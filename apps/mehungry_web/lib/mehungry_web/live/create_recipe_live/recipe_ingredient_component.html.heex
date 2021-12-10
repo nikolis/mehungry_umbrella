@@ -1,0 +1,68 @@
+<div>
+  <h2 class="mx-auto"> Select Ingredient </h2>
+  <br>
+
+  <.form
+    let={f}
+    for={@changeset}
+    id="measurement_unit-form"
+    phx-target={@myself}
+    phx-change="validate"
+    phx-submit="save">
+  
+     <.ignore>  
+      <%= label f, :measurement_unit %>
+      <%= text_input f, :measurement_unit %>
+      <%= error_tag f, :measurement_unit %>
+
+      <%= label f, :ingredient %>
+      <%= text_input f, :ingredient %>
+      <%= error_tag f, :ingredient %>
+    </.ignore>
+
+
+   <div class="flex-initial"  
+         phx-hook="SelectIngredient" 
+         phx-update="ignore"
+         id="select_ingredient_container"
+        >
+      <%= label f, :ingredient_id %>
+      <br>
+      <select phx-update="ignore"  id="select_ingredient" class="js-example-basic-single" name="ingredient">
+        <%= for i <- @ingredients do %>
+          <option value= {i.id} >
+             <%= i.name %>
+          </option>
+        <% end %>
+      </select>
+    </div>
+   
+    <br> 
+    <div class="flex-initial">
+      <%= label f, :measurement_unit %>
+      <br>
+      <select>
+        <%= for i <- @measurement_units do %>
+            <option value={i.id}>
+            <%= i.name %>
+        <% end %>
+      </select>
+      <%= error_tag f, :measurement_unit %>
+    </div>
+
+
+    <br>
+    <%= text_input f, :ingredient_id , id: "ingredient_id_ph" %>
+    <div class="flex-initial">
+      <%= label f, :quantity %>
+      <%= text_input f, :quantity %>
+      <%= error_tag f, :quantity %>
+   </div>
+
+    
+    <br>
+    <div>
+      <%= submit "Save", phx_disable_with: "Saving..." %>
+    </div>
+  </.form>
+</div>

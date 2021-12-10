@@ -1,0 +1,20 @@
+<h1>Create Recipe</h1>
+
+<%= if @live_action in [:add_ingredient] do %>
+  <.modal return_to={Routes.create_recipe_index_path(@socket, :index)}>
+    <.live_component
+      module={MehungryWeb.CreateRecipeLive.RecipeIngredientComponent}
+      id={@recipe_ingredient.id || :new}
+      title={@page_title}
+      action={@live_action}
+      recipe_ingredient={@recipe_ingredient}
+      return_to={Routes.create_recipe_index_path(@socket, :index)}
+    />
+  </.modal>
+<% end %>
+
+<div phx-drop-target="{@uploads.image.ref}">
+  <%= live_file_input @uploads.image %>
+</div>
+
+<span><%= live_patch "Add Ingredient", to: Routes.create_recipe_index_path(@socket, :add_ingredient) %></span>
