@@ -36,6 +36,8 @@ defmodule Mehungry.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:numexy, "~> 0.1.9"},
+      {:matrix, "~> 0.3.2"},
       {:phoenix_pubsub, "~> 2.0"},
       {:ecto_sql, "~> 3.4"},
       {:postgrex, ">= 0.0.0"},

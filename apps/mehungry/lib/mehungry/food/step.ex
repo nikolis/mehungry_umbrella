@@ -11,6 +11,4 @@ defmodule Mehungry.Food.Step do
     step
     |> cast(attrs, [:title, :description])
   end
-
-
 end

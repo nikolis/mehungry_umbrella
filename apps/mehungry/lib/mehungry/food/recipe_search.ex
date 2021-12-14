@@ -25,6 +25,7 @@ defmodule Mehungry.Food.RecipeSearch do
   end
 
   defp _run(query, ""), do: query
+
   defp _run(query, search_string) do
     from recipe in query,
       join: id_and_rank in matching_recipe_ids_and_ranks(search_string),
@@ -34,7 +35,7 @@ defmodule Mehungry.Food.RecipeSearch do
 
   defp normalize(search_string) do
     search_string
-    |> String.downcase
+    |> String.downcase()
     |> String.replace("gluten free", "gluten-free")
     |> String.replace("dairy free", "dairy-free")
     |> String.replace("sugar free", "sugar-free")
@@ -43,7 +44,6 @@ defmodule Mehungry.Food.RecipeSearch do
     |> String.replace(~r/\n/, " ")
     |> String.replace(~r/\t/, " ")
     |> String.replace(~r/\s{2,}/, " ")
-    |> String.trim
+    |> String.trim()
   end
-
 end

@@ -9,7 +9,7 @@ defmodule Mehungry.Food.IngredientTranslation do
 
     belongs_to :ingredient, Mehungry.Food.Ingredient
     belongs_to :language, Mehungry.Language
-    
+
     timestamps()
   end
 
@@ -19,5 +19,4 @@ defmodule Mehungry.Food.IngredientTranslation do
     |> validate_required([:name, :language_id])
     |> unique_constraint(:name)
   end
-
 end

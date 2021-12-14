@@ -8,6 +8,5 @@ defmodule MehungryServer.Repo.Migrations.CreateMeasurementUnits do
 
       timestamps()
     end
-
   end
 end

@@ -6,7 +6,7 @@ defmodule MehungryServer.Repo.Migrations.CreateUsers do
       add :name, :string
       add :first_name, :string
       add :last_name, :string
-      add :facebook_id, :string 
+      add :facebook_id, :string
 
       timestamps()
     end

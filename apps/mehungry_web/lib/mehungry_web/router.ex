@@ -3,12 +3,11 @@ defmodule MehungryWeb.Router do
 
   pipeline :browser do
     plug :accepts, ["html"]
-    plug :fetch_session        
-    plug :fetch_live_flash     
+    plug :fetch_session
+    plug :fetch_live_flash
     plug :put_root_layout, {MehungryWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-
   end
 
   pipeline :api do
@@ -17,8 +16,8 @@ defmodule MehungryWeb.Router do
 
   scope "/", MehungryWeb do
     pipe_through :browser
-    
-    
+
+    live "/browse", RecipeBrowseLive.Index, :index
     live "/ingredients", IngredientLive.Index, :index
     live "/ingredients/new", IngredientLive.Index, :new
     live "/ingredients/:id/edit", IngredientLive.Index, :edit
@@ -39,7 +38,6 @@ defmodule MehungryWeb.Router do
 
     live "/measurement_units/:id", MeasurementUnitLive.Show, :show
     live "/measurement_units/:id/show/edit", MeasurementUnitLive.Show, :edit
-
 
     live "/create_recipe", CreateRecipeLive.Index, :index
     live "/create_recipe/add_ingredient", CreateRecipeLive.Index, :add_ingredient

@@ -27,6 +27,12 @@ Hooks.SelectIngredient = {
         $select = jQuery(hook.el).find("select");
     console.log($select)
     $select.select2().on("select2:select", (e) => hook.selected(hook, e))
+    
+    $( "#submit_button_ingredient" ).click(function() {
+        var text_ingredient = $('#ingredient_id_ph').val();
+        var text_quantity = $('#quantity_placeholder').val();
+        hook.pushEvent("new_ingredient_entry",{ingredient_id: text_ingredient, quantity: text_quantity, measurement_unit_id: 1});
+    });
 
     return $select;
   },

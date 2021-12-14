@@ -55,14 +55,14 @@
     <%= text_input f, :ingredient_id , id: "ingredient_id_ph" %>
     <div class="flex-initial">
       <%= label f, :quantity %>
-      <%= text_input f, :quantity %>
+      <%= text_input f, :quantity , id: "quantity_placeholder"%>
       <%= error_tag f, :quantity %>
    </div>
 
     
     <br>
     <div>
-      <%= submit "Save", phx_disable_with: "Saving..." %>
+      <%= submit "Save",id: "submit_button_ingredient" ,phx_disable_with: "Saving..." %>
     </div>
   </.form>
 </div>

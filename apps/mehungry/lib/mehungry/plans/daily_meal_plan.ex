@@ -1,5 +1,4 @@
 defmodule Mehungry.Plans.DailyMealPlan do
-
   alias Mehungry.Plans.MealPlan
   alias Mehungry.Plans.Meal
 
@@ -13,7 +12,7 @@ defmodule Mehungry.Plans.DailyMealPlan do
 
     has_many :meals, Meal
 
-    belongs_to :meal_plan , MealPlan
+    belongs_to :meal_plan, MealPlan
     timestamps()
   end
 

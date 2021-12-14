@@ -8,7 +8,7 @@ defmodule Mehungry.Food.Annotation do
 
     belongs_to :user, Mehungry.Accounts.User
     belongs_to :recipe, Mehungry.Food.Recipe
-    
+
     timestamps()
   end
 

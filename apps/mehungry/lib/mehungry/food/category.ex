@@ -3,7 +3,7 @@ defmodule Mehungry.Food.Category do
 
   import Ecto.Changeset
 
-  alias  Mehungry.Food.CategoryTranslation
+  alias Mehungry.Food.CategoryTranslation
 
   schema "categories" do
     field :name, :string
@@ -20,5 +20,4 @@ defmodule Mehungry.Food.Category do
     |> validate_required([:name])
     |> unique_constraint(:name)
   end
-
 end

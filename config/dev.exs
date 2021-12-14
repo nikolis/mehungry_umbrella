@@ -8,7 +8,6 @@ config :mehungry, Mehungry.Repo,
   hostname: "localhost",
   pool_size: 10
 
-
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

@@ -25,7 +25,5 @@ defmodule MehungryServer.Repo.Migrations.CreateRecipes do
 
     create index(:recipes, [:user_id])
     create unique_index(:recipes, [:title, :user_id], name: :title_user_index)
-
-    
   end
 end

@@ -1,5 +1,4 @@
 defmodule Mehungry.Plans.Meal do
-
   alias Mehungry.Plans.DailyMealPlan
   alias Mehungry.Food.Recipe
 
@@ -10,8 +9,8 @@ defmodule Mehungry.Plans.Meal do
     field :meal_note, :string
     field :meal_title, :string
 
-    belongs_to :recipe, Recipe 
-    belongs_to :daily_meal_plan, DailyMealPlan 
+    belongs_to :recipe, Recipe
+    belongs_to :daily_meal_plan, DailyMealPlan
     timestamps()
   end
 

@@ -8,7 +8,7 @@ defmodule Mehungry.Food.Ingredient do
     field :url, :string
 
     belongs_to :category, Mehungry.Food.Category
-    belongs_to :measurement_unit, Mehungry.Food.MeasurementUnit 
+    belongs_to :measurement_unit, Mehungry.Food.MeasurementUnit
     has_many :ingredient_translation, Mehungry.Food.IngredientTranslation
 
     timestamps()

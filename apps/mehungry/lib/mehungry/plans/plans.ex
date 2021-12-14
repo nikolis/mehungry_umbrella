@@ -20,20 +20,17 @@ defmodule Mehungry.Plans do
   def list_meal_plans do
     Repo.all(MealPlan)
     |> Repo.preload([
-      {:daily_meal_plans, 
-        [
-          {:meals, 
-            [
-              {:recipe, 
-                [
-                  {:recipe_ingredients, :ingredient},
-                  {:recipe_ingredients, :measurement_unit}
-                ] 
-              }
-            ]
-          }
-        ]
-      }
+      {:daily_meal_plans,
+       [
+         {:meals,
+          [
+            {:recipe,
+             [
+               {:recipe_ingredients, :ingredient},
+               {:recipe_ingredients, :measurement_unit}
+             ]}
+          ]}
+       ]}
     ])
   end
 
@@ -54,20 +51,17 @@ defmodule Mehungry.Plans do
   def get_meal_plan!(id) do
     Repo.get!(MealPlan, id)
     |> Repo.preload([
-      {:daily_meal_plans, 
-        [
-          {:meals, 
-            [
-              {:recipe, 
-                [
-                  {:recipe_ingredients, :ingredient},
-                  {:recipe_ingredients, :measurement_unit}
-                ] 
-              }
-            ]
-          }
-        ]
-      }
+      {:daily_meal_plans,
+       [
+         {:meals,
+          [
+            {:recipe,
+             [
+               {:recipe_ingredients, :ingredient},
+               {:recipe_ingredients, :measurement_unit}
+             ]}
+          ]}
+       ]}
     ])
   end
 

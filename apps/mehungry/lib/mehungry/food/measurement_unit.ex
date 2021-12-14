@@ -2,9 +2,8 @@ defmodule Mehungry.Food.MeasurementUnit do
   use Ecto.Schema
 
   import Ecto.Changeset
-  
-  alias Mehungry.Food.MeasurementUnitTranslation
 
+  alias Mehungry.Food.MeasurementUnitTranslation
 
   schema "measurement_units" do
     field :name, :string
@@ -22,6 +21,4 @@ defmodule Mehungry.Food.MeasurementUnit do
     |> validate_required([:name])
     |> unique_constraint(:name)
   end
-
-
 end

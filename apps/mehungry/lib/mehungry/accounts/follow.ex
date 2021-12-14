@@ -1,4 +1,4 @@
-defmodule Mehungry.Accounts.Follow do 
+defmodule Mehungry.Accounts.Follow do
   use Ecto.Schema
 
   import Ecto.Changeset
@@ -17,5 +17,4 @@ defmodule Mehungry.Accounts.Follow do
     |> cast(attrs, [:user_id, :follow_id])
     |> validate_required([:user_id, :follow_id])
   end
-
 end

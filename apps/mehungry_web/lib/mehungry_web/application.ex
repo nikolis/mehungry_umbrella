@@ -10,9 +10,11 @@ defmodule MehungryWeb.Application do
       # Start the Telemetry supervisor
       MehungryWeb.Telemetry,
       # Start the Endpoint (http/https)
-      MehungryWeb.Endpoint
+      MehungryWeb.Endpoint,
       # Start a worker by calling: MehungryWeb.Worker.start_link(arg)
       # {MehungryWeb.Worker, arg}
+      {MehungryWeb.OnlineRecommender, []},
+      {Cachex, name: :users}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -7,17 +7,16 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, 
-      socket
-      |> assign(:recipes, list_recipes())
-      |> assign(:ingredients, list_ingredients())
-      |> allow_upload(:image,
-        accept: ~w(.jpg .jpeg .png),
-        max_entries: 1,
-        auto_upload: true,
-        progress: &handle_progress/3
-       ) 
-    }
+    {:ok,
+     socket
+     |> assign(:recipes, list_recipes())
+     |> assign(:ingredients, list_ingredients())
+     |> allow_upload(:image,
+       accept: ~w(.jpg .jpeg .png),
+       max_entries: 1,
+       auto_upload: true,
+       progress: &handle_progress/3
+     )}
   end
 
   @impl true
@@ -32,25 +31,25 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
           socket,
           entry,
           &upload_static_file(&1, socket)
-       )
-      {:noreply,
+        )
+
+      {
+        :noreply,
         socket
-        #|> put_flash(:info, "file #{entry.client_name} uploaded")
-        #|> update_changeset(:image_upload, path)
+        # |> put_flash(:info, "file #{entry.client_name} uploaded")
+        # |> update_changeset(:image_upload, path)
       }
     else
       {:noreply, socket}
     end
   end
 
-  
   defp upload_static_file(%{path: path}, socket) do
     # Plug in your production image file persistence implementation here!
     dest = Path.join("priv/static/images", Path.basename(path))
     File.cp!(path, dest)
     Routes.static_path(socket, "/images/#{Path.basename(dest)}")
   end
-
 
   defp apply_action(socket, :edit, %{"id" => id}) do
     socket
@@ -71,6 +70,22 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   @impl true
+  def handle_event(
+        "new_ingredient_entry",
+        %{
+          "ingredient_id" => ingredient_id,
+          "measurement_unit_id" => mu_id,
+          "quantity" => quantity
+        },
+        socket
+      ) do
+    # recipe = Food.get_recipe!(id)
+    # {:ok, _} = Food.delete_recipe(recipe)
+
+    {:noreply, assign(socket, :recipes, list_recipes())}
+  end
+
+  @impl true
   def handle_event("delete", %{"id" => id}, socket) do
     recipe = Food.get_recipe!(id)
     {:ok, _} = Food.delete_recipe(recipe)
@@ -85,7 +100,4 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   defp list_ingredients do
     Food.list_ingredients()
   end
-
-
-
 end

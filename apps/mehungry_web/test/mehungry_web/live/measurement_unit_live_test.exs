@@ -48,7 +48,9 @@ defmodule MehungryWeb.MeasurementUnitLiveTest do
     test "updates measurement_unit in listing", %{conn: conn, measurement_unit: measurement_unit} do
       {:ok, index_live, _html} = live(conn, Routes.measurement_unit_index_path(conn, :index))
 
-      assert index_live |> element("#measurement_unit-#{measurement_unit.id} a", "Edit") |> render_click() =~
+      assert index_live
+             |> element("#measurement_unit-#{measurement_unit.id} a", "Edit")
+             |> render_click() =~
                "Edit Measurement unit"
 
       assert_patch(index_live, Routes.measurement_unit_index_path(conn, :edit, measurement_unit))
@@ -70,7 +72,10 @@ defmodule MehungryWeb.MeasurementUnitLiveTest do
     test "deletes measurement_unit in listing", %{conn: conn, measurement_unit: measurement_unit} do
       {:ok, index_live, _html} = live(conn, Routes.measurement_unit_index_path(conn, :index))
 
-      assert index_live |> element("#measurement_unit-#{measurement_unit.id} a", "Delete") |> render_click()
+      assert index_live
+             |> element("#measurement_unit-#{measurement_unit.id} a", "Delete")
+             |> render_click()
+
       refute has_element?(index_live, "#measurement_unit-#{measurement_unit.id}")
     end
   end
@@ -79,14 +84,19 @@ defmodule MehungryWeb.MeasurementUnitLiveTest do
     setup [:create_measurement_unit]
 
     test "displays measurement_unit", %{conn: conn, measurement_unit: measurement_unit} do
-      {:ok, _show_live, html} = live(conn, Routes.measurement_unit_show_path(conn, :show, measurement_unit))
+      {:ok, _show_live, html} =
+        live(conn, Routes.measurement_unit_show_path(conn, :show, measurement_unit))
 
       assert html =~ "Show Measurement unit"
       assert html =~ measurement_unit.name
     end
 
-    test "updates measurement_unit within modal", %{conn: conn, measurement_unit: measurement_unit} do
-      {:ok, show_live, _html} = live(conn, Routes.measurement_unit_show_path(conn, :show, measurement_unit))
+    test "updates measurement_unit within modal", %{
+      conn: conn,
+      measurement_unit: measurement_unit
+    } do
+      {:ok, show_live, _html} =
+        live(conn, Routes.measurement_unit_show_path(conn, :show, measurement_unit))
 
       assert show_live |> element("a", "Edit") |> render_click() =~
                "Edit Measurement unit"

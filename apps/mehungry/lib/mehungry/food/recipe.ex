@@ -1,7 +1,7 @@
 defmodule Mehungry.Food.Recipe do
   use Ecto.Schema
   import Ecto.Changeset
-  
+
   alias Mehungry.Food.RecipeIngredient
   alias Mehungry.Food.Step
   alias Mehungry.Accounts.User
@@ -36,12 +36,28 @@ defmodule Mehungry.Food.Recipe do
   @doc false
   def changeset(recipe, attrs) do
     recipe
-      |> cast(attrs, [:recipe_image_remote, :servings, :private, :cousine, :title, :author, :original_url, :preperation_time_upper_limit, :preperation_time_lower_limit, :cooking_time_upper_limit, :cooking_time_lower_limit, :description, :image_url, :user_id, :language_id])
-      |> unique_constraint(:title_user_constraint, name: :title_user_index)
-      |> foreign_key_constraint(:language_id)
-      |> foreign_key_constraint(:user_id)
-      |> validate_required([:title, :language_id, :recipe_ingredients, :steps])
-      |> cast_embed(:steps,[:required_message])
-      |> cast_assoc(:recipe_ingredients, with: &RecipeIngredient.changeset/2, required: true)
+    |> cast(attrs, [
+      :recipe_image_remote,
+      :servings,
+      :private,
+      :cousine,
+      :title,
+      :author,
+      :original_url,
+      :preperation_time_upper_limit,
+      :preperation_time_lower_limit,
+      :cooking_time_upper_limit,
+      :cooking_time_lower_limit,
+      :description,
+      :image_url,
+      :user_id,
+      :language_id
+    ])
+    |> unique_constraint(:title_user_constraint, name: :title_user_index)
+    |> foreign_key_constraint(:language_id)
+    |> foreign_key_constraint(:user_id)
+    |> validate_required([:title, :language_id, :recipe_ingredients, :steps])
+    |> cast_embed(:steps, [:required_message])
+    |> cast_assoc(:recipe_ingredients, with: &RecipeIngredient.changeset/2, required: true)
   end
 end

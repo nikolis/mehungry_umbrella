@@ -1,5 +1,5 @@
 defmodule HeexIgnore do
-    use Phoenix.Component
+  use Phoenix.Component
 
-    def ignore(assigns), do: ~H""
+  def ignore(assigns), do: ~H""
 end

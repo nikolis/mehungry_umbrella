@@ -1,4 +1,4 @@
-defmodule Mehungry.Food.CategoryTranslation do 
+defmodule Mehungry.Food.CategoryTranslation do
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -16,7 +16,5 @@ defmodule Mehungry.Food.CategoryTranslation do
     |> cast(attrs, [:name, :language_id])
     |> validate_required([:name, :language_id])
     |> unique_constraint(:name)
-   
   end
-
 end

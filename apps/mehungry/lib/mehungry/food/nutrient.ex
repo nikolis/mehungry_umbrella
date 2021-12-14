@@ -10,7 +10,4 @@ defmodule Mehungry.Food.Nutrient do
 
     timestamps()
   end
-
-
 end
-  

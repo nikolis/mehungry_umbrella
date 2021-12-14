@@ -37,7 +37,9 @@ defmodule MehungryWeb.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:mehungry, in_umbrella: true}, 
+      {:cachex, "~> 3.4"},
+      {:bcrypt_elixir, "~> 2.3"},
+      {:mehungry, in_umbrella: true},
       {:phoenix, "~> 1.6.2"},
       {:phoenix_live_view, "~> 0.17.5"},
       {:phoenix_ecto, "~> 4.4"},
@@ -49,9 +51,7 @@ defmodule MehungryWeb.MixProject do
       {:gettext, "~> 0.11"},
       {:mehungry, in_umbrella: true},
       {:jason, "~> 1.0"},
-      {:plug_cowboy, "~> 2.5"},
-   
-    
+      {:plug_cowboy, "~> 2.5"}
     ]
   end
 

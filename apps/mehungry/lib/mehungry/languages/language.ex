@@ -5,7 +5,6 @@ defmodule Mehungry.Languages.Language do
 
   schema "languages" do
     field :name, :string
-   
 
     timestamps()
   end
@@ -16,6 +15,4 @@ defmodule Mehungry.Languages.Language do
     |> validate_required([:name])
     |> unique_constraint(:name)
   end
-
- 
-end 
+end

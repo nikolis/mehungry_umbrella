@@ -45,10 +45,10 @@ defmodule MehungryWeb do
   def router do
     quote do
       use Phoenix.Router
-        
+
       import Plug.Conn
       import Phoenix.Controller
-      import Phoenix.LiveView.Router  
+      import Phoenix.LiveView.Router
     end
   end
 
@@ -60,9 +60,10 @@ defmodule MehungryWeb do
   end
 
   def live_view do
-    quote do                   
+    quote do
       use Phoenix.LiveView,
-        layout: {MehungryWeb.LayoutView, "live.html"}                                                                                                                                                        
+        layout: {MehungryWeb.LayoutView, "live.html"}
+
       unquote(view_helpers())
     end
   end
@@ -80,8 +81,8 @@ defmodule MehungryWeb do
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML
       import Phoenix.LiveView.Helpers
-      
-      import MehungryWeb.LiveHelpers  
+
+      import MehungryWeb.LiveHelpers
       # Import basic rendering functionality (render, render_layout, etc)
       import Phoenix.View
       import HeexIgnore

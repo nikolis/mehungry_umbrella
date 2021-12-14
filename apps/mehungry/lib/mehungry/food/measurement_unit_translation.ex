@@ -7,18 +7,14 @@ defmodule Mehungry.Food.MeasurementUnitTranslation do
     field :name, :string
 
     belongs_to :language, Mehungry.Language
-    belongs_to :measurement_unit, Mehungry.Food.Measurement_unit 
- 
-    timestamps()    
+    belongs_to :measurement_unit, Mehungry.Food.Measurement_unit
+
+    timestamps()
   end
-   
+
   def changeset(mu_trans, attrs) do
     mu_trans
     |> cast(attrs, [:language_id, :name])
     |> validate_required([:language_id, :name])
   end
-
-
-
-
 end

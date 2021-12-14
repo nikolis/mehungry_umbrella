@@ -1,0 +1,29 @@
+<h1>Listing Recipes</h1>
+
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+
+      <th></th>
+    </tr>
+  </thead>
+  <tbody id="recipes">
+    <%= for recipe <- @recipes do %>
+      <tr id={"recipe-#{recipe.id}"}>
+        <td><%= recipe.title %></td>
+
+        <td>
+            <span><%= link "1 Star", to: "#", phx_click: "review", phx_value_points: 1 ,phx_value_id: recipe.id %></span>
+            <span><%= link "2 Stars", to: "#", phx_click: "review", phx_value_points: 2 ,phx_value_id: recipe.id %></span>
+            <span><%= link "3 Stars", to: "#", phx_click: "review", phx_value_points: 3 ,phx_value_id: recipe.id %></span>
+            <span><%= link "4 Stars", to: "#", phx_click: "review", phx_value_points: 4 ,phx_value_id: recipe.id %></span>
+            <span><%= link "5 Stars", to: "#", phx_click: "review", phx_value_points: 5 ,phx_value_id: recipe.id %></span>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
