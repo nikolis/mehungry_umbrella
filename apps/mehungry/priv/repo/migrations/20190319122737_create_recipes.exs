@@ -17,7 +17,10 @@ defmodule MehungryServer.Repo.Migrations.CreateRecipes do
       add :description, :string
       add :image_url, :string
       add :user_id, references(:users, on_delete: :nothing)
-      add :language_id, references(:languages, on_delete: :nothing)
+
+      add :language_name,
+          references(:languages, column: :name, type: :string, on_delete: :nothing)
+
       add :steps, {:array, :map}, default: []
 
       timestamps()

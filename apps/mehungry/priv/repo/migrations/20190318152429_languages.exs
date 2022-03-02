@@ -2,8 +2,8 @@ defmodule MehungryServer.Repo.Migrations.Languages do
   use Ecto.Migration
 
   def change do
-    create table(:languages) do
-      add :name, :string
+    create table(:languages, primary_key: false) do
+      add :name, :string, primary_key: true
 
       timestamps()
     end

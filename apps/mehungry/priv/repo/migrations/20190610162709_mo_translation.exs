@@ -6,7 +6,9 @@ defmodule MehungryServer.Repo.Migrations.MoTranslation do
       add :name, :string
 
       add :measurement_unit_id, references(:measurement_units, on_delete: :delete_all)
-      add :language_id, references(:languages, on_delete: :delete_all)
+
+      add :language_name,
+          references(:languages, column: :name, type: :string, on_delete: :delete_all)
 
       timestamps()
     end

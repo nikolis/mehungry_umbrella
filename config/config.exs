@@ -6,9 +6,8 @@
 # same configuration and dependencies, which is why they
 # all use the same configuration file. If you want different
 # configurations or dependencies per app, it is best to
-# move said applications out of the umbrella.
-use Mix.Config
-
+# move said applications out of the umbrellause Mix.Config
+import Config
 # Configure Mix tasks and generators
 config :mehungry,
   ecto_repos: [Mehungry.Repo]
@@ -24,6 +23,17 @@ config :mehungry_web, MehungryWeb.Endpoint,
   render_errors: [view: MehungryWeb.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: Mehungry.PubSub,
   live_view: [signing_salt: "l1ra29uq"]
+
+config :mehungry_api, MehungryApi.Guardian,
+  issuer: "mehungry_api",
+  secret_key: "xqo0BfDpsWTY/ZDz/+nmsbdLFLfZEmU3qXhJzdtc3qS7GZyji91GLgE15nYoVbxt"
+
+# Configures the endpoint
+config :mehungry_api, MehungryApi.Endpoint,
+  url: [host: "localhost"],
+  secret_key_base: "iH7KE2sUcWxfd3dkWBtzxcSkJlSKZaVWP/hDKC8Hg3gCkGYZcXhIZLrEkzw/Ddq3",
+  render_errors: [view: MehungryApi.ErrorView, accepts: ~w(html json), layout: false],
+  pubsub_server: Mehungry.PubSub
 
 # Configures Elixir's Logger
 config :logger, :console,

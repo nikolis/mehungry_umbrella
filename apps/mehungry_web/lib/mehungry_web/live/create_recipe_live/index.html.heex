@@ -1,10 +1,10 @@
 <h1>Create Recipe</h1>
 
-<%= if @live_action in [:add_ingredient] do %>
+<%= if @live_action in [:add_ingredient, :edit_ingredient] do %>
   <.modal return_to={Routes.create_recipe_index_path(@socket, :index)}>
     <.live_component
       module={MehungryWeb.CreateRecipeLive.RecipeIngredientComponent}
-      id={@recipe_ingredient.id || :new}
+      id={@recipe_ingredient["uuid"]}
       title={@page_title}
       action={@live_action}
       recipe_ingredient={@recipe_ingredient}
@@ -17,4 +17,69 @@
   <%= live_file_input @uploads.image %>
 </div>
 
+<table>
+  <thead>
+    <tr>
+      <th>Ingredient</th>
+      <th>Measurement Unit</th>
+      <th>Quantity</th>
+    </tr>
+  </thead>
+  <tbody id="recipe_ingredients">
+    <%= for ingredient <- map_recipe_ingredient(@recipe_ingredients) do %>
+      <tr id={"ingredient-#{ingredient["uuid"]}"}>
+        <td><%= ingredient["ingredient"] %></td>
+        <td><%= ingredient["measurement_unit"] %></td>
+        <td><%= ingredient["quantity"] %></td>
+        <td>
+          <span><%= live_patch "Edit", to: Routes.create_recipe_index_path(@socket, :edit_ingredient, ingredient["uuid"]) %></span>
+          <span><%= link "Delete", to: "#", phx_click: "delete_ingredient", phx_value_uuid: ingredient["uuid"], data: [confirm: "Are you sure?"] %></span>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
 <span><%= live_patch "Add Ingredient", to: Routes.create_recipe_index_path(@socket, :add_ingredient) %></span>
+
+<table>
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody id="recipe_steps">
+    <%= for step <- @steps do %>
+      <tr id={"step-#{step["uuid"]}"}>
+          <.form
+            let={f}
+            for={step.changeset}
+            id= "adsf"
+            phx-change="validate"
+          >
+            <div>
+                <%= inspect(step) %>
+                <input id="user_name" name="ident" type="hidden" value= {step.attributes.uuid}> 
+                <div class="">
+                  <%= label f, :title %>
+                  <%= text_input f, :title , id:  "tit"  %>
+                  <%= error_tag f, :title %>
+                </div>
+                
+                <div class="">
+                  <%= label f, :desciption %>
+                  <%= text_input f, :description , id: "asdf9c6aa2d9-6274-4645-b0d9-2bf878793c51" %>
+                  <%= error_tag f, :description %>
+                </div>
+            </div>
+     
+         </.form>
+        <td>
+          <span><%= link "Delete", to: "#", phx_click: "delete_step", phx_value_uuid: step["uuid"], data: [confirm: "Are you sure?"] %></span>
+         </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+<span><%= link "Add Step", to: "#", phx_click: "add_step" %></span>
+

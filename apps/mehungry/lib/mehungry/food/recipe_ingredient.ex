@@ -20,9 +20,6 @@ defmodule Mehungry.Food.RecipeIngredient do
       The attrs transformation code should be moved to the Food module
     """
 
-    IO.inspect(recipe_ingredient)
-    IO.inspect(attrs)
-
     recipe_ingredient
     |> cast(attrs, [
       :quantity,
@@ -31,6 +28,7 @@ defmodule Mehungry.Food.RecipeIngredient do
       :ingredient_id,
       :recipe_id
     ])
-    |> validate_required([:quantity])
+    # |> validate_number(:quantity, greater_than: 3)
+    |> validate_required([:quantity, :measurement_unit_id])
   end
 end

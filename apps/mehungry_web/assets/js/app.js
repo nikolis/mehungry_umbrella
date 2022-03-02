@@ -18,34 +18,67 @@ import select2 from "select2"
   
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
    
-// Show progress bar on live navigation and form submits
 let Hooks = {}
-Hooks.SelectIngredient = {
+
+Hooks.Mu = {
 
   initSelect2() {
-    let hook = this,
-        $select = jQuery(hook.el).find("select");
-    console.log($select)
-    $select.select2().on("select2:select", (e) => hook.selected(hook, e))
-    
-    $( "#submit_button_ingredient" ).click(function() {
-        var text_ingredient = $('#ingredient_id_ph').val();
-        var text_quantity = $('#quantity_placeholder').val();
-        hook.pushEvent("new_ingredient_entry",{ingredient_id: text_ingredient, quantity: text_quantity, measurement_unit_id: 1});
-    });
+    console.log("init23")
+    let hook = this;
+    let $selects = jQuery(hook.el).find("select");
+    let $select_mu = $selects[0]
 
-    return $select;
+    $selects.select2().on("select2:select", (e) => hook.selected_mu(hook, e)) 
+    hook.pushEventTo($selects[0], "mu_selected", {mu_id: $selects[0].value}) 
+    $('#mu_id_ph').val($selects[0].value)
+    return $select_mu;
   },
-
+  
   mounted() {
     this.initSelect2();
   },
 
-  selected(hook, event) {
+  selected_mu(hook, event) {
+    console.log("selected mu")
     let id = event.params.data.id;
-    $('#ingredient_id_ph').value = id;
-    hook.pushEventTo(this.el, "ingredient_selected", {ingredient_id: id})
+    hook.pushEventTo(this.el, "mu_selected", {mu_id: id}) 
+    $('#mu_id_ph').val(id)
   }
+}
+
+Hooks.SelectIngredient = {
+
+  initSelect2() {
+    console.log("init2")
+    let hook = this;
+    let $selects = jQuery(hook.el).find("select");
+    let $select_ingredient = $selects[0]
+
+    $selects.select2().on("select2:select", (e) => hook.selected_ingredient(hook, e))
+    $('#ingredient_id_ph').val($selects[0].value)
+   
+    hook.pushEventTo($selects[0], "ingredient_selected", {ingredient_id: $selects[0].value}) 
+
+    /* $( "#submit_button_ingredient" ).click(function() {
+        var text_ingredient = $('#ingredient_id_ph').val();
+        var text_quantity = $('#quantity_placeholder').val();
+        hook.pushEvent("new_ingredient_entry",{ingredient_id: text_ingredient, quantity: text_quantity, measurement_unit_id: 1});
+    });*/
+
+    return $select_ingredient;
+  },
+
+  mounted() {
+    console.log("mounter")
+    this.initSelect2();
+  },
+
+  selected_ingredient(hook, event) {
+    console.log(event)
+    let id = event.params.data.id;
+    $('#ingredient_id_ph').val(id).change();
+    hook.pushEventTo(this.el, "ingredient_selected", {ingredient_id: id})
+  },
 }
 
 let liveSocket = new LiveSocket("/live", Socket, {hooks: Hooks, params: {_csrf_token: csrfToken}})

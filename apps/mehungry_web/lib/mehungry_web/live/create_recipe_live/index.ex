@@ -1,16 +1,26 @@
 defmodule MehungryWeb.CreateRecipeLive.Index do
   use MehungryWeb, :live_view
 
+  import Ecto
+
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
+  alias Mehungry.Food.Step
   alias Mehungry.Food.RecipeIngredient
+
+  @step_title "Step Title"
+  @step_description "The description of the step"
 
   @impl true
   def mount(_params, _session, socket) do
+    attrs = %{uuid: Ecto.UUID.generate()}
+
     {:ok,
      socket
      |> assign(:recipes, list_recipes())
      |> assign(:ingredients, list_ingredients())
+     |> assign(:recipe_ingredients, [])
+     |> assign(:steps, [%{attributes: attrs, changeset: Food.change_step(%Step{}, %{})}])
      |> allow_upload(:image,
        accept: ~w(.jpg .jpeg .png),
        max_entries: 1,
@@ -22,6 +32,18 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+  end
+
+  def map_recipe_ingredient(recipe_ingredients) do
+    result =
+      Enum.map(recipe_ingredients, fn ing ->
+        ingredient = Food.get_ingredient(ing["ingredient_id"])
+        measurement_unit = Food.get_measurement_unit!(ing["measurement_unit_id"])
+        ing = Map.put(ing, "ingredient", ingredient.name)
+        ing = Map.put(ing, "measurement_unit", measurement_unit.name)
+      end)
+
+    result
   end
 
   defp handle_progress(:image, entry, socket) do
@@ -51,16 +73,50 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     Routes.static_path(socket, "/images/#{Path.basename(dest)}")
   end
 
-  defp apply_action(socket, :edit, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Edit Recipe")
-    |> assign(:recipe, Food.get_recipe!(id))
+  @impl true
+  def handle_event("add_step", _, socket) do
+    attrs = %{uuid: Ecto.UUID.generate()}
+
+    steps =
+      socket.assigns.steps ++ [%{attributes: attrs, changeset: Food.change_step(%Step{}, %{})}]
+
+    {:noreply,
+     socket
+     |> assign(:steps, steps)}
+  end
+
+  @impl true
+  def handle_event("validate", %{"step" => step_params, "ident" => ident} = params, socket) do
+    IO.inspect(params, label: "Params")
+    [step] = Enum.filter(socket.assigns.steps, fn x -> x.attributes.uuid == ident end)
+    rest = Enum.filter(socket.assigns.steps, fn x -> x.attributes.uuid != ident end)
+
+    changeset =
+      %Step{}
+      |> Food.change_step(step_params)
+      |> Map.put(:action, :validate)
+
+    {:noreply,
+     assign(socket, :steps, rest ++ [%{attributes: %{uuid: ident}, changeset: changeset}])}
   end
 
   defp apply_action(socket, :add_ingredient, _params) do
+    uuid = Ecto.UUID.generate()
+
     socket
     |> assign(:page_title, "New Recipe")
-    |> assign(:recipe_ingredient, %RecipeIngredient{})
+    |> assign(:recipe_ingredient, %{"uuid" => uuid})
+  end
+
+  defp apply_action(socket, :edit_ingredient, %{"uuid" => uuid}) do
+    recipe_ingredient =
+      Enum.find(socket.assigns.recipe_ingredients, fn x -> x["uuid"] == uuid end)
+
+    IO.inspect(recipe_ingredient, label: "Edit")
+
+    socket
+    |> assign(:page_title, "New Recipe")
+    |> assign(:recipe_ingredient, recipe_ingredient)
   end
 
   defp apply_action(socket, :index, _params) do
@@ -86,11 +142,40 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    recipe = Food.get_recipe!(id)
-    {:ok, _} = Food.delete_recipe(recipe)
+  def handle_event("delete_step", %{"uuid" => uuid}, socket) do
+    steps = Enum.filter(socket.assigns.steps, fn x -> x["uuid"] != uuid end)
 
-    {:noreply, assign(socket, :recipes, list_recipes())}
+    {:noreply,
+     socket
+     |> assign(:steps, steps)}
+  end
+
+  @impl true
+  def handle_event("delete_ingredient", %{"uuid" => uuid}, socket) do
+    IO.inspect(socket.assigns.recipe_ingredients, label: "Recipe ingredients before")
+
+    recipe_ingredients =
+      Enum.filter(socket.assigns.recipe_ingredients, fn x -> x["uuid"] != uuid end)
+
+    IO.inspect(recipe_ingredients, label: "Recipe Ingredients after")
+
+    {:noreply,
+     socket
+     |> assign(:recipe_ingredients, recipe_ingredients)}
+  end
+
+  @impl true
+  def handle_info({:recipe_ingredient, recipe_ingredient_params}, socket) do
+    recipe_ingredients =
+      Enum.filter(socket.assigns.recipe_ingredients, fn x ->
+        x["uuid"] != recipe_ingredient_params["uuid"]
+      end)
+
+    recipe_ingredients = recipe_ingredients ++ [recipe_ingredient_params]
+
+    {:noreply,
+     socket
+     |> assign(:recipe_ingredients, recipe_ingredients)}
   end
 
   defp list_recipes do

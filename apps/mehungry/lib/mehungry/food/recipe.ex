@@ -23,9 +23,13 @@ defmodule Mehungry.Food.Recipe do
     field :title, :string
 
     belongs_to :user, User
-    belongs_to :language, Language
 
-    has_many :recipe_ingredients, Mehungry.Food.RecipeIngredient
+    belongs_to :language, Mehungry.Language,
+      references: :name,
+      foreign_key: :language_name,
+      type: :string
+
+    has_many :recipe_ingredients, Mehungry.Food.RecipeIngredient, on_replace: :delete
     has_many :annotations, Mehungry.Food.Annotation
 
     embeds_many :steps, Mehungry.Food.Step
@@ -51,12 +55,12 @@ defmodule Mehungry.Food.Recipe do
       :description,
       :image_url,
       :user_id,
-      :language_id
+      :language_name
     ])
     |> unique_constraint(:title_user_constraint, name: :title_user_index)
     |> foreign_key_constraint(:language_id)
     |> foreign_key_constraint(:user_id)
-    |> validate_required([:title, :language_id, :recipe_ingredients, :steps])
+    |> validate_required([:title, :language_name, :recipe_ingredients, :steps])
     |> cast_embed(:steps, [:required_message])
     |> cast_assoc(:recipe_ingredients, with: &RecipeIngredient.changeset/2, required: true)
   end

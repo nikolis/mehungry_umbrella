@@ -7,7 +7,9 @@ defmodule MehungryServer.Repo.Migrations.IngredientTranslation do
       add :description, :string
       add :url, :string
 
-      add :language_id, references(:languages, on_delete: :delete_all)
+      add :language_name,
+          references(:languages, column: :name, type: :string, on_delete: :delete_all)
+
       add :ingredient_id, references(:ingredients, on_delete: :delete_all)
 
       timestamps()

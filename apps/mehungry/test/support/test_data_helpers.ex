@@ -24,7 +24,7 @@ defmodule Mehungry.TestDataHelpers do
     user
   end
 
-  def ingredient_fixture(attrs) do
+  def ingredient_fixture(attrs \\ %{}) do
     name =
       case Map.get(attrs, :name) do
         nil ->
@@ -36,6 +36,16 @@ defmodule Mehungry.TestDataHelpers do
 
     lang = Languages.get_language_by_name("En")
 
+    lang =
+      case lang do
+        nil ->
+          {:ok, lang} = Languages.create_language(%{name: "En"})
+          lang
+
+        value ->
+          value
+      end
+
     attrs =
       Enum.into(attrs, %{
         name: name,
@@ -44,7 +54,7 @@ defmodule Mehungry.TestDataHelpers do
         ingredient_translation: [
           %{
             name: name,
-            language_id: lang.id
+            language_name: lang.name
           }
         ]
       })
@@ -70,18 +80,39 @@ defmodule Mehungry.TestDataHelpers do
       end
 
     lang = Languages.get_language_by_name("En")
+
+    lang =
+      case lang do
+        nil ->
+          {:ok, lang} = Languages.create_language(%{name: "En"})
+          lang
+
+        value ->
+          value
+      end
+
     lang2 = Languages.get_language_by_name("Gr")
+
+    lang2 =
+      case lang do
+        nil ->
+          {:ok, lang2} = Languages.create_language(%{name: "Gr"})
+          lang2
+
+        value ->
+          value
+      end
 
     {:ok, category} =
       Food.create_category(%{
         name: category_name,
         category_translation: [
           %{
-            language_id: lang.id,
+            language_name: lang.name,
             name: "category"
           },
           %{
-            language_id: lang2.id,
+            language_name: lang2.name,
             name: category_name
           }
         ]
@@ -92,18 +123,39 @@ defmodule Mehungry.TestDataHelpers do
 
   def measurement_unit_fixture(attrs \\ %{}) do
     lang = Languages.get_language_by_name("En")
+
+    lang =
+      case lang do
+        nil ->
+          {:ok, lang} = Languages.create_language(%{name: "En"})
+          lang
+
+        value ->
+          value
+      end
+
     lang2 = Languages.get_language_by_name("Gr")
+
+    lang2 =
+      case lang2 do
+        nil ->
+          {:ok, lang2} = Languages.create_language(%{name: "Gr"})
+          lang2
+
+        value ->
+          value
+      end
 
     {:ok, mu} =
       Food.create_measurement_unit(%{
         name: "gram",
         translation: [
           %{
-            language_id: lang.id,
+            language_name: lang.name,
             name: "gram"
           },
           %{
-            language_id: lang2.id,
+            language_name: lang2.name,
             name: "γραμμάριο"
           }
         ]

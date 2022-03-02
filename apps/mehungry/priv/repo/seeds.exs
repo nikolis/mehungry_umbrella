@@ -19,49 +19,49 @@ require Logger
 
 Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnitTranslation{
   name: "γραμμάριο",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   measurement_unit_id: gram.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnitTranslation{
   name: "gram",
-  language_id: language_en.id,
+  language_name: language_en.name,
   measurement_unit_id: gram.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnitTranslation{
   name: "κιλό",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   measurement_unit_id: kg.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnitTranslation{
   name: "kg",
-  language_id: language_en.id,
+  language_name: language_en.name,
   measurement_unit_id: kg.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnitTranslation{
   name: "ml",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   measurement_unit_id: ml.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnitTranslation{
   name: "ml",
-  language_id: language_en.id,
+  language_name: language_en.name,
   measurement_unit_id: ml.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnitTranslation{
   name: "mg",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   measurement_unit_id: mg.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnitTranslation{
   name: "mg",
-  language_id: language_en.id,
+  language_name: language_en.name,
   measurement_unit_id: mg.id
 })
 
@@ -93,157 +93,157 @@ Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnitTranslation{
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Καρυκεύματα",
   category_id: seasonigs.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "seasonings",
   category_id: seasonigs.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Σάλτσες",
   category_id: sauces.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "sauces",
   category_id: sauces.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Όσπρια",
   category_id: legumes.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "legumes",
   category_id: legumes.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Αλκοολούχα",
   category_id: alcohol.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "alcohol",
   category_id: alcohol.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Σούπες",
   category_id: soup.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Soups",
   category_id: soup.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Ξηροι καρποί",
   category_id: nuts.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "nuts",
   category_id: nuts.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Κρέας",
   category_id: meats.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Meat",
   category_id: meats.id,
-  language_id: language_en.id
+  language_name: language_en.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Yποκατάστατα γαλακτοκομικών",
   category_id: dairy_alternatives.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Snack",
   category_id: deasert_and_snacks.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Ποτά",
   category_id: beverages.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Γαλακτοκομεικά",
   category_id: dairy.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Λαχανικά",
   category_id: vegetables.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Φρούτα",
   category_id: fruits.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "ψησίματος και καρποί",
   category_id: baking_and_grains.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "πρόσθετα γλυκαντικά",
   category_id: added_sweeteners.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "μπαχαρικά",
   category_id: spices.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Ψάρι",
   category_id: fish.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Θαλασιννά",
   category_id: seafood.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
   name: "Λάδι",
   category_id: oils.id,
-  language_id: language_gr.id
+  language_name: language_gr.name
 })
 
 {_, chicken_breast} =
@@ -257,13 +257,13 @@ Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "κοτόπουλο στοίθος",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   ingredient_id: chicken_breast.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "chicken breast",
-  language_id: language_en.id,
+  language_name: language_en.name,
   ingredient_id: chicken_breast.id
 })
 """
@@ -277,13 +277,13 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "μπροκοο",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   ingredient_id: broccoli.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "broccoli",
-  language_id: language_en.id,
+  language_name: language_en.name,
   ingredient_id: broccoli.id
 })
 
@@ -297,13 +297,13 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 """
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "φακες",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   ingredient_id: lentiles.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "lentils",
-  language_id: language_en.id,
+  language_name: language_en.name,
   ingredient_id: lentiles.id
 })
 """
@@ -315,7 +315,7 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 {:ok, recipe_1} =
   Mehungry.Repo.insert(%Mehungry.Food.Recipe{
     title: "Meet Intensive 1",
-    language_id: language_en.id,
+    language_name: language_en.name,
     user_id: user.id,
     steps: [%{title: "Step title", description: "Description"}],
     recipe_ingredients: [
@@ -327,7 +327,7 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 {:ok, recipe_2} =
   Mehungry.Repo.insert(%Mehungry.Food.Recipe{
     title: "Meet Intensive 2",
-    language_id: language_en.id,
+    language_name: language_en.name,
     user_id: user.id,
     steps: [%{title: "Step title", description: "Description"}],
     recipe_ingredients: [
@@ -339,7 +339,7 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 {:ok, recipe_3} =
   Mehungry.Repo.insert(%Mehungry.Food.Recipe{
     title: "Meet Intensive 3",
-    language_id: language_en.id,
+    language_name: language_en.name,
     user_id: user.id,
     steps: [%{title: "Step title", description: "Description"}],
     recipe_ingredients: [
@@ -351,7 +351,7 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 {:ok, recipe_4} =
   Mehungry.Repo.insert(%Mehungry.Food.Recipe{
     title: "Vegeterian 4",
-    language_id: language_en.id,
+    language_name: language_en.name,
     user_id: user.id,
     steps: [%{title: "Step title", description: "Description"}],
     recipe_ingredients: [
@@ -363,7 +363,7 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 {:ok, recipe_5} =
   Mehungry.Repo.insert(%Mehungry.Food.Recipe{
     title: "Vegeterian 5",
-    language_id: language_en.id,
+    language_name: language_en.name,
     user_id: user.id,
     steps: [%{title: "Step title", description: "Description"}],
     recipe_ingredients: [
@@ -375,7 +375,7 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 {:ok, recipe_6} =
   Mehungry.Repo.insert(%Mehungry.Food.Recipe{
     title: "Vegeterian  6",
-    language_id: language_en.id,
+    language_name: language_en.name,
     user_id: user.id,
     steps: [%{title: "Step title", description: "Description"}],
     recipe_ingredients: [
@@ -387,7 +387,7 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 {:ok, recipe_7} =
   Mehungry.Repo.insert(%Mehungry.Food.Recipe{
     title: "Vegeterian 7",
-    language_id: language_en.id,
+    language_name: language_en.name,
     user_id: user.id,
     steps: [%{title: "Step title", description: "Description"}],
     recipe_ingredients: [
@@ -398,7 +398,7 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 {:ok, recipe_8} =
   Mehungry.Repo.insert(%Mehungry.Food.Recipe{
     title: "Vegeterian 8",
-    language_id: language_en.id,
+    language_name: language_en.name,
     user_id: user.id,
     steps: [%{title: "Step title", description: "Description"}],
     recipe_ingredients: [
@@ -409,7 +409,7 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 {:ok, recipe_9} =
   Mehungry.Repo.insert(%Mehungry.Food.Recipe{
     title: "Vegeterian  9",
-    language_id: language_en.id,
+    language_name: language_en.name,
     user_id: user.id,
     steps: [%{title: "Step title", description: "Description"}],
     recipe_ingredients: [
@@ -430,18 +430,18 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "κιμας μοσχαρίσιος",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   ingredient_id: ground_beef.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "ground beef",
-  language_id: language_en.id,
+  language_name: language_en.name,
   ingredient_id: ground_beef.id
 })
 
 # {:ok, bacon} = Mehungry.Repo.insert(%Mehungry.Food.Ingredient{name: "bacon", category: meats, measurement_unit: gram})
-# Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{name: "μπέικον", language_id: language_gr.id, ingredient_id: bacon.id})
+# Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{name: "μπέικον", language_name: language_gr.name, ingredient_id: bacon.id})
 
 {:ok, sausage} =
   Mehungry.Repo.insert(%Mehungry.Food.Ingredient{
@@ -452,13 +452,13 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "λουκάνικο",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   ingredient_id: sausage.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "sausage",
-  language_id: language_en.id,
+  language_name: language_en.name,
   ingredient_id: sausage.id
 })
 
@@ -471,13 +471,13 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "μοσχαρίσια μπριζόλα",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   ingredient_id: beef_steak.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "beef steak",
-  language_id: language_en.id,
+  language_name: language_en.name,
   ingredient_id: beef_steak.id
 })
 
@@ -490,13 +490,13 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "ζαμπόν",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   ingredient_id: ham.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "ham",
-  language_id: language_en.id,
+  language_name: language_en.name,
   ingredient_id: ham.id
 })
 
@@ -509,13 +509,13 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "λουκάνικο",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   ingredient_id: hot_dog.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "hot dog",
-  language_id: language_en.id,
+  language_name: language_en.name,
   ingredient_id: hot_dog.id
 })
 
@@ -528,13 +528,13 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "χοιρινη μπριζόλα",
-  language_id: language_gr.id,
+  language_name: language_gr.name,
   ingredient_id: hot_dog.id
 })
 
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "pork chops",
-  language_id: language_en.id,
+  language_name: language_en.name,
   ingredient_id: hot_dog.id
 })
 

@@ -29,12 +29,13 @@ defmodule MehungryWeb.ModelTrainer do
 
             grades =
               Enum.map(data, fn {x, grade} ->
-                #{int_id, _rest} = Integer.parse(x)
-                #recipe = Food.get_recipe!(int_id)
+                # {int_id, _rest} = Integer.parse(x)
+                # recipe = Food.get_recipe!(int_id)
                 {int_grade, _rest} = Integer.parse(grade)
                 int_grade
               end)
-            recipies = 
+
+            recipies =
               Enum.map(data, fn {x, grade} ->
                 {int_id, _rest} = Integer.parse(x)
                 recipe = Food.get_recipe!(int_id)
@@ -48,7 +49,7 @@ defmodule MehungryWeb.ModelTrainer do
                 x = [1] ++ x
                 Numexy.new(x)
               end)
-          
+
             {thetas, error} = Reccomendations.optimize_thetas([0, 0, 0, 0], xs, grades, 1_500)
 
             IO.inspect(recipies, label: "The processed data")

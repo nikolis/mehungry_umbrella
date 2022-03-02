@@ -4,6 +4,7 @@ defmodule Mehungry.Food do
 
   alias Mehungry.Repo
   alias Mehungry.Food.Recipe
+  alias Mehungry.Food.Step
   alias Mehungry.Food.RecipeIngredient
   alias Mehungry.Food.MeasurementUnit
   alias Mehungry.Food.MeasurementUnitTranslation
@@ -23,6 +24,10 @@ defmodule Mehungry.Food do
 
   def change_category(cat) do
     Category.changeset(cat, %{})
+  end
+
+  def change_step(%Step{} = step, attrs \\ %{}) do
+    Step.changeset(step, attrs)
   end
 
   def annotate_recipe(%User{id: user_id}, recipe_id, attrs) do
@@ -78,7 +83,7 @@ defmodule Mehungry.Food do
   end
 
   def translate_recipe_if_needed(recipe) do
-    language = Repo.get(Language, recipe.language_id)
+    language = Repo.get(Language, recipe.language_name)
 
     case language do
       %{name: "Gr"} ->
@@ -92,11 +97,12 @@ defmodule Mehungry.Food do
             join: cat in Category,
             where: cat.id == ingredient.category_id,
             join: cat_trans in CategoryTranslation,
-            where: cat_trans.category_id == cat.id and ^language.id == cat_trans.language_id,
+            where: cat_trans.category_id == cat.id and ^language.id == cat_trans.language_name,
             join: mu in MeasurementUnit,
             where: mu.id == rec_ing.measurement_unit_id,
             join: mu_trans in MeasurementUnitTranslation,
-            where: mu_trans.measurement_unit_id == mu.id and ^language.id == mu_trans.language_id,
+            where:
+              mu_trans.measurement_unit_id == mu.id and ^language.id == mu_trans.language_name,
             select: %RecipeIngredient{
               quantity: rec_ing.quantity,
               ingredient_allias: rec_ing.ingredient_allias,
@@ -231,10 +237,10 @@ defmodule Mehungry.Food do
     Repo.delete(ingredient)
   end
 
-  def find_ingredient_translation(language_id, ingredient_id) do
+  def find_ingredient_translation(language_name, ingredient_id) do
     query =
       from in_tr in "ingredient_translations",
-        where: ^language_id == in_tr.language_id and ^ingredient_id == in_tr.ingredient_id,
+        where: ^language_name == in_tr.language_name and ^ingredient_id == in_tr.ingredient_id,
         select: in_tr.name
 
     Repo.all(query)
@@ -299,7 +305,7 @@ defmodule Mehungry.Food do
     else
       query =
         from mu_trans in MeasurementUnitTranslation,
-          where: mu_trans.language_id == ^language.id
+          where: mu_trans.language_name == ^language.id
 
       query_search =
         from transl in query,
@@ -318,16 +324,16 @@ defmodule Mehungry.Food do
     end
   end
 
-  def search_ingredient(search_term, language_id) do
+  def search_ingredient(search_term, language_name) do
     search_term = search_term <> "%"
 
     Logger.info(
       "Searching for ingredient with name: " <>
         search_term <>
-        ", in: " <> language_id
+        ", in: " <> language_name
     )
 
-    if is_nil(language_id) do
+    if is_nil(language_name) do
       query =
         from ingredient in Ingredient,
           where: ilike(ingredient.name, ^search_term)
@@ -335,15 +341,15 @@ defmodule Mehungry.Food do
       Repo.all(query)
       |> Repo.preload([:category, :measurement_unit])
     else
-      if is_nil(language_id) do
-        Logger.info("Language not fount" <> language_id)
+      if is_nil(language_name) do
+        Logger.info("Language not fount" <> language_name)
         []
       else
-        Logger.info("Language no doupt" <> language_id)
+        Logger.info("Language no doupt" <> language_name)
 
         query =
           from ingr_trans in IngredientTranslation,
-            where: ingr_trans.language_id == ^language_id
+            where: ingr_trans.language_name == ^language_name
 
         query_search =
           from transl in query,
@@ -351,16 +357,18 @@ defmodule Mehungry.Food do
 
         query_aggrigate =
           from tra in query_search,
-            join: ing in Ingredient,
+            inner_join: ing in Ingredient,
             on: ing.id == tra.ingredient_id,
-            join: cat in Category,
+            inner_join: cat in Category,
             where: cat.id == ing.category_id,
-            join: cat_trans in CategoryTranslation,
-            where: cat_trans.category_id == cat.id and ^language_id == cat_trans.language_id,
-            join: mu in MeasurementUnit,
+            inner_join: cat_trans in CategoryTranslation,
+            where: cat_trans.category_id == cat.id and cat_trans.language_name == ^language_name,
+            inner_join: mu in MeasurementUnit,
             where: mu.id == ing.measurement_unit_id,
-            join: mu_trans in MeasurementUnitTranslation,
-            where: mu_trans.measurement_unit_id == mu.id and ^language_id == mu_trans.language_id,
+            inner_join: mu_trans in MeasurementUnitTranslation,
+            where:
+              mu_trans.measurement_unit_id == mu.id and mu_trans.language_name == ^language_name,
+            distinct: true,
             select: %Ingredient{
               name: tra.name,
               id: ing.id,

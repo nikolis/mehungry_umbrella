@@ -10,14 +10,15 @@
     phx-change="validate"
     phx-submit="save">
   
-     <.ignore>  
+    <.ignore>  
+      <%= label f, :ingredient %>
+      <%= text_input f, :ingredient %>
+      <%= error_tag f, :ingredient %>
+    
       <%= label f, :measurement_unit %>
       <%= text_input f, :measurement_unit %>
       <%= error_tag f, :measurement_unit %>
 
-      <%= label f, :ingredient %>
-      <%= text_input f, :ingredient %>
-      <%= error_tag f, :ingredient %>
     </.ignore>
 
 
@@ -38,7 +39,11 @@
     </div>
    
     <br> 
-    <div class="flex-initial">
+    <div class="flex-initial"
+         phx-hook="Mu" 
+         phx-update="ignore"
+         id="select_ingredient_container" 
+    >
       <%= label f, :measurement_unit %>
       <br>
       <select>
@@ -52,14 +57,17 @@
 
 
     <br>
-    <%= text_input f, :ingredient_id , id: "ingredient_id_ph" %>
     <div class="flex-initial">
       <%= label f, :quantity %>
       <%= text_input f, :quantity , id: "quantity_placeholder"%>
       <%= error_tag f, :quantity %>
-   </div>
+    </div>
 
-    
+    <div phx-update="ignore">
+        <%= hidden_input f, :ingredient_id , id: "ingredient_id_ph" %>
+        <%= hidden_input f, :measurement_unit_id , id: "mu_id_ph"  %>
+    </div>
+
     <br>
     <div>
       <%= submit "Save",id: "submit_button_ingredient" ,phx_disable_with: "Saving..." %>
