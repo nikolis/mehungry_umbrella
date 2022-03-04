@@ -46,7 +46,7 @@ RUN apk upgrade --no-cache && \
 ARG VERSION=0.7.0
 
 WORKDIR /app
-COPY --from=builder /app/_build/prod/rel/mehungry_umbrella/app/
+COPY --from=builder /app/_build/prod/rel/mehungry_umbrella /app/
 
 #RUN ln -s ./foilapp/lib/foilapi_web-${VERSION}/priv/static /app/static
 ENV HOME=/app
