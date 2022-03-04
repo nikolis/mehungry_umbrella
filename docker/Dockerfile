@@ -54,4 +54,3 @@ ENV HOME=/app
 EXPOSE 4000
 
 ENTRYPOINT ["./bin/mehungry_umbrella", "start"]
-

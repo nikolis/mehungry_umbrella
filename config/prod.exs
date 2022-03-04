@@ -13,6 +13,15 @@ config :mehungry_web, MehungryWeb.Endpoint,
   url: [host: "example.com", port: 80],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
+config :mehungry, Mehungry.Repo,
+  username: System.get_env("DB_USER") || "postgres",
+  password: System.get_env("DB_PASS") || "postgres",
+  database: System.get_env("DB_NAME") || "mehungry_server_dev",
+  hostname: System.get_env("DB_HOST") || "localhost",
+  port: System.get_env("DB_PORT") || 5432,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
+
 # ## SSL Support
 #
 # To get SSL working, you will need to add the `https` key

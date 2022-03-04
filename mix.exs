@@ -7,13 +7,13 @@ defmodule Mehungry.Umbrella.MixProject do
       version: "0.1.0",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
-    ],
-    releases: [
+      aliases: aliases(),
+      releases: [
         mehungry_umbrella: [
           applications: [mehungry: :permanent, mehungry_web: :permanent, mehungry_api: :permanent]
         ]
       ]
+    ]
   end
 
   # Dependencies can be Hex packages:
