@@ -36,7 +36,7 @@ COPY . /app/
 
 WORKDIR /app
 
-RUN PORT=4000 MIX_ENV=prod mix do compile, phx.swagger.generate, release
+RUN PORT=4000 MIX_ENV=prod mix do compile, release
 
 # prepare release image
 FROM bitwalker/alpine-elixir:1.10.3
