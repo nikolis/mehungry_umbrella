@@ -17,7 +17,7 @@ RUN mix do local.hex --force, local.rebar --force
 
 COPY config config
 COPY mix.* ./
-COPY apps/mehungry/mix.exs ./apps/foilapi/
+COPY apps/mehungry/mix.exs ./apps/mehungry/
 COPY apps/mehungry_api/mix.exs ./apps/mehungry_api/
 COPY apps/mehungry_web/mix.exs ./apps/mehungry_web/
 RUN apk add make
@@ -46,12 +46,12 @@ RUN apk upgrade --no-cache && \
 ARG VERSION=0.7.0
 
 WORKDIR /app
-COPY --from=builder /app/_build/prod/rel/foilapp /app/
+COPY --from=builder /app/_build/prod/rel/mehungry_umbrella/app/
 
 #RUN ln -s ./foilapp/lib/foilapi_web-${VERSION}/priv/static /app/static
 ENV HOME=/app
 
 EXPOSE 4000
 
-ENTRYPOINT ["./bin/foilapp", "start"]
+ENTRYPOINT ["./bin/mehungry_umbrella", "start"]
 
