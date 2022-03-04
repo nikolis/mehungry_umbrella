@@ -174,17 +174,17 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
         run: |
-          docker build  -t $ECR_REGISTRY/cms_repo:$IMAGE_TAG -f docker/Dockerfile .
-          docker push $ECR_REGISTRY/cms_repo:$IMAGE_TAG
+          docker build  -t $ECR_REGISTRY/mehyngry_ecr_repo:$IMAGE_TAG -f docker/Dockerfile .
+          docker push $ECR_REGISTRY/mehyngry_ecr_repo:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
       - name: deploy to cluster
         uses: kodermax/kubectl-aws-eks@master
         env:
           KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: foilmusic/web
+          ECR_REPOSITORY: mehyngry_ecr_repo
           IMAGE_TAG: ${{ github.sha }}
-          RELEASE_IMAGE: ${{ steps.login-ecr.outputs.registry }}/cms_repo:${{ github.sha }}
+          RELEASE_IMAGE: ${{ steps.login-ecr.outputs.registry }}/mehyngry_ecr_repo:${{ github.sha }}
 
         with:
-          args: --namespace=cms-ns set image deployment/foilweb-cms-deployment foilweb-cms=$ECR_REGISTRY/cms_repo:$IMAGE_TAG
+          args: --namespace=mehungry-app-ns set image deployment/mehungry-app-deployment mehungry_app=$ECR_REGISTRY/mehyngry_ecr_repo:$IMAGE_TAG
