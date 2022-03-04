@@ -28,11 +28,11 @@ RUN mix do deps.get --only $MIX_ENV, deps.compile, compile
 COPY . /app/
 
 # build assets
-WORKDIR /app/apps/mehungry_web
+#WORKDIR /app/apps/mehungry_web
 
-RUN npm install --prefix ./assets/ ci --progress=false --no-audit --loglevel=error
-RUN npm run deploy --prefix ./assets
-RUN mix phx.digest
+#RUN npm install --prefix ./assets/ ci --progress=false --no-audit --loglevel=error
+#RUN npm run deploy --prefix ./assets
+#RUN mix phx.digest
 
 WORKDIR /app
 
