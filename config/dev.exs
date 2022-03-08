@@ -2,9 +2,9 @@ use Mix.Config
 
 # Configure your database
 config :mehungry, Mehungry.Repo,
-  username: System.get_env("DB_USER") || "postgres",
-  password: System.get_env("DB_PASS") || "postgres",
-  database: System.get_env("DB_NAME") || "mehungry_server_dev",
+  username: System.get_env("RDS_USERNAME") || "postgres",
+  password: System.get_env("RDS_PASSWORD") || "postgres",
+  database: System.get_env("RDS_DB_NAME") || "mehungry_server_dev",
   hostname: System.get_env("DB_HOST") || "localhost",
   port: System.get_env("DB_PORT") || 5432,
   show_sensitive_data_on_connection_error: true,
