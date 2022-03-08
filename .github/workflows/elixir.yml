@@ -170,6 +170,7 @@ jobs:
           RDS_USERNAME: ${{ secrets.RDS_USERNAME }}
           RDS_DB_NAME: ${{ secrets.RDS_DB_NAME }}
           RDS_HOSTNAME: ${{ secrets.RDS_HOSTNAME_LD }}
+          DB_HOST: ${{ secrets.DB_HOST }}
           RDS_PORT: ${{ secrets.RDS_PORT }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
