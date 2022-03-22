@@ -29,7 +29,7 @@ COPY apps/mehungry_web/mix.exs ./apps/mehungry_web/
 RUN apk add make
 RUN apk update && apk add --virtual build-dependencies build-base gcc wget git
 
-RUN mix do deps.get --only $MIX_ENV, deps.compile, compile
+RUN mix do deps.get --only $MIX_ENV, deps.compile, compile, phx.digest
 
 COPY . /app/
 
