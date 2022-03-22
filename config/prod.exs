@@ -11,7 +11,7 @@ use Mix.Config
 # before starting your production server.
 config :mehungry_web, MehungryWeb.Endpoint,
   url: [host: "example.com", port: 80],
-  cache_static_manifest: "priv/static/cache_manifest.json"
+  #cache_static_manifest: "priv/static/cache_manifest.json"
 
 
 IO.inspect("Config -----------------------------------------------------------------------------------------------------------")
