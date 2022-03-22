@@ -1,5 +1,14 @@
 use Mix.Config
 
+
+IO.inspect("Config Error-----------------------------------------------------------------------------------------------------------")
+IO.inspect(System.get_env("RDS_USERNAME"))
+IO.inspect(System.get_env("RDS_PASSWORD"))
+IO.inspect(System.get_env("RDS_DB_NAME"))
+IO.inspect(System.get_env("DB_HOST"))
+IO.inspect("Config End -----------------------------------------------------------------------------------------------------------")
+
+
 # Configure your database
 config :mehungry, Mehungry.Repo,
   username: System.get_env("RDS_USERNAME") || "postgres",

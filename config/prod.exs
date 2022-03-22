@@ -13,6 +13,14 @@ config :mehungry_web, MehungryWeb.Endpoint,
   url: [host: "example.com", port: 80],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
+
+IO.inspect("Config -----------------------------------------------------------------------------------------------------------")
+IO.inspect(System.get_env("RDS_USERNAME"))
+IO.inspect(System.get_env("RDS_PASSWORD"))
+IO.inspect(System.get_env("RDS_DB_NAME"))
+IO.inspect(System.get_env("DB_HOST"))
+IO.inspect("Config End -----------------------------------------------------------------------------------------------------------")
+
 config :mehungry, Mehungry.Repo,
   username: System.get_env("RDS_USERNAME") || "postgres",
   password: System.get_env("RDS_PASSWORD") || "postgres",
