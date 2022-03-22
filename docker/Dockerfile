@@ -27,6 +27,9 @@ COPY apps/mehungry/mix.exs ./apps/mehungry/
 COPY apps/mehungry_api/mix.exs ./apps/mehungry_api/
 COPY apps/mehungry_web/mix.exs ./apps/mehungry_web/
 RUN apk add make
+
+ENV PYTHONUNBUFFERED=1
+RUN apk add --update --no-cache python3 && ln -sf python3 /usr/bin/python
 RUN apk update && apk add --virtual build-dependencies build-base gcc wget git
 
 RUN mix do deps.get --only $MIX_ENV, deps.compile, compile, phx.digest
