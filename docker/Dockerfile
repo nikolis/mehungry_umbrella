@@ -21,7 +21,7 @@ ENV MIX_ENV=prod \
 # install hex + rebar
 RUN mix do local.hex --force, local.rebar --force 
 
-COPY config config
+COPY config/  /app/config
 COPY mix.* ./
 COPY apps/mehungry/mix.exs ./apps/mehungry/
 COPY apps/mehungry_api/mix.exs ./apps/mehungry_api/
@@ -38,6 +38,12 @@ COPY . /app/
 
 # build assets
 WORKDIR /app/apps/mehungry_web
+
+RUN npm install --prefix ./assets/ ci --progress=false --no-audit --loglevel=error
+RUN npm run deploy --prefix ./assets
+RUN mix phx.digest
+
+WORKDIR /app/apps/mehungry_api
 
 RUN npm install --prefix ./assets/ ci --progress=false --no-audit --loglevel=error
 RUN npm run deploy --prefix ./assets
@@ -60,6 +66,10 @@ COPY --from=builder /app/_build/prod/rel/mehungry_umbrella /app/
 #RUN ln -s ./foilapp/lib/foilapi_web-${VERSION}/priv/static /app/static
 ENV HOME=/app
 
-EXPOSE 4000
-
-ENTRYPOINT ["./bin/mehungry_umbrella", "start"]
+EXPOSE 4000 3000
+RUN ls
+RUN pwd
+WORKDIR /app/bin
+RUN ls 
+RUN pwd
+ENTRYPOINT ["./mehungry_umbrella", "start"]

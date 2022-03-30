@@ -2,6 +2,8 @@ defmodule MehungryApi.Endpoint do
   use Phoenix.Endpoint, otp_app: :mehungry_api
   plug(CORSPlug)
 
+  IO.inspect("Running from within the endpoit mehungry API")
+
   @session_options [
     store: :cookie,
     key: "_mehungry_api_key",

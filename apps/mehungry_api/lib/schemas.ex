@@ -409,19 +409,19 @@ defmodule MehungryApi.Schemas do
       type: :object,
       required: [:meal_datetime, :recipes],
       properties: %{
-           meal_datetime: %Schema{
-              type: :string,
-              format: :datetime,
-              description: "The datetime of the meal"
-            },
-            title: %Schema{
-              type: :string,
-              format: :string,
-              description: "An optional Title for th email i.e breakfast"
-            },
-            recipes: %Schema{
-              type: :array,
-              items: Recipe
+        meal_datetime: %Schema{
+          type: :string,
+          format: :datetime,
+          description: "The datetime of the meal"
+        },
+        title: %Schema{
+          type: :string,
+          format: :string,
+          description: "An optional Title for th email i.e breakfast"
+        },
+        recipes: %Schema{
+          type: :array,
+          items: Recipe
         }
       }
     })

@@ -18,7 +18,7 @@ defmodule MehungryApi.RecipeIngredientView do
       quantity: recipe_ingredient.quantity,
       ingredient_allias: recipe_ingredient.ingredient_allias,
       ingredient:
-      render_one(recipe_ingredient.ingredient, IngredientView, "ingredient_plane.json"),
+        render_one(recipe_ingredient.ingredient, IngredientView, "ingredient_plane.json"),
       measurement_unit_id: recipe_ingredient.measurement_unit_id,
       ingredient_id: recipe_ingredient.ingredient_id,
       measurement_unit:
