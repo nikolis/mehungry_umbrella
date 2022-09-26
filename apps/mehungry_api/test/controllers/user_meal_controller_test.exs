@@ -77,7 +77,7 @@ defmodule MehungryApi.UserMealControllerTest do
 
       conn = get(conn, Routes.user_meal_path(conn, :index))
       assert Enum.count(json_response(conn, 200)["data"]) == 1
-      
+
       api_spec = MehungryApi.ApiSpec.spec()
       [data] = json_response(conn, 200)["data"]
       recipes = List.first(data["recipes"])

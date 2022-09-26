@@ -1,29 +1,34 @@
-<h1>Listing Recipes</h1>
 
+<.form
+  let={f}
+  for={@changeset}
+  id="recipe-form"
+  phx-change="validate"
+  phx-submit="search">
 
-<table>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Description</th>
+  <%= text_input f, :title %>
+ 
+  <div>
+    <%= submit "Search", phx_disable_with: "Searching..." %>
+  </div>
+ 
+</.form>
 
-      <th></th>
-    </tr>
-  </thead>
-  <tbody id="recipes">
-    <%= for recipe <- @recipes do %>
-      <tr id={"recipe-#{recipe.id}"}>
-        <td><%= recipe.title %></td>
-
-        <td>
-            <span><%= link "1 Star", to: "#", phx_click: "review", phx_value_points: 1 ,phx_value_id: recipe.id %></span>
-            <span><%= link "2 Stars", to: "#", phx_click: "review", phx_value_points: 2 ,phx_value_id: recipe.id %></span>
-            <span><%= link "3 Stars", to: "#", phx_click: "review", phx_value_points: 3 ,phx_value_id: recipe.id %></span>
-            <span><%= link "4 Stars", to: "#", phx_click: "review", phx_value_points: 4 ,phx_value_id: recipe.id %></span>
-            <span><%= link "5 Stars", to: "#", phx_click: "review", phx_value_points: 5 ,phx_value_id: recipe.id %></span>
-        </td>
-      </tr>
-    <% end %>
-  </tbody>
-</table>
-
+<div class="grid grid-cols-5 gap-4">
+<%= for recipe <- @recipes do %>      
+  <div class="max-w-sm rounded overflow-hidden shadow-lg">
+    <img class="w-full" src= {recipe.image_url} alt="Sunset in the mountains">
+    <div class="px-6 py-4">
+      <div class="font-bold text-xl mb-2"></div>
+      <p class="text-gray-700 text-base">
+        <%= recipe.title %>
+      </p>
+    </div>
+    <div class="px-6 pt-4 pb-2">
+      <span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">#photography</span>
+      <span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">#travel</span>
+      <span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">#winter</span>
+    </div>
+  </div>
+<% end %>
+</div>

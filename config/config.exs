@@ -24,6 +24,15 @@ config :mehungry_web, MehungryWeb.Endpoint,
   pubsub_server: Mehungry.PubSub,
   live_view: [signing_salt: "l1ra29uq"]
 
+config :tailwind, version: "3.1.8", default: [
+  args: ~w(
+    --config=tailwind.config.js
+    --input=css/app.css
+    --output=../apps/mehungry_web/priv/static/assets/app.css
+  ),
+  cd: Path.expand("../assets", __DIR__)
+]  
+
 config :mehungry_api, MehungryApi.Guardian,
   issuer: "mehungry_api",
   secret_key: "xqo0BfDpsWTY/ZDz/+nmsbdLFLfZEmU3qXhJzdtc3qS7GZyji91GLgE15nYoVbxt"

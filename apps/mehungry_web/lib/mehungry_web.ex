@@ -81,8 +81,9 @@ defmodule MehungryWeb do
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML
       import Phoenix.LiveView.Helpers
+      import MehungryWeb.LiveHelpers 
+      import Phoenix.Component
 
-      import MehungryWeb.LiveHelpers
       # Import basic rendering functionality (render, render_layout, etc)
       import Phoenix.View
       import HeexIgnore

@@ -22,19 +22,19 @@ defmodule Mehungry.Food do
     Repo.get(Category, id)
   end
 
-  def change_category(cat) do
-    Category.changeset(cat, %{})
+  def change_category(%Category{} = category, attrs \\ %{}) do
+    Category.changeset(category, attrs)
   end
 
   def change_step(%Step{} = step, attrs \\ %{}) do
     Step.changeset(step, attrs)
   end
 
-  def annotate_recipe(%User{id: user_id}, recipe_id, attrs) do
-    %Annotation{recipe_id: recipe_id, user_id: user_id}
-    |> Annotation.changeset(attrs)
-    |> Repo.insert()
-  end
+#  def annotate_recipe(%User{id: user_id}, recipe_id, attrs) do
+#    %Annotation{recipe_id: recipe_id, user_id: user_id}
+#    |> Annotation.changeset(attrs)
+#    |> Repo.insert()
+#  end
 
   def get_user_likes(user_id) do
     query =
@@ -73,14 +73,14 @@ defmodule Mehungry.Food do
     result
   end
 
-  def get_user_by_email(email) do
-    query =
-      from usr in User,
-        join: credential in Credential,
-        where: ^email == credential.email
+#  def get_user_by_email(email) do
+#    query =
+#      from usr in User,
+#        join: credential in Credential,
+#        where: ^email == credential.email
 
-    Repo.get_by(User, query)
-  end
+#    Repo.get_by(User, query)
+#  end
 
   def translate_recipe_if_needed(recipe) do
     language = Repo.get(Language, recipe.language_name)
@@ -170,9 +170,9 @@ defmodule Mehungry.Food do
     Repo.all(RecipeIngredient)
   end
 
-  def list_users() do
-    Repo.all(User)
-  end
+#  def list_users() do
+#    Repo.all(User)
+#  end
 
   def create_measurement_unit(attrs) do
     %MeasurementUnit{}
@@ -194,6 +194,10 @@ defmodule Mehungry.Food do
 
   def list_measurement_units() do
     Repo.all(MeasurementUnit)
+  end
+
+  def change_recipe(recipe , attrs \\ %{}) do
+    Recipe.changeset(recipe, attrs) 
   end
 
   def list_recipes() do
@@ -244,6 +248,11 @@ defmodule Mehungry.Food do
         select: in_tr.name
 
     Repo.all(query)
+  end
+
+  def get_ingredient!(id) do
+    result = Repo.get!(Ingredient, id)
+    Repo.preload(result, :ingredient_translation)
   end
 
   def get_ingredient(id) do

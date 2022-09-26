@@ -8,22 +8,19 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   alias Mehungry.Food.Step
   alias Mehungry.Food.RecipeIngredient
 
-  @step_title "Step Title"
-  @step_description "The description of the step"
 
   @impl true
   def mount(_params, _session, socket) do
-    attrs = %{uuid: Ecto.UUID.generate()}
-
+    recipe = %Recipe{steps: [], recipe_ingredients: [] , language_name: "En"}
     {:ok,
      socket
-     |> assign(:recipes, list_recipes())
+     |> assign(:recipe, recipe)
      |> assign(:ingredients, list_ingredients())
-     |> assign(:recipe_ingredients, [])
-     |> assign(:steps, [%{attributes: attrs, changeset: Food.change_step(%Step{}, %{})}])
+     |> assign(:changeset, Food.change_recipe(recipe))
      |> allow_upload(:image,
        accept: ~w(.jpg .jpeg .png),
        max_entries: 1,
+       max_file_size: 9_000_000,
        auto_upload: true,
        progress: &handle_progress/3
      )}
@@ -35,15 +32,9 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def map_recipe_ingredient(recipe_ingredients) do
-    result =
-      Enum.map(recipe_ingredients, fn ing ->
-        ingredient = Food.get_ingredient(ing["ingredient_id"])
-        measurement_unit = Food.get_measurement_unit!(ing["measurement_unit_id"])
-        ing = Map.put(ing, "ingredient", ingredient.name)
-        ing = Map.put(ing, "measurement_unit", measurement_unit.name)
-      end)
-
-    result
+    ingredient = Food.get_ingredient(recipe_ingredients.ingredient_id)
+    measurement_unit = Food.get_measurement_unit!(recipe_ingredients.measurement_unit_id)
+    the_ing = %{temp_id: recipe_ingredients.temp_id, ingredient: ingredient.name, measurement_unit: measurement_unit.name, quantity: recipe_ingredients.quantity}
   end
 
   defp handle_progress(:image, entry, socket) do
@@ -67,52 +58,91 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   defp upload_static_file(%{path: path}, socket) do
-    # Plug in your production image file persistence implementation here!
+    #TODO Implement S3 upload before deployment
     dest = Path.join("priv/static/images", Path.basename(path))
     File.cp!(path, dest)
     Routes.static_path(socket, "/images/#{Path.basename(dest)}")
   end
 
-  @impl true
-  def handle_event("add_step", _, socket) do
-    attrs = %{uuid: Ecto.UUID.generate()}
 
-    steps =
-      socket.assigns.steps ++ [%{attributes: attrs, changeset: Food.change_step(%Step{}, %{})}]
-
-    {:noreply,
-     socket
-     |> assign(:steps, steps)}
+  def handle_event("save", %{"recipe" => recipe_params}, socket) do
+    save_recipe(socket, socket.assigns, recipe_params)
   end
 
-  @impl true
-  def handle_event("validate", %{"step" => step_params, "ident" => ident} = params, socket) do
-    IO.inspect(params, label: "Params")
-    [step] = Enum.filter(socket.assigns.steps, fn x -> x.attributes.uuid == ident end)
-    rest = Enum.filter(socket.assigns.steps, fn x -> x.attributes.uuid != ident end)
+  defp save_recipe(socket, action, recipe_params) do
+    recipe_params = 
+      if (! is_nil(Map.get(recipe_params, "steps"))) do
+        Map.put(recipe_params, "steps", Enum.map(recipe_params["steps"], fn x -> elem(x, 1) end))
+      else
+        recipe_params
+      end
+     recipe_params = 
+      if (! is_nil(Map.get(recipe_params, "recipe_ingredients"))) do
+        Map.put(recipe_params, "recipe_ingredients", Enum.map(recipe_params["recipe_ingredients"], fn x -> elem(x, 1) end))
+      else
+        recipe_params
+      end
+ 
+    case Food.create_recipe(recipe_params) do
+      {:ok, _category} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Recipe has been created ")
+         |> push_redirect(to: socket.assigns.return_to)}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, changeset: changeset)}
+    end
+  end
+
+
+  def handle_event("remove-step", %{"remove" => remove_id}, socket) do
+    steps =
+      socket.assigns.changeset.changes.steps
+      |> Enum.reject(fn %{data: step} ->
+        step.temp_id == remove_id
+      end)
 
     changeset =
-      %Step{}
-      |> Food.change_step(step_params)
-      |> Map.put(:action, :validate)
+      socket.assigns.changeset
+      |> Ecto.Changeset.put_embed(:steps, steps)
 
-    {:noreply,
-     assign(socket, :steps, rest ++ [%{attributes: %{uuid: ident}, changeset: changeset}])}
+    {:noreply, assign(socket, changeset: changeset)}
+  end
+
+  defp get_temp_id, do: :crypto.strong_rand_bytes(5) |> Base.url_encode64 |> binary_part(0, 5)
+
+
+  @impl true
+  def handle_event("validate", %{"recipe" => recipe_params} , socket) do
+    ##TODO Investigate wtf is going on in here
+    recipe_params = 
+      if (! is_nil(Map.get(recipe_params, "steps"))) do
+        Map.put(recipe_params, "steps", Enum.map(recipe_params["steps"], fn x -> elem(x, 1) end))
+      else
+        recipe_params
+      end
+    changeset = 
+      socket.assigns.recipe
+      |> Food.change_recipe(recipe_params)
+      |> Map.put(:action, :validate)
+    {:noreply, assign(socket, :changeset, changeset)}
   end
 
   defp apply_action(socket, :add_ingredient, _params) do
-    uuid = Ecto.UUID.generate()
+    temp_id = get_temp_id() 
 
     socket
     |> assign(:page_title, "New Recipe")
-    |> assign(:recipe_ingredient, %{"uuid" => uuid})
+    |> assign(:recipe_ingredient, %{"temp_id" => temp_id})
   end
 
-  defp apply_action(socket, :edit_ingredient, %{"uuid" => uuid}) do
-    recipe_ingredient =
-      Enum.find(socket.assigns.recipe_ingredients, fn x -> x["uuid"] == uuid end)
 
-    IO.inspect(recipe_ingredient, label: "Edit")
+  defp apply_action(socket, :edit_ingredient, %{"temp_id" =>temp_id}) do
+    recipe_ingredient_changeset =
+      Enum.find(socket.assigns.changeset.changes.recipe_ingredients, fn x -> x.changes.temp_id == temp_id end)
+   
+    recipe_ingredient = Map.new(recipe_ingredient_changeset.changes, fn {k, v} -> {Atom.to_string(k), v} end) 
 
     socket
     |> assign(:page_title, "New Recipe")
@@ -121,61 +151,63 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   defp apply_action(socket, :index, _params) do
     socket
-    |> assign(:page_title, "Listing Recipes")
-    |> assign(:recipe, nil)
   end
 
   @impl true
-  def handle_event(
-        "new_ingredient_entry",
-        %{
-          "ingredient_id" => ingredient_id,
-          "measurement_unit_id" => mu_id,
-          "quantity" => quantity
-        },
-        socket
-      ) do
-    # recipe = Food.get_recipe!(id)
-    # {:ok, _} = Food.delete_recipe(recipe)
-
-    {:noreply, assign(socket, :recipes, list_recipes())}
-  end
-
-  @impl true
-  def handle_event("delete_step", %{"uuid" => uuid}, socket) do
-    steps = Enum.filter(socket.assigns.steps, fn x -> x["uuid"] != uuid end)
-
-    {:noreply,
-     socket
-     |> assign(:steps, steps)}
-  end
-
-  @impl true
-  def handle_event("delete_ingredient", %{"uuid" => uuid}, socket) do
-    IO.inspect(socket.assigns.recipe_ingredients, label: "Recipe ingredients before")
-
+  def handle_event("delete_ingredient", %{"temp_id" => temp_id}, socket) do
     recipe_ingredients =
-      Enum.filter(socket.assigns.recipe_ingredients, fn x -> x["uuid"] != uuid end)
-
-    IO.inspect(recipe_ingredients, label: "Recipe Ingredients after")
+      Enum.filter(socket.assigns.recipe_ingredients, fn x -> x["temp_id"] != temp_id end)
 
     {:noreply,
      socket
      |> assign(:recipe_ingredients, recipe_ingredients)}
   end
+
+  def handle_event("add-step", _, socket) do
+    existing_steps = Map.get(socket.assigns.changeset.changes, :steps, socket.assigns.recipe.steps)
+    
+    steps =
+      existing_steps
+      |> Enum.concat([
+        Food.change_step(%Step{temp_id: get_temp_id()}) # NOTE temp_id
+      ])
+
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.put_embed(:steps, steps)
+
+    {:noreply, assign(socket, changeset: changeset)}
+  end
+
 
   @impl true
   def handle_info({:recipe_ingredient, recipe_ingredient_params}, socket) do
-    recipe_ingredients =
-      Enum.filter(socket.assigns.recipe_ingredients, fn x ->
-        x["uuid"] != recipe_ingredient_params["uuid"]
-      end)
 
-    recipe_ingredients = recipe_ingredients ++ [recipe_ingredient_params]
+    existing_ingredients = Map.get(socket.assigns.changeset.changes, :recipe_ingredients, socket.assigns.recipe.recipe_ingredients)
+    existing_ingredients = Enum.map(existing_ingredients, fn x -> 
+      x.changes
+      |> Map.new(fn {k, v} -> {Atom.to_string(k), v} end) 
+    end)
+    existing_ingredients = 
+      case existing_ingredients do
+        [] ->
+          []
+        reci_ingr_list ->
+          Enum.filter(reci_ingr_list, fn x -> x["temp_id"] != recipe_ingredient_params["temp_id"] end)
+      end
 
+    recipe_ingredient_params = for {key, val} <- recipe_ingredient_params, into: %{}, do: {String.to_atom(key), val}
+
+    ingredients =
+      existing_ingredients ++ [recipe_ingredient_params]
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.put_assoc(:recipe_ingredients, ingredients)
+    
     {:noreply,
-     socket
-     |> assign(:recipe_ingredients, recipe_ingredients)}
+      socket
+      |> assign(:changeset, changeset)
+    }
   end
 
   defp list_recipes do

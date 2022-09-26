@@ -50,6 +50,7 @@
         <%= for i <- @measurement_units do %>
             <option value={i.id}>
             <%= i.name %>
+            </option>
         <% end %>
       </select>
       <%= error_tag f, :measurement_unit %>
@@ -63,7 +64,7 @@
       <%= error_tag f, :quantity %>
     </div>
 
-    <div phx-update="ignore">
+    <div phx-update="ignore" id = "hidden_ignore">
         <%= hidden_input f, :ingredient_id , id: "ingredient_id_ph" %>
         <%= hidden_input f, :measurement_unit_id , id: "mu_id_ph"  %>
     </div>

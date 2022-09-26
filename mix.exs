@@ -10,7 +10,10 @@ defmodule Mehungry.Umbrella.MixProject do
       aliases: aliases(),
       releases: [
         mehungry_umbrella: [
-          applications: [mehungry: :permanent, mehungry_web: :permanent, mehungry_api: :permanent]
+          applications: [
+            mehungry_web: :permanent,
+            mehungry_api: :permanent
+          ]
         ]
       ]
     ]

@@ -24,6 +24,7 @@ config :mehungry_web, MehungryWeb.Endpoint,
   code_reloader: true,
   check_origin: false,
   watchers: [
+    tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]},
     node: [
       "node_modules/webpack/bin/webpack.js",
       "--mode",

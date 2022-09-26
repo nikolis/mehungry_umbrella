@@ -7,6 +7,9 @@ defmodule Mehungry.Food.RecipeIngredient do
     field :quantity, :float
     field :ingredient_allias, :string
 
+    field :delete, :boolean, virtual: true
+    field :temp_id, :string, virtual: true
+
     belongs_to :recipe, Mehungry.Food.Recipe
     belongs_to :measurement_unit, Mehungry.Food.MeasurementUnit
     belongs_to :ingredient, Mehungry.Food.Ingredient
@@ -21,14 +24,27 @@ defmodule Mehungry.Food.RecipeIngredient do
     """
 
     recipe_ingredient
+    #|> Map.put(:temp_id, (recipe_ingredient.temp_id || attrs["temp_id"])) # So its persisted
     |> cast(attrs, [
       :quantity,
       :ingredient_allias,
       :measurement_unit_id,
       :ingredient_id,
-      :recipe_id
+      :recipe_id,
+      :delete,
+      :temp_id,
     ])
-    # |> validate_number(:quantity, greater_than: 3)
     |> validate_required([:quantity, :measurement_unit_id])
+    |> maybe_mark_for_deletion()
   end
+
+  defp maybe_mark_for_deletion(%{data: %{id: nil}} = changeset), do: changeset
+  defp maybe_mark_for_deletion(changeset) do
+    if get_change(changeset, :delete) do
+      %{changeset | action: :delete}
+    else
+      changeset
+    end
+  end
+
 end
