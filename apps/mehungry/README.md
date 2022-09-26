@@ -1,3 +1,0 @@
-# Mehungry
-
-**TODO: Add description**
