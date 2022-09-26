@@ -1,13 +1,14 @@
-defmodule MehungryServer.Repo.Migrations.CreateUsersAuthTables do
+defmodule Mehungry.Repo.Migrations.CreateUsersAuthTables do
   use Ecto.Migration
 
   def change do
     execute "CREATE EXTENSION IF NOT EXISTS citext", ""
 
-    alter table(:users) do
-      add :email, :citext, null: false, default: "nikolisgal@gmail.com"
-      add :hashed_password, :string, null: false, default: "Untitled"
+    create table(:users) do
+      add :email, :citext, null: false
+      add :hashed_password, :string, null: false
       add :confirmed_at, :naive_datetime
+      timestamps()
     end
 
     create unique_index(:users, [:email])

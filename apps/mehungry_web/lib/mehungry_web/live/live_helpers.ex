@@ -1,6 +1,7 @@
 defmodule MehungryWeb.LiveHelpers do
   import Phoenix.LiveView
   import Phoenix.LiveView.Helpers
+  import Phoenix.Component
 
   alias Phoenix.LiveView.JS
 
@@ -12,14 +13,14 @@ defmodule MehungryWeb.LiveHelpers do
 
   ## Examples
 
-      <.modal return_to={Routes.u2ser_index_path(@socket, :index)}>
+      <.modal return_to={Routes.delete_test_index_path(@socket, :index)}>
         <.live_component
-          module={MehungryWeb.U2serLive.FormComponent}
-          id={@u2ser.id || :new}
+          module={MehungryWeb.DeleteTestLive.FormComponent}
+          id={@delete_test.id || :new}
           title={@page_title}
           action={@live_action}
-          return_to={Routes.u2ser_index_path(@socket, :index)}
-          u2ser: @u2ser
+          return_to={Routes.delete_test_index_path(@socket, :index)}
+          delete_test: @delete_test
         />
       </.modal>
   """
@@ -27,10 +28,11 @@ defmodule MehungryWeb.LiveHelpers do
     assigns = assign_new(assigns, :return_to, fn -> nil end)
 
     ~H"""
-    <div id="modal" class="phx-modal" phx-remove={hide_modal()}>
+    <div id="modal" class="phx-modal fade-in" phx-remove={hide_modal()}>
       <div
         id="modal-content"
         class="phx-modal-content fade-in-scale"
+        phx-click-away={JS.dispatch("click", to: "#close")}
         phx-window-keydown={JS.dispatch("click", to: "#close")}
         phx-key="escape"
       >
@@ -42,7 +44,7 @@ defmodule MehungryWeb.LiveHelpers do
             phx_click: hide_modal()
           %>
         <% else %>
-         <a id="close" href="#" class="phx-modal-close" phx-click={hide_modal()}>✖</a>
+          <a id="close" href="#" class="phx-modal-close" phx-click={hide_modal()}>✖</a>
         <% end %>
 
         <%= render_slot(@inner_block) %>

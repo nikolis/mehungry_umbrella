@@ -1,6 +1,8 @@
 defmodule MehungryWeb.Router do
   use MehungryWeb, :router
 
+  import MehungryWeb.UserAuth
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -8,6 +10,7 @@ defmodule MehungryWeb.Router do
     plug :put_root_layout, {MehungryWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    #plug :fetch_current_user
   end
 
   pipeline :api do
@@ -41,16 +44,12 @@ defmodule MehungryWeb.Router do
 
     live "/create_recipe", CreateRecipeLive.Index, :index
     live "/create_recipe/add_ingredient", CreateRecipeLive.Index, :add_ingredient
-    live "/create_recipe/:uuid/edit_ingredient", CreateRecipeLive.Index, :edit_ingredient
+    live "/create_recipe/:temp_id/edit_ingredient", CreateRecipeLive.Index, :edit_ingredient
     live "/create_recipe/:uuid/delete_ingredient", CreateRecipeLive.Index, :delete_ingredient
 
     get "/", PageController, :index
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", MehungryWeb do
-  #   pipe_through :api
-  # end
 
   # Enables LiveDashboard only for development
   #
@@ -66,5 +65,38 @@ defmodule MehungryWeb.Router do
       pipe_through :browser
       live_dashboard "/dashboard", metrics: MehungryWeb.Telemetry
     end
+  end
+
+  ## Authentication routes
+
+  scope "/", MehungryWeb do
+    pipe_through [:browser]
+
+    get "/users/register", UserRegistrationController, :new
+    post "/users/register", UserRegistrationController, :create
+    get "/users/log_in", UserSessionController, :new
+    post "/users/log_in", UserSessionController, :create
+    get "/users/reset_password", UserResetPasswordController, :new
+    post "/users/reset_password", UserResetPasswordController, :create
+    get "/users/reset_password/:token", UserResetPasswordController, :edit
+    put "/users/reset_password/:token", UserResetPasswordController, :update
+  end
+
+  scope "/", MehungryWeb do
+    pipe_through [:browser] #:require_authenticated_user]
+
+    get "/users/settings", UserSettingsController, :edit
+    put "/users/settings", UserSettingsController, :update
+    get "/users/settings/confirm_email/:token", UserSettingsController, :confirm_email
+  end
+
+  scope "/", MehungryWeb do
+    pipe_through [:browser]
+
+    delete "/users/log_out", UserSessionController, :delete
+    get "/users/confirm", UserConfirmationController, :new
+    post "/users/confirm", UserConfirmationController, :create
+    get "/users/confirm/:token", UserConfirmationController, :edit
+    post "/users/confirm/:token", UserConfirmationController, :update
   end
 end

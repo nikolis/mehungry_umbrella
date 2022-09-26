@@ -1,21 +1,27 @@
 defmodule Mehungry.Accounts.UserNotifier do
-  # For simplicity, this module simply logs messages to the terminal.
-  # You should replace it by a proper email or notification tool, such as:
-  #
-  #   * Swoosh - https://hexdocs.pm/swoosh
-  #   * Bamboo - https://hexdocs.pm/bamboo
-  #
-  defp deliver(to, body) do
-    require Logger
-    Logger.debug(body)
-    {:ok, %{to: to, body: body}}
+  import Swoosh.Email
+
+  alias Mehungry.Mailer
+
+  # Delivers the email using the application mailer.
+  defp deliver(recipient, subject, body) do
+    email =
+      new()
+      |> to(recipient)
+      |> from({"MyApp", "contact@example.com"})
+      |> subject(subject)
+      |> text_body(body)
+
+    with {:ok, _metadata} <- Mailer.deliver(email) do
+      {:ok, email}
+    end
   end
 
   @doc """
   Deliver instructions to confirm account.
   """
   def deliver_confirmation_instructions(user, url) do
-    deliver(user.email, """
+    deliver(user.email, "Confirmation instructions", """
 
     ==============================
 
@@ -35,7 +41,7 @@ defmodule Mehungry.Accounts.UserNotifier do
   Deliver instructions to reset a user password.
   """
   def deliver_reset_password_instructions(user, url) do
-    deliver(user.email, """
+    deliver(user.email, "Reset password instructions", """
 
     ==============================
 
@@ -55,7 +61,7 @@ defmodule Mehungry.Accounts.UserNotifier do
   Deliver instructions to update a user email.
   """
   def deliver_update_email_instructions(user, url) do
-    deliver(user.email, """
+    deliver(user.email, "Update email instructions", """
 
     ==============================
 
