@@ -58,7 +58,6 @@ defmodule Mehungry.Food do
     )
   end
 
-
   #  def get_user_by_email(email) do
   #    query =
   #      from usr in User,

@@ -38,7 +38,6 @@ defmodule MehungryApi.MixProject do
       {:mehungry, in_umbrella: true},
       {:bcrypt_elixir, "~> 2.3"},
       {:phoenix, "~> 1.6.2"},
-      {:credo, "~> 1.5.0-rc.2", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
       {:con_cache, "~> 0.13.1"},
       {:cors_plug, "~> 1.5"},

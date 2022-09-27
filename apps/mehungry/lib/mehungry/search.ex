@@ -1,12 +1,10 @@
 defmodule Mehungry.Search do
-  
   alias Mehungry.Repo
 
   alias Mehungry.Search.RecipeSearchItem
   alias Mehungry.Search.RecipeSearch
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
-  
 
   def change_recipe_search_item(%RecipeSearchItem{} = recipe_search, attrs \\ %{}) do
     RecipeSearchItem.changeset(recipe_search, attrs)
@@ -23,7 +21,6 @@ defmodule Mehungry.Search do
   end
 
   def search_recipe(search_term) do
-    IO.inspect(search_term)
     query = RecipeSearch.run(Recipe, search_term)
 
     results =
@@ -37,5 +34,4 @@ defmodule Mehungry.Search do
 
     result
   end
-
 end

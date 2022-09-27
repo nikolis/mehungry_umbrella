@@ -100,7 +100,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
           end
       end
 
-    IO.inspect(new_content, label: "Review event")
 
     case Cachex.put(:users, "data", new_content) do
       {:ok, true} ->
