@@ -16,7 +16,7 @@ defmodule Mehungry.SimpleS3Upload do
 
 
   Returns a map of form fields to be used on the client via the JavaScript `FormData` API.
-  
+
   ## Options
 
     * `:key` - The required key of the object to be uploaded.

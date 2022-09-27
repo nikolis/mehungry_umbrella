@@ -10,7 +10,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   alias Mehungry.SimpleS3Upload
 
-
   @impl true
   def mount(_params, _session, socket) do
     recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
@@ -66,7 +65,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   defp upload_static_file(%{key: image_name, url: s3_host}, socket) do
-    access_url =  s3_host <> "/"<>image_name
+    access_url = s3_host <> "/" <> image_name
     {:ok, access_url}
   end
 
@@ -198,7 +197,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
     {:noreply, assign(socket, changeset: changeset)}
   end
-  
+
   @impl true
   def handle_event("new_recipe_ingredient", recipe_ingredient_params, socket) do
     existing_ingredients =
@@ -239,7 +238,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:changeset, changeset)}
   end
 
-
   @impl true
   def handle_info({:recipe_ingredient, recipe_ingredient_params}, socket) do
     existing_ingredients =
@@ -267,15 +265,18 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       end
 
     ingredients = existing_ingredients ++ [recipe_ingredient_params]
-    ingredients = Enum.map(ingredients, fn x ->
-      for {key, val} <- recipe_ingredient_params, into: %{}, do: {String.to_atom(key), val}
-    end)
-    IO.inspect(ingredients, label: "The ingredients !!")
-    #recipe_ingredient_params =
-      #for {key, val} <- recipe_ingredient_params, into: %{}, do: {String.to_atom(key), val}
 
-    #IO.inspect(recipe_ingredient_params, label: "Sosfda oadsifoaiuf saudofi ausdoi")
-    #ingredients = existing_ingredients ++ [recipe_ingredient_params]
+    ingredients =
+      Enum.map(ingredients, fn x ->
+        for {key, val} <- recipe_ingredient_params, into: %{}, do: {String.to_atom(key), val}
+      end)
+
+    IO.inspect(ingredients, label: "The ingredients !!")
+    # recipe_ingredient_params =
+    # for {key, val} <- recipe_ingredient_params, into: %{}, do: {String.to_atom(key), val}
+
+    # IO.inspect(recipe_ingredient_params, label: "Sosfda oadsifoaiuf saudofi ausdoi")
+    # ingredients = existing_ingredients ++ [recipe_ingredient_params]
 
     changeset =
       socket.assigns.changeset
@@ -291,7 +292,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, cancel_upload(socket, :avatar, ref)}
   end
 
-  #Helper Function 
+  # Helper Function 
   def error_to_string(:too_large), do: "Too large"
   def error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
 
@@ -322,8 +323,13 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         expires_in: :timer.hours(1)
       )
 
-    meta = %{uploader: "S3", key: key, url: "http://#{bucket}.s3-#{config.region}.amazonaws.com", fields: fields}
+    meta = %{
+      uploader: "S3",
+      key: key,
+      url: "http://#{bucket}.s3-#{config.region}.amazonaws.com",
+      fields: fields
+    }
+
     {:ok, meta, socket}
   end
-
 end

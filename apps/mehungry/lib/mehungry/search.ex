@@ -5,7 +5,13 @@ defmodule Mehungry.Search do
     RecipeSearch.changeset(recipe_search, attrs)
   end
 
-  def search_recipe(%RecipeSearch{} = recipe_search) do
-    # TODO Search for recipes in here
+  def update_recipe_search(%RecipeSearch{} = recipe_search, attrs \\ %{}) do
+    changeset = RecipeSearch.changeset(recipe_search, attrs)
+
+    if !changeset.valid? do
+      {:error, changeset}
+    else
+      {:ok, Ecto.Changeset.apply_changes(changeset)}
+    end
   end
 end

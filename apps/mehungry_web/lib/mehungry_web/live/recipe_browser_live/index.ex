@@ -41,6 +41,32 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      |> assign(:changeset, changeset)}
   end
 
+  def handle_event(
+        "search",
+        %{"recipe_search" => recipe_search_params},
+        %{assigns: %{recipe_search: recipe_search}} = socket
+      ) do
+    update_result =
+      recipe_search
+      |> Search.update_recipe_search(recipe_search_params)
+
+    case update_result do
+      {:error, %Ecto.Changeset{} = changeset} ->
+        changeset = Map.put(changeset, :action, :validate)
+
+        {:noreply,
+         socket
+         |> assign(:changeset, changeset)}
+
+      {:ok, %RecipeSearch{} = recipe_search} ->
+        recipes = Food.search_recipe(recipe_search.query_string)
+
+        {:noreply,
+         socket
+         |> assign(recipes: recipes)}
+    end
+  end
+
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
