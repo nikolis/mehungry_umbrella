@@ -1,12 +1,19 @@
 defmodule Mehungry.Search do
-  alias Mehungry.Search.RecipeSearch
+  
+  alias Mehungry.Repo
 
-  def change_recipe_search(%RecipeSearch{} = recipe_search, attrs \\ %{}) do
-    RecipeSearch.changeset(recipe_search, attrs)
+  alias Mehungry.Search.RecipeSearchItem
+  alias Mehungry.Search.RecipeSearch
+  alias Mehungry.Food
+  alias Mehungry.Food.Recipe
+  
+
+  def change_recipe_search_item(%RecipeSearchItem{} = recipe_search, attrs \\ %{}) do
+    RecipeSearchItem.changeset(recipe_search, attrs)
   end
 
-  def update_recipe_search(%RecipeSearch{} = recipe_search, attrs \\ %{}) do
-    changeset = RecipeSearch.changeset(recipe_search, attrs)
+  def update_recipe_search_item(%RecipeSearchItem{} = recipe_search, attrs \\ %{}) do
+    changeset = RecipeSearchItem.changeset(recipe_search, attrs)
 
     if !changeset.valid? do
       {:error, changeset}
@@ -14,4 +21,21 @@ defmodule Mehungry.Search do
       {:ok, Ecto.Changeset.apply_changes(changeset)}
     end
   end
+
+  def search_recipe(search_term) do
+    IO.inspect(search_term)
+    query = RecipeSearch.run(Recipe, search_term)
+
+    results =
+      Repo.all(query)
+      |> Repo.preload([:recipe_ingredients, :user])
+
+    result =
+      Enum.map(results, fn rec ->
+        Food.translate_recipe_if_needed(rec)
+      end)
+
+    result
+  end
+
 end

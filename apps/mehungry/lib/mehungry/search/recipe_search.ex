@@ -1,4 +1,4 @@
-defmodule Mehungry.Food.RecipeSearch do
+defmodule Mehungry.Search.RecipeSearch do
   import Ecto.Query
 
   def run(query, search_string) do

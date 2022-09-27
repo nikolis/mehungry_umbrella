@@ -58,20 +58,6 @@ defmodule Mehungry.Food do
     )
   end
 
-  def search_recipe(search_term) do
-    query = RecipeSearch.run(Recipe, search_term)
-
-    results =
-      Repo.all(query)
-      |> Repo.preload([:recipe_ingredients, :user])
-
-    result =
-      Enum.map(results, fn rec ->
-        translate_recipe_if_needed(rec)
-      end)
-
-    result
-  end
 
   #  def get_user_by_email(email) do
   #    query =

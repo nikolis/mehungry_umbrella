@@ -3,7 +3,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
-  alias Mehungry.Search.RecipeSearch
+  alias Mehungry.Search.RecipeSearchItem
   alias Mehungry.Search
 
   @user_id 5
@@ -18,22 +18,22 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   def assign_recipe_search(socket) do
     socket
-    |> assign(:recipe_search, %RecipeSearch{})
+    |> assign(:recipe_search_item, %RecipeSearchItem{})
   end
 
-  def assign_changeset(%{assigns: %{recipe_search: recipe_search}} = socket) do
+  def assign_changeset(%{assigns: %{recipe_search_item: recipe_search_item}} = socket) do
     socket
-    |> assign(:changeset, Search.change_recipe_search(recipe_search))
+    |> assign(:changeset, Search.change_recipe_search_item(recipe_search_item))
   end
 
   def handle_event(
         "validate",
-        %{"recipe_search" => recipe_search_params},
-        %{assigns: %{recipe_search: recipe_search}} = socket
+        %{"recipe_search_item" => recipe_search_item_params},
+        %{assigns: %{recipe_search_item: recipe_search_item}} = socket
       ) do
     changeset =
-      recipe_search
-      |> Search.change_recipe_search(recipe_search_params)
+      recipe_search_item
+      |> Search.change_recipe_search_item(recipe_search_item_params)
       |> Map.put(:action, :validate)
 
     {:noreply,
@@ -43,12 +43,12 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   def handle_event(
         "search",
-        %{"recipe_search" => recipe_search_params},
-        %{assigns: %{recipe_search: recipe_search}} = socket
+        %{"recipe_search_item" => recipe_search_item_params},
+        %{assigns: %{recipe_search_item: recipe_search_item}} = socket
       ) do
     update_result =
-      recipe_search
-      |> Search.update_recipe_search(recipe_search_params)
+      recipe_search_item
+      |> Search.update_recipe_search_item(recipe_search_item_params)
 
     case update_result do
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -58,8 +58,8 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
          socket
          |> assign(:changeset, changeset)}
 
-      {:ok, %RecipeSearch{} = recipe_search} ->
-        recipes = Food.search_recipe(recipe_search.query_string)
+      {:ok, %RecipeSearchItem{} = recipe_search_item} ->
+        recipes = Search.search_recipe(recipe_search_item.query_string)
 
         {:noreply,
          socket
