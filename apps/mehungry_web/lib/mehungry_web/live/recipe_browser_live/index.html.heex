@@ -6,7 +6,7 @@
   phx-change="validate"
   phx-submit="search">
 
-  <%= text_input f, :title %>
+  <%= text_input f, :query_string %>
  
   <div>
     <%= submit "Search", phx_disable_with: "Searching..." %>

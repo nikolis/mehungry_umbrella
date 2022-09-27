@@ -7,10 +7,11 @@ defmodule MehungryApi.Application do
 
   def start(_type, _args) do
     IO.inspect("Starting the mehungry api application from /apps/mehungry_api/application.ex")
+
     children = [
       # Start the Telemetry supervisor
       # Start the Endpoint (http/https)
-      MehungryApi.Endpoint 
+      MehungryApi.Endpoint
       # Start a worker by calling: MehungryWeb.Worker.start_link(arg)
       # {MehungryWeb.Worker, arg}
     ]

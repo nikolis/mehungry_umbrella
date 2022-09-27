@@ -23,5 +23,4 @@ defmodule Mehungry.Food.Ingredient do
     |> validate_required([:name, :category_id, :measurement_unit_id])
     |> unique_constraint([:name])
   end
-
 end

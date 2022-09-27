@@ -24,7 +24,7 @@ defmodule Mehungry.Food.RecipeIngredient do
     """
 
     recipe_ingredient
-    #|> Map.put(:temp_id, (recipe_ingredient.temp_id || attrs["temp_id"])) # So its persisted
+    # |> Map.put(:temp_id, (recipe_ingredient.temp_id || attrs["temp_id"])) # So its persisted
     |> cast(attrs, [
       :quantity,
       :ingredient_allias,
@@ -32,13 +32,14 @@ defmodule Mehungry.Food.RecipeIngredient do
       :ingredient_id,
       :recipe_id,
       :delete,
-      :temp_id,
+      :temp_id
     ])
     |> validate_required([:quantity, :measurement_unit_id])
     |> maybe_mark_for_deletion()
   end
 
   defp maybe_mark_for_deletion(%{data: %{id: nil}} = changeset), do: changeset
+
   defp maybe_mark_for_deletion(changeset) do
     if get_change(changeset, :delete) do
       %{changeset | action: :delete}
@@ -46,5 +47,4 @@ defmodule Mehungry.Food.RecipeIngredient do
       changeset
     end
   end
-
 end

@@ -91,3 +91,18 @@
   display: block;
   margin: -1rem 0 2rem;
 }
+
+.select2-results__option {
+    @apply text-2xl;
+}
+.select2-selection__rendered{
+    @apply text-2xl;
+}
+
+input[type] {
+  @apply text-2xl;
+}
+th, td, a, p, button {
+  @apply text-2xl;
+}
+

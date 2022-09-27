@@ -73,7 +73,9 @@ defmodule MehungryWeb.CreateRecipeLive.RecipeIngredientComponent do
   end
 
   def handle_event("save", %{"recipe_ingredient" => recipe_ingredient_params}, socket) do
-    recipe_ingredient_params = Map.put(recipe_ingredient_params, "temp_id", socket.assigns.temp_id)
+    recipe_ingredient_params =
+      Map.put(recipe_ingredient_params, "temp_id", socket.assigns.temp_id)
+
     send(socket.root_pid, {:recipe_ingredient, recipe_ingredient_params})
     {:noreply, push_patch(socket, to: socket.assigns.return_to)}
   end

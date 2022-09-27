@@ -1,5 +1,5 @@
 <div>
-  <h2 class="mx-auto"> Select Ingredient </h2>
+  <h2 class="w-3/5 mx-auto"> Select Ingredient </h2>
   <br>
 
   <.form
@@ -22,14 +22,14 @@
     </.ignore>
 
 
-   <div class="flex-initial"  
+   <div class="flex-initial w-3/5 mx-auto"  
          phx-hook="SelectIngredient" 
          phx-update="ignore"
          id="select_ingredient_container"
         >
       <%= label f, :ingredient_id %>
       <br>
-      <select phx-update="ignore"  id="select_ingredient" class="js-example-basic-single" name="ingredient">
+      <select phx-update="ignore"  id="select_ingredient" class="w-4/5" name="ingredient">
         <%= for i <- @ingredients do %>
           <option value= {i.id} >
              <%= i.name %>
@@ -39,16 +39,16 @@
     </div>
    
     <br> 
-    <div class="flex-initial"
+    <div class="flex-initial w-3/5 mx-auto"
          phx-hook="Mu" 
          phx-update="ignore"
          id="select_ingredient_container" 
     >
       <%= label f, :measurement_unit %>
       <br>
-      <select>
+      <select class ="w-3/5 ">
         <%= for i <- @measurement_units do %>
-            <option value={i.id}>
+            <option value={i.id} >
             <%= i.name %>
             </option>
         <% end %>
@@ -58,9 +58,9 @@
 
 
     <br>
-    <div class="flex-initial">
-      <%= label f, :quantity %>
-      <%= text_input f, :quantity , id: "quantity_placeholder"%>
+    <div class="flex-initial w-3/5 mx-auto">
+      <%= label f, :quantity , class: "w-full"%>
+      <%= text_input f, :quantity ,style: "width: 60%",class: "text-2xl", id: "quantity_placeholder"%>
       <%= error_tag f, :quantity %>
     </div>
 
@@ -70,8 +70,8 @@
     </div>
 
     <br>
-    <div>
-      <%= submit "Save",id: "submit_button_ingredient" ,phx_disable_with: "Saving..." %>
+    <div class="flex-initial w-3/5 mx-auto">
+      <%= submit "Save",class: "mt-4 w-full rounded-lg drop-shadow-xl bg-color-green ", id: "submit_button_ingredient" ,phx_disable_with: "Saving..." %>
     </div>
   </.form>
 </div>

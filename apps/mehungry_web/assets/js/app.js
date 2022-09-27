@@ -17,13 +17,36 @@ import jQuery from "jquery"
 import select2 from "select2"
   
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
-   
+
+let Uploaders = {}
+
+Uploaders.S3 = function(entries, onViewError){
+  entries.forEach(entry => {
+    let formData = new FormData()
+    let {url, fields} = entry.meta
+    Object.entries(fields).forEach(([key, val]) => formData.append(key, val))
+    formData.append("file", entry.file)
+    let xhr = new XMLHttpRequest()
+    onViewError(() => xhr.abort())
+    xhr.onload = () => xhr.status === 204 ? entry.progress(100) : entry.error()
+    xhr.onerror = () => entry.error()
+    xhr.upload.addEventListener("progress", (event) => {
+      if(event.lengthComputable){
+        let percent = Math.round((event.loaded / event.total) * 100)
+        if(percent < 100){ entry.progress(percent) }
+      }
+    })
+
+    xhr.open("POST", url, true)
+    xhr.send(formData)
+  })
+}
+
 let Hooks = {}
 
 Hooks.Mu = {
 
   initSelect2() {
-    console.log("init23")
     let hook = this;
     let $selects = jQuery(hook.el).find("select");
     let $select_mu = $selects[0]
@@ -39,7 +62,6 @@ Hooks.Mu = {
   },
 
   selected_mu(hook, event) {
-    console.log("selected mu")
     let id = event.params.data.id;
     hook.pushEventTo(this.el, "mu_selected", {mu_id: id}) 
     $('#mu_id_ph').val(id)
@@ -54,34 +76,25 @@ Hooks.SelectIngredient = {
     let $selects = jQuery(hook.el).find("select");
     let $select_ingredient = $selects[0]
 
-    $selects.select2().on("select2:select", (e) => hook.selected_ingredient(hook, e))
-    $('#ingredient_id_ph').val($selects[0].value)
-   
-    hook.pushEventTo($selects[0], "ingredient_selected", {ingredient_id: $selects[0].value}) 
-
-    /* $( "#submit_button_ingredient" ).click(function() {
-        var text_ingredient = $('#ingredient_id_ph').val();
-        var text_quantity = $('#quantity_placeholder').val();
-        hook.pushEvent("new_ingredient_entry",{ingredient_id: text_ingredient, quantity: text_quantity, measurement_unit_id: 1});
-    });*/
+    $selects.select2().on("select2:select", (e) => hook.selected_ingredient(hook, e));
+    hook.pushEventTo($selects[0], "ingredient_selected", {ingredient_id: $selects[0].value});
+    $('#ingredient_id_ph').val($selects[0].value); 
 
     return $select_ingredient;
   },
 
   mounted() {
-    console.log("mounter")
     this.initSelect2();
   },
 
   selected_ingredient(hook, event) {
-    console.log(event)
     let id = event.params.data.id;
     $('#ingredient_id_ph').val(id).change();
     hook.pushEventTo(this.el, "ingredient_selected", {ingredient_id: id})
   },
 }
 
-let liveSocket = new LiveSocket("/live", Socket, {hooks: Hooks, params: {_csrf_token: csrfToken}})
+let liveSocket = new LiveSocket("/live", Socket, {hooks: Hooks, uploaders: Uploaders, params: {_csrf_token: csrfToken}})
  
 // connect if there are any LiveViews on the page
 liveSocket.connect()
@@ -91,4 +104,3 @@ liveSocket.connect()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket 
-

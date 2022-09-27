@@ -35,13 +35,18 @@ defmodule Mehungry.TestDeleteTest do
       delete_test = delete_test_fixture()
       update_attrs = %{name: "some updated name"}
 
-      assert {:ok, %DeleteTest{} = delete_test} = TestDelete.update_delete_test(delete_test, update_attrs)
+      assert {:ok, %DeleteTest{} = delete_test} =
+               TestDelete.update_delete_test(delete_test, update_attrs)
+
       assert delete_test.name == "some updated name"
     end
 
     test "update_delete_test/2 with invalid data returns error changeset" do
       delete_test = delete_test_fixture()
-      assert {:error, %Ecto.Changeset{}} = TestDelete.update_delete_test(delete_test, @invalid_attrs)
+
+      assert {:error, %Ecto.Changeset{}} =
+               TestDelete.update_delete_test(delete_test, @invalid_attrs)
+
       assert delete_test == TestDelete.get_delete_test!(delete_test.id)
     end
 

@@ -3,11 +3,42 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
+  alias Mehungry.Search.RecipeSearch
+  alias Mehungry.Search
+
   @user_id 5
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :recipes, list_recipes())}
+    {:ok,
+     assign(socket, :recipes, list_recipes())
+     |> assign_recipe_search()
+     |> assign_changeset()}
+  end
+
+  def assign_recipe_search(socket) do
+    socket
+    |> assign(:recipe_search, %RecipeSearch{})
+  end
+
+  def assign_changeset(%{assigns: %{recipe_search: recipe_search}} = socket) do
+    socket
+    |> assign(:changeset, Search.change_recipe_search(recipe_search))
+  end
+
+  def handle_event(
+        "validate",
+        %{"recipe_search" => recipe_search_params},
+        %{assigns: %{recipe_search: recipe_search}} = socket
+      ) do
+    changeset =
+      recipe_search
+      |> Search.change_recipe_search(recipe_search_params)
+      |> Map.put(:action, :validate)
+
+    {:noreply,
+     socket
+     |> assign(:changeset, changeset)}
   end
 
   @impl true

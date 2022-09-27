@@ -11,8 +11,8 @@ defmodule Mehungry.Umbrella.MixProject do
       releases: [
         mehungry_umbrella: [
           applications: [
-            mehungry_web: :permanent,
-            mehungry_api: :permanent
+            mehungry_web: :permanent
+            # mehungry_api: :permanent
           ]
         ]
       ]

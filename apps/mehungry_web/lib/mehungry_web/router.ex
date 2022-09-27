@@ -10,7 +10,7 @@ defmodule MehungryWeb.Router do
     plug :put_root_layout, {MehungryWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    #plug :fetch_current_user
+    # plug :fetch_current_user
   end
 
   pipeline :api do
@@ -50,7 +50,6 @@ defmodule MehungryWeb.Router do
     get "/", PageController, :index
   end
 
-
   # Enables LiveDashboard only for development
   #
   # If you want to use the LiveDashboard in production, you should put
@@ -83,7 +82,8 @@ defmodule MehungryWeb.Router do
   end
 
   scope "/", MehungryWeb do
-    pipe_through [:browser] #:require_authenticated_user]
+    # :require_authenticated_user]
+    pipe_through [:browser]
 
     get "/users/settings", UserSettingsController, :edit
     put "/users/settings", UserSettingsController, :update

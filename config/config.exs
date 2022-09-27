@@ -22,16 +22,23 @@ config :mehungry_web, MehungryWeb.Endpoint,
   secret_key_base: "iH7KE2sUcWxfSctkWBtzxcSkJlSKZaVWP/hDKC8Hg3gCkGYZcXhIZLrEkzw/Ddq3",
   render_errors: [view: MehungryWeb.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: Mehungry.PubSub,
-  live_view: [signing_salt: "l1ra29uq"]
+  live_view: [signing_salt: "l1ra29uq"],
+  aws_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
+  aws_secret: System.get_env("AWS_SECRET_ACCESS_KEY"),
+  aws_bucket: System.get_env("AWS_ASSETS_BUCKET_NAME")
 
-config :tailwind, version: "3.1.8", default: [
-  args: ~w(
+
+
+config :tailwind,
+  version: "3.1.8",
+  default: [
+    args: ~w(
     --config=tailwind.config.js
     --input=css/app.css
     --output=../apps/mehungry_web/priv/static/assets/app.css
   ),
-  cd: Path.expand("../assets", __DIR__)
-]  
+    cd: Path.expand("../assets", __DIR__)
+  ]
 
 config :mehungry_api, MehungryApi.Guardian,
   issuer: "mehungry_api",
@@ -49,6 +56,22 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
+
+config :ex_aws,            
+  json_codec: Jason,                                                                  
+  access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),              
+  secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY")
+                                                                
+  
+config :ex_aws,                                  
+  region: "eu-west-3"                             
+                                                      
+  
+config :ex_aws, :hackney_opts,                        
+  follow_redirect: true,
+  recv_timeout: 30_000
+
+ 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 

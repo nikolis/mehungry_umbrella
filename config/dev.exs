@@ -1,7 +1,5 @@
 import Config
 
-
-
 # Configure your database
 config :mehungry, Mehungry.Repo,
   username: "postgres",
