@@ -26,11 +26,9 @@ defmodule MehungryWeb.CreateRecipeLive.RecipeIngredientComponent do
 
   @impl true
   def update(%{recipe_ingredient: recipe_ingredient} = assigns, socket) do
-    IO.inspect(recipe_ingredient, label: "Componenet update")
     changeset = Food.change_recipe_ingredient(recipe_ingredient)
     ingredients = Food.list_ingredients()
     measurement_units = Food.list_measurement_units()
-    IO.inspect(recipe_ingredient["temp_id"])
 
     {:ok,
      socket
