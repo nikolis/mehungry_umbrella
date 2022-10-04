@@ -38,7 +38,8 @@ defmodule MehungryWeb.MixProject do
   defp deps do
     [
       {:cachex, "~> 3.4"},
-      {:bcrypt_elixir, "~> 2.3"},
+      {:bcrypt_elixir, "~> 3.0"},
+      {:httpoison, "~> 1.2"},
       {:mehungry, in_umbrella: true},
       {:phoenix, "~> 1.6.12"},
       {:phoenix_live_view, "~> 0.18.0"},

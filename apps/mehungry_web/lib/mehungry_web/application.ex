@@ -6,8 +6,6 @@ defmodule MehungryWeb.Application do
   use Application
 
   def start(_type, _args) do
-    IO.inspect("Strting application mehungry_WEB you know the drill")
-
     children = [
       # Start the Telemetry supervisor
       MehungryWeb.Telemetry,

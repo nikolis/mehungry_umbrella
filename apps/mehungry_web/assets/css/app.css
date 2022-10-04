@@ -106,3 +106,8 @@ th, td, a, p, button {
   @apply text-2xl;
 }
 
+@media (min-width: 1024px) {
+  .top-navbar {
+    display: inline-flex !important;
+  }
+}

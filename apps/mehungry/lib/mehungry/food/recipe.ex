@@ -6,6 +6,7 @@ defmodule Mehungry.Food.Recipe do
   alias Mehungry.Food.Step
   alias Mehungry.Accounts.User
   alias Mehungry.Language
+  alias Mehungry.Survey.Rating
 
   schema "recipes" do
     field :author, :string
@@ -22,6 +23,7 @@ defmodule Mehungry.Food.Recipe do
     field :private, :boolean
     field :title, :string
 
+    has_many :ratings, Rating
     belongs_to :user, User
 
     belongs_to :language, Mehungry.Language,

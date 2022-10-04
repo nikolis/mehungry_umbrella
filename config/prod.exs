@@ -33,29 +33,6 @@ config :mehungry_web, MehungryWeb.Endpoint,
     ]
   ]
 
-config :mehungry_api, MehungryApi.Endpoint,
-  http: [port: 3000],
-  debug_errors: true,
-  check_origin: false,
-  server: true,
-  watchers: [
-    node: [
-      "node_modules/webpack/bin/webpack.js",
-      "--mode",
-      "production",
-      "--watch-stdin",
-      cd: Path.expand("../apps/mehungry_api/assets", __DIR__)
-    ]
-  ]
-
-IO.inspect(
-  "Config -----------------------------------------------------------------------------------------------------------"
-)
-
-IO.inspect(
-  "Config End -----------------------------------------------------------------------------------------------------------"
-)
-
 config :mehungry, Mehungry.Repo,
   username: "postgres",
   password: "G2ET17z3N1243G",

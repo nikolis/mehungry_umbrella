@@ -49,10 +49,10 @@ defmodule Mehungry.Umbrella.MixProject do
   defp aliases do
     [
       # run `mix setup` in all child apps
-      genrun: [
-        "cmd --app mehungry_api mix openapi.spec.json --spec MehungryApi.ApiSpec",
-        "phx.server"
-      ],
+      # genrun: [
+      #  "cmd --app mehungry_api mix openapi.spec.json --spec MehungryApi.ApiSpec",
+      #  "phx.server"
+      # ],
       setup: ["cmd mix setup"]
     ]
   end

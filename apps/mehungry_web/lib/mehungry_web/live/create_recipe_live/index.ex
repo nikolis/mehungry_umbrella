@@ -38,7 +38,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     socket
   end
 
-
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
@@ -66,9 +65,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     |> assign(:recipe_ingredient, recipe_ingredient)
   end
 
-  
   ################################################################################ Event Handling ###################################################################################
- 
+
   def handle_event("save", %{"recipe" => recipe_params}, socket) do
     save_recipe(socket, socket.assigns, recipe_params)
   end
@@ -86,7 +84,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
     {:noreply, assign(socket, changeset: changeset)}
   end
-
 
   @impl true
   def handle_event("delete_ingredient", %{"temp_id" => temp_id}, socket) do
@@ -116,12 +113,10 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, assign(socket, changeset: changeset)}
   end
 
-
   @impl Phoenix.LiveView
   def handle_event("cancel-upload", %{"ref" => ref}, socket) do
     {:noreply, cancel_upload(socket, :avatar, ref)}
   end
-
 
   @impl true
   def handle_event("validate", %{"recipe" => recipe_params}, socket) do
@@ -140,7 +135,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
     {:noreply, assign(socket, :changeset, changeset)}
   end
-
 
   ######################################################################################## External Signal Receivers #################################
 
@@ -202,12 +196,10 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     }
   end
 
-
   defp upload_static_file(%{key: image_name, url: s3_host}, socket) do
     access_url = s3_host <> "/" <> image_name
     {:ok, access_url}
   end
-
 
   defp save_recipe(socket, action, recipe_params) do
     recipe_params = get_params_with_image(socket, recipe_params)
@@ -227,7 +219,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
           recipe_params,
           "recipe_ingredients",
           Enum.map(recipe_params["recipe_ingredients"], fn x -> elem(x, 1) end)
-        ) 
+        )
       end
 
     case Food.create_recipe(recipe_params) do
@@ -241,8 +233,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         {:noreply, assign(socket, changeset: changeset)}
     end
   end
-
-
 
   defp get_temp_id, do: :crypto.strong_rand_bytes(5) |> Base.url_encode64() |> binary_part(0, 5)
 

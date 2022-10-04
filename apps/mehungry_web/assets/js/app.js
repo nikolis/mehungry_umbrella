@@ -15,7 +15,17 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import jQuery from "jquery"
 import select2 from "select2"
-  
+ 
+$(document).ready(function () {
+  $(".nav-toggler").each(function (_, navToggler) {
+    var target = $(navToggler).data("target");
+    $(navToggler).on("click", function () {
+      $(target).animate({
+        height: "toggle",
+      });
+    });
+  });
+});
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
 let Uploaders = {}
@@ -103,4 +113,7 @@ liveSocket.connect()
 // >> liveSocket.enableDebug()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
-window.liveSocket = liveSocket 
+window.liveSocket = liveSocket
+
+
+

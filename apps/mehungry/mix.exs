@@ -36,16 +36,16 @@ defmodule Mehungry.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:bcrypt_elixir, "~> 2.0"},
+      {:bcrypt_elixir, "~> 3.0"},
       {:numexy, "~> 0.1.9"},
+      {:hackney, "~> 1.18.1"},
       {:phoenix, "~> 1.6.2"},
       {:swoosh, "~> 1.8"},
       {:matrix, "~> 0.3.2"},
       {:phoenix_pubsub, "~> 2.0"},
       {:ecto_sql, "~> 3.4"},
       {:postgrex, ">= 0.0.0"},
-      {:jason, "~> 1.0"},
-      {:bcrypt_elixir, "~> 2.3"}
+      {:jason, "~> 1.0"}
     ]
   end
 

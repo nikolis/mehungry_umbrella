@@ -100,13 +100,13 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
           end
       end
 
-    #case Cachex.put(:users, "data", new_content) do
-      #{:ok, true} ->
-        #IO.inspect("Sucess", label: "Puting to cache")
+    # case Cachex.put(:users, "data", new_content) do
+    # {:ok, true} ->
+    # IO.inspect("Sucess", label: "Puting to cache")
 
-      #{errorm, reason} ->
-        #IO.inspect(reason, label: "Puting to cache")
-    #end
+    # {errorm, reason} ->
+    # IO.inspect(reason, label: "Puting to cache")
+    # end
 
     {:noreply, assign(socket, :recipes, list_recipes())}
   end

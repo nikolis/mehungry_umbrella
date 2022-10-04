@@ -27,8 +27,6 @@ config :mehungry_web, MehungryWeb.Endpoint,
   aws_secret: System.get_env("AWS_SECRET_ACCESS_KEY"),
   aws_bucket: System.get_env("AWS_ASSETS_BUCKET_NAME")
 
-
-
 config :tailwind,
   version: "3.1.8",
   default: [
@@ -40,38 +38,11 @@ config :tailwind,
     cd: Path.expand("../assets", __DIR__)
   ]
 
-config :mehungry_api, MehungryApi.Guardian,
-  issuer: "mehungry_api",
-  secret_key: "xqo0BfDpsWTY/ZDz/+nmsbdLFLfZEmU3qXhJzdtc3qS7GZyji91GLgE15nYoVbxt"
-
-# Configures the endpoint
-config :mehungry_api, MehungryApi.Endpoint,
-  url: [host: "localhost"],
-  secret_key_base: "iH7KE2sUcWxfd3dkWBtzxcSkJlSKZaVWP/hDKC8Hg3gCkGYZcXhIZLrEkzw/Ddq3",
-  render_errors: [view: MehungryApi.ErrorView, accepts: ~w(html json), layout: false],
-  pubsub_server: Mehungry.PubSub
-
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
-
-config :ex_aws,            
-  json_codec: Jason,                                                                  
-  access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),              
-  secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY")
-                                                                
-  
-config :ex_aws,                                  
-  region: "eu-west-3"                             
-                                                      
-  
-config :ex_aws, :hackney_opts,                        
-  follow_redirect: true,
-  recv_timeout: 30_000
-
- 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 

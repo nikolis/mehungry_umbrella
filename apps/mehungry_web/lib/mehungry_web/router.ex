@@ -10,7 +10,7 @@ defmodule MehungryWeb.Router do
     plug :put_root_layout, {MehungryWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    # plug :fetch_current_user
+    plug :fetch_current_user
   end
 
   pipeline :api do
@@ -18,9 +18,17 @@ defmodule MehungryWeb.Router do
   end
 
   scope "/", MehungryWeb do
-    pipe_through :browser
+    pipe_through [:browser, :require_authenticated_user]
 
-    live "/browse", RecipeBrowseLive.Index, :index
+    live_session :default, on_mount: MehungryWeb.UserAuthLive do
+      live "/browse", RecipeBrowseLive.Index, :index
+      live "/create_recipe", CreateRecipeLive.Index, :index
+      live "/create_recipe/add_ingredient", CreateRecipeLive.Index, :add_ingredient
+      live "/create_recipe/:temp_id/edit_ingredient", CreateRecipeLive.Index, :edit_ingredient
+      live "/create_recipe/:uuid/delete_ingredient", CreateRecipeLive.Index, :delete_ingredient
+      live "/survey", SurveyLive, :index
+    end
+
     live "/ingredients", IngredientLive.Index, :index
     live "/ingredients/new", IngredientLive.Index, :new
     live "/ingredients/:id/edit", IngredientLive.Index, :edit
@@ -41,11 +49,6 @@ defmodule MehungryWeb.Router do
 
     live "/measurement_units/:id", MeasurementUnitLive.Show, :show
     live "/measurement_units/:id/show/edit", MeasurementUnitLive.Show, :edit
-
-    live "/create_recipe", CreateRecipeLive.Index, :index
-    live "/create_recipe/add_ingredient", CreateRecipeLive.Index, :add_ingredient
-    live "/create_recipe/:temp_id/edit_ingredient", CreateRecipeLive.Index, :edit_ingredient
-    live "/create_recipe/:uuid/delete_ingredient", CreateRecipeLive.Index, :delete_ingredient
 
     get "/", PageController, :index
   end
@@ -82,8 +85,41 @@ defmodule MehungryWeb.Router do
   end
 
   scope "/", MehungryWeb do
-    # :require_authenticated_user]
+    pipe_through [:browser, :require_authenticated_user]
+
+    get "/users/settings", UserSettingsController, :edit
+    put "/users/settings", UserSettingsController, :update
+    live "/survey", SurveyLive, :index
+    get "/users/settings/confirm_email/:token", UserSettingsController, :confirm_email
+  end
+
+  scope "/", MehungryWeb do
     pipe_through [:browser]
+
+    delete "/users/log_out", UserSessionController, :delete
+    get "/users/confirm", UserConfirmationController, :new
+    post "/users/confirm", UserConfirmationController, :create
+    get "/users/confirm/:token", UserConfirmationController, :edit
+    post "/users/confirm/:token", UserConfirmationController, :update
+  end
+
+  ## Authentication routes
+
+  scope "/", MehungryWeb do
+    pipe_through [:browser, :redirect_if_user_is_authenticated]
+
+    get "/users/register", UserRegistrationController, :new
+    post "/users/register", UserRegistrationController, :create
+    get "/users/log_in", UserSessionController, :new
+    post "/users/log_in", UserSessionController, :create
+    get "/users/reset_password", UserResetPasswordController, :new
+    post "/users/reset_password", UserResetPasswordController, :create
+    get "/users/reset_password/:token", UserResetPasswordController, :edit
+    put "/users/reset_password/:token", UserResetPasswordController, :update
+  end
+
+  scope "/", MehungryWeb do
+    pipe_through [:browser, :require_authenticated_user]
 
     get "/users/settings", UserSettingsController, :edit
     put "/users/settings", UserSettingsController, :update
