@@ -169,10 +169,6 @@ defmodule Mehungry.Food do
     MeasurementUnit.changeset(%MeasurementUnit{}, attrs)
   end
 
-  def change_recipe_ingredient(attrs) do
-    RecipeIngredient.changeset(%RecipeIngredient{}, attrs)
-  end
-
   def change_recipe_ingredient(%RecipeIngredient{} = recipe_ingredient, attrs \\ %{}) do
     RecipeIngredient.changeset(recipe_ingredient, attrs)
   end

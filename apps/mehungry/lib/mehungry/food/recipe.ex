@@ -64,6 +64,6 @@ defmodule Mehungry.Food.Recipe do
     |> foreign_key_constraint(:user_id)
     |> validate_required([:title, :language_name])
     |> cast_embed(:steps, [:required_message])
-    |> cast_assoc(:recipe_ingredients, with: &RecipeIngredient.changeset/2, required: true)
+    |> cast_assoc(:recipe_ingredients, required: true)
   end
 end

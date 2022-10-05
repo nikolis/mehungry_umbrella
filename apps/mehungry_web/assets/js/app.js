@@ -53,55 +53,37 @@ Uploaders.S3 = function(entries, onViewError){
 }
 
 let Hooks = {}
+Hooks.Select2 = {
 
-Hooks.Mu = {
+  initSelect2(element, hook, hiddenIdFull, selects) {
+    let hook2 = this;
+    let $select = selects[0]
+    
+    selects.select2().on("select2:select", (e) => 
+      hook.item_selected($select, e, hiddenIdFull)) 
+      return element 
+    },
 
-  initSelect2() {
-    let hook = this;
-    let $selects = jQuery(hook.el).find("select");
-    let $select_mu = $selects[0]
-
-    $selects.select2().on("select2:select", (e) => hook.selected_mu(hook, e)) 
-    hook.pushEventTo($selects[0], "mu_selected", {mu_id: $selects[0].value}) 
-    $('#mu_id_ph').val($selects[0].value)
-    return $select_mu;
+  item_selected(element, event, hiddenIdFull) {
+    let id = event.params.data.id;
+    $(hiddenIdFull).val(id).change()
+    element.dispatchEvent(new Event("input", {bubbles: true, cancelable: true}))
+    return event ; 
   },
+
+  mounted() {
+    let tempId = this.el.getAttribute("data-temp-id") 
+    let hiddenId = this.el.getAttribute("data-hidden-id") 
+    let hiddenIdFull = '#'+hiddenId  
   
-  mounted() {
-    this.initSelect2();
-  },
+    let $selects = jQuery(this.el).find("select");
+    let $select = $selects[0]
 
-  selected_mu(hook, event) {
-    let id = event.params.data.id;
-    hook.pushEventTo(this.el, "mu_selected", {mu_id: id}) 
-    $('#mu_id_ph').val(id)
+    $(hiddenIdFull).val(1).change()
+    $select.dispatchEvent(new Event("input", {bubbles: true, cancelable: true}))
+
+    this.initSelect2(this.el, this, hiddenIdFull, $selects)
   }
-}
-
-Hooks.SelectIngredient = {
-
-  initSelect2() {
-    console.log("init2")
-    let hook = this;
-    let $selects = jQuery(hook.el).find("select");
-    let $select_ingredient = $selects[0]
-
-    $selects.select2().on("select2:select", (e) => hook.selected_ingredient(hook, e));
-    hook.pushEventTo($selects[0], "ingredient_selected", {ingredient_id: $selects[0].value});
-    $('#ingredient_id_ph').val($selects[0].value); 
-
-    return $select_ingredient;
-  },
-
-  mounted() {
-    this.initSelect2();
-  },
-
-  selected_ingredient(hook, event) {
-    let id = event.params.data.id;
-    $('#ingredient_id_ph').val(id).change();
-    hook.pushEventTo(this.el, "ingredient_selected", {ingredient_id: id})
-  },
 }
 
 let liveSocket = new LiveSocket("/live", Socket, {hooks: Hooks, uploaders: Uploaders, params: {_csrf_token: csrfToken}})
