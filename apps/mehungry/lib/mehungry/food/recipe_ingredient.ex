@@ -34,7 +34,7 @@ defmodule Mehungry.Food.RecipeIngredient do
       :delete,
       :temp_id
     ])
-    |> validate_required([:quantity, :measurement_unit_id])
+    |> validate_required([:ingredient_id, :quantity, :measurement_unit_id])
     |> maybe_mark_for_deletion()
   end
 

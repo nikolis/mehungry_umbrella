@@ -24,16 +24,19 @@ phx-submit="save">
   <div class="grid grid-cols-3 gap-4"> 
     <div class="col-span-2"> 
       <div class = "my-4 grid grid-cols-2 gap-2">
+        
         <div class = "mx-3">
           <%= label f, :title %>
           <%= text_input f, :title %>
           <%= error_tag f, :title %>
         </div>
+
         <div class="mx-3">
           <%= label f, :servings %>
           <%= text_input f, :servings %>
           <%= error_tag f, :servings %>
         </div>
+
       </div>
 
       <div class = "grid grid-cols-2 gap-2">
@@ -101,46 +104,53 @@ phx-submit="save">
     <%= text_input f, :cooking_time_upper_limit %>
     <%= error_tag f, :cooking_time_upper_limit %>
  -->
-<table class="table-fixed rounded-xl  bg-sky-500">
-  <thead>
-    <tr>
-      <th>Ingredient</th>
-      <th>Measurement Unit</th>
-      <th>Quantity</th>
-    </tr>
-  </thead>
-  <tbody id="recipe_ingredients">
-  <%= inputs_for f, :recipe_ingredients, fn g -> %>
-    <div class="flex flex-wrap -mx-1 overflow-hidden">
-      <div >
-        <%= hidden_input g, :measurement_unit_id, class: "form-control" %>
-        <%= hidden_input g, :ingredient_id, class: "form-control" %>
-        <%= hidden_input g, :quantity, class: "form-control" %>
-        <%= hidden_input g, :temp_id, class: "form-control" %>
+ <%= inputs_for f, :recipe_ingredients, fn g -> %>
+    <div class = "grid grid-cols-4 gap-2" > 
+      <div data-temp-id= {g.data.temp_id||g.params["temp_id"]}  data-hidden-id = {"ingredient_select_hiddden#{g.data.temp_id||g.params["temp_id"]}"} phx-hook="Select2"  phx-update="ignore" id={"ingredient_select_containe23232r#{g.params["temp_id"]||g.data.temp_id}"} >
+        <%= label g, :ingredient_id %>
+        <select class="w-4/5" >
+          <%= for i <- @ingredients do %>
+            <option value= {i.id} >
+              <%= i.name %>
+            </option>
+          <% end %>                                                                                                                                                                           
+        </select>
       </div>
-    
-      <tr id={g.data.temp_id}>
-        <td><%= map_recipe_ingredient(g.source.changes).ingredient %></td>
-        <td><%= map_recipe_ingredient(g.source.changes).measurement_unit %></td>
-        <td><%= map_recipe_ingredient(g.source.changes).quantity %></td>
-        <td>
-          <span><%= live_patch "Edit", to: Routes.create_recipe_index_path(@socket, :edit_ingredient, map_recipe_ingredient(g.source.changes).temp_id) %></span>
-          <span><%= link "Delete", to: "#", phx_click: "delete_ingredient", phx_value_temp_id: map_recipe_ingredient(g.source.changes).temp_id, data: [confirm: "Are you sure?"] %></span>
-        </td>
-      </tr>
+
+      <div data-temp-id= {g.data.temp_id||g.params["temp_id"]} data-hidden-id = {"measurement_unit_select_hiddden#{g.params["temp_id"]||g.data.temp_id}"} phx-hook="Select2"  phx-update="ignore" id={"mu_select_containe23232r#{g.params["temp_id"]||g.data.temp_id}"} >
+        <%= label g, :measurement_unit_id %>
+        <select class="w-4/5" >
+          <%= for i <- @measurement_units do %>
+            <option value= {i.id} >
+              <%= i.name %>
+            </option>
+          <% end %>                                                                                                                                                                           
+        </select>
+      </div>
+
+       <%= hidden_input g, :measurement_unit_id , id: "measurement_unit_select_hiddden#{g.data.temp_id||g.params["temp_id"]}"%>
+       <%= hidden_input g, :temp_id , id: "temp_id#{g.params["temp_id"]||g.data.temp_id}"%>
+       <%= hidden_input g, :ingredient_id , id: "ingredient_select_hiddden#{g.params["temp_id"]||g.data.temp_id}"%>
+
+      <div class="form-group px-1 w-2/6">
+        <%= label g, :quantity %>
+        <%= text_input g, :quantity, class: "form-control" %>
+        <%= error_tag g, :quantity %>
+      </div>
+      
+      <div class="form-group px-1 w-1/6">
+          <a href="#" phx-click="remove-ingredient" phx-value-remove={g.data.temp_id}>&times</a>
+      </div>
     </div>
-  
   <% end %>
+ 
 
-  </tbody>
-</table>
-
-<span><%= live_patch "Add Ingredient", to: Routes.create_recipe_index_path(@socket, :add_ingredient) %></span>
-
+<span>  <a href="#" phx-click="add-ingredient">Add Ingredient</a>
+</span>
 <p class="mt-4 mb-2 font-bold">Creation Steps</p>
 
   <%= inputs_for f, :steps, fn v -> %>
-    <div class="flex flex-wrap -mx-1 overflow-hidden">
+    <div class="flex flex-wrap -mx-1 overflow-hidden" >
       <div class="form-group px-1 w-3/6">
         <%= label v, :title %>
         <%= text_input v, :title, class: "form-control" %>

@@ -13,11 +13,14 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+    measurement_units = Food.list_measurement_units()
+
 
     {:ok,
      socket
      |> assign(:recipe, recipe)
      |> assign(:ingredients, list_ingredients())
+     |> assign(:measurement_units, measurement_units)
      |> assign(:changeset, Food.change_recipe(recipe))
      |> allow_upload(:image,
        accept: ~w(.jpg .jpeg .png),
@@ -41,28 +44,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
-  end
-
-  defp apply_action(socket, :add_ingredient, _params) do
-    temp_id = get_temp_id()
-
-    socket
-    |> assign(:page_title, "New Recipe")
-    |> assign(:recipe_ingredient, %{"temp_id" => temp_id})
-  end
-
-  defp apply_action(socket, :edit_ingredient, %{"temp_id" => temp_id}) do
-    recipe_ingredient_changeset =
-      Enum.find(socket.assigns.changeset.changes.recipe_ingredients, fn x ->
-        x.changes.temp_id == temp_id
-      end)
-
-    recipe_ingredient =
-      Map.new(recipe_ingredient_changeset.changes, fn {k, v} -> {Atom.to_string(k), v} end)
-
-    socket
-    |> assign(:page_title, "New Recipe")
-    |> assign(:recipe_ingredient, recipe_ingredient)
   end
 
   ################################################################################ Event Handling ###################################################################################
@@ -95,6 +76,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:recipe_ingredients, recipe_ingredients)}
   end
 
+ 
   def handle_event("add-step", _, socket) do
     existing_steps =
       Map.get(socket.assigns.changeset.changes, :steps, socket.assigns.recipe.steps)
@@ -112,6 +94,24 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
     {:noreply, assign(socket, changeset: changeset)}
   end
+
+
+  def handle_event("add-ingredient", _params, socket) do
+    existing_ingredients =
+      Map.get(socket.assigns.changeset.changes, :recipe_ingredients, socket.assigns.recipe.recipe_ingredients)
+
+    ingredients =
+      existing_ingredients
+      |> Enum.concat([
+        Food.change_recipe_ingredient(%RecipeIngredient{temp_id: get_temp_id()})
+      ])
+
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.put_assoc(:recipe_ingredients, ingredients)
+    {:noreply, assign(socket, changeset: changeset)}
+  end
+
 
   @impl Phoenix.LiveView
   def handle_event("cancel-upload", %{"ref" => ref}, socket) do
@@ -132,7 +132,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       socket.assigns.recipe
       |> Food.change_recipe(recipe_params)
       |> Map.put(:action, :validate)
-
+  
     {:noreply, assign(socket, :changeset, changeset)}
   end
 
