@@ -1,9 +1,11 @@
 defmodule MehungryWeb.SurveyLive do
   use MehungryWeb, :live_view
+
   alias Mehungry.Survey
-  alias MehungryWeb.DemographicLive
   alias Mehungry.Food
-  alias MehungryWeb.RatingLive
+
+  alias MehungryWeb.{DemographicLive, RatingLive, Endpoint}
+  @survey_results_topic "survey_results"
 
   alias __MODULE__.Component
 
@@ -35,6 +37,9 @@ defmodule MehungryWeb.SurveyLive do
         updated_recipe,
         recipe_index
       ) do
+    # I'm new!
+    Endpoint.broadcast(@survey_results_topic, "rating_created", %{})
+
     socket
     |> put_flash(:info, "Rating submitted successfully")
     |> assign(

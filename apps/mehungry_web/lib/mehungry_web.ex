@@ -94,6 +94,18 @@ defmodule MehungryWeb do
     end
   end
 
+  def chart_live do
+    quote do
+      unquote(chart_helpers())
+    end
+  end
+
+  defp chart_helpers do
+    quote do
+      import MehungryWeb.BarChart
+    end
+  end
+
   @doc """
   When used, dispatch to the appropriate controller/view/etc.
   """

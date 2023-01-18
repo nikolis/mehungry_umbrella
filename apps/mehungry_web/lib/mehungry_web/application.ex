@@ -9,6 +9,8 @@ defmodule MehungryWeb.Application do
     children = [
       # Start the Telemetry supervisor
       MehungryWeb.Telemetry,
+      # Manually Crated Presence Model
+      MehungryWeb.Presence,
       # Start the Endpoint (http/https)
       MehungryWeb.Endpoint,
       # Start a worker by calling: MehungryWeb.Worker.start_link(arg)

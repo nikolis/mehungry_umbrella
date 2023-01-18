@@ -6,7 +6,8 @@ defmodule Mehungry.History.UserMeal do
   alias Mehungry.History.RecipeUserMeal
 
   schema "history_user_meals" do
-    field :meal_datetime, :utc_datetime
+    field :start_dt, :naive_datetime
+    field :end_dt, :naive_datetime
     field :title, :string
     field :user_id, :id
 
@@ -18,8 +19,8 @@ defmodule Mehungry.History.UserMeal do
   @doc false
   def changeset(user_meal, attrs) do
     user_meal
-    |> cast(attrs, [:title, :meal_datetime])
+    |> cast(attrs, [:title, :start_dt, :end_dt, :user_id])
     |> cast_assoc(:recipe_user_meals, with: &RecipeUserMeal.changeset/2)
-    |> validate_required([:title])
+    |> validate_required([:title, :user_id])
   end
 end

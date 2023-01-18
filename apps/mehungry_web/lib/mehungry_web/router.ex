@@ -22,11 +22,18 @@ defmodule MehungryWeb.Router do
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
       live "/browse", RecipeBrowseLive.Index, :index
+      live "/browse/:id", RecipeBrowseLive.Index, :show
+
+      live "/calendar", CalendarLive.Index, :index
+      live "/calendar/:start/:end", CalendarLive.Index, :new
+      live "/calendar/:id", CalendarLive.Index, :edit
+
       live "/create_recipe", CreateRecipeLive.Index, :index
       live "/create_recipe/add_ingredient", CreateRecipeLive.Index, :add_ingredient
       live "/create_recipe/:temp_id/edit_ingredient", CreateRecipeLive.Index, :edit_ingredient
       live "/create_recipe/:uuid/delete_ingredient", CreateRecipeLive.Index, :delete_ingredient
       live "/survey", SurveyLive, :index
+      live "/admin-dashboard", Admin.DashboardLive
     end
 
     live "/ingredients", IngredientLive.Index, :index

@@ -7,14 +7,14 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   alias Mehungry.Food.Recipe
   alias Mehungry.Food.Step
   alias Mehungry.Food.RecipeIngredient
-
   alias Mehungry.SimpleS3Upload
+
+  alias MehungryWeb.CreateRecipeLive.Components
 
   @impl true
   def mount(_params, _session, socket) do
     recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
     measurement_units = Food.list_measurement_units()
-
 
     {:ok,
      socket
@@ -76,7 +76,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:recipe_ingredients, recipe_ingredients)}
   end
 
- 
   def handle_event("add-step", _, socket) do
     existing_steps =
       Map.get(socket.assigns.changeset.changes, :steps, socket.assigns.recipe.steps)
@@ -95,10 +94,13 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, assign(socket, changeset: changeset)}
   end
 
-
   def handle_event("add-ingredient", _params, socket) do
     existing_ingredients =
-      Map.get(socket.assigns.changeset.changes, :recipe_ingredients, socket.assigns.recipe.recipe_ingredients)
+      Map.get(
+        socket.assigns.changeset.changes,
+        :recipe_ingredients,
+        socket.assigns.recipe.recipe_ingredients
+      )
 
     ingredients =
       existing_ingredients
@@ -109,9 +111,9 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     changeset =
       socket.assigns.changeset
       |> Ecto.Changeset.put_assoc(:recipe_ingredients, ingredients)
+
     {:noreply, assign(socket, changeset: changeset)}
   end
-
 
   @impl Phoenix.LiveView
   def handle_event("cancel-upload", %{"ref" => ref}, socket) do
@@ -121,6 +123,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @impl true
   def handle_event("validate", %{"recipe" => recipe_params}, socket) do
     ## TODO Investigate wtf is going on in here
+    IO.inspect(recipe_params, label: "Recipe params in the validte")
     recipe_params =
       if is_nil(Map.get(recipe_params, "steps")) do
         recipe_params
@@ -132,16 +135,17 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       socket.assigns.recipe
       |> Food.change_recipe(recipe_params)
       |> Map.put(:action, :validate)
-  
+
     {:noreply, assign(socket, :changeset, changeset)}
   end
 
   ######################################################################################## External Signal Receivers #################################
 
   @doc """
-  Receiving the recipe_ingredient params from created in the RecipeIngredientComponent
+  Receiving the recipe_ingredient params from created in the RecipeIngredientComponent is this really needed
   """
   def handle_info({:recipe_ingredient, recipe_ingredient_params}, socket) do
+    IO.inspect(recipe_ingredient_params, label: "the recipe_ingredient")
     existing_ingredients =
       Map.get(
         socket.assigns.changeset.changes,

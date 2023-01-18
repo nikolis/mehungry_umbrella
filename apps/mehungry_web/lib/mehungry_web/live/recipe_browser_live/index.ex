@@ -5,6 +5,9 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   alias Mehungry.Food.Recipe
   alias Mehungry.Search.RecipeSearchItem
   alias Mehungry.Search
+  alias MehungryWeb.Presence
+  alias Mehungry.Accounts
+  alias MehungryWeb.ImageProcessing
 
   @user_id 5
 
@@ -69,13 +72,31 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   @impl true
   def handle_params(params, _url, socket) do
+    maybe_track_user(nil, socket)
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
+
+  def maybe_track_user(
+        product,
+        %{assigns: %{live_action: :index, current_user: current_user}} = socket
+      ) do
+    if connected?(socket) do
+      Presence.track_user(self(), "recipe_browser_live", current_user.email)
+    end
+  end
+
+  def maybe_track_user(product, socket), do: nil
 
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(:page_title, "Listing Categories")
     |> assign(:category, nil)
+  end
+
+  defp apply_action(socket, :show, %{"id" => id}) do
+    socket
+    |> assign(:page_title, "Recipe Details")
+    |> assign(:recipe, Food.get_recipe!(id))
   end
 
   @impl true
@@ -102,10 +123,8 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
     # case Cachex.put(:users, "data", new_content) do
     # {:ok, true} ->
-    # IO.inspect("Sucess", label: "Puting to cache")
 
     # {errorm, reason} ->
-    # IO.inspect(reason, label: "Puting to cache")
     # end
 
     {:noreply, assign(socket, :recipes, list_recipes())}
@@ -113,5 +132,9 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   defp list_recipes do
     Food.list_recipes()
+    |> Enum.map(fn recipe ->
+      return = ImageProcessing.resize(recipe.image_url, 100, 100)
+      %Recipe{recipe | recipe_image_remote: return}
+    end)
   end
 end

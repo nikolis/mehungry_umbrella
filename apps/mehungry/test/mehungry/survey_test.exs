@@ -2,13 +2,15 @@ defmodule Mehungry.SurveyTest do
   use Mehungry.DataCase
 
   alias Mehungry.Survey
+  alias Mehungry.AccountsFixtures
+  alias Mehungry.FoodFixtures
 
   describe "demographics" do
     alias Mehungry.Survey.Demographic
 
     import Mehungry.SurveyFixtures
 
-    @invalid_attrs %{gender: nil, year_of_birth: nil}
+    @invalid_attrs %{capacity: nil, year_of_birth: nil}
 
     test "list_demographics/0 returns all demographics" do
       demographic = demographic_fixture()
@@ -21,11 +23,12 @@ defmodule Mehungry.SurveyTest do
     end
 
     test "create_demographic/1 with valid data creates a demographic" do
-      valid_attrs = %{gender: "some gender", year_of_birth: 42}
+      user = AccountsFixtures.user_fixture()
+      valid_attrs = %{capacity: "Cook", year_of_birth: 1990, user_id: user.id}
 
       assert {:ok, %Demographic{} = demographic} = Survey.create_demographic(valid_attrs)
-      assert demographic.gender == "some gender"
-      assert demographic.year_of_birth == 42
+      assert demographic.capacity == "Cook"
+      assert demographic.year_of_birth == 1990
     end
 
     test "create_demographic/1 with invalid data returns error changeset" do
@@ -34,13 +37,13 @@ defmodule Mehungry.SurveyTest do
 
     test "update_demographic/2 with valid data updates the demographic" do
       demographic = demographic_fixture()
-      update_attrs = %{gender: "some updated gender", year_of_birth: 43}
+      update_attrs = %{capacity: "Cook", year_of_birth: 1991}
 
       assert {:ok, %Demographic{} = demographic} =
                Survey.update_demographic(demographic, update_attrs)
 
-      assert demographic.gender == "some updated gender"
-      assert demographic.year_of_birth == 43
+      assert demographic.capacity == "Cook"
+      assert demographic.year_of_birth == 1991
     end
 
     test "update_demographic/2 with invalid data returns error changeset" do
@@ -65,6 +68,7 @@ defmodule Mehungry.SurveyTest do
     alias Mehungry.Survey.Rating
 
     import Mehungry.SurveyFixtures
+    import Mehungry.FoodFixtures
 
     @invalid_attrs %{stars: nil}
 
@@ -79,10 +83,12 @@ defmodule Mehungry.SurveyTest do
     end
 
     test "create_rating/1 with valid data creates a rating" do
-      valid_attrs = %{stars: 42}
+      user = AccountsFixtures.user_fixture()
+      recipe = FoodFixtures.recipe_fixture(user)
+      valid_attrs = %{stars: 4, recipe_id: recipe.id, user_id: user.id}
 
       assert {:ok, %Rating{} = rating} = Survey.create_rating(valid_attrs)
-      assert rating.stars == 42
+      assert rating.stars == 4
     end
 
     test "create_rating/1 with invalid data returns error changeset" do
@@ -91,10 +97,10 @@ defmodule Mehungry.SurveyTest do
 
     test "update_rating/2 with valid data updates the rating" do
       rating = rating_fixture()
-      update_attrs = %{stars: 43}
+      update_attrs = %{stars: 3}
 
       assert {:ok, %Rating{} = rating} = Survey.update_rating(rating, update_attrs)
-      assert rating.stars == 43
+      assert rating.stars == 3
     end
 
     test "update_rating/2 with invalid data returns error changeset" do

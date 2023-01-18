@@ -31,11 +31,9 @@
     </button>
     <div class="top-nav w-full lg:inline-flex lg:flex-grow lg:w-auto hidden" id="navigation">
       <div class="lg:inline-flex lg:flex-row lg:ml-96 flex flex-col ">
-          <%= live_redirect "Discovery",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.recipe_browse_index_path(@socket, :index) %>
-          <%= live_redirect "Create Recipe",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.create_recipe_index_path(@socket, :index) %>
-        <a href="#" class= "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600">
-          <span>Social</span>
-        </a>
+        <%= live_redirect "Discovery",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.recipe_browse_index_path(@socket, :index) %>
+        <%= live_redirect "Create Recipe",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.create_recipe_index_path(@socket, :index) %>
+        <%= live_redirect "Calendar",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.calendar_index_path(@socket, :index) %>
         <a href="#" class= "lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600">
           <span>What Evs</span>
         </a>
@@ -50,7 +48,7 @@
     </div>
   </nav>
 
-<main role="main" class="container">
+<main role="main" class="container" >
   <p class="alert alert-info" role="alert"
     phx-click="lv:clear-flash" 
     phx-value-key="info"><%= live_flash(@flash, :info) %></p>
@@ -58,6 +56,5 @@
   <p class="alert alert-danger" role="alert"
     phx-click="lv:clear-flash" 
     phx-value-key="error"><%= live_flash(@flash, :error) %></p>
-  <h1> Some mf layout here </h1>
   <%= @inner_content %>
 </main>

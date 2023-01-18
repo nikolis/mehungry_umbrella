@@ -37,8 +37,8 @@
           <a href="/create_recipe" class= "lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600">
             <span>Create</span>
           </a>
-          <a href="#" class= "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600">
-            <span>Social</span>
+          <a href="/calendar" class= "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600">
+            <span>Calendar234</span>
           </a>
           <a href="#" class= "lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600">
             <span>What Evs</span>
@@ -54,7 +54,7 @@
       </div>
     </nav>
 
-<main role="main" class="container">
+    <main role="main" class="container">
   <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
   <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p> 
   <p> afdsfdaafd </p>

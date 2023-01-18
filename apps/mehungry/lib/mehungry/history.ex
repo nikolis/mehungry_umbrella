@@ -31,6 +31,26 @@ defmodule Mehungry.History do
     )
   end
 
+  def list_history_user_meals_for_user(user_id) do
+
+    query = 
+      from meal in UserMeal, 
+      where: meal.user_id == ^user_id
+    Repo.all(query)
+    |> Repo.preload(
+      recipe_user_meals: [
+        recipe: [
+          recipe_ingredients: [
+            :measurement_unit,
+            ingredient: [:category, :ingredient_translation]
+          ]
+        ]
+      ]
+    )
+  end
+
+
+
   @doc """
   Gets a single user_meal.
 
@@ -45,7 +65,20 @@ defmodule Mehungry.History do
       ** (Ecto.NoResultsError)
 
   """
-  def get_user_meal!(id), do: Repo.get!(UserMeal, id)
+  def get_user_meal!(id) do
+    Repo.get!(UserMeal, id)
+    |> Repo.preload(
+      recipe_user_meals: [
+        recipe: [
+          recipe_ingredients: [
+            :measurement_unit,
+            ingredient: [:category, :ingredient_translation]
+          ]
+        ]
+      ]
+    )
+
+  end
 
   @doc """
   Creates a user_meal.

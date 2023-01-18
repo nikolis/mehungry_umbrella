@@ -38,11 +38,15 @@ defmodule MehungryWeb.MixProject do
   defp deps do
     [
       {:cachex, "~> 3.4"},
+      {:evision, "~> 0.1.16"},
+      {:vix, "~> 0.14.0"},
+      {:image, "~> 0.14.1"},
       {:bcrypt_elixir, "~> 3.0"},
       {:httpoison, "~> 1.2"},
+      {:contex, "~> 0.4.0"},
       {:mehungry, in_umbrella: true},
       {:phoenix, "~> 1.6.12"},
-      {:phoenix_live_view, "~> 0.18.0"},
+      {:phoenix_live_view, "~> 0.18.3"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.2"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},

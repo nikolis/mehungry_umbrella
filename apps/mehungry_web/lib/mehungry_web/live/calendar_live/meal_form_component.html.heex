@@ -1,0 +1,38 @@
+<div>
+  <h2><%= @title %></h2>
+
+  <.form
+    let={f}
+    for={@changeset}
+    id="meal-form"
+    phx-target={@myself}
+    phx-change="validate"
+    phx-submit="save">
+  
+    <%= label f, :title %>
+    <%= text_input f, :title %>
+    <%= error_tag f, :title %>
+
+    <%= hidden_input f, :start_dt %>
+    <%= hidden_input f, :end_dt %>
+    <%= hidden_input f, :user_id %>
+
+    <div  phx-hook="Select2Multi"  phx-update="ignore" id="recipe_user_meals" class="col-span-3" data-hidden-id = "recipe_select"  >
+      <%= label f, :recipe_user_meals, class: "text-center" %>
+      <select class="text-center w-full", multiple="multiple" id="recipe_select_select">
+        <%= for i <- @recipes do %>
+          <option value= {i.id} >
+            <%= i.title %>
+          </option>
+        <% end %>
+      </select>
+    </div>
+    <%= hidden_input f, :recipe_user_meals, id: "recipe_select2" , value: get_recipe_user_meal_values(f) %>
+    <%= multiple_select f, :recipe_user_meals, @recipe_ids, id: "recipe_select", style: "visibility:hidden" , value: get_recipe_user_meal_values(f)  %> 
+
+  
+    <div>
+      <%= submit "Save", phx_disable_with: "Saving..." %>
+    </div>
+  </.form>
+</div>

@@ -1,5 +1,6 @@
 /* This file is for your main application css. */
 @import "./phoenix.css";
+@import "./custom.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -43,8 +44,15 @@
   width: 40%;
 }
 
+.phx-modal-content-large {
+  background-color: #fefefe;
+  margin: 3.7% auto;
+  border: 1px solid #888;
+  width: 80%;
+}
+
 .phx-modal-close {
-  color: #aaa;
+  background-color: transparent;
   float: right;
   font-size: 28px;
   font-weight: bold;
@@ -110,4 +118,17 @@ th, td, a, p, button {
   .top-navbar {
     display: inline-flex !important;
   }
+}
+
+
+.primary_button {
+  color: white;
+  background-color: #4caf50;
+  border: none;
+  hover: 
+}
+
+.primary_button:hover {
+  background-color: #388e3c;
+  color: white;
 }

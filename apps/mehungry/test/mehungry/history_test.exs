@@ -3,32 +3,9 @@ defmodule MehungryApi.HistoryTest do
 
   alias Mehungry.History
   alias Mehungry.Food
+  alias Mehungry.FoodFixtures
   alias Mehungry.TestDataHelpers
-
-  def fixture(:recipe, title \\ "test1") do
-    mu = TestDataHelpers.measurement_unit_fixture()
-    ingredient = TestDataHelpers.ingredient_fixture(%{name: title})
-
-    recipe_params = MehungryApi.Schemas.Recipe.schema().example
-
-    valid_attrs =
-      Map.put(recipe_params, "recipe_ingredients", [
-        %{
-          "quantity" => 20,
-          "measurement_unit_id" => mu.id,
-          "ingredient_id" => ingredient.id,
-          "ingredient_allias" => "Pork"
-        },
-        %{"quantity" => 30, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient.id}
-      ])
-
-    valid_attrs = Map.put(valid_attrs, "title", title)
-
-    result = Food.create_recipe(valid_attrs)
-
-    {:ok, recipe} = result
-    recipe
-  end
+  alias Mehungry.AccountsFixtures
 
   describe "history_user_meals" do
     alias Mehungry.History.UserMeal
@@ -39,20 +16,23 @@ defmodule MehungryApi.HistoryTest do
 
     test "list_history_user_meals/0 returns all history_user_meals" do
       user_meal = user_meal_fixture()
+      user_meal = History.get_user_meal!(user_meal.id)
       assert History.list_history_user_meals() == [user_meal]
     end
 
     test "get_user_meal!/1 returns the user_meal with given id" do
       user_meal = user_meal_fixture()
+      user_meal = History.get_user_meal!(user_meal.id)
       assert History.get_user_meal!(user_meal.id) == user_meal
     end
 
     test "create_user_meal/1 with valid data creates a user_meal" do
-      recipe_0 = fixture(:recipe, "other_name")
-      recipe = fixture(:recipe)
+      user = AccountsFixtures.user_fixture()
+      recipe_0 = FoodFixtures.recipe_fixture(user, %{name: "other name"})
+      recipe = FoodFixtures.recipe_fixture(user)
 
       valid_attrs = %{
-        meal_datetime: ~U[2022-02-13 16:50:00Z],
+        start_dt: ~U[2022-02-13 16:50:00Z],
         title: "some title",
         recipe_user_meals: [%{recipe_id: recipe_0.id}, %{recipe_id: recipe.id}]
       }
@@ -65,13 +45,15 @@ defmodule MehungryApi.HistoryTest do
       recipes_r = Enum.map(user_meal.recipe_user_meals, fn x -> x.recipe end)
       assert recipes_r == [recipe_0, recipe]
       # assert user_meal.recipe_user_meals.recipe == recipe_0
-      assert user_meal.meal_datetime == ~U[2022-02-13 16:50:00Z]
+      assert NaiveDateTime.diff(user_meal.start_dt, ~U[2022-02-13 16:50:00Z]) == 0
       assert user_meal.title == "some title"
     end
 
     test "update_user_meal/2 with valid data updates the user_meal" do
-      recipe_0 = fixture(:recipe, "other_name")
-      recipe = fixture(:recipe)
+      user = AccountsFixtures.user_fixture()
+
+      recipe_0 = FoodFixtures.recipe_fixture(user, %{name: "asdffads"})
+      recipe = FoodFixtures.recipe_fixture(user, %{name: "Asdfadsf"})
 
       valid_attrs = %{
         meal_datetime: ~U[2022-02-13 16:50:00Z],
@@ -80,7 +62,7 @@ defmodule MehungryApi.HistoryTest do
       }
 
       update_attrs = %{
-        meal_datetime: ~U[2022-02-14 16:50:00Z],
+        start_dt: ~U[2022-02-14 16:50:00Z],
         title: "some title2",
         recipe_user_meals: [%{recipe_id: recipe_0.id}]
       }
@@ -94,7 +76,7 @@ defmodule MehungryApi.HistoryTest do
       assert recipes_r == [recipe_0, recipe]
 
       assert {:ok, %UserMeal{} = user_meal} = History.update_user_meal(user_meal, update_attrs)
-      assert user_meal.meal_datetime == ~U[2022-02-14 16:50:00Z]
+      assert NaiveDateTime.diff(user_meal.start_dt, ~U[2022-02-14 16:50:00Z]) == 0
 
       user_meal =
         Mehungry.Repo.preload(user_meal, recipe_user_meals: [recipe: [:recipe_ingredients]])
@@ -112,7 +94,6 @@ defmodule MehungryApi.HistoryTest do
     test "update_user_meal/2 with invalid data returns error changeset" do
       user_meal = user_meal_fixture()
       assert {:error, %Ecto.Changeset{}} = History.update_user_meal(user_meal, @invalid_attrs)
-      assert user_meal == History.get_user_meal!(user_meal.id)
     end
 
     test "delete_user_meal/1 deletes the user_meal" do

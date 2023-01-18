@@ -206,6 +206,21 @@ defmodule Mehungry.Food do
     result
   end
 
+  def recipes_with_average_ratings(%{
+        age_group_filter: age_group_filter
+      }) do
+    Recipe.Query.with_average_ratings()
+    |> Recipe.Query.join_users()
+    |> Recipe.Query.join_demographics()
+    |> Recipe.Query.filter_by_age_group(age_group_filter)
+    |> Repo.all()
+  end
+
+  def recipes_with_zero_ratings do
+    Recipe.Query.with_zero_ratings()
+    |> Repo.all()
+  end
+
   alias Mehungry.Food.Category
 
   def create_category(attrs) do

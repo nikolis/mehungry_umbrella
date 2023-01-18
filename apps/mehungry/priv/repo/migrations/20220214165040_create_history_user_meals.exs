@@ -4,7 +4,9 @@ defmodule MehungryApi.Repo.Migrations.CreateHistoryUserMeals do
   def change do
     create table(:history_user_meals) do
       add :title, :string
-      add :meal_datetime, :utc_datetime
+      add :start_dt, :naive_datetime
+      add :end_dt, :naive_datetime
+
       add :user_id, references(:users, on_delete: :nothing)
 
       timestamps()

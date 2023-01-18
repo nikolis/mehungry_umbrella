@@ -12,12 +12,15 @@ module.exports = (env, options) => {
   return {
     optimization: {            
       minimizer: [
-        new TerserPlugin({ cache: true, parallel: true, sourceMap: devMode }),
+        //new TerserPlugin({ cache: true, parallel: true, sourceMap: devMode }),
         new OptimizeCSSAssetsPlugin({}) 
       ]                        
     },
     entry: {                   
       'app': glob.sync('./vendor/**/*.js').concat(['./js/app.js'])
+      //'caleandar': ['./js/caleandar.js'].concat(glob.sync('./vendor/**/*.js')),
+      //'calendar_handler': ['./js/calendar_handler.js'].concat(glob.sync('./vendor/**/*.js'))
+
     },
     output: {                  
       filename: '[name].js',

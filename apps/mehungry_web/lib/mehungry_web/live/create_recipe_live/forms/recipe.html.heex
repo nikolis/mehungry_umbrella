@@ -1,0 +1,35 @@
+<div class = "my-4 grid grid-cols-2 gap-2">
+        
+        <div class = "mx-3">
+          <%= label @f, :title %>
+          <%= text_input @f, :title %>
+          <%= error_tag @f, :title %>
+        </div>
+
+        <div class="mx-3">
+          <%= label @f, :servings %>
+          <%= text_input @f, :servings %>
+          <%= error_tag @f, :servings %>
+        </div>
+
+</div>
+
+<div class = "grid grid-cols-2 gap-2">
+        <div class="mx-3">
+          <%= label @f, :languge_name %>
+          <%= text_input @f, :language_name %>
+          <%= error_tag @f, :language_name %>
+        </div>
+        <div class="mx-3">
+          <%= label @f, :private %>
+          <%= text_input @f, :private %>
+          <%= error_tag @f, :private %>
+        </div>
+</div> 
+
+<div class="my-4 mx-3"> 
+        <%= label @f, :description %>
+        <%= text_input @f, :description %>
+        <%= error_tag @f, :description %>
+</div>
+
