@@ -227,13 +227,15 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       end
 
     case Food.create_recipe(recipe_params) do
-      {:ok, _category} ->
+      {:ok, _recipe} ->
+        IO.inspect("recipe created")
         {:noreply,
          socket
          |> put_flash(:info, "Recipe has been created ")
          |> push_redirect(to: "/browse")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        IO.inspect(changeset, label: "The errors in save")
         {:noreply, assign(socket, changeset: changeset)}
     end
   end

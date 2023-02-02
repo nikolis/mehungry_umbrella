@@ -15,8 +15,6 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import jQuery from "jquery"
 import select2 from "select2"
-import 'tui-date-picker/dist/tui-date-picker.css';
-import 'tui-time-picker/dist/tui-time-picker.css';
 
 $(document).ready(function () {
   $(".nav-toggler").each(function (_, navToggler) {
@@ -28,6 +26,8 @@ $(document).ready(function () {
     });
   });
 });
+
+
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
 let Uploaders = {}
@@ -126,6 +126,14 @@ Hooks.Select2Multi = {
   }
 }
 
+
+import flatpicker from "flatpickr";
+
+Hooks.DatePicker = {
+  mounted(){
+    flatpicker("input[type=datetime]", {})
+  }
+}
 
 
 import 'tui-date-picker/dist/tui-date-picker.css';

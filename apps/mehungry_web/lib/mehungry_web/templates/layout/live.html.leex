@@ -34,9 +34,7 @@
         <%= live_redirect "Discovery",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.recipe_browse_index_path(@socket, :index) %>
         <%= live_redirect "Create Recipe",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.create_recipe_index_path(@socket, :index) %>
         <%= live_redirect "Calendar",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.calendar_index_path(@socket, :index) %>
-        <a href="#" class= "lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600">
-          <span>What Evs</span>
-        </a>
+        <%= live_redirect "Basket",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.basket_index_path(@socket, :index) %>
         <a href="#" class= "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600">
           <span>Bailando</span>
         </a>

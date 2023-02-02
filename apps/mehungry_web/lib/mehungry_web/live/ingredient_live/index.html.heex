@@ -31,9 +31,15 @@
         <td><%= ingredient.url %></td>
 
         <td>
-          <span><%= live_redirect "Show", to: Routes.ingredient_show_path(@socket, :show, ingredient) %></span>
-          <span><%= live_patch "Edit", to: Routes.ingredient_index_path(@socket, :edit, ingredient) %></span>
-          <span><%= link "Delete", to: "#", phx_click: "delete", phx_value_id: ingredient.id, data: [confirm: "Are you sure?"] %></span>
+          <span>
+            <%= live_redirect "Show", to: Routes.ingredient_show_path(@socket, :show, ingredient) %>
+          </span>
+          <span>
+            <%= live_patch "Edit", to: Routes.ingredient_index_path(@socket, :edit, ingredient) %>
+          </span>
+          <span>
+            <%= link "Delete", to: "#", phx_click: "delete", phx_value_id: ingredient.id, data: [confirm: "Are you sure?"] %>
+          </span>
         </td>
       </tr>
     <% end %>
