@@ -68,5 +68,4 @@ defmodule Mehungry.Food.Recipe do
     |> cast_embed(:steps, [:required_message])
     |> cast_assoc(:recipe_ingredients, required: true)
   end
-
 end

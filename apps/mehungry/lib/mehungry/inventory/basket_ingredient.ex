@@ -11,7 +11,6 @@ defmodule Mehungry.Inventory.BasketIngredient do
 
     belongs_to :ingredient, Ingredient
     belongs_to :shopping_basket, ShoppingBasket
-  
 
     timestamps()
   end
@@ -19,7 +18,7 @@ defmodule Mehungry.Inventory.BasketIngredient do
   @doc false
   def changeset(basket_ingredient, attrs) do
     basket_ingredient
-    |> cast(attrs, [:quantity, :in_storage, :ingredient_id, :shopping_basket_id ])
+    |> cast(attrs, [:quantity, :in_storage, :ingredient_id, :shopping_basket_id])
     |> validate_required([:quantity, :ingredient_id, :shopping_basket_id])
   end
 end

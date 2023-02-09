@@ -3,7 +3,7 @@ defmodule Mehungry.SurveyFixtures do
   This module defines test helpers for creating
   entities via the `Mehungry.Survey` context.
   """
-  alias Mehungry.FoodFixtures 
+  alias Mehungry.FoodFixtures
   alias Mehungry.AccountsFixtures
 
   @doc """
@@ -30,6 +30,7 @@ defmodule Mehungry.SurveyFixtures do
   def rating_fixture(attrs \\ %{}) do
     user = AccountsFixtures.user_fixture()
     recipe = FoodFixtures.recipe_fixture(user)
+
     {:ok, rating} =
       attrs
       |> Enum.into(%{

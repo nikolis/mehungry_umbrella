@@ -12,10 +12,10 @@ defmodule Mehungry.Accounts.UserNotifier do
       |> subject(subject)
       |> text_body(body)
 
-    #TODO
-    #with {:ok, _metadata} <- Mailer.deliver(email) do
+    # TODO
+    # with {:ok, _metadata} <- Mailer.deliver(email) do
     #  {:ok, email}
-    #end
+    # end
     {:ok, email}
   end
 

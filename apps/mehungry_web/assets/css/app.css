@@ -1,113 +1,28 @@
 /* This file is for your main application css. */
-@import "./phoenix.css";
-@import "./custom.css";
-@tailwind base;
+/*@import "./phoenix.css";
+ */
+/*@import "./essentials.css";
+@import "./custome_checklist.css";
+*/
+
+/*
 @tailwind components;
+*/
+@tailwind base;
 @tailwind utilities;
 
-/* LiveView specific classes for your customizations */
-.phx-no-feedback.invalid-feedback,
-.phx-no-feedback .invalid-feedback {
-  display: none;
-}
+@import "./essentials.css";
 
-.phx-click-loading {
-  opacity: 0.5;
-  transition: opacity 1s ease-out;
-}
+/*@tailwind utilities;*/
 
-.phx-disconnected{
-  cursor: wait;
-}
-.phx-disconnected *{
-  pointer-events: none;
-}
-
-.phx-modal {
-  opacity: 1!important;
-  position: fixed;
-  z-index: 1;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgb(0,0,0);
-  background-color: rgba(0,0,0,0.4);
-}
-
-.phx-modal-content {
-  background-color: #fefefe;
-  margin: 15% auto;
-  padding: 20px;
-  border: 1px solid #888;
-  width: 40%;
-}
-
-.phx-modal-content-large {
-  background-color: #fefefe;
-  margin: 3.7% auto;
-  border: 1px solid #888;
-  width: 80%;
-}
-
-.phx-modal-close {
-  background-color: transparent;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.phx-modal-close:hover,
-.phx-modal-close:focus {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-
-/* Alerts and form errors */
-.alert {
-  padding: 15px;
-  margin-bottom: 20px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-}
-.alert-info {
-  color: #31708f;
-  background-color: #d9edf7;
-  border-color: #bce8f1;
-}
-.alert-warning {
-  color: #8a6d3b;
-  background-color: #fcf8e3;
-  border-color: #faebcc;
-}
-.alert-danger {
-  color: #a94442;
-  background-color: #f2dede;
-  border-color: #ebccd1;
-}
-.alert p {
-  margin-bottom: 0;
-}
-.alert:empty {
-  display: none;
-}
-.invalid-feedback {
-  color: #a94442;
-  display: block;
-  margin: -1rem 0 2rem;
-}
-
-.select2-results__option {
+/*.select2-results__option {
     @apply text-2xl;
 }
 .select2-selection__rendered{
     @apply text-2xl;
 }
 
-input[type] {
+ input[type] {
   @apply text-2xl;
 }
 th, td, a, p, button {
@@ -131,110 +46,6 @@ th, td, a, p, button {
 .primary_button:hover {
   background-color: #388e3c;
   color: white;
-}
-
-.list 
-{
-	background: #fff;
-	width: 50%;
-	margin-top: 50px;
-	margin-bottom: 50px;
-}
-
-.list h2 
-{
-	background: #03a9f4;
-	color: #fff;
-	padding: 10px 20px ; 
-	font-weight: 600 ; 
-}
-
-.list ul 
-{
-	position: relative; 
-	padding: 20px;
-}
-
-.list ul li 
-{
-	position: relative; 
-	list-style: none;
-	padding: 15px 0;
-	border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-	
-}
-
-.list ul li:last-child
-{
-	border-bottom: none;
-}
+}*/
 
 
-.list ul li label 
-{
-	position: relative; 
-	display: flex; 
-	justify-content: space-between;
-	align-items: center;
-	cursor: pointer; 
-}
-
-.list ul li label input 
-{
-	visibility: hidden;
-	appearance: none;
-}
-
-.list ul li label p 
-{
-	position: absolute; 
-}
-
-.list ul li label span 
-{
-	position:relative; 
-	width: 20px;
-	height: 20px;
-	border: 1px solid #ccc;
-	border-radius: 50%;
-	display: flex; 
-	justify-content: center; 
-	align-items: center;
-}
-
-.list ul li label span:before
-{
-	content: '';
-	position: absolute;
-	top: 5px;
-	width: 10px;
-	height: 5px;
-	border-left: 2px solid #ccc;
-	border-bottom:  2px solid #ccc;
-	transform: rotate(-40deg);
-}
-
-
-.list ul li label input.checked ~ p 
-{
-	text-decoration: line-through;
-	color: #ccc;
-
-}
-
-.list ul li label input.checked ~ span 
-{
-	background: #03a9f4;
-	border: 1px solid #03a9f4;
-}
-
-
-.link_part {
-	background: #03a9f4;
-}
-
-.list ul li label input.checked ~ span::before 
-{
-	border-left: 2px solid #fff;
-	border-bottom: 2px solid #fff;
-}

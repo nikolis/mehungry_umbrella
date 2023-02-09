@@ -21,6 +21,8 @@ defmodule MehungryWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
+      live "/", HomeLive.Index, :index
+
       live "/browse", RecipeBrowseLive.Index, :index
       live "/browse/:id", RecipeBrowseLive.Index, :show
 
@@ -58,8 +60,6 @@ defmodule MehungryWeb.Router do
 
     live "/measurement_units/:id", MeasurementUnitLive.Show, :show
     live "/measurement_units/:id/show/edit", MeasurementUnitLive.Show, :edit
-
-    get "/", PageController, :index
   end
 
   # Enables LiveDashboard only for development

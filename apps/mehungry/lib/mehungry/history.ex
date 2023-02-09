@@ -32,10 +32,10 @@ defmodule Mehungry.History do
   end
 
   def list_history_user_meals_for_user(user_id) do
+    query =
+      from meal in UserMeal,
+        where: meal.user_id == ^user_id
 
-    query = 
-      from meal in UserMeal, 
-      where: meal.user_id == ^user_id
     Repo.all(query)
     |> Repo.preload(
       recipe_user_meals: [
@@ -50,10 +50,10 @@ defmodule Mehungry.History do
   end
 
   def list_history_user_meals_for_user(user_id, start_dt, end_dt) do
+    query =
+      from meal in UserMeal,
+        where: meal.user_id == ^user_id and ^start_dt < meal.start_dt and ^end_dt > meal.end_dt
 
-    query = 
-      from meal in UserMeal, 
-      where: meal.user_id == ^user_id and ^start_dt < meal.start_dt and ^end_dt > meal.end_dt 
     Repo.all(query)
     |> Repo.preload(
       recipe_user_meals: [
@@ -66,7 +66,6 @@ defmodule Mehungry.History do
       ]
     )
   end
-
 
   @doc """
   Gets a single user_meal.
@@ -94,7 +93,6 @@ defmodule Mehungry.History do
         ]
       ]
     )
-
   end
 
   @doc """

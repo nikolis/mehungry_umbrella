@@ -6,6 +6,5 @@ defmodule Mehungry.Repo.Migrations.ModifyRecipeTable do
       add :list_image_url, :string
       add :detail_image_url, :string
     end
-
   end
 end

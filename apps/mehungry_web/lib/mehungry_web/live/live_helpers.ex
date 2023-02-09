@@ -5,7 +5,7 @@ defmodule MehungryWeb.LiveHelpers do
 
   alias Phoenix.LiveView.JS
 
- def modal(assigns) do
+  def modal(assigns) do
     assigns = assign_new(assigns, :return_to, fn -> nil end)
 
     ~H"""
@@ -34,7 +34,7 @@ defmodule MehungryWeb.LiveHelpers do
     """
   end
 
- def modal_large(assigns) do
+  def modal_large(assigns) do
     assigns = assign_new(assigns, :return_to, fn -> nil end)
 
     ~H"""
@@ -51,8 +51,6 @@ defmodule MehungryWeb.LiveHelpers do
     </div>
     """
   end
-
-
 
   defp hide_modal(js \\ %JS{}) do
     js

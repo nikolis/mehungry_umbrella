@@ -1,6 +1,5 @@
 defmodule Mehungry.FoodFixtures do
-
- alias Mehungry.Languages
+  alias Mehungry.Languages
 
   alias Mehungry.{
     Accounts,
@@ -168,18 +167,22 @@ defmodule Mehungry.FoodFixtures do
   def recipe_fixture(%Accounts.User{} = user, attrs \\ %{}) do
     ingredient = ingredient_fixture()
     mu = measurement_unit_fixture()
+
     {:ok, recipe} =
       attrs =
-        Enum.into(attrs, %{
-          title: "some title",
-          author: "another author",
-          cousine: "some cusine",
-          description: "some description",
-          servings: 4,
-          language_name: "En",
-          recipe_ingredients: [%{ingredient_id: ingredient.id, measurement_unit_id: mu.id, quantity: 5}]
-        })
-        |> Food.create_recipe()
+      Enum.into(attrs, %{
+        title: "some title",
+        author: "another author",
+        cousine: "some cusine",
+        description: "some description",
+        servings: 4,
+        language_name: "En",
+        recipe_ingredients: [
+          %{ingredient_id: ingredient.id, measurement_unit_id: mu.id, quantity: 5}
+        ]
+      })
+      |> Food.create_recipe()
+
     recipe
   end
 end

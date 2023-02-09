@@ -6,10 +6,7 @@ defmodule Mehungry.Inventory do
   import Ecto.Query, warn: false
   alias Mehungry.Repo
 
-
-
   alias Mehungry.Inventory.BasketParams
-
 
   def change_basket_params(%BasketParams{} = basket_params, attrs \\ %{}) do
     BasketParams.changeset(basket_params, attrs)
@@ -31,22 +28,20 @@ defmodule Mehungry.Inventory do
   end
 
   def list_shopping_baskets_for_user(user_id) do
-    (from s in ShoppingBasket, 
-    where: s.user_id == ^user_id)
+    from(s in ShoppingBasket,
+      where: s.user_id == ^user_id
+    )
     |> Repo.all()
     |> Repo.preload(
       basket_ingredients: [
         ingredient: [
-            :measurement_unit,
-            :category, 
-            :ingredient_translation
-          ]
+          :measurement_unit,
+          :category,
+          :ingredient_translation
         ]
+      ]
     )
-
   end
-
-
 
   @doc """
   Gets a single shopping_basket.
@@ -77,28 +72,27 @@ defmodule Mehungry.Inventory do
 
   """
   def create_shopping_basket(attrs \\ %{}) do
-    result = 
+    result =
       %ShoppingBasket{}
       |> ShoppingBasket.changeset(attrs)
       |> Repo.insert()
 
-    case result do 
+    case result do
       {:ok, basket} ->
         basket
         |> Repo.preload(
           basket_ingredients: [
             ingredient: [
-                :measurement_unit,
-                :category, 
-                :ingredient_translation
-              ]
+              :measurement_unit,
+              :category,
+              :ingredient_translation
             ]
+          ]
         )
-      _ -> 
+
+      _ ->
         result
-      end
-
-
+    end
   end
 
   @doc """
@@ -149,6 +143,7 @@ defmodule Mehungry.Inventory do
   end
 
   alias Mehungry.Inventory.BasketIngredient
+
   @doc """
   Returns the list of basket_ingredients.
 

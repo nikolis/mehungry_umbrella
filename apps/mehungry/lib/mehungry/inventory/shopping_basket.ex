@@ -1,15 +1,14 @@
 defmodule Mehungry.Inventory.ShoppingBasket do
-
   use Ecto.Schema
   import Ecto.Changeset
-  
+
   alias Mehungry.Inventory.BasketIngredient
   alias Mehungry.Accounts.User
 
   schema "shopping_baskets" do
     field :end_dt, :naive_datetime
     field :start_dt, :naive_datetime
-  
+
     belongs_to :user, User
 
     has_many :basket_ingredients, BasketIngredient, on_replace: :delete

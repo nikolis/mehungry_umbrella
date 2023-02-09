@@ -1,5 +1,5 @@
-  <nav class="flex items-center bg-green-200 p-3 flex-wrap">
-    <a href="#" class = "ml-20 p-2 mr-4 inline-flex items-center">
+<nav class="flex items-center bg-green-200 p-3 flex-wrap">
+    <a href="/" class = "ml-20 p-2 mr-4 inline-flex items-center">
       <svg width="47.5px" height="47.5px" viewBox="0 0 47.5 47.5" id="svg2" style="enable-background:new 0 0 47.5 47.5;" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg">
         <defs id="defs6">
           <clipPath clipPathUnits="userSpaceOnUse" id="clipPath16">
@@ -22,9 +22,6 @@
           </g>
         </g>
       </svg>
-      <span class="text-4xl text-green font-bold tracking-wide" style="color: #77b255">
-        M3hungry
-      </span>
     </a>
     <button class="inline-flex p-3 hover:bg-green-500 rounded lg:hidden ml-auto nav-toggler" data-target="#navigation">
       <i class="material-icons">menu</i>
@@ -32,14 +29,11 @@
     <div class="top-nav w-full lg:inline-flex lg:flex-grow lg:w-auto hidden" id="navigation">
       <div class="lg:inline-flex lg:flex-row lg:ml-96 flex flex-col ">
         <%= live_redirect "Discovery",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.recipe_browse_index_path(@socket, :index) %>
-        <%= live_redirect "Create Recipe",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.create_recipe_index_path(@socket, :index) %>
+        <%= live_redirect "Create",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.create_recipe_index_path(@socket, :index) %>
         <%= live_redirect "Calendar",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.calendar_index_path(@socket, :index) %>
         <%= live_redirect "Basket",class: "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600", to: Routes.basket_index_path(@socket, :index) %>
-        <a href="#" class= "mx-10 lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600">
-          <span>Bailando</span>
-        </a>
         <a href="#" class= "lg:inline-flex lg:w-auto px-3 py-2 rounded text-green-500 text-3xl hover:text-green-300 hover:bg-green-600">
-          <span>Contact Us</span>
+          <span>Contact Us </span>
         </a>
 
       </div>
@@ -54,5 +48,6 @@
   <p class="alert alert-danger" role="alert"
     phx-click="lv:clear-flash" 
     phx-value-key="error"><%= live_flash(@flash, :error) %></p>
+
   <%= @inner_content %>
 </main>

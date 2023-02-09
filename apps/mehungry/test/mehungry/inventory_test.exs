@@ -23,7 +23,9 @@ defmodule Mehungry.InventoryTest do
     test "create_shoping_basket/1 with valid data creates a shoping_basket" do
       valid_attrs = %{end_dt: ~N[2023-01-25 11:01:00], start_dt: ~N[2023-01-25 11:01:00]}
 
-      assert {:ok, %ShopingBasket{} = shoping_basket} = Inventory.create_shoping_basket(valid_attrs)
+      assert {:ok, %ShopingBasket{} = shoping_basket} =
+               Inventory.create_shoping_basket(valid_attrs)
+
       assert shoping_basket.end_dt == ~N[2023-01-25 11:01:00]
       assert shoping_basket.start_dt == ~N[2023-01-25 11:01:00]
     end
@@ -36,14 +38,19 @@ defmodule Mehungry.InventoryTest do
       shoping_basket = shoping_basket_fixture()
       update_attrs = %{end_dt: ~N[2023-01-26 11:01:00], start_dt: ~N[2023-01-26 11:01:00]}
 
-      assert {:ok, %ShopingBasket{} = shoping_basket} = Inventory.update_shoping_basket(shoping_basket, update_attrs)
+      assert {:ok, %ShopingBasket{} = shoping_basket} =
+               Inventory.update_shoping_basket(shoping_basket, update_attrs)
+
       assert shoping_basket.end_dt == ~N[2023-01-26 11:01:00]
       assert shoping_basket.start_dt == ~N[2023-01-26 11:01:00]
     end
 
     test "update_shoping_basket/2 with invalid data returns error changeset" do
       shoping_basket = shoping_basket_fixture()
-      assert {:error, %Ecto.Changeset{}} = Inventory.update_shoping_basket(shoping_basket, @invalid_attrs)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Inventory.update_shoping_basket(shoping_basket, @invalid_attrs)
+
       assert shoping_basket == Inventory.get_shoping_basket!(shoping_basket.id)
     end
 
@@ -79,7 +86,9 @@ defmodule Mehungry.InventoryTest do
     test "create_ingredient_basket/1 with valid data creates a ingredient_basket" do
       valid_attrs = %{quantity: 120.5}
 
-      assert {:ok, %IngredientBasket{} = ingredient_basket} = Inventory.create_ingredient_basket(valid_attrs)
+      assert {:ok, %IngredientBasket{} = ingredient_basket} =
+               Inventory.create_ingredient_basket(valid_attrs)
+
       assert ingredient_basket.quantity == 120.5
     end
 
@@ -91,20 +100,28 @@ defmodule Mehungry.InventoryTest do
       ingredient_basket = ingredient_basket_fixture()
       update_attrs = %{quantity: 456.7}
 
-      assert {:ok, %IngredientBasket{} = ingredient_basket} = Inventory.update_ingredient_basket(ingredient_basket, update_attrs)
+      assert {:ok, %IngredientBasket{} = ingredient_basket} =
+               Inventory.update_ingredient_basket(ingredient_basket, update_attrs)
+
       assert ingredient_basket.quantity == 456.7
     end
 
     test "update_ingredient_basket/2 with invalid data returns error changeset" do
       ingredient_basket = ingredient_basket_fixture()
-      assert {:error, %Ecto.Changeset{}} = Inventory.update_ingredient_basket(ingredient_basket, @invalid_attrs)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Inventory.update_ingredient_basket(ingredient_basket, @invalid_attrs)
+
       assert ingredient_basket == Inventory.get_ingredient_basket!(ingredient_basket.id)
     end
 
     test "delete_ingredient_basket/1 deletes the ingredient_basket" do
       ingredient_basket = ingredient_basket_fixture()
       assert {:ok, %IngredientBasket{}} = Inventory.delete_ingredient_basket(ingredient_basket)
-      assert_raise Ecto.NoResultsError, fn -> Inventory.get_ingredient_basket!(ingredient_basket.id) end
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Inventory.get_ingredient_basket!(ingredient_basket.id)
+      end
     end
 
     test "change_ingredient_basket/1 returns a ingredient_basket changeset" do

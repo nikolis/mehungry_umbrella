@@ -124,6 +124,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def handle_event("validate", %{"recipe" => recipe_params}, socket) do
     ## TODO Investigate wtf is going on in here
     IO.inspect(recipe_params, label: "Recipe params in the validte")
+
     recipe_params =
       if is_nil(Map.get(recipe_params, "steps")) do
         recipe_params
@@ -146,6 +147,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   """
   def handle_info({:recipe_ingredient, recipe_ingredient_params}, socket) do
     IO.inspect(recipe_ingredient_params, label: "the recipe_ingredient")
+
     existing_ingredients =
       Map.get(
         socket.assigns.changeset.changes,
@@ -229,6 +231,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     case Food.create_recipe(recipe_params) do
       {:ok, _recipe} ->
         IO.inspect("recipe created")
+
         {:noreply,
          socket
          |> put_flash(:info, "Recipe has been created ")
