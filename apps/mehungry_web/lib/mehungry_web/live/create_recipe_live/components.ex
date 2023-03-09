@@ -22,4 +22,32 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
     <.recipe f={assigns.f}/>
     """
   end
+
+  def is_empty(%Phoenix.HTML.Form{} = form, atom_key) do
+    key_form_params = form.params[atom_key]
+    key_changeset = form.source.changes[atom_key]
+    key_form_data = Map.from_struct(form.data)[atom_key]
+
+    # IO.inspect(atom_key, label: "THE KEY")
+    # IO.inspect(key_form_params, label: "The form")
+    # IO.inspect(key_changeset, label: "Sourde changes") 
+    # IO.inspect(key_form_data, label: "form data")
+    if(is_nil(key_form_data) and is_nil(key_changeset) and is_nil(key_form_params)) do
+      true
+    else
+      false
+    end
+  end
+
+  def has_content(form, atom_key) do
+    is_e = is_empty(form, atom_key)
+
+    case is_e do
+      true ->
+        ""
+
+      false ->
+        "input_with_content"
+    end
+  end
 end

@@ -2,8 +2,6 @@ defmodule Mehungry.Food.Recipe do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Mehungry.Food.RecipeIngredient
-  alias Mehungry.Food.Step
   alias Mehungry.Accounts.User
   alias Mehungry.Language
   alias Mehungry.Survey.Rating
@@ -28,7 +26,7 @@ defmodule Mehungry.Food.Recipe do
     has_many :ratings, Rating
     belongs_to :user, User
 
-    belongs_to :language, Mehungry.Language,
+    belongs_to :language, Language,
       references: :name,
       foreign_key: :language_name,
       type: :string

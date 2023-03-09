@@ -12,10 +12,7 @@ defmodule Mehungry.Food do
   alias Mehungry.Food.CategoryTranslation
   alias Mehungry.Food.Ingredient
   alias Mehungry.Food.IngredientTranslation
-  alias Mehungry.Food.RecipeSearch
   alias Mehungry.Languages.Language
-  alias Mehungry.Accounts.User
-  alias Mehungry.Food.Annotation
   alias Mehungry.Food.Like
 
   def get_category!(id) do

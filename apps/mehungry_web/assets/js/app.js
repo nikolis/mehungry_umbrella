@@ -16,6 +16,15 @@ import {LiveSocket} from "phoenix_live_view"
 import jQuery from "jquery"
 import select2 from "select2"
 
+
+$('#lab1').click(function() {
+	console.log("asdffasd")	
+	var idd = $('#lab1').attr('for')
+	console.log(idd)
+	$("#"+idd).trigger( "click")
+});
+
+
 $(document).ready(function () {
   $(".nav-toggler").each(function (_, navToggler) {
     var target = $(navToggler).data("target");

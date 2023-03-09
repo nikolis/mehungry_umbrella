@@ -1,5 +1,6 @@
 defmodule MehungryWeb.HomeLive.Index do
   use MehungryWeb, :live_view
+  use MehungryWeb.Searchable, :transfers_to_search
 
   import Ecto
 

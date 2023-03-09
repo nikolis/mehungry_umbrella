@@ -6,8 +6,6 @@
   id="recipe-form"
   phx-change="validate"
   phx-submit="search">
-	
-
 	<div class ="flex mt-16 mb-16 w-1/4 mx-auto">
 	
 	  <%= text_input f, :query_string , class: "mr-2 h-full "%>
@@ -16,42 +14,42 @@
  
 </.form>
 
-<%= if @live_action in [:show] do %>
-  <.modal_large return_to={Routes.recipe_browse_index_path(@socket, :index)}>
-    <.live_component
-      module={MehungryWeb.RecipeBrowseLive.Show}
-      id={@recipe.id}
-      title={@page_title}
-      action={@live_action}
-      recipe={@recipe}
-      return_to={Routes.recipe_browse_index_path(@socket, :index)}
-    />
-  </.modal_large>
-<% end %>
+  <%= if @live_action in [:show] do %>
+    <.modal_large return_to={Routes.recipe_browse_index_path(@socket, :index)}>
+     <.live_component
+        module={MehungryWeb.RecipeBrowseLive.Show}
+        id={@recipe.id}
+        title={@page_title}
+        action={@live_action}
+        recipe={@recipe}
+        return_to={Routes.recipe_browse_index_path(@socket, :index)}
+      />
+    </.modal_large>
+  <% end %>
 
+  <div class="grid grid-cols-5 gap-4">
+    <%= for recipe <- @recipes do %>
+      <%= if not is_nil(recipe.recipe_image_remote) do %> 
+        <div>
+	  <div>
+	    <.link patch={"/browse/" <> Integer.to_string(recipe.id)} >
+	      <img src={recipe.recipe_image_remote} alt="Italian Trulli" style="width: 100%" >
+            </.link>
+	  </div>
 
+          <div style = "background-color: #ffffff" class = "p-5 h-60">
+            <.link patch={"/browse/" <> Integer.to_string(recipe.id)} >
+              <h4 class="font-semibold" style="color: #4caf50"> <%= recipe.title %> </h4>
+              <h4 class="text-3xl pt-4"> <%= recipe.description %> </h4>
+              <div class="flex pt-4"> 
+                <img style="width: 10%" class="h-full" src={Routes.static_path(@socket, "/images/BPM-Timer1.svg")} alt="Phoenix Framework Logo"/>
+                <p class="text-2xl my-auto pl-3"> 5	mins</p>
+              </div>
+            </.link>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
 
-	<div class="grid grid-cols-5 gap-4">
-		<%= for recipe <- @recipes do %>
-			<%= if not is_nil(recipe.recipe_image_remote) do %> 
-					<div>
-						<div>
-							<.link patch={"/browse/" <> Integer.to_string(recipe.id)} >
-								<img src={recipe.recipe_image_remote} alt="Italian Trulli" style="width: 100%" >
-							</.link>
-						</div>
-					  <div style = "background-color: #ffffff" class = "p-5 h-60">
-							<.link patch={"/browse/" <> Integer.to_string(recipe.id)} >
-								<h4 class="font-semibold" style="color: #4caf50"> <%= recipe.title %> </h4>
-								<h4 class="text-3xl pt-4"> <%= recipe.description %> </h4>
-								<div class="flex pt-4"> 
-									<img style="width: 10%" class="h-full" src={Routes.static_path(@socket, "/images/BPM-Timer1.svg")} alt="Phoenix Framework Logo"/>
-									<p class="text-2xl my-auto pl-3"> 5	mins</p>
-								</div>
-							</.link>
-						</div>
-					</div>
-			<% end %>
-		<% end %>
-	</div>
 </div>

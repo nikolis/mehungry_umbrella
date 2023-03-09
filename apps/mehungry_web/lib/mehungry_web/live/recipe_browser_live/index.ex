@@ -13,6 +13,8 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    IO.inspect("Mount")
+
     {:ok,
      assign(socket, :recipes, list_recipes())
      |> assign_recipe_search()
@@ -25,10 +27,21 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   end
 
   def assign_changeset(%{assigns: %{recipe_search_item: recipe_search_item}} = socket) do
-    socket
-    |> assign(:changeset, Search.change_recipe_search_item(recipe_search_item))
+    result =
+      socket
+      |> assign(:changeset, Search.change_recipe_search_item(recipe_search_item))
+
+    result
   end
 
+  @impl true
+  def handle_event("validate", %{"recipe_search_item" => search_item} = thing, socket) do
+    IO.inspect(thing, label: "Thing")
+    IO.inspect("General handle Locally though")
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event(
         "validate",
         %{"recipe_search_item" => recipe_search_item_params},
@@ -39,9 +52,27 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
       |> Search.change_recipe_search_item(recipe_search_item_params)
       |> Map.put(:action, :validate)
 
+    IO.inspect("THe local impl", label: "The")
+
     {:noreply,
      socket
      |> assign(:changeset, changeset)}
+  end
+
+  def handle_event(any, _, socket) do
+    IO.inspect(any, label: "From within")
+
+    IO.inspect(
+      "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("search", %{"recipe_search_item" => %{"query_string" => query_string}}, socket) do
+    IO.inspect("General handle Buttt locally here")
+    IO.inspect(query_string, label: "Query String")
+    {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/browse")}
   end
 
   def handle_event(

@@ -25,8 +25,14 @@ defmodule MehungryWeb.Router do
 
       live "/browse", RecipeBrowseLive.Index, :index
       live "/browse/:id", RecipeBrowseLive.Index, :show
-
+      live "/browse_prepop/:search_term", :searc_prepop
       live "/basket", BasketLive.Index, :index
+
+      live "/bedels", BedelLive.Index, :index
+      live "/bedels/new", BedelLive.Index, :new
+      live "/bedels/:id/edit", BedelLive.Index, :edit
+      live "/bedels/:id", BedelLive.Show, :show
+      live "/bedels/:id/show/edit", BedelLive.Show, :edit
 
       live "/calendar", CalendarLive.Index, :index
       live "/calendar/:start/:end", CalendarLive.Index, :new

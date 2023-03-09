@@ -5,15 +5,12 @@
 @import "./custome_checklist.css";
 */
 
-/*
 @tailwind components;
-*/
 @tailwind base;
 @tailwind utilities;
 
 @import "./essentials.css";
 
-/*@tailwind utilities;*/
 
 /*.select2-results__option {
     @apply text-2xl;

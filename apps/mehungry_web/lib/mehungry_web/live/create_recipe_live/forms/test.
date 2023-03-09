@@ -1,12 +1,11 @@
-  <div class="fields-row-container mx-auto">
-
-    <div 
-      data-temp-id= {@g.data.temp_id||@g.params["temp_id"]}  
-      data-hidden-id = {"ingredient_select_hiddden#{@g.data.temp_id||@g.params["temp_id"]}"} 
-      phx-hook="Select2"  
-      phx-update="ignore" 
-      id={"ingredient_select_containe23232r#{@g.params["temp_id"]||@g.data.temp_id}"}
-      class="fw first">
+  <div class="fields-row-container">
+  <div 
+    data-temp-id= {@g.data.temp_id||@g.params["temp_id"]}  
+    data-hidden-id = {"ingredient_select_hiddden#{@g.data.temp_id||@g.params["temp_id"]}"} 
+    phx-hook="Select2"  
+    phx-update="ignore" 
+    id={"ingredient_select_containe23232r#{@g.params["temp_id"]||@g.data.temp_id}"}
+      class="fw">
       
       <select class="fw"  >
         <%= for i <- @ingredients do %>
@@ -17,15 +16,14 @@
       </select>
   </div>
 
-
   <div 
   data-temp-id= {@g.data.temp_id||@g.params["temp_id"]} 
   data-hidden-id = {"measurement_unit_select_hiddden#{@g.params["temp_id"]||@g.data.temp_id}"} 
   phx-hook="Select2"  
   phx-update="ignore" 
   id={"mu_select_containe23232r#{@g.params["temp_id"]||@g.data.temp_id}"} 
-  class="fw second" >
-      <select class="select-class fw ", style= "right: 40px;", style="padding-right: 2rem;" >
+  class="fw" >
+      <select class="select-class fw" >
         <%= for i <- @measurement_units do %>
           <option value= {i.id} class="text-center" >
             <%= i.name %>
@@ -35,9 +33,8 @@
      
   </div>
 
-
-  <div class=" fw input-form-select2  asdf 3 third">
-    <%= text_input @g, :quantity, class: "input", style: "margin: 0" , placeholder: "3."%>
+  <div class=" fw input-form-select2  ">
+    <%= text_input @g, :quantity, class: "input" , placeholder: "0."%>
   </div>
 
   <div class="remove-entry-button">
@@ -45,7 +42,6 @@
       phx-value-temp_id={@g.data.temp_id||@g.params["temp_id"]} 
       phx-value-remove={@g.data.temp_id} 
       phx-click="remove-ingredient"
-      type="button"
       type="button" >
         &times
     </button>

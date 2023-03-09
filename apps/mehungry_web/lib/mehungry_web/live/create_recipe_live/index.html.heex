@@ -1,85 +1,78 @@
-<div class="testimonial-grid2 ">
-<h1 class="mx-auto text-center text-6xl font-semibold m-10">Create Recipe</h1>
-
+<div class="form-main">
 <.form
 let={f}
 for={@changeset}
 id="recipe-form"
 phx-change="validate"
-phx-submit="save">
+phx-submit="save"
+class="the_form"
+>
 
-  <div class="grid grid-cols-10 gap-4 px-20"> 
-    <div class="col-span-1"> </div>
-    
-    <div class="col-span-6"> 
-      <Components.recipe_render f={f} />
-    </div>
 
-    <div class= "col-span-2 flex flex-column"> 
-      <div class="bg-color-blue w-full h-full" phx-drop-target="{@uploads.image.ref}">
-        <.live_file_input upload={@uploads.image} />
-      </div>
-      <%= for entry <- @uploads.image.entries do %>
-        <article class="upload-entry">
-          <figure>
-            <!-- <.live_img_preview entry={entry} /> -->
-            <!-- <figcaption><%= entry.client_name %></figcaption>-->
-          </figure>
-
-          <%# entry.progress will update automatically for in-flight entries %>
-          <progress value={entry.progress} max="100"> <%= entry.progress %>% </progress>
-
-          <%# a regular click event whose handler will invoke Phoenix.LiveView.cancel_upload/3 %>
-          <!-- <button class="w-20 text-2xl" type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} aria-label="cancel">&times;</button> -->
-
-          <%# Phoenix.Component.upload_errors/2 returns a list of error atoms %>
-          <%= for err <- upload_errors(@uploads.image, entry) do %>
-            <p class="alert alert-danger"><%= error_to_string(err) %></p>
-          <% end %>
-        </article>
-      <% end %>
-    </div>
-
-    <div class="col-span-2"> </div>
-  </div>
-
- 
-
-  <div class="grid grid-cols-10 gap-4 px-20"> 
-    <div class="col-span-1"> </div> 
-    
-    <div class="col-span-6">
-      <h1 class="mx-auto text-center text-4xl font-semibold m-10">Recipe Ingredients</h1>
-
-      <%= inputs_for f, :recipe_ingredients, fn g -> %>
-        <Components.ingredient_render g={g} f={f} ingredients ={@ingredients} measurement_units={@measurement_units}/>
-      <% end %>
-      <span>
-        <button href="#" phx-click="add-ingredient">Add Ingredient</button>
-      </span>
-
-      <h1 class="mx-auto text-center text-4xl font-semibold m-10">Creation Steps</h1>
-
-      <div class = "grid grid-cols-10 gap-20" > 
-        <div class="col-span-1"> </div>  
-        <div class="col-span-7">
-          <%= inputs_for f, :steps, fn v -> %>
-            <Components.step_render v={v} />
-          <% end %>
-        </div>
-      </div>
-
-      <div class="col-span-1"></div>
-      <a href="#" phx-click="add-step">Add a step</a>
-    </div> 
-
-    <div class="col-span-2">
-      <div class="grid grid-cols-5 my-10 bor">
-        <%= submit "Save", class: "col-start-5 col-span-1 rounded-lg text-2xl", phx_disable_with: "Saving..." %>
-      </div>
-    </div>
-
-  </div>
-
-</.form>
+<div class="flex-container-rec-form">    
+<div class="flex-container-rec-form-inner"> 
+<Components.recipe_render f={f} />
 </div>
+
+<div class= {"drop-container #{drop_hidden?(@uploads.image.entries)}"} >    
+<div class= {"file-drop-area w-full h-full "} phx-drop-target="{@uploads.image.ref}">
+<div id="lab1" for={@uploads.image.ref} class="h-full w-full ">
+<div class="drag_label">Drag n Drop or click to upload</div>
+</div>
+<.live_file_input upload={@uploads.image} class= "h-full w-full" style= "" />
+</div>
+</div>
+
+<div class="asdf">
+<%= for entry <- @uploads.image.entries do %>
+<div class="img_preview_container">
+<.live_img_preview entry={entry}  width="500rem" class="m-auto"  /> 
+<article class="upload-entry">
+<figure class="h-full">
+<progress class="w-full" value={entry.progress} max="100"> <%= entry.progress %>% </progress>
+</figure>
+
+<%= for err <- upload_errors(@uploads.image, entry) do %>
+<p class="alert alert-danger"><%= error_to_string(err) %></p>
+<% end %>
+</article>
+<button class="photo-delbutton text-4xl" type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} aria-label="cancel">&times;</button> 
+</div>
+<% end %>
+</div>
+
+</div>
+
+
+
+
+<div class="">
+<article class="relative pb-10">
+<h2 class="mx-auto text-center my-10">Ingredients</h2>
+
+<%= inputs_for f, :recipe_ingredients, fn g -> %>
+<Components.ingredient_render g={g} f={f} ingredients ={@ingredients} measurement_units={@measurement_units}/>
+<% end %>
+
+<button href="#" class="text-4xl add-list-entry-button" phx-click="add-ingredient">&oplus;</button>
+</article>
+
+<article class="relative pb-10">
+<h2 class="mx-auto text-center text-4xl font-semibold m-10">Creation Steps</h2>
+<%= inputs_for f, :steps, fn v -> %>
+<Components.step_render v={v} />
+<% end %>
+
+<button type="button" class="text-4xl add-list-entry-button" phx-click="add-step">&oplus;</button>
+</article>
+
+
+<div class="grid grid-cols-5 my-10 bor">
+<%= submit "Save", class: "col-start-5 col-span-1 rounded-lg text-2xl", phx_disable_with: "Saving..." %>
+                                                                        </div>
+                                                                        </div>
+
+                                                                        </.form>
+
+
+                                                                        </div>

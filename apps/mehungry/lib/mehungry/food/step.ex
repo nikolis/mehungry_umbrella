@@ -5,7 +5,7 @@ defmodule Mehungry.Food.Step do
   embedded_schema do
     field :title, :string
     field :description, :string
-    # field :index, :string
+    field :index, :integer
 
     field :delete, :boolean, virtual: true
     field :temp_id, :string, virtual: true
@@ -15,8 +15,8 @@ defmodule Mehungry.Food.Step do
     step
     # So its persisted
     |> Map.put(:temp_id, step.temp_id || attrs["temp_id"])
-    |> cast(attrs, [:title, :description, :delete, :temp_id])
-    |> validate_required([:title, :description])
+    |> cast(attrs, [:title, :description, :delete, :temp_id, :index])
+    |> validate_required([:description, :index])
     |> maybe_mark_for_deletion()
   end
 

@@ -1,11 +1,7 @@
 defmodule MehungryWeb.CalendarLive.Index do
   use MehungryWeb, :live_view
+  use MehungryWeb.Searchable, :transfers_to_search
 
-  import Ecto
-
-  alias Mehungry.Repo
-  alias Mehungry.Food
-  alias Mehungry.Food.Recipe
   alias Mehungry.History.UserMeal
   alias Mehungry.Accounts
   alias Mehungry.History
@@ -51,7 +47,6 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   defp apply_action(socket, :edit, %{"id" => id} = params) do
     user_meal = History.get_user_meal!(id)
-    IO.inspect(user_meal, label: "The user meal")
 
     # user_meal = %UserMeal{user_meal| recipe_user_meals: Enum.map(user_meal.recipe_user_meals, fn x -> x.recipe_id end) }
     socket =
