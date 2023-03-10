@@ -104,14 +104,11 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       Enum.map(steps, fn step ->
         case step.changes.index > the_one.changes.index do
           true ->
+            step_index = step.changes.index
+            step = Food.change_step(%Step{}, %{step.changes | index: step_index - 1})
             step
 
           false ->
-            step_index = step.changes.index
-
-            {:ok, step} =
-              Food.change_step(%Step{}, %{temp_id: step.changes.temp_id, index: step_index - 1})
-
             step
         end
       end)
@@ -193,7 +190,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @impl true
   def handle_event("validate", %{"recipe" => recipe_params}, socket) do
     ## TODO Investigate wtf is going on in here
-
+    IO.inspect(recipe_params, label: "Recipe params b valida")
     recipe_params =
       if is_nil(Map.get(recipe_params, "steps")) do
         recipe_params
@@ -201,11 +198,13 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         Map.put(recipe_params, "steps", Enum.map(recipe_params["steps"], fn x -> elem(x, 1) end))
       end
 
+    IO.inspect(recipe_params, label: "Recipe params mid")
+
     changeset =
       socket.assigns.recipe
       |> Food.change_recipe(recipe_params)
       |> Map.put(:action, :validate)
-
+    IO.inspect(changeset, label: "Changeset after valid")
     {:noreply, assign(socket, :changeset, changeset)}
   end
 

@@ -35,6 +35,45 @@ input[type="file"] {
   border-radius: 20px;
 }
 
+.the_form {
+  border: 2px solid red; 
+  background-color: #ffffff;
+  position: relative;
+  border-radius: 50px;
+  min-height: 70vh;
+      
+  --input_height: 50px;
+  --input_color: #f73378;
+
+  padding: 40px 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  perspective: 1000px;
+  padding-bottom: 10rem;
+}
+
+
+.static-save-button {
+  
+  position: fixed;
+  bottom: 2rem;
+  right: 3rem;
+  width: fit-content;
+  z-index: 1;
+
+  /* width: fit-content; */
+  align-items: start;
+  padding: 0.2em 1em;
+  border-radius: 40px;
+  font-size: 2rem; 
+  color: white;
+  font-weight: 550; 
+}
+
+.p-no {
+  padding: 1rem;
+}
 
 .drop-container
 {
@@ -250,7 +289,6 @@ height: 100%;
   right: 12rem;
 }
 
-
 .input {
 	padding: 10px 20px;
 	width: 100%;
@@ -406,7 +444,6 @@ article h2 {
 	justify-content: space-around;*/
 	
 	width: 96%;
-	margin-inline: auto;
 	position: relative;
 	overflow: auto;
 }
@@ -418,7 +455,7 @@ article h2 {
 	grid-template-columns: repeat(3, 1fr);
 	margin: auto;
 	gap: 1.5rem;
-
+  position: relative;
 	width: 96%;
 	/* overflow: auto; */
 }
@@ -526,29 +563,16 @@ article h2 {
 
 .remove-entry-button { 
 	position: absolute;
-	bottom: 0.2em;
-	right: 0.4em;
+  top: 0;
+  bottom: 0;
+  margin: auto 0;
+  right: 0 ;
 }
 
 .form-main {
 	background-color: #eaeaea;
 	padding:2rem;
 	min-height: 80vh;
-}
-
-.the_form {
-  overflow:auto;
-  background-color: #ffffff;
-  border-radius: 50px;
-  min-height: 70vh;
-      
-  --input_height: 50px;
-  --input_color: #f73378;
-
-  padding: 40px 50px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
 }
 
 
@@ -677,6 +701,7 @@ body {
 
 .footer {
 	margin-top: auto;
+  z-index: 2;
 }
 .footer .container {
 	max-width: 1470px;
