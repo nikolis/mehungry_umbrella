@@ -1,55 +1,63 @@
+<div class="testimonial-grid2">
+  <%= if @live_action not in [:show] do %>
+  <.form let={f} for={@changeset} id="recipe-form" phx-change="validate" phx-submit="search">
+    <div class="flex mt-16 mb-16 w-1/4 mx-auto">
 
-<div class="testimonial-grid2"> 
-<.form
-  let={f}
-  for={@changeset}
-  id="recipe-form"
-  phx-change="validate"
-  phx-submit="search">
-	<div class ="flex mt-16 mb-16 w-1/4 mx-auto">
-	
-	  <%= text_input f, :query_string , class: "mr-2 h-full "%>
-	  <%= submit "Search", phx_disable_with: "Searching..." , class: "ml-2 px-10 primary_button "%>
-	</div>
- 
-</.form>
+      <%= text_input f, :query_string , class: "mr-2 h-full "%>
+      <%= submit "Search", phx_disable_with: "Searching..." , class: "ml-2 px-10 primary_button "%>
+    </div>
 
-  <%= if @live_action in [:show] do %>
-    <.modal_large return_to={Routes.recipe_browse_index_path(@socket, :index)}>
-     <.live_component
-        module={MehungryWeb.RecipeBrowseLive.Show}
-        id={@recipe.id}
-        title={@page_title}
-        action={@live_action}
-        recipe={@recipe}
-        return_to={Routes.recipe_browse_index_path(@socket, :index)}
-      />
-    </.modal_large>
+  </.form>
   <% end %>
+  <%= if @live_action in [:show] do %>
+  <.modal_large return_to={Routes.recipe_browse_index_path(@socket, :index)}>
+    <.live_component module={MehungryWeb.RecipeBrowseLive.Show} id={@recipe.id} title={@page_title} action={@live_action} recipe={@recipe} return_to={Routes.recipe_browse_index_path(@socket, :index)} />
+  </.modal_large>
+  <% end %>
+
+
+
+  <%= if @live_action not in [:show] do %>
+
+  <div class="portfolio-modal">
+    <div class="portfolio-header">
+      <div class="portfolio-title-box">
+        <h2 class="portfolio-title"> Recipe Name </h2>
+        <p class="portfolio-subtitle">
+        </p>
+      </div>
+    </div> <!-- close portfolio-header -->
+    <div class="portfolio-content">
+      <p>
+        The wierd anonymous technique !
+      </p>
+      <img class="portfolio-full-width" src="/images/image-product-desktop.jpg" alt="an image">
+    </div>
+  </div> <!-- close portfolio-modal -->
 
   <div class="grid grid-cols-5 gap-4">
     <%= for recipe <- @recipes do %>
-      <%= if not is_nil(recipe.recipe_image_remote) do %> 
-        <div>
-	  <div>
-	    <.link patch={"/browse/" <> Integer.to_string(recipe.id)} >
-	      <img src={recipe.recipe_image_remote} alt="Italian Trulli" style="width: 100%" >
-            </.link>
-	  </div>
+    <%= if not is_nil(recipe.recipe_image_remote) do %>
+    <div>
+      <div>
+        <.link patch={"/browse/" <> Integer.to_string(recipe.id)} >
+          <img src={recipe.recipe_image_remote} alt="Italian Trulli" style="width: 100%">
+        </.link>
+      </div>
 
-          <div style = "background-color: #ffffff" class = "p-5 h-60">
-            <.link patch={"/browse/" <> Integer.to_string(recipe.id)} >
-              <h4 class="font-semibold" style="color: #4caf50"> <%= recipe.title %> </h4>
-              <h4 class="text-3xl pt-4"> <%= recipe.description %> </h4>
-              <div class="flex pt-4"> 
-                <img style="width: 10%" class="h-full" src={Routes.static_path(@socket, "/images/BPM-Timer1.svg")} alt="Phoenix Framework Logo"/>
-                <p class="text-2xl my-auto pl-3"> 5	mins</p>
-              </div>
-            </.link>
+      <div style="background-color: #ffffff" class="p-5 h-60">
+        <.link patch={"/browse/" <> Integer.to_string(recipe.id)} >
+          <h4 class="font-semibold" style="color: #4caf50"> <%= recipe.title %> </h4>
+          <h4 class="text-3xl pt-4"> <%= recipe.description %> </h4>
+          <div class="flex pt-4">
+            <img style="width: 10%" class="h-full" src={Routes.static_path(@socket, "/images/BPM-Timer1.svg" )} alt="Phoenix Framework Logo" />
+            <p class="text-2xl my-auto pl-3"> 5 mins</p>
           </div>
-        </div>
-      <% end %>
+        </.link>
+      </div>
+    </div>
+    <% end %>
     <% end %>
   </div>
-
+  <% end %>
 </div>

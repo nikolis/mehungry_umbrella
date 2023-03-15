@@ -14,7 +14,7 @@ defmodule Mehungry.Food.Step do
   def changeset(step, attrs) do
     step
     # So its persisted
-    #|> Map.put(:temp_id, step.temp_id || attrs["temp_id"])
+    # |> Map.put(:temp_id, step.temp_id || attrs["temp_id"])
     |> cast(attrs, [:title, :description, :delete, :temp_id, :index])
     |> validate_required([:description, :index])
     |> maybe_mark_for_deletion()

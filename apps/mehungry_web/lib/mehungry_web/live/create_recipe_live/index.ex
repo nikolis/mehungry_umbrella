@@ -34,7 +34,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def get_params_with_image(socket, params) do
     Map.put(params, "image_url", socket.assigns.image_upload)
   end
-
+  
   ################################################################################## Actions #############################################################################################
   defp apply_action(socket, :index, _params) do
     socket
@@ -105,8 +105,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         case step.changes.index > the_one.changes.index do
           true ->
             step_index = step.changes.index
-            step = Food.change_step(%Step{}, %{step.changes | index: step_index - 1})
-            step
+            Food.change_step(%Step{}, %{step.changes | index: step_index - 1})
 
           false ->
             step
@@ -191,6 +190,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def handle_event("validate", %{"recipe" => recipe_params}, socket) do
     ## TODO Investigate wtf is going on in here
     IO.inspect(recipe_params, label: "Recipe params b valida")
+
     recipe_params =
       if is_nil(Map.get(recipe_params, "steps")) do
         recipe_params
@@ -204,6 +204,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       socket.assigns.recipe
       |> Food.change_recipe(recipe_params)
       |> Map.put(:action, :validate)
+
     IO.inspect(changeset, label: "Changeset after valid")
     {:noreply, assign(socket, :changeset, changeset)}
   end
@@ -297,8 +298,12 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         )
       end
 
+    IO.inspect(recipe_params, label: "Save recuoe post put params")
+
     case Food.create_recipe(recipe_params) do
       {:ok, _recipe} ->
+        IO.inspect("hERE", label: "")
+
         {:noreply,
          socket
          |> put_flash(:info, "Recipe has been created ")
@@ -356,7 +361,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       )
 
     meta = %{
-      uploader: "S3",
       key: key,
       url: "http://#{bucket}.s3-#{config.region}.amazonaws.com",
       fields: fields

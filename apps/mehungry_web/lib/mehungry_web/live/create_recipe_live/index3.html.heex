@@ -1,0 +1,69 @@
+<div class="form-main">
+
+    <.form let={f} for={@changeset} id="recipe-form" phx-change="validate" phx-submit="save" class="the_form">
+
+        <%= submit "Save", class: "static-save-button",style: "background-color: #77b255", type: "submit", phx_disable_with: "Saving..." %>
+
+        <div class="flex-container-rec-form">
+            <div class="flex-container-rec-form-inner">
+                <Components.recipe_render f={f} />
+            </div>
+
+            <div class={"drop-container #{drop_hidden?(@uploads.image.entries)}"}>
+                <div class={"file-drop-area w-full h-full "} phx-drop-target=" {@uploads.image.ref}">
+                    <div id="lab1" for={@uploads.image.ref} class="h-full w-full ">
+                        <div class="drag_label">Drag n Drop or click to upload</div>
+                    </div>
+                    <.live_file_input upload={@uploads.image} class="h-full w-full" style="" />
+                </div>
+            </div>
+
+            <div class="asdf">
+
+                <%= for entry <- @uploads.image.entries do %>
+
+                <div class="img_preview_container">
+                    <.live_img_preview entry={entry} width="500rem" class="m-auto" />
+                    <article class="upload-entry">
+                        <figure class="h-full">
+                            <progress class="w-full" value={entry.progress} max="100"> <%= entry.progress %>% </progress>
+                        </figure>
+
+                        <%= for err <- upload_errors(@uploads.image, entry) do %>
+                        <p class="alert alert-danger"><%= error_to_string(err) %></p>
+                        <% end %>
+                    </article>
+                    <button class="photo-delbutton text-4xl" type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} aria-label="cancel">&times;</button>
+                </div>
+                <% end %>
+            </div>
+
+        </div>
+
+
+
+        <div class="">
+            <article class="relative pb-10">
+                <h2 class="mx-auto text-center my-10">Ingredients</h2>
+
+                <%= inputs_for f, :recipe_ingredients, fn g -> %>
+                <Components.ingredient_render g={g} f={f} ingredients={@ingredients} measurement_units={@measurement_units} />
+                <% end %>
+
+                <button href="#" class="text-4xl add-list-entry-button" phx-click="add-ingredient">&oplus;</button>
+            </article>
+
+            <article class="relative pb-10">
+                <h2 class="mx-auto text-center text-4xl font-semibold m-10">Creation Steps</h2>
+                <%= inputs_for f, :steps, fn v -> %>
+                <Components.step_render v={v} />
+                <% end %>
+
+                <button type="button" class="text-4xl add-list-entry-button" phx-click="add-step">&oplus;</button>
+            </article>
+
+
+        </div>
+
+    </.form>
+</div>

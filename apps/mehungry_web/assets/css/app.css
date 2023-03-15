@@ -10,7 +10,7 @@
 @tailwind utilities;
 
 @import "./essentials.css";
-
+@import "./browse.css";
 
 /*.select2-results__option {
     @apply text-2xl;

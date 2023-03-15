@@ -1,19 +1,20 @@
 :root {
-  --clr-primary-400: 263 55% 52%;
-  --clr-secondary-400: 217 19% 35%;
-  --clr-secondary-500: 219 29% 14%;
-  --clr-neutral-100: 0 0% 100%;
-  --clr-neutral-200: 210 46% 95%;
-  --clr-neutral-300: 0 0% 81%;
+  --clr-primary-400: hsl(158 36% 37%);
+  --clr-secondary-200: hsl(30 38% 92%);
 
-  --ff-primary: "Barlow Semi Condensed", sans-serif;
+  --clr-neutral-900: hsl(212,  21%, 14%);
+  --clr-neutral-400: hsl(212, 12%, 48%);
+  --clr-neutral-100: hsl(0, 0%, 100%);
 
-  --fw-400: 500;
-  --fw-700: 600;
 
-  --fs-300: 0.6875rem;
-  --fs-400: 0.8125rem;
-  --fs-500: 1.25rem;
+  --ff-accent: 'Fraunces', 'serif';
+  --ff-base: 'Montserrat', 'sans-serif';
+  --ff-accent: 'Fraunces', serif;
+  --ff-base: 'Montserrat', sans-serif;
+
+  --fw-regular: 500;
+  --fw-bold: 700;
+
 }
 
 /* Box sizing rules */
@@ -170,9 +171,11 @@ html {
 }
 /* Set core body defaults */
 body {
-  height: 100%;
-  text-rendering: optimizeSpeed;
-  line-height: 1.5;
+  font-family: var(--ff-base);
+  font-weight: var(--fw-regular);
+  font-size: 0.875rem;
+  color: var(--clr-neutral-400);
+  background-color: var(--clr-secondary-200);
 }
 
 /* A elements that don't have a class get default styles */
