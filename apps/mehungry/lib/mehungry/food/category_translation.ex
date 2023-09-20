@@ -1,4 +1,6 @@
 defmodule Mehungry.Food.CategoryTranslation do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
 

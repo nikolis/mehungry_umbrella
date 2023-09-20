@@ -34,7 +34,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def get_params_with_image(socket, params) do
     Map.put(params, "image_url", socket.assigns.image_upload)
   end
-  
+
   ################################################################################## Actions #############################################################################################
   defp apply_action(socket, :index, _params) do
     socket
@@ -52,8 +52,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def handle_event("add-step", _, socket) do
-    IO.inspect(socket.assigns.changeset, label: "cHANGESET")
-
     existing_steps =
       Map.get(socket.assigns.changeset.changes, :steps, socket.assigns.recipe.steps)
 
@@ -67,9 +65,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
           max_step.changes.index + 1
       end
 
-    IO.inspect(next_step, label: "Max step is")
     new_step = Food.change_step(%Step{}, %{temp_id: get_temp_id(), index: next_step})
-    IO.inspect(new_step, label: "New stesp changeset")
 
     steps =
       existing_steps
@@ -79,26 +75,18 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       socket.assigns.changeset
       |> Ecto.Changeset.put_embed(:steps, steps)
 
-    IO.inspect(changeset, label: "THe whoel changeset")
     {:noreply, assign(socket, changeset: changeset)}
   end
 
   def handle_event("remove-step", %{"remove" => remove_id}, socket) do
-    IO.inspect(socket.assigns.changeset.changes.steps, label: "Local changeset steps")
-
     the_one =
       Enum.find(socket.assigns.changeset.changes.steps, nil, fn x ->
         x.changes.temp_id == remove_id
       end)
 
-    IO.inspect(the_one, label: "the one")
-    IO.inspect(remove_id)
-
     steps =
       socket.assigns.changeset.changes.steps
       |> Enum.filter(fn x -> x.changes.temp_id != remove_id end)
-
-    IO.inspect(steps, label: "New steps")
 
     steps =
       Enum.map(steps, fn step ->
@@ -112,31 +100,21 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         end
       end)
 
-    IO.inspect(steps, label: "New steps2")
-
     changeset =
       socket.assigns.changeset
       |> Ecto.Changeset.put_embed(:steps, steps)
 
-    IO.inspect(changeset)
     socket = assign(socket, changeset: changeset)
-
-    IO.inspect(socket.assigns.changeset, label: "Socket")
 
     {:noreply, socket}
   end
 
   @impl true
   def handle_event("remove-ingredient", %{"temp_id" => temp_id}, socket) do
-    IO.inspect(socket.assigns.changeset.changes.recipe_ingredients, label: "asdffadsfdsafdsafsad")
-
     recipe_ingredients =
       Enum.filter(socket.assigns.changeset.changes.recipe_ingredients, fn x ->
         x.changes.temp_id != temp_id
       end)
-
-    IO.inspect(recipe_ingredients, label: "Recipe ingedients after")
-    IO.inspect(socket.assigns.changeset.changes, label: "asdffads")
 
     changeset =
       Map.put(socket.assigns.changeset, :changes, %{recipe_ingredients: recipe_ingredients})
@@ -147,10 +125,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def drop_hidden?(images) do
-    IO.inspect(Enum.empty?(images),
-      label: "Fropm iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"
-    )
-
     case Enum.empty?(images) do
       true ->
         ""
@@ -189,7 +163,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @impl true
   def handle_event("validate", %{"recipe" => recipe_params}, socket) do
     ## TODO Investigate wtf is going on in here
-    IO.inspect(recipe_params, label: "Recipe params b valida")
 
     recipe_params =
       if is_nil(Map.get(recipe_params, "steps")) do
@@ -198,14 +171,11 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         Map.put(recipe_params, "steps", Enum.map(recipe_params["steps"], fn x -> elem(x, 1) end))
       end
 
-    IO.inspect(recipe_params, label: "Recipe params mid")
-
     changeset =
       socket.assigns.recipe
       |> Food.change_recipe(recipe_params)
       |> Map.put(:action, :validate)
 
-    IO.inspect(changeset, label: "Changeset after valid")
     {:noreply, assign(socket, :changeset, changeset)}
   end
 
@@ -214,9 +184,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @doc """
   Receiving the recipe_ingredient params from created in the RecipeIngredientComponent is this really needed
   """
+  @impl true
   def handle_info({:recipe_ingredient, recipe_ingredient_params}, socket) do
-    IO.inspect(recipe_ingredient_params, label: "the recipe_ingredient event")
-
     existing_ingredients =
       Map.get(
         socket.assigns.changeset.changes,
@@ -244,7 +213,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     ingredients = existing_ingredients ++ [recipe_ingredient_params]
 
     ingredients =
-      Enum.map(ingredients, fn x ->
+      Enum.map(ingredients, fn _x ->
         for {key, val} <- recipe_ingredient_params, into: %{}, do: {String.to_atom(key), val}
       end)
 
@@ -298,12 +267,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         )
       end
 
-    IO.inspect(recipe_params, label: "Save recuoe post put params")
-
     case Food.create_recipe(recipe_params) do
       {:ok, _recipe} ->
-        IO.inspect("hERE", label: "")
-
         {:noreply,
          socket
          |> put_flash(:info, "Recipe has been created ")
@@ -362,6 +327,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
     meta = %{
       key: key,
+      uploader: "S3",
       url: "http://#{bucket}.s3-#{config.region}.amazonaws.com",
       fields: fields
     }

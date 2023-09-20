@@ -1,25 +1,33 @@
 defmodule MehungryWeb.SearchLive.Index do
   use MehungryWeb, :live_component
 
-  import Ecto
 
-  alias Mehungry.Inventory.BasketParams
   alias Mehungry.Inventory
-  alias Mehungry.Inventory.ShoppingBasket
   alias Mehungry.Search.RecipeSearchItem
   alias Mehungry.Food.Recipe
+  alias Mehungry.Food
   alias Mehungry.Accounts
-  alias Mehungry.History
   alias Mehungry.Search
+  alias MehungryWeb.ImageProcessing
 
   @impl true
-  def update(assigns, socket) do
+  def update(_assigns, socket) do
     {:ok,
      socket
      |> assign_recipe_search()
      |> assign_changeset()}
   end
 
+  def handle_event("delete_basket", %{"id" => basket_id}, socket) do
+    bs = Inventory.get_shopping_basket!(basket_id)
+    Inventory.delete_shopping_basket(bs)
+
+    {:noreply,
+     socket
+     |> assign(:shopping_basket, nil)}
+  end
+
+  @impl true
   def handle_event(
         "validate",
         %{"recipe_search_item" => recipe_search_item_params},
@@ -35,7 +43,6 @@ defmodule MehungryWeb.SearchLive.Index do
      |> assign(:changeset, changeset)}
   end
 
-  @impl true
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
 
@@ -61,22 +68,13 @@ defmodule MehungryWeb.SearchLive.Index do
     socket
   end
 
-  @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  def handle_event("delete_basket", %{"id" => basket_id}, socket) do
-    bs = Inventory.get_shopping_basket!(basket_id)
-    Inventory.delete_shopping_basket(bs)
-
-    {:noreply,
-     socket
-     |> assign(:shopping_basket, nil)}
-  end
 
   defp list_recipes do
-    Food.list_recipes()
+    Food.list_recipes(nil)
     |> Enum.map(fn recipe ->
       return = ImageProcessing.resize(recipe.image_url, 100, 100)
       %Recipe{recipe | recipe_image_remote: return}

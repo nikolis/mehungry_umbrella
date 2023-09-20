@@ -1,6 +1,6 @@
 defmodule Mehungry.Food.Nutrient do
   use Ecto.Schema
-  import Ecto.Changeset
+  @moduledoc false
 
   schema "nutrients" do
     field :name, :string

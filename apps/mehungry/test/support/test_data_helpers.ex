@@ -1,4 +1,6 @@
 defmodule Mehungry.TestDataHelpers do
+  @moduledoc false
+
   alias Mehungry.Languages
 
   alias Mehungry.{

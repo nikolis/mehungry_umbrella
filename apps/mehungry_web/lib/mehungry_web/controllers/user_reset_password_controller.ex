@@ -1,4 +1,6 @@
 defmodule MehungryWeb.UserResetPasswordController do
+  @moduledoc false
+
   use MehungryWeb, :controller
 
   alias Mehungry.Accounts

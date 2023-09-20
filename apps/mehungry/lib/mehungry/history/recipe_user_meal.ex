@@ -1,4 +1,6 @@
 defmodule Mehungry.History.RecipeUserMeal do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
 

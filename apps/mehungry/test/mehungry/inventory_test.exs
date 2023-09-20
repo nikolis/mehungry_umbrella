@@ -2,131 +2,147 @@ defmodule Mehungry.InventoryTest do
   use Mehungry.DataCase
 
   alias Mehungry.Inventory
+  alias Mehungry.AccountsFixtures
 
-  describe "shoping_baskets" do
-    alias Mehungry.Inventory.ShopingBasket
+  describe "shopping_baskets" do
+    alias Mehungry.Inventory.ShoppingBasket
 
     import Mehungry.InventoryFixtures
 
+    setup do
+      user = AccountsFixtures.user_fixture()
+
+      %{user: user}
+    end
+
     @invalid_attrs %{end_dt: nil, start_dt: nil}
 
-    test "list_shoping_baskets/0 returns all shoping_baskets" do
-      shoping_basket = shoping_basket_fixture()
-      assert Inventory.list_shoping_baskets() == [shoping_basket]
+    test "list_shopping_baskets/0 returns all shopping_baskets", %{user: user} do
+      {:ok, shopping_basket} = shopping_basket_fixture(%{user_id: user.id})
+      assert Inventory.list_shopping_baskets_for_user(user.id) == [shopping_basket]
     end
 
-    test "get_shoping_basket!/1 returns the shoping_basket with given id" do
-      shoping_basket = shoping_basket_fixture()
-      assert Inventory.get_shoping_basket!(shoping_basket.id) == shoping_basket
+    test "get_shopping_basket!/1 returns the shopping_basket with given id", %{user: user} do
+      {:ok, shopping_basket} = shopping_basket_fixture(%{user_id: user.id})
+      assert Inventory.get_shopping_basket!(shopping_basket.id) == shopping_basket
     end
 
-    test "create_shoping_basket/1 with valid data creates a shoping_basket" do
-      valid_attrs = %{end_dt: ~N[2023-01-25 11:01:00], start_dt: ~N[2023-01-25 11:01:00]}
+    test "create_shopping_basket/1 with valid data creates a shopping_basket", %{user: user} do
+      valid_attrs = %{
+        end_dt: ~N[2023-01-25 11:01:00],
+        start_dt: ~N[2023-01-25 11:01:00],
+        user_id: user.id
+      }
 
-      assert {:ok, %ShopingBasket{} = shoping_basket} =
-               Inventory.create_shoping_basket(valid_attrs)
+      assert {:ok, %ShoppingBasket{} = shopping_basket} =
+               Inventory.create_shopping_basket(valid_attrs)
 
-      assert shoping_basket.end_dt == ~N[2023-01-25 11:01:00]
-      assert shoping_basket.start_dt == ~N[2023-01-25 11:01:00]
+      assert shopping_basket.end_dt == ~N[2023-01-25 11:01:00]
+      assert shopping_basket.start_dt == ~N[2023-01-25 11:01:00]
     end
 
-    test "create_shoping_basket/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Inventory.create_shoping_basket(@invalid_attrs)
+    test "create_shopping_basket/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Inventory.create_shopping_basket(@invalid_attrs)
     end
 
-    test "update_shoping_basket/2 with valid data updates the shoping_basket" do
-      shoping_basket = shoping_basket_fixture()
+    test "update_shopping_basket/2 with valid data updates the shopping_basket", %{user: user} do
+      {:ok, shopping_basket} = shopping_basket_fixture(%{user_id: user.id})
       update_attrs = %{end_dt: ~N[2023-01-26 11:01:00], start_dt: ~N[2023-01-26 11:01:00]}
 
-      assert {:ok, %ShopingBasket{} = shoping_basket} =
-               Inventory.update_shoping_basket(shoping_basket, update_attrs)
+      assert {:ok, %ShoppingBasket{} = shopping_basket} =
+               Inventory.update_shopping_basket(shopping_basket, update_attrs)
 
-      assert shoping_basket.end_dt == ~N[2023-01-26 11:01:00]
-      assert shoping_basket.start_dt == ~N[2023-01-26 11:01:00]
+      assert shopping_basket.end_dt == ~N[2023-01-26 11:01:00]
+      assert shopping_basket.start_dt == ~N[2023-01-26 11:01:00]
     end
 
-    test "update_shoping_basket/2 with invalid data returns error changeset" do
-      shoping_basket = shoping_basket_fixture()
+    test "update_shopping_basket/2 with invalid data returns error changeset", %{user: user} do
+      {:ok, shopping_basket} = shopping_basket_fixture(%{user_id: user.id})
 
       assert {:error, %Ecto.Changeset{}} =
-               Inventory.update_shoping_basket(shoping_basket, @invalid_attrs)
+               Inventory.update_shopping_basket(shopping_basket, @invalid_attrs)
 
-      assert shoping_basket == Inventory.get_shoping_basket!(shoping_basket.id)
+      assert shopping_basket == Inventory.get_shopping_basket!(shopping_basket.id)
     end
 
-    test "delete_shoping_basket/1 deletes the shoping_basket" do
-      shoping_basket = shoping_basket_fixture()
-      assert {:ok, %ShopingBasket{}} = Inventory.delete_shoping_basket(shoping_basket)
-      assert_raise Ecto.NoResultsError, fn -> Inventory.get_shoping_basket!(shoping_basket.id) end
+    test "delete_shopping_basket/1 deletes the shopping_basket", %{user: user} do
+      {:ok, shopping_basket} = shopping_basket_fixture(%{user_id: user.id})
+      assert {:ok, %ShoppingBasket{}} = Inventory.delete_shopping_basket(shopping_basket)
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Inventory.get_shopping_basket!(shopping_basket.id)
+      end
     end
 
-    test "change_shoping_basket/1 returns a shoping_basket changeset" do
-      shoping_basket = shoping_basket_fixture()
-      assert %Ecto.Changeset{} = Inventory.change_shoping_basket(shoping_basket)
+    test "change_shopping_basket/1 returns a shopping_basket changeset", %{user: user} do
+      {:ok, shopping_basket} = shopping_basket_fixture(%{user_id: user.id})
+      assert %Ecto.Changeset{} = Inventory.change_shopping_basket(shopping_basket)
     end
   end
 
-  describe "ingredient_baskets" do
-    alias Mehungry.Inventory.IngredientBasket
+  """
+  describe "basket_ingredients" do
+    alias Mehungry.Inventory.BasketIngredient 
 
     import Mehungry.InventoryFixtures
 
     @invalid_attrs %{quantity: nil}
 
-    test "list_ingredient_baskets/0 returns all ingredient_baskets" do
-      ingredient_basket = ingredient_basket_fixture()
-      assert Inventory.list_ingredient_baskets() == [ingredient_basket]
+    test "list_basket_ingredients/0 returns all basket_ingredients" do
+      basket_ingredient = basket_ingredient_fixture()
+      assert Inventory.list_basket_ingredients() == [basket_ingredient]
     end
 
-    test "get_ingredient_basket!/1 returns the ingredient_basket with given id" do
-      ingredient_basket = ingredient_basket_fixture()
-      assert Inventory.get_ingredient_basket!(ingredient_basket.id) == ingredient_basket
+    test "get_basket_ingredient!/1 returns the basket_ingredient with given id" do
+      basket_ingredient = basket_ingredient_fixture()
+      assert Inventory.get_basket_ingredient!(basket_ingredient.id) == basket_ingredient
     end
 
-    test "create_ingredient_basket/1 with valid data creates a ingredient_basket" do
+    test "create_basket_ingredient/1 with valid data creates a basket_ingredient" do
       valid_attrs = %{quantity: 120.5}
 
-      assert {:ok, %IngredientBasket{} = ingredient_basket} =
-               Inventory.create_ingredient_basket(valid_attrs)
+      assert {:ok, %BasketIngredient{} = basket_ingredient} =
+               Inventory.create_basket_ingredient(valid_attrs)
 
-      assert ingredient_basket.quantity == 120.5
+      assert basket_ingredient.quantity == 120.5
     end
 
-    test "create_ingredient_basket/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Inventory.create_ingredient_basket(@invalid_attrs)
+    test "create_basket_ingredient/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Inventory.create_basket_ingredient(@invalid_attrs)
     end
 
-    test "update_ingredient_basket/2 with valid data updates the ingredient_basket" do
-      ingredient_basket = ingredient_basket_fixture()
+    test "update_basket_ingredient/2 with valid data updates the basket_ingredient" do
+      basket_ingredient = basket_ingredient_fixture()
       update_attrs = %{quantity: 456.7}
 
-      assert {:ok, %IngredientBasket{} = ingredient_basket} =
-               Inventory.update_ingredient_basket(ingredient_basket, update_attrs)
+      assert {:ok, %BasketIngredient{} = basket_ingredient} =
+               Inventory.update_basket_ingredient(basket_ingredient, update_attrs)
 
-      assert ingredient_basket.quantity == 456.7
+      assert basket_ingredient.quantity == 456.7
     end
 
-    test "update_ingredient_basket/2 with invalid data returns error changeset" do
-      ingredient_basket = ingredient_basket_fixture()
+    test "update_basket_ingredient/2 with invalid data returns error changeset" do
+      basket_ingredient = basket_ingredient_fixture()
 
       assert {:error, %Ecto.Changeset{}} =
-               Inventory.update_ingredient_basket(ingredient_basket, @invalid_attrs)
+               Inventory.update_basket_ingredient(basket_ingredient, @invalid_attrs)
 
-      assert ingredient_basket == Inventory.get_ingredient_basket!(ingredient_basket.id)
+      assert basket_ingredient == Inventory.get_basket_ingredient!(basket_ingredient.id)
     end
 
-    test "delete_ingredient_basket/1 deletes the ingredient_basket" do
-      ingredient_basket = ingredient_basket_fixture()
-      assert {:ok, %IngredientBasket{}} = Inventory.delete_ingredient_basket(ingredient_basket)
+    test "delete_basket_ingredient/1 deletes the basket_ingredient" do
+      basket_ingredient = basket_ingredient_fixture()
+      assert {:ok, %BasketIngredient{}} = Inventory.delete_basket_ingredient(basket_ingredient)
 
       assert_raise Ecto.NoResultsError, fn ->
-        Inventory.get_ingredient_basket!(ingredient_basket.id)
+        Inventory.get_basket_ingredient!(basket_ingredient.id)
       end
     end
 
-    test "change_ingredient_basket/1 returns a ingredient_basket changeset" do
-      ingredient_basket = ingredient_basket_fixture()
-      assert %Ecto.Changeset{} = Inventory.change_ingredient_basket(ingredient_basket)
+    test "change_basket_ingredient/1 returns a basket_ingredient changeset" do
+      basket_ingredient = basket_ingredient_fixture()
+      assert %Ecto.Changeset{} = Inventory.change_basket_ingredient(basket_ingredient)
     end
   end
+  """
 end

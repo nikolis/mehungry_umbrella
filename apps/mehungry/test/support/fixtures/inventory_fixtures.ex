@@ -5,31 +5,31 @@ defmodule Mehungry.InventoryFixtures do
   """
 
   @doc """
-  Generate a shoping_basket.
+  Generate a shopping_basket.
   """
-  def shoping_basket_fixture(attrs \\ %{}) do
-    {:ok, shoping_basket} =
+  def shopping_basket_fixture(attrs \\ %{}) do
+    shopping_basket =
       attrs
       |> Enum.into(%{
         end_dt: ~N[2023-01-25 11:01:00],
         start_dt: ~N[2023-01-25 11:01:00]
       })
-      |> Mehungry.Inventory.create_shoping_basket()
+      |> Mehungry.Inventory.create_shopping_basket()
 
-    shoping_basket
+    shopping_basket
   end
 
   @doc """
-  Generate a ingredient_basket.
+  Generate a basket_ingredient.
   """
-  def ingredient_basket_fixture(attrs \\ %{}) do
-    {:ok, ingredient_basket} =
+  def basket_ingredient_fixture(attrs \\ %{}) do
+    {:ok, basket_ingredient} =
       attrs
       |> Enum.into(%{
         quantity: 120.5
       })
-      |> Mehungry.Inventory.create_ingredient_basket()
+      |> Mehungry.Inventory.create_basket_ingredient()
 
-    ingredient_basket
+    basket_ingredient
   end
 end

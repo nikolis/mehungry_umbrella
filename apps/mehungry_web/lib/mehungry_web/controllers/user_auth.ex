@@ -1,4 +1,6 @@
 defmodule MehungryWeb.UserAuth do
+  @moduledoc false
+
   import Plug.Conn
   import Phoenix.Controller
 
@@ -91,7 +93,10 @@ defmodule MehungryWeb.UserAuth do
   def fetch_current_user(conn, _opts) do
     {user_token, conn} = ensure_user_token(conn)
     user = user_token && Accounts.get_user_by_session_token(user_token)
-    assign(conn, :current_user, user)
+
+    # conn = assign(conn, :path, conn.request_path)
+    conn = assign(conn, :current_user, user)
+    conn
   end
 
   defp ensure_user_token(conn) do

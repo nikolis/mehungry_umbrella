@@ -1,0 +1,203 @@
+.game {
+        position: relative;
+	block-size: fit-content;
+	margin: auto;
+	min-height: 450px;
+	max-height: 615px;
+}
+
+
+.streamers {
+        display: flex;
+	text-align: center;
+	padding: 0.5rem 1rem;
+}
+
+.streamer {
+	padding: 0.1rem;
+}
+
+.streamers img {
+        width: 2em;
+        height: 2em;
+        border-radius: 50%;
+}
+
+
+.front .stats {
+	display: flex;
+	border: 2px solid transparent;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.front .name {
+	margin: 0.75em 0;
+}
+
+.game:hover .name {
+	color: white;
+}
+
+.front .streamers img {
+	border: 2px solid black;
+}
+
+.rank {
+	position: absolute;
+	top: 0 ;
+	right: 1em;
+	color: white;
+	font-weight: bold;
+	background: rgba(0, 0, 0, 0.65);
+	padding: 0.5em 0.5em 0.75em ;
+	z-index: 4; 
+	clip-path: polygon(100% 0%, 100% 100%, 50% 82%, 0 100%, 0 0);
+	transition: transform 250ms ease-in-out; 
+}
+
+.game .front .thumbnail {
+	border-radius: 5%;
+	max-width: 100%;
+}
+
+.background {
+	background: #234;
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	z-index: -1;
+	transform: scale(0.2, 0.9);
+	#transition: transform 500ms;
+	opacity: 0;
+	border-radius: 5%;
+
+	transition: 
+		transform 300ms ease-in-out,
+		opacity 150ms linear;
+
+}
+
+.game:hover .background {
+	transition: 
+		transform 300ms ease-in-out,
+		opacity 150ms linear;
+	transform: scale(1.3,  1.1);
+	opacity: 1;
+}
+
+.game:hover {
+	z-index: 10;
+}
+
+.front { 
+	cursor: pointer;
+	transition: 300ms;
+        display: block;
+	margin: auto;
+}
+
+.game:hover .front{
+	transform: translateY(-22%) scale(0.8);
+	transition: 300ms;
+}
+
+.game:hover .stats { 
+	opacity: 0;
+}
+
+.game:hover .name {
+	animation: gameName 250ms forwards;
+}
+
+.game:hover .rank {
+	transform: translate(135%, -40%);
+}
+
+
+@keyframes gameName { 
+
+	0% {
+		text-align: left;
+		opacity: 1;
+	}
+
+	20% {
+		text-align: left;
+		opacity: 0;
+	}
+
+	50% {
+		text-align: center;
+		opacity: 0;
+		transform: scale(1.2);
+	}
+
+	100% {
+		text-align: center;
+		opacity: 1;
+		transform: scale(1.2);
+	}
+}
+
+.back .btn {
+	cursor: pointer; 
+	border: 0 ;
+	background: rgba(0, 76, 199, 1);
+	border-radius: 100vw; 
+	color: white;
+	font-weight: bold;
+	padding: 0.5rem 1.5rem;
+}
+
+.back {
+	color: black;
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	opacity: 0;
+	right: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5em;
+}
+
+.back .streamers .streamer {
+	font-size: 0.9rem;
+}
+
+.back .streamers {
+	justify-content: space-between;
+	width: 100%;
+}
+
+.back .game-stat {
+	font-size: 0.9 rem;
+}
+.back .game-stat span {
+	font-size: 0.85rem;
+	display: block;
+}
+
+.back .game-stat {
+	text-align: center;
+}
+
+.back .streaming-info {	
+	columns: 2;
+	column-rule: 1px solid rgba(255,255,255, 0.2);
+}
+
+.game:hover  .back{ 
+	color: white;
+	opacity: 1;
+}
+
+.thmubnail{
+  display: block;
+  width: 100%;
+  height: auto;
+}

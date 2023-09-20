@@ -1,14 +1,21 @@
 defmodule Mehungry.Reccomendations do
-  alias Mehungry.Food.Ingredient
+  @moduledoc false
+
   alias Mehungry.Food
 
   @alpha 0.00001
   @lambda 0.001
-  @attributes [:at_a, :at_b, :at_c]
+  # @attributes [:at_a, :at_b, :at_c]
 
   def calculate_error_term(theta, attrs, result) do
     prediction = Numexy.dot(theta, attrs)
     abs(prediction - result)
+  end
+
+  def calculate_error_term(theta, attrs, result, 0) do
+    prediction = Numexy.dot(theta, attrs)
+    x_i = Numexy.get(attrs, {0, nil})
+    @alpha * ((prediction - result) * x_i)
   end
 
   def calculate_error_term(theta, attrs, result, index) do
@@ -16,12 +23,6 @@ defmodule Mehungry.Reccomendations do
     x_i = Numexy.get(attrs, {index, nil})
     reg_term = @lambda * Numexy.get(theta, {index, nil})
     @alpha * ((prediction - result) * x_i + reg_term)
-  end
-
-  def calculate_error_term(theta, attrs, result, 0) do
-    prediction = Numexy.dot(theta, attrs)
-    x_i = Numexy.get(attrs, {0, nil})
-    @alpha * ((prediction - result) * x_i)
   end
 
   def calculate_sum_error_term(thetas, xs, ys) do
@@ -40,7 +41,7 @@ defmodule Mehungry.Reccomendations do
     end)
   end
 
-  def optimize_thetas(thetas, xs, ys, total_error) do
+  def optimize_thetas(thetas, xs, ys, _total_error) do
     thetas_index = Enum.with_index(thetas)
     thetas_num = Numexy.new(thetas)
     total_error_init = calculate_sum_error_term(thetas_num, xs, ys)
@@ -70,7 +71,7 @@ defmodule Mehungry.Reccomendations do
   end
 
   def get_feature_vector(recipe_list, categories) do
-    the_list =
+    _the_list =
       Enum.map(recipe_list, fn x ->
         list_of_grades =
           Enum.map(x.recipe_ingredients, fn y ->
@@ -81,25 +82,14 @@ defmodule Mehungry.Reccomendations do
 
         map_of_grades = Enum.into(list_of_grades, %{})
 
-        vector =
-          Enum.reduce(categories, [], fn x, acc ->
-            grade =
-              case Map.get(map_of_grades, x) do
-                nil ->
-                  0
-
-                result ->
-                  result
-              end
-
-            acc ++ [grade]
-          end)
-
-        vector
+        Enum.reduce(categories, [], fn x, acc ->
+          grade = Map.get(map_of_grades, x, 0)
+          acc ++ [grade]
+        end)
       end)
   end
 
-  def create_reccomender_model(recipe_list, grades) do
+  def create_reccomender_model(recipe_list, _grades) do
     category_lists =
       Enum.reduce(recipe_list, [], fn x, acc ->
         partial_list =
@@ -114,7 +104,7 @@ defmodule Mehungry.Reccomendations do
 
     categories = Enum.uniq(category_lists)
 
-    the_list =
+    _the_list =
       Enum.map(recipe_list, fn x ->
         list_of_grades =
           Enum.map(x.recipe_ingredients, fn y ->
@@ -127,15 +117,7 @@ defmodule Mehungry.Reccomendations do
 
         vector =
           Enum.reduce(categories, [], fn x, acc ->
-            grade =
-              case Map.get(map_of_grades, x) do
-                nil ->
-                  0
-
-                result ->
-                  result
-              end
-
+            grade = Map.get(map_of_grades, x, 0)
             acc ++ [grade]
           end)
 

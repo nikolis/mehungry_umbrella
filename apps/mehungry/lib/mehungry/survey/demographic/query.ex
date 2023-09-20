@@ -1,4 +1,6 @@
 defmodule Mehungry.Survey.Demographic.Query do
+  @moduledoc false
+
   import Ecto.Query
   alias Mehungry.Survey.Demographic
 

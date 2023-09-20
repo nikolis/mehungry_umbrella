@@ -1,4 +1,6 @@
 defmodule Mehungry.Food.Step do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
 

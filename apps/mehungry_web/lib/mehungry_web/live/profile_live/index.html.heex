@@ -1,0 +1,30 @@
+<div>
+  <RecipeComponents.recipe_modal invocations={@invocations} live_action={@live_action} recipe={@recipe}/>
+
+  <div class="profile_index_main">
+    <div class="profile_index_info ">
+      <img src={@user.profile_pic} alt="">
+      <h2> <%= @user.name %> </h2>
+      <span> <%= @user.email %> </span>
+      <div>
+        <button> Share Profile </button>
+        <button> Edit Profile </button>
+      </div>
+    </div>
+
+    <div class="profile_index_user_content">
+      <div class="nav_buttons">
+        <button class={"nav_button " <> get_active(@content_state, :saved )} phx-click="content_state_change" phx-value-state={:saved}>Saved recipes</button>
+        <button class={"nav_button " <> get_active(@content_state, :created )}   phx-click="content_state_change" phx-value-state={:created}>Created recipes</button>
+      </div>
+      <div class="line">
+      </div>
+    <div class="grid_even_columns" id="recipes_container" phx-hook="InfiniteScroll" phx-update='append' data-page = {@page}>
+        <%= for recipe <- @recipes do %>
+        <RecipeComponents.recipe_details recipe={recipe} id={"recipe" <> Integer.to_string(recipe.id)}/>
+          <% end %>
+
+      </div>
+    </div>
+  </div>
+</div>

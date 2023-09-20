@@ -1,4 +1,6 @@
 defmodule Mehungry.FoodFixtures do
+  @moduledoc false
+
   alias Mehungry.Languages
 
   alias Mehungry.{
@@ -12,7 +14,7 @@ defmodule Mehungry.FoodFixtures do
     name =
       case Map.get(attrs, :name) do
         nil ->
-          unique_ingredient
+          unique_ingredient()
 
         name ->
           name
@@ -75,7 +77,7 @@ defmodule Mehungry.FoodFixtures do
           value
       end
 
-    lang2 = Languages.get_language_by_name("Gr")
+    _lang2 = Languages.get_language_by_name("Gr")
 
     lang2 =
       case lang do
@@ -105,7 +107,7 @@ defmodule Mehungry.FoodFixtures do
     category
   end
 
-  def measurement_unit_fixture(attrs \\ %{}) do
+  def measurement_unit_fixture(_attrs \\ %{}) do
     lang = Languages.get_language_by_name("En")
 
     lang =
@@ -164,12 +166,11 @@ defmodule Mehungry.FoodFixtures do
     recipe_ingredient
   end
 
-  def recipe_fixture(%Accounts.User{} = user, attrs \\ %{}) do
+  def recipe_fixture(%Accounts.User{} = _user, attrs \\ %{}) do
     ingredient = ingredient_fixture()
     mu = measurement_unit_fixture()
 
     {:ok, recipe} =
-      attrs =
       Enum.into(attrs, %{
         title: "some title",
         author: "another author",

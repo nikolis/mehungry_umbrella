@@ -1,4 +1,6 @@
 defmodule Mehungry.Inventory.BasketIngredient do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -19,6 +21,6 @@ defmodule Mehungry.Inventory.BasketIngredient do
   def changeset(basket_ingredient, attrs) do
     basket_ingredient
     |> cast(attrs, [:quantity, :in_storage, :ingredient_id, :shopping_basket_id])
-    |> validate_required([:quantity, :ingredient_id, :shopping_basket_id])
+    |> validate_required([:quantity, :ingredient_id])
   end
 end

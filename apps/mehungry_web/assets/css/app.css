@@ -11,6 +11,11 @@
 
 @import "./essentials.css";
 @import "./browse.css";
+@import "./card.css";
+@import "./profile.css";
+@import "./onboarding.css";
+@import "./nav_bar.css";
+
 
 /*.select2-results__option {
     @apply text-2xl;

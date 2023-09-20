@@ -4,11 +4,6 @@ defmodule Mehungry.ReccomendationsTest do
   alias Mehungry.Reccomendations
 
   alias Mehungry.Food
-  alias Mehungry.Food.Ingredient
-  alias Mehungry.Food.MeasurementUnit
-  alias Mehungry.Food.RecipeIngredient
-  alias Mehungry.Food.Recipe
-  alias Mehungry.Accounts.User
   alias Mehungry.TestDataHelpers
   alias Mehungry.Languages
 
@@ -25,7 +20,7 @@ defmodule Mehungry.ReccomendationsTest do
       TestDataHelpers.ingredient_fixture(%{name: "ingredient3", category_name: "category3"})
 
     lang = Languages.get_language_by_name("En")
-    lang2 = Languages.get_language_by_name("Gr")
+    _lang2 = Languages.get_language_by_name("Gr")
 
     # TestDataHelpers.user_fixture   
     {:ok, user} =
@@ -36,11 +31,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented 2",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => 1}],
       "recipe_ingredients" => [
         %{"quantity" => 1, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient.id},
         %{"quantity" => 0.4, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient3.id}
@@ -54,11 +48,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented4",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => 1}],
       "recipe_ingredients" => [
         %{"quantity" => 1, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient2.id},
         %{"quantity" => 0.5, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient3.id}
@@ -72,11 +65,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented 5",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => 1}],
       "recipe_ingredients" => [
         %{"quantity" => 0.9, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient.id},
         %{"quantity" => 0.6, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient2.id}
@@ -90,11 +82,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented4",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => 1}],
       "recipe_ingredients" => [
         %{"quantity" => 1, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient2.id},
         %{"quantity" => 0.5, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient3.id}
@@ -108,11 +99,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented 5",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => "1"}],
       "recipe_ingredients" => [
         %{"quantity" => 0.9, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient2.id},
         %{"quantity" => 0.6, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient3.id}
@@ -126,11 +116,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented 6",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => 1}],
       "recipe_ingredients" => [
         %{"quantity" => 1.1, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient2.id},
         %{"quantity" => 0.4, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient3.id}
@@ -144,11 +133,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented4",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => 1}],
       "recipe_ingredients" => [
         %{"quantity" => 1, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient.id},
         %{"quantity" => 0.5, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient2.id}
@@ -162,11 +150,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented 5",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => 1}],
       "recipe_ingredients" => [
         %{"quantity" => 0.9, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient.id},
         %{"quantity" => 0.6, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient2.id}
@@ -180,11 +167,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented 6",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => 1}],
       "recipe_ingredients" => [
         %{"quantity" => 1.1, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient.id},
         %{"quantity" => 0.4, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient2.id}
@@ -198,11 +184,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => 1}],
       "recipe_ingredients" => [
         %{"quantity" => 1, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient.id},
         %{"quantity" => 0.5, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient3.id}
@@ -216,11 +201,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented 2",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => 1}],
       "recipe_ingredients" => [
         %{"quantity" => 0.9, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient.id},
         %{"quantity" => 0.6, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient3.id}
@@ -234,11 +218,10 @@ defmodule Mehungry.ReccomendationsTest do
       "cousine" => "Without boarders",
       "description" => "a recipe I just invented 2",
       "servings" => 4,
-      "title" => "tst1",
       "user" => user,
       "language_name" => lang.name,
       "title" => "tst1 gluten-free",
-      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free"}],
+      "steps" => [%{"title" => "dsa", "description" => "asdfasdf gluten-free", "index" => 1}],
       "recipe_ingredients" => [
         %{"quantity" => 1.1, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient.id},
         %{"quantity" => 0.4, "measurement_unit_id" => mu.id, "ingredient_id" => ingredient3.id}
@@ -258,7 +241,7 @@ defmodule Mehungry.ReccomendationsTest do
       recipes_with_index = Enum.with_index(recipes)
 
       grades =
-        Enum.map(recipes_with_index, fn {x, index} ->
+        Enum.map(recipes_with_index, fn {_x, index} ->
           cond do
             index < 3 ->
               10
@@ -279,12 +262,12 @@ defmodule Mehungry.ReccomendationsTest do
           Numexy.new(x)
         end)
 
-      {thetas, error} = Reccomendations.optimize_thetas([0, 0, 0, 0], xs, grades, 1_500_000)
+      {thetas, _error} = Reccomendations.optimize_thetas([0, 0, 0, 0], xs, grades, 1_500_000)
       xs = Reccomendations.get_feature_vector(test_set, ["category1", "category2", "category3"])
 
       Enum.each(xs, fn x ->
         x = [1] ++ x
-        result = Reccomendations.get_grade(thetas, x)
+        _result = Reccomendations.get_grade(thetas, x)
       end)
     end
 
@@ -302,7 +285,7 @@ defmodule Mehungry.ReccomendationsTest do
       ]
 
       ys = [2, 2, 2, 5, 5, 5, 0, 0, 0]
-      result = Reccomendations.optimize_thetas([0, 0, 0, 0], xs, ys, 150)
+      _result = Reccomendations.optimize_thetas([0, 0, 0, 0], xs, ys, 150)
     end
 
     test "test sum of errors" do
@@ -317,28 +300,28 @@ defmodule Mehungry.ReccomendationsTest do
       theta = Numexy.new([0, 5, 0])
       attrs = Numexy.new([1, 0.99, 0])
       y = 10
-      result = Reccomendations.calculate_error_term(theta, attrs, y)
+      _result = Reccomendations.calculate_error_term(theta, attrs, y)
       # assert result == 5
     end
 
     def test_something() do
-      food_a_1 = %{name: "food_a_1", at_a: 0, at_b: 15, at_c: 15}
-      food_a_2 = %{name: "food_a_2", at_a: 0, at_b: 15, at_c: 15}
+      _food_a_1 = %{name: "food_a_1", at_a: 0, at_b: 15, at_c: 15}
+      _food_a_2 = %{name: "food_a_2", at_a: 0, at_b: 15, at_c: 15}
       food_a_3 = %{name: "food_a_3", at_a: 0, at_b: 15, at_c: 15}
 
-      food_b_1 = %{name: "food_b_1", at_a: 15, at_b: 15, at_c: 0}
-      food_b_2 = %{name: "food_b_2", at_a: 15, at_b: 15, at_c: 0}
+      _food_b_1 = %{name: "food_b_1", at_a: 15, at_b: 15, at_c: 0}
+      _food_b_2 = %{name: "food_b_2", at_a: 15, at_b: 15, at_c: 0}
       food_b_3 = %{name: "food_b_3", at_a: 15, at_b: 15, at_c: 0}
 
-      food_c_1 = %{name: "food_c_1", at_a: 0, at_b: 15, at_c: 0}
-      food_c_2 = %{name: "food_c_2", at_a: 0, at_b: 15, at_c: 0}
+      _food_c_1 = %{name: "food_c_1", at_a: 0, at_b: 15, at_c: 0}
+      _food_c_2 = %{name: "food_c_2", at_a: 0, at_b: 15, at_c: 0}
       food_c_3 = %{name: "food_c_3", at_a: 0, at_b: 15, at_c: 0}
 
-      food_d_1 = %{name: "food_d_1", at_a: 15, at_b: 0, at_c: 15}
-      food_d_2 = %{name: "food_d_2", at_a: 15, at_b: 0, at_c: 15}
+      _food_d_1 = %{name: "food_d_1", at_a: 15, at_b: 0, at_c: 15}
+      _food_d_2 = %{name: "food_d_2", at_a: 15, at_b: 0, at_c: 15}
       food_d_3 = %{name: "food_d_3", at_a: 15, at_b: 0, at_c: 15}
 
-      user_a = [
+      _user_a = [
         %{name: "food_a_1", rating: 10},
         %{name: "food_a_2", rating: 9},
         %{name: "food_b_1", rating: 5},
@@ -349,10 +332,10 @@ defmodule Mehungry.ReccomendationsTest do
         %{name: "food_d_2", rating: 0}
       ]
 
-      reccomendation_on = [food_a_3, food_b_3, food_c_3, food_d_3]
+      _reccomendation_on = [food_a_3, food_b_3, food_c_3, food_d_3]
 
-      result = Reccomendations.reccomend()
-      IO.inspect(result)
+      # result = Reccomendations.reccomend()
+      # IO.inspect(result)
     end
   end
 end

@@ -1,4 +1,5 @@
 defmodule MehungryServer.Repo.Migrations.Languages do
+  @moduledoc false
   use Ecto.Migration
 
   def change do

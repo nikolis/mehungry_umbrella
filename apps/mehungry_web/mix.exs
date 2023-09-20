@@ -24,7 +24,7 @@ defmodule MehungryWeb.MixProject do
   def application do
     [
       mod: {MehungryWeb.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :ueberauth_facebook]
     ]
   end
 
@@ -45,9 +45,12 @@ defmodule MehungryWeb.MixProject do
       {:httpoison, "~> 1.2"},
       {:contex, "~> 0.4.0"},
       {:mehungry, in_umbrella: true},
+      {:ueberauth_facebook, "~> 0.8"},
+      {:ueberauth_google, "~> 0.10"},
       {:phoenix, "~> 1.6.12"},
       {:phoenix_live_view, "~> 0.18.3"},
       {:phoenix_ecto, "~> 4.4"},
+      {:paginator, "~> 1.2.0"},
       {:phoenix_html, "~> 3.2"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_dashboard, "~> 0.6"},

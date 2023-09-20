@@ -1,17 +1,151 @@
-.container_product{
-	background-color: var(--clr-secondary-200);
-	width: 100%;
-	height: 100%;
+.container_product {
+        background-color: var(--clr-secondary-200);
+        width: 100%;
+        height: 100%;
+}
+
+
+#modal {
+        position: fixed;
+        right: 2rem;
+        left: 2rem;;
+        z-index: 15;
+
+}
+
+.portfolio-modal {
+        position: fixed;
+        z-index: 10;
+        top: 2em;
+        bottom: 2em;
+        left: 2em;
+        right: 2em;
+        background: white;
+        box-shadow: 0 0 5em rgba(0, 0, 0, 0.7);
+        overflow-y: scroll;
+	display: none;	
+}
+
+.portfolio-modal.is-open {
+	display: block;
+	animation: modalFadeIn 500ms forwards; 
+}
+
+.portfolio-modal.is-closing {
+	display: block;
+	animation: modalFadeOut 500ms forwards; 
+}
+
+.portfolio-modal.is-closed {
+	display: none;
+}
+
+.portfolio-header {
+        text: align-left;
+        line-height: 3rem;
+        padding: 5em 0;
+}
+
+
+.portfolio-header:nth-of-type(1) {
+        //background-image: url(/images/image-product-desktop.jpg);
+        background-size: cover;
+        background-position: center;
+}
+
+
+.portfolio-title-box {
+        color: white;
+        padding: 1em 2vw 1em 3vw;
+        background: rgba(24, 128, 184, 0.5);
+        width: 70%;
+        font-size: 3.5rem;
+        font-family: Fraunces;
+
+
+}
+
+.portfolio-title {
+        font-size: 3.5rem;
+	display: inline-block;
+}
+
+h2.portfolio-title::after {
+        content: '';
+	display: block;
+        height: 1px;
+        margin: 0.5em 0;
+        background: white;
+        width: 100%;
 }
 
 
 
-#modal{
-	width: 100%;
-	position: absolute;
-	top:0 ;
-	bottom: 0;
-	right: 0;
-	left: 0;
-	z-index: 5;
+.subtitle-container {
+        font-size: 1rem;
+        line-height: 1.1rem;
 }
+
+.modal-close {
+	position: fixed;
+	top: 1em; 
+	left: 1em;
+	background: white;
+	border-radius: 50%;
+	padding: 0.1em;
+
+}
+
+
+
+@keyframes modalFadeIn {
+	0% { opacity: 0 ;}
+	100%{ opacity: 1 ;}
+}
+
+@keyframes modalFadeOut {
+	0% { opacity: 1 ;}
+	100%{ opacity: 0 ;}
+}
+
+
+
+.modal {
+	animation: modalFade 500ms forwards; 
+}
+
+
+
+ /* The grid presentation */
+
+
+.grid_even_columns {
+	display: grid;
+	gap: 1rem;
+	padding: 3rem;
+	margin-left: auto;
+	margin-right: auto;
+	width: fit-content;
+	overflow: hidden;
+}
+
+
+@media (min-width: 40em) {
+	.grid_even_columns {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+
+@media (min-width: 60em) {
+	.grid_even_columns {
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+@media (min-width: 80em) {
+	.grid_even_columns {
+		grid-template-columns: repeat(6, 1fr);
+	}
+}
+

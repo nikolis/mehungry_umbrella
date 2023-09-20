@@ -1,4 +1,6 @@
 defmodule MehungryWeb.OnlineRecommender do
+  @moduledoc false
+
   use GenServer
 
   def start_link(_) do
@@ -22,23 +24,23 @@ defmodule MehungryWeb.OnlineRecommender do
         {:noreply, state}
 
       {:ok, data} ->
-        users_data_list = Map.to_list(data)
-
-        Enum.each(users_data_list, fn {x, grades} ->
-          case length(grades) > 5 do
-            true ->
-              IO.inspect("Work has been scheduled", label: "Online Recommender")
-              {:ok, pid} = GenServer.start_link(MehungryWeb.ModelTrainer, [:hello])
-              GenServer.cast(pid, {:train, x})
-
-            false ->
-              nil
-          end
-        end)
-
+        process_data(data)
         schedule_work()
         {:noreply, state}
     end
+  end
+
+  defp process_data(data) do
+    users_data_list = Map.to_list(data)
+
+    Enum.each(users_data_list, fn {x, grades} ->
+      if length(grades) > 5 do
+        {:ok, pid} = GenServer.start_link(MehungryWeb.ModelTrainer, [:hello])
+        GenServer.cast(pid, {:train, x})
+      else
+        nil
+      end
+    end)
   end
 
   defp schedule_work do

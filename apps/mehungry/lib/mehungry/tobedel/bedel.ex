@@ -1,4 +1,6 @@
 defmodule Mehungry.Tobedel.Bedel do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
 

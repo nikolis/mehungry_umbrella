@@ -11,7 +11,7 @@
 
       <div class={"drop-container #{drop_hidden?(@uploads.image.entries)}"}>
         <div class={"file-drop-area w-full h-full "} phx-drop-target=" {@uploads.image.ref}">
-          <div id="lab1" for={@uploads.image.ref} class="h-full w-full ">
+          <div id="lab1" phx-hook="ImageSelect" for={@uploads.image.ref} class="h-full w-full ">
             <div class="drag_label">Drag n Drop or click to upload</div>
           </div>
           <.live_file_input upload={@uploads.image} class="h-full w-full" style="" />

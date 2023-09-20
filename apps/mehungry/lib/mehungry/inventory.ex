@@ -57,7 +57,18 @@ defmodule Mehungry.Inventory do
       ** (Ecto.NoResultsError)
 
   """
-  def get_shopping_basket!(id), do: Repo.get!(ShoppingBasket, id)
+  def get_shopping_basket!(id) do
+    Repo.get!(ShoppingBasket, id)
+    |> Repo.preload(
+      basket_ingredients: [
+        ingredient: [
+          :measurement_unit,
+          :category,
+          :ingredient_translation
+        ]
+      ]
+    )
+  end
 
   @doc """
   Creates a shopping_basket.
@@ -79,16 +90,19 @@ defmodule Mehungry.Inventory do
 
     case result do
       {:ok, basket} ->
-        basket
-        |> Repo.preload(
-          basket_ingredients: [
-            ingredient: [
-              :measurement_unit,
-              :category,
-              :ingredient_translation
+        basket =
+          basket
+          |> Repo.preload(
+            basket_ingredients: [
+              ingredient: [
+                :measurement_unit,
+                :category,
+                :ingredient_translation
+              ]
             ]
-          ]
-        )
+          )
+
+        {:ok, basket}
 
       _ ->
         result

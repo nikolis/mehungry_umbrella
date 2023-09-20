@@ -1,4 +1,6 @@
 defmodule Mehungry.Accounts.User do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -7,6 +9,8 @@ defmodule Mehungry.Accounts.User do
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
+    field :profile_pic, :string
+    field :name, :string
 
     timestamps()
   end
@@ -33,6 +37,12 @@ defmodule Mehungry.Accounts.User do
     |> cast(attrs, [:email, :password])
     |> validate_email()
     |> validate_password(opts)
+  end
+
+  def registration_3rd_party_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:email, :profile_pic, :name])
+    |> validate_email()
   end
 
   defp validate_email(changeset) do

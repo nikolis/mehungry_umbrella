@@ -1,4 +1,6 @@
 defmodule Mehungry.Accounts.UserNotifier do
+  @moduledoc false
+
   import Swoosh.Email
 
   alias Mehungry.Mailer

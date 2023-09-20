@@ -1,4 +1,6 @@
 defmodule Mehungry.Food do
+  @moduledoc false
+
   import Ecto.Query, warn: false
   require Logger
 
@@ -14,6 +16,10 @@ defmodule Mehungry.Food do
   alias Mehungry.Food.IngredientTranslation
   alias Mehungry.Languages.Language
   alias Mehungry.Food.Like
+
+  def delete_category(%Category{} = category) do
+    Repo.delete(category)
+  end
 
   def get_category!(id) do
     Repo.get(Category, id)
@@ -98,8 +104,6 @@ defmodule Mehungry.Food do
             }
 
         result = Repo.all(query)
-        IO.puts("REsult")
-        IO.inspect(result)
         ret_rec = %Recipe{recipe | recipe_ingredients: result}
         ret_rec
 
@@ -178,9 +182,10 @@ defmodule Mehungry.Food do
     Recipe.changeset(recipe, attrs)
   end
 
-  def list_recipes() do
-    results = Repo.all(Recipe)
-    results = Repo.preload(results, [:recipe_ingredients, :user])
+  def list_user_recipes_for_selection(_user_id) do
+    entries = Repo.all(Recipe)
+
+    results = Repo.preload(entries, [:recipe_ingredients, :user])
 
     result =
       Enum.map(results, fn rec ->
@@ -188,6 +193,56 @@ defmodule Mehungry.Food do
       end)
 
     result
+  end
+
+  def list_recipes(nil) do
+    query = from(recipe in Recipe)
+
+    # return the first 50 posts
+
+    %{entries: entries, metadata: metadata} =
+      Repo.paginate(
+        query,
+        cursor_fields: [:inserted_at, :id],
+        limit: 20
+      )
+
+    # assign the `after` cursor to a variable
+    cursor_after = metadata.after
+
+    results = Repo.preload(entries, [:recipe_ingredients, :user])
+
+    result =
+      Enum.map(results, fn rec ->
+        translate_recipe_if_needed(rec)
+      end)
+
+    {result, cursor_after}
+  end
+
+  def list_recipes(cursor_after) do
+    query = from(recipe in Recipe)
+    # return the next 50 posts
+
+    %{entries: entries, metadata: metadata} =
+      Repo.paginate(
+        query,
+        after: cursor_after,
+        cursor_fields: [{:inserted_at, :asc}, {:id, :asc}],
+        limit: 30
+      )
+
+    # assign the `after` cursor to a variable
+    cursor_after = metadata.after
+
+    results = Repo.preload(entries, [:recipe_ingredients, :user])
+
+    result =
+      Enum.map(results, fn rec ->
+        translate_recipe_if_needed(rec)
+      end)
+
+    {result, cursor_after}
   end
 
   def list_user_recipes(user_id) do

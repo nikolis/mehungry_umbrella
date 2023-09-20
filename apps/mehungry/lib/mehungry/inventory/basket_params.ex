@@ -1,4 +1,6 @@
 defmodule Mehungry.Inventory.BasketParams do
+  @moduledoc false
+
   defstruct [:start_dt, :end_dt]
   @types %{start_dt: :date, end_dt: :date}
   import Ecto.Changeset

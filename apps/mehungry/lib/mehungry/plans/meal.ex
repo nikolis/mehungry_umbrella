@@ -1,4 +1,6 @@
 defmodule Mehungry.Plans.Meal do
+  @moduledoc false
+
   alias Mehungry.Plans.DailyMealPlan
   alias Mehungry.Food.Recipe
 

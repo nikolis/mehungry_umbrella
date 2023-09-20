@@ -1,4 +1,6 @@
 defmodule MehungryWeb.BarChart do
+  @moduledoc false
+
   alias Contex.{Dataset, BarChart, Plot}
 
   def make_bar_chart_dataset(data) do

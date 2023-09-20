@@ -10,9 +10,6 @@ defmodule Mehungry.FoodTest do
       user = AccountsFixtures.user_fixture()
       recipe = FoodFixtures.recipe_fixture(user)
       dt_now = NaiveDateTime.utc_now()
-      IO.inspect(user)
-      IO.inspect(recipe)
-      IO.inspect(dt_now)
 
       user_meal_params = %{
         start_dt: dt_now,
@@ -23,7 +20,6 @@ defmodule Mehungry.FoodTest do
       }
 
       result = History.create_user_meal(user_meal_params)
-      IO.inspect(result)
     end
   end
 end

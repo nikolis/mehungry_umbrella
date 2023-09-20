@@ -1,11 +1,13 @@
 defmodule MehungryWeb.ImageProcessing do
+  @moduledoc false
+
   def resize(path, width, height, opts \\ [])
 
-  def resize(nil, width, height, opts) do
+  def resize(nil, _width, _height, _opts) do
     nil
   end
 
-  def resize(image_path, width, height, opts) do
+  def resize(image_path, _width, _height, _opts) do
     image_name =
       image_path
       |> String.split("/")
@@ -21,15 +23,12 @@ defmodule MehungryWeb.ImageProcessing do
     case File.exists?(new_image_write) do
       false ->
         %HTTPoison.Response{body: body} = HTTPoison.get!(image_path)
-        file = File.write!(pre_image_name, body)
-
-        IO.inspect(file, label: "Image path")
+        _file = File.write!(pre_image_name, body)
 
         {:ok, result} =
           Image.thumbnail(pre_image_name, "270x200", crop: :center, autorotate: true)
 
-        return = Vix.Vips.Image.write_to_file(result, new_image_write)
-        IO.inspect(return, label: "Return the image")
+        _return = Vix.Vips.Image.write_to_file(result, new_image_write)
         new_image_read
 
       true ->
@@ -37,7 +36,7 @@ defmodule MehungryWeb.ImageProcessing do
     end
   end
 
-  def resize_details(image_path, width, height, opts \\ []) do
+  def resize_details(image_path, _width, _height, _opts \\ []) do
     image_name =
       image_path
       |> String.split("/")
@@ -53,15 +52,12 @@ defmodule MehungryWeb.ImageProcessing do
     case File.exists?(new_image_write) do
       false ->
         %HTTPoison.Response{body: body} = HTTPoison.get!(image_path)
-        file = File.write!(pre_image_name, body)
-
-        IO.inspect(file, label: "Image path")
+        _file = File.write!(pre_image_name, body)
 
         {:ok, result} =
           Image.thumbnail(pre_image_name, "1000x700", crop: :center, autorotate: true)
 
-        return = Vix.Vips.Image.write_to_file(result, new_image_write)
-        IO.inspect(return, label: "Return the image")
+        _return = Vix.Vips.Image.write_to_file(result, new_image_write)
         new_image_read
 
       true ->

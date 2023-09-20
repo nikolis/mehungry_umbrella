@@ -1,4 +1,6 @@
 defmodule Mehungry.Food.Annotation do
+  @moduledoc "Designed to represent the annotations on a recipe I.E greek cusine, fitness, vegetarion etc"
+
   use Ecto.Schema
   import Ecto.Changeset
 

@@ -18,12 +18,13 @@
 }
 
 /* Box sizing rules */
+/*
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
-
+*/
 
 input[type="file"] {
   background-color : white;
@@ -675,8 +676,13 @@ body {
 	display: flex;
 	flex-direction: column;
 	overflow:auto;
-
 }
+
+body.modal-open {
+    overflow: hidden;
+}
+
+
 
 .drop-container {
 	min-width: 40%;
@@ -805,3 +811,8 @@ footer {
   top: 5px;
 }
 
+
+
+h2 {
+	font-size: 2em;
+}

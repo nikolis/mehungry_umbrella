@@ -2,13 +2,11 @@ defmodule MehungryWeb.BasketLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
 
-  import Ecto
-
   alias Mehungry.Inventory.BasketParams
   alias Mehungry.Inventory
-  alias Mehungry.Inventory.ShoppingBasket
   alias Mehungry.Accounts
   alias Mehungry.History
+
 
   @impl true
   def mount(_params, session, socket) do
@@ -25,7 +23,6 @@ defmodule MehungryWeb.BasketLive.Index do
           shopping_basket
       end
 
-    IO.inspect(shopping_basket, label: "THe one and shopping basket")
     basket_params = %BasketParams{}
     changeset = Inventory.change_basket_params(basket_params, %{})
 
@@ -41,7 +38,7 @@ defmodule MehungryWeb.BasketLive.Index do
     socket
   end
 
-  defp apply_action(socket, :edit, %{"id" => id} = params) do
+  defp apply_action(socket, :edit, %{"id" => _id} = _params) do
     socket =
       socket
       |> assign(:page_title, "Edit Basket")
@@ -50,7 +47,7 @@ defmodule MehungryWeb.BasketLive.Index do
     socket
   end
 
-  defp apply_action(socket, :new, %{"start" => start_date, "end" => end_date} = params) do
+  defp apply_action(socket, :new, %{"start" => _start_date, "end" => _end_date} = _params) do
     socket =
       socket
       |> assign(:page_title, "Create Meal")
@@ -72,12 +69,23 @@ defmodule MehungryWeb.BasketLive.Index do
      |> assign(:shopping_basket, nil)}
   end
 
+  def handle_event("save", %{"basket_params" => basket_params_params}, socket) do
+    create_basket(socket, socket.assigns.live_action, basket_params_params)
+  end
+
+  @impl true
+  def handle_event("validate", %{"basket_params" => basket_params_params}, socket) do
+    changeset =
+      socket.assigns.basket_params
+      |> Inventory.change_basket_params(basket_params_params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :changeset, changeset)}
+  end
+
   def handle_event("got_item", %{"id" => id}, socket) do
-    IO.inspect(id, label: "From within the got iten")
     bi = Inventory.get_basket_ingredient!(id)
-    IO.inspect(bi, label: "Bi click")
-    bi = Inventory.update_basket_ingredient(bi, %{in_storage: !bi.in_storage})
-    IO.inspect(bi, label: "Bi click after")
+    _bi = Inventory.update_basket_ingredient(bi, %{in_storage: !bi.in_storage})
     shopping_baskets = Inventory.list_shopping_baskets_for_user(socket.assigns.user.id)
 
     shopping_basket =
@@ -97,7 +105,6 @@ defmodule MehungryWeb.BasketLive.Index do
 
   def checked(id) do
     bi = Inventory.get_basket_ingredient!(id)
-    IO.inspect(bi, label: "Bi criminal")
 
     case bi.in_storage do
       true ->
@@ -108,11 +115,38 @@ defmodule MehungryWeb.BasketLive.Index do
     end
   end
 
-  def handle_event("save", %{"basket_params" => basket_params_params}, socket) do
-    create_basket(socket, socket.assigns.live_action, basket_params_params)
+  #     case Map.get(acc, Integer.to_string(ing)) do
+  #        nil ->
+  #          Map.put_new(acc, Integer.to_string(ing), {ing, quant, mu})
+  #
+  #        {ing, quant, mu_e} ->
+  #          if mu == mu_e do
+  #            Map.replace(acc, Integer.to_string(ing), {ing, quant + quant, mu_e})
+  #          else
+  #            Map.put_new(acc, Integer.to_string(ing), {ing, quant, mu})
+  #          end
+  #      end
+
+  defp crete_ingredient_basket(user_meals) do
+    user_meals
+    |> Enum.reduce([], fn x, acc -> acc ++ x.recipe_user_meals end)
+    |> Enum.reduce([], fn x, acc -> acc ++ x.recipe.recipe_ingredients end)
+    |> Enum.map(fn x -> {x.ingredient.id, x.quantity, x.measurement_unit.id} end)
+    |> Enum.reduce(%{}, fn {ing, quant, mu}, acc ->
+      with {ing, quant, mu_e} <- Map.get(acc, Integer.to_string(ing)),
+           true <- mu == mu_e do
+        Map.replace(acc, Integer.to_string(ing), {ing, quant + quant, mu_e})
+      else
+        _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant, mu})
+      end
+    end)
+    |> Map.values()
+    |> Enum.map(fn {ing, quant, mu} ->
+      %{ingredient_id: ing, quantity: quant, measurement_unit_id: mu}
+    end)
   end
 
-  defp create_basket(socket, save_action, basket_params_params) do
+  defp create_basket(socket, _save_action, basket_params_params) do
     user = socket.assigns.user
 
     changeset =
@@ -134,57 +168,20 @@ defmodule MehungryWeb.BasketLive.Index do
         user_meals =
           History.list_history_user_meals_for_user(socket.assigns.user.id, st_dt, en_dt)
 
-        all_ingredients =
-          user_meals
-          |> Enum.reduce([], fn x, acc -> acc ++ x.recipe_user_meals end)
-          |> Enum.reduce([], fn x, acc -> acc ++ x.recipe.recipe_ingredients end)
-          |> Enum.map(fn x -> {x.ingredient.id, x.quantity, x.measurement_unit.id} end)
-          |> Enum.reduce(%{}, fn {ing, quant, mu}, acc ->
-            case Map.get(acc, Integer.to_string(ing)) do
-              nil ->
-                Map.put_new(acc, Integer.to_string(ing), {ing, quant, mu})
-
-              {ing, quant, mu_e} ->
-                if(mu == mu_e) do
-                  Map.replace(acc, Integer.to_string(ing), {ing, quant + quant, mu_e})
-                else
-                  Map.put_new(acc, Integer.to_string(ing), {ing, quant, mu})
-                end
-            end
-          end)
-          |> Map.values()
-          |> Enum.map(fn {ing, quant, mu} ->
-            %{ingredient_id: ing, quantity: quant, measurement_unit_id: mu}
-          end)
-
-        IO.inspect(all_ingredients, label: "All Ingredeitns")
+        all_ingredients = crete_ingredient_basket(user_meals)
 
         params = %{
           start_dt: st_dt,
           end_dt: en_dt,
           basket_ingredients: all_ingredients,
-          user_id: socket.assigns.user.id
+          user_id: user.id
         }
 
-        IO.inspect(params, label: "Create params")
         shopping_basket = Inventory.create_shopping_basket(params)
-        IO.inspect(shopping_basket, label: "WHatacscshange")
 
-        # |> put_flash(:info, "User Meal updated successfully")
-        # |> push_redirect(to: socket.assigns.return_to)}
         {:noreply,
          socket
          |> assign(:shopping_basket, shopping_basket)}
     end
-  end
-
-  @impl true
-  def handle_event("validate", %{"basket_params" => basket_params_params}, socket) do
-    changeset =
-      socket.assigns.basket_params
-      |> Inventory.change_basket_params(basket_params_params)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, :changeset, changeset)}
   end
 end

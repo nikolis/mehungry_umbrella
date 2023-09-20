@@ -1,4 +1,6 @@
 defmodule Mehungry.Languages do
+  @moduledoc false
+
   import Ecto.Query
 
   alias Mehungry.Repo

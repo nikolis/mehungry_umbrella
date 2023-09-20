@@ -1,13 +1,13 @@
-<div class=" h-full my-auto"  style = ""> 
+<div class=""  style = ""> 
 <.form
   let={f}
   for={@changeset}
   id="recipe-form"
-  class="form-search "
+  class="form-search"
 
   phx-change="validate"
   phx-submit="search">
-	<div class ="h-full flex">	
+	<div class ="">	
 	  <%= text_input f, :query_string , class: "w-full h-full rounded-full p-3", style: "background-color:#eaeaea" %>
 	  <%= submit "", phx_disable_with: "Searching..." , class: "invisible"%>
 	</div>

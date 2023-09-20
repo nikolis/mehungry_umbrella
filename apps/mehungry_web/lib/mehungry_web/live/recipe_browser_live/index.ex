@@ -6,19 +6,44 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   alias Mehungry.Search.RecipeSearchItem
   alias Mehungry.Search
   alias MehungryWeb.Presence
-  alias Mehungry.Accounts
   alias MehungryWeb.ImageProcessing
+
+  alias MehungryWeb.RecipeBrowseLive.Modal
 
   @user_id 5
 
   @impl true
   def mount(_params, _session, socket) do
-    IO.inspect("Mount")
+    {recipes, cursor_after} = list_recipes()
 
     {:ok,
-     assign(socket, :recipes, list_recipes())
+     assign(socket, :recipes, recipes)
+     |> assign(:cursor_after, cursor_after)
+     |> assign(:recipe, nil)
+     |> assign(:page, 1)
+     |> assign(:counter, 1)
      |> assign_recipe_search()
      |> assign_changeset()}
+  end
+
+  def is_open(action, url, invocations) do
+    result = String.split(url, "/")
+
+    case action do
+      :show ->
+        "is-open"
+
+      _ ->
+        if length(result) >= 5 do
+          "is-closing"
+        else
+          if invocations > 1 do
+            "is-closing"
+          else
+            "is-closed"
+          end
+        end
+    end
   end
 
   def assign_recipe_search(socket) do
@@ -35,10 +60,24 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   end
 
   @impl true
-  def handle_event("validate", %{"recipe_search_item" => search_item} = thing, socket) do
-    IO.inspect(thing, label: "Thing")
-    IO.inspect("General handle Locally though")
-    {:noreply, socket}
+  def handle_event("close-modal", _thing, socket) do
+    Process.sleep(500)
+    {:noreply, push_patch(socket, to: "/browse")}
+  end
+
+  @impl true
+  def handle_event("load-more", _, socket) do
+    cursor_after = Map.get(socket.assigns, :cursor_after)
+
+    {recipes, cursor_after} = Food.list_recipes(cursor_after)
+
+    # all_recipes  = socket.assigns.recipes ++ recipes
+
+    {:noreply,
+     socket
+     |> assign(:cursor_after, cursor_after)
+     |> assign(:page, socket.assigns.page + 1)
+     |> assign(:recipes, recipes)}
   end
 
   @impl true
@@ -52,26 +91,17 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
       |> Search.change_recipe_search_item(recipe_search_item_params)
       |> Map.put(:action, :validate)
 
-    IO.inspect("THe local impl", label: "The")
-
     {:noreply,
      socket
      |> assign(:changeset, changeset)}
   end
 
-  def handle_event(any, _, socket) do
-    IO.inspect(any, label: "From within")
-
-    IO.inspect(
-      "----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
-    )
-
-    {:noreply, socket}
+  @impl true
+  def handle_event("recipe_details_nav", %{"recipe_id" => recipe_id}, socket) do
+    {:noreply, push_patch(socket, to: "/browse/" <> recipe_id)}
   end
 
   def handle_event("search", %{"recipe_search_item" => %{"query_string" => query_string}}, socket) do
-    IO.inspect("General handle Buttt locally here")
-    IO.inspect(query_string, label: "Query String")
     {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/browse")}
   end
 
@@ -102,13 +132,28 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(params, uri, socket) do
     maybe_track_user(nil, socket)
+    socket = assign(socket, :path, uri)
+
+    socket =
+      assign(
+        socket,
+        :invocations,
+        case Map.get(socket.assigns, :invocations) do
+          nil ->
+            1
+
+          x ->
+            x + 1
+        end
+      )
+
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
   def maybe_track_user(
-        product,
+        _product,
         %{assigns: %{live_action: :index, current_user: current_user}} = socket
       ) do
     if connected?(socket) do
@@ -116,12 +161,13 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     end
   end
 
-  def maybe_track_user(product, socket), do: nil
+  def maybe_track_user(_product, _socket), do: nil
 
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(:page_title, "Listing Categories")
     |> assign(:category, nil)
+    |> assign(:recipe, nil)
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do
@@ -136,7 +182,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     # To be fixed I need to use a map instead if I want to keep a single grade for the a particular recipe
     users = Cachex.get(:users, "data")
 
-    new_content =
+    _new_content =
       case users do
         {:ok, nil} ->
           %{to_string(@user_id) => [{id, points}]}
@@ -162,10 +208,14 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   end
 
   defp list_recipes do
-    Food.list_recipes()
-    |> Enum.map(fn recipe ->
-      return = ImageProcessing.resize(recipe.image_url, 100, 100)
-      %Recipe{recipe | recipe_image_remote: return}
-    end)
+    {result, cursor_after} = Food.list_recipes(nil)
+
+    result =
+      Enum.map(result, fn recipe ->
+        return = ImageProcessing.resize(recipe.image_url, 100, 100)
+        %Recipe{recipe | recipe_image_remote: return}
+      end)
+
+    {result, cursor_after}
   end
 end

@@ -1,4 +1,6 @@
 defmodule Mehungry.Search.RecipeSearchItem do
+  @moduledoc false
+
   import Ecto.Changeset
 
   defstruct [:query_string]

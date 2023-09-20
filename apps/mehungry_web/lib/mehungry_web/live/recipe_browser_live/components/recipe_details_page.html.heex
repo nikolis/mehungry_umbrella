@@ -1,0 +1,57 @@
+<div class="game" id={"recipe_card" <> Integer.to_string(@recipe.id)}  style="border: solid 4px transparent">
+  <div class="rank" id={"recipe_rank" <> Integer.to_string(@recipe.id)} >
+    <%= @recipe.id %>
+  </div>
+  <button class="front" id={"recipe_button" <> Integer.to_string(@recipe.id)} phx-click="recipe_details_nav" phx-value-recipe_id={@recipe.id} >
+    <img class="thumbnail" src={@recipe.image_url} alt="" width="900" height="600">
+    <h3 class="name"><%= @recipe.title %></h3>
+    <div class="stats">
+      <p class="viewers">593.6k</p>
+      <div class="streamers">
+        <img src="images/image-jonathan.jpg" alt="">
+        <img src="images/image-kira.jpg" alt="">
+        <img src="images/image-patrick.jpg" alt="">
+      </div>
+    </div>
+
+  </button>
+
+
+  <div class="back" id={"recipe_back" <> Integer.to_string(@recipe.id)} >
+    <div class="streaming-info">
+      <p class="game-stat">550k<span>watching</span></p>
+      <p class="game-stat">30k<span>streaming</span></p>
+    </div>
+
+    <button class="btn">Save Recipe</button>
+    <div class="streamers">
+      <div class="streamer">
+        <div class="icon">
+          <img src="images/image-jonathan.jpg" alt="", class="m-auto">
+        </div>
+        <p class="name">Gamer1</p>
+        <p class="number m-auto"> 34.6k </p>
+      </div>
+      <div class="streamer">
+        <div class="icon">
+          <img src="images/image-kira.jpg" alt="" class="m-auto">
+        </div>
+        <p class="name">Gamer2</p>
+        <p class="number">32k</p>
+      </div>
+      <div class="streamer">
+        <div class="icon">
+          <img src="images/image-patrick.jpg" alt="" class="m-auto">
+        </div>
+        <p class="name">Gamer3</p>
+        <p class="number">33k</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="background">
+
+  </div>
+
+
+</div>

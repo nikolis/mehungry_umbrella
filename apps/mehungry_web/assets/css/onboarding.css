@@ -1,0 +1,107 @@
+.log_in_container{
+	display: flex;
+	flex-direction: column;
+	max-width: 500px;
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: 2%;
+	margin-bottom: 1%;
+	border-radius: 30px;
+	padding: 2rem;
+	box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1) ;
+	row-gap: 0.5rem;;
+}
+
+
+@media (min-width: 40em) {
+	.log_in_container {
+		margin-top: 5%;
+		margin-bottom: 2%;
+	}
+}
+
+.login_form {
+	margin-top: 2em;
+	display: flex;
+	flex-direction: column;
+	row-gap: 1.8rem;;
+	align-items: center;
+
+}
+
+.input_group_container {
+	position: relative;
+	border-radius: 20px;
+	padding: 0.2rem;
+}
+
+.input_group_container label {
+	position: absolute;
+	top: -2vh;
+	left: 1em;
+	font-size: 0.8em;
+}
+
+.input_group_container a {
+	position: absolute;
+	bottom: -3vh;
+	left: 0.5em;
+	font-size: 0.8em;
+	font-weight: bold;
+}
+
+.input_group_container input {
+	width: 100%;
+	height: 100%;
+	padding: 0.4rem 1rem;
+	border: 3px solid rgba(0, 0, 0, 0.2);
+	border-radius: 20px;
+
+}
+
+.login_submit_button {
+	padding: 2em 3em;
+	display: flex;
+	flex-direction: column;
+	row-gap: 0.55rem;
+}
+
+.login_submit_button button{
+	width: 100%;
+ 	text-align: center;
+	font-size: 20px;
+	border: 3px solid rgba(59, 130, 246, 0);
+
+	padding: 0.3rem 1rem;
+	border-radius: 20px;
+	color: white;
+}
+
+.login_submit_button .link_button{
+	width: 100%;
+ 	text-align: center;
+	font-size: 20px;
+
+	padding: 0.3rem 1rem;
+	border-radius: 20px;
+	color:  rgba(79, 124, 77, 1);
+	font-weight: bold;
+	border: 2px solid rgba(79, 124, 77, 0.7);
+}
+
+
+.login_submit_button button {
+	background-color: #77b255;
+}
+.login_submit_button button:hover {
+	background-color: #66a155;
+}
+
+
+.quote {
+	font-weight: normal;
+	font-size: 1rem;
+	line-height: 1.4rem;
+	color: rgba(79, 124, 77, 0.5);
+
+}

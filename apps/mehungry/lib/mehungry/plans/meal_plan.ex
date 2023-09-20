@@ -1,4 +1,6 @@
 defmodule Mehungry.Plans.MealPlan do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
 

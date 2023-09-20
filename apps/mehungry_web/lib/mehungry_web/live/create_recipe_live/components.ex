@@ -1,5 +1,6 @@
 defmodule MehungryWeb.CreateRecipeLive.Components do
   use Phoenix.Component
+  
   import Phoenix.HTML.Form
   import MehungryWeb.ErrorHelpers
 
@@ -28,11 +29,7 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
     key_changeset = form.source.changes[atom_key]
     key_form_data = Map.from_struct(form.data)[atom_key]
 
-    # IO.inspect(atom_key, label: "THE KEY")
-    # IO.inspect(key_form_params, label: "The form")
-    # IO.inspect(key_changeset, label: "Sourde changes") 
-    # IO.inspect(key_form_data, label: "form data")
-    if(is_nil(key_form_data) and is_nil(key_changeset) and is_nil(key_form_params)) do
+    if is_nil(key_form_data) and is_nil(key_changeset) and is_nil(key_form_params) do
       true
     else
       false

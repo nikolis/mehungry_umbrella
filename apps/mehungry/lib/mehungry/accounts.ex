@@ -5,7 +5,7 @@ defmodule Mehungry.Accounts do
 
   import Ecto.Query, warn: false
   alias Mehungry.Repo
-
+  alias Ueberauth.Auth
   alias Mehungry.Accounts.{User, UserToken, UserNotifier}
 
   ## Database getters
@@ -78,6 +78,81 @@ defmodule Mehungry.Accounts do
     %User{}
     |> User.registration_changeset(attrs)
     |> Repo.insert()
+  end
+
+  def register_3rd_party_user(attrs) do
+    %User{}
+    |> User.registration_3rd_party_changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def find_or_create(%Auth{} = auth) do
+    user =
+      email_from_auth(auth)
+      |> get_user_by_email()
+
+    if user do
+      {:ok, user}
+    else
+      register_3rd_party_user(basic_info(auth))
+    end
+  end
+
+  # github does it this way
+  defp avatar_from_auth(%{info: %{urls: %{avatar_url: image}}}), do: image
+
+  # facebook does it this way
+  defp avatar_from_auth(%{extra: %{raw_info: %{user: user}}} = extra) do
+    user["picture"]["data"]["url"]
+  end
+
+  defp email_from_auth(%{info: %{email: email}}), do: email
+
+  # default case if nothing matches
+  # defp avatar_from_auth(auth) do
+  # Logger.warn("#{auth.provider} needs to find an avatar URL!")
+  # Logger.debug(Jason.encode!(auth))
+  # nil
+  # end
+
+  defp basic_info(auth) do
+    email = email_from_auth(auth)
+
+    case auth.strategy do
+      Ueberauth.Strategy.Facebook ->
+        %{
+          # uid: auth.uid,
+          name: name_from_auth(auth),
+          email: email,
+          profile_pic: avatar_from_auth(auth),
+          provider: "facebook"
+        }
+
+      Ueberauth.Strategy.Google ->
+        %{
+          # uid: auth.uid,
+          name: name_from_auth(auth),
+          email: email,
+          avatar: avatar_from_auth(auth),
+          provider: "google"
+        }
+    end
+  end
+
+  defp name_from_auth(auth) do
+    if auth.info.name do
+      auth.info.name
+    else
+      name =
+        [auth.info.first_name, auth.info.last_name]
+        |> Enum.filter(&(&1 != nil and &1 != ""))
+
+      if Enum.empty?(name) do
+        auth.info.nickname
+      else
+        Enum.join(name, " ")
+      end
+    end
   end
 
   @doc """

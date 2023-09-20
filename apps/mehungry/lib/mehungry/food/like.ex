@@ -1,4 +1,6 @@
 defmodule Mehungry.Food.Like do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
 

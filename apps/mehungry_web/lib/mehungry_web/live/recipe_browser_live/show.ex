@@ -1,11 +1,11 @@
 defmodule MehungryWeb.RecipeBrowseLive.Show do
   use MehungryWeb, :live_component
 
-  alias Mehungry.Food
+  # alias Mehungry.Food
   alias Mehungry.Food.Recipe
   alias MehungryWeb.ImageProcessing
 
-  alias Phoenix.LiveView.JS
+  # alias Phoenix.LiveView.JS
 
   @impl true
   def update(%{recipe: recipe} = assigns, socket) do
@@ -22,9 +22,11 @@ defmodule MehungryWeb.RecipeBrowseLive.Show do
     %Recipe{recipe | detail_image_url: return}
   end
 
+  """
   defp hide_modal(js \\ %JS{}) do
     js
     |> JS.hide(to: "#modal", transition: "fade-out")
     |> JS.hide(to: "#modal-content", transition: "fade-out-scale")
   end
+  """
 end

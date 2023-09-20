@@ -6,7 +6,9 @@ defmodule Mehungry.Repo.Migrations.CreateUsersAuthTables do
 
     create table(:users) do
       add :email, :citext, null: false
-      add :hashed_password, :string, null: false
+      add :profile_pic, :string
+      add :name, :string
+      add :hashed_password, :string
       add :confirmed_at, :naive_datetime
       timestamps()
     end

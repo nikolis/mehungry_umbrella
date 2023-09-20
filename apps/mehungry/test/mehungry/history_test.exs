@@ -2,9 +2,7 @@ defmodule MehungryApi.HistoryTest do
   use Mehungry.DataCase
 
   alias Mehungry.History
-  alias Mehungry.Food
   alias Mehungry.FoodFixtures
-  alias Mehungry.TestDataHelpers
   alias Mehungry.AccountsFixtures
 
   describe "history_user_meals" do
@@ -12,16 +10,22 @@ defmodule MehungryApi.HistoryTest do
 
     import Mehungry.HistoryFixtures
 
+    setup do
+      user = AccountsFixtures.user_fixture()
+
+      %{user: user}
+    end
+
     @invalid_attrs %{meal_datetime: nil, title: nil}
 
-    test "list_history_user_meals/0 returns all history_user_meals" do
-      user_meal = user_meal_fixture()
+    test "list_history_user_meals/0 returns all history_user_meals", %{user: user} do
+      user_meal = user_meal_fixture(%{user_id: user.id})
       user_meal = History.get_user_meal!(user_meal.id)
       assert History.list_history_user_meals() == [user_meal]
     end
 
-    test "get_user_meal!/1 returns the user_meal with given id" do
-      user_meal = user_meal_fixture()
+    test "get_user_meal!/1 returns the user_meal with given id", %{user: user} do
+      user_meal = user_meal_fixture(%{user_id: user.id})
       user_meal = History.get_user_meal!(user_meal.id)
       assert History.get_user_meal!(user_meal.id) == user_meal
     end
@@ -34,6 +38,7 @@ defmodule MehungryApi.HistoryTest do
       valid_attrs = %{
         start_dt: ~U[2022-02-13 16:50:00Z],
         title: "some title",
+        user_id: user.id,
         recipe_user_meals: [%{recipe_id: recipe_0.id}, %{recipe_id: recipe.id}]
       }
 
@@ -56,6 +61,7 @@ defmodule MehungryApi.HistoryTest do
       recipe = FoodFixtures.recipe_fixture(user, %{name: "Asdfadsf"})
 
       valid_attrs = %{
+        user_id: user.id,
         meal_datetime: ~U[2022-02-13 16:50:00Z],
         title: "some title",
         recipe_user_meals: [%{recipe_id: recipe_0.id}, %{recipe_id: recipe.id}]
@@ -91,19 +97,19 @@ defmodule MehungryApi.HistoryTest do
       assert {:error, %Ecto.Changeset{}} = History.create_user_meal(@invalid_attrs)
     end
 
-    test "update_user_meal/2 with invalid data returns error changeset" do
-      user_meal = user_meal_fixture()
+    test "update_user_meal/2 with invalid data returns error changeset", %{user: user} do
+      user_meal = user_meal_fixture(%{user_id: user.id})
       assert {:error, %Ecto.Changeset{}} = History.update_user_meal(user_meal, @invalid_attrs)
     end
 
-    test "delete_user_meal/1 deletes the user_meal" do
-      user_meal = user_meal_fixture()
+    test "delete_user_meal/1 deletes the user_meal", %{user: user} do
+      user_meal = user_meal_fixture(%{user_id: user.id})
       assert {:ok, %UserMeal{}} = History.delete_user_meal(user_meal)
       assert_raise Ecto.NoResultsError, fn -> History.get_user_meal!(user_meal.id) end
     end
 
-    test "change_user_meal/1 returns a user_meal changeset" do
-      user_meal = user_meal_fixture()
+    test "change_user_meal/1 returns a user_meal changeset", %{user: user} do
+      user_meal = user_meal_fixture(%{user_id: user.id})
       assert %Ecto.Changeset{} = History.change_user_meal(user_meal)
     end
   end

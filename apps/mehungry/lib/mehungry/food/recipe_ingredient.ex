@@ -1,7 +1,8 @@
 defmodule Mehungry.Food.RecipeIngredient do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
-  alias Mehungry.Food.MeasurementUnit
 
   schema "recipe_ingredients" do
     field :quantity, :float
@@ -19,9 +20,7 @@ defmodule Mehungry.Food.RecipeIngredient do
 
   @doc false
   def changeset(recipe_ingredient, attrs) do
-    """
-      The attrs transformation code should be moved to the Food module
-    """
+    # TODO The attrs transformation code should be moved to the Food module
 
     recipe_ingredient
     # |> Map.put(:temp_id, (recipe_ingredient.temp_id || attrs["temp_id"])) # So its persisted

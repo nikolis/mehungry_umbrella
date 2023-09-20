@@ -1,18 +1,21 @@
-<div class="" >
+<div class="">
+  
   <%= if @live_action in [:new, :edit] do %>
-    <.modal return_to={Routes.calendar_index_path(@socket, :index)}>
-      <.live_component
-        module={MehungryWeb.CalendarLive.MealFormComponent}
-        id={@user_meal.id || :new}
-        title={@page_title}
-        action={@live_action}
-        user_meal={@user_meal}
-        dates = {@dates}
-        current_user = {@current_user}
-        return_to={Routes.calendar_index_path(@socket, :index)}
-      />
-    </.modal>
-  <% end %>
+
+    <.live_component
+      module={MehungryWeb.CalendarLive.MealFormComponent }
+      id={@user_meal.id || :new}
+      title={@page_title}
+      live_action={@live_action}
+      invocations = {@invocations}
+      recipes= {@recipes}
+      dates = {@dates}
+      current_user = {@current_user}
+      return_to={Routes.calendar_index_path(@socket, :index)}
+
+    />
+
+  <% end %>  
 
   <div id="calendar" style="height: 67rem" phx-update="ignore" phx-hook="Calendar" class="pt-12" >
   </div>

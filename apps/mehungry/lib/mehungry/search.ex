@@ -1,4 +1,6 @@
 defmodule Mehungry.Search do
+  @moduledoc false
+
   alias Mehungry.Repo
 
   alias Mehungry.Search.RecipeSearchItem
@@ -13,10 +15,10 @@ defmodule Mehungry.Search do
   def update_recipe_search_item(%RecipeSearchItem{} = recipe_search, attrs \\ %{}) do
     changeset = RecipeSearchItem.changeset(recipe_search, attrs)
 
-    if !changeset.valid? do
-      {:error, changeset}
-    else
+    if changeset.valid? do
       {:ok, Ecto.Changeset.apply_changes(changeset)}
+    else
+      {:error, changeset}
     end
   end
 

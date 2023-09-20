@@ -1,4 +1,6 @@
 defmodule MehungryWeb.Presence do
+  @moduledoc false
+
   use Phoenix.Presence,
     otp_app: :mehungry_web,
     pubsub_server: Mehungry.PubSub

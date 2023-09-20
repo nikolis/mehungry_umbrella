@@ -1,5 +1,6 @@
 defmodule MehungryWeb.LiveHelpers do
-  import Phoenix.LiveView
+  @moduledoc false
+
   import Phoenix.LiveView.Helpers
   import Phoenix.Component
 

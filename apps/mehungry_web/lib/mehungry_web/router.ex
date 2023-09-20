@@ -2,6 +2,7 @@ defmodule MehungryWeb.Router do
   use MehungryWeb, :router
 
   import MehungryWeb.UserAuth
+  import MehungryWeb.PathPlug
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -10,11 +11,21 @@ defmodule MehungryWeb.Router do
     plug :put_root_layout, {MehungryWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_path_info
     plug :fetch_current_user
   end
 
   pipeline :api do
     plug :accepts, ["json"]
+  end
+
+  scope "/auth", MehungryWeb do
+    pipe_through :browser
+
+    get("/:provider", AuthController, :request)
+    get("/:provider/callback", AuthController, :callback)
+    post("/:provider/callback", AuthController, :callback)
+    post("/logout", AuthController, :delete)
   end
 
   scope "/", MehungryWeb do
@@ -23,6 +34,7 @@ defmodule MehungryWeb.Router do
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
       live "/", HomeLive.Index, :index
 
+      live "/profile", ProfileLive.Index, :index
       live "/browse", RecipeBrowseLive.Index, :index
       live "/browse/:id", RecipeBrowseLive.Index, :show
       live "/browse_prepop/:search_term", :searc_prepop
@@ -104,14 +116,13 @@ defmodule MehungryWeb.Router do
 
     get "/users/settings", UserSettingsController, :edit
     put "/users/settings", UserSettingsController, :update
-    live "/survey", SurveyLive, :index
     get "/users/settings/confirm_email/:token", UserSettingsController, :confirm_email
   end
 
   scope "/", MehungryWeb do
     pipe_through [:browser]
 
-    delete "/users/log_out", UserSessionController, :delete
+    get "/users/log_out", UserSessionController, :delete
     get "/users/confirm", UserConfirmationController, :new
     post "/users/confirm", UserConfirmationController, :create
     get "/users/confirm/:token", UserConfirmationController, :edit
@@ -120,34 +131,4 @@ defmodule MehungryWeb.Router do
 
   ## Authentication routes
 
-  scope "/", MehungryWeb do
-    pipe_through [:browser, :redirect_if_user_is_authenticated]
-
-    get "/users/register", UserRegistrationController, :new
-    post "/users/register", UserRegistrationController, :create
-    get "/users/log_in", UserSessionController, :new
-    post "/users/log_in", UserSessionController, :create
-    get "/users/reset_password", UserResetPasswordController, :new
-    post "/users/reset_password", UserResetPasswordController, :create
-    get "/users/reset_password/:token", UserResetPasswordController, :edit
-    put "/users/reset_password/:token", UserResetPasswordController, :update
-  end
-
-  scope "/", MehungryWeb do
-    pipe_through [:browser, :require_authenticated_user]
-
-    get "/users/settings", UserSettingsController, :edit
-    put "/users/settings", UserSettingsController, :update
-    get "/users/settings/confirm_email/:token", UserSettingsController, :confirm_email
-  end
-
-  scope "/", MehungryWeb do
-    pipe_through [:browser]
-
-    delete "/users/log_out", UserSessionController, :delete
-    get "/users/confirm", UserConfirmationController, :new
-    post "/users/confirm", UserConfirmationController, :create
-    get "/users/confirm/:token", UserConfirmationController, :edit
-    post "/users/confirm/:token", UserConfirmationController, :update
-  end
 end

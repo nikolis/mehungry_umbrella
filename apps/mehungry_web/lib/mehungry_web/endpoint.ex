@@ -40,6 +40,7 @@ defmodule MehungryWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
+  # plug MehungryWeb.PathPlug
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
   plug Plug.Parsers,
@@ -50,5 +51,6 @@ defmodule MehungryWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+
   plug MehungryWeb.Router
 end

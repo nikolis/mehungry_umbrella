@@ -27,6 +27,20 @@ config :mehungry_web, MehungryWeb.Endpoint,
   aws_secret: System.get_env("AWS_SECRET_ACCESS_KEY"),
   aws_bucket: System.get_env("AWS_ASSETS_BUCKET_NAME")
 
+config :ueberauth, Ueberauth,
+  providers: [
+    facebook: {Ueberauth.Strategy.Facebook, [profile_fields: "name,email,first_name,last_name,picture, gender, hometown"]},
+    google: {Ueberauth.Strategy.Google, [default_scope: "email profile"]}
+  ]
+
+config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
+  client_id: System.get_env("FACEBOOK_CLIENT_ID"),
+  client_secret: System.get_env("FACEBOOK_CLIENT_SECRET")
+
+config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+  client_id: System.get_env("GOOGLE_CLIENT_ID"),
+  client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+
 config :tailwind,
   version: "3.1.8",
   default: [
