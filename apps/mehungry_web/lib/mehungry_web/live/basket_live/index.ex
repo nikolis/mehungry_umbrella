@@ -7,7 +7,6 @@ defmodule MehungryWeb.BasketLive.Index do
   alias Mehungry.Accounts
   alias Mehungry.History
 
-
   @impl true
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])

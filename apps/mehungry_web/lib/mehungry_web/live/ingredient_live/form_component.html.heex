@@ -20,7 +20,10 @@
     <%= label f, :url %>
     <%= text_input f, :url %>
     <%= error_tag f, :url %>
-  
+
+    <%= text_input f, :category_id %>
+    <%= text_input f, :measurement_unit_id %>
+
     <div>
       <%= submit "Save", phx_disable_with: "Saving..." %>
     </div>

@@ -14,7 +14,7 @@ defmodule MehungryWeb.CategoryLiveTest do
   end
 
   describe "Index" do
-    setup [:create_category]
+    setup [:create_category, :register_and_log_in_user]
 
     test "lists all categories", %{conn: conn, category: category} do
       {:ok, _index_live, html} = live(conn, Routes.category_index_path(conn, :index))
@@ -76,7 +76,7 @@ defmodule MehungryWeb.CategoryLiveTest do
   end
 
   describe "Show" do
-    setup [:create_category]
+    setup [:create_category, :register_and_log_in_user]
 
     test "displays category", %{conn: conn, category: category} do
       {:ok, _show_live, html} = live(conn, Routes.category_show_path(conn, :show, category))

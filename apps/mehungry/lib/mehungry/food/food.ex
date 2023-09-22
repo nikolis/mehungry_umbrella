@@ -166,8 +166,18 @@ defmodule Mehungry.Food do
     |> Repo.insert()
   end
 
-  def change_measurement_unit(attrs) do
-    MeasurementUnit.changeset(%MeasurementUnit{}, attrs)
+  def update_measurement_unit(%MeasurementUnit{} = measurement_unit, attrs \\ %{}) do
+    measurement_unit
+    |> MeasurementUnit.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def delete_measurement_unit(%MeasurementUnit{} = measrement_unit) do
+    Repo.delete(measrement_unit)
+  end
+
+  def change_measurement_unit(measurement_unit, attrs \\ %{}) do
+    MeasurementUnit.changeset(measurement_unit, attrs)
   end
 
   def change_recipe_ingredient(%RecipeIngredient{} = recipe_ingredient, attrs \\ %{}) do
@@ -280,6 +290,12 @@ defmodule Mehungry.Food do
     |> Repo.insert()
   end
 
+  def update_category(%Category{} = category, attrs \\ %{}) do
+    category
+    |> Category.changeset(attrs)
+    |> Repo.update()
+  end
+
   def create_ingredient(attrs) do
     Ingredient.changeset(%Ingredient{}, attrs)
     |> Repo.insert()
@@ -296,6 +312,16 @@ defmodule Mehungry.Food do
         select: in_tr.name
 
     Repo.all(query)
+  end
+
+  def change_ingredient(%Ingredient{} = ingredient, attrs \\ %{}) do
+    Ingredient.changeset(ingredient, attrs)
+  end
+
+  def update_ingredient(%Ingredient{} = ingredient, attrs \\ %{}) do
+    ingredient
+    |> Ingredient.changeset(attrs)
+    |> Repo.update()
   end
 
   def get_ingredient!(id) do

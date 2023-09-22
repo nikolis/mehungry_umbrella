@@ -92,14 +92,17 @@ defmodule Mehungry.FoodFixtures do
     {:ok, category} =
       Food.create_category(%{
         name: category_name,
+        description: "basic descr",
         category_translation: [
           %{
             language_name: lang.name,
-            name: "category"
+            name: "category",
+            description: "asome sdfa"
           },
           %{
             language_name: lang2.name,
-            name: category_name
+            name: category_name,
+            description: "asdfdfsaf"
           }
         ]
       })
@@ -148,22 +151,6 @@ defmodule Mehungry.FoodFixtures do
       })
 
     mu
-  end
-
-  def recipe_ingredient_fixture(
-        %Food.Recipe{} = recipe,
-        %Food.Ingredient{} = ingredient,
-        %Food.MeasurementUnit{} = mo,
-        attrs \\ %{}
-      ) do
-    attrs =
-      Enum.into(attrs, %{
-        quantity: 3
-      })
-
-    {:ok, recipe_ingredient} = Food.create_recipe_ingredient(recipe, ingredient, mo, attrs)
-
-    recipe_ingredient
   end
 
   def recipe_fixture(%Accounts.User{} = _user, attrs \\ %{}) do

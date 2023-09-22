@@ -7,7 +7,9 @@ defmodule MehungryWeb.RatingLive.Show do
       filled_stars(assigns.rating.stars)
       |> Enum.concat(unfilled_stars(assigns.rating.stars))
       |> Enum.join(" ")
-    assigns = assign(assigns, :stars , stars)
+
+    assigns = assign(assigns, :stars, stars)
+
     ~H"""
       <div>
         <h4>

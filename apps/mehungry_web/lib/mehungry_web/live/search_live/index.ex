@@ -1,7 +1,6 @@
 defmodule MehungryWeb.SearchLive.Index do
   use MehungryWeb, :live_component
 
-
   alias Mehungry.Inventory
   alias Mehungry.Search.RecipeSearchItem
   alias Mehungry.Food.Recipe
@@ -71,7 +70,6 @@ defmodule MehungryWeb.SearchLive.Index do
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
-
 
   defp list_recipes do
     Food.list_recipes(nil)

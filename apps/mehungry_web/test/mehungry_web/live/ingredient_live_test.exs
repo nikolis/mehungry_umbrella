@@ -4,6 +4,21 @@ defmodule MehungryWeb.IngredientLiveTest do
   import Phoenix.LiveViewTest
   import Mehungry.FoodFixtures
 
+  defp create_category(_) do
+    category = category_fixture()
+    %{category: category}
+  end
+
+  defp create_ingredient(_) do
+    ingredient = ingredient_fixture()
+    %{ingredient: ingredient}
+  end
+
+  defp create_measurement_unit(_) do
+    measurement_unit = measurement_unit_fixture()
+    %{measurement_unit: measurement_unit}
+  end
+
   @create_attrs %{description: "some description", name: "some name", url: "some url"}
   @update_attrs %{
     description: "some updated description",
@@ -12,22 +27,26 @@ defmodule MehungryWeb.IngredientLiveTest do
   }
   @invalid_attrs %{description: nil, name: nil, url: nil}
 
-  defp create_ingredient(_) do
-    ingredient = ingredient_fixture()
-    %{ingredient: ingredient}
-  end
-
   describe "Index" do
-    setup [:create_ingredient]
+    setup [
+      :create_ingredient,
+      :register_and_log_in_user,
+      :create_category,
+      :create_measurement_unit
+    ]
 
-    test "lists all ingredients", %{conn: conn, ingredient: ingredient} do
+    test "lists all ingredients", %{conn: conn, ingredient: ingredient} = _params do
       {:ok, _index_live, html} = live(conn, Routes.ingredient_index_path(conn, :index))
 
       assert html =~ "Listing Ingredients"
       assert html =~ ingredient.description
     end
 
-    test "saves new ingredient", %{conn: conn} do
+    test "saves new ingredient", %{
+      conn: conn,
+      category: category,
+      measurement_unit: measurement_unit
+    } do
       {:ok, index_live, _html} = live(conn, Routes.ingredient_index_path(conn, :index))
 
       assert index_live |> element("a", "New Ingredient") |> render_click() =~
@@ -39,14 +58,18 @@ defmodule MehungryWeb.IngredientLiveTest do
              |> form("#ingredient-form", ingredient: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
+      create_attrs =
+        @create_attrs
+        |> Enum.into(%{category_id: category.id, measurement_unit_id: measurement_unit.id})
+
       {:ok, _, html} =
         index_live
-        |> form("#ingredient-form", ingredient: @create_attrs)
+        |> form("#ingredient-form", ingredient: create_attrs)
         |> render_submit()
         |> follow_redirect(conn, Routes.ingredient_index_path(conn, :index))
 
       assert html =~ "Ingredient created successfully"
-      assert html =~ "some description"
+      assert html =~ "some name"
     end
 
     test "updates ingredient in listing", %{conn: conn, ingredient: ingredient} do
@@ -80,7 +103,7 @@ defmodule MehungryWeb.IngredientLiveTest do
   end
 
   describe "Show" do
-    setup [:create_ingredient]
+    setup [:create_ingredient, :register_and_log_in_user]
 
     test "displays ingredient", %{conn: conn, ingredient: ingredient} do
       {:ok, _show_live, html} = live(conn, Routes.ingredient_show_path(conn, :show, ingredient))

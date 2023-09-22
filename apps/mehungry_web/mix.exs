@@ -38,6 +38,7 @@ defmodule MehungryWeb.MixProject do
   defp deps do
     [
       {:cachex, "~> 3.4"},
+      {:floki, ">= 0.30.0", only: :test},
       {:evision, "~> 0.1.16"},
       {:vix, "~> 0.14.0"},
       {:image, "~> 0.14.1"},

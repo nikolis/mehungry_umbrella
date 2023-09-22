@@ -93,7 +93,7 @@ defmodule Mehungry.TestDataHelpers do
           value
       end
 
-    lang2 = Languages.get_language_by_name("Gr")
+    _lang2 = Languages.get_language_by_name("Gr")
 
     lang2 =
       case lang do
@@ -123,7 +123,7 @@ defmodule Mehungry.TestDataHelpers do
     category
   end
 
-  def measurement_unit_fixture(attrs \\ %{}) do
+  def measurement_unit_fixture(_attrs \\ %{}) do
     lang = Languages.get_language_by_name("En")
 
     lang =
@@ -166,30 +166,13 @@ defmodule Mehungry.TestDataHelpers do
     mu
   end
 
-  def recipe_ingredient_fixture(
-        %Food.Recipe{} = recipe,
-        %Food.Ingredient{} = ingredient,
-        %Food.MeasurementUnit{} = mo,
-        attrs \\ %{}
-      ) do
-    attrs =
-      Enum.into(attrs, %{
-        quantity: 3
-      })
-
-    {:ok, recipe_ingredient} = Food.create_recipe_ingredient(recipe, ingredient, mo, attrs)
-
-    recipe_ingredient
-  end
-
-  def recipe_fixture(%Accounts.User{} = user, attrs \\ %{}) do
-    attrs =
-      Enum.into(attrs, %{
-        title: "some title",
-        author: "another author",
-        cousine: "some cusine",
-        description: "some description",
-        servings: 4
-      })
+  def recipe_fixture(%Accounts.User{} = _user, attrs \\ %{}) do
+    Enum.into(attrs, %{
+      title: "some title",
+      author: "another author",
+      cousine: "some cusine",
+      description: "some description",
+      servings: 4
+    })
   end
 end

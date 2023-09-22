@@ -21,7 +21,7 @@
     </.link>
 
 
-    <%= if  !@current_user do %>
+   <%= unless assigns[:current_user] do %> 
 
     <a class="btn btn-primary btn-lg" href="/auth/facebook">
       <i class="fa fa-facebook"></i>
@@ -34,7 +34,7 @@
     <% end %>
 
 
-    <%= if @current_user do %>
+    <%= if assigns[:current_user] do %>
     <.link patch={"/profile"} class={"utils_item" }>
       <img height="auto" width="auto" class="rounded-full" src={@current_user.profile_pic} alt="profile">
     </.link>

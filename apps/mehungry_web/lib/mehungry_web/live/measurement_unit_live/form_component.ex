@@ -5,7 +5,7 @@ defmodule MehungryWeb.MeasurementUnitLive.FormComponent do
 
   @impl true
   def update(%{measurement_unit: measurement_unit} = assigns, socket) do
-    changeset = Food.change_measurement_unit(measurement_unit)
+    changeset = Food.change_measurement_unit(measurement_unit, %{})
 
     {:ok,
      socket

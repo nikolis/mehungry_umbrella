@@ -40,12 +40,6 @@ defmodule MehungryWeb.Router do
       live "/browse_prepop/:search_term", :searc_prepop
       live "/basket", BasketLive.Index, :index
 
-      live "/bedels", BedelLive.Index, :index
-      live "/bedels/new", BedelLive.Index, :new
-      live "/bedels/:id/edit", BedelLive.Index, :edit
-      live "/bedels/:id", BedelLive.Show, :show
-      live "/bedels/:id/show/edit", BedelLive.Show, :edit
-
       live "/calendar", CalendarLive.Index, :index
       live "/calendar/:start/:end", CalendarLive.Index, :new
       live "/calendar/:id", CalendarLive.Index, :edit
@@ -130,5 +124,4 @@ defmodule MehungryWeb.Router do
   end
 
   ## Authentication routes
-
 end

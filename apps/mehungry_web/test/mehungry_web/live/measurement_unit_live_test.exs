@@ -14,7 +14,7 @@ defmodule MehungryWeb.MeasurementUnitLiveTest do
   end
 
   describe "Index" do
-    setup [:create_measurement_unit]
+    setup [:create_measurement_unit, :register_and_log_in_user]
 
     test "lists all measurement_units", %{conn: conn, measurement_unit: measurement_unit} do
       {:ok, _index_live, html} = live(conn, Routes.measurement_unit_index_path(conn, :index))
@@ -81,7 +81,7 @@ defmodule MehungryWeb.MeasurementUnitLiveTest do
   end
 
   describe "Show" do
-    setup [:create_measurement_unit]
+    setup [:create_measurement_unit, :register_and_log_in_user]
 
     test "displays measurement_unit", %{conn: conn, measurement_unit: measurement_unit} do
       {:ok, _show_live, html} =

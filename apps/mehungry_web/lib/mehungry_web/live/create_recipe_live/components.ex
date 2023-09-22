@@ -1,6 +1,6 @@
 defmodule MehungryWeb.CreateRecipeLive.Components do
   use Phoenix.Component
-  
+
   import Phoenix.HTML.Form
   import MehungryWeb.ErrorHelpers
 

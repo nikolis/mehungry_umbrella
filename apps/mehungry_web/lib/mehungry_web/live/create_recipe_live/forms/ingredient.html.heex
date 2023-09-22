@@ -1,4 +1,4 @@
-  <div class="fields-row-container mx-auto">
+  <div class="fields-row-container mx-auto", id= "recipe_ingredients">
 
     <div 
       data-temp-id= {@g.data.temp_id||@g.params["temp_id"]}  
@@ -52,7 +52,7 @@
   </div>
 
   <%= hidden_input @g, :measurement_unit_id , 
-    id: "measurement_unit_select_hiddden#{@g.data.temp_id||@g.params["temp_id"]}"
+    id: "measurement_unit_select_hiddden#{@g.data.temp_id||@g.params["temp_id"]}", name: "measurement_unit"
     %>
   <%= hidden_input @g, :temp_id , 
     id: "temp_id#{@g.params["temp_id"]||@g.data.temp_id}"

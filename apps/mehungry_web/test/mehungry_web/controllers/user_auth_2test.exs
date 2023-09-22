@@ -8,16 +8,16 @@ defmodule MehungryWeb.UserAuthTest do
   @remember_me_cookie "_mehungry_web_user_remember_me"
 
   setup %{conn: conn} do
-    conn =
-      conn
-      |> Map.replace!(:secret_key_base, MehungryWeb.Endpoint.config(:secret_key_base))
-      |> init_test_session(%{})
-
     %{user: user_fixture(), conn: conn}
   end
 
   describe "log_in_user/3" do
     test "stores the user token in the session", %{conn: conn, user: user} do
+      conn =
+        conn
+        |> Map.replace!(:secret_key_base, MehungryWeb.Endpoint.config(:secret_key_base))
+        |> init_test_session(%{})
+
       conn = UserAuth.log_in_user(conn, user)
       assert token = get_session(conn, :user_token)
       assert get_session(conn, :live_socket_id) == "users_sessions:#{Base.url_encode64(token)}"
