@@ -30,6 +30,7 @@ defmodule MehungryWeb.BasketLive.Index do
      |> assign(:user, user)
      |> assign(:shopping_basket, shopping_basket)
      |> assign(:basket_params, basket_params)
+     |> assign(:shopping_baskets, shopping_baskets)
      |> assign(:changeset, changeset)}
   end
 

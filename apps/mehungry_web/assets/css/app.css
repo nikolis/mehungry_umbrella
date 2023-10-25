@@ -15,7 +15,7 @@
 @import "./profile.css";
 @import "./onboarding.css";
 @import "./nav_bar.css";
-
+@import "./basket.css";
 
 /*.select2-results__option {
     @apply text-2xl;
