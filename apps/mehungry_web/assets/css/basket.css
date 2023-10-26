@@ -1,34 +1,41 @@
 .check_list_container {	
-	border: 5px solid red;
+	/* border: 5px solid red; */
 	height: 100vh;
-	width: 80%;
+	width: 90%;
 	margin: 50px auto ;
+	position: relative;
+	background-color: white;
+	border-radius: 3%;
 }
 
 
 .check_list_side_bar {
 	width: 30%;
-	border: 5px solid yellow;
+	/*border: 5px solid yellow; */
 	display: inline-block;
 	margin: 2% 1%;
 }
 
 .check_list_content {
-	position: relative;
-	top: -90px;
+	position: absolute;
+	top: 0px;
+	left: 33% ;
+	margin: 2% 5%;
 	width: 55%;
-	height: 50vh;
-	border: 5px solid green;
+	/* border: 5px solid green; */
    	display: inline-block;
 }
 
 @media screen and (min-width: 1030px) {
 	.menu-button-wrapper {
-		top: 0px;
-		border: 4px solid yellow;
+		/* border: 4px solid yellow; */
 		display: inline-block;
 		margin: 2% 2%;
 		width: 30%;
+		position: absolute;
+		top: 0px;
+		left: 0px;
+
 	}
 }
 
@@ -49,36 +56,7 @@ input.hamburger-input {
 }
 
 
-.menu-button-wrapper {
-
-  
-  .item-list {
-    
-    div {
-    }
-  }
-  
-  .menu-button {
-  }
-}
-
-
-
-
-
-
-
-
-
 @media screen and (max-width: 1030px) {
-
-/*	.check_list_content {
-		position: static;
-		margin: 4% 4%;
-	}*/
-
-
-
 
 	.closed {
 		position: absolute;
@@ -117,14 +95,12 @@ input.hamburger-input {
 	}
 
 
-
-
 	.menu-button-wrapper {
-	  border: 3px solid orange;
+	  /* border: 3px solid orange; */
 	  position: absolute;
 	  display: inline-block;
-	  left: 20px;
-	  top: 240px;
+	  left: -50px;
+	  top: 2%;
 	  margin-left: 10%;
 
 	  .item-list {
@@ -133,7 +109,7 @@ input.hamburger-input {
 	    transform: translateX(-100%) scale(0);
 	    transform-origin: left;
 	    transition: all 0.5s cubic-bezier(0.54, -0.10, 0.57, 0.57);
-	    background-color: #dddddd;
+	    background-color: #f7f7f7;
 	    color: #444444;
 	    width: 400px;
 	    left: 150px;
@@ -142,7 +118,6 @@ input.hamburger-input {
 	    border-radius: 100px;
 	    font-weight: 300;
 	    opacity: 0;
-	    user-select: none;
 	    
 	    div {
 	      padding: 10px 30px;
@@ -161,11 +136,6 @@ input.hamburger-input {
 	    cursor: pointer;
 	  }
 	}
-
-
-
-
-
 
 	.hamburger {
 	  position: relative;
@@ -221,20 +191,8 @@ input.hamburger-input {
 	      transform-origin: left;
 	    }
 	  }
-}
-
-
-
-
-
-
-
-
-
-
-}
-
-
+	}
+   }
 
 
 html, body {
@@ -252,7 +210,6 @@ html, body {
   text-align: center;
   padding-top: 100px;
 }
-
 
 
 .menu-button {

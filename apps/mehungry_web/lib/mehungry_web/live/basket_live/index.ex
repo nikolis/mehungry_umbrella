@@ -3,6 +3,7 @@ defmodule MehungryWeb.BasketLive.Index do
   use MehungryWeb.Searchable, :transfers_to_search
 
   alias Mehungry.Inventory.BasketParams
+  alias Mehungry.Inventory.BasketSelectionParams
   alias Mehungry.Inventory
   alias Mehungry.Accounts
   alias Mehungry.History
@@ -24,14 +25,16 @@ defmodule MehungryWeb.BasketLive.Index do
 
     basket_params = %BasketParams{}
     changeset = Inventory.change_basket_params(basket_params, %{})
-
+    changeset2 = BasketSelectionParams.changeset(%BasketSelectionParams{}, %{}) 
     {:ok,
      socket
      |> assign(:user, user)
      |> assign(:shopping_basket, shopping_basket)
      |> assign(:basket_params, basket_params)
      |> assign(:shopping_baskets, shopping_baskets)
-     |> assign(:changeset, changeset)}
+     |> assign(:changeset, changeset)
+     |> assign(:changeset2, changeset2)
+     }
   end
 
   defp apply_action(socket, :index, _params) do
@@ -82,6 +85,21 @@ defmodule MehungryWeb.BasketLive.Index do
 
     {:noreply, assign(socket, :changeset, changeset)}
   end
+
+  @impl true
+  def handle_event("validate", %{"basket_selection_params" => basket_params_params}, socket) do
+    IO.inspect(basket_params_params, label: "validate form new")
+    changeset =
+      socket.assigns.basket_params
+      |> Inventory.change_basket_params(basket_params_params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :changeset, changeset)}
+  end
+
+
+
+
 
   def handle_event("got_item", %{"id" => id}, socket) do
     bi = Inventory.get_basket_ingredient!(id)
