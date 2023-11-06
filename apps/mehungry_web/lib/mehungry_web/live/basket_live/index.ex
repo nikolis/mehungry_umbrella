@@ -2,6 +2,7 @@ defmodule MehungryWeb.BasketLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
 
+  alias MehungryWeb.BasketLive.Components
   alias Mehungry.Inventory.BasketParams
   alias Mehungry.Inventory.BasketSelectionParams
   alias Mehungry.Inventory
@@ -40,6 +41,18 @@ defmodule MehungryWeb.BasketLive.Index do
   defp apply_action(socket, :index, _params) do
     socket
   end
+
+
+  defp apply_action(socket, :new, _params) do
+    socket =
+      socket
+      |> assign(:page_title, "Edit Basket")
+
+    # |> assign(:user_meal, user_meal)
+    socket
+  end
+
+
 
   defp apply_action(socket, :edit, %{"id" => _id} = _params) do
     socket =
@@ -98,7 +111,26 @@ defmodule MehungryWeb.BasketLive.Index do
   end
 
 
+  @impl true
+  def handle_event("create_basket", _params, socket) do
+    #changeset =
+      #socket.assigns.basket_params
+      #|> Inventory.change_basket_params(basket_params_params)
+      #|> Map.put(:action, :validate)
 
+    #{:noreply, assign(socket, :live_action, changeset)}
+    {:noreply, push_patch(socket, to: "/basket/new", replace: true)}
+  end
+
+  @impl true
+  def handle_event("close-modal", _, socket) do
+    {:noreply, push_patch(socket, to: "/basket/", replace: true)}
+  end
+
+  @impl true
+  def handle_event("edit_basket", %{"id" => id}, socket) do
+    {:noreply, push_patch(socket, to: "/calendar/#{id}", replace: true)}
+  end
 
 
   def handle_event("got_item", %{"id" => id}, socket) do

@@ -4,7 +4,7 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
   import Phoenix.HTML.Form
   import MehungryWeb.ErrorHelpers
 
-  embed_templates("forms/*")
+  embed_templates("components/*")
 
   def ingredient_render(assigns) do
     ~H"""

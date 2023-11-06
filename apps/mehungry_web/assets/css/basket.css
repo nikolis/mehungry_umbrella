@@ -35,14 +35,27 @@
 		position: absolute;
 		top: 0px;
 		left: 0px;
-
 	}
 }
 
 .item-list {
 	display: inline-block;
 	width: 100%;
+        border: 2px solid red;
+	padding: 5px;
 }
+.list_item { 
+ padding: 5px;
+}
+
+.create_button {
+	border: 2px solid green;
+	padding: 3px 3px 3px 3px; 
+	margin: 15px 5px 5px 5px ;
+	border-radius: 15px;
+	font-weight: 500;
+}
+
 
 .check_list_item {
 	border: 2px solid blue;
