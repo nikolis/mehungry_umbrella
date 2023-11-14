@@ -1,13 +1,37 @@
-.check_list_container {	
-	/* border: 5px solid red; */
-	height: 100vh;
-	width: 90%;
-	margin: 50px auto ;
-	position: relative;
-	background-color: white;
-	border-radius: 3%;
+.check_list_container {
+
+		/*display: grid;
+		grid-template-columns: 1fr 2fr ; 
+		gap: 1.5rem;
+		grid-auto-rows: max-content;
+		 border: 5px solid red; */
+		height: 100vh;
+		width: 100%;
+		margin: auto;
+		position: relative;
+		background-color: white;
+		border-radius: 3%;
 }
 
+
+
+
+@media screen and (min-width: 1030px) {
+
+	.check_list_container {
+
+		display: grid;
+		grid-template-columns: 1fr 2fr ; 
+		gap: 1.5rem;
+		grid-auto-rows: max-content;
+		/* border: 5px solid red; */
+		height: 100vh;
+		margin: 0 auto ;
+		position: relative;
+		background-color: white;
+		border-radius: 3%;
+	}
+}
 
 .check_list_side_bar {
 	width: 30%;
@@ -16,34 +40,44 @@
 	margin: 2% 1%;
 }
 
-.check_list_content {
-	position: absolute;
-	top: 0px;
-	left: 33% ;
-	margin: 2% 5%;
-	width: 55%;
-	/* border: 5px solid green; */
-   	display: inline-block;
+.grid_col_span_2 {
+	grid-column: span 2;
 }
+
+.header {
+	font-size: 2rem;
+	font-weight: 550;
+	padding: 1.5rem;
+}
+
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+table th {
+	font-size: 1rem;
+}
+
+
+.check_list_content {
+	/* border: 5px solid blue; */
+}
+
 
 @media screen and (min-width: 1030px) {
 	.menu-button-wrapper {
-		/* border: 4px solid yellow; */
-		display: inline-block;
-		margin: 2% 2%;
-		width: 30%;
-		position: absolute;
-		top: 0px;
-		left: 0px;
+	    /*	border: 4px solid yellow; */
 	}
 }
 
 .item-list {
 	display: inline-block;
 	width: 100%;
-        border: 2px solid red;
+	border-right: solid red;
 	padding: 5px;
 }
+
 .list_item { 
  padding: 5px;
 }
@@ -96,7 +130,6 @@ input.hamburger-input {
 		width: 80%;
 		margin: 4% auto;
 		display: block;
-		padding: 5px;
 	}
 	
 
@@ -221,7 +254,7 @@ html, body {
 
 .main {
   text-align: center;
-  padding-top: 100px;
+  padding-top: 1.5rem;
 }
 
 

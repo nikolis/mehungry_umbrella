@@ -141,7 +141,6 @@ html:focus-within {
 
 html {
 	width: 100%;
-	height: 100%;
 }
 
 
@@ -559,12 +558,6 @@ article h2 {
 
 }
 
-
-
-
-
-
-
 .remove-entry-button { 
 	position: absolute;
   top: 0;
@@ -575,7 +568,7 @@ article h2 {
 
 .form-main {
 	background-color: #eaeaea;
-	padding:2rem;
+	padding:3rem;
 	min-height: 80vh;
 }
 

@@ -4,52 +4,55 @@
    <% end %>  
 
    <div class="check_list_container">
-        <div class = "check_list_content">
-          <%= for ingredient <- @shopping_basket.basket_ingredients do %>
-            <div> <%=  ingredient.ingredient.name %> </div>
-          <% end %>
+        <h1 class="header grid_col_span_2"> Repository </h1>
+        <div>
+          <label class="menu-button-wrapper" for="">
+              <input type="checkbox" class="menu-button">
+              <div class="icon-wrapper">
+                <label class="hamburger">
+                </label>
+              </div>
+              <div class="item-list">
+              <.form
+                let={b}
+                for={@changeset}
+                id="repo-form"
+                phx-change="validate"
+                phx-submit="save"
+                >
+
+                <%= for basket <- @shopping_baskets do %>
+                  <div class="list_item">
+                    <label>  <%=  basket.start_dt %> </label>
+                    <%= checkbox b, String.to_atom(Integer.to_string(basket.id)), value: basket.id , type: "checkbox" , id: Integer.to_string(basket.id) %> 
+                  </div>
+                <% end %>
+              </.form>
+              <button phx-click="create_basket" class="create_button"> Create Basket </button>
+              </div>
+            </label>
+          </div>
+        <div class="check_list_content">
+
+          <table class="">
+            <tr>
+              <th>
+                Ingredient 
+              </th>
+              <th>
+                Quantity
+              </th>
+              <th>
+                In-Repo
+              </th>
+            </tr>
+          </table>
         </div>
 
-        <label class="menu-button-wrapper" for="">
-            <input type="checkbox" class="menu-button">
-            <div class="icon-wrapper">
-
-              <label class="hamburger">
-
-              </label>
-            </div>
-            <div class="item-list">
-            <.form
-              let={b}
-              for={@changeset}
-              id="repo-form"
-              phx-change="validate"
-              phx-submit="save"
-              >
-
-              <%= for basket <- @shopping_baskets do %>
-                <div class="list_item">
-                  <label>  <%=  basket.start_dt %> </label>
-                  <%= checkbox b, String.to_atom(Integer.to_string(basket.id)), value: basket.id , type: "checkbox" , id: Integer.to_string(basket.id) %> 
-                </div>
-              <% end %>
-            </.form>
-            <button phx-click="create_basket" class="create_button"> Create Basket </button>
-            </div>
-          </label>
-
     </div>
-
-
 
 <div class="main">
 
 </div>
 
-
-
-
 </div>
-
-
-

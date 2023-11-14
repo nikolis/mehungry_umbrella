@@ -27,6 +27,7 @@
  input[type] {
   @apply text-2xl;
 }
+
 th, td, a, p, button {
   @apply text-2xl;
 }
@@ -49,5 +50,3 @@ th, td, a, p, button {
   background-color: #388e3c;
   color: white;
 }*/
-
-
