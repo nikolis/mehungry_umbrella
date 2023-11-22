@@ -16,13 +16,16 @@
       phx-hook="DatePicker" 
       >
 
-      <%= label f, :start_dt %>
-      <%= text_input f, :start_dt , type: "datetime" , id: "flat_id" %>
-      <%= error_tag f, :start_dt %>
-
-      <%= label f, :end_dt %>
-      <%= text_input f, :end_dt , type: "datetime" %>
-      <%= error_tag f, :end_dt %>
+      <div class="field input-form">
+        <%= label f, :start_dt, class: "placeholder #{has_content(f, :start_dt)}" %>
+        <%= text_input f, :start_dt , type: "datetime" , id: "flat_id", class: "input w-full"%>
+        <%= error_tag f, :start_dt %>
+      </div>
+      <div class="field input-form">
+        <%= label f, :end_dt, class: "placeholder #{has_content(f, :end_dt)}" %>
+        <%= text_input f, :end_dt , type: "datetime", class: "input w-full" %>
+        <%= error_tag f, :end_dt %>
+      </div>
 
       <div>
         <%= submit "Save", phx_disable_with: "Saving..." %>
