@@ -425,4 +425,300 @@ defmodule Mehungry.Accounts do
       {:error, :user, changeset, _} -> {:error, changeset}
     end
   end
+
+  alias Mehungry.Accounts.UserCategoryRule
+
+  @doc """
+  Returns the list of user_category_rules.
+
+  ## Examples
+
+      iex> list_user_category_rules()
+      [%UserCategoryRule{}, ...]
+
+  """
+  def list_user_category_rules do
+    Repo.all(UserCategoryRule)
+  end
+
+  @doc """
+  Gets a single user_category_rule.
+
+  Raises `Ecto.NoResultsError` if the User category rule does not exist.
+
+  ## Examples
+
+      iex> get_user_category_rule!(123)
+      %UserCategoryRule{}
+
+      iex> get_user_category_rule!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_user_category_rule!(id), do: Repo.get!(UserCategoryRule, id)
+
+  @doc """
+  Creates a user_category_rule.
+
+  ## Examples
+
+      iex> create_user_category_rule(%{field: value})
+      {:ok, %UserCategoryRule{}}
+
+      iex> create_user_category_rule(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_user_category_rule(attrs \\ %{}) do
+    %UserCategoryRule{}
+    |> UserCategoryRule.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a user_category_rule.
+
+  ## Examples
+
+      iex> update_user_category_rule(user_category_rule, %{field: new_value})
+      {:ok, %UserCategoryRule{}}
+
+      iex> update_user_category_rule(user_category_rule, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_user_category_rule(%UserCategoryRule{} = user_category_rule, attrs) do
+    user_category_rule
+    |> UserCategoryRule.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a user_category_rule.
+
+  ## Examples
+
+      iex> delete_user_category_rule(user_category_rule)
+      {:ok, %UserCategoryRule{}}
+
+      iex> delete_user_category_rule(user_category_rule)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_user_category_rule(%UserCategoryRule{} = user_category_rule) do
+    Repo.delete(user_category_rule)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking user_category_rule changes.
+
+  ## Examples
+
+      iex> change_user_category_rule(user_category_rule)
+      %Ecto.Changeset{data: %UserCategoryRule{}}
+
+  """
+  def change_user_category_rule(%UserCategoryRule{} = user_category_rule, attrs \\ %{}) do
+    UserCategoryRule.changeset(user_category_rule, attrs)
+  end
+
+  alias Mehungry.Accounts.UserIngredientRule
+
+  @doc """
+  Returns the list of user_ingredient_rules.
+
+  ## Examples
+
+      iex> list_user_ingredient_rules()
+      [%UserIngredientRule{}, ...]
+
+  """
+  def list_user_ingredient_rules do
+    Repo.all(UserIngredientRule)
+  end
+
+  @doc """
+  Gets a single user_ingredient_rule.
+
+  Raises `Ecto.NoResultsError` if the User ingredient rule does not exist.
+
+  ## Examples
+
+      iex> get_user_ingredient_rule!(123)
+      %UserIngredientRule{}
+
+      iex> get_user_ingredient_rule!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_user_ingredient_rule!(id), do: Repo.get!(UserIngredientRule, id)
+
+  @doc """
+  Creates a user_ingredient_rule.
+
+  ## Examples
+
+      iex> create_user_ingredient_rule(%{field: value})
+      {:ok, %UserIngredientRule{}}
+
+      iex> create_user_ingredient_rule(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_user_ingredient_rule(attrs \\ %{}) do
+    %UserIngredientRule{}
+    |> UserIngredientRule.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a user_ingredient_rule.
+
+  ## Examples
+
+      iex> update_user_ingredient_rule(user_ingredient_rule, %{field: new_value})
+      {:ok, %UserIngredientRule{}}
+
+      iex> update_user_ingredient_rule(user_ingredient_rule, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_user_ingredient_rule(%UserIngredientRule{} = user_ingredient_rule, attrs) do
+    user_ingredient_rule
+    |> UserIngredientRule.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a user_ingredient_rule.
+
+  ## Examples
+
+      iex> delete_user_ingredient_rule(user_ingredient_rule)
+      {:ok, %UserIngredientRule{}}
+
+      iex> delete_user_ingredient_rule(user_ingredient_rule)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_user_ingredient_rule(%UserIngredientRule{} = user_ingredient_rule) do
+    Repo.delete(user_ingredient_rule)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking user_ingredient_rule changes.
+
+  ## Examples
+
+      iex> change_user_ingredient_rule(user_ingredient_rule)
+      %Ecto.Changeset{data: %UserIngredientRule{}}
+
+  """
+  def change_user_ingredient_rule(%UserIngredientRule{} = user_ingredient_rule, attrs \\ %{}) do
+    UserIngredientRule.changeset(user_ingredient_rule, attrs)
+  end
+
+  alias Mehungry.Accounts.UserProfile
+
+  @doc """
+  Returns the list of user_profiles.
+
+  ## Examples
+
+      iex> list_user_profiles()
+      [%UserProfile{}, ...]
+
+  """
+  def list_user_profiles do
+    Repo.all(UserProfile)
+  end
+
+  @doc """
+  Gets a single user_profile.
+
+  Raises `Ecto.NoResultsError` if the User profile does not exist.
+
+  ## Examples
+
+      iex> get_user_profile!(123)
+      %UserProfile{}
+
+      iex> get_user_profile!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_user_profile!(id), do: Repo.get!(UserProfile, id)
+
+  def get_user_profile_by_user_id(id) do
+    from(p in UserProfile,
+      where: p.user_id == ^id
+    )
+    |> Repo.one()
+    |> Repo.preload([:user_category_rules, :user_ingredient_rules])
+  end
+
+  @doc """
+  Creates a user_profile.
+
+  ## Examples
+
+      iex> create_user_profile(%{field: value})
+      {:ok, %UserProfile{}}
+
+      iex> create_user_profile(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_user_profile(attrs \\ %{}) do
+    %UserProfile{}
+    |> UserProfile.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a user_profile.
+
+  ## Examples
+
+      iex> update_user_profile(user_profile, %{field: new_value})
+      {:ok, %UserProfile{}}
+
+      iex> update_user_profile(user_profile, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_user_profile(%UserProfile{} = user_profile, attrs) do
+    user_profile
+    |> UserProfile.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a user_profile.
+
+  ## Examples
+
+      iex> delete_user_profile(user_profile)
+      {:ok, %UserProfile{}}
+
+      iex> delete_user_profile(user_profile)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_user_profile(%UserProfile{} = user_profile) do
+    Repo.delete(user_profile)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking user_profile changes.
+
+  ## Examples
+
+      iex> change_user_profile(user_profile)
+      %Ecto.Changeset{data: %UserProfile{}}
+
+  """
+  def change_user_profile(%UserProfile{} = user_profile, attrs \\ %{}) do
+    UserProfile.changeset(user_profile, attrs)
+  end
 end

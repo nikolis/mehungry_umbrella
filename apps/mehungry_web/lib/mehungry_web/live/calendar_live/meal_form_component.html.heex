@@ -1,61 +1,48 @@
-<div id="modal"  phx-hook="ModalHook" class={"portfolio-modal #{is_open(@live_action, @invocations)}"} >
-<div >
-  <button class='modal-close' phx-click="close-modal">
+  <div >
 
-    <svg width="20px" height="20px" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-      <path fill="#000000" d="M195.2 195.2a64 64 0 0 1 90.496 0L512 421.504 738.304 195.2a64 64 0 0 1 90.496 90.496L602.496 512 828.8 738.304a64 64 0 0 1-90.496 90.496L512 602.496 285.696 828.8a64 64 0 0 1-90.496-90.496L421.504 512 195.2 285.696a64 64 0 0 1 0-90.496z" />
-    </svg>
-  </button>
+     <.form
+       id={@id} 
+       for={@form} 
+       phx-change="validate" 
+       phx-submit="submit"
+       phx-target={@myself}>
+   
+       <div class="input-form" style="margin-top: 25px; margin-bottom: 10px;">
+            <.input field={@form[:title]} label="Title" class="input" />
+       </div>
 
-  <h2><%= @title %></h2>
-
-  <.form
-    let={f}
-    for={@changeset}
-    id="meal-form"
-    phx-target={@myself}
-    phx-change="validate"
-    phx-submit="save">
- 
- <div class="field input-form">
-
-    <%= label f, :title ,class: "placeholder #{has_content(f, :title)}"%>
-    <%= text_input f, :title , class: "input w-full"%>
-    <%= error_tag f, :title %>
-</div>
-
-    <%= hidden_input f, :start_dt %>
-    <%= hidden_input f, :end_dt %>
-    <%= hidden_input f, :user_id %>
+       <.input field={@form[:start_dt]} type="hidden"/>
+       <.input field={@form[:end_dt]}  type="hidden"/> 
+       <.input field={@form[:user_id]}  type="hidden"/>
 
   
-    <div  phx-hook="Select2Multi"  phx-update="ignore" id="recipe_user_meals" class=" field input-form col-span-3" data-hidden-id = "recipe_select"  >
-      <%= label f, for="html", class: "placeholder " %>
-      <select class="text-center w-full", multiple="multiple" id="recipe_select_select">
-        <%= for i <- @recipes do %>
-          <option value= {i.id} >
-            <%= i.title %>
-          </option>
-        <% end %>
-      </select>
-    </div>
-    <%= hidden_input f, :recipe_user_meals, id: "recipe_select2" , value: get_recipe_user_meal_values(f) %>
-    <%= multiple_select f, :recipe_user_meals, @recipe_ids, id: "recipe_select", style: "visibility:hidden" , value: get_recipe_user_meal_values(f)  %> 
+       <div class="tabs_container">
+         <ul aria-labelledby="tabs-title">
+           <li> <a id="recipe-2" href="#recipe2" phx-target={@myself} phx-click="new_recipe"> Add recipe slot </a>  --- 
+                <a id="recipe-3" href="#recipe3" phx-target={@myself} phx-click="new_consume_recipe"> Find cooked </a> 
+            </li> 
+         </ul>
+         <div class="tabs_panel_flow", style="margin-bottom: 1.5em; margin-top: 1.5em; ">
 
-  
-    <div>
-      <%= submit "Save", phx_disable_with: "Saving..." %>
-    </div>
-    <%= if @live_action in [:edit] do %>
-
-      <button  phx-value-id={@user_meal.id}  phx-click = "delete_user_meal" > Delete </button>
-    <% end %>
-
-  </.form>
-
-</div> <!-- close portfolio-modal -->
+          <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
+            <Components.recipe_user_meal_render f = {f_recipe_user_meal} parent_component= {@myself} recipes = {@recipes} recipe_ids = {@recipe_ids} />
+          </.inputs_for>
+          <.inputs_for :let={f_consume_recipe_user_meal} field={@form[:consume_recipe_user_meals]}>
+            <Components.consume_recipe_user_meal_render f = {f_consume_recipe_user_meal} parent_component= {@myself} recipe_user_meals = {@recipe_user_meals} recipe_user_meal_ids = {@recipe_user_meal_ids} user_meal = {@user_meal}/>
+          </.inputs_for>
 
 
-<div>
-</div>
-</div>
+        </div> 
+       </div>
+
+      <div>
+        <button class="primary_button modal-submit-button" phx_disable_with= "Saving..." > Save</button>
+      </div>
+      <%= if @live_action in [:edit] do %>
+        <button  phx-value-id={@user_meal.id}  phx-click = "delete_user_meal" > Delete </button>
+      <% end %>
+
+    </.form>
+
+  </div>
+

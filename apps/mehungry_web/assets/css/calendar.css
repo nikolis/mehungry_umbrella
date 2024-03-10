@@ -1,0 +1,77 @@
+.calendar_controlls{
+	font-size: calc(12px + 1.5vw);
+	position: absolute;	
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 5%;
+	background: white;
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 5rem;
+	transition: 1s;
+}
+
+.calendar_controlls_open{
+	height: 100% !important;
+	display: hidden;
+	transition: 1s;
+}
+
+.line_container {
+	display: flex;
+	flex-direction: column;
+        justify-content: center;
+	gap: 0.5em;
+	padding-inline: 2rem;
+	margin-top: 0.75em;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.calendar_button{
+	max-height: 50px;
+	position: absolute;	
+	bottom: 0;
+}
+
+@media (min-width: 600px) {
+
+	.line_container {
+		display: flex;
+		flex-direction: row;
+		gap: 0.4em;
+
+	}
+}
+
+
+.calendar_form {
+	width: 35vw;
+}
+
+ @media only screen and (max-width: 1000px) {
+	.calendar_form {
+		width: 60vw;
+	}
+ }
+
+ @media only screen and (max-width: 600px) {
+	 .calendar_form {
+		 width: 100%;
+	 }
+ }
+
+.toastui-calendar-day-name__date{
+	font-size: calc(12px + 1.5vw);
+}
+.toastui-calendar-day-name__name{
+	font-size: calc(5px + 1vw);
+}
+
+.toastui-calendar-day-name-item toastui-calendar-week{
+	font-size: 1vw;
+}
+
+.toastui-calendar-day-name__date{
+}

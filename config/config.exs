@@ -29,7 +29,9 @@ config :mehungry_web, MehungryWeb.Endpoint,
 
 config :ueberauth, Ueberauth,
   providers: [
-    facebook: {Ueberauth.Strategy.Facebook, [profile_fields: "name,email,first_name,last_name,picture, gender, hometown"]},
+    facebook:
+      {Ueberauth.Strategy.Facebook,
+       [profile_fields: "name,email,first_name,last_name,picture, gender, hometown"]},
     google: {Ueberauth.Strategy.Google, [default_scope: "email profile"]}
   ]
 

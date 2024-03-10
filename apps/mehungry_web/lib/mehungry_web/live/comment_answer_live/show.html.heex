@@ -1,0 +1,28 @@
+<.header>
+  Comment answer <%= @comment_answer.id %>
+  <:subtitle>This is a comment_answer record from your database.</:subtitle>
+  <:actions>
+    <.link patch={~p"/comment_answers/#{@comment_answer}/show/edit"} phx-click={JS.push_focus()}>
+      <.button>Edit comment_answer</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.list>
+  <:item title="Text"><%= @comment_answer.text %></:item>
+</.list>
+
+<.back navigate={~p"/comment_answers"}>Back to comment_answers</.back>
+
+
+<CoreComponents.modal :if={@live_action == :edit} id="comment_answer-modal" show on_cancel={JS.patch(~p"/comment_answers/#{@comment_answer}")}>
+  <.live_component
+    module={MehungryWeb.CommentAnswerLive.FormComponent}
+    id={@comment_answer.id}
+    title={@page_title}
+    action={@live_action}
+    comment_answer={@comment_answer}
+    patch={~p"/comment_answers/#{@comment_answer}"}
+  />
+alias MehungryWeb.CoreComponents
+</CoreComponents.modal>

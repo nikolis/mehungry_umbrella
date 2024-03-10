@@ -2,10 +2,11 @@ defmodule MehungryWeb.CalendarLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
 
+  import MehungryWeb.CoreComponents
+
   alias Mehungry.History.UserMeal
   alias Mehungry.Accounts
   alias Mehungry.History
-  alias MehungryWeb.CalendarLive.Components
   alias Mehungry.Repo
   alias Mehungry.Food
 
@@ -42,7 +43,6 @@ defmodule MehungryWeb.CalendarLive.Index do
       socket
       |> assign(:user, user)
       |> assign(:recipes, recipes)
-      # |> push_event("create_meals", user_meals)
     }
   end
 

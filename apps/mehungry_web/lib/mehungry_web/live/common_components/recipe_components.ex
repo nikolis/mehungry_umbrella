@@ -4,6 +4,16 @@ defmodule MehungryWeb.CommonComponents.RecipeComponents do
   use Phoenix.Component
   embed_templates("recipe_components/*")
 
+  def get_color(treaty) do
+    case treaty do
+      true ->
+        "#eb4034"
+
+      false ->
+        "none"
+    end
+  end
+
   def recipe_details(assigns) do
     ~H"""
     <.recipe_details_page  recipe={assigns.recipe}  />

@@ -1,5 +1,6 @@
 defmodule MehungryWeb.RecipeBrowseLive.Show do
   use MehungryWeb, :live_component
+  Phoenix.LiveView.JS
 
   # alias Mehungry.Food
   alias Mehungry.Food.Recipe

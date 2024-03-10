@@ -5,6 +5,7 @@ defmodule MehungryWeb.BasketLive.Index do
   alias MehungryWeb.BasketLive.Components
   alias Mehungry.Inventory.BasketParams
   alias Mehungry.Inventory.BasketSelectionParams
+  alias Mehungry.Inventory.ShoppingBasket
   alias Mehungry.Inventory
   alias Mehungry.Accounts
   alias Mehungry.History
@@ -24,9 +25,22 @@ defmodule MehungryWeb.BasketLive.Index do
           shopping_basket
       end
 
+    shopping_basket =
+      case shopping_basket do
+        nil ->
+          nil
+
+        shopping_basket ->
+          shopping_basket = %ShoppingBasket{
+            basket_ingredients:
+              Mehungry.Utils.sort_ingredients_for_basket(shopping_basket.basket_ingredients)
+          }
+      end
+
     basket_params = %BasketParams{}
     changeset = Inventory.change_basket_params(basket_params, %{})
-    changeset2 = BasketSelectionParams.changeset(%BasketSelectionParams{}, %{}) 
+    changeset2 = BasketSelectionParams.changeset(%BasketSelectionParams{}, %{})
+
     {:ok,
      socket
      |> assign(:user, user)
@@ -34,14 +48,22 @@ defmodule MehungryWeb.BasketLive.Index do
      |> assign(:basket_params, basket_params)
      |> assign(:shopping_baskets, shopping_baskets)
      |> assign(:changeset, changeset)
-     |> assign(:changeset2, changeset2)
-     }
+     |> assign(:changeset2, changeset2)}
   end
 
   defp apply_action(socket, :index, _params) do
     socket
   end
 
+  def get_class_for_toggle_button(in_stock) do
+    case in_stock do
+      true ->
+        "checked"
+
+      false ->
+        "unchecked"
+    end
+  end
 
   defp apply_action(socket, :new, _params) do
     socket =
@@ -51,8 +73,6 @@ defmodule MehungryWeb.BasketLive.Index do
     # |> assign(:user_meal, user_meal)
     socket
   end
-
-
 
   defp apply_action(socket, :edit, %{"id" => _id} = _params) do
     socket =
@@ -76,13 +96,32 @@ defmodule MehungryWeb.BasketLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  def handle_event("delete_basket", %{"id" => basket_id}, socket) do
-    bs = Inventory.get_shopping_basket!(basket_id)
-    Inventory.delete_shopping_basket(bs)
+  def handle_event("delete_baskets", _, socket) do
+    # bs = Inventory.get_shopping_basket!(basket_id)
+    Inventory.delete_all_baskets_for_user(socket.assigns.user.id)
 
     {:noreply,
      socket
      |> assign(:shopping_basket, nil)}
+  end
+
+  def handle_event("toggle_basket", %{"id" => id}, socket) do
+    id = String.to_integer(id)
+
+    {[ingredient], rest} =
+      Enum.split_with(socket.assigns.shopping_basket.basket_ingredients, fn x -> x.id == id end)
+
+    {:ok, ingredient} = Inventory.toggle_basket_ingredient(ingredient)
+    all_ingredients = rest ++ [ingredient]
+
+    shopping_basket = %ShoppingBasket{
+      socket.assigns.shopping_basket
+      | basket_ingredients: Mehungry.Utils.sort_ingredients_for_basket(all_ingredients)
+    }
+
+    {:noreply,
+     socket
+     |> assign(:shopping_basket, shopping_basket)}
   end
 
   def handle_event("save", %{"basket_params" => basket_params_params}, socket) do
@@ -101,7 +140,6 @@ defmodule MehungryWeb.BasketLive.Index do
 
   @impl true
   def handle_event("validate", %{"basket_selection_params" => basket_params_params}, socket) do
-    IO.inspect(basket_params_params, label: "validate form new")
     changeset =
       socket.assigns.basket_params
       |> Inventory.change_basket_params(basket_params_params)
@@ -110,15 +148,14 @@ defmodule MehungryWeb.BasketLive.Index do
     {:noreply, assign(socket, :changeset, changeset)}
   end
 
-
   @impl true
   def handle_event("create_basket", _params, socket) do
-    #changeset =
-      #socket.assigns.basket_params
-      #|> Inventory.change_basket_params(basket_params_params)
-      #|> Map.put(:action, :validate)
+    # changeset =
+    # socket.assigns.basket_params
+    # |> Inventory.change_basket_params(basket_params_params)
+    # |> Map.put(:action, :validate)
 
-    #{:noreply, assign(socket, :live_action, changeset)}
+    # {:noreply, assign(socket, :live_action, changeset)}
     {:noreply, push_patch(socket, to: "/basket/new", replace: true)}
   end
 
@@ -131,7 +168,6 @@ defmodule MehungryWeb.BasketLive.Index do
   def handle_event("edit_basket", %{"id" => id}, socket) do
     {:noreply, push_patch(socket, to: "/calendar/#{id}", replace: true)}
   end
-
 
   def handle_event("got_item", %{"id" => id}, socket) do
     bi = Inventory.get_basket_ingredient!(id)

@@ -1,3 +1,64 @@
+.recipe_card:hover {
+	transform: translateY(-1rem);
+}
+
+
+.recipe_card {
+	border-radius: 10px;
+	border: 1px solid #e5e5e5;
+	padding: 15px;
+	position: relative;
+	transition: transform 500ms  ease;
+	cursor: pointer;
+}
+
+
+.recipe_card .recipe_img{
+	border-radius: 10px;
+}
+
+.recipe_like_container {
+	background: white;
+	padding: 5px;
+	border-radius: 100%;
+	position: absolute;	
+	top: 20px;
+	right: 20px;
+}
+.recipe_title {
+	margin-top: 10px;
+}
+
+.recipe_attrs_container {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+}
+
+.recipe_attrs_text{
+	color: #444;
+	font-size: 0.9rem;
+}
+.recipe_sub_text {
+	font-size: 0.9rem;
+	font-weight: 100;
+	color: #b5b5b5;
+	margin: 10px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 .game {
         position: relative;
 	block-size: fit-content;

@@ -1,0 +1,143 @@
+defmodule MehungryWeb.ProfileLive.Form do
+  use MehungryWeb, :live_component
+  import MehungryWeb.CoreComponents
+
+  alias MehungryWeb.ProfileLive.FormIngredientComponent
+  alias MehungryWeb.ProfileLive.FormCategoryComponent
+
+  alias Mehungry.Accounts
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div style="width: 100%;" class="form-main">
+      <.header>
+        <%= @title %>
+      </.header>
+
+      <.simple_form
+        for={@form}
+        id="user_profile-form"
+        phx-target={@myself}
+        phx-change="validate"
+        phx-submit="save"
+        class="the_form"
+      >
+        <.input required field={@form[:alias]} type="text" label="Alias" />
+        <.input required field={@form[:intro]} type="textarea" label="Intro" />
+        <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>
+            <FormCategoryComponent.render category_ids = {@category_ids} categories = {@categories} food_restrictions = {@food_restrictions} food_restriction_ids = {@food_restriction_ids} f = {f_user_category_rule} parent= {@myself}  />
+        </.inputs_for>
+        <.button style="margin-top: 10%;" class="mt-20" type="button" phx-target={@myself} phx-click="add_category_rule">Add Category Rule</.button>
+
+
+        <div style="height: 50vh">
+          <.button class="submitbutton" phx-disable-with="Saving...">Save User profile</.button>
+          </div>
+      </.simple_form>
+    </div>
+    """
+  end
+
+  @impl true
+  def update(%{user_profile: user_profile} = assigns, socket) do
+    changeset = Accounts.change_user_profile(user_profile)
+
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign_form(changeset)}
+  end
+
+  @impl true
+  def handle_event("validate", %{"user_profile" => user_profile_params}, socket) do
+    changeset =
+      socket.assigns.user_profile
+      |> Accounts.change_user_profile(user_profile_params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign_form(socket, changeset)}
+  end
+
+  def handle_event("save", %{"user_profile" => user_profile_params}, socket) do
+    save_user_profile(socket, socket.assigns.action, user_profile_params)
+  end
+
+  def handle_event("add_category_rule", data, socket) do
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_assoc(changeset, :user_category_rules)
+
+        changeset =
+          Ecto.Changeset.put_assoc(
+            changeset,
+            :user_category_rules,
+            existing ++ [%{user_id: socket.assigns.user.id}]
+          )
+
+        to_form(changeset)
+      end)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("delete_category_rule", %{"index" => index}, socket) do
+    index = String.to_integer(index)
+
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_assoc(changeset, :user_category_rules)
+        {to_delete, rest} = List.pop_at(existing, index)
+
+        user_category_rules =
+          if Ecto.Changeset.change(to_delete).data.id do
+            List.replace_at(existing, index, Ecto.Changeset.change(to_delete, delete: true))
+          else
+            rest
+          end
+
+        changeset
+        |> Ecto.Changeset.put_assoc(:user_category_rules, user_category_rules)
+        |> to_form()
+      end)
+
+    {:noreply, socket}
+  end
+
+  defp save_user_profile(socket, :edit, user_profile_params) do
+    case Accounts.update_user_profile(socket.assigns.user_profile, user_profile_params) do
+      {:ok, user_profile} ->
+        notify_parent({:saved, user_profile})
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "User profile updated successfully")
+         |> push_patch(to: "/profile")}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        IO.inspect(changeset)
+        {:noreply, assign_form(socket, changeset)}
+    end
+  end
+
+  defp save_user_profile(socket, :new, user_profile_params) do
+    case Accounts.create_user_profile(user_profile_params) do
+      {:ok, user_profile} ->
+        notify_parent({:saved, user_profile})
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "User profile created successfully")
+         |> push_patch(to: socket.assigns.patch)}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign_form(socket, changeset)}
+    end
+  end
+
+  defp assign_form(socket, %Ecto.Changeset{} = changeset) do
+    assign(socket, :form, to_form(changeset))
+  end
+
+  defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
+end

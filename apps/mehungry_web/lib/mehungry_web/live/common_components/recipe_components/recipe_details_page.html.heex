@@ -1,57 +1,22 @@
-<div class="game" id={"recipe_card" <> Integer.to_string(@recipe.id)}  style="border: solid 4px transparent">
-  <div class="rank" id={"recipe_rank" <> Integer.to_string(@recipe.id)} >
-    <%= @recipe.id %>
-  </div>
-  <button class="front" id={"recipe_button" <> Integer.to_string(@recipe.id)} phx-click="recipe_details_nav" phx-value-recipe_id={@recipe.id} >
-    <img class="thumbnail" src={@recipe.image_url} alt="">
-    <h3 class="name"><%= @recipe.title %></h3>
-    <div class="stats">
-      <p class="viewers">593.6k</p>
-      <div class="streamers">
-        <img src="images/image-jonathan.jpg" alt="">
-        <img src="images/image-kira.jpg" alt="">
-        <img src="images/image-patrick.jpg" alt="">
-      </div>
-    </div>
+<div  phx-click="recipe_details_nav" phx-value-recipe_id={@recipe.id} class ="recipe_card" id={"recipe_card" <> Integer.to_string(@recipe.id)}>
+  <img class="recipe_img" src={@recipe.image_url} >
+  <div class="recipe_like_container">
+     <svg phx-click="delete_recipe"  phx-value-id={@recipe.id}  width="35px" height="35px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: auto">
+      <path d="M10 12V17" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14 12V17" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M4 7H20" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M6 10V18C6 19.6569 7.34315 21 9 21H15C16.6569 21 18 19.6569 18 18V10" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V7H9V5Z" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
 
-  </button>
-
-
-  <div class="back" id={"recipe_back" <> Integer.to_string(@recipe.id)} >
-    <div class="streaming-info">
-      <p class="game-stat">550k<span>watching</span></p>
-      <p class="game-stat">30k<span>streaming</span></p>
-    </div>
-
-    <button class="btn">Save Recipe</button>
-    <div class="streamers">
-      <div class="streamer">
-        <div class="icon">
-          <img src="images/image-jonathan.jpg" alt="", class="m-auto">
-        </div>
-        <p class="name">Gamer1</p>
-        <p class="number m-auto"> 34.6k </p>
-      </div>
-      <div class="streamer">
-        <div class="icon">
-          <img src="images/image-kira.jpg" alt="" class="m-auto">
-        </div>
-        <p class="name">Gamer2</p>
-        <p class="number">32k</p>
-      </div>
-      <div class="streamer">
-        <div class="icon">
-          <img src="images/image-patrick.jpg" alt="" class="m-auto">
-        </div>
-        <p class="name">Gamer3</p>
-        <p class="number">33k</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="background">
 
   </div>
-
-
+  <h1 class="recipe_title"> <%= @recipe.title %> </h1>
+  <div class="recipe_sub_text"> Some text that is related to the paricular recipe is going in here. Because that's the plan </div>
+  <div class="recipe_attrs_container">
+    <div><div> <img style="margin:auto;width:35px;height:35px;" src="/images/time_spent.svg" > </div> <span class="recipe_attrs_text"> 55' </span> </div>
+    <div><div> <img style="margin:auto;width:35px;height:35px;" src="/images/food_dif.svg" > </div> <span class="recipe_attrs_text"> easy </span>  </div>
+    <div><div> <img src="/images/bowl.svg" style="margin: auto;width:35px;height:35px;"> </div><span class="recipe_attrs_text"> 5 </span> </div>
+  </div>
 </div>
+

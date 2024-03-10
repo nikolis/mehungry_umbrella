@@ -28,4 +28,43 @@ defmodule Mehungry.AccountsFixtures do
     [_, token | _] = String.split(captured_email.text_body, "[TOKEN]")
     token
   end
+
+  @doc """
+  Generate a user_category_rule.
+  """
+  def user_category_rule_fixture(attrs \\ %{}) do
+    {:ok, user_category_rule} =
+      attrs
+      |> Enum.into(%{})
+      |> Mehungry.Accounts.create_user_category_rule()
+
+    user_category_rule
+  end
+
+  @doc """
+  Generate a user_ingredient_rule.
+  """
+  def user_ingredient_rule_fixture(attrs \\ %{}) do
+    {:ok, user_ingredient_rule} =
+      attrs
+      |> Enum.into(%{})
+      |> Mehungry.Accounts.create_user_ingredient_rule()
+
+    user_ingredient_rule
+  end
+
+  @doc """
+  Generate a user_profile.
+  """
+  def user_profile_fixture(attrs \\ %{}) do
+    {:ok, user_profile} =
+      attrs
+      |> Enum.into(%{
+        alias: "some alias",
+        intro: "some intro"
+      })
+      |> Mehungry.Accounts.create_user_profile()
+
+    user_profile
+  end
 end

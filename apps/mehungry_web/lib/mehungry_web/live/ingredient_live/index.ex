@@ -3,6 +3,7 @@ defmodule MehungryWeb.IngredientLive.Index do
 
   alias Mehungry.Food
   alias Mehungry.Food.Ingredient
+  import Phoenix.HTML.Form
 
   @impl true
   def mount(_params, _session, socket) do

@@ -5,6 +5,7 @@
 @import "./custome_checklist.css";
 */
 
+
 @tailwind components;
 @tailwind base;
 @tailwind utilities;
@@ -16,37 +17,114 @@
 @import "./onboarding.css";
 @import "./nav_bar.css";
 @import "./basket.css";
+@import "./calendar.css";
+@import "./create.css";
 
-/*.select2-results__option {
-    @apply text-2xl;
-}
-.select2-selection__rendered{
-    @apply text-2xl;
-}
-
- input[type] {
-  @apply text-2xl;
+.input {
+	height: 2.6em;
+	width: 100%;
 }
 
-th, td, a, p, button {
-  @apply text-2xl;
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  color: #444;
+  line-height: 2.6vw !important;
 }
 
-@media (min-width: 1024px) {
-  .top-navbar {
-    display: inline-flex !important;
-  }
+.select2-results__option--selectable{
+	font-size: 3vw !important;
+}
+
+@media (min-width: 850px) {
+	.select2-results__option--selectable{
+		font-size: 1vw !important;
+	}
+
 }
 
 
-.primary_button {
-  color: white;
-  background-color: #4caf50;
-  border: none;
-  hover: 
+@media (max-width: 840px) {
+
+	.select2-container--default .select2-selection--single .select2-selection__rendered {
+	  color: #444;
+	  line-height: 4vw !important;
+	}
+}
+@media (max-width: 640px) {
+	.input{
+		line-height: 3vw;
+	}
+
+
 }
 
-.primary_button:hover {
-  background-color: #388e3c;
-  color: white;
-}*/
+@media (max-width: 480px) {
+	.select2-container--default .select2-selection--single .select2-selection__rendered {
+	  color: #444;
+	  line-height: 6vw !important;
+	}
+
+
+}
+
+
+.select2-container--default .select2-selection--single {
+	
+}
+
+
+#modal{
+	width: 60%;
+}
+.select2-search__field {
+	min-height: 35px;
+	width: 100%;
+}
+
+.select2_internal {
+	width: 100%;
+}
+
+.select2-container .select2-selection--single  {
+    border: var(--main-border)  !important ;
+    height: 2.6em !important;
+    border-radius: var(--input-border-radius) !important;
+    outline: 0;
+    width: 100% !important;
+
+
+
+}
+
+.select2-container--focus .select2-selection--single  {
+    border:  var(--focus-border) !important ; 
+    outline: 0;
+
+}
+
+.select2-container--default.select2-container .select2-selection--multiple {
+    border: var(--main-border)  !important ; 
+    border-radius: var(--input-border-radius);
+    outline: 0
+}
+
+
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border:  var(--focus-border) !important ; 
+    outline: 0
+}
+
+
+
+.main-content-container{
+	background-color: transparent;
+}
+
+.main-page-container-bg{
+	background-color: #eaeaea;
+	padding: 2rem;
+}
+
+.main-page-container{
+	padding: 2rem;
+	position: relative;
+}

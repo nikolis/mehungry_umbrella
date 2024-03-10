@@ -28,7 +28,7 @@
   </div>
   <div class="text-center font-bold text-3xl"> Login in <p class="quote"> Explore more </p>
   </div>
-  <.form class="login_form" let={f} for={@conn} action={Routes.user_session_path(@conn, :create)} as={:user}>
+  <.form class="login_form" :let={f} for={@conn} action={Routes.user_session_path(@conn, :create)} as={:user}>
     <%= if @error_message do %>
     <div class="alert alert-danger">
       <p><%= @error_message %></p>

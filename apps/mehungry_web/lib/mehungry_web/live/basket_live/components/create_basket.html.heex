@@ -1,5 +1,4 @@
-
-<div id="modal"  phx-hook="ModalHook" class={"portfolio-modal #{is_open(@live_action, 2)}"}>
+<div id="modal"  phx-hook="ModalHook" class={"portfolio-modal #{is_open(@live_action, 1)}"}>
   <button class='modal-close' phx-click="close-modal">
 
     <svg width="20px" height="20px" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
@@ -8,7 +7,7 @@
   </button> 
   
     <.form
-      let={f}
+      :let={f}
       for={@changeset}
       id="meal-form"
       phx-change="validate"

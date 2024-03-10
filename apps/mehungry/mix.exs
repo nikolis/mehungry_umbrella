@@ -37,13 +37,14 @@ defmodule Mehungry.MixProject do
   defp deps do
     [
       {:bcrypt_elixir, "~> 3.0"},
+      {:poison, "~> 5.0"},
       {:numexy, "~> 0.1.9"},
       {:hackney, "~> 1.18.1"},
-      {:phoenix, "~> 1.6.2"},
+      {:phoenix, "~> 1.7.10"},
       {:swoosh, "~> 1.8"},
       {:matrix, "~> 0.3.2"},
       {:phoenix_pubsub, "~> 2.0"},
-      {:ecto_sql, "~> 3.4"},
+      {:ecto_sql, "~> 3.11"},
       {:postgrex, ">= 0.0.0"},
       {:jason, "~> 1.0"}
     ]

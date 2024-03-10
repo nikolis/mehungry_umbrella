@@ -30,7 +30,7 @@
   </div>
 
 
-<.form let={f} for={:user} class="login_form"  action={Routes.user_reset_password_path(@conn, :create)}>
+<.form :let={f} for={:user} class="login_form"  action={Routes.user_reset_password_path(@conn, :create)}>
   <div class="input_group_container">
     <%= label f, :email %>
     <%= email_input f, :email, required: true %>

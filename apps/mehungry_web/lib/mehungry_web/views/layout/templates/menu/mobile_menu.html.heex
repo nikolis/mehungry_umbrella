@@ -1,0 +1,65 @@
+<nav class="nav_container_mobile" id="nav_bar_mobile" phx-update="ignore">
+  <div class="main_nav_content">
+    <.link patch={"/browse"} class={"main_nav_button" }>Browse</.link>
+    <.link patch={"/create_recipe"} class={"main_nav_button"}>Create</.link>
+    <.link patch={"/calendar"} class={"main_nav_button"}>Calendar</.link>
+    <.link patch={"/basket"} class={"main_nav_button"}> Basket </.link>
+ 
+   <%= unless assigns[:current_user] do %> 
+
+    <a class="btn btn-primary btn-lg" href="/auth/facebook">
+      <i class="fa fa-facebook"></i>
+      Sign in with Facebook
+    </a>
+    <a class="btn btn-primary btn-lg" href="/auth/google">
+      <i class="fa fa-google"></i>
+      Sign in with Google
+    </a>
+    <% end %>
+
+    <%= if assigns[:current_user] do %>
+    <!-- <.link patch={"/profile"} class={"utils_item" }>
+      <img height="auto" width="auto" class="rounded-full" src={@current_user.profile_pic} alt="profile">
+    </.link> -->
+    <div style="padding: 15px" class="utils_item" id="menu_utils_toggle" phx-hook="MenuToggleHook">
+      <img src="/images/arrow_down.svg">
+      <div class="drop_down" id="menu_items_list">
+        <div class="drop_down_container">
+          <img height="auto" width="auto" style="padding: 5px 2px 5px" class="rounded-full" src={@current_user.profile_pic} alt="profile">
+
+          <div class="drop_down_inner_container_info">
+            <div> <%= @current_user.name %> </div>
+            <div style="font-weight: lighter"> personal </div>
+            <div style="font-weight: lighter"> <%= @current_user.email %> </div>
+          </div>
+        </div>
+          <div class="drop_down_inner_container_account">
+            <div class="drop_down_sub_title"> Account </div>
+            <.link patch={"/profile"} class={"drop_down_buttons" }>
+              Profile
+            </.link>
+            <button class="drop_down_buttons"> Upgrade to professional </button>
+              <a href="users/log_out"> Logout out account </a>
+          </div>
+      </div>
+    </div>
+    <% end %>
+  </div>
+</nav>
+
+<div class="mobile_nav_toggle">
+  <div class="">
+    <svg onClick="toggleMenu();" height="40px" id="Layer_1" style="enable-background:new 0 0 32 32;" version="1.1" viewBox="0 0 32 32" width="32px" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M4,10h24c1.104,0,2-0.896,2-2s-0.896-2-2-2H4C2.896,6,2,6.896,2,8S2.896,10,4,10z M28,14H4c-1.104,0-2,0.896-2,2  s0.896,2,2,2h24c1.104,0,2-0.896,2-2S29.104,14,28,14z M28,22H4c-1.104,0-2,0.896-2,2s0.896,2,2,2h24c1.104,0,2-0.896,2-2  S29.104,22,28,22z"/></svg>
+  </div>
+    <.link class="logo" patch={"/"}>
+      <img width="auto" src='/images/logo.svg'>
+    </.link>
+
+  <script>
+    function toggleMenu() {
+      document.querySelector(".nav_container_mobile").classList.toggle("open_menu");
+    }
+  </script>
+</div>
+    
+

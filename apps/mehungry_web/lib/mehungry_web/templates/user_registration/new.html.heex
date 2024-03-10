@@ -29,7 +29,7 @@
   <div class="text-center font-bold text-3xl"> Register <p class="quote"> Explore your taste </p>
   </div>
 
-  <.form let={f} for={@changeset} class="login_form" action={Routes.user_registration_path(@conn, :create)}>
+  <.form :let={f} for={@changeset} class="login_form" action={Routes.user_registration_path(@conn, :create)}>
     <%= if @changeset.action do %>
     <div class="alert alert-danger">
       <p>Oops, something went wrong! Please check the errors below.</p>

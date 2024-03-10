@@ -1,24 +1,149 @@
+.recipe_details_title{
+	font-size: 1.5rem;
+        text-transform: uppercase;
+	font-weight: bold;
+}
+
+.recipe_details_sub_title {
+	margin-bottom: 2rem;
+}
+
+
+.recipe_steps_container {
+	min-width: 15rem;
+	max-width: 30rem;
+	width: 30%;
+	word-wrap: break-word;
+	padding: 2rem;
+	font-size: 0.7rem;
+	border: 1px solid lightgrey;
+	border-radius: 7px;
+}
+
+.recipe_ingredients_container {
+	padding: 2rem;
+	width: 30%;
+	min-width: 15rem;
+	max-width: 25rem;
+	border: 1px solid lightgrey;
+	border-radius: 7px;
+	font-size: 0.7rem;
+}
+
+.recipe_ingredients_container_back {
+	padding: 2rem;
+	min-width: 10rem;
+	border: 1px solid lightgrey;
+	border-radius: 7px;
+	font-size: 0.7rem;
+}
+
+
+.ingredient_details_container{
+	display: grid;
+	grid-template-columns: 2fr 1fr;
+	border-bottom: 1px solid lightgrey;
+	padding: 0.5rem;
+
+}
+
+.step_details_container{
+	display: grid;
+	grid-template-columns: 1fr 4fr;
+	padding: 0.5rem;
+	border-bottom: 1px solid lightgrey;
+}
+
+.img_cnt{
+}
+
+
+.flip_card{
+  perspective: 1000px; /* Remove this if you don't want the 3D effect */
+
+}
+
+.flip_card_inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+
+/* Do an horizontal flip when you move the mouse over the flip box container */
+.flip_card_turned .flip_card_inner {
+  transform: rotateY(180deg);
+}
+
+.flip_card_front, .flip_card_back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.flip_card_front {
+  #background-color: #bbb;
+  color: black;
+}
+
+.flip_card_back {
+  background-color: white;
+  color: balck;
+  transform: rotateY(180deg);
+  overflow-y: scroll;
+}
+
+.switch_button {
+	position: absolute;
+	top: 0.5rem ;
+	right: 0.5rem ;
+	z-index: 5;
+}
+
+.recipe_ingredients_steps_container {
+	margin: auto;
+	width: 100%;
+        display: flex;
+	gap: 1rem;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.recipe_section_header {
+	padding-top: 1rem;
+	margin-bottom: 2rem;
+	font-size: 1.2rem;
+	border-bottom: 1.5px solid;
+
+}
+
+
+
+
+
+
+
+
 .container_product {
         background-color: var(--clr-secondary-200);
         width: 100%;
         height: 100%;
 }
 
-
-#modal {
-
-}
-
 .portfolio-modal {
         position: fixed;
 	padding: 2rem;
+	padding-top: 3rem;
         z-index: 10;
         top: 50%;
         left: 50%;
-	transform: translate(-50%, -120%);
+	transform: translate(-50%, -80%);
         background: white;
         box-shadow: 0 0 5em rgba(0, 0, 0, 0.7);
-	overflow: scroll;
 	display: none;	
 }
 
@@ -41,9 +166,16 @@
 	display: none;	
 
 }
-
-.portfolio-modal.is-open {
+.recipe_modal.is-open {
 	display: block;
+	animation: modalFadeIn 500ms forwards; 
+}
+
+.recipe_modal.is-closing {
+	display: block;
+	animation: modalFadeOut 500ms forwards; 
+}
+.portfolio-modal.is-open {
 	animation: modalFadeIn 500ms forwards; 
 }
 
@@ -134,33 +266,69 @@ h2.portfolio-title::after {
  /* The grid presentation */
 
 
+
+.grid_2_even_columns {
+	display: grid;
+	gap: 3em;
+	width: 100%;
+}
+
+@media (min-width: 60em) {
+	.grid_2_even_columns {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
 .grid_even_columns {
 	display: grid;
-	gap: 1rem;
-	padding: 3rem;
+	grid-gap: 2rem 2rem ; 
 	margin-left: auto;
 	margin-right: auto;
-	width: fit-content;
+	width: 100%;
 	overflow: hidden;
 }
+
+.second_layer_spacing {
+		padding: var(--inner-container-padding);
+}
+
+@media (max-width: 900px) {
+	.second_layer_spacing {
+		padding: var(--inner-container-padding-mobile);
+	}
+}
+
+@media (max-width: 500px) {
+	.second_layer_spacing {
+		padding: var(--inner-container-padding-mobile);
+	}
+
+}
+
+
+
+
+
+
 
 
 @media (min-width: 40em) {
 	.grid_even_columns {
-		grid-template-columns: repeat(2, 1fr);
+		grid-template-columns: repeat(2, auto);
 	}
 }
 
 
 @media (min-width: 60em) {
 	.grid_even_columns {
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(3, auto);
+
 	}
 }
 
 @media (min-width: 80em) {
 	.grid_even_columns {
-		grid-template-columns: repeat(6, 1fr);
+		grid-template-columns: repeat(4, auto);
 	}
 }
 

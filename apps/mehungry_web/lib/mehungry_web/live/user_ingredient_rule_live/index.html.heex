@@ -1,0 +1,40 @@
+<.header>
+  Listing User ingredient rules
+  <:actions>
+    <.link patch={~p"/user_ingredient_rules/new"}>
+      <.button>New User ingredient rule</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.table
+  id="user_ingredient_rules"
+  rows={@streams.user_ingredient_rules}
+  row_click={fn {_id, user_ingredient_rule} -> JS.navigate(~p"/user_ingredient_rules/#{user_ingredient_rule}") end}
+>
+  <:action :let={{_id, user_ingredient_rule}}>
+    <div class="sr-only">
+      <.link navigate={~p"/user_ingredient_rules/#{user_ingredient_rule}"}>Show</.link>
+    </div>
+    <.link patch={~p"/user_ingredient_rules/#{user_ingredient_rule}/edit"}>Edit</.link>
+  </:action>
+  <:action :let={{id, user_ingredient_rule}}>
+    <.link
+      phx-click={JS.push("delete", value: %{id: user_ingredient_rule.id}) |> hide("##{id}")}
+      data-confirm="Are you sure?"
+    >
+      Delete
+    </.link>
+  </:action>
+</.table>
+
+<MehungryWeb.CoreComponents.modal :if={@live_action in [:new, :edit]} id="user_ingredient_rule-modal" show on_cancel={JS.patch(~p"/user_ingredient_rules")}>
+  <.live_component
+    module={MehungryWeb.UserIngredientRuleLive.FormComponent}
+    id={@user_ingredient_rule.id || :new}
+    title={@page_title}
+    action={@live_action}
+    user_ingredient_rule={@user_ingredient_rule}
+    patch={~p"/user_ingredient_rules"}
+  />
+</MehungryWeb.CoreComponents.modal>

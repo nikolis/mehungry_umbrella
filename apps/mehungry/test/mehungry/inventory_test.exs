@@ -3,6 +3,7 @@ defmodule Mehungry.InventoryTest do
 
   alias Mehungry.Inventory
   alias Mehungry.AccountsFixtures
+  alias Mehungry.FoodFixtures
 
   describe "shopping_baskets" do
     alias Mehungry.Inventory.ShoppingBasket
@@ -31,7 +32,34 @@ defmodule Mehungry.InventoryTest do
       valid_attrs = %{
         end_dt: ~N[2023-01-25 11:01:00],
         start_dt: ~N[2023-01-25 11:01:00],
-        user_id: user.id
+        user_id: user.id,
+        basket_ingredients: []
+      }
+
+      assert {:ok, %ShoppingBasket{} = shopping_basket} =
+               Inventory.create_shopping_basket(valid_attrs)
+
+      assert shopping_basket.end_dt == ~N[2023-01-25 11:01:00]
+      assert shopping_basket.start_dt == ~N[2023-01-25 11:01:00]
+    end
+
+    test "create_shopping_basket/1 creation process should be able to handle measurement unit normalization",
+         %{user: user} do
+      ingredient = FoodFixtures.ingredient_fixture()
+      measurement_unit_2 = FoodFixtures.measurement_unit_fixture(%{name: "kg"})
+      measurement_unit = FoodFixtures.measurement_unit_fixture(%{name: "gram"})
+
+      valid_attrs = %{
+        end_dt: ~N[2023-01-25 11:01:00],
+        start_dt: ~N[2023-01-25 11:01:00],
+        user_id: user.id,
+        basket_ingredients: [
+          %{
+            ingredient_id: ingredient.id,
+            measurement_unit_id: measurement_unit.id,
+            quantity: 54000
+          }
+        ]
       }
 
       assert {:ok, %ShoppingBasket{} = shopping_basket} =

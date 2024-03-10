@@ -5,17 +5,58 @@ defmodule Mehungry.Food do
   require Logger
 
   alias Mehungry.Repo
-  alias Mehungry.Food.Recipe
-  alias Mehungry.Food.Step
-  alias Mehungry.Food.RecipeIngredient
-  alias Mehungry.Food.MeasurementUnit
-  alias Mehungry.Food.MeasurementUnitTranslation
-  alias Mehungry.Food.Category
-  alias Mehungry.Food.CategoryTranslation
-  alias Mehungry.Food.Ingredient
-  alias Mehungry.Food.IngredientTranslation
+
+  alias Mehungry.Food.{
+    Recipe,
+    Step,
+    RecipeIngredient,
+    MeasurementUnit,
+    MeasurementUnitTranslation,
+    IngredientNutrient,
+    Category,
+    CategoryTranslation,
+    Ingredient,
+    Nutrient,
+    IngredientTranslation,
+    Like,
+    IngredientPortion
+  }
+
   alias Mehungry.Languages.Language
-  alias Mehungry.Food.Like
+
+  def create_ingredient_portion(attrs) do
+    %IngredientPortion{}
+    |> IngredientPortion.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def create_ingredient_nutrient(attrs) do
+    %IngredientNutrient{}
+    |> IngredientNutrient.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def get_nutrient(name, measurment_unit_id) do
+    query =
+      from nutr in Nutrient,
+        where:
+          nutr.name == ^name and
+            nutr.measurement_unit_id == ^measurment_unit_id
+
+    Repo.one(query)
+  end
+
+  def create_nutrient(attrs) do
+    %Nutrient{}
+    |> Nutrient.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def create_category(attrs) do
+    %Category{}
+    |> Category.changeset(attrs)
+    |> Repo.insert()
+  end
 
   def delete_category(%Category{} = category) do
     Repo.delete(category)
@@ -61,6 +102,12 @@ defmodule Mehungry.Food do
     )
   end
 
+  alias Mehungry.Food.FoodRestrictionType
+
+  def list_food_restriction_types() do
+    Repo.all(from(a in FoodRestrictionType))
+  end
+
   #  def get_user_by_email(email) do
   #    query =
   #      from usr in User,
@@ -71,7 +118,11 @@ defmodule Mehungry.Food do
   #  end
 
   def translate_recipe_if_needed(recipe) do
-    language = Repo.get(Language, recipe.language_name)
+    language =
+      from(lan in Language,
+        where: lan.name == ^recipe.language_name
+      )
+      |> Repo.one()
 
     case language do
       %{name: "Gr"} ->
@@ -124,6 +175,20 @@ defmodule Mehungry.Food do
     Repo.get(MeasurementUnit, id)
   end
 
+  def get_measurement_unit_by_name(name) do
+    from(mu in MeasurementUnit,
+      where: mu.name == ^name or mu.alternate_name == ^name
+    )
+    |> Repo.all()
+  end
+
+  def get_category_by_name(name) do
+    from(cate in Category,
+      where: cate.name == ^name
+    )
+    |> Repo.one()
+  end
+
   def delete_recipe(id) do
     recipe =
       Repo.get!(Recipe, id)
@@ -139,7 +204,8 @@ defmodule Mehungry.Food do
   def get_recipe!(id) do
     result =
       Repo.get(Recipe, id)
-      |> Repo.preload([:recipe_ingredients, :user])
+      |> Repo.preload([[recipe_ingredients: [:measurement_unit, :ingredient]], :user])
+  
 
     if is_nil(result) do
       result
@@ -192,6 +258,19 @@ defmodule Mehungry.Food do
     Recipe.changeset(recipe, attrs)
   end
 
+  def list_user_recipes_for_selection(nil) do
+    entries = Repo.all(Recipe)
+
+    results = Repo.preload(entries, [:recipe_ingredients, :user])
+
+    result =
+      Enum.map(results, fn rec ->
+        translate_recipe_if_needed(rec)
+      end)
+
+    result
+  end
+
   def list_user_recipes_for_selection(_user_id) do
     entries = Repo.all(Recipe)
 
@@ -206,6 +285,7 @@ defmodule Mehungry.Food do
   end
 
   def list_recipes(nil) do
+    # , where: not is_nil(recipe.image_url)
     query = from(recipe in Recipe)
 
     # return the first 50 posts
@@ -231,7 +311,7 @@ defmodule Mehungry.Food do
   end
 
   def list_recipes(cursor_after) do
-    query = from(recipe in Recipe)
+    query = from recipe in Recipe, where: not is_nil(recipe.image_url)
     # return the next 50 posts
 
     %{entries: entries, metadata: metadata} =
@@ -324,14 +404,32 @@ defmodule Mehungry.Food do
     |> Repo.update()
   end
 
+  """
+      basket_ingredients: [
+          :measurement_unit,
+          ingredient: [
+            :category,
+            :ingredient_translation
+          ]
+        ]
+  """
+
+  def get_ingredient_details!(id) do
+    Repo.get!(Ingredient, id)
+    |> Repo.preload(
+      ingredient_portions: [:measurement_unit],
+      ingredient_nutrients: [nutrient: [:measurement_unit]]
+    )
+  end
+
   def get_ingredient!(id) do
-    result = Repo.get!(Ingredient, id)
-    Repo.preload(result, :ingredient_translation)
+    Repo.get!(Ingredient, id)
+    |> Repo.preload(:ingredient_translation)
   end
 
   def get_ingredient(id) do
-    result = Repo.get(Ingredient, id)
-    Repo.preload(result, :ingredient_translation)
+    Repo.get(Ingredient, id)
+    |> Repo.preload(:ingredient_translation)
   end
 
   def find_ri_allias(%{"ingredient_id" => ingredient_id} = rec_in, lang_id) do
@@ -358,10 +456,37 @@ defmodule Mehungry.Food do
     |> Repo.update()
   end
 
+  def create_post_from_recipe(%Recipe{} = recipe) do
+    IO.inspect(recipe)
+
+    post_params = %{
+      md_media_url: recipe.image_url,
+      description: recipe.description,
+      reference_id: recipe.id,
+      title: recipe.title,
+      type_: "RECIPE",
+      user_id: recipe.user_id,
+      recipe_id: recipe.id
+    }
+
+    result_2 = Mehungry.Posts.create_post(post_params)
+  end
+
   def create_recipe(attrs \\ %{}) do
-    %Recipe{}
-    |> Recipe.changeset(attrs)
-    |> Repo.insert()
+    IO.inspect(attrs, label: "The actuall attrs")
+
+    result =
+      %Recipe{}
+      |> Recipe.changeset(attrs)
+      |> Repo.insert()
+
+    case result do
+      {:ok, result} ->
+        result
+
+      {:error, _} ->
+        result
+    end
   end
 
   def list_ingredients() do

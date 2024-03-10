@@ -33,8 +33,11 @@ defmodule MehungryWeb.Router do
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
       live "/", HomeLive.Index, :index
+      live "/post/:id", HomeLive.Show, :show
 
       live "/profile", ProfileLive.Index, :index
+      live "/profile/edit", ProfileLive.Index, :edit
+
       live "/browse", RecipeBrowseLive.Index, :index
       live "/browse/:id", RecipeBrowseLive.Index, :show
       live "/browse_prepop/:search_term", :searc_prepop
@@ -51,6 +54,27 @@ defmodule MehungryWeb.Router do
       live "/create_recipe/:uuid/delete_ingredient", CreateRecipeLive.Index, :delete_ingredient
       live "/survey", SurveyLive, :index
       live "/admin-dashboard", Admin.DashboardLive
+
+      live "/posts", PostLive.Index, :index
+      live "/posts/new", PostLive.Index, :new
+      live "/posts/:id/edit", PostLive.Index, :edit
+
+      live "/posts/:id", PostLive.Show, :show
+      live "/posts/:id/show/edit", PostLive.Show, :edit
+
+      live "/comments", CommentLive.Index, :index
+      live "/comments/new", CommentLive.Index, :new
+      live "/comments/:id/edit", CommentLive.Index, :edit
+
+      live "/comments/:id", CommentLive.Show, :show
+      live "/comments/:id/show/edit", CommentLive.Show, :edit
+
+      live "/comment_answers", CommentAnswerLive.Index, :index
+      live "/comment_answers/new", CommentAnswerLive.Index, :new
+      live "/comment_answers/:id/edit", CommentAnswerLive.Index, :edit
+
+      live "/comment_answers/:id", CommentAnswerLive.Show, :show
+      live "/comment_answers/:id/show/edit", CommentAnswerLive.Show, :edit
     end
 
     live "/ingredients", IngredientLive.Index, :index

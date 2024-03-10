@@ -15,11 +15,15 @@ import {
 } from "phoenix_live_view"
 import jQuery from "jquery"
 import select2 from "select2";
+import "selectize";
 import { fix_navigation_active } from './navigation.js';
 import { Hooks } from './hooks.js'
 import { Uploaders } from './uploaders.js'
 
 
+function toggleMenu() {
+	console.log("toogle mennu")
+}
 
 window.addEventListener('load', function() {
 	var modal = document.getElementById('modal');
@@ -28,7 +32,7 @@ window.addEventListener('load', function() {
 		modal.removeAttribute('style');
 	}
 
-	//document.getElementById("modal").style.visibility = "visible";
+  	//document.getElementById("modal").style.visibility = "visible";
 	//modal.classList.remove("is-closing")
 	//modal.classList.add("is-closed");
 	//modal.classList.add("portfolio-modal");
@@ -85,7 +89,7 @@ let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("
 //LiveSocket Creation 
 let liveSocket = new LiveSocket("/live", Socket, {
 	hooks: Hooks,
-	uploaders: Uploaders,
+	//uploaders: Uploaders,
 	params: {
 		_csrf_token: csrfToken
 	}

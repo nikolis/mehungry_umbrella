@@ -18,7 +18,6 @@ defmodule MehungryWeb.BasketLive.Components do
     end
   end
 
-
   def has_content(form, atom_key) do
     is_e = is_empty(form, atom_key)
 
@@ -39,9 +38,11 @@ defmodule MehungryWeb.BasketLive.Components do
 
   def is_open(action, invocations) do
     IO.inspect(action, label: "Is oppen")
+
     case action do
       :new ->
         "is-open"
+
       _ ->
         if invocations > 1 do
           "is-closing"

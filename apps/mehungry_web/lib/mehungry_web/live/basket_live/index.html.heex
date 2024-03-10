@@ -1,10 +1,11 @@
-<div class = "form-main" >
+<div class = "main-page-container-bg" >
    <%= if @live_action in [:new, :edit] do %>
      <Components.create_basket_modal live_action={@live_action}  changeset = {@changeset}/>
    <% end %>  
 
    <div class="check_list_container">
-        <h1 class="header grid_col_span_2"> Repository </h1>
+        <h1 class="header grid_col_span_1"> Active Basket </h1>
+        <h1 class="header grid_col_span_1"> Repository </h1>
         <div>
           <label class="menu-button-wrapper" for="">
               <input type="checkbox" class="menu-button">
@@ -13,40 +14,50 @@
                 </label>
               </div>
               <div class="item-list">
-              <.form
-                let={b}
-                for={@changeset}
-                id="repo-form"
-                phx-change="validate"
-                phx-submit="save"
-                >
-
-                <%= for basket <- @shopping_baskets do %>
-                  <div class="list_item">
-                    <label>  <%=  basket.start_dt %> </label>
-                    <%= checkbox b, String.to_atom(Integer.to_string(basket.id)), value: basket.id , type: "checkbox" , id: Integer.to_string(basket.id) %> 
-                  </div>
-                <% end %>
-              </.form>
-              <button phx-click="create_basket" class="create_button"> Create Basket </button>
+              
+              <%= if length(@shopping_baskets) > 0 do %>
+                  <h2 class="header grid_col_span_1"> <%= Enum.at(@shopping_baskets, 0).start_dt.day %>-<%= Enum.at(@shopping_baskets, 0).start_dt.month %>/<%= Enum.at(@shopping_baskets, 0).end_dt.day %>-<%= Enum.at(@shopping_baskets, 0).end_dt.month %>(<%= Enum.at(@shopping_baskets, 0).end_dt.year %>) </h2>
+                  <button phx-click="delete_baskets" class="create_button"> Delete </button>
+              <% else %>
+                  <button phx-click="create_basket" class="create_button"> Create Basket </button>
+              <% end %>
               </div>
             </label>
           </div>
         <div class="check_list_content">
 
-          <table class="">
-            <tr>
-              <th>
-                Ingredient 
-              </th>
-              <th>
-                Quantity
-              </th>
-              <th>
-                In-Repo
-              </th>
-            </tr>
-          </table>
+          <%= if length(@shopping_baskets) > 0 do %>
+              <table class="">
+                <tr>
+                  <th>
+                    Ingredient 
+                  </th>
+                  <th>
+                    Quantity
+                  </th>
+                  <th>
+                    In-Repo
+                  </th>
+                </tr>
+                <%= for rec_ing <- @shopping_basket.basket_ingredients do %>
+                <tr>
+                    <td>
+                      <%= rec_ing.ingredient.name %>
+                    </td>
+                    <td>
+                     <span> <%= rec_ing.quantity %> </span> <%= rec_ing.measurement_unit.name %>
+                    </td>
+                    <td>
+                        <button phx-click="toggle_basket" class={get_class_for_toggle_button(rec_ing.in_storage)} phx-value-id={rec_ing.id} >Cla</button>
+                    </td>
+                </tr>
+                <% end %>
+              </table>
+
+              <% else %>
+                  <button phx-click="create_basket" class="create_button"> Create Basket </button>
+              <% end %>
+
         </div>
 
     </div>

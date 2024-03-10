@@ -1,0 +1,18 @@
+<div  class="">
+  <.post_card post = {@post}  user={@user}/>
+
+  <.live_component
+    module={MehungryWeb.HomeLive.FormComponentComment}
+    id="comment_form"
+    title={@page_title}
+    action={@live_action}
+    comment={@comment}
+  />
+
+  <div class="post_card"> 
+    <%= for comment <- @post.comments do %>
+      <.comment comment = {comment} user={@user}  live_action={@live_action} page_title={@page_title}  reply={@reply}/>
+    <% end %>  
+  </div>
+
+</div>
