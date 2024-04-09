@@ -2,15 +2,17 @@ defmodule MehungryWeb.CalendarLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
 
+  import MehungryWeb.CoreComponents
+
   alias Mehungry.History.UserMeal
   alias Mehungry.Accounts
   alias Mehungry.History
-  alias MehungryWeb.CalendarLive.Components
   alias Mehungry.Repo
   alias Mehungry.Food
 
   @impl true
   def mount(_params, session, socket) do
+    IO.inspect("Calendar mount === index -/?>?")
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_meals = History.list_history_user_meals_for_user(user.id)
     recipes = list_recipes(user)
@@ -42,7 +44,6 @@ defmodule MehungryWeb.CalendarLive.Index do
       socket
       |> assign(:user, user)
       |> assign(:recipes, recipes)
-      # |> push_event("create_meals", user_meals)
     }
   end
 

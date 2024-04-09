@@ -1,6 +1,8 @@
 defmodule MehungryWeb.RatingLive.Show do
   use Phoenix.Component
-  use Phoenix.HTML
+  import Phoenix.HTML
+  import Phoenix.HTML.Form
+  use PhoenixHTMLHelpers
 
   def stars(assigns) do
     stars =

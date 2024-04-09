@@ -1,0 +1,12 @@
+<div style="">
+  <.header>
+    <div style=""> <%= @user.email%> </div> <%= @user_profile.alias %>
+    <:subtitle><%= @user_profile.intro %></:subtitle>
+  </.header>
+  <div>
+    <.button class="primary_button"> Share Profile </.button>
+    <.link patch={~p"/profile/edit"} phx-click={JS.push_focus()}>
+      <.button class="primary_button_outline" type="button"> Edit Profile </.button>
+    </.link>
+  </div>
+</div>

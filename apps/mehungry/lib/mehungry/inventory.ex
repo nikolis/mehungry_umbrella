@@ -34,8 +34,8 @@ defmodule Mehungry.Inventory do
     |> Repo.all()
     |> Repo.preload(
       basket_ingredients: [
+        :measurement_unit,
         ingredient: [
-          :measurement_unit,
           :category,
           :ingredient_translation
         ]
@@ -61,8 +61,8 @@ defmodule Mehungry.Inventory do
     Repo.get!(ShoppingBasket, id)
     |> Repo.preload(
       basket_ingredients: [
+        :measurement_unit,
         ingredient: [
-          :measurement_unit,
           :category,
           :ingredient_translation
         ]
@@ -82,7 +82,55 @@ defmodule Mehungry.Inventory do
       {:error, %Ecto.Changeset{}}
 
   """
+  def update_shopping_basket(%ShoppingBasket{} = shopping_basket, attrs) do
+    ingredient_params =
+      case Map.get(attrs, "basket_ingredients") do
+        nil ->
+          []
+        b_i ->
+          Enum.map(b_i, fn x -> Mehungry.Utils.normilize_ingredient(x) end)
+      end
+
+    #attrs = Enum.into(%{"basket_ingredients" => ingredient_params}, attrs)
+
+
+    result = 
+    shopping_basket
+    |> ShoppingBasket.changeset(attrs)
+    |> Repo.update()
+    case result do
+      {:ok, basket} ->
+        basket =
+          basket
+          |> Repo.preload(
+            basket_ingredients: [
+              :measurement_unit,
+              ingredient: [
+                :category,
+                :ingredient_translation
+              ]
+            ]
+          )
+
+        {:ok, basket}
+
+      _ ->
+        result
+    end
+
+  end
+
   def create_shopping_basket(attrs \\ %{}) do
+    ingredient_params =
+      case Map.get(attrs, "basket_ingredients") do
+        nil ->
+          []
+        b_i ->
+          Enum.map(b_i, fn x -> Mehungry.Utils.normilize_ingredient(x) end)
+      end
+
+    #attrs = Enum.into(%{"basket_ingredients" => ingredient_params}, attrs)
+
     result =
       %ShoppingBasket{}
       |> ShoppingBasket.changeset(attrs)
@@ -94,8 +142,8 @@ defmodule Mehungry.Inventory do
           basket
           |> Repo.preload(
             basket_ingredients: [
+              :measurement_unit,
               ingredient: [
-                :measurement_unit,
                 :category,
                 :ingredient_translation
               ]
@@ -121,11 +169,6 @@ defmodule Mehungry.Inventory do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_shopping_basket(%ShoppingBasket{} = shopping_basket, attrs) do
-    shopping_basket
-    |> ShoppingBasket.changeset(attrs)
-    |> Repo.update()
-  end
 
   @doc """
   Deletes a shopping_basket.
@@ -141,6 +184,13 @@ defmodule Mehungry.Inventory do
   """
   def delete_shopping_basket(%ShoppingBasket{} = shopping_basket) do
     Repo.delete(shopping_basket)
+  end
+
+  def delete_all_baskets_for_user(user_id) do
+    from(basket in ShoppingBasket,
+      where: basket.user_id == ^user_id
+    )
+    |> Repo.delete_all()
   end
 
   @doc """
@@ -220,6 +270,12 @@ defmodule Mehungry.Inventory do
   def update_basket_ingredient(%BasketIngredient{} = basket_ingredient, attrs) do
     basket_ingredient
     |> BasketIngredient.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def toggle_basket_ingredient(%BasketIngredient{} = basket_ingredient) do
+    basket_ingredient
+    |> BasketIngredient.changeset(%{in_storage: not basket_ingredient.in_storage})
     |> Repo.update()
   end
 

@@ -505,4 +505,190 @@ defmodule Mehungry.AccountsTest do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
     end
   end
+
+"""
+  describe "user_category_rules" do
+    alias Mehungry.Accounts.UserCategoryRule
+
+    import Mehungry.AccountsFixtures
+
+    @invalid_attrs %{}
+
+    test "list_user_category_rules/0 returns all user_category_rules" do
+      user_category_rule = user_category_rule_fixture()
+      assert Accounts.list_user_category_rules() == [user_category_rule]
+    end
+
+    test "get_user_category_rule!/1 returns the user_category_rule with given id" do
+      user_category_rule = user_category_rule_fixture()
+      assert Accounts.get_user_category_rule!(user_category_rule.id) == user_category_rule
+    end
+
+    test "create_user_category_rule/1 with valid data creates a user_category_rule" do
+      valid_attrs = %{}
+
+      assert {:ok, %UserCategoryRule{} = user_category_rule} =
+               Accounts.create_user_category_rule(valid_attrs)
+    end
+
+    test "create_user_category_rule/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Accounts.create_user_category_rule(@invalid_attrs)
+    end
+
+    test "update_user_category_rule/2 with valid data updates the user_category_rule" do
+      user_category_rule = user_category_rule_fixture()
+      update_attrs = %{}
+
+      assert {:ok, %UserCategoryRule{} = user_category_rule} =
+               Accounts.update_user_category_rule(user_category_rule, update_attrs)
+    end
+
+    test "update_user_category_rule/2 with invalid data returns error changeset" do
+      user_category_rule = user_category_rule_fixture()
+
+      assert {:error, %Ecto.Changeset{}} =
+               Accounts.update_user_category_rule(user_category_rule, @invalid_attrs)
+
+      assert user_category_rule == Accounts.get_user_category_rule!(user_category_rule.id)
+    end
+
+    test "delete_user_category_rule/1 deletes the user_category_rule" do
+      user_category_rule = user_category_rule_fixture()
+      assert {:ok, %UserCategoryRule{}} = Accounts.delete_user_category_rule(user_category_rule)
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Accounts.get_user_category_rule!(user_category_rule.id)
+      end
+    end
+
+    test "change_user_category_rule/1 returns a user_category_rule changeset" do
+      user_category_rule = user_category_rule_fixture()
+      assert %Ecto.Changeset{} = Accounts.change_user_category_rule(user_category_rule)
+    end
+  end
+
+  describe "user_ingredient_rules" do
+    alias Mehungry.Accounts.UserIngredientRule
+
+    import Mehungry.AccountsFixtures
+
+    @invalid_attrs %{}
+
+    test "list_user_ingredient_rules/0 returns all user_ingredient_rules" do
+      user_ingredient_rule = user_ingredient_rule_fixture()
+      assert Accounts.list_user_ingredient_rules() == [user_ingredient_rule]
+    end
+
+    test "get_user_ingredient_rule!/1 returns the user_ingredient_rule with given id" do
+      user_ingredient_rule = user_ingredient_rule_fixture()
+      assert Accounts.get_user_ingredient_rule!(user_ingredient_rule.id) == user_ingredient_rule
+    end
+
+    test "create_user_ingredient_rule/1 with valid data creates a user_ingredient_rule" do
+      valid_attrs = %{}
+
+      assert {:ok, %UserIngredientRule{} = user_ingredient_rule} =
+               Accounts.create_user_ingredient_rule(valid_attrs)
+    end
+
+    test "create_user_ingredient_rule/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Accounts.create_user_ingredient_rule(@invalid_attrs)
+    end
+
+    test "update_user_ingredient_rule/2 with valid data updates the user_ingredient_rule" do
+      user_ingredient_rule = user_ingredient_rule_fixture()
+      update_attrs = %{}
+
+      assert {:ok, %UserIngredientRule{} = user_ingredient_rule} =
+               Accounts.update_user_ingredient_rule(user_ingredient_rule, update_attrs)
+    end
+
+    test "update_user_ingredient_rule/2 with invalid data returns error changeset" do
+      user_ingredient_rule = user_ingredient_rule_fixture()
+
+      assert {:error, %Ecto.Changeset{}} =
+               Accounts.update_user_ingredient_rule(user_ingredient_rule, @invalid_attrs)
+
+      assert user_ingredient_rule == Accounts.get_user_ingredient_rule!(user_ingredient_rule.id)
+    end
+
+    test "delete_user_ingredient_rule/1 deletes the user_ingredient_rule" do
+      user_ingredient_rule = user_ingredient_rule_fixture()
+
+      assert {:ok, %UserIngredientRule{}} =
+               Accounts.delete_user_ingredient_rule(user_ingredient_rule)
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Accounts.get_user_ingredient_rule!(user_ingredient_rule.id)
+      end
+    end
+
+    test "change_user_ingredient_rule/1 returns a user_ingredient_rule changeset" do
+      user_ingredient_rule = user_ingredient_rule_fixture()
+      assert %Ecto.Changeset{} = Accounts.change_user_ingredient_rule(user_ingredient_rule)
+    end
+  end
+
+  
+  describe "user_profiles" do
+    alias Mehungry.Accounts.UserProfile
+
+    import Mehungry.AccountsFixtures
+
+    @invalid_attrs %{alias: nil, intro: nil}
+
+    test "list_user_profiles/0 returns all user_profiles" do
+      user_profile = user_profile_fixture()
+      assert Accounts.list_user_profiles() == [user_profile]
+    end
+
+    test "get_user_profile!/1 returns the user_profile with given id" do
+      user_profile = user_profile_fixture()
+      assert Accounts.get_user_profile!(user_profile.id) == user_profile
+    end
+
+    test "create_user_profile/1 with valid data creates a user_profile" do
+      valid_attrs = %{alias: "some alias", intro: "some intro"}
+
+      assert {:ok, %UserProfile{} = user_profile} = Accounts.create_user_profile(valid_attrs)
+      assert user_profile.alias == "some alias"
+      assert user_profile.intro == "some intro"
+    end
+
+    test "create_user_profile/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Accounts.create_user_profile(@invalid_attrs)
+    end
+
+    test "update_user_profile/2 with valid data updates the user_profile" do
+      user_profile = user_profile_fixture()
+      update_attrs = %{alias: "some updated alias", intro: "some updated intro"}
+
+      assert {:ok, %UserProfile{} = user_profile} =
+               Accounts.update_user_profile(user_profile, update_attrs)
+
+      assert user_profile.alias == "some updated alias"
+      assert user_profile.intro == "some updated intro"
+    end
+
+    test "update_user_profile/2 with invalid data returns error changeset" do
+      user_profile = user_profile_fixture()
+
+      assert {:error, %Ecto.Changeset{}} =
+               Accounts.update_user_profile(user_profile, @invalid_attrs)
+
+      assert user_profile == Accounts.get_user_profile!(user_profile.id)
+    end
+
+    test "delete_user_profile/1 deletes the user_profile" do
+      user_profile = user_profile_fixture()
+      assert {:ok, %UserProfile{}} = Accounts.delete_user_profile(user_profile)
+      assert_raise Ecto.NoResultsError, fn -> Accounts.get_user_profile!(user_profile.id) end
+    end
+
+    test "change_user_profile/1 returns a user_profile changeset" do
+      user_profile = user_profile_fixture()
+      assert %Ecto.Changeset{} = Accounts.change_user_profile(user_profile)
+    end
+  end
+  """
 end

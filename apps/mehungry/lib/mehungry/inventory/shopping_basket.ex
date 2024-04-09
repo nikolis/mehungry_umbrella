@@ -10,10 +10,11 @@ defmodule Mehungry.Inventory.ShoppingBasket do
   schema "shopping_baskets" do
     field :end_dt, :naive_datetime
     field :start_dt, :naive_datetime
+    field :title, :string
 
     belongs_to :user, User
 
-    has_many :basket_ingredients, BasketIngredient, on_replace: :delete
+    has_many :basket_ingredients, BasketIngredient, defaults: [], on_replace: :delete
 
     timestamps()
   end
@@ -21,8 +22,8 @@ defmodule Mehungry.Inventory.ShoppingBasket do
   @doc false
   def changeset(shoping_basket, attrs) do
     shoping_basket
-    |> cast(attrs, [:start_dt, :end_dt, :user_id])
+    |> cast(attrs, [:start_dt, :end_dt, :user_id, :title])
     |> cast_assoc(:basket_ingredients, with: &BasketIngredient.changeset/2)
-    |> validate_required([:start_dt, :end_dt, :user_id])
+    |> validate_required([:user_id, :title])
   end
 end

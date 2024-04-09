@@ -4,6 +4,8 @@ defmodule Mehungry.History do
   """
 
   import Ecto.Query, warn: false
+  alias Mehungry.History.ConsumeRecipeUserMeal
+  alias Mehungry.History
   alias Mehungry.Repo
 
   alias Mehungry.History.UserMeal
@@ -29,6 +31,67 @@ defmodule Mehungry.History do
         ]
       ]
     )
+  end
+
+  alias History.RecipeUserMeal
+
+  def get_available_portions_for_user_meal(recipe_user_meal_id) do
+    result =
+      from(cum in ConsumeRecipeUserMeal,
+        join: rum in RecipeUserMeal,
+        on: rum.id == ^recipe_user_meal_id,
+        where: cum.user_meal_id == rum.user_meal_id
+      )
+      |> Repo.aggregate(:sum, :consume_portions)
+
+    recipe_user_meal =
+      from(rum in RecipeUserMeal, where: rum.id == ^recipe_user_meal_id)
+      |> Repo.one()
+
+    result =
+      case result do
+        nil ->
+          0
+
+        anything_else ->
+          anything_else
+      end
+
+    recipe_user_meal.cooking_portions - (result + recipe_user_meal.consume_portions)
+  end
+
+  def list_incomplete_user_meals2(user_id, date_time) do
+    query =
+      from rum in RecipeUserMeal,
+        join: um in UserMeal,
+        on: um.id == rum.user_meal_id,
+        left_join: cum in ConsumeRecipeUserMeal,
+        on: cum.user_meal_id == um.id,
+        where: um.user_id == ^user_id and rum.cooking_portions > rum.consume_portions,
+        having:
+          (is_nil(cum.consume_portions) and rum.consume_portions < rum.cooking_portions) or
+            sum(cum.consume_portions) + rum.consume_portions < rum.cooking_portions,
+        group_by: [cum.id, rum.id, um.id]
+
+    Repo.all(query)
+    |> Repo.preload([:user_meal, :recipe])
+  end
+
+  def list_incomplete_user_meals(user_id, date_time) do
+    query =
+      from um in UserMeal,
+        join: rum in RecipeUserMeal,
+        on: rum.user_meal_id == um.id,
+        left_join: cum in ConsumeRecipeUserMeal,
+        on: cum.user_meal_id == um.id,
+        where: um.user_id == ^user_id and rum.cooking_portions > rum.consume_portions,
+        having:
+          (is_nil(cum.consume_portions) and rum.consume_portions < rum.cooking_portions) or
+            sum(cum.consume_portions) + rum.consume_portions < rum.cooking_portions,
+        group_by: [cum.id, rum.id, um.id]
+
+    Repo.all(query)
+    |> Repo.preload(:recipe_user_meals)
   end
 
   def list_history_user_meals_for_user(user_id) do
@@ -91,6 +154,17 @@ defmodule Mehungry.History do
             ingredient: [:category, :ingredient_translation]
           ]
         ]
+      ]
+    )
+  end
+
+  def get_user_meal_raw!(id) do
+    Repo.get!(UserMeal, id)
+    |> Repo.preload(
+      [consume_recipe_user_meals: [recipe_user_meal: :recipe],
+      recipe_user_meals: [
+        :recipe
+      ]
       ]
     )
   end

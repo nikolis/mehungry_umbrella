@@ -1,0 +1,40 @@
+<.header>
+  Listing User category rules
+  <:actions>
+    <.link patch={~p"/user_category_rules/new"}>
+      <.button>New User category rule</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.table
+  id="user_category_rules"
+  rows={@streams.user_category_rules}
+  row_click={fn {_id, user_category_rule} -> JS.navigate(~p"/user_category_rules/#{user_category_rule}") end}
+>
+  <:action :let={{_id, user_category_rule}}>
+    <div class="sr-only">
+      <.link navigate={~p"/user_category_rules/#{user_category_rule}"}>Show</.link>
+    </div>
+    <.link patch={~p"/user_category_rules/#{user_category_rule}/edit"}>Edit</.link>
+  </:action>
+  <:action :let={{id, user_category_rule}}>
+    <.link
+      phx-click={JS.push("delete", value: %{id: user_category_rule.id}) |> hide("##{id}")}
+      data-confirm="Are you sure?"
+    >
+      Delete
+    </.link>
+  </:action>
+</.table>
+
+<MehungryWeb.CoreComponents.modal :if={@live_action in [:new, :edit]} id="user_category_rule-modal" show on_cancel={JS.patch(~p"/user_category_rules")}>
+  <.live_component
+    module={MehungryWeb.UserCategoryRuleLive.FormComponent}
+    id={@user_category_rule.id || :new}
+    title={@page_title}
+    action={@live_action}
+    user_category_rule={@user_category_rule}
+    patch={~p"/user_category_rules"}
+  />
+</MehungryWeb.CoreComponents.modal>

@@ -1,5 +1,4 @@
 .profile_index_info {
-	margin-top: 3em;
 	display: flex;
 	flex-direction: column;
         text-align: center;
@@ -9,19 +8,6 @@
 }
 
 
-.profile_index_info button{
-	background-color: rgb(153, 255, 204);
-	padding: 0.5rem 2rem 0.5rem;
-	border-radius: 2rem;
-	font-weight: bold;
-}
-
-
-.profile_index_info button:hover {
-	background-color: rgb(77, 255, 166);
-	padding: 0.5rem 2rem 0.5rem;
-	border-radius: 2rem;
-}
 .profile_index_info h2 {
 	font-weight: bold;
 	font-size: 2rem;
@@ -57,15 +43,15 @@
 .nav_button {
 	font-size: 1.5rem;
 	font-weight: 600;
-	color: #919191;
+	color: var(--clr-grey-friend);
 	background: none;
 	border: none;
 	padding: 19px;
 }
 
 .nav_button.active {
-	color: #7360ff;
-	border-bottom: 3px solid #7360ff;
+	color: var(--clr-complementary-middle);
+	border-bottom: 3px solid var(--clr-complementary-middle);
 }
 
 .aline {

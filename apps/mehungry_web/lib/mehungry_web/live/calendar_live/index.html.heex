@@ -1,22 +1,30 @@
-<div class="">
+<div class="main-page-container">
   
   <%= if @live_action in [:new, :edit] do %>
-
-    <.live_component
-      module={MehungryWeb.CalendarLive.MealFormComponent }
-      id={@user_meal.id || :new}
-      title={@page_title}
-      live_action={@live_action}
-      invocations = {@invocations}
-      recipes= {@recipes}
-      dates = {@dates}
-      current_user = {@current_user}
-      return_to={Routes.calendar_index_path(@socket, :index)}
-
-    />
-
+    <.my_modal  id="calendar_modal" class="my_modal" patch="/calendar">
+      <div class="calendar_form">
+        <.live_component
+          module={MehungryWeb.CalendarLive.MealFormComponent }
+          id={@user_meal.id || :new}
+          title={@page_title}
+          live_action={@live_action}
+          invocations = {@invocations}
+          recipes= {@recipes}
+          dates = {@dates}
+          current_user = {@current_user}
+          return_to={Routes.calendar_index_path(@socket, :index)}
+        />
+      </div>
+    </.my_modal>
   <% end %>  
+  <div id="calendar" style="height: 600px; padding-inline: 40px;" phx-update="ignore"  class="" >
+  </div>
 
-  <div id="calendar" style="height: 67rem" phx-update="ignore" phx-hook="Calendar" class="pt-12" >
+  <div class="calendar_controlls" id="calendar_controlls"  phx-hook="HiddenCalendar" close-button-id="button_hidde_calendar"  phx-update="ignore">
+    <div id="hidden_calendar" class="hidden_callendar" style="background-color: white; width: 100vw; padding: 3rem;"> 
+    </div>
+    <button class="calendar_button" style="right: 2rem;" id="callendar_prev_button"> Prev </button>
+     <img id="button_hidde_calendar"  style="z-index: 10000; position: absolute; margin-inline: auto; right: 0; left: 0; top: 0;" width="40px" src="/images/calendar.svg"/>
+    <button class="calendar_button" id="callendar_next_button" style="left: 2rem"> Next </button>
   </div>
 </div>

@@ -26,6 +26,7 @@ defmodule Mehungry.Food.Recipe do
     field :title, :string
 
     has_many :ratings, Rating
+    has_one :post, Mehungry.Posts.Post
     belongs_to :user, User
 
     belongs_to :language, Language,
@@ -64,7 +65,7 @@ defmodule Mehungry.Food.Recipe do
     |> unique_constraint(:title_user_constraint, name: :title_user_index)
     |> foreign_key_constraint(:language_id)
     |> foreign_key_constraint(:user_id)
-    |> validate_required([:title, :language_name])
+    |> validate_required([:title, :language_name, :user_id])
     |> cast_embed(:steps, [:required_message])
     |> cast_assoc(:recipe_ingredients, required: true)
   end

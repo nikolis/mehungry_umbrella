@@ -29,7 +29,7 @@
   <div class="text-center font-bold text-3xl"> Register <p class="quote"> Explore your taste </p>
   </div>
 
-  <.form let={f} for={@changeset} class="login_form" action={Routes.user_registration_path(@conn, :create)}>
+  <.form :let={f} for={@changeset} class="login_form" action={Routes.user_registration_path(@conn, :create)}>
     <%= if @changeset.action do %>
     <div class="alert alert-danger">
       <p>Oops, something went wrong! Please check the errors below.</p>
@@ -53,6 +53,8 @@
       <%= submit "Register", style: "background-color: #77b255" , class: "text-5xl"  %>
       <span style= "text-align: center"> OR </span>
       <button style= "background-color: #1778F2"> Continue with Facebook </button>
+      <button style= "background-color: #1778F2"> Google Sign in </button>
+
       <%= link "Log in", class: "link_button",to: Routes.user_session_path(@conn, :new) %>
     </div>
   </.form>

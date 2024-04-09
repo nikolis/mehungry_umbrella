@@ -5,6 +5,7 @@ defmodule Mehungry.History.UserMeal do
 
   import Ecto.Changeset
 
+  alias Mehungry.History.ConsumeRecipeUserMeal
   alias Mehungry.History.RecipeUserMeal
 
   schema "history_user_meals" do
@@ -14,6 +15,7 @@ defmodule Mehungry.History.UserMeal do
     field :user_id, :id
 
     has_many :recipe_user_meals, RecipeUserMeal, on_replace: :delete
+    has_many :consume_recipe_user_meals, ConsumeRecipeUserMeal, on_replace: :delete
 
     timestamps()
   end
@@ -22,7 +24,11 @@ defmodule Mehungry.History.UserMeal do
   def changeset(user_meal, attrs) do
     user_meal
     |> cast(attrs, [:title, :start_dt, :end_dt, :user_id])
-    |> cast_assoc(:recipe_user_meals, with: &RecipeUserMeal.changeset/2)
+    |> cast_assoc(:recipe_user_meals, with: &RecipeUserMeal.changeset/2, required: true)
+    |> cast_assoc(:consume_recipe_user_meals,
+      with: &ConsumeRecipeUserMeal.changeset/2,
+      required: false
+    )
     |> validate_required([:title, :user_id])
   end
 end

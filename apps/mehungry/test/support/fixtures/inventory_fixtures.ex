@@ -11,8 +11,10 @@ defmodule Mehungry.InventoryFixtures do
     shopping_basket =
       attrs
       |> Enum.into(%{
+        title: "test tittle",
         end_dt: ~N[2023-01-25 11:01:00],
-        start_dt: ~N[2023-01-25 11:01:00]
+        start_dt: ~N[2023-01-25 11:01:00],
+        basket_ingredients: []
       })
       |> Mehungry.Inventory.create_shopping_basket()
 

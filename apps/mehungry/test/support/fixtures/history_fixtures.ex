@@ -11,7 +11,9 @@ defmodule Mehungry.HistoryFixtures do
     {:ok, user_meal} =
       attrs
       |> Enum.into(%{
-        meal_datetime: ~U[2022-02-13 16:50:00Z],
+        start_dt: ~U[2022-02-13 16:50:00Z],
+        end_dt: ~U[2022-02-13 18:50:00Z],
+        recipe_user_meals: [],
         title: "some title"
       })
       |> Mehungry.History.create_user_meal()

@@ -9,7 +9,6 @@ defmodule Mehungry.Food.RecipeIngredient do
     field :ingredient_allias, :string
 
     field :delete, :boolean, virtual: true
-    field :temp_id, :string, virtual: true
 
     belongs_to :recipe, Mehungry.Food.Recipe
     belongs_to :measurement_unit, Mehungry.Food.MeasurementUnit
@@ -20,26 +19,24 @@ defmodule Mehungry.Food.RecipeIngredient do
 
   @doc false
   def changeset(recipe_ingredient, attrs) do
-    # TODO The attrs transformation code should be moved to the Food module
 
-    recipe_ingredient
-    # |> Map.put(:temp_id, (recipe_ingredient.temp_id || attrs["temp_id"])) # So its persisted
-    |> cast(attrs, [
-      :quantity,
-      :ingredient_allias,
-      :measurement_unit_id,
-      :ingredient_id,
-      :recipe_id,
-      :delete,
-      :temp_id
-    ])
-    |> validate_required([:ingredient_id, :quantity, :measurement_unit_id])
-    |> maybe_mark_for_deletion()
-  end
+    changeset =
+      recipe_ingredient
+      |> cast(attrs, [
+        :quantity,
+        :ingredient_allias,
+        :measurement_unit_id,
+        :ingredient_id,
+        :recipe_id,
+        :delete
+      ])
+      |> validate_required([:ingredient_id, :quantity, :measurement_unit_id])
+      |> foreign_key_constraint(:name)
+      |> foreign_key_constraint(:recipe_ingredients_name_fkey)
+      |> foreign_key_constraint(:recipe_ingredients_name)
+      |> foreign_key_constraint(:recipe_ingredients)
+      |> foreign_key_constraint(:ingredient_id)
 
-  defp maybe_mark_for_deletion(%{data: %{id: nil}} = changeset), do: changeset
-
-  defp maybe_mark_for_deletion(changeset) do
     if get_change(changeset, :delete) do
       %{changeset | action: :delete}
     else

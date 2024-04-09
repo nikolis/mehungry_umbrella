@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?> <svg id="shoppingcart" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="54" height="50" viewBox="0 0 54 50">
+  <defs>
+    <clipPath id="clip-path">
+      <path id="Mask" d="M46,26H4L0,0H50L46,26Zm-4-8a2,2,0,1,0,2,2A2,2,0,0,0,42,18Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,34,18Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,26,18Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,18,18Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,10,18Zm32-6a2,2,0,1,0,2,2A2,2,0,0,0,42,12Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,34,12Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,26,12Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,18,12Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,10,12ZM42,6a2,2,0,1,0,2,2A2,2,0,0,0,42,6ZM34,6a2,2,0,1,0,2,2A2,2,0,0,0,34,6ZM26,6a2,2,0,1,0,2,2A2,2,0,0,0,26,6ZM18,6a2,2,0,1,0,2,2A2,2,0,0,0,18,6ZM10,6a2,2,0,1,0,2,2A2,2,0,0,0,10,6Z" fill="#2c97de"/>
+    </clipPath>
+  </defs>
+  <g id="Mask_Rectangle_397" data-name="Mask + Rectangle 397" transform="translate(4 8)">
+    <path id="Mask-2" data-name="Mask" d="M46,26H4L0,0H50L46,26Zm-4-8a2,2,0,1,0,2,2A2,2,0,0,0,42,18Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,34,18Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,26,18Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,18,18Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,10,18Zm32-6a2,2,0,1,0,2,2A2,2,0,0,0,42,12Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,34,12Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,26,12Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,18,12Zm-8,0a2,2,0,1,0,2,2A2,2,0,0,0,10,12ZM42,6a2,2,0,1,0,2,2A2,2,0,0,0,42,6ZM34,6a2,2,0,1,0,2,2A2,2,0,0,0,34,6ZM26,6a2,2,0,1,0,2,2A2,2,0,0,0,26,6ZM18,6a2,2,0,1,0,2,2A2,2,0,0,0,18,6ZM10,6a2,2,0,1,0,2,2A2,2,0,0,0,10,6Z" fill="#2c97de"/>
+    <g id="Mask_Rectangle_397-2" data-name="Mask + Rectangle 397" clip-path="url(#clip-path)">
+      <path id="Rectangle_397" data-name="Rectangle 397" d="M0,0H50V8Z" transform="translate(0 2)" fill="rgba(34,127,187,0.6)"/>
+    </g>
+  </g>
+  <rect id="Rectangle_396" data-name="Rectangle 396" width="50" height="2" transform="translate(4 8)" fill="#227fbb"/>
+  <path id="Rectangle_394" data-name="Rectangle 394" d="M2,12V10H34v2Zm0-2L0,0H4L6,10Z" transform="translate(8 34)" fill="#bdc3c7"/>
+  <path id="Oval_185" data-name="Oval 185" d="M24,2a2,2,0,1,1,2,2A2,2,0,0,1,24,2ZM0,2A2,2,0,1,1,2,4,2,2,0,0,1,0,2Z" transform="translate(12 46)" fill="#7f8c8d"/>
+  <path id="Rectangle_398" data-name="Rectangle 398" d="M0,0H2L4,6H2Z" transform="translate(2 2)" fill="#bdc3c7"/>
+  <circle id="Oval_202" data-name="Oval 202" cx="2" cy="2" r="2" fill="#7f8c8d"/>
+</svg>

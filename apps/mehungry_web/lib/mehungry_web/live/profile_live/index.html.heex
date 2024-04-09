@@ -1,30 +1,40 @@
-<div>
-  <RecipeComponents.recipe_modal invocations={@invocations} live_action={@live_action} recipe={@recipe}/>
-
+<div class="main-page-container">
   <div class="profile_index_main">
-    <div class="profile_index_info ">
-      <img src={@user.profile_pic} alt="">
-      <h2> <%= @user.name %> </h2>
-      <span> <%= @user.email %> </span>
-      <div>
-        <button> Share Profile </button>
-        <button> Edit Profile </button>
-      </div>
-    </div>
-
-    <div class="profile_index_user_content">
-      <div class="nav_buttons">
-        <button class={"nav_button " <> get_active(@content_state, :saved )} phx-click="content_state_change" phx-value-state={:saved}>Saved recipes</button>
-        <button class={"nav_button " <> get_active(@content_state, :created )}   phx-click="content_state_change" phx-value-state={:created}>Created recipes</button>
-      </div>
-      <div class="line">
-      </div>
-    <div class="grid_even_columns" id="recipes_container" phx-hook="InfiniteScroll" phx-update='append' data-page = {@page}>
-        <%= for recipe <- @recipes do %>
-        <RecipeComponents.recipe_details recipe={recipe} id={"recipe" <> Integer.to_string(recipe.id)}/>
-          <% end %>
-
-      </div>
+    <div class="profile_index_info">
+      <%= if @live_action == :index do %> 
+        <.live_component module={Show} id="hero" user_profile={@user_profile} live_action={@live_action} user={@user} page_title ={@page_title}/>
+      <% else  %>
+        <.live_component  categories={@categories} category_ids={@category_ids} food_restriction_ids = {@food_restriction_ids} food_restrictions = {@food_restrictions}  module={MehungryWeb.ProfileLive.Form} id="hero" user_profile={@user_profile} live_action={@live_action} user={@user} title ={@page_title} action={@live_action} form ={@form}/>
+      <% end %>
     </div>
   </div>
+
+  <%= if @live_action == :index do %> 
+
+    <div class="profile_index_main">
+    
+      <div class="profile_index_user_content">
+        <div class="nav_buttons">
+          <button class={"nav_button " <> get_active(@content_state, :saved )} phx-click="content_state_change" phx-value-state={:saved}>Saved recipes</button>
+          <button class={"nav_button " <> get_active(@content_state, :created )}   phx-click="content_state_change" phx-value-state={:created}>Created recipes</button>
+        </div>
+        <div class="line">
+        </div>
+        <div class="grid_even_columns">
+          <%= case @content_state do %> 
+            <% :created -> %>
+              <%= for recipe <- @user_created_recipes do %>
+                <RecipeComponents.recipe_details recipe={recipe} id={"recipe" <> Integer.to_string(recipe.id)}/>
+              <% end %>
+            <% :saved -> %>
+              <%= for user_recipe <- @user_saved_recipes do %>
+                <RecipeComponents.recipe_details recipe={user_recipe.recipe} id={"recipe" <> Integer.to_string(user_recipe.recipe.id)}/>
+              <% end %>
+          <% end %>
+         </div>
+      </div>
+
+    </div>
+  <% end %>
+
 </div>

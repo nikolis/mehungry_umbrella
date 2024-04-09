@@ -27,6 +27,18 @@ defmodule MehungryWeb do
     end
   end
 
+  def html do
+    quote do
+      use Phoenix.Component
+      import Phoenix.View
+
+      import Phoenix.Controller,
+        only: [get_flash: 1, get_flash: 2, view_module: 1, view_template: 1]
+
+      unquote(view_helpers())
+    end
+  end
+
   def view do
     quote do
       use Phoenix.View,
@@ -39,6 +51,17 @@ defmodule MehungryWeb do
 
       # Include shared imports and aliases for views
       unquote(view_helpers())
+    end
+  end
+
+  def static_paths, do: ~w(css js assets fonts images favicon.ico robots.txt)
+
+  def verified_routes do
+    quote do
+      use Phoenix.VerifiedRoutes,
+        endpoint: MehungryWeb.Endpoint,
+        router: MehungryWeb.Router,
+        statics: MehungryWeb.static_paths()
     end
   end
 
@@ -60,11 +83,15 @@ defmodule MehungryWeb do
   end
 
   def live_view do
+    alias Phoenix.LiveView.JS
+
     quote do
       use Phoenix.LiveView,
         layout: {MehungryWeb.LayoutView, :live}
 
+      alias Phoenix.LiveView.JS
       unquote(view_helpers())
+      unquote(verified_routes())
     end
   end
 
@@ -72,14 +99,18 @@ defmodule MehungryWeb do
     quote do
       use Phoenix.LiveComponent
 
+      alias Phoenix.LiveView.JS
       unquote(view_helpers())
+      unquote(verified_routes())
     end
   end
 
   defp view_helpers do
     quote do
       # Use all HTML functionality (forms, tags, etc)
-      use Phoenix.HTML
+      import Phoenix.HTML
+      import Phoenix.HTML.Form
+      use PhoenixHTMLHelpers
       import Phoenix.LiveView.Helpers
       import MehungryWeb.LiveHelpers
       import Phoenix.Component

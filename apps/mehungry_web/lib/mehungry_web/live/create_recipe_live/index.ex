@@ -22,17 +22,33 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:measurement_units, measurement_units)
      |> assign(:changeset, Food.change_recipe(recipe))
      |> allow_upload(:image,
-       accept: ~w(.jpg .jpeg .png),
+       accept: :any,
        max_entries: 1,
        max_file_size: 9_000_000,
-       auto_upload: false,
-       external: &presign_upload/2,
-       progress: &handle_progress/3
-     )}
+       auto_upload: true
+       #       external: &presign_upload/2,
+       #       progress: &handle_progress/3
+     )
+     |> init(recipe)}
+  end
+
+  defp init(socket, base) do
+    changeset = Recipe.changeset(base, %{})
+
+    assign(socket,
+      base: base,
+      form: to_form(changeset),
+      # Reset form for LV
+      id: "form-#{System.unique_integer()}"
+    )
   end
 
   def get_params_with_image(socket, params) do
-    Map.put(params, "image_url", socket.assigns.image_upload)
+    if is_nil(Map.get(socket.assigns, :image_upload)) do
+      params
+    else
+      Map.put(params, "image_url", socket.assigns.image_upload)
+    end
   end
 
   ################################################################################## Actions #############################################################################################
@@ -51,79 +67,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     save_recipe(socket, socket.assigns, recipe_params)
   end
 
-  def handle_event("add-step", _, socket) do
-    existing_steps =
-      Map.get(socket.assigns.changeset.changes, :steps, socket.assigns.recipe.steps)
-
-    next_step =
-      case Enum.empty?(existing_steps) do
-        true ->
-          0
-
-        false ->
-          max_step = Enum.max_by(existing_steps, fn x -> x.changes.index end)
-          max_step.changes.index + 1
-      end
-
-    new_step = Food.change_step(%Step{}, %{temp_id: get_temp_id(), index: next_step})
-
-    steps =
-      existing_steps
-      |> Enum.concat([new_step])
-
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_embed(:steps, steps)
-
-    {:noreply, assign(socket, changeset: changeset)}
-  end
-
-  def handle_event("remove-step", %{"remove" => remove_id}, socket) do
-    the_one =
-      Enum.find(socket.assigns.changeset.changes.steps, nil, fn x ->
-        x.changes.temp_id == remove_id
-      end)
-
-    steps =
-      socket.assigns.changeset.changes.steps
-      |> Enum.filter(fn x -> x.changes.temp_id != remove_id end)
-
-    steps =
-      Enum.map(steps, fn step ->
-        case step.changes.index > the_one.changes.index do
-          true ->
-            step_index = step.changes.index
-            Food.change_step(%Step{}, %{step.changes | index: step_index - 1})
-
-          false ->
-            step
-        end
-      end)
-
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_embed(:steps, steps)
-
-    socket = assign(socket, changeset: changeset)
-
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("remove-ingredient", %{"temp_id" => temp_id}, socket) do
-    recipe_ingredients =
-      Enum.filter(socket.assigns.changeset.changes.recipe_ingredients, fn x ->
-        x.changes.temp_id != temp_id
-      end)
-
-    changeset =
-      Map.put(socket.assigns.changeset, :changes, %{recipe_ingredients: recipe_ingredients})
-
-    {:noreply,
-     socket
-     |> assign(:changeset, changeset)}
-  end
-
   def drop_hidden?(images) do
     case Enum.empty?(images) do
       true ->
@@ -134,25 +77,73 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     end
   end
 
+  def handle_event("add-step", _, socket) do
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_embed(changeset, :steps)
+        changeset = Ecto.Changeset.put_embed(changeset, :steps, existing ++ [%{}])
+        to_form(changeset)
+      end)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("remove-step", %{"index" => index}, socket) do
+    index = String.to_integer(index)
+
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_embed(changeset, :steps)
+        {to_delete, rest} = List.pop_at(existing, index)
+
+        steps =
+          if Ecto.Changeset.change(to_delete).data.id do
+            List.replace_at(existing, index, Ecto.Changeset.change(to_delete, delete: true))
+          else
+            rest
+          end
+
+        changeset
+        |> Ecto.Changeset.put_embed(:steps, steps)
+        |> to_form()
+      end)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("remove-ingredient", %{"index" => index}, socket) do
+    index = String.to_integer(index)
+
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_assoc(changeset, :recipe_ingredients)
+        {to_delete, rest} = List.pop_at(existing, index)
+
+        recipe_ingredients =
+          if Ecto.Changeset.change(to_delete).data.id do
+            List.replace_at(existing, index, Ecto.Changeset.change(to_delete, delete: true))
+          else
+            rest
+          end
+
+        changeset
+        |> Ecto.Changeset.put_assoc(:recipe_ingredients, recipe_ingredients)
+        |> to_form()
+      end)
+
+    {:noreply, socket}
+  end
+
   def handle_event("add-ingredient", _params, socket) do
-    existing_ingredients =
-      Map.get(
-        socket.assigns.changeset.changes,
-        :recipe_ingredients,
-        socket.assigns.recipe.recipe_ingredients
-      )
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_assoc(changeset, :recipe_ingredients)
+        changeset = Ecto.Changeset.put_assoc(changeset, :recipe_ingredients, existing ++ [%{}])
+        to_form(changeset)
+      end)
 
-    ingredients =
-      existing_ingredients
-      |> Enum.concat([
-        Food.change_recipe_ingredient(%RecipeIngredient{temp_id: get_temp_id()})
-      ])
-
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_assoc(:recipe_ingredients, ingredients)
-
-    {:noreply, assign(socket, changeset: changeset)}
+    {:noreply, socket}
   end
 
   @impl Phoenix.LiveView
@@ -162,21 +153,12 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   @impl true
   def handle_event("validate", %{"recipe" => recipe_params}, socket) do
-    ## TODO Investigate wtf is going on in here
-
-    recipe_params =
-      if is_nil(Map.get(recipe_params, "steps")) do
-        recipe_params
-      else
-        Map.put(recipe_params, "steps", Enum.map(recipe_params["steps"], fn x -> elem(x, 1) end))
-      end
-
     changeset =
-      socket.assigns.recipe
-      |> Food.change_recipe(recipe_params)
-      |> Map.put(:action, :validate)
+      socket.assigns.base
+      |> Recipe.changeset(recipe_params)
+      |> struct!(action: :validate)
 
-    {:noreply, assign(socket, :changeset, changeset)}
+    {:noreply, assign(socket, form: to_form(changeset))}
   end
 
   ######################################################################################## External Signal Receivers #################################
@@ -246,32 +228,53 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   defp save_recipe(socket, action, recipe_params) do
+    path =
+      consume_uploaded_entries(
+        socket,
+        :image,
+        # &upload_static_file(&1, socket)
+        fn %{path: path}, _entry ->
+          dest = Path.join(Application.app_dir(:mehungry_web, "priv/static/images"), path)
+          # Path.join(
+          # Application.app_dir(:mehungry_web, "priv/static/uploads"),
+          # Path.basename(path)
+          # )
+
+          # You will need to create `priv/static/uploads` for `File.cp!/2` to work.
+          IO.inspect(File.exists?(dest), label: "Exists dest")
+
+          File.mkdir_p!("priv/static/images")
+          IO.inspect(File.exists?(dest), label: "Exists dest")
+          IO.inspect(File.exists?(path), label: "Exists path")
+          File.cp!(path, dest)
+          path_parts = String.split(dest, "/")
+          IO.inspect(path_parts)
+          IO.inspect(dest)
+
+          dest =
+            "/" <>
+              Enum.at(path_parts, length(path_parts) - 4) <>
+              "/" <>
+              Enum.at(path_parts, length(path_parts) - 3) <>
+              "/" <>
+              Enum.at(path_parts, length(path_parts) - 2) <>
+              "/" <> Enum.at(path_parts, length(path_parts) - 1)
+
+          {:ok, dest}
+        end
+      )
+
+    path = Enum.at(path, 0)
+    socket = assign(socket, :image_upload, path)
     recipe_params = get_params_with_image(socket, recipe_params)
     recipe_params = Map.put(recipe_params, "language_name", "En")
-
-    recipe_params =
-      if is_nil(Map.get(recipe_params, "steps")) do
-        recipe_params
-      else
-        Map.put(recipe_params, "steps", Enum.map(recipe_params["steps"], fn x -> elem(x, 1) end))
-      end
-
-    recipe_params =
-      if is_nil(Map.get(recipe_params, "recipe_ingredients")) do
-        recipe_params
-      else
-        Map.put(
-          recipe_params,
-          "recipe_ingredients",
-          Enum.map(recipe_params["recipe_ingredients"], fn x -> elem(x, 1) end)
-        )
-      end
+    recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
 
     case Food.create_recipe(recipe_params) do
-      {:ok, _recipe} ->
+      {:ok, %Recipe{} = _recipe} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Recipe has been created ")
+         |> put_flash(:info, "Recipe created succesfully")
          |> push_redirect(to: "/browse")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -279,16 +282,29 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     end
   end
 
-  defp get_temp_id, do: :crypto.strong_rand_bytes(5) |> Base.url_encode64() |> binary_part(0, 5)
-
   defp handle_progress(:image, entry, socket) do
-    if entry.done? do
+    if entry.done? and entry.valid? do
+      dir = File.mkdir_p(Path.join(Application.app_dir(:mehungry_web), "priv/static/uploads"))
+
       path =
-        consume_uploaded_entry(
+        consume_uploaded_entries(
           socket,
           entry,
-          &upload_static_file(&1, socket)
+          # &upload_static_file(&1, socket)
+          fn %{path: path}, _entry ->
+            dest =
+              Path.join(
+                Application.app_dir(:mehungry_web, "priv/static/uploads"),
+                Path.basename(path)
+              )
+
+            # You will need to create `priv/static/uploads` for `File.cp!/2` to work.
+            File.cp!(path, dest)
+            {:ok, ~p"/uploads/#{Path.basename(dest)}"}
+          end
         )
+
+      IO.inspect(path, label: "The pathh is hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
 
       {:noreply,
        socket
@@ -301,10 +317,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   def error_to_string(:too_large), do: "Too large"
   def error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
-
-  defp list_ingredients do
-    Food.list_ingredients()
-  end
 
   defp presign_upload(entry, socket) do
     uploads = socket.assigns.uploads
@@ -333,5 +345,9 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     }
 
     {:ok, meta, socket}
+  end
+
+  defp list_ingredients do
+    Food.list_ingredients()
   end
 end

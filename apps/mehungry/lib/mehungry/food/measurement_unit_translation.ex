@@ -7,6 +7,7 @@ defmodule Mehungry.Food.MeasurementUnitTranslation do
 
   schema "measurement_unit_translations" do
     field :name, :string
+    field :alternate_name, :string
 
     belongs_to :language, Mehungry.Language,
       references: :name,
@@ -20,7 +21,7 @@ defmodule Mehungry.Food.MeasurementUnitTranslation do
 
   def changeset(mu_trans, attrs) do
     mu_trans
-    |> cast(attrs, [:language_name, :name])
+    |> cast(attrs, [:language_name, :name, :alternate_name])
     |> validate_required([:language_name, :name])
   end
 end

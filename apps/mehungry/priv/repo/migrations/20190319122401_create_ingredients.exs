@@ -5,7 +5,7 @@ defmodule MehungryServer.Repo.Migrations.CreateIngredients do
     create table(:ingredients) do
       add :url, :string
       add :name, :string
-      add :description, :text
+      add :food_class, :string
       add :category_id, references(:categories, on_delete: :nothing)
       add :measurement_unit_id, references(:measurement_units, on_delete: :nothing)
 

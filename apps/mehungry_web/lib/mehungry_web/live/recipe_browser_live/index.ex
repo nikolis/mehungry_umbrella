@@ -1,49 +1,40 @@
 defmodule MehungryWeb.RecipeBrowseLive.Index do
   use MehungryWeb, :live_view
+  alias Phoenix.LiveView.JS
 
+  alias Vix.Vips.Flag
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
   alias Mehungry.Search.RecipeSearchItem
   alias Mehungry.Search
   alias MehungryWeb.Presence
   alias MehungryWeb.ImageProcessing
-
-  alias MehungryWeb.RecipeBrowseLive.Modal
+  alias Mehungry.Accounts
+  alias Mehungry.Users
+  alias MehungryWeb.RecipeBrowseLive.Components
+  alias Mehungry.Food.RecipeUtils
 
   @user_id 5
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
+    user = Accounts.get_user_by_session_token(session["user_token"])
+
     {recipes, cursor_after} = list_recipes()
+    user_recipes = Users.list_user_saved_recipes(user)
+    user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
 
     {:ok,
      assign(socket, :recipes, recipes)
      |> assign(:cursor_after, cursor_after)
      |> assign(:recipe, nil)
+     |> assign(:user_recipes, user_recipes)
      |> assign(:page, 1)
+     |> assign(:invocations, 0)
      |> assign(:counter, 1)
+     |> assign(:user, user)
      |> assign_recipe_search()
      |> assign_changeset()}
-  end
-
-  def is_open(action, url, invocations) do
-    result = String.split(url, "/")
-
-    case action do
-      :show ->
-        "is-open"
-
-      _ ->
-        if length(result) >= 5 do
-          "is-closing"
-        else
-          if invocations > 1 do
-            "is-closing"
-          else
-            "is-closed"
-          end
-        end
-    end
   end
 
   def assign_recipe_search(socket) do
@@ -61,8 +52,27 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   @impl true
   def handle_event("close-modal", _thing, socket) do
-    Process.sleep(500)
     {:noreply, push_patch(socket, to: "/browse")}
+  end
+
+  @impl true
+  def handle_event("save_user_recipe", %{"recipe_id" => recipe_id}, socket) do
+    {recipe_id, _ignore} = Integer.parse(recipe_id)
+    toggle_user_saved_recipes(socket, recipe_id)
+    user_recipes = Users.list_user_saved_recipes(socket.assigns.user)
+    user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
+    socket = assign(socket, :user_recipes, user_recipes)
+    {:noreply, push_patch(socket, to: "/browse")}
+  end
+
+  def toggle_user_saved_recipes(socket, recipe_id) do
+    case Enum.any?(socket.assigns.user_recipes, fn x -> x == recipe_id end) do
+      true ->
+        Users.remove_user_saved_recipe(socket.assigns.user.id, recipe_id)
+
+      false ->
+        Users.save_user_recipe(socket.assigns.user.id, recipe_id)
+    end
   end
 
   @impl true
@@ -98,6 +108,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   @impl true
   def handle_event("recipe_details_nav", %{"recipe_id" => recipe_id}, socket) do
+    socket = assign(socket, :invocations, 0)
     {:noreply, push_patch(socket, to: "/browse/" <> recipe_id)}
   end
 
@@ -136,19 +147,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     maybe_track_user(nil, socket)
     socket = assign(socket, :path, uri)
 
-    socket =
-      assign(
-        socket,
-        :invocations,
-        case Map.get(socket.assigns, :invocations) do
-          nil ->
-            1
-
-          x ->
-            x + 1
-        end
-      )
-
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
@@ -168,12 +166,95 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     |> assign(:page_title, "Listing Categories")
     |> assign(:category, nil)
     |> assign(:recipe, nil)
+    |> assign(:nutrients, nil)
+    |> assign(:recipe_nutrients, nil)
+  end
+
+  defp get_nutrient_category(nutrients, category_name, category_sum_name) do
+    {category, rest} =
+      Enum.split_with(nutrients, fn x -> String.contains?(x.name, category_name) end)
+
+    case length(category) > 0 do
+      true ->
+        # IO.inspect(category)
+        {category_total, rest} =
+          Enum.split_with(rest, fn x ->
+            String.contains?(x.name, category_sum_name)
+          end)
+
+        case length(category_total) == 1 do
+          true ->
+            {Enum.into(Enum.at(category_total, 0), children: category), rest}
+
+          false ->
+            {%{
+               amount: 111.1,
+               measurement_unit: "to be defined",
+               children: category,
+               name: category_sum_name
+             }, rest}
+        end
+
+      false ->
+        {nil, rest}
+    end
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do
+    recipe = Food.get_recipe!(id)
+
+    recipe_nutrients = RecipeUtils.calculate_recipe_nutrition_value(recipe)
+
+    rest =
+      Enum.filter(recipe_nutrients.flat_recipe_nutrients, fn x ->
+        Float.round(x.amount, 4) != 0
+      end)
+
+    {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Fatty acids, total monounsaturated")
+    {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Fatty acids, total polyunsaturated")
+    {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Fatty acids, total saturated")
+    {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Fatty acids, total trans")
+
+    {vitamins, rest} = Enum.split_with(rest, fn x -> String.contains?(x.name, "Vitamin") end)
+
+    vitamins_all =
+      case length(vitamins) > 0 do
+        true ->
+          Enum.into(%{name: "Vitamins", amount: nil, measurement_unit: nil}, children: vitamins)
+
+        false ->
+          nil
+      end
+
+    # IO.inspect(mufa_all)
+    nuts_pre = [mufa_all, pufa_all, sfa_all, tfa_all, vitamins_all]
+    nuts_pre = Enum.filter(nuts_pre, fn x -> !is_nil(x) end)
+    # IO.inspect(nuts_pre, label: "nuts tree")
+
+    nuts_pre =
+      Enum.map(nuts_pre, fn x ->
+        # IO.inspect(x)
+
+        case is_map(x) do
+          true ->
+            x
+
+          false ->
+            Enum.into(x, %{})
+        end
+      end)
+
+    nutrients = nuts_pre ++ rest
+    nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
+    # IO.inspect(length(rest), label: "Total")
+    # IO.inspect(rest, label: "rEST")
+    # IO.inspect(nutrients, label: "nutrients")
+
     socket
     |> assign(:page_title, "Recipe Details")
-    |> assign(:recipe, Food.get_recipe!(id))
+    |> assign(:nutrients, nutrients)
+    |> assign(:recipe, recipe)
+    |> assign(:recipe_nutrients, recipe_nutrients)
   end
 
   @impl true
