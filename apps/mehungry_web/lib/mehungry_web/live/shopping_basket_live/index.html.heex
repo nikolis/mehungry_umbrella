@@ -12,7 +12,6 @@
     </.my_modal>
 
   
-  <h1 style="margin-inline: auto; text-align: center; font-size: 2rem;"> Shopping Basket </h1>
 
   <div class="basket-page-container">
      
@@ -39,7 +38,7 @@
             JS.remove_class("active", to: "#basket-basic-form.active")
             |> JS.add_class("active", to: "#basket-basic-form:not(.active)")
          end
-        }  class="side_nav_list_item" style="border-bottom: 2px solid black"> Lists <span style="font-size: 2rem; font-weight: 200 ; color: var(--clr-grey-friend_3); margin-left: 0.75rem;"> + </span> </h2>
+        }  class="side_nav_list_item" style="border-bottom: 1px solid var(--clr-grey-friend_3)"> Lists <span style="font-size: 2rem; font-weight: 200 ; color: var(--clr-grey-friend_3); margin-left: 0.75rem;"> + </span> </h2>
 
         <.live_component
         module = {MehungryWeb.ShoppingBasketLive.BasicFormComponent}
@@ -53,8 +52,8 @@
           <.render_basket_titles shopping_baskets = {@shopping_baskets} shopping_basket= {@shopping_basket}/> 
       </div>
     </div>
-    <div style="border: 2px solid blue;">
-      <h1 style="margin-inline: auto; text-align: center; font-size: 1.75rem; padding-top: 1rem"> <%=  Map.get(@shopping_basket, :title, "...")  %> </h1>
+    <div class="item-list-container">
+      <h1 style="margin-inline: auto; text-align: start; font-size: 1.75rem; padding-top: 1rem"> <%=  Map.get(@shopping_basket, :title, "...")  %> </h1>
       <%= if @shopping_basket do %> 
         <.render_basket_items shopping_basket = {@shopping_basket} />
       <% end %>

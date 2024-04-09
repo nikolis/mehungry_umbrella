@@ -25,12 +25,11 @@ defmodule MehungryWeb.CalendarLiveTest do
             %{recipe_id: recipe1.id, consume_portions: 5, cooking: true, cooking_portions: 10}
           ]
         }
-      {:ok, user_meal} = History.create_user_meal(recipe_user_meal_params)
-      
-      {:ok, _index_live, html} = live(conn, ~p"/calendar")
-      #assert html =~ "The title"
 
-       
+      {:ok, user_meal} = History.create_user_meal(recipe_user_meal_params)
+
+      {:ok, _index_live, html} = live(conn, ~p"/calendar")
+      # assert html =~ "The title"
     end
   end
 end
