@@ -16,6 +16,7 @@ defmodule MehungryWeb.CoreComponents do
   """
   use Phoenix.Component
 
+  alias Phoenix.HTML.FormField
   alias Phoenix.LiveView.JS
   import MehungryWeb.Gettext
 
@@ -43,7 +44,7 @@ defmodule MehungryWeb.CoreComponents do
 
   def my_modal(assigns) do
     ~H"""
-      <dialog id="my_modal" class="my_modal" phx-hook="MyModalHook"  style="z-index: 100;">
+      <dialog id="my_modal" class="my_modal" phx-hook="MyModalHook"  style="z-index: 100;" patch={assigns.patch}>
         <button id="button-close-modal" class="modal-button-close">    
           <svg width="20px" height="20px" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
             <path fill="#000000" d="M195.2 195.2a64 64 0 0 1 90.496 0L512 421.504 738.304 195.2a64 64 0 0 1 90.496 90.496L602.496 512 828.8 738.304a64 64 0 0 1-90.496 90.496L512 602.496 285.696 828.8a64 64 0 0 1-90.496-90.496L421.504 512 195.2 285.696a64 64 0 0 1 0-90.496z" />
@@ -219,12 +220,10 @@ defmodule MehungryWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="">
         <%= render_slot(@inner_block, f) %>
         <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
           <%= render_slot(action, f) %>
         </div>
-      </div>
     </.form>
     """
   end
@@ -242,6 +241,23 @@ defmodule MehungryWeb.CoreComponents do
   attr :rest, :global, include: ~w(disabled form name value)
 
   slot :inner_block, required: true
+
+  def button(%{type: "primary"} = assigns) do
+    ~H"""
+    <button
+      type={@type}
+      style="margin-inline: auto; position: absolute; bottom: 1.2rem; right: 1.2rem;"
+
+      class={[
+        "primary_button",
+        @class
+      ]}
+      {@rest}
+    >
+      <%= render_slot(@inner_block) %>
+    </button>
+    """
+  end
 
   def button(assigns) do
     ~H"""
@@ -377,17 +393,12 @@ defmodule MehungryWeb.CoreComponents do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class=" input-form">
+    <div phx-feedback-for={@name} class="input-form">
            <textarea
         id={@id}
         name={@name}
-        style="margin-bottom: 20px;"
         class={[
-          "input",
-          "block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "min-h-[6rem] phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          "input ",
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
@@ -421,6 +432,50 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
+  def input(%{type: "flatpicker"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name} class="input-form flatpickr" phx-hook="DatePicker" id={(@id || @name) <> "as"} style="">
+      <input
+        type="hidden"
+        name={@name}
+        id={@id}
+        value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        class={[
+          "input_full",
+          "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
+          @errors == [] && "border-zinc-300 focus:border-zinc-400",
+          @errors != [] && "border-rose-400 focus:border-rose-400"
+        ]}
+        {@rest}
+      />
+
+      <.error :for={msg <- @errors}><%= msg %></.error>
+    </div>
+    """
+  end
+
+  def input(%{type: "bidden"} = assigns) do
+    IO.inspect("bidden")
+    IO.inspect(assigns)
+
+    ~H"""
+    <div id={(@id  || @name) <> "aho"}  phx-feedback-for={@name} class="input-form " style="">
+     <div > 
+      <%= inspect @errors %>
+      </div>
+      <input
+        name={@name}
+        type="hidden"
+        id={@id || @name}
+        class={[
+          "input_full",
+        ]}
+        {@rest}
+      />
+          </div>
+    """
+  end
+
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
@@ -440,7 +495,6 @@ defmodule MehungryWeb.CoreComponents do
       />
       <.label for={@id} class="placeholder"><%= @label %></.label>
 
-      <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
     """
   end
@@ -473,6 +527,17 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
+  def my_error(assigns) do
+    IO.inspect("My error")
+
+    ~H"""
+    <div class="" style="position: absolute; top: 0; left: 0; z-index: 600">
+      <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
+      <%= render_slot(@inner_block) %>
+    </div>
+    """
+  end
+
   @doc """
   Renders a header with title.
   """
@@ -484,12 +549,12 @@ defmodule MehungryWeb.CoreComponents do
 
   def header(assigns) do
     ~H"""
-    <header class={[@actions != [] && "flex items-center justify-between gap-6", @class]}>
+    <header style="font-size: 2rem;" class={[@actions != [] && "flex items-center justify-between gap-6", @class]}>
       <div>
-        <h1 class="text-lg font-semibold leading-8 text-zinc-800">
+        <h1 class="text-lg font-semibold leading-8 text-zinc-800" style="margin-inline: auto; text-align: center; font-size: 1.6rem;">
           <%= render_slot(@inner_block) %>
         </h1>
-        <p :if={@subtitle != []} class="mt-2 text-sm leading-6 text-zinc-600">
+        <p :if={@subtitle != []} class="subtitle" >
           <%= render_slot(@subtitle) %>
         </p>
       </div>

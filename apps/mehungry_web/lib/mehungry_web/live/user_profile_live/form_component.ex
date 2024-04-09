@@ -20,7 +20,8 @@ defmodule MehungryWeb.UserProfileLive.FormComponent do
         phx-change="validate"
         phx-submit="save"
       >
-        <.input field={@form[:alias]} type="text" label="Alias" />
+        <%= inspect @form %>
+          <.input field={@form[:alias]} type="text" label="Alias" />
         <.input field={@form[:intro]} type="text" label="Intro" />
         <:actions>
           <.button phx-disable-with="Saving...">Save User profile</.button>

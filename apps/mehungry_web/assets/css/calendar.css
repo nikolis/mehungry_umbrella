@@ -9,13 +9,13 @@
 	display: grid;
 	grid-template-columns: 1fr 1fr 1fr;
 	gap: 5rem;
-	transition: 1s;
+	transition: 500ms;
 }
 
 .calendar_controlls_open{
 	height: 100% !important;
 	display: hidden;
-	transition: 1s;
+	transition: 500ms;
 }
 
 .line_container {
@@ -74,4 +74,11 @@
 }
 
 .toastui-calendar-day-name__date{
+}
+.toastui-calendar-daygrid-cell{
+	background-color: red;
+}
+
+.toastui-calendar-accumulated .toastui-calendar-grid-selection{
+	background-color: red;
 }

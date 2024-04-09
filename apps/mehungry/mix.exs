@@ -42,7 +42,6 @@ defmodule Mehungry.MixProject do
       {:hackney, "~> 1.18.1"},
       {:phoenix, "~> 1.7.10"},
       {:swoosh, "~> 1.8"},
-      {:matrix, "~> 0.3.2"},
       {:phoenix_pubsub, "~> 2.0"},
       {:ecto_sql, "~> 3.11"},
       {:postgrex, ">= 0.0.0"},

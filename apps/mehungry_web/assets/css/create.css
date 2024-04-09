@@ -1,6 +1,4 @@
 
-
-
 .listing_title{
 	font-size: 2rem;
 	margin-bottom: 1rem;
@@ -71,6 +69,8 @@
 	text-transform: uppercase;
 	padding: 0.5rem;
 	width: 40%;
+	max-width: 200px;
+
 	border-radius: 25px;
 	background-color: transparent;
 	color: var(--clr-primary);
@@ -81,6 +81,21 @@
 	color: white;
 }
 
+.list_button_cancel{
+font-size: 0.875rem;
+
+font-weight: bold;
+text-transform: uppercase;
+padding: 0.5rem;
+width: 40%;
+border-radius: 5px;
+background-color: transparent;
+color: var(--clr-complementary-middle);
+}
+
+.list_button_cancel:hover{
+background-color:  var(--clr-grey-friend_2);
+}
 
 
 .list_button_complementary{
@@ -90,6 +105,7 @@
 	text-transform: uppercase;
 	padding: 0.5rem;
 	width: 40%;
+	max-width: 200px;
 	border-radius: 25px;
 	background-color: transparent;
 	color: var(--clr-complementary-middle);
@@ -101,6 +117,11 @@
 	color: white;
 }
 
+.button_modal_submit {
+	position: absolute;
+	bottom: 1.5rem;
+	right: 1.5rem;
+}
 
 .primary_button {
 	text-transform: uppercase;

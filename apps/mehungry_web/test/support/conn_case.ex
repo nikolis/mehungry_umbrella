@@ -28,6 +28,7 @@ defmodule MehungryWeb.ConnCase do
 
       # The default endpoint for testing
       @endpoint MehungryWeb.Endpoint
+      use MehungryWeb, :verified_routes
     end
   end
 

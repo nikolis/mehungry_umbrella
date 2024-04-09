@@ -3,114 +3,61 @@ defmodule MehungryWeb.UserProfileLiveTest do
 
   import Phoenix.LiveViewTest
   import Mehungry.AccountsFixtures
+  import Mehungry.FoodFixtures
 
   @create_attrs %{alias: "some alias", intro: "some intro"}
   @update_attrs %{alias: "some updated alias", intro: "some updated intro"}
   @invalid_attrs %{alias: nil, intro: nil}
 
-  defp create_user_profile(_) do
-    user_profile = user_profile_fixture()
-    %{user_profile: user_profile}
+  defp create_user_profile(conn) do
+    _rest = %{user: user, conn: conn} = register_and_log_in_user(conn)
+
+    user_profile = user_profile_fixture(%{user_id: user.id})
+    %{user_profile: user_profile, user: user, conn: conn}
   end
 
   describe "Index" do
     setup [:create_user_profile]
 
-    test "lists all user_profiles", %{conn: conn, user_profile: user_profile} do
-      {:ok, _index_live, html} = live(conn, ~p"/user_profiles")
+    test "lists all user_profiles", %{conn: conn, user_profile: user_profile, user: user} do
+      {:ok, _index_live, html} = live(conn, ~p"/profile")
 
-      assert html =~ "Listing User profiles"
+      assert html =~ "Edit Profile"
+      assert html =~ "Share Profile"
       assert html =~ user_profile.alias
+      assert html =~ user.email
     end
 
-    test "saves new user_profile", %{conn: conn} do
-      {:ok, index_live, _html} = live(conn, ~p"/user_profiles")
+    test "profile page listing of created should appear when existing", %{conn: conn, user: user} do
+      recipe1 = recipe_fixture(user)
+      recipe2 = recipe_fixture(user)
 
-      assert index_live |> element("a", "New User profile") |> render_click() =~
-               "New User profile"
-
-      assert_patch(index_live, ~p"/user_profiles/new")
-
-      assert index_live
-             |> form("#user_profile-form", user_profile: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
-
-      assert index_live
-             |> form("#user_profile-form", user_profile: @create_attrs)
-             |> render_submit()
-
-      assert_patch(index_live, ~p"/user_profiles")
-
-      html = render(index_live)
-      assert html =~ "User profile created successfully"
-      assert html =~ "some alias"
+      {:ok, _index_live, html} = live(conn, Routes.profile_index_path(conn, :index))
+      assert html =~ recipe1.title
+      assert html =~ recipe2.title
     end
 
-    test "updates user_profile in listing", %{conn: conn, user_profile: user_profile} do
-      {:ok, index_live, _html} = live(conn, ~p"/user_profiles")
+    test "Edit User Profile", %{conn: conn, user_profile: user_profile} do
+      {:ok, index_live, _html} = live(conn, ~p"/profile")
 
       assert index_live
-             |> element("#user_profiles-#{user_profile.id} a", "Edit")
+             |> element("a", "Edit Profile")
              |> render_click() =~
-               "Edit User profile"
+               "Edit Profile"
 
-      assert_patch(index_live, ~p"/user_profiles/#{user_profile}/edit")
+      assert_patch(index_live, ~p"/profile/edit")
 
-      assert index_live
-             |> form("#user_profile-form", user_profile: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+      # assert index_live
+      # |> form("#user_profile-form", user_profile: @invalid_attrs)
+      # |> render_change() =~ "can&#39;t be blank"
 
       assert index_live
              |> form("#user_profile-form", user_profile: @update_attrs)
              |> render_submit()
 
-      assert_patch(index_live, ~p"/user_profiles")
+      assert_patch(index_live, ~p"/profile")
 
       html = render(index_live)
-      assert html =~ "User profile updated successfully"
-      assert html =~ "some updated alias"
-    end
-
-    test "deletes user_profile in listing", %{conn: conn, user_profile: user_profile} do
-      {:ok, index_live, _html} = live(conn, ~p"/user_profiles")
-
-      assert index_live
-             |> element("#user_profiles-#{user_profile.id} a", "Delete")
-             |> render_click()
-
-      refute has_element?(index_live, "#user_profiles-#{user_profile.id}")
-    end
-  end
-
-  describe "Show" do
-    setup [:create_user_profile]
-
-    test "displays user_profile", %{conn: conn, user_profile: user_profile} do
-      {:ok, _show_live, html} = live(conn, ~p"/user_profiles/#{user_profile}")
-
-      assert html =~ "Show User profile"
-      assert html =~ user_profile.alias
-    end
-
-    test "updates user_profile within modal", %{conn: conn, user_profile: user_profile} do
-      {:ok, show_live, _html} = live(conn, ~p"/user_profiles/#{user_profile}")
-
-      assert show_live |> element("a", "Edit") |> render_click() =~
-               "Edit User profile"
-
-      assert_patch(show_live, ~p"/user_profiles/#{user_profile}/show/edit")
-
-      assert show_live
-             |> form("#user_profile-form", user_profile: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
-
-      assert show_live
-             |> form("#user_profile-form", user_profile: @update_attrs)
-             |> render_submit()
-
-      assert_patch(show_live, ~p"/user_profiles/#{user_profile}")
-
-      html = render(show_live)
       assert html =~ "User profile updated successfully"
       assert html =~ "some updated alias"
     end

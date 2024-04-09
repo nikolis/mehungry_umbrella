@@ -457,7 +457,6 @@ defmodule Mehungry.Food do
   end
 
   def create_post_from_recipe(%Recipe{} = recipe) do
-    IO.inspect(recipe)
 
     post_params = %{
       md_media_url: recipe.image_url,
@@ -473,20 +472,12 @@ defmodule Mehungry.Food do
   end
 
   def create_recipe(attrs \\ %{}) do
-    IO.inspect(attrs, label: "The actuall attrs")
 
     result =
       %Recipe{}
       |> Recipe.changeset(attrs)
       |> Repo.insert()
 
-    case result do
-      {:ok, result} ->
-        result
-
-      {:error, _} ->
-        result
-    end
   end
 
   def list_ingredients() do

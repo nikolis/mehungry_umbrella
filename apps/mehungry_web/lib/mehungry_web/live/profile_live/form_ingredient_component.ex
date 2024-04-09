@@ -12,8 +12,6 @@ defmodule MehungryWeb.ProfileLive.FormIngredientComponent do
         <%= @title %>
         <:subtitle>Use this form to manage user_ingredient_rule records in your database.</:subtitle>
       </.header>
-
-
     </div>
     """
   end

@@ -508,7 +508,6 @@ defmodule Mehungry.Posts do
         %PostDownvote{}
         |> PostDownvote.changeset(%{user_id: user_id, post_id: post_id})
         |> Repo.insert()
-        |> IO.inspect()
 
       broadcast_vote(result, "downvote")
 
@@ -534,10 +533,7 @@ defmodule Mehungry.Posts do
     end
 
     if not is_nil(vote)  and vote.positive != reaction do
-      IO.inspect(get_positive.(reaction))
-      IO.inspect(reaction)
       vote = update_comment_vote(vote, %{positive: (get_positive.(reaction))}) 
-      IO.inspect(vote)
       broadcast_vote({:ok, comment}, "vote")
 
     else
@@ -545,7 +541,6 @@ defmodule Mehungry.Posts do
         %CommentVote{}
         |> CommentVote.changeset(%{user_id: user_id, comment_id: comment_id, positive: reaction})
         |> Repo.insert()
-        |> IO.inspect()
 
       broadcast_vote({:ok, comment}, "vote")
 
@@ -572,7 +567,6 @@ defmodule Mehungry.Posts do
         %PostUpvote{}
         |> PostUpvote.changeset(%{user_id: user_id, post_id: post_id})
         |> Repo.insert()
-        |> IO.inspect()
 
       broadcast_vote(result, "upvote")
 

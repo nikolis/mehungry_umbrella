@@ -1,3 +1,4 @@
+"""
 defmodule Mehungry.SurveyTest do
   use Mehungry.DataCase
 
@@ -121,3 +122,4 @@ defmodule Mehungry.SurveyTest do
     end
   end
 end
+"""

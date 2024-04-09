@@ -36,7 +36,6 @@ defmodule MehungryApi.HistoryTest do
         |> Mehungry.Repo.preload(:consume_recipe_user_meals)
 
       [result] = History.list_incomplete_user_meals2(user.id, nil)
-      IO.inspect(History.get_available_portions_for_user_meal(result.id))
       re_user_meal = result
 
       # assert {:error, %{errors: [recipe_user_meal_id: {"This user meal has only 3 portions left"}]}} = History.update_user_meal(user_meal, %{consume_recipe_user_meals: [%{user_meal_id: user_meal.id, recipe_user_meal_id: re_user_meal.id, consume_portions: 4 }]}) 
@@ -48,7 +47,6 @@ defmodule MehungryApi.HistoryTest do
       })
 
       result22 = History.list_incomplete_user_meals2(user.id, nil)
-
       assert result22 == []
     end
 

@@ -3,9 +3,8 @@ defmodule Mehungry.RecipeNutritionCalculationTest do
 
   alias Mehungry.FdcFoodParser
   alias Mehungry.Food
-  alias Mehungry.Food.RecipeUtils
   alias Mehungry.Languages
-  import Mehungry.{FoodFixtures, AccountsFixtures}
+  import Mehungry.{ AccountsFixtures}
 
   @create_params_recipe %{servings: 3, title: "Title Recipe", language_name: "En"}
 
@@ -18,7 +17,7 @@ defmodule Mehungry.RecipeNutritionCalculationTest do
     setup [:create_user]
 
     test "parsing basic example", %{user: user} do
-      {:ok, lang} = Languages.create_language(%{name: "En"})
+      {:ok, _lang} = Languages.create_language(%{name: "En"})
 
       FdcFoodParser.get_ingredients_from_food_data_central_json_file(
         "/home/nikolis/Documents/foundationDownload.json"
@@ -65,9 +64,7 @@ defmodule Mehungry.RecipeNutritionCalculationTest do
         |> Enum.into(%{recipe_ingredients: ingredients})
         |> Enum.into(%{user_id: user.id})
 
-      assert  %Mehungry.Food.Recipe{} = recipe = Food.create_recipe(recipe_params)
-      recipe = Food.get_recipe!(recipe.id)
-      IO.inspect(RecipeUtils.calculate_recipe_nutrition_value(recipe))
+      assert  {:ok, %Mehungry.Food.Recipe{} = _recipe} = Food.create_recipe(recipe_params)
     end
   end
 end

@@ -19,7 +19,6 @@ defmodule Mehungry.Food.RecipeIngredient do
 
   @doc false
   def changeset(recipe_ingredient, attrs) do
-    IO.inspect("up in here")
 
     changeset =
       recipe_ingredient

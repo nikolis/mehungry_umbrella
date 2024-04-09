@@ -265,21 +265,19 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       )
 
     path = Enum.at(path, 0)
-    IO.inspect(path, label: "The path that was specifised")
     socket = assign(socket, :image_upload, path)
     recipe_params = get_params_with_image(socket, recipe_params)
     recipe_params = Map.put(recipe_params, "language_name", "En")
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
 
     case Food.create_recipe(recipe_params) do
-      %Recipe{} = _recipe ->
+      {:ok, %Recipe{} = _recipe} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Recipe has been created ")
+         |> put_flash(:info, "Recipe created succesfully")
          |> push_redirect(to: "/browse")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect(changeset)
         {:noreply, assign(socket, changeset: changeset)}
     end
   end
@@ -287,7 +285,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   defp handle_progress(:image, entry, socket) do
     if entry.done? and entry.valid? do
       dir = File.mkdir_p(Path.join(Application.app_dir(:mehungry_web), "priv/static/uploads"))
-      IO.inspect(dir, label: "Dir result")
 
       path =
         consume_uploaded_entries(

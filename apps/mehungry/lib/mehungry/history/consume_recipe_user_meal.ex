@@ -34,7 +34,6 @@ defmodule Mehungry.History.ConsumeRecipeUserMeal do
   end
 
   def validate_recipe_user_meal(changeset, field, portions) when is_atom(field) do
-    IO.inspect(portions, label: "COnsume portions")
     portions =
       case portions do
         nil ->
@@ -46,16 +45,18 @@ defmodule Mehungry.History.ConsumeRecipeUserMeal do
 
     validate_change(changeset, field, fn field, value ->
       portions_left = History.get_available_portions_for_user_meal(value)
-      {portions, _} = Integer.parse(portions)
-      IO.inspect(portions_left, label: "left")
-      IO.inspect(portions, label: "right")
+      portions = 
+        if(is_integer(portions)) do 
+          portions
+        else 
+          {portions, _} = Integer.parse(portions)
+        end
+
       case portions_left >= portions do
         true ->
-          IO.inspect("FASDADFSATRUEEEEEEEEEEEEEEEE")
           []
 
         false ->
-          IO.inspect("afsdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
           [{field, "This user meal has only " <> to_string(portions_left) <> " portions left"}]
       end
     end)

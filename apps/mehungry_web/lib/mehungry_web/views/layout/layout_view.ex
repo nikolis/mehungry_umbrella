@@ -10,5 +10,4 @@ defmodule MehungryWeb.LayoutView do
 
     "main-content-container"
   end
-
 end

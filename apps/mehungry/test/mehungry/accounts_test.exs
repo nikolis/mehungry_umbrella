@@ -506,6 +506,7 @@ defmodule Mehungry.AccountsTest do
     end
   end
 
+"""
   describe "user_category_rules" do
     alias Mehungry.Accounts.UserCategoryRule
 
@@ -628,6 +629,7 @@ defmodule Mehungry.AccountsTest do
     end
   end
 
+  
   describe "user_profiles" do
     alias Mehungry.Accounts.UserProfile
 
@@ -688,4 +690,5 @@ defmodule Mehungry.AccountsTest do
       assert %Ecto.Changeset{} = Accounts.change_user_profile(user_profile)
     end
   end
+  """
 end

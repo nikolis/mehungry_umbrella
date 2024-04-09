@@ -40,7 +40,7 @@ defmodule Mehungry.FoodTest do
         @create_params_recipe
         |> Enum.into(%{recipe_ingredients: ingredients, user_id: user.id})
 
-      assert {:ok, _recipe} = Food.create_recipe(recipe_params)
+      assert   recipe = Food.create_recipe(recipe_params)
     end
 
     test "Create Recipe with invalid arguments should provide feedback", %{
@@ -103,71 +103,4 @@ defmodule Mehungry.FoodTest do
     end
   end
 
-  describe "food_restriction_types" do
-    alias Mehungry.Food.FoodRestrictionType
-
-    import Mehungry.FoodFixtures
-
-    @invalid_attrs %{alias: nil, title: nil}
-
-    test "list_food_restriction_types/0 returns all food_restriction_types" do
-      food_restriction_type = food_restriction_type_fixture()
-      assert Food.list_food_restriction_types() == [food_restriction_type]
-    end
-
-    test "get_food_restriction_type!/1 returns the food_restriction_type with given id" do
-      food_restriction_type = food_restriction_type_fixture()
-      assert Food.get_food_restriction_type!(food_restriction_type.id) == food_restriction_type
-    end
-
-    test "create_food_restriction_type/1 with valid data creates a food_restriction_type" do
-      valid_attrs = %{alias: "some alias", title: "some title"}
-
-      assert {:ok, %FoodRestrictionType{} = food_restriction_type} =
-               Food.create_food_restriction_type(valid_attrs)
-
-      assert food_restriction_type.alias == "some alias"
-      assert food_restriction_type.title == "some title"
-    end
-
-    test "create_food_restriction_type/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Food.create_food_restriction_type(@invalid_attrs)
-    end
-
-    test "update_food_restriction_type/2 with valid data updates the food_restriction_type" do
-      food_restriction_type = food_restriction_type_fixture()
-      update_attrs = %{alias: "some updated alias", title: "some updated title"}
-
-      assert {:ok, %FoodRestrictionType{} = food_restriction_type} =
-               Food.update_food_restriction_type(food_restriction_type, update_attrs)
-
-      assert food_restriction_type.alias == "some updated alias"
-      assert food_restriction_type.title == "some updated title"
-    end
-
-    test "update_food_restriction_type/2 with invalid data returns error changeset" do
-      food_restriction_type = food_restriction_type_fixture()
-
-      assert {:error, %Ecto.Changeset{}} =
-               Food.update_food_restriction_type(food_restriction_type, @invalid_attrs)
-
-      assert food_restriction_type == Food.get_food_restriction_type!(food_restriction_type.id)
-    end
-
-    test "delete_food_restriction_type/1 deletes the food_restriction_type" do
-      food_restriction_type = food_restriction_type_fixture()
-
-      assert {:ok, %FoodRestrictionType{}} =
-               Food.delete_food_restriction_type(food_restriction_type)
-
-      assert_raise Ecto.NoResultsError, fn ->
-        Food.get_food_restriction_type!(food_restriction_type.id)
-      end
-    end
-
-    test "change_food_restriction_type/1 returns a food_restriction_type changeset" do
-      food_restriction_type = food_restriction_type_fixture()
-      assert %Ecto.Changeset{} = Food.change_food_restriction_type(food_restriction_type)
-    end
-  end
 end

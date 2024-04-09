@@ -123,14 +123,11 @@
 	background-color: var(--clr-light_2);
 }
 
-
-
 .mobile_nav_toggle {
 	display: none;
 }
 
-
-.nav_container_mobile{
+.nav_container_mobile {
 	display: none;
 }
 

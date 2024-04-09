@@ -113,16 +113,12 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
 
   @impl true
   def handle_event("validate", %{"user_meal" => user_meal_params}, socket) do
-    IO.inspect(user_meal_params, label: "Validate_params")
-
     changeset =
       Map.get(socket.assigns, :user_meal, %UserMeal{})
       |> History.change_user_meal(user_meal_params)
       |> Map.put(:action, :validate)
 
     socket = assign(socket, :form, to_form(changeset))
-
-    IO.inspect(changeset, label: "Validate_params")
 
     {:noreply, assign(socket, :changeset, changeset)}
   end

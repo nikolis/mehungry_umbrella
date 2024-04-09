@@ -57,8 +57,11 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
+    profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
+
     socket
     |> assign(:page_title, "Profile")
+    |> assign(:user_profile, profile)
   end
 
   defp apply_action(socket, :edit, _params) do

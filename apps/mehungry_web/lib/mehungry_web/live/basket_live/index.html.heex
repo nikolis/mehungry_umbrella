@@ -1,69 +1,50 @@
-<div class = "main-page-container-bg" >
-   <%= if @live_action in [:new, :edit] do %>
-     <Components.create_basket_modal live_action={@live_action}  changeset = {@changeset}/>
-   <% end %>  
+<div class="main-page-container">
+    <.my_modal patch={~p"/basket"} class="my_modal" :if={@live_action in [:new, :import_items]} id="my_modal">
+      <.live_component
+        module={MehungryWeb.BasketLive.FormComponent}
+        id={@processing_basket.id || :new}
+        title="Alter Basket"
+        action={@live_action}
+        shopping_basket={@processing_basket}
+        user = {@current_user}
+        patch={~p"/basket"}
+      />
+    </.my_modal>
 
-   <div class="check_list_container">
-        <h1 class="header grid_col_span_1"> Active Basket </h1>
-        <h1 class="header grid_col_span_1"> Repository </h1>
-        <div>
-          <label class="menu-button-wrapper" for="">
-              <input type="checkbox" class="menu-button">
-              <div class="icon-wrapper">
-                <label class="hamburger">
-                </label>
-              </div>
-              <div class="item-list">
-              
-              <%= if length(@shopping_baskets) > 0 do %>
-                  <h2 class="header grid_col_span_1"> <%= Enum.at(@shopping_baskets, 0).start_dt.day %>-<%= Enum.at(@shopping_baskets, 0).start_dt.month %>/<%= Enum.at(@shopping_baskets, 0).end_dt.day %>-<%= Enum.at(@shopping_baskets, 0).end_dt.month %>(<%= Enum.at(@shopping_baskets, 0).end_dt.year %>) </h2>
-                  <button phx-click="delete_baskets" class="create_button"> Delete </button>
-              <% else %>
-                  <button phx-click="create_basket" class="create_button"> Create Basket </button>
-              <% end %>
-              </div>
-            </label>
-          </div>
-        <div class="check_list_content">
+  <h1 style="margin-inline: auto; text-align: center; font-size: --var(--font-size-large);"> Shopping Basket </h1>
+  <div class="basket-page-container">
+    <div style="border: 2px solid green;">
+      <div >
+        <%= @live_action %>
+        <h2  phx-click={
+        case @live_action  in  ["index"] do
+          true ->
+            ""
+          false ->
+            JS.remove_class("active", to: "#basket-basic-form.active")
+            |> JS.add_class("active", to: "#basket-basic-form:not(.active)")
+         end
+        } class="side_nav_list_item" style="border-bottom: 2px solid black"> Lists <span style="font-size: 2rem; font-weight: 200 ; color: var(--clr-grey-friend_3); margin-left: 0.75rem;"> + </span> </h2>
 
-          <%= if length(@shopping_baskets) > 0 do %>
-              <table class="">
-                <tr>
-                  <th>
-                    Ingredient 
-                  </th>
-                  <th>
-                    Quantity
-                  </th>
-                  <th>
-                    In-Repo
-                  </th>
-                </tr>
-                <%= for rec_ing <- @shopping_basket.basket_ingredients do %>
-                <tr>
-                    <td>
-                      <%= rec_ing.ingredient.name %>
-                    </td>
-                    <td>
-                     <span> <%= rec_ing.quantity %> </span> <%= rec_ing.measurement_unit.name %>
-                    </td>
-                    <td>
-                        <button phx-click="toggle_basket" class={get_class_for_toggle_button(rec_ing.in_storage)} phx-value-id={rec_ing.id} >Cla</button>
-                    </td>
-                </tr>
-                <% end %>
-              </table>
+        <.live_component
+        module = {MehungryWeb.BasketLive.BasicFormComponent}
+        id={@processing_basket.id || :new}
+        action={@live_action}
+        shopping_basket={@processing_basket}
+        user = {@current_user}
+        page_title= "Create"
+        patch={~p"/basket"}
+        />
 
-              <% else %>
-                  <button phx-click="create_basket" class="create_button"> Create Basket </button>
-              <% end %>
-
-        </div>
+       <.render_basket_titles shopping_baskets = {@shopping_baskets} shopping_basket= {@shopping_basket}/> 
+      </div>
+    </div>
+    <div style="border: 2px solid blue;">
+      <h1 style="margin-inline: auto; text-align: center; font-size: 1.75rem; padding-top: 1rem"> <%=  Map.get(@shopping_basket, :title, "...")  %> </h1>
+      <%= if @shopping_basket do %> 
+        <.render_basket_items shopping_basket = {@shopping_basket} />
+      <% end %>
 
     </div>
-
-<div class="main">
-
-</div>
-
+  </div>
 </div>

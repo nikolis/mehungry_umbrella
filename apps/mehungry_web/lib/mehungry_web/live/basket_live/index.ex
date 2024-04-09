@@ -2,6 +2,9 @@ defmodule MehungryWeb.BasketLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
 
+  import MehungryWeb.CoreComponents
+  import MehungryWeb.BasketLive.Components
+
   alias MehungryWeb.BasketLive.Components
   alias Mehungry.Inventory.BasketParams
   alias Mehungry.Inventory.BasketSelectionParams
@@ -14,80 +17,48 @@ defmodule MehungryWeb.BasketLive.Index do
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     shopping_baskets = Inventory.list_shopping_baskets_for_user(user.id)
-
-    shopping_basket =
-      case Enum.empty?(shopping_baskets) do
-        true ->
-          nil
-
-        false ->
-          {:ok, shopping_basket} = Enum.fetch(shopping_baskets, 0)
-          shopping_basket
-      end
-
-    shopping_basket =
-      case shopping_basket do
-        nil ->
-          nil
-
-        shopping_basket ->
-          shopping_basket = %ShoppingBasket{
-            basket_ingredients:
-              Mehungry.Utils.sort_ingredients_for_basket(shopping_basket.basket_ingredients)
-          }
-      end
-
-    basket_params = %BasketParams{}
-    changeset = Inventory.change_basket_params(basket_params, %{})
-    changeset2 = BasketSelectionParams.changeset(%BasketSelectionParams{}, %{})
+    shopping_basket = List.first(shopping_baskets)
+    shopping_basket = get_shopping_basket(shopping_basket, user)
+    IO.inspect("Mount")
+    changeset = Inventory.change_shopping_basket(shopping_basket, %{})
 
     {:ok,
      socket
      |> assign(:user, user)
      |> assign(:shopping_basket, shopping_basket)
-     |> assign(:basket_params, basket_params)
      |> assign(:shopping_baskets, shopping_baskets)
-     |> assign(:changeset, changeset)
-     |> assign(:changeset2, changeset2)}
+     |> assign(:processing_basket, %ShoppingBasket{})
+     |> assign_form(changeset)
+     |> assign(:id, "form-#{System.unique_integer()}")}
+  end
+
+  defp get_shopping_basket(shopping_basket, user) do
+    case shopping_basket do
+      nil ->
+        %ShoppingBasket{user_id: user.id, basket_ingredients: []}
+
+      shopping_basket ->
+        shopping_basket = %ShoppingBasket{
+          shopping_basket
+          | basket_ingredients:
+              Mehungry.Utils.sort_ingredients_for_basket(shopping_basket.basket_ingredients)
+        }
+    end
   end
 
   defp apply_action(socket, :index, _params) do
     socket
   end
 
-  def get_class_for_toggle_button(in_stock) do
-    case in_stock do
-      true ->
-        "checked"
-
-      false ->
-        "unchecked"
-    end
-  end
-
-  defp apply_action(socket, :new, _params) do
-    socket =
-      socket
-      |> assign(:page_title, "Edit Basket")
-
-    # |> assign(:user_meal, user_meal)
+  defp apply_action(socket, :import_items, %{"id" => id} = params) do
     socket
   end
 
   defp apply_action(socket, :edit, %{"id" => _id} = _params) do
-    socket =
-      socket
-      |> assign(:page_title, "Edit Basket")
-
-    # |> assign(:user_meal, user_meal)
     socket
   end
 
   defp apply_action(socket, :new, %{"start" => _start_date, "end" => _end_date} = _params) do
-    socket =
-      socket
-      |> assign(:page_title, "Create Meal")
-
     socket
   end
 
@@ -96,13 +67,35 @@ defmodule MehungryWeb.BasketLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  def handle_event("delete_baskets", _, socket) do
-    # bs = Inventory.get_shopping_basket!(basket_id)
-    Inventory.delete_all_baskets_for_user(socket.assigns.user.id)
+  @impl true
+  def handle_info({MehungryWeb.BasketLive.BasicFormComponent, {:saved, shopping_basket}}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :shopping_baskets,
+       Enum.into(socket.assigns.shopping_baskets, [shopping_basket])
+     )}
+  end
+
+  def handle_event("select_shopping_basket", %{"id" => id}, socket) do
+    shopping_basket = Inventory.get_shopping_basket!(id)
 
     {:noreply,
      socket
-     |> assign(:shopping_basket, nil)}
+     |> assign(:shopping_basket, shopping_basket)}
+  end
+
+  @impl true
+  def handle_event("close-modal", %{"to" => patch}, socket) do
+    IO.inspect(patch)
+    {:noreply, push_patch(socket, to: "/basket", replace: true)}
+  end
+
+  def handle_event("delete_basket", %{"id" => id}, socket) do
+    {id, _} = Integer.parse(id)
+    shopping_basket = Inventory.delete_shopping_basket(%ShoppingBasket{id: id})
+
+    {:noreply, socket}
   end
 
   def handle_event("toggle_basket", %{"id" => id}, socket) do
@@ -129,39 +122,13 @@ defmodule MehungryWeb.BasketLive.Index do
   end
 
   @impl true
-  def handle_event("validate", %{"basket_params" => basket_params_params}, socket) do
+  def handle_event("validate", %{"shopping_basket" => shopping_basket_params}, socket) do
     changeset =
-      socket.assigns.basket_params
-      |> Inventory.change_basket_params(basket_params_params)
-      |> Map.put(:action, :validate)
+      Inventory.change_shopping_basket(socket.assigns.shopping_basket, shopping_basket_params)
 
-    {:noreply, assign(socket, :changeset, changeset)}
-  end
+    socket = assign_form(socket, changeset)
 
-  @impl true
-  def handle_event("validate", %{"basket_selection_params" => basket_params_params}, socket) do
-    changeset =
-      socket.assigns.basket_params
-      |> Inventory.change_basket_params(basket_params_params)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, :changeset, changeset)}
-  end
-
-  @impl true
-  def handle_event("create_basket", _params, socket) do
-    # changeset =
-    # socket.assigns.basket_params
-    # |> Inventory.change_basket_params(basket_params_params)
-    # |> Map.put(:action, :validate)
-
-    # {:noreply, assign(socket, :live_action, changeset)}
-    {:noreply, push_patch(socket, to: "/basket/new", replace: true)}
-  end
-
-  @impl true
-  def handle_event("close-modal", _, socket) do
-    {:noreply, push_patch(socket, to: "/basket/", replace: true)}
+    {:noreply, socket}
   end
 
   @impl true
@@ -269,5 +236,9 @@ defmodule MehungryWeb.BasketLive.Index do
          socket
          |> assign(:shopping_basket, shopping_basket)}
     end
+  end
+
+  defp assign_form(socket, %Ecto.Changeset{} = changeset) do
+    assign(socket, :form, to_form(changeset))
   end
 end

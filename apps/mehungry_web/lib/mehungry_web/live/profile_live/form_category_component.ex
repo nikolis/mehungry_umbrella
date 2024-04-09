@@ -72,7 +72,7 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
           phx-target= {@parent}
           disabled={@deleted}
         >
-     <svg phx-click="remove-ingredient"  style="height: calc(1rem + 1.8vw); width=calc(1rem + 1.5vw); " viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: auto" >
+     <svg phx-click="remove-ingredient"  style="height: 2rem; width=2rem; " viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: auto" >
       <path d="M10 12V17" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M14 12V17" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M4 7H20" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

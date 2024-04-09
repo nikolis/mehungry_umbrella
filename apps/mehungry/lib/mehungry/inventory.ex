@@ -82,17 +82,54 @@ defmodule Mehungry.Inventory do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_shopping_basket(attrs \\ %{}) do
+  def update_shopping_basket(%ShoppingBasket{} = shopping_basket, attrs) do
     ingredient_params =
-      case Map.get(attrs, :basket_ingredients) do
+      case Map.get(attrs, "basket_ingredients") do
         nil ->
-          nil
-
+          []
         b_i ->
           Enum.map(b_i, fn x -> Mehungry.Utils.normilize_ingredient(x) end)
       end
 
-    attrs = Enum.into(%{basket_ingredients: ingredient_params}, attrs)
+    #attrs = Enum.into(%{"basket_ingredients" => ingredient_params}, attrs)
+
+
+    result = 
+    shopping_basket
+    |> ShoppingBasket.changeset(attrs)
+    |> Repo.update()
+    case result do
+      {:ok, basket} ->
+        basket =
+          basket
+          |> Repo.preload(
+            basket_ingredients: [
+              :measurement_unit,
+              ingredient: [
+                :category,
+                :ingredient_translation
+              ]
+            ]
+          )
+
+        {:ok, basket}
+
+      _ ->
+        result
+    end
+
+  end
+
+  def create_shopping_basket(attrs \\ %{}) do
+    ingredient_params =
+      case Map.get(attrs, "basket_ingredients") do
+        nil ->
+          []
+        b_i ->
+          Enum.map(b_i, fn x -> Mehungry.Utils.normilize_ingredient(x) end)
+      end
+
+    #attrs = Enum.into(%{"basket_ingredients" => ingredient_params}, attrs)
 
     result =
       %ShoppingBasket{}
@@ -132,11 +169,6 @@ defmodule Mehungry.Inventory do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_shopping_basket(%ShoppingBasket{} = shopping_basket, attrs) do
-    shopping_basket
-    |> ShoppingBasket.changeset(attrs)
-    |> Repo.update()
-  end
 
   @doc """
   Deletes a shopping_basket.

@@ -31,9 +31,9 @@ defmodule MehungryWeb do
     quote do
       use Phoenix.Component
       import Phoenix.View
+
       import Phoenix.Controller,
         only: [get_flash: 1, get_flash: 2, view_module: 1, view_template: 1]
-
 
       unquote(view_helpers())
     end
@@ -54,13 +54,14 @@ defmodule MehungryWeb do
     end
   end
 
+  def static_paths, do: ~w(css js assets fonts images favicon.ico robots.txt)
+
   def verified_routes do
     quote do
       use Phoenix.VerifiedRoutes,
         endpoint: MehungryWeb.Endpoint,
-        router: MehungryWeb.Router
-
-      # statics: MehungryWeb.static_paths()
+        router: MehungryWeb.Router,
+        statics: MehungryWeb.static_paths()
     end
   end
 
@@ -107,7 +108,9 @@ defmodule MehungryWeb do
   defp view_helpers do
     quote do
       # Use all HTML functionality (forms, tags, etc)
-      use Phoenix.HTML
+      import Phoenix.HTML
+      import Phoenix.HTML.Form
+      use PhoenixHTMLHelpers
       import Phoenix.LiveView.Helpers
       import MehungryWeb.LiveHelpers
       import Phoenix.Component

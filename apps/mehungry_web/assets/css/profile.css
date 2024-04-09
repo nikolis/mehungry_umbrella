@@ -8,29 +8,6 @@
 }
 
 
-.profile_index_info button.submitbutton{
-	position: absolute;
-	margin: auto;
-	bottom: 10%;
-	left: 0%;
-	right: 0%;
-	background-color: rgb(203, 205, 104);
-	padding: 0.5rem 2rem 0.5rem;
-	border-radius: 2rem;
-	font-weight: bold;
-}
-.profile_index_info button{
-	background-color: rgb(203, 205, 104);
-	padding: 0.5rem 2rem 0.5rem;
-	border-radius: 2rem;
-	font-weight: bold;
-}
-
-.profile_index_info button:hover {
-	background-color: rgb(180, 185, 86);
-	padding: 0.5rem 2rem 0.5rem;
-	border-radius: 2rem;
-}
 .profile_index_info h2 {
 	font-weight: bold;
 	font-size: 2rem;

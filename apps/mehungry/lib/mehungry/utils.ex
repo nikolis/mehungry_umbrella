@@ -1,20 +1,20 @@
 defmodule Mehungry.Utils do
-  @measurement_units [["ml", "l"], ["gram", "kg"]]
+  @measurement_units [["ml", "l"], ["gram", "kg"], ["grammar", "kg"] ]
 
   def sort_ingredients_for_basket(ingredients) do
     Enum.sort_by(ingredients, fn x -> x.in_storage end, fn a, b -> a > b end)
   end
 
   def normilize_ingredient(ingredient_params) do
-    measurement_unit_id = ingredient_params.measurement_unit_id
-    quantity = ingredient_params.quantity
+    measurement_unit_id = ingredient_params["measurement_unit_id"]
+    quantity = ingredient_params["quantity"]
     measurement_unit = Mehungry.Food.get_measurement_unit!(measurement_unit_id)
     result = normilize_measurement_unit(measurement_unit.name, quantity)
     {quantity_new, mu_name} = result
     [measurement_unit_new] = Mehungry.Food.get_measurement_unit_by_name(mu_name)
 
     Enum.into(
-      %{measurement_unit_id: measurement_unit_new.id, quantity: quantity_new},
+      %{"measurement_unit_id" => measurement_unit_new.id, "quantity" => quantity_new},
       ingredient_params
     )
   end

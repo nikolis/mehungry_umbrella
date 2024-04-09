@@ -20,7 +20,6 @@
       </div>
 
       <div class="asdf">
-
         <%= for entry <- @uploads.image.entries do %>
         <div class="img_preview_container">
           <.live_img_preview entry={entry} width="500rem" class="m-auto" />
@@ -30,7 +29,7 @@
             </figure>
 
             <%= for err <- upload_errors(@uploads.image, entry) do %>
-            <p class="alert alert-danger"><%= error_to_string(err) %></p>
+            <p class="alert alert-danger"><%= error_to_string(err) %> </p>
             <% end %>
           </article>
           <button class="photo-delbutton text-4xl" type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} aria-label="cancel">&times;</button>

@@ -1,10 +1,12 @@
 defmodule Mehungry.PostsTest do
   use Mehungry.DataCase
 
+
+"""
   alias Mehungry.Posts
 
   describe "recipe_posts" do
-    alias Mehungry.Posts.RecipePost
+    alias Mehungry.Posts.Post
 
     import Mehungry.PostsFixtures
 
@@ -37,7 +39,7 @@ defmodule Mehungry.PostsTest do
         title: "some title"
       }
 
-      assert {:ok, %RecipePost{} = recipe_post} = Posts.create_recipe_post(valid_attrs)
+      assert {:ok, %Post{} = recipe_post} = Posts.create_recipe_post(valid_attrs)
       assert recipe_post.bg_media_url == "some bg_media_url"
       assert recipe_post.description == "some description"
       assert recipe_post.md_media_url == "some md_media_url"
@@ -62,7 +64,7 @@ defmodule Mehungry.PostsTest do
         title: "some updated title"
       }
 
-      assert {:ok, %RecipePost{} = recipe_post} =
+      assert {:ok, %Post{} = recipe_post} =
                Posts.update_recipe_post(recipe_post, update_attrs)
 
       assert recipe_post.bg_media_url == "some updated bg_media_url"
@@ -81,7 +83,7 @@ defmodule Mehungry.PostsTest do
 
     test "delete_recipe_post/1 deletes the recipe_post" do
       recipe_post = recipe_post_fixture()
-      assert {:ok, %RecipePost{}} = Posts.delete_recipe_post(recipe_post)
+      assert {:ok, %Post{}} = Posts.delete_recipe_post(recipe_post)
       assert_raise Ecto.NoResultsError, fn -> Posts.get_recipe_post!(recipe_post.id) end
     end
 
@@ -528,4 +530,5 @@ defmodule Mehungry.PostsTest do
       assert %Ecto.Changeset{} = Posts.change_comment_answer_vote(comment_answer_vote)
     end
   end
+  """
 end

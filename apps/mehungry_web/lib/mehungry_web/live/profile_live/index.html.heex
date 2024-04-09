@@ -1,6 +1,5 @@
 <div class="main-page-container">
   <div class="profile_index_main">
-
     <div class="profile_index_info">
       <%= if @live_action == :index do %> 
         <.live_component module={Show} id="hero" user_profile={@user_profile} live_action={@live_action} user={@user} page_title ={@page_title}/>
@@ -10,30 +9,32 @@
     </div>
   </div>
 
-  <div class="profile_index_main">
-  
-    <div class="profile_index_user_content">
-      <div class="nav_buttons">
-        <button class={"nav_button " <> get_active(@content_state, :saved )} phx-click="content_state_change" phx-value-state={:saved}>Saved recipes</button>
-        <button class={"nav_button " <> get_active(@content_state, :created )}   phx-click="content_state_change" phx-value-state={:created}>Created recipes</button>
-      </div>
-      <div class="line">
-      </div>
-     <%= case @content_state do %> 
-        <% :created -> %>
-          <div class="grid_even_columns">
-            <%= for recipe <- @user_created_recipes do %>
-              <RecipeComponents.recipe_details recipe={recipe} id={"recipe" <> Integer.to_string(recipe.id)}/>
-            <% end %>
-          </div>
-        <% :saved -> %>
-          <div class="grid_even_columns">
-           <%= for user_recipe <- @user_saved_recipes do %>
-              <RecipeComponents.recipe_details recipe={user_recipe.recipe} id={"recipe" <> Integer.to_string(user_recipe.recipe.id)}/>
-           <% end %>
-          </div>
+  <%= if @live_action == :index do %> 
 
-     <% end %>
-     </div>
-  </div>
+    <div class="profile_index_main">
+    
+      <div class="profile_index_user_content">
+        <div class="nav_buttons">
+          <button class={"nav_button " <> get_active(@content_state, :saved )} phx-click="content_state_change" phx-value-state={:saved}>Saved recipes</button>
+          <button class={"nav_button " <> get_active(@content_state, :created )}   phx-click="content_state_change" phx-value-state={:created}>Created recipes</button>
+        </div>
+        <div class="line">
+        </div>
+        <div class="grid_even_columns">
+          <%= case @content_state do %> 
+            <% :created -> %>
+              <%= for recipe <- @user_created_recipes do %>
+                <RecipeComponents.recipe_details recipe={recipe} id={"recipe" <> Integer.to_string(recipe.id)}/>
+              <% end %>
+            <% :saved -> %>
+              <%= for user_recipe <- @user_saved_recipes do %>
+                <RecipeComponents.recipe_details recipe={user_recipe.recipe} id={"recipe" <> Integer.to_string(user_recipe.recipe.id)}/>
+              <% end %>
+          <% end %>
+         </div>
+      </div>
+
+    </div>
+  <% end %>
+
 </div>

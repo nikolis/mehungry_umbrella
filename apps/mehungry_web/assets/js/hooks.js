@@ -8,11 +8,15 @@ Hooks.MyModalHook = {
 		console.log("My modal hook");
 		const closeModal = document.getElementById("button-close-modal");
 		const modal = document.getElementById("my_modal");
+		var patch = modal.getAttribute('patch')
+		modal.addEventListener("close", () => {
+			this.pushEvent("close-modal", {to: patch});
+
+		});
 		modal.showModal();
 		console.log("Mount load end");
 		closeModal.addEventListener('click', () => {
 			modal.close();
-			this.pushEvent("close-modal");
 		});
 	}
 }
@@ -190,6 +194,15 @@ function toggleAccordion(panelToActivate) {
 	updated() {
 	}
 }
+
+
+Hooks.GoogleLoginHook = {
+	mounted() {
+		console.log("Mounter")
+	}
+
+}
+
 Hooks.Select2 = {
 
 	initSelect2(element, hook, hiddenIdFull, selects) {
@@ -237,9 +250,54 @@ import flatpicker from "flatpickr";
 
 
 Hooks.DatePicker = {
-	mounted() {
-		flatpicker("input[type=datetime]", {})
-	}
+
+	updated() {
+		console.log("Update")
+		console.log(this.picker.open())
+	},
+	mounted() 
+	{
+		console.log(this.el)
+		this.picker = flatpickr("#container", {appendTo: this.el, static: false, inline: true, wrap: false, clickOpens: true, mode: 'range', onChange: (e) => 
+		{
+			console.log("Piou")
+			var end = document.getElementById('shopping_basket_end_dt')
+			var st = document.getElementById('shopping_basket_start_dt');
+			console.log(e)
+	
+			if(e[0]) {
+				console.log(e[0])
+				
+				var value = e[0].getFullYear() +"-"+ e[0].getMonth()  +"-" + e[0].getDate()
+				console.log(value)
+				st.value =  (e[0].toISOString())
+				console.log(st)
+				st.dispatchEvent(new Event('input', {
+				  view: window,
+				  bubbles: true,
+				  cancelable: true
+				}))
+			}
+	
+			if(e[1]) {
+				end.value = e[1].toISOString()
+				end.dispatchEvent(new Event('input', {
+				  view: window,
+				  bubbles: true,
+				  cancelable: true
+				}))
+			}
+
+
+		console.log(e[0])
+		console.log(e[1])
+		console.log("Something")
+		return;
+		} 
+       })
+	this.picker.open()
+   }
+	
 }
 
 
@@ -261,9 +319,49 @@ function get_default_view() {
 	}
 }
 
-Hooks.Calendar = {
+function for_calendar(meals, calendar) {
 
-	mounted() {
+	var date = new Date();
+	for (let i = 0; i < meals.length; i++) {
+		let meal = meals[i];
+		const startDt = Date.parse(meal.start)
+		const endDT = Date.parse(meal.end)
+		const newDate = startDt - (date.getTimezoneOffset() * 60 * 1000)
+		const newDateAfter = endDT - (date.getTimezoneOffset() * 60 * 1000)
+		const dt = new Date(newDate)
+		const dta = new Date(newDateAfter)
+
+		let colorText = "#004300";
+		let colorBack = "#ffcc90";
+		let lightColorBack = "#c8e6c9";
+
+		calendar.createEvents([{
+			id: meal.id,
+			calendarId: 'cal1',
+			title: meal.title + "(" + meal.sub_title + ")",
+			body: 'TOAST UI Calendar',
+			start: dt,
+			body: meal.sub_title,
+			end: dta,
+			location: 'Meeting Room A',
+			attendees: ['A', 'B', 'C'],
+			category: 'time',
+			state: 'Busy',
+			isReadOnly: false,
+			color: colorText,
+			backgroundColor: colorBack,
+			customStyle: {
+				fontStyle: 'italic',
+				fontSize: '15px',
+			},
+		}, // EventObject
+		]);
+	}
+}
+
+
+
+function  mount_callendar(parent_view) {
 		const Calendar = tui.Calendar;
 		const container = document.getElementById('calendar');
 		const options = {
@@ -274,9 +372,6 @@ Hooks.Calendar = {
 			useDetailPopup: false,
 			  theme: {
    				 week: {
-				      today: {
-				        color: '#85cb33',
-					},
     				},
 			  },
 			week: {
@@ -315,61 +410,6 @@ Hooks.Calendar = {
 			calendar.next();
 });
 
-
-
-		window.addEventListener(`phx:create_meals`, (e) => {
-			let meals = e.detail['meals']
-			var date = new Date();
-			for (let i = 0; i < meals.length; i++) {
-				let meal = meals[i];
-				const startDt = Date.parse(meal.start)
-				const endDT = Date.parse(meal.end)
-				const newDate = startDt - (date.getTimezoneOffset() * 60 * 1000)
-				const newDateAfter = endDT - (date.getTimezoneOffset() * 60 * 1000)
-				const dt = new Date(newDate)
-				const dta = new Date(newDateAfter)
-
-				let colorText = "#004300";
-				let colorBack = "#ffcc90";
-				let lightColorBack = "#c8e6c9";
-				/*if(dt.getHours() < 12){
-					colorBack = "blue";
-					colorText = "white";
-				}
-				if(dt.getHours() >= 12  && dt.getHours() <= 16) {
-					colorBack = "yellow";
-					colorText = "white";
-				}
-				if(dt.getHours() > 16) {
-					colorBack = "green";
-					colorText = "white";
-				}*/
-				calendar.createEvents([{
-					id: meal.id,
-					calendarId: 'cal1',
-					title: meal.title + "(" + meal.sub_title + ")",
-					body: 'TOAST UI Calendar',
-					start: dt,
-					body: meal.sub_title,
-					end: dta,
-					location: 'Meeting Room A',
-					attendees: ['A', 'B', 'C'],
-					category: 'time',
-					state: 'Busy',
-					isReadOnly: false,
-					color: colorText,
-					backgroundColor: colorBack,
-					customStyle: {
-						fontStyle: 'italic',
-						fontSize: '15px',
-					},
-				}, // EventObject
-				]);
-			}
-		})
-
-
-
 		window.addEventListener(`phx:create-meal`, (e) => {
 			var start = e.detail.start
 			var end = e.detail.end
@@ -386,72 +426,22 @@ Hooks.Calendar = {
 		calendar.on('clickEvent', ({
 			event
 		}) => {
-			this.pushEvent("edit_modal", {
+			parent_view.pushEvent("edit_modal", {
 				id: event.id
 			})
 		});
-		calendar.on('clickSchedule', ({
-			event
-		}) => {
-			console.log(event)
-		});
-
-		calendar.on('beforeCreateSchedule', ({
-			event
-		}) => {
-			console.log("Click Event4")
-			console.log(event)
-		});
-
-		calendar.on('beforeCreateEvent', ({
-			event
-		}) => {
-			console.log("Click Event5")
-			console.log(event)
-		});
-
-		calendar.on('beforeUpdateEvent', ({
-			event
-		}) => {
-			console.log("Click Event6")
-			console.log(event)
-		});
-
-		calendar.on('clickDayName', ({
-			event
-		}) => {
-			console.log("Click Event7")
-			console.log(event)
-		});
-
-		calendar.on('afterRenderEvent', ({
-			event
-		}) => {});
 
 		calendar.on('selectDateTime', ({
 			start,
 			end
 		}) => {
 			console.log("Click Event9")
-			this.pushEvent("initial_modal", {
+			parent_view.pushEvent("initial_modal", {
 				start: start,
 				end: end
 			})
 		});
 
-		calendar.on('clickMoreEventsBtn', ({
-			event
-		}) => {
-			console.log("Click Event10")
-			console.log(event)
-		});
-
-		calendar.on('clickTimezoneCollapseBtn', ({
-			event
-		}) => {
-			console.log("Click Event11")
-			console.log(event)
-		});
 
 
 
@@ -499,20 +489,35 @@ Hooks.Calendar = {
 				cal.deleteSchedule(e.schedule.id, e.schedule.calendarId);
 			}
 		});
+		return calendar ;
 
 	}
-}
 
 Hooks.HiddenCalendar = {
 
 	mounted() {
 		const toggle_button = document.getElementById('button_hidde_calendar');
-
 		toggle_button.addEventListener("click", () => {
-	        	let para = document.getElementById("calendar_controlls");
-			para.classList.toggle("calendar_controlls_open")
+	        	this.para = document.getElementById("calendar_controlls");
+			this.para.classList.toggle("calendar_controlls_open")
+		});
+
+	      	this.origin_callendar = mount_callendar(this);
+		mounted_func(this, null, this.origin_callendar);
+		window.addEventListener(`phx:create_meals`, (e) => {
+			this.meals = e.detail['meals']
+			for_calendar(this.meals, this.origin_callendar);
+		})
+	}
+}
+
+
+	function mounted_func(parent_view, start_date, origin_callendar) {
+		if(! origin_callendar) {
+		       	parent_view.origin_callendar = mount_callendar(parent_view); 
+			origin_callendar = parent_view.origin_callendar;
 		}
-		); 
+	
 
 		const Calendar = tui.Calendar;
 		const container = document.getElementById('hidden_calendar');
@@ -523,12 +528,13 @@ Hooks.HiddenCalendar = {
 			useFormPopup: false,
 			useDetailPopup: false,
 			  theme: {
+				 month: {
+					backgroundColor: 'white',
+				 },
    				 week: {
-				      today: {
-				        color: '#85cb33',
-					},
     				},
 			  },
+
 			week: {
 				taskView: true,
 				startDayOfWeek: 1,
@@ -547,15 +553,117 @@ Hooks.HiddenCalendar = {
 				}, ],
 			},
 			calendars: [{
-				id: 'cal1',
+				id: 'cal2',
 				name: 'Personal',
 				backgroundColor: 'blue',
 			}, ],
 		};
 
-		const calendar = new Calendar(container, options);
+		var calendar = new Calendar(container, options);
+		if(start_date) {
+			console.log(start_date)
+			console.log(origin_callendar);
+			console.log("Start date--------------------------------------")
+			origin_callendar.setDate(start_date);
+		}
+		calendar.on('afterRenderEvent', ({
+			event
+		}) => {
+			console.log("Hei ho---------------->")
+			var elements2 = document.getElementsByClassName('toastui-calendar-accumulated');
+			console.log(elements2)
+			console.log("element 222")
+			for (let s of elements2) {
+				console.log(s)
+				console.log("22222")
+				s.remove();
+			}
+			return null;
+
+		});
+
+calendar.setTheme({
+  month: {
+    dayExceptThisMonth: {
+    },
+    moreView: {
+	    backgroundColor: 'red'
+    }
+  },
+});
+		calendar.on('selectDateTime', ({
+			start,
+			end
+		}) => {
+			origin_callendar.setDate(start);
+			calendar.setDate(start);
+			var elements2 = document.getElementsByClassName('toastui-calendar-accumulated');
+	        	let para = document.getElementById("calendar_controlls");
+			para.classList.toggle("calendar_controlls_open")
+			calendar.destroy();
+			origin_callendar.destroy();
+			mounted_func(parent_view, start, this);
+			for_calendar(parent_view.meals, parent_view.origin_callendar);
+
+		});
+
+		calendar.on('clickEvent', ({
+			event
+		}) => {
+			console.log("another event")
+			console.log(event)
+		});
+		calendar.on('clickSchedule', ({
+			event
+		}) => {
+			console.log(event)
+		});
+
+		calendar.on('beforeCreateSchedule', ({
+			event
+		}) => {
+			console.log("Click Event4")
+			console.log(event)
+		});
+
+		calendar.on('beforeCreateEvent', ({
+			event
+		}) => {
+			console.log("Click Event5")
+			console.log(event)
+		});
+
+		calendar.on('beforeUpdateEvent', ({
+			event
+		}) => {
+			console.log("Click Event6")
+			console.log(event)
+		});
+
+		calendar.on('clickDayName', ({
+			event
+		}) => {
+			console.log("Click Event7")
+			console.log(event)
+		});
+
+		calendar.on('afterRenderEvent', ({
+			event
+		}) => {});
+
+
+		calendar.on('clickMoreEventsBtn', ({
+			event
+		}) => {
+			console.log("Click Event10")
+			console.log(event)
+		});
+
+		calendar.on('clickTimezoneCollapseBtn', ({
+			event
+		}) => {
+			console.log("Click Event11")
+			console.log(event)
+		});
 	}
-}
-
-
 export {Hooks}

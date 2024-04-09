@@ -21,19 +21,17 @@ defmodule MehungryWeb.ProfileLive.Form do
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save"
-        class="the_form"
+        class="profile-form"
       >
         <.input required field={@form[:alias]} type="text" label="Alias" />
         <.input required field={@form[:intro]} type="textarea" label="Intro" />
         <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>
             <FormCategoryComponent.render category_ids = {@category_ids} categories = {@categories} food_restrictions = {@food_restrictions} food_restriction_ids = {@food_restriction_ids} f = {f_user_category_rule} parent= {@myself}  />
         </.inputs_for>
-        <.button style="margin-top: 10%;" class="mt-20" type="button" phx-target={@myself} phx-click="add_category_rule">Add Category Rule</.button>
-
-
-        <div style="height: 50vh">
-          <.button class="submitbutton" phx-disable-with="Saving...">Save User profile</.button>
-          </div>
+        <button class="list_button_complementary" style="margin: auto; margin-top: 1.5rem" type="button" phx-target={@myself} phx-click="add_category_rule">Add Rule</button>
+        <div style="position: relative">
+          <button  style="position: absolute; right: 0;" class="primary_button" phx-disable-with="Saving...">Save</button>
+        </div>
       </.simple_form>
     </div>
     """

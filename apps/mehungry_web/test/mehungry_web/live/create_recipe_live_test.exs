@@ -27,18 +27,25 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
     } do
       {:ok, index_live, html} = live(conn, Routes.create_recipe_index_path(conn, :index))
 
-      ingredients = [
-        %{ingredient_id: ingredient.id, measurement_unit_id: measurement_unit.id, quantity: 33}
-      ]
+      ingredients = %{
+        0 => %{
+          ingredient_id: ingredient.id,
+          measurement_unit_id: measurement_unit.id,
+          quantity: 33
+        }
+      }
+
+      assert index_live
+             |> element("#add_ingredient")
+             |> render_click()
 
       {:ok, _, html} =
         index_live
-        |> form("#recipe-form", recipe: @create_params_recipe)
-        |> render_submit()
-        |> follow_redirect(conn, Routes.category_index_path(conn, :index))
+        |> form(".the_form", recipe: @create_params_recipe)
+        |> render_submit(%{recipe: %{"recipe_ingredients" => ingredients}})
+        |> follow_redirect(conn, Routes.recipe_browse_index_path(conn, :index))
 
-      assert html =~ "Category created successfully"
-      assert html =~ "some description"
+      assert html =~ "Recipe created succesfully"
     end
   end
 end
