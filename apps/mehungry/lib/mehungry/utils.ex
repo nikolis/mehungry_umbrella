@@ -1,5 +1,5 @@
 defmodule Mehungry.Utils do
-  @measurement_units [["ml", "l"], ["gram", "kg"], ["grammar", "kg"] ]
+  @measurement_units [["ml", "l"], ["gram", "kg"], ["grammar", "kg"]]
 
   def sort_ingredients_for_basket(ingredients) do
     Enum.sort_by(ingredients, fn x -> x.in_storage end, fn a, b -> a > b end)

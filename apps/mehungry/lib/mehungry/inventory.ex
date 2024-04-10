@@ -87,17 +87,18 @@ defmodule Mehungry.Inventory do
       case Map.get(attrs, "basket_ingredients") do
         nil ->
           []
+
         b_i ->
           Enum.map(b_i, fn x -> Mehungry.Utils.normilize_ingredient(x) end)
       end
 
-    #attrs = Enum.into(%{"basket_ingredients" => ingredient_params}, attrs)
+    # attrs = Enum.into(%{"basket_ingredients" => ingredient_params}, attrs)
 
+    result =
+      shopping_basket
+      |> ShoppingBasket.changeset(attrs)
+      |> Repo.update()
 
-    result = 
-    shopping_basket
-    |> ShoppingBasket.changeset(attrs)
-    |> Repo.update()
     case result do
       {:ok, basket} ->
         basket =
@@ -117,7 +118,6 @@ defmodule Mehungry.Inventory do
       _ ->
         result
     end
-
   end
 
   def create_shopping_basket(attrs \\ %{}) do
@@ -125,11 +125,12 @@ defmodule Mehungry.Inventory do
       case Map.get(attrs, "basket_ingredients") do
         nil ->
           []
+
         b_i ->
           Enum.map(b_i, fn x -> Mehungry.Utils.normilize_ingredient(x) end)
       end
 
-    #attrs = Enum.into(%{"basket_ingredients" => ingredient_params}, attrs)
+    # attrs = Enum.into(%{"basket_ingredients" => ingredient_params}, attrs)
 
     result =
       %ShoppingBasket{}

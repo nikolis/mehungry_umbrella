@@ -205,7 +205,6 @@ defmodule Mehungry.Food do
     result =
       Repo.get(Recipe, id)
       |> Repo.preload([[recipe_ingredients: [:measurement_unit, :ingredient]], :user])
-  
 
     if is_nil(result) do
       result
@@ -457,7 +456,6 @@ defmodule Mehungry.Food do
   end
 
   def create_post_from_recipe(%Recipe{} = recipe) do
-
     post_params = %{
       md_media_url: recipe.image_url,
       description: recipe.description,
@@ -472,12 +470,10 @@ defmodule Mehungry.Food do
   end
 
   def create_recipe(attrs \\ %{}) do
-
     result =
       %Recipe{}
       |> Recipe.changeset(attrs)
       |> Repo.insert()
-
   end
 
   def list_ingredients() do

@@ -4,6 +4,11 @@ defmodule MehungryWeb.AuthController do
 
   alias Mehungry.Accounts
   alias MehungryWeb.UserAuth
+  alias Ueberauth.Strategy.Helpers
+
+  def request(conn, _params) do
+    render(conn, "request.html", callback_url: Helpers.callback_url(conn))
+  end
 
   def delete(conn, _params) do
     conn
@@ -22,7 +27,6 @@ defmodule MehungryWeb.AuthController do
     case Accounts.find_or_create(auth) do
       {:ok, user} ->
         UserAuth.log_in_user(conn, user, %{})
-
         conn
         |> put_flash(:info, "Successfully authenticated.")
         |> put_session(:current_user, user)

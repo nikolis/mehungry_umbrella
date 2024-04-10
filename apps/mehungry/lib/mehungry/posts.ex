@@ -1,5 +1,5 @@
 defmodule Mehungry.Posts do
-  alias Mehungry.Posts.CommentVote 
+  alias Mehungry.Posts.CommentVote
 
   @moduledoc """
   The Posts context.
@@ -28,8 +28,6 @@ defmodule Mehungry.Posts do
     Phoenix.PubSub.subscribe(Mehungry.PubSub, "post:" <> to_string(post_id))
   end
 
-
-
   defp broadcast_vote({:ok, vote}, type_) do
     Phoenix.PubSub.broadcast(Mehungry.PubSub, "post:" <> to_string(vote.post_id), %{
       new_vote: vote,
@@ -38,7 +36,6 @@ defmodule Mehungry.Posts do
 
     {:ok, vote}
   end
-
 
   defp broadcast_change({:ok, comment}) do
     Phoenix.PubSub.broadcast(Mehungry.PubSub, "post:" <> to_string(comment.post_id), %{
@@ -64,7 +61,11 @@ defmodule Mehungry.Posts do
   """
   def get_post!(id) do
     Repo.get!(Post, id)
-    |> Repo.preload([:upvotes, :downvotes, comments: [:user, votes: [:user] ,comment_answers: [:user, votes: [:user]]]])
+    |> Repo.preload([
+      :upvotes,
+      :downvotes,
+      comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
+    ])
   end
 
   @doc """
@@ -163,7 +164,7 @@ defmodule Mehungry.Posts do
   """
   def get_comment!(id) do
     Repo.get!(Comment, id)
-    |> Repo.preload([:user, comment_answers: [:user, votes: [:user]], votes: [:user] ])
+    |> Repo.preload([:user, comment_answers: [:user, votes: [:user]], votes: [:user]])
   end
 
   @doc """
@@ -285,16 +286,18 @@ defmodule Mehungry.Posts do
 
   """
   def create_comment_answer(attrs \\ %{}) do
-    result = 
+    result =
       %CommentAnswer{}
       |> CommentAnswer.changeset(attrs)
       |> Repo.insert()
-    case result do 
+
+    case result do
       {:ok, comment_answer} ->
         comment = get_comment!(comment_answer.comment_id)
         broadcast_change({:ok, comment})
         result
-      {:error, _ } ->
+
+      {:error, _} ->
         result
     end
   end
@@ -499,43 +502,44 @@ defmodule Mehungry.Posts do
       delete_upvotes(user_id, post_id)
     end
 
-    if not Enum.empty?(downvote) do 
+    if not Enum.empty?(downvote) do
       delete_downvotes(user_id, post_id)
       broadcast_vote({:ok, %{post_id: post_id}}, "downvote")
       :already_downvoted
-    else 
-      result = 
+    else
+      result =
         %PostDownvote{}
         |> PostDownvote.changeset(%{user_id: user_id, post_id: post_id})
         |> Repo.insert()
 
       broadcast_vote(result, "downvote")
-
     end
   end
 
   def get_comment_votes_for_user(user_id, comment_id) do
-    (from c in CommentVote, 
-    where: c.user_id == ^user_id and c.comment_id ==^comment_id)
+    from(c in CommentVote,
+      where: c.user_id == ^user_id and c.comment_id == ^comment_id
+    )
     |> Repo.one()
   end
 
   def vote_comment(comment_id, user_id, reaction) do
     vote = get_comment_votes_for_user(user_id, comment_id)
-    comment = get_comment!(comment_id) 
-    get_positive = fn a -> 
-      case a do 
+    comment = get_comment!(comment_id)
+
+    get_positive = fn a ->
+      case a do
         "true" ->
           true
+
         "false" ->
           false
-       end
+      end
     end
 
-    if not is_nil(vote)  and vote.positive != reaction do
-      vote = update_comment_vote(vote, %{positive: (get_positive.(reaction))}) 
+    if not is_nil(vote) and vote.positive != reaction do
+      vote = update_comment_vote(vote, %{positive: get_positive.(reaction)})
       broadcast_vote({:ok, comment}, "vote")
-
     else
       result =
         %CommentVote{}
@@ -543,11 +547,8 @@ defmodule Mehungry.Posts do
         |> Repo.insert()
 
       broadcast_vote({:ok, comment}, "vote")
-
     end
   end
-
-
 
   def upvote_post(post_id, user_id) do
     downvote = get_downvote_from(user_id, post_id)
@@ -557,7 +558,7 @@ defmodule Mehungry.Posts do
       delete_downvotes(user_id, post_id)
     end
 
-    if not Enum.empty?(upvote) do 
+    if not Enum.empty?(upvote) do
       delete_upvotes(user_id, post_id)
       broadcast_vote({:ok, %{post_id: post_id}}, "downvote")
 
@@ -569,10 +570,8 @@ defmodule Mehungry.Posts do
         |> Repo.insert()
 
       broadcast_vote(result, "upvote")
-
     end
   end
-
 
   def delete_upvotes(user_id, post_id) do
     from(upvote in PostUpvote,
@@ -586,7 +585,6 @@ defmodule Mehungry.Posts do
       where: downvote.user_id == ^user_id and downvote.post_id == ^post_id
     )
     |> Repo.delete_all()
-
   end
 
   def get_downvote_from(user_id, post_id) do

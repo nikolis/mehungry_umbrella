@@ -161,10 +161,9 @@ defmodule Mehungry.History do
   def get_user_meal_raw!(id) do
     Repo.get!(UserMeal, id)
     |> Repo.preload(
-      [consume_recipe_user_meals: [recipe_user_meal: :recipe],
+      consume_recipe_user_meals: [recipe_user_meal: :recipe],
       recipe_user_meals: [
         :recipe
-      ]
       ]
     )
   end

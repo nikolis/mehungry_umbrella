@@ -19,7 +19,6 @@ defmodule Mehungry.Food.RecipeIngredient do
 
   @doc false
   def changeset(recipe_ingredient, attrs) do
-
     changeset =
       recipe_ingredient
       |> cast(attrs, [

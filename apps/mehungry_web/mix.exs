@@ -47,6 +47,7 @@ defmodule MehungryWeb.MixProject do
       {:httpoison, "~> 1.2"},
       {:contex, "~> 0.4.0"},
       {:mehungry, in_umbrella: true},
+      {:ueberauth, "~> 0.6"},
       {:ueberauth_facebook, "~> 0.8"},
       {:ueberauth_google, "~> 0.10"},
       {:phoenix, "~> 1.7.11", override: true},

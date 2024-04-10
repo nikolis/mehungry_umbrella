@@ -6,6 +6,7 @@ defmodule Mehungry.Accounts do
   import Ecto.Query, warn: false
   alias Mehungry.Repo
   alias Ueberauth.Auth
+
   alias Mehungry.Accounts.{User, UserToken, UserNotifier}
 
   ## Database getters
@@ -81,9 +82,34 @@ defmodule Mehungry.Accounts do
   end
 
   def register_3rd_party_user(attrs) do
+
     %User{}
     |> User.registration_3rd_party_changeset(attrs)
     |> Repo.insert()
+  end
+
+
+  def update_user(%User{} = user, attrs) do
+    user
+    |> User.registration_3rd_party_changeset(attrs)
+    |> Repo.update()
+  end
+
+  def verify_3rd_party_user_changes(%Auth{} = auth, %User{} = user) do
+    case user.profile_pic == auth.info.image do
+      true ->
+        user
+
+      false ->
+        case update_user(user, %{profile_pic: auth.info.image}) do
+          {:ok, user} ->
+            user
+
+          {:error, error} ->
+            Logger.error("Problem getting info from 3rd party authentication: #{inspect(error)}")
+            user
+        end
+    end
   end
 
   def find_or_create(%Auth{} = auth) do
@@ -92,6 +118,7 @@ defmodule Mehungry.Accounts do
       |> get_user_by_email()
 
     if user do
+      verify_3rd_party_user_changes(auth, user)
       {:ok, user}
     else
       register_3rd_party_user(basic_info(auth))
@@ -100,6 +127,12 @@ defmodule Mehungry.Accounts do
 
   # github does it this way
   defp avatar_from_auth(%{info: %{urls: %{avatar_url: image}}}), do: image
+
+
+  #Google Does it this way
+  defp avatar_from_auth(%{info: %{image: image}}) do 
+    image
+  end
 
   # facebook does it this way
   defp avatar_from_auth(%{extra: %{raw_info: %{user: user}}} = extra) do
@@ -133,7 +166,7 @@ defmodule Mehungry.Accounts do
           # uid: auth.uid,
           name: name_from_auth(auth),
           email: email,
-          avatar: avatar_from_auth(auth),
+          profile_pic: avatar_from_auth(auth),
           provider: "google"
         }
     end

@@ -58,7 +58,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                             </button>
                         </td>
                         <td style="border-bottom: 1px solid var(--clr-grey-friend_3);
-"> <span style="font-weight: bold;"> <%= rec_ing.quantity %>  <%= rec_ing.measurement_unit.name %> </span> <%= rec_ing.ingredient.name %> </td>
+    "> <span style="font-weight: bold;"> <%= rec_ing.quantity %>  <%= rec_ing.measurement_unit.name %> </span> <%= rec_ing.ingredient.name %> </td>
                                                                  </tr>
                   <% end %>
                 </table>
