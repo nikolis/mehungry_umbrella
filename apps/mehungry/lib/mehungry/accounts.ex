@@ -82,12 +82,10 @@ defmodule Mehungry.Accounts do
   end
 
   def register_3rd_party_user(attrs) do
-
     %User{}
     |> User.registration_3rd_party_changeset(attrs)
     |> Repo.insert()
   end
-
 
   def update_user(%User{} = user, attrs) do
     user
@@ -95,7 +93,30 @@ defmodule Mehungry.Accounts do
     |> Repo.update()
   end
 
+  def verify_3rd_party_user_changes(%Auth{strategy: Ueberauth.Strategy.Facebook} = auth, %User{} = user) do
+    IO.inspect(auth, label: "The auth data")
+    IO.inspect(auth.extra.raw_info.user["picture"]["data"]["url"]) 
+    case user.profile_pic == auth.extra.raw_info.user["picture"]["data"]["url"] do
+      true ->
+        user
+
+      false ->
+        case update_user(user, %{profile_pic: auth.extra.raw_info.user["picture"]["data"]["url"]}) do
+          {:ok, user} ->
+            user
+
+          {:error, error} ->
+            Logger.error("Problem getting info from 3rd party authentication: #{inspect(error)}")
+            user
+        end
+    end
+  end
+
+
+
   def verify_3rd_party_user_changes(%Auth{} = auth, %User{} = user) do
+    IO.inspect(auth, label: "The auth data")
+
     case user.profile_pic == auth.info.image do
       true ->
         user
@@ -128,9 +149,8 @@ defmodule Mehungry.Accounts do
   # github does it this way
   defp avatar_from_auth(%{info: %{urls: %{avatar_url: image}}}), do: image
 
-
-  #Google Does it this way
-  defp avatar_from_auth(%{info: %{image: image}}) do 
+  # Google Does it this way
+  defp avatar_from_auth(%{info: %{image: image}}) do
     image
   end
 

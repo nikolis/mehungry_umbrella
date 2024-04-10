@@ -39,7 +39,7 @@ config :ueberauth, Ueberauth,
 
 config :ueberauth, Ueberauth,
   providers: [
-    facebook: {Ueberauth.Strategy.Facebook, []},
+    facebook: {Ueberauth.Strategy.Facebook, [profile_fields: "name,email,first_name,last_name, picture"]},
     google: {Ueberauth.Strategy.Google, []},
     identity:
       {Ueberauth.Strategy.Identity,

@@ -27,6 +27,7 @@ defmodule MehungryWeb.AuthController do
     case Accounts.find_or_create(auth) do
       {:ok, user} ->
         UserAuth.log_in_user(conn, user, %{})
+
         conn
         |> put_flash(:info, "Successfully authenticated.")
         |> put_session(:current_user, user)
