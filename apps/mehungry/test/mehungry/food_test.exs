@@ -40,7 +40,7 @@ defmodule Mehungry.FoodTest do
         @create_params_recipe
         |> Enum.into(%{recipe_ingredients: ingredients, user_id: user.id})
 
-      assert   recipe = Food.create_recipe(recipe_params)
+      assert recipe = Food.create_recipe(recipe_params)
     end
 
     test "Create Recipe with invalid arguments should provide feedback", %{
@@ -102,5 +102,4 @@ defmodule Mehungry.FoodTest do
       assert {:ok, %UserMeal{} = _user_meal} = History.create_user_meal(user_meal_params)
     end
   end
-
 end

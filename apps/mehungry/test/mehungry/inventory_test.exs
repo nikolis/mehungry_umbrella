@@ -90,8 +90,8 @@ defmodule Mehungry.InventoryTest do
     test "update_shopping_basket/2 with invalid data returns error changeset", %{user: user} do
       {:ok, shopping_basket} = shopping_basket_fixture(%{user_id: user.id})
 
-      #assert {:error, %Ecto.Changeset{}} =
-       #        Inventory.update_shopping_basket(shopping_basket, @invalid_attrs)
+      # assert {:error, %Ecto.Changeset{}} =
+      #        Inventory.update_shopping_basket(shopping_basket, @invalid_attrs)
 
       assert shopping_basket == Inventory.get_shopping_basket!(shopping_basket.id)
     end

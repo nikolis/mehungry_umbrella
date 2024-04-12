@@ -4,7 +4,7 @@ defmodule Mehungry.RecipeNutritionCalculationTest do
   alias Mehungry.FdcFoodParser
   alias Mehungry.Food
   alias Mehungry.Languages
-  import Mehungry.{ AccountsFixtures}
+  import Mehungry.{AccountsFixtures}
 
   @create_params_recipe %{servings: 3, title: "Title Recipe", language_name: "En"}
 
@@ -64,7 +64,7 @@ defmodule Mehungry.RecipeNutritionCalculationTest do
         |> Enum.into(%{recipe_ingredients: ingredients})
         |> Enum.into(%{user_id: user.id})
 
-      assert  {:ok, %Mehungry.Food.Recipe{} = _recipe} = Food.create_recipe(recipe_params)
+      assert {:ok, %Mehungry.Food.Recipe{} = _recipe} = Food.create_recipe(recipe_params)
     end
   end
 end

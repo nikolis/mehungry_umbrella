@@ -506,7 +506,7 @@ defmodule Mehungry.AccountsTest do
     end
   end
 
-"""
+  """
   describe "user_category_rules" do
     alias Mehungry.Accounts.UserCategoryRule
 
@@ -629,7 +629,7 @@ defmodule Mehungry.AccountsTest do
     end
   end
 
-  
+
   describe "user_profiles" do
     alias Mehungry.Accounts.UserProfile
 

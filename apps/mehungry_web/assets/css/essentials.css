@@ -14,7 +14,7 @@
   --ff-accent: 'Fraunces', serif;
   --ff-base: 'Montserrat', sans-serif;
 
-  --fw-regular: 500;
+  --fw-regular: 400;
   --fw-bold: 400;
 
   --inner-container-padding: 1rem 3rem;
@@ -35,7 +35,7 @@
 
   --clr-grey-friend: #f0f0f0;
   --clr-grey-friend_2: #f0f0f0;
-  --clr-grey-friend_3: rgb(100 100 100);
+  --clr-grey-friend_3: rgba(100, 100, 100, 0.3);
 
 
   /* form-input */
@@ -137,6 +137,9 @@ dd {
   margin: 0;
 }
 
+h1{
+	font-weight: 500 !important;
+}
 /* Remove list styles on ul, ol elements with a list role, which suggests default styling will be removed */
 ul[role="list"],
 ol[role="list"] {
@@ -183,7 +186,7 @@ html {
 body {
   font-family: var(--ff-base);
   font-weight: var(--fw-regular);
-  font-size: 0.875rem;
+  font-size: 0.7rem;
   color: var(--clr-neutral-400);
   background-color: var(--clr-secondary-200);
 }
@@ -488,7 +491,7 @@ body {
 	min-height: 100%;
 	margin: 0;
 	font-family: system-ui, sans-serif;
-	font-size: 1.25rem; 
+	font-size: 1rem; 
 	line-height: 1.6;
 	color: #333;
 	background: white;
@@ -702,7 +705,7 @@ h2 {
 
 body {
   font-family: system-ui;
-  font-size: 1.25rem;
+  font-size: 1rem;
   line-height: 1.5;
 }
 

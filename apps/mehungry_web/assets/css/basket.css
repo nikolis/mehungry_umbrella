@@ -24,9 +24,12 @@ check_list_container {
 	padding: 0.75rem;
 	cursor: pointer;
 	position: relative;
+	width: 100%;
 }
 
-.side_nav_list_item{
+.li_title {
+        word-wrap: break-word;
+
 }
 .side_nav_list_item.active{
 	color: var(--clr-complementary-middle);
@@ -35,6 +38,14 @@ check_list_container {
 .side_nav_list_item.active .li_title{
 	border-bottom : 3px solid var(--clr-complementary-middle);
 }
+
+.bakset-side-nav-hidden.active .basket-side-button{
+	transform: rotate(180deg);
+        transition: 0.8s ease-in-out;
+	right: 0;
+}
+
+
 
 .side_nav_list_item:hover{
 	background-color: var(--clr-grey-friend);
@@ -53,17 +64,13 @@ check_list_container {
 	bottom: 0;
 	right: 0;
 }
-
-
-.basket-side-button {
-	position: absolute;
-	right: 0;
-	top: 0;
-	padding: 1rem;
-	background: var(--clr-light);
-	border-radius: 200px;
+.checkbox {
+	font-size: 0.9rem;
+	margin: 0.9rem;
 }
-
+.item-list-container{
+	max-width: 80%;
+}
 .basket-page-container {
 	padding: 2rem;
 	display: grid;	
@@ -71,34 +78,85 @@ check_list_container {
 	grid-template-columns: 1fr 3fr;
 }
 
+
+@media only screen and (max-width: 800px)  {
+	.side_nav_list_item  {
+
+		padding: 0.4rem;
+	}
+	.item-list-container{
+		width: 70vw;
+		max-width: 100%;
+	}
+	.basket-page-container {
+		display: block;
+	}
+	.basket-page-container{
+		padding: 0;
+	}
+	.li_title{
+		max-width: 70%;
+	}
+}
+ 
+
+.basket-side-navbar {
+	background-color: var(--clr-grey-friend_2);
+	border-radius: 5px;
+	min-width: 300px;
+	min-height: 70vh;
+
+}
 .bakset-side-nav-hidden {
 	position: absolute;
-	z-index: 100;
-	left: -100%;
+	z-index: 90;
+	left: -100vw;
+}
+
+.basket-side-button {
+	position: absolute;
+	right: 0;
+	top: 0;
+	background: var(--clr-light_2);
+	border-radius: 200px;
+	width: 10vw;
+	height: 10vw;
+	max-width: 40px;
+	max-height: 40px;
+        transition: 1s ease-in-out;
 }
 
 @media only screen and (max-width: 800px)  {
 
   .bakset-side-nav-hidden  {
-	left: -30%;
-	padding-right: 10rem;
-	overflow: hidden;
+	top: 0;
+	left: -100vw;
+	width: 110vw;
+	padding-right: 10vw;
 	position: absolute;
 	transition: 1s;
 	height: 100%;
   }
 
+  .bakset-side-nav-hidden.active {
+	  width: 100vw ;
+  }
+
+  .titles_list{
+	  max-width: 90%;
+  }
    .active {
-  	z-index: 100;
 	background: white;
 	left: 0;
-	width: 100%;
+	padding-top: 2vw;
 	height: 100%;
 	overflow: hidden;
 
   }
+  .shopping_list_utils {
 
-
+  }
+  .back-side-nav-hidden.active
   .basket-page-container {
     display: block;	
   }

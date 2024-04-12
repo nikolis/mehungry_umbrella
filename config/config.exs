@@ -27,12 +27,28 @@ config :mehungry_web, MehungryWeb.Endpoint,
   aws_secret: System.get_env("AWS_SECRET_ACCESS_KEY"),
   aws_bucket: System.get_env("AWS_ASSETS_BUCKET_NAME")
 
+"""
 config :ueberauth, Ueberauth,
   providers: [
     facebook:
       {Ueberauth.Strategy.Facebook,
        [profile_fields: "name,email,first_name,last_name,picture, gender, hometown"]},
     google: {Ueberauth.Strategy.Google, [default_scope: "email profile"]}
+  ]
+"""
+
+config :ueberauth, Ueberauth,
+  providers: [
+    facebook: {Ueberauth.Strategy.Facebook, [profile_fields: "name,email,first_name,last_name, picture"]},
+    google: {Ueberauth.Strategy.Google, []},
+    identity:
+      {Ueberauth.Strategy.Identity,
+       [
+         callback_methods: ["POST"],
+         uid_field: :username,
+         nickname_field: :username
+       ]}
+    # twitter: {Ueberauth.Strategy.Twitter, []}
   ]
 
 config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,

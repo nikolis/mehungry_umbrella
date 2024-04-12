@@ -45,10 +45,11 @@ defmodule Mehungry.History.ConsumeRecipeUserMeal do
 
     validate_change(changeset, field, fn field, value ->
       portions_left = History.get_available_portions_for_user_meal(value)
-      portions = 
-        if(is_integer(portions)) do 
+
+      portions =
+        if(is_integer(portions)) do
           portions
-        else 
+        else
           {portions, _} = Integer.parse(portions)
         end
 

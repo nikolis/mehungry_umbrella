@@ -1,8 +1,7 @@
 defmodule Mehungry.PostsTest do
   use Mehungry.DataCase
 
-
-"""
+  """
   alias Mehungry.Posts
 
   describe "recipe_posts" do
