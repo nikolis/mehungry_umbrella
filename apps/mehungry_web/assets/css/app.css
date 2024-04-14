@@ -1,8 +1,3 @@
-
-@tailwind components;
-@tailwind base;
-@tailwind utilities;
-
 @import "./essentials.css";
 @import "./browse.css";
 @import "./card.css";
@@ -14,10 +9,16 @@
 @import "./create.css";
 @import "./select2.css";
 
-.main-content-container{
-	background-color: transparent;
-}
+@tailwind components;
+@tailwind base;
+@tailwind utilities;
 
+
+.main-content-container{
+}
+.main_nav_content {
+	font-weight: 800;
+}
 .main-page-container-bg{
 	background-color: #eaeaea;
 	padding: 2rem;

@@ -16,21 +16,6 @@ config :mehungry, Mehungry.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we use it
 # with webpack to recompile .js and .css sources.
-config :mehungry_web, MehungryWeb.Endpoint,
-  http: [port: 4000],
-  debug_errors: true,
-  code_reloader: true,
-  check_origin: false,
-  watchers: [
-    tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]},
-    node: [
-      "node_modules/webpack/bin/webpack.js",
-      "--mode",
-      "development",
-      "--watch-stdin",
-      cd: Path.expand("../apps/mehungry_web/assets", __DIR__)
-    ]
-  ]
 
 # ## SSL Support
 #
@@ -57,6 +42,17 @@ config :mehungry_web, MehungryWeb.Endpoint,
 # different ports.
 
 # Watch static and templates for browser reloading.
+
+config :mehungry_web, MehungryWeb.Endpoint,
+  http: [port: 4000],
+  debug_errors: true,
+  code_reloader: true,
+  check_origin: false,
+  watchers: [
+    esbuild: {Esbuild, :install_and_run, [:mehungry_web, ~w(--sourcemap=inline --watch --log-limit=0)]},
+    tailwind: {Tailwind, :install_and_run, [:mehungry_web, ~w(--watch)]}
+  ]
+
 config :mehungry_web, MehungryWeb.Endpoint,
   live_reload: [
     patterns: [

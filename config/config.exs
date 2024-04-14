@@ -27,15 +27,6 @@ config :mehungry_web, MehungryWeb.Endpoint,
   aws_secret: System.get_env("AWS_SECRET_ACCESS_KEY"),
   aws_bucket: System.get_env("AWS_ASSETS_BUCKET_NAME")
 
-"""
-config :ueberauth, Ueberauth,
-  providers: [
-    facebook:
-      {Ueberauth.Strategy.Facebook,
-       [profile_fields: "name,email,first_name,last_name,picture, gender, hometown"]},
-    google: {Ueberauth.Strategy.Google, [default_scope: "email profile"]}
-  ]
-"""
 
 config :ueberauth, Ueberauth,
   providers: [
@@ -59,16 +50,37 @@ config :ueberauth, Ueberauth.Strategy.Google.OAuth,
   client_id: System.get_env("GOOGLE_CLIENT_ID"),
   client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
 
+
+config :esbuild,
+  version: "0.17.11",
+    mehungry_web: [
+      args: [
+        "js/app.js",
+        "--bundle",
+        "--target=es2017",
+        "--outdir=../priv/static/js",
+        "--external:/fonts/*",
+        "--external:/images/*",
+        "--external:/favicons/*"
+      ],
+      cd: Path.expand("../apps/mehungry_web/assets", __DIR__),
+      env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+    ]
+  
+
 config :tailwind,
-  version: "3.1.8",
-  default: [
+  version: "3.4.0",
+  mehungry_web: [
     args: ~w(
-    --config=tailwind.config.js
-    --input=css/app.css
-    --output=../apps/mehungry_web/priv/static/assets/app.css
-  ),
-    cd: Path.expand("../assets", __DIR__)
+      --config=tailwind.config.js
+      --input=css/app.css
+      --output=../priv/static/css/app.css
+
+    ),
+    cd: Path.expand("../apps/mehungry_web/assets/", __DIR__)
   ]
+
+
 
 # Configures Elixir's Logger
 config :logger, :console,
