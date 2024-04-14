@@ -63,8 +63,9 @@ defmodule MehungryWeb.MixProject do
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.5"},
-      {:tailwind, "~> 0.1", runtime: Mix.env() == :dev}
-    ]
+      {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
+          ]
   end
 
   # Aliases are shortcuts or tasks specific to the current project.
@@ -72,9 +73,15 @@ defmodule MehungryWeb.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      "assets.deploy": ["tailwind default --minify", "esbuild default --minify", "phx.digest"],
       setup: ["deps.get", "cmd npm install --prefix assets"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
+      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
+      "assets.build": ["tailwind mehungry_web", "esbuild mehungry_web"],
+      "assets.deploy": [
+        "tailwind mehungry_web --minify",
+        "esbuild mehungry_web --minify",
+        "phx.digest"
+    ]
     ]
   end
 end

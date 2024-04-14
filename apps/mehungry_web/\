@@ -1,5 +1,0 @@
-defmodule MehungryWeb.AuthView do
-  @moduledoc false
-
-  use UeberauthExampleWeb, :view
-end
