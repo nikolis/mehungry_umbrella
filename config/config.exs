@@ -39,7 +39,6 @@ config :ueberauth, Ueberauth,
          uid_field: :username,
          nickname_field: :username
        ]}
-    # twitter: {Ueberauth.Strategy.Twitter, []}
   ]
 
 config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,

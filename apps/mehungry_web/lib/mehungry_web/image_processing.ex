@@ -37,10 +37,6 @@ defmodule MehungryWeb.ImageProcessing do
           new_image_read
         else
           _file = File.copy(image_path, pre_image_name)
-
-          # IO.inspect(image_path)
-          # Image.thumbnail(image_path, "270x200", crop: :center, autorotate: true)
-          # _return = Vix.Vips.Image.write_to_file(result, new_image_write)
           {:ok, result} = {:ok, new_image_read}
         end
 

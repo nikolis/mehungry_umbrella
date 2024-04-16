@@ -34,9 +34,6 @@
 
 
     <%= if assigns[:current_user] do %>
-    <!-- <.link patch={"/profile"} class={"utils_item" }>
-      <img height="auto" width="auto" class="rounded-full" src={@current_user.profile_pic} alt="profile">
-    </.link> -->
     <div style="padding: 15px" class="utils_item" id="menu_utils_toggle" phx-hook="MenuToggleHook">
       <img src="/images/arrow_down.svg">
       <div class="drop_down" id="menu_items_list">

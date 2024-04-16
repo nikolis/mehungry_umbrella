@@ -30,7 +30,7 @@ defmodule MehungryWeb.Endpoint do
     gzip: false,
     only: MehungryWeb.static_paths()
 
-  plug Plug.Static, at: "/static/mages", from: "media/"
+  plug Plug.Static, at: "/static/images", from: "media/"
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
