@@ -97,8 +97,6 @@ defmodule Mehungry.Accounts do
         %Auth{strategy: Ueberauth.Strategy.Facebook} = auth,
         %User{} = user
       ) do
-    IO.inspect(auth, label: "The auth data")
-    IO.inspect(auth.extra.raw_info.user["picture"]["data"]["url"])
 
     case user.profile_pic == auth.extra.raw_info.user["picture"]["data"]["url"] do
       true ->
@@ -117,7 +115,6 @@ defmodule Mehungry.Accounts do
   end
 
   def verify_3rd_party_user_changes(%Auth{} = auth, %User{} = user) do
-    IO.inspect(auth, label: "The auth data")
 
     case user.profile_pic == auth.info.image do
       true ->
