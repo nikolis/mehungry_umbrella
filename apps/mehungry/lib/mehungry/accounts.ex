@@ -93,9 +93,13 @@ defmodule Mehungry.Accounts do
     |> Repo.update()
   end
 
-  def verify_3rd_party_user_changes(%Auth{strategy: Ueberauth.Strategy.Facebook} = auth, %User{} = user) do
+  def verify_3rd_party_user_changes(
+        %Auth{strategy: Ueberauth.Strategy.Facebook} = auth,
+        %User{} = user
+      ) do
     IO.inspect(auth, label: "The auth data")
-    IO.inspect(auth.extra.raw_info.user["picture"]["data"]["url"]) 
+    IO.inspect(auth.extra.raw_info.user["picture"]["data"]["url"])
+
     case user.profile_pic == auth.extra.raw_info.user["picture"]["data"]["url"] do
       true ->
         user
@@ -111,8 +115,6 @@ defmodule Mehungry.Accounts do
         end
     end
   end
-
-
 
   def verify_3rd_party_user_changes(%Auth{} = auth, %User{} = user) do
     IO.inspect(auth, label: "The auth data")
