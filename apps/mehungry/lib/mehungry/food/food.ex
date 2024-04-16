@@ -221,10 +221,6 @@ defmodule Mehungry.Food do
     Repo.all(RecipeIngredient)
   end
 
-  #  def list_users() do
-  #    Repo.all(User)
-  #  end
-
   def create_measurement_unit(attrs) do
     %MeasurementUnit{}
     |> MeasurementUnit.changeset(attrs)
@@ -283,9 +279,15 @@ defmodule Mehungry.Food do
     result
   end
 
-  def list_recipes(nil) do
-    # , where: not is_nil(recipe.image_url)
-    query = from(recipe in Recipe)
+  
+
+  def list_recipes(query) do
+    query = 
+      if is_nil(query) do 
+        query = from(recipe in Recipe)
+      else 
+        query
+      end
 
     # return the first 50 posts
 
@@ -518,6 +520,12 @@ defmodule Mehungry.Food do
       result
     end
   end
+  
+  def search_recipe(query_string) do 
+    query = Mehungry.Search.RecipeSearch.run(Recipe, query_string)
+    list_recipes(query)
+  end
+
 
   def search_ingredient(search_term, language_name) do
     search_term = search_term <> "%"

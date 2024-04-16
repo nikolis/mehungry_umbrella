@@ -64,8 +64,8 @@ defmodule MehungryWeb.MixProject do
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.5"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
-          ]
+      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev}
+    ]
   end
 
   # Aliases are shortcuts or tasks specific to the current project.
@@ -81,7 +81,7 @@ defmodule MehungryWeb.MixProject do
         "tailwind mehungry_web --minify",
         "esbuild mehungry_web --minify",
         "phx.digest"
-    ]
+      ]
     ]
   end
 end
