@@ -101,7 +101,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
       |> Search.change_recipe_search_item(recipe_search_item_params)
       |> Map.put(:action, :validate)
 
-    IO.inspect(changeset, label: "asdfacasdadfsadfsadfsadfsadfsasdfas")
     {:noreply,
      socket
      |> assign(:changeset, changeset)}
@@ -151,7 +150,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
       {:ok, %RecipeSearchItem{} = recipe_search_item} ->
         recipes = Search.search_recipe(recipe_search_item.query_string)
-        IO.inspect(recipes, label: "=================================================================================================================")
         {:noreply,
          socket
          |> assign(recipes: recipes)}
@@ -192,7 +190,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
     case length(category) > 0 do
       true ->
-        # IO.inspect(category)
         {category_total, rest} =
           Enum.split_with(rest, fn x ->
             String.contains?(x.name, category_sum_name)
@@ -247,7 +244,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
     nuts_pre =
       Enum.map(nuts_pre, fn x ->
-        # IO.inspect(x)
 
         case is_map(x) do
           true ->
