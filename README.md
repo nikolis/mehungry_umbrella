@@ -9,4 +9,4 @@ The postgres password for the dev part is the default postgres postgres.
 3. mix ecto.migrate 
 4. mix run apps/mehungry/priv/repo/seeds.exs
 
-After this the test should be running properly 
+After this the test for the parser should be running properly 
