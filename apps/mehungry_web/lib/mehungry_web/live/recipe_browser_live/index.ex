@@ -113,7 +113,22 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   end
 
   def handle_event("search", %{"recipe_search_item" => %{"query_string" => query_string}}, socket) do
-    {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/browse")}
+    {result, cursor_after} = Food.search_recipe(query_string)
+    
+    result =
+      Enum.map(result, fn recipe ->
+        return = ImageProcessing.resize(recipe.image_url, 100, 100)
+        %Recipe{recipe | recipe_image_remote: return}
+      end)
+
+    {result, cursor_after}
+
+     {:noreply, socket
+     |> assign(:cursor_after, cursor_after)
+     |> assign(:page, 1)
+     |> assign(:recipes, result)}
+
+
   end
 
   def handle_event(
@@ -135,7 +150,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
       {:ok, %RecipeSearchItem{} = recipe_search_item} ->
         recipes = Search.search_recipe(recipe_search_item.query_string)
-
         {:noreply,
          socket
          |> assign(recipes: recipes)}
@@ -176,7 +190,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
     case length(category) > 0 do
       true ->
-        # IO.inspect(category)
         {category_total, rest} =
           Enum.split_with(rest, fn x ->
             String.contains?(x.name, category_sum_name)
@@ -226,14 +239,11 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
           nil
       end
 
-    # IO.inspect(mufa_all)
     nuts_pre = [mufa_all, pufa_all, sfa_all, tfa_all, vitamins_all]
     nuts_pre = Enum.filter(nuts_pre, fn x -> !is_nil(x) end)
-    # IO.inspect(nuts_pre, label: "nuts tree")
 
     nuts_pre =
       Enum.map(nuts_pre, fn x ->
-        # IO.inspect(x)
 
         case is_map(x) do
           true ->
@@ -246,9 +256,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
     nutrients = nuts_pre ++ rest
     nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
-    # IO.inspect(length(rest), label: "Total")
-    # IO.inspect(rest, label: "rEST")
-    # IO.inspect(nutrients, label: "nutrients")
 
     socket
     |> assign(:page_title, "Recipe Details")
@@ -278,12 +285,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
               Map.put(user_content, to_string(@user_id), new_list)
           end
       end
-
-    # case Cachex.put(:users, "data", new_content) do
-    # {:ok, true} ->
-
-    # {errorm, reason} ->
-    # end
 
     {:noreply, assign(socket, :recipes, list_recipes())}
   end

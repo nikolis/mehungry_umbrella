@@ -23,7 +23,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
        <ul id="shopping_baskets_list" class="titles_list"> 
 
         <%= for shopping_basket <- @shopping_baskets do %>
-        <li id={shopping_basket.title <> "li" <> Integer.to_string(shopping_basket.id)}  class={"side_nav_list_item " <> 
+        <li id={ "li" <> Integer.to_string(shopping_basket.id)}  class={"side_nav_list_item " <> 
         get_active_class(shopping_basket, @shopping_basket)} 
         phx-click ={
     Phoenix.LiveView.JS.push("select_shopping_basket")
