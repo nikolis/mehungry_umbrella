@@ -1,7 +1,7 @@
 # Mehungry.Umbrella
 
 ## Documentating the Food Data Parser resigning in apps/Mehungry/lib/mehungry/food_data_parser.ex 
-(this is a toy project so the documentation for the time being is just for the context of the interview process with elixirator)
+(this is a toy project so the documentation for the time being is just for the context of the interview process)
 
 The postgres password for the dev part is the default postgres postgres. 
 1. mix deps.get 
