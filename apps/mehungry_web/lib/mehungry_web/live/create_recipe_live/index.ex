@@ -232,24 +232,14 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       consume_uploaded_entries(
         socket,
         :image,
-        # &upload_static_file(&1, socket)
         fn %{path: path}, _entry ->
           dest = Path.join(Application.app_dir(:mehungry_web, "priv/static/images"), path)
-          # Path.join(
-          # Application.app_dir(:mehungry_web, "priv/static/uploads"),
-          # Path.basename(path)
-          # )
-
           # You will need to create `priv/static/uploads` for `File.cp!/2` to work.
-          IO.inspect(File.exists?(dest), label: "Exists dest")
-
-          File.mkdir_p!("priv/static/images")
-          IO.inspect(File.exists?(dest), label: "Exists dest")
-          IO.inspect(File.exists?(path), label: "Exists path")
+          if(File.exists?(Path.dirname(dest)) == false ) do 
+            File.mkdir!(Path.dirname(dest))
+          end
           File.cp!(path, dest)
           path_parts = String.split(dest, "/")
-          IO.inspect(path_parts)
-          IO.inspect(dest)
 
           dest =
             "/" <>
@@ -271,7 +261,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
 
     case Food.create_recipe(recipe_params) do
-      {:ok, %Recipe{} = _recipe} ->
+      {:ok, %Recipe{} = recipe} ->
         {:noreply,
          socket
          |> put_flash(:info, "Recipe created succesfully")

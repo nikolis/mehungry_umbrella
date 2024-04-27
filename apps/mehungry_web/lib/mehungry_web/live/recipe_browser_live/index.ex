@@ -14,7 +14,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   alias MehungryWeb.RecipeBrowseLive.Components
   alias Mehungry.Food.RecipeUtils
 
-  @user_id 5
 
   @impl true
   def mount(_params, session, socket) do
