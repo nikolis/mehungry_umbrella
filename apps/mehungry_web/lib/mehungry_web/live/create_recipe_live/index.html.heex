@@ -41,7 +41,7 @@
 
     <div class="grid_2_even_columns">
       <article class="parent ">
-        <h3 class="listing_title">Ingredients</h3>
+        <h3 class="listing_title text-center">Ingredients</h3>
         <div class="ingredients_create_container">
            <.inputs_for :let={g} field={@form[:recipe_ingredients]}>
               <Components.ingredient_render g={g} f={@form} ingredients={@ingredients} measurement_units={@measurement_units} />
@@ -50,15 +50,16 @@
         <button  id="add_ingredient" class="list_button" type="button" phx-click="add-ingredient">Add Ingredient</button>
       </article>
 
-      <article class="relative pb-10">
-        <h3 class="listing_title">Creation Steps</h3>
+      <div>
+        <h3 class="listing_title text-center">Creation Steps</h3>
         <div class="steps_create_container">
           <.inputs_for :let={v} field={@form[:steps]}>
               <Components.step_render v={v} />
           </.inputs_for>
         </div>
-        <button id="some_id" type="button" class="list_button_complementary" phx-click="add-step">Add Step</button>
-      </article>
+        <div>  <button id="some_id" type="button" style="width:100px; margin-left: auto; margin-right: auto" class="list_button_complementary mx-auto" phx-click="add-step">Add Step</button>
+        </div>
+      </div>
 
 
     </div>

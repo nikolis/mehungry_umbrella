@@ -6,8 +6,6 @@ defmodule MehungryWeb.LayoutView do
   embed_templates "templates/menu/*"
 
   def get_main_content_container_class(conn) do
-    IO.inspect(conn)
-
     "main-content-container"
   end
 end

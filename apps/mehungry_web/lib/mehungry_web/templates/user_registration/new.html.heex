@@ -50,12 +50,20 @@
     </div>
 
   <div class="login_submit_button">
-      <%= submit "Register", style: "background-color: #77b255" , class: "text-5xl"  %>
+      <%= submit "Register", style: "color: white; border: 1px solid #77b255; height: 4rem; border-radius: 990px;  ", class: "link_button " %>
       <span style= "text-align: center"> OR </span>
-      <button style= "background-color: #1778F2"> Continue with Facebook </button>
-      <button style= "background-color: #1778F2"> Google Sign in </button>
+            <a class= " text-center flex items-center  rounded-full" style=" height: 4rem; background-color: #039be5; color: white" href="/auth/facebook"> 
+        <div class="p-2 flex items-center text-xl gap-2 font-medium     "> <img src="/images/facebook.svg" /> <span> Sign in with Facebook </span></div>
+      </a>
+      <a class="" href={Routes.auth_path(@conn, :request, "google") }>
+        <img class="w-full h-full" style="height: 4rem;" src="/images/google_login.svg"/>
+      </a>
 
-      <%= link "Log in", class: "link_button",to: Routes.user_session_path(@conn, :new) %>
+      <a class= "flex items-center rounded-full border-solid  border-2" style="height: 4rem; border-color: var(--clr-complementary-middle)" href="/users/login">
+        <div class="p-2 flex items-center text-xl gap-1 font-medium w-full "> <img style="width: 48px;" src="/images/logo2.svg" /><span style="color: var(--clr-complementary-middle)" class="w-full text-center text-medium"> Login </span> </div>
+      </a>
+
+
     </div>
   </.form>
 </div>
