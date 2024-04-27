@@ -27,10 +27,10 @@ config :mehungry_web, MehungryWeb.Endpoint,
   aws_secret: System.get_env("AWS_SECRET_ACCESS_KEY"),
   aws_bucket: System.get_env("AWS_ASSETS_BUCKET_NAME")
 
-
 config :ueberauth, Ueberauth,
   providers: [
-    facebook: {Ueberauth.Strategy.Facebook, [profile_fields: "name,email,first_name,last_name, picture"]},
+    facebook:
+      {Ueberauth.Strategy.Facebook, [profile_fields: "name,email,first_name,last_name, picture"]},
     google: {Ueberauth.Strategy.Google, []},
     identity:
       {Ueberauth.Strategy.Identity,
@@ -49,23 +49,21 @@ config :ueberauth, Ueberauth.Strategy.Google.OAuth,
   client_id: System.get_env("GOOGLE_CLIENT_ID"),
   client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
 
-
 config :esbuild,
   version: "0.17.11",
-    mehungry_web: [
-      args: [
-        "js/app.js",
-        "--bundle",
-        "--target=es2017",
-        "--outdir=../priv/static/js",
-        "--external:/fonts/*",
-        "--external:/images/*",
-        "--external:/favicons/*"
-      ],
-      cd: Path.expand("../apps/mehungry_web/assets", __DIR__),
-      env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-    ]
-  
+  mehungry_web: [
+    args: [
+      "js/app.js",
+      "--bundle",
+      "--target=es2017",
+      "--outdir=../priv/static/js",
+      "--external:/fonts/*",
+      "--external:/images/*",
+      "--external:/favicons/*"
+    ],
+    cd: Path.expand("../apps/mehungry_web/assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
 
 config :tailwind,
   version: "3.4.0",
@@ -78,8 +76,6 @@ config :tailwind,
     ),
     cd: Path.expand("../apps/mehungry_web/assets/", __DIR__)
   ]
-
-
 
 # Configures Elixir's Logger
 config :logger, :console,

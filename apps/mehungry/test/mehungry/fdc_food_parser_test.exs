@@ -1,4 +1,4 @@
-defmodule Mehungry.RecipeNutritionCalculationTest do
+defmodule Mehungry.FdcFoodParserTest do
   use Mehungry.DataCase
 
   alias Mehungry.FdcFoodParser

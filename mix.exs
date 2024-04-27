@@ -54,7 +54,6 @@ defmodule Mehungry.Umbrella.MixProject do
       #  "cmd --app mehungry_api mix openapi.spec.json --spec MehungryApi.ApiSpec",
       #  "phx.server"
       # ],
-
     ]
   end
 end
