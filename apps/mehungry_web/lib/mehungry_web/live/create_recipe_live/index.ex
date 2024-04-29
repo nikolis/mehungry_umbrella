@@ -235,9 +235,10 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         fn %{path: path}, _entry ->
           dest = Path.join(Application.app_dir(:mehungry_web, "priv/static/images"), path)
           # You will need to create `priv/static/uploads` for `File.cp!/2` to work.
-          if(File.exists?(Path.dirname(dest)) == false ) do 
+          if(File.exists?(Path.dirname(dest)) == false) do
             File.mkdir!(Path.dirname(dest))
           end
+
           File.cp!(path, dest)
           path_parts = String.split(dest, "/")
 

@@ -397,11 +397,9 @@ defmodule MehungryWeb.CoreComponents do
            <textarea
         id={@id}
         name={@name}
-        class={[
+        class={[Map.get(assigns.rest, :class, "")] ++ [
           "input ",
-        ]}
-        {@rest}
-      ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
+        ]}{@rest}><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
        <.label for={@id}><%= @label %>
       </.label>
       <.error :for={msg <- @errors}><%= msg %></.error>
@@ -417,7 +415,7 @@ defmodule MehungryWeb.CoreComponents do
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-        class={[
+        class={[Map.get(assigns.rest, :class, "")] ++ [
           "input_full",
           "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
           @errors == [] && "border-zinc-300 focus:border-zinc-400",
@@ -455,8 +453,6 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   def input(%{type: "bidden"} = assigns) do
-    IO.inspect("bidden")
-    IO.inspect(assigns)
 
     ~H"""
     <div id={(@id  || @name) <> "aho"}  phx-feedback-for={@name} class="input-form " style="">
@@ -528,7 +524,6 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   def my_error(assigns) do
-    IO.inspect("My error")
 
     ~H"""
     <div class="" style="position: absolute; top: 0; left: 0; z-index: 600">

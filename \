@@ -63,7 +63,7 @@
 
 
     </div>
-    <%= submit "Save", class: "primary_button mt-24 w-1/3 mr-auto ml-auto", type: "submit", phx_disable_with: "Saving..." %>
+    <%= submit "Save", class: "primary_button",style: "background-color: #77b255; width: 30%; margin: auto; margin-top: 2rem;", type: "submit", phx_disable_with: "Saving..." %>
 
   </.form>
 </div>

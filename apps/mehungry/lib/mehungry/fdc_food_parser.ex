@@ -1,9 +1,7 @@
 defmodule Mehungry.FdcFoodParser do
- @moduledoc """
- This module is responsible for parsing food and nutrition related data gotten from Food Data Central and translate them into a form that fits the database model goten from  https://www.usda.gov/
- """
-
-
+  @moduledoc """
+  This module is responsible for parsing food and nutrition related data gotten from Food Data Central and translate them into a form that fits the database model goten from  https://www.usda.gov/
+  """
 
   alias Mehungry.Food
 
@@ -106,6 +104,7 @@ defmodule Mehungry.FdcFoodParser do
     Enum.map(food_portions, fn x ->
       Food.create_measurement_unit(%{name: x["measureUnit"]["name"]})
       [measurement_unit | _rest] = Food.get_measurement_unit_by_name(x["measureUnit"]["name"])
+
       %{
         amount: x["amount"],
         value: x["value"],

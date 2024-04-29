@@ -14,7 +14,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   alias MehungryWeb.RecipeBrowseLive.Components
   alias Mehungry.Food.RecipeUtils
 
-
   @impl true
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
@@ -113,7 +112,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   def handle_event("search", %{"recipe_search_item" => %{"query_string" => query_string}}, socket) do
     {result, cursor_after} = Food.search_recipe(query_string)
-    
+
     result =
       Enum.map(result, fn recipe ->
         return = ImageProcessing.resize(recipe.image_url, 100, 100)
@@ -122,12 +121,11 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
     {result, cursor_after}
 
-     {:noreply, socket
+    {:noreply,
+     socket
      |> assign(:cursor_after, cursor_after)
      |> assign(:page, 1)
      |> assign(:recipes, result)}
-
-
   end
 
   def handle_event(
@@ -149,6 +147,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
       {:ok, %RecipeSearchItem{} = recipe_search_item} ->
         recipes = Search.search_recipe(recipe_search_item.query_string)
+
         {:noreply,
          socket
          |> assign(recipes: recipes)}
@@ -243,7 +242,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
     nuts_pre =
       Enum.map(nuts_pre, fn x ->
-
         case is_map(x) do
           true ->
             x

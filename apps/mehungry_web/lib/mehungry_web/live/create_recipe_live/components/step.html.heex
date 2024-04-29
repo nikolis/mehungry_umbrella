@@ -1,8 +1,8 @@
 <div class="step_create_container">
-    <div style=""  >
-                <%= @v.index %>
+    <div class="" >
+                <span class="text-xl"> <%= @v.index %> </span>
               </div>
-        <.input required field={@v[:description]} type="textarea"  />
+        <.input required field={@v[:description]} type="textarea" class= "w-full h-5/6" />
         <.input required field={@v[:index]} type="hidden" value={@v.index} />
 
      <svg phx-click="remove-step"  phx-value-index={@v.index}  width="2rem" height="3rem" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: auto">
