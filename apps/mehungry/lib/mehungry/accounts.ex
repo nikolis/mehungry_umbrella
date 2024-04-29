@@ -6,6 +6,7 @@ defmodule Mehungry.Accounts do
   import Ecto.Query, warn: false
   alias Mehungry.Repo
   alias Ueberauth.Auth
+  require Logger
 
   alias Mehungry.Accounts.{User, UserToken, UserNotifier}
 
@@ -152,7 +153,7 @@ defmodule Mehungry.Accounts do
   end
 
   # facebook does it this way
-  defp avatar_from_auth(%{extra: %{raw_info: %{user: user}}} = extra) do
+  defp avatar_from_auth(%{extra: %{raw_info: %{user: user}}} = _extra) do
     user["picture"]["data"]["url"]
   end
 

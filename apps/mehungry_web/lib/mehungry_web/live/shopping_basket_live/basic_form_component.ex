@@ -3,7 +3,6 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
   import MehungryWeb.CoreComponents
 
   alias Mehungry.Inventory
-  alias Mehungry.History
 
   @impl true
   def render(assigns) do
@@ -85,22 +84,11 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
   end
 
   defp create_basket(socket, basket_params_params) do
-    user = socket.assigns.user
-
-    changeset =
-      socket.assigns.shopping_basket
-      |> Inventory.change_shopping_basket(basket_params_params)
-      |> Map.put(:action, :validate)
-
     shopping_basket = Inventory.create_shopping_basket(basket_params_params)
-
-    IO.inspect(shopping_basket)
 
     case shopping_basket do
       {:ok, basket} ->
-        IO.inspect("sucess styory")
         notify_parent({:saved, basket})
-
       _ ->
         ""
     end

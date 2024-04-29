@@ -2,7 +2,6 @@ defmodule MehungryWeb.ErrorHelpers do
   @moduledoc """
   Conveniences for translating and building error messages.
   """
-  import Phoenix.HTML
   import Phoenix.HTML.Form
   use PhoenixHTMLHelpers
 

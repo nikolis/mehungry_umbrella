@@ -1,12 +1,8 @@
 defmodule MehungryWeb.CreateRecipeLive.Index do
   use MehungryWeb, :live_view
-  use MehungryWeb.Searchable, :transfers_to_search
 
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
-  alias Mehungry.Food.Step
-  alias Mehungry.Food.RecipeIngredient
-  alias Mehungry.SimpleS3Upload
 
   alias MehungryWeb.CreateRecipeLive.Components
 
@@ -62,20 +58,12 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   ################################################################################ Event Handling ###################################################################################
+  use MehungryWeb.Searchable, :transfers_to_search
 
   def handle_event("save", %{"recipe" => recipe_params}, socket) do
     save_recipe(socket, socket.assigns, recipe_params)
   end
 
-  def drop_hidden?(images) do
-    case Enum.empty?(images) do
-      true ->
-        ""
-
-      false ->
-        "hidden"
-    end
-  end
 
   def handle_event("add-step", _, socket) do
     socket =
@@ -161,6 +149,16 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, assign(socket, form: to_form(changeset))}
   end
 
+  def drop_hidden?(images) do
+    case Enum.empty?(images) do
+      true ->
+        ""
+
+      false ->
+        "hidden"
+    end
+  end
+
   ######################################################################################## External Signal Receivers #################################
 
   @doc """
@@ -222,12 +220,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     }
   end
 
-  defp upload_static_file(%{key: image_name, url: s3_host}, _socket) do
-    access_url = s3_host <> "/" <> image_name
-    {:ok, access_url}
-  end
 
-  defp save_recipe(socket, action, recipe_params) do
+  defp save_recipe(socket, _action, recipe_params) do
     path =
       consume_uploaded_entries(
         socket,
@@ -262,7 +256,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
 
     case Food.create_recipe(recipe_params) do
-      {:ok, %Recipe{} = recipe} ->
+      {:ok, %Recipe{} = _recipe} ->
         {:noreply,
          socket
          |> put_flash(:info, "Recipe created succesfully")
@@ -273,70 +267,10 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     end
   end
 
-  defp handle_progress(:image, entry, socket) do
-    if entry.done? and entry.valid? do
-      dir = File.mkdir_p(Path.join(Application.app_dir(:mehungry_web), "priv/static/uploads"))
-
-      path =
-        consume_uploaded_entries(
-          socket,
-          entry,
-          # &upload_static_file(&1, socket)
-          fn %{path: path}, _entry ->
-            dest =
-              Path.join(
-                Application.app_dir(:mehungry_web, "priv/static/uploads"),
-                Path.basename(path)
-              )
-
-            # You will need to create `priv/static/uploads` for `File.cp!/2` to work.
-            File.cp!(path, dest)
-            {:ok, ~p"/uploads/#{Path.basename(dest)}"}
-          end
-        )
-
-      IO.inspect(path, label: "The pathh is hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
-
-      {:noreply,
-       socket
-       |> put_flash(:info, "file #{entry.client_name} uploaded")
-       |> assign(:image_upload, path)}
-    else
-      {:noreply, socket}
-    end
-  end
 
   def error_to_string(:too_large), do: "Too large"
   def error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
 
-  defp presign_upload(entry, socket) do
-    uploads = socket.assigns.uploads
-    bucket = "deb-bin-assets"
-    key = "public/#{entry.client_name}"
-
-    config = %{
-      region: "eu-west-3",
-      access_key_id: System.fetch_env!("AWS_ACCESS_KEY_ID"),
-      secret_access_key: System.fetch_env!("AWS_SECRET_ACCESS_KEY")
-    }
-
-    {:ok, fields} =
-      SimpleS3Upload.sign_form_upload(config, bucket,
-        key: key,
-        content_type: entry.client_type,
-        max_file_size: uploads[entry.upload_config].max_file_size,
-        expires_in: :timer.hours(1)
-      )
-
-    meta = %{
-      key: key,
-      uploader: "S3",
-      url: "http://#{bucket}.s3-#{config.region}.amazonaws.com",
-      fields: fields
-    }
-
-    {:ok, meta, socket}
-  end
 
   defp list_ingredients do
     Food.list_ingredients()

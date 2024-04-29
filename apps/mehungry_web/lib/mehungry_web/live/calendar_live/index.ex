@@ -129,7 +129,7 @@ defmodule MehungryWeb.CalendarLive.Index do
          |> put_flash(:info, "User Meal Deleted")
          |> push_redirect(to: Routes.calendar_index_path(socket, :index))}
 
-      {:error, changeset} ->
+      {:error, _changeset} ->
         {:noreply, socket}
     end
   end

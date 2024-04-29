@@ -1,8 +1,6 @@
 defmodule MehungryWeb.RecipeBrowseLive.Index do
   use MehungryWeb, :live_view
-  alias Phoenix.LiveView.JS
 
-  alias Vix.Vips.Flag
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
   alias Mehungry.Search.RecipeSearchItem
@@ -49,6 +47,31 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   end
 
   @impl true
+  def handle_event("review", %{"id" => id, "points" => points}, socket) do
+    # %{"user_id" => [{recipe_id, grade}]}
+    # To be fixed I need to use a map instead if I want to keep a single grade for the a particular recipe
+    users = Cachex.get(:users, "data")
+    user_id = socket.assigns.user.id
+    _new_content =
+      case users do
+        {:ok, nil} ->
+          %{to_string(user_id) => [{id, points}]}
+
+        {:ok, user_content} ->
+          case Map.get(user_content, to_string(user_id)) do
+            nil ->
+              Map.put(user_content, to_string(user_id), [{id, points}])
+
+            content ->
+              new_list = content ++ [{id, points}]
+              Map.put(user_content, to_string(user_id), new_list)
+          end
+      end
+
+    {:noreply, assign(socket, :recipes, list_recipes())}
+  end
+
+  @impl true
   def handle_event("close-modal", _thing, socket) do
     {:noreply, push_patch(socket, to: "/browse")}
   end
@@ -61,16 +84,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
     socket = assign(socket, :user_recipes, user_recipes)
     {:noreply, push_patch(socket, to: "/browse")}
-  end
-
-  def toggle_user_saved_recipes(socket, recipe_id) do
-    case Enum.any?(socket.assigns.user_recipes, fn x -> x == recipe_id end) do
-      true ->
-        Users.remove_user_saved_recipe(socket.assigns.user.id, recipe_id)
-
-      false ->
-        Users.save_user_recipe(socket.assigns.user.id, recipe_id)
-    end
   end
 
   @impl true
@@ -154,6 +167,16 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     end
   end
 
+  def toggle_user_saved_recipes(socket, recipe_id) do
+    case Enum.any?(socket.assigns.user_recipes, fn x -> x == recipe_id end) do
+      true ->
+        Users.remove_user_saved_recipe(socket.assigns.user.id, recipe_id)
+
+      false ->
+        Users.save_user_recipe(socket.assigns.user.id, recipe_id)
+    end
+  end
+
   @impl true
   def handle_params(params, uri, socket) do
     maybe_track_user(nil, socket)
@@ -180,35 +203,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     |> assign(:recipe, nil)
     |> assign(:nutrients, nil)
     |> assign(:recipe_nutrients, nil)
-  end
-
-  defp get_nutrient_category(nutrients, category_name, category_sum_name) do
-    {category, rest} =
-      Enum.split_with(nutrients, fn x -> String.contains?(x.name, category_name) end)
-
-    case length(category) > 0 do
-      true ->
-        {category_total, rest} =
-          Enum.split_with(rest, fn x ->
-            String.contains?(x.name, category_sum_name)
-          end)
-
-        case length(category_total) == 1 do
-          true ->
-            {Enum.into(Enum.at(category_total, 0), children: category), rest}
-
-          false ->
-            {%{
-               amount: 111.1,
-               measurement_unit: "to be defined",
-               children: category,
-               name: category_sum_name
-             }, rest}
-        end
-
-      false ->
-        {nil, rest}
-    end
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do
@@ -261,30 +255,36 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     |> assign(:recipe_nutrients, recipe_nutrients)
   end
 
-  @impl true
-  def handle_event("review", %{"id" => id, "points" => points}, socket) do
-    # %{"user_id" => [{recipe_id, grade}]}
-    # To be fixed I need to use a map instead if I want to keep a single grade for the a particular recipe
-    users = Cachex.get(:users, "data")
+  defp get_nutrient_category(nutrients, category_name, category_sum_name) do
+    {category, rest} =
+      Enum.split_with(nutrients, fn x -> String.contains?(x.name, category_name) end)
 
-    _new_content =
-      case users do
-        {:ok, nil} ->
-          %{to_string(@user_id) => [{id, points}]}
+    case length(category) > 0 do
+      true ->
+        {category_total, rest} =
+          Enum.split_with(rest, fn x ->
+            String.contains?(x.name, category_sum_name)
+          end)
 
-        {:ok, user_content} ->
-          case Map.get(user_content, to_string(@user_id)) do
-            nil ->
-              Map.put(user_content, to_string(@user_id), [{id, points}])
+        case length(category_total) == 1 do
+          true ->
+            {Enum.into(Enum.at(category_total, 0), children: category), rest}
 
-            content ->
-              new_list = content ++ [{id, points}]
-              Map.put(user_content, to_string(@user_id), new_list)
-          end
-      end
+          false ->
+            {%{
+               amount: 111.1,
+               measurement_unit: "to be defined",
+               children: category,
+               name: category_sum_name
+             }, rest}
+        end
 
-    {:noreply, assign(socket, :recipes, list_recipes())}
+      false ->
+        {nil, rest}
+    end
   end
+
+
 
   defp list_recipes do
     {result, cursor_after} = Food.list_recipes(nil)

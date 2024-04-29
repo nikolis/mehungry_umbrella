@@ -5,7 +5,6 @@ defmodule Mehungry.Survey.Rating do
   import Ecto.Changeset
 
   alias Mehungry.Accounts.User
-  alias Mehungry.Food.Recipe
 
   schema "ratings" do
     field :stars, :integer

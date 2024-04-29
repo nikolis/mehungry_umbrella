@@ -16,7 +16,6 @@ defmodule MehungryWeb.CoreComponents do
   """
   use Phoenix.Component
 
-  alias Phoenix.HTML.FormField
   alias Phoenix.LiveView.JS
   import MehungryWeb.Gettext
 
@@ -41,6 +40,7 @@ defmodule MehungryWeb.CoreComponents do
   attr :show, :boolean, default: false
   attr :on_cancel, JS, default: %JS{}
   slot :inner_block, required: true
+
 
   def my_modal(assigns) do
     ~H"""
@@ -213,7 +213,7 @@ defmodule MehungryWeb.CoreComponents do
   attr :rest, :global,
     include: ~w(autocomplete name rel action enctype method novalidate target multipart),
     doc: "the arbitrary HTML attributes to apply to the form tag"
-
+  
   slot :inner_block, required: true
   slot :actions, doc: "the slot for form actions, such as a submit button"
 
@@ -308,7 +308,7 @@ defmodule MehungryWeb.CoreComponents do
   attr :type, :string,
     default: "text",
     values: ~w(checkbox color date datetime-local email file hidden month number password
-               range radio search select tel text textarea time url week)
+               range radio search select tel text textarea time url week full-text)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -499,7 +499,9 @@ defmodule MehungryWeb.CoreComponents do
   Renders a label.
   """
   attr :for, :string, default: nil
+  attr :class, :string, default: ""
   slot :inner_block, required: true
+
 
   def label(assigns) do
     ~H"""

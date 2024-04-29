@@ -1,8 +1,6 @@
 defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
   use Phoenix.Component
-  import MehungryWeb.CoreComponents
 
-  @impl true
   def render(assigns) do
     assigns = assign(assigns, :deleted, Phoenix.HTML.Form.input_value(assigns.f, :delete) == true)
 

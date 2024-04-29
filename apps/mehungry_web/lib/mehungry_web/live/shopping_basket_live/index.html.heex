@@ -1,5 +1,5 @@
 <div class="main-page-container" id="shopping_basket_index">
-    <.my_modal patch={~p"/basket"} class="my_modal" :if={@live_action in [:import_items]} id="my_modal">
+    <.my_modal   :if={@live_action in [:import_items]} id="my_modal">
       <.live_component
         module={MehungryWeb.ShoppingBasketLive.FormComponent}
         id={@processing_basket.id || :new}

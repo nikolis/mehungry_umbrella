@@ -52,12 +52,6 @@ defmodule Mehungry.Food do
     |> Repo.insert()
   end
 
-  def create_category(attrs) do
-    %Category{}
-    |> Category.changeset(attrs)
-    |> Repo.insert()
-  end
-
   def delete_category(%Category{} = category) do
     Repo.delete(category)
   end
@@ -130,16 +124,22 @@ defmodule Mehungry.Food do
           from rec_ing in RecipeIngredient,
             where: rec_ing.recipe_id == ^recipe.id,
             join: ingredient in Ingredient,
+            on: true,
             where: ingredient.id == rec_ing.ingredient_id,
             join: tra in IngredientTranslation,
+            on: true,
             where: tra.ingredient_id == ingredient.id,
             join: cat in Category,
+            on: true,
             where: cat.id == ingredient.category_id,
             join: cat_trans in CategoryTranslation,
+            on: true, 
             where: cat_trans.category_id == cat.id and ^language.id == cat_trans.language_name,
             join: mu in MeasurementUnit,
+            on: true,
             where: mu.id == rec_ing.measurement_unit_id,
             join: mu_trans in MeasurementUnitTranslation,
+            on: true,
             where:
               mu_trans.measurement_unit_id == mu.id and ^language.id == mu_trans.language_name,
             select: %RecipeIngredient{
@@ -282,7 +282,7 @@ defmodule Mehungry.Food do
   def list_recipes(query) do
     query =
       if is_nil(query) do
-        query = from(recipe in Recipe)
+        from(recipe in Recipe)
       else
         query
       end
@@ -309,30 +309,6 @@ defmodule Mehungry.Food do
     {result, cursor_after}
   end
 
-  def list_recipes(cursor_after) do
-    query = from recipe in Recipe, where: not is_nil(recipe.image_url)
-    # return the next 50 posts
-
-    %{entries: entries, metadata: metadata} =
-      Repo.paginate(
-        query,
-        after: cursor_after,
-        cursor_fields: [{:inserted_at, :asc}, {:id, :asc}],
-        limit: 30
-      )
-
-    # assign the `after` cursor to a variable
-    cursor_after = metadata.after
-
-    results = Repo.preload(entries, [:recipe_ingredients, :user])
-
-    result =
-      Enum.map(results, fn rec ->
-        translate_recipe_if_needed(rec)
-      end)
-
-    {result, cursor_after}
-  end
 
   def list_user_recipes(user_id) do
     query = from recipe in Recipe, where: recipe.user_id == ^user_id
@@ -364,10 +340,13 @@ defmodule Mehungry.Food do
 
   alias Mehungry.Food.Category
 
+
   def create_category(attrs) do
-    Category.changeset(%Category{}, attrs)
+    %Category{}
+    |> Category.changeset(attrs)
     |> Repo.insert()
   end
+
 
   def update_category(%Category{} = category, attrs \\ %{}) do
     category
@@ -403,15 +382,6 @@ defmodule Mehungry.Food do
     |> Repo.update()
   end
 
-  """
-      basket_ingredients: [
-          :measurement_unit,
-          ingredient: [
-            :category,
-            :ingredient_translation
-          ]
-        ]
-  """
 
   def get_ingredient_details!(id) do
     Repo.get!(Ingredient, id)
@@ -466,11 +436,10 @@ defmodule Mehungry.Food do
       recipe_id: recipe.id
     }
 
-    result_2 = Mehungry.Posts.create_post(post_params)
+    Mehungry.Posts.create_post(post_params)
   end
 
   def create_recipe(attrs \\ %{}) do
-    result =
       %Recipe{}
       |> Recipe.changeset(attrs)
       |> Repo.insert()
@@ -509,8 +478,10 @@ defmodule Mehungry.Food do
       query_aggrigate =
         from tra in query_search,
           join: ing in MeasurementUnit,
+          on: true,
           where: ing.id == tra.id,
           join: cat in Category,
+          on: true, 
           select: %MeasurementUnit{name: tra.name, id: ing.id}
 
       result = Repo.all(query_aggrigate)
@@ -560,12 +531,16 @@ defmodule Mehungry.Food do
             inner_join: ing in Ingredient,
             on: ing.id == tra.ingredient_id,
             inner_join: cat in Category,
+            on: true,
             where: cat.id == ing.category_id,
             inner_join: cat_trans in CategoryTranslation,
+            on: true, 
             where: cat_trans.category_id == cat.id and cat_trans.language_name == ^language_name,
             inner_join: mu in MeasurementUnit,
+            on: true,
             where: mu.id == ing.measurement_unit_id,
             inner_join: mu_trans in MeasurementUnitTranslation,
+            on: true,
             where:
               mu_trans.measurement_unit_id == mu.id and mu_trans.language_name == ^language_name,
             distinct: true,

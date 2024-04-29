@@ -186,7 +186,7 @@ defmodule Mehungry.Posts do
       |> Repo.insert()
 
     case result do
-      {:ok, comment} ->
+      {:ok, _comment} ->
         broadcast_change(result)
         result
 
@@ -538,13 +538,12 @@ defmodule Mehungry.Posts do
     end
 
     if not is_nil(vote) and vote.positive != reaction do
-      vote = update_comment_vote(vote, %{positive: get_positive.(reaction)})
+      update_comment_vote(vote, %{positive: get_positive.(reaction)})
       broadcast_vote({:ok, comment}, "vote")
     else
-      result =
-        %CommentVote{}
-        |> CommentVote.changeset(%{user_id: user_id, comment_id: comment_id, positive: reaction})
-        |> Repo.insert()
+      %CommentVote{}
+      |> CommentVote.changeset(%{user_id: user_id, comment_id: comment_id, positive: reaction})
+      |> Repo.insert()
 
       broadcast_vote({:ok, comment}, "vote")
     end

@@ -33,7 +33,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
         %ShoppingBasket{user_id: user.id, basket_ingredients: []}
 
       shopping_basket ->
-        shopping_basket = %ShoppingBasket{
+        %ShoppingBasket{
           shopping_basket
           | basket_ingredients:
               Mehungry.Utils.sort_ingredients_for_basket(shopping_basket.basket_ingredients)
@@ -52,14 +52,9 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     |> assign(:user_profile, Accounts.get_user_profile!(id))
   end
 
-  defp apply_action(socket, :import_items, %{"id" => id} = params) do
+  defp apply_action(socket, :import_items, %{"id" => id} = _params) do
     processing_basket = Inventory.get_shopping_basket!(id)
     assign(socket, :processing_basket, processing_basket)
-  end
-
-  @impl true
-  def handle_event("close-modal", %{"to" => patch}, socket) do
-    {:noreply, push_patch(socket, to: "/basket", replace: true)}
   end
 
   defp apply_action(socket, :new, _params) do
@@ -73,6 +68,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     |> assign(:page_title, "Listing User profiles")
     |> assign(:user_profile, nil)
   end
+
 
   @impl true
   def handle_info(
@@ -95,8 +91,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       ) do
     shopping_baskets =
       Enum.filter(socket.assigns.shopping_basket, fn x -> x.id == shopping_basket.id end)
-
-    shopping_baskets = socket.assigns.shopping_baskets + [shopping_basket]
+    shopping_baskets = shopping_baskets + [shopping_basket]
     shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
 
     {:noreply, assign(socket, :shopping_baskets, shopping_baskets)}
@@ -104,7 +99,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
 
   def handle_event("delete_basket", %{"id" => id}, socket) do
     {id, _} = Integer.parse(id)
-    shopping_basket = Inventory.delete_shopping_basket(%ShoppingBasket{id: id})
+    Inventory.delete_shopping_basket(%ShoppingBasket{id: id})
     shopping_baskets = Enum.filter(socket.assigns.shopping_baskets, fn x -> x.id != id end)
 
     {:noreply, assign(socket, :shopping_baskets, shopping_baskets)}
@@ -144,6 +139,12 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
 
     {:noreply, stream_delete(socket, :user_profiles, user_profile)}
   end
+
+  @impl true
+  def handle_event("close-modal", _, socket) do
+    {:noreply, push_patch(socket, to: "/basket", replace: true)}
+  end
+
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))

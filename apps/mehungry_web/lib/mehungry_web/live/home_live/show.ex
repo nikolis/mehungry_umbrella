@@ -1,6 +1,5 @@
 defmodule MehungryWeb.HomeLive.Show do
   use MehungryWeb, :live_view
-  import MehungryWeb.CoreComponents
 
   embed_templates("components/*")
 
@@ -12,7 +11,7 @@ defmodule MehungryWeb.HomeLive.Show do
   @color_fill "#00A0D0"
 
   @impl true
-  def mount(%{"id" => id} = params, session, socket) do
+  def mount(%{"id" => id} = _params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     post = Posts.get_post!(id)
     Posts.subscribe_to_post(%{post_id: id})
@@ -37,21 +36,8 @@ defmodule MehungryWeb.HomeLive.Show do
     end
   end
 
-  def get_style(item_list, user_id) do
-    has = Enum.any?(item_list, fn x -> x.user_id == user_id end)
-
-    case has do
-      true ->
-        @color_fill
-
-      false ->
-        "#FFFFFF"
-    end
-  end
 
   def get_style2(item_list, user_id, positive) do
-    IO.inspect(positive)
-    IO.inspect(item_list)
     has = Enum.any?(item_list, fn x -> x.user_id == user_id and x.positive == positive end)
 
     case has do
@@ -115,9 +101,9 @@ defmodule MehungryWeb.HomeLive.Show do
     {:noreply, socket}
   end
 
-  def handle_info(%{new_vote: vote, type_: type_}, socket) do
+  @impl true
+  def handle_info(%{new_vote: _vote, type_: _type_}, socket) do
     post = socket.assigns.post
-    IO.inspect(type_)
     post = Posts.get_post!(post.id)
 
     socket =
@@ -167,7 +153,7 @@ defmodule MehungryWeb.HomeLive.Show do
   end
 
   @impl true
-  def handle_params(%{"id" => id}, _, socket) do
+  def handle_params(%{"id" => _id}, _, socket) do
     {:noreply,
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))}

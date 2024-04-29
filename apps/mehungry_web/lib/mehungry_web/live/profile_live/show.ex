@@ -3,7 +3,6 @@ defmodule MehungryWeb.ProfileLive.Show do
 
   import MehungryWeb.CoreComponents
 
-  alias Mehungry.Accounts
 
   @impl true
   def update(%{user_profile: user_profile} = assigns, socket) do

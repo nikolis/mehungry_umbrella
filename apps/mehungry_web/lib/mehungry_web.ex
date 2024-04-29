@@ -83,7 +83,6 @@ defmodule MehungryWeb do
   end
 
   def live_view do
-    alias Phoenix.LiveView.JS
 
     quote do
       use Phoenix.LiveView,

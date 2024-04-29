@@ -11,7 +11,7 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
     <div>
       <.header>
         <%= @title %>
-        <:subtitle style="text-align: center;">Crete a shopping list by selecting a range of dates (meals will be pulled from your callendar schedule) </:subtitle>
+        <:subtitle >Crete a shopping list by selecting a range of dates (meals will be pulled from your callendar schedule) </:subtitle>
       </.header>
           <div style="" phx-update="ignore" id="container" phx-hook="DatePicker"> 
               <input name="endtDate" type="hidden" placeholder="Select Date.." data-input>
@@ -35,7 +35,7 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
   end
 
   @impl true
-  def update(%{shopping_basket: basket, user: user, patch: patch} = assigns, socket) do
+  def update(%{shopping_basket: basket, user: user, patch: _patch} = assigns, socket) do
     changeset = Inventory.change_shopping_basket(basket, %{})
 
     {:ok,
