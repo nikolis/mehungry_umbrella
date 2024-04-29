@@ -49,7 +49,9 @@ config :mehungry_web, MehungryWeb.Endpoint,
   code_reloader: true,
   check_origin: false,
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:mehungry_web, ~w(--sourcemap=inline --watch --log-limit=0 --loader:.svg=file)]},
+    esbuild:
+      {Esbuild, :install_and_run,
+       [:mehungry_web, ~w(--sourcemap=inline --watch --log-limit=0 --loader:.svg=file)]},
     tailwind: {Tailwind, :install_and_run, [:mehungry_web, ~w(--watch)]}
   ]
 

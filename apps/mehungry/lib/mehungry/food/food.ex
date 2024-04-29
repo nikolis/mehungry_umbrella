@@ -279,13 +279,11 @@ defmodule Mehungry.Food do
     result
   end
 
-  
-
   def list_recipes(query) do
-    query = 
-      if is_nil(query) do 
+    query =
+      if is_nil(query) do
         query = from(recipe in Recipe)
-      else 
+      else
         query
       end
 
@@ -520,12 +518,11 @@ defmodule Mehungry.Food do
       result
     end
   end
-  
-  def search_recipe(query_string) do 
+
+  def search_recipe(query_string) do
     query = Mehungry.Search.RecipeSearch.run(Recipe, query_string)
     list_recipes(query)
   end
-
 
   def search_ingredient(search_term, language_name) do
     search_term = search_term <> "%"

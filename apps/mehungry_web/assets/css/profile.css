@@ -49,9 +49,25 @@
 	padding: 19px;
 }
 
+.nav_button svg {
+	stroke: var(--clr-grey-friend); 
+	fill: var(--clr-grey-friend); 
+
+}
+.nav_button.active svg {
+	stroke:var(--clr-complementary-middle);
+	fill:  var(--clr-complementary-middle); 
+}
 .nav_button.active {
 	color: var(--clr-complementary-middle);
 	border-bottom: 3px solid var(--clr-complementary-middle);
+	
+}
+
+@media (max-width: 780px) {
+	.nav_button span {
+		display: none;
+	}
 }
 
 .aline {
