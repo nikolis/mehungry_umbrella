@@ -208,7 +208,8 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   defp apply_action(socket, :show, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
 
-    recipe_nutrients = RecipeUtils.calculate_recipe_nutrition_value(recipe)
+    recipe_nutrients = 
+      RecipeUtils.calculate_recipe_nutrition_value(recipe)
 
     rest =
       Enum.filter(recipe_nutrients.flat_recipe_nutrients, fn x ->
@@ -219,13 +220,12 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Fatty acids, total polyunsaturated")
     {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Fatty acids, total saturated")
     {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Fatty acids, total trans")
-
     {vitamins, rest} = Enum.split_with(rest, fn x -> String.contains?(x.name, "Vitamin") end)
 
     vitamins_all =
       case length(vitamins) > 0 do
         true ->
-          Enum.into(%{name: "Vitamins", amount: nil, measurement_unit: nil}, children: vitamins)
+          %{name: "Vitamins", amount: nil, measurement_unit: nil, children: vitamins}
 
         false ->
           nil
@@ -252,7 +252,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     |> assign(:page_title, "Recipe Details")
     |> assign(:nutrients, nutrients)
     |> assign(:recipe, recipe)
-    |> assign(:recipe_nutrients, recipe_nutrients)
   end
 
   defp get_nutrient_category(nutrients, category_name, category_sum_name) do

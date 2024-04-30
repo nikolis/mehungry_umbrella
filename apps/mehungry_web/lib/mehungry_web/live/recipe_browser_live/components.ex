@@ -29,13 +29,10 @@ defmodule MehungryWeb.RecipeBrowseLive.Components do
         """
 
       _recipe ->
-        recipe_nutrients =
-          Enum.filter(assigns.recipe_nutrients.flat_recipe_nutrients, fn x -> x.amount > 0 end)
-          |> Enum.sort_by(fn x -> x.amount end, :desc)
-          |> Enum.map(fn x -> %{x | amount: Float.round(x.amount, 3)} end)
+       
 
         ~H"""
-        <.recipe_modal_page  invocations={assigns.invocations} live_action={assigns.live_action} recipe={assigns.recipe} recipe_nutrients={recipe_nutrients} nutrients = {assigns.nutrients}/>
+        <.recipe_modal_page  invocations={assigns.invocations} live_action={assigns.live_action} recipe={assigns.recipe} nutrients = {assigns.nutrients}/>
         """
     end
   end

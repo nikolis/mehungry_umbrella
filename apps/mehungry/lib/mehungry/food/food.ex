@@ -278,22 +278,16 @@ defmodule Mehungry.Food do
 
     result
   end
-
-  def list_recipes(query) do
-    query =
-      if is_nil(query) do
-        from(recipe in Recipe)
-      else
-        query
-      end
-
-    # return the first 50 posts
+ def list_recipes(cursor_after) do
+    query = from recipe in Recipe, where: not is_nil(recipe.image_url)
+    # return the next 50 posts
 
     %{entries: entries, metadata: metadata} =
       Repo.paginate(
         query,
-        cursor_fields: [:inserted_at, :id],
-        limit: 20
+        after: cursor_after,
+        cursor_fields: [{:inserted_at, :asc}, {:id, :asc}],
+        limit: 10
       )
 
     # assign the `after` cursor to a variable
@@ -308,7 +302,6 @@ defmodule Mehungry.Food do
 
     {result, cursor_after}
   end
-
 
   def list_user_recipes(user_id) do
     query = from recipe in Recipe, where: recipe.user_id == ^user_id

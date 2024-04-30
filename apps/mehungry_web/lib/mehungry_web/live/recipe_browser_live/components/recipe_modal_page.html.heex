@@ -15,7 +15,6 @@
     <div><div> <img style="margin:auto;width:35px;height:35px;" src="/images/food_dif.svg" > </div> <span class="recipe_attrs_text"> easy </span>  </div>
     <div><div> <img src="/images/bowl.svg" style="margin: auto;width:35px;height:35px;"> </div><span class="recipe_attrs_text"> 5 </span> </div>
   </div>
-    <% inspect(@recipe_nutrients) %> 
       
       <div class="recipe_ingredients_steps_container">
         <img class="img_cnt" src={@recipe.image_url} style="height: 70vh; border-radius: 7px" >
@@ -36,13 +35,6 @@
             </div>
             <div class="flip_card_back wrapper" phx-hook="AccordionHook" id="recipe_nutrients_accordion", style = "overflow-x: scroll; height: 100%; width: 100%">
                <h3 class="recipe_section_header"> Recipe Nutrients </h3>
-             <!-- <%= for nutrient <- @recipe_nutrients do %>
-                <div class="ingredient_details_container">
-                  <div> <%= nutrient.name %> </div>
-                  <div> <%= nutrient.amount %> <%= nutrient.measurement_unit %> </div>
-                </div>
-              <% end %>
-      -->
 
   <div class="accordion">
 
@@ -56,7 +48,7 @@
             <%= ( if !is_nil(n[:measurement_unit]) do n[:measurement_unit] else ""  end) %>
 
           </button>
-        <%= else %>
+        <% else %>
             <button class="accordion_reccord" style="text-align: start; width: 100%;" aria-expanded="false" aria-controls="">
             <%= Map.get(n, :name, "Default") <>" " <> ( if !is_nil(n[:amount]) do to_string(Float.round(n[:amount], 2)) else "."  end) %>
             <%= ( if !is_nil(n[:measurement_unit]) do n[:measurement_unit] else ""  end) %>
