@@ -12,6 +12,8 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   alias MehungryWeb.RecipeBrowseLive.Components
   alias Mehungry.Food.RecipeUtils
 
+  alias MehungryWeb.CommonComponents.RecipeComponents
+
   @impl true
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])

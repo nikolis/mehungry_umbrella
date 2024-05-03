@@ -3,11 +3,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Components do
   embed_templates("components/*")
   alias Phoenix.LiveView.JS
 
-  def recipe_details(assigns) do
-    ~H"""
-    <.recipe_details_page user_recipes={assigns.user_recipes} recipe={assigns.recipe}  />
-    """
-  end
 
   def get_color(treaty) do
     case treaty do
