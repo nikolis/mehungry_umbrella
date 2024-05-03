@@ -44,14 +44,4 @@ defmodule MehungryWeb.RecipeBrowseLive.Components do
     |> JS.hide(transition: "fade-out", to: "#modal2")
   end
 
-  def is_open(action, invocations) do
-    IO.inspect(action, label: "action")
-    IO.inspect(invocations)
-
-    if invocations > 0 do
-      "is-closing"
-    else
-      "is-open"
-    end
-  end
 end

@@ -7,13 +7,13 @@
       <path fill="#000000" d="M195.2 195.2a64 64 0 0 1 90.496 0L512 421.504 738.304 195.2a64 64 0 0 1 90.496 90.496L602.496 512 828.8 738.304a64 64 0 0 1-90.496 90.496L512 602.496 285.696 828.8a64 64 0 0 1-90.496-90.496L421.504 512 195.2 285.696a64 64 0 0 1 0-90.496z" />
     </svg>
   </button>
-    <div style="min-height: 140vh">
-      <h1 class="recipe_details_title"> <%= @recipe.title %> </h1>
-      <h2 class="recipe_details_sub_title"> <%= @recipe.description %> </h2>
+    <div style="min-height: 140vh" class="mt-8">
+      <h1 class="recipe_details_title text-center"> <%= @recipe.title %> </h1>
+      <h2 class="recipe_details_sub_title text-center"> <%= @recipe.description %> </h2>
    <div class="recipe_attrs_container", style="width: 25%; margin: auto; padding-bottom: 1.5rem; padding-top: 0rem;" >
-    <div><div> <img style="margin:auto;width:35px;height:35px;" src="/images/time_spent.svg" > </div> <span class="recipe_attrs_text"> 55' </span> </div>
-    <div><div> <img style="margin:auto;width:35px;height:35px;" src="/images/food_dif.svg" > </div> <span class="recipe_attrs_text"> easy </span>  </div>
-    <div><div> <img src="/images/bowl.svg" style="margin: auto;width:35px;height:35px;"> </div><span class="recipe_attrs_text"> 5 </span> </div>
+    <div><div> <img style="margin:auto;width:35px;height:35px;" src="/images/time_spent.svg" > </div> <div class="recipe_attrs_text text-center"> 55' </div> </div>
+    <div><div> <img style="margin:auto;width:35px;height:35px;" src="/images/food_dif.svg" > </div> <div class="recipe_attrs_text text-center"> easy </div>  </div>
+    <div><div> <img src="/images/bowl.svg" style="margin: auto;width:35px;height:35px;"> </div><div class="recipe_attrs_text text-center"> 5 </div> </div>
   </div>
       
       <div class="recipe_ingredients_steps_container">
