@@ -20,7 +20,7 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
         phx-submit="save"
       >
         <div style="display: grid; grid-template-columns: 1fr 19fr; gap: 0.75rem;">
-          <img src="/images/food4.jpeg"  style="border-radius: 50%; width: 40px; height: 40px;" />
+          <img src={@current_user.profile_pic}  style="border-radius: 50%; width: 40px; height: 40px;" />
           <.input field={@form[:text]} type="full-text" label="Reply" style="margin: 0px; "/>
           <.input field={@form[:user_id]} type="hidden" />
           <.input field={@form[:comment_id]} type="hidden"  />
