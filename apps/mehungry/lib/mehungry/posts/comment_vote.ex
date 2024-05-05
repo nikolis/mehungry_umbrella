@@ -1,5 +1,5 @@
 defmodule Mehungry.Posts.CommentVote do
-  alias Mehungry.Posts.CommentVote
+
   use Ecto.Schema
   import Ecto.Changeset
 

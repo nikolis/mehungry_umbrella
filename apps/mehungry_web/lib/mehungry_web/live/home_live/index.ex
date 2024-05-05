@@ -5,13 +5,9 @@ defmodule MehungryWeb.HomeLive.Index do
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
-  import Ecto
 
-  alias Mehungry.Inventory.BasketParams
   alias Mehungry.Inventory
-  alias Mehungry.Inventory.ShoppingBasket
   alias Mehungry.Accounts
-  alias Mehungry.History
   alias Mehungry.Posts
 
   def get_positive_votes(votes) do
@@ -60,6 +56,10 @@ defmodule MehungryWeb.HomeLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
+  def handle_event("navigate_to_post_details", %{"id" => post_id}, socket) do
+    {:noreply, push_redirect(socket, to: "/post/" <> to_string(post_id))}
+  end
+
   def handle_event("delete_basket", %{"id" => basket_id}, socket) do
     bs = Inventory.get_shopping_basket!(basket_id)
     Inventory.delete_shopping_basket(bs)
@@ -83,10 +83,8 @@ defmodule MehungryWeb.HomeLive.Index do
     {:noreply, socket}
   end
 
-  def handle_info(%{new_vote: vote, type_: type_}, socket) do
-    post = socket.assigns.post
-    IO.inspect(type_)
-    IO.inspect(vote)
+  @impl true
+  def handle_info(%{new_vote: vote, type_: _type_}, socket) do
     post = Posts.get_post!(vote.post_id)
 
     posts =
@@ -119,8 +117,4 @@ defmodule MehungryWeb.HomeLive.Index do
     end
   end
 
-  def handle_event("navigate_to_post_details", %{"id" => post_id}, socket) do
-    IO.inspect("Simera eiami edw")
-    {:noreply, push_redirect(socket, to: "/post/" <> to_string(post_id))}
-  end
 end

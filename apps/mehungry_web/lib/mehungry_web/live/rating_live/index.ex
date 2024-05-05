@@ -2,7 +2,6 @@ defmodule MehungryWeb.RatingLive.Index do
   use Phoenix.Component
   alias MehungryWeb.RatingLive
   import Phoenix.HTML
-  import Phoenix.HTML.Form
   use PhoenixHTMLHelpers
 
   def recipes(assigns) do

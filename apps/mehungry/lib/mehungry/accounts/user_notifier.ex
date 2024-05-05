@@ -3,7 +3,7 @@ defmodule Mehungry.Accounts.UserNotifier do
 
   import Swoosh.Email
 
-  alias Mehungry.Mailer
+  #alias Mehungry.Mailer
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do

@@ -1,7 +1,6 @@
 defmodule MehungryWeb.DemographicLive.Show do
   use Phoenix.Component
   import Phoenix.HTML
-  import Phoenix.HTML.Form
   use PhoenixHTMLHelpers
 
   def details(assigns) do

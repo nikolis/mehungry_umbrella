@@ -3,7 +3,6 @@ defmodule MehungryWeb.Admin.SurveyResultsLive do
   use MehungryWeb, :chart_live
 
   alias Mehungry.Food
-  alias Contex.Plot
 
   def update(assigns, socket) do
     {:ok,

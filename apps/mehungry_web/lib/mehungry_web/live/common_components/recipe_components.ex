@@ -16,7 +16,7 @@ defmodule MehungryWeb.CommonComponents.RecipeComponents do
 
   def recipe_details(assigns) do
     ~H"""
-    <.recipe_details_page  recipe={assigns.recipe}  />
+    <.recipe_details_page user_recipes={assigns.user_recipes} recipe={assigns.recipe}  />
     """
   end
 

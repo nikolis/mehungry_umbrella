@@ -36,7 +36,7 @@
   </:action>
 </.table>
 
-<CoreComponents.modal :if={@live_action in [:new, :edit]} id="post-modal" show on_cancel={JS.patch(~p"/posts")}>
+<.modal :if={@live_action in [:new, :edit]} id="post-modal" show on_cancel={JS.patch(~p"/posts")}>
   <.live_component
     module={MehungryWeb.PostLive.FormComponent}
     id={@post.id || :new}
@@ -45,4 +45,4 @@
     post={@post}
     patch={~p"/posts"}
   />
-</CoreComponents.modal>
+</.modal>

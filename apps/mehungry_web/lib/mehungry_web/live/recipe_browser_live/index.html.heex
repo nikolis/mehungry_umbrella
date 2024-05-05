@@ -1,10 +1,11 @@
 <div class="main-page-container-bg">
-  <Components.recipe_modal invocations={@invocations} live_action={@live_action} recipe_nutrients={@recipe_nutrients} nutrients = {@nutrients} recipe={@recipe}/>
+  <Components.recipe_modal invocations={@invocations} live_action={@live_action} nutrients = {@nutrients} recipe={@recipe}/>
 
   <div  class="the_form second_layer_spacing">
-    <div class="grid_even_columns" id="recipes_container" phx-hook="InfiniteScroll" phx-update='append' data-page = {@page}>
+    <div class="grid_even_columns" id="recipes_container" phx-hook="InfiniteScroll" phx-update='stream' data-page = {@page}>
       <%= for recipe <- @recipes do %>
-              <Components.recipe_details recipe={recipe} user_recipes={@user_recipes} id={"recipe" <>  Integer.to_string(recipe.id)}/>
+               <RecipeComponents.recipe_details recipe={recipe}  user_recipes ={@user_recipes} id={"recipe" <> Integer.to_string(recipe.id)}/>
+
       <% end %>
     </div>
 

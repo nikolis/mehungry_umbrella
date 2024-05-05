@@ -2,7 +2,6 @@ defmodule MehungryWeb.ProfileLive.Form do
   use MehungryWeb, :live_component
   import MehungryWeb.CoreComponents
 
-  alias MehungryWeb.ProfileLive.FormIngredientComponent
   alias MehungryWeb.ProfileLive.FormCategoryComponent
 
   alias Mehungry.Accounts
@@ -61,7 +60,7 @@ defmodule MehungryWeb.ProfileLive.Form do
     save_user_profile(socket, socket.assigns.action, user_profile_params)
   end
 
-  def handle_event("add_category_rule", data, socket) do
+  def handle_event("add_category_rule", _data, socket) do
     socket =
       update(socket, :form, fn %{source: changeset} ->
         existing = Ecto.Changeset.get_assoc(changeset, :user_category_rules)

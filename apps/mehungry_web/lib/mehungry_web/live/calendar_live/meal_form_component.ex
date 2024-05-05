@@ -7,7 +7,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
 
   alias Mehungry.Food
   alias Mehungry.History
-  alias Mehungry.Repo
   alias MehungryWeb.CalendarLive.Components
 
   def is_empty(%Phoenix.HTML.Form{} = form, atom_key) do
@@ -136,7 +135,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
 
   def handle_event("new_consume_recipe", _params, socket) do
     socket =
-      update(socket, :form, fn %{source: changeset, params: params} ->
+      update(socket, :form, fn %{source: changeset, params: _params} ->
         existing = Ecto.Changeset.get_assoc(changeset, :consume_recipe_user_meals)
 
         changeset =
@@ -204,18 +203,8 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     end
   end
 
-  defp transform_rum_field(user_meal_params) do
-    user_meal_params = %{
-      user_meal_params
-      | "recipe_user_meals" =>
-          Enum.map(user_meal_params["recipe_user_meals"], fn x -> %{"recipe_id" => x} end)
-    }
-
-    user_meal_params
-  end
 
   defp save_user_meal(socket, :edit, user_meal_params) do
-    # user_meal_params = transform_rum_field(user_meal_params)
 
     case History.update_user_meal(socket.assigns.user_meal, user_meal_params) do
       {:ok, _user_meal} ->
@@ -231,18 +220,15 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   end
 
   defp save_user_meal(socket, :new, user_meal_params) do
-    # user_meal_params = transform_rum_field(user_meal_params)
 
     case History.create_user_meal(user_meal_params) do
-      {:ok, user_meal} ->
+      {:ok, _user_meal} ->
         {:noreply,
          socket
          |> put_flash(:info, "User Meal created successfully")
-         # |> push_event("create-meal", %{start: start_date, end: end_date})
          |> push_redirect(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect(changeset)
         {:noreply, assign(socket, changeset: changeset)}
     end
   end

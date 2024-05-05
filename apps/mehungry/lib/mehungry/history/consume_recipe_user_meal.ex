@@ -51,6 +51,7 @@ defmodule Mehungry.History.ConsumeRecipeUserMeal do
           portions
         else
           {portions, _} = Integer.parse(portions)
+          portions
         end
 
       case portions_left >= portions do

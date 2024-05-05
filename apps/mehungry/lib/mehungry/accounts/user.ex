@@ -39,7 +39,7 @@ defmodule Mehungry.Accounts.User do
     |> validate_password(opts)
   end
 
-  def registration_3rd_party_changeset(user, attrs, opts \\ []) do
+  def registration_3rd_party_changeset(user, attrs, _opts \\ []) do
     user
     |> cast(attrs, [:email, :profile_pic, :name])
     |> validate_email()

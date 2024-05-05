@@ -18,7 +18,7 @@ defmodule Mehungry.PostsFixtures do
         sm_media_url: "some sm_media_url",
         title: "some title"
       })
-      |> Mehungry.Posts.create_recipe_post()
+      |> Mehungry.Posts.create_post()
 
     recipe_post
   end

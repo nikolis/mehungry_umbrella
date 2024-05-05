@@ -183,9 +183,10 @@ defmodule Mehungry.FoodFixtures do
     recipe
   end
 
-  @doc """
-  Generate a food_restriction_type.
   """
+  @doc
+  Generate a food_restriction_type.
+  
   def food_restriction_type_fixture(attrs \\ %{}) do
     {:ok, food_restriction_type} =
       attrs
@@ -197,4 +198,5 @@ defmodule Mehungry.FoodFixtures do
 
     food_restriction_type
   end
+  """
 end

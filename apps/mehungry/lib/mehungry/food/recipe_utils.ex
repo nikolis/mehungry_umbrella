@@ -2,11 +2,6 @@ defmodule Mehungry.Food.RecipeUtils do
   alias Mehungry.Food
 
   def calculate_recipe_nutrition_value(recipe) do
-    gram_mu = Enum.at(Food.get_measurement_unit_by_name("grammar"), 0)
-
-    # {grammar_compatible, needs_measurement_unit_conversion} =
-    # Enum.split_while(recipe.recipe_ingredients, fn x -> x.measurement_unit_id == gram_mu.id end)
-
     calculate_nutrition_for_recipe_ingredient(recipe.recipe_ingredients)
   end
 

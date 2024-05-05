@@ -37,7 +37,7 @@ defmodule MehungryWeb.ImageProcessing do
           new_image_read
         else
           _file = File.copy(image_path, pre_image_name)
-          {:ok, result} = {:ok, new_image_read}
+          {:ok, new_image_read}
         end
 
       true ->
