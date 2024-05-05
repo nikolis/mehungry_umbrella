@@ -1,7 +1,7 @@
 <div class="main-page-container">
   
   <%= if @live_action in [:new, :edit] do %>
-    <.my_modal  id="calendar_modal" class="my_modal" patch="/calendar">
+    <.my_modal  id="calendar_modal" patch="/calendar">
       <div class="calendar_form">
         <.live_component
           module={MehungryWeb.CalendarLive.MealFormComponent }
