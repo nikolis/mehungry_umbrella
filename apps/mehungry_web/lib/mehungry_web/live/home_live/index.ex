@@ -19,8 +19,6 @@ defmodule MehungryWeb.HomeLive.Index do
   end
 
   def get_style2(item_list, user_id, positive) do
-    IO.inspect(positive)
-    IO.inspect(item_list)
     has = Enum.any?(item_list, fn x -> x.user_id == user_id and x.positive == positive end)
 
     case has do
