@@ -19,7 +19,7 @@ defmodule Mehungry.FdcFoodParser do
     {"Specific gravity", "sp gr"}
   ]
 
-  def get_measurement_unit_foul_name(abbriviation) do
+  defp get_measurement_unit_foul_name(abbriviation) do
     result =
       Enum.filter(@measurement_unit_dict, fn {x, y} -> y == abbriviation or x == abbriviation end)
 
@@ -35,7 +35,7 @@ defmodule Mehungry.FdcFoodParser do
     end
   end
 
-  def get_or_create_measurement_unit(measurement_unit_name) do
+  defp get_or_create_measurement_unit(measurement_unit_name) do
     result = Food.get_measurement_unit_by_name(measurement_unit_name)
 
     case result do
@@ -55,7 +55,7 @@ defmodule Mehungry.FdcFoodParser do
     end
   end
 
-  def create_ingredient_nutrients(ingredient, nutrient, attrs) do
+  defp create_ingredient_nutrients(ingredient, nutrient, attrs) do
     attrs = %{
       ingredient_id: ingredient.id,
       nutrient_id: nutrient.id,
@@ -75,7 +75,7 @@ defmodule Mehungry.FdcFoodParser do
     Food.create_ingredient_nutrient(attrs)
   end
 
-  def get_or_create_nutrient(ingredient, origin_attrs) do
+  defp get_or_create_nutrient(ingredient, origin_attrs) do
     nut_ing_attrs = origin_attrs
     origin_attrs = origin_attrs["nutrient"]
     measurement_unit = get_or_create_measurement_unit(origin_attrs["unitName"])
@@ -100,7 +100,7 @@ defmodule Mehungry.FdcFoodParser do
     end
   end
 
-  def create_ingredient_portions(food_portions, ingredient) do
+  defp create_ingredient_portions(food_portions, ingredient) do
     Enum.map(food_portions, fn x ->
       Food.create_measurement_unit(%{name: x["measureUnit"]["name"]})
       [measurement_unit | _rest] = Food.get_measurement_unit_by_name(x["measureUnit"]["name"])
@@ -121,7 +121,7 @@ defmodule Mehungry.FdcFoodParser do
     end)
   end
 
-  def create_ingredient(attrs) do
+  defp create_ingredient(attrs) do
     category = get_or_create_food_category(attrs["foodCategory"]["description"])
 
     food_portions = attrs["foodPortions"]
@@ -149,7 +149,7 @@ defmodule Mehungry.FdcFoodParser do
     end
   end
 
-  def get_or_create_food_category(category_name) do
+  defp get_or_create_food_category(category_name) do
     category = Food.get_category_by_name(category_name)
 
     if is_nil(category) do
@@ -160,11 +160,12 @@ defmodule Mehungry.FdcFoodParser do
     end
   end
 
-  def get_json(filename) do
+  defp get_json(filename) do
     with {:ok, body} <- File.read(filename), {:ok, json} <- Poison.decode(body), do: {:ok, json}
   end
 
   def get_ingredients_from_food_data_central_json_file(file_path) do
+    IO.inspect(File.cwd())
     {:ok, json_body} = get_json(file_path)
     Enum.each(json_body["FoundationFoods"], fn x -> create_ingredient(x) end)
   end

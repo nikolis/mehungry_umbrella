@@ -203,9 +203,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     end
   end
 
-
   defp save_user_meal(socket, :edit, user_meal_params) do
-
     case History.update_user_meal(socket.assigns.user_meal, user_meal_params) do
       {:ok, _user_meal} ->
         {:noreply,
@@ -220,7 +218,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   end
 
   defp save_user_meal(socket, :new, user_meal_params) do
-
     case History.create_user_meal(user_meal_params) do
       {:ok, _user_meal} ->
         {:noreply,

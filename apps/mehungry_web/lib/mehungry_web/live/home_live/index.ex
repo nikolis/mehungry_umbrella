@@ -5,30 +5,9 @@ defmodule MehungryWeb.HomeLive.Index do
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
-
   alias Mehungry.Inventory
   alias Mehungry.Accounts
   alias Mehungry.Posts
-
-  def get_positive_votes(votes) do
-    Enum.reduce(votes, 0, fn x, acc ->
-      if x.positive do
-        acc + 1
-      end
-    end)
-  end
-
-  def get_style2(item_list, user_id, positive) do
-    has = Enum.any?(item_list, fn x -> x.user_id == user_id and x.positive == positive end)
-
-    case has do
-      true ->
-        @color_fill
-
-      false ->
-        "#FFFFFF"
-    end
-  end
 
   @impl true
   def mount(_params, session, socket) do
@@ -68,8 +47,6 @@ defmodule MehungryWeb.HomeLive.Index do
   end
 
   def handle_event("react", %{"type_" => type, "id" => post_id}, socket) do
-    IO.inspect(type, label: "THe vodte: ")
-
     case type do
       "upvote" ->
         Posts.upvote_post(post_id, socket.assigns.user.id)
@@ -115,4 +92,23 @@ defmodule MehungryWeb.HomeLive.Index do
     end
   end
 
+  def get_positive_votes(votes) do
+    Enum.reduce(votes, 0, fn x, acc ->
+      if x.positive do
+        acc + 1
+      end
+    end)
+  end
+
+  def get_style2(item_list, user_id, positive) do
+    has = Enum.any?(item_list, fn x -> x.user_id == user_id and x.positive == positive end)
+
+    case has do
+      true ->
+        @color_fill
+
+      false ->
+        "#FFFFFF"
+    end
+  end
 end

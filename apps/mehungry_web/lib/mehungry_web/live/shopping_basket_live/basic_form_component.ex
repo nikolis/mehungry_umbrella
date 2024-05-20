@@ -89,6 +89,7 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
     case shopping_basket do
       {:ok, basket} ->
         notify_parent({:saved, basket})
+
       _ ->
         ""
     end

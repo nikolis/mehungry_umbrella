@@ -36,7 +36,6 @@ defmodule MehungryWeb.HomeLive.Show do
     end
   end
 
-
   def get_style2(item_list, user_id, positive) do
     has = Enum.any?(item_list, fn x -> x.user_id == user_id and x.positive == positive end)
 

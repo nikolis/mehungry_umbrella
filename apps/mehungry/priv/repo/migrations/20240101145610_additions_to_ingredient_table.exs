@@ -3,7 +3,7 @@ defmodule Mehungry.Repo.Migrations.AdditionsToIngredientTable do
 
   def change do
     alter table(:ingredients) do
-      add :food_class, :string
+      add :description, :string
       add :nutrient_conversion_factors, {:array, :map}
       add :publication_date, :string
     end

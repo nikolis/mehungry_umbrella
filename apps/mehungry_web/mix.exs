@@ -39,7 +39,6 @@ defmodule MehungryWeb.MixProject do
     [
       {:cachex, "~> 3.4"},
       {:floki, ">= 0.30.0", only: :test},
-      {:evision, "~> 0.1.16"},
       {:vix, "~> 0.23.0"},
       {:image, "~> 0.37"},
       {:phoenix_html_helpers, "~> 1.0"},
@@ -63,8 +62,8 @@ defmodule MehungryWeb.MixProject do
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.5"},
-      {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev}
+      {:esbuild, "~> 0.8"},
+      {:tailwind, "~> 0.2"}
     ]
   end
 
@@ -75,7 +74,6 @@ defmodule MehungryWeb.MixProject do
     [
       setup: ["deps.get", "cmd npm install --prefix assets"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["tailwind mehungry_web", "esbuild mehungry_web"],
       "assets.deploy": [
         "tailwind mehungry_web --minify",

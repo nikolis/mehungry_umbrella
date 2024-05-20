@@ -64,7 +64,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     save_recipe(socket, socket.assigns, recipe_params)
   end
 
-
   def handle_event("add-step", _, socket) do
     socket =
       update(socket, :form, fn %{source: changeset} ->
@@ -220,7 +219,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     }
   end
 
-
   defp save_recipe(socket, _action, recipe_params) do
     path =
       consume_uploaded_entries(
@@ -267,10 +265,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     end
   end
 
-
   def error_to_string(:too_large), do: "Too large"
   def error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
-
 
   defp list_ingredients do
     Food.list_ingredients()

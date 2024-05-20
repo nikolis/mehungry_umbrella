@@ -186,7 +186,7 @@ defmodule Mehungry.FoodFixtures do
   """
   @doc
   Generate a food_restriction_type.
-  
+
   def food_restriction_type_fixture(attrs \\ %{}) do
     {:ok, food_restriction_type} =
       attrs

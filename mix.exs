@@ -10,9 +10,10 @@ defmodule Mehungry.Umbrella.MixProject do
       aliases: aliases(),
       releases: [
         mehungry_umbrella: [
+          version: "0.0.1",
           applications: [
+            mehungry: :permanent,
             mehungry_web: :permanent
-            # mehungry_api: :permanent
           ]
         ]
       ]
@@ -48,11 +49,11 @@ defmodule Mehungry.Umbrella.MixProject do
   # Aliases listed here are available only for this project
   # and cannot be accessed from applications inside the apps/ folder.
   defp aliases do
-      [ compile: ["compile --warnings-as-errors"]]
-      # run `mix setup` in all child apps
-      # genrun: [
-      #  "cmd --app mehungry_api mix openapi.spec.json --spec MehungryApi.ApiSpec",
-      #  "phx.server"
-      # ],
+    # [ compile: ["compile --warnings-as-errors"]]
+    # run `mix setup` in all child apps
+    # genrun: [
+    #  "cmd --app mehungry_api mix openapi.spec.json --spec MehungryApi.ApiSpec",
+    #  "phx.server"
+    # ],
   end
 end

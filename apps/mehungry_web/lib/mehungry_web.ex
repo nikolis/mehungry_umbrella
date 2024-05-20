@@ -83,7 +83,6 @@ defmodule MehungryWeb do
   end
 
   def live_view do
-
     quote do
       use Phoenix.LiveView,
         layout: {MehungryWeb.LayoutView, :live}
