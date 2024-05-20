@@ -69,7 +69,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     |> assign(:user_profile, nil)
   end
 
-
   @impl true
   def handle_info(
         {MehungryWeb.ShoppingBasketLive.BasicFormComponent, {:saved, shopping_basket}},
@@ -91,6 +90,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       ) do
     shopping_baskets =
       Enum.filter(socket.assigns.shopping_basket, fn x -> x.id == shopping_basket.id end)
+
     shopping_baskets = shopping_baskets + [shopping_basket]
     shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
 
@@ -144,7 +144,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   def handle_event("close-modal", _, socket) do
     {:noreply, push_patch(socket, to: "/basket", replace: true)}
   end
-
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))

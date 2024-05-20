@@ -110,7 +110,6 @@ defmodule Mehungry.Inventory do
   end
 
   def create_shopping_basket(attrs \\ %{}) do
-
     result =
       %ShoppingBasket{}
       |> ShoppingBasket.changeset(attrs)
@@ -136,7 +135,6 @@ defmodule Mehungry.Inventory do
         result
     end
   end
-
 
   @doc """
   Deletes a shopping_basket.

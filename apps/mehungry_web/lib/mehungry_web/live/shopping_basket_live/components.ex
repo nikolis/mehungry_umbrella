@@ -2,7 +2,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
   use Phoenix.Component
   use MehungryWeb, :verified_routes
 
-
   def get_active_class(basket_1, basket_2) do
     case basket_1.id == basket_2.id do
       true ->

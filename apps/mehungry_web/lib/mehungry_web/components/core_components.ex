@@ -41,7 +41,6 @@ defmodule MehungryWeb.CoreComponents do
   attr :on_cancel, JS, default: %JS{}
   slot :inner_block, required: true
 
-
   def my_modal(assigns) do
     ~H"""
       <dialog id="my_modal" class="my_modal" phx-hook="MyModalHook"  style="z-index: 100;" patch={assigns.patch}>
@@ -213,7 +212,7 @@ defmodule MehungryWeb.CoreComponents do
   attr :rest, :global,
     include: ~w(autocomplete name rel action enctype method novalidate target multipart),
     doc: "the arbitrary HTML attributes to apply to the form tag"
-  
+
   slot :inner_block, required: true
   slot :actions, doc: "the slot for form actions, such as a submit button"
 
@@ -453,7 +452,6 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   def input(%{type: "bidden"} = assigns) do
-
     ~H"""
     <div id={(@id  || @name) <> "aho"}  phx-feedback-for={@name} class="input-form " style="">
      <div > 
@@ -502,7 +500,6 @@ defmodule MehungryWeb.CoreComponents do
   attr :class, :string, default: ""
   slot :inner_block, required: true
 
-
   def label(assigns) do
     ~H"""
     <label for={@for} class="placeholder">
@@ -526,7 +523,6 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   def my_error(assigns) do
-
     ~H"""
     <div class="" style="position: absolute; top: 0; left: 0; z-index: 600">
       <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />

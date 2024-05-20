@@ -23,62 +23,67 @@ config :mehungry_web, MehungryWeb.Endpoint,
   debug_errors: true,
   check_origin: false,
   server: true,
-  watchers: [
-    node: [
-      "node_modules/webpack/bin/webpack.js",
-      "--mode",
-      "production",
-      "--watch-stdin",
-      cd: Path.expand("../apps/mehungry_web/assets", __DIR__)
-    ]
-  ]
+  url: [host: "localhost", port: 4000],
+  cache_static_manifest: "priv/static/cache_manifest.json"
 
-config :mehungry, Mehungry.Repo,
-  username: "postgres",
-  password: "G2ET17z3N1243G",
-  database: "mehungry_api_db",
-  hostname: "mehungry-online-db.cwtjultszqbn.eu-west-3.rds.amazonaws.com",
-  port: 5432,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+if config_env() == :prod do
+  database_url = "ecto://postgres:postgres@localhost:5432/mehungry_server_dev"
+  # System.get_env("DATABASE_URL") ||
+  # raise """
+  # environment variable DATABASE_URL is missing.
+  # For example: ecto://USER:PASS@HOST/DATABASE
+  # """
 
-# ## SSL Support
-#
-# To get SSL working, you will need to add the `https` key
-# to the previous section and set your `:url` port to 443:
-#
-#     config :mehungry_web, MehungryWeb.Endpoint,
-#       ...
-#       url: [host: "example.com", port: 443],
-#       https: [
-#         port: 443,
-#         cipher_suite: :strong,
-#         keyfile: System.get_env("SOME_APP_SSL_KEY_PATH"),
-#         certfile: System.get_env("SOME_APP_SSL_CERT_PATH"),
-#         transport_options: [socket_opts: [:inet6]]
-#       ]
-#
-# The `cipher_suite` is set to `:strong` to support only the
-# latest and more secure SSL ciphers. This means old browsers
-# and clients may not be supported. You can set it to
-# `:compatible` for wider support.
-#
-# `:keyfile` and `:certfile` expect an absolute path to the key
-# and cert in disk or a relative path inside priv, for example
-# "priv/ssl/server.key". For all supported SSL configuration
-# options, see https://hexdocs.pm/plug/Plug.SSL.html#configure/1
-#
-# We also recommend setting `force_ssl` in your endpoint, ensuring
-# no data is ever sent via http, always redirecting to https:
-#
-#     config :mehungry_web, MehungryWeb.Endpoint,
-#       force_ssl: [hsts: true]
-#
-# Check `Plug.SSL` for all available options in `force_ssl`.
+  maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
-# Do not print debug messages in production
-config :logger, level: :info
+  config :mehungry, Mehungry.Repo,
+    url: database_url,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+    socket_options: maybe_ipv6
 
-# Finally import the config/prod.secret.exs which loads secrets
-# and configuration from environment variables.
-# import_config "prod.secret.exs"
+  # config :mehungry, Mehungry.Repo,
+  #  username: "postgres",
+  #  password: "G2ET17z3N1243G",
+  #  database: "mehungry_api_db",
+  #  hostname: "mehungry-online-db.cwtjultszqbn.eu-west-3.rds.amazonaws.com",
+  #  port: 5432,
+  #  show_sensitive_data_on_connection_error: true,
+  #  pool_size: 10
+
+  # ## SSL Support
+  #
+  # To get SSL working, you will need to add the `https` key
+  # to the previous section and set your `:url` port to 443:
+  #
+  #     config :mehungry_web, MehungryWeb.Endpoint,
+  #       ...
+  #       url: [host: "example.com", port: 443],
+  #       https: [
+  #         port: 443,
+  #         cipher_suite: :strong,
+  #         keyfile: System.get_env("SOME_APP_SSL_KEY_PATH"),
+  #         certfile: System.get_env("SOME_APP_SSL_CERT_PATH"),
+  #         transport_options: [socket_opts: [:inet6]]
+  #       ]
+  #
+  # The `cipher_suite` is set to `:strong` to support only the
+  # latest and more secure SSL ciphers. This means old browsers
+  # and clients may not be supported. You can set it to
+  # `:compatible` for wider support.
+  #
+  # `:keyfile` and `:certfile` expect an absolute path to the key
+  # and cert in disk or a relative path inside priv, for example
+  # "priv/ssl/server.key". For all supported SSL configuration
+  # options, see https://hexdocs.pm/plug/Plug.SSL.html#configure/1
+  #
+  # We also recommend setting `force_ssl` in your endpoint, ensuring
+  # no data is ever sent via http, always redirecting to https:
+  #
+  #     config :mehungry_web, MehungryWeb.Endpoint,
+  #       force_ssl: [hsts: true]
+  #
+  # Check `Plug.SSL` for all available options in `force_ssl`.
+
+  # Do not print debug messages in production
+  config :logger, level: :info
+end

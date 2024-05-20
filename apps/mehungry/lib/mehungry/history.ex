@@ -60,7 +60,7 @@ defmodule Mehungry.History do
     recipe_user_meal.cooking_portions - (result + recipe_user_meal.consume_portions)
   end
 
-  #TODO use the date_time to only show incomplete meals to show user warning
+  # TODO use the date_time to only show incomplete meals to show user warning
   def list_incomplete_user_meals2(user_id, _date_time) do
     query =
       from rum in RecipeUserMeal,
@@ -77,7 +77,6 @@ defmodule Mehungry.History do
     Repo.all(query)
     |> Repo.preload([:user_meal, :recipe])
   end
-
 
   def list_history_user_meals_for_user(user_id) do
     query =

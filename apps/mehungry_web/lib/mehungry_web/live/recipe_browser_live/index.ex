@@ -54,6 +54,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     # To be fixed I need to use a map instead if I want to keep a single grade for the a particular recipe
     users = Cachex.get(:users, "data")
     user_id = socket.assigns.user.id
+
     _new_content =
       case users do
         {:ok, nil} ->
@@ -210,7 +211,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   defp apply_action(socket, :show, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
 
-    recipe_nutrients = 
+    recipe_nutrients =
       RecipeUtils.calculate_recipe_nutrition_value(recipe)
 
     rest =
@@ -284,8 +285,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
         {nil, rest}
     end
   end
-
-
 
   defp list_recipes do
     {result, cursor_after} = Food.list_recipes(nil)

@@ -3,7 +3,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Components do
   embed_templates("components/*")
   alias Phoenix.LiveView.JS
 
-
   def get_color(treaty) do
     case treaty do
       true ->
@@ -24,8 +23,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Components do
         """
 
       _recipe ->
-       
-
         ~H"""
         <.recipe_modal_page  invocations={assigns.invocations} live_action={assigns.live_action} recipe={assigns.recipe} nutrients = {assigns.nutrients}/>
         """
@@ -38,5 +35,4 @@ defmodule MehungryWeb.RecipeBrowseLive.Components do
     js
     |> JS.hide(transition: "fade-out", to: "#modal2")
   end
-
 end
