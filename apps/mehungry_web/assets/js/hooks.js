@@ -3,23 +3,6 @@ import "selectize";
 let Hooks = {}
 
 
-Hooks.MyModalHook = {
-
-	mounted() {
-		const closeModal = document.getElementById("button-close-modal");
-		const modal = document.getElementById("my_modal");
-		var patch = modal.getAttribute('patch')
-		modal.addEventListener("close", () => {
-      console.log("I am getting here")
-			this.pushEventTo("#"+modal.id,"close-modal", {to: patch});
-		});
-		modal.showModal();
-		closeModal.addEventListener('click', () => {
-			modal.close();
-		});
-	}
-}
-
 
 Hooks.SelectComponent = {
 
