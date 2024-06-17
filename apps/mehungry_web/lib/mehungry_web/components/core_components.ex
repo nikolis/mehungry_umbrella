@@ -378,7 +378,7 @@ defmodule MehungryWeb.CoreComponents do
       <select
         id={@id}
         name={@name}
-        class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm"
+        class="rounded-lg border-2 focus:border-none",
         multiple={@multiple}
         {@rest}
       >
@@ -397,7 +397,7 @@ defmodule MehungryWeb.CoreComponents do
         id={@id}
         name={@name}
         class={[Map.get(assigns.rest, :class, "")] ++ [
-          "input ",
+          "rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2 mt-2",
         ]}{@rest}><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
        <.label for={@id}><%= @label %>
       </.label>
@@ -455,7 +455,6 @@ defmodule MehungryWeb.CoreComponents do
     ~H"""
     <div id={(@id  || @name) <> "aho"}  phx-feedback-for={@name} class="input-form " style="">
      <div > 
-      <%= inspect @errors %>
       </div>
       <input
         name={@name}
@@ -473,21 +472,23 @@ defmodule MehungryWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class=" input-form" >
+    <div phx-feedback-for={@name} class=" input-form mr-6" >
+      
       <input
         type={@type}
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-        class={[
-          "input",
-          "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+        class={[Map.get(assigns.rest, :class, "")] ++ [
+          "rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	",
+          "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym",
+          @errors == [] && "",
+          @errors != [] && " ring-rose-400  focus:ring-rose-400"
         ]}
         {@rest}
       />
       <.label for={@id} class="placeholder"><%= @label %></.label>
+      <.error :for={msg <- @errors}><%= msg %></.error>
 
     </div>
     """
@@ -515,10 +516,10 @@ defmodule MehungryWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 flex gap-3 text-sm leading-6 text-rose-600 phx-no-feedback:hidden">
+    <div class="text-right text-base font-medium leading-6 text-rose-600 phx-no-feedback:hidden">
       <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
       <%= render_slot(@inner_block) %>
-    </p>
+    </div>
     """
   end
 

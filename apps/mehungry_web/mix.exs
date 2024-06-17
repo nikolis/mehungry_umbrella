@@ -63,7 +63,8 @@ defmodule MehungryWeb.MixProject do
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.5"},
       {:esbuild, "~> 0.8"},
-      {:tailwind, "~> 0.2"}
+      {:tailwind, "~> 0.2"},
+      {:live_isolated_component, "~> 0.8.0", only: [:dev, :test]}
     ]
   end
 

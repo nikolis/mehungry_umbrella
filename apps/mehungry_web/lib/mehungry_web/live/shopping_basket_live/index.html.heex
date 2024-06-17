@@ -1,5 +1,5 @@
 <div class="main-page-container" id="shopping_basket_index">
-    <.my_modal   :if={@live_action in [:import_items]} id="my_modal">
+    <.my_modal   :if={@live_action in [:import_items]} id="my_modal" patch ="/basket">
       <.live_component
         module={MehungryWeb.ShoppingBasketLive.FormComponent}
         id={@processing_basket.id || :new}
@@ -15,7 +15,7 @@
 
   <div class="basket-page-container">
      
-    <div class="bakset-side-nav-hidden " id="basket-side-navbar"> 
+    <div class="bakset-side-nav-hidden  bd-black-400" id="basket-side-navbar"> 
       <.render_basket_titles shopping_baskets = {@shopping_baskets} shopping_basket= {@shopping_basket}/> 
 
       <div>
@@ -38,7 +38,7 @@
             JS.remove_class("active", to: "#basket-basic-form.active")
             |> JS.add_class("active", to: "#basket-basic-form:not(.active)")
          end
-        }  class="side_nav_list_item" style="border-bottom: 1px solid var(--clr-grey-friend_3)"> Lists <span style="font-size: 2rem; font-weight: 200 ; color: var(--clr-grey-friend_3); margin-left: 0.75rem;"> + </span> </h2>
+        }  class="side_nav_list_item border-b border-greyfriend2"> Lists <span style="font-size: 2rem; font-weight: 200 ; color: var(--clr-grey-friend_3); margin-left: 0.75rem;"> + </span> </h2>
 
         <.live_component
         module = {MehungryWeb.ShoppingBasketLive.BasicFormComponent}

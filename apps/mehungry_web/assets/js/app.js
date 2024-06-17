@@ -11,12 +11,19 @@ import "selectize";
 import { fix_navigation_active } from './navigation.js';
 import { Hooks } from './hooks.js'
 import { Uploaders } from './uploaders.js'
+import {multiselect} from './select.js';
+import Alpine from 'alpinejs';
+
+window.Alpine = Alpine
+window.multiselect = multiselect;
+Alpine.start();
+
 
 
 function toggleMenu() {
 	console.log("toogle mennu")
 }
-
+ 
 window.addEventListener('load', function() {
 	var modal = document.getElementById('modal');
 	if (modal) {
@@ -82,6 +89,13 @@ let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("
 let liveSocket = new LiveSocket("/live", Socket, {
 	hooks: Hooks,
 	//uploaders: Uploaders,
+  dom: {
+    onBeforeElUpdated(from, to) {
+      if (from._x_dataStack) {
+        window.Alpine.clone(from, to)
+      }
+    }
+  },
 	params: {
 		_csrf_token: csrfToken
 	}

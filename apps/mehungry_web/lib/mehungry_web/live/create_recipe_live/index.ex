@@ -61,6 +61,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   use MehungryWeb.Searchable, :transfers_to_search
 
   def handle_event("save", %{"recipe" => recipe_params}, socket) do
+    IO.inspect(recipe_params, label: "Sacve recipe")
     save_recipe(socket, socket.assigns, recipe_params)
   end
 
@@ -145,6 +146,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       |> Recipe.changeset(recipe_params)
       |> struct!(action: :validate)
 
+    IO.inspect(changeset, label: "the changeset ---------------------------------------------------------------->")
     {:noreply, assign(socket, form: to_form(changeset))}
   end
 
@@ -261,6 +263,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          |> push_redirect(to: "/browse")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        IO.inspect(changeset, label: "Chaggeset seave")
         {:noreply, assign(socket, changeset: changeset)}
     end
   end

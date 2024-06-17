@@ -9,7 +9,6 @@
 	overflow-x: scroll;
 	max-height: 15rem;
 	min-height: 15rem;
-
 }
 
 .ingredient_create_container{
@@ -49,6 +48,7 @@
 	}
 
 }
+
 @media only screen and (max-width: 800px) {
 
 	.ingredient_create_container{
@@ -57,10 +57,7 @@
 	.step_create_container{ 
 		font-size: calc(1vw + 0.7vh);
 	}
-
-
 }
-
 
 .list_button{
 	margin-top: 2rem;
@@ -76,25 +73,25 @@
 	color: var(--clr-primary);
 	border: 1.2px solid var(--clr-primary);
 }
+
 .list_button:hover{
 	background-color:  var(--clr-primary);
 	color: white;
 }
 
 .list_button_cancel{
-font-size: 0.875rem;
-
-font-weight: bold;
-text-transform: uppercase;
-padding: 0.5rem;
-width: 40%;
-border-radius: 5px;
-background-color: transparent;
-color: var(--clr-complementary-middle);
+  font-size: 0.875rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  padding: 0.5rem;
+  width: 40%;
+  border-radius: 5px;
+  background-color: transparent;
+  color: var(--clr-complementary-middle);
 }
 
 .list_button_cancel:hover{
-background-color:  var(--clr-grey-friend_2);
+  background-color:  var(--clr-grey-friend_2);
 }
 
 
@@ -137,19 +134,11 @@ background-color:  var(--clr-grey-friend_2);
 	background-color: var(--clr-light) !important;
 }
 
-
 .primary_button_complementary {
 	text-transform: uppercase;
-	background-color: var(--clr-complementary-middle) !important;
-	color: white;
 	padding: 5px 25px;
 	border-radius: 20px;
-	font-size: calc(0.7rem + 0.7vw);
 	font-weight: bold;
-}
-
-.primary_button_complementary:hover {
-	background-color: var(--clr-complementary-light) !important;
 }
 
 

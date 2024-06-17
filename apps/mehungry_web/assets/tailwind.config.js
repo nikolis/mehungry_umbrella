@@ -14,7 +14,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        transparent: 'transparent',
         brand: "#FD4F00",
+        primary: "#85CB33",
+        primaryd1: "#004300",
+        primaryd2: "#002800",
+        primaryl1: "#FFCC62",
+        primaryl2: "#FFCF90",
+        complementary: "#00A0D0",
+        complementaryd: "#006D89",
+        complementaryl: "#00D8FF",
+        greyfriend1: "#f0f0f0",
+        greyfriend2: "#6464644d",
+
       }
     },
   },

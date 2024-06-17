@@ -1,4 +1,4 @@
-<div class="main-page-container">
+<div class="container m-8 ">
   <div class="profile_index_main">
     <div class="profile_index_info">
       <%= if @live_action == :index do %> 
@@ -11,10 +11,10 @@
 
   <%= if @live_action == :index do %> 
 
-    <div class="profile_index_main">
+    <div class=" bg-greyfriend1 p-6  rounded-lg	">
     
-      <div class="profile_index_user_content">
-        <div class="nav_buttons">
+      <div class="relative p-6 pt-24  container  rounded-lg	bg-white ">
+        <div class="nav_buttons bg-white text-2xl font-bold	text-greyfriend2 absolute top-0 right-0 left-0 p-4 flex justify-around w-full">
           <button class={"nav_button " <> get_active(@content_state, :saved )} phx-click="content_state_change" phx-value-state={:saved}><span> Saved recipes </span>
             <svg height="40px" width="30px" style="display: inline;" version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
 	 viewBox="0 0 512 512"  xml:space="preserve">
@@ -41,7 +41,7 @@
         </div>
         <div class="line">
         </div>
-        <div class="grid_even_columns">
+        <div class="grid_even_columns p-4">
           <%= case @content_state do %> 
             <% :created -> %>
               <%= for recipe <- @user_created_recipes do %>

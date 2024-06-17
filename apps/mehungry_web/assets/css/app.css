@@ -1,30 +1,84 @@
 @import "./essentials.css";
-@import "./browse.css";
 @import "./card.css";
 @import "./profile.css";
 @import "./onboarding.css";
 @import "./nav_bar.css";
 @import "./basket.css";
 @import "./calendar.css";
-@import "./create.css";
+/*@import "./browse.css";
+@import "./create.css";*/
+
+/*@import "./override.css"; */
 @import "./select2.css";
 
-@tailwind components;
+
+
+
 @tailwind base;
 @tailwind utilities;
 
+@layer base {
 
-.main-content-container{
-}
-.main_nav_content {
-	font-weight: 800;
-}
-.main-page-container-bg{
-	background-color: #eaeaea;
-	padding: 2rem;
+  .button {
+  	color: white;
+  	padding: 5px 25px;
+  	font-weight: bold;
+    @apply rounded-2xl text-white hover:opacity-65;
+  }
+
+  .button_outline_primary {
+    text-transform: uppercase;
+    padding: 5px 25px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    @apply border-2 bg-transparent border-solid border-primary text-primary hover:bg-primary hover:text-white;
+  }
+  .button_outline_complementary {
+    text-transform: uppercase;
+    padding: 5px 25px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    @apply border-2 bg-transparent border-solid border-complementary text-complementary hover:bg-complementary hover:text-white;
+  }
+
+  /*--------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+  h3 {
+    font-weight: bold ; 
+    @apply text-2xl text-gray-600;
+  }
+
+  /*---------- Custon Containers ---------------------------------------------------------------------------------------------------*/
+
+  .basic_2_col_grid_cont{
+    display: grid;
+    gap: 2.5rem;
+    justify-content: space-around;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    margin-bottom: 3rem;
+  }
+
+  @media only screen and (min-width: 1400px) {
+
+    .basic_2_col_grid_cont{
+      display: grid;
+      gap: 2.5rem;
+      justify-content: space-around;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 3rem;
+    }
+  }
+
+
+
 }
 
-.main-page-container{
-	padding: 2rem;
-	position: relative;
+
+/* -- Preventing Chrome's autofill interventions ------------------------------------ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
 }
