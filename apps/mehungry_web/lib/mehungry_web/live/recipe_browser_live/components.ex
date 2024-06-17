@@ -24,7 +24,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Components do
 
       _recipe ->
         ~H"""
-        <.recipe_modal_page  invocations={assigns.invocations} live_action={assigns.live_action} recipe={assigns.recipe} nutrients = {assigns.nutrients}/>
+          <.recipe_modal_page  invocations={assigns.invocations} live_action={assigns.live_action} recipe={assigns.recipe} nutrients = {assigns.nutrients}/>
         """
     end
   end

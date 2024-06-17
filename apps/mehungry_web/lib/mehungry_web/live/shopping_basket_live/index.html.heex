@@ -1,5 +1,5 @@
 <div class="main-page-container" id="shopping_basket_index">
-    <.my_modal   :if={@live_action in [:import_items]} id="my_modal" patch ="/basket">
+    <.modal :if={@live_action in [:import_items]} on_cancel={JS.patch(~p"/basket")} id="shopping_basket_modal" show>
       <.live_component
         module={MehungryWeb.ShoppingBasketLive.FormComponent}
         id={@processing_basket.id || :new}
@@ -9,9 +9,7 @@
         user = {@current_user}
         patch={~p"/basket"}      
         />
-    </.my_modal>
-
-  
+    </.modal>
 
   <div class="basket-page-container">
      
@@ -29,7 +27,7 @@
     </div>
 
     <div class= "basket-side-navbar" id="">
-      <div >
+      <div>
         <h2  phx-click={
         case @live_action  in  ["index"] do
           true ->
@@ -49,8 +47,9 @@
         page_title= "Create"
         patch={~p"/basket"}
         />
-          <.render_basket_titles shopping_baskets = {@shopping_baskets} shopping_basket= {@shopping_basket}/> 
-      </div>
+        <.render_basket_titles shopping_baskets = {@shopping_baskets} shopping_basket= {@shopping_basket}/> 
+
+              </div>
     </div>
     <div class="item-list-container">
       <h1 style="margin-inline: auto; text-align: start; font-size: 1.75rem; padding-top: 1rem"> <%=  Map.get(@shopping_basket, :title, "...")  %> </h1>
@@ -59,7 +58,5 @@
       <% end %>
     </div>
   </div>
-
-
 
 </div>

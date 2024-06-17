@@ -10,8 +10,8 @@ Hooks.MyModalHook = {
 		const modal = document.getElementById("my_modal");
 		var patch = modal.getAttribute('patch')
 		modal.addEventListener("close", () => {
-			this.pushEventTo(MehungryWeb.SelectComponent,"close-modal", {to: patch});
-
+      console.log("I am getting here")
+			this.pushEventTo("#"+modal.id,"close-modal", {to: patch});
 		});
 		modal.showModal();
 		closeModal.addEventListener('click', () => {

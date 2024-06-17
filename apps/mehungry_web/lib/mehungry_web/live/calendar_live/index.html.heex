@@ -1,22 +1,20 @@
 <div class="container p-6">
-  
-  <%= if @live_action in [:new, :edit] do %>
-    <.my_modal  id="calendar_modal" patch="/calendar">
-      <div class="calendar_form">
-        <.live_component
-          module={MehungryWeb.CalendarLive.MealFormComponent }
-          id={@user_meal.id || :new}
-          title={@page_title}
-          live_action={@live_action}
-          invocations = {@invocations}
-          recipes= {@recipes}
-          dates = {@dates}
-          current_user = {@current_user}
-          return_to={Routes.calendar_index_path(@socket, :index)}
-        />
-      </div>
-    </.my_modal>
-  <% end %>  
+  <.modal :if={@live_action in [:new, :edit]} on_cancel={JS.patch(~p"/calendar")} id="calendar_modal" show>
+
+    <div class="calendar_form">
+      <.live_component
+        module={MehungryWeb.CalendarLive.MealFormComponent }
+        id={@user_meal.id || :new}
+        title={@page_title}
+        live_action={@live_action}
+        invocations = {@invocations}
+        recipes= {@recipes}
+        dates = {@dates}
+        current_user = {@current_user}
+        return_to={Routes.calendar_index_path(@socket, :index)}
+      />
+    </div>
+  </.modal>
   <div id="calendar" style="height: 600px; padding-inline: 40px;" phx-update="ignore"  class="" >
   </div>
 

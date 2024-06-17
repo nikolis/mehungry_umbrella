@@ -146,7 +146,10 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       |> Recipe.changeset(recipe_params)
       |> struct!(action: :validate)
 
-    IO.inspect(changeset, label: "the changeset ---------------------------------------------------------------->")
+    IO.inspect(changeset,
+      label: "the changeset ---------------------------------------------------------------->"
+    )
+
     {:noreply, assign(socket, form: to_form(changeset))}
   end
 

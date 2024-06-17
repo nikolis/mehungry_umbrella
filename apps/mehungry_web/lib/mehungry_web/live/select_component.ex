@@ -6,7 +6,7 @@ defmodule MehungryWeb.SelectComponent do
     ~H"""
     <div class="col-span-2" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={"select_component"<> Integer.to_string(@form.index) <> @input_variable } >
 
-    <.input  field={@form[String.to_atom(@input_variable)]} type="hidden" />
+    <.input  field={@form[String.to_atom(@input_variable)]} type="hidden"  />
 
     <div class="w-full max-w-lg " phx-click-away="close-listing" phx-target={@myself} id={"select-item" <> Integer.to_string(@form.index) <> @input_variable }>
       <!-- Start Component -->
