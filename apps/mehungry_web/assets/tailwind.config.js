@@ -45,8 +45,8 @@ module.exports = {
     // Embeds Heroicons (https://heroicons.com) into your app.css bundle
     // See your `CoreComponents.icon/1` for more information.
     //
-    /*plugin(function({matchComponents, theme}) {
-      let iconsDir = path.join(__dirname, "../deps/heroicons/optimized")
+    plugin(function({matchComponents, theme}) {
+      let iconsDir = path.join(__dirname, "../../../deps/heroicons/optimized")
       let values = {}
       let icons = [
         ["", "/24/outline"],
@@ -69,7 +69,7 @@ module.exports = {
           } else if (name.endsWith("-micro")) {
             size = theme("spacing.4")
           }
-          return {
+          var ret_obj =  {
             [`--hero-${name}`]: `url('data:image/svg+xml;utf8,${content}')`,
             "-webkit-mask": `var(--hero-${name})`,
             "mask": `var(--hero-${name})`,
@@ -80,8 +80,9 @@ module.exports = {
             "width": size,
             "height": size
           }
+          return ret_obj;
         }
       }, {values})
-    })*/
+    })
   ]
 }

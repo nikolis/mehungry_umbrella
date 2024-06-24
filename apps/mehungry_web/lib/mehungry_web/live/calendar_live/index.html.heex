@@ -1,6 +1,5 @@
-<div class="container p-6">
+<div class="container mx-auto pt-6">
   <.modal :if={@live_action in [:new, :edit]} on_cancel={JS.patch(~p"/calendar")} id="calendar_modal" show>
-
     <div class="calendar_form">
       <.live_component
         module={MehungryWeb.CalendarLive.MealFormComponent }
@@ -15,14 +14,15 @@
       />
     </div>
   </.modal>
-  <div id="calendar" style="height: 600px; padding-inline: 40px;" phx-update="ignore"  class="" >
+
+  <div id="calendar" style="height: 600px; padding-inline: 40px;" phx-update="ignore"  class="">
   </div>
 
   <div class="calendar_controlls" id="calendar_controlls"  phx-hook="HiddenCalendar" close-button-id="button_hidde_calendar"  phx-update="ignore">
     <div id="hidden_calendar" class="hidden_callendar" style="background-color: white; width: 100vw; padding: 3rem;"> 
     </div>
     <button class="calendar_button" style="right: 2rem;" id="callendar_prev_button"> Prev </button>
-     <img id="button_hidde_calendar"  style="z-index: 10000; position: absolute; margin-inline: auto; right: 0; left: 0; top: 0;" width="40px" src="/images/calendar.svg"/>
+      <img id="button_hidde_calendar"  style="z-index: 10000; position: absolute; margin-inline: auto; right: 0; left: 0; top: 0;" width="40px" src="/images/calendar.svg"/>
     <button class="calendar_button" id="callendar_next_button" style="left: 2rem"> Next </button>
   </div>
 </div>

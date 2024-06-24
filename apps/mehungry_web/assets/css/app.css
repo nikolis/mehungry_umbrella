@@ -5,16 +5,18 @@
 @import "./nav_bar.css";
 @import "./basket.css";
 @import "./calendar.css";
-/*
-@import "./select2.css";
 
-*/
-@import "./browse.css";
+
+
+
+
+@import "./browse.css"; 
 @import "./create.css";
 @import "./override.css"; 
 
 
 @tailwind base;
+@tailwind components;
 @tailwind utilities;
 
 @layer base {

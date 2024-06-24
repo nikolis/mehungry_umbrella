@@ -232,11 +232,10 @@ select {
 	.input {
 		padding: 15px;
 	}
-	.the_form {
+.the_form {
 		padding: 0px;
 		padding-top: 3vh;
 	}
-
 }
 
 .box {

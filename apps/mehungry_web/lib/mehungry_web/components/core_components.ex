@@ -518,7 +518,7 @@ defmodule MehungryWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class=" input-form mr-6" >
+    <div phx-feedback-for={@name} class=" input-form mx-6" >
       
       <input
         type={@type}
