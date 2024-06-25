@@ -66,7 +66,7 @@ defmodule MehungryWeb.SelectComponent do
             <%= if @listing_open do %>
               <%=  for x <- @items do %>
                    <!-- Item Element -->
-                    <div>
+                    <div class="">
                       <div >
                         <li class="hover:bg-amber-200 cursor-pointer px-2 py-2" phx-click="handle-item-click" phx-value-id={x.id} id={Integer.to_string(x.id)}phx-target={@myself}>
                           <%= x.label %>
