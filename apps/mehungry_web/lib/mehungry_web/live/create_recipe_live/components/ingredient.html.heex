@@ -1,7 +1,7 @@
   <div class="p-6 grid grid-cols-7 gap-6", id= {"recipe_ingredients" <> to_string(@g.index) }>
 
     <.live_component
-      module={MehungryWeb.SelectComponent}
+      module={MehungryWeb.SelectComponentSingle}
       form={@g}
       items = {@ingredients}
       input_variable={"ingredient_id"}
@@ -9,7 +9,7 @@
       />
 
     <.live_component
-      module={MehungryWeb.SelectComponent}
+      module={MehungryWeb.SelectComponentSingle}
       form={@g}
       items = {@measurement_units}
       input_variable={"measurement_unit_id"}
