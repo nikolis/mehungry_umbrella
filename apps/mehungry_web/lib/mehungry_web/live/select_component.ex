@@ -53,14 +53,14 @@ defmodule MehungryWeb.SelectComponent do
           <!-- Start Items List -->
                 <div >
                   <ul
-                    class="w-full list-none border border-2 border-t-0 rounded-md focus:outline-none overflow-y-auto outline-none focus:outline-none bg-white absolute left-0 bottom-100 max-h-56	">
+                    class="w-full list-none   border-t-0 rounded-md focus:outline-none overflow-y-auto outline-none focus:outline-none bg-white absolute left-0 bottom-100 max-h-56	bg-white z-50">
 
             <%= if @listing_open do %>
               <%=  for x <- @items do %>
                    <!-- Item Element -->
-                    <div class="">
-                      <div >
-                        <li class="hover:bg-amber-200 cursor-pointer px-2 py-2" phx-click="handle-item-click" phx-value-id={x.id} id={Integer.to_string(x.id)}phx-target={@myself}>
+                    <div class="relative z-50">
+                      <div class="bg-white">
+                        <li class="hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white" phx-click="handle-item-click" phx-value-id={x.id} id={Integer.to_string(x.id)}phx-target={@myself}>
                           <%= x.label %>
                         </li>
                       </div>
@@ -146,9 +146,6 @@ defmodule MehungryWeb.SelectComponent do
   end
 
   def handle_event("validate", _params, socket) do
-    # %{"recipe" => %{"recipe_ingredients" => %{"0" => ing_rec} = ingredients} = recipe} = params
-    # %{"search_input" => search_input} = ing_rec
-
     {:noreply, socket}
   end
 
@@ -206,8 +203,6 @@ defmodule MehungryWeb.SelectComponent do
       socket
       |> assign(:listing_open, false)
       |> assign(:selected_items, selected_items)
-
-    IO.inspect(id, label: "Id")
 
     {:noreply,
      push_event(
