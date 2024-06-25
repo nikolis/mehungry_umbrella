@@ -7,7 +7,6 @@ defmodule MehungryWeb.SelectComponent do
     <div class="col-span-2" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={"select_component"<> Integer.to_string(@form.index) <> @input_variable } >
 
     <.input  field={@form[String.to_atom(@input_variable)]} type="hidden"  />
-
     <div class="w-full max-w-lg " phx-click-away="close-listing" phx-target={@myself} id={"select-item" <> Integer.to_string(@form.index) <> @input_variable }>
       <!-- Start Component -->
       <div class="relative">
@@ -31,14 +30,7 @@ defmodule MehungryWeb.SelectComponent do
             <!-- Search Input -->
 
             <%= if Enum.empty?(@selected_items) do %>
-              <.simple_form            
-                for={@search_form}            
-                id={"what-form" <> @input_variable }
-                class="flex-grow"
-                phx-target={@myself}   
-                phx-change="validate">   
                 <.input  phx-focus="search_input_focus" phx-target={@myself} field={@form[String.to_atom("search_input"<> Integer.to_string(@form.index)<>@input_variable)]} type="text" class="test flex-grow py-2 px-2 mx-1 my-1.5 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full"/>
-              </.simple_form>
             <% end %>
             <!-- Arrow Icon -->
             <svg
@@ -131,7 +123,6 @@ defmodule MehungryWeb.SelectComponent do
 
     items = Enum.map(assigns.items, fn x -> %{label: x.name, id: x.id} end)
     presenting_items = Enum.slice(items, 0..10)
-    IO.inspect(assigns.form.index)
 
     socket =
       socket
@@ -141,18 +132,6 @@ defmodule MehungryWeb.SelectComponent do
       |> assign(:selected_items, selected_items)
       |> assign(:form, assigns.form)
       |> assign(:input_variable, assigns.input_variable)
-      |> assign(
-        :search_form,
-        to_form(
-          Map.put(
-            %{},
-            String.to_atom(
-              "search_input" <> Integer.to_string(assigns.form.index) <> assigns.input_variable
-            ),
-            ""
-          )
-        )
-      )
 
     {:ok, socket}
   end
@@ -218,12 +197,10 @@ defmodule MehungryWeb.SelectComponent do
   end
 
   def handle_event("handle-item-click", %{"id" => id}, socket) do
-    IO.inspect("Received the mssage handle item click")
     {id, _} = Integer.parse(id)
 
     selected_item = Enum.find(socket.assigns.items, fn x -> x.id == id end)
     selected_items = Enum.into(socket.assigns.selected_items, [selected_item])
-    IO.inspect(selected_items, label: "asdfasdfasfasds")
 
     socket =
       socket
