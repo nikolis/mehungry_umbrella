@@ -4,22 +4,28 @@ defmodule MehungryWeb.SelectComponentSingle do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="col-span-2" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={"select_component"<> Integer.to_string(@form.index) <> @input_variable } >
+    <div class="col-span-2" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={@id } >
 
       <.input  field={@form[String.to_atom(@input_variable)]} type="hidden"  />
       <!-- Start Component -->
+        <.focus_wrap  
+          id={"select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable}
+          class="h-full" 
+          phx-click-away={JS.push("close-listing", target: @myself)}
+
+    >
+
       <div class="h-full relative">
         <!-- Start Item Tags And Input Field -->
             <!-- Tags (Selected) -->
             <%=  for x <- @selected_items do %>
               <div class="text-center w-full h-full">
-                <div
-                  phx-click="handle-selected-item-click"
+                <div phx-click="handle-selected-item-click"
                   phx-value-id={x.id}
                   phx-target={@myself}
                   tabindex="0"
                   class="border border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg"> 
-              <div class="h-full flex flex-col  justify-center"> <div class="self-center "> <%= x.label %> </div> </div>
+                  <div class="h-full flex flex-col  justify-center"> <div class="self-center "> <%= x.label %> </div> </div>
                   <.icon name="hero-x-mark-solid" class="absolute right-1 top-0  z-50 opacity-70" />
 
                 </div>
@@ -59,7 +65,8 @@ defmodule MehungryWeb.SelectComponentSingle do
                 </div>
 
         <!-- End Items List -->
-      </div>
+        </div>
+      </.focus_wrap>
       <!-- End Component -->
     </div>
     """
@@ -67,6 +74,9 @@ defmodule MehungryWeb.SelectComponentSingle do
 
   @impl true
   def update(assigns, socket) do
+    id = "select_component"<> Integer.to_string(assigns.form.index) <> assigns.input_variable 
+    IO.inspect(id)
+
     selected_items =
       case Map.get(socket.assigns, :selected_items) do
         [] ->
@@ -113,6 +123,7 @@ defmodule MehungryWeb.SelectComponentSingle do
       |> assign(:selected_items, selected_items)
       |> assign(:form, assigns.form)
       |> assign(:input_variable, assigns.input_variable)
+      |> assign(:id, id)
 
     {:ok, socket}
   end
