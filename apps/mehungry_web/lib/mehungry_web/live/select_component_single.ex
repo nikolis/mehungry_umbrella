@@ -6,7 +6,7 @@ defmodule MehungryWeb.SelectComponentSingle do
     ~H"""
     <div class="col-span-2" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={"select_component"<> Integer.to_string(@form.index) <> @input_variable } >
 
-    <.input  field={@form[String.to_atom(@input_variable)]} type="hidden"  />
+      <.input  field={@form[String.to_atom(@input_variable)]} type="hidden"  />
       <!-- Start Component -->
       <div class="h-full relative">
         <!-- Start Item Tags And Input Field -->
@@ -18,9 +18,9 @@ defmodule MehungryWeb.SelectComponentSingle do
                   phx-value-id={x.id}
                   phx-target={@myself}
                   tabindex="0"
-                  class="border border-2 h-full text-left rounded-md border-greyfriend2"> 
-                  <span class="absolute  bottom-1/3"> <%= x.label %> </span>
-                  <.icon name="hero-x-mark-solid" class="absolute right-1  z-50 opacity-70" />
+                  class="border border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg"> 
+              <div class="h-full flex flex-col  justify-center"> <div class="self-center "> <%= x.label %> </div> </div>
+                  <.icon name="hero-x-mark-solid" class="absolute right-1 top-0  z-50 opacity-70" />
 
                 </div>
               </div>
@@ -28,21 +28,21 @@ defmodule MehungryWeb.SelectComponentSingle do
             <!-- Search Input -->
 
             <%= if Enum.empty?(@selected_items) do %>
-                <.input  phx-focus="search_input_focus" phx-target={@myself} field={@form[String.to_atom("search_input"<> Integer.to_string(@form.index)<>@input_variable)]} myself={@myself} type="select_component" class="test flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full"/>
+                <.input  phx-focus="search_input_focus" phx-target={@myself} field={@form[String.to_atom("search_input"<> Integer.to_string(@form.index)<>@input_variable)]} myself={@myself} type="select_component" class="test flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full"/>
             <% end %>
         <!-- End Item Tags And Input Field -->
 
           <!-- Start Items List -->
                 <div >
                   <ul
-                    class="w-full list-none   border-t-0 rounded-md focus:outline-none overflow-y-auto outline-none focus:outline-none bg-white absolute left-0 bottom-100 max-h-56	bg-white z-50">
+                    class="w-full list-none   border-t-0  focus:outline-none overflow-y-auto outline-none focus:outline-none bg-white absolute left-0 bottom-100 max-h-56	bg-white z-50">
 
             <%= if @listing_open do %>
               <%=  for x <- @items do %>
                    <!-- Item Element -->
                     <div class="relative z-50">
                       <div class="bg-white">
-                        <li class="hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white" phx-click="handle-item-click" phx-value-id={x.id} id={Integer.to_string(x.id)}phx-target={@myself}>
+                        <li class="hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white" phx-click="handle-item-click" phx-value-id={x.id} id={Integer.to_string(x.id)} phx-target={@myself}>
                           <%= x.label %>
                         </li>
                       </div>
