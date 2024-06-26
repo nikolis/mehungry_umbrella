@@ -41,22 +41,7 @@ defmodule MehungryWeb.CoreComponents do
   attr :on_cancel, JS, default: %JS{}
   slot :inner_block, required: true
 
-  def my_modal(assigns) do
-    ~H"""
-      <dialog id="my_modal" class="my_modal" phx-hook="MyModalHook"  style="z-index: 100;" patch={assigns.patch}>
-        <button id="button-close-modal" class="modal-button-close">
-          <svg width="20px" height="20px" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-            <path fill="#000000" d="M195.2 195.2a64 64 0 0 1 90.496 0L512 421.504 738.304 195.2a64 64 0 0 1 90.496 90.496L602.496 512 828.8 738.304a64 64 0 0 1-90.496 90.496L512 602.496 285.696 828.8a64 64 0 0 1-90.496-90.496L421.504 512 195.2 285.696a64 64 0 0 1 0-90.496z" />
-          </svg>
-        </button> 
-        <button id="button-opem-modal" type="hidden"></button> 
-        <div id={"#{@id}-content"}>
-          <%= render_slot(@inner_block) %>
-        </div>
-      </dialog>
-    """
-  end
-
+  
   def recipe_modal(assigns) do
     ~H"""
     <div
@@ -559,7 +544,7 @@ defmodule MehungryWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class=" input-form " >
+    <div phx-feedback-for={@name} class=" input-form w-full" >
       
       <input
         type={@type}
