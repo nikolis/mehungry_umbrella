@@ -1,10 +1,10 @@
-<div class="p-8 bg-greyfriend1 mx-auto">
+<div class="md:p-8 bg-greyfriend1 mx-auto">
 <.form 
   id={@id} 
   for={@form} 
   phx-change="validate" 
   phx-submit="save"
-  class="the_form second_layer_spacing flex flex-col mx-auto"
+  class="the_form flex flex-col mx-auto"
   >
     <div class="basic_2_col_grid_cont">
       <Components.recipe_render f={@form} />

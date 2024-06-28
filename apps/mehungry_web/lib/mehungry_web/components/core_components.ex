@@ -41,7 +41,6 @@ defmodule MehungryWeb.CoreComponents do
   attr :on_cancel, JS, default: %JS{}
   slot :inner_block, required: true
 
-  
   def recipe_modal(assigns) do
     ~H"""
     <div
@@ -337,7 +336,8 @@ defmodule MehungryWeb.CoreComponents do
 
   attr :type, :string,
     default: "text",
-    values: ~w(checkbox color date datetime-local email file hidden month number password select_component
+    values:
+      ~w(checkbox color date datetime-local email file hidden month number password select_component
                range radio search select tel text textarea time url week full-text)
 
   attr :field, Phoenix.HTML.FormField,
@@ -402,24 +402,6 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  def input(%{type: "select"} = assigns) do
-    ~H"""
-    <div phx-feedback-for={@name} class="input-form">
-      <.label for={@id}><%= @label %></.label>
-      <select
-        id={@id}
-        name={@name}
-        class="rounded-lg border-2 focus:border-none",
-        multiple={@multiple}
-        {@rest}
-      >
-        <option :if={@prompt} value=""><%= @prompt %></option>
-        <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
-      </select>
-      <.error :for={msg <- @errors}><%= msg %></.error>
-    </div>
-    """
-  end
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
@@ -428,7 +410,7 @@ defmodule MehungryWeb.CoreComponents do
         id={@id}
         name={@name}
         class={[Map.get(assigns.rest, :class, "")] ++ [
-          "rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2 mt-2",
+          "h-full rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2 mt-2",
         ]}{@rest}><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
        <.label for={@id}><%= @label %>
       </.label>
@@ -482,30 +464,15 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  def input(%{type: "bidden"} = assigns) do
-    ~H"""
-    <div id={(@id  || @name) <> "aho"}  phx-feedback-for={@name} class="input-form " style="">
-     <div > 
-      </div>
-      <input
-        name={@name}
-        type="hidden"
-        id={@id || @name}
-        class={[
-          "input_full",
-        ]}
-        {@rest}
-      />
-          </div>
-    """
-  end
+
   """
   relative m-1 px-2 py-1.5 border rounded-md cursor-pointer hover:bg-gray-100 after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2 focus:ring-amber-300 ring-inset transition-all
   """
+
   # Input type for select component
   def input(%{type: "select_component"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class=" input-form  relative">
+    <div phx-feedback-for={@name} class=" input-form  relative h-full">
        <svg
         phx-click="toggle-listing"
         phx-target={assigns.rest.myself}
@@ -526,7 +493,7 @@ defmodule MehungryWeb.CoreComponents do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[Map.get(assigns.rest, :class, "")] ++ [
-          "rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	",
+          "h-full rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	",
           "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym",
           @errors == [] && "",
           @errors != [] && " ring-rose-400  focus:ring-rose-400"
@@ -544,7 +511,7 @@ defmodule MehungryWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class=" input-form w-full" >
+    <div phx-feedback-for={@name} class=" input-form w-full h-full" >
       
       <input
         type={@type}
@@ -565,7 +532,6 @@ defmodule MehungryWeb.CoreComponents do
     </div>
     """
   end
-
 
   @doc """
   Renders a label.

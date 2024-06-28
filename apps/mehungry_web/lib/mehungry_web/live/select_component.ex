@@ -121,7 +121,16 @@ defmodule MehungryWeb.SelectComponent do
           other
       end
 
-    items = Enum.map(assigns.items, fn x -> %{label: x.name, id: x.id} end)
+    label_function =
+      case Map.get(assigns, :label_function) do
+        nil ->
+          fn x -> x.name end
+
+        label_f ->
+          label_f
+      end
+
+    items = Enum.map(assigns.items, fn x -> %{label: label_function.(x), id: x.id} end)
     presenting_items = Enum.slice(items, 0..10)
 
     socket =
