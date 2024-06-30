@@ -402,7 +402,6 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-
   def input(%{type: "textarea"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name} class="input-form">
@@ -464,7 +463,6 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-
   """
   relative m-1 px-2 py-1.5 border rounded-md cursor-pointer hover:bg-gray-100 after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2 focus:ring-amber-300 ring-inset transition-all
   """
@@ -511,7 +509,7 @@ defmodule MehungryWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class=" input-form w-full h-full" >
+    <div phx-feedback-for={@name} class=" input-form w-full h-full max-h-12" >
       
       <input
         type={@type}
