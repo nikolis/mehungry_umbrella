@@ -5,8 +5,7 @@ defmodule MehungryWeb.SelectComponentSingle do
   def render(assigns) do
     ~H"""
     <div class="col-span-2" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={@id } >
-      <%= inspect @selected_items %>
-      <div phx-update="ignore" id={@id <> "hidden"}> <.input  field={@form[String.to_atom(@input_variable)]} type="hidden"  /> </div>
+      <.input  field={@form[String.to_atom(@input_variable)]} type="hidden"  />
       <!-- Start Component -->
       <.focus_wrap  
         id={"select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable}
@@ -34,8 +33,8 @@ defmodule MehungryWeb.SelectComponentSingle do
           <% end %>
           <!-- Search Input -->
 
-          <%= if is_nil(@selected_items) do %>
-            <.input  phx-focus="search_input_focus" phx-target={@myself} field={@form[String.to_atom("search_input"<> Integer.to_string(@form.index)<>@input_variable)]} myself={@myself} type="select_component" class="test flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "/>
+            <%= if is_nil(@selected_items) do %>
+              <.input  phx-change="validate" phx-focus="search_input_focus" phx-target={@myself} value="" name="search_input" myself={@myself} type="select_component" class="test flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "/> 
           <% end %>
             <!-- End Item Tags And Input Field -->
             <!-- Start Items List -->
@@ -74,7 +73,6 @@ defmodule MehungryWeb.SelectComponentSingle do
 
   @impl true
   def update(assigns, socket) do
-    IO.inspect("Getting through the update -------------------------------------------------------------------------------------------------------------------------------------------")
     id = "select_component" <> Integer.to_string(assigns.form.index) <> assigns.input_variable
     atom_input_variable = String.to_existing_atom(assigns.input_variable)
 
@@ -88,26 +86,40 @@ defmodule MehungryWeb.SelectComponentSingle do
       end
 
     selected_items =
-    if map_size(assigns.form.params) < 2 do 
-      if is_nil(Map.get(assigns, :selected_items)) do
-        case Map.get(assigns.form.data, atom_input_variable) do
-          nil ->
-            nil
-          id ->
-            id
-            if is_nil(Map.get(assigns, :items)) do
-              nil
-            else
-              item = Enum.find(assigns.items, nil, fn x -> x.id == id end)
-              if(item) do
-                %{id: item.id, label: label_function.(item)}
-              end
+      case Map.get(assigns.form.params, assigns.input_variable) do
+        nil -> 
+          if is_nil(Map.get(assigns, :selected_items)) do
+            case Map.get(assigns.form.data, atom_input_variable) do
+              nil ->
+                nil
+              id ->
+                id
+                if is_nil(Map.get(assigns, :items)) do
+                  nil
+                else
+                  item = Enum.find(assigns.items, nil, fn x -> x.id == id end)
+                  if(item) do
+                    %{id: item.id, label: label_function.(item)}
+                  end
+                end
             end
-        end
-      else
-        assigns.selected_items
+          else
+            assigns.selected_items
+          end
+        str_id ->
+          result = Integer.parse(str_id)
+          case result do 
+            :error -> 
+              nil
+            {num_id, _} ->
+              selected_item = Enum.find(assigns.items, fn x -> x.id == num_id end)
+              selected_item
+              %{id: selected_item.id, label: label_function.(selected_item)}
+
+          end
+
+          
       end
-    end
     items = Enum.map(assigns.items, fn x -> %{label: label_function.(x), id: x.id} end)
     presenting_items = Enum.slice(items, 0..10)
 
@@ -126,15 +138,13 @@ defmodule MehungryWeb.SelectComponentSingle do
   end
 
   @impl true
-  def handle_event("validate", %{"search_input" => _search_string}, socket) do
+  def handle_event("validate", %{"search_input" => search_string}, socket) do
+    items = Seqfuzz.filter(socket.assigns.items, search_string, fn x -> x.label end)
     socket =
       socket
       |> assign(:listing_open, true)
+      |> assign(:items, items)
 
-    {:noreply, socket}
-  end
-
-  def handle_event("validate", _params, socket) do
     {:noreply, socket}
   end
 
@@ -189,7 +199,6 @@ defmodule MehungryWeb.SelectComponentSingle do
     {id, _} = Integer.parse(id)
 
     selected_item = Enum.find(socket.assigns.items, fn x -> x.id == id end)
-    IO.inspect(selected_item)
 
     socket =
       socket

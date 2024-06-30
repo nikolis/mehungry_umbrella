@@ -21,7 +21,6 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
         name={Phoenix.HTML.Form.input_name(@f, :user_profile_id)}
         value={to_string(Phoenix.HTML.Form.input_value(@f, :user_profile_id))}
       />
-
       <div> </div>
       <.live_component
       module={MehungryWeb.SelectComponentSingle}
