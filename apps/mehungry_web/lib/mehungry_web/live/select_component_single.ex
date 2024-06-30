@@ -34,7 +34,7 @@ defmodule MehungryWeb.SelectComponentSingle do
           <!-- Search Input -->
 
             <%= if is_nil(@selected_items) do %>
-              <.input  phx-change="validate" phx-focus="search_input_focus" phx-target={@myself} value="" name="search_input" myself={@myself} type="select_component" class="test flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "/> 
+                    <.input  phx-change="validate" phx-focus="search_input_focus" phx-target={@myself} value="" name="search_input" myself={@myself} type="select_component" class="test flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "/> 
           <% end %>
             <!-- End Item Tags And Input Field -->
             <!-- Start Items List -->
@@ -45,7 +45,7 @@ defmodule MehungryWeb.SelectComponentSingle do
              bg-white absolute left-0 bottom-100 
              bg-white z-50 max-h-52 shadow-lg">
               <%= if @listing_open do %>
-                <%=  for x <- @items do %>
+                <%=  for x <- @items_filtered do %>
                   <!-- Item Element -->
                   <div class="relative z-50 h-full">
                     <div class="bg-white h-full">
@@ -126,6 +126,7 @@ defmodule MehungryWeb.SelectComponentSingle do
     socket =
       socket
       |> assign(:items, items)
+      |> assign(:items_filtered, items)
       |> assign(:presenting_items, presenting_items)
       |> assign(:listing_open, Map.get(assigns, :initial_open, false))
       |> assign(:selected_items, selected_items)
@@ -139,11 +140,12 @@ defmodule MehungryWeb.SelectComponentSingle do
 
   @impl true
   def handle_event("validate", %{"search_input" => search_string}, socket) do
-    items = Seqfuzz.filter(socket.assigns.items, search_string, fn x -> x.label end)
+    IO.inspect(search_string, label: "Search input")
+    items_filtered = Seqfuzz.filter(socket.assigns.items, search_string, fn x -> x.label end)
     socket =
       socket
       |> assign(:listing_open, true)
-      |> assign(:items, items)
+      |> assign(:items_filtered, items_filtered)
 
     {:noreply, socket}
   end
