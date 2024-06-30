@@ -35,14 +35,14 @@ defmodule MehungryWeb.Router do
       live "/", HomeLive.Index, :index
       live "/post/:id", HomeLive.Show, :show
 
+      live "/select", SelectAlpineLive, :index
+
       live "/profile", ProfileLive.Index, :index
       live "/profile/edit", ProfileLive.Index, :edit
 
       live "/browse", RecipeBrowseLive.Index, :index
       live "/browse/:id", RecipeBrowseLive.Index, :show
       live "/browse_prepop/:search_term", :searc_prepop
-      # live "/basket", BasketLive.Index, :index
-      # live "/basket/import_items/:id", BasketLive.Index, :import_items
       live "/basket", ShoppingBasketLive.Index, :index
       live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
 

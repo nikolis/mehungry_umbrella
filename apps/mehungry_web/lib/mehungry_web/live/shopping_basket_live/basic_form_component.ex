@@ -17,10 +17,10 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
         class="side-form "
       >
           <.input field={@form[:user_id]} type="hidden"  />
-          <.input field={@form[:title]} type="text"  /> 
+          <.input field={@form[:title]} type="text" class="mt-2 mx-2" /> 
         <:actions>
           <div style="margin-inline: auto; width: 88%; ">
-            <button type="submit" class="primary_button_complementary" phx-click={
+            <button type="submit" class="button bg-complementary  " phx-click={
       JS.remove_class("active", to: "#basket-basic-form.active")
       } >SAVE</button>
             <button class="list_button_cancel"  phx-click={

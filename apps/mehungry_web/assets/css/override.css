@@ -1,0 +1,21 @@
+:root {
+  --inner-container-padding: 1rem 3rem;
+  --inner-container-padding-mobile: 1.5rem 2.1rem;
+
+  --border-radius-smooth: 25px;
+  --clr-primary: #85CB33;
+
+  --clr-dark_1: #004300;
+  --clr-dark_2: #002800;
+
+  --clr-light: #FFCC62;
+  --clr-light_2: #FFCF90;
+
+  --clr-complementary-dark: #006D89;
+  --clr-complementary-middle: #00A0D0;
+  --clr-complementary-light: #00D8FF;
+  
+  --clr-grey-friend: #f0f0f0;
+  --clr-grey-friend_2: #f0f0f0;
+  --clr-grey-friend_3: rgba(100, 100, 100, 0.3);
+}

@@ -1,5 +1,7 @@
-<div class="main-page-container-bg">
-  <Components.recipe_modal invocations={@invocations} live_action={@live_action} nutrients = {@nutrients} recipe={@recipe}/>
+<div class=" p-8 bg-greyfriend1">
+    <.recipe_modal :if={@live_action in [:show]} on_cancel={JS.patch(~p"/browse")} id="shopping_basket_modal" show >
+      <Components.recipe_modal invocations={@invocations} live_action={@live_action} nutrients = {@nutrients} recipe={@recipe}/>
+    </.recipe_modal>
 
   <div  class="the_form second_layer_spacing">
     <div class="grid_even_columns" id="recipes_container" phx-hook="InfiniteScroll" phx-update='stream' data-page = {@page}>

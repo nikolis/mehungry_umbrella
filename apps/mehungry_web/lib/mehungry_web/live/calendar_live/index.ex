@@ -16,7 +16,7 @@ defmodule MehungryWeb.CalendarLive.Index do
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_meals = History.list_history_user_meals_for_user(user.id)
     recipes = list_recipes(user)
-    
+
     user_meals =
       Enum.map(user_meals, fn x ->
         %{

@@ -1,63 +1,13 @@
-.profile_index_info {
-	display: flex;
-	flex-direction: column;
-        text-align: center;
-	gap: 1rem;
-        justify-content: center;
-	align-items: center;
-}
-
-
-.profile_index_info h2 {
-	font-weight: bold;
-	font-size: 2rem;
-}
-
-.profile_index_info img {
-	border-radius: 70rem;
-	max-width: 15vw;
-	max-height: 20vw;
-}
-
-
-.profile_index_user_content {
-	padding-top: 6em;
-	margin: 2em;
-	border-radius: 10px;
-	position: relative;
-	box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1) ;
-}
-
-.nav_buttons {
-	margin: 1em 5em 1em 5em;
-	position: absolute;
-	top: 0;
-	right: 0;
-	left: 0;
-	justify-content: space-around;
-	display: flex;
-}
-
-
-
-.nav_button {
-	font-size: 1.5rem;
-	font-weight: 600;
-	color: var(--clr-grey-friend);
-	background: none;
-	border: none;
-	padding: 19px;
-}
-
 .nav_button svg {
-	stroke: var(--clr-grey-friend); 
-	fill: var(--clr-grey-friend); 
-
+	stroke: var(--clr-grey-friend_3); 
+	fill: var(--clr-grey-friend_3); 
 }
+
 .nav_button.active svg {
 	stroke:var(--clr-complementary-middle);
 	fill:  var(--clr-complementary-middle); 
 }
+
 .nav_button.active {
 	color: var(--clr-complementary-middle);
 	border-bottom: 3px solid var(--clr-complementary-middle);
@@ -69,18 +19,5 @@
 		display: none;
 	}
 }
-
-.aline {
-	position: absolute;
-	top: 0; 
-	left: 0;
-	width: 90px;
-	top: 62px;
-	height: 5px;
-	background-color: #7360ff;
-}
-
-
-
 
 

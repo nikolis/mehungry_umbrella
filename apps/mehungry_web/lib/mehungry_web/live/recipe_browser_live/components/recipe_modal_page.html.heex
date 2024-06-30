@@ -1,12 +1,4 @@
-<div id="modal2" phx-hook="SwapElement"  phx-hook="ModalHook" class={"recipe_modal is-open"} style="overflow-y: scroll; height: 100vh;">
-  <button class='modal-close' phx-click={
-  Phoenix.LiveView.JS.push("close-modal")
-  |> Phoenix.LiveView.JS.set_attribute({"closing", "true"}, to: "#modal2")
-}>
-    <svg width="20px" height="20px" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-      <path fill="#000000" d="M195.2 195.2a64 64 0 0 1 90.496 0L512 421.504 738.304 195.2a64 64 0 0 1 90.496 90.496L602.496 512 828.8 738.304a64 64 0 0 1-90.496 90.496L512 602.496 285.696 828.8a64 64 0 0 1-90.496-90.496L421.504 512 195.2 285.696a64 64 0 0 1 0-90.496z" />
-    </svg>
-  </button>
+<div phx-hook="SwapElement" id="recipe_presentation_modal" >
     <div style="min-height: 140vh" class="mt-8">
       <h1 class="recipe_details_title text-center"> <%= @recipe.title %> </h1>
       <h2 class="recipe_details_sub_title text-center"> <%= @recipe.description %> </h2>
