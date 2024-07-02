@@ -20,19 +20,21 @@
 
       <div class="">
         <%= for entry <- @uploads.image.entries do %>
-        <div class="img_preview_container">
-          <.live_img_preview entry={entry} width="500rem" class="m-auto" />
-          <article class="upload-entry">
-            <figure class="h-full">
-              <progress class="w-full" value={entry.progress} max="100"> <%= entry.progress %>% </progress>
-            </figure>
+          <div class="img_preview_container">
+            <.live_img_preview entry={entry} width="500rem" class="m-auto" />
+            <article class="upload-entry">
+              <figure class="h-full">
+                <progress class="w-full" value={entry.progress} max="100"> <%= entry.progress %>% </progress>
+              </figure>
 
-            <%= for err <- upload_errors(@uploads.image, entry) do %>
-            <p class="alert alert-danger"><%= error_to_string(err) %> </p>
-            <% end %>
-          </article>
-          <button class="photo-delbutton text-4xl" type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} aria-label="cancel">&times;</button>
-        </div>
+              <%= for err <- upload_errors(@uploads.image, entry) do %>
+              <p class="alert alert-danger"><%= error_to_string(err) %> </p>
+              <% end %>
+            </article>
+            <button class="photo-delbutton text-4xl" type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} aria-label="cancel">
+              &times;
+            </button>
+          </div>
         <% end %>
       </div>
 
@@ -62,9 +64,9 @@
 
 
     </div>
-     <div id="something wierd" class="absolute right-0 left-0 mx-auto bottom-0"> 
+    <div id="something wierd" class="absolute right-0 left-0 mx-auto bottom-0"> 
        <%= submit "Save", class: "button bg-primary  w-1/3 absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold  uppercase", type: "submit", phx_disable_with: "Saving...", id: "save_button" %>
-      </div>
+    </div>
 
   </.form>
 </div>

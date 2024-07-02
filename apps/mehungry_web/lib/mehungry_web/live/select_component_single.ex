@@ -93,7 +93,6 @@ defmodule MehungryWeb.SelectComponentSingle do
               nil ->
                 nil
               id ->
-                id
                 if is_nil(Map.get(assigns, :items)) do
                   nil
                 else
@@ -113,7 +112,6 @@ defmodule MehungryWeb.SelectComponentSingle do
               nil
             {num_id, _} ->
               selected_item = Enum.find(assigns.items, fn x -> x.id == num_id end)
-              selected_item
               %{id: selected_item.id, label: label_function.(selected_item)}
 
           end
@@ -140,7 +138,6 @@ defmodule MehungryWeb.SelectComponentSingle do
 
   @impl true
   def handle_event("validate", %{"search_input" => search_string}, socket) do
-    IO.inspect(search_string, label: "Search input")
     items_filtered = Seqfuzz.filter(socket.assigns.items, search_string, fn x -> x.label end)
     socket =
       socket
@@ -182,7 +179,7 @@ defmodule MehungryWeb.SelectComponentSingle do
     {:noreply, socket}
   end
 
-  def handle_event("handle-selected-item-click", %{"id" => id}, socket) do
+  def handle_event("handle-selected-item-click", _, socket) do
     socket =
       socket
       |> assign(:selected_items, nil)

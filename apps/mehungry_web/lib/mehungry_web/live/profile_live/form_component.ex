@@ -9,10 +9,10 @@ defmodule MehungryWeb.ProfileLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <div style="width: 100%;" class="form-main">
-      <.header>
+    <div class="form-main h-120 w-full">
+      <h3 class="text-center mt-4 mb-8">
         <%= @title %>
-      </.header>
+      </h3>
 
       <.simple_form
         for={@form}
@@ -20,17 +20,22 @@ defmodule MehungryWeb.ProfileLive.Form do
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save"
-        class="profile-form"
+        class="profile-form pb-10 relative"
       >
         <.input required field={@form[:alias]} type="text" label="Alias" />
         <.input required field={@form[:intro]} type="textarea" label="Intro" />
-        <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>
+        <h3 class="text-center m-8"> Diatery Restrictions </h3>
+        <div class="max-h-64 overflow-auto"> 
+          <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>
             <FormCategoryComponent.render category_ids = {@category_ids} categories = {@categories} food_restrictions = {@food_restrictions} food_restriction_ids = {@food_restriction_ids} f = {f_user_category_rule} parent= {@myself}  />
-        </.inputs_for>
-        <button class="list_button_complementary" style="margin: auto; margin-top: 1.5rem" type="button" phx-target={@myself} phx-click="add_category_rule">Add Rule</button>
-        <div style="position: relative">
-          <button  style="position: absolute; right: 0;" class="primary_button" phx-disable-with="Saving...">Save</button>
+          </.inputs_for>
         </div>
+    <div class="flex justify-end"> <button class=" list_button_complementary" type="button" phx-target={@myself} phx-click="add_category_rule">
+          Add Rule
+    </button>
+    </div>
+        <button  class="block w-1/3 mt-12 mx-auto text-2xl font-bold  uppercase primary_button" phx-disable-with="Saving...">Save</button>
+
       </.simple_form>
     </div>
     """
@@ -80,11 +85,14 @@ defmodule MehungryWeb.ProfileLive.Form do
 
   def handle_event("delete_category_rule", %{"index" => index}, socket) do
     index = String.to_integer(index)
+    IO.inspect(index, label: "Delete Index")
 
     socket =
       update(socket, :form, fn %{source: changeset} ->
         existing = Ecto.Changeset.get_assoc(changeset, :user_category_rules)
         {to_delete, rest} = List.pop_at(existing, index)
+        IO.inspect(to_delete, label: "to del")
+        IO.inspect(rest, label: "to del")
 
         user_category_rules =
           if Ecto.Changeset.change(to_delete).data.id do
@@ -92,7 +100,7 @@ defmodule MehungryWeb.ProfileLive.Form do
           else
             rest
           end
-
+        IO.inspect(user_category_rules, label: "asdfafsd")
         changeset
         |> Ecto.Changeset.put_assoc(:user_category_rules, user_category_rules)
         |> to_form()

@@ -13,6 +13,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      spacing: {
+        '120': '50rem',
+      },
       colors: {
         transparent: 'transparent',
         brand: "#FD4F00",

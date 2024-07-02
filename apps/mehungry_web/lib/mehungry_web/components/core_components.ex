@@ -463,10 +463,6 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  """
-  relative m-1 px-2 py-1.5 border rounded-md cursor-pointer hover:bg-gray-100 after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2 focus:ring-amber-300 ring-inset transition-all
-  """
-
   # Input type for select component
   def input(%{type: "select_component"} = assigns) do
     ~H"""
