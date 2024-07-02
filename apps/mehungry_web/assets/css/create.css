@@ -130,6 +130,7 @@
 	font-weight: bold;
 }
 
+
 .primary_button:hover {
 	background-color: var(--clr-light) !important;
 }

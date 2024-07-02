@@ -479,6 +479,8 @@ Hooks.HiddenCalendar = {
 			console.log(start_date)
 			console.log(origin_callendar);
 			console.log("Start date--------------------------------------")
+      console.log(origin_callendar)
+      console.log(calendar)
 			origin_callendar.setDate(start_date);
 		}
 		calendar.on('afterRenderEvent', ({

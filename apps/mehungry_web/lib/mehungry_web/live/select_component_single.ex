@@ -4,7 +4,7 @@ defmodule MehungryWeb.SelectComponentSingle do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="col-span-2" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={@id } >
+    <div class="col-span-2 h-full" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={@id } >
       <.input  field={@form[String.to_atom(@input_variable)]} type="hidden"  />
       <!-- Start Component -->
       <.focus_wrap  
