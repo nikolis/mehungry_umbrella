@@ -274,6 +274,7 @@ function for_calendar(meals, calendar) {
 		}, // EventObject
 		]);
 	}
+  return calendar; 
 }
 
 
@@ -312,23 +313,24 @@ function  mount_callendar(parent_view) {
 				name: 'Personal',
 				backgroundColor: 'blue',
 			}, ],
-		};
+		};//options
 
 		const calendar = new Calendar(container, options);
 		const prevButton = document.getElementById('callendar_prev_button');
 		prevButton.addEventListener('click', function(e) {
 			calendar.prev();
-});
-
+    });
 
 		const nextButton = document.getElementById('callendar_next_button');
 		nextButton.addEventListener('click', function(e) {
 			calendar.next();
-});
+    });
 
 		window.addEventListener(`phx:create-meal`, (e) => {
 			var start = e.detail.start
 			var end = e.detail.end
+      console.log("Clear -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+      calendar.clear();
 			calendar.createEvents([{
 				id: 'event1',
 				calendarId: 'cal1',
@@ -357,9 +359,6 @@ function  mount_callendar(parent_view) {
 				end: end
 			})
 		});
-
-
-
 
 		calendar.on({
 			'clickSchedule': function(e) {
@@ -407,36 +406,7 @@ function  mount_callendar(parent_view) {
 		});
 		return calendar ;
 
-	}
-
-Hooks.HiddenCalendar = {
-
-	mounted() {
-		const toggle_button = document.getElementById('button_hidde_calendar');
-		toggle_button.addEventListener("click", () => {
-	        	this.para = document.getElementById("calendar_controlls");
-			this.para.classList.toggle("calendar_controlls_open")
-		});
-
-	      	this.origin_callendar = mount_callendar(this);
-		mounted_func(this, null, this.origin_callendar);
-		window.addEventListener(`phx:create_meals`, (e) => {
-			this.meals = e.detail['meals']
-			for_calendar(this.meals, this.origin_callendar);
-		})
-	}
 }
-
-
-	function mounted_func(parent_view, start_date, origin_callendar) {
-		if(! origin_callendar) {
-		       	parent_view.origin_callendar = mount_callendar(parent_view); 
-			origin_callendar = parent_view.origin_callendar;
-		}
-	
-
-		const Calendar = tui.Calendar;
-		const container = document.getElementById('hidden_calendar');
 		const options = {
 			defaultView: "month",
 			usageStatistics: false,
@@ -474,14 +444,58 @@ Hooks.HiddenCalendar = {
 			}, ],
 		};
 
+Hooks.HiddenCalendar = {
+
+	mounted() {
+		const toggle_button = document.getElementById('button_hidde_calendar');
+		toggle_button.addEventListener("click", () => {
+	        	this.para = document.getElementById("calendar_controlls");
+			this.para.classList.toggle("calendar_controlls_open")
+		});
+
+	  this.origin_callendar = mount_callendar(this);
+    console.log(this.origin_callendar)
+    console.log("This origin callendar ");
+		mounted_func(this, null, this.origin_callendar);
+		window.addEventListener(`phx:create_meals`, (e) => {
+			this.meals = e.detail['meals']
+			for_calendar(this.meals, this.origin_callendar);
+		})
+		window.addEventListener(`phx:go_to_date`, (e) => {
+			var date = e.detail['date']
+      console.log(date)
+			result = this.origin_callendar.setDate(date)
+      console.log(result)
+		})
+
+	}
+}
+
+	function mounted_func(parent_view, start_date, origin_callendar) {
+    console.log("original calldndar mounted")
+    console.log(origin_callendar)
+    console.log("----")
+    const ori_cale = origin_callendar;
+    console.log("ori_cale")
+    console.log(ori_cale)
+		if(! origin_callendar) {
+      console.log("Should not go here 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+		  parent_view.origin_callendar = mount_callendar(parent_view); 
+			origin_callendar = parent_view.origin_callendar;
+		}
+	
+
+		const Calendar = tui.Calendar;
+		const container = document.getElementById('hidden_calendar');
+
 		var calendar = new Calendar(container, options);
 		if(start_date) {
 			console.log(start_date)
 			console.log(origin_callendar);
 			console.log("Start date--------------------------------------")
       console.log(origin_callendar)
-      console.log(calendar)
-			origin_callendar.setDate(start_date);
+    
+			parent_view.origin_callendar.setDate(start_date);
 		}
 		calendar.on('afterRenderEvent', ({
 			event
@@ -499,15 +513,15 @@ Hooks.HiddenCalendar = {
 
 		});
 
-calendar.setTheme({
-  month: {
-    dayExceptThisMonth: {
+  calendar.setTheme({
+    month: {
+      dayExceptThisMonth: {
+      },
+      moreView: {
+        backgroundColor: 'red'
+      }
     },
-    moreView: {
-	    backgroundColor: 'red'
-    }
-  },
-});
+  });
 		calendar.on('selectDateTime', ({
 			start,
 			end
@@ -519,9 +533,8 @@ calendar.setTheme({
 			para.classList.toggle("calendar_controlls_open")
 			calendar.destroy();
 			origin_callendar.destroy();
-			mounted_func(parent_view, start, this);
+			mounted_func(parent_view, start, null);
 			for_calendar(parent_view.meals, parent_view.origin_callendar);
-
 		});
 
 		calendar.on('clickEvent', ({
