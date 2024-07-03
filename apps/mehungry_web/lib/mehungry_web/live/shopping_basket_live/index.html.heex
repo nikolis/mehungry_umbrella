@@ -71,7 +71,7 @@
 
         </div>
     </div>
-    <div class="item-list-container pt-8">
+    <div class="item-list-container pt-8 pl-8">
       <h3 class="mt-4"> <%=  Map.get(@shopping_basket, :title, "...")  %> </h3>
       <%= if @shopping_basket do %> 
         <.render_basket_items shopping_basket = {@shopping_basket} />
