@@ -87,16 +87,18 @@ defmodule MehungryWeb.SelectComponentSingle do
 
     selected_items =
       case Map.get(assigns.form.params, assigns.input_variable) do
-        nil -> 
+        nil ->
           if is_nil(Map.get(assigns, :selected_items)) do
             case Map.get(assigns.form.data, atom_input_variable) do
               nil ->
                 nil
+
               id ->
                 if is_nil(Map.get(assigns, :items)) do
                   nil
                 else
                   item = Enum.find(assigns.items, nil, fn x -> x.id == id end)
+
                   if(item) do
                     %{id: item.id, label: label_function.(item)}
                   end
@@ -105,19 +107,20 @@ defmodule MehungryWeb.SelectComponentSingle do
           else
             assigns.selected_items
           end
+
         str_id ->
           result = Integer.parse(str_id)
-          case result do 
-            :error -> 
+
+          case result do
+            :error ->
               nil
+
             {num_id, _} ->
               selected_item = Enum.find(assigns.items, fn x -> x.id == num_id end)
               %{id: selected_item.id, label: label_function.(selected_item)}
-
           end
-
-          
       end
+
     items = Enum.map(assigns.items, fn x -> %{label: label_function.(x), id: x.id} end)
     presenting_items = Enum.slice(items, 0..10)
 
@@ -139,6 +142,7 @@ defmodule MehungryWeb.SelectComponentSingle do
   @impl true
   def handle_event("validate", %{"search_input" => search_string}, socket) do
     items_filtered = Seqfuzz.filter(socket.assigns.items, search_string, fn x -> x.label end)
+
     socket =
       socket
       |> assign(:listing_open, true)
@@ -191,7 +195,6 @@ defmodule MehungryWeb.SelectComponentSingle do
          Integer.to_string(socket.assigns.form.index) <> socket.assigns.input_variable,
        %{id: nil}
      )}
-
   end
 
   def handle_event("handle-item-click", %{"id" => id}, socket) do

@@ -49,7 +49,7 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   defp apply_action(socket, :index, params) do
     IO.inspect(params, label: "params")
-    #IO.inspect("Being called")
+    # IO.inspect("Being called")
     socket
   end
 
@@ -57,7 +57,7 @@ defmodule MehungryWeb.CalendarLive.Index do
     IO.inspect(date, label: "params")
     socket = push_event(socket, "go_to_date", %{date: date})
 
-    #IO.inspect("Being called")
+    # IO.inspect("Being called")
     socket
   end
 

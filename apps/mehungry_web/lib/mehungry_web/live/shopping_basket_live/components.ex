@@ -6,7 +6,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
     case basket_1.id == basket_2.id do
       true ->
         "active"
-
       false ->
         ""
     end
@@ -26,11 +25,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
     }  phx-value-id={shopping_basket.id}> 
           <div class="li_title"> <%= shopping_basket.title %> </div>
           <div class="shopping_list_utils">
-
             <.link patch={~p"/basket/import_items/#{shopping_basket.id}"}>  <img width="30vw" style="height: 100%;" src="/images/calendar.svg"/> </.link>
-
             <img width="30vw" src="/images/edit_color.svg" />
-
             <img width="25vw" src="/images/delete_color.svg" phx-value-id={shopping_basket.id} phx-click="delete_basket" />
           </div>
         </li>
@@ -47,13 +43,17 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                   <%= for rec_ing <- @shopping_basket.basket_ingredients do %>
                     <tr>
                         <td> 
-                            <button phx-click="toggle_basket" class={"checkbox " <> get_class_for_toggle_button(rec_ing.in_storage)} phx-value-id={rec_ing.id} >
-                              Cla
-                            </button>
+                          <button phx-click="toggle_basket" class={"checkbox " <> get_class_for_toggle_button(rec_ing.in_storage)} phx-value-id={rec_ing.id} >                             Cla
+                          </button>
                         </td>
-                        <td style="border-bottom: 1px solid var(--clr-grey-friend_3);
-    "> <span style="font-weight: bold;"> <%= rec_ing.quantity %>  <%= rec_ing.measurement_unit.name %> </span> <%= rec_ing.ingredient.name %> </td>
-                                                                 </tr>
+                        <td style="border-bottom: 1px solid var(--clr-grey-friend_3);"> 
+                          <span style="font-weight: bold;"> 
+                            <%= rec_ing.quantity %> 
+                            <%= rec_ing.measurement_unit.name %> 
+                          </span> 
+                          <%= rec_ing.ingredient.name %> 
+                        </td>
+                    </tr>
                   <% end %>
                 </table>
              <% end %>
@@ -64,7 +64,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
     case in_stock do
       true ->
         "checked"
-
       false ->
         "unchecked"
     end

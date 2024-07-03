@@ -221,14 +221,20 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   defp save_user_meal(socket, :new, user_meal_params) do
     IO.inspect(socket.assigns.return_to, label: "new yuser meal;")
     IO.inspect(user_meal_params)
+
     case History.create_user_meal(user_meal_params) do
       {:ok, user_meal} ->
         date = NaiveDateTime.to_string(user_meal.start_dt)
-        IO.inspect(date, label: "Date adsoaifds--------------------------------------------------------------------------------------------------")
+
+        IO.inspect(date,
+          label:
+            "Date adsoaifds--------------------------------------------------------------------------------------------------"
+        )
+
         {:noreply,
          socket
          |> put_flash(:info, "User Meal created successfully")
-         |> push_redirect(to: "/calendar/ondate/"<> date)}
+         |> push_redirect(to: "/calendar/ondate/" <> date)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
