@@ -122,12 +122,6 @@
 }
 
 
-
-
-
-
-
-
 .container_product {
         background-color: var(--clr-secondary-200);
         width: 100%;
@@ -261,11 +255,7 @@ h2.portfolio-title::after {
 	animation: modalFade 500ms forwards; 
 }
 
-
-
  /* The grid presentation */
-
-
 
 .grid_2_even_columns {
 	display: grid;
@@ -305,19 +295,11 @@ h2.portfolio-title::after {
 
 }
 
-
-
-
-
-
-
-
 @media (min-width: 40em) {
 	.grid_even_columns {
 		grid-template-columns: repeat(2, auto);
 	}
 }
-
 
 @media (min-width: 60em) {
 	.grid_even_columns {

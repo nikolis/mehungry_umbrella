@@ -1,11 +1,6 @@
-<div style="display: flex; flex-direction: column; gap: 0.75rem;">
+<div class="flex flex-col gap-3">
 
-  <.input required field={@f[:title]} type="text" label="Title" />
-
+  <.input required field={@f[:title]} type="text" label="Title"  class=""/>
   <.input required field={@f[:servings]} type="text" label="Servings" />
-
-  <.input required field={@f[:description]} type="text" label="Description" />
-
-  
-  <.input field={@f[:language_name]} type="hidden"  />
+  <.input required field={@f[:description]} type="text" label="Description" />   <.input field={@f[:language_name]} type="hidden"  />
 </div>

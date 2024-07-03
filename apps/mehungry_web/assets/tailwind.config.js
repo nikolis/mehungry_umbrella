@@ -13,8 +13,23 @@ module.exports = {
   ],
   theme: {
     extend: {
+      spacing: {
+        '120': '50rem',
+      },
       colors: {
+        transparent: 'transparent',
         brand: "#FD4F00",
+        primary: "#85CB33",
+        primaryd1: "#004300",
+        primaryd2: "#002800",
+        primaryl1: "#FFCC62",
+        primaryl2: "#FFCF90",
+        complementary: "#00A0D0",
+        complementaryd: "#006D89",
+        complementaryl: "#00D8FF",
+        greyfriend1: "#f0f0f0",
+        greyfriend2: "#6464644d",
+
       }
     },
   },
@@ -33,8 +48,8 @@ module.exports = {
     // Embeds Heroicons (https://heroicons.com) into your app.css bundle
     // See your `CoreComponents.icon/1` for more information.
     //
-    /*plugin(function({matchComponents, theme}) {
-      let iconsDir = path.join(__dirname, "../deps/heroicons/optimized")
+    plugin(function({matchComponents, theme}) {
+      let iconsDir = path.join(__dirname, "../../../deps/heroicons/optimized")
       let values = {}
       let icons = [
         ["", "/24/outline"],
@@ -57,7 +72,7 @@ module.exports = {
           } else if (name.endsWith("-micro")) {
             size = theme("spacing.4")
           }
-          return {
+          var ret_obj =  {
             [`--hero-${name}`]: `url('data:image/svg+xml;utf8,${content}')`,
             "-webkit-mask": `var(--hero-${name})`,
             "mask": `var(--hero-${name})`,
@@ -68,8 +83,9 @@ module.exports = {
             "width": size,
             "height": size
           }
+          return ret_obj;
         }
       }, {values})
-    })*/
+    })
   ]
 }

@@ -112,6 +112,7 @@ defmodule MehungryWeb do
       import Phoenix.LiveView.Helpers
       import MehungryWeb.LiveHelpers
       import Phoenix.Component
+      import MehungryWeb.CoreComponents
 
       # Import basic rendering functionality (render, render_layout, etc)
       import Phoenix.View

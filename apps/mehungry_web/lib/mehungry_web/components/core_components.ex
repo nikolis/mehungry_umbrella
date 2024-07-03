@@ -41,21 +41,51 @@ defmodule MehungryWeb.CoreComponents do
   attr :on_cancel, JS, default: %JS{}
   slot :inner_block, required: true
 
-  def my_modal(assigns) do
+  def recipe_modal(assigns) do
     ~H"""
-      <dialog id="my_modal" class="my_modal" phx-hook="MyModalHook"  style="z-index: 100;" patch={assigns.patch}>
-        <button id="button-close-modal" class="modal-button-close">    
-          <svg width="20px" height="20px" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-            <path fill="#000000" d="M195.2 195.2a64 64 0 0 1 90.496 0L512 421.504 738.304 195.2a64 64 0 0 1 90.496 90.496L602.496 512 828.8 738.304a64 64 0 0 1-90.496 90.496L512 602.496 285.696 828.8a64 64 0 0 1-90.496-90.496L421.504 512 195.2 285.696a64 64 0 0 1 0-90.496z" />
-          </svg>
-        </button> 
-        <button id="button-opem-modal" type="hidden"></button> 
-
-
-        <div id={"#{@id}-content"}>
-          <%= render_slot(@inner_block) %>
+    <div
+      id={@id}
+      phx-mounted={@show && show_modal(@id)}
+      phx-remove={hide_modal(@id)}
+      data-cancel={JS.exec(@on_cancel, "phx-remove")}
+      class="relative z-50 hidden"
+    >
+      <div id={"#{@id}-bg"} class="bg-zinc-50/90 fixed inset-0 transition-opacity top-0 left-0 right-0" aria-hidden="true" />
+      <div
+        class="fixed inset-0 overflow-y-auto"
+        aria-labelledby={"#{@id}-title"}
+        aria-describedby={"#{@id}-description"}
+        role="dialog"
+        aria-modal="true"
+        tabindex="0"
+      >
+        <div class="flex min-h-full items-center justify-center mt-10">
+          <div class="w-full  p-4 sm:p-6 lg:py-8">
+            <.focus_wrap
+              id={"#{@id}-container"}
+              phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
+              phx-key="escape"
+              phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
+              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-14 shadow-lg ring-1 transition"
+            >
+              <div class="absolute top-6 right-5">
+                <button
+                  phx-click={JS.exec("data-cancel", to: "##{@id}")}
+                  type="button"
+                  class="-m-3 flex-none p-3 opacity-20 hover:opacity-40"
+                  aria-label={gettext("close")}
+                >
+                  <.icon name="hero-x-mark-solid" class="h-5 w-5" />
+                </button>
+              </div>
+              <div id={"#{@id}-content"}>
+                <%= render_slot(@inner_block) %>
+              </div>
+            </.focus_wrap>
+          </div>
         </div>
-      </dialog>
+      </div>
+    </div>
     """
   end
 
@@ -306,7 +336,8 @@ defmodule MehungryWeb.CoreComponents do
 
   attr :type, :string,
     default: "text",
-    values: ~w(checkbox color date datetime-local email file hidden month number password
+    values:
+      ~w(checkbox color date datetime-local email file hidden month number password select_component
                range radio search select tel text textarea time url week full-text)
 
   attr :field, Phoenix.HTML.FormField,
@@ -371,25 +402,6 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  def input(%{type: "select"} = assigns) do
-    ~H"""
-    <div phx-feedback-for={@name} class="input-form">
-      <.label for={@id}><%= @label %></.label>
-      <select
-        id={@id}
-        name={@name}
-        class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm"
-        multiple={@multiple}
-        {@rest}
-      >
-        <option :if={@prompt} value=""><%= @prompt %></option>
-        <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
-      </select>
-      <.error :for={msg <- @errors}><%= msg %></.error>
-    </div>
-    """
-  end
-
   def input(%{type: "textarea"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name} class="input-form">
@@ -397,7 +409,7 @@ defmodule MehungryWeb.CoreComponents do
         id={@id}
         name={@name}
         class={[Map.get(assigns.rest, :class, "")] ++ [
-          "input ",
+          "h-full rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2 mt-2",
         ]}{@rest}><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
        <.label for={@id}><%= @label %>
       </.label>
@@ -451,43 +463,65 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  def input(%{type: "bidden"} = assigns) do
+  # Input type for select component
+  def input(%{type: "select_component"} = assigns) do
     ~H"""
-    <div id={(@id  || @name) <> "aho"}  phx-feedback-for={@name} class="input-form " style="">
-     <div > 
-      <%= inspect @errors %>
-      </div>
+    <div phx-feedback-for={@name} class=" input-form  relative h-full">
+       <svg
+        phx-click="toggle-listing"
+        phx-target={assigns.rest.myself}
+        width="24"
+        height="24"
+        stroke-width="0"
+        fill="#ccc"
+        class="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer focus:outline-none"
+        tabindex="-1">
+        <path
+          d="M12 17.414 3.293 8.707l1.414-1.414L12 14.586l7.293-7.293 1.414 1.414L12 17.414z"
+        />
+      </svg>
+
       <input
+        type={@type}
         name={@name}
-        type="hidden"
-        id={@id || @name}
-        class={[
-          "input_full",
+        id={@id}
+        value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        class={[Map.get(assigns.rest, :class, "")] ++ [
+          "h-full rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	",
+          "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym",
+          @errors == [] && "",
+          @errors != [] && " ring-rose-400  focus:ring-rose-400"
         ]}
         {@rest}
+
       />
-          </div>
+      <.label for={@id} class="placeholder"><%= @label %></.label>
+      <.error :for={msg <- @errors}><%= msg %></.error>
+
+    </div>
     """
   end
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class=" input-form" >
+    <div phx-feedback-for={@name} class=" input-form w-full h-full max-h-12" >
+      
       <input
         type={@type}
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-        class={[
-          "input",
-          "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+        class={[Map.get(assigns.rest, :class, "")] ++ [
+          "rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	h-full",
+          "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym",
+          @errors == [] && "",
+          @errors != [] && " ring-rose-400  focus:ring-rose-400"
         ]}
         {@rest}
       />
       <.label for={@id} class="placeholder"><%= @label %></.label>
+      <.error :for={msg <- @errors}><%= msg %></.error>
 
     </div>
     """
@@ -515,10 +549,10 @@ defmodule MehungryWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 flex gap-3 text-sm leading-6 text-rose-600 phx-no-feedback:hidden">
+    <div class="text-right text-base font-medium leading-6 text-rose-600 phx-no-feedback:hidden">
       <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
       <%= render_slot(@inner_block) %>
-    </p>
+    </div>
     """
   end
 

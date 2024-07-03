@@ -1,13 +1,12 @@
-<div class="main-page-container-bg">
-
+<div class="md:p-8 bg-greyfriend1 mx-auto">
 <.form 
   id={@id} 
   for={@form} 
   phx-change="validate" 
   phx-submit="save"
-  class="the_form second_layer_spacing"
+  class="the_form flex flex-col mx-auto"
   >
-    <div class="grid_2_even_columns">
+    <div class="basic_2_col_grid_cont">
       <Components.recipe_render f={@form} />
 
       <div class={"drop-container #{drop_hidden?(@uploads.image.entries)}"}>
@@ -19,51 +18,55 @@
         </div>
       </div>
 
-      <div class="asdf">
+      <div class="">
         <%= for entry <- @uploads.image.entries do %>
-        <div class="img_preview_container">
-          <.live_img_preview entry={entry} width="500rem" class="m-auto" />
-          <article class="upload-entry">
-            <figure class="h-full">
-              <progress class="w-full" value={entry.progress} max="100"> <%= entry.progress %>% </progress>
-            </figure>
+          <div class="img_preview_container">
+            <.live_img_preview entry={entry} width="500rem" class="m-auto" />
+            <article class="upload-entry">
+              <figure class="h-full">
+                <progress class="w-full" value={entry.progress} max="100"> <%= entry.progress %>% </progress>
+              </figure>
 
-            <%= for err <- upload_errors(@uploads.image, entry) do %>
-            <p class="alert alert-danger"><%= error_to_string(err) %> </p>
-            <% end %>
-          </article>
-          <button class="photo-delbutton text-4xl" type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} aria-label="cancel">&times;</button>
-        </div>
+              <%= for err <- upload_errors(@uploads.image, entry) do %>
+              <p class="alert alert-danger"><%= error_to_string(err) %> </p>
+              <% end %>
+            </article>
+            <button class="photo-delbutton text-4xl" type="button" phx-click="cancel-upload" phx-value-ref={entry.ref} aria-label="cancel">
+              &times;
+            </button>
+          </div>
         <% end %>
       </div>
 
     </div>
 
-    <div class="grid_2_even_columns">
-      <article class="parent ">
+    <div class="basic_2_col_grid_cont pb-32">
+      <div >
         <h3 class="listing_title text-center">Ingredients</h3>
         <div class="ingredients_create_container">
            <.inputs_for :let={g} field={@form[:recipe_ingredients]}>
               <Components.ingredient_render g={g} f={@form} ingredients={@ingredients} measurement_units={@measurement_units} />
            </.inputs_for>
       </div>
-        <div class="w-full relative"> <button  id="add_ingredient" class="list_button absolute bottom--10 right-0" type="button" phx-click="add-ingredient">Add Ingredient</button> </div>
-      </article>
+        <div id="ingredient_button" class="w-full relative"> <button  id="add_ingredient" class="button_outline_primary  absolute bottom--10 right-0" type="button" phx-click="add-ingredient">Add Ingredient</button> </div>
+      </div>
 
       <div>
-        <h3 class="listing_title text-center">Creation Steps</h3>
+        <h3 class="text-center">Creation Steps</h3>
         <div class="steps_create_container">
           <.inputs_for :let={v} field={@form[:steps]}>
               <Components.step_render v={v} />
           </.inputs_for>
         </div>
-           <div class="w-full relative">  <button id="some_id" type="button" class="list_button_complementary absolute bottom--10 right-0" phx-click="add-step">Add Step</button>
+           <div class="w-full relative">  <button id="some_id" type="button" class="button_outline_complementary absolute bottom--10 right-0" phx-click="add-step">Add Step</button>
         </div>
       </div>
 
 
     </div>
-    <%= submit "Save", class: "primary_button mt-24 w-1/3 mr-auto ml-auto", type: "submit", phx_disable_with: "Saving..." %>
+    <div id="something wierd" class="absolute right-0 left-0 mx-auto bottom-0"> 
+       <%= submit "Save", class: "button bg-primary  w-1/3 absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold  uppercase", type: "submit", phx_disable_with: "Saving...", id: "save_button" %>
+    </div>
 
   </.form>
 </div>

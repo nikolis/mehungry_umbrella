@@ -2,7 +2,6 @@
 	transform: translateY(-1rem);
 }
 
-
 .recipe_card {
 	border-radius: 10px;
 	border: 1px solid #e5e5e5;
@@ -11,7 +10,6 @@
 	transition: transform 500ms  ease;
 	cursor: pointer;
 }
-
 
 .recipe_card .recipe_img{
 	border-radius: 10px;

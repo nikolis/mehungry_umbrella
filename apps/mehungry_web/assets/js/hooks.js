@@ -2,81 +2,41 @@ import "selectize";
 
 let Hooks = {}
 
-Hooks.MyModalHook = {
 
-	mounted() {
-		console.log("My modal hook");
-		const closeModal = document.getElementById("button-close-modal");
-		const modal = document.getElementById("my_modal");
-		var patch = modal.getAttribute('patch')
-		modal.addEventListener("close", () => {
-			this.pushEvent("close-modal", {to: patch});
 
-		});
-		modal.showModal();
-		console.log("Mount load end");
-		closeModal.addEventListener('click', () => {
-			modal.close();
-		});
-	}
+Hooks.SelectComponent = {
+
+  mounted() {
+    this.ref = this.el;
+    const refAt = this.ref.getAttribute("data-reference-id")
+    const originalID = this.el.id
+    const referenceIndex = this.ref.getAttribute("data-reference-index")
+    console.log(referenceIndex)
+    console.log(refAt)
+    window.addEventListener("phx:selected_id"+ referenceIndex + refAt, (e) => {
+      console.log("On the click")
+      let el = document.getElementById(originalID)
+      console.log(el)
+      for (const child of this.el.children) {
+        if(child.id !=null && child.id.includes(refAt)){
+            if(child.tagName == "INPUT"){
+              console.log("Found the input")
+              console.log(child)
+      			  $("#" + child.id).val(e.detail.id).change()
+              var ret = child.dispatchEvent(new Event("input", {
+                  bubbles: true,
+                  cancelable: false,
+                  detail: {id: e.detail.id},
+              }));
+              console.log(child)
+
+            }
+        }
+      }
+    });
+  }
 }
 
-Hooks.Select2Multi = {
-
-	initSelect2(element, hook, hiddenIdFull, selects, index, hook_layer_id, select_layer_id, placeholder) {
-		let hook2 = this;
-		let $select = selects[0]
-		console.log(hook_layer_id)
-		let id = '#' + select_layer_id ;
-		console.log(id)
-		//var s = document.getElementById(element.id);
-		$select.value = $(hiddenIdFull).val();
-	        	
-		$('#' + element.id).val($(hiddenIdFull).val())
-  	
-
-		selects.select2().on("change", (e) =>
-			hook.item_selected($select, e, hiddenIdFull)
-		)
-		$(id).select2({
-        	    dropdownParent: $('#'+hook_layer_id),
-		    closeOnSelect: true,
-		    debug: true,
-		    placeholder: placeholder,
-
-    		});
-
-		return element
-	},
-
-	item_selected(element, event, hiddenIdFull) {
-		if ($(element).val().length === 0) {
-			//$(hiddenIdFull).find('option').attr("selected",false) ;
-			//$(hiddenIdFull).prop('selectedIndex', -1)
-		} else {
-			$(hiddenIdFull).val($(element).val()).change()
-		}
-		element.dispatchEvent(new Event("input", {
-			bubbles: true,
-			cancelable: true
-		}))
-		return event;
-	},
-
-	mounted() {
-
-		let hiddenId = this.el.getAttribute("data-hidden-id")
-		let index = this.el.getAttribute("data-index")
-		let hook_layer_id = this.el.getAttribute("id")
-		let select_layer_id = this.el.getAttribute("data-select-layer-id")
-		let placeholder = this.el.getAttribute("placeholder")
-		let hiddenIdFull = '#' + hiddenId
-		let $selects = jQuery(this.el).find("select");
-		let $select = $selects[0];
-		
-		this.initSelect2(this.el, this, hiddenIdFull, $selects, index, hook_layer_id, select_layer_id, placeholder)
-	}
-}
 
 
 
@@ -203,48 +163,6 @@ Hooks.GoogleLoginHook = {
 
 }
 
-Hooks.Select2 = {
-
-	initSelect2(element, hook, hiddenIdFull, selects) {
-		let hook2 = this;
-		let $select = selects[0]
-
-		selects.select2().on("change", (e) =>
-			hook.item_selected($select, e, hiddenIdFull)
-		)
-
-		return element
-	},
-
-	item_selected(element, event, hiddenIdFull) {
-		$(hiddenIdFull).val($(element).val()).change()
-		element.dispatchEvent(new Event("input", {
-			bubbles: true,
-			cancelable: true
-		}))
-		return event;
-	},
-
-	mounted() {
-		let hiddenId = this.el.getAttribute("data-hidden-id")
-		let hiddenIdFull = '#' + hiddenId
-
-		let $selects = jQuery(this.el).find("select");
-		let $select = $selects[0]
-
-		$(hiddenIdFull).val(1).change()
-		$select.dispatchEvent(new Event("input", {
-			bubbles: true,
-			cancelable: true
-		}))
-
-		this.initSelect2(this.el, this, hiddenIdFull, $selects)
-	}
-}
-
-
-
-
 
 import flatpicker from "flatpickr";
 
@@ -339,7 +257,6 @@ function for_calendar(meals, calendar) {
 			id: meal.id,
 			calendarId: 'cal1',
 			title: meal.title + "(" + meal.sub_title + ")",
-			body: 'TOAST UI Calendar',
 			start: dt,
 			body: meal.sub_title,
 			end: dta,
@@ -375,7 +292,6 @@ function  mount_callendar(parent_view) {
     				},
 			  },
 			week: {
-				taskView: true,
 				startDayOfWeek: 1,
 				visibleScheduleCount: 14,
 				showNowIndicator: false,
@@ -536,7 +452,6 @@ Hooks.HiddenCalendar = {
 			  },
 
 			week: {
-				taskView: true,
 				startDayOfWeek: 1,
 				visibleScheduleCount: 14,
 				showNowIndicator: false,

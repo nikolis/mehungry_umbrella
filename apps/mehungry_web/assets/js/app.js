@@ -11,12 +11,15 @@ import "selectize";
 import { fix_navigation_active } from './navigation.js';
 import { Hooks } from './hooks.js'
 import { Uploaders } from './uploaders.js'
+import { multiselect } from './select.js';
+
+
 
 
 function toggleMenu() {
 	console.log("toogle mennu")
 }
-
+ 
 window.addEventListener('load', function() {
 	var modal = document.getElementById('modal');
 	if (modal) {
@@ -24,7 +27,7 @@ window.addEventListener('load', function() {
 		modal.removeAttribute('style');
 	}
 
-  	//document.getElementById("modal").style.visibility = "visible";
+ 	//document.getElementById("modal").style.visibility = "visible";
 	//modal.classList.remove("is-closing")
 	//modal.classList.add("is-closed");
 	//modal.classList.add("portfolio-modal");
@@ -74,19 +77,21 @@ $(document).ready(function() {
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
-
-
-
-
 //LiveSocket Creation 
 let liveSocket = new LiveSocket("/live", Socket, {
 	hooks: Hooks,
 	//uploaders: Uploaders,
+  dom: {
+    onBeforeElUpdated(from, to) {
+      if (from._x_dataStack) {
+        window.Alpine.clone(from, to)
+      }
+    }
+  },
 	params: {
 		_csrf_token: csrfToken
 	}
 })
-
 
 
 //Use the liveSocket to create navigation bar highlighting using 

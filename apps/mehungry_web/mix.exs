@@ -41,6 +41,7 @@ defmodule MehungryWeb.MixProject do
       {:floki, ">= 0.30.0", only: :test},
       {:vix, "~> 0.23.0"},
       {:image, "~> 0.37"},
+      {:seqfuzz, "~> 0.2.0"},
       {:phoenix_html_helpers, "~> 1.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:httpoison, "~> 1.2"},
@@ -54,7 +55,7 @@ defmodule MehungryWeb.MixProject do
       {:phoenix_view, "~> 2.0"},
       {:phoenix_ecto, "~> 4.4"},
       {:paginator, "~> 1.2.0"},
-      {:phoenix_html, "~> 4.1.1"},
+      {:phoenix_html, "~> 4.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:telemetry_metrics, "~> 0.4"},
@@ -63,7 +64,15 @@ defmodule MehungryWeb.MixProject do
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.5"},
       {:esbuild, "~> 0.8"},
-      {:tailwind, "~> 0.2"}
+      {:tailwind, "~> 0.2"},
+      {:heroicons,
+       github: "tailwindlabs/heroicons",
+       tag: "v2.1.1",
+       sparse: "optimized",
+       app: false,
+       compile: false,
+       depth: 1},
+      {:live_isolated_component, "~> 0.8.0", only: [:dev, :test]}
     ]
   end
 
