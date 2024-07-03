@@ -1,14 +1,14 @@
-  <div >
-
+  <div class="w-full">
      <.form
        id={@id} 
        for={@form} 
        phx-change="validate" 
        phx-submit="submit"
+       class="w-full"
        phx-target={@myself}>
    
-       <div class="input-form" style="margin-top: 25px; margin-bottom: 10px;">
-            <.input field={@form[:title]} label="Title" class="input" />
+       <div class="mt-12">
+            <.input field={@form[:title]} label="Title" type="text" class="input" />
        </div>
 
        <.input field={@form[:start_dt]} type="hidden"/>
@@ -16,30 +16,32 @@
        <.input field={@form[:user_id]}  type="hidden"/>
 
   
-       <div class="tabs_container">
-         <ul aria-labelledby="tabs-title">
-           <li> <a id="recipe-2" href="#recipe2" phx-target={@myself} phx-click="new_recipe"> Add recipe slot </a>  --- 
+       <div class="w-full ">
+         <ul aria-labelledby="tabs-title" class=" w-fit	m-auto">
+           <li> <a id="recipe-2" href="#recipe2" phx-target={@myself} phx-click="new_recipe"> Add recipe slot </a>/ 
                 <a id="recipe-3" href="#recipe3" phx-target={@myself} phx-click="new_consume_recipe"> Find cooked </a> 
             </li> 
          </ul>
-         <div class="tabs_panel_flow", style="margin-bottom: 1.5em; margin-top: 1.5em; ">
+         <div class="">
 
           <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
             <Components.recipe_user_meal_render f = {f_recipe_user_meal} parent_component= {@myself} recipes = {@recipes} recipe_ids = {@recipe_ids} />
           </.inputs_for>
           <.inputs_for :let={f_consume_recipe_user_meal} field={@form[:consume_recipe_user_meals]}>
-            <Components.consume_recipe_user_meal_render f = {f_consume_recipe_user_meal} parent_component= {@myself} recipe_user_meals = {@recipe_user_meals} recipe_user_meal_ids = {@recipe_user_meal_ids} user_meal = {@user_meal}/>
+            <Components.consume_recipe_user_meal_render f = {f_consume_recipe_user_meal} parent_component= {@myself} recipe_user_meals = {@recipe_user_meals} recipe_user_meal_ids = {@recipe_user_meal_ids} user_meal = {@user_meal} />
           </.inputs_for>
 
 
         </div> 
        </div>
 
-      <div>
-        <button class="primary_button modal-submit-button" phx_disable_with= "Saving..." > Save</button>
+      <div class="absolute bottom-3 right-4 w-fit	">
+        <button class="button_outline_primary modal-submit-button" phx_disable_with= "Saving..." > Save</button>
       </div>
       <%= if @live_action in [:edit] do %>
-        <button  phx-value-id={@user_meal.id}  phx-click = "delete_user_meal" > Delete </button>
+        <div class="absolute bottom-3 end-28 w-fit	">
+          <button  class="delete_button" phx-value-id={@user_meal.id}  phx-click = "delete_user_meal" > Delete </button>  
+        </div>
       <% end %>
 
     </.form>

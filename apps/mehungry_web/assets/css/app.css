@@ -6,10 +6,6 @@
 @import "./basket.css";
 @import "./calendar.css";
 
-
-
-
-
 @import "./browse.css"; 
 @import "./create.css";
 @import "./override.css"; 
@@ -45,6 +41,13 @@
     @apply border-2 bg-transparent border-solid border-complementary text-complementary hover:bg-complementary hover:text-white;
   }
 
+.delete_button {
+    text-transform: uppercase;
+    padding: 5px 25px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: bold;
+}
   /*--------------------------------------------------------------------------------------------------------------------------------------------------------------*/
   h3 {
     font-weight: bold ; 

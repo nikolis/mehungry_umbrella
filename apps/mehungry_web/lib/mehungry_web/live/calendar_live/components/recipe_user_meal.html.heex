@@ -1,29 +1,27 @@
-<div  id= {"root_layer" <> to_string(@f.index)} class="line_container" style={if @deleted , do: "display: none"} >
+<div  id= {"root_layer" <> to_string(@f.index)} class="p-2 gap-2 md:p-6 grid grid-cols-5 md:gap-6" style={if @deleted , do: "display: none"} >
   <input
     type="hidden"
     name={Phoenix.HTML.Form.input_name(@f, :delete)}
     value={to_string(Phoenix.HTML.Form.input_value(@f, :delete))}
   />
 
-  <div class="input-form">
-    <%=  select @f, :recipe_id, @recipe_ids,  id: "select_outer_layer" <> to_string(@f.index) , style: "display: none" %>
-    <div  phx-hook="Select2Multi" phx-update="ignore" id= {"hook_layer" <> to_string(@f.index)} class="" data-hidden-id = {"select_outer_layer" <> to_string(@f.index)} data-select-layer-id = {"select_layer" <> to_string(@f.index)} data-index= {to_string(@f.index)} style="position: relative" placeholder="Sselect Recipe">
-      <select class="input select_internal ", style=" height: 100%",  id= {"select_layer" <> to_string(@f.index)}}>
-            <%= for i <- @recipes do %>
-              <option value= {i.id} >
-                <%= i.title %>
-              </option>
-            <% end %>
-      </select>
-    </div>
+  <div class="h-full col-span-2">
+      <.live_component
+      module={MehungryWeb.SelectComponentSingle}
+      form={@f}
+      items = {@recipes}
+      input_variable={"recipe_id"}
+      label_function={fn x -> x.title end}
+      id={"recipe_search_component" <> Integer.to_string(@f.index)}
+      />
   </div>
 
 
    <div class="input-form">
-     <.input  field={@f[:cooking_portions]} type="number" label="Cook portions" />
+     <.input  field={@f[:cooking_portions]} type="number" label="cook" />
    </div>
    <div class="input-form">
-     <.input  field={@f[:consume_portions]} type="number" label="Consume portions" />
+     <.input  field={@f[:consume_portions]} type="number" label="consume" />
    </div>
 
   <div class="input-form pl-2">

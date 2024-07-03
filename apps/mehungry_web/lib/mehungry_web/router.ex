@@ -47,7 +47,10 @@ defmodule MehungryWeb.Router do
       live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
 
       live "/calendar", CalendarLive.Index, :index
+      live "/calendar/ondate/:date", CalendarLive.Index, :particular
+
       live "/calendar/:start/:end", CalendarLive.Index, :new
+
       live "/calendar/:id", CalendarLive.Index, :edit
 
       live "/create_recipe", CreateRecipeLive.Index, :index

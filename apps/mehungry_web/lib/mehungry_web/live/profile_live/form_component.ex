@@ -100,7 +100,9 @@ defmodule MehungryWeb.ProfileLive.Form do
           else
             rest
           end
+
         IO.inspect(user_category_rules, label: "asdfafsd")
+
         changeset
         |> Ecto.Changeset.put_assoc(:user_category_rules, user_category_rules)
         |> to_form()

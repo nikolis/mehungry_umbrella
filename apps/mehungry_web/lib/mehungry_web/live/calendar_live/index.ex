@@ -12,7 +12,6 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   @impl true
   def mount(_params, session, socket) do
-    IO.inspect("Calendar mount === index -/?>?")
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_meals = History.list_history_user_meals_for_user(user.id)
     recipes = list_recipes(user)
@@ -43,11 +42,22 @@ defmodule MehungryWeb.CalendarLive.Index do
       :ok,
       socket
       |> assign(:user, user)
+      |> assign(:user_meals, user_meals)
       |> assign(:recipes, recipes)
     }
   end
 
-  defp apply_action(socket, :index, _params) do
+  defp apply_action(socket, :index, params) do
+    IO.inspect(params, label: "params")
+    # IO.inspect("Being called")
+    socket
+  end
+
+  defp apply_action(socket, :particular, %{"date" => date} = params) do
+    IO.inspect(date, label: "params")
+    socket = push_event(socket, "go_to_date", %{date: date})
+
+    # IO.inspect("Being called")
     socket
   end
 

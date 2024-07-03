@@ -6,16 +6,13 @@
   />
 
   <div class="input-form">
-    <%=  select @f, :recipe_user_meal_id, @recipe_user_meal_ids,  id: "select2_outer_layer" <> to_string(@f.index) , style: "display: none" %>
-    <div  phx-hook="Select2Multi" phx-update="ignore" id= {"hook_layer" <> to_string(@f.index)} class="" data-hidden-id = {"select2_outer_layer" <> to_string(@f.index)} data-select-layer-id = {"select2_layer" <> to_string(@f.index)} data-index= {to_string(@f.index)} style="position: relative" placeholder= "Select Meal">
-      <select class="input select_internal ", style=" height: 100%",  id= {"select2_layer" <> to_string(@f.index)}}>
-            <%= for i <- @recipe_user_meals do %>
-              <option value= {i.id} >
-                <%= i.recipe.title %>
-              </option>
-            <% end %>
-      </select>
-    </div>
+      <.live_component
+      module={MehungryWeb.SelectComponentSingle}
+      form={@f}
+      items = {@recipe_user_meals}
+      input_variable={"recipe_user_meal_id"}
+      id={"user_meal_search_component" <> Integer.to_string(@f.index)}
+      />
   </div>
 
 

@@ -4,7 +4,9 @@
     <.link patch={"/create_recipe"} class={"main_nav_button"}>Create</.link>
     <.link patch={"/calendar"} class={"main_nav_button"}>Calendar</.link>
     <.link patch={"/basket"} class={"main_nav_button"}> Basket </.link>
- 
+    <.link patch={"/profile"} class={"main_nav_button" }> Profile </.link>
+    <a href="users/log_out"> Logout </a>
+
    <%= unless assigns[:current_user] do %> 
 
     <a class="btn btn-primary btn-lg" href="/auth/facebook">
@@ -19,7 +21,6 @@
 
     <%= if assigns[:current_user] do %>
     <div style="padding: 15px" class="utils_item" id="menu_utils_toggle_mobile" phx-hook="MenuToggleHook">
-      <img src="/images/arrow_down.svg">
       <div class="drop_down" id="menu_items_list_mobile">
         <div class="drop_down_container">
           <img height="auto" width="auto" style="padding: 5px 2px 5px" class="rounded-full" src={@current_user.profile_pic} alt="profile">
