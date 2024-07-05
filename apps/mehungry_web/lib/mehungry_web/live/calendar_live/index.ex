@@ -124,6 +124,21 @@ defmodule MehungryWeb.CalendarLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
+
+
+  @impl true
+  def handle_event("go_to", %{"date" => start_date}, socket) do
+    {:noreply, push_patch(socket, to: "/calendar/ondate/#{start_date}", replace: true)}
+  end
+
+  @impl true
+  def handle_event("today", _, socket) do
+    date = NaiveDateTime.local_now()
+    socket = push_event(socket, "go_to_date", %{date: date})
+    {:noreply, push_patch(socket, to: "/calendar", replace: true)}
+  end
+
+
   @impl true
   def handle_event("initial_modal", %{"start" => start_date, "end" => end_date}, socket) do
     {:noreply, push_patch(socket, to: "/calendar/#{start_date}/#{end_date}", replace: true)}

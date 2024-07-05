@@ -17,18 +17,22 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
 
         <%= for shopping_basket <- @shopping_baskets do %>
         <li id={ "liab" <> Integer.to_string(shopping_basket.id)}  class={"side_nav_list_item " <> 
-        get_active_class(shopping_basket, @shopping_basket)} 
+          get_active_class(shopping_basket, @shopping_basket)} 
+          phx-click="select_shopping_basket"
       phx-value-id={shopping_basket.id}> 
           <div class="li_title"> <%= shopping_basket.title %> </div>
           <div class="shopping_list_utils">
-          <.link patch={~p"/basket/import_items/#{shopping_basket.id}"}     phx-click ={
-    Phoenix.LiveView.JS.push("select_shopping_basket")
+          <.link patch={~p"/basket/import_items/#{shopping_basket.id}"}     
+            phx-click ={
+              Phoenix.LiveView.JS.push("select_shopping_basket")
               |> Phoenix.LiveView.JS.remove_class("active", to: "#basket-side-navbar.active")
               |> Phoenix.LiveView.JS.add_class("active", to: "#basket-side-navbar:not(.active)")
-    } 
-          >  <img width="30vw" style="height: 100%;" src="/images/calendar.svg"/> </.link>
-            <img width="30vw" src="/images/edit_color.svg" />
-            <img width="25vw" src="/images/delete_color.svg" phx-value-id={shopping_basket.id} phx-click="delete_basket" />
+          }>
+         
+            <img width="30vw" style="height: 100%;" src="/images/calendar.svg"/> 
+          </.link>
+          <img width="30vw" src="/images/edit_color.svg" />
+          <img width="25vw" src="/images/delete_color.svg" phx-value-id={shopping_basket.id} phx-click="delete_basket" />
           </div>
         </li>
       <% end %>

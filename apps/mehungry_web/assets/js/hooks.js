@@ -316,15 +316,15 @@ function  mount_callendar(parent_view) {
 		};//options
 
 		const calendar = new Calendar(container, options);
-		const prevButton = document.getElementById('callendar_prev_button');
-		prevButton.addEventListener('click', function(e) {
-			calendar.prev();
-    });
+		//const prevButton = document.getElementById('callendar_prev_button');
+		//prevButton.addEventListener('click', function(e) {
+			//calendar.prev();
+    //});
 
-		const nextButton = document.getElementById('callendar_next_button');
-		nextButton.addEventListener('click', function(e) {
-			calendar.next();
-    });
+		//const nextButton = document.getElementById('callendar_next_button');
+		//nextButton.addEventListener('click', function(e) {
+			//calendar.next();
+    //});
 
 		window.addEventListener(`phx:create-meal`, (e) => {
 			var start = e.detail.start
@@ -452,10 +452,7 @@ Hooks.HiddenCalendar = {
 	        	this.para = document.getElementById("calendar_controlls");
 			this.para.classList.toggle("calendar_controlls_open")
 		});
-
 	  this.origin_callendar = mount_callendar(this);
-    console.log(this.origin_callendar)
-    console.log("This origin callendar ");
 		mounted_func(this, null, this.origin_callendar);
 		window.addEventListener(`phx:create_meals`, (e) => {
 			this.meals = e.detail['meals']
@@ -463,54 +460,34 @@ Hooks.HiddenCalendar = {
 		})
 		window.addEventListener(`phx:go_to_date`, (e) => {
 			var date = e.detail['date']
-      console.log(date)
 			result = this.origin_callendar.setDate(date)
-      console.log(result)
 		})
-
 	}
 }
 
 	function mounted_func(parent_view, start_date, origin_callendar) {
-    console.log("original calldndar mounted")
-    console.log(origin_callendar)
-    console.log("----")
+    const hookReference = parent_view;
     const ori_cale = origin_callendar;
-    console.log("ori_cale")
-    console.log(ori_cale)
 		if(! origin_callendar) {
-      console.log("Should not go here 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 		  parent_view.origin_callendar = mount_callendar(parent_view); 
 			origin_callendar = parent_view.origin_callendar;
-		}
-	
+		}	
 
 		const Calendar = tui.Calendar;
 		const container = document.getElementById('hidden_calendar');
 
 		var calendar = new Calendar(container, options);
 		if(start_date) {
-			console.log(start_date)
-			console.log(origin_callendar);
-			console.log("Start date--------------------------------------")
-      console.log(origin_callendar)
-    
 			parent_view.origin_callendar.setDate(start_date);
 		}
 		calendar.on('afterRenderEvent', ({
 			event
 		}) => {
-			console.log("Hei ho---------------->")
 			var elements2 = document.getElementsByClassName('toastui-calendar-accumulated');
-			console.log(elements2)
-			console.log("element 222")
 			for (let s of elements2) {
-				console.log(s)
-				console.log("22222")
 				s.remove();
 			}
 			return null;
-
 		});
 
   calendar.setTheme({
@@ -526,10 +503,10 @@ Hooks.HiddenCalendar = {
 			start,
 			end
 		}) => {
-			origin_callendar.setDate(start);
-			calendar.setDate(start);
+      console.log("I am here thow")
+      hookReference.pushEvent("go_to", {date: start})
 			var elements2 = document.getElementsByClassName('toastui-calendar-accumulated');
-	        	let para = document.getElementById("calendar_controlls");
+	    let para = document.getElementById("calendar_controlls");
 			para.classList.toggle("calendar_controlls_open")
 			calendar.destroy();
 			origin_callendar.destroy();

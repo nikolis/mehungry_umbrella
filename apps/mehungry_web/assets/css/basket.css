@@ -51,7 +51,7 @@ check_list_container {
 	border-bottom: none !important;
 }
 
-.side_nav_list_item:hover .shopping_list_utils {
+.side_nav_list_item.active .shopping_list_utils {
 	display: inline-flex;
 	gap: 1rem;
 	position: absolute;
