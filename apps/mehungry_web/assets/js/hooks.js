@@ -316,20 +316,9 @@ function  mount_callendar(parent_view) {
 		};//options
 
 		const calendar = new Calendar(container, options);
-		//const prevButton = document.getElementById('callendar_prev_button');
-		//prevButton.addEventListener('click', function(e) {
-			//calendar.prev();
-    //});
-
-		//const nextButton = document.getElementById('callendar_next_button');
-		//nextButton.addEventListener('click', function(e) {
-			//calendar.next();
-    //});
-
 		window.addEventListener(`phx:create-meal`, (e) => {
 			var start = e.detail.start
 			var end = e.detail.end
-      console.log("Clear -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
       calendar.clear();
 			calendar.createEvents([{
 				id: 'event1',
@@ -353,7 +342,6 @@ function  mount_callendar(parent_view) {
 			start,
 			end
 		}) => {
-			console.log("Click Event9")
 			parent_view.pushEvent("initial_modal", {
 				start: start,
 				end: end
@@ -503,7 +491,6 @@ Hooks.HiddenCalendar = {
 			start,
 			end
 		}) => {
-      console.log("I am here thow")
       hookReference.pushEvent("go_to", {date: start})
 			var elements2 = document.getElementsByClassName('toastui-calendar-accumulated');
 	    let para = document.getElementById("calendar_controlls");
