@@ -20,6 +20,32 @@ defmodule MehungryWeb.CoreComponents do
   import MehungryWeb.Gettext
 
   @doc """
+  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
+  """
+  def user_overview_card(assigns) do
+    ~H"""
+    <div style="margin-bottom: 0.75rem; ">
+      <div style="display: flex; flex-direction: row;" > 
+        <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
+          <img src={@user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;"/>
+        </.link>
+        <div style="margin-left: 1rem;" > 
+          <div style="font-weight: bold; text-align: start; font-size: 0.75rem;"class="flex flex-row gap-4">    
+            <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
+              <%= @user.email %> 
+            </.link>
+    <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}> 
+      <%= if @user.id in @user_follows do "Following" else "Follow" end %> 
+    </div>
+          </div>
+          <div style="font-size: 1rem; text-align: start; color: var(--clr-dark_1)"> <%= @post.title %> </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a modal.
 
   ## Examples

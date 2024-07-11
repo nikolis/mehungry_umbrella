@@ -87,6 +87,10 @@ defmodule Mehungry.Food do
     |> Repo.insert()
   end
 
+  def grade_recipe(%Recipe{} = recipe) do
+    IO.inspect(recipe)
+  end
+
   def list_annotations(%Recipe{} = recipe) do
     Repo.all(
       from a in Ecto.assoc(recipe, :annotations),
@@ -380,6 +384,11 @@ defmodule Mehungry.Food do
       ingredient_portions: [:measurement_unit],
       ingredient_nutrients: [nutrient: [:measurement_unit]]
     )
+  end
+
+  def get_ingredient_with_category!(id) do
+    Repo.get!(Ingredient, id)
+    |> Repo.preload(:category)
   end
 
   def get_ingredient!(id) do

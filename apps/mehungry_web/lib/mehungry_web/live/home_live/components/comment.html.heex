@@ -16,7 +16,6 @@
       </div>
   
       <%= if(not is_nil(@reply))  do %>
-
         <%= if @comment.id == @reply.comment_id  do %>
            <.live_component
             module={MehungryWeb.HomeLive.FormComponentCommentAnswer}

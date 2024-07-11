@@ -6,6 +6,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
     case basket_1.id == basket_2.id do
       true ->
         "active"
+
       false ->
         ""
     end
@@ -65,6 +66,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
     case in_stock do
       true ->
         "checked"
+
       false ->
         "unchecked"
     end

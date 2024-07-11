@@ -5,12 +5,11 @@ defmodule Mehungry.Accounts.UserCategoryRule do
 
   schema "user_category_rules" do
     field :user_id, :id
-    field :category_id, :id
-    field :food_restriction_type_id, :id
-
     field(:delete, :boolean, virtual: true)
 
     belongs_to :user_profile, UserProfile
+    belongs_to :category, Mehungry.Food.Category 
+    belongs_to :food_restriction_type, Mehungry.Food.FoodRestrictionType
 
     timestamps()
   end

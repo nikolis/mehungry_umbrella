@@ -8,11 +8,20 @@ defmodule MehungryWeb.HomeLive.Index do
   alias Mehungry.Inventory
   alias Mehungry.Accounts
   alias Mehungry.Posts
+  alias Mehungry.Users
+  alias Mehungry.Accounts.UserPost
+ alias Mehungry.Accounts.UserFollow
 
   @impl true
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     posts = Mehungry.Posts.list_posts()
+
+    user_posts = Users.list_user_saved_posts(user)
+    user_posts = Enum.map(user_posts, fn x -> x.post_id end)
+
+    user_follows = Users.list_user_follows(user)
+    user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
     Enum.each(posts, fn post ->
       Posts.subscribe_to_post(%{post_id: post.id})
@@ -21,7 +30,9 @@ defmodule MehungryWeb.HomeLive.Index do
     {:ok,
      socket
      |> assign(:user, user)
-     |> assign(:posts, Mehungry.Posts.list_posts())}
+     |> assign(:posts, Mehungry.Posts.list_posts())
+     |> assign(:user_posts, user_posts)
+     |> assign(:user_follows, user_follows)}
   end
 
   defp apply_action(socket, :index, _params) do
@@ -40,10 +51,10 @@ defmodule MehungryWeb.HomeLive.Index do
   def handle_event("delete_basket", %{"id" => basket_id}, socket) do
     bs = Inventory.get_shopping_basket!(basket_id)
     Inventory.delete_shopping_basket(bs)
-
     {:noreply,
      socket
-     |> assign(:shopping_basket, nil)}
+     |> assign(:shopping_basket, nil)
+    }
   end
 
   def handle_event("react", %{"type_" => type, "id" => post_id}, socket) do
@@ -78,6 +89,59 @@ defmodule MehungryWeb.HomeLive.Index do
       |> assign(:posts, posts)
 
     {:noreply, socket}
+  end
+
+
+  @impl true
+  def handle_event("save_post", %{"post_id" => post_id}, socket) do
+    {post_id, _ignore} = Integer.parse(post_id)
+    toggle_user_saved_posts(socket, post_id)
+    user_posts = Users.list_user_saved_posts(socket.assigns.user)
+    user_posts = Enum.map(user_posts, fn x -> x.post_id end)
+    socket = assign(socket, :user_posts, user_posts)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("save_user_follow", %{"follow_id" => follow_id}, socket) do
+    {follow_id, _ignore} = Integer.parse(follow_id)
+    toggle_user_follow(socket, follow_id)
+    user_follows = Users.list_user_follows(socket.assigns.user)
+    user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
+    socket = assign(socket, :user_follows, user_follows)
+    {:noreply, socket}
+  end
+
+  def toggle_user_saved_posts(socket, post_id) do
+    case Enum.any?(socket.assigns.user_posts, fn x -> x == post_id end) do
+      true ->
+        Users.remove_user_saved_post(socket.assigns.user.id, post_id)
+
+      false ->
+        Users.save_user_post(socket.assigns.user.id, post_id)
+    end
+  end
+
+  def toggle_user_follow(socket, follow_id) do
+    case Enum.any?(socket.assigns.user_follows, fn x -> x == follow_id end) do
+      true ->
+        Users.remove_user_follow(socket.assigns.user.id, follow_id)
+
+      false ->
+        Users.save_user_follow(socket.assigns.user.id, follow_id)
+    end
+  end
+
+  def get_style(item_list, user_id, get_attr) do
+    has = Enum.any?(item_list, fn x -> get_attr.(x) == user_id end)
+
+    case has do
+      true ->
+        @color_fill
+
+      false ->
+        "#FFFFFF"
+    end
   end
 
   def get_style(item_list, user_id) do

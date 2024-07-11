@@ -151,7 +151,6 @@ defmodule Mehungry.FdcFoodParser do
 
   defp get_or_create_food_category(category_name) do
     category = Food.get_category_by_name(category_name)
-
     if is_nil(category) do
       {:ok, category} = Food.create_category(%{name: category_name})
       category
@@ -165,8 +164,8 @@ defmodule Mehungry.FdcFoodParser do
   end
 
   def get_ingredients_from_food_data_central_json_file(file_path) do
-    IO.inspect(File.cwd())
     {:ok, json_body} = get_json(file_path)
+
     Enum.each(json_body["FoundationFoods"], fn x -> create_ingredient(x) end)
   end
 end

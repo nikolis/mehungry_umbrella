@@ -1,5 +1,5 @@
 <div class="main-page-container">
   <%= for post <- @posts do %>
-    <.post_card post = {post} user= {@user}/>
+    <.post_card post = {post} user= {@user} user_follows={@user_follows} user_posts={@user_posts}/>
   <% end %>
 </div>

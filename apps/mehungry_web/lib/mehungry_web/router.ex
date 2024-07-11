@@ -39,6 +39,7 @@ defmodule MehungryWeb.Router do
 
       live "/profile", ProfileLive.Index, :index
       live "/profile/edit", ProfileLive.Index, :edit
+      live "/profile/:id", ProfileLive.Index, :show
 
       live "/browse", RecipeBrowseLive.Index, :index
       live "/browse/:id", RecipeBrowseLive.Index, :show
