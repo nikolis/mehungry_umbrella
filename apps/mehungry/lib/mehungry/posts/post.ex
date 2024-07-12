@@ -1,6 +1,8 @@
 defmodule Mehungry.Posts.Post do
   use Ecto.Schema
+
   import Ecto.Changeset
+
   alias Mehungry.Posts.Comment
   alias Mehungry.Posts.Comment
   alias Mehungry.Posts.PostUpvote

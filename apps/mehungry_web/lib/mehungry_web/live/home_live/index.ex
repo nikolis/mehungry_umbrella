@@ -10,7 +10,7 @@ defmodule MehungryWeb.HomeLive.Index do
   alias Mehungry.Posts
   alias Mehungry.Users
   alias Mehungry.Accounts.UserPost
- alias Mehungry.Accounts.UserFollow
+  alias Mehungry.Accounts.UserFollow
 
   @impl true
   def mount(_params, session, socket) do

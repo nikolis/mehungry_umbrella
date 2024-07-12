@@ -19,18 +19,6 @@ defmodule Mehungry.Users do
   @seafood ["Finfish and Shellfish Products", "Fish"]
   @restrictions %{"Absolutely not" => 0, "Not a fun" => 0.5, "Neutral" => 1, "Fun" => 1.5, "Absolutely fun" => 2}
 
-
-  def calculate_user_pref_table(user) do
-    user_category_rules = get_user_category_rules(user)
-    Enum.map(user_category_rules, fn x -> 
-      title = get_category_name(x)
-      grade = Map.get(@restrictions, x.food_restriction_type.title)
-      {title, grade}
-       
-    end)
-    |> Enum.into(%{})
-  end
-
   def calculate_recipe_grading(recipe, user) do
     recipe_grade = 
       RecipeUtils.calculate_recipe_ingredient_categories_array(recipe)
@@ -48,6 +36,17 @@ defmodule Mehungry.Users do
     end)
   end
 
+
+  def calculate_user_pref_table(user) do
+    user_category_rules = get_user_category_rules(user)
+    Enum.map(user_category_rules, fn x -> 
+      title = get_category_name(x)
+      grade = Map.get(@restrictions, x.food_restriction_type.title)
+      {title, grade}
+       
+    end)
+    |> Enum.into(%{})
+  end
 
   def get_category_name(category) do
     if category.category.name in @meat do

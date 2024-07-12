@@ -6,8 +6,9 @@ defmodule Mehungry.Posts do
   """
 
   import Ecto.Query, warn: false
-  alias Mehungry.Repo
 
+  alias Mehungry.Repo
+  alias Mehungry.Food.Recipe
   alias Mehungry.Posts.Post
 
   @doc """
@@ -79,8 +80,35 @@ defmodule Mehungry.Posts do
       iex> create_post(%{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
-  """
+      """
+  def create_post(%Recipe{} = recipe) do
+    attrs = 
+      %{
+        reference_id: recipe.id,
+        md_media_url: recipe.image_url,
+        user_id: recipe.user_id,
+        title: recipe.title,
+        type_: "RECIPE"
+      }
+    %Post{}
+    |> Post.changeset(attrs)
+    |> Repo.insert()
+  end
+
   def create_post(attrs \\ %{}) do
+    %Post{}
+    |> Post.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def create_post(%Recipe{} = recipe) do
+    attrs = 
+      %{
+        reference_id: recipe.id,
+        md_media_url: recipe.image_url,
+        user_id: recipe.user_id,
+        title: recipe.title
+      }
     %Post{}
     |> Post.changeset(attrs)
     |> Repo.insert()
