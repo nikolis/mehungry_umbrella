@@ -440,9 +440,17 @@ defmodule Mehungry.Food do
   end
 
   def create_recipe(attrs \\ %{}) do
-    %Recipe{}
-    |> Recipe.changeset(attrs)
-    |> Repo.insert()
+    result = 
+      %Recipe{}
+      |> Recipe.changeset(attrs)
+      |> Repo.insert()
+    case result do
+      {:ok , %Recipe{} = recipe} ->
+        Mehungry.Posts.create_post(recipe)
+        result
+      _ ->
+        result
+    end
   end
 
   def list_ingredients() do

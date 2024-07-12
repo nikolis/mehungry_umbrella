@@ -15,7 +15,7 @@ defmodule MehungryWeb.HomeLive.Index do
   @impl true
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
-    posts = Mehungry.Posts.list_posts()
+    posts = Mehungry.Posts.list_posts(user)
 
     user_posts = Users.list_user_saved_posts(user)
     user_posts = Enum.map(user_posts, fn x -> x.post_id end)
@@ -30,7 +30,7 @@ defmodule MehungryWeb.HomeLive.Index do
     {:ok,
      socket
      |> assign(:user, user)
-     |> assign(:posts, Mehungry.Posts.list_posts())
+     |> assign(:posts, posts)
      |> assign(:user_posts, user_posts)
      |> assign(:user_follows, user_follows)}
   end
