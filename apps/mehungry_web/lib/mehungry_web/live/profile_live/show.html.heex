@@ -3,10 +3,12 @@
     <div class=""> <%= @user.email%> </div> <%= @user_profile.alias %>
     <div class="text-center text-base text-greyfriend2"><%= @user_profile.intro %></div>
   </.header>
-  <div class="flex justify-center m-6">
-    <.button class="primary_button"> Share Profile </.button>
-    <.link patch={~p"/profile/edit"} phx-click={JS.push_focus()}>
-      <.button class="primary_button_outline" type="button"> Edit Profile </.button>
-    </.link>
+  <%= if @live_action == :index do %>
+    <div class="flex justify-center m-6">
+      <.button class="primary_button"> Share Profile </.button>
+      <.link patch={~p"/profile/edit"} phx-click={JS.push_focus()}>
+        <.button class="primary_button_outline" type="button"> Edit Profile </.button>
+     </.link>
   </div>
+  <% end %>
 </div>

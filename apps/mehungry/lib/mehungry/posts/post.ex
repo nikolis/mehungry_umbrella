@@ -1,6 +1,8 @@
 defmodule Mehungry.Posts.Post do
   use Ecto.Schema
+
   import Ecto.Changeset
+
   alias Mehungry.Posts.Comment
   alias Mehungry.Posts.Comment
   alias Mehungry.Posts.PostUpvote
@@ -10,7 +12,6 @@ defmodule Mehungry.Posts.Post do
     field :bg_media_url, :string
     field :description, :string
     field :md_media_url, :string
-    field :reference_id, :integer
     field :reference_url, :string
     field :sm_media_url, :string
     field :title, :string
@@ -18,6 +19,7 @@ defmodule Mehungry.Posts.Post do
 
     belongs_to :user, Mehungry.Accounts.User
     belongs_to :recipe, Mehungry.Food.Recipe
+    belongs_to :reference, Mehungry.Food.Recipe
 
     has_many :comments, Comment
     has_many :upvotes, PostUpvote

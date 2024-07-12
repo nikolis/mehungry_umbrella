@@ -1,15 +1,14 @@
-defmodule Mehungry.UsersTest do
+defmodule Mehungry.RutilsTest do
   use Mehungry.DataCase
 
   alias Mehungry.Users
+  alias Mehungry.Languages 
+  alias Mehungry.FdcFoodParser
+  alias Mehungry.Food 
 
   alias Mehungry.AccountsFixtures
   alias Mehungry.FoodFixtures
-  alias Mehungry.Languages
-  alias Mehungry.FdcFoodParser
-  alias Mehungry.Food
-
-  @restrictions %{"Absolutely not" => 0, "Not a fun" => 0.5, "Neutral" => 1, "Fun" => 1.5, "Absolutely fun" => 2}
+  alias Mehungry.Food.RecipeUtils
 
   defp create_ingredients(_) do
       {:ok, _lang} = Languages.create_language(%{name: "En"})
@@ -17,20 +16,22 @@ defmodule Mehungry.UsersTest do
       FdcFoodParser.get_ingredients_from_food_data_central_json_file(
         "/home/nikolis/Documents/foundationDownload.json"
       )
-    Enum.each(Map.keys(@restrictions), fn x -> Users.create_user_restriction_type(%{title: x, alias: x}) end)
 
   end
 
-  describe "Category rules translation " do
+  describe "Listing users created recipes" do
     setup [:create_ingredients]
 
-    test "Creatin and list of category_rules" do
+    test "listing user created recipes" do
       user = AccountsFixtures.user_fixture()
-      restrictions = Users.list_food_restriction_types()
+
+      _beans = Enum.at(Food.search_ingredient("beans", nil), 0)
       chicken =
         Enum.at(Food.search_ingredient("Chicken, breast, boneless, skinless, raw", nil), 0)
-      oil = Enum.at(Food.search_ingredient("oil", nil), 0)
+      _beef = Enum.at(Food.search_ingredient("beef", nil), 0)
       broccoli = Enum.at(Food.search_ingredient("Broccoli", nil), 0)
+      oil = Enum.at(Food.search_ingredient("oil", nil), 0)
+      _cheese = Enum.at(Food.search_ingredient("cheese", nil), 0)
 
       mu = FoodFixtures.measurement_unit_fixture()
      {:ok, recipe} =
@@ -50,29 +51,10 @@ defmodule Mehungry.UsersTest do
       }
       |> Food.create_recipe()
 
+     ing_table = RecipeUtils.calculate_recipe_ingredient_categories_array(recipe)
+     assert ing_table == ["Fats and Oils", "meat", "Vegetables and Vegetable Products"]
 
 
-      Users.create_user_category_rule(%{category_id: chicken.category.id, food_restriction_type_id: Enum.at(restrictions, 0).id , user_id: user.id})
-      Users.create_user_category_rule(%{category_id: broccoli.category.id, food_restriction_type_id: Enum.at(restrictions, 2).id , user_id: user.id})
-      #Users.calculate_user_pref_table(user)
-      recipe_grade = Users.calculate_recipe_grading(recipe, user)
-      IO.inspect(recipe_grade)
-    end
-  end
-
-  describe "Listing users created recipes" do
-    test "listing user created recipes" do
-      user = AccountsFixtures.user_fixture()
-      user2 = AccountsFixtures.user_fixture()
-
-      _recipe = FoodFixtures.recipe_fixture(user)
-      _recipe1 = FoodFixtures.recipe_fixture(user)
-      _recipe2 = FoodFixtures.recipe_fixture(user)
-      _recipe3 = FoodFixtures.recipe_fixture(user)
-      _recipe4 = FoodFixtures.recipe_fixture(user2)
-
-      recipes = Users.list_user_created_recipes(user)
-      assert length(recipes) == 4
     end
   end
 

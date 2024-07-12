@@ -7,6 +7,7 @@ defmodule MehungryWeb.HomeLive.Show do
   alias Mehungry.Posts.Comment
   alias Mehungry.Posts.Post
   alias Mehungry.Posts
+  alias Mehungry.Users
 
   @color_fill "#00A0D0"
 
@@ -16,16 +17,26 @@ defmodule MehungryWeb.HomeLive.Show do
     post = Posts.get_post!(id)
     Posts.subscribe_to_post(%{post_id: id})
 
+    user_posts = Users.list_user_saved_posts(user)
+    user_posts = Enum.map(user_posts, fn x -> x.post_id end)
+
+    user_follows = Users.list_user_follows(user)
+    user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
+
+
+
     {:ok,
      socket
      |> assign(:comment, %Comment{user_id: user.id, post_id: id})
      |> assign(:user, user)
      |> assign(:post, post)
+     |> assign(:user_posts, user_posts)
+     |> assign(:user_follows, user_follows)
      |> assign(:reply, nil)}
   end
 
-  def get_style(item_list, user_id) do
-    has = Enum.any?(item_list, fn x -> x.user_id == user_id end)
+  def get_style(item_list, user_id , get_attr) do
+    has = Enum.any?(item_list, fn x -> get_attr.(x) == user_id end)
 
     case has do
       true ->
@@ -68,7 +79,6 @@ defmodule MehungryWeb.HomeLive.Show do
   end
 
   def handle_event("add-reply-form", %{"id" => comment_id}, socket) do
-    IO.inspect("Here handled the thingie")
     {comment_id, _} = Integer.parse(comment_id)
 
     socket =
@@ -78,8 +88,27 @@ defmodule MehungryWeb.HomeLive.Show do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_event("save_post", %{"post_id" => post_id}, socket) do
+    {post_id, _ignore} = Integer.parse(post_id)
+    toggle_user_saved_posts(socket, post_id)
+    user_posts = Users.list_user_saved_posts(socket.assigns.user)
+    user_posts = Enum.map(user_posts, fn x -> x.post_id end)
+    socket = assign(socket, :user_posts, user_posts)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("save_user_follow", %{"follow_id" => follow_id}, socket) do
+    {follow_id, _ignore} = Integer.parse(follow_id)
+    toggle_user_follow(socket, follow_id)
+    user_follows = Users.list_user_follows(socket.assigns.user)
+    user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
+    socket = assign(socket, :user_follows, user_follows)
+    {:noreply, socket}
+  end
+
   def handle_event("cancel_comment_reply", _, socket) do
-    IO.inspect("Here handled the thingie")
 
     socket =
       socket
@@ -156,6 +185,26 @@ defmodule MehungryWeb.HomeLive.Show do
     {:noreply,
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))}
+  end
+
+  def toggle_user_saved_posts(socket, post_id) do
+    case Enum.any?(socket.assigns.user_posts, fn x -> x == post_id end) do
+      true ->
+        Users.remove_user_saved_post(socket.assigns.user.id, post_id)
+
+      false ->
+        Users.save_user_post(socket.assigns.user.id, post_id)
+    end
+  end
+
+  def toggle_user_follow(socket, follow_id) do
+    case Enum.any?(socket.assigns.user_follows, fn x -> x == follow_id end) do
+      true ->
+        Users.remove_user_follow(socket.assigns.user.id, follow_id)
+
+      false ->
+        Users.save_user_follow(socket.assigns.user.id, follow_id)
+    end
   end
 
   defp page_title(:show), do: "Show Post"

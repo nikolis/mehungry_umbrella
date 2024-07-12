@@ -1,7 +1,31 @@
 defmodule Mehungry.Food.RecipeUtils do
+  
   alias Mehungry.Food
+  alias Mehungry.Food.Recipe
 
-  def calculate_recipe_nutrition_value(recipe) do
+  @supper_categories ["meat", "seafood"]
+  @meat ["Poultry Products", "Sausages and Luncheon Meats", "Pork Products", "Beef Products", "Lamb, Veal, and Game Products"]
+  @seafood ["Finfish and Shellfish Products", "Fish"]
+
+  def calculate_recipe_ingredient_categories_array(%Recipe{} = recipe) do
+    recipe_ingredients = recipe.recipe_ingredients
+    ingredients = Enum.map(recipe_ingredients, fn x -> Food.get_ingredient_with_category!(x.ingredient_id) end)
+    ingredients_table = Enum.map(ingredients, fn x ->
+      if x.category.name in @meat do 
+        "meat"
+      else 
+        if x.category.name in @seafood do 
+          "seafood"
+        else
+          x.category.name
+        end
+
+      end
+    end)
+    Enum.uniq(ingredients_table)
+  end
+
+  def calculate_recipe_nutrition_value(%Recipe{} = recipe) do
     calculate_nutrition_for_recipe_ingredient(recipe.recipe_ingredients)
   end
 
