@@ -182,3 +182,40 @@
 	}
 }
 
+.body_side_nav_bar{
+  min-height: 200vh;
+  margin: 0;
+  font-size: 1.25rem;
+  color: white;
+  display: grid;
+  grid-template-columns: 15rem 1fr;
+  gap: 2rem;
+}
+
+
+nav.nav-list-cont {
+  position: sticky;
+  top: 0;
+  max-height: 100svh;
+  @apply bg-complementary;
+}
+
+.nav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 1.25rem;
+  padding-block: 2rem;
+}
+
+.nav-list li {
+  padding: 1rem 2rem;
+  margin-inline: 2rem;
+  border-radius: 7px;
+}
+
+.nav-list li.active {
+  background: var(--clr-navbar-dark);
+}
+

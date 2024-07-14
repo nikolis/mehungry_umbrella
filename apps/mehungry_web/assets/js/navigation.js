@@ -27,7 +27,8 @@ function fix_navigation_active() {
 
 	waitForElm('#nav_bar').then((elm) => {
 		var nav = document.getElementsByTagName("nav")[0];
-
+    console.log(nav)
+    console.log("HERWERWERWERRWEWRWRWERREW")
 		if (nav) {
 			nav.classList.add('active');
 			var childNodes = nav.childNodes;
