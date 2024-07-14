@@ -20,7 +20,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
         <li id={ "liab" <> Integer.to_string(shopping_basket.id)}  class={"side_nav_list_item " <> 
         get_active_class(shopping_basket, @shopping_basket)} 
       phx-value-id={shopping_basket.id}> 
-          <div class="li_title"> <%= shopping_basket.title %> </div>
+          <div class="li_title" phx-click="select_shopping_basket" phx-value-id={shopping_basket.id}> <%= shopping_basket.title %> </div>
           <div class="shopping_list_utils">
           <.link patch={~p"/basket/import_items/#{shopping_basket.id}"}     phx-click ={
     Phoenix.LiveView.JS.push("select_shopping_basket")

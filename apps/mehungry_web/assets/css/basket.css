@@ -40,9 +40,7 @@ check_list_container {
 	right: 0;
 }
 
-
-
-.side_nav_list_item:hover{
+.side_nav_list_item.active{
 	background-color: var(--clr-grey-friend);
 }
 
@@ -51,13 +49,13 @@ check_list_container {
 	border-bottom: none !important;
 }
 
-.side_nav_list_item:hover .shopping_list_utils {
+.side_nav_list_item.active .shopping_list_utils {
 	display: inline-flex;
 	gap: 1rem;
 	position: absolute;
 	height: 100%;
-	bottom: 0;
-	right: 0;
+	bottom: 5px;
+	right: 5px;
 }
 .checkbox {
 	font-size: 0.9rem;
