@@ -51,7 +51,7 @@ defmodule MehungryWeb.MixProject do
       {:ueberauth_facebook, "~> 0.8"},
       {:ueberauth_google, "~> 0.10"},
       {:phoenix, "~> 1.7.11", override: true},
-      {:phoenix_live_view, "~> 0.20.11"},
+      {:phoenix_live_view, "~> 0.20.17"},
       {:phoenix_view, "~> 2.0"},
       {:phoenix_ecto, "~> 4.4"},
       {:paginator, "~> 1.2.0"},

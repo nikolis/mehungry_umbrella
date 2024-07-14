@@ -23,7 +23,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
 
     {:ok,
-     assign(socket, :recipes, recipes)
+     stream(socket, :recipes, recipes)
      |> assign(:cursor_after, cursor_after)
      |> assign(:recipe, nil)
      |> assign(:user_recipes, user_recipes)
@@ -101,7 +101,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      socket
      |> assign(:cursor_after, cursor_after)
      |> assign(:page, socket.assigns.page + 1)
-     |> assign(:recipes, recipes)}
+     |> stream(:recipes, recipes)}
   end
 
   @impl true
@@ -127,21 +127,36 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   end
 
   def handle_event("search", %{"recipe_search_item" => %{"query_string" => query_string}}, socket) do
-    {result, cursor_after} = Food.search_recipe(query_string)
+    #There is a problem with getting the results of the search because it does not work properly with the phx-update'Stream' on the other hand
+    #The listing of recipes suppose to use phx-update Stream As more efficient
+    case String.length(query_string) do 
+      0 ->
+        {recipes, cursor_after} = list_recipes()
+        {:noreply,
+         socket
+         |> assign(:cursor_after, cursor_after)
+         |> assign(:page, 1)
+         |> stream(:recipes, recipes, reset: true, at: 0)
+        }
 
-    result =
-      Enum.map(result, fn recipe ->
-        return = ImageProcessing.resize(recipe.image_url, 100, 100)
-        %Recipe{recipe | recipe_image_remote: return}
-      end)
+      length ->
+        {result, cursor_after} = Food.search_recipe(query_string)
 
-    {result, cursor_after}
+        result =
+          Enum.map(result, fn recipe ->
+            return = ImageProcessing.resize(recipe.image_url, 100, 100)
+            %Recipe{recipe | recipe_image_remote: return}
+          end)
 
-    {:noreply,
-     socket
-     |> assign(:cursor_after, cursor_after)
-     |> assign(:page, 1)
-     |> assign(:recipes, result)}
+        {result, cursor_after}
+
+        {:noreply,
+         socket
+         |> assign(:cursor_after, cursor_after)
+         |> assign(:page, 1)
+         |> stream(:recipes, result, reset: true, at: 0)
+        }
+     end
   end
 
   def handle_event(
@@ -166,7 +181,8 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
         {:noreply,
          socket
-         |> assign(recipes: recipes)}
+         |> stream(:recipes, recipes, reset: true)}
+
     end
   end
 

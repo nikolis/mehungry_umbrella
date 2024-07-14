@@ -283,6 +283,29 @@ defmodule Mehungry.Food do
     result
   end
 
+  def list_recipes(%Ecto.Query{} = query) do
+    # return the next 50 posts
+
+    %{entries: entries, metadata: metadata} =
+      Repo.paginate(
+        query,
+        cursor_fields: [{:inserted_at, :asc}, {:id, :asc}],
+        limit: 10
+      )
+
+    # assign the `after` cursor to a variable
+    cursor_after = metadata.after
+
+    results = Repo.preload(entries, [:recipe_ingredients, :user])
+
+    result =
+      Enum.map(results, fn rec ->
+        translate_recipe_if_needed(rec)
+      end)
+
+    {result, cursor_after}
+  end
+
   def list_recipes(cursor_after) do
     query = from recipe in Recipe, where: not is_nil(recipe.image_url)
     # return the next 50 posts
@@ -500,8 +523,11 @@ defmodule Mehungry.Food do
 
   def search_recipe(query_string) do
     query = Mehungry.Search.RecipeSearch.run(Recipe, query_string)
+    IO.inspect(query_string)
     list_recipes(query)
   end
+
+
 
   def search_ingredient(search_term, language_name) do
     search_term = search_term <> "%"

@@ -1,4 +1,4 @@
-<div phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)} phx-click="recipe_details_nav" phx-value-recipe_id={@recipe.id} class ="recipe_card" id={"recipe_card" <> Integer.to_string(@recipe.id)}>
+<div phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)} phx-click="recipe_details_nav" phx-value-recipe_id={@recipe.id} class ="recipe_card" id={@id}>
   <img class="recipe_img" src={@recipe.image_url} >
   <div class="recipe_like_container">
     <svg width="35px" height="35px" viewBox="0 0 24 24" fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))} xmlns="http://www.w3.org/2000/svg" phx-click="save_user_recipe", phx-value-recipe_id={@recipe.id} >
