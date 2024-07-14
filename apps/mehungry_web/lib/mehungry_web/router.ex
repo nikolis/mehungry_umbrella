@@ -15,6 +15,21 @@ defmodule MehungryWeb.Router do
     plug :fetch_current_user
   end
 
+    pipeline :admin_browser do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, {MehungryWeb.LayoutView, :admin_root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+    plug :fetch_path_info
+    plug :fetch_current_user
+  end
+
+
+
+
+
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -26,6 +41,17 @@ defmodule MehungryWeb.Router do
     get("/:provider/callback", AuthController, :callback)
     post("/:provider/callback", AuthController, :callback)
     post("/logout", AuthController, :delete)
+  end
+
+  scope "/professional", MehungryWeb do
+    pipe_through [:admin_browser, :require_authenticated_user]
+    live_session :default2, on_mount: MehungryWeb.AdminAuthLive , layout: {MehungryWeb.LayoutView, :admin_live}
+do
+      live "/users", ProfessionalLive.Users, :index
+      live "/user/:id", ProfessionalLive.User, :show
+
+      live "/ingredients", ProfessionalLive.Ingredients, :index
+    end
   end
 
   scope "/", MehungryWeb do

@@ -89,7 +89,6 @@ defmodule MehungryWeb do
 
       alias Phoenix.LiveView.JS
       unquote(view_helpers())
-      unquote(verified_routes())
     end
   end
 
@@ -99,7 +98,6 @@ defmodule MehungryWeb do
 
       alias Phoenix.LiveView.JS
       unquote(view_helpers())
-      unquote(verified_routes())
     end
   end
 
@@ -121,6 +119,10 @@ defmodule MehungryWeb do
       import MehungryWeb.ErrorHelpers
       import MehungryWeb.Gettext
       alias MehungryWeb.Router.Helpers, as: Routes
+
+      # Routes generation with the ~p sigil
+      unquote(verified_routes())
+
     end
   end
 
