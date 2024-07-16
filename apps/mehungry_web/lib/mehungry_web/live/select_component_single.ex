@@ -4,15 +4,15 @@ defmodule MehungryWeb.SelectComponentSingle do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="col-span-2 h-full" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={@id } >
+    <div class="col-span-2 h-full max-h-16	" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={@id } >
       <.input  field={@form[String.to_atom(@input_variable)]} type="hidden"  />
       <!-- Start Component -->
       <.focus_wrap  
         id={"select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable}
-        class="h-full" 
+        class="h-full max-h-16" 
         phx-click-away={JS.push("close-listing", target: @myself)}>
 
-        <div class="h-full relative">
+        <div class="h-full relative max-h-10 max-h-16	">
           <!-- Start Item Tags And Input Field -->
           <!-- Tags (Selected) -->
           <%=  if @selected_items do %>

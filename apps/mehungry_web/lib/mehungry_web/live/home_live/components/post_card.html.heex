@@ -16,7 +16,7 @@
    <div class="utils_container" style="gap: 0.15rem;"> 
      <img src="/images/comments-3-svgrepo-com.svg"  width="35px"/>
      <div style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;">  <%= length(@post.comments) %> </div>
-     <div  style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;" > Comments </div>
+     <div  style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"  class="md:block hidden"> Comments </div>
      <div class="utils_container mx-4 gap-2 cursor-pointer" phx-click="save_post"  phx-value-post_id = {@post.id}>
        <div styles="stroke: var(--clr-complementary-middle);"> 
          <svg  style="stroke: var(--clr-complementary-middle);  display: inline; fill: #ffffff" width="30px" height="30px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -24,18 +24,17 @@
          </svg>
        </div>
 
-       <div >
+       <div  class="md:block hidden">
         Save Post
        </div>
 
      </div> 
      <.link class="utils_container mx-4 gap-2" href={"/browse/"<> to_string(@post.reference_id)}> 
-        <img src="/images/cutlery-plate-svgrepo-com.svg" width="35px" /> 
-        <div style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;" > View Recipe</div>
+        <img src="/images/cutlery-plate-svgrepo-com.svg" width="35px" height="35px"/> 
+        <div style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;" class="md:block hidden"> View Recipe</div>
     </.link>
      
-   </div>
-
+    </div>
   </div>
 </div>
 
