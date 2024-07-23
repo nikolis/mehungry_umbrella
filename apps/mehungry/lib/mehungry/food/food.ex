@@ -87,9 +87,6 @@ defmodule Mehungry.Food do
     |> Repo.insert()
   end
 
-  def grade_recipe(%Recipe{} = recipe) do
-    IO.inspect(recipe)
-  end
 
   def list_annotations(%Recipe{} = recipe) do
     Repo.all(
@@ -306,9 +303,15 @@ defmodule Mehungry.Food do
     {result, cursor_after}
   end
 
-  def list_recipes(cursor_after) do
-    query = from recipe in Recipe, where: not is_nil(recipe.image_url)
+  def list_recipes(cursor_after, query \\ nil) do
     # return the next 50 posts
+    query = 
+      case query do 
+        nil -> 
+          from recipe in Recipe, where: not is_nil(recipe.image_url)
+        _ ->
+          query
+        end
 
     %{entries: entries, metadata: metadata} =
       Repo.paginate(
@@ -481,6 +484,21 @@ defmodule Mehungry.Food do
     |> Repo.preload([:measurement_unit, :category])
   end
 
+  def search_measurement_unit(term) do
+    query =
+        from mu in MeasurementUnit,
+          where: ilike(mu.name, ^term)
+      Repo.all(query)
+  end
+
+  def search_category(term) do
+    term = "%"<>term<>"%"
+    query =
+        from mu in Category,
+          where: ilike(mu.name, ^term)
+      Repo.all(query)
+  end
+
   def search_measurement_unit(search_term, language_str) do
     search_term = search_term <> "%"
     language = Repo.get_by(Language, name: language_str)
@@ -500,7 +518,7 @@ defmodule Mehungry.Food do
     else
       query =
         from mu_trans in MeasurementUnitTranslation,
-          where: mu_trans.language_name == ^language.id
+          where: mu_trans.language_name == ^language.name
 
       query_search =
         from transl in query,
@@ -523,8 +541,17 @@ defmodule Mehungry.Food do
 
   def search_recipe(query_string) do
     query = Mehungry.Search.RecipeSearch.run(Recipe, query_string)
-    IO.inspect(query_string)
-    list_recipes(query)
+    {query, list_recipes(query)}
+  end
+
+  def search_ingredient(search_term) do
+    search_term = "%" <> search_term <> "%"
+      query =
+        from ingredient in Ingredient,
+          where: ilike(ingredient.name, ^search_term)
+
+      Repo.all(query)
+      |> Repo.preload([:category, :measurement_unit])
   end
 
 

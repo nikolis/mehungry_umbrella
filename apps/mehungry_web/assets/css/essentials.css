@@ -503,6 +503,7 @@ h2 {
 
 .post_card_image {
 	margin: auto;
+  max-height: 90vh;
 }
 
 .post_card_image_container {

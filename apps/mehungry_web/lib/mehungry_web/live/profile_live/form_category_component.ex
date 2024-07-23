@@ -5,7 +5,7 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
     assigns = assign(assigns, :deleted, Phoenix.HTML.Form.input_value(assigns.f, :delete) == true)
 
     ~H"""
-    <div class={"min-h-24	 h-full p-6 grid grid-cols-6  gap-6 m-auto" <> if(@deleted, do: " hidden", else: "")}>
+    <div class={"min-h-16 p-2	 h-full grid grid-cols-6  gap-6 m-auto" <> if(@deleted, do: " hidden", else: "")}>
       <input
         type="hidden"
         name={Phoenix.HTML.Form.input_name(@f, :delete)}
@@ -24,7 +24,7 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
       <div class="max-h-16"> </div>
       
       <.live_component
-      module={MehungryWeb.SelectComponentSingle}
+      module={MehungryWeb.SelectComponentSingleMemory}
       form={@f}
       items = {@categories}
       input_variable={"category_id"}
@@ -33,7 +33,7 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
 
 
       <.live_component
-      module={MehungryWeb.SelectComponentSingle}
+      module={MehungryWeb.SelectComponentSingleMemory}
       form={@f}
       items = {@food_restrictions}
       input_variable={"food_restriction_type_id"}
@@ -43,14 +43,14 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
 
       <div class="flex gap-4 items-end max-h-16">
         <div
-          class=""
+          class="h-full"
           type=""
           phx-click="delete_category_rule"
           phx-value-index={@f.index}
           phx-target= {@parent}
           disabled={@deleted}
           >
-    <div class="">
+    <div class="py-2 h-fit">
      <svg phx-click="delete_category_rule" phx-target={@parent} phx-value-index= {@f.index} style="height: 2rem; width=2rem;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: auto" >
       <path d="M10 12V17" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M14 12V17" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

@@ -171,6 +171,31 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     {:noreply, socket}
   end
 
+
+  @impl true
+  def handle_event("delete_consume_record", %{"index" => index}, socket) do
+    index = String.to_integer(index)
+
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_assoc(changeset, :consume_recipe_user_meals)
+        {to_delete, rest} = List.pop_at(existing, index)
+
+        recipe_user_meals =
+          if Ecto.Changeset.change(to_delete).data.id do
+            List.replace_at(existing, index, Ecto.Changeset.change(to_delete, delete: true))
+          else
+            rest
+          end
+
+        changeset
+        |> Ecto.Changeset.put_assoc(:consume_recipe_user_meals, recipe_user_meals)
+        |> to_form()
+      end)
+
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_event("delete_recipe_consume_record", %{"index" => index}, socket) do
     index = String.to_integer(index)

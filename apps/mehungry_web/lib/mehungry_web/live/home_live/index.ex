@@ -13,7 +13,7 @@ defmodule MehungryWeb.HomeLive.Index do
   alias Mehungry.Accounts.UserFollow
 
   @impl true
-  def mount(_params, session, socket) do
+  def mount(params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     posts = Mehungry.Posts.list_posts(user)
 
@@ -35,7 +35,7 @@ defmodule MehungryWeb.HomeLive.Index do
      |> assign(:user_follows, user_follows)}
   end
 
-  defp apply_action(socket, :index, _params) do
+  defp apply_action(socket, :index, params) do
     socket
   end
 

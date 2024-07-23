@@ -10,10 +10,14 @@ defmodule MehungryWeb.SearchLive.Index do
   alias MehungryWeb.ImageProcessing
 
   @impl true
-  def update(_assigns, socket) do
+  def update(assigns, socket) do
+    
+    IO.inspect("h----------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+    query_string = Map.get(assigns, :query_string, nil)
     {:ok,
      socket
      |> assign_recipe_search()
+     |> assign(:query_string, query_string)
      |> assign_changeset()}
   end
 
@@ -42,7 +46,9 @@ defmodule MehungryWeb.SearchLive.Index do
      |> assign(:changeset, changeset)}
   end
 
-  def mount(_params, session, socket) do
+  @impl true
+  def mount(params, session, socket) do
+    IO.inspect(params, label: "Search live params ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
     user = Accounts.get_user_by_session_token(session["user_token"])
 
     {:ok,

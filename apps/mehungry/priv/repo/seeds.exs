@@ -12,6 +12,14 @@ require Logger
 {:ok, language_gr} = Mehungry.Repo.insert(%Mehungry.Languages.Language{name: "Gr"})
 {:ok, language_en} = Mehungry.Repo.insert(%Mehungry.Languages.Language{name: "En"})
 
+{:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolutely not"})
+{:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Not a fun"})
+{:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Neutral"})
+{:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Fun"})
+{:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolute fun"})
+
+
+"""
 {:ok, gram} = Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnit{name: "gram"})
 {:ok, kg} = Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnit{name: "kg"})
 {:ok, ml} = Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnit{name: "ml"})
@@ -253,8 +261,6 @@ Mehungry.Repo.insert(%Mehungry.Food.CategoryTranslation{
     measurement_unit: gram
   })
 
-"""
-
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "κοτόπουλο στοίθος",
   language_name: language_gr.name,
@@ -266,7 +272,6 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   language_name: language_en.name,
   ingredient_id: chicken_breast.id
 })
-"""
 
 {_, broccoli} =
   Mehungry.Repo.insert(%Mehungry.Food.Ingredient{
@@ -294,7 +299,6 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
     measurement_unit: gram
   })
 
-"""
 Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   name: "φακες",
   language_name: language_gr.name,
@@ -306,7 +310,6 @@ Mehungry.Repo.insert(%Mehungry.Food.IngredientTranslation{
   language_name: language_en.name,
   ingredient_id: lentiles.id
 })
-"""
 
 # Recipe First
 {:ok, user} =
@@ -812,4 +815,5 @@ Mehungry.Repo.insert(%Mehungry.Food.Ingredient{
   name: "corned beef",
   category: meats,
   measurement_unit: gram
-})
+  })
+"""

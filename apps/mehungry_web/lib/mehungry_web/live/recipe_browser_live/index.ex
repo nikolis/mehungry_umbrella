@@ -15,10 +15,17 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   alias MehungryWeb.CommonComponents.RecipeComponents
 
   @impl true
-  def mount(_params, session, socket) do
+  def mount(params, session, socket) do
+    query = Map.get(params, "query", nil)
     user = Accounts.get_user_by_session_token(session["user_token"])
-
-    {recipes, cursor_after} = list_recipes()
+    
+    {query, {recipes , cursor_after}} =
+      case query do 
+      nil ->
+          {query, list_recipes()}
+      qr ->
+          Food.search_recipe(qr)
+    end
     user_recipes = Users.list_user_saved_recipes(user)
     user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
 
@@ -26,10 +33,12 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      stream(socket, :recipes, recipes)
      |> assign(:cursor_after, cursor_after)
      |> assign(:recipe, nil)
+     |> assign(:not_empty, if length(recipes) > 0 do true else false end)
      |> assign(:user_recipes, user_recipes)
      |> assign(:page, 1)
      |> assign(:invocations, 0)
      |> assign(:counter, 1)
+     |> assign(:query, query)
      |> assign(:user, user)
      |> assign_recipe_search()
      |> assign_changeset()}
@@ -93,7 +102,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   def handle_event("load-more", _, socket) do
     cursor_after = Map.get(socket.assigns, :cursor_after)
 
-    {recipes, cursor_after} = Food.list_recipes(cursor_after)
+    {recipes, cursor_after} = Food.list_recipes(cursor_after, Map.get(socket.assigns, :query, nil))
 
     # all_recipes  = socket.assigns.recipes ++ recipes
 
@@ -126,37 +135,11 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     {:noreply, push_patch(socket, to: "/browse/" <> recipe_id)}
   end
 
+
   def handle_event("search", %{"recipe_search_item" => %{"query_string" => query_string}}, socket) do
     #There is a problem with getting the results of the search because it does not work properly with the phx-update'Stream' on the other hand
     #The listing of recipes suppose to use phx-update Stream As more efficient
-    case String.length(query_string) do 
-      0 ->
-        {recipes, cursor_after} = list_recipes()
-        {:noreply,
-         socket
-         |> assign(:cursor_after, cursor_after)
-         |> assign(:page, 1)
-         |> stream(:recipes, recipes, reset: true, at: 0)
-        }
-
-      length ->
-        {result, cursor_after} = Food.search_recipe(query_string)
-
-        result =
-          Enum.map(result, fn recipe ->
-            return = ImageProcessing.resize(recipe.image_url, 100, 100)
-            %Recipe{recipe | recipe_image_remote: return}
-          end)
-
-        {result, cursor_after}
-
-        {:noreply,
-         socket
-         |> assign(:cursor_after, cursor_after)
-         |> assign(:page, 1)
-         |> stream(:recipes, result, reset: true, at: 0)
-        }
-     end
+    {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/browse/search/"<> query_string)}
   end
 
   def handle_event(

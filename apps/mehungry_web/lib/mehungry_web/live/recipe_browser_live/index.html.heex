@@ -1,10 +1,11 @@
 <div class=" p-8 bg-greyfriend1">
+
     <.recipe_modal :if={@live_action in [:show]} on_cancel={JS.patch(~p"/browse")} id="shopping_basket_modal" show >
       <Components.recipe_modal invocations={@invocations} live_action={@live_action} nutrients = {@nutrients} recipe={@recipe}/>
     </.recipe_modal>
-
-  <div  class="the_form second_layer_spacing">
-    <div class="grid_even_columns" id="recipes_container" phx-hook="InfiniteScroll" phx-update='stream' data-page = {@page}>
+  <%= if @not_empty do %>
+  <div  class="the_form second_layer_spacing min-h-40">
+    <div class="grid_even_columns " id="recipes_container" phx-hook="InfiniteScroll" phx-update='stream' data-page = {@page}>
       <%= for {dom_id, recipe} <- @streams.recipes do %>
                <RecipeComponents.recipe_details recipe={recipe}  user_recipes ={@user_recipes} id={dom_id}/>
 
@@ -15,4 +16,9 @@
       <input type="hidden" id="page_is_dirty" name="page_is_dirty" value="0" />
     </form>
   </div>
+<% else %> 
+  <div style="height: 20vh">
+    <h3 class="text-center p-10"> We were not able to find a recipe according to your search </h3>
+  </div>
+<% end %>
 </div>

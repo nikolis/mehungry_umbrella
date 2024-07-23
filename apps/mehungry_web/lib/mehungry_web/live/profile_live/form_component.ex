@@ -9,7 +9,7 @@ defmodule MehungryWeb.ProfileLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="form-main h-120 w-full">
+    <div class="form-main h-120 w-full xl:px-10">
       <h3 class="text-center mt-4 mb-8">
         <%= @title %>
       </h3>
@@ -25,7 +25,7 @@ defmodule MehungryWeb.ProfileLive.Form do
         <.input required field={@form[:alias]} type="text" label="Alias" />
         <.input required field={@form[:intro]} type="textarea" label="Intro" />
         <h3 class="text-center m-8"> Diatery Restrictions </h3>
-        <div class="max-h-64 overflow-auto min-h-60	"> 
+        <div class="max-h-64 overflow-auto min-h-80	"> 
           <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>
             <FormCategoryComponent.render category_ids = {@category_ids} categories = {@categories} food_restrictions = {@food_restrictions} food_restriction_ids = {@food_restriction_ids} f = {f_user_category_rule} parent= {@myself}  />
           </.inputs_for>
@@ -35,7 +35,6 @@ defmodule MehungryWeb.ProfileLive.Form do
     </button>
     </div>
         <button  class="block w-1/3 mt-12 mx-auto text-2xl font-bold  uppercase primary_button" phx-disable-with="Saving...">Save</button>
-
       </.simple_form>
     </div>
     """

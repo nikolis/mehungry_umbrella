@@ -531,7 +531,7 @@ defmodule MehungryWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class=" input-form w-full h-full max-h-12" >
+    <div phx-feedback-for={@name} class="input-form w-full h-full " >
       
       <input
         type={@type}
@@ -575,7 +575,7 @@ defmodule MehungryWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <div class="text-right text-base font-medium leading-6 text-rose-600 phx-no-feedback:hidden">
+    <div class="text-right text-base font-medium leading-6 text-rose-600 phx-no-feedback:hidden " style="position: absolute; bottom: -3rem;">
       <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
       <%= render_slot(@inner_block) %>
     </div>

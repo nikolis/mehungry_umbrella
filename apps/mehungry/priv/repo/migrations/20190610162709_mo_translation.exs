@@ -4,6 +4,7 @@ defmodule MehungryServer.Repo.Migrations.MoTranslation do
   def change do
     create table(:measurement_unit_translations) do
       add :name, :string
+      add :alternate_name, :string
 
       add :measurement_unit_id, references(:measurement_units, on_delete: :delete_all)
 
@@ -13,6 +14,6 @@ defmodule MehungryServer.Repo.Migrations.MoTranslation do
       timestamps()
     end
 
-    create index(:measurement_unit_translations, [:name])
+    create unique_index(:measurement_unit_translations, [:name])
   end
 end

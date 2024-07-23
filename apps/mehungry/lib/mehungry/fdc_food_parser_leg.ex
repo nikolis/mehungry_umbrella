@@ -1,4 +1,4 @@
-defmodule Mehungry.FdcFoodParser do
+defmodule Mehungry.FdcFoodParserLeg do
   @moduledoc """
   This module is responsible for parsing food and nutrition related data gotten from Food Data Central and translate them into a form that fits the database model goten from  https://www.usda.gov/
   """
@@ -168,6 +168,6 @@ defmodule Mehungry.FdcFoodParser do
   def get_ingredients_from_food_data_central_json_file(file_path) do
     {:ok, json_body} = get_json(file_path)
 
-    Enum.each(json_body["FoundationFoods"], fn x -> create_ingredient(x) end)
+    Enum.each(json_body["SRLegacyFoods"], fn x -> create_ingredient(x) end)
   end
 end
