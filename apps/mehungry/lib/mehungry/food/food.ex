@@ -87,7 +87,6 @@ defmodule Mehungry.Food do
     |> Repo.insert()
   end
 
-
   def list_annotations(%Recipe{} = recipe) do
     Repo.all(
       from a in Ecto.assoc(recipe, :annotations),
@@ -305,13 +304,14 @@ defmodule Mehungry.Food do
 
   def list_recipes(cursor_after, query \\ nil) do
     # return the next 50 posts
-    query = 
-      case query do 
-        nil -> 
+    query =
+      case query do
+        nil ->
           from recipe in Recipe, where: not is_nil(recipe.image_url)
+
         _ ->
           query
-        end
+      end
 
     %{entries: entries, metadata: metadata} =
       Repo.paginate(
@@ -466,14 +466,16 @@ defmodule Mehungry.Food do
   end
 
   def create_recipe(attrs \\ %{}) do
-    result = 
+    result =
       %Recipe{}
       |> Recipe.changeset(attrs)
       |> Repo.insert()
+
     case result do
-      {:ok , %Recipe{} = recipe} ->
+      {:ok, %Recipe{} = recipe} ->
         Mehungry.Posts.create_post(recipe)
         result
+
       _ ->
         result
     end
@@ -486,17 +488,20 @@ defmodule Mehungry.Food do
 
   def search_measurement_unit(term) do
     query =
-        from mu in MeasurementUnit,
-          where: ilike(mu.name, ^term)
-      Repo.all(query)
+      from mu in MeasurementUnit,
+        where: ilike(mu.name, ^term)
+
+    Repo.all(query)
   end
 
   def search_category(term) do
-    term = "%"<>term<>"%"
+    term = "%" <> term <> "%"
+
     query =
-        from mu in Category,
-          where: ilike(mu.name, ^term)
-      Repo.all(query)
+      from mu in Category,
+        where: ilike(mu.name, ^term)
+
+    Repo.all(query)
   end
 
   def search_measurement_unit(search_term, language_str) do
@@ -546,15 +551,15 @@ defmodule Mehungry.Food do
 
   def search_ingredient(search_term) do
     search_term = "%" <> search_term <> "%"
-      query =
-        from ingredient in Ingredient,
-          where: ilike(ingredient.name, ^search_term)
 
-      Repo.all(query)
-      |> Repo.preload([:category, :measurement_unit])
+    query =
+      from ingredient in Ingredient,
+        where: ilike(ingredient.name, ^search_term)
+
+    Repo.all(query)
+    |> Repo.preload([:category, :measurement_unit])
+    |> Enum.sort_by(fn x-> String.length(x.name) end)
   end
-
-
 
   def search_ingredient(search_term, language_name) do
     search_term = search_term <> "%"

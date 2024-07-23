@@ -62,9 +62,9 @@ defmodule Mehungry.History.ConsumeRecipeUserMeal do
           false ->
             [{:consume_portions, "only " <> to_string(portions_left) <> " portions left"}]
         end
-      end) 
+      end)
     else
-        changeset
+      changeset
     end
   end
 end

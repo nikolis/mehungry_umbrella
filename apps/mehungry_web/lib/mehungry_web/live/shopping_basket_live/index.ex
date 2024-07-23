@@ -78,7 +78,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       socket
       |> assign(:processing_basket, %ShoppingBasket{})
 
-    shopping_baskets = socket.assigns.shopping_baskets + [shopping_basket]
+    shopping_baskets = socket.assigns.shopping_baskets ++ [shopping_basket]
     shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
 
     {:noreply, assign(socket, :shopping_baskets, shopping_baskets)}
@@ -131,6 +131,13 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
      socket
      |> assign(:shopping_basket, shopping_basket)}
   end
+
+  def handle_event("select_shopping_basket",_, socket) do
+
+    {:noreply,
+     socket}
+  end
+
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do

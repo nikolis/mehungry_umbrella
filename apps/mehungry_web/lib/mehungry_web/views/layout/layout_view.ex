@@ -8,7 +8,6 @@ defmodule MehungryWeb.LayoutView do
     "main-content-container"
   end
 
-
   attr :current_user, :any
 
   def sidebar_nav_links(assigns) do
@@ -29,5 +28,4 @@ defmodule MehungryWeb.LayoutView do
     </div>
     """
   end
-
 end

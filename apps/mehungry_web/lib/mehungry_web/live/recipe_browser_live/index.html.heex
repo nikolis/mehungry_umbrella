@@ -1,5 +1,15 @@
 <div class=" p-8 bg-greyfriend1">
 
+  <.modal :if={is_nil(@user_profile.onboarding_level)  or @user_profile.onboarding_level < 1} id="onboarding-modal" show on_cancel={JS.patch(~p"/")}>
+  
+  <.live_component
+    module={MehungryWeb.Onboarding.FormComponent}
+    user_profile = {@user_profile}
+    id={:new}
+    patch={~p"/"}
+  />
+</.modal>
+
     <.recipe_modal :if={@live_action in [:show]} on_cancel={JS.patch(~p"/browse")} id="shopping_basket_modal" show >
       <Components.recipe_modal invocations={@invocations} live_action={@live_action} nutrients = {@nutrients} recipe={@recipe}/>
     </.recipe_modal>

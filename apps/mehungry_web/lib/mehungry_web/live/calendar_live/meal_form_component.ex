@@ -171,7 +171,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     {:noreply, socket}
   end
 
-
   @impl true
   def handle_event("delete_consume_record", %{"index" => index}, socket) do
     index = String.to_integer(index)
@@ -251,17 +250,13 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
       {:ok, user_meal} ->
         date = NaiveDateTime.to_string(user_meal.start_dt)
 
-        IO.inspect(date,
-          label:
-            "Date adsoaifds--------------------------------------------------------------------------------------------------"
-        )
-
         {:noreply,
          socket
          |> put_flash(:info, "User Meal created successfully")
          |> push_redirect(to: "/calendar/ondate/" <> date)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        IO.inspect(changeset)
         {:noreply, assign(socket, changeset: changeset)}
     end
   end

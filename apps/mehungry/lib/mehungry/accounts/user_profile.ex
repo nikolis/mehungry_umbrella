@@ -5,6 +5,7 @@ defmodule Mehungry.Accounts.UserProfile do
   schema "user_profiles" do
     field :alias, :string
     field :intro, :string
+    field :onboarding_level, :integer
 
     belongs_to :user, Mehungry.Accounts.User
     has_many :user_category_rules, Mehungry.Accounts.UserCategoryRule
@@ -15,10 +16,11 @@ defmodule Mehungry.Accounts.UserProfile do
   @doc false
   def changeset(user_profile, attrs) do
     user_profile
-    |> cast(attrs, [:alias, :intro, :user_id])
+    |> cast(attrs, [:alias, :intro, :user_id, :onboarding_level])
     |> validate_required([:user_id])
     |> cast_assoc(:user_category_rules,
-      with: &Mehungry.Accounts.UserCategoryRule.changeset/2
+      with: &Mehungry.Accounts.UserCategoryRule.changeset/2,
+      on_replace: :delete
     )
     |> cast_assoc(:user_ingredient_rules)
   end

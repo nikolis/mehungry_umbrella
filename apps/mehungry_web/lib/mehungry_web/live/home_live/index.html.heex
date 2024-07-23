@@ -1,4 +1,14 @@
 <div class="main-page-container">
+
+<.modal :if={is_nil(@user_profile.onboarding_level)  or @user_profile.onboarding_level < 1} id="onboarding-modal" show on_cancel={JS.patch(~p"/")}>
+  
+  <.live_component
+    module={MehungryWeb.Onboarding.FormComponent}
+    user_profile = {@user_profile}
+    id={:new}
+    patch={~p"/"}
+  />
+</.modal>
   <%= for post <- @posts do %>
     <.post_card post = {post} user= {@user} user_follows={@user_follows} user_posts={@user_posts}/>
   <% end %>

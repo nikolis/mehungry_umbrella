@@ -21,6 +21,5 @@ defmodule :"Elixir.Mehungry.Repo.Migrations.UserUser-userPostConnectionTables" d
 
     create index(:user_posts, [:post_id])
     create index(:user_posts, [:user_id])
-
   end
 end

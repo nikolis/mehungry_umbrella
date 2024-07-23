@@ -11,70 +11,83 @@ defmodule Mehungry.Users do
   alias Mehungry.Accounts.UserCategoryRule
   alias Mehungry.Food.FoodRestrictionType
   alias Mehungry.Food.FoodRestrictionType
-  alias Mehungry.Food.RecipeUtils 
+  alias Mehungry.Food.RecipeUtils
 
   @restrictions ["Absolutely not", "Not a fun", "Neutral", "Fun", "Absolute fun"]
   @restriction_map [0, 0.5, 1, 1.5, 2]
-  @meat ["Poultry Products", "Sausages and Luncheon Meats", "Pork Products", "Beef Products", "Lamb, Veal, and Game Products"]
+  @meat [
+    "Poultry Products",
+    "Sausages and Luncheon Meats",
+    "Pork Products",
+    "Beef Products",
+    "Lamb, Veal, and Game Products"
+  ]
   @seafood ["Finfish and Shellfish Products", "Fish"]
-  @restrictions %{"Absolutely not" => 0, "Not a fun" => 0.5, "Neutral" => 1, "Fun" => 1.5, "Absolute fun" => 2}
+  @restrictions %{
+    "Absolutely not" => 0,
+    "Not a fun" => 0.5,
+    "Neutral" => 1,
+    "Fun" => 1.5,
+    "Absolute fun" => 2
+  }
 
   def calculate_recipe_grading(recipe, user) do
-    recipe_grade = 
+    recipe_grade =
       RecipeUtils.calculate_recipe_ingredient_categories_array(recipe)
       |> Enum.map(fn x -> {x, 1.0} end)
       |> Enum.into(%{})
-    
-    user_pref_array = calculate_user_pref_table(user) 
-    Enum.reduce(recipe_grade, 1 , fn {key, grade}, acc -> 
+
+    user_pref_array = calculate_user_pref_table(user)
+
+    Enum.reduce(recipe_grade, 1, fn {key, grade}, acc ->
       case Map.get(user_pref_array, key) do
-        nil -> 
+        nil ->
           1 * acc
-        grade -> 
+
+        grade ->
           grade * acc
       end
     end)
   end
 
-
   def calculate_user_pref_table(user) do
     user_category_rules = get_user_category_rules(user)
-    Enum.map(user_category_rules, fn x -> 
+    IO.inspect(user_category_rules)
+    Enum.map(user_category_rules, fn x ->
       title = get_category_name(x)
       grade = Map.get(@restrictions, x.food_restriction_type.title)
       {title, grade}
-       
     end)
+    |> IO.inspect()
     |> Enum.into(%{})
   end
 
   def get_category_name(category) do
     if category.category.name in @meat do
       "meat"
-    else 
+    else
       if category.category.name in @seafood do
-          "seafood"
+        "seafood"
       else
-          category.category.name
+        category.category.name
       end
     end
   end
 
   def get_user_category_rules(user) do
-    (from u_c_r in UserCategoryRule,
-      where: u_c_r.user_id == ^user.id)
-      |> Repo.all() 
-      |> Repo.preload([:category, :food_restriction_type] )
+    from(u_c_r in UserCategoryRule,
+      where: u_c_r.user_id == ^user.id
+    )
+    |> Repo.all()
+    |> Repo.preload([:category, :food_restriction_type])
   end
-
-
 
   def create_user_restriction_type(attrs) do
-     %FoodRestrictionType{}
+    %FoodRestrictionType{}
     |> Mehungry.Food.FoodRestrictionType.changeset(attrs)
-    |> Repo.insert() 
+    |> Repo.insert()
   end
-  
+
   def list_food_restriction_types() do
     FoodRestrictionType
     |> Repo.all()
@@ -85,16 +98,18 @@ defmodule Mehungry.Users do
     |> UserCategoryRule.changeset(attrs)
     |> Repo.insert()
   end
+
   def list_user_category_rules() do
     UserCategoryRule
     |> Repo.all()
   end
 
   def get_user_category_rulles(%User{} = user) do
-    (from u_c_r in UserCategoryRule,
-      where: u_c_r.user_id == ^user.id)
-      |> Repo.all()
-      |> Repo.preload([:category])
+    from(u_c_r in UserCategoryRule,
+      where: u_c_r.user_id == ^user.id
+    )
+    |> Repo.all()
+    |> Repo.preload([:category])
   end
 
   def save_user_recipe(%User{} = user, %Recipe{} = recipe) do
@@ -151,7 +166,6 @@ defmodule Mehungry.Users do
     |> Repo.delete_all()
   end
 
-
   def list_user_saved_recipes(%User{} = user) do
     from(u_r in UserRecipe,
       where: u_r.user_id == ^user.id
@@ -175,9 +189,6 @@ defmodule Mehungry.Users do
     |> Repo.all()
     |> Repo.preload(post: [:recipe])
   end
-
-
-
 
   def list_user_created_recipes(%User{} = user) do
     from(recipe in Recipe,

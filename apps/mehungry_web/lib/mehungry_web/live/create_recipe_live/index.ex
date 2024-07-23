@@ -3,17 +3,21 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
-
+  alias Mehungry.Accounts
   alias MehungryWeb.CreateRecipeLive.Components
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
     measurement_units = Food.list_measurement_units()
+    user = Accounts.get_user_by_session_token(session["user_token"])
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
 
     {:ok,
      socket
      |> assign(:recipe, recipe)
+     |> assign(:user, user)
+     |> assign(:user_profile, user_profile)
      |> assign(:ingredients, list_ingredients())
      |> assign(:measurement_units, measurement_units)
      |> assign(:changeset, Food.change_recipe(recipe))
@@ -26,6 +30,15 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
        #       progress: &handle_progress/3
      )
      |> init(recipe)}
+  end
+  
+  @impl true
+  def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
+    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
+
+    {:noreply,
+     socket
+     |> assign(:user_profile, user_profile)}
   end
 
   defp init(socket, base) do
@@ -61,7 +74,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   use MehungryWeb.Searchable, :transfers_to_search
 
   def handle_event("save", %{"recipe" => recipe_params}, socket) do
-    IO.inspect(recipe_params, label: "Sacve recipe")
     save_recipe(socket, socket.assigns, recipe_params)
   end
 
@@ -146,9 +158,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       |> Recipe.changeset(recipe_params)
       |> struct!(action: :validate)
 
-    IO.inspect(changeset,
-      label: "the changeset ---------------------------------------------------------------->"
-    )
 
     {:noreply, assign(socket, form: to_form(changeset))}
   end
@@ -266,7 +275,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          |> push_redirect(to: "/browse")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect(changeset, label: "Chaggeset seave")
         {:noreply, assign(socket, changeset: changeset)}
     end
   end

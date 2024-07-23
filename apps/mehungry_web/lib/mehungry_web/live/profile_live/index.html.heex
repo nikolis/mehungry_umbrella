@@ -1,4 +1,15 @@
 <div class="container  mx-auto">
+
+  <.modal :if={is_nil(@user_profile.onboarding_level)  or @user_profile.onboarding_level < 1} id="onboarding-modal" show on_cancel={JS.patch(~p"/")}>
+  
+  <.live_component
+    module={MehungryWeb.Onboarding.FormComponent}
+    user_profile = {@user_profile}
+    id={:new}
+    patch={~p"/"}
+  />
+</.modal>
+
   <div class="profile_index_main">
     <div class="profile_index_info">
       <%= case @live_action  do %> 

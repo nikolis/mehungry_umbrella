@@ -9,9 +9,6 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   alias __MODULE__.Component
 
   def mount(_params, _session, socket) do
-    {:ok,
-     socket}
+    {:ok, socket}
   end
-
-
 end

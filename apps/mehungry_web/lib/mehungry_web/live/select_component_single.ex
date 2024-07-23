@@ -124,10 +124,11 @@ defmodule MehungryWeb.SelectComponentSingle do
           end
       end
 
-    IO.inspect(items,label: "ITEMS PRE")
+    IO.inspect(items, label: "ITEMS PRE")
     items = Enum.map(items, fn x -> %{label: label_function.(x), id: x.id} end)
     presenting_items = Enum.slice(items, 0..10)
     IO.inspect(items, label: "Items")
+
     socket =
       socket
       |> assign(:items, items)
@@ -146,11 +147,12 @@ defmodule MehungryWeb.SelectComponentSingle do
 
   @impl true
   def handle_event("validate", params, socket) do
-    search_input = "search_input" <> socket.assigns.id 
+    search_input = "search_input" <> socket.assigns.id
     %{^search_input => search_string} = params
     items_filtered = socket.assigns.item_function.(search_string)
-    #items_filtered = Seqfuzz.filter(socket.assigns.items, search_string, fn x -> x.label end)
-    items = Enum.map(items_filtered, fn x -> %{label: socket.assigns.label_function.(x), id: x.id} end)
+    # items_filtered = Seqfuzz.filter(socket.assigns.items, search_string, fn x -> x.label end)
+    items =
+      Enum.map(items_filtered, fn x -> %{label: socket.assigns.label_function.(x), id: x.id} end)
 
     socket =
       socket

@@ -37,16 +37,19 @@ defmodule Mehungry.FdcFoodParserSurvey do
 
   defp get_or_create_measurement_unit(measurement_unit_name) do
     result = Food.get_measurement_unit_by_name(measurement_unit_name)
+
     case result do
       [] ->
         {name, abbribiation} = get_measurement_unit_foul_name(measurement_unit_name)
         result = Food.get_measurement_unit_by_name(name)
+
         case result do
-          [] -> 
+          [] ->
             {:ok, measurement_unit} =
               Food.create_measurement_unit(%{name: name, alternate_name: abbribiation})
-            IO.inspect(measurement_unit, label: "New measurement unit created with --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+
             measurement_unit
+
           [measurement_unit, _] ->
             measurement_unit
         end
@@ -127,25 +130,15 @@ defmodule Mehungry.FdcFoodParserSurvey do
 
   defp write_item_to_file(attrs) do
     {:ok, content} = File.read("leftovers.json")
-    File.write("leftovers.json", content <>", \n" <> Poison.encode!(attrs), [:binary])
+    File.write("leftovers.json", content <> ", \n" <> Poison.encode!(attrs), [:binary])
   end
 
   def create_ingredient(attrs) do
     if(is_nil(attrs["wweiaFoodCategory"]["wweiaFoodCategoryDescription"])) do
-      IO.inspect("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWRONGS")
-      IO.inspect(attrs)
-      IO.inspect(attrs["description"], label: "The ingredient being processed ")
-      IO.inspect(attrs["wweiaFoodCategory"]["wweiaFoodCategoryDescription"], label: "The category")
-      IO.inspect("------------------------------------------------------------------------")
-
       write_item_to_file(attrs)
     else
-      IO.inspect("WORKING")
-      IO.inspect(attrs["description"], label: "The ingredient being processed ")
-      IO.inspect(attrs["wweiaFoodCategory"]["wweiaFoodCategoryDescription"], label: "The category")
-      IO.inspect("------------------------------------------------------------------------")
-
-      category = get_or_create_food_category(attrs["wweiaFoodCategory"]["wweiaFoodCategoryDescription"])
+      category =
+        get_or_create_food_category(attrs["wweiaFoodCategory"]["wweiaFoodCategoryDescription"])
 
       food_portions = attrs["foodPortions"]
       food_nutrients = attrs["foodNutrients"]
@@ -175,6 +168,7 @@ defmodule Mehungry.FdcFoodParserSurvey do
 
   defp get_or_create_food_category(category_name) do
     category = Food.search_category(category_name)
+
     if length(category) == 0 do
       {:ok, category} = Food.create_category(%{name: category_name})
       category

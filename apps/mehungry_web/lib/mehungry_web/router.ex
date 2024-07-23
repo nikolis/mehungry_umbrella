@@ -15,7 +15,7 @@ defmodule MehungryWeb.Router do
     plug :fetch_current_user
   end
 
-    pipeline :admin_browser do
+  pipeline :admin_browser do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_live_flash
@@ -25,10 +25,6 @@ defmodule MehungryWeb.Router do
     plug :fetch_path_info
     plug :fetch_current_user
   end
-
-
-
-
 
   pipeline :api do
     plug :accepts, ["json"]
@@ -45,8 +41,10 @@ defmodule MehungryWeb.Router do
 
   scope "/professional", MehungryWeb do
     pipe_through [:admin_browser, :require_authenticated_user]
-    live_session :default2, on_mount: MehungryWeb.AdminAuthLive , layout: {MehungryWeb.LayoutView, :admin_live}
-do
+
+    live_session :default2,
+      on_mount: MehungryWeb.AdminAuthLive,
+      layout: {MehungryWeb.LayoutView, :admin_live} do
       live "/users", ProfessionalLive.Users, :index
       live "/user/:id", ProfessionalLive.User, :show
 
@@ -66,7 +64,7 @@ do
       live "/profile", ProfileLive.Index, :index
       live "/profile/edit", ProfileLive.Index, :edit
       live "/profile/:id", ProfileLive.Index, :show
-      live "/browse", RecipeBrowseLive.Index, :index 
+      live "/browse", RecipeBrowseLive.Index, :index
       live "/browse/search/:query", RecipeBrowseLive.Index, :index
       live "/browse/:id", RecipeBrowseLive.Index, :show
       live "/browse_prepop/:search_term", :searc_prepop

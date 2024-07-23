@@ -19,7 +19,7 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
 
       <.simple_form
         for={@form}
-        id="basket-form"
+        id="form-basket"
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save">

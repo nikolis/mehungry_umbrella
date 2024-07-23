@@ -24,7 +24,7 @@ defmodule Mehungry.History.UserMeal do
   def changeset(user_meal, attrs) do
     user_meal
     |> cast(attrs, [:title, :start_dt, :end_dt, :user_id])
-    |> cast_assoc(:recipe_user_meals, with: &RecipeUserMeal.changeset/2, required: true)
+    |> cast_assoc(:recipe_user_meals, with: &RecipeUserMeal.changeset/2, required: false)
     |> cast_assoc(:consume_recipe_user_meals,
       with: &ConsumeRecipeUserMeal.changeset/2,
       required: false

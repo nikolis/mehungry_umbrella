@@ -52,6 +52,7 @@ defmodule MehungryWeb.ProfileLive.Form do
 
   @impl true
   def handle_event("validate", %{"user_profile" => user_profile_params}, socket) do
+
     changeset =
       socket.assigns.user_profile
       |> Accounts.change_user_profile(user_profile_params)
@@ -84,14 +85,11 @@ defmodule MehungryWeb.ProfileLive.Form do
 
   def handle_event("delete_category_rule", %{"index" => index}, socket) do
     index = String.to_integer(index)
-    IO.inspect(index, label: "Delete Index")
 
     socket =
       update(socket, :form, fn %{source: changeset} ->
         existing = Ecto.Changeset.get_assoc(changeset, :user_category_rules)
         {to_delete, rest} = List.pop_at(existing, index)
-        IO.inspect(to_delete, label: "to del")
-        IO.inspect(rest, label: "to del")
 
         user_category_rules =
           if Ecto.Changeset.change(to_delete).data.id do
@@ -100,7 +98,6 @@ defmodule MehungryWeb.ProfileLive.Form do
             rest
           end
 
-        IO.inspect(user_category_rules, label: "asdfafsd")
 
         changeset
         |> Ecto.Changeset.put_assoc(:user_category_rules, user_category_rules)
@@ -121,7 +118,6 @@ defmodule MehungryWeb.ProfileLive.Form do
          |> push_patch(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect(changeset)
         {:noreply, assign_form(socket, changeset)}
     end
   end

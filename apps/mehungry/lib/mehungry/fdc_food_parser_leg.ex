@@ -153,6 +153,7 @@ defmodule Mehungry.FdcFoodParserLeg do
 
   defp get_or_create_food_category(category_name) do
     category = Food.get_category_by_name(category_name)
+
     if is_nil(category) do
       {:ok, category} = Food.create_category(%{name: category_name})
       category

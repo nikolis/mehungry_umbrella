@@ -23,8 +23,6 @@ defmodule MehungryWeb.HomeLive.Show do
     user_follows = Users.list_user_follows(user)
     user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
-
-
     {:ok,
      socket
      |> assign(:comment, %Comment{user_id: user.id, post_id: id})
@@ -35,7 +33,7 @@ defmodule MehungryWeb.HomeLive.Show do
      |> assign(:reply, nil)}
   end
 
-  def get_style(item_list, user_id , get_attr) do
+  def get_style(item_list, user_id, get_attr) do
     has = Enum.any?(item_list, fn x -> get_attr.(x) == user_id end)
 
     case has do
@@ -109,7 +107,6 @@ defmodule MehungryWeb.HomeLive.Show do
   end
 
   def handle_event("cancel_comment_reply", _, socket) do
-
     socket =
       socket
       |> assign(:reply, nil)

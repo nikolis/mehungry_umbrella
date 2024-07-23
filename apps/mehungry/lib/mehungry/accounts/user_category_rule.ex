@@ -8,7 +8,7 @@ defmodule Mehungry.Accounts.UserCategoryRule do
     field(:delete, :boolean, virtual: true)
 
     belongs_to :user_profile, UserProfile
-    belongs_to :category, Mehungry.Food.Category 
+    belongs_to :category, Mehungry.Food.Category
     belongs_to :food_restriction_type, Mehungry.Food.FoodRestrictionType
 
     timestamps()
