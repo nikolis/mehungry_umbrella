@@ -15,8 +15,6 @@ defmodule MehungryWeb.CommonComponents.RecipeComponents do
   end
 
   def recipe_details(assigns) do
-    IO.inspect(assigns.id)
-
     ~H"""
     <.recipe_details_page user_recipes={assigns.user_recipes} recipe={assigns.recipe}  id={@id} />
     """

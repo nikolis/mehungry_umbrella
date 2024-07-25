@@ -554,7 +554,7 @@ defmodule Mehungry.Food do
 
     query =
       from ingredient in Ingredient,
-        where: ilike(ingredient.name, ^search_term)
+        where: ingredient.category_id != 212 and ingredient.category_id != 197 and ilike(ingredient.name, ^search_term)
 
     Repo.all(query)
     |> Repo.preload([:category, :measurement_unit])

@@ -109,11 +109,13 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   end
 
   @impl true
-  def handle_event("save_user_recipe", %{"recipe_id" => recipe_id}, socket) do
+  def handle_event("save_user_recipe", %{"recipe_id" => recipe_id, "dom_id" => dom_id}, socket) do
     {recipe_id, _ignore} = Integer.parse(recipe_id)
+    recipe = Food.get_recipe!(recipe_id)
     toggle_user_saved_recipes(socket, recipe_id)
     user_recipes = Users.list_user_saved_recipes(socket.assigns.user)
     user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
+    socket = stream_insert(socket, :recipes, recipe)
     socket = assign(socket, :user_recipes, user_recipes)
     {:noreply, push_patch(socket, to: "/browse")}
   end

@@ -14,8 +14,8 @@ defmodule Mehungry.History.UserMeal do
     field :title, :string
     field :user_id, :id
 
-    has_many :recipe_user_meals, RecipeUserMeal, on_replace: :delete
-    has_many :consume_recipe_user_meals, ConsumeRecipeUserMeal, on_replace: :delete
+    has_many :recipe_user_meals, RecipeUserMeal, on_replace: :delete, on_delete: :nothing
+    has_many :consume_recipe_user_meals, ConsumeRecipeUserMeal, on_replace: :delete, on_delete: :nothing
 
     timestamps()
   end

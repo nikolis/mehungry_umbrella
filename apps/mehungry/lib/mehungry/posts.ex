@@ -34,7 +34,6 @@ defmodule Mehungry.Posts do
     |> Enum.map(fn x ->
       {x, Users.calculate_recipe_grading(x.reference, user)}
     end)
-    |> IO.inspect()
     |> Enum.filter(fn {x, y} -> y > 0 end)
     |> Enum.sort_by(fn {x, y} -> y end, :desc)
     |> Enum.map(fn {x, y} -> x end)

@@ -20,15 +20,7 @@ defmodule Mehungry.Food.RecipeUtils do
 
     ingredients_table =
       Enum.map(ingredients, fn x ->
-        if x.category.name in @meat do
-          "meat"
-        else
-          if x.category.name in @seafood do
-            "seafood"
-          else
             x.category.name
-          end
-        end
       end)
 
     Enum.uniq(ingredients_table)

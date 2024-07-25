@@ -13,7 +13,6 @@ defmodule Mehungry.Users do
   alias Mehungry.Food.FoodRestrictionType
   alias Mehungry.Food.RecipeUtils
 
-  @restrictions ["Absolutely not", "Not a fun", "Neutral", "Fun", "Absolute fun"]
   @restriction_map [0, 0.5, 1, 1.5, 2]
   @meat [
     "Poultry Products",
@@ -37,8 +36,9 @@ defmodule Mehungry.Users do
       |> Enum.map(fn x -> {x, 1.0} end)
       |> Enum.into(%{})
 
+    IO.inspect(recipe_grade, label: "Recipe grades")
     user_pref_array = calculate_user_pref_table(user)
-
+    IO.inspect(user_pref_array, label: "User pref array")
     Enum.reduce(recipe_grade, 1, fn {key, grade}, acc ->
       case Map.get(user_pref_array, key) do
         nil ->
@@ -54,12 +54,15 @@ defmodule Mehungry.Users do
     user_category_rules = get_user_category_rules(user)
     IO.inspect(user_category_rules)
     Enum.map(user_category_rules, fn x ->
-      title = get_category_name(x)
+      title = x.category.name 
+      IO.inspect(x.food_restriction_type.title)
       grade = Map.get(@restrictions, x.food_restriction_type.title)
       {title, grade}
     end)
-    |> IO.inspect()
     |> Enum.into(%{})
+    |> IO.inspect()
+
+
   end
 
   def get_category_name(category) do
@@ -112,8 +115,8 @@ defmodule Mehungry.Users do
     |> Repo.preload([:category])
   end
 
-  def save_user_recipe(%User{} = user, %Recipe{} = recipe) do
-    attrs = %{user_id: user.id, recipe_id: recipe.id}
+  def save_user_recipe(user_id, recipe_id) do
+    attrs = %{user_id: user_id, recipe_id: recipe_id}
 
     %UserRecipe{}
     |> UserRecipe.changeset(attrs)

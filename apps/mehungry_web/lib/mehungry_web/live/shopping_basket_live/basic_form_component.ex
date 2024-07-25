@@ -71,7 +71,7 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
 
         {:noreply,
          socket
-         |> put_flash(:info, "User profile updated successfully")
+         |> put_flash(:info, "Shopping basket updated successfully")
          |> push_patch(to: socket.assigns.patch)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
