@@ -97,15 +97,11 @@ defmodule MehungryWeb.SelectComponentSingle do
                 nil
 
               id ->
-                if is_nil(Map.get(assigns, :items)) do
-                  nil
-                else
                   item = get_by_id_func.(id)
 
                   if(item) do
                     %{id: item.id, label: label_function.(item)}
                   end
-                end
             end
           else
             assigns.selected_items
@@ -123,7 +119,7 @@ defmodule MehungryWeb.SelectComponentSingle do
               %{id: selected_item.id, label: label_function.(selected_item)}
           end
       end
-
+    IO.inspect(selected_items, label: "Selectect comonent online")
     items = Enum.map(items, fn x -> %{label: label_function.(x), id: x.id} end)
     presenting_items = Enum.slice(items, 0..10)
 

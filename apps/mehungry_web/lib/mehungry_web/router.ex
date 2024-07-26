@@ -79,6 +79,8 @@ defmodule MehungryWeb.Router do
       live "/calendar/:id", CalendarLive.Index, :edit
 
       live "/create_recipe", CreateRecipeLive.Index, :index
+      live "/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit
+
       live "/create_recipe/add_ingredient", CreateRecipeLive.Index, :add_ingredient
       live "/create_recipe/:temp_id/edit_ingredient", CreateRecipeLive.Index, :edit_ingredient
       live "/create_recipe/:uuid/delete_ingredient", CreateRecipeLive.Index, :delete_ingredient

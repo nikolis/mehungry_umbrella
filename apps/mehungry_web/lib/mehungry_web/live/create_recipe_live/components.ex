@@ -11,7 +11,18 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
 
   def ingredient_render(assigns) do
     assigns = assign(assigns, :deleted, Phoenix.HTML.Form.input_value(assigns.g, :delete) == true)
-    ing_val =  Phoenix.HTML.Form.input_value(assigns.g, :ingredient_id)
+    ing_val =  
+      case  is_nil(Phoenix.HTML.Form.input_value(assigns.g, :ingredient_id)) do
+        true ->
+          if(length(assigns.f.data.recipe_ingredients) > 0) do
+            Enum.get_at(assigns.f.data.recipe_ingredients, assigns.g.index).id
+          else
+            nil
+          end
+        false ->
+          Phoenix.HTML.Form.input_value(assigns.g, :ingredient_id)
+      end
+
     measurement_units = 
       case is_nil(ing_val)   do
         true ->
@@ -19,7 +30,6 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
         false -> 
           if(!is_binary(ing_val)) do
             portions = (from ingp in Mehungry.Food.IngredientPortion, where: ingp.ingredient_id == ^ing_val) |> Repo.all() 
-            IO.inspect(portions)
       
             measurement_units =  Enum.map(portions, 
               fn x -> 
@@ -27,16 +37,27 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
                    end)
               |> Enum.filter(fn x -> !is_nil(x) end)
   
-            IO.inspect(ing_val, label: "Choseeen thiss--------------------------------------------------------------------------------------------------------------------------------------------")
-            IO.inspect(measurement_units)
             measurement_units = assigns.measurement_units ++ measurement_units
           else
-            assigns.measurement_units
+            if String.length(ing_val) <= 0 do
+              assigns.measurement_units
+            else
+              ing_val = String.to_integer(ing_val)  
+              portions = (from ingp in Mehungry.Food.IngredientPortion, where: ingp.ingredient_id == ^ing_val) |> Repo.all() 
+        
+              measurement_units =  Enum.map(portions, 
+                fn x -> 
+                       Food.get_measurement_unit!(x.measurement_unit_id)
+                     end)
+                |> Enum.filter(fn x -> !is_nil(x) end)
+    
+              measurement_units = assigns.measurement_units ++ measurement_units
+ 
+            end
           end
       end
      assigns = assign(assigns, :measurement_units, measurement_units)
-
-    ~H"""
+     ~H"""
     <.ingredient g={assigns.g} ingredients={assigns.ingredients} measurement_units={assigns.measurement_units} style={get_style(assigns.deleted)}  deleted={assigns.deleted}/>
     """
   end

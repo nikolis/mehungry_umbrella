@@ -124,7 +124,8 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
               end
           end
       end
-
+  
+    IO.inspect(selected_items, label: "Selectect comonent in memory")
     items = Enum.map(assigns.items, fn x -> %{label: label_function.(x), id: x.id} end)
     presenting_items = Enum.slice(items, 0..10)
 
