@@ -9,7 +9,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @impl true
   def mount(_params, session, socket) do
     recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
-    measurement_units = Food.list_measurement_units()
+    measurement_units = Food.get_measurement_unit_by_name("grammar")
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_profile = Accounts.get_user_profile_by_user_id(user.id)
 

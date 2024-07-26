@@ -124,10 +124,8 @@ defmodule MehungryWeb.SelectComponentSingle do
           end
       end
 
-    IO.inspect(items, label: "ITEMS PRE")
     items = Enum.map(items, fn x -> %{label: label_function.(x), id: x.id} end)
     presenting_items = Enum.slice(items, 0..10)
-    IO.inspect(items, label: "Items")
 
     socket =
       socket
