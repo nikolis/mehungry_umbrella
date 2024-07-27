@@ -20,9 +20,10 @@
     <div class="basic_2_col_grid_cont">
       <Components.recipe_render f={@form} />
 
+   
      <%= if @form.data.image_url do %> 
        <div class="relative">
-       <img src = { @form.data.image_url}  width="500rem" class="m-auto relative" />
+       <img src = {@form.data.image_url}  width="500rem" class="m-auto relative" />
          <button type="button" phx-click="delete-image" class="absolute top-0 right-10"> <.icon name="hero-x-mark-solid" class="h-10 w-10 " phx-click="clear-image"/> </button>
         </div>
        <%= else %> 
@@ -31,8 +32,7 @@
           <div id="lab1" phx-hook="ImageSelect" for={@uploads.image.ref} class="h-full w-full ">
             <div class="drag_label">Drag n Drop or click to upload</div>
           </div>
-         <.live_file_input upload={@uploads.image} class="h-full w-full" style="" />
-        
+         <.live_file_input upload={@uploads.image} class="h-full w-full" style="" />   
         </div>
       </div>
       <% end %>

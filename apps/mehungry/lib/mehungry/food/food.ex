@@ -22,6 +22,9 @@ defmodule Mehungry.Food do
     IngredientPortion
   }
 
+  alias Mehungry.Posts.Post
+  alias Mehungry.Posts
+
   alias Mehungry.Languages.Language
 
   def create_ingredient_portion(attrs) do
@@ -446,9 +449,27 @@ defmodule Mehungry.Food do
   end
 
   def update_recipe(%Recipe{} = recipe, attrs \\ %{}) do
-    recipe
+    IO.inspect(attrs, label: "uPDATE RECIPE ----------------------------------------------------------------------------------------------------------------------------")
+    result = 
+      recipe
     |> Recipe.changeset(attrs)
     |> Repo.update()
+    case result do 
+      {:ok, recipe} ->
+        case Map.get(attrs, "image_url") do 
+          nil ->
+            result
+          image_url -> 
+            Repo.all(from p in Post, where: p.reference_id == ^recipe.id)
+            |> Enum.each(fn x ->
+              Posts.update_post(x, %{md_media_url: image_url})
+            end)
+            result
+        end
+      {:error, _} ->
+        result
+    end
+
   end
 
   def create_post_from_recipe(%Recipe{} = recipe) do

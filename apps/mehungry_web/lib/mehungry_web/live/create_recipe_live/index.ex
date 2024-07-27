@@ -8,30 +8,45 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   @impl true
   def mount(_params, session, socket) do
-    recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
-    measurement_units = Food.get_measurement_unit_by_name("grammar")
+        measurement_units = Food.get_measurement_unit_by_name("grammar")
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_profile = Accounts.get_user_profile_by_user_id(user.id)
 
     {:ok,
      socket
-     |> assign(:recipe, recipe)
      |> assign(:user, user)
      |> assign(:user_profile, user_profile)
      |> assign(:ingredients, list_ingredients())
      |> assign(:measurement_units, measurement_units)
-     |> assign(:changeset, Food.change_recipe(recipe))
      |> allow_upload(:image,
        accept: :any,
        max_entries: 1,
        max_file_size: 9_000_000,
-       auto_upload: true
+       auto_upload: false
        #       external: &presign_upload/2,
        #       progress: &handle_progress/3
-     )
-     |> init(recipe)}
+     )}
   end
-  
+ 
+  ################################################################################## Actions #############################################################################################
+  defp apply_action(socket, :index, _params) do
+    recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+
+    socket
+    |> assign(:recipe, recipe)
+    |> assign(:changeset, Food.change_recipe(recipe))
+    |> init(recipe)
+  end
+
+  defp apply_action(socket, :edit, %{"recipe_id" => id}) do 
+    recipe = Food.get_recipe!(id)
+    socket
+    |> assign(:changeset, Food.change_recipe(recipe))
+    |> assign(:recipe, recipe)
+    |> init(recipe)
+  end
+
+ 
   @impl true
   def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
     user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
@@ -60,20 +75,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     end
   end
 
-  ################################################################################## Actions #############################################################################################
-  defp apply_action(socket, :index, _params) do
-    socket
-  end
-
-  defp apply_action(socket, :edit, %{"recipe_id" => id}) do 
-    recipe = Food.get_recipe!(id)
-    socket
-    |> assign(:changeset, Food.change_recipe(recipe))
-    |> assign(:image_upload, recipe.image_url)
-    |> assign(:recipe, recipe)
-    |> init(recipe)
-  end
-
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
@@ -87,7 +88,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def handle_event("delete-image", _, socket) do
-    {:ok, recipe} = Food.update_recipe(socket.assigns.recipe, %{image_url: nil})
+    #{:ok, recipe} = Food.update_recipe(socket.assigns.recipe, %{image_url: nil})
+    recipe = %Recipe{socket.assigns.recipe| image_url: nil}
     {:noreply, socket
     |> assign(:recipe, recipe)
     |> init(recipe)
@@ -290,7 +292,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         {:noreply,
          socket
          |> put_flash(:info, "Recipe created succesfully")
-         |> push_redirect(to: "/browse")}
+         |> push_redirect(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
@@ -336,7 +338,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         {:noreply,
          socket
          |> put_flash(:info, "Recipe created succesfully")
-         |> push_redirect(to: "/browse")}
+         |> push_redirect(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}

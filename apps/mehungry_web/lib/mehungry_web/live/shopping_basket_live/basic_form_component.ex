@@ -3,6 +3,7 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
   import MehungryWeb.CoreComponents
 
   alias Mehungry.Inventory
+  alias Mehungry.History
 
   @impl true
   def render(assigns) do
@@ -82,6 +83,56 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
   defp save_shopping_basket(socket, :index, shopping_basket_params) do
     create_basket(socket, shopping_basket_params)
   end
+  defp save_shopping_basket(socket, :import_items, shopping_basket_params) do
+    create_basket2(socket, shopping_basket_params)
+  end
+
+  defp create_basket2(socket, basket_params_params) do
+    user = socket.assigns.user
+    IO.inspect(socket.assigns.shopping_basket, label: "Basket from assigns in create")
+    IO.inspect(basket_params_params, label: "basket_params")
+
+    changeset =
+      socket.assigns.shopping_basket
+      |> Inventory.change_shopping_basket(basket_params_params)
+      |> Map.put(:action, :validate)
+
+    case changeset.valid? do
+      false ->
+        {:noreply, assign_form(socket, changeset)}
+
+      true ->
+        start_dt = basket_params_params["start_dt"]
+        st_dt = NaiveDateTime.from_iso8601!(start_dt)
+
+        end_dt = basket_params_params["end_dt"]
+        en_dt = NaiveDateTime.from_iso8601!(end_dt)
+
+        user_meals =
+          History.list_history_user_meals_for_user(socket.assigns.user.id, st_dt, en_dt)
+
+        all_ingredients = crete_ingredient_basket(user_meals)
+
+        params = %{
+          "start_dt" => st_dt,
+          "end_dt" => en_dt,
+          "basket_ingredients" => all_ingredients,
+          "user_id" => user.id
+        }
+
+        {:ok, shopping_basket} =
+          Inventory.update_shopping_basket(socket.assigns.shopping_basket, params)
+
+        IO.inspect(shopping_basket, label: "Here when leave")
+        notify_parent({:update, shopping_basket})
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Shopping basket updated")
+         |> push_patch(to: socket.assigns.patch)
+         |> assign(:shopping_basket, shopping_basket)}
+    end
+  end
 
   defp create_basket(socket, basket_params_params) do
     shopping_basket = Inventory.create_shopping_basket(basket_params_params)
@@ -98,6 +149,55 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
      socket
      |> assign(:shopping_basket, shopping_basket)
      |> push_patch(to: socket.assigns.patch)}
+  end
+  def crete_ingredient_basket(user_meals) do
+    user_meals
+    |> Enum.reduce([], fn x, acc -> acc ++ x.recipe_user_meals end)
+    #Recipe + portions
+    |> Enum.map(fn y -> {y.cooking_portions, y.recipe} end)
+    #[{2, recipe}]
+    |> Enum.map(fn {x, y} -> {x, y.servings, y.recipe_ingredients} end)
+    #[{2, [recipe_ingredient, ..]]
+    |> Enum.map(fn {x, z ,y} ->  
+      Enum.map(y, fn p -> {x, z, p} end)
+      #[[{2, recipe_ingredient}]]
+    end)
+    |> Enum.reduce([], fn x, acc -> acc ++ x  end)
+    #[{2, recipe_ingredient}]
+    #|> IO.inspect()
+    |> Enum.map(fn {x, z, p} -> {p.ingredient_id, (p.quantity/z)*x, p.measurement_unit.id} end)
+    |> IO.inspect()
+    #[{ingredient_id, quantity, measurement_unit_id}]
+    #|> Enum.reduce([], fn x, acc -> acc ++ x.recipe.recipe_ingredients end)
+ 
+     |> Enum.reduce(%{}, fn {ing, quant_out, mu}, acc ->
+      with {ing, quant, mu_e} <- Map.get(acc, Integer.to_string(ing)),
+           true <- mu == mu_e do
+        Map.replace(acc, Integer.to_string(ing), {ing, quant + quant_out, mu_e})
+      else
+        _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant_out, mu})
+      end
+    end)
+    |> Map.values()
+    |> Enum.map(fn {ing, quant, mu} ->
+      %{"ingredient_id" => ing, "quantity" => quant, "measurement_unit_id" => mu}
+    end)
+   
+    
+    
+    #|> Enum.map(fn x -> {x.ingredient.id, x.quantity, x.measurement_unit.id} end)
+    #|> Enum.reduce(%{}, fn {ing, quant, mu}, acc ->
+     # with {ing, quant, mu_e} <- Map.get(acc, Integer.to_string(ing)),
+      #     true <- mu == mu_e do
+      #  Map.replace(acc, Integer.to_string(ing), {ing, quant + quant, mu_e})
+      #else
+      #  _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant, mu})
+      #end
+    #end)
+    #|> Map.values()
+    #|> Enum.map(fn {ing, quant, mu} ->
+     # %{"ingredient_id" => ing, "quantity" => quant, "measurement_unit_id" => mu}
+    #end)
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do

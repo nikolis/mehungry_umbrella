@@ -14,15 +14,15 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
 
   def render_basket_titles(assigns) do
     ~H"""
-       <ul class="titles_list"> 
+       <ul class="titles_list" id={@id}> 
 
-        <%= for shopping_basket <- @shopping_baskets do %>
-        <li id={ "liab" <> Integer.to_string(shopping_basket.id)}  class={"side_nav_list_item " <> 
+    <%= for shopping_basket <- @shopping_baskets do %>
+         <li id={@id <> "liab" <> Integer.to_string(shopping_basket.id)}  class={"side_nav_list_item " <> 
         get_active_class(shopping_basket, @shopping_basket)} 
       phx-value-id={shopping_basket.id}> 
           <div class="li_title" phx-click="select_shopping_basket" phx-value-id={shopping_basket.id}> <%= shopping_basket.title %> </div>
           <div class="shopping_list_utils">
-          <.link patch={~p"/basket/import_items/#{shopping_basket.id}"}     phx-click ={
+          <.link patch={~p"/basket/import_items/#{shopping_basket.id}"}  phx-value-id={shopping_basket.id}   phx-click ={
     Phoenix.LiveView.JS.push("select_shopping_basket")
               |> Phoenix.LiveView.JS.remove_class("active", to: "#basket-side-navbar.active")
               |> Phoenix.LiveView.JS.add_class("active", to: "#basket-side-navbar:not(.active)")

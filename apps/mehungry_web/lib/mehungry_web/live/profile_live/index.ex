@@ -105,6 +105,22 @@ defmodule MehungryWeb.ProfileLive.Index do
       ""
     end
   end
+  def handle_event("edit-recipe", %{"id" => id}, socket) do 
+    {:noreply, 
+      socket
+      |> push_redirect(to: "/create_recipe/#{id}" )} 
+  end
+  def handle_event("unsave-recipe", %{"id" => id}, socket) do 
+    Users.remove_user_saved_recipe(socket.assigns.user.id, String.to_integer(id))
+    user_saved_recipes = Users.list_user_saved_recipes(socket.assigns.user)
+
+    {:noreply, 
+      socket
+      |> assign(:user_saved_recipes, user_saved_recipes)} 
+  end
+
+  
+
 
   def handle_event("delete", %{"id" => _id}, socket) do
     # measurement_unit = food.get_measurement_unit!(id)
