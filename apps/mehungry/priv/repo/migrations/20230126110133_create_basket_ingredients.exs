@@ -9,13 +9,11 @@ defmodule Mehungry.Repo.Migrations.CreateBasketIngredients do
       add :shopping_basket_id, references(:shopping_baskets, on_delete: :delete_all)
       add :measurement_unit_id, references(:measurement_units, on_delete: :nothing)
 
-
       timestamps()
     end
 
     create index(:basket_ingredients, [:ingredient_id])
     create index(:basket_ingredients, [:shopping_basket_id])
     create index(:basket_ingredients, [:measurement_unit_id])
-
   end
 end

@@ -13,7 +13,11 @@ defmodule MehungryWeb.CalendarLive.Components do
   end
 
   def consume_recipe_user_meal_render(assigns) do
-    IO.inspect(assigns, label: "Assign consume --------------------------------------------------------------------------------------")
+    IO.inspect(assigns,
+      label:
+        "Assign consume --------------------------------------------------------------------------------------"
+    )
+
     assigns = assign(assigns, :deleted, Phoenix.HTML.Form.input_value(assigns.f, :delete) == true)
 
     ~H"""

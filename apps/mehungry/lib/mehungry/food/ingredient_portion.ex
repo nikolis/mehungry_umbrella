@@ -32,6 +32,6 @@ defmodule Mehungry.Food.IngredientPortion do
       :measurement_unit_id,
       :ingredient_id
     ])
-    |> validate_required([:amount, :gram_weight, :ingredient_id, :min_year_acquired])
+    |> validate_required([:gram_weight, :ingredient_id, :measurement_unit_id])
   end
 end

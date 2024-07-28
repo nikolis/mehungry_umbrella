@@ -48,6 +48,4 @@ defmodule MehungryWeb.ProfessionalLive.Users do
 
     {:noreply, stream_delete(socket, :users, user)}
   end
-
-
 end

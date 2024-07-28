@@ -12,7 +12,6 @@ defmodule MehungryServer.Repo.Migrations.CreateIngredients do
       add :nutrient_conversion_factors, {:array, :map}
       add :publication_date, :string
 
-
       timestamps()
     end
 

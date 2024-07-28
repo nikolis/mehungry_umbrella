@@ -12,7 +12,7 @@ defmodule MehungryWeb.Searchable do
             %{"recipe_search_item" => %{"query_string" => query_string}},
             socket
           ) do
-            {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/browse/search/"<> query_string)}
+        {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/browse/search/" <> query_string)}
       end
     end
   end

@@ -8,7 +8,6 @@ defmodule MehungryApi.Repo.Migrations.CreateHistoryRecipeUserMeal do
       add :consume_portions, :integer
       add :cooking, :boolean
       add :cooking_portions, :integer
-
     end
 
     create index(:history_recipe_user_meals, [:recipe_id])

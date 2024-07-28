@@ -52,7 +52,6 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
 
   @impl true
   def handle_event("validate", %{"comment_answer" => comment_answer_params}, socket) do
-
     changeset =
       %CommentAnswer{}
       |> Posts.change_comment_answer(comment_answer_params)
@@ -66,7 +65,6 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
   end
 
   defp save_comment_answer(socket, :show, comment_answer_params) do
-
     case Posts.create_comment_answer(comment_answer_params) do
       {:ok, comment_answer} ->
         comment_answer_params_clean = Map.put(comment_answer_params, "text", "")

@@ -34,7 +34,9 @@
         patch={~p"/basket"}
         />
 
-      <.render_basket_titles shopping_baskets = {@shopping_baskets} shopping_basket= {@shopping_basket}/> 
+      <%= if !is_nil(@shopping_basket) and !is_nil(@shopping_baskets) do %>
+        <.render_basket_titles shopping_baskets = {@shopping_baskets} shopping_basket= {@shopping_basket} id="titles-1"/> 
+      <% end %>
 
       <div>
         <button class="basket-side-button" phx-click={
@@ -67,12 +69,15 @@
         page_title= "Create"
         patch={~p"/basket"}
         />
-        <.render_basket_titles shopping_baskets = {@shopping_baskets} shopping_basket= {@shopping_basket}/> 
-
+        <%= if !is_nil(@shopping_basket) and !is_nil(@shopping_baskets) do %>
+          <.render_basket_titles shopping_baskets = {@shopping_baskets} shopping_basket= {@shopping_basket} id="titles-2"/> 
+        <% end %>
         </div>
     </div>
     <div class="item-list-container pt-8 pl-8">
-      <h3 class="mt-4"> <%=  Map.get(@shopping_basket, :title, "...")  %> </h3>
+      <%= if @shopping_basket do %> 
+        <h3 class="mt-4"> <%=  Map.get(@shopping_basket, :title, "...")  %> </h3>
+      <% end %>
       <%= if @shopping_basket do %> 
         <.render_basket_items shopping_basket = {@shopping_basket} />
       <% end %>

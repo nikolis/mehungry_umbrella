@@ -1,4 +1,15 @@
 <div class="container  mx-auto">
+
+  <.modal :if={is_nil(@user_profile.onboarding_level)  or @user_profile.onboarding_level < 1} id="onboarding-modal" show on_cancel={JS.patch(~p"/")}>
+  
+  <.live_component
+    module={MehungryWeb.Onboarding.FormComponent}
+    user_profile = {@user_profile}
+    id={:new}
+    patch={~p"/"}
+  />
+</.modal>
+
   <div class="profile_index_main">
     <div class="profile_index_info">
       <%= case @live_action  do %> 
@@ -47,11 +58,11 @@
           <%= case @content_state do %> 
             <% :created -> %>
               <%= for recipe <- @user_created_recipes do %>
-                <RecipeComponents.recipe_details recipe={recipe}  user_recipes ={@user_saved_recipes} id={"recipe" <> Integer.to_string(recipe.id)}/>
+                <RecipeComponents.recipe_details recipe={recipe} type = "created"  user_recipes ={@user_saved_recipes} id={"recipe" <> Integer.to_string(recipe.id)}/>
               <% end %>
             <% :saved -> %>
               <%= for user_recipe <- @user_saved_recipes do %>
-                <RecipeComponents.recipe_details user_recipes = {@user_saved_recipes} recipe={user_recipe.recipe} id={"recipe" <> Integer.to_string(user_recipe.recipe.id)}/>
+                <RecipeComponents.recipe_details user_recipes = {@user_saved_recipes} recipe={user_recipe.recipe} id={"recipe" <> Integer.to_string(user_recipe.recipe.id)} type="saved" />
             <% end %>
           <% end %>
         </div>

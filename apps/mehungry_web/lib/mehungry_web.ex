@@ -122,7 +122,6 @@ defmodule MehungryWeb do
 
       # Routes generation with the ~p sigil
       unquote(verified_routes())
-
     end
   end
 

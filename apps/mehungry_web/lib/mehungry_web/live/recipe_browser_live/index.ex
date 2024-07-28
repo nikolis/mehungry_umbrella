@@ -18,14 +18,17 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   def mount(params, session, socket) do
     query = Map.get(params, "query", nil)
     user = Accounts.get_user_by_session_token(session["user_token"])
-    
-    {query, {recipes , cursor_after}} =
-      case query do 
-      nil ->
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
+
+    {query, {recipes, cursor_after}} =
+      case query do
+        nil ->
           {query, list_recipes()}
-      qr ->
+
+        qr ->
           Food.search_recipe(qr)
-    end
+      end
+
     user_recipes = Users.list_user_saved_recipes(user)
     user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
 
@@ -33,11 +36,19 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      stream(socket, :recipes, recipes)
      |> assign(:cursor_after, cursor_after)
      |> assign(:recipe, nil)
-     |> assign(:not_empty, if length(recipes) > 0 do true else false end)
+     |> assign(
+       :not_empty,
+       if length(recipes) > 0 do
+         true
+       else
+         false
+       end
+     )
      |> assign(:user_recipes, user_recipes)
      |> assign(:page, 1)
      |> assign(:invocations, 0)
      |> assign(:counter, 1)
+     |> assign(:user_profile, user_profile)
      |> assign(:query, query)
      |> assign(:user, user)
      |> assign_recipe_search()
@@ -47,6 +58,15 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   def assign_recipe_search(socket) do
     socket
     |> assign(:recipe_search_item, %RecipeSearchItem{})
+  end
+
+  @impl true
+  def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
+    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
+
+    {:noreply,
+     socket
+     |> assign(:user_profile, user_profile)}
   end
 
   def assign_changeset(%{assigns: %{recipe_search_item: recipe_search_item}} = socket) do
@@ -89,11 +109,13 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   end
 
   @impl true
-  def handle_event("save_user_recipe", %{"recipe_id" => recipe_id}, socket) do
+  def handle_event("save_user_recipe", %{"recipe_id" => recipe_id, "dom_id" => dom_id}, socket) do
     {recipe_id, _ignore} = Integer.parse(recipe_id)
+    recipe = Food.get_recipe!(recipe_id)
     toggle_user_saved_recipes(socket, recipe_id)
     user_recipes = Users.list_user_saved_recipes(socket.assigns.user)
     user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
+    socket = stream_insert(socket, :recipes, recipe)
     socket = assign(socket, :user_recipes, user_recipes)
     {:noreply, push_patch(socket, to: "/browse")}
   end
@@ -102,7 +124,8 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   def handle_event("load-more", _, socket) do
     cursor_after = Map.get(socket.assigns, :cursor_after)
 
-    {recipes, cursor_after} = Food.list_recipes(cursor_after, Map.get(socket.assigns, :query, nil))
+    {recipes, cursor_after} =
+      Food.list_recipes(cursor_after, Map.get(socket.assigns, :query, nil))
 
     # all_recipes  = socket.assigns.recipes ++ recipes
 
@@ -135,11 +158,10 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     {:noreply, push_patch(socket, to: "/browse/" <> recipe_id)}
   end
 
-
   def handle_event("search", %{"recipe_search_item" => %{"query_string" => query_string}}, socket) do
-    #There is a problem with getting the results of the search because it does not work properly with the phx-update'Stream' on the other hand
-    #The listing of recipes suppose to use phx-update Stream As more efficient
-    {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/browse/search/"<> query_string)}
+    # There is a problem with getting the results of the search because it does not work properly with the phx-update'Stream' on the other hand
+    # The listing of recipes suppose to use phx-update Stream As more efficient
+    {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/browse/search/" <> query_string)}
   end
 
   def handle_event(
@@ -165,7 +187,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
         {:noreply,
          socket
          |> stream(:recipes, recipes, reset: true)}
-
     end
   end
 

@@ -61,7 +61,6 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
 
   @impl true
   def handle_event("cancel_comment", _, socket) do
-
     changeset = Posts.change_comment(socket.assigns.comment)
 
     socket =

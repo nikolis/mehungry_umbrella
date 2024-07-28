@@ -10,6 +10,5 @@ defmodule MehungryServer.Repo.Migrations.CreateCategories do
     end
 
     create unique_index(:categories, [:name])
-
   end
 end

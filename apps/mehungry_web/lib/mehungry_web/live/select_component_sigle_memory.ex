@@ -117,10 +117,15 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
 
             {num_id, _} ->
               selected_item = Enum.find(assigns.items, fn x -> x.id == num_id end)
-              %{id: selected_item.id, label: label_function.(selected_item)}
+              if is_nil(selected_item) do
+                nil
+              else
+                %{id: selected_item.id, label: label_function.(selected_item)}
+              end
           end
       end
-
+  
+    IO.inspect(selected_items, label: "Selectect comonent in memory")
     items = Enum.map(assigns.items, fn x -> %{label: label_function.(x), id: x.id} end)
     presenting_items = Enum.slice(items, 0..10)
 

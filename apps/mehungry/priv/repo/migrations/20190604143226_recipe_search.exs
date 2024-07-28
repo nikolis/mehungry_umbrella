@@ -2,38 +2,37 @@ defmodule MehungryServer.Repo.Migrations.RecipeSearch do
   use Ecto.Migration
 
   def down do
+    execute("""
+    DROP MATERIALIZED VIEW IF EXISTS recipe_search 
+    """)
 
     execute("""
     DROP MATERIALIZED VIEW IF EXISTS recipe_search 
-      """)
+    """)
 
     execute("""
-    DROP MATERIALIZED VIEW IF EXISTS recipe_search 
-      """)
+    DROP INDEX IF EXISTS recipe_search
+    """)
 
     execute("""
-      DROP INDEX IF EXISTS recipe_search
-      """)
+    DROP INDEX IF EXISTS recipe_search_title_trgm_index
+    """)
 
     execute("""
-      DROP INDEX IF EXISTS recipe_search_title_trgm_index
-      """)
+    DROP TRIGGER  refresh_recipe_search ON recipes
+    """)
 
     execute("""
-      DROP TRIGGER  refresh_recipe_search ON recipes
-      """)
+    DROP TRIGGER  refresh_recipe_search ON recipe_ingredients
+    """)
 
     execute("""
-      DROP TRIGGER  refresh_recipe_search ON recipe_ingredients
-      """)
+    DROP TRIGGER  refresh_recipe_search ON ingredient_translations
+    """)
 
     execute("""
-      DROP TRIGGER  refresh_recipe_search ON ingredient_translations
-      """)
-
-    execute("""
-      DROP FUNCTION IF EXISTS refresh_recipe_search 
-      """)
+    DROP FUNCTION IF EXISTS refresh_recipe_search 
+    """)
   end
 
   def up do
