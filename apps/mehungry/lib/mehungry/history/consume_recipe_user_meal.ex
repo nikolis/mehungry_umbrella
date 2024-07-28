@@ -43,24 +43,28 @@ defmodule Mehungry.History.ConsumeRecipeUserMeal do
           other
       end
 
-    validate_change(changeset, field, fn field, value ->
-      portions_left = History.get_available_portions_for_user_meal(value)
+    if(changeset.valid?) do
+      validate_change(changeset, field, fn field, value ->
+        portions_left = History.get_available_portions_for_user_meal(value)
 
-      portions =
-        if(is_integer(portions)) do
-          portions
-        else
-          {portions, _} = Integer.parse(portions)
-          portions
+        portions =
+          if(is_integer(portions)) do
+            portions
+          else
+            {portions, _} = Integer.parse(portions)
+            portions
+          end
+
+        case portions_left >= portions do
+          true ->
+            []
+
+          false ->
+            [{:consume_portions, "only " <> to_string(portions_left) <> " portions left"}]
         end
-
-      case portions_left >= portions do
-        true ->
-          []
-
-        false ->
-          [{field, "This user meal has only " <> to_string(portions_left) <> " portions left"}]
-      end
-    end)
+      end) 
+    else
+        changeset
+    end
   end
 end

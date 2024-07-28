@@ -9,6 +9,6 @@ defmodule MehungryServer.Repo.Migrations.Languages do
       timestamps()
     end
 
-    create index(:languages, [:name])
+    create unique_index(:languages, [:name])
   end
 end

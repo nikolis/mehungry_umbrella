@@ -8,6 +8,10 @@ defmodule MehungryServer.Repo.Migrations.CreateIngredients do
       add :food_class, :string
       add :category_id, references(:categories, on_delete: :nothing)
       add :measurement_unit_id, references(:measurement_units, on_delete: :nothing)
+      add :description, :string
+      add :nutrient_conversion_factors, {:array, :map}
+      add :publication_date, :string
+
 
       timestamps()
     end

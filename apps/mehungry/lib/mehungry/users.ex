@@ -13,11 +13,11 @@ defmodule Mehungry.Users do
   alias Mehungry.Food.FoodRestrictionType
   alias Mehungry.Food.RecipeUtils 
 
-  @restrictions ["Absolutely not", "Not a fun", "Neutral", "Fun", "Absolutely fun"]
+  @restrictions ["Absolutely not", "Not a fun", "Neutral", "Fun", "Absolute fun"]
   @restriction_map [0, 0.5, 1, 1.5, 2]
   @meat ["Poultry Products", "Sausages and Luncheon Meats", "Pork Products", "Beef Products", "Lamb, Veal, and Game Products"]
   @seafood ["Finfish and Shellfish Products", "Fish"]
-  @restrictions %{"Absolutely not" => 0, "Not a fun" => 0.5, "Neutral" => 1, "Fun" => 1.5, "Absolutely fun" => 2}
+  @restrictions %{"Absolutely not" => 0, "Not a fun" => 0.5, "Neutral" => 1, "Fun" => 1.5, "Absolute fun" => 2}
 
   def calculate_recipe_grading(recipe, user) do
     recipe_grade = 

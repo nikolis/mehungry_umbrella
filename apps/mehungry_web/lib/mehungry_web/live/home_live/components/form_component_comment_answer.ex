@@ -42,7 +42,6 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
 
   @impl true
   def update(%{comment_answer: comment_answer} = assigns, socket) do
-    IO.inspect(comment_answer, label: "Upadet")
     changeset = Posts.change_comment_answer(%CommentAnswer{}, comment_answer)
 
     {:ok,
@@ -53,7 +52,6 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
 
   @impl true
   def handle_event("validate", %{"comment_answer" => comment_answer_params}, socket) do
-    IO.inspect(comment_answer_params, label: "validate")
 
     changeset =
       %CommentAnswer{}
@@ -64,12 +62,10 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
   end
 
   def handle_event("save", %{"comment_answer" => comment_answer_params}, socket) do
-    IO.inspect(comment_answer_params, label: "sto stigno lemono handle ")
     save_comment_answer(socket, socket.assigns.action, comment_answer_params)
   end
 
   defp save_comment_answer(socket, :show, comment_answer_params) do
-    IO.inspect(comment_answer_params, label: "Save")
 
     case Posts.create_comment_answer(comment_answer_params) do
       {:ok, comment_answer} ->

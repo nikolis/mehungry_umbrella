@@ -1,4 +1,4 @@
-defmodule Mehungry.FdcFoodParser do
+defmodule Mehungry.FdcFoodParserSurvey do
   @moduledoc """
   This module is responsible for parsing food and nutrition related data gotten from Food Data Central and translate them into a form that fits the database model goten from  https://www.usda.gov/
   """
@@ -37,15 +37,19 @@ defmodule Mehungry.FdcFoodParser do
 
   defp get_or_create_measurement_unit(measurement_unit_name) do
     result = Food.get_measurement_unit_by_name(measurement_unit_name)
-
     case result do
       [] ->
         {name, abbribiation} = get_measurement_unit_foul_name(measurement_unit_name)
-
-        {:ok, measurement_unit} =
-          Food.create_measurement_unit(%{name: name, alternate_name: abbribiation})
-
-        measurement_unit
+        result = Food.get_measurement_unit_by_name(name)
+        case result do
+          [] -> 
+            {:ok, measurement_unit} =
+              Food.create_measurement_unit(%{name: name, alternate_name: abbribiation})
+            IO.inspect(measurement_unit, label: "New measurement unit created with --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+            measurement_unit
+          [measurement_unit, _] ->
+            measurement_unit
+        end
 
       [measurement_unit, _] ->
         measurement_unit
@@ -55,7 +59,7 @@ defmodule Mehungry.FdcFoodParser do
     end
   end
 
-  defp create_ingredient_nutrients(ingredient, nutrient, attrs) do
+  def create_ingredient_nutrients(ingredient, nutrient, attrs) do
     attrs = %{
       ingredient_id: ingredient.id,
       nutrient_id: nutrient.id,
@@ -121,53 +125,71 @@ defmodule Mehungry.FdcFoodParser do
     end)
   end
 
-  defp create_ingredient(attrs) do
-    category = get_or_create_food_category(attrs["foodCategory"]["description"])
+  defp write_item_to_file(attrs) do
+    {:ok, content} = File.read("leftovers.json")
+    File.write("leftovers.json", content <>", \n" <> Poison.encode!(attrs), [:binary])
+  end
 
-    food_portions = attrs["foodPortions"]
-    food_nutrients = attrs["foodNutrients"]
+  def create_ingredient(attrs) do
+    if(is_nil(attrs["wweiaFoodCategory"]["wweiaFoodCategoryDescription"])) do
+      IO.inspect("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWRONGS")
+      IO.inspect(attrs)
+      IO.inspect(attrs["description"], label: "The ingredient being processed ")
+      IO.inspect(attrs["wweiaFoodCategory"]["wweiaFoodCategoryDescription"], label: "The category")
+      IO.inspect("------------------------------------------------------------------------")
 
-    attrs = %{
-      name: attrs["description"],
-      food_class: attrs["foodClass"],
-      nutrient_conversion_factors: attrs["nutrientConversionFactors"],
-      publication_date: attrs["publicationDate"],
-      category_id: category.id
-    }
+      write_item_to_file(attrs)
+    else
+      IO.inspect("WORKING")
+      IO.inspect(attrs["description"], label: "The ingredient being processed ")
+      IO.inspect(attrs["wweiaFoodCategory"]["wweiaFoodCategoryDescription"], label: "The category")
+      IO.inspect("------------------------------------------------------------------------")
 
-    case Food.create_ingredient(attrs) do
-      {:ok, ingredient} ->
-        Enum.map(food_nutrients, fn x ->
-          {:ok, nutrient} = get_or_create_nutrient(ingredient, x)
-          nutrient
-        end)
+      category = get_or_create_food_category(attrs["wweiaFoodCategory"]["wweiaFoodCategoryDescription"])
 
-        if not is_nil(food_portions) do
+      food_portions = attrs["foodPortions"]
+      food_nutrients = attrs["foodNutrients"]
+
+      attrs = %{
+        name: attrs["description"],
+        food_class: attrs["foodClass"],
+        nutrient_conversion_factors: attrs["nutrientConversionFactors"],
+        publication_date: attrs["publicationDate"],
+        category_id: category.id
+      }
+
+      case Food.create_ingredient(attrs) do
+        {:ok, ingredient} ->
+          Enum.map(food_nutrients, fn x ->
+            {:ok, nutrient} = get_or_create_nutrient(ingredient, x)
+            nutrient
+          end)
+
           create_ingredient_portions(food_portions, ingredient)
-        end
 
-      _ ->
-        ""
+        _ ->
+          ""
+      end
     end
   end
 
   defp get_or_create_food_category(category_name) do
-    category = Food.get_category_by_name(category_name)
-    if is_nil(category) do
+    category = Food.search_category(category_name)
+    if length(category) == 0 do
       {:ok, category} = Food.create_category(%{name: category_name})
       category
     else
-      category
+      Enum.at(category, 0)
     end
   end
 
-  defp get_json(filename) do
+  def get_json(filename) do
     with {:ok, body} <- File.read(filename), {:ok, json} <- Poison.decode(body), do: {:ok, json}
   end
 
   def get_ingredients_from_food_data_central_json_file(file_path) do
     {:ok, json_body} = get_json(file_path)
 
-    Enum.each(json_body["FoundationFoods"], fn x -> create_ingredient(x) end)
+    Enum.each(json_body["SurveyFoods"], fn x -> create_ingredient(x) end)
   end
 end

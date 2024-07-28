@@ -8,7 +8,7 @@
        phx-target={@myself}>
    
        <div class="mt-12">
-            <.input field={@form[:title]} label="Title" type="text" class="input" />
+            <.input field={@form[:title]} label="Title" type="text"  />
        </div>
 
        <.input field={@form[:start_dt]} type="hidden"/>
@@ -16,22 +16,20 @@
        <.input field={@form[:user_id]}  type="hidden"/>
 
   
-       <div class="w-full ">
+       <div class="w-full">
          <ul aria-labelledby="tabs-title" class=" w-fit	m-auto">
-           <li> <a id="recipe-2" href="#recipe2" phx-target={@myself} phx-click="new_recipe"> Add recipe slot </a>/ 
+           <li> 
+                <a id="recipe-2" href="#recipe2" phx-target={@myself} phx-click="new_recipe"> Add recipe slot </a>
                 <a id="recipe-3" href="#recipe3" phx-target={@myself} phx-click="new_consume_recipe"> Find cooked </a> 
             </li> 
          </ul>
-         <div class="">
-
+         <div class="max-h-60 overflow-y-auto">
           <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
             <Components.recipe_user_meal_render f = {f_recipe_user_meal} parent_component= {@myself} recipes = {@recipes} recipe_ids = {@recipe_ids} />
           </.inputs_for>
-          <.inputs_for :let={f_consume_recipe_user_meal} field={@form[:consume_recipe_user_meals]}>
+          <.inputs_for :let={f_consume_recipe_user_meal} field={@form[:consume_recipe_user_meals]} >
             <Components.consume_recipe_user_meal_render f = {f_consume_recipe_user_meal} parent_component= {@myself} recipe_user_meals = {@recipe_user_meals} recipe_user_meal_ids = {@recipe_user_meal_ids} user_meal = {@user_meal} />
           </.inputs_for>
-
-
         </div> 
        </div>
 

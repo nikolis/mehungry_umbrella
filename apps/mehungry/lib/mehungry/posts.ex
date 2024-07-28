@@ -24,12 +24,12 @@ defmodule Mehungry.Posts do
   """
   def list_posts(%User{} =user) do
     Repo.all(Post)
-    |> Repo.preload([ :upvotes, :downvotes, comments: [:user], reference: [recipe_ingredients: [:ingredient]]])
+    |> Repo.preload([:user ,:upvotes, :downvotes, comments: [:user], reference: [:user, recipe_ingredients: [:ingredient]]])
     |> Enum.map(fn x ->
       {x, Users.calculate_recipe_grading(x.reference , user)}
     end)
-    |> Enum.sort_by(fn {x, y} -> y end)
-    |> IO.inspect()
+    |> Enum.filter(fn {x, y} ->  y > 0 end)
+    |> Enum.sort_by(fn {x, y} -> y end, :desc)
     |> Enum.map(fn {x, y}  -> x end)
 
   end
@@ -74,6 +74,7 @@ defmodule Mehungry.Posts do
     |> Repo.preload([
       :upvotes,
       :downvotes,
+      reference: [:user, recipe_ingredients: [:ingredient]],
       comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
     ])
   end

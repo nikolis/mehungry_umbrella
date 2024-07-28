@@ -66,8 +66,8 @@ do
       live "/profile", ProfileLive.Index, :index
       live "/profile/edit", ProfileLive.Index, :edit
       live "/profile/:id", ProfileLive.Index, :show
-
-      live "/browse", RecipeBrowseLive.Index, :index
+      live "/browse", RecipeBrowseLive.Index, :index 
+      live "/browse/search/:query", RecipeBrowseLive.Index, :index
       live "/browse/:id", RecipeBrowseLive.Index, :show
       live "/browse_prepop/:search_term", :searc_prepop
       live "/basket", ShoppingBasketLive.Index, :index

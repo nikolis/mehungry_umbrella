@@ -30,6 +30,7 @@
     </.link>
   </:action>
 </.table>
+<.button phx-click="reset">Reset</.button>
 
 <.modal :if={@live_action in [:new, :edit]} id="user-modal" show on_cancel={JS.patch(~p"/users")}>
   <.live_component

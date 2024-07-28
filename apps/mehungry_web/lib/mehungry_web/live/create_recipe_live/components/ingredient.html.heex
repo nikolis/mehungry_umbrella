@@ -1,17 +1,18 @@
-  <div class="p-2 gap-2 md:p-6 grid grid-cols-6 md:gap-6", id= {"recipe_ingredients" <> to_string(@g.index) }>
+  <div class="p-3 grid grid-cols-6 gap-2 md:gap-6", id= {"recipe_ingredients" <> to_string(@g.index) }>
 
     <.live_component
       module={MehungryWeb.SelectComponentSingle}
       form={@g}
-      items = {@ingredients}
+      item_function = {fn x -> Mehungry.Food.search_ingredient(x) end}
+      get_by_id_func = {fn x -> Mehungry.Food.get_ingredient!(x) end}
       input_variable={"ingredient_id"}
       id={"ingredient_search_component" <> Integer.to_string(@g.index)}
       />
 
     <.live_component
-      module={MehungryWeb.SelectComponentSingle}
+      module={MehungryWeb.SelectComponentSingleMemory}
       form={@g}
-      items = {@measurement_units}
+      items ={@measurement_units}
       input_variable={"measurement_unit_id"}
       id={"measurement_unit_search_component" <> Integer.to_string(@g.index)}
       />

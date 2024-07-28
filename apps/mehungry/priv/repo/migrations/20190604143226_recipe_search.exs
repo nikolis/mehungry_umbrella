@@ -1,7 +1,42 @@
 defmodule MehungryServer.Repo.Migrations.RecipeSearch do
   use Ecto.Migration
 
-  def change do
+  def down do
+
+    execute("""
+    DROP MATERIALIZED VIEW IF EXISTS recipe_search 
+      """)
+
+    execute("""
+    DROP MATERIALIZED VIEW IF EXISTS recipe_search 
+      """)
+
+    execute("""
+      DROP INDEX IF EXISTS recipe_search
+      """)
+
+    execute("""
+      DROP INDEX IF EXISTS recipe_search_title_trgm_index
+      """)
+
+    execute("""
+      DROP TRIGGER  refresh_recipe_search ON recipes
+      """)
+
+    execute("""
+      DROP TRIGGER  refresh_recipe_search ON recipe_ingredients
+      """)
+
+    execute("""
+      DROP TRIGGER  refresh_recipe_search ON ingredient_translations
+      """)
+
+    execute("""
+      DROP FUNCTION IF EXISTS refresh_recipe_search 
+      """)
+  end
+
+  def up do
     execute("""
     CREATE EXTENSION IF NOT EXISTS unaccent
     """)

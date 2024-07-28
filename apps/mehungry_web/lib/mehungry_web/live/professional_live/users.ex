@@ -9,6 +9,10 @@ defmodule MehungryWeb.ProfessionalLive.Users do
     {:ok, stream(socket, :users, Accounts.list_users())}
   end
 
+  def handle_event("reset", %{"value" => ""}, socket) do
+    {:noreply, stream(socket, :users, [], reset: true)}
+  end
+
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
