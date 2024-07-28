@@ -15,6 +15,7 @@ defmodule MehungryWeb.HomeLive.Index do
   @impl true
   def mount(params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
     posts = Mehungry.Posts.list_posts(user)
 
     user_posts = Users.list_user_saved_posts(user)
@@ -32,6 +33,7 @@ defmodule MehungryWeb.HomeLive.Index do
      |> assign(:user, user)
      |> assign(:posts, posts)
      |> assign(:user_posts, user_posts)
+     |> assign(:user_profile, user_profile)
      |> assign(:user_follows, user_follows)}
   end
 
@@ -51,10 +53,10 @@ defmodule MehungryWeb.HomeLive.Index do
   def handle_event("delete_basket", %{"id" => basket_id}, socket) do
     bs = Inventory.get_shopping_basket!(basket_id)
     Inventory.delete_shopping_basket(bs)
+
     {:noreply,
      socket
-     |> assign(:shopping_basket, nil)
-    }
+     |> assign(:shopping_basket, nil)}
   end
 
   def handle_event("react", %{"type_" => type, "id" => post_id}, socket) do
@@ -67,6 +69,15 @@ defmodule MehungryWeb.HomeLive.Index do
     end
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
+    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
+
+    {:noreply,
+     socket
+     |> assign(:user_profile, user_profile)}
   end
 
   @impl true
@@ -90,7 +101,6 @@ defmodule MehungryWeb.HomeLive.Index do
 
     {:noreply, socket}
   end
-
 
   @impl true
   def handle_event("save_post", %{"post_id" => post_id}, socket) do

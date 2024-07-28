@@ -9,7 +9,7 @@ defmodule MehungryWeb.AdminLayout do
   `use VisualizeWeb, :live_view`.
   """
   use MehungryWeb, :html
-    
+
   embed_templates "layouts/*"
 
   attr :current_user, :any
@@ -39,4 +39,3 @@ defmodule MehungryWeb.AdminLayout do
     """
   end
 end
-

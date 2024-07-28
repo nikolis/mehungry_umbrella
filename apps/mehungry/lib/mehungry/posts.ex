@@ -22,16 +22,21 @@ defmodule Mehungry.Posts do
       [%Post{}, ...]
 
   """
-  def list_posts(%User{} =user) do
+  def list_posts(%User{} = user) do
     Repo.all(Post)
-    |> Repo.preload([:user ,:upvotes, :downvotes, comments: [:user], reference: [:user, recipe_ingredients: [:ingredient]]])
+    |> Repo.preload([
+      :user,
+      :upvotes,
+      :downvotes,
+      comments: [:user],
+      reference: [:user, recipe_ingredients: [:ingredient]]
+    ])
     |> Enum.map(fn x ->
-      {x, Users.calculate_recipe_grading(x.reference , user)}
+      {x, Users.calculate_recipe_grading(x.reference, user)}
     end)
-    |> Enum.filter(fn {x, y} ->  y > 0 end)
+    |> Enum.filter(fn {x, y} -> y > 0 end)
     |> Enum.sort_by(fn {x, y} -> y end, :desc)
-    |> Enum.map(fn {x, y}  -> x end)
-
+    |> Enum.map(fn {x, y} -> x end)
   end
 
   def subscribe_to_post(%{post_id: post_id}) do
@@ -84,15 +89,15 @@ defmodule Mehungry.Posts do
 
   ## Examples
 
-      iex> create_post(%{field: value})
-      {:ok, %Post{}}
+  iex> create_post(%{field: value})
+  {:ok, %Post{}}
 
-      iex> create_post(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
+  iex> create_post(%{field: bad_value})
+  {:error, %Ecto.Changeset{}}
 
-      """
+  """
   def create_post(%Recipe{} = recipe) do
-    attrs = 
+    attrs =
       %{
         reference_id: recipe.id,
         md_media_url: recipe.image_url,
@@ -100,6 +105,7 @@ defmodule Mehungry.Posts do
         title: recipe.title,
         type_: "RECIPE"
       }
+
     %Post{}
     |> Post.changeset(attrs)
     |> Repo.insert()
@@ -112,13 +118,14 @@ defmodule Mehungry.Posts do
   end
 
   def create_post(%Recipe{} = recipe) do
-    attrs = 
+    attrs =
       %{
         reference_id: recipe.id,
         md_media_url: recipe.image_url,
         user_id: recipe.user_id,
         title: recipe.title
       }
+
     %Post{}
     |> Post.changeset(attrs)
     |> Repo.insert()

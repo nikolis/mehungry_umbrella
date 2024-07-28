@@ -12,12 +12,14 @@ defmodule MehungryWeb.ProfileLive.Index do
   @impl true
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
+
     user_profile =
       case Accounts.get_user_profile_by_user_id(user.id) do
         nil ->
           {:ok, _profile} =
             Accounts.create_user_profile(%{user_id: user.id, user_category_rules: []})
-            Accounts.get_user_profile_by_user_id(user.id)
+
+          Accounts.get_user_profile_by_user_id(user.id)
 
         profile ->
           profile
@@ -34,11 +36,11 @@ defmodule MehungryWeb.ProfileLive.Index do
        case Map.get(socket.assigns, :invocations) do
          nil ->
            1
+
          x ->
            x + 1
        end
      )
-
      |> assign(:recipe, nil)
      |> assign(:user_saved_recipes, user_saved_recipes)
      |> assign(:user, user)
@@ -58,6 +60,16 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:page_title, "Profile")
     |> assign(:user_profile, profile)
   end
+
+  @impl true
+  def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
+    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
+
+    {:noreply,
+     socket
+     |> assign(:user_profile, user_profile)}
+  end
+
 
   defp apply_action(socket, :show, %{"id" => id} = _params) do
     profile = Accounts.get_user_profile_by_user_id(id)
@@ -93,6 +105,22 @@ defmodule MehungryWeb.ProfileLive.Index do
       ""
     end
   end
+  def handle_event("edit-recipe", %{"id" => id}, socket) do 
+    {:noreply, 
+      socket
+      |> push_redirect(to: "/create_recipe/#{id}" )} 
+  end
+  def handle_event("unsave-recipe", %{"id" => id}, socket) do 
+    Users.remove_user_saved_recipe(socket.assigns.user.id, String.to_integer(id))
+    user_saved_recipes = Users.list_user_saved_recipes(socket.assigns.user)
+
+    {:noreply, 
+      socket
+      |> assign(:user_saved_recipes, user_saved_recipes)} 
+  end
+
+  
+
 
   def handle_event("delete", %{"id" => _id}, socket) do
     # measurement_unit = food.get_measurement_unit!(id)
@@ -104,7 +132,6 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def handle_event("delete_recipe", %{"id" => id}, socket) do
     result = Food.delete_recipe(id)
-    IO.inspect(result, label: "Delete event")
     user_saved_recipes = Users.list_user_saved_recipes(socket.assigns.user)
     user_created_recipes = Users.list_user_created_recipes(socket.assigns.user)
 

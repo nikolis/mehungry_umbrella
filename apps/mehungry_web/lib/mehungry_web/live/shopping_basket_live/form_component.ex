@@ -19,7 +19,7 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
 
       <.simple_form
         for={@form}
-        id="basket-form"
+        id="form-basket"
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save">
@@ -63,7 +63,7 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
   defp save_shopping_basket(socket, :edit, shopping_basket_params) do
     case Inventory.update_shopping_basket(socket.assigns.shopping_basket, shopping_basket_params) do
       {:ok, shopping_basket} ->
-        IO.inspect("Save shopping basket ok")
+        IO.inspect("Save shopping basket ok --------------------------------------------------------------------------")
 
         notify_parent({:saved, shopping_basket})
 
@@ -130,23 +130,54 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
     end
   end
 
-  defp crete_ingredient_basket(user_meals) do
+  def crete_ingredient_basket(user_meals) do
     user_meals
     |> Enum.reduce([], fn x, acc -> acc ++ x.recipe_user_meals end)
-    |> Enum.reduce([], fn x, acc -> acc ++ x.recipe.recipe_ingredients end)
-    |> Enum.map(fn x -> {x.ingredient.id, x.quantity, x.measurement_unit.id} end)
-    |> Enum.reduce(%{}, fn {ing, quant, mu}, acc ->
+    #Recipe + portions
+    |> Enum.map(fn y -> {y.cooking_portions, y.recipe} end)
+    #[{2, recipe}]
+    |> Enum.map(fn {x, y} -> {x, y.servings, y.recipe_ingredients} end)
+    #[{2, [recipe_ingredient, ..]]
+    |> Enum.map(fn {x, z ,y} ->  
+      Enum.map(y, fn p -> {x, z, p} end)
+      #[[{2, recipe_ingredient}]]
+    end)
+    |> Enum.reduce([], fn x, acc -> acc ++ x  end)
+    #[{2, recipe_ingredient}]
+    #|> IO.inspect()
+    |> Enum.map(fn {x, z, p} -> {p.ingredient_id, (p.quantity/z)*x, p.measurement_unit.id} end)
+    |> IO.inspect()
+    #[{ingredient_id, quantity, measurement_unit_id}]
+    #|> Enum.reduce([], fn x, acc -> acc ++ x.recipe.recipe_ingredients end)
+ 
+     |> Enum.reduce(%{}, fn {ing, quant_out, mu}, acc ->
       with {ing, quant, mu_e} <- Map.get(acc, Integer.to_string(ing)),
            true <- mu == mu_e do
-        Map.replace(acc, Integer.to_string(ing), {ing, quant + quant, mu_e})
+        Map.replace(acc, Integer.to_string(ing), {ing, quant + quant_out, mu_e})
       else
-        _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant, mu})
+        _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant_out, mu})
       end
     end)
     |> Map.values()
     |> Enum.map(fn {ing, quant, mu} ->
       %{"ingredient_id" => ing, "quantity" => quant, "measurement_unit_id" => mu}
     end)
+   
+    
+    
+    #|> Enum.map(fn x -> {x.ingredient.id, x.quantity, x.measurement_unit.id} end)
+    #|> Enum.reduce(%{}, fn {ing, quant, mu}, acc ->
+     # with {ing, quant, mu_e} <- Map.get(acc, Integer.to_string(ing)),
+      #     true <- mu == mu_e do
+      #  Map.replace(acc, Integer.to_string(ing), {ing, quant + quant, mu_e})
+      #else
+      #  _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant, mu})
+      #end
+    #end)
+    #|> Map.values()
+    #|> Enum.map(fn {ing, quant, mu} ->
+     # %{"ingredient_id" => ing, "quantity" => quant, "measurement_unit_id" => mu}
+    #end)
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do

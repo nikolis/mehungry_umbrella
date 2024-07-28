@@ -5,7 +5,7 @@ defmodule Mehungry.Accounts.UserPost do
   import Ecto.Changeset
 
   alias Mehungry.Accounts.User
-  alias Mehungry.Posts.Post 
+  alias Mehungry.Posts.Post
 
   schema "user_posts" do
     belongs_to :user, User

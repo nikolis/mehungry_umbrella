@@ -5,7 +5,11 @@ defmodule MehungryWeb.UserLiveTest do
   import Mehungry.AccountsFixtures
 
   @create_attrs %{email: "some email", name: "some name", profile_pic: "some profile_pic"}
-  @update_attrs %{email: "some updated email", name: "some updated name", profile_pic: "some updated profile_pic"}
+  @update_attrs %{
+    email: "some updated email",
+    name: "some updated name",
+    profile_pic: "some updated profile_pic"
+  }
   @invalid_attrs %{email: nil, name: nil, profile_pic: nil}
 
   defp create_user(_) do
