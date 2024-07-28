@@ -1,4 +1,19 @@
-<nav class="nav_container_mobile" id="nav_bar_mobile" phx-update="ignore">
+<nav class="nav_container_mobile" id="nav_bar_mobile" phx-update="ignore" style="background-color: var(--clr-light_2)">
+
+<div class="grid grid-cols-5 h-full max-h-20 bg-inherit", style="    background-color: inherit; overflow: hidden; max-height: 80px;">
+    <.link class="m-auto" patch={"/"}>
+      <img style="margin: auto" width="50px" height="50px" src='/images/logo2.svg'>
+    </.link>
+
+  <div class="col-span-3 w-full  m-auto" >
+    <.live_component module={MehungryWeb.SearchLive.Index} id={6}, class="m-auto h-full" />
+  </div>
+
+  <div class="m-auto">
+      <img style="margin: auto; padding: 0.5rem" width="50px" height="50px" src='/images/hamburger_icon.svg' onClick="toggleMenu();">
+  </div>
+</div>
+
   <div class="main_nav_content">
     <.link patch={"/browse"} class={"main_nav_button" }>Browse</.link>
     <.link patch={"/create_recipe"} class={"main_nav_button"}>Create</.link>
@@ -43,21 +58,14 @@
     </div>
     <% end %>
   </div>
-</nav>
 
-<div class="mobile_nav_toggle">
-  <div class="">
-      <img style="padding: 0.5rem" width="100%" height="100%" src='/images/hamburger_icon.svg' onClick="toggleMenu();">
- </div>
-    <.link class="logo" patch={"/"}>
-      <img width="auto" src='/images/logo.svg'>
-    </.link>
 
+ 
   <script>
     function toggleMenu() {
       document.querySelector(".nav_container_mobile").classList.toggle("open_menu");
     }
   </script>
-</div>
-    
+  </nav>
+   
 
