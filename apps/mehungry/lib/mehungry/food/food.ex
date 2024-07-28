@@ -565,6 +565,12 @@ defmodule Mehungry.Food do
     end
   end
 
+
+  def search_recipe("") do
+    query = (from r in Recipe)
+    {query, list_recipes(query)}
+  end
+
   def search_recipe(query_string) do
     query = Mehungry.Search.RecipeSearch.run(Recipe, query_string)
     {query, list_recipes(query)}

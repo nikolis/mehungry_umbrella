@@ -1,5 +1,7 @@
 defmodule MehungryWeb.HomeLive.Show do
   use MehungryWeb, :live_view
+  use MehungryWeb.Searchable, :transfers_to_search
+
 
   embed_templates("components/*")
 
@@ -12,7 +14,7 @@ defmodule MehungryWeb.HomeLive.Show do
   @color_fill "#00A0D0"
 
   @impl true
-  def mount(%{"id" => id} = _params, session, socket) do
+  def mount_search(%{"id" => id} = _params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     post = Posts.get_post!(id)
     Posts.subscribe_to_post(%{post_id: id})

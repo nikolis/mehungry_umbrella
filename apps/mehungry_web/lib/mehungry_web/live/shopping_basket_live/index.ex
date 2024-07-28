@@ -1,6 +1,8 @@
 defmodule MehungryWeb.ShoppingBasketLive.Index do
   use MehungryWeb, :live_view
   import MehungryWeb.CoreComponents
+  use MehungryWeb.Searchable, :transfers_to_search
+
 
   alias Mehungry.Accounts
   alias Mehungry.Accounts.UserProfile
@@ -9,7 +11,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   import MehungryWeb.ShoppingBasketLive.Components
 
   @impl true
-  def mount(_params, session, socket) do
+  def mount_search(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     shopping_baskets = Inventory.list_shopping_baskets_for_user(user.id)
     shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)

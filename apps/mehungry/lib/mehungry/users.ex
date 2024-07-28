@@ -36,10 +36,13 @@ defmodule Mehungry.Users do
       |> Enum.map(fn x -> {x, 1.0} end)
       |> Enum.into(%{})
 
-    IO.inspect(recipe_grade, label: "Recipe grades")
     user_pref_array = calculate_user_pref_table(user)
-    IO.inspect(user_pref_array, label: "User pref array")
-    Enum.reduce(recipe_grade, 1, fn {key, grade}, acc ->
+    user_follows = list_user_follows(user)
+    user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
+
+
+    grade =
+      Enum.reduce(recipe_grade, 1, fn {key, grade}, acc ->
       case Map.get(user_pref_array, key) do
         nil ->
           1 * acc
@@ -48,6 +51,17 @@ defmodule Mehungry.Users do
           grade * acc
       end
     end)
+    case recipe.user_id in user_follows do 
+      false -> 
+        grade 
+      true ->
+        if(grade > 0) do
+          grade + 4
+        else 
+          grade
+        end
+    end
+
   end
 
   def calculate_user_pref_table(user) do

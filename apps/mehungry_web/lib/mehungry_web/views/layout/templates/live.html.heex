@@ -1,8 +1,6 @@
-<.main_menu current_user={@current_user} />
-<.mobile_menu current_user={@current_user} />
-
-
 <main role="main">
+  <.get_menu query_string={@query_string}  current_user={@current_user}  />
+
   <p class="alert alert-info" role="alert" phx-click="lv:clear-flash" phx-value-key="info"><%= live_flash(@flash, :info) %></p>
   <p class="alert alert-danger" role="alert" phx-click="lv:clear-flash" phx-value-key="error"><%= live_flash(@flash, :error) %></p>
   <%= @inner_content %>

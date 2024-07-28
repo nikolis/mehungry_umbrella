@@ -35,7 +35,9 @@ defmodule MehungryWeb.CoreComponents do
               <%= @user.email %> 
             </.link>
     <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}> 
+    <%= if @user.id != @current_user.id do %>
       <%= if @user.id in @user_follows do "Following" else "Follow" end %> 
+      <% end %>
     </div>
           </div>
           <div style="font-size: 1rem; text-align: start; color: var(--clr-dark_1)"> <%= @post.title %> </div>

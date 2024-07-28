@@ -1,5 +1,7 @@
 defmodule MehungryWeb.PostLive.Index do
   use MehungryWeb, :live_view
+  use MehungryWeb.Searchable, :transfers_to_search
+
 
   import MehungryWeb.CoreComponents
 
@@ -7,7 +9,7 @@ defmodule MehungryWeb.PostLive.Index do
   alias Mehungry.Posts.Post
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount_search(_params, _session, socket) do
     {:ok, stream(socket, :posts, Posts.list_posts())}
   end
 

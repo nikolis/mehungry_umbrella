@@ -13,7 +13,7 @@ defmodule MehungryWeb.HomeLive.Index do
   alias Mehungry.Accounts.UserFollow
 
   @impl true
-  def mount(params, session, socket) do
+  def mount_search(params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_profile = Accounts.get_user_profile_by_user_id(user.id)
     posts = Mehungry.Posts.list_posts(user)

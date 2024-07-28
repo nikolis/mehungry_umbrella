@@ -4,13 +4,13 @@
     <.link class="utils_item" patch={"/"}>
       <img width="auto" src='/images/logo2.svg'>
     </.link>
-    <.link patch={"/browse"} class={"main_nav_button" }>Browse</.link>
+    <.link navigate={"/browse"} class={"main_nav_button" }>Browse</.link>
     <.link patch={"/create_recipe"} class={"main_nav_button"}>Create</.link>
 
   </div>
 
   <div class="search_comp_cont">
-    <.live_component module={MehungryWeb.SearchLive.Index} id={5}, class="search_comp" />
+    <.live_component module={MehungryWeb.SearchLive.Index} id={5}, class="search_comp" query_string={@query_string}  />
   </div>
   <div class="main_nav_utils" phx-update="ignore" id="main_nav_utils">
     <.link patch={"/calendar"} class={"utils_item" }>

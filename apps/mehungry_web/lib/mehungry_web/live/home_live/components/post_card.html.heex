@@ -1,5 +1,5 @@
 <div class="post_card my-12" style="border-bottom: 1px solid var(--clr-grey-friend_2);">
-  <.user_overview_card  user={@post.reference.user}  post={@post} user_follows={@user_follows}/>
+  <.user_overview_card  user={@post.reference.user}  post={@post} user_follows={@user_follows} current_user = {@user}/>
   <.link class="post_card_image_container"  href={"/post/"<> to_string(@post.id)} > <img  class="post_card_image" src= {@post.md_media_url} /> </.link>
   <div class="post_card_details">
     <div class="utils_container">
