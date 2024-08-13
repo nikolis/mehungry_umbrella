@@ -1,4 +1,4 @@
-<div class="md:p-8 bg-greyfriend1 mx-auto">
+<div class="md:p-8 bg-greyfriend1 mx-auto  ">
 
   <.modal :if={is_nil(@user_profile.onboarding_level)  or @user_profile.onboarding_level < 1} id="onboarding-modal" show on_cancel={JS.patch(~p"/")}>
   
@@ -15,7 +15,7 @@
   for={@form} 
   phx-change="validate" 
   phx-submit="save"
-  class="the_form flex flex-col mx-auto"
+  class="the_form flex flex-col mx-auto mb-14"
   >
     <div class="basic_2_col_grid_cont">
       <Components.recipe_render f={@form} />
@@ -85,7 +85,7 @@
 
     </div>
     <div id="something wierd" class="absolute right-0 left-0 mx-auto bottom-0"> 
-       <%= submit "Save", class: "button bg-primary  w-1/3 absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold  uppercase", type: "submit", phx_disable_with: "Saving...", id: "save_button" %>
+       <%= submit "Save", class: "button bg-primary  w-1/3 absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold  uppercase mb-14", type: "submit", phx_disable_with: "Saving...", id: "save_button" %>
     </div>
 
   </.form>

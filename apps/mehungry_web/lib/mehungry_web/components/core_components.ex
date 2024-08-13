@@ -26,8 +26,12 @@ defmodule MehungryWeb.CoreComponents do
     ~H"""
     <div style="margin-bottom: 0.75rem; ">
       <div style="display: flex; flex-direction: row;" > 
-        <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-          <img src={@user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;"/>
+    <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
+    <%= if @user.profile_pic do %>
+      <img src={@user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;"/>
+    <%= else %>
+             <.icon name="hero-user-circle" class="h-10 w-10" />
+    <% end %>
         </.link>
         <div style="margin-left: 1rem;" > 
           <div style="font-weight: bold; text-align: start; font-size: 0.75rem;"class="flex flex-row gap-4">    
@@ -88,13 +92,13 @@ defmodule MehungryWeb.CoreComponents do
         tabindex="0"
       >
         <div class="flex min-h-full items-center justify-center mt-10">
-          <div class="w-full  p-4 sm:p-6 lg:py-8">
+          <div class="w-full  p-2 sm:p-6 lg:py-8">
             <.focus_wrap
               id={"#{@id}-container"}
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-14 shadow-lg ring-1 transition"
+              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white lg:p-8 shadow-lg ring-1 transition pt-4"
             >
               <div class="absolute top-6 right-5">
                 <button
@@ -278,7 +282,7 @@ defmodule MehungryWeb.CoreComponents do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
         <%= render_slot(@inner_block, f) %>
-        <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
+        <div :for={action <- @actions} class="mt-6 flex items-center justify-between gap-6">
           <%= render_slot(action, f) %>
         </div>
     </.form>
@@ -321,8 +325,7 @@ defmodule MehungryWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg bg-zinc-900 hover:bg-zinc-700 py-2 px-3",
-        "text-sm font-semibold leading-6 text-white active:text-white/80",
+        "absolute right-5 button_outline_primary modal-submit-button",
         @class
       ]}
       {@rest}
@@ -400,7 +403,7 @@ defmodule MehungryWeb.CoreComponents do
 
     ~H"""
     <div phx-feedback-for={@name}>
-      <label class="flex items-center gap-4 text-sm leading-6 text-zinc-600">
+      <label class="flex items-center gap-4 text-md font-medium leading-6 text-zinc-600">
         <input type="hidden" name={@name} value="false" />
         <input
           type="checkbox"
@@ -408,7 +411,7 @@ defmodule MehungryWeb.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class="rounded border-zinc-300 text-zinc-900 focus:ring-0"
+          class="rounded border-complementaryl text-complementary focus:ring-0 font-medium"
           {@rest}
         />
         <%= @label %>
@@ -530,10 +533,35 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
+  def input(%{type: "number"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name} class="input-form w-full h-full" >
+      
+      <input
+        type={@type}
+        name={@name}
+        id={@id}
+        value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        class={[Map.get(assigns.rest, :class, "")] ++ [
+          "rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym 	h-full p-0 md:p-2 sm:p-0 sm:pt-2 sm:pb-2 ",
+          "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym text-sm sm:text-base p-1 sm:p-4",
+          @errors == [] && "",
+          @errors != [] && " ring-rose-400  focus:ring-rose-400"
+        ]}
+        {@rest}
+      />
+      <.label for={@id} class="placeholder"><%= @label %></.label>
+      <.error :for={msg <- @errors}><%= msg %></.error>
+
+    </div>
+    """
+  end
+
+
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class="input-form w-full h-fit" >
+    <div phx-feedback-for={@name} class="input-form w-full h-full" >
       
       <input
         type={@type}

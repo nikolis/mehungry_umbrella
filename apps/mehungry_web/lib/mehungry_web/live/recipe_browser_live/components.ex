@@ -1,5 +1,7 @@
 defmodule MehungryWeb.RecipeBrowseLive.Components do
   use Phoenix.Component
+  import MehungryWeb.CoreComponents
+
   embed_templates("components/*")
   alias Phoenix.LiveView.JS
 
@@ -24,7 +26,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Components do
 
       _recipe ->
         ~H"""
-          <.recipe_modal_page  invocations={assigns.invocations} live_action={assigns.live_action} recipe={assigns.recipe} nutrients = {assigns.nutrients}/>
+          <.recipe_modal_page  invocations={assigns.invocations} primary_size ={assigns.primary_size} live_action={assigns.live_action} recipe={assigns.recipe} nutrients = {assigns.nutrients}/>
         """
     end
   end

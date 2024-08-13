@@ -5,22 +5,22 @@
       <img style="margin: auto" width="50px" height="50px" src='/images/logo2.svg'>
     </.link>
 
-  <div class="col-span-3 w-full  m-auto" >
-    <.live_component module={MehungryWeb.SearchLive.Index} id={6}, class="m-auto h-full" />
+  <div class="col-span-3 w-full m-auto" >
+    <.live_component module={MehungryWeb.SearchLive.Index} id={6}, class="m-auto h-full" query_string={@query_string} />
   </div>
 
   <div class="m-auto">
-      <img style="margin: auto; padding: 0.5rem" width="50px" height="50px" src='/images/hamburger_icon.svg' onClick="toggleMenu();">
+      <img style="margin: auto; padding: 0.3rem" width="50px" height="50px" src='/images/hamburger_icon.svg' onClick="toggleMenu();">
   </div>
 </div>
 
   <div class="main_nav_content">
-    <.link patch={"/browse"} class={"main_nav_button" }>Browse</.link>
+    <.link navigate={"/browse"} class={"main_nav_button" }>Browse</.link>
     <.link patch={"/create_recipe"} class={"main_nav_button"}>Create</.link>
     <.link patch={"/calendar"} class={"main_nav_button"}>Calendar</.link>
     <.link patch={"/basket"} class={"main_nav_button"}> Basket </.link>
     <.link patch={"/profile"} class={"main_nav_button" }> Profile </.link>
-    <a href="users/log_out"> Logout </a>
+    <a href="/users/log_out"> Logout </a>
 
    <%= unless assigns[:current_user] do %> 
 
@@ -38,8 +38,12 @@
     <div style="padding: 15px" class="utils_item" id="menu_utils_toggle_mobile" phx-hook="MenuToggleHook">
       <div class="drop_down" id="menu_items_list_mobile">
         <div class="drop_down_container">
-          <img height="auto" width="auto" style="padding: 5px 2px 5px" class="rounded-full" src={@current_user.profile_pic} alt="profile">
-
+          <%= if @current_user.profile_pic do %>
+            <img src={@current_user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;"/>
+          <%= else %>
+             <.icon name="hero-user-circle" class="h-10 w-10" />
+          <% end %>
+ 
           <div class="drop_down_inner_container_info">
             <div> <%= @current_user.name %> </div>
             <div style="font-weight: lighter"> personal </div>

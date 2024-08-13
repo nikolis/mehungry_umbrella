@@ -37,7 +37,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
 
     {:ok,
-      socket
+     socket
      |> assign(:cursor_after, cursor_after)
      |> assign(:recipe, nil)
      |> assign(
@@ -50,14 +50,13 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      )
      |> assign(:user_recipes, user_recipes)
      |> assign(:page, 1)
-     #|> assign(:search_changeset, changeset)
+     # |> assign(:search_changeset, changeset)
      |> assign(:invocations, 0)
      |> assign(:counter, 1)
      |> assign(:user_profile, user_profile)
      |> assign(:query, query)
      |> assign(:user, user)
-     |> assign_recipe_search()
-    }
+     |> assign_recipe_search()}
   end
 
   def assign_recipe_search(socket) do
@@ -120,7 +119,8 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     toggle_user_saved_recipes(socket, recipe_id)
     user_recipes = Users.list_user_saved_recipes(socket.assigns.user)
     user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
-    socket = stream_insert(socket, :recipes, recipe)
+    # socket = stream_delete(socket, :recipes, recipe)
+    # socket = stream_insert(socket, :recipes, recipe)
     socket = assign(socket, :user_recipes, user_recipes)
     {:noreply, push_patch(socket, to: "/browse")}
   end
@@ -140,7 +140,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      |> assign(:page, socket.assigns.page + 1)
      |> stream(:recipes, recipes)}
   end
-
 
   @impl true
   def handle_event("recipe_details_nav", %{"recipe_id" => recipe_id}, socket) do
@@ -167,9 +166,10 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   def handle_event("search", %{"recipe_search_item" => %{"query_string" => query_string}}, socket) do
     # There is a problem with getting the results of the search because it does not work properly with the phx-update'Stream' on the other hand
     # The listing of recipes suppose to use phx-update Stream As more efficient
-    case (String.length(query_string) == 0) do 
+    case String.length(query_string) == 0 do
       true ->
         {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/browse")}
+
       false ->
         {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/search/" <> query_string)}
     end
@@ -179,11 +179,11 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
         "search",
         %{"recipe_search_item" => recipe_search_item_params},
         %{assigns: %{recipe_search_item: recipe_search_item}} = socket
-  ) do
+      ) do
     update_result =
       recipe_search_item
       |> Search.update_recipe_search_item(recipe_search_item_params)
-    
+
     changeset =
       recipe_search_item
       |> Search.change_recipe_search_item(recipe_search_item_params)
@@ -198,12 +198,11 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
       {:ok, %RecipeSearchItem{} = recipe_search_item} ->
         recipes = Search.search_recipe(recipe_search_item.query_string)
-        IO.inspect("Here with the saerch")
+
         {:noreply,
          socket
          |> stream(:recipes, recipes, reset: true)
-         |> assign(:changeset, changeset)
-        }
+         |> assign(:changeset, changeset)}
     end
   end
 
@@ -236,7 +235,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   def maybe_track_user(_product, _socket), do: nil
 
-
   defp apply_action(socket, :index, %{"query" => query_str} = params) do
     user = socket.assigns.user
     user_profile = Accounts.get_user_profile_by_user_id(user.id)
@@ -258,24 +256,23 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
 
     socket =
-     stream(socket, :recipes, recipes)
-     |> assign(:cursor_after, cursor_after)
-     |> assign(:recipe, nil)
-     |> assign(
-       :not_empty,
-       if length(recipes) > 0 do
-         true
-       else
-         false
-       end
-     )
-     |> assign(:user_recipes, user_recipes)
-     |> assign(:page, 1)
-     |> assign(:query_string, query_str)
-     |> assign(:search_changeset, nil)
-     |> assign(:user_profile, user_profile)
-     |> assign(:query, query)
- 
+      stream(socket, :recipes, recipes)
+      |> assign(:cursor_after, cursor_after)
+      |> assign(:recipe, nil)
+      |> assign(
+        :not_empty,
+        if length(recipes) > 0 do
+          true
+        else
+          false
+        end
+      )
+      |> assign(:user_recipes, user_recipes)
+      |> assign(:page, 1)
+      |> assign(:query_string, query_str)
+      |> assign(:search_changeset, nil)
+      |> assign(:user_profile, user_profile)
+      |> assign(:query, query)
   end
 
   defp apply_action(socket, :index, _) do
@@ -300,29 +297,27 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
 
     socket =
-     stream(socket, :recipes, recipes)
-     |> assign(:cursor_after, cursor_after)
-     |> assign(:recipe, nil)
-     |> assign(
-       :not_empty,
-       if length(recipes) > 0 do
-         true
-       else
-         false
-       end
-     )
-     |> assign(:user_recipes, user_recipes)
-     |> assign(:page, 1)
-     |> assign(:query_string, "")
-     |> assign(:search_changeset, nil)
-     |> assign(:user_profile, user_profile)
-     |> assign(:query, query)
-     
-     socket = assign(socket, :search_changeset, nil)
-     socket = assign(socket, :query_string, nil)
+      stream(socket, :recipes, recipes)
+      |> assign(:cursor_after, cursor_after)
+      |> assign(:recipe, nil)
+      |> assign(
+        :not_empty,
+        if length(recipes) > 0 do
+          true
+        else
+          false
+        end
+      )
+      |> assign(:user_recipes, user_recipes)
+      |> assign(:page, 1)
+      |> assign(:query_string, "")
+      |> assign(:search_changeset, nil)
+      |> assign(:user_profile, user_profile)
+      |> assign(:query, query)
 
+    socket = assign(socket, :search_changeset, nil)
+    socket = assign(socket, :query_string, nil)
   end
-
 
   defp apply_action(socket, :show, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
@@ -332,7 +327,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
     rest =
       Enum.filter(recipe_nutrients.flat_recipe_nutrients, fn x ->
-        Float.round(x.amount, 4) != 0
+        Float.round(x.amount, 3) != 0
       end)
 
     {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Fatty acids, total monounsaturated")
@@ -366,6 +361,17 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
     nutrients = nuts_pre ++ rest
     nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
+    energy = Enum.find(nutrients, fn x -> String.contains?(x.name, "Energy") end)
+    carb = Enum.find(nutrients, fn x -> String.contains?(x.name, "Carbohydrate") end)
+    protein = Enum.find(nutrients, fn x -> String.contains?(x.name, "Protein") end)
+    fiber = Enum.find(nutrients, fn x -> String.contains?(x.name, "Fiber") end)
+    fat = Enum.find(nutrients, fn x -> String.contains?(x.name, "Total lipid") end)
+
+    primaries = [energy, fat, carb, protein, fiber]
+    primaries = Enum.filter(primaries, fn x -> !is_nil(x) end)
+    nutrients = Enum.filter(nutrients, fn x -> x not in primaries end)
+    nutrients = primaries ++ nutrients
+
     user = socket.assigns.user
     query_str = ""
     user_profile = Accounts.get_user_profile_by_user_id(user.id)
@@ -386,15 +392,14 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     user_recipes = Users.list_user_saved_recipes(user)
     user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
 
-
     socket
     |> assign(:page_title, "Recipe Details")
     |> assign(:nutrients, nutrients)
+    |> assign(:primary_size, length(primaries))
     |> assign(:recipe, recipe)
     |> assign(:query_string, nil)
     |> stream(:recipes, recipes)
     |> assign(:cursor_after, cursor_after)
- 
   end
 
   defp get_nutrient_category(nutrients, category_name, category_sum_name) do

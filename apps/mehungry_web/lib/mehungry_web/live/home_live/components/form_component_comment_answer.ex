@@ -20,8 +20,13 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
         phx-submit="save"
       >
         <div style="display: grid; grid-template-columns: 1fr 19fr; gap: 0.75rem;">
-          <img src={@current_user.profile_pic}  style="border-radius: 50%; width: 40px; height: 40px;" />
-          <.input field={@form[:text]} type="full-text" label="Reply" style="margin: 0px; "/>
+          <%= if @current_user.profile_pic do %>
+            <img src={@current_user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;"/>
+          <%= else %>
+             <.icon name="hero-user-circle" class="h-10 w-10" />
+          <% end %>
+
+          <.input field={@form[:text]} type="text" label="Reply" style="margin: 0px; "/>
           <.input field={@form[:user_id]} type="hidden" />
           <.input field={@form[:comment_id]} type="hidden"  />
 

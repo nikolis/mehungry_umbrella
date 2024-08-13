@@ -31,6 +31,7 @@ defmodule Mehungry.Users do
   }
 
   def calculate_recipe_grading(recipe, user) do
+
     recipe_grade =
       RecipeUtils.calculate_recipe_ingredient_categories_array(recipe)
       |> Enum.map(fn x -> {x, 1.0} end)
@@ -40,43 +41,39 @@ defmodule Mehungry.Users do
     user_follows = list_user_follows(user)
     user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
-
     grade =
       Enum.reduce(recipe_grade, 1, fn {key, grade}, acc ->
-      case Map.get(user_pref_array, key) do
-        nil ->
-          1 * acc
+        case Map.get(user_pref_array, key) do
+          nil ->
+            1 * acc
 
-        grade ->
-          grade * acc
-      end
-    end)
-    case recipe.user_id in user_follows do 
-      false -> 
-        grade 
+          grade ->
+            grade * acc
+        end
+      end)
+
+    case recipe.user_id in user_follows do
+      false ->
+        grade
+
       true ->
         if(grade > 0) do
           grade + 4
-        else 
+        else
           grade
         end
     end
-
   end
 
   def calculate_user_pref_table(user) do
     user_category_rules = get_user_category_rules(user)
-    IO.inspect(user_category_rules)
+
     Enum.map(user_category_rules, fn x ->
-      title = x.category.name 
-      IO.inspect(x.food_restriction_type.title)
+      title = x.category.name
       grade = Map.get(@restrictions, x.food_restriction_type.title)
       {title, grade}
     end)
     |> Enum.into(%{})
-    |> IO.inspect()
-
-
   end
 
   def get_category_name(category) do

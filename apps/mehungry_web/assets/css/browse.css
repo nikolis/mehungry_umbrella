@@ -22,12 +22,8 @@
 
 .recipe_ingredients_container {
 	padding: 2rem;
-	width: 30%;
-	min-width: 15rem;
-	max-width: 25rem;
 	border: 1px solid lightgrey;
 	border-radius: 7px;
-	font-size: 0.7rem;
 }
 
 .recipe_ingredients_container_back {
@@ -290,7 +286,7 @@ h2.portfolio-title::after {
 
 @media (max-width: 500px) {
 	.second_layer_spacing {
-		padding: var(--inner-container-padding-mobile);
+		padding: 0.5rem;
 	}
 
 }

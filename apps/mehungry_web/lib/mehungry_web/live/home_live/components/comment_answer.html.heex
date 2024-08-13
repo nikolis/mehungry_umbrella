@@ -1,6 +1,12 @@
 <div style="margin-bottom: 0.75rem; ">
   <div style="display: flex; flex-direction: row;" > 
-    <img src={@current_user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;"/>
+    <%= if @current_user.profile_pic do %>
+      <img src={@current_user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;"/>
+    <%= else %>
+       <.icon name="hero-user-circle" class="h-10 w-10" />
+    <% end %>
+ 
+
     <div style="margin-left: 1rem;"> 
       <div style="font-weight: bold; text-align: start; font-size: 0.75rem;"> <%=   @comment.user.email %> </div>
       <div style="font-size: 1rem; text-align: start; color: var(--clr-dark_1)"> <%= @comment.text %> </div>

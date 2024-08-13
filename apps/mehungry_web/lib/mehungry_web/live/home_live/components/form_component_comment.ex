@@ -20,7 +20,13 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
         phx-submit="save"
       >
         <div class="flex flex-row gap-3">
-          <img src={@current_user.profile_pic}  style="border-radius: 50%; width: 40px; height: 40px;" />
+
+
+          <%= if @current_user.profile_pic do %>
+            <img src={@current_user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;"/>
+          <%= else %>
+             <.icon name="hero-user-circle" class="h-10 w-10" />
+          <% end %>
           <.input field={@form[:text]} type="text" class="flex-grow w-full" label="Comment "/>
           <.input field={@form[:user_id]} type="hidden" />
           <.input field={@form[:post_id]} type="hidden"  />

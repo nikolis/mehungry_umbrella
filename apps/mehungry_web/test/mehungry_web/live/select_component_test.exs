@@ -30,14 +30,6 @@ defmodule MehungryWeb.SelectComponentTest do
         view
         |> element("li", "three")
         |> render_click()
-
-      IO.inspect(clicked, label: "clicked")
-
-      IO.inspect(
-        "--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
-      )
-
-      IO.inspect(html, label: "clicked")
     end
   end
 end

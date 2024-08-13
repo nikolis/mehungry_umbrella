@@ -1,5 +1,5 @@
 <div phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)} phx-click="recipe_details_nav" phx-value-recipe_id={@recipe.id} class ="recipe_card" id={@id}>
-  <img class="recipe_img" src={@recipe.image_url} >
+  <img class="recipe_img m-auto" src={@recipe.image_url} >
   <div class="recipe_like_container">
     <%= case @type do %>
       <%= "saved" -> %>

@@ -23,6 +23,12 @@ defmodule MehungryWeb.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
+      env: [
+        aws_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
+        aws_secret: System.get_env("AWS_SECRET_ACCESS_KEY"),
+        aws_bucket: System.get_env("AWS_ASSETS_BUCKET_NAME"),
+        region: "eu-central-1"
+      ],
       mod: {MehungryWeb.Application, []},
       extra_applications: [:logger, :runtime_tools, :ueberauth_facebook]
     ]
@@ -65,6 +71,10 @@ defmodule MehungryWeb.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:esbuild, "~> 0.8"},
       {:tailwind, "~> 0.2"},
+      {:ex_aws, "~> 2.1"},
+      {:ex_aws_s3, "~> 2.0"},
+      {:hackney, "~> 1.9"},
+      {:sweet_xml, "~> 0.6"},
       {:heroicons,
        github: "tailwindlabs/heroicons",
        tag: "v2.1.1",

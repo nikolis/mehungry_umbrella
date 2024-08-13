@@ -38,7 +38,12 @@
       <img src="/images/arrow_down.svg">
       <div class="drop_down" id="menu_items_list">
         <div class="drop_down_container">
-          <img height="auto" width="auto" style="padding: 5px 2px 5px" class="rounded-full" src={@current_user.profile_pic} alt="profile">
+          <%= if @current_user.profile_pic do %>
+            <img src={@current_user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;"/>
+          <%= else %>
+             <.icon name="hero-user-circle" class="h-10 w-10" />
+          <% end %>
+     
 
           <div class="drop_down_inner_container_info">
             <div> <%= @current_user.name %> </div>
@@ -52,7 +57,7 @@
               Profile
             </.link>
             <button class="drop_down_buttons"> Upgrade to professional </button>
-              <a href="users/log_out"> Logout out account </a>
+              <a href="/users/log_out"> Logout out account </a>
           </div>
       </div>
     </div>

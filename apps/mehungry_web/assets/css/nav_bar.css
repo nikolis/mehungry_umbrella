@@ -104,6 +104,7 @@
 .main_nav_button {
 	padding: 0.25em 1em ;
 	border-radius: 20px;
+  font-weight: 650;
 }
 
 .main_nav_button:hover {

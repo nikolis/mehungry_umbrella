@@ -2,7 +2,6 @@ defmodule MehungryWeb.HomeLive.Show do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
 
-
   embed_templates("components/*")
 
   alias Mehungry.Accounts

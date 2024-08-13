@@ -34,6 +34,20 @@ check_list_container {
 	border-bottom : 3px solid var(--clr-complementary-middle);
 }
 
+.accordion-side-button {
+	transform: rotate(180deg);
+  transition: 0.8s ease-in-out;
+}
+
+
+.accordion-side-button.open{
+	transform: rotate(-45deg);
+  transition: 0.8s ease-in-out;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
 .bakset-side-nav-hidden.active .basket-side-button{
 	transform: rotate(180deg);
         transition: 0.8s ease-in-out;

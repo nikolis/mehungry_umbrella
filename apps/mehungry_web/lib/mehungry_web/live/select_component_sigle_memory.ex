@@ -62,7 +62,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
                 <% end %>
               <% end %>
             </ul>
-          </div>
+            </div>
           <!-- End Items List -->
         </div>
       </.focus_wrap>
@@ -74,7 +74,13 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
   @impl true
   def update(assigns, socket) do
     id = "select_component" <> Integer.to_string(assigns.form.index) <> assigns.input_variable
-    atom_input_variable = String.to_existing_atom(assigns.input_variable)
+
+    selected_items =
+      MehungryWeb.SelectComponentUtils.get_selected_items(
+        assigns.form.params,
+        assigns.input_variable,
+        assigns
+      )
 
     label_function =
       case Map.get(assigns, :label_function) do
@@ -85,55 +91,28 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
           label_f
       end
 
-    selected_items =
-      case Map.get(assigns.form.params, assigns.input_variable) do
-        nil ->
-          if is_nil(Map.get(assigns, :selected_items)) do
-            case Map.get(assigns.form.data, atom_input_variable) do
-              nil ->
-                nil
-
-              id ->
-                if is_nil(Map.get(assigns, :items)) do
-                  nil
-                else
-                  item = Enum.find(assigns.items, nil, fn x -> x.id == id end)
-
-                  if(item) do
-                    %{id: item.id, label: label_function.(item)}
-                  end
-                end
-            end
+    # Create the content
+    items_filtered =
+      if is_nil(selected_items) do
+        if Map.get(socket.assigns, :original_items) do
+          if socket.assigns.original_items == assigns.items do
+            socket.assigns.items_filtered
           else
-            assigns.selected_items
+            presenting_items = Enum.slice(assigns.items, 0..10)
+            Enum.map(presenting_items, fn x -> %{label: label_function.(x), id: x.id} end)
           end
-
-        str_id ->
-          result = Integer.parse(str_id)
-
-          case result do
-            :error ->
-              nil
-
-            {num_id, _} ->
-              selected_item = Enum.find(assigns.items, fn x -> x.id == num_id end)
-              if is_nil(selected_item) do
-                nil
-              else
-                %{id: selected_item.id, label: label_function.(selected_item)}
-              end
-          end
+        else
+          presenting_items = Enum.slice(assigns.items, 0..10)
+          Enum.map(presenting_items, fn x -> %{label: label_function.(x), id: x.id} end)
+        end
+      else
+        nil
       end
-  
-    IO.inspect(selected_items, label: "Selectect comonent in memory")
-    items = Enum.map(assigns.items, fn x -> %{label: label_function.(x), id: x.id} end)
-    presenting_items = Enum.slice(items, 0..10)
 
     socket =
       socket
-      |> assign(:items, items)
-      |> assign(:items_filtered, items)
-      |> assign(:presenting_items, presenting_items)
+      |> assign(:original_items, items_filtered)
+      |> assign(:items_filtered, items_filtered)
       |> assign(:listing_open, Map.get(assigns, :initial_open, false))
       |> assign(:selected_items, selected_items)
       |> assign(:form, assigns.form)
@@ -146,7 +125,8 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
 
   @impl true
   def handle_event("validate", %{"search_input" => search_string}, socket) do
-    items_filtered = Seqfuzz.filter(socket.assigns.items, search_string, fn x -> x.label end)
+    items_filtered =
+      Seqfuzz.filter(socket.assigns.original_items, search_string, fn x -> x.label end)
 
     socket =
       socket
@@ -205,7 +185,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
   def handle_event("handle-item-click", %{"id" => id}, socket) do
     {id, _} = Integer.parse(id)
 
-    selected_item = Enum.find(socket.assigns.items, fn x -> x.id == id end)
+    selected_item = Enum.find(socket.assigns.items_filtered, fn x -> x.id == id end)
 
     socket =
       socket

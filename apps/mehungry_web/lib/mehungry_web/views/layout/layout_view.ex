@@ -10,18 +10,14 @@ defmodule MehungryWeb.LayoutView do
 
   attr :current_user, :any
 
-
-  def get_menu(assigns) do 
-
+  def get_menu(assigns) do
     ~H"""
      <.main_menu current_user={@current_user} query_string={@query_string}  />
-     <.mobile_menu current_user={@current_user} />
+     <.mobile_menu current_user={@current_user} query_string={@query_string} />
     """
-  # query_string={@changeset.changes.query_string} />
 
+    # query_string={@changeset.changes.query_string} />
   end
- 
-
 
   def sidebar_nav_links(assigns) do
     ~H"""

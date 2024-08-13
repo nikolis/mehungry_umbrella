@@ -52,7 +52,6 @@ defmodule MehungryWeb.ProfileLive.Form do
 
   @impl true
   def handle_event("validate", %{"user_profile" => user_profile_params}, socket) do
-
     changeset =
       socket.assigns.user_profile
       |> Accounts.change_user_profile(user_profile_params)
@@ -97,7 +96,6 @@ defmodule MehungryWeb.ProfileLive.Form do
           else
             rest
           end
-
 
         changeset
         |> Ecto.Changeset.put_assoc(:user_category_rules, user_category_rules)

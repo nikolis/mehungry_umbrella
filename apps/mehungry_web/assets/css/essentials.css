@@ -251,14 +251,8 @@ select {
 
 
 .invalid-feedback {
-  position: absolute;
-  bottom: -0.3rem;
   color: #c61a09;
-  right: 2rem;
-  font-size: 1rem;
-  margin-right: 20px;
-  padding: 0px 20px;
-
+  padding: 0 20px;
 }
 
 
@@ -595,6 +589,7 @@ body {
   position: relative;
 }
 
+/*
 .accordion-trigger {
   padding: 0.5rem;
   background: transparent;
@@ -632,7 +627,7 @@ body {
 .accordion-trigger[aria-expanded="true"]::after {
   transform: rotate(45deg);
 }
-
+*/
 
 .my_modal:backdrop {
 	background: (0 0 0 / .4);

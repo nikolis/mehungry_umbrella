@@ -48,16 +48,12 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   defp apply_action(socket, :index, params) do
-    IO.inspect(params, label: "params")
-    # IO.inspect("Being called")
     socket
   end
 
   defp apply_action(socket, :particular, %{"date" => date} = params) do
-    IO.inspect(date, label: "params")
     socket = push_event(socket, "go_to_date", %{date: date})
 
-    # IO.inspect("Being called")
     socket
   end
 

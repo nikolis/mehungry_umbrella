@@ -23,7 +23,7 @@ defmodule MehungryWeb.SelectComponentSingle do
                 tabindex="0"
                 class="border border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg"> 
                 <div class="h-full flex flex-col  justify-center py-2"> 
-                  <div class="self-center "> 
+                  <div class="self-center text-ellipsis overflow-hidden "> 
                     <%= @selected_items.label %> 
                   </div> 
                 </div>
@@ -75,7 +75,6 @@ defmodule MehungryWeb.SelectComponentSingle do
   def update(assigns, socket) do
     item_function = assigns.item_function
     get_by_id_func = assigns.get_by_id_func
-    items = item_function.("")
     id = "select_component" <> Integer.to_string(assigns.form.index) <> assigns.input_variable
     atom_input_variable = String.to_existing_atom(assigns.input_variable)
 
@@ -89,46 +88,26 @@ defmodule MehungryWeb.SelectComponentSingle do
       end
 
     selected_items =
-      case Map.get(assigns.form.params, assigns.input_variable) do
-        nil ->
-          if is_nil(Map.get(assigns, :selected_items)) do
-            case Map.get(assigns.form.data, atom_input_variable) do
-              nil ->
-                nil
+      MehungryWeb.SelectComponentUtils.get_selected_items_database(
+        assigns.form.params,
+        assigns.input_variable,
+        assigns,
+        get_by_id_func
+      )
 
-              id ->
-                  item = get_by_id_func.(id)
-
-                  if(item) do
-                    %{id: item.id, label: label_function.(item)}
-                  end
-            end
-          else
-            assigns.selected_items
-          end
-
-        str_id ->
-          result = Integer.parse(str_id)
-
-          case result do
-            :error ->
-              nil
-
-            {num_id, _} ->
-              selected_item = get_by_id_func.(num_id)
-              %{id: selected_item.id, label: label_function.(selected_item)}
-          end
+    {items, items_filtered} =
+      if is_nil(selected_items) do
+        items = item_function.("")
+        {items, Enum.map(items, fn x -> %{label: label_function.(x), id: x.id} end)}
+      else
+        {nil, nil}
       end
-    IO.inspect(selected_items, label: "Selectect comonent online")
-    items = Enum.map(items, fn x -> %{label: label_function.(x), id: x.id} end)
-    presenting_items = Enum.slice(items, 0..10)
 
     socket =
       socket
       |> assign(:items, items)
       |> assign(:item_function, item_function)
-      |> assign(:items_filtered, items)
-      |> assign(:presenting_items, presenting_items)
+      |> assign(:items_filtered, items_filtered)
       |> assign(:listing_open, Map.get(assigns, :initial_open, false))
       |> assign(:selected_items, selected_items)
       |> assign(:form, assigns.form)
@@ -205,7 +184,9 @@ defmodule MehungryWeb.SelectComponentSingle do
   def handle_event("handle-item-click", %{"id" => id}, socket) do
     {id, _} = Integer.parse(id)
 
-    selected_item = Enum.find(socket.assigns.items, fn x -> x.id == id end)
+    selected_item = Enum.find(socket.assigns.items_filtered, fn x -> x.id == id end)
+
+    # selected_item = %{label: socket.assigns.label_function.(selected_item), id: selected_item.id}
 
     socket =
       socket

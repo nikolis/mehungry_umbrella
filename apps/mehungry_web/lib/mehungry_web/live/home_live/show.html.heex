@@ -10,7 +10,7 @@
     comment={@comment}
   />
 
-  <div class="post_card"> 
+  <div class="post_card mb-12"> 
     <%= for comment <- @post.comments do %>
       <.comment comment = {comment} user={@user}  live_action={@live_action} page_title={@page_title}  reply={@reply}/>
     <% end %>  

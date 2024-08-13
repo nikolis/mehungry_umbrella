@@ -1,6 +1,6 @@
 <div class="container mx-auto pt-6 relative">
   <.modal :if={@live_action in [:new, :edit]} on_cancel={JS.patch(~p"/calendar")} id="calendar_modal" show>
-    <div class="w-full">
+    <div class="w-full" style="min-height: 55vh;">
       <.live_component
         module={MehungryWeb.CalendarLive.MealFormComponent }
         id={@user_meal.id || :new}

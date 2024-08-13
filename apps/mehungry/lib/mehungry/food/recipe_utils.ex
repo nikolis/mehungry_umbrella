@@ -20,7 +20,7 @@ defmodule Mehungry.Food.RecipeUtils do
 
     ingredients_table =
       Enum.map(ingredients, fn x ->
-            x.category.name
+        x.category.name
       end)
 
     Enum.uniq(ingredients_table)
@@ -39,6 +39,7 @@ defmodule Mehungry.Food.RecipeUtils do
         %{
           ingredient_id: elem(x, 0).id,
           ingredient: elem(x, 0).name,
+          ingredient_item: elem(x, 0),
           recipe_amount: elem(x, 2),
           recipe_measurement_unit: elem(x, 1),
           nutrients:
@@ -58,7 +59,10 @@ defmodule Mehungry.Food.RecipeUtils do
           ingredient_id: x.ingredient_id,
           ingredient: x.ingredient,
           measurement_unit: x.recipe_measurement_unit.name,
-          nutrients: Enum.map(x.nutrients, fn y -> adjust_amount(x.recipe_amount, y) end)
+          nutrients:
+            Enum.map(x.nutrients, fn y ->
+              adjust_amount(x.recipe_amount, y, x.recipe_measurement_unit, x.ingredient_item)
+            end)
         }
       end)
 
@@ -82,7 +86,19 @@ defmodule Mehungry.Food.RecipeUtils do
     }
   end
 
-  def adjust_amount(recipe_amount, nutrient_entry) do
+  def adjust_amount(recipe_amount, nutrient_entry, measurement_unit, ingredient_item) do
+    portion =
+      Enum.find(ingredient_item.ingredient_portions, fn x ->
+        x.measurement_unit_id == measurement_unit.id
+      end)
+
+    recipe_amount =
+      if is_nil(portion) do
+        recipe_amount
+      else
+        recipe_amount = recipe_amount * portion.gram_weight
+      end
+
     adjusted_amount = recipe_amount * nutrient_entry.amount / 100.0
 
     %{
