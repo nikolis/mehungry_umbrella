@@ -17,12 +17,11 @@
 
   <div id="calendar" style="height: 600px; padding-inline: 40px;" phx-update="ignore" >
   </div>
-
   <div class="calendar_controlls" id="calendar_controlls"  phx-hook="HiddenCalendar" close-button-id="button_hidde_calendar"  phx-update="ignore">
-    <div id="hidden_calendar" class="hidden_callendar" style="background-color: white; width: 100vw; padding: 3rem;"> 
+     <button class="calendar_button" id="callendar_next_button" style="right: 2rem"> Next </button> 
+     <div id="hidden_calendar" class="hidden_callendar" style="background-color: white; width: 100vw; padding: 3rem;"> 
     </div>
-    <button class="calendar_button" style="right: 2rem;" id="callendar_prev_button"> Prev </button>
-      <img id="button_hidde_calendar"  style="z-index: 10000; position: absolute; margin-inline: auto; right: 0; left: 0; top: 0;" width="40px" src="/images/calendar.svg"/>
-    <button class="calendar_button" id="callendar_next_button" style="left: 2rem"> Next </button>
+      <button class="calendar_button" style="left: 2rem;" id="callendar_prev_button"> Prev </button>
+      <img id="button_hidde_calendar"  style="z-index: 50; position: absolute; margin-inline: auto; right: 0; left: 0; top: 0;" width="40px" src="/images/calendar.svg"/>
   </div>
 </div>

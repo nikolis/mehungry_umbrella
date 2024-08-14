@@ -138,7 +138,15 @@
 	padding: 5px 25px;
 	border-radius: 20px;
 	font-weight: bold;
+	font-size: calc(0.7rem + 0.7vw);
+	background-color: var(--clr-complementary-middle) !important;
+	color: white;
+
 }
+.primary_button_complementary:hover {
+	background-color: var(--clr-complementary-light) !important;
+}
+
 
 
 .primary_button_outline {

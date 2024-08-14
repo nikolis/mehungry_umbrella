@@ -329,7 +329,6 @@ function  mount_callendar(parent_view) {
 		window.addEventListener(`phx:create-meal`, (e) => {
 			var start = e.detail.start
 			var end = e.detail.end
-      console.log("Clear -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
       calendar.clear();
 			calendar.createEvents([{
 				id: 'event1',
@@ -427,7 +426,7 @@ function  mount_callendar(parent_view) {
 				showNowIndicator: false,
 				scheduleView: true,
 				hourStart: 6,
-				hourEnd: 24,
+				hourEnd: 12,
 				eventView: ['time'],
 				taskView: false,
 			},
@@ -479,7 +478,6 @@ Hooks.HiddenCalendar = {
     console.log("ori_cale")
     console.log(ori_cale)
 		if(! origin_callendar) {
-      console.log("Should not go here 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 		  parent_view.origin_callendar = mount_callendar(parent_view); 
 			origin_callendar = parent_view.origin_callendar;
 		}

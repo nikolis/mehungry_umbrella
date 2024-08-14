@@ -4,10 +4,10 @@
       <%= @user_profile.intro %>
     </div>
   <%= if @live_action == :index do %>
-    <div class="flex justify-center m-6">
-      <.button class="primary_button"> Share Profile </.button>
+    <div class="flex justify-center m-6 relative">
+      <button class="primary_button"> Share Profile </button>
       <.link patch={~p"/profile/edit"} phx-click={JS.push_focus()}>
-        <.button class="primary_button_outline" type="button"> Edit Profile </.button>
+        <button class="primary_button_complementary" type="button"> Edit Profile </button>
      </.link>
   </div>
   <% end %>

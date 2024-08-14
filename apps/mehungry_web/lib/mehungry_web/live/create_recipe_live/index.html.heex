@@ -1,4 +1,4 @@
-<div class="md:p-8 bg-greyfriend1 mx-auto  ">
+<div class="p-2 md:p-8 bg-greyfriend1 mx-auto  ">
 
   <.modal :if={is_nil(@user_profile.onboarding_level)  or @user_profile.onboarding_level < 1} id="onboarding-modal" show on_cancel={JS.patch(~p"/")}>
   
@@ -15,7 +15,7 @@
   for={@form} 
   phx-change="validate" 
   phx-submit="save"
-  class="the_form flex flex-col mx-auto mb-14"
+  class="the_form p-4 flex flex-col mx-auto mb-14"
   >
     <div class="basic_2_col_grid_cont">
       <Components.recipe_render f={@form} />
