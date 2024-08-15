@@ -26,8 +26,8 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
               "text-center",
               ]}
             >
-              <div :for={meal <- @day_meals} >
-              <button   class={[
+    <div :for={meal <- @day_meals} >
+                  <button   class={[
               "text-center min-h-24 w-full border-solid border-2 border-sky-500",
               today?(day) && "bg-green-100",
               other_month?(day, @current_date)  && "bg-gray-100",
@@ -35,7 +35,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
               ]} 
     
     type="button" phx-click="initial_modal" phx-value-date={Calendar.strftime(day, "%Y-%m-%d")} phx-value-title={meal} >
-                  <time datetime={Calendar.strftime(day, "%Y-%m-%d")}><%= meal %></time>
+    <time datetime={Calendar.strftime(day, "%Y-%m-%d")}><%= meal %> <%= get_from_week_rows(@user_meals, day, meal) %> </time>
                 </button>
               </div>
               <!--<button type="button" phx-target={@myself} phx-click="pick-date" phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}>
@@ -62,6 +62,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     assigns = [
       current_date: current_date,
       selected_date: nil,
+      user_meals: assigns.user_meals,
       selected_meal: nil,
       week_rows: week_rows(current_date, assigns.user_meals),
       day_meals: @day_meals
@@ -119,16 +120,68 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     week_rows_post_pros(week_rows, user_meals)
   end
 
+  defp get_from_week_rows(user_meals, current_date, title) do
+    first = Date.beginning_of_week(current_date)
+    last = Date.end_of_week(current_date)
+    
+    week_rows = 
+    Date.range(first, last)
+    |> Enum.map(& &1)
+    |> Enum.chunk_every(7)
+
+    result = Map.new(week_rows_post_pros23(week_rows, user_meals))
+    current_date = Date.to_string(current_date) <> " 00:00:00"
+    {:ok, current_date} = NaiveDateTime.from_iso8601(current_date) 
+    result = Map.get(result, current_date)
+    result = Map.get(result, title)
+    IO.inspect(result, label: "afdssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss-------------------------------------")
+  end
+
+
+
+  defp get_from_user_meals(user_meals, date, title) do
+    result = Enum.filter(user_meals, fn x -> x.start == date and x.title == title end) 
+    IO.inspect(result)
+    case result do 
+      [] -> 
+        nil
+      [result] ->
+        result
+    end
+  end
+
+
   defp week_rows_post_pros(week_rows, user_meals) do
-    IO.inspect(week_rows)
     week_rows_tr = List.first(week_rows)
     translated_week_rows = 
       Enum.map(week_rows_tr, fn x -> Date.to_string(x) <> " 00:00:00" end)
       |> Enum.map( fn y -> NaiveDateTime.from_iso8601(y) end)
-      |> Enum.map(fn {:ok, date} -> date end )
-    IO.inspect(user_meals)
-    IO.inspect(translated_week_rows)
+      |> Enum.map(fn {:ok, date} -> {date, 
+        Enum.map(@day_meals, fn x -> 
+          meal = get_from_user_meals(user_meals, date, x)
+          {x, meal} 
+        end)
+        |> Map.new()
+        
+      } end)
+
     week_rows
+  end
+  defp week_rows_post_pros23(week_rows, user_meals) do
+    week_rows_tr = List.first(week_rows)
+    translated_week_rows = 
+      Enum.map(week_rows_tr, fn x -> Date.to_string(x) <> " 00:00:00" end)
+      |> Enum.map( fn y -> NaiveDateTime.from_iso8601(y) end)
+      |> Enum.map(fn {:ok, date} -> {date, 
+        Enum.map(@day_meals, fn x -> 
+          meal = get_from_user_meals(user_meals, date, x)
+          {x, meal} 
+        end)
+        |> Map.new()
+        
+      } end)
+
+    translated_week_rows
   end
 
 end 
