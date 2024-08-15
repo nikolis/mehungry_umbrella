@@ -27,17 +27,8 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
               ]}
             >
     <div :for={meal <- @day_meals} >
-                  <button   class={[
-              "text-center min-h-24 w-full border-solid border-2 border-sky-500",
-              today?(day) && "bg-green-100",
-              other_month?(day, @current_date)  && "bg-gray-100",
-              selected_date?(day, @selected_date) &&  meal==@selected_meal && "bg-blue-100"
-              ]} 
-    
-    type="button" phx-click="initial_modal" phx-value-date={Calendar.strftime(day, "%Y-%m-%d")} phx-value-title={meal} >
-    <time datetime={Calendar.strftime(day, "%Y-%m-%d")}><%= meal %> <%= get_from_week_rows(@user_meals, day, meal) %> </time>
-                </button>
-              </div>
+      <%= get_from_week_rows(@user_meals, day, meal, assigns) %> 
+                                </div>
               <!--<button type="button" phx-target={@myself} phx-click="pick-date" phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}>
                 <time datetime={Calendar.strftime(day, "%Y-%m-%d")}><%= Calendar.strftime(day, "%d") %></time>
               </button> -->
@@ -120,7 +111,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     week_rows_post_pros(week_rows, user_meals)
   end
 
-  defp get_from_week_rows(user_meals, current_date, title) do
+  defp get_from_week_rows(user_meals, current_date, title, assigns) do
     first = Date.beginning_of_week(current_date)
     last = Date.end_of_week(current_date)
     
@@ -134,7 +125,38 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     {:ok, current_date} = NaiveDateTime.from_iso8601(current_date) 
     result = Map.get(result, current_date)
     result = Map.get(result, title)
-    IO.inspect(result, label: "afdssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss-------------------------------------")
+    assigns = 
+      assigns
+      |> Map.put(:day, current_date)
+      |> Map.put(:meal, title)
+    case result do 
+      nil -> 
+        ~H"""
+          <button   class={[
+              "text-center min-h-24 w-full border-solid border-2 border-sky-500",
+              today?(@day) && "bg-green-100",
+              other_month?(@day, @current_date)  && "bg-gray-100",
+              selected_date?(@day, @selected_date) &&  @meal==@selected_meal && "bg-blue-100"
+              ]} 
+    
+    type="button" phx-click="initial_modal" phx-value-date={Calendar.strftime(@day, "%Y-%m-%d")} phx-value-title={@meal} >
+    <time datetime={Calendar.strftime(@day, "%Y-%m-%d")}><%= @meal %>  </time>
+                </button>
+        """
+       _ -> 
+        ~H"""
+        <button   class={[
+              "text-center min-h-24 w-full border-solid border-2 border-sky-500",
+              today?(@day) && "bg-green-100",
+              other_month?(@day, @current_date)  && "bg-gray-100",
+              selected_date?(@day, @selected_date) &&  @meal==@selected_meal && "bg-blue-100"
+              ]} 
+    
+    type="button" phx-click="initial_modal" phx-value-date={Calendar.strftime(@day, "%Y-%m-%d")} phx-value-title={@meal} >
+        <time datetime={Calendar.strftime(@day, "%Y-%m-%d")}><%= @meal <> " ------ 234324" %>  </time>
+                </button>
+      """
+  end
   end
 
 
