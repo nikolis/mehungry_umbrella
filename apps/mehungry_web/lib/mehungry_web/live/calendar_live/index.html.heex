@@ -4,7 +4,7 @@
       <.live_component
         module={MehungryWeb.CalendarLive.MealFormComponent }
         id={@user_meal.id || :new}
-        title={@page_title}
+        title={@title}
         live_action={@live_action}
         invocations = {@invocations}
         recipes= {@recipes}
@@ -15,13 +15,18 @@
     </div>
   </.modal>
 
-  <div id="calendar" style="height: 600px; padding-inline: 40px;" phx-update="ignore" >
-  </div>
-  <div class="calendar_controlls" id="calendar_controlls"  phx-hook="HiddenCalendar" close-button-id="button_hidde_calendar"  phx-update="ignore">
+  <.live_component
+    module={MehungryWeb.CalendarLive.CalendarWidgetComponent}
+    id={:new}
+    user_meals = {@user_meals}
+    title="Alter Basket"
+    action={@live_action}
+    user = {@current_user}
+  />
+
+  <!-- <div class="calendar_controlls" id="calendar_controlls"  phx-hook="HiddenCalendar" close-button-id="button_hidde_calendar"  phx-update="ignore">
      <button class="calendar_button" id="callendar_next_button" style="right: 2rem"> Next </button> 
-     <div id="hidden_calendar" class="hidden_callendar" style="background-color: white; width: 100vw; padding: 3rem;"> 
-    </div>
       <button class="calendar_button" style="left: 2rem;" id="callendar_prev_button"> Prev </button>
       <img id="button_hidde_calendar"  style="z-index: 50; position: absolute; margin-inline: auto; right: 0; left: 0; top: 0;" width="40px" src="/images/calendar.svg"/>
-  </div>
+  </div> -->
 </div>

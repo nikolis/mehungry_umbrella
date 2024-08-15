@@ -1,6 +1,7 @@
 defmodule MehungryWeb.CalendarLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
+  use ViewportHelpers
 
   import MehungryWeb.CoreComponents
 
@@ -10,12 +11,18 @@ defmodule MehungryWeb.CalendarLive.Index do
   alias Mehungry.Repo
   alias Mehungry.Food
 
+  # https://gist.github.com/cblavier/0e227de6fd1dfa00814b88642cdcb2a9
+  # def render(assigns) do
+  #  render_for_device(SomeView, "show.html", assigns)
+  # end
+
   @impl true
   def mount_search(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_meals = History.list_history_user_meals_for_user(user.id)
     recipes = list_recipes(user)
-
+    socket = assign_device_kind(socket)
+    IO.inspect(socket)
     user_meals =
       Enum.map(user_meals, fn x ->
         %{
@@ -70,7 +77,7 @@ defmodule MehungryWeb.CalendarLive.Index do
     socket
   end
 
-  defp apply_action(socket, :new, %{"start" => start_date, "end" => end_date} = _params) do
+  defp apply_action(socket, :new, %{"start" => start_date, "title" => title} = _params) do
     user_meal =
       struct(UserMeal)
       |> Repo.preload(
@@ -87,7 +94,7 @@ defmodule MehungryWeb.CalendarLive.Index do
     changeset =
       History.change_user_meal(user_meal, %{
         start_dt: start_date,
-        end_dt: end_date,
+        title: title,
         user_id: socket.assigns.user.id
       })
 
@@ -96,8 +103,9 @@ defmodule MehungryWeb.CalendarLive.Index do
     |> assign(:user_meal, user_meal)
     |> assign(
       :dates,
-      %{start: start_date, end: end_date}
+      %{start: start_date}
     )
+    |> assign(:title, title)
     |> assign(:changeset, changeset)
     |> assign(:recipes, list_recipes(nil))
   end
@@ -121,8 +129,8 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   @impl true
-  def handle_event("initial_modal", %{"start" => start_date, "end" => end_date}, socket) do
-    {:noreply, push_patch(socket, to: "/calendar/#{start_date}/#{end_date}", replace: true)}
+  def handle_event("initial_modal", %{"date" => start_date, "title" => title}, socket) do
+    {:noreply, push_patch(socket, to: "/calendar/#{start_date}/#{title}", replace: true)}
   end
 
   def handle_event("delete_user_meal", %{"id" => meal_id}, socket) do
