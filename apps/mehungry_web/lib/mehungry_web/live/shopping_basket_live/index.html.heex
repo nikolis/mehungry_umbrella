@@ -1,4 +1,4 @@
-<div class="main-page-container relative" id="shopping_basket_index">
+<div class="main-page-container relative " style="height: 90vh" id="shopping_basket_index">
     <.modal :if={@live_action in [:import_items]} on_cancel={JS.patch(~p"/basket")} id="shopping_basket_modal" show>
       <.live_component
         module={MehungryWeb.ShoppingBasketLive.FormComponent}
@@ -11,7 +11,7 @@
         />
     </.modal>
 
-  <div class="basket-page-container min-h-120">
+  <div class="basket-page-container">
      
     <div class="bakset-side-nav-hidden  bd-black-400" id="basket-side-navbar"> 
         <h2  phx-click={

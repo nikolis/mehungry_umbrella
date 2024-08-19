@@ -1,0 +1,32 @@
+defmodule MehungryWeb.NewsLetterComponent do 
+  use MehungryWeb, :live_component
+
+  @impl true
+  def update(assigns, socket) do 
+  
+  end
+
+  def render(assigns) do 
+    ~H"""
+      <div style="height: 40px;"> 
+      <.form
+        :let={f}
+        for={@search_changeset}
+        class="form-search"
+        phx-change="validate"
+        phx-submit="search"
+      style="height: 40px;">
+        <div class ="h-full">	
+          <%= if @query_string do %>
+            <%= text_input f, :query_string , class: "w-full h-full rounded-full", style: "background-color:#eaeaea", id: "text-search-input" , value: @query_string %>
+          <%= else %>
+            <%= text_input f, :query_string , class: "w-full h-full rounded-full", style: "background-color:#eaeaea", id: "text-search-input"  %>
+          <% end %>
+          <%= submit "", phx_disable_with: "Searching..." , class: "invisible"%>
+        </div>
+       
+      </.form>
+      </div>
+      """
+  end
+end

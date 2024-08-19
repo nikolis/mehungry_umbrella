@@ -29,7 +29,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   def update(%{id: id, title: title, dates: dates, current_user: user} = assigns, socket) do
     default_attrs = %{
       start_dt: dates.start,
-      title: title, 
+      title: title,
       user_id: user.id
     }
 
@@ -81,22 +81,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     )
   end
 
-  def is_open(action, invocations) do
-    case action do
-      :new ->
-        "is-open"
-
-      :edit ->
-        "is-open"
-
-      _ ->
-        if invocations > 1 do
-          "is-closing"
-        else
-          "is-closed"
-        end
-    end
-  end
 
   def get_not_nil(first, second) do
     if(first) do
@@ -241,11 +225,10 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   end
 
   defp save_user_meal(socket, :new, user_meal_params) do
-    IO.inspect(user_meal_params)
     start_dt = user_meal_params["start_dt"]
-    {:ok, dt}  = NaiveDateTime.from_iso8601(start_dt <>  " 00:00:00")
+    {:ok, dt} = NaiveDateTime.from_iso8601(start_dt <> " 00:00:00")
     user_meals_params = %{user_meal_params | "start_dt" => dt}
-    IO.inspect(user_meals_params)
+
     case History.create_user_meal(user_meals_params) do
       {:ok, user_meal} ->
         date = NaiveDateTime.to_string(user_meal.start_dt)
@@ -253,8 +236,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
         {:noreply,
          socket
          |> put_flash(:info, "User Meal created successfully")
-         |> push_redirect(to: "/calendar/ondate/" <> date)
-        }
+         |> push_redirect(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         IO.inspect(changeset)

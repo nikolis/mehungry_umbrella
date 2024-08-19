@@ -1,7 +1,6 @@
-<div class="log_in_container">
+<div class="log_in_container" style="min-height: 95vh;">
   <div>
-    <img  src="/images/logo2.svg" width= "80px;"  style="margin-left: auto; margin-right: auto;"/>
-
+    <img  src="/images/logo2.svg" width= "55px;"  style="margin-left: auto; margin-right: auto;"/>
   </div>
   <div class="text-center font-bold text-3xl"> Login in <p class="quote"> Explore more </p>
   </div>
@@ -24,16 +23,20 @@
     </div>
 
     <div class="login_submit_button">
-      <%= submit "Log in", style: "color: white; border: 1px solid #77b255; height: 4rem; border-radius: 990px;  ", class: "link_button " %>
+      <%= submit "Log in", style: "color: white; border: 1px solid #77b255; height: 3rem; border-radius: 990px; font-size: calc(0.8rem + 0.35vw ); ", class: "link_button " %>
       <span style="text-align: center"> OR </span>
-      <a class= " text-center flex items-center  rounded-full" style=" height: 4rem; background-color: #039be5; color: white" href="/auth/facebook"> 
-        <div class="p-2 flex items-center text-xl gap-2 font-medium     "> <img src="/images/facebook.svg" /> <span> Sign in with Facebook </span></div>
+      <a class= " text-center flex items-center  rounded-full" style="height: 3rem; background-color: #039be5; color: white" href="/auth/facebook"> 
+        <div class="w-full font-semibold flex items-center  gap-1" style="font-size: calc(0.7rem + 0.5vw );"> <img style="width: 40px;"src="/images/facebook.svg" /> <div class="w-full text-center"> Sign in with Facebook </div></div>
       </a>
-      <a class="" href={Routes.auth_path(@conn, :request, "google") }>
-        <img class="w-full h-full" style="height: 4rem;" src="/images/google_login.svg"/>
+      <a class= " text-center flex items-center  rounded-full" style="height: 3rem; background-color: white; color: black"  href={Routes.auth_path(@conn, :request, "google") }>
+        <div class="w-full font-semibold flex items-center border-radius w-full h-full gap-1" style="font-size: calc(0.7rem + 0.5vw ); border-radius: 100px; border: 2px solid #747775; 
+  ">    <img style="width: 40px" src="/images/google_login.svg" /> <span class="w-full text-center" style="color:  #1F1F1F;"> Sign in with Google </span></div>
       </a>
-      <a class= "flex items-center rounded-full border-solid  border-2" style="height: 4rem; border-color: var(--clr-complementary-middle)" href="/users/register">
-        <div class="p-2 flex items-center text-xl gap-1 font-medium w-full "> <img style="width: 48px;" src="/images/logo2.svg" /><span style="color: var(--clr-complementary-middle)" class="w-full text-center text-medium"> Register with email </span> </div>
+
+      <a class= "flex items-center rounded-full border-solid  border-2" style="height: 3rem; border-color: var(--clr-complementary-middle)" href="/users/register">
+        <div class="w-full p-2 flex items-center gap-1 font-medium w-full" style=" font-size: calc(0.7rem + 0.5vw );"> 
+          <img style=" width: 40px;" src="/images/logo2.svg" />
+          <span class="w-full text-center" style="color: var(--clr-complementary-middle);"  > Register with email </span> </div>
       </a>
 
     </div>

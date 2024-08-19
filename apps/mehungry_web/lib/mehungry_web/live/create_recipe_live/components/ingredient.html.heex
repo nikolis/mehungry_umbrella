@@ -1,4 +1,4 @@
-  <div class="md:p-3 grid grid-cols-6 gap-2 md:gap-6", id= {"recipe_ingredients" <> to_string(@g.index) }>
+  <div class="md:p-3 grid grid-cols-9 sm:grid-cols-6 gap-2 md:gap-6", id= {"recipe_ingredients" <> to_string(@g.index) }>
   
     <.live_component
       module={MehungryWeb.SelectComponentSingle}
@@ -17,11 +17,11 @@
       id={"measurement_unit_search_component" <> Integer.to_string(@g.index)}
       />
 
-  <div class="field input-form">
+  <div class="field input-form col-span-2 sm:col-span-1">
     <.input required field={@g[:quantity]} type="number" />
   </div>
 
-     <svg phx-click="remove-ingredient"  phx-value-index={@g.index}  width="2rem" height="3rem" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: auto">
+     <svg phx-click="remove-ingredient" style="width:25px; height: 100%;" phx-value-index={@g.index}  width="2rem" height="3rem" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: auto">
       <path d="M10 12V17" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M14 12V17" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M4 7H20" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

@@ -362,6 +362,15 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     nutrients = nuts_pre ++ rest
     nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
     energy = Enum.find(nutrients, fn x -> String.contains?(x.name, "Energy") end)
+    energy = 
+      case energy.measurement_unit do 
+        "kilojoule" ->
+          %{energy | amount: energy.amount *  0.2390057361 , measurement_unit: "kcal"}
+        _ ->
+          energy
+      end
+
+
     carb = Enum.find(nutrients, fn x -> String.contains?(x.name, "Carbohydrate") end)
     protein = Enum.find(nutrients, fn x -> String.contains?(x.name, "Protein") end)
     fiber = Enum.find(nutrients, fn x -> String.contains?(x.name, "Fiber") end)

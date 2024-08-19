@@ -11,6 +11,7 @@ defmodule Mehungry.NutrientTest do
       )
 
       Food.search_ingredient("beans", nil)
+      |> IO.inspect()
     end
   end
 end

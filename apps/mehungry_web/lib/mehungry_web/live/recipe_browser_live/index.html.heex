@@ -1,4 +1,4 @@
-<div class="md:p-8 bg-greyfriend1 ">
+<div class="md:p-8 bg-greyfriend1 " style="min-height: 90vh;">
 
   <.modal :if={is_nil(@user_profile.onboarding_level)  or @user_profile.onboarding_level < 1} id="onboarding-modal" show on_cancel={JS.patch(~p"/")}>
   <.live_component

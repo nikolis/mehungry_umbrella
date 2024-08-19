@@ -91,8 +91,8 @@ let liveSocket = new LiveSocket("/live", Socket, {
 	params: {
 		_csrf_token: csrfToken,
     viewport: {
-      width: window.innerWidth,
-      height: window.innerHeight
+      width: window.screen.width,
+      height: window.screen.height
     }
 	}
 })

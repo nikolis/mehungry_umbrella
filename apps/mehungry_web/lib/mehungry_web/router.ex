@@ -73,6 +73,7 @@ defmodule MehungryWeb.Router do
 
       live "/calendar", CalendarLive.Index, :index
       live "/calendar/ondate/:date", CalendarLive.Index, :particular
+      live "/calendar/details/:date", CalendarLive.Index, :nutrition_details
 
       live "/calendar/:start/:title", CalendarLive.Index, :new
 

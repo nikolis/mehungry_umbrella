@@ -121,7 +121,6 @@ defmodule Mehungry.FdcFoodParserLeg do
   end
 
   def create_ingredient(attrs) do
-
     category = get_or_create_food_category(attrs["foodCategory"]["description"])
 
     food_portions = attrs["foodPortions"]
@@ -137,7 +136,6 @@ defmodule Mehungry.FdcFoodParserLeg do
 
     case Food.create_ingredient(attrs) do
       {:ok, ingredient} ->
-
         if not is_nil(food_portions) do
           create_ingredient_portions(food_portions, ingredient)
         end

@@ -15,9 +15,12 @@ export const ViewportResizeHooks = {
   },
 
   pushResizeEvent () {
+    console.log("Hereerereerer")
+    console.log(window.screen.width)
+    console.log(window)
     this.pushEvent('viewport_resize', {
-      width: window.innerWidth,
-      height: window.innerHeight
+      width: window.screen.width,
+      height: window.screen.height
     })
   },
 

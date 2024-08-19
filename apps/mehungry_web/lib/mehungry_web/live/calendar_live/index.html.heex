@@ -1,27 +1,42 @@
-<div class="container mx-auto pt-6 relative">
+<div class="container mx-auto pt-6 relative p-12">
   <.modal :if={@live_action in [:new, :edit]} on_cancel={JS.patch(~p"/calendar")} id="calendar_modal" show>
     <div class="w-full" style="min-height: 55vh;">
       <.live_component
         module={MehungryWeb.CalendarLive.MealFormComponent }
         id={@user_meal.id || :new}
-        title={@title}
+        title={@user_meal.title || @title}
         live_action={@live_action}
         invocations = {@invocations}
         recipes= {@recipes}
         dates = {@dates}
         current_user = {@current_user}
-        return_to={Routes.calendar_index_path(@socket, :index)}
+        return_to={@detail_return_to || Routes.calendar_index_path(@socket, :index)}
       />
     </div>
   </.modal>
+
+  <.modal :if={@live_action in [:nutrition_details]} on_cancel={JS.patch(~p"/calendar")} id="calendar_modal23" show>
+    <div class="w-full" style="min-height: 55vh;">
+      <.live_component
+        module={MehungryWeb.NutrientAnalysisComponent }
+        id={:details}
+        current_user = {@current_user}
+        particular_date = {@nutrition_details}
+        return_to={@detail_return_to || Routes.calendar_index_path(@socket, :index)}
+      />
+    </div>
+  </.modal>
+
 
   <.live_component
     module={MehungryWeb.CalendarLive.CalendarWidgetComponent}
     id={:new}
     user_meals = {@user_meals}
+    particular_date = {@particular_date}
     title="Alter Basket"
     action={@live_action}
     user = {@current_user}
+    device_width = {@device_width}
   />
 
   <!-- <div class="calendar_controlls" id="calendar_controlls"  phx-hook="HiddenCalendar" close-button-id="button_hidde_calendar"  phx-update="ignore">

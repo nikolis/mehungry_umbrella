@@ -116,7 +116,7 @@ check_list_container {
 }
 .bakset-side-nav-hidden {
 	position: absolute;
-	z-index: 90;
+	z-index: 10;
 	left: -100vw;
 }
 

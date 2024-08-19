@@ -4,7 +4,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="col-span-2 h-full" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={@id } >
+    <div class="col-span-3 sm:col-span-2 h-full" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={@id } >
       <.input  field={@form[String.to_atom(@input_variable)]} type="hidden"  />
       <!-- Start Component -->
       <.focus_wrap  
@@ -23,7 +23,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
                 tabindex="0"
                 class="border border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg"> 
                 <div class="h-full flex flex-col  justify-center py-2"> 
-                  <div class="self-center "> 
+                  <div class="self-center text-ellipsis overflow-hidden  "> 
                     <%= @selected_items.label %> 
                   </div> 
                 </div>

@@ -22,24 +22,15 @@ defmodule MehungryWeb.CalendarLive.Index do
     user_meals = History.list_history_user_meals_for_user(user.id)
     recipes = list_recipes(user)
     socket = assign_device_kind(socket)
-    IO.inspect(socket)
+
     user_meals =
       Enum.map(user_meals, fn x ->
         %{
           id: x.id,
-          start: x.start_dt,
+          start_dt: x.start_dt,
           end: x.end_dt,
           title: x.title,
-          sub_title:
-            Enum.reduce(x.recipe_user_meals, "", fn x, acc ->
-              case String.length(acc) do
-                0 ->
-                  x.recipe.title
-
-                _ ->
-                  acc <> ", " <> x.recipe.title
-              end
-            end)
+          recipe_user_meals: Enum.map(x.recipe_user_meals, fn y -> %{title: y.recipe.title} end)
         }
       end)
 
@@ -49,8 +40,10 @@ defmodule MehungryWeb.CalendarLive.Index do
       :ok,
       socket
       |> assign(:user, user)
+      |> assign(:particular_date, nil)
       |> assign(:user_meals, user_meals)
       |> assign(:recipes, recipes)
+      |> assign(:detail_return_to, nil)
     }
   end
 
@@ -60,8 +53,14 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   defp apply_action(socket, :particular, %{"date" => date} = params) do
     socket = push_event(socket, "go_to_date", %{date: date})
-
     socket
+    |> assign(:detail_return_to, ~p"/calendar/ondate/#{date}")
+    |> assign(:particular_date, date)
+  end
+
+  defp apply_action(socket, :nutrition_details, %{"date" => date} = params) do
+    socket
+    |> assign(:nutrition_details, date)
   end
 
   defp apply_action(socket, :edit, %{"id" => id} = _params) do
@@ -129,10 +128,22 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   @impl true
-  def handle_event("initial_modal", %{"date" => start_date, "title" => title}, socket) do
+  def handle_info({:initial_modal, %{"date" => start_date, "title" => title}}, socket) do
     {:noreply, push_patch(socket, to: "/calendar/#{start_date}/#{title}", replace: true)}
   end
 
+  @impl true
+  def handle_info({:particular_date, %{"date" => start_date}}, socket) do
+    {:noreply, push_patch(socket, to: "/calendar/ondate/#{start_date}", replace: true)}
+  end
+
+  @impl true
+  def handle_event("date-details", %{"date" => start_date}, socket) do
+    {:noreply, push_patch(socket, to: "/calendar/details/#{start_date}", replace: true)}
+  end
+
+
+ 
   def handle_event("delete_user_meal", %{"id" => meal_id}, socket) do
     user_meal = History.get_user_meal!(meal_id)
 

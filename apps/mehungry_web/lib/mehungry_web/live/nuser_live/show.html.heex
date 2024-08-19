@@ -1,0 +1,26 @@
+<.header>
+  Nuser <%= @nuser.id %>
+  <:subtitle>This is a nuser record from your database.</:subtitle>
+  <:actions>
+    <.link patch={~p"/nusers/#{@nuser}/show/edit"} phx-click={JS.push_focus()}>
+      <.button>Edit nuser</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.list>
+  <:item title="Email"><%= @nuser.email %></:item>
+</.list>
+
+<.back navigate={~p"/nusers"}>Back to nusers</.back>
+
+<.modal :if={@live_action == :edit} id="nuser-modal" show on_cancel={JS.patch(~p"/nusers/#{@nuser}")}>
+  <.live_component
+    module={MehungryWeb.NuserLive.FormComponent}
+    id={@nuser.id}
+    title={@page_title}
+    action={@live_action}
+    nuser={@nuser}
+    patch={~p"/nusers/#{@nuser}"}
+  />
+</.modal>

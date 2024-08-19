@@ -14,10 +14,10 @@ defmodule ViewportHelpers do
       def handle_event("viewport_resize", viewport, socket) do
         IO.inspect(viewport)
         device_kind = viewport |> Map.get("width") |> device_kind_for_width()
-        {:noreply, 
-          Phoenix.Component.assign(socket, device_kind: device_kind)
-          |> Phoenix.Component.assign(socket, width: Map.get(viewport, "width"))
-        }
+
+        {:noreply,
+         Phoenix.Component.assign(socket, device_kind: device_kind)
+         |> Phoenix.Component.assign(socket, width: Map.get(viewport, "width"))}
       end
     end
   end
@@ -26,9 +26,9 @@ defmodule ViewportHelpers do
     intermidiate =
       socket.private
       |> get_in([:connect_params, "viewport", "width"])
-   
-    IO.inspect( intermidiate , label: "adsf") 
-    device_kind =  device_kind_for_width(intermidiate)
+
+    IO.inspect(intermidiate, label: "adsf")
+    device_kind = device_kind_for_width(intermidiate)
 
     Phoenix.Component.assign(socket, device_kind: device_kind)
     |> Phoenix.Component.assign(device_width: intermidiate)

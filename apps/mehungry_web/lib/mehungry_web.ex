@@ -40,7 +40,7 @@ defmodule MehungryWeb do
 
       import Phoenix.Controller,
         only: [get_flash: 1, get_flash: 2, view_module: 1, view_template: 1]
-      
+
       unquote(view_helpers())
     end
   end
@@ -96,7 +96,6 @@ defmodule MehungryWeb do
       alias Phoenix.LiveView.JS
       unquote(view_helpers())
     end
-
   end
 
   def live_component do
@@ -109,8 +108,6 @@ defmodule MehungryWeb do
   end
 
   defp view_helpers do
-
-
     quote do
       # Use all HTML functionality (forms, tags, etc)
       import Phoenix.HTML

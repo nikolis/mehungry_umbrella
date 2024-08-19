@@ -1,7 +1,5 @@
-<div class="container  mx-auto">
-
+<div class="container  mx-auto p-2" style="min-height: 90vh">
   <.modal :if={is_nil(@user_profile.onboarding_level)  or @user_profile.onboarding_level < 1} id="onboarding-modal" show on_cancel={JS.patch(~p"/")}>
-  
   <.live_component
     module={MehungryWeb.Onboarding.FormComponent}
     user_profile = {@user_profile}

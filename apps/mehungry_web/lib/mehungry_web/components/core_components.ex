@@ -368,7 +368,7 @@ defmodule MehungryWeb.CoreComponents do
   attr :type, :string,
     default: "text",
     values:
-      ~w(checkbox color date datetime-local email file hidden month number password select_component
+      ~w(readonly checkbox color date datetime-local email file hidden month number password select_component
                range radio search select tel text textarea time url week full-text)
 
   attr :field, Phoenix.HTML.FormField,
@@ -393,6 +393,30 @@ defmodule MehungryWeb.CoreComponents do
     |> assign_new(:name, fn -> if assigns.multiple, do: field.name <> "[]", else: field.name end)
     |> assign_new(:value, fn -> field.value end)
     |> input()
+  end
+
+  # All type readonly are handled here...
+  def input(%{type: "readonly"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name} class="input-form w-full h-full" >
+     
+     <input
+       type={"text"}
+       name={@name}
+       id={@id}
+       readonly
+       value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+       class={[Map.get(assigns.rest, :class, "")] ++ [
+         " w-full sm:w-fit text-2xl text-center w-fit m-auto uppercase	font-medium	mb-4 rounded-lg border-greyfriend2 border-2 border-transparent ring-complementaryl ring-2	h-full",
+         @errors == [] && "",
+         @errors != [] && " ring-rose-400  focus:ring-rose-400"
+       ]}
+       {@rest}
+     />
+     <.error :for={msg <- @errors}><%= msg %></.error>
+
+    </div>
+    """
   end
 
   def input(%{type: "checkbox"} = assigns) do
@@ -556,7 +580,6 @@ defmodule MehungryWeb.CoreComponents do
     </div>
     """
   end
-
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do

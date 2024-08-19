@@ -1,6 +1,5 @@
 defmodule MehungryWeb.SelectComponentUtils do
   def get_selected_items_database(form_params, input_variable, assigns, get_by_id_func) do
-
     label_function =
       case Map.get(assigns, :label_function) do
         nil ->

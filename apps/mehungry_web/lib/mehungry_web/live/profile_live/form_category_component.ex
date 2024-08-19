@@ -5,7 +5,7 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
     assigns = assign(assigns, :deleted, Phoenix.HTML.Form.input_value(assigns.f, :delete) == true)
 
     ~H"""
-    <div class={"min-h-16 p-2	 h-full grid grid-cols-6  gap-6 m-auto" <> if(@deleted, do: " hidden", else: "")}>
+    <div class={"min-h-16 p-2	 h-full grid grid-cols-7 sm:grid-cols-5  gap-6 m-auto" <> if(@deleted, do: " hidden", else: "")}>
       <input
         type="hidden"
         name={Phoenix.HTML.Form.input_name(@f, :delete)}
@@ -21,7 +21,6 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
         name={Phoenix.HTML.Form.input_name(@f, :user_profile_id)}
         value={to_string(Phoenix.HTML.Form.input_value(@f, :user_profile_id))}
       />
-      <div class="max-h-16"> </div>
       
       <.live_component
       module={MehungryWeb.SelectComponentSingleMemory}
@@ -43,7 +42,7 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
 
       <div class="flex gap-4 items-end max-h-16">
         <div
-          class="h-full"
+          class="h-full m-auto"
           type=""
           phx-click="delete_category_rule"
           phx-value-index={@f.index}

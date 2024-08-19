@@ -290,6 +290,14 @@ textarea+ .placeholder {
 	transition: 0.3s;
 }
 
+input+ .placeholder2 {
+	position: absolute;
+	top: -10%; 
+	left: 10%;
+	font-size: 14px;
+	color: #666;
+	transition: 0.3s;
+}
 
 input:focus + .placeholder {
     top: -15%;
@@ -455,10 +463,6 @@ body.modal-open {
 	padding-left: 10px;
 }
 
-footer {
-	background-color: #24262b;
-	padding: 70px 0; 
-}
 
 .bottom_section {
 	margin-top: auto;

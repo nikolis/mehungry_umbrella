@@ -31,7 +31,6 @@ defmodule Mehungry.Users do
   }
 
   def calculate_recipe_grading(recipe, user) do
-
     recipe_grade =
       RecipeUtils.calculate_recipe_ingredient_categories_array(recipe)
       |> Enum.map(fn x -> {x, 1.0} end)

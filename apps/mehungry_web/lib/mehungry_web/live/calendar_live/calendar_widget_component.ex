@@ -2,208 +2,337 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
   use MehungryWeb, :live_component
 
   @week_start_at :monday
-  @day_meals ["breakfast", "elevenses", "lunch", "after lunch" , "dinner"]
+  @day_meals ["breakfast", "elevenses", "lunch", "after lunch", "dinner"]
   @impl true
   def render(assigns) do
-    ~H"""
-    <div class="mb-44 mt-12">
-      <div>
-      <h3 class="text-center"><%= Calendar.strftime(@current_date, "%B %Y") %></h3>
-   </div>
-      <table>
-        <thead>
-          <tr>
-            <th :for={week_day <- List.first(@week_rows)}>
-              <div> <span class="text-3xl	"> <%= Calendar.strftime(week_day, "%d") %> </span>  
-                    <span> <%= Calendar.strftime(week_day, "%a") %> </span> 
+    case is_nil(assigns.device_width) do 
+      true ->
+         get_loading(assigns)
+      false ->
+        ~H"""
+        <div class="mb-44" id="calendar_widget">
+          <div>
+          <h3 class="text-center text-4xl mb-8"><%= Calendar.strftime(@current_date, "%B %Y") %></h3>
+        </div>
+          <table style="box-sizing: border-box;">
+          <thead>
+              <tr  class="border-b-2 border-double border-t-2 border-complementary ">
+                <th :for={week_day <- List.first(@week_rows)}>
+                  <div class="cursor-pointer" phx-target{@myself} phx-click="date-details" phx-value-date={week_day}> <span class="text-4xl font-normal	text-complementaryd"> <%= Calendar.strftime(week_day, "%d") %> </span>  
+                        <span class="text-complementaryd text-xl font-normal"> <%= Calendar.strftime(week_day, "%a") %> </span> 
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <div :for={week <- @week_rows} class= "max-h-96	overflow-y-scroll	">
+                <td :for={day <- week} class={[
+                  "text-center border-l-2  border-r-2 max-w-48 min-w-48 ",
+                  ]}
+                >
+        <div :for={meal <- @day_meals} class="">
+          <%= get_from_week_rows(@user_meals, day, meal, assigns) %> 
+                                    </div>
+                </td>
               </div>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr :for={week <- @week_rows}>
-            <td :for={day <- week} class={[
-              "text-center",
-              ]}
-            >
-    <div :for={meal <- @day_meals} >
-      <%= get_from_week_rows(@user_meals, day, meal, assigns) %> 
-                                </div>
-              <!--<button type="button" phx-target={@myself} phx-click="pick-date" phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}>
-                <time datetime={Calendar.strftime(day, "%Y-%m-%d")}><%= Calendar.strftime(day, "%d") %></time>
-              </button> -->
-            </td>
-          </tr>
-        </tbody>
-        </table>
-      <div class="grid grid-cols-3 justify-between text-3xl		">
-      <button type="button" class="w-fit" phx-target={@myself} phx-click="prev-month">&laquo; Prev</button>
-      <button class="w-full text-lg"> Callendar </button>
-      <button type="button" class="w-full text-end	" phx-target={@myself} phx-click="next-month">Next &raquo;</button>
-      </div>
- 
-    </div>
-    """
+            </tbody>
+          </table>
+          <div class="grid grid-cols-3 justify-between text-xl md:text-3xl mt-10	">
+          <button type="button" class="w-fit text-primary font-medium" phx-target={@myself} phx-click="prev-month">&laquo; Prev</button>
+          <button class="w-full text-lg"> Callendar </button>
+          <button type="button" class="w-full text-end	text-primary font-medium" phx-target={@myself} phx-click="next-month">Next &raquo;</button>
+          </div>
+
+        </div>
+        """
+      end
   end
 
   @impl true
   def update(assigns, socket) do
-    current_date = Date.utc_today()
-    IO.inspect(assigns.user_meals, label: "User meals")
+    current_date = 
+      case assigns.particular_date do 
+        nil ->
+          date = calculate_initial_date(Date.utc_today(), assigns.device_width)
+        date -> 
+          {:ok, date} = Date.from_iso8601(date)
+          date
+      end
+
+    {first, last, rows} = week_rows(current_date, assigns.user_meals, assigns.device_width)
+    IO.inspect(assigns.device_width, label: "Device width")
     assigns = [
       current_date: current_date,
       selected_date: nil,
       user_meals: assigns.user_meals,
       selected_meal: nil,
-      week_rows: week_rows(current_date, assigns.user_meals),
-      day_meals: @day_meals
+      week_rows: rows,
+      last: last,
+      first: first,
+      day_meals: @day_meals,
+      device_width: assigns.device_width
     ]
 
     {:ok,
      socket
-     |> assign(assigns)
-    }
+     |> assign(assigns)}
+  end
+
+  defp calculate_initial_date(current_date, width) do
+    days =  get_days_according_to_width(width)
+    beggining_of_week = Date.beginning_of_week(current_date)
+   case days do 
+      0 -> 
+       current_date
+      1 -> 
+       current_date
+      2 -> 
+        new_date = Date.add(current_date, -1)
+        if(beggining_of_week > new_date) do
+          beggining_of_week 
+        else 
+          new_date
+        end
+      3 -> 
+        new_date = Date.add(current_date, -1)
+        if(beggining_of_week > new_date) do
+          beggining_of_week 
+        else 
+          new_date
+        end
+      4 -> 
+        new_date = Date.add(current_date, -2)
+        if(beggining_of_week > new_date) do
+          beggining_of_week 
+        else 
+          new_date
+        end
+      5 -> 
+        new_date = Date.add(current_date, -2)
+        if(beggining_of_week > new_date) do
+          beggining_of_week 
+        else 
+          new_date
+        end
+      6 ->
+          beggining_of_week 
+      _ ->
+        beggining_of_week
+   end
+
   end
 
   def handle_event("prev-month", _, socket) do
-    new_date = socket.assigns.current_date |> Date.beginning_of_week() |> Date.add(-1)
+    days = get_days_according_to_width(socket.assigns.device_width) * -1
+    new_date = socket.assigns.first |> Date.add(days) |> Date.add(-1)
+
+    {first, last, rows} =
+      week_rows(new_date, socket.assigns.user_meals, socket.assigns.device_width)
 
     assigns = [
       current_date: new_date,
-      week_rows: week_rows(new_date, socket.assigns.user_meals)
+      week_rows: rows,
+      last: last,
+      first: first
     ]
-
+    send(self(), {:particular_date, %{"date" => first}})
     {:noreply, assign(socket, assigns)}
   end
 
   def handle_event("next-month", _, socket) do
-    new_date = socket.assigns.current_date |> Date.end_of_week() |> Date.add(1)
+    # |> Date.add(1)
+    new_date = socket.assigns.last |> Date.add(1)
+
+    {first, last, rows} =
+      week_rows(new_date, socket.assigns.user_meals, socket.assigns.device_width)
+
     assigns = [
       current_date: new_date,
-      week_rows: week_rows(new_date, socket.assigns.user_meals)
+      week_rows: rows,
+      last: last,
+      first: first
     ]
-
-    {:noreply, assign(socket, assigns)}
+    send(self(), {:particular_date, %{"date" => first}})
+    {:noreply, socket} #assign(socket, assigns)}
   end
-  
+
   defp selected_date?(day, selected_date), do: day == selected_date
 
   defp today?(day), do: day == Date.utc_today()
 
-  defp other_month?(day, current_date), do: Date.beginning_of_month(day) != Date.beginning_of_month(current_date)
-  
+  defp other_month?(day, current_date),
+    do: Date.beginning_of_month(day) != Date.beginning_of_month(current_date)
+
   def handle_event("pick-date", %{"date" => date, "meal" => meal}, socket) do
-    {:noreply, 
-      assign(socket, :selected_date, Date.from_iso8601!(date))
-      |> assign(:selected_meal, meal)
-    }
+    send(self(), {:initial_modal, %{"date" => date, "title" => meal}})
+
+    {:noreply,
+     assign(socket, :selected_date, Date.from_iso8601!(date))
+     |> assign(:selected_meal, meal)}
   end
-  
-  defp week_rows(current_date, user_meals) do
-    first = Date.beginning_of_week(current_date)
-    last = Date.end_of_week(current_date)
 
-    week_rows = 
-    Date.range(first, last)
-    |> Enum.map(& &1)
-    |> Enum.chunk_every(7)
+  def handle_event("date-details", %{"date" => date}, socket) do
+    send(self(), {:date_details, %{"date" => date}})
 
-    week_rows_post_pros(week_rows, user_meals)
+    {:noreply, socket}
+  end
+
+
+  defp get_days_according_to_width(width) do
+    case width < 700 do
+      true ->
+        case width < 400 do
+          true ->
+            0
+
+          false ->
+            1
+        end
+
+      false ->
+        case width > 700 do
+          true ->
+            case width > 1000 do
+              true ->
+                case width > 1300 do
+                  true ->
+                    case width > 1550 do
+                      true ->
+                        6
+
+                      false ->
+                        5
+                    end
+
+                  false ->
+                    4
+                end
+
+              false ->
+                2
+            end
+        end
+    end
+  end
+
+  defp week_rows(current_date, user_meals, device_width) do
+    days = get_days_according_to_width(device_width)
+    first = current_date
+    last = Date.add(first, days)
+
+    week_rows =
+      Date.range(first, last)
+      |> Enum.map(& &1)
+      |> Enum.chunk_every(7)
+
+    {first, last, week_rows_post_pros(week_rows, user_meals)}
   end
 
   defp get_from_week_rows(user_meals, current_date, title, assigns) do
     first = Date.beginning_of_week(current_date)
     last = Date.end_of_week(current_date)
-    
-    week_rows = 
-    Date.range(first, last)
-    |> Enum.map(& &1)
-    |> Enum.chunk_every(7)
+
+    week_rows =
+      Date.range(first, last)
+      |> Enum.map(& &1)
+      |> Enum.chunk_every(7)
 
     result = Map.new(week_rows_post_pros23(week_rows, user_meals))
     current_date = Date.to_string(current_date) <> " 00:00:00"
-    {:ok, current_date} = NaiveDateTime.from_iso8601(current_date) 
+    {:ok, current_date} = NaiveDateTime.from_iso8601(current_date)
     result = Map.get(result, current_date)
     result = Map.get(result, title)
-    assigns = 
+
+    assigns =
       assigns
       |> Map.put(:day, current_date)
       |> Map.put(:meal, title)
-    case result do 
-      nil -> 
+
+    case result do
+      nil ->
         ~H"""
           <button   class={[
-              "text-center min-h-24 w-full border-solid border-2 border-sky-500",
+              "text-center min-h-28 max-h-28 w-full border-t-2 ",
               today?(@day) && "bg-green-100",
               other_month?(@day, @current_date)  && "bg-gray-100",
               selected_date?(@day, @selected_date) &&  @meal==@selected_meal && "bg-blue-100"
               ]} 
-    
-    type="button" phx-click="initial_modal" phx-value-date={Calendar.strftime(@day, "%Y-%m-%d")} phx-value-title={@meal} >
-    <time datetime={Calendar.strftime(@day, "%Y-%m-%d")}><%= @meal %>  </time>
-                </button>
+              type="button" phx-target={@myself} phx-click="pick-date"  phx-value-date={Calendar.strftime(@day, "%Y-%m-%d")} phx-value-meal={@meal} >
+        <time datetime={Calendar.strftime(@day, "%Y-%m-%d")}><span class="text-md capitalize text-complementaryd font-semibold"> <%= @meal %></span>  </time>
+          </button>
         """
-       _ -> 
+
+      actual_meal ->
         ~H"""
-        <button   class={[
-              "text-center min-h-24 w-full border-solid border-2 border-sky-500",
-              today?(@day) && "bg-green-100",
-              other_month?(@day, @current_date)  && "bg-gray-100",
-              selected_date?(@day, @selected_date) &&  @meal==@selected_meal && "bg-blue-100"
-              ]} 
-    
-    type="button" phx-click="initial_modal" phx-value-date={Calendar.strftime(@day, "%Y-%m-%d")} phx-value-title={@meal} >
-        <time datetime={Calendar.strftime(@day, "%Y-%m-%d")}><%= @meal <> " ------ 234324" %>  </time>
-                </button>
-      """
+          <button   class={[
+            "text-center min-h-28 max-h-28  w-full bg-primaryl2 border-t-2 overflow-hidden overflow-y-auto",
+            today?(@day) && "bg-green-100",
+            other_month?(@day, @current_date)  && "bg-gray-100",
+            selected_date?(@day, @selected_date) &&  @meal==@selected_meal && "bg-blue-100"
+            ]} 
+            type="button" phx-click="edit_modal" phx-value-id={actual_meal.id}   >
+            <div class="capitalize text-complementaryd font-medium  overflow-hidden">
+              <div class="font-semibold text-md"> <%= actual_meal.title %>  </div>
+              <div :for={meal <- actual_meal.recipe_user_meals}  >
+                <div class="text-sm"> <%= meal.title %> </div>
+              </div> 
+            </div>
+          </button>
+        """
+    end
   end
+  defp get_loading(assigns) do 
+    ~H"""
+    <div style="min-height: 90vh">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><radialGradient id="a12" cx=".66" fx=".66" cy=".3125" fy=".3125" gradientTransform="scale(1.5)"><stop offset="0" stop-color="#00A0D0"></stop><stop offset=".3" stop-color="#00A0D0" stop-opacity=".9"></stop><stop offset=".6" stop-color="#00A0D0" stop-opacity=".6"></stop><stop offset=".8" stop-color="#00A0D0" stop-opacity=".3"></stop><stop offset="1" stop-color="#00A0D0" stop-opacity="0"></stop></radialGradient><circle transform-origin="center" fill="none" stroke="url(#a12)" stroke-width="15" stroke-linecap="round" stroke-dasharray="200 1000" stroke-dashoffset="0" cx="100" cy="100" r="70"><animateTransform type="rotate" attributeName="transform" calcMode="spline" dur="2" values="360;0" keyTimes="0;1" keySplines="0 0 1 1" repeatCount="indefinite"></animateTransform></circle><circle transform-origin="center" fill="none" opacity=".2" stroke="#FF156D" stroke-width="15" stroke-linecap="round" cx="100" cy="100" r="70"></circle></svg>
+    </div>
+    """
   end
-
-
 
   defp get_from_user_meals(user_meals, date, title) do
-    result = Enum.filter(user_meals, fn x -> x.start == date and x.title == title end) 
-    IO.inspect(result)
-    case result do 
-      [] -> 
+    result = Enum.filter(user_meals, fn x -> x.start_dt == date and x.title == title end)
+    case result do
+      [] ->
         nil
+
       [result] ->
         result
     end
   end
 
-
   defp week_rows_post_pros(week_rows, user_meals) do
     week_rows_tr = List.first(week_rows)
-    translated_week_rows = 
+
+    translated_week_rows =
       Enum.map(week_rows_tr, fn x -> Date.to_string(x) <> " 00:00:00" end)
-      |> Enum.map( fn y -> NaiveDateTime.from_iso8601(y) end)
-      |> Enum.map(fn {:ok, date} -> {date, 
-        Enum.map(@day_meals, fn x -> 
-          meal = get_from_user_meals(user_meals, date, x)
-          {x, meal} 
-        end)
-        |> Map.new()
-        
-      } end)
+      |> Enum.map(fn y -> NaiveDateTime.from_iso8601(y) end)
+      |> Enum.map(fn {:ok, date} ->
+        {date,
+         Enum.map(@day_meals, fn x ->
+           meal = get_from_user_meals(user_meals, date, x)
+           {x, meal}
+         end)
+         |> Map.new()}
+      end)
 
     week_rows
   end
+
   defp week_rows_post_pros23(week_rows, user_meals) do
     week_rows_tr = List.first(week_rows)
-    translated_week_rows = 
+
+    translated_week_rows =
       Enum.map(week_rows_tr, fn x -> Date.to_string(x) <> " 00:00:00" end)
-      |> Enum.map( fn y -> NaiveDateTime.from_iso8601(y) end)
-      |> Enum.map(fn {:ok, date} -> {date, 
-        Enum.map(@day_meals, fn x -> 
-          meal = get_from_user_meals(user_meals, date, x)
-          {x, meal} 
-        end)
-        |> Map.new()
-        
-      } end)
+      |> Enum.map(fn y -> NaiveDateTime.from_iso8601(y) end)
+      |> Enum.map(fn {:ok, date} ->
+        {date,
+         Enum.map(@day_meals, fn x ->
+           meal = get_from_user_meals(user_meals, date, x)
+           {x, meal}
+         end)
+         |> Map.new()}
+      end)
 
     translated_week_rows
   end
-
-end 
+end

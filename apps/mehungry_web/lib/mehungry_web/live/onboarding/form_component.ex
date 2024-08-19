@@ -59,24 +59,33 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
     case Map.get(post_params, "vegan") do
       "true" ->
-          restriction = get_restriction()
-          categories = get_categories(:vegan)
-          categories = Enum.map(categories, fn x -> %{category_id: x.id, food_restriction_type_id: restriction.id, user_id: user_id} end)
-          Accounts.update_user_profile(
-            socket.assigns.user_profile,
-            %{
-              onboarding_level: 1,
-              user_category_rules: categories
-            }
-          )
+        restriction = get_restriction()
+        categories = get_categories(:vegan)
 
+        categories =
+          Enum.map(categories, fn x ->
+            %{category_id: x.id, food_restriction_type_id: restriction.id, user_id: user_id}
+          end)
+
+        Accounts.update_user_profile(
+          socket.assigns.user_profile,
+          %{
+            onboarding_level: 1,
+            user_category_rules: categories
+          }
+        )
 
       _ ->
         case Map.get(post_params, "vegetarian") do
           "true" ->
             restriction = get_restriction()
             categories = get_categories(:vegeterian)
-            categories = Enum.map(categories, fn x -> %{category_id: x.id, food_restriction_type_id: restriction.id, user_id: user_id} end)
+
+            categories =
+              Enum.map(categories, fn x ->
+                %{category_id: x.id, food_restriction_type_id: restriction.id, user_id: user_id}
+              end)
+
             Accounts.update_user_profile(
               socket.assigns.user_profile,
               %{
@@ -90,7 +99,16 @@ defmodule MehungryWeb.Onboarding.FormComponent do
               "true" ->
                 restriction = get_restriction()
                 categories = get_categories(:lactose_intolerant)
-                categories = Enum.map(categories, fn x -> %{category_id: x.id, food_restriction_type_id: restriction.id, user_id: user_id} end)
+
+                categories =
+                  Enum.map(categories, fn x ->
+                    %{
+                      category_id: x.id,
+                      food_restriction_type_id: restriction.id,
+                      user_id: user_id
+                    }
+                  end)
+
                 Accounts.update_user_profile(
                   socket.assigns.user_profile,
                   %{
@@ -138,11 +156,11 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   def get_restriction() do
     restrictions = Mehungry.Food.list_food_restriction_types()
-    Enum.find(restrictions, fn x ->  x.title == "Absolutely not" end)
+    Enum.find(restrictions, fn x -> x.title == "Absolutely not" end)
   end
 
-  defp get_categories(type) do 
-    [fish] = Mehungry.Food.search_category("fish") 
+  defp get_categories(type) do
+    [fish] = Mehungry.Food.search_category("fish")
     [poultry] = Mehungry.Food.search_category("Poultry")
     [dairy] = Mehungry.Food.search_category("Dairy")
     [pork] = Mehungry.Food.search_category("Pork")
@@ -150,15 +168,18 @@ defmodule MehungryWeb.Onboarding.FormComponent do
     [lamb] = Mehungry.Food.search_category("Lamb")
     [beef] = Mehungry.Food.search_category("Beef")
 
-    case type do 
+    case type do
       :vegan ->
         [fish, poultry, dairy, pork, sausages, lamb, beef]
+
       :vegeterian ->
         [fish, poultry, pork, sausages, lamb, beef]
+
       :pescaterian ->
         [poultry, pork, sausages, lamb, beef]
+
       :lactose_intolerant ->
-        [dairy] 
+        [dairy]
     end
   end
 
