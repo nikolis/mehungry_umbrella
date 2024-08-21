@@ -81,7 +81,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     )
   end
 
-
   def get_not_nil(first, second) do
     if(first) do
       first

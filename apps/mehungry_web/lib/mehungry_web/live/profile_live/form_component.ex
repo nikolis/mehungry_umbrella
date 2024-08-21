@@ -24,17 +24,35 @@ defmodule MehungryWeb.ProfileLive.Form do
       >
         <.input required field={@form[:alias]} type="text" label="Alias" />
         <.input required field={@form[:intro]} type="textarea" label="Intro" />
-        <h3 class="text-center m-8"> Diatery Restrictions </h3>
-        <div class="max-h-64 overflow-auto min-h-80	"> 
+        <h3 class="text-center m-8">Diatery Restrictions</h3>
+        <div class="max-h-64 overflow-auto min-h-80	">
           <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>
-            <FormCategoryComponent.render category_ids = {@category_ids} categories = {@categories} food_restrictions = {@food_restrictions} food_restriction_ids = {@food_restriction_ids} f = {f_user_category_rule} parent= {@myself}  />
+            <FormCategoryComponent.render
+              category_ids={@category_ids}
+              categories={@categories}
+              food_restrictions={@food_restrictions}
+              food_restriction_ids={@food_restriction_ids}
+              f={f_user_category_rule}
+              parent={@myself}
+            />
           </.inputs_for>
         </div>
-    <div class="flex justify-end"> <button class=" list_button_complementary" type="button" phx-target={@myself} phx-click="add_category_rule">
-          Add Rule
-    </button>
-    </div>
-        <button  class="block w-1/3 mt-12 mx-auto text-2xl font-bold  uppercase primary_button" phx-disable-with="Saving...">Save</button>
+        <div class="flex justify-end">
+          <button
+            class=" list_button_complementary"
+            type="button"
+            phx-target={@myself}
+            phx-click="add_category_rule"
+          >
+            Add Rule
+          </button>
+        </div>
+        <button
+          class="block w-1/3 mt-12 mx-auto text-2xl font-bold  uppercase primary_button"
+          phx-disable-with="Saving..."
+        >
+          Save
+        </button>
       </.simple_form>
     </div>
     """

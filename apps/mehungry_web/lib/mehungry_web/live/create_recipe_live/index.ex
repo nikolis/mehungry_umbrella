@@ -7,7 +7,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   alias MehungryWeb.CreateRecipeLive.Components
   alias MehungryWeb.SimpleS3Upload
 
-  @impl true
   def mount_search(_params, session, socket) do
     measurement_units = Food.get_measurement_unit_by_name("grammar")
     user = Accounts.get_user_by_session_token(session["user_token"])

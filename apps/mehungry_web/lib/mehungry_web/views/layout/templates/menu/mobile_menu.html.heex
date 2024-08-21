@@ -1,75 +1,101 @@
-<nav class="nav_container_mobile" id="nav_bar_mobile" phx-update="ignore" style="background-color: var(--clr-light_2)">
-
-<div class="grid grid-cols-5 h-full max-h-20 bg-inherit", style="    background-color: inherit; overflow: hidden; max-height: 80px;">
-    <.link class="m-auto" patch={"/"}>
-      <img style="margin: auto" width="40px" height="40px" src='/images/logo2.svg'>
+<nav
+  class="nav_container_mobile"
+  id="nav_bar_mobile"
+  phx-update="ignore"
+  style="background-color: var(--clr-light_2)"
+>
+  <div
+    class="grid grid-cols-5 h-full max-h-20 bg-inherit"
+    ,
+    style="    background-color: inherit; overflow: hidden; max-height: 80px;"
+  >
+    <.link class="m-auto" patch="/">
+      <img style="margin: auto" width="40px" height="40px" src="/images/logo2.svg" />
     </.link>
 
-  <div class="col-span-3 w-full m-auto" style="" >
-    <.live_component module={MehungryWeb.SearchLive.Index} id={6}, class="m-auto h-full" query_string={@query_string} />
-  </div>
+    <div class="col-span-3 w-full m-auto" style="">
+      <.live_component
+        module={MehungryWeb.SearchLive.Index}
+        id={6}
+        ,
+        class="m-auto h-full"
+        query_string={@query_string}
+      />
+    </div>
 
-  <div class="m-auto">
-      <img style="margin: auto; padding: 0.3rem" width="40px" height="40px" src='/images/hamburger_icon.svg' onClick="toggleMenu();">
+    <div class="m-auto">
+      <img
+        style="margin: auto; padding: 0.3rem"
+        width="40px"
+        height="40px"
+        src="/images/hamburger_icon.svg"
+        onClick="toggleMenu();"
+      />
+    </div>
   </div>
-</div>
 
   <div class="main_nav_content">
-    <.link navigate={"/browse"} class={"main_nav_button" }>Browse</.link>
-    <.link patch={"/create_recipe"} class={"main_nav_button"}>Create</.link>
-    <.link patch={"/calendar"} class={"main_nav_button"}>Calendar</.link>
-    <.link patch={"/basket"} class={"main_nav_button"}> Basket </.link>
-    <.link patch={"/profile"} class={"main_nav_button" }> Profile </.link>
-    <a href="/users/log_out"> Logout </a>
+    <.link navigate="/browse" class="main_nav_button">Browse</.link>
+    <.link patch="/create_recipe" class="main_nav_button">Create</.link>
+    <.link patch="/calendar" class="main_nav_button">Calendar</.link>
+    <.link patch="/basket" class="main_nav_button"> Basket </.link>
+    <.link patch="/profile" class="main_nav_button"> Profile </.link>
 
-   <%= unless assigns[:current_user] do %> 
+    <%= if is_nil(@current_user) do %>
+      <a class="font-semibold" href="/users/log_in"> Log in </a>
+    <% else %>
+      <a class="font-semibold mt-2" href="/users/log_out"> Logout </a>
+    <% end %>
 
-    <a class="btn btn-primary btn-lg" href="/auth/facebook">
-      <i class="fa fa-facebook"></i>
-      Sign in with Facebook
-    </a>
-    <a class="btn btn-primary btn-lg" href="/auth/google">
-      <i class="fa fa-google"></i>
-      Sign in with Google
-    </a>
+    <%= unless assigns[:current_user] do %>
     <% end %>
 
     <%= if assigns[:current_user] do %>
-    <div style="padding: 15px" class="utils_item" id="menu_utils_toggle_mobile" phx-hook="MenuToggleHook">
-      <div class="drop_down" id="menu_items_list_mobile">
-        <div class="drop_down_container">
-          <%= if @current_user.profile_pic do %>
-            <img src={@current_user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;"/>
-          <%= else %>
-             <.icon name="hero-user-circle" class="h-10 w-10" />
-          <% end %>
- 
-          <div class="drop_down_inner_container_info">
-            <div> <%= @current_user.name %> </div>
-            <div style="font-weight: lighter"> personal </div>
-            <div style="font-weight: lighter"> <%= @current_user.email %> </div>
+      <div
+        style="padding: 15px"
+        class="utils_item"
+        id="menu_utils_toggle_mobile"
+        phx-hook="MenuToggleHook"
+      >
+        <div class="drop_down" id="menu_items_list_mobile">
+          <div class="drop_down_container">
+            <%= if @current_user.profile_pic do %>
+              <img
+                src={@current_user.profile_pic}
+                ,
+                style="width: 40px; height: 40px; border-radius: 50%;"
+              />
+            <% else %>
+              <.icon name="hero-user-circle" class="h-10 w-10" />
+            <% end %>
+
+            <div class="drop_down_inner_container_info">
+              <div><%= @current_user.name %></div>
+              <div style="font-weight: lighter">personal</div>
+              <div style="font-weight: lighter"><%= @current_user.email %></div>
+            </div>
           </div>
-        </div>
           <div class="drop_down_inner_container_account">
-            <div class="drop_down_sub_title"> Account </div>
-            <.link patch={"/profile"} class={"drop_down_buttons" }>
+            <div class="drop_down_sub_title">Account</div>
+            <.link patch="/profile" class="drop_down_buttons">
               Profile
             </.link>
-            <button class="drop_down_buttons"> Upgrade to professional </button>
-              <a href="users/log_out"> Logout out account </a>
+            <button class="drop_down_buttons">Upgrade to professional</button>
+            <%= inspect(@current_user) %>
+            <%= if @current_user do %>
+              <a href="/users/log_out"> Logout out account </a>
+            <% else %>
+              <a href="/users/log_in"> Log in </a>
+            <% end %>
           </div>
+        </div>
       </div>
-    </div>
     <% end %>
   </div>
 
-
- 
   <script>
     function toggleMenu() {
       document.querySelector(".nav_container_mobile").classList.toggle("open_menu");
     }
   </script>
-  </nav>
-   
-
+</nav>

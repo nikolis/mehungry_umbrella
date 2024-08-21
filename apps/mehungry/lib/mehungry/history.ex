@@ -98,6 +98,7 @@ defmodule Mehungry.History do
 
   def list_history_user_meals_for_user(user_id, date) do
     {:ok, date} = NaiveDateTime.from_iso8601(date <> " 00:00:00")
+
     query =
       from meal in UserMeal,
         where: meal.user_id == ^user_id and meal.start_dt == ^date
@@ -114,7 +115,6 @@ defmodule Mehungry.History do
       ]
     )
   end
-
 
   def list_history_user_meals_for_user(user_id, start_dt, end_dt) do
     end_dt = NaiveDateTime.add(end_dt, 24, :hour)

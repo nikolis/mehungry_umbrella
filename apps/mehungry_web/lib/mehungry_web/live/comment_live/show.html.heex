@@ -14,7 +14,12 @@
 
 <.back navigate={~p"/comments"}>Back to comments</.back>
 
-<.modal :if={@live_action == :edit} id="comment-modal" show on_cancel={JS.patch(~p"/comments/#{@comment}")}>
+<.modal
+  :if={@live_action == :edit}
+  id="comment-modal"
+  show
+  on_cancel={JS.patch(~p"/comments/#{@comment}")}
+>
   <.live_component
     module={MehungryWeb.CommentLive.FormComponent}
     id={@comment.id}

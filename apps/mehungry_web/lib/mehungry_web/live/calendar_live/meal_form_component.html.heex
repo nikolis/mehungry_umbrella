@@ -1,49 +1,68 @@
-  <div class="w-full">
-     <.form
-       id={@id} 
-       for={@form} 
-       phx-change="validate" 
-       phx-submit="submit"
-       class="w-full min-h-full"
-       style="min-height: 50vh;"
-       phx-target={@myself}>
-   
-       <div class="mt-12">
-            <.input field={@form[:title]} label="Title" type="readonly" />
-       </div>
+<div class="w-full">
+  <.form
+    id={@id}
+    for={@form}
+    phx-change="validate"
+    phx-submit="submit"
+    class="w-full min-h-full"
+    style="min-height: 50vh;"
+    phx-target={@myself}
+  >
+    <div class="mt-12">
+      <.input field={@form[:title]} label="Title" type="readonly" />
+    </div>
 
-       <.input field={@form[:start_dt]} type="hidden"/>
-       <.input field={@form[:end_dt]}  type="hidden"/> 
-       <.input field={@form[:user_id]}  type="hidden"/>
+    <.input field={@form[:start_dt]} type="hidden" />
+    <.input field={@form[:end_dt]} type="hidden" />
+    <.input field={@form[:user_id]} type="hidden" />
 
-  
-       <div class="w-full"  style="min-height: 50vh; margin-bottom: 50px;">
-         <ul aria-labelledby="tabs-title" class=" w-fit	m-auto">
-           <li> 
-                <a id="recipe-2" href="#recipe2" phx-target={@myself} phx-click="new_recipe"> Add recipe slot </a>
-                <a id="recipe-3" href="#recipe3" phx-target={@myself} phx-click="new_consume_recipe"> Find cooked </a> 
-            </li> 
-         </ul>
-         <div class="overflow-y-auto h-full" style="height: 50vh;">
-          <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
-            <Components.recipe_user_meal_render f = {f_recipe_user_meal} parent_component= {@myself} recipes = {@recipes} recipe_ids = {@recipe_ids} />
-          </.inputs_for>
-          <.inputs_for :let={f_consume_recipe_user_meal} field={@form[:consume_recipe_user_meals]} >
-            <Components.consume_recipe_user_meal_render f = {f_consume_recipe_user_meal} parent_component= {@myself} recipe_user_meals = {@recipe_user_meals} recipe_user_meal_ids = {@recipe_user_meal_ids} user_meal = {@user_meal} />
-          </.inputs_for>
-        </div> 
-       </div>
-
-      <div class="absolute bottom-3 right-4 w-fit bg-white	">
-        <button class="button_outline_primary modal-submit-button" phx_disable_with= "Saving..." > Save</button>
+    <div class="w-full" style="min-height: 50vh; margin-bottom: 50px;">
+      <ul aria-labelledby="tabs-title" class=" w-fit	m-auto">
+        <li>
+          <a id="recipe-2" href="#recipe2" phx-target={@myself} phx-click="new_recipe">
+            Add recipe slot
+          </a>
+          <a id="recipe-3" href="#recipe3" phx-target={@myself} phx-click="new_consume_recipe">
+            Find cooked
+          </a>
+        </li>
+      </ul>
+      <div class="overflow-y-auto h-full" style="height: 50vh;">
+        <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
+          <Components.recipe_user_meal_render
+            f={f_recipe_user_meal}
+            parent_component={@myself}
+            recipes={@recipes}
+            recipe_ids={@recipe_ids}
+          />
+        </.inputs_for>
+        <.inputs_for :let={f_consume_recipe_user_meal} field={@form[:consume_recipe_user_meals]}>
+          <Components.consume_recipe_user_meal_render
+            f={f_consume_recipe_user_meal}
+            parent_component={@myself}
+            recipe_user_meals={@recipe_user_meals}
+            recipe_user_meal_ids={@recipe_user_meal_ids}
+            user_meal={@user_meal}
+          />
+        </.inputs_for>
       </div>
-      <%= if @live_action in [:edit] do %>
-        <div class="absolute bottom-3 end-28 w-fit	bg-white mr-2">
-          <button  class="delete_button border-2 border-transparent" phx-value-id={@user_meal.id}  phx-click = "delete_user_meal" > Delete </button>  
-        </div>
-      <% end %>
+    </div>
 
-    </.form>
-
-  </div>
-
+    <div class="absolute bottom-3 right-4 w-fit bg-white	">
+      <button class="button_outline_primary modal-submit-button" phx_disable_with="Saving...">
+        Save
+      </button>
+    </div>
+    <%= if @live_action in [:edit] do %>
+      <div class="absolute bottom-3 end-28 w-fit	bg-white mr-2">
+        <button
+          class="delete_button border-2 border-transparent"
+          phx-value-id={@user_meal.id}
+          phx-click="delete_user_meal"
+        >
+          Delete
+        </button>
+      </div>
+    <% end %>
+  </.form>
+</div>

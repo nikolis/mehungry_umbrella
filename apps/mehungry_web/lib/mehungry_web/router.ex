@@ -56,18 +56,11 @@ defmodule MehungryWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
-      live "/", HomeLive.Index, :index
-      live "/post/:id", HomeLive.Show, :show
-
       live "/select", SelectAlpineLive, :index
 
       live "/profile", ProfileLive.Index, :index
       live "/profile/edit", ProfileLive.Index, :edit
       live "/profile/:id", ProfileLive.Index, :show
-      live "/browse", RecipeBrowseLive.Index, :index
-      live "/search/:query", RecipeBrowseLive.Index, :index
-      live "/browse/:id", RecipeBrowseLive.Index, :show
-      live "/browse_prepop/:search_term", :searc_prepop
       live "/basket", ShoppingBasketLive.Index, :index
       live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
 
@@ -151,7 +144,19 @@ defmodule MehungryWeb.Router do
   ## Authentication routes
 
   scope "/", MehungryWeb do
-    pipe_through [:browser]
+    pipe_through [:browser, :maybe_require_authenticated_user]
+
+    live_session :maybe, on_mount: MehungryWeb.MaybeUserAuthLive do
+      live "/", HomeLive.Index, :index
+      live "/show_recipe/:id", HomeLive.Index, :show_recipe
+      live "/post/:id", HomeLive.Show, :show
+      live "/post/:id/show_recipe/:rec_id", HomeLive.Show, :show_recipe
+
+      live "/browse", RecipeBrowseLive.Index, :index
+      live "/search/:query", RecipeBrowseLive.Index, :index
+      live "/browse/:id", RecipeBrowseLive.Index, :show
+      live "/browse_prepop/:search_term", :searc_prepop
+    end
 
     get "/users/register", UserRegistrationController, :new
     post "/users/register", UserRegistrationController, :create

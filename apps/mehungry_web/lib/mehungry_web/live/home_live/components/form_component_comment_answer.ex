@@ -8,9 +8,19 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="" style= "margin-top: 0.75rem">
-      <.header>
-      </.header>
+    <div class="" style="margin-top: 0.75rem">
+      <.header></.header>
+      <%= if !is_nil(@must_be_loged_in) do %>
+        <.modal
+          id="browse_index_must_be_login"
+          show
+          on_cancel={JS.push("keep_browsing")}
+          class="h-full"
+          %
+        >
+          <.live_component module={MehungryWeb.MustBeLoginComponent} id={:new} patch={~p"/browse"} />
+        </.modal>
+      <% end %>
 
       <.simple_form
         for={@form}
@@ -20,25 +30,31 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
         phx-submit="save"
       >
         <div style="display: grid; grid-template-columns: 1fr 19fr; gap: 0.75rem;">
-          <%= if @current_user.profile_pic do %>
-            <img src={@current_user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;"/>
-          <%= else %>
-             <.icon name="hero-user-circle" class="h-10 w-10" />
+          <%= if @user and @user.profile_pic do %>
+            <img
+              src={@current_user.profile_pic}
+              ,
+              style="width: 40px; height: 40px; border-radius: 50%;"
+            />
+          <% else %>
+            <.icon name="hero-user-circle" class="h-10 w-10" />
           <% end %>
 
-          <.input field={@form[:text]} type="text" label="Reply" style="margin: 0px; "/>
+          <.input field={@form[:text]} type="text" label="Reply" style="margin: 0px; " />
           <.input field={@form[:user_id]} type="hidden" />
-          <.input field={@form[:comment_id]} type="hidden"  />
-
+          <.input field={@form[:comment_id]} type="hidden" />
         </div>
         <:actions>
-        <div style="display: grid; grid-template-columns: 19fr 2fr 2fr; margin-top: 0.5rem;">
-          <div> </div>
-          <button phx-click="cancel_comment_reply" style="margin-right: 1.5rem; color: var(--clr-grey-friend_3)"> Cancel </button>
-          <button class="primary_button" phx-disable-with="Saving...">Post</button>
-
-
-        </div>
+          <div style="display: grid; grid-template-columns: 19fr 2fr 2fr; margin-top: 0.5rem;">
+            <div></div>
+            <button
+              phx-click="cancel_comment_reply"
+              style="margin-right: 1.5rem; color: var(--clr-grey-friend_3)"
+            >
+              Cancel
+            </button>
+            <button class="primary_button" phx-disable-with="Saving...">Post</button>
+          </div>
         </:actions>
       </.simple_form>
     </div>
@@ -51,8 +67,14 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
 
     {:ok,
      socket
+     |> assign(:must_be_loged_in, nil)
      |> assign(assigns)
      |> assign_form(changeset)}
+  end
+
+  @impl true
+  def handle_event("keep_browsing", _thing, socket) do
+    {:noreply, assign(socket, :must_be_loged_in, nil)}
   end
 
   @impl true
@@ -66,7 +88,14 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
   end
 
   def handle_event("save", %{"comment_answer" => comment_answer_params}, socket) do
-    save_comment_answer(socket, socket.assigns.action, comment_answer_params)
+    case is_nil(socket.assigns.current_user) do
+      true ->
+        socket = assign(socket, :must_be_loged_in, 1)
+        {:noreply, socket}
+
+      false ->
+        save_comment_answer(socket, socket.assigns.action, comment_answer_params)
+    end
   end
 
   defp save_comment_answer(socket, :show, comment_answer_params) do

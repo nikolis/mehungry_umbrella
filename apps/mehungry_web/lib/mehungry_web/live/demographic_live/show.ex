@@ -6,7 +6,7 @@ defmodule MehungryWeb.DemographicLive.Show do
   def details(assigns) do
     ~H"""
     <div class="survey-component-container">
-      <h2>Demographics <%= raw "&#x2713;" %></h2>
+      <h2>Demographics <%= raw("&#x2713;") %></h2>
       <ul>
         <li>Capacity: <%= @demographic.capacity %></li>
         <li>Year of birth: <%= @demographic.year_of_birth %></li>

@@ -11,25 +11,27 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
     <div>
       <.header>
         <%= @title %>
-        <:subtitle >Crete a shopping list by selecting a range of dates (meals will be pulled from your callendar schedule) </:subtitle>
+        <:subtitle>
+          Crete a shopping list by selecting a range of dates (meals will be pulled from your callendar schedule)
+        </:subtitle>
       </.header>
-          <div style="" phx-update="ignore" id="container" phx-hook="DatePicker"> 
-              <input name="endtDate" type="hidden" placeholder="Select Date.." data-input>
-          </div>
+      <div style="" phx-update="ignore" id="container" phx-hook="DatePicker">
+        <input name="endtDate" type="hidden" placeholder="Select Date.." data-input />
+      </div>
 
       <.simple_form
         for={@form}
         id="form-basket"
         phx-target={@myself}
         phx-change="validate"
-        phx-submit="save">
-          <.input field={@form[:start_dt]} type="hidden"  />
-          <.input field={@form[:end_dt]} type="hidden" label="Intro" /> 
+        phx-submit="save"
+      >
+        <.input field={@form[:start_dt]} type="hidden" />
+        <.input field={@form[:end_dt]} type="hidden" label="Intro" />
         <:actions>
-          <.button type="primary"  phx-disable-with="Saving...">Create Basket</.button>
+          <.button type="primary" phx-disable-with="Saving...">Create Basket</.button>
         </:actions>
       </.simple_form>
-
     </div>
     """
   end

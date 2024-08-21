@@ -9,8 +9,6 @@ defmodule MehungryWeb.SelectComponentUtils do
           label_f
       end
 
-    atom_input_variable = String.to_existing_atom(assigns.input_variable)
-
     case Map.get(form_params, input_variable) do
       nil ->
         case Map.get(assigns.form.data, :ingredient_id) do

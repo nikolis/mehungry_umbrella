@@ -1,19 +1,63 @@
-<div  class="">
-  <.post_card post = {@post}  user={@user} user_follows={@user_follows} user_posts={@user_posts}/>
+<div class="" style="min-height: 90vh">
+  <%= if !is_nil(@must_be_loged_in) do %>
+    <.modal
+      id="browse_index_must_be_login"
+      show
+      on_cancel={JS.push("keep_browsing")}
+      class="h-full"
+      %
+    >
+      <.live_component module={MehungryWeb.MustBeLoginComponent} id={:new} patch={~p"/browse"} />
+    </.modal>
+  <% end %>
 
-  <.live_component
-    module={MehungryWeb.HomeLive.FormComponentComment}
-    id="comment_form"
-    title={@page_title}
-    action={@live_action}
-    current_user = {@user}
-    comment={@comment}
+  <.post_card
+    post={@post}
+    user={@user}
+    user_follows={@user_follows}
+    user_posts={@user_posts}
+    recipe_path={~p"/post/"<> to_string(@post.id)<> "/show_recipe/"<> to_string(@post.reference_id)}
   />
 
-  <div class="post_card mb-12"> 
-    <%= for comment <- @post.comments do %>
-      <.comment comment = {comment} user={@user}  live_action={@live_action} page_title={@page_title}  reply={@reply}/>
-    <% end %>  
-  </div>
+  <.recipe_modal
+    :if={@live_action in [:show_recipe]}
+    on_cancel={JS.patch(~p"/post/#{@post.id}")}
+    id="recipe_details_modal"
+    show
+  >
+    <div class="w-full" style="min-height: 55vh;">
+      <.live_component
+        module={MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent}
+        id="recipe_details_component"
+        primary_size={@primary_size}
+        nutrients={@nutrients}
+        recipe={@recipe}
+        user_recipes={@user_recipes}
+        return_to={Routes.post_show_path(@socket, :show, @post.id)}
+      />
+    </div>
+  </.recipe_modal>
 
+  <%= if !is_nil(@user) do %>
+    <.live_component
+      module={MehungryWeb.HomeLive.FormComponentComment}
+      id="comment_form"
+      title={@page_title}
+      action={@live_action}
+      current_user={@user}
+      comment={@comment}
+    />
+  <% end %>
+  <div class="post_card mb-12">
+    <%= for comment <- @post.comments do %>
+      <.comment
+        comment={comment}
+        user={comment.user}
+        current_user={@user}
+        live_action={@live_action}
+        page_title={@page_title}
+        reply={@reply}
+      />
+    <% end %>
+  </div>
 </div>

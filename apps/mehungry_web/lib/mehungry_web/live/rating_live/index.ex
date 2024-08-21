@@ -7,8 +7,8 @@ defmodule MehungryWeb.RatingLive.Index do
   def recipes(assigns) do
     ~H"""
     <div class="survey-component-container">
-    <.heading recipes={@recipes} />
-    <.list recipes={@recipes} current_user={@current_user}/>
+      <.heading recipes={@recipes} />
+      <.list recipes={@recipes} current_user={@current_user} />
     </div>
     """
   end
@@ -16,8 +16,7 @@ defmodule MehungryWeb.RatingLive.Index do
   def heading(assigns) do
     ~H"""
     <h2>
-      Ratings
-      <%= if ratings_complete?(@recipes), do: raw "&#x2713;" %>
+      Ratings <%= if ratings_complete?(@recipes), do: raw("&#x2713;") %>
     </h2>
     """
   end
@@ -34,11 +33,13 @@ defmodule MehungryWeb.RatingLive.Index do
       <%= if rating = List.first(recipe.ratings) do %>
         <RatingLive.Show.stars rating={rating} recipe={recipe} />
       <% else %>
-        <.live_component module={RatingLive.Form}
-        id={"rating-form-#{recipe.id}"}
-        recipe={recipe}
-        recipe_index={index}
-        current_user={@current_user } />
+        <.live_component
+          module={RatingLive.Form}
+          id={"rating-form-#{recipe.id}"}
+          recipe={recipe}
+          recipe_index={index}
+          current_user={@current_user}
+        />
       <% end %>
     <% end %>
     """

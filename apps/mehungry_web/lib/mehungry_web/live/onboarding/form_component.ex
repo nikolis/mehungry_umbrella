@@ -9,7 +9,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
     ~H"""
     <div>
       <.header>
-        <h3 class="p-6"> Please specify your relationship with animal products </h3>
+        <h3 class="p-6">Please specify your relationship with animal products</h3>
       </.header>
 
       <.simple_form
@@ -20,11 +20,11 @@ defmodule MehungryWeb.Onboarding.FormComponent do
         phx-submit="save"
         class="text-center"
       >
-        <div class="p-6 pt-0 text-base font-medium"> 
-        <.input field={@form[:vegan]} type="checkbox" label="I am vegan" />
-        <.input field={@form[:vegetarian]} type="checkbox" label="I am vegeterian" />
-        <.input field={@form[:lactose_intolerant]} type="checkbox" label="I am lactose intolerant" />
-        <.input field={@form[:nothing]} type="checkbox" label="Non of the above" />
+        <div class="p-6 pt-0 text-base font-medium">
+          <.input field={@form[:vegan]} type="checkbox" label="I am vegan" />
+          <.input field={@form[:vegetarian]} type="checkbox" label="I am vegeterian" />
+          <.input field={@form[:lactose_intolerant]} type="checkbox" label="I am lactose intolerant" />
+          <.input field={@form[:nothing]} type="checkbox" label="Non of the above" />
         </div>
         <:actions>
           <.button class="primary_outline_button" phx-disable-with="Saving...">Save Post</.button>

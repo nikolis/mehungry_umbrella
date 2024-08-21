@@ -1,79 +1,135 @@
 defmodule MehungryWeb.NutrientAnalysisComponent do
   use MehungryWeb, :live_component
 
-  alias Mehungry.History 
+  alias Mehungry.History
   alias Mehungry.FoodUtils
 
   @impl true
   def render(assigns) do
     ~H"""
-      <div>
-        <h3> Total nutrition for day <span class="text-sm"> (<%= @particular_date %>) </span> </h3>
-  <div class="accordion text-sm md:text-base lg:text-lg font-medium	">
+    <div>
+      <h3>Total nutrition for day <span class="text-sm">(<%= @particular_date %>)</span></h3>
+      <div class="accordion text-sm md:text-base lg:text-lg font-medium	">
+        <%= for {n, index} <-  Enum.with_index(@nutrients) do %>
+          <%= if !is_nil(n) do %>
+            <div class="accordion-panel">
+              <h2 id={"panel" <> to_string(index) <> "-title"}>
+                <%= if !is_nil(n[:children]) do %>
+                  <button
+                    class="accordion-trigger rounded-xl  pr-6"
+                    style="text-align: start; width: 100%; background-color:white ; "
+                    aria-expanded="false"
+                    aria-controls="accordion1-content"
+                  >
+                    <div class="w-fit h-fit bg-white rounded-xl absolute right-0 top-0 ">
+                      <.icon
+                        name="hero-arrow-down-circle "
+                        class="h-6 w-6 rounded-xl text-complementary  "
+                      />
+                    </div>
 
-  <%= for {n, index} <-  Enum.with_index(@nutrients) do %>
-    <%= if !is_nil(n) do %> 
-    <div class="accordion-panel">
-      <h2 id={"panel" <> to_string(index) <> "-title"}>
-        <%= if !is_nil(n[:children]) do  %>
-          <button class="accordion-trigger rounded-xl  pr-6" style="text-align: start; width: 100%; background-color:white ; " aria-expanded="false" aria-controls="accordion1-content">
-              <div class="w-fit h-fit bg-white rounded-xl absolute right-0 top-0 "> <.icon name="hero-arrow-down-circle " class="h-6 w-6 rounded-xl text-complementary  " /> </div>
-
-              <%= Map.get(n, :name, "Default") <>" " <> ( if !is_nil(n[:amount]) do to_string(Float.round(n[:amount], 2)) else "."  end) %>
-            <%= ( if !is_nil(n[:measurement_unit]) do n[:measurement_unit] else ""  end) %>
-
-          </button>
-        <% else %>
-            <%= if index < @primary_size do %>
-              <button class="accordion_reccord font-bold	" style="text-align: start; width: 100%;" aria-expanded="false" aria-controls="">
-                <%= Map.get(n, :name, "Default") <>" " <> ( if !is_nil(n[:amount]) do to_string(Float.round(n[:amount], 2)) else "."  end) %>
-                <%= ( if !is_nil(n[:measurement_unit]) do n[:measurement_unit] else ""  end) %>
-
-              </button>
-            <%= else  %>
-              <button class="accordion_reccord" style="text-align: start; width: 100%;" aria-expanded="false" aria-controls="">
-              <%= Map.get(n, :name, "Default") <>" " <> ( if !is_nil(n[:amount]) do to_string(Float.round(n[:amount], 2)) else "."  end) %>
-              <%= ( if !is_nil(n[:measurement_unit]) do n[:measurement_unit] else ""  end) %>
-
-          </button>
+                    <%= Map.get(n, :name, "Default") <>
+                      " " <>
+                      if !is_nil(n[:amount]) do
+                        to_string(Float.round(n[:amount], 2))
+                      else
+                        "."
+                      end %>
+                    <%= if !is_nil(n[:measurement_unit]) do
+                      n[:measurement_unit]
+                    else
+                      ""
+                    end %>
+                  </button>
+                <% else %>
+                  <%= if index < @primary_size do %>
+                    <button
+                      class="accordion_reccord font-bold	"
+                      style="text-align: start; width: 100%;"
+                      aria-expanded="false"
+                      aria-controls=""
+                    >
+                      <%= Map.get(n, :name, "Default") <>
+                        " " <>
+                        if !is_nil(n[:amount]) do
+                          to_string(Float.round(n[:amount], 2))
+                        else
+                          "."
+                        end %>
+                      <%= if !is_nil(n[:measurement_unit]) do
+                        n[:measurement_unit]
+                      else
+                        ""
+                      end %>
+                    </button>
+                  <% else %>
+                    <button
+                      class="accordion_reccord"
+                      style="text-align: start; width: 100%;"
+                      aria-expanded="false"
+                      aria-controls=""
+                    >
+                      <%= Map.get(n, :name, "Default") <>
+                        " " <>
+                        if !is_nil(n[:amount]) do
+                          to_string(Float.round(n[:amount], 2))
+                        else
+                          "."
+                        end %>
+                      <%= if !is_nil(n[:measurement_unit]) do
+                        n[:measurement_unit]
+                      else
+                        ""
+                      end %>
+                    </button>
+                  <% end %>
+                <% end %>
+              </h2>
+              <div
+                class="accordion-content"
+                role="region"
+                aria-labelledby={"panel"<>to_string(index)<>"-title"}
+                aria-hidden="true"
+                id={"panel"<>to_string(index) <> "-content"}
+              >
+                <div style="text-center: start;">
+                  <ul>
+                    <%= if !is_nil(n[:children]) do
+                      for n_r <- n[:children] do %>
+                      <li style="padding-left: 1rem; text-align: start;">
+                        <%= n_r.name %> <%= Float.round(n_r.amount, 4) %> <%= n_r.measurement_unit %>
+                      </li>
+                    <% end end %>
+                  </ul>
+                </div>
+              </div>
+            </div>
           <% end %>
         <% end %>
-         
-      </h2>
-      <div class="accordion-content" role="region" aria-labelledby={"panel"<>to_string(index)<>"-title"} aria-hidden="true" id={"panel"<>to_string(index) <> "-content"}>
-        <div style="text-center: start;">
-          <ul>
-          <%=  if !is_nil(n[:children]) do
-            for n_r <- n[:children] do %>
-           <li style="padding-left: 1rem; text-align: start;"> <%= n_r.name %> <%= Float.round(n_r.amount, 4) %> <%= n_r.measurement_unit %> </li>
-          <% end end %>
-          </ul>
-        </div>
       </div>
     </div>
-  <% end %>
-  <% end %>
-</div>
-
-      </div>
     """
   end
 
   @impl true
   def update(assigns, socket) do
     socket = assign(socket, assigns)
-    user_meals = History.list_history_user_meals_for_user(socket.assigns.current_user.id, socket.assigns.particular_date)
-    IO.inspect(user_meals, label: "User meals")
+
+    user_meals =
+      History.list_history_user_meals_for_user(
+        socket.assigns.current_user.id,
+        socket.assigns.particular_date
+      )
+
     meals_nutrients = FoodUtils.calculate_nutrients_for_meal_list(user_meals)
     {primary_size, nutrients} = post_process_nutrient_list(meals_nutrients)
-    socket =  assign(socket, :nutrients, nutrients)
-    socket =  assign(socket, :primary_size, primary_size)
+    socket = assign(socket, :nutrients, nutrients)
+    socket = assign(socket, :primary_size, primary_size)
 
     {:ok, socket}
   end
-  
 
-  def post_process_nutrient_list(nutrients) do 
+  def post_process_nutrient_list(nutrients) do
     rest =
       Enum.filter(nutrients, fn x ->
         Float.round(x.amount, 3) != 0
@@ -111,11 +167,12 @@ defmodule MehungryWeb.NutrientAnalysisComponent do
     nutrients = nuts_pre ++ rest
     nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
     energy = Enum.find(nutrients, fn x -> String.contains?(x.name, "Energy") end)
-    #energy = %{energy: measurement_unit}
-    energy = 
-      case energy.measurement_unit do 
+    # energy = %{energy: measurement_unit}
+    energy =
+      case energy.measurement_unit do
         "kilojoule" ->
-          %{energy | amount: energy.amount *  0.2390057361 , measurement_unit: "kcal"}
+          %{energy | amount: energy.amount * 0.2390057361, measurement_unit: "kcal"}
+
         _ ->
           energy
       end
@@ -160,7 +217,4 @@ defmodule MehungryWeb.NutrientAnalysisComponent do
         {nil, rest}
     end
   end
-
-
-
 end

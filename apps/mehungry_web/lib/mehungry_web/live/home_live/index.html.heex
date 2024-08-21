@@ -1,15 +1,59 @@
 <div class="main-page-container">
+  <%= if !is_nil(@must_be_loged_in) do %>
+    <.modal
+      id="browse_index_must_be_login"
+      show
+      on_cancel={JS.push("keep_browsing")}
+      class="h-full"
+      %
+    >
+      <.live_component module={MehungryWeb.MustBeLoginComponent} id={:new} patch={~p"/browse"} />
+    </.modal>
+  <% end %>
 
-  <.modal :if={is_nil(@user_profile.onboarding_level)  or @user_profile.onboarding_level < 1} id="onboarding-modal" show on_cancel={JS.patch(~p"/")}>
-  
-    <.live_component
-      module={MehungryWeb.Onboarding.FormComponent}
-      user_profile = {@user_profile}
-      id={:new}
-      patch={~p"/"}
-    />
-  </.modal>
+  <%= if is_nil(@user) do %>
+  <% else %>
+    <.modal
+      :if={is_nil(@user_profile.onboarding_level) or @user_profile.onboarding_level < 1}
+      id="onboarding-modal"
+      show
+      on_cancel={JS.patch(~p"/")}
+    >
+      <.live_component
+        module={MehungryWeb.Onboarding.FormComponent}
+        user_profile={@user_profile}
+        id={:new}
+        patch={~p"/"}
+      />
+    </.modal>
+  <% end %>
+
+  <.recipe_modal
+    :if={@live_action in [:show_recipe]}
+    on_cancel={JS.patch(~p"/")}
+    id="recipe_details_modal"
+    show
+  >
+    <div class="w-full" style="min-height: 55vh;">
+      <.live_component
+        module={MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent}
+        id="recipe_details_component"
+        primary_size={@primary_size}
+        nutrients={@nutrients}
+        recipe={@recipe}
+        user_recipes={@user_recipes}
+        return_to={Routes.recipe_browse_index_path(@socket, :index)}
+      />
+    </div>
+  </.recipe_modal>
+
   <%= for post <- @posts do %>
-    <.post_card post = {post} user= {@user} user_follows={@user_follows} user_posts={@user_posts}/>
+    <.post_card
+      post={post}
+      user={@user}
+      user_follows={@user_follows}
+      user_posts={@user_posts}
+      recipe_path={~p"/show_recipe/"<> to_string(post.reference_id)}
+    />
   <% end %>
 </div>

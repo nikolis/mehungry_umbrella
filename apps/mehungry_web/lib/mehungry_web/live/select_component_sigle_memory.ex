@@ -4,65 +4,86 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="col-span-3 sm:col-span-2 h-full" data-reference-id={@input_variable} data-reference-index={@form.index} phx-hook="SelectComponent" id={@id } >
-      <.input  field={@form[String.to_atom(@input_variable)]} type="hidden"  />
+    <div
+      class="col-span-3 sm:col-span-2 h-full"
+      data-reference-id={@input_variable}
+      data-reference-index={@form.index}
+      phx-hook="SelectComponent"
+      id={@id}
+    >
+      <.input field={@form[String.to_atom(@input_variable)]} type="hidden" />
       <!-- Start Component -->
-      <.focus_wrap  
+      <.focus_wrap
         id={"select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable}
-        class="h-full" 
-        phx-click-away={JS.push("close-listing", target: @myself)}>
-
+        class="h-full"
+        phx-click-away={JS.push("close-listing", target: @myself)}
+      >
         <div class="h-full relative">
           <!-- Start Item Tags And Input Field -->
           <!-- Tags (Selected) -->
-          <%=  if @selected_items do %>
+          <%= if @selected_items do %>
             <div class="text-center w-full h-full">
-              <div phx-click="handle-selected-item-click"
+              <div
+                phx-click="handle-selected-item-click"
                 phx-value-id={@selected_items.id}
                 phx-target={@myself}
                 tabindex="0"
-                class="border border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg"> 
-                <div class="h-full flex flex-col  justify-center py-2"> 
-                  <div class="self-center text-ellipsis overflow-hidden  "> 
-                    <%= @selected_items.label %> 
-                  </div> 
+                class="border border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg"
+              >
+                <div class="h-full flex flex-col  justify-center py-2">
+                  <div class="self-center text-ellipsis overflow-hidden  ">
+                    <%= @selected_items.label %>
+                  </div>
                 </div>
                 <.icon name="hero-x-mark-solid" class="absolute right-1 top-0  z-50 opacity-70" />
               </div>
             </div>
           <% end %>
           <!-- Search Input -->
-
-            <%= if is_nil(@selected_items) do %>
-                    <.input  phx-change="validate" phx-focus="search_input_focus" phx-target={@myself} value="" name="search_input" myself={@myself} type="select_component" class="test flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "/> 
+          <%= if is_nil(@selected_items) do %>
+            <.input
+              phx-change="validate"
+              phx-focus="search_input_focus"
+              phx-target={@myself}
+              value=""
+              name="search_input"
+              myself={@myself}
+              type="select_component"
+              class="test flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "
+            />
           <% end %>
-            <!-- End Item Tags And Input Field -->
+          <!-- End Item Tags And Input Field -->
             <!-- Start Items List -->
-          <div >
+          <div>
             <ul class="w-full list-none border-t-0
              focus:outline-none overflow-y-auto 
              outline-none focus:outline-none 
              bg-white absolute left-0 bottom-100 
              bg-white z-50 max-h-52 shadow-lg">
               <%= if @listing_open do %>
-                <%=  for x <- @items_filtered do %>
+                <%= for x <- @items_filtered do %>
                   <!-- Item Element -->
                   <div class="relative z-50 h-full">
                     <div class="bg-white h-full">
-                      <li class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white" phx-click="handle-item-click" phx-value-id={x.id} id={Integer.to_string(x.id)} phx-target={@myself}>
+                      <li
+                        class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
+                        phx-click="handle-item-click"
+                        phx-value-id={x.id}
+                        id={Integer.to_string(x.id)}
+                        phx-target={@myself}
+                      >
                         <%= x.label %>
                       </li>
                     </div>
                   </div>
                   <!-- Empty Text -->
-                  <div >
-                    <li class="cursor-pointer px-2 py-2 text-gray-400">
-                    </li>
+                  <div>
+                    <li class="cursor-pointer px-2 py-2 text-gray-400"></li>
                   </div>
                 <% end %>
               <% end %>
             </ul>
-            </div>
+          </div>
           <!-- End Items List -->
         </div>
       </.focus_wrap>

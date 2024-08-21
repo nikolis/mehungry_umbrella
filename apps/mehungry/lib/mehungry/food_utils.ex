@@ -1,26 +1,27 @@
-defmodule Mehungry.FoodUtils do 
-  
+defmodule Mehungry.FoodUtils do
   alias Mehungry.Food.RecipeUtils
   alias Mehungry.Food.RecipeIngredient
-  
-  def calculate_nutrients_for_meal_list(user_meals) do 
-    recipes_user_meals = Enum.reduce(user_meals, [], fn x, acc -> 
-      x.recipe_user_meals ++ acc
-    end)
 
-    recipe_outcome = Enum.map(recipes_user_meals, fn x ->  
-      Enum.map(x.recipe.recipe_ingredients, fn y -> 
-        %RecipeIngredient{y | quantity: (y.quantity / x.recipe.servings) * x.consume_portions}
+  def calculate_nutrients_for_meal_list(user_meals) do
+    recipes_user_meals =
+      Enum.reduce(user_meals, [], fn x, acc ->
+        x.recipe_user_meals ++ acc
       end)
-    end)
+
+    recipe_outcome =
+      Enum.map(recipes_user_meals, fn x ->
+        Enum.map(x.recipe.recipe_ingredients, fn y ->
+          %RecipeIngredient{y | quantity: y.quantity / x.recipe.servings * x.consume_portions}
+        end)
+      end)
+
     flatten_rec_ing_list = List.flatten(recipe_outcome)
 
     result = RecipeUtils.calculate_nutrition_for_recipe_ingredient(flatten_rec_ing_list)
-    result = calculate_recipe_nutrients(result.flat_recipe_nutrients)
+    calculate_recipe_nutrients(result.flat_recipe_nutrients)
   end
 
   defp calculate_recipe_nutrients(nutrients) do
-
     rest =
       Enum.filter(nutrients, fn x ->
         Float.round(x.amount, 3) != 0
@@ -35,8 +36,9 @@ defmodule Mehungry.FoodUtils do
     vitamins_all =
       case length(vitamins) > 0 do
         true ->
-          #%{name: "Vitamins", amount: nil, measurement_unit: nil, children: vitamins}
-         nil
+          # %{name: "Vitamins", amount: nil, measurement_unit: nil, children: vitamins}
+          nil
+
         false ->
           nil
       end
@@ -68,12 +70,11 @@ defmodule Mehungry.FoodUtils do
     nutrients = Enum.filter(nutrients, fn x -> x not in primaries end)
     nutrients = primaries ++ nutrients
 
-    #socket     
-    #|> assign(:nutrients, nutrients)
-    #|> assign(:primary_size, length(primaries))
+    # socket     
+    # |> assign(:nutrients, nutrients)
+    # |> assign(:primary_size, length(primaries))
     nutrients
   end
-
 
   defp get_nutrient_category(nutrients, category_name, category_sum_name) do
     {category, rest} =
@@ -103,6 +104,4 @@ defmodule Mehungry.FoodUtils do
         {nil, rest}
     end
   end
-
-
 end

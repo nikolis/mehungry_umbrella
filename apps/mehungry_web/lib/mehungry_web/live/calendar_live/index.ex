@@ -16,7 +16,6 @@ defmodule MehungryWeb.CalendarLive.Index do
   #  render_for_device(SomeView, "show.html", assigns)
   # end
 
-  @impl true
   def mount_search(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_meals = History.list_history_user_meals_for_user(user.id)
@@ -53,6 +52,7 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   defp apply_action(socket, :particular, %{"date" => date} = params) do
     socket = push_event(socket, "go_to_date", %{date: date})
+
     socket
     |> assign(:detail_return_to, ~p"/calendar/ondate/#{date}")
     |> assign(:particular_date, date)
@@ -142,8 +142,6 @@ defmodule MehungryWeb.CalendarLive.Index do
     {:noreply, push_patch(socket, to: "/calendar/details/#{start_date}", replace: true)}
   end
 
-
- 
   def handle_event("delete_user_meal", %{"id" => meal_id}, socket) do
     user_meal = History.get_user_meal!(meal_id)
 

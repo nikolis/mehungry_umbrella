@@ -9,7 +9,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   alias Mehungry.Inventory
   import MehungryWeb.ShoppingBasketLive.Components
 
-  @impl true
   def mount_search(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     shopping_baskets = Inventory.list_shopping_baskets_for_user(user.id)

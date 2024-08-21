@@ -22,6 +22,17 @@ defmodule Mehungry.Posts do
       [%Post{}, ...]
 
   """
+  def list_posts(nil) do
+    Repo.all(Post)
+    |> Repo.preload([
+      :user,
+      :upvotes,
+      :downvotes,
+      comments: [:user],
+      reference: [:user, recipe_ingredients: [:ingredient]]
+    ])
+  end
+
   def list_posts(%User{} = user) do
     Repo.all(Post)
     |> Repo.preload([

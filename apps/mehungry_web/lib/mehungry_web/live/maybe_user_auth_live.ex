@@ -1,5 +1,4 @@
-defmodule MehungryWeb.UserAuthLive do
-  import Phoenix.LiveView
+defmodule MehungryWeb.MaybeUserAuthLive do
 
   use MehungryWeb, :live_view
 
@@ -11,14 +10,10 @@ defmodule MehungryWeb.UserAuthLive do
         Accounts.get_user_by_session_token(user_token)
       end)
 
-    if socket.assigns.current_user do
-      {:cont, socket}
-    else
-      {:halt, redirect(socket, to: "/users/log_in")}
-    end
+    {:cont, socket}
   end
 
   def on_mount(_, _params, %{}, socket) do
-    {:halt, redirect(socket, to: "/users/log_in")}
+    {:cont, socket}
   end
 end
