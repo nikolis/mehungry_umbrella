@@ -134,22 +134,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
   end
 
   defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
-
-  defp save_post(socket, :edit, post_params) do
-    case Posts.update_post(socket.assigns.post, post_params) do
-      {:ok, post} ->
-        notify_parent({:saved, post})
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "Post updated successfully")
-         |> push_patch(to: socket.assigns.patch)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign_form(socket, changeset)}
-    end
-  end
-
+  
   defp assign_form(socket, map) do
     assign(socket, :form, to_form(map))
   end

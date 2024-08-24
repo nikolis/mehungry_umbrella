@@ -1,11 +1,11 @@
-defmodule MehungryWeb.SelectComponentSingle do
+defmodule MehungryWeb.SelectComponentSingleMemory2 do
   use MehungryWeb, :live_component
 
   @impl true
   def render(assigns) do
     ~H"""
     <div
-      class="col-span-4 sm:col-span-2 h-full max-h-16	"
+      class="w-full "
       data-reference-id={@input_variable}
       data-reference-index={@form.index}
       phx-hook="SelectComponent"
@@ -14,11 +14,16 @@ defmodule MehungryWeb.SelectComponentSingle do
       <.input field={@form[String.to_atom(@input_variable)]} type="hidden" />
       <!-- Start Component -->
       <.focus_wrap
-        id={"select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable}
-        class="h-full max-h-16"
+        id={if is_nil(@form.index) do
+          "select_component_focus_wrap" <> @input_variable
+        else  
+          "select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable
+        end
+        }
+        class="h-full"
         phx-click-away={JS.push("close-listing", target: @myself)}
       >
-        <div class="h-full relative max-h-10 max-h-16	">
+        <div class="h-full relative">
           <!-- Start Item Tags And Input Field -->
           <!-- Tags (Selected) -->
           <%= if @selected_items do %>
@@ -31,7 +36,7 @@ defmodule MehungryWeb.SelectComponentSingle do
                 class="border border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg"
               >
                 <div class="h-full flex flex-col  justify-center py-2">
-                  <div class="self-center text-ellipsis overflow-hidden ">
+                  <div class="self-center text-ellipsis overflow-hidden  ">
                     <%= @selected_items.label %>
                   </div>
                 </div>
@@ -46,30 +51,26 @@ defmodule MehungryWeb.SelectComponentSingle do
               phx-focus="search_input_focus"
               phx-target={@myself}
               value=""
-              name={"search_input" <> @id}
+              name="search_input"
               myself={@myself}
               type="select_component"
               class="test flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "
-              id={@id <> "innder"}
             />
           <% end %>
           <!-- End Item Tags And Input Field -->
             <!-- Start Items List -->
           <div>
-            <ul id={"ul"<>@id}  class="w-full list-none border-t-0
+            <ul class="w-full list-none border-t-0
              focus:outline-none overflow-y-auto 
              outline-none focus:outline-none 
              bg-white absolute left-0 bottom-100 
-              bg-white z-50 max-h-52 shadow-lg" 
->
-            <div id={@id<> "face"}               >
-              </div>
+             bg-white z-50 max-h-52 shadow-lg">
               <%= if @listing_open do %>
-                <%= for {x, index} <- Enum.with_index(@items_filtered) do %>
+                <%= for {x, index}  <- Enum.with_index(@items_filtered) do %>
                   <!-- Item Element -->
                   <div class="relative z-50 h-full">
                     <div class="bg-white h-full">
-                      <%= if index == 0  do %> 
+                      <%= if index == 0   and !is_nil(@form.index) do %> 
                         <li 
                           class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
                           phx-click="handle-item-click"
@@ -113,9 +114,19 @@ defmodule MehungryWeb.SelectComponentSingle do
 
   @impl true
   def update(assigns, socket) do
-    item_function = assigns.item_function
-    get_by_id_func = assigns.get_by_id_func
-    id = "select_component" <> Integer.to_string(assigns.form.index) <> assigns.input_variable
+    id =
+      if is_nil(assigns.form.index) do
+        "select_component" <>  assigns.input_variable
+      else 
+        "select_component" <> Integer.to_string(assigns.form.index) <> assigns.input_variable
+      end
+
+    selected_items =
+      MehungryWeb.SelectComponentUtils.get_selected_items(
+        assigns.form.params,
+        assigns.input_variable,
+        assigns
+      )
 
     label_function =
       case Map.get(assigns, :label_function) do
@@ -126,26 +137,27 @@ defmodule MehungryWeb.SelectComponentSingle do
           label_f
       end
 
-    selected_items =
-      MehungryWeb.SelectComponentUtils.get_selected_items_database(
-        assigns.form.params,
-        assigns.input_variable,
-        assigns,
-        get_by_id_func
-      )
-
-    {items, items_filtered} =
+    # Create the content
+    items_filtered =
       if is_nil(selected_items) do
-        items = item_function.("")
-        {items, Enum.map(items, fn x -> %{label: label_function.(x), id: x.id} end)}
+        if Map.get(socket.assigns, :original_items) do
+          if socket.assigns.original_items == assigns.items do
+            socket.assigns.items_filtered
+          else
+            presenting_items = Enum.slice(assigns.items, 0..10)
+            Enum.map(presenting_items, fn x -> %{label: label_function.(x), id: x.id} end)
+          end
+        else
+          presenting_items = Enum.slice(assigns.items, 0..10)
+          Enum.map(presenting_items, fn x -> %{label: label_function.(x), id: x.id} end)
+        end
       else
-        {nil, nil}
+        nil
       end
 
     socket =
       socket
-      |> assign(:items, items)
-      |> assign(:item_function, item_function)
+      |> assign(:original_items, items_filtered)
       |> assign(:items_filtered, items_filtered)
       |> assign(:listing_open, Map.get(assigns, :initial_open, false))
       |> assign(:selected_items, selected_items)
@@ -158,18 +170,14 @@ defmodule MehungryWeb.SelectComponentSingle do
   end
 
   @impl true
-  def handle_event("validate", params, socket) do
-    search_input = "search_input" <> socket.assigns.id
-    %{^search_input => search_string} = params
-    items_filtered = socket.assigns.item_function.(search_string)
-    # items_filtered = Seqfuzz.filter(socket.assigns.items, search_string, fn x -> x.label end)
-    items =
-      Enum.map(items_filtered, fn x -> %{label: socket.assigns.label_function.(x), id: x.id} end)
+  def handle_event("validate", %{"search_input" => search_string}, socket) do
+    items_filtered =
+      Seqfuzz.filter(socket.assigns.original_items, search_string, fn x -> x.label end)
 
     socket =
       socket
       |> assign(:listing_open, true)
-      |> assign(:items_filtered, items)
+      |> assign(:items_filtered, items_filtered)
 
     {:noreply, socket}
   end
@@ -225,19 +233,28 @@ defmodule MehungryWeb.SelectComponentSingle do
 
     selected_item = Enum.find(socket.assigns.items_filtered, fn x -> x.id == id end)
 
-    # selected_item = %{label: socket.assigns.label_function.(selected_item), id: selected_item.id}
-
     socket =
       socket
       |> assign(:listing_open, false)
       |> assign(:selected_items, selected_item)
+    case is_nil(socket.assigns.form.index) do 
+      true ->
+        {:noreply,
+         push_event(
+           socket,
+           "selected_id" <>
+              socket.assigns.input_variable,
+           %{id: id}
+         )}
 
-    {:noreply,
-     push_event(
-       socket,
-       "selected_id" <>
-         Integer.to_string(socket.assigns.form.index) <> socket.assigns.input_variable,
-       %{id: id}
-     )}
+      false ->
+        {:noreply,
+         push_event(
+           socket,
+           "selected_id" <>
+             Integer.to_string(socket.assigns.form.index) <> socket.assigns.input_variable,
+           %{id: id}
+         )}
+    end
   end
 end

@@ -14,7 +14,6 @@ defmodule MehungryWeb.HomeLive.Show do
 
   @color_fill "#00A0D0"
 
-  @impl true
   def mount_search(%{"id" => id} = _params, session, socket) do
     user =
       case is_nil(session["user_token"]) do

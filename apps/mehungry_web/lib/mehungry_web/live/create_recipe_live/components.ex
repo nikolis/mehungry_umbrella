@@ -45,7 +45,7 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
               )
               |> Enum.filter(fn x -> !is_nil(x) end)
 
-            measurement_units = assigns.measurement_units ++ measurement_units
+            assigns.measurement_units ++ measurement_units
           else
             if String.length(ing_val) <= 0 do
               assigns.measurement_units
@@ -67,7 +67,7 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
                 )
                 |> Enum.filter(fn x -> !is_nil(x) end)
 
-              measurement_units = assigns.measurement_units ++ measurement_units
+              assigns.measurement_units ++ measurement_units
             end
           end
       end

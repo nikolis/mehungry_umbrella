@@ -2,16 +2,6 @@ defmodule Mehungry.Food.RecipeUtils do
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
 
-  @supper_categories ["meat", "seafood"]
-  @meat [
-    "Poultry Products",
-    "Sausages and Luncheon Meats",
-    "Pork Products",
-    "Beef Products",
-    "Lamb, Veal, and Game Products"
-  ]
-  @seafood ["Finfish and Shellfish Products", "Fish"]
-
   def calculate_recipe_ingredient_categories_array(%Recipe{} = recipe) do
     recipe_ingredients = recipe.recipe_ingredients
 
@@ -96,7 +86,7 @@ defmodule Mehungry.Food.RecipeUtils do
       if is_nil(portion) do
         recipe_amount
       else
-        recipe_amount = recipe_amount * portion.gram_weight
+        recipe_amount * portion.gram_weight
       end
 
     adjusted_amount = recipe_amount * nutrient_entry.amount / 100.0

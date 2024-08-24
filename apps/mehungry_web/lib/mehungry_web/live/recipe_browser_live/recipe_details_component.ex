@@ -19,20 +19,39 @@ defmodule MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent do
         <h3 class="recipe_details_title text-center mt-10"><%= @recipe.title %></h3>
         <h2 class="recipe_details_sub_title text-center"><%= @recipe.description %></h2>
         <div
-          class="recipe_attrs_container"
+          class="recipe_attrs_container md:w-1/3"
           ,
-          style="width: 25%; margin: auto; padding-bottom: 1.5rem; padding-top: 0rem; "
+          style="margin: auto; padding-bottom: 1.5rem; padding-top: 0rem;"
         >
           <div>
             <div>
               <img style="margin:auto;width:35px;height:35px;" src="/images/time_spent.svg" />
             </div>
-            <div class="recipe_attrs_text text-center">55'</div>
+            <div class="recipe_attrs_text text-center">
+              <%= case is_nil(@recipe.preperation_time_lower_limit) or is_nil(@recipe.cooking_time_lower_limit) do %>
+                <%= true -> %>
+                  <div> N/A </div>
+                <%= fals -> %>
+                    <%= @recipe.preperation_time_lower_limit + @recipe.cooking_time_lower_limit  %>
+                <% end %>               
+             
+            </div>   
           </div>
           <div>
             <div><img style="margin:auto;width:35px;height:35px;" src="/images/food_dif.svg" /></div>
 
-            <div class="recipe_attrs_text text-center">easy</div>
+    <div class="recipe_attrs_text text-center">
+              <%= case @recipe.difficulty do %> 
+        <%= 1 -> %> 
+          Easy
+        <%= 2 -> %>
+          Medium
+        <%= 3 -> %>
+          Difficult
+        <% _ -> %>
+          N/A
+      <% end %>
+    </div>
           </div>
           <div>
             <div><img src="/images/bowl.svg" style="margin: auto;width:35px;height:35px;" /></div>

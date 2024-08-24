@@ -3,7 +3,6 @@ defmodule Mehungry.Users do
 
   alias Mehungry.Repo
   alias Mehungry.Food.Recipe
-  alias Mehungry.Posts.Post
   alias Mehungry.Accounts.User
   alias Mehungry.Accounts.UserRecipe
   alias Mehungry.Accounts.UserPost
@@ -13,7 +12,6 @@ defmodule Mehungry.Users do
   alias Mehungry.Food.FoodRestrictionType
   alias Mehungry.Food.RecipeUtils
 
-  @restriction_map [0, 0.5, 1, 1.5, 2]
   @meat [
     "Poultry Products",
     "Sausages and Luncheon Meats",
@@ -41,7 +39,7 @@ defmodule Mehungry.Users do
     user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
     grade =
-      Enum.reduce(recipe_grade, 1, fn {key, grade}, acc ->
+      Enum.reduce(recipe_grade, 1, fn {key, _grade}, acc ->
         case Map.get(user_pref_array, key) do
           nil ->
             1 * acc
