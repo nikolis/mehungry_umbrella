@@ -1,20 +1,28 @@
-<div> 
-<.form
-  :let={f}
-  for={@changeset}
-  class="form-search"
-  phx-change="validate"
-  phx-submit="search"
->
-	<div class ="">	
-	  <%= if @query_string do %>
-      <%= text_input f, :query_string , class: "w-full h-full rounded-full p-3", style: "background-color:#eaeaea", id: "text-search-input" , value: @query_string %>
-    <%= else %>
-      <%= text_input f, :query_string , class: "w-full h-full rounded-full p-3", style: "background-color:#eaeaea", id: "text-search-input"  %>
-    <% end %>
-	  <%= submit "", phx_disable_with: "Searching..." , class: "invisible"%>
-	</div>
- 
-</.form>
+<div style="height: 40px;">
+  <.form
+    :let={f}
+    for={@search_changeset}
+    class="form-search"
+    phx-change="validate"
+    phx-submit="search"
+    style="height: 40px;"
+  >
+    <div class="h-full">
+      <%= if @query_string do %>
+        <%= text_input(f, :query_string,
+          class: "w-full h-full rounded-full",
+          style: "background-color:#eaeaea",
+          id: "text-search-input",
+          value: @query_string
+        ) %>
+      <% else %>
+        <%= text_input(f, :query_string,
+          class: "w-full h-full rounded-full",
+          style: "background-color:#eaeaea",
+          id: "text-search-input"
+        ) %>
+      <% end %>
+      <%= submit("", phx_disable_with: "Searching...", class: "invisible") %>
+    </div>
+  </.form>
 </div>
-

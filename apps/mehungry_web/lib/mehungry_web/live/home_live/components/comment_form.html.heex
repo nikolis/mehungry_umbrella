@@ -1,18 +1,20 @@
 <div>
-  <img style="width: 60px; height: 60px; border-radius: 50%;" src={@current_user.profile_pic}/>
-<.form
-  :let={f}
-  for={@changeset}
-  id="comment-form"
-  class="form-search"
-
-  phx-change="validate"
-  phx-submit="search">
-	<div class ="">	
-	  <%= text_input f, :query_string , class: "w-full h-full rounded-full p-3", style: "background-color:#eaeaea", id: "text-search-input"%>
-	  <%= submit "", phx_disable_with: "Searching..." , class: "invisible"%>
-	</div>
- 
-</.form>
-
+  <img style="width: 60px; height: 60px; border-radius: 50%;" src={@current_user.profile_pic} />
+  <.form
+    :let={f}
+    for={@changeset}
+    id="comment-form"
+    class="form-search"
+    phx-change="validate"
+    phx-submit="search"
+  >
+    <div class="">
+      <%= text_input(f, :query_string,
+        class: "w-full h-full rounded-full p-3",
+        style: "background-color:#eaeaea",
+        id: "text-search-input"
+      ) %>
+      <%= submit("", phx_disable_with: "Searching...", class: "invisible") %>
+    </div>
+  </.form>
 </div>

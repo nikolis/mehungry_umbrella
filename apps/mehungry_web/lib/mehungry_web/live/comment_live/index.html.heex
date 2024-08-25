@@ -29,7 +29,12 @@
   </:action>
 </.table>
 
-<CoreComponents.modal :if={@live_action in [:new, :edit]} id="comment-modal" show on_cancel={JS.patch(~p"/comments")}>
+<CoreComponents.modal
+  :if={@live_action in [:new, :edit]}
+  id="comment-modal"
+  show
+  on_cancel={JS.patch(~p"/comments")}
+>
   <.live_component
     module={MehungryWeb.CommentLive.FormComponent}
     id={@comment.id || :new}

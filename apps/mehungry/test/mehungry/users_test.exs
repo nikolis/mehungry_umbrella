@@ -75,7 +75,6 @@ defmodule Mehungry.UsersTest do
 
       # Users.calculate_user_pref_table(user)
       recipe_grade = Users.calculate_recipe_grading(recipe, user)
-      IO.inspect(recipe_grade)
     end
   end
 

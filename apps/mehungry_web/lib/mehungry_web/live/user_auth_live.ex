@@ -14,7 +14,11 @@ defmodule MehungryWeb.UserAuthLive do
     if socket.assigns.current_user do
       {:cont, socket}
     else
-      {:halt, redirect(socket, to: "/login")}
+      {:halt, redirect(socket, to: "/users/log_in")}
     end
+  end
+
+  def on_mount(_, _params, %{}, socket) do
+    {:halt, redirect(socket, to: "/users/log_in")}
   end
 end

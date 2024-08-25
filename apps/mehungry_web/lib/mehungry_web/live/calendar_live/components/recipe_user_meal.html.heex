@@ -1,5 +1,8 @@
-<div  id= {"root_layer" <> to_string(@f.index)} class="mt-14 gap-2 grid grid-cols-5 md:gap-6" style={if @deleted , do: "display: none"} >
-
+<div
+  id={"root_layer" <> to_string(@f.index)}
+  class="mt-14 gap-2 grid grid-cols-5 md:gap-6"
+  style={if @deleted, do: "display: none"}
+>
   <input
     type="hidden"
     name={Phoenix.HTML.Form.input_name(@f, :delete)}
@@ -7,35 +10,70 @@
   />
 
   <div class="h-full col-span-2">
-      <.live_component
+    <.live_component
       module={MehungryWeb.SelectComponentSingleMemory}
       form={@f}
-      items = {@recipes}
-      input_variable={"recipe_id"}
+      items={@recipes}
+      input_variable="recipe_id"
       label_function={fn x -> x.title end}
       id={"recipe_search_component" <> Integer.to_string(@f.index)}
-      />
+    />
   </div>
 
-
-   <div class="input-form">
-     <.input  field={@f[:cooking_portions]} type="number" label="cook" />
-   </div>
-   <div class="input-form">
-     <.input  field={@f[:consume_portions]} type="number" label="consume" />
-   </div>
+  <div class="input-form">
+    <.input field={@f[:cooking_portions]} type="number" label="cook" />
+  </div>
+  <div class="input-form">
+    <.input field={@f[:consume_portions]} type="number" label="consume" />
+  </div>
 
   <div class="input-form pl-2">
-    <svg phx-click="delete_recipe_record" phx-target={@parent_component} phx-value-index={@f.index}  width="2rem" height="3rem" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: auto">
-      <path d="M10 12V17" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M14 12V17" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M4 7H20" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M6 10V18C6 19.6569 7.34315 21 9 21H15C16.6569 21 18 19.6569 18 18V10" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V7H9V5Z" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <svg
+      phx-click="delete_recipe_record"
+      phx-target={@parent_component}
+      phx-value-index={@f.index}
+      width="2rem"
+      height="3rem"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style="margin: auto"
+    >
+      <path
+        d="M10 12V17"
+        stroke="#000000"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M14 12V17"
+        stroke="#000000"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M4 7H20"
+        stroke="#000000"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M6 10V18C6 19.6569 7.34315 21 9 21H15C16.6569 21 18 19.6569 18 18V10"
+        stroke="#000000"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V7H9V5Z"
+        stroke="#000000"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
     </svg>
   </div>
-
-
-
 </div>
-

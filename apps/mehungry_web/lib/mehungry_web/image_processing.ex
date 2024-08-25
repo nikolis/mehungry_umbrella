@@ -22,7 +22,6 @@ defmodule MehungryWeb.ImageProcessing do
 
     case File.exists?(new_image_write) do
       false ->
-        IO.inspect(image_path)
         is_http = String.contains?(String.downcase(image_path), "http")
 
         if is_http do

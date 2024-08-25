@@ -5,10 +5,10 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   alias Mehungry.Food.Recipe
   alias Mehungry.Accounts
   alias MehungryWeb.CreateRecipeLive.Components
+  alias MehungryWeb.SimpleS3Upload
 
-  @impl true
-  def mount(_params, session, socket) do
-        measurement_units = Food.get_measurement_unit_by_name("grammar")
+  def mount_search(_params, session, socket) do
+    measurement_units = Food.get_measurement_unit_by_name("grammar")
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_profile = Accounts.get_user_profile_by_user_id(user.id)
 
@@ -22,12 +22,17 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
        accept: :any,
        max_entries: 1,
        max_file_size: 9_000_000,
-       auto_upload: false
-       #       external: &presign_upload/2,
+       auto_upload: false,
+       external: &presign_upload/2
        #       progress: &handle_progress/3
      )}
   end
- 
+
+  defp presign_upload(entry, %{assigns: %{uploads: uploads}} = socket) do
+    meta = SimpleS3Upload.meta(entry, uploads)
+    {:ok, meta, socket}
+  end
+
   ################################################################################## Actions #############################################################################################
   defp apply_action(socket, :index, _params) do
     recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
@@ -38,15 +43,15 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     |> init(recipe)
   end
 
-  defp apply_action(socket, :edit, %{"recipe_id" => id}) do 
+  defp apply_action(socket, :edit, %{"recipe_id" => id}) do
     recipe = Food.get_recipe!(id)
+
     socket
     |> assign(:changeset, Food.change_recipe(recipe))
     |> assign(:recipe, recipe)
     |> init(recipe)
   end
 
- 
   @impl true
   def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
     user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
@@ -88,12 +93,13 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def handle_event("delete-image", _, socket) do
-    #{:ok, recipe} = Food.update_recipe(socket.assigns.recipe, %{image_url: nil})
-    recipe = %Recipe{socket.assigns.recipe| image_url: nil}
-    {:noreply, socket
-    |> assign(:recipe, recipe)
-    |> init(recipe)
-    }
+    # {:ok, recipe} = Food.update_recipe(socket.assigns.recipe, %{image_url: nil})
+    recipe = %Recipe{socket.assigns.recipe | image_url: nil}
+
+    {:noreply,
+     socket
+     |> assign(:recipe, recipe)
+     |> init(recipe)}
   end
 
   def handle_event("add-step", _, socket) do
@@ -177,7 +183,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       |> Recipe.changeset(recipe_params)
       |> struct!(action: :validate)
 
-
     {:noreply, assign(socket, form: to_form(changeset))}
   end
 
@@ -257,25 +262,25 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       consume_uploaded_entries(
         socket,
         :image,
-        fn %{path: path}, _entry ->
-          dest = Path.join(Application.app_dir(:mehungry_web, "priv/static/images"), path)
+        fn %{url: url, key: key}, _entry ->
+          #   dest = Path.join(Application.app_dir(:mehungry_web, "priv/static/images"), path)
           # You will need to create `priv/static/uploads` for `File.cp!/2` to work.
-          if(File.exists?(Path.dirname(dest)) == false) do
-            File.mkdir!(Path.dirname(dest))
-          end
+          #  if(File.exists?(Path.dirname(dest)) == false) do
+          #   File.mkdir!(Path.dirname(dest))
+          #   end
 
-          File.cp!(path, dest)
-          path_parts = String.split(dest, "/")
+          #    File.cp!(path, dest)
+          #    path_parts = String.split(dest, "/")
 
-          dest =
-            "/" <>
-              Enum.at(path_parts, length(path_parts) - 4) <>
-              "/" <>
-              Enum.at(path_parts, length(path_parts) - 3) <>
-              "/" <>
-              Enum.at(path_parts, length(path_parts) - 2) <>
-              "/" <> Enum.at(path_parts, length(path_parts) - 1)
-
+          #    dest =
+          #      "/" <>
+          #    Enum.at(path_parts, length(path_parts) - 4) <>
+          #    "/" <>
+          #    Enum.at(path_parts, length(path_parts) - 3) <>
+          #    "/" <>
+          #    Enum.at(path_parts, length(path_parts) - 2) <>
+          #    "/" <> Enum.at(path_parts, length(path_parts) - 1)
+          dest = url <> "/" <> key
           {:ok, dest}
         end
       )
@@ -285,9 +290,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     recipe_params = get_params_with_image(socket, recipe_params)
     recipe_params = Map.put(recipe_params, "language_name", "En")
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
-    IO.inspect(recipe_params)
-    IO.inspect(socket.assigns.recipe)
-    case Food.update_recipe(socket.assigns.recipe,recipe_params) do
+
+    case Food.update_recipe(socket.assigns.recipe, recipe_params) do
       {:ok, %Recipe{} = _recipe} ->
         {:noreply,
          socket
@@ -304,25 +308,25 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       consume_uploaded_entries(
         socket,
         :image,
-        fn %{path: path}, _entry ->
-          dest = Path.join(Application.app_dir(:mehungry_web, "priv/static/images"), path)
+        fn %{url: url, key: key}, _entry ->
+          # dest = Path.join(Application.app_dir(:mehungry_web, "priv/static/images"), path)
           # You will need to create `priv/static/uploads` for `File.cp!/2` to work.
-          if(File.exists?(Path.dirname(dest)) == false) do
-            File.mkdir!(Path.dirname(dest))
-          end
+          # if(File.exists?(Path.dirname(dest)) == false) do
+          # File.mkdir!(Path.dirname(dest))
+          # end
 
-          File.cp!(path, dest)
-          path_parts = String.split(dest, "/")
+          # File.cp!(path, dest)
+          # path_parts = String.split(dest, "/")
 
-          dest =
-            "/" <>
-              Enum.at(path_parts, length(path_parts) - 4) <>
-              "/" <>
-              Enum.at(path_parts, length(path_parts) - 3) <>
-              "/" <>
-              Enum.at(path_parts, length(path_parts) - 2) <>
-              "/" <> Enum.at(path_parts, length(path_parts) - 1)
-
+          # dest =
+          # "/" <>
+          #   Enum.at(path_parts, length(path_parts) - 4) <>
+          #  "/" <>
+          #   Enum.at(path_parts, length(path_parts) - 3) <>
+          #  "/" <>
+          #   Enum.at(path_parts, length(path_parts) - 2) <>
+          #  "/" <> Enum.at(path_parts, length(path_parts) - 1)
+          dest = url <> "/" <> key
           {:ok, dest}
         end
       )

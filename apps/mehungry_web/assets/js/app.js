@@ -80,7 +80,7 @@ let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("
 //LiveSocket Creation 
 let liveSocket = new LiveSocket("/live", Socket, {
 	hooks: Hooks,
-	//uploaders: Uploaders,
+	uploaders: Uploaders,
   dom: {
     onBeforeElUpdated(from, to) {
       if (from._x_dataStack) {
@@ -89,7 +89,11 @@ let liveSocket = new LiveSocket("/live", Socket, {
     }
   },
 	params: {
-		_csrf_token: csrfToken
+		_csrf_token: csrfToken,
+    viewport: {
+      width: window.screen.width,
+      height: window.screen.height
+    }
 	}
 })
 

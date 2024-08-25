@@ -125,6 +125,14 @@ defmodule MehungryWeb.UserAuth do
     end
   end
 
+  def maybe_require_authenticated_user(conn, _opts) do
+    if conn.assigns[:current_user] do
+      conn
+    else
+      conn
+    end
+  end
+
   @doc """
   Used for routes that require the user to be authenticated.
 

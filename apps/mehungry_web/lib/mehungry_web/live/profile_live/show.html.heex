@@ -1,14 +1,14 @@
 <div class="p-10">
-    <h3 class="text-center"> <%= @user.email%> <br/>  <%= @user_profile.alias %> </h3>
-    <div class="text-center text-base text-greyfriend2">
-      <%= @user_profile.intro %>
-    </div>
-  <%= if @live_action == :index do %>
-    <div class="flex justify-center m-6">
-      <.button class="primary_button"> Share Profile </.button>
-      <.link patch={~p"/profile/edit"} phx-click={JS.push_focus()}>
-        <.button class="primary_button_outline" type="button"> Edit Profile </.button>
-     </.link>
+  <h3 class="text-center"><%= @user.email %> <br /> <%= @user_profile.alias %></h3>
+  <div class="text-center text-base text-greyfriend2">
+    <%= @user_profile.intro %>
   </div>
+  <%= if @live_action == :index do %>
+    <div class="flex justify-center m-6 relative">
+      <button class="primary_button">Share Profile</button>
+      <.link patch={~p"/profile/edit"} phx-click={JS.push_focus()}>
+        <button class="primary_button_complementary" type="button">Edit Profile</button>
+      </.link>
+    </div>
   <% end %>
 </div>

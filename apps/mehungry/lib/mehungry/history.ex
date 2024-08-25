@@ -96,12 +96,35 @@ defmodule Mehungry.History do
     )
   end
 
-  def list_history_user_meals_for_user(user_id, start_dt, end_dt) do
-    end_dt = NaiveDateTime.add(end_dt, 24, :hour)
+  def list_history_user_meals_for_user(user_id, date) do
+    {:ok, date} = NaiveDateTime.from_iso8601(date <> " 00:00:00")
+
     query =
       from meal in UserMeal,
-        where: meal.user_id == ^user_id and ^start_dt <= meal.start_dt and ^end_dt >=  meal.end_dt
-  
+        where: meal.user_id == ^user_id and meal.start_dt == ^date
+
+    Repo.all(query)
+    |> Repo.preload(
+      recipe_user_meals: [
+        recipe: [
+          recipe_ingredients: [
+            :measurement_unit,
+            ingredient: [:category, :ingredient_translation]
+          ]
+        ]
+      ]
+    )
+  end
+
+  def list_history_user_meals_for_user(user_id, start_dt, end_dt) do
+    end_dt = NaiveDateTime.add(end_dt, 24, :hour)
+
+    query =
+      from meal in UserMeal,
+        where:
+          meal.user_id == ^user_id and ^start_dt <= meal.start_dt and
+            (^end_dt >= meal.end_dt or is_nil(meal.end_dt))
+
     Repo.all(query)
     |> Repo.preload(
       recipe_user_meals: [

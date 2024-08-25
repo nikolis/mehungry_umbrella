@@ -3,7 +3,6 @@ defmodule Mehungry.Users do
 
   alias Mehungry.Repo
   alias Mehungry.Food.Recipe
-  alias Mehungry.Posts.Post
   alias Mehungry.Accounts.User
   alias Mehungry.Accounts.UserRecipe
   alias Mehungry.Accounts.UserPost
@@ -13,7 +12,6 @@ defmodule Mehungry.Users do
   alias Mehungry.Food.FoodRestrictionType
   alias Mehungry.Food.RecipeUtils
 
-  @restriction_map [0, 0.5, 1, 1.5, 2]
   @meat [
     "Poultry Products",
     "Sausages and Luncheon Meats",
@@ -36,33 +34,43 @@ defmodule Mehungry.Users do
       |> Enum.map(fn x -> {x, 1.0} end)
       |> Enum.into(%{})
 
-    IO.inspect(recipe_grade, label: "Recipe grades")
     user_pref_array = calculate_user_pref_table(user)
-    IO.inspect(user_pref_array, label: "User pref array")
-    Enum.reduce(recipe_grade, 1, fn {key, grade}, acc ->
-      case Map.get(user_pref_array, key) do
-        nil ->
-          1 * acc
+    user_follows = list_user_follows(user)
+    user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
-        grade ->
-          grade * acc
-      end
-    end)
+    grade =
+      Enum.reduce(recipe_grade, 1, fn {key, _grade}, acc ->
+        case Map.get(user_pref_array, key) do
+          nil ->
+            1 * acc
+
+          grade ->
+            grade * acc
+        end
+      end)
+
+    case recipe.user_id in user_follows do
+      false ->
+        grade
+
+      true ->
+        if(grade > 0) do
+          grade + 4
+        else
+          grade
+        end
+    end
   end
 
   def calculate_user_pref_table(user) do
     user_category_rules = get_user_category_rules(user)
-    IO.inspect(user_category_rules)
+
     Enum.map(user_category_rules, fn x ->
-      title = x.category.name 
-      IO.inspect(x.food_restriction_type.title)
+      title = x.category.name
       grade = Map.get(@restrictions, x.food_restriction_type.title)
       {title, grade}
     end)
     |> Enum.into(%{})
-    |> IO.inspect()
-
-
   end
 
   def get_category_name(category) do

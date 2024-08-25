@@ -11,12 +11,12 @@ defmodule MehungryWeb.RatingLive.Show do
     assigns = assign(assigns, :stars, stars)
 
     ~H"""
-      <div>
-        <h4>
-          <%= @recipe.title %>:<br/>
-          <%= raw @assigns.stars %>
-        </h4>
-      </div>
+    <div>
+      <h4>
+        <%= @recipe.title %>:<br />
+        <%= raw(@assigns.stars) %>
+      </h4>
+    </div>
     """
   end
 

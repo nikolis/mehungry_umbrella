@@ -1,62 +1,82 @@
 <nav class="main_nav_container" id="nav_bar" phx-update="ignore">
-
   <div class="main_nav_content">
-    <.link class="utils_item" patch={"/"}>
-      <img width="auto" src='/images/logo2.svg'>
+    <.link class="utils_item" patch="/">
+      <img width="auto" src="/images/logo2.svg" />
     </.link>
-    <.link patch={"/browse"} class={"main_nav_button" }>Browse</.link>
-    <.link patch={"/create_recipe"} class={"main_nav_button"}>Create</.link>
-
+    <.link navigate="/browse" class="main_nav_button">Browse</.link>
+    <.link patch="/create_recipe" class="main_nav_button">Create</.link>
   </div>
 
   <div class="search_comp_cont">
-    <.live_component module={MehungryWeb.SearchLive.Index} id={5}, class="search_comp" />
+    <.live_component
+      module={MehungryWeb.SearchLive.Index}
+      id={5}
+      ,
+      class="search_comp"
+      query_string={@query_string}
+    />
   </div>
   <div class="main_nav_utils" phx-update="ignore" id="main_nav_utils">
-    <.link patch={"/calendar"} class={"utils_item" }>
-      <img width="auto" src='/images/calendar.svg'>
+    <.link patch="/calendar" class="utils_item">
+      <img width="auto" src="/images/calendar.svg" />
     </.link>
-    <.link patch={"/basket"} class={"utils_item" }>
-      <img width="auto" src='/images/shopping_basket.svg'>
+    <.link patch="/basket" class="utils_item">
+      <img width="auto" src="/images/shopping_basket.svg" />
     </.link>
 
-   <%= unless assigns[:current_user] do %> 
-
-    <a class="btn btn-primary btn-lg" href="/auth/facebook">
-      <i class="fa fa-facebook"></i>
-      Sign in with Facebook
-    </a>
-    <a class="btn btn-primary btn-lg" href="/auth/google">
-      <i class="fa fa-google"></i>
-      Sign in with Google
-    </a>
+    <%= unless assigns[:current_user] do %>
+      <a
+        class="flex items-center rounded-full border-solid  "
+        style=" border-width: 2.5px; height: 3rem; border-color: var(--clr-complementary-middle)"
+        href="/users/log_in"
+      >
+        <div
+          class="w-full p-2 flex items-center gap-1 font-semibold w-full"
+          style=" font-size: calc(0.7rem + 0.5vw );"
+        >
+          <span class="w-full text-center" style="color: var(--clr-complementary-middle);">
+            Login
+          </span>
+        </div>
+      </a>
     <% end %>
 
-
     <%= if assigns[:current_user] do %>
-    <div style="padding: 15px" class="utils_item" id="menu_utils_toggle" phx-hook="MenuToggleHook">
-      <img src="/images/arrow_down.svg">
-      <div class="drop_down" id="menu_items_list">
-        <div class="drop_down_container">
-          <img height="auto" width="auto" style="padding: 5px 2px 5px" class="rounded-full" src={@current_user.profile_pic} alt="profile">
+      <div
+        style="padding: 15px"
+        class="utils_item"
+        id="menu_utils_toggle"
+        phx-hook="MenuToggleHook"
+      >
+        <img src="/images/arrow_down.svg" />
+        <div class="drop_down" id="menu_items_list">
+          <div class="drop_down_container">
+            <%= if @current_user.profile_pic do %>
+              <img
+                src={@current_user.profile_pic}
+                ,
+                style="width: 40px; height: 40px; border-radius: 50%;"
+              />
+            <% else %>
+              <.icon name="hero-user-circle" class="h-10 w-10" />
+            <% end %>
 
-          <div class="drop_down_inner_container_info">
-            <div> <%= @current_user.name %> </div>
-            <div style="font-weight: lighter"> personal </div>
-            <div style="font-weight: lighter"> <%= @current_user.email %> </div>
+            <div class="drop_down_inner_container_info">
+              <div><%= @current_user.name %></div>
+              <div style="font-weight: lighter">personal</div>
+              <div style="font-weight: lighter"><%= @current_user.email %></div>
+            </div>
           </div>
-        </div>
           <div class="drop_down_inner_container_account">
-            <div class="drop_down_sub_title"> Account </div>
-            <.link patch={"/profile"} class={"drop_down_buttons" }>
+            <div class="drop_down_sub_title">Account</div>
+            <.link patch="/profile" class="drop_down_buttons">
               Profile
             </.link>
-            <button class="drop_down_buttons"> Upgrade to professional </button>
-              <a href="users/log_out"> Logout out account </a>
+            <button class="drop_down_buttons">Upgrade to professional</button>
+            <a href="/users/log_out"> Logout out account </a>
           </div>
+        </div>
       </div>
-    </div>
     <% end %>
   </div>
 </nav>
-

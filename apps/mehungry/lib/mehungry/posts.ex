@@ -22,6 +22,17 @@ defmodule Mehungry.Posts do
       [%Post{}, ...]
 
   """
+  def list_posts(nil) do
+    Repo.all(Post)
+    |> Repo.preload([
+      :user,
+      :upvotes,
+      :downvotes,
+      comments: [:user],
+      reference: [:user, recipe_ingredients: [:ingredient]]
+    ])
+  end
+
   def list_posts(%User{} = user) do
     Repo.all(Post)
     |> Repo.preload([
@@ -34,9 +45,9 @@ defmodule Mehungry.Posts do
     |> Enum.map(fn x ->
       {x, Users.calculate_recipe_grading(x.reference, user)}
     end)
-    |> Enum.filter(fn {x, y} -> y > 0 end)
-    |> Enum.sort_by(fn {x, y} -> y end, :desc)
-    |> Enum.map(fn {x, y} -> x end)
+    |> Enum.filter(fn {_x, y} -> y > 0 end)
+    |> Enum.sort_by(fn {_x, y} -> y end, :desc)
+    |> Enum.map(fn {x, _y} -> x end)
   end
 
   def subscribe_to_post(%{post_id: post_id}) do
@@ -117,19 +128,6 @@ defmodule Mehungry.Posts do
     |> Repo.insert()
   end
 
-  def create_post(%Recipe{} = recipe) do
-    attrs =
-      %{
-        reference_id: recipe.id,
-        md_media_url: recipe.image_url,
-        user_id: recipe.user_id,
-        title: recipe.title
-      }
-
-    %Post{}
-    |> Post.changeset(attrs)
-    |> Repo.insert()
-  end
 
   @doc """
   Updates a post.

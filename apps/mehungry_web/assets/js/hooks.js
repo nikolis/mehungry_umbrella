@@ -2,7 +2,47 @@ import "selectize";
 
 let Hooks = {}
 
+Hooks.ViewportResizeHooks = {
 
+  mounted () {
+    // Direct push of current window size to properly update view
+    this.pushResizeEvent()
+    resizeHandler = _.debounce(() => {
+      this.pushResizeEvent()
+    }, 100)
+    window.addEventListener('resize', resizeHandler)
+  },
+
+  pushResizeEvent () {
+    console.log("Hereerereerer")
+    console.log(window.screen.width)
+    console.log(window)
+    this.pushEvent('viewport_resize', {
+      width: window.screen.width,
+      height: window.screen.height
+    })
+  },
+
+  turbolinksDisconnected () {
+    window.removeEventListener('resize', resizeHandler)
+  }
+}
+Hooks.SelectComponentList = {
+  mounted() {
+    setTimeout(() => {
+    console.log("In here 1")
+    console.log(this.el.scrollIntoView({block: "center", behavior: "smooth"}));
+    console.log("In here")
+}, 200);
+  },
+  updated() {
+    console.log("updated:")
+    this.el.scrollIntoView({block: "center", behavior: "smooth"});  
+  },
+  destroyed() {
+    console.log("destroyed")
+  }
+}
 
 Hooks.SelectComponent = {
 
@@ -11,25 +51,29 @@ Hooks.SelectComponent = {
     const refAt = this.ref.getAttribute("data-reference-id")
     const originalID = this.el.id
     const referenceIndex = this.ref.getAttribute("data-reference-index")
+
     console.log(referenceIndex)
     console.log(refAt)
-    window.addEventListener("phx:selected_id"+ referenceIndex + refAt, (e) => {
+    var event_listener;
+    if (referenceIndex) {
+      event_listener = "phx:selected_id"+ referenceIndex + refAt
+    }
+    else {
+      event_listener = "phx:selected_id"+ refAt
+    }
+    window.addEventListener(event_listener, (e) => {
       console.log("On the click")
       let el = document.getElementById(originalID)
       console.log(el)
       for (const child of this.el.children) {
         if(child.id !=null && child.id.includes(refAt)){
             if(child.tagName == "INPUT"){
-              console.log("Found the input")
-              console.log(child)
       			  $("#" + child.id).val(e.detail.id).change()
               var ret = child.dispatchEvent(new Event("input", {
                   bubbles: true,
                   cancelable: false,
                   detail: {id: e.detail.id},
               }));
-              console.log(child)
-
             }
         }
       }
@@ -329,7 +373,6 @@ function  mount_callendar(parent_view) {
 		window.addEventListener(`phx:create-meal`, (e) => {
 			var start = e.detail.start
 			var end = e.detail.end
-      console.log("Clear -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
       calendar.clear();
 			calendar.createEvents([{
 				id: 'event1',
@@ -427,7 +470,7 @@ function  mount_callendar(parent_view) {
 				showNowIndicator: false,
 				scheduleView: true,
 				hourStart: 6,
-				hourEnd: 24,
+				hourEnd: 12,
 				eventView: ['time'],
 				taskView: false,
 			},
@@ -479,7 +522,6 @@ Hooks.HiddenCalendar = {
     console.log("ori_cale")
     console.log(ori_cale)
 		if(! origin_callendar) {
-      console.log("Should not go here 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 		  parent_view.origin_callendar = mount_callendar(parent_view); 
 			origin_callendar = parent_view.origin_callendar;
 		}

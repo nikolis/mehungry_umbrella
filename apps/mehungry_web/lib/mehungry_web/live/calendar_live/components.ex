@@ -8,20 +8,28 @@ defmodule MehungryWeb.CalendarLive.Components do
     assigns = assign(assigns, :deleted, Phoenix.HTML.Form.input_value(assigns.f, :delete) == true)
 
     ~H"""
-      <.recipe_user_meal f={assigns.f} recipe_ids = {assigns.recipe_ids} recipes = {assigns.recipes} parent_component = {assigns.parent_component}  deleted = {assigns.deleted} />
+    <.recipe_user_meal
+      f={assigns.f}
+      recipe_ids={assigns.recipe_ids}
+      recipes={assigns.recipes}
+      parent_component={assigns.parent_component}
+      deleted={assigns.deleted}
+    />
     """
   end
 
   def consume_recipe_user_meal_render(assigns) do
-    IO.inspect(assigns,
-      label:
-        "Assign consume --------------------------------------------------------------------------------------"
-    )
-
     assigns = assign(assigns, :deleted, Phoenix.HTML.Form.input_value(assigns.f, :delete) == true)
 
     ~H"""
-      <.consume_recipe_user_meal f={assigns.f} recipe_user_meals = {assigns.recipe_user_meals} recipe_user_meal_ids= {assigns.recipe_user_meal_ids} parent_component = {assigns.parent_component}  deleted = {assigns.deleted} user_meal = {assigns.user_meal}/>
+    <.consume_recipe_user_meal
+      f={assigns.f}
+      recipe_user_meals={assigns.recipe_user_meals}
+      recipe_user_meal_ids={assigns.recipe_user_meal_ids}
+      parent_component={assigns.parent_component}
+      deleted={assigns.deleted}
+      user_meal={assigns.user_meal}
+    />
     """
   end
 

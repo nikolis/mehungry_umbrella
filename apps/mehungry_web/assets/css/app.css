@@ -41,6 +41,10 @@
     @apply border-2 bg-transparent border-solid border-complementary text-complementary hover:bg-complementary hover:text-white;
   }
 
+h1 {
+  font-weight: 650;
+  font-size: 1.3rem;
+}
 .delete_button {
     text-transform: uppercase;
     padding: 5px 25px;

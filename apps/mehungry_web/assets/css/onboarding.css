@@ -41,7 +41,9 @@
 	left: 1em;
 	font-size: 0.8em;
 }
-
+.input_group_container span {
+  display: block;
+}
 .input_group_container a {
 	position: absolute;
 	bottom: -3vh;
@@ -60,7 +62,8 @@
 }
 
 .login_submit_button {
-	padding: 2em 3em;
+  width: 70%;
+	padding: 2em 1em;
 	display: flex;
 	flex-direction: column;
 	row-gap: 0.55rem;

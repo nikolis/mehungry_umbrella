@@ -1,6 +1,7 @@
 defmodule MehungryWeb.ShoppingBasketLive.Index do
   use MehungryWeb, :live_view
   import MehungryWeb.CoreComponents
+  use MehungryWeb.Searchable, :transfers_to_search
 
   alias Mehungry.Accounts
   alias Mehungry.Accounts.UserProfile
@@ -8,8 +9,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   alias Mehungry.Inventory
   import MehungryWeb.ShoppingBasketLive.Components
 
-  @impl true
-  def mount(_params, session, socket) do
+  def mount_search(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     shopping_baskets = Inventory.list_shopping_baskets_for_user(user.id)
     shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
@@ -74,72 +74,68 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
         {MehungryWeb.ShoppingBasketLive.BasicFormComponent, {:saved, shopping_basket}},
         socket
       ) do
-
-    IO.inspect("saveeeeeeeeeeeeeeeeeeeeeeeeeee")
     shopping_baskets = Inventory.list_shopping_baskets_for_user(socket.assigns.user.id)
     shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
-    shopping_basket = 
+
+    shopping_basket =
       if is_nil(socket.assigns.shopping_basket) do
         List.first(shopping_baskets)
-      else 
+      else
         socket.assigns.shopping_basket
       end
-    {:noreply, 
-    socket
-    |> assign(:shopping_baskets, shopping_baskets)
-    |> assign(:shopping_basket, shopping_basket)
-    |> assign(:processing_basket, %ShoppingBasket{})
-    }
 
+    {:noreply,
+     socket
+     |> assign(:shopping_baskets, shopping_baskets)
+     |> assign(:shopping_basket, shopping_basket)
+     |> assign(:processing_basket, %ShoppingBasket{})}
   end
+
   def handle_info(
         {MehungryWeb.ShoppingBasketLive.BasicFormComponent, {:update, shopping_basket}},
         socket
-  ) do
-    IO.inspect("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
-
+      ) do
     shopping_baskets =
       Enum.filter(socket.assigns.shopping_baskets, fn x -> x.id != shopping_basket.id end)
 
     shopping_baskets = shopping_baskets ++ [shopping_basket]
     shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
-    shopping_basket = 
+
+    shopping_basket =
       if socket.assigns.shopping_basket.id == shopping_basket.id do
         shopping_basket
       else
         socket.assigns.shopping_basket
       end
-    {:noreply, 
-      socket
-      |> assign(:shopping_baskets, shopping_baskets)
-      |> assign(:shopping_basket, shopping_basket)
-      |> push_patch(to: "/basket")
 
-    }
+    {:noreply,
+     socket
+     |> assign(:shopping_baskets, shopping_baskets)
+     |> assign(:shopping_basket, shopping_basket)
+     |> push_patch(to: "/basket")}
   end
 
   def handle_info(
         {MehungryWeb.ShoppingBasketLive.FormComponent, {:update, shopping_basket}},
         socket
-  ) do
-    IO.inspect("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu")
-
+      ) do
     shopping_baskets =
       Enum.filter(socket.assigns.shopping_baskets, fn x -> x.id != shopping_basket.id end)
 
     shopping_baskets = shopping_baskets ++ [shopping_basket]
     shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
-    shopping_basket = 
+
+    shopping_basket =
       if socket.assigns.shopping_basket.id == shopping_basket.id do
         shopping_basket
       else
         socket.assigns.shopping_basket
       end
-    {:noreply, 
-      socket
-      |> assign(:shopping_baskets, shopping_baskets)
-      |> assign(:shopping_basket, shopping_basket)
-    }
+
+    {:noreply,
+     socket
+     |> assign(:shopping_baskets, shopping_baskets)
+     |> assign(:shopping_basket, shopping_basket)}
   end
 
   def handle_event("delete_basket", %{"id" => id}, socket) do
@@ -147,22 +143,22 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     Inventory.delete_shopping_basket(%ShoppingBasket{id: id})
     shopping_baskets = Inventory.list_shopping_baskets_for_user(socket.assigns.user.id)
     shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
-    shopping_basket = 
-          if is_nil(socket.assigns.shopping_basket) do
-            List.first(shopping_baskets)
-          else 
-            socket.assigns.shopping_basket
-          end
-    {:noreply, 
-      socket
-      |> assign(:shopping_baskets, shopping_baskets)
-      |> assign(:shopping_basket, shopping_basket)
-      |> assign(:processing_basket, %ShoppingBasket{})
-    }
+
+    shopping_basket =
+      if is_nil(socket.assigns.shopping_basket) do
+        List.first(shopping_baskets)
+      else
+        socket.assigns.shopping_basket
+      end
+
+    {:noreply,
+     socket
+     |> assign(:shopping_baskets, shopping_baskets)
+     |> assign(:shopping_basket, shopping_basket)
+     |> assign(:processing_basket, %ShoppingBasket{})}
   end
 
   def handle_event("toggle_basket", %{"id" => id}, socket) do
-    IO.inspect("Toggle basket ---------------234-32-f-32f0-2f3")
     id = String.to_integer(id)
 
     {[ingredient], rest} =
@@ -183,11 +179,11 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
 
   def handle_event("select_shopping_basket", %{"id" => id}, socket) do
     shopping_basket = Inventory.get_shopping_basket!(id)
+
     {:noreply,
      socket
      |> assign(:shopping_basket, shopping_basket)}
   end
-
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do

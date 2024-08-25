@@ -9,8 +9,7 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
   def render(assigns) do
     ~H"""
     <div class="post_card">
-      <.header>
-      </.header>
+      <.header></.header>
 
       <.simple_form
         for={@form}
@@ -20,19 +19,32 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
         phx-submit="save"
       >
         <div class="flex flex-row gap-3">
-          <img src={@current_user.profile_pic}  style="border-radius: 50%; width: 40px; height: 40px;" />
-          <.input field={@form[:text]} type="text" class="flex-grow w-full" label="Comment "/>
+          <%= if @current_user.profile_pic do %>
+            <img
+              src={@current_user.profile_pic}
+              ,
+              style="width: 40px; height: 40px; border-radius: 50%;"
+            />
+          <% else %>
+            <.icon name="hero-user-circle" class="h-10 w-10" />
+          <% end %>
+          <.input field={@form[:text]} type="text" class="flex-grow w-full" label="Comment " />
           <.input field={@form[:user_id]} type="hidden" />
-          <.input field={@form[:post_id]} type="hidden"  />
-
+          <.input field={@form[:post_id]} type="hidden" />
         </div>
         <:actions>
-        <div style="display: grid; grid-template-columns: 19fr 2fr 2fr; margin-top: 0.5rem;">
-          <div> </div>
-          <button phx-click="cancel_comment" style="margin-right: 1.5rem; color: var(--clr-grey-friend_3)" type="reset" phx-target = {@myself} > Cancel </button>
-          <button type="submit" class="primary_button" phx-disable-with="Saving..." >Post</button>
-
-        </div>
+          <div style="display: grid; grid-template-columns: 19fr 2fr 2fr; margin-top: 0.5rem;">
+            <div></div>
+            <button
+              phx-click="cancel_comment"
+              style="margin-right: 1.5rem; color: var(--clr-grey-friend_3)"
+              type="reset"
+              phx-target={@myself}
+            >
+              Cancel
+            </button>
+            <button type="submit" class="primary_button" phx-disable-with="Saving...">Post</button>
+          </div>
         </:actions>
       </.simple_form>
     </div>
@@ -72,7 +84,14 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
   end
 
   def handle_event("save", %{"comment" => comment_params}, socket) do
-    save_comment(socket, socket.assigns.action, comment_params)
+    case is_nil(socket.assigns.current_user) do
+      true ->
+        socket = assign(socket, :must_be_loged_in, 1)
+        {:noreply, socket}
+
+      false ->
+        save_comment(socket, socket.assigns.action, comment_params)
+    end
   end
 
   defp save_comment(socket, :show, comment_params) do

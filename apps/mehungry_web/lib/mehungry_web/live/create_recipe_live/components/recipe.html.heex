@@ -1,6 +1,23 @@
-<div class="flex flex-col gap-3">
-  <.input required field={@f[:title]} type="text" label="Title"  class="max-h-12"/>
-  <.input required field={@f[:servings]} type="text" label="Servings" class="max-h-12" />
+<div class="flex flex-col gap-3 h-fit pt-4 ">
+
+  <.input required field={@f[:title]} type="text" label="Title" class="max-h-12 " />
   <.input required field={@f[:description]} type="text" label="Description" class="max-h-12" />
-  <.input field={@f[:language_name]} type="hidden"  />
+
+  <div class="grid grid-cols-2 gap-4">  
+    <.input required field={@f[:cooking_time_lower_limit]} type="text" label="Cooking time" class="sm:w-full max-h-12 min-w-20" style="flex-shrink: 2;" />
+    <.input required field={@f[:preperation_time_lower_limit]} type="text" label="Prep Time" class="sm:w-full max-h-12 " />
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+      <.input required field={@f[:servings]} type="text" label="Servings" class="max-h-12 w-full" />
+      <.live_component
+        module={MehungryWeb.SelectComponentSingleMemory2}
+        form={@f}
+        items={[%{id: 1, name: "easy"}, %{id: 2, name: "medium"}, %{ id: 3, name: "difficult"}]}
+        input_variable="difficulty"
+        id={"difficulty_component"}
+      />
+  </div>
+
+  <.input field={@f[:language_name]} type="hidden" />
 </div>

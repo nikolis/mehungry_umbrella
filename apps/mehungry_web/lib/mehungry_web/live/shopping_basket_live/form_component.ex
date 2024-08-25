@@ -11,25 +11,27 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
     <div>
       <.header>
         <%= @title %>
-        <:subtitle >Crete a shopping list by selecting a range of dates (meals will be pulled from your callendar schedule) </:subtitle>
+        <:subtitle>
+          Crete a shopping list by selecting a range of dates (meals will be pulled from your callendar schedule)
+        </:subtitle>
       </.header>
-          <div style="" phx-update="ignore" id="container" phx-hook="DatePicker"> 
-              <input name="endtDate" type="hidden" placeholder="Select Date.." data-input>
-          </div>
+      <div style="" phx-update="ignore" id="container" phx-hook="DatePicker">
+        <input name="endtDate" type="hidden" placeholder="Select Date.." data-input />
+      </div>
 
       <.simple_form
         for={@form}
         id="form-basket"
         phx-target={@myself}
         phx-change="validate"
-        phx-submit="save">
-          <.input field={@form[:start_dt]} type="hidden"  />
-          <.input field={@form[:end_dt]} type="hidden" label="Intro" /> 
+        phx-submit="save"
+      >
+        <.input field={@form[:start_dt]} type="hidden" />
+        <.input field={@form[:end_dt]} type="hidden" label="Intro" />
         <:actions>
-          <.button type="primary"  phx-disable-with="Saving...">Create Basket</.button>
+          <.button type="primary" phx-disable-with="Saving...">Create Basket</.button>
         </:actions>
       </.simple_form>
-
     </div>
     """
   end
@@ -63,8 +65,6 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
   defp save_shopping_basket(socket, :edit, shopping_basket_params) do
     case Inventory.update_shopping_basket(socket.assigns.shopping_basket, shopping_basket_params) do
       {:ok, shopping_basket} ->
-        IO.inspect("Save shopping basket ok --------------------------------------------------------------------------")
-
         notify_parent({:saved, shopping_basket})
 
         {:noreply,
@@ -73,8 +73,6 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
          |> push_patch(to: socket.assigns.patch)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect("Save shopping basket ok not")
-
         {:noreply, assign_form(socket, changeset)}
     end
   end
@@ -85,8 +83,6 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
 
   defp create_basket(socket, basket_params_params) do
     user = socket.assigns.user
-    IO.inspect(socket.assigns.shopping_basket, label: "Basket from assigns in create")
-    IO.inspect(basket_params_params, label: "basket_params")
 
     changeset =
       socket.assigns.shopping_basket
@@ -119,7 +115,6 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
         {:ok, shopping_basket} =
           Inventory.update_shopping_basket(socket.assigns.shopping_basket, params)
 
-        IO.inspect(shopping_basket, label: "Here when leave")
         notify_parent({:update, shopping_basket})
 
         {:noreply,
@@ -133,24 +128,24 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
   def crete_ingredient_basket(user_meals) do
     user_meals
     |> Enum.reduce([], fn x, acc -> acc ++ x.recipe_user_meals end)
-    #Recipe + portions
+    # Recipe + portions
     |> Enum.map(fn y -> {y.cooking_portions, y.recipe} end)
-    #[{2, recipe}]
+    # [{2, recipe}]
     |> Enum.map(fn {x, y} -> {x, y.servings, y.recipe_ingredients} end)
-    #[{2, [recipe_ingredient, ..]]
-    |> Enum.map(fn {x, z ,y} ->  
+    # [{2, [recipe_ingredient, ..]]
+    |> Enum.map(fn {x, z, y} ->
       Enum.map(y, fn p -> {x, z, p} end)
-      #[[{2, recipe_ingredient}]]
+      # [[{2, recipe_ingredient}]]
     end)
-    |> Enum.reduce([], fn x, acc -> acc ++ x  end)
-    #[{2, recipe_ingredient}]
-    #|> IO.inspect()
-    |> Enum.map(fn {x, z, p} -> {p.ingredient_id, (p.quantity/z)*x, p.measurement_unit.id} end)
-    |> IO.inspect()
-    #[{ingredient_id, quantity, measurement_unit_id}]
-    #|> Enum.reduce([], fn x, acc -> acc ++ x.recipe.recipe_ingredients end)
- 
-     |> Enum.reduce(%{}, fn {ing, quant_out, mu}, acc ->
+    |> Enum.reduce([], fn x, acc -> acc ++ x end)
+    # [{2, recipe_ingredient}]
+    |> Enum.map(fn {x, z, p} ->
+      {p.ingredient_id, Float.round(p.quantity / z * x, 2), p.measurement_unit.id}
+    end)
+    # [{ingredient_id, quantity, measurement_unit_id}]
+    # |> Enum.reduce([], fn x, acc -> acc ++ x.recipe.recipe_ingredients end)
+
+    |> Enum.reduce(%{}, fn {ing, quant_out, mu}, acc ->
       with {ing, quant, mu_e} <- Map.get(acc, Integer.to_string(ing)),
            true <- mu == mu_e do
         Map.replace(acc, Integer.to_string(ing), {ing, quant + quant_out, mu_e})
@@ -162,22 +157,20 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
     |> Enum.map(fn {ing, quant, mu} ->
       %{"ingredient_id" => ing, "quantity" => quant, "measurement_unit_id" => mu}
     end)
-   
-    
-    
-    #|> Enum.map(fn x -> {x.ingredient.id, x.quantity, x.measurement_unit.id} end)
-    #|> Enum.reduce(%{}, fn {ing, quant, mu}, acc ->
-     # with {ing, quant, mu_e} <- Map.get(acc, Integer.to_string(ing)),
-      #     true <- mu == mu_e do
-      #  Map.replace(acc, Integer.to_string(ing), {ing, quant + quant, mu_e})
-      #else
-      #  _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant, mu})
-      #end
-    #end)
-    #|> Map.values()
-    #|> Enum.map(fn {ing, quant, mu} ->
-     # %{"ingredient_id" => ing, "quantity" => quant, "measurement_unit_id" => mu}
-    #end)
+
+    # |> Enum.map(fn x -> {x.ingredient.id, x.quantity, x.measurement_unit.id} end)
+    # |> Enum.reduce(%{}, fn {ing, quant, mu}, acc ->
+    # with {ing, quant, mu_e} <- Map.get(acc, Integer.to_string(ing)),
+    #     true <- mu == mu_e do
+    #  Map.replace(acc, Integer.to_string(ing), {ing, quant + quant, mu_e})
+    # else
+    #  _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant, mu})
+    # end
+    # end)
+    # |> Map.values()
+    # |> Enum.map(fn {ing, quant, mu} ->
+    # %{"ingredient_id" => ing, "quantity" => quant, "measurement_unit_id" => mu}
+    # end)
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do

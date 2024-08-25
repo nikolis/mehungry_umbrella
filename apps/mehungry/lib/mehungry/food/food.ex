@@ -201,6 +201,13 @@ defmodule Mehungry.Food do
       Repo.delete(rec_in)
     end)
 
+    if !is_nil(recipe.image_url) do
+      file_name = List.last(String.split(recipe.image_url))
+
+      ExAws.S3.delete_object("test-bucket-local-mehungry", file_name)
+      |> ExAws.request(region: "eu-central-1")
+    end
+
     Repo.delete(recipe)
   end
 
@@ -448,28 +455,37 @@ defmodule Mehungry.Food do
     end
   end
 
-  def update_recipe(%Recipe{} = recipe, attrs \\ %{}) do
-    IO.inspect(attrs, label: "uPDATE RECIPE ----------------------------------------------------------------------------------------------------------------------------")
-    result = 
-      recipe
-    |> Recipe.changeset(attrs)
-    |> Repo.update()
-    case result do 
+  def update_recipe(%Recipe{} = recipe_origin, attrs \\ %{}) do
+    result =
+      recipe_origin
+      |> Recipe.changeset(attrs)
+      |> Repo.update()
+
+    case result do
       {:ok, recipe} ->
-        case Map.get(attrs, "image_url") do 
+        case Map.get(attrs, "image_url") do
           nil ->
             result
-          image_url -> 
+
+          image_url ->
+            if(!is_nil(recipe_origin.image_url)) do
+              file_name = List.last(String.split(recipe_origin.image_url, "/"))
+
+              ExAws.S3.delete_object("test-bucket-local-mehungry", file_name)
+              |> ExAws.request(region: "eu-central-1")
+            end
+
             Repo.all(from p in Post, where: p.reference_id == ^recipe.id)
             |> Enum.each(fn x ->
               Posts.update_post(x, %{md_media_url: image_url})
             end)
+
             result
         end
+
       {:error, _} ->
         result
     end
-
   end
 
   def create_post_from_recipe(%Recipe{} = recipe) do
@@ -565,21 +581,66 @@ defmodule Mehungry.Food do
     end
   end
 
+  def search_recipe("") do
+    query = from(r in Recipe)
+    {query, list_recipes(query)}
+  end
+
   def search_recipe(query_string) do
     query = Mehungry.Search.RecipeSearch.run(Recipe, query_string)
     {query, list_recipes(query)}
   end
 
   def search_ingredient(search_term) do
+    ilike_search_term = "%#{search_term}%"
+
+    query =
+      from(
+        ingredient in Ingredient,
+        where:
+          ingredient.category_id != 212 and ingredient.category_id != 197 and
+            ingredient.category_id != 192 and ingredient.category_id != 193 and
+            ingredient.category_id != 194 and
+            (fragment("? % ?", ^search_term, ingredient.name) or
+               ilike(ingredient.name, ^ilike_search_term)),
+        order_by: {:desc, fragment("? % ?", ^search_term, ingredient.name)},
+        limit: 20
+      )
+
+    Repo.all(query)
+    |> Repo.preload([:category, :measurement_unit])
+  end
+
+  def search_ingredient3(search_term) do
+    ilike_search_term = "%#{search_term}%"
+
+    query =
+      from(
+        ingredient in Ingredient,
+        where:
+          ingredient.category_id != 212 and ingredient.category_id != 197 and
+            ingredient.category_id != 192 and ingredient.category_id != 193 and
+            ingredient.category_id != 194 and ilike(ingredient.name, ^ilike_search_term),
+        order_by: {:desc, fragment("? % ?", ^search_term, ingredient.name)}
+      )
+
+    Repo.all(query)
+  end
+
+  def search_ingredient2(search_term) do
     search_term = "%" <> search_term <> "%"
 
     query =
       from ingredient in Ingredient,
-        where: ingredient.category_id != 212 and ingredient.category_id != 197 and ilike(ingredient.name, ^search_term)
+        where:
+          ingredient.category_id != 212 and ingredient.category_id != 197 and
+            ingredient.category_id != 192 and ingredient.category_id != 193 and
+            ingredient.category_id != 194 and ilike(ingredient.name, ^search_term),
+        limit: 20
 
     Repo.all(query)
     |> Repo.preload([:category, :measurement_unit])
-    |> Enum.sort_by(fn x-> String.length(x.name) end)
+    |> Enum.sort_by(fn x -> String.length(x.name) end)
   end
 
   def search_ingredient(search_term, language_name) do

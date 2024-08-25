@@ -83,12 +83,14 @@ defmodule Mehungry.Accounts do
   def register_user(attrs) do
     result =
       %User{}
-    |> User.registration_changeset(attrs)
-    |> Repo.insert()
-    case result do 
+      |> User.registration_changeset(attrs)
+      |> Repo.insert()
+
+    case result do
       {:ok, user} ->
-        create_user_profile_if_needed(user) 
+        create_user_profile_if_needed(user)
         {:ok, user}
+
       _ ->
         result
     end
@@ -96,34 +98,33 @@ defmodule Mehungry.Accounts do
 
   def register_3rd_party_user(attrs) do
     result =
-    %User{}
-    |> User.registration_3rd_party_changeset(attrs)
-    |> Repo.insert()
+      %User{}
+      |> User.registration_3rd_party_changeset(attrs)
+      |> Repo.insert()
 
-    case result do 
+    case result do
       {:ok, user} ->
-        create_user_profile_if_needed(user) 
+        create_user_profile_if_needed(user)
         {:ok, user}
+
       _ ->
         result
     end
-
   end
 
   defp create_user_profile_if_needed(user) do
-    user_profile =
       case get_user_profile_by_user_id(user.id) do
         nil ->
           {:ok, _profile} =
             create_user_profile(%{user_id: user.id, user_category_rules: []})
 
           get_user_profile_by_user_id(user.id)
+
         profile ->
           profile
       end
-
-
   end
+
   def update_user(%User{} = user, attrs) do
     user
     |> User.registration_3rd_party_changeset(attrs)

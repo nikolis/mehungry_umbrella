@@ -11,10 +11,6 @@ defmodule MehungryWeb.SearchLive.Index do
 
   @impl true
   def update(assigns, socket) do
-    IO.inspect(
-      "h----------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
-    )
-
     query_string = Map.get(assigns, :query_string, nil)
 
     {:ok,
@@ -51,11 +47,6 @@ defmodule MehungryWeb.SearchLive.Index do
 
   @impl true
   def mount(params, session, socket) do
-    IO.inspect(params,
-      label:
-        "Search live params ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
-    )
-
     user = Accounts.get_user_by_session_token(session["user_token"])
 
     {:ok,
@@ -73,7 +64,7 @@ defmodule MehungryWeb.SearchLive.Index do
 
   def assign_changeset(%{assigns: %{recipe_search_item: recipe_search_item}} = socket) do
     socket
-    |> assign(:changeset, Search.change_recipe_search_item(recipe_search_item))
+    |> assign(:search_changeset, Search.change_recipe_search_item(recipe_search_item))
   end
 
   defp apply_action(socket, :index, _params) do

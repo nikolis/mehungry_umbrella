@@ -1,32 +1,77 @@
-<div class=" p-8 bg-greyfriend1">
+<div class="md:p-8 bg-greyfriend1 " style="min-height: 90vh;">
+  <%= if !is_nil(@must_be_loged_in) do %>
+    <.modal
+      id="browse_index_must_be_login"
+      show
+      on_cancel={JS.push("keep_browsing")}
+      class="h-full"
+      %
+    >
+      <.live_component module={MehungryWeb.MustBeLoginComponent} id={:new} patch={~p"/browse"} />
+    </.modal>
+  <% end %>
 
-  <.modal :if={is_nil(@user_profile.onboarding_level)  or @user_profile.onboarding_level < 1} id="onboarding-modal" show on_cancel={JS.patch(~p"/")}>
-  <.live_component
-    module={MehungryWeb.Onboarding.FormComponent}
-    user_profile = {@user_profile}
-    id={:new}
-    patch={~p"/"}
-  />
-</.modal>
+  <%= if !is_nil(@user_profile) do %>
+    <.modal
+      :if={is_nil(@user_profile.onboarding_level) or @user_profile.onboarding_level < 1}
+      id="onboarding-modal"
+      show
+      on_cancel={JS.patch(~p"/")}
+    >
+      <.live_component
+        module={MehungryWeb.Onboarding.FormComponent}
+        user_profile={@user_profile}
+        id={:new}
+        patch={~p"/"}
+      />
+    </.modal>
+  <% end %>
 
-    <.recipe_modal :if={@live_action in [:show]} on_cancel={JS.patch(~p"/browse")} id="shopping_basket_modal" show >
-      <Components.recipe_modal invocations={@invocations} live_action={@live_action} nutrients = {@nutrients} recipe={@recipe}/>
-    </.recipe_modal>
-  <%= if @not_empty do %>
-  <div  class="the_form second_layer_spacing min-h-40">
-    <div class="grid_even_columns " id="recipes_container" phx-hook="InfiniteScroll" phx-update='stream' data-page = {@page}>
-      <%= for {dom_id, recipe} <- @streams.recipes do %>
-               <RecipeComponents.recipe_details recipe={recipe}  user_recipes ={@user_recipes} id={dom_id} type="browse"/>
-      <% end %>
+  <.recipe_modal
+    :if={@live_action in [:show]}
+    on_cancel={JS.patch(~p"/browse")}
+    id="recipe_details_modal"
+    show
+  >
+    <div class="w-full" style="min-height: 55vh;">
+      <.live_component
+        module={MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent}
+        id="recipe_details_component"
+        primary_size={@primary_size}
+        nutrients={@nutrients}
+        recipe={@recipe}
+        user_recipes={@user_recipes}
+        return_to={Routes.recipe_browse_index_path(@socket, :index)}
+      />
     </div>
+  </.recipe_modal>
 
-    <form name="ignore_me">
-      <input type="hidden" id="page_is_dirty" name="page_is_dirty" value="0" />
-    </form>
-  </div>
-<% else %> 
-  <div style="height: 20vh">
-    <h3 class="text-center p-10"> We were not able to find a recipe according to your search </h3>
-  </div>
-<% end %>
+  <%= if @not_empty do %>
+    <div class="the_form second_layer_spacing min-h-40">
+      <div
+        class="grid_even_columns "
+        id="recipes_container"
+        phx-hook="InfiniteScroll"
+        phx-update="stream"
+        data-page={@page}
+      >
+        <%= for {dom_id, recipe} <- @streams.recipes do %>
+          <RecipeComponents.recipe_details
+            recipe={recipe}
+            user_recipes={@user_recipes}
+            id={dom_id}
+            type="browse"
+          />
+        <% end %>
+      </div>
+
+      <form name="ignore_me">
+        <input type="hidden" id="page_is_dirty" name="page_is_dirty" value="0" />
+      </form>
+    </div>
+  <% else %>
+    <div style="height: 20vh">
+      <h3 class="text-center p-10">We were not able to find a recipe according to your search</h3>
+    </div>
+  <% end %>
 </div>

@@ -17,6 +17,12 @@ defmodule MehungryWeb do
   and import those modules here.
   """
 
+  # in sync with css/shared/_media_queries.scss
+  @mobile_max_width 480
+
+  @desktop_kind :desktop
+  @mobile_kind :mobile
+
   def controller do
     quote do
       use Phoenix.Controller, namespace: MehungryWeb

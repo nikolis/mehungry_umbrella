@@ -63,7 +63,6 @@ defmodule Mehungry.AccountsFixtures do
         alias: "some alias",
         intro: "some intro"
       })
-      |> IO.inspect(label: "---------------------")
       |> Mehungry.Accounts.create_user_profile()
 
     user_profile

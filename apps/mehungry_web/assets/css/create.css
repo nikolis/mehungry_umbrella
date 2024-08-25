@@ -119,13 +119,13 @@
 }
 
 .primary_button {
-	text-transform: uppercase;
+	text-transform: capitalize;
 	background-color: var(--clr-primary) !important;
 	color: white;
 	padding: 5px 25px;
 	border-radius: 20px;
-	font-size: calc(0.7rem + 0.7vw);
-	font-weight: bold;
+	font-size: 1.1rem;
+	font-weight: 500;
 }
 
 
@@ -134,11 +134,19 @@
 }
 
 .primary_button_complementary {
-	text-transform: uppercase;
+	text-transform: capitalize;
 	padding: 5px 25px;
 	border-radius: 20px;
-	font-weight: bold;
+	font-weight: 500;
+	font-size: 1.1rem;
+	background-color: var(--clr-complementary-middle) !important;
+	color: white;
+
 }
+.primary_button_complementary:hover {
+	background-color: var(--clr-complementary-light) !important;
+}
+
 
 
 .primary_button_outline {

@@ -169,7 +169,7 @@ defmodule Mehungry.FdcFoodParserSurvey do
   defp get_or_create_food_category(category_name) do
     category = Food.search_category(category_name)
 
-    if length(category) == 0 do
+    if Enum.empty?(category) do
       {:ok, category} = Food.create_category(%{name: category_name})
       category
     else

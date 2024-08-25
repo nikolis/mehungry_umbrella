@@ -102,7 +102,8 @@ defmodule Mehungry.FdcFoodParserLeg do
 
   defp create_ingredient_portions(food_portions, ingredient) do
     Enum.map(food_portions, fn x ->
-      measurement_unit =  get_or_create_measurement_unit(x["modifier"])
+      measurement_unit = get_or_create_measurement_unit(x["modifier"])
+
       %{
         amount: x["amount"],
         value: x["value"],
@@ -115,20 +116,11 @@ defmodule Mehungry.FdcFoodParserLeg do
       }
     end)
     |> Enum.each(fn b ->
-      case Food.create_ingredient_portion(b) do 
-        {:ok, portion} ->
-          IO.inspect(portion, label: "Created portion @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        {:error, error} -> 
-          IO.inspect(error, label: "Error inserting portttionsssssssssssssssssssssssssssssssssssssssssssssss------------------------------------------------------------------------------------------------------")
-        end
-
+      Food.create_ingredient_portion(b)
     end)
   end
 
-  defp create_ingredient(attrs) do
-    #IO.inspect(attrs)
-
-    
+  def create_ingredient(attrs) do
     category = get_or_create_food_category(attrs["foodCategory"]["description"])
 
     food_portions = attrs["foodPortions"]
@@ -144,17 +136,14 @@ defmodule Mehungry.FdcFoodParserLeg do
 
     case Food.create_ingredient(attrs) do
       {:ok, ingredient} ->
-        IO.inspect(attrs)
-        IO.inspect(food_portions)
         if not is_nil(food_portions) do
-          IO.inspect(food_portions)
           create_ingredient_portions(food_portions, ingredient)
         end
+
         Enum.map(food_nutrients, fn x ->
           {:ok, nutrient} = get_or_create_nutrient(ingredient, x)
           nutrient
         end)
-
 
       _ ->
         ""
