@@ -24,11 +24,12 @@ defmodule Mehungry.Food.Recipe do
     field :servings, :integer
     field :private, :boolean
     field :title, :string
+    field :difficulty, :integer
 
     has_many :ratings, Rating
     has_one :post, Mehungry.Posts.Post
-    belongs_to :user, User
 
+    belongs_to :user, User
     belongs_to :language, Language,
       references: :name,
       foreign_key: :language_name,
@@ -60,13 +61,15 @@ defmodule Mehungry.Food.Recipe do
       :description,
       :image_url,
       :user_id,
-      :language_name
+      :language_name,
+      :difficulty,
     ])
     |> unique_constraint(:title_user_constraint, name: :title_user_index)
     |> foreign_key_constraint(:language_id)
     |> foreign_key_constraint(:user_id)
-    |> validate_required([:title, :language_name, :user_id])
+    |> validate_required([:title, :language_name, :user_id, :cooking_time_lower_limit, :preperation_time_lower_limit, :difficulty])
     |> cast_embed(:steps, [:required_message])
     |> cast_assoc(:recipe_ingredients, required: true)
   end
+
 end

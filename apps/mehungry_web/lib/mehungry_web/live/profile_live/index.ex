@@ -108,7 +108,7 @@ defmodule MehungryWeb.ProfileLive.Index do
   def handle_event("edit-recipe", %{"id" => id}, socket) do
     {:noreply,
      socket
-     |> push_redirect(to: "/create_recipe/#{id}")}
+     |> push_navigate(to: "/create_recipe/#{id}")}
   end
 
   def handle_event("unsave-recipe", %{"id" => id}, socket) do

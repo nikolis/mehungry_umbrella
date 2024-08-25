@@ -5,7 +5,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
   def render(assigns) do
     ~H"""
     <div
-      class="col-span-3 sm:col-span-2 h-full"
+      class="col-span-4 sm:col-span-2 h-full w-full"
       data-reference-id={@input_variable}
       data-reference-index={@form.index}
       phx-hook="SelectComponent"
@@ -14,7 +14,12 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
       <.input field={@form[String.to_atom(@input_variable)]} type="hidden" />
       <!-- Start Component -->
       <.focus_wrap
-        id={"select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable}
+        id={if is_nil(@form.index) do
+          "select_component_focus_wrap" <> @input_variable
+        else  
+          "select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable
+        end
+        }
         class="h-full"
         phx-click-away={JS.push("close-listing", target: @myself)}
       >
@@ -61,19 +66,34 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
              bg-white absolute left-0 bottom-100 
              bg-white z-50 max-h-52 shadow-lg">
               <%= if @listing_open do %>
-                <%= for x <- @items_filtered do %>
+                <%= for {x, index}  <- Enum.with_index(@items_filtered) do %>
                   <!-- Item Element -->
                   <div class="relative z-50 h-full">
                     <div class="bg-white h-full">
-                      <li
-                        class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
-                        phx-click="handle-item-click"
-                        phx-value-id={x.id}
-                        id={Integer.to_string(x.id)}
-                        phx-target={@myself}
-                      >
-                        <%= x.label %>
-                      </li>
+                      <%= if index == 0   and !is_nil(@form.index) do %> 
+                        <li 
+                          class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
+                          phx-click="handle-item-click"
+                          phx-value-id={x.id}
+                          id={Integer.to_string(x.id)}
+                          phx-target={@myself}
+                          phx-hook="SelectComponentList"
+
+                        >
+                          <%= x.label %>
+                  </li>
+                  <%= else %>
+                        <li 
+                          class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
+                          phx-click="handle-item-click"
+                          phx-value-id={x.id}
+                          id={Integer.to_string(x.id)}
+                          phx-target={@myself}
+                        >
+                          <%= x.label %>
+                  </li>
+ 
+                      <% end %>
                     </div>
                   </div>
                   <!-- Empty Text -->
@@ -94,7 +114,12 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
 
   @impl true
   def update(assigns, socket) do
-    id = "select_component" <> Integer.to_string(assigns.form.index) <> assigns.input_variable
+    id =
+      if is_nil(assigns.form.index) do
+        "select_component" <>  assigns.input_variable
+      else 
+        "select_component" <> Integer.to_string(assigns.form.index) <> assigns.input_variable
+      end
 
     selected_items =
       MehungryWeb.SelectComponentUtils.get_selected_items(
@@ -212,13 +237,24 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
       socket
       |> assign(:listing_open, false)
       |> assign(:selected_items, selected_item)
+    case is_nil(socket.assigns.form.index) do 
+      true ->
+        {:noreply,
+         push_event(
+           socket,
+           "selected_id" <>
+              socket.assigns.input_variable,
+           %{id: id}
+         )}
 
-    {:noreply,
-     push_event(
-       socket,
-       "selected_id" <>
-         Integer.to_string(socket.assigns.form.index) <> socket.assigns.input_variable,
-       %{id: id}
-     )}
+      false ->
+        {:noreply,
+         push_event(
+           socket,
+           "selected_id" <>
+             Integer.to_string(socket.assigns.form.index) <> socket.assigns.input_variable,
+           %{id: id}
+         )}
+    end
   end
 end

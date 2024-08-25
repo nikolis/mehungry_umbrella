@@ -27,6 +27,22 @@ Hooks.ViewportResizeHooks = {
     window.removeEventListener('resize', resizeHandler)
   }
 }
+Hooks.SelectComponentList = {
+  mounted() {
+    setTimeout(() => {
+    console.log("In here 1")
+    console.log(this.el.scrollIntoView({block: "center", behavior: "smooth"}));
+    console.log("In here")
+}, 200);
+  },
+  updated() {
+    console.log("updated:")
+    this.el.scrollIntoView({block: "center", behavior: "smooth"});  
+  },
+  destroyed() {
+    console.log("destroyed")
+  }
+}
 
 Hooks.SelectComponent = {
 
@@ -35,25 +51,29 @@ Hooks.SelectComponent = {
     const refAt = this.ref.getAttribute("data-reference-id")
     const originalID = this.el.id
     const referenceIndex = this.ref.getAttribute("data-reference-index")
+
     console.log(referenceIndex)
     console.log(refAt)
-    window.addEventListener("phx:selected_id"+ referenceIndex + refAt, (e) => {
+    var event_listener;
+    if (referenceIndex) {
+      event_listener = "phx:selected_id"+ referenceIndex + refAt
+    }
+    else {
+      event_listener = "phx:selected_id"+ refAt
+    }
+    window.addEventListener(event_listener, (e) => {
       console.log("On the click")
       let el = document.getElementById(originalID)
       console.log(el)
       for (const child of this.el.children) {
         if(child.id !=null && child.id.includes(refAt)){
             if(child.tagName == "INPUT"){
-              console.log("Found the input")
-              console.log(child)
       			  $("#" + child.id).val(e.detail.id).change()
               var ret = child.dispatchEvent(new Event("input", {
                   bubbles: true,
                   cancelable: false,
                   detail: {id: e.detail.id},
               }));
-              console.log(child)
-
             }
         }
       }

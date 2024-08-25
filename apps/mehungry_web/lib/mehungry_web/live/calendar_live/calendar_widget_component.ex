@@ -20,17 +20,23 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
               <tr class="border-b-2 border-double border-t-2 border-complementary ">
                 <th :for={week_day <- List.first(@week_rows)}>
                   <div
-                    class="cursor-pointer"
+                    class="cursor-pointer relative"
                     phx-target{@myself}
                     phx-click="date-details"
-                    phx-value-date={week_day}
-                  >
+                    phx-value-date={week_day}>
                     <span class="text-4xl font-normal	text-complementaryd">
                       <%= Calendar.strftime(week_day, "%d") %>
                     </span>
                     <span class="text-complementaryd text-xl font-normal">
                       <%= Calendar.strftime(week_day, "%a") %>
                     </span>
+                    <%= if get_from_week_rows2(@user_meals, week_day, assigns) > 0 do %>
+                     <svg style="stroke: var(--clr-primary);" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-8 w-8 absolute right-2 top-0 bottom-0 m-auto">
+  <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+</svg>
+
+<!-- <.icon name="hero-information-circle" class="h-5 w-5" style="stroke: white;"/> -->
+                    <% end %>
                   </div>
                 </th>
               </tr>
@@ -40,9 +46,8 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
                 <td
                   :for={day <- week}
                   class={[
-                    "text-center border-l-2  border-r-2 max-w-48 min-w-48 "
-                  ]}
-                >
+                    "text-center border-l-2  border-r-2 max-w-48 min-w-42 "
+                  ]}>
                   <div :for={meal <- @day_meals} class="">
                     <%= get_from_week_rows(@user_meals, day, meal, assigns) %>
                   </div>
@@ -64,9 +69,8 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
               type="button"
               class="w-full text-end	text-primary font-medium"
               phx-target={@myself}
-              phx-click="next-month"
-            >
-              Next &raquo;
+              phx-click="next-month">
+                Next &raquo;
             </button>
           </div>
         </div>
@@ -179,7 +183,6 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
   end
 
   def handle_event("next-month", _, socket) do
-    # |> Date.add(1)
     new_date = socket.assigns.last |> Date.add(1)
 
     {first, last, rows} =
@@ -193,7 +196,6 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     ]
 
     send(self(), {:particular_date, %{"date" => first}})
-    # assign(socket, assigns)}
     {:noreply, socket}
   end
 
@@ -268,6 +270,24 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     {first, last, week_rows_post_pros(week_rows, user_meals)}
   end
 
+  defp get_from_week_rows2(user_meals, current_date,  assigns) do
+    first = Date.beginning_of_week(current_date)
+    last = Date.end_of_week(current_date)
+
+    week_rows =
+      Date.range(first, last)
+      |> Enum.map(& &1)
+      |> Enum.chunk_every(7)
+
+    result = Map.new(week_rows_post_pros23(week_rows, user_meals))
+    current_date = Date.to_string(current_date) <> " 00:00:00"
+    {:ok, current_date} = NaiveDateTime.from_iso8601(current_date)
+    result = Map.get(result, current_date)
+    result = Map.values(result)
+    result = Enum.filter(result, fn x -> !is_nil(x) end)
+    length(result)
+  end
+
   defp get_from_week_rows(user_meals, current_date, title, assigns) do
     first = Date.beginning_of_week(current_date)
     last = Date.end_of_week(current_date)
@@ -336,8 +356,8 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
 
   defp get_loading(assigns) do
     ~H"""
-    <div style="min-height: 90vh">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+    <div style="max-width: 60vh; margin: auto;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" >
         <radialGradient
           id="a12"
           cx=".66"

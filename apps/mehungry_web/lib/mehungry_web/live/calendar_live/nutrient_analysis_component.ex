@@ -7,7 +7,7 @@ defmodule MehungryWeb.NutrientAnalysisComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div>
+    <div style="max-height: 65vh; overflow: auto;">
       <h3>Total nutrition for day <span class="text-sm">(<%= @particular_date %>)</span></h3>
       <div class="accordion text-sm md:text-base lg:text-lg font-medium	">
         <%= for {n, index} <-  Enum.with_index(@nutrients) do %>

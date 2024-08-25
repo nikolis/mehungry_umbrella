@@ -216,7 +216,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
         {:noreply,
          socket
          |> put_flash(:info, "User Meal updated successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}

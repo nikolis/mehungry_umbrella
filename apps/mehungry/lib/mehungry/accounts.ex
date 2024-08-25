@@ -113,7 +113,6 @@ defmodule Mehungry.Accounts do
   end
 
   defp create_user_profile_if_needed(user) do
-    user_profile =
       case get_user_profile_by_user_id(user.id) do
         nil ->
           {:ok, _profile} =
