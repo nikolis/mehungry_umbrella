@@ -21,9 +21,9 @@ env:
   OTP_VERSION_SPEC: "26.0.2"
   
 jobs:
-  deps:
+   deps:
     name: Dependencies
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     strategy:
       matrix:
@@ -31,10 +31,10 @@ jobs:
         otp: [23.2]
 
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
+#      - name: Cancel Previous Runs
+ #       uses: styfle/cancel-workflow-action@0.6.0
+  #      with:
+   #       access_token: ${{ github.token }}
 
       - name: Checkout
         uses: actions/checkout@v2
