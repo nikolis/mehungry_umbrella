@@ -63,7 +63,7 @@ RUN apk add --update openssl postgresql-client
 
 EXPOSE 4000
 # copy release to app container
-COPY --from=build /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
+COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
 
 CMD ["sh", "bin/mehungry_umbrella", "start"]
 
