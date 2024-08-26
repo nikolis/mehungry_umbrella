@@ -56,140 +56,57 @@ jobs:
           mix deps.get
           mix deps.compile
           
-  build_and_deploy:
-    # The type of runner that the job will run on
-    needs: [deps]
-    runs-on: ubuntu-latest
+   build_and_deploy:
+     # The type of runner that the job will run on
+     needs: [deps]
+     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-3
+     # Steps represent a sequence of tasks that will be executed as part of the job
+     steps:
+       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+       - uses: actions/checkout@v2
+       - name: Configure AWS credentials
+         uses: aws-actions/configure-aws-credentials@v1
+         with:
+           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+           aws-region: eu-west-3
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+       - name: Login to Amazon ECR
+         id: login-ecr
+         uses: aws-actions/amazon-ecr-login@v1
 
       # Runs a single command using the runners shell
-      - name: docker build mehungry_app #django api
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: mehungry_ecr
-          IMAGE_TAG: ${{ github.sha }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+       - name: docker build mehungry_app #django api
+         id: build-image
+         env:
+           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+           ECR_REPOSITORY: mehungry_ecr
+           IMAGE_TAG: ${{ github.sha }}
+           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-        run: |
-          docker build  -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG -f docker/Dockerfile .
-          docker push $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG
-          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+         run: |
+           docker build  -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG -f docker/Dockerfile .
+           docker push $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG
+           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
 
-      - name: Download task definition 
-        run: |
-           aws ecs describe-task-definition - task-definition etap-development - query taskDefinition > task-definition.json    
+       - name: Download task definition 
+         run: |
+            aws ecs describe-task-definition - task-definition etap-development - query taskDefinition > task-definition.json    
 
-      - name: Fill in new image ID in task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: task-definition.json 
-          container-name: mehungry_app 
-          image: ${{ steps.build-image.outputs.image }}
-
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1 
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: mehungry_app
-          cluster: mehungry_ecs_cluster_prod
-           
-      - name: deploy to cluster
-        uses: kodermax/kubectl-aws-eks@master
-        env:
-          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: mehyngry_ecr_repo
-          IMAGE_TAG: ${{ github.sha }}
-          RELEASE_IMAGE: ${{ steps.login-ecr.outputs.registry }}/mehyngry_ecr_repo:${{ github.sha }}
-
-        with:
-          args: --namespace=default set image deployment/mehungry-app-depl mehungry-app=$ECR_REGISTRY/mehyngry_ecr_repo:$IMAGE_TAG
-      
-  build:
-
-    name: Build and test
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Elixir
-      uses: erlef/setup-beam@61e01a43a562a89bfc54c7f9a378ff67b03e4a21 # v1.16.0
-      with:
-        elixir-version: ${{ env.ELIXIR_VERSION_SPEC }} # [Required] Define the Elixir version
-        otp-version: ${{ env.OTP_VERSION_SPEC }}      # [Required] Define the Erlang/OTP version
-    - name: Restore dependencies cache
-      uses: actions/cache@v3
-      with:
-        path: deps
-        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-        restore-keys: ${{ runner.os }}-mix-
-    - name: Install dependencies
-      run: mix deps.get
-    - name: Compile dependencies
-      run: mix deps.compile
-    - name: Compile
-      run: mix compile 
-      
-  test:
-    name: Test
-    runs-on: ubuntu-22.04
-
-    services:
-      invoices_control_db_test:
-        image: postgres:latest
-        ports: ['5432:5432']
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_HOST_AUTH_METHOD: 'trust'
-          POSTGRES_DB: invoices_control_test
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1.16
-        with:
-          elixir-version: ${{ env.ELIXIR_VERSION_SPEC }}
-          otp-version: ${{ env.OTP_VERSION_SPEC }}
-      - name: Install dependencies
-        run: mix deps.get
-      - name: Compile dependencies
-        run: mix deps.compile
-      - name: Setup database
-        env:
-          MIX_ENV: test
-          PGHOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        run:
-          mix ecto.drop
-          mix ecto.create
-          mix ecto.migrate
-      - name: Run tests
-        env:
-          MIX_ENV: test
-          PGHOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        run:
-          mix test
-
+       - name: Fill in new image ID in task definition
+         id: task-def
+         uses: aws-actions/amazon-ecs-render-task-definition@v1
+         with:
+           task-definition: task-definition.json 
+           container-name: mehungry_app 
+           image: ${{ steps.build-image.outputs.image }}
+ 
+       - name: Deploy Amazon ECS task definition
+         uses: aws-actions/amazon-ecs-deploy-task-definition@v1 
+         with:
+           task-definition: ${{ steps.task-def.outputs.task-definition }}
+           service: mehungry_app
+           cluster: mehungry_ecs_cluster_prod
+            
