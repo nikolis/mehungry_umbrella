@@ -1,75 +1,69 @@
 FROM bitwalker/alpine-elixir-phoenix:latest as builder
 #ARG ALPINE_VERSION=3.8
-
 #FROM elixir:1.7.2-alpine AS builder
-
-WORKDIR /app
+#WORKDIR /app
 
 ENV MIX_ENV=prod \
-    SECRET_KEY_BASE=$SECRET_KEY_BASE \
     AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     DATABASE_URL=$DATABASE_URL \
-    RDS_DB_NAME=$RDS_DB_NAME\
-    RDS_HOSTNAME=$RDS_HOSTNAME\
-    DB_HOST=$DB_HOST\
-    DB_PORT=$DB_PORT\
-    RDS_USERNAME=$RDS_USERNAME\
-    RDS_PASSWORD=$RDS_PASSWORD\
     SHELL=/bin/bash
 
 # install hex + rebar
-RUN mix do local.hex --force, local.rebar --force 
+RUN apk add --update git build-base nodejs npm yarn
 
-COPY config/  /app/config
+RUN mkdir mehungry_umbrella
+WORKDIR /mehungry_umbrella
+
+# install Hex + Rebar
+RUN mix do local.hex --force, local.rebar --force
+
+# set build ENV
+ENV MIX_ENV=prod
+
+# Install dependencies
+RUN mkdir ./apps
+RUN mkdir ./apps/mehungry
+RUN mkdir ./apps/mehungry_web
+RUN mkdir ./apps/mehungry_web/assets/
+
+# Install JS dependencies
+COPY ./apps/mehungry_web/assets/package.json ./apps/mehungry_web/assets/
+COPY ./apps/mehungry_web/assets/  ./apps/mehungry_web/assets/
+
+RUN npm i --prefix ./apps/mehungry_web/assets/
+# Install mix dependecies
 COPY mix.* ./
-COPY apps/mehungry/mix.exs ./apps/mehungry/
-COPY apps/mehungry_api/mix.exs ./apps/mehungry_api/
-COPY apps/mehungry_web/mix.exs ./apps/mehungry_web/
-RUN apk add make
+COPY ./apps/mehungry/mix.* ./apps/mehungry
+COPY ./apps/mehungry_web/mix.* ./apps/mehungry_web
 
-ENV PYTHONUNBUFFERED=1
-RUN apk add --update --no-cache python3 && ln -sf python3 /usr/bin/python
-RUN apk update && apk add --virtual build-dependencies build-base gcc wget git
 
-RUN mix do deps.get --only $MIX_ENV, deps.compile, compile, phx.digest
+COPY config ./config
 
-COPY . /app/
+RUN mix deps.get --only $MIX_ENV
+RUN mix assets.build 
+RUN mix deps.compile
 
-# build assets
-WORKDIR /app/apps/mehungry_web
+# Build front-end
+COPY ./apps/mehungry_web/assets ./apps/mehungry_web/assets
+RUN mix assets.deploy --prefix ./apps/mehungry_web/assets
 
-RUN npm install --prefix ./assets/ ci --progress=false --no-audit --loglevel=error
-RUN npm run deploy --prefix ./assets
-RUN mix phx.digest
+# Copy app code
+COPY apps ./apps
 
-WORKDIR /app/apps/mehungry_api
+#RUN mix phx.digest
 
-RUN npm install --prefix ./assets/ ci --progress=false --no-audit --loglevel=error
-RUN npm run deploy --prefix ./assets
-RUN mix phx.digest
-
-WORKDIR /app
-
-RUN PORT=4000 MIX_ENV=prod mix do compile, release
+# build release
+RUN PORT=4000 mix release mehungry_umbrella
 
 # prepare release image
-FROM bitwalker/alpine-elixir:1.10.3
-RUN apk upgrade --no-cache && \ 
-    apk add --no-cache postgresql-client bash openssl libgcc libstdc++ ncurses-libs
+FROM bitwalker/alpine-elixir-phoenix:latest as  app
+# install runtime dependencies
+RUN apk add --update openssl postgresql-client
 
-ARG VERSION=0.7.0
+EXPOSE 4000
+# copy release to app container
+COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
 
-WORKDIR /app
-COPY --from=builder /app/_build/prod/rel/mehungry_umbrella /app/
+CMD ["sh", "bin/mehungry_umbrella", "start"]
 
-#RUN ln -s ./foilapp/lib/foilapi_web-${VERSION}/priv/static /app/static
-ENV HOME=/app
-
-EXPOSE 4000 3000
-RUN ls
-RUN pwd
-WORKDIR /app/bin
-RUN ls 
-RUN pwd
-ENTRYPOINT ["./mehungry_umbrella", "start"]
