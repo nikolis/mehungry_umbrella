@@ -58,6 +58,12 @@ RUN PORT=4000 mix release mehungry_umbrella
 
 # prepare release image
 FROM bitwalker/alpine-elixir-phoenix:latest as  app
+ENV MIX_ENV=prod \
+    AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+    AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+    DATABASE_URL=$DATABASE_URL \
+    SHELL=/bin/bash
+    
 # install runtime dependencies
 RUN apk add --update openssl postgresql-client
 
