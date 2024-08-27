@@ -9,7 +9,8 @@ ENV MIX_ENV=$MIX_ENV \
     DATABASE_URL=$DATABASE_URL \
     SHELL=/bin/bash
 
-echo $AWS_ACCESS_KEY_ID
+RUN echo $AWS_ACCESS_KEY_ID
+RUN echo $MIX_ENV
 
 # install hex + rebar
 RUN apk add --update git build-base nodejs npm yarn
@@ -22,6 +23,7 @@ RUN mix do local.hex --force, local.rebar --force
 
 # set build ENV
 ENV MIX_ENV=prod
+RUN echo $MIX_ENV
 
 # Install dependencies
 RUN mkdir ./apps
