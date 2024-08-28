@@ -47,7 +47,7 @@ COPY ./apps/mehungry_web/mix.* ./apps/mehungry_web
 
 COPY config ./config
 
-RUN mix deps.get --only $MIX_ENV
+RUN mix deps.get --only ${MIX_ENV}
 RUN mix assets.build 
 RUN mix deps.compile
 
