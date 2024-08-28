@@ -62,11 +62,8 @@ jobs:
         env:
           MIX_ENV: prod
 
-        run: 
-          docker build -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG -f docker/Dockerfile .
-          docker push $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG
-          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
+        run: |
+          docker build  --build-arg MIX_ENV=prod  -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG -f docker/Dockerfile .
 
       - name: Download task definition 
         run: |
