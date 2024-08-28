@@ -3,14 +3,16 @@ FROM bitwalker/alpine-elixir-phoenix:latest as builder
 #FROM elixir:1.7.2-alpine AS builder
 #WORKDIR /app
 
-ENV MIX_ENV=$MIX_ENV \
-    AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-    AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-    DATABASE_URL=$DATABASE_URL \
-    SHELL=/bin/bash
+#ENV MIX_ENV=$MIX_ENV \
+ #   AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+  #  AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+   # DATABASE_URL=$DATABASE_URL \
+    #SHELL=/bin/bash
 
-RUN echo $AWS_ACCESS_KEY_ID
-RUN echo $MIX_ENV
+#RUN echo $AWS_ACCESS_KEY_ID
+#RUN echo $MIX_ENV
+ARG MIX_ENV=${MIX_ENV}
+ENV MIX_ENV=${MIX_ENV}
 
 # install hex + rebar
 RUN apk add --update git build-base nodejs npm yarn
@@ -62,15 +64,17 @@ RUN PORT=4000 mix release mehungry_umbrella
 
 # prepare release image
 FROM bitwalker/alpine-elixir-phoenix:latest as  app
-ENV MIX_ENV=prod \
-    AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+ARG MIX_ENV=${MIX_ENV}
+ENV MIX_ENV=${MIX_ENV}
+
+ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
     AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
     DATABASE_URL=$DATABASE_URL \
     SHELL=/bin/bash
     
 # install runtime dependencies
 RUN apk add --update openssl postgresql-client
-RUN echo $AWS_ACCESS_KEY_ID
+#RUN echo $AWS_ACCESS_KEY_ID
 RUN echo $MIX_ENV
 
 EXPOSE 4000
