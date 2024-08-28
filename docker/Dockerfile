@@ -11,7 +11,7 @@ ENV MIX_ENV=SHEL="bin/bash"#$MIX_ENV
 
 #RUN echo $AWS_ACCESS_KEY_ID
 #RUN echo $MIX_ENV
-ARG MIX_ENV=${MIX_ENV}
+#ARG MIX_ENV=${MIX_ENV}
 ENV MIX_ENV=${MIX_ENV}
 
 # install hex + rebar
