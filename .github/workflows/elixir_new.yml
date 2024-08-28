@@ -41,6 +41,7 @@ jobs:
       - name: docker build mehungry_app #django api
         id: build-image
         env:
+          MIX_ENV: "prod"
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: mehungry_ecr
           IMAGE_TAG: ${{ github.sha }}
