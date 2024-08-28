@@ -10,31 +10,12 @@ permissions:
   contents: read
 
 env:
-  MIX_ENV: prod
-  
+  MIX_ENV: test
   # NOTE: make sure these versions match in Containerfile and .tool-versions
   ELIXIR_VERSION_SPEC: "1.16.2"
   OTP_VERSION_SPEC: "26.0.2"
   
 jobs:
-  #compile:
-   # name: Compile
-    #runs-on: ubuntu-latest
-
-    #steps:
-     # - name: Checkout
-      #  uses: actions/checkout@v3
-      #- name: Set up Elixir
-      #  uses: erlef/setup-beam@v1.16
-      #  with:
-       #   elixir-version: ${{ env.ELIXIR_VERSION_SPEC }}
-        #  otp-version: ${{ env.OTP_VERSION_SPEC }}
-      #- name: Install dependencies
-        #run: mix deps.get
-      #- name: Compile dependencies
-        #run: mix deps.compile
-      #- name: Compile
-        #run: mix compile   
           
   build_and_deploy:
      # The type of runner that the job will run on
@@ -60,10 +41,16 @@ jobs:
       - name: docker build mehungry_app #django api
         id: build-image
         env:
-          MIX_ENV: prod
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: mehungry_ecr
+          IMAGE_TAG: ${{ github.sha }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
         run: |
-          docker build  --build-arg MIX_ENV=prod  -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG -f docker/Dockerfile .
+          docker build  -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG -f docker/Dockerfile .
+          docker push $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
 
       - name: Download task definition 
         run: |
