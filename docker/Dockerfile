@@ -3,7 +3,8 @@ FROM bitwalker/alpine-elixir-phoenix:latest as builder
 #FROM elixir:1.7.2-alpine AS builder
 #WORKDIR /app
 
-ENV MIX_ENV=SHEL="bin/bash"#$MIX_ENV 
+ENV MIX_ENV=SHEL="bin/bash" 
+#$MIX_ENV 
  #   AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   #  AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
    # DATABASE_URL=$DATABASE_URL \
@@ -24,7 +25,7 @@ WORKDIR /mehungry_umbrella
 RUN mix do local.hex --force, local.rebar --force
 
 # set build ENV
-ENV MIX_ENV=prod
+#ENV MIX_ENV=prod
 RUN echo $MIX_ENV
 
 # Install dependencies
