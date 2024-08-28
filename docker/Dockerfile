@@ -70,6 +70,8 @@ ENV MIX_ENV=prod \
     
 # install runtime dependencies
 RUN apk add --update openssl postgresql-client
+RUN echo $AWS_ACCESS_KEY_ID
+RUN echo $MIX_ENV
 
 EXPOSE 4000
 # copy release to app container
