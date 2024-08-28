@@ -3,7 +3,9 @@ FROM bitwalker/alpine-elixir-phoenix:latest as builder
 #FROM elixir:1.7.2-alpine AS builder
 #WORKDIR /app
 
-ENV MIX_ENV=SHEL="bin/bash" 
+ENV SHEL="bin/bash" \
+  MIX_ENV=${MIX_ENV}
+
 #$MIX_ENV 
  #   AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   #  AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
@@ -13,7 +15,7 @@ ENV MIX_ENV=SHEL="bin/bash"
 #RUN echo $AWS_ACCESS_KEY_ID
 #RUN echo $MIX_ENV
 #ARG MIX_ENV=${MIX_ENV}
-ENV MIX_ENV=${MIX_ENV}
+
 
 # install hex + rebar
 RUN apk add --update git build-base nodejs npm yarn
