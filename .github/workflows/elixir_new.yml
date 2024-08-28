@@ -11,14 +11,6 @@ permissions:
 
 env:
   MIX_ENV: prod
-  AWS_ASSETS_BUCKET_NAME: mehungry-main-bucket 
-  AWS_ACCESS_KEY_ID: AKIAQFLZDOL4D3NPTDND 
-  AWS_SECRET_ACCESS_KEY: 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
-  FACEBOOK_CLIENT_ID: 902631176539278
-  FACEBOOK_CLIENT_SECRET: 9b4b943448f4282c70e06a590ee4d7c1
-  GOOGLE_CLIENT_ID: 247808283378-33oecc4i17juadkk76m2sg20ts8ko128.apps.googleusercontent.com
-  GOOGLE_CLIENT_SECRET: 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
-  SECRET_KEY_BASE: mhnHqlDrVl11yiMKfXf62RyDEW31iS7jTWS+jMyxJSSvSTwvNc20htRuM6wfU5kC
   
   # NOTE: make sure these versions match in Containerfile and .tool-versions
   ELIXIR_VERSION_SPEC: "1.16.2"
@@ -68,34 +60,10 @@ jobs:
       - name: docker build mehungry_app #django api
         id: build-image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: mehungry_ecr
-          IMAGE_TAG: ${{ github.sha }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           MIX_ENV: prod
-          AWS_ASSETS_BUCKET_NAME: mehungry-main-bucket 
-          AWS_ACCESS_KEY_ID: AKIAQFLZDOL4D3NPTDND 
-          AWS_SECRET_ACCESS_KEY: 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
-          FACEBOOK_CLIENT_ID: 902631176539278
-          FACEBOOK_CLIENT_SECRET: 9b4b943448f4282c70e06a590ee4d7c1
-          GOOGLE_CLIENT_ID: 247808283378-33oecc4i17juadkk76m2sg20ts8ko128.apps.googleusercontent.com
-          GOOGLE_CLIENT_SECRET: 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
-          SECRET_KEY_BASE: mhnHqlDrVl11yiMKfXf62RyDEW31iS7jTWS+jMyxJSSvSTwvNc20htRuM6wfU5kC
 
-        run: |
-          export AWS_ASSETS_BUCKET_NAME=mehungry-main-bucket 
-          export AWS_ACCESS_KEY_ID=AKIAQFLZDOL4D3NPTDND 
-          export AWS_SECRET_ACCESS_KEY=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
-          export FACEBOOK_CLIENT_ID=902631176539278
-          export FACEBOOK_CLIENT_SECRET=9b4b943448f4282c70e06a590ee4d7c1
-          export GOOGLE_CLIENT_ID=247808283378-33oecc4i17juadkk76m2sg20ts8ko128.apps.googleusercontent.com
-          export GOOGLE_CLIENT_SECRET=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
-          export SECRET_KEY_BASE=mhnHqlDrVl11yiMKfXf62RyDEW31iS7jTWS+jMyxJSSvSTwvNc20htRuM6wfU5kC
-          export SOME_APP_SSL_KEY_PATH=priv/cert/SSL_PrivateKEY_www_m3hungry_com.pem
-          export SOME_APP_SSL_CERT_PATH=priv/cert/SSL_CSR_www_m3hungry_com.pem
-          export MIX_ENV=prod
-
-          docker build  --build-arg MIX_ENV=prod  -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG -f docker/Dockerfile .
+        run: 
+          docker build -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG -f docker/Dockerfile .
           docker push $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
