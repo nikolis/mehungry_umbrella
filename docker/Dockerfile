@@ -83,7 +83,7 @@ EXPOSE 4000
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
 RUN echo $MIX_ENV
-ENV MIX_ENV=$MIX_ENV 
+ENV MIX_ENV=${MIX_ENV}
 
 CMD ["sh", "bin/mehungry_umbrella", "start"]
 
