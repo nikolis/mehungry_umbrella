@@ -63,7 +63,7 @@ COPY apps ./apps
 RUN PORT=4000 mix release mehungry_umbrella
 
 # prepare release image
-FROM bitwalker/alpine-elixir-phoenix:latest as  app
+FROM bitwalker/alpine-elixir-phoenix:latest as  actuall_application
 ARG MIX_ENV=${MIX_ENV}
 ENV MIX_ENV=${MIX_ENV}
 
@@ -75,11 +75,12 @@ ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
 # install runtime dependencies
 RUN apk add --update openssl postgresql-client
 #RUN echo $AWS_ACCESS_KEY_ID
-RUN echo $MIX_ENV
 
 EXPOSE 4000
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
+RUN echo $MIX_ENV
+ENV MIX_ENV=$MIX_ENV 
 
 CMD ["sh", "bin/mehungry_umbrella", "start"]
 
