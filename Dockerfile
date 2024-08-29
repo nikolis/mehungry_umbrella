@@ -38,9 +38,11 @@ COPY config ./config
 
 
 RUN mix deps.get --only ${MIX_ENV}
+RUN mix tailwind.install --if-missing 
+
 RUN mix assets.build  
 RUN mix deps.compile
-  
+
 # Build front-end
 COPY ./apps/mehungry_web/assets ./apps/mehungry_web/assets
 RUN mix assets.deploy --prefix ./apps/mehungry_web/assets
