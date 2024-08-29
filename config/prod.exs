@@ -22,12 +22,15 @@ config :mehungry_web, MehungryWeb.Endpoint,
   http: [port: 4000],
   debug_errors: true,
   check_origin: false,
+  # force_ssl: [rewrite_on: [:x_forwarded_proto]],
   server: true,
-  url: [host: "localhost", port: 4000],
-  cache_static_manifest: "priv/static/cache_manifest.json"
+  url: [host: "mehungry.com", port: 4000]
 
 if config_env() == :prod do
-  database_url = "ecto://postgres:postgres@localhost:5432/mehungry_server_dev"
+  database_url =System.get_env("DATABASE_URL")
+
+  # database_url = "ecto://postgres:postgres@localhost:5432/mehungry_server_dev"
+
   # System.get_env("DATABASE_URL") ||
   # raise """
   # environment variable DATABASE_URL is missing.
@@ -35,11 +38,13 @@ if config_env() == :prod do
   # """
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
+  query_args = ["SET pg_trgm.similarity_threshold = 0.3", []]
 
   config :mehungry, Mehungry.Repo,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-    socket_options: maybe_ipv6
+    socket_options: maybe_ipv6,
+    after_connect: {Postgrex, :query!, query_args}
 
   # config :mehungry, Mehungry.Repo,
   #  username: "postgres",
@@ -85,5 +90,31 @@ if config_env() == :prod do
   # Check `Plug.SSL` for all available options in `force_ssl`.
 
   # Do not print debug messages in production
+  #
+  #
+
+  config :ueberauth, Ueberauth,
+    providers: [
+      facebook:
+        {Ueberauth.Strategy.Facebook,
+         [profile_fields: "name,email,first_name,last_name, picture"]},
+      google: {Ueberauth.Strategy.Google, []},
+      identity:
+        {Ueberauth.Strategy.Identity,
+         [
+           callback_methods: ["POST"],
+           uid_field: :username,
+           nickname_field: :username
+         ]}
+    ]
+
+  config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
+    client_id: System.get_env("FACEBOOK_CLIENT_ID"),
+    client_secret: System.get_env("FACEBOOK_CLIENT_SECRET")
+
+  config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+    client_id: System.get_env("GOOGLE_CLIENT_ID"),
+    client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+
   config :logger, level: :info
 end
