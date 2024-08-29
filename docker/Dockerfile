@@ -1,23 +1,6 @@
 FROM bitwalker/alpine-elixir-phoenix:latest as builder
-#ARG ALPINE_VERSION=3.8
-#FROM elixir:1.7.2-alpine AS builder
-#WORKDIR /app
 
-ENV SHEL="bin/bash" \
-  MIX_ENV=${MIX_ENV}
-
-#$MIX_ENV 
- #   AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-  #  AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-   # DATABASE_URL=$DATABASE_URL \
-    #SHELL=/bin/bash
-
-#RUN echo $AWS_ACCESS_KEY_ID
-#RUN echo $MIX_ENV
-#ARG MIX_ENV=${MIX_ENV}
-
-
-# install hex + rebar
+# install build dependencies
 RUN apk add --update git build-base nodejs npm yarn
 
 RUN mkdir mehungry_umbrella
@@ -27,8 +10,7 @@ WORKDIR /mehungry_umbrella
 RUN mix do local.hex --force, local.rebar --force
 
 # set build ENV
-#ENV MIX_ENV=prod
-RUN echo ${MIX_ENV}
+ENV MIX_ENV=prod
 
 # Install dependencies
 RUN mkdir ./apps
@@ -49,14 +31,13 @@ COPY ./apps/mehungry_web/mix.* ./apps/mehungry_web
 
 COPY config ./config
 
-RUN mix deps.get --only ${MIX_ENV}
+RUN mix deps.get --only "prod"
 RUN mix assets.build 
 RUN mix deps.compile
-
+  
 # Build front-end
 COPY ./apps/mehungry_web/assets ./apps/mehungry_web/assets
 RUN mix assets.deploy --prefix ./apps/mehungry_web/assets
-
 # Copy app code
 COPY apps ./apps
 
@@ -66,24 +47,12 @@ COPY apps ./apps
 RUN PORT=4000 mix release mehungry_umbrella
 
 # prepare release image
-FROM bitwalker/alpine-elixir-phoenix:latest as  actuall_application
-ARG MIX_ENV=${MIX_ENV}
-ENV MIX_ENV=${MIX_ENV}
-
-ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-    AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-    DATABASE_URL=$DATABASE_URL \
-    SHELL=/bin/bash
-    
+FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
 # install runtime dependencies
 RUN apk add --update openssl postgresql-client
-#RUN echo $AWS_ACCESS_KEY_ID
 
 EXPOSE 4000
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
-RUN echo $MIX_ENV
-ENV MIX_ENV="prod"
 
 CMD ["sh", "bin/mehungry_umbrella", "start"]
-
