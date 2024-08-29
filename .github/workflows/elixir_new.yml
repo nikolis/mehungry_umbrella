@@ -68,6 +68,6 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1 
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: mehungry_app
-          cluster: mehungry_ecs_cluster_prod
+          service: mh-prod-service
+          cluster: mehungry_cluster
             
