@@ -54,7 +54,7 @@ jobs:
 
       - name: Download task definition 
         run: |
-           aws ecs describe-task-definition - task-definition etap-development - query taskDefinition > task-definition.json    
+           aws ecs describe-task-definition - task-definition etap-development - query taskDefinition > task-definition.json
 
       - name: Fill in new image ID in task definition
         id: task-def
