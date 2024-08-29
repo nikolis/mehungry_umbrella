@@ -28,7 +28,7 @@ RUN mix do local.hex --force, local.rebar --force
 
 # set build ENV
 #ENV MIX_ENV=prod
-RUN echo $MIX_ENV
+RUN echo ${MIX_ENV}
 
 # Install dependencies
 RUN mkdir ./apps
