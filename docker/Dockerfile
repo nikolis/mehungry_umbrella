@@ -49,10 +49,11 @@ RUN PORT=4000 mix release mehungry_umbrella
 # prepare release image
 FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
 # install runtime dependencies
-RUN apk add --update openssl postgresql-client
-ENV MIX_ENV=prod
-EXPOSE 4000
+
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
+RUN apk add --update openssl postgresql-client
+ENV MIX_ENV="prod"
+EXPOSE 4000
 
 CMD ["sh", "bin/mehungry_umbrella", "start"]
