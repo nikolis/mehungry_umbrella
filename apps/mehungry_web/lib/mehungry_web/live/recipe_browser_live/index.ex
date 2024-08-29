@@ -353,7 +353,8 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
       |> assign(:query_string, query_str)
       |> assign(:search_changeset, nil)
       |> assign(:user_profile, user_profile)
-      |> assign(:query, query)
+      |> assign(:page_title, query_str)
+      |> assign(:query, %{title: query})
   end
 
   defp apply_action(socket, :index, _) do
@@ -514,13 +515,14 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
       end
 
     socket
-    |> assign(:page_title, "Recipe Details")
     |> assign(:nutrients, nutrients)
     |> assign(:primary_size, length(primaries))
     |> assign(:recipe, recipe)
     |> assign(:query_string, nil)
     |> stream(:recipes, recipes)
     |> assign(:cursor_after, cursor_after)
+    |> assign(:page_title, %{title: recipe.title, img: recipe.image_url, id: Integer.to_string(recipe.id)}) 
+
   end
 
   defp get_nutrient_category(nutrients, category_name, category_sum_name) do

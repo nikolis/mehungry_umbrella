@@ -49,7 +49,7 @@ defmodule MehungryWeb.SelectComponentSingle do
               name={"search_input" <> @id}
               myself={@myself}
               type="select_component"
-              class="test flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "
+              class="text-sm flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "
               id={@id <> "innder"}
             />
           <% end %>

@@ -54,7 +54,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory2 do
               name="search_input"
               myself={@myself}
               type="select_component"
-              class="test flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "
+              class="text-sm	 flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "
             />
           <% end %>
           <!-- End Item Tags And Input Field -->
@@ -222,8 +222,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory2 do
     {:noreply,
      push_event(
        socket,
-       "selected_id" <>
-         Integer.to_string(socket.assigns.form.index) <> socket.assigns.input_variable,
+       "selected_id" <> socket.assigns.input_variable,
        %{id: nil}
      )}
   end

@@ -5,7 +5,7 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
     assigns = assign(assigns, :deleted, Phoenix.HTML.Form.input_value(assigns.f, :delete) == true)
 
     ~H"""
-    <div class={"min-h-16 p-2	 h-full grid grid-cols-7 sm:grid-cols-5  gap-6 m-auto" <> if(@deleted, do: " hidden", else: "")}>
+    <div class={"min-h-16  gap-2 p-2 h-full grid grid-cols-9 sm:grid-cols-5  sm:gap-10 m-auto" <> if(@deleted, do: " hidden", else: "")}>
       <input
         type="hidden"
         name={Phoenix.HTML.Form.input_name(@f, :delete)}

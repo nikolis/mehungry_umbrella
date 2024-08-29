@@ -16,6 +16,8 @@ defmodule MehungryWeb.HomeLive.Index do
   alias MehungryWeb.HomeLive.Recipe.Components
 
   def mount_search(params, session, socket) do
+    IO.inspect(System.get_env("ENABLE_XXX"), label: "AWS_KEY")
+
     user =
       case is_nil(session["user_token"]) do
         true ->
