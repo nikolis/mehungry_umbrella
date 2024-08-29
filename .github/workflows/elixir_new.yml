@@ -38,7 +38,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       # Runs a single command using the runners shell
-      - name: docker build mehungry_app #django api
+      - name: docker build mehungry_app 
         id: build-image
         env:
           MIX_ENV: "prod"
@@ -48,7 +48,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
         run: |
-          docker build  -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG -f docker/Dockerfile .
+          docker build  -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG .
           docker push $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
