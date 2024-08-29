@@ -25,3 +25,11 @@ When first user subscribes to first topic create the initial in-memory post list
 
 
 
+##  Roadmap 
+
+    *** Public user profile / user to user subscriptions 
+    *** Basic Professional Account control screen / Presentation Ready 
+    *** Basic Recommendation engine 
+    *** Basic Ingredient Management Interface 
+    *** Multi Language Translation in Ingredients  
+    *** Multi Language Translation in Application
