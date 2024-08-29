@@ -25,6 +25,7 @@ RUN mkdir ./apps/mehungry_web/assets/
 
 # Install JS dependencies
 COPY ./apps/mehungry_web/assets/package.json ./apps/mehungry_web/assets/
+COPY ./apps/mehungry_web/assets/tailwind.config.js ./apps/mehungry_web/assets/
 COPY ./apps/mehungry_web/assets/  ./apps/mehungry_web/assets/
 
 RUN npm i --prefix ./apps/mehungry_web/assets/
