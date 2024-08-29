@@ -1,0 +1,74 @@
+name: Elixir CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+env:
+  MIX_ENV: test
+  # NOTE: make sure these versions match in Containerfile and .tool-versions
+  ELIXIR_VERSION_SPEC: "1.16.2"
+  OTP_VERSION_SPEC: "26.0.2"
+  
+jobs:
+          
+  build_and_deploy:
+     # The type of runner that the job will run on
+    #needs: [compile]
+    runs-on: ubuntu-latest
+
+     # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Runs a single command using the runners shell
+      - name: docker build mehungry_app 
+        id: build-image
+        env:
+          MIX_ENV: "prod"
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: mehungry_ecr
+          IMAGE_TAG: ${{ github.sha }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+        run: |
+          docker build  -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+
+      - name: Download task definition 
+        run: |
+           aws ecs describe-task-definition - task-definition etap-development - query taskDefinition > task-definition.json    
+
+      - name: Fill in new image ID in task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+           task-definition: task-definition.json 
+           container-name: mehungry_app 
+           image: ${{ steps.build-image.outputs.image }}
+ 
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1 
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: mehungry_app
+          cluster: mehungry_ecs_cluster_prod
+            

@@ -9,8 +9,8 @@ WORKDIR /mehungry_umbrella
 # install Hex + Rebar
 RUN mix do local.hex --force, local.rebar --force
 
-ARG MIX_ENV
-ENV ENABLE_X={$BUILD_ARG2}
+# set build ENV
+ENV MIX_ENV=prod
 
 # Install dependencies
 RUN mkdir ./apps
@@ -31,7 +31,6 @@ COPY ./apps/mehungry_web/mix.* ./apps/mehungry_web
 
 COPY config ./config
 
-ENV MIX_ENV=${MIX_ENV}
 
 RUN mix deps.get --only ${MIX_ENV}
 RUN mix assets.build  
@@ -71,9 +70,9 @@ ENV GOOGLE_CLIENT_ID  ${GOOGLE_CLIENT_ID}
 ENV GOOGLE_CLIENT_SECRET  ${GOOGLE_CLIENT_SECRET}
 ENV SECRET_KEY_BASE ${SECRET_KEY_BASE}
 
+
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
-
 RUN apk add --update openssl postgresql-client
 
 EXPOSE 4000
