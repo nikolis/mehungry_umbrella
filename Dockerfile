@@ -1,5 +1,6 @@
 FROM bitwalker/alpine-elixir-phoenix:latest as builder
 
+
 # install build dependencies
 RUN apk add --update git build-base nodejs npm yarn
 
@@ -9,8 +10,12 @@ WORKDIR /mehungry_umbrella
 # install Hex + Rebar
 RUN mix do local.hex --force, local.rebar --force
 
+# set build ARG
+ARG DATABASE_URL
+
 # set build ENV
 ENV MIX_ENV=prod
+ENV DATABASE_URL: ${DATABASE_URL}
 
 # Install dependencies
 RUN mkdir ./apps
