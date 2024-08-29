@@ -10,6 +10,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <%= csrf_meta_tag() %>
   <script
     src="https://code.jquery.com/jquery-3.6.0.min.js"
@@ -69,6 +70,12 @@
     href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
     rel="stylesheet"
   />
+  <%= if is_map(@conn.assigns[:page_title]) do %>
+    <title> <%= @conn.assigns.page_title.title %> </title>
+    <meta property="og:url" content={"https://www.m3hungry.com/browse/"<> @conn.assigns.page_title.id} />
+    <meta property="og:image" content={@conn.assigns.page_title.img} />
+  <% end %>
+
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js">
   </script>
 </head>

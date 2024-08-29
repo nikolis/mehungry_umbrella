@@ -16,6 +16,7 @@ defmodule MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent do
     ~H"""
     <div phx-hook="SwapElement" id="recipe_presentation_modal">
       <div style="min-height: 140vh" class="mt-8">
+
         <h3 class="recipe_details_title text-center mt-10"><%= @recipe.title %></h3>
         <h2 class="recipe_details_sub_title text-center"><%= @recipe.description %></h2>
         <div
