@@ -26,7 +26,6 @@ RUN mkdir ./apps/mehungry_web/assets/
 # Install JS dependencies
 #COPY ./apps/mehungry_web/assets/package.json ./apps/mehungry_web/assets/
 #COPY ./apps/mehungry_web/assets/tailwind.config.js ./apps/mehungry_web/assets/
-COPY ./apps/mehungry_web/assets/  ./apps/mehungry_web/assets/
 
 
 # Install mix dependecies
@@ -45,6 +44,8 @@ RUN MIX_ENV=prod mix compile
 
 # Build front-end
 COPY ./apps/mehungry_web/assets ./apps/mehungry_web/assets
+COPY ./apps/mehungry_web/lib ./apps/mehungry_web/lib
+
 RUN npm i --prefix ./apps/mehungry_web/assets/
 
 RUN mix tailwind.install  --if-missing
@@ -56,7 +57,7 @@ COPY apps ./apps
 #RUN mix phx.digest
 
 # build release
-RUN PORT=4000 mix release mehungry_umbrella
+RUN PORT=4000 MIX_ENV=prod  mix release mehungry_umbrella
 
 # prepare release image
 FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
