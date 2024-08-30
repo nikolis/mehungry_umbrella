@@ -15,7 +15,7 @@ ARG DATABASE_URL
 
 # set build ENV
 ENV MIX_ENV=prod
-ENV DATABASE_URL: ${DATABASE_URL}
+ENV DATABASE_URL ${DATABASE_URL}
 
 # Install dependencies
 RUN mkdir ./apps
@@ -44,6 +44,7 @@ RUN MIX_ENV=prod mix compile
 
 # Build front-end
 COPY ./apps/mehungry_web/assets ./apps/mehungry_web/assets
+COPY ./apps/mehungry/lib ./apps/mehungry/lib
 COPY ./apps/mehungry_web/lib ./apps/mehungry_web/lib
 
 RUN npm i --prefix ./apps/mehungry_web/assets/
