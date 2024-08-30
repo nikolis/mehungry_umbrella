@@ -46,7 +46,7 @@ RUN MIX_ENV=prod mix compile
 COPY ./apps/mehungry_web/assets ./apps/mehungry_web/assets
 COPY ./apps/mehungry/lib ./apps/mehungry/lib
 COPY ./apps/mehungry_web/lib ./apps/mehungry_web/lib
-COPY ./apps/mehungry_web/priv/satic ./apps/mehungry_web/priv/static/
+COPY ./apps/mehungry_web/priv/static ./apps/mehungry_web/priv/static/
 
 RUN npm i --prefix ./apps/mehungry_web/assets/
 
