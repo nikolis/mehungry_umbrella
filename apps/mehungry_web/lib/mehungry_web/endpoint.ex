@@ -27,7 +27,7 @@ defmodule MehungryWeb.Endpoint do
   plug Plug.Static,
     at: "/",
     from: :mehungry_web,
-    gzip: false,
+    gzip: true,
     only: MehungryWeb.static_paths()
 
   plug Plug.Static, at: "/static/images", from: "media/"
