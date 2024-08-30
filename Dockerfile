@@ -24,8 +24,8 @@ RUN mkdir ./apps/mehungry_web
 RUN mkdir ./apps/mehungry_web/assets/
 
 # Install JS dependencies
-COPY ./apps/mehungry_web/assets/package.json ./apps/mehungry_web/assets/
-COPY ./apps/mehungry_web/assets/tailwind.config.js ./apps/mehungry_web/assets/
+#COPY ./apps/mehungry_web/assets/package.json ./apps/mehungry_web/assets/
+#COPY ./apps/mehungry_web/assets/tailwind.config.js ./apps/mehungry_web/assets/
 COPY ./apps/mehungry_web/assets/  ./apps/mehungry_web/assets/
 
 RUN npm i --prefix ./apps/mehungry_web/assets/
@@ -34,19 +34,22 @@ COPY mix.* ./
 COPY ./apps/mehungry/mix.* ./apps/mehungry
 COPY ./apps/mehungry_web/mix.* ./apps/mehungry_web
 
-
 COPY config ./config
-
 
 RUN mix deps.get --only ${MIX_ENV}
 RUN mix tailwind.install --if-missing 
+RUN MIX_ENV=prod mix compile
+RUN MIX_ENV=prod mix assets.deploy
 
-RUN mix assets.build  
-RUN mix deps.compile
+
+#RUN mix assets.build  
+#RUN mix deps.compile
 
 # Build front-end
 COPY ./apps/mehungry_web/assets ./apps/mehungry_web/assets
-RUN mix assets.deploy --prefix ./apps/mehungry_web/assets
+RUN MIX_ENV=prod mix assets.deploy
+#RUN mix assets.deploy --prefix ./apps/mehungry_web/assets
+
 # Copy app code
 COPY apps ./apps
 
