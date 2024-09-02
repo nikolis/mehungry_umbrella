@@ -60,9 +60,8 @@ defmodule MehungryWeb.SelectComponentSingle do
              focus:outline-none overflow-y-auto 
              outline-none focus:outline-none 
              bg-white absolute left-0 bottom-100 
-              bg-white z-50 max-h-52 shadow-lg" 
->
-            <div id={@id<> "face"}               >
+              bg-white z-50 max-h-52 shadow-lg">
+            <div id={@id<> "face"}>
               </div>
               <%= if @listing_open do %>
                 <%= for {x, index} <- Enum.with_index(@items_filtered) do %>
@@ -81,7 +80,7 @@ defmodule MehungryWeb.SelectComponentSingle do
                         >
                           <%= x.label %>
                   </li>
-                  <%= else %>
+                  <% else %>
                         <li 
                           class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
                           phx-click="handle-item-click"

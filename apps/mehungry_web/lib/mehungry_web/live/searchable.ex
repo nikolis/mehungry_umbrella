@@ -11,6 +11,7 @@ defmodule MehungryWeb.Searchable do
                 ) ::
                   {:ok, Socket.t()} | {:ok, Socket.t(), keyword()}
 
+      @impl true
       def mount(params, session, socket) do
         socket = assign(socket, :search_changeset, nil)
         socket = assign(socket, :query_string, "")

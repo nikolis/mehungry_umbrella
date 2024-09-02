@@ -1,7 +1,6 @@
 defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
   use MehungryWeb, :live_component
 
-  @week_start_at :monday
   @day_meals ["breakfast", "elevenses", "lunch", "after lunch", "dinner"]
   @impl true
   def render(assigns) do
@@ -164,6 +163,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     end
   end
 
+  @impl true
   def handle_event("prev-month", _, socket) do
     days = get_days_according_to_width(socket.assigns.device_width) * -1
     new_date = socket.assigns.first |> Date.add(days) |> Date.add(-1)

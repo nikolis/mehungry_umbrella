@@ -82,7 +82,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
                         >
                           <%= x.label %>
                   </li>
-                  <%= else %>
+                  <% else %>
                         <li 
                           class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
                           phx-click="handle-item-click"

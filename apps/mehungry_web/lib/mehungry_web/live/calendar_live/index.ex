@@ -46,11 +46,11 @@ defmodule MehungryWeb.CalendarLive.Index do
     }
   end
 
-  defp apply_action(socket, :index, params) do
+  defp apply_action(socket, :index, _params) do
     socket
   end
 
-  defp apply_action(socket, :particular, %{"date" => date} = params) do
+  defp apply_action(socket, :particular, %{"date" => date} = _params) do
     socket = push_event(socket, "go_to_date", %{date: date})
 
     socket
@@ -58,7 +58,7 @@ defmodule MehungryWeb.CalendarLive.Index do
     |> assign(:particular_date, date)
   end
 
-  defp apply_action(socket, :nutrition_details, %{"date" => date} = params) do
+  defp apply_action(socket, :nutrition_details, %{"date" => date} = _params) do
     socket
     |> assign(:nutrition_details, date)
   end
@@ -150,7 +150,7 @@ defmodule MehungryWeb.CalendarLive.Index do
         {:noreply,
          socket
          |> put_flash(:info, "User Meal Deleted")
-         |> push_redirect(to: Routes.calendar_index_path(socket, :index))}
+         |> push_navigate(to: Routes.calendar_index_path(socket, :index))}
 
       {:error, _changeset} ->
         {:noreply, socket}
