@@ -68,8 +68,6 @@ defmodule MehungryWeb.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:esbuild, "~> 0.8"},
       {:tailwind, "~> 0.2"},
-      {:ex_aws, "~> 2.1"},
-      {:ex_aws_s3, "~> 2.0"},
       {:hackney, "~> 1.9"},
       {:sweet_xml, "~> 0.6"},
       {:heroicons,

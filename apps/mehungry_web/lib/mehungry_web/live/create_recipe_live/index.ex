@@ -52,14 +52,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     |> init(recipe)
   end
 
-  @impl true
-  def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
-    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
-
-    {:noreply,
-     socket
-     |> assign(:user_profile, user_profile)}
-  end
 
   defp init(socket, base) do
     changeset = Recipe.changeset(base, %{})
@@ -243,6 +235,15 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:changeset, changeset)}
   end
 
+  @impl true
+  def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
+    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
+
+    {:noreply,
+     socket
+     |> assign(:user_profile, user_profile)}
+  end
+
   ########################################################################################## Helper Function  ##########################################
 
   def map_recipe_ingredient(recipe_ingredients) do
@@ -296,7 +297,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         {:noreply,
          socket
          |> put_flash(:info, "Recipe created succesfully")
-         |> push_redirect(to: "/profile")}
+         |> push_navigate(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
@@ -342,7 +343,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         {:noreply,
          socket
          |> put_flash(:info, "Recipe created succesfully")
-         |> push_redirect(to: "/profile")}
+         |> push_navigate(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}

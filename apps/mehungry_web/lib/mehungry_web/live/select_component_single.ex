@@ -56,32 +56,33 @@ defmodule MehungryWeb.SelectComponentSingle do
           <!-- End Item Tags And Input Field -->
             <!-- Start Items List -->
           <div>
-            <ul id={"ul"<>@id}  class="w-full list-none border-t-0
+            <ul
+              id={"ul"<>@id}
+              class="w-full list-none border-t-0
              focus:outline-none overflow-y-auto 
              outline-none focus:outline-none 
              bg-white absolute left-0 bottom-100 
-              bg-white z-50 max-h-52 shadow-lg">
-            <div id={@id<> "face"}>
-              </div>
+              bg-white z-50 max-h-52 shadow-lg"
+            >
+              <div id={@id<> "face"}></div>
               <%= if @listing_open do %>
                 <%= for {x, index} <- Enum.with_index(@items_filtered) do %>
                   <!-- Item Element -->
                   <div class="relative z-50 h-full">
                     <div class="bg-white h-full">
-                      <%= if index == 0  do %> 
-                        <li 
+                      <%= if index == 0  do %>
+                        <li
                           class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
                           phx-click="handle-item-click"
                           phx-value-id={x.id}
                           id={Integer.to_string(x.id)}
                           phx-target={@myself}
                           phx-hook="SelectComponentList"
-
                         >
                           <%= x.label %>
-                  </li>
-                  <% else %>
-                        <li 
+                        </li>
+                      <% else %>
+                        <li
                           class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
                           phx-click="handle-item-click"
                           phx-value-id={x.id}
@@ -89,8 +90,7 @@ defmodule MehungryWeb.SelectComponentSingle do
                           phx-target={@myself}
                         >
                           <%= x.label %>
-                  </li>
- 
+                        </li>
                       <% end %>
                     </div>
                   </div>

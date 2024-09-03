@@ -27,10 +27,11 @@ config :mehungry_web, MehungryWeb.Endpoint,
   url: [host: "mehungry.com", port: 4000]
 
 if config_env() == :prod do
-  database_url = System.get_env("DATABASE_URL") ||
-    raise """
-      environment variable DATABASE_URL is missing.
-    """
+  database_url =
+    System.get_env("DATABASE_URL") ||
+      raise """
+        environment variable DATABASE_URL is missing.
+      """
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
   query_args = ["SET pg_trgm.similarity_threshold = 0.3", []]

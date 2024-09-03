@@ -1,5 +1,4 @@
 defmodule MehungryWeb.MaybeUserAuthLive do
-
   use MehungryWeb, :live_view
 
   alias Mehungry.Accounts

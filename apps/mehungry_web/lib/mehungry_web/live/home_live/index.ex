@@ -13,7 +13,6 @@ defmodule MehungryWeb.HomeLive.Index do
   alias Mehungry.Food.RecipeUtils
 
   def mount_search(_params, session, socket) do
-
     user =
       case is_nil(session["user_token"]) do
         true ->
@@ -96,12 +95,12 @@ defmodule MehungryWeb.HomeLive.Index do
   @impl true
   def handle_event(
         "save_user_recipe_dets",
-        %{"recipe_id" => recipe_id, "dom_id" => dom_id},
+        %{"recipe_id" => recipe_id, "dom_id" => _dom_id},
         socket
       ) do
     case is_nil(socket.assigns.user) do
       true ->
-        {:noreply,  assign(socket, :must_be_loged_in, 1)}
+        {:noreply, assign(socket, :must_be_loged_in, 1)}
 
       false ->
         {recipe_id, _ignore} = Integer.parse(recipe_id)
@@ -131,7 +130,7 @@ defmodule MehungryWeb.HomeLive.Index do
   def handle_event("react", %{"type_" => type, "id" => post_id}, socket) do
     case is_nil(socket.assigns.user) do
       true ->
-        {:noreply,  assign(socket, :must_be_loged_in, 1)}
+        {:noreply, assign(socket, :must_be_loged_in, 1)}
 
       false ->
         case type do
@@ -282,7 +281,6 @@ defmodule MehungryWeb.HomeLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-
   @impl true
   def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
     user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
@@ -313,7 +311,6 @@ defmodule MehungryWeb.HomeLive.Index do
 
     {:noreply, socket}
   end
-
 
   def toggle_user_saved_posts(socket, post_id) do
     case is_nil(socket.assigns.user) do

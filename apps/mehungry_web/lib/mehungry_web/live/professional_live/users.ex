@@ -41,5 +41,4 @@ defmodule MehungryWeb.ProfessionalLive.Users do
   def handle_info({MehungryWeb.UserLive.FormComponent, {:saved, user}}, socket) do
     {:noreply, stream_insert(socket, :users, user)}
   end
-
 end

@@ -22,7 +22,7 @@ defmodule MehungryWeb.CoreComponents do
   @doc """
   Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
   """
-  def user_overview_card(%{user: %Mehungry.Accounts.User{} = user} = assigns) do
+  def user_overview_card(%{user: %Mehungry.Accounts.User{} = _user} = assigns) do
     ~H"""
     <div style="margin-bottom: 0.75rem; ">
       <div style="display: flex; flex-direction: row;">
@@ -53,13 +53,10 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  @doc """
-  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
-  """
   def user_overview_card(
         %{
-          current_user: %Mehungry.Accounts.User{} = current_user,
-          user: %Mehungry.Accounts.User{} = user
+          current_user: %Mehungry.Accounts.User{} = _current_user,
+          user: %Mehungry.Accounts.User{} = _user
         } = assigns
       ) do
     ~H"""
@@ -351,8 +348,7 @@ defmodule MehungryWeb.CoreComponents do
   """
   attr :type, :string, default: nil
   attr :class, :string, default: nil
-  attr :rest, :global, include: ~w(disabled form name value)
-
+  attr :rest, :global, include: ~w(disabled form name value myself)
   slot :inner_block, required: true
 
   def button(%{type: "primary"} = assigns) do
@@ -433,7 +429,7 @@ defmodule MehungryWeb.CoreComponents do
 
   attr :rest, :global,
     include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
-                multiple pattern placeholder readonly required rows size step)
+                multiple pattern placeholder readonly required rows size step myself)
 
   slot :inner_block
 

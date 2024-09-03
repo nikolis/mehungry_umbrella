@@ -40,6 +40,8 @@ defmodule Mehungry.MixProject do
       {:poison, "~> 5.0"},
       {:numexy, "~> 0.1.9"},
       {:hackney, "~> 1.18.1"},
+      {:ex_aws, "~> 2.1"},
+      {:ex_aws_s3, "~> 2.0"},
       {:ueberauth, "~> 0.6"},
       {:oauth2, "~> 2.0", override: true},
       {:ueberauth_facebook, "~> 0.8"},

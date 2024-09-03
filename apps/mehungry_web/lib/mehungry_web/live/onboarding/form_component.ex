@@ -133,7 +133,6 @@ defmodule MehungryWeb.Onboarding.FormComponent do
      |> push_patch(to: socket.assigns.patch)}
   end
 
-  
   defp assign_form(socket, map) do
     assign(socket, :form, to_form(map))
   end

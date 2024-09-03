@@ -8,7 +8,7 @@ defmodule MehungryWeb.Application do
   def start(_type, _args) do
     children = [
       # Start the Telemetry supervisor
-      #MehungryWeb.Telemetry,
+      # MehungryWeb.Telemetry,
       # Manually Crated Presence Model
       MehungryWeb.Presence,
       # Start the Endpoint (http/https)

@@ -134,19 +134,19 @@ defmodule MehungryWeb.HomeLive.Show do
   @impl true
   def handle_event(
         "save_user_recipe_dets",
-        %{"recipe_id" => recipe_id, "dom_id" => dom_id},
+        %{"recipe_id" => recipe_id, "dom_id" => _dom_id},
         socket
       ) do
     case is_nil(socket.assigns.user) do
       true ->
-      {:noreply, assign(socket, :must_be_loged_in, 1)}
+        {:noreply, assign(socket, :must_be_loged_in, 1)}
 
       false ->
         {recipe_id, _ignore} = Integer.parse(recipe_id)
         toggle_user_saved_recipes(socket, recipe_id)
         user_recipes = Users.list_user_saved_recipes(socket.assigns.user)
         user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
-        
+
         {:noreply,
          push_patch(assign(socket, :user_recipes, user_recipes),
            to: ~p"/post/#{socket.assigns.post.id}/show_recipe/#{socket.assigns.recipe.id}"
@@ -154,12 +154,11 @@ defmodule MehungryWeb.HomeLive.Show do
     end
   end
 
-
   @impl true
   def handle_event("vote_comment", %{"id" => comment_id, "reaction" => reaction}, socket) do
     case is_nil(socket.assigns.user) do
       true ->
-       {:noreply,  assign(socket, :must_be_loged_in, 1)}
+        {:noreply, assign(socket, :must_be_loged_in, 1)}
 
       false ->
         Mehungry.Posts.vote_comment(comment_id, socket.assigns.user.id, reaction)
@@ -331,7 +330,7 @@ defmodule MehungryWeb.HomeLive.Show do
     |> assign(:page_title, page_title(socket.assigns.live_action))
   end
 
-  defp apply_action(socket, :show_recipe, %{"id" => id, "rec_id" => rec_id}) do
+  defp apply_action(socket, :show_recipe, %{"id" => id, "rec_id" => _rec_id}) do
     recipe = Food.get_recipe!(id)
 
     recipe_nutrients =

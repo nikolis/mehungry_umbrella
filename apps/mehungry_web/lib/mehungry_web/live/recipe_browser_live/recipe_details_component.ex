@@ -16,7 +16,6 @@ defmodule MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent do
     ~H"""
     <div phx-hook="SwapElement" id="recipe_presentation_modal">
       <div style="min-height: 140vh" class="mt-8">
-
         <h3 class="recipe_details_title text-center mt-10"><%= @recipe.title %></h3>
         <h2 class="recipe_details_sub_title text-center"><%= @recipe.description %></h2>
         <div
@@ -30,29 +29,28 @@ defmodule MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent do
             </div>
             <div class="recipe_attrs_text text-center">
               <%= case is_nil(@recipe.preperation_time_lower_limit) or is_nil(@recipe.cooking_time_lower_limit) do %>
-                <%= true -> %>
-                  <div> N/A </div>
-                <%= fals -> %>
-                    <%= @recipe.preperation_time_lower_limit + @recipe.cooking_time_lower_limit  %>
-                <% end %>               
-             
-            </div>   
+                <% true -> %>
+                  <div>N/A</div>
+                <% false -> %>
+                  <%= @recipe.preperation_time_lower_limit + @recipe.cooking_time_lower_limit %>
+              <% end %>
+            </div>
           </div>
           <div>
             <div><img style="margin:auto;width:35px;height:35px;" src="/images/food_dif.svg" /></div>
 
-    <div class="recipe_attrs_text text-center">
-              <%= case @recipe.difficulty do %> 
-        <%= 1 -> %> 
-          Easy
-        <%= 2 -> %>
-          Medium
-        <%= 3 -> %>
-          Difficult
-        <% _ -> %>
-          N/A
-      <% end %>
-    </div>
+            <div class="recipe_attrs_text text-center">
+              <%= case @recipe.difficulty do %>
+                <% 1 -> %>
+                  Easy
+                <% 2 -> %>
+                  Medium
+                <% 3 -> %>
+                  Difficult
+                <% _ -> %>
+                  N/A
+              <% end %>
+            </div>
           </div>
           <div>
             <div><img src="/images/bowl.svg" style="margin: auto;width:35px;height:35px;" /></div>
