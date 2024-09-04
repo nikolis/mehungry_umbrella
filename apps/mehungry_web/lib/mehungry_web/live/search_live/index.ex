@@ -45,8 +45,7 @@ defmodule MehungryWeb.SearchLive.Index do
      |> assign(:changeset, changeset)}
   end
 
-  @impl true
-  def mount(params, session, socket) do
+  def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
 
     {:ok,

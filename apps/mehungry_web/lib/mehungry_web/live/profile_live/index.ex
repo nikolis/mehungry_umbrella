@@ -9,7 +9,6 @@ defmodule MehungryWeb.ProfileLive.Index do
   alias MehungryWeb.ProfileLive.Show
   alias Mehungry.Food
 
-  @impl true
   def mount_search(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
 
@@ -61,15 +60,6 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:user_profile, profile)
   end
 
-  @impl true
-  def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
-    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
-
-    {:noreply,
-     socket
-     |> assign(:user_profile, user_profile)}
-  end
-
   defp apply_action(socket, :show, %{"id" => id} = _params) do
     profile = Accounts.get_user_profile_by_user_id(id)
 
@@ -95,6 +85,15 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:food_restrictions, food_restrictions)
     |> assign(:form, to_form(changeset))
     |> assign(:id, "form-#{System.unique_integer()}")
+  end
+
+  @impl true
+  def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
+    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
+
+    {:noreply,
+     socket
+     |> assign(:user_profile, user_profile)}
   end
 
   def get_active(state, param) do
@@ -129,7 +128,7 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   def handle_event("delete_recipe", %{"id" => id}, socket) do
-    result = Food.delete_recipe(id)
+    Food.delete_recipe(id)
     user_saved_recipes = Users.list_user_saved_recipes(socket.assigns.user)
     user_created_recipes = Users.list_user_created_recipes(socket.assigns.user)
 

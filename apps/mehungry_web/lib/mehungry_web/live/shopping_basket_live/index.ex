@@ -71,7 +71,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
 
   @impl true
   def handle_info(
-        {MehungryWeb.ShoppingBasketLive.BasicFormComponent, {:saved, shopping_basket}},
+        {MehungryWeb.ShoppingBasketLive.BasicFormComponent, {:saved, _shopping_basket}},
         socket
       ) do
     shopping_baskets = Inventory.list_shopping_baskets_for_user(socket.assigns.user.id)

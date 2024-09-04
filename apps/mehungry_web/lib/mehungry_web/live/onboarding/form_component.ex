@@ -46,7 +46,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
   end
 
   @impl true
-  def handle_event("validate", params, socket) do
+  def handle_event("validate", _params, socket) do
     {:noreply, socket}
   end
 
@@ -133,8 +133,6 @@ defmodule MehungryWeb.Onboarding.FormComponent do
      |> push_patch(to: socket.assigns.patch)}
   end
 
-  defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
-  
   defp assign_form(socket, map) do
     assign(socket, :form, to_form(map))
   end

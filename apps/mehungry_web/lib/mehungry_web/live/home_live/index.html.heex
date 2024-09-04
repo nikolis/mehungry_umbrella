@@ -53,7 +53,7 @@
       user={@user}
       user_follows={@user_follows}
       user_posts={@user_posts}
-      recipe_path={~p"/show_recipe/"<> to_string(post.reference_id)}
+      recipe_path={~p"/show_recipe/#{to_string(post.reference_id)}"}
     />
   <% end %>
 </div>

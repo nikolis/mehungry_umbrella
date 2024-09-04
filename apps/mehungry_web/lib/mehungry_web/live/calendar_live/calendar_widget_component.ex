@@ -1,7 +1,6 @@
 defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
   use MehungryWeb, :live_component
 
-  @week_start_at :monday
   @day_meals ["breakfast", "elevenses", "lunch", "after lunch", "dinner"]
   @impl true
   def render(assigns) do
@@ -23,7 +22,8 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
                     class="cursor-pointer relative"
                     phx-target{@myself}
                     phx-click="date-details"
-                    phx-value-date={week_day}>
+                    phx-value-date={week_day}
+                  >
                     <span class="text-4xl font-normal	text-complementaryd">
                       <%= Calendar.strftime(week_day, "%d") %>
                     </span>
@@ -31,11 +31,22 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
                       <%= Calendar.strftime(week_day, "%a") %>
                     </span>
                     <%= if get_from_week_rows2(@user_meals, week_day, assigns) > 0 do %>
-                     <svg style="stroke: var(--clr-primary);" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-8 w-8 absolute right-2 top-0 bottom-0 m-auto">
-  <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-</svg>
-
-<!-- <.icon name="hero-information-circle" class="h-5 w-5" style="stroke: white;"/> -->
+                      <svg
+                        style="stroke: var(--clr-primary);"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="h-8 w-8 absolute right-2 top-0 bottom-0 m-auto"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                        />
+                      </svg>
+                      <!-- <.icon name="hero-information-circle" class="h-5 w-5" style="stroke: white;"/> -->
                     <% end %>
                   </div>
                 </th>
@@ -47,7 +58,8 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
                   :for={day <- week}
                   class={[
                     "text-center border-l-2  border-r-2 max-w-48 min-w-42 "
-                  ]}>
+                  ]}
+                >
                   <div :for={meal <- @day_meals} class="">
                     <%= get_from_week_rows(@user_meals, day, meal, assigns) %>
                   </div>
@@ -69,8 +81,9 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
               type="button"
               class="w-full text-end	text-primary font-medium"
               phx-target={@myself}
-              phx-click="next-month">
-                Next &raquo;
+              phx-click="next-month"
+            >
+              Next &raquo;
             </button>
           </div>
         </div>
@@ -83,7 +96,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     current_date =
       case assigns.particular_date do
         nil ->
-          date = calculate_initial_date(Date.utc_today(), assigns.device_width)
+          calculate_initial_date(Date.utc_today(), assigns.device_width)
 
         date ->
           {:ok, date} = Date.from_iso8601(date)
@@ -91,7 +104,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
       end
 
     {first, last, rows} = week_rows(current_date, assigns.user_meals, assigns.device_width)
-    
+
     assigns = [
       current_date: current_date,
       selected_date: nil,
@@ -164,6 +177,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     end
   end
 
+  @impl true
   def handle_event("prev-month", _, socket) do
     days = get_days_according_to_width(socket.assigns.device_width) * -1
     new_date = socket.assigns.first |> Date.add(days) |> Date.add(-1)
@@ -196,15 +210,8 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     ]
 
     send(self(), {:particular_date, %{"date" => first}})
-    {:noreply, socket}
+    {:noreply, assign(socket, assigns)}
   end
-
-  defp selected_date?(day, selected_date), do: day == selected_date
-
-  defp today?(day), do: day == Date.utc_today()
-
-  defp other_month?(day, current_date),
-    do: Date.beginning_of_month(day) != Date.beginning_of_month(current_date)
 
   def handle_event("pick-date", %{"date" => date, "meal" => meal}, socket) do
     send(self(), {:initial_modal, %{"date" => date, "title" => meal}})
@@ -219,6 +226,13 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
 
     {:noreply, socket}
   end
+
+  defp selected_date?(day, selected_date), do: day == selected_date
+
+  defp today?(day), do: day == Date.utc_today()
+
+  defp other_month?(day, current_date),
+    do: Date.beginning_of_month(day) != Date.beginning_of_month(current_date)
 
   defp get_days_according_to_width(width) do
     case width < 700 do
@@ -257,7 +271,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     end
   end
 
-  defp week_rows(current_date, user_meals, device_width) do
+  defp week_rows(current_date, _user_meals, device_width) do
     days = get_days_according_to_width(device_width)
     first = current_date
     last = Date.add(first, days)
@@ -267,10 +281,10 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
       |> Enum.map(& &1)
       |> Enum.chunk_every(7)
 
-    {first, last, week_rows_post_pros(week_rows, user_meals)}
+    {first, last, week_rows}
   end
 
-  defp get_from_week_rows2(user_meals, current_date,  assigns) do
+  defp get_from_week_rows2(user_meals, current_date, _assigns) do
     first = Date.beginning_of_week(current_date)
     last = Date.end_of_week(current_date)
 
@@ -281,7 +295,9 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
 
     result = Map.new(week_rows_post_pros23(week_rows, user_meals))
     current_date = Date.to_string(current_date) <> " 00:00:00"
+
     {:ok, current_date} = NaiveDateTime.from_iso8601(current_date)
+
     result = Map.get(result, current_date)
     result = Map.values(result)
     result = Enum.filter(result, fn x -> !is_nil(x) end)
@@ -357,7 +373,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
   defp get_loading(assigns) do
     ~H"""
     <div style="max-width: 60vh; margin: auto;">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
         <radialGradient
           id="a12"
           cx=".66"
@@ -423,24 +439,6 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
       [result] ->
         result
     end
-  end
-
-  defp week_rows_post_pros(week_rows, user_meals) do
-    week_rows_tr = List.first(week_rows)
-
-    translated_week_rows =
-      Enum.map(week_rows_tr, fn x -> Date.to_string(x) <> " 00:00:00" end)
-      |> Enum.map(fn y -> NaiveDateTime.from_iso8601(y) end)
-      |> Enum.map(fn {:ok, date} ->
-        {date,
-         Enum.map(@day_meals, fn x ->
-           meal = get_from_user_meals(user_meals, date, x)
-           {x, meal}
-         end)
-         |> Map.new()}
-      end)
-
-    week_rows
   end
 
   defp week_rows_post_pros23(week_rows, user_meals) do

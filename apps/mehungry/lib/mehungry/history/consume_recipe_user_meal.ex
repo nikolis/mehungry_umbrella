@@ -44,7 +44,7 @@ defmodule Mehungry.History.ConsumeRecipeUserMeal do
       end
 
     if(changeset.valid?) do
-      validate_change(changeset, field, fn field, value ->
+      validate_change(changeset, field, fn _field, value ->
         portions_left = History.get_available_portions_for_user_meal(value)
 
         portions =

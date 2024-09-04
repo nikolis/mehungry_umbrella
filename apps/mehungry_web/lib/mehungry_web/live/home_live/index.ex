@@ -9,15 +9,10 @@ defmodule MehungryWeb.HomeLive.Index do
   alias Mehungry.Accounts
   alias Mehungry.Posts
   alias Mehungry.Users
-  alias Mehungry.Accounts.UserPost
-  alias Mehungry.Accounts.UserFollow
   alias Mehungry.Food
   alias Mehungry.Food.RecipeUtils
-  alias MehungryWeb.HomeLive.Recipe.Components
 
-  def mount_search(params, session, socket) do
-    IO.inspect(System.get_env("ENABLE_XXX"), label: "AWS_KEY")
-
+  def mount_search(_params, session, socket) do
     user =
       case is_nil(session["user_token"]) do
         true ->
@@ -66,6 +61,33 @@ defmodule MehungryWeb.HomeLive.Index do
   end
 
   @impl true
+  def handle_event("save_post", %{"post_id" => post_id}, socket) do
+    case is_nil(socket.assigns.user) do
+      true ->
+        socket = assign(socket, :must_be_loged_in, 1)
+        {:noreply, socket}
+
+      false ->
+        {post_id, _ignore} = Integer.parse(post_id)
+        toggle_user_saved_posts(socket, post_id)
+        user_posts = Users.list_user_saved_posts(socket.assigns.user)
+        user_posts = Enum.map(user_posts, fn x -> x.post_id end)
+        socket = assign(socket, :user_posts, user_posts)
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("save_user_follow", %{"follow_id" => follow_id}, socket) do
+    {follow_id, _ignore} = Integer.parse(follow_id)
+    toggle_user_follow(socket, follow_id)
+    user_follows = Users.list_user_follows(socket.assigns.user)
+    user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
+    socket = assign(socket, :user_follows, user_follows)
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("keep_browsing", _thing, socket) do
     {:noreply, assign(socket, :must_be_loged_in, nil)}
   end
@@ -73,17 +95,15 @@ defmodule MehungryWeb.HomeLive.Index do
   @impl true
   def handle_event(
         "save_user_recipe_dets",
-        %{"recipe_id" => recipe_id, "dom_id" => dom_id},
+        %{"recipe_id" => recipe_id, "dom_id" => _dom_id},
         socket
       ) do
     case is_nil(socket.assigns.user) do
       true ->
-        socket = assign(socket, :must_be_loged_in, 1)
-        {:noreply, socket}
+        {:noreply, assign(socket, :must_be_loged_in, 1)}
 
       false ->
         {recipe_id, _ignore} = Integer.parse(recipe_id)
-        recipe = Food.get_recipe!(recipe_id)
         toggle_user_saved_recipes(socket, recipe_id)
         user_recipes = Users.list_user_saved_recipes(socket.assigns.user)
         user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
@@ -94,10 +114,41 @@ defmodule MehungryWeb.HomeLive.Index do
     end
   end
 
+  def handle_event("navigate_to_post_details", %{"id" => post_id}, socket) do
+    {:noreply, push_navigate(socket, to: "/post/" <> to_string(post_id))}
+  end
+
+  def handle_event("delete_basket", %{"id" => basket_id}, socket) do
+    bs = Inventory.get_shopping_basket!(basket_id)
+    Inventory.delete_shopping_basket(bs)
+
+    {:noreply,
+     socket
+     |> assign(:shopping_basket, nil)}
+  end
+
+  def handle_event("react", %{"type_" => type, "id" => post_id}, socket) do
+    case is_nil(socket.assigns.user) do
+      true ->
+        {:noreply, assign(socket, :must_be_loged_in, 1)}
+
+      false ->
+        case type do
+          "upvote" ->
+            Posts.upvote_post(post_id, socket.assigns.user.id)
+
+          "downvote" ->
+            Posts.downvote_post(post_id, socket.assigns.user.id)
+        end
+
+        {:noreply, socket}
+    end
+  end
+
   def toggle_user_saved_recipes(socket, recipe_id) do
     case is_nil(socket.assigns.user) do
       true ->
-        socket = assign(socket, :must_be_loged_in, 1)
+        assign(socket, :must_be_loged_in, 1)
 
       false ->
         case Enum.any?(socket.assigns.user_recipes, fn x -> x == recipe_id end) do
@@ -110,85 +161,15 @@ defmodule MehungryWeb.HomeLive.Index do
     end
   end
 
-  defp apply_action(socket, :index, params) do
+  defp apply_action(socket, :index, _params) do
     socket
   end
 
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
-    IO.inspect(recipe)
 
-    recipe_nutrients =
-      RecipeUtils.calculate_recipe_nutrition_value(recipe)
-
-    rest =
-      Enum.filter(recipe_nutrients.flat_recipe_nutrients, fn x ->
-        Float.round(x.amount, 3) != 0
-      end)
-
-    {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Fatty acids, total monounsaturated")
-    {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Fatty acids, total polyunsaturated")
-    {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Fatty acids, total saturated")
-    {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Fatty acids, total trans")
-    {vitamins, rest} = Enum.split_with(rest, fn x -> String.contains?(x.name, "Vitamin") end)
-
-    vitamins_all =
-      case length(vitamins) > 0 do
-        true ->
-          %{name: "Vitamins", amount: nil, measurement_unit: nil, children: vitamins}
-
-        false ->
-          nil
-      end
-
-    nuts_pre = [mufa_all, pufa_all, sfa_all, tfa_all, vitamins_all]
-    nuts_pre = Enum.filter(nuts_pre, fn x -> !is_nil(x) end)
-
-    nuts_pre =
-      Enum.map(nuts_pre, fn x ->
-        case is_map(x) do
-          true ->
-            x
-
-          false ->
-            Enum.into(x, %{})
-        end
-      end)
-
-    nutrients = nuts_pre ++ rest
-    nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
-    energy = Enum.find(nutrients, fn x -> String.contains?(x.name, "Energy") end)
-
-    energy =
-      case energy.measurement_unit do
-        "kilojoule" ->
-          %{energy | amount: energy.amount * 0.2390057361, measurement_unit: "kcal"}
-
-        _ ->
-          energy
-      end
-
-    carb = Enum.find(nutrients, fn x -> String.contains?(x.name, "Carbohydrate") end)
-    protein = Enum.find(nutrients, fn x -> String.contains?(x.name, "Protein") end)
-    fiber = Enum.find(nutrients, fn x -> String.contains?(x.name, "Fiber") end)
-    fat = Enum.find(nutrients, fn x -> String.contains?(x.name, "Total lipid") end)
-
-    primaries = [energy, fat, carb, protein, fiber]
-    primaries = Enum.filter(primaries, fn x -> !is_nil(x) end)
-    nutrients = Enum.filter(nutrients, fn x -> x not in primaries end)
-    nutrients = primaries ++ nutrients
-
+    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)  
     user = socket.assigns.user
-    query_str = ""
-
-    user_profile =
-      case is_nil(user) do
-        true ->
-          nil
-
-        false ->
-          Accounts.get_user_profile_by_user_id(user.id)
-      end
 
     user_recipes =
       case is_nil(user) do
@@ -196,13 +177,13 @@ defmodule MehungryWeb.HomeLive.Index do
           []
 
         false ->
-          user_recipes = Users.list_user_saved_recipes(user)
-          user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
+          Users.list_user_saved_recipes(user)
+          |> Enum.map(fn x -> x.recipe_id end)
       end
 
     socket
     |> assign(:nutrients, nutrients)
-    |> assign(:primary_size, length(primaries))
+    |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
     |> assign(:user_recipes, user_recipes)
   end
@@ -241,38 +222,6 @@ defmodule MehungryWeb.HomeLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  def handle_event("navigate_to_post_details", %{"id" => post_id}, socket) do
-    {:noreply, push_redirect(socket, to: "/post/" <> to_string(post_id))}
-  end
-
-  def handle_event("delete_basket", %{"id" => basket_id}, socket) do
-    bs = Inventory.get_shopping_basket!(basket_id)
-    Inventory.delete_shopping_basket(bs)
-
-    {:noreply,
-     socket
-     |> assign(:shopping_basket, nil)}
-  end
-
-  def handle_event("react", %{"type_" => type, "id" => post_id}, socket) do
-    case is_nil(socket.assigns.user) do
-      true ->
-        socket = assign(socket, :must_be_loged_in, 1)
-        {:noreply, socket}
-
-      false ->
-        case type do
-          "upvote" ->
-            Posts.upvote_post(post_id, socket.assigns.user.id)
-
-          "downvote" ->
-            Posts.downvote_post(post_id, socket.assigns.user.id)
-        end
-
-        {:noreply, socket}
-    end
-  end
-
   @impl true
   def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
     user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
@@ -301,33 +250,6 @@ defmodule MehungryWeb.HomeLive.Index do
       socket
       |> assign(:posts, posts)
 
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("save_post", %{"post_id" => post_id}, socket) do
-    case is_nil(socket.assigns.user) do
-      true ->
-        socket = assign(socket, :must_be_loged_in, 1)
-        {:noreply, socket}
-
-      false ->
-        {post_id, _ignore} = Integer.parse(post_id)
-        toggle_user_saved_posts(socket, post_id)
-        user_posts = Users.list_user_saved_posts(socket.assigns.user)
-        user_posts = Enum.map(user_posts, fn x -> x.post_id end)
-        socket = assign(socket, :user_posts, user_posts)
-        {:noreply, socket}
-    end
-  end
-
-  @impl true
-  def handle_event("save_user_follow", %{"follow_id" => follow_id}, socket) do
-    {follow_id, _ignore} = Integer.parse(follow_id)
-    toggle_user_follow(socket, follow_id)
-    user_follows = Users.list_user_follows(socket.assigns.user)
-    user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
-    socket = assign(socket, :user_follows, user_follows)
     {:noreply, socket}
   end
 

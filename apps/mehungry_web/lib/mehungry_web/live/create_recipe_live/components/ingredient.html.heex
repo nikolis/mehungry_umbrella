@@ -1,8 +1,8 @@
 <div
   class="pt-2 md:p-3 grid grid-cols-11 sm:grid-cols-6 gap-2 md:gap-6"
   ,
-  id={"recipe_ingredients" <> to_string(@g.index)}>
-  
+  id={"recipe_ingredients" <> to_string(@g.index)}
+>
   <.live_component
     module={MehungryWeb.SelectComponentSingle}
     form={@g}

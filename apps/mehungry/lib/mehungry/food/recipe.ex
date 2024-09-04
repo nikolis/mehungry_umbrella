@@ -30,6 +30,7 @@ defmodule Mehungry.Food.Recipe do
     has_one :post, Mehungry.Posts.Post
 
     belongs_to :user, User
+
     belongs_to :language, Language,
       references: :name,
       foreign_key: :language_name,
@@ -62,14 +63,20 @@ defmodule Mehungry.Food.Recipe do
       :image_url,
       :user_id,
       :language_name,
-      :difficulty,
+      :difficulty
     ])
     |> unique_constraint(:title_user_constraint, name: :title_user_index)
     |> foreign_key_constraint(:language_id)
     |> foreign_key_constraint(:user_id)
-    |> validate_required([:title, :language_name, :user_id, :cooking_time_lower_limit, :preperation_time_lower_limit, :difficulty])
+    |> validate_required([
+      :title,
+      :language_name,
+      :user_id,
+      :cooking_time_lower_limit,
+      :preperation_time_lower_limit,
+      :difficulty
+    ])
     |> cast_embed(:steps, [:required_message])
     |> cast_assoc(:recipe_ingredients, required: true)
   end
-
 end

@@ -18,10 +18,6 @@ defmodule MehungryWeb do
   """
 
   # in sync with css/shared/_media_queries.scss
-  @mobile_max_width 480
-
-  @desktop_kind :desktop
-  @mobile_kind :mobile
 
   def controller do
     quote do

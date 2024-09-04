@@ -229,16 +229,13 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     user_meals_params = %{user_meal_params | "start_dt" => dt}
 
     case History.create_user_meal(user_meals_params) do
-      {:ok, user_meal} ->
-        date = NaiveDateTime.to_string(user_meal.start_dt)
-
+      {:ok, _user_meal} ->
         {:noreply,
          socket
          |> put_flash(:info, "User Meal created successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
+         |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect(changeset)
         {:noreply, assign(socket, changeset: changeset)}
     end
   end

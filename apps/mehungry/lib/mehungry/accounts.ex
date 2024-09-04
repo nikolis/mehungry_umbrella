@@ -113,16 +113,16 @@ defmodule Mehungry.Accounts do
   end
 
   defp create_user_profile_if_needed(user) do
-      case get_user_profile_by_user_id(user.id) do
-        nil ->
-          {:ok, _profile} =
-            create_user_profile(%{user_id: user.id, user_category_rules: []})
+    case get_user_profile_by_user_id(user.id) do
+      nil ->
+        {:ok, _profile} =
+          create_user_profile(%{user_id: user.id, user_category_rules: []})
 
-          get_user_profile_by_user_id(user.id)
+        get_user_profile_by_user_id(user.id)
 
-        profile ->
-          profile
-      end
+      profile ->
+        profile
+    end
   end
 
   def update_user(%User{} = user, attrs) do

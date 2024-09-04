@@ -1,10 +1,6 @@
 <.header>
   Listing Users
-  <:actions>
-    <.link patch={~p"/users/new"}>
-      <.button>New User</.button>
-    </.link>
-  </:actions>
+  <:actions></:actions>
 </.header>
 
 <.table
@@ -17,9 +13,8 @@
   <:col :let={{_id, user}} label="Name"><%= user.name %></:col>
   <:action :let={{_id, user}}>
     <div class="sr-only">
-      <.link navigate={~p"/users/#{user}"}>Show</.link>
+      <.link navigate={~p"/professional/user/#{user.id}"}>Show</.link>
     </div>
-    <.link patch={~p"/users/#{user}/edit"}>Edit</.link>
   </:action>
   <:action :let={{id, user}}>
     <.link
@@ -31,14 +26,3 @@
   </:action>
 </.table>
 <.button phx-click="reset">Reset</.button>
-
-<.modal :if={@live_action in [:new, :edit]} id="user-modal" show on_cancel={JS.patch(~p"/users")}>
-  <.live_component
-    module={MehungryWeb.UserLive.FormComponent}
-    id={@user.id || :new}
-    title={@page_title}
-    action={@live_action}
-    user={@user}
-    patch={~p"/users"}
-  />
-</.modal>

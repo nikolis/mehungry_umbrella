@@ -122,13 +122,6 @@ defmodule Mehungry.Posts do
     |> Repo.insert()
   end
 
-  def create_post(attrs \\ %{}) do
-    %Post{}
-    |> Post.changeset(attrs)
-    |> Repo.insert()
-  end
-
-
   @doc """
   Updates a post.
 

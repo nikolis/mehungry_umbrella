@@ -14,11 +14,12 @@ defmodule MehungryWeb.SelectComponentSingleMemory2 do
       <.input field={@form[String.to_atom(@input_variable)]} type="hidden" />
       <!-- Start Component -->
       <.focus_wrap
-        id={if is_nil(@form.index) do
-          "select_component_focus_wrap" <> @input_variable
-        else  
-          "select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable
-        end
+        id={
+          if is_nil(@form.index) do
+            "select_component_focus_wrap" <> @input_variable
+          else
+            "select_component_focus_wrap" <> Integer.to_string(@form.index) <> @input_variable
+          end
         }
         class="h-full"
         phx-click-away={JS.push("close-listing", target: @myself)}
@@ -70,20 +71,19 @@ defmodule MehungryWeb.SelectComponentSingleMemory2 do
                   <!-- Item Element -->
                   <div class="relative z-50 h-full">
                     <div class="bg-white h-full">
-                      <%= if index == 0   and !is_nil(@form.index) do %> 
-                        <li 
+                      <%= if index == 0   and !is_nil(@form.index) do %>
+                        <li
                           class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
                           phx-click="handle-item-click"
                           phx-value-id={x.id}
                           id={Integer.to_string(x.id)}
                           phx-target={@myself}
                           phx-hook="SelectComponentList"
-
                         >
                           <%= x.label %>
-                  </li>
-                  <%= else %>
-                        <li 
+                        </li>
+                      <% else %>
+                        <li
                           class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
                           phx-click="handle-item-click"
                           phx-value-id={x.id}
@@ -91,8 +91,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory2 do
                           phx-target={@myself}
                         >
                           <%= x.label %>
-                  </li>
- 
+                        </li>
                       <% end %>
                     </div>
                   </div>
@@ -116,8 +115,8 @@ defmodule MehungryWeb.SelectComponentSingleMemory2 do
   def update(assigns, socket) do
     id =
       if is_nil(assigns.form.index) do
-        "select_component" <>  assigns.input_variable
-      else 
+        "select_component" <> assigns.input_variable
+      else
         "select_component" <> Integer.to_string(assigns.form.index) <> assigns.input_variable
       end
 
@@ -236,13 +235,14 @@ defmodule MehungryWeb.SelectComponentSingleMemory2 do
       socket
       |> assign(:listing_open, false)
       |> assign(:selected_items, selected_item)
-    case is_nil(socket.assigns.form.index) do 
+
+    case is_nil(socket.assigns.form.index) do
       true ->
         {:noreply,
          push_event(
            socket,
            "selected_id" <>
-              socket.assigns.input_variable,
+             socket.assigns.input_variable,
            %{id: id}
          )}
 

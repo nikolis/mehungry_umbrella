@@ -1,5 +1,5 @@
 defmodule ViewportHelpers do
-  alias Phoenix.{LiveView, View}
+  alias Phoenix.{View}
 
   # in sync with css/shared/_media_queries.scss
   @mobile_max_width 480

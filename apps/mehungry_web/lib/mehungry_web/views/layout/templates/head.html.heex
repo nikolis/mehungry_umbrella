@@ -71,8 +71,11 @@
     rel="stylesheet"
   />
   <%= if is_map(@conn.assigns[:page_title]) do %>
-    <title> <%= @conn.assigns.page_title.title %> </title>
-    <meta property="og:url" content={"https://www.m3hungry.com/browse/"<> @conn.assigns.page_title.id} />
+    <title><%= @conn.assigns.page_title.title %></title>
+    <meta
+      property="og:url"
+      content={"https://www.m3hungry.com/browse/"<> @conn.assigns.page_title.id}
+    />
     <meta property="og:image" content={@conn.assigns.page_title.img} />
   <% end %>
 
