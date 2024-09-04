@@ -96,7 +96,6 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:user_profile, user_profile)}
   end
 
-
   def get_active(state, param) do
     if state == param do
       "active"

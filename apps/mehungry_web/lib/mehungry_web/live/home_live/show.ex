@@ -291,35 +291,6 @@ defmodule MehungryWeb.HomeLive.Show do
     {:noreply, socket}
   end
 
-  defp get_nutrient_category(nutrients, category_name, category_sum_name) do
-    {category, rest} =
-      Enum.split_with(nutrients, fn x -> String.contains?(x.name, category_name) end)
-
-    case length(category) > 0 do
-      true ->
-        {category_total, rest} =
-          Enum.split_with(rest, fn x ->
-            String.contains?(x.name, category_sum_name)
-          end)
-
-        case length(category_total) == 1 do
-          true ->
-            {Enum.into(Enum.at(category_total, 0), children: category), rest}
-
-          false ->
-            {%{
-               amount: 111.1,
-               measurement_unit: "to be defined",
-               children: category,
-               name: category_sum_name
-             }, rest}
-        end
-
-      false ->
-        {nil, rest}
-    end
-  end
-
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
@@ -333,65 +304,7 @@ defmodule MehungryWeb.HomeLive.Show do
   defp apply_action(socket, :show_recipe, %{"id" => id, "rec_id" => _rec_id}) do
     recipe = Food.get_recipe!(id)
 
-    recipe_nutrients =
-      RecipeUtils.calculate_recipe_nutrition_value(recipe)
-
-    rest =
-      Enum.filter(recipe_nutrients.flat_recipe_nutrients, fn x ->
-        Float.round(x.amount, 3) != 0
-      end)
-
-    {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Fatty acids, total monounsaturated")
-    {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Fatty acids, total polyunsaturated")
-    {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Fatty acids, total saturated")
-    {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Fatty acids, total trans")
-    {vitamins, rest} = Enum.split_with(rest, fn x -> String.contains?(x.name, "Vitamin") end)
-
-    vitamins_all =
-      case length(vitamins) > 0 do
-        true ->
-          %{name: "Vitamins", amount: nil, measurement_unit: nil, children: vitamins}
-
-        false ->
-          nil
-      end
-
-    nuts_pre = [mufa_all, pufa_all, sfa_all, tfa_all, vitamins_all]
-    nuts_pre = Enum.filter(nuts_pre, fn x -> !is_nil(x) end)
-
-    nuts_pre =
-      Enum.map(nuts_pre, fn x ->
-        case is_map(x) do
-          true ->
-            x
-
-          false ->
-            Enum.into(x, %{})
-        end
-      end)
-
-    nutrients = nuts_pre ++ rest
-    nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
-    energy = Enum.find(nutrients, fn x -> String.contains?(x.name, "Energy") end)
-
-    energy =
-      case energy.measurement_unit do
-        "kilojoule" ->
-          %{energy | amount: energy.amount * 0.2390057361, measurement_unit: "kcal"}
-
-        _ ->
-          energy
-      end
-
-    carb = Enum.find(nutrients, fn x -> String.contains?(x.name, "Carbohydrate") end)
-    protein = Enum.find(nutrients, fn x -> String.contains?(x.name, "Protein") end)
-    fiber = Enum.find(nutrients, fn x -> String.contains?(x.name, "Fiber") end)
-    fat = Enum.find(nutrients, fn x -> String.contains?(x.name, "Total lipid") end)
-
-    primaries = [energy, fat, carb, protein, fiber]
-    primaries = Enum.filter(primaries, fn x -> !is_nil(x) end)
-    nutrients = Enum.filter(nutrients, fn x -> x not in primaries end)
-    nutrients = primaries ++ nutrients
+    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe) 
 
     user = socket.assigns.user
 
@@ -407,7 +320,7 @@ defmodule MehungryWeb.HomeLive.Show do
 
     socket
     |> assign(:nutrients, nutrients)
-    |> assign(:primary_size, length(primaries))
+    |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
     |> assign(:user_recipes, user_recipes)
     |> assign(:page_title, page_title(socket.assigns.live_action))

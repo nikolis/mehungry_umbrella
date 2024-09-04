@@ -52,7 +52,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     |> init(recipe)
   end
 
-
   defp init(socket, base) do
     changeset = Recipe.changeset(base, %{})
 

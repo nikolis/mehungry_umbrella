@@ -1,19 +1,117 @@
 defmodule Mehungry.Food.RecipeUtils do
+  @moduledoc """
+  This is module dedicated to common operations on recipes more specifically related to 
+  nutrition analysis regarding recipes and the ingredients involved
+  """
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
 
-  def calculate_recipe_ingredient_categories_array(%Recipe{} = recipe) do
-    recipe_ingredients = recipe.recipe_ingredients
+  def get_nutrients(recipe) do
+    recipe_nutrients = calculate_recipe_nutrition_value(recipe)
 
-    ingredients =
-      Enum.map(recipe_ingredients, fn x -> Food.get_ingredient_with_category!(x.ingredient_id) end)
-
-    ingredients_table =
-      Enum.map(ingredients, fn x ->
-        x.category.name
+    rest =
+      Enum.filter(recipe_nutrients.flat_recipe_nutrients, fn x ->
+        Float.round(x.amount, 3) != 0
       end)
 
-    Enum.uniq(ingredients_table)
+    nuts_pre = get_nutrients_pre(rest)
+
+    nutrients = nuts_pre ++ rest
+    nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
+
+    energy = Enum.find(nutrients, fn x -> String.contains?(x.name, "Energy") end)
+    energy = convert_energy_to_calories_if_needed(energy)
+
+    {primaries_length, nutrients} = sort_nutrients(nutrients, energy)
+  end
+
+  def get_nutrients_pre(rest) do
+    {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Fatty acids, total monounsaturated")
+    {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Fatty acids, total polyunsaturated")
+    {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Fatty acids, total saturated")
+    {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Fatty acids, total trans")
+    {vitamins_all, rest} = get_nutrient_category(rest, "Vitamin", "Vitamins")
+
+    nuts_pre = [mufa_all, pufa_all, sfa_all, tfa_all, vitamins_all]
+    nuts_pre = Enum.filter(nuts_pre, fn x -> !is_nil(x) end)
+
+    Enum.map(nuts_pre, fn x ->
+      case is_map(x) do
+        true ->
+          x
+
+        false ->
+          Enum.into(x, %{})
+      end
+    end)
+  end
+
+  @doc """
+  Sort nutrients to have on top entries that are relevant to most people
+  """
+  def sort_nutrients(nutrients, energy) do
+    carb = Enum.find(nutrients, fn x -> String.contains?(x.name, "Carbohydrate") end)
+    protein = Enum.find(nutrients, fn x -> String.contains?(x.name, "Protein") end)
+    fiber = Enum.find(nutrients, fn x -> String.contains?(x.name, "Fiber") end)
+    fat = Enum.find(nutrients, fn x -> String.contains?(x.name, "Total lipid") end)
+
+    primaries = [energy, fat, carb, protein, fiber]
+    primaries = Enum.filter(primaries, fn x -> !is_nil(x) end)
+    nutrients = Enum.filter(nutrients, fn x -> x not in primaries end)
+    {length(primaries), primaries ++ nutrients}
+  end
+
+  def convert_energy_to_calories_if_needed(energy) do
+    case energy.measurement_unit do
+      "kilojoule" ->
+        %{energy | amount: energy.amount * 0.2390057361, measurement_unit: "kcal"}
+
+      _ ->
+        energy
+    end
+  end
+
+  @doc """
+  Given a set of nutrients, category_name(being substring that should be part of the name of all the nutrients belonging in the category) and the name that the aggrigating entry should have,  
+
+  Returns `:ok`.
+
+  ## Examples
+  # nutrients ,SFA, Fatty Acids Saturated
+  """
+  def get_nutrient_category(nutrients, category_name, category_sum_name) do
+    {category, rest} =
+      Enum.split_with(nutrients, fn x -> String.contains?(x.name, category_name) end)
+
+    case length(category) > 0 do
+      true ->
+        # Find if the aggrigator exists as an entry in the nutrients
+        {category_total, rest} =
+          Enum.split_with(rest, fn x ->
+            String.contains?(x.name, category_sum_name)
+          end)
+
+        case length(category_total) == 1 do
+          true ->
+            # Use the existing aggrigate category
+            {Enum.into(Enum.at(category_total, 0), children: category), rest}
+
+          false ->
+            # Create the aggrigating category
+            total_ammount = Enum.reduce(category, 0, fn x, acc -> x.amount + acc end)
+            category_first = Enum.at(category, 0)
+
+            {%{
+               amount: total_ammount,
+               measurement_unit: category_first.measurement_unit,
+               children: category,
+               name: category_sum_name
+             }, rest}
+        end
+
+      false ->
+        {nil, rest}
+    end
   end
 
   def calculate_recipe_nutrition_value(%Recipe{} = recipe) do
@@ -96,5 +194,19 @@ defmodule Mehungry.Food.RecipeUtils do
       amount: adjusted_amount,
       measurement_unit: nutrient_entry.nutrient_measurement_unit.name
     }
+  end
+
+  def calculate_recipe_ingredient_categories_array(%Recipe{} = recipe) do
+    recipe_ingredients = recipe.recipe_ingredients
+
+    ingredients =
+      Enum.map(recipe_ingredients, fn x -> Food.get_ingredient_with_category!(x.ingredient_id) end)
+
+    ingredients_table =
+      Enum.map(ingredients, fn x ->
+        x.category.name
+      end)
+
+    Enum.uniq(ingredients_table)
   end
 end
