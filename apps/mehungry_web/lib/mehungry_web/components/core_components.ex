@@ -25,31 +25,224 @@ defmodule MehungryWeb.CoreComponents do
   def user_overview_card(%{user: %Mehungry.Accounts.User{} = _user} = assigns) do
     ~H"""
     <div style="margin-bottom: 0.75rem; ">
-      <div style="display: flex; flex-direction: row;">
+      <div class="flex gap-2">
         <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
           <%= if @user.profile_pic do %>
-            <img src={@user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;" />
+            <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
           <% else %>
-            <.icon name="hero-user-circle" class="h-10 w-10" />
+            <.icon name="hero-user-circle" class="h-12 w-12" />
           <% end %>
         </.link>
-        <div style="margin-left: 1rem;">
-          <div
-            style="font-weight: bold; text-align: start; font-size: 0.75rem;"
-            class="flex flex-row gap-4"
-          >
+        <div class="flex flex-col justify-center w-full">
+          <div class="text-sm font-bold leading-4">
             <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
               <%= @user.email %>
             </.link>
             <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
             </div>
           </div>
-          <div style="font-size: 1rem; text-align: start; color: var(--clr-dark_1)">
-            <%= @post.title %>
+          <div class="text-sm leading-4">
+            300 posted recipes
           </div>
+        </div>
+        <div class="mt-auto mb-auto self-end">
+          <button class="primary_button">Follow</button>
         </div>
       </div>
     </div>
+    """
+  end
+
+  def recipe_ingredients(%{recipe_ingredients: recipe_ingredients} = assigns) do
+    ~H"""
+    <%= for ingredient <- @recipe_ingredients do %>
+      <div class="ingredient_details_container text-sm md:text-base lg:text-lg font-medium">
+        <div><%= ingredient.ingredient.name %></div>
+        <div><%= ingredient.quantity %> <%= ingredient.measurement_unit.name %></div>
+      </div>
+    <% end %>
+    """
+  end
+
+  def recipe_nutrients(%{nutrients: nutrients, primary_size: primary_size} = assigns) do
+    ~H"""
+    <div class="accordion text-sm md:text-base lg:text-lg font-medium	overflow-auto	max-h-1/2" style="max-height: 300px;">
+      <%= for {n, index} <-  Enum.with_index(@nutrients) do %>
+        <%= if !is_nil(n) do %>
+          <div class="accordion-panel">
+            <h2 id={"panel" <> to_string(index) <> "-title"}>
+              <%= if !is_nil(n[:children]) do %>
+                <button
+                  class="accordion-trigger rounded-xl  pr-6"
+                  style="text-align: start; width: 100%; background-color:white ; "
+                  aria-expanded="false"
+                  aria-controls="accordion1-content"
+                >
+                  <div class="w-fit h-fit bg-white rounded-xl absolute right-0 top-0 ">
+                    <.icon
+                      name="hero-arrow-down-circle "
+                      class="h-6 w-6 rounded-xl text-complementary  "
+                    />
+                  </div>
+
+                  <%= Map.get(n, :name, "Default") <>
+                    " " <>
+                    if !is_nil(n[:amount]) do
+                      to_string(Float.round(n[:amount], 2))
+                    else
+                      "."
+                    end %>
+                  <%= if !is_nil(n[:measurement_unit]) do
+                    n[:measurement_unit]
+                  else
+                    ""
+                  end %>
+                </button>
+              <% else %>
+                <%= if index < @primary_size do %>
+                  <button
+                    class="accordion_reccord font-bold	"
+                    style="text-align: start; width: 100%;"
+                    aria-expanded="false"
+                    aria-controls=""
+                  >
+                    <%= Map.get(n, :name, "Default") <>
+                      " " <>
+                      if !is_nil(n[:amount]) do
+                        to_string(Float.round(n[:amount], 2))
+                      else
+                        "."
+                      end %>
+                    <%= if !is_nil(n[:measurement_unit]) do
+                      n[:measurement_unit]
+                    else
+                      ""
+                    end %>
+                  </button>
+                <% else %>
+                  <button
+                    class="accordion_reccord"
+                    style="text-align: start; width: 100%;"
+                    aria-expanded="false"
+                    aria-controls=""
+                  >
+                    <%= Map.get(n, :name, "Default") <>
+                      " " <>
+                      if !is_nil(n[:amount]) do
+                        to_string(Float.round(n[:amount], 2))
+                      else
+                        "."
+                      end %>
+                    <%= if !is_nil(n[:measurement_unit]) do
+                      n[:measurement_unit]
+                    else
+                      ""
+                    end %>
+                  </button>
+                <% end %>
+              <% end %>
+            </h2>
+            <div
+              class="accordion-content"
+              role="region"
+              aria-labelledby={"panel"<>to_string(index)<>"-title"}
+              aria-hidden="true"
+              id={"panel"<>to_string(index) <> "-content"}
+            >
+              <div style="text-center: start;">
+                <ul>
+                  <%= if !is_nil(n[:children]) do
+                  for n_r <- n[:children] do %>
+                    <li style="padding-left: 1rem; text-align: start;">
+                      <%= n_r.name %> <%= Float.round(n_r.amount, 4) %> <%= n_r.measurement_unit %>
+                    </li>
+                  <% end end %>
+                </ul>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+    """
+  end
+
+  def recipe_steps(%{steps: steps} = assigns) do
+    ~H"""
+    <%= for step <- @steps do %>
+      <div class="step_details_container text-sm md:text-base lg:text-lg font-medium	">
+        <div><%= step.index %></div>
+        <div><%= step.description %></div>
+      </div>
+    <% end %>
+    """
+  end
+
+  def recipe_details(%{recipe: recipe, nutrients: nutrients, primary_size: primary_size} = assigns) do
+    ~H"""
+    <div class=" bg-white text-sm font-bold	text-greyfriend2 flex justify-around w-full relative">
+      <div
+        id="first"
+        class="nav_button active"
+        phx-click={
+          JS.remove_class("active", to: ".nav_button")
+          |> JS.add_class("active", to: "#first")
+        |> JS.remove_class("active", to: ".nav_content")
+          |> JS.add_class("active", to: "#first_content")
+
+        }
+      >
+        <span class="cursor-pointer"> Ingredients </span>
+        <div
+          id="first_content"
+          class="absolute top-0 left-0 right-0 right-0 w-full h-fit m-auto text-black mt-10 overflow-wrap nav_content active"
+        >
+          <.recipe_ingredients recipe_ingredients={@recipe.recipe_ingredients} . />
+        </div>
+      </div>
+      <div
+        id="second"
+        class="nav_button"
+        phx-click={
+          JS.remove_class("active", to: ".nav_button")
+          |> JS.add_class("active", to: "#second")
+          |> JS.remove_class("active", to: ".nav_content")
+          |> JS.add_class("active", to: "#second_content")
+        }
+      >
+        <span class="cursor-pointer"> Nutrients </span>
+        <div
+          id="second_content"
+          class="absolute top-0 left-0 right-0 right-0 w-full h-fit m-auto text-black mt-10 overflow-wrap nav_content"
+        >
+          <.recipe_nutrients nutrients={@nutrients} primary_size = {@primary_size} ./>
+        </div>
+
+      </div>
+
+      <div
+        id="third"
+        class="nav_button "
+        phx-click={
+          JS.remove_class("active", to: ".nav_button")
+          |> JS.add_class("active", to: "#third")
+          |> JS.remove_class("active", to: ".nav_content")
+          |> JS.add_class("active", to: "#third_content")
+        }
+      >
+        <span class="cursor-pointer"> Steps </span>
+        <div
+          id="third_content"
+          class="absolute top-0 left-0 right-0 right-0 w-full h-fit m-auto text-black mt-10 overflow-wrap nav_content"
+        >
+          <.recipe_steps steps = {@recipe.steps} ./>
+        </div>
+
+
+      </div>
+    </div>
+    <div class="line"></div>
+    <div class="grid_even_columns p-4"></div>
     """
   end
 
@@ -125,7 +318,7 @@ defmodule MehungryWeb.CoreComponents do
       phx-mounted={@show && show_modal(@id)}
       phx-remove={hide_modal(@id)}
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
-      class="relative z-50 hidden"
+      class="relative z-50 hidden max-w-1/2"
     >
       <div
         id={"#{@id}-bg"}
@@ -140,25 +333,15 @@ defmodule MehungryWeb.CoreComponents do
         aria-modal="true"
         tabindex="0"
       >
-        <div class="flex min-h-full items-center justify-center mt-10">
-          <div class="w-full  p-2 sm:p-6 lg:py-8">
+        <div class="flex min-h-full  justify-center " style="padding-top: 80px;">
+          <div class="w-7/12" style="">
             <.focus_wrap
               id={"#{@id}-container"}
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white lg:p-8 shadow-lg ring-1 transition pt-4"
+              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white  shadow-lg ring-1 transition "
             >
-              <div class="absolute top-6 right-5">
-                <button
-                  phx-click={JS.exec("data-cancel", to: "##{@id}")}
-                  type="button"
-                  class="-m-3 flex-none p-3 opacity-20 hover:opacity-40"
-                  aria-label={gettext("close")}
-                >
-                  <.icon name="hero-x-mark-solid" class="h-5 w-5" />
-                </button>
-              </div>
               <div id={"#{@id}-content"}>
                 <%= render_slot(@inner_block) %>
               </div>

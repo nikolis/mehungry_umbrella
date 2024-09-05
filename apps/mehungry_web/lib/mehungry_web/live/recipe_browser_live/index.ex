@@ -417,7 +417,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   defp apply_action(socket, :show, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
-    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)  
+    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
 
     # user = socket.assigns.user
     query_str = ""

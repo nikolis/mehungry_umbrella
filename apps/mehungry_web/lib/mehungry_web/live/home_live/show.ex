@@ -304,7 +304,7 @@ defmodule MehungryWeb.HomeLive.Show do
   defp apply_action(socket, :show_recipe, %{"id" => id, "rec_id" => _rec_id}) do
     recipe = Food.get_recipe!(id)
 
-    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe) 
+    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
 
     user = socket.assigns.user
 
