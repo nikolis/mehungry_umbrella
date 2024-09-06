@@ -1,6 +1,8 @@
 defmodule MehungryWeb.RecipeBrowseLive.Index do
   use MehungryWeb, :live_view
 
+  import MehungryWeb.CoreComponents
+
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
   alias Mehungry.Search.RecipeSearchItem
@@ -78,6 +80,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      |> assign(:query, query)
      |> assign(:must_be_loged_in, nil)
      |> assign(:user, user)
+     |> assign(:reply, nil)
      |> assign_recipe_search()}
   end
 

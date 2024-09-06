@@ -26,7 +26,10 @@ defmodule MehungryWeb.CoreComponents do
     ~H"""
     <div style="margin-bottom: 0.75rem; ">
       <div class="flex gap-2">
-        <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
+        <.link
+          patch={"/profile/"<>Integer.to_string(@user.id)}
+          style="min-height: 50px; min-width: 50px;"
+        >
           <%= if @user.profile_pic do %>
             <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
           <% else %>
@@ -56,9 +59,11 @@ defmodule MehungryWeb.CoreComponents do
   def recipe_ingredients(%{recipe_ingredients: recipe_ingredients} = assigns) do
     ~H"""
     <%= for ingredient <- @recipe_ingredients do %>
-      <div class="ingredient_details_container text-sm md:text-base lg:text-lg font-medium">
+      <div class="ingredient_details_container font-normal	 ">
         <div><%= ingredient.ingredient.name %></div>
-        <div><%= ingredient.quantity %> <%= ingredient.measurement_unit.name %></div>
+        <div class="font-semibold">
+          <%= ingredient.quantity %> <%= ingredient.measurement_unit.name %>
+        </div>
       </div>
     <% end %>
     """
@@ -66,7 +71,7 @@ defmodule MehungryWeb.CoreComponents do
 
   def recipe_nutrients(%{nutrients: nutrients, primary_size: primary_size} = assigns) do
     ~H"""
-    <div class="accordion text-sm md:text-base lg:text-lg font-medium	overflow-auto	max-h-1/2" style="max-height: 300px;">
+    <div class="accordion overflow-auto	max-h-1/2 font-normal" style="max-height: 300px;">
       <%= for {n, index} <-  Enum.with_index(@nutrients) do %>
         <%= if !is_nil(n) do %>
           <div class="accordion-panel">
@@ -170,79 +175,33 @@ defmodule MehungryWeb.CoreComponents do
   def recipe_steps(%{steps: steps} = assigns) do
     ~H"""
     <%= for step <- @steps do %>
-      <div class="step_details_container text-sm md:text-base lg:text-lg font-medium	">
+      <div class="step_details_container text-sm">
         <div><%= step.index %></div>
-        <div><%= step.description %></div>
+        <div class="font-normal"><%= step.description %></div>
       </div>
     <% end %>
     """
   end
 
-  def recipe_details(%{recipe: recipe, nutrients: nutrients, primary_size: primary_size} = assigns) do
+  def content(assigns) do
     ~H"""
-    <div class=" bg-white text-sm font-bold	text-greyfriend2 flex justify-around w-full relative">
-      <div
-        id="first"
-        class="nav_button active"
-        phx-click={
-          JS.remove_class("active", to: ".nav_button")
-          |> JS.add_class("active", to: "#first")
-        |> JS.remove_class("active", to: ".nav_content")
-          |> JS.add_class("active", to: "#first_content")
+    <h3>sOMETHING</h3>
+    """
+  end
 
-        }
-      >
-        <span class="cursor-pointer"> Ingredients </span>
-        <div
-          id="first_content"
-          class="absolute top-0 left-0 right-0 right-0 w-full h-fit m-auto text-black mt-10 overflow-wrap nav_content active"
-        >
-          <.recipe_ingredients recipe_ingredients={@recipe.recipe_ingredients} . />
-        </div>
-      </div>
-      <div
-        id="second"
-        class="nav_button"
-        phx-click={
-          JS.remove_class("active", to: ".nav_button")
-          |> JS.add_class("active", to: "#second")
-          |> JS.remove_class("active", to: ".nav_content")
-          |> JS.add_class("active", to: "#second_content")
-        }
-      >
-        <span class="cursor-pointer"> Nutrients </span>
-        <div
-          id="second_content"
-          class="absolute top-0 left-0 right-0 right-0 w-full h-fit m-auto text-black mt-10 overflow-wrap nav_content"
-        >
-          <.recipe_nutrients nutrients={@nutrients} primary_size = {@primary_size} ./>
-        </div>
+  def content2(assigns) do
+    ~H"""
+    <h3>sOMETHING2</h3>
+    """
+  end
 
-      </div>
-
-      <div
-        id="third"
-        class="nav_button "
-        phx-click={
-          JS.remove_class("active", to: ".nav_button")
-          |> JS.add_class("active", to: "#third")
-          |> JS.remove_class("active", to: ".nav_content")
-          |> JS.add_class("active", to: "#third_content")
-        }
-      >
-        <span class="cursor-pointer"> Steps </span>
-        <div
-          id="third_content"
-          class="absolute top-0 left-0 right-0 right-0 w-full h-fit m-auto text-black mt-10 overflow-wrap nav_content"
-        >
-          <.recipe_steps steps = {@recipe.steps} ./>
-        </div>
-
-
-      </div>
+  def recipe_details(
+        %{recipe: recipe, nutrients: nutrients, primary_size: primary_size} = assigns
+      ) do
+    ~H"""
+    <div class="w-8/12 m-auto">
+      <.live_component module={MehungryWeb.TabsComponent} id="live_comp_tabs_rec" contents={MehungryWeb.TestArgument} />
     </div>
-    <div class="line"></div>
-    <div class="grid_even_columns p-4"></div>
     """
   end
 

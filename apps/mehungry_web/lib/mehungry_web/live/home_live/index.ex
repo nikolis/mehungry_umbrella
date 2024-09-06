@@ -2,6 +2,7 @@ defmodule MehungryWeb.HomeLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
 
+  import MehungryWeb.CoreComponents
   embed_templates("components/*")
   @color_fill "#00A0D0"
 

@@ -28,8 +28,8 @@ defmodule Mehungry.Posts do
       :user,
       :upvotes,
       :downvotes,
-      comments: [:user],
-      reference: [:user, recipe_ingredients: [:ingredient]]
+      # comments: [:user],
+      reference: [:user, recipe_ingredients: [:ingredient], comments: [:user]]
     ])
   end
 
@@ -39,8 +39,8 @@ defmodule Mehungry.Posts do
       :user,
       :upvotes,
       :downvotes,
-      comments: [:user],
-      reference: [:user, recipe_ingredients: [:ingredient]]
+      # comments: [:user],
+      reference: [:user, recipe_ingredients: [:ingredient], comments: [:user]]
     ])
     |> Enum.map(fn x ->
       {x, Users.calculate_recipe_grading(x.reference, user)}
@@ -78,20 +78,22 @@ defmodule Mehungry.Posts do
 
   ## Examples
 
-      iex> get_post!(123)
-      %Post{}
+  iex> get_post!(123)
+  %Post{}
 
-      iex> get_post!(456)
-      ** (Ecto.NoResultsError)
+  iex> get_post!(456)
+  ** (Ecto.NoResultsError)
 
   """
+
+  #      comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
+
   def get_post!(id) do
     Repo.get!(Post, id)
     |> Repo.preload([
       :upvotes,
       :downvotes,
-      reference: [:user, recipe_ingredients: [:ingredient]],
-      comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
+      reference: [:user, recipe_ingredients: [:ingredient]]
     ])
   end
 
