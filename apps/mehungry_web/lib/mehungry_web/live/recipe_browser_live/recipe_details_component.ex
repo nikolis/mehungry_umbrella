@@ -67,8 +67,8 @@ defmodule MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id="recipe_presentation_modal" class="p-6">
-      <div class="grid grid-cols-2 gap-6">
+    <div id="recipe_presentation_modal" class="sm:p-6">
+      <div class="basic_2_col_grid_cont">
         <div class="w-full">
           <img class="min-h-96 rounded-2xl" src={@recipe.image_url} />
         </div>
@@ -78,8 +78,21 @@ defmodule MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent do
           <div style="">
             <.recipe_details recipe={@recipe} nutrients={@nutrients} primary_size={@primary_size} . />
           </div>
-          <div class="mt-20"></div>
-          <%= if !is_nil(@user) do %>
+          <div class="post_card mb-12">
+            <h3 class="text-lg m-4 mr-auto ml-auto text-start mt-14"> Comments </h3>
+          <%= for comment <- @recipe.comments do %>
+            <.comment
+              comment={comment}
+              user={comment.user}
+              current_user={@user}
+              live_action={@live_action}
+              page_title={@page_title}
+              reply={@reply}
+            />
+          <% end %>
+        </div> 
+
+        <%= if !is_nil(@user) do %>
             <.live_component
               module={MehungryWeb.HomeLive.FormComponentComment}
               id="comment_form"
@@ -90,18 +103,6 @@ defmodule MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent do
             />
           <% end %>
         </div>
-        <!--         <div class="post_card mb-12">
-            <%= for comment <- @recipe.comments do %>
-              <.comment
-                comment={comment}
-                user={comment.user}
-                current_user={@user}
-                live_action={@live_action}
-                page_title={@page_title}
-                reply={@reply}
-              />
-            <% end %>
-          </div> -->
       </div>
     </div>
     """

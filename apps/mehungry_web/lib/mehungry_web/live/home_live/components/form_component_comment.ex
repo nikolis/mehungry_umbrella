@@ -8,7 +8,7 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="post_card">
+    <div class="">
       <.header></.header>
 
       <.simple_form
@@ -28,22 +28,13 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
           <% else %>
             <.icon name="hero-user-circle" class="h-10 w-10" />
           <% end %>
-          <.input field={@form[:text]} type="text" class="flex-grow w-full" label="Comment " />
+          <.input field={@form[:text]} type="comment" class="flex-grow w-full" label="Comment " />
           <.input field={@form[:user_id]} type="hidden" />
           <.input field={@form[:post_id]} type="hidden" />
         </div>
         <:actions>
           <div style="display: grid; grid-template-columns: 19fr 2fr 2fr; margin-top: 0.5rem;">
             <div></div>
-            <button
-              phx-click="cancel_comment"
-              style="margin-right: 1.5rem; color: var(--clr-grey-friend_3)"
-              type="reset"
-              phx-target={@myself}
-            >
-              Cancel
-            </button>
-            <button type="submit" class="primary_button" phx-disable-with="Saving...">Post</button>
           </div>
         </:actions>
       </.simple_form>

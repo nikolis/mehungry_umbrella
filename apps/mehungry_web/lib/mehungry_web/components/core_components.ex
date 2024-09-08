@@ -199,8 +199,15 @@ defmodule MehungryWeb.CoreComponents do
         %{recipe: recipe, nutrients: nutrients, primary_size: primary_size} = assigns
       ) do
     ~H"""
-    <div class="w-8/12 m-auto">
-      <.live_component module={MehungryWeb.TabsComponent} id="live_comp_tabs_rec" contents={MehungryWeb.TestArgument} />
+    <div class="w-11/12 md:w-8/12 m-auto" style="height: 300px;">
+      <.live_component
+        module={MehungryWeb.TabsComponent}
+        id="live_comp_tabs_rec"
+        contents={MehungryWeb.TestArgument}
+        recipe={@recipe}
+        nutrients={@nutrients}
+        primary_size={@primary_size}
+      />
     </div>
     """
   end
@@ -293,7 +300,7 @@ defmodule MehungryWeb.CoreComponents do
         tabindex="0"
       >
         <div class="flex min-h-full  justify-center " style="padding-top: 80px;">
-          <div class="w-7/12" style="">
+          <div class="w-full sm:w-7/12" style="">
             <.focus_wrap
               id={"#{@id}-container"}
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
@@ -781,6 +788,33 @@ defmodule MehungryWeb.CoreComponents do
       />
       <.label for={@id} class="placeholder"><%= @label %></.label>
       <.error :for={msg <- @errors}><%= msg %></.error>
+    </div>
+    """
+  end
+
+  # Comment Input
+  def input(%{type: "comment"} = assigns) do
+    IO.inspect("adfssssssssssssssssssssss-----------------------------")
+    ~H"""
+    <div phx-feedback-for={@name} class="input-form w-full h-full">
+      <textarea
+        type={@type}
+        name={@name}
+        id={@id}
+        value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        style="height: 40px; padding-right: 44px; padding-left: 12px; overflow: hidden"
+        class={
+          [Map.get(assigns.rest, :class, "")] ++
+            [
+              "rounded-full border-greyfriend2 border-2 relative text-sm leading-4	",
+            ]
+        }
+        {@rest}
+      />
+      <.label for={@id} class="placeholder"><%= @label %></.label>
+      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.icon name="hero-arrow-right-circle" class="mt-0.5 h-9 w-9 flex-none absolute right-2 m-auto text-primary" pxh-click="submit" />
+      <!-- <button type="submit" class="primary_button" phx-disable-with="Saving...">Post</button> --->
     </div>
     """
   end
