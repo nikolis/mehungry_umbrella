@@ -1,4 +1,4 @@
-defmodule MehungryWeb.TestArgument do
+defmodule MehungryWeb.RecipeDetailsTabsConfig do
   @moduledoc """
     This is a module Representing the contents of a particular instance of a
     tabs comopnent
@@ -16,14 +16,14 @@ defmodule MehungryWeb.TestArgument do
   end
 
   def tab_content(%{state: "ingredients"} = assigns) do
-    MehungryWeb.CoreComponents.recipe_ingredients(assigns.recipe)
+    MehungryWeb.RecipeComponents.recipe_ingredients(assigns.recipe)
   end
 
   def tab_content(%{state: "nutrients"} = assigns) do
-    MehungryWeb.CoreComponents.recipe_nutrients(assigns)
+    MehungryWeb.RecipeComponents.recipe_nutrients(assigns)
   end
 
   def tab_content(%{state: "steps"} = assigns) do
-    MehungryWeb.CoreComponents.recipe_steps(assigns.recipe)
+    MehungryWeb.RecipeComponents.recipe_steps(assigns.recipe)
   end
 end

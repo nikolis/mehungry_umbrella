@@ -2,7 +2,7 @@ defmodule MehungryWeb.ProfileLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
 
-  alias MehungryWeb.CommonComponents.RecipeComponents
+  alias MehungryWeb.RecipeComponents
 
   alias Mehungry.Accounts
   alias Mehungry.Users

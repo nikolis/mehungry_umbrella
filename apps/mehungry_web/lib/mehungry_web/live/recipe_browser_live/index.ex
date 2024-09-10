@@ -1,8 +1,6 @@
 defmodule MehungryWeb.RecipeBrowseLive.Index do
   use MehungryWeb, :live_view
 
-  import MehungryWeb.CoreComponents
-
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
   alias Mehungry.Search.RecipeSearchItem
@@ -13,7 +11,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   alias Mehungry.Users
   alias Mehungry.Food.RecipeUtils
 
-  alias MehungryWeb.CommonComponents.RecipeComponents
+  alias MehungryWeb.RecipeComponents
 
   @impl true
   def mount(params, session, socket) do
@@ -202,12 +200,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      |> assign(:cursor_after, cursor_after)
      |> assign(:page, socket.assigns.page + 1)
      |> stream(:recipes, recipes)}
-  end
-
-  @impl true
-  def handle_event("recipe_details_nav", %{"recipe_id" => recipe_id}, socket) do
-    socket = assign(socket, :invocations, 0)
-    {:noreply, push_patch(socket, to: "/browse/" <> recipe_id)}
   end
 
   @impl true

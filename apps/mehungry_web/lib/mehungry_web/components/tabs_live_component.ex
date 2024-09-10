@@ -1,11 +1,10 @@
-defmodule MehungryWeb.TabsComponent do
+defmodule MehungryWeb.TabsLiveComponent do
   use Phoenix.LiveComponent
 
   @impl true
   def update(assigns, socket) do
     states = assigns.contents.get_states()
     [initial_state | _] = states
-    IO.inspect(assigns)
 
     {:ok,
      socket
@@ -44,7 +43,7 @@ defmodule MehungryWeb.TabsComponent do
 
   def nav_buttons(assigns) do
     ~H"""
-    <div class="w-full flex justify-between nav_buttons text-xl text-greyfriend2 font-semibold	">
+    <div class="w-full flex justify-between nav_buttons text-xl text-greyfriend2 font-semibold	mb-4">
       <%= for state <- @states do %>
         <.nav_button state={state} current_state={@state} myself={@myself} />
       <% end %>

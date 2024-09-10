@@ -12,7 +12,6 @@ defmodule ViewportHelpers do
       import ViewportHelpers
 
       def handle_event("viewport_resize", viewport, socket) do
-        IO.inspect(viewport)
         device_kind = viewport |> Map.get("width") |> device_kind_for_width()
 
         {:noreply,
@@ -27,7 +26,6 @@ defmodule ViewportHelpers do
       socket.private
       |> get_in([:connect_params, "viewport", "width"])
 
-    IO.inspect(intermidiate, label: "adsf")
     device_kind = device_kind_for_width(intermidiate)
 
     Phoenix.Component.assign(socket, device_kind: device_kind)

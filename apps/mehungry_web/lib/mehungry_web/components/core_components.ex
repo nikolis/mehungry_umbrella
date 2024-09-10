@@ -56,162 +56,6 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  def recipe_ingredients(%{recipe_ingredients: recipe_ingredients} = assigns) do
-    ~H"""
-    <%= for ingredient <- @recipe_ingredients do %>
-      <div class="ingredient_details_container font-normal	 ">
-        <div><%= ingredient.ingredient.name %></div>
-        <div class="font-semibold">
-          <%= ingredient.quantity %> <%= ingredient.measurement_unit.name %>
-        </div>
-      </div>
-    <% end %>
-    """
-  end
-
-  def recipe_nutrients(%{nutrients: nutrients, primary_size: primary_size} = assigns) do
-    ~H"""
-    <div class="accordion overflow-auto	max-h-1/2 font-normal" style="max-height: 300px;">
-      <%= for {n, index} <-  Enum.with_index(@nutrients) do %>
-        <%= if !is_nil(n) do %>
-          <div class="accordion-panel">
-            <h2 id={"panel" <> to_string(index) <> "-title"}>
-              <%= if !is_nil(n[:children]) do %>
-                <button
-                  class="accordion-trigger rounded-xl  pr-6"
-                  style="text-align: start; width: 100%; background-color:white ; "
-                  aria-expanded="false"
-                  aria-controls="accordion1-content"
-                >
-                  <div class="w-fit h-fit bg-white rounded-xl absolute right-0 top-0 ">
-                    <.icon
-                      name="hero-arrow-down-circle "
-                      class="h-6 w-6 rounded-xl text-complementary  "
-                    />
-                  </div>
-
-                  <%= Map.get(n, :name, "Default") <>
-                    " " <>
-                    if !is_nil(n[:amount]) do
-                      to_string(Float.round(n[:amount], 2))
-                    else
-                      "."
-                    end %>
-                  <%= if !is_nil(n[:measurement_unit]) do
-                    n[:measurement_unit]
-                  else
-                    ""
-                  end %>
-                </button>
-              <% else %>
-                <%= if index < @primary_size do %>
-                  <button
-                    class="accordion_reccord font-bold	"
-                    style="text-align: start; width: 100%;"
-                    aria-expanded="false"
-                    aria-controls=""
-                  >
-                    <%= Map.get(n, :name, "Default") <>
-                      " " <>
-                      if !is_nil(n[:amount]) do
-                        to_string(Float.round(n[:amount], 2))
-                      else
-                        "."
-                      end %>
-                    <%= if !is_nil(n[:measurement_unit]) do
-                      n[:measurement_unit]
-                    else
-                      ""
-                    end %>
-                  </button>
-                <% else %>
-                  <button
-                    class="accordion_reccord"
-                    style="text-align: start; width: 100%;"
-                    aria-expanded="false"
-                    aria-controls=""
-                  >
-                    <%= Map.get(n, :name, "Default") <>
-                      " " <>
-                      if !is_nil(n[:amount]) do
-                        to_string(Float.round(n[:amount], 2))
-                      else
-                        "."
-                      end %>
-                    <%= if !is_nil(n[:measurement_unit]) do
-                      n[:measurement_unit]
-                    else
-                      ""
-                    end %>
-                  </button>
-                <% end %>
-              <% end %>
-            </h2>
-            <div
-              class="accordion-content"
-              role="region"
-              aria-labelledby={"panel"<>to_string(index)<>"-title"}
-              aria-hidden="true"
-              id={"panel"<>to_string(index) <> "-content"}
-            >
-              <div style="text-center: start;">
-                <ul>
-                  <%= if !is_nil(n[:children]) do
-                  for n_r <- n[:children] do %>
-                    <li style="padding-left: 1rem; text-align: start;">
-                      <%= n_r.name %> <%= Float.round(n_r.amount, 4) %> <%= n_r.measurement_unit %>
-                    </li>
-                  <% end end %>
-                </ul>
-              </div>
-            </div>
-          </div>
-        <% end %>
-      <% end %>
-    </div>
-    """
-  end
-
-  def recipe_steps(%{steps: steps} = assigns) do
-    ~H"""
-    <%= for step <- @steps do %>
-      <div class="step_details_container text-sm">
-        <div><%= step.index %></div>
-        <div class="font-normal"><%= step.description %></div>
-      </div>
-    <% end %>
-    """
-  end
-
-  def content(assigns) do
-    ~H"""
-    <h3>sOMETHING</h3>
-    """
-  end
-
-  def content2(assigns) do
-    ~H"""
-    <h3>sOMETHING2</h3>
-    """
-  end
-
-  def recipe_details(
-        %{recipe: recipe, nutrients: nutrients, primary_size: primary_size} = assigns
-      ) do
-    ~H"""
-    <div class="w-11/12 md:w-8/12 m-auto" style="height: 300px;">
-      <.live_component
-        module={MehungryWeb.TabsComponent}
-        id="live_comp_tabs_rec"
-        contents={MehungryWeb.TestArgument}
-        recipe={@recipe}
-        nutrients={@nutrients}
-        primary_size={@primary_size}
-      />
-    </div>
-    """
-  end
-
   def user_overview_card(
         %{
           current_user: %Mehungry.Accounts.User{} = _current_user,
@@ -248,70 +92,6 @@ defmodule MehungryWeb.CoreComponents do
           </div>
           <div style="font-size: 1rem; text-align: start; color: var(--clr-dark_1)">
             <%= @post.title %>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  @doc """
-  Renders a modal.
-
-  ## Examples
-
-      <.modal id="confirm-modal">
-        This is a modal.
-      </.modal>
-
-  JS commands may be passed to the `:on_cancel` to configure
-  the closing/cancel event, for example:
-
-      <.modal id="confirm" on_cancel={JS.navigate(~p"/posts")}>
-        This is another modal.
-      </.modal>
-
-  """
-  attr :id, :string, required: true
-  attr :show, :boolean, default: false
-  attr :on_cancel, JS, default: %JS{}
-  slot :inner_block, required: true
-
-  def recipe_modal(assigns) do
-    ~H"""
-    <div
-      id={@id}
-      phx-mounted={@show && show_modal(@id)}
-      phx-remove={hide_modal(@id)}
-      data-cancel={JS.exec(@on_cancel, "phx-remove")}
-      class="relative z-50 hidden max-w-1/2"
-    >
-      <div
-        id={"#{@id}-bg"}
-        class="bg-zinc-50/90 fixed inset-0 transition-opacity top-0 left-0 right-0"
-        aria-hidden="true"
-      />
-      <div
-        class="fixed inset-0 overflow-y-auto"
-        aria-labelledby={"#{@id}-title"}
-        aria-describedby={"#{@id}-description"}
-        role="dialog"
-        aria-modal="true"
-        tabindex="0"
-      >
-        <div class="flex min-h-full  justify-center " style="padding-top: 80px;">
-          <div class="w-full sm:w-7/12" style="">
-            <.focus_wrap
-              id={"#{@id}-container"}
-              phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
-              phx-key="escape"
-              phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white  shadow-lg ring-1 transition "
-            >
-              <div id={"#{@id}-content"}>
-                <%= render_slot(@inner_block) %>
-              </div>
-            </.focus_wrap>
           </div>
         </div>
       </div>
@@ -794,7 +574,6 @@ defmodule MehungryWeb.CoreComponents do
 
   # Comment Input
   def input(%{type: "comment"} = assigns) do
-    IO.inspect("adfssssssssssssssssssssss-----------------------------")
     ~H"""
     <div phx-feedback-for={@name} class="input-form w-full h-full">
       <textarea
@@ -806,14 +585,19 @@ defmodule MehungryWeb.CoreComponents do
         class={
           [Map.get(assigns.rest, :class, "")] ++
             [
-              "rounded-full border-greyfriend2 border-2 relative text-sm leading-4	",
+              "rounded-full border-greyfriend2 border-2 relative text-sm leading-4	"
             ]
         }
         {@rest}
       />
       <.label for={@id} class="placeholder"><%= @label %></.label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
-      <.icon name="hero-arrow-right-circle" class="mt-0.5 h-9 w-9 flex-none absolute right-2 m-auto text-primary" pxh-click="submit" />
+      <button phx-clic="submit" class="absolute right-2 m-auto">
+        <.icon
+          name="hero-arrow-right-circle"
+          class="mt-0.5 h-9 w-9 flex-none text-primary"
+          pxh-click="submit cursor-pointer"
+        />
+      </button>
       <!-- <button type="submit" class="primary_button" phx-disable-with="Saving...">Post</button> --->
     </div>
     """

@@ -121,18 +121,20 @@
           <%= case @content_state do %>
             <% :created -> %>
               <%= for recipe <- @user_created_recipes do %>
-                <RecipeComponents.recipe_details
+                <RecipeComponents.recipe_card
                   recipe={recipe}
                   type="created"
+                  return_to="profile"
                   user_recipes={@user_saved_recipes}
                   id={"recipe" <> Integer.to_string(recipe.id)}
                 />
               <% end %>
             <% :saved -> %>
               <%= for user_recipe <- @user_saved_recipes do %>
-                <RecipeComponents.recipe_details
+                <RecipeComponents.recipe_card
                   user_recipes={@user_saved_recipes}
                   recipe={user_recipe.recipe}
+                  return_to="profile"
                   id={"recipe" <> Integer.to_string(user_recipe.recipe.id)}
                   type="saved"
                 />

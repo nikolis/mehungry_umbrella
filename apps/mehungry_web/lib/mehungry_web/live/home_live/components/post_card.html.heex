@@ -5,7 +5,7 @@
     user_follows={@user_follows}
     current_user={@user}
   />
-  <.link class="post_card_image_container" patch={@recipe_path}>
+  <.link class="post_card_image_container" patch={~p"/browse/home/#{@post.reference_id}"}>
     <img class="post_card_image" src={@post.md_media_url} />
   </.link>
   <div class="post_card_details">

@@ -293,20 +293,20 @@ h2.portfolio-title::after {
 
 @media (min-width: 40em) {
 	.grid_even_columns {
-		grid-template-columns: repeat(2, auto);
+		grid-template-columns: repeat(2, 1fr);
 	}
 }
 
 @media (min-width: 60em) {
 	.grid_even_columns {
-		grid-template-columns: repeat(3, auto);
+		grid-template-columns: repeat(3, 1fr);
 
 	}
 }
 
 @media (min-width: 80em) {
 	.grid_even_columns {
-		grid-template-columns: repeat(4, auto);
+		grid-template-columns: repeat(4, 1fr);
 	}
 }
 
