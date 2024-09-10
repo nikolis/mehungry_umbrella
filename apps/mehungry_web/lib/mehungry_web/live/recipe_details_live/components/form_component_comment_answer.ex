@@ -1,4 +1,4 @@
-defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
+defmodule MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer do
   use MehungryWeb, :live_component
   import MehungryWeb.CoreComponents
 
@@ -8,7 +8,7 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="" style="margin-top: 0.75rem">
+    <div class="w-8/12 sm:w-10/12">
       <.header></.header>
       <%= if !is_nil(@must_be_loged_in) do %>
         <.modal
@@ -29,13 +29,9 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
         phx-change="validate"
         phx-submit="save"
       >
-        <div style="display: grid; grid-template-columns: 1fr 19fr; gap: 0.75rem;">
-          <%= if @user and @user.profile_pic do %>
-            <img
-              src={@current_user.profile_pic}
-              ,
-              style="width: 40px; height: 40px; border-radius: 50%;"
-            />
+        <div class="flex flex-row gap-4">
+          <%= if !is_nil(@user) and @user.profile_pic do %>
+            <img src={@user.profile_pic} , style="width: 30px; height: 30px; border-radius: 50%;" />
           <% else %>
             <.icon name="hero-user-circle" class="h-10 w-10" />
           <% end %>
@@ -88,7 +84,7 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
   end
 
   def handle_event("save", %{"comment_answer" => comment_answer_params}, socket) do
-    case is_nil(socket.assigns.current_user) do
+    case is_nil(socket.assigns.user) do
       true ->
         socket = assign(socket, :must_be_loged_in, 1)
         {:noreply, socket}
@@ -98,7 +94,7 @@ defmodule MehungryWeb.HomeLive.FormComponentCommentAnswer do
     end
   end
 
-  defp save_comment_answer(socket, :show, comment_answer_params) do
+  defp save_comment_answer(socket, :index, comment_answer_params) do
     case Posts.create_comment_answer(comment_answer_params) do
       {:ok, comment_answer} ->
         comment_answer_params_clean = Map.put(comment_answer_params, "text", "")

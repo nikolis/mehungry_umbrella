@@ -1,6 +1,6 @@
-<div style="margin-bottom: 0.75rem; ">
-  <div style="display: flex; flex-direction: row;">
-    <%= if @comment.user.profile_pic do %>
+<div class="comment mt-4">
+  <div class="flex flew-row">
+    <%= if !is_nil(@comment.user.profile_pic) do %>
       <img
         src={@comment.user.profile_pic}
         ,
@@ -18,7 +18,7 @@
         <%= @comment.text %>
       </div>
       <div style="display: flex; ">
-        <div class="utils_container" style="margin-top: 0.75rem; margin-bottom: 0.75rem">
+        <div class="utils_container" style="">
           <div
             style="font-size: 1rem; font-weight: bold; text-align: start; color: var(--clr-grey-friend_3); margin-right: 1rem;"
             phx-click="add-reply-form"
@@ -31,8 +31,8 @@
             phx-click="vote_comment"
             phx-value-reaction="true"
             phx-value-id={@comment.id}
-            width="35px"
-            height="35px"
+            width="28px"
+            height="28px"
             viewBox="0 0 24 24"
             id="up-alt"
             data-name="Flat Line"
@@ -60,8 +60,8 @@
             phx-click="vote_comment"
             phx-value-reaction="false"
             phx-value-id={@comment.id}
-            width="35px"
-            height="35px"
+            width="28px"
+            height="28px"
             viewBox="0 0 24 24"
             id="down-alt"
             data-name="Flat Line"
@@ -84,20 +84,6 @@
         </div>
       </div>
 
-      <%= if(not is_nil(@reply))  do %>
-        <%= if @comment.id == @reply.comment_id  do %>
-          <%= if @current_user do %>
-            <.live_component
-              module={MehungryWeb.HomeLive.FormComponentCommentAnswer}
-              id={"comment_answer_form_alla" <> to_string(@comment.id)}
-              action={@live_action}
-              current_user={@current_user}
-              comment_answer={%{comment_id: @reply.comment_id, user_id: @user.id}}
-            />
-          <% end %>
-        <% end %>
-      <% end %>
-
       <%= for co_an <- @comment.comment_answers do %>
         <div style="margin-bottom: 0.75rem; ">
           <div style="display: flex; flex-direction: row;">
@@ -105,9 +91,8 @@
               <img
                 src={co_an.user.profile_pic}
                 ,
-                style="width: 40px; height: 40px; border-radius: 50%;"
+                style="width: 30px; height: 30px; border-radius: 50%;"
               />
-              <%= inspect(co_an.user.profile_pic) %>
             <% else %>
               <.icon name="hero-user-circle" class="h-10 w-10" />
             <% end %>
@@ -122,6 +107,19 @@
             </div>
           </div>
         </div>
+      <% end %>
+      <%= if(not is_nil(@reply))  do %>
+        <%= if @comment.id == @reply.comment_id  do %>
+          <%= if @current_user do %>
+            <.live_component
+              module={MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer}
+              id={"comment_answer_form_alla" <> to_string(@comment.id)}
+              action={@live_action}
+              user={@user}
+              comment_answer={%{comment_id: @reply.comment_id, user_id: @user.id}}
+            />
+          <% end %>
+        <% end %>
       <% end %>
     </div>
   </div>

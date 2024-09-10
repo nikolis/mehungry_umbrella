@@ -11,7 +11,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   alias Mehungry.Users
   alias Mehungry.Food.RecipeUtils
 
-  alias MehungryWeb.CommonComponents.RecipeComponents
+  alias MehungryWeb.RecipeComponents
 
   @impl true
   def mount(params, session, socket) do
@@ -78,6 +78,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      |> assign(:query, query)
      |> assign(:must_be_loged_in, nil)
      |> assign(:user, user)
+     |> assign(:reply, nil)
      |> assign_recipe_search()}
   end
 
@@ -199,12 +200,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      |> assign(:cursor_after, cursor_after)
      |> assign(:page, socket.assigns.page + 1)
      |> stream(:recipes, recipes)}
-  end
-
-  @impl true
-  def handle_event("recipe_details_nav", %{"recipe_id" => recipe_id}, socket) do
-    socket = assign(socket, :invocations, 0)
-    {:noreply, push_patch(socket, to: "/browse/" <> recipe_id)}
   end
 
   @impl true
@@ -417,7 +412,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
 
   defp apply_action(socket, :show, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
-    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)  
+    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
 
     # user = socket.assigns.user
     query_str = ""

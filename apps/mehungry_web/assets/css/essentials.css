@@ -489,7 +489,6 @@ h2 {
 
 .post_card {
 	border-radius: 10px;
-	width: 75%;
 	margin: auto;
 }
 
@@ -580,13 +579,18 @@ body {
 
 .accordion {
   background: white;
-  color: var(--clr-dark_2);
+  color: var(--clr-primary-d);
   padding: 1rem;
+  color: var(--clr-dark_2);
+
 }
 
 .accordion-panel {
   padding: 0.5rem;
-  border: 1px solid;
+  border-top: 1px solid #D8D8D8;
+  border-left: 1px solid #D8D8D8 ;
+  border-right: 1px solid #D8D8D8 ;
+  background-color: var(--clr-grey-friend_2) ;
 }
 
 .accordion h2 {

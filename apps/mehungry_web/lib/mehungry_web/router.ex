@@ -148,13 +148,12 @@ defmodule MehungryWeb.Router do
 
     live_session :maybe, on_mount: MehungryWeb.MaybeUserAuthLive do
       live "/", HomeLive.Index, :index
+      live "/home", HomeLive.Index, :index
       live "/show_recipe/:id", HomeLive.Index, :show_recipe
-      live "/post/:id", HomeLive.Show, :show
-      live "/post/:id/show_recipe/:rec_id", HomeLive.Show, :show_recipe
 
       live "/browse", RecipeBrowseLive.Index, :index
       live "/search/:query", RecipeBrowseLive.Index, :index
-      live "/browse/:id", RecipeBrowseLive.Index, :show
+      live "/browse/:origin/:id", RecipeDetailsLive.Index, :index
       live "/browse_prepop/:search_term", :searc_prepop
     end
 

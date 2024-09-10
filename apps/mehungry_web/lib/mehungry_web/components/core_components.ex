@@ -25,28 +25,31 @@ defmodule MehungryWeb.CoreComponents do
   def user_overview_card(%{user: %Mehungry.Accounts.User{} = _user} = assigns) do
     ~H"""
     <div style="margin-bottom: 0.75rem; ">
-      <div style="display: flex; flex-direction: row;">
-        <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
+      <div class="flex gap-2">
+        <.link
+          patch={"/profile/"<>Integer.to_string(@user.id)}
+          style="min-height: 50px; min-width: 50px;"
+        >
           <%= if @user.profile_pic do %>
-            <img src={@user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;" />
+            <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
           <% else %>
-            <.icon name="hero-user-circle" class="h-10 w-10" />
+            <.icon name="hero-user-circle" class="h-12 w-12" />
           <% end %>
         </.link>
-        <div style="margin-left: 1rem;">
-          <div
-            style="font-weight: bold; text-align: start; font-size: 0.75rem;"
-            class="flex flex-row gap-4"
-          >
+        <div class="flex flex-col justify-center w-full">
+          <div class="text-sm font-bold leading-4">
             <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
               <%= @user.email %>
             </.link>
             <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
             </div>
           </div>
-          <div style="font-size: 1rem; text-align: start; color: var(--clr-dark_1)">
-            <%= @post.title %>
+          <div class="text-sm leading-4">
+            300 posted recipes
           </div>
+        </div>
+        <div class="mt-auto mb-auto self-end">
+          <button class="primary_button">Follow</button>
         </div>
       </div>
     </div>
@@ -89,80 +92,6 @@ defmodule MehungryWeb.CoreComponents do
           </div>
           <div style="font-size: 1rem; text-align: start; color: var(--clr-dark_1)">
             <%= @post.title %>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  @doc """
-  Renders a modal.
-
-  ## Examples
-
-      <.modal id="confirm-modal">
-        This is a modal.
-      </.modal>
-
-  JS commands may be passed to the `:on_cancel` to configure
-  the closing/cancel event, for example:
-
-      <.modal id="confirm" on_cancel={JS.navigate(~p"/posts")}>
-        This is another modal.
-      </.modal>
-
-  """
-  attr :id, :string, required: true
-  attr :show, :boolean, default: false
-  attr :on_cancel, JS, default: %JS{}
-  slot :inner_block, required: true
-
-  def recipe_modal(assigns) do
-    ~H"""
-    <div
-      id={@id}
-      phx-mounted={@show && show_modal(@id)}
-      phx-remove={hide_modal(@id)}
-      data-cancel={JS.exec(@on_cancel, "phx-remove")}
-      class="relative z-50 hidden"
-    >
-      <div
-        id={"#{@id}-bg"}
-        class="bg-zinc-50/90 fixed inset-0 transition-opacity top-0 left-0 right-0"
-        aria-hidden="true"
-      />
-      <div
-        class="fixed inset-0 overflow-y-auto"
-        aria-labelledby={"#{@id}-title"}
-        aria-describedby={"#{@id}-description"}
-        role="dialog"
-        aria-modal="true"
-        tabindex="0"
-      >
-        <div class="flex min-h-full items-center justify-center mt-10">
-          <div class="w-full  p-2 sm:p-6 lg:py-8">
-            <.focus_wrap
-              id={"#{@id}-container"}
-              phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
-              phx-key="escape"
-              phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white lg:p-8 shadow-lg ring-1 transition pt-4"
-            >
-              <div class="absolute top-6 right-5">
-                <button
-                  phx-click={JS.exec("data-cancel", to: "##{@id}")}
-                  type="button"
-                  class="-m-3 flex-none p-3 opacity-20 hover:opacity-40"
-                  aria-label={gettext("close")}
-                >
-                  <.icon name="hero-x-mark-solid" class="h-5 w-5" />
-                </button>
-              </div>
-              <div id={"#{@id}-content"}>
-                <%= render_slot(@inner_block) %>
-              </div>
-            </.focus_wrap>
           </div>
         </div>
       </div>
@@ -639,6 +568,37 @@ defmodule MehungryWeb.CoreComponents do
       />
       <.label for={@id} class="placeholder"><%= @label %></.label>
       <.error :for={msg <- @errors}><%= msg %></.error>
+    </div>
+    """
+  end
+
+  # Comment Input
+  def input(%{type: "comment"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name} class="input-form w-full h-full">
+      <textarea
+        type={@type}
+        name={@name}
+        id={@id}
+        value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        style="height: 40px; padding-right: 44px; padding-left: 12px; overflow: hidden"
+        class={
+          [Map.get(assigns.rest, :class, "")] ++
+            [
+              "rounded-full border-greyfriend2 border-2 relative text-sm leading-4	"
+            ]
+        }
+        {@rest}
+      />
+      <.label for={@id} class="placeholder"><%= @label %></.label>
+      <button phx-clic="submit" class="absolute right-2 m-auto">
+        <.icon
+          name="hero-arrow-right-circle"
+          class="mt-0.5 h-9 w-9 flex-none text-primary"
+          pxh-click="submit cursor-pointer"
+        />
+      </button>
+      <!-- <button type="submit" class="primary_button" phx-disable-with="Saving...">Post</button> --->
     </div>
     """
   end

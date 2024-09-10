@@ -5,7 +5,7 @@
     user_follows={@user_follows}
     current_user={@user}
   />
-  <.link class="post_card_image_container" patch={"/post/"<> to_string(@post.id)}>
+  <.link class="post_card_image_container" patch={~p"/browse/home/#{@post.reference_id}"}>
     <img class="post_card_image" src={@post.md_media_url} />
   </.link>
   <div class="post_card_details">
@@ -73,7 +73,7 @@
     <div class="utils_container" style="gap: 0.15rem;">
       <img src="/images/comments-3-svgrepo-com.svg" width="35px" />
       <div style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;">
-        <%= length(@post.comments) %>
+        <%= length(@post.reference.comments) %>
       </div>
       <div
         style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
@@ -110,15 +110,6 @@
           Save Post
         </div>
       </div>
-      <.link class="utils_container mx-4 gap-2" patch={@recipe_path}>
-        <img src="/images/cutlery-plate-svgrepo-com.svg" width="35px" height="35px" />
-        <div
-          style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
-          class="md:block hidden"
-        >
-          View Recipe
-        </div>
-      </.link>
     </div>
   </div>
 </div>

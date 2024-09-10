@@ -2,6 +2,7 @@ defmodule MehungryWeb.HomeLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
 
+  import MehungryWeb.RecipeComponents
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
@@ -47,7 +48,7 @@ defmodule MehungryWeb.HomeLive.Index do
       end
 
     Enum.each(posts, fn post ->
-      Posts.subscribe_to_post(%{post_id: post.id})
+      Posts.subscribe_to_post(%{recipe_id: post.recipe_id})
     end)
 
     {:ok,
@@ -168,7 +169,7 @@ defmodule MehungryWeb.HomeLive.Index do
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
 
-    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)  
+    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.user
 
     user_recipes =

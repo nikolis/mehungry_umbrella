@@ -16,6 +16,6 @@
   --clr-complementary-light: #00D8FF;
   
   --clr-grey-friend: #f0f0f0;
-  --clr-grey-friend_2: #f0f0f0;
+  --clr-grey-friend_2: rgba(240, 240, 240, 0.3);  
   --clr-grey-friend_3: rgba(100, 100, 100, 0.3);
 }

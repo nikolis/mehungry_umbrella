@@ -1,4 +1,4 @@
-defmodule MehungryWeb.HomeLive.FormComponentComment do
+defmodule MehungryWeb.RecipeDetailsLive.FormComponentComment do
   use MehungryWeb, :live_component
   import MehungryWeb.CoreComponents
 
@@ -8,7 +8,7 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="post_card">
+    <div class="">
       <.header></.header>
 
       <.simple_form
@@ -18,7 +18,7 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
         phx-change="validate"
         phx-submit="save"
       >
-        <div class="flex flex-row gap-3">
+        <div class="flex flex-row gap-3 w-11/12 m-auto">
           <%= if @current_user.profile_pic do %>
             <img
               src={@current_user.profile_pic}
@@ -28,22 +28,13 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
           <% else %>
             <.icon name="hero-user-circle" class="h-10 w-10" />
           <% end %>
-          <.input field={@form[:text]} type="text" class="flex-grow w-full" label="Comment " />
+          <.input field={@form[:text]} type="comment" class="flex-grow w-full" label="Comment " />
           <.input field={@form[:user_id]} type="hidden" />
-          <.input field={@form[:post_id]} type="hidden" />
+          <.input field={@form[:recipe_id]} type="hidden" />
         </div>
         <:actions>
           <div style="display: grid; grid-template-columns: 19fr 2fr 2fr; margin-top: 0.5rem;">
             <div></div>
-            <button
-              phx-click="cancel_comment"
-              style="margin-right: 1.5rem; color: var(--clr-grey-friend_3)"
-              type="reset"
-              phx-target={@myself}
-            >
-              Cancel
-            </button>
-            <button type="submit" class="primary_button" phx-disable-with="Saving...">Post</button>
           </div>
         </:actions>
       </.simple_form>
@@ -94,11 +85,11 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
     end
   end
 
-  defp save_comment(socket, :show, comment_params) do
+  defp save_comment(socket, :index, comment_params) do
     case Posts.create_comment(comment_params) do
       {:ok, comment} ->
         comment_params_clean = Map.put(comment_params, "text", "")
-        notify_parent({:saved, comment})
+        # notify_parent({:saved, comment})
         changeset_new = Posts.change_comment(%Comment{}, comment_params_clean)
 
         {
@@ -106,7 +97,6 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
           socket
           |> put_flash(:info, "Comment updated successfully")
           |> assign_form(changeset_new)
-          # |> push_patch(to: socket.assigns.patch)}
         }
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -117,7 +107,7 @@ defmodule MehungryWeb.HomeLive.FormComponentComment do
   defp save_comment(socket, :new, comment_params) do
     case Posts.create_comment(comment_params) do
       {:ok, comment} ->
-        notify_parent({:saved, comment})
+        # notify_parent({:saved, comment})
 
         {:noreply,
          socket
