@@ -151,6 +151,9 @@ Hooks.InfiniteScroll = {
 		})
 	},
 	reconnected() {
+    console.log("-------------------------- page reconnect");
+    console.log(this.page())
+    console.log("-------------------------- page reconnect --------------------------------------------------");
 		this.pending = this.page()
 	},
 	updated() {

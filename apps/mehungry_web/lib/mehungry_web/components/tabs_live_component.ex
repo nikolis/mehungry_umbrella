@@ -1,4 +1,7 @@
 defmodule MehungryWeb.TabsLiveComponent do
+  @moduledoc """
+  Module to Facilitate Generalized Tabs widget functionality
+  """
   use Phoenix.LiveComponent
 
   @impl true
@@ -35,6 +38,7 @@ defmodule MehungryWeb.TabsLiveComponent do
     """
   end
 
+  @impl true
   def handle_event("content_state_change", %{"state" => state}, socket) do
     {:noreply,
      socket
@@ -51,6 +55,7 @@ defmodule MehungryWeb.TabsLiveComponent do
     """
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="" id={@id}>

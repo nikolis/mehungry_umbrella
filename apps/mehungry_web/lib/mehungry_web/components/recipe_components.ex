@@ -10,7 +10,6 @@ defmodule MehungryWeb.RecipeComponents do
 
   use Phoenix.Component
   alias Phoenix.LiveView.JS
-  alias MehungryWeb.TabsLiveComponent
   import MehungryWeb.CoreComponents
 
   def get_color(treaty) do
@@ -99,7 +98,7 @@ defmodule MehungryWeb.RecipeComponents do
   end
 
   def recipe_details(
-        %{recipe: recipe, nutrients: nutrients, primary_size: primary_size} = assigns
+        %{recipe: _recipe, nutrients: _nutrients, primary_size: _primary_size} = assigns
       ) do
     ~H"""
     <div class="w-11/12  m-auto" style="height: 300px;">
@@ -115,7 +114,7 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_ingredients(%{recipe_ingredients: recipe_ingredients} = assigns) do
+  def recipe_ingredients(%{recipe_ingredients: _recipe_ingredients} = assigns) do
     ~H"""
     <div style="max-height: 300px;" class="overflow-auto">
       <%= for ingredient <- @recipe_ingredients do %>
@@ -130,7 +129,7 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_nutrients(%{nutrients: nutrients, primary_size: primary_size} = assigns) do
+  def recipe_nutrients(%{nutrients: _nutrients, primary_size: _primary_size} = assigns) do
     ~H"""
     <div class="accordion overflow-auto	max-h-1/2 font-normal" style="max-height: 300px;">
       <%= for {n, index} <-  Enum.with_index(@nutrients) do %>
@@ -233,7 +232,7 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_steps(%{steps: steps} = assigns) do
+  def recipe_steps(%{steps: _steps} = assigns) do
     ~H"""
     <div class="overflow-auto" style="height: 300px;">
       <%= for step <- @steps do %>
@@ -250,8 +249,8 @@ defmodule MehungryWeb.RecipeComponents do
     ~H"""
     <.link
       phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
-      class="recipe_card" 
-      patch={~p"/browse/#{@return_to}/#{@recipe.id}"}
+      class="recipe_card"
+      patch={@path_to_details}
       id={@id}
     >
       <img class="w-full rounded-xl m-auto" src={@recipe.image_url} />

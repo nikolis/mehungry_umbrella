@@ -44,6 +44,9 @@ defmodule Mehungry.RutilsTest do
           cousine: "some cusine",
           description: "some description",
           servings: 4,
+          difficulty: 1,
+          cooking_time_lower_limit: 5,
+          preperation_time_lower_limit: 5,
           language_name: "En",
           recipe_ingredients: [
             %{ingredient_id: oil.id, measurement_unit_id: mu.id, quantity: 5},
@@ -54,7 +57,12 @@ defmodule Mehungry.RutilsTest do
         |> Food.create_recipe()
 
       ing_table = RecipeUtils.calculate_recipe_ingredient_categories_array(recipe)
-      assert ing_table == ["Fats and Oils", "meat", "Vegetables and Vegetable Products"]
+
+      assert ing_table == [
+               "Fats and Oils",
+               "Poultry Products",
+               "Vegetables and Vegetable Products"
+             ]
     end
   end
 
@@ -63,7 +71,7 @@ defmodule Mehungry.RutilsTest do
       user = AccountsFixtures.user_fixture()
       user2 = AccountsFixtures.user_fixture()
       recipe = FoodFixtures.recipe_fixture(user2)
-      {:ok, user_recipe} = Users.save_user_recipe(user, recipe)
+      {:ok, user_recipe} = Users.save_user_recipe(user.id, recipe.id)
       assert user_recipe.recipe_id == recipe.id
     end
 
@@ -76,9 +84,9 @@ defmodule Mehungry.RutilsTest do
       _recipe3 = FoodFixtures.recipe_fixture(user2)
       _recipe4 = FoodFixtures.recipe_fixture(user2)
 
-      {:ok, _user_recipe} = Users.save_user_recipe(user, recipe)
-      {:ok, _user_recipe2} = Users.save_user_recipe(user, recipe2)
-      {:ok, _user_recipe1} = Users.save_user_recipe(user, recipe1)
+      {:ok, _user_recipe} = Users.save_user_recipe(user.id, recipe.id)
+      {:ok, _user_recipe2} = Users.save_user_recipe(user.id, recipe2.id)
+      {:ok, _user_recipe1} = Users.save_user_recipe(user.id, recipe1.id)
 
       user_saved_recipes = Users.list_user_saved_recipes(user)
       assert length(user_saved_recipes) == 3

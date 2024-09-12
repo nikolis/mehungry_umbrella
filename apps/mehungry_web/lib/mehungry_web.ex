@@ -100,6 +100,7 @@ defmodule MehungryWeb do
       use Phoenix.LiveComponent
 
       alias Phoenix.LiveView.JS
+      import MehungryWeb.LiveUtils
       unquote(view_helpers())
     end
   end

@@ -1,4 +1,4 @@
-defmodule MehungryWeb.RecipeBrowseLive.Components do
+defmodule MehungryWeb.RecipeBrowserLive.Components do
   use Phoenix.Component
 
   import MehungryWeb.CoreComponents

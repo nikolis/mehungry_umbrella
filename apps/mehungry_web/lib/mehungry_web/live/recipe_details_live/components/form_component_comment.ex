@@ -85,11 +85,10 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentComment do
     end
   end
 
-  defp save_comment(socket, :index, comment_params) do
+  defp save_comment(socket, :show_recipe, comment_params) do
     case Posts.create_comment(comment_params) do
-      {:ok, comment} ->
+      {:ok, _comment} ->
         comment_params_clean = Map.put(comment_params, "text", "")
-        # notify_parent({:saved, comment})
         changeset_new = Posts.change_comment(%Comment{}, comment_params_clean)
 
         {
@@ -106,9 +105,7 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentComment do
 
   defp save_comment(socket, :new, comment_params) do
     case Posts.create_comment(comment_params) do
-      {:ok, comment} ->
-        # notify_parent({:saved, comment})
-
+      {:ok, _comment} ->
         {:noreply,
          socket
          |> put_flash(:info, "Comment created successfully")
@@ -122,6 +119,4 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentComment do
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))
   end
-
-  defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
 end

@@ -52,6 +52,9 @@ defmodule Mehungry.UsersTest do
           cousine: "some cusine",
           description: "some description",
           servings: 4,
+          difficulty: 1,
+          cooking_time_lower_limit: 5,
+          preperation_time_lower_limit: 5,
           language_name: "En",
           recipe_ingredients: [
             %{ingredient_id: oil.id, measurement_unit_id: mu.id, quantity: 5},
@@ -74,7 +77,7 @@ defmodule Mehungry.UsersTest do
       })
 
       # Users.calculate_user_pref_table(user)
-      recipe_grade = Users.calculate_recipe_grading(recipe, user)
+      _recipe_grade = Users.calculate_recipe_grading(recipe, user)
     end
   end
 
@@ -99,7 +102,7 @@ defmodule Mehungry.UsersTest do
       user = AccountsFixtures.user_fixture()
       user2 = AccountsFixtures.user_fixture()
       recipe = FoodFixtures.recipe_fixture(user2)
-      {:ok, user_recipe} = Users.save_user_recipe(user, recipe)
+      {:ok, user_recipe} = Users.save_user_recipe(user.id, recipe.id)
       assert user_recipe.recipe_id == recipe.id
     end
 
@@ -112,9 +115,9 @@ defmodule Mehungry.UsersTest do
       _recipe3 = FoodFixtures.recipe_fixture(user2)
       _recipe4 = FoodFixtures.recipe_fixture(user2)
 
-      {:ok, _user_recipe} = Users.save_user_recipe(user, recipe)
-      {:ok, _user_recipe2} = Users.save_user_recipe(user, recipe2)
-      {:ok, _user_recipe1} = Users.save_user_recipe(user, recipe1)
+      {:ok, _user_recipe} = Users.save_user_recipe(user.id, recipe.id)
+      {:ok, _user_recipe2} = Users.save_user_recipe(user.id, recipe2.id)
+      {:ok, _user_recipe1} = Users.save_user_recipe(user.id, recipe1.id)
 
       user_saved_recipes = Users.list_user_saved_recipes(user)
       assert length(user_saved_recipes) == 3

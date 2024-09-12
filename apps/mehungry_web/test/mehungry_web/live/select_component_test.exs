@@ -16,7 +16,7 @@ defmodule MehungryWeb.SelectComponentTest do
 
       form = %Phoenix.HTML.Form{form | index: 1}
 
-      {ok, view, html} =
+      {_ok, view, _html} =
         live_isolated_component(MehungryWeb.SelectComponent, %{
           current_user: user,
           form: form,
@@ -26,7 +26,7 @@ defmodule MehungryWeb.SelectComponentTest do
           initial_open: true
         })
 
-      clicked =
+      _clicked =
         view
         |> element("li", "three")
         |> render_click()
