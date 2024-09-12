@@ -174,6 +174,9 @@ defmodule Mehungry.FoodFixtures do
         description: "some description",
         servings: 4,
         language_name: "En",
+        difficulty: 1,
+        cooking_time_lower_limit: 5,
+        preperation_time_lower_limit: 5,
         recipe_ingredients: [
           %{ingredient_id: ingredient.id, measurement_unit_id: mu.id, quantity: 5}
         ]

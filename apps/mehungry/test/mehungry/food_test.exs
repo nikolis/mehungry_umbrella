@@ -6,7 +6,14 @@ defmodule Mehungry.FoodTest do
   alias Mehungry.Food
   import Mehungry.{FoodFixtures, AccountsFixtures}
 
-  @invalid_params_recipe %{servings: nil, title: nil, recipe_ingredients: []}
+  @invalid_params_recipe %{
+    servings: nil,
+    title: nil,
+    recipe_ingredients: [],
+    difficulty: 1,
+    cooking_time_lower_limit: 5,
+    preperation_time_lower_limit: 5
+  }
   @create_params_recipe %{servings: 3, title: "Title Recipe", language_name: "En"}
 
   defp create_user(_) do
@@ -40,7 +47,7 @@ defmodule Mehungry.FoodTest do
         @create_params_recipe
         |> Enum.into(%{recipe_ingredients: ingredients, user_id: user.id})
 
-      assert recipe = Food.create_recipe(recipe_params)
+      assert _recipe = Food.create_recipe(recipe_params)
     end
 
     test "Create Recipe with invalid arguments should provide feedback", %{

@@ -14,42 +14,42 @@ defmodule Mehungry.Food.RecipeUtils do
         Float.round(x.amount, 3) != 0
       end)
 
-    nuts_pre = get_nutrients_pre(rest)
+    {nuts_pre, rest} = get_nutrients_pre(rest)
 
     nutrients = nuts_pre ++ rest
+    # IO.inspect(nuts_pre, label: "Byts ore")
     nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
 
-    energy = Enum.find(nutrients, fn x -> String.contains?(x.name, "Energy") end)
+    energy = Enum.find(rest, fn x -> String.contains?(x.name, "Energy") end)
     energy = convert_energy_to_calories_if_needed(energy)
-
-    {primaries_length, nutrients} = sort_nutrients(nutrients, energy)
+    sort_nutrients(nutrients, energy)
   end
 
   def get_nutrients_pre(rest) do
-    {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Fatty acids, total monounsaturated")
-    {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Fatty acids, total polyunsaturated")
-    {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Fatty acids, total saturated")
-    {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Fatty acids, total trans")
+    {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Monounsaturated fatty acids")
+    {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Polyunsaturated fatty acids")
+    {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Saturated fatty acids")
+    {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Trans fatty acids")
+
+    # {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Fatty acids, total monounsaturated")
+    # {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Fatty acids, total polyunsaturated")
+    # {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Fatty acids, total saturated")
+    # {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Fatty acids, total trans")
     {vitamins_all, rest} = get_nutrient_category(rest, "Vitamin", "Vitamins")
 
-    nuts_pre = [mufa_all, pufa_all, sfa_all, tfa_all, vitamins_all]
+    # IO.inspect(vitamins_all, label: "vits")
+    # IO.inspect(mufa_all, label: "mufa")
+    nuts_pre = [mufa_all, vitamins_all, pufa_all, sfa_all, tfa_all, vitamins_all]
     nuts_pre = Enum.filter(nuts_pre, fn x -> !is_nil(x) end)
 
-    Enum.map(nuts_pre, fn x ->
-      case is_map(x) do
-        true ->
-          x
-
-        false ->
-          Enum.into(x, %{})
-      end
-    end)
+    {nuts_pre, rest}
   end
 
   @doc """
   Sort nutrients to have on top entries that are relevant to most people
   """
   def sort_nutrients(nutrients, energy) do
+    # IO.inspect(nutrients)
     carb = Enum.find(nutrients, fn x -> String.contains?(x.name, "Carbohydrate") end)
     protein = Enum.find(nutrients, fn x -> String.contains?(x.name, "Protein") end)
     fiber = Enum.find(nutrients, fn x -> String.contains?(x.name, "Fiber") end)
@@ -80,9 +80,12 @@ defmodule Mehungry.Food.RecipeUtils do
   # nutrients ,SFA, Fatty Acids Saturated
   """
   def get_nutrient_category(nutrients, category_name, category_sum_name) do
+    # IO.inspect(category_name)
+    # IO.inspect(category_sum_name)
     {category, rest} =
       Enum.split_with(nutrients, fn x -> String.contains?(x.name, category_name) end)
 
+    # IO.inspect(category, label: "Category")
     case length(category) > 0 do
       true ->
         # Find if the aggrigator exists as an entry in the nutrients

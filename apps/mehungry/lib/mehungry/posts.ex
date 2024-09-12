@@ -50,7 +50,7 @@ defmodule Mehungry.Posts do
     |> Enum.map(fn {x, _y} -> x end)
   end
 
-  def subscribe_to_post(%{recipe_id: recipe_id}) do
+  def subscribe_to_recipe(%{recipe_id: recipe_id}) do
     Phoenix.PubSub.subscribe(Mehungry.PubSub, "recipe:" <> to_string(recipe_id))
   end
 

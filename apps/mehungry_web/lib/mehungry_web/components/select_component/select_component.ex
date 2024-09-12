@@ -227,7 +227,7 @@ defmodule MehungryWeb.SelectComponent do
     {id, _} = Integer.parse(id)
 
     selected_item = Enum.find(socket.assigns.items, fn x -> x.id == id end)
-    selected_items = Enum.into(socket.assigns.selected_items, [selected_item])
+    selected_items = socket.assigns.selected_items ++ [selected_item]
 
     socket =
       socket

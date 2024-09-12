@@ -345,7 +345,7 @@ defmodule MehungryWeb.CoreComponents do
     default: "text",
     values:
       ~w(readonly checkbox color date datetime-local email file hidden month number password select_component
-               range radio search select tel text textarea time url week full-text)
+               range radio search select tel text textarea time url week full-text comment)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -594,14 +594,34 @@ defmodule MehungryWeb.CoreComponents do
       <button phx-clic="submit" class="absolute right-2 m-auto">
         <.icon
           name="hero-arrow-right-circle"
-          class="mt-0.5 h-9 w-9 flex-none text-primary"
-          pxh-click="submit cursor-pointer"
+          class="mt-0.5 h-9 w-9 flex-none text-primary cursor-pointer"
         />
       </button>
       <!-- <button type="submit" class="primary_button" phx-disable-with="Saving...">Post</button> --->
     </div>
     """
   end
+
+ def input(%{type: "select"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name}>    
+      <.label for={@id}><%= @label %></.label>
+      <select
+        id={@id}
+        name={@name}
+        class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm select"
+        multiple={@multiple}
+        {@rest}
+      >
+        <option :if={@prompt} value=""><%= @prompt %></option>
+        <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
+      </select>
+      <.error :for={msg <- @errors}><%= msg %></.error>                                                                                                                                       
+    </div>
+    """
+  end
+
+
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do

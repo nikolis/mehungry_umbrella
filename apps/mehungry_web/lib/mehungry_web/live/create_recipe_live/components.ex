@@ -103,7 +103,7 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
 
   def recipe_render(assigns) do
     ~H"""
-    <.recipe f={assigns.f} />
+    <.recipe f={assigns.f}  items={@items}/>
     """
   end
 end

@@ -1,6 +1,7 @@
 defmodule MehungryWeb.ProfileLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
+  use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
 
   alias MehungryWeb.RecipeComponents
 
@@ -8,6 +9,8 @@ defmodule MehungryWeb.ProfileLive.Index do
   alias Mehungry.Users
   alias MehungryWeb.ProfileLive.Show
   alias Mehungry.Food
+  alias Mehungry.Posts
+  alias Mehungry.Food.RecipeUtils
 
   def mount_search(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
@@ -66,6 +69,30 @@ defmodule MehungryWeb.ProfileLive.Index do
     socket
     |> assign(:page_title, "Profile")
     |> assign(:user_profile, profile)
+  end
+
+  defp apply_action(socket, :show_recipe, %{"recipe_id" => id}) do
+    recipe = Food.get_recipe!(id)
+    Posts.subscribe_to_recipe(%{recipe_id: id})
+
+    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
+    user = socket.assigns.user
+
+    user_recipes =
+      case is_nil(user) do
+        true ->
+          []
+
+        false ->
+          Users.list_user_saved_recipes(user)
+          |> Enum.map(fn x -> x.recipe_id end)
+      end
+
+    socket
+    |> assign(:nutrients, nutrients)
+    |> assign(:primary_size, primaries_length)
+    |> assign(:recipe, recipe)
+    |> assign(:user_recipes, user_recipes)
   end
 
   defp apply_action(socket, :edit, _params) do
