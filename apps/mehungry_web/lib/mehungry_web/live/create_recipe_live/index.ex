@@ -18,7 +18,11 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:user_profile, user_profile)
      |> assign(:ingredients, list_ingredients())
      |> assign(:measurement_units, measurement_units)
-     |> assign(:items, [%{id: 1, name: "easy"}, %{id: 2, name: "medium"}, %{id: 3, name: "difficult"}])
+     |> assign(:items, [
+       %{id: 1, name: "easy"},
+       %{id: 2, name: "medium"},
+       %{id: 3, name: "difficult"}
+     ])
      |> allow_upload(:image,
        accept: :any,
        max_entries: 1,

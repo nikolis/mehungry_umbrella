@@ -175,6 +175,7 @@ defmodule Mehungry.FoodFixtures do
         servings: 4,
         language_name: "En",
         difficulty: 1,
+        image_url: "https://www.dommu_url/image",
         cooking_time_lower_limit: 5,
         preperation_time_lower_limit: 5,
         recipe_ingredients: [

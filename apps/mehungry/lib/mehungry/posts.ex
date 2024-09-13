@@ -50,27 +50,6 @@ defmodule Mehungry.Posts do
     |> Enum.map(fn {x, _y} -> x end)
   end
 
-  def subscribe_to_recipe(%{recipe_id: recipe_id}) do
-    Phoenix.PubSub.subscribe(Mehungry.PubSub, "recipe:" <> to_string(recipe_id))
-  end
-
-  defp broadcast_vote({:ok, vote}, type_) do
-    Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(vote.post_id), %{
-      new_vote: vote,
-      type_: type_
-    })
-
-    {:ok, vote}
-  end
-
-  defp broadcast_change({:ok, comment}) do
-    Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(comment.recipe_id), %{
-      new_comment: comment
-    })
-
-    {:ok, comment}
-  end
-
   @doc """
   Gets a single post.
 
@@ -91,11 +70,40 @@ defmodule Mehungry.Posts do
   def get_post!(id) do
     Repo.get!(Post, id)
     |> Repo.preload([
+      :user,
       :upvotes,
       :downvotes,
-      reference: [:user, recipe_ingredients: [:ingredient]]
+      # comments: [:user],
+      reference: [:user, recipe_ingredients: [:ingredient], comments: [:user]]
     ])
   end
+
+  def subscribe_to_recipe(%{recipe_id: recipe_id}) do
+    Phoenix.PubSub.subscribe(Mehungry.PubSub, "recipe:" <> to_string(recipe_id))
+  end
+
+  defp broadcast_change({:ok, comment}) do
+    Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(comment.recipe_id), %{
+      new_comment: comment
+    })
+
+    {:ok, comment}
+  end
+
+  def subscribe_to_post(%{post_id: post_id}) do
+    Phoenix.PubSub.subscribe(Mehungry.PubSub, "post:" <> to_string(post_id))
+  end
+
+  defp broadcast_vote({:ok, vote}, type_) do
+    Phoenix.PubSub.broadcast(Mehungry.PubSub, "post:" <> to_string(vote.post_id), %{
+      new_vote: vote,
+      type_: type_
+    })
+
+    {:ok, vote}
+  end
+
+
 
   @doc """
   Creates a post.

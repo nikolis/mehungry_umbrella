@@ -40,7 +40,7 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
       ingredient: ingredient,
       measurement_unit: measurement_unit
     } do
-      {:ok, index_live, _html} = live(conn, Routes.create_recipe_index_path(conn, :index))#, items: [%{id: 1, name: "easy"}]))
+      {:ok, index_live, _html} = live(conn, Routes.create_recipe_index_path(conn, :index))
 
       ingredients = %{
         0 => %{
@@ -68,7 +68,8 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
       ingredient: ingredient,
       measurement_unit: measurement_unit
     } do
-      {:ok, index_live, _html} = live(conn, Routes.create_recipe_index_path(conn, :index))#, items: [%{id: 1, name: "easy"}]))
+      # , items: [%{id: 1, name: "easy"}]))
+      {:ok, index_live, _html} = live(conn, Routes.create_recipe_index_path(conn, :index))
 
       ingredients = %{
         0 => %{
@@ -85,12 +86,9 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
       html =
         index_live
         |> form(".the_form", recipe: @invalid_params_recipe)
-        |> render_change(%{recipe: %{"recipe_ingredients" => ingredients}}) 
+        |> render_change(%{recipe: %{"recipe_ingredients" => ingredients}})
 
       assert html =~ "is invalid"
     end
-
-
-
   end
 end

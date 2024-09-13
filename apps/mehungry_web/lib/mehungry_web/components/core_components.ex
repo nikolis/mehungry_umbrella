@@ -19,6 +19,59 @@ defmodule MehungryWeb.CoreComponents do
   alias Phoenix.LiveView.JS
   import MehungryWeb.Gettext
 
+  def user_overview_card(
+        %{
+          user_follows: _user_follows,
+          user: %Mehungry.Accounts.User{} = _user
+        } = assigns
+      ) do
+    ~H"""
+    <div style="margin-bottom: 0.75rem; ">
+      <div class="flex gap-2">
+        <.link
+          patch={"/profile/"<>Integer.to_string(@user.id)}
+          style="min-height: 50px; min-width: 50px;"
+        >
+          <%= if @user.profile_pic do %>
+            <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
+          <% else %>
+            <.icon name="hero-user-circle" class="h-12 w-12" />
+          <% end %>
+        </.link>
+        <div class="flex flex-col justify-center w-full">
+          <div class="text-sm font-bold leading-4">
+            <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
+              <%= @user.email %>
+            </.link>
+            <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
+            </div>
+          </div>
+          <div class="text-sm leading-4">
+            300 posted recipes
+          </div>
+        </div>
+        <%= if @user.id in @user_follows do %>
+          <div class="mt-auto mb-auto self-end">
+            <button
+              class="primary_button_complementary"
+              phx-click="save_user_follow"
+              phx-value-follow_id={@user.id}
+            >
+              Following
+            </button>
+          </div>
+        <% else %>
+          <div class="mt-auto mb-auto self-end">
+            <button class="primary_button" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
+              Follow
+            </button>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
   @doc """
   Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
   """
@@ -50,49 +103,6 @@ defmodule MehungryWeb.CoreComponents do
         </div>
         <div class="mt-auto mb-auto self-end">
           <button class="primary_button">Follow</button>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  def user_overview_card(
-        %{
-          current_user: %Mehungry.Accounts.User{} = _current_user,
-          user: %Mehungry.Accounts.User{} = _user
-        } = assigns
-      ) do
-    ~H"""
-    <div style="margin-bottom: 0.75rem; ">
-      <div style="display: flex; flex-direction: row;">
-        <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-          <%= if @user.profile_pic do %>
-            <img src={@user.profile_pic} , style="width: 40px; height: 40px; border-radius: 50%;" />
-          <% else %>
-            <.icon name="hero-user-circle" class="h-10 w-10" />
-          <% end %>
-        </.link>
-        <div style="margin-left: 1rem;">
-          <div
-            style="font-weight: bold; text-align: start; font-size: 0.75rem;"
-            class="flex flex-row gap-4"
-          >
-            <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-              <%= @user.email %>
-            </.link>
-            <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
-              <%= if @user.id != @current_user.id do %>
-                <%= if @user.id in @user_follows do
-                  "Following"
-                else
-                  "Follow"
-                end %>
-              <% end %>
-            </div>
-          </div>
-          <div style="font-size: 1rem; text-align: start; color: var(--clr-dark_1)">
-            <%= @post.title %>
-          </div>
         </div>
       </div>
     </div>
@@ -602,9 +612,9 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
- def input(%{type: "select"} = assigns) do
+  def input(%{type: "select"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>    
+    <div phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
       <select
         id={@id}
@@ -616,12 +626,10 @@ defmodule MehungryWeb.CoreComponents do
         <option :if={@prompt} value=""><%= @prompt %></option>
         <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
       </select>
-      <.error :for={msg <- @errors}><%= msg %></.error>                                                                                                                                       
+      <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
     """
   end
-
-
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do

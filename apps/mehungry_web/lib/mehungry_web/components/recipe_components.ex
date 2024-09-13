@@ -249,9 +249,9 @@ defmodule MehungryWeb.RecipeComponents do
     ~H"""
     <.link
       phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
+      id={"recipe-card-details-link-#{@recipe.id}"}
       class="recipe_card"
       patch={@path_to_details}
-      id={@id}
     >
       <img class="w-full rounded-xl m-auto" src={@recipe.image_url} />
       <div class="recipe_like_container">

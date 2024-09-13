@@ -15,27 +15,6 @@ defmodule MehungryWeb.HomeLive.Index do
   alias Mehungry.Food.RecipeUtils
   alias Mehungry.Food.Recipe
 
-  @impl true
-  def handle_info(%{new_comment: comment}, socket) do
-    recipe = socket.assigns.recipe
-    comment = Posts.get_comment!(comment.id)
-
-    comments =
-      Enum.into(Enum.filter(recipe.comments, fn x -> x.id != comment.id end), [comment])
-      |> Enum.sort_by(& &1.updated_at)
-
-    recipe = %Recipe{
-      recipe
-      | comments: comments
-    }
-
-    socket =
-      socket
-      |> assign(:recipe, recipe)
-
-    {:noreply, socket}
-  end
-
   def mount_search(_params, session, socket) do
     user =
       case is_nil(session["user_token"]) do
@@ -71,7 +50,7 @@ defmodule MehungryWeb.HomeLive.Index do
       end
 
     Enum.each(posts, fn post ->
-      Posts.subscribe_to_recipe(%{recipe_id: post.reference_id})
+      Posts.subscribe_to_post(%{post_id: post.id})
     end)
 
     {:ok,
@@ -193,6 +172,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
+    Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
 
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.user

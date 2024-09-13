@@ -1,5 +1,5 @@
 <div
-  class="post_card my-12"
+  class="post_card my-12 md:w-9/12"
   style="border-bottom: 1px solid var(--clr-grey-friend_2);"
   id={"post_card_"<> Integer.to_string(@id)}
 >
@@ -9,7 +9,11 @@
     user_follows={@user_follows}
     current_user={@user}
   />
-  <.link class="post_card_image_container" patch={~p"/show_recipe/#{@post.reference_id}"}>
+  <.link
+    id={"link-to-recipe-#{@post.reference_id}"}
+    class="post_card_image_container"
+    patch={~p"/show_recipe/#{@post.reference_id}"}
+  >
     <img class="post_card_image" src={@post.md_media_url} />
   </.link>
   <div class="post_card_details">
