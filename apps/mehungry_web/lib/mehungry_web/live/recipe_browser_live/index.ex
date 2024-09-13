@@ -158,8 +158,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         toggle_user_saved_recipes(socket, recipe_id)
         user_recipes = Users.list_user_saved_recipes(socket.assigns.user)
         user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
-        # socket = stream_delete(socket, :recipes, recipe)
-        # socket = stream_insert(socket, :recipes, recipe)
         socket = assign(socket, :user_recipes, user_recipes)
         {:noreply, socket}
     end

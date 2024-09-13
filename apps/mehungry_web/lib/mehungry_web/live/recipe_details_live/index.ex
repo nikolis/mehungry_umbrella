@@ -5,8 +5,9 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   import MehungryWeb.RecipeComponents
 
   alias Mehungry.Posts.Comment
-  alias Mehungry.Posts
+  alias Mehungry.{Posts, Users}
   alias Mehungry.Food.Recipe
+
 
   embed_templates("components/*")
   @color_fill "#00A0D0"
@@ -19,6 +20,45 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign(:reply, nil)
 
     {:noreply, socket}
+  end
+
+  def toggle_user_saved_recipes(socket, recipe_id) do
+    case is_nil(socket.assigns.user) do
+      true ->
+        assign(socket, :must_be_loged_in, 1)
+
+      false ->
+        case Enum.any?(socket.assigns.user_recipes, fn x -> x == recipe_id end) do
+          true ->
+            Users.remove_user_saved_recipe(socket.assigns.user.id, recipe_id)
+
+          false ->
+            Users.save_user_recipe(socket.assigns.user.id, recipe_id)
+        end
+    end
+  end
+
+  @impl true
+  def handle_event("save_user_recipe", %{"recipe_id" => recipe_id, "dom_id" => _dom_id}, socket) do
+    case is_nil(socket.assigns.user) do
+      true ->
+        socket = assign(socket, :must_be_loged_in, 1)
+        {:noreply, socket}
+
+      false ->
+        {recipe_id, _ignore} = Integer.parse(recipe_id)
+        toggle_user_saved_recipes(socket, recipe_id)
+
+        Users.list_user_saved_recipes(socket.assigns.user)
+        |> Enum.map(fn x -> x.recipe_id end)
+
+        user_recipes =
+          Users.list_user_saved_recipes(socket.assigns.user)
+          |> Enum.map(fn x -> x.recipe_id end)
+
+        socket = assign(socket, :user_recipes, user_recipes)
+        {:noreply, socket}
+    end
   end
 
   @impl true
@@ -76,6 +116,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     <div id="recipe_presentation_modal" class="sm:p-6">
       <div class="basic_2_col_grid_cont">
         <div class="w-full">
+          <.recipe_like_container type={"browse"} user_recipes={@user_recipes} recipe={@recipe} id={@id} myself={@myself}/>
           <img class="min-h-96 rounded-2xl w-full" src={@recipe.image_url} />
         </div>
         <div class="w-full">
