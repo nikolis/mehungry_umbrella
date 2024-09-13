@@ -355,7 +355,7 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_like_container(%{myself: myself} = assigns) do 
     ~H"""
-      <div class="recipe_like_container z-50">
+      <div class="bg-white p-2 rounded-full absolute top-5 right-5 md:top-8 md:left-8 md:w-12 md:h-12 ">
         <%= case @type do %>
           <% "saved" -> %>
             <button phx-click="unsave-recipe" phx-value-id={@recipe.id}>

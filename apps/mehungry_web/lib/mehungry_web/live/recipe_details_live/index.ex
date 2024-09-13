@@ -22,22 +22,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     {:noreply, socket}
   end
 
-  def toggle_user_saved_recipes(socket, recipe_id) do
-    case is_nil(socket.assigns.user) do
-      true ->
-        assign(socket, :must_be_loged_in, 1)
-
-      false ->
-        case Enum.any?(socket.assigns.user_recipes, fn x -> x == recipe_id end) do
-          true ->
-            Users.remove_user_saved_recipe(socket.assigns.user.id, recipe_id)
-
-          false ->
-            Users.save_user_recipe(socket.assigns.user.id, recipe_id)
-        end
-    end
-  end
-
   @impl true
   def handle_event("save_user_recipe", %{"recipe_id" => recipe_id, "dom_id" => _dom_id}, socket) do
     case is_nil(socket.assigns.user) do
@@ -89,6 +73,22 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           acc
       end
     end)
+  end
+
+  def toggle_user_saved_recipes(socket, recipe_id) do
+    case is_nil(socket.assigns.user) do
+      true ->
+        assign(socket, :must_be_loged_in, 1)
+
+      false ->
+        case Enum.any?(socket.assigns.user_recipes, fn x -> x == recipe_id end) do
+          true ->
+            Users.remove_user_saved_recipe(socket.assigns.user.id, recipe_id)
+
+          false ->
+            Users.save_user_recipe(socket.assigns.user.id, recipe_id)
+        end
+    end
   end
 
   def get_style2(item_list, user, positive) do

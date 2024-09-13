@@ -182,7 +182,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           |> Enum.map(fn x -> x.recipe_id end)
 
         socket = assign(socket, :user_recipes, user_recipes)
-        {:noreply, push_patch(socket, to: "/browse")}
+        {:noreply, socket}
     end
   end
 

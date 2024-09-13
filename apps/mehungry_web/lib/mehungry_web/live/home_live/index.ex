@@ -13,7 +13,6 @@ defmodule MehungryWeb.HomeLive.Index do
   alias Mehungry.Users
   alias Mehungry.Food
   alias Mehungry.Food.RecipeUtils
-  alias Mehungry.Food.Recipe
 
   def mount_search(_params, session, socket) do
     user =
