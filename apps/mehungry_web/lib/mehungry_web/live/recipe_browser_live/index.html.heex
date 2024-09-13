@@ -27,25 +27,6 @@
     </.modal>
   <% end %>
 
-  <.recipe_modal
-    :if={@live_action in [:show]}
-    on_cancel={JS.patch(~p"/browse")}
-    id="recipe_details_modal"
-    show
-  >
-    <div class="w-full" style="min-height: 55vh;">
-      <.live_component
-        module={MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent}
-        id="recipe_details_component"
-        primary_size={@primary_size}
-        nutrients={@nutrients}
-        recipe={@recipe}
-        user_recipes={@user_recipes}
-        return_to={Routes.recipe_browse_index_path(@socket, :index)}
-      />
-    </div>
-  </.recipe_modal>
-
   <%= if @not_empty do %>
     <div class="the_form second_layer_spacing min-h-40">
       <div
@@ -56,9 +37,11 @@
         data-page={@page}
       >
         <%= for {dom_id, recipe} <- @streams.recipes do %>
-          <RecipeComponents.recipe_details
+          <RecipeComponents.recipe_card
             recipe={recipe}
             user_recipes={@user_recipes}
+            return_to="browse"
+            path_to_details={~p"/browse/#{recipe.id}"}
             id={dom_id}
             type="browse"
           />
@@ -74,4 +57,25 @@
       <h3 class="text-center p-10">We were not able to find a recipe according to your search</h3>
     </div>
   <% end %>
+  <MehungryWeb.RecipeComponents.recipe_modal
+    :if={@live_action in [:show_recipe]}
+    on_cancel={JS.patch(~p"/browse")}
+    id="recipe_details_modal"
+    show
+  >
+    <div class="w-full" style="min-height: 55vh;">
+      <.live_component
+        module={MehungryWeb.RecipeDetailsComponent}
+        id="recipe_details_component"
+        primary_size={@primary_size}
+        nutrients={@nutrients}
+        recipe={@recipe}
+        user_recipes={@user_recipes}
+        user={@current_user}
+        page_title={"Recipe #{@recipe.title}"}
+        live_action={@live_action}
+        return_to={Routes.recipe_browser_index_path(@socket, :index)}
+      />
+    </div>
+  </MehungryWeb.RecipeComponents.recipe_modal>
 </div>

@@ -78,6 +78,13 @@ h1 {
       margin-bottom: 3rem;
     }
   }
+
+  .nav_content {
+    display: none;
+  }
+  .nav_content.active {
+    display: block;
+  }
 }
 
 

@@ -1,4 +1,6 @@
 defmodule MehungryWeb.CalendarLiveTest do
+  @moduledoc false
+
   use MehungryWeb.ConnCase
 
   import Mehungry.FoodFixtures
@@ -11,7 +13,7 @@ defmodule MehungryWeb.CalendarLiveTest do
 
     test "Recipe User Meals with current date show in page", %{conn: conn, user: user} do
       recipe1 = recipe_fixture(user)
-      recipe2 = recipe_fixture(user)
+      _recipe2 = recipe_fixture(user)
       from = NaiveDateTime.utc_now()
       to = NaiveDateTime.utc_now()
 
@@ -26,9 +28,9 @@ defmodule MehungryWeb.CalendarLiveTest do
           ]
         }
 
-      {:ok, user_meal} = History.create_user_meal(recipe_user_meal_params)
+      {:ok, _user_meal} = History.create_user_meal(recipe_user_meal_params)
 
-      {:ok, _index_live, html} = live(conn, ~p"/calendar")
+      {:ok, _index_live, _html} = live(conn, ~p"/calendar")
       # assert html =~ "The title"
     end
   end

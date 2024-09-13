@@ -27,7 +27,7 @@ defmodule Mehungry.UtilsTest do
 
   describe "test sort_ingredients for basket" do
     test "sort ingredients for baskjet" do
-      result =
+      _result =
         Utils.sort_ingredients_for_basket([
           %{in_storage: true},
           %{in_storage: false},

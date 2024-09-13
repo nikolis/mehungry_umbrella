@@ -7,7 +7,7 @@ defmodule Mehungry.Posts.Comment do
 
     timestamps()
 
-    belongs_to :post, Mehungry.Posts.Post
+    belongs_to :recipe, Mehungry.Food.Recipe
     belongs_to :user, Mehungry.Accounts.User
 
     has_many :comment_answers, Mehungry.Posts.CommentAnswer
@@ -17,7 +17,7 @@ defmodule Mehungry.Posts.Comment do
   @doc false
   def changeset(comment, attrs) do
     comment
-    |> cast(attrs, [:text, :post_id, :user_id])
-    |> validate_required([:text, :post_id, :user_id])
+    |> cast(attrs, [:text, :user_id, :recipe_id])
+    |> validate_required([:text, :recipe_id, :user_id])
   end
 end

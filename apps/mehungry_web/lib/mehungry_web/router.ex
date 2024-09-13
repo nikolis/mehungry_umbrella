@@ -61,6 +61,7 @@ defmodule MehungryWeb.Router do
       live "/profile", ProfileLive.Index, :index
       live "/profile/edit", ProfileLive.Index, :edit
       live "/profile/:id", ProfileLive.Index, :show
+      live "/profile/show_recipe/:recipe_id", ProfileLive.Index, :show_recipe
       live "/basket", ShoppingBasketLive.Index, :index
       live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
 
@@ -148,14 +149,15 @@ defmodule MehungryWeb.Router do
 
     live_session :maybe, on_mount: MehungryWeb.MaybeUserAuthLive do
       live "/", HomeLive.Index, :index
-      live "/show_recipe/:id", HomeLive.Index, :show_recipe
-      live "/post/:id", HomeLive.Show, :show
-      live "/post/:id/show_recipe/:rec_id", HomeLive.Show, :show_recipe
+      live "/home", HomeLive.Index, :index
+      live "/browse", RecipeBrowserLive.Index, :index
+      live "/browse/:id", RecipeBrowserLive.Index, :show_recipe
 
-      live "/browse", RecipeBrowseLive.Index, :index
-      live "/search/:query", RecipeBrowseLive.Index, :index
-      live "/browse/:id", RecipeBrowseLive.Index, :show
-      live "/browse_prepop/:search_term", :searc_prepop
+      live "/show_recipe/:id", HomeLive.Index, :show_recipe
+
+      live "/search/:query", RecipeBrowserLive.Index, :index
+      # live "/browse/:origin/:id", RecipeDetailsLive.Index, :index
+      # live "/browse_prepop/:search_term", :searc_prepop
     end
 
     get "/users/register", UserRegistrationController, :new

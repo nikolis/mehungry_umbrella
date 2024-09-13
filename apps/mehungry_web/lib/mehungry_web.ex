@@ -90,6 +90,7 @@ defmodule MehungryWeb do
         layout: {MehungryWeb.LayoutView, :live}
 
       alias Phoenix.LiveView.JS
+      import MehungryWeb.LiveUtils
       unquote(view_helpers())
     end
   end
@@ -99,6 +100,7 @@ defmodule MehungryWeb do
       use Phoenix.LiveComponent
 
       alias Phoenix.LiveView.JS
+      import MehungryWeb.LiveUtils
       unquote(view_helpers())
     end
   end

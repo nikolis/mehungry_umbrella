@@ -27,7 +27,13 @@ defmodule MehungryWeb.Onboarding.FormComponent do
           <.input field={@form[:nothing]} type="checkbox" label="Non of the above" />
         </div>
         <:actions>
-          <.button class="primary_outline_button" phx-disable-with="Saving...">Save Post</.button>
+          <.button
+            id="onboarding_submit_button"
+            class="primary_outline_button"
+            phx-disable-with="Saving..."
+          >
+            Save
+          </.button>
         </:actions>
       </.simple_form>
     </div>
@@ -36,7 +42,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   @impl true
   def update(assigns, socket) do
-    map = %{vegan: "true", vegeterian: "false", lactose_intolerant: "false"}
+    map = %{"vegan" => "true", "vegeterian" => "false", "lactose_intolerant" => "false"}
 
     {:ok,
      socket

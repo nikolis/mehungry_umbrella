@@ -6,7 +6,14 @@ defmodule Mehungry.FdcFoodParserTest do
   alias Mehungry.Languages
   import Mehungry.{AccountsFixtures}
 
-  @create_params_recipe %{servings: 3, title: "Title Recipe", language_name: "En"}
+  @create_params_recipe %{
+    servings: 3,
+    title: "Title Recipe",
+    language_name: "En",
+    difficulty: 1,
+    cooking_time_lower_limit: 5,
+    preperation_time_lower_limit: 5
+  }
 
   defp create_user(_) do
     user = user_fixture()

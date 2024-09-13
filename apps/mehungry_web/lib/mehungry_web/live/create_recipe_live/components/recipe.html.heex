@@ -22,13 +22,20 @@
 
   <div class="grid grid-cols-2 gap-4">
     <.input required field={@f[:servings]} type="text" label="Servings" class="max-h-12 w-full" />
-    <.live_component
+    <.input
+      required
+      field={@f[:difficulty]}
+      options={[Easy: "1", Medium: "2", Difficult: "3"]}
+      type="select"
+      class="max-h-12 w-full"
+    />
+    <!--    <.live_component
       module={MehungryWeb.SelectComponentSingleMemory2}
       form={@f}
-      items={[%{id: 1, name: "easy"}, %{id: 2, name: "medium"}, %{id: 3, name: "difficult"}]}
+      items={@items}
       input_variable="difficulty"
       id="difficulty_component"
-    />
+    /> -->
   </div>
 
   <.input field={@f[:language_name]} type="hidden" />

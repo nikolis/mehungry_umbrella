@@ -17,6 +17,7 @@ defmodule MehungryWeb.SearchLive.Index do
      socket
      |> assign_recipe_search()
      |> assign(:query_string, query_string)
+     |> assign(assigns)
      |> assign_changeset()}
   end
 

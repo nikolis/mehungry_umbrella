@@ -1,5 +1,6 @@
-defmodule MehungryWeb.RecipeBrowseLive.Index do
+defmodule MehungryWeb.RecipeBrowserLive.Index do
   use MehungryWeb, :live_view
+  use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
 
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
@@ -10,8 +11,8 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
   alias Mehungry.Accounts
   alias Mehungry.Users
   alias Mehungry.Food.RecipeUtils
-
-  alias MehungryWeb.CommonComponents.RecipeComponents
+  alias Mehungry.Posts
+  alias MehungryWeb.RecipeComponents
 
   @impl true
   def mount(params, session, socket) do
@@ -71,6 +72,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
        end
      )
      |> assign(:user_recipes, user_recipes)
+     |> assign(:query_string, query_str)
      |> assign(:page, 1)
      |> assign(:invocations, 0)
      |> assign(:counter, 1)
@@ -78,6 +80,7 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      |> assign(:query, query)
      |> assign(:must_be_loged_in, nil)
      |> assign(:user, user)
+     |> assign(:reply, nil)
      |> assign_recipe_search()}
   end
 
@@ -155,8 +158,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
         toggle_user_saved_recipes(socket, recipe_id)
         user_recipes = Users.list_user_saved_recipes(socket.assigns.user)
         user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
-        # socket = stream_delete(socket, :recipes, recipe)
-        # socket = stream_insert(socket, :recipes, recipe)
         socket = assign(socket, :user_recipes, user_recipes)
         {:noreply, socket}
     end
@@ -199,12 +200,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
      |> assign(:cursor_after, cursor_after)
      |> assign(:page, socket.assigns.page + 1)
      |> stream(:recipes, recipes)}
-  end
-
-  @impl true
-  def handle_event("recipe_details_nav", %{"recipe_id" => recipe_id}, socket) do
-    socket = assign(socket, :invocations, 0)
-    {:noreply, push_patch(socket, to: "/browse/" <> recipe_id)}
   end
 
   @impl true
@@ -415,9 +410,45 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
     |> assign(:query_string, nil)
   end
 
+  defp apply_action(socket, :show_recipe, %{"id" => id}) do
+    recipe = Food.get_recipe!(id)
+    Posts.subscribe_to_recipe(%{recipe_id: id})
+
+    query_str = ""
+
+    {_query, {recipes, _cursor_after}} =
+      case query_str do
+        nil ->
+          {query_str, list_recipes()}
+
+        qr ->
+          Food.search_recipe(qr)
+      end
+
+    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
+    user = socket.assigns.user
+
+    user_recipes =
+      case is_nil(user) do
+        true ->
+          []
+
+        false ->
+          Users.list_user_saved_recipes(user)
+          |> Enum.map(fn x -> x.recipe_id end)
+      end
+
+    socket
+    |> assign(:nutrients, nutrients)
+    |> assign(:primary_size, primaries_length)
+    |> assign(:recipe, recipe)
+    |> stream(:recipes, recipes)
+    |> assign(:user_recipes, user_recipes)
+  end
+
   defp apply_action(socket, :show, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
-    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)  
+    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
 
     # user = socket.assigns.user
     query_str = ""
@@ -466,35 +497,6 @@ defmodule MehungryWeb.RecipeBrowseLive.Index do
       img: recipe.image_url,
       id: Integer.to_string(recipe.id)
     })
-  end
-
-  defp get_nutrient_category(nutrients, category_name, category_sum_name) do
-    {category, rest} =
-      Enum.split_with(nutrients, fn x -> String.contains?(x.name, category_name) end)
-
-    case length(category) > 0 do
-      true ->
-        {category_total, rest} =
-          Enum.split_with(rest, fn x ->
-            String.contains?(x.name, category_sum_name)
-          end)
-
-        case length(category_total) == 1 do
-          true ->
-            {Enum.into(Enum.at(category_total, 0), children: category), rest}
-
-          false ->
-            {%{
-               amount: 111.1,
-               measurement_unit: "to be defined",
-               children: category,
-               name: category_sum_name
-             }, rest}
-        end
-
-      false ->
-        {nil, rest}
-    end
   end
 
   defp list_recipes do

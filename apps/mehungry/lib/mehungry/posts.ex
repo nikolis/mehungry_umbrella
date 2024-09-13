@@ -28,8 +28,8 @@ defmodule Mehungry.Posts do
       :user,
       :upvotes,
       :downvotes,
-      comments: [:user],
-      reference: [:user, recipe_ingredients: [:ingredient]]
+      # comments: [:user],
+      reference: [:user, recipe_ingredients: [:ingredient], comments: [:user]]
     ])
   end
 
@@ -39,8 +39,8 @@ defmodule Mehungry.Posts do
       :user,
       :upvotes,
       :downvotes,
-      comments: [:user],
-      reference: [:user, recipe_ingredients: [:ingredient]]
+      # comments: [:user],
+      reference: [:user, recipe_ingredients: [:ingredient], comments: [:user]]
     ])
     |> Enum.map(fn x ->
       {x, Users.calculate_recipe_grading(x.reference, user)}
@@ -48,6 +48,46 @@ defmodule Mehungry.Posts do
     |> Enum.filter(fn {_x, y} -> y > 0 end)
     |> Enum.sort_by(fn {_x, y} -> y end, :desc)
     |> Enum.map(fn {x, _y} -> x end)
+  end
+
+  @doc """
+  Gets a single post.
+
+  Raises `Ecto.NoResultsError` if the Post does not exist.
+
+  ## Examples
+
+  iex> get_post!(123)
+  %Post{}
+
+  iex> get_post!(456)
+  ** (Ecto.NoResultsError)
+
+  """
+
+  #      comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
+
+  def get_post!(id) do
+    Repo.get!(Post, id)
+    |> Repo.preload([
+      :user,
+      :upvotes,
+      :downvotes,
+      # comments: [:user],
+      reference: [:user, recipe_ingredients: [:ingredient], comments: [:user]]
+    ])
+  end
+
+  def subscribe_to_recipe(%{recipe_id: recipe_id}) do
+    Phoenix.PubSub.subscribe(Mehungry.PubSub, "recipe:" <> to_string(recipe_id))
+  end
+
+  defp broadcast_change({:ok, comment}) do
+    Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(comment.recipe_id), %{
+      new_comment: comment
+    })
+
+    {:ok, comment}
   end
 
   def subscribe_to_post(%{post_id: post_id}) do
@@ -63,37 +103,7 @@ defmodule Mehungry.Posts do
     {:ok, vote}
   end
 
-  defp broadcast_change({:ok, comment}) do
-    Phoenix.PubSub.broadcast(Mehungry.PubSub, "post:" <> to_string(comment.post_id), %{
-      new_comment: comment
-    })
 
-    {:ok, comment}
-  end
-
-  @doc """
-  Gets a single post.
-
-  Raises `Ecto.NoResultsError` if the Post does not exist.
-
-  ## Examples
-
-      iex> get_post!(123)
-      %Post{}
-
-      iex> get_post!(456)
-      ** (Ecto.NoResultsError)
-
-  """
-  def get_post!(id) do
-    Repo.get!(Post, id)
-    |> Repo.preload([
-      :upvotes,
-      :downvotes,
-      reference: [:user, recipe_ingredients: [:ingredient]],
-      comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
-    ])
-  end
 
   @doc """
   Creates a post.
@@ -223,6 +233,7 @@ defmodule Mehungry.Posts do
 
     case result do
       {:ok, _comment} ->
+        IO.inspect("BIRAD CASTING CHANGE")
         broadcast_change(result)
         result
 

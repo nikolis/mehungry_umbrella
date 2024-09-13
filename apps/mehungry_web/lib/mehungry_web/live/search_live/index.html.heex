@@ -12,14 +12,14 @@
         <%= text_input(f, :query_string,
           class: "w-full h-full rounded-full",
           style: "background-color:#eaeaea",
-          id: "text-search-input",
+          id: "text-search-input1#{@id}",
           value: @query_string
         ) %>
       <% else %>
         <%= text_input(f, :query_string,
           class: "w-full h-full rounded-full",
           style: "background-color:#eaeaea",
-          id: "text-search-input"
+          id: "text-search-input#{@id}"
         ) %>
       <% end %>
       <%= submit("", phx_disable_with: "Searching...", class: "invisible") %>

@@ -2,6 +2,8 @@ defmodule MehungryWeb.HomeLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
 
+  use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
+
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
@@ -11,6 +13,7 @@ defmodule MehungryWeb.HomeLive.Index do
   alias Mehungry.Users
   alias Mehungry.Food
   alias Mehungry.Food.RecipeUtils
+  alias Mehungry.Food.Recipe
 
   def mount_search(_params, session, socket) do
     user =
@@ -57,6 +60,8 @@ defmodule MehungryWeb.HomeLive.Index do
      |> assign(:user_posts, user_posts)
      |> assign(:user_profile, user_profile)
      |> assign(:user_follows, user_follows)
+     |> assign(:search_changeset, nil)
+     |> assign(:query_string, "")
      |> assign(:must_be_loged_in, nil)}
   end
 
@@ -167,8 +172,9 @@ defmodule MehungryWeb.HomeLive.Index do
 
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
+    Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
 
-    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)  
+    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.user
 
     user_recipes =
@@ -186,35 +192,6 @@ defmodule MehungryWeb.HomeLive.Index do
     |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
     |> assign(:user_recipes, user_recipes)
-  end
-
-  defp get_nutrient_category(nutrients, category_name, category_sum_name) do
-    {category, rest} =
-      Enum.split_with(nutrients, fn x -> String.contains?(x.name, category_name) end)
-
-    case length(category) > 0 do
-      true ->
-        {category_total, rest} =
-          Enum.split_with(rest, fn x ->
-            String.contains?(x.name, category_sum_name)
-          end)
-
-        case length(category_total) == 1 do
-          true ->
-            {Enum.into(Enum.at(category_total, 0), children: category), rest}
-
-          false ->
-            {%{
-               amount: 111.1,
-               measurement_unit: "to be defined",
-               children: category,
-               name: category_sum_name
-             }, rest}
-        end
-
-      false ->
-        {nil, rest}
-    end
   end
 
   @impl true

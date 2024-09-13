@@ -28,7 +28,7 @@
     </.modal>
   <% end %>
 
-  <.recipe_modal
+  <MehungryWeb.RecipeComponents.recipe_modal
     :if={@live_action in [:show_recipe]}
     on_cancel={JS.patch(~p"/")}
     id="recipe_details_modal"
@@ -36,24 +36,26 @@
   >
     <div class="w-full" style="min-height: 55vh;">
       <.live_component
-        module={MehungryWeb.RecipeBrowserLive.RecipeDetailsComponent}
+        module={MehungryWeb.RecipeDetailsComponent}
         id="recipe_details_component"
         primary_size={@primary_size}
         nutrients={@nutrients}
         recipe={@recipe}
         user_recipes={@user_recipes}
-        return_to={Routes.recipe_browse_index_path(@socket, :index)}
+        user={@current_user}
+        page_title={"Recipe #{@recipe.title}"}
+        live_action={@live_action}
       />
     </div>
-  </.recipe_modal>
+  </MehungryWeb.RecipeComponents.recipe_modal>
 
   <%= for post <- @posts do %>
     <.post_card
       post={post}
+      id={post.id}
       user={@user}
       user_follows={@user_follows}
       user_posts={@user_posts}
-      recipe_path={~p"/show_recipe/#{to_string(post.reference_id)}"}
     />
   <% end %>
 </div>

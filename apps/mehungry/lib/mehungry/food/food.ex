@@ -214,7 +214,11 @@ defmodule Mehungry.Food do
   def get_recipe!(id) do
     result =
       Repo.get(Recipe, id)
-      |> Repo.preload([[recipe_ingredients: [:measurement_unit, :ingredient]], :user])
+      |> Repo.preload([
+        [recipe_ingredients: [:measurement_unit, :ingredient]],
+        :user,
+        comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
+      ])
 
     if is_nil(result) do
       result
