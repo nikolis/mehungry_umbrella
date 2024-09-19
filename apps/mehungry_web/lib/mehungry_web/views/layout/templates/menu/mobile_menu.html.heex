@@ -3,6 +3,9 @@
   id="nav_bar_mobile"
   phx-update="ignore"
   style="background-color: var(--clr-light_2)"
+  phx-click-away={
+    Phoenix.LiveView.JS.remove_class(" open_menu", to: "#nav_bar_mobile")
+}
 >
   <div
     class="grid grid-cols-5 h-full max-h-20 bg-inherit"
@@ -23,14 +26,15 @@
       />
     </div>
 
-    <div class="m-auto">
+     <div class="m-auto"    phx-click={
+    Phoenix.LiveView.JS.toggle_class(" open_menu", to: "#nav_bar_mobile")}
+  >
       <img
         style="margin: auto; padding: 0.3rem"
         width="40px"
         height="40px"
         src="/images/hamburger_icon.svg"
-        onClick="toggleMenu();"
-      />
+             />
     </div>
   </div>
 
@@ -94,7 +98,7 @@
 
   <script>
     function toggleMenu() {
-      document.querySelector(".nav_container_mobile").classList.toggle("open_menu");
+      document.querySelector("#nav_container_mobile").classList.toggle("open_menu");
     }
   </script>
 </nav>

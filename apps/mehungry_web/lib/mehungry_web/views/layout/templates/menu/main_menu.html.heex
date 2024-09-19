@@ -47,14 +47,13 @@
         class="utils_item"
         id="menu_utils_toggle"
         phx-click-away={
-    Phoenix.LiveView.JS.remove_class(" drop_down_open", to: "#menu_items_list")
-    |> Phoenix.LiveView.JS.add_class(" drop_down", to: "#menu_items_list")
+          Phoenix.LiveView.JS.remove_class(" drop_down_open", to: "#menu_items_list")
+          |> Phoenix.LiveView.JS.add_class(" drop_down", to: "#menu_items_list")
         }
-    phx-click={
-    Phoenix.LiveView.JS.toggle_class(" drop_down_open", to: "#menu_items_list")
-|> Phoenix.LiveView.JS.toggle_class("drop_down", to: "#menu_items_list")
-    
-}
+        phx-click={
+          Phoenix.LiveView.JS.toggle_class(" drop_down_open", to: "#menu_items_list")
+          |> Phoenix.LiveView.JS.toggle_class("drop_down", to: "#menu_items_list")
+        }
       >
         <img src="/images/arrow_down.svg" />
         <div class="drop_down" id="menu_items_list">
