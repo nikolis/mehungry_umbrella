@@ -103,8 +103,6 @@ defmodule Mehungry.Posts do
     {:ok, vote}
   end
 
-
-
   @doc """
   Creates a post.
 

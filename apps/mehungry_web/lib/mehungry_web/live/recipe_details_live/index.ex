@@ -8,7 +8,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   alias Mehungry.{Posts, Users}
   alias Mehungry.Food.Recipe
 
-
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
@@ -116,18 +115,25 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     <div id="recipe_presentation_modal" class="sm:p-6">
       <div class="basic_2_col_grid_cont">
         <div class="w-full">
-          <.recipe_like_container type={"browse"} user_recipes={@user_recipes} recipe={@recipe} id={@id} myself={@myself}/>
+          <.recipe_like_container
+            type="browse"
+            user_recipes={@user_recipes}
+            recipe={@recipe}
+            id={@id}
+            myself={@myself}
+          />
           <img class="min-h-96 rounded-2xl w-full" src={@recipe.image_url} />
+          <h3 class="m-2 mt-4  text-center w-full"><%= @recipe.title %></h3>
+          <.recipe_attrs_container recipe={@recipe} />
         </div>
         <div class="w-full">
           <.user_overview_card user={@recipe.user} . />
-          <h3 class="m-2 mt-4  text-center w-full"><%= @recipe.title %></h3>
-          <div style="">
+          <div class="mt-8">
             <.recipe_details recipe={@recipe} nutrients={@nutrients} primary_size={@primary_size} . />
           </div>
           <div class="post_card w-11/12 mb-12">
             <div class="grid grid-cols-2 h-fit mt-16">
-              <h3 class="text-lg text-start ">Comments</h3>
+              <h3 class="text-lg text-start "><%= "Comments (#{length(@recipe.comments)})" %></h3>
               <div
                 class="relative"
                 phx-click={JS.toggle_class("h-0 overflow-hidden mt-4", to: ".comment")}

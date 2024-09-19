@@ -26,18 +26,21 @@ defmodule MehungryWeb.ImageProcessing do
 
         if is_http do
           response = HTTPoison.get(image_path)
+
           case response do
             {:error, %HTTPoison.Error{reason: :nxdomain, id: nil}} ->
               nil
+
             {:ok, response} ->
               %HTTPoison.Response{body: body} = response
               _file = File.write!(pre_image_name, body)
+
               {:ok, result} =
                 Image.thumbnail(pre_image_name, "270x200", crop: :center, autorotate: true)
+
               _return = Vix.Vips.Image.write_to_file(result, new_image_write)
               new_image_read
           end
-
         else
           _file = File.copy(image_path, pre_image_name)
           {:ok, new_image_read}

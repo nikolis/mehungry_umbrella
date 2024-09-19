@@ -17,6 +17,8 @@ defmodule MehungryWeb.CoreComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
+  alias Mehungry.Food
+
   import MehungryWeb.Gettext
 
   def user_overview_card(
@@ -26,8 +28,8 @@ defmodule MehungryWeb.CoreComponents do
         } = assigns
       ) do
     ~H"""
-    <div style="margin-bottom: 0.75rem; ">
-      <div class="flex gap-2">
+    <div style="margin-bottom: 0.75rem; " class="w-full ">
+      <div class=" flex gap-2 w-11/12 m-auto sm:w-full m-0 ">
         <.link
           patch={"/profile/"<>Integer.to_string(@user.id)}
           style="min-height: 50px; min-width: 50px;"
@@ -47,13 +49,13 @@ defmodule MehungryWeb.CoreComponents do
             </div>
           </div>
           <div class="text-sm leading-4">
-            300 posted recipes
+            <%= "#{get_user_posted_recipes(@user)} posted recipes" %>
           </div>
         </div>
         <%= if @user.id in @user_follows do %>
-          <div class="mt-auto mb-auto self-end">
+          <div class="my-auto self-end w-fit relative mx-2">
             <button
-              class="primary_button_complementary"
+              class="primary_button_complementary  "
               phx-click="save_user_follow"
               phx-value-follow_id={@user.id}
             >
@@ -72,12 +74,16 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
+  def get_user_posted_recipes(user) do
+    Food.count_user_created_recipes(user.id)
+  end
+
   @doc """
   Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
   """
   def user_overview_card(%{user: %Mehungry.Accounts.User{} = _user} = assigns) do
     ~H"""
-    <div style="margin-bottom: 0.75rem; ">
+    <div style="margin-bottom: 0.75rem;" class="mx-8 sm:mx-0">
       <div class="flex gap-2">
         <.link
           patch={"/profile/"<>Integer.to_string(@user.id)}
@@ -98,11 +104,49 @@ defmodule MehungryWeb.CoreComponents do
             </div>
           </div>
           <div class="text-sm leading-4">
-            300 posted recipes
+            <%= "#{get_user_posted_recipes(@user)} posted recipes" %>
           </div>
         </div>
         <div class="mt-auto mb-auto self-end">
           <button class="primary_button">Follow</button>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  def dialog_button(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      phx-mounted={@show && show_modal(@id)}
+      phx-remove={hide_modal(@id)}
+      data-cancel={JS.exec(@on_cancel, "phx-remove")}
+      class="relative z-50 hidden"
+    >
+      <div id={"#{@id}-bg"} class="bg-zinc-50/90 fixed inset-0 transition-opacity" aria-hidden="true" />
+      <div
+        class="fixed inset-0 overflow-y-auto"
+        aria-labelledby={"#{@id}-title"}
+        aria-describedby={"#{@id}-description"}
+        role="dialog"
+        aria-modal="true"
+        tabindex="0"
+      >
+        <div class="flex min-h-full items-center justify-center">
+          <div class="w-full max-w-3xl p-4 sm:p-6 lg:py-8">
+            <.focus_wrap
+              id={"#{@id}-container"}
+              phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
+              phx-key="escape"
+              phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
+              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-2 min-h-96 lg:p-14 shadow-lg ring-1 transition"
+            >
+              <div id={"#{@id}-content"}>
+                <%= render_slot(@inner_block) %>
+              </div>
+            </.focus_wrap>
+          </div>
         </div>
       </div>
     </div>

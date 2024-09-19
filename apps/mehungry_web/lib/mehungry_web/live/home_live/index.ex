@@ -64,6 +64,10 @@ defmodule MehungryWeb.HomeLive.Index do
      |> assign(:must_be_loged_in, nil)}
   end
 
+  def get_total_recipes_for_user(user_id) do
+    Food.count_user_created_recipes(user_id)
+  end
+
   @impl true
   def handle_event("save_post", %{"post_id" => post_id}, socket) do
     case is_nil(socket.assigns.user) do

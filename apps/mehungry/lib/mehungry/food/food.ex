@@ -280,6 +280,17 @@ defmodule Mehungry.Food do
     result
   end
 
+  def count_user_created_recipes(nil), do: nil
+
+  def count_user_created_recipes(user_id) do
+    result =
+      from(rec in Recipe,
+        where: rec.user_id == ^user_id,
+        select: count(rec.id)
+      )
+      |> Repo.one()
+  end
+
   def list_user_recipes_for_selection(_user_id) do
     entries = Repo.all(Recipe)
 

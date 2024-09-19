@@ -1,11 +1,12 @@
 <div
-  class="post_card my-12 md:w-9/12"
+  class="w-fit my-12 mx-auto md:w-9/12 "
   style="border-bottom: 1px solid var(--clr-grey-friend_2);"
   id={"post_card_"<> Integer.to_string(@id)}
 >
   <.user_overview_card
     user={@post.reference.user}
     post={@post}
+    total_recipes={get_total_recipes_for_user(@post.user_id)}
     user_follows={@user_follows}
     current_user={@user}
   />
@@ -46,7 +47,10 @@
           </path>
         </svg>
       </div>
-      <div style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;">
+      <div
+        style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
+        class="font-semibold"
+      >
         <%= length(@post.upvotes) %>
       </div>
       <div class="cursor-pointer">
@@ -80,42 +84,28 @@
     </div>
     <div class="utils_container" style="gap: 0.15rem;">
       <img src="/images/comments-3-svgrepo-com.svg" width="35px" />
-      <div style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;">
+      <div
+        style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
+        class="font-semibold"
+      >
         <%= length(@post.reference.comments) %>
       </div>
       <div
         style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
         class="md:block hidden"
       >
-        Comments
       </div>
       <div
-        class="utils_container mx-4 gap-2 cursor-pointer"
+        class="utils_container mx-4 gap-2 cursor-pointer "
         phx-click="save_post"
         phx-value-post_id={@post.id}
       >
-        <div styles="stroke: rgba(75, 85, 99, 0.7));">
-          <svg
-            style="stroke: #4b5563;  display: inline; fill: #ffffff"
-            width="30px"
-            height="30px"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M19 19.2674V7.84496C19 5.64147 17.4253 3.74489 15.2391 3.31522C13.1006 2.89493 10.8994 2.89493 8.76089 3.31522C6.57467 3.74489 5 5.64147 5 7.84496V19.2674C5 20.6038 6.46752 21.4355 7.63416 20.7604L10.8211 18.9159C11.5492 18.4945 12.4508 18.4945 13.1789 18.9159L16.3658 20.7604C17.5325 21.4355 19 20.6038 19 19.2674Z"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              fill={get_style(@user_posts, @post, fn x -> x end)}
-              stoke="black"
-              stroke-linejoin="round"
-            />
-          </svg>
+        <div>
+          <.icon name="hero-share" class="h-7 w-7 flex-none text-greyfriend_2 cursor-pointer" />
         </div>
 
-        <div class="md:block hidden">
-          Save Post
+        <div class="font-semibold">
+          Share
         </div>
       </div>
     </div>

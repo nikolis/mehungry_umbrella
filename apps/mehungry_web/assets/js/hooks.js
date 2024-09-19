@@ -109,23 +109,6 @@ Hooks.SwapElement = {
 	}
 }
 
-Hooks.MenuToggleHook = {
-	mounted() {
-		var drop_down_open = false;
-		$('#menu_utils_toggle').on("click", function() {
-			if (!drop_down_open) {
-				$('#menu_items_list').addClass("drop_down_open");
-				$('#menu_items_list').removeClass("drop_down");
-				drop_down_open = true;
-			} else {
-				$('#menu_items_list').removeClass("drop_down_open");
-				$('#menu_items_list').addClass("drop_down");
-				drop_down_open = false;
-			}
-		});
-	}
-}
-
 
 let scrollAt = () => {
 	let scrollTop = document.documentElement.scrollTop || document.body.scrollTop
