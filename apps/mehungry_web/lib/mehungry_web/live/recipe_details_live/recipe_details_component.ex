@@ -127,7 +127,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           <.recipe_attrs_container recipe={@recipe} />
         </div>
         <div class="w-full">
-          <.user_overview_card user={@recipe.user} . />
+          <.user_overview_card user={@recipe.user} user_follows={@user_follows} />
           <div class="mt-8">
             <.recipe_details recipe={@recipe} nutrients={@nutrients} primary_size={@primary_size} . />
           </div>
@@ -152,6 +152,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                   current_user={@user}
                   live_action={@live_action}
                   page_title={@page_title}
+                  myself={@myself}
                   reply={@reply}
                 />
               <% end %>
@@ -175,6 +176,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   end
 
   def handle_info(%{new_comment: comment}, socket) do
+    IO.inspect("New comment inside recipe detals live")
+
     recipe = socket.assigns.recipe
     comment = Posts.get_comment!(comment.id)
 
@@ -196,10 +199,13 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   @impl true
   def update(assigns, socket) do
+    IO.inspect(assigns.recipe, label: "Recipe from recipe detauls index")
+
     socket =
       assign(socket, assigns)
       |> assign(:reply, nil)
       |> assign(assigns)
+      |> assign(:recipe, assigns.recipe)
       |> assign(
         :comment,
         get_when_first_exists(assigns.user, fn ->

@@ -21,6 +21,42 @@ defmodule MehungryWeb.CoreComponents do
 
   import MehungryWeb.Gettext
 
+
+  def user_overview_card(%{user: %Mehungry.Accounts.User{}, user_follows: nil} = assigns) do
+    ~H"""
+    <div style="margin-bottom: 0.75rem;" class="mx-8 sm:mx-0">
+      <div class="flex gap-2">
+        <.link
+          patch={"/profile/"<>Integer.to_string(@user.id)}
+          style="min-height: 50px; min-width: 50px;"
+        >
+          <%= if @user.profile_pic do %>
+            <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
+          <% else %>
+            <.icon name="hero-user-circle" class="h-12 w-12" />
+          <% end %>
+        </.link>
+        <div class="flex flex-col justify-center w-full">
+          <div class="text-sm font-bold leading-4">
+            <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
+              <%= @user.email %>
+            </.link>
+            <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
+            </div>
+          </div>
+          <div class="text-sm leading-4">
+            <%= "#{get_user_posted_recipes(@user)} posted recipes" %>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+
+  @doc """
+  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
+  """
   def user_overview_card(
         %{
           user_follows: _user_follows,
@@ -78,42 +114,6 @@ defmodule MehungryWeb.CoreComponents do
     Food.count_user_created_recipes(user.id)
   end
 
-  @doc """
-  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
-  """
-  def user_overview_card(%{user: %Mehungry.Accounts.User{} = _user} = assigns) do
-    ~H"""
-    <div style="margin-bottom: 0.75rem;" class="mx-8 sm:mx-0">
-      <div class="flex gap-2">
-        <.link
-          patch={"/profile/"<>Integer.to_string(@user.id)}
-          style="min-height: 50px; min-width: 50px;"
-        >
-          <%= if @user.profile_pic do %>
-            <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
-          <% else %>
-            <.icon name="hero-user-circle" class="h-12 w-12" />
-          <% end %>
-        </.link>
-        <div class="flex flex-col justify-center w-full">
-          <div class="text-sm font-bold leading-4">
-            <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-              <%= @user.email %>
-            </.link>
-            <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
-            </div>
-          </div>
-          <div class="text-sm leading-4">
-            <%= "#{get_user_posted_recipes(@user)} posted recipes" %>
-          </div>
-        </div>
-        <div class="mt-auto mb-auto self-end">
-          <button class="primary_button">Follow</button>
-        </div>
-      </div>
-    </div>
-    """
-  end
 
   def dialog_button(assigns) do
     ~H"""

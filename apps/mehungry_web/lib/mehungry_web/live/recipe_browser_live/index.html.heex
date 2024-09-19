@@ -72,6 +72,7 @@
         recipe={@recipe}
         user_recipes={@user_recipes}
         user={@current_user}
+        user_follows={@user_follows}
         page_title={"Recipe #{@recipe.title}"}
         live_action={@live_action}
         return_to={Routes.recipe_browser_index_path(@socket, :index)}

@@ -27,6 +27,16 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           Accounts.get_user_by_session_token(session["user_token"])
       end
 
+    user_follows =
+      case is_nil(user) do
+        true ->
+          {nil, nil}
+
+        false ->
+          Users.list_user_follows(user)
+          |> Enum.map(fn x -> x.follow_id end)
+      end
+
     user_profile =
       case is_nil(user) do
         true ->
@@ -79,6 +89,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      |> assign(:user_profile, user_profile)
      |> assign(:query, query)
      |> assign(:must_be_loged_in, nil)
+     |> assign(:user_follows, user_follows)
      |> assign(:user, user)
      |> assign(:reply, nil)
      |> assign_recipe_search()}

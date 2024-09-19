@@ -63,6 +63,7 @@
                 primary_size={@primary_size}
                 nutrients={@nutrients}
                 recipe={@recipe}
+                user_follows={@user_follows}
                 user_recipes={@user_recipes}
                 user={@current_user}
                 page_title={"Recipe #{@recipe.title}"}
@@ -160,7 +161,7 @@
                   recipe={user_recipe.recipe}
                   return_to="profile"
                   id={"recipe" <> Integer.to_string(user_recipe.recipe.id)}
-                  path_to_details={"/profile/show_recipe/#{user_recipe.id}"}
+                  path_to_details={"/profile/show_recipe/#{user_recipe.recipe_id}"}
                   type="saved"
                 />
               <% end %>

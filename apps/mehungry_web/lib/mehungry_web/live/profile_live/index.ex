@@ -74,9 +74,21 @@ defmodule MehungryWeb.ProfileLive.Index do
   defp apply_action(socket, :show_recipe, %{"recipe_id" => id}) do
     recipe = Food.get_recipe!(id)
     Posts.subscribe_to_recipe(%{recipe_id: id})
-
+    IO.inspect(id)
+    IO.inspect(recipe, label: "SHow in progile ")
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.user
+
+    user_follows =
+      case recipe.user_id == socket.assigns.user.id do
+        true ->
+          nil
+
+        false ->
+          IO.inspect("here-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+          Users.list_user_follows(user)
+          |> Enum.map(fn x -> x.follow_id end)
+      end
 
     user_recipes =
       case is_nil(user) do
@@ -88,10 +100,14 @@ defmodule MehungryWeb.ProfileLive.Index do
           |> Enum.map(fn x -> x.recipe_id end)
       end
 
+    IO.inspect("here-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
+    IO.inspect(user_follows)
+
     socket
     |> assign(:nutrients, nutrients)
     |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
+    |> assign(:user_follows, user_follows)
     |> assign(:user_recipes, user_recipes)
   end
 

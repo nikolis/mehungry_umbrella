@@ -5,9 +5,30 @@ defmodule MehungryWeb.LiveHelpers do
 
   alias Phoenix.LiveView.JS
   alias Mehungry.Food.Recipe
+  alias Mehungry.Users
 
   def hook_for_update_recipe_details_component do
     quote do
+      def toggle_user_follow(socket, follow_id) do
+        case Enum.any?(socket.assigns.user_follows, fn x -> x == follow_id end) do
+          true ->
+            Users.remove_user_follow(socket.assigns.user.id, follow_id)
+
+          false ->
+            Users.save_user_follow(socket.assigns.user.id, follow_id)
+        end
+      end
+
+      @impl true
+      def handle_event("save_user_follow", %{"follow_id" => follow_id}, socket) do
+        {follow_id, _ignore} = Integer.parse(follow_id)
+        toggle_user_follow(socket, follow_id)
+        user_follows = Users.list_user_follows(socket.assigns.user)
+        user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
+        socket = assign(socket, :user_follows, user_follows)
+        {:noreply, socket}
+      end
+
       @impl true
       def handle_info(%{new_comment: comment}, socket) do
         recipe = socket.assigns.recipe
