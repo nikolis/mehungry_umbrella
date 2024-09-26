@@ -62,6 +62,28 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     end
   end
 
+  @impl true
+  def handle_event("vote_comment", %{"id" => comment_id, "reaction" => reaction} = params, socket) do
+    IO.inspect(params, label: "Params on comment")
+
+    case is_nil(socket.assigns.user) do
+      true ->
+        socket = assign(socket, :must_be_loged_in, 1)
+        {:noreply, socket}
+
+      false ->
+        {comment_id, _} = Integer.parse(comment_id)
+
+        socket =
+          socket
+          |> assign(:reply, %{comment_id: comment_id})
+
+        Mehungry.Posts.vote_comment(comment_id, socket.assigns.user.id, reaction)
+
+        {:noreply, socket}
+    end
+  end
+
   def get_positive_votes(votes) do
     Enum.reduce(votes, 0, fn x, acc ->
       case x.positive do
@@ -175,6 +197,29 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     """
   end
 
+  @impl true
+  def handle_info(%{new_vote: vote, type_: _type_}, socket) do
+    IO.inspect(vote, label: "The vote received")
+    post = Posts.get_post!(vote.post_id)
+
+    posts =
+      Enum.map(socket.assigns.posts, fn x ->
+        case x.id == post.id do
+          false ->
+            x
+
+          true ->
+            post
+        end
+      end)
+
+    socket =
+      socket
+      |> assign(:posts, posts)
+
+    {:noreply, socket}
+  end
+
   def handle_info(%{new_comment: comment}, socket) do
     IO.inspect("New comment inside recipe detals live")
 
@@ -201,10 +246,18 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   def update(assigns, socket) do
     IO.inspect(assigns.recipe, label: "Recipe from recipe detauls index")
 
+    user_follows =
+      if(is_nil(Map.get(socket.assigns, :user))) do
+        nil
+      else
+        socket.assigns.user_follows
+      end
+
     socket =
       assign(socket, assigns)
       |> assign(:reply, nil)
       |> assign(assigns)
+      |> assign(:user_follows, user_follows)
       |> assign(:recipe, assigns.recipe)
       |> assign(
         :comment,

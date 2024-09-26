@@ -105,6 +105,15 @@ defmodule Mehungry.Posts do
     {:ok, vote}
   end
 
+  defp broadcast_comment_vote({:ok, comment}, type_) do
+    Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(comment.recipe_id), %{
+      new_comment_vote: comment,
+      type_: type_
+    })
+
+    {:ok, comment}
+  end
+
   @doc """
   Creates a post.
 
@@ -536,6 +545,8 @@ defmodule Mehungry.Posts do
 
   """
   def create_post_downvote(attrs \\ %{}) do
+    IO.inspect("Down vote")
+
     %PostDownvote{}
     |> PostDownvote.changeset(attrs)
     |> Repo.insert()
@@ -586,13 +597,13 @@ defmodule Mehungry.Posts do
 
     if not is_nil(vote) and vote.positive != reaction do
       update_comment_vote(vote, %{positive: get_positive.(reaction)})
-      broadcast_vote({:ok, comment}, "vote")
+      broadcast_comment_vote({:ok, comment}, "vote")
     else
       %CommentVote{}
       |> CommentVote.changeset(%{user_id: user_id, comment_id: comment_id, positive: reaction})
       |> Repo.insert()
 
-      broadcast_vote({:ok, comment}, "vote")
+      broadcast_comment_vote({:ok, comment}, "vote")
     end
   end
 

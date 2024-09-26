@@ -41,7 +41,7 @@
 	right: 15px;
 	top: 50px;
 	border-radius: 5%;
-        box-shadow:  0px 0 5px 0 grey;
+  box-shadow:  0px 0 5px 0 grey;
 }
 
 .drop_down_open {
@@ -55,7 +55,7 @@
 	padding: 1em;
 	font-weight: bold;
 	font-size: 0.65em;
-        text-align: left;
+  text-align: left;
 	right: 30px;
 	top: 60px;
 	border-radius: 5%;

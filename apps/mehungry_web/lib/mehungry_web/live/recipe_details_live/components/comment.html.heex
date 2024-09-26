@@ -32,6 +32,7 @@
             phx-click="vote_comment"
             phx-value-reaction="true"
             phx-value-id={@comment.id}
+            phx-target={@myself}
             width="28px"
             height="28px"
             viewBox="0 0 24 24"
@@ -61,6 +62,8 @@
             phx-click="vote_comment"
             phx-value-reaction="false"
             phx-value-id={@comment.id}
+            phx-target={@myself}
+            phx-type="click"
             width="28px"
             height="28px"
             viewBox="0 0 24 24"

@@ -6,7 +6,7 @@
   <.user_overview_card
     user={@post.reference.user}
     post={@post}
-    total_recipes={get_total_recipes_for_user(@post.user_id)}
+    total_recipes={count_user_created_recipes(@post.user_id)}
     user_follows={@user_follows}
     current_user={@user}
   />
@@ -101,7 +101,30 @@
         phx-value-post_id={@post.id}
       >
         <div>
-          <.icon name="hero-share" class="h-7 w-7 flex-none text-greyfriend_2 cursor-pointer" />
+          <div
+            style="padding: 15px"
+            class="utils_item"
+            id="share_utils_toggle"
+            phx-click-away={
+              Phoenix.LiveView.JS.remove_class(" drop_down_open", to: "#share_items_list")
+              |> Phoenix.LiveView.JS.add_class(" drop_down", to: "#share_items_list")
+            }
+            phx-click={
+              Phoenix.LiveView.JS.toggle_class(" drop_down_open", to: "#share_items_list")
+              |> Phoenix.LiveView.JS.toggle_class("drop_down", to: "#share_items_list")
+            }
+          >
+            <.icon name="hero-share" class="h-7 w-7 flex-none text-greyfriend_2 cursor-pointer" />
+            <div class="drop_down" id="share_items_list">
+              <div class="drop_down_inner_container_account">
+                <.link patch="/profile" class="drop_down_buttons">
+                  <button>Profile</button>
+                </.link>
+                <button class="drop_down_buttons">Upgrade to professional</button>
+                <a href="/users/log_out"> Logout out account </a>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="font-semibold">

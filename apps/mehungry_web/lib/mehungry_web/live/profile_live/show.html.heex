@@ -1,14 +1,32 @@
 <div class="p-10">
-  <h3 class="text-center"><%= @user.email %> <br /> <%= @user_profile.alias %></h3>
-  <div class="text-center text-base text-greyfriend2">
-    <%= @user_profile.intro %>
-  </div>
+  <div class="text-center text-base text-greyfriend2"></div>
+
   <%= if @live_action == :index do %>
-    <div class="flex justify-center m-6 relative">
-      <button class="primary_button">Share Profile</button>
+    <.user_details_card
+      user={@current_user}
+      myself={@myself}
+      total_recipes={count_user_created_recipes(@user.id)}
+      user_follows={@user_follows}
+      user_profile={@user_profile}
+      current_user={@current_user}
+    />
+
+    <div class="flex justify-center m-6 relative mt-14 flex-wrap gap-2">
+      <button class="primary_button text-sm sm:text-xl">Share Profile</button>
       <.link patch={~p"/profile/edit"} phx-click={JS.push_focus()}>
-        <button class="primary_button_complementary" type="button">Edit Profile</button>
+        <button class="primary_button_complementary text-sm sm:text-xl" type="button">
+          Edit Profile
+        </button>
       </.link>
     </div>
+  <% else %>
+    <.user_details_card
+      user={@user}
+      myself={@myself}
+      total_recipes={count_user_created_recipes(@user.id)}
+      user_follows={@user_follows}
+      user_profile={@user_profile}
+      current_user={@current_user}
+    />
   <% end %>
 </div>

@@ -16,8 +16,8 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
       case is_nil(Phoenix.HTML.Form.input_value(assigns.g, :ingredient_id)) do
         true ->
           if(length(assigns.f.data.recipe_ingredients) > 0) do
-            if is_nil(Enum.at(assigns.f.data.recipe_ingredients, assigns.g.index)) do 
-              nil 
+            if is_nil(Enum.at(assigns.f.data.recipe_ingredients, assigns.g.index)) do
+              nil
             else
               Enum.at(assigns.f.data.recipe_ingredients, assigns.g.index).id
             end

@@ -18,9 +18,138 @@ defmodule MehungryWeb.CoreComponents do
 
   alias Phoenix.LiveView.JS
   alias Mehungry.Food
-
+  alias Mehungry.Accounts
   import MehungryWeb.Gettext
 
+  def drop_down(assigns) do
+    ~H"""
+    <div style="margin-bottom: 0.75rem;" class="mx-8 sm:mx-0">
+      <div class="flex gap-2">
+        <.link
+          patch={"/profile/"<>Integer.to_string(@user.id)}
+          style="min-height: 50px; min-width: 50px;"
+        >
+          <%= if @user.profile_pic do %>
+            <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
+          <% else %>
+            <.icon name="hero-user-circle" class="h-12 w-12" />
+          <% end %>
+        </.link>
+        <div class="flex flex-col justify-center w-full">
+          <div class="text-sm font-bold leading-4">
+            <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
+              <%= @user.email %>
+            </.link>
+            <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
+            </div>
+          </div>
+          <div class="text-sm leading-4">
+            <%= "#{count_user_created_recipes(@user.id)} posted recipes" %>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  def count_user_created_recipes(user_id) do
+    Food.count_user_created_recipes(user_id)
+  end
+
+  def count_user_followers(user_id) do
+    Accounts.count_user_followers(user_id)
+  end
+
+  def count_user_following(user_id) do
+    Accounts.count_user_following(user_id)
+  end
+
+  @doc """
+  Renders a user details presentation for the moment just in profile maybe needs to be moved in more speicic context. 
+  """
+  def user_details_card(
+        %{
+          user_follows: _user_follows,
+          user: %Mehungry.Accounts.User{} = _user
+        } = assigns
+      ) do
+    ~H"""
+    <div style="margin-bottom: 0.75rem; " class="w-full">
+      <div class=" flex justify-center gap-2 xl:gap-28 w-11/12 m-auto sm:w-full m-0 flex-wrap ">
+        <.link
+          patch={"/profile/"<>Integer.to_string(@user.id)}
+          style="min-height: 100px; min-width: 100px;"
+        >
+          <%= if @user.profile_pic do %>
+            <img src={@user.profile_pic} , style="width: 130px; height: 130px; border-radius: 50%;" />
+          <% else %>
+            <.icon name="hero-user-circle" class="h-12 w-12" />
+          <% end %>
+        </.link>
+        <div class="flex flex-col justify-center w-fit h-full">
+          <div class="text-sm  font-bold leading-4">
+            <.link patch={"/profile/"<>Integer.to_string(@user.id)} class="flex flex-wrap">
+              <span class="w-full text-center sm:w-fit text-lg md:text-2xl mr-4">
+                <%= @user.email %>
+              </span>
+            </.link>
+
+            <%= if @current_user != @user do %>
+              <div class="w-full md:w-fit">
+                <%= if @user.id not in @user_follows do %>
+                  <div class="m-auto h-full w-fit sm:m-0  mt-4">
+                    <button
+                      class="primary_button  p-2 m-auto text-md px-2 font-bold"
+                      type="button"
+                      id="adsadfs"
+                      phx-click="save_user_follow"
+                      phx-value-follow_id={@user.id}
+                    >
+                      Follow!
+                    </button>
+                  </div>
+                <% else %>
+                  <div class="mt-auto mb-auto self-end w-full">
+                    <button
+                      class="primary_button_complementary  m-auto"
+                      phx-click="save_user_follow"
+                      phx-value-follow_id={@user.id}
+                    >
+                      <span class="text-md px-2 font-bold"> Following </span>
+                    </button>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+            <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
+            </div>
+          </div>
+          <div class="flex gap-2 mt-2 flex-wrap justify-center sm:justify-start	">
+            <div class="text-sm leading-4 ">
+              <span class="font-semibold text-lg">
+                <%= "#{count_user_created_recipes(@user.id)}" %>
+              </span>
+               <span class="text-lg"> Posted recipes </span>
+            </div>
+            <div class="text-sm leading-4 ">
+              <span class="font-semibold text-lg"><%= "#{count_user_followers(@user.id)}" %></span>
+              <span class="text-lg"> Followers </span>
+            </div>
+
+            <div class="text-sm leading-4">
+              <span class="font-semibold text-lg"><%= "#{count_user_following(@user.id)}" %></span>
+              <span class="text-lg"> Following </span>
+            </div>
+          </div>
+          <div class="mt-2 w-fit m-auto sm:m-0">
+            <div class="font-semibold"><%= @user_profile.alias %></div>
+            <div><%= @user_profile.intro %></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
 
   def user_overview_card(%{user: %Mehungry.Accounts.User{}, user_follows: nil} = assigns) do
     ~H"""
@@ -45,14 +174,13 @@ defmodule MehungryWeb.CoreComponents do
             </div>
           </div>
           <div class="text-sm leading-4">
-            <%= "#{get_user_posted_recipes(@user)} posted recipes" %>
+            <%= "#{count_user_created_recipes(@user.id)} posted recipes" %>
           </div>
         </div>
       </div>
     </div>
     """
   end
-
 
   @doc """
   Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
@@ -85,13 +213,13 @@ defmodule MehungryWeb.CoreComponents do
             </div>
           </div>
           <div class="text-sm leading-4">
-            <%= "#{get_user_posted_recipes(@user)} posted recipes" %>
+            <%= "#{count_user_created_recipes(@user.id)} posted recipes" %>
           </div>
         </div>
         <%= if @user.id in @user_follows do %>
           <div class="my-auto self-end w-fit relative mx-2">
             <button
-              class="primary_button_complementary  "
+              class="primary_button_complementary px-2 py-1 text-sm sm:text-xl sm:px-4 sm:py-2"
               phx-click="save_user_follow"
               phx-value-follow_id={@user.id}
             >
@@ -100,7 +228,7 @@ defmodule MehungryWeb.CoreComponents do
           </div>
         <% else %>
           <div class="mt-auto mb-auto self-end">
-            <button class="primary_button" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
+            <button class="primary_button px-2 py-1 text-sm sm:text-xl sm:px-4 sm:py-2" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
               Follow
             </button>
           </div>
@@ -109,11 +237,6 @@ defmodule MehungryWeb.CoreComponents do
     </div>
     """
   end
-
-  def get_user_posted_recipes(user) do
-    Food.count_user_created_recipes(user.id)
-  end
-
 
   def dialog_button(assigns) do
     ~H"""

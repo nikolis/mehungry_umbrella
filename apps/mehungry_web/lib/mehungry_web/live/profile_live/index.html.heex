@@ -1,18 +1,19 @@
 <div class="container  mx-auto p-2" style="min-height: 90vh">
-  <.modal
-    :if={is_nil(@user_profile.onboarding_level) or @user_profile.onboarding_level < 1}
-    id="onboarding-modal"
-    show
-    on_cancel={JS.patch(~p"/")}
-  >
-    <.live_component
-      module={MehungryWeb.Onboarding.FormComponent}
-      user_profile={@user_profile}
-      id={:new}
-      patch={~p"/"}
-    />
-  </.modal>
-
+  <%= if !is_nil(@user) do %>
+    <.modal
+      :if={is_nil(@user_profile.onboarding_level) or @user_profile.onboarding_level < 1}
+      id="onboarding-modal"
+      show
+      on_cancel={JS.patch(~p"/")}
+    >
+      <.live_component
+        module={MehungryWeb.Onboarding.FormComponent}
+        user_profile={@user_profile}
+        id={:new}
+        patch={~p"/"}
+      />
+    </.modal>
+  <% end %>
   <div class="profile_index_main">
     <div class="profile_index_info">
       <%= case @live_action  do %>
@@ -22,16 +23,18 @@
             id="hero"
             user_profile={@user_profile}
             live_action={@live_action}
-            user={@user}
             page_title={@page_title}
+            user={@current_user}
+            current_user={@current_user}
+            user_follows={@user_follows}
           />
         <% :edit -> %>
           <.live_component
+            module={MehungryWeb.ProfileLive.Form}
             categories={@categories}
             category_ids={@category_ids}
             food_restriction_ids={@food_restriction_ids}
             food_restrictions={@food_restrictions}
-            module={MehungryWeb.ProfileLive.Form}
             id="hero"
             user_profile={@user_profile}
             live_action={@live_action}
@@ -44,19 +47,22 @@
           <.live_component
             module={Show}
             id="hero"
-            user_profile={@user_profile}
             live_action={@live_action}
             user={@user}
+            current_user={@current_user}
+            user_profile={@user_profile}
+            user_follows={@user_follows}
             page_title={@page_title}
           />
-        <% _ -> %>
+        <% action -> %>
           <MehungryWeb.RecipeComponents.recipe_modal
             :if={@live_action in [:show_recipe]}
-            on_cancel={JS.patch(~p"/profile")}
+            on_cancel={JS.patch(@cancel_path)}
             id="recipe_details_modal"
             show
           >
             <div class="w-full" style="min-height: 55vh;">
+              <%= inspect(@cancel_path) %>
               <.live_component
                 module={MehungryWeb.RecipeDetailsComponent}
                 id="recipe_details_component"
@@ -147,9 +153,9 @@
               <%= for recipe <- @user_created_recipes do %>
                 <RecipeComponents.recipe_card
                   recipe={recipe}
-                  type="created"
+                  type={if @live_action == :show, do: "browse", else: "created"}
                   return_to="profile"
-                  user_recipes={@user_saved_recipes}
+                  user_recipes={@current_user_recipes}
                   path_to_details={"/profile/show_recipe/#{recipe.id}"}
                   id={"recipe" <> Integer.to_string(recipe.id)}
                 />
@@ -157,12 +163,12 @@
             <% :saved -> %>
               <%= for user_recipe <- @user_saved_recipes do %>
                 <RecipeComponents.recipe_card
-                  user_recipes={@user_saved_recipes}
+                  user_recipes={@current_user_recipes}
                   recipe={user_recipe.recipe}
                   return_to="profile"
                   id={"recipe" <> Integer.to_string(user_recipe.recipe.id)}
                   path_to_details={"/profile/show_recipe/#{user_recipe.recipe_id}"}
-                  type="saved"
+                  type={if @live_action == :show, do: "browse", else: "saved"}
                 />
               <% end %>
           <% end %>
