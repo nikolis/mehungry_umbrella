@@ -2,7 +2,7 @@ name: Elixir CI
 
 on:
   push:
-    branches: [ "@e-master" ]
+    branches: [ "@-master" ]
 
 permissions:
   contents: read
