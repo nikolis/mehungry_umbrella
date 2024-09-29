@@ -6,9 +6,32 @@ defmodule Mehungry.Accounts do
   import Ecto.Query, warn: false
   alias Mehungry.Repo
   alias Ueberauth.Auth
+
   require Logger
 
-  alias Mehungry.Accounts.{User, UserToken, UserNotifier}
+  alias Mehungry.Accounts.{User, UserToken, UserNotifier, UserFollow}
+
+  def count_user_following(nil), do: nil
+
+  def count_user_following(user_id) do
+    result =
+      from(u_fo in UserFollow,
+        where: u_fo.user_id == ^user_id,
+        select: count(u_fo.id)
+      )
+      |> Repo.one()
+  end
+
+  def count_user_followers(nil), do: nil
+
+  def count_user_followers(user_id) do
+    result =
+      from(u_fo in UserFollow,
+        where: u_fo.follow_id == ^user_id,
+        select: count(u_fo.id)
+      )
+      |> Repo.one()
+  end
 
   ## Database getters
 

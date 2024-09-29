@@ -29,7 +29,7 @@ module.exports = {
         complementaryl: "#00D8FF",
         greyfriend1: "#f0f0f0",
         greyfriend2: "#6464644d",
-
+        greyfriend3: "#758599",
       }
     },
   },
