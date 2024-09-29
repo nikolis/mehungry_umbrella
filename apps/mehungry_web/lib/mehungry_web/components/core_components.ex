@@ -83,7 +83,7 @@ defmodule MehungryWeb.CoreComponents do
           <%= if @user.profile_pic do %>
             <img src={@user.profile_pic} , style="width: 130px; height: 130px; border-radius: 50%;" />
           <% else %>
-            <.icon name="hero-user-circle" class="h-12 w-12" />
+            <.icon name="hero-user-circle" class="w-full h-full" />
           <% end %>
         </.link>
         <div class="flex flex-col justify-center w-fit h-full">
@@ -129,7 +129,7 @@ defmodule MehungryWeb.CoreComponents do
               <span class="font-semibold text-lg">
                 <%= "#{count_user_created_recipes(@user.id)}" %>
               </span>
-               <span class="text-lg"> Posted recipes </span>
+              <span class="text-lg"> Posted recipes </span>
             </div>
             <div class="text-sm leading-4 ">
               <span class="font-semibold text-lg"><%= "#{count_user_followers(@user.id)}" %></span>
@@ -142,8 +142,8 @@ defmodule MehungryWeb.CoreComponents do
             </div>
           </div>
           <div class="mt-2 w-fit m-auto sm:m-0">
-            <div class="font-semibold"><%= @user_profile.alias %></div>
-            <div><%= @user_profile.intro %></div>
+            <div class="font-semibold text-center sm:text-left"><%= @user_profile.alias %></div>
+            <div class="text-center sm:text-left"> <%= @user_profile.intro %></div>
           </div>
         </div>
       </div>
@@ -228,7 +228,11 @@ defmodule MehungryWeb.CoreComponents do
           </div>
         <% else %>
           <div class="mt-auto mb-auto self-end">
-            <button class="primary_button px-2 py-1 text-sm sm:text-xl sm:px-4 sm:py-2" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
+            <button
+              class="primary_button px-2 py-1 text-sm sm:text-xl sm:px-4 sm:py-2"
+              phx-click="save_user_follow"
+              phx-value-follow_id={@user.id}
+            >
               Follow
             </button>
           </div>
@@ -786,7 +790,7 @@ defmodule MehungryWeb.CoreComponents do
       <select
         id={@id}
         name={@name}
-        class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm select"
+        class="rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	h-full w-full  text-greyfriend3 font-semibold",
         multiple={@multiple}
         {@rest}
       >

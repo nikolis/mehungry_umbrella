@@ -2,6 +2,21 @@ import "selectize";
 
 let Hooks = {}
 
+Hooks.Copy = {
+  mounted() {
+    let { to } = this.el.dataset;
+    this.el.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      let text = document.querySelector(to).value
+      var host = window.location.protocol + "//" + window.location.host;
+
+      navigator.clipboard.writeText(host + text).then(() => {
+        console.log("All done again!")
+      })
+    });
+  },
+}
+
 Hooks.ViewportResizeHooks = {
 
   mounted () {

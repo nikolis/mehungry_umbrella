@@ -58,6 +58,7 @@ defmodule MehungryWeb.HomeLive.Index do
      |> assign(:posts, posts)
      |> assign(:user_posts, user_posts)
      |> assign(:user_profile, user_profile)
+     |> assign(:page_title, "Food recipe feed")
      |> assign(:user_follows, user_follows)
      |> assign(:search_changeset, nil)
      |> assign(:query_string, "")
@@ -188,6 +189,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
     socket
     |> assign(:nutrients, nutrients)
+    |> assign(:page_title,  recipe.title <>  " Instructions and nutrition facts")
     |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
     |> assign(:user_recipes, user_recipes)

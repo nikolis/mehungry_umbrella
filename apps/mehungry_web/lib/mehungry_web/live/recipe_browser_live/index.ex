@@ -30,7 +30,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     user_follows =
       case is_nil(user) do
         true ->
-          {nil, nil}
+          nil
 
         false ->
           Users.list_user_follows(user)
@@ -358,7 +358,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:query_string, query_str)
     |> assign(:search_changeset, nil)
     |> assign(:user_profile, user_profile)
-    |> assign(:page_title, query_str)
+    |> assign(:page_title, "search for recipe  " <> query_str)
     |> assign(:query, %{title: query})
   end
 
@@ -412,6 +412,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       )
       |> assign(:user_recipes, user_recipes)
       |> assign(:page, 1)
+      |> assign(:page_title, "Browse food recipes")
       |> assign(:query_string, "")
       |> assign(:search_changeset, nil)
       |> assign(:user_profile, user_profile)
@@ -453,6 +454,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:nutrients, nutrients)
     |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
+    |> assign(:page_title,  recipe.title <>  " Instructions and nutrition facts")
     |> stream(:recipes, recipes)
     |> assign(:user_recipes, user_recipes)
   end

@@ -116,7 +116,7 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_ingredients(%{recipe_ingredients: _recipe_ingredients} = assigns) do
     ~H"""
-    <div style="max-height: 300px;" class="overflow-auto">
+    <div style="max-height: 300px;" class="overflow-auto p-4">
       <%= for ingredient <- @recipe_ingredients do %>
         <div class="ingredient_details_container font-normal	 ">
           <div><%= ingredient.ingredient.name %></div>
@@ -131,10 +131,10 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_nutrients(%{nutrients: _nutrients, primary_size: _primary_size} = assigns) do
     ~H"""
-    <div class="accordion overflow-auto	max-h-1/2 font-normal" style="max-height: 300px;">
+      <div class="accordion overflow-auto	max-h-1/2 font-normal" style="max-height: 300px;" >
       <%= for {n, index} <-  Enum.with_index(@nutrients) do %>
         <%= if !is_nil(n) do %>
-          <div class="accordion-panel">
+          <div class="accordion-panel" phx-hook="AccordionHook" id={"nutrient" <> Integer.to_string(index)}  >
             <h2 id={"panel" <> to_string(index) <> "-title"}>
               <%= if !is_nil(n[:children]) do %>
                 <button
@@ -234,11 +234,11 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_steps(%{steps: _steps} = assigns) do
     ~H"""
-    <div class="overflow-auto" style="height: 300px;">
+    <div class="overflow-auto p-4" style="height: 300px;">
       <%= for step <- @steps do %>
-        <div class="step_details_container ">
-          <div><%= step.index %></div>
-          <div class="font-normal"><%= step.description %></div>
+        <div class="step_details_container accordion-panel">
+          <div class="font-semibold text-lg"><%= step.index %></div>
+          <div class="text-lg"><%= step.description %></div>
         </div>
       <% end %>
     </div>

@@ -96,39 +96,53 @@
       >
       </div>
       <div
-        class="utils_container mx-4 gap-2 cursor-pointer "
+        class="utils_container mx-4 gap-2 cursor-pointer relative"
         phx-click="save_post"
         phx-value-post_id={@post.id}
       >
-        <div>
-          <div
-            style="padding: 15px"
-            class="utils_item"
-            id="share_utils_toggle"
-            phx-click-away={
-              Phoenix.LiveView.JS.remove_class(" drop_down_open", to: "#share_items_list")
-              |> Phoenix.LiveView.JS.add_class(" drop_down", to: "#share_items_list")
-            }
-            phx-click={
-              Phoenix.LiveView.JS.toggle_class(" drop_down_open", to: "#share_items_list")
-              |> Phoenix.LiveView.JS.toggle_class("drop_down", to: "#share_items_list")
-            }
-          >
-            <.icon name="hero-share" class="h-7 w-7 flex-none text-greyfriend_2 cursor-pointer" />
-            <div class="drop_down" id="share_items_list">
+        <div
+          style="padding: 15px"
+          id={"share_utils_toggle" <> Integer.to_string(@post.id) }
+          phx-click-away={
+            Phoenix.LiveView.JS.remove_class("drop_down_visible ",
+              to: "#share_items_list" <> Integer.to_string(@post.id)
+            )
+          }
+          phx-click={
+            Phoenix.LiveView.JS.toggle_class("drop_down_visible ",
+              to: "#share_items_list" <> Integer.to_string(@post.id)
+            )
+          }
+        >
+          <div>
+            <div class="flex gap-2 cursor-pointer ">
+              <.icon name="hero-share" class="h-7 w-7 flex-none text-greyfriend_2 " />
+              <div class="font-semibold text-xl">Share</div>
+            </div>
+            <div class="drop_down_home" id={"share_items_list"<> Integer.to_string(@post.id)}>
               <div class="drop_down_inner_container_account">
-                <.link patch="/profile" class="drop_down_buttons">
-                  <button>Profile</button>
-                </.link>
-                <button class="drop_down_buttons">Upgrade to professional</button>
-                <a href="/users/log_out"> Logout out account </a>
+                <div
+                  data-to="#control-codes"
+                  class="drop_down_buttons flex gap-4"
+                  phx-hook="Copy"
+                  id={"drop_hook"<>Integer.to_string(@post.id)}
+                >
+                  <input
+                    type="text"
+                    class="hidden"
+                    id="control-codes"
+                    value={~p"/show_recipe/#{Integer.to_string(@post.reference_id)}"}
+                  />
+
+                  <.icon
+                    name="hero-link"
+                    class="h-7 w-7 flex-none text-greyfriend_2 cursor-pointer"
+                  />
+                  <button class="">Copy link</button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <div class="font-semibold">
-          Share
         </div>
       </div>
     </div>

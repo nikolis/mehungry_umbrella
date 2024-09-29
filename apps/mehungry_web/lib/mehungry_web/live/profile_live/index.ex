@@ -101,7 +101,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     {user_saved_recipes, user_created_recipes, user_follows} =
       case is_nil(socket.assigns.current_user) do
         true ->
-          {[], []}
+          {Users.list_user_saved_recipes(user), Users.list_user_created_recipes(user), []}
 
         false ->
           user_follows = Users.list_user_follows(socket.assigns.current_user)
@@ -114,6 +114,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     socket
     |> assign(:page_title, "Profile")
     |> assign(:user, user)
+    |> assign(:page_title, "Profile " <> user.email )
     |> assign(:user_created_recipes, user_created_recipes)
     |> assign(:user_saved_recipes, user_saved_recipes)
     |> assign(:current_user_recipes, current_user_recipes)
@@ -124,9 +125,6 @@ defmodule MehungryWeb.ProfileLive.Index do
   defp apply_action(socket, :show_recipe, %{"recipe_id" => id}) do
     recipe = Food.get_recipe!(id)
     Posts.subscribe_to_recipe(%{recipe_id: id})
-    # IO.inspect(id)
-    # IO.inspect(recipe, label: "SHow in progile ")
-    IO.inspect(socket.assigns)
 
     cancel_path =
       if not is_nil(socket.assigns.user) and not is_nil(socket.assigns.current_user) do
@@ -172,15 +170,11 @@ defmodule MehungryWeb.ProfileLive.Index do
           |> Enum.map(fn x -> x.recipe_id end)
       end
 
-    IO.inspect(
-      "here-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
-    )
-
-    IO.inspect(user_follows)
 
     socket
     |> assign(:nutrients, nutrients)
     |> assign(:primary_size, primaries_length)
+    |> assign(:page_title, recipe.title <> " from "  <> recipe.user.email )
     |> assign(:recipe, recipe)
     |> assign(:user_follows, user_follows)
     |> assign(:user_recipes, user_recipes)

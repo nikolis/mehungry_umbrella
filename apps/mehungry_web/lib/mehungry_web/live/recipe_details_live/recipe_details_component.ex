@@ -64,8 +64,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   @impl true
   def handle_event("vote_comment", %{"id" => comment_id, "reaction" => reaction} = params, socket) do
-    IO.inspect(params, label: "Params on comment")
-
     case is_nil(socket.assigns.user) do
       true ->
         socket = assign(socket, :must_be_loged_in, 1)
@@ -244,13 +242,12 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   @impl true
   def update(assigns, socket) do
-    IO.inspect(assigns.recipe, label: "Recipe from recipe detauls index")
-
+    #IO.inspect(assigns.recipe, label: "Recipe from recipe detauls index")
     user_follows =
-      if(is_nil(Map.get(socket.assigns, :user))) do
+      if(is_nil(Map.get(assigns, :user_follows))) do
         nil
       else
-        socket.assigns.user_follows
+        assigns.user_follows
       end
 
     socket =

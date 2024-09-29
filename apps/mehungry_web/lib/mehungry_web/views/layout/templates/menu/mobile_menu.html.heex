@@ -78,8 +78,6 @@
             <.link patch="/profile" class="drop_down_buttons">
               Profile
             </.link>
-            <button class="drop_down_buttons">Upgrade to professional</button>
-            <%= inspect(@current_user) %>
             <%= if @current_user do %>
               <a href="/users/log_out"> Logout out account </a>
             <% else %>

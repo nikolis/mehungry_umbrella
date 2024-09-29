@@ -18,6 +18,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:user_profile, user_profile)
      |> assign(:ingredients, list_ingredients())
      |> assign(:measurement_units, measurement_units)
+     |> assign(:page_title, "Share your recipes ")
      |> assign(:items, [
        %{id: 1, name: "easy"},
        %{id: 2, name: "medium"},
