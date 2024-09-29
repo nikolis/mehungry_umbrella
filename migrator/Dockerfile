@@ -60,4 +60,4 @@ RUN MIX_ENV=prod mix compile
 # Build front-end
 COPY ./apps/mehungry/priv/repo/migrations ./apps/mehungry/priv/repo/migrations
 
-CMD ["mix", "migrate"]
+CMD ["mix", "ecto.migrate"]
