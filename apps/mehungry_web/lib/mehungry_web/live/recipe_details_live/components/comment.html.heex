@@ -22,6 +22,7 @@
           <div
             style="font-size: 1rem; font-weight: bold; text-align: start; color: var(--clr-grey-friend_3); margin-right: 1rem;"
             phx-click="add-reply-form"
+            phx-target={@myself}
             phx-value-id={@comment.id}
           >
             Reply
@@ -31,6 +32,7 @@
             phx-click="vote_comment"
             phx-value-reaction="true"
             phx-value-id={@comment.id}
+            phx-target={@myself}
             width="28px"
             height="28px"
             viewBox="0 0 24 24"
@@ -60,6 +62,8 @@
             phx-click="vote_comment"
             phx-value-reaction="false"
             phx-value-id={@comment.id}
+            phx-target={@myself}
+            phx-type="click"
             width="28px"
             height="28px"
             viewBox="0 0 24 24"

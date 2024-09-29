@@ -1,4 +1,6 @@
 defmodule MehungryWeb.CalendarLiveTest do
+  @moduledoc false
+
   use MehungryWeb.ConnCase
 
   import Mehungry.FoodFixtures

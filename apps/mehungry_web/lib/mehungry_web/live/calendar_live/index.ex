@@ -40,6 +40,7 @@ defmodule MehungryWeb.CalendarLive.Index do
       socket
       |> assign(:user, user)
       |> assign(:particular_date, nil)
+      |> assign(:page_title, "Meal planner")
       |> assign(:user_meals, user_meals)
       |> assign(:recipes, recipes)
       |> assign(:detail_return_to, nil)

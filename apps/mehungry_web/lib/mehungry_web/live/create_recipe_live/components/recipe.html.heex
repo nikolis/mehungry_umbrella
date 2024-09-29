@@ -22,9 +22,14 @@
 
   <div class="grid grid-cols-2 gap-4">
     <.input required field={@f[:servings]} type="text" label="Servings" class="max-h-12 w-full" />
-    <.input required field={@f[:difficulty]} options={["Easy": "1", "Medium": "2", "Difficult": "3" ]} type="select"  class="max-h-12 w-full" />
-
-<!--    <.live_component
+    <.input
+      required
+      field={@f[:difficulty]}
+      options={[Easy: "1", Medium: "2", Difficult: "3"]}
+      type="select"
+      class="w-full h-full"
+    />
+    <!--    <.live_component
       module={MehungryWeb.SelectComponentSingleMemory2}
       form={@f}
       items={@items}

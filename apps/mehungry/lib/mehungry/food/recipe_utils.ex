@@ -21,6 +21,7 @@ defmodule Mehungry.Food.RecipeUtils do
     nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
 
     energy = Enum.find(rest, fn x -> String.contains?(x.name, "Energy") end)
+
     energy = convert_energy_to_calories_if_needed(energy)
     sort_nutrients(nutrients, energy)
   end
@@ -60,6 +61,8 @@ defmodule Mehungry.Food.RecipeUtils do
     nutrients = Enum.filter(nutrients, fn x -> x not in primaries end)
     {length(primaries), primaries ++ nutrients}
   end
+
+  def convert_energy_to_calories_if_needed(nil), do: nil
 
   def convert_energy_to_calories_if_needed(energy) do
     case energy.measurement_unit do

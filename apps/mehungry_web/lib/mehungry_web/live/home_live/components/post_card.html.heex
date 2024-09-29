@@ -1,15 +1,20 @@
 <div
-  class="post_card my-12"
+  class="w-fit my-12 mx-auto md:w-9/12 "
   style="border-bottom: 1px solid var(--clr-grey-friend_2);"
   id={"post_card_"<> Integer.to_string(@id)}
 >
   <.user_overview_card
     user={@post.reference.user}
     post={@post}
+    total_recipes={count_user_created_recipes(@post.user_id)}
     user_follows={@user_follows}
     current_user={@user}
   />
-  <.link class="post_card_image_container" patch={~p"/show_recipe/#{@post.reference_id}"}>
+  <.link
+    id={"link-to-recipe-#{@post.reference_id}"}
+    class="post_card_image_container"
+    patch={~p"/show_recipe/#{@post.reference_id}"}
+  >
     <img class="post_card_image" src={@post.md_media_url} />
   </.link>
   <div class="post_card_details">
@@ -42,7 +47,10 @@
           </path>
         </svg>
       </div>
-      <div style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;">
+      <div
+        style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
+        class="font-semibold"
+      >
         <%= length(@post.upvotes) %>
       </div>
       <div class="cursor-pointer">
@@ -76,42 +84,65 @@
     </div>
     <div class="utils_container" style="gap: 0.15rem;">
       <img src="/images/comments-3-svgrepo-com.svg" width="35px" />
-      <div style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;">
+      <div
+        style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
+        class="font-semibold"
+      >
         <%= length(@post.reference.comments) %>
       </div>
       <div
         style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
         class="md:block hidden"
       >
-        Comments
       </div>
       <div
-        class="utils_container mx-4 gap-2 cursor-pointer"
+        class="utils_container mx-4 gap-2 cursor-pointer relative"
         phx-click="save_post"
         phx-value-post_id={@post.id}
       >
-        <div styles="stroke: rgba(75, 85, 99, 0.7));">
-          <svg
-            style="stroke: #4b5563;  display: inline; fill: #ffffff"
-            width="30px"
-            height="30px"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M19 19.2674V7.84496C19 5.64147 17.4253 3.74489 15.2391 3.31522C13.1006 2.89493 10.8994 2.89493 8.76089 3.31522C6.57467 3.74489 5 5.64147 5 7.84496V19.2674C5 20.6038 6.46752 21.4355 7.63416 20.7604L10.8211 18.9159C11.5492 18.4945 12.4508 18.4945 13.1789 18.9159L16.3658 20.7604C17.5325 21.4355 19 20.6038 19 19.2674Z"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              fill={get_style(@user_posts, @post, fn x -> x end)}
-              stoke="black"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </div>
+        <div
+          style="padding: 15px"
+          id={"share_utils_toggle" <> Integer.to_string(@post.id) }
+          phx-click-away={
+            Phoenix.LiveView.JS.remove_class("drop_down_visible ",
+              to: "#share_items_list" <> Integer.to_string(@post.id)
+            )
+          }
+          phx-click={
+            Phoenix.LiveView.JS.toggle_class("drop_down_visible ",
+              to: "#share_items_list" <> Integer.to_string(@post.id)
+            )
+          }
+        >
+          <div>
+            <div class="flex gap-2 cursor-pointer ">
+              <.icon name="hero-share" class="h-7 w-7 flex-none text-greyfriend_2 " />
+              <div class="font-semibold text-xl">Share</div>
+            </div>
+            <div class="drop_down_home" id={"share_items_list"<> Integer.to_string(@post.id)}>
+              <div class="drop_down_inner_container_account">
+                <div
+                  data-to="#control-codes"
+                  class="drop_down_buttons flex gap-4"
+                  phx-hook="Copy"
+                  id={"drop_hook"<>Integer.to_string(@post.id)}
+                >
+                  <input
+                    type="text"
+                    class="hidden"
+                    id="control-codes"
+                    value={~p"/show_recipe/#{Integer.to_string(@post.reference_id)}"}
+                  />
 
-        <div class="md:block hidden">
-          Save Post
+                  <.icon
+                    name="hero-link"
+                    class="h-7 w-7 flex-none text-greyfriend_2 cursor-pointer"
+                  />
+                  <button class="">Copy link</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

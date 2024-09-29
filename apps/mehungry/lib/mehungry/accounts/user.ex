@@ -12,6 +12,8 @@ defmodule Mehungry.Accounts.User do
     field :profile_pic, :string
     field :name, :string
 
+    has_one :recipes, Mehungry.Food.Recipe
+
     timestamps()
   end
 

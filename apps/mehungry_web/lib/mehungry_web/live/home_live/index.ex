@@ -13,28 +13,6 @@ defmodule MehungryWeb.HomeLive.Index do
   alias Mehungry.Users
   alias Mehungry.Food
   alias Mehungry.Food.RecipeUtils
-  alias Mehungry.Food.Recipe
-
-  @impl true
-  def handle_info(%{new_comment: comment}, socket) do
-    recipe = socket.assigns.recipe
-    comment = Posts.get_comment!(comment.id)
-
-    comments =
-      Enum.into(Enum.filter(recipe.comments, fn x -> x.id != comment.id end), [comment])
-      |> Enum.sort_by(& &1.updated_at)
-
-    recipe = %Recipe{
-      recipe
-      | comments: comments
-    }
-
-    socket =
-      socket
-      |> assign(:recipe, recipe)
-
-    {:noreply, socket}
-  end
 
   def mount_search(_params, session, socket) do
     user =
@@ -71,7 +49,7 @@ defmodule MehungryWeb.HomeLive.Index do
       end
 
     Enum.each(posts, fn post ->
-      Posts.subscribe_to_recipe(%{recipe_id: post.reference_id})
+      Posts.subscribe_to_post(%{post_id: post.id})
     end)
 
     {:ok,
@@ -80,6 +58,7 @@ defmodule MehungryWeb.HomeLive.Index do
      |> assign(:posts, posts)
      |> assign(:user_posts, user_posts)
      |> assign(:user_profile, user_profile)
+     |> assign(:page_title, "Food recipe feed")
      |> assign(:user_follows, user_follows)
      |> assign(:search_changeset, nil)
      |> assign(:query_string, "")
@@ -193,6 +172,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
+    Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
 
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.user
@@ -209,6 +189,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
     socket
     |> assign(:nutrients, nutrients)
+    |> assign(:page_title,  recipe.title <>  " Instructions and nutrition facts")
     |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
     |> assign(:user_recipes, user_recipes)

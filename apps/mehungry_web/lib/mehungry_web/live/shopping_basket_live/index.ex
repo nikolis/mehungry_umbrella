@@ -21,6 +21,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
      socket
      |> assign(:user, user)
      |> assign(:shopping_basket, shopping_basket)
+     |> assign(:page_title, "Ingredient shopping basket")
      |> assign(:shopping_baskets, shopping_baskets)
      |> assign(:processing_basket, %ShoppingBasket{})
      |> assign_form(changeset)

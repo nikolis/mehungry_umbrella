@@ -10,7 +10,7 @@ defmodule Mehungry.FdcFoodParserSplitter do
     the_ingredients = json_body["SRLegacyFoods"]
     # num_slices = ceil(length(the_ingredients)/150)
     # the_ingredients_index = Enum.with_index(the_ingredients)
-    chunks = Enum.chunk_every(the_ingredients, 50)
+    chunks = Enum.chunk_every(the_ingredients, 10)
     chunks_indexed = Enum.with_index(chunks)
 
     Enum.each(chunks_indexed, fn {x, ind} ->

@@ -5,7 +5,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   import MehungryWeb.RecipeComponents
 
   alias Mehungry.Posts.Comment
-  alias Mehungry.Posts
+  alias Mehungry.{Posts, Users}
   alias Mehungry.Food.Recipe
 
   embed_templates("components/*")
@@ -19,6 +19,29 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign(:reply, nil)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("save_user_recipe", %{"recipe_id" => recipe_id, "dom_id" => _dom_id}, socket) do
+    case is_nil(socket.assigns.user) do
+      true ->
+        socket = assign(socket, :must_be_loged_in, 1)
+        {:noreply, socket}
+
+      false ->
+        {recipe_id, _ignore} = Integer.parse(recipe_id)
+        toggle_user_saved_recipes(socket, recipe_id)
+
+        Users.list_user_saved_recipes(socket.assigns.user)
+        |> Enum.map(fn x -> x.recipe_id end)
+
+        user_recipes =
+          Users.list_user_saved_recipes(socket.assigns.user)
+          |> Enum.map(fn x -> x.recipe_id end)
+
+        socket = assign(socket, :user_recipes, user_recipes)
+        {:noreply, socket}
+    end
   end
 
   @impl true
@@ -39,6 +62,26 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     end
   end
 
+  @impl true
+  def handle_event("vote_comment", %{"id" => comment_id, "reaction" => reaction} = params, socket) do
+    case is_nil(socket.assigns.user) do
+      true ->
+        socket = assign(socket, :must_be_loged_in, 1)
+        {:noreply, socket}
+
+      false ->
+        {comment_id, _} = Integer.parse(comment_id)
+
+        socket =
+          socket
+          |> assign(:reply, %{comment_id: comment_id})
+
+        Mehungry.Posts.vote_comment(comment_id, socket.assigns.user.id, reaction)
+
+        {:noreply, socket}
+    end
+  end
+
   def get_positive_votes(votes) do
     Enum.reduce(votes, 0, fn x, acc ->
       case x.positive do
@@ -49,6 +92,22 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           acc
       end
     end)
+  end
+
+  def toggle_user_saved_recipes(socket, recipe_id) do
+    case is_nil(socket.assigns.user) do
+      true ->
+        assign(socket, :must_be_loged_in, 1)
+
+      false ->
+        case Enum.any?(socket.assigns.user_recipes, fn x -> x == recipe_id end) do
+          true ->
+            Users.remove_user_saved_recipe(socket.assigns.user.id, recipe_id)
+
+          false ->
+            Users.save_user_recipe(socket.assigns.user.id, recipe_id)
+        end
+    end
   end
 
   def get_style2(item_list, user, positive) do
@@ -76,17 +135,25 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     <div id="recipe_presentation_modal" class="sm:p-6">
       <div class="basic_2_col_grid_cont">
         <div class="w-full">
+          <.recipe_like_container
+            type="browse"
+            user_recipes={@user_recipes}
+            recipe={@recipe}
+            id={@id}
+            myself={@myself}
+          />
           <img class="min-h-96 rounded-2xl w-full" src={@recipe.image_url} />
+          <h3 class="m-2 mt-4  text-center w-full"><%= @recipe.title %></h3>
+          <.recipe_attrs_container recipe={@recipe} />
         </div>
         <div class="w-full">
-          <.user_overview_card user={@recipe.user} . />
-          <h3 class="m-2 mt-4  text-center w-full"><%= @recipe.title %></h3>
-          <div style="">
+          <.user_overview_card user={@recipe.user} user_follows={@user_follows} />
+          <div class="mt-8">
             <.recipe_details recipe={@recipe} nutrients={@nutrients} primary_size={@primary_size} . />
           </div>
           <div class="post_card w-11/12 mb-12">
             <div class="grid grid-cols-2 h-fit mt-16">
-              <h3 class="text-lg text-start ">Comments</h3>
+              <h3 class="text-lg text-start "><%= "Comments (#{length(@recipe.comments)})" %></h3>
               <div
                 class="relative"
                 phx-click={JS.toggle_class("h-0 overflow-hidden mt-4", to: ".comment")}
@@ -105,6 +172,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                   current_user={@user}
                   live_action={@live_action}
                   page_title={@page_title}
+                  myself={@myself}
                   reply={@reply}
                 />
               <% end %>
@@ -127,7 +195,32 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     """
   end
 
+  @impl true
+  def handle_info(%{new_vote: vote, type_: _type_}, socket) do
+    IO.inspect(vote, label: "The vote received")
+    post = Posts.get_post!(vote.post_id)
+
+    posts =
+      Enum.map(socket.assigns.posts, fn x ->
+        case x.id == post.id do
+          false ->
+            x
+
+          true ->
+            post
+        end
+      end)
+
+    socket =
+      socket
+      |> assign(:posts, posts)
+
+    {:noreply, socket}
+  end
+
   def handle_info(%{new_comment: comment}, socket) do
+    IO.inspect("New comment inside recipe detals live")
+
     recipe = socket.assigns.recipe
     comment = Posts.get_comment!(comment.id)
 
@@ -149,10 +242,20 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   @impl true
   def update(assigns, socket) do
+    #IO.inspect(assigns.recipe, label: "Recipe from recipe detauls index")
+    user_follows =
+      if(is_nil(Map.get(assigns, :user_follows))) do
+        nil
+      else
+        assigns.user_follows
+      end
+
     socket =
       assign(socket, assigns)
       |> assign(:reply, nil)
       |> assign(assigns)
+      |> assign(:user_follows, user_follows)
+      |> assign(:recipe, assigns.recipe)
       |> assign(
         :comment,
         get_when_first_exists(assigns.user, fn ->

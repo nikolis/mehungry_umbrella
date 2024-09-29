@@ -27,6 +27,16 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           Accounts.get_user_by_session_token(session["user_token"])
       end
 
+    user_follows =
+      case is_nil(user) do
+        true ->
+          nil
+
+        false ->
+          Users.list_user_follows(user)
+          |> Enum.map(fn x -> x.follow_id end)
+      end
+
     user_profile =
       case is_nil(user) do
         true ->
@@ -79,6 +89,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      |> assign(:user_profile, user_profile)
      |> assign(:query, query)
      |> assign(:must_be_loged_in, nil)
+     |> assign(:user_follows, user_follows)
      |> assign(:user, user)
      |> assign(:reply, nil)
      |> assign_recipe_search()}
@@ -158,8 +169,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         toggle_user_saved_recipes(socket, recipe_id)
         user_recipes = Users.list_user_saved_recipes(socket.assigns.user)
         user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
-        # socket = stream_delete(socket, :recipes, recipe)
-        # socket = stream_insert(socket, :recipes, recipe)
         socket = assign(socket, :user_recipes, user_recipes)
         {:noreply, socket}
     end
@@ -184,7 +193,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           |> Enum.map(fn x -> x.recipe_id end)
 
         socket = assign(socket, :user_recipes, user_recipes)
-        {:noreply, push_patch(socket, to: "/browse")}
+        {:noreply, socket}
     end
   end
 
@@ -349,7 +358,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:query_string, query_str)
     |> assign(:search_changeset, nil)
     |> assign(:user_profile, user_profile)
-    |> assign(:page_title, query_str)
+    |> assign(:page_title, "search for recipe  " <> query_str)
     |> assign(:query, %{title: query})
   end
 
@@ -403,6 +412,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       )
       |> assign(:user_recipes, user_recipes)
       |> assign(:page, 1)
+      |> assign(:page_title, "Browse food recipes")
       |> assign(:query_string, "")
       |> assign(:search_changeset, nil)
       |> assign(:user_profile, user_profile)
@@ -444,6 +454,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:nutrients, nutrients)
     |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
+    |> assign(:page_title,  recipe.title <>  " Instructions and nutrition facts")
     |> stream(:recipes, recipes)
     |> assign(:user_recipes, user_recipes)
   end

@@ -50,27 +50,6 @@ defmodule Mehungry.Posts do
     |> Enum.map(fn {x, _y} -> x end)
   end
 
-  def subscribe_to_recipe(%{recipe_id: recipe_id}) do
-    Phoenix.PubSub.subscribe(Mehungry.PubSub, "recipe:" <> to_string(recipe_id))
-  end
-
-  defp broadcast_vote({:ok, vote}, type_) do
-    Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(vote.post_id), %{
-      new_vote: vote,
-      type_: type_
-    })
-
-    {:ok, vote}
-  end
-
-  defp broadcast_change({:ok, comment}) do
-    Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(comment.recipe_id), %{
-      new_comment: comment
-    })
-
-    {:ok, comment}
-  end
-
   @doc """
   Gets a single post.
 
@@ -91,10 +70,48 @@ defmodule Mehungry.Posts do
   def get_post!(id) do
     Repo.get!(Post, id)
     |> Repo.preload([
+      :user,
       :upvotes,
       :downvotes,
-      reference: [:user, recipe_ingredients: [:ingredient]]
+      # comments: [:user],
+      reference: [:user, recipe_ingredients: [:ingredient], comments: [:user]]
     ])
+  end
+
+  def subscribe_to_recipe(%{recipe_id: recipe_id}) do
+    Phoenix.PubSub.subscribe(Mehungry.PubSub, "recipe:" <> to_string(recipe_id))
+  end
+
+  defp broadcast_change({:ok, comment}) do
+    IO.inspect(comment, label: "Broadcasting Changes in commnent")
+
+    Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(comment.recipe_id), %{
+      new_comment: comment
+    })
+
+    {:ok, comment}
+  end
+
+  def subscribe_to_post(%{post_id: post_id}) do
+    Phoenix.PubSub.subscribe(Mehungry.PubSub, "post:" <> to_string(post_id))
+  end
+
+  defp broadcast_vote({:ok, vote}, type_) do
+    Phoenix.PubSub.broadcast(Mehungry.PubSub, "post:" <> to_string(vote.post_id), %{
+      new_vote: vote,
+      type_: type_
+    })
+
+    {:ok, vote}
+  end
+
+  defp broadcast_comment_vote({:ok, comment}, type_) do
+    Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(comment.recipe_id), %{
+      new_comment_vote: comment,
+      type_: type_
+    })
+
+    {:ok, comment}
   end
 
   @doc """
@@ -225,7 +242,6 @@ defmodule Mehungry.Posts do
 
     case result do
       {:ok, _comment} ->
-        IO.inspect("BIRAD CASTING CHANGE")
         broadcast_change(result)
         result
 
@@ -333,6 +349,7 @@ defmodule Mehungry.Posts do
     case result do
       {:ok, comment_answer} ->
         comment = get_comment!(comment_answer.comment_id)
+        IO.inspect(comment, label: "Coment to bvroad")
         broadcast_change({:ok, comment})
         result
 
@@ -528,6 +545,8 @@ defmodule Mehungry.Posts do
 
   """
   def create_post_downvote(attrs \\ %{}) do
+    IO.inspect("Down vote")
+
     %PostDownvote{}
     |> PostDownvote.changeset(attrs)
     |> Repo.insert()
@@ -578,13 +597,13 @@ defmodule Mehungry.Posts do
 
     if not is_nil(vote) and vote.positive != reaction do
       update_comment_vote(vote, %{positive: get_positive.(reaction)})
-      broadcast_vote({:ok, comment}, "vote")
+      broadcast_comment_vote({:ok, comment}, "vote")
     else
       %CommentVote{}
       |> CommentVote.changeset(%{user_id: user_id, comment_id: comment_id, positive: reaction})
       |> Repo.insert()
 
-      broadcast_vote({:ok, comment}, "vote")
+      broadcast_comment_vote({:ok, comment}, "vote")
     end
   end
 

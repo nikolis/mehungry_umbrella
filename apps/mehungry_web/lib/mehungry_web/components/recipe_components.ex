@@ -116,7 +116,7 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_ingredients(%{recipe_ingredients: _recipe_ingredients} = assigns) do
     ~H"""
-    <div style="max-height: 300px;" class="overflow-auto">
+    <div style="max-height: 300px;" class="overflow-auto p-4">
       <%= for ingredient <- @recipe_ingredients do %>
         <div class="ingredient_details_container font-normal	 ">
           <div><%= ingredient.ingredient.name %></div>
@@ -131,10 +131,10 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_nutrients(%{nutrients: _nutrients, primary_size: _primary_size} = assigns) do
     ~H"""
-    <div class="accordion overflow-auto	max-h-1/2 font-normal" style="max-height: 300px;">
+      <div class="accordion overflow-auto	max-h-1/2 font-normal" style="max-height: 300px;" >
       <%= for {n, index} <-  Enum.with_index(@nutrients) do %>
         <%= if !is_nil(n) do %>
-          <div class="accordion-panel">
+          <div class="accordion-panel" phx-hook="AccordionHook" id={"nutrient" <> Integer.to_string(index)}  >
             <h2 id={"panel" <> to_string(index) <> "-title"}>
               <%= if !is_nil(n[:children]) do %>
                 <button
@@ -234,99 +234,174 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_steps(%{steps: _steps} = assigns) do
     ~H"""
-    <div class="overflow-auto" style="height: 300px;">
+    <div class="overflow-auto p-4" style="height: 300px;">
       <%= for step <- @steps do %>
-        <div class="step_details_container ">
-          <div><%= step.index %></div>
-          <div class="font-normal"><%= step.description %></div>
+        <div class="step_details_container accordion-panel">
+          <div class="font-semibold text-lg"><%= step.index %></div>
+          <div class="text-lg"><%= step.description %></div>
         </div>
       <% end %>
     </div>
     """
   end
 
+  def recipe_attrs_container(assigns) do
+    ~H"""
+    <div class="recipe_attrs_container mt-6">
+      <div>
+        <div><img style="margin:auto;width:35px;height:35px;" src="/images/time_spent.svg" /></div>
+
+        <div class="recipe_attrs_text text-center">
+          <%= case is_nil(@recipe.preperation_time_lower_limit) or is_nil(@recipe.cooking_time_lower_limit) do %>
+            <% true -> %>
+              <div>N/A</div>
+            <% false -> %>
+              <%= @recipe.preperation_time_lower_limit + @recipe.cooking_time_lower_limit %>
+          <% end %>
+        </div>
+      </div>
+      <div>
+        <div><img style="margin:auto;width:35px;height:35px;" src="/images/food_dif.svg" /></div>
+
+        <div class="recipe_attrs_text text-center">
+          <%= case @recipe.difficulty do %>
+            <% 1 -> %>
+              Easy
+            <% 2 -> %>
+              Medium
+            <% 3 -> %>
+              Difficult
+            <% _ -> %>
+              N/A
+          <% end %>
+        </div>
+      </div>
+      <div>
+        <div><img src="/images/bowl.svg" style="margin: auto;width:35px;height:35px;" /></div>
+        <div class="recipe_attrs_text text-center"><%= @recipe.servings %></div>
+      </div>
+    </div>
+    """
+  end
+
+  def recipe_card(%{myself: _myself} = assigns) do
+    ~H"""
+    <div id={"recipe-card-details-container-#{@recipe.id}"} } class="recipe_card">
+      <.recipe_like_container
+        type={@type}
+        user_recipes={@user_recipes}
+        recipe={@recipe}
+        id={@id}
+        myself={@myself}
+      />
+      <.link
+        phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
+        id={"recipe-card-details-link-#{@recipe.id}"}
+        patch={@path_to_details}
+      >
+        <img class="w-full rounded-xl m-auto" src={@recipe.image_url} />
+        <h1 class="recipe_title text-center"><%= @recipe.title %></h1>
+        <div class="recipe_sub_text text-center">
+          Sub title
+        </div>
+        <.recipe_attrs_container recipe={@recipe} />
+      </.link>
+    </div>
+    """
+  end
+
   def recipe_card(assigns) do
     ~H"""
-    <.link
-      phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
-      class="recipe_card"
-      patch={@path_to_details}
-      id={@id}
-    >
-      <img class="w-full rounded-xl m-auto" src={@recipe.image_url} />
-      <div class="recipe_like_container">
-        <%= case @type do %>
-          <% "saved" -> %>
-            <button phx-click="unsave-recipe" phx-value-id={@recipe.id}>
-              <.icon name="hero-trash-solid" class="h-5 w-5" />
-            </button>
-          <% "browse" -> %>
-            <svg
-              width="35px"
-              height="35px"
-              viewBox="0 0 24 24"
-              fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
-              XMLNS="http://www.w3.org/2000/svg"
-              phx-click="save_user_recipe"
-              ,
-              phx-value-recipe_id={@recipe.id}
-              phx-value-dom_id={@id}
-            >
-              <path
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z"
-                stroke="#eb1111"
-                stroke-width="1"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          <% "created" -> %>
-            <button phx-click="edit-recipe" phx-value-id={@recipe.id}>
-              <.icon name="hero-pencil-square-solid" />
-            </button>
-        <% end %>
-      </div>
-      <h1 class="recipe_title text-center"><%= @recipe.title %></h1>
-      <div class="recipe_sub_text text-center">
-        Sub title
-      </div>
-      <div class="recipe_attrs_container mt-6">
-        <div>
-          <div><img style="margin:auto;width:35px;height:35px;" src="/images/time_spent.svg" /></div>
+    <div id={"recipe-card-details-container-#{@recipe.id}"} } class="recipe_card">
+      <.recipe_like_container type={@type} user_recipes={@user_recipes} recipe={@recipe} id={@id} />
+      <.link
+        phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
+        id={"recipe-card-details-link-#{@recipe.id}"}
+        patch={@path_to_details}
+      >
+        <img class="w-full rounded-xl m-auto" src={@recipe.image_url} />
+        <h1 class="recipe_title text-center"><%= @recipe.title %></h1>
+        <div class="recipe_sub_text text-center">
+          Sub title
+        </div>
+        <.recipe_attrs_container recipe={@recipe} />
+      </.link>
+    </div>
+    """
+  end
 
-          <div class="recipe_attrs_text text-center">
-            <%= case is_nil(@recipe.preperation_time_lower_limit) or is_nil(@recipe.cooking_time_lower_limit) do %>
-              <% true -> %>
-                <div>N/A</div>
-              <% false -> %>
-                <%= @recipe.preperation_time_lower_limit + @recipe.cooking_time_lower_limit %>
-            <% end %>
-          </div>
-        </div>
-        <div>
-          <div><img style="margin:auto;width:35px;height:35px;" src="/images/food_dif.svg" /></div>
+  def recipe_like_container(%{myself: _myself} = assigns) do
+    ~H"""
+    <div class="bg-white p-2 rounded-full absolute top-5 right-5 md:top-8 md:left-8 md:w-12 md:h-12 ">
+      <%= case @type do %>
+        <% "saved" -> %>
+          <button phx-click="unsave-recipe" phx-value-id={@recipe.id}>
+            <.icon name="hero-trash-solid" class="h-5 w-5" />
+          </button>
+        <% "browse" -> %>
+          <svg
+            width="35px"
+            height="35px"
+            viewBox="0 0 24 24"
+            fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
+            phx-click="save_user_recipe"
+            phx-target={@myself}
+            phx-value-recipe_id={@recipe.id}
+            phx-value-dom_id={@id}
+          >
+            <path
+              fill-rule="evenodd"
+              clip-rule="evenodd"
+              d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z"
+              stroke="#eb1111"
+              stroke-width="1"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        <% "created" -> %>
+          <button phx-click="edit-recipe" phx-value-id={@recipe.id}>
+            <.icon name="hero-pencil-square-solid" />
+          </button>
+      <% end %>
+    </div>
+    """
+  end
 
-          <div class="recipe_attrs_text text-center">
-            <%= case @recipe.difficulty do %>
-              <% 1 -> %>
-                Easy
-              <% 2 -> %>
-                Medium
-              <% 3 -> %>
-                Difficult
-              <% _ -> %>
-                N/A
-            <% end %>
-          </div>
-        </div>
-        <div>
-          <div><img src="/images/bowl.svg" style="margin: auto;width:35px;height:35px;" /></div>
-          <div class="recipe_attrs_text text-center"><%= @recipe.servings %></div>
-        </div>
-      </div>
-    </.link>
+  def recipe_like_container(assigns) do
+    ~H"""
+    <div class="recipe_like_container z-50">
+      <%= case @type do %>
+        <% "saved" -> %>
+          <button phx-click="unsave-recipe" phx-value-id={@recipe.id}>
+            <.icon name="hero-trash-solid" class="h-5 w-5" />
+          </button>
+        <% "browse" -> %>
+          <svg
+            width="35px"
+            height="35px"
+            viewBox="0 0 24 24"
+            fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
+            phx-click="save_user_recipe"
+            phx-value-recipe_id={@recipe.id}
+            phx-value-dom_id={@id}
+          >
+            <path
+              fill-rule="evenodd"
+              clip-rule="evenodd"
+              d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z"
+              stroke="#eb1111"
+              stroke-width="1"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        <% "created" -> %>
+          <button phx-click="edit-recipe" phx-value-id={@recipe.id}>
+            <.icon name="hero-pencil-square-solid" />
+          </button>
+      <% end %>
+    </div>
     """
   end
 end

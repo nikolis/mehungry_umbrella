@@ -2,6 +2,21 @@ import "selectize";
 
 let Hooks = {}
 
+Hooks.Copy = {
+  mounted() {
+    let { to } = this.el.dataset;
+    this.el.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      let text = document.querySelector(to).value
+      var host = window.location.protocol + "//" + window.location.host;
+
+      navigator.clipboard.writeText(host + text).then(() => {
+        console.log("All done again!")
+      })
+    });
+  },
+}
+
 Hooks.ViewportResizeHooks = {
 
   mounted () {
@@ -106,23 +121,6 @@ function swap_ingredients() {
 Hooks.SwapElement = {
 	mounted() {
 		document.getElementById("button_swap_ingredients").onclick = function() {swap_ingredients()};
-	}
-}
-
-Hooks.MenuToggleHook = {
-	mounted() {
-		var drop_down_open = false;
-		$('#menu_utils_toggle').on("click", function() {
-			if (!drop_down_open) {
-				$('#menu_items_list').addClass("drop_down_open");
-				$('#menu_items_list').removeClass("drop_down");
-				drop_down_open = true;
-			} else {
-				$('#menu_items_list').removeClass("drop_down_open");
-				$('#menu_items_list').addClass("drop_down");
-				drop_down_open = false;
-			}
-		});
 	}
 }
 

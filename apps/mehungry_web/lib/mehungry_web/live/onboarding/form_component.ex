@@ -27,7 +27,13 @@ defmodule MehungryWeb.Onboarding.FormComponent do
           <.input field={@form[:nothing]} type="checkbox" label="Non of the above" />
         </div>
         <:actions>
-          <.button class="primary_outline_button" phx-disable-with="Saving...">Save Post</.button>
+          <.button
+            id="onboarding_submit_button"
+            class="primary_outline_button"
+            phx-disable-with="Saving..."
+          >
+            Save
+          </.button>
         </:actions>
       </.simple_form>
     </div>
