@@ -44,8 +44,6 @@ ENV DATABASE_URL ${DATABASE_URL}
 RUN mkdir ./apps
 RUN mkdir ./apps/mehungry
 
-COPY ./apps/mehungry/lib ./apps/mehungry/lib
-
 # Install mix dependecies
 COPY mix.* ./
 COPY ./apps/mehungry/mix.* ./apps/mehungry
@@ -53,7 +51,7 @@ COPY ./apps/mehungry/mix.* ./apps/mehungry
 COPY config ./config
 
 RUN mix deps.get --only ${MIX_ENV}
-RUN MIX_ENV=prod mix compile
+#RUN MIX_ENV=prod mix compile
 #RUN mix assets.build  
 #RUN mix deps.compile
 
