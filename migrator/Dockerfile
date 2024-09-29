@@ -48,6 +48,10 @@ RUN mkdir ./apps/mehungry
 COPY mix.* ./
 COPY ./apps/mehungry/mix.* ./apps/mehungry
 
+COPY ./apps/mehungry/lib ./apps/mehungry/lib
+# Copy app code
+COPY apps ./apps
+
 COPY config ./config
 
 RUN mix deps.get --only ${MIX_ENV}
