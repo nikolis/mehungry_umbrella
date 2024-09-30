@@ -52,7 +52,7 @@ jobs:
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
            task-definition: migrator-task-definition.json
-           container-name: mehungry_migrator 
+           container-name: mehungry_migrator_container 
            image: ${{ steps.build-image.outputs.image }}
  
       - name: Deploy Amazon ECS task definition
