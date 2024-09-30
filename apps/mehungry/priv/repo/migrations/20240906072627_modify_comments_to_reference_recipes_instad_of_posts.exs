@@ -18,15 +18,15 @@ defmodule Mehungry.Repo.Migrations.ModifyCommentsToReferenceRecipesInstadOfPosts
       repo.update(changeset)
     end)
 
-    alter table(:comments) do
-      remove(:post_id)
-    end
+    #alter table(:comments) do
+      #remove(:post_id)
+    #end
   end
 
   def down do
     alter table(:comments) do
       remove(:recipe_id)
-      add :post_id, references(:posts, on_delete: :delete_all)
+     # add :post_id, references(:posts, on_delete: :delete_all)
     end
   end
 end

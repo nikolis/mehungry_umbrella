@@ -9,6 +9,7 @@ defmodule Mehungry.Posts.Comment do
 
     belongs_to :recipe, Mehungry.Food.Recipe
     belongs_to :user, Mehungry.Accounts.User
+    belongs_to :post, Mehungry.Posts.Post 
 
     has_many :comment_answers, Mehungry.Posts.CommentAnswer
     has_many :votes, Mehungry.Posts.CommentVote
