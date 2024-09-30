@@ -2,7 +2,7 @@
     "family": "mehungry_migrator",
     "containerDefinitions": [
         {
-            "name": "mehungry_migrator_container",
+            "name": "mehungry_app",
             "image": "011528270584.dkr.ecr.eu-central-1.amazonaws.com/mehungry_ecr:4b4bda89ec5f6e97d357cd09a28ef677d5fa9a41",
             "cpu": 0,
             "portMappings": [
