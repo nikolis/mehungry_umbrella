@@ -2,12 +2,12 @@
     "family": "mehungry_migrator",
     "containerDefinitions": [
         {
-            "name": "mehungry_app",
+            "name": "mehungry_migrator",
             "image": "011528270584.dkr.ecr.eu-central-1.amazonaws.com/mehungry_ecr:4b4bda89ec5f6e97d357cd09a28ef677d5fa9a41",
             "cpu": 0,
             "portMappings": [
                 {
-                    "name": "mehungry_app-4000-tcp",
+                    "name": "mehungry_migrator-4000-tcp",
                     "containerPort": 4000,
                     "hostPort": 4000,
                     "protocol": "tcp",
