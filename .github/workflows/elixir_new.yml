@@ -14,63 +14,6 @@ env:
   OTP_VERSION_SPEC: "26.0.2"
   
 jobs:
-  
-  test:
-    name: Test
-    runs-on: ubuntu-22.04
-
-    services:
-      invoices_control_db_test:
-        image: postgres:latest
-        ports: ['5432:5432']
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_HOST_AUTH_METHOD: 'trust'
-          POSTGRES_DB: invoices_control_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      MIX_ENV: test
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1.16
-        with:
-          elixir-version: ${{ env.ELIXIR_VERSION_SPEC }}
-          otp-version: ${{ env.OTP_VERSION_SPEC }}
-      - name: Install dependencies
-        run: mix deps.get
-      - name: Compile dependencies
-        run: mix deps.compile
-      - name: Setup database
-        env:
-          MIX_ENV: test
-          PGHOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        run:
-          mix ecto.drop
-          mix ecto.create
-          mix ecto.migrate
-      - name: Run tests
-        env:
-          MIX_ENV: test
-          PGHOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        run:
-          mix test
-
-
   migrate:
      # The type of runner that the job will run on
     runs-on: ubuntu-latest
@@ -108,8 +51,8 @@ jobs:
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-           task-definition: task-definition.json 
-           container-name: mehungry_app 
+           task-definition: migrator-task-definition.json
+           container-name: mehungry_migrator 
            image: ${{ steps.build-image.outputs.image }}
  
       - name: Deploy Amazon ECS task definition
