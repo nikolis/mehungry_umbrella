@@ -1,0 +1,46 @@
+{
+    "family": "mehungry_migrator",
+    "containerDefinitions": [
+        {
+            "name": "mehungry_migrator_container",
+            "image": "011528270584.dkr.ecr.eu-central-1.amazonaws.com/mehungry_ecr:4b4bda89ec5f6e97d357cd09a28ef677d5fa9a41",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "name": "mehungry_app-4000-tcp",
+                    "containerPort": 4000,
+                    "hostPort": 4000,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/mehungry_migrator",
+                    "mode": "non-blocking",
+                    "awslogs-create-group": "true",
+                    "max-buffer-size": "25m",
+                    "awslogs-region": "eu-central-1",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "systemControls": []
+        }
+    ],
+    "executionRoleArn": "arn:aws:iam::011528270584:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "3072",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    }
+}
