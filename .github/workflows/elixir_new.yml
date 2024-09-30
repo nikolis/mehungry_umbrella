@@ -34,7 +34,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       # Runs a single command using the runners shell
-      - name: docker build mehungry_migrator_container 
+      - name: docker build mehungry_migrator 
         id: build-image
         env:
           MIX_ENV: "prod"
@@ -52,7 +52,7 @@ jobs:
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
            task-definition: migrator-task-definition.json
-           container-name: mehungry_migrator_container 
+           container-name: mehungry_migrator 
            image: ${{ steps.build-image.outputs.image }}
  
       - name: Deploy Amazon ECS task definition
