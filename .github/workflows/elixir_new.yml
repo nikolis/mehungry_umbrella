@@ -34,7 +34,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       # Runs a single command using the runners shell
-      - name: docker build mehungry_app 
+      - name: docker build mehungry_migrator_container 
         id: build-image
         env:
           MIX_ENV: "prod"
