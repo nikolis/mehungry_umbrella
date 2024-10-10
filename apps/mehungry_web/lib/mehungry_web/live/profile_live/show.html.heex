@@ -34,7 +34,7 @@
           <div>
             <div class="flex items-center gap-2 cursor-pointer text-md sm:text-xl ">
               <.icon name="hero-share" class="w-6 h-6 sm:h-7 sm:w-7 flex-none text-greyfriend_2 " />
-              <div class="">Share </div>
+              <div class="">Share</div>
             </div>
             <div class="drop_down_home" id={"share_items_list"<> Integer.to_string(@user.id)}>
               <div class="drop_down_inner_container_account text-greyfriend3 text-md ">
@@ -77,6 +77,7 @@
       myself={@myself}
       total_recipes={count_user_created_recipes(@user.id)}
       user_follows={@user_follows}
+      user_recipes={@user_recipes}
       user_profile={@user_profile}
       current_user={@current_user}
     />

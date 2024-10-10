@@ -34,4 +34,64 @@ defmodule MehungryWeb.BrowserLiveTest do
     assert view =~ "ingredients"
     assert view =~ "nutrients"
   end
+
+  test "Test BrowserLive Like on recipe details ", %{conn: conn, user: user} do
+    recipe = recipe_fixture(user)
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
+
+    Accounts.update_user_profile(
+      user_profile,
+      %{onboarding_level: 1}
+    )
+
+    {:ok, index_live, html} =
+      live(conn, Routes.recipe_browser_index_path(conn, :show_recipe, recipe.id))
+
+    assert html =~ recipe.image_url
+    assert html =~ recipe.title
+
+    assert html =~ recipe.title
+    assert html =~ "steps"
+    assert html =~ "ingredients"
+    assert html =~ "nutrients"
+    like_recipe_button = "#recipe_details_componentlike_container"
+
+    view =
+      index_live
+      |> element(like_recipe_button)
+      |> render_click()
+
+    assert view =~ recipe.title
+    [user_saved_recipe] = Mehungry.Users.list_user_saved_recipes(user)
+    assert user_saved_recipe.recipe_id == recipe.id
+  end
+
+  test "Test BrowserLive  Like Recipe", %{conn: conn, user: user} do
+    recipe = recipe_fixture(user)
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
+
+    Accounts.update_user_profile(
+      user_profile,
+      %{onboarding_level: 1}
+    )
+
+    {:ok, index_live, html} = live(conn, Routes.recipe_browser_index_path(conn, :index))
+    assert html =~ recipe.image_url
+    assert html =~ recipe.title
+
+    like_recipe_button = "#button_save_recipe#{recipe.id}"
+
+    view =
+      index_live
+      |> element(like_recipe_button)
+      |> render_click()
+
+    assert view =~ recipe.title
+    [user_saved_recipe] = Mehungry.Users.list_user_saved_recipes(user)
+    assert user_saved_recipe.recipe_id == recipe.id
+
+    _element =
+      index_live
+      |> element(like_recipe_button)
+  end
 end

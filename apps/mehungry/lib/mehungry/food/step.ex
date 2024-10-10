@@ -10,12 +10,13 @@ defmodule Mehungry.Food.Step do
     field :index, :integer
 
     field :delete, :boolean, virtual: true
+    field :temp_id, :string, virtual: true
   end
 
   def changeset(step, attrs) do
     changeset =
       step
-      |> cast(attrs, [:title, :description, :delete, :index])
+      |> cast(attrs, [:title, :description, :delete, :index, :temp_id])
       |> validate_required([:description, :index])
 
     if get_change(changeset, :delete) do

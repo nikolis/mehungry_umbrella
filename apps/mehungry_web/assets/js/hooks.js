@@ -67,8 +67,6 @@ Hooks.SelectComponent = {
     const originalID = this.el.id
     const referenceIndex = this.ref.getAttribute("data-reference-index")
 
-    console.log(referenceIndex)
-    console.log(refAt)
     var event_listener;
     if (referenceIndex) {
       event_listener = "phx:selected_id"+ referenceIndex + refAt
@@ -175,8 +173,10 @@ function toggleAccordion(panelToActivate) {
   const activeButton = panelToActivate.querySelector("button");
   const activePanel = panelToActivate.querySelector(".accordion-content");
   const activePanelIsOpened = activeButton.getAttribute("aria-expanded");
-
-  if (activePanelIsOpened === "true") {
+  console.log(activePanelIsOpened)
+  console.log("adfs")
+  if (activePanelIsOpened === true || activePanelIsOpened === "true") {
+    console.log("Got in here")
     panelToActivate
       .querySelector("button")
       .setAttribute("aria-expanded", false);
@@ -185,8 +185,8 @@ function toggleAccordion(panelToActivate) {
       .querySelector(".accordion-content")
       .setAttribute("aria-hidden", true);
   } else {
+    console.log("Got in here through")
     panelToActivate.querySelector("button").setAttribute("aria-expanded", true);
-
     panelToActivate
       .querySelector(".accordion-content")
       .setAttribute("aria-hidden", false);

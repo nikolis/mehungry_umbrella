@@ -51,12 +51,6 @@
   </MehungryWeb.RecipeComponents.recipe_modal>
 
   <%= for post <- @posts do %>
-    <.post_card
-      post={post}
-      id={post.id}
-      user={@user}
-      user_follows={@user_follows}
-      user_posts={@user_posts}
-    />
+    <.post_card post={post} id={post.id} user={@user} user_follows={@user_follows} />
   <% end %>
 </div>

@@ -3,7 +3,6 @@ defmodule MehungryWeb.LayoutView do
 
   embed_templates "templates/*"
   embed_templates "templates/menu/*"
-  alias Phoenix.LiveView.JS
 
   def get_main_content_container_class(_conn) do
     "main-content-container"

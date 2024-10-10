@@ -8,8 +8,10 @@ defmodule Mehungry.Accounts.UserProfile do
     field :onboarding_level, :integer
 
     belongs_to :user, Mehungry.Accounts.User
+
     has_many :user_category_rules, Mehungry.Accounts.UserCategoryRule
     has_many :user_ingredient_rules, Mehungry.Accounts.UserIngredientRule
+
     timestamps()
   end
 

@@ -11,6 +11,7 @@ defmodule MehungryWeb.RecipeComponents do
   use Phoenix.Component
   alias Phoenix.LiveView.JS
   import MehungryWeb.CoreComponents
+  import MehungryWeb.TabsComponent
 
   def get_color(treaty) do
     case treaty do
@@ -102,8 +103,7 @@ defmodule MehungryWeb.RecipeComponents do
       ) do
     ~H"""
     <div class="w-11/12  m-auto" style="height: 300px;">
-      <.live_component
-        module={MehungryWeb.TabsLiveComponent}
+      <.render_tabs
         id="live_comp_tabs_rec"
         contents={MehungryWeb.RecipeDetailsTabsConfig}
         recipe={@recipe}
@@ -116,7 +116,7 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_ingredients(%{recipe_ingredients: _recipe_ingredients} = assigns) do
     ~H"""
-    <div style="max-height: 300px;" class="overflow-auto p-4">
+    <div style="max-height: 300px;" class="overflow-auto p-4 text-base text-black">
       <%= for ingredient <- @recipe_ingredients do %>
         <div class="ingredient_details_container font-normal	 ">
           <div><%= ingredient.ingredient.name %></div>
@@ -129,99 +129,61 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_nutrients(%{nutrients: _nutrients, primary_size: _primary_size} = assigns) do
+  def recipe_nutrients(
+        %{nutrients: _nutrients, primary_size: _primary_size, recipe: recipe} = assigns
+      ) do
     ~H"""
-      <div class="accordion overflow-auto	max-h-1/2 font-normal" style="max-height: 300px;" >
-      <%= for {n, index} <-  Enum.with_index(@nutrients) do %>
+    <div
+      class="accordion overflow-auto	max-h-1/2 font-normal"
+      style="max-height: 300px;"
+      phx-hook="AccordionHook"
+      id={"nutrients"<> to_string(recipe.id)}
+    >
+      <%= for {{_, n}, index} <-  Mehungry.Food.RecipeUtils.sort_nutrients_from_db(@recipe.nutrients) do %>
         <%= if !is_nil(n) do %>
-          <div class="accordion-panel" phx-hook="AccordionHook" id={"nutrient" <> Integer.to_string(index)}  >
+          <div
+            class={
+              if index <= @recipe.primary_nutrients_size do
+                "accordion-panel relative font-semibold text-base"
+              else
+                "text-base accordion-panel relative"
+              end
+            }
+            id={"nutrient" <> Integer.to_string(index)}
+          >
             <h2 id={"panel" <> to_string(index) <> "-title"}>
-              <%= if !is_nil(n[:children]) do %>
-                <button
-                  class="accordion-trigger rounded-xl  pr-6"
-                  style="text-align: start; width: 100%; "
-                  aria-expanded="false"
-                  aria-controls="accordion1-content"
-                >
-                  <div class="w-fit h-fit rounded-xl absolute right-0 top-0 ">
-                    <.icon
-                      name="hero-arrow-down-circle "
-                      class="h-6 w-6 rounded-xl text-complementary  "
-                    />
-                  </div>
-
-                  <%= Map.get(n, :name, "Default") <>
-                    " " <>
-                    if !is_nil(n[:amount]) do
-                      to_string(Float.round(n[:amount], 2))
-                    else
-                      "."
-                    end %>
-                  <%= if !is_nil(n[:measurement_unit]) do
-                    n[:measurement_unit]
-                  else
-                    ""
-                  end %>
-                </button>
+              <%= if !is_nil(n) do %>
+                <.render_nutrient_button n={n} recipe={@recipe} index={index} />
               <% else %>
-                <%= if index < @primary_size do %>
-                  <button
-                    class="accordion_reccord font-bold	"
-                    style="text-align: start; width: 100%;"
-                    aria-expanded="false"
-                    aria-controls=""
-                  >
-                    <%= Map.get(n, :name, "Default") <>
-                      " " <>
-                      if !is_nil(n[:amount]) do
-                        to_string(Float.round(n[:amount], 2))
-                      else
-                        "."
-                      end %>
-                    <%= if !is_nil(n[:measurement_unit]) do
-                      n[:measurement_unit]
-                    else
-                      ""
-                    end %>
-                  </button>
-                <% else %>
-                  <button
-                    class="accordion_reccord"
-                    style="text-align: start; width: 100%;"
-                    aria-expanded="false"
-                    aria-controls=""
-                  >
-                    <%= Map.get(n, :name, "Default") <>
-                      " " <>
-                      if !is_nil(n[:amount]) do
-                        to_string(Float.round(n[:amount], 2))
-                      else
-                        "."
-                      end %>
-                    <%= if !is_nil(n[:measurement_unit]) do
-                      n[:measurement_unit]
-                    else
-                      ""
-                    end %>
-                  </button>
-                <% end %>
+                <h3>Nill nutrient</h3>
               <% end %>
             </h2>
             <div
-              class="accordion-content"
+              class="accordion-content "
               role="region"
               aria-labelledby={"panel"<>to_string(index)<>"-title"}
               aria-hidden="true"
               id={"panel"<>to_string(index) <> "-content"}
             >
               <div style="text-center: start;">
-                <ul>
-                  <%= if !is_nil(n[:children]) do
-                  for n_r <- n[:children] do %>
-                    <li style="padding-left: 1rem; text-align: start;">
-                      <%= n_r.name %> <%= Float.round(n_r.amount, 4) %> <%= n_r.measurement_unit %>
-                    </li>
-                  <% end end %>
+                <ul id={"ul" <>to_string(index)} phx-update="ignore">
+                  <%= if Map.has_key?(n, "children") do %>
+                    <div id={"ul"<> n["name"]}>
+                      <%= for n_r <- n["children"] do %>
+                        <li style="padding-left: 1rem; text-align: start;" id={"li" <> n_r["name"]}>
+                          <%= n_r["name"] %> <%= Float.round(n_r["amount"], 4) %> <%= n_r[
+                            "measurement_unit"
+                          ] %>
+                          <div class="w-fit h-fit rounded-xl absolute right-0 top-0 ">
+                            <.icon
+                              name="hero-arrow-down-circle "
+                              class="h-6 w-6 rounded-xl text-complementary  "
+                            />
+                          </div>
+                        </li>
+                      <% end %>
+                    </div>
+                  <% end %>
                 </ul>
               </div>
             </div>
@@ -232,13 +194,49 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
+  defp render_nutrient_button(assigns) do
+    ~H"""
+    <div>
+      <button
+        class="accordion-trigger rounded-xl  pr-6 "
+        style="text-align: start; width: 100%; "
+        aria-expanded="false"
+        aria-controls="accordion1-content"
+        id={"nutrient_button" <> Integer.to_string(@index)}
+      >
+        <%= Map.get(@n, "name") ||
+          Map.get(@n, :name, "") <>
+            "" %>
+        <%= if !is_nil(@n["amount"]) do %>
+          <%= to_string(Float.round(@n["amount"] / @recipe.servings, 2)) %>
+        <% else %>
+          <%= if !is_nil(@n[:amount]) do %>
+            <%= to_string(Float.round(@n[:amount] / @recipe.servings, 2)) %>
+          <% else %>
+            "nothing"
+          <% end %>
+        <% end %>
+        <%= if !is_nil(@n["measurement_unit"]) do %>
+          <%= @n["measurement_unit"] %>
+        <% else %>
+          <%= if !is_nil(@n[:measurement_unit]) do %>
+            <%= @n[:measurement_unit] %>
+          <% else %>
+            "nothing"
+          <% end %>
+        <% end %>
+      </button>
+    </div>
+    """
+  end
+
   def recipe_steps(%{steps: _steps} = assigns) do
     ~H"""
-    <div class="overflow-auto p-4" style="height: 300px;">
+    <div class="overflow-auto p-4 text-base text-black" style="height: 300px;">
       <%= for step <- @steps do %>
         <div class="step_details_container accordion-panel">
           <div class="font-semibold text-lg"><%= step.index %></div>
-          <div class="text-lg"><%= step.description %></div>
+          <div class="text-lg font-normal"><%= step.description %></div>
         </div>
       <% end %>
     </div>
@@ -335,7 +333,11 @@ defmodule MehungryWeb.RecipeComponents do
     <div class="bg-white p-2 rounded-full absolute top-5 right-5 md:top-8 md:left-8 md:w-12 md:h-12 ">
       <%= case @type do %>
         <% "saved" -> %>
-          <button phx-click="unsave-recipe" phx-value-id={@recipe.id}>
+          <button
+            phx-click="unsave-recipe"
+            phx-value-id={@recipe.id}
+            id={"button_save_recipe#{@recipe.id}"}
+          >
             <.icon name="hero-trash-solid" class="h-5 w-5" />
           </button>
         <% "browse" -> %>
@@ -346,6 +348,7 @@ defmodule MehungryWeb.RecipeComponents do
             fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
             phx-click="save_user_recipe"
             phx-target={@myself}
+            id={@id}
             phx-value-recipe_id={@recipe.id}
             phx-value-dom_id={@id}
           >
@@ -373,7 +376,11 @@ defmodule MehungryWeb.RecipeComponents do
     <div class="recipe_like_container z-50">
       <%= case @type do %>
         <% "saved" -> %>
-          <button phx-click="unsave-recipe" phx-value-id={@recipe.id}>
+          <button
+            phx-click="unsave-recipe"
+            phx-value-id={@recipe.id}
+            id={"button_save_recipe#{@recipe.id}"}
+          >
             <.icon name="hero-trash-solid" class="h-5 w-5" />
           </button>
         <% "browse" -> %>
@@ -385,6 +392,7 @@ defmodule MehungryWeb.RecipeComponents do
             phx-click="save_user_recipe"
             phx-value-recipe_id={@recipe.id}
             phx-value-dom_id={@id}
+            id={"button_save_recipe#{@recipe.id}"}
           >
             <path
               fill-rule="evenodd"

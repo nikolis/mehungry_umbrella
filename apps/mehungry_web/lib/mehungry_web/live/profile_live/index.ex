@@ -25,6 +25,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:ok,
      assign(socket, :content_state, :created)
      |> assign(:recipe, nil)
+     |> assign(:user_recipes, [])
      |> assign(:current_user, user)
      |> assign(:user, nil)}
   end
@@ -35,36 +36,17 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
-    user_profile =
-      case is_nil(socket.assigns.current_user) do
-        true ->
-          nil
+    {current_user_profile, user_follows, current_user_recipes} =
+      Accounts.get_user_essentials(socket.assigns.current_user)
 
-        false ->
-          Accounts.get_user_profile_by_user_id(socket.assigns.current_user.id)
-      end
-
-    current_user_recipes =
-      case is_nil(socket.assigns.current_user) do
-        true ->
-          []
-
-        false ->
-          Users.list_user_saved_recipes(socket.assigns.current_user)
-          |> Enum.map(fn x -> x.recipe_id end)
-      end
-
-    {user_saved_recipes, user_created_recipes, user_follows} =
+    {user_saved_recipes, user_created_recipes} =
       case is_nil(socket.assigns.current_user) do
         true ->
           {[], []}
 
         false ->
-          user_follows = Users.list_user_follows(socket.assigns.current_user)
-          user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
-
           {Users.list_user_saved_recipes(socket.assigns.current_user),
-           Users.list_user_created_recipes(socket.assigns.current_user), user_follows}
+           Users.list_user_created_recipes(socket.assigns.current_user)}
       end
 
     socket
@@ -72,54 +54,41 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:user_created_recipes, user_created_recipes)
     |> assign(:user_saved_recipes, user_saved_recipes)
     |> assign(:current_user_recipes, current_user_recipes)
-    |> assign(:user_profile, user_profile)
-    |> assign(:user_follows, user_follows)
+    |> assign(:current_user_profile, current_user_profile)
+    |> assign(:user_profile, current_user_profile)
+    |> assign(:current_user_follows, user_follows)
   end
 
   defp apply_action(socket, :show, %{"id" => id} = _params) do
     user = Accounts.get_user!(id)
 
-    user_profile =
+    {current_user_profile, current_user_follows, current_user_recipes} =
+      Accounts.get_user_essentials(socket.assigns.current_user)
+
+    {user_saved_recipes, user_created_recipes, user_profile} =
       case is_nil(user) do
         true ->
-          nil
+          {[], [], []}
 
         false ->
-          Accounts.get_user_profile_by_user_id(user.id)
-      end
-
-    current_user_recipes =
-      case is_nil(socket.assigns.current_user) do
-        true ->
-          []
-
-        false ->
-          Users.list_user_saved_recipes(socket.assigns.current_user)
-          |> Enum.map(fn x -> x.recipe_id end)
-      end
-
-    {user_saved_recipes, user_created_recipes, user_follows} =
-      case is_nil(socket.assigns.current_user) do
-        true ->
-          {Users.list_user_saved_recipes(user), Users.list_user_created_recipes(user), []}
-
-        false ->
-          user_follows = Users.list_user_follows(socket.assigns.current_user)
-          user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
-
           {Users.list_user_saved_recipes(user), Users.list_user_created_recipes(user),
-           user_follows}
+           Accounts.get_user_profile_by_user_id(user.id)}
       end
+
+    user_recipes = Enum.map(user_saved_recipes, fn x -> x.recipe_id end)
 
     socket
     |> assign(:page_title, "Profile")
     |> assign(:user, user)
-    |> assign(:page_title, "Profile " <> user.email )
+    |> assign(:page_title, "Profile " <> user.email)
     |> assign(:user_created_recipes, user_created_recipes)
     |> assign(:user_saved_recipes, user_saved_recipes)
     |> assign(:current_user_recipes, current_user_recipes)
+    |> assign(:current_user_profile, current_user_profile)
     |> assign(:user_profile, user_profile)
-    |> assign(:user_follows, user_follows)
+    |> assign(:user_recipes, user_recipes)
+    |> assign(:user_follows, [])
+    |> assign(:current_user_follows, current_user_follows)
   end
 
   defp apply_action(socket, :show_recipe, %{"recipe_id" => id}) do
@@ -134,51 +103,19 @@ defmodule MehungryWeb.ProfileLive.Index do
       end
 
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
-    user = socket.assigns.user
 
-    user_follows =
-      if is_nil(socket.assigns.user) do
-        nil
-      else
-        case recipe.user_id == socket.assigns.user.id do
-          true ->
-            nil
-
-          false ->
-            Users.list_user_follows(user)
-            |> Enum.map(fn x -> x.follow_id end)
-        end
-      end
-
-    current_user_recipes =
-      case is_nil(socket.assigns.current_user) do
-        true ->
-          []
-
-        false ->
-          Users.list_user_saved_recipes(socket.assigns.current_user)
-          |> Enum.map(fn x -> x.recipe_id end)
-      end
-
-    user_recipes =
-      case is_nil(user) do
-        true ->
-          []
-
-        false ->
-          Users.list_user_saved_recipes(user)
-          |> Enum.map(fn x -> x.recipe_id end)
-      end
-
+    {current_user_profile, current_user_follows, current_user_recipes} =
+      Accounts.get_user_essentials(socket.assigns.current_user)
 
     socket
     |> assign(:nutrients, nutrients)
     |> assign(:primary_size, primaries_length)
-    |> assign(:page_title, recipe.title <> " from "  <> recipe.user.email )
+    |> assign(:page_title, recipe.title <> " from " <> recipe.user.email)
     |> assign(:recipe, recipe)
-    |> assign(:user_follows, user_follows)
-    |> assign(:user_recipes, user_recipes)
+    |> assign(:current_user_follows, current_user_follows)
+    # |> assign(:user_recipes, user_recipes)
     |> assign(:current_user_recipes, current_user_recipes)
+    |> assign(:current_user_profile, current_user_profile)
     |> assign(:cancel_path, cancel_path)
   end
 
@@ -226,8 +163,7 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def handle_event("unsave-recipe", %{"id" => id}, socket) do
     Users.remove_user_saved_recipe(socket.assigns.current_user.id, String.to_integer(id))
-    IO.inspect(socket.assigns.user)
-    user_saved_recipes = Users.list_user_saved_recipes(socket.assigns.user)
+    user_saved_recipes = Users.list_user_saved_recipes(socket.assigns.current_user)
 
     {:noreply,
      socket

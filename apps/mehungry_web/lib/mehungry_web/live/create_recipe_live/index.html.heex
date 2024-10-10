@@ -14,18 +14,19 @@
   </.modal>
 
   <.form
+    :let={f}
     id={@id}
-    for={@form}
+    for={@changeset}
     phx-change="validate"
     phx-submit="save"
     class="the_form p-4 flex flex-col mx-auto mb-14"
   >
     <div class="basic_2_col_grid_cont">
-      <Components.recipe_render f={@form} items={@items} />
+      <Components.recipe_render f={f} items={@items} />
 
-      <%= if @form.data.image_url do %>
+      <%= if f.data.image_url do %>
         <div class="relative">
-          <img src={@form.data.image_url} width="500rem" class="m-auto relative" />
+          <img src={f.data.image_url} width="500rem" class="m-auto relative" />
           <button type="button" phx-click="delete-image" class="absolute top-0 right-10">
             <.icon name="hero-x-mark-solid" class="h-10 w-10 " phx-click="clear-image" />
           </button>
@@ -40,7 +41,7 @@
           </div>
         </div>
       <% end %>
-      <%= if is_nil(@form.data.image_url) do %>
+      <%= if is_nil(f.data.image_url) do %>
         <div class="">
           <%= for entry <- @uploads.image.entries do %>
             <div class="img_preview_container">
@@ -75,10 +76,10 @@
       <div>
         <h3 class="text-center">Ingredients</h3>
         <div class="min-h-80 max-h-96  overflow-auto	pt-4 sm:p-4">
-          <.inputs_for :let={g} field={@form[:recipe_ingredients]}>
+          <.inputs_for :let={g} field={f[:recipe_ingredients]}>
             <Components.ingredient_render
               g={g}
-              f={@form}
+              f={f}
               ingredients={@ingredients}
               measurement_units={@measurement_units}
             />
@@ -99,7 +100,7 @@
       <div>
         <h3 class="text-center">Creation Steps</h3>
         <div class="min-h-80 overflow-auto	">
-          <.inputs_for :let={v} field={@form[:steps]}>
+          <.inputs_for :let={v} field={f[:steps]}>
             <Components.step_render v={v} />
           </.inputs_for>
         </div>
@@ -107,7 +108,7 @@
           <button
             id="some_id"
             type="button"
-            class="button_outline_complementary absolute bottom--10 right-0"
+            class="button_outline_complementary absolute bottom--10 right-0 text-sm"
             phx-click="add-step"
           >
             Add Step
@@ -115,14 +116,24 @@
         </div>
       </div>
     </div>
-    <div id="something wierd" class="absolute right-0 left-0 mx-auto bottom-0">
+    <div id="something wierd" class="absolute right-10 mx-auto bottom-0 w-40">
       <%= submit("Save",
         class:
-          "button bg-primary  w-1/3 absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold  uppercase mb-14",
+          "button bg-primary border-2 border-transparent  w-full absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold mb-14",
         type: "submit",
         phx_disable_with: "Saving...",
         id: "save_button"
       ) %>
+    </div>
+    <div id="something wierd" class="absolute right-56 mx-auto bottom-0 w-40">
+      <button
+        class="button text-greyfriend3 border-2 border-greyfriend3  w-full absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold   mb-14"
+        id="button_delete"
+        type="button"
+        phx-click="clear-form"
+      >
+        Reset
+      </button>
     </div>
   </.form>
 </div>

@@ -17,7 +17,7 @@ defmodule Mehungry.FoodUtils do
 
     flatten_rec_ing_list = List.flatten(recipe_outcome)
 
-    result = RecipeUtils.calculate_nutrition_for_recipe_ingredient(flatten_rec_ing_list)
+    result = RecipeUtils.calculate_nutrition_for_recipe_ingredient_callendar(flatten_rec_ing_list)
     calculate_recipe_nutrients(result.flat_recipe_nutrients)
   end
 

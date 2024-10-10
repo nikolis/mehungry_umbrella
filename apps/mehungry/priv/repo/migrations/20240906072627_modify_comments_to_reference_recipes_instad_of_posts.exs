@@ -14,19 +14,21 @@ defmodule Mehungry.Repo.Migrations.ModifyCommentsToReferenceRecipesInstadOfPosts
       |> repo.preload(:post)
 
     Enum.each(comments, fn x ->
-      changeset = Mehungry.Posts.Comment.changeset(x, %{recipe_id: x.post.reference_id})
-      repo.update(changeset)
+      if not is_nil(x.post) do
+        changeset = Mehungry.Posts.Comment.changeset(x, %{recipe_id: x.post.reference_id})
+        repo.update(changeset)
+      end
     end)
 
-    #alter table(:comments) do
-      #remove(:post_id)
-    #end
+    # alter table(:comments) do
+    # remove(:post_id)
+    # end
   end
 
   def down do
     alter table(:comments) do
       remove(:recipe_id)
-     # add :post_id, references(:posts, on_delete: :delete_all)
+      add :post_id, references(:posts, on_delete: :delete_all)
     end
   end
 end

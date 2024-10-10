@@ -96,7 +96,7 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer do
 
   defp save_comment_answer(socket, _, comment_answer_params) do
     case Posts.create_comment_answer(comment_answer_params) do
-      {:ok, comment_answer} ->
+      {:ok, _comment_answer} ->
         comment_answer_params_clean = Map.put(comment_answer_params, "text", "")
         # notify_parent({:saved, comment_answer})
         changeset_new = Posts.change_comment_answer(%CommentAnswer{}, comment_answer_params_clean)
@@ -118,5 +118,5 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer do
     assign(socket, :form, to_form(changeset))
   end
 
-  defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
+  # defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
 end

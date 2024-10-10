@@ -11,9 +11,12 @@
     </.modal>
   <% end %>
 
-  <%= if !is_nil(@user_profile) do %>
+  <%= if !is_nil(@current_user_profile) do %>
     <.modal
-      :if={is_nil(@user_profile.onboarding_level) or @user_profile.onboarding_level < 1}
+      :if={
+        is_nil(@current_user_profile.onboarding_level) or
+          @current_user_profile.onboarding_level < 1
+      }
       id="onboarding-modal"
       show
       on_cancel={JS.patch(~p"/")}
@@ -71,8 +74,8 @@
         nutrients={@nutrients}
         recipe={@recipe}
         user_recipes={@user_recipes}
-        user={@user}
-        user_follows={@user_follows}
+        user={@current_user}
+        user_follows={@current_user_follows}
         page_title={"Recipe #{@recipe.title}"}
         live_action={@live_action}
         return_to={Routes.recipe_browser_index_path(@socket, :index)}

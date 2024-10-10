@@ -79,13 +79,15 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
     assigns = assign(assigns, :measurement_units, measurement_units)
 
     ~H"""
-    <.ingredient
-      g={assigns.g}
-      ingredients={assigns.ingredients}
-      measurement_units={assigns.measurement_units}
-      style={get_style(assigns.deleted)}
-      deleted={assigns.deleted}
-    />
+    <div>
+      <.ingredient
+        g={assigns.g}
+        ingredients={assigns.ingredients}
+        measurement_units={assigns.measurement_units}
+        style={get_style(assigns.deleted)}
+        deleted={assigns.deleted}
+      />
+    </div>
     """
   end
 

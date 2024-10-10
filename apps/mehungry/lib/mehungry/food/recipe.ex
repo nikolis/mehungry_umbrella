@@ -21,10 +21,12 @@ defmodule Mehungry.Food.Recipe do
     field :original_url, :string
     field :preperation_time_lower_limit, :integer
     field :preperation_time_upper_limit, :integer
+    field :primary_nutrients_size, :integer
     field :servings, :integer
     field :private, :boolean
     field :title, :string
     field :difficulty, :integer
+    field :nutrients, :map, default: %{}
 
     has_many :ratings, Rating
     has_one :post, Mehungry.Posts.Post
@@ -51,6 +53,7 @@ defmodule Mehungry.Food.Recipe do
     |> cast(attrs, [
       :recipe_image_remote,
       :servings,
+      :primary_nutrients_size,
       :private,
       :cousine,
       :title,
@@ -61,6 +64,7 @@ defmodule Mehungry.Food.Recipe do
       :cooking_time_upper_limit,
       :cooking_time_lower_limit,
       :description,
+      :nutrients,
       :image_url,
       :user_id,
       :language_name,

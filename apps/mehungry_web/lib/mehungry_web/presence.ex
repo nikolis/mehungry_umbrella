@@ -1,20 +1,55 @@
 defmodule MehungryWeb.Presence do
   @moduledoc false
+  @topic "user_activity"
+  # @recipe_activity "recipe_activity"
 
   use Phoenix.Presence,
     otp_app: :mehungry_web,
     pubsub_server: Mehungry.PubSub
 
   alias MehungryWeb.Presence
-  @user_activity_topic "user_activity"
 
-  def list_views_and_users do
-    Presence.list(@user_activity_topic)
-    |> Enum.map(&extract_views_with_users/1)
+  def user_tracking do
+    quote do
+      @topic "user_activity"
+      @recipe_activity "recipe_activity"
+
+      def maybe_track_user(
+            %{recipe: recipe},
+            %{assigns: %{live_action: _, current_user: current_user}} = socket
+          ) do
+        if connected?(socket) do
+          result =
+            Presence.track(self(), @topic, current_user.email, %{users: [recipe: recipe.title]})
+        end
+      end
+
+      def maybe_track_user(
+            metadata,
+            %{assigns: %{live_action: :index, current_user: current_user}} =
+              socket
+          ) do
+        if connected?(socket) do
+          result =
+            Presence.track(self(), @topic, current_user.email, %{
+              users: [recipe_search: metadata.query]
+            })
+        end
+      end
+
+      def maybe_track_user(_product, _socket) do
+        nil
+      end
+    end
   end
 
-  defp extract_views_with_users({view_name, %{metas: metas}}) do
-    {view_name, users_from_metas_list(metas)}
+  def list_products_and_users do
+    Presence.list(@topic)
+    |> Enum.map(&extract_recipe_with_users/1)
+  end
+
+  defp extract_recipe_with_users({recipe_name, %{metas: metas}}) do
+    {recipe_name, users_from_metas_list(metas)}
   end
 
   defp users_from_metas_list(metas_list) do
@@ -30,9 +65,13 @@ defmodule MehungryWeb.Presence do
   def track_user(pid, view_name, user_email) do
     Presence.track(
       pid,
-      @user_activity_topic,
+      @topic,
       view_name,
       %{users: [%{email: user_email}]}
     )
+  end
+
+  defmacro __using__(which) when is_atom(which) do
+    apply(__MODULE__, which, [])
   end
 end

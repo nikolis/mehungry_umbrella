@@ -9,6 +9,7 @@ defmodule Mehungry.Food.RecipeIngredient do
     field :ingredient_allias, :string
 
     field :delete, :boolean, virtual: true
+    field :temp_id, :string, virtual: true
 
     belongs_to :recipe, Mehungry.Food.Recipe
     belongs_to :measurement_unit, Mehungry.Food.MeasurementUnit
@@ -21,13 +22,15 @@ defmodule Mehungry.Food.RecipeIngredient do
   def changeset(recipe_ingredient, attrs) do
     changeset =
       recipe_ingredient
+      # So its persisted
       |> cast(attrs, [
         :quantity,
         :ingredient_allias,
         :measurement_unit_id,
         :ingredient_id,
         :recipe_id,
-        :delete
+        :delete,
+        :temp_id
       ])
       |> validate_required([:ingredient_id, :quantity, :measurement_unit_id])
       |> foreign_key_constraint(:name)
@@ -35,7 +38,12 @@ defmodule Mehungry.Food.RecipeIngredient do
       |> foreign_key_constraint(:recipe_ingredients_name)
       |> foreign_key_constraint(:recipe_ingredients)
       |> foreign_key_constraint(:ingredient_id)
+      |> maybe_mark_for_deletion()
+  end
 
+  defp maybe_mark_for_deletion(%{data: %{id: nil}} = changeset), do: changeset
+
+  defp maybe_mark_for_deletion(changeset) do
     if get_change(changeset, :delete) do
       %{changeset | action: :delete}
     else

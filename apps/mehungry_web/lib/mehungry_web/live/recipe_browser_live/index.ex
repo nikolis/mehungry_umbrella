@@ -1,12 +1,12 @@
 defmodule MehungryWeb.RecipeBrowserLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
+  use MehungryWeb.Presence, :user_tracking
 
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
   alias Mehungry.Search.RecipeSearchItem
   alias Mehungry.Search
-  alias MehungryWeb.Presence
   alias MehungryWeb.ImageProcessing
   alias Mehungry.Accounts
   alias Mehungry.Users
@@ -27,28 +27,11 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           Accounts.get_user_by_session_token(session["user_token"])
       end
 
-    user_follows =
-      case is_nil(user) do
-        true ->
-          nil
-
-        false ->
-          Users.list_user_follows(user)
-          |> Enum.map(fn x -> x.follow_id end)
-      end
-
-    user_profile =
-      case is_nil(user) do
-        true ->
-          nil
-
-        false ->
-          Accounts.get_user_profile_by_user_id(user.id)
-      end
-
     # changeset =
     # %RecipeSearchItem{query_string: nil}
     # |> Search.change_recipe_search_item(%{query_string: query_str})
+
+    {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
 
     {query, {recipes, cursor_after}} =
       case query_str do
@@ -57,16 +40,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
         qr ->
           Food.search_recipe(qr)
-      end
-
-    user_recipes =
-      case is_nil(user) do
-        true ->
-          []
-
-        false ->
-          Users.list_user_saved_recipes(user)
-          |> Enum.map(fn x -> x.recipe_id end)
       end
 
     {:ok,
@@ -81,16 +54,16 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
          false
        end
      )
-     |> assign(:user_recipes, user_recipes)
+     |> assign(:current_user_recipes, user_recipes)
+     |> assign(:current_user_follows, user_follows)
+     |> assign(:current_user_profile, user_profile)
+     |> assign(:current_user, user)
      |> assign(:query_string, query_str)
      |> assign(:page, 1)
      |> assign(:invocations, 0)
      |> assign(:counter, 1)
-     |> assign(:user_profile, user_profile)
      |> assign(:query, query)
      |> assign(:must_be_loged_in, nil)
-     |> assign(:user_follows, user_follows)
-     |> assign(:user, user)
      |> assign(:reply, nil)
      |> assign_recipe_search()}
   end
@@ -102,7 +75,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   @impl true
   def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
-    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
+    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.current_user.id)
 
     {:noreply,
      socket
@@ -122,7 +95,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     # %{"user_id" => [{recipe_id, grade}]}
     # To be fixed I need to use a map instead if I want to keep a single grade for the a particular recipe
     users = Cachex.get(:users, "data")
-    user_id = socket.assigns.user.id
+    user_id = socket.assigns.current_user.id
 
     _new_content =
       case users do
@@ -159,7 +132,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         %{"recipe_id" => recipe_id, "dom_id" => _dom_id},
         socket
       ) do
-    case is_nil(socket.assigns.user) do
+    case is_nil(socket.assigns.current_user) do
       true ->
         socket = assign(socket, :must_be_loged_in, 1)
         {:noreply, socket}
@@ -167,7 +140,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       false ->
         {recipe_id, _ignore} = Integer.parse(recipe_id)
         toggle_user_saved_recipes(socket, recipe_id)
-        user_recipes = Users.list_user_saved_recipes(socket.assigns.user)
+        user_recipes = Users.list_user_saved_recipes(socket.assigns.current_user)
         user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
         socket = assign(socket, :user_recipes, user_recipes)
         {:noreply, socket}
@@ -176,7 +149,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   @impl true
   def handle_event("save_user_recipe", %{"recipe_id" => recipe_id, "dom_id" => _dom_id}, socket) do
-    case is_nil(socket.assigns.user) do
+    case is_nil(socket.assigns.current_user) do
       true ->
         socket = assign(socket, :must_be_loged_in, 1)
         {:noreply, socket}
@@ -185,11 +158,11 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         {recipe_id, _ignore} = Integer.parse(recipe_id)
         toggle_user_saved_recipes(socket, recipe_id)
 
-        Users.list_user_saved_recipes(socket.assigns.user)
+        Users.list_user_saved_recipes(socket.assigns.current_user)
         |> Enum.map(fn x -> x.recipe_id end)
 
         user_recipes =
-          Users.list_user_saved_recipes(socket.assigns.user)
+          Users.list_user_saved_recipes(socket.assigns.current_user)
           |> Enum.map(fn x -> x.recipe_id end)
 
         socket = assign(socket, :user_recipes, user_recipes)
@@ -273,42 +246,31 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   end
 
   def toggle_user_saved_recipes(socket, recipe_id) do
-    case is_nil(socket.assigns.user) do
+    case is_nil(socket.assigns.current_user) do
       true ->
         assign(socket, :must_be_loged_in, 1)
 
       false ->
-        case Enum.any?(socket.assigns.user_recipes, fn x -> x == recipe_id end) do
+        case Enum.any?(socket.assigns.current_user_recipes, fn x -> x == recipe_id end) do
           true ->
-            Users.remove_user_saved_recipe(socket.assigns.user.id, recipe_id)
+            Users.remove_user_saved_recipe(socket.assigns.current_user.id, recipe_id)
 
           false ->
-            Users.save_user_recipe(socket.assigns.user.id, recipe_id)
+            Users.save_user_recipe(socket.assigns.current_user.id, recipe_id)
         end
     end
   end
 
   @impl true
   def handle_params(params, uri, socket) do
-    maybe_track_user(nil, socket)
     socket = assign(socket, :path, uri)
 
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  def maybe_track_user(
-        _product,
-        %{assigns: %{live_action: :index, current_user: current_user}} = socket
-      ) do
-    if connected?(socket) do
-      Presence.track_user(self(), "recipe_browser_live", current_user.email)
-    end
-  end
-
-  def maybe_track_user(_product, _socket), do: nil
-
   defp apply_action(socket, :index, %{"query" => query_str} = _params) do
-    user = socket.assigns.user
+    maybe_track_user(%{query: query_str}, socket)
+    user = socket.assigns.current_user
 
     user_profile =
       case is_nil(user) do
@@ -363,7 +325,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   end
 
   defp apply_action(socket, :index, _) do
-    user = socket.assigns.user
+    user = socket.assigns.current_user
     query_str = ""
 
     user_profile =
@@ -397,6 +359,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           Users.list_user_saved_recipes(user)
           |> Enum.map(fn x -> x.recipe_id end)
       end
+
+    maybe_track_user(%{query: ""}, socket)
 
     socket =
       stream(socket, :recipes, recipes)
@@ -438,7 +402,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       end
 
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
-    user = socket.assigns.user
+    user = socket.assigns.current_user
 
     user_recipes =
       case is_nil(user) do
@@ -450,18 +414,23 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           |> Enum.map(fn x -> x.recipe_id end)
       end
 
+    socket =
+      socket
+      |> assign(:nutrients, nutrients)
+      |> assign(:primary_size, primaries_length)
+      |> assign(:recipe, recipe)
+      |> assign(:page_title, recipe.title <> " Instructions and nutrition facts")
+      |> stream(:recipes, recipes)
+      |> assign(:user_recipes, user_recipes)
+
+    maybe_track_user(%{page: "browser", type: :show_recipe, recipe: recipe}, socket)
     socket
-    |> assign(:nutrients, nutrients)
-    |> assign(:primary_size, primaries_length)
-    |> assign(:recipe, recipe)
-    |> assign(:page_title,  recipe.title <>  " Instructions and nutrition facts")
-    |> stream(:recipes, recipes)
-    |> assign(:user_recipes, user_recipes)
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
+    maybe_track_user(recipe, socket)
 
     # user = socket.assigns.user
     query_str = ""

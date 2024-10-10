@@ -52,7 +52,8 @@ defmodule Mehungry.MixProject do
       {:ecto_sql, "~> 3.11"},
       {:postgrex, ">= 0.0.0"},
       {:jason, "~> 1.0"},
-      {:paginator, "~> 1.2.0"}
+      {:paginator, "~> 1.2.0"},
+      {:cachex, "~> 3.4"}
     ]
   end
 

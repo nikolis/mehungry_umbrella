@@ -72,8 +72,8 @@ defmodule MehungryApi.HistoryTest do
 
     test "create_user_meal/1 with valid data creates a user_meal" do
       user = AccountsFixtures.user_fixture()
-      recipe = FoodFixtures.recipe_fixture(user)
-      recipe_0 = FoodFixtures.recipe_fixture(user, %{name: "other name"})
+      recipe = FoodFixtures.recipe_fixture(user, %{nutrients: %{}})
+      recipe_0 = FoodFixtures.recipe_fixture(user, %{name: "other name", nutrients: %{}})
 
       valid_attrs = %{
         start_dt: ~U[2022-02-13 16:50:00Z],
@@ -100,8 +100,8 @@ defmodule MehungryApi.HistoryTest do
     test "update_user_meal/2 with valid data updates the user_meal" do
       user = AccountsFixtures.user_fixture()
 
-      recipe_0 = FoodFixtures.recipe_fixture(user, %{name: "asdffads"})
-      recipe = FoodFixtures.recipe_fixture(user, %{name: "Asdfadsf"})
+      recipe_0 = FoodFixtures.recipe_fixture(user, %{name: "asdffads", nutrients: %{}})
+      recipe = FoodFixtures.recipe_fixture(user, %{name: "Asdfadsf", nutrients: %{}})
 
       valid_attrs = %{
         start_dt: ~U[2022-02-13 16:50:00Z],

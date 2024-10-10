@@ -174,6 +174,8 @@ defmodule Mehungry.Food do
     end
   end
 
+  def get_measurement_unit!(nil), do: nil
+
   def get_measurement_unit!(id) do
     Repo.get(MeasurementUnit, id)
   end
@@ -212,13 +214,32 @@ defmodule Mehungry.Food do
   end
 
   def get_recipe!(id) do
+    {id, _} =
+      if(is_integer(id)) do
+        {id, nil}
+      else
+        Integer.parse(id)
+      end
+
     result =
-      Repo.get(Recipe, id)
-      |> Repo.preload([
-        [recipe_ingredients: [:measurement_unit, :ingredient]],
-        :user,
-        comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
-      ])
+      case Cachex.get(:recipes_cache, {__MODULE__, id}) do
+        {:ok, nil} ->
+          recipe =
+            Repo.get(Recipe, id)
+            |> Repo.preload([
+              [recipe_ingredients: [:measurement_unit, :ingredient]],
+              :user,
+              comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
+            ])
+
+          if(not is_nil(recipe)) do
+            Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
+            recipe
+          end
+
+        {:ok, %Recipe{} = recipe} ->
+          recipe
+      end
 
     if is_nil(result) do
       result
@@ -267,6 +288,16 @@ defmodule Mehungry.Food do
     Recipe.changeset(recipe, attrs)
   end
 
+  def count_user_created_recipes(nil), do: nil
+
+  def count_user_created_recipes(user_id) do
+    from(rec in Recipe,
+      where: rec.user_id == ^user_id,
+      select: count(rec.id)
+    )
+    |> Repo.one()
+  end
+
   def list_user_recipes_for_selection(nil) do
     entries = Repo.all(Recipe)
 
@@ -280,20 +311,8 @@ defmodule Mehungry.Food do
     result
   end
 
-  def count_user_created_recipes(nil), do: nil
-
-  def count_user_created_recipes(user_id) do
-    result =
-      from(rec in Recipe,
-        where: rec.user_id == ^user_id,
-        select: count(rec.id)
-      )
-      |> Repo.one()
-  end
-
   def list_user_recipes_for_selection(_user_id) do
     entries = Repo.all(Recipe)
-
     results = Repo.preload(entries, [:recipe_ingredients, :user])
 
     result =
@@ -429,6 +448,8 @@ defmodule Mehungry.Food do
     |> Repo.update()
   end
 
+  def get_ingredient_details!(nil), do: nil
+
   def get_ingredient_details!(id) do
     Repo.get!(Ingredient, id)
     |> Repo.preload(
@@ -471,15 +492,23 @@ defmodule Mehungry.Food do
   end
 
   def update_recipe(%Recipe{} = recipe_origin, attrs \\ %{}) do
-    result =
+    changeset =
       recipe_origin
       |> Recipe.changeset(attrs)
-      |> Repo.update()
+
+    result =
+      if changeset.valid? do
+        put_nutrient_info(changeset, attrs)
+        |> Repo.update()
+      else
+        {:error, changeset}
+      end
 
     case result do
       {:ok, recipe} ->
         case Map.get(attrs, "image_url") do
           nil ->
+            Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
             result
 
           image_url ->
@@ -495,6 +524,7 @@ defmodule Mehungry.Food do
               Posts.update_post(x, %{md_media_url: image_url})
             end)
 
+            Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
             result
         end
 
@@ -517,14 +547,47 @@ defmodule Mehungry.Food do
     Mehungry.Posts.create_post(post_params)
   end
 
+  def put_nutrient_info(%Ecto.Changeset{valid?: true} = changeset, attrs) do
+    {primary_size, nutrients} = Mehungry.Food.RecipeUtils.get_nutrients(attrs)
+
+    if Enum.empty?(nutrients) do
+      changeset
+    else
+      nutrients =
+        nutrients
+        |> Enum.map(fn x -> Map.new([{x.name, x}]) end)
+        |> Enum.reduce(&Map.merge/2)
+
+      changeset
+      |> Ecto.Changeset.put_change(:nutrients, nutrients)
+      |> Ecto.Changeset.put_change(:primary_nutrients_size, primary_size)
+    end
+  end
+
   def create_recipe(attrs \\ %{}) do
-    result =
+    changeset =
       %Recipe{}
       |> Recipe.changeset(attrs)
-      |> Repo.insert()
+
+    result =
+      if changeset.valid? do
+        put_nutrient_info(changeset, attrs)
+        |> Repo.insert()
+      else
+        {:error, changeset}
+      end
 
     case result do
       {:ok, %Recipe{} = recipe} ->
+        recipe =
+          recipe
+          |> Repo.preload([
+            [recipe_ingredients: [:measurement_unit, :ingredient]],
+            :user,
+            comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
+          ])
+
+        Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
         Mehungry.Posts.create_post(recipe)
         result
 

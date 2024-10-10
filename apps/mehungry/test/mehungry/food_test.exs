@@ -76,6 +76,7 @@ defmodule Mehungry.FoodTest do
       recipe = recipe_fixture(user)
       assert {:ok, new_recipe} = Food.update_recipe(recipe, %{title: "New recipe title"})
       recipe_test = Food.get_recipe!(recipe.id)
+
       assert recipe_test.title == new_recipe.title
     end
 

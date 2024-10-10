@@ -10,6 +10,22 @@ defmodule MehungryWeb.LiveHelpers do
 
   def hook_for_update_recipe_details_component do
     quote do
+      def toggle_user_saved_recipe(socket, recipe_id) do
+        case is_nil(socket.assigns.current_user) do
+          true ->
+            assign(socket, :must_be_loged_in, 1)
+
+          false ->
+            case Enum.any?(socket.assigns.current_user_recipes, fn x -> x == recipe_id end) do
+              true ->
+                Users.remove_user_saved_recipe(socket.assigns.current_user.id, recipe_id)
+
+              false ->
+                Users.save_user_recipe(socket.assigns.current_user.id, recipe_id)
+            end
+        end
+      end
+
       def toggle_user_follow(socket, follow_id) do
         case Enum.any?(socket.assigns.user_follows, fn x -> x == follow_id end) do
           true ->
@@ -28,6 +44,13 @@ defmodule MehungryWeb.LiveHelpers do
           socket
           |> assign(:recipe, recipe)
 
+        {:noreply, socket}
+      end
+
+      @impl true
+      def handle_event("save_user_recipe", %{"recipe_id" => recipe_id}, socket) do
+        {recipe_id, _ignore} = Integer.parse(recipe_id)
+        toggle_user_saved_recipe(socket, recipe_id)
         {:noreply, socket}
       end
 

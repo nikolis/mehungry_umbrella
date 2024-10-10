@@ -2,6 +2,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   use MehungryWeb, :live_view
 
   alias Mehungry.Food
+  alias Mehungry.Food.{RecipeIngredient, Recipe}
+
   alias Mehungry.Food.Recipe
   alias Mehungry.Accounts
   alias MehungryWeb.CreateRecipeLive.Components
@@ -30,7 +32,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
        max_file_size: 9_000_000,
        auto_upload: false,
        external: &presign_upload/2
-       #       progress: &handle_progress/3
      )}
   end
 
@@ -43,10 +44,18 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   defp apply_action(socket, :index, _params) do
     recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
 
+    attrs =
+      case Cachex.get(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}) do
+        {:ok, nil} ->
+          %{}
+
+        {:ok, _attrs} ->
+          %{}
+      end
+
     socket
     |> assign(:recipe, recipe)
-    |> assign(:changeset, Food.change_recipe(recipe))
-    |> init(recipe)
+    |> init(recipe, attrs)
   end
 
   defp apply_action(socket, :edit, %{"recipe_id" => id}) do
@@ -58,12 +67,14 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     |> init(recipe)
   end
 
-  defp init(socket, base) do
-    changeset = Recipe.changeset(base, %{})
+  defp init(socket, base, attrs \\ %{}) do
+    changeset =
+      Recipe.changeset(base, attrs)
+      |> struct!(action: :validate)
 
     assign(socket,
       base: base,
-      form: to_form(changeset),
+      changeset: changeset,
       # Reset form for LV
       id: "form-#{System.unique_integer()}"
     )
@@ -85,6 +96,14 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   ################################################################################ Event Handling ###################################################################################
   use MehungryWeb.Searchable, :transfers_to_search
 
+  def handle_event("clear-form", _, socket) do
+    recipe = Food.get_recipe!(socket.assigns.recipe.id)
+    socket = init(socket, recipe, %{})
+    socket = assign(socket, :recipe, recipe)
+
+    {:noreply, socket}
+  end
+
   def handle_event("save", %{"recipe" => recipe_params}, socket) do
     save_recipe(socket, socket.assigns.live_action, recipe_params)
   end
@@ -100,77 +119,99 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def handle_event("add-step", _, socket) do
-    socket =
-      update(socket, :form, fn %{source: changeset} ->
-        existing = Ecto.Changeset.get_embed(changeset, :steps)
-        changeset = Ecto.Changeset.put_embed(changeset, :steps, existing ++ [%{}])
-        to_form(changeset)
-      end)
+    existing = Ecto.Changeset.get_embed(socket.assigns.changeset, :steps)
 
-    {:noreply, socket}
-  end
+    changeset =
+      Ecto.Changeset.put_embed(
+        socket.assigns.changeset,
+        :steps,
+        existing ++ [%{temp_id: get_temp_id()}]
+      )
 
-  def handle_event("remove-step", %{"index" => index}, socket) do
-    index = String.to_integer(index)
-
-    socket =
-      update(socket, :form, fn %{source: changeset} ->
-        existing = Ecto.Changeset.get_embed(changeset, :steps)
-        {to_delete, rest} = List.pop_at(existing, index)
-
-        steps =
-          if Ecto.Changeset.change(to_delete).data.id do
-            List.replace_at(existing, index, Ecto.Changeset.change(to_delete, delete: true))
-          else
-            rest
-          end
-
-        changeset
-        |> Ecto.Changeset.put_embed(:steps, steps)
-        |> to_form()
-      end)
+    socket = assign(socket, :changeset, changeset)
 
     {:noreply, socket}
   end
 
   @impl true
-  def handle_event("remove-ingredient", %{"index" => index}, socket) do
-    index = String.to_integer(index)
+  def handle_event("remove-ingredient", %{"temp_id" => remove_id}, socket) do
+    {progress, recipe_ingredients} = remove_from_change(socket, remove_id)
 
-    socket =
-      update(socket, :form, fn %{source: changeset} ->
-        existing = Ecto.Changeset.get_assoc(changeset, :recipe_ingredients)
-        {to_delete, rest} = List.pop_at(existing, index)
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.put_assoc(:recipe_ingredients, recipe_ingredients)
 
-        recipe_ingredients =
-          if Ecto.Changeset.change(to_delete).data.id do
-            List.replace_at(existing, index, Ecto.Changeset.change(to_delete, delete: true))
-          else
-            rest
-          end
-
-        changeset
-        |> Ecto.Changeset.put_assoc(:recipe_ingredients, recipe_ingredients)
-        |> to_form()
-      end)
-
-    {:noreply, socket}
+    {:noreply, assign(socket, changeset: changeset)}
   end
 
-  def handle_event("add-ingredient", _params, socket) do
-    socket =
-      update(socket, :form, fn %{source: changeset} ->
-        existing = Ecto.Changeset.get_assoc(changeset, :recipe_ingredients)
-        changeset = Ecto.Changeset.put_assoc(changeset, :recipe_ingredients, existing ++ [%{}])
-        to_form(changeset)
-      end)
+  def handle_event("remove-step", %{"temp_id" => remove_id}, socket) do
+    IO.inspect("HERE REMOVING STEP")
+    {progress, steps} = remove_from_change_step(socket, remove_id)
 
-    {:noreply, socket}
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.put_embed(:steps, steps)
+
+    {:noreply, assign(socket, changeset: changeset)}
   end
 
-  @impl Phoenix.LiveView
-  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
-    {:noreply, cancel_upload(socket, :image, ref)}
+  defp remove_from_change(socket, remove_id) do
+    case Map.get(socket.assigns.changeset.changes, :recipe_ingredients, nil) do
+      nil ->
+        {:repeat, []}
+
+      recipe_ingredient_changes ->
+        original_length = length(recipe_ingredient_changes)
+
+        result_changes =
+          recipe_ingredient_changes
+          |> Enum.reject(fn %{changes: recipe_ingredient} = rest ->
+            Map.get(recipe_ingredient, :temp_id, nil) == remove_id
+          end)
+
+        case length(result_changes) == original_length do
+          true ->
+            {:repeat, result_changes}
+
+          false ->
+            {:ok, result_changes}
+        end
+    end
+  end
+
+  defp remove_from_change_step(socket, remove_id) do
+    case Map.get(socket.assigns.changeset.changes, :steps, nil) do
+      nil ->
+        {:repeat, []}
+
+      steps_changes ->
+        original_length = length(steps_changes)
+
+        result_changes =
+          steps_changes
+          |> Enum.reject(fn %{changes: step} = rest ->
+            Map.get(step, :temp_id, nil) == remove_id
+          end)
+
+        case length(result_changes) == original_length do
+          true ->
+            {:repeat, result_changes}
+
+          false ->
+            {:ok, result_changes}
+        end
+    end
+  end
+
+  @impl true
+  def handle_event("remove-ingredient", %{"temp_id" => remove_id}, socket) do
+    {progress, recipe_ingredients} = remove_from_change(socket, remove_id)
+
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.put_assoc(:recipe_ingredients, recipe_ingredients)
+
+    {:noreply, assign(socket, changeset: changeset)}
   end
 
   @impl true
@@ -180,7 +221,30 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       |> Recipe.changeset(recipe_params)
       |> struct!(action: :validate)
 
-    {:noreply, assign(socket, form: to_form(changeset))}
+    if(socket.assigns.live_action == :index) do
+      Cachex.put(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}, recipe_params)
+    end
+
+    {:noreply, assign(socket, :changeset, changeset)}
+  end
+
+  def handle_event("add-ingredient", _params, socket) do
+    existing = Ecto.Changeset.get_assoc(socket.assigns.changeset, :recipe_ingredients)
+
+    changeset =
+      Ecto.Changeset.put_assoc(
+        socket.assigns.changeset,
+        :recipe_ingredients,
+        existing ++ [%{temp_id: get_temp_id()}]
+      )
+
+    socket = assign(socket, :changeset, changeset)
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveView
+  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :image, ref)}
   end
 
   def drop_hidden?(images) do
@@ -297,7 +361,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     recipe_params = Map.put(recipe_params, "language_name", "En")
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
 
-    case Food.update_recipe(socket.assigns.recipe, recipe_params) do
+    case Food.update_recipe(socket.assigns.base, recipe_params) do
       {:ok, %Recipe{} = _recipe} ->
         {:noreply,
          socket
@@ -305,6 +369,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          |> push_navigate(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        IO.inspect(changeset)
         {:noreply, assign(socket, changeset: changeset)}
     end
   end
@@ -361,4 +426,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   defp list_ingredients do
     Food.list_ingredients()
   end
+
+  defp get_temp_id, do: :crypto.strong_rand_bytes(5) |> Base.url_encode64() |> binary_part(0, 5)
 end

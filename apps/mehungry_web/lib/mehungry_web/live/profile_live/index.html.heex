@@ -1,14 +1,17 @@
 <div class="container  mx-auto p-2" style="min-height: 90vh">
-  <%= if !is_nil(@user) do %>
+  <%= if !is_nil(@current_user) do %>
     <.modal
-      :if={is_nil(@user_profile.onboarding_level) or @user_profile.onboarding_level < 1}
+      :if={
+        is_nil(@current_user_profile.onboarding_level) or
+          @current_user_profile.onboarding_level < 1
+      }
       id="onboarding-modal"
       show
       on_cancel={JS.patch(~p"/")}
     >
       <.live_component
         module={MehungryWeb.Onboarding.FormComponent}
-        user_profile={@user_profile}
+        user_profile={@current_user_profile}
         id={:new}
         patch={~p"/"}
       />
@@ -26,7 +29,7 @@
             page_title={@page_title}
             user={@current_user}
             current_user={@current_user}
-            user_follows={@user_follows}
+            user_follows={@current_user_follows}
           />
         <% :edit -> %>
           <.live_component
@@ -50,8 +53,10 @@
             live_action={@live_action}
             user={@user}
             current_user={@current_user}
+            current_user_profile={@current_user_profile}
             user_profile={@user_profile}
-            user_follows={@user_follows}
+            user_follows={@current_user_follows}
+            user_recipes={@current_user_recipes}
             page_title={@page_title}
           />
         <% action -> %>
@@ -68,7 +73,7 @@
                 primary_size={@primary_size}
                 nutrients={@nutrients}
                 recipe={@recipe}
-                user_follows={@user_follows}
+                user_follows={@current_user_follows}
                 user_recipes={@user_recipes}
                 user={@current_user}
                 page_title={"Recipe #{@recipe.title}"}
@@ -89,6 +94,7 @@
             class={"nav_button " <> get_active(@content_state, :saved )}
             phx-click="content_state_change"
             phx-value-state={:saved}
+            id="tab_button_profile_saved_recipes"
           >
             <span> Saved recipes </span>
             <svg
@@ -154,7 +160,7 @@
                   recipe={recipe}
                   type={if @live_action == :show, do: "browse", else: "created"}
                   return_to="profile"
-                  user_recipes={@current_user_recipes}
+                  user_recipes={@user_recipes}
                   path_to_details={"/profile/show_recipe/#{recipe.id}"}
                   id={"recipe" <> Integer.to_string(recipe.id)}
                 />

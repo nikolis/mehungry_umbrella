@@ -101,7 +101,7 @@ defmodule MehungryWeb.CoreComponents do
                     <button
                       class="primary_button  p-2 m-auto text-md px-2 font-bold"
                       type="button"
-                      id="adsadfs"
+                      id={"toggle_user_follow#{@user.id}"}
                       phx-click="save_user_follow"
                       phx-value-follow_id={@user.id}
                     >
@@ -143,7 +143,7 @@ defmodule MehungryWeb.CoreComponents do
           </div>
           <div class="mt-2 w-fit m-auto sm:m-0">
             <div class="font-semibold text-center sm:text-left"><%= @user_profile.alias %></div>
-            <div class="text-center sm:text-left"> <%= @user_profile.intro %></div>
+            <div class="text-center sm:text-left"><%= @user_profile.intro %></div>
           </div>
         </div>
       </div>
@@ -603,6 +603,34 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
+  def input(%{type: "checkbox_covered"} = assigns) do
+    assigns =
+      assign_new(assigns, :checked, fn ->
+        Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
+      end)
+
+    ~H"""
+    <div phx-feedback-for={@name} style="height: 100%; margin: auto" class="">
+      <label
+        class="w-full relative "
+        style="background-image: url('/images/remove.svg'); height: 10px; background-position: center; background-repeat: no-repeat; background-size: 25px 40%; height: 60px; display: block; margin: auto;"
+      >
+        <input type="hidden" name={@name} value="false" />
+        <input
+          type="checkbox"
+          id={@id}
+          name={@name}
+          value="true"
+          checked={@checked}
+          class="rounded border-complementaryl text-complementary focus:ring-0 font-medium w-full h-full  invisible "
+          {@rest}
+        />
+      </label>
+      <.error :for={msg <- @errors}><%= msg %></.error>
+    </div>
+    """
+  end
+
   def input(%{type: "hidden"} = assigns) do
     ~H"""
     <input
@@ -790,7 +818,8 @@ defmodule MehungryWeb.CoreComponents do
       <select
         id={@id}
         name={@name}
-        class="rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	h-full w-full  text-greyfriend3 font-semibold",
+        class="rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	h-full w-full  text-greyfriend3 font-semibold"
+        ,
         multiple={@multiple}
         {@rest}
       >

@@ -17,7 +17,11 @@
 
 @layer base {
 
-  .button {
+.the_checkbox {
+   background-color: red;
+}
+
+.button {
   	color: white;
   	padding: 5px 25px;
   	font-weight: bold;

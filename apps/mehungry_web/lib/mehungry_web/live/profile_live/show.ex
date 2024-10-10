@@ -1,13 +1,12 @@
 defmodule MehungryWeb.ProfileLive.Show do
   use MehungryWeb, :live_component
 
-  alias Mehungry.Food
-
   @impl true
-  def update(%{user_profile: user_profile} = assigns, socket) do
+  def update(%{user_profile: user_profile, user_follows: user_follows} = assigns, socket) do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:user_profile, user_profile)}
+     |> assign(:user_profile, user_profile)
+     |> assign(:user_follows, user_follows)}
   end
 end

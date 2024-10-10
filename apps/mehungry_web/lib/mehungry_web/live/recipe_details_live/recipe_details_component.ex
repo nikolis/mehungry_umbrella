@@ -63,7 +63,11 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   end
 
   @impl true
-  def handle_event("vote_comment", %{"id" => comment_id, "reaction" => reaction} = params, socket) do
+  def handle_event(
+        "vote_comment",
+        %{"id" => comment_id, "reaction" => reaction} = _params,
+        socket
+      ) do
     case is_nil(socket.assigns.user) do
       true ->
         socket = assign(socket, :must_be_loged_in, 1)
@@ -139,7 +143,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             type="browse"
             user_recipes={@user_recipes}
             recipe={@recipe}
-            id={@id}
+            id={@id <> "like_container"}
             myself={@myself}
           />
           <img class="min-h-96 rounded-2xl w-full" src={@recipe.image_url} />
@@ -195,9 +199,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     """
   end
 
-  @impl true
   def handle_info(%{new_vote: vote, type_: _type_}, socket) do
-    IO.inspect(vote, label: "The vote received")
     post = Posts.get_post!(vote.post_id)
 
     posts =
@@ -219,8 +221,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   end
 
   def handle_info(%{new_comment: comment}, socket) do
-    IO.inspect("New comment inside recipe detals live")
-
     recipe = socket.assigns.recipe
     comment = Posts.get_comment!(comment.id)
 
@@ -242,7 +242,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   @impl true
   def update(assigns, socket) do
-    #IO.inspect(assigns.recipe, label: "Recipe from recipe detauls index")
     user_follows =
       if(is_nil(Map.get(assigns, :user_follows))) do
         nil

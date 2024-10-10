@@ -11,26 +11,36 @@ defmodule Mehungry.Accounts do
 
   alias Mehungry.Accounts.{User, UserToken, UserNotifier, UserFollow}
 
+  def get_user_essentials(nil), do: {nil, nil, nil}
+
+  def get_user_essentials(%User{} = user) do
+    user_profile = get_user_profile_by_user_id(user.id)
+    user_follows = Mehungry.Users.list_user_follows(user)
+
+    user_recipes = Mehungry.Users.list_user_saved_recipes(user)
+    user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
+
+    {user_profile, user_follows, user_recipes}
+  end
+
   def count_user_following(nil), do: nil
 
   def count_user_following(user_id) do
-    result =
-      from(u_fo in UserFollow,
-        where: u_fo.user_id == ^user_id,
-        select: count(u_fo.id)
-      )
-      |> Repo.one()
+    from(u_fo in UserFollow,
+      where: u_fo.user_id == ^user_id,
+      select: count(u_fo.id)
+    )
+    |> Repo.one()
   end
 
   def count_user_followers(nil), do: nil
 
   def count_user_followers(user_id) do
-    result =
-      from(u_fo in UserFollow,
-        where: u_fo.follow_id == ^user_id,
-        select: count(u_fo.id)
-      )
-      |> Repo.one()
+    from(u_fo in UserFollow,
+      where: u_fo.follow_id == ^user_id,
+      select: count(u_fo.id)
+    )
+    |> Repo.one()
   end
 
   ## Database getters

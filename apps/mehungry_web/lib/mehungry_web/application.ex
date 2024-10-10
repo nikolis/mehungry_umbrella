@@ -4,6 +4,7 @@ defmodule MehungryWeb.Application do
   @moduledoc false
 
   use Application
+  import Cachex.Spec
 
   def start(_type, _args) do
     children = [
@@ -11,12 +12,21 @@ defmodule MehungryWeb.Application do
       # MehungryWeb.Telemetry,
       # Manually Crated Presence Model
       MehungryWeb.Presence,
+      # MehungryWeb.Telemetry,
       # Start the Endpoint (http/https)
       MehungryWeb.Endpoint,
       # Start a worker by calling: MehungryWeb.Worker.start_link(arg)
       # {MehungryWeb.Worker, arg}
-      {MehungryWeb.OnlineRecommender, []},
-      {Cachex, name: :users}
+      # {MehungryWeb.OnlineRecommender, []},
+      %{
+        id: :create_recipe_cache,
+        start:
+          {Cachex, :start_link,
+           [
+             :create_recipe_cache,
+             [expiration: expiration(default: :timer.hours(1), interval: :timer.hours(1))]
+           ]}
+      }
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

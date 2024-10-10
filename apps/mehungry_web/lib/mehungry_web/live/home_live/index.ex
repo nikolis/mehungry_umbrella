@@ -7,7 +7,6 @@ defmodule MehungryWeb.HomeLive.Index do
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
-  alias Mehungry.Inventory
   alias Mehungry.Accounts
   alias Mehungry.Posts
   alias Mehungry.Users
@@ -24,29 +23,8 @@ defmodule MehungryWeb.HomeLive.Index do
           Accounts.get_user_by_session_token(session["user_token"])
       end
 
-    user_profile =
-      case is_nil(user) do
-        true ->
-          nil
-
-        false ->
-          Accounts.get_user_profile_by_user_id(user.id)
-      end
-
     posts = Mehungry.Posts.list_posts(user)
-
-    {user_posts, user_follows} =
-      case is_nil(user) do
-        true ->
-          {nil, nil}
-
-        false ->
-          user_posts = Users.list_user_saved_posts(user)
-          user_posts = Enum.map(user_posts, fn x -> x.post_id end)
-          user_follows = Users.list_user_follows(user)
-          user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
-          {user_posts, user_follows}
-      end
+    {user_profile, user_follows, _user_recipes} = Accounts.get_user_essentials(user)
 
     Enum.each(posts, fn post ->
       Posts.subscribe_to_post(%{post_id: post.id})
@@ -56,30 +34,12 @@ defmodule MehungryWeb.HomeLive.Index do
      socket
      |> assign(:user, user)
      |> assign(:posts, posts)
-     |> assign(:user_posts, user_posts)
      |> assign(:user_profile, user_profile)
      |> assign(:page_title, "Food recipe feed")
      |> assign(:user_follows, user_follows)
      |> assign(:search_changeset, nil)
      |> assign(:query_string, "")
      |> assign(:must_be_loged_in, nil)}
-  end
-
-  @impl true
-  def handle_event("save_post", %{"post_id" => post_id}, socket) do
-    case is_nil(socket.assigns.user) do
-      true ->
-        socket = assign(socket, :must_be_loged_in, 1)
-        {:noreply, socket}
-
-      false ->
-        {post_id, _ignore} = Integer.parse(post_id)
-        toggle_user_saved_posts(socket, post_id)
-        user_posts = Users.list_user_saved_posts(socket.assigns.user)
-        user_posts = Enum.map(user_posts, fn x -> x.post_id end)
-        socket = assign(socket, :user_posts, user_posts)
-        {:noreply, socket}
-    end
   end
 
   @impl true
@@ -117,19 +77,6 @@ defmodule MehungryWeb.HomeLive.Index do
         socket = assign(socket, :user_recipes, user_recipes)
         {:noreply, socket}
     end
-  end
-
-  def handle_event("navigate_to_post_details", %{"id" => post_id}, socket) do
-    {:noreply, push_navigate(socket, to: "/post/" <> to_string(post_id))}
-  end
-
-  def handle_event("delete_basket", %{"id" => basket_id}, socket) do
-    bs = Inventory.get_shopping_basket!(basket_id)
-    Inventory.delete_shopping_basket(bs)
-
-    {:noreply,
-     socket
-     |> assign(:shopping_basket, nil)}
   end
 
   def handle_event("react", %{"type_" => type, "id" => post_id}, socket) do
@@ -189,7 +136,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
     socket
     |> assign(:nutrients, nutrients)
-    |> assign(:page_title,  recipe.title <>  " Instructions and nutrition facts")
+    |> assign(:page_title, recipe.title <> " Instructions and nutrition facts")
     |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
     |> assign(:user_recipes, user_recipes)
