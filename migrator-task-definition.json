@@ -1,5 +1,5 @@
 {
-    "taskDefinitionArn": "arn:aws:ecs:eu-central-1:011528270584:task-definition/mehungry_migrator:4",
+    "taskDefinitionArn": "arn:aws:ecs:eu-central-1:011528270584:task-definition/mehungry_migrator:10",
     "family": "mehungry_migrator",
     "containerDefinitions": [
         {
