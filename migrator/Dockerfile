@@ -55,11 +55,5 @@ COPY apps ./apps
 COPY config ./config
 
 RUN mix deps.get --only ${MIX_ENV}
-#RUN MIX_ENV=prod mix compile
-#RUN mix assets.build  
-#RUN mix deps.compile
-
-# Build front-end
 COPY ./apps/mehungry/priv/repo/migrations ./apps/mehungry/priv/repo/migrations
-
 CMD ["mix", "ecto.migrate"]
