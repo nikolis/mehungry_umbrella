@@ -59,7 +59,7 @@
             user_recipes={@current_user_recipes}
             page_title={@page_title}
           />
-        <% action -> %>
+        <% _action -> %>
           <MehungryWeb.RecipeComponents.recipe_modal
             :if={@live_action in [:show_recipe]}
             on_cancel={JS.patch(@cancel_path)}

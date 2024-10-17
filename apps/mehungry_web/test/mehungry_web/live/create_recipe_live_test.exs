@@ -52,7 +52,7 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
 
     test "Update Recipe Correct update recipe ingredient", %{
       conn: conn,
-      ingredient: ingredient,
+      ingredient: _ingredient,
       measurement_unit: measurement_unit,
       user: user
     } do
@@ -83,14 +83,7 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
         }
       }
 
-      live_view =
-        index_live
-        |> element("#button_remove_ingredient" <> Integer.to_string(0))
-        |> render_click()
-
-      open_browser(index_live)
-
-      {:ok, profile_view, _html} =
+      {:ok, _profile_view, _html} =
         index_live
         |> form(".the_form", recipe: @create_params_recipe)
         |> render_submit(%{recipe: %{"recipe_ingredients" => ingredients}})
@@ -189,6 +182,7 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
       assert html =~ "is invalid"
       # stop(index_live)
       {:ok, _index_live, html} = live(conn, Routes.create_recipe_index_path(conn, :index))
+
       assert html =~ "is invalid"
     end
   end

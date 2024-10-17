@@ -2,7 +2,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   use MehungryWeb, :live_view
 
   alias Mehungry.Food
-  alias Mehungry.Food.{RecipeIngredient, Recipe}
+  alias Mehungry.Food.{Recipe}
 
   alias Mehungry.Food.Recipe
   alias Mehungry.Accounts
@@ -49,8 +49,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         {:ok, nil} ->
           %{}
 
-        {:ok, _attrs} ->
-          %{}
+        {:ok, attrs} ->
+          attrs
       end
 
     socket
@@ -135,7 +135,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   @impl true
   def handle_event("remove-ingredient", %{"temp_id" => remove_id}, socket) do
-    {progress, recipe_ingredients} = remove_from_change(socket, remove_id)
+    {_progress, recipe_ingredients} = remove_from_change(socket, remove_id)
 
     changeset =
       socket.assigns.changeset
@@ -145,71 +145,11 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def handle_event("remove-step", %{"temp_id" => remove_id}, socket) do
-    IO.inspect("HERE REMOVING STEP")
-    {progress, steps} = remove_from_change_step(socket, remove_id)
+    {_progress, steps} = remove_from_change_step(socket, remove_id)
 
     changeset =
       socket.assigns.changeset
       |> Ecto.Changeset.put_embed(:steps, steps)
-
-    {:noreply, assign(socket, changeset: changeset)}
-  end
-
-  defp remove_from_change(socket, remove_id) do
-    case Map.get(socket.assigns.changeset.changes, :recipe_ingredients, nil) do
-      nil ->
-        {:repeat, []}
-
-      recipe_ingredient_changes ->
-        original_length = length(recipe_ingredient_changes)
-
-        result_changes =
-          recipe_ingredient_changes
-          |> Enum.reject(fn %{changes: recipe_ingredient} = rest ->
-            Map.get(recipe_ingredient, :temp_id, nil) == remove_id
-          end)
-
-        case length(result_changes) == original_length do
-          true ->
-            {:repeat, result_changes}
-
-          false ->
-            {:ok, result_changes}
-        end
-    end
-  end
-
-  defp remove_from_change_step(socket, remove_id) do
-    case Map.get(socket.assigns.changeset.changes, :steps, nil) do
-      nil ->
-        {:repeat, []}
-
-      steps_changes ->
-        original_length = length(steps_changes)
-
-        result_changes =
-          steps_changes
-          |> Enum.reject(fn %{changes: step} = rest ->
-            Map.get(step, :temp_id, nil) == remove_id
-          end)
-
-        case length(result_changes) == original_length do
-          true ->
-            {:repeat, result_changes}
-
-          false ->
-            {:ok, result_changes}
-        end
-    end
-  end
-
-  @impl true
-  def handle_event("remove-ingredient", %{"temp_id" => remove_id}, socket) do
-    {progress, recipe_ingredients} = remove_from_change(socket, remove_id)
-
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_assoc(:recipe_ingredients, recipe_ingredients)
 
     {:noreply, assign(socket, changeset: changeset)}
   end
@@ -314,6 +254,53 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   ########################################################################################## Helper Function  ##########################################
+  defp remove_from_change(socket, remove_id) do
+    case Map.get(socket.assigns.changeset.changes, :recipe_ingredients, nil) do
+      nil ->
+        {:repeat, []}
+
+      recipe_ingredient_changes ->
+        original_length = length(recipe_ingredient_changes)
+
+        result_changes =
+          recipe_ingredient_changes
+          |> Enum.reject(fn %{changes: recipe_ingredient} = _rest ->
+            Map.get(recipe_ingredient, :temp_id, nil) == remove_id
+          end)
+
+        case length(result_changes) == original_length do
+          true ->
+            {:repeat, result_changes}
+
+          false ->
+            {:ok, result_changes}
+        end
+    end
+  end
+
+  defp remove_from_change_step(socket, remove_id) do
+    case Map.get(socket.assigns.changeset.changes, :steps, nil) do
+      nil ->
+        {:repeat, []}
+
+      steps_changes ->
+        original_length = length(steps_changes)
+
+        result_changes =
+          steps_changes
+          |> Enum.reject(fn %{changes: step} = _rest ->
+            Map.get(step, :temp_id, nil) == remove_id
+          end)
+
+        case length(result_changes) == original_length do
+          true ->
+            {:repeat, result_changes}
+
+          false ->
+            {:ok, result_changes}
+        end
+    end
+  end
 
   def map_recipe_ingredient(recipe_ingredients) do
     ingredient = Food.get_ingredient(recipe_ingredients.ingredient_id)
@@ -369,7 +356,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          |> push_navigate(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect(changeset)
         {:noreply, assign(socket, changeset: changeset)}
     end
   end

@@ -105,6 +105,16 @@ defmodule MehungryWeb do
     end
   end
 
+  def stateless_component do
+    quote do
+      use Phoenix.Component
+
+      alias Phoenix.LiveView.JS
+      import MehungryWeb.LiveUtils
+      unquote(verified_routes())
+    end
+  end
+
   defp view_helpers do
     quote do
       # Use all HTML functionality (forms, tags, etc)

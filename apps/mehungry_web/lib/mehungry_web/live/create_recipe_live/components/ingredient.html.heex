@@ -28,7 +28,7 @@
   <div class="form-group px-1 w-full">
     <%= if is_nil Map.get(@g.source.changes, :temp_id, nil) do %>
       <div class="m-auto h-full w-full color-transparent">
-        <.input field={@g[:delete]} type="checkbox_covered" />
+        <.input field={@g[:delete]} type="checkbox_covered" index={@g.index} />
         <.icon name="hero-delete" class="h-12 w-12" />
       </div>
     <% else %>

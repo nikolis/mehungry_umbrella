@@ -30,7 +30,7 @@ defmodule Mehungry.NutrientTest do
         })
 
       recipe = Food.get_recipe!(recipe.id)
-      {num, nutrients} = Mehungry.Food.RecipeUtils.get_nutrients(recipe)
+      {_num, nutrients} = Mehungry.Food.RecipeUtils.get_nutrients(recipe)
 
       nutrients_changed =
         nutrients
@@ -38,7 +38,6 @@ defmodule Mehungry.NutrientTest do
         |> Enum.reduce(&Map.merge/2)
 
       assert nutrients_changed == recipe.nutrients
-      IO.inspect(Mehungry.Food.RecipeUtils.sort_nutrients_from_db(recipe.nutrients))
     end
   end
 end

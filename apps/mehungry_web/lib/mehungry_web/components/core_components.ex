@@ -14,8 +14,7 @@ defmodule MehungryWeb.CoreComponents do
 
   Icons are provided by [heroicons](https://heroicons.com). See `icon/1` for usage.
   """
-  use Phoenix.Component
-
+  use MehungryWeb, :stateless_component
   alias Phoenix.LiveView.JS
   alias Mehungry.Food
   alias Mehungry.Accounts
@@ -62,6 +61,44 @@ defmodule MehungryWeb.CoreComponents do
 
   def count_user_following(user_id) do
     Accounts.count_user_following(user_id)
+  end
+
+  @doc """
+  """
+  def share_button(assigns) do
+    ~H"""
+    <div
+      class="relative"
+      id={"share_utils_toggle" <> Integer.to_string(@post.id) }
+      phx-click-away={
+        Phoenix.LiveView.JS.remove_class("drop_down_visible ",
+          to: "#share_items_list" <> Integer.to_string(@post.id)
+        )
+      }
+      phx-click={
+        Phoenix.LiveView.JS.toggle_class("drop_down_visible ",
+          to: "#share_items_list" <> Integer.to_string(@post.id)
+        )
+      }
+    >
+      <.icon name="hero-share" class="stroke-white h-7 w-8 flex-none text-white " />
+      <div
+        phx-hook="Copy"
+        class="drop_down_home w-24"
+        data-to="#control-codes"
+        id={"share_items_list"<> Integer.to_string(@post.id)}
+      >
+        <input
+          type="text"
+          class="hidden"
+          id="control-codes"
+          value={~p"/show_recipe/#{Integer.to_string(@post.reference_id)}"}
+        />
+
+        <.icon name="hero-link" class="h-7 w-7 flex-none text-white cursor-pointer" />
+      </div>
+    </div>
+    """
   end
 
   @doc """
@@ -239,6 +276,86 @@ defmodule MehungryWeb.CoreComponents do
         <% end %>
       </div>
     </div>
+    """
+  end
+
+  @doc """
+  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
+  """
+  def footer_user_overview_card(
+        %{
+          user_follows: _user_follows,
+          user: %Mehungry.Accounts.User{} = _user
+        } = assigns
+      ) do
+    ~H"""
+    <div class="footer_user_overview w-full absolute bottom-0 right-0 left-0 m-auto rounded-full z-10">
+      <div class=" flex gap-2 w-11/12 m-auto sm:w-full m-0 ">
+        <.link
+          patch={"/profile/"<>Integer.to_string(@user.id)}
+          style="min-height: 50px; min-width: 50px;"
+        >
+          <%= if @user.profile_pic do %>
+            <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
+          <% else %>
+            <.icon name="hero-user-circle" class="h-12 w-12" />
+          <% end %>
+        </.link>
+        <div class="flex flex-col justify-center w-full">
+          <div class="text-base font-bold text-white leading-4">
+            <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
+              <%= @user.email %>
+            </.link>
+            <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
+            </div>
+          </div>
+          <div class="text-sm font-semibold leading-4 text-white">
+            <%= "#{count_user_created_recipes(@user.id)} posted recipes" %>
+          </div>
+        </div>
+        <.follow_button user_follows={@user_follows} user={@user} />
+      </div>
+    </div>
+    """
+  end
+
+  def follow_button(%{user_follows: nil} =assigns) do
+    ~H"""
+      <div class="self-end m-auto">     
+        <a href={~p"/users/log_in"}
+          class="primary_button px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-bold h-full w-full"                                                                                                 
+          phx-click="save_user_follow"
+          phx-value-follow_id={@user.id}
+        >
+          Follow
+        </a>
+      </div>
+    """
+  end
+
+  def follow_button(assigns) do
+    ~H"""
+    <%= if @user.id in @user_follows do %>
+      <div class="my-auto self-end w-fit relative mx-2">                                                                                                                                      
+        <button
+          class="primary_button_complementary px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-bold h-full w-full"                                                                                   
+          phx-click="save_user_follow"
+          phx-value-follow_id={@user.id}
+        > 
+          Following
+        </button>
+      </div>
+    <% else %>
+      <div class="self-end m-auto">     
+        <button
+          class="primary_button px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-bold h-full w-full"                                                                                                 
+          phx-click="save_user_follow"
+          phx-value-follow_id={@user.id}
+        >
+          Follow
+        </button>
+      </div>
+    <% end %>
     """
   end
 
@@ -526,12 +643,13 @@ defmodule MehungryWeb.CoreComponents do
     default: "text",
     values:
       ~w(readonly checkbox color date datetime-local email file hidden month number password select_component
-               range radio search select tel text textarea time url week full-text comment)
+               range radio search select tel text textarea time url week full-text comment checkbox_covered)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :errors, :list, default: []
+  attr :index, :integer, required: false,  doc: "The index in case the input exists within form_for kind of setup"
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
   attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
   attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"
@@ -612,6 +730,7 @@ defmodule MehungryWeb.CoreComponents do
     ~H"""
     <div phx-feedback-for={@name} style="height: 100%; margin: auto" class="">
       <label
+        id={"button_remove_ingredient"<> Integer.to_string(@index)}
         class="w-full relative "
         style="background-image: url('/images/remove.svg'); height: 10px; background-position: center; background-repeat: no-repeat; background-size: 25px 40%; height: 60px; display: block; margin: auto;"
       >

@@ -323,51 +323,54 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
       assigns
       |> Map.put(:day, current_date)
       |> Map.put(:meal, title)
+      |> Map.put(:actual_meal, result)
 
-    case result do
-      nil ->
-        ~H"""
-        <button
-          class={[
-            "text-center min-h-28 max-h-28 w-full border-t-2 ",
-            today?(@day) && "bg-green-100",
-            other_month?(@day, @current_date) && "bg-gray-100",
-            selected_date?(@day, @selected_date) && @meal == @selected_meal && "bg-blue-100"
-          ]}
-          type="button"
-          phx-target={@myself}
-          phx-click="pick-date"
-          phx-value-date={Calendar.strftime(@day, "%Y-%m-%d")}
-          phx-value-meal={@meal}
-        >
-          <time datetime={Calendar.strftime(@day, "%Y-%m-%d")}>
-            <span class="text-md capitalize text-complementaryd font-semibold"><%= @meal %></span>
-          </time>
-        </button>
-        """
+    week_row_button(assigns)
+  end
 
-      actual_meal ->
-        ~H"""
-        <button
-          class={[
-            "text-center min-h-28 max-h-28  w-full bg-primaryl2 border-t-2 overflow-hidden overflow-y-auto",
-            today?(@day) && "bg-green-100",
-            other_month?(@day, @current_date) && "bg-gray-100",
-            selected_date?(@day, @selected_date) && @meal == @selected_meal && "bg-blue-100"
-          ]}
-          type="button"
-          phx-click="edit_modal"
-          phx-value-id={actual_meal.id}
-        >
-          <div class="capitalize text-complementaryd font-medium  overflow-hidden">
-            <div class="font-semibold text-md"><%= actual_meal.title %></div>
-            <div :for={meal <- actual_meal.recipe_user_meals}>
-              <div class="text-sm"><%= meal.title %></div>
-            </div>
-          </div>
-        </button>
-        """
-    end
+  defp week_row_button(%{actual_meal: nil} = assigns) do
+    ~H"""
+    <button
+      class={[
+        "text-center min-h-28 max-h-28 w-full border-t-2 ",
+        today?(@day) && "bg-green-100",
+        other_month?(@day, @current_date) && "bg-gray-100",
+        selected_date?(@day, @selected_date) && @meal == @selected_meal && "bg-blue-100"
+      ]}
+      type="button"
+      phx-target={@myself}
+      phx-click="pick-date"
+      phx-value-date={Calendar.strftime(@day, "%Y-%m-%d")}
+      phx-value-meal={@meal}
+    >
+      <time datetime={Calendar.strftime(@day, "%Y-%m-%d")}>
+        <span class="text-md capitalize text-complementaryd font-semibold"><%= @meal %></span>
+      </time>
+    </button>
+    """
+  end
+
+  defp week_row_button(assigns) do
+    ~H"""
+    <button
+      class={[
+        "text-center min-h-28 max-h-28  w-full bg-primaryl2 border-t-2 overflow-hidden overflow-y-auto",
+        today?(@day) && "bg-green-100",
+        other_month?(@day, @current_date) && "bg-gray-100",
+        selected_date?(@day, @selected_date) && @meal == @selected_meal && "bg-blue-100"
+      ]}
+      type="button"
+      phx-click="edit_modal"
+      phx-value-id={@actual_meal.id}
+    >
+      <div class="capitalize text-complementaryd font-medium  overflow-hidden">
+        <div class="font-semibold text-md"><%= @actual_meal.title %></div>
+        <div :for={meal <- @actual_meal.recipe_user_meals}>
+          <div class="text-sm"><%= meal.title %></div>
+        </div>
+      </div>
+    </button>
+    """
   end
 
   defp get_loading(assigns) do

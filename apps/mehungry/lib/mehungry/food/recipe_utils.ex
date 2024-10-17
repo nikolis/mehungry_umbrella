@@ -153,8 +153,6 @@ defmodule Mehungry.Food.RecipeUtils do
   def map_ingredients_to_structured_form_pre_saved(nil), do: nil
 
   def map_ingredients_to_structured_form_pre_saved(recipe_ingredients) do
-    IO.inspect(recipe_ingredients, label: "The ingredients")
-
     Enum.map(recipe_ingredients, fn {_, x} ->
       {Food.get_ingredient_details!(x["ingredient_id"]),
        Food.get_measurement_unit!(x["measurement_unit_id"]), x["quantity"]}

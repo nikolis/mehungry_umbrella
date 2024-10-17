@@ -78,7 +78,8 @@ defmodule MehungryWeb.MixProject do
        app: false,
        compile: false,
        depth: 1},
-      {:live_isolated_component, "~> 0.8.0", only: [:dev, :test]}
+       {:live_isolated_component, "~> 0.8.0", only: [:dev, :test]},
+       {:wallaby, "~> 0.30", runtime: false, only: :test}
     ]
   end
 

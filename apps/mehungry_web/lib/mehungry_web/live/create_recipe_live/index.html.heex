@@ -32,7 +32,7 @@
           </button>
         </div>
       <% else %>
-        <div class={"drop-container #{drop_hidden?(@uploads.image.entries)}"}>
+        <div class={"drop-container mt-4 #{drop_hidden?(@uploads.image.entries)}"}>
           <div class="file-drop-area w-full h-full " phx-drop-target=" {@uploads.image.ref}">
             <div id="lab1" phx-hook="ImageSelect" for={@uploads.image.ref} class="h-full w-full ">
               <div class="drag_label">Drag n Drop or click to upload</div>
@@ -116,7 +116,7 @@
         </div>
       </div>
     </div>
-    <div id="something wierd" class="absolute right-10 mx-auto bottom-0 w-40">
+    <div id="something wierd" class="absolute right-0 sm:right-10 mx-auto bottom-0 w-40">
       <%= submit("Save",
         class:
           "button bg-primary border-2 border-transparent  w-full absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold mb-14",
@@ -125,7 +125,7 @@
         id: "save_button"
       ) %>
     </div>
-    <div id="something wierd" class="absolute right-56 mx-auto bottom-0 w-40">
+    <div id="something wierd" class="absolute  sm:right-56  mx-auto bottom-0 w-40">
       <button
         class="button text-greyfriend3 border-2 border-greyfriend3  w-full absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold   mb-14"
         id="button_delete"

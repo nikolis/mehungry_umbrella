@@ -52,23 +52,23 @@ defmodule MehungryWeb.RecipeComponents do
       phx-mounted={@show && show_modal(@id)}
       phx-remove={hide_modal(@id)}
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
-      class="relative z-50 hidden max-w-1/2"
+      class="relative z-50 hidden max-w-1/2 m-auto "
     >
       <div
         id={"#{@id}-bg"}
         class="bg-zinc-50/90 fixed inset-0 transition-opacity top-0 left-0 right-0"
-        aria-hidden="true"
+        aria-hidden="false"
       />
       <div
-        class="fixed inset-0 overflow-y-auto"
+        class="fixed right-0 inset-0 overflow-y-auto"
         aria-labelledby={"#{@id}-title"}
         aria-describedby={"#{@id}-description"}
         role="dialog"
         aria-modal="true"
         tabindex="0"
       >
-        <div class="flex min-h-full  justify-center " style="padding-top: 80px;">
-          <div class="w-full sm:w-7/12" style="">
+        <div class="flex min-h-full  sm:mt-20">
+          <div class="w-full sm:w-7/12 m-auto" style="">
             <.focus_wrap
               id={"#{@id}-container"}
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
@@ -76,18 +76,18 @@ defmodule MehungryWeb.RecipeComponents do
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
               class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white  shadow-lg ring-1 transition "
             >
-              <div class="absolute sm:hidden top-2 left-2 bg-white rounded-full">
+              <div class=" sm:hidden  absolute top-5 left-5 rounded-full w-12 h-12  bg-white">
                 <button
                   phx-click={JS.exec("data-cancel", to: "##{@id}")}
                   type="button"
-                  class=" flex-none p-2   hover:opacity-40"
+                  class=" flex-none p-2   hover:opacity-40 w-full h-full "
                   aria-label="close"
                 >
-                  <.icon name="hero-arrow-left" class="h-5 w-5" />
+                  <.icon name="hero-arrow-left" class="h-6 w-6 " />
                 </button>
               </div>
 
-              <div id={"#{@id}-content"}>
+              <div id={"#{@id}-content"} class="sm:p-4">
                 <%= render_slot(@inner_block) %>
               </div>
             </.focus_wrap>
@@ -102,7 +102,7 @@ defmodule MehungryWeb.RecipeComponents do
         %{recipe: _recipe, nutrients: _nutrients, primary_size: _primary_size} = assigns
       ) do
     ~H"""
-    <div class="w-11/12  m-auto" style="height: 300px;">
+    <div class="w-11/12  m-auto" style="height: 280px;">
       <.render_tabs
         id="live_comp_tabs_rec"
         contents={MehungryWeb.RecipeDetailsTabsConfig}
@@ -245,7 +245,7 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_attrs_container(assigns) do
     ~H"""
-    <div class="recipe_attrs_container mt-6">
+    <div class="recipe_attrs_container mt-4">
       <div>
         <div><img style="margin:auto;width:35px;height:35px;" src="/images/time_spent.svg" /></div>
 

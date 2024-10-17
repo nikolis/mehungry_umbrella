@@ -66,8 +66,6 @@ h1 {
 
   .basic_2_col_grid_cont{
     display: grid;
-    gap: 2.5rem;
-    justify-content: space-around;
     grid-template-columns: repeat(1, minmax(0, 1fr));
     margin-bottom: 3rem;
   }

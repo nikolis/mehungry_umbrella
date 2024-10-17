@@ -20,25 +20,24 @@ defmodule Mehungry.Food.RecipeIngredient do
 
   @doc false
   def changeset(recipe_ingredient, attrs) do
-    changeset =
-      recipe_ingredient
-      # So its persisted
-      |> cast(attrs, [
-        :quantity,
-        :ingredient_allias,
-        :measurement_unit_id,
-        :ingredient_id,
-        :recipe_id,
-        :delete,
-        :temp_id
-      ])
-      |> validate_required([:ingredient_id, :quantity, :measurement_unit_id])
-      |> foreign_key_constraint(:name)
-      |> foreign_key_constraint(:recipe_ingredients_name_fkey)
-      |> foreign_key_constraint(:recipe_ingredients_name)
-      |> foreign_key_constraint(:recipe_ingredients)
-      |> foreign_key_constraint(:ingredient_id)
-      |> maybe_mark_for_deletion()
+    recipe_ingredient
+    # So its persisted
+    |> cast(attrs, [
+      :quantity,
+      :ingredient_allias,
+      :measurement_unit_id,
+      :ingredient_id,
+      :recipe_id,
+      :delete,
+      :temp_id
+    ])
+    |> validate_required([:ingredient_id, :quantity, :measurement_unit_id])
+    |> foreign_key_constraint(:name)
+    |> foreign_key_constraint(:recipe_ingredients_name_fkey)
+    |> foreign_key_constraint(:recipe_ingredients_name)
+    |> foreign_key_constraint(:recipe_ingredients)
+    |> foreign_key_constraint(:ingredient_id)
+    |> maybe_mark_for_deletion()
   end
 
   defp maybe_mark_for_deletion(%{data: %{id: nil}} = changeset), do: changeset

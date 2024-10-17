@@ -83,8 +83,6 @@ defmodule Mehungry.Posts do
   end
 
   defp broadcast_change({:ok, comment}) do
-    IO.inspect(comment, label: "Broadcasting Changes in commnent")
-
     Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(comment.recipe_id), %{
       new_comment: comment
     })
@@ -349,7 +347,6 @@ defmodule Mehungry.Posts do
     case result do
       {:ok, comment_answer} ->
         comment = get_comment!(comment_answer.comment_id)
-        IO.inspect(comment, label: "Coment to bvroad")
         broadcast_change({:ok, comment})
         result
 
@@ -545,8 +542,6 @@ defmodule Mehungry.Posts do
 
   """
   def create_post_downvote(attrs \\ %{}) do
-    IO.inspect("Down vote")
-
     %PostDownvote{}
     |> PostDownvote.changeset(attrs)
     |> Repo.insert()

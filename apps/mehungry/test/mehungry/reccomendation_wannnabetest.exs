@@ -47,7 +47,6 @@ defmodule Mehungry.ReccomendationsTest do
     }
 
     error_result = Food.create_recipe(valid_attrs)
-    IO.inspect(error_result)
 
     valid_attrs2 = %{
       "author" => "Nikolaos Galerakis",

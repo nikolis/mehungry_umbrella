@@ -158,9 +158,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         {recipe_id, _ignore} = Integer.parse(recipe_id)
         toggle_user_saved_recipes(socket, recipe_id)
 
-        Users.list_user_saved_recipes(socket.assigns.current_user)
-        |> Enum.map(fn x -> x.recipe_id end)
-
         user_recipes =
           Users.list_user_saved_recipes(socket.assigns.current_user)
           |> Enum.map(fn x -> x.recipe_id end)

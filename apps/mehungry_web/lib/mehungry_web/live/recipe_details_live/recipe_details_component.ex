@@ -32,9 +32,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
         {recipe_id, _ignore} = Integer.parse(recipe_id)
         toggle_user_saved_recipes(socket, recipe_id)
 
-        Users.list_user_saved_recipes(socket.assigns.user)
-        |> Enum.map(fn x -> x.recipe_id end)
-
         user_recipes =
           Users.list_user_saved_recipes(socket.assigns.user)
           |> Enum.map(fn x -> x.recipe_id end)
@@ -136,7 +133,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id="recipe_presentation_modal" class="sm:p-6">
+    <div id="recipe_presentation_modal" class="">
       <div class="basic_2_col_grid_cont">
         <div class="w-full">
           <.recipe_like_container
@@ -146,11 +143,13 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             id={@id <> "like_container"}
             myself={@myself}
           />
-          <img class="min-h-96 rounded-2xl w-full" src={@recipe.image_url} />
-          <h3 class="m-2 mt-4  text-center w-full"><%= @recipe.title %></h3>
+          <img style="max-height: 215px;" class="min-h-96 rounded-2xl w-full" src={@recipe.image_url} />
+          <h3 class="m-2  max-h-16 overflow-hidden text-center text-xl w-full">
+            <%= @recipe.title %>
+          </h3>
           <.recipe_attrs_container recipe={@recipe} />
         </div>
-        <div class="w-full">
+        <div class="w-full mt-2">
           <.user_overview_card user={@recipe.user} user_follows={@user_follows} />
           <div class="mt-8">
             <.recipe_details recipe={@recipe} nutrients={@nutrients} primary_size={@primary_size} . />
