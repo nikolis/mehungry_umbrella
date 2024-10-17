@@ -280,6 +280,30 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   @doc """
+  Recipe Hedder
+  """
+  def recipe_header_card(
+        %{
+          user_follows: _user_follows,
+          user: %Mehungry.Accounts.User{} = _user
+        } = assigns
+      ) do
+    ~H"""
+    <div class="footer_user_overview w-fit absolute top-10 right-0 left-0 m-auto rounded-full z-10">
+      <div class=" flex gap-2 w-fit m-auto sm:w-full m-0 ">
+        <div class="flex flex-col justify-center w-full">
+          <div class="text-sm font-semibold leading-4 text-white">
+           <div class="text-center text-2xl px-6 max-h-16 overflow-hidden"> <%= @post.reference.title %> </div>
+           <div class="text-center text-base px-6 pb-2"> <%= @post.reference.description %> </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
   """
   def footer_user_overview_card(
@@ -289,7 +313,7 @@ defmodule MehungryWeb.CoreComponents do
         } = assigns
       ) do
     ~H"""
-    <div class="footer_user_overview w-full absolute bottom-0 right-0 left-0 m-auto rounded-full z-10">
+    <div class="footer_user_overview w-full absolute bottom-10 right-0 left-0 m-auto rounded-full z-10">
       <div class=" flex gap-2 w-11/12 m-auto sm:w-full m-0 ">
         <.link
           patch={"/profile/"<>Integer.to_string(@user.id)}
@@ -319,36 +343,37 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  def follow_button(%{user_follows: nil} =assigns) do
+  def follow_button(%{user_follows: nil} = assigns) do
     ~H"""
-      <div class="self-end m-auto">     
-        <a href={~p"/users/log_in"}
-          class="primary_button px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-bold h-full w-full"                                                                                                 
-          phx-click="save_user_follow"
-          phx-value-follow_id={@user.id}
-        >
-          Follow
-        </a>
-      </div>
+    <div class="self-end m-auto">
+      <a
+        href={~p"/users/log_in"}
+        class="primary_button px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-bold h-full w-full"
+        phx-click="save_user_follow"
+        phx-value-follow_id={@user.id}
+      >
+        Follow
+      </a>
+    </div>
     """
   end
 
   def follow_button(assigns) do
     ~H"""
     <%= if @user.id in @user_follows do %>
-      <div class="my-auto self-end w-fit relative mx-2">                                                                                                                                      
+      <div class="my-auto self-end w-fit relative mx-2">
         <button
-          class="primary_button_complementary px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-bold h-full w-full"                                                                                   
+          class="primary_button_complementary px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-bold h-full w-full"
           phx-click="save_user_follow"
           phx-value-follow_id={@user.id}
-        > 
+        >
           Following
         </button>
       </div>
     <% else %>
-      <div class="self-end m-auto">     
+      <div class="self-end m-auto">
         <button
-          class="primary_button px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-bold h-full w-full"                                                                                                 
+          class="primary_button px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-bold h-full w-full"
           phx-click="save_user_follow"
           phx-value-follow_id={@user.id}
         >
@@ -649,7 +674,11 @@ defmodule MehungryWeb.CoreComponents do
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :errors, :list, default: []
-  attr :index, :integer, required: false,  doc: "The index in case the input exists within form_for kind of setup"
+
+  attr :index, :integer,
+    required: false,
+    doc: "The index in case the input exists within form_for kind of setup"
+
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
   attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
   attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"

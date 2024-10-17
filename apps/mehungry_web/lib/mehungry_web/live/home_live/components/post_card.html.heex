@@ -11,11 +11,19 @@
     user_follows={@user_follows}
     current_user={@user}
   />
+  <.recipe_header_card
+    user={@post.reference.user}
+    post={@post}
+    total_recipes={count_user_created_recipes(@post.user_id)}
+    user_follows={@user_follows}
+    current_user={@user}
+  />
+
   <div class="m-auto">
     <.link
       id={"link-to-recipe-#{@post.reference_id}"}
-      class="block  " 
-      style="height: calc(100vh - 60px)"
+      class="block  "
+      #style="height: calc(100vh - 60px)"
       patch={~p"/show_recipe/#{@post.reference_id}"}
     >
       <img class="h-full m-auto" src={@post.md_media_url} />
