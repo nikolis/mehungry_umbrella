@@ -1,5 +1,6 @@
 <div
-  class="snap-start flex flex-row relative sm:w-2/4 m-auto"
+  style="height: calc(100vh - 60px)"
+  class="snap-end flex flex-row relative sm:w-2/4 m-auto "
   style="border-bottom: 1px solid var(--clr-grey-friend_2);"
   id={"post_card_"<> Integer.to_string(@id)}
 >
@@ -13,7 +14,8 @@
   <div class="m-auto">
     <.link
       id={"link-to-recipe-#{@post.reference_id}"}
-      class="block h-lvh"
+      class="block  " 
+      style="height: calc(100vh - 60px)"
       patch={~p"/show_recipe/#{@post.reference_id}"}
     >
       <img class="h-full m-auto" src={@post.md_media_url} />
