@@ -243,6 +243,30 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
+  def recipe_tags(assigns) do
+    ~H"""
+    <div class="w-fit m-auto px-4 flex gap-2 my-2 flex-wrap">
+      <%= for recipe_ingredient <- Enum.slice(@recipe.recipe_ingredients, 0..4) do %>
+        <.recipe_tag ingredient={recipe_ingredient.ingredient} />
+      <% end %>
+    </div>
+    """
+  end
+
+  def recipe_tag(assigns) do
+    ~H"""
+    <a
+      href={~p"/search/" <> Enum.at(String.split(@ingredient.name, ","), 0)}
+      class="cursor-pointer w-fit border-2 border-red border-solid rounded-full px-2 border-primaryl2"
+      id={Integer.to_string(@ingredient.id)}
+    >
+      <div class=" text-greyfriend3 text-base font-semibold">
+        <%= Enum.at(String.split(@ingredient.name, ","), 0) %>
+      </div>
+    </a>
+    """
+  end
+
   def recipe_attrs_container(assigns) do
     ~H"""
     <div class="recipe_attrs_container mt-4">
@@ -277,6 +301,45 @@ defmodule MehungryWeb.RecipeComponents do
       <div>
         <div><img src="/images/bowl.svg" style="margin: auto;width:35px;height:35px;" /></div>
         <div class="recipe_attrs_text text-center"><%= @recipe.servings %></div>
+      </div>
+    </div>
+    """
+  end
+
+  def post_card_interaction(assigns) do
+    ~H"""
+    <div class="post_card_details max-w-20  absolute h-full w-1/5 top-0 bottom-0 right-0 sm:-right-20 ">
+      <div class="my-auto">
+        <div class="utils_container gap-3">
+          <div class="cursor-pointer ">
+            <MehungryWeb.SvgComponents.upvote_svg post={@post} user={@user} />
+          </div>
+          <div
+            style="display: none; font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
+            class="font-semibold"
+          >
+            <%= length(@post.upvotes) %>
+          </div>
+          <div class="cursor-pointer">
+            <MehungryWeb.SvgComponents.downvote_svg post={@post} user={@user} />
+          </div>
+          <div class="fill-white hidden">
+            <.icon name="hero-chat-bubble-oval-left" class="h-7 w-8 flex-none text-white		" />
+          </div>
+          <.share_button post={@post}></.share_button>
+        </div>
+
+        <div
+          style="display: none; font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
+          class="font-semibold"
+        >
+          <%= length(@post.reference.comments) %>
+        </div>
+        <div
+          style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
+          class="md:block hidden"
+        >
+        </div>
       </div>
     </div>
     """

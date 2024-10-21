@@ -1,17 +1,10 @@
 <div
-  style="height: calc(100vh - 60px)"
-  class="snap-end flex flex-row relative sm:w-2/4 m-auto "
+  style=""
+  class="sm:w-2/4 m-auto mt-6 "
   style="border-bottom: 1px solid var(--clr-grey-friend_2);"
   id={"post_card_"<> Integer.to_string(@id)}
 >
-  <.footer_user_overview_card
-    user={@post.reference.user}
-    post={@post}
-    total_recipes={count_user_created_recipes(@post.user_id)}
-    user_follows={@user_follows}
-    current_user={@user}
-  />
-  <.recipe_header_card
+  <.user_overview_card
     user={@post.reference.user}
     post={@post}
     total_recipes={count_user_created_recipes(@post.user_id)}
@@ -19,48 +12,23 @@
     current_user={@user}
   />
 
-  <div class="m-auto">
-    <.link
-      id={"link-to-recipe-#{@post.reference_id}"}
-      class="block  "
-      #style="height: calc(100vh - 60px)"
-      patch={~p"/show_recipe/#{@post.reference_id}"}
-    >
-      <img class="h-full m-auto" src={@post.md_media_url} />
-    </.link>
-  </div>
-  <div class="post_card_details max-w-20  absolute h-full w-1/5 top-0 bottom-0 right-0 sm:-right-20">
-    <div class="my-auto">
-      <div class="utils_container gap-3">
-        <div class="cursor-pointer">
-          <MehungryWeb.SvgComponents.upvote_svg post={@post} user={@user} />
-        </div>
-        <div
-          style="display: none; font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
-          class="font-semibold"
+  <div class="m-auto relative">
+    <div class="" id="adfsafds">
+      <h3 class="text-lg font-semibold px-8 text-center"><%= @post.reference.title %></h3>
+
+      <div class="w-full m-auto relative bg-greyfriend1">
+        <.post_card_interaction post={@post} user={@user} />
+        <.link
+          id={"link-to-recipe-#{@post.reference_id}"}
+          class="block  "
+          #style="height: calc(100vh - 60px)"
+          patch={~p"/show_recipe/#{@post.reference_id}"}
         >
-          <%= length(@post.upvotes) %>
-        </div>
-        <div class="cursor-pointer">
-          <MehungryWeb.SvgComponents.downvote_svg post={@post} user={@user} />
-        </div>
-        <div class="fill-white hidden">
-          <.icon name="hero-chat-bubble-oval-left" class="h-7 w-8 flex-none text-white		" />
-        </div>
-        <.share_button post={@post}></.share_button>
-      </div>
-
-      <div
-        style="display: none; font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
-        class="font-semibold"
-      >
-        <%= length(@post.reference.comments) %>
-      </div>
-      <div
-        style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
-        class="md:block hidden"
-      >
+          <img style="max-height: calc(100vh - 300px);" class=" m-auto" src={@post.md_media_url} />
+        </.link>
       </div>
     </div>
+    <.recipe_tags recipe={@post.reference} />
+    <.recipe_attrs_container recipe={@post.reference} />
   </div>
 </div>

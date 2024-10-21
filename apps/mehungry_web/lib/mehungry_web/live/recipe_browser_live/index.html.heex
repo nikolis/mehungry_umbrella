@@ -29,7 +29,6 @@
       />
     </.modal>
   <% end %>
-
   <%= if @not_empty do %>
     <div class="the_form second_layer_spacing min-h-40">
       <div
@@ -43,7 +42,7 @@
           <RecipeComponents.recipe_card
             recipe={recipe}
             user_recipes={@user_recipes}
-            return_to="browse"
+            return_to={@return_to_path}
             path_to_details={~p"/browse/#{recipe.id}"}
             id={dom_id}
             type="browse"
@@ -62,7 +61,7 @@
   <% end %>
   <MehungryWeb.RecipeComponents.recipe_modal
     :if={@live_action in [:show_recipe]}
-    on_cancel={JS.patch(~p"/browse")}
+    on_cancel={JS.patch(@return_to_path)}
     id="recipe_details_modal"
     show
   >

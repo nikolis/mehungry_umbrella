@@ -81,7 +81,7 @@ defmodule MehungryWeb.SvgComponents do
       id={"up-alt#{@post.id}"}
       data-name="Flat Line"
       xmlns="http://www.w3.org/2000/svg"
-      class="icon flat-line"
+      class="icon flat-line z-40"
     >
       <path
         id={"secondary#{@post.id}"}

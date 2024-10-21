@@ -84,7 +84,7 @@ defmodule MehungryWeb.CoreComponents do
       <.icon name="hero-share" class="stroke-white h-7 w-8 flex-none text-white " />
       <div
         phx-hook="Copy"
-        class="drop_down_home w-24"
+        class="drop_down_home w-24 inner_utils "
         data-to="#control-codes"
         id={"share_items_list"<> Integer.to_string(@post.id)}
       >
@@ -95,7 +95,7 @@ defmodule MehungryWeb.CoreComponents do
           value={~p"/show_recipe/#{Integer.to_string(@post.reference_id)}"}
         />
 
-        <.icon name="hero-link" class="h-7 w-7 flex-none text-white cursor-pointer" />
+        <.icon name="hero-link" class="h-7 w-7 bg-white flex-none text-white cursor-pointer" />
       </div>
     </div>
     """
@@ -293,9 +293,10 @@ defmodule MehungryWeb.CoreComponents do
       <div class=" flex gap-2 w-fit m-auto sm:w-full m-0 ">
         <div class="flex flex-col justify-center w-full">
           <div class="text-sm font-semibold leading-4 text-white">
-           <div class="text-center text-2xl px-6 max-h-16 overflow-hidden"> <%= @post.reference.title %> </div>
-           <div class="text-center text-base px-6 pb-2"> <%= @post.reference.description %> </div>
-
+            <div class="text-center text-2xl px-6 max-h-16 overflow-hidden">
+              <%= @post.reference.title %>
+            </div>
+            <div class="text-center text-base px-6 pb-2"><%= @post.reference.description %></div>
           </div>
         </div>
       </div>

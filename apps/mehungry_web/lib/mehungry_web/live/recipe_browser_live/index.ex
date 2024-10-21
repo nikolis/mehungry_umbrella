@@ -261,13 +261,14 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   @impl true
   def handle_params(params, uri, socket) do
     socket = assign(socket, :path, uri)
-
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
   defp apply_action(socket, :index, %{"query" => query_str} = _params) do
     maybe_track_user(%{query: query_str}, socket)
     user = socket.assigns.current_user
+
+    socket = assign(socket, :return_to_path, ~p"/search/#{query_str}")
 
     user_profile =
       case is_nil(user) do
@@ -324,6 +325,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   defp apply_action(socket, :index, _) do
     user = socket.assigns.current_user
     query_str = ""
+    socket = assign(socket, :return_to_path, ~p"/browse")
 
     user_profile =
       case is_nil(user) do
@@ -387,17 +389,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     recipe = Food.get_recipe!(id)
     Posts.subscribe_to_recipe(%{recipe_id: id})
 
-    query_str = ""
-
-    {_query, {recipes, _cursor_after}} =
-      case query_str do
-        nil ->
-          {query_str, list_recipes()}
-
-        qr ->
-          Food.search_recipe(qr)
-      end
-
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.current_user
 
@@ -417,7 +408,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       |> assign(:primary_size, primaries_length)
       |> assign(:recipe, recipe)
       |> assign(:page_title, recipe.title <> " Instructions and nutrition facts")
-      |> stream(:recipes, recipes)
       |> assign(:user_recipes, user_recipes)
 
     maybe_track_user(%{page: "browser", type: :show_recipe, recipe: recipe}, socket)

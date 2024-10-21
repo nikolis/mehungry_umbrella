@@ -1,6 +1,7 @@
 defmodule MehungryWeb.HomeLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
+  import MehungryWeb.RecipeComponents
 
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
   embed_templates("components/*")

@@ -18,10 +18,19 @@ input[type="file"] {
   max-width: 600px;
 }
 
-.utils_container div {
+.inner_utils  {
+  background-color: #6464644d !important;
+  backdrop-filter: blur(10px) !important;
+  backdrop-filter: brightness(60%) !important;
+
+  padding: 0.5rem;
+  border-radius: 100px;
+
+}
+.utils_container  div {
   background-color: rgb(255 255 255 / 30%);
   backdrop-filter: blur(10px);
-  backdrop-filter: brightness(40%);
+  backdrop-filter: brightness(60%);
 
   padding: 0.5rem;
   border-radius: 100px;
