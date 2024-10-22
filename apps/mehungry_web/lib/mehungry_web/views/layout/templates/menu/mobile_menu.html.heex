@@ -1,20 +1,42 @@
 <nav
-  class="nav_container_mobile fixed"
+  class="nav_container_mobile fixed border-t broder-greyfriend1 "
   id="nav_bar_mobile"
   phx-update="ignore"
-  style="background-color: var(--clr-light_2)"
   phx-click-away={Phoenix.LiveView.JS.remove_class(" open_menu", to: "#nav_bar_mobile")}
 >
   <div
-    class="grid grid-cols-5 h-full max-h-20 bg-inherit"
-    ,
-    style="    background-color: inherit; overflow: hidden; max-height: 80px;"
-  >
-    <.link class="m-auto" patch="/">
-      <img style="margin: auto" width="40px" height="40px" src="/images/logo2.svg" />
+    class="grid grid-cols-7 h-fit p-2  bg-inherit h-full" 
+    style="    background-color: inherit; overflow: hidden; max-height: 80px;">
+
+    <.link class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}  patch="/">
+      <img style="margin: auto" class="h-7 w-7"  src="/images/logo2.svg" />
+    </.link>
+    <.link patch="/browse" class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}>
+                <.icon name="hero-book-open" class="h-7 w-7"  />
+    </.link>
+    <.link patch="/create_recipe" class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}>
+                <.icon name="hero-plus-circle" class="h-7 w-7" />
+
+</.link>
+    <div class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""} phx-click={Phoenix.LiveView.JS.toggle_class(" hidden", to: ".nav_link_basic")} >
+                <.icon name="hero-magnifying-glass-circle" class="h-7 w-7" />
+    </div>
+
+    <.link patch="/calendar" class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}>
+                <.icon name="hero-calendar" class="h-7 w-7" />
     </.link>
 
-    <div class="col-span-3 w-full m-auto" style="">
+    <.link patch="/basket" class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}>
+                <.icon name="hero-shopping-bag" class="h-7 w-7" />
+    </.link>
+
+
+
+    <div class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: "", else: "hidden"}  phx-click={Phoenix.LiveView.JS.toggle_class(" hidden", to: ".nav_link_basic")} >
+                <.icon name="hero-arrow-left-circle" class="h-8 w-8" />
+    </div>
+
+    <div  class={"m-auto w-11/12 col-span-6 nav_link_basic" <> if String.length(@query_string) > 1, do: "", else: " hidden"} style="">
       <.live_component
         module={MehungryWeb.SearchLive.Index}
         id={6}
@@ -26,72 +48,19 @@
 
     <div
       class="m-auto"
-      phx-click={Phoenix.LiveView.JS.toggle_class(" open_menu", to: "#nav_bar_mobile")}
     >
-      <img
-        style="margin: auto; padding: 0.3rem"
-        width="40px"
-        height="40px"
-        src="/images/hamburger_icon.svg"
-      />
-    </div>
-  </div>
-
-  <div class="main_nav_content">
-    <.link navigate="/browse" class="main_nav_button">Browse</.link>
-    <.link patch="/create_recipe" class="main_nav_button">Create</.link>
-    <.link patch="/calendar" class="main_nav_button">Calendar</.link>
-    <.link patch="/basket" class="main_nav_button"> Basket </.link>
-    <.link patch="/profile" class="main_nav_button"> Profile </.link>
-
-    <%= if is_nil(@current_user) do %>
-      <a class="font-semibold" href="/users/log_in"> Log in </a>
-    <% else %>
-      <a class="font-semibold mt-2" href="/users/log_out"> Logout </a>
-    <% end %>
-
-    <%= unless assigns[:current_user] do %>
-    <% end %>
-
-    <%= if assigns[:current_user] do %>
-      <div style="padding: 15px" class="utils_item" id="menu_utils_toggle_mobile">
-        <div class="drop_down" id="menu_items_list_mobile">
-          <div class="drop_down_container">
+      <a href={~p"/profile"} >
             <%= if @current_user.profile_pic do %>
               <img
                 src={@current_user.profile_pic}
                 ,
-                style="width: 40px; height: 40px; border-radius: 50%;"
-              />
+                style=" border-radius: 50%;"
+class={"m-auto w-7 h-7 nav_link_basic " <> if String.length(@query_string) > 1, do: "hidden", else: ""}     />
             <% else %>
               <.icon name="hero-user-circle" class="h-10 w-10" />
             <% end %>
-
-            <div class="drop_down_inner_container_info">
-              <div><%= @current_user.name %></div>
-              <div style="font-weight: lighter">personal</div>
-              <div style="font-weight: lighter"><%= @current_user.email %></div>
-            </div>
-          </div>
-          <div class="drop_down_inner_container_account">
-            <div class="drop_down_sub_title">Account</div>
-            <.link patch="/profile" class="drop_down_buttons">
-              Profile
-            </.link>
-            <%= if @current_user do %>
-              <a href="/users/log_out"> Logout out account </a>
-            <% else %>
-              <a href="/users/log_in"> Log in </a>
-            <% end %>
-          </div>
-        </div>
-      </div>
-    <% end %>
+      </a>
+    </div>
   </div>
 
-  <script>
-    function toggleMenu() {
-      document.querySelector("#nav_container_mobile").classList.toggle("open_menu");
-    }
-  </script>
 </nav>

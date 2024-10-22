@@ -16,7 +16,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   @impl true
   def mount(params, session, socket) do
-    query_str = Map.get(params, "query", nil)
+    query_str = Map.get(params, "query", "")
 
     user =
       case is_nil(session["user_token"]) do
@@ -382,7 +382,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       |> assign(:query, query)
 
     assign(socket, :search_changeset, nil)
-    |> assign(:query_string, nil)
   end
 
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
@@ -458,7 +457,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:nutrients, nutrients)
     |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
-    |> assign(:query_string, nil)
+    |> assign(:query_string, "")
     |> stream(:recipes, recipes)
     |> assign(:cursor_after, cursor_after)
     |> assign(:page_title, %{

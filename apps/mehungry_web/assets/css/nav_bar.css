@@ -16,7 +16,10 @@
 	justify-content: space-around;
 
 }
+.noscrollbar::--webkit-scrollbar{
+  display: none;
 
+}
 .search_comp_cont{
 	margin-top: auto;
 	margin-bottom: auto;
@@ -167,9 +170,15 @@
 .logo {
 	display: none;
 }
+.mobile_header {
+  display: none;
+}
 @media only screen and (max-width: 800px)  {
+  .mobile_header {
+    display: block
+  }
 	.nav_container_mobile {
-		top: 0;
+		bottom: 0;
 		display: block;
 		position: sticky;
 		z-index: 40;
