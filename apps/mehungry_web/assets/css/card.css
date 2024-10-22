@@ -5,7 +5,8 @@
 .recipe_card {
 	border-radius: 10px;
 	border: 1px solid #e5e5e5;
-	padding: 15px;
+	padding-bottom: 15px;
+  padding-top: 0px;
 	position: relative;
 	transition: transform 500ms  ease;
 	cursor: pointer;
