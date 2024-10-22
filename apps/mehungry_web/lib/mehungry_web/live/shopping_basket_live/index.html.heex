@@ -1,4 +1,4 @@
-<div class="main-page-container relative " style="height: 90vh" id="shopping_basket_index">
+<div class="main-page-container relative " style="height: 60vh;" id="shopping_basket_index">
   <.modal
     :if={@live_action in [:import_items]}
     on_cancel={JS.patch(~p"/basket")}
@@ -63,7 +63,7 @@
             |> JS.add_class("active", to: "#basket-side-navbar:not(.active)")
           }
         >
-          <.icon name="hero-arrow-right-circle" class="h-10 w-10 text-complementary" />
+          <.icon name="hero-arrow-down-circle" class="sm:hidden h-10 w-10 text-complementary" />
         </button>
       </div>
     </div>

@@ -41,7 +41,7 @@ check_list_container {
 
 
 .accordion-side-button.open{
-	transform: rotate(-45deg);
+	transform: rotate(45deg);
   transition: 0.8s ease-in-out;
   position: absolute;
   right: 0;
@@ -50,8 +50,8 @@ check_list_container {
 
 .bakset-side-nav-hidden.active .basket-side-button{
 	transform: rotate(180deg);
-        transition: 0.8s ease-in-out;
-	right: 0;
+  transition: 0.8s ease-in-out;
+	right: 20;
 }
 
 .side_nav_list_item.active{
@@ -121,9 +121,9 @@ check_list_container {
 }
 
 .basket-side-button {
-	position: absolute;
-	right: 0;
-	top: 0;
+	position: fixed;
+	bottom: 80px;
+  right: 20px;
 	background: white;
 	border-radius: 200px;
 	max-width: 40px;
@@ -134,17 +134,17 @@ check_list_container {
 @media only screen and (max-width: 800px)  {
 
   .bakset-side-nav-hidden  {
-	top: 0;
-	left: -100vw;
-	width: 110vw;
+	bottom: -140vh;
+	left: 0;
+  height: 100vh;
+	width: 100vw;
 	padding-right: 10vw;
 	position: absolute;
 	transition: 1s;
-	height: 100%;
   }
 
   .bakset-side-nav-hidden.active {
-	  width: 100vw ;
+	  bottom: 0;
   }
 
   .titles_list{
