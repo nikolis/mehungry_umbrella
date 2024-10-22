@@ -50,14 +50,14 @@
       class="m-auto"
     >
       <a href={~p"/profile"} >
-            <%= if @current_user.profile_pic do %>
+            <%= if @current_user do %>
               <img
                 src={@current_user.profile_pic}
                 ,
                 style=" border-radius: 50%;"
 class={"m-auto w-7 h-7 nav_link_basic " <> if String.length(@query_string) > 1, do: "hidden", else: ""}     />
             <% else %>
-              <.icon name="hero-user-circle" class="h-10 w-10" />
+              <img src="/images/log-in-outline.svg" class="h-8 w-8" />
             <% end %>
       </a>
     </div>

@@ -20,7 +20,17 @@ defmodule MehungryWeb.Presence do
           ) do
         if connected?(socket) do
           result =
-            Presence.track(self(), @topic, current_user.email, %{users: [recipe: recipe.title]})
+            if(is_nil(current_user)) do 
+              Presence.track(self(), @topic, "Unknow user", %{users: [recipe: recipe.title]})
+            else
+              if is_nil(current_user.email) do 
+
+                  Presence.track(self(), @topic, "Unknown user", %{users: [recipe: recipe.title]})
+              else
+                  Presence.track(self(), @topic, current_user.email, %{users: [recipe: recipe.title]})
+
+              end
+            end
         end
       end
 

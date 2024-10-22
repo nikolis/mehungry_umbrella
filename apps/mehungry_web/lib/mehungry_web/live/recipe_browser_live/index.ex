@@ -113,7 +113,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           end
       end
 
-    {:noreply, assign(socket, :recipes, list_recipes())}
+    {:noreply, stream(socket, :recipes, list_recipes())}
   end
 
   @impl true
@@ -261,6 +261,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   @impl true
   def handle_params(params, uri, socket) do
     socket = assign(socket, :path, uri)
+    IO.inspect(socket.assigns)
+    IO.inspect(uri, label: "uri000000")
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
@@ -391,6 +393,17 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.current_user
 
+
+    IO.inspect(socket.assigns.return_to_path, label: "ehererereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+    socket = 
+      if  is_nil(Map.get(socket.assigns, :return_to_path, nil)) do
+        IO.inspect("asdfadfsdfsa")
+      socket = assign(socket, :return_to_path, ~p"/browse")
+    else
+      socket
+    end
+
+
     user_recipes =
       case is_nil(user) do
         true ->
@@ -400,7 +413,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           Users.list_user_saved_recipes(user)
           |> Enum.map(fn x -> x.recipe_id end)
       end
-
+    {recipes, elth} = list_recipes()
     socket =
       socket
       |> assign(:nutrients, nutrients)
@@ -408,6 +421,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       |> assign(:recipe, recipe)
       |> assign(:page_title, recipe.title <> " Instructions and nutrition facts")
       |> assign(:user_recipes, user_recipes)
+      |> stream(:recipes, [])
 
     maybe_track_user(%{page: "browser", type: :show_recipe, recipe: recipe}, socket)
     socket
