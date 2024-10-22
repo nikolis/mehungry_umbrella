@@ -190,7 +190,7 @@ defmodule MehungryWeb.CoreComponents do
 
   def user_overview_card(%{user: %Mehungry.Accounts.User{}, user_follows: nil} = assigns) do
     ~H"""
-    <div style="margin-bottom: 0.75rem;" class="mx-8 sm:mx-0">
+    <div  class="mx-8 sm:mx-0">
       <div class="flex gap-2">
         <.link
           patch={"/profile/"<>Integer.to_string(@user.id)}

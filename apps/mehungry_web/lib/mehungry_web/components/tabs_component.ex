@@ -73,7 +73,6 @@ defmodule MehungryWeb.TabsComponent do
           states={@contents.get_states()}
           contents={@contents}
           recipe={@recipe}
-          ,
           nutrients={@nutrients}
           primary_size={@primary_size}
         />
