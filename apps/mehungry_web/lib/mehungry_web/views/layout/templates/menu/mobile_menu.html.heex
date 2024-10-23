@@ -5,38 +5,59 @@
   phx-click-away={Phoenix.LiveView.JS.remove_class(" open_menu", to: "#nav_bar_mobile")}
 >
   <div
-    class="grid grid-cols-7 h-fit p-2  bg-inherit h-full" 
-    style="    background-color: inherit; overflow: hidden; max-height: 80px;">
-
-    <.link class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}  patch="/">
-      <img style="margin: auto" class="h-7 w-7"  src="/images/logo2.svg" />
+    class="grid grid-cols-7 h-fit p-2  bg-inherit h-full"
+    style="    background-color: inherit; overflow: hidden; max-height: 80px;"
+  >
+    <.link
+      class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}
+      patch="/"
+    >
+      <img style="margin: auto" class="h-7 w-7" src="/images/logo2.svg" />
     </.link>
-    <.link patch="/browse" class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}>
-                <.icon name="hero-book-open" class="h-7 w-7"  />
+    <.link
+      patch="/browse"
+      class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}
+    >
+      <.icon name="hero-book-open" class="h-7 w-7" />
     </.link>
-    <.link patch="/create_recipe" class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}>
-                <.icon name="hero-plus-circle" class="h-7 w-7" />
-
-</.link>
-    <div class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""} phx-click={Phoenix.LiveView.JS.toggle_class(" hidden", to: ".nav_link_basic")} >
-                <.icon name="hero-magnifying-glass-circle" class="h-7 w-7" />
+    <.link
+      patch="/create_recipe"
+      class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}
+    >
+      <.icon name="hero-plus-circle" class="h-7 w-7" />
+    </.link>
+    <div
+      class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}
+      phx-click={Phoenix.LiveView.JS.toggle_class(" hidden", to: ".nav_link_basic")}
+    >
+      <.icon name="hero-magnifying-glass-circle" class="h-7 w-7" />
     </div>
 
-    <.link patch="/calendar" class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}>
-                <.icon name="hero-calendar" class="h-7 w-7" />
+    <.link
+      patch="/calendar"
+      class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}
+    >
+      <.icon name="hero-calendar" class="h-7 w-7" />
     </.link>
 
-    <.link patch="/basket" class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}>
-                <.icon name="hero-shopping-bag" class="h-7 w-7" />
+    <.link
+      patch="/basket"
+      class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}
+    >
+      <.icon name="hero-shopping-bag" class="h-7 w-7" />
     </.link>
 
-
-
-    <div class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: "", else: "hidden"}  phx-click={Phoenix.LiveView.JS.toggle_class(" hidden", to: ".nav_link_basic")} >
-                <.icon name="hero-arrow-left-circle" class="h-8 w-8" />
+    <div
+      class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: "", else: "hidden"}
+      phx-click={Phoenix.LiveView.JS.toggle_class(" hidden", to: ".nav_link_basic")}
+    >
+      <.icon name="hero-arrow-left-circle" class="h-8 w-8" />
     </div>
 
-    <div  class={"m-auto w-11/12 col-span-6 nav_link_basic" <> if String.length(@query_string) > 1, do: "", else: " hidden"} style="">
+    <div
+      class={"m-auto w-11/12 col-span-6 nav_link_basic" <> if String.length(@query_string) > 1, do: "", else: " hidden"}
+      style=""
+    >
       <.live_component
         module={MehungryWeb.SearchLive.Index}
         id={6}
@@ -46,21 +67,20 @@
       />
     </div>
 
-    <div
-      class="m-auto"
-    >
-      <a href={~p"/profile"} >
-            <%= if @current_user do %>
-              <img
-                src={@current_user.profile_pic}
-                ,
-                style=" border-radius: 50%;"
-class={"m-auto w-7 h-7 nav_link_basic " <> if String.length(@query_string) > 1, do: "hidden", else: ""}     />
-            <% else %>
-              <img src="/images/log-in-outline.svg" class="h-8 w-8" />
-            <% end %>
+    <div class="m-auto">
+      <a href={~p"/profile"}>
+        <%= if @current_user do %>
+          <img
+            src={@current_user.profile_pic}
+            ,
+            style=" border-radius: 50%;"
+            class={"m-auto w-7 h-7 nav_link_basic " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
+          />
+        <% else %>
+          <img src="/images/log-in-outline.svg" class={"h-8 w-8 nav_link_basic "<> if String.length(@query_string) > 1, do: "hidden", else: ""}
+ />
+        <% end %>
       </a>
     </div>
   </div>
-
 </nav>

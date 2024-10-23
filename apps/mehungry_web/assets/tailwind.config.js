@@ -24,6 +24,8 @@ module.exports = {
         primaryd2: "#002800",
         primaryl1: "#FFCC62",
         primaryl2: "#FFCF90",
+        primaryl3: "#FFFFf0",
+
         complementary: "#00A0D0",
         complementaryd: "#006D89",
         complementaryl: "#00D8FF",

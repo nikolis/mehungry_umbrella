@@ -10,85 +10,113 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
 
       false ->
         ~H"""
-        <div class="mb-44" id="calendar_widget">
-          <div>
-            <h3 class="text-center text-4xl mb-8"><%= Calendar.strftime(@current_date, "%B %Y") %></h3>
+        <div class="	 " id="calendar_widget" style="margin: auto; max-h-full overflow-scroll ">
+          <div >
+            <h3 class="text-center text-3xl font-semibold"><%= Calendar.strftime(@current_date, "%B %Y") %></h3>
           </div>
-          <table style="box-sizing: border-box;">
-            <thead>
-              <tr class="border-b-2 border-double border-t-2 border-complementary ">
-                <th :for={week_day <- List.first(@week_rows)}>
-                  <div
-                    class="cursor-pointer relative"
-                    phx-target{@myself}
-                    phx-click="date-details"
-                    phx-value-date={week_day}
-                  >
-                    <span class="text-4xl font-normal	text-complementaryd">
-                      <%= Calendar.strftime(week_day, "%d") %>
-                    </span>
-                    <span class="text-complementaryd text-xl font-normal">
-                      <%= Calendar.strftime(week_day, "%a") %>
-                    </span>
-                    <%= if get_from_week_rows2(@user_meals, week_day, assigns) > 0 do %>
-                      <svg
-                        style="stroke: var(--clr-primary);"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                        class="h-8 w-8 absolute right-2 top-0 bottom-0 m-auto"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                        />
-                      </svg>
-                      <!-- <.icon name="hero-information-circle" class="h-5 w-5" style="stroke: white;"/> -->
-                    <% end %>
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <div :for={week <- @week_rows} class="max-h-96	overflow-y-scroll	">
-                <td
-                  :for={day <- week}
-                  class={[
-                    "text-center border-l-2  border-r-2 max-w-48 min-w-42 "
-                  ]}
-                >
-                  <div :for={meal <- @day_meals} class="">
-                    <%= get_from_week_rows(@user_meals, day, meal, assigns) %>
-                  </div>
-                </td>
-              </div>
-            </tbody>
-          </table>
-          <div class="grid grid-cols-3 justify-between text-xl md:text-3xl mt-10	">
-            <button
-              type="button"
-              class="w-fit text-primary font-medium"
-              phx-target={@myself}
-              phx-click="prev-month"
-            >
-              &laquo; Prev
-            </button>
-            <button class="w-full text-lg">Callendar</button>
-            <button
-              type="button"
-              class="w-full text-end	text-primary font-medium"
-              phx-target={@myself}
-              phx-click="next-month"
-            >
-              Next &raquo;
-            </button>
+          <.calendar_main_table
+            week_rows={@week_rows}
+            user_meals={@user_meals}
+            day_meals={@day_meals}
+            current_date={@current_date}
+            selected_date={@selected_date}
+            myself={@myself}
+          />
+          <div class="absolute  bottom-0 right-0 left-0 p-2">
+            <.calendar_control_buttons myself={@myself} />
           </div>
         </div>
         """
     end
+  end
+
+  def calendar_main_table(assigns) do
+    ~H"""
+    <div style="">
+      <div class="">
+        <div class="border-b-2 border-double border-t-2 border-complementary flex flex-col w-full justify-around" style="margin-bottom: 100px;">
+          <div class="flex-row flex justify-center	w-full">
+          <div class="contain w-full"  :for={week_day <- List.first(@week_rows)}> <!-- th -->
+            <div
+              class="cursor-pointer relative text-center "
+              phx-target{@myself}
+              phx-click="date-details"
+              phx-value-date={week_day}
+            >
+              <span class="text-4xl font-normal	text-complementaryd">
+                <%= Calendar.strftime(week_day, "%d") %>
+              </span>
+              <span class="text-complementaryd text-xl font-normal">
+                <%= Calendar.strftime(week_day, "%a") %>
+              </span>
+              <.nutrition_widget_button user_meals={@user_meals} week_day={week_day} />
+            </div>
+          </div><!-- th -->
+        </div>
+        <div :for={week <- @week_rows} class="  w-full justify-center overflow-auto	flex flex-row absolute lg:mb-12 bottom-12 lg:bottom-0 xl:bottom-24 " style="  top: 100px;">
+          <div
+            :for={day <- week}
+            class={[
+              "text-center border-l-2  border-r-2  w-full px-auto"
+            ]}
+          >
+            <div :for={meal <- @day_meals} class="">
+              <%= get_from_week_rows(@user_meals, day, meal, assigns) %>
+            </div>
+          </div>
+        </div>
+        </div>
+
+      </div> <!--Div bodu -->
+    </div>
+    """
+  end
+
+  def calendar_control_buttons(assigns) do
+    ~H"""
+    <div class="my-auto lg:-mb-0 grid grid-cols-3 justify-between text-xl md:text-3xl 	">
+      <button
+        type="button"
+        class="w-fit text-primary font-medium"
+        phx-target={@myself}
+        phx-click="prev-month"
+      >
+        &laquo; Prev
+      </button>
+      <button class="w-full text-lg">Callendar</button>
+      <button
+        type="button"
+        class="w-full text-end	text-primary font-medium"
+        phx-target={@myself}
+        phx-click="next-month"
+      >
+        Next &raquo;
+      </button>
+    </div>
+    """
+  end
+
+  def nutrition_widget_button(assigns) do
+    ~H"""
+    <%= if get_from_week_rows2(@user_meals, @week_day, assigns) > 0 do %>
+      <svg
+        style="stroke: var(--clr-primary);"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="h-8 w-8 absolute right-2 top-0 bottom-0 m-auto"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+        />
+      </svg>
+      <!-- <.icon name="hero-information-circle" class="h-5 w-5" style="stroke: white;"/> -->
+    <% end %>
+    """
   end
 
   @impl true
@@ -332,7 +360,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     ~H"""
     <button
       class={[
-        "text-center min-h-28 max-h-28 w-full border-t-2 ",
+        "week_row_button_empty text-center min-h-28 max-h-28 w-full border-t-2 ",
         today?(@day) && "bg-green-100",
         other_month?(@day, @current_date) && "bg-gray-100",
         selected_date?(@day, @selected_date) && @meal == @selected_meal && "bg-blue-100"
@@ -354,7 +382,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     ~H"""
     <button
       class={[
-        "text-center min-h-28 max-h-28  w-full bg-primaryl2 border-t-2 overflow-hidden overflow-y-auto",
+        "week_row_button  text-center min-h-28 max-h-28  w-full bg-primaryl3 border-t-2 overflow-hidden overflow-y-auto",
         today?(@day) && "bg-green-100",
         other_month?(@day, @current_date) && "bg-gray-100",
         selected_date?(@day, @selected_date) && @meal == @selected_meal && "bg-blue-100"

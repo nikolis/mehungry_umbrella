@@ -393,16 +393,17 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.current_user
 
+    IO.inspect(socket.assigns.return_to_path,
+      label: "ehererereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    )
 
-    IO.inspect(socket.assigns.return_to_path, label: "ehererereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
-    socket = 
-      if  is_nil(Map.get(socket.assigns, :return_to_path, nil)) do
+    socket =
+      if is_nil(Map.get(socket.assigns, :return_to_path, nil)) do
         IO.inspect("asdfadfsdfsa")
-      socket = assign(socket, :return_to_path, ~p"/browse")
-    else
-      socket
-    end
-
+        socket = assign(socket, :return_to_path, ~p"/browse")
+      else
+        socket
+      end
 
     user_recipes =
       case is_nil(user) do
@@ -413,7 +414,9 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           Users.list_user_saved_recipes(user)
           |> Enum.map(fn x -> x.recipe_id end)
       end
+
     {recipes, elth} = list_recipes()
+
     socket =
       socket
       |> assign(:nutrients, nutrients)

@@ -436,7 +436,7 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_like_container(assigns) do
     ~H"""
-    <div class="recipe_like_container z-50">
+    <div class="recipe_like_container z-10">
       <%= case @type do %>
         <% "saved" -> %>
           <button

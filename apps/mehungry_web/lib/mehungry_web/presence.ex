@@ -20,15 +20,18 @@ defmodule MehungryWeb.Presence do
           ) do
         if connected?(socket) do
           result =
-            if(is_nil(current_user)) do 
+            if(is_nil(current_user)) do
+              IO.inspect(current_user, label: "Current user is")
+
               Presence.track(self(), @topic, "Unknow user", %{users: [recipe: recipe.title]})
             else
-              if is_nil(current_user.email) do 
-
-                  Presence.track(self(), @topic, "Unknown user", %{users: [recipe: recipe.title]})
+              IO.inspect(current_user, label: "Current user is")
+              if is_nil(current_user.email) do
+                Presence.track(self(), @topic, "Unknown user", %{users: [recipe: recipe.title]})
               else
-                  Presence.track(self(), @topic, current_user.email, %{users: [recipe: recipe.title]})
-
+                Presence.track(self(), @topic, current_user.email, %{
+                  users: [recipe: recipe.title]
+                })
               end
             end
         end
@@ -41,9 +44,23 @@ defmodule MehungryWeb.Presence do
           ) do
         if connected?(socket) do
           result =
+            if(is_nil(current_user)) do
+              IO.inspect(current_user, label: "Current user is")
+
+            Presence.track(self(), @topic, "Unknown User", %{
+              users: [recipe_search: metadata.query]
+            })
+            else
+              if is_nil(current_user.email) do
+            Presence.track(self(), @topic, current_user.id, %{
+              users: [recipe_search: metadata.query]
+            })
+              else
             Presence.track(self(), @topic, current_user.email, %{
               users: [recipe_search: metadata.query]
             })
+              end
+            end
         end
       end
 

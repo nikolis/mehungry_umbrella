@@ -1,4 +1,8 @@
-<div class="main-page-container relative " style="height: 60vh; overflow:hidden;" id="shopping_basket_index">
+<div
+  class="main-page-container relative "
+  style="height: 60vh; overflow:hidden;"
+  id="shopping_basket_index"
+>
   <.modal
     :if={@live_action in [:import_items]}
     on_cancel={JS.patch(~p"/basket")}

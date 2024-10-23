@@ -4,6 +4,16 @@
 	}
 }
 
+.week_row_button:hover {
+   opacity: 0.7;
+}
+.week_row_button_empty:hover {
+   background: #f0f0f0;
+}
+
+
+
+
 input[type="file"] {
   background-color : white;
   display: none;
