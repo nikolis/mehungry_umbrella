@@ -1,6 +1,6 @@
 <div
   class="main-page-container relative "
-  style="height: 60vh; overflow:hidden;"
+  style="height: 100%; overflow:hidden; "
   id="shopping_basket_index"
 >
   <.modal
@@ -19,8 +19,13 @@
       patch={~p"/basket"}
     />
   </.modal>
+      <%= if @shopping_basket do %>
+        <h3 class="mb-2 text-center"><%= Map.get(@shopping_basket, :title, "...") %></h3>
+      <% end %>
 
-  <div class="basket-page-container">
+<%= if length(@shopping_baskets) > 0  do %>
+  <div class="basket-page-container h-fit bg-greyfriend1 rounded-lg py-4">
+
     <div class="bakset-side-nav-hidden  bd-black-400" id="basket-side-navbar">
       <h2
         phx-click={
@@ -40,6 +45,8 @@
           +
         </span>
       </h2>
+
+
 
       <.live_component
         module={MehungryWeb.ShoppingBasketLive.BasicFormComponent}
@@ -71,7 +78,6 @@
         </button>
       </div>
     </div>
-
     <div class="basket-side-navbar" id="">
       <div>
         <h2
@@ -111,13 +117,15 @@
         <% end %>
       </div>
     </div>
-    <div class="item-list-container w-full p-6">
-      <%= if @shopping_basket do %>
-        <h3 class="mt-4"><%= Map.get(@shopping_basket, :title, "...") %></h3>
-      <% end %>
+    
+    <div class="item-list-container w-full  sm:p-6">
       <%= if @shopping_basket do %>
         <.render_basket_items shopping_basket={@shopping_basket} />
       <% end %>
+      <%= if length(@shopping_basket.basket_ingredients) < 1 do %>
+          <h4 class="text-center text-base font-semibold text-greyfriend-2"> Empty </h4>
+      <% end %>
     </div>
   </div>
+<% end %>
 </div>

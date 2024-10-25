@@ -35,7 +35,7 @@ defmodule MehungryWeb.SelectComponentSingle do
                     <%= @selected_items.label %>
                   </div>
                 </div>
-                <.icon name="hero-x-mark-solid" class="absolute right-1 top-0  z-50 opacity-70" />
+                <.icon name="hero-x-mark-solid" class="absolute right-1 top-0  z-20 opacity-70" />
               </div>
             </div>
           <% end %>

@@ -14,7 +14,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
 
   def render_basket_titles(assigns) do
     ~H"""
-    <ul class="titles_list" id={@id}>
+    <ul class="titles_list overflowx-scroll" id={@id}>
       <%= for shopping_basket <- @shopping_baskets do %>
         <li
           id={@id <> "liab" <> Integer.to_string(shopping_basket.id)}
@@ -54,10 +54,10 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
   def render_basket_items(assigns) do
     ~H"""
     <%= if length(@shopping_basket.basket_ingredients) > 0 do %>
-      <table style="max-height: 650px ;  overflow: scroll; margin-top: 3vh">
+      <div style="overflow: scroll; height: 60vh;" class="">
         <%= for rec_ing <- @shopping_basket.basket_ingredients do %>
-          <tr>
-            <td>
+          <div class=" flex gap-2">
+            <div>
               <button
                 phx-click="toggle_basket"
                 class={"checkbox " <> get_class_for_toggle_button(rec_ing.in_storage)}
@@ -65,17 +65,17 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
               >
                 Cla
               </button>
-            </td>
-            <td style="border-bottom: 1px solid var(--clr-grey-friend_3);">
+            </div>
+            <div style="border-bottom: 1px solid var(--clr-grey-friend_3);">
               <span style="font-weight: bold;">
                 <%= rec_ing.quantity %>
                 <%= rec_ing.measurement_unit.name %>
               </span>
               <%= rec_ing.ingredient.name %>
-            </td>
-          </tr>
+            </div>
+          </div>
         <% end %>
-      </table>
+      </div>
     <% end %>
     """
   end

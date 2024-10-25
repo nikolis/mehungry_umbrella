@@ -69,7 +69,6 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Shopping basket updated")
          |> push_patch(to: socket.assigns.patch)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -119,7 +118,6 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Shopping basket updated")
          |> push_patch(to: socket.assigns.patch)
          |> assign(:shopping_basket, shopping_basket)}
     end
