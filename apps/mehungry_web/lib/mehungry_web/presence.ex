@@ -26,6 +26,7 @@ defmodule MehungryWeb.Presence do
               Presence.track(self(), @topic, "Unknow user", %{users: [recipe: recipe.title]})
             else
               IO.inspect(current_user, label: "Current user is")
+
               if is_nil(current_user.email) do
                 Presence.track(self(), @topic, "Unknown user", %{users: [recipe: recipe.title]})
               else
@@ -47,18 +48,18 @@ defmodule MehungryWeb.Presence do
             if(is_nil(current_user)) do
               IO.inspect(current_user, label: "Current user is")
 
-            Presence.track(self(), @topic, "Unknown User", %{
-              users: [recipe_search: metadata.query]
-            })
+              Presence.track(self(), @topic, "Unknown User", %{
+                users: [recipe_search: metadata.query]
+              })
             else
               if is_nil(current_user.email) do
-            Presence.track(self(), @topic, current_user.id, %{
-              users: [recipe_search: metadata.query]
-            })
+                Presence.track(self(), @topic, current_user.id, %{
+                  users: [recipe_search: metadata.query]
+                })
               else
-            Presence.track(self(), @topic, current_user.email, %{
-              users: [recipe_search: metadata.query]
-            })
+                Presence.track(self(), @topic, current_user.email, %{
+                  users: [recipe_search: metadata.query]
+                })
               end
             end
         end

@@ -1,7 +1,4 @@
-<div
-  style="height: 100%;"
-  class="container  md:mt-2 sm:p-2 mx-auto relative overflow-hidden "
->
+<div style="height: 100%;" class="container  md:mt-2 sm:p-2 mx-auto relative overflow-hidden ">
   <.modal
     :if={@live_action in [:new, :edit]}
     on_cancel={JS.patch(~p"/calendar")}

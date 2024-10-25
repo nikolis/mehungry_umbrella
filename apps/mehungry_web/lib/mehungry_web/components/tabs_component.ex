@@ -27,7 +27,7 @@ defmodule MehungryWeb.TabsComponent do
   def nav_button(assigns) do
     extra_class =
       if assigns.current_state == assigns.state do
-        "active"
+        "selected"
       else
         ""
       end
@@ -40,8 +40,8 @@ defmodule MehungryWeb.TabsComponent do
         id={@state}
         class={"nav_button " <> @extra_class}
         phx-click={
-          JS.remove_class("active", to: ".nav_button")
-          |> JS.add_class("active", to: "##{@state}")
+          JS.remove_class("selected", to: ".nav_button")
+          |> JS.add_class("selected", to: "##{@state}")
           |> JS.add_class("hidden", to: ".content_container")
           |> JS.remove_class("hidden", to: "##{@state}content")
         }

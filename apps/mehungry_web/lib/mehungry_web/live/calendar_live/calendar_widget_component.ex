@@ -11,8 +11,10 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
       false ->
         ~H"""
         <div class="	 " id="calendar_widget" style="margin: auto; max-h-full overflow-scroll ">
-          <div >
-            <h3 class="text-center text-3xl font-semibold"><%= Calendar.strftime(@current_date, "%B %Y") %></h3>
+          <div>
+            <h3 class="text-center text-3xl font-semibold">
+              <%= Calendar.strftime(@current_date, "%B %Y") %>
+            </h3>
           </div>
           <.calendar_main_table
             week_rows={@week_rows}
@@ -34,40 +36,49 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     ~H"""
     <div style="">
       <div class="">
-        <div class="border-b-2 border-double border-t-2 border-complementary flex flex-col w-full justify-around" style="margin-bottom: 100px;">
+        <div
+          class="border-b-2 border-double border-t-2 border-complementary flex flex-col w-full justify-around"
+          style="margin-bottom: 100px;"
+        >
           <div class="flex-row flex justify-center	w-full">
-          <div class="contain w-full"  :for={week_day <- List.first(@week_rows)}> <!-- th -->
-            <div
-              class="cursor-pointer relative text-center "
-              phx-target{@myself}
-              phx-click="date-details"
-              phx-value-date={week_day}
-            >
-              <span class="text-4xl font-normal	text-complementaryd">
-                <%= Calendar.strftime(week_day, "%d") %>
-              </span>
-              <span class="text-complementaryd text-xl font-normal">
-                <%= Calendar.strftime(week_day, "%a") %>
-              </span>
-              <.nutrition_widget_button user_meals={@user_meals} week_day={week_day} />
+            <div :for={week_day <- List.first(@week_rows)} class="contain w-full">
+              <!-- th -->
+              <div
+                class="cursor-pointer relative text-center "
+                phx-target{@myself}
+                phx-click="date-details"
+                phx-value-date={week_day}
+              >
+                <span class="text-4xl font-normal	text-complementaryd">
+                  <%= Calendar.strftime(week_day, "%d") %>
+                </span>
+                <span class="text-complementaryd text-xl font-normal">
+                  <%= Calendar.strftime(week_day, "%a") %>
+                </span>
+                <.nutrition_widget_button user_meals={@user_meals} week_day={week_day} />
+              </div>
             </div>
-          </div><!-- th -->
-        </div>
-        <div :for={week <- @week_rows} class="  w-full justify-center overflow-auto	flex flex-row absolute lg:mb-12 bottom-12 lg:bottom-0 xl:bottom-24 " style="  top: 100px;">
+            <!-- th -->
+          </div>
           <div
-            :for={day <- week}
-            class={[
-              "text-center border-l-2  border-r-2  w-full px-auto"
-            ]}
+            :for={week <- @week_rows}
+            class="  w-full justify-center overflow-auto	flex flex-row absolute lg:mb-12 bottom-12 lg:bottom-0 xl:bottom-24 "
+            style="  top: 100px;"
           >
-            <div :for={meal <- @day_meals} class="">
-              <%= get_from_week_rows(@user_meals, day, meal, assigns) %>
+            <div
+              :for={day <- week}
+              class={[
+                "text-center border-l-2  border-r-2  w-full px-auto"
+              ]}
+            >
+              <div :for={meal <- @day_meals} class="">
+                <%= get_from_week_rows(@user_meals, day, meal, assigns) %>
+              </div>
             </div>
           </div>
         </div>
-        </div>
-
-      </div> <!--Div bodu -->
+      </div>
+      <!--Div bodu -->
     </div>
     """
   end

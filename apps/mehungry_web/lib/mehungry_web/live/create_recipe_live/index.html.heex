@@ -1,4 +1,4 @@
-<div class=" sm:p-8 bg-greyfriend1 mx-auto  ">
+<div class=" sm:p-8 bg-greyfriend1 mx-auto  pb-2 sm:pb-2">
   <.modal
     :if={is_nil(@user_profile.onboarding_level) or @user_profile.onboarding_level < 1}
     id="onboarding-modal"
@@ -73,7 +73,7 @@
     </div>
 
     <div class="basic_2_col_grid_cont pb-32">
-      <div class="overflowx-hidden p-8">
+      <div class="overflowx-hidden pb-8">
         <h3 class="text-center">Ingredients</h3>
         <div class="min-h-80 max-h-96 overflow-x-hidden noscrollbar	pt-4 sm:p-4">
           <.inputs_for :let={g} field={f[:recipe_ingredients]}>
@@ -97,7 +97,7 @@
         </div>
       </div>
 
-      <div class="p-8">
+      <div class="pt-8">
         <h3 class="text-center">Creation Steps</h3>
         <div class="min-h-80 max-h-96 overflow-x-hidden 	pt-4 sm:p-4	">
           <.inputs_for :let={v} field={f[:steps]}>

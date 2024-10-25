@@ -1000,7 +1000,7 @@ defmodule MehungryWeb.CoreComponents do
         }
         {@rest}
       />
-      <.label for={@id} class="placeholder"><%= @label %></.label>
+      <.label for={@id} class="placeholder px-4"><%= @label %></.label>
       <.error :for={msg <- @errors}><%= msg %></.error>
     </div>
     """

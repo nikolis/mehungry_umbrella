@@ -152,7 +152,6 @@
 
 .main_nav_button.active {
 	background-color: var(--clr-light_2);
-	//background-color: rgb(77, 255, 166) ;
 }
 
 .utils_item.active {

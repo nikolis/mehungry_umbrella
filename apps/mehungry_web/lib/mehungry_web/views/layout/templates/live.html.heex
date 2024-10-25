@@ -9,5 +9,10 @@
   <p class="alert alert-danger" role="alert" phx-click="lv:clear-flash" phx-value-key="error">
     <%= Phoenix.Flash.get(@flash, :error) %>
   </p>
-  <div class="absolute px-2   sm:mt-8 md:mt-10 " style="bottom: 60px; top:60px; margin: auto; width: 100%;"><%= @inner_content %></div>
+  <div
+    class="absolute px-2   sm:mt-8 md:mt-10 "
+    style="bottom: 60px; top:60px; margin: auto; width: 100%;"
+  >
+    <%= @inner_content %>
+  </div>
 </main>

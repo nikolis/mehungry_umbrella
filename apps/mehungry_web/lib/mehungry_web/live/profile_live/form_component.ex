@@ -20,10 +20,14 @@ defmodule MehungryWeb.ProfileLive.Form do
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save"
-        class="profile-form pb-10 relative"
+        class="profile-form pb-10 relative w-fit md:w-8/12 m-auto"
       >
-        <.input required field={@form[:alias]} type="text" label="Alias" />
-        <.input required field={@form[:intro]} type="textarea" label="Intro" />
+        <div>
+            <.input required field={@form[:alias]} type="text" label="Alias" class="mt-4" />
+          </div>
+      <div class="mt-4">
+        <.input required field={@form[:intro]} type="textarea" label="Intro" class="" />
+      </div>
         <h3 class="text-center m-8">Diatery Restrictions</h3>
         <div class="max-h-64 overflow-auto min-h-80	">
           <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>
@@ -91,7 +95,7 @@ defmodule MehungryWeb.ProfileLive.Form do
           Ecto.Changeset.put_assoc(
             changeset,
             :user_category_rules,
-            existing ++ [%{user_id: socket.assigns.user.id}]
+            existing ++ [%{user_id: socket.assigns.current_user.id}]
           )
 
         to_form(changeset)
@@ -123,7 +127,7 @@ defmodule MehungryWeb.ProfileLive.Form do
     {:noreply, socket}
   end
 
-  defp save_user_profile(socket, :edit, user_profile_params) do
+  defp save_user_profile(socket, :index, user_profile_params) do
     case Accounts.update_user_profile(socket.assigns.user_profile, user_profile_params) do
       {:ok, user_profile} ->
         notify_parent({:saved, user_profile})

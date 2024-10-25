@@ -74,6 +74,7 @@ check_list_container {
 .checkbox {
 	font-size: 0.9rem;
 	margin: 0.9rem;
+  border-radius: 50%;
 }
 .item-list-container{
 	max-width: 80%;

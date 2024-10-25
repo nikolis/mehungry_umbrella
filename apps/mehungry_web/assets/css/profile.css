@@ -13,10 +13,22 @@
 	border-bottom: 3px solid var(--clr-complementary-middle);
 	
 }
-
+.nav_button.selected {
+	color: var(--clr-complementary-middle);
+	border-bottom: 3px solid var(--clr-complementary-middle);
+	
+}
+.text {
+  font-size: 1rem;
+}
 @media (max-width: 780px) {
-	.nav_button span {
-		display: none;
+  .nav_button .text {
+    display: none;
+  }
+	
+  .nav_button span {
+    width: 20px;
+    height: 20px;
 	}
 }
 

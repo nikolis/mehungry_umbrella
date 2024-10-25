@@ -114,27 +114,12 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_ingredients(%{recipe_ingredients: _recipe_ingredients} = assigns) do
-    ~H"""
-    <div style="max-height: 300px;" class="overflow-auto p-4 text-base text-black">
-      <%= for ingredient <- @recipe_ingredients do %>
-        <div class="ingredient_details_container font-normal	 ">
-          <div><%= ingredient.ingredient.name %></div>
-          <div class="font-semibold">
-            <%= ingredient.quantity %> <%= ingredient.measurement_unit.name %>
-          </div>
-        </div>
-      <% end %>
-    </div>
-    """
-  end
-
   def recipe_nutrients(
         %{nutrients: _nutrients, primary_size: _primary_size, recipe: recipe} = assigns
       ) do
     ~H"""
     <div
-      class="accordion overflow-auto	max-h-1/2 font-normal"
+      class="accordion overflow-auto	max-h-1/2 font-normal mt-4"
       style="max-height: 300px;"
       phx-hook="AccordionHook"
       id={"nutrients"<> to_string(recipe.id)}
@@ -144,7 +129,7 @@ defmodule MehungryWeb.RecipeComponents do
           <div
             class={
               if index <= @recipe.primary_nutrients_size do
-                "accordion-panel relative font-semibold text-base"
+                "accordion-panel relative font-semibold text-base p-2"
               else
                 "text-base accordion-panel relative"
               end
@@ -230,12 +215,27 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
+  def recipe_ingredients(%{recipe_ingredients: _recipe_ingredients} = assigns) do
+    ~H"""
+    <div style="max-height: 300px;" class="overflow-auto p-4 text-base text-black">
+      <%= for ingredient <- @recipe_ingredients do %>
+        <div class="ingredient_details_container font-normal	 ">
+          <div><%= ingredient.ingredient.name %></div>
+          <div class="font-semibold">
+            <%= ingredient.quantity %> <%= ingredient.measurement_unit.name %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
   def recipe_steps(%{steps: _steps} = assigns) do
     ~H"""
     <div class="overflow-auto p-4 text-base text-black" style="height: 300px;">
       <%= for step <- @steps do %>
-        <div class="step_details_container accordion-panel">
-          <div class="font-semibold text-lg"><%= step.index %></div>
+        <div class="step_details_container">
+          <div class="font-semibold text-lg w-fit"><%= step.index %></div>
           <div class="text-lg font-normal"><%= step.description %></div>
         </div>
       <% end %>

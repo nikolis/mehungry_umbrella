@@ -393,10 +393,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.current_user
 
-    IO.inspect(socket.assigns.return_to_path,
-      label: "ehererereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-    )
-
     socket =
       if is_nil(Map.get(socket.assigns, :return_to_path, nil)) do
         IO.inspect("asdfadfsdfsa")

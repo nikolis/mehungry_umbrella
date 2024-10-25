@@ -77,8 +77,10 @@
             class={"m-auto w-7 h-7 nav_link_basic " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
           />
         <% else %>
-          <img src="/images/log-in-outline.svg" class={"h-8 w-8 nav_link_basic "<> if String.length(@query_string) > 1, do: "hidden", else: ""}
- />
+          <img
+            src="/images/log-in-outline.svg"
+            class={"h-8 w-8 nav_link_basic "<> if String.length(@query_string) > 1, do: "hidden", else: ""}
+          />
         <% end %>
       </a>
     </div>
