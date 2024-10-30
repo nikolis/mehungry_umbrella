@@ -20,7 +20,7 @@
       <div style="display: flex; ">
         <div class="utils_container" style="">
           <div
-            style="font-size: 1rem; font-weight: bold; text-align: start; color: var(--clr-grey-friend_3); margin-right: 1rem;"
+            style="font-size: 1rem; font-weight: bold; text-align: start; color: var(--clr-primary); margin-right: 1rem; background-color: white;"
             phx-click="add-reply-form"
             phx-target={@myself}
             phx-value-id={@comment.id}
@@ -54,7 +54,7 @@
             >
             </path>
           </svg>
-          <div style="font-size: 1rem; font-weight: bold; text-align: start; color: var(--clr-grey-friend_3 line-height: 1.2rem; height: 1.2rem;)">
+          <div style="font-size: 1rem; background-color: white; font-weight: bold; text-align: start; color: var(--clr-grey-friend_3 line-height: 1.2rem; height: 1.2rem;)">
             <%= get_positive_votes(@comment.votes) %>
           </div>
           <svg

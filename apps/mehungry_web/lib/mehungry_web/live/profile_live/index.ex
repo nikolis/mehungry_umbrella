@@ -36,10 +36,9 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
-
-   categories = Food.list_categories()
-   category_ids = Enum.map(categories, fn x -> x.id end)
-   food_restrictions = Food.list_food_restriction_types()
+    categories = Food.list_categories()
+    category_ids = Enum.map(categories, fn x -> x.id end)
+    food_restrictions = Food.list_food_restriction_types()
     food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
 
     user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.current_user.id)
@@ -47,22 +46,17 @@ defmodule MehungryWeb.ProfileLive.Index do
     #    user_profile = socket.assigns.user_profile
     changeset = Accounts.change_user_profile(user_profile, %{})
 
-    
-    socket = 
+    socket =
       socket
-    |> assign(:page_title, "Edit Profile Details")
-    |> assign(:categories, categories)
-    |> assign(:current_user_profile, user_profile)
-    |> assign(:user_profile, user_profile)
-    |> assign(:category_ids, category_ids)
-    |> assign(:food_restriction_ids, food_restriction_ids)
-    |> assign(:food_restrictions, food_restrictions)
-    |> assign(:form, to_form(changeset))
-    |> assign(:id, "form-#{System.unique_integer()}" )
-
-
-
-
+      |> assign(:page_title, "Edit Profile Details")
+      |> assign(:categories, categories)
+      |> assign(:current_user_profile, user_profile)
+      |> assign(:user_profile, user_profile)
+      |> assign(:category_ids, category_ids)
+      |> assign(:food_restriction_ids, food_restriction_ids)
+      |> assign(:food_restrictions, food_restrictions)
+      |> assign(:form, to_form(changeset))
+      |> assign(:id, "form-#{System.unique_integer()}")
 
     {current_user_profile, user_follows, current_user_recipes} =
       Accounts.get_user_essentials(socket.assigns.current_user)
@@ -92,10 +86,10 @@ defmodule MehungryWeb.ProfileLive.Index do
 
     {current_user_profile, current_user_follows, current_user_recipes} =
       Accounts.get_user_essentials(socket.assigns.current_user)
- 
+
     categories = Food.list_categories()
-   category_ids = Enum.map(categories, fn x -> x.id end)
-   food_restrictions = Food.list_food_restriction_types()
+    category_ids = Enum.map(categories, fn x -> x.id end)
+    food_restrictions = Food.list_food_restriction_types()
     food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
 
     user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.current_user.id)
@@ -103,21 +97,16 @@ defmodule MehungryWeb.ProfileLive.Index do
     #    user_profile = socket.assigns.user_profile
     changeset = Accounts.change_user_profile(user_profile, %{})
 
-    socket = 
+    socket =
       socket
-    |> assign(:categories, categories)
-    |> assign(:current_user_profile, user_profile)
-    |> assign(:user_profile, user_profile)
-    |> assign(:category_ids, category_ids)
-    |> assign(:food_restriction_ids, food_restriction_ids)
-    |> assign(:food_restrictions, food_restrictions)
-    |> assign(:form, to_form(changeset))
-    |> assign(:id, "form-#{System.unique_integer()}" )
-
-
-
-
-
+      |> assign(:categories, categories)
+      |> assign(:current_user_profile, user_profile)
+      |> assign(:user_profile, user_profile)
+      |> assign(:category_ids, category_ids)
+      |> assign(:food_restriction_ids, food_restriction_ids)
+      |> assign(:food_restrictions, food_restrictions)
+      |> assign(:form, to_form(changeset))
+      |> assign(:id, "form-#{System.unique_integer()}")
 
     {user_saved_recipes, user_created_recipes, user_profile} =
       case is_nil(user) do
@@ -237,7 +226,7 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def get_profile_content(%{content_state: :created} = assigns) do
     ~H"""
-     <div class="grid_even_columns p-4">
+    <div class="grid_even_columns p-4">
       <%= for recipe <- @user_created_recipes do %>
         <RecipeComponents.recipe_card
           recipe={recipe}
@@ -247,8 +236,7 @@ defmodule MehungryWeb.ProfileLive.Index do
           path_to_details={"/profile/show_recipe/#{recipe.id}"}
           id={"recipe" <> Integer.to_string(recipe.id)}
         />
-    <% end %>
-
+      <% end %>
     </div>
     """
   end
@@ -256,37 +244,36 @@ defmodule MehungryWeb.ProfileLive.Index do
   def get_profile_content(%{content_state: :saved} = assigns) do
     ~H"""
     <div class="grid_even_columns p-4">
-
-    <%= for user_recipe <- @user_saved_recipes do %>
-      <RecipeComponents.recipe_card
-        recipe={user_recipe.recipe}
-        type={if @live_action == :show, do: "browse", else: "saved"}
-        return_to="profile"
-        user_recipes={@user_recipes}
-        path_to_details={"/profile/show_recipe/#{user_recipe.recipe.id}"}
-        id={"recipe" <> Integer.to_string(user_recipe.recipe.id)}
-      />
-    <% end %>
-  </div>
+      <%= for user_recipe <- @user_saved_recipes do %>
+        <RecipeComponents.recipe_card
+          recipe={user_recipe.recipe}
+          type={if @live_action == :show, do: "browse", else: "saved"}
+          return_to="profile"
+          user_recipes={@user_recipes}
+          path_to_details={"/profile/show_recipe/#{user_recipe.recipe.id}"}
+          id={"recipe" <> Integer.to_string(user_recipe.recipe.id)}
+        />
+      <% end %>
+    </div>
     """
   end
 
   def get_profile_content(%{content_state: :edit_profile} = assigns) do
     ~H"""
-  <.live_component
-            module={MehungryWeb.ProfileLive.Form}
-            categories={@categories}
-            category_ids={@category_ids}
-            food_restriction_ids={@food_restriction_ids}
-            food_restrictions={@food_restrictions}
-            id="hero"
-            user_profile={@current_user_profile}
-            live_action={@live_action}
-            current_user={@current_user}
-            title={@page_title}
-            action={@live_action}
-            form={@form}
-          />
+    <.live_component
+      module={MehungryWeb.ProfileLive.Form}
+      categories={@categories}
+      category_ids={@category_ids}
+      food_restriction_ids={@food_restriction_ids}
+      food_restrictions={@food_restrictions}
+      id="hero"
+      user_profile={@current_user_profile}
+      live_action={@live_action}
+      current_user={@current_user}
+      title={@page_title}
+      action={@live_action}
+      form={@form}
+    />
     """
   end
 

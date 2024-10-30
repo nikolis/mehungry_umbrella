@@ -45,6 +45,7 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer do
             <div></div>
             <button
               phx-click="cancel_comment_reply"
+              type="button"
               style="margin-right: 1.5rem; color: var(--clr-grey-friend_3)"
             >
               Cancel
@@ -71,6 +72,15 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer do
   @impl true
   def handle_event("keep_browsing", _thing, socket) do
     {:noreply, assign(socket, :must_be_loged_in, nil)}
+  end
+  
+  @impl true
+  def handle_event("cancel_comment_reply", _, socket) do
+    socket =
+      socket
+      |> assign(:reply, nil)
+  
+    {:noreply, socket}
   end
 
   @impl true

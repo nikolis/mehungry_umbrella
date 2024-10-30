@@ -23,11 +23,11 @@ defmodule MehungryWeb.ProfileLive.Form do
         class="profile-form pb-10 relative w-fit md:w-8/12 m-auto"
       >
         <div>
-            <.input required field={@form[:alias]} type="text" label="Alias" class="mt-4" />
-          </div>
-      <div class="mt-4">
-        <.input required field={@form[:intro]} type="textarea" label="Intro" class="" />
-      </div>
+          <.input required field={@form[:alias]} type="text" label="Alias" class="mt-4" />
+        </div>
+        <div class="mt-4">
+          <.input required field={@form[:intro]} type="textarea" label="Intro" class="" />
+        </div>
         <h3 class="text-center m-8">Diatery Restrictions</h3>
         <div class="max-h-64 overflow-auto min-h-80	">
           <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>

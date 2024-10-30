@@ -24,6 +24,25 @@ function waitForElm(selector) {
 
 
 function fix_navigation_active() {
+	waitForElm('#nav_bar_mobile').then((elm) => {
+		var nav = document.getElementsByTagName("nav")[1];
+		if (nav) {
+			nav.classList.add('current');
+			var childNodes = nav.childNodes;
+			childNodes.forEach(function(arg1, arg2) {
+				if (arg2 == 1 || arg2 == 5) {
+					var leaves1 = arg1.childNodes;
+					leaves1.forEach(function(arg3, arg4) {
+						if (arg3.classList) {
+							if (arg3.href == liveSocket.currentLocation.href) {
+								arg3.classList.add("current");
+							}
+						}
+					});
+				}
+			});
+		}
+	});
 
 	waitForElm('#nav_bar').then((elm) => {
 		var nav = document.getElementsByTagName("nav")[0];

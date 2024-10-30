@@ -88,7 +88,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
     <div class="my-auto lg:-mb-0 grid grid-cols-3 justify-between text-xl md:text-3xl 	">
       <button
         type="button"
-        class="w-fit text-primary font-medium"
+        class="w-fit text-complementary font-medium"
         phx-target={@myself}
         phx-click="prev-month"
       >
@@ -97,7 +97,7 @@ defmodule MehungryWeb.CalendarLive.CalendarWidgetComponent do
       <button class="w-full text-lg">Callendar</button>
       <button
         type="button"
-        class="w-full text-end	text-primary font-medium"
+        class="w-full text-end text-complementary font-medium"
         phx-target={@myself}
         phx-click="next-month"
       >

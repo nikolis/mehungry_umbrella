@@ -1,8 +1,8 @@
 <nav
-  class="nav_container_mobile fixed border-t broder-greyfriend1 "
+  class="nav_container_mobile fixed border-t broder-greyfriend1"
   id="nav_bar_mobile"
   phx-update="ignore"
-  phx-click-away={Phoenix.LiveView.JS.remove_class(" open_menu", to: "#nav_bar_mobile")}
+  phx-click-away={Phoenix.LiveView.JS.remove_class("open_menu", to: "#nav_bar_mobile")}
 >
   <div
     class="grid grid-cols-7 h-fit p-2  bg-inherit h-full"
@@ -18,7 +18,7 @@
       patch="/browse"
       class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}
     >
-      <.icon name="hero-book-open" class="h-7 w-7" />
+      <.icon name="hero-book-open" style="" class="h-7 w-7  " />
     </.link>
     <.link
       patch="/create_recipe"

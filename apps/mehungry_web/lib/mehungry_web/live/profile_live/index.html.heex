@@ -108,34 +108,34 @@
             <span class="text"> Created recipes </span>
           </button>
           <%= if @live_action in [:index] do %>
-          <button
-            class={"nav_button " <> get_active(@content_state, :edit_profile )}
-            phx-click="content_state_change"
-            phx-value-state={:edit_profile}
-          >
-            <.icon name="hero-pencil-square-solid" />
-            <span class="text"> Edit Profile </span>
-          </button>
-        <% end %>
+            <button
+              class={"nav_button " <> get_active(@content_state, :edit_profile )}
+              phx-click="content_state_change"
+              phx-value-state={:edit_profile}
+            >
+              <.icon name="hero-pencil-square-solid" />
+              <span class="text"> Edit Profile </span>
+            </button>
+          <% end %>
         </div>
         <div class="line"></div>
 
-          <.get_profile_content
-            content_state={@content_state}
-            user_created_recipes={@user_created_recipes}
-            user_saved_recipes={@user_saved_recipes}
-            live_action={@live_action}
-            user_recipes={@user_recipes}
-            current_user_recipes={@current_user_recipes}
-            current_user_profile={@current_user_profile} 
-            categories={@categories}
-            category_ids={@category_ids}
-            food_restriction_ids={@food_restriction_ids}
-            food_restrictions={@food_restrictions}
-            current_user={@current_user}
-            page_title={@page_title}
-            form={@form}
-          />
+        <.get_profile_content
+          content_state={@content_state}
+          user_created_recipes={@user_created_recipes}
+          user_saved_recipes={@user_saved_recipes}
+          live_action={@live_action}
+          user_recipes={@user_recipes}
+          current_user_recipes={@current_user_recipes}
+          current_user_profile={@current_user_profile}
+          categories={@categories}
+          category_ids={@category_ids}
+          food_restriction_ids={@food_restriction_ids}
+          food_restrictions={@food_restrictions}
+          current_user={@current_user}
+          page_title={@page_title}
+          form={@form}
+        />
       </div>
     </div>
   <% end %>

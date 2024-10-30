@@ -36,7 +36,8 @@ defmodule MehungryWeb.LiveHelpers do
         end
       end
 
-      @impl true
+
+     @impl true
       def handle_info(%{new_comment_vote: vote, type_: _type_}, socket) do
         recipe = Food.get_recipe!(vote.recipe_id)
 
@@ -47,6 +48,19 @@ defmodule MehungryWeb.LiveHelpers do
         {:noreply, socket}
       end
 
+      @impl true 
+      def handle_event("cancel_comment_reply", _, socket ) do
+        
+        send_update(MehungryWeb.RecipeDetailsComponent, %{
+          id: "recipe_details_component",
+          recipe: socket.assigns.recipe,
+          reply: nil
+        })
+
+        {:noreply, assign(socket, :reply, nil) }
+      end
+
+ 
       @impl true
       def handle_event("save_user_recipe", %{"recipe_id" => recipe_id}, socket) do
         {recipe_id, _ignore} = Integer.parse(recipe_id)
@@ -68,16 +82,26 @@ defmodule MehungryWeb.LiveHelpers do
       def handle_info(%{new_comment: comment}, socket) do
         recipe = socket.assigns.recipe
         recipe = Mehungry.Food.get_recipe!(recipe.id)
+        IO.inspect(comment, label: "Recieved comment in lhelpres ")
 
         recipe = %Recipe{
           recipe
           | comments: Enum.sort_by(recipe.comments, & &1.updated_at)
         }
 
+        user =
+          case is_nil(Map.get(socket.assigns, :user, nil)) do
+            true ->
+              socket.assigns.current_user
+
+            false ->
+              socket.assigns.user
+          end
+
         send_update(MehungryWeb.RecipeDetailsComponent, %{
           id: "recipe_details_component",
           recipe: recipe,
-          user: socket.assigns.user
+          user: user
         })
 
         {:noreply, socket}

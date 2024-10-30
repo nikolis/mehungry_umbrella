@@ -213,6 +213,12 @@ defmodule Mehungry.Food do
     Repo.delete(recipe)
   end
 
+  def get_recipe_comments(recipe_id) do
+    from(c in Mehungry.Posts.Comment, where: c.recipe_id == ^recipe_id)
+    |> Repo.all()
+    |> Repo.preload([:user, :votes, [comment_answers: :user]])
+  end
+
   def get_recipe!(id) do
     {id, _} =
       if(is_integer(id)) do

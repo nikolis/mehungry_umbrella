@@ -5,7 +5,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   import MehungryWeb.RecipeComponents
 
   alias Mehungry.Posts.Comment
-  alias Mehungry.{Posts, Users}
+  alias Mehungry.{Posts, Users, Food}
   alias Mehungry.Food.Recipe
 
   embed_templates("components/*")
@@ -59,6 +59,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     end
   end
 
+  
   @impl true
   def handle_event(
         "vote_comment",
@@ -156,7 +157,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           </div>
           <div class="post_card w-11/12 mb-12">
             <div class="grid grid-cols-2 h-fit mt-16">
-              <h3 class="text-lg text-start "><%= "Comments (#{length(@recipe.comments)})" %></h3>
+              <h3 class="text-lg text-start "><%= "Comments (#{length(@recipe_comments)})" %></h3>
               <div
                 class="relative"
                 phx-click={JS.toggle_class("h-0 overflow-hidden mt-4", to: ".comment")}
@@ -168,11 +169,11 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               </div>
             </div>
             <div style="max-height: 300px; overflow: auto;">
-              <%= for comment <- @recipe.comments do %>
+              <%= for comment <- @recipe_comments do %>
                 <.comment
                   comment={comment}
                   user={comment.user}
-                  current_user={@user}
+                  current_user={@comment.user}
                   live_action={@live_action}
                   page_title={@page_title}
                   myself={@myself}
@@ -220,21 +221,17 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   end
 
   def handle_info(%{new_comment: comment}, socket) do
-    recipe = socket.assigns.recipe
+    IO.inspect(comment, label: "NEW comment")
+    recipe_comments = socket.assigns.recipe_comments
     comment = Posts.get_comment!(comment.id)
 
     comments =
-      Enum.into(Enum.filter(recipe.comments, fn x -> x.id != comment.id end), [comment])
+      Enum.into(Enum.filter(recipe_comments, fn x -> x.id != comment.id end), [comment])
       |> Enum.sort_by(& &1.updated_at)
-
-    recipe = %Recipe{
-      recipe
-      | comments: comments
-    }
 
     socket =
       socket
-      |> assign(:recipe, recipe)
+      |> assign(:recipe_comments, comments)
 
     {:noreply, socket}
   end
@@ -248,12 +245,15 @@ defmodule MehungryWeb.RecipeDetailsComponent do
         assigns.user_follows
       end
 
+    comments = Food.get_recipe_comments(assigns.recipe.id)
+
     socket =
       assign(socket, assigns)
       |> assign(:reply, nil)
       |> assign(assigns)
       |> assign(:user_follows, user_follows)
       |> assign(:recipe, assigns.recipe)
+      |> assign(:recipe_comments, comments)
       |> assign(
         :comment,
         get_when_first_exists(assigns.user, fn ->

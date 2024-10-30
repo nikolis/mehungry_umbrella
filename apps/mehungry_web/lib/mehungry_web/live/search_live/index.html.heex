@@ -9,12 +9,20 @@
   >
     <div class="h-full">
       <%= if @query_string do %>
-        <%= text_input(f, :query_string,
-          class: "w-full h-full rounded-full",
-          style: "background-color:#eaeaea",
-          id: "text-search-input1#{@id}",
-          value: @query_string
-        ) %>
+        <div>
+          <%= text_input(f, :query_string,
+            class: "w-full h-full rounded-full",
+            style: "background-color:#eaeaea",
+            id: "text-search-input1#{@id}",
+            value: @query_string
+          ) %>
+          <button phx-clic="submit" class="absolute right-2  sm:right-4 m-auto md:hidden">
+            <.icon
+              name="hero-arrow-right-circle"
+              class="h-9 w-9 flex-none text-primary cursor-pointer mr-4"
+            />
+          </button>
+        </div>
       <% else %>
         <%= text_input(f, :query_string,
           class: "w-full h-full rounded-full",

@@ -934,7 +934,7 @@ defmodule MehungryWeb.CoreComponents do
   def input(%{type: "comment"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name} class="input-form w-full h-full">
-      <textarea
+      <input
         type={@type}
         name={@name}
         id={@id}

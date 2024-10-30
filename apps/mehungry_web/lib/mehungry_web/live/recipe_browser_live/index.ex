@@ -261,8 +261,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   @impl true
   def handle_params(params, uri, socket) do
     socket = assign(socket, :path, uri)
-    IO.inspect(socket.assigns)
-    IO.inspect(uri, label: "uri000000")
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 

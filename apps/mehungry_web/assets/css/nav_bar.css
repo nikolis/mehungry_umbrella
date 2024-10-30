@@ -1,3 +1,9 @@
+
+.nav_link_basic.current span{
+  background-color:  var(--clr-primary);
+
+}
+
 .main_nav_container {
 	display: grid;
 	padding-bottom: 0.5rem;
