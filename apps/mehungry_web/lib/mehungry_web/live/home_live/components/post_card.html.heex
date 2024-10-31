@@ -21,7 +21,6 @@
         <.link
           id={"link-to-recipe-#{@post.reference_id}"}
           class="block  "
-          #style="height: calc(100vh - 60px)"
           patch={~p"/show_recipe/#{@post.reference_id}"}
         >
           <img style="max-height: calc(100vh - 300px);" class=" m-auto" src={@post.md_media_url} />

@@ -39,23 +39,20 @@ defmodule MehungryWeb.LiveHelpers do
 
      @impl true
       def handle_info(%{new_comment_vote: vote, type_: _type_}, socket) do
-        recipe = Food.get_recipe!(vote.recipe_id)
+        recipe_comments = Food.get_recipe_comments(vote.recipe_id)
+        assigns = Map.put(%{}, :recipe_comments, recipe_comments)
+        assigns = Map.put(assigns, :id , "recipe_details_component")
 
-        socket =
-          socket
-          |> assign(:recipe, recipe)
+        send_update(MehungryWeb.RecipeDetailsComponent, assigns)
 
         {:noreply, socket}
       end
 
       @impl true 
       def handle_event("cancel_comment_reply", _, socket ) do
-        
-        send_update(MehungryWeb.RecipeDetailsComponent, %{
-          id: "recipe_details_component",
-          recipe: socket.assigns.recipe,
-          reply: nil
-        })
+        assigns = Map.put(%{}, :reply, nil)
+        assigns = Map.put(assigns, :id , "recipe_details_component")
+        send_update(MehungryWeb.RecipeDetailsComponent, assigns)
 
         {:noreply, assign(socket, :reply, nil) }
       end
@@ -65,6 +62,13 @@ defmodule MehungryWeb.LiveHelpers do
       def handle_event("save_user_recipe", %{"recipe_id" => recipe_id}, socket) do
         {recipe_id, _ignore} = Integer.parse(recipe_id)
         toggle_user_saved_recipe(socket, recipe_id)
+         user_recipes =
+          Users.list_user_saved_recipes(socket.assigns.current_user)
+          |> Enum.map(fn x -> x.recipe_id end)
+        recipe = Food.get_recipe!(recipe_id)
+        socket = assign(socket, :user_recipes, user_recipes)
+        socket = assign(socket, :current_user_recipes, user_recipes)
+        socket = stream_insert(socket, :recipes, recipe) 
         {:noreply, socket}
       end
 

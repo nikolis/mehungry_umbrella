@@ -224,6 +224,39 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply, socket}
   end
 
+  def handle_event("delete_recipe", %{"id" => id}, socket) do
+    Food.delete_recipe(id)
+    user_saved_recipes = Users.list_user_saved_recipes(socket.assigns.user)
+    user_created_recipes = Users.list_user_created_recipes(socket.assigns.user)
+
+    socket =
+      socket
+      |> assign(:user_saved_recipes, user_saved_recipes)
+      |> assign(:user_created_recipes, user_created_recipes)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("content_state_change", %{"state" => state}, socket) do
+    case state do
+      "created" ->
+        {:noreply,
+         socket
+         |> assign(content_state: :created)}
+
+      "saved" ->
+        {:noreply,
+         socket
+         |> assign(content_state: :saved)}
+
+      "edit_profile" ->
+        {:noreply,
+         socket
+         |> assign(content_state: :edit_profile)}
+    end
+  end
+
   def get_profile_content(%{content_state: :created} = assigns) do
     ~H"""
     <div class="grid_even_columns p-4">
@@ -277,36 +310,4 @@ defmodule MehungryWeb.ProfileLive.Index do
     """
   end
 
-  def handle_event("delete_recipe", %{"id" => id}, socket) do
-    Food.delete_recipe(id)
-    user_saved_recipes = Users.list_user_saved_recipes(socket.assigns.user)
-    user_created_recipes = Users.list_user_created_recipes(socket.assigns.user)
-
-    socket =
-      socket
-      |> assign(:user_saved_recipes, user_saved_recipes)
-      |> assign(:user_created_recipes, user_created_recipes)
-
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("content_state_change", %{"state" => state}, socket) do
-    case state do
-      "created" ->
-        {:noreply,
-         socket
-         |> assign(content_state: :created)}
-
-      "saved" ->
-        {:noreply,
-         socket
-         |> assign(content_state: :saved)}
-
-      "edit_profile" ->
-        {:noreply,
-         socket
-         |> assign(content_state: :edit_profile)}
-    end
-  end
 end

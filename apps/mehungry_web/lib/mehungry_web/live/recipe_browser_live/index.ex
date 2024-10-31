@@ -148,26 +148,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   end
 
   @impl true
-  def handle_event("save_user_recipe", %{"recipe_id" => recipe_id, "dom_id" => _dom_id}, socket) do
-    case is_nil(socket.assigns.current_user) do
-      true ->
-        socket = assign(socket, :must_be_loged_in, 1)
-        {:noreply, socket}
-
-      false ->
-        {recipe_id, _ignore} = Integer.parse(recipe_id)
-        toggle_user_saved_recipes(socket, recipe_id)
-
-        user_recipes =
-          Users.list_user_saved_recipes(socket.assigns.current_user)
-          |> Enum.map(fn x -> x.recipe_id end)
-
-        socket = assign(socket, :user_recipes, user_recipes)
-        {:noreply, socket}
-    end
-  end
-
-  @impl true
   def handle_event("load-more", _, socket) do
     cursor_after = Map.get(socket.assigns, :cursor_after)
 
@@ -393,8 +373,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
     socket =
       if is_nil(Map.get(socket.assigns, :return_to_path, nil)) do
-        IO.inspect("asdfadfsdfsa")
-        socket = assign(socket, :return_to_path, ~p"/browse")
+        assign(socket, :return_to_path, ~p"/browse")
       else
         socket
       end
@@ -408,8 +387,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           Users.list_user_saved_recipes(user)
           |> Enum.map(fn x -> x.recipe_id end)
       end
-
-    {recipes, elth} = list_recipes()
 
     socket =
       socket

@@ -87,7 +87,7 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentComment do
 
   defp save_comment(socket, :show_recipe, comment_params) do
     case Posts.create_comment(comment_params) do
-      {:ok, comment} ->
+      {:ok, _comment} ->
         comment_params_clean = Map.put(comment_params, "text", "")
         changeset_new = Posts.change_comment(%Comment{}, comment_params_clean)
 

@@ -115,14 +115,14 @@ defmodule MehungryWeb.RecipeComponents do
   end
 
   def recipe_nutrients(
-        %{nutrients: _nutrients, primary_size: _primary_size, recipe: recipe} = assigns
+        %{nutrients: _nutrients, primary_size: _primary_size, recipe: _recipe} = assigns
       ) do
     ~H"""
     <div
       class="accordion overflow-auto	max-h-1/2 font-normal mt-4"
       style="max-height: 300px;"
       phx-hook="AccordionHook"
-      id={"nutrients"<> to_string(recipe.id)}
+      id={"nutrients"<> to_string(@recipe.id)}
     >
       <%= for {{_, n}, index} <-  Mehungry.Food.RecipeUtils.sort_nutrients_from_db(@recipe.nutrients) do %>
         <%= if !is_nil(n) do %>
@@ -254,9 +254,12 @@ defmodule MehungryWeb.RecipeComponents do
   end
 
   def recipe_tag(assigns) do
+    uri = ~p"/search/" <> Enum.at(String.split(assigns.ingredient.name, ","), 0)
+    assigns = assign(assigns, :uri, uri)
+
     ~H"""
     <a
-      href={~p"/search/" <> Enum.at(String.split(@ingredient.name, ","), 0)}
+      href={@uri}
       class="cursor-pointer w-fit border-2 border-red border-solid rounded-full px-2 border-primaryl2"
       id={Integer.to_string(@ingredient.id)}
     >
@@ -373,7 +376,7 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_card(assigns) do
     ~H"""
-    <div id={"recipe-card-details-container-#{@recipe.id}"} } class="recipe_card">
+      <div id={"recipe-card-details-container-#{@recipe.id}"} } class="recipe_card">
       <.recipe_like_container type={@type} user_recipes={@user_recipes} recipe={@recipe} id={@id} />
       <.link
         phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}

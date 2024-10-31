@@ -45,18 +45,13 @@ Hooks.ViewportResizeHooks = {
 Hooks.SelectComponentList = {
   mounted() {
     setTimeout(() => {
-    console.log("In here 1")
     console.log(this.el.scrollIntoView({block: "center", behavior: "smooth"}));
-    console.log("In here")
 }, 200);
   },
   updated() {
     console.log("updated:")
     this.el.scrollIntoView({block: "center", behavior: "smooth"});  
   },
-  destroyed() {
-    console.log("destroyed")
-  }
 }
 
 Hooks.SelectComponent = {

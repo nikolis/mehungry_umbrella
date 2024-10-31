@@ -6,7 +6,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   alias Mehungry.Posts.Comment
   alias Mehungry.{Posts, Users, Food}
-  alias Mehungry.Food.Recipe
 
   embed_templates("components/*")
   @color_fill "#00A0D0"
@@ -74,9 +73,9 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       false ->
         {comment_id, _} = Integer.parse(comment_id)
 
-        socket =
-          socket
-          |> assign(:reply, %{comment_id: comment_id})
+        #socket =
+         # socket
+          #|> assign(:reply, %{comment_id: comment_id})
 
         Mehungry.Posts.vote_comment(comment_id, socket.assigns.user.id, reaction)
 
@@ -173,7 +172,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                 <.comment
                   comment={comment}
                   user={comment.user}
-                  current_user={@comment.user}
+                  current_user={@user}
                   live_action={@live_action}
                   page_title={@page_title}
                   myself={@myself}
@@ -236,6 +235,27 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     {:noreply, socket}
   end
 
+
+  @doc """
+    Every LiveView that uses this component is also importing 
+    MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
+    behaviour so this update is here to handle the updates by this behaviour
+    so as not to make a mess with the "typical" update 
+  """
+  @impl true
+  def update(%{reply: nil} = assigns, socket) do
+    reply = Map.get(assigns, :reply, nil)
+    socket = assign(socket, :reply, reply)
+
+    {:ok, socket}
+  end
+
+  @impl true
+  def update(%{recipe_comments: recipe_comments} = _assigns, socket) do
+    socket = assign(socket, :recipe_comments, recipe_comments)
+    {:ok, socket}
+  end
+
   @impl true
   def update(assigns, socket) do
     user_follows =
@@ -246,13 +266,12 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       end
 
     comments = Food.get_recipe_comments(assigns.recipe.id)
-
+    reply = Map.get(assigns, :reply, nil)
     socket =
-      assign(socket, assigns)
-      |> assign(:reply, nil)
+      socket
       |> assign(assigns)
+      |> assign(:reply, reply)
       |> assign(:user_follows, user_follows)
-      |> assign(:recipe, assigns.recipe)
       |> assign(:recipe_comments, comments)
       |> assign(
         :comment,
@@ -260,7 +279,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           %Comment{user_id: assigns.user.id, recipe_id: assigns.recipe.id}
         end)
       )
-
     {:ok, socket}
   end
 end
