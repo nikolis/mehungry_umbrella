@@ -8,7 +8,7 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="w-8/12 sm:w-10/12" id="comment_answer_form" phx-hook={SelectComponentList}>
+    <div class="w-8/12 sm:w-10/12" id="comment_answer_form" phx-hook="ScrolledIntoEndOfScreen">
 
       <.header></.header>
       <%= if !is_nil(@must_be_loged_in) do %>

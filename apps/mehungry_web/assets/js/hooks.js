@@ -54,6 +54,19 @@ Hooks.SelectComponentList = {
   },
 }
 
+Hooks.ScrolledIntoEndOfScreen = {
+  mounted() {
+    setTimeout(() => {
+    console.log(this.el.scrollIntoView({block: "end", behavior: "smooth"}));
+}, 200);
+  },
+  updated() {
+    console.log("updated:")
+    this.el.scrollIntoView({block: "end", behavior: "smooth"});  
+  },
+}
+
+
 Hooks.SelectComponent = {
 
   mounted() {
