@@ -1,6 +1,8 @@
 defmodule MehungryWeb.HomeLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
+  use MehungryWeb.Presence, :user_tracking
+
   import MehungryWeb.RecipeComponents
 
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
@@ -104,10 +106,14 @@ defmodule MehungryWeb.HomeLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
+    maybe_track_user(%{}, socket)
+
     socket
   end
 
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
+    maybe_track_user(%{}, socket)
+
     recipe = Food.get_recipe!(id)
     Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
 
@@ -133,7 +139,8 @@ defmodule MehungryWeb.HomeLive.Index do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(params, uri, socket) do
+    socket = assign(socket, :path, uri)
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 

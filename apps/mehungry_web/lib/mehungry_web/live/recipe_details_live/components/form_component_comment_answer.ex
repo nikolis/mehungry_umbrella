@@ -9,7 +9,6 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer do
   def render(assigns) do
     ~H"""
     <div class="w-8/12 sm:w-10/12" id="comment_answer_form" phx-hook="ScrolledIntoEndOfScreen">
-
       <.header></.header>
       <%= if !is_nil(@must_be_loged_in) do %>
         <.modal
@@ -74,13 +73,13 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer do
   def handle_event("keep_browsing", _thing, socket) do
     {:noreply, assign(socket, :must_be_loged_in, nil)}
   end
-  
+
   @impl true
   def handle_event("cancel_comment_reply", _, socket) do
     socket =
       socket
       |> assign(:reply, nil)
-  
+
     {:noreply, socket}
   end
 

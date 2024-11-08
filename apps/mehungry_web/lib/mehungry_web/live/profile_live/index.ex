@@ -2,6 +2,7 @@ defmodule MehungryWeb.ProfileLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
+  use MehungryWeb.Presence, :user_tracking
 
   alias MehungryWeb.RecipeComponents
 
@@ -31,7 +32,8 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(params, uri, socket) do
+    socket = assign(socket, :path, uri)
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
@@ -45,6 +47,7 @@ defmodule MehungryWeb.ProfileLive.Index do
 
     #    user_profile = socket.assigns.user_profile
     changeset = Accounts.change_user_profile(user_profile, %{})
+    maybe_track_user(%{}, socket)
 
     socket =
       socket
@@ -82,6 +85,8 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   defp apply_action(socket, :show, %{"id" => id} = _params) do
+    maybe_track_user(%{}, socket)
+
     user = Accounts.get_user!(id)
 
     {current_user_profile, current_user_follows, current_user_recipes} =
@@ -135,6 +140,8 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   defp apply_action(socket, :show_recipe, %{"recipe_id" => id}) do
+    maybe_track_user(%{}, socket)
+
     recipe = Food.get_recipe!(id)
     Posts.subscribe_to_recipe(%{recipe_id: id})
 
@@ -163,6 +170,7 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   defp apply_action(socket, :edit, _params) do
+    maybe_track_user(%{}, socket)
     categories = Food.list_categories()
     category_ids = Enum.map(categories, fn x -> x.id end)
     food_restrictions = Food.list_food_restriction_types()
@@ -309,5 +317,4 @@ defmodule MehungryWeb.ProfileLive.Index do
     />
     """
   end
-
 end

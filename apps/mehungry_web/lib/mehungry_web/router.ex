@@ -48,7 +48,10 @@ defmodule MehungryWeb.Router do
       live "/users", ProfessionalLive.Users, :index
       live "/user/:id", ProfessionalLive.User, :show
 
+      live "/activeusers", ProfessionalLive.ActiveUsers, :index
       live "/ingredients", ProfessionalLive.Ingredients, :index
+      live "/visits", VisitLive.Index, :index
+      live "/visits/:ip_address", VisitLive.Show, :show
     end
   end
 
@@ -71,6 +74,7 @@ defmodule MehungryWeb.Router do
 
       live "/calendar/:id", CalendarLive.Index, :edit
 
+      live "/stepper", CreateRecipeLive.Show, :show
       live "/create_recipe", CreateRecipeLive.Index, :index
       live "/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit
 

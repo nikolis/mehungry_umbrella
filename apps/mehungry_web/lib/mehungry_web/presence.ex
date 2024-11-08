@@ -2,6 +2,7 @@ defmodule MehungryWeb.Presence do
   @moduledoc false
   @topic "user_activity"
   # @recipe_activity "recipe_activity"
+  alias Mehungry.Meta
 
   use Phoenix.Presence,
     otp_app: :mehungry_web,
@@ -14,61 +15,107 @@ defmodule MehungryWeb.Presence do
       @topic "user_activity"
       @recipe_activity "recipe_activity"
 
-      def maybe_track_user(
-            %{recipe: recipe},
-            %{assigns: %{live_action: _, current_user: current_user}} = socket
-          ) do
-        if connected?(socket) do
-          result =
-            if(is_nil(current_user)) do
-              IO.inspect(current_user, label: "Current user is")
+      def get_address_agent(socket) do
+        try do
+          {first, second, third, forth} =
+            Phoenix.LiveView.get_connect_info(socket, :peer_data).address
 
-              Presence.track(self(), @topic, "Unknow user", %{users: [recipe: recipe.title]})
-            else
-              IO.inspect(current_user, label: "Current user is")
+          address =
+            Integer.to_string(first) <>
+              "." <>
+              Integer.to_string(second) <>
+              "." <> Integer.to_string(third) <> "." <> Integer.to_string(forth)
 
-              if is_nil(current_user.email) do
-                Presence.track(self(), @topic, "Unknown user", %{users: [recipe: recipe.title]})
-              else
-                Presence.track(self(), @topic, current_user.email, %{
-                  users: [recipe: recipe.title]
-                })
-              end
-            end
+          agent = Phoenix.LiveView.get_connect_info(socket, :user_agent)
+
+          {address, agent}
+        catch
+          _ ->
+            nil
         end
       end
 
-      def maybe_track_user(
-            metadata,
-            %{assigns: %{live_action: :index, current_user: current_user}} =
-              socket
-          ) do
+      def maybe_track_user(product, socket) do
         if connected?(socket) do
-          result =
-            if(is_nil(current_user)) do
-              IO.inspect(current_user, label: "Current user is")
+          ret =
+            Presence.track(self(), "general", "general", %{
+              address: socket.assigns.address,
+              agent: socket.assigns.agent,
+              path: socket.assigns.path
+            })
 
-              Presence.track(self(), @topic, "Unknown User", %{
-                users: [recipe_search: metadata.query]
-              })
-            else
-              if is_nil(current_user.email) do
-                Presence.track(self(), @topic, current_user.id, %{
-                  users: [recipe_search: metadata.query]
-                })
-              else
-                Presence.track(self(), @topic, current_user.email, %{
-                  users: [recipe_search: metadata.query]
-                })
+          Mehungry.Meta.create_visit(%{
+            ip_address: socket.assigns.address,
+            details: %{agent: socket.assigns.agent, path: socket.assigns.path}
+          })
+          |> IO.inspect()
+
+          ret
+        else
+          nil
+        end
+
+        # Presence.track(socket, "General" ,"General", %{addres: address, agent: agent, path: path} )
+      end
+
+      """
+            def maybe_track_user(
+                  %{page: page, recipe: recipe},
+                  %{assigns: %{live_action: _, current_user: current_user}} = socket
+                ) do
+              if connected?(socket) do
+                {address, agent} = get_address_agent(socket)
+
+                result =
+                  if(is_nil(current_user)) do
+                    Presence.track(self(), @topic, "Unknow user", %{users: [recipe: recipe.title]})
+                  else
+                    if is_nil(current_user.email) do
+                      Presence.track(self(), @topic, "Unknown user", %{users: [recipe: recipe.title]})
+                    else
+                      Presence.track(self(), @topic, current_user.email, %{
+                        users: [recipe: recipe.title]
+                      })
+                    end
+                  end
               end
             end
-        end
-      end
 
-      def maybe_track_user(_product, _socket) do
-        nil
-      end
+            def maybe_track_user(
+                  metadata,
+                  %{assigns: %{live_action: :index, current_user: current_user}} =
+                    socket
+            ) do
+              if connected?(socket) do
+                result =
+                  if(is_nil(current_user)) do
+                    IO.inspect(current_user, label: "Current user is")
+
+                    Presence.track(self(), @topic, "Unknown User", %{
+                      users: [recipe_search: metadata.query]
+                    })
+                  else
+                    if is_nil(current_user.email) do
+                      Presence.track(self(), @topic, current_user.id, %{
+                        users: [recipe_search: metadata.query]
+                      })
+                    else
+                      Presence.track(self(), @topic, current_user.email, %{
+                        users: [recipe_search: metadata.query]
+                      })
+                    end
+                  end
+              end
+            end
+      """
     end
+  end
+
+  def list_general do
+    IO.inspect(Presence.list("general"),
+      label:
+        "asdafdsfadsfads----------------------------------------------------------------------------------------------------------------"
+    )
   end
 
   def list_products_and_users do

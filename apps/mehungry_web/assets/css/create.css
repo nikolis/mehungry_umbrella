@@ -165,3 +165,37 @@
 	color: white !important;
 }
 
+
+
+#content-2 {
+  height: 69vh;
+}
+
+#content-1 {
+  height: 69vh;
+}
+#content-3 {
+  height: 69vh;
+}
+
+@media only screen and (min-width: 768px) {
+  
+  #content-3 {
+    height: fit-content;
+  }
+  #content-1 {
+    height: fit-content;
+  }
+  #content-2 {
+    height: fit-content;
+  }
+
+
+
+}
+@media only screen and (max-width: 600px) {
+
+  .step_ing_cont {
+    height: 65vh; 
+  }
+}

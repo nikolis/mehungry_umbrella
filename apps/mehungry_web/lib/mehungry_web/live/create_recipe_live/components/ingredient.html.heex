@@ -8,7 +8,7 @@
   <.live_component
     module={MehungryWeb.SelectComponentSingle}
     form={@g}
-    item_function={fn x -> Mehungry.Food.search_ingredient(x) end}
+    item_function={fn x -> Mehungry.Food.search_ingredient_alt(x) end}
     get_by_id_func={fn x -> Mehungry.Food.get_ingredient!(x) end}
     input_variable="ingredient_id"
     id={"ingredient_search_component" <> Integer.to_string(@g.index)}

@@ -230,7 +230,6 @@
 }
 
 .body_side_nav_bar{
-  min-height: 200vh;
   margin: 0;
   font-size: 1.25rem;
   color: white;
@@ -241,10 +240,38 @@
 
 
 nav.nav-list-cont {
-  position: sticky;
+  height: 100vh;
+  position: absolute;
+  transition: 0.8s ease-in-out;
+
   top: 0;
+  left: -300px;
   max-height: 100svh;
-  @apply bg-complementary;
+  color: black;
+  border-right: 1px solid var(--clr-grey-friend_3);
+}
+
+nav.nav-list-cont.open {
+  left: 0;
+  z-index: 50; 
+  background: white;
+  transition: 0.8s ease-in-out;
+
+}
+
+#admin_menu_button {
+ 	transform: rotate(90deg);
+  transition: 0.8s ease-in-out;
+  bottom: 15px ; 
+  right: 15px ;
+
+}
+
+#admin_menu_button.open_button {
+ 	transform: rotate(-90deg);
+  transition: 0.8s ease-in-out;
+  bottom: 15px ; 
+  right: 15px ;
 }
 
 .nav-list {

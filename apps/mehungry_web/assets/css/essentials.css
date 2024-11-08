@@ -511,6 +511,9 @@ body.modal-open {
 
 .img_preview_container {
 	position: relative;
+  max-width: 60vw;
+  max-height: 50vh;
+  margin: auto;
 }
 
 .photo-delbutton {

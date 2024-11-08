@@ -376,7 +376,7 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_card(assigns) do
     ~H"""
-      <div id={"recipe-card-details-container-#{@recipe.id}"} } class="recipe_card">
+    <div id={"recipe-card-details-container-#{@recipe.id}"} } class="recipe_card">
       <.recipe_like_container type={@type} user_recipes={@user_recipes} recipe={@recipe} id={@id} />
       <.link
         phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
