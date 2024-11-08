@@ -58,7 +58,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     end
   end
 
-  
   @impl true
   def handle_event(
         "vote_comment",
@@ -73,9 +72,9 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       false ->
         {comment_id, _} = Integer.parse(comment_id)
 
-        #socket =
-         # socket
-          #|> assign(:reply, %{comment_id: comment_id})
+        # socket =
+        # socket
+        # |> assign(:reply, %{comment_id: comment_id})
 
         Mehungry.Posts.vote_comment(comment_id, socket.assigns.user.id, reaction)
 
@@ -235,7 +234,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     {:noreply, socket}
   end
 
-
   @doc """
     Every LiveView that uses this component is also importing 
     MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
@@ -267,6 +265,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
     comments = Food.get_recipe_comments(assigns.recipe.id)
     reply = Map.get(assigns, :reply, nil)
+
     socket =
       socket
       |> assign(assigns)
@@ -279,6 +278,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           %Comment{user_id: assigns.user.id, recipe_id: assigns.recipe.id}
         end)
       )
+
     {:ok, socket}
   end
 end

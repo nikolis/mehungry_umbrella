@@ -1,0 +1,36 @@
+<.header>
+  Listing Visits
+  <:actions>
+    <.link patch={~p"/visits/new"}>
+      <.button>New Visit</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<.table
+  id="visits"
+  rows={@streams.visits}
+  row_click={fn {_id, visit} -> JS.navigate(~p"/professional/visits/#{visit.ip_address}") end}
+>
+  <:col :let={{_id, visit}} label="Ip address"><%= visit.ip_address %></:col>
+  <:col :let={{_id, visit}} label="Details"><%= visit.details["agent"] %></:col>
+  <:col :let={{_id, visit}} label="Details"><%= visit.details["path"] %></:col>
+
+  <:action :let={{_id, visit}}>
+    <div class="sr-only">
+      <.link navigate={~p"/professional/visits/#{visit}"}>Show</.link>
+    </div>
+  </:action>
+  <:action :let={{id, visit}}>
+    <.link phx-click={JS.push("delete", value: %{id: visit.id}) |> hide("##{id}")}>
+      Delete
+    </.link>
+  </:action>
+</.table>
+
+<button
+  class="text-red fixed bg-red bottom-20 right-10 font-semibold text-lg"
+  phx-click={JS.push("delete_all")}
+>
+  Delete all
+</button>

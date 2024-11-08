@@ -2,6 +2,7 @@ defmodule MehungryWeb.CalendarLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
   use ViewportHelpers
+  use MehungryWeb.Presence, :user_tracking
 
   import MehungryWeb.CoreComponents
 
@@ -48,10 +49,13 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
+    maybe_track_user(%{}, socket)
     socket
   end
 
   defp apply_action(socket, :particular, %{"date" => date} = _params) do
+    maybe_track_user(%{}, socket)
+
     socket = push_event(socket, "go_to_date", %{date: date})
 
     socket
@@ -60,11 +64,15 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   defp apply_action(socket, :nutrition_details, %{"date" => date} = _params) do
+    maybe_track_user(%{}, socket)
+
     socket
     |> assign(:nutrition_details, date)
   end
 
   defp apply_action(socket, :edit, %{"id" => id} = _params) do
+    maybe_track_user(%{}, socket)
+
     user_meal = History.get_user_meal!(id)
 
     # user_meal = %UserMeal{user_meal| recipe_user_meals: Enum.map(user_meal.recipe_user_meals, fn x -> x.recipe_id end) }
@@ -78,6 +86,8 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   defp apply_action(socket, :new, %{"start" => start_date, "title" => title} = _params) do
+    maybe_track_user(%{}, socket)
+
     user_meal =
       struct(UserMeal)
       |> Repo.preload(
@@ -111,7 +121,9 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(params, uri, socket) do
+    socket = assign(socket, :path, uri)
+
     socket =
       assign(
         socket,

@@ -5,7 +5,8 @@
 @import "./nav_bar.css";
 @import "./basket.css";
 @import "./calendar.css";
-
+@import "./stepper.css";
+@import "./stepper2.css";
 @import "./browse.css"; 
 @import "./create.css";
 @import "./override.css"; 
@@ -68,17 +69,24 @@ h1 {
   .basic_2_col_grid_cont{
     display: grid;
     grid-template-columns: repeat(1, minmax(0, 1fr));
-    margin-bottom: 3rem;
+      }
+
+  @media only screen and (min-height: 600px) {
+  .basic_2_col_grid_cont{
+      margin-bottom: 2.3vh;
+      gap: 2.5rem;
+    }
+
   }
 
   @media only screen and (min-width: 1400px) {
 
     .basic_2_col_grid_cont{
       display: grid;
-      gap: 2.5rem;
+      gap: 1rem;
+      margin-bottom: 0;
       justify-content: space-around;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      margin-bottom: 3rem;
     }
   }
 

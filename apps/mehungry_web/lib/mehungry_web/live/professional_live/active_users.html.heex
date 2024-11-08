@@ -1,0 +1,13 @@
+<h3 class="text-center">Active Users</h3>
+<div class="w-full">
+  <%= for record <- @active_users do %>
+    <div class="border-solid border-black border-2 p-4 m-4 ">
+      <%= inspect(record.address) %>
+      <br />
+      <%= inspect(record.agent) %>
+
+      <%= inspect(record.path) %>
+      <%= inspect(record.phx_ref) %>
+    </div>
+  <% end %>
+</div>

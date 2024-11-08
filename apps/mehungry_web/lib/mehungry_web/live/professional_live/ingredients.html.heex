@@ -1,5 +1,62 @@
-<h3 class="text-center">Active Users</h3>
-<%= for {user, rest} <- @active_users do %>
-  <h3><%= inspect(user) %></h3>
-  <h3><%= inspect(rest) %></h3>
-<% end %>
+<div class=" ">
+  <h3 class="text-center sm:pb-4">Ingredients Explorer</h3>
+
+  <.simple_form for={%{}} class="w-full">
+    <div class="flex gap-1 sm:gap-4 flex-row  flex-wrap p-1 sm:p-4">
+      <.input
+        class="text-black"
+        type="select"
+        options={@categories}
+        name="category"
+        value={@category}
+        phx-change="filter_change"
+      />
+
+      <.input
+        class="text-black "
+        type="select"
+        options={@search_methods}
+        name="search_method"
+        value={@search_method}
+        phx-change="filter_change"
+      />
+      <.input
+        class="text-black max-w-60"
+        type="text"
+        options={@search_methods}
+        name="query"
+        phx-change="filter_change"
+        value={@query}
+        label="Search "
+      />
+    </div>
+  </.simple_form>
+
+  <div class="flex gap-4 m-auto">
+    <div class="text-black text-base font-bold text-lg" style="width: 250px;">
+      Name
+    </div>
+    <div class="text-black text-base font-bold text-lg" style="width: 100px;">Class</div>
+    <div class="text-black text-base font-bold text-lg" style="width: 250px;">Category</div>
+  </div>
+
+  <div
+    class="m-auto overflow-scroll"
+    id="ingredients_container"
+    phx-hook="InfiniteScroll"
+    phx-update="stream"
+    data-page={@page}
+  >
+    <%= for {dom_id, ingredient} <- @streams.ingredients do %>
+      <div class="flex gap-4">
+        <div class="text-black text-base" style="width: 250px;">
+          <span class="font-semibold">(<%= ingredient.id %>)</span> <%= ingredient.name %>
+        </div>
+        <div class="text-black text-base" style="width: 100px;"><%= ingredient.food_class %></div>
+        <div class="text-black text-base" style="width: 250px;">
+          <%= ingredient.category.name %> ( <%= ingredient.category_id %> )
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

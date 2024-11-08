@@ -1208,6 +1208,66 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   @doc """
+  An attempt to make a stepper component  with references to 
+  https://verpex.com/blog/website-tips/a-css-only-responsive-stepper-component
+  https://codepen.io/t_afif/pen/gOjJpeq
+  """
+  def stepper(assigns) do
+    steps = ["Step A", "Step B", "Step Ctroen", "Step D "]
+    assigns = Map.put(assigns, :steps, steps)
+
+    ~H"""
+    <ol class="stepper">
+      <%= for {step, index} <- Enum.with_index(@steps) do %>
+        <%= if index == 0 do %>
+          <.stepper_step
+            class="stepper_step active pr-6 cursor-pointer"
+            id={"step"<> Integer.to_string(index)}
+            step={step}
+            index={index}
+          >
+          </.stepper_step>
+        <% else %>
+          <%= if index == length(@steps) -1 do %>
+            <.stepper_step
+              class="stepper_step  cursor-pointer"
+              step={step}
+              index={index}
+              id={"step"<> Integer.to_string(index)}
+            >
+            </.stepper_step>
+          <% else %>
+            <.stepper_step
+              class="stepper_step pr-6 cursor-pointer"
+              step={step}
+              index={index}
+              id={"step"<> Integer.to_string(index)}
+            >
+            </.stepper_step>
+          <% end %>
+        <% end %>
+      <% end %>
+    </ol>
+    """
+  end
+
+  defp stepper_step(assigns) do
+    ~H"""
+    <li
+      id={@id}
+      class={@class}
+      phx-click={
+        JS.remove_class("active", to: ".stepper_step")
+        |> JS.add_class("active", to: "#step#{@index}")
+        |> JS.add_class("hidden", to: ".content_container")
+        |> JS.remove_class("hidden", to: "#content-#{@index}")
+      }
+    >
+    </li>
+    """
+  end
+
+  @doc """
   Renders a [Heroicon](https://heroicons.com).
 
   Heroicons come in three styles – outline, solid, and mini.

@@ -1,5 +1,6 @@
 defmodule MehungryWeb.CreateRecipeLive.Index do
   use MehungryWeb, :live_view
+  use MehungryWeb.Presence, :user_tracking
 
   alias Mehungry.Food
   alias Mehungry.Food.{Recipe}
@@ -43,6 +44,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   ################################################################################## Actions #############################################################################################
   defp apply_action(socket, :index, _params) do
     recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+    maybe_track_user(%{}, socket)
 
     attrs =
       case Cachex.get(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}) do
@@ -89,7 +91,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(params, uri, socket) do
+    socket = assign(socket, :path, uri)
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
@@ -156,6 +159,9 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   @impl true
   def handle_event("validate", %{"recipe" => recipe_params}, socket) do
+    recipe_params = Map.put(recipe_params, "language_name", "En")
+    recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
+
     changeset =
       socket.assigns.base
       |> Recipe.changeset(recipe_params)

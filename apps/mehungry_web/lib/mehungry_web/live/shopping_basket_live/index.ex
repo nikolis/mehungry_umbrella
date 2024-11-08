@@ -2,6 +2,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   use MehungryWeb, :live_view
   import MehungryWeb.CoreComponents
   use MehungryWeb.Searchable, :transfers_to_search
+  use MehungryWeb.Presence, :user_tracking
 
   alias Mehungry.Accounts
   alias Mehungry.Accounts.UserProfile
@@ -43,28 +44,38 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(params, uri, socket) do
+    socket = assign(socket, :path, uri)
+
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
+    maybe_track_user(%{}, socket)
+
     socket
     |> assign(:page_title, "Edit User profile")
     |> assign(:user_profile, Accounts.get_user_profile!(id))
   end
 
   defp apply_action(socket, :import_items, %{"id" => id} = _params) do
+    maybe_track_user(%{}, socket)
+
     processing_basket = Inventory.get_shopping_basket!(id)
     assign(socket, :processing_basket, processing_basket)
   end
 
   defp apply_action(socket, :new, _params) do
+    maybe_track_user(%{}, socket)
+
     socket
     |> assign(:page_title, "New User profile")
     |> assign(:user_profile, %UserProfile{})
   end
 
   defp apply_action(socket, :index, _params) do
+    maybe_track_user(%{}, socket)
+
     socket
     |> assign(:page_title, "Listing User profiles")
     |> assign(:user_profile, nil)

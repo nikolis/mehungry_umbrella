@@ -329,6 +329,70 @@ defmodule Mehungry.Food do
     result
   end
 
+  def list_ingredients_paginated() do
+    # return the next 50 posts
+    query = from(i in Ingredient)
+
+    %{entries: entries, metadata: metadata} =
+      Repo.paginate(
+        query,
+        cursor_fields: [{:inserted_at, :asc}, {:id, :asc}],
+        limit: 20
+      )
+
+    # assign the `after` cursor to a variable
+    cursor_after = metadata.after
+
+    results = Repo.preload(entries, [:category])
+
+    {results, cursor_after}
+  end
+
+  def list_ingredients_paginated(%Ecto.Query{} = query) do
+    # return the next 50 posts
+
+    %{entries: entries, metadata: metadata} =
+      Repo.paginate(
+        query,
+        cursor_fields: [{:inserted_at, :asc}, {:id, :asc}],
+        limit: 10
+      )
+
+    # assign the `after` cursor to a variable
+    cursor_after = metadata.after
+
+    results = Repo.preload(entries, [:category])
+
+    {results, cursor_after}
+  end
+
+  def list_ingredients_paginated(cursor_after, query \\ nil) do
+    # return the next 50 posts
+    query =
+      case query do
+        nil ->
+          from(ing in Ingredient)
+
+        _ ->
+          query
+      end
+
+    %{entries: entries, metadata: metadata} =
+      Repo.paginate(
+        query,
+        after: cursor_after,
+        cursor_fields: [{:inserted_at, :asc}, {:id, :asc}],
+        limit: 10
+      )
+
+    # assign the `after` cursor to a variable
+    cursor_after = metadata.after
+
+    results = Repo.preload(entries, [:category])
+
+    {results, cursor_after}
+  end
+
   def list_recipes(%Ecto.Query{} = query) do
     # return the next 50 posts
 
@@ -673,6 +737,46 @@ defmodule Mehungry.Food do
   def search_recipe(query_string) do
     query = Mehungry.Search.RecipeSearch.run(Recipe, query_string)
     {query, list_recipes(query)}
+  end
+
+  def search_ingredient_alt_admin(search_term) do
+    query =
+      from(i in Ingredient,
+        where:
+          fragment(
+            "searchable @@ websearch_to_tsquery(?)",
+            ^search_term
+          ),
+        order_by: {
+          :desc,
+          fragment(
+            "ts_rank_cd(searchable, websearch_to_tsquery(?), 4)",
+            ^search_term
+          )
+        }
+      )
+
+    Repo.all(query)
+  end
+
+  def search_ingredient_alt(search_term) do
+    query =
+      from(i in Ingredient,
+        where:
+          fragment(
+            "searchable @@ websearch_to_tsquery(?)",
+            ^search_term
+          ),
+        order_by: {
+          :desc,
+          fragment(
+            "ts_rank_cd(searchable, websearch_to_tsquery(?), 4)",
+            ^search_term
+          )
+        }
+      )
+
+    Repo.all(query)
   end
 
   def search_ingredient(search_term) do
