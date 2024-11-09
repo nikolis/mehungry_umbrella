@@ -19,6 +19,7 @@ defmodule Mehungry.Meta do
   """
   def list_visits do
     from(vi in Visit,
+      order_by: [desc: :inserted_at],
       distinct: vi.ip_address
     )
     |> Repo.all()

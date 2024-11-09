@@ -71,6 +71,7 @@ defmodule MehungryWeb.MixProject do
       {:tailwind, "~> 0.2"},
       {:hackney, "~> 1.9"},
       {:sweet_xml, "~> 0.6"},
+      {:timex, "~> 3.6"},
       {:heroicons,
        github: "tailwindlabs/heroicons",
        tag: "v2.1.1",

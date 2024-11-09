@@ -1,10 +1,5 @@
 <.header>
   Listing Visits
-  <:actions>
-    <.link patch={~p"/visits/new"}>
-      <.button>New Visit</.button>
-    </.link>
-  </:actions>
 </.header>
 
 <.table
@@ -13,7 +8,8 @@
   row_click={fn {_id, visit} -> JS.navigate(~p"/professional/visits/#{visit.ip_address}") end}
 >
   <:col :let={{_id, visit}} label="Ip address"><%= visit.ip_address %></:col>
-  <:col :let={{_id, visit}} label="Details"><%= visit.details["agent"] %></:col>
+  <:col :let={{_id, visit}} label="Dt"><%= DateTime.from_naive!(visit.inserted_at, "Etc/UTC") %></:col>
+
   <:col :let={{_id, visit}} label="Details"><%= visit.details["path"] %></:col>
 
   <:action :let={{_id, visit}}>

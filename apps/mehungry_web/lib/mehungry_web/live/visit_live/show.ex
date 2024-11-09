@@ -13,9 +13,12 @@ defmodule MehungryWeb.VisitLive.Show do
     visits =
       Meta.list_visits(id)
       |> Enum.uniq_by(fn x -> {x.details["path"], x.ip_address, x.inserted_at} end)
+    visit = Enum.at(visits, 0, nil)
+      
 
     {:noreply,
-     socket
+      socket
+      |> assign(:visit, visit)
      |> stream(:visits, visits)
      |> assign(:ip_address, id)}
   end

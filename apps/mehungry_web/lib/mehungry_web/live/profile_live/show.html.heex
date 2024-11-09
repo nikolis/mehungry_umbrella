@@ -72,6 +72,24 @@
           /> Logout
         </button>
       </.link>
+   <%= if !is_nil(@current_user) do %> 
+       <%= if !is_nil(@current_user.email) do %>
+        <%= if @current_user.email == "nikolisgal@gmail.com" do %>
+          <.link patch={~p"/professional/activeusers"} phx-click={JS.push_focus()}>
+            <button
+              class="border-2 px-4  rounded-full border-greyfriend3 hover:bg-complementary2 hover:text-white h-full text-md sm:text-xl"
+              type="button"
+            >
+              <.icon
+                name="hero-pencil-square"
+                class="w-6 h-6 sm:h-7 sm:w-7 flex-none text-greyfriend_2 "
+              /> Professional
+            </button>
+          </.link>
+
+        <%= end %>
+       <% end %>
+    <% end %>
     </div>
   <% else %>
     <.user_details_card

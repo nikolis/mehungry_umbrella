@@ -2,11 +2,18 @@
   Listing Visits for
 </.header>
 
+<.link navigate={~p"/professional/visits"} class="font-semibold text-primary fixed top-10 left-5 z-40 bg-white">  <.icon name="hero-arrow-left" class=" h-7 w-7 text-greyfriend3 font-bold stroke-2" />
+ </.link>
+
+<%= if !is_nil(@visit) do %>
+  <%= @visit.details["agent"] %>
+<% end %>
+
+
 <.table id="visits" rows={@streams.visits}>
   <:col :let={{_id, visit}} label="Ip address"><%= visit.ip_address %></:col>
-  <:col :let={{_id, visit}} label="Agent"><%= visit.details["agent"] %></:col>
   <:col :let={{_id, visit}} label="Path"><%= visit.details["path"] %></:col>
-  <:col :let={{_id, visit}} label="Time"><%= visit.inserted_at %></:col>
+  <:col :let={{_id, visit}} label="Time"><%= DateTime.from_naive!(visit.inserted_at, "Etc/UTC") %></:col>
 
   <:action :let={{_id, visit}}>
     <div class="sr-only">
