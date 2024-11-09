@@ -241,7 +241,7 @@
 
 nav.nav-list-cont {
   height: 100vh;
-  position: absolute;
+  position: fixed;
   transition: 0.8s ease-in-out;
 
   top: 0;

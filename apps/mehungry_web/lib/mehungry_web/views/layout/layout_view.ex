@@ -26,7 +26,7 @@ defmodule MehungryWeb.LayoutView do
     <div class="">
       <button
         id="admin_menu_button"
-        class="fixed border-complementary text-white rounded-full  w-10 h-10 bg-white"
+        class="fixed border-complementary text-white rounded-full  w-10 h-10 bg-white z-50"
         phx-click={
           JS.toggle_class("open", to: "#nav_bar_admin")
           |> JS.toggle_class("open_button", to: "#admin_menu_button")
@@ -43,6 +43,9 @@ defmodule MehungryWeb.LayoutView do
           <a href="/professional/users" class="w-fit block ">Users</a>
           <a href="/professional/activeusers" class="w-fit block">Active users</a>
           <a href="/professional/ingredients" class="w-fit block ">Ingredients</a>
+
+          <a href="/professional/visits" class="w-fit block">Visits</a>
+
         </div>
       </nav>
       <div class="container px-2 py-4 m-auto">
