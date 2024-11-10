@@ -1,13 +1,11 @@
 defmodule Mehungry.Utils do
   @measurement_units [["ml", "l"], ["gram", "kg"], ["grammar", "kg"]]
 
-
   def remove_parenthesis(text) do
     text
-    |> String.replace(~r"\(.*\)", "") 
+    |> String.replace(~r"\(.*\)", "")
     |> String.replace(~r", ,", ",")
     |> String.replace(~r",,", ",")
-
   end
 
   def sort_ingredients_for_basket(ingredients) do

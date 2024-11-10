@@ -15,12 +15,13 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
     socket =
       socket
-      |> stream(:ingredients, ingredients)
+      |> stream(:ingredients, [])
       |> assign(:category, nil)
       |> assign(:categories, categories)
       |> assign(:search_methods, search_methods)
-      |> assign(:search_method, "")
+      |> assign(:search_method, "ilike")
       |> assign(:query, "")
+      |> assign(:ecto_query, nil)
       |> assign(:cursor_after, cursor_after)
       |> assign(:page, 1)
 
@@ -36,7 +37,8 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   end
 
   def set_value(%{"search_method" => search_method}, socket) do
-    assign(socket, :search_method, search_method)
+    socket = assign(socket, :search_method, search_method)
+    execute_query(socket.assigns.query, socket)
   end
 
   def set_value(%{"category" => category}, socket) do
@@ -44,15 +46,35 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   end
 
   def set_value(%{"query" => query}, socket) do
-    assign(socket, :query, query)
+  
+    execute_query(query, socket)
   end
+
+
+  def execute_query(query, socket) do 
+    {ecto_query, {ingredients, cursor}} =  
+    case socket.assigns.search_method do 
+      "ilike" ->
+        Food.search_ingredient_admin(query)
+      "search" ->
+        Food.search_ingredient_alt_admin(query)
+    end 
+    socket = assign(socket, :query, query)
+    socket = assign(socket, :ecto_query, ecto_query) 
+    socket
+    |> assign(:cursor_after, cursor)
+
+    socket = stream(socket, :ingredients, ingredients, reset: true)
+
+  end
+
 
   @impl true
   def handle_event("load-more", _, socket) do
     cursor_after = Map.get(socket.assigns, :cursor_after)
 
     {ingredients, cursor_after} =
-      Food.list_ingredients_paginated(cursor_after)
+      Food.list_ingredients_paginated(cursor_after, socket.assigns.ecto_query)
 
     # all_recipes  = socket.assigns.recipes ++ recipes
 

@@ -220,9 +220,11 @@ defmodule MehungryWeb.RecipeComponents do
     <div style="max-height: 300px;" class="overflow-auto p-4 text-base text-black">
       <%= for ingredient <- @recipe_ingredients do %>
         <div class="ingredient_details_container font-normal	 ">
-          <div> <%= Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %></div>
+          <div><%= Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %></div>
           <div class="font-semibold">
-            <%= ingredient.quantity %> <%= Mehungry.Utils.remove_parenthesis(ingredient.measurement_unit.name)  %>
+            <%= ingredient.quantity %> <%= Mehungry.Utils.remove_parenthesis(
+              ingredient.measurement_unit.name
+            ) %>
           </div>
         </div>
       <% end %>
