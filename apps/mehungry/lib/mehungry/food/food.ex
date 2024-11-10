@@ -739,55 +739,38 @@ defmodule Mehungry.Food do
     {query, list_recipes(query)}
   end
 
-  def search_ingredient_alt_admin(search_term) do
-    secondary_ids = get_second_layer_foods_ids()
-    query =
-      from(i in Ingredient,
-        where:
-        i.category_id not in ^secondary_ids and
-          fragment(
-            "searchable @@ websearch_to_tsquery(?)",
-            ^search_term
-          ),
-        order_by: {
-          :desc,
-          fragment(
-            "ts_rank_cd(searchable, websearch_to_tsquery(?), 4)",
-            ^search_term
-          )
-        }
+  def pagenate_query(query) do
+    # return the next 50 posts
+
+    %{entries: entries, metadata: metadata} =
+      Repo.paginate(
+        query,
+        cursor_fields: [{:inserted_at, :asc}, {:id, :asc}],
+        limit: 20
       )
 
-    Repo.all(query)
+    # assign the `after` cursor to a variable
+    cursor_after = metadata.after
+
+    results = Repo.preload(entries, [:category])
+
+    {results, cursor_after}
   end
 
-  def search_ingredient_alt(search_term) do
-    secondary_ids = get_second_layer_foods_ids()
+  def get_second_layer_foods_ids() do
+    category_titles = [
+      "Meals, Entrees, and Side Dishes",
+      "Restaurant Foods",
+      "Baked Products",
+      "Snacks",
+      "Sweets",
+      "Baby Foods",
+      "Breakfast Cereals",
+      "Beverages"
+    ]
 
-    query =
-      from(i in Ingredient,
-        where:
-        i.category_id not in ^secondary_ids and
-          fragment(
-            "searchable @@ websearch_to_tsquery(?)",
-            ^search_term
-          ),
-        limit: 20,
-        order_by: {
-          :desc,
-          fragment(
-            "ts_rank_cd(searchable, websearch_to_tsquery(?), 4)",
-            ^search_term
-          )
-        }
-      )
-
-    Repo.all(query)
-  end
-
-  def get_second_layer_foods_ids() do 
-    category_titles = ["Meals, Entrees, and Side Dishes", "Restaurant Foods", "Baked Products", "Snacks", "Sweets", "Baby Foods", "Breakfast Cereals", "Beverages"]
-    Enum.map(category_titles, 
+    Enum.map(
+      category_titles,
       fn x ->
         category = get_category_by_name(x)
         category.id
@@ -795,24 +778,66 @@ defmodule Mehungry.Food do
     )
   end
 
+  def search_ingredient_search(search_term) do
+    secondary_ids = get_second_layer_foods_ids()
+
+    from(i in Ingredient,
+      where:
+        i.category_id not in ^secondary_ids and
+          fragment(
+            "searchable @@ websearch_to_tsquery(?)",
+            ^search_term
+          ),
+      limit: 20,
+      order_by: {
+        :desc,
+        fragment(
+          "ts_rank_cd(searchable, websearch_to_tsquery(?), 4)",
+          ^search_term
+        )
+      }
+    )
+  end
+
+  def search_ingredient_alt_admin(search_term) do
+    {search_ingredient_search(search_term), pagenate_query(search_ingredient_search(search_term))}
+  end
+
+  def search_ingredient_alt(search_term) do
+    secondary_ids = get_second_layer_foods_ids()
+
+    result = Repo.all(search_ingredient_search(search_term))
+    Logger.info("Search ingredient: " <> search_term <> " resulted: " <> inspect(result))
+
+    result
+  end
+
+  def search_ingredient_admin(search_term) do
+   query =  search_ingredient_query(search_term)
+   {query, pagenate_query(query) }
+  end
+
   def search_ingredient(search_term) do
+    Repo.all(search_ingredient_query(search_term))
+   |> Repo.preload([:category, :measurement_unit])
+  end
+
+  def search_ingredient_query(search_term) do
     ilike_search_term = "%#{search_term}%"
+    secondary_ids = get_second_layer_foods_ids()
 
     query =
       from(
         ingredient in Ingredient,
         where:
-          ingredient.category_id != 212 and ingredient.category_id != 197 and
-            ingredient.category_id != 192 and ingredient.category_id != 193 and
-            ingredient.category_id != 194 and
+          ingredient.category_id not in ^secondary_ids and
             (fragment("? % ?", ^search_term, ingredient.name) or
                ilike(ingredient.name, ^ilike_search_term)),
         order_by: {:desc, fragment("? % ?", ^search_term, ingredient.name)},
         limit: 20
       )
 
-    Repo.all(query)
-    |> Repo.preload([:category, :measurement_unit])
+    query
   end
 
   def search_ingredient3(search_term) do

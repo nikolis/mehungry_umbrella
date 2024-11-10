@@ -119,7 +119,7 @@ defmodule MehungryWeb.SelectComponentSingle do
     label_function =
       case Map.get(assigns, :label_function) do
         nil ->
-          fn x -> 
+          fn x ->
             Mehungry.Utils.remove_parenthesis(x.name)
           end
 
