@@ -12,18 +12,18 @@ defmodule MehungryWeb.RecipeDetailsTabsConfig do
   by a tabs_content function to avoid runtime errors
   """
   def get_states() do
-    ["ingredients", "nutrients", "steps"]
+    ["Ingredients", "Nutrients", "Steps"]
   end
 
-  def tab_content(%{state: "ingredients"} = assigns) do
+  def tab_content(%{state: "Ingredients"} = assigns) do
     MehungryWeb.RecipeComponents.recipe_ingredients(assigns.recipe)
   end
 
-  def tab_content(%{state: "nutrients"} = assigns) do
+  def tab_content(%{state: "Nutrients"} = assigns) do
     MehungryWeb.RecipeComponents.recipe_nutrients(assigns)
   end
 
-  def tab_content(%{state: "steps"} = assigns) do
+  def tab_content(%{state: "Steps"} = assigns) do
     MehungryWeb.RecipeComponents.recipe_steps(assigns.recipe)
   end
 end

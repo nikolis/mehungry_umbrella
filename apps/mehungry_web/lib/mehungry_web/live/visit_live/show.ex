@@ -13,14 +13,29 @@ defmodule MehungryWeb.VisitLive.Show do
     visits =
       Meta.list_visits(id)
       |> Enum.uniq_by(fn x -> {x.details["path"], x.ip_address, x.inserted_at} end)
+
+    visits2 = Enum.chunk_by(visits, fn x -> x.inserted_at.day end)
     visit = Enum.at(visits, 0, nil)
-      
 
     {:noreply,
-      socket
-      |> assign(:visit, visit)
+     socket
+     |> assign(:visit, visit)
+     |> assign(:visits2, visits2)
      |> stream(:visits, visits)
      |> assign(:ip_address, id)}
+  end
+
+  def remove_hostname(url) do
+    url = String.replace(url, MehungryWeb.Endpoint.url() <> "/", "")
+
+    url =
+      case url do
+        "" ->
+          "Home"
+
+        anyth ->
+          anyth
+      end
   end
 
   @impl true

@@ -740,9 +740,11 @@ defmodule Mehungry.Food do
   end
 
   def search_ingredient_alt_admin(search_term) do
+    secondary_ids = get_second_layer_foods_ids()
     query =
       from(i in Ingredient,
         where:
+        i.category_id not in ^secondary_ids and
           fragment(
             "searchable @@ websearch_to_tsquery(?)",
             ^search_term
@@ -760,9 +762,12 @@ defmodule Mehungry.Food do
   end
 
   def search_ingredient_alt(search_term) do
+    secondary_ids = get_second_layer_foods_ids()
+
     query =
       from(i in Ingredient,
         where:
+        i.category_id not in ^secondary_ids and
           fragment(
             "searchable @@ websearch_to_tsquery(?)",
             ^search_term
@@ -777,6 +782,16 @@ defmodule Mehungry.Food do
       )
 
     Repo.all(query)
+  end
+
+  def get_second_layer_foods_ids() do 
+    category_titles = ["Meals, Entrees, and Side Dishes", "Restaurant Foods", "Baked Products", "Snacks", "Sweets", "Baby Foods", "Breakfast Cereals", "Beverages"]
+    Enum.map(category_titles, 
+      fn x ->
+        category = get_category_by_name(x)
+        category.id
+      end
+    )
   end
 
   def search_ingredient(search_term) do
