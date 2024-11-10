@@ -772,6 +772,7 @@ defmodule Mehungry.Food do
             "searchable @@ websearch_to_tsquery(?)",
             ^search_term
           ),
+        limit: 20,
         order_by: {
           :desc,
           fragment(
