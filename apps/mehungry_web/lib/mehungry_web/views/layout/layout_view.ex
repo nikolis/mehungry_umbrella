@@ -45,7 +45,6 @@ defmodule MehungryWeb.LayoutView do
           <a href="/professional/ingredients" class="w-fit block ">Ingredients</a>
 
           <a href="/professional/visits" class="w-fit block">Visits</a>
-
         </div>
       </nav>
       <div class="container px-2 py-4 m-auto">

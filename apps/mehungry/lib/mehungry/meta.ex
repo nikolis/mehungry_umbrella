@@ -27,7 +27,8 @@ defmodule Mehungry.Meta do
 
   def list_visits(ip_address) do
     from(vi in Visit,
-      where: vi.ip_address == ^ip_address
+      where: vi.ip_address == ^ip_address,
+      order_by: [desc: :inserted_at]
     )
     |> Repo.all()
   end
