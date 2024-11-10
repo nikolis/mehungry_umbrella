@@ -16,11 +16,14 @@ defmodule Mehungry.Repo.Migrations.IngredientSearchMigration do
     """
   end
 
-  def down do
+ def down do
     execute """
-      DROP INDEX ingredient_searchable_idx ; 
+      DROP INDEX ingredient_searchable_idx ;                                                                                                                                                  
+    """   
+    execute """
       ALTER TABLE ingredients 
       DROP COLUMN searchable;
     """
   end
+
 end
