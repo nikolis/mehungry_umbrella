@@ -785,14 +785,14 @@ defmodule Mehungry.Food do
       where:
         i.category_id not in ^secondary_ids and
           fragment(
-            "searchable @@ websearch_to_tsquery(?)",
+            "searchable @@ websearch_to_tsquery('english',?)",
             ^search_term
           ),
       limit: 20,
       order_by: {
         :desc,
         fragment(
-          "ts_rank_cd(searchable, websearch_to_tsquery(?), 4)",
+          "ts_rank_cd(searchable, websearch_to_tsquery('english', ?), 4)",
           ^search_term
         )
       }
