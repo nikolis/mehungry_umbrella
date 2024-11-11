@@ -23,7 +23,7 @@ config :mehungry_web, MehungryWeb.Endpoint,
   debug_errors: true,
   check_origin: false,
   # force_ssl: [rewrite_on: [:x_forwarded_proto]],
-  server: true,
+  #server: true,
   url: [host: "mehungry.com", port: 4000]
 
 if config_env() == :prod do
