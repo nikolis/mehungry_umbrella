@@ -58,4 +58,3 @@ RUN mix deps.get --only ${MIX_ENV}
 COPY ./apps/mehungry/priv/repo/migrations ./apps/mehungry/priv/repo/migrations
 
 CMD ["mix", "ecto.migrate"]
-
