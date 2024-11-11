@@ -6,7 +6,7 @@ defmodule Mehungry.Repo.Migrations.IngredientSearchMigration do
       ALTER TABLE ingredients
         ADD COLUMN searchable tsvector
         GENERATED ALWAYS AS (
-          setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
+          setweight(to_tsvector('english', coalesce(name, '')), 'A')
         ) STORED;
     """
 
