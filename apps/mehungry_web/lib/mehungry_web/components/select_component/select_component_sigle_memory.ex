@@ -37,11 +37,11 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
                 class="border border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg"
               >
                 <div class="h-full flex flex-col  justify-center py-2">
-                  <div class="self-center text-ellipsis overflow-hidden  ">
-                    <%= @selected_items.label %>
+                  <div class="self-center text-ellipsis overflow-hidden leading-4	 px-1">
+                    <.get_label label={Mehungry.Utils.remove_parenthesis(@selected_items.label)} />
                   </div>
                 </div>
-                <.icon name="hero-x-mark-solid" class="absolute right-1 top-0  z-20 opacity-70" />
+                <.icon name="hero-x-mark" class="absolute right-1 top-1  z-20 opacity-70 h-3 w-3" />
               </div>
             </div>
           <% end %>
@@ -80,7 +80,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
                           phx-target={@myself}
                           phx-hook="SelectComponentList"
                         >
-                          <%= x.label %>
+                          <.get_label label={x.label} />
                         </li>
                       <% else %>
                         <li
@@ -90,7 +90,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
                           id={Integer.to_string(x.id)}
                           phx-target={@myself}
                         >
-                          <%= x.label %>
+                          <.get_label label={x.label} />
                         </li>
                       <% end %>
                     </div>
@@ -107,6 +107,26 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
         </div>
       </.focus_wrap>
       <!-- End Component -->
+    </div>
+    """
+  end
+
+  def get_label(assigns) do
+    labels = String.split(assigns.label, ",")
+    first = List.first(labels)
+    sub_script = Enum.reduce(labels, "", fn x, acc -> x <> " " <> acc end)
+    sub_script = String.replace(sub_script, first, "")
+    assigns = Map.put(assigns, :sub_script, sub_script)
+    assigns = Map.put(assigns, :first, first)
+
+    IO.inspect(assigns.first, label: "First")
+    IO.inspect(assigns.sub_script, label: "Sub script")
+
+    ~H"""
+    <div>
+      <span class="font-semibold">
+        <%= @first %> <span class="text-xs font-light"><%= @sub_script %></span>
+      </span>
     </div>
     """
   end

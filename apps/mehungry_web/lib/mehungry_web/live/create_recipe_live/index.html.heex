@@ -1,4 +1,7 @@
-<div class=" sm:p-8 bg-greyfriend1 mx-auto  pb-2 sm:pb-2">
+<div
+  class="bg-transparent sm:p-8 lg:bg-greyfriend1 mx-auto  pb-2 sm:pb-2 relative"
+  style="max-height: 100%; margin-bottom: 40px;"
+>
   <.modal
     :if={is_nil(@user_profile.onboarding_level) or @user_profile.onboarding_level < 1}
     id="onboarding-modal"
@@ -12,22 +15,24 @@
       patch={~p"/"}
     />
   </.modal>
+    <div class="m-auto w-fit md:hidden absolute -top-8 right-0 left-0 m-auto">
+      <.stepper />
+    </div>
+
   <.form
     :let={f}
     id={@id}
     for={@changeset}
     phx-change="validate"
     phx-submit="save"
-    class="the_form p-2 sm:p-6 sm:pt-2 flex flex-col mx-auto mb-14"
+    class="the_form2 the_form  p-2 sm:p-6 sm:pt-2 flex md:gap-8 flex-col mx-auto mb-14 "
+    style=""
   >
-    <div class="m-auto w-fit md:hidden">
-      <.stepper />
-    </div>
 
-    <div class="basic_2_col_grid_cont  content_container" id="content-0">
+    <div class="basic_2_col_grid_cont   content_container" id="content-0" style="margin-top: 20px;">
       <Components.recipe_render f={f} items={@items} />
       <%= if f.data.image_url do %>
-        <div class="relative">
+        <div class="">
           <img src={f.data.image_url} width="500rem" class="m-auto relative" />
           <button type="button" phx-click="delete-image" class="absolute top-0 right-10">
             <.icon name="hero-x-mark-solid" class="h-10 w-10 " phx-click="clear-image" />
@@ -74,11 +79,11 @@
       <% end %>
     </div>
 
-    <div class="basic_2_col_grid_cont md:pb-32 ">
+    <div class="basic_2_col_grid_cont md:pb-32 " style="">
       <div class="overflowx-hidden  relative content_container hidden md:block" id="content-1">
         <h3 class="text-center">Ingredients</h3>
         <div
-          class="md:min-h-96  overflow-x-hidden noscrollbar	pt-4 sm:p-4 step_ing_cont"
+          class="md:min-h-96 md:max-h-96  overflow-x-hidden noscrollbar	pt-4  step_ing_cont"
           style=" padding-bottom: 2rem;"
         >
           <.inputs_for :let={g} field={f[:recipe_ingredients]}>
@@ -91,19 +96,29 @@
           </.inputs_for>
           <button
             id="add_ingredient"
-            class="button_outline_primary  fixed bottom-0 md:absolute md:-bottom-14 right-0"
+            class="bg-primary   fixed bottom-0 md:absolute md:bottom-0 right-3 rounded-full"
             type="button"
+            style="color: black;"
             phx-click="add-ingredient"
           >
-            Add
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="white"
+              class="size-8 p-1"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
           </button>
         </div>
       </div>
 
-      <div class="content_container hidden md:block" id="content-2">
+      <div class="content_container hidden md:block" id="content-2" style="max-height: 70vh;" >
         <h3 class="text-center">Creation Steps</h3>
         <div
-          class="step_ing_cont md:min-h-96  overflow-x-hidden noscrollbar	pt-4 sm:p-4"
+          class="step_ing_cont md:min-h-96 md:max-h-96  overflow-x-hidden noscrollbar	pt-4 sm:p-4"
           style=" padding-bottom: 2rem;"
         >
           <.inputs_for :let={v} field={f[:steps]}>
@@ -114,10 +129,19 @@
           <button
             id="some_id"
             type="button"
-            class="button_outline_complementary  fixed bottom-0 md:absolute md:-bottom-14 right-0"
+            class="bg-complementary  fixed bottom-0 rounded-full md:absolute md:-bottom-0 right-3"
             phx-click="add-step"
           >
-            Add
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="white"
+              class="size-8 p-1"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
           </button>
         </div>
       </div>
@@ -125,14 +149,13 @@
 
     <div
       id="content-3"
-      class=" content_container hidden md:block"
-      style={"padding-bottom: 3rem;" <> if @changeset.valid? do "color: var(--clr-primary);" else "" end}
+      class=" content_container hidden md:block h-full "
+      style={" padding-bottom: 3rem; " <> if @changeset.valid? do "color: var(--clr-primary);" else "" end}
     >
-      <h3 class="m-auto w-fit"></h3>
-      <div class="flex justify-around h-full">
-        <div class="w-1/5"></div>
+      <div class="flex justify-around h-full min-h-80 sm:min-h-fit	">
+        <div class="w-1/8"></div>
         <.icon name="hero-check-badge" class="h-full w-full md:hidden" phx-click="clear-image" />
-        <div class="w-1/5"></div>
+        <div class="w-1/8"></div>
       </div>
       <div class="flex bottom-0">
         <div id="something wierd" class="md:absolute  sm:right-56  mx-auto bottom-0 w-40">

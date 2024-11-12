@@ -79,7 +79,7 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
     assigns = assign(assigns, :measurement_units, measurement_units)
 
     ~H"""
-    <div>
+    <div class="py-2">
       <.ingredient
         g={assigns.g}
         ingredients={assigns.ingredients}

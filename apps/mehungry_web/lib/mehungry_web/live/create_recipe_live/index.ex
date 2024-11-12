@@ -18,10 +18,13 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:ok,
      socket
      |> assign(:user, user)
+     |> assign(:show, false)
+     |> assign(:selected_ingredient, 1)
      |> assign(:user_profile, user_profile)
      |> assign(:ingredients, list_ingredients())
      |> assign(:measurement_units, measurement_units)
      |> assign(:page_title, "Share your recipes ")
+     |> assign(:return_to_path, "/create_recipe")
      |> assign(:items, [
        %{id: 1, name: "easy"},
        %{id: 2, name: "medium"},
@@ -172,6 +175,13 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     end
 
     {:noreply, assign(socket, :changeset, changeset)}
+  end
+
+  def handle_event("select_ingredient", %{"index" => index} = _params, socket) do
+    socket = assign(socket, :selected_ingredient, String.to_integer(index))
+    socket = assign(socket, :show, true)
+
+    {:noreply, socket}
   end
 
   def handle_event("add-ingredient", _params, socket) do

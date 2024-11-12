@@ -76,6 +76,11 @@ defmodule MehungryWeb.Router do
 
       live "/stepper", CreateRecipeLive.Show, :show
       live "/create_recipe", CreateRecipeLive.Index, :index
+
+      live "/create_recipe/:form_id/add_ingredient/:index",
+           CreateRecipeLive.Index,
+           :add_ingredient
+
       live "/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit
 
       live "/create_recipe/add_ingredient", CreateRecipeLive.Index, :add_ingredient

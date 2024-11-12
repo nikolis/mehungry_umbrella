@@ -813,13 +813,13 @@ defmodule Mehungry.Food do
   end
 
   def search_ingredient_admin(search_term) do
-   query =  search_ingredient_query(search_term)
-   {query, pagenate_query(query) }
+    query = search_ingredient_query(search_term)
+    {query, pagenate_query(query)}
   end
 
   def search_ingredient(search_term) do
     Repo.all(search_ingredient_query(search_term))
-   |> Repo.preload([:category, :measurement_unit])
+    |> Repo.preload([:category, :measurement_unit])
   end
 
   def search_ingredient_query(search_term) do

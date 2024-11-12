@@ -46,28 +46,27 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   end
 
   def set_value(%{"query" => query}, socket) do
-  
     execute_query(query, socket)
   end
 
+  def execute_query(query, socket) do
+    {ecto_query, {ingredients, cursor}} =
+      case socket.assigns.search_method do
+        "ilike" ->
+          Food.search_ingredient_admin(query)
 
-  def execute_query(query, socket) do 
-    {ecto_query, {ingredients, cursor}} =  
-    case socket.assigns.search_method do 
-      "ilike" ->
-        Food.search_ingredient_admin(query)
-      "search" ->
-        Food.search_ingredient_alt_admin(query)
-    end 
+        "search" ->
+          Food.search_ingredient_alt_admin(query)
+      end
+
     socket = assign(socket, :query, query)
-    socket = assign(socket, :ecto_query, ecto_query) 
+    socket = assign(socket, :ecto_query, ecto_query)
+
     socket
     |> assign(:cursor_after, cursor)
 
     socket = stream(socket, :ingredients, ingredients, reset: true)
-
   end
-
 
   @impl true
   def handle_event("load-more", _, socket) do

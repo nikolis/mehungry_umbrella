@@ -98,6 +98,59 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
+  def ingredient_modal(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      phx-mounted={@show && show_modal(@id)}
+      phx-remove={hide_modal(@id)}
+      data-cancel={JS.exec(@on_cancel, "phx-remove")}
+      class="relative z-50 hidden max-w-1/2 m-auto "
+    >
+      <div
+        id={"#{@id}-bg"}
+        class="bg-zinc-50/90 fixed inset-0 transition-opacity top-0 left-0 right-0"
+        aria-hidden="false"
+      />
+      <div
+        class="fixed right-0 inset-0 overflow-y-auto"
+        aria-labelledby={"#{@id}-title"}
+        aria-describedby={"#{@id}-description"}
+        role="dialog"
+        aria-modal="true"
+        tabindex="0"
+      >
+        <div class="flex min-h-full  sm:mt-20">
+          <div class="w-full sm:w-7/12 m-auto" style="">
+            <.focus_wrap
+              id={"#{@id}-container"}
+              phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
+              phx-key="escape"
+              phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
+              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white  shadow-lg ring-1 transition "
+            >
+              <div class=" sm:hidden  absolute top-5 left-5 rounded-full w-12 h-12  bg-white">
+                <button
+                  phx-click={JS.exec("data-cancel", to: "##{@id}")}
+                  type="button"
+                  class=" flex-none p-2   hover:opacity-40 w-full h-full "
+                  aria-label="close"
+                >
+                  <.icon name="hero-arrow-left" class="h-6 w-6 " />
+                </button>
+              </div>
+
+              <div id={"#{@id}-content"} class="sm:p-4">
+                <%= render_slot(@inner_block) %>
+              </div>
+            </.focus_wrap>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   def recipe_details(
         %{recipe: _recipe, nutrients: _nutrients, primary_size: _primary_size} = assigns
       ) do
