@@ -69,12 +69,13 @@ h1 {
   .basic_2_col_grid_cont{
     display: grid;
     grid-template-columns: repeat(1, minmax(0, 1fr));
-      }
+  }
 
   @media only screen and (min-height: 600px) {
   .basic_2_col_grid_cont{
-      margin-bottom: 2.3vh;
-      gap: 2.5rem;
+      margin-bottom: 1vh;
+      margin-top: 1vh;
+      gap: 0.5rem;
     }
 
   }

@@ -1,4 +1,4 @@
-<div class="flex flex-col gap-2 sm:gap-3 h-fit p-2 sm:p-4 ">
+<div class="flex flex-col gap-2 sm:gap-3 h-full p-2 sm:p-4 ">
   <.input required field={@f[:title]} type="text" label="Title" class="max-h-12 " />
   <.input required field={@f[:description]} type="text" label="Description" class="max-h-12" />
 
@@ -21,13 +21,12 @@
   </div>
 
   <div class="grid grid-cols-2 gap-4">
-    <.input required field={@f[:servings]} type="text" label="Servings" class="max-h-12 w-full" />
+    <.input required field={@f[:servings]} type="text" label="Servings" class=" w-full" />
     <.input
       required
       field={@f[:difficulty]}
       options={[Easy: "1", Medium: "2", Difficult: "3"]}
       type="select"
-      class="w-full"
     />
   </div>
 
