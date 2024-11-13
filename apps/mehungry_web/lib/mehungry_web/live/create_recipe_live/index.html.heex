@@ -32,10 +32,10 @@
     <div class="basic_2_col_grid_cont   content_container" id="content-0" style="margin-top: 20px;">
       <Components.recipe_render f={f} items={@items} />
       <%= if f.data.image_url do %>
-        <div class="">
-          <img src={f.data.image_url} width="500rem" class="m-auto relative" />
-          <button type="button" phx-click="delete-image" class="absolute top-0 right-10">
-            <.icon name="hero-x-mark-solid" class="h-10 w-10 " phx-click="clear-image" />
+        <div class="relative">
+          <img src={f.data.image_url}  class="m-auto relative" style="max-height: 30vh;"/>
+          <button type="button" phx-click="delete-image" class="absolute top-0 right-3 bg-white rounded-full">
+            <.icon name="hero-x-mark-solid" class="h-6 w-6 " phx-click="clear-image" />
           </button>
         </div>
       <% else %>
@@ -52,7 +52,7 @@
         <div class="">
           <%= for entry <- @uploads.image.entries do %>
             <div class="img_preview_container">
-              <.live_img_preview entry={entry} width="500rem" class="m-auto" />
+              <.live_img_preview entry={entry} width="500rem" class="m-auto" style="max-height: 30vh;"/>
               <article class="upload-entry">
                 <figure class="h-full">
                   <progress class="w-full" value={entry.progress} max="100">
