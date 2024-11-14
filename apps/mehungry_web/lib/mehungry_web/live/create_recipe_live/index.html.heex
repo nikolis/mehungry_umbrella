@@ -15,9 +15,9 @@
       patch={~p"/"}
     />
   </.modal>
-    <div class="m-auto w-fit md:hidden absolute -top-8 right-0 left-0 m-auto">
-      <.stepper />
-    </div>
+  <div class="m-auto w-fit md:hidden absolute -top-8 right-0 left-0 m-auto">
+    <.stepper />
+  </div>
 
   <.form
     :let={f}
@@ -28,13 +28,20 @@
     class="the_form2 the_form  p-2 sm:p-6 sm:pt-2 flex md:gap-8 flex-col mx-auto mb-14 "
     style=""
   >
-
-    <div class="basic_2_col_grid_cont   content_container" id="content-0" style="margin-top: 20px;">
+    <div
+      class="basic_2_col_grid_cont   content_container"
+      id="content-0"
+      style="margin-top: 20px;"
+    >
       <Components.recipe_render f={f} items={@items} />
       <%= if f.data.image_url do %>
         <div class="relative">
-          <img src={f.data.image_url}  class="m-auto relative" style="max-height: 30vh;"/>
-          <button type="button" phx-click="delete-image" class="absolute top-0 right-3 bg-white rounded-full">
+          <img src={f.data.image_url} class="m-auto relative" style="max-height: 30vh;" />
+          <button
+            type="button"
+            phx-click="delete-image"
+            class="absolute top-0 right-3 bg-white rounded-full"
+          >
             <.icon name="hero-x-mark-solid" class="h-6 w-6 " phx-click="clear-image" />
           </button>
         </div>
@@ -52,7 +59,12 @@
         <div class="">
           <%= for entry <- @uploads.image.entries do %>
             <div class="img_preview_container">
-              <.live_img_preview entry={entry} width="500rem" class="m-auto" style="max-height: 30vh;"/>
+              <.live_img_preview
+                entry={entry}
+                width="500rem"
+                class="m-auto"
+                style="max-height: 30vh;"
+              />
               <article class="upload-entry">
                 <figure class="h-full">
                   <progress class="w-full" value={entry.progress} max="100">
@@ -115,7 +127,7 @@
         </div>
       </div>
 
-      <div class="content_container hidden md:block" id="content-2" style="max-height: 70vh;" >
+      <div class="content_container hidden md:block" id="content-2" style="max-height: 70vh;">
         <h3 class="text-center">Creation Steps</h3>
         <div
           class="step_ing_cont md:min-h-96 md:max-h-96  overflow-x-hidden noscrollbar	pt-4 sm:p-4"
