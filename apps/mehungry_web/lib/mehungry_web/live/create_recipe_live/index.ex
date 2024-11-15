@@ -161,6 +161,11 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   @impl true
+  def handle_event("other", _, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("validate", %{"recipe" => recipe_params}, socket) do
     recipe_params = Map.put(recipe_params, "language_name", "En")
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)

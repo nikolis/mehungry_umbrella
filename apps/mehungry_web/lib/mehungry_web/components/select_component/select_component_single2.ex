@@ -1,113 +1,69 @@
-defmodule MehungryWeb.SelectComponentSingle do
+defmodule MehungryWeb.SelectComponentSingle2 do
   use MehungryWeb, :live_component
 
   @impl true
   def render(assigns) do
     ~H"""
-    <div
-      class="col-span-4 sm:col-span-2 h-full max-h-16	"
-      data-reference-id={@input_variable}
-      data-reference-index={@form.index}
-      phx-hook="SelectComponent"
-      id={@id}
-    >
-      <.input field={@form[String.to_atom(@input_variable)]} type="hidden" />
-      <!-- Start Component -->
-      <.focus_wrap
-        id={"select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable}
-        class="h-fit"
-        phx-click-away={JS.push("close-listing", target: @myself)}
-      >
-        <div class="h-full relative max-h-10 max-h-16	" id={"213" <>  @id} phx-hook="FocusHook">
-          <!-- Start Item Tags And Input Field -->
-          <!-- Tags (Selected) -->
-          <%= if @selected_items do %>
-            <div class="text-center w-full h-full ">
-              <div
-                phx-click="handle-selected-item-click"
-                phx-value-id={@selected_items.id}
-                phx-target={@myself}
-                tabindex="0"
-                class="border border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg"
-              >
-                <div class="h-full flex flex-col  justify-center p-1">
-                  <div class="self-center text-ellipsis text-center overflow-hidden px-1 leading-4">
-                    <.get_label label={Mehungry.Utils.remove_parenthesis(@selected_items.label)} />
-                  </div>
-                </div>
-                <.icon name="hero-x-mark" class="absolute right-1 top-1  z-20 opacity-70 h-3 w-3" />
+    <div class=" flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-4 sm:col-span-2 h-full max-h-18	 overflow-hidden">
+      <!-- modal trigger -->
+      <!-- hidden toggle -->
+      <%= if @selected_items do %>
+        <div class="text-center w-full h-full relative">
+          <div
+            phx-click="handle-selected-item-click"
+            phx-value-id={@selected_items.id}
+            phx-target={@myself}
+            tabindex="0"
+            class="border border-black border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg "
+          >
+            <div class="h-full flex flex-col  justify-center p-1">
+              <div class="self-center text-ellipsis text-center overflow-hidden px-1 leading-4">
+                <.get_label label={Mehungry.Utils.remove_parenthesis(@selected_items.label)} />
               </div>
             </div>
-          <% end %>
-          <!-- Search Input -->
-          <%= if is_nil(@selected_items) do %>
-            <.input
-              phx-change="validate"
-              tabindex="1"
-              phx-focus="search_input_focus"
-              phx-target={@myself}
-              value=""
-              name={"search_input" <> @id}
-              myself={@myself}
-              autofocus
-              type="select_component"
-              class=" text-sm flex-grow py-4 px-4 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full max-h-12"
-              id={@id <> "innder"}
-            />
-          <% end %>
-          <!-- End Item Tags And Input Field -->
-            <!-- Start Items List -->
-          <div class="">
-            <ul
-              id={"ul"<>@id}
-              class="w-full list-none border-t-0
-             focus:outline-none overflow-y-auto 
-             outline-none focus:outline-none 
-             bg-white absolute left-0 bottom-100 
-              bg-white z-50 max-h-52 shadow-lg"
-            >
-              <div id={@id<> "face"}></div>
-              <%= if @listing_open do %>
-                <%= for {x, index} <- Enum.with_index(@items_filtered) do %>
-                  <!-- Item Element -->
-                  <div class="relative z-50 h-fit">
-                    <div class="bg-white h-fit">
-                      <%= if index == 0  do %>
-                        <li
-                          class="h-full hover:bg-amber-200 cursor-pointer bg-white px-1 leading-4 "
-                          phx-click="handle-item-click"
-                          phx-value-id={x.id}
-                          id={Integer.to_string(x.id)}
-                          phx-target={@myself}
-                          phx-hook="SelectComponentList"
-                        >
-                          <.get_label label={x.label} />
-                        </li>
-                      <% else %>
-                        <li
-                          class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white px-1 leading-4 "
-                          phx-click="handle-item-click"
-                          phx-value-id={x.id}
-                          id={Integer.to_string(x.id)}
-                          phx-target={@myself}
-                        >
-                          <.get_label label={x.label} />
-                        </li>
-                      <% end %>
-                    </div>
-                  </div>
-                  <!-- Empty Text -->
-                  <div>
-                    <li class="cursor-pointer px-2 py-2 text-gray-400"></li>
-                  </div>
-                <% end %>
-              <% end %>
-            </ul>
+            <.icon name="hero-x-mark" class="absolute right-1 top-1  z-20 opacity-70 h-3 w-3" />
           </div>
-          <!-- End Items List -->
         </div>
-      </.focus_wrap>
-      <!-- End Component -->
+      <% else %>
+        <div class="h-full w-full border-2 rounded-lg relative border-greyfriend2">
+          <label
+            for={"tw-modal" <> Integer.to_string(@form.index)}
+            class="active:bg-transparent h-full w-full absolute top-0 bottom-0 left-0 right-0  cursor-pointer  rounded  text-greyfriend3  "
+          >
+          </label>
+        </div>
+      <% end %>
+
+      <input
+        tabindex="-1"
+        type="checkbox"
+        phx-change="other"
+        id={"tw-modal" <> Integer.to_string(@form.index)   }
+        ref-input={Integer.to_string(@form.index)}
+        class="peer fixed appearance-none opacity-0 hidden"
+      />
+      <!-- modal -->
+      <label
+        for={"tw-modal" <> Integer.to_string(@form.index)}
+        class="z-40 pointer-events-none invisible fixed inset-0 flex cursor-pointer items-center justify-center overflow-hidden overscroll-contain bg-slate-700/30 opacity-0 transition-all duration-200 ease-in-out peer-checked:pointer-events-auto peer-checked:visible peer-checked:opacity-100 peer-checked: [&>*]:translate-y-0 peer-checked:[&>*]:scale-100"
+      >
+        <!-- modal box -->
+        <label class="max-h-[calc(100vh -5 em)] h-5/6 sm:h-4/6 md:h-3/6 mx-4 w-full  max-w-lg scale-90 overflow-y-auto overscroll-contain rounded-md bg-white p-6 text-black shadow-2xl transition ">
+          <div class="fixed  top-0 bottom-0 right-0 left-0 bg-white p-6" style="">
+            <!--- modal content -->
+            <h3 class="p-2 text-center">Search ingredient</h3>
+            <.live_component
+              module={MehungryWeb.SelectComponentSingle}
+              form={@form}
+              item_function={fn x -> Mehungry.Food.search_ingredient_alt(x) end}
+              get_by_id_func={fn x -> Mehungry.Food.get_ingredient!(x) end}
+              input_variable="ingredient_id"
+              id={"ingredient_search_component" <> Integer.to_string(@form.index)}
+            />
+            <!-- modal  content -->
+          </div>
+        </label>
+      </label>
     </div>
     """
   end

@@ -6,7 +6,7 @@
   <%= hidden_input(@g, :delete) %>
 
   <.live_component
-    module={MehungryWeb.SelectComponentSingle}
+    module={MehungryWeb.SelectComponentSingle2}
     form={@g}
     item_function={fn x -> Mehungry.Food.search_ingredient_alt(x) end}
     get_by_id_func={fn x -> Mehungry.Food.get_ingredient!(x) end}
