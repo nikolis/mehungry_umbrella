@@ -4,57 +4,64 @@ defmodule MehungryWeb.SelectComponentSingle2 do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="relative flex activated:min-h-screen flex-col items-center justify-center overflow-hidden z-50 col-span-4 sm:col-span-2 h-full max-h-18	 overflow-hidden">
+    <div class=" flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-4 sm:col-span-2 h-full max-h-18	 overflow-hidden">
       <!-- modal trigger -->
       <!-- hidden toggle -->
-          <%= if @selected_items do %>
-            <div class="text-center w-full h-full ">
-              <div
-                phx-click="handle-selected-item-click"
-                phx-value-id={@selected_items.id}
-                phx-target={@myself}
-                tabindex="0"
-                class="border border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg"
-              >
-                <div class="h-full flex flex-col  justify-center p-1">
-                  <div class="self-center text-ellipsis text-center overflow-hidden px-1 leading-4">
-                    <.get_label label={Mehungry.Utils.remove_parenthesis(@selected_items.label)} />
-                  </div>
-                </div>
-                <.icon name="hero-x-mark" class="absolute right-1 top-1  z-20 opacity-70 h-3 w-3" />
+      <%= if @selected_items do %>
+        <div class="text-center w-full h-full relative">
+          <div
+            phx-click="handle-selected-item-click"
+            phx-value-id={@selected_items.id}
+            phx-target={@myself}
+            tabindex="0"
+            class="border border-black border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg "
+          >
+            <div class="h-full flex flex-col  justify-center p-1">
+              <div class="self-center text-ellipsis text-center overflow-hidden px-1 leading-4">
+                <.get_label label={Mehungry.Utils.remove_parenthesis(@selected_items.label)} />
               </div>
             </div>
-          <% else %>
-      <div>
-        <label
-          for="tw-modal"
-          class="cursor-pointer rounded  px-8 py-4 text-greyfriend3 active:bg-slate-400"
-        >
-           OPEN 
-        </label>
-      </div>
+            <.icon name="hero-x-mark" class="absolute right-1 top-1  z-20 opacity-70 h-3 w-3" />
+          </div>
+        </div>
+      <% else %>
+        <div class="h-full w-full border-2 rounded-lg relative border-greyfriend2">
+          <label
+            for={"tw-modal" <> Integer.to_string(@form.index)}
+            class="active:bg-transparent h-full w-full absolute top-0 bottom-0 left-0 right-0  cursor-pointer  rounded  text-greyfriend3  "
+          >
+          </label>
+        </div>
+      <% end %>
 
-          <% end %>
-
-      <input type="checkbox" id="tw-modal" class="peer fixed appearance-none opacity-0" />
+      <input
+        tabindex="-1"
+        type="checkbox"
+        phx-change="other"
+        id={"tw-modal" <> Integer.to_string(@form.index)   }
+        ref-input={Integer.to_string(@form.index)}
+        class="peer fixed appearance-none opacity-0 hidden"
+      />
       <!-- modal -->
       <label
-        for="tw-modal"
-        class="pointer-events-none invisible fixed inset-0 flex cursor-pointer items-center justify-center overflow-hidden overscroll-contain bg-slate-700/30 opacity-0 transition-all duration-200 ease-in-out peer-checked:pointer-events-auto peer-checked:visible peer-checked:opacity-100 peer-checked: [&>*]:translate-y-0 peer-checked:[&>*]:scale-100"
+        for={"tw-modal" <> Integer.to_string(@form.index)}
+        class="z-40 pointer-events-none invisible fixed inset-0 flex cursor-pointer items-center justify-center overflow-hidden overscroll-contain bg-slate-700/30 opacity-0 transition-all duration-200 ease-in-out peer-checked:pointer-events-auto peer-checked:visible peer-checked:opacity-100 peer-checked: [&>*]:translate-y-0 peer-checked:[&>*]:scale-100"
       >
         <!-- modal box -->
-        <label class="max-h-[calc(100vh -5 em)] h-4/6 w-full h-fit max-w-lg scale-90 overflow-y-auto overscroll-contain rounded-md bg-white p-6 text-black shadow-2xl transition ">
-          <!--- modal content -->
-            <h3 class="p-2 text-center"> Search ingredient </h3>
-          <.live_component
-            module={MehungryWeb.SelectComponentSingle}
-            form={@form}
-            item_function={fn x -> Mehungry.Food.search_ingredient_alt(x) end}
-            get_by_id_func={fn x -> Mehungry.Food.get_ingredient!(x) end}
-            input_variable="ingredient_id"
-            id={"ingredient_search_component" <> Integer.to_string(@form.index)}
-          />
-          <!-- modal  content -->
+        <label class="max-h-[calc(100vh -5 em)] h-5/6 sm:h-4/6 md:h-3/6 mx-4 w-full  max-w-lg scale-90 overflow-y-auto overscroll-contain rounded-md bg-white p-6 text-black shadow-2xl transition ">
+          <div class="fixed  top-0 bottom-0 right-0 left-0 bg-white p-6" style="">
+            <!--- modal content -->
+            <h3 class="p-2 text-center">Search ingredient</h3>
+            <.live_component
+              module={MehungryWeb.SelectComponentSingle}
+              form={@form}
+              item_function={fn x -> Mehungry.Food.search_ingredient_alt(x) end}
+              get_by_id_func={fn x -> Mehungry.Food.get_ingredient!(x) end}
+              input_variable="ingredient_id"
+              id={"ingredient_search_component" <> Integer.to_string(@form.index)}
+            />
+            <!-- modal  content -->
+          </div>
         </label>
       </label>
     </div>

@@ -15,10 +15,10 @@ defmodule MehungryWeb.SelectComponentSingle do
       <!-- Start Component -->
       <.focus_wrap
         id={"select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable}
-        class="h-full max-h-16"
+        class="h-fit"
         phx-click-away={JS.push("close-listing", target: @myself)}
       >
-        <div class="h-full relative max-h-10 max-h-16	">
+        <div class="h-full relative max-h-10 max-h-16	" id={"213" <>  @id} phx-hook="FocusHook">
           <!-- Start Item Tags And Input Field -->
           <!-- Tags (Selected) -->
           <%= if @selected_items do %>
@@ -43,13 +43,15 @@ defmodule MehungryWeb.SelectComponentSingle do
           <%= if is_nil(@selected_items) do %>
             <.input
               phx-change="validate"
+              tabindex="1"
               phx-focus="search_input_focus"
               phx-target={@myself}
               value=""
               name={"search_input" <> @id}
               myself={@myself}
+              autofocus
               type="select_component"
-              class="text-sm flex-grow py-2 px-2 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full "
+              class=" text-sm flex-grow py-4 px-4 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full max-h-12"
               id={@id <> "innder"}
             />
           <% end %>
@@ -68,8 +70,8 @@ defmodule MehungryWeb.SelectComponentSingle do
               <%= if @listing_open do %>
                 <%= for {x, index} <- Enum.with_index(@items_filtered) do %>
                   <!-- Item Element -->
-                  <div class="relative z-50 h-full">
-                    <div class="bg-white h-full">
+                  <div class="relative z-50 h-fit">
+                    <div class="bg-white h-fit">
                       <%= if index == 0  do %>
                         <li
                           class="h-full hover:bg-amber-200 cursor-pointer bg-white px-1 leading-4 "
