@@ -5,7 +5,7 @@
     id="calendar_modal"
     show
   >
-    <div class="w-full" style="min-height: 55vh;">
+    <div class="w-full h-fit" >
       <.live_component
         module={MehungryWeb.CalendarLive.MealFormComponent}
         id={@user_meal.id || :new}
@@ -26,7 +26,7 @@
     id="calendar_modal23"
     show
   >
-    <div class="w-full" style="min-height: 55vh;">
+    <div class="w-full" >
       <.live_component
         module={MehungryWeb.NutrientAnalysisComponent}
         id={:details}
@@ -38,7 +38,7 @@
   </.modal>
 
   <.live_component
-    module={MehungryWeb.CalendarLive.CalendarWidgetComponent}
+    module={MehungryWeb.CalendarLive.Calendar.Widget}
     id={:new}
     user_meals={@user_meals}
     particular_date={@particular_date}
@@ -47,9 +47,4 @@
     user={@current_user}
     device_width={@device_width}
   />
-  <!-- <div class="calendar_controlls" id="calendar_controlls"  phx-hook="HiddenCalendar" close-button-id="button_hidde_calendar"  phx-update="ignore">
-     <button class="calendar_button" id="callendar_next_button" style="right: 2rem"> Next </button> 
-      <button class="calendar_button" style="left: 2rem;" id="callendar_prev_button"> Prev </button>
-      <img id="button_hidde_calendar"  style="z-index: 50; position: absolute; margin-inline: auto; right: 0; left: 0; top: 0;" width="40px" src="/images/calendar.svg"/>
-  </div> -->
 </div>

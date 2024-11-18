@@ -1,6 +1,6 @@
 <div
   id={"root_layer" <> to_string(@f.index)}
-  class="mt-14 gap-2 grid grid-cols-5 md:gap-6"
+  class=""
   style={if @deleted, do: "display: none"}
 >
   <input
@@ -9,7 +9,7 @@
     value={to_string(Phoenix.HTML.Form.input_value(@f, :delete))}
   />
 
-  <div class="h-full col-span-2">
+  <div class="h-full p-4">
     <.live_component
       module={MehungryWeb.SelectComponentSingleMemory}
       form={@f}
@@ -20,14 +20,15 @@
     />
   </div>
 
-  <div class="input-form">
+  <div class ="flex p-4 gap-2">
+  <div class="input-form w-full">
     <.input field={@f[:cooking_portions]} type="number" label="cook" />
   </div>
-  <div class="input-form">
+  <div class="input-form w-full">
     <.input field={@f[:consume_portions]} type="number" label="consume" />
   </div>
-
-  <div class="input-form pl-2">
+  </div>
+ <!--- <div class="input-form pl-2">
     <svg
       phx-click="delete_recipe_record"
       phx-target={@parent_component}
@@ -74,6 +75,6 @@
         stroke-linecap="round"
         stroke-linejoin="round"
       />
-    </svg>
-  </div>
+    </svg> 
+  </div> -->
 </div>

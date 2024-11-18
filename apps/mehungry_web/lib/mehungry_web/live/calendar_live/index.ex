@@ -30,7 +30,10 @@ defmodule MehungryWeb.CalendarLive.Index do
           start_dt: x.start_dt,
           end: x.end_dt,
           title: x.title,
-          recipe_user_meals: Enum.map(x.recipe_user_meals, fn y -> %{title: y.recipe.title} end)
+          recipe_user_meals:
+            Enum.map(x.recipe_user_meals, fn y ->
+              %{title: y.recipe.title, img_url: y.recipe.image_url}
+            end)
         }
       end)
 
