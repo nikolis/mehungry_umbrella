@@ -70,15 +70,38 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     {:ok, init(socket, base_user_meal, default_attrs)}
   end
 
-  defp init(socket, base, default_attrs) do
-    changeset = UserMeal.changeset(base, default_attrs)
+  def handle_event("new_recipe", _params, socket) do
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
+        changeset = Ecto.Changeset.put_assoc(changeset, :recipe_user_meals, existing ++ [%{}])
+        to_form(changeset)
+      end)
 
-    assign(socket,
-      base: base,
-      form: to_form(changeset),
-      # Reset form for LV
-      id: "form-#{System.unique_integer()}"
-    )
+    {:noreply, socket}
+  end
+
+  defp init(socket, base, default_attrs) do
+    IO.inspect(base, label: "Base -----------------------------------------------------------------------------------------------------")
+    changeset = UserMeal.changeset(base, default_attrs)
+    existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
+    if(length(existing) == 0) do
+      changeset = Ecto.Changeset.put_assoc(changeset, :recipe_user_meals,  [%{}])
+
+      assign(socket,
+        base: base,
+        form: to_form(changeset),
+        # Reset form for LV
+        id: "form-#{System.unique_integer()}"
+      )
+    else 
+      assign(socket,
+        base: base,
+        form: to_form(changeset),
+        # Reset form for LV
+        id: "form-#{System.unique_integer()}"
+      )
+    end
   end
 
   def get_not_nil(first, second) do
@@ -105,16 +128,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     {:noreply, assign(socket, :changeset, changeset)}
   end
 
-  def handle_event("new_recipe", _params, socket) do
-    socket =
-      update(socket, :form, fn %{source: changeset} ->
-        existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
-        changeset = Ecto.Changeset.put_assoc(changeset, :recipe_user_meals, existing ++ [%{}])
-        to_form(changeset)
-      end)
-
-    {:noreply, socket}
-  end
 
   def handle_event("new_consume_recipe", _params, socket) do
     socket =

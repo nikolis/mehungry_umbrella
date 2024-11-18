@@ -1,23 +1,21 @@
-<div class="w-full">
+<div class="w-full h-fit">
   <.form
     id={@id}
     for={@form}
     phx-change="validate"
     phx-submit="submit"
-    class="w-full min-h-full"
-    style="min-height: 50vh;"
+    class="w-full h-fit"
     phx-target={@myself}
   >
-    <div class="mt-12">
-      <.input field={@form[:title]} label="Title" type="readonly" />
-    </div>
 
+    <h3 class="m-auto text-center"> Search for recipe </h3>
+    <.input field={@form[:title]} label="Title" type="hidden" />
     <.input field={@form[:start_dt]} type="hidden" />
     <.input field={@form[:end_dt]} type="hidden" />
     <.input field={@form[:user_id]} type="hidden" />
 
-    <div class="w-full" style="min-height: 50vh; margin-bottom: 50px;">
-      <ul aria-labelledby="tabs-title" class=" w-fit	m-auto">
+    <div class="w-full h-fit" style="margin-bottom: 50px;">
+      <!--- <ul aria-labelledby="tabs-title" class=" w-fit	m-auto">
         <li>
           <a id="recipe-2" href="#recipe2" phx-target={@myself} phx-click="new_recipe">
             Add recipe slot
@@ -26,7 +24,7 @@
             Find cooked
           </a>
         </li>
-      </ul>
+      </ul> --->
       <div class="overflow-y-auto h-full" style="height: 50vh;">
         <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
           <Components.recipe_user_meal_render

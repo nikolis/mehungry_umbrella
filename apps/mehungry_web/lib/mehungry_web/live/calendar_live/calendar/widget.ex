@@ -1,0 +1,320 @@
+defmodule MehungryWeb.CalendarLive.Calendar.Widget do
+  use MehungryWeb, :live_component
+
+  alias MehungryWeb.CalendarLive.Calendar.Utils
+  alias MehungryWeb.SvgComponents
+
+  @day_meals ["breakfast", "elevenses", "lunch", "after lunch", "dinner"]
+  @impl true
+  def render(assigns) do
+    case is_nil(assigns.device_width) do
+      true ->
+        SvgComponents.get_loading(assigns)
+
+      false ->
+        ~H"""
+        <div class="h-full" id="calendar_widget">
+          <div class="w-full relative">
+            <.button_add_meal current_date={@current_date} myself={@myself} />
+
+            <div class="flex px-4 py-2 gap-4 bg-greyfriend1 justify-center border-2 rounded-full border-greyfriend3 	m-auto w-fit">
+              <button
+                type="button"
+                class="w-fit text-complementary font-medium"
+                phx-target={@myself}
+                phx-click="prev-month"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="2.5"
+                  stroke="currentColor"
+                  class="size-5"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                </svg>
+              </button>
+
+              <h3 class="text-center text-xl font-semibold ">
+                <span><%= Calendar.strftime(@current_date, "%A") %>,</span>
+                <span><%= String.slice(Calendar.strftime(@current_date, "%d"), 0..2) %></span>
+                <span><%= String.slice(Calendar.strftime(@current_date, "%B"), 0..2) %></span>
+              </h3>
+
+              <button
+                type="button"
+                class="w-fit text-end text-complementary font-medium"
+                phx-target={@myself}
+                phx-click="next-month"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="2.5"
+                  stroke="currentColor"
+                  class="size-5"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+              </button>
+            </div>
+            <!-- Flex Container closed -->
+          </div>
+          <.calendar_main_table
+            week_rows={@week_rows}
+            user_meals={@user_meals}
+            day_meals={@day_meals}
+            current_date={@current_date}
+            selected_date={@selected_date}
+            myself={@myself}
+          />
+        </div>
+        """
+    end
+  end
+
+  def calendar_main_table(assigns) do
+    user_meals =
+      Enum.filter(assigns.user_meals, fn x ->
+        NaiveDateTime.to_date(x.start_dt) == assigns.current_date
+      end)
+
+    assigns = Map.put(assigns, :user_meals, user_meals)
+
+    ~H"""
+    <div :for={week <- @week_rows} class="h-full overflow-y-auto " style="padding-bottom: 50px;">
+      <div
+        :for={day <- week}
+        class={[
+          " text-center"
+        ]}
+      >
+        <div :for={meal <- @user_meals}>
+          <div class="py-2 rounded-lg">
+            <%= for re_u_m <- meal.recipe_user_meals do %>
+            <.card_meal  actual_meal={meal} img_url={re_u_m.img_url} title={re_u_m.title} />
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--Div bodu -->
+    """
+  end
+
+  @impl true
+  def update(assigns, socket) do
+    current_date =
+      case assigns.particular_date do
+        nil ->
+          Utils.calculate_initial_date(Date.utc_today(), assigns.device_width)
+
+        date ->
+          {:ok, date} = Date.from_iso8601(date)
+          date
+      end
+
+    {first, last, rows} = get_week_rows(current_date, assigns.user_meals, assigns.device_width)
+
+    IO.inspect(assigns.user_meals,
+      label:
+        "------------------------------------------------------------------------------------------------------------------------------------------------"
+    )
+
+    assigns = [
+      current_date: current_date,
+      selected_date: nil,
+      user_meals: assigns.user_meals,
+      selected_meal: nil,
+      week_rows: rows,
+      last: last,
+      first: first,
+      day_meals: @day_meals,
+      device_width: assigns.device_width
+    ]
+
+    {:ok,
+     socket
+     |> assign(assigns)}
+  end
+
+  defp selected_date?(day, selected_date), do: day == selected_date
+
+  defp today?(day), do: day == Date.utc_today()
+
+  defp other_month?(day, current_date),
+    do: Date.beginning_of_month(day) != Date.beginning_of_month(current_date)
+
+  defp get_week_rows(current_date, _user_meals, device_width) do
+    # days = Utils.get_days_according_to_width(device_width)
+    days = 0
+    # first = current_date
+    # last = Date.add(first, days)
+
+    week_rows =
+      Date.range(current_date, current_date)
+      |> Enum.map(& &1)
+      |> Enum.chunk_every(7)
+
+    {current_date, current_date, week_rows}
+  end
+
+  ## ------------------------------------ Event Handlers  ---------------------------------------------------------------
+
+  @impl true
+  def handle_event("prev-month", _, socket) do
+    days = 0
+    new_date = socket.assigns.first |> Date.add(days) |> Date.add(-1)
+
+    {first, last, rows} =
+      get_week_rows(new_date, socket.assigns.user_meals, socket.assigns.device_width)
+
+    assigns = [
+      current_date: new_date,
+      week_rows: rows,
+      last: last,
+      first: first
+    ]
+
+    send(self(), {:particular_date, %{"date" => first}})
+    {:noreply, assign(socket, assigns)}
+  end
+
+  def handle_event("next-month", _, socket) do
+    new_date = socket.assigns.last |> Date.add(1)
+
+    {first, last, rows} =
+      get_week_rows(new_date, socket.assigns.user_meals, 300)
+
+    assigns = [
+      current_date: new_date,
+      week_rows: rows,
+      last: last,
+      first: first
+    ]
+
+    send(self(), {:particular_date, %{"date" => first}})
+    {:noreply, assign(socket, assigns)}
+  end
+
+  def handle_event("pick-date", %{"meal" => meal}, socket) do
+    current_date = socket.assigns.current_date
+    send(self(), {:initial_modal, %{"date" => current_date, "title" => meal}})
+
+    {:noreply,
+     assign(socket, :selected_date, current_date)
+     |> assign(:selected_meal, meal)}
+  end
+
+  def handle_event("date-details", %{"date" => date}, socket) do
+    send(self(), {:date_details, %{"date" => date}})
+
+    {:noreply, socket}
+  end
+
+  ## ------------------------------------ UI Elements ---------------------------------------------------------------
+
+  defp card_meal(assigns) do
+    ~H"""
+    <div class="shadow m-auto w-full  grid-cols-6 grid rounded-md relative" >
+      <button class="absolute bg-white right-1 top-1"
+      type="button"
+      phx-click="edit_modal"
+      phx-value-id={@actual_meal.id}
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+</svg>
+
+      </button>
+      <%= if is_nil(@img_url) do %>
+        <%= SvgComponents.get_default_recipe_image(assigns) %>
+      <% else %>
+        <img src={@img_url} class="col-span-2 h-full" />
+      <% end %>
+      <div class="col-span-4 px-6 py-4"><%= @title %></div>
+    </div>
+    """
+  end
+
+  defp button_week_row(%{actual_meal: nil} = assigns) do
+    ~H"""
+    <button
+      class={[
+        "week_row_button_empty text-center min-h-28 max-h-28 w-full border-t-2 p-4"
+      ]}
+      type="button"
+      phx-target={@myself}
+      phx-click="pick-date"
+      phx-value-meal={@meal.id}
+    >
+    </button>
+    """
+  end
+
+  defp buton_week_row(assigns) do
+    ~H"""
+    <button
+      class={[
+        "week_row_button  text-center min-h-28 max-h-28  w-full bg-primaryl3 border-t-2 overflow-hidden overflow-y-auto",
+        today?(@day) && "bg-green-100",
+        other_month?(@day, @current_date) && "bg-gray-100",
+        selected_date?(@day, @selected_date) && @meal == @selected_meal && "bg-blue-100"
+      ]}
+      type="button"
+      phx-click="edit_modal"
+      phx-value-id={@actual_meal.id}
+    >
+      <div class="capitalize text-complementaryd font-medium  overflow-hidden">
+        <div class="font-semibold text-md"><%= @actual_meal.title %></div>
+        <div :for={meal <- @ctual_meal.recipe_user_meals}>
+          <div class="text-sm"><%= meal.title %> para pa pam</div>
+        </div>
+      </div>
+    </button>
+    """
+  end
+
+  defp button_add_meal(assigns) do
+    current_date = Date.to_string(assigns.current_date) <> " 00:00:00"
+    {:ok, current_date} = NaiveDateTime.from_iso8601(current_date)
+
+    assigns =
+      assigns
+      |> Map.put(:day, current_date)
+      |> Map.put(:meal, "El diablo")
+
+    ~H"""
+    <button
+      class={[
+        "text-center w-fit absolute right-0 top-0"
+      ]}
+      type="button"
+      phx-target={@myself}
+      phx-click="pick-date"
+      phx-value-date={Calendar.strftime(@day, "%Y-%m-%d")}
+      phx-value-meal={@meal}
+    >
+      <div class=" h-fit m-auto top-0 w-fit flex ">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="size-8"
+          style="color: var(--clr-primary) "
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+          />
+        </svg>
+      </div>
+    </button>
+    """
+  end
+end

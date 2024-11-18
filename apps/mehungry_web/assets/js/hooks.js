@@ -17,6 +17,14 @@ Hooks.Copy = {
   },
 }
 
+
+Hooks.FocusHook = {
+  mounted() {
+  }
+}
+
+
+
 Hooks.ViewportResizeHooks = {
 
   mounted () {
