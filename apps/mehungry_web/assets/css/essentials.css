@@ -613,6 +613,31 @@ body {
   margin-inline: auto;
 }
 
+.day_of_week {
+  margin-top: 0.2rem;
+  display: grid; 
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 500ms; 
+  padding: 1rem;
+}
+.widget_day {
+  transition: 500ms ease; 
+}
+
+.widget_day.copen {
+  transform: rotate(90deg);
+  transition: 500ms ease-in-out; 
+}
+
+
+.day_of_week.copen {
+ grid-template-rows: 1fr;
+}
+
+.day_of_week > div {
+  overflow: hidden;
+}
+
 .accordion {
   background: white;
   color: var(--clr-primary-d);

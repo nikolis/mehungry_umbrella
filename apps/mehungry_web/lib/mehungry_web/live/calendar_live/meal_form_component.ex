@@ -82,11 +82,16 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   end
 
   defp init(socket, base, default_attrs) do
-    IO.inspect(base, label: "Base -----------------------------------------------------------------------------------------------------")
+    IO.inspect(base,
+      label:
+        "Base -----------------------------------------------------------------------------------------------------"
+    )
+
     changeset = UserMeal.changeset(base, default_attrs)
     existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
+
     if(length(existing) == 0) do
-      changeset = Ecto.Changeset.put_assoc(changeset, :recipe_user_meals,  [%{}])
+      changeset = Ecto.Changeset.put_assoc(changeset, :recipe_user_meals, [%{}])
 
       assign(socket,
         base: base,
@@ -94,7 +99,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
         # Reset form for LV
         id: "form-#{System.unique_integer()}"
       )
-    else 
+    else
       assign(socket,
         base: base,
         form: to_form(changeset),
@@ -127,7 +132,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
 
     {:noreply, assign(socket, :changeset, changeset)}
   end
-
 
   def handle_event("new_consume_recipe", _params, socket) do
     socket =

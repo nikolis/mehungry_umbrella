@@ -43,6 +43,7 @@ defmodule MehungryWeb.CalendarLive.Index do
       :ok,
       socket
       |> assign(:user, user)
+      |> assign(:calendar_view, "day_view")
       |> assign(:particular_date, nil)
       |> assign(:page_title, "Meal planner")
       |> assign(:user_meals, user_meals)
@@ -121,6 +122,19 @@ defmodule MehungryWeb.CalendarLive.Index do
     |> assign(:title, title)
     |> assign(:changeset, changeset)
     |> assign(:recipes, list_recipes(nil))
+  end
+
+  def handle_event("toggle_basket", %{"view" => view}, socket) do
+    socket =
+      case view do
+        "week_view" ->
+          assign(socket, :calendar_view, "week_view")
+
+        "day_view" ->
+          assign(socket, :calendar_view, "day_view")
+      end
+
+    {:noreply, socket}
   end
 
   @impl true
