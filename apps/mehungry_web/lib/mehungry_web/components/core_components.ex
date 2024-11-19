@@ -410,7 +410,7 @@ defmodule MehungryWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-2 min-h-96 lg:p-14 shadow-lg ring-1 transition"
+              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-2  lg:p-14 shadow-lg ring-1 transition"
             >
               <div id={"#{@id}-content"}>
                 <%= render_slot(@inner_block) %>

@@ -5,7 +5,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
   def render(assigns) do
     ~H"""
     <div
-      class="col-span-4 sm:col-span-2 h-full w-full"
+      class="col-span-4 sm:col-span-2  w-full"
       data-reference-id={@input_variable}
       data-reference-index={@form.index}
       phx-hook="SelectComponent"

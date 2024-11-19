@@ -5,7 +5,7 @@
     id="calendar_modal"
     show
   >
-    <div class="w-full h-fit" >
+    <div class="w-full h-full">
       <.live_component
         module={MehungryWeb.CalendarLive.MealFormComponent}
         id={@user_meal.id || :new}
@@ -26,7 +26,7 @@
     id="calendar_modal23"
     show
   >
-    <div class="w-full" >
+    <div class="w-full">
       <.live_component
         module={MehungryWeb.NutrientAnalysisComponent}
         id={:details}
@@ -43,6 +43,7 @@
     user_meals={@user_meals}
     particular_date={@particular_date}
     title="Alter Basket"
+    calendar_view={@calendar_view}
     action={@live_action}
     user={@current_user}
     device_width={@device_width}
