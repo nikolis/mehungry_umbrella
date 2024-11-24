@@ -100,7 +100,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     # assigns = Map.put(assigns, :first_of_week, first_of_week)
 
     ~H"""
-    <div :for={week <- @week_rows} class="h-full overflow-y-auto " style="padding-bottom: 50px; margin-top: 10px;">
+    <div
+      :for={week <- @week_rows}
+      class="h-full overflow-y-auto "
+      style="padding-bottom: 50px; margin-top: 10px;"
+    >
       <div
         :for={day <- week}
         class={[
@@ -108,7 +112,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         ]}
       >
         <div
-          class="w-full mt-2 border-t-2 border-greyfriend2 day_of_week relative"
+          class="w-full mt-2 border-t-2 border-greyfriend2 day_of_week relative "
           id={"dat_" <> Date.to_string(day) }
         >
           <div class="p-2 mt-2">
@@ -125,21 +129,23 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             <% end %>
           </div>
 
-                       <span       
-      phx-target={@myself}
-      phx-click="pick-date"
-      phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
- class="absolute  text-lg top-4   left-12 font-semibold">
-<%= Calendar.strftime(day, "%A") %></span>
+          <span
+            phx-target={@myself}
+            phx-click="pick-date"
+            phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
+            class="absolute  text-lg top-4   left-12 font-semibold cursor-pointer "
+          >
+            <%= Calendar.strftime(day, "%A") %>
+          </span>
 
-<span class="absolute top-4   left-4 font-semibold"
-      phx-target={@myself}
-      phx-click="pick-date"
-      phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
-
->
+          <span
+            class="absolute top-4   left-4 font-semibold"
+            phx-target={@myself}
+            phx-click="pick-date"
+            phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
+          >
             <div class="flex">
-               <span class="">
+              <span class="">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -154,16 +160,15 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                     d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
                   />
                 </svg>
-
               </span>
             </div>
           </span>
-          <span class="absolute top-4  right-4  font-semibold"
-                    phx-click={
-            Phoenix.LiveView.JS.toggle_class("copen", to: "#dat_" <> Date.to_string(day))
-            |> Phoenix.LiveView.JS.toggle_class("copen", to: "#widget" <> Date.to_string(day))
-          }
-
+          <span
+            class="absolute top-4  right-4  font-semibold"
+            phx-click={
+              Phoenix.LiveView.JS.toggle_class("copen", to: "#dat_" <> Date.to_string(day))
+              |> Phoenix.LiveView.JS.toggle_class("copen", to: "#widget" <> Date.to_string(day))
+            }
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -171,7 +176,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="size-6 widget_day"
+              class="size-6 widget_day cursor-pointer"
               id={"widget"<> Date.to_string(day)}
             >
               <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -190,10 +195,18 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         NaiveDateTime.to_date(x.start_dt) == assigns.current_date
       end)
 
+    IO.inspect(user_meals, label: "The user meals")
+    IO.inspect("------------------------------------------------------------------------------")
+    IO.inspect(assigns.week_rows, label: "Week rows")
+
     assigns = Map.put(assigns, :user_meals, user_meals)
 
     ~H"""
-    <div :for={week <- @week_rows} class="h-full overflow-y-auto " style="padding-bottom: 50px; margin-top: 10px;">
+    <div
+      :for={week <- @week_rows}
+      class="h-full overflow-y-auto "
+      style="padding-bottom: 50px; margin-top: 10px;"
+    >
       <div
         :for={day <- week}
         class={[
@@ -203,8 +216,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         <div :for={meal <- @user_meals}>
           <div class="py-2 rounded-lg">
             <%= for re_u_m <- meal.recipe_user_meals do %>
-              <%= if NaiveDateTime.to_date(meal.start_dt) == @current_date do %>
-
+              <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
                 <.card_meal actual_meal={meal} img_url={re_u_m.img_url} title={re_u_m.title} />
               <% end %>
             <% end %>
@@ -330,9 +342,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     current_date = date
     send(self(), {:initial_modal, %{"date" => current_date, "title" => "r"}})
 
-    {:noreply,
-     assign(socket, :selected_date, current_date)
-    }
+    {:noreply, assign(socket, :selected_date, current_date)}
   end
 
   def handle_event("pick-date", %{"meal" => meal}, socket) do
