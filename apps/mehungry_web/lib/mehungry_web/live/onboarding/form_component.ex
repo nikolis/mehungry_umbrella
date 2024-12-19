@@ -42,7 +42,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   @impl true
   def update(assigns, socket) do
-    map = %{"vegan" => "true", "vegeterian" => "false", "lactose_intolerant" => "false"}
+    map = %{"vegan" => "false", "vegeterian" => "false", "lactose_intolerant" => "false"}
 
     {:ok,
      socket

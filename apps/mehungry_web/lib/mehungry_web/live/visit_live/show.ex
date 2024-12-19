@@ -28,14 +28,13 @@ defmodule MehungryWeb.VisitLive.Show do
   def remove_hostname(url) do
     url = String.replace(url, MehungryWeb.Endpoint.url() <> "/", "")
 
-    url =
-      case url do
-        "" ->
-          "Home"
+    case url do
+      "" ->
+        "Home"
 
-        anyth ->
-          anyth
-      end
+      anyth ->
+        anyth
+    end
   end
 
   @impl true

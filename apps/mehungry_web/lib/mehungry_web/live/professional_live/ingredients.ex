@@ -3,7 +3,7 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
   alias Mehungry.Food
 
-  @topic "user_activity"
+  @impl true
   def mount(_params, _session, socket) do
     {ingredients, cursor_after} = Food.list_ingredients_paginated()
 
@@ -15,7 +15,7 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
     socket =
       socket
-      |> stream(:ingredients, [])
+      |> stream(:ingredients, ingredients)
       |> assign(:category, nil)
       |> assign(:categories, categories)
       |> assign(:search_methods, search_methods)
@@ -34,6 +34,22 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
     socket = set_value(%{target => value}, socket)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("load-more", _, socket) do
+    cursor_after = Map.get(socket.assigns, :cursor_after)
+
+    {ingredients, cursor_after} =
+      Food.list_ingredients_paginated(cursor_after, socket.assigns.ecto_query)
+
+    # all_recipes  = socket.assigns.recipes ++ recipes
+
+    {:noreply,
+     socket
+     |> assign(:cursor_after, cursor_after)
+     |> assign(:page, socket.assigns.page + 1)
+     |> stream(:ingredients, ingredients)}
   end
 
   def set_value(%{"search_method" => search_method}, socket) do
@@ -65,22 +81,6 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
     socket
     |> assign(:cursor_after, cursor)
 
-    socket = stream(socket, :ingredients, ingredients, reset: true)
-  end
-
-  @impl true
-  def handle_event("load-more", _, socket) do
-    cursor_after = Map.get(socket.assigns, :cursor_after)
-
-    {ingredients, cursor_after} =
-      Food.list_ingredients_paginated(cursor_after, socket.assigns.ecto_query)
-
-    # all_recipes  = socket.assigns.recipes ++ recipes
-
-    {:noreply,
-     socket
-     |> assign(:cursor_after, cursor_after)
-     |> assign(:page, socket.assigns.page + 1)
-     |> stream(:ingredients, ingredients)}
+    stream(socket, :ingredients, ingredients, reset: true)
   end
 end

@@ -2,7 +2,7 @@ defmodule MehungryWeb.Presence do
   @moduledoc false
   @topic "user_activity"
   # @recipe_activity "recipe_activity"
-  alias Mehungry.Meta
+  # alias Mehungry.Meta
 
   use Phoenix.Presence,
     otp_app: :mehungry_web,
@@ -48,7 +48,6 @@ defmodule MehungryWeb.Presence do
             ip_address: socket.assigns.address,
             details: %{agent: socket.assigns.agent, path: socket.assigns.path}
           })
-          |> IO.inspect()
 
           ret
         else
@@ -109,13 +108,6 @@ defmodule MehungryWeb.Presence do
             end
       """
     end
-  end
-
-  def list_general do
-    IO.inspect(Presence.list("general"),
-      label:
-        "asdafdsfadsfads----------------------------------------------------------------------------------------------------------------"
-    )
   end
 
   def list_products_and_users do

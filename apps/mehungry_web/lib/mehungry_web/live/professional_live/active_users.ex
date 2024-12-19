@@ -10,14 +10,8 @@ defmodule MehungryWeb.ProfessionalLive.ActiveUsers do
   end
 
   def handle_info(%{event: "presence_diff"}, socket) do
-    presense_gen_info = Map.get(MehungryWeb.Presence.list_general(), "general")
-    IO.inspect(presense_gen_info)
+    presense_gen_info = Map.get(MehungryWeb.Presence.list("general"), "general")
     presense_gen_info = presense_gen_info.metas
-
-    IO.inspect(presense_gen_info,
-      label:
-        "presense_gen_info 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-    )
 
     socket = assign(socket, :active_users, presense_gen_info)
 

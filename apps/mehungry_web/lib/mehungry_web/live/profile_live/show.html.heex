@@ -72,6 +72,22 @@
           /> Logout
         </button>
       </.link>
+      <a
+        class=" text-center flex items-center  rounded-full"
+        style="height: 3rem; background-color: white; color: black"
+        href={Routes.auth_path(@socket, :request, "instagram")}
+      >
+        <div
+          class="w-full font-semibold flex items-center border-radius w-full h-full gap-1"
+          style="font-size: calc(0.7rem + 0.5vw ); border-radius: 100px; border: 2px solid #747775; 
+  "
+        >
+          <span class="w-full text-center" style="color:  #1F1F1F;">
+            Sign in with Instagram
+          </span>
+        </div>
+      </a>
+
       <%= if !is_nil(@current_user) do %>
         <%= if !is_nil(@current_user.email) do %>
           <%= if @current_user.email == "nikolisgal@gmail.com" do %>

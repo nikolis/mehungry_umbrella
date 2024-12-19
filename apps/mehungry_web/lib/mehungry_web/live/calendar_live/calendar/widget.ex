@@ -195,10 +195,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         NaiveDateTime.to_date(x.start_dt) == assigns.current_date
       end)
 
-    IO.inspect(user_meals, label: "The user meals")
-    IO.inspect("------------------------------------------------------------------------------")
-    IO.inspect(assigns.week_rows, label: "Week rows")
-
     assigns = Map.put(assigns, :user_meals, user_meals)
 
     ~H"""
@@ -242,11 +238,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
     {first, last, rows} = get_full_week(current_date, assigns.user_meals, 1500)
 
-    IO.inspect(assigns.user_meals,
-      label:
-        "------------------------------------------------------------------------------------------------------------------------------------------------"
-    )
-
     assigns = [
       current_date: current_date,
       selected_date: nil,
@@ -265,14 +256,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
      |> assign(assigns)}
   end
 
-  defp selected_date?(day, selected_date), do: day == selected_date
-
-  defp today?(day), do: day == Date.utc_today()
-
-  defp other_month?(day, current_date),
-    do: Date.beginning_of_month(day) != Date.beginning_of_month(current_date)
-
-  defp get_full_week(current_date, _user_meals, device_width) do
+  defp get_full_week(current_date, _user_meals, _device_width) do
     days = 6
     first = Date.beginning_of_week(current_date)
 
@@ -286,9 +270,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     {first, last, week_rows}
   end
 
-  defp get_week_rows(current_date, _user_meals, device_width) do
+  defp get_week_rows(current_date, _user_meals, _device_width) do
     # days = Utils.get_days_according_to_width(device_width)
-    days = 0
+    # days = 0
     # first = current_date
     # last = Date.add(first, days)
 
@@ -396,44 +380,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     """
   end
 
-  defp button_week_row(%{actual_meal: nil} = assigns) do
-    ~H"""
-    <button
-      class={[
-        "week_row_button_empty text-center min-h-28 max-h-28 w-full border-t-2 p-4"
-      ]}
-      type="button"
-      phx-target={@myself}
-      phx-click="pick-date"
-      phx-value-meal={@meal.id}
-    >
-    </button>
-    """
-  end
-
-  defp buton_week_row(assigns) do
-    ~H"""
-    <button
-      class={[
-        "week_row_button  text-center min-h-28 max-h-28  w-full bg-primaryl3 border-t-2 overflow-hidden overflow-y-auto",
-        today?(@day) && "bg-green-100",
-        other_month?(@day, @current_date) && "bg-gray-100",
-        selected_date?(@day, @selected_date) && @meal == @selected_meal && "bg-blue-100"
-      ]}
-      type="button"
-      phx-click="edit_modal"
-      phx-value-id={@actual_meal.id}
-    >
-      <div class="capitalize text-complementaryd font-medium  overflow-hidden">
-        <div class="font-semibold text-md"><%= @actual_meal.title %></div>
-        <div :for={meal <- @ctual_meal.recipe_user_meals}>
-          <div class="text-sm"><%= meal.title %> para pa pam</div>
-        </div>
-      </div>
-    </button>
-    """
-  end
-
   defp button_settings(assigns) do
     ~H"""
     <div class="absolute top-0 bottom-0 left-0 h-fit m-auto">
@@ -534,6 +480,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         "text-center w-fit absolute right-0 top-0 bottom-0 "
       ]}
       type="button"
+      id="button_calendar"
       phx-target={@myself}
       phx-click="pick-date"
       phx-value-date={Calendar.strftime(@day, "%Y-%m-%d")}

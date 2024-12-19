@@ -47,9 +47,9 @@ defmodule MehungryWeb.HomeLiveTest do
         |> render_click()
 
       assert view =~ recipe.title
-      assert view =~ "steps"
-      assert view =~ "ingredients"
-      assert view =~ "nutrients"
+      assert view =~ "Steps"
+      assert view =~ "Ingredients"
+      assert view =~ "Nutrients"
     end
   end
 end

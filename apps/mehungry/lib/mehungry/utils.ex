@@ -1,6 +1,32 @@
 defmodule Mehungry.Utils do
   @measurement_units [["ml", "l"], ["gram", "kg"], ["grammar", "kg"]]
 
+  @doc """
+   A function that a Map , Key as string and value
+   puts the key,value pair with a key according to the existing keys of the Map
+  i.e 
+  map , %{the_atom: "lor"} 
+  put_map(map, "new_key", "value")
+  is going to return %{the_atom: "lor", new_key: "value"}
+  """
+  def put_map(map, key, value) when map == %{} do
+    Map.put(map, key, value)
+  end
+
+  def put_map(the_map, key, value) do
+    first_key = Enum.at(Map.keys(the_map), 0)
+
+    if(is_atom(first_key) and !is_atom(key)) do
+      Map.put(the_map, String.to_atom(key), value)
+    else
+      if is_binary(first_key) and is_atom(key) do
+        Map.put(the_map, to_string(key), value)
+      else
+        Map.put(the_map, key, value)
+      end
+    end
+  end
+
   def remove_parenthesis(text) do
     text
     |> String.replace(~r"\(.*\)", "")

@@ -5,7 +5,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   import MehungryWeb.RecipeComponents
 
   alias Mehungry.Posts.Comment
-  alias Mehungry.{Posts, Users, Food}
+  alias Mehungry.{Posts, Users, Food, Accounts}
+  alias Mehungry.Api.Instagram
 
   embed_templates("components/*")
   @color_fill "#00A0D0"
@@ -13,6 +14,19 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   # cancel_comment_reply
   @impl true
   def handle_event("cancel_comment_reply", _, socket) do
+    socket =
+      socket
+      |> assign(:reply, nil)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("post-on-instagram", %{"recipe_id" => recipe_id, "user_id" => user_id}, socket) do
+    recipe = Food.get_recipe!(recipe_id)
+    user = Accounts.get_user!(user_id)
+    Instagram.post_recipe_container(user, recipe)
+
     socket =
       socket
       |> assign(:reply, nil)
@@ -149,7 +163,19 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           <.recipe_attrs_container recipe={@recipe} />
         </div>
         <div class="w-full mt-2">
-          <.user_overview_card user={@recipe.user} user_follows={@user_follows} />
+          <%= if @recipe.user_id == @user.id do %>
+            <button
+              class="px-4 rounded-md py-1"
+              phx-target={@myself}
+              phx-click="post-on-instagram"
+              phx-value-recipe_id={@recipe.id}
+              phx-value-user_id={@user.id}
+            >
+              Instagram Post
+            </button>
+          <% else %>
+            <.user_overview_card user={@recipe.user} user_follows={@user_follows} />
+          <% end %>
           <div class="mt-8">
             <.recipe_details recipe={@recipe} nutrients={@nutrients} primary_size={@primary_size} . />
           </div>
@@ -219,7 +245,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   end
 
   def handle_info(%{new_comment: comment}, socket) do
-    IO.inspect(comment, label: "NEW comment")
     recipe_comments = socket.assigns.recipe_comments
     comment = Posts.get_comment!(comment.id)
 

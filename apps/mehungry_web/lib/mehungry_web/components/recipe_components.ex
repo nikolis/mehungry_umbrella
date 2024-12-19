@@ -82,6 +82,7 @@ defmodule MehungryWeb.RecipeComponents do
                   type="button"
                   class=" flex-none p-2   hover:opacity-40 w-full h-full "
                   aria-label="close"
+                  id="close-recipe-modal"
                 >
                   <.icon name="hero-arrow-left" class="h-6 w-6 " />
                 </button>
@@ -301,25 +302,29 @@ defmodule MehungryWeb.RecipeComponents do
   def recipe_tags(assigns) do
     ~H"""
     <div class="w-fit m-auto px-4 flex gap-2 my-2 flex-wrap">
-      <%= for recipe_ingredient <- Enum.slice(@recipe.recipe_ingredients, 0..4) do %>
-        <.recipe_tag ingredient={recipe_ingredient.ingredient} />
+      <%= for tag <- @recipe.recipe_hashtags do %>
+        <.recipe_tag hashtag={tag.hashtag} />
       <% end %>
     </div>
     """
   end
 
+  def recipe_tag(%{hashtag: %{title: nil}} = assigns),
+    do: ~H"""
+    """
+
   def recipe_tag(assigns) do
-    uri = ~p"/search/" <> Enum.at(String.split(assigns.ingredient.name, ","), 0)
+    uri = ~p"/search/hashtag/" <> assigns.hashtag.title
     assigns = assign(assigns, :uri, uri)
 
     ~H"""
     <a
       href={@uri}
       class="cursor-pointer w-fit border-2 border-red border-solid rounded-full px-2 border-primaryl2"
-      id={Integer.to_string(@ingredient.id)}
+      id={Integer.to_string(@hashtag.id)}
     >
       <div class=" text-greyfriend3 text-base font-semibold">
-        <%= Enum.at(String.split(@ingredient.name, ","), 0) %>
+        <%= Enum.at(String.split(@hashtag.title, ","), 0) %>
       </div>
     </a>
     """

@@ -5,7 +5,7 @@ defmodule Mehungry.Food.Recipe do
   import Ecto.Changeset
 
   alias Mehungry.Accounts.User
-  alias Mehungry.Language
+  alias Mehungry.Languages.Language
   alias Mehungry.Survey.Rating
 
   schema "recipes" do
@@ -39,6 +39,7 @@ defmodule Mehungry.Food.Recipe do
       type: :string
 
     has_many :recipe_ingredients, Mehungry.Food.RecipeIngredient, on_replace: :delete
+    has_many :recipe_hashtags, Mehungry.Food.RecipeHashtag, on_replace: :nilify
     has_many :annotations, Mehungry.Food.Annotation
     has_many :comments, Mehungry.Posts.Comment
 
@@ -47,8 +48,33 @@ defmodule Mehungry.Food.Recipe do
     timestamps()
   end
 
+  defp get_hashtags(%{"recipe_hashtags" => _hashtags} = attrs) do
+    %{
+      attrs
+      | "recipe_hashtags" =>
+          Enum.map(attrs["recipe_hashtags"], fn x ->
+            title = x.hashtag.title
+            existing = Mehungry.Hashtag.get_hashtag_by_title(title)
+
+            case is_nil(existing) do
+              true ->
+                x
+
+              false ->
+                %{hashtag: %{id: existing.id}}
+            end
+          end)
+    }
+  end
+
+  defp get_hashtags(attrs) do
+    attrs
+  end
+
   @doc false
   def changeset(recipe, attrs) do
+    attrs = get_hashtags(attrs)
+
     recipe
     |> cast(attrs, [
       :recipe_image_remote,
@@ -83,5 +109,6 @@ defmodule Mehungry.Food.Recipe do
     ])
     |> cast_embed(:steps, [:required_message])
     |> cast_assoc(:recipe_ingredients, required: true)
+    |> cast_assoc(:recipe_hashtags, required: false)
   end
 end

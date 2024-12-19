@@ -49,7 +49,7 @@ defmodule MehungryWeb.MixProject do
       {:seqfuzz, "~> 0.2.0"},
       {:phoenix_html_helpers, "~> 1.0"},
       {:bcrypt_elixir, "~> 3.0"},
-      {:httpoison, "~> 1.2"},
+      {:httpoison, "~> 2.0"},
       {:contex, "~> 0.4.0"},
       {:mehungry, in_umbrella: true},
       {:ueberauth, "~> 0.6"},

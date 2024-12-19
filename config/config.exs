@@ -30,7 +30,15 @@ config :mehungry_web, MehungryWeb.Endpoint,
 config :ueberauth, Ueberauth,
   providers: [
     facebook:
-      {Ueberauth.Strategy.Facebook, [profile_fields: "name,email,first_name,last_name, picture"]},
+      {Ueberauth.Strategy.Facebook, [profile_fields: "name,email,first_name,last_name, picture", scope: "email, public_profile, ages_manage_posts, pages_manage_metadata, pages_manage_engagement, pages_manage_instant_articles, pages_show_list"]},
+    instagram:
+      {Ueberauth.Strategy.Instagram,
+       [
+         ~c"instagram_business_basic",
+         ~c"instagram_business_content_publish",
+         ~c"instagram_business_manage_messages",
+         ~c"instagram_business_manage_comments"
+       ]},
     google: {Ueberauth.Strategy.Google, []},
     identity:
       {Ueberauth.Strategy.Identity,
@@ -48,6 +56,10 @@ config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
 config :ueberauth, Ueberauth.Strategy.Google.OAuth,
   client_id: System.get_env("GOOGLE_CLIENT_ID"),
   client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+
+config :ueberauth, Ueberauth.Strategy.Instagram.OAuth,
+  client_id: System.get_env("INSTAGRAM_CLIENT_ID"),
+  client_secret: System.get_env("INSTAGRAM_CLIENT_SECRET")
 
 config :esbuild,
   version: "0.17.11",

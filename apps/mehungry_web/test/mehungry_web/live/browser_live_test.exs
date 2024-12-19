@@ -30,9 +30,9 @@ defmodule MehungryWeb.BrowserLiveTest do
       |> render_click()
 
     assert view =~ recipe.title
-    assert view =~ "steps"
-    assert view =~ "ingredients"
-    assert view =~ "nutrients"
+    assert view =~ "Steps"
+    assert view =~ "Ingredients"
+    assert view =~ "Nutrients"
   end
 
   test "Test BrowserLive Like on recipe details ", %{conn: conn, user: user} do
@@ -51,9 +51,9 @@ defmodule MehungryWeb.BrowserLiveTest do
     assert html =~ recipe.title
 
     assert html =~ recipe.title
-    assert html =~ "steps"
-    assert html =~ "ingredients"
-    assert html =~ "nutrients"
+    assert html =~ "Steps"
+    assert html =~ "Ingredients"
+    assert html =~ "Nutrients"
     like_recipe_button = "#recipe_details_componentlike_container"
 
     view =
@@ -93,5 +93,39 @@ defmodule MehungryWeb.BrowserLiveTest do
     _element =
       index_live
       |> element(like_recipe_button)
+  end
+
+  test "Test BrowserLive -> Recipe Details -> Listing", %{conn: conn, user: user} do
+    recipe = recipe_fixture(user)
+
+    recipe_2 =
+      recipe_fixture(user, %{
+        description: "description with #hashtag",
+        title: "Title for the uknow"
+      })
+
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
+
+    Accounts.update_user_profile(
+      user_profile,
+      %{onboarding_level: 1}
+    )
+
+    {:ok, index_live, html} =
+      live(conn, Routes.recipe_browser_index_path(conn, :index, "#hashtag"))
+
+    assert html =~ recipe_2.title
+    assert html =~ recipe.title == false
+    assert html =~ "Nutrients" == false
+
+    _result =
+      element(index_live, "#recipe-card-details-link-" <> Integer.to_string(recipe_2.id))
+      |> render_click()
+
+    assert_patch(index_live)
+    html = render(index_live)
+    assert html =~ recipe_2.title
+    assert html =~ "Nutrients"
+    assert html =~ "Nutrients" == true
   end
 end

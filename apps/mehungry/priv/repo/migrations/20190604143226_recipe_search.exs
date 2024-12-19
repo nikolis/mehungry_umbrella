@@ -53,7 +53,6 @@ defmodule MehungryServer.Repo.Migrations.RecipeSearch do
       setweight(to_tsvector(unaccent(recipes.title)), 'A') ||
       setweight(to_tsvector(unaccent(coalesce(string_agg(ingredients.name, ' '), ' '))), 'B') ||
       setweight(to_tsvector(unaccent(coalesce(string_agg(ingredient_translations.name, ' '), ' '))), 'C')
-
       ) AS document
     FROM recipes
     LEFT JOIN recipe_ingredients ON recipe_ingredients.recipe_id = recipes.id

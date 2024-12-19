@@ -11,7 +11,7 @@ defmodule MehungryWeb.CalendarLive.FormSettings do
   end
 
   @impl true
-  def update(assigns, socket) do
+  def update(_assigns, socket) do
     {:ok, socket}
   end
 end

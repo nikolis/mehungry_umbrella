@@ -31,9 +31,9 @@ defmodule MehungryWeb.ProfileLiveTest do
       |> render_click()
 
     assert view =~ recipe.title
-    assert view =~ "steps"
-    assert view =~ "ingredients"
-    assert view =~ "nutrients"
+    assert view =~ "Steps"
+    assert view =~ "Ingredients"
+    assert view =~ "Nutrients"
   end
 
   test "Test Own Profile Remove Recipe From Likes ", %{conn: conn, user: user} do
@@ -100,9 +100,9 @@ defmodule MehungryWeb.ProfileLiveTest do
       |> render_click()
 
     assert view =~ recipe.title
-    assert view =~ "steps"
-    assert view =~ "ingredients"
-    assert view =~ "nutrients"
+    assert view =~ "Steps"
+    assert view =~ "Ingredients"
+    assert view =~ "Nutrients"
   end
 
   test "Test Visit Other Profile Page Like Recipe from Listing ", %{conn: conn, user: user} do

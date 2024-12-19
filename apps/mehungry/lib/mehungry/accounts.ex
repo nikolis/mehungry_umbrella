@@ -11,6 +11,31 @@ defmodule Mehungry.Accounts do
 
   alias Mehungry.Accounts.{User, UserToken, UserNotifier, UserFollow}
 
+  def get_user_tokens(user, domain) do
+    case Cachex.get(:cache_user_tokens, {__MODULE__, user.id}) do
+      {:ok, nil} ->
+        nil
+
+      {:ok, user_tokens} ->
+        Map.get(user_tokens, domain, nil)
+    end
+  end
+
+  def put_user_token(user, token, domain) do
+    user_tokens =
+      case Cachex.get(:cache_user_tokens, {__MODULE__, user.id}) do
+        {:ok, nil} ->
+          %{}
+          |> Map.put(domain, token)
+
+        {:ok, %{} = existing_user_tokens} ->
+          existing_user_tokens
+          |> Map.put(domain, token)
+      end
+
+    Cachex.put(:cache_user_tokens, {__MODULE__, user.id}, user_tokens)
+  end
+
   def get_user_essentials(nil), do: {nil, nil, nil}
 
   def get_user_essentials(%User{} = user) do
@@ -161,6 +186,12 @@ defmodule Mehungry.Accounts do
   def update_user(%User{} = user, attrs) do
     user
     |> User.registration_3rd_party_changeset(attrs)
+    |> Repo.update()
+  end
+
+  def update_user_tokens(%User{} = user, attrs) do
+    user
+    |> User.tokens_changeset(attrs)
     |> Repo.update()
   end
 

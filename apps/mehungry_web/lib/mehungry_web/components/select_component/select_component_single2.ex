@@ -87,9 +87,6 @@ defmodule MehungryWeb.SelectComponentSingle2 do
     assigns = Map.put(assigns, :sub_script, sub_script)
     assigns = Map.put(assigns, :first, first)
 
-    IO.inspect(assigns.first, label: "First")
-    IO.inspect(assigns.sub_script, label: "Sub script")
-
     ~H"""
     <div>
       <span class="font-semibold">
