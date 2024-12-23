@@ -2,7 +2,7 @@ defmodule Mehungry.Api.Facebook do
   alias Mehungry.Accounts
   alias Mehungry.Food.Recipe
 
-  @api_base "https://graph.instagram.com"
+  @api_base "https://graph.facebook.com/"
   @api_version "v21.0"
 
   defp get_recipe_caption(%Recipe{} = recipe) do
@@ -50,62 +50,74 @@ defmodule Mehungry.Api.Facebook do
   @doc """
   Access the graph endpoint to exchange short_lived token for long_lived token the short_lived token should not be expired
   """
-  def get_long_lived_token(user, existing_token, instagram_user_id) do
-    # Application.fetch_env(:mehungry, :INSTAGRAM_CLIENT_SECRET)
-    instagram_secret = System.get_env("INSTAGRAM_CLIENT_SECRET")
+  def get_user_pages(user, token, facebook_user_id) do
+    # token = Accounts.get_user_token(user, "facebook")
+
+    "https://graph.facebook.com/v21.0/user_id/accounts?access_token=user_access_token"
+
+    url =
+      @api_base <>
+        @api_version <> "/" <> facebook_user_id <> "/" <> "accounts" <> "?access_token=#{token}"
 
     {:ok, get_response} =
-      HTTPoison.get(
-        @api_base <>
-          "/" <>
-          "access_token" <>
-          "?grant_type=ig_exchange_token" <>
-          "&client_secret=#{instagram_secret}" <>
-          "&access_token=#{existing_token}"
-      )
+      HTTPoison.get(url)
 
-    {:ok, token} = Jason.decode(get_response.body)
-    token = Map.put(token, "user_id", instagram_user_id)
-    Mehungry.Accounts.update_user_tokens(user, %{"instagram_token" => token})
+    {:ok, decoded_body} = Jason.decode(get_response.body)
+
+    data =
+      Enum.reduce(decoded_body["data"], %{}, fn page_entry, acc ->
+        result = %{page_entry["name"] => page_entry}
+        result = Enum.into(result, acc)
+        result
+      end)
+
+    result = Mehungry.Accounts.update_user_tokens(user, %{"facebook_token" => data})
+    IO.inspect(result, label: "Saved tokesn")
+  end
+
+  defp construct_url(path, params) do
+    path <> params
   end
 
   def post_recipe_container(user, recipe) do
     # token = Accounts.get_user_tokens(user, "instagram")
-    token = user.instagram_token
-
-    user_id = Map.get(token, "user_id", "")
+    {_name, token} = Enum.at(user.facebook_token,  0)
+    IO.inspect(token)
+    user_id = Map.get(token, "id", "")
     access_token = Map.get(token, "access_token", "")
 
-    caption = get_recipe_caption(recipe)
 
+    #caption = get_recipe_caption(recipe)
+  
     headers = [
       Authorization: "Bearer #{access_token}",
       Accept: "Application/json; Charset=utf-8",
       image_url: recipe.image_url
     ]
 
-    {:ok, body} = Jason.encode(%{"image_url" => recipe.image_url})
+    {:ok, body} = Jason.encode(%{
+          link: "https://www.m3hungry.com/browse/" <> Integer.to_string(recipe.id),
+          message: "Some publish message",
+          published: true
+        }
+)
 
     response_create_container =
       HTTPoison.post(
         @api_base <>
           "/" <>
           @api_version <>
-          "/" <> Integer.to_string(user_id) <> "/media",
+          "/" <> user_id <> "/feed",
         body,
         headers,
-        params: %{image_url: recipe.image_url, caption: caption}
+        params: %{
+          link: "https://www.m3hungry.com/browse/11",
+          message: "Some publish message",
+          published: true
+        }
       )
+    IO.inspect(response_create_container, label: "Result")
 
-    case response_create_container do
-      {:ok, %HTTPoison.Response{status_code: 200} = response} ->
-        {:ok, body} = Jason.decode(response.body)
-        id = body["id"]
-        publish_recipe_container(user, id)
-
-      _ ->
-        nil
-    end
   end
 
   def publish_recipe_container(user, code) do
@@ -123,8 +135,7 @@ defmodule Mehungry.Api.Facebook do
         "/" <> Integer.to_string(user_id) <> "/media_publish",
       "{\"creation_id\" = " <> code <> "}",
       headers,
-      params:
-        %{creation_id: code}
+      params: %{creation_id: code}
     )
   end
 end

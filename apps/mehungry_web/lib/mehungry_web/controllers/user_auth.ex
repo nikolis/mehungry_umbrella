@@ -68,6 +68,27 @@ defmodule MehungryWeb.UserAuth do
   end
 
   @doc """
+  Deletes user.
+
+  It clears all session data for safety and deltes user. See renew_session.
+  """
+  def delete_user(conn) do
+    user_token = get_session(conn, :user_token)
+    user  = Accounts.get_user_by_session_token(user_token)
+    Accounts.delete_user(user)
+    user_token && Accounts.delete_session_token(user_token)
+    
+    if live_socket_id = get_session(conn, :live_socket_id) do
+      MehungryWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
+    end
+
+    conn
+    |> renew_session()
+    |> delete_resp_cookie(@remember_me_cookie)
+    |> redirect(to: "/")
+  end
+
+  @doc """
   Logs the user out.
 
   It clears all session data for safety. See renew_session.

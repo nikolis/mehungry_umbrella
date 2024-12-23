@@ -6,7 +6,7 @@ defmodule MehungryWeb.RecipeBrowserFeatureTest do
   alias Mehungry.Accounts
 
   describe "Recipe Browser Index" do
-    setup(%{session: session}) do 
+    setup(%{session: session}) do
       {session, user} = log_in(%{session: session})
       user_profile = Accounts.get_user_profile_by_user_id(user.id)
 
@@ -14,11 +14,14 @@ defmodule MehungryWeb.RecipeBrowserFeatureTest do
         user_profile,
         %{onboarding_level: 1}
       )
-     
+
       _recipe_3 = recipe_fixture(user, %{title: "Recipe 1"})
       _recipe_2 = recipe_fixture(user, %{title: "Recipe 6"})
       _recipe_4 = recipe_fixture(user, %{title: "Recipe 15", description: "Puta madre"})
-      _recipe_5 = recipe_fixture(user, %{title: "Recipe 12341", description: "adsfafdfdasdf asd "})
+
+      _recipe_5 =
+        recipe_fixture(user, %{title: "Recipe 12341", description: "adsfafdfdasdf asd "})
+
       recipe =
         recipe_fixture(user, %{
           title: "Recipe 2",
@@ -28,8 +31,11 @@ defmodule MehungryWeb.RecipeBrowserFeatureTest do
       {:ok, session: session, recipe: recipe, user: user}
     end
 
-    test "Test Listing Hashtag Recipes Viewing one and go back to listing", %{session: session, recipe: recipe, user: _user} do
-
+    test "Test Listing Hashtag Recipes Viewing one and go back to listing", %{
+      session: session,
+      recipe: recipe,
+      user: _user
+    } do
       link_id = "recipe-card-details-link-" <> Integer.to_string(recipe.id)
       query = Query.link(link_id)
 
@@ -52,7 +58,11 @@ defmodule MehungryWeb.RecipeBrowserFeatureTest do
       assert length(whatever) == 1
     end
 
-    test "Test Listing Recipes Viewing one and go back to listing", %{session: session, recipe: recipe, user: _user} do
+    test "Test Listing Recipes Viewing one and go back to listing", %{
+      session: session,
+      recipe: recipe,
+      user: _user
+    } do
       link_id = "recipe-card-details-link-" <> Integer.to_string(recipe.id)
       query = Query.link(link_id)
 

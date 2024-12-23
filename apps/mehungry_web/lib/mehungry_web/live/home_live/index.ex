@@ -37,11 +37,11 @@ defmodule MehungryWeb.HomeLive.Index do
      |> assign(:user, user)
      |> assign(:posts, posts)
      |> assign(:user_profile, user_profile)
-     |> assign(:page_title, "Food recipe feed")
      |> assign(:user_follows, user_follows)
      |> assign(:search_changeset, nil)
      |> assign(:query_string, "")
-     |> assign(:must_be_loged_in, nil)}
+     |> assign(:must_be_loged_in, nil)
+     |> assign(:page_title, "Browse Recipes")}
   end
 
   @impl true
@@ -132,7 +132,11 @@ defmodule MehungryWeb.HomeLive.Index do
 
     socket
     |> assign(:nutrients, nutrients)
-    |> assign(:page_title, recipe.title <> " Instructions and nutrition facts")
+    |> assign(:page_title, %{
+      title: recipe.title <> "Browse Recipes",
+      img: recipe.image_url,
+      id: Integer.to_string(recipe.id)
+    })
     |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
     |> assign(:user_recipes, user_recipes)

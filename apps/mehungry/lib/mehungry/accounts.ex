@@ -845,6 +845,9 @@ defmodule Mehungry.Accounts do
     |> Repo.update()
   end
 
+  def delete_user(%User{} = user) do 
+    Repo.delete(user)
+  end
   @doc """
   Deletes a user_profile.
 

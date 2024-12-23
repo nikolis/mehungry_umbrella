@@ -15,7 +15,6 @@ defmodule Mehungry.Food.RecipeHashtag do
 
   @doc false
   def changeset(recipe_ingredient, attrs) do
-
     recipe_ingredient
     # attrs = get_hashtags(attrs)
     # So its persisted

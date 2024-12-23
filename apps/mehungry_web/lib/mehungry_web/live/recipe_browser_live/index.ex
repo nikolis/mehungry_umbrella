@@ -355,7 +355,12 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       |> assign(:nutrients, nutrients)
       |> assign(:primary_size, primaries_length)
       |> assign(:recipe, recipe)
-      |> assign(:page_title, recipe.title <> " Instructions and nutrition facts")
+      |> assign(:page_title, recipe.title <> " Instrufacts")
+      |> assign(:page_title, %{
+        title: recipe.title <> " Instructions and nutrition facts",
+        img: recipe.image_url,
+        id: Integer.to_string(recipe.id)
+      })
       |> assign(:user_recipes, user_recipes)
       |> stream(:recipes, [])
 

@@ -55,7 +55,6 @@ defmodule Ueberauth.Strategy.Instagram do
   Handles the callback from Instagram.
   """
   def handle_callback!(%Plug.Conn{params: %{"code" => code}} = conn) do
-
     opts = [redirect_uri: callback_url(conn)]
     token = Ueberauth.Strategy.Instagram.OAuth.get_token!([code: code], opts).token
 
@@ -146,11 +145,11 @@ defmodule Ueberauth.Strategy.Instagram do
   end
 
   defp option(conn, key) do
-    default = Map.get(default_options(), key)
+    default = Keyword.get(default_options(), key)
 
     conn
     |> options
-    |> Map.get(key, default)
+    |> Keyword.get(key, default)
   end
 
   defp option(nil, conn, key), do: option(conn, key)

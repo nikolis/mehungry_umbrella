@@ -66,6 +66,7 @@ defmodule Mehungry.Api.Instagram do
 
     {:ok, token} = Jason.decode(get_response.body)
     token = Map.put(token, "user_id", instagram_user_id)
+
     Mehungry.Accounts.update_user_tokens(user, %{"instagram_token" => token})
   end
 
@@ -123,8 +124,7 @@ defmodule Mehungry.Api.Instagram do
         "/" <> Integer.to_string(user_id) <> "/media_publish",
       "{\"creation_id\" = " <> code <> "}",
       headers,
-      params:
-        %{creation_id: code}
+      params: %{creation_id: code}
     )
   end
 end

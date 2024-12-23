@@ -30,7 +30,11 @@ config :mehungry_web, MehungryWeb.Endpoint,
 config :ueberauth, Ueberauth,
   providers: [
     facebook:
-      {Ueberauth.Strategy.Facebook, [profile_fields: "name,email,first_name,last_name, picture", scope: "email, public_profile, ages_manage_posts, pages_manage_metadata, pages_manage_engagement, pages_manage_instant_articles, pages_show_list"]},
+      {Ueberauth.Strategy.Facebook,
+       [
+         profile_fields: "name,email,first_name,last_name, picture",
+         scope: "pages_manage_engagement, pages_manage_posts, pages_read_engagement "
+       ]},
     instagram:
       {Ueberauth.Strategy.Instagram,
        [

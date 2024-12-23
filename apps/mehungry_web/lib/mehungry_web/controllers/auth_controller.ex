@@ -17,7 +17,9 @@ defmodule MehungryWeb.AuthController do
     |> redirect(to: "/")
   end
 
-  def callback(%{assigns: %{ueberauth_failure: _fails}} = conn, _params) do
+  def callback(%{assigns: %{ueberauth_failure: fails}} = conn, _params) do
+    IO.inspect(fails, label: "Dilure")
+
     conn
     |> put_flash(:error, "Failed to authenticate.")
     |> redirect(to: "/")
@@ -40,13 +42,19 @@ defmodule MehungryWeb.AuthController do
   end
 
   def callback(%{assigns: %{ueberauth_auth: %{provider: :facebook} = auth}} = conn, _params) do
+    IO.inspect(auth, label: "Auth first")
 
     case Accounts.find_or_create(auth) do
       {:ok, user} ->
         UserAuth.log_in_user(conn, user, %{})
         IO.inspect(auth, label: "Facebook auth")
         token = auth.extra.raw_info.token.access_token
-         _token_save = Accounts.put_user_token(conn.assigns.current_user, token, "facebook")
+        # {:ok, decoded_token} = Jason.decode(auth.extra.raw_info.user)
+
+        IO.inspect(auth.extra.raw_info.user, labe: "afdadfs")
+        _token_save = Accounts.put_user_token(user, token, "facebook")
+        Mehungry.Api.Facebook.get_user_pages(user, token, auth.extra.raw_info.user["id"])
+
       {:error, reason} ->
         conn
         |> put_flash(:error, reason)
@@ -59,7 +67,6 @@ defmodule MehungryWeb.AuthController do
   end
 
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, _params) do
-
     case Accounts.find_or_create(auth) do
       {:ok, user} ->
         UserAuth.log_in_user(conn, user, %{})

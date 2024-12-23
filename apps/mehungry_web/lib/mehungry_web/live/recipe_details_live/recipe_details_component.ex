@@ -7,6 +7,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   alias Mehungry.Posts.Comment
   alias Mehungry.{Posts, Users, Food, Accounts}
   alias Mehungry.Api.Instagram
+  alias Mehungry.Api.Facebook
 
   embed_templates("components/*")
   @color_fill "#00A0D0"
@@ -14,6 +15,20 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   # cancel_comment_reply
   @impl true
   def handle_event("cancel_comment_reply", _, socket) do
+    socket =
+      socket
+      |> assign(:reply, nil)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("post-on-facebook", %{"recipe_id" => recipe_id, "user_id" => user_id}, socket) do
+    recipe = Food.get_recipe!(recipe_id)
+    user = Accounts.get_user!(user_id)
+
+    Facebook.post_recipe_container(user, recipe)
+
     socket =
       socket
       |> assign(:reply, nil)
@@ -173,6 +188,16 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             >
               Instagram Post
             </button>
+            <button
+              class="px-4 rounded-md py-1"
+              phx-target={@myself}
+              phx-click="post-on-facebook"
+              phx-value-recipe_id={@recipe.id}
+              phx-value-user_id={@user.id}
+            >
+              Facebook Post
+            </button>
+
           <% else %>
             <.user_overview_card user={@recipe.user} user_follows={@user_follows} />
           <% end %>

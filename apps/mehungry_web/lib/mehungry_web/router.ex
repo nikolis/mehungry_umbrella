@@ -122,6 +122,13 @@ defmodule MehungryWeb.Router do
   ## Authentication routes
 
   scope "/", MehungryWeb do
+    pipe_through [:browser]
+
+    live "/privacy_policy", PrivacyPolicyLive, :index
+
+  end
+
+  scope "/", MehungryWeb do
     pipe_through [:browser, :maybe_require_authenticated_user]
 
     live_session :maybe, on_mount: MehungryWeb.MaybeUserAuthLive do
@@ -164,6 +171,8 @@ defmodule MehungryWeb.Router do
     pipe_through [:browser]
 
     get "/users/log_out", UserSessionController, :delete
+    get "/users/delete", UserSessionController, :delete_user
+
     get "/users/confirm", UserConfirmationController, :new
     post "/users/confirm", UserConfirmationController, :create
     get "/users/confirm/:token", UserConfirmationController, :edit
