@@ -28,6 +28,10 @@ defmodule Mehungry.Users do
     "Absolute fun" => 2
   }
 
+  def calculate_recipe_grading(nil, user) do
+    0
+  end
+
   def calculate_recipe_grading(recipe, user) do
     recipe_grade =
       RecipeUtils.calculate_recipe_ingredient_categories_array(recipe)

@@ -24,7 +24,6 @@ Hooks.FocusHook = {
 }
 
 
-
 Hooks.ViewportResizeHooks = {
 
   mounted () {
@@ -76,10 +75,12 @@ Hooks.ScrolledIntoEndOfScreen = {
 
 
 Hooks.SelectComponent = {
-
   mounted() {
     this.ref = this.el;
     const refAt = this.ref.getAttribute("data-reference-id")
+    console.log(refAt )
+    console.log("afdsfads")
+
     const originalID = this.el.id
     const referenceIndex = this.ref.getAttribute("data-reference-index")
 
@@ -109,6 +110,7 @@ Hooks.SelectComponent = {
     });
   }
 }
+
 
 
 

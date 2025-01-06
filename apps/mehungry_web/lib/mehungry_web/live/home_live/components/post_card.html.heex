@@ -1,6 +1,6 @@
 <div
   style="background: white; "
-  class="sm:w-2/4 m-auto  p-4  mt-2 rounded-xl "
+  class="sm:w-2/6 m-auto  p-4  mt-2 rounded-xl max-w-4/12"
   style="border-bottom: 1px solid var(--clr-grey-friend_2);"
   id={"post_card_"<> Integer.to_string(@id)}
 >
@@ -13,13 +13,10 @@
   />
 
   <div class="m-auto relative">
-    <div class="" id="adfsafds">
-      <h3 class="text-lg font-semibold px-8 text-center"><%= @post.reference.title %></h3>
-
+    <div class="" id={Integer.to_string(@post.id)}>
       <div class="w-full m-auto relative bg-greyfriend1">
-        <.post_card_interaction post={@post} user={@user} />
         <.link
-          id={"link-to-recipe-#{@post.reference_id}"}
+          id={"card-link-to-recipe-#{@post.reference_id}"}
           class="block  "
           patch={~p"/show_recipe/#{@post.reference_id}"}
         >
@@ -27,7 +24,34 @@
         </.link>
       </div>
     </div>
-    <.recipe_tags recipe={@post.reference} />
-    <.recipe_attrs_container recipe={@post.reference} />
+
+    <div class="relative flex gap-2 py-1">
+      <.recipe_like_container2
+        type="browse"
+        user_recipes={@current_user_recipes}
+        recipe={@post.reference}
+        id={@id}
+        myself={@self()}
+      />
+      <div class="my-auto">
+        <.icon name="hero-chat-bubble-oval-left" class="h-7 w-7 flex-none text-black		" />
+      </div>
+      <div class="my-auto realtive">
+        <.share_button post={@post}></.share_button>
+      </div>
+    </div>
+    <div class="font-semibold"><%= length(@post.reference.user_recipes) %> likes</div>
+    <div>
+      <span class="text-base font-bold text-center">
+        <%= @post.reference.title %>
+      </span>
+      <span>
+        <.get_recipe_description
+          description={@post.reference.description}
+          recipe={@post.reference}
+        />
+      </span>
+    </div>
+    <!-- <.recipe_attrs_container recipe={@post.reference} /> -->
   </div>
 </div>

@@ -1,10 +1,10 @@
-defmodule MehungryWeb.SelectComponentSingle2 do
+defmodule MehungryWeb.SelectComponentSingle3 do
   use MehungryWeb, :live_component
 
   @impl true
   def render(assigns) do
     ~H"""
-    <div class=" flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-4 sm:col-span-2 h-full max-h-18	 overflow-hidden">
+    <div class=" bg-red flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-4 sm:col-span-2 h-full max-h-18	 overflow-hidden">
       <!-- modal trigger -->
       <!-- hidden toggle -->
       <%= if @selected_items do %>
@@ -27,44 +27,41 @@ defmodule MehungryWeb.SelectComponentSingle2 do
       <% else %>
         <div class="h-full w-full border-2 rounded-lg relative border-greyfriend2">
           <label
-            for={"tw-modal" <> Integer.to_string(@form.index)}
             phx-click={
-              JS.focus(
-                to: "#select_component" <> Integer.to_string(@form.index) <> "ingredient_idinnder"
+              JS.show(to: "#modal-ingr" <> Integer.to_string(@form.index))
+              |> JS.focus(
+                to:
+                  "#select_component" <>
+                    Integer.to_string(@form.index) <>
+                    "ingredient_idinnder"
               )
             }
-            )
             class="active:bg-transparent h-full w-full absolute top-0 bottom-0 left-0 right-0  cursor-pointer  rounded  text-greyfriend3  "
           >
           </label>
         </div>
       <% end %>
-
-      <input
-        tabindex="-1"
-        type="checkbox"
-        phx-change="other"
-        id={"tw-modal" <> Integer.to_string(@form.index)   }
-        ref-input={Integer.to_string(@form.index)}
-        class="peer fixed appearance-none opacity-0 hidden"
-      />
       <!-- modal -->
-      <label
-        phx-click={
-          JS.focus(to: "#select_component" <> Integer.to_string(@form.index) <> "ingredient_idinnder")
-        }
-        )
-        for={"tw-modal" <> Integer.to_string(@form.index)}
-        class="z-40 pointer-events-none invisible fixed inset-0 flex cursor-pointer items-center justify-center overflow-hidden overscroll-contain bg-slate-700/30 opacity-0 transition-all duration-200 ease-in-out peer-checked:pointer-events-auto peer-checked:visible peer-checked:opacity-100 peer-checked: [&>*]:translate-y-0 peer-checked:[&>*]:scale-100"
+      <dialog
+        class="z-50 fixed top-0 bottom-0  open:bg-grey bg-red"
+        id={"modal-ingr" <> Integer.to_string(@form.index)}
       >
-        <!-- modal box -->
-        <dialog
-          open
-          class="max-h-[calc(100vh -5 em)] h-5/6 sm:h-4/6 md:h-3/6  w-full  max-w-lg scale-90 overflow-y-auto overscroll-contain rounded-md bg-white p-6 text-black shadow-2xl transition"
+        <div
+          id={"modal-background-bg" <> Integer.to_string(@form.index)}
+          class="bg-zinc-50/90 fixed inset-0 transition-opacity"
+          aria-hidden="true"
+        />
+
+        <.focus_wrap
+          phx-window-keydown={JS.hide(to: "#modal-ingr" <> Integer.to_string(@form.index))}
+          phx-key="escape"
+          phx-click-away={JS.hide(to: "#modal-ingr" <> Integer.to_string(@form.index))}
+          id={"my-modal" <> Integer.to_string(@form.index)}
+          class="h-full"
+          autofocus
         >
-          <div class="fixed  top-0 bottom-0 right-0 left-0 bg-white p-6" style="">
-            <!--- modal content -->
-            <h3 class="p-2 text-center">Search ingredient</h3>
+          <div class="bg-white relative py-8 px-14 rounded-lg min-h-40 pb-20">
+            <h3 class="mb-4">Search Ingredient</h3>
             <.live_component
               module={MehungryWeb.SelectComponentSingle}
               form={@form}
@@ -73,10 +70,17 @@ defmodule MehungryWeb.SelectComponentSingle2 do
               input_variable="ingredient_id"
               id={"ingredient_search_component" <> Integer.to_string(@form.index)}
             />
-            <!-- modal  content -->
+
+            <button
+              phx-click={JS.hide(to: "#modal-ingr" <> Integer.to_string(@form.index))}
+              class="absolute top-1 right-1"
+            >
+              <.icon name="hero-x-mark" class=" h-5 w-5" />
+            </button>
           </div>
-        </dialog>
-      </label>
+        </.focus_wrap>
+        <!-- modal  content -->
+      </dialog>
     </div>
     """
   end

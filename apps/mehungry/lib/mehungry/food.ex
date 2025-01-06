@@ -433,7 +433,7 @@ defmodule Mehungry.Food do
     # assign the `after` cursor to a variable
     cursor_after = metadata.after
 
-    results = Repo.preload(entries, [:recipe_ingredients, :user])
+    results = Repo.preload(entries, [:recipe_ingredients, :user, :user_recipes])
 
     result =
       Enum.map(results, fn rec ->

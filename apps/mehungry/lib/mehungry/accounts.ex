@@ -845,9 +845,67 @@ defmodule Mehungry.Accounts do
     |> Repo.update()
   end
 
-  def delete_user(%User{} = user) do 
+  def delete_user(%User{} = user) do
+    query =
+      from r in Mehungry.Food.Recipe,
+        where: r.user_id == ^user.id
+
+    all_recipes = Repo.all(query) |> Repo.preload([:recipe_ingredients, :comments])
+
+    Enum.each(all_recipes, fn x ->
+      Enum.each(x.recipe_ingredients, fn y ->
+        Repo.delete(y)
+      end)
+
+      Enum.each(x.comments, fn z ->
+        Repo.delete_all(from c_a in Mehungry.Posts.CommentAnswer, where: c_a.comment_id == ^z.id)
+        Repo.delete(z)
+      end)
+
+      Repo.delete(x)
+    end)
+
+    Repo.delete_all(from u_m in Mehungry.History.UserMeal, where: u_m.user_id == ^user.id)
+
+    baskets =
+      Repo.all(from bas in Mehungry.Inventory.ShoppingBasket, where: bas.user_id == ^user.id)
+      |> Repo.preload(:basket_ingredients)
+
+    Enum.each(baskets, fn x ->
+      Repo.delete_all(
+        from b_i in Mehungry.Inventory.BasketIngredient, where: b_i.shopping_basket_id == ^x.id
+      )
+
+      Repo.delete(x)
+    end)
+
+    Repo.delete_all(
+      from profile in Mehungry.Accounts.UserProfile, where: profile.user_id == ^user.id
+    )
+
+    comments =
+      Repo.all(from comment in Mehungry.Posts.Comment, where: comment.user_id == ^user.id)
+
+    Enum.each(comments, fn x ->
+      Repo.delete_all(from co_vo in Mehungry.Posts.CommentVote, where: co_vo.comment_id == ^x.id)
+      Repo.delete_all(from co_do in Mehungry.Posts.PostDownvote, where: co_do.comment_id == ^x.id)
+      Repo.delete_all(from co_up in Mehungry.Posts.PostUpvote, where: co_up.comment_id == ^x.id)
+
+      Repo.delete_all(
+        from co_an in Mehungry.Posts.CommentAnswer, where: co_an.comment_id == ^x.id
+      )
+
+      Repo.delete(x)
+    end)
+
+    Repo.delete_all(from do_up in Mehungry.Posts.PostDownvote, where: do_up.user_id == ^user.id)
+    Repo.delete_all(from co_vo in Mehungry.Posts.CommentVote, where: co_vo.user_id == ^user.id)
+
+    Repo.delete_all(from co_up in Mehungry.Posts.PostUpvote, where: co_up.user_id == ^user.id)
+
     Repo.delete(user)
   end
+
   @doc """
   Deletes a user_profile.
 

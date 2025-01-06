@@ -31,7 +31,7 @@ input[type="file"] {
 .inner_utils  {
   background-color: #6464644d !important;
   backdrop-filter: blur(10px) !important;
-  backdrop-filter: brightness(60%) !important;
+  backdrop-filter: brightness(100%) !important;
 
   padding: 0.5rem;
   border-radius: 100px;
@@ -52,11 +52,11 @@ input[type="file"] {
   border-radius: var(--border-radius-smooth);
   padding: 2rem;
   --input_height: 50px;
-  --input_color: #f73378;
-  display: flex;
-  flex-direction: column;
+  --input_color: #f73378; 
   justify-content: center;
-  perspective: 1000px;
+  flex-direction: column;
+  /* perspective: 1000px; */
+  display: flex;
 }
 
 .drop-container

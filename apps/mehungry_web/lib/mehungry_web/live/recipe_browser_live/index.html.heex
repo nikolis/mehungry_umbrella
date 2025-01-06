@@ -44,7 +44,7 @@
         <%= for {dom_id, recipe} <- @streams.recipes do %>
           <RecipeComponents.recipe_card
             recipe={recipe}
-            user_recipes={@user_recipes}
+            user_recipes={@current_user_recipes}
             return_to={@return_to}
             path_to_details={~p"/browse/#{recipe.id}"}
             id={dom_id}
@@ -75,7 +75,7 @@
         primary_size={@primary_size}
         nutrients={@nutrients}
         recipe={@recipe}
-        user_recipes={@user_recipes}
+        user_recipes={@current_user_recipes}
         user={@current_user}
         user_follows={@current_user_follows}
         page_title={"Recipe #{@recipe.title}"}

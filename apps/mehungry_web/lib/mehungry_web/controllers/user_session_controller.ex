@@ -30,5 +30,4 @@ defmodule MehungryWeb.UserSessionController do
     |> put_flash(:info, "Logged out successfully.")
     |> UserAuth.log_out_user()
   end
-
 end

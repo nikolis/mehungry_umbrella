@@ -197,7 +197,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             >
               Facebook Post
             </button>
-
           <% else %>
             <.user_overview_card user={@recipe.user} user_follows={@user_follows} />
           <% end %>

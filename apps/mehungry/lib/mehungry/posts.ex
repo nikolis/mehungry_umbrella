@@ -30,6 +30,7 @@ defmodule Mehungry.Posts do
       :downvotes,
       # comments: [:user],
       reference: [
+        :user_recipes,
         :user,
         recipe_ingredients: [:ingredient],
         comments: [:user],
@@ -47,6 +48,7 @@ defmodule Mehungry.Posts do
       # comments: [:user],
       reference: [
         :user,
+        :user_recipes,
         recipe_hashtags: [:hashtag],
         recipe_ingredients: [:ingredient],
         comments: [:user]

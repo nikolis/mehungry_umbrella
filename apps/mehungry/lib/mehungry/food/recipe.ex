@@ -29,6 +29,7 @@ defmodule Mehungry.Food.Recipe do
     field :nutrients, :map, default: %{}
 
     has_many :ratings, Rating
+    has_many :user_recipes, Mehungry.Accounts.UserRecipe
     has_one :post, Mehungry.Posts.Post
 
     belongs_to :user, User

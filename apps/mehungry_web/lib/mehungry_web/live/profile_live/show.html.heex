@@ -72,18 +72,20 @@
           /> Logout
         </button>
       </.link>
-      <.link patch={~p"/users/delete"} phx-click={JS.push_focus()} data-confirm="Are you sure you wan't to completely erase your account ?"] >
+      <.link
+        patch={~p"/users/delete"}
+        phx-click={JS.push_focus()}
+        data-confirm="Are you sure you wan't to completely erase your account ?"
+        ]
+      >
         <button
           class="border-2 px-4  rounded-full border-red-600 hover:bg-greyfriend3 hover:text-white h-full text-md sm:text-xl text-red-600"
           type="button"
         >
-          <.icon
-            name="hero-trash"
-            class="w-6 h-6 sm:h-7 sm:w-7 flex-none "
-          /> Delete Account
+          <.icon name="hero-trash" class="w-6 h-6 sm:h-7 sm:w-7 flex-none " /> Delete Account
         </button>
       </.link>
- 
+
       <a
         class=" text-center flex items-center  rounded-full"
         style="height: 3rem; background-color: white; color: black"
@@ -95,7 +97,7 @@
   "
         >
           <span class="w-full text-center font-normal" style="color:  #1F1F1F;">
-           Connect to Instagram
+            Connect to Instagram
           </span>
         </div>
       </a>

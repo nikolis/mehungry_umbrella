@@ -5,7 +5,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
   import MehungryWeb.RecipeComponents
 
-  use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
+  # use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
@@ -26,11 +26,15 @@ defmodule MehungryWeb.HomeLive.Index do
       end
 
     posts = Mehungry.Posts.list_posts(user)
-    {user_profile, user_follows, _user_recipes} = Accounts.get_user_essentials(user)
+
+    posts = Enum.filter(posts, fn x -> !is_nil(x) end)
+    {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
 
     Enum.each(posts, fn post ->
       Posts.subscribe_to_post(%{post_id: post.id})
     end)
+
+    IO.inspect("HOme live")
 
     {:ok,
      socket
@@ -38,6 +42,7 @@ defmodule MehungryWeb.HomeLive.Index do
      |> assign(:posts, posts)
      |> assign(:user_profile, user_profile)
      |> assign(:user_follows, user_follows)
+     |> assign(:current_user_recipes, user_recipes)
      |> assign(:search_changeset, nil)
      |> assign(:query_string, "")
      |> assign(:must_be_loged_in, nil)
@@ -49,26 +54,34 @@ defmodule MehungryWeb.HomeLive.Index do
     {:noreply, assign(socket, :must_be_loged_in, nil)}
   end
 
-  @impl true
-  def handle_event(
-        "save_user_recipe_dets",
-        %{"recipe_id" => recipe_id, "dom_id" => _dom_id},
-        socket
-      ) do
-    case is_nil(socket.assigns.user) do
-      true ->
-        {:noreply, assign(socket, :must_be_loged_in, 1)}
+  defp get_recipe_description(assigns) do
+    terms = String.split(assigns.description, " ")
 
-      false ->
-        {recipe_id, _ignore} = Integer.parse(recipe_id)
-        toggle_user_saved_recipes(socket, recipe_id)
-        user_recipes = Users.list_user_saved_recipes(socket.assigns.user)
-        user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
-        # socket = stream_delete(socket, :recipes, recipe)
-        # socket = stream_insert(socket, :recipes, recipe)
-        socket = assign(socket, :user_recipes, user_recipes)
-        {:noreply, socket}
-    end
+    {hashtags, other} =
+      Enum.split_with(terms, fn x ->
+        case String.at(x, 0) == "#" do
+          true ->
+            true
+
+          false ->
+            false
+        end
+      end)
+
+    Enum.map(hashtags, fn x ->
+      %{hashtag: %{title: x}}
+    end)
+
+    assigns = Map.put(assigns, :description, other)
+
+    ~H"""
+    <span class=" flex gap-2  flex-wrap">
+      <div class="w-full break-words	"><%= @description %></div>
+      <%= for tag <- @recipe.recipe_hashtags do %>
+        <.recipe_tag hashtag={tag.hashtag} />
+      <% end %>
+    </span>
+    """
   end
 
   def handle_event("react", %{"type_" => type, "id" => post_id}, socket) do
@@ -89,26 +102,20 @@ defmodule MehungryWeb.HomeLive.Index do
     end
   end
 
-  def toggle_user_saved_recipes(socket, recipe_id) do
-    case is_nil(socket.assigns.user) do
-      true ->
-        assign(socket, :must_be_loged_in, 1)
-
-      false ->
-        case Enum.any?(socket.assigns.user_recipes, fn x -> x == recipe_id end) do
-          true ->
-            Users.remove_user_saved_recipe(socket.assigns.user.id, recipe_id)
-
-          false ->
-            Users.save_user_recipe(socket.assigns.user.id, recipe_id)
-        end
-    end
-  end
-
   defp apply_action(socket, :index, _params) do
     maybe_track_user(%{}, socket)
 
     socket
+  end
+
+  defp apply_action(socket, :share_social_media, %{"id" => id}) do
+    maybe_track_user(%{}, socket)
+
+    recipe = Food.get_recipe!(id)
+    Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
+
+    socket
+    |> assign(:recipe, recipe)
   end
 
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
@@ -139,7 +146,7 @@ defmodule MehungryWeb.HomeLive.Index do
     })
     |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
-    |> assign(:user_recipes, user_recipes)
+    |> assign(:current_user_recipes, user_recipes)
   end
 
   @impl true
@@ -155,6 +162,28 @@ defmodule MehungryWeb.HomeLive.Index do
     {:noreply,
      socket
      |> assign(:user_profile, user_profile)}
+  end
+
+  @impl true
+  def handle_info(
+        {MehungryWeb.SocialMediaPostComponent, %{post_result: results} = parameters},
+        socket
+      ) do
+    results =
+      Enum.map(results, fn {name, status, body} ->
+        {:ok, body} = Jason.decode(body)
+        {name, status, body["error"]["message"]}
+      end)
+
+    IO.inspect(results, label: "Result")
+
+    send_update(MehungryWeb.SocialMediaPostComponent, %{
+      state: :result,
+      results: results,
+      id: "recipe_social_media_component"
+    })
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -196,6 +225,7 @@ defmodule MehungryWeb.HomeLive.Index do
     end
   end
 
+  """
   def get_style(item_list, user, get_attr) do
     has =
       case is_nil(user) or is_nil(item_list) or Enum.empty?(item_list) do
@@ -246,4 +276,5 @@ defmodule MehungryWeb.HomeLive.Index do
         "#FFFFFF"
     end
   end
+  """
 end

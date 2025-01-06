@@ -42,23 +42,18 @@
 
 .drop_down {
 	position: absolute;
-	padding: 0.5rem;
  	display: none;
-	grid-template-rows: 3fr 4fr;
 	gap: 15px;
 	z-index: 5;
 	background-color: white;
-	padding: 1em;
 	font-weight: bold;
 	font-size: 0.65em;
   text-align: left;
-	right: 30px;
-	top: 60px;
 	border-radius: 5%;
         box-shadow:  0px 0 5px 0 grey;
 }
+
 .drop_down_home {
-  height: fit-content;
 	position: absolute;
  	display: none;
 	gap: 15px;
@@ -66,29 +61,25 @@
 	background-color: white;
 	font-weight: 500;
 	font-size: 1.25em;
-  text-align: left;
-	right: 0px;
-	top: 0px;
-  width: 200px;
 	border-radius: 5%;
   box-shadow:  0px 0 5px 0 grey;
   margin: auto;
 }
 
-
 .drop_down_visible {
-   display: grid;
-   height: fit-content;
-   backdrop-filter: blur(10px);
-   backdrop-filter: brightness(40%);
-   background-color: rgb(255 255 255 / 30%);
+   top: 0;
+   left: 30px;
+   width: fit_content;
+   display: flex;
+   height: 40px;
+   backdrop-filter: blur(2px);
+   backdrop-filter: brightness(80%);
+   background-color: rgb(255 255 255 / 10%);
 }
 
 .drop_down_open {
 	position: absolute;
-	padding: 0.5rem;
- 	display: grid;
-	grid-template-rows: 3fr 4fr;
+ 	display: flex;
 	gap: 15px;
 	z-index: 5;
 	background-color: white;
@@ -96,10 +87,10 @@
 	font-weight: bold;
 	font-size: 0.65em;
   text-align: left;
-	right: 30px;
-	top: 60px;
+	right: 60px;
+	top: 0px;
 	border-radius: 5%;
-        box-shadow:  0px 0 5px 0 grey;
+  box-shadow:  0px 0 5px 0 grey;
 }
 
 .drop_down_container {	

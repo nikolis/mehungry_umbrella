@@ -49,7 +49,6 @@ defmodule MehungryWeb.SelectComponentSingle do
               value=""
               name={"search_input" <> @id}
               myself={@myself}
-              autofocus
               type="select_component"
               class=" text-sm flex-grow py-4 px-4 outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all  w-full max-h-12"
               id={@id <> "innder"}
@@ -66,7 +65,6 @@ defmodule MehungryWeb.SelectComponentSingle do
              bg-white absolute left-0 bottom-100 
               bg-white z-50 max-h-52 shadow-lg"
             >
-              <div id={@id<> "face"}></div>
               <%= if @listing_open do %>
                 <%= for {x, index} <- Enum.with_index(@items_filtered) do %>
                   <!-- Item Element -->
@@ -75,7 +73,10 @@ defmodule MehungryWeb.SelectComponentSingle do
                       <%= if index == 0  do %>
                         <li
                           class="h-full hover:bg-amber-200 cursor-pointer bg-white px-1 leading-4 "
-                          phx-click="handle-item-click"
+                          phx-click={
+                            JS.hide(to: "#modal-ingr" <> Integer.to_string(@form.index))
+                            |> JS.push("handle-item-click")
+                          }
                           phx-value-id={x.id}
                           id={Integer.to_string(x.id)}
                           phx-target={@myself}
@@ -86,7 +87,10 @@ defmodule MehungryWeb.SelectComponentSingle do
                       <% else %>
                         <li
                           class="h-full hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white px-1 leading-4 "
-                          phx-click="handle-item-click"
+                          phx-click={
+                            JS.hide(to: "#modal-ingr" <> Integer.to_string(@form.index))
+                            |> JS.push("handle-item-click")
+                          }
                           phx-value-id={x.id}
                           id={Integer.to_string(x.id)}
                           phx-target={@myself}
@@ -242,6 +246,8 @@ defmodule MehungryWeb.SelectComponentSingle do
       socket
       |> assign(:selected_items, nil)
 
+    IO.inspect(socket.form.index, label: "SElected iems clicked withv")
+
     {:noreply,
      push_event(
        socket,
@@ -257,6 +263,7 @@ defmodule MehungryWeb.SelectComponentSingle do
     selected_item = Enum.find(socket.assigns.items_filtered, fn x -> x.id == id end)
 
     # selected_item = %{label: socket.assigns.label_function.(selected_item), id: selected_item.id}
+    IO.inspect(socket.assigns.form.index, label: "Hnalde normal clicked")
 
     socket =
       socket

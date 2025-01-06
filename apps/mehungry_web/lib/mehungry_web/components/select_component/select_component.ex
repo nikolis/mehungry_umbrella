@@ -7,16 +7,15 @@ defmodule MehungryWeb.SelectComponent do
     <div
       class="col-span-2"
       data-reference-id={@input_variable}
-      data-reference-index={@form.index}
       phx-hook="SelectComponent"
-      id={"select_component"<> Integer.to_string(@form.index) <> @input_variable }
+      id={"select_component"<>  @input_variable }
     >
       <.input field={@form[String.to_atom(@input_variable)]} type="hidden" />
       <div
         class="w-full max-w-lg "
         phx-click-away="close-listing"
         phx-target={@myself}
-        id={"select-item" <> Integer.to_string(@form.index) <> @input_variable }
+        id={"select-item"<> @input_variable }
       >
         <!-- Start Component -->
         <div class="relative">
@@ -44,9 +43,7 @@ defmodule MehungryWeb.SelectComponent do
                   phx-target={@myself}
                   field={
                     @form[
-                      String.to_atom(
-                        "search_input" <> Integer.to_string(@form.index) <> @input_variable
-                      )
+                      String.to_atom("search_input" <> @input_variable)
                     ]
                   }
                   type="text"
@@ -82,7 +79,7 @@ defmodule MehungryWeb.SelectComponent do
                         class="hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
                         phx-click="handle-item-click"
                         phx-value-id={x.id}
-                        id={Integer.to_string(x.id)}
+                        id={x.id}
                         phx-target={@myself}
                       >
                         <%= x.label %>
@@ -224,10 +221,11 @@ defmodule MehungryWeb.SelectComponent do
   end
 
   def handle_event("handle-item-click", %{"id" => id}, socket) do
-    {id, _} = Integer.parse(id)
+    # {id, _} = Integer.parse(id)
 
     selected_item = Enum.find(socket.assigns.items, fn x -> x.id == id end)
     selected_items = socket.assigns.selected_items ++ [selected_item]
+    IO.inspect(selected_items)
 
     socket =
       socket
@@ -237,9 +235,8 @@ defmodule MehungryWeb.SelectComponent do
     {:noreply,
      push_event(
        socket,
-       "selected_id" <>
-         Integer.to_string(socket.assigns.form.index) <> socket.assigns.input_variable,
-       %{id: id}
+       "selected_id" <> socket.assigns.input_variable,
+       %{id: Enum.map(selected_items, fn x -> x.id end)}
      )}
   end
 end

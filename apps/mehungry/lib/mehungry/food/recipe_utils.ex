@@ -339,4 +339,8 @@ defmodule Mehungry.Food.RecipeUtils do
 
     Enum.uniq(ingredients_table)
   end
+
+  def calculate_recipe_ingredient_categories_array(nil) do
+    []
+  end
 end

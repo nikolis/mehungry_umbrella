@@ -79,45 +79,38 @@ defmodule Mehungry.Api.Facebook do
     path <> params
   end
 
-  def post_recipe_container(user, recipe) do
-    # token = Accounts.get_user_tokens(user, "instagram")
-    {_name, token} = Enum.at(user.facebook_token,  0)
-    IO.inspect(token)
-    user_id = Map.get(token, "id", "")
-    access_token = Map.get(token, "access_token", "")
+  def post_recipe_container(user, recipe, page) do
+    user_id = Map.get(page, "id", "")
+    access_token = Map.get(page, "access_token", "")
 
+    # caption = get_recipe_caption(recipe)
 
-    #caption = get_recipe_caption(recipe)
-  
     headers = [
       Authorization: "Bearer #{access_token}",
       Accept: "Application/json; Charset=utf-8",
       image_url: recipe.image_url
     ]
 
-    {:ok, body} = Jason.encode(%{
-          link: "https://www.m3hungry.com/browse/" <> Integer.to_string(recipe.id),
-          message: "Some publish message",
-          published: true
-        }
-)
+    {:ok, body} =
+      Jason.encode(%{
+        link: "https://www.m3hungry.com/browse/" <> Integer.to_string(recipe.id),
+        message: "Some publish message",
+        published: true
+      })
 
-    response_create_container =
-      HTTPoison.post(
-        @api_base <>
-          "/" <>
-          @api_version <>
-          "/" <> user_id <> "/feed",
-        body,
-        headers,
-        params: %{
-          link: "https://www.m3hungry.com/browse/11",
-          message: "Some publish message",
-          published: true
-        }
-      )
-    IO.inspect(response_create_container, label: "Result")
-
+    HTTPoison.post!(
+      @api_base <>
+        "/" <>
+        @api_version <>
+        "/" <> user_id <> "/feed",
+      body,
+      headers,
+      params: %{
+        link: "https://www.m3hungry.com/browse/11",
+        message: "Some publish message",
+        published: true
+      }
+    )
   end
 
   def publish_recipe_container(user, code) do
