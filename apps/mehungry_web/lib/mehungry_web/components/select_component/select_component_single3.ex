@@ -18,7 +18,7 @@ defmodule MehungryWeb.SelectComponentSingle3 do
           >
             <div class="h-full flex flex-col  justify-center p-1">
               <div class="self-center text-ellipsis text-center overflow-hidden px-1 leading-4">
-                <.get_label label={Mehungry.Utils.remove_parenthesis(@selected_items.label)} />
+                <.get_label label={Mehungry.Utils.remove_parenthesis(@selected_items.name)} />
               </div>
             </div>
             <.icon name="hero-x-mark" class="absolute right-1 top-1  z-20 opacity-70 h-3 w-3" />

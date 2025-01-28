@@ -154,7 +154,7 @@ defmodule MehungryWeb.SelectComponentSingle do
       case Map.get(assigns, :label_function) do
         nil ->
           fn x ->
-            Mehungry.Utils.remove_parenthesis(x.name)
+            x.name
           end
 
         label_f ->
@@ -168,6 +168,15 @@ defmodule MehungryWeb.SelectComponentSingle do
         assigns,
         get_by_id_func
       )
+
+    IO.inspect(selected_items, label: "Selected itemes ")
+
+    selected_items =
+      if is_nil(selected_items) do
+        nil
+      else
+        %{label: label_function.(selected_items), id: selected_items.id}
+      end
 
     {items, items_filtered} =
       if is_nil(selected_items) do

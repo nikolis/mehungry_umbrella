@@ -9,6 +9,22 @@ The postgres password for the dev part is the default postgres postgres.
 3. mix ecto.migrate 
 4. mix run apps/mehungry/priv/repo/seeds.exs
 
+## Coding Guidelines 
+### Build Live Components with a clear division between View (Render) and Update Code 
+### Build Live Components View part be defining it's function in the order that they are invoked from the invoking function starting with the render
+
+## Custom Components 
+### Search Select   
+[Contribution guidelines for this project](diagrams/SelectComponentDataFlow.jpg)
+
+As can be shown by the diagram the Form id the middle man and holds all the necessary information. 
+
+So we are limited buy the limitations of the relevant html components and their cappabilities of foldind data, we could not just have the form submit array data for multiple selected items, this can only happen through modifications in the data after they leave the form. 
+
+
+
+    
+
 After this the test for the parser should be running properly
 
 ## Case Study -> Posts 

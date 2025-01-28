@@ -17,12 +17,10 @@ Hooks.Copy = {
   },
 }
 
-
 Hooks.FocusHook = {
   mounted() {
   }
 }
-
 
 Hooks.ViewportResizeHooks = {
 
@@ -78,8 +76,6 @@ Hooks.SelectComponent = {
   mounted() {
     this.ref = this.el;
     const refAt = this.ref.getAttribute("data-reference-id")
-    console.log(refAt )
-    console.log("afdsfads")
 
     const originalID = this.el.id
     const referenceIndex = this.ref.getAttribute("data-reference-index")
@@ -92,12 +88,23 @@ Hooks.SelectComponent = {
       event_listener = "phx:selected_id"+ refAt
     }
     window.addEventListener(event_listener, (e) => {
-      console.log("On the click")
+      console.log("Event Listener")
       let el = document.getElementById(originalID)
+      console.log("Parent elemtn")
       console.log(el)
+      console.log("Parent elem")
       for (const child of this.el.children) {
+        console.log(child.tagName)
+        console.log(child)
         if(child.id !=null && child.id.includes(refAt)){
             if(child.tagName == "INPUT"){
+              
+              child.value = e.detail.id
+              console.log(e.detail.id)
+              console.log(child.tagName)
+              console.log("-------------------111")
+              console.log(child.value)
+              console.log("---------------------2222")
       			  $("#" + child.id).val(e.detail.id).change()
               var ret = child.dispatchEvent(new Event("input", {
                   bubbles: true,

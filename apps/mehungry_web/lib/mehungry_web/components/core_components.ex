@@ -1040,6 +1040,19 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
+  def input(%{type: "select_plain"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name}>
+      <input
+        id={@id}
+        name={@name}
+        class="hidden rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	h-full w-full  text-greyfriend3 font-semibold"
+        ,
+      />
+    </div>
+    """
+  end
+
   def input(%{type: "select"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
