@@ -10,12 +10,13 @@ The postgres password for the dev part is the default postgres postgres.
 4. mix run apps/mehungry/priv/repo/seeds.exs
 
 ## Coding Guidelines 
-### Build Live Components with a clear division between View (Render) and Update Code 
-### Build Live Components View part be defining it's function in the order that they are invoked from the invoking function starting with the render
+- Follow Default Creado guidelines 
+- Build Live Components with a clear division between View (Render) and Update Code 
+- Build Live Components View part be defining it's function in the order that they are invoked from the invoking function starting with the render
 
 ## Custom Components 
-### Search Select   
-[Contribution guidelines for this project](diagrams/SelectComponentDataFlow.jpg)
+![Alt text](diagrams/SelectComponentDataFlow.jpg?raw=true "Select Diagram")
+
 
 As can be shown by the diagram the Form id the middle man and holds all the necessary information. 
 
