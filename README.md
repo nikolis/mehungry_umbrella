@@ -1,5 +1,15 @@
 # Mehungry.Umbrella
 
+## Deployment 
+### Database 
+    - Engine PostgreSQL
+    - Provider AwsRDS
+### Application 
+    - Docker 
+    - Github Actions
+    - AWS ECR 
+    - AWS ECS 
+
 ## Documentating the Food Data Parser resigning in apps/Mehungry/lib/mehungry/food_data_parser.ex 
 (this is a toy project so the documentation for the time being is just for the context of the interview process)
 
