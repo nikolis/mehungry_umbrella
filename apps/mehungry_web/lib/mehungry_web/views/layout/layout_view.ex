@@ -17,8 +17,6 @@ defmodule MehungryWeb.LayoutView do
     <.main_menu current_user={@current_user} query_string={@query_string} />
     <.mobile_menu current_user={@current_user} query_string={@query_string} />
     """
-
-    # query_string={@changeset.changes.query_string} />
   end
 
   def sidebar_nav_links(assigns) do

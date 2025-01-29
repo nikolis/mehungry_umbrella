@@ -68,7 +68,14 @@ defmodule MehungryWeb.LiveHelpers do
         recipe = Food.get_recipe!(recipe_id)
         socket = assign(socket, :user_recipes, user_recipes)
         socket = assign(socket, :current_user_recipes, user_recipes)
-        socket = stream_insert(socket, :recipes, recipe)
+
+        socket =
+          if is_nil(Map.get(socket.assigns, :streams, nil)) do
+            socket
+          else
+            socket = stream_insert(socket, :recipes, recipe)
+          end
+
         {:noreply, socket}
       end
 
@@ -86,7 +93,6 @@ defmodule MehungryWeb.LiveHelpers do
       def handle_info(%{new_comment: comment}, socket) do
         recipe = socket.assigns.recipe
         recipe = Mehungry.Food.get_recipe!(recipe.id)
-        IO.inspect(comment, label: "Recieved comment in lhelpres ")
 
         recipe = %Recipe{
           recipe

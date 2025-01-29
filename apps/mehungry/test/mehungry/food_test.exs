@@ -45,9 +45,20 @@ defmodule Mehungry.FoodTest do
 
       recipe_params =
         @create_params_recipe
-        |> Enum.into(%{recipe_ingredients: ingredients, user_id: user.id})
+        |> Enum.into(%{
+          recipe_ingredients: ingredients,
+          user_id: user.id,
+          cooking_time_lower_limit: 15,
+          preperation_time_lower_limit: 15,
+          difficulty: 1,
+          description: "#greek_cusine"
+          # recipe_hashtags: [%{hashtag: %{title: "greek_cusine"}}]
+        })
 
-      assert _recipe = Food.create_recipe(recipe_params)
+      result = Food.create_recipe(recipe_params)
+      {:ok, recipe} = result
+      _recipe = Food.get_recipe_no_caching!(recipe.id)
+      # assert _recipe = Food.create_recipe(recipe_params)
     end
 
     test "Create Recipe with invalid arguments should provide feedback", %{
@@ -87,6 +98,13 @@ defmodule Mehungry.FoodTest do
       assert changeset.errors == [
                {:recipe_ingredients, {"can't be blank", [validation: :required]}}
              ]
+    end
+
+    test "Test recipe search_hashtag", %{user: user} do
+      _recipe = recipe_fixture(user, %{description: "some description with #hashtag"})
+      _recipe2 = recipe_fixture(user, %{description: "some description"})
+      result = Food.search_hashtag("hashtag")
+      assert length(result.recipe_hashtags) == 1
     end
   end
 

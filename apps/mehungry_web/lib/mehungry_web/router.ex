@@ -7,6 +7,7 @@ defmodule MehungryWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug Plug.CSRFProtection
     plug :fetch_live_flash
     plug :put_root_layout, {MehungryWeb.LayoutView, :root}
     plug :protect_from_forgery
@@ -59,8 +60,6 @@ defmodule MehungryWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
-      live "/select", SelectAlpineLive, :index
-
       live "/profile", ProfileLive.Index, :index
       live "/profile/edit", ProfileLive.Index, :edit
       live "/basket", ShoppingBasketLive.Index, :index
@@ -76,16 +75,8 @@ defmodule MehungryWeb.Router do
 
       live "/stepper", CreateRecipeLive.Show, :show
       live "/create_recipe", CreateRecipeLive.Index, :index
-
-      live "/create_recipe/:form_id/add_ingredient/:index",
-           CreateRecipeLive.Index,
-           :add_ingredient
-
       live "/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit
 
-      live "/create_recipe/add_ingredient", CreateRecipeLive.Index, :add_ingredient
-      live "/create_recipe/:temp_id/edit_ingredient", CreateRecipeLive.Index, :edit_ingredient
-      live "/create_recipe/:uuid/delete_ingredient", CreateRecipeLive.Index, :delete_ingredient
       live "/survey", SurveyLive, :index
       live "/admin-dashboard", Admin.DashboardLive
 
@@ -110,27 +101,6 @@ defmodule MehungryWeb.Router do
       live "/comment_answers/:id", CommentAnswerLive.Show, :show
       live "/comment_answers/:id/show/edit", CommentAnswerLive.Show, :edit
     end
-
-    live "/ingredients", IngredientLive.Index, :index
-    live "/ingredients/new", IngredientLive.Index, :new
-    live "/ingredients/:id/edit", IngredientLive.Index, :edit
-
-    live "/ingredients/:id", IngredientLive.Show, :show
-    live "/ingredients/:id/show/edit", IngredientLive.Show, :edit
-
-    live "/categories", CategoryLive.Index, :index
-    live "/categories/new", CategoryLive.Index, :new
-    live "/categories/:id/edit", CategoryLive.Index, :edit
-
-    live "/categories/:id", CategoryLive.Show, :show
-    live "/categories/:id/show/edit", CategoryLive.Show, :edit
-
-    live "/measurement_units", MeasurementUnitLive.Index, :index
-    live "/measurement_units/new", MeasurementUnitLive.Index, :new
-    live "/measurement_units/:id/edit", MeasurementUnitLive.Index, :edit
-
-    live "/measurement_units/:id", MeasurementUnitLive.Show, :show
-    live "/measurement_units/:id/show/edit", MeasurementUnitLive.Show, :edit
   end
 
   # Enables LiveDashboard only for development
@@ -152,6 +122,12 @@ defmodule MehungryWeb.Router do
   ## Authentication routes
 
   scope "/", MehungryWeb do
+    pipe_through [:browser]
+
+    live "/privacy_policy", PrivacyPolicyLive, :index
+  end
+
+  scope "/", MehungryWeb do
     pipe_through [:browser, :maybe_require_authenticated_user]
 
     live_session :maybe, on_mount: MehungryWeb.MaybeUserAuthLive do
@@ -163,8 +139,12 @@ defmodule MehungryWeb.Router do
       live "/profile/show_recipe/:recipe_id", ProfileLive.Index, :show_recipe
 
       live "/show_recipe/:id", HomeLive.Index, :show_recipe
+      live "/share_social_media/:id", HomeLive.Index, :share_social_media
 
+      live "/search/", RecipeBrowserLive.Index, :index
       live "/search/:query", RecipeBrowserLive.Index, :index
+      live "/search/hashtag/:hashtag", RecipeBrowserLive.Index, :index
+
       # live "/browse/:origin/:id", RecipeDetailsLive.Index, :index
       # live "/browse_prepop/:search_term", :searc_prepop
     end
@@ -191,6 +171,8 @@ defmodule MehungryWeb.Router do
     pipe_through [:browser]
 
     get "/users/log_out", UserSessionController, :delete
+    get "/users/delete", UserSessionController, :delete_user
+
     get "/users/confirm", UserConfirmationController, :new
     post "/users/confirm", UserConfirmationController, :create
     get "/users/confirm/:token", UserConfirmationController, :edit

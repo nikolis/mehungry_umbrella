@@ -30,9 +30,6 @@ defmodule MehungryWeb.Searchable do
         {address, agent} = get_address_agent(socket)
         socket = assign(socket, :address, address)
         socket = assign(socket, :agent, agent)
-
-        socket = assign(socket, :search_changeset, nil)
-
         socket = assign(socket, :search_changeset, nil)
         socket = assign(socket, :query_string, "")
         mount_search(params, session, socket)

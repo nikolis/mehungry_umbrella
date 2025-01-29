@@ -124,19 +124,6 @@ defmodule MehungryWeb.CalendarLive.Index do
     |> assign(:recipes, list_recipes(nil))
   end
 
-  def handle_event("toggle_basket", %{"view" => view}, socket) do
-    socket =
-      case view do
-        "week_view" ->
-          assign(socket, :calendar_view, "week_view")
-
-        "day_view" ->
-          assign(socket, :calendar_view, "day_view")
-      end
-
-    {:noreply, socket}
-  end
-
   @impl true
   def handle_params(params, uri, socket) do
     socket = assign(socket, :path, uri)
@@ -170,6 +157,19 @@ defmodule MehungryWeb.CalendarLive.Index do
   @impl true
   def handle_event("date-details", %{"date" => start_date}, socket) do
     {:noreply, push_patch(socket, to: "/calendar/details/#{start_date}", replace: true)}
+  end
+
+  def handle_event("toggle_basket", %{"view" => view}, socket) do
+    socket =
+      case view do
+        "week_view" ->
+          assign(socket, :calendar_view, "week_view")
+
+        "day_view" ->
+          assign(socket, :calendar_view, "day_view")
+      end
+
+    {:noreply, socket}
   end
 
   def handle_event("delete_user_meal", %{"id" => meal_id}, socket) do

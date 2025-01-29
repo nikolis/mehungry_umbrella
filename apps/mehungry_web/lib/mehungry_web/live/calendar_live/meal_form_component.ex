@@ -70,27 +70,11 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     {:ok, init(socket, base_user_meal, default_attrs)}
   end
 
-  def handle_event("new_recipe", _params, socket) do
-    socket =
-      update(socket, :form, fn %{source: changeset} ->
-        existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
-        changeset = Ecto.Changeset.put_assoc(changeset, :recipe_user_meals, existing ++ [%{}])
-        to_form(changeset)
-      end)
-
-    {:noreply, socket}
-  end
-
   defp init(socket, base, default_attrs) do
-    IO.inspect(base,
-      label:
-        "Base -----------------------------------------------------------------------------------------------------"
-    )
-
     changeset = UserMeal.changeset(base, default_attrs)
     existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
 
-    if(length(existing) == 0) do
+    if Enum.empty?(existing) do
       changeset = Ecto.Changeset.put_assoc(changeset, :recipe_user_meals, [%{}])
 
       assign(socket,
@@ -119,6 +103,17 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
 
   def handle_event("submit", %{"user_meal" => user_meal_params}, socket) do
     save_user_meal(socket, socket.assigns.live_action, user_meal_params)
+  end
+
+  def handle_event("new_recipe", _params, socket) do
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
+        changeset = Ecto.Changeset.put_assoc(changeset, :recipe_user_meals, existing ++ [%{}])
+        to_form(changeset)
+      end)
+
+    {:noreply, socket}
   end
 
   @impl true

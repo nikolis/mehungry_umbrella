@@ -2,7 +2,7 @@ defmodule MehungryWeb.VisitLive.Index do
   use MehungryWeb, :live_view
 
   alias Mehungry.Meta
-  alias Mehungry.Meta.Visit
+  # alias Mehungry.Meta.Visit
 
   @impl true
   def mount(_params, _session, socket) do

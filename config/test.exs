@@ -18,8 +18,17 @@ config :mehungry, Mehungry.Repo,
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :mehungry_web, MehungryWeb.Endpoint,
-  http: [port: 4002],
-  server: false
+  http: [port: 4000],
+  server: true
+
+config :mehungry, :sql_sandbox, true
+
+# Chrome
+# default
+config :wallaby, opt_app: :mehungry_web, chromedriver: [headless: false], driver: Wallaby.Chrome
+
+# Selenium
+# config :wallaby, driver: Wallaby.Selenium
 
 # Print only warnings and errors during test
 config :logger, level: :warning

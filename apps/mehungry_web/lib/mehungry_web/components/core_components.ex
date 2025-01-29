@@ -81,21 +81,43 @@ defmodule MehungryWeb.CoreComponents do
         )
       }
     >
-      <.icon name="hero-share" class="stroke-white h-7 w-8 flex-none text-white " />
+      <.icon name="hero-share" class="stroke-white h-7 w-7 " />
       <div
         phx-hook="Copy"
-        class="drop_down_home w-24 inner_utils "
-        data-to="#control-codes"
+        class="drop_down_home  inner_utils m-auto pr-4"
+        data-to={"#control-codes" <> Integer.to_string(@post.id)}
         id={"share_items_list"<> Integer.to_string(@post.id)}
       >
         <input
           type="text"
           class="hidden"
-          id="control-codes"
+          id={"control-codes"<> Integer.to_string(@post.id)}
           value={~p"/show_recipe/#{Integer.to_string(@post.reference_id)}"}
         />
+        <.icon
+          name="hero-link"
+          style="width: 40px;"
+          class="m-auto h-7 w-9 bg-white  text-white cursor-pointer"
+        />
 
-        <.icon name="hero-link" class="h-7 w-7 bg-white flex-none text-white cursor-pointer" />
+        <img
+          src="/images/instagram-svgrepo-com.svg"
+          width="full"
+          class="m-auto h-7 w-10   text-white cursor-pointer bg-transparent overflow-hidden"
+        />
+
+        <.link
+          id={"link-to-recipe-#{@post.reference_id}"}
+          class="block w-full overflow-hidden"
+          style="width: 50px;"
+          patch={~p"/share_social_media/#{@post.reference_id}"}
+        >
+          <img
+            src="/images/facebook-svgrepo-com (1).svg"
+            width="full"
+            class="m-auto h-7 w-10  text-white cursor-pointer bg-transparent inline w-full"
+          />
+        </.link>
       </div>
     </div>
     """
@@ -213,10 +235,66 @@ defmodule MehungryWeb.CoreComponents do
           <div class="text-sm leading-4">
             <%= "#{count_user_created_recipes(@user.id)} posted recipes" %>
           </div>
+          <div class="text-sm leading-4">
+            <%= "#{count_user_created_recipes(@user.id)} posted recipesfasdafsdafsafsd" %>
+          </div>
         </div>
       </div>
     </div>
     """
+  end
+
+  def get_post_age(%Mehungry.Posts.Post{} = post) do
+    diff = NaiveDateTime.diff(NaiveDateTime.local_now(), post.updated_at, :second)
+    IO.inspect(diff)
+    "23m"
+    get_diff(diff)
+  end
+
+  5500
+
+  defp get_diff(diff) do
+    if diff < 60 do
+      Integer.to_string(round(diff)) <> "s"
+    else
+      get_diff(diff / 60, "min")
+    end
+  end
+
+  defp get_diff(diff, "min") do
+    if diff < 60 do
+      Integer.to_string(round(diff)) <> "m"
+    else
+      get_diff(diff / 60, "hour")
+    end
+  end
+
+  defp get_diff(diff, "hour") do
+    if diff < 24 do
+      Integer.to_string(round(diff)) <> "h"
+    else
+      get_diff(diff / 24, "day")
+    end
+  end
+
+  defp get_diff(diff, "day") do
+    if diff < 7 do
+      Integer.to_string(round(diff)) <> "d"
+    else
+      get_diff(diff / 7, "week")
+    end
+  end
+
+  defp get_diff(diff, "week") do
+    if diff < 4 do
+      Integer.to_string(round(diff)) <> "w"
+    else
+      get_diff(diff / 4, "month")
+    end
+  end
+
+  defp get_diff(diff, "month") do
+    Integer.to_string(round(diff)) <> "m"
   end
 
   @doc """
@@ -228,6 +306,9 @@ defmodule MehungryWeb.CoreComponents do
           user: %Mehungry.Accounts.User{} = _user
         } = assigns
       ) do
+    post = Map.get(assigns, :post, nil)
+    assigns = Map.put(assigns, :post, post)
+
     ~H"""
     <div style="margin-bottom: 0.75rem; " class="w-full ">
       <div class=" flex gap-2 w-11/12 m-auto sm:w-full m-0 ">
@@ -245,6 +326,9 @@ defmodule MehungryWeb.CoreComponents do
           <div class="text-sm font-bold leading-4">
             <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
               <%= @user.email %>
+              <%= if not is_nil(@post) do %>
+                <span class="font-normal text-greyfriend3"><%= get_post_age(@post) %></span>
+              <% end %>
             </.link>
             <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
             </div>
@@ -254,25 +338,21 @@ defmodule MehungryWeb.CoreComponents do
           </div>
         </div>
         <%= if @user.id in @user_follows do %>
-          <div class="my-auto self-end w-fit relative mx-2">
-            <button
-              class="primary_button_complementary px-2 py-1 text-sm sm:text-xl sm:px-4 sm:py-2"
-              phx-click="save_user_follow"
-              phx-value-follow_id={@user.id}
-            >
-              Following
-            </button>
-          </div>
+          <button
+            class="text-primary font-semibold  text-sm sm:text-xl "
+            phx-click="save_user_follow"
+            phx-value-follow_id={@user.id}
+          >
+            Following
+          </button>
         <% else %>
-          <div class="mt-auto mb-auto self-end">
-            <button
-              class="primary_button px-2 py-1 text-sm sm:text-xl sm:px-4 sm:py-2"
-              phx-click="save_user_follow"
-              phx-value-follow_id={@user.id}
-            >
-              Follow
-            </button>
-          </div>
+          <button
+            class="text-complementary font-semibold  text-sm sm:text-xl "
+            phx-click="save_user_follow"
+            phx-value-follow_id={@user.id}
+          >
+            Follow
+          </button>
         <% end %>
       </div>
     </div>
@@ -349,7 +429,7 @@ defmodule MehungryWeb.CoreComponents do
     <div class="self-end m-auto">
       <a
         href={~p"/users/log_in"}
-        class="primary_button px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-bold h-full w-full"
+        class="primary_button px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-semibold h-full w-full"
         phx-click="save_user_follow"
         phx-value-follow_id={@user.id}
       >
@@ -374,7 +454,7 @@ defmodule MehungryWeb.CoreComponents do
     <% else %>
       <div class="self-end m-auto">
         <button
-          class="primary_button px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-bold h-full w-full"
+          class="primary_button px-2 py-1  sm:px-4 sm:py-3 m-auto sm:font-semibold h-full w-full"
           phx-click="save_user_follow"
           phx-value-follow_id={@user.id}
         >
@@ -956,6 +1036,19 @@ defmodule MehungryWeb.CoreComponents do
         />
       </button>
       <!-- <button type="submit" class="primary_button" phx-disable-with="Saving...">Post</button> --->
+    </div>
+    """
+  end
+
+  def input(%{type: "select_plain"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name}>
+      <input
+        id={@id}
+        name={@name}
+        class="hidden rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	h-full w-full  text-greyfriend3 font-semibold"
+        ,
+      />
     </div>
     """
   end

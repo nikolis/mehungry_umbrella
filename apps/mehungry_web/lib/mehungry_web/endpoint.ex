@@ -1,6 +1,10 @@
 defmodule MehungryWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :mehungry_web
 
+  if Application.compile_env(:mehungry, :sql_sandbox) do
+    plug Phoenix.Ecto.SQL.Sandbox
+  end
+
   use Phoenix.VerifiedRoutes,
     endpoint: MehungryWeb.Endpoint,
     router: MehungryWeb.Router

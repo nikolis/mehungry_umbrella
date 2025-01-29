@@ -28,8 +28,6 @@ defmodule Mehungry.Repo.Migrations.AddNutritionMetaToRecipes do
     Enum.each(recipes, fn recipe ->
       {primary_size, nutrients} = Mehungry.Food.RecipeUtils.get_nutrients(recipe)
 
-      IO.inspect(primary_size)
-
       nutrients =
         nutrients
         |> Enum.map(fn x -> Map.new([{x.name, x}]) end)

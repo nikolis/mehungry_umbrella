@@ -25,7 +25,7 @@
     for={@changeset}
     phx-change="validate"
     phx-submit="save"
-    class="the_form2 the_form max-h-full overflow-clip  p-2 sm:p-6 sm:pt-2 flex md:gap-8 flex-col mx-auto mb-14 "
+    class="the_form2 the_form max-h-full overflow-clip  p-2 sm:p-6 sm:pt-2 flex md:gap-8 flex-col mx-auto mb-14 relative"
     style=""
   >
     <div
@@ -108,7 +108,7 @@
           </.inputs_for>
           <button
             id="add_ingredient"
-            class="bg-primary   fixed bottom-0 md:absolute md:bottom-0 right-3 rounded-full"
+            class="bg-primary absolute bottom-0  md:bottom-0 right-3 rounded-full"
             type="button"
             style="color: black;"
             phx-click="add-ingredient"
@@ -141,7 +141,7 @@
           <button
             id="some_id"
             type="button"
-            class="bg-complementary  fixed bottom-0 rounded-full md:absolute md:-bottom-0 right-3"
+            class="bg-complementary absolute bottom-0 rounded-full  md:-bottom-0 right-3"
             phx-click="add-step"
           >
             <svg

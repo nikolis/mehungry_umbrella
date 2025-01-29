@@ -28,6 +28,12 @@ defmodule MehungryWeb.SelectComponentSingle2 do
         <div class="h-full w-full border-2 rounded-lg relative border-greyfriend2">
           <label
             for={"tw-modal" <> Integer.to_string(@form.index)}
+            phx-click={
+              JS.focus(
+                to: "#select_component" <> Integer.to_string(@form.index) <> "ingredient_idinnder"
+              )
+            }
+            )
             class="active:bg-transparent h-full w-full absolute top-0 bottom-0 left-0 right-0  cursor-pointer  rounded  text-greyfriend3  "
           >
           </label>
@@ -44,11 +50,18 @@ defmodule MehungryWeb.SelectComponentSingle2 do
       />
       <!-- modal -->
       <label
+        phx-click={
+          JS.focus(to: "#select_component" <> Integer.to_string(@form.index) <> "ingredient_idinnder")
+        }
+        )
         for={"tw-modal" <> Integer.to_string(@form.index)}
         class="z-40 pointer-events-none invisible fixed inset-0 flex cursor-pointer items-center justify-center overflow-hidden overscroll-contain bg-slate-700/30 opacity-0 transition-all duration-200 ease-in-out peer-checked:pointer-events-auto peer-checked:visible peer-checked:opacity-100 peer-checked: [&>*]:translate-y-0 peer-checked:[&>*]:scale-100"
       >
         <!-- modal box -->
-        <label class="max-h-[calc(100vh -5 em)] h-5/6 sm:h-4/6 md:h-3/6 mx-4 w-full  max-w-lg scale-90 overflow-y-auto overscroll-contain rounded-md bg-white p-6 text-black shadow-2xl transition ">
+        <dialog
+          open
+          class="max-h-[calc(100vh -5 em)] h-5/6 sm:h-4/6 md:h-3/6  w-full  max-w-lg scale-90 overflow-y-auto overscroll-contain rounded-md bg-white p-6 text-black shadow-2xl transition"
+        >
           <div class="fixed  top-0 bottom-0 right-0 left-0 bg-white p-6" style="">
             <!--- modal content -->
             <h3 class="p-2 text-center">Search ingredient</h3>
@@ -62,7 +75,7 @@ defmodule MehungryWeb.SelectComponentSingle2 do
             />
             <!-- modal  content -->
           </div>
-        </label>
+        </dialog>
       </label>
     </div>
     """
@@ -86,9 +99,6 @@ defmodule MehungryWeb.SelectComponentSingle2 do
     # sub_script = String.replace(sub_script, first, "")
     assigns = Map.put(assigns, :sub_script, sub_script)
     assigns = Map.put(assigns, :first, first)
-
-    IO.inspect(assigns.first, label: "First")
-    IO.inspect(assigns.sub_script, label: "Sub script")
 
     ~H"""
     <div>
@@ -214,8 +224,6 @@ defmodule MehungryWeb.SelectComponentSingle2 do
     {id, _} = Integer.parse(id)
 
     selected_item = Enum.find(socket.assigns.items_filtered, fn x -> x.id == id end)
-
-    # selected_item = %{label: socket.assigns.label_function.(selected_item), id: selected_item.id}
 
     socket =
       socket

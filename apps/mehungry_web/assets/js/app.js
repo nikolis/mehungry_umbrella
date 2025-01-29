@@ -13,7 +13,11 @@ import { Hooks } from './hooks.js'
 import { Uploaders } from './uploaders.js'
 import { multiselect } from './select.js';
 
-
+window.addEventListener("phx:js-exec", ({detail}) => {
+  document.querySelectorAll(detail.to).forEach(el => {
+      liveSocket.execJS(el, el.getAttribute(detail.attr))
+  })
+})
 
 
 function toggleMenu() {

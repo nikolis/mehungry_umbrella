@@ -3,10 +3,8 @@
   ,
   id={"recipe_ingredients" <> to_string(@g.index)}
 >
-  <%= hidden_input(@g, :delete) %>
-
   <.live_component
-    module={MehungryWeb.SelectComponentSingle2}
+    module={MehungryWeb.SelectComponentSingle3}
     form={@g}
     item_function={fn x -> Mehungry.Food.search_ingredient_alt(x) end}
     get_by_id_func={fn x -> Mehungry.Food.get_ingredient!(x) end}
@@ -15,11 +13,11 @@
   />
 
   <.live_component
-    module={MehungryWeb.SelectComponentSingleMemory}
+    module={MehungryWeb.SelectComponent}
+    items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
     form={@g}
-    items={@measurement_units}
-    input_variable="measurement_unit_id"
     id={"measurement_unit_search_component" <> Integer.to_string(@g.index)}
+    input_variable={:measurement_unit_id}
   />
 
   <div class="field input-form col-span-2 sm:col-span-1">

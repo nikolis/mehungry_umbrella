@@ -1,7 +1,6 @@
 defmodule MehungryWeb.SearchLive.Index do
   use MehungryWeb, :live_component
 
-  alias Mehungry.Inventory
   alias Mehungry.Search.RecipeSearchItem
   alias Mehungry.Food.Recipe
   alias Mehungry.Food
@@ -19,15 +18,6 @@ defmodule MehungryWeb.SearchLive.Index do
      |> assign(:query_string, query_string)
      |> assign(assigns)
      |> assign_changeset()}
-  end
-
-  def handle_event("delete_basket", %{"id" => basket_id}, socket) do
-    bs = Inventory.get_shopping_basket!(basket_id)
-    Inventory.delete_shopping_basket(bs)
-
-    {:noreply,
-     socket
-     |> assign(:shopping_basket, nil)}
   end
 
   @impl true

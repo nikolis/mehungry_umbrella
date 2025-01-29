@@ -29,7 +29,13 @@ defmodule Mehungry.Posts do
       :upvotes,
       :downvotes,
       # comments: [:user],
-      reference: [:user, recipe_ingredients: [:ingredient], comments: [:user]]
+      reference: [
+        :user_recipes,
+        :user,
+        recipe_ingredients: [:ingredient],
+        comments: [:user],
+        recipe_hashtags: [:hashtag]
+      ]
     ])
   end
 
@@ -40,7 +46,13 @@ defmodule Mehungry.Posts do
       :upvotes,
       :downvotes,
       # comments: [:user],
-      reference: [:user, recipe_ingredients: [:ingredient], comments: [:user]]
+      reference: [
+        :user,
+        :user_recipes,
+        recipe_hashtags: [:hashtag],
+        recipe_ingredients: [:ingredient],
+        comments: [:user]
+      ]
     ])
     |> Enum.map(fn x ->
       {x, Users.calculate_recipe_grading(x.reference, user)}

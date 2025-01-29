@@ -88,7 +88,9 @@ defmodule MehungryApi.HistoryTest do
       assert {:ok, %UserMeal{} = user_meal} = History.create_user_meal(valid_attrs)
 
       user_meal =
-        Mehungry.Repo.preload(user_meal, recipe_user_meals: [recipe: [:recipe_ingredients]])
+        Mehungry.Repo.preload(user_meal,
+          recipe_user_meals: [recipe: [:recipe_ingredients, :recipe_hashtags]]
+        )
 
       recipes_r = Enum.map(user_meal.recipe_user_meals, fn x -> x.recipe end)
       assert recipes_r == [recipe_0, recipe]
@@ -121,7 +123,9 @@ defmodule MehungryApi.HistoryTest do
       assert {:ok, %UserMeal{} = user_meal} = History.create_user_meal(valid_attrs)
 
       user_meal =
-        Mehungry.Repo.preload(user_meal, recipe_user_meals: [recipe: [:recipe_ingredients]])
+        Mehungry.Repo.preload(user_meal,
+          recipe_user_meals: [recipe: [:recipe_ingredients, :recipe_hashtags]]
+        )
 
       recipes_r = Enum.map(user_meal.recipe_user_meals, fn x -> x.recipe end)
       assert recipes_r == [recipe_0, recipe]
@@ -130,7 +134,9 @@ defmodule MehungryApi.HistoryTest do
       assert NaiveDateTime.diff(user_meal.start_dt, ~U[2022-02-14 16:50:00Z]) == 0
 
       user_meal =
-        Mehungry.Repo.preload(user_meal, recipe_user_meals: [recipe: [:recipe_ingredients]])
+        Mehungry.Repo.preload(user_meal,
+          recipe_user_meals: [recipe: [:recipe_ingredients, :recipe_hashtags]]
+        )
 
       [recipes_r | _rest] = Enum.map(user_meal.recipe_user_meals, fn x -> x.recipe end)
 

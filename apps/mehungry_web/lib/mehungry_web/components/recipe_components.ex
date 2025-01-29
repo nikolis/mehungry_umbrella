@@ -82,6 +82,7 @@ defmodule MehungryWeb.RecipeComponents do
                   type="button"
                   class=" flex-none p-2   hover:opacity-40 w-full h-full "
                   aria-label="close"
+                  id="close-recipe-modal"
                 >
                   <.icon name="hero-arrow-left" class="h-6 w-6 " />
                 </button>
@@ -300,26 +301,30 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_tags(assigns) do
     ~H"""
-    <div class="w-fit m-auto px-4 flex gap-2 my-2 flex-wrap">
-      <%= for recipe_ingredient <- Enum.slice(@recipe.recipe_ingredients, 0..4) do %>
-        <.recipe_tag ingredient={recipe_ingredient.ingredient} />
+    <div class=" m-auto px-4 flex gap-2 my-2 flex-wrap">
+      <%= for tag <- @recipe.recipe_hashtags do %>
+        <.recipe_tag hashtag={tag.hashtag} />
       <% end %>
     </div>
     """
   end
 
+  def recipe_tag(%{hashtag: %{title: nil}} = assigns),
+    do: ~H"""
+    """
+
   def recipe_tag(assigns) do
-    uri = ~p"/search/" <> Enum.at(String.split(assigns.ingredient.name, ","), 0)
+    uri = ~p"/search/hashtag/" <> assigns.hashtag.title
     assigns = assign(assigns, :uri, uri)
 
     ~H"""
     <a
       href={@uri}
-      class="cursor-pointer w-fit border-2 border-red border-solid rounded-full px-2 border-primaryl2"
-      id={Integer.to_string(@ingredient.id)}
+      class=" inline cursor-pointer w-fit border-2 border-red border-solid rounded-full px-2 border-primaryl2"
+      id={Integer.to_string(@hashtag.id)}
     >
-      <div class=" text-greyfriend3 text-base font-semibold">
-        <%= Enum.at(String.split(@ingredient.name, ","), 0) %>
+      <div class="inline text-greyfriend3 text-base font-semibold">
+        <%= @hashtag.title %>
       </div>
     </a>
     """
@@ -449,6 +454,48 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
+  def recipe_like_container2(%{myself: _myself} = assigns) do
+    ~H"""
+    <div class="bg-white  ">
+      <%= case @type do %>
+        <% "saved" -> %>
+          <button
+            phx-click="unsave-recipe"
+            phx-value-id={@recipe.id}
+            id={"button_save_recipe#{@recipe.id}"}
+          >
+            <.icon name="hero-trash-solid" class="h-5 w-5" />
+          </button>
+        <% "browse" -> %>
+          <svg
+            class="w-7 h-7"
+            viewBox="0 0 24 24"
+            fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
+            phx-click="save_user_recipe"
+            phx-target={@myself}
+            id={"svg-"<> Integer.to_string(@id)}
+            phx-value-recipe_id={@recipe.id}
+            phx-value-dom_id={@id}
+          >
+            <path
+              fill-rule="evenodd"
+              clip-rule="evenodd"
+              d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z"
+              stroke="#eb1111"
+              stroke-width="1"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        <% "created" -> %>
+          <button phx-click="edit-recipe" phx-value-id={@recipe.id}>
+            <.icon name="hero-pencil-square-solid" />
+          </button>
+      <% end %>
+    </div>
+    """
+  end
+
   def recipe_like_container(%{myself: _myself} = assigns) do
     ~H"""
     <div class="bg-white p-2 rounded-full absolute top-5 right-5 md:top-8 md:left-8 md:w-12 md:h-12 ">
@@ -469,7 +516,7 @@ defmodule MehungryWeb.RecipeComponents do
             fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
             phx-click="save_user_recipe"
             phx-target={@myself}
-            id={@id}
+            id={"svg-"<> (if is_integer(@id), do: Integer.to_string(@id), else: @id)}
             phx-value-recipe_id={@recipe.id}
             phx-value-dom_id={@id}
           >

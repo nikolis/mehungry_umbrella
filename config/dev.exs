@@ -48,6 +48,12 @@ config :mehungry_web, MehungryWeb.Endpoint,
   debug_errors: true,
   code_reloader: true,
   check_origin: false,
+  https: [
+    port: 4001,
+    cipher_suite: :strong,
+    keyfile: "priv/cert/selfsigned_key.pem",
+    certfile: "priv/cert/selfsigned.pem"
+  ],
   watchers: [
     esbuild:
       {Esbuild, :install_and_run,
@@ -74,3 +80,8 @@ config :phoenix, :plug_init_mode, :runtime
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
 config :phoenix, :stacktrace_depth, 20
+
+# Chrome
+config :wallaby,
+  screenshot_on_failure: true,
+  chromedriver: [headlesss: false]
