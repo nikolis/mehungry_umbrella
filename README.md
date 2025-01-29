@@ -17,18 +17,6 @@
 - [Documentation](apps/mehungry_web/README.md)
 ## Core App 
  - [Documentation](apps/mehungry/README.md)
-
-
-## Custom Components 
-![Alt text](diagrams/SelectComponentDataFlow.jpg?raw=true "Select Diagram")
-
-
-As can be shown by the diagram the Form id the middle man and holds all the necessary information. 
-
-So we are limited buy the limitations of the relevant html components and their cappabilities of foldind data, we could not just have the form submit array data for multiple selected items, this can only happen through modifications in the data after they leave the form. 
-
-
-
     
 
 After this the test for the parser should be running properly
