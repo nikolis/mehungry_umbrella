@@ -1,4 +1,12 @@
 # MehungryWeb
+## Custom Components 
+![Alt text](diagrams/SelectComponentDataFlow.jpg?raw=true "Select Diagram")
+
+
+As can be shown by the diagram the Form id the middle man and holds all the necessary information. 
+
+So we are limited buy the limitations of the relevant html components and their cappabilities of foldind data, we could not just have the form submit array data for multiple selected items, this can only happen through modifications in the data after they leave the form. 
+
 
 ## Navigation Highlighting 
 
