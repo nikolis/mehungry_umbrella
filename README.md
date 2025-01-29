@@ -15,7 +15,6 @@ The postgres password for the dev part is the default postgres postgres.
 
 ## Custom Components 
 ### Search Select   
-[Contribution guidelines for this project](diagrams/SelectComponentDataFlow.jpg)
 ![Alt text](diagrams/SelectComponentDataFlow.jpg?raw=true "Select Diagram")
 
 
