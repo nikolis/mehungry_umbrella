@@ -16,6 +16,8 @@ The postgres password for the dev part is the default postgres postgres.
 ## Custom Components 
 ### Search Select   
 [Contribution guidelines for this project](diagrams/SelectComponentDataFlow.jpg)
+![Alt text](diagrams/SelectComponentDataFlow.jpg?raw=true "Select Diagram")
+
 
 As can be shown by the diagram the Form id the middle man and holds all the necessary information. 
 
