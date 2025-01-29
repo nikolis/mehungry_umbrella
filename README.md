@@ -15,7 +15,6 @@ The postgres password for the dev part is the default postgres postgres.
 - Build Live Components View part be defining it's function in the order that they are invoked from the invoking function starting with the render
 
 ## Custom Components 
-### Search Select   
 ![Alt text](diagrams/SelectComponentDataFlow.jpg?raw=true "Select Diagram")
 
 
