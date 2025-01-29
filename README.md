@@ -13,8 +13,10 @@
 - Follow Default Creado guidelines 
 - Build Live Components with a clear division between View (Render) and Update Code 
 - Build Live Components View part be defining it's function in the order that they are invoked from the invoking function starting with the render
-## Web app documentation
-- [Web](apps/README.md)
+## Web App
+- [Documentation](apps/mehungry_web/README.md)
+## Core App 
+ - [Documentation](apps/mehungry/README.md)
 
 
 ## Custom Components 
