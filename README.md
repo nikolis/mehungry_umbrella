@@ -35,15 +35,18 @@ When there is a need to get value from a series of sources and return the first 
     ```
 ## Testing 
 ### Unit Tests
- Ex Unit 
-### Integration tests
-  Integration tests verify that different modules or services used by your application work well together.
+  Ex Unit 
+### Integration tests / Smoke Test
+  The domain of the integration/smoke tests in the context of phoenix application can be well represented through the tests genereted by a the generators whenever we use them to generate a new Module. 
+
+### Regression Tests 
+  Regression tests should be more related to the app's domain ex_unit ConnCase along with LiveViewTests  could still do the job, idealy whatever evades the basic Apis CRUD etc .. though would be hierarchically differentiated so that it only runs in the case that all the Previous Layer(Integration/Smoke) Tests are sucessfull 
 
 ### Functional tests
-  Functional tests focus on the business requirements of an application. They only verify the output of an action and do not check the intermediate states of the system when performing that action.
+  When it comes to functional tests for a phoenix application in the context of LiveViews the only promising approach looks like is wallaby and thus we use wallaby Tests to perform Functional Tests in the context of this project. Ideally this would still layered on top of the previous test layer and thus only run through a sucessfull pass of all Regression Tests 
 
 ### End-to-end tests
-End-to-end testing replicates a user behavior with the software in a complete application environment. It verifies that various user flows work as expected and can be as simple as loading a web page or logging in or much more complex scenarios verifying email notifications, online payments, etc...
+  ...
 
 ### Performance testing
  In the context of the Phoenix Live Views it seem that there is no dominating trend on the approach when it comes to Load Testing/Performance Testing.
