@@ -21,7 +21,7 @@
 #### Hierarchical Selection
 When there is a need to get value from a series of sources and return the first that is currently not nil that some times arise when working with custome ui elements on forms and changes etc. The code could be stadardized like the following
 - Put the values in a tuple {first-degree, second-degee, thrid-degree}
-    '''
+    ```
     case tuple do 
         {nil, nil, nil } ->
           whatever 
@@ -32,7 +32,7 @@ When there is a need to get value from a series of sources and return the first 
         {first-degree, _, _} ->
           third-degree
      end 
-    '''
+    ```
 ## Testing 
 
 ## Web App
