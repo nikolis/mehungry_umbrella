@@ -48,9 +48,9 @@ End-to-end testing replicates a user behavior with the software in a complete ap
 ### Performance testing
  In the context of the Phoenix Live Views it seem that there is no dominating trend on the approach when it comes to Load Testing/Performance Testing.
 - [phoenix liveview load testing](https://elixirforum.com/t/phoenix-liveview-load-testing-2024/62331)
-- [phoenix liveview telemetry] (https://elixirforum.com/t/understanding-liveview-telemetry-events-for-load-performance-testing-w-artillery-and-playwright/64192)
-- [phoenix liveview load test with flame ?] (https://elixirforum.com/t/is-flame-well-suited-for-load-testing/61758)
-- [phoenix testing with tsung ?] (https://elixirforum.com/t/tsung-load-testing-phoenix-app/20723/2)
+- [phoenix liveview telemetry](https://elixirforum.com/t/understanding-liveview-telemetry-events-for-load-performance-testing-w-artillery-and-playwright/64192)
+- [phoenix liveview load test with flame ?](https://elixirforum.com/t/is-flame-well-suited-for-load-testing/61758)
+- [phoenix testing with tsung ?](https://elixirforum.com/t/tsung-load-testing-phoenix-app/20723/2)
 
 ## Web App
 - [Documentation](apps/mehungry_web/README.md)
