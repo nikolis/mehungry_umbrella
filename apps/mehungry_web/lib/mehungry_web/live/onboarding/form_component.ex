@@ -11,7 +11,6 @@ defmodule MehungryWeb.Onboarding.FormComponent do
       <.header>
         <h3 class="p-6">Please specify your relationship with animal products</h3>
       </.header>
-
       <.simple_form
         for={@form}
         id="onboarding-form"
