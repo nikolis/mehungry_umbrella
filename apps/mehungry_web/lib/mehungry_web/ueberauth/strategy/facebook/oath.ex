@@ -1,4 +1,4 @@
-defmodule Ueberauth.Strategy.Facebook.OAuth do
+defmodule Ueberauth.Strategy.Local.Facebook.OAuth do
   @moduledoc """
   OAuth2 for Facebook.
 

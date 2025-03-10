@@ -1,4 +1,4 @@
-defmodule Ueberauth.Strategy.Facebook do
+defmodule Ueberauth.Strategy.Local.Facebook do
   @moduledoc """
   Facebook Strategy for Überauth.
   """
