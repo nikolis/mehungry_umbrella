@@ -12,6 +12,17 @@
     - AWS ECR 
     - AWS ECS 
 
+### Handling Database Migrations
+The way it's handled in this project is by having a seperate 2 different processes in the deploymenty phase 
+1) Is the normal deployment for the core app which is being done in 2 steps 
+    a) First we create an docker-image (the builder) which has all the necessary build tools need for us to release the elixir applicatio but using lightweight OS identical to the deployment OS Alpine in this case.
+    b) The building of the image that is actually going to be deployed inside the container created in step a 
+2) A simpler deployment consisting from only one step which is the creation of a single docker container containing all the developement tools of elixir like mix etc.. and it just execute the mix migrate command 
+3) There is a specific task definition in ECS that is updated through the "migrate" step with the latest migrator-image 
+    a) for this to work there is still the need to comment out the server: true in the Endpoint config in the prods.exs 
+    b) The deployement contrary to the normal app of the Task should be run manually 
+
+
 ## Coding Guidelines 
 - Follow Default Creado guidelines 
 - Build Live Components with a clear division between View (Render) and Update Code 
