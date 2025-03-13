@@ -38,7 +38,6 @@ if config_env() == :prod do
 
   config :mehungry, Mehungry.Repo,
     url: database_url,
-    adapter: Ecto.Adapters.Postgres,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6,
     after_connect: {Postgrex, :query!, query_args}
