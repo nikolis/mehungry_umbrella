@@ -6,7 +6,9 @@
     - Engine PostgreSQL
     - Provider AwsRDS
     - In deployment be extra carefull of the Database url to eliminate any special characters in case of copy and paste like space character as they may lead to very confusing to debug problems *DATABASE_URL
-    - When running the task in AWS ECS, Chose Compute Options -> Launch Type 
+    - When running the task in AWS ECS beware of the default secutiry-groups/subnets
+    - Postgres version 14 is used / newer versions might not work out of the box with the current ecs set up
+ 
 
 ### Application 
     - Docker 

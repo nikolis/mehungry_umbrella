@@ -1,4 +1,5 @@
 defmodule Mehungry.FdcFoodParserSplitter do
+  
   defp get_json(filename) do
     File.mkdir("fdc_legacy_splited_files")
     File.cd("fdc_legacy_splited_files")
