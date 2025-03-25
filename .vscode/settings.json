@@ -1,0 +1,17 @@
+{
+  "files.associations": {
+    "*.ex": "elixir",
+    "*.exs": "elixir",
+    "*.heex": "phoenix-heex",
+    "*.leex": "phoenix-heex",
+    "*.eex": "eex"
+  },
+  "emmet.includeLanguages": {
+    "phoenix-heex": "html",
+    "elixir": "html"
+  },
+  "[elixir]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "JakeBecker.elixir-ls"
+  }
+} 
