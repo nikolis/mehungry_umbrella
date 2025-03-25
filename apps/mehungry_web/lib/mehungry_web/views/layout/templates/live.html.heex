@@ -2,7 +2,7 @@
   <div class="mobile_header text-xl text-center text-primary font-semibold m-auto ">
     <a href="/"><img class="h-14 m-auto" src="/images/logo_written.png" /></a>
   </div>
-  <.get_menu query_string={@query_string} current_user={assigns[:current_user]} />
+  <.get_menu query_string={@query_string} current_user={assigns[:current_user]} inner_content = {@inner_content} />
   <p class="alert alert-info" role="alert" phx-click="lv:clear-flash" phx-value-key="info">
     <%= Phoenix.Flash.get(@flash, :info) %>
   </p>
@@ -10,9 +10,6 @@
     <%= Phoenix.Flash.get(@flash, :error) %>
   </p>
   <div
-    class="absolute px-2   sm:mt-8 md:mt-10 "
-    style="bottom: 60px; top:60px; margin: auto; width: 100%;"
   >
-    <%= @inner_content %>
   </div>
 </main>

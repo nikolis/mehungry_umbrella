@@ -14,7 +14,7 @@ defmodule MehungryWeb.LayoutView do
 
   def get_menu(assigns) do
     ~H"""
-    <.main_menu current_user={@current_user} query_string={@query_string} />
+    <.main_menu current_user={@current_user} query_string={@query_string} inner_content = {@inner_content} />
     <.mobile_menu current_user={@current_user} query_string={@query_string} />
     """
   end
@@ -45,9 +45,6 @@ defmodule MehungryWeb.LayoutView do
           <a href="/professional/visits" class="w-fit block">Visits</a>
         </div>
       </nav>
-      <div class="container px-2 py-4 m-auto">
-        <%= @inner_content %>
-      </div>
     </div>
     """
   end

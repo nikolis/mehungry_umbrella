@@ -19,6 +19,14 @@ defmodule Mehungry.Food.IngredientTranslation do
     timestamps()
   end
 
+  @spec changeset(
+          {map(), map()}
+          | %{
+              :__struct__ => atom() | %{:__changeset__ => map(), optional(any()) => any()},
+              optional(atom()) => any()
+            },
+          :invalid | %{optional(:__struct__) => none(), optional(atom() | binary()) => any()}
+        ) :: Ecto.Changeset.t()
   def changeset(ingredient_translation, attrs) do
     ingredient_translation
     |> cast(attrs, [:name, :language_name, :description, :url])

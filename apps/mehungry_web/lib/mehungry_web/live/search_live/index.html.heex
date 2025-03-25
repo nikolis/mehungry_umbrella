@@ -1,20 +1,20 @@
-<div style="height: 40px;">
+<div style="height: 60px;">
   <.form
     :let={f}
     for={@search_changeset}
     class="form-search"
     phx-change="validate"
     phx-submit="search"
-    style="height: 40px;"
+    style="height: 60px;"
   >
     <div class="h-full">
       <%= if @query_string do %>
         <div>
           <%= text_input(f, :query_string,
-            class: "w-full h-full rounded-full",
-            style: "background-color:#eaeaea",
+            class: " md:text-lg w-full h-full rounded-full md:p-4 md:rounded-lg md:p-4 md:border-2 md:border-gray-300 md:bg-white",
             id: "text-search-input1#{@id}",
-            value: @query_string
+            placeholder: "e.g Crispy brocolli steaks ..",
+            value: @query_string,
           ) %>
           <button phx-clic="submit" class="absolute right-2  sm:right-4 m-auto md:hidden">
             <.icon
