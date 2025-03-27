@@ -56,7 +56,7 @@ defmodule MehungryWeb.MixProject do
       {:ueberauth_facebook, "~> 0.8"},
       {:ueberauth_google, "~> 0.10"},
       {:phoenix, "~> 1.7.11", override: true},
-      {:phoenix_live_view, "~> 0.20.17"},
+      {:phoenix_live_view, "~> 1.0"},
       {:phoenix_view, "~> 2.0"},
       {:phoenix_ecto, "~> 4.4"},
       {:paginator, "~> 1.2.0"},
@@ -69,6 +69,7 @@ defmodule MehungryWeb.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:esbuild, "~> 0.8"},
       {:tailwind, "~> 0.2"},
+      {:daisy_ui_components, "~> 0.8"},
       {:hackney, "~> 1.9"},
       {:sweet_xml, "~> 0.6"},
       {:timex, "~> 3.6"},
@@ -79,7 +80,7 @@ defmodule MehungryWeb.MixProject do
        app: false,
        compile: false,
        depth: 1},
-      {:live_isolated_component, "~> 0.8.0", only: [:dev, :test]},
+      #{:live_isolated_component, "~> 0.8.0", only: [:dev, :test]},
       {:wallaby, "~> 0.30", runtime: false, only: :test}
     ]
   end
