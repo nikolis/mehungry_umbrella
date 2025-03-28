@@ -154,7 +154,13 @@ defmodule MehungryWeb.SelectComponentSingle do
       case Map.get(assigns, :label_function) do
         nil ->
           fn x ->
-            x.name
+            case Map.get(x, :name)  do 
+              nil -> 
+                Map.get(x, :label) 
+              val -> 
+                val 
+            end
+
           end
 
         label_f ->
