@@ -1,5 +1,6 @@
 defmodule MehungryWeb.Router do
   use MehungryWeb, :router
+  import Phoenix.LiveDashboard.Router
 
   import MehungryWeb.UserAuth
   import MehungryWeb.PathPlug
@@ -61,6 +62,8 @@ defmodule MehungryWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
+
+      live "/admin-dashboard", Admin.DashboardLive
       live "/profile", ProfileLive.Index, :index
       live "/profile/edit", ProfileLive.Index, :edit
       live "/basket", ShoppingBasketLive.Index, :index
@@ -79,7 +82,6 @@ defmodule MehungryWeb.Router do
       live "/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit
 
       live "/survey", SurveyLive, :index
-      live "/admin-dashboard", Admin.DashboardLive
 
       live "/posts", PostLive.Index, :index
       live "/posts/new", PostLive.Index, :new
@@ -111,14 +113,12 @@ defmodule MehungryWeb.Router do
   # If your application does not have an admins-only section yet,
   # you can use Plug.BasicAuth to set up some basic authentication
   # as long as you are also using SSL (which you should anyway).
-  if Mix.env() in [:dev, :test] do
     import Phoenix.LiveDashboard.Router
 
     scope "/" do
-      pipe_through :browser
+      pipe_through :admin_browser
       live_dashboard "/dashboard", metrics: MehungryWeb.Telemetry
     end
-  end
 
   ## Authentication routes
 
