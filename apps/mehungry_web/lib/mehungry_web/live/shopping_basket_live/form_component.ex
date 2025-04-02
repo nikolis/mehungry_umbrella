@@ -10,7 +10,7 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
     ~H"""
     <div>
       <.header>
-        <%= @title %>
+        {@title}
         <:subtitle>
           Crete a shopping list by selecting a range of dates (meals will be pulled from your callendar schedule)
         </:subtitle>

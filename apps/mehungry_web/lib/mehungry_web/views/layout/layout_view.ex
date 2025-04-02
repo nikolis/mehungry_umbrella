@@ -14,7 +14,11 @@ defmodule MehungryWeb.LayoutView do
 
   def get_menu(assigns) do
     ~H"""
-    <.main_menu current_user={@current_user} query_string={@query_string} inner_content = {@inner_content} />
+    <.main_menu
+      current_user={@current_user}
+      query_string={@query_string}
+      inner_content={@inner_content}
+    />
     <.mobile_menu current_user={@current_user} query_string={@query_string} />
     """
   end

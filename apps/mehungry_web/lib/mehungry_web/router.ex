@@ -62,7 +62,6 @@ defmodule MehungryWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
-
       live "/admin-dashboard", Admin.DashboardLive
       live "/profile", ProfileLive.Index, :index
       live "/profile/edit", ProfileLive.Index, :edit
@@ -113,12 +112,12 @@ defmodule MehungryWeb.Router do
   # If your application does not have an admins-only section yet,
   # you can use Plug.BasicAuth to set up some basic authentication
   # as long as you are also using SSL (which you should anyway).
-    import Phoenix.LiveDashboard.Router
+  import Phoenix.LiveDashboard.Router
 
-    scope "/" do
-      pipe_through :admin_browser
-      live_dashboard "/dashboard", metrics: MehungryWeb.Telemetry
-    end
+  scope "/" do
+    pipe_through :admin_browser
+    live_dashboard "/dashboard", metrics: MehungryWeb.Telemetry
+  end
 
   ## Authentication routes
 

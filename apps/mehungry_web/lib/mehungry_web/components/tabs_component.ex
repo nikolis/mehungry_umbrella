@@ -47,19 +47,19 @@ defmodule MehungryWeb.TabsComponent do
         }
         phx-value-state={@state}
       >
-        <%= @state %>
+        {@state}
       </button>
 
       <div
         id={@state <> "content"}
         class={"content_container absolute top-0 right-0 left-0 mt-6 hidden" <> @extra_class}
       >
-        <%= @contents.tab_content(%{
+        {@contents.tab_content(%{
           state: @state,
           recipe: @recipe,
           nutrients: @nutrients,
           primary_size: @primary_size
-        }) %>
+        })}
       </div>
     </div>
     """

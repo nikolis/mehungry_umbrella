@@ -30,10 +30,12 @@ defmodule MehungryWeb.SelectComponent do
         label_function,
         assigns
       )
-    selected_items = 
-      case is_map(selected_items) do 
+
+    selected_items =
+      case is_map(selected_items) do
         true ->
-          {selected_items.id, selected_items.name} 
+          {selected_items.id, selected_items.name}
+
         false ->
           selected_items
       end
@@ -49,7 +51,7 @@ defmodule MehungryWeb.SelectComponent do
         end
       end)
 
-    items = Enum.map(assigns.items, fn x -> {elem(x, 0) , label_function.(x)} end)
+    items = Enum.map(assigns.items, fn x -> {elem(x, 0), label_function.(x)} end)
     presenting_items = Enum.slice(items, 0..10)
 
     socket =
@@ -80,16 +82,19 @@ defmodule MehungryWeb.SelectComponent do
       Enum.map(selected_items, fn x -> elem(x, 0) end)
       |> Enum.uniq()
 
-    index = if is_nil(Map.get(socket.assigns.form, :index, 0) )  do
-      0
-    else 
-      socket.assigns.form.index 
-    end
+    index =
+      if is_nil(Map.get(socket.assigns.form, :index, 0)) do
+        0
+      else
+        socket.assigns.form.index
+      end
+
     IO.inspect(index, label: "index")
+
     {:noreply,
      push_event(
        socket,
-       "selected_id" <>  Integer.to_string(index)  <> Atom.to_string(socket.assigns.input_variable),
+       "selected_id" <> Integer.to_string(index) <> Atom.to_string(socket.assigns.input_variable),
        %{id: selected_items}
      )}
   end
@@ -108,7 +113,9 @@ defmodule MehungryWeb.SelectComponent do
     {:noreply,
      push_event(
        socket,
-       "selected_id" <>  Integer.to_string(socket.assigns.form.index) <> Atom.to_string(socket.assigns.input_variable),
+       "selected_id" <>
+         Integer.to_string(socket.assigns.form.index) <>
+         Atom.to_string(socket.assigns.input_variable),
        %{id: selected_items}
      )}
   end
@@ -154,33 +161,38 @@ defmodule MehungryWeb.SelectComponent do
     {:noreply, socket}
   end
 
-#----------------------------------------------------------------------------------Render --------------------------------------------------------------------------------------------->
+  # ----------------------------------------------------------------------------------Render --------------------------------------------------------------------------------------------->
   @impl true
   def render(assigns) do
-    form = Map.get(assigns, :form,  nil)
-    index = 
-      case is_nil(form) do 
-        true -> 
-          0 
+    form = Map.get(assigns, :form, nil)
+
+    index =
+      case is_nil(form) do
+        true ->
+          0
+
         false ->
           index = Map.get(form, :index, 0)
+
           if is_nil(index) do
-            0 
+            0
           else
             index
           end
       end
+
     assigns = Map.put(assigns, :index, index)
+
     ~H"""
-     <div
+    <div
       class="col-span-2"
       data-reference-id={@input_variable}
-      data-reference-index = {@index}
+      data-reference-index={@index}
       phx-hook="SelectComponent"
       id={"select_component"<>  Atom.to_string(@input_variable) <> Integer.to_string(@index)}
     >
-     <.input field={@form[@input_variable]} type="hidden" />
-     <!-- <input
+      <.input field={@form[@input_variable]} type="hidden" />
+      <!-- <input
         id={"dummy_input" <> Atom.to_string(@input_variable) <> Integer.to_string(@index) }
         name="pages"
         type="text"
@@ -204,9 +216,11 @@ defmodule MehungryWeb.SelectComponent do
             input_variable={@input_variable}
           />
           <.list_search_result myself={@myself} listing_open={@listing_open} items={@items} />
-          <.arrow_down_svg myself={@myself} selected_items_length={length(@selected_items)}
+          <.arrow_down_svg
+            myself={@myself}
+            selected_items_length={length(@selected_items)}
             mode={@mode}
-/>
+          />
         </div>
         <!-- End Component -->
       </div>
@@ -217,16 +231,16 @@ defmodule MehungryWeb.SelectComponent do
   # ------------------------------------------------------------------------------- List Selected ------------------------------------------------------------------------------------
   def list_selected(assigns) do
     ~H"""
-        <div class="flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-2 sm:col-span-2 	 overflow-hidden">
-    <!-- Tags (Selected) -->
-        <%= for x <- @selected_items do %>
-          <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode}  name={elem(x, 1)} />
-        <% end %>
-        <!-- Search Input -->
-        <%= if Enum.empty?(@selected_items) do %>
-          <.input_search myself={@myself} form={@form} input_variable={@input_variable} />
-        <% end %>
-        <!-- Arrow Icon -->
+    <div class="flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-2 sm:col-span-2 	 overflow-hidden">
+      <!-- Tags (Selected) -->
+      <%= for x <- @selected_items do %>
+        <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode} name={elem(x, 1)} />
+      <% end %>
+      <!-- Search Input -->
+      <%= if Enum.empty?(@selected_items) do %>
+        <.input_search myself={@myself} form={@form} input_variable={@input_variable} />
+      <% end %>
+      <!-- Arrow Icon -->
     </div>
     """
   end
@@ -241,35 +255,32 @@ defmodule MehungryWeb.SelectComponent do
         tabindex="0"
         class="relative m-1 px-2 py-1.5 border rounded-md cursor-pointer hover:bg-gray-100 after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2 focus:ring-amber-300 ring-inset transition-all"
       >
-        <%= @name %>
+        {@name}
       </li>
     </div>
     """
   end
 
-
   defp selected_item(%{mode: :single} = assigns) do
     ~H"""
-        <div class="text-center w-full h-full relative">
-          <div
-            phx-click="handle-selected-item-click"
-            phx-value-id={@id}
-            phx-target={@myself}
-            tabindex="0"
-            class="border border-black border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg "
-          >
-            <div class="h-full flex flex-col  justify-center p-4 ">
-              <div class="self-center text-ellipsis text-center overflow-hidden px-1 leading-4">
-                <%= @name %>
-              </div>
-            </div>
-            <.icon name="hero-x-mark" class="absolute right-1 top-1  z-20 opacity-70 h-3 w-3" />
+    <div class="text-center w-full h-full relative">
+      <div
+        phx-click="handle-selected-item-click"
+        phx-value-id={@id}
+        phx-target={@myself}
+        tabindex="0"
+        class="border border-black border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg "
+      >
+        <div class="h-full flex flex-col  justify-center p-4 ">
+          <div class="self-center text-ellipsis text-center overflow-hidden px-1 leading-4">
+            {@name}
           </div>
         </div>
+        <.icon name="hero-x-mark" class="absolute right-1 top-1  z-20 opacity-70 h-3 w-3" />
+      </div>
+    </div>
     """
   end
-
-
 
   defp input_search(assigns) do
     ~H"""
@@ -319,7 +330,7 @@ defmodule MehungryWeb.SelectComponent do
           id={elem(@x, 0)}
           phx-target={@myself}
         >
-          <%= elem(@x, 1) %>
+          {elem(@x, 1)}
         </li>
       </div>
     </div>
@@ -328,9 +339,10 @@ defmodule MehungryWeb.SelectComponent do
 
   # ----------------------------------------------------------------------------------------------------- Search Result -----------------------------------------------------------
 
-  defp arrow_down_svg(%{mode: :single,selected_items_length: selected_length } = assigns)when selected_length > 0  do
+  defp arrow_down_svg(%{mode: :single, selected_items_length: selected_length} = assigns)
+       when selected_length > 0 do
     ~H"""
-    <div> </div>
+    <div></div>
     """
   end
 

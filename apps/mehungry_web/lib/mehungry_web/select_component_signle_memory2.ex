@@ -38,7 +38,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory2 do
               >
                 <div class="h-full flex flex-col  justify-center py-2">
                   <div class="self-center text-ellipsis overflow-hidden  ">
-                    <%= @selected_items.label %>
+                    {@selected_items.label}
                   </div>
                 </div>
                 <.icon name="hero-x-mark-solid" class="absolute right-1 top-0  z-50 opacity-70" />
@@ -80,7 +80,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory2 do
                           phx-target={@myself}
                           phx-hook="SelectComponentList"
                         >
-                          <%= x.label %>
+                          {x.label}
                         </li>
                       <% else %>
                         <li
@@ -90,7 +90,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory2 do
                           id={Integer.to_string(x.id)}
                           phx-target={@myself}
                         >
-                          <%= x.label %>
+                          {x.label}
                         </li>
                       <% end %>
                     </div>

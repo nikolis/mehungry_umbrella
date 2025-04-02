@@ -39,10 +39,10 @@
         <.share_button post={@post}></.share_button>
       </div>
     </div>
-    <div class="font-semibold"><%= length(@post.reference.user_recipes) %> likes</div>
+    <div class="font-semibold">{length(@post.reference.user_recipes)} likes</div>
     <div>
       <span class="text-base font-bold text-center">
-        <%= @post.reference.title %>
+        {@post.reference.title}
       </span>
       <span>
         <.get_recipe_description

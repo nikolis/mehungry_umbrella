@@ -1,8 +1,8 @@
 <div class={"grid grid-cols-7 gap-2 h-14  m-2" <> if Map.get(@v.source.changes, :delete)  do " hidden"  else ""  end}>
   <div class="m-auto">
-    <span class="text-3xl"><%= @v.index + 1 %></span>
+    <span class="text-3xl">{@v.index + 1}</span>
   </div>
-  <%= hidden_input(@v, :delete) %>
+  {hidden_input(@v, :delete)}
   <.input required field={@v[:index]} type="hidden" value={@v.index} />
 
   <div class="col-span-5">

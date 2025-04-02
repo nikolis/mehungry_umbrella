@@ -173,7 +173,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           />
           <img style="max-height: 215px;" class="min-h-96 rounded-2xl w-full" src={@recipe.image_url} />
           <h3 class="m-2  max-h-16 overflow-hidden text-center text-xl w-full">
-            <%= @recipe.title %>
+            {@recipe.title}
           </h3>
           <.recipe_attrs_container recipe={@recipe} />
         </div>
@@ -205,7 +205,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           </div>
           <div class="post_card w-11/12 mb-12">
             <div class="grid grid-cols-2 h-fit mt-16">
-              <h3 class="text-lg text-start "><%= "Comments (#{length(@recipe_comments)})" %></h3>
+              <h3 class="text-lg text-start ">{"Comments (#{length(@recipe_comments)})"}</h3>
               <div
                 class="relative"
                 phx-click={JS.toggle_class("h-0 overflow-hidden mt-4", to: ".comment")}

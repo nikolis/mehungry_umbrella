@@ -10,12 +10,13 @@
     <div class="h-full">
       <%= if @query_string do %>
         <div>
-          <%= text_input(f, :query_string,
-            class: " md:text-lg w-full h-full rounded-full md:p-4 md:rounded-lg md:p-4 md:border-2 md:border-gray-300 md:bg-white",
+          {text_input(f, :query_string,
+            class:
+              " md:text-lg w-full h-full rounded-full md:p-4 md:rounded-lg md:p-4 md:border-2 md:border-gray-300 md:bg-white",
             id: "text-search-input1#{@id}",
             placeholder: "e.g Crispy brocolli steaks ..",
-            value: @query_string,
-          ) %>
+            value: @query_string
+          )}
           <button phx-clic="submit" class="absolute right-2  sm:right-4 m-auto md:hidden">
             <.icon
               name="hero-arrow-right-circle"
@@ -24,13 +25,13 @@
           </button>
         </div>
       <% else %>
-        <%= text_input(f, :query_string,
+        {text_input(f, :query_string,
           class: "w-full h-full rounded-full",
           style: "background-color:#eaeaea",
           id: "text-search-input#{@id}"
-        ) %>
+        )}
       <% end %>
-      <%= submit("", phx_disable_with: "Searching...", class: "invisible") %>
+      {submit("", phx_disable_with: "Searching...", class: "invisible")}
     </div>
   </.form>
 </div>

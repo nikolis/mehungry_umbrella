@@ -38,9 +38,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
               </button>
 
               <h3 class="text-center text-lg font-semibold ">
-                <span><%= Calendar.strftime(@current_date, "%A") %>,</span>
-                <span><%= String.slice(Calendar.strftime(@current_date, "%d"), 0..2) %></span>
-                <span><%= String.slice(Calendar.strftime(@current_date, "%B"), 0..2) %></span>
+                <span>{Calendar.strftime(@current_date, "%A")},</span>
+                <span>{String.slice(Calendar.strftime(@current_date, "%d"), 0..2)}</span>
+                <span>{String.slice(Calendar.strftime(@current_date, "%B"), 0..2)}</span>
               </h3>
 
               <button
@@ -135,7 +135,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
             class="absolute  text-lg top-4   left-12 font-semibold cursor-pointer "
           >
-            <%= Calendar.strftime(day, "%A") %>
+            {Calendar.strftime(day, "%A")}
           </span>
 
           <span
@@ -371,11 +371,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         </svg>
       </button>
       <%= if is_nil(@img_url) do %>
-        <%= SvgComponents.get_default_recipe_image(assigns) %>
+        {SvgComponents.get_default_recipe_image(assigns)}
       <% else %>
         <img src={@img_url} class="col-span-2 h-full" />
       <% end %>
-      <div class="col-span-4 px-6 py-4"><%= @title %></div>
+      <div class="col-span-4 px-6 py-4">{@title}</div>
     </div>
     """
   end

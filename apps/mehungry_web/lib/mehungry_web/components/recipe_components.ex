@@ -89,7 +89,7 @@ defmodule MehungryWeb.RecipeComponents do
               </div>
 
               <div id={"#{@id}-content"} class="sm:p-4">
-                <%= render_slot(@inner_block) %>
+                {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
           </div>
@@ -142,7 +142,7 @@ defmodule MehungryWeb.RecipeComponents do
               </div>
 
               <div id={"#{@id}-content"} class="sm:p-4">
-                <%= render_slot(@inner_block) %>
+                {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
           </div>
@@ -210,9 +210,9 @@ defmodule MehungryWeb.RecipeComponents do
                     <div id={"ul"<> n["name"]}>
                       <%= for n_r <- n["children"] do %>
                         <li style="padding-left: 1rem; text-align: start;" id={"li" <> n_r["name"]}>
-                          <%= n_r["name"] %> <%= Float.round(n_r["amount"], 4) %> <%= n_r[
+                          {n_r["name"]} {Float.round(n_r["amount"], 4)} {n_r[
                             "measurement_unit"
-                          ] %>
+                          ]}
                           <div class="w-fit h-fit rounded-xl absolute right-0 top-0 ">
                             <.icon
                               name="hero-arrow-down-circle "
@@ -243,23 +243,23 @@ defmodule MehungryWeb.RecipeComponents do
         aria-controls="accordion1-content"
         id={"nutrient_button" <> Integer.to_string(@index)}
       >
-        <%= Map.get(@n, "name") ||
+        {Map.get(@n, "name") ||
           Map.get(@n, :name, "") <>
-            "" %>
+            ""}
         <%= if !is_nil(@n["amount"]) do %>
-          <%= to_string(Float.round(@n["amount"] / @recipe.servings, 2)) %>
+          {to_string(Float.round(@n["amount"] / @recipe.servings, 2))}
         <% else %>
           <%= if !is_nil(@n[:amount]) do %>
-            <%= to_string(Float.round(@n[:amount] / @recipe.servings, 2)) %>
+            {to_string(Float.round(@n[:amount] / @recipe.servings, 2))}
           <% else %>
             "nothing"
           <% end %>
         <% end %>
         <%= if !is_nil(@n["measurement_unit"]) do %>
-          <%= @n["measurement_unit"] %>
+          {@n["measurement_unit"]}
         <% else %>
           <%= if !is_nil(@n[:measurement_unit]) do %>
-            <%= @n[:measurement_unit] %>
+            {@n[:measurement_unit]}
           <% else %>
             "nothing"
           <% end %>
@@ -274,11 +274,9 @@ defmodule MehungryWeb.RecipeComponents do
     <div style="max-height: 300px;" class="overflow-auto p-4 text-base text-black">
       <%= for ingredient <- @recipe_ingredients do %>
         <div class="ingredient_details_container font-normal	 ">
-          <div><%= Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %></div>
+          <div>{Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name)}</div>
           <div class="font-semibold">
-            <%= ingredient.quantity %> <%= Mehungry.Utils.remove_parenthesis(
-              ingredient.measurement_unit.name
-            ) %>
+            {ingredient.quantity} {Mehungry.Utils.remove_parenthesis(ingredient.measurement_unit.name)}
           </div>
         </div>
       <% end %>
@@ -291,8 +289,8 @@ defmodule MehungryWeb.RecipeComponents do
     <div class="overflow-auto p-4 text-base text-black" style="height: 300px;">
       <%= for step <- @steps do %>
         <div class="step_details_container">
-          <div class="font-semibold text-lg w-fit"><%= step.index %></div>
-          <div class="text-lg font-normal"><%= step.description %></div>
+          <div class="font-semibold text-lg w-fit">{step.index}</div>
+          <div class="text-lg font-normal">{step.description}</div>
         </div>
       <% end %>
     </div>
@@ -324,7 +322,7 @@ defmodule MehungryWeb.RecipeComponents do
       id={Integer.to_string(@hashtag.id)}
     >
       <div class="inline text-greyfriend3 text-base font-semibold">
-        <%= @hashtag.title %>
+        {@hashtag.title}
       </div>
     </a>
     """
@@ -341,7 +339,7 @@ defmodule MehungryWeb.RecipeComponents do
             <% true -> %>
               <div>N/A</div>
             <% false -> %>
-              <%= @recipe.preperation_time_lower_limit + @recipe.cooking_time_lower_limit %>
+              {@recipe.preperation_time_lower_limit + @recipe.cooking_time_lower_limit}
           <% end %>
         </div>
       </div>
@@ -363,7 +361,7 @@ defmodule MehungryWeb.RecipeComponents do
       </div>
       <div>
         <div><img src="/images/bowl.svg" style="margin: auto;width:35px;height:35px;" /></div>
-        <div class="recipe_attrs_text text-center"><%= @recipe.servings %></div>
+        <div class="recipe_attrs_text text-center">{@recipe.servings}</div>
       </div>
     </div>
     """
@@ -381,7 +379,7 @@ defmodule MehungryWeb.RecipeComponents do
             style="display: none; font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
             class="font-semibold"
           >
-            <%= length(@post.upvotes) %>
+            {length(@post.upvotes)}
           </div>
           <div class="cursor-pointer">
             <MehungryWeb.SvgComponents.downvote_svg post={@post} user={@user} />
@@ -396,7 +394,7 @@ defmodule MehungryWeb.RecipeComponents do
           style="display: none; font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
           class="font-semibold"
         >
-          <%= length(@post.reference.comments) %>
+          {length(@post.reference.comments)}
         </div>
         <div
           style="font-size: 1rem; height: 20px; margin-top: auto; margin-bottom: auto;"
@@ -424,7 +422,7 @@ defmodule MehungryWeb.RecipeComponents do
         patch={@path_to_details}
       >
         <img class="w-full rounded-xl m-auto" src={@recipe.image_url} />
-        <h1 class="recipe_title text-center"><%= @recipe.title %></h1>
+        <h1 class="recipe_title text-center">{@recipe.title}</h1>
         <div class="recipe_sub_text text-center">
           Sub title
         </div>
@@ -444,7 +442,7 @@ defmodule MehungryWeb.RecipeComponents do
         patch={@path_to_details}
       >
         <img class="w-full rounded-xl m-auto" src={@recipe.image_url} />
-        <h1 class="recipe_title text-center"><%= @recipe.title %></h1>
+        <h1 class="recipe_title text-center">{@recipe.title}</h1>
         <div class="recipe_sub_text text-center">
           Sub title
         </div>

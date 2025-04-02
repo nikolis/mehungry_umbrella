@@ -11,7 +11,7 @@ defmodule MehungryWeb.ProfileLive.Form do
     ~H"""
     <div class="form-main h-120 w-full xl:px-10">
       <h3 class="text-center mt-4 mb-8">
-        <%= @title %>
+        {@title}
       </h3>
 
       <.simple_form
