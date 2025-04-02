@@ -47,7 +47,8 @@ defmodule Mehungry.MixProject do
       {:ex_aws_s3, "~> 2.5"},
       {:hackney, "~> 1.18"},
       {:sweet_xml, "~> 0.7"},
-      {:configparser_ex, "~> 4.0", optional: true},  # For
+      # For
+      {:configparser_ex, "~> 4.0", optional: true},
       {:ueberauth, "~> 0.6"},
       {:oauth2, "~> 2.0", override: true},
       {:ueberauth_facebook, "~> 0.8"},
