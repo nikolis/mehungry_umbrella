@@ -97,6 +97,6 @@ FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
 RUN apk add --update openssl postgresql-client
 
-EXPOSE 4000
+EXPOSE 4000 4369 9000-9100
 
 CMD ["sh", "bin/mehungry_umbrella", "start"]
