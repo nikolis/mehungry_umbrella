@@ -15,7 +15,6 @@
                     "appProtocol": "http"
                 },
                 { "containerPort": 4369, "hostPort": 4369 },
-                { "containerPort": 9000, "hostPort": 9000 },
                 { "containerPortRange": "9000-9100", "protocol": "tcp"}
             ],
             "essential": true,
