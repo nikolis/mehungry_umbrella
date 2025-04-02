@@ -23,7 +23,7 @@ defmodule Mehungry.MixProject do
   def application do
     [
       mod: {Mehungry.Application, []},
-      extra_applications: [:logger, :runtime_tools, :wx]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 
