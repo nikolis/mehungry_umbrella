@@ -20,7 +20,7 @@
             "essential": true,
             "environment": [
               { "name": "NODE_NAME", "value": "mehungry@$(hostname -i)" },
-              { "name": "DNS_NAME", "value": "namespace-m3hungry-ecs-backend" }
+              { "name": "DNS_NAME", "value": "namespace-m3hungry-ecs-backend.local" }
             ],
             "environmentFiles": [],
             "mountPoints": [],
