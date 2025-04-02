@@ -19,7 +19,10 @@
                 { "containerPortRange": "9000-9100", "protocol": "tcp"}
             ],
             "essential": true,
-            "environment": [],
+            "environment": [
+              { "name": "NODE_NAME", "value": "mehungry@$(hostname -i)" },
+              { "name": "DNS_NAME", "value": "namespace-m3hungry-ecs-backend" }
+            ],
             "environmentFiles": [],
             "mountPoints": [],
             "volumesFrom": [],
