@@ -25,7 +25,7 @@ config(:libcluster,
       config: [
         # Check every 5s
         polling_interval: 5_000,
-        query: "mh-prod-service.namespace-m3hungry-ecs-backen",
+        query: "discovery-service-m3hungry-ecs-backend.namespace-m3hungry-ecs-backend",
         node_basename: "mehungry_umbrella"
       ]
     ]
