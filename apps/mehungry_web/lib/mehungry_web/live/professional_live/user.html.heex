@@ -1,12 +1,12 @@
 <.header>
-  User <%= @user.id %>
+  User {@user.id}
   <:subtitle>This is a user record from your database.</:subtitle>
 </.header>
 
 <.list>
-  <:item title="Email"><%= @user.email %></:item>
-  <:item title="Profile pic"><%= @user.profile_pic %></:item>
-  <:item title="Name"><%= @user.name %></:item>
+  <:item title="Email">{@user.email}</:item>
+  <:item title="Profile pic">{@user.profile_pic}</:item>
+  <:item title="Name">{@user.name}</:item>
 </.list>
 
 <.back navigate={~p"/professional/users"}>Back to users</.back>

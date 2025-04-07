@@ -12,10 +12,10 @@
 
     <div style="margin-left: 1rem;">
       <div style="font-weight: bold; text-align: start; font-size: 0.75rem;">
-        <%= @comment.user.email %>
+        {@comment.user.email}
       </div>
       <div style="font-size: 1rem; text-align: start; color: var(--clr-dark_1)">
-        <%= @comment.text %>
+        {@comment.text}
       </div>
       <div style="display: flex; ">
         <div class="utils_container" style="">
@@ -55,7 +55,7 @@
             </path>
           </svg>
           <div style="font-size: 1rem; background-color: white; font-weight: bold; text-align: start; color: var(--clr-grey-friend_3 line-height: 1.2rem; height: 1.2rem;)">
-            <%= get_positive_votes(@comment.votes) %>
+            {get_positive_votes(@comment.votes)}
           </div>
           <svg
             fill="#000000"
@@ -103,10 +103,10 @@
 
             <div style="margin-left: 1rem;">
               <div style="font-weight: bold; text-align: start; font-size: 0.75rem;">
-                <%= @comment.user.email %>
+                {@comment.user.email}
               </div>
               <div style="font-size: 1rem; text-align: start; color: var(--clr-dark_1)">
-                <%= co_an.text %>
+                {co_an.text}
               </div>
             </div>
           </div>

@@ -138,7 +138,7 @@ defmodule MehungryWeb.SelectComponentSingle do
     ~H"""
     <div>
       <span class="font-semibold">
-        <%= @first %> <span class="text-xs font-light"><%= @sub_script %></span>
+        {@first} <span class="text-xs font-light">{@sub_script}</span>
       </span>
     </div>
     """
@@ -154,13 +154,13 @@ defmodule MehungryWeb.SelectComponentSingle do
       case Map.get(assigns, :label_function) do
         nil ->
           fn x ->
-            case Map.get(x, :name)  do 
-              nil -> 
-                Map.get(x, :label) 
-              val -> 
-                val 
-            end
+            case Map.get(x, :name) do
+              nil ->
+                Map.get(x, :label)
 
+              val ->
+                val
+            end
           end
 
         label_f ->

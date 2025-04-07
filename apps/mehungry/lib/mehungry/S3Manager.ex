@@ -59,11 +59,14 @@ defmodule Mehungry.S3Manager do
         case destination_path do
           nil ->
             response
+
           path ->
             File.write!(path, body)
             {:ok, :file_written}
         end
-      error -> error
+
+      error ->
+        error
     end
   end
 
@@ -117,7 +120,8 @@ defmodule Mehungry.S3Manager do
     - {:error, reason} on failure
   """
   def presigned_url(bucket, key, expires_in \\ 3600, operation \\ :get) do
-    {:ok, ExAws.S3.presigned_url(ExAws.Config.new(:s3), operation, bucket, key, expires_in: expires_in)}
+    {:ok,
+     ExAws.S3.presigned_url(ExAws.Config.new(:s3), operation, bucket, key, expires_in: expires_in)}
   end
 
   @doc """

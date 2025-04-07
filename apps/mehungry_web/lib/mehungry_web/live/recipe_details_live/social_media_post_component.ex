@@ -27,7 +27,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
     socket =
       socket
       |> assign(assigns)
-      |> assign(:changeset, changeset) 
+      |> assign(:changeset, changeset)
       |> assign(:post, %FacebookPost{})
       |> assign(:state, Map.get(assigns, :state, :normal))
 
@@ -39,7 +39,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
     changeset =
       changeset = FacebookPost.change_facebook_post(socket.assigns.post, pages_params)
 
-    #form = to_form(changeset)
+    # form = to_form(changeset)
 
     socket =
       socket
@@ -92,7 +92,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
         <div class="p-4 m-auto w-fit">
           <%= for {name, code, result} <- assigns.results do %>
             <div>
-              <span class="text-base  font-semibold px-2"><%= name %></span>
+              <span class="text-base  font-semibold px-2">{name}</span>
               <%= if is_nil(result) do %>
                 <span
                   class="inline-block bg-primary rounded-full"
@@ -100,7 +100,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                 >
                 </span>
               <% else %>
-                <span><%= result %> (<span class="font-semibold"> <%= code %> </span>)</span>
+                <span>{result} (<span class="font-semibold"> <%= code %> </span>)</span>
               <% end %>
             </div>
           <% end %>
@@ -111,8 +111,8 @@ defmodule MehungryWeb.SocialMediaPostComponent do
         SvgComponents.get_loading(assigns)
 
       :normal ->
-          ~H"""
-          <div class="relative h-full" style="min-height: 55vh;">
+        ~H"""
+        <div class="relative h-full" style="min-height: 55vh;">
           <h3 class="w-fit m-auto">Share on Facebook</h3>
           <%= case Enum.empty?(assigns.user.facebook_token) do %>
             <% true -> %>
@@ -133,12 +133,11 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                     Enum.map(Map.keys(assigns.user.facebook_token), fn x ->
                       {x, x}
                     end)
-                }
-
-                form={form}
-                mode={:multi}
-                id={@recipe.id}
-                input_variable={:pages}
+                  }
+                  form={form}
+                  mode={:multi}
+                  id={@recipe.id}
+                  input_variable={:pages}
                 />
                 <button type="submit" class="primary_button absolute bottom-0 right-0">Post</button>
               </.form>

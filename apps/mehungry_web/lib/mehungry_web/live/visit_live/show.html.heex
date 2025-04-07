@@ -9,15 +9,15 @@
   <.icon name="hero-arrow-left" class=" h-7 w-7 text-greyfriend3 font-bold stroke-2" />
 </.link>
 <%= if !is_nil(@visit) do %>
-  <%= @visit.details["agent"] %>
+  {@visit.details["agent"]}
 <% end %>
 <div class="w-fit m-auto p-2">
   <%= for visit_row <- @visits2 do %>
     <div class="text-complementary font-bold  text-center text-lg mt-4">
-      <%= Enum.at(visit_row, 0).inserted_at.day %>- <%= Enum.at(visit_row, 0).inserted_at.month %>- <%= Enum.at(
+      {Enum.at(visit_row, 0).inserted_at.day}- {Enum.at(visit_row, 0).inserted_at.month}- {Enum.at(
         visit_row,
         0
-      ).inserted_at.year %>
+      ).inserted_at.year}
     </div>
     <%= for visit <- visit_row do %>
       <a
@@ -25,9 +25,9 @@
         href={~p"/professional/visits/#{visit.ip_address}"}
       >
         <div>
-          <%= visit.inserted_at.hour %>:<%= visit.inserted_at.minute %>:<%= visit.inserted_at.second %>
+          {visit.inserted_at.hour}:{visit.inserted_at.minute}:{visit.inserted_at.second}
         </div>
-        <div><%= remove_hostname(visit.details["path"]) %></div>
+        <div>{remove_hostname(visit.details["path"])}</div>
       </a>
     <% end %>
     <div class="borderb-solid border-2 border-greyfriend2"></div>

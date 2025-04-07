@@ -23,7 +23,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
           phx-value-id={shopping_basket.id}
         >
           <div class="li_title" phx-click="select_shopping_basket" phx-value-id={shopping_basket.id}>
-            <%= shopping_basket.title %>
+            {shopping_basket.title}
           </div>
           <div class="shopping_list_utils">
             <.link
@@ -68,10 +68,10 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
             </div>
             <div style="border-bottom: 1px solid var(--clr-grey-friend_3);">
               <span style="font-weight: bold;">
-                <%= rec_ing.quantity %>
-                <%= rec_ing.measurement_unit.name %>
+                {rec_ing.quantity}
+                {rec_ing.measurement_unit.name}
               </span>
-              <%= rec_ing.ingredient.name %>
+              {rec_ing.ingredient.name}
             </div>
           </div>
         <% end %>

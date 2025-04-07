@@ -1,67 +1,114 @@
- <div class="invisible  md:visible h-screen w-20 md:w-64 bg-white shadow-lg fixed top-0 left-0 p-4 flex flex-col border-r-4 border-[#85cb33]">
-        <nav class="flex flex-col space-y-6">
-            <!-- Home (M3Hungry) -->
-            <a href="/" class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg" >
-            <img class="hidden max-h-16  md:block" src="/images/logo_written.png" />
-            </a>
-            <!-- Create Recipe -->
-            <a href="/create_recipe" class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16"></path>
-                </svg>
-                <span class="hidden md:block text-lg">Create </span>
-            </a>
-            <!-- Search Recipe -->
-            <a href="/browse" class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"></path>
-                </svg>
-                <span class="hidden md:block text-lg">Search </span>
-            </a>
-                  <!-- Calendar -->
-            <a href="/calendar" class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]">
-
+<div class="invisible  md:visible h-screen w-20 md:w-64 bg-white shadow-lg fixed top-0 left-0 p-4 flex flex-col border-r-4 border-[#85cb33]">
+  <nav class="flex flex-col space-y-6">
+    <!-- Home (M3Hungry) -->
+    <a href="/" class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg">
+      <img class="hidden max-h-16  md:block" src="/images/logo_written.png" />
+    </a>
+    <!-- Create Recipe -->
+    <a
+      href="/create_recipe"
+      class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+    >
+      <svg
+        class="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16"></path>
+      </svg>
+      <span class="hidden md:block text-lg">Create </span>
+    </a>
+    <!-- Search Recipe -->
+    <a
+      href="/browse"
+      class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+    >
+      <svg
+        class="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
+        >
+        </path>
+      </svg>
+      <span class="hidden md:block text-lg">Search </span>
+    </a>
+    <!-- Calendar -->
+    <a
+      href="/calendar"
+      class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+    >
       <.icon name="hero-calendar" class="h-7 w-7" />
-                <span class="hidden md:block text-lg">Calendar</span>
-            </a>
-            <!-- Basket -->
-            <a href="/basket" class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]">
-
+      <span class="hidden md:block text-lg">Calendar</span>
+    </a>
+    <!-- Basket -->
+    <a
+      href="/basket"
+      class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+    >
       <.icon name="hero-shopping-cart" class="h-7 w-7" />
-                <span class="hidden md:block text-lg">Basket</span>
-            </a>
-      <!-- Profile -->
-            <a href="/profile" class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]">
-        <%= if @current_user do %>
-          <img
-            src={@current_user.profile_pic}
-            ,
-            style=" border-radius: 50%;"
-            class={"w-7 h-7 nav_link_basic " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
-          />
-        <% else %>
-          <img
-            src="/images/log-in-outline.svg"
-            class={"h-8 w-8 nav_link_basic "<> if String.length(@query_string) > 1, do: "hidden", else: ""}
-          />
-        <% end %>
+      <span class="hidden md:block text-lg">Basket</span>
+    </a>
+    <!-- Profile -->
+    <a
+      href="/profile"
+      class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+    >
+      <%= if @current_user do %>
+        <img
+          src={@current_user.profile_pic}
+          ,
+          style=" border-radius: 50%;"
+          class={"w-7 h-7 nav_link_basic " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
+        />
+      <% else %>
+        <img
+          src="/images/log-in-outline.svg"
+          class={"h-8 w-8 nav_link_basic "<> if String.length(@query_string) > 1, do: "hidden", else: ""}
+        />
+      <% end %>
 
-               <span class="hidden md:block text-lg">Profile</span>
-            </a>
-
-            <!-- Professional (conditionally) -->
-            <div id="professional-menu" class="hidden">
-                <a href="#" class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 2a10 10 0 100 20 10 10 0 000-20zM12 6a4 4 0 110 8 4 4 0 010-8z"></path>
-                    </svg>
-                    <span class="hidden md:block text-lg">Professional</span>
-                </a>
-            </div>
-        </nav>
+      <span class="hidden md:block text-lg">Profile</span>
+    </a>
+    
+<!-- Professional (conditionally) -->
+    <div id="professional-menu" class="hidden">
+      <a
+        href="#"
+        class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+      >
+        <svg
+          class="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 2a10 10 0 100 20 10 10 0 000-20zM12 6a4 4 0 110 8 4 4 0 010-8z"
+          >
+          </path>
+        </svg>
+        <span class="hidden md:block text-lg">Professional</span>
+      </a>
     </div>
+  </nav>
+</div>
 
-    <!-- Content Area -->
-    <div class="md:ml-64 p-8">
-      <%= @inner_content %>
-    </div>
+<!-- Content Area -->
+<div class="md:ml-64 p-8">
+  {@inner_content}
+</div>

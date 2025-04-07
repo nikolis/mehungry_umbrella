@@ -42,14 +42,21 @@ config :mehungry, Mehungry.Repo,
 # different ports.
 
 # Watch static and templates for browser reloading.
-
+config :libcluster,
+  topologies: [
+    mehungry: [
+      strategy: Elixir.Cluster.Strategy.LocalEpmd
+    ]
+  ]
+  
 config :mehungry_web, MehungryWeb.Endpoint,
-  http: [port: 4000],
+  #http: [port: 4000],
+  http: [ip: {127, 0, 0, 1}, port: System.get_env("PORT", "4000")],
   debug_errors: true,
   code_reloader: true,
   check_origin: false,
   https: [
-    port: 4001,
+    port: System.get_env("HTTPS_PORT", "4001"),
     cipher_suite: :strong,
     keyfile: "priv/cert/selfsigned_key.pem",
     certfile: "priv/cert/selfsigned.pem"

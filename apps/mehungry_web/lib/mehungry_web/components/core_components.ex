@@ -37,13 +37,13 @@ defmodule MehungryWeb.CoreComponents do
         <div class="flex flex-col justify-center w-full">
           <div class="text-sm font-bold leading-4">
             <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-              <%= @user.email %>
+              {@user.email}
             </.link>
             <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
             </div>
           </div>
           <div class="text-sm leading-4">
-            <%= "#{count_user_created_recipes(@user.id)} posted recipes" %>
+            {"#{count_user_created_recipes(@user.id)} posted recipes"}
           </div>
         </div>
       </div>
@@ -149,7 +149,7 @@ defmodule MehungryWeb.CoreComponents do
           <div class="text-sm  font-bold leading-4">
             <.link patch={"/profile/"<>Integer.to_string(@user.id)} class="flex flex-wrap">
               <span class="w-full text-center sm:w-fit text-lg md:text-2xl mr-4">
-                <%= @user.email %>
+                {@user.email}
               </span>
             </.link>
 
@@ -186,23 +186,23 @@ defmodule MehungryWeb.CoreComponents do
           <div class="flex gap-2 mt-2 flex-wrap justify-center sm:justify-start	">
             <div class="text-sm leading-4 ">
               <span class="font-semibold text-lg">
-                <%= "#{count_user_created_recipes(@user.id)}" %>
+                {"#{count_user_created_recipes(@user.id)}"}
               </span>
               <span class="text-lg"> Posted recipes </span>
             </div>
             <div class="text-sm leading-4 ">
-              <span class="font-semibold text-lg"><%= "#{count_user_followers(@user.id)}" %></span>
+              <span class="font-semibold text-lg">{"#{count_user_followers(@user.id)}"}</span>
               <span class="text-lg"> Followers </span>
             </div>
 
             <div class="text-sm leading-4">
-              <span class="font-semibold text-lg"><%= "#{count_user_following(@user.id)}" %></span>
+              <span class="font-semibold text-lg">{"#{count_user_following(@user.id)}"}</span>
               <span class="text-lg"> Following </span>
             </div>
           </div>
           <div class="mt-2 w-fit m-auto sm:m-0">
-            <div class="font-semibold text-center sm:text-left"><%= @user_profile.alias %></div>
-            <div class="text-center sm:text-left"><%= @user_profile.intro %></div>
+            <div class="font-semibold text-center sm:text-left">{@user_profile.alias}</div>
+            <div class="text-center sm:text-left">{@user_profile.intro}</div>
           </div>
         </div>
       </div>
@@ -227,16 +227,16 @@ defmodule MehungryWeb.CoreComponents do
         <div class="flex flex-col justify-center w-full">
           <div class="text-sm font-bold leading-4">
             <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-              <%= @user.email %>
+              {@user.email}
             </.link>
             <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
             </div>
           </div>
           <div class="text-sm leading-4">
-            <%= "#{count_user_created_recipes(@user.id)} posted recipes" %>
+            {"#{count_user_created_recipes(@user.id)} posted recipes"}
           </div>
           <div class="text-sm leading-4">
-            <%= "#{count_user_created_recipes(@user.id)} posted recipesfasdafsdafsafsd" %>
+            {"#{count_user_created_recipes(@user.id)} posted recipesfasdafsdafsafsd"}
           </div>
         </div>
       </div>
@@ -325,16 +325,16 @@ defmodule MehungryWeb.CoreComponents do
         <div class="flex flex-col justify-center w-full">
           <div class="text-sm font-bold leading-4">
             <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-              <%= @user.email %>
+              {@user.email}
               <%= if not is_nil(@post) do %>
-                <span class="font-normal text-greyfriend3"><%= get_post_age(@post) %></span>
+                <span class="font-normal text-greyfriend3">{get_post_age(@post)}</span>
               <% end %>
             </.link>
             <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
             </div>
           </div>
           <div class="text-sm leading-4">
-            <%= "#{count_user_created_recipes(@user.id)} posted recipes" %>
+            {"#{count_user_created_recipes(@user.id)} posted recipes"}
           </div>
         </div>
         <%= if @user.id in @user_follows do %>
@@ -374,9 +374,9 @@ defmodule MehungryWeb.CoreComponents do
         <div class="flex flex-col justify-center w-full">
           <div class="text-sm font-semibold leading-4 text-white">
             <div class="text-center text-2xl px-6 max-h-16 overflow-hidden">
-              <%= @post.reference.title %>
+              {@post.reference.title}
             </div>
-            <div class="text-center text-base px-6 pb-2"><%= @post.reference.description %></div>
+            <div class="text-center text-base px-6 pb-2">{@post.reference.description}</div>
           </div>
         </div>
       </div>
@@ -409,13 +409,13 @@ defmodule MehungryWeb.CoreComponents do
         <div class="flex flex-col justify-center w-full">
           <div class="text-base font-bold text-white leading-4">
             <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-              <%= @user.email %>
+              {@user.email}
             </.link>
             <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
             </div>
           </div>
           <div class="text-sm font-semibold leading-4 text-white">
-            <%= "#{count_user_created_recipes(@user.id)} posted recipes" %>
+            {"#{count_user_created_recipes(@user.id)} posted recipes"}
           </div>
         </div>
         <.follow_button user_follows={@user_follows} user={@user} />
@@ -493,7 +493,7 @@ defmodule MehungryWeb.CoreComponents do
               class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-2  lg:p-14 shadow-lg ring-1 transition"
             >
               <div id={"#{@id}-content"}>
-                <%= render_slot(@inner_block) %>
+                {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
           </div>
@@ -541,7 +541,7 @@ defmodule MehungryWeb.CoreComponents do
                 </button>
               </div>
               <div id={"#{@id}-content"}>
-                <%= render_slot(@inner_block) %>
+                {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
           </div>
@@ -586,9 +586,9 @@ defmodule MehungryWeb.CoreComponents do
       <p :if={@title} class="flex items-center gap-1.5 text-sm font-semibold leading-6">
         <.icon :if={@kind == :info} name="hero-information-circle-mini" class="h-4 w-4" />
         <.icon :if={@kind == :error} name="hero-exclamation-circle-mini" class="h-4 w-4" />
-        <%= @title %>
+        {@title}
       </p>
-      <p class="mt-2 text-sm leading-5"><%= msg %></p>
+      <p class="mt-2 text-sm leading-5">{msg}</p>
       <button type="button" class="group absolute top-1 right-1 p-2" aria-label={gettext("close")}>
         <.icon name="hero-x-mark-solid" class="h-5 w-5 opacity-40 group-hover:opacity-70" />
       </button>
@@ -663,9 +663,9 @@ defmodule MehungryWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <%= render_slot(@inner_block, f) %>
+      {render_slot(@inner_block, f)}
       <div :for={action <- @actions} class="mt-6 flex items-center justify-between gap-6">
-        <%= render_slot(action, f) %>
+        {render_slot(action, f)}
       </div>
     </.form>
     """
@@ -695,7 +695,7 @@ defmodule MehungryWeb.CoreComponents do
       ]}
       {@rest}
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </button>
     """
   end
@@ -710,7 +710,7 @@ defmodule MehungryWeb.CoreComponents do
       ]}
       {@rest}
     >
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </button>
     """
   end
@@ -800,7 +800,7 @@ defmodule MehungryWeb.CoreComponents do
         }
         {@rest}
       />
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -824,9 +824,9 @@ defmodule MehungryWeb.CoreComponents do
           class="rounded border-complementaryl text-complementary focus:ring-0 font-medium"
           {@rest}
         />
-        <%= @label %>
+        {@label}
       </label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -855,7 +855,7 @@ defmodule MehungryWeb.CoreComponents do
           {@rest}
         />
       </label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -886,8 +886,8 @@ defmodule MehungryWeb.CoreComponents do
         }
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
-      <.label for={@id}><%= @label %></.label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.label for={@id}>{@label}</.label>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -911,9 +911,9 @@ defmodule MehungryWeb.CoreComponents do
         }
         {@rest}
       />
-      <.label for={@id} class="placeholder"><%= @label %></.label>
+      <.label for={@id} class="placeholder">{@label}</.label>
 
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -941,7 +941,7 @@ defmodule MehungryWeb.CoreComponents do
         {@rest}
       />
 
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -979,8 +979,8 @@ defmodule MehungryWeb.CoreComponents do
         }
         {@rest}
       />
-      <.label for={@id} class="placeholder"><%= @label %></.label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.label for={@id} class="placeholder">{@label}</.label>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -1004,8 +1004,8 @@ defmodule MehungryWeb.CoreComponents do
         }
         {@rest}
       />
-      <.label for={@id} class="placeholder"><%= @label %></.label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.label for={@id} class="placeholder">{@label}</.label>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -1028,7 +1028,7 @@ defmodule MehungryWeb.CoreComponents do
         }
         {@rest}
       />
-      <.label for={@id} class="placeholder"><%= @label %></.label>
+      <.label for={@id} class="placeholder">{@label}</.label>
       <button phx-clic="submit" class="absolute right-2 m-auto">
         <.icon
           name="hero-arrow-right-circle"
@@ -1056,7 +1056,7 @@ defmodule MehungryWeb.CoreComponents do
   def input(%{type: "select"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name}>
-      <.label for={@id}><%= @label %></.label>
+      <.label for={@id}>{@label}</.label>
       <select
         id={@id}
         name={@name}
@@ -1065,10 +1065,10 @@ defmodule MehungryWeb.CoreComponents do
         multiple={@multiple}
         {@rest}
       >
-        <option :if={@prompt} value=""><%= @prompt %></option>
-        <%= Phoenix.HTML.Form.options_for_select(@options, @value) %>
+        <option :if={@prompt} value="">{@prompt}</option>
+        {Phoenix.HTML.Form.options_for_select(@options, @value)}
       </select>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -1093,8 +1093,8 @@ defmodule MehungryWeb.CoreComponents do
         }
         {@rest}
       />
-      <.label for={@id} class="placeholder px-4"><%= @label %></.label>
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <.label for={@id} class="placeholder px-4">{@label}</.label>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
   end
@@ -1109,7 +1109,7 @@ defmodule MehungryWeb.CoreComponents do
   def label(assigns) do
     ~H"""
     <label for={@for} class="placeholder">
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </label>
     """
   end
@@ -1126,7 +1126,7 @@ defmodule MehungryWeb.CoreComponents do
       style="position: absolute; bottom: -3rem;"
     >
       <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -1135,7 +1135,7 @@ defmodule MehungryWeb.CoreComponents do
     ~H"""
     <div class="" style="position: absolute; top: 0; left: 0; z-index: 600">
       <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
-      <%= render_slot(@inner_block) %>
+      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -1160,13 +1160,13 @@ defmodule MehungryWeb.CoreComponents do
           class="text-lg font-semibold leading-8 text-zinc-800"
           style="margin-inline: auto; text-align: center; font-size: 1.6rem;"
         >
-          <%= render_slot(@inner_block) %>
+          {render_slot(@inner_block)}
         </h1>
         <p :if={@subtitle != []} class="subtitle">
-          <%= render_slot(@subtitle) %>
+          {render_slot(@subtitle)}
         </p>
       </div>
-      <div class="flex-none"><%= render_slot(@actions) %></div>
+      <div class="flex-none">{render_slot(@actions)}</div>
     </header>
     """
   end
@@ -1207,9 +1207,9 @@ defmodule MehungryWeb.CoreComponents do
       <table class="w-[40rem] mt-11 sm:w-full">
         <thead class="text-sm text-left leading-6 text-zinc-500">
           <tr>
-            <th :for={col <- @col} class="p-0 pb-4 pr-6 font-normal w-fit"><%= col[:label] %></th>
+            <th :for={col <- @col} class="p-0 pb-4 pr-6 font-normal w-fit">{col[:label]}</th>
             <th :if={@action != []} class="relative p-0 pb-4 w-fit">
-              <span class="sr-only"><%= gettext("Actions") %></span>
+              <span class="sr-only">{gettext("Actions")}</span>
             </th>
           </tr>
         </thead>
@@ -1227,7 +1227,7 @@ defmodule MehungryWeb.CoreComponents do
               <div class="block py-4 pr-6">
                 <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-50 sm:rounded-l-xl" />
                 <span class={["relative", i == 0 && "font-semibold text-zinc-900"]}>
-                  <%= render_slot(col, @row_item.(row)) %>
+                  {render_slot(col, @row_item.(row))}
                 </span>
               </div>
             </td>
@@ -1238,7 +1238,7 @@ defmodule MehungryWeb.CoreComponents do
                   :for={action <- @action}
                   class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
                 >
-                  <%= render_slot(action, @row_item.(row)) %>
+                  {render_slot(action, @row_item.(row))}
                 </span>
               </div>
             </td>
@@ -1268,8 +1268,8 @@ defmodule MehungryWeb.CoreComponents do
     <div class="mt-14">
       <dl class="-my-4 divide-y divide-zinc-100">
         <div :for={item <- @item} class="flex gap-4 py-4 text-sm leading-6 sm:gap-8">
-          <dt class="w-1/4 flex-none text-zinc-500"><%= item.title %></dt>
-          <dd class="text-zinc-700"><%= render_slot(item) %></dd>
+          <dt class="w-1/4 flex-none text-zinc-500">{item.title}</dt>
+          <dd class="text-zinc-700">{render_slot(item)}</dd>
         </div>
       </dl>
     </div>
@@ -1294,7 +1294,7 @@ defmodule MehungryWeb.CoreComponents do
         class="text-sm font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
       >
         <.icon name="hero-arrow-left-solid" class="h-3 w-3" />
-        <%= render_slot(@inner_block) %>
+        {render_slot(@inner_block)}
       </.link>
     </div>
     """

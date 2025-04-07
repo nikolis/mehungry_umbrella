@@ -18,7 +18,11 @@ defmodule MehungryWeb.SelectComponentSingle3 do
           >
             <div class="h-full flex flex-col  justify-center p-1">
               <div class="self-center text-ellipsis text-center overflow-hidden px-1 leading-4">
-                <.get_label label={Mehungry.Utils.remove_parenthesis(Map.get(@selected_items, :label, Map.get(@selected_items, :name)))} />
+                <.get_label label={
+                  Mehungry.Utils.remove_parenthesis(
+                    Map.get(@selected_items, :label, Map.get(@selected_items, :name))
+                  )
+                } />
               </div>
             </div>
             <.icon name="hero-x-mark" class="absolute right-1 top-1  z-20 opacity-70 h-3 w-3" />
@@ -107,7 +111,7 @@ defmodule MehungryWeb.SelectComponentSingle3 do
     ~H"""
     <div>
       <span class="font-semibold">
-        <%= @first %> <span class="text-xs font-light"><%= @sub_script %></span>
+        {@first} <span class="text-xs font-light">{@sub_script}</span>
       </span>
     </div>
     """

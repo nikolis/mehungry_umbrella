@@ -22,6 +22,17 @@ defmodule Mehungry.Application do
       # Supervisor.Spec.worker(Cachex, [:recipes_cache, [limit: 500]], id: :recipes_cache)
     ]
 
+    children =
+    if @env != :test do
+      [
+        # Start libcluster
+        {Cluster.Supervisor, [Application.get_env(:libcluster, :topologies), [name: Mehungry.ClusterSupervisor]]}
+          | children
+      ]
+    else
+      children
+    end
+
     Supervisor.start_link(children, strategy: :one_for_one, name: Mehungry.Supervisor)
   end
 end

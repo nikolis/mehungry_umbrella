@@ -36,8 +36,7 @@ defmodule Mehungry.Umbrella.MixProject do
     [
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.3", only: [:dev], runtime: false},
-      {:libcluster, "~> 3.3"}
-    ]
+      ]
   end
 
   # Aliases are shortcuts or tasks specific to the current project.

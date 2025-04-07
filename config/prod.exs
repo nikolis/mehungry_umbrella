@@ -24,14 +24,24 @@ config(:libcluster,
       strategy: Cluster.Strategy.DNSPoll,
       config: [
         # Check every 5s
-        polling_interval: 5_000,
+        polling_interval: 1000,
         query: "discovery-service-m3hungry-ecs-backend.namespace-m3hungry-ecs-backend",
         node_basename: "mehungry_umbrella"
       ]
     ]
   ]
 )
-
+config :libcluster,
+  topologies: [
+    ecs: [
+      strategy: Cluster.Strategy.DNSPoll,
+      config: [
+        polling_interval: 1000,
+        query: <full URL of other running service>,
+        node_basename: <base node name of other service>
+      ]
+    ]
+  ]
 config :mehungry_web, MehungryWeb.Endpoint,
   http: [port: 4000],
   debug_errors: true,

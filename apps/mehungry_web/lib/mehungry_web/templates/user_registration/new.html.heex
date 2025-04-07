@@ -20,24 +20,24 @@
     <% end %>
 
     <div class="input_group_container">
-      <%= label(f, :email) %>
-      <%= email_input(f, :email, required: true) %>
+      {label(f, :email)}
+      {email_input(f, :email, required: true)}
       <br />
-      <%= error_tag(f, :email) %>
+      {error_tag(f, :email)}
     </div>
     <div class="input_group_container">
-      <%= label(f, :password) %>
-      <%= password_input(f, :password, required: true) %>
-      <%= link("Forgot your password?", to: Routes.user_reset_password_path(@conn, :new)) %>
-      <%= error_tag(f, :password) %>
+      {label(f, :password)}
+      {password_input(f, :password, required: true)}
+      {link("Forgot your password?", to: Routes.user_reset_password_path(@conn, :new))}
+      {error_tag(f, :password)}
     </div>
 
     <div class="login_submit_button">
-      <%= submit("Register",
+      {submit("Register",
         style:
           "color: white; border: 1px solid #77b255; height: 3rem; border-radius: 990px; font-size: calc(0.8rem + 0.35vw );",
         class: "link_button "
-      ) %>
+      )}
       <span style="text-align: center"> OR </span>
       <a
         class=" text-center flex items-center  rounded-full"

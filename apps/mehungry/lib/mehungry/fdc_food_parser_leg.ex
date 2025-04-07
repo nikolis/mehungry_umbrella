@@ -171,9 +171,8 @@ defmodule Mehungry.FdcFoodParserLeg do
     Enum.each(json_body["SRLegacyFoods"], fn x -> create_ingredient(x) end)
   end
 
-  def get_ingredients_from_json_body(json_body) do 
+  def get_ingredients_from_json_body(json_body) do
     {:ok, body} = Poison.decode(json_body)
     Enum.each(body, fn x -> create_ingredient(x) end)
   end
-
 end

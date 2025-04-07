@@ -9,12 +9,12 @@
     phx-submit="search"
   >
     <div class="">
-      <%= text_input(f, :query_string,
+      {text_input(f, :query_string,
         class: "w-full h-full rounded-full p-3",
         style: "background-color:#eaeaea",
         id: "text-search-input"
-      ) %>
-      <%= submit("", phx_disable_with: "Searching...", class: "invisible") %>
+      )}
+      {submit("", phx_disable_with: "Searching...", class: "invisible")}
     </div>
   </.form>
 </div>

@@ -122,7 +122,7 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
     ~H"""
     <div>
       <span class="font-semibold">
-        <%= @first %> <span class="text-xs font-light"><%= @sub_script %></span>
+        {@first} <span class="text-xs font-light">{@sub_script}</span>
       </span>
     </div>
     """

@@ -27,6 +27,7 @@ ARG GOOGLE_CLIENT_ID
 ARG GOOGLE_CLIENT_SECRET
 ARG SECRET_KEY_BASE 
 ARG DATABASE_URL
+ARG RELEASE_COOKIE
 
 ENV MIX_ENV  ${MIX_ENV}
 ENV AWS_ASSETS_BUCKET_NAME  ${AWS_ASSETS_BUCKET_NAME}
@@ -39,8 +40,7 @@ ENV GOOGLE_CLIENT_SECRET  ${GOOGLE_CLIENT_SECRET}
 ENV SECRET_KEY_BASE ${SECRET_KEY_BASE}
 ENV SECRET_KEY_BASE ${SECRET_KEY_BASE}
 ENV DATABASE_URL ${DATABASE_URL}
-
-
+ENV RELEASE_COOKIE  ${RELEASE_COOKIE} 
 
 
 # Install dependencies
@@ -97,6 +97,17 @@ FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
 RUN apk add --update openssl postgresql-client
 
-EXPOSE 4000 4369 9000-9100
+# Default Phoenix server port
+EXPOSE 4000
+
+# Erlang EPMD port
+EXPOSE 4369
+
+# Intra-Erlang communication ports
+EXPOSE 9000-9010
+
+# :erpc default port
+EXPOSE 9090
+
 
 CMD ["sh", "bin/mehungry_umbrella", "start"]

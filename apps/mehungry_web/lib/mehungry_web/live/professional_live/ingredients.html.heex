@@ -51,11 +51,11 @@
     <%= for {dom_id, ingredient} <- @streams.ingredients do %>
       <div class="flex gap-4" id={dom_id}>
         <div class="text-black text-base" style="width: 250px;">
-          <span class="font-semibold">(<%= ingredient.id %>)</span> <%= ingredient.name %>
+          <span class="font-semibold">({ingredient.id})</span> {ingredient.name}
         </div>
-        <div class="text-black text-base" style="width: 100px;"><%= ingredient.food_class %></div>
+        <div class="text-black text-base" style="width: 100px;">{ingredient.food_class}</div>
         <div class="text-black text-base" style="width: 250px;">
-          <%= ingredient.category.name %> ( <%= ingredient.category_id %> )
+          {ingredient.category.name} ( {ingredient.category_id} )
         </div>
       </div>
     <% end %>

@@ -76,7 +76,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
     ~H"""
     <span class=" flex gap-2  flex-wrap">
-      <div class="w-full break-words	"><%= @description %></div>
+      <div class="w-full break-words	">{@description}</div>
       <%= for tag <- @recipe.recipe_hashtags do %>
         <.recipe_tag hashtag={tag.hashtag} />
       <% end %>

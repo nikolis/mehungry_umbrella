@@ -8,7 +8,7 @@ defmodule MehungryWeb.NutrientAnalysisComponent do
   def render(assigns) do
     ~H"""
     <div style="max-height: 65vh; overflow: auto;">
-      <h3>Total nutrition for day <span class="text-sm">(<%= @particular_date %>)</span></h3>
+      <h3>Total nutrition for day <span class="text-sm">({@particular_date})</span></h3>
       <div class="accordion text-sm md:text-base lg:text-lg font-medium	">
         <%= for {n, index} <-  Enum.with_index(@nutrients) do %>
           <%= if !is_nil(n) do %>
@@ -28,18 +28,18 @@ defmodule MehungryWeb.NutrientAnalysisComponent do
                       />
                     </div>
 
-                    <%= Map.get(n, :name, "Default") <>
+                    {Map.get(n, :name, "Default") <>
                       " " <>
                       if !is_nil(n[:amount]) do
                         to_string(Float.round(n[:amount], 2))
                       else
                         "."
-                      end %>
-                    <%= if !is_nil(n[:measurement_unit]) do
+                      end}
+                    {if !is_nil(n[:measurement_unit]) do
                       n[:measurement_unit]
                     else
                       ""
-                    end %>
+                    end}
                   </button>
                 <% else %>
                   <%= if index < @primary_size do %>
@@ -49,18 +49,18 @@ defmodule MehungryWeb.NutrientAnalysisComponent do
                       aria-expanded="false"
                       aria-controls=""
                     >
-                      <%= Map.get(n, :name, "Default") <>
+                      {Map.get(n, :name, "Default") <>
                         " " <>
                         if !is_nil(n[:amount]) do
                           to_string(Float.round(n[:amount], 2))
                         else
                           "."
-                        end %>
-                      <%= if !is_nil(n[:measurement_unit]) do
+                        end}
+                      {if !is_nil(n[:measurement_unit]) do
                         n[:measurement_unit]
                       else
                         ""
-                      end %>
+                      end}
                     </button>
                   <% else %>
                     <button
@@ -69,18 +69,18 @@ defmodule MehungryWeb.NutrientAnalysisComponent do
                       aria-expanded="false"
                       aria-controls=""
                     >
-                      <%= Map.get(n, :name, "Default") <>
+                      {Map.get(n, :name, "Default") <>
                         " " <>
                         if !is_nil(n[:amount]) do
                           to_string(Float.round(n[:amount], 2))
                         else
                           "."
-                        end %>
-                      <%= if !is_nil(n[:measurement_unit]) do
+                        end}
+                      {if !is_nil(n[:measurement_unit]) do
                         n[:measurement_unit]
                       else
                         ""
-                      end %>
+                      end}
                     </button>
                   <% end %>
                 <% end %>
@@ -97,7 +97,7 @@ defmodule MehungryWeb.NutrientAnalysisComponent do
                     <%= if !is_nil(n[:children]) do
                       for n_r <- n[:children] do %>
                       <li style="padding-left: 1rem; text-align: start;">
-                        <%= n_r.name %> <%= Float.round(n_r.amount, 4) %> <%= n_r.measurement_unit %>
+                        {n_r.name} {Float.round(n_r.amount, 4)} {n_r.measurement_unit}
                       </li>
                     <% end end %>
                   </ul>

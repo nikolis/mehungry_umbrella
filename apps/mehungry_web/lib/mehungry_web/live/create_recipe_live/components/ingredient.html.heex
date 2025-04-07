@@ -30,7 +30,7 @@
         <.icon name="hero-delete" class="h-12 w-12" />
       </div>
     <% else %>
-      <%= hidden_input(@g, :temp_id) %>
+      {hidden_input(@g, :temp_id)}
       <svg
         phx-click="remove-ingredient"
         style="width:25px; height: 100%; margin: auto;"

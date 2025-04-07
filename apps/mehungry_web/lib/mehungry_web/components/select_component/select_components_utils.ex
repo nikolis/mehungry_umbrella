@@ -88,18 +88,19 @@ defmodule MehungryWeb.SelectComponentUtils do
 
       # get_items_from_params(form_params, assigns.items)
       {selected_items, _, _, _} ->
-        selected_items = 
+        selected_items =
           if is_map(selected_items) do
             {selected_items.id, selected_items.name}
           else
-           selected_items 
+            selected_items
           end
-        Enum.filter(assigns.items, fn x -> 
-        if is_binary(selected_items) do 
-            String.contains?(selected_items, elem(x, 0)) 
-        else 
+
+        Enum.filter(assigns.items, fn x ->
+          if is_binary(selected_items) do
+            String.contains?(selected_items, elem(x, 0))
+          else
             selected_items == String.to_integer(elem(x, 0))
-        end
+          end
         end)
     end
   end

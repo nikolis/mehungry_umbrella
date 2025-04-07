@@ -20,7 +20,7 @@
     />
   </.modal>
   <%= if @shopping_basket do %>
-    <h3 class="mb-2 text-center md:hidden"><%= Map.get(@shopping_basket, :title, "...") %></h3>
+    <h3 class="mb-2 text-center md:hidden">{Map.get(@shopping_basket, :title, "...")}</h3>
   <% end %>
 
   <div class="basket-page-container h-fit bg-greyfriend1 rounded-lg py-4">
