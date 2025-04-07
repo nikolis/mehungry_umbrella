@@ -61,7 +61,7 @@ defmodule Mehungry.MixProject do
       {:jason, "~> 1.0"},
       {:paginator, "~> 1.2.0"},
       {:cachex, "~> 3.4"},
-      {:libcluster, "~> 3.1"}
+      {:libcluster, "~> 3.3"}
     ]
   end
 
