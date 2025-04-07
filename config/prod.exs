@@ -18,15 +18,16 @@ import Config
 #  show_sensitive_data_on_connection_error: true,
 #  pool_size: 10
 
-onfig(:libcluster,
+config(:libcluster,
   topologies: [
     ecs_dns: [
       strategy: Cluster.Strategy.DNSPoll,
       config: [
         # Check every 5s
-        polling_interval: 5_000,
-        query: "namespace-m3hungry-ecs-backend",
-        node_basename: "mehungry_umbrella"
+        polling_interval: 1000,
+        query: "discovery-service-m3hungry-ecs-backend.namespace-m3hungry-ecs-backend",
+        node_basename: "mehungry_umbrella",
+        app_name: :mehungry_umbrella 
       ]
     ]
   ]

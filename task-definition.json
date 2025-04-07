@@ -15,13 +15,12 @@
                     "appProtocol": "http"
                 },
                 { "containerPort": 4369, "hostPort": 4369 },
-                { "containerPort": 9000, "hostPort": 9000 },
                 { "containerPortRange": "9000-9100", "protocol": "tcp"}
             ],
             "essential": true,
             "environment": [
-              { "name": "NODE_NAME", "value": "mehungry@$(hostname -i)" },
-              { "name": "DNS_NAME", "value": "namespace-m3hungry-ecs-backend" }
+              { "name": "NODE_NAME", "value": "mehungry@$(hostname --fqdn)" },
+              { "name": "DNS_NAME", "value": "discovery-service-m3hungry-ecs-backend.namespace-m3hungry-ecs-backend" }
             ],
             "environmentFiles": [],
             "mountPoints": [],
