@@ -46,6 +46,7 @@ defmodule MehungryWeb.MixProject do
       {:cachex, "~> 3.4"},
       {:vix, "~> 0.23.0"},
       {:image, "~> 0.37"},
+      {:libcluster, "~> 3.3"},
       {:seqfuzz, "~> 0.2.0"},
       {:phoenix_html_helpers, "~> 1.0"},
       {:bcrypt_elixir, "~> 3.0"},
