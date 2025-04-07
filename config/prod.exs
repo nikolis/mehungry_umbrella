@@ -31,17 +31,7 @@ config(:libcluster,
     ]
   ]
 )
-config :libcluster,
-  topologies: [
-    ecs: [
-      strategy: Cluster.Strategy.DNSPoll,
-      config: [
-        polling_interval: 1000,
-        query: <full URL of other running service>,
-        node_basename: <base node name of other service>
-      ]
-    ]
-  ]
+
 config :mehungry_web, MehungryWeb.Endpoint,
   http: [port: 4000],
   debug_errors: true,
