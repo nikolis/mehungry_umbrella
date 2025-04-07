@@ -81,6 +81,7 @@ RUN MIX_ENV=prod mix assets.deploy
 
 # Copy app code
 COPY apps ./apps
+COPY rel rel
 
 #RUN mix phx.digest
 
