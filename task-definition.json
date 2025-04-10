@@ -42,6 +42,7 @@
         }
     ],
     "family": "mehungry_app_deployment",
+    "taskRoleArn": "arn:aws:iam::011528270584:role/EcsTaskCommunicationRole",
     "executionRoleArn": "arn:aws:iam::011528270584:role/ecsTaskExecutionRole",
     "networkMode": "awsvpc",
     "revision": 6,
