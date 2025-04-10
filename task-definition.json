@@ -5,19 +5,46 @@
             "name": "mehungry_app",
             "image": "011528270584.dkr.ecr.eu-central-1.amazonaws.com/mehungry_ecr:4e3bf58c1f8ea3052f8539eaad140ed77f337b6a",
             "cpu": 0,
+            "essential": true,
             "portMappings": [
                 {
-                    
                     "name": "mehungry_app-4000-tcp",
                     "containerPort": 4000,
                     "hostPort": 4000,
                     "protocol": "tcp",
                     "appProtocol": "http"
                 },
-                { "containerPort": 4369, "hostPort": 4369 },
-                { "containerPortRange": "9000-9100", "protocol": "tcp"}
+                {
+                    "containerPort": 4369,
+                    "hostPort": 4369,
+                    "protocol": "tcp"
+                },
+                {
+                    "containerPort": 9000,
+                    "hostPort": 9000,
+                    "protocol": "tcp"
+                },
+                {
+                    "containerPort": 9001,
+                    "hostPort": 9001,
+                    "protocol": "tcp"
+                },
+                {
+                    "containerPort": 9002,
+                    "hostPort": 9002,
+                    "protocol": "tcp"
+                },
+                {
+                    "containerPort": 9003,
+                    "hostPort": 9003,
+                    "protocol": "tcp"
+                },
+                {
+                    "containerPort": 9004,
+                    "hostPort": 9004,
+                    "protocol": "tcp"
+                }
             ],
-            "essential": true,
             "environment": [
               { "name": "NODE_NAME", "value": "mehungry@$(hostname --fqdn)" },
               { "name": "DNS_NAME", "value": "discovery-service-m3hungry-ecs-backend.namespace-m3hungry-ecs-backend" }
