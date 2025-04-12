@@ -46,8 +46,6 @@
                 }
             ],
             "environment": [
-              { "name": "NODE_NAME", "value": "mehungry@$(hostname --fqdn)" },
-              { "name": "DNS_NAME", "value": "discovery-service-m3hungry-ecs-backend.namespace-m3hungry-ecs-backend" }
             ],
             "environmentFiles": [],
             "mountPoints": [],
