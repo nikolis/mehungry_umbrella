@@ -1,51 +1,28 @@
-<div style="height: 100%;" class="container  md:mt-2 sm:p-2 mx-auto relative overflow-hidden ">
-  <.modal
-    :if={@live_action in [:new, :edit]}
-    on_cancel={JS.patch(~p"/calendar")}
-    id="calendar_modal"
-    show
-  >
-    <div class="w-full h-full">
-      <.live_component
-        module={MehungryWeb.CalendarLive.MealFormComponent}
-        id={@user_meal.id || :new}
-        title={@user_meal.title || @title}
-        live_action={@live_action}
-        invocations={@invocations}
-        recipes={@recipes}
-        dates={@dates}
-        current_user={@current_user}
-        return_to={@detail_return_to || Routes.calendar_index_path(@socket, :index)}
-      />
+    <div class="flex flex-col lg:flex-row h-full">
+  <!-- Weekly Grid -->
+  <div class="w-full lg:w-3/4 p-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
+      <%= for day <- @week do %>
+        <.live_component
+          module={MehungryWeb.DayCardComponent}
+          id={"day-#{day.date}"}
+          day={day}
+        />
+      <% end %>
     </div>
-  </.modal>
+  </div>
 
-  <.modal
-    :if={@live_action in [:nutrition_details]}
-    on_cancel={JS.patch(~p"/calendar")}
-    id="calendar_modal23"
-    show
-  >
-    <div class="w-full">
-      <.live_component
-        module={MehungryWeb.NutrientAnalysisComponent}
-        id={:details}
-        current_user={@current_user}
-        particular_date={@nutrition_details}
-        return_to={@detail_return_to || Routes.calendar_index_path(@socket, :index)}
-      />
-    </div>
-  </.modal>
+  <!-- Sidebar -->
+  <aside class="hidden lg:block w-1/4 bg-white border-l p-4 overflow-y-auto">
+    <MehungryWeb.CalendarLive.NutritionSidebarComponent.nutrition_sidebar  nutrition_data ={@nutrition_data}, warnings = {@warnings} />
+    <button
+      phx-click="toggle_grocery_list"
+      class="mt-6 w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg"
+    >
+      🛒 View Grocery List
+    </button>
+  </aside>
 
-  <.live_component
-    module={MehungryWeb.CalendarLive.Calendar.Widget}
-    id={:new}
-    user_meals={@user_meals}
-    particular_date={@particular_date}
-    title="Alter Basket"
-    calendar_view={@calendar_view}
-    action={@live_action}
-    user={@current_user}
-    device_width={@device_width}
-  />
+
 </div>
+

@@ -38,6 +38,7 @@ defmodule MehungryWeb.CalendarLive.Index do
       end)
 
     socket = push_event(socket, "create_meals", %{meals: user_meals})
+    week = create_week_plan()
 
     {
       :ok,
@@ -49,6 +50,9 @@ defmodule MehungryWeb.CalendarLive.Index do
       |> assign(:user_meals, user_meals)
       |> assign(:recipes, recipes)
       |> assign(:detail_return_to, nil)
+      |> assign(:week, week)
+      |> assign(:warnings, [])
+      |> assign(:nutrition_data, %{})
     }
   end
 
@@ -200,4 +204,17 @@ defmodule MehungryWeb.CalendarLive.Index do
   defp list_recipes(user) do
     Food.list_user_recipes_for_selection(user)
   end
+
+
+    defp create_week_plan do
+    # Sample meal plan for the week
+    [
+      %{date: "Monday", meals: [%{type: "Breakfast", meal: "Oatmeal with Berries"}]},
+      %{date: "Tuesday", meals: [%{type: "Lunch", meal: "Grilled Chicken Salad"}]},
+      %{date: "Wednesday", meals: [%{type: "Dinner", meal: "Beef Stir Fry"}]},
+      %{date: "Thursday", meals: [%{type: "Snack", meal: "Banana Smoothie"}]},
+      # Add more days as needed
+    ]
+    end
+
 end
