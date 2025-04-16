@@ -43,7 +43,7 @@ defmodule MehungryWeb.CalendarLive.Index do
       :ok,
       socket
       |> assign(:user, user)
-      |> assign(:calendar_view, "day_view")
+      |> assign(:calendar_view, "week_view")
       |> assign(:particular_date, nil)
       |> assign(:page_title, "Meal planner")
       |> assign(:user_meals, user_meals)

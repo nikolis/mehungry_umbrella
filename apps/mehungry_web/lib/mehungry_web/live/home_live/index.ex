@@ -36,6 +36,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
     IO.inspect("HOme live")
     IO.inspect(System.get_env())
+
     {:ok,
      socket
      |> assign(:user, user)

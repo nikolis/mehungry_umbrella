@@ -48,9 +48,9 @@ config :libcluster,
       strategy: Elixir.Cluster.Strategy.LocalEpmd
     ]
   ]
-  
+
 config :mehungry_web, MehungryWeb.Endpoint,
-  #http: [port: 4000],
+  # http: [port: 4000],
   http: [ip: {127, 0, 0, 1}, port: System.get_env("PORT", "4000")],
   debug_errors: true,
   code_reloader: true,

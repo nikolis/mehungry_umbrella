@@ -3,6 +3,7 @@
   <.head conn={@conn} />
   <body class=" w-full"></body>
 
+  {@inner_content}
   <%= if @current_user do %>
     <.sidebar_nav_links current_user={@current_user} inner_content={@inner_content} />
   <% end %>
