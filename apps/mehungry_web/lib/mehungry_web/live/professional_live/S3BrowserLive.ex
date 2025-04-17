@@ -245,7 +245,9 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
          MehungryWeb.DistributedTaskHandler.run(%{
                 type: :parse_and_insert,
                 data: %{files_urls: urls}
-      })
+         })
+         #IO.inspect(urls, label: "Urls ----------------->")
+        MehungryWeb.SeedsGenWorkerServer.put_work_list(urls)
         {:noreply, assign(socket, objects: objects.body.contents, loading: false)}
 
       {:error, error} ->

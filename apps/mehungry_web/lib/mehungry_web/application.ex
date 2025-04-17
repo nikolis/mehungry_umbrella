@@ -38,8 +38,8 @@ defmodule MehungryWeb.Application do
            [Application.get_env(:libcluster, :topologies), [name: Mehungry.ClusterSupervisor]]},
           {Task.Supervisor, name: MehungryWeb.TaskSupervisor},
           %{
-            id: MehungryWeb.DistributedTaskHandler,
-            start: {MehungryWeb.DistributedTaskHandler, :start_link, [[]]},
+            id: MehungryWeb.SeedGenServerSuperServer,
+            start: {MehungryWeb.SeedGenServerSuperServer, :start_link, []},
             restart: :transient
           }
         ] ++
