@@ -19,7 +19,6 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
     ~H"""
     <div class="container mx-auto p-4">
       <h1 class="text-2xl font-bold mb-4">AWS S3 Browser</h1>
-
       <div class="flex mb-4">
         <div class="flex-1 mr-2">
           <form phx-submit="list_objects" class="flex">
@@ -232,22 +231,23 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   @impl true
   def handle_event("load-ingredients", %{"bucket_name" => bucket_name}, socket) do
     socket = assign(socket, bucket_name: bucket_name, loading: true, error: nil)
-
     case S3Manager.list_objects(bucket_name, socket.assigns.prefix) do
       {:ok, objects} ->
-        Enum.each(objects.body.contents, fn x ->
+        urls = Enum.map(objects.body.contents, fn x ->
           case S3Manager.presigned_url(bucket_name, x.key) do
             {:ok, url} ->
-              IO.inspect(url, label: "Url")
-              {:ok, url} = url
-              %HTTPoison.Response{body: body} = HTTPoison.get!(url)
-              Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
+              url
 
             {:error, the_err} ->
               IO.inspect(the_err, label: "The error in parsing")
           end
         end)
-
+         MehungryWeb.DistributedTaskHandler.run(%{
+                type: :parse_and_insert,
+                data: %{files_urls: urls}
+         })
+         #IO.inspect(urls, label: "Urls ----------------->")
+        MehungryWeb.SeedsGenWorkerServer.put_work_list(urls)
         {:noreply, assign(socket, objects: objects.body.contents, loading: false)}
 
       {:error, error} ->

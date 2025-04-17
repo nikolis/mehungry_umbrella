@@ -14,6 +14,7 @@ defmodule MehungryWeb.Application do
       MehungryWeb.Presence,
       # MehungryWeb.Telemetry,
       # Start the Endpoint (http/https)
+
       MehungryWeb.Endpoint,
       # Start a worker by calling: MehungryWeb.Worker.start_link(arg)
       # {MehungryWeb.Worker, arg}
@@ -29,18 +30,23 @@ defmodule MehungryWeb.Application do
       }
     ]
 
-
     children =
-    if @env != :test do
-      [
+      if @env != :test do
         # Start libcluster
-        {Cluster.Supervisor, [Application.get_env(:libcluster, :topologies), [name: Mehungry.ClusterSupervisor]]}
-          | children
-      ]
-    else
-      children
-    end
-
+        [
+          {Cluster.Supervisor,
+           [Application.get_env(:libcluster, :topologies), [name: Mehungry.ClusterSupervisor]]},
+          {Task.Supervisor, name: MehungryWeb.TaskSupervisor},
+          %{
+            id: MehungryWeb.SeedGenServerSuperServer,
+            start: {MehungryWeb.SeedGenServerSuperServer, :start_link, []},
+            restart: :transient
+          }
+        ] ++
+          children
+      else
+        children
+      end
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

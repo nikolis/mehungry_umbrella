@@ -167,12 +167,22 @@ defmodule Mehungry.FdcFoodParserLeg do
 
   def get_ingredients_from_food_data_central_json_file(file_path) do
     {:ok, json_body} = get_json(file_path)
+    main = Map.get(json_body, "SRLegacyFoods", []) 
+    main2 = Map.get(json_body, "SurveyFoods", []) 
+    total = main ++ main2
 
-    Enum.each(json_body["SRLegacyFoods"], fn x -> create_ingredient(x) end)
+    IO.inspect(length(total), label: "Total items being proessed")  
+    Enum.each(total, fn x -> create_ingredient(x) end)
   end
 
   def get_ingredients_from_json_body(json_body) do
-    {:ok, body} = Poison.decode(json_body)
-    Enum.each(body, fn x -> create_ingredient(x) end)
+    try do
+      {:ok, body} = Poison.decode(json_body)
+      IO.inspect("1")
+      Enum.each(body, fn x -> create_ingredient(x) end)
+      IO.inspect("2")
+    rescue the_error -> 
+        IO.inspect(the_error, label: "Error") 
+    end
   end
 end

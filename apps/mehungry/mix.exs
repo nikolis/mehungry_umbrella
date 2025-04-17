@@ -60,7 +60,7 @@ defmodule Mehungry.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:jason, "~> 1.0"},
       {:paginator, "~> 1.2.0"},
-      {:cachex, "~> 3.4"},
+      {:cachex, "~> 3.4"}
     ]
   end
 

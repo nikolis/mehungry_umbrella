@@ -27,7 +27,7 @@ config(:libcluster,
         polling_interval: 1000,
         query: "discovery-service-m3hungry-ecs-backend.namespace-m3hungry-ecs-backend",
         node_basename: "mehungry_umbrella",
-        app_name: :mehungry_umbrella 
+        app_name: :mehungry_umbrella
       ]
     ]
   ]

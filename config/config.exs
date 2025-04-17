@@ -12,9 +12,13 @@ import Config
 config :mehungry,
   ecto_repos: [Mehungry.Repo]
 
-config :kernel,
-  inet_dist_listen_min: 9000,
-  inet_dist_listen_max: 9003
+config :my_app, Oban,
+  repo: MyApp.Repo,
+  queues: [feeders: 1]
+
+config :swarm,
+  distribution_strategy: Swarm.Distribution.StaticQuorumRing,
+  static_quorum_size: 1
 
 config :mehungry_web,
   ecto_repos: [Mehungry.Repo],

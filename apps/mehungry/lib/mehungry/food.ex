@@ -34,6 +34,17 @@ defmodule Mehungry.Food do
     |> Repo.insert()
   end
 
+  def broadcast_ingredient_work_item(file_url) do
+    # Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(comment.recipe_id), %{
+    # new_comment_vote: comment,
+    # type_: type_
+    # })
+
+    Phoenix.PubSub.broadcast(Mehungry.PubSub, "json_jobs", %{new_comment_vote: file_url})
+
+    {:ok, :submitted}
+  end
+
   def create_ingredient_nutrient(attrs) do
     %IngredientNutrient{}
     |> IngredientNutrient.changeset(attrs)
