@@ -12,9 +12,9 @@ defmodule IngredientSimilarity do
             fat: float(),
             carbs: float(),
             water: float(),
-            melt_point: float(),
-            pH: float(),
-            function: MapSet.t(String.t())
+            #melt_point: float(),
+            #pH: float(),
+            #function: MapSet.t(String.t())
           }
         }
 
