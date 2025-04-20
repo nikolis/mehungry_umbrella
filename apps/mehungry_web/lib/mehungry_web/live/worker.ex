@@ -1,4 +1,4 @@
-defmodule MehungryWeb.Worker do 
+defmodule MehungryWeb.Worker do
   use GenServer
 
   def start_link(task_args) do
@@ -10,5 +10,4 @@ defmodule MehungryWeb.Worker do
     Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
     {:ok, task_args}
   end
-
-end 
+end
