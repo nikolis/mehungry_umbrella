@@ -167,11 +167,11 @@ defmodule Mehungry.FdcFoodParserLeg do
 
   def get_ingredients_from_food_data_central_json_file(file_path) do
     {:ok, json_body} = get_json(file_path)
-    main = Map.get(json_body, "SRLegacyFoods", []) 
-    main2 = Map.get(json_body, "SurveyFoods", []) 
+    main = Map.get(json_body, "SRLegacyFoods", [])
+    main2 = Map.get(json_body, "SurveyFoods", [])
     total = main ++ main2
 
-    IO.inspect(length(total), label: "Total items being proessed")  
+    IO.inspect(length(total), label: "Total items being proessed")
     Enum.each(total, fn x -> create_ingredient(x) end)
   end
 
@@ -181,8 +181,9 @@ defmodule Mehungry.FdcFoodParserLeg do
       IO.inspect("1")
       Enum.each(body, fn x -> create_ingredient(x) end)
       IO.inspect("2")
-    rescue the_error -> 
-        IO.inspect(the_error, label: "Error") 
+    rescue
+      the_error ->
+        IO.inspect(the_error, label: "Error")
     end
   end
 end

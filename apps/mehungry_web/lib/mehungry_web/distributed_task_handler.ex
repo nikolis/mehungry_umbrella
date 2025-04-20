@@ -8,11 +8,12 @@ defmodule MehungryWeb.DistributedTaskHandler do
 
   # This is what Swarm calls
   def start([]) do
-    #GenServer.start_link(__MODULE__, nil, name: via_swarm(__MODULE__))
+    # GenServer.start_link(__MODULE__, nil, name: via_swarm(__MODULE__))
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
-  @interval 5_000 # 5 seconds
+  # 5 seconds
+  @interval 5_000
 
   defp via_swarm(name), do: {:via, :swarm, name}
 
@@ -22,19 +23,19 @@ defmodule MehungryWeb.DistributedTaskHandler do
   def run(task_payload) do
     GenServer.cast(via_swarm(__MODULE__), {:run_task, task_payload})
   end
+
   # Handle different task types dynamically
   def handle_cast({:run_task, %{type: type, data: data}}, state) do
     nodes = [node() | Node.list()]
     IO.inspect(nodes, label: "Dhte nodes")
-    #Logger.info("Spawning task on nodes: #{inspect(nodes)}")
+    # Logger.info("Spawning task on nodes: #{inspect(nodes)}")
 
     Enum.each(nodes, fn n ->
       :rpc.call(n, __MODULE__, :spawn_task, [%{file_name: data.file_url}])
     end)
-    
+
     {:noreply, %{working: nodes, waiting: []}, @interval}
   end
-
 
   defp handle_task(:parse_and_insert, %{file_url: {:ok, file_url}}) do
     %HTTPoison.Response{body: body} = HTTPoison.get!(file_url)
@@ -57,6 +58,3 @@ defmodule MehungryWeb.DistributedTaskHandler do
     IO.puts("❓ Unknown task type: #{inspect(other)}")
   end
 end
-
-
-

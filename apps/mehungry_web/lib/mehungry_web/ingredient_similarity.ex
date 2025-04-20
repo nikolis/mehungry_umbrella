@@ -11,10 +11,10 @@ defmodule IngredientSimilarity do
             protein: float(),
             fat: float(),
             carbs: float(),
-            water: float(),
-            #melt_point: float(),
-            #pH: float(),
-            #function: MapSet.t(String.t())
+            water: float()
+            # melt_point: float(),
+            # pH: float(),
+            # function: MapSet.t(String.t())
           }
         }
 
@@ -33,7 +33,7 @@ defmodule IngredientSimilarity do
   end
 
   defp vector_magnitude(vec) do
-    vec |> Enum.map(&(:math.pow(&1, 2))) |> Enum.sum() |> :math.sqrt()
+    vec |> Enum.map(&:math.pow(&1, 2)) |> Enum.sum() |> :math.sqrt()
   end
 
   @doc "Inverse of Euclidean distance (closer = more similar)"
@@ -86,4 +86,3 @@ defmodule IngredientSimilarity do
     [features.protein, features.fat, features.carbs, features.water]
   end
 end
-
