@@ -15,6 +15,35 @@
   <div class="m-auto w-fit md:hidden absolute -top-8 right-0 left-0 m-auto">
     <.stepper />
   </div>
+  
+  <.form 
+    :let={b}
+    id={@id<>"2"}
+    for={%{}}
+    phx-change="validate"
+    phx-submit="save"
+    class=" max-h-full overflow-clip  p-2 sm:p-6 sm:pt-2 flex md:gap-8 flex-col mx-auto mb-14 relative"
+    style=""
+>
+    
+    <.input
+      required
+      field={b[:url_to_drill]}
+      type="text"
+      label="Url input"
+      class="sm:w-full max-h-12 "
+    />
+        <div class="md:absolute   right-0 sm:right-10 mx-auto bottom-0 w-40">
+          {submit("Get",
+            class:
+              "button bg-complementary border-2 border-transparent  w-full md:absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold mb-14",
+            type: "submit",
+            phx_disable_with: "Saving...",
+            id: "save_button"
+          )}
+        </div>
+
+  </.form>
 
   <.form
     :let={f}

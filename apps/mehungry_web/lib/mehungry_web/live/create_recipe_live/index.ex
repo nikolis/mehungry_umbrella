@@ -44,6 +44,40 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:ok, meta, socket}
   end
 
+
+  def handle_event("validate", params, socket) do 
+    IO.inspect(params, label: "Small params")
+    socket = 
+      assign(socket, :url_to_drill, params["url_to_drill"])
+    {:noreply, socket}
+  end
+  
+  @url_regex ~r/^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w\-._~:\/?#[\]@!$&'()*+,;=]*)?$/
+  def valid_url?(url) when is_binary(url) do
+    Regex.match?(@url_regex, url)
+  end
+
+  def handle_event("save", %{"url_to_drill" => url }, socket) do
+     case valid_url?(url)  do 
+       true -> 
+         case MehungryWeb.Api.MealFetcher.fetch_and_parse(url) do
+           {:ok, meal} ->  
+             IO.inspect(meal, label: "meal   ========= ")
+             converted_meal  = MehungryWeb.Api.MealConverter.convert(meal) 
+             IO.inspect(converted_meal, label: "Converted meal")
+             recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+             socket = init(socket, recipe, converted_meal)
+             {:noreply, socket}
+           {:error, whatever} ->
+             IO.inspect(whatever, label: "Errrorr. ---")
+             {:noreply, socket}
+         end
+       false ->
+        IO.inspect(url, label: "dONT DRill this url")
+        {:noreply, socket}
+     end
+
+  end
   ################################################################################## Actions #############################################################################################
   defp apply_action(socket, :index, _params) do
     recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
