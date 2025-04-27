@@ -4,4 +4,6 @@ alias Mehungry.Food.Recipe
 alias Mehungry.Food.RecipeUtils
 alias Mehungry.Api.Instagram
 alias Mehungry.Accounts
-
+alias MehungryWeb.Api.TheMealDBParser
+alias MehungryWeb.Api.MealFetcher 
+alias MehungryWeb.Api.MealConverter

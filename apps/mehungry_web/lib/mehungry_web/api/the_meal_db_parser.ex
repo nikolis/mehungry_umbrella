@@ -54,8 +54,8 @@ defmodule MehungryWeb.Api.MealFetcher do
   @endpoint "https://www.themealdb.com/api/json/v1/1/search.php?s=Arrabiata"
 
   
-  def fetch_and_parse do
-    case HTTPoison.get(@endpoint) do
+  def fetch_and_parse(url \\ @endpoint) do
+    case HTTPoison.get(url) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         IO.inspect(body)
         {:ok, meal} = MehungryWeb.Api.TheMealDBParser.parse(body)
