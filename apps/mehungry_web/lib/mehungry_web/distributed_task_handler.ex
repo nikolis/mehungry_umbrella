@@ -27,7 +27,6 @@ defmodule MehungryWeb.DistributedTaskHandler do
   # Handle different task types dynamically
   def handle_cast({:run_task, %{type: type, data: data}}, state) do
     nodes = [node() | Node.list()]
-    IO.inspect(nodes, label: "Dhte nodes")
     # Logger.info("Spawning task on nodes: #{inspect(nodes)}")
 
     Enum.each(nodes, fn n ->
@@ -38,6 +37,7 @@ defmodule MehungryWeb.DistributedTaskHandler do
   end
 
   defp handle_task(:parse_and_insert, %{file_url: {:ok, file_url}}) do
+    IO.inspect(file_url, label: "Urls")
     %HTTPoison.Response{body: body} = HTTPoison.get!(file_url)
     Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
     # parsed = MehungryWeb.Parser.parse(%{raw: raw})
