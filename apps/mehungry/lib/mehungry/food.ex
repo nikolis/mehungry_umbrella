@@ -207,12 +207,17 @@ defmodule Mehungry.Food do
     |> Repo.all()
   end
 
+  def get_category_by_name(nil) do
+    nil
+  end
+
   def get_category_by_name(name) do
     from(cate in Category,
       where: cate.name == ^name
     )
     |> Repo.one()
   end
+
 
   def delete_recipe(id) do
     recipe =
@@ -517,6 +522,7 @@ defmodule Mehungry.Food do
   alias Mehungry.Food.Category
 
   def create_category(attrs) do
+
     %Category{}
     |> Category.changeset(attrs)
     |> Repo.insert()
