@@ -27,7 +27,9 @@ defmodule MehungryWeb.Api.MealConverter do
   end
 
   defp convert_ingredient(%{ingredient: name, measure: measure}) do
-    ingredient = Food.search_ingredient(name) |> find_best_match(:name)
+    {:ok, name} = PosTagger.rearrange_with_noun_first(name <>" \n")  
+
+    ingredient = Food.search_ingredient(name ) |> find_best_match(:name)
     {quantity, unit_string} = parse_measure(measure)
     measurement_unit = search_measurement_unit(unit_string)
 
@@ -72,6 +74,7 @@ defmodule MehungryWeb.Api.MealConverter do
 
   defp find_best_match(nil, _field), do: nil
   defp find_best_match([], _field), do: nil
+  defp find_best_match([match], _field), do: match
   defp find_best_match([match | _], _field), do: match
 end
 
