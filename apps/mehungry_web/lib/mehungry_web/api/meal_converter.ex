@@ -1,6 +1,8 @@
 defmodule MehungryWeb.Api.MealConverter do
   
   alias Mehungry.Food
+  alias Mehungry.Repo
+  require Logger
 
   def convert(meal) do
     %{
@@ -27,17 +29,28 @@ defmodule MehungryWeb.Api.MealConverter do
   end
 
   defp convert_ingredient(%{ingredient: name, measure: measure}) do
+    Logger.info("Converting ingredient with name: #{name} and the measurement unit is: #{measure}")
     {:ok, name} = PosTagger.rearrange_with_noun_first(name <>" \n")  
 
-    ingredient = Food.search_ingredient(name ) |> find_best_match(:name)
+    ingredients = Food.search_ingredient(name)  |> Repo.preload([:measurement_unit, [ingredient_portions: :measurement_unit]]) 
     {quantity, unit_string} = parse_measure(measure)
+    ingredient = find_matching_ingredient(ingredients, unit_string)
     measurement_unit = search_measurement_unit(unit_string)
-
     %{
       ingredient_id: ingredient && ingredient.id,
       measurement_unit_id: measurement_unit && measurement_unit.id,
       quantity: quantity
     }
+  end
+
+  defp find_matching_ingredient(ingredients, mu_name) do
+    ingredients = 
+      Enum.map(ingredients, fn x -> x.ingredient_portions end)
+      |> List.flatten()
+      |> Enum.map(fn x -> x.measurement_unit.name end)
+
+    IO.inspect(ingredients, label: "The ingredients")
+    nil
   end
 
   defp parse_measure(nil), do: {nil, nil}
@@ -66,7 +79,7 @@ defmodule MehungryWeb.Api.MealConverter do
   defp search_measurement_unit(unit) do
     # If short like "tsp", use partial match
     if String.length(unit) <= 4 do
-      Food.search_measurement_unit("#{unit}%") |> find_best_match(:name)
+      Food.search_measurement_unit("#{unit}%")  |> find_best_match(:name)
     else
       Food.search_measurement_unit(unit) |> find_best_match(:name)
     end
