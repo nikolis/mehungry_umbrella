@@ -5,7 +5,7 @@ defmodule Mehungry.FdcFoodParserLeg do
 
   alias Mehungry.Food
 
-  require Logger 
+  require Logger
 
   @measurement_unit_dict [
     {"grammar", "g"},
@@ -63,9 +63,10 @@ defmodule Mehungry.FdcFoodParserLeg do
       nutrient_id: nutrient.id,
       amount:
         case is_nil(attrs["amount"]) do
-           true ->
-            -1.0 
-           false ->
+          true ->
+            -1.0
+
+          false ->
             attrs["amount"]
         end,
       median: attrs["median"],
@@ -122,27 +123,32 @@ defmodule Mehungry.FdcFoodParserLeg do
   end
 
   def create_ingredient(attrs) do
-    attrs_description = 
+    attrs_description =
       case attrs["foodCategory"]["description"] do
         nil ->
           case attrs["wweiaFoodCategory"]["wweiaFoodCategoryDescription"] do
             nil ->
               attrs["brandedFoodCategory"]
+
             desc ->
               desc
           end
+
         description ->
           description
       end
 
     category = get_or_create_food_category(attrs_description)
-    category_id = 
-      case is_nil(category) do 
+
+    category_id =
+      case is_nil(category) do
         true ->
           nil
+
         false ->
           category.id
       end
+
     food_portions = attrs["foodPortions"]
     food_nutrients = attrs["foodNutrients"]
 
@@ -153,9 +159,11 @@ defmodule Mehungry.FdcFoodParserLeg do
       publication_date: attrs["publicationDate"],
       category_id: category_id
     }
+
     case Food.create_ingredient(attrs) do
       {:ok, ingredient} ->
         Logger.info("#{ingredient.name} was created Successfulle ")
+
         if not is_nil(food_portions) do
           create_ingredient_portions(food_portions, ingredient)
         end
@@ -171,9 +179,11 @@ defmodule Mehungry.FdcFoodParserLeg do
     end
   end
 
-  defp get_or_create_food_category(nil), do: nil 
+  defp get_or_create_food_category(nil), do: nil
+
   defp get_or_create_food_category(category_name) do
     category = Food.get_category_by_name(category_name)
+
     if is_nil(category) do
       {:ok, category} = Food.create_category(%{name: category_name})
       category
@@ -204,6 +214,7 @@ defmodule Mehungry.FdcFoodParserLeg do
       Enum.each(body, fn x -> create_ingredient(x) end)
     rescue
       the_error ->
+        nil
     end
   end
 end

@@ -1,5 +1,4 @@
 defmodule PosTagger do
-
   def rearrange_with_noun_first(text) do
     case tag_text(text) do
       {:ok, tagged} ->
@@ -21,6 +20,7 @@ defmodule PosTagger do
 
             true ->
               {before, [noun | rest]} = Enum.split(tagged, last_noun_index)
+
               [noun | before ++ rest]
               |> Enum.map(fn {word, _tag} -> word end)
           end
@@ -31,7 +31,7 @@ defmodule PosTagger do
         error
     end
   end
-  
+
   def tag_text(text) do
     port = Port.open({:spawn, "python3 pos_tagger.py"}, [:binary, :exit_status])
     Port.command(port, text)
@@ -63,6 +63,3 @@ defmodule PosTagger do
     end
   end
 end
-
-
-

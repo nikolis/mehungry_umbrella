@@ -1,5 +1,4 @@
 defmodule MehungryWeb.Api.MealConverter do
-  
   alias Mehungry.Food
   alias Mehungry.Repo
   require Logger
@@ -10,7 +9,7 @@ defmodule MehungryWeb.Api.MealConverter do
       steps: split_steps(meal.instructions),
       recipe_hashtags: meal.tags,
       user_id: 18,
-      cooking_time_lower_limit: 0, 
+      cooking_time_lower_limit: 0,
       preperation_time_lower_limit: 0,
       difficulty: 0,
       language_name: "En",
@@ -21,6 +20,7 @@ defmodule MehungryWeb.Api.MealConverter do
   end
 
   defp split_steps(nil), do: []
+
   defp split_steps(instructions) do
     instructions
     |> String.split(~r/\.\s+|\r\n/, trim: true)
@@ -29,13 +29,22 @@ defmodule MehungryWeb.Api.MealConverter do
   end
 
   defp convert_ingredient(%{ingredient: name, measure: measure}) do
-    Logger.info("Converting ingredient with name: #{name} and the measurement unit is: #{measure}")
-    {:ok, name} = PosTagger.rearrange_with_noun_first(name <>" \n")  
+    {:ok, name} = PosTagger.rearrange_with_noun_first(name <> " \n")
 
-    ingredients = Food.search_ingredient(name)  |> Repo.preload([:measurement_unit, [ingredient_portions: :measurement_unit]]) 
+    ingredients =
+      Food.search_ingredient(name)
+      |> Repo.preload([:measurement_unit, [ingredient_portions: :measurement_unit]])
+
+    IO.inspect(ingredients, label: "Ing ------------------------------")
     {quantity, unit_string} = parse_measure(measure)
     ingredient = find_matching_ingredient(ingredients, unit_string)
     measurement_unit = search_measurement_unit(unit_string)
+    Logger.info(
+      "Converting ingredient with name: #{name} and the measurement unit is: #{measure}"
+    )
+    Logger.info("The measuremnet unit quantity: #{inspect(quantity)} ")
+    Logger.info("The measuremnet unit : #{inspect(measurement_unit)} ")
+    Logger.info("The ingredient : #{inspect(ingredient)}")
     %{
       ingredient_id: ingredient && ingredient.id,
       measurement_unit_id: measurement_unit && measurement_unit.id,
@@ -44,16 +53,19 @@ defmodule MehungryWeb.Api.MealConverter do
   end
 
   defp find_matching_ingredient(ingredients, mu_name) do
-    ingredients = 
+
+    ingredients =
       Enum.map(ingredients, fn x -> x.ingredient_portions end)
       |> List.flatten()
       |> Enum.map(fn x -> x.measurement_unit.name end)
 
     IO.inspect(ingredients, label: "The ingredients")
+    IO.inspect(mu_name, label: "The ingredients") 
     nil
   end
 
   defp parse_measure(nil), do: {nil, nil}
+
   defp parse_measure(measure) do
     case Regex.run(~r/([\d\/\.]+)?\s*(.+)?/, measure, capture: :all_but_first) do
       [num, unit] -> {parse_quantity(num), String.trim(unit || "")}
@@ -63,10 +75,13 @@ defmodule MehungryWeb.Api.MealConverter do
 
   defp parse_quantity(nil), do: nil
   defp parse_quantity(""), do: nil
+
   defp parse_quantity(q) do
     # Handle fractions like "1/2"
     case Float.parse(q) do
-      {val, _} -> val
+      {val, _} ->
+        val
+
       :error ->
         case String.split(q, "/") do
           [num, denom] -> String.to_float(num) / String.to_float(denom)
@@ -76,10 +91,11 @@ defmodule MehungryWeb.Api.MealConverter do
   end
 
   defp search_measurement_unit(""), do: nil
+
   defp search_measurement_unit(unit) do
     # If short like "tsp", use partial match
     if String.length(unit) <= 4 do
-      Food.search_measurement_unit("#{unit}%")  |> find_best_match(:name)
+      Food.search_measurement_unit("#{unit}%") |> find_best_match(:name)
     else
       Food.search_measurement_unit(unit) |> find_best_match(:name)
     end
@@ -90,4 +106,3 @@ defmodule MehungryWeb.Api.MealConverter do
   defp find_best_match([match], _field), do: match
   defp find_best_match([match | _], _field), do: match
 end
-
