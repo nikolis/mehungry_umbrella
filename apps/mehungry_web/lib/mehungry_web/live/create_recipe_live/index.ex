@@ -25,6 +25,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:measurement_units, measurement_units)
      |> assign(:page_title, "Share your recipes ")
      |> assign(:return_to_path, "/create_recipe")
+     |> assign(:plain_meal, nil)
      |> assign(:items, [
        %{id: 1, name: "easy"},
        %{id: 2, name: "medium"},
@@ -44,40 +45,49 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:ok, meta, socket}
   end
 
-
-  def handle_event("validate", params, socket) do 
+  def handle_event("validate", params, socket) do
     IO.inspect(params, label: "Small params")
-    socket = 
+
+    socket =
       assign(socket, :url_to_drill, params["url_to_drill"])
+
     {:noreply, socket}
   end
-  
+
   @url_regex ~r/^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w\-._~:\/?#[\]@!$&'()*+,;=]*)?$/
   def valid_url?(url) when is_binary(url) do
     Regex.match?(@url_regex, url)
   end
 
-  def handle_event("save", %{"url_to_drill" => url }, socket) do
-     case valid_url?(url)  do 
-       true -> 
-         case MehungryWeb.Api.MealFetcher.fetch_and_parse(url) do
-           {:ok, meal} ->  
-             IO.inspect(meal, label: "meal   ========= ")
-             converted_meal  = MehungryWeb.Api.MealConverter.convert(meal) 
-             IO.inspect(converted_meal, label: "Converted meal")
-             recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
-             socket = init(socket, recipe, converted_meal)
-             {:noreply, socket}
-           {:error, whatever} ->
-             IO.inspect(whatever, label: "Errrorr. ---")
-             {:noreply, socket}
-         end
-       false ->
+  def handle_event("save", %{"url_to_drill" => url}, socket) do
+    case valid_url?(url) do
+      true ->
+        case MehungryWeb.Api.MealFetcher.fetch_and_parse(url) do
+          {:ok, meal} ->
+            IO.inspect(meal, label: "meal   ========= ")
+            converted_meal = MehungryWeb.Api.MealConverter.convert(meal)
+            IO.inspect(converted_meal, label: "Converted meal")
+            recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+            # {:ok, json} = Jason.decode(meal)
+            # plain_meal = Jason.encode!(meal, pretty: true)
+
+            socket = init(socket, recipe, converted_meal)
+
+            {:noreply,
+             socket
+             |> assign(plain_meal: meal)}
+
+          {:error, whatever} ->
+            IO.inspect(whatever, label: "Errrorr. ---")
+            {:noreply, socket}
+        end
+
+      false ->
         IO.inspect(url, label: "dONT DRill this url")
         {:noreply, socket}
-     end
-
+    end
   end
+
   ################################################################################## Actions #############################################################################################
   defp apply_action(socket, :index, _params) do
     recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}

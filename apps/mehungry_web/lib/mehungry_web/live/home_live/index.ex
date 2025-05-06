@@ -34,8 +34,6 @@ defmodule MehungryWeb.HomeLive.Index do
       Posts.subscribe_to_post(%{post_id: post.id})
     end)
 
-    IO.inspect("HOme live")
-    IO.inspect(System.get_env())
 
     {:ok,
      socket
@@ -176,7 +174,6 @@ defmodule MehungryWeb.HomeLive.Index do
         {name, status, body["error"]["message"]}
       end)
 
-    IO.inspect(results, label: "Result")
 
     send_update(MehungryWeb.SocialMediaPostComponent, %{
       state: :result,

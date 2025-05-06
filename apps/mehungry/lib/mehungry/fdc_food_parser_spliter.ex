@@ -7,7 +7,7 @@ defmodule Mehungry.FdcFoodParserSplitter do
 
   def get_ingredients_from_food_data_central_json_file(file_path) do
     {:ok, json_body} = get_json(file_path)
-    the_ingredients = json_body["SurveyFoods"]
+    the_ingredients = json_body["FoundationFoods"]
     # num_slices = ceil(length(the_ingredients)/150)
     # the_ingredients_index = Enum.with_index(the_ingredients)
     chunks = Enum.chunk_every(the_ingredients, 10)

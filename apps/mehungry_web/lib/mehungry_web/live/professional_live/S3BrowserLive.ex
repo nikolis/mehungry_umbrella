@@ -1,8 +1,8 @@
 defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   use Phoenix.LiveView
-  
+
   alias Mehungry.S3Manager
-  require Logger 
+  require Logger
 
   @impl true
   def mount(_params, _session, socket) do
@@ -249,10 +249,10 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
             end
           end)
 
-        #MehungryWeb.DistributedTaskHandler.run(%{
-          #type: :parse_and_insert,
-          #data: %{files_urls: urls}
-        #})
+        # MehungryWeb.DistributedTaskHandler.run(%{
+        # type: :parse_and_insert,
+        # data: %{files_urls: urls}
+        # })
 
         # IO.inspect(urls, label: "Urls ----------------->")
         MehungryWeb.SeedsGenWorkerServer.put_work_list(urls)

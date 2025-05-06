@@ -218,7 +218,6 @@ defmodule Mehungry.Food do
     |> Repo.one()
   end
 
-
   def delete_recipe(id) do
     recipe =
       Repo.get!(Recipe, id)
@@ -522,7 +521,6 @@ defmodule Mehungry.Food do
   alias Mehungry.Food.Category
 
   def create_category(attrs) do
-
     %Category{}
     |> Category.changeset(attrs)
     |> Repo.insert()

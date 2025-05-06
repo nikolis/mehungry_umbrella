@@ -1,4 +1,4 @@
-defmodule MehungryWeb.Api.TheMealDBParser do 
+defmodule MehungryWeb.Api.TheMealDBParser do
   @moduledoc """
   Parses MealDB-style JSON into structured Elixir data.
   """
@@ -16,6 +16,7 @@ defmodule MehungryWeb.Api.TheMealDBParser do
         ingredients: parse_ingredients(meal_data),
         source: meal_data["strSource"]
       }
+
       {:ok, meal}
     else
       error -> {:error, error}
@@ -42,18 +43,13 @@ defmodule MehungryWeb.Api.TheMealDBParser do
     end)
     |> Enum.reject(&is_nil/1)
   end
-
-
 end
-
-
 
 defmodule MehungryWeb.Api.MealFetcher do
   @moduledoc "Fetches and parses meal data from TheMealDB API"
 
   @endpoint "https://www.themealdb.com/api/json/v1/1/search.php?s=Arrabiata"
 
-  
   def fetch_and_parse(url \\ @endpoint) do
     case HTTPoison.get(url) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
@@ -67,7 +63,4 @@ defmodule MehungryWeb.Api.MealFetcher do
         {:error, "HTTP error: #{inspect(reason)}"}
     end
   end
-
-
-
 end
