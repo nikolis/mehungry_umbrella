@@ -96,8 +96,18 @@ FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
 
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
+
 RUN apk add --update openssl postgresql-client jq 
-RUN apk add --update --no-cache python3 && ln -sf python3 /usr/bin/python
+# Install build dependencies for spaCy
+RUN apk add --no-cache \
+    build-base \
+    libffi-dev \
+    openssl-dev \
+    musl-dev \
+    gcc \
+    g++ \
+    python3-dev \
+    py3-pip
 
 # Default Phoenix server port
 EXPOSE 4000
@@ -111,9 +121,24 @@ EXPOSE 9000-9010
 # :erpc default port
 EXPOSE 9090
 
-RUN python3 -m venv env
-RUN source ./env/bin/activate
-RUN pip install spacy
+
+# Create a virtual environment
+ENV VENV_PATH=/opt/venv
+RUN python -m venv $VENV_PATH
+
+# Activate the virtual environment by modifying PATH
+ENV PATH="$VENV_PATH/bin:$PATH"
+
+# Install spaCy inside the virtual environment
+RUN pip install --upgrade pip \
+ && pip install --no-cache-dir spacy \
+ && python -m spacy download en_core_web_sm
+
+
+#RUN python3 -m venv env
+#RUN source ./env/bin/activate
+#RUN pip install spacy
+#RUN python -m spacy download en_core_web_sm
 
  
 CMD ["sh", "bin/mehungry_umbrella", "start"]
