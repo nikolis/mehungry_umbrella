@@ -96,7 +96,8 @@ FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
 
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
-RUN apk add --update openssl postgresql-client jq python3
+RUN apk add --update openssl postgresql-client jq 
+RUN apk add --update --no-cache python3 && ln -sf python3 /usr/bin/python
 
 # Default Phoenix server port
 EXPOSE 4000
