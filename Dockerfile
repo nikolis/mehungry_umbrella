@@ -96,7 +96,7 @@ FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
 
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
-RUN apk add --update openssl postgresql-client jq
+RUN apk add --update openssl postgresql-client jq python3
 
 # Default Phoenix server port
 EXPOSE 4000
@@ -110,5 +110,9 @@ EXPOSE 9000-9010
 # :erpc default port
 EXPOSE 9090
 
+RUN python3 -m venv env
+RUN source ./env/bin/activate
+RUN pip install spacy
 
+ 
 CMD ["sh", "bin/mehungry_umbrella", "start"]
