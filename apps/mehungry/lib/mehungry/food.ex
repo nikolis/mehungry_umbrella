@@ -896,7 +896,7 @@ defmodule Mehungry.Food do
 
     from(i in Ingredient,
       where:
-        i.category_id not in ^secondary_ids and
+       i.food_class != "Survey" and i.category_id not in ^secondary_ids and
           fragment(
             "searchable @@ websearch_to_tsquery('english',?)",
             ^search_term
@@ -943,7 +943,7 @@ defmodule Mehungry.Food do
       from(
         ingredient in Ingredient,
         where:
-          ingredient.category_id not in ^secondary_ids and
+          ingredient.food_class != "Survey" and  ingredient.category_id not in ^secondary_ids and
             (fragment("? % ?", ^search_term, ingredient.name) or
                ilike(ingredient.name, ^ilike_search_term)),
         order_by: {:desc, fragment("? % ?", ^search_term, ingredient.name)},

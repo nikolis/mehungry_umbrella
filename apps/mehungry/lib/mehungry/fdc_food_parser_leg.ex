@@ -37,8 +37,10 @@ defmodule Mehungry.FdcFoodParserLeg do
     end
   end
 
-  defp get_or_create_measurement_unit(measurement_unit_name) do
+  defp get_or_create_measurement_unit(measurement_unit_name, ingredient) do
     result = Food.get_measurement_unit_by_name(measurement_unit_name)
+
+    Logger.info("For #{inspect(ingredient.name)} Get/Create measurement unit with name #{measurement_unit_name} and the search result replied #{inspect(result)}")
 
     case result do
       [] ->
@@ -80,7 +82,7 @@ defmodule Mehungry.FdcFoodParserLeg do
   defp get_or_create_nutrient(ingredient, origin_attrs) do
     nut_ing_attrs = origin_attrs
     origin_attrs = origin_attrs["nutrient"]
-    measurement_unit = get_or_create_measurement_unit(origin_attrs["unitName"])
+    measurement_unit = get_or_create_measurement_unit(origin_attrs["unitName"], ingredient)
 
     attrs = %{
       reference_id: origin_attrs["id"],
@@ -104,7 +106,7 @@ defmodule Mehungry.FdcFoodParserLeg do
 
   defp create_ingredient_portions(food_portions, ingredient) do
     Enum.map(food_portions, fn x ->
-      measurement_unit = get_or_create_measurement_unit(x["modifier"])
+      measurement_unit = get_or_create_measurement_unit(x["modifier"], ingredient)
 
       %{
         amount: x["amount"],
