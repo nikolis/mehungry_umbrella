@@ -60,6 +60,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def handle_event("save", %{"url_to_drill" => url}, socket) do
+    IO.inspect("Sae here-----------------------------")
     case valid_url?(url) do
       true ->
         case MehungryWeb.Api.MealFetcher.fetch_and_parse(url) do
@@ -68,11 +69,9 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
             converted_meal = MehungryWeb.Api.MealConverter.convert(meal)
             IO.inspect(converted_meal, label: "Converted meal")
             recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
-            # {:ok, json} = Jason.decode(meal)
-            # plain_meal = Jason.encode!(meal, pretty: true)
 
             socket = init(socket, recipe, converted_meal)
-
+            IO.inspect(converted_meal, label: "COnverted meal Url to Dril")
             {:noreply,
              socket
              |> assign(plain_meal: meal)}
@@ -185,6 +184,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   @impl true
   def handle_event("remove-ingredient", %{"temp_id" => remove_id}, socket) do
+    IO.inspect("Remove ingredient")
     {_progress, recipe_ingredients} = remove_from_change(socket, remove_id)
 
     changeset =
@@ -426,6 +426,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   defp save_recipe(socket, :index, recipe_params) do
+    IO.inspect(recipe_params, label: "Save Recipe")
+  
     path =
       consume_uploaded_entries(
         socket,
@@ -467,6 +469,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          |> push_navigate(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        IO.inspect(changeset, label: "The errors")
         {:noreply, assign(socket, changeset: changeset)}
     end
   end
