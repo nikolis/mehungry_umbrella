@@ -14,8 +14,8 @@ defmodule Mehungry.Food.Recipe do
     field :cooking_time_upper_limit, :integer
     field :cousine, :string
     field :description, :string
-    field :image_url, :string
     field :list_image_url, :string
+    field :image_url, :string
     field :detail_image_url, :string
     field :recipe_image_remote, :string
     field :original_url, :string
@@ -85,7 +85,6 @@ defmodule Mehungry.Food.Recipe do
       :cousine,
       :title,
       :author,
-      :original_url,
       :preperation_time_upper_limit,
       :preperation_time_lower_limit,
       :cooking_time_upper_limit,
@@ -93,6 +92,8 @@ defmodule Mehungry.Food.Recipe do
       :description,
       :nutrients,
       :image_url,
+      :original_url,
+      :detail_image_url,
       :user_id,
       :language_name,
       :difficulty

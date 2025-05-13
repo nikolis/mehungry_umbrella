@@ -26,8 +26,20 @@ defmodule MehungryWeb.Api.MealConverter do
     |> String.split(~r/\.\s+|\r\n/, trim: true)
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
-  end
+    |> map_strings_to_structs()
 
+  end
+      
+    def map_strings_to_structs(strings) when is_list(strings) do
+    Enum.with_index(strings, 1)
+    |> Enum.map(fn {str, idx} ->
+      %{
+        title: str,
+        description: str,
+        index: idx
+      }
+    end)
+  end
   defp convert_ingredient(%{ingredient: name, measure: measure}) do
     {:ok, name} = PosTagger.rearrange_with_noun_first(name <> " \n")
 
