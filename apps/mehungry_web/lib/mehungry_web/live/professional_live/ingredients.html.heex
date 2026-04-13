@@ -1,4 +1,4 @@
-<div class=" ">
+<div class="">
   <h3 class="text-center sm:pb-4">Ingredients Explorer</h3>
 
   <.simple_form for={%{}} class="w-full">
@@ -41,22 +41,40 @@
     <div class="text-black text-base font-bold text-lg" style="width: 250px;">Category</div>
   </div>
 
+  <.link
+    phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
+    patch="/professional/ingredients/new"
+    class="fixed bttom-0 right-10 px-6 py-3 rounded-full bg-sky-700 text-white border border-transparent text-[18px] sm:text-[20px] leading-8 font-medium tracking-[-0.2px] dark:border-white/15 hover:brightness-110 transition-[filter] focus-visible:ring-white/30"
+  >
+    New
+  </.link>
+
   <div
-    class="m-auto "
+    class="m-auto  "
     id="ingredients_container"
     phx-hook="InfiniteScroll"
     phx-update="stream"
     data-page={@page}
   >
     <%= for {dom_id, ingredient} <- @streams.ingredients do %>
-      <div class="flex gap-4" id={dom_id}>
-        <div class="text-black text-base" style="width: 250px;">
-          <span class="font-semibold">({ingredient.id})</span> {ingredient.name}
-        </div>
-        <div class="text-black text-base" style="width: 100px;">{ingredient.food_class}</div>
-        <div class="text-black text-base" style="width: 250px;">
-          {ingredient.category.name} ( {ingredient.category_id} )
-        </div>
+      <div class="flex p-2" id={dom_id}>
+        <.link patch={"/professional/ingredients/"<> Integer.to_string(ingredient.id) <>"/show"}>
+          <div class="flex gap-4">
+            <div class="text-black text-base" style="width: 250px;">
+              <span class="font-semibold">({ingredient.id})</span> {ingredient.name}
+            </div>
+            <div class="text-black text-base" style="width: 100px;">{ingredient.food_class}</div>
+            <div class="text-black text-base" style="width: 250px;">
+              {ingredient.category.name} ( {ingredient.category_id} )
+            </div>
+          </div>
+        </.link>
+        <.link
+          phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
+          patch={"/professional/ingredients/"<> Integer.to_string(ingredient.id) <>"/edit"}
+        >
+          Edit
+        </.link>
       </div>
     <% end %>
   </div>

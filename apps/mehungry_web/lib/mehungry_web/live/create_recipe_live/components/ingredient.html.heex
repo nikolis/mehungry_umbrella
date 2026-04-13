@@ -12,6 +12,10 @@
     id={"ingredient_search_component" <> Integer.to_string(@g.index)}
   />
 
+  <div class="field input-form col-span-2 sm:col-span-1">
+    <.input field={@g[:quantity]} type="number" />
+  </div>
+
   <.live_component
     module={MehungryWeb.SelectComponent}
     items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
@@ -20,9 +24,6 @@
     input_variable={:measurement_unit_id}
   />
 
-  <div class="field input-form col-span-2 sm:col-span-1">
-    <.input required field={@g[:quantity]} type="number" />
-  </div>
   <div class="form-group w-full">
     <%= if is_nil Map.get(@g.source.changes, :temp_id, nil) do %>
       <div class="m-auto h-full w-full color-transparent">
@@ -33,7 +34,7 @@
       {hidden_input(@g, :temp_id)}
       <svg
         phx-click="remove-ingredient"
-        style="width:25px; height: 100%; margin: auto;"
+        style="width:25px; height: 100%; margin: auto; z-index: 20"
         phx-value-temp_id={@g.data.temp_id || Map.get(@g.source.changes, :temp_id, nil)}
         id={"button_remove_ingredient"<> Integer.to_string(@g.index)}
         width="2rem"

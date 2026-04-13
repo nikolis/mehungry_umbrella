@@ -59,6 +59,17 @@ defmodule Mehungry.Food do
     |> Repo.preload(recipe_hashtags: [recipe: [recipe_ingredients: :ingredient]])
   end
 
+  def get_nutrient(id) do
+    if not is_nil(id) and id != "" do
+      query = from nutr in Nutrient, where: nutr.id == ^id
+
+      Repo.one(query)
+      |> Repo.preload(:measurement_unit)
+    else
+      nil
+    end
+  end
+
   def get_nutrient(name, measurment_unit_id) do
     query =
       from nutr in Nutrient,
@@ -198,6 +209,20 @@ defmodule Mehungry.Food do
 
   def get_measurement_unit!(id) do
     Repo.get(MeasurementUnit, id)
+  end
+
+  @doc """
+  IngredientPortion represents the portions of ingredients and connects bassically ingredients with measurmenet Units 
+  """
+  def get_measurement_unit_portions_for_ingredient(ingredient_id)
+      when is_binary(ingredient_id) and ingredient_id == "" do
+    []
+  end
+
+  def get_measurement_unit_portions_for_ingredient(ingredient_id) do
+    from(ingp in Mehungry.Food.IngredientPortion, where: ingp.ingredient_id == ^ingredient_id)
+    |> Repo.all()
+    |> Repo.preload(:measurement_unit)
   end
 
   def get_measurement_unit_by_name(name) do
@@ -758,6 +783,10 @@ defmodule Mehungry.Food do
     end
   end
 
+  def list_nutrients() do
+    Repo.all(Mehungry.Food.Nutrient)
+  end
+
   def list_ingredients() do
     Repo.all(Ingredient)
     |> Repo.preload([:measurement_unit, :category])
@@ -896,7 +925,8 @@ defmodule Mehungry.Food do
 
     from(i in Ingredient,
       where:
-       i.food_class != "Survey" and i.category_id not in ^secondary_ids and
+        i.food_class != "Survey" and
+          i.category_id not in ^secondary_ids and
           fragment(
             "searchable @@ websearch_to_tsquery('english',?)",
             ^search_term
@@ -943,7 +973,7 @@ defmodule Mehungry.Food do
       from(
         ingredient in Ingredient,
         where:
-          ingredient.food_class != "Survey" and  ingredient.category_id not in ^secondary_ids and
+          ingredient.food_class != "Survey" and ingredient.category_id not in ^secondary_ids and
             (fragment("? % ?", ^search_term, ingredient.name) or
                ilike(ingredient.name, ^ilike_search_term)),
         order_by: {:desc, fragment("? % ?", ^search_term, ingredient.name)},

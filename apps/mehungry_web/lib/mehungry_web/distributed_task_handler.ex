@@ -37,7 +37,6 @@ defmodule MehungryWeb.DistributedTaskHandler do
   end
 
   defp handle_task(:parse_and_insert, %{file_url: {:ok, file_url}}) do
-    IO.inspect(file_url, label: "Urls")
     %HTTPoison.Response{body: body} = HTTPoison.get!(file_url)
     Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
     # parsed = MehungryWeb.Parser.parse(%{raw: raw})
@@ -45,7 +44,8 @@ defmodule MehungryWeb.DistributedTaskHandler do
   end
 
   defp handle_task(:notify_user, %{user_id: id, message: msg}) do
-    IO.puts("📣 Notify user #{id}: #{msg}")
+    Logger.info("📣 Notify user #{id}: #{msg}")
+
     # Maybe call your mailer or PubSub here
   end
 

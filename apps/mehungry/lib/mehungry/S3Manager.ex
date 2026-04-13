@@ -86,7 +86,6 @@ defmodule Mehungry.S3Manager do
     opts = if prefix, do: Keyword.put(opts, :prefix, prefix), else: opts
 
     ExAws.S3.list_objects(bucket, opts)
-    |> IO.inspect()
     |> ExAws.request()
   end
 

@@ -34,7 +34,6 @@ defmodule MehungryWeb.HomeLive.Index do
       Posts.subscribe_to_post(%{post_id: post.id})
     end)
 
-
     {:ok,
      socket
      |> assign(:user, user)
@@ -174,7 +173,6 @@ defmodule MehungryWeb.HomeLive.Index do
         {name, status, body["error"]["message"]}
       end)
 
-
     send_update(MehungryWeb.SocialMediaPostComponent, %{
       state: :result,
       results: results,
@@ -222,5 +220,4 @@ defmodule MehungryWeb.HomeLive.Index do
         end
     end
   end
-
 end

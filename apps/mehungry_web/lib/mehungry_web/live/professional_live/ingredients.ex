@@ -75,6 +75,7 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
           Food.search_ingredient_alt_admin(query)
       end
 
+    IO.inspect(ingredients, label: "asfdasfd")
     socket = assign(socket, :query, query)
     socket = assign(socket, :ecto_query, ecto_query)
 

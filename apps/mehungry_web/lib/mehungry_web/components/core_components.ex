@@ -246,7 +246,6 @@ defmodule MehungryWeb.CoreComponents do
 
   def get_post_age(%Mehungry.Posts.Post{} = post) do
     diff = NaiveDateTime.diff(NaiveDateTime.local_now(), post.updated_at, :second)
-    IO.inspect(diff)
     "23m"
     get_diff(diff)
   end
@@ -985,7 +984,7 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  def input(%{type: "number"} = assigns) do
+  def input(%{type: "number_subscript"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name} class="input-form w-full h-full">
       <input
@@ -1006,6 +1005,7 @@ defmodule MehungryWeb.CoreComponents do
       />
       <.label for={@id} class="placeholder">{@label}</.label>
       <.error :for={msg <- @errors}>{msg}</.error>
+      <div class="absolute right-0 bottom-0 px-1">{@rest.subscript}</div>
     </div>
     """
   end
@@ -1068,6 +1068,33 @@ defmodule MehungryWeb.CoreComponents do
         <option :if={@prompt} value="">{@prompt}</option>
         {Phoenix.HTML.Form.options_for_select(@options, @value)}
       </select>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
+  # All other inputs text, datetime-local, url, password, etc. are handled here...
+  def input(%{type: "noautocomplete"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name} class="input-form w-full h-full">
+      <input
+        type={@type}
+        name={@name}
+        id={@id}
+        autocomplete="off"
+        value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        class={
+          [Map.get(assigns.rest, :class, "")] ++
+            [
+              "rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	h-full",
+              "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym",
+              @errors == [] && "",
+              @errors != [] && " ring-rose-400  focus:ring-rose-400"
+            ]
+        }
+        {@rest}
+      />
+      <.label for={@id} class="placeholder px-4">{@label}</.label>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """

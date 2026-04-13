@@ -9,8 +9,10 @@ defmodule MehungryWeb.Api.MealConverter do
       steps: split_steps(meal.instructions),
       recipe_hashtags: meal.tags,
       user_id: 18,
+      description: meal.name <> Enum.reduce(meal.tags, "", fn x, y -> y <> " #" <> x end),
       cooking_time_lower_limit: 0,
       preperation_time_lower_limit: 0,
+      servings: 0,
       difficulty: 0,
       language_name: "En",
       image_url: meal.image,
@@ -27,10 +29,9 @@ defmodule MehungryWeb.Api.MealConverter do
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
     |> map_strings_to_structs()
-
   end
-      
-    def map_strings_to_structs(strings) when is_list(strings) do
+
+  def map_strings_to_structs(strings) when is_list(strings) do
     Enum.with_index(strings, 1)
     |> Enum.map(fn {str, idx} ->
       %{
@@ -40,50 +41,57 @@ defmodule MehungryWeb.Api.MealConverter do
       }
     end)
   end
+
   defp convert_ingredient(%{ingredient: name, measure: measure}) do
+    IO.inspect(name, label: "The name before")
     {:ok, name} = PosTagger.rearrange_with_noun_first(name <> " \n")
+    IO.inspect(name, label: "The name after")
 
     ingredients =
       Food.search_ingredient(name)
       |> Repo.preload([:measurement_unit, [ingredient_portions: :measurement_unit]])
 
-    #IO.inspect(ingredients, label: "Ing ------------------------------")
     {quantity, unit_string} = parse_measure(measure)
     {ingredient_portion, _} = find_matching_ingredient(ingredients, unit_string)
     measurement_unit = search_measurement_unit(unit_string)
+
     Logger.info(
       "Converting ingredient with name: #{name} and the measurement unit is: #{measure}"
     )
+
     Logger.info("The measuremnet unit quantity: #{inspect(quantity)} ")
     Logger.info("The measuremnet unit : #{inspect(measurement_unit)} ")
-    #Logger.info("The ingredient : #{inspect(ingredient_portion.ingredient_id)}")
+    # Logger.info("The ingredient : #{inspect(ingredient_portion.ingredient_id)}")
     %{
-      ingredient_id: 
-      (case is_nil(ingredient_portion) do 
-        true -> 
-          nil 
-        false -> 
-          ingredient_portion.ingredient_id
-      end),
+      ingredient_id:
+        case is_nil(ingredient_portion) do
+          true ->
+            nil
+
+          false ->
+            ingredient_portion.ingredient_id
+        end,
       measurement_unit_id: measurement_unit && measurement_unit.id,
       quantity: quantity
     }
   end
 
   defp find_matching_ingredient(ingredients, mu_name) do
-
     ingredients =
       Enum.map(ingredients, fn x -> x.ingredient_portions end)
       |> List.flatten()
       |> Enum.map(fn x -> {x, x.measurement_unit.name} end)
 
     IO.inspect(ingredients, label: "The ingredients")
-    IO.inspect(mu_name, label: "The ingredients") 
-    case ingredients do 
+    IO.inspect(mu_name, label: "The neasyrenebt unit name")
+
+    case ingredients do
       [] ->
         {nil, nil}
+
       [sthing] ->
-        sthing 
+        sthing
+
       [head | _tail] ->
         head
     end

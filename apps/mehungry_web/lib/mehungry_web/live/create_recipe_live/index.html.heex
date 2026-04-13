@@ -104,12 +104,15 @@
             <h3 class="text-center">Ingredients</h3>
             <div class="md:min-h-96   overflow-x-hidden noscrollbar	pt-4  step_ing_cont">
               <.inputs_for :let={g} field={f[:recipe_ingredients]}>
-                <Components.ingredient_render
-                  g={g}
-                  f={f}
-                  ingredients={@ingredients}
-                  measurement_units={@measurement_units}
-                />
+                <%= if ! Map.get(g.source.changes, :delete)  do %>
+                  <Components.ingredient_render
+                    g={g}
+                    f={f}
+                    ingredients={@ingredients}
+                    measurement_units={@measurement_units}
+                  />
+                <% else %>
+                <% end %>
               </.inputs_for>
               <button
                 id="add_ingredient"
@@ -216,7 +219,7 @@
             class: "button bg-complementary border-2 border-transparent  ",
             type: "submit",
             phx_disable_with: "Saving...",
-            id: "save_button"
+            id: "save_button2"
           )}
         </div>
       </.form>

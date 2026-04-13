@@ -19,6 +19,8 @@ defmodule MehungryWeb.Application do
       # Start a worker by calling: MehungryWeb.Worker.start_link(arg)
       # {MehungryWeb.Worker, arg}
       # {MehungryWeb.OnlineRecommender, []},
+      # MehungryWeb.NutrientMapper, 
+      MehungryWeb.IngredientSearch,
       %{
         id: :create_recipe_cache,
         start:

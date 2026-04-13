@@ -29,53 +29,7 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
           Phoenix.HTML.Form.input_value(assigns.g, :ingredient_id)
       end
 
-    measurement_units =
-      case is_nil(ing_val) do
-        true ->
-          assigns.measurement_units
-
-        false ->
-          if(!is_binary(ing_val)) do
-            portions =
-              from(ingp in Mehungry.Food.IngredientPortion, where: ingp.ingredient_id == ^ing_val)
-              |> Repo.all()
-
-            measurement_units =
-              Enum.map(
-                portions,
-                fn x ->
-                  Food.get_measurement_unit!(x.measurement_unit_id)
-                end
-              )
-              |> Enum.filter(fn x -> !is_nil(x) end)
-
-            assigns.measurement_units ++ measurement_units
-          else
-            if String.length(ing_val) <= 0 do
-              assigns.measurement_units
-            else
-              ing_val = String.to_integer(ing_val)
-
-              portions =
-                from(ingp in Mehungry.Food.IngredientPortion,
-                  where: ingp.ingredient_id == ^ing_val
-                )
-                |> Repo.all()
-
-              measurement_units =
-                Enum.map(
-                  portions,
-                  fn x ->
-                    Food.get_measurement_unit!(x.measurement_unit_id)
-                  end
-                )
-                |> Enum.filter(fn x -> !is_nil(x) end)
-
-              assigns.measurement_units ++ measurement_units
-            end
-          end
-      end
-
+    measurement_units = get_measurement_unit(ing_val, assigns)
     assigns = assign(assigns, :measurement_units, measurement_units)
 
     ~H"""
@@ -89,6 +43,27 @@ defmodule MehungryWeb.CreateRecipeLive.Components do
       />
     </div>
     """
+  end
+
+  def get_measurement_unit(nil, assigns), do: assigns.measurement_units
+
+  def get_measurement_unit(ing_val, assigns) when is_binary(ing_val),
+    do: assigns.measurement_units ++ get_measurement_unit(ing_val)
+
+  def get_measurement_unit(ing_val, assigns) when is_integer(ing_val),
+    do: assigns.measurement_units ++ get_measurement_unit(ing_val)
+
+  def get_measurment_unit("", assigns), do: assigns.measurement_units
+
+  def get_measurement_unit(ing_val, assigns) do
+    ing_val = String.to_integer(ing_val)
+    assigns.measurement_units ++ get_measurement_unit(ing_val)
+  end
+
+  defp get_measurement_unit(ing_val) do
+    Food.get_measurement_unit_portions_for_ingredient(ing_val)
+    |> Enum.map(fn x -> x.measurement_unit end)
+    |> Enum.filter(fn x -> !is_nil(x) end)
   end
 
   def get_style(deleted) do

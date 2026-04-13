@@ -32,6 +32,14 @@ defmodule MehungryWeb.Api.TheMealDBParser do
       ingredient = Map.get(meal_data, "strIngredient#{i}")
       measure = Map.get(meal_data, "strMeasure#{i}")
 
+      IO.inspect(ingredient,
+        label: "--------------------------------------"
+      )
+
+      IO.inspect(measure,
+        label: "--------------------------------------"
+      )
+
       if is_binary(ingredient) and ingredient != "" do
         %{
           ingredient: ingredient,
@@ -53,7 +61,6 @@ defmodule MehungryWeb.Api.MealFetcher do
   def fetch_and_parse(url \\ @endpoint) do
     case HTTPoison.get(url) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        IO.inspect(body)
         {:ok, meal} = MehungryWeb.Api.TheMealDBParser.parse(body)
 
       {:ok, %HTTPoison.Response{status_code: code}} ->

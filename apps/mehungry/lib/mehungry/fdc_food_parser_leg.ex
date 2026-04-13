@@ -40,7 +40,9 @@ defmodule Mehungry.FdcFoodParserLeg do
   defp get_or_create_measurement_unit(measurement_unit_name, ingredient) do
     result = Food.get_measurement_unit_by_name(measurement_unit_name)
 
-    Logger.info("For #{inspect(ingredient.name)} Get/Create measurement unit with name #{measurement_unit_name} and the search result replied #{inspect(result)}")
+    Logger.info(
+      "For #{inspect(ingredient.name)} Get/Create measurement unit with name #{measurement_unit_name} and the search result replied #{inspect(result)}"
+    )
 
     case result do
       [] ->
@@ -206,7 +208,6 @@ defmodule Mehungry.FdcFoodParserLeg do
     main4 = Map.get(json_body, "BrandedFoods", [])
     total = main ++ main2 ++ main3 ++ main4
 
-    IO.inspect(length(total), label: "Total items being proessed")
     Enum.each(total, fn x -> create_ingredient(x) end)
   end
 

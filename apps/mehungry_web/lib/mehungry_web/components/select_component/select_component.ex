@@ -31,6 +31,10 @@ defmodule MehungryWeb.SelectComponent do
         assigns
       )
 
+    IO.inspect(assigns.input_variable, label: "Input_variable")
+    existing_selected = Map.get(assigns.form.source.data, assigns.input_variable)
+    IO.inspect(existing_selected, label: "Input_variable value")
+
     selected_items =
       case is_map(selected_items) do
         true ->
@@ -38,6 +42,25 @@ defmodule MehungryWeb.SelectComponent do
 
         false ->
           selected_items
+      end
+
+    selected_items =
+      case selected_items do
+        [] ->
+          if !is_nil(existing_selected) do
+            items =
+              Enum.filter(assigns.items, fn x ->
+                elem(x, 0) == Integer.to_string(existing_selected)
+              end)
+
+            IO.inspect(existing_selected, label: "Existing selected")
+            IO.inspect(items, label: "Items pre existing")
+          else
+            []
+          end
+
+        other ->
+          other
       end
 
     selected_items_vals =
@@ -52,6 +75,12 @@ defmodule MehungryWeb.SelectComponent do
       end)
 
     items = Enum.map(assigns.items, fn x -> {elem(x, 0), label_function.(x)} end)
+
+    items =
+      Enum.map(items, fn {x, y} ->
+        {x, MehungryWeb.NutrientMapper.humanize_nutrient_name(y)}
+      end)
+
     presenting_items = Enum.slice(items, 0..10)
 
     socket =
@@ -66,6 +95,72 @@ defmodule MehungryWeb.SelectComponent do
       |> assign(:input_variable, assigns.input_variable)
 
     {:ok, socket}
+  end
+
+  def handle_event("search", %{"key" => key, "value" => value}, socket) do
+    IO.inspect(socket.assigns.items, label: "223")
+    items = fuzzy_match(value, socket.assigns.items)
+
+    socket =
+      socket
+      |> assign(:presenting_items, items)
+      |> assign(:items, items)
+      |> assign(:listing_open, true)
+
+    {:noreply, socket}
+  end
+
+  def to_human(term) do
+    Map.get(@lookup, normalize(term), term)
+  end
+
+  def normalize(str) do
+    str
+    |> String.downcase()
+    |> String.trim()
+    |> :unicode.characters_to_nfd_binary()
+    |> String.replace(~r/[^a-z0-9\s]/u, "")
+  end
+
+  def build_lookup(map) do
+    Enum.reduce(map, %{}, fn {canonical, synonyms}, acc ->
+      all_terms = [canonical | synonyms]
+
+      Enum.reduce(all_terms, acc, fn term, acc2 ->
+        Map.put(acc2, normalize(term), canonical)
+      end)
+    end)
+  end
+
+  def exact_match(query, lookup) do
+    Map.get(lookup, normalize(query))
+  end
+
+  # query => strimg 
+  # terms => list<{id, string}>
+  # result => list <{id, string}>
+  def fuzzy_match(query, terms, threshold \\ 0.40) do
+    normalized_query = normalize(query)
+
+    terms
+    |> Enum.map(fn {id, term} ->
+      score = String.jaro_distance(normalize(term), normalized_query)
+      {id, term, score}
+    end)
+    |> Enum.filter(fn {_id, _term, score} -> score >= threshold end)
+    |> Enum.sort_by(fn {_id, _term, score} -> -score end)
+    |> Enum.map(fn {id, term, _} -> {id, term} end)
+    |> Enum.slice(0..10)
+  end
+
+  def find_nutrient(query, lookup) do
+    case exact_match(query, lookup) do
+      nil ->
+        fuzzy_match(query, lookup)
+
+      result ->
+        [result]
+    end
   end
 
   def handle_event("handle-item-click", %{"id" => id}, socket) do
@@ -88,8 +183,6 @@ defmodule MehungryWeb.SelectComponent do
       else
         socket.assigns.form.index
       end
-
-    IO.inspect(index, label: "index")
 
     {:noreply,
      push_event(
@@ -287,6 +380,7 @@ defmodule MehungryWeb.SelectComponent do
     <.input
       phx-focus="search_input_focus"
       phx-target={@myself}
+      phx-keyup="search"
       field={
         @form[
           String.to_atom("search_input" <> Atom.to_string(@input_variable))

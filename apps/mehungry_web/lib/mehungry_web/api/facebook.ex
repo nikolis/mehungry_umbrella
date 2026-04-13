@@ -72,7 +72,6 @@ defmodule Mehungry.Api.Facebook do
       end)
 
     result = Mehungry.Accounts.update_user_tokens(user, %{"facebook_token" => data})
-    IO.inspect(result, label: "Saved tokesn")
   end
 
   defp construct_url(path, params) do
