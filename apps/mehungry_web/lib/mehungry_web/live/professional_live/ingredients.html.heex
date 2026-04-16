@@ -1,77 +1,72 @@
-<div class="">
+<div class="mx-auto  relative" style="max-width: 65%">
   <h3 class="text-center sm:pb-4">Ingredients Explorer</h3>
+  <.link
+    phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
+    patch="/professional/ingredients/new"
+    class="fixed bottom-16 right-10 px-6 py-3 rounded-full bg-sky-700 text-white border border-transparent text-[18px] sm:text-[20px] leading-8 font-medium tracking-[-0.2px] dark:border-white/15 hover:brightness-110 transition-[filter] focus-visible:ring-white/30"
+  >
+    New
+  </.link>
 
-  <.simple_form for={%{}} class="w-full">
+  <form phx-change="search_change" class="w-full" >
     <div class="flex gap-1 sm:gap-4 flex-row  flex-wrap p-1 sm:p-4">
-      <.input
-        class="text-black"
-        type="select"
-        options={@categories}
-        name="category"
-        value={@category}
-        phx-change="filter_change"
+      <.live_component
+        module={MehungryWeb.SelectComponent}
+        items={@food_classes}
+        form={@form}
+        id="category_select_component"
+        input_variable={:classes}
+        mode={:multi}
       />
 
       <.input
         class="text-black "
         type="select"
         options={@search_methods}
-        name="search_method"
+        name="search_form[search_method]"
         value={@search_method}
-        phx-change="filter_change"
       />
       <.input
         class="text-black max-w-60"
         type="text"
-        options={@search_methods}
-        name="query"
-        phx-change="filter_change"
-        value={@query}
+        name="search_form[query]"
+        value={@form[:query].value}
         label="Search "
+
       />
     </div>
-  </.simple_form>
+  </form>
 
-  <div></div>
-  <div class="flex gap-4 m-auto">
-    <div class="text-black text-base font-bold text-lg" style="width: 250px;">
-      Name
-    </div>
-    <div class="text-black text-base font-bold text-lg" style="width: 100px;">Class</div>
-    <div class="text-black text-base font-bold text-lg" style="width: 250px;">Category</div>
+  <div class="bg-gray-200 grid grid-cols-4 gap-2 w-full">
+    <div class="p-2 text-xl font-semibold">Name</div>
+    <div class="p-2 text-xl font-semibold">Class</div>
+    <div class="p-2 text-xl font-semibold">Category</div>
   </div>
-
-  <.link
-    phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
-    patch="/professional/ingredients/new"
-    class="fixed bttom-0 right-10 px-6 py-3 rounded-full bg-sky-700 text-white border border-transparent text-[18px] sm:text-[20px] leading-8 font-medium tracking-[-0.2px] dark:border-white/15 hover:brightness-110 transition-[filter] focus-visible:ring-white/30"
-  >
-    New
-  </.link>
-
   <div
-    class="m-auto  "
+    class="m-auto  w-full"
     id="ingredients_container"
     phx-hook="InfiniteScroll"
     phx-update="stream"
     data-page={@page}
   >
     <%= for {dom_id, ingredient} <- @streams.ingredients do %>
-      <div class="flex p-2" id={dom_id}>
+      <div class="relative w-full" id={dom_id}>
         <.link patch={"/professional/ingredients/"<> Integer.to_string(ingredient.id) <>"/show"}>
-          <div class="flex gap-4">
-            <div class="text-black text-base" style="width: 250px;">
+          <div class="grid grid-cols-4 gap-8 py-2 hover:bg-gray-100">
+            <div class="text-black text-base">
               <span class="font-semibold">({ingredient.id})</span> {ingredient.name}
             </div>
-            <div class="text-black text-base" style="width: 100px;">{ingredient.food_class}</div>
-            <div class="text-black text-base" style="width: 250px;">
+            <div class="text-black text-base" style="">{ingredient.food_class}</div>
+            <div class="text-black text-base" style="">
               {ingredient.category.name} ( {ingredient.category_id} )
             </div>
+            <div></div>
           </div>
         </.link>
         <.link
           phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
           patch={"/professional/ingredients/"<> Integer.to_string(ingredient.id) <>"/edit"}
+          class="absolute right-0 top-2 text-xl font-semibold "
         >
           Edit
         </.link>

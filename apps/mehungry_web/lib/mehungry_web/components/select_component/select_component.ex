@@ -20,6 +20,11 @@ defmodule MehungryWeb.SelectComponent do
           label_f
       end
 
+    IO.inspect(assigns.input_variable,
+      label:
+        "Input_variable000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    )
+
     form_params = assigns.form.params
 
     selected_items =
@@ -31,9 +36,7 @@ defmodule MehungryWeb.SelectComponent do
         assigns
       )
 
-    IO.inspect(assigns.input_variable, label: "Input_variable")
     existing_selected = Map.get(assigns.form.source.data, assigns.input_variable)
-    IO.inspect(existing_selected, label: "Input_variable value")
 
     selected_items =
       case is_map(selected_items) do
@@ -98,7 +101,6 @@ defmodule MehungryWeb.SelectComponent do
   end
 
   def handle_event("search", %{"key" => key, "value" => value}, socket) do
-    IO.inspect(socket.assigns.items, label: "223")
     items = fuzzy_match(value, socket.assigns.items)
 
     socket =
@@ -203,11 +205,20 @@ defmodule MehungryWeb.SelectComponent do
 
     selected_items = Enum.map(selected_items, fn x -> elem(x, 0) end)
 
+    index =
+      case socket.assigns.form.index do
+        nil ->
+          0
+
+        anything ->
+          anything
+      end
+
     {:noreply,
      push_event(
        socket,
        "selected_id" <>
-         Integer.to_string(socket.assigns.form.index) <>
+         Integer.to_string(index) <>
          Atom.to_string(socket.assigns.input_variable),
        %{id: selected_items}
      )}
@@ -278,21 +289,13 @@ defmodule MehungryWeb.SelectComponent do
 
     ~H"""
     <div
-      class="col-span-2"
+      class="col-span-2 "
       data-reference-id={@input_variable}
       data-reference-index={@index}
       phx-hook="SelectComponent"
       id={"select_component"<>  Atom.to_string(@input_variable) <> Integer.to_string(@index)}
     >
       <.input field={@form[@input_variable]} type="hidden" />
-      <!-- <input
-        id={"dummy_input" <> Atom.to_string(@input_variable) <> Integer.to_string(@index) }
-        name="pages"
-        type="text"
-        class="hidden"
-        style="display: none;"
-    /> -->
-
       <div
         class="h-full w-full max-w-lg px-2 "
         phx-click-away="close-listing"
@@ -308,11 +311,11 @@ defmodule MehungryWeb.SelectComponent do
             form={@form}
             input_variable={@input_variable}
           />
-          <.list_search_result myself={@myself} listing_open={@listing_open} items={@items} />
-          <.arrow_down_svg
+          <.list_search_result
             myself={@myself}
-            selected_items_length={length(@selected_items)}
-            mode={@mode}
+            listing_open={@listing_open}
+            items={@items}
+            selected_items={@selected_items}
           />
         </div>
         <!-- End Component -->
@@ -322,16 +325,47 @@ defmodule MehungryWeb.SelectComponent do
   end
 
   # ------------------------------------------------------------------------------- List Selected ------------------------------------------------------------------------------------
+
+  def list_selected(%{mode: :multi} = assigns) do
+    ~H"""
+    <div class=" flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-2 sm:col-span-2 	 overflow-hidden">
+      <!-- Tags (Selected) -->
+
+
+        <!-- Search Input -->
+      <%= if Enum.empty?(@selected_items)  or @mode == :multi do %>
+        <.input_search
+          myself={@myself}
+          form={@form}
+          selected_items={@selected_items}
+          mode={@mode}
+          input_variable={@input_variable}
+          class="text-2xl bg-black"
+        />
+      <% end %>
+      <!-- Arrow Icon -->
+    </div>
+    """
+  end
+
   def list_selected(assigns) do
     ~H"""
-    <div class="flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-2 sm:col-span-2 	 overflow-hidden">
+    <div class=" flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-2 sm:col-span-2 	 overflow-hidden">
       <!-- Tags (Selected) -->
       <%= for x <- @selected_items do %>
         <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode} name={elem(x, 1)} />
       <% end %>
-      <!-- Search Input -->
-      <%= if Enum.empty?(@selected_items) do %>
-        <.input_search myself={@myself} form={@form} input_variable={@input_variable} />
+      
+    <!-- Search Input -->
+      <%= if Enum.empty?(@selected_items)  or @mode == :multi do %>
+        <.input_search
+          myself={@myself}
+          form={@form}
+          selected_items={@selected_items}
+          mode={@mode}
+          input_variable={@input_variable}
+          class="text-2xl bg-black"
+        />
       <% end %>
       <!-- Arrow Icon -->
     </div>
@@ -340,16 +374,14 @@ defmodule MehungryWeb.SelectComponent do
 
   defp selected_item(%{mode: :multi} = assigns) do
     ~H"""
-    <div>
-      <li
-        phx-click="handle-selected-item-click"
-        phx-value-id={@id}
-        phx-target={@myself}
-        tabindex="0"
-        class="relative m-1 px-2 py-1.5 border rounded-md cursor-pointer hover:bg-gray-100 after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2 focus:ring-amber-300 ring-inset transition-all"
-      >
-        {@name}
-      </li>
+    <div
+      phx-click="handle-selected-item-click"
+      phx-value-id={@id}
+      phx-target={@myself}
+      tabindex="0"
+      class="relative w-fit my-2 mx-auto px-2 py-1.5 border rounded-md cursor-pointer hover:bg-gray-100 after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2 focus:ring-amber-300 ring-inset transition-all"
+    >
+      {@name}
     </div>
     """
   end
@@ -375,20 +407,47 @@ defmodule MehungryWeb.SelectComponent do
     """
   end
 
+  defp input_search(%{mode: :multi} = assigns) do
+    ~H"""
+    <div class="relative">
+      <%= for x <- @selected_items do %>
+        <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode} name={elem(x, 1)} />
+      <% end %>
+
+      <.input
+        phx-focus="search_input_focus"
+        phx-target={@myself}
+        phx-keyup="search"
+        field={
+          @form[
+            String.to_atom("search_input" <> Atom.to_string(@input_variable))
+          ]
+        }
+        type="text"
+        class="test flex-grow p-4  outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full relative"
+      />
+      <.arrow_down_svg myself={@myself} selected_items_length={length(@selected_items)} mode={@mode} />
+    </div>
+    """
+  end
+
   defp input_search(assigns) do
     ~H"""
-    <.input
-      phx-focus="search_input_focus"
-      phx-target={@myself}
-      phx-keyup="search"
-      field={
-        @form[
-          String.to_atom("search_input" <> Atom.to_string(@input_variable))
-        ]
-      }
-      type="text"
-      class="test flex-grow p-4  outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full"
-    />
+    <div class="relative">
+      <.input
+        phx-focus="search_input_focus"
+        phx-target={@myself}
+        phx-keyup="search"
+        field={
+          @form[
+            String.to_atom("search_input" <> Atom.to_string(@input_variable))
+          ]
+        }
+        type="text"
+        class="test flex-grow p-4  outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full relative"
+      />
+      <.arrow_down_svg myself={@myself} selected_items_length={length(@selected_items)} mode={@mode} />
+    </div>
     """
   end
 
@@ -418,7 +477,7 @@ defmodule MehungryWeb.SelectComponent do
     <div class="relative z-50">
       <div class="bg-white">
         <li
-          class="hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white"
+          class="hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white "
           phx-click="handle-item-click"
           phx-value-id={elem(@x, 0)}
           id={elem(@x, 0)}
@@ -449,7 +508,7 @@ defmodule MehungryWeb.SelectComponent do
       height="24"
       stroke-width="0"
       fill="#ccc"
-      class="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer focus:outline-none"
+      class="absolute right-2 bottom-1 -translate-y-1/2 cursor-pointer focus:outline-none z-50"
       tabindex="-1"
     >
       <path d="M12 17.414 3.293 8.707l1.414-1.414L12 14.586l7.293-7.293 1.414 1.414L12 17.414z" />

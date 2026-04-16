@@ -75,6 +75,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def handle_event("save", %{"url_to_drill" => url}, socket) do
+    url = "https://www.themealdb.com/api/json/v1/1/lookup.php?i=" <> url
+
     case valid_url?(url) do
       true ->
         case MehungryWeb.Api.MealFetcher.fetch_and_parse(url) do

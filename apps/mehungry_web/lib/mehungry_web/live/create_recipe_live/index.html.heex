@@ -210,12 +210,18 @@
         for={%{}}
         phx-change="validate"
         phx-submit="save"
-        class="gap-2 flex  flex-col mx-auto relative"
+        class="gap-2 flex  flex-col mx-auto relative w-fit  mr-10"
         style=""
       >
-        <.input required field={b[:url_to_drill]} type="text" label="Url input" class=" " />
+        <.input
+          required
+          field={b[:url_to_drill]}
+          type="text"
+          label="themealdb id i.e 52764"
+          class="px-16"
+        />
         <div class=" absolute right-0 ">
-          {submit("Get",
+          {submit("Get blueprint",
             class: "button bg-complementary border-2 border-transparent  ",
             type: "submit",
             phx_disable_with: "Saving...",

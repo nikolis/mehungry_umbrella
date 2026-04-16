@@ -3,13 +3,35 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
   alias Mehungry.Food
 
+  import Ecto.Changeset
+
+  @types %{
+    query: :string,
+    categories: {:array, :string},
+    search_method: :string
+  }
+
+  @params %{
+    "query" => "",
+    "classes" => nil,
+    "search_method" => ""
+  }
+
+  @food_classes [{"Branded", "Branded"}, {"FinalFood", "FinalFood"}, {"Admin created", "Admin created"}, {"Survey", "Survey"}]
+
+  defp get_form_changeset(params) do
+    changeset =
+      {params, @types}
+      |> cast(params, Map.keys(@types))
+      |> validate_required([:query])
+  end
+
   @impl true
   def mount(_params, _session, socket) do
     {ingredients, cursor_after} = Food.list_ingredients_paginated()
 
     categories =
       Food.list_categories()
-      |> Enum.map(fn x -> {x.name, x.id} end)
 
     search_methods = [{"ilike", "ilike"}, {"search", "search"}]
 
@@ -17,21 +39,30 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
       socket
       |> stream(:ingredients, ingredients)
       |> assign(:category, nil)
-      |> assign(:categories, categories)
+      |> assign(:food_classes, @food_classes)
       |> assign(:search_methods, search_methods)
       |> assign(:search_method, "ilike")
       |> assign(:query, "")
       |> assign(:ecto_query, nil)
       |> assign(:cursor_after, cursor_after)
       |> assign(:page, 1)
+      |> assign(:form, to_form(get_form_changeset(@params), as: :search_form))
 
     {:ok, socket}
   end
 
   @impl true
+  def handle_event("search_change", %{"search_form" => search_form} = rest, socket) do
+    IO.inspect(search_form, label: "search change ")
+    
+    socket = execute_query(search_form, socket)
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("filter_change", %{"_target" => [target]} = vari, socket) do
     value = Map.get(vari, target, nil)
-    socket = set_value(%{target => value}, socket)
 
     {:noreply, socket}
   end
@@ -52,31 +83,21 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
      |> stream(:ingredients, ingredients)}
   end
 
-  def set_value(%{"search_method" => search_method}, socket) do
-    socket = assign(socket, :search_method, search_method)
-    execute_query(socket.assigns.query, socket)
-  end
 
-  def set_value(%{"category" => category}, socket) do
-    assign(socket, :category, category)
-  end
+  def execute_query(form_params, socket) do
+   classes = String.split(form_params["classes"], ",")
+    IO.inspect(classes)
 
-  def set_value(%{"query" => query}, socket) do
-    execute_query(query, socket)
-  end
-
-  def execute_query(query, socket) do
     {ecto_query, {ingredients, cursor}} =
-      case socket.assigns.search_method do
+         case form_params["search_method"] do
         "ilike" ->
-          Food.search_ingredient_admin(query)
+          Food.search_ingredient_admin(form_params["query"], classes)
 
         "search" ->
-          Food.search_ingredient_alt_admin(query)
+          Food.search_ingredient_alt_admin(form_params["query"], classes)
       end
 
-    IO.inspect(ingredients, label: "asfdasfd")
-    socket = assign(socket, :query, query)
+    #socket = assign(socket, :query, form_params)
     socket = assign(socket, :ecto_query, ecto_query)
 
     socket

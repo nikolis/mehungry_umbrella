@@ -25,10 +25,10 @@ defmodule MehungryWeb.LayoutView do
 
   def sidebar_nav_links(assigns) do
     ~H"""
-    <div class="">
+    <div class="w-full">
       <button
         id="admin_menu_button"
-        class="fixed border-complementary text-white rounded-full  w-10 h-10 bg-white z-50"
+        class="fixed border-complementary text-white rounded-full  w-10 h-10 bg-white z-50 "
         phx-click={
           JS.toggle_class("open", to: "#nav_bar_admin")
           |> JS.toggle_class("open_button", to: "#admin_menu_button")
@@ -37,8 +37,12 @@ defmodule MehungryWeb.LayoutView do
         <.icon name="hero-arrow-down-circle" class=" h-10 w-10 text-complementary" />
       </button>
 
-      <nav class="nav-list-cont w-fit  pl-6 pt-16 min-w-60 text-left" id="nav_bar_admin">
-        <div class="flex flex-col gap-4 w-fit	">
+      <nav
+        class="nav-list-cont w-fit  pl-6 pt-16 min-w-60 text-left open text-olive-500
+    "
+        id="nav_bar_admin"
+      >
+        <div class="flex flex-col gap-4 w-fit font-500	 text-lg">
           <a href="/" class="w-fit ">
             <img src={~p"/images/logo_written.png"} width="100" height="45" />
           </a>

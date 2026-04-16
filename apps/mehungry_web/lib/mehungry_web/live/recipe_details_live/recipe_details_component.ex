@@ -171,7 +171,11 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             id={@id <> "like_container"}
             myself={@myself}
           />
-          <img class=" rounded-2xl m-auto" src={@recipe.image_url} />
+                <div class="w-full m-auto relative bg-greyfriend1">
+          <img style="max-height: calc(100vh - 300px);" class=" m-auto" src={@recipe.image_url} />
+      </div>
+
+          
           <h3 class="m-2  max-h-16 overflow-hidden text-center text-xl w-full">
             {@recipe.title}
           </h3>

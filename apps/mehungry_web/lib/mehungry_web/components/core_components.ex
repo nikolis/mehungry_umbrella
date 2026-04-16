@@ -65,6 +65,66 @@ defmodule MehungryWeb.CoreComponents do
 
   @doc """
   """
+  def share_button(%{user: user} = assigns) do
+    ~H"""
+    <div
+      class="relative"
+      id={"share_utils_toggle" <> Integer.to_string(@user.id) }
+      phx-click-away={
+        Phoenix.LiveView.JS.remove_class("drop_down_visible ",
+          to: "#share_items_list" <> Integer.to_string(@user.id)
+        )
+      }
+      phx-click={
+        Phoenix.LiveView.JS.toggle_class("drop_down_visible ",
+          to: "#share_items_list" <> Integer.to_string(@user.id)
+        )
+      }
+    >
+      <.icon name="hero-share" class="stroke-white h-7 w-7 " />
+      <div
+        phx-hook="Copy"
+        class="drop_down_home  inner_utils m-auto pr-4"
+        data-to={"#control-codes" <> Integer.to_string(@user.id)}
+        id={"share_items_list"<> Integer.to_string(@user.id)}
+      >
+        <input
+          type="text"
+          class="hidden"
+          id={"control-codes"<> Integer.to_string(@user.id)}
+          value={~p"/show_recipe/#{Integer.to_string(@user.id)}"}
+        />
+        <.icon
+          name="hero-link"
+          style="width: 40px;"
+          class="m-auto h-7 w-9 bg-white  text-white cursor-pointer"
+        />
+
+        <img
+          src="/images/instagram-svgrepo-com.svg"
+          width="full"
+          class="m-auto h-7 w-10   text-white cursor-pointer bg-transparent overflow-hidden"
+        />
+
+        <.link
+          id={"link-to-recipe-#{@user.id}"}
+          class="block w-full overflow-hidden"
+          style="width: 50px;"
+          patch={~p"/share_social_media/#{@user.id}"}
+        >
+          <img
+            src="/images/facebook-svgrepo-com (1).svg"
+            width="full"
+            class="m-auto h-7 w-10  text-white cursor-pointer bg-transparent inline w-full"
+          />
+        </.link>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  """
   def share_button(assigns) do
     ~H"""
     <div

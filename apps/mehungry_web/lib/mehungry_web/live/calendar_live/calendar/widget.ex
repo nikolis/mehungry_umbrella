@@ -373,9 +373,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       <%= if is_nil(@img_url) do %>
         {SvgComponents.get_default_recipe_image(assigns)}
       <% else %>
-        <img src={@img_url} class="col-span-2 h-full" />
+        <img src={@img_url} class="col-span-2 h-60 " />
       <% end %>
-      <div class="col-span-4 px-6 py-4">{@title}</div>
+      <div class="col-span-4 px-6 py-4 text-xl font-semibold">{@title}</div>
     </div>
     """
   end

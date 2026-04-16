@@ -4,7 +4,9 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
   def render(assigns) do
     ~H"""
     <form phx-change="validate" phx-submit="save" class="max-w-5xl mx-auto  relative">
-      <div class="bg-white shadow-md rounded-lg p-16 space-y-6 ">
+      <div class="bg-white shadow-md rounded-lg pb-24 p-4 space-y-6 ">
+        <.back navigate={~p"/professional/ingredients"}>Back</.back>
+
         <h2 class="text-xl font-semibold mb-4">Ingredient Details</h2>
         <div class="grid grid-cols-6  ">
           <.input

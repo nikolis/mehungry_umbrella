@@ -775,7 +775,8 @@ defmodule Mehungry.Food do
           ])
 
         Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
-        Mehungry.Posts.create_post(recipe)
+        create_post = Mehungry.Posts.create_post(recipe)
+        IO.inspect(create_post, label: "References create post")
         result
 
       _ ->
@@ -920,12 +921,19 @@ defmodule Mehungry.Food do
     |> Enum.filter(fn x -> !is_nil(x) end)
   end
 
-  def search_ingredient_search(search_term) do
+  def maybe_filter_by_classes(query, nil), do: query
+  def maybe_filter_by_classes(query, []), do: query
+  def maybe_filter_by_classes(query, [""]), do: query
+  
+  def maybe_filter_by_classes(query, classes) do
+    from(i in query, where: i.food_class in ^classes)
+  end
+
+  def search_ingredient_search(search_term, classes \\ []) do
     secondary_ids = get_second_layer_foods_ids()
 
     from(i in Ingredient,
       where:
-        i.food_class != "Survey" and
           i.category_id not in ^secondary_ids and
           fragment(
             "searchable @@ websearch_to_tsquery('english',?)",
@@ -939,46 +947,48 @@ defmodule Mehungry.Food do
           ^search_term
         )
       }
-    )
+    )|> maybe_filter_by_classes(classes)
   end
 
-  def search_ingredient_alt_admin(search_term) do
-    {search_ingredient_search(search_term), pagenate_query(search_ingredient_search(search_term))}
+  def search_ingredient_alt_admin(search_term, classes \\ []) do
+    {search_ingredient_search(search_term, classes), pagenate_query(search_ingredient_search(search_term, classes))}
   end
 
-  def search_ingredient_alt(search_term) do
+  def search_ingredient_alt(search_term, classes \\ [] ) do
     # secondary_ids = get_second_layer_foods_ids()
 
-    result = Repo.all(search_ingredient_search(search_term))
+    result = Repo.all(search_ingredient_search(search_term, classes))
     Logger.info("Search ingredient: " <> search_term <> " resulted: " <> inspect(result))
 
     result
   end
 
-  def search_ingredient_admin(search_term) do
-    query = search_ingredient_query(search_term)
+  def search_ingredient_admin(search_term, classes) do
+    query = search_ingredient_query(search_term, classes)
     {query, pagenate_query(query)}
   end
 
-  def search_ingredient(search_term) do
-    Repo.all(search_ingredient_query(search_term))
+  def search_ingredient(search_term, classes) do
+    Repo.all(search_ingredient_query(search_term, classes))
     |> Repo.preload([:category, :measurement_unit])
   end
 
-  def search_ingredient_query(search_term) do
+  def search_ingredient_query(search_term, classes) do
     ilike_search_term = "%#{search_term}%"
-    secondary_ids = get_second_layer_foods_ids()
+    #secondary_ids = get_second_layer_foods_ids()
 
     query =
       from(
         ingredient in Ingredient,
         where:
-          ingredient.food_class != "Survey" and ingredient.category_id not in ^secondary_ids and
+        #ingredient.food_class in ^classes and ingredient.category_id not in ^secondary_ids and
+        #and
             (fragment("? % ?", ^search_term, ingredient.name) or
                ilike(ingredient.name, ^ilike_search_term)),
         order_by: {:desc, fragment("? % ?", ^search_term, ingredient.name)},
         limit: 20
       )
+      |> maybe_filter_by_classes(classes)
 
     query
   end
