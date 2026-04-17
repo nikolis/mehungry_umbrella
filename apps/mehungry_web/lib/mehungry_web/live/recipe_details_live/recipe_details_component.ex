@@ -171,18 +171,17 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             id={@id <> "like_container"}
             myself={@myself}
           />
-                <div class="w-full m-auto relative bg-greyfriend1">
-          <img style="max-height: calc(100vh - 300px);" class=" m-auto" src={@recipe.image_url} />
-      </div>
+          <div class="w-full m-auto relative bg-greyfriend1">
+            <img style="max-height: calc(100vh - 300px);" class=" m-auto" src={@recipe.image_url} />
+          </div>
 
-          
           <h3 class="m-2  max-h-16 overflow-hidden text-center text-xl w-full">
             {@recipe.title}
           </h3>
           <.recipe_attrs_container recipe={@recipe} />
         </div>
         <div class="w-full mt-2">
-          <%= if @recipe.user_id == @user.id do %>
+          <%= if ! is_nil(@user) and @recipe.user_id == @user.id do %>
             <button
               class="px-4 rounded-md py-1"
               phx-target={@myself}

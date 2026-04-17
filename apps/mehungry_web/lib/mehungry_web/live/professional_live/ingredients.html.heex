@@ -8,7 +8,7 @@
     New
   </.link>
 
-  <form phx-change="search_change" class="w-full" >
+  <form phx-change="search_change" class="w-full">
     <div class="flex gap-1 sm:gap-4 flex-row  flex-wrap p-1 sm:p-4">
       <.live_component
         module={MehungryWeb.SelectComponent}
@@ -32,7 +32,6 @@
         name="search_form[query]"
         value={@form[:query].value}
         label="Search "
-
       />
     </div>
   </form>

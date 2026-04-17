@@ -36,7 +36,7 @@ defmodule Mehungry.Accounts do
     Cachex.put(:cache_user_tokens, {__MODULE__, user.id}, user_tokens)
   end
 
-  def get_user_essentials(nil), do: {nil, nil, nil}
+  def get_user_essentials(nil), do: {nil, [], []}
 
   def get_user_essentials(%User{} = user) do
     user_profile = get_user_profile_by_user_id(user.id)
@@ -155,6 +155,7 @@ defmodule Mehungry.Accounts do
   end
 
   def register_3rd_party_user(attrs) do
+    IO.inspect("register regiserer ------------------------------------------------------------------------------------------------------------")
     result =
       %User{}
       |> User.registration_3rd_party_changeset(attrs)

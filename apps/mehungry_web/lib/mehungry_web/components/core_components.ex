@@ -65,10 +65,10 @@ defmodule MehungryWeb.CoreComponents do
 
   @doc """
   """
-  def share_button(%{user: user} = assigns) do
+  def share_button(%{user: user, socket: socket} = assigns) do
     ~H"""
     <div
-      class="relative"
+      class="relative w-full h-full"
       id={"share_utils_toggle" <> Integer.to_string(@user.id) }
       phx-click-away={
         Phoenix.LiveView.JS.remove_class("drop_down_visible ",
@@ -81,7 +81,7 @@ defmodule MehungryWeb.CoreComponents do
         )
       }
     >
-      <.icon name="hero-share" class="stroke-white h-7 w-7 " />
+      <.icon name="hero-share" class="stroke-white w-10 h-10" />
       <div
         phx-hook="Copy"
         class="drop_down_home  inner_utils m-auto pr-4"
@@ -92,7 +92,7 @@ defmodule MehungryWeb.CoreComponents do
           type="text"
           class="hidden"
           id={"control-codes"<> Integer.to_string(@user.id)}
-          value={~p"/show_recipe/#{Integer.to_string(@user.id)}"}
+          value={~p"/profile/#{Integer.to_string(@user.id)}"}
         />
         <.icon
           name="hero-link"
@@ -103,6 +103,7 @@ defmodule MehungryWeb.CoreComponents do
         <img
           src="/images/instagram-svgrepo-com.svg"
           width="full"
+          href={MehungryWeb.Router.Helpers.auth_path(@socket, :request, "instagram")}
           class="m-auto h-7 w-10   text-white cursor-pointer bg-transparent overflow-hidden"
         />
 
@@ -206,12 +207,16 @@ defmodule MehungryWeb.CoreComponents do
           <% end %>
         </.link>
         <div class="flex flex-col justify-center w-fit h-full">
-          <div class="text-sm  font-bold leading-4">
-            <.link patch={"/profile/"<>Integer.to_string(@user.id)} class="flex flex-wrap">
-              <span class="w-full text-center sm:w-fit text-lg md:text-2xl mr-4">
+          <div class="text-sm  font-bold leading-4 flex">
+                     <.link patch={"/profile/"<>Integer.to_string(@user.id)} class="flex flex-wrap">
+              <span class="w-full text-center sm:w-fit m-auto text-lg md:text-2xl mr-4">
                 {@user.email}
               </span>
             </.link>
+    <div class=" py-2 pr-4">
+              <.share_button user={@user} socket={@socket}></.share_button>
+            </div>
+
 
             <%= if @current_user != @user do %>
               <div class="w-full md:w-fit">
@@ -260,6 +265,7 @@ defmodule MehungryWeb.CoreComponents do
               <span class="text-lg"> Following </span>
             </div>
           </div>
+
           <div class="mt-2 w-fit m-auto sm:m-0">
             <div class="font-semibold text-center sm:text-left">{@user_profile.alias}</div>
             <div class="text-center sm:text-left">{@user_profile.intro}</div>

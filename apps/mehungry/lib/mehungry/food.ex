@@ -924,7 +924,7 @@ defmodule Mehungry.Food do
   def maybe_filter_by_classes(query, nil), do: query
   def maybe_filter_by_classes(query, []), do: query
   def maybe_filter_by_classes(query, [""]), do: query
-  
+
   def maybe_filter_by_classes(query, classes) do
     from(i in query, where: i.food_class in ^classes)
   end
@@ -934,7 +934,7 @@ defmodule Mehungry.Food do
 
     from(i in Ingredient,
       where:
-          i.category_id not in ^secondary_ids and
+        i.category_id not in ^secondary_ids and
           fragment(
             "searchable @@ websearch_to_tsquery('english',?)",
             ^search_term
@@ -947,14 +947,16 @@ defmodule Mehungry.Food do
           ^search_term
         )
       }
-    )|> maybe_filter_by_classes(classes)
+    )
+    |> maybe_filter_by_classes(classes)
   end
 
   def search_ingredient_alt_admin(search_term, classes \\ []) do
-    {search_ingredient_search(search_term, classes), pagenate_query(search_ingredient_search(search_term, classes))}
+    {search_ingredient_search(search_term, classes),
+     pagenate_query(search_ingredient_search(search_term, classes))}
   end
 
-  def search_ingredient_alt(search_term, classes \\ [] ) do
+  def search_ingredient_alt(search_term, classes \\ []) do
     # secondary_ids = get_second_layer_foods_ids()
 
     result = Repo.all(search_ingredient_search(search_term, classes))
@@ -963,28 +965,28 @@ defmodule Mehungry.Food do
     result
   end
 
-  def search_ingredient_admin(search_term, classes) do
+  def search_ingredient_admin(search_term, classes \\ []) do
     query = search_ingredient_query(search_term, classes)
     {query, pagenate_query(query)}
   end
 
-  def search_ingredient(search_term, classes) do
+  def search_ingredient(search_term, classes \\ []) do
     Repo.all(search_ingredient_query(search_term, classes))
     |> Repo.preload([:category, :measurement_unit])
   end
 
-  def search_ingredient_query(search_term, classes) do
+  def search_ingredient_query(search_term, classes \\ []) do
     ilike_search_term = "%#{search_term}%"
-    #secondary_ids = get_second_layer_foods_ids()
+    # secondary_ids = get_second_layer_foods_ids()
 
     query =
       from(
         ingredient in Ingredient,
+        # ingredient.food_class in ^classes and ingredient.category_id not in ^secondary_ids and
+        # and
         where:
-        #ingredient.food_class in ^classes and ingredient.category_id not in ^secondary_ids and
-        #and
-            (fragment("? % ?", ^search_term, ingredient.name) or
-               ilike(ingredient.name, ^ilike_search_term)),
+          fragment("? % ?", ^search_term, ingredient.name) or
+            ilike(ingredient.name, ^ilike_search_term),
         order_by: {:desc, fragment("? % ?", ^search_term, ingredient.name)},
         limit: 20
       )

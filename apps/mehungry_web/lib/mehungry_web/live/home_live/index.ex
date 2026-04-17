@@ -120,7 +120,9 @@ defmodule MehungryWeb.HomeLive.Index do
     maybe_track_user(%{}, socket)
 
     recipe = Food.get_recipe!(id)
-    Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
+    if ! is_nil(recipe) do
+      Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
+    end
 
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.user

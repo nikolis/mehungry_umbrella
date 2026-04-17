@@ -465,7 +465,7 @@ defmodule MehungryWeb.RecipeComponents do
             <.icon name="hero-trash-solid" class="h-5 w-5" />
           </button>
         <% "browse" -> %>
-          <%= if ! is_nil(@user_recipes) do %>
+          <%= if ! is_nil(@user_recipes)  and ! is_nil(@recipe) do %>
             <svg
               class="w-7 h-7"
               viewBox="0 0 24 24"

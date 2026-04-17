@@ -17,7 +17,13 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
     "search_method" => ""
   }
 
-  @food_classes [{"Branded", "Branded"}, {"FinalFood", "FinalFood"}, {"Admin created", "Admin created"}, {"Survey", "Survey"}]
+  @food_classes [
+    {"Branded", "Branded"},
+    {"FinalFood", "FinalFood"},
+    {"Admin created", "Admin created"},
+    {"Survey", "Survey"},
+    {"Foundation", "Foundation"}
+  ]
 
   defp get_form_changeset(params) do
     changeset =
@@ -54,7 +60,7 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   @impl true
   def handle_event("search_change", %{"search_form" => search_form} = rest, socket) do
     IO.inspect(search_form, label: "search change ")
-    
+
     socket = execute_query(search_form, socket)
 
     {:noreply, socket}
@@ -83,13 +89,12 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
      |> stream(:ingredients, ingredients)}
   end
 
-
   def execute_query(form_params, socket) do
-   classes = String.split(form_params["classes"], ",")
+    classes = String.split(form_params["classes"], ",")
     IO.inspect(classes)
 
     {ecto_query, {ingredients, cursor}} =
-         case form_params["search_method"] do
+      case form_params["search_method"] do
         "ilike" ->
           Food.search_ingredient_admin(form_params["query"], classes)
 
@@ -97,7 +102,7 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
           Food.search_ingredient_alt_admin(form_params["query"], classes)
       end
 
-    #socket = assign(socket, :query, form_params)
+    # socket = assign(socket, :query, form_params)
     socket = assign(socket, :ecto_query, ecto_query)
 
     socket
