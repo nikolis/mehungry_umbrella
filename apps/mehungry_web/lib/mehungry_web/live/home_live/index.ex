@@ -34,7 +34,6 @@ defmodule MehungryWeb.HomeLive.Index do
       Posts.subscribe_to_post(%{post_id: post.id})
     end)
 
-
     {:ok,
      socket
      |> assign(:user, user)
@@ -121,7 +120,9 @@ defmodule MehungryWeb.HomeLive.Index do
     maybe_track_user(%{}, socket)
 
     recipe = Food.get_recipe!(id)
-    Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
+    if ! is_nil(recipe) do
+      Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
+    end
 
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.user
@@ -174,7 +175,6 @@ defmodule MehungryWeb.HomeLive.Index do
         {name, status, body["error"]["message"]}
       end)
 
-
     send_update(MehungryWeb.SocialMediaPostComponent, %{
       state: :result,
       results: results,
@@ -222,5 +222,4 @@ defmodule MehungryWeb.HomeLive.Index do
         end
     end
   end
-
 end

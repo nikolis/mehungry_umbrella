@@ -104,12 +104,15 @@
             <h3 class="text-center">Ingredients</h3>
             <div class="md:min-h-96   overflow-x-hidden noscrollbar	pt-4  step_ing_cont">
               <.inputs_for :let={g} field={f[:recipe_ingredients]}>
-                <Components.ingredient_render
-                  g={g}
-                  f={f}
-                  ingredients={@ingredients}
-                  measurement_units={@measurement_units}
-                />
+                <%= if ! Map.get(g.source.changes, :delete)  do %>
+                  <Components.ingredient_render
+                    g={g}
+                    f={f}
+                    ingredients={@ingredients}
+                    measurement_units={@measurement_units}
+                  />
+                <% else %>
+                <% end %>
               </.inputs_for>
               <button
                 id="add_ingredient"
@@ -207,16 +210,22 @@
         for={%{}}
         phx-change="validate"
         phx-submit="save"
-        class="gap-2 flex  flex-col mx-auto relative"
+        class="gap-2 flex  flex-col mx-auto relative w-fit  mr-10"
         style=""
       >
-        <.input required field={b[:url_to_drill]} type="text" label="Url input" class=" " />
+        <.input
+          required
+          field={b[:url_to_drill]}
+          type="text"
+          label="themealdb id i.e 52764"
+          class="px-16"
+        />
         <div class=" absolute right-0 ">
-          {submit("Get",
+          {submit("Get blueprint",
             class: "button bg-complementary border-2 border-transparent  ",
             type: "submit",
             phx_disable_with: "Saving...",
-            id: "save_button"
+            id: "save_button2"
           )}
         </div>
       </.form>

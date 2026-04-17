@@ -465,26 +465,28 @@ defmodule MehungryWeb.RecipeComponents do
             <.icon name="hero-trash-solid" class="h-5 w-5" />
           </button>
         <% "browse" -> %>
-          <svg
-            class="w-7 h-7"
-            viewBox="0 0 24 24"
-            fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
-            phx-click="save_user_recipe"
-            phx-target={@myself}
-            id={"svg-"<> Integer.to_string(@id)}
-            phx-value-recipe_id={@recipe.id}
-            phx-value-dom_id={@id}
-          >
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z"
-              stroke="#eb1111"
-              stroke-width="1"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <%= if ! is_nil(@user_recipes)  and ! is_nil(@recipe) do %>
+            <svg
+              class="w-7 h-7"
+              viewBox="0 0 24 24"
+              fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
+              phx-click="save_user_recipe"
+              phx-target={@myself}
+              id={"svg-"<> Integer.to_string(@id)}
+              phx-value-recipe_id={@recipe.id}
+              phx-value-dom_id={@id}
+            >
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z"
+                stroke="#eb1111"
+                stroke-width="1"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          <% end %>
         <% "created" -> %>
           <button phx-click="edit-recipe" phx-value-id={@recipe.id}>
             <.icon name="hero-pencil-square-solid" />
@@ -496,7 +498,7 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_like_container(%{myself: _myself} = assigns) do
     ~H"""
-    <div class="bg-white p-2 rounded-full absolute top-5 right-5 md:top-8 md:left-8 md:w-12 md:h-12 ">
+    <div class="z-40 bg-transparent p-2 rounded-full absolute top-5 right-5 md:top-8 md:left-8 md:w-12 md:h-12 ">
       <%= case @type do %>
         <% "saved" -> %>
           <button

@@ -245,7 +245,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
                 url
 
               {:error, the_err} ->
-                IO.inspect(the_err, label: "The error in parsing")
+                Logger.error("Error in parsing: #the_erre_err}")
             end
           end)
 
@@ -254,12 +254,10 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
         # data: %{files_urls: urls}
         # })
 
-        # IO.inspect(urls, label: "Urls ----------------->")
         MehungryWeb.SeedsGenWorkerServer.put_work_list(urls)
         {:noreply, assign(socket, objects: objects.body.contents, loading: false)}
 
       {:error, error} ->
-        IO.inspect(error)
         error_message = extract_error_message(error)
         {:noreply, assign(socket, error: error_message, objects: [], loading: false)}
     end

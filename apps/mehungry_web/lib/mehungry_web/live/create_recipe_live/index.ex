@@ -45,13 +45,28 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:ok, meta, socket}
   end
 
-  def handle_event("validate", params, socket) do
-    IO.inspect(params, label: "Small params")
-
+  def handle_event("validate", %{"url_to_drill" => url}, socket) do
     socket =
-      assign(socket, :url_to_drill, params["url_to_drill"])
+      assign(socket, :url_to_drill, url)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("validate", %{"recipe" => recipe_params}, socket) do
+    recipe_params = Map.put(recipe_params, "language_name", "En")
+    recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
+
+    changeset =
+      socket.assigns.base
+      |> Recipe.changeset(recipe_params)
+      |> struct!(action: :validate)
+
+    if(socket.assigns.live_action == :index) do
+      Cachex.put(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}, recipe_params)
+    end
+
+    {:noreply, assign(socket, :changeset, changeset)}
   end
 
   @url_regex ~r/^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w\-._~:\/?#[\]@!$&'()*+,;=]*)?$/
@@ -60,29 +75,27 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def handle_event("save", %{"url_to_drill" => url}, socket) do
-    IO.inspect("Sae here-----------------------------")
+    url = "https://www.themealdb.com/api/json/v1/1/lookup.php?i=" <> url
+
     case valid_url?(url) do
       true ->
         case MehungryWeb.Api.MealFetcher.fetch_and_parse(url) do
           {:ok, meal} ->
-            IO.inspect(meal, label: "meal   ========= ")
             converted_meal = MehungryWeb.Api.MealConverter.convert(meal)
-            IO.inspect(converted_meal, label: "Converted meal")
             recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
 
-            socket = init(socket, recipe, converted_meal)
-            IO.inspect(converted_meal, label: "COnverted meal Url to Dril")
+            socket =
+              init(socket, recipe, converted_meal)
+
             {:noreply,
              socket
              |> assign(plain_meal: meal)}
 
           {:error, whatever} ->
-            IO.inspect(whatever, label: "Errrorr. ---")
             {:noreply, socket}
         end
 
       false ->
-        IO.inspect(url, label: "dONT DRill this url")
         {:noreply, socket}
     end
   end
@@ -184,7 +197,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   @impl true
   def handle_event("remove-ingredient", %{"temp_id" => remove_id}, socket) do
-    IO.inspect("Remove ingredient")
     {_progress, recipe_ingredients} = remove_from_change(socket, remove_id)
 
     changeset =
@@ -207,23 +219,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @impl true
   def handle_event("other", _, socket) do
     {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("validate", %{"recipe" => recipe_params}, socket) do
-    recipe_params = Map.put(recipe_params, "language_name", "En")
-    recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
-
-    changeset =
-      socket.assigns.base
-      |> Recipe.changeset(recipe_params)
-      |> struct!(action: :validate)
-
-    if(socket.assigns.live_action == :index) do
-      Cachex.put(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}, recipe_params)
-    end
-
-    {:noreply, assign(socket, :changeset, changeset)}
   end
 
   def handle_event("select_ingredient", %{"index" => index} = _params, socket) do
@@ -370,6 +365,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def map_recipe_ingredient(recipe_ingredients) do
     ingredient = Food.get_ingredient(recipe_ingredients.ingredient_id)
     measurement_unit = Food.get_measurement_unit!(recipe_ingredients.measurement_unit_id)
+    Log.info("Maping: #{measurement_unit.name}")
 
     %{
       temp_id: recipe_ingredients.temp_id,
@@ -426,8 +422,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   defp save_recipe(socket, :index, recipe_params) do
-    IO.inspect(recipe_params, label: "Save Recipe")
-  
     path =
       consume_uploaded_entries(
         socket,
@@ -469,7 +463,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          |> push_navigate(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect(changeset, label: "The errors")
         {:noreply, assign(socket, changeset: changeset)}
     end
   end

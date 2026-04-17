@@ -45,7 +45,7 @@ defmodule MehungryWeb.SvgComponents do
       xmlns="http://www.w3.org/2000/svg"
       xmlns:xlink="http://www.w3.org/1999/xlink"
       viewBox="0 0 512 512"
-      class="col-span-2 max-h-40"
+      class="col-span-2 max-h-60"
       xml:space="preserve"
     >
       <polygon

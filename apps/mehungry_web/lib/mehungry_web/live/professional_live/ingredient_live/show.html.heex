@@ -1,0 +1,114 @@
+<div class="max-w-5xl mx-auto p-4 space-y-6">
+  
+<!-- Header -->
+  <div class="bg-white shadow rounded-lg p-6">
+    <.back navigate={~p"/professional/ingredients"}>Back</.back>
+
+    <h1 class="text-2xl font-bold mb-2 mt-4">{@ingredient.name}</h1>
+    <p class="text-gray-600">{@ingredient.description}</p>
+
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+      <div>
+        <span class="font-semibold">Category:</span>
+        {@ingredient.category && @ingredient.category.name}
+      </div>
+      <div>
+        <span class="font-semibold">Default Unit:</span>
+        {@ingredient.measurement_unit && @ingredient.measurement_unit.name}
+      </div>
+      <div>
+        <span class="font-semibold">Food Class:</span>
+        {@ingredient.food_class}
+      </div>
+      <div>
+        <span class="font-semibold">Publication Date:</span>
+        {@ingredient.publication_date}
+      </div>
+    </div>
+  </div>
+  
+<!-- Nutrients -->
+  <div class="bg-white shadow rounded-lg p-6">
+    <h2 class="text-xl font-semibold mb-4">Nutrients</h2>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr class="bg-gray-100 text-left">
+            <th class="p-2">Nutrient</th>
+            <th class="p-2">Amount</th>
+            <th class="p-2">Measurement Unit</th>
+            <th class="p-2">Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          <%= for n <- @ingredient.ingredient_nutrients do %>
+            <tr class="border-b">
+              <td class="p-2">{n.nutrient && n.nutrient.name}</td>
+              <td class="p-2">{n.amount}</td>
+
+              <td class="p-2">{n.nutrient.measurement_unit.name}</td>
+              <td class="p-2">{n.type_}</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <%= if @ingredient.ingredient_nutrients == [] do %>
+      <p class="text-gray-500 text-sm mt-2">No nutrients available.</p>
+    <% end %>
+  </div>
+  
+<!-- Portions -->
+  <div class="bg-white shadow rounded-lg p-6">
+    <h2 class="text-xl font-semibold mb-4">Portions</h2>
+
+    <div class="space-y-3">
+      <%= for portion <- @ingredient.ingredient_portions do %>
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between bg-gray-50 p-3 rounded-md">
+          <div class="text-sm">
+            <span class="font-medium">Amount:</span> {portion.amount}
+          </div>
+          <div class="text-sm">
+            <span class="font-medium">Gram Weight:</span> {portion.gram_weight}
+          </div>
+          <div class="text-sm">
+            <span class="font-medium">Unit:</span>
+            {portion.measurement_unit && portion.measurement_unit.name}
+          </div>
+        </div>
+      <% end %>
+
+      <%= if @ingredient.ingredient_portions == [] do %>
+        <p class="text-gray-500 text-sm">No portions available.</p>
+      <% end %>
+    </div>
+  </div>
+  
+<!-- Translations -->
+  <div class="bg-white shadow rounded-lg p-6">
+    <h2 class="text-xl font-semibold mb-4">Translations</h2>
+
+    <div class="space-y-3">
+      <%= for tr <- @ingredient.ingredient_translation do %>
+        <div class="bg-gray-50 p-3 rounded-md">
+          <div class="text-sm">
+            <span class="font-medium">Language:</span>
+            {tr.language && tr.language.name}
+          </div>
+          <div class="text-sm">
+            <span class="font-medium">Name:</span> {tr.name}
+          </div>
+          <div class="text-sm text-gray-600">
+            {tr.description}
+          </div>
+        </div>
+      <% end %>
+
+      <%= if @ingredient.ingredient_translation == [] do %>
+        <p class="text-gray-500 text-sm">No translations available.</p>
+      <% end %>
+    </div>
+  </div>
+</div>

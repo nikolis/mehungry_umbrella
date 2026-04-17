@@ -80,7 +80,6 @@ defmodule MehungryWeb.SocialMediaPostComponent do
 
   @impl true
   def handle_event("post", params, socket) do
-    IO.inspect(params, label: "Params")
     {:noreply, socket}
   end
 

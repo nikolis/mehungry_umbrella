@@ -166,6 +166,11 @@ defmodule MehungryWeb.SimpleS3Upload do
     amz_date = short_date(expires_at)
     %{secret_access_key: secret, region: "eu-central-1"} = config
 
+    IO.inspect(config,
+      label:
+        "Config ---------------------------------------------------------------------------------------------------------------"
+    )
+
     ("AWS4" <> secret)
     |> sha256(amz_date)
     |> sha256("eu-central-1")

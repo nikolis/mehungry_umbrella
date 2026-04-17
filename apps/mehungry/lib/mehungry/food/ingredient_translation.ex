@@ -11,7 +11,7 @@ defmodule Mehungry.Food.IngredientTranslation do
 
     belongs_to :ingredient, Mehungry.Food.Ingredient
 
-    belongs_to :language, Mehungry.Language,
+    belongs_to :language, Mehungry.Languages.Language,
       references: :name,
       foreign_key: :language_name,
       type: :string
@@ -29,7 +29,7 @@ defmodule Mehungry.Food.IngredientTranslation do
         ) :: Ecto.Changeset.t()
   def changeset(ingredient_translation, attrs) do
     ingredient_translation
-    |> cast(attrs, [:name, :language_name, :description, :url])
+    |> cast(attrs, [:name, :language_name, :description, :url, :ingredient_id])
     |> validate_required([:name, :language_name])
     |> unique_constraint(:name)
   end

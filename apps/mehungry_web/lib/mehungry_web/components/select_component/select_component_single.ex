@@ -175,8 +175,6 @@ defmodule MehungryWeb.SelectComponentSingle do
         get_by_id_func
       )
 
-    IO.inspect(selected_items, label: "Selected itemes ")
-
     selected_items =
       if is_nil(selected_items) do
         nil
@@ -261,8 +259,6 @@ defmodule MehungryWeb.SelectComponentSingle do
       socket
       |> assign(:selected_items, nil)
 
-    IO.inspect(socket.form.index, label: "SElected iems clicked withv")
-
     {:noreply,
      push_event(
        socket,
@@ -278,7 +274,6 @@ defmodule MehungryWeb.SelectComponentSingle do
     selected_item = Enum.find(socket.assigns.items_filtered, fn x -> x.id == id end)
 
     # selected_item = %{label: socket.assigns.label_function.(selected_item), id: selected_item.id}
-    IO.inspect(socket.assigns.form.index, label: "Hnalde normal clicked")
 
     socket =
       socket

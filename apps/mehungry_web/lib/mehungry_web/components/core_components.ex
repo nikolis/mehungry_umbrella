@@ -65,6 +65,67 @@ defmodule MehungryWeb.CoreComponents do
 
   @doc """
   """
+  def share_button(%{user: user, socket: socket} = assigns) do
+    ~H"""
+    <div
+      class="relative w-full h-full"
+      id={"share_utils_toggle" <> Integer.to_string(@user.id) }
+      phx-click-away={
+        Phoenix.LiveView.JS.remove_class("drop_down_visible ",
+          to: "#share_items_list" <> Integer.to_string(@user.id)
+        )
+      }
+      phx-click={
+        Phoenix.LiveView.JS.toggle_class("drop_down_visible ",
+          to: "#share_items_list" <> Integer.to_string(@user.id)
+        )
+      }
+    >
+      <.icon name="hero-share" class="stroke-white w-10 h-10" />
+      <div
+        phx-hook="Copy"
+        class="drop_down_home  inner_utils m-auto pr-4"
+        data-to={"#control-codes" <> Integer.to_string(@user.id)}
+        id={"share_items_list"<> Integer.to_string(@user.id)}
+      >
+        <input
+          type="text"
+          class="hidden"
+          id={"control-codes"<> Integer.to_string(@user.id)}
+          value={~p"/profile/#{Integer.to_string(@user.id)}"}
+        />
+        <.icon
+          name="hero-link"
+          style="width: 40px;"
+          class="m-auto h-7 w-9 bg-white  text-white cursor-pointer"
+        />
+
+        <img
+          src="/images/instagram-svgrepo-com.svg"
+          width="full"
+          href={MehungryWeb.Router.Helpers.auth_path(@socket, :request, "instagram")}
+          class="m-auto h-7 w-10   text-white cursor-pointer bg-transparent overflow-hidden"
+        />
+
+        <.link
+          id={"link-to-recipe-#{@user.id}"}
+          class="block w-full overflow-hidden"
+          style="width: 50px;"
+          patch={~p"/share_social_media/#{@user.id}"}
+        >
+          <img
+            src="/images/facebook-svgrepo-com (1).svg"
+            width="full"
+            class="m-auto h-7 w-10  text-white cursor-pointer bg-transparent inline w-full"
+          />
+        </.link>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  """
   def share_button(assigns) do
     ~H"""
     <div
@@ -146,12 +207,16 @@ defmodule MehungryWeb.CoreComponents do
           <% end %>
         </.link>
         <div class="flex flex-col justify-center w-fit h-full">
-          <div class="text-sm  font-bold leading-4">
-            <.link patch={"/profile/"<>Integer.to_string(@user.id)} class="flex flex-wrap">
-              <span class="w-full text-center sm:w-fit text-lg md:text-2xl mr-4">
+          <div class="text-sm  font-bold leading-4 flex">
+                     <.link patch={"/profile/"<>Integer.to_string(@user.id)} class="flex flex-wrap">
+              <span class="w-full text-center sm:w-fit m-auto text-lg md:text-2xl mr-4">
                 {@user.email}
               </span>
             </.link>
+    <div class=" py-2 pr-4">
+              <.share_button user={@user} socket={@socket}></.share_button>
+            </div>
+
 
             <%= if @current_user != @user do %>
               <div class="w-full md:w-fit">
@@ -200,6 +265,7 @@ defmodule MehungryWeb.CoreComponents do
               <span class="text-lg"> Following </span>
             </div>
           </div>
+
           <div class="mt-2 w-fit m-auto sm:m-0">
             <div class="font-semibold text-center sm:text-left">{@user_profile.alias}</div>
             <div class="text-center sm:text-left">{@user_profile.intro}</div>
@@ -246,7 +312,6 @@ defmodule MehungryWeb.CoreComponents do
 
   def get_post_age(%Mehungry.Posts.Post{} = post) do
     diff = NaiveDateTime.diff(NaiveDateTime.local_now(), post.updated_at, :second)
-    IO.inspect(diff)
     "23m"
     get_diff(diff)
   end
@@ -985,7 +1050,7 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  def input(%{type: "number"} = assigns) do
+  def input(%{type: "number_subscript"} = assigns) do
     ~H"""
     <div phx-feedback-for={@name} class="input-form w-full h-full">
       <input
@@ -1006,6 +1071,7 @@ defmodule MehungryWeb.CoreComponents do
       />
       <.label for={@id} class="placeholder">{@label}</.label>
       <.error :for={msg <- @errors}>{msg}</.error>
+      <div class="absolute right-0 bottom-0 px-1">{@rest.subscript}</div>
     </div>
     """
   end
@@ -1068,6 +1134,33 @@ defmodule MehungryWeb.CoreComponents do
         <option :if={@prompt} value="">{@prompt}</option>
         {Phoenix.HTML.Form.options_for_select(@options, @value)}
       </select>
+      <.error :for={msg <- @errors}>{msg}</.error>
+    </div>
+    """
+  end
+
+  # All other inputs text, datetime-local, url, password, etc. are handled here...
+  def input(%{type: "noautocomplete"} = assigns) do
+    ~H"""
+    <div phx-feedback-for={@name} class="input-form w-full h-full">
+      <input
+        type={@type}
+        name={@name}
+        id={@id}
+        autocomplete="off"
+        value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        class={
+          [Map.get(assigns.rest, :class, "")] ++
+            [
+              "rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	h-full",
+              "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym",
+              @errors == [] && "",
+              @errors != [] && " ring-rose-400  focus:ring-rose-400"
+            ]
+        }
+        {@rest}
+      />
+      <.label for={@id} class="placeholder px-4">{@label}</.label>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """

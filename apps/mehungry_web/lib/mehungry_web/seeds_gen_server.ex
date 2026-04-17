@@ -49,7 +49,7 @@ defmodule MehungryWeb.SeedsGenWorkerServer do
     # Do your work here
     url_list = Agent.get(state.agent, fn x -> x.work_items end)
 
-    #IO.inspect(url_list, label: "\n Work Schedule \n")
+    # IO.inspect(url_list, label: "\n Work Schedule \n")
     list = process_list(url_list)
     Agent.update(state.agent, fn state -> %{work_items: list} end)
     # Reschedule next work
@@ -63,7 +63,7 @@ defmodule MehungryWeb.SeedsGenWorkerServer do
 
   def process_list([url]) do
     try do
-      #IO.inspect("Parsing url #{url} ", label: "Process List Signle Item")
+      # IO.inspect("Parsing url #{url} ", label: "Process List Signle Item")
       %HTTPoison.Response{body: body} = HTTPoison.get!(url)
       Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
     rescue
@@ -76,12 +76,12 @@ defmodule MehungryWeb.SeedsGenWorkerServer do
     url
 
     try do
-      #IO.inspect("Parsing url #{url} ", label: "Process List")
+      # IO.inspect("Parsing url #{url} ", label: "Process List")
       %HTTPoison.Response{body: body} = HTTPoison.get!(url)
       Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
     rescue
       the_error ->
-        #IO.inspect(the_error, label: "Error in processing #{url}")
+        # IO.inspect(the_error, label: "Error in processing #{url}")
         rest
     end
 
@@ -101,7 +101,7 @@ defmodule MehungryWeb.SeedsGenWorkerServer do
   def handle_cast({:submit_tasks, task_list}, state) do
     tasks_list = Agent.get(state.agent, fn x -> x.work_items end)
     # Logger.debug
-    #IO.inspect("Tasks list submited to Worked(seeds gen server) #{inspect(task_list)}")
+    # IO.inspect("Tasks list submited to Worked(seeds gen server) #{inspect(task_list)}")
     Agent.update(state.agent, fn state -> %{work_items: task_list} end)
     {:noreply, state}
   end

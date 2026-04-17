@@ -7,11 +7,10 @@
 
   <div class="mt-4 h-full py-2 px-4">
     <.live_component
-      module={MehungryWeb.SelectComponentSingleMemory}
+      module={MehungryWeb.SelectComponent}
       form={@f}
-      items={@recipes}
-      input_variable="recipe_id"
-      label_function={fn x -> x.title end}
+      items={Enum.map(@recipes, fn x -> {Integer.to_string(x.id), x.title} end)}
+      input_variable={:recipe_id}
       id={"recipe_search_component" <> Integer.to_string(@f.index)}
     />
   </div>
