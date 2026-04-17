@@ -33,7 +33,7 @@ defmodule PosTagger do
   end
 
   def tag_text(text) do
-    port = Port.open({:spawn, "python3 pos_tagger.py"}, [:binary, :exit_status])
+    port = Port.open({:spawn, "pipenv run python3 pos_tagger.py"}, [:binary, :exit_status])
     Port.command(port, text)
 
     receive_output(port, [])
