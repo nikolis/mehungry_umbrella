@@ -60,6 +60,7 @@ COPY ./apps/mehungry/mix.* ./apps/mehungry
 COPY ./apps/mehungry_web/mix.* ./apps/mehungry_web
 
 COPY config ./config
+COPY ./pos_tagger.py ./pos_tagger.py
 
 RUN mix deps.get --only ${MIX_ENV}
 RUN MIX_ENV=prod mix compile
@@ -96,6 +97,7 @@ FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
 
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
+COPY --from=builder /mehungry_umbrella/pos_tagger.py ./pos_tagger.py
 
 RUN apk add --update openssl postgresql-client jq 
 # Install build dependencies for spaCy
