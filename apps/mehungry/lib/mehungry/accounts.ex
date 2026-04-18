@@ -155,7 +155,10 @@ defmodule Mehungry.Accounts do
   end
 
   def register_3rd_party_user(attrs) do
-    IO.inspect("register regiserer ------------------------------------------------------------------------------------------------------------")
+    IO.inspect(
+      "register regiserer ------------------------------------------------------------------------------------------------------------"
+    )
+
     result =
       %User{}
       |> User.registration_3rd_party_changeset(attrs)

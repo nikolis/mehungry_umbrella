@@ -1,0 +1,47 @@
+<h1 class="text-xl font-bold mb-4">Languages</h1>
+
+<.link patch={~p"/professional/languages/new"} class="btn">
+  + New Language
+</.link>
+
+<div class="mt-4">
+  <table class="w-full border">
+    <thead>
+      <tr>
+        <th class="text-left p-2">Name</th>
+        <th></th>
+      </tr>
+    </thead>
+
+    <tbody id="languages" phx-update="stream">
+      <%= for {id, language} <- @streams.languages do %>
+        <tr id={id}>
+          <td class="p-2">{language.name}</td>
+
+          <td class="p-2 flex gap-2">
+            <.link patch={~p"/admin/languages/#{language.name}/edit"}>
+              Edit
+            </.link>
+
+            <.link phx-click="delete" phx-value-id={language.name} data-confirm="Are you sure?">
+              Delete
+            </.link>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<.modal :if={@live_action in [:new, :edit]} id="language-modal" show ={true}       on_cancel={JS.push("keep_browsing")}
+>
+  <.live_component
+    module={MehungryWeb.ProfessionalLive.LanguageLive.FormComponent}
+    id={@language.name || :new}
+    show={true}
+    title={@page_title}
+    action={@live_action}
+    language={@language}
+    patch={~p"/admin/languages"}
+  />
+</.modal>

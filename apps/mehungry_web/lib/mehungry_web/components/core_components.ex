@@ -208,15 +208,14 @@ defmodule MehungryWeb.CoreComponents do
         </.link>
         <div class="flex flex-col justify-center w-fit h-full">
           <div class="text-sm  font-bold leading-4 flex">
-                     <.link patch={"/profile/"<>Integer.to_string(@user.id)} class="flex flex-wrap">
+            <.link patch={"/profile/"<>Integer.to_string(@user.id)} class="flex flex-wrap">
               <span class="w-full text-center sm:w-fit m-auto text-lg md:text-2xl mr-4">
                 {@user.email}
               </span>
             </.link>
-    <div class=" py-2 pr-4">
+            <div class=" py-2 pr-4">
               <.share_button user={@user} socket={@socket}></.share_button>
             </div>
-
 
             <%= if @current_user != @user do %>
               <div class="w-full md:w-fit">
