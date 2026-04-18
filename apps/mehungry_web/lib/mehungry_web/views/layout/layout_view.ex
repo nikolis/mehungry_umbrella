@@ -49,6 +49,8 @@ defmodule MehungryWeb.LayoutView do
           <a href="/professional/users" class="w-fit block ">Users</a>
           <a href="/professional/activeusers" class="w-fit block">Active users</a>
           <a href="/professional/ingredients" class="w-fit block ">Ingredients</a>
+          <a href="/professional/languages" class="w-fit block ">Languages</a>
+
           <a href="/professional/files" class="w-fit block ">Files</a>
           <a href="/professional/visits" class="w-fit block">Visits</a>
         </div>
