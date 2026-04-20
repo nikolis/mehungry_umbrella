@@ -286,38 +286,42 @@ defmodule Mehungry.Food do
   end
 
   def get_recipe!(id) do
-    {id, _} =
-      if(is_integer(id)) do
-        {id, nil}
-      else
-        Integer.parse(id)
-      end
-
-    result =
-      case Cachex.get(:recipes_cache, {__MODULE__, id}) do
-        {:ok, nil} ->
-          recipe =
-            Repo.get(Recipe, id)
-            |> Repo.preload([
-              [recipe_ingredients: [:measurement_unit, :ingredient]],
-              :user,
-              :recipe_hashtags,
-              comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
-            ])
-
-          if(not is_nil(recipe)) do
-            Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
-            recipe
-          end
-
-        {:ok, %Recipe{} = recipe} ->
-          recipe
-      end
-
-    if is_nil(result) do
-      result
+    if is_nil(id) do
+      nil
     else
-      translate_recipe_if_needed(result)
+      {id, _} =
+        if(is_integer(id)) do
+          {id, nil}
+        else
+          Integer.parse(id)
+        end
+
+      result =
+        case Cachex.get(:recipes_cache, {__MODULE__, id}) do
+          {:ok, nil} ->
+            recipe =
+              Repo.get(Recipe, id)
+              |> Repo.preload([
+                [recipe_ingredients: [:measurement_unit, :ingredient]],
+                :user,
+                :recipe_hashtags,
+                comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
+              ])
+
+            if(not is_nil(recipe)) do
+              Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
+              recipe
+            end
+
+          {:ok, %Recipe{} = recipe} ->
+            recipe
+        end
+
+      if is_nil(result) do
+        result
+      else
+        translate_recipe_if_needed(result)
+      end
     end
   end
 

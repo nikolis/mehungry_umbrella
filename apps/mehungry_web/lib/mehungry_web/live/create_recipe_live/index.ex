@@ -159,9 +159,11 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   use MehungryWeb.Searchable, :transfers_to_search
 
   def handle_event("clear-form", _, socket) do
-    recipe = Food.get_recipe!(socket.assigns.recipe.id)
-    socket = init(socket, recipe, %{})
-    socket = assign(socket, :recipe, recipe)
+    #recipe = Food.get_recipe!(socket.assigns.recipe.id)
+    socket = init(socket, %Recipe{}, %{})
+    socket = 
+      assign(socket, :recipe, %Recipe{})
+      |> assign(:plain_meal, nil)
 
     {:noreply, socket}
   end

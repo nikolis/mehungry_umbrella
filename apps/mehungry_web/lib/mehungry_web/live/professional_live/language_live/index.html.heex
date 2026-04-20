@@ -33,7 +33,11 @@
   </table>
 </div>
 
-<.modal :if={@live_action in [:new, :edit]} id="language-modal" show ={true}       on_cancel={JS.push("keep_browsing")}
+<.modal
+  :if={@live_action in [:new, :edit]}
+  id="language-modal"
+  show={true}
+  on_cancel={JS.push("keep_browsing")}
 >
   <.live_component
     module={MehungryWeb.ProfessionalLive.LanguageLive.FormComponent}
