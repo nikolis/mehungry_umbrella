@@ -48,11 +48,7 @@ defmodule MehungryWeb.Professional.NutrientComponent do
             </div>
           </.input>
 
-          <button
-            type="submit"
-            name="ingredient[_action]"
-            value={"remove_nutrient:#{nutrients_form.index}"}
-          >
+          <button name="ingredient[_action]" value={"remove_nutrient:#{nutrients_form.index}"}>
             ❌
           </button>
         </div>
