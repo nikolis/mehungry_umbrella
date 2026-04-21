@@ -1,15 +1,15 @@
 <div>
-<.header>
-  {@title}
-</.header>
+  <.header>
+    {@title}
+  </.header>
 
-<.simple_form for={@form} id="language-form" phx-target={@myself} phx-submit="save">
-  <.input field={@form[:name]} label="Language Name" />
+  <.simple_form for={@form} id="language-form" phx-target={@myself} phx-submit="save">
+    <.input field={@form[:name]} label="Language Name" />
 
-  <:actions>
-    <.button phx-disable-with="Saving...">
-      Save Language
-    </.button>
-  </:actions>
-</.simple_form>
+    <:actions>
+      <.button phx-disable-with="Saving...">
+        Save Language
+      </.button>
+    </:actions>
+  </.simple_form>
 </div>

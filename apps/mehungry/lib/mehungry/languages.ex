@@ -15,7 +15,6 @@ defmodule Mehungry.Languages do
     Language.changeset(%Language{}, attrs)
   end
 
-
   def get_language_by_name(name) do
     query = from lang in Language, where: lang.name == ^name
     Repo.one(query)

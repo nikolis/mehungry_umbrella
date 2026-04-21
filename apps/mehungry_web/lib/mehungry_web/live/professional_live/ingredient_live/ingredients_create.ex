@@ -59,10 +59,13 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsCreate do
         add_nutrient(socket, params)
 
       "add_ingredient_translation" ->
-        add_nutrient(socket, params)
+        add_ingredient_translation(socket, params)
 
       "remove_portion:" <> index ->
         remove_portion(socket, params, index)
+
+      "remove_nutrient:" <> index ->
+        remove_nutrient(socket, params, index)
 
       _ ->
         case Food.create_ingredient(params) do
@@ -132,6 +135,10 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsCreate do
   end
 
   defp remove_nutrient(socket, params, index) do
+    IO.inspect(
+      "Remove nutrient -------------------------------------------------------------------------------------------------------------------------------------------"
+    )
+
     portions =
       Map.get(params, "ingredient_nutrients", %{})
       |> Map.delete(index)
