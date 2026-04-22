@@ -83,7 +83,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def handle_event("save", %{"url_to_drill" => url} = recipe_params, socket) do
-
     url = "https://www.themealdb.com/api/json/v1/1/lookup.php?i=" <> url
 
     case valid_url?(url) do
@@ -198,7 +197,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   defp handle_action(socket, params) do
-
     case params["_action"] do
       "add_ingredient" ->
         add_ingredient(socket, params)
@@ -293,7 +291,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   defp add_ingredient(socket, params) do
-   
     ingredients = Map.get(params, "recipe_ingredients", %{})
 
     new_key = "#{map_size(ingredients)}"
@@ -304,7 +301,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     new_params =
       Map.put(params, "recipe_ingredients", updated)
 
-   
     rebuild_form(socket, new_params)
   end
 
@@ -318,7 +314,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
     new_params =
       Map.put(params, "steps", updated)
-
 
     rebuild_form(socket, new_params)
   end

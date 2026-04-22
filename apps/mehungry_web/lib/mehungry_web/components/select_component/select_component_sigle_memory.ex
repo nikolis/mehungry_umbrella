@@ -137,12 +137,18 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
         "select_component" <> Integer.to_string(assigns.form.index) <> assigns.input_variable
       end
 
-    selected_items =
-      MehungryWeb.SelectComponentUtils.get_selected_items(
-        assigns.form.params,
-        assigns.input_variable,
-        assigns
+    selected_id =
+      Phoenix.HTML.Form.input_value(
+        assigns.form,
+        String.to_atom(assigns.input_variable)
       )
+
+    selected_items =
+      if selected_id do
+        assigns.get_by_id_func.(selected_id)
+      else
+        nil
+      end
 
     label_function =
       case Map.get(assigns, :label_function) do
@@ -247,7 +253,18 @@ defmodule MehungryWeb.SelectComponentSingleMemory do
   def handle_event("handle-item-click", %{"id" => id}, socket) do
     {id, _} = Integer.parse(id)
 
-    selected_item = Enum.find(socket.assigns.items_filtered, fn x -> x.id == id end)
+    selected_id =
+      Phoenix.HTML.Form.input_value(
+        socket.assigns.form,
+        String.to_atom(socket.assigns.input_variable)
+      )
+
+    selected_item =
+      if selected_id do
+        socket.assigns.get_by_id_func.(selected_id)
+      else
+        nil
+      end
 
     socket =
       socket

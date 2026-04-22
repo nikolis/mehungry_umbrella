@@ -7,11 +7,14 @@ defmodule MehungryWeb.IngredientComponent do
       <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
         <div class="grid grid-cols-11 sm:grid-cols-6 gap-2 md:gap-6 display-none">
           <.live_component
-            module={MehungryWeb.SelectComponentSingle3}
+            module={MehungryWeb.SelectComponentDeep}
             form={ingredient_form}
-            item_function={fn x -> Mehungry.Food.search_ingredient_alt(x) end}
-            get_by_id_func={fn x -> Mehungry.Food.get_ingredient!(x) end}
+            item_function={&Mehungry.Food.search_ingredient_alt/1}
+            get_by_id_func={&Mehungry.Food.get_ingredient!/1}
             input_variable="ingredient_id"
+            label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
+            placeholder="Select an ingredient..."
+            modal_title="Search Ingredients"
             id={"ingredient_search_component" <> Integer.to_string(ingredient_form.index)}
           />
 
@@ -26,6 +29,7 @@ defmodule MehungryWeb.IngredientComponent do
             id={"measurement_unit_search_component" <> Integer.to_string(ingredient_form.index)}
             input_variable={:measurement_unit_id}
           />
+
           <button
             class="text-4xl font-bold "
             name="recipe[_action]"

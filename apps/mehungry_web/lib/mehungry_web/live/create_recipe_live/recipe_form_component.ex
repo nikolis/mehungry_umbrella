@@ -132,18 +132,20 @@ defmodule MehungryWeb.RecipeFormComponent do
           </div>
         </div>
 
-        <div class="overflowx-hidden  relative content_container hidden md:block"           id="content-2"
+        <div
+          class="overflowx-hidden  relative content_container hidden md:block"
+          id="content-2"
           style="max-height: 70vh;"
-          >
-            <div class="relative h-fit"> 
-          <h3 class="text-center">Creation Steps</h3>
-          <div
-            class="step_ing_cont md:min-h-96 md:max-h-96  overflow-x-hidden noscrollbar	pt-4 sm:p-4"
-            style=" padding-bottom: 2rem;"
-          >
-            <.live_component module={MehungryWeb.StepComponent} id="recipe_step" f={@f} />
+        >
+          <div class="relative h-fit">
+            <h3 class="text-center">Creation Steps</h3>
+            <div
+              class="step_ing_cont md:min-h-96 md:max-h-96  overflow-x-hidden noscrollbar	pt-4 sm:p-4"
+              style=" padding-bottom: 2rem;"
+            >
+              <.live_component module={MehungryWeb.StepComponent} id="recipe_step" f={@f} />
+            </div>
           </div>
-        </div>
         </div>
       </div>
       <div

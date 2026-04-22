@@ -20,11 +20,6 @@ defmodule MehungryWeb.SelectComponent do
           label_f
       end
 
-    IO.inspect(assigns.input_variable,
-      label:
-        "Input_variable000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-    )
-
     form_params = assigns.form.params
 
     selected_items =

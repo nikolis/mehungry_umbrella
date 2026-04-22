@@ -31,7 +31,7 @@ defmodule MehungryWeb.StepComponent do
       <button
         name="recipe[_action]"
         value="add_step"
-          class=" font-semibold text-md absolute right-0 bottom-0 bg-transparent  text-xl z-50"
+        class=" font-semibold text-md absolute right-0 bottom-0 bg-transparent  text-xl z-50"
       >
         + Add Step
       </button>

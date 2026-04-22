@@ -92,21 +92,11 @@ Hooks.SelectComponent = {
     window.addEventListener(event_listener, (e) => {
       console.log("Event Listener")
       let el = document.getElementById(originalID)
-      console.log("Parent elemtn")
-      console.log(el)
-      console.log("Parent elem")
       for (const child of this.el.children) {
-        console.log(child.tagName)
-        console.log(child)
         if(child.id !=null && child.id.includes(refAt)){
             if(child.tagName == "INPUT"){
               
               child.value = e.detail.id
-              console.log(e.detail.id)
-              console.log(child.tagName)
-              console.log("-------------------111")
-              console.log(child.value)
-              console.log("---------------------2222")
       			  $("#" + child.id).val(e.detail.id).change()
               var ret = child.dispatchEvent(new Event("input", {
                   bubbles: true,
@@ -119,8 +109,36 @@ Hooks.SelectComponent = {
     });
   }
 }
+// In your app.js or hooks file
+Hooks.SelectComponentDeep = {
+  mounted() {
+    // Store component ID for reference
+    this.componentId = this.el.id
+    
+    // Handle selection events to update hidden input
+    this.handleEvent("select_item_selected", ({id, input_key, component_id}) => {
+      // Only process if it's for this component
+      if (component_id !== this.componentId) return
+      
+      const hiddenInput = this.el.querySelector(`input[name$="[${input_key}]"]`)
+      if (hiddenInput) {
+        hiddenInput.value = id
+        hiddenInput.dispatchEvent(new Event("change", { bubbles: true }))
+      }
+    })
 
-
+    this.handleEvent("selection_cleared", ({input_key, component_id}) => {
+      // Only process if it's for this component
+      if (component_id !== this.componentId) return
+      
+      const hiddenInput = this.el.querySelector(`input[name$="[${input_key}]"]`)
+      if (hiddenInput) {
+        hiddenInput.value = ""
+        hiddenInput.dispatchEvent(new Event("change", { bubbles: true }))
+      }
+    })
+  }
+}
 
 
 
