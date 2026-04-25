@@ -60,26 +60,32 @@
       <span class="hidden md:block text-lg">Basket</span>
     </a>
     <!-- Profile -->
-    <a
-      href="/profile"
-      class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
-    >
-      <%= if @current_user do %>
+    <%= if @current_user do %>
+      <a
+        href="/profile"
+        class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+      >
         <img
           src={@current_user.profile_pic}
           ,
           style=" border-radius: 50%;"
           class={"w-7 h-7 nav_link_basic " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
         />
-      <% else %>
+
+        <span class="hidden md:block text-lg">Profile</span>
+      </a>
+    <% else %>
+      <a
+        href="/users/log_in"
+        class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+      >
         <img
           src="/images/log-in-outline.svg"
           class={"h-8 w-8 nav_link_basic "<> if String.length(@query_string) > 1, do: "hidden", else: ""}
         />
-      <% end %>
-
-      <span class="hidden md:block text-lg">Profile</span>
-    </a>
+        <span class="hidden md:block text-lg">Log in</span>
+      </a>
+    <% end %>
     
 <!-- Professional (conditionally) -->
     <div id="professional-menu" class="hidden">
@@ -109,6 +115,6 @@
 </div>
 
 <!-- Content Area -->
-<div class="md:ml-64 p-8">
+<div class="md:ml-64 px-2 py-4 md:p-8">
   {@inner_content}
 </div>

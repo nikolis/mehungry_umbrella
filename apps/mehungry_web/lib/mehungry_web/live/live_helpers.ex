@@ -81,6 +81,7 @@ defmodule MehungryWeb.LiveHelpers do
 
       @impl true
       def handle_event("save_user_follow", %{"follow_id" => follow_id}, socket) do
+        IO.inspect("here-------------------------------------------------")
         {follow_id, _ignore} = Integer.parse(follow_id)
         toggle_user_follow(socket, follow_id)
         user_follows = Users.list_user_follows(socket.assigns.current_user)

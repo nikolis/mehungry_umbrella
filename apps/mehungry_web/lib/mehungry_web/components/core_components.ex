@@ -189,7 +189,7 @@ defmodule MehungryWeb.CoreComponents do
   """
   def user_details_card(
         %{
-          user_follows: _user_follows,
+          user_follows: user_follows,
           user: %Mehungry.Accounts.User{} = _user
         } = assigns
       ) do
@@ -218,27 +218,27 @@ defmodule MehungryWeb.CoreComponents do
             </div>
 
             <%= if @current_user != @user do %>
-              <div class="w-full md:w-fit">
+              <div class="">
                 <%= if @user.id not in @user_follows do %>
-                  <div class="m-auto h-full w-fit sm:m-0  mt-4">
+                  <div class="m-auto h-full  sm:m-0  mt-4">
                     <button
-                      class="primary_button  p-2 m-auto text-md px-2 font-bold"
+                      class="primary_button  h-full text-2xl  font-semibold"
                       type="button"
                       id={"toggle_user_follow#{@user.id}"}
                       phx-click="save_user_follow"
                       phx-value-follow_id={@user.id}
                     >
-                      Follow!
+                      Follow
                     </button>
                   </div>
                 <% else %>
-                  <div class="mt-auto mb-auto self-end w-full">
+                  <div class="mt-auto mb-auto self-end w-full h-full">
                     <button
-                      class="primary_button_complementary  m-auto"
+                      class="primary_button_complementary  m-auto h-full"
                       phx-click="save_user_follow"
                       phx-value-follow_id={@user.id}
                     >
-                      <span class="text-md px-2 font-bold"> Following </span>
+                      <span class="text-2xl px-2 font-semibold h-full"> Following </span>
                     </button>
                   </div>
                 <% end %>
@@ -366,7 +366,7 @@ defmodule MehungryWeb.CoreComponents do
   """
   def user_overview_card(
         %{
-          user_follows: _user_follows,
+          user_follows: user_follows,
           user: %Mehungry.Accounts.User{} = _user
         } = assigns
       ) do

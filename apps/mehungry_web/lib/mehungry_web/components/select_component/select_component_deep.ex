@@ -1,16 +1,11 @@
 defmodule MehungryWeb.SelectComponentDeep do
-
   use MehungryWeb, :live_component
   import Ecto.Changeset, only: [get_field: 2, change: 2]
 
   @impl true
   def render(assigns) do
     ~H"""
-    <div
-      class="relative"
-      id={"select-component-#{@unique_id}"}
-      data-component-id={@unique_id}
-    >
+    <div class="h-full relative" id={"select-component-#{@unique_id}"} data-component-id={@unique_id}>
       <!-- Hidden input for form value -->
       <input
         type="hidden"
@@ -18,13 +13,9 @@ defmodule MehungryWeb.SelectComponentDeep do
         id={@form.name <> "_#{@input_variable}"}
         value={@selected_id}
       />
-
-      <!-- Trigger Button / Selected Item Display -->
-      <div
-        phx-click="open_modal"
-        phx-target={@myself}
-        class="w-full cursor-pointer"
-      >
+      
+    <!-- Trigger Button / Selected Item Display -->
+      <div phx-click="open_modal" phx-target={@myself} class="w-full cursor-pointer">
         <%= if @selected_item do %>
           <div class="border border-gray-300 rounded-lg p-2 flex justify-between items-center">
             <span class="font-semibold">
@@ -40,29 +31,26 @@ defmodule MehungryWeb.SelectComponentDeep do
             </button>
           </div>
         <% else %>
-          <div class="border border-gray-300 rounded-lg p-2 text-gray-500">
-            <%= @placeholder || "Select an option..." %>
+          <div class="h-full border border-greyfriend2 border-2 rounded-lg p-4 text-gray-500">
+            {@placeholder || "Select an option..."}
           </div>
         <% end %>
       </div>
-
-      <!-- Modal/Dropdown -->
+      
+    <!-- Modal/Dropdown -->
       <div
         id={"select-modal-#{@unique_id}"}
         class={"fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 #{if @modal_open, do: "", else: "hidden"}"}
       >
         <div class="bg-white rounded-lg w-96 max-w-md p-4">
           <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold"><%= @modal_title || "Select Option" %></h3>
-            <button
-              phx-click="close_modal"
-              phx-target={@myself}
-            >
+            <h3 class="text-lg font-semibold">{@modal_title || "Select Option"}</h3>
+            <button phx-click="close_modal" phx-target={@myself}>
               <.icon name="hero-x-mark" class="h-5 w-5" />
             </button>
           </div>
-
-          <!-- Search Input -->
+          
+    <!-- Search Input -->
           <input
             type="text"
             id={"search-input-#{@unique_id}"}
@@ -74,8 +62,8 @@ defmodule MehungryWeb.SelectComponentDeep do
             phx-debounce="300"
             class="w-full border border-gray-300 rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-
-          <!-- Results List -->
+          
+    <!-- Results List -->
           <div class="max-h-64 overflow-y-auto">
             <%= if @loading do %>
               <div class="text-center py-4">Loading...</div>
@@ -109,10 +97,10 @@ defmodule MehungryWeb.SelectComponentDeep do
     <div>
       <%= if String.contains?(@label, ",") do %>
         <% [first | rest] = String.split(@label, ",") %>
-        <span class="font-semibold"><%= first %></span>
-        <span class="text-xs text-gray-600"><%= Enum.join(rest, ",") %></span>
+        <span class="font-semibold">{first}</span>
+        <span class="text-xs text-gray-600">{Enum.join(rest, ",")}</span>
       <% else %>
-        <span class="font-semibold"><%= @label %></span>
+        <span class="font-semibold">{@label}</span>
       <% end %>
     </div>
     """

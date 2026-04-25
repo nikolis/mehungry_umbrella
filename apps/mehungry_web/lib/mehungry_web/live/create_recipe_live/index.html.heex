@@ -1,4 +1,4 @@
-<div>
+<div class=" sm:px-4 ">
   <.modal
     :if={is_nil(@user_profile.onboarding_level) or @user_profile.onboarding_level < 1}
     id="onboarding-modal"
@@ -12,11 +12,11 @@
       patch={~p"/"}
     />
   </.modal>
-  <div class="m-auto w-fit md:hidden absolute -top-8 right-0 left-0 m-auto">
+  <div class="m-auto w-fit md:hidden absolute top-0  right-0 left-0 m-auto relative m-auto">
     <.stepper />
   </div>
   <div class="flex ">
-    <div class="bg-red w-full h-full p-2">
+    <div class="bg-red w-full h-full p-2 hidden md:block">
       <%= if ! is_nil(@plain_meal) do %>
         <.live_component
           module={MehungryWeb.JsonViewerComponent}
@@ -37,31 +37,32 @@
         measurement_units={@measurement_units}
       />
 
-      <.form
-        :let={b}
-        id={@f.id<>"2"}
-        for={%{}}
-        phx-change="validate"
-        phx-submit="save"
-        class="gap-2 flex  flex-col mx-auto relative w-fit  mr-10"
-        style=""
-      >
-        <.input
-          required
-          field={b[:url_to_drill]}
-          type="text"
-          label="themealdb id i.e 52764"
-          class="px-16"
-        />
-        <div class=" absolute right-0 ">
-          {submit("Get blueprint",
-            class: "button bg-complementary border-2 border-transparent  ",
-            type: "submit",
-            phx_disable_with: "Saving...",
-            id: "save_button2"
-          )}
-        </div>
-      </.form>
+      <div class="content_container " id="content-0">
+        <.form
+          :let={b}
+          id={@f.id<>"2"}
+          for={%{}}
+          phx-change="validate"
+          phx-submit="save"
+          class="gap-2 flex  flex-col  relative w-fit m-auto"
+          style=""
+        >
+          <.input
+            field={b[:url_to_drill]}
+            type="text"
+            label="themealdb id i.e 52764"
+            class="px-10"
+          />
+          <div class=" absolute right-0 ">
+            {submit("Get blueprint",
+              class: "button bg-complementary border-2 border-transparent  ",
+              type: "submit",
+              phx_disable_with: "Saving...",
+              id: "save_button2"
+            )}
+          </div>
+        </.form>
+      </div>
     </div>
   </div>
 </div>

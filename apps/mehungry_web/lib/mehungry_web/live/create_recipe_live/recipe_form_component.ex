@@ -22,45 +22,45 @@ defmodule MehungryWeb.RecipeFormComponent do
       novalidate
       phx-change="validate"
       phx-submit="save"
-      class=" sm:p-6 sm:pt-2 flex md:gap-8 flex-col mx-auto mb-14 relative"
+      class=" sm:pt-6 sm:pt-2 flex md:gap-8 flex-col mx-auto mb-2 relative"
     >
       <input type="hidden" name="recipe[_action]" value="" />
-
-      <div class="flex flex-col gap-2 sm:gap-3 h-full p-2 sm:p-4 ">
-        <.input required field={@f[:title]} type="text" label="Title" class="max-h-12 " />
-        <.input required field={@f[:description]} type="text" label="Description" class="max-h-12" />
-
-        <div class="grid grid-cols-2 gap-4">
-          <.input
-            required
-            field={@f[:cooking_time_lower_limit]}
-            type="text"
-            label="Cooking time"
-            class="sm:w-full max-h-12 min-w-20"
-            style="flex-shrink: 2;"
-          />
-          <.input
-            required
-            field={@f[:preperation_time_lower_limit]}
-            type="text"
-            label="Prep Time"
-            class="sm:w-full max-h-12 "
-          />
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <.input required field={@f[:servings]} type="text" label="Servings" class=" w-full" />
-          <.input
-            required
-            field={@f[:difficulty]}
-            options={[Easy: "1", Medium: "2", Difficult: "3"]}
-            type="select"
-          />
-        </div>
-
-        <.input field={@f[:language_name]} type="hidden" />
-      </div>
       <div class="basic_2_col_grid_cont   content_container" id="content-0">
+        <div class="flex flex-col gap-2 sm:gap-3 h-full p-2 sm:p-4 ">
+          <.input required field={@f[:title]} type="text" label="Title" class="max-h-12 " />
+          <.input required field={@f[:description]} type="text" label="Description" class="max-h-12" />
+
+          <div class="grid grid-cols-2 gap-4">
+            <.input
+              required
+              field={@f[:cooking_time_lower_limit]}
+              type="text"
+              label="Cooking time"
+              class="sm:w-full max-h-12 min-w-20"
+              style="flex-shrink: 2;"
+            />
+            <.input
+              required
+              field={@f[:preperation_time_lower_limit]}
+              type="text"
+              label="Prep Time"
+              class="sm:w-full max-h-12 "
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <.input required field={@f[:servings]} type="text" label="Servings" class=" w-full" />
+            <.input
+              required
+              field={@f[:difficulty]}
+              options={[Easy: "1", Medium: "2", Difficult: "3"]}
+              type="select"
+            />
+          </div>
+
+          <.input field={@f[:language_name]} type="hidden" />
+        </div>
+
         <%= if @f.data.image_url do %>
           <div class="relative">
             <img src={@f.data.image_url} class="m-auto relative" style="max-height: 30vh;" />
@@ -169,7 +169,7 @@ defmodule MehungryWeb.RecipeFormComponent do
               Reset
             </button>
           </div>
-          <div class="md:absolute   right-0 sm:right-10 mx-auto bottom-0 w-40">
+          <div class="md:absolute right-0 sm:right-10 mx-auto bottom-0 w-40">
             {submit("Save",
               class:
                 "button bg-complementary border-2 border-transparent  w-full md:absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold mb-14",
