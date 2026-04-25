@@ -246,7 +246,7 @@ defmodule MehungryWeb.RecipeComponents do
         {Map.get(@n, "name") ||
           Map.get(@n, :name, "") <>
             ""}
-        <%= if !is_nil(@n["amount"]) do %>
+        <%= if ! is_nil(@n["amount"]) do %>
           {to_string(Float.round(@n["amount"] / @recipe.servings, 2))}
         <% else %>
           <%= if !is_nil(@n[:amount]) do %>

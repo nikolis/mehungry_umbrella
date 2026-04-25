@@ -95,6 +95,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     food_restrictions = Food.list_food_restriction_types()
     food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
 
+    changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
 
 
     socket =
@@ -104,6 +105,7 @@ defmodule MehungryWeb.ProfileLive.Index do
       |> assign(:food_restriction_ids, food_restriction_ids)
       |> assign(:food_restrictions, food_restrictions)
       |> assign(:id, "form-#{System.unique_integer()}")
+      |> assign(:form, to_form(changeset))
 
     {user_saved_recipes, user_created_recipes, user_profile} =
       case is_nil(user) do

@@ -30,6 +30,8 @@
             user={@current_user}
             current_user={@current_user}
             user_follows={@current_user_follows}
+            form={@form}
+
           />
         <% :edit -> %>
           <.live_component
@@ -58,6 +60,7 @@
             user_follows={@current_user_follows}
             user_recipes={@current_user_recipes}
             page_title={@page_title}
+            form={@form}
           />
         <% _action -> %>
           <MehungryWeb.RecipeComponents.recipe_modal
@@ -133,6 +136,8 @@
         food_restrictions={@food_restrictions}
         current_user={@current_user}
         page_title={@page_title}
+        form={@form}
+
       />
     </div>
   <% end %>

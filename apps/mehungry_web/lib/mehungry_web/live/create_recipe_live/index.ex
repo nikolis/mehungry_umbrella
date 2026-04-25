@@ -458,7 +458,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     recipe_params = Map.put(recipe_params, "language_name", "En")
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
 
-    case Food.update_recipe(socket.assigns.base, recipe_params) do
+    case Food.update_recipe(socket.assigns.recipe, recipe_params) do
       {:ok, %Recipe{} = _recipe} ->
         {:noreply,
          socket
