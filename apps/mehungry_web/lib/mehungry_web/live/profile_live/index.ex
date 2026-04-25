@@ -1,7 +1,7 @@
 defmodule MehungryWeb.ProfileLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
-    use MehungryWeb.Presence, :user_tracking
+  use MehungryWeb.Presence, :user_tracking
 
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
 
@@ -23,11 +23,12 @@ defmodule MehungryWeb.ProfileLive.Index do
         false ->
           Accounts.get_user_by_session_token(session["user_token"])
       end
+
     {current_user_profile, current_user_follows, current_user_recipes} =
       Accounts.get_user_essentials(socket.assigns.current_user)
 
     current_user_follows = Enum.map(current_user_follows, fn x -> x.follow_id end)
-  
+
     {:ok,
      assign(socket, :content_state, :created)
      |> assign(:recipe, nil)
@@ -36,9 +37,7 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:user, nil)
      |> assign(:current_user_profile, current_user_profile)
      |> assign(:current_user_follows, current_user_follows)
-     |> assign(:current_user_recipes, current_user_recipes)
-    }
-
+     |> assign(:current_user_recipes, current_user_recipes)}
   end
 
   @impl true
@@ -53,7 +52,6 @@ defmodule MehungryWeb.ProfileLive.Index do
     food_restrictions = Food.list_food_restriction_types()
     food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
 
-  
     changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
     maybe_track_user(%{}, socket)
 
@@ -66,7 +64,6 @@ defmodule MehungryWeb.ProfileLive.Index do
       |> assign(:food_restrictions, food_restrictions)
       |> assign(:form, to_form(changeset))
       |> assign(:id, "form-#{System.unique_integer()}")
-
 
     {user_saved_recipes, user_created_recipes} =
       case is_nil(socket.assigns.current_user) do
@@ -89,14 +86,12 @@ defmodule MehungryWeb.ProfileLive.Index do
 
     user = Accounts.get_user!(id)
 
-
     categories = Food.list_categories()
     category_ids = Enum.map(categories, fn x -> x.id end)
     food_restrictions = Food.list_food_restriction_types()
     food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
 
     changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
-
 
     socket =
       socket

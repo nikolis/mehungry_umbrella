@@ -632,7 +632,7 @@ defmodule Mehungry.Food do
     end
   end
 
-  defp get_recipe_hashtags(attrs) do 
+  defp get_recipe_hashtags(attrs) do
     recipe_hashtags =
       case is_nil(attrs["description"]) do
         true ->
@@ -647,28 +647,13 @@ defmodule Mehungry.Food do
         false ->
           get_hashtags_string(attrs["description"])
       end
-    """
-    recipe_hashtags = Enum.map(recipe_hashtags, fn x ->
-      hashtag = x.hashtag 
-      case  Repo.one(from h in Mehungry.Hashtag, where: h.title == ^hashtag.title) do 
-        nil -> 
-          hashtag
-        hashtag_actual -> 
-          %{hashtag_id: hashtag_actual.id}
-      end
-    end )
-    """
-    IO.inspect(recipe_hashtags, label: "REcipe hashtags--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------")
-
   end
 
   def update_recipe(%Recipe{} = recipe_origin, attrs \\ %{}) do
     recipe_hashtags = get_recipe_hashtags(attrs)
-    IO.inspect(recipe_hashtags, label: "recipe hashtags")
 
     attrs = Mehungry.Utils.put_map(attrs, :recipe_hashtags, recipe_hashtags)
 
-    IO.inspect(attrs, label: "attrs")
     changeset =
       recipe_origin
       |> Recipe.changeset(attrs)

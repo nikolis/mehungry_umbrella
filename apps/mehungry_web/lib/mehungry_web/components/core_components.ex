@@ -214,10 +214,9 @@ defmodule MehungryWeb.CoreComponents do
               </span>
             </.link>
             <%= if @current_user == @user do %>
-
-            <div class="py-2 pr-4">
-              <.share_button user={@user} socket={@socket}></.share_button>
-            </div>
+              <div class="py-2 pr-4">
+                <.share_button user={@user} socket={@socket}></.share_button>
+              </div>
             <% end %>
 
             <%= if @current_user != @user do %>

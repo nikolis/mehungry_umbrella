@@ -1,4 +1,4 @@
-<div class="w-full h-full">
+<div class="">
   <.form
     id={@id}
     for={@form}
@@ -7,23 +7,13 @@
     class="w-full "
     phx-target={@myself}
   >
-    <h3 class="m-auto text-center mt-4">Search for recipe</h3>
+    <h3 class="m-4">Search for food</h3>
     <.input field={@form[:title]} label="Title" type="hidden" />
     <.input field={@form[:start_dt]} type="hidden" />
     <.input field={@form[:end_dt]} type="hidden" />
     <.input field={@form[:user_id]} type="hidden" />
 
     <div class="w-full " style="margin-bottom: 50px;">
-      <!--- <ul aria-labelledby="tabs-title" class=" w-fit	m-auto">
-        <li>
-          <a id="recipe-2" href="#recipe2" phx-target={@myself} phx-click="new_recipe">
-            Add recipe slot
-          </a>
-          <a id="recipe-3" href="#recipe3" phx-target={@myself} phx-click="new_consume_recipe">
-            Find cooked
-          </a>
-        </li>
-      </ul> --->
       <div class=" h-full">
         <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
           <Components.recipe_user_meal_render

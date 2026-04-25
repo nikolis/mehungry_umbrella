@@ -289,7 +289,7 @@ defmodule MehungryWeb.SelectComponent do
 
     ~H"""
     <div
-      class="col-span-2 h-full"
+      class="w-full h-full"
       data-reference-id={@input_variable}
       data-reference-index={@index}
       phx-hook="SelectComponent"
@@ -297,7 +297,7 @@ defmodule MehungryWeb.SelectComponent do
     >
       <.input field={@form[@input_variable]} type="hidden" />
       <div
-        class="h-full w-full max-w-lg px-2 "
+        class="h-full w-full max-w-lg "
         phx-click-away="close-listing"
         phx-target={@myself}
         id={"select-item"<> Atom.to_string(@input_variable) <> Integer.to_string(@index)}
@@ -350,7 +350,7 @@ defmodule MehungryWeb.SelectComponent do
 
   def list_selected(assigns) do
     ~H"""
-    <div class="h-full flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-2 sm:col-span-2 	 overflow-hidden">
+    <div class="m-4">
       <!-- Tags (Selected) -->
       <%= for x <- @selected_items do %>
         <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode} name={elem(x, 1)} />

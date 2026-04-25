@@ -173,7 +173,7 @@ defmodule MehungryWeb.RecipeComponents do
       ) do
     ~H"""
     <div
-      class="accordion overflow-auto	max-h-1/2 font-normal mt-4"
+      class=" accordion overflow-auto	max-h-1/2 font-normal "
       style="max-height: 300px;"
       phx-hook="AccordionHook"
       id={"nutrients"<> to_string(@recipe.id)}

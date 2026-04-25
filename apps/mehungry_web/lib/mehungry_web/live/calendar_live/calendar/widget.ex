@@ -63,27 +63,16 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             </div>
             <!-- Flex Container closed -->
           </div>
-          <%= if @calendar_view == "day_view" do %>
-            <.table_day_calendar
-              week_rows={@week_rows}
-              user_meals={@user_meals}
-              day_meals={@day_meals}
-              current_date={@current_date}
-              selected_date={@selected_date}
-              myself={@myself}
-            />
-          <% else %>
-            <.table_week_calendar
-              week_rows={@week_rows}
-              first={@first}
-              last={@last}
-              user_meals={@user_meals}
-              day_meals={@day_meals}
-              current_date={@current_date}
-              selected_date={@selected_date}
-              myself={@myself}
-            />
-          <% end %>
+          <.table_week_calendar
+            week_rows={@week_rows}
+            first={@first}
+            last={@last}
+            user_meals={@user_meals}
+            day_meals={@day_meals}
+            current_date={@current_date}
+            selected_date={@selected_date}
+            myself={@myself}
+          />
         </div>
         """
     end
@@ -120,7 +109,22 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
               <div class="py-6 rounded-lg">
                 <%= for re_u_m <- meal.recipe_user_meals do %>
                   <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
-                    <.card_meal actual_meal={meal} img_url={re_u_m.img_url} title={re_u_m.title} />
+                    <.card_meal
+                      actual_meal={meal}
+                      img_url={re_u_m.img_url}
+                      title={re_u_m.title}
+                      nutrients={re_u_m.recipe_nutrients}
+                      cooking_portions={re_u_m.cooking_portions}
+                      consume_portions={re_u_m.consume_portions}
+                      recipe={
+                        %{
+                          nutrients: re_u_m.recipe_nutrients,
+                          primary_nutrients_size: re_u_m.primary_nutrients_size,
+                          servings: re_u_m.servings,
+                          id: re_u_m.recipe_id
+                        }
+                      }
+                    />
                   <% else %>
                     nil
                   <% end %>
@@ -348,34 +352,50 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
   defp card_meal(assigns) do
     ~H"""
-    <div class="shadow m-auto w-full  grid-cols-6 grid rounded-md relative">
-      <button
-        class="absolute bg-white right-1 top-1"
-        type="button"
-        phx-click="edit_modal"
-        phx-value-id={@actual_meal.id}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="size-6"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+    <div class="shadow m-auto w-full grid rounded-md relative">
+      <div class="m-auto w-fit flex gap-2 sm:gap-4 flex-col md:flex-row ">
+        <div class="my-auto relative size-32">
+          <%= if is_nil(@img_url) do %>
+            {SvgComponents.get_default_recipe_image(assigns)}
+          <% else %>
+            <img src={@img_url} class=" h-60 w-60 m-auto" style="width: 15rem;"/>
+          <% end %>
+          <button
+            class="absolute right-2 top-2 sm:top-10 sm:right-2   bg-white p-2 rounded-full "
+            type="button"
+            phx-click="edit_modal"
+            phx-value-id={@actual_meal.id}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-6"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="sm:p-6">
+          <h1>{@title}</h1>
+          <span class="font-semibold text-md">prepare portions: {@cooking_portions}</span>
+          <br />
+          <span class="font-semibold text-md">consume portions: {@consume_portions}</span>
+        </div>
+        <div class=" font-semibold">
+          <MehungryWeb.RecipeComponents.recipe_nutrients
+            nutrients={@nutrients}
+            primary_size={6}
+            recipe={@recipe}
           />
-        </svg>
-      </button>
-      <%= if is_nil(@img_url) do %>
-        {SvgComponents.get_default_recipe_image(assigns)}
-      <% else %>
-        <img src={@img_url} class="col-span-2 h-60 " />
-      <% end %>
-      <div class="col-span-4 px-6 py-4 text-xl font-semibold">{@title}</div>
+        </div>
+      </div>
     </div>
     """
   end
