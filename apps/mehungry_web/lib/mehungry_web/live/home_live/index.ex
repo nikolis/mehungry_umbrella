@@ -30,7 +30,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
     posts = Enum.filter(posts, fn x -> !is_nil(x) end)
     {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
-    user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
+    current_user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
     Enum.each(posts, fn post ->
       Posts.subscribe_to_post(%{post_id: post.id})
@@ -41,7 +41,7 @@ defmodule MehungryWeb.HomeLive.Index do
      |> assign(:user, user)
      |> assign(:posts, posts)
      |> assign(:user_profile, user_profile)
-     |> assign(:user_follows, user_follows)
+     |> assign(:current_user_follows, current_user_follows)
      |> assign(:current_user_recipes, user_recipes)
      |> assign(:search_changeset, nil)
      |> assign(:query_string, "")

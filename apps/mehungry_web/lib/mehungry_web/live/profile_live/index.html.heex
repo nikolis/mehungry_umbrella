@@ -24,7 +24,7 @@
           <.live_component
             module={Show}
             id="hero"
-            user_profile={@user_profile}
+            user_profile={@current_user_profile}
             live_action={@live_action}
             page_title={@page_title}
             user={@current_user}
@@ -133,7 +133,6 @@
         food_restrictions={@food_restrictions}
         current_user={@current_user}
         page_title={@page_title}
-        form={@form}
       />
     </div>
   <% end %>
