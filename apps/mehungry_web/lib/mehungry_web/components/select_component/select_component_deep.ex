@@ -150,8 +150,6 @@ defmodule MehungryWeb.SelectComponentDeep do
 
   @impl true
   def handle_event("open_modal", _, socket) do
-    IO.puts("🎯 Component #{socket.assigns.unique_id} - Opening modal")
-
     items = load_items(socket, "")
 
     {:noreply,
@@ -162,13 +160,10 @@ defmodule MehungryWeb.SelectComponentDeep do
   end
 
   def handle_event("close_modal", _, socket) do
-    IO.puts("🎯 Component #{socket.assigns.unique_id} - Closing modal")
     {:noreply, assign(socket, :modal_open, false)}
   end
 
   def handle_event("search", %{"value" => search_term}, socket) do
-    IO.puts("🎯 Component #{socket.assigns.unique_id} - Searching for: '#{search_term}'")
-
     items = load_items(socket, search_term)
 
     {:noreply,
@@ -180,8 +175,6 @@ defmodule MehungryWeb.SelectComponentDeep do
   def handle_event("select_item", %{"id" => id_str}, socket) do
     {id, _} = Integer.parse(id_str)
 
-    IO.puts("🎯 Component #{socket.assigns.unique_id} - Selecting item: #{id}")
-
     selected_item = Enum.find(socket.assigns.items, fn item -> item.id == id end)
 
     form = socket.assigns.form
@@ -192,6 +185,11 @@ defmodule MehungryWeb.SelectComponentDeep do
 
     form = %{form | source: changeset, params: Map.put(form.params, input_key, id)}
 
+    if(!is_nil(Map.get(socket.assigns, :select_function))) do
+      socket.assigns.select_function.(id)
+    end
+
+    # send(self(), {:selected_id, id})
     {:noreply,
      socket
      |> assign(:selected_item, selected_item)
@@ -203,8 +201,6 @@ defmodule MehungryWeb.SelectComponentDeep do
   end
 
   def handle_event("clear_selection", _, socket) do
-    IO.puts("🎯 Component #{socket.assigns.unique_id} - Clearing selection")
-
     form = socket.assigns.form
     input_key = String.to_atom(socket.assigns.input_variable)
 

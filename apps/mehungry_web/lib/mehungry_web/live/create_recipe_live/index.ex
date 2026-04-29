@@ -10,9 +10,9 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   alias MehungryWeb.SimpleS3Upload
 
   def mount_search(_params, session, socket) do
-    measurement_units = Food.get_measurement_unit_by_name("grammar")
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_profile = Accounts.get_user_profile_by_user_id(user.id)
+    grammar = Food.get_measurement_unit_by_name("grammar")
 
     {:ok,
      socket
@@ -21,7 +21,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:selected_ingredient, 1)
      |> assign(:user_profile, user_profile)
      |> assign(:ingredients, list_ingredients())
-     |> assign(:measurement_units, measurement_units)
+     |> assign(:measurement_units, nil)
      |> assign(:page_title, "Share your recipes ")
      |> assign(:return_to_path, "/create_recipe")
      |> assign(:plain_meal, nil)
@@ -216,8 +216,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   defp remove_ingredient(socket, params, index) do
-    IO.inspect(params, label: "params")
-
     portions =
       Map.get(params, "recipe_ingredients", %{})
       |> Map.delete(index)
@@ -225,13 +223,10 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     new_params =
       Map.put(params, "recipe_ingredients", portions)
 
-    IO.inspect(new_params, label: "New params")
     rebuild_form(socket, new_params)
   end
 
   defp remove_step(socket, params, index) do
-    IO.inspect(params, label: "params")
-
     portions =
       Map.get(params, "steps", %{})
       |> Map.delete(index)
@@ -324,6 +319,20 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   ######################################################################################## External Signal Receivers #################################
+
+  @impl true
+  def handle_info({:select_id, id}, socket) do
+    grammar = Food.get_measurement_unit_by_name("grammar")
+
+    measurement_units =
+      Mehungry.Food.get_measurement_unit_portions_for_ingredient(id)
+      |> Enum.map(fn x -> x.measurement_unit end)
+      |> Enum.filter(fn x -> !is_nil(x) end)
+
+    {:noreply,
+     socket
+     |> assign(:measurement_units, measurement_units ++ grammar)}
+  end
 
   @doc """
   Receiving the recipe_ingredient params from created in the RecipeIngredientComponent is this really needed

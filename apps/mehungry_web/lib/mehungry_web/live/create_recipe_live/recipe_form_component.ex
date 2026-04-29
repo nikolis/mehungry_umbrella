@@ -122,13 +122,17 @@ defmodule MehungryWeb.RecipeFormComponent do
         <div class="overflowx-hidden  relative content_container hidden md:block" id="content-1">
           <h3 class="text-center">Ingredients</h3>
           <div class="md:min-h-96   overflow-x-hidden noscrollbar	pt-4  step_ing_cont">
-            <.live_component
-              module={MehungryWeb.IngredientComponent}
-              id="recipe_ingredients"
-              f={@f}
-              ingredients={@ingredients}
-              measurement_units={@measurement_units}
-            />
+            <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
+              <.live_component
+                module={MehungryWeb.IngredientComponent}
+                id="recipe_ingredients"
+                f={@f}
+                ingredient_form={ingredient_form}
+                ingredients={@ingredients}
+                measurement_units={@measurement_units}
+                measurement_units={@measurement_units}
+              />
+            </.inputs_for>
           </div>
         </div>
 

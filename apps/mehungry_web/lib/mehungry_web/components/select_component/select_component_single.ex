@@ -146,10 +146,6 @@ defmodule MehungryWeb.SelectComponentSingle do
 
   @impl true
   def update(assigns, socket) do
-    IO.inspect(
-      "sLECT COMPONENT SINGLE CHANGE ----------------------------------------------------------------UPDATE the 111"
-    )
-
     item_function = assigns.item_function
     get_by_id_func = assigns.get_by_id_func
     id = "select_component" <> Integer.to_string(assigns.form.index) <> assigns.input_variable

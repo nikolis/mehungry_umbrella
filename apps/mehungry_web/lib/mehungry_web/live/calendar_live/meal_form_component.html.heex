@@ -7,7 +7,6 @@
     class="w-full "
     phx-target={@myself}
   >
-    <h3 class="m-4">Search for food</h3>
     <.input field={@form[:title]} label="Title" type="hidden" />
     <.input field={@form[:start_dt]} type="hidden" />
     <.input field={@form[:end_dt]} type="hidden" />
@@ -15,14 +14,32 @@
 
     <div class="w-full " style="margin-bottom: 50px;">
       <div class=" h-full">
-        <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
-          <Components.recipe_user_meal_render
-            f={f_recipe_user_meal}
-            parent_component={@myself}
-            recipes={@recipes}
-            recipe_ids={@recipe_ids}
-          />
-        </.inputs_for>
+        <%= if @mode == "recipe" do %>
+          <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
+            <Components.recipe_user_meal_render
+              f={f_recipe_user_meal}
+              parent_component={@myself}
+              recipes={@recipes}
+              mode={@mode}
+              myself={@myself}
+              recipe_ids={@recipe_ids}
+            />
+          </.inputs_for>
+        <% else %>
+          <.inputs_for :let={f_ingredient_user_meal} field={@form[:ingredient_user_meals]}>
+            <Components.ingredient_user_meal_render
+              f={f_ingredient_user_meal}
+              parent_component={@myself}
+              recipes={@recipes}
+              mode={@mode}
+              measurement_units={
+                get_measurement_units(f_ingredient_user_meal, f_ingredient_user_meal.index)
+              }
+              myself={@myself}
+              recipe_ids={@recipe_ids}
+            />
+          </.inputs_for>
+        <% end %>
         <.inputs_for :let={f_consume_recipe_user_meal} field={@form[:consume_recipe_user_meals]}>
           <Components.consume_recipe_user_meal_render
             f={f_consume_recipe_user_meal}

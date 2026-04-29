@@ -1,47 +1,76 @@
 defmodule MehungryWeb.IngredientComponent do
   use MehungryWeb, :live_component
 
+  @impl true
+  def update(assigns, socket) do
+    socket =
+      socket
+      |> assign(assigns)
+
+    measurement_units =
+      if(!is_nil(assigns.measurement_units)) do
+        assigns.measurement_units
+      else
+        if(!is_nil(socket.assigns.ingredient_form[:ingredient_id].value)) do
+          id = socket.assigns.ingredient_form[:ingredient_id].value
+          grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
+
+          Mehungry.Food.get_measurement_unit_portions_for_ingredient(id)
+          |> Enum.map(fn x -> x.measurement_unit end)
+          |> Enum.filter(fn x -> !is_nil(x) end)
+        else
+          []
+        end
+      end
+
+    socket = assign(socket, :measurement_units, measurement_units)
+
+    {:ok, socket}
+  end
+
+  def get_measurement_units() do
+  end
+
   def render(assigns) do
     ~H"""
     <div>
-      <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
-        <div class="grid grid-cols-9 sm:grid-cols-9 gap-2 md:gap-6 display-none">
-          <div class=" col-span-3 sm:col-span-4 h-full">
-            <.live_component
-              module={MehungryWeb.SelectComponentDeep}
-              form={ingredient_form}
-              item_function={&Mehungry.Food.search_ingredient_alt/1}
-              get_by_id_func={&Mehungry.Food.get_ingredient!/1}
-              input_variable="ingredient_id"
-              label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
-              placeholder="Select an ingredient..."
-              modal_title="Search Ingredients"
-              id={"ingredient_search_component" <> Integer.to_string(ingredient_form.index)}
-            />
-          </div>
-          <div class="field input-form col-span-2 ">
-            <.input field={ingredient_form[:quantity]} type="number" />
-          </div>
-
-          <div class="col-span-3">
-            <.live_component
-              module={MehungryWeb.SelectComponent}
-              items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
-              form={ingredient_form}
-              id={"measurement_unit_search_componentasdf" <> Integer.to_string(ingredient_form.index)}
-              input_variable={:measurement_unit_id}
-            />
-          </div>
-
-          <button
-            class="text-4xl font-bold "
-            name="recipe[_action]"
-            value={"remove_ingredient:#{ingredient_form.index}"}
-          >
-            ❌
-          </button>
+      <div class="grid grid-cols-9 sm:grid-cols-9 gap-2 md:gap-6 display-none">
+        <div class=" col-span-3 sm:col-span-4 h-full">
+          <.live_component
+            module={MehungryWeb.SelectComponentDeep}
+            form={@ingredient_form}
+            item_function={&Mehungry.Food.search_ingredient_alt/1}
+            get_by_id_func={&Mehungry.Food.get_ingredient!/1}
+            input_variable="ingredient_id"
+            label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
+            placeholder="Select an ingredient..."
+            modal_title="Search Ingredients"
+            select_function={fn x -> send(self(), {:select_id, x}) end}
+            id={"ingredient_search_component" <> Integer.to_string(@ingredient_form.index)}
+          />
         </div>
-      </.inputs_for>
+        <div class="field input-form col-span-2 ">
+          <.input field={@ingredient_form[:quantity]} type="number" />
+        </div>
+
+        <div class="col-span-3">
+          <.live_component
+            module={MehungryWeb.SelectComponent}
+            items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
+            form={@ingredient_form}
+            id={"measurement_unit_search_componentasdf" <> Integer.to_string(@ingredient_form.index)}
+            input_variable={:measurement_unit_id}
+          />
+        </div>
+
+        <button
+          class="text-4xl font-bold "
+          name="recipe[_action]"
+          value={"remove_ingredient:#{@ingredient_form.index}"}
+        >
+          ❌
+        </button>
+      </div>
       <button
         name="recipe[_action]"
         value="add_ingredient"
@@ -51,5 +80,30 @@ defmodule MehungryWeb.IngredientComponent do
       </button>
     </div>
     """
+  end
+
+  def get_measurement_unit(nil, assigns), do: assigns.measurement_units
+
+  def get_measurement_unit(ing_val, assigns) when is_binary(ing_val),
+    do: assigns.measurement_units ++ get_measurement_unit(ing_val)
+
+  def get_measurement_unit(ing_val, assigns) when is_integer(ing_val),
+    do: assigns.measurement_units ++ get_measurement_unit(ing_val)
+
+  def get_measurment_unit("", assigns), do: assigns.measurement_units
+
+  def get_measurement_unit(ing_val, assigns) do
+    ing_val = String.to_integer(ing_val)
+    assigns.measurement_units ++ get_measurement_unit(ing_val)
+  end
+
+  defp get_measurement_unit(nil) do
+    []
+  end
+
+  defp get_measurement_unit(ing_val) do
+    Mehungry.Food.get_measurement_unit_portions_for_ingredient(ing_val)
+    |> Enum.map(fn x -> x.measurement_unit end)
+    |> Enum.filter(fn x -> !is_nil(x) end)
   end
 end

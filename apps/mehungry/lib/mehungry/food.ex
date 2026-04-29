@@ -35,11 +35,6 @@ defmodule Mehungry.Food do
   end
 
   def broadcast_ingredient_work_item(file_url) do
-    # Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(comment.recipe_id), %{
-    # new_comment_vote: comment,
-    # type_: type_
-    # })
-
     Phoenix.PubSub.broadcast(Mehungry.PubSub, "json_jobs", %{new_comment_vote: file_url})
 
     {:ok, :submitted}
@@ -101,12 +96,6 @@ defmodule Mehungry.Food do
   def change_step(%Step{} = step, attrs \\ %{}) do
     Step.changeset(step, attrs)
   end
-
-  #  def annotate_recipe(%User{id: user_id}, recipe_id, attrs) do
-  #    %Annotation{recipe_id: recipe_id, user_id: user_id}
-  #    |> Annotation.changeset(attrs)
-  #    |> Repo.insert()
-  #  end
 
   def get_user_likes(user_id) do
     query =
@@ -747,7 +736,6 @@ defmodule Mehungry.Food do
 
   def create_recipe(attrs \\ %{}) do
     recipe_hashtags = get_recipe_hashtags(attrs)
-    # attrs = Map.put(attrs, "recipe_hashtags", recipe_hashtags)
     attrs = Mehungry.Utils.put_map(attrs, :recipe_hashtags, recipe_hashtags)
 
     changeset =
@@ -774,7 +762,6 @@ defmodule Mehungry.Food do
 
         Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
         create_post = Mehungry.Posts.create_post(recipe)
-        IO.inspect(create_post, label: "References create post")
         result
 
       _ ->
@@ -955,8 +942,6 @@ defmodule Mehungry.Food do
   end
 
   def search_ingredient_alt(search_term, classes \\ []) do
-    # secondary_ids = get_second_layer_foods_ids()
-
     result = Repo.all(search_ingredient_search(search_term, classes))
     Logger.info("Search ingredient: " <> search_term <> " resulted: " <> inspect(result))
 
@@ -975,13 +960,10 @@ defmodule Mehungry.Food do
 
   def search_ingredient_query(search_term, classes \\ []) do
     ilike_search_term = "%#{search_term}%"
-    # secondary_ids = get_second_layer_foods_ids()
 
     query =
       from(
         ingredient in Ingredient,
-        # ingredient.food_class in ^classes and ingredient.category_id not in ^secondary_ids and
-        # and
         where:
           fragment("? % ?", ^search_term, ingredient.name) or
             ilike(ingredient.name, ^ilike_search_term),

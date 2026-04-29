@@ -20,11 +20,6 @@ defmodule MehungryWeb.SelectComponent do
           label_f
       end
 
-    IO.inspect(assigns.input_variable,
-      label:
-        "Input_variable000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-    )
-
     form_params = assigns.form.params
 
     selected_items =
@@ -55,9 +50,6 @@ defmodule MehungryWeb.SelectComponent do
               Enum.filter(assigns.items, fn x ->
                 elem(x, 0) == Integer.to_string(existing_selected)
               end)
-
-            IO.inspect(existing_selected, label: "Existing selected")
-            IO.inspect(items, label: "Items pre existing")
           else
             []
           end
@@ -350,7 +342,7 @@ defmodule MehungryWeb.SelectComponent do
 
   def list_selected(assigns) do
     ~H"""
-    <div class="m-4">
+    <div class="">
       <!-- Tags (Selected) -->
       <%= for x <- @selected_items do %>
         <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode} name={elem(x, 1)} />
