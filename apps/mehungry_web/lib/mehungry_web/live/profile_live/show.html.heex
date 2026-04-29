@@ -1,6 +1,5 @@
 <div class="sm:p-10">
   <div class="text-center text-base text-greyfriend2"></div>
-
   <%= if @live_action == :index do %>
     <.user_details_card
       user={@current_user}
@@ -38,19 +37,6 @@
         </button>
       </.link>
 
-      <a
-        class=" text-center flex items-center  rounded-full"
-        style="height: 3rem; background-color: white; color: black"
-        href={Routes.auth_path(@socket, :request, "instagram")}
-      >
-        <div
-          class="w-full font-semibold flex items-center border-radius w-full h-full gap-1"
-          style="font-size: calc(0.7rem + 0.5vw ); border-radius: 100px; border: 2px solid #747775; 
-  "
-        >
-        </div>
-      </a>
-
       <%= if !is_nil(@current_user) do %>
         <%= if !is_nil(@current_user.email) do %>
           <%= if @current_user.email == "nikolisgal@gmail.com" do %>
@@ -73,6 +59,7 @@
     <.user_details_card
       user={@user}
       myself={@myself}
+      socket={@socket}
       total_recipes={count_user_created_recipes(@user.id)}
       user_follows={@user_follows}
       user_recipes={@user_recipes}

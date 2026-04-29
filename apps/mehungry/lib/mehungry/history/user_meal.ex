@@ -7,6 +7,7 @@ defmodule Mehungry.History.UserMeal do
 
   alias Mehungry.History.ConsumeRecipeUserMeal
   alias Mehungry.History.RecipeUserMeal
+  alias Mehungry.History.IngredientUserMeal
 
   schema "history_user_meals" do
     field :start_dt, :naive_datetime
@@ -15,6 +16,7 @@ defmodule Mehungry.History.UserMeal do
     field :user_id, :id
 
     has_many :recipe_user_meals, RecipeUserMeal, on_replace: :delete, on_delete: :nothing
+    has_many :ingredient_user_meals, IngredientUserMeal, on_replace: :delete, on_delete: :nothing
 
     has_many :consume_recipe_user_meals, ConsumeRecipeUserMeal,
       on_replace: :delete,
@@ -28,6 +30,7 @@ defmodule Mehungry.History.UserMeal do
     user_meal
     |> cast(attrs, [:title, :start_dt, :end_dt, :user_id])
     |> cast_assoc(:recipe_user_meals, with: &RecipeUserMeal.changeset/2, required: false)
+    |> cast_assoc(:ingredient_user_meals, with: &IngredientUserMeal.changeset/2, required: false)
     |> cast_assoc(:consume_recipe_user_meals,
       with: &ConsumeRecipeUserMeal.changeset/2,
       required: false

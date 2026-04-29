@@ -44,6 +44,8 @@ defmodule MehungryWeb.MixProject do
   defp deps do
     [
       {:cachex, "~> 3.4"},
+      {:contex, "~> 0.5.0"},
+      {:vega_lite, "~> 0.1.10"},
       {:vix, "~> 0.23.0"},
       {:image, "~> 0.37"},
       {:libcluster, "~> 3.5"},
@@ -52,7 +54,6 @@ defmodule MehungryWeb.MixProject do
       {:phoenix_html_helpers, "~> 1.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:httpoison, "~> 2.0"},
-      {:contex, "~> 0.4.0"},
       {:mehungry, in_umbrella: true},
       {:ueberauth, "~> 0.6"},
       {:ueberauth_facebook, "~> 0.8"},

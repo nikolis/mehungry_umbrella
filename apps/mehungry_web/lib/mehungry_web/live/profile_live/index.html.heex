@@ -24,12 +24,13 @@
           <.live_component
             module={Show}
             id="hero"
-            user_profile={@user_profile}
+            user_profile={@current_user_profile}
             live_action={@live_action}
             page_title={@page_title}
             user={@current_user}
             current_user={@current_user}
             user_follows={@current_user_follows}
+            form={@form}
           />
         <% :edit -> %>
           <.live_component
@@ -58,6 +59,7 @@
             user_follows={@current_user_follows}
             user_recipes={@current_user_recipes}
             page_title={@page_title}
+            form={@form}
           />
         <% _action -> %>
           <MehungryWeb.RecipeComponents.recipe_modal

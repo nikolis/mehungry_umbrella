@@ -134,21 +134,26 @@ defmodule MehungryWeb.SelectComponentSingle3 do
           label_f
       end
 
-    selected_items =
-      MehungryWeb.SelectComponentUtils.get_selected_items_database(
-        assigns.form.params,
-        assigns.input_variable,
-        assigns,
-        get_by_id_func
+    selected_id =
+      Phoenix.HTML.Form.input_value(
+        assigns.form,
+        String.to_atom(assigns.input_variable)
       )
 
-    {items, items_filtered} =
-      if is_nil(selected_items) do
-        items = item_function.("")
-        {items, Enum.map(items, fn x -> %{label: label_function.(x), id: x.id} end)}
+    selected_items =
+      if selected_id do
+        assigns.get_by_id_func.(selected_id)
       else
-        {nil, nil}
+        nil
       end
+
+    items =
+      assigns.item_function.("")
+
+    items_filtered =
+      Enum.map(items, fn x ->
+        %{label: assigns.label_function.(x), id: x.id}
+      end)
 
     socket =
       socket

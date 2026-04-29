@@ -5,7 +5,8 @@ defmodule MehungryWeb.HomeLive.Index do
 
   import MehungryWeb.RecipeComponents
 
-  # use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
+  use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
+
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
@@ -29,6 +30,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
     posts = Enum.filter(posts, fn x -> !is_nil(x) end)
     {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
+    current_user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
     Enum.each(posts, fn post ->
       Posts.subscribe_to_post(%{post_id: post.id})
@@ -39,7 +41,7 @@ defmodule MehungryWeb.HomeLive.Index do
      |> assign(:user, user)
      |> assign(:posts, posts)
      |> assign(:user_profile, user_profile)
-     |> assign(:user_follows, user_follows)
+     |> assign(:current_user_follows, current_user_follows)
      |> assign(:current_user_recipes, user_recipes)
      |> assign(:search_changeset, nil)
      |> assign(:query_string, "")
@@ -205,22 +207,5 @@ defmodule MehungryWeb.HomeLive.Index do
       |> assign(:posts, posts)
 
     {:noreply, socket}
-  end
-
-  def toggle_user_saved_posts(socket, post_id) do
-    case is_nil(socket.assigns.user) do
-      true ->
-        socket = assign(socket, :must_be_loged_in, 1)
-        {:noreply, socket}
-
-      false ->
-        case Enum.any?(socket.assigns.user_posts, fn x -> x == post_id end) do
-          true ->
-            Users.remove_user_saved_post(socket.assigns.user.id, post_id)
-
-          false ->
-            Users.save_user_post(socket.assigns.user.id, post_id)
-        end
-    end
   end
 end

@@ -71,11 +71,6 @@ defmodule MehungryWeb.SearchSelect do
 
   @impl true
   def handle_event("search", %{"q" => query}, socket) do
-    IO.inspect(query,
-      label:
-        "SEarching now------------------------------------------------------------------------"
-    )
-
     filtered =
       socket.assigns.options
       |> Enum.filter(fn {label, _value} ->

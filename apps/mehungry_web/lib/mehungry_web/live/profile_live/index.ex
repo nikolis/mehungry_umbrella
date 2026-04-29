@@ -1,8 +1,9 @@
 defmodule MehungryWeb.ProfileLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Searchable, :transfers_to_search
-  use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
   use MehungryWeb.Presence, :user_tracking
+
+  use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
 
   alias MehungryWeb.RecipeComponents
 
@@ -14,7 +15,7 @@ defmodule MehungryWeb.ProfileLive.Index do
   alias Mehungry.Food.RecipeUtils
 
   def mount_search(_params, session, socket) do
-    user =
+    current_user =
       case is_nil(session["user_token"]) do
         true ->
           nil
@@ -23,12 +24,20 @@ defmodule MehungryWeb.ProfileLive.Index do
           Accounts.get_user_by_session_token(session["user_token"])
       end
 
+    {current_user_profile, current_user_follows, current_user_recipes} =
+      Accounts.get_user_essentials(socket.assigns.current_user)
+
+    current_user_follows = Enum.map(current_user_follows, fn x -> x.follow_id end)
+
     {:ok,
      assign(socket, :content_state, :created)
      |> assign(:recipe, nil)
      |> assign(:user_recipes, [])
-     |> assign(:current_user, user)
-     |> assign(:user, nil)}
+     |> assign(:current_user, current_user)
+     |> assign(:user, nil)
+     |> assign(:current_user_profile, current_user_profile)
+     |> assign(:current_user_follows, current_user_follows)
+     |> assign(:current_user_recipes, current_user_recipes)}
   end
 
   @impl true
@@ -43,26 +52,18 @@ defmodule MehungryWeb.ProfileLive.Index do
     food_restrictions = Food.list_food_restriction_types()
     food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
 
-    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.current_user.id)
-
-    #    user_profile = socket.assigns.user_profile
-    changeset = Accounts.change_user_profile(user_profile, %{})
+    changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
     maybe_track_user(%{}, socket)
 
     socket =
       socket
       |> assign(:page_title, "Edit Profile Details")
       |> assign(:categories, categories)
-      |> assign(:current_user_profile, user_profile)
-      |> assign(:user_profile, user_profile)
       |> assign(:category_ids, category_ids)
       |> assign(:food_restriction_ids, food_restriction_ids)
       |> assign(:food_restrictions, food_restrictions)
       |> assign(:form, to_form(changeset))
       |> assign(:id, "form-#{System.unique_integer()}")
-
-    {current_user_profile, user_follows, current_user_recipes} =
-      Accounts.get_user_essentials(socket.assigns.current_user)
 
     {user_saved_recipes, user_created_recipes} =
       case is_nil(socket.assigns.current_user) do
@@ -78,10 +79,6 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:page_title, "Profile")
     |> assign(:user_created_recipes, user_created_recipes)
     |> assign(:user_saved_recipes, user_saved_recipes)
-    |> assign(:current_user_recipes, current_user_recipes)
-    |> assign(:current_user_profile, current_user_profile)
-    |> assign(:user_profile, current_user_profile)
-    |> assign(:current_user_follows, user_follows)
   end
 
   defp apply_action(socket, :show, %{"id" => id} = _params) do
@@ -89,29 +86,21 @@ defmodule MehungryWeb.ProfileLive.Index do
 
     user = Accounts.get_user!(id)
 
-    {current_user_profile, current_user_follows, current_user_recipes} =
-      Accounts.get_user_essentials(socket.assigns.current_user)
-
     categories = Food.list_categories()
     category_ids = Enum.map(categories, fn x -> x.id end)
     food_restrictions = Food.list_food_restriction_types()
     food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
 
-    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.current_user.id)
-
-    #    user_profile = socket.assigns.user_profile
-    changeset = Accounts.change_user_profile(user_profile, %{})
+    changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
 
     socket =
       socket
       |> assign(:categories, categories)
-      |> assign(:current_user_profile, user_profile)
-      |> assign(:user_profile, user_profile)
       |> assign(:category_ids, category_ids)
       |> assign(:food_restriction_ids, food_restriction_ids)
       |> assign(:food_restrictions, food_restrictions)
-      |> assign(:form, to_form(changeset))
       |> assign(:id, "form-#{System.unique_integer()}")
+      |> assign(:form, to_form(changeset))
 
     {user_saved_recipes, user_created_recipes, user_profile} =
       case is_nil(user) do
@@ -131,12 +120,9 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:page_title, "Profile " <> user.email)
     |> assign(:user_created_recipes, user_created_recipes)
     |> assign(:user_saved_recipes, user_saved_recipes)
-    |> assign(:current_user_recipes, current_user_recipes)
-    |> assign(:current_user_profile, current_user_profile)
     |> assign(:user_profile, user_profile)
     |> assign(:user_recipes, user_recipes)
     |> assign(:user_follows, [])
-    |> assign(:current_user_follows, current_user_follows)
   end
 
   defp apply_action(socket, :show_recipe, %{"recipe_id" => id}) do

@@ -26,7 +26,7 @@ defmodule Mehungry.Food.RecipeHashtag do
     |> validate_required([])
     |> foreign_key_constraint(:hashtag_id)
     |> foreign_key_constraint(:recipe_id)
-    |> cast_assoc(:hashtag, required: true)
+    |> cast_assoc(:hashtag, required: false)
     |> maybe_mark_for_deletion()
   end
 

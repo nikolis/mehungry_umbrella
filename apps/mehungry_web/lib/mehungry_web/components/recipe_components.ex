@@ -168,31 +168,29 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_nutrients(
-        %{nutrients: _nutrients, primary_size: _primary_size, recipe: _recipe} = assigns
-      ) do
+  def recipe_nutrients(%{nutrients: _nutrients, primary_size: _primary_size, id: _id} = assigns) do
     ~H"""
     <div
-      class="accordion overflow-auto	max-h-1/2 font-normal mt-4"
+      class="accordion overflow-auto	max-h-1/2 font-normal "
       style="max-height: 300px;"
       phx-hook="AccordionHook"
-      id={"nutrients"<> to_string(@recipe.id)}
+      id={"nutrients"<> to_string(@id)}
     >
-      <%= for {{_, n}, index} <-  Mehungry.Food.RecipeUtils.sort_nutrients_from_db(@recipe.nutrients) do %>
+      <%= for {{_, n}, index} <-  Mehungry.Food.RecipeUtils.sort_nutrients_from_db(@nutrients) do %>
         <%= if !is_nil(n) do %>
           <div
             class={
-              if index <= @recipe.primary_nutrients_size do
+              if index <= @primary_size do
                 "accordion-panel relative font-semibold text-base p-2"
               else
                 "text-base accordion-panel relative"
               end
             }
-            id={"nutrient" <> Integer.to_string(index)}
+            id={"nutrient" <> Integer.to_string(index) <> @id }
           >
-            <h2 id={"panel" <> to_string(index) <> "-title"}>
+            <h2 id={"panel"<> @id <> to_string(index) <> "-title"}>
               <%= if !is_nil(n) do %>
-                <.render_nutrient_button n={n} recipe={@recipe} index={index} />
+                <.render_nutrient_button id={@id} n={n} servings={2} index={index} />
               <% else %>
                 <h3>Nill nutrient</h3>
               <% end %>
@@ -202,15 +200,21 @@ defmodule MehungryWeb.RecipeComponents do
               role="region"
               aria-labelledby={"panel"<>to_string(index)<>"-title"}
               aria-hidden="true"
-              id={"panel"<>to_string(index) <> "-content"}
+              id={"panel"<>to_string(index)<> @id  <> "-content"}
             >
               <div style="text-center: start;">
-                <ul id={"ul" <>to_string(index)} phx-update="ignore">
+                <ul id={"ul" <>to_string(index) <> @id } phx-update="ignore">
                   <%= if Map.has_key?(n, "children") do %>
-                    <div id={"ul"<> n["name"]}>
+                    <div id={"ul"<> n["name"] <> @id }>
                       <%= for n_r <- n["children"] do %>
-                        <li style="padding-left: 1rem; text-align: start;" id={"li" <> n_r["name"]}>
-                          {n_r["name"]} {Float.round(n_r["amount"], 4)} {n_r[
+                        <li
+                          style="padding-left: 1rem; text-align: start;"
+                          id={"li" <> n_r["name"] <> @id }
+                        >
+                          {MehungryWeb.NutrientsFormatter.format(n_r["name"])} {Float.round(
+                            n_r["amount"],
+                            4
+                          )} {n_r[
                             "measurement_unit"
                           ]}
                           <div class="w-fit h-fit rounded-xl absolute right-0 top-0 ">
@@ -241,16 +245,16 @@ defmodule MehungryWeb.RecipeComponents do
         style="text-align: start; width: 100%; "
         aria-expanded="false"
         aria-controls="accordion1-content"
-        id={"nutrient_button" <> Integer.to_string(@index)}
+        id={"nutrient_button" <> @id <> Integer.to_string(@index) }
       >
-        {Map.get(@n, "name") ||
-          Map.get(@n, :name, "") <>
+        {MehungryWeb.FattyAcidFormatter.format(Map.get(@n, "name")) ||
+          MehungryWeb.FattyAcidFormatter.format(Map.get(@n, :name, "")) <>
             ""}
-        <%= if !is_nil(@n["amount"]) do %>
-          {to_string(Float.round(@n["amount"] / @recipe.servings, 2))}
+        <%= if ! is_nil(@n["amount"]) do %>
+          {to_string(Float.round(@n["amount"] / @servings, 2))}
         <% else %>
           <%= if !is_nil(@n[:amount]) do %>
-            {to_string(Float.round(@n[:amount] / @recipe.servings, 2))}
+            {to_string(Float.round(@n[:amount] / @servings, 2))}
           <% else %>
             "nothing"
           <% end %>

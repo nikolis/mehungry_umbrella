@@ -41,7 +41,7 @@
         recipe={@recipe}
         user={@user}
         page_title={"Share Recipe #{@recipe.title}"}
-        user_follows={@user_follows}
+        user_follows={@current_user_follows}
         live_action={@live_action}
       />
     </div>
@@ -63,7 +63,7 @@
         user_recipes={@current_user_recipes}
         user={@user}
         page_title={"Recipe #{@recipe.title}"}
-        user_follows={@user_follows}
+        user_follows={@current_user_follows}
         live_action={@live_action}
       />
     </div>
@@ -74,7 +74,7 @@
       post={post}
       id={post.id}
       user={@user}
-      user_follows={@user_follows}
+      user_follows={@current_user_follows}
       current_user_recipes={@current_user_recipes}
     />
   <% end %>

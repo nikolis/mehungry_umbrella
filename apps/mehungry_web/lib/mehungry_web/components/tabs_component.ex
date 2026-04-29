@@ -15,6 +15,7 @@ defmodule MehungryWeb.TabsComponent do
           current_state={Enum.at(@states, 0)}
           contents={@contents}
           recipe={@recipe}
+          id={@recipe.id}
           ,
           nutrients={@nutrients}
           primary_size={@primary_size}
@@ -57,7 +58,8 @@ defmodule MehungryWeb.TabsComponent do
         {@contents.tab_content(%{
           state: @state,
           recipe: @recipe,
-          nutrients: @nutrients,
+          id: Integer.to_string(@recipe.id),
+          nutrients: @recipe.nutrients,
           primary_size: @primary_size
         })}
       </div>
@@ -73,6 +75,7 @@ defmodule MehungryWeb.TabsComponent do
           states={@contents.get_states()}
           contents={@contents}
           recipe={@recipe}
+          id={@recipe.id}
           nutrients={@nutrients}
           primary_size={@primary_size}
         />

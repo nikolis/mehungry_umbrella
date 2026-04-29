@@ -2,6 +2,51 @@ import "selectize";
 
 let Hooks = {}
 
+import "vega"
+import "vega-lite"
+import vegaEmbed from "vega-embed"
+
+Hooks.ResponsiveChart = {
+  mounted() {
+    this.el._id = this.el.dataset.id
+    const componentId = this.el.dataset.origin_id;
+    const measure = () => {
+      const width = this.el.offsetWidth
+
+      this.pushEventTo(componentId, "resize", {
+        width: width
+      })
+    }
+
+    // initial measure (IMPORTANT for mobile)
+    setTimeout(measure, 0)
+
+    window.addEventListener("resize", measure)
+  }
+}
+
+
+Hooks.VegaLite = {
+  mounted() {
+    const spec = JSON.parse(this.el.dataset.spec)
+    vegaEmbed(this.el, spec)
+
+    this.handleResize = () => {
+      const width = this.el.offsetWidth
+      this.pushEvent("resize_chart", { width })
+    }
+
+    window.addEventListener("resize", this.handleResize)
+    this.handleResize()
+  },
+  updated() {
+    const spec = JSON.parse(this.el.dataset.spec)
+    vegaEmbed(this.el, spec)
+  },
+  destroyed() {
+    window.removeEventListener("resize", this.handleResize)
+  }
+}
 
 
 Hooks.Copy = {
@@ -92,21 +137,11 @@ Hooks.SelectComponent = {
     window.addEventListener(event_listener, (e) => {
       console.log("Event Listener")
       let el = document.getElementById(originalID)
-      console.log("Parent elemtn")
-      console.log(el)
-      console.log("Parent elem")
       for (const child of this.el.children) {
-        console.log(child.tagName)
-        console.log(child)
         if(child.id !=null && child.id.includes(refAt)){
             if(child.tagName == "INPUT"){
               
               child.value = e.detail.id
-              console.log(e.detail.id)
-              console.log(child.tagName)
-              console.log("-------------------111")
-              console.log(child.value)
-              console.log("---------------------2222")
       			  $("#" + child.id).val(e.detail.id).change()
               var ret = child.dispatchEvent(new Event("input", {
                   bubbles: true,
@@ -119,8 +154,36 @@ Hooks.SelectComponent = {
     });
   }
 }
+// In your app.js or hooks file
+Hooks.SelectComponentDeep = {
+  mounted() {
+    // Store component ID for reference
+    this.componentId = this.el.id
+    
+    // Handle selection events to update hidden input
+    this.handleEvent("select_item_selected", ({id, input_key, component_id}) => {
+      // Only process if it's for this component
+      if (component_id !== this.componentId) return
+      
+      const hiddenInput = this.el.querySelector(`input[name$="[${input_key}]"]`)
+      if (hiddenInput) {
+        hiddenInput.value = id
+        hiddenInput.dispatchEvent(new Event("change", { bubbles: true }))
+      }
+    })
 
-
+    this.handleEvent("selection_cleared", ({input_key, component_id}) => {
+      // Only process if it's for this component
+      if (component_id !== this.componentId) return
+      
+      const hiddenInput = this.el.querySelector(`input[name$="[${input_key}]"]`)
+      if (hiddenInput) {
+        hiddenInput.value = ""
+        hiddenInput.dispatchEvent(new Event("change", { bubbles: true }))
+      }
+    })
+  }
+}
 
 
 
@@ -183,17 +246,19 @@ Hooks.InfiniteScroll = {
 		this.pending = this.page()
 	}
 }
-
+/*
 Hooks.AccordionHook = {
 	page() {
 	},
 	mounted() {
 		const accordion = document.querySelector(".accordion");
+    console.log(accordion.id);
 
-accordion.addEventListener("click", (e) => {
+    accordion.addEventListener("click", (e) => {
   const activePanel = e.target.closest(".accordion-panel");
   if (!activePanel) return;
   toggleAccordion(activePanel);
+  e.stopPropagation();
 });
 
 function toggleAccordion(panelToActivate) {
@@ -226,8 +291,7 @@ function toggleAccordion(panelToActivate) {
 	updated() {
 	}
 }
-
-
+*/
 Hooks.GoogleLoginHook = {
 	mounted() {
 		console.log("Mounter")
@@ -666,4 +730,119 @@ Hooks.HiddenCalendar = {
 			console.log(event)
 		});
 	}
+
+
+
+
+// assets/js/hooks/accordion_hook.js
+
+Hooks.AccordionHook = {
+  mounted() {
+    console.log("Accordion mounted for:", this.el.id);
+
+    // Store references
+    this.accordion = this.el;
+    this.panels = [];
+
+    // Initialize panels
+    this.initPanels();
+
+    // Bind event handler
+    this.handleClick = this.handleClick.bind(this);
+
+    // Add event listener to this specific accordion
+    this.accordion.addEventListener("click", this.handleClick);
+  },
+
+  initPanels() {
+    // Get all panels within THIS accordion
+    const panels = this.accordion.querySelectorAll(".accordion-panel");
+
+    panels.forEach((panel, index) => {
+      const button = panel.querySelector("button");
+      const content = panel.querySelector(".accordion-content");
+
+      if (button && content) {
+        this.panels.push({ panel, button, content, index });
+
+        // Set initial state
+        const isOpen = false; // Start closed
+        button.setAttribute("aria-expanded", isOpen.toString());
+        content.setAttribute("aria-hidden", (!isOpen).toString());
+
+        // Add CSS classes for styling
+        if (isOpen) {
+          content.classList.remove("hidden");
+        } else {
+          content.classList.add("hidden");
+        }
+      }
+    });
+
+    console.log(`Initialized ${this.panels.length} panels for`, this.accordion.id);
+  },
+
+  handleClick(event) {
+    const activePanel = event.target.closest(".accordion-panel");
+    if (!activePanel) return;
+
+    const button = activePanel.querySelector("button");
+    const content = activePanel.querySelector(".accordion-content");
+
+    if (!button || !content) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const isExpanded = button.getAttribute("aria-expanded") === "true";
+
+    if (isExpanded) {
+      this.closePanel(button, content);
+    } else {
+      this.openPanel(button, content);
+    }
+  },
+
+  openPanel(button, content) {
+    button.setAttribute("aria-expanded", "true");
+    content.setAttribute("aria-hidden", "false");
+    content.classList.remove("hidden");
+
+    // Optional: Emit event to LiveView
+    if (this.pushEvent) {
+      this.pushEvent("accordion_opened", {});
+    }
+  },
+
+  closePanel(button, content) {
+    button.setAttribute("aria-expanded", "false");
+    content.setAttribute("aria-hidden", "true");
+    content.classList.add("hidden");
+
+    // Optional: Emit event to LiveView
+    if (this.pushEvent) {
+      this.pushEvent("accordion_closed", {});
+    }
+  },
+
+  updated() {
+    // Re-initialize after LiveView updates
+    this.panels = [];
+    this.initPanels();
+  },
+
+  destroyed() {
+    // Cleanup
+    if (this.accordion && this.handleClick) {
+      this.accordion.removeEventListener("click", this.handleClick);
+    }
+  }
+};
+
+// Register the hook
+
+
+
+
+
 export {Hooks}

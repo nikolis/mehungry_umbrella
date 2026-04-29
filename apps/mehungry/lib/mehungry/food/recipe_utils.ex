@@ -178,6 +178,18 @@ defmodule Mehungry.Food.RecipeUtils do
     end)
   end
 
+  def reform_nutrients(nutrients) do
+    nutrients
+    |> Enum.map(fn x ->
+      Map.new([
+        {x.name,
+         %{x | measurement_unit: x.measurement_unit.name}
+         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)}
+      ])
+    end)
+    |> Enum.reduce(&Map.merge/2)
+  end
+
   def map_ingredients_to_structured_form(recipe_ingredients) do
     Enum.map(recipe_ingredients, fn x ->
       {Food.get_ingredient_details!(x.ingredient_id),

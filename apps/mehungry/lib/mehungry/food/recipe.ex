@@ -62,7 +62,7 @@ defmodule Mehungry.Food.Recipe do
                 x
 
               false ->
-                %{hashtag: %{id: existing.id}}
+                %{"hashtag_id" => existing.id}
             end
           end)
     }
@@ -112,5 +112,6 @@ defmodule Mehungry.Food.Recipe do
     |> cast_embed(:steps, [:required_message])
     |> cast_assoc(:recipe_ingredients, required: true)
     |> cast_assoc(:recipe_hashtags, required: false)
+    |> IO.inspect(label: "AT THEN END")
   end
 end

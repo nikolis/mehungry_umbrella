@@ -27,7 +27,7 @@ defmodule MehungryWeb.LiveHelpers do
       end
 
       def toggle_user_follow(socket, follow_id) do
-        case Enum.any?(socket.assigns.user_follows, fn x -> x == follow_id end) do
+        case Enum.any?(socket.assigns.current_user_follows, fn x -> x == follow_id end) do
           true ->
             Users.remove_user_follow(socket.assigns.current_user.id, follow_id)
 
@@ -81,11 +81,12 @@ defmodule MehungryWeb.LiveHelpers do
 
       @impl true
       def handle_event("save_user_follow", %{"follow_id" => follow_id}, socket) do
+        IO.inspect("here-------------------------------------------------")
         {follow_id, _ignore} = Integer.parse(follow_id)
         toggle_user_follow(socket, follow_id)
         user_follows = Users.list_user_follows(socket.assigns.current_user)
         user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
-        socket = assign(socket, :user_follows, user_follows)
+        socket = assign(socket, :current_user_follows, user_follows)
         {:noreply, socket}
       end
 

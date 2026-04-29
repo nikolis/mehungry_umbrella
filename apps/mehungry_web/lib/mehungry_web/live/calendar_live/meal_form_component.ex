@@ -9,6 +9,11 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   alias Mehungry.History
   alias MehungryWeb.CalendarLive.Components
 
+  def get_measurement_units(form, index) do
+    measurement_units = Food.get_measurement_unit_by_name("grammar")
+    measurement_units
+  end
+
   def is_empty(%Phoenix.HTML.Form{} = form, atom_key) do
     key_form_params = form.params[Atom.to_string(atom_key)]
     key_changeset = form.source.changes[atom_key]
@@ -38,8 +43,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
         :new ->
           struct(UserMeal)
 
-        # |> Repo.preload(:recipe_user_meals, :consume_recipe_user_meals)
-
         id ->
           History.get_user_meal_raw!(id)
       end
@@ -66,31 +69,36 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
       |> assign(:recipes, recipes)
       |> assign(:user_meal, base_user_meal)
       |> assign(:recipe_ids, recipe_ids)
+      |> assign(:mode, "recipe")
 
     {:ok, init(socket, base_user_meal, default_attrs)}
   end
 
   defp init(socket, base, default_attrs) do
+    IO.inspect(base,
+      label: "Vasdfdafsdfasafsddfzse =i----------------------------------------------"
+    )
+
     changeset = UserMeal.changeset(base, default_attrs)
     existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
+    existing_ing = Ecto.Changeset.get_assoc(changeset, :ingredient_user_meals)
 
-    if Enum.empty?(existing) do
-      changeset = Ecto.Changeset.put_assoc(changeset, :recipe_user_meals, [%{}])
+    changeset =
+      if Enum.empty?(existing) do
+        Ecto.Changeset.put_assoc(changeset, :ingredient_user_meals, [%{}])
+        |> Ecto.Changeset.put_assoc(:recipe_user_meals, [%{}])
+      else
+        changeset
+      end
 
-      assign(socket,
-        base: base,
-        form: to_form(changeset),
-        # Reset form for LV
-        id: "form-#{System.unique_integer()}"
-      )
-    else
-      assign(socket,
-        base: base,
-        form: to_form(changeset),
-        # Reset form for LV
-        id: "form-#{System.unique_integer()}"
-      )
-    end
+    IO.inspect(changeset, label: "Vzse =i----------------------------------------------")
+
+    assign(socket,
+      base: base,
+      form: to_form(changeset),
+      # Reset form for LV
+      id: "form-#{System.unique_integer()}"
+    )
   end
 
   def get_not_nil(first, second) do
@@ -105,11 +113,27 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     save_user_meal(socket, socket.assigns.live_action, user_meal_params)
   end
 
+  def handle_event("set_mode", %{"mode" => mode}, socket) do
+    socket = assign(socket, :mode, mode)
+    {:noreply, socket}
+  end
+
   def handle_event("new_recipe", _params, socket) do
     socket =
       update(socket, :form, fn %{source: changeset} ->
         existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
         changeset = Ecto.Changeset.put_assoc(changeset, :recipe_user_meals, existing ++ [%{}])
+        to_form(changeset)
+      end)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("new_ingredient", _params, socket) do
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_assoc(changeset, :ingredient_user_meals)
+        changeset = Ecto.Changeset.put_assoc(changeset, :ingredient_user_meals, existing ++ [%{}])
         to_form(changeset)
       end)
 
@@ -137,6 +161,30 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
           Ecto.Changeset.put_assoc(changeset, :consume_recipe_user_meals, existing ++ [%{}])
 
         to_form(changeset)
+      end)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("delete_ingredient_record", %{"index" => index}, socket) do
+    index = String.to_integer(index)
+
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_assoc(changeset, :ingredient_user_meals)
+        {to_delete, rest} = List.pop_at(existing, index)
+
+        ingredient_user_meals =
+          if Ecto.Changeset.change(to_delete).data.id do
+            List.replace_at(existing, index, Ecto.Changeset.change(to_delete, delete: true))
+          else
+            rest
+          end
+
+        changeset
+        |> Ecto.Changeset.put_assoc(:ingredient_user_meals, ingredient_user_meals)
+        |> to_form()
       end)
 
     {:noreply, socket}
@@ -231,6 +279,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
          |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        IO.inspect(changeset, label: "CHangeset")
         {:noreply, assign(socket, :changeset, changeset)}
     end
   end
@@ -247,6 +296,8 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
          |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        IO.inspect(changeset, label: "CHangeset")
+
         {:noreply, assign(socket, changeset: changeset)}
     end
   end
