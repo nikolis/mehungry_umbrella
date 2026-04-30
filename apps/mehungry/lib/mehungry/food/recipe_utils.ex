@@ -34,37 +34,12 @@ defmodule Mehungry.Food.RecipeUtils do
     {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Polyunsaturated fatty acids")
     {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Saturated fatty acids")
     {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Trans fatty acids")
-
-    # {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Fatty acids, total monounsaturated")
-    # {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Fatty acids, total polyunsaturated")
-    # {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Fatty acids, total saturated")
-    # {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Fatty acids, total trans")
     {vitamins_all, rest} = get_nutrient_category(rest, "Vitamin", "Vitamins")
 
-    # IO.inspect(vitamins_all, label: "vits")
-    # IO.inspect(mufa_all, label: "mufa")
     nuts_pre = [mufa_all, vitamins_all, pufa_all, sfa_all, tfa_all, vitamins_all]
     nuts_pre = Enum.filter(nuts_pre, fn x -> !is_nil(x) end)
 
     {nuts_pre, rest}
-  end
-
-  @doc """
-  Sort nutrients to have on top entries that are relevant to most people
-  """
-  def sort_nutrients_from_db(nutrients) do
-    carb = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Carbohydrate") end)
-    protein = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Protein") end)
-    fiber = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Fiber") end)
-    fat = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Total lipid") end)
-    sugar = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Sugar") end)
-    energy = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Energy") end)
-    vitamins = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Vitamins") end)
-
-    primaries = [energy, fat, carb, protein, fiber, sugar, vitamins]
-    primaries = Enum.filter(primaries, fn x -> !is_nil(x) end)
-    nutrients = Enum.filter(nutrients, fn x -> x not in primaries end)
-    Enum.with_index(primaries ++ nutrients)
   end
 
   @doc """
