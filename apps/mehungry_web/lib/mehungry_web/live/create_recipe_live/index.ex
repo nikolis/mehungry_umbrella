@@ -321,17 +321,15 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   ######################################################################################## External Signal Receivers #################################
 
   @impl true
-  def handle_info({:select_id, id}, socket) do
-    grammar = Food.get_measurement_unit_by_name("grammar")
+  def handle_info({:select_id, id, component_id}, socket) do
 
-    measurement_units =
-      Mehungry.Food.get_measurement_unit_portions_for_ingredient(id)
-      |> Enum.map(fn x -> x.measurement_unit end)
-      |> Enum.filter(fn x -> !is_nil(x) end)
-
+   
+    send_update(MehungryWeb.IngredientComponent,
+    id: component_id,
+    new_ingredient_id: id
+    )
     {:noreply,
-     socket
-     |> assign(:measurement_units, measurement_units ++ grammar)}
+     socket}
   end
 
   @doc """

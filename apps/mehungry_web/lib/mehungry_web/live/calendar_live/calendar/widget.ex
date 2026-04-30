@@ -5,80 +5,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   alias MehungryWeb.SvgComponents
   alias VegaLite, as: Vl
 
-  def merge_nutrients(list) do
-    Enum.reduce(list, %{}, fn nutrients_map, acc ->
-      Map.merge(acc, nutrients_map, fn _key, v1, v2 ->
-        merge_nutrient(v1, v2)
-      end)
-    end)
-  end
-
-  defp merge_nutrient(n1, n2) do
-    base = %{
-      "name" => n1["name"],
-      "measurement_unit" => n1["measurement_unit"],
-      "amount" => n1["amount"] + n2["amount"]
-    }
-
-    case {n1["children"], n2["children"]} do
-      {nil, nil} ->
-        base
-
-      {c1, c2} ->
-        children =
-          (c1 || [])
-          |> Enum.concat(c2 || [])
-          |> merge_children()
-
-        Map.put(base, "children", children)
-    end
-  end
-
-  defp merge_children(children) do
-    children
-    |> Enum.group_by(& &1["name"])
-    |> Enum.map(fn {_name, group} ->
-      Enum.reduce(group, fn c, acc ->
-        %{
-          "name" => acc["name"],
-          "measurement_unit" => acc["measurement_unit"],
-          "amount" => acc["amount"] + c["amount"]
-        }
-      end)
-    end)
-  end
-
-  defp summarize_meals_nutrients(user_meals) do
-    result =
-      user_meals
-      |> Enum.flat_map(fn item ->
-        recipe_nutrients =
-          item
-          |> Map.get(:recipe_user_meals, [])
-          |> Enum.map(& &1.recipe_nutrients)
-
-        ingredient_nutrients =
-          item
-          |> Map.get(:ingredient_user_meals, [])
-          |> Enum.flat_map(fn ing ->
-            ing.recipe.nutrients
-            |> Enum.map(fn n ->
-              %{
-                n.name => %{
-                  "amount" => n.amount,
-                  "measurement_unit" => n.measurement_unit.name,
-                  "name" => n.name
-                }
-              }
-            end)
-          end)
-
-        recipe_nutrients ++ ingredient_nutrients
-      end)
-
-    merged = merge_nutrients(result)
-    merged
-  end
+  alias Mehungry.NutrientUtils, as: Nu
 
   def get_chart(user_meals, day) do
     meals = Enum.filter(user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end)
@@ -86,10 +13,10 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     if(meals == []) do
       nil
     else
-      total_nutrients = summarize_meals_nutrients(meals)
+      total_nutrients = Nu.summarize_meals_nutrients(meals)
+      nutrients_sorted = Nu.sort_nutrients_from_db(total_nutrients)
 
       assigns = %{recipe: %{nutrients: total_nutrients, id: "test_id", primary_size: 5}}
-      nutrients_sorted = Mehungry.Food.RecipeUtils.sort_nutrients_from_db(total_nutrients)
 
       data =
         Enum.slice(nutrients_sorted, 0, 5)
@@ -226,6 +153,124 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     end
   end
 
+  @impl true
+  def update(assigns, socket) do
+    current_date =
+      case assigns.particular_date do
+        nil ->
+          Utils.calculate_initial_date(Date.utc_today(), assigns.device_width)
+
+        date ->
+          {:ok, date} = Date.from_iso8601(date)
+          date
+      end
+
+    {first, last, rows} = get_full_week(current_date, assigns.user_meals, 1500)
+
+    assigns = [
+      current_date: current_date,
+      selected_date: nil,
+      user_meals: assigns.user_meals,
+      selected_meal: nil,
+      week_rows: rows,
+      last: last,
+      first: first,
+      calendar_view: assigns.calendar_view,
+      day_meals: @day_meals,
+      device_width: assigns.device_width
+    ]
+
+    {:ok,
+     socket
+     |> assign(assigns)}
+  end
+
+  ## ------------------------------------ Utility Functions  ---------------------------------------------------------------
+
+  defp get_full_week(current_date, _user_meals, _device_width) do
+    days = 6
+    first = Date.beginning_of_week(current_date)
+
+    last = Date.add(first, days)
+
+    week_rows =
+      Date.range(first, last)
+      |> Enum.map(& &1)
+      |> Enum.chunk_every(7)
+
+    {first, last, week_rows}
+  end
+
+  defp get_week_rows(current_date, _user_meals, _device_width) do
+    week_rows =
+      Date.range(current_date, current_date)
+      |> Enum.map(& &1)
+      |> Enum.chunk_every(7)
+
+    {current_date, current_date, week_rows}
+  end
+
+  ## ------------------------------------ Event Handlers  ---------------------------------------------------------------
+
+  @impl true
+  def handle_event("prev-month", _, socket) do
+    days = 0
+    new_date = socket.assigns.current_date |> Date.add(days) |> Date.add(-1)
+
+    {first, last, rows} =
+      get_full_week(new_date, socket.assigns.user_meals, 100)
+
+    assigns = [
+      current_date: new_date,
+      week_rows: rows,
+      last: last,
+      first: first
+    ]
+
+    send(self(), {:particular_date, %{"date" => new_date}})
+    {:noreply, assign(socket, assigns)}
+  end
+
+  def handle_event("next-month", _, socket) do
+    new_date = socket.assigns.current_date |> Date.add(1)
+
+    {first, last, rows} =
+      get_week_rows(new_date, socket.assigns.user_meals, 300)
+
+    assigns = [
+      current_date: new_date,
+      week_rows: rows,
+      last: last,
+      first: first
+    ]
+
+    send(self(), {:particular_date, %{"date" => first}})
+    {:noreply, assign(socket, assigns)}
+  end
+
+  def handle_event("pick-date", %{"date" => date}, socket) do
+    current_date = date
+    send(self(), {:initial_modal, %{"date" => current_date, "title" => "r"}})
+
+    {:noreply, assign(socket, :selected_date, current_date)}
+  end
+
+  def handle_event("pick-date", %{"meal" => meal}, socket) do
+    current_date = socket.assigns.current_date
+    send(self(), {:initial_modal, %{"date" => current_date, "title" => meal}})
+
+    {:noreply,
+     assign(socket, :selected_date, current_date)
+     |> assign(:selected_meal, meal)}
+  end
+
+  def handle_event("date-details", %{"date" => date}, socket) do
+    send(self(), {:date_details, %{"date" => date}})
+
+    {:noreply, socket}
+  end
+
+  ## ------------------------------------ UI Elements ---------------------------------------------------------------
   def table_week_calendar(assigns) do
     ~H"""
     <div
@@ -255,13 +300,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                       nutrients={re_u_m.recipe_nutrients}
                       cooking_portions={re_u_m.cooking_portions}
                       consume_portions={re_u_m.consume_portions}
-v                      myself={@myself}
+                      v
+                      myself={@myself}
                       recipe={
                         %{
                           nutrients: re_u_m.recipe_nutrients,
                           primary_size: re_u_m.primary_size,
                           servings: re_u_m.servings,
-                          id: Integer.to_string(re_u_m.recipe_id) <> Integer.to_string(meal.id),
+                          id: Integer.to_string(re_u_m.recipe_id) <> Integer.to_string(meal.id)
                         }
                       }
                     />
@@ -273,8 +319,7 @@ v                      myself={@myself}
                   <%= for re_u_m <- meal.ingredient_user_meals do %>
                     <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
                       <.card_meal
-                      myself={@myself}
-
+                        myself={@myself}
                         actual_meal={meal}
                         img_url={re_u_m.img_url}
                         title={re_u_m.title}
@@ -389,7 +434,12 @@ v                      myself={@myself}
           <div class="py-2 rounded-lg">
             <%= for re_u_m <- meal.recipe_user_meals do %>
               <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
-                <.card_meal actual_meal={meal} img_url={re_u_m.img_url} title={re_u_m.title} myself={@myself} />
+                <.card_meal
+                  actual_meal={meal}
+                  img_url={re_u_m.img_url}
+                  title={re_u_m.title}
+                  myself={@myself}
+                />
               <% end %>
             <% end %>
           </div>
@@ -399,128 +449,6 @@ v                      myself={@myself}
     <!--Div bodu -->
     """
   end
-
-  @impl true
-  def update(assigns, socket) do
-    current_date =
-      case assigns.particular_date do
-        nil ->
-          Utils.calculate_initial_date(Date.utc_today(), assigns.device_width)
-
-        date ->
-          {:ok, date} = Date.from_iso8601(date)
-          date
-      end
-
-    {first, last, rows} = get_full_week(current_date, assigns.user_meals, 1500)
-
-    assigns = [
-      current_date: current_date,
-      selected_date: nil,
-      user_meals: assigns.user_meals,
-      selected_meal: nil,
-      week_rows: rows,
-      last: last,
-      first: first,
-      calendar_view: assigns.calendar_view,
-      day_meals: @day_meals,
-      device_width: assigns.device_width
-    ]
-
-    {:ok,
-     socket
-     |> assign(assigns)}
-  end
-
-  defp get_full_week(current_date, _user_meals, _device_width) do
-    days = 6
-    first = Date.beginning_of_week(current_date)
-
-    last = Date.add(first, days)
-
-    week_rows =
-      Date.range(first, last)
-      |> Enum.map(& &1)
-      |> Enum.chunk_every(7)
-
-    {first, last, week_rows}
-  end
-
-  defp get_week_rows(current_date, _user_meals, _device_width) do
-    # days = Utils.get_days_according_to_width(device_width)
-    # days = 0
-    # first = current_date
-    # last = Date.add(first, days)
-
-    week_rows =
-      Date.range(current_date, current_date)
-      |> Enum.map(& &1)
-      |> Enum.chunk_every(7)
-
-    {current_date, current_date, week_rows}
-  end
-
-  ## ------------------------------------ Event Handlers  ---------------------------------------------------------------
-
-  @impl true
-  def handle_event("prev-month", _, socket) do
-    days = 0
-    new_date = socket.assigns.current_date |> Date.add(days) |> Date.add(-1)
-
-    {first, last, rows} =
-      get_full_week(new_date, socket.assigns.user_meals, 100)
-
-    assigns = [
-      current_date: new_date,
-      week_rows: rows,
-      last: last,
-      first: first
-    ]
-
-    send(self(), {:particular_date, %{"date" => new_date}})
-    {:noreply, assign(socket, assigns)}
-  end
-
-  def handle_event("next-month", _, socket) do
-    new_date = socket.assigns.current_date |> Date.add(1)
-
-    {first, last, rows} =
-      get_week_rows(new_date, socket.assigns.user_meals, 300)
-
-    assigns = [
-      current_date: new_date,
-      week_rows: rows,
-      last: last,
-      first: first
-    ]
-
-    send(self(), {:particular_date, %{"date" => first}})
-    {:noreply, assign(socket, assigns)}
-  end
-
-  def handle_event("pick-date", %{"date" => date}, socket) do
-    current_date = date
-    send(self(), {:initial_modal, %{"date" => current_date, "title" => "r"}})
-
-    {:noreply, assign(socket, :selected_date, current_date)}
-  end
-
-  def handle_event("pick-date", %{"meal" => meal}, socket) do
-    current_date = socket.assigns.current_date
-    send(self(), {:initial_modal, %{"date" => current_date, "title" => meal}})
-
-    {:noreply,
-     assign(socket, :selected_date, current_date)
-     |> assign(:selected_meal, meal)}
-  end
-
-  def handle_event("date-details", %{"date" => date}, socket) do
-    send(self(), {:date_details, %{"date" => date}})
-
-    {:noreply, socket}
-  end
-
-  ## ------------------------------------ UI Elements ---------------------------------------------------------------
 
   defp card_meal(assigns) do
     ~H"""
@@ -548,7 +476,13 @@ v                      myself={@myself}
           <span class="font-semibold text-md">consume portions: {@consume_portions}</span>
         </div>
         <div class=" font-semibold">
-          <MehungryWeb.RecipeComponents.recipe_nutrients recipe ={@recipe} primary_size={6} nutrients={@recipe.nutrients} myself={@myself}  id={@recipe.id} ./>}
+          <MehungryWeb.RecipeComponents.recipe_nutrients
+            id={to_string(@recipe.id)}
+            nutrients={@recipe.nutrients}
+            primary_size={5}
+            servings={2}
+            class="my-custom-class"
+          />
         </div>
       </div>
     </div>

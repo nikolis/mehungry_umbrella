@@ -2,15 +2,30 @@ defmodule MehungryWeb.IngredientComponent do
   use MehungryWeb, :live_component
 
   @impl true
+  def update(%{new_ingredient_id: ingredient_id} = assigns, socket) do
+
+    grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
+    measurement_units =
+      Mehungry.Food.get_measurement_unit_portions_for_ingredient(ingredient_id)
+      |> Enum.map(fn x -> x.measurement_unit end)
+      |> Enum.filter(fn x -> !is_nil(x) end)
+
+
+    socket =
+      socket
+      |> assign(:measurement_units, measurement_units ++ grammar)
+    {:ok, socket}
+  end
+
+  @impl true
   def update(assigns, socket) do
     socket =
       socket
       |> assign(assigns)
 
+    grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
+
     measurement_units =
-      if(!is_nil(assigns.measurement_units)) do
-        assigns.measurement_units
-      else
         if(!is_nil(socket.assigns.ingredient_form[:ingredient_id].value)) do
           id = socket.assigns.ingredient_form[:ingredient_id].value
           grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
@@ -18,15 +33,17 @@ defmodule MehungryWeb.IngredientComponent do
           Mehungry.Food.get_measurement_unit_portions_for_ingredient(id)
           |> Enum.map(fn x -> x.measurement_unit end)
           |> Enum.filter(fn x -> !is_nil(x) end)
+          
         else
           []
         end
-      end
+    measurement_units = measurement_units ++ grammar 
 
     socket = assign(socket, :measurement_units, measurement_units)
 
     {:ok, socket}
   end
+
 
   def get_measurement_units() do
   end
@@ -45,7 +62,9 @@ defmodule MehungryWeb.IngredientComponent do
             label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
             placeholder="Select an ingredient..."
             modal_title="Search Ingredients"
-            select_function={fn x -> send(self(), {:select_id, x}) end}
+            phx-target={@myself}
+            parent_id={@id}
+            select_function={fn x -> send(self(), {:select_id, x, @id}) end}
             id={"ingredient_search_component" <> Integer.to_string(@ingredient_form.index)}
           />
         </div>
@@ -71,13 +90,6 @@ defmodule MehungryWeb.IngredientComponent do
           ❌
         </button>
       </div>
-      <button
-        name="recipe[_action]"
-        value="add_ingredient"
-        class="p-4 font-semibold text-md absolute right-6 text-xl"
-      >
-        + Add
-      </button>
     </div>
     """
   end

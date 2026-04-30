@@ -735,111 +735,68 @@ Hooks.HiddenCalendar = {
 
 
 // assets/js/hooks/accordion_hook.js
+// assets/js/hooks/accordion_hook.js
 
 Hooks.AccordionHook = {
   mounted() {
-    console.log("Accordion mounted for:", this.el.id);
-
-    // Store references
     this.accordion = this.el;
-    this.panels = [];
-
-    // Initialize panels
     this.initPanels();
-
-    // Bind event handler
     this.handleClick = this.handleClick.bind(this);
-
-    // Add event listener to this specific accordion
     this.accordion.addEventListener("click", this.handleClick);
   },
-
+  
   initPanels() {
-    // Get all panels within THIS accordion
     const panels = this.accordion.querySelectorAll(".accordion-panel");
-
-    panels.forEach((panel, index) => {
+    
+    panels.forEach((panel) => {
       const button = panel.querySelector("button");
       const content = panel.querySelector(".accordion-content");
-
+      
       if (button && content) {
-        this.panels.push({ panel, button, content, index });
-
-        // Set initial state
-        const isOpen = false; // Start closed
-        button.setAttribute("aria-expanded", isOpen.toString());
-        content.setAttribute("aria-hidden", (!isOpen).toString());
-
-        // Add CSS classes for styling
-        if (isOpen) {
-          content.classList.remove("hidden");
-        } else {
-          content.classList.add("hidden");
-        }
+        // Store initial closed state
+        button.setAttribute("aria-expanded", "false");
+        content.setAttribute("aria-hidden", "true");
       }
     });
-
-    console.log(`Initialized ${this.panels.length} panels for`, this.accordion.id);
   },
-
+  
   handleClick(event) {
-    const activePanel = event.target.closest(".accordion-panel");
-    if (!activePanel) return;
-
-    const button = activePanel.querySelector("button");
-    const content = activePanel.querySelector(".accordion-content");
-
+    const panel = event.target.closest(".accordion-panel");
+    if (!panel) return;
+    
+    const button = panel.querySelector("button");
+    const content = panel.querySelector(".accordion-content");
+    
     if (!button || !content) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-
+    
     const isExpanded = button.getAttribute("aria-expanded") === "true";
-
+    
     if (isExpanded) {
-      this.closePanel(button, content);
+      // Close
+      button.setAttribute("aria-expanded", "false");
+      content.setAttribute("aria-hidden", "true");
+      content.classList.add("hidden");
     } else {
-      this.openPanel(button, content);
+      // Open
+      button.setAttribute("aria-expanded", "true");
+      content.setAttribute("aria-hidden", "false");
+      content.classList.remove("hidden");
     }
+    
+    event.stopPropagation();
   },
-
-  openPanel(button, content) {
-    button.setAttribute("aria-expanded", "true");
-    content.setAttribute("aria-hidden", "false");
-    content.classList.remove("hidden");
-
-    // Optional: Emit event to LiveView
-    if (this.pushEvent) {
-      this.pushEvent("accordion_opened", {});
-    }
-  },
-
-  closePanel(button, content) {
-    button.setAttribute("aria-expanded", "false");
-    content.setAttribute("aria-hidden", "true");
-    content.classList.add("hidden");
-
-    // Optional: Emit event to LiveView
-    if (this.pushEvent) {
-      this.pushEvent("accordion_closed", {});
-    }
-  },
-
+  
   updated() {
-    // Re-initialize after LiveView updates
-    this.panels = [];
+    // Re-attach to any new panels after LiveView updates
     this.initPanels();
   },
-
+  
   destroyed() {
-    // Cleanup
     if (this.accordion && this.handleClick) {
       this.accordion.removeEventListener("click", this.handleClick);
     }
   }
 };
-
-// Register the hook
 
 
 

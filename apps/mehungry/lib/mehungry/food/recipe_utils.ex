@@ -8,7 +8,6 @@ defmodule Mehungry.Food.RecipeUtils do
 
   def get_nutrients(recipe) do
     recipe_nutrients = calculate_recipe_nutrition_value(recipe)
-
     if is_nil(recipe_nutrients) do
       {recipe_nutrients, []}
     else
@@ -17,33 +16,39 @@ defmodule Mehungry.Food.RecipeUtils do
           Float.round(x.amount, 3) != 0
         end)
 
-      {nuts_pre, rest} = get_nutrients_pre(rest)
+      # Convert to the format expected by NutrientMerger (atom keys already)
+      rest = Enum.map(rest, fn nutrient ->
+        %{
+          name: nutrient.name,
+          amount: nutrient.amount,
+          measurement_unit: nutrient.measurement_unit
+        }
+      end)
 
-      nutrients = nuts_pre ++ rest
+      # Merge using NutrientMerger - returns list with atom keys
+      merged_rest = Mehungry.Food.NutrientMerger.merge_flat_list(rest)
+      
+      {nuts_pre, rest_after_pre} = get_nutrients_pre(merged_rest)
+
+      nutrients = nuts_pre ++ rest_after_pre
       nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
 
-      energy = Enum.find(rest, fn x -> String.contains?(x.name, "Energy") end)
+      energy = Enum.find(rest_after_pre, fn x -> String.contains?(to_string(x.name), "Energy") end)
 
       energy = convert_energy_to_calories_if_needed(energy)
-      sort_nutrients(nutrients, energy)
+      {imp, rest_sorted} = sort_nutrients(nutrients, energy)
+      {imp, rest_sorted}
     end
   end
 
   def get_nutrients_pre(rest) do
-    {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Monounsaturated fatty acids")
-    {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Polyunsaturated fatty acids")
-    {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Saturated fatty acids")
-    {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Trans fatty acids")
-
-    # {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Fatty acids, total monounsaturated")
-    # {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Fatty acids, total polyunsaturated")
-    # {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Fatty acids, total saturated")
-    # {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Fatty acids, total trans")
+    {mufa_all, rest} = get_nutrient_category(rest, "MUFA", "Monounsaturated Fat")
+    {pufa_all, rest} = get_nutrient_category(rest, "PUFA", "Polyunsaturated Fat")
+    {sfa_all, rest} = get_nutrient_category(rest, "SFA", "Saturated Fat")
+    {tfa_all, rest} = get_nutrient_category(rest, "TFA", "Trans Fat")
     {vitamins_all, rest} = get_nutrient_category(rest, "Vitamin", "Vitamins")
 
-    # IO.inspect(vitamins_all, label: "vits")
-    # IO.inspect(mufa_all, label: "mufa")
-    nuts_pre = [mufa_all, vitamins_all, pufa_all, sfa_all, tfa_all, vitamins_all]
+    nuts_pre = [mufa_all, vitamins_all, pufa_all, sfa_all, tfa_all]
     nuts_pre = Enum.filter(nuts_pre, fn x -> !is_nil(x) end)
 
     {nuts_pre, rest}
@@ -52,30 +57,12 @@ defmodule Mehungry.Food.RecipeUtils do
   @doc """
   Sort nutrients to have on top entries that are relevant to most people
   """
-  def sort_nutrients_from_db(nutrients) do
-    carb = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Carbohydrate") end)
-    protein = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Protein") end)
-    fiber = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Fiber") end)
-    fat = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Total lipid") end)
-    sugar = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Sugar") end)
-    energy = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Energy") end)
-    vitamins = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Vitamins") end)
-
-    primaries = [energy, fat, carb, protein, fiber, sugar, vitamins]
-    primaries = Enum.filter(primaries, fn x -> !is_nil(x) end)
-    nutrients = Enum.filter(nutrients, fn x -> x not in primaries end)
-    Enum.with_index(primaries ++ nutrients)
-  end
-
-  @doc """
-  Sort nutrients to have on top entries that are relevant to most people
-  """
   def sort_nutrients(nutrients, energy) do
-    carb = Enum.find(nutrients, fn x -> String.contains?(x.name, "Carbohydrate") end)
-    protein = Enum.find(nutrients, fn x -> String.contains?(x.name, "Protein") end)
-    fiber = Enum.find(nutrients, fn x -> String.contains?(x.name, "Fiber") end)
-    fat = Enum.find(nutrients, fn x -> String.contains?(x.name, "Total lipid") end)
-    sugar = Enum.find(nutrients, fn x -> String.contains?(x.name, "Total lipid") end)
+    carb = Enum.find(nutrients, fn x -> String.contains?(to_string(x.name), "Carbohydrate") end)
+    protein = Enum.find(nutrients, fn x -> String.contains?(to_string(x.name), "Protein") end)
+    fiber = Enum.find(nutrients, fn x -> String.contains?(to_string(x.name), "Fiber") end)
+    fat = Enum.find(nutrients, fn x -> String.contains?(to_string(x.name), "Total Fat") end)
+    sugar = Enum.find(nutrients, fn x -> String.contains?(to_string(x.name), "Sugar") end)
 
     primaries = [energy, fat, carb, protein, fiber, sugar]
     primaries = Enum.filter(primaries, fn x -> !is_nil(x) end)
@@ -96,45 +83,43 @@ defmodule Mehungry.Food.RecipeUtils do
   end
 
   @doc """
-  Given a set of nutrients, category_name(being substring that should be part of the name of all the nutrients belonging in the category) and the name that the aggrigating entry should have,  
+  Given a set of nutrients, category_name(being substring that should be part of the name of all the nutrients belonging in the category) and the name that the aggregating entry should have.
 
-  Returns `:ok`.
-
-  ## Examples
-  # nutrients ,SFA, Fatty Acids Saturated
+  Returns aggregated category and remaining nutrients.
   """
   def get_nutrient_category(nutrients, category_name, category_sum_name) do
     {category, rest} =
-      Enum.split_with(nutrients, fn x -> String.contains?(x.name, category_name) end)
+      Enum.split_with(nutrients, fn x -> 
+        x && x.name && String.contains?(to_string(x.name), category_name) 
+      end)
 
-    case length(category) > 0 do
-      true ->
-        # Find if the aggrigator exists as an entry in the nutrients
-        {category_total, rest} =
-          Enum.split_with(rest, fn x ->
-            String.contains?(x.name, category_sum_name)
-          end)
+    if length(category) > 0 do
+      # Find if the aggregator exists as an entry in the nutrients
+      {category_total, rest_after_total} =
+        Enum.split_with(rest, fn x ->
+          x && x.name && String.contains?(to_string(x.name), category_sum_name)
+        end)
 
-        case length(category_total) == 1 do
-          true ->
-            # Use the existing aggrigate category
-            {Enum.into(Enum.at(category_total, 0), children: category), rest}
+      if length(category_total) == 1 do
+        # Use the existing aggregate category
+        existing = Enum.at(category_total, 0)
+        updated = %{existing | children: category}
+        {updated, rest_after_total}
+      else
+        # Create the aggregating category
+        total_amount = Enum.reduce(category, 0, fn x, acc -> x.amount + acc end)
+        category_first = Enum.at(category, 0)
 
-          false ->
-            # Create the aggrigating category
-            total_ammount = Enum.reduce(category, 0, fn x, acc -> x.amount + acc end)
-            category_first = Enum.at(category, 0)
-
-            {%{
-               amount: total_ammount,
-               measurement_unit: category_first.measurement_unit,
-               children: category,
-               name: category_sum_name
-             }, rest}
-        end
-
-      false ->
-        {nil, rest}
+        aggregated = %{
+          name: category_sum_name,
+          amount: total_amount,
+          measurement_unit: category_first.measurement_unit,
+          children: category
+        }
+        {aggregated, rest_after_total}
+      end
+    else
+      {nil, rest}
     end
   end
 
@@ -354,5 +339,14 @@ defmodule Mehungry.Food.RecipeUtils do
 
   def calculate_recipe_ingredient_categories_array(nil) do
     []
+  end
+
+  # Helper function to safely convert nutrient names to string for display
+  def nutrient_name_to_string(nutrient) do
+    case nutrient do
+      %{name: name} when is_atom(name) -> Atom.to_string(name)
+      %{name: name} when is_binary(name) -> name
+      _ -> ""
+    end
   end
 end

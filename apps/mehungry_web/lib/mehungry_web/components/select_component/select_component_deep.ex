@@ -76,6 +76,7 @@ defmodule MehungryWeb.SelectComponentDeep do
                     <li
                       phx-click="select_item"
                       phx-value-id={item.id}
+                      phx-value-parent_id={@parent_id}
                       phx-target={@myself}
                       class="cursor-pointer hover:bg-blue-50 p-2 rounded transition-colors"
                     >

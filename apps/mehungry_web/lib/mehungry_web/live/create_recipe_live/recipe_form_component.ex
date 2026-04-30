@@ -125,7 +125,7 @@ defmodule MehungryWeb.RecipeFormComponent do
             <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
               <.live_component
                 module={MehungryWeb.IngredientComponent}
-                id="recipe_ingredients"
+                id={"recipe_ingredients_component" <> Integer.to_string(ingredient_form.index)}
                 f={@f}
                 ingredient_form={ingredient_form}
                 ingredients={@ingredients}
@@ -133,7 +133,16 @@ defmodule MehungryWeb.RecipeFormComponent do
                 measurement_units={@measurement_units}
               />
             </.inputs_for>
+            <button
+              name="recipe[_action]"
+              value="add_ingredient"
+              class="p-4 font-semibold text-md absolute right-6 text-xl"
+            >
+              + Add
+            </button>
+
           </div>
+
         </div>
 
         <div
