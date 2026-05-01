@@ -6,6 +6,24 @@ defmodule Mehungry.Food.RecipeUtils do
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
 
+    @doc """
+  Sort nutrients to have on top entries that are relevant to most people
+  """
+  def sort_nutrients_from_db(nutrients) do
+    carb = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Carbohydrate") end)
+    protein = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Protein") end)
+    fiber = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Fiber") end)
+    fat = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Total lipid") end)
+    sugar = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Sugar") end)
+    energy = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Energy") end)
+    vitamins = Enum.find(nutrients, fn {name, _x} -> String.contains?(name, "Vitamins") end)
+
+    primaries = [energy, fat, carb, protein, fiber, sugar, vitamins]
+    primaries = Enum.filter(primaries, fn x -> !is_nil(x) end)
+    nutrients = Enum.filter(nutrients, fn x -> x not in primaries end)
+    Enum.with_index(primaries ++ nutrients)
+  end
+
   def get_nutrients(recipe) do
     recipe_nutrients = calculate_recipe_nutrition_value(recipe)
     if is_nil(recipe_nutrients) do

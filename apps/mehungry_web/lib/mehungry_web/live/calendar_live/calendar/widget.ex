@@ -14,7 +14,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       nil
     else
       total_nutrients = Nu.summarize_meals_nutrients(meals)
-      nutrients_sorted = Nu.sort_nutrients_from_db(total_nutrients)
+      nutrients_sorted = Mehungry.Food.RecipeUtils.sort_nutrients_from_db(total_nutrients)
 
       assigns = %{recipe: %{nutrients: total_nutrients, id: "test_id", primary_size: 5}}
 
@@ -454,11 +454,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     ~H"""
     <div class="shadow m-auto w-full grid rounded-md relative">
       <div class="m-auto w-fit flex gap-2 sm:gap-4 flex-col md:flex-row ">
-        <div class="my-auto relative size-32">
+        <div class="my-auto relative">
           <%= if is_nil(@img_url) do %>
             {SvgComponents.get_default_recipe_image(assigns)}
           <% else %>
-            <img src={@img_url} class=" h-60 w-60 m-auto" style="width: 15rem;" />
+            <img src={@img_url} class=" h-60 w-60 m-auto" style="" />
           <% end %>
           <button
             class="absolute right-2 top-2 sm:top-10 sm:right-2   bg-white p-2 rounded-full "
