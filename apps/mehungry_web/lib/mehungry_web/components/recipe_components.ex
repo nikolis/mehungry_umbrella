@@ -630,7 +630,8 @@ end
   # ============================================================================
 
   defp sort_nutrients(nutrients) do
-    Enum.sort_by(nutrients, fn {_key, nutrient} ->
+    Enum.sort_by(nutrients, fn {key, nutrient} ->
+
       priority = case Map.get(nutrient, "name", Map.get(nutrient, :name, "")) do
         "Energy" -> 1
         "Total Fat" -> 2
