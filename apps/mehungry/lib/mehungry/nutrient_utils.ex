@@ -1,4 +1,5 @@
 defmodule Mehungry.Food.NutrientUtils do
+
   @moduledoc """
   Handles merging of USDA nutrient data with intelligent normalization.
   De-duplicates equivalent nutrients (e.g., different energy calculation methods).
@@ -18,7 +19,7 @@ defmodule Mehungry.Food.NutrientUtils do
     "energy (kilojoule)" => "Energy",
     "kilojoule" => "Energy",
     "calories" => "Energy",
-    
+
     # Protein variations
     "protein" => "Protein",
     "protein (n x 6.25)" => "Protein",
@@ -26,58 +27,58 @@ defmodule Mehungry.Food.NutrientUtils do
     "protein (n x 5.83)" => "Protein",
     "protein (n x 6.38)" => "Protein",
     "crude protein" => "Protein",
-    
+
     # Fat variations
     "total lipid (fat)" => "Total Fat",
     "total fat" => "Total Fat",
     "fat" => "Total Fat",
     "lipid" => "Total Fat",
     "total lipid" => "Total Fat",
-    
+
     # Carbohydrate variations
     "carbohydrate" => "Carbohydrates",
     "carbohydrate (by difference)" => "Carbohydrates",
     "carbohydrate, by difference" => "Carbohydrates",
     "total carbohydrate" => "Carbohydrates",
     "carbs" => "Carbohydrates",
-    
+
     # Fiber variations
     "fiber" => "Fiber",
     "total dietary fiber" => "Fiber",
     "fiber, total dietary" => "Fiber",
     "dietary fiber" => "Fiber",
     "crude fiber" => "Fiber",
-    
+
     # Sugar variations
     "sugars" => "Total Sugars",
     "total sugars" => "Total Sugars",
     "sugar" => "Total Sugars",
     "added sugars" => "Added Sugars",
-    
+
     # Saturated Fat variations
     "saturated fat" => "Saturated Fat",
     "fatty acids, total saturated" => "Saturated Fat",
     "total saturated fatty acids" => "Saturated Fat",
     "sfa" => "Saturated Fat",
-    
+
     # Monounsaturated Fat variations
     "monounsaturated fat" => "Monounsaturated Fat",
     "fatty acids, total monounsaturated" => "Monounsaturated Fat",
     "total monounsaturated fatty acids" => "Monounsaturated Fat",
     "monounsaturated fatty acids" => "Monounsaturated Fat",
     "mufa" => "Monounsaturated Fat",
-    
+
     # Polyunsaturated Fat variations
     "polyunsaturated fat" => "Polyunsaturated Fat",
     "fatty acids, total polyunsaturated" => "Polyunsaturated Fat",
     "total polyunsaturated fatty acids" => "Polyunsaturated Fat",
     "polyunsaturated fatty acids" => "Polyunsaturated Fat",
     "pufa" => "Polyunsaturated Fat",
-    
+
     # Cholesterol
     "cholesterol" => "Cholesterol",
     "total cholesterol" => "Cholesterol",
-    
+
     # Minerals
     "sodium" => "Sodium",
     "na" => "Sodium",
@@ -101,7 +102,7 @@ defmodule Mehungry.Food.NutrientUtils do
     "mn" => "Manganese",
     "selenium" => "Selenium",
     "se" => "Selenium",
-    
+
     # Vitamins
     "vitamin a" => "Vitamin A",
     "carotene, beta" => "Vitamin A (Beta-Carotene)",
@@ -115,7 +116,7 @@ defmodule Mehungry.Food.NutrientUtils do
     "cobalamin" => "Vitamin B12",
     "choline, total" => "Choline",
     "choline" => "Choline",
-    
+
     # Amino Acids
     "alanine" => "Alanine",
     "arginine" => "Arginine",
@@ -135,7 +136,7 @@ defmodule Mehungry.Food.NutrientUtils do
     "tryptophan" => "Tryptophan",
     "tyrosine" => "Tyrosine",
     "valine" => "Valine",
-    
+
     # Other
     "ash" => "Ash",
     "water" => "Water",
@@ -177,19 +178,19 @@ defmodule Mehungry.Food.NutrientUtils do
   Normalizes a nutrient name to its canonical form
   """
   def normalize_nutrient_name(nil), do: "Unknown"
-  
+
   def normalize_nutrient_name(name) when is_atom(name) do
     normalize_nutrient_name(to_string(name))
   end
-  
+
   def normalize_nutrient_name(name) when is_binary(name) do
     normalized = name
     |> String.downcase()
     |> String.trim()
-    
+
     # First check exact mapping
     case Map.get(@canonical_mapping, normalized) do
-      nil -> 
+      nil ->
         # Try to capitalize properly
         name
         |> String.split(" ")
@@ -229,13 +230,13 @@ defmodule Mehungry.Food.NutrientUtils do
   def normalize_units(%{"name" => name, "amount" => amount, "measurement_unit" => unit} = nutrient) do
     name_lower = String.downcase(name)
     unit_lower = String.downcase(unit)
-    
+
     {converted_amount, new_unit} = cond do
       # Energy conversions (convert everything to kcal)
-      (name_lower == "energy" or String.contains?(name_lower, "energy")) and 
+      (name_lower == "energy" or String.contains?(name_lower, "energy")) and
       (unit_lower == "kj" or unit_lower == "kilojoule") ->
         {amount / 4.184, "kcal"}
-      
+
       # Weight conversions (convert everything to grams for consistency)
       unit_lower == "mg" or unit_lower == "milligram" ->
         {amount / 1000, "g"}
@@ -243,12 +244,12 @@ defmodule Mehungry.Food.NutrientUtils do
         {amount / 1_000_000, "g"}
       unit_lower == "grammar" or unit_lower == "gram" ->  # Fix typo in your data
         {amount, "g"}
-      
+
       # Keep as is
       true ->
         {amount, unit}
     end
-    
+
     %{
       "name" => name,
       "amount" => converted_amount,
@@ -264,14 +265,14 @@ defmodule Mehungry.Food.NutrientUtils do
   def normalize_keys(nutrient) when is_list(nutrient) do
     Enum.map(nutrient, &normalize_keys/1)
   end
-  
+
   def normalize_keys(%{} = nutrient) do
     result = %{
       "name" => get_value(nutrient, :name) || get_value(nutrient, "name") || "Unknown",
       "amount" => (get_value(nutrient, :amount) || get_value(nutrient, "amount") || 0),
       "measurement_unit" => get_value(nutrient, :measurement_unit) || get_value(nutrient, "measurement_unit") || "g"
     }
-    
+
     # Handle children recursively
     children = get_value(nutrient, :children) || get_value(nutrient, "children")
     if children && (is_list(children) && length(children) > 0) do
@@ -289,10 +290,10 @@ defmodule Mehungry.Food.NutrientUtils do
     normalized_list = nutrient_list
     |> Enum.map(&normalize_keys/1)
     |> Enum.map(&normalize_units/1)
-    
+
     # Group by canonical name
     normalized_list
-    |> Enum.group_by(fn nutrient -> 
+    |> Enum.group_by(fn nutrient ->
       normalize_nutrient_name(nutrient["name"])
     end)
     |> Enum.map(fn {canonical_name, group} ->
@@ -301,7 +302,7 @@ defmodule Mehungry.Food.NutrientUtils do
         current_amount = Map.get(acc, "amount") || 0
         current_children = Map.get(acc, "children") || []
         new_children = Map.get(nutrient, "children") || []
-        
+
         %{
           "name" => canonical_name,
           "amount" => current_amount + (nutrient["amount"] || 0),
@@ -309,7 +310,7 @@ defmodule Mehungry.Food.NutrientUtils do
           "children" => merge_children(current_children, new_children)
         }
       end)
-      
+
       {canonical_name, merged}
     end)
     |> Enum.into(%{})
@@ -331,7 +332,7 @@ defmodule Mehungry.Food.NutrientUtils do
 
   defp merge_children(existing_children, new_children) when is_list(existing_children) and is_list(new_children) do
     all_children = existing_children ++ new_children
-    
+
     if Enum.empty?(all_children) do
       nil
     else
@@ -400,13 +401,13 @@ defmodule Mehungry.Food.NutrientUtils do
           |> Enum.flat_map(fn ing ->
             recipe = Map.get(ing, :recipe, %{})
             nutrients = Map.get(recipe, :nutrients, [])
-            
+
             Enum.map(nutrients, fn n ->
               %{
                 "name" => Map.get(n, :name) || Map.get(n, "name"),
                 "amount" => Map.get(n, :amount) || Map.get(n, "amount") || 0,
-                "measurement_unit" => Map.get(n, :measurement_unit) || 
-                                      Map.get(n, "measurement_unit") || 
+                "measurement_unit" => Map.get(n, :measurement_unit) ||
+                                      Map.get(n, "measurement_unit") ||
                                       "g",
                 "children" => Map.get(n, :children) || Map.get(n, "children") || []
               }
