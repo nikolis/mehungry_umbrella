@@ -4,6 +4,8 @@ defmodule Mehungry.Release do
   @app :mehungry
 
   def migrate(opts \\ [all: true]) do
+    Application.load(@app)
+
     for repo <- repos() do
       {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, opts))
     end
