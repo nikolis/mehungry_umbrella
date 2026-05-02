@@ -78,7 +78,7 @@ jobs:
             "containerOverrides": [
               {
                 "name": "mehungry_app",
-                "command": ["bin/mehungry", "eval", "Mehungry.Release.migrate"]
+                "command": ["bin/mehungry_umbrella", "eval", "Mehungry.Release.migrate"]
               }
             ]
           }' \
