@@ -3,17 +3,17 @@ defmodule MehungryWeb.IngredientComponent do
 
   @impl true
   def update(%{new_ingredient_id: ingredient_id} = assigns, socket) do
-
     grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
+
     measurement_units =
       Mehungry.Food.get_measurement_unit_portions_for_ingredient(ingredient_id)
       |> Enum.map(fn x -> x.measurement_unit end)
       |> Enum.filter(fn x -> !is_nil(x) end)
 
-
     socket =
       socket
       |> assign(:measurement_units, measurement_units ++ grammar)
+
     {:ok, socket}
   end
 
@@ -26,24 +26,23 @@ defmodule MehungryWeb.IngredientComponent do
     grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
 
     measurement_units =
-        if(!is_nil(socket.assigns.ingredient_form[:ingredient_id].value)) do
-          id = socket.assigns.ingredient_form[:ingredient_id].value
-          grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
+      if(!is_nil(socket.assigns.ingredient_form[:ingredient_id].value)) do
+        id = socket.assigns.ingredient_form[:ingredient_id].value
+        grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
 
-          Mehungry.Food.get_measurement_unit_portions_for_ingredient(id)
-          |> Enum.map(fn x -> x.measurement_unit end)
-          |> Enum.filter(fn x -> !is_nil(x) end)
-          
-        else
-          []
-        end
-    measurement_units = measurement_units ++ grammar 
+        Mehungry.Food.get_measurement_unit_portions_for_ingredient(id)
+        |> Enum.map(fn x -> x.measurement_unit end)
+        |> Enum.filter(fn x -> !is_nil(x) end)
+      else
+        []
+      end
+
+    measurement_units = measurement_units ++ grammar
 
     socket = assign(socket, :measurement_units, measurement_units)
 
     {:ok, socket}
   end
-
 
   def get_measurement_units() do
   end

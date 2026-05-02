@@ -699,7 +699,9 @@ defmodule Mehungry.Food do
   end
 
   def put_nutrient_info(%Ecto.Changeset{valid?: true} = changeset, attrs) do
-    {primary_size, nutrients} = Mehungry.Food.RecipeUtils.get_nutrients(attrs)
+
+    {primary_size, nutrients} = Mehungry.Food.NutrientCalculation.calculate_recipe_nutrition_value(attrs)
+
 
     if Enum.empty?(nutrients) do
       changeset

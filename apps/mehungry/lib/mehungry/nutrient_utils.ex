@@ -1,5 +1,4 @@
 defmodule Mehungry.NutrientUtils do
-
   @moduledoc """
   Handles merging of USDA nutrient data with intelligent normalization.
   De-duplicates equivalent nutrients (e.g., different energy calculation methods).
@@ -172,38 +171,41 @@ defmodule Mehungry.NutrientUtils do
     "18:3 undifferentiated" => "Alpha-Linolenic Acid (Omega-3)",
     "18:3 n-3 c,c,c" => "Alpha-Linolenic Acid (Omega-3)",
     "20:5 n-3" => "Eicosapentaenoic Acid (EPA)",
-    "22:6 n-3" => "Docosahexaenoic Acid (DHA)",
+    "22:6 n-3" => "Docosahexaenoic Acid (DHA)"
   }
 
   @doc """
   Normalizes a nutrient name to its canonical form
   """
   def normalize_nutrient_name(name) when is_binary(name) do
-    normalized = name
-    |> String.downcase()
-    |> String.trim()
+    normalized =
+      name
+      |> String.downcase()
+      |> String.trim()
 
     # First check exact mapping
     case Map.get(@canonical_mapping, normalized) do
       nil ->
         # Try fuzzy matching
         fuzzy_normalize(normalized)
+
       canonical ->
         canonical
     end
   end
+
   def normalize_nutrient_name(_), do: "Unknown"
 
   defp fuzzy_normalize(name) do
     cond do
       # Omega-3 patterns
       String.contains?(name, "omega-3") or
-      (String.contains?(name, "n-3") and String.contains?(name, "18:3")) ->
+          (String.contains?(name, "n-3") and String.contains?(name, "18:3")) ->
         "Alpha-Linolenic Acid (Omega-3)"
 
       # Omega-6 patterns
       String.contains?(name, "omega-6") or
-      (String.contains?(name, "n-6") and String.contains?(name, "18:2")) ->
+          (String.contains?(name, "n-6") and String.contains?(name, "18:2")) ->
         "Linoleic Acid (Omega-6)"
 
       # Vitamin patterns
@@ -211,16 +213,35 @@ defmodule Mehungry.NutrientUtils do
         extract_b_vitamin_name(name)
 
       # Mineral patterns (single letter)
-      name == "na" -> "Sodium"
-      name == "k" -> "Potassium"
-      name == "ca" -> "Calcium"
-      name == "fe" -> "Iron"
-      name == "mg" -> "Magnesium"
-      name == "p" -> "Phosphorus"
-      name == "zn" -> "Zinc"
-      name == "cu" -> "Copper"
-      name == "mn" -> "Manganese"
-      name == "se" -> "Selenium"
+      name == "na" ->
+        "Sodium"
+
+      name == "k" ->
+        "Potassium"
+
+      name == "ca" ->
+        "Calcium"
+
+      name == "fe" ->
+        "Iron"
+
+      name == "mg" ->
+        "Magnesium"
+
+      name == "p" ->
+        "Phosphorus"
+
+      name == "zn" ->
+        "Zinc"
+
+      name == "cu" ->
+        "Copper"
+
+      name == "mn" ->
+        "Manganese"
+
+      name == "se" ->
+        "Selenium"
 
       true ->
         # Capitalize properly
@@ -291,7 +312,7 @@ defmodule Mehungry.NutrientUtils do
 
   defp merge_children(children) do
     children
-    |> Enum.group_by(& normalize_nutrient_name(&1["name"]))
+    |> Enum.group_by(&normalize_nutrient_name(&1["name"]))
     |> Enum.map(fn {canonical_name, group} ->
       Enum.reduce(group, fn child, acc ->
         %{

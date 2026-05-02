@@ -140,9 +140,7 @@ defmodule MehungryWeb.RecipeFormComponent do
             >
               + Add
             </button>
-
           </div>
-
         </div>
 
         <div
