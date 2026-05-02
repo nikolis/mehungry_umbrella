@@ -138,14 +138,14 @@ defmodule MehungryWeb.ProfileLive.Index do
         ~p"/profile"
       end
 
-    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
+    #{primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
 
     {current_user_profile, current_user_follows, current_user_recipes} =
       Accounts.get_user_essentials(socket.assigns.current_user)
 
     socket
-    |> assign(:nutrients, nutrients)
-    |> assign(:primary_size, primaries_length)
+    |> assign(:nutrients, recipe.nutrients)
+    |> assign(:primary_size, recipe.primary_nutrients_size)
     |> assign(:page_title, recipe.title <> " from " <> recipe.user.email)
     |> assign(:recipe, recipe)
     |> assign(:current_user_follows, current_user_follows)

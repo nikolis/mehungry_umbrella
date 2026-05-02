@@ -162,6 +162,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   def render(assigns) do
     ~H"""
     <div id="recipe_presentation_modal" class="">
+      <pre><%= inspect( @recipe.nutrients, pretty: true, limit: :infinity) %> </pre>
       <div class="basic_2_col_grid_cont">
         <div class="w-full">
           <.recipe_like_container

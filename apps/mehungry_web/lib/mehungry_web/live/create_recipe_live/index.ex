@@ -322,14 +322,12 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   @impl true
   def handle_info({:select_id, id, component_id}, socket) do
-
-   
     send_update(MehungryWeb.IngredientComponent,
-    id: component_id,
-    new_ingredient_id: id
+      id: component_id,
+      new_ingredient_id: id
     )
-    {:noreply,
-     socket}
+
+    {:noreply, socket}
   end
 
   @doc """

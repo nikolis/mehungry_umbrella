@@ -491,7 +491,7 @@ defmodule MehungryWeb.RecipeComponents do
       servings: assigns[:servings] || 1,
       class: assigns[:class] || ""
     }
-    
+
     ~H"""
     <div
       id={"accordion-#{@id}"}
@@ -501,8 +501,8 @@ defmodule MehungryWeb.RecipeComponents do
     >
       <%= for {_key, nutrient} <- sort_nutrients(@nutrients) do %>
         <%= if !is_nil(nutrient) do %>
-          <.render_nutrient_panel 
-            nutrient={nutrient} 
+          <.render_nutrient_panel
+            nutrient={nutrient}
             servings={@servings}
             is_primary={is_primary?(nutrient, sort_nutrients(@nutrients), @primary_size)}
             index={get_nutrient_index(nutrient, sort_nutrients(@nutrients))}
@@ -514,6 +514,12 @@ defmodule MehungryWeb.RecipeComponents do
     </div>
     """
   end
+  def get_value(map, key) do
+    get_value_specific(map, key) || get_value_specific(map, Atom.to_string(key))
+  end
+  
+  def get_value_specific(map, key) when is_atom(key), do: map[key] || map[to_string(key)]
+  def get_value_specific(map, key) when is_binary(key), do: map[key] || map[String.to_atom(key)]
 
   defp render_nutrient_panel(assigns) do
     ~H"""
@@ -522,7 +528,7 @@ defmodule MehungryWeb.RecipeComponents do
       @is_primary && "bg-gray-50"
     ]}>
       <!-- Header Button with visual indicators for clickability -->
-      <.render_nutrient_button 
+      <.render_nutrient_button
         nutrient={@nutrient}
         servings={@servings}
         index={@index}
@@ -530,23 +536,19 @@ defmodule MehungryWeb.RecipeComponents do
         is_primary={@is_primary}
         has_children={@has_children}
       />
-
-      <!-- Content Panel - only rendered if there are children -->
+      
+    <!-- Content Panel - only rendered if there are children -->
       <%= if @has_children do %>
-        <div
-          class="accordion-content hidden"
-          role="region"
-          aria-hidden="true"
-        >
+        <div class="accordion-content hidden" role="region" aria-hidden="true">
           <div class="px-3 pb-3 pt-1 border-t border-gray-100 bg-white">
             <ul class="space-y-1">
-              <%= for child <- @nutrient["children"] || [] do %>
+              <%= for child <- get_value(@nutrient, :children) || [] do %>
                 <li class="flex justify-between items-center text-sm py-1">
                   <span class="text-gray-600 pl-2">
-                    <%= format_nutrient_name(child) %>
+                    {format_nutrient_name(child)}
                   </span>
                   <span class="font-mono text-gray-500 text-xs">
-                    <%= Float.round(child["amount"], 2) %> <%= child["measurement_unit"] %>
+                    {Float.round(get_value(child, :amount), 2)} {get_value(child, :measurement_unit)}
                   </span>
                 </li>
               <% end %>
@@ -558,72 +560,73 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
+  def render_nutrient_button(assigns) do
+    ~H"""
+    <button
+      id={"nutrient-button-#{@accordion_id}-#{@index}"}
+      class={[
+        "w-full text-left rounded-lg transition-all duration-150",
+        if(@has_children,
+          do: "cursor-pointer hover:bg-gray-100 active:scale-[0.99]",
+          else: "cursor-default opacity-75"
+        ),
+        if(@is_primary, do: "font-semibold", else: "font-normal"),
+        if(@has_children and @is_primary, do: "bg-gray-50 p-3"),
+        if(@has_children and not @is_primary, do: "p-2"),
+        if(not @has_children and @is_primary, do: "p-3"),
+        if(not @has_children and not @is_primary, do: "p-2")
+      ]}
+      aria-expanded="false"
+      aria-controls={"nutrient-content-#{@accordion_id}-#{@index}"}
+      disabled={!@has_children}
+    >
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2 flex-1">
+          <div class="w-4 h-4 flex-shrink-0">
+            <%= if @has_children do %>
+              <div class="transition-transform duration-200 group-[.open]:rotate-90">
+                <.icon name="hero-chevron-right" class="w-4 h-4 text-gray-400" />
+              </div>
+            <% else %>
+              <div class="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5"></div>
+            <% end %>
+          </div>
 
-def render_nutrient_button(assigns) do
-  ~H"""
-  <button
-    id={"nutrient-button-#{@accordion_id}-#{@index}"}
-    class={[
-      "w-full text-left rounded-lg transition-all duration-150",
-      if(@has_children, do: "cursor-pointer hover:bg-gray-100 active:scale-[0.99]", else: "cursor-default opacity-75"),
-      if(@is_primary, do: "font-semibold", else: "font-normal"),
-      if(@has_children and @is_primary, do: "bg-gray-50 p-3"),
-      if(@has_children and not @is_primary, do: "p-2"),
-      if(not @has_children and @is_primary, do: "p-3"),
-      if(not @has_children and not @is_primary, do: "p-2")
-    ]}
-    aria-expanded="false"
-    aria-controls={"nutrient-content-#{@accordion_id}-#{@index}"}
-    disabled={!@has_children}
-  >
-    <div class="flex justify-between items-center">
-      <div class="flex items-center gap-2 flex-1">
-        <div class="w-4 h-4 flex-shrink-0">
+          <span class={
+            "flex-1 " <>
+            if(@is_primary, do: "text-gray-900 ", else: "text-gray-700 ") <>
+            if(not @has_children, do: "text-gray-400", else: "")
+          }>
+            {format_nutrient_name(@nutrient)}
+          </span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span class={
+            "text-sm font-mono " <>
+            if(@has_children, do: "text-gray-600", else: "text-gray-400")
+          }>
+            {format_amount(@nutrient, @servings)}
+          </span>
+          <span class={
+            "text-xs " <>
+            if(@has_children, do: "text-gray-400", else: "text-gray-300")
+          }>
+            {format_unit(@nutrient)}
+          </span>
+
           <%= if @has_children do %>
-            <div class="transition-transform duration-200 group-[.open]:rotate-90">
-              <.icon name="hero-chevron-right" class="w-4 h-4 text-gray-400" />
+            <div class="w-4 h-4 text-gray-400 transition-transform duration-200">
+              <.icon name="hero-chevron-down" class="w-4 h-4" />
             </div>
           <% else %>
-            <div class="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5"></div>
+            <div class="w-4 h-4"></div>
           <% end %>
         </div>
-        
-        <span class={
-          "flex-1 " <>
-          if(@is_primary, do: "text-gray-900 ", else: "text-gray-700 ") <>
-          if(not @has_children, do: "text-gray-400", else: "")
-        }>
-          <%= format_nutrient_name(@nutrient) %>
-        </span>
       </div>
-      
-      <div class="flex items-center gap-3">
-        <span class={
-          "text-sm font-mono " <>
-          if(@has_children, do: "text-gray-600", else: "text-gray-400")
-        }>
-          <%= format_amount(@nutrient, @servings) %>
-        </span>
-        <span class={
-          "text-xs " <>
-          if(@has_children, do: "text-gray-400", else: "text-gray-300")
-        }>
-          <%= format_unit(@nutrient) %>
-        </span>
-        
-        <%= if @has_children do %>
-          <div class="w-4 h-4 text-gray-400 transition-transform duration-200">
-            <.icon name="hero-chevron-down" class="w-4 h-4" />
-          </div>
-        <% else %>
-          <div class="w-4 h-4"></div>
-        <% end %>
-      </div>
-    </div>
-  </button>
-  """
-end
-
+    </button>
+    """
+  end
 
   # ============================================================================
   # Helper Functions
@@ -631,18 +634,19 @@ end
 
   defp sort_nutrients(nutrients) do
     Enum.sort_by(nutrients, fn {key, nutrient} ->
+      priority =
+        case Map.get(nutrient, "name", Map.get(nutrient, :name, "")) do
+          "Energy" -> 1
+          "Total Fat" -> 2
+          "Saturated Fat" -> 3
+          "Protein" -> 4
+          "Carbohydrates" -> 5
+          "Fiber" -> 6
+          "Sugars" -> 7
+          "Sodium" -> 8
+          _ -> 10
+        end
 
-      priority = case Map.get(nutrient, "name", Map.get(nutrient, :name, "")) do
-        "Energy" -> 1
-        "Total Fat" -> 2
-        "Saturated Fat" -> 3
-        "Protein" -> 4
-        "Carbohydrates" -> 5
-        "Fiber" -> 6
-        "Sugars" -> 7
-        "Sodium" -> 8
-        _ -> 10
-      end
       {priority, Map.get(nutrient, "name", "")}
     end)
   end
@@ -658,22 +662,24 @@ end
 
   defp format_nutrient_name(nutrient) do
     name = Map.get(nutrient, "name", Map.get(nutrient, :name, ""))
-    
+
     case MehungryWeb.FattyAcidFormatter.format(name) do
-      "Unknown Fatty Acid" -> 
+      "Unknown Fatty Acid" ->
         MehungryWeb.NutrientFormatter.format("", name)
-      formatted -> 
+
+      formatted ->
         formatted
     end
   end
 
   defp format_amount(nutrient, servings) do
-    amount = case nutrient do
-      %{"amount" => amt} -> amt
-      %{amount: amt} -> amt
-      _ -> 0
-    end
-    
+    amount =
+      case nutrient do
+        %{"amount" => amt} -> amt
+        %{amount: amt} -> amt
+        _ -> 0
+      end
+
     cond do
       not is_number(amount) -> "0"
       amount >= 10 -> Float.round(amount / servings, 0) |> to_string()
@@ -691,10 +697,15 @@ end
   end
 
   defp has_children?(nutrient) do
+  result =
     case nutrient do
       %{"children" => children} when is_list(children) and length(children) > 0 -> true
       %{children: children} when is_list(children) and length(children) > 0 -> true
       _ -> false
     end
+    IO.inspect(nutrient, label: "Nutrient")
+    IO.inspect(result, label: "----------------------------------------------------------------------------------------------")
+
+    result
   end
 end
