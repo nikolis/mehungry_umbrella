@@ -13,7 +13,7 @@ defmodule Mehungry.Food.NutrientCalculation do
       %{flat_nutrients: [], structured_nutrients: [], total_calories: 0, ingredient_count: 0}
     else
       ingredients = map_ingredients_to_structured_form(recipe_ingredients)
-      {6, Map.get(calculate_nutrition_for_recipe(ingredients), :structured_nutrients)}
+      {8, Map.get(calculate_nutrition_for_recipe(ingredients), :structured_nutrients)}
     end
   end
 
@@ -158,20 +158,11 @@ defmodule Mehungry.Food.NutrientCalculation do
       "Energy" => 1,
       "Protein" => 2,
       "Total Fat" => 3,
-      "Saturated Fat" => 4,
-      "Monounsaturated Fat" => 5,
-      "Polyunsaturated Fat" => 6,
-      "Trans Fat" => 7,
-      "Cholesterol" => 8,
-      "Carbohydrates" => 9,
-      "Fiber" => 10,
-      "Total Sugars" => 11,
-      "Sodium" => 12,
-      "Potassium" => 13,
-      "Calcium" => 14,
-      "Iron" => 15,
-      "Vitamins" => 16,
-      "Minerals" => 17
+      "Vitamins" => 4,
+      "carbohydrates" => 5,
+      "Fiber" => 6,
+      "Total Sugars" => 7,
+      "Minerals" => 8
     }
     
     nutrient_map
