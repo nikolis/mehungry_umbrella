@@ -493,20 +493,21 @@ defmodule MehungryWeb.RecipeComponents do
     }
 
     ~H"""
- <div class="my-4">
-      <MehungryWeb.NutritionAccordion.nutrition_accordion 
+    <div class="my-4">
+      <MehungryWeb.NutritionAccordion.nutrition_accordion
         nutrients={@nutrients}
         title="Nutrition Facts"
         max_height="600px"
         show_title={true}
       />
-    </div>    
+    </div>
     """
   end
+
   def get_value(map, key) do
     get_value_specific(map, key) || get_value_specific(map, Atom.to_string(key))
   end
-  
+
   def get_value_specific(map, key) when is_atom(key), do: map[key] || map[to_string(key)]
   def get_value_specific(map, key) when is_binary(key), do: map[key] || map[String.to_atom(key)]
 
@@ -686,14 +687,19 @@ defmodule MehungryWeb.RecipeComponents do
   end
 
   defp has_children?(nutrient) do
-  result =
-    case nutrient do
-      %{"children" => children} when is_list(children) and length(children) > 0 -> true
-      %{children: children} when is_list(children) and length(children) > 0 -> true
-      _ -> false
-    end
+    result =
+      case nutrient do
+        %{"children" => children} when is_list(children) and length(children) > 0 -> true
+        %{children: children} when is_list(children) and length(children) > 0 -> true
+        _ -> false
+      end
+
     IO.inspect(nutrient, label: "Nutrient")
-    IO.inspect(result, label: "----------------------------------------------------------------------------------------------")
+
+    IO.inspect(result,
+      label:
+        "----------------------------------------------------------------------------------------------"
+    )
 
     result
   end
