@@ -6,7 +6,7 @@ defmodule Mehungry.Food.RecipeUtils do
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
 
-    @doc """
+  @doc """
   Sort nutrients to have on top entries that are relevant to most people
   """
   def sort_nutrients_from_db(nutrients) do
@@ -26,6 +26,7 @@ defmodule Mehungry.Food.RecipeUtils do
 
   def get_nutrients(recipe) do
     recipe_nutrients = calculate_recipe_nutrition_value(recipe)
+
     if is_nil(recipe_nutrients) do
       {recipe_nutrients, []}
     else
@@ -35,23 +36,25 @@ defmodule Mehungry.Food.RecipeUtils do
         end)
 
       # Convert to the format expected by NutrientMerger (atom keys already)
-      rest = Enum.map(rest, fn nutrient ->
-        %{
-          name: nutrient.name,
-          amount: nutrient.amount,
-          measurement_unit: nutrient.measurement_unit
-        }
-      end)
+      rest =
+        Enum.map(rest, fn nutrient ->
+          %{
+            name: nutrient.name,
+            amount: nutrient.amount,
+            measurement_unit: nutrient.measurement_unit
+          }
+        end)
 
       # Merge using NutrientMerger - returns list with atom keys
       merged_rest = Mehungry.Food.NutrientMerger.merge_flat_list(rest)
-      
+
       {nuts_pre, rest_after_pre} = get_nutrients_pre(merged_rest)
 
       nutrients = nuts_pre ++ rest_after_pre
       nutrients = Enum.filter(nutrients, fn x -> !is_nil(x) end)
 
-      energy = Enum.find(rest_after_pre, fn x -> String.contains?(to_string(x.name), "Energy") end)
+      energy =
+        Enum.find(rest_after_pre, fn x -> String.contains?(to_string(x.name), "Energy") end)
 
       energy = convert_energy_to_calories_if_needed(energy)
       {imp, rest_sorted} = sort_nutrients(nutrients, energy)
@@ -107,8 +110,8 @@ defmodule Mehungry.Food.RecipeUtils do
   """
   def get_nutrient_category(nutrients, category_name, category_sum_name) do
     {category, rest} =
-      Enum.split_with(nutrients, fn x -> 
-        x && x.name && String.contains?(to_string(x.name), category_name) 
+      Enum.split_with(nutrients, fn x ->
+        x && x.name && String.contains?(to_string(x.name), category_name)
       end)
 
     if length(category) > 0 do
@@ -134,6 +137,7 @@ defmodule Mehungry.Food.RecipeUtils do
           measurement_unit: category_first.measurement_unit,
           children: category
         }
+
         {aggregated, rest_after_total}
       end
     else

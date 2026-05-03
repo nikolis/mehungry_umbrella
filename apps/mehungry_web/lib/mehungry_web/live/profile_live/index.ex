@@ -138,7 +138,7 @@ defmodule MehungryWeb.ProfileLive.Index do
         ~p"/profile"
       end
 
-    #{primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
+    # {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
 
     {current_user_profile, current_user_follows, current_user_recipes} =
       Accounts.get_user_essentials(socket.assigns.current_user)

@@ -49,9 +49,9 @@ defmodule MehungryWeb.IngredientComponent do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <div class="grid grid-cols-9 sm:grid-cols-9 gap-2 md:gap-6 display-none">
-        <div class=" col-span-3 sm:col-span-4 h-full">
+    <div class="py-2">
+      <div class="grid grid-cols-10 sm:grid-cols-9 gap-2 md:gap-6 display-none">
+        <div class=" col-span-4 sm:col-span-3 h-full">
           <.live_component
             module={MehungryWeb.SelectComponentDeep}
             form={@ingredient_form}
@@ -61,17 +61,16 @@ defmodule MehungryWeb.IngredientComponent do
             label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
             placeholder="Select an ingredient..."
             modal_title="Search Ingredients"
-            phx-target={@myself}
             parent_id={@id}
             select_function={fn x -> send(self(), {:select_id, x, @id}) end}
             id={"ingredient_search_component" <> Integer.to_string(@ingredient_form.index)}
           />
         </div>
-        <div class="field input-form col-span-2 ">
+        <div class=" col-span-2 my-auto">
           <.input field={@ingredient_form[:quantity]} type="number" />
         </div>
 
-        <div class="col-span-3">
+        <div class="col-span-3 my-auto">
           <.live_component
             module={MehungryWeb.SelectComponent}
             items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
@@ -82,7 +81,7 @@ defmodule MehungryWeb.IngredientComponent do
         </div>
 
         <button
-          class="text-4xl font-bold "
+          class="text-3xl font-bold col-span-1 "
           name="recipe[_action]"
           value={"remove_ingredient:#{@ingredient_form.index}"}
         >

@@ -285,10 +285,10 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         ]}
       >
         <div
-          class="w-full mt-2 border-t-2 border-greyfriend2 day_of_week relative "
+          class="w-full border-t-2 border-greyfriend2 day_of_week relative "
           id={"dat_" <> Date.to_string(day)}
         >
-          <div class="p-2 mt-2">
+          <div class="">
             <%= for meal <- Enum.filter(@user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end) do %>
               <div class="py-6 rounded-lg">
                 <%= for re_u_m <- meal.recipe_user_meals do %>
@@ -350,22 +350,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             </div>
           </div>
 
+          <div class="flex flex-row ">
           <span
-            phx-target={@myself}
-            phx-click="pick-date"
-            phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
-            class="absolute  text-lg top-4   left-12 font-semibold cursor-pointer "
-          >
-            {Calendar.strftime(day, "%A")}
-          </span>
-
-          <span
-            class="absolute top-4   left-4 font-semibold"
+            class=" font-semibold"
             phx-target={@myself}
             phx-click="pick-date"
             phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
           >
-            <div class="flex">
+            <div class=" w-fit m-auto">
               <span class="">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -384,6 +376,17 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
               </span>
             </div>
           </span>
+          <span
+            phx-target={@myself}
+            phx-click="pick-date"
+            phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
+            class="text-lg font-semibold cursor-pointer "
+          >
+            {Calendar.strftime(day, "%A")}
+          </span>
+
+
+        </div>
           <span
             class="absolute top-4  right-4  font-semibold"
             phx-click={

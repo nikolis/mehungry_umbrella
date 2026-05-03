@@ -34,7 +34,8 @@ defmodule MehungryWeb.RecipeFormComponent do
             <.input
               required
               field={@f[:cooking_time_lower_limit]}
-              type="text"
+              type="number_subscript"
+              subscript="mins"
               label="Cooking time"
               class="sm:w-full max-h-12 min-w-20"
               style="flex-shrink: 2;"
@@ -43,6 +44,8 @@ defmodule MehungryWeb.RecipeFormComponent do
               required
               field={@f[:preperation_time_lower_limit]}
               type="text"
+              type="number_subscript"
+              subscript="mins"
               label="Prep Time"
               class="sm:w-full max-h-12 "
             />
@@ -121,7 +124,7 @@ defmodule MehungryWeb.RecipeFormComponent do
       <div class="basic_2_col_grid_cont md:pb-32 " style="">
         <div class="overflowx-hidden  relative content_container hidden md:block" id="content-1">
           <h3 class="text-center">Ingredients</h3>
-          <div class="md:min-h-96   overflow-x-hidden noscrollbar	pt-4  step_ing_cont">
+          <div class="md:min-h-96  sm:max-h-65 overflow-x-hidden noscrollbar	pt-4  step_ing_cont mb-14">
             <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
               <.live_component
                 module={MehungryWeb.IngredientComponent}
@@ -136,7 +139,7 @@ defmodule MehungryWeb.RecipeFormComponent do
             <button
               name="recipe[_action]"
               value="add_ingredient"
-              class="p-4 font-semibold text-md absolute right-6 text-xl"
+              class="p-4 font-semibold text-md fixed sm:absolute bottom-20 right-6 text-xl bg-white"
             >
               + Add
             </button>

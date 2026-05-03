@@ -74,7 +74,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       Cachex.put(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}, recipe_params)
     end
 
-    {:noreply, assign(socket, :changeset, changeset)}
+    {:noreply, assign(socket, :f, to_form(changeset))}
   end
 
   @url_regex ~r/^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w\-._~:\/?#[\]@!$&'()*+,;=]*)?$/

@@ -56,6 +56,154 @@ defmodule MehungryWeb.SvgComponents do
     """
   end
 
+  def get_empty(assigns) do
+    ~H"""
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+      <!-- Empty State: Magnifying Glass + Fork -->
+      <circle cx="85" cy="85" r="50" fill="none" stroke="#334155" stroke-width="4" />
+      <line
+        x1="120"
+        y1="120"
+        x2="150"
+        y2="150"
+        stroke="#334155"
+        stroke-width="4"
+        stroke-linecap="round"
+      />
+      
+    <!-- Plate -->
+      <ellipse cx="120" cy="140" rx="45" ry="12" fill="#1E293B" stroke="#334155" stroke-width="2" />
+      <ellipse cx="120" cy="138" rx="35" ry="8" fill="#0F172A" />
+      
+    <!-- Fork -->
+      <line x1="100" y1="110" x2="100" y2="145" stroke="#475569" stroke-width="2" />
+      <line x1="92" y1="110" x2="92" y2="105" stroke="#475569" stroke-width="2" />
+      <line x1="96" y1="108" x2="96" y2="103" stroke="#475569" stroke-width="2" />
+      <line x1="100" y1="107" x2="100" y2="102" stroke="#475569" stroke-width="2" />
+      <line x1="104" y1="108" x2="104" y2="103" stroke="#475569" stroke-width="2" />
+      <line x1="108" y1="110" x2="108" y2="105" stroke="#475569" stroke-width="2" />
+      
+    <!-- Question Mark -->
+      <text
+        x="135"
+        y="80"
+        font-family="system-ui"
+        font-size="28"
+        font-weight="bold"
+        fill="#F97316"
+        text-anchor="middle"
+      >
+        ?
+      </text>
+    </svg>
+    """
+  end
+
+  @doc """
+  Compact logo for collapsed header state
+  """
+  def logo_compact(assigns) do
+    ~H"""
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" width="120" height="30" class="">
+      <!-- Simplified cubes for compact view -->
+      <polygon points="25,35 35,28 45,35 45,45 35,52 25,45" fill="#14B8A6" opacity="0.9" />
+      <polygon points="35,20 45,13 55,20 55,30 45,37 35,30" fill="#5EEAD4" opacity="0.9" />
+      <polygon points="45,13 55,6 65,13 65,23 55,30 45,23" fill="#99F6E4" opacity="0.9" />
+      
+    <!-- Compact text -->
+      <text
+        x="75"
+        y="30"
+        font-family="'Inter', sans-serif"
+        font-size="20"
+        font-weight="800"
+        fill="#F8FAFC"
+        letter-spacing="1"
+      >
+        M3<tspan fill="#F97316">HUNGRY</tspan>
+      </text>
+    </svg>
+    """
+  end
+
+  def get_logo(assigns) do
+    ~H"""
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 120">
+      <defs>
+        <linearGradient id="topCubeLight" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#14B8A6" />
+          <stop offset="100%" stop-color="#0D9488" />
+        </linearGradient>
+        <linearGradient id="middleCubeLight" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0D9488" />
+          <stop offset="100%" stop-color="#0F766E" />
+        </linearGradient>
+        <linearGradient id="bottomCubeLight" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0F766E" />
+          <stop offset="100%" stop-color="#0A5A54" />
+        </linearGradient>
+      </defs>
+      
+    <!-- Bottom Cube -->
+      <polygon points="60,95 80,82 100,95 100,115 80,128 60,115" fill="url(#bottomCubeLight)" />
+      <polygon points="80,82 100,95 80,108 60,95" fill="#0A5A54" opacity="0.7" />
+      
+    <!-- Middle Cube -->
+      <polygon points="80,65 100,52 120,65 120,85 100,98 80,85" fill="url(#middleCubeLight)" />
+      <polygon points="100,52 120,65 100,78 80,65" fill="#0F766E" opacity="0.7" />
+      
+    <!-- Top Cube -->
+      <polygon points="100,38 120,25 140,38 140,58 120,71 100,58" fill="url(#topCubeLight)" />
+      <polygon points="120,25 140,38 120,51 100,38" fill="#0D9488" opacity="0.8" />
+      
+    <!-- Lines -->
+      <line
+        x1="100"
+        y1="58"
+        x2="100"
+        y2="78"
+        stroke="#14B8A6"
+        stroke-width="2"
+        stroke-dasharray="3,3"
+      />
+      <line x1="80" y1="65" x2="80" y2="82" stroke="#14B8A6" stroke-width="2" stroke-dasharray="3,3" />
+      <line
+        x1="120"
+        y1="52"
+        x2="120"
+        y2="65"
+        stroke="#14B8A6"
+        stroke-width="2"
+        stroke-dasharray="3,3"
+      />
+      
+    <!-- Text for light background - DARK -->
+      <text
+        x="160"
+        y="65"
+        font-family="'Inter', system-ui, -apple-system, sans-serif"
+        font-size="38"
+        font-weight="800"
+        fill="#0F172A"
+        letter-spacing="2"
+      >
+        M3<tspan fill="#EA580C">HUNGRY</tspan>
+      </text>
+
+      <text
+        x="160"
+        y="88"
+        font-family="'Inter', system-ui, -apple-system, sans-serif"
+        font-size="11"
+        fill="#64748B"
+        letter-spacing="3"
+      >
+        ANALYZE • SHARE • CONNECT
+      </text>
+    </svg>
+    """
+  end
+
   def get_default_recipe_image(assigns) do
     ~H"""
     <svg

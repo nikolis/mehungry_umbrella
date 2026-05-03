@@ -371,7 +371,7 @@ defmodule MehungryWeb.SelectComponent do
       phx-value-id={@id}
       phx-target={@myself}
       tabindex="0"
-      class="relative h-full w-fit my-2 mx-auto px-2 py-1.5 border rounded-md cursor-pointer hover:bg-gray-100 after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2 focus:ring-amber-300 ring-inset transition-all"
+      class="relative h-full w-fit my-2 mx-auto px-2 py-1.5 border  border-greyfriend2 rounded-md cursor-pointer hover:bg-gray-100 after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2  ring-inset transition-all"
     >
       {@name}
     </div>
@@ -386,9 +386,9 @@ defmodule MehungryWeb.SelectComponent do
         phx-value-id={@id}
         phx-target={@myself}
         tabindex="0"
-        class="border border-black border-2 h-full text-left border-greyfriend2 cursor-pointer rounded-lg "
+        class="border border-black border-2  h-full text-left border-greyfriend2 cursor-pointer rounded-lg "
       >
-        <div class="h-full flex flex-col  justify-center p-4 ">
+        <div class="h-full flex flex-col  justify-center p-2 ">
           <div class="self-center text-ellipsis text-center overflow-hidden px-1 leading-4">
             {@name}
           </div>
@@ -416,7 +416,7 @@ defmodule MehungryWeb.SelectComponent do
           ]
         }
         type="text"
-        class="h-full test flex-grow p-4  outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full relative"
+        class="h-full test flex-grow   outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full relative"
       />
       <.arrow_down_svg myself={@myself} selected_items_length={length(@selected_items)} mode={@mode} />
     </div>
@@ -436,7 +436,7 @@ defmodule MehungryWeb.SelectComponent do
           ]
         }
         type="text"
-        class="h-full test flex-grow p-4  outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full relative"
+        class="h-full test flex-grow   outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full relative"
       />
       <.arrow_down_svg myself={@myself} selected_items_length={length(@selected_items)} mode={@mode} />
     </div>
@@ -500,7 +500,8 @@ defmodule MehungryWeb.SelectComponent do
       height="24"
       stroke-width="0"
       fill="#ccc"
-      class="absolute right-2 bottom-1 -translate-y-1/2 cursor-pointer focus:outline-none z-50"
+      class="absolute right-2  -translate-y-1/2 cursor-pointer focus:outline-none z-50"
+      style=" top: 50%; transform: translateY(-50%);"
       tabindex="-1"
     >
       <path d="M12 17.414 3.293 8.707l1.414-1.414L12 14.586l7.293-7.293 1.414 1.414L12 17.414z" />

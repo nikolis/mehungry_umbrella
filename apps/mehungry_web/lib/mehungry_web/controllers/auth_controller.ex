@@ -39,35 +39,37 @@ defmodule MehungryWeb.AuthController do
     |> put_flash(:info, "Successfully connected with Instagram")
     |> redirect(to: "/profile")
   end
-  
+
   def callback(%{assigns: %{ueberauth_auth: %{provider: :facebook} = auth}} = conn, _params) do
-  case Accounts.find_or_create(auth) do
-    {:ok, user} ->
-      conn =
+    case Accounts.find_or_create(auth) do
+      {:ok, user} ->
+        conn =
+          conn
+          |> UserAuth.log_in_user(user, %{})
+          |> put_flash(:info, "Successfully connected with Facebook")
+          |> redirect(to: "/profile")
+
+        token = auth.extra.raw_info.token.access_token
+
+        Task.start(fn ->
+          Accounts.put_user_token(user, token, "facebook")
+
+          Mehungry.Api.Facebook.get_user_pages(
+            user,
+            token,
+            auth.extra.raw_info.user["id"]
+          )
+        end)
+
         conn
-        |> UserAuth.log_in_user(user, %{})
-        |> put_flash(:info, "Successfully connected with Facebook")
-        |> redirect(to: "/profile")
 
-      token = auth.extra.raw_info.token.access_token
-
-      Task.start(fn ->
-        Accounts.put_user_token(user, token, "facebook")
-        Mehungry.Api.Facebook.get_user_pages(
-          user,
-          token,
-          auth.extra.raw_info.user["id"]
-        )
-      end)
-
-      conn
-
-    {:error, reason} ->
-      conn
-      |> put_flash(:error, reason)
-      |> redirect(to: "/")
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, reason)
+        |> redirect(to: "/")
+    end
   end
-  end
+
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, _params) do
     case Accounts.find_or_create(auth) do
       {:ok, user} ->

@@ -1170,7 +1170,7 @@ defmodule MehungryWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class="input-form w-full h-full">
+    <div phx-feedback-for={@name} class="input-form w-full ">
       <input
         type={@type}
         name={@name}
@@ -1179,7 +1179,8 @@ defmodule MehungryWeb.CoreComponents do
         class={
           [Map.get(assigns.rest, :class, "")] ++
             [
-              "rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	h-full",
+              "rounded-lg border-greyfriend2  focus:border-greyfriend2 focus:ring-complementarym focus:ring-2	h-full border-3",
+
               "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym",
               @errors == [] && "",
               @errors != [] && " ring-rose-400  focus:ring-rose-400"
