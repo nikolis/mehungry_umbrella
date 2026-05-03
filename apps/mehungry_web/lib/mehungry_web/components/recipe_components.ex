@@ -493,25 +493,14 @@ defmodule MehungryWeb.RecipeComponents do
     }
 
     ~H"""
-    <div
-      id={"accordion-#{@id}"}
-      class={"accordion overflow-auto font-normal #{@class}"}
-      style="max-height: 300px;"
-      phx-hook="AccordionHook"
-    >
-      <%= for {_key, nutrient} <- sort_nutrients(@nutrients) do %>
-        <%= if !is_nil(nutrient) do %>
-          <.render_nutrient_panel
-            nutrient={nutrient}
-            servings={@servings}
-            is_primary={is_primary?(nutrient, sort_nutrients(@nutrients), @primary_size)}
-            index={get_nutrient_index(nutrient, sort_nutrients(@nutrients))}
-            accordion_id={@id}
-            has_children={has_children?(nutrient)}
-          />
-        <% end %>
-      <% end %>
-    </div>
+ <div class="container mx-auto p-4 max-w-2xl">
+      <MehungryWeb.NutritionAccordion.nutrition_accordion 
+        nutrients={@nutrients}
+        title="Nutrition Facts"
+        max_height="600px"
+        show_title={true}
+      />
+    </div>    
     """
   end
   def get_value(map, key) do
