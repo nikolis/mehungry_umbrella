@@ -43,12 +43,10 @@ defmodule MehungryWeb.NutritionAccordion do
             "Protein" -> 2
             "Total Fat" -> 3
             "Carbohydrates" -> 4
-            "Fiber" -> 5
-            "Total Sugars" -> 6
-            "Sodium" -> 7
-            "Potassium" -> 8
-            "Calcium" -> 9
-            "Iron" -> 10
+            "Vitamins" -> 5
+            "Fiber" -> 6
+            "Total Sugars" -> 7
+            "Minerals" -> 8
             _ -> 99
           end
           {priority, name}
@@ -57,15 +55,10 @@ defmodule MehungryWeb.NutritionAccordion do
     assigns = assign(assigns, nutrient_list: nutrient_list)
     
     ~H"""
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <%= if @show_title do %>
-        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
-          <h3 class="text-lg font-semibold text-gray-900"><%= @title %></h3>
-        </div>
-      <% end %>
+    <div class="w-full max-w-full overflow-hidden bg-white rounded-xl shadow-sm border border-gray-200 m-auto" style="max-height: 300px; max-width: 100%;">
       
-      <!-- Scrollable container with custom scrollbar -->
-      <div class="overflow-y-auto" style={"max-height: #{@max_height}"}>
+      <!-- Scrollable container with proper overflow containment -->
+      <div class="w-fit overflow-y-auto overflow-x-hidden m-auto " style={"max-height: 300px;"}>
         <%= if Enum.empty?(@nutrient_list) do %>
           <div class="text-center py-8 text-gray-500 text-sm">
             No nutrition data available

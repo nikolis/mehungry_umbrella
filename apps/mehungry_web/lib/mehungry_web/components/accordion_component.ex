@@ -34,7 +34,7 @@ defmodule MehungryWeb.AccordionComponent do
 
   def accordion(assigns) do
     ~H"""
-    <div class="w-full">
+    <div class="w-full overflow-hidden">
       <%= for {item, index} <- Enum.with_index(@items) do %>
         <.accordion_item 
           item={item} 
@@ -81,13 +81,13 @@ defmodule MehungryWeb.AccordionComponent do
       _ -> "Unknown"
     end
     
-    # Determine indentation based on level (Tailwind classes)
+    # Determine indentation based on level (Tailwind classes) - using percentage for better containment
     indent_class = case assigns.level do
-      1 -> ""  # No indent for level 1
-      2 -> "ml-4"
-      3 -> "ml-8"
-      4 -> "ml-12"
-      _ -> "ml-4"
+      1 -> "pl-4 pr-4"
+      2 -> "pl-8 pr-4"
+      3 -> "pl-12 pr-4"
+      4 -> "pl-16 pr-4"
+      _ -> "pl-4 pr-4"
     end
     
     # Background color based on level
@@ -100,7 +100,7 @@ defmodule MehungryWeb.AccordionComponent do
     
     # Left border for nested items
     border_class = if assigns.level > 1 do
-      "border-l-2 border-gray-200"
+      "border-l-2 border-gray-200 ml-4"
     else
       ""
     end
@@ -118,7 +118,7 @@ defmodule MehungryWeb.AccordionComponent do
     )
     
     ~H"""
-    <div class={"border-b border-gray-100 #{@indent_class} #{@border_class}"}>
+    <div class={["border-b border-gray-100 w-full overflow-hidden", @border_class]}>
       <%= if @has_children do %>
         <!-- Hidden checkbox for the accordion hack -->
         <input 
@@ -131,14 +131,15 @@ defmodule MehungryWeb.AccordionComponent do
         <label 
           for={@item_id} 
           class={[
-            "flex justify-between items-center w-full py-3 px-4 cursor-pointer transition-colors",
+            "flex justify-between items-center w-full py-3 cursor-pointer transition-colors",
+            @indent_class,
             @bg_class,
             "hover:bg-gray-100"
           ]}
         >
-          <div class="flex-1 text-left">
+          <div class="flex-1 text-left min-w-0">
             <div class={[
-              "text-gray-900",
+              "text-gray-900 truncate",
               @level == 1 && "font-semibold text-base",
               @level == 2 && "font-medium text-sm",
               @level >= 3 && "font-normal text-sm"
@@ -150,7 +151,7 @@ defmodule MehungryWeb.AccordionComponent do
             </div>
           </div>
           <svg class={[
-            "w-5 h-5 text-gray-400 transition-transform duration-200 flex-shrink-0",
+            "w-5 h-5 text-gray-400 transition-transform duration-200 flex-shrink-0 ml-2",
             "peer-checked:rotate-180"
           ]} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -158,8 +159,8 @@ defmodule MehungryWeb.AccordionComponent do
         </label>
         
         <!-- Content that expands/collapses based on checkbox state -->
-        <div class="hidden peer-checked:block bg-gray-50 border-t border-gray-100">
-          <div class="py-1">
+        <div class="hidden peer-checked:block bg-gray-50 border-t border-gray-100 w-full overflow-hidden">
+          <div class="py-1 w-full overflow-hidden">
             <.accordion 
               items={@children_list} 
               level={@level + 1}
@@ -170,12 +171,13 @@ defmodule MehungryWeb.AccordionComponent do
       <% else %>
         <!-- No children - just display the item -->
         <div class={[
-          "flex justify-between items-center w-full py-3 px-4",
+          "flex justify-between items-center w-full py-3",
+          @indent_class,
           @bg_class
         ]}>
-          <div class="flex-1 text-left">
+          <div class="flex-1 text-left min-w-0">
             <div class={[
-              "text-gray-900",
+              "text-gray-900 truncate",
               @level == 1 && "font-semibold text-base",
               @level == 2 && "font-medium text-sm",
               @level >= 3 && "font-normal text-sm"
