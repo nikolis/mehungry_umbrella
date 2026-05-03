@@ -19,7 +19,7 @@ defmodule Mehungry.Food.IngredientNutrient do
   @doc false
   def changeset(measurement_unit, attrs) do
     measurement_unit
-    |> cast(attrs, [:median, :amount, :data_points, :type_, :ingredient_id, :nutrient_id])
-    |> validate_required([:amount, :ingredient_id, :nutrient_id])
+    |> cast(attrs, [:median, :amount, :data_points, :type_, :nutrient_id, :ingredient_id])
+    |> validate_required([:amount, :nutrient_id])
   end
 end

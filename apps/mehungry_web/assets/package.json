@@ -14,6 +14,9 @@
     "jquery": "^3.7.1",
     "select2": "^4.1.0-rc.0",
     "selectize": "^0.12.6",
-    "tui-date-picker": "^4.3.3"
+    "tui-date-picker": "^4.3.3",
+    "vega": "^6.2.0",
+    "vega-embed": "^7.1.0",
+    "vega-lite": "^6.4.3"
   }
 }

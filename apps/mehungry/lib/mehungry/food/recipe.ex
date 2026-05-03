@@ -14,8 +14,8 @@ defmodule Mehungry.Food.Recipe do
     field :cooking_time_upper_limit, :integer
     field :cousine, :string
     field :description, :string
-    field :image_url, :string
     field :list_image_url, :string
+    field :image_url, :string
     field :detail_image_url, :string
     field :recipe_image_remote, :string
     field :original_url, :string
@@ -62,7 +62,7 @@ defmodule Mehungry.Food.Recipe do
                 x
 
               false ->
-                %{hashtag: %{id: existing.id}}
+                %{"hashtag_id" => existing.id}
             end
           end)
     }
@@ -85,7 +85,6 @@ defmodule Mehungry.Food.Recipe do
       :cousine,
       :title,
       :author,
-      :original_url,
       :preperation_time_upper_limit,
       :preperation_time_lower_limit,
       :cooking_time_upper_limit,
@@ -93,6 +92,8 @@ defmodule Mehungry.Food.Recipe do
       :description,
       :nutrients,
       :image_url,
+      :original_url,
+      :detail_image_url,
       :user_id,
       :language_name,
       :difficulty
@@ -111,5 +112,6 @@ defmodule Mehungry.Food.Recipe do
     |> cast_embed(:steps, [:required_message])
     |> cast_assoc(:recipe_ingredients, required: true)
     |> cast_assoc(:recipe_hashtags, required: false)
+    |> IO.inspect(label: "AT THEN END")
   end
 end

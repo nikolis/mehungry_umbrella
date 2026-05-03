@@ -5,7 +5,8 @@ defmodule MehungryWeb.HomeLive.Index do
 
   import MehungryWeb.RecipeComponents
 
-  # use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
+  use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
+
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
@@ -29,20 +30,18 @@ defmodule MehungryWeb.HomeLive.Index do
 
     posts = Enum.filter(posts, fn x -> !is_nil(x) end)
     {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
+    current_user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
     Enum.each(posts, fn post ->
       Posts.subscribe_to_post(%{post_id: post.id})
     end)
-
-    IO.inspect("HOme live")
-    IO.inspect(System.get_env())
 
     {:ok,
      socket
      |> assign(:user, user)
      |> assign(:posts, posts)
      |> assign(:user_profile, user_profile)
-     |> assign(:user_follows, user_follows)
+     |> assign(:current_user_follows, current_user_follows)
      |> assign(:current_user_recipes, user_recipes)
      |> assign(:search_changeset, nil)
      |> assign(:query_string, "")
@@ -123,7 +122,10 @@ defmodule MehungryWeb.HomeLive.Index do
     maybe_track_user(%{}, socket)
 
     recipe = Food.get_recipe!(id)
-    Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
+
+    if !is_nil(recipe) do
+      Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
+    end
 
     {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.user
@@ -176,8 +178,6 @@ defmodule MehungryWeb.HomeLive.Index do
         {name, status, body["error"]["message"]}
       end)
 
-    IO.inspect(results, label: "Result")
-
     send_update(MehungryWeb.SocialMediaPostComponent, %{
       state: :result,
       results: results,
@@ -208,74 +208,4 @@ defmodule MehungryWeb.HomeLive.Index do
 
     {:noreply, socket}
   end
-
-  def toggle_user_saved_posts(socket, post_id) do
-    case is_nil(socket.assigns.user) do
-      true ->
-        socket = assign(socket, :must_be_loged_in, 1)
-        {:noreply, socket}
-
-      false ->
-        case Enum.any?(socket.assigns.user_posts, fn x -> x == post_id end) do
-          true ->
-            Users.remove_user_saved_post(socket.assigns.user.id, post_id)
-
-          false ->
-            Users.save_user_post(socket.assigns.user.id, post_id)
-        end
-    end
-  end
-
-  """
-  def get_style(item_list, user, get_attr) do
-    has =
-      case is_nil(user) or is_nil(item_list) or Enum.empty?(item_list) do
-        true ->
-          false
-
-        false ->
-          Enum.any?(item_list, fn x -> get_attr.(x) == user.id end)
-      end
-
-    case has do
-      true ->
-        @color_fill
-
-      false ->
-        "#FFFFFF"
-    end
-  end
-
-  def get_style(item_list, user_id) do
-    has = Enum.any?(item_list, fn x -> x.user_id == user_id end)
-
-    case has do
-      true ->
-        @color_fill
-
-      false ->
-        "#FFFFFF"
-    end
-  end
-
-  def get_positive_votes(votes) do
-    Enum.reduce(votes, 0, fn x, acc ->
-      if x.positive do
-        acc + 1
-      end
-    end)
-  end
-
-  def get_style2(item_list, user_id, positive) do
-    has = Enum.any?(item_list, fn x -> x.user_id == user_id and x.positive == positive end)
-
-    case has do
-      true ->
-        @color_fill
-
-      false ->
-        "#FFFFFF"
-    end
-  end
-  """
 end

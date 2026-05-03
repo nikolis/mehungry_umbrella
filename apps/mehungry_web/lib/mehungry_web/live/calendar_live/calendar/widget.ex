@@ -3,6 +3,82 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
   alias MehungryWeb.CalendarLive.Calendar.Utils
   alias MehungryWeb.SvgComponents
+  alias VegaLite, as: Vl
+
+  alias Mehungry.NutrientUtils, as: Nu
+
+  def get_chart(user_meals, day) do
+    meals = Enum.filter(user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end)
+
+    if(meals == []) do
+      nil
+    else
+      total_nutrients = Nu.summarize_meals_nutrients(meals)
+      nutrients_sorted = Mehungry.Food.RecipeUtils.sort_nutrients_from_db(total_nutrients)
+
+      assigns = %{recipe: %{nutrients: total_nutrients, id: "test_id", primary_size: 5}}
+
+      data =
+        Enum.slice(nutrients_sorted, 0, 5)
+        |> Enum.map(fn {{label, %{"amount" => amount}}, _} ->
+          %{"category" => label, "value" => amount}
+        end)
+        |> Enum.filter(fn %{"category" => label, "value" => amount} ->
+          !String.contains?(label, "Energy")
+        end)
+        |> Enum.map(fn %{"category" => c, "value" => v} ->
+          cleaned =
+            c
+            |> String.replace("\n", " ")
+            |> String.replace(~r/\s+/, " ")
+            |> String.trim()
+
+          %{category: cleaned, value: v}
+        end)
+
+      spec =
+        spec =
+        Vl.new(width: 400, height: 400)
+        |> Vl.data_from_values(data)
+        |> Vl.encode_field(:theta, "value", type: :quantitative)
+        |> Vl.encode_field(:color, "category", type: :nominal)
+        |> Vl.encode(:tooltip, [
+          [field: "category", type: :nominal],
+          [field: "value", type: :quantitative]
+        ])
+        |> Vl.to_spec()
+
+      spec =
+        put_in(spec, ["mark"], %{
+          "type" => "arc",
+          "innerRadius" => 40,
+          "radius" => 160
+        })
+
+      assigns = Map.put(assigns, :spec, spec)
+      assigns = Map.put(assigns, :data, data)
+
+      ~H"""
+      <div class="m-auto flex flex-wrap gap-8 ">
+        <h3 class="m-auto">Overview</h3>
+        <div class=" m-auto pb-4">
+          {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
+        </div>
+
+        <div class="m-auto">
+          <!-- <div class="" id="chart" phx-hook="VegaLite" data-spec={Jason.encode!(@spec)}></div>-->
+          <.live_component
+            module={MehungryWeb.CalendarLive.Calendar.PieChart}
+            id={"nutrition-chart23" <> Date.to_string(day)}
+            data={@data}
+            origin_id={"nutrition-chart23" <> Date.to_string(day)}
+            size="20rem"
+          />
+        </div>
+      </div>
+      """
+    end
+  end
 
   @day_meals ["breakfast", "elevenses", "lunch", "after lunch", "dinner"]
   @impl true
@@ -16,9 +92,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         <div class="h-full" id="calendar_widget">
           <div class="w-full relative">
             <.button_add_meal current_date={@current_date} myself={@myself} />
-            <.button_settings myself={@myself} calendar_view={@calendar_view} />
 
-            <div class="flex px-4 py-2 gap-4 bg-greyfriend1 justify-center border-2 rounded-full border-greyfriend3 	m-auto w-fit">
+            <div class="flex px-2 py-2 gap-2 bg-greyfriend1 justify-center border-2 rounded-full border-greyfriend3 	m-auto w-fit">
               <button
                 type="button"
                 class="w-fit text-complementary font-medium"
@@ -63,42 +138,140 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             </div>
             <!-- Flex Container closed -->
           </div>
-          <%= if @calendar_view == "day_view" do %>
-            <.table_day_calendar
-              week_rows={@week_rows}
-              user_meals={@user_meals}
-              day_meals={@day_meals}
-              current_date={@current_date}
-              selected_date={@selected_date}
-              myself={@myself}
-            />
-          <% else %>
-            <.table_week_calendar
-              week_rows={@week_rows}
-              first={@first}
-              last={@last}
-              user_meals={@user_meals}
-              day_meals={@day_meals}
-              current_date={@current_date}
-              selected_date={@selected_date}
-              myself={@myself}
-            />
-          <% end %>
+          <.table_week_calendar
+            week_rows={@week_rows}
+            first={@first}
+            last={@last}
+            user_meals={@user_meals}
+            day_meals={@day_meals}
+            current_date={@current_date}
+            selected_date={@selected_date}
+            myself={@myself}
+          />
         </div>
         """
     end
   end
 
+  @impl true
+  def update(assigns, socket) do
+    current_date =
+      case assigns.particular_date do
+        nil ->
+          Utils.calculate_initial_date(Date.utc_today(), assigns.device_width)
+
+        date ->
+          {:ok, date} = Date.from_iso8601(date)
+          date
+      end
+
+    {first, last, rows} = get_full_week(current_date, assigns.user_meals, 1500)
+
+    assigns = [
+      current_date: current_date,
+      selected_date: nil,
+      user_meals: assigns.user_meals,
+      selected_meal: nil,
+      week_rows: rows,
+      last: last,
+      first: first,
+      calendar_view: assigns.calendar_view,
+      day_meals: @day_meals,
+      device_width: assigns.device_width
+    ]
+
+    {:ok,
+     socket
+     |> assign(assigns)}
+  end
+
+  ## ------------------------------------ Utility Functions  ---------------------------------------------------------------
+
+  defp get_full_week(current_date, _user_meals, _device_width) do
+    days = 6
+    first = Date.beginning_of_week(current_date)
+
+    last = Date.add(first, days)
+
+    week_rows =
+      Date.range(first, last)
+      |> Enum.map(& &1)
+      |> Enum.chunk_every(7)
+
+    {first, last, week_rows}
+  end
+
+  defp get_week_rows(current_date, _user_meals, _device_width) do
+    week_rows =
+      Date.range(current_date, current_date)
+      |> Enum.map(& &1)
+      |> Enum.chunk_every(7)
+
+    {current_date, current_date, week_rows}
+  end
+
+  ## ------------------------------------ Event Handlers  ---------------------------------------------------------------
+
+  @impl true
+  def handle_event("prev-month", _, socket) do
+    days = 0
+    new_date = socket.assigns.current_date |> Date.add(days) |> Date.add(-1)
+
+    {first, last, rows} =
+      get_full_week(new_date, socket.assigns.user_meals, 100)
+
+    assigns = [
+      current_date: new_date,
+      week_rows: rows,
+      last: last,
+      first: first
+    ]
+
+    send(self(), {:particular_date, %{"date" => new_date}})
+    {:noreply, assign(socket, assigns)}
+  end
+
+  def handle_event("next-month", _, socket) do
+    new_date = socket.assigns.current_date |> Date.add(1)
+
+    {first, last, rows} =
+      get_week_rows(new_date, socket.assigns.user_meals, 300)
+
+    assigns = [
+      current_date: new_date,
+      week_rows: rows,
+      last: last,
+      first: first
+    ]
+
+    send(self(), {:particular_date, %{"date" => first}})
+    {:noreply, assign(socket, assigns)}
+  end
+
+  def handle_event("pick-date", %{"date" => date}, socket) do
+    current_date = date
+    send(self(), {:initial_modal, %{"date" => current_date, "title" => "r"}})
+
+    {:noreply, assign(socket, :selected_date, current_date)}
+  end
+
+  def handle_event("pick-date", %{"meal" => meal}, socket) do
+    current_date = socket.assigns.current_date
+    send(self(), {:initial_modal, %{"date" => current_date, "title" => meal}})
+
+    {:noreply,
+     assign(socket, :selected_date, current_date)
+     |> assign(:selected_meal, meal)}
+  end
+
+  def handle_event("date-details", %{"date" => date}, socket) do
+    send(self(), {:date_details, %{"date" => date}})
+
+    {:noreply, socket}
+  end
+
+  ## ------------------------------------ UI Elements ---------------------------------------------------------------
   def table_week_calendar(assigns) do
-    # user_meals =
-    # Enum.filter(assigns.user_meals, fn x ->
-    #  NaiveDateTime.to_date(x.start_dt) == assigns.current_date
-    # end)
-
-    # assigns = Map.put(assigns, :user_meals, user_meals)
-    # first_of_week = Date.beginning_of_week(assigns.current_date)
-    # assigns = Map.put(assigns, :first_of_week, first_of_week)
-
     ~H"""
     <div
       :for={week <- @week_rows}
@@ -113,20 +286,68 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       >
         <div
           class="w-full mt-2 border-t-2 border-greyfriend2 day_of_week relative "
-          id={"dat_" <> Date.to_string(day) }
+          id={"dat_" <> Date.to_string(day)}
         >
           <div class="p-2 mt-2">
             <%= for meal <- Enum.filter(@user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end) do %>
               <div class="py-6 rounded-lg">
                 <%= for re_u_m <- meal.recipe_user_meals do %>
                   <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
-                    <.card_meal actual_meal={meal} img_url={re_u_m.img_url} title={re_u_m.title} />
+                    <.card_meal
+                      actual_meal={meal}
+                      img_url={re_u_m.img_url}
+                      title={re_u_m.title}
+                      nutrients={re_u_m.recipe_nutrients}
+                      cooking_portions={re_u_m.cooking_portions}
+                      consume_portions={re_u_m.consume_portions}
+                      v
+                      myself={@myself}
+                      recipe={
+                        %{
+                          nutrients: re_u_m.recipe_nutrients,
+                          primary_size: re_u_m.primary_size,
+                          servings: re_u_m.servings,
+                          id: Integer.to_string(re_u_m.recipe_id) <> Integer.to_string(meal.id)
+                        }
+                      }
+                    />
                   <% else %>
                     nil
                   <% end %>
                 <% end %>
+                <div class="py-6 rounded-lg">
+                  <%= for re_u_m <- meal.ingredient_user_meals do %>
+                    <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
+                      <.card_meal
+                        myself={@myself}
+                        actual_meal={meal}
+                        img_url={re_u_m.img_url}
+                        title={re_u_m.title}
+                        cooking_portions={re_u_m.portions}
+                        consume_portions={nil}
+                        recipe={
+                          %{
+                            nutrients:
+                              Mehungry.Food.RecipeUtils.reform_nutrients(re_u_m.recipe.nutrients),
+                            primary_size: re_u_m.primary_size,
+                            servings: re_u_m.portions,
+                            id: Integer.to_string(re_u_m.recipe.id) <> Integer.to_string(meal.id)
+                          }
+                        }
+                      />
+                    <% else %>
+                      nil
+                    <% end %>
+                  <% end %>
+                  <div></div>
+                </div>
               </div>
             <% end %>
+            <div>
+              <div>
+                {get_chart(@user_meals, day)}
+              </div>
+            </div>
           </div>
 
           <span
@@ -213,7 +434,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           <div class="py-2 rounded-lg">
             <%= for re_u_m <- meal.recipe_user_meals do %>
               <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
-                <.card_meal actual_meal={meal} img_url={re_u_m.img_url} title={re_u_m.title} />
+                <.card_meal
+                  actual_meal={meal}
+                  img_url={re_u_m.img_url}
+                  title={re_u_m.title}
+                  myself={@myself}
+                />
               <% end %>
             <% end %>
           </div>
@@ -224,158 +450,41 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     """
   end
 
-  @impl true
-  def update(assigns, socket) do
-    current_date =
-      case assigns.particular_date do
-        nil ->
-          Utils.calculate_initial_date(Date.utc_today(), assigns.device_width)
-
-        date ->
-          {:ok, date} = Date.from_iso8601(date)
-          date
-      end
-
-    {first, last, rows} = get_full_week(current_date, assigns.user_meals, 1500)
-
-    assigns = [
-      current_date: current_date,
-      selected_date: nil,
-      user_meals: assigns.user_meals,
-      selected_meal: nil,
-      week_rows: rows,
-      last: last,
-      first: first,
-      calendar_view: assigns.calendar_view,
-      day_meals: @day_meals,
-      device_width: assigns.device_width
-    ]
-
-    {:ok,
-     socket
-     |> assign(assigns)}
-  end
-
-  defp get_full_week(current_date, _user_meals, _device_width) do
-    days = 6
-    first = Date.beginning_of_week(current_date)
-
-    last = Date.add(first, days)
-
-    week_rows =
-      Date.range(first, last)
-      |> Enum.map(& &1)
-      |> Enum.chunk_every(7)
-
-    {first, last, week_rows}
-  end
-
-  defp get_week_rows(current_date, _user_meals, _device_width) do
-    # days = Utils.get_days_according_to_width(device_width)
-    # days = 0
-    # first = current_date
-    # last = Date.add(first, days)
-
-    week_rows =
-      Date.range(current_date, current_date)
-      |> Enum.map(& &1)
-      |> Enum.chunk_every(7)
-
-    {current_date, current_date, week_rows}
-  end
-
-  ## ------------------------------------ Event Handlers  ---------------------------------------------------------------
-
-  @impl true
-  def handle_event("prev-month", _, socket) do
-    days = 0
-    new_date = socket.assigns.current_date |> Date.add(days) |> Date.add(-1)
-
-    {first, last, rows} =
-      get_full_week(new_date, socket.assigns.user_meals, 100)
-
-    assigns = [
-      current_date: new_date,
-      week_rows: rows,
-      last: last,
-      first: first
-    ]
-
-    send(self(), {:particular_date, %{"date" => new_date}})
-    {:noreply, assign(socket, assigns)}
-  end
-
-  def handle_event("next-month", _, socket) do
-    new_date = socket.assigns.current_date |> Date.add(1)
-
-    {first, last, rows} =
-      get_week_rows(new_date, socket.assigns.user_meals, 300)
-
-    assigns = [
-      current_date: new_date,
-      week_rows: rows,
-      last: last,
-      first: first
-    ]
-
-    send(self(), {:particular_date, %{"date" => first}})
-    {:noreply, assign(socket, assigns)}
-  end
-
-  def handle_event("pick-date", %{"date" => date}, socket) do
-    current_date = date
-    send(self(), {:initial_modal, %{"date" => current_date, "title" => "r"}})
-
-    {:noreply, assign(socket, :selected_date, current_date)}
-  end
-
-  def handle_event("pick-date", %{"meal" => meal}, socket) do
-    current_date = socket.assigns.current_date
-    send(self(), {:initial_modal, %{"date" => current_date, "title" => meal}})
-
-    {:noreply,
-     assign(socket, :selected_date, current_date)
-     |> assign(:selected_meal, meal)}
-  end
-
-  def handle_event("date-details", %{"date" => date}, socket) do
-    send(self(), {:date_details, %{"date" => date}})
-
-    {:noreply, socket}
-  end
-
-  ## ------------------------------------ UI Elements ---------------------------------------------------------------
-
   defp card_meal(assigns) do
     ~H"""
-    <div class="shadow m-auto w-full  grid-cols-6 grid rounded-md relative">
-      <button
-        class="absolute bg-white right-1 top-1"
-        type="button"
-        phx-click="edit_modal"
-        phx-value-id={@actual_meal.id}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="size-6"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+    <div class="shadow m-auto w-full grid rounded-md relative">
+      <div class="m-auto w-fit flex gap-2 sm:gap-4 flex-col md:flex-row ">
+        <div class="my-auto relative">
+          <%= if is_nil(@img_url) do %>
+            {SvgComponents.get_default_recipe_image(assigns)}
+          <% else %>
+            <img src={@img_url} class=" h-60 w-60 m-auto" style="" />
+          <% end %>
+          <button
+            class="absolute right-2 top-2 sm:top-10 sm:right-2   bg-white p-2 rounded-full "
+            type="button"
+            phx-click="edit_modal"
+            phx-value-id={@actual_meal.id}
+          >
+            {SvgComponents.get_edit_icon(assigns)}
+          </button>
+        </div>
+        <div class="sm:p-6">
+          <h1>{@title}</h1>
+          <span class="font-semibold text-md">prepare portions: {@cooking_portions}</span>
+          <br />
+          <span class="font-semibold text-md">consume portions: {@consume_portions}</span>
+        </div>
+        <div class=" font-semibold">
+          <MehungryWeb.RecipeComponents.recipe_nutrients
+            id={to_string(@recipe.id)}
+            nutrients={@recipe.nutrients}
+            primary_size={5}
+            servings={2}
+            class="my-custom-class"
           />
-        </svg>
-      </button>
-      <%= if is_nil(@img_url) do %>
-        {SvgComponents.get_default_recipe_image(assigns)}
-      <% else %>
-        <img src={@img_url} class="col-span-2 h-full" />
-      <% end %>
-      <div class="col-span-4 px-6 py-4">{@title}</div>
+        </div>
+      </div>
     </div>
     """
   end

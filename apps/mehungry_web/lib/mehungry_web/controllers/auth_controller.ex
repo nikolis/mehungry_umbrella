@@ -18,8 +18,6 @@ defmodule MehungryWeb.AuthController do
   end
 
   def callback(%{assigns: %{ueberauth_failure: fails}} = conn, _params) do
-    IO.inspect(fails, label: "Dilure")
-
     conn
     |> put_flash(:error, "Failed to authenticate.")
     |> redirect(to: "/")
@@ -29,6 +27,7 @@ defmodule MehungryWeb.AuthController do
     token = auth.extra.raw_info.token.access_token
     {:ok, decoded_token} = Jason.decode(token)
     _token_save = Accounts.put_user_token(conn.assigns.current_user, token, "instagram")
+    IO.inspect("login instagram provider")
 
     Mehungry.Api.Instagram.get_long_lived_token(
       conn.assigns.current_user,
@@ -40,6 +39,7 @@ defmodule MehungryWeb.AuthController do
     |> put_flash(:info, "Successfully connected with Instagram")
     |> redirect(to: "/profile")
   end
+<<<<<<< HEAD
 def callback(%{assigns: %{ueberauth_auth: %{provider: :facebook} = auth}} = conn, _params) do
   case Accounts.find_or_create(auth) do
     {:ok, user} ->
@@ -66,22 +66,44 @@ def callback(%{assigns: %{ueberauth_auth: %{provider: :facebook} = auth}} = conn
       conn
       |> put_flash(:error, reason)
       |> redirect(to: "/")
+=======
+
+  def callback(%{assigns: %{ueberauth_auth: %{provider: :facebook} = auth}} = conn, _params) do
+    case Accounts.find_or_create(auth) do
+      {:ok, user} ->
+        token = auth.extra.raw_info.token.access_token
+        _token_save = Accounts.put_user_token(user, token, "facebook")
+        Mehungry.Api.Facebook.get_user_pages(user, token, auth.extra.raw_info.user["id"])
+
+        conn
+        |> put_flash(:info, "Successfully connected with Facebook")
+        # Η log_in_user συνήθως κάνει δικό της redirect στο "/" ή στο user_return_to
+        |> UserAuth.log_in_user(user, %{})
+
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, reason)
+        |> redirect(to: "/")
+    end
+>>>>>>> c87dc0b5011080cef69a25290d939508bf1e7f2e
   end
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, _params) do
     case Accounts.find_or_create(auth) do
       {:ok, user} ->
         UserAuth.log_in_user(conn, user, %{})
 
+        IO.inspect("login adsfaffadsafsdfasdm provider")
+
         conn
         |> put_flash(:info, "Successfully authenticated.")
         |> put_session(:current_user, user)
         |> configure_session(renew: true)
-        |> redirect(to: "/")
+        |> redirect(to: "~/")
 
       {:error, reason} ->
         conn
         |> put_flash(:error, reason)
-        |> redirect(to: "/")
+        |> redirect(to: "~/")
     end
   end
 end

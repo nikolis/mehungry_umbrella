@@ -1,0 +1,26 @@
+<h1 class="text-xl font-bold">Language Details</h1>
+
+<div class="mt-4">
+  <p><strong>Name:</strong> {@language.name}</p>
+</div>
+
+<div class="mt-4 flex gap-2">
+  <.link patch={~p"/admin/languages/#{@language.name}/show/edit"}>
+    Edit
+  </.link>
+
+  <.link navigate={~p"/admin/languages"}>
+    Back
+  </.link>
+</div>
+
+<.modal :if={@live_action == :edit} id="language-edit-modal">
+  <.live_component
+    module={MehungryWeb.LanguageLive.FormComponent}
+    id={@language.name}
+    title="Edit Language"
+    action={:edit}
+    language={@language}
+    patch={~p"/admin/languages/#{@language.name}"}
+  />
+</.modal>

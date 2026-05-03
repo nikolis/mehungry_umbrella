@@ -53,6 +53,17 @@ defmodule MehungryWeb.Router do
       live "/files", ProfessionalLive.S3BrowserLive, :index
       live "/activeusers", ProfessionalLive.ActiveUsers, :index
       live "/ingredients", ProfessionalLive.Ingredients, :index
+      live "/ingredients/:id/edit", ProfessionalLive.IngredientsEdit, :edit
+      live "/ingredients/new", ProfessionalLive.IngredientsCreate, :create
+      live "/ingredients/:id/show", Professional.IngredientLive.Show, :show
+
+      live "/languages", Professional.LanguageLive.Index, :index
+      live "/languages/new", Professional.LanguageLive.Index, :new
+      live "/languages/:id/edit", Professional.LanguageLive.Index, :edit
+
+      live "/languages/:id", Professional.LanguageLive.Show, :show
+      live "/languages/:id/show/edit", Professional.LanguageLive.Show, :edit
+
       live "/visits", VisitLive.Index, :index
       live "/visits/:ip_address", VisitLive.Show, :show
     end

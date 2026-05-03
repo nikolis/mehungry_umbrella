@@ -22,6 +22,8 @@ defmodule Mehungry.Food.RecipeIngredient do
   def changeset(recipe_ingredient, attrs) do
     recipe_ingredient
     # So its persisted
+    # So its persisted
+    |> Map.put(:temp_id, recipe_ingredient.temp_id || attrs["temp_id"])
     |> cast(attrs, [
       :quantity,
       :ingredient_allias,
@@ -31,16 +33,18 @@ defmodule Mehungry.Food.RecipeIngredient do
       :delete,
       :temp_id
     ])
+    |> maybe_mark_for_deletion()
     |> validate_required([:ingredient_id, :quantity, :measurement_unit_id])
     |> foreign_key_constraint(:name)
     |> foreign_key_constraint(:recipe_ingredients_name_fkey)
     |> foreign_key_constraint(:recipe_ingredients_name)
     |> foreign_key_constraint(:recipe_ingredients)
     |> foreign_key_constraint(:ingredient_id)
-    |> maybe_mark_for_deletion()
   end
 
-  defp maybe_mark_for_deletion(%{data: %{id: nil}} = changeset), do: changeset
+  defp maybe_mark_for_deletion(%{data: %{id: nil}} = changeset) do
+    changeset
+  end
 
   defp maybe_mark_for_deletion(changeset) do
     if get_change(changeset, :delete) do

@@ -5,7 +5,6 @@
 @import "./nav_bar.css";
 @import "./basket.css";
 @import "./calendar.css";
-@import "./stepper.css";
 @import "./stepper2.css";
 @import "./browse.css"; 
 @import "./create.css";
@@ -73,18 +72,16 @@ h1 {
 
   @media only screen and (min-height: 600px) {
   .basic_2_col_grid_cont{
-      margin-bottom: 1vh;
-      margin-top: 1vh;
       gap: 0.5rem;
     }
 
   }
 
-  @media only screen and (min-width: 1400px) {
+  @media only screen and (min-width: 5000px) {
 
     .basic_2_col_grid_cont{
       display: grid;
-      gap: 1rem;
+      gap: 0rem;
       margin-bottom: 0;
       justify-content: space-around;
       grid-template-columns: repeat(2, minmax(0, 1fr));

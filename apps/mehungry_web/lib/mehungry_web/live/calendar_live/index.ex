@@ -30,9 +30,40 @@ defmodule MehungryWeb.CalendarLive.Index do
           start_dt: x.start_dt,
           end: x.end_dt,
           title: x.title,
+          ingredient_user_meals:
+            Enum.map(x.ingredient_user_meals, fn y ->
+              %{
+                title: y.ingredient.name,
+                portions: y.quantity,
+                measurement_unit: y.measurement_unit.name,
+                primary_size: 6,
+                img_url: nil,
+                recipe: %{
+                  id: y.ingredient.id,
+                  nutrients:
+                    Enum.map(y.ingredient.ingredient_nutrients, fn x ->
+                      %{
+                        amount: x.amount,
+                        name: x.nutrient.name,
+                        measurement_unit: %{name: x.nutrient.measurement_unit.name}
+                      }
+                    end),
+                  primary_size: 5
+                }
+              }
+            end),
           recipe_user_meals:
             Enum.map(x.recipe_user_meals, fn y ->
-              %{title: y.recipe.title, img_url: y.recipe.image_url}
+              %{
+                title: y.recipe.title,
+                consume_portions: y.consume_portions,
+                cooking_portions: y.cooking_portions,
+                servings: y.recipe.servings,
+                recipe_nutrients: y.recipe.nutrients,
+                img_url: y.recipe.image_url,
+                primary_size: y.recipe.primary_nutrients_size,
+                recipe_id: y.recipe.id
+              }
             end)
         }
       end)
@@ -43,6 +74,7 @@ defmodule MehungryWeb.CalendarLive.Index do
       :ok,
       socket
       |> assign(:user, user)
+      |> assign(:child_ids, [])
       |> assign(:calendar_view, "week_view")
       |> assign(:particular_date, nil)
       |> assign(:page_title, "Meal planner")
@@ -102,7 +134,8 @@ defmodule MehungryWeb.CalendarLive.Index do
               ingredient: [:category, :ingredient_translation]
             ]
           ]
-        ]
+        ],
+        ingredient_user_meals: [:ingredient, :measurement_unit]
       )
 
     changeset =
@@ -152,6 +185,15 @@ defmodule MehungryWeb.CalendarLive.Index do
   @impl true
   def handle_info({:particular_date, %{"date" => start_date}}, socket) do
     {:noreply, push_patch(socket, to: "/calendar/ondate/#{start_date}", replace: true)}
+  end
+
+  @impl true
+  def handle_event("resize_chart", %{"width" => width}, socket) do
+    for child_id <- socket.assigns.child_ids do
+      send_update(MehungryWeb.CalendarLive.Calendar.PieChart, resize: width)
+    end
+
+    {:noreply, socket}
   end
 
   @impl true

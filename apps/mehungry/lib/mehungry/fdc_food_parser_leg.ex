@@ -5,6 +5,8 @@ defmodule Mehungry.FdcFoodParserLeg do
 
   alias Mehungry.Food
 
+  require Logger
+
   @measurement_unit_dict [
     {"grammar", "g"},
     {"gigatonne", "Gt"},
@@ -35,8 +37,12 @@ defmodule Mehungry.FdcFoodParserLeg do
     end
   end
 
-  defp get_or_create_measurement_unit(measurement_unit_name) do
+  defp get_or_create_measurement_unit(measurement_unit_name, ingredient) do
     result = Food.get_measurement_unit_by_name(measurement_unit_name)
+
+    Logger.info(
+      "For #{inspect(ingredient.name)} Get/Create measurement unit with name #{measurement_unit_name} and the search result replied #{inspect(result)}"
+    )
 
     case result do
       [] ->
@@ -60,12 +66,12 @@ defmodule Mehungry.FdcFoodParserLeg do
       ingredient_id: ingredient.id,
       nutrient_id: nutrient.id,
       amount:
-        case attrs["amount"] do
-          nil ->
+        case is_nil(attrs["amount"]) do
+          true ->
             -1.0
 
-          val ->
-            val
+          false ->
+            attrs["amount"]
         end,
       median: attrs["median"],
       data_points: attrs["dataPoints"],
@@ -78,7 +84,7 @@ defmodule Mehungry.FdcFoodParserLeg do
   defp get_or_create_nutrient(ingredient, origin_attrs) do
     nut_ing_attrs = origin_attrs
     origin_attrs = origin_attrs["nutrient"]
-    measurement_unit = get_or_create_measurement_unit(origin_attrs["unitName"])
+    measurement_unit = get_or_create_measurement_unit(origin_attrs["unitName"], ingredient)
 
     attrs = %{
       reference_id: origin_attrs["id"],
@@ -90,19 +96,19 @@ defmodule Mehungry.FdcFoodParserLeg do
 
     nutrient = Food.get_nutrient(attrs.name, attrs.measurement_unit_id)
 
-    case nutrient do
-      nil ->
+    case is_nil(nutrient) do
+      true ->
         {:ok, nutrient} = Food.create_nutrient(attrs)
         create_ingredient_nutrients(ingredient, nutrient, nut_ing_attrs)
 
-      nutr ->
-        create_ingredient_nutrients(ingredient, nutr, nut_ing_attrs)
+      false ->
+        create_ingredient_nutrients(ingredient, nutrient, nut_ing_attrs)
     end
   end
 
   defp create_ingredient_portions(food_portions, ingredient) do
     Enum.map(food_portions, fn x ->
-      measurement_unit = get_or_create_measurement_unit(x["modifier"])
+      measurement_unit = get_or_create_measurement_unit(x["modifier"], ingredient)
 
       %{
         amount: x["amount"],
@@ -121,7 +127,31 @@ defmodule Mehungry.FdcFoodParserLeg do
   end
 
   def create_ingredient(attrs) do
-    category = get_or_create_food_category(attrs["foodCategory"]["description"])
+    attrs_description =
+      case attrs["foodCategory"]["description"] do
+        nil ->
+          case attrs["wweiaFoodCategory"]["wweiaFoodCategoryDescription"] do
+            nil ->
+              attrs["brandedFoodCategory"]
+
+            desc ->
+              desc
+          end
+
+        description ->
+          description
+      end
+
+    category = get_or_create_food_category(attrs_description)
+
+    category_id =
+      case is_nil(category) do
+        true ->
+          nil
+
+        false ->
+          category.id
+      end
 
     food_portions = attrs["foodPortions"]
     food_nutrients = attrs["foodNutrients"]
@@ -131,11 +161,13 @@ defmodule Mehungry.FdcFoodParserLeg do
       food_class: attrs["foodClass"],
       nutrient_conversion_factors: attrs["nutrientConversionFactors"],
       publication_date: attrs["publicationDate"],
-      category_id: category.id
+      category_id: category_id
     }
 
     case Food.create_ingredient(attrs) do
       {:ok, ingredient} ->
+        Logger.info("#{ingredient.name} was created Successfulle ")
+
         if not is_nil(food_portions) do
           create_ingredient_portions(food_portions, ingredient)
         end
@@ -145,10 +177,13 @@ defmodule Mehungry.FdcFoodParserLeg do
           nutrient
         end)
 
-      _ ->
+      {:error, error} ->
+        Logger.error(error)
         ""
     end
   end
+
+  defp get_or_create_food_category(nil), do: nil
 
   defp get_or_create_food_category(category_name) do
     category = Food.get_category_by_name(category_name)
@@ -169,21 +204,20 @@ defmodule Mehungry.FdcFoodParserLeg do
     {:ok, json_body} = get_json(file_path)
     main = Map.get(json_body, "SRLegacyFoods", [])
     main2 = Map.get(json_body, "SurveyFoods", [])
-    total = main ++ main2
+    main3 = Map.get(json_body, "FoundationFoods", [])
+    main4 = Map.get(json_body, "BrandedFoods", [])
+    total = main ++ main2 ++ main3 ++ main4
 
-    IO.inspect(length(total), label: "Total items being proessed")
     Enum.each(total, fn x -> create_ingredient(x) end)
   end
 
   def get_ingredients_from_json_body(json_body) do
     try do
       {:ok, body} = Poison.decode(json_body)
-      IO.inspect("1")
       Enum.each(body, fn x -> create_ingredient(x) end)
-      IO.inspect("2")
     rescue
       the_error ->
-        IO.inspect(the_error, label: "Error")
+        nil
     end
   end
 end

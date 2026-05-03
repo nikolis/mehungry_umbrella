@@ -6,7 +6,7 @@
 >
   <div
     class="grid grid-cols-7 h-fit p-2  bg-inherit h-full"
-    style="    background-color: inherit; overflow: hidden; max-height: 80px;"
+    style="background-color: inherit; overflow: hidden; max-height: 80px;"
   >
     <.link
       class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: " hidden", else: ""}
@@ -48,10 +48,10 @@
     </.link>
 
     <div
-      class={"m-auto nav_link_basic " <> if String.length(@query_string) > 1, do: "", else: "hidden"}
+      class={"m-auto nav_link_basic h-full " <> if String.length(@query_string) > 1, do: "", else: "hidden"}
       phx-click={Phoenix.LiveView.JS.toggle_class(" hidden", to: ".nav_link_basic")}
     >
-      <.icon name="hero-arrow-left-circle" class="h-8 w-8" />
+      <.icon name="hero-arrow-left-circle" class="h-9 w-9" />
     </div>
 
     <div

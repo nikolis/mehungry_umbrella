@@ -21,13 +21,22 @@ defmodule MehungryWeb.SelectComponentUtils do
         end
 
       str_id ->
-        result = Integer.parse(str_id)
+        result =
+          if is_integer(str_id) do
+            str_id
+          else
+            Integer.parse(str_id)
+          end
 
         case result do
           :error ->
             nil
 
           {num_id, _} ->
+            item = get_by_id_func.(num_id)
+            %{name: label_function.(item), id: item.id}
+
+          num_id ->
             item = get_by_id_func.(num_id)
             %{name: label_function.(item), id: item.id}
         end

@@ -1,6 +1,8 @@
 defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   use Phoenix.LiveView
+
   alias Mehungry.S3Manager
+  require Logger
 
   @impl true
   def mount(_params, _session, socket) do
@@ -231,31 +233,31 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   @impl true
   def handle_event("load-ingredients", %{"bucket_name" => bucket_name}, socket) do
     socket = assign(socket, bucket_name: bucket_name, loading: true, error: nil)
+    Logger.info("Load ingredients from folder: #{bucket_name}")
 
     case S3Manager.list_objects(bucket_name, socket.assigns.prefix) do
       {:ok, objects} ->
         urls =
           Enum.map(objects.body.contents, fn x ->
             case S3Manager.presigned_url(bucket_name, x.key) do
-              {:ok, url} ->
+              {:ok, {:ok, url}} ->
+                Logger.info("Load ingredients from folder: #{url}")
                 url
 
               {:error, the_err} ->
-                IO.inspect(the_err, label: "The error in parsing")
+                Logger.error("Error in parsing: #the_erre_err}")
             end
           end)
 
-        MehungryWeb.DistributedTaskHandler.run(%{
-          type: :parse_and_insert,
-          data: %{files_urls: urls}
-        })
+        # MehungryWeb.DistributedTaskHandler.run(%{
+        # type: :parse_and_insert,
+        # data: %{files_urls: urls}
+        # })
 
-        # IO.inspect(urls, label: "Urls ----------------->")
         MehungryWeb.SeedsGenWorkerServer.put_work_list(urls)
         {:noreply, assign(socket, objects: objects.body.contents, loading: false)}
 
       {:error, error} ->
-        IO.inspect(error)
         error_message = extract_error_message(error)
         {:noreply, assign(socket, error: error_message, objects: [], loading: false)}
     end

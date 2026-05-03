@@ -27,7 +27,6 @@ defmodule MehungryWeb.DistributedTaskHandler do
   # Handle different task types dynamically
   def handle_cast({:run_task, %{type: type, data: data}}, state) do
     nodes = [node() | Node.list()]
-    IO.inspect(nodes, label: "Dhte nodes")
     # Logger.info("Spawning task on nodes: #{inspect(nodes)}")
 
     Enum.each(nodes, fn n ->
@@ -45,7 +44,8 @@ defmodule MehungryWeb.DistributedTaskHandler do
   end
 
   defp handle_task(:notify_user, %{user_id: id, message: msg}) do
-    IO.puts("📣 Notify user #{id}: #{msg}")
+    Logger.info("📣 Notify user #{id}: #{msg}")
+
     # Maybe call your mailer or PubSub here
   end
 

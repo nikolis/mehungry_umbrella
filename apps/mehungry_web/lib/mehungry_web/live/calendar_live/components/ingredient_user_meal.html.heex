@@ -1,0 +1,84 @@
+<div
+  id={"root_layer_ingredient" <> to_string(@f.index)}
+  class=""
+  style={if @deleted, do: "display: none"}
+>
+  <div class="w-full max-w-md mx-auto">
+    <!-- Toggle -->
+    <div class="flex bg-gray-100 rounded-xl p-1 shadow-inner">
+      <!-- Recipe -->
+      <button
+        type="button"
+        phx-click="set_mode"
+        phx-value-mode="recipe"
+        phx-target={@myself}
+        class={
+        "w-1/2 py-2 text-md font-medium rounded-lg transition-all px-2 " <>
+        if @mode == "recipe" do
+          "bg-white text-gray-900 shadow"
+        else
+          "text-gray-500 hover:text-gray-700"
+        end
+      }
+      >
+        🍲 Recipe
+      </button>
+      
+<!-- Ingredient -->
+      <button
+        type="button"
+        phx-click="set_mode"
+        phx-target={@myself}
+        phx-value-mode="ingredient"
+        class={
+        "w-1/2 py-2 text-md font-medium rounded-lg transition-all px-2 " <>
+        if @mode == "ingredient" do
+          "bg-white text-gray-900 shadow"
+        else
+          "text-gray-500 hover:text-gray-700"
+        end
+      }
+      >
+        🥕 Ingredient
+      </button>
+      <div class="p-2  text-lg font-semibold">Meal</div>
+    </div>
+  </div>
+
+  <input
+    type="hidden"
+    name={Phoenix.HTML.Form.input_name(@f, :delete)}
+    value={to_string(Phoenix.HTML.Form.input_value(@f, :delete))}
+  />
+
+  <div class="w-full">
+    <div class=" flex flex-col p-4 gap-2  display-none">
+      <div class=" col-span-3 sm:col-span-4 h-full">
+        <.live_component
+          module={MehungryWeb.SelectComponentDeep}
+          form={@f}
+          item_function={&Mehungry.Food.search_ingredient_alt/1}
+          get_by_id_func={&Mehungry.Food.get_ingredient!/1}
+          input_variable="ingredient_id"
+          label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
+          placeholder="Select an ingredient..."
+          modal_title="Search Ingredients"
+          id={"ingredient_search_component" <> Integer.to_string(@f.index)}
+        />
+      </div>
+      <div class="field input-form col-span-2 ">
+        <.input field={@f[:quantity]} type="number" />
+      </div>
+
+      <div class="col-span-3">
+        <.live_component
+          module={MehungryWeb.SelectComponent}
+          items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
+          form={@f}
+          id={"measurement_unit_search_componentasdf" <> Integer.to_string(@f.index)}
+          input_variable={:measurement_unit_id}
+        />
+      </div>
+    </div>
+  </div>
+</div>

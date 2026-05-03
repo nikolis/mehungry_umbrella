@@ -50,7 +50,7 @@ input[type="file"] {
   background-color: #ffffff;
   position: relative;
   border-radius: var(--border-radius-smooth);
-  padding: 2rem;
+  padding: 0rem;
   --input_height: 50px;
   --input_color: #f73378; 
   justify-content: center;
@@ -641,13 +641,11 @@ body {
 .accordion {
   background: white;
   color: var(--clr-primary-d);
-  padding: 1rem;
   color: var(--clr-dark_2);
 
 }
 
 .accordion-panel {
-  padding: 0.5rem;
   border-top: 1px solid #D8D8D8;
   border-left: 1px solid #D8D8D8 ;
   border-right: 1px solid #D8D8D8 ;

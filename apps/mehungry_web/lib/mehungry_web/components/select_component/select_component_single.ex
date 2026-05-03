@@ -11,7 +11,7 @@ defmodule MehungryWeb.SelectComponentSingle do
       phx-hook="SelectComponent"
       id={@id}
     >
-      <.input field={@form[String.to_atom(@input_variable)]} type="hidden" />
+      <.input field={@form[String.to_atom(@input_variable)]} />
       <!-- Start Component -->
       <.focus_wrap
         id={"select_component_focus_wrap"<> Integer.to_string(@form.index) <> @input_variable}
@@ -167,15 +167,18 @@ defmodule MehungryWeb.SelectComponentSingle do
           label_f
       end
 
-    selected_items =
-      MehungryWeb.SelectComponentUtils.get_selected_items_database(
-        assigns.form.params,
-        assigns.input_variable,
-        assigns,
-        get_by_id_func
+    selected_id =
+      Phoenix.HTML.Form.input_value(
+        assigns.form,
+        String.to_atom(assigns.input_variable)
       )
 
-    IO.inspect(selected_items, label: "Selected itemes ")
+    selected_items =
+      if selected_id do
+        assigns.get_by_id_func.(selected_id)
+      else
+        nil
+      end
 
     selected_items =
       if is_nil(selected_items) do
@@ -261,8 +264,6 @@ defmodule MehungryWeb.SelectComponentSingle do
       socket
       |> assign(:selected_items, nil)
 
-    IO.inspect(socket.form.index, label: "SElected iems clicked withv")
-
     {:noreply,
      push_event(
        socket,
@@ -275,22 +276,15 @@ defmodule MehungryWeb.SelectComponentSingle do
   def handle_event("handle-item-click", %{"id" => id}, socket) do
     {id, _} = Integer.parse(id)
 
-    selected_item = Enum.find(socket.assigns.items_filtered, fn x -> x.id == id end)
-
-    # selected_item = %{label: socket.assigns.label_function.(selected_item), id: selected_item.id}
-    IO.inspect(socket.assigns.form.index, label: "Hnalde normal clicked")
-
-    socket =
-      socket
-      |> assign(:listing_open, false)
-      |> assign(:selected_items, selected_item)
+    selected_item =
+      Enum.find(socket.assigns.items_filtered, &(&1.id == id))
 
     {:noreply,
-     push_event(
-       socket,
-       "selected_id" <>
-         Integer.to_string(socket.assigns.form.index) <> socket.assigns.input_variable,
-       %{id: id}
-     )}
+     socket
+     |> assign(:selected_items, selected_item)
+     |> push_event("set_input_value", %{
+       id: socket.assigns.id,
+       value: id
+     })}
   end
 end

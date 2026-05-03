@@ -12,6 +12,7 @@ defmodule Mehungry.Food.MeasurementUnit do
     field :alternate_name, :string
     field :url, :string
 
+    has_many :ingredient_portions, Mehungry.Food.IngredientPortion
     has_many :translation, MeasurementUnitTranslation
     timestamps()
   end

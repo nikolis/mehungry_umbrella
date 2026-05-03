@@ -1,6 +1,9 @@
 defmodule Mehungry.Food.IngredientPortion do
   use Ecto.Schema
-  @moduledoc false
+
+  @moduledoc """
+  IngredientPortion represents the portions of ingredients and connects bassically ingredients with measurmenet Units
+  """
 
   import Ecto.Changeset
 
@@ -32,6 +35,6 @@ defmodule Mehungry.Food.IngredientPortion do
       :measurement_unit_id,
       :ingredient_id
     ])
-    |> validate_required([:gram_weight, :ingredient_id, :measurement_unit_id])
+    |> validate_required([:gram_weight, :measurement_unit_id])
   end
 end

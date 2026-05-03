@@ -26,7 +26,7 @@ defmodule Mehungry.History do
         recipe: [
           recipe_ingredients: [
             :measurement_unit,
-            ingredient: [:category, :ingredient_translation]
+            ingredient: [:category, :ingredient_translation, :ingredient_nutrients]
           ]
         ]
       ]
@@ -91,6 +91,14 @@ defmodule Mehungry.History do
             :measurement_unit,
             ingredient: [:category, :ingredient_translation]
           ]
+        ]
+      ],
+      ingredient_user_meals: [
+        :measurement_unit,
+        ingredient: [
+          :category,
+          :ingredient_translation,
+          ingredient_nutrients: [nutrient: :measurement_unit]
         ]
       ]
     )
@@ -172,6 +180,9 @@ defmodule Mehungry.History do
       consume_recipe_user_meals: [recipe_user_meal: :recipe],
       recipe_user_meals: [
         :recipe
+      ],
+      ingredient_user_meals: [
+        :ingredient
       ]
     )
   end

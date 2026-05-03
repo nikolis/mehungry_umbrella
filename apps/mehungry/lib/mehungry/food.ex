@@ -35,11 +35,6 @@ defmodule Mehungry.Food do
   end
 
   def broadcast_ingredient_work_item(file_url) do
-    # Phoenix.PubSub.broadcast(Mehungry.PubSub, "recipe:" <> to_string(comment.recipe_id), %{
-    # new_comment_vote: comment,
-    # type_: type_
-    # })
-
     Phoenix.PubSub.broadcast(Mehungry.PubSub, "json_jobs", %{new_comment_vote: file_url})
 
     {:ok, :submitted}
@@ -57,6 +52,17 @@ defmodule Mehungry.Food do
     )
     |> Repo.one()
     |> Repo.preload(recipe_hashtags: [recipe: [recipe_ingredients: :ingredient]])
+  end
+
+  def get_nutrient(id) do
+    if not is_nil(id) and id != "" do
+      query = from nutr in Nutrient, where: nutr.id == ^id
+
+      Repo.one(query)
+      |> Repo.preload(:measurement_unit)
+    else
+      nil
+    end
   end
 
   def get_nutrient(name, measurment_unit_id) do
@@ -90,12 +96,6 @@ defmodule Mehungry.Food do
   def change_step(%Step{} = step, attrs \\ %{}) do
     Step.changeset(step, attrs)
   end
-
-  #  def annotate_recipe(%User{id: user_id}, recipe_id, attrs) do
-  #    %Annotation{recipe_id: recipe_id, user_id: user_id}
-  #    |> Annotation.changeset(attrs)
-  #    |> Repo.insert()
-  #  end
 
   def get_user_likes(user_id) do
     query =
@@ -200,11 +200,29 @@ defmodule Mehungry.Food do
     Repo.get(MeasurementUnit, id)
   end
 
+  @doc """
+  IngredientPortion represents the portions of ingredients and connects bassically ingredients with measurmenet Units 
+  """
+  def get_measurement_unit_portions_for_ingredient(ingredient_id)
+      when is_binary(ingredient_id) and ingredient_id == "" do
+    []
+  end
+
+  def get_measurement_unit_portions_for_ingredient(ingredient_id) do
+    from(ingp in Mehungry.Food.IngredientPortion, where: ingp.ingredient_id == ^ingredient_id)
+    |> Repo.all()
+    |> Repo.preload(:measurement_unit)
+  end
+
   def get_measurement_unit_by_name(name) do
     from(mu in MeasurementUnit,
       where: mu.name == ^name or mu.alternate_name == ^name
     )
     |> Repo.all()
+  end
+
+  def get_category_by_name(nil) do
+    nil
   end
 
   def get_category_by_name(name) do
@@ -257,38 +275,42 @@ defmodule Mehungry.Food do
   end
 
   def get_recipe!(id) do
-    {id, _} =
-      if(is_integer(id)) do
-        {id, nil}
-      else
-        Integer.parse(id)
-      end
-
-    result =
-      case Cachex.get(:recipes_cache, {__MODULE__, id}) do
-        {:ok, nil} ->
-          recipe =
-            Repo.get(Recipe, id)
-            |> Repo.preload([
-              [recipe_ingredients: [:measurement_unit, :ingredient]],
-              :user,
-              :recipe_hashtags,
-              comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
-            ])
-
-          if(not is_nil(recipe)) do
-            Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
-            recipe
-          end
-
-        {:ok, %Recipe{} = recipe} ->
-          recipe
-      end
-
-    if is_nil(result) do
-      result
+    if is_nil(id) do
+      nil
     else
-      translate_recipe_if_needed(result)
+      {id, _} =
+        if(is_integer(id)) do
+          {id, nil}
+        else
+          Integer.parse(id)
+        end
+
+      result =
+        case Cachex.get(:recipes_cache, {__MODULE__, id}) do
+          {:ok, nil} ->
+            recipe =
+              Repo.get(Recipe, id)
+              |> Repo.preload([
+                [recipe_ingredients: [:measurement_unit, :ingredient]],
+                :user,
+                :recipe_hashtags,
+                comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
+              ])
+
+            if(not is_nil(recipe)) do
+              Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
+              recipe
+            end
+
+          {:ok, %Recipe{} = recipe} ->
+            recipe
+        end
+
+      if is_nil(result) do
+        result
+      else
+        translate_recipe_if_needed(result)
+      end
     end
   end
 
@@ -599,19 +621,27 @@ defmodule Mehungry.Food do
     end
   end
 
-  def update_recipe(%Recipe{} = recipe_origin, attrs \\ %{}) do
+  defp get_recipe_hashtags(attrs) do
     recipe_hashtags =
-      case is_nil(attrs[:description]) do
+      case is_nil(attrs["description"]) do
         true ->
-          []
+          case is_nil(attrs[:description]) do
+            true ->
+              []
+
+            false ->
+              get_hashtags_string(attrs[:description])
+          end
 
         false ->
-          get_hashtags_string(attrs[:description])
+          get_hashtags_string(attrs["description"])
       end
+  end
+
+  def update_recipe(%Recipe{} = recipe_origin, attrs \\ %{}) do
+    recipe_hashtags = get_recipe_hashtags(attrs)
 
     attrs = Mehungry.Utils.put_map(attrs, :recipe_hashtags, recipe_hashtags)
-
-    # attrs = Map.put(attrs, :recipe_hashtags, recipe_hashtags)
 
     changeset =
       recipe_origin
@@ -669,7 +699,9 @@ defmodule Mehungry.Food do
   end
 
   def put_nutrient_info(%Ecto.Changeset{valid?: true} = changeset, attrs) do
-    {primary_size, nutrients} = Mehungry.Food.RecipeUtils.get_nutrients(attrs)
+
+    {primary_size, nutrients} = Mehungry.Food.NutrientCalculation.calculate_recipe_nutrition_value(attrs)
+
 
     if Enum.empty?(nutrients) do
       changeset
@@ -705,22 +737,7 @@ defmodule Mehungry.Food do
   end
 
   def create_recipe(attrs \\ %{}) do
-    recipe_hashtags =
-      case is_nil(attrs["description"]) do
-        true ->
-          case is_nil(attrs[:description]) do
-            true ->
-              []
-
-            false ->
-              get_hashtags_string(attrs[:description])
-          end
-
-        false ->
-          get_hashtags_string(attrs["description"])
-      end
-
-    # attrs = Map.put(attrs, "recipe_hashtags", recipe_hashtags)
+    recipe_hashtags = get_recipe_hashtags(attrs)
     attrs = Mehungry.Utils.put_map(attrs, :recipe_hashtags, recipe_hashtags)
 
     changeset =
@@ -746,12 +763,16 @@ defmodule Mehungry.Food do
           ])
 
         Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
-        Mehungry.Posts.create_post(recipe)
+        create_post = Mehungry.Posts.create_post(recipe)
         result
 
       _ ->
         result
     end
+  end
+
+  def list_nutrients() do
+    Repo.all(Mehungry.Food.Nutrient)
   end
 
   def list_ingredients() do
@@ -887,7 +908,15 @@ defmodule Mehungry.Food do
     |> Enum.filter(fn x -> !is_nil(x) end)
   end
 
-  def search_ingredient_search(search_term) do
+  def maybe_filter_by_classes(query, nil), do: query
+  def maybe_filter_by_classes(query, []), do: query
+  def maybe_filter_by_classes(query, [""]), do: query
+
+  def maybe_filter_by_classes(query, classes) do
+    from(i in query, where: i.food_class in ^classes)
+  end
+
+  def search_ingredient_search(search_term, classes \\ []) do
     secondary_ids = get_second_layer_foods_ids()
 
     from(i in Ingredient,
@@ -906,45 +935,44 @@ defmodule Mehungry.Food do
         )
       }
     )
+    |> maybe_filter_by_classes(classes)
   end
 
-  def search_ingredient_alt_admin(search_term) do
-    {search_ingredient_search(search_term), pagenate_query(search_ingredient_search(search_term))}
+  def search_ingredient_alt_admin(search_term, classes \\ []) do
+    {search_ingredient_search(search_term, classes),
+     pagenate_query(search_ingredient_search(search_term, classes))}
   end
 
-  def search_ingredient_alt(search_term) do
-    # secondary_ids = get_second_layer_foods_ids()
-
-    result = Repo.all(search_ingredient_search(search_term))
+  def search_ingredient_alt(search_term, classes \\ []) do
+    result = Repo.all(search_ingredient_search(search_term, classes))
     Logger.info("Search ingredient: " <> search_term <> " resulted: " <> inspect(result))
 
     result
   end
 
-  def search_ingredient_admin(search_term) do
-    query = search_ingredient_query(search_term)
+  def search_ingredient_admin(search_term, classes \\ []) do
+    query = search_ingredient_query(search_term, classes)
     {query, pagenate_query(query)}
   end
 
-  def search_ingredient(search_term) do
-    Repo.all(search_ingredient_query(search_term))
+  def search_ingredient(search_term, classes \\ []) do
+    Repo.all(search_ingredient_query(search_term, classes))
     |> Repo.preload([:category, :measurement_unit])
   end
 
-  def search_ingredient_query(search_term) do
+  def search_ingredient_query(search_term, classes \\ []) do
     ilike_search_term = "%#{search_term}%"
-    secondary_ids = get_second_layer_foods_ids()
 
     query =
       from(
         ingredient in Ingredient,
         where:
-          ingredient.category_id not in ^secondary_ids and
-            (fragment("? % ?", ^search_term, ingredient.name) or
-               ilike(ingredient.name, ^ilike_search_term)),
+          fragment("? % ?", ^search_term, ingredient.name) or
+            ilike(ingredient.name, ^ilike_search_term),
         order_by: {:desc, fragment("? % ?", ^search_term, ingredient.name)},
         limit: 20
       )
+      |> maybe_filter_by_classes(classes)
 
     query
   end
