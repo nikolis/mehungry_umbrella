@@ -59,8 +59,6 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
   @impl true
   def handle_event("search_change", %{"search_form" => search_form} = rest, socket) do
-    IO.inspect(search_form, label: "search change ")
-
     socket = execute_query(search_form, socket)
 
     {:noreply, socket}
@@ -91,7 +89,6 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
   def execute_query(form_params, socket) do
     classes = String.split(form_params["classes"], ",")
-    IO.inspect(classes)
 
     {ecto_query, {ingredients, cursor}} =
       case form_params["search_method"] do

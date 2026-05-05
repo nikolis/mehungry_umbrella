@@ -288,6 +288,7 @@ defmodule Mehungry.Food do
       result =
         case Cachex.get(:recipes_cache, {__MODULE__, id}) do
           {:ok, nil} ->
+            Logger.warning("Getting recipe " <> Integer.to_string(id) <> " from Database")
             recipe =
               Repo.get(Recipe, id)
               |> Repo.preload([
@@ -303,6 +304,8 @@ defmodule Mehungry.Food do
             end
 
           {:ok, %Recipe{} = recipe} ->
+            Logger.info("Getting recipe " <> Integer.to_string(id) <> " from Cache")
+
             recipe
         end
 
@@ -466,7 +469,7 @@ defmodule Mehungry.Food do
     # assign the `after` cursor to a variable
     cursor_after = metadata.after
 
-    results = Repo.preload(entries, [:recipe_ingredients, :user, :user_recipes])
+    results = Repo.preload(entries, [:user, :user_recipes])
 
     result =
       Enum.map(results, fn rec ->
@@ -498,7 +501,7 @@ defmodule Mehungry.Food do
     # assign the `after` cursor to a variable
     cursor_after = metadata.after
 
-    results = Repo.preload(entries, [:recipe_ingredients, :user])
+    results = Repo.preload(entries, [:user])
 
     result =
       Enum.map(results, fn rec ->

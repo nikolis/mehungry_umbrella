@@ -694,13 +694,6 @@ defmodule MehungryWeb.RecipeComponents do
         _ -> false
       end
 
-    IO.inspect(nutrient, label: "Nutrient")
-
-    IO.inspect(result,
-      label:
-        "----------------------------------------------------------------------------------------------"
-    )
-
     result
   end
 end

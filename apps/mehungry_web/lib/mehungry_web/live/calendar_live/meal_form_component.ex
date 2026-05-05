@@ -75,9 +75,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   end
 
   defp init(socket, base, default_attrs) do
-    IO.inspect(base,
-      label: "Vasdfdafsdfasafsddfzse =i----------------------------------------------"
-    )
 
     changeset = UserMeal.changeset(base, default_attrs)
     existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
@@ -91,7 +88,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
         changeset
       end
 
-    IO.inspect(changeset, label: "Vzse =i----------------------------------------------")
 
     assign(socket,
       base: base,
@@ -279,7 +275,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
          |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect(changeset, label: "CHangeset")
         {:noreply, assign(socket, :changeset, changeset)}
     end
   end
@@ -296,7 +291,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
          |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect(changeset, label: "CHangeset")
 
         {:noreply, assign(socket, changeset: changeset)}
     end

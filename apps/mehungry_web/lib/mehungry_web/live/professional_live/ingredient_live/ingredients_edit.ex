@@ -120,8 +120,6 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsEdit do
     updated =
       Map.put(nutrients, new_key, %{})
 
-    IO.inspect("--------------")
-
     new_params =
       Map.put(params, "ingredient_nutrients", updated)
 

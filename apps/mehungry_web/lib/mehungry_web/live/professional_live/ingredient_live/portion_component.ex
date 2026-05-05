@@ -6,7 +6,7 @@ defmodule MehungryWeb.Professional.PortionsComponent do
     <div class="relative px-8">
       <h3 class="text-xl font-semibold mb-2">Portions</h3>
       <.inputs_for :let={portion_form} field={@form[:ingredient_portions]}>
-        <div class="grid grid-cols-5 p-2">
+        <div class="flex flex-row p-2">
           <input
             type="hidden"
             name="ingredient[ingredient_portions_sort][]"

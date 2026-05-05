@@ -75,7 +75,6 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsCreate do
              |> put_flash(:info, "Saved successfully")}
 
           {:error, changeset} ->
-            IO.inspect(changeset, label: "Changeset")
             {:noreply, assign(socket, :form, to_form(changeset))}
         end
     end
@@ -135,9 +134,6 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsCreate do
   end
 
   defp remove_nutrient(socket, params, index) do
-    IO.inspect(
-      "Remove nutrient -------------------------------------------------------------------------------------------------------------------------------------------"
-    )
 
     portions =
       Map.get(params, "ingredient_nutrients", %{})

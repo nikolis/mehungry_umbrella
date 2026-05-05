@@ -27,7 +27,6 @@ defmodule MehungryWeb.AuthController do
     token = auth.extra.raw_info.token.access_token
     {:ok, decoded_token} = Jason.decode(token)
     _token_save = Accounts.put_user_token(conn.assigns.current_user, token, "instagram")
-    IO.inspect("login instagram provider")
 
     Mehungry.Api.Instagram.get_long_lived_token(
       conn.assigns.current_user,
@@ -74,8 +73,6 @@ defmodule MehungryWeb.AuthController do
     case Accounts.find_or_create(auth) do
       {:ok, user} ->
         UserAuth.log_in_user(conn, user, %{})
-
-        IO.inspect("login adsfaffadsafsdfasdm provider")
 
         conn
         |> put_flash(:info, "Successfully authenticated.")

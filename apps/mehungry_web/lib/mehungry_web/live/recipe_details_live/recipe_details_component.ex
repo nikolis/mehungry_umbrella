@@ -181,7 +181,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           <.recipe_attrs_container recipe={@recipe} />
         </div>
         <div class="w-full mt-2">
-          <%= if ! is_nil(@user) and @recipe.user_id == @user.id do %>
+          <%= if ! is_nil(@user) and @recipe.user_id == nil do %>
             <button
               class="px-4 rounded-md py-1"
               phx-target={@myself}

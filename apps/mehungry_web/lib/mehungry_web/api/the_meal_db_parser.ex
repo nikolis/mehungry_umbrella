@@ -32,14 +32,6 @@ defmodule MehungryWeb.Api.TheMealDBParser do
       ingredient = Map.get(meal_data, "strIngredient#{i}")
       measure = Map.get(meal_data, "strMeasure#{i}")
 
-      IO.inspect(ingredient,
-        label: "--------------------------------------"
-      )
-
-      IO.inspect(measure,
-        label: "--------------------------------------"
-      )
-
       if is_binary(ingredient) and ingredient != "" do
         %{
           ingredient: ingredient,

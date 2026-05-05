@@ -8,7 +8,7 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
         <.back navigate={~p"/professional/ingredients"}>Back</.back>
 
         <h2 class="text-xl font-semibold mb-4">Ingredient Details</h2>
-        <div class="grid grid-cols-6  ">
+        <div class="flex flex-row  ">
           <.input
             type="text"
             class=""

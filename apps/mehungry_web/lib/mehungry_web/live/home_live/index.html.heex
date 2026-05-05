@@ -57,8 +57,8 @@
       <.live_component
         module={MehungryWeb.RecipeDetailsComponent}
         id="recipe_details_component"
-        primary_size={@primary_size}
-        nutrients={@nutrients}
+        primary_size={@recipe.primary_nutrients_size}
+        nutrients={@recipe.nutrients}
         recipe={@recipe}
         user_recipes={@current_user_recipes}
         user={@user}

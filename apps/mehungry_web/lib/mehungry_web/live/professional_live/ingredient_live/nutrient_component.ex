@@ -20,7 +20,7 @@ defmodule MehungryWeb.Professional.NutrientComponent do
     <div class="relative  p-8">
       <h3 class="m-auto w-wrap text-2xl font-semibold mb-2">Nutrients</h3>
       <.inputs_for :let={nutrients_form} field={@form[:ingredient_nutrients]}>
-        <div class="grid grid-cols-5  relative py-2">
+        <div class="flex  relative py-2">
           <input
             type="hidden"
             name="ingredient[ingredient_nutrients_sort][]"

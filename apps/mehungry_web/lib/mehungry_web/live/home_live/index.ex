@@ -121,13 +121,11 @@ defmodule MehungryWeb.HomeLive.Index do
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
     maybe_track_user(%{}, socket)
 
-    recipe = Food.get_recipe!(id)
-
+    recipe = Food.get_recipe!(String.to_integer(id))
     if !is_nil(recipe) do
       Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
     end
 
-    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
     user = socket.assigns.user
 
     user_recipes =
@@ -141,13 +139,11 @@ defmodule MehungryWeb.HomeLive.Index do
       end
 
     socket
-    |> assign(:nutrients, nutrients)
     |> assign(:page_title, %{
       title: recipe.title <> "Browse Recipes",
       img: recipe.image_url,
       id: Integer.to_string(recipe.id)
     })
-    |> assign(:primary_size, primaries_length)
     |> assign(:recipe, recipe)
     |> assign(:current_user_recipes, user_recipes)
   end

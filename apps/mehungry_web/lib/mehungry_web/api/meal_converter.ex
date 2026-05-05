@@ -43,12 +43,10 @@ defmodule MehungryWeb.Api.MealConverter do
   end
 
   defp convert_ingredient(%{ingredient: name, measure: measure}) do
-    IO.inspect(name, label: "The name before")
     {:ok, name} = PosTagger.rearrange_with_noun_first(name <> " \n")
-    IO.inspect(name, label: "The name after")
 
     ingredients =
-      Food.search_ingredient(name)
+      Food.search_ingredient_alt(name)
       |> Repo.preload([:measurement_unit, [ingredient_portions: :measurement_unit]])
 
     {quantity, unit_string} = parse_measure(measure)
@@ -81,9 +79,6 @@ defmodule MehungryWeb.Api.MealConverter do
       Enum.map(ingredients, fn x -> x.ingredient_portions end)
       |> List.flatten()
       |> Enum.map(fn x -> {x, x.measurement_unit.name} end)
-
-    IO.inspect(ingredients, label: "The ingredients")
-    IO.inspect(mu_name, label: "The neasyrenebt unit name")
 
     case ingredients do
       [] ->

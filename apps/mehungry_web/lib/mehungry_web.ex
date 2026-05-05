@@ -56,7 +56,7 @@ defmodule MehungryWeb do
     end
   end
 
-  def static_paths, do: ~w(css js assets fonts images favicon.ico robots.txt)
+  def static_paths, do: ~w(css js assets fonts images favicon.svg favicon.ico robots.txt)
 
   def verified_routes do
     quote do
