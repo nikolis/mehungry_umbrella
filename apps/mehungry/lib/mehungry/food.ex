@@ -289,6 +289,7 @@ defmodule Mehungry.Food do
         case Cachex.get(:recipes_cache, {__MODULE__, id}) do
           {:ok, nil} ->
             Logger.warning("Getting recipe " <> Integer.to_string(id) <> " from Database")
+
             recipe =
               Repo.get(Recipe, id)
               |> Repo.preload([

@@ -1,4 +1,4 @@
-defmodule MehungryWeb.Professional.IngredientFormComponent do
+defmodule MehungryWeb.Professional.IngredientDirectForm do
   use MehungryWeb, :live_component
 
   def render(assigns) do
@@ -8,8 +8,6 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
         <.back navigate={~p"/professional/ingredients"}>Back</.back>
 
         <h2 class="text-xl font-semibold mb-4">Ingredient Details</h2>
-        <.input type="textarea" class="h-80" label="Nutrients text" name="ingredient[nutrients_text]" value={@form[:nutrients_text].value} />
-
         <div class="flex flex-row  ">
           <.input
             type="text"
@@ -20,27 +18,6 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
           />
           <input type="hidden" name="ingredient[_action]" value="" />
           <input type="hidden" name="ingredient[food_class]" value={@form[:food_class].value} />
-
-          <input name="ingredient[food_class]" value={@form[:food_clas].value} />
-          
-    <!-- CATEGORY DROPDOWN -->
-          <.live_component
-            module={MehungryWeb.SelectComponent}
-            items={Enum.map(@categories, fn x -> {Integer.to_string(x.id), x.name} end)}
-            form={@form}
-            id="category_select_component"
-            input_variable={:category_id}
-          />
-          
-    <!-- MEASUREMENT UNIT DROPDOWN -->
-
-          <.live_component
-            module={MehungryWeb.SelectComponent}
-            items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
-            form={@form}
-            id="measurement_unit_select_component_ingredient"
-            input_variable={:measurement_unit_id}
-          />
         </div>
 
         <.live_component

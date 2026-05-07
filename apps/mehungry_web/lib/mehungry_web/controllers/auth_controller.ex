@@ -78,7 +78,7 @@ defmodule MehungryWeb.AuthController do
         |> put_flash(:info, "Successfully authenticated.")
         |> put_session(:current_user, user)
         |> configure_session(renew: true)
-        |> redirect(to: "~/")
+        |> redirect(to: "/")
 
       {:error, reason} ->
         conn

@@ -75,7 +75,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   end
 
   defp init(socket, base, default_attrs) do
-
     changeset = UserMeal.changeset(base, default_attrs)
     existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
     existing_ing = Ecto.Changeset.get_assoc(changeset, :ingredient_user_meals)
@@ -87,7 +86,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
       else
         changeset
       end
-
 
     assign(socket,
       base: base,
@@ -291,7 +289,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
          |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-
         {:noreply, assign(socket, changeset: changeset)}
     end
   end

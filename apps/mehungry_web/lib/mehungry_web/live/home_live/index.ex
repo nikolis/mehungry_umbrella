@@ -122,6 +122,7 @@ defmodule MehungryWeb.HomeLive.Index do
     maybe_track_user(%{}, socket)
 
     recipe = Food.get_recipe!(String.to_integer(id))
+
     if !is_nil(recipe) do
       Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
     end

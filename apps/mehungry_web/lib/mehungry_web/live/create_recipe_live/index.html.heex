@@ -26,7 +26,6 @@
       <% end %>
     </div>
 
-
     <div class="w-full">
       <.live_component
         module={MehungryWeb.RecipeFormComponent}
@@ -39,34 +38,34 @@
         measurement_units={@measurement_units}
       />
 
-<%= if @current_user.email in ["nikolisgal@gmail.com", "r3qviem@hotmail.com"]  do %>
-      <div class="content_container " id="content-0">
-        <.form
-          :let={b}
-          id={@f.id<>"2"}
-          for={%{}}
-          phx-change="validate"
-          phx-submit="save"
-          class="gap-2 flex  flex-col  relative w-fit m-auto"
-          style=""
-        >
-          <.input
-            field={b[:url_to_drill]}
-            type="text"
-            label="themealdb id i.e 52764"
-            class="px-10"
-          />
-          <div class=" absolute right-0 ">
-            {submit("Get blueprint",
-              class: "button bg-complementary border-2 border-transparent  ",
-              type: "submit",
-              phx_disable_with: "Saving...",
-              id: "save_button2"
-            )}
-          </div>
-        </.form>
-      </div>
-<% end %>
+      <%= if @current_user.email in ["nikolisgal@gmail.com", "r3qviem@hotmail.com"]  do %>
+        <div class="content_container " id="content-0">
+          <.form
+            :let={b}
+            id={@f.id<>"2"}
+            for={%{}}
+            phx-change="validate"
+            phx-submit="save"
+            class="gap-2 flex  flex-col  relative w-fit m-auto"
+            style=""
+          >
+            <.input
+              field={b[:url_to_drill]}
+              type="text"
+              label="themealdb id i.e 52764"
+              class="px-10"
+            />
+            <div class=" absolute right-0 ">
+              {submit("Get blueprint",
+                class: "button bg-complementary border-2 border-transparent  ",
+                type: "submit",
+                phx_disable_with: "Saving...",
+                id: "save_button2"
+              )}
+            </div>
+          </.form>
+        </div>
+      <% end %>
     </div>
   </div>
 </div>

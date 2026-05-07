@@ -13,6 +13,7 @@ defmodule Mehungry.Food.Ingredient do
     field :food_class, :string
     field :nutrient_conversion_factors, {:array, :map}, default: []
     field :publication_date, :string
+    field :nutrients_text, :string, virtual: true
 
     belongs_to :category, Mehungry.Food.Category
     belongs_to :measurement_unit, Mehungry.Food.MeasurementUnit
@@ -22,6 +23,25 @@ defmodule Mehungry.Food.Ingredient do
     has_many :ingredient_translation, Mehungry.Food.IngredientTranslation
 
     timestamps()
+  end
+
+  defp handle_nutrient_text(changeset) do
+    nutrient_text = get_change(changeset, :nutrients_text)
+
+    nutrients = get_change(changeset, :ingredient_nutrients)
+    IO.inspect(nutrients, label: "Nutrients")
+
+    IO.inspect(nutrient_text, label: "Nutrients")
+    # put_change(changeset, :ingredient_nutrients, nutrients)
+    changeset
+  end
+
+  defp handle_portion_text(changeset) do
+    portion_text = get_change(changeset, :portion_text)
+    portions = get_change(changeset, :portions)
+
+    # put_change(changeset, :ingredient_portions, ingredient_portions)
+    changeset
   end
 
   @doc false
@@ -37,6 +57,8 @@ defmodule Mehungry.Food.Ingredient do
       :publication_date,
       :food_class
     ])
+    |> handle_nutrient_text()
+    |> handle_portion_text()
     |> cast_assoc(:ingredient_portions,
       with: &Mehungry.Food.IngredientPortion.changeset/2,
       sort_param: :ingredient_portions_sort,

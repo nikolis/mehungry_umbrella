@@ -1180,7 +1180,6 @@ defmodule MehungryWeb.CoreComponents do
           [Map.get(assigns.rest, :class, "")] ++
             [
               "rounded-lg border-greyfriend2  focus:border-greyfriend2 focus:ring-complementarym focus:ring-2	h-full border-3",
-
               "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym",
               @errors == [] && "",
               @errors != [] && " ring-rose-400  focus:ring-rose-400"

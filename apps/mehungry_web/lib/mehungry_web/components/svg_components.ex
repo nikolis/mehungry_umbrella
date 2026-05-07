@@ -127,53 +127,84 @@ defmodule MehungryWeb.SvgComponents do
   end
 
   def get_logo(assigns) do
-      ~H"""
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 120">
-  <defs>
-    <!-- Warm Orange gradients matching favicon -->
-    <linearGradient id="topCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FBBF24" />
-      <stop offset="50%" stop-color="#F97316" />
-      <stop offset="100%" stop-color="#EA580C" />
-    </linearGradient>
-    <linearGradient id="middleCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#F97316" />
-      <stop offset="50%" stop-color="#EA580C" />
-      <stop offset="100%" stop-color="#C2410C" />
-    </linearGradient>
-    <linearGradient id="bottomCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#EA580C" />
-      <stop offset="100%" stop-color="#7C2D12" />
-    </linearGradient>
-  </defs>
-
-  <!-- Bottom Cube -->
-  <polygon points="60,95 80,82 100,95 100,115 80,128 60,115" fill="url(#bottomCubeOrange)" />
-  <polygon points="80,82 100,95 80,108 60,95" fill="#7C2D12" opacity="0.7" />
-
-  <!-- Middle Cube -->
-  <polygon points="80,65 100,52 120,65 120,85 100,98 80,85" fill="url(#middleCubeOrange)" />
-  <polygon points="100,52 120,65 100,78 80,65" fill="#C2410C" opacity="0.7" />
-
-  <!-- Top Cube -->
-  <polygon points="100,38 120,25 140,38 140,58 120,71 100,58" fill="url(#topCubeOrange)" />
-  <polygon points="120,25 140,38 120,51 100,38" fill="#F97316" opacity="0.8" />
-
-  <!-- Lines -->
-  <line x1="100" y1="58" x2="100" y2="78" stroke="#FBBF24" stroke-width="2" stroke-dasharray="3,3" />
-  <line x1="80" y1="65" x2="80" y2="82" stroke="#FBBF24" stroke-width="2" stroke-dasharray="3,3" />
-  <line x1="120" y1="52" x2="120" y2="65" stroke="#FBBF24" stroke-width="2" stroke-dasharray="3,3" />
-
-  <!-- Text - Dark slate to match favicon text -->
-  <text x="160" y="65" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="38" font-weight="800" fill="#0F172A" letter-spacing="2">
-    M3<tspan fill="#EA580C">HUNGRY</tspan>
-  </text>
-
-  <!-- Tagline -->
-  <text x="160" y="88" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="11" fill="#64748B" letter-spacing="3">
-    ANALYZE • SHARE • CONNECT
-  </text>
-</svg>
+    ~H"""
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 120">
+      <defs>
+        <!-- Warm Orange gradients matching favicon -->
+        <linearGradient id="topCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#FBBF24" />
+          <stop offset="50%" stop-color="#F97316" />
+          <stop offset="100%" stop-color="#EA580C" />
+        </linearGradient>
+        <linearGradient id="middleCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#F97316" />
+          <stop offset="50%" stop-color="#EA580C" />
+          <stop offset="100%" stop-color="#C2410C" />
+        </linearGradient>
+        <linearGradient id="bottomCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#EA580C" />
+          <stop offset="100%" stop-color="#7C2D12" />
+        </linearGradient>
+      </defs>
+      
+    <!-- Bottom Cube -->
+      <polygon points="60,95 80,82 100,95 100,115 80,128 60,115" fill="url(#bottomCubeOrange)" />
+      <polygon points="80,82 100,95 80,108 60,95" fill="#7C2D12" opacity="0.7" />
+      
+    <!-- Middle Cube -->
+      <polygon points="80,65 100,52 120,65 120,85 100,98 80,85" fill="url(#middleCubeOrange)" />
+      <polygon points="100,52 120,65 100,78 80,65" fill="#C2410C" opacity="0.7" />
+      
+    <!-- Top Cube -->
+      <polygon points="100,38 120,25 140,38 140,58 120,71 100,58" fill="url(#topCubeOrange)" />
+      <polygon points="120,25 140,38 120,51 100,38" fill="#F97316" opacity="0.8" />
+      
+    <!-- Lines -->
+      <line
+        x1="100"
+        y1="58"
+        x2="100"
+        y2="78"
+        stroke="#FBBF24"
+        stroke-width="2"
+        stroke-dasharray="3,3"
+      />
+      <line x1="80" y1="65" x2="80" y2="82" stroke="#FBBF24" stroke-width="2" stroke-dasharray="3,3" />
+      <line
+        x1="120"
+        y1="52"
+        x2="120"
+        y2="65"
+        stroke="#FBBF24"
+        stroke-width="2"
+        stroke-dasharray="3,3"
+      />
+      
+    <!-- Text - Dark slate to match favicon text -->
+      <text
+        x="160"
+        y="65"
+        font-family="'Inter', system-ui, -apple-system, sans-serif"
+        font-size="38"
+        font-weight="800"
+        fill="#0F172A"
+        letter-spacing="2"
+      >
+        M3<tspan fill="#EA580C">HUNGRY</tspan>
+      </text>
+      
+    <!-- Tagline -->
+      <text
+        x="160"
+        y="88"
+        font-family="'Inter', system-ui, -apple-system, sans-serif"
+        font-size="11"
+        fill="#64748B"
+        letter-spacing="3"
+      >
+        ANALYZE • SHARE • CONNECT
+      </text>
+    </svg>
     """
   end
 
