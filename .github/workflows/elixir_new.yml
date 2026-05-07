@@ -61,7 +61,14 @@ jobs:
            task-definition: task-definition.json 
            container-name: mehungry_app 
            image: ${{ steps.build-image.outputs.image }}
-
+           
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1 
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: mh-prod-service
+          cluster: mehungry_cluster
+    
      # - name: Run DB migrations
      #   env:
      #     ECS_CLUSTER: mehungry_cluster
@@ -104,12 +111,6 @@ jobs:
     #        exit 1
     #      fi
  
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1 
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: mh-prod-service
-          cluster: mehungry_cluster
             
 
           
