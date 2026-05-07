@@ -134,7 +134,6 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsCreate do
   end
 
   defp remove_nutrient(socket, params, index) do
-
     portions =
       Map.get(params, "ingredient_nutrients", %{})
       |> Map.delete(index)

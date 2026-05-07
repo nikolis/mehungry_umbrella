@@ -26,13 +26,13 @@ defmodule Mehungry.Posts do
     Repo.all(Post)
     |> Repo.preload([
       :user,
-      #:upvotes,
-      #:downvotes,
+      # :upvotes,
+      # :downvotes,
       # comments: [:user],
       reference: [
         :user_recipes,
         :user,
-        #recipe_ingredients: [:ingredient],
+        # recipe_ingredients: [:ingredient],
         comments: [:user],
         recipe_hashtags: [:hashtag]
       ]

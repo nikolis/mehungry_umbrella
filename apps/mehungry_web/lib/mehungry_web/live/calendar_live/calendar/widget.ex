@@ -351,42 +351,40 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           </div>
 
           <div class="flex flex-row ">
-          <span
-            class=" font-semibold"
-            phx-target={@myself}
-            phx-click="pick-date"
-            phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
-          >
-            <div class=" w-fit m-auto">
-              <span class="">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="size-7"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                  />
-                </svg>
-              </span>
-            </div>
-          </span>
-          <span
-            phx-target={@myself}
-            phx-click="pick-date"
-            phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
-            class="text-lg font-semibold cursor-pointer "
-          >
-            {Calendar.strftime(day, "%A")}
-          </span>
-
-
-        </div>
+            <span
+              class=" font-semibold"
+              phx-target={@myself}
+              phx-click="pick-date"
+              phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
+            >
+              <div class=" w-fit m-auto">
+                <span class="">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                    class="size-7"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                    />
+                  </svg>
+                </span>
+              </div>
+            </span>
+            <span
+              phx-target={@myself}
+              phx-click="pick-date"
+              phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
+              class="text-lg font-semibold cursor-pointer "
+            >
+              {Calendar.strftime(day, "%A")}
+            </span>
+          </div>
           <span
             class="absolute top-4  right-4  font-semibold"
             phx-click={

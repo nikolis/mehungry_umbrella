@@ -271,7 +271,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     socket
     |> assign(:cursor_after, cursor_after)
     |> assign(:query_string, query_str)
-    |> assign(:query, %{title: query})
+    |> assign(:query, query)
     |> assign(:search_changeset, nil)
     |> stream(:recipes, recipes)
     |> assign(

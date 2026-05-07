@@ -155,7 +155,6 @@ defmodule Mehungry.Accounts do
   end
 
   def register_3rd_party_user(attrs) do
-
     result =
       %User{}
       |> User.registration_3rd_party_changeset(attrs)
