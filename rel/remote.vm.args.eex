@@ -6,3 +6,35 @@
 
 ## Tweak GC to run more often
 ##-env ERL_FULLSWEEP_AFTER 10
+
+# apps/mehungry_app/rel/remote.vm.args.eex
+
+## Cookie
+# IMPORTANT: Remove or comment out any hardcoded cookie here
+# Let the environment variable take precedence
+-setcookie ${ERLANG_COOKIE}
+
+## Node name
+-name ${RELEASE_NODE}
+
+## Kernel options
+-smp auto
+
+## Increase distribution buffer
++zdbbl 32768
+
+## Port range for distribution
+-kernel inet_dist_listen_min 9000
+-kernel inet_dist_listen_max 9100
+
+## Heartbeat for VM monitoring
+-heart
+
+## Run as a long-lived node
++Bi
+
+## Enable distributed signals
++sfwi -sbt db
+
+## Number of async threads for IO
++A 5

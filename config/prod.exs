@@ -18,20 +18,35 @@ import Config
 #  show_sensitive_data_on_connection_error: true,
 #  pool_size: 10
 
-config(:libcluster,
-  topologies: [
-    ecs_dns: [
-      strategy: Cluster.Strategy.DNSPoll,
-      config: [
-        # Check every 5s
-        polling_interval: 1000,
-        query: "discovery-service-m3hungry-ecs-backend.namespace-m3hungry-ecs-backend",
-        node_basename: "mehungry_umbrella",
-        app_name: :mehungry_umbrella
+
+if System.get_env("ECS_TASK_ID") do
+  config :libcluster,
+    topologies: [
+      ecs_clustering: [
+        strategy: Cluster.Strategy.DNSPoll,
+        config: [
+          polling_interval: 10_000,  # Check every 10 seconds
+          query: "mehungry-app.ecs.internal",  # Your ECS service discovery DNS
+          node_name: "mehungry_app@#{System.get_env("MY_POD_IP")}"
+        ],
+        connect: {:net_kernel, :connect_node, []},
+        disconnect: {:erlang, :disconnect_node, []},
+        list_nodes: {:erlang, :nodes, [:visible]}
       ]
     ]
-  ]
-)
+else
+  # Development fallback
+  config :libcluster,
+    topologies: [
+      epmd: [
+        strategy: Cluster.Strategy.Epmd,
+        config: [
+          hosts: ["127.0.0.1"],
+          node_name: "mehungry_app@127.0.0.1"
+        ]
+      ]
+    ]
+end
 
 config :mehungry_web, MehungryWeb.Endpoint,
   http: [port: 4000],

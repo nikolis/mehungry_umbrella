@@ -5,8 +5,24 @@ defmodule MehungryWeb.Application do
 
   use Application
   import Cachex.Spec
-
+  defp force_set_cookie do
+    cookie = System.get_env("ERLANG_COOKIE") || System.get_env("RELEASE_COOKIE")
+    
+    if cookie do
+      # Convert to atom (Erlang cookies are atoms)
+      cookie_atom = String.to_atom(cookie)
+      :erlang.set_cookie(node(), cookie_atom)
+      IO.puts("✓ Cluster cookie set successfully")
+    else
+      IO.puts("⚠️ No ERLANG_COOKIE found - clustering will fail!")
+    end
+  end
   def start(_type, _args) do
+    # Force-set the cookie early
+    force_set_cookie()
+    
+    # Start topologies before clustering
+    topologies = Application.get_env(:libcluster, :topologies, [])
     children = [
       # Start the Telemetry supervisor
       # MehungryWeb.Telemetry,
@@ -36,8 +52,8 @@ defmodule MehungryWeb.Application do
       if @env != :test do
         # Start libcluster
         [
-          {Cluster.Supervisor,
-           [Application.get_env(:libcluster, :topologies), [name: Mehungry.ClusterSupervisor]]},
+          {Cluster.Supervisor, [topologies, [name: Mehungry.ClusterSupervisor]]},
+
           {Task.Supervisor, name: MehungryWeb.TaskSupervisor},
           %{
             id: MehungryWeb.SeedGenServerSuperServer,
