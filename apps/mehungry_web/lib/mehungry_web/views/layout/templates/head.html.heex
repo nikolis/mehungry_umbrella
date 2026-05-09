@@ -1,5 +1,6 @@
 <head>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
   <link rel="shortcut icon" href="/favicon.svg" />
 
   <style>
@@ -73,7 +74,7 @@
   {csrf_meta_tag()}
 
   <%= if is_map(@conn.assigns[:page_title]) do %>
-    <title>{@conn.assigns.page_title.title} -23432332324432</title>
+    <title>{@conn.assigns.page_title.title} </title>
     <meta
       property="og:url"
       content={"https://www.m3hungry.com/browse/"<> @conn.assigns.page_title.id}
@@ -81,7 +82,7 @@
     <meta property="og:image" content={@conn.assigns.page_title.img} />
   <% else %>
     <meta property="og:url" content="https://www.m3hungry.com/browse/" />
-    <title>-23432332324432</title>
+    <title>M3hungry</title>
   <% end %>
 
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js">
