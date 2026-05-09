@@ -12,8 +12,7 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
       <.header class="text-md">
         {@title}
       </.header>
-      <span>
-  </span>
+      <span></span>
       <div style="" phx-update="ignore" id="container" phx-hook="DatePicker">
         <input name="endtDate" type="hidden" placeholder="Select Date.." data-input />
       </div>
