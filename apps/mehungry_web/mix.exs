@@ -48,7 +48,7 @@ defmodule MehungryWeb.MixProject do
       {:vega_lite, "~> 0.1.10"},
       {:vix, "~> 0.23.0"},
       {:image, "~> 0.37"},
-      {:libcluster, "~> 3.5"},
+      {:libcluster, "~> 3.3"},
       {:swarm, "~> 3.0"},
       {:seqfuzz, "~> 0.2.0"},
       {:phoenix_html_helpers, "~> 1.0"},
