@@ -118,52 +118,9 @@
 	right: 1.5rem;
 }
 
-.primary_button {
-	text-transform: capitalize;
-	background-color: var(--clr-primary) !important;
-	color: white;
-	padding: 5px 25px;
-	border-radius: 20px;
-	font-size: 1.1rem;
-	font-weight: 500;
-}
-
-
-.primary_button:hover {
-	background-color: var(--clr-light) !important;
-}
-
-.primary_button_complementary {
-	text-transform: capitalize;
-	padding: 5px 25px;
-	border-radius: 20px;
-	font-weight: 500;
-	font-size: 1.1rem;
-	background-color: var(--clr-complementary-middle) !important;
-	color: white;
-
-}
-.primary_button_complementary:hover {
-	background-color: var(--clr-complementary-light) !important;
-}
 
 
 
-.primary_button_outline {
-	text-transform: uppercase;
-	background-color: transparent !important;
-	color: var(--clr-primary) !important;
-	padding: 5px 25px;
-	border-radius: 20px;
-	font-size: 1rem;
-	font-weight: bold;
-	border: 1px solid var(--clr-light);
-}
-
-.primary_button_outline:hover {
-	background-color: var(--clr-light) !important;
-	color: white !important;
-}
 
 
 

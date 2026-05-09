@@ -175,7 +175,7 @@ defmodule MehungryWeb.RecipeFormComponent do
         <div class="flex bottom-0">
           <div id="something wierd" class="md:absolute  sm:right-56  mx-auto bottom-0 w-40">
             <button
-              class="button text-greyfriend3 border-2 border-greyfriend3  w-full md:absolute right-0 left-0 bottom-0 md:mx-auto text-2xl font-bold   mb-14"
+              class="button text-secondary-500 border-2 border-secondary-500  w-full md:absolute right-0 left-0 bottom-0 md:mx-auto text-2xl font-bold   mb-14"
               id="button_delete"
               type="button"
               phx-click="clear-form"
@@ -186,7 +186,7 @@ defmodule MehungryWeb.RecipeFormComponent do
           <div class="md:absolute right-0 sm:right-10 mx-auto bottom-0 w-40">
             {submit("Save",
               class:
-                "button bg-complementary border-2 border-transparent  w-full md:absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold mb-14",
+                "button bg-primary-400  border-2 border-transparent  w-full md:absolute right-0 left-0 bottom-0 mx-auto text-2xl font-bold mb-14",
               type: "submit",
               phx_disable_with: "Saving...",
               id: "save_button"

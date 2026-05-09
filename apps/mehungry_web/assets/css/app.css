@@ -8,19 +8,81 @@
 @import "./stepper2.css";
 @import "./browse.css"; 
 @import "./create.css";
-@import "./override.css"; 
 
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Dark theme tooltips - matches your #1E293B background */
+.vg-tooltip {
+  background-color: #1E293B !important;
+  color: #FFFFFF !important;
+  border: 1px solid #3B4252 !important;
+}
+.mark-text{
+  color: white;
+} 
+.role-legend-title{
+  color: white;
+}
+.vg-tooltip th {
+  color: #94A3B8 !important;  /* Lighter color for field names */
+}
 
+.vg-tooltip td {
+  color: #FFFFFF !important;   /* White for values */
+}
+
+/* If you want even more control over the tooltip theme */
+.vg-tooltip.dark-theme {
+  background-color: #1E293B;
+  color: #F8FAFC;
+}
+/* Chrome, Edge, Safari */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1f2937; /* gray-800 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #10b981; /* emerald-500 */
+  border-radius: 9999px;
+  border: 2px solid #1f2937;
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #FB923C #1f2937;
+}
 
 
 @layer base {
 
+/* Chrome, Edge, Safari */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
 
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1f2937; /* gray-800 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #10b981; /* emerald-500 */
+  border-radius: 9999px;
+  border: 2px solid #1f2937;
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #10b981 #1f2937;
+}
 .the_checkbox {
    background-color: red;
 }
@@ -38,7 +100,7 @@
     border-radius: 20px;
     font-size: 1rem;
     font-weight: bold;
-    @apply border-2 bg-transparent border-solid border-primary text-primary hover:bg-primary hover:text-white;
+    @apply border-2 bg-transparent border-solid border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white;
   }
   .button_outline_complementary {
     text-transform: uppercase;

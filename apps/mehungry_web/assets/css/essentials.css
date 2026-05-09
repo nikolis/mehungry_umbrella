@@ -656,45 +656,6 @@ body {
   position: relative;
 }
 
-/*
-.accordion-trigger {
-  padding: 0.5rem;
-  background: transparent;
-  border: 0;
-  font: inherit;
-  color: inherit;
-}
-
-.accordion-trigger {
-  padding: 0.2rem;
-  background: transparent;
-  border: 0;
-  font: inherit;
-  color: inherit;
-}
-
-.accordion-trigger::before,
-.accordion-trigger::after {
-  position: absolute;
-  right: 0em;
-  content: "";
-  display: block;
-  width: 15px;
-  height: 5px;
-  background: currentcolor;
-  transition: transform 500ms;
-}
-
-.accordion-trigger::after {
-  rotate: 90deg;
-  translate: 0 -1.5em;
-}
-
-.accordion-trigger[aria-expanded="true"]::before,
-.accordion-trigger[aria-expanded="true"]::after {
-  transform: rotate(45deg);
-}
-*/
 
 .my_modal:backdrop {
 	background: (0 0 0 / .4);

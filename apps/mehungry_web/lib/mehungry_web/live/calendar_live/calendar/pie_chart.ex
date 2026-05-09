@@ -34,7 +34,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.PieChart do
       phx-hook="ResponsiveChart"
       data-size={@size}
       data-id={@id}
-      class="w-full"
+      class="w-full bg-red"
       data-origin_id={@origin_id}
     >
       <div id={"vega-#{@id}"} phx-hook="VegaLite" data-spec={Jason.encode!(@spec)}></div>
@@ -53,9 +53,33 @@ defmodule MehungryWeb.CalendarLive.Calendar.PieChart do
     |> Vl.encode_field(:theta, "value", type: :quantitative)
     |> Vl.encode_field(:color, "category", type: :nominal)
     |> Vl.encode(:tooltip, [
-      [field: "category", type: :nominal],
-      [field: "value", type: :quantitative]
+      [field: "category", type: :nominal, title: "Category"],
+      [field: "value", type: :quantitative, title: "Value", format: ".2f"]
     ])
+    |> Vl.config(
+      background: "#1E293B",
+      # Override all text elements
+      style: [
+        "guide-label": [fill: "#FFFFFF", font: "Inter"],
+        "guide-title": [fill: "#FFFFFF", font: "Inter"],
+        "group-title": [fill: "#FFFFFF", font: "Inter"],
+        "group-subtitle": [fill: "#FFFFFF", font: "Inter"],
+        "legend-label": [fill: "#FFFFFF", font: "Inter"],
+        "legend-title": [fill: "#FFFFFF", font: "Inter"]
+      ],
+      axis: [
+        labelColor: "#FFFFFF",
+        titleColor: "#FFFFFF",
+        domainColor: "#64748B",
+        tickColor: "#64748B"
+      ],
+      legend: [
+        labelColor: "#FFFFFF",
+        titleColor: "#FFFFFF",
+        labelFont: "Inter",
+        titleFont: "Inter"
+      ]
+    )
     |> Vl.to_spec()
   end
 end

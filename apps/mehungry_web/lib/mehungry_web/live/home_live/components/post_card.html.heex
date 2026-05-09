@@ -1,5 +1,5 @@
 <div
-  class="sm:w-2/6 md:w-4/6 m-auto  w-full p-4  mt-2 rounded-xl max-w-4/12"
+  class=" sm:w-2/6 md:w-4/6 m-auto  w-full p-4  mt-2 rounded-xl max-w-4/12 shadow my-12"
   style="border-bottom: 1px solid var(--clr-grey-friend_2);"
   id={"post_card_"<> Integer.to_string(@id)}
 >
@@ -15,7 +15,7 @@
 
   <div class="m-auto relative">
     <div class="" id={Integer.to_string(@post.id)}>
-      <div class="w-full m-auto relative bg-greyfriend1">
+      <div class="w-full m-auto relative bg-slate-100">
         <.link
           id={"card-link-to-recipe-#{@post.reference_id}"}
           class="block  "

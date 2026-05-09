@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <.head conn={@conn} />
-  <body class="w-fit  pt-8 m-auto">
+  <body class="w-full  pt-8 m-auto">
     {@inner_content}
     <%= if @current_user do %>
       <.sidebar_nav_links current_user={@current_user} inner_content={@inner_content} />

@@ -217,11 +217,11 @@ defmodule MehungryWeb.RecipeComponents do
     ~H"""
     <a
       href={@uri}
-      class=" inline cursor-pointer w-fit border-2 border-red border-solid rounded-full px-2 border-primaryl2"
+      class=" inline cursor-pointer w-fit border-2 border-red border-solid rounded-full  border-primary-400 bg-primary-400 px-2"
       id={Integer.to_string(@hashtag.id)}
     >
-      <div class="inline text-greyfriend3 text-base font-semibold">
-        {@hashtag.title}
+      <div class="inline bg-primary-400 rounded-full text-white text-base font-semibold">
+        {"#" <> @hashtag.title}
       </div>
     </a>
     """
@@ -476,6 +476,30 @@ defmodule MehungryWeb.RecipeComponents do
             <.icon name="hero-pencil-square-solid" />
           </button>
       <% end %>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders an accordion for recipe nutrients - with visual indicators for clickable items
+  """
+  def recipe_nutrients(%Mehungry.Food.Recipe{} = recipe) do
+    assigns = %{
+      id: recipe.id,
+      nutrients: recipe.nutrients,
+      primary_size: recipe.primary_nutrients_size || 3,
+      servings: recipe.servings || 1,
+      class: ""
+    }
+
+    ~H"""
+    <div class="my-4 ">
+      <MehungryWeb.NutritionAccordion.nutrition_accordion
+        nutrients={@nutrients}
+        title="Nutrition Facts"
+        max_height="600px"
+        show_title={true}
+      />
     </div>
     """
   end

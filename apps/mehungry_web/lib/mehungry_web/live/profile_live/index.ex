@@ -89,6 +89,18 @@ defmodule MehungryWeb.ProfileLive.Index do
     categories = Food.list_categories()
     category_ids = Enum.map(categories, fn x -> x.id end)
     food_restrictions = Food.list_food_restriction_types()
+    # Foul chnage asap
+    if(food_restrictions == []) do
+      {:ok, fr} =
+        Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolutely not"})
+
+      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Not a fun"})
+      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Neutral"})
+      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Fun"})
+      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolute fun"})
+    end
+
+    food_restrictions = Food.list_food_restriction_types()
     food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
 
     changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
@@ -185,6 +197,16 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply,
      socket
      |> assign(:user_profile, user_profile)}
+  end
+
+  def handle_info(
+        {MehungryWeb.ProfileLive.Form, {:saved, %Mehungry.Accounts.UserProfile{} = profile}},
+        socket
+      ) do
+    {:noreply,
+     socket
+     |> assign(:current_user_profile, profile)
+     |> put_flash(:info, "Upadated successfully")}
   end
 
   def get_active(state, param) do

@@ -141,8 +141,15 @@ defmodule MehungryWeb.Router do
   scope "/", MehungryWeb do
     pipe_through [:browser, :maybe_require_authenticated_user]
 
+    live_session :default3,
+      layout: {MehungryWeb.LayoutView, :landing_live} do
+      live "/welcome", LandingLive, :index
+    end
+
     live_session :maybe, on_mount: MehungryWeb.MaybeUserAuthLive do
-      live "/", HomeLive.Index, :index
+      get "/", HomePageController, :home
+
+      # live "/", HomeLive.Index, :index
       live "/home", HomeLive.Index, :index
       live "/browse", RecipeBrowserLive.Index, :index
       live "/browse/:id", RecipeBrowserLive.Index, :show_recipe
@@ -159,6 +166,11 @@ defmodule MehungryWeb.Router do
       # live "/browse/:origin/:id", RecipeDetailsLive.Index, :index
       # live "/browse_prepop/:search_term", :searc_prepop
     end
+
+    get "/register", UserRegistrationController, :new
+    post "/register", UserRegistrationController, :create
+    get "/login", UserSessionController, :new
+    post "/login", UserSessionController, :create
 
     get "/users/register", UserRegistrationController, :new
     post "/users/register", UserRegistrationController, :create

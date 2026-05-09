@@ -62,14 +62,17 @@ defmodule MehungryWeb.NutritionAccordion do
 
     ~H"""
     <div
-      class="w-full max-w-full overflow-hidden bg-white rounded-xl shadow-sm border border-gray-200 m-auto"
+      class="w-full max-w-full overflow-hidden  rounded-xl shadow-sm  m-auto"
       style="max-height: 300px; max-width: 100%;"
     >
       
     <!-- Scrollable container with proper overflow containment -->
-      <div class="w-fit overflow-y-auto overflow-x-hidden m-auto " style="max-height: 300px;">
+      <div
+        class=" overflow-y-auto custom-scrollbar p-4 overflow-x-hidden m-auto "
+        style="max-height: 300px;"
+      >
         <%= if Enum.empty?(@nutrient_list) do %>
-          <div class="text-center py-8 text-gray-500 text-sm">
+          <div class="text-center  text-white text-sm">
             No nutrition data available
           </div>
         <% else %>

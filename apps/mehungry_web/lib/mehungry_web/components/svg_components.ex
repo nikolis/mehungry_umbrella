@@ -131,17 +131,17 @@ defmodule MehungryWeb.SvgComponents do
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 120">
       <defs>
         <!-- Warm Orange gradients matching favicon -->
-        <linearGradient id={"topCubeOrange" <> @id} x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="topCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#FBBF24" />
           <stop offset="50%" stop-color="#F97316" />
           <stop offset="100%" stop-color="#EA580C" />
         </linearGradient>
-        <linearGradient id={("middleCubeOrange" <> @id)} x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="middleCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#F97316" />
           <stop offset="50%" stop-color="#EA580C" />
           <stop offset="100%" stop-color="#C2410C" />
         </linearGradient>
-        <linearGradient id={"bottomCubeOrange" <> @id} x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="bottomCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#EA580C" />
           <stop offset="100%" stop-color="#7C2D12" />
         </linearGradient>

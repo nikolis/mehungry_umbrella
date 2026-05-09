@@ -7,7 +7,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
   alias Mehungry.NutrientUtils, as: Nu
 
-  def get_chart(user_meals, day) do
+  def get_chart(user_meals, day, text) do
     meals = Enum.filter(user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end)
 
     if(meals == []) do
@@ -60,7 +60,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
       ~H"""
       <div class="m-auto flex flex-wrap gap-8 ">
-        <h3 class="m-auto">Overview</h3>
+        <h3 class={"m-auto " <> text }>Overview</h3>
         <div class=" m-auto pb-4">
           {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
         </div>
@@ -96,7 +96,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             <div class="flex px-2 py-2 gap-2 bg-greyfriend1 justify-center border-2 rounded-full border-greyfriend3 	m-auto w-fit">
               <button
                 type="button"
-                class="w-fit text-complementary font-medium"
+                class="w-fit text-slate-500 font-medium"
                 phx-target={@myself}
                 phx-click="prev-month"
               >
@@ -294,6 +294,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                 <%= for re_u_m <- meal.recipe_user_meals do %>
                   <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
                     <.card_meal
+                      card_meal_text="text-slate-800"
                       actual_meal={meal}
                       img_url={re_u_m.img_url}
                       title={re_u_m.title}
@@ -345,7 +346,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             <% end %>
             <div>
               <div>
-                {get_chart(@user_meals, day)}
+                {get_chart(@user_meals, day, "text-slate-800")}
               </div>
             </div>
           </div>
@@ -451,26 +452,28 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     """
   end
 
-  defp card_meal(assigns) do
+  def card_meal(assigns) do
     ~H"""
-    <div class="shadow m-auto w-full grid rounded-md relative">
-      <div class="m-auto w-fit flex gap-2 sm:gap-4 flex-col md:flex-row ">
+    <div class="">
+      <div class="m-auto  flex gap-2 sm:gap-4 flex-col md:flex-row ">
         <div class="my-auto relative">
           <%= if is_nil(@img_url) do %>
             {SvgComponents.get_default_recipe_image(assigns)}
           <% else %>
             <img src={@img_url} class=" h-60 w-60 m-auto" style="" />
           <% end %>
-          <button
-            class="absolute right-2 top-2 sm:top-10 sm:right-2   bg-white p-2 rounded-full "
-            type="button"
-            phx-click="edit_modal"
-            phx-value-id={@actual_meal.id}
-          >
-            {SvgComponents.get_edit_icon(assigns)}
-          </button>
+          <%= if @actual_meal.id != "landing_id" do %>
+            <button
+              class="absolute right-2 top-2 sm:top-10 sm:right-2   bg-white p-2 rounded-full "
+              type="button"
+              phx-click="edit_modal"
+              phx-value-id={@actual_meal.id}
+            >
+              {SvgComponents.get_edit_icon(assigns)}
+            </button>
+          <% end %>
         </div>
-        <div class="sm:p-6">
+        <div class={"sm:p-6 m-auto " <> @card_meal_text}>
           <h1>{@title}</h1>
           <span class="font-semibold text-md">prepare portions: {@cooking_portions}</span>
           <br />

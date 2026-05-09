@@ -404,21 +404,25 @@ defmodule MehungryWeb.CoreComponents do
           </div>
         </div>
         <%= if @user.id in @user_follows do %>
-          <button
-            class="text-primary font-semibold  text-sm sm:text-xl "
-            phx-click="save_user_follow"
-            phx-value-follow_id={@user.id}
-          >
-            Following
-          </button>
+          <div class="m-auto border-slate-400 border-2 rounded-full h-fit w-fit px-3 ">
+            <button
+              class="text-slate-400 font-semibold  text-sm sm:text-xl "
+              phx-click="save_user_follow"
+              phx-value-follow_id={@user.id}
+            >
+              Following
+            </button>
+          </div>
         <% else %>
-          <button
-            class="text-complementary font-semibold  text-sm sm:text-xl "
-            phx-click="save_user_follow"
-            phx-value-follow_id={@user.id}
-          >
-            Follow
-          </button>
+          <div class="m-auto h-fit w-fit px-3 ">
+            <button
+              class="text-accent-500 font-semibold  text-sm sm:text-xl "
+              phx-click="save_user_follow"
+              phx-value-follow_id={@user.id}
+            >
+              Follow
+            </button>
+          </div>
         <% end %>
       </div>
     </div>

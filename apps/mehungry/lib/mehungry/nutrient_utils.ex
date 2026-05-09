@@ -372,7 +372,7 @@ defmodule Mehungry.NutrientUtils do
       |> Enum.flat_map(fn item ->
         recipe_nutrients =
           item
-          |> Map.get(:recipe_user_meals, [])
+          |> Map.get(:recipe_user_meals)
           |> Enum.map(&Map.get(&1, :recipe_nutrients, %{}))
           |> Enum.filter(&(&1 != %{}))
 

@@ -23,7 +23,7 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
           <div style="margin-inline: auto; width: 88%; ">
             <button
               type="submit"
-              class="button bg-complementary  "
+              class="button bg-primary-500 "
               phx-click={JS.remove_class("active", to: "#basket-basic-form.active")}
             >
               SAVE

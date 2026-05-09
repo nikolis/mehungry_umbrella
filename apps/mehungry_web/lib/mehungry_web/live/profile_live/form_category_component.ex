@@ -5,7 +5,7 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
     assigns = assign(assigns, :deleted, Phoenix.HTML.Form.input_value(assigns.f, :delete) == true)
 
     ~H"""
-    <div class={"min-h-16  gap-2 p-2 h-full grid grid-cols-9 sm:grid-cols-5  sm:gap-10 m-auto" <> if(@deleted, do: " hidden", else: "")}>
+    <div class={"min-h-16 w-full gap-2 p-2 h-full grid grid-cols-6 sm:grid-cols-5  sm:gap-10 m-auto" <> if(@deleted, do: " hidden", else: "")}>
       <input
         type="hidden"
         name={Phoenix.HTML.Form.input_name(@f, :delete)}
@@ -22,23 +22,25 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
         value={to_string(Phoenix.HTML.Form.input_value(@f, :user_profile_id))}
       />
 
-      <.live_component
-        module={MehungryWeb.SelectComponentSingleMemory}
-        form={@f}
-        items={@categories}
-        input_variable="category_id"
-        id={"category_search_component" <> Integer.to_string(@f.index)}
-      />
+      <div class="col-span-3 sm:col-span-2">
+        <.live_component
+          module={MehungryWeb.SelectComponent}
+          form={@f}
+          items={Enum.map(@categories, fn x -> {Integer.to_string(x.id), x.name} end)}
+          input_variable={:category_id}
+          id={"category_search_component" <> Integer.to_string(@f.index)}
+        />
+      </div>
 
-      <.live_component
-        module={MehungryWeb.SelectComponentSingleMemory}
-        form={@f}
-        items={@food_restrictions}
-        input_variable="food_restriction_type_id"
-        label_function={fn x -> x.title end}
-        id={"food_restriction_search_component" <> Integer.to_string(@f.index)}
-      />
-
+      <div class="col-span-2">
+        <.live_component
+          module={MehungryWeb.SelectComponent}
+          form={@f}
+          items={Enum.map(@food_restrictions, fn x -> {Integer.to_string(x.id), x.title} end)}
+          input_variable={:food_restriction_type_id}
+          id={"food_restriction_search_component" <> Integer.to_string(@f.index)}
+        />
+      </div>
       <div class="flex gap-4 items-end max-h-16">
         <div
           class="h-full m-auto"

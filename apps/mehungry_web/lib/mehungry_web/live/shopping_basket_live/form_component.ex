@@ -9,12 +9,11 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
   def render(assigns) do
     ~H"""
     <div>
-      <.header>
+      <.header class="text-md">
         {@title}
-        <:subtitle>
-          Crete a shopping list by selecting a range of dates (meals will be pulled from your callendar schedule)
-        </:subtitle>
       </.header>
+      <span>
+  </span>
       <div style="" phx-update="ignore" id="container" phx-hook="DatePicker">
         <input name="endtDate" type="hidden" placeholder="Select Date.." data-input />
       </div>

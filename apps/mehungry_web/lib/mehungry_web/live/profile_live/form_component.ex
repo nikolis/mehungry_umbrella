@@ -29,7 +29,7 @@ defmodule MehungryWeb.ProfileLive.Form do
           <.input required field={@form[:intro]} type="textarea" label="Intro" class="" />
         </div>
         <h3 class="text-center m-8">Diatery Restrictions</h3>
-        <div class="max-h-64 overflow-auto min-h-80	">
+        <div class="max-h-64 overflow-auto min-h-80	m-auto">
           <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>
             <FormCategoryComponent.render
               category_ids={@category_ids}
@@ -43,7 +43,7 @@ defmodule MehungryWeb.ProfileLive.Form do
         </div>
         <div class="flex justify-end">
           <button
-            class=" list_button_complementary"
+            class="text-slate-800 font-semibold text-xl hover:text-slate-500"
             type="button"
             phx-target={@myself}
             phx-click="add_category_rule"

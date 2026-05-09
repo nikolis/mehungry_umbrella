@@ -103,10 +103,10 @@ defmodule MehungryWeb.AccordionComponent do
     # Background color based on level
     bg_class =
       case assigns.level do
-        1 -> "bg-white"
-        2 -> "bg-gray-50"
-        3 -> "bg-gray-50/80"
-        _ -> "bg-white"
+        1 -> "bg-slate-800"
+        2 -> "bg-slate-750"
+        3 -> "bg-slate-800"
+        _ -> "bg-slate-800"
       end
 
     # Left border for nested items
@@ -131,7 +131,7 @@ defmodule MehungryWeb.AccordionComponent do
       )
 
     ~H"""
-    <div class={["border-b border-gray-100 w-full overflow-hidden", @border_class]}>
+    <div class={["border-b border-slate-700 w-full overflow-hidden", @border_class]}>
       <%= if @has_children do %>
         <!-- Hidden checkbox for the accordion hack -->
         <input type="checkbox" id={@item_id} class="hidden peer" />
@@ -143,12 +143,12 @@ defmodule MehungryWeb.AccordionComponent do
             "flex justify-between items-center w-full py-3 cursor-pointer transition-colors",
             @indent_class,
             @bg_class,
-            "hover:bg-gray-100"
+            "hover:bg-slate-700"
           ]}
         >
           <div class="flex-1 text-left min-w-0">
             <div class={[
-              "text-gray-900 truncate",
+              "text-white truncate",
               @level == 1 && "font-semibold text-base",
               @level == 2 && "font-medium text-sm",
               @level >= 3 && "font-normal text-sm"
@@ -173,7 +173,7 @@ defmodule MehungryWeb.AccordionComponent do
         </label>
         
     <!-- Content that expands/collapses based on checkbox state -->
-        <div class="hidden peer-checked:block bg-gray-50 border-t border-gray-100 w-full overflow-hidden">
+        <div class="hidden peer-checked:block bg-slate-800   w-full overflow-hidden">
           <div class="py-1 w-full overflow-hidden">
             <.accordion items={@children_list} level={@level + 1} accordion_id={@item_id} />
           </div>
@@ -187,7 +187,7 @@ defmodule MehungryWeb.AccordionComponent do
         ]}>
           <div class="flex-1 text-left min-w-0">
             <div class={[
-              "text-gray-900 truncate",
+              "text-white truncate",
               @level == 1 && "font-semibold text-base",
               @level == 2 && "font-medium text-sm",
               @level >= 3 && "font-normal text-sm"
