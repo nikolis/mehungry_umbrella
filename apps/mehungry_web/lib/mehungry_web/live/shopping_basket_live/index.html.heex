@@ -1,8 +1,88 @@
 <div
-  class="main-page-container relative "
-  style="height: 100%; overflow:hidden; "
+  class=" min-h-screen bg-slate-900 pb-10"
   id="shopping_basket_index"
 >
+  <div class="container mx-auto px-4 py-8" 
+ >
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+        <svg
+          class="w-8 h-8 text-primary-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 1.5M17 13l1.5 1.5M9 21h6M12 21v-8"
+          />
+        </svg>
+        Shopping Lists
+      </h1>
+      <p class="text-slate-400 mt-1">Manage your grocery lists and track items</p>
+    </div>
+    
+<!-- Two Column Layout -->
+    <div class="flex flex-col sm:flex-row gap-6 "   style="height: 100%; overflow:hidden; " >
+      
+<!-- Sidebar - Shopping Lists -->
+      <div class="lg:w-80 flex-shrink-0 bakset-side-nav-hidden  bd-black-400" id="basket-side-navbar">
+        <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+          <!-- Header with New List Button -->
+          <div class="p-4 border-b border-slate-700 flex justify-between items-center">
+            <h2 class="text-white font-semibold">My Lists</h2>
+            <button
+              phx-click={
+                case @live_action in ["index"] do
+                  true ->
+                    ""
+
+                  false ->
+                    JS.remove_class("active", to: "#basket-basic-form.active")
+                    |> JS.add_class("active", to: "#basket-basic-form:not(.active)")
+                end
+              }
+              class="p-1.5 rounded-lg bg-primary-500/10 hover:bg-primary-500/20 text-primary-500 transition"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </button>
+          </div>
+          <.live_component
+            module={MehungryWeb.ShoppingBasketLive.BasicFormComponent}
+            id={@processing_basket.id || :new}
+            action={@live_action}
+            shopping_basket={@processing_basket}
+            user={@current_user}
+            page_title="Create"
+            patch={~p"/basket"}
+          />
+          <.render_basket_titles
+            shopping_baskets={@shopping_baskets}
+            shopping_basket={@shopping_basket}
+          />
+        </div>
+      </div>
+      <div class="item-list-container w-full  sm:p-6">
+        <%= if @shopping_basket do %>
+          <.render_basket_items shopping_basket={@shopping_basket} />
+        <% end %>
+        <%= if length(@shopping_basket.basket_ingredients) < 1 do %>
+          <h4 class="text-center text-base font-semibold text-greyfriend-2">Empty</h4>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
   <.modal
     :if={@live_action in [:import_items]}
     on_cancel={JS.patch(~p"/basket")}
@@ -19,51 +99,7 @@
       patch={~p"/basket"}
     />
   </.modal>
-  <%= if @shopping_basket do %>
-    <h3 class="mb-2 text-center md:hidden">{Map.get(@shopping_basket, :title, "...")}</h3>
-  <% end %>
-
-  <div class="basket-page-container h-fit bg-greyfriend1 rounded-lg py-4">
-    <div class="bakset-side-nav-hidden  bd-black-400" id="basket-side-navbar">
-      <h2
-        phx-click={
-          case @live_action in ["index"] do
-            true ->
-              ""
-
-            false ->
-              JS.remove_class("active", to: "#basket-basic-form.active")
-              |> JS.add_class("active", to: "#basket-basic-form:not(.active)")
-          end
-        }
-        class="side_nav_list_item border-b border-greyfriend2"
-      >
-        Lists
-        <span style="font-size: 2rem; font-weight: 200 ; color: var(--clr-grey-friend_3); margin-left: 0.75rem;">
-          +
-        </span>
-      </h2>
-
-      <.live_component
-        module={MehungryWeb.ShoppingBasketLive.BasicFormComponent}
-        id="diethnistes"
-        action={@live_action}
-        shopping_basket={@processing_basket}
-        user={@current_user}
-        page_title="Create"
-        patch={~p"/basket"}
-      />
-
-      <%= if !is_nil(@shopping_basket) and !is_nil(@shopping_baskets) do %>
-        <.render_basket_titles
-          shopping_baskets={@shopping_baskets}
-          shopping_basket={@shopping_basket}
-          id="titles-1"
-        />
-      <% end %>
-
-      <div>
-        <button
+   <button
           class="basket-side-button"
           phx-click={
             JS.remove_class("active", to: "#basket-side-navbar.active")
@@ -72,55 +108,4 @@
         >
           <.icon name="hero-arrow-down-circle" class="md:hidden h-10 w-10 text-complementary" />
         </button>
-      </div>
-    </div>
-    <div class="basket-side-navbar" id="">
-      <div>
-        <h2
-          phx-click={
-            case @live_action in ["index"] do
-              true ->
-                ""
-
-              false ->
-                JS.remove_class("active", to: "#basket-basic-form.active")
-                |> JS.add_class("active", to: "#basket-basic-form:not(.active)")
-            end
-          }
-          class="side_nav_list_item border-b border-greyfriend2"
-        >
-          Lists
-          <span style="font-size: 2rem; font-weight: 200 ; color: var(--clr-grey-friend_3); margin-left: 0.75rem;">
-            +
-          </span>
-        </h2>
-
-        <.live_component
-          module={MehungryWeb.ShoppingBasketLive.BasicFormComponent}
-          id={@processing_basket.id || :new}
-          action={@live_action}
-          shopping_basket={@processing_basket}
-          user={@current_user}
-          page_title="Create"
-          patch={~p"/basket"}
-        />
-        <%= if !is_nil(@shopping_basket) and !is_nil(@shopping_baskets) do %>
-          <.render_basket_titles
-            shopping_baskets={@shopping_baskets}
-            shopping_basket={@shopping_basket}
-            id="titles-2"
-          />
-        <% end %>
-      </div>
-    </div>
-
-    <div class="item-list-container w-full  sm:p-6">
-      <%= if @shopping_basket do %>
-        <.render_basket_items shopping_basket={@shopping_basket} />
-      <% end %>
-      <%= if length(@shopping_basket.basket_ingredients) < 1 do %>
-        <h4 class="text-center text-base font-semibold text-greyfriend-2">Empty</h4>
-      <% end %>
-    </div>
-  </div>
 </div>

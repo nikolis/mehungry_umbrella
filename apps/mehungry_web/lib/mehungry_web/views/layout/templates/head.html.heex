@@ -2,6 +2,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
   <link rel="shortcut icon" href="/favicon.svg" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
 
   <style>
     input:focus,
@@ -28,9 +29,7 @@
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/gh/habibmhamadi/multi-select-tag@2.0.1/dist/css/multi-select-tag.css"
   />
-  <script
-    src="https://cdn.jsdelivr.net/gh/habibmhamadi/multi-select-tag@2.0.1/dist/js/multi-select-tag.js"
-  >
+  <script src="https://cdn.jsdelivr.net/gh/habibmhamadi/multi-select-tag@2.0.1/dist/js/multi-select-tag.js">
   </script>
 
   <link
@@ -74,7 +73,7 @@
   {csrf_meta_tag()}
 
   <%= if is_map(@conn.assigns[:page_title]) do %>
-    <title>{@conn.assigns.page_title.title} </title>
+    <title>{@conn.assigns.page_title.title}</title>
     <meta
       property="og:url"
       content={"https://www.m3hungry.com/browse/"<> @conn.assigns.page_title.id}

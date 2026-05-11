@@ -211,7 +211,8 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def get_active(state, param) do
     if state == param do
-      "active"
+      " bg-slate-800 text-primary-500 border-b-2 border-primary-500 " <>
+        "text-slate-400 hover:text-slate-300 hover:bg-slate-800/50"
     else
       ""
     end
