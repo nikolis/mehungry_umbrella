@@ -18,15 +18,16 @@ import Config
 #  show_sensitive_data_on_connection_error: true,
 #  pool_size: 10
 
-
 if System.get_env("ECS_TASK_ID") do
   config :libcluster,
     topologies: [
       ecs_clustering: [
         strategy: Cluster.Strategy.DNSPoll,
         config: [
-          polling_interval: 10_000,  # Check every 10 seconds
-          query: "mehungry-app.ecs.internal",  # Your ECS service discovery DNS
+          # Check every 10 seconds
+          polling_interval: 10_000,
+          # Your ECS service discovery DNS
+          query: "mehungry-app.ecs.internal",
           node_name: "mehungry_app@#{System.get_env("MY_POD_IP")}"
         ],
         connect: {:net_kernel, :connect_node, []},

@@ -115,17 +115,12 @@ check_list_container {
 	min-height: 70vh;
 
 }
-.bakset-side-nav-hidden {
-	position: absolute;
-	z-index: 10;
-	left: -100vw;
-}
 
 .basket-side-button {
 	position: fixed;
 	bottom: 80px;
   right: 20px;
-	background: white;
+	background-color: #0F172A;
 	border-radius: 200px;
 	max-width: 40px;
 	max-height: 40px;
@@ -135,7 +130,7 @@ check_list_container {
 @media only screen and (max-width: 800px)  {
 
   .bakset-side-nav-hidden  {
-	bottom: -140vh;
+	bottom: -110vh;
 	left: 0;
   height: 100vh;
 	width: 100vw;
@@ -152,9 +147,8 @@ check_list_container {
 	  max-width: 90%;
   }
   .bakset-side-nav-hidden.active {
-	background: white;
+	background: #0F172A;
 	left: 0;
-	padding-top: 2vw;
 	height: 100%;
 	overflow: hidden;
 
