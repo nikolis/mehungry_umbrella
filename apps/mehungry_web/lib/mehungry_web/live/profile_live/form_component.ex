@@ -9,11 +9,10 @@ defmodule MehungryWeb.ProfileLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="form-main h-120 w-full xl:px-10">
-      <h3 class="text-center mt-4 mb-8">
+    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6 text-white">
+      <h3 class="text-center mt-4 mb-8i text-white">
         {@title}
       </h3>
-
       <.simple_form
         for={@form}
         id="user_profile-form"
@@ -22,13 +21,13 @@ defmodule MehungryWeb.ProfileLive.Form do
         phx-submit="save"
         class="profile-form pb-10 relative w-fit md:w-8/12 m-auto"
       >
-        <div>
+        <div class="text-slate-800">
           <.input required field={@form[:alias]} type="text" label="Alias" class="mt-4" />
         </div>
-        <div class="mt-4">
+        <div class="mt-4 text-slate-800">
           <.input required field={@form[:intro]} type="textarea" label="Intro" class="" />
         </div>
-        <h3 class="text-center m-8">Diatery Restrictions</h3>
+        <h3 class="text-center m-8 text-white ">Diatery Restrictions</h3>
         <div class="max-h-64 overflow-auto min-h-80	m-auto">
           <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>
             <FormCategoryComponent.render
@@ -43,20 +42,23 @@ defmodule MehungryWeb.ProfileLive.Form do
         </div>
         <div class="flex justify-end">
           <button
-            class="text-slate-800 font-semibold text-xl hover:text-slate-500"
             type="button"
             phx-target={@myself}
             phx-click="add_category_rule"
+            class="mt-3 text-sm text-primary-500 hover:text-primary-400 transition text-xl font-semibold"
           >
-            Add Rule
+            + Add Rule
           </button>
         </div>
-        <button
-          class="block w-1/3 mt-12 mx-auto text-2xl font-bold  uppercase primary_button"
-          phx-disable-with="Saving..."
-        >
-          Save
-        </button>
+        <div class="flex gap-4 pt-4">
+          <button
+            type="submit"
+            phx-disable-with="Saving..."
+            class="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-semibold py-2 px-4 rounded-lg transition"
+          >
+            Save Changes
+          </button>
+        </div>
       </.simple_form>
     </div>
     """

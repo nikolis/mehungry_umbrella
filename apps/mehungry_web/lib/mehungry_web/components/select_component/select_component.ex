@@ -415,7 +415,7 @@ defmodule MehungryWeb.SelectComponent do
             String.to_atom("search_input" <> Atom.to_string(@input_variable))
           ]
         }
-        type="text"
+        type="saerch"
         class="h-full test flex-grow   outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full relative"
       />
       <.arrow_down_svg myself={@myself} selected_items_length={length(@selected_items)} mode={@mode} />
@@ -447,8 +447,8 @@ defmodule MehungryWeb.SelectComponent do
   # ----------------------------------------------------------------------------------------------------- Search Result -----------------------------------------------------------
   defp list_search_result(assigns) do
     ~H"""
-    <div>
-      <ul class="w-full list-none   border-t-0 rounded-md focus:outline-none overflow-y-auto outline-none focus:outline-none bg-white absolute left-0 bottom-100 max-h-56	bg-white z-50">
+    <div class=" max-h-80 overflow-y-auto pr-2">
+      <ul class="text-white bg-slate-700 absolute left-0 bottom-100  z-50 w-full lex gap-3 items-center">
         <%= if @listing_open do %>
           <%= for x <- @items do %>
             <!-- Item Element -->
@@ -467,9 +467,9 @@ defmodule MehungryWeb.SelectComponent do
   defp option_item(assigns) do
     ~H"""
     <div class="relative z-50">
-      <div class="bg-white">
+      <div class="">
         <li
-          class="hover:bg-amber-200 cursor-pointer px-2 py-2 bg-white "
+          class="hover:bg-slate-500 cursor-pointer px-2 py-2 bg-slate-700 "
           phx-click="handle-item-click"
           phx-value-id={elem(@x, 0)}
           id={elem(@x, 0)}

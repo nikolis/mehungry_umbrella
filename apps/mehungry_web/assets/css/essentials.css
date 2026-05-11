@@ -365,15 +365,15 @@ textarea:focus + .placeholder {
 input:valid + .placeholder {
     top: -15%;
     font-size: 0.70rem;
-    color: #04AA6D;
-    background-color: #fff;
+    color: #94A3B8;
+    background-color: transparent;
 }
 
 
 textarea:valid + .placeholder {
     top: -20%;
-    color: #04AA6D;
-    background-color: #fff;
+    color: #94A3B8;
+    background-color: transparent;
     font-size: 0.70rem;
 
 }

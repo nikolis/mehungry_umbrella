@@ -15,27 +15,30 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save"
-        class="side-form "
+        class="flex flex-col side-form px-4 gap-4"
       >
         <.input field={@form[:user_id]} type="hidden" />
-        <.input field={@form[:title]} type="text" class="mt-2 mx-2" />
-        <:actions>
-          <div style="margin-inline: auto; width: 88%; ">
-            <button
-              type="submit"
-              class="button bg-primary-500 "
-              phx-click={JS.remove_class("active", to: "#basket-basic-form.active")}
-            >
-              SAVE
-            </button>
-            <button
-              class="list_button_cancel"
-              phx-click={JS.remove_class("active", to: "#basket-basic-form.active")}
-            >
-              CANCEL
-            </button>
-          </div>
-        </:actions>
+        <input
+          type="text"
+          name={@form[:title].name}
+          placeholder="List name..."
+          class=" h-fit flex-1 mt-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500"
+        />
+        <div clas="w-fit mx-4 my-4 ">
+          <button
+            type="submit"
+            class="px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm transition mr-2 font-semibold"
+            phx-click={JS.remove_class("active", to: "#basket-basic-form.active")}
+          >
+            SAVE
+          </button>
+          <button
+            class="text-slate-400 font-semibold "
+            phx-click={JS.remove_class("active", to: "#basket-basic-form.active")}
+          >
+            CANCEL
+          </button>
+        </div>
       </.simple_form>
     </div>
     """
@@ -67,6 +70,7 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
 
   def handle_event("save", %{"shopping_basket" => shopping_basket_params}, socket) do
     shopping_basket_params = Map.put(shopping_basket_params, "user_id", socket.assigns.user.id)
+    IO.inspect("Save ----------------------------------------------------->")
 
     save_shopping_basket(socket, socket.assigns.action, shopping_basket_params)
   end
@@ -87,6 +91,8 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
   end
 
   defp save_shopping_basket(socket, :index, shopping_basket_params) do
+    IO.inspect("Save ---------------------------------------------Index >")
+
     create_basket(socket, shopping_basket_params)
   end
 
@@ -140,6 +146,7 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
 
   defp create_basket(socket, basket_params_params) do
     shopping_basket = Inventory.create_shopping_basket(basket_params_params)
+    IO.inspect(shopping_basket, label: "Result")
 
     case shopping_basket do
       {:ok, basket} ->

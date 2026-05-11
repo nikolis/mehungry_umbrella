@@ -194,7 +194,7 @@ defmodule MehungryWeb.CoreComponents do
         } = assigns
       ) do
     ~H"""
-    <div style="margin-bottom: 0.75rem; " class="w-full">
+    <div style="margin-bottom: 0.75rem; " class="w-full ">
       <div class=" flex justify-center gap-2 xl:gap-28 w-11/12 m-auto sm:w-full m-0 flex-wrap ">
         <.link
           patch={"/profile/"<>Integer.to_string(@user.id)}
@@ -1191,7 +1191,7 @@ defmodule MehungryWeb.CoreComponents do
         }
         {@rest}
       />
-      <.label for={@id} class="placeholder px-4">{@label}</.label>
+      <.label for={@id} class="placeholder ">{@label}</.label>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """

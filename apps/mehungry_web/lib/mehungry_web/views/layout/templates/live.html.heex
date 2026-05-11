@@ -1,8 +1,13 @@
-<main role="main" class="" style="height: 100vh;">
-  <div class="mobile_header text-xl text-center text-primary font-semibold m-auto ">
-    <a href="/" class="m-auto w-fit h-fit" style="height: 5vh; ">
-      {MehungryWeb.SvgComponents.get_logo(%{id: "Live logo"})}
-    </a>
+<main role="main" class="" style="height: 100vh; ">
+  <div class="mobile_header text-xl text-center text-primary font-semibold m-auto bg-slate-900  border-b border-slate-800" style="padding-bottom: 4.5rem;  ">
+    <nav
+      class="ml-6 absolute top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md  transition-all duration-300 h-18"
+      style="height: 4; width: 16rem;"
+    >
+      <div class="container mx-auto  flex items-center justify-between">
+        {MehungryWeb.SvgComponents.get_logo(%{id: "Live logo"})}
+      </div>
+    </nav>
   </div>
   <.get_menu
     query_string={@query_string}
@@ -17,3 +22,5 @@
   </p>
   <div></div>
 </main>
+
+
