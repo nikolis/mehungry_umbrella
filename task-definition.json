@@ -11,7 +11,7 @@
       {
         "name": "RELEASE_COOKIE",
         "value": "MEHUNGRY_SECURE_CLUSTER_COOKIE_2024"
-      },
+      }],
             "image": "011528270584.dkr.ecr.eu-central-1.amazonaws.com/mehungry_ecr:4e3bf58c1f8ea3052f8539eaad140ed77f337b6a",
             "cpu": 0,
             "essential": true,
