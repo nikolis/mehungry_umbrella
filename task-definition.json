@@ -10,8 +10,13 @@
               },
               {
                 "name": "RELEASE_COOKIE",
-                "valueFrom": "arn:aws:secretsmanager:eu-west-1:123456789:secret:mehungry/prod/release_cookie"
+                "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/release_cookie-QYj6rK"
               }],
+              "secrets": [
+              {
+                "name": "RELEASE_COOKIE",
+                "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/release_cookie-QYj6rK"
+              },
             "image": "011528270584.dkr.ecr.eu-central-1.amazonaws.com/mehungry_ecr:4e3bf58c1f8ea3052f8539eaad140ed77f337b6a",
             "cpu": 0,
             "essential": true,
