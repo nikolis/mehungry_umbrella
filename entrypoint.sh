@@ -1,5 +1,4 @@
 #!/bin/sh
-
 echo "Starting Mehungry release..."
 
 # ECS/Fargate may return multiple IPs.
