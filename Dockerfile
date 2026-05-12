@@ -143,4 +143,4 @@ RUN pip install --upgrade pip \
 #RUN python -m spacy download en_core_web_sm
 
  
-CMD ["entrypoint.sh"]
+CMD ["./entrypoint.sh"]
