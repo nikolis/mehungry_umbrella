@@ -40,8 +40,6 @@ ENV GOOGLE_CLIENT_SECRET  ${GOOGLE_CLIENT_SECRET}
 ENV SECRET_KEY_BASE ${SECRET_KEY_BASE}
 ENV SECRET_KEY_BASE ${SECRET_KEY_BASE}
 ENV DATABASE_URL ${DATABASE_URL}
-ENV RELEASE_COOKIE  ${RELEASE_COOKIE} 
-ENV RELEASE_DISTRIBUTION "name"
 
 # Install dependencies
 RUN mkdir ./apps
@@ -75,6 +73,7 @@ COPY ./apps/mehungry_web/assets ./apps/mehungry_web/assets
 COPY ./apps/mehungry/lib ./apps/mehungry/lib
 COPY ./apps/mehungry_web/lib ./apps/mehungry_web/lib
 COPY ./apps/mehungry_web/priv/static ./apps/mehungry_web/priv/static/
+COPY ./entrypoint.sh /entrypoint.sh
 
 RUN npm i --prefix ./apps/mehungry_web/assets/
 
