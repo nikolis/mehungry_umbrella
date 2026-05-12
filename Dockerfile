@@ -56,10 +56,10 @@ RUN mkdir ./apps/mehungry_web/assets/
 COPY mix.* ./
 COPY ./apps/mehungry/mix.* ./apps/mehungry
 COPY ./apps/mehungry_web/mix.* ./apps/mehungry_web
-COPY ./entrypoint.sh ./entrypoint.sh
 
 COPY config ./config
 COPY ./pos_tagger.py ./pos_tagger.py
+COPY ./entrypoint.sh ./entrypoint.sh
 
 RUN mix deps.get --only ${MIX_ENV}
 RUN MIX_ENV=prod mix compile
@@ -73,7 +73,6 @@ COPY ./apps/mehungry_web/assets ./apps/mehungry_web/assets
 COPY ./apps/mehungry/lib ./apps/mehungry/lib
 COPY ./apps/mehungry_web/lib ./apps/mehungry_web/lib
 COPY ./apps/mehungry_web/priv/static ./apps/mehungry_web/priv/static/
-COPY ./entrypoint.sh /entrypoint.sh
 
 RUN npm i --prefix ./apps/mehungry_web/assets/
 
@@ -98,7 +97,7 @@ FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
 COPY --from=builder /mehungry_umbrella/pos_tagger.py ./pos_tagger.py
-COPY --from=builder /entrypoint.sh ./entrypoint.sh 
+copy --from=builder /mehungry_umbrella/entrypoint.sh ./entrypoint.sh 
 
 RUN apk add --update openssl postgresql-client jq 
 # Install build dependencies for spaCy
