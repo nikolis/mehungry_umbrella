@@ -5,6 +5,16 @@ echo "Starting Mehungry release..."
 # Use first one.
 export POD_IP=$(hostname -i | awk '{print $1}')
 
+
+# Try to find the binary automatically
+RELEASE_BIN=$(find / -name "mehungry_umbrella" -type f -executable 2>/dev/null | head -1)
+
+if [ -z "$RELEASE_BIN" ]; then
+    echo "ERROR: Could not find mehungry_umbrella binary"
+    exit 1
+fi
+echo "Found binary at: $RELEASE_BIN"
+
 echo "Detected container IP: $POD_IP"
 
 # Enable distributed Erlang
@@ -24,4 +34,5 @@ fi
 echo "RELEASE_COOKIE detected"
 
 # Start Elixir release
-exec /app/bin/mehungry_umbrella start
+exec "$RELEASE_BIN" start
+
