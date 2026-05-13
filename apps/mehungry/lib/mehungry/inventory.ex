@@ -125,7 +125,6 @@ defmodule Mehungry.Inventory do
       quantity: item_params.quantity,
       shopping_basket_id: basket_id,
       measurement_unit_id: item_params.measurement_unit_id,
-      unit: item_params.unit,
       nutrition_data: item_params.nutrition,
       usda_fdc_id: item_params.usda_fdc_id,
       checked: false

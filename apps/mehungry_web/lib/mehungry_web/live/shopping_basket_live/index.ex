@@ -117,18 +117,12 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
 
   def handle_event(
         "add_plain_item",
-        %{
-          "name" => name,
-          "quantity" => quantity,
-          "unit" => unit,
-          "basket_item" => %{"measurement_unit_id" => measurement_unit_id}
-        },
+    %{"basket_item" => %{"measurement_unit_id" => measurement_unit_id}, "name" => name, "quantity" => quantity},
         socket
       ) do
     item = %{
       name: name,
       quantity: elem(Float.parse(quantity), 0),
-      unit: unit,
       measurement_unit_id: measurement_unit_id,
       nutrition: nil,
       usda_fdc_id: nil
