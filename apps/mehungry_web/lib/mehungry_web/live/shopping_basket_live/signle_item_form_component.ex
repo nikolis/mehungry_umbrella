@@ -1,4 +1,4 @@
-defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
+defmodule Mehungryweb.ShoppingBasketLive.SignleItemFormComponent do
   use MehungryWeb, :live_component
   import MehungryWeb.CoreComponents
 
@@ -9,44 +9,34 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
   def render(assigns) do
     ~H"""
     <div>
+      <.header class="text-md">
+        Signle item
+      </.header>
+      <span></span>
+      <div style="" phx-update="ignore" id="container" phx-hook="DatePicker">
+        <input name="endtDate" type="hidden" placeholder="Select Date.." data-input />
+      </div>
+
       <.simple_form
         for={@form}
-        id="basket-basic-form"
+        id="form-basket"
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save"
-        class="flex flex-col side-form px-4 gap-4"
       >
-        <.input field={@form[:user_id]} type="hidden" />
-        <input
-          type="text"
-          name={@form[:title].name}
-          placeholder="List name..."
-          class=" h-fit flex-1 mt-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500"
-        />
-        <div clas="w-fit mx-4 my-4 ">
-          <button
-            type="submit"
-            class="px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm transition mr-2 font-semibold"
-            phx-click={JS.remove_class("active", to: "#basket-basic-form.active")}
-          >
-            SAVE
-          </button>
-          <button
-            class="text-slate-400 font-semibold "
-            phx-click={JS.remove_class("active", to: "#basket-basic-form.active")}
-          >
-            CANCEL
-          </button>
-        </div>
+        <.input field={@form[:start_dt]} type="hidden" />
+        <.input field={@form[:end_dt]} type="hidden" label="Intro" />
+        <:actions>
+          <.button type="primary" phx-disable-with="Saving...">Create Basket</.button>
+        </:actions>
       </.simple_form>
     </div>
     """
   end
 
   @impl true
-  def update(%{shopping_basket: basket, user: user} = assigns, socket) do
-    changeset = Inventory.change_shopping_basket(Map.put(basket, "user_id", user.id))
+  def update(%{shopping_basket: basket, user: user, patch: _patch} = assigns, socket) do
+    changeset = Inventory.change_shopping_basket(basket, %{})
 
     {:ok,
      socket
@@ -58,8 +48,6 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
 
   @impl true
   def handle_event("validate", %{"shopping_basket" => shopping_basket_params}, socket) do
-    shopping_basket_params = Map.put(shopping_basket_params, "user_id", socket.assigns.user.id)
-
     changeset =
       socket.assigns.shopping_basket
       |> Inventory.change_shopping_basket(shopping_basket_params)
@@ -69,7 +57,7 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
   end
 
   def handle_event("save", %{"shopping_basket" => shopping_basket_params}, socket) do
-    shopping_basket_params = Map.put(shopping_basket_params, "user_id", socket.assigns.user.id)
+    IO.inspect("Save ----------------------------------------------------->")
     save_shopping_basket(socket, socket.assigns.action, shopping_basket_params)
   end
 
@@ -80,7 +68,6 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Shopping basket updated successfully")
          |> push_patch(to: socket.assigns.patch)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -88,15 +75,11 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
     end
   end
 
-  defp save_shopping_basket(socket, :index, shopping_basket_params) do
+  defp save_shopping_basket(socket, :import_items, shopping_basket_params) do
     create_basket(socket, shopping_basket_params)
   end
 
-  defp save_shopping_basket(socket, :import_items, shopping_basket_params) do
-    create_basket2(socket, shopping_basket_params)
-  end
-
-  defp create_basket2(socket, basket_params_params) do
+  defp create_basket(socket, basket_params_params) do
     user = socket.assigns.user
 
     changeset =
@@ -134,28 +117,9 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Shopping basket updated")
          |> push_patch(to: socket.assigns.patch)
          |> assign(:shopping_basket, shopping_basket)}
     end
-  end
-
-  defp create_basket(socket, basket_params_params) do
-    shopping_basket = Inventory.create_shopping_basket(basket_params_params)
-    IO.inspect(shopping_basket, label: "Result")
-
-    case shopping_basket do
-      {:ok, basket} ->
-        notify_parent({:saved, basket})
-
-      _ ->
-        ""
-    end
-
-    {:noreply,
-     socket
-     |> assign(:shopping_basket, shopping_basket)
-     |> push_patch(to: socket.assigns.patch)}
   end
 
   def crete_ingredient_basket(user_meals) do
@@ -172,7 +136,9 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
     end)
     |> Enum.reduce([], fn x, acc -> acc ++ x end)
     # [{2, recipe_ingredient}]
-    |> Enum.map(fn {x, z, p} -> {p.ingredient_id, p.quantity / z * x, p.measurement_unit.id} end)
+    |> Enum.map(fn {x, z, p} ->
+      {p.ingredient_id, Float.round(p.quantity / z * x, 2), p.measurement_unit.id}
+    end)
     # [{ingredient_id, quantity, measurement_unit_id}]
     # |> Enum.reduce([], fn x, acc -> acc ++ x.recipe.recipe_ingredients end)
 

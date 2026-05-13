@@ -45,7 +45,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                 <h3 class="text-white font-medium">{basket.title}</h3>
               </div>
               <div class="flex gap-3 mt-1 text-xs text-slate-400">
-                <span>{length(@shopping_basket.basket_ingredients)} items</span>
+                <span>{length(basket.basket_ingredients ++ basket.basket_items)} items</span>
                 <span>{basket.start_dt}</span>
               </div>
             </div>
@@ -114,7 +114,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                 {@shopping_basket.title}
               </h2>
               <p class="text-slate-400 text-sm mt-1">
-                {length(@shopping_basket.basket_ingredients)} items • Last updated today
+                {length(@shopping_basket.basket_ingredients ++ @shopping_basket.basket_items)} items • Last updated today
               </p>
             </div>
             <div class="flex gap-2">
@@ -133,7 +133,10 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                 </svg>
               </a>
               <!-- Add Item -->
-              <button class="p-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white transition">
+              <button
+                phx-click="open_add_item_modal"
+                class="p-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white transition"
+              >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
@@ -149,7 +152,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
         
     <!-- Items List -->
         <div class="divide-y divide-slate-700 max-h-[60vh] overflow-y-auto">
-          <%= if Enum.empty?(@shopping_basket.basket_ingredients ) do %>
+          <%= if Enum.empty?(@shopping_basket.basket_ingredients ++  @shopping_basket.basket_items) do %>
             <div class="text-center py-12">
               <svg
                 class="w-16 h-16 mx-auto text-slate-600 mb-4"
@@ -165,12 +168,15 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                 />
               </svg>
               <p class="text-slate-400">No items in this list</p>
-              <button class="mt-4 text-primary-500 hover:text-primary-400 text-sm transition">
+              <button
+                class="mt-4 text-primary-500 hover:text-primary-400 text-sm transition"
+                phx-click="open_add_item_modal"
+              >
                 + Add your first item
               </button>
             </div>
           <% else %>
-            <%= for item <- @shopping_basket.basket_ingredients do %>
+            <%= for item <- Mehungry.Utils.sort_ingredients_for_basket(@shopping_basket.basket_ingredients ++ @shopping_basket.basket_items) do %>
               <div class="flex items-center gap-4 p-4 hover:bg-slate-700/30 transition group">
                 <!-- Checkbox -->
                 <button
@@ -203,7 +209,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
     <!-- Item Details -->
                 <div class="flex-1">
                   <div class={["text-white", if(item.in_storage, do: "line-through text-slate-500")]}>
-                    {item.ingredient.name}
+                    {if !is_nil(Map.get(item, :ingredient)), do: item.ingredient.name, else: item.name}
                   </div>
                   <div class="text-xs text-slate-400 mt-0.5">
                     {item.quantity} {item.measurement_unit.name}

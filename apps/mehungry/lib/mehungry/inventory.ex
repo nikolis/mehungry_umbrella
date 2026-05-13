@@ -5,7 +5,7 @@ defmodule Mehungry.Inventory do
 
   import Ecto.Query, warn: false
   alias Mehungry.Repo
-
+  alias Mehungry.Inventory.BasketItem
   alias Mehungry.Inventory.BasketParams
 
   def change_basket_params(%BasketParams{} = basket_params, attrs \\ %{}) do
@@ -33,6 +33,9 @@ defmodule Mehungry.Inventory do
     )
     |> Repo.all()
     |> Repo.preload(
+      basket_items: [
+        :measurement_unit
+      ],
       basket_ingredients: [
         :measurement_unit,
         ingredient: [
@@ -60,6 +63,9 @@ defmodule Mehungry.Inventory do
   def get_shopping_basket!(id) do
     Repo.get!(ShoppingBasket, id)
     |> Repo.preload(
+      basket_items: [
+        :measurement_unit
+      ],
       basket_ingredients: [
         :measurement_unit,
         ingredient: [
@@ -107,6 +113,70 @@ defmodule Mehungry.Inventory do
       _ ->
         result
     end
+  end
+
+  def add_item(basket_id, item_params) do
+    basket = get_shopping_basket!(basket_id)
+
+    %BasketItem{}
+    |> BasketItem.changeset(%{
+      list_id: basket.id,
+      name: item_params.name,
+      quantity: item_params.quantity,
+      shopping_basket_id: basket_id,
+      measurement_unit_id: item_params.measurement_unit_id,
+      unit: item_params.unit,
+      nutrition_data: item_params.nutrition,
+      usda_fdc_id: item_params.usda_fdc_id,
+      checked: false
+    })
+    |> Repo.insert()
+  end
+
+  def add_items_from_recipe(basket_id, recipe, servings_scale \\ 1) do
+    basket = get_shopping_basket!(basket_id)
+
+    items =
+      Enum.map(recipe.ingredients, fn ingredient ->
+        %{
+          list_id: basket.id,
+          name: ingredient.name,
+          quantity: ingredient.quantity * servings_scale,
+          unit: ingredient.unit,
+          nutrition_data: ingredient.nutrition,
+          recipe_id: recipe.id,
+          checked: false
+        }
+      end)
+
+    Repo.insert_all(BasketItem, items)
+  end
+
+  def add_items_from_calendar_span(basket_id, start_date, end_date) do
+    # Fetch all planned meals in date range
+    planned_meals =
+      Repo.all(
+        from pm in PlannedMeal,
+          where: pm.date >= ^start_date and pm.date <= ^end_date,
+          preload: [recipe: [:ingredients]]
+      )
+
+    items =
+      Enum.flat_map(planned_meals, fn meal ->
+        Enum.map(meal.recipe.ingredients, fn ingredient ->
+          %{
+            list_id: basket_id,
+            name: ingredient.name,
+            quantity: ingredient.quantity,
+            unit: ingredient.unit,
+            recipe_id: meal.recipe_id,
+            meal_plan_id: meal.id,
+            checked: false
+          }
+        end)
+      end)
+
+    Repo.insert_all(BasketItem, items)
   end
 
   def create_shopping_basket(attrs \\ %{}) do
@@ -194,14 +264,14 @@ defmodule Mehungry.Inventory do
 
   ## Examples
 
-      iex> get_basket_ingredient!(123)
+      iex> get_shopping_basket_ingredient!(123)
       %BasketIngredient{}
 
-      iex> get_basket_ingredient!(456)
+      iex> get_shopping_basket_ingredient!(456)
       ** (Ecto.NoResultsError)
 
   """
-  def get_basket_ingredient!(id), do: Repo.get!(BasketIngredient, id)
+  def get_shopping_basket_ingredient!(id), do: Repo.get!(BasketIngredient, id)
 
   @doc """
   Creates a basket_ingredient.
@@ -236,6 +306,12 @@ defmodule Mehungry.Inventory do
   def update_basket_ingredient(%BasketIngredient{} = basket_ingredient, attrs) do
     basket_ingredient
     |> BasketIngredient.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def toggle_basket_ingredient(%BasketItem{} = basket_item) do
+    basket_item
+    |> BasketItem.changeset(%{in_storage: not basket_item.in_storage})
     |> Repo.update()
   end
 

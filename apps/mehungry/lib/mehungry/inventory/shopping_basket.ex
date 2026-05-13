@@ -5,6 +5,10 @@ defmodule Mehungry.Inventory.ShoppingBasket do
   import Ecto.Changeset
 
   alias Mehungry.Inventory.BasketIngredient
+  alias Mehungry.Inventory.BasketItem
+
+  alias Mehungry.Inventory.Item
+
   alias Mehungry.Accounts.User
 
   schema "shopping_baskets" do
@@ -15,6 +19,7 @@ defmodule Mehungry.Inventory.ShoppingBasket do
     belongs_to :user, User
 
     has_many :basket_ingredients, BasketIngredient, defaults: [], on_replace: :delete
+    has_many :basket_items, BasketItem, defaults: [], on_replace: :delete
 
     timestamps()
   end
