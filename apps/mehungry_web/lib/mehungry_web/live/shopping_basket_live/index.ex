@@ -311,8 +311,11 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     shopping_basket =
       if(item.__struct__ == Mehungry.Inventory.BasketIngredient) do
         IO.inspect("here")
+
         rest =
-          Enum.filter(socket.assigns.shopping_basket.basket_ingredients, fn x -> x.id != item.id end)
+          Enum.filter(socket.assigns.shopping_basket.basket_ingredients, fn x ->
+            x.id != item.id
+          end)
 
         {:ok, ingredient} = Inventory.toggle_basket_ingredient(item)
         all_ingredients = rest ++ [ingredient]
@@ -323,7 +326,10 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
         }
       else
         IO.inspect("here2342")
-        rest = Enum.filter(socket.assigns.shopping_basket.basket_items, fn x -> x.id != item.id end)
+
+        rest =
+          Enum.filter(socket.assigns.shopping_basket.basket_items, fn x -> x.id != item.id end)
+
         {:ok, basket_item} = Inventory.toggle_basket_ingredient(item)
 
         %ShoppingBasket{
