@@ -1,4 +1,4 @@
-<div class="comment mt-4">
+<div class="comment mt-4 text-slate-800">
   <div class="flex flew-row">
     <%= if !is_nil(@comment.user.profile_pic) do %>
       <img
@@ -120,6 +120,7 @@
               id={"comment_answer_form_alla" <> to_string(@comment.id)}
               action={@live_action}
               user={@user}
+              class="text-slate-800"
               comment_answer={%{comment_id: @reply.comment_id, user_id: @user.id}}
             />
           <% end %>

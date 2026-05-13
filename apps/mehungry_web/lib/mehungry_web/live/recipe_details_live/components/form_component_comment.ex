@@ -8,7 +8,7 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentComment do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="" id="form_component_comment" phx-hook="SelectComponent">
+    <div class="text-slate-800" id="form_component_comment" phx-hook="SelectComponent">
       <.header></.header>
 
       <.simple_form
