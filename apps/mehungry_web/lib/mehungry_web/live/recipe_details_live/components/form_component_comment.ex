@@ -9,8 +9,6 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentComment do
   def render(assigns) do
     ~H"""
     <div class="text-slate-800" id="form_component_comment" phx-hook="SelectComponent">
-      <.header></.header>
-
       <.simple_form
         for={@form}
         id="comment-form"
@@ -28,15 +26,21 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentComment do
           <% else %>
             <.icon name="hero-user-circle" class="h-10 w-10" />
           <% end %>
-          <.input field={@form[:text]} type="comment" class="flex-grow w-full" label="Comment " />
+          <.input
+            field={@form[:text]}
+            type="comment"
+            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-full text-white text-sm focus:outline-none focus:border-primary-500"
+            label="Comment "
+          />
           <.input field={@form[:user_id]} type="hidden" />
           <.input field={@form[:recipe_id]} type="hidden" />
+          <button
+            type="submit"
+            class="px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-full text-white transition"
+          >
+            Post
+          </button>
         </div>
-        <:actions>
-          <div style="display: grid; grid-template-columns: 19fr 2fr 2fr; margin-top: 0.5rem;">
-            <div></div>
-          </div>
-        </:actions>
       </.simple_form>
     </div>
     """

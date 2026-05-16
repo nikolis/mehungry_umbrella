@@ -7,7 +7,7 @@ defmodule MehungryWeb.StepComponent do
       <.inputs_for :let={steps_form} field={@f[:steps]}>
         <div class={"grid grid-cols-7 gap-2 h-14  m-2" <> if Map.get(steps_form.source.changes, :delete)  do " hidden"  else ""  end}>
           <div class="m-auto">
-            <span class="text-3xl">{steps_form.index + 1}</span>
+            <span class="text-2xl text-white">{steps_form.index + 1}</span>
           </div>
           {hidden_input(steps_form, :delete)}
           <.input required field={steps_form[:index]} type="hidden" value={steps_form.index} />
@@ -31,7 +31,7 @@ defmodule MehungryWeb.StepComponent do
       <button
         name="recipe[_action]"
         value="add_step"
-        class=" font-semibold text-md absolute right-0 bottom-0 bg-transparent  text-xl z-50"
+        class="px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg text-white transition self-end font-semibold text-sm absolute right-0 bottom-0 z-50"
       >
         + Add Step
       </button>

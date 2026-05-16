@@ -161,89 +161,232 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id="recipe_presentation_modal" class="">
-      <div class="basic_2_col_grid_cont">
+    <div id="recipe_presentation_modal " class="min-h-screen bg-slate-900 pb-10">
+      <div class=" mx-auto px-4 py-8 max-w-4xl">
         <div class="w-full">
-          <.recipe_like_container
-            type="browse"
-            user_recipes={@user_recipes}
-            recipe={@recipe}
-            id={@id <> "like_container"}
-            myself={@myself}
-          />
-          <div class="w-full m-auto relative bg-greyfriend1">
-            <img style="max-height: calc(100vh - 300px);" class=" m-auto" src={@recipe.image_url} />
-          </div>
-
-          <h3 class="m-2  max-h-16 overflow-hidden text-center text-xl w-full">
-            {@recipe.title}
-          </h3>
-          <.recipe_attrs_container recipe={@recipe} />
-        </div>
-        <div class="w-full mt-2">
-          <%= if ! is_nil(@user) and @recipe.user_id == nil do %>
-            <button
-              class="px-4 rounded-md py-1"
-              phx-target={@myself}
-              phx-click="post-on-instagram"
-              phx-value-recipe_id={@recipe.id}
-              phx-value-user_id={@user.id}
-            >
-              Instagram Post
-            </button>
-            <button
-              class="px-4 rounded-md py-1"
-              phx-target={@myself}
-              phx-click="post-on-facebook"
-              phx-value-recipe_id={@recipe.id}
-              phx-value-user_id={@user.id}
-            >
-              Facebook Post
-            </button>
-          <% else %>
-            <.user_overview_card user={@recipe.user} user_follows={@user_follows} />
-          <% end %>
-          <div class="mt-8">
-            <.recipe_details recipe={@recipe} nutrients={@nutrients} primary_size={@primary_size} . />
-          </div>
-          <div class="post_card w-11/12 mb-12">
-            <div class="grid grid-cols-2 h-fit mt-16">
-              <h3 class="text-lg text-start ">{"Comments (#{length(@recipe_comments)})"}</h3>
-              <div
-                class="relative"
-                phx-click={JS.toggle_class("h-0 overflow-hidden mt-4", to: ".comment")}
-              >
-                <.icon
-                  name="hero-arrow-down"
-                  class="mt-0.5 h-5 w-5 flex-none font-bold cursor-pointer text-end absolute right-2"
-                />
+          <!-- Hero Section -->
+          <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 mb-8">
+            <!-- Image -->
+            <div class="relative aspect-video bg-slate-700">
+              <%= if @recipe.image_url do %>
+                <img src={@recipe.image_url} alt={@recipe.title} class="w-full h-full object-cover" />
+              <% else %>
+                <div class="w-full h-full flex items-center justify-center">
+                  <svg
+                    class="w-20 h-20 text-slate-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+              <% end %>
+              <.recipe_like_container
+                type="browse"
+                user_recipes={@user_recipes}
+                recipe={@recipe}
+                id={@id <> "like_container"}
+                myself={@myself}
+              />
+            </div>
+            <!-- Content -->
+            <div class="p-6">
+              <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">{@recipe.title}</h1>
+              <p class="text-slate-400 mb-4">{@recipe.description}</p>
+              
+    <!-- Recipe Stats -->
+              <div class="flex flex-wrap gap-4 mb-6">
+                <div class="flex items-center gap-2">
+                  <svg
+                    class="w-5 h-5 text-slate-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span class="text-slate-300">
+                    {@recipe.cooking_time_lower_limit + @recipe.preperation_time_lower_limit} min total
+                  </span>
+                  <span class="text-slate-500 text-sm">
+                    (Prep: {@recipe.preperation_time_lower_limit} | Cook: {@recipe.cooking_time_lower_limit})
+                  </span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <svg
+                    class="w-5 h-5 text-slate-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                  <span class="text-slate-300">{@recipe.servings} servings</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <%= case @recipe.difficulty do %>
+                    <% "Easy" -> %>
+                      <svg
+                        class="w-5 h-5 text-green-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    <% "Medium" -> %>
+                      <svg
+                        class="w-5 h-5 text-yellow-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    <% _ -> %>
+                      <svg
+                        class="w-5 h-5 text-red-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                  <% end %>
+                  <span class="text-slate-300">{@recipe.difficulty}</span>
+                </div>
+              </div>
+              <!-- Author Section -->
+              <div class="flex items-center justify-between p-4 bg-slate-700/50 rounded-xl">
+                <div class="flex items-center gap-3">
+                  <img
+                    src={@recipe.user.profile_pic}
+                    alt={@recipe.user.name}
+                    class="w-12 h-12 rounded-full object-cover"
+                  />
+                  <div>
+                    <a
+                      href={"/profile/#{@recipe.user.id}"}
+                      class="text-white font-semibold hover:text-primary-500 transition"
+                    >
+                      {@recipe.user.name}
+                    </a>
+                    <p class="text-slate-400 text-sm">{5} recipes</p>
+                  </div>
+                </div>
+                <button
+                  phx-click="toggle_follow"
+                  phx-value-user-id={@recipe.user.id}
+                  class={[
+                    "px-4 py-2 rounded-lg font-medium transition",
+                    (@user.id not in @user_follows && "bg-slate-600 text-white hover:bg-slate-500") ||
+                      "bg-primary-500 text-white hover:bg-primary-600"
+                  ]}
+                >
+                  {if @user.id not in @user_follows, do: "Following", else: "Follow"}
+                </button>
               </div>
             </div>
-            <div style="max-height: 300px; overflow: auto;">
-              <%= for comment <- @recipe_comments do %>
-                <.comment
-                  comment={comment}
-                  user={comment.user}
-                  current_user={@user}
-                  live_action={@live_action}
-                  page_title={@page_title}
-                  myself={@myself}
-                  reply={@reply}
+          </div>
+        </div>
+        <div class="w-full mt-2">
+          <div class="mt-8">
+            <.recipe_details
+              recipe={@recipe}
+              nutrients={@nutrients}
+              primary_size={@primary_size}
+              .
+            />
+          </div>
+          <div
+            class="mt-20 bg-slate-800 rounded-xl border border-slate-700 overflow-hidden"
+            id="comments"
+          >
+            <button
+              class="w-full flex justify-between items-center p-4 hover:bg-slate-700/30 transition relative"
+              phx-click={JS.toggle_class("h-0 overflow-hidden mt-6", to: ".comment")}
+            >
+              <h3 class="text-white font-semibold">{"Comments (#{length(@recipe_comments)})"}</h3>
+
+              <svg
+                class={[
+                  "w-5 h-5 text-slate-400 transition-transform"
+                ]}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
                 />
+              </svg>
+            </button>
+            <div class="comment h-0 overflow-hidden">
+              <%= if !is_nil(@user) do %>
+                <.live_component
+                  module={MehungryWeb.RecipeDetailsLive.FormComponentComment}
+                  id="comment_form"
+                  title={@page_title}
+                  action={@live_action}
+                  current_user={@user}
+                  comment={@comment}
+                />
+              <% end %>
+              <%= if Enum.empty?(@recipe_comments) do %>
+                <div class="text-center py-8 text-slate-500">
+                  No comments yet. Be the first to comment!
+                </div>
+              <% else %>
+                <div class="mt-2">
+                  <%= for comment <- @recipe_comments do %>
+                    <.comment
+                      comment={comment}
+                      user={comment.user}
+                      current_user={@user}
+                      live_action={@live_action}
+                      page_title={@page_title}
+                      myself={@myself}
+                      reply={@reply}
+                    />
+                  <% end %>
+                </div>
               <% end %>
             </div>
           </div>
-
-          <%= if !is_nil(@user) do %>
-            <.live_component
-              module={MehungryWeb.RecipeDetailsLive.FormComponentComment}
-              id="comment_form"
-              title={@page_title}
-              action={@live_action}
-              current_user={@user}
-              comment={@comment}
-            />
-          <% end %>
         </div>
       </div>
     </div>
@@ -310,7 +453,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   def update(assigns, socket) do
     user_follows =
       if(is_nil(Map.get(assigns, :user_follows))) do
-        nil
+        []
       else
         assigns.user_follows
       end

@@ -25,6 +25,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:page_title, "Share your recipes ")
      |> assign(:return_to_path, "/create_recipe")
      |> assign(:plain_meal, nil)
+     |> assign(:active_step, 0)
      |> assign(:items, [
        %{id: 1, name: "easy"},
        %{id: 2, name: "medium"},
@@ -37,6 +38,10 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
        auto_upload: false,
        external: &presign_upload/2
      )}
+  end
+
+  def handle_event("set_step", %{"step" => step}, socket) do
+    {:noreply, assign(socket, active_step: String.to_integer(step))}
   end
 
   defp rebuild_form(socket, params) do

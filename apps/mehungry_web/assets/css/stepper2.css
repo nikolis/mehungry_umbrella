@@ -1,9 +1,9 @@
 ol.stepper {
-  --default-b: lightgrey;
-  --default-c: black;
-  --active-b: #64748B;
+  --default-b: #334155;
+  --default-c: white;
+  --active-b: #F97316;
   --active-c: white;
-  --circle: 3em; /* size of circle */
+  --circle: 2em; /* size of circle */
   --b: 5px; /* line thickness */
   
   display: flex;
@@ -15,7 +15,7 @@ ol.stepper {
   counter-reset: step;
   margin: 0px 20px;
   padding: 0;
-  font-size: 12px;
+  font-size: 20px;
   font-weight: bold;
   counter-reset: step;
   overflow: hidden;
@@ -34,7 +34,6 @@ ol.stepper li::before {
   place-content: center;
   aspect-ratio: 1;
   height: var(--circle);
-  border: 5px solid #fff;
   box-sizing: border-box;
   background: var(--active-b);
   color: var(--active-c);

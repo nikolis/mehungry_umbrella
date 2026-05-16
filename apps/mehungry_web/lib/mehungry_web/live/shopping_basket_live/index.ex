@@ -117,7 +117,11 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
 
   def handle_event(
         "add_plain_item",
-    %{"basket_item" => %{"measurement_unit_id" => measurement_unit_id}, "name" => name, "quantity" => quantity},
+        %{
+          "basket_item" => %{"measurement_unit_id" => measurement_unit_id},
+          "name" => name,
+          "quantity" => quantity
+        },
         socket
       ) do
     item = %{

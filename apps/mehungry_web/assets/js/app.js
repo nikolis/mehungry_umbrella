@@ -12,6 +12,10 @@ import { fix_navigation_active } from './navigation.js';
 import { Hooks } from './hooks.js'
 import { Uploaders } from './uploaders.js'
 import { multiselect } from './select.js';
+import Alpine from 'alpinejs'
+
+window.Alpine = Alpine
+Alpine.start()
 
 window.addEventListener("phx:js-exec", ({detail}) => {
   document.querySelectorAll(detail.to).forEach(el => {
@@ -87,10 +91,11 @@ let liveSocket = new LiveSocket("/live", Socket, {
 	uploaders: Uploaders,
   dom: {
     onBeforeElUpdated(from, to) {
-      if (from._x_dataStack) {
-        window.Alpine.clone(from, to)
-      }
-    }
+    // Preserve Alpine component state
+      if (from.__x) {
+        // Prevent LiveView from removing Alpine-managed elements
+        return false
+      }    }
   },
 	params: {
 		_csrf_token: csrfToken,

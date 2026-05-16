@@ -40,6 +40,13 @@
 	top: -2vh;
 	left: 1em;
 	font-size: 0.8em;
+   /* Important */
+  background: #1e1e1e;
+  padding: 0 4px;
+
+  color: #aaa;
+  pointer-events: none;
+
 }
 .input_group_container span {
   display: block;

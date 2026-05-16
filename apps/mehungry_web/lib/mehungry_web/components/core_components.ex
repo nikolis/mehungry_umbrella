@@ -84,7 +84,7 @@ defmodule MehungryWeb.CoreComponents do
       <.icon name="hero-share" class="stroke-white w-10 h-10" />
       <div
         phx-hook="Copy"
-        class="drop_down_home  inner_utils m-auto pr-4"
+        class="drop_down_home   m-auto pr-4 w-fit"
         data-to={"#control-codes" <> Integer.to_string(@user.id)}
         id={"share_items_list"<> Integer.to_string(@user.id)}
       >
@@ -367,6 +367,75 @@ defmodule MehungryWeb.CoreComponents do
   Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
   """
   def user_overview_card(
+        %{
+          user_follows: user_follows,
+          user: %Mehungry.Accounts.User{} = _user
+        } = assigns
+      ) do
+    post = Map.get(assigns, :post, nil)
+    assigns = Map.put(assigns, :post, post)
+
+    ~H"""
+    <div class="flex items-center justify-between p-4">
+      <div class="flex items-center gap-3">
+        <!-- Avatar -->
+        <a href={"/profile/"<>Integer.to_string(@user.id)} class="flex-shrink-0">
+          <%= if @user.profile_pic do %>
+            <img src={@user.profile_pic} alt={@user.name} class="w-11 h-11 rounded-full object-cover" />
+          <% else %>
+            <div class="w-11 h-11 rounded-full bg-primary-500/20 flex items-center justify-center">
+              <span class="text-primary-500 font-semibold text-lg">
+                {String.at(@user.email, 0) |> String.upcase()}
+              </span>
+            </div>
+          <% end %>
+        </a>
+        <div>
+          <div class="flex items-center gap-2">
+            <a
+              href={"/profile/#{@user.id}"}
+              class="text-white font-semibold hover:text-primary-500 transition"
+            >
+              {@user.name}
+            </a>
+            <span class="text-slate-500 text-xs">• {get_post_age(@post)}</span>
+          </div>
+          <p class="text-slate-400 text-xs">{count_user_created_recipes(@user.id)} recipes</p>
+        </div>
+        <%= if @user.id in @user_follows do %>
+          <!-- Follow Button -->
+          <button
+            phx-click="save_user_follow"
+            phx-value-follow_id={@user.id}
+            class={[
+              "px-2 py-1.5 rounded-full text-sm font-medium transition",
+              "bg-slate-700 text-slate-300 hover:bg-slate-600"
+            ]}
+          >
+            Following
+          </button>
+        <% else %>
+          <!-- Follow Button -->
+          <button
+            phx-click="save_user_follow"
+            phx-value-follow_id={@user.id}
+            class={[
+              "px-4 py-1.5 rounded-full text-sm font-medium transition",
+              "bg-primary-500 text-white hover:bg-primary-600"
+            ]}
+          >
+            Follow
+          </button>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
+  """
+  def user_overview_card2(
         %{
           user_follows: user_follows,
           user: %Mehungry.Accounts.User{} = _user
@@ -865,7 +934,7 @@ defmodule MehungryWeb.CoreComponents do
             [
               " w-full sm:w-fit text-2xl text-center w-fit m-auto uppercase	font-medium	mb-4 rounded-lg border-greyfriend2 border-2 border-transparent ring-complementaryl ring-2	h-full",
               @errors == [] && "",
-              @errors != [] && " ring-rose-400  focus:ring-rose-400"
+              @errors != [] && " ring-rose-500  focus:ring-rose-500 border-rose-500"
             ]
         }
         {@rest}
@@ -951,7 +1020,7 @@ defmodule MehungryWeb.CoreComponents do
         class={
           [Map.get(assigns.rest, :class, "")] ++
             [
-              "h-full rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2 mt-2"
+              "w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500"
             ]
         }
         {@rest}
@@ -974,7 +1043,7 @@ defmodule MehungryWeb.CoreComponents do
           [Map.get(assigns.rest, :class, "")] ++
             [
               "input_full",
-              "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
+              "phx-no-feedback:focus:border-zinc-400",
               @errors == [] && "border-zinc-300 focus:border-zinc-400",
               @errors != [] && "border-rose-400 focus:border-rose-400"
             ]
@@ -1066,17 +1135,19 @@ defmodule MehungryWeb.CoreComponents do
         class={
           [Map.get(assigns.rest, :class, "")] ++
             [
-              "rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym 	h-full p-0 md:p-2 sm:p-0 sm:pt-2 sm:pb-2 ",
+              "w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none  ",
               "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym text-sm sm:text-base p-1 sm:p-4",
               @errors == [] && "",
-              @errors != [] && " ring-rose-400  focus:ring-rose-400"
+              @errors != [] && " ring-rose-400  focus:ring-rose-400 bg-rose-300"
             ]
         }
         {@rest}
       />
-      <.label for={@id} class="placeholder">{@label}</.label>
-      <.error :for={msg <- @errors}>{msg}</.error>
-      <div class="absolute right-0 bottom-0 px-1">{@rest.subscript}</div>
+      <%= if(@errors == []) do %>
+      <.label for={@id} class="text-primary-500">{@label}</.label>
+        <%=  else %>
+      <.label for={@id} class="text-slate-900">{@label}</.label>
+      <% end %>
     </div>
     """
   end
@@ -1100,13 +1171,6 @@ defmodule MehungryWeb.CoreComponents do
         {@rest}
       />
       <.label for={@id} class="placeholder">{@label}</.label>
-      <button phx-clic="submit" class="absolute right-2 m-auto">
-        <.icon
-          name="hero-arrow-right-circle"
-          class="mt-0.5 h-9 w-9 flex-none text-primary cursor-pointer"
-        />
-      </button>
-      <!-- <button type="submit" class="primary_button" phx-disable-with="Saving...">Post</button> --->
     </div>
     """
   end
@@ -1131,7 +1195,7 @@ defmodule MehungryWeb.CoreComponents do
       <select
         id={@id}
         name={@name}
-        class="rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	h-full w-full  text-greyfriend3 font-semibold"
+        class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500"
         ,
         multiple={@multiple}
         {@rest}
@@ -1158,7 +1222,7 @@ defmodule MehungryWeb.CoreComponents do
           [Map.get(assigns.rest, :class, "")] ++
             [
               "rounded-lg border-greyfriend2 border-2 focus:border-transparent focus:ring-complementarym focus:ring-2	h-full",
-              "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym",
+              "phx-no-feedback:transparent phx-no-feedback:focus:border-primary-500",
               @errors == [] && "",
               @errors != [] && " ring-rose-400  focus:ring-rose-400"
             ]
@@ -1183,15 +1247,15 @@ defmodule MehungryWeb.CoreComponents do
         class={
           [Map.get(assigns.rest, :class, "")] ++
             [
-              "rounded-lg border-greyfriend2  focus:border-greyfriend2 focus:ring-complementarym focus:ring-2	h-full border-3",
-              "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym",
+              "w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none ",
+              "phx-no-feedback:transparent phx-no-feedback:focus:border-primary-500",
               @errors == [] && "",
               @errors != [] && " ring-rose-400  focus:ring-rose-400"
             ]
         }
         {@rest}
       />
-      <.label for={@id} class="placeholder ">{@label}</.label>
+      <.label for={@id} class="block text-md font-lg text-slate-100 mb-2 ">{@label}</.label>
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
@@ -1220,10 +1284,9 @@ defmodule MehungryWeb.CoreComponents do
   def error(assigns) do
     ~H"""
     <div
-      class="text-right text-base font-medium leading-6 text-rose-600 phx-no-feedback:hidden "
-      style="position: absolute; bottom: -3rem;"
+      class="text-right text-xs font-small leading-6 text-rose-600 phx-no-feedback:hidden "
+      style="position: absolute; bottom: -0.4rem; right: 0.5rem;"
     >
-      <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
       {render_slot(@inner_block)}
     </div>
     """
@@ -1421,7 +1484,7 @@ defmodule MehungryWeb.CoreComponents do
         <% else %>
           <%= if index == length(@steps) -1 do %>
             <.stepper_step
-              class="stepper_step  cursor-pointer"
+              class="stepper_step  cursor-pointer "
               step={step}
               index={index}
               id={"step"<> Integer.to_string(index)}

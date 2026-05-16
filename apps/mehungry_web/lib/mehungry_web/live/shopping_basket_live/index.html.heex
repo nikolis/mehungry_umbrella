@@ -1,8 +1,8 @@
 <div
-  class="h-112 pb-4 sm:min-h-screen bg-slate-900 "
+  class="h-full pb-4 sm:min-h-screen bg-slate-900 "
   id="shopping_basket_index"
 >
-  <div class="container mx-auto px-4 py-8 overflow-hidden">
+  <div class="h-full mx-auto px-4 py-8 overflow-hidden">
     <!-- Header -->
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-white flex items-center gap-3">
@@ -25,7 +25,10 @@
     </div>
     
 <!-- Two Column Layout -->
-    <div class="flex flex-col sm:flex-row gap-6 relative" style="height: 100%; overflow:hidden; ">
+    <div
+      class="h-full flex flex-col sm:flex-row gap-6 relative"
+      style="height: 100%; overflow:hidden; "
+    >
       
 <!-- Sidebar - Shopping Lists -->
       <div
@@ -339,6 +342,6 @@
       |> JS.add_class("active", to: "#basket-side-navbar:not(.active)")
     }
   >
-    <.icon name="hero-arrow-down-circle" class="md:hidden h-10 w-10 text-complementary" />
+    <.icon name="hero-arrow-down-circle" class="md:hidden h-10 w-10 text-primary-500" />
   </button>
 </div>

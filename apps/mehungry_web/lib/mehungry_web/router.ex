@@ -151,6 +151,8 @@ defmodule MehungryWeb.Router do
 
       # live "/", HomeLive.Index, :index
       live "/home", HomeLive.Index, :index
+      live "/home/:id", HomeLive.Index, :show_recipe
+
       live "/browse", RecipeBrowserLive.Index, :index
       live "/browse/:id", RecipeBrowserLive.Index, :show_recipe
       live "/profile/:id", ProfileLive.Index, :show

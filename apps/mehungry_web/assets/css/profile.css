@@ -4,8 +4,8 @@
 }
 
 .nav_button.active svg {
-	stroke:var(--clr-complementary-middle);
-	fill:  var(--clr-complementary-middle); 
+	stroke:#F97316;
+	fill:  #F97316; 
 }
 
 .nav_button.active {
@@ -14,9 +14,9 @@
 	
 }
 .nav_button.selected {
-	color: var(--clr-complementary-middle);
-	border-bottom: 3px solid var(--clr-complementary-middle);
-	
+  background-color: #1E293B; 
+  color: #F97316; 
+  border-bottom: 3px solid #F97316;
 }
 .text {
   font-size: 1rem;

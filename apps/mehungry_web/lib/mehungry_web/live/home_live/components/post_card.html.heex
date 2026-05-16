@@ -1,8 +1,4 @@
-<div
-  class=" sm:w-2/6 md:w-4/6 m-auto  w-full p-4  mt-2 rounded-xl max-w-4/12 shadow my-12"
-  style="border-bottom: 1px solid var(--clr-grey-friend_2);"
-  id={"post_card_"<> Integer.to_string(@id)}
->
+<div class="bg-slate-800 rounded-xl overflow-hidden border border-slate-700">
   <%= if ! is_nil(@post.reference) do %>
     <.user_overview_card
       user={@post.reference.user}
@@ -12,20 +8,219 @@
       current_user={@user}
     />
   <% end %>
-
-  <div class="m-auto relative">
-    <div class="" id={Integer.to_string(@post.id)}>
-      <div class="w-full m-auto relative bg-slate-100">
-        <.link
-          id={"card-link-to-recipe-#{@post.reference_id}"}
-          class="block  "
-          patch={~p"/show_recipe/#{@post.reference_id}"}
+  <!-- Recipe Image -->
+  <div class="" id={Integer.to_string(@post.id)}>
+    <.link
+      id={"card-link-to-recipe-#{@post.reference_id}"}
+      patch={~p"/home/#{@post.reference_id}"}
+    >
+      <div class="aspect-video bg-slate-700 overflow-hidden">
+        <%= if @post.md_media_url do %>
+          <img
+            src={@post.md_media_url}
+            alt={@post.title}
+            class="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          />
+        <% else %>
+          <div class="w-full h-full flex items-center justify-center">
+            <svg
+              class="w-16 h-16 text-slate-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </div>
+        <% end %>
+      </div>
+    </.link>
+  </div>
+  
+<!-- Action Buttons -->
+  <div class="p-3">
+    <div class="flex items-center gap-4">
+      <!-- Like Button -->
+      <button
+        phx-click="save_user_recipe"
+        phx-target={@self()}
+        phx-value-post-id={@post.id}
+        phx-value-recipe_id={@post.reference.id}
+        phx-value-dom_id={@id}
+        class="group flex items-center gap-1 transition"
+      >
+        <svg
+          class={[
+            "w-7 h-7 transition",
+            (false && "text-red-500 fill-red-500") || "text-slate-400 group-hover:text-red-400"
+          ]}
+          fill={
+            if Enum.any?(@current_user_recipes, fn x -> x == @post.reference.id end),
+              do: "currentColor",
+              else: "none"
+          }
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
-          <img style="max-height: calc(100vh - 300px);" class=" m-auto" src={@post.md_media_url} />
-        </.link>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+          />
+        </svg>
+        <span class="text-sm text-slate-400">{length(@post.reference.user_recipes)}</span>
+      </button>
+      
+<!-- Comment Button -->
+      <.link
+        id={"card-link2-to-recipe-#{@post.reference_id}"}
+        patch={~p"/home/#{@post.reference_id}"}
+        class="group flex items-center gap-1 transition"
+      >
+        <svg
+          class="w-6 h-6 text-slate-400 group-hover:text-primary-500 transition"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          />
+        </svg>
+        <span class="text-sm text-slate-400">{length(@post.reference.comments)}</span>
+      </.link>
+      
+<!-- Share Button -->
+      <div class="relative">
+        <button
+          phx-click={
+            Phoenix.LiveView.JS.toggle_class("drop_down_visible ",
+              to: "#share_items_list" <> Integer.to_string(@post.id)
+            )
+          }
+          class="group p-1 transition"
+          }
+        >
+          <svg
+            class="w-5 h-5 text-slate-400 group-hover:text-primary-500 transition"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+            />
+          </svg>
+        </button>
+
+        <div
+          class=" drop_down_home absolute left-0 mt-2   bg-slate-700 rounded-lg shadow-lg border border-slate-600 z-10"
+          id={"share_items_list" <> Integer.to_string(@post.id)}
+          phx-click-away={
+            Phoenix.LiveView.JS.remove_class("drop_down_visible ",
+              to: "#share_items_list" <> Integer.to_string(@post.id)
+            )
+          }
+        >
+          <div class="py-2">
+            <button
+              phx-click="copy_link"
+              phx-value-link={"/home/#{@post.reference.id}"}
+              class="w-full px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-600 transition flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                />
+              </svg>
+              Copy Link
+            </button>
+            <a
+              href="/share_social_media/instagram"
+              class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-600 transition flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 7a5 5 0 100 10 5 5 0 000-10z" />
+              </svg>
+              Instagram
+            </a>
+            <a
+              href="/share_social_media/facebook"
+              class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-600 transition flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+              </svg>
+              Facebook
+            </a>
+          </div>
+        </div>
       </div>
     </div>
-
+  </div>
+  
+<!-- Likes Count -->
+  <div class="px-4 pb-2">
+    <span class="text-white text-sm font-semibold">
+      {length(@post.reference.user_recipes)} {if {length(@post.reference.user_recipes)} == 1,
+        do: "like",
+        else: "likes"}
+    </span>
+  </div>
+  
+<!-- Recipe Caption -->
+  <div class="px-4 pb-3">
+    <div class="flex flex-wrap items-baseline gap-1">
+      <a
+        href={"/profile/#{@post.reference.user_id}"}
+        class="text-white font-semibold text-sm hover:text-primary-500 transition"
+      >
+        {@post.reference.user.name}
+      </a>
+      <span class="text-slate-300 text-sm">{@post.reference.description}</span>
+    </div>
+    
+<!-- Hashtags -->
+    <%= if @post.reference.recipe_hashtags != [] do %>
+      <div class="flex flex-wrap gap-1 mt-1">
+        <%= for hashtag <- @post.reference.recipe_hashtags do %>
+          <a
+            href={"/search/hashtag/#{hashtag.hashtag.title}"}
+            class="text-primary-500 text-sm hover:text-primary-400 transition"
+          >
+            #{hashtag.hashtag.title}
+          </a>
+        <% end %>
+      </div>
+    <% end %>
+    
+<!-- View Comments Link -->
+    <.link
+      id={"card-link-to-recipe-#{@post.reference_id}"}
+      patch={~p"/home/#{Integer.to_string(@post.reference.id) <> "#comments"}"}
+      class="block text-slate-500 text-sm mt-2 hover:text-slate-400 transition"
+    >
+      View all {length(@post.reference.comments)} comments
+    </.link>
+  </div>
+</div>
+<!-- 
+<div class="m-auto relative">
     <div class="relative flex gap-2 py-1">
       <.recipe_like_container2
         type="browse"
@@ -59,6 +254,4 @@
         <% end %>
       </span>
     </div>
-    <!-- <.recipe_attrs_container recipe={@post.reference} /> -->
-  </div>
-</div>
+  </div> -->

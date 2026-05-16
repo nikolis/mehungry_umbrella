@@ -5,7 +5,11 @@ defmodule MehungryWeb.SelectComponentDeep do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="h-full relative" id={"select-component-#{@unique_id}"} data-component-id={@unique_id}>
+    <div
+      class="h-full relative rounded-lg border-2 border-slate-700 "
+      id={"select-component-#{@unique_id}"}
+      data-component-id={@unique_id}
+    >
       <!-- Hidden input for form value -->
       <input
         type="hidden"
@@ -17,7 +21,7 @@ defmodule MehungryWeb.SelectComponentDeep do
     <!-- Trigger Button / Selected Item Display -->
       <div phx-click="open_modal" phx-target={@myself} class="w-full cursor-pointer">
         <%= if @selected_item do %>
-          <div class="border border-gray-300 rounded-lg p-2 flex justify-between items-center">
+          <div class="bg-slate-700 border border-slate-800 rounded-lg text-white rounded-lg p-2 flex justify-between items-center">
             <span class="font-semibold">
               <.display_label label={@selected_item.label} />
             </span>
@@ -25,13 +29,13 @@ defmodule MehungryWeb.SelectComponentDeep do
               phx-click="clear_selection"
               phx-target={@myself}
               phx-stop-propagation
-              class="text-gray-500 hover:text-red-500"
+              class="text-gray-100 hover:text-red-500"
             >
               <.icon name="hero-x-mark" class="h-4 w-4" />
             </button>
           </div>
         <% else %>
-          <div class="h-full border border-greyfriend2 border-2 rounded-lg p-4 text-gray-500">
+          <div class="overflow-hidden  h-full border border-slate-800 bg-slate-700 border-2 rounded-lg p-4 text-gray-500">
             {@placeholder || "Select an option..."}
           </div>
         <% end %>
@@ -40,30 +44,30 @@ defmodule MehungryWeb.SelectComponentDeep do
     <!-- Modal/Dropdown -->
       <div
         id={"select-modal-#{@unique_id}"}
-        class={"fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 #{if @modal_open, do: "", else: "hidden"}"}
+        class={"fixed inset-0 bg-black/50 rounded-lg border-2 border-slate-700 flex items-center justify-center z-50 #{if @modal_open, do: "", else: "hidden"}"}
       >
-        <div class="bg-white rounded-lg w-96 max-w-md p-4">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold">{@modal_title || "Select Option"}</h3>
+        <div class="bg-slate-800 rounded-xl max-w-lg w-full mx-4 overflow-hidden ">
+          <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800">
+            <h3 class="text-lg font-semibold overflow-hidden">{@modal_title || "Select Option"}</h3>
             <button phx-click="close_modal" phx-target={@myself}>
-              <.icon name="hero-x-mark" class="h-5 w-5" />
+              <.icon name="hero-x-mark" class="h-5 w-5 text-white" />
             </button>
           </div>
-          
-    <!-- Search Input -->
-          <input
-            type="text"
-            id={"search-input-#{@unique_id}"}
-            name="search_term"
-            value={@search_term}
-            placeholder="Search..."
-            phx-keyup="search"
-            phx-target={@myself}
-            phx-debounce="300"
-            class="w-full border border-gray-300 rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          
-    <!-- Results List -->
+          <div class="p-6">
+            <!-- Search Input -->
+            <input
+              type="text"
+              id={"search-input-#{@unique_id}"}
+              name="search_term"
+              value={@search_term}
+              placeholder="Search..."
+              phx-keyup="search"
+              phx-target={@myself}
+              phx-debounce="300"
+              class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+            />
+          </div>
+          <!-- Results List -->
           <div class="max-h-64 overflow-y-auto">
             <%= if @loading do %>
               <div class="text-center py-4">Loading...</div>
@@ -71,14 +75,14 @@ defmodule MehungryWeb.SelectComponentDeep do
               <%= if Enum.empty?(@items) do %>
                 <div class="text-center py-4 text-gray-500">No results found</div>
               <% else %>
-                <ul class="space-y-1">
+                <ul class="space-y-1 p-4">
                   <%= for item <- @items do %>
                     <li
                       phx-click="select_item"
                       phx-value-id={item.id}
                       phx-value-parent_id={@parent_id}
                       phx-target={@myself}
-                      class="cursor-pointer hover:bg-blue-50 p-2 rounded transition-colors"
+                      class="cursor-pointer hover:bg-slate-700 p-2 rounded transition-colors"
                     >
                       <.display_label label={item.label} />
                     </li>
@@ -98,8 +102,8 @@ defmodule MehungryWeb.SelectComponentDeep do
     <div>
       <%= if String.contains?(@label, ",") do %>
         <% [first | rest] = String.split(@label, ",") %>
-        <span class="font-semibold">{first}</span>
-        <span class="text-xs text-gray-600">{Enum.join(rest, ",")}</span>
+        <span class="font-semibold text-white">{first}</span>
+        <span class="text-xs text-slate-500">{Enum.join(rest, ",")}</span>
       <% else %>
         <span class="font-semibold">{@label}</span>
       <% end %>

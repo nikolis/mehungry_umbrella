@@ -62,6 +62,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      |> assign(:invocations, 0)
      |> assign(:counter, 1)
      |> assign(:query, query)
+     |> assign(sort_by: "recent")
      |> assign(:must_be_loged_in, nil)
      |> assign(:reply, nil)
      |> assign_recipe_search()}

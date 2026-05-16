@@ -1,81 +1,105 @@
-<div class="pb-14">
-  <%= if !is_nil(@must_be_loged_in) do %>
-    <.modal
-      id="browse_index_must_be_login"
-      show
-      on_cancel={JS.push("keep_browsing")}
-      class="h-full"
-      %
-    >
-      <.live_component module={MehungryWeb.MustBeLoginComponent} id={:new} patch={~p"/browse"} />
-    </.modal>
-  <% end %>
+<div class="min-h-screen bg-slate-900">
+  <div class="container max-w-2xl mx-auto px-4 py-8">
+    <!-- Feed Header -->
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+        <svg
+          class="w-7 h-7 text-primary-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+          />
+        </svg>
+        Recipe Feed
+      </h1>
+      <p class="text-slate-400 text-sm mt-1">Discover recipes from your community</p>
+    </div>
 
-  <%= if is_nil(@user) do %>
-  <% else %>
-    <.modal
-      :if={is_nil(@user_profile.onboarding_level) or @user_profile.onboarding_level < 1}
-      id="onboarding-modal"
-      show
+    <%= if !is_nil(@must_be_loged_in) do %>
+      <.modal
+        id="browse_index_must_be_login"
+        show
+        on_cancel={JS.push("keep_browsing")}
+        class="h-full"
+        %
+      >
+        <.live_component module={MehungryWeb.MustBeLoginComponent} id={:new} patch={~p"/browse"} />
+      </.modal>
+    <% end %>
+
+    <%= if is_nil(@user) do %>
+    <% else %>
+      <.modal
+        :if={is_nil(@user_profile.onboarding_level) or @user_profile.onboarding_level < 1}
+        id="onboarding-modal"
+        show
+        on_cancel={JS.patch(~p"/")}
+      >
+        <.live_component
+          module={MehungryWeb.Onboarding.FormComponent}
+          user_profile={@user_profile}
+          id={:new}
+          patch={~p"/"}
+        />
+      </.modal>
+    <% end %>
+
+    <MehungryWeb.CoreComponents.modal
+      :if={@live_action in [:share_social_media]}
       on_cancel={JS.patch(~p"/")}
+      id="recipe_details_modal"
+      show
     >
-      <.live_component
-        module={MehungryWeb.Onboarding.FormComponent}
-        user_profile={@user_profile}
-        id={:new}
-        patch={~p"/"}
-      />
-    </.modal>
-  <% end %>
+      <div class="w-full" style="min-height: 55vh;">
+        <.live_component
+          module={MehungryWeb.SocialMediaPostComponent}
+          id="recipe_social_media_component"
+          recipe={@recipe}
+          user={@user}
+          page_title={"Share Recipe #{@recipe.title}"}
+          user_follows={@current_user_follows}
+          live_action={@live_action}
+        />
+      </div>
+    </MehungryWeb.CoreComponents.modal>
 
-  <MehungryWeb.CoreComponents.modal
-    :if={@live_action in [:share_social_media]}
-    on_cancel={JS.patch(~p"/")}
-    id="recipe_details_modal"
-    show
-  >
-    <div class="w-full" style="min-height: 55vh;">
-      <.live_component
-        module={MehungryWeb.SocialMediaPostComponent}
-        id="recipe_social_media_component"
-        recipe={@recipe}
-        user={@user}
-        page_title={"Share Recipe #{@recipe.title}"}
-        user_follows={@current_user_follows}
-        live_action={@live_action}
-      />
+    <MehungryWeb.RecipeComponents.recipe_modal
+      :if={@live_action in [:show_recipe]}
+      on_cancel={JS.patch(~p"/home")}
+      id="recipe_details_modal"
+      show
+    >
+      <div class="w-full" style="min-height: 55vh;">
+        <.live_component
+          module={MehungryWeb.RecipeDetailsComponent}
+          id="recipe_details_component"
+          primary_size={@recipe.primary_nutrients_size}
+          nutrients={@recipe.nutrients}
+          recipe={@recipe}
+          user_recipes={@current_user_recipes}
+          user={@user}
+          page_title={"Recipe #{@recipe.title}"}
+          user_follows={@current_user_follows}
+          live_action={@live_action}
+        />
+      </div>
+    </MehungryWeb.RecipeComponents.recipe_modal>
+    <div class="space-y-6">
+      <%= for post <- @posts do %>
+        <.post_card
+          post={post}
+          id={post.id}
+          user={@user}
+          user_follows={@current_user_follows}
+          current_user_recipes={@current_user_recipes}
+        />
+      <% end %>
     </div>
-  </MehungryWeb.CoreComponents.modal>
-
-  <MehungryWeb.RecipeComponents.recipe_modal
-    :if={@live_action in [:show_recipe]}
-    on_cancel={JS.patch(~p"/")}
-    id="recipe_details_modal"
-    show
-  >
-    <div class="w-full" style="min-height: 55vh;">
-      <.live_component
-        module={MehungryWeb.RecipeDetailsComponent}
-        id="recipe_details_component"
-        primary_size={@recipe.primary_nutrients_size}
-        nutrients={@recipe.nutrients}
-        recipe={@recipe}
-        user_recipes={@current_user_recipes}
-        user={@user}
-        page_title={"Recipe #{@recipe.title}"}
-        user_follows={@current_user_follows}
-        live_action={@live_action}
-      />
-    </div>
-  </MehungryWeb.RecipeComponents.recipe_modal>
-
-  <%= for post <- @posts do %>
-    <.post_card
-      post={post}
-      id={post.id}
-      user={@user}
-      user_follows={@current_user_follows}
-      current_user_recipes={@current_user_recipes}
-    />
-  <% end %>
+  </div>
 </div>

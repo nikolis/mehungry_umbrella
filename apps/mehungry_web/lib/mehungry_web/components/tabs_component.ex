@@ -8,7 +8,7 @@ defmodule MehungryWeb.TabsComponent do
 
   def nav_buttons(assigns) do
     ~H"""
-    <div class="w-full flex justify-between nav_buttons text-xl text-greyfriend2 font-semibold	mb-4">
+    <div class="flex gap-2 m-auto nav_buttons">
       <%= for state <- @states do %>
         <.nav_button
           state={state}
@@ -36,41 +36,41 @@ defmodule MehungryWeb.TabsComponent do
     assigns = Map.put(assigns, :extra_class, extra_class)
 
     ~H"""
-    <div>
-      <button
-        id={@state}
-        class={"nav_button " <> @extra_class}
-        phx-click={
-          JS.remove_class("selected", to: ".nav_button")
-          |> JS.add_class("selected", to: "##{@state}")
-          |> JS.add_class("hidden", to: ".content_container")
-          |> JS.remove_class("hidden", to: "##{@state}content")
-        }
-        phx-value-state={@state}
-      >
-        {@state}
-      </button>
+    <button
+      id={@state}
+      class={[
+        "px-6 py-3 text-sm font-medium transition-all rounded-t-lg nav_button " <> extra_class
+      ]}
+      phx-click={
+        JS.remove_class("selected", to: ".nav_button")
+        |> JS.add_class("selected", to: "##{@state}")
+        |> JS.add_class("hidden", to: ".content_container")
+        |> JS.remove_class("hidden", to: "##{@state}content")
+      }
+      phx-value-state={@state}
+    >
+      {@state}
+    </button>
 
-      <div
-        id={@state <> "content"}
-        class={"content_container absolute top-0 right-0 left-0 mt-6 hidden" <> @extra_class}
-      >
-        {@contents.tab_content(%{
-          state: @state,
-          recipe: @recipe,
-          id: Integer.to_string(@recipe.id),
-          nutrients: @recipe.nutrients,
-          primary_size: @primary_size
-        })}
-      </div>
+    <div
+      id={@state <> "content"}
+      class={"content_container absolute top-0 right-0 left-0 mt-6 hidden" <> @extra_class}
+    >
+      {@contents.tab_content(%{
+        state: @state,
+        recipe: @recipe,
+        id: Integer.to_string(@recipe.id),
+        nutrients: @recipe.nutrients,
+        primary_size: @primary_size
+      })}
     </div>
     """
   end
 
   def render_tabs(assigns) do
     ~H"""
-    <div class="" id={@id}>
-      <div class="nav_buttons relative">
+    <div class="border-b border-slate-700 mb-6" id={@id}>
+      <div class="nav_buttons relative flex gap-2">
         <.nav_buttons
           states={@contents.get_states()}
           contents={@contents}

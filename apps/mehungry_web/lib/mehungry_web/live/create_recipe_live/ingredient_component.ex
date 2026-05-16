@@ -67,7 +67,7 @@ defmodule MehungryWeb.IngredientComponent do
           />
         </div>
         <div class=" col-span-2 my-auto">
-          <.input field={@ingredient_form[:quantity]} type="number" />
+          <.input field={@ingredient_form[:quantity]} type="number_subscript" label="quantity"/>
         </div>
 
         <div class="col-span-3 my-auto">

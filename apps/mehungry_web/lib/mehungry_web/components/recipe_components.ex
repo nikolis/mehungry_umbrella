@@ -52,7 +52,7 @@ defmodule MehungryWeb.RecipeComponents do
       phx-mounted={@show && show_modal(@id)}
       phx-remove={hide_modal(@id)}
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
-      class="relative z-50 hidden max-w-1/2 m-auto "
+      class="relative z-50 hidden max-w-1/2 "
     >
       <div
         id={"#{@id}-bg"}
@@ -76,19 +76,27 @@ defmodule MehungryWeb.RecipeComponents do
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
               class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white  shadow-lg ring-1 transition "
             >
-              <div class=" sm:hidden  absolute top-5 left-5 rounded-full w-12 h-12  bg-white">
+              <div class="absolute top-10 left-5 z-50">
                 <button
                   phx-click={JS.exec("data-cancel", to: "##{@id}")}
                   type="button"
-                  class=" flex-none p-2   hover:opacity-40 w-full h-full "
+                  class="inline-flex items-center gap-2 text-slate-300 hover:text-white mb-6 transition"
                   aria-label="close"
                   id="close-recipe-modal"
                 >
-                  <.icon name="hero-arrow-left" class="h-6 w-6 " />
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                    />
+                  </svg>
+                  Back
                 </button>
               </div>
 
-              <div id={"#{@id}-content"} class="sm:p-4">
+              <div id={"#{@id}-content"} class="">
                 {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
@@ -156,7 +164,7 @@ defmodule MehungryWeb.RecipeComponents do
         %{recipe: _recipe, nutrients: _nutrients, primary_size: _primary_size} = assigns
       ) do
     ~H"""
-    <div class="w-11/12  m-auto" style="height: 280px;">
+    <div class="" style="height: 280px;">
       <.render_tabs
         id="live_comp_tabs_rec"
         contents={MehungryWeb.RecipeDetailsTabsConfig}
@@ -170,26 +178,32 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_ingredients(%{recipe_ingredients: _recipe_ingredients} = assigns) do
     ~H"""
-    <div style="max-height: 300px;" class="overflow-auto p-4 text-base text-black">
-      <%= for ingredient <- @recipe_ingredients do %>
-        <div class="ingredient_details_container font-normal	 ">
-          <div>{Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name)}</div>
-          <div class="font-semibold">
-            {ingredient.quantity} {Mehungry.Utils.remove_parenthesis(ingredient.measurement_unit.name)}
+    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden mt-8">
+      <div class="divide-y custom-scrollbar divide-slate-700 overflow-auto" style="max-height: 300px;">
+        <%= for ingredient <- @recipe_ingredients do %>
+          <div class="flex justify-between items-center p-4 hover:bg-slate-700/30 transition">
+            <span class="text-white">
+              {Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name)}
+            </span>
+            <span class="text-slate-400">
+              {ingredient.quantity} {ingredient.measurement_unit.name}
+            </span>
           </div>
-        </div>
-      <% end %>
+        <% end %>
+      </div>
     </div>
     """
   end
 
   def recipe_steps(%{steps: _steps} = assigns) do
     ~H"""
-    <div class="overflow-auto p-4 text-base text-black" style="height: 300px;">
+    <div class="overflow-auto p-4 text-base custom-scrollbar text-black mt-6" style="height: 300px;">
       <%= for step <- @steps do %>
         <div class="step_details_container">
-          <div class="font-semibold text-lg w-fit">{step.index}</div>
-          <div class="text-lg font-normal">{step.description}</div>
+          <div class="w-8 h-8 rounded-full bg-primary-500/20 text-primary-500 flex items-center justify-center font-semibold flex-shrink-0">
+            {step.index}
+          </div>
+          <div class="text-white">{step.description}</div>
         </div>
       <% end %>
     </div>
@@ -307,7 +321,8 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_card(%{myself: _myself} = assigns) do
     ~H"""
-    <div id={"recipe-card-details-container-#{@recipe.id}"} } class="recipe_card">
+    <div id={"recipe-card-details-container-#{@recipe.id}"} } class="group">
+      <h1>asdfadfsadfsffffffffffffffffffffff</h1>
       <.recipe_like_container
         type={@type}
         user_recipes={@user_recipes}
@@ -320,12 +335,37 @@ defmodule MehungryWeb.RecipeComponents do
         id={"recipe-card-details-link-#{@recipe.id}"}
         patch={@path_to_details}
       >
-        <img class="w-full rounded-xl m-auto" src={@recipe.image_url} />
-        <h1 class="recipe_title text-center">{@recipe.title}</h1>
-        <div class="recipe_sub_text text-center">
-          Sub title
+        <div class="bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-primary-500/50 transition-all duration-200 group-hover:transform group-hover:-translate-y-1">
+          
+    <!-- Image Container -->
+          <div class="relative aspect-video overflow-hidden bg-slate-700">
+            <%= if ! is_nil(@recipe.image_url) do %>
+              {inspect(@recipe.image_url)}
+              <img class="w-full rounded-xl m-auto" src={@recipe.image_url} />
+            <% else %>
+              <div class="w-full h-full flex items-center justify-center">
+                <svg
+                  class="w-12 h-12 text-slate-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+            <% end %>
+          </div>
+          <h1 class="recipe_title text-center">{@recipe.title}</h1>
+          <div class="recipe_sub_text text-center">
+            Sub title
+          </div>
+          <.recipe_attrs_container recipe={@recipe} />
         </div>
-        <.recipe_attrs_container recipe={@recipe} />
       </.link>
     </div>
     """
@@ -333,19 +373,196 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_card(assigns) do
     ~H"""
-    <div id={"recipe-card-details-container-#{@recipe.id}"} } class="recipe_card">
-      <.recipe_like_container type={@type} user_recipes={@user_recipes} recipe={@recipe} id={@id} />
+    <div id={"recipe-card-details-container-#{@recipe.id}"} } class="py-2">
       <.link
         phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
         id={"recipe-card-details-link-#{@recipe.id}"}
         patch={@path_to_details}
       >
-        <img class="w-full rounded-xl m-auto" src={@recipe.image_url} />
-        <h1 class="recipe_title text-center">{@recipe.title}</h1>
-        <div class="recipe_sub_text text-center">
-          Sub title
+        <div class="bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-primary-500/50 transition-all duration-200 group-hover:transform group-hover:-translate-y-1 relative">
+          <!-- Image Container -->
+          <div class="aspect-video overflow-hidden bg-slate-700 w-full ">
+            <%= if @recipe.image_url do %>
+              <img
+                src={@recipe.image_url}
+                alt={@recipe.title}
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            <% else %>
+              <div class="w-full h-full flex items-center justify-center">
+                <svg
+                  class="w-12 h-12 text-slate-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+            <% end %>
+            <!-- Save Button -->
+            <%= if @type =="created" do %>
+              <a
+                phx-click="edit-recipe"
+                phx-value-id={@recipe.id}
+                class="absolute top-2 right-2 cursor-pointer  text-white z-69 rounded-full p-2 bg-slate-800"
+                href={"/create_recipe/" <> Integer.to_string(@recipe.id)}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                </svg>
+              </a>
+            <% else %>
+              <button
+                phx-click="save_recipe"
+                phx-value-id={@recipe.id}
+                class="absolute top-3 right-3 p-2 rounded-full bg-black/50 hover:bg-black/70 transition backdrop-blur-sm"
+              >
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                  />
+                </svg>
+              </button>
+            <% end %>
+          </div>
+          <!-- Content -->
+          <div class="p-4">
+            <h3 class="text-white font-semibold text-lg line-clamp-1 group-hover:text-primary-500 transition">
+              {@recipe.title}
+            </h3>
+            <p class="text-slate-400 text-sm mt-1 line-clamp-2">
+              {@recipe.description || "No description available"}
+            </p>
+            
+    <!-- Recipe Stats -->
+            <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-700">
+              <div class="flex items-center gap-3">
+                <!-- Cooking Time -->
+                <div class="flex items-center gap-1">
+                  <svg
+                    class="w-4 h-4 text-slate-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span class="text-slate-400 text-xs">{@recipe.cooking_time_lower_limit} min</span>
+                </div>
+                
+    <!-- Difficulty -->
+                <div class="flex items-center gap-1">
+                  <%= case @recipe.difficulty do %>
+                    <% 1 -> %>
+                      <svg
+                        class="w-4 h-4 text-green-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    <% 2 -> %>
+                      <svg
+                        class="w-4 h-4 text-yellow-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    <% 3 -> %>
+                      <svg
+                        class="w-4 h-4 text-red-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                  <% end %>
+                  <span class="text-slate-400 text-xs capitalize">{@recipe.difficulty}</span>
+                </div>
+                
+    <!-- Servings -->
+                <div class="flex items-center gap-1">
+                  <svg
+                    class="w-4 h-4 text-slate-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                  <span class="text-slate-400 text-xs">{@recipe.servings}</span>
+                </div>
+              </div>
+              
+    <!-- Save Count -->
+              <div class="flex items-center gap-1">
+                <svg
+                  class="w-4 h-4 text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                  />
+                </svg>
+                <span class="text-slate-400 text-xs">{0}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <.recipe_attrs_container recipe={@recipe} />
       </.link>
     </div>
     """
@@ -397,88 +614,95 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_like_container(%{myself: _myself} = assigns) do
     ~H"""
-    <div class="z-40 bg-transparent p-2 rounded-full absolute top-5 right-5 md:top-8 md:left-8 md:w-12 md:h-12 ">
-      <%= case @type do %>
-        <% "saved" -> %>
-          <button
-            phx-click="unsave-recipe"
-            phx-value-id={@recipe.id}
-            id={"button_save_recipe#{@recipe.id}"}
-          >
-            <.icon name="hero-trash-solid" class="h-5 w-5" />
-          </button>
-        <% "browse" -> %>
-          <svg
-            width="35px"
-            height="35px"
-            viewBox="0 0 24 24"
-            fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
-            phx-click="save_user_recipe"
-            phx-target={@myself}
-            id={"svg-"<> (if is_integer(@id), do: Integer.to_string(@id), else: @id)}
-            phx-value-recipe_id={@recipe.id}
-            phx-value-dom_id={@id}
-          >
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z"
-              stroke="#eb1111"
-              stroke-width="1"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        <% "created" -> %>
-          <button phx-click="edit-recipe" phx-value-id={@recipe.id}>
-            <.icon name="hero-pencil-square-solid" />
-          </button>
-      <% end %>
-    </div>
+    <button
+      phx-click="toggle_save"
+      class="absolute top-4 right-4 p-2 rounded-full bg-black/50 hover:bg-black/70 transition backdrop-blur-sm"
+    >
+      <svg
+        class={[
+          "w-6 h-6 transition",
+          (@type == "saved" && "text-red-500 fill-red-500") || "text-white"
+        ]}
+        fill={(@type == "saved" && "currentColor") || "none"}
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+        />
+      </svg>
+    </button>
     """
   end
 
   def recipe_like_container(assigns) do
     ~H"""
-    <div class="recipe_like_container z-10">
-      <%= case @type do %>
-        <% "saved" -> %>
-          <button
-            phx-click="unsave-recipe"
-            phx-value-id={@recipe.id}
-            id={"button_save_recipe#{@recipe.id}"}
-          >
-            <.icon name="hero-trash-solid" class="h-5 w-5" />
-          </button>
-        <% "browse" -> %>
-          <svg
-            width="35px"
-            height="35px"
-            viewBox="0 0 24 24"
-            fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
-            phx-click="save_user_recipe"
-            phx-value-recipe_id={@recipe.id}
-            phx-value-dom_id={@id}
-            id={"button_save_recipe#{@recipe.id}"}
-          >
-            <path
-              fill-rule="evenodd"
-              clip-rule="evenodd"
-              d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z"
-              stroke="#eb1111"
-              stroke-width="1"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        <% "created" -> %>
-          <button phx-click="edit-recipe" phx-value-id={@recipe.id}>
-            <.icon name="hero-pencil-square-solid" />
-          </button>
-      <% end %>
-    </div>
+    <button
+      phx-click="toggle_save"
+      class="absolute top-4 right-4 p-2 rounded-full bg-black/50 hover:bg-black/70 transition backdrop-blur-sm"
+    >
+      <svg
+        class={[
+          "w-6 h-6 transition",
+          (@type == "saved" && "text-red-500 fill-red-500") || "text-white"
+        ]}
+        fill={(@recipe.is_saved && "currentColor") || "none"}
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+        />
+      </svg>
+    </button>
     """
   end
+
+  """
+  <div class="recipe_like_container z-10">
+    <%= case @type do %>
+      <% "saved" -> %>
+        <button
+          phx-click="unsave-recipe"
+          phx-value-id={@recipe.id}
+          id={"button_save_recipe{@recipe.id}"}
+        >
+          <.icon name="hero-trash-solid" class="h-5 w-5" />
+        </button>
+      <% "browse" -> %>
+        <svg
+          width="35px"
+          height="35px"
+          viewBox="0 0 24 24"
+          fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
+          phx-click="save_user_recipe"
+          phx-value-recipe_id={@recipe.id}
+          phx-value-dom_id={@id}
+          id={"button_save_recipe{@recipe.id}"}
+        >
+          <path
+            fill-rule="evenodd"
+            clip-rule="evenodd"
+            d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z"
+            stroke="#eb1111"
+            stroke-width="1"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      <% "created" -> %>
+        <button phx-click="edit-recipe" phx-value-id={@recipe.id}>
+          <.icon name="hero-pencil-square-solid" />
+        </button>
+    <% end %>
+  </div>
+  """
 
   @doc """
   Renders an accordion for recipe nutrients - with visual indicators for clickable items

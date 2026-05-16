@@ -276,7 +276,7 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def get_profile_content(%{content_state: :created} = assigns) do
     ~H"""
-    <div class="grid_even_columns p-4">
+    <div class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6  px-4">
       <%= for recipe <- @user_created_recipes do %>
         <RecipeComponents.recipe_card
           recipe={recipe}
@@ -293,7 +293,7 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def get_profile_content(%{content_state: :saved} = assigns) do
     ~H"""
-    <div class="grid_even_columns p-4">
+    <div class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-4">
       <%= for user_recipe <- @user_saved_recipes do %>
         <RecipeComponents.recipe_card
           recipe={user_recipe.recipe}

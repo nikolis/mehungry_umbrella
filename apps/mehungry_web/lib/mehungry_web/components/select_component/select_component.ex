@@ -342,7 +342,7 @@ defmodule MehungryWeb.SelectComponent do
 
   def list_selected(assigns) do
     ~H"""
-    <div class="">
+    <div class="bg-slate-700 text-white border-slate-700">
       <!-- Tags (Selected) -->
       <%= for x <- @selected_items do %>
         <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode} name={elem(x, 1)} />
@@ -371,7 +371,7 @@ defmodule MehungryWeb.SelectComponent do
       phx-value-id={@id}
       phx-target={@myself}
       tabindex="0"
-      class="relative h-full w-fit my-2 mx-auto px-2 py-1.5 border  border-greyfriend2 rounded-md cursor-pointer hover:bg-gray-100 after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2  ring-inset transition-all"
+      class="relative h-full w-fit my-2 mx-auto px-2 py-1.5 border  border-slate-800 rounded-md cursor-pointer hover:bg-gray-100 after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2  ring-inset transition-all"
     >
       {@name}
     </div>
@@ -380,15 +380,15 @@ defmodule MehungryWeb.SelectComponent do
 
   defp selected_item(%{mode: :single} = assigns) do
     ~H"""
-    <div class="text-center w-full h-full relative">
+    <div class="text-center w-full h-full relative  border-2 border-slate-600 rounded-lg  ">
       <div
         phx-click="handle-selected-item-click"
         phx-value-id={@id}
         phx-target={@myself}
         tabindex="0"
-        class="border border-black border-2  h-full text-left border-greyfriend2 cursor-pointer rounded-lg "
+        class=" rounded-lg  p-2 h-full text-left cursor-pointer"
       >
-        <div class="h-full flex flex-col  justify-center p-2 ">
+        <div class=" p-2 h-full flex flex-col  justify-center p-2 rounded-lg ">
           <div class="self-center text-ellipsis text-center overflow-hidden px-1 leading-4">
             {@name}
           </div>

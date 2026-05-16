@@ -324,7 +324,13 @@ input+ .placeholder {
 	font-size: 14px;
 	color: #666;
 	transition: 0.3s;
+
+  background: transparent;
+  padding: 0 4px;
+  will-change: transform;
+  backface-visibility: hidden;
 }
+
 textarea+ .placeholder {
 	position: absolute;
 	top: 20%; 
@@ -347,7 +353,10 @@ input:focus + .placeholder {
     top: -15%;
     font-size: 0.70rem;
     color: #04AA6D;
-    background-color: #fff;
+    background-color: transparent;
+    will-change: transform;
+    backface-visibility: hidden;
+    transition: transform 0.2s ease;
 }
 
 .submitbutton{

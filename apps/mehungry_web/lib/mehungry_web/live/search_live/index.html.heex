@@ -9,18 +9,35 @@
   >
     <div class=" h-full">
       <%= if @query_string do %>
-        <div>
+        <div class="relative">
+          <svg
+            class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+
           {text_input(f, :query_string,
             class:
-              " md:text-lg w-full h-full rounded-full md:p-4 md:rounded-lg md:p-4 md:border-2 md:border-gray-300 md:bg-white",
+              " md:text-lg w-full h-full rounded-full md:p-4 md:rounded-lg md:p-4 md:border-2 md:border-gray-300  w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition md:pl-10",
             id: "text-search-input1#{@id}",
             placeholder: "e.g Crispy brocolli steaks ..",
             value: @query_string
           )}
-          <button phx-clic="submit" class="absolute right-2  sm:right-4 m-auto md:hidden">
+          <button
+            phx-clic="submit"
+            class="absolute right-2 top-0 bottom-0  sm:right-4 m-auto md:hidden"
+          >
             <.icon
               name="hero-arrow-right-circle"
-              class="h-9 w-9 flex-none text-primary cursor-pointer mr-4"
+              class="h-9 w-9 flex-none text-primary-500 cursor-pointer mr-4"
             />
           </button>
         </div>

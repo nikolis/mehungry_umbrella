@@ -3,6 +3,49 @@ defmodule Mehungry.Food.NutrientCalculation do
   alias Mehungry.Food.NutrientNameNormalizer
   alias Mehungry.Food.NutrientHierarchyBuilder
 
+  import Ecto.Query
+  alias Mehungry.Repo
+  
+  @specific "Energy (Atwater Specific Factors)"
+  @general "Energy (Atwater General Factors)"
+
+  def filter_energy_duplicates(nutrients) do
+    nutrients
+    |> Enum.group_by(& &1.nutrient.reference_id)
+    |> Enum.flat_map(fn {_food_id, food_nutrients} ->
+      keep_best_energy(food_nutrients)
+    end)
+  end
+
+  defp keep_best_energy(food_nutrients) do
+    {energy_nutrients, other_nutrients} =
+      Enum.split_with(food_nutrients, fn nutrient ->
+        String.starts_with?(nutrient.nutrient.name, "Energy")
+      end)
+
+    selected_energy =
+      cond do
+        specific = find_energy(energy_nutrients, @specific) ->
+          [specific]
+
+        general = find_energy(energy_nutrients, @general) ->
+          []
+
+        energy_nutrients != [] ->
+          [hd(energy_nutrients)]
+
+        true ->
+          []
+      end
+    other_nutrients ++ selected_energy
+  end
+
+  defp find_energy(nutrients, target_name) do
+    Enum.find(nutrients, fn nutrient ->
+      nutrient.nutrient.name == target_name
+    end)
+  end
+
   @doc """
   Main entry point - calculates complete nutrition value for a recipe
   """
@@ -24,46 +67,74 @@ defmodule Mehungry.Food.NutrientCalculation do
   def get_value_specific(map, key) when is_atom(key), do: map[key] || map[to_string(key)]
   def get_value_specific(map, key) when is_binary(key), do: map[key] || map[String.to_atom(key)]
 
-  def map_ingredients_to_structured_form(recipe_ingredients) do
-    Enum.map(recipe_ingredients, fn {_, x} ->
-      ingredient_id = get_value(x, :ingredient_id)
-      measurement_unit_id = get_value(x, :measurement_unit_id)
-      quantity = get_value(x, :quantity)
+  def map_ingredients_to_structured_form(recipe_ingredient_params) do
+    gram = Repo.one(from m in Mehungry.Food.MeasurementUnit, where: like(m.name, "gram%"))
 
-      ingredient = Food.get_ingredient_details!(ingredient_id)
-      measurement_unit = Food.get_measurement_unit!(measurement_unit_id)
+    ingredient_ids =
+      recipe_ingredient_params
+      |> Map.values()
+      |> Enum.map(&String.to_integer(&1["ingredient_id"]))
+      |> Enum.uniq()
 
-      gram_weight = calculate_gram_weight(ingredient, measurement_unit, quantity)
+    ingredients =
+      Repo.all(
+        from i in Mehungry.Food.Ingredient,
+          where: i.id in ^ingredient_ids,
+          preload: [
+            :ingredient_portions,
+            ingredient_nutrients: [nutrient: :measurement_unit]
+          ]
+      )
 
-      %{
-        ingredient_id: ingredient.id,
-        ingredient_name: ingredient.name,
-        ingredient: ingredient,
-        quantity: quantity,
-        measurement_unit: measurement_unit,
-        gram_weight: gram_weight,
-        nutrients: build_nutrient_list(ingredient, gram_weight)
-      }
-    end)
+    ingredients_by_id =
+      Map.new(ingredients, fn ingredient ->
+        {ingredient.id, ingredient}
+      end)
+
+    recipe_ingredients_with_nutrients =
+      recipe_ingredient_params
+      |> Map.values()
+      |> Enum.map(fn params ->
+        ingredient_id = String.to_integer(params["ingredient_id"])
+
+        ingredient =
+          Map.fetch!(ingredients_by_id, ingredient_id)
+
+        gram_weight =
+          calculate_gram_weight(
+            ingredient,
+            get_value(params, :measurement_unit_id),
+            get_value(params, :quantity),
+            gram
+          )
+
+        %{
+          quantity: params["quantity"],
+          measurement_unit_id: params["measurement_unit_id"],
+          ingredient: ingredient,
+          nutrients: build_nutrient_list(ingredient, gram_weight),
+          gram_weight: gram_weight
+        }
+      end)
   end
 
-  def calculate_gram_weight(ingredient, measurement_unit, quantity) do
+  def calculate_gram_weight(ingredient, measurement_unit_id, quantity, grammar) do
     quantity_float = safe_to_float(quantity)
 
     portion =
       Enum.find(ingredient.ingredient_portions || [], fn p ->
-        p.measurement_unit_id == measurement_unit.id
+        p.measurement_unit_id == measurement_unit_id
       end)
 
     cond do
       portion && portion.gram_weight ->
         quantity_float * portion.gram_weight
 
-      measurement_unit.name == "gram" or measurement_unit.alternate_name == "g" ->
+      measurement_unit_id == grammar.id ->
         quantity_float
 
       true ->
-        quantity_float * 100
+        quantity_float
     end
   end
 
@@ -84,10 +155,12 @@ defmodule Mehungry.Food.NutrientCalculation do
   def safe_nutrient_amount(_), do: 0.0
 
   def build_nutrient_list(ingredient, gram_weight) do
+
     gram_weight_float = safe_to_float(gram_weight)
     scaling_factor = gram_weight_float / 100.0
-
-    Enum.map(ingredient.ingredient_nutrients, fn nutrient_entry ->
+  
+    nutrients = filter_energy_duplicates(ingredient.ingredient_nutrients) 
+    Enum.map(nutrients, fn nutrient_entry ->
       amount = safe_nutrient_amount(nutrient_entry.amount)
       scaled_amount = amount * scaling_factor
 
@@ -103,7 +176,10 @@ defmodule Mehungry.Food.NutrientCalculation do
           %{measurement_unit: %{name: name}} when is_binary(name) -> name
           %{measurement_unit: %{name: name}} when is_atom(name) -> Atom.to_string(name)
           %{measurement_unit: %{alternate_name: name}} when is_binary(name) -> name
-          _ -> "g"
+          _ -> 
+            IO.inspect(nutrient_entry, label: "Nutrient entry")
+            
+            "g"
         end
 
       nutrient_number =
