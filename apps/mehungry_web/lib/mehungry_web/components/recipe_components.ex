@@ -322,7 +322,6 @@ defmodule MehungryWeb.RecipeComponents do
   def recipe_card(%{myself: _myself} = assigns) do
     ~H"""
     <div id={"recipe-card-details-container-#{@recipe.id}"} } class="group">
-      <h1>asdfadfsadfsffffffffffffffffffffff</h1>
       <.recipe_like_container
         type={@type}
         user_recipes={@user_recipes}
@@ -585,7 +584,7 @@ defmodule MehungryWeb.RecipeComponents do
             <svg
               class="w-7 h-7"
               viewBox="0 0 24 24"
-              fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
+              fill= {get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
               phx-click="save_user_recipe"
               phx-target={@myself}
               id={"svg-"<> Integer.to_string(@id)}
@@ -614,8 +613,11 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_like_container(%{myself: _myself} = assigns) do
     ~H"""
+    <%= if !is_nil(Map.get(assigns, :current_user)) do %>
     <button
-      phx-click="toggle_save"
+        phx-click="save_user_recipe"
+        phx-value-recipe_id={@recipe.id}
+        phx-value-dom_id={@id}
       class="absolute top-4 right-4 p-2 rounded-full bg-black/50 hover:bg-black/70 transition backdrop-blur-sm"
     >
       <svg
@@ -623,7 +625,7 @@ defmodule MehungryWeb.RecipeComponents do
           "w-6 h-6 transition",
           (@type == "saved" && "text-red-500 fill-red-500") || "text-white"
         ]}
-        fill={(@type == "saved" && "currentColor") || "none"}
+        fill= {get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
         stroke="currentColor"
         viewBox="0 0 24 24"
       >
@@ -635,6 +637,29 @@ defmodule MehungryWeb.RecipeComponents do
         />
       </svg>
     </button>
+  <% else %>
+      <a href="/users/log_in" >
+
+      <svg
+        class={[
+          "w-6 h-6 transition",
+          (@type == "saved" && "text-red-500 fill-red-500") || "text-white"
+        ]}
+        fill= {get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+        />
+      </svg>
+
+      </a>
+
+<% end %>
     """
   end
 

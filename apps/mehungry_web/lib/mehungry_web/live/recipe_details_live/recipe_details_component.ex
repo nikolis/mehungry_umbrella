@@ -305,17 +305,23 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                     <p class="text-slate-400 text-sm">{5} recipes</p>
                   </div>
                 </div>
+                <%= if !is_nil(@user) do %> 
                 <button
-                  phx-click="toggle_follow"
-                  phx-value-user-id={@recipe.user.id}
+                      phx-click="save_user_follow"
+                      phx-value-follow_id={@user.id}
                   class={[
                     "px-4 py-2 rounded-lg font-medium transition",
                     (@user.id not in @user_follows && "bg-slate-600 text-white hover:bg-slate-500") ||
-                      "bg-primary-500 text-white hover:bg-primary-600"
+                     "bg-primary-500 text-white hover:bg-primary-600"
                   ]}
                 >
                   {if @user.id not in @user_follows, do: "Following", else: "Follow"}
-                </button>
+                  </button>
+                  <%= else %>
+                  <a href="/users/log_in" class="px-4 py-2 rounded-lg font-medium transition bg-primary-500 text-white hover:bg-primary-600 rounded-full" 
+                  >Follow</a>
+                
+                  <% end %>
               </div>
             </div>
           </div>
