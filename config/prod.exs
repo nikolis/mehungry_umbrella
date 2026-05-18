@@ -33,8 +33,8 @@ config :libcluster,
   ]
 
 config :mehungry_web, MehungryWeb.Endpoint,
-  http: [port: 4000],
-  debug_errors: true,
+  http: [ip: {0, 0, 0, 0}, port: 4000],
+  debug_errors: false,
   check_origin: false,
   # force_ssl: [rewrite_on: [:x_forwarded_proto]],
   server: true,

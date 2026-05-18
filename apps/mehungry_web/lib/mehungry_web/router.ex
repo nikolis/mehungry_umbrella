@@ -134,8 +134,10 @@ defmodule MehungryWeb.Router do
 
   scope "/", MehungryWeb do
     pipe_through [:browser]
-
+  
     live "/privacy_policy", PrivacyPolicyLive, :index
+    get "/health", HealthController, :check
+
   end
 
   scope "/", MehungryWeb do
