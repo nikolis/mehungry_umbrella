@@ -83,7 +83,7 @@
           nutrients={@recipe.nutrients}
           recipe={@recipe}
           user_recipes={@current_user_recipes}
-          user={@user}
+          current_user={@user}
           page_title={"Recipe #{@recipe.title}"}
           user_follows={@current_user_follows}
           live_action={@live_action}
@@ -92,15 +92,15 @@
     </MehungryWeb.RecipeComponents.recipe_modal>
     <div class="space-y-6">
       <%= for post <- @posts do %>
-      <%= if ! is_nil( post.reference) do %>
-        <.post_card
-          post={post}
-          id={post.id}
-          user={@user}
-          user_follows={@current_user_follows}
-          current_user_recipes={@current_user_recipes}
-        />
-<% end %>
+        <%= if ! is_nil( post.reference) do %>
+          <.post_card
+            post={post}
+            id={post.id}
+            user={@user}
+            user_follows={@current_user_follows}
+            current_user_recipes={@current_user_recipes}
+          />
+        <% end %>
       <% end %>
     </div>
   </div>

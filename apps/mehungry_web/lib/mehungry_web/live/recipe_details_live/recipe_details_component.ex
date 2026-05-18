@@ -191,6 +191,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                 type="browse"
                 user_recipes={@user_recipes}
                 recipe={@recipe}
+                current_user={@current_user}
                 id={@id <> "like_container"}
                 myself={@myself}
               />
@@ -305,23 +306,27 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                     <p class="text-slate-400 text-sm">{5} recipes</p>
                   </div>
                 </div>
-                <%= if !is_nil(@user) do %> 
-                <button
-                      phx-click="save_user_follow"
-                      phx-value-follow_id={@user.id}
-                  class={[
-                    "px-4 py-2 rounded-lg font-medium transition",
-                    (@user.id not in @user_follows && "bg-slate-600 text-white hover:bg-slate-500") ||
-                     "bg-primary-500 text-white hover:bg-primary-600"
-                  ]}
-                >
-                  {if @user.id not in @user_follows, do: "Following", else: "Follow"}
+                <%= if !is_nil(@current_user) do %>
+                  <button
+                    phx-click="save_user_follow"
+                    phx-value-follow_id={@recipe.user.id}
+                    class={[
+                      "px-4 py-2 rounded-lg font-medium transition",
+                      (@recipe.user.id not in @user_follows &&
+                         "bg-slate-600 text-white hover:bg-slate-500") ||
+                        "bg-primary-500 text-white hover:bg-primary-600"
+                    ]}
+                  >
+                    {if @recipe.user.id not in @user_follows, do: "Following", else: "Follow"}
                   </button>
-                  <%= else %>
-                  <a href="/users/log_in" class="px-4 py-2 rounded-lg font-medium transition bg-primary-500 text-white hover:bg-primary-600 rounded-full" 
-                  >Follow</a>
-                
-                  <% end %>
+                <% else %>
+                  <a
+                    href="/users/log_in"
+                    class="px-4 py-2 rounded-lg font-medium transition bg-primary-500 text-white hover:bg-primary-600 rounded-full"
+                  >
+                    Follow
+                  </a>
+                <% end %>
               </div>
             </div>
           </div>
@@ -330,6 +335,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           <div class="mt-8">
             <.recipe_details
               recipe={@recipe}
+              current_user={@current_user}
               nutrients={@nutrients}
               primary_size={@primary_size}
               .
@@ -362,13 +368,13 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               </svg>
             </button>
             <div class="comment h-0 overflow-hidden">
-              <%= if !is_nil(@user) do %>
+              <%= if !is_nil(@current_user) do %>
                 <.live_component
                   module={MehungryWeb.RecipeDetailsLive.FormComponentComment}
                   id="comment_form"
                   title={@page_title}
                   action={@live_action}
-                  current_user={@user}
+                  current_user={@current_user}
                   comment={@comment}
                 />
               <% end %>
@@ -382,7 +388,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                     <.comment
                       comment={comment}
                       user={comment.user}
-                      current_user={@user}
+                      current_user={@current_user}
                       live_action={@live_action}
                       page_title={@page_title}
                       myself={@myself}
@@ -475,8 +481,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign(:recipe_comments, comments)
       |> assign(
         :comment,
-        get_when_first_exists(assigns.user, fn ->
-          %Comment{user_id: assigns.user.id, recipe_id: assigns.recipe.id}
+        get_when_first_exists(assigns.current_user, fn ->
+          %Comment{user_id: assigns.current_user.id, recipe_id: assigns.recipe.id}
         end)
       )
 

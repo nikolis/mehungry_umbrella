@@ -5,7 +5,7 @@ defmodule Mehungry.Food.NutrientCalculation do
 
   import Ecto.Query
   alias Mehungry.Repo
-  
+
   @specific "Energy (Atwater Specific Factors)"
   @general "Energy (Atwater General Factors)"
 
@@ -37,6 +37,7 @@ defmodule Mehungry.Food.NutrientCalculation do
         true ->
           []
       end
+
     other_nutrients ++ selected_energy
   end
 
@@ -155,11 +156,11 @@ defmodule Mehungry.Food.NutrientCalculation do
   def safe_nutrient_amount(_), do: 0.0
 
   def build_nutrient_list(ingredient, gram_weight) do
-
     gram_weight_float = safe_to_float(gram_weight)
     scaling_factor = gram_weight_float / 100.0
-  
-    nutrients = filter_energy_duplicates(ingredient.ingredient_nutrients) 
+
+    nutrients = filter_energy_duplicates(ingredient.ingredient_nutrients)
+
     Enum.map(nutrients, fn nutrient_entry ->
       amount = safe_nutrient_amount(nutrient_entry.amount)
       scaled_amount = amount * scaling_factor
@@ -173,12 +174,18 @@ defmodule Mehungry.Food.NutrientCalculation do
 
       unit_name =
         case nutrient_entry.nutrient do
-          %{measurement_unit: %{name: name}} when is_binary(name) -> name
-          %{measurement_unit: %{name: name}} when is_atom(name) -> Atom.to_string(name)
-          %{measurement_unit: %{alternate_name: name}} when is_binary(name) -> name
-          _ -> 
+          %{measurement_unit: %{name: name}} when is_binary(name) ->
+            name
+
+          %{measurement_unit: %{name: name}} when is_atom(name) ->
+            Atom.to_string(name)
+
+          %{measurement_unit: %{alternate_name: name}} when is_binary(name) ->
+            name
+
+          _ ->
             IO.inspect(nutrient_entry, label: "Nutrient entry")
-            
+
             "g"
         end
 

@@ -26,20 +26,24 @@ defmodule MehungryWeb.TabsComponent do
   end
 
   def nav_button(assigns) do
-    extra_class =
+    {extra_class, extra_content} =
       if assigns.current_state == assigns.state do
-        "selected"
+        {"selected", ""}
       else
-        ""
+        {"", "hidden"}
       end
 
     assigns = Map.put(assigns, :extra_class, extra_class)
+    assigns = Map.put(assigns, :extra_content, extra_content)
+
+    IO.inspect(extra_class)
 
     ~H"""
     <button
       id={@state}
       class={[
-        "px-6 py-3 text-sm font-medium transition-all rounded-t-lg nav_button w-full h-full " <> extra_class
+        "px-6 py-3 text-sm font-medium transition-all rounded-t-lg nav_button w-full h-full " <>
+          extra_class
       ]}
       phx-click={
         JS.remove_class("selected", to: ".nav_button")
@@ -54,7 +58,7 @@ defmodule MehungryWeb.TabsComponent do
 
     <div
       id={@state <> "content"}
-      class={"content_container absolute top-0 right-0 left-0 mt-10 hidden mb-10 " <> @extra_class}
+      class={"content_container absolute top-0 right-0 left-0 mt-10 mb-10 " <> @extra_class <> " " <> @extra_content }
     >
       {@contents.tab_content(%{
         state: @state,
