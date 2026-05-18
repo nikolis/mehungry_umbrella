@@ -69,7 +69,7 @@ defmodule Mehungry.Food.NutrientCalculation do
   def get_value_specific(map, key) when is_binary(key), do: map[key] || map[String.to_atom(key)]
 
   def map_ingredients_to_structured_form(recipe_ingredient_params) do
-    gram = Repo.one(from m in Mehungry.Food.MeasurementUnit, where: like(m.name, "gram%"))
+    gram = Repo.one(from m in Mehungry.Food.MeasurementUnit, where: like(m.name, "gram%"),  limit: 1)
 
     ingredient_ids =
       recipe_ingredient_params
