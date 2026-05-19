@@ -101,7 +101,7 @@
         phx-click=""
       >
         <div
-          class="bg-slate-800 rounded-xl max-w-lg w-full mx-4 overflow-hidden"
+          class="bg-slate-800 rounded-xl max-w-lg w-full mx-4"
           phx-click-away="close_add_item_modal"
         >
           <!-- Modal Header -->
@@ -120,7 +120,7 @@
           </div>
           
 <!-- Modal Body -->
-          <div class="p-4">
+          <div class="p-4 overflow-visible ">
             <%= if @selected_usda_item do %>
               <!-- USDA Item Selected - Show nutrition preview -->
               <div class="mb-4">
@@ -158,7 +158,7 @@
                 </div>
                 
 <!-- Quantity and Unit -->
-                <div class="flex gap-3 mb-4">
+                <div class="flex gap-3 mb-4  overflow-visible  ">
                   <div class="flex-1">
                     <label class="block text-slate-400 text-sm mb-1">Quantity</label>
                     <input
@@ -169,13 +169,13 @@
                       class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
                     />
                   </div>
-                  <div class="flex-1">
+                  <div class="flex-1 overflow-auto  ">
                     <label class="block text-slate-400 text-sm mb-1">Unit</label>
 
                     <select
                       id="unit"
                       phx-change="update_unit"
-                      class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                      class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white overflow-auto"
                     >
                       <option value="g">grams (g)</option>
                       <option value="kg">kilograms (kg)</option>
@@ -286,7 +286,7 @@
                     required
                     class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary-500"
                   />
-                  <div class="flex gap-3">
+                  <div class="flex gap-3 overflow-visible">
                     <input
                       type="number"
                       name="quantity"

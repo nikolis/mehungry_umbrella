@@ -118,7 +118,8 @@ defmodule Mehungry.Inventory do
   def add_item(basket_id, item_params) do
     basket = get_shopping_basket!(basket_id)
 
-    %BasketItem{}
+    result = 
+      %BasketItem{}
     |> BasketItem.changeset(%{
       list_id: basket.id,
       name: item_params.name,
@@ -130,6 +131,12 @@ defmodule Mehungry.Inventory do
       checked: false
     })
     |> Repo.insert()
+    case result do 
+      {:ok, result} -> 
+        {:ok, Repo.preload(result, :measurement_unit)}
+      {:eror, problem} ->
+        {:error, problem}
+    end
   end
 
   def add_items_from_recipe(basket_id, recipe, servings_scale \\ 1) do

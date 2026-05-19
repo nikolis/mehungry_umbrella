@@ -320,7 +320,7 @@ defmodule MehungryWeb.SelectComponent do
 
   def list_selected(%{mode: :multi} = assigns) do
     ~H"""
-    <div class=" h-full flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-2 sm:col-span-2 	 overflow-hidden">
+    <div class=" h-full flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-2 sm:col-span-2 	 ">
       <!-- Tags (Selected) -->
 
 
@@ -447,8 +447,8 @@ defmodule MehungryWeb.SelectComponent do
   # ----------------------------------------------------------------------------------------------------- Search Result -----------------------------------------------------------
   defp list_search_result(assigns) do
     ~H"""
-    <div class=" max-h-80 overflow-y-auto pr-2">
-      <ul class="text-white bg-slate-700 absolute left-0 bottom-100  z-50 w-full lex gap-3 items-center">
+    <div class=" max-h-50 overflow-y-auto pr-2">
+      <ul class="text-white absolute left-0 bg-slate-700 max-h-40 overflow-y-scroll">
         <%= if @listing_open do %>
           <%= for x <- @items do %>
             <!-- Item Element -->

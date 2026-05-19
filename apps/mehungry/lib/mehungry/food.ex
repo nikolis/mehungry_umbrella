@@ -674,10 +674,16 @@ defmodule Mehungry.Food do
               |> ExAws.request(region: "eu-central-1")
             end
 
-            Repo.all(from p in Post, where: p.reference_id == ^recipe.id)
+            posts = Repo.all(from p in Post, where: p.reference_id == ^recipe.id)
+
+            posts
             |> Enum.each(fn x ->
               Posts.update_post(x, %{md_media_url: image_url})
             end)
+
+            if length(posts) == 0 do 
+              create_post = Mehungry.Posts.create_post(recipe)
+            end
 
             Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
             result

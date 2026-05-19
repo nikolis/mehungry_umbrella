@@ -499,6 +499,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
     case Food.create_recipe(recipe_params) do
       {:ok, %Recipe{} = _recipe} ->
+        Cachex.put(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}, %{})
+
         {:noreply,
          socket
          |> put_flash(:info, "Recipe created succesfully")
