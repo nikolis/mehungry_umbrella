@@ -681,7 +681,7 @@ defmodule Mehungry.Food do
               Posts.update_post(x, %{md_media_url: image_url})
             end)
 
-            if length(posts) == 0 do 
+            if length(posts) == 0 do
               create_post = Mehungry.Posts.create_post(recipe)
             end
 

@@ -614,7 +614,6 @@ defmodule MehungryWeb.RecipeComponents do
   end
 
   def recipe_like_container(%{myself: _myself} = assigns) do
-
     ~H"""
     <%= if !is_nil(Map.get(assigns, :current_user)) do %>
       <button

@@ -25,10 +25,10 @@ defmodule MehungryWeb.LayoutView do
 
   def sidebar_nav_links(assigns) do
     ~H"""
-    <div class="w-full">
+    <div class="w-full h-full bg-slate-800">
       <button
         id="admin_menu_button"
-        class="fixed border-complementary text-white rounded-full  w-10 h-10 bg-white z-50 "
+        class="fixed border-complementary text-white rounded-full  w-10 h-10 bg-primary-500 z-50 "
         phx-click={
           JS.toggle_class("open", to: "#nav_bar_admin")
           |> JS.toggle_class("open_button", to: "#admin_menu_button")

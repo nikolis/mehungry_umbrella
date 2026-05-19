@@ -120,7 +120,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
             <div class="flex gap-2">
               <!-- Calendar / Meal Planning -->
               <a
-    href={"/basket/import_items/" <> Integer.to_string(@shopping_basket.id)}
+                href={"/basket/import_items/" <> Integer.to_string(@shopping_basket.id)}
                 class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,7 +212,9 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                     {if !is_nil(Map.get(item, :ingredient)), do: item.ingredient.name, else: item.name}
                   </div>
                   <div class="text-xs text-slate-400 mt-0.5">
-                    {item.quantity} {if !is_nil(item.measurement_unit) do  item.measurement_unit.name end}
+                    {item.quantity} {if !is_nil(item.measurement_unit) do
+                      item.measurement_unit.name
+                    end}
                   </div>
                 </div>
                 

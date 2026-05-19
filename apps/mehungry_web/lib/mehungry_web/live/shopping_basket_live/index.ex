@@ -135,7 +135,12 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     case Inventory.add_item(socket.assigns.shopping_basket.id, item) do
       {:ok, item} ->
         IO.inspect(item, label: "Item added")
-        basket = %ShoppingBasket{socket.assigns.shopping_basket | basket_items: socket.assigns.shopping_basket.basket_items ++ [item]}
+
+        basket = %ShoppingBasket{
+          socket.assigns.shopping_basket
+          | basket_items: socket.assigns.shopping_basket.basket_items ++ [item]
+        }
+
         {:noreply,
          socket
          |> assign(show_add_item_modal: false)

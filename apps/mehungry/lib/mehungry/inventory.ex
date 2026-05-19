@@ -118,22 +118,24 @@ defmodule Mehungry.Inventory do
   def add_item(basket_id, item_params) do
     basket = get_shopping_basket!(basket_id)
 
-    result = 
+    result =
       %BasketItem{}
-    |> BasketItem.changeset(%{
-      list_id: basket.id,
-      name: item_params.name,
-      quantity: item_params.quantity,
-      shopping_basket_id: basket_id,
-      measurement_unit_id: item_params.measurement_unit_id,
-      nutrition_data: item_params.nutrition,
-      usda_fdc_id: item_params.usda_fdc_id,
-      checked: false
-    })
-    |> Repo.insert()
-    case result do 
-      {:ok, result} -> 
+      |> BasketItem.changeset(%{
+        list_id: basket.id,
+        name: item_params.name,
+        quantity: item_params.quantity,
+        shopping_basket_id: basket_id,
+        measurement_unit_id: item_params.measurement_unit_id,
+        nutrition_data: item_params.nutrition,
+        usda_fdc_id: item_params.usda_fdc_id,
+        checked: false
+      })
+      |> Repo.insert()
+
+    case result do
+      {:ok, result} ->
         {:ok, Repo.preload(result, :measurement_unit)}
+
       {:eror, problem} ->
         {:error, problem}
     end
