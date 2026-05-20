@@ -8,6 +8,50 @@ defmodule Mehungry.Food.IngredientSearch do
   import Ecto.Query
   alias Mehungry.Repo
   alias Mehungry.Food.Ingredient
+  
+  def search_fixed(search_term, classes \\ []) do
+  cleaned_term = String.trim(search_term)
+  search_lower = String.downcase(cleaned_term)
+  
+  # Get candidates using multiple strategies
+  query = from i in Ingredient,
+    where: not is_nil(i.name),
+    where: i.category_id not in ^get_second_layer_foods_ids(),
+    where: ilike(i.name, ^"%#{cleaned_term}%"),
+    limit: 200
+  
+  candidates = 
+    query
+    |> maybe_filter_by_classes(classes)
+    |> Repo.all()
+  
+  # Sort with explicit priority
+  candidates
+  |> Enum.sort_by(fn i ->
+    name_lower = String.downcase(i.name)
+    
+    # Calculate priority (lower number = higher priority)
+    priority = cond do
+      # PRIORITY 1: Name starts with search term (exact word)
+      Regex.match?(~r/^#{Regex.escape(search_lower)}(?=[,\s]|$)/, name_lower) ->
+        1
+      # PRIORITY 2: Name starts with search term as prefix
+      String.starts_with?(name_lower, search_lower) ->
+        2
+      # PRIORITY 3: Contains as a separate word
+      Regex.match?(~r/\b#{Regex.escape(search_lower)}\b/, name_lower) ->
+        3
+      # PRIORITY 4: Contains anywhere else
+      true ->
+        4
+    end
+    
+    # Secondary sort: shorter names preferred for same priority
+    {priority, String.length(name_lower), name_lower}
+  end)
+  |> Enum.take(20)
+end
+
 
   @doc """
   Simple, predictable search that puts exact matches first
