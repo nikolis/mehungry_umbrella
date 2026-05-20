@@ -8,6 +8,256 @@ defmodule Mehungry.Food.IngredientSearch do
   import Ecto.Query
   alias Mehungry.Repo
   alias Mehungry.Food.Ingredient
+def search_robust_with_position(search_term, classes \\ []) do
+  cleaned_term = String.trim(search_term)
+  
+  # Normalize search term
+  search_words = String.split(cleaned_term, " ")
+  search_phrase = Enum.join(search_words, " ")
+  
+  # Build query that matches each word anywhere
+  conditions = Enum.map(search_words, fn word ->
+    dynamic([i], ilike(i.name, ^"%#{word}%"))
+  end)
+  
+  combined_condition = Enum.reduce(conditions, fn cond, acc ->
+    dynamic([i], ^cond and ^acc)
+  end)
+  
+  candidates_query = from i in Ingredient,
+    where: not is_nil(i.name),
+    where: i.category_id not in ^get_second_layer_foods_ids(),
+    where: ^combined_condition,
+    limit: 200
+  
+  candidates = 
+    candidates_query
+    |> maybe_filter_by_classes(classes)
+    |> Repo.all()
+  
+  # Rank with position awareness
+  candidates
+  |> Enum.map(fn i ->
+    # Normalize name (remove punctuation, lowercase)
+    name_normalized = i.name
+    |> String.downcase()
+    |> String.replace(~r/[^\w\s]/, " ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+    
+    # Calculate scores
+    position_score = calculate_position_score(name_normalized, search_words)
+    order_score = calculate_word_order_score(name_normalized, search_words)
+    phrase_score = calculate_phrase_score(name_normalized, search_phrase)
+    
+    # Bonus for shorter names
+    length_bonus = if String.length(i.name) < 30, do: 30, else: 0
+    
+    total_score = position_score + order_score + phrase_score + length_bonus
+    
+    {i, total_score}
+  end)
+  |> Enum.sort_by(fn {_i, score} -> -score end)
+  |> Enum.map(fn {i, _score} -> i end)
+  |> Enum.take(20)
+end
+
+defp calculate_position_score(name_normalized, search_words) do
+  name_parts = String.split(name_normalized, " ")
+  
+  # Find position of first matching word
+  first_match_index = Enum.find_index(name_parts, fn word ->
+    Enum.any?(search_words, &String.contains?(word, &1))
+  end)
+  
+  case first_match_index do
+    nil -> 0
+    0 -> 500      # First word matches - best
+    1 -> 300      # Second word matches
+    2 -> 200      # Third word matches
+    3 -> 100      # Fourth word matches
+    _ -> 50       # Later matches
+  end
+end
+
+defp calculate_word_order_score(name_normalized, search_words) do
+  name_parts = String.split(name_normalized, " ")
+  
+  # Check if search words appear in order (as subsequence)
+  if words_in_order?(name_parts, search_words) do
+    # Find where the sequence starts
+    start_pos = find_sequence_start(name_parts, search_words)
+    case start_pos do
+      0 -> 400     # Sequence starts at beginning
+      1 -> 250     # Starts at second word
+      2 -> 150     # Starts at third word
+      _ -> 50
+    end
+  else
+    0
+  end
+end
+
+defp calculate_phrase_score(name_normalized, search_phrase) do
+  if String.contains?(name_normalized, search_phrase) do
+    # Find position of the phrase
+    case find_phrase_position(name_normalized, search_phrase) do
+      0 -> 600      # Phrase at beginning - highest
+      pos when pos <= 10 -> 400
+      pos when pos <= 20 -> 200
+      _ -> 100
+    end
+  else
+    0
+  end
+end
+
+defp words_in_order?(name_parts, search_words) do
+  find_sequence_start(name_parts, search_words) != nil
+end
+
+defp find_sequence_start(name_parts, search_words) do
+  # Try each starting position
+  Enum.find_index(name_parts, fn _ ->
+    # Check if from this position, we can match all search words in order
+    match_sequence?(name_parts, search_words, 0)
+  end)
+end
+
+defp match_sequence?(_name_parts, [], _index), do: true
+defp match_sequence?([], [_|_], _index), do: false
+defp match_sequence?([n|name_tail], [s|search_tail], index) do
+  if String.contains?(n, s) do
+    match_sequence?(name_tail, search_tail, index + 1)
+  else
+    false
+  end
+end
+
+defp find_phrase_position(name_normalized, search_phrase) do
+  # Find position of phrase using split
+  case String.split(name_normalized, search_phrase, parts: 2) do
+    [before, _] -> String.length(before)
+    _ -> nil
+  end
+end
+
+# Simplified version that's guaranteed to work (no complex position calculations)
+def search_simple_working(search_term, classes \\ []) do
+  cleaned_term = String.trim(search_term)
+  search_words = String.split(cleaned_term, " ")
+  search_phrase = Enum.join(search_words, " ")
+  
+  # Get candidates with simple matching
+  candidates = 
+    from(i in Ingredient,
+      where: not is_nil(i.name),
+      where: i.category_id not in ^get_second_layer_foods_ids(),
+      where: ilike(i.name, ^"%#{cleaned_term}%"),
+      limit: 200
+    )
+    |> maybe_filter_by_classes(classes)
+    |> Repo.all()
+  
+  # Simple sorting logic
+  candidates
+  |> Enum.sort_by(fn i ->
+    name_norm = i.name
+    |> String.downcase()
+    |> String.replace(~r/[^\w\s]/, " ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+    
+    # Create a sort key as a tuple for natural ordering
+    priority = cond do
+      # Exact match (normalized)
+      name_norm == search_phrase -> {1, 0}
+      # Starts with search phrase
+      String.starts_with?(name_norm, search_phrase) -> {2, 0}
+      # Contains search phrase
+      String.contains?(name_norm, search_phrase) -> {3, 0}
+      # Contains all words in order
+      all_words_in_order?(name_norm, search_words) -> {4, 0}
+      # Contains all words (any order)
+      Enum.all?(search_words, &String.contains?(name_norm, &1)) -> {5, 0}
+      # Contains any word
+      true -> {6, 0}
+    end
+    
+    # Secondary sort: shorter names first (more specific)
+    {priority, String.length(i.name), i.name}
+  end)
+  |> Enum.take(20)
+end
+
+defp all_words_in_order?(name_norm, search_words) do
+  # Check if all search words appear in the correct order (non-contiguous)
+  name_parts = String.split(name_norm, " ")
+  is_subsequence(name_parts, search_words)
+end
+
+defp is_subsequence(_, []), do: true
+defp is_subsequence([], _), do: false
+defp is_subsequence([h|t], [s|st]) do
+  if String.contains?(h, s) do
+    is_subsequence(t, st)
+  else
+    is_subsequence(t, [s|st])
+  end
+end
+  def search_robust(search_term, classes \\ []) do
+    cleaned_term = String.trim(search_term)
+
+    # Create patterns that ignore punctuation
+    # "salt table" becomes patterns for "salt" and "table"
+    words = String.split(cleaned_term, " ")
+
+    # Build a query that matches each word, ignoring punctuation
+    conditions =
+      Enum.map(words, fn word ->
+        dynamic([i], ilike(i.name, ^"%#{word}%"))
+      end)
+
+    combined_condition =
+      Enum.reduce(conditions, fn cond, acc ->
+        dynamic([i], ^cond and ^acc)
+      end)
+
+    candidates_query =
+      from i in Ingredient,
+        where: not is_nil(i.name),
+        where: i.category_id not in ^get_second_layer_foods_ids(),
+        where: ^combined_condition,
+        limit: 200
+
+    candidates =
+      candidates_query
+      |> maybe_filter_by_classes(classes)
+      |> Repo.all()
+
+    # Rank: prefer matches where words appear in order
+    search_phrase = Enum.join(words, " ")
+
+    candidates
+    |> Enum.sort_by(
+      fn i ->
+        name_lower = String.downcase(i.name)
+        name_no_punct = String.replace(name_lower, ~r/[^\w\s]/, " ")
+
+        cond do
+          # Exact phrase match (ignoring punctuation)
+          String.contains?(name_no_punct, search_phrase) -> 1000
+          # All words present (any order)
+          Enum.all?(words, &String.contains?(name_no_punct, &1)) -> 800
+          # First word matches at beginning
+          String.starts_with?(name_no_punct, List.first(words)) -> 600
+          true -> 400
+        end
+      end,
+      :desc
+    )
+    |> Enum.take(20)
+  end
 
   def search_production(search_term, classes \\ []) do
     cleaned_term = String.trim(search_term)
