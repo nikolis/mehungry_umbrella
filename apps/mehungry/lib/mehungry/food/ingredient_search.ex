@@ -2,7 +2,7 @@
 
 defmodule Mehungry.Food.IngredientSearch do
   @moduledoc """
-  USDA-style ingredient search with first-word priority
+  USDA-style ingredient search with position-based scoring
   """
   
   import Ecto.Query
@@ -10,123 +10,126 @@ defmodule Mehungry.Food.IngredientSearch do
   alias Mehungry.Food.Ingredient
 
   @doc """
-  Search with first-word priority (Pure Elixir ranking - most reliable)
+  Smart search with position-based ranking
   """
-  def search_optimized(search_term, classes \\ [], limit \\ 20) do
+  def search(search_term, classes \\ [], opts \\ []) do
     cleaned_term = String.trim(search_term)
     search_lower = String.downcase(cleaned_term)
+    limit = Keyword.get(opts, :limit, 20)
+    detailed = Keyword.get(opts, :detailed, true)
     
-    # Get candidates using simple LIKE (fast)
-    candidate_query = from i in Ingredient,
-      where: not is_nil(i.name),
-      where: i.category_id not in ^get_second_layer_foods_ids(),
-      where: ilike(i.name, ^"%#{cleaned_term}%"),
-      limit: 100
-    
-    candidate_query = maybe_filter_by_classes(candidate_query, classes)
-    candidates = Repo.all(candidate_query)
-    
-    # Rank in Elixir (no SQL fragment issues)
-    candidates
-    |> Enum.map(fn ingredient ->
-      score = calculate_usda_score(ingredient.name, search_lower, ingredient.food_class)
-      {ingredient, score}
-    end)
-    |> Enum.sort_by(fn {_ingredient, score} -> -score end)
-    |> Enum.map(fn {ingredient, _score} -> ingredient end)
-    |> Enum.take(limit)
+    # Return empty if search term is too short
+    if String.length(cleaned_term) < 1 do
+      return_empty(detailed)
+    else
+      # Get candidates using simple LIKE (fastest)
+      query = from i in Ingredient,
+        where: not is_nil(i.name),
+        where: i.category_id not in ^get_second_layer_foods_ids(),
+        where: ilike(i.name, ^"%#{cleaned_term}%"),
+        limit: 100
+      
+      query = maybe_filter_by_classes(query, classes)
+      candidates = Repo.all(query)
+      
+      # Rank with position-based scoring
+      candidates
+      |> Enum.map(fn ingredient ->
+        score = calculate_position_score(ingredient.name, search_lower, ingredient.food_class)
+        {ingredient, score}
+      end)
+      |> Enum.sort_by(fn {_ingredient, score} -> -score end)
+      |> Enum.map(fn {ingredient, _score} -> ingredient end)
+      |> Enum.take(limit)
+      |> format_results(detailed)
+    end
   end
 
-  @doc """
-  Search with trigram similarity for typo tolerance
-  """
-  def search_fuzzy(search_term, classes \\ [], limit \\ 20) do
-    cleaned_term = String.trim(search_term)
-    search_lower = String.downcase(cleaned_term)
-    
-    # Use pg_trgm for similarity matching
-    candidate_query = from i in Ingredient,
-      where: not is_nil(i.name),
-      where: i.category_id not in ^get_second_layer_foods_ids(),
-      where: fragment("LOWER(?) % LOWER(?)", i.name, ^cleaned_term)
-        or ilike(i.name, ^"%#{cleaned_term}%"),
-      limit: 100
-    
-    candidate_query = maybe_filter_by_classes(candidate_query, classes)
-    candidates = Repo.all(candidate_query)
-    
-    # Rank with similarity
-    candidates
-    |> Enum.map(fn ingredient ->
-      similarity = calculate_similarity(ingredient.name, search_lower)
-      score = calculate_usda_score(ingredient.name, search_lower, ingredient.food_class)
-      {ingredient, score + similarity * 10}
-    end)
-    |> Enum.sort_by(fn {_ingredient, score} -> -score end)
-    |> Enum.map(fn {ingredient, _score} -> ingredient end)
-    |> Enum.take(limit)
-  end
+  defp return_empty(true = _detailed), do: []
+  defp return_empty(false), do: []
 
-  # USDA-style scoring with first-word priority
-  defp calculate_usda_score(name, search_term, food_class) do
+  defp calculate_position_score(name, search_term, food_class) do
     name_lower = String.downcase(name)
     
-    # Extract first word (before comma or space)
-    first_word = name_lower
-      |> String.split(~r/[\s,]+/)
-      |> List.first()
-      |> to_string()
+    # Find position using String.split/pattern matching
+    position = find_position(name_lower, search_term)
     
-    cond do
-      # Exact match (highest priority)
+    # Check if it's a standalone word
+    is_whole_word = Regex.match?(~r/\b#{Regex.escape(search_term)}\b/, name_lower)
+    
+    # Get word position
+    words = String.split(name_lower, ~r/[\s,]+/)
+    word_position = find_word_position(words, search_term)
+    
+    # Check if preceded by "with"
+    has_with_modifier = Regex.match?(~r/with\s+#{Regex.escape(search_term)}/, name_lower)
+    
+    # Calculate base score
+    base_score = cond do
+      # Exact match (highest)
       name_lower == search_term -> 1000
       name_lower == "#{search_term}," -> 1000
       name_lower == "#{search_term} " -> 1000
-      name_lower == "#{search_term} -" -> 1000
-      
-      # First word matches exactly (CRITICAL for "Salt, table")
-      first_word == search_term -> 950
-      
-      # First word starts with search term
-      String.starts_with?(first_word, search_term) -> 850
-      
-      # Any word matches exactly
-      String.split(name_lower, ~r/[\s,]+/)
-      |> Enum.any?(&(&1 == search_term)) -> 750
+      name_lower == "#{search_term}, " -> 1000
       
       # Name starts with search term
-      String.starts_with?(name_lower, search_term) -> 650
+      String.starts_with?(name_lower, search_term) -> 950
       
-      # Contains as whole word
-      String.contains?(name_lower, " #{search_term} ") -> 550
-      String.contains?(name_lower, " #{search_term},") -> 550
-      String.ends_with?(name_lower, " #{search_term}") -> 550
+      # First word is the search term
+      List.first(words) == search_term -> 900
       
-      # Contains search term
-      String.contains?(name_lower, search_term) -> 450
+      # Search term is a standalone word
+      is_whole_word -> 800
       
-      # Contains as substring
+      # Contains as prefix of first word
+      (List.first(words) || "") |> String.starts_with?(search_term) -> 700
+      
+      # Contains as substring anywhere
+      true -> 600
+    end
+    
+    # Apply penalties
+    position_penalty = cond do
+      is_nil(position) -> 0
+      position == 0 -> 0
+      position <= 5 -> 50
+      position <= 15 -> 150
+      true -> 250
+    end
+    
+    word_penalty = cond do
+      is_nil(word_position) -> 0
+      word_position == 0 -> 0
+      word_position == 1 -> 100
+      word_position == 2 -> 200
       true -> 300
     end
-    # Add bonus for Foundation/SR Legacy
+    
+    modifier_penalty = if has_with_modifier, do: 200, else: 0
+    
+    # Calculate final score
+    score = base_score - position_penalty - word_penalty - modifier_penalty
+    
+    # Add bonuses
+    score
     |> add_data_type_bonus(food_class)
-    # Add bonus for shorter names (more specific)
     |> add_length_bonus(name_lower)
+    |> max(0)
   end
 
-  defp calculate_similarity(name, search_term) do
-    name_lower = String.downcase(name)
-    # Simple Jaccard-like similarity
-    name_words = MapSet.new(String.split(name_lower, ~r/[\s,]+/))
-    search_words = MapSet.new(String.split(search_term, ~r/[\s,]+/))
-    intersection = MapSet.intersection(name_words, search_words) |> MapSet.size()
-    union = MapSet.union(name_words, search_words) |> MapSet.size()
-    
-    if union > 0 do
-      intersection / union
-    else
-      0
+  # Helper to find position of substring
+  defp find_position(string, substring) do
+    case String.split(string, substring, parts: 2) do
+      [before, _] -> String.length(before)
+      _ -> nil
     end
+  end
+
+  # Helper to find word position
+  defp find_word_position(words, search_term) do
+    Enum.find_index(words, fn word ->
+      String.contains?(word, search_term)
+    end)
   end
 
   defp add_data_type_bonus(score, food_class) when food_class in ["Foundation", "SR Legacy"] do
@@ -135,20 +138,33 @@ defmodule Mehungry.Food.IngredientSearch do
   defp add_data_type_bonus(score, _), do: score
 
   defp add_length_bonus(score, name) do
-    # Shorter names get a small bonus (more specific)
-    length_bonus = max(0, 30 - String.length(name))
-    score + div(length_bonus, 5)
+    # Shorter, more specific names get a bonus
+    length_bonus = max(0, 50 - String.length(name))
+    score + div(length_bonus, 10)
   end
 
-  # Simple search function for select components (returns limited fields)
+  defp format_results(results, true = _detailed), do: results
+  defp format_results(results, false) do
+    Enum.map(results, fn i -> %{id: i.id, name: i.name} end)
+  end
+
+  # Simplified version for select components (fastest)
   def search_for_select(search_term, classes \\ []) do
+    search(search_term, classes, detailed: false, limit: 20)
+  end
+
+  # Ultra-simple version guaranteed to work
+  def search_simple(search_term, classes \\ []) do
     cleaned_term = String.trim(search_term)
     
     query = from i in Ingredient,
       where: not is_nil(i.name),
       where: i.category_id not in ^get_second_layer_foods_ids(),
       where: ilike(i.name, ^"%#{cleaned_term}%"),
-      order_by: [asc: i.name],
+      order_by: [
+        desc: fragment("CASE WHEN LOWER(?) = LOWER(?) THEN 1 ELSE 0 END", i.name, ^cleaned_term),
+        asc: i.name
+      ],
       limit: 20,
       select: [:id, :name]
     
@@ -166,8 +182,6 @@ defmodule Mehungry.Food.IngredientSearch do
 
   defp get_second_layer_foods_ids do
     # Your existing logic for secondary IDs
-    # Example: Get IDs of secondary categories
-    # from(c in Category, where: c.name == "Secondary", select: c.id) |> Repo.all()
     []
   end
 end
