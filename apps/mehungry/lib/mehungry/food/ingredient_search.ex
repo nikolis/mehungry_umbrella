@@ -9,62 +9,111 @@ defmodule Mehungry.Food.IngredientSearch do
   alias Mehungry.Repo
   alias Mehungry.Food.Ingredient
 
+  def search_two_phase(search_term, classes \\ []) do
+    cleaned_term = String.trim(search_term)
+    search_lower = String.downcase(cleaned_term)
+
+    # Phase 1: Search for exact prefix matches (starts with the term)
+    phase1_results =
+      from(i in Ingredient,
+        where: not is_nil(i.name),
+        where: i.category_id not in ^get_second_layer_foods_ids(),
+        where: ilike(i.name, ^"#{cleaned_term}%"),
+        limit: 20
+      )
+      |> maybe_filter_by_classes(classes)
+      |> Repo.all()
+
+    # Phase 2: If phase 1 has enough results, return them
+    if length(phase1_results) >= 10 do
+      phase1_results
+    else
+      # Phase 3: Get remaining results, but exclude common noisy patterns
+      remaining_needed = 20 - length(phase1_results)
+
+      # Get contains matches, explicitly excluding "with salt", "no salt added", etc.
+      exclude_patterns = ["with %", "without %", "no % added", "%added %"]
+
+      base_query =
+        from i in Ingredient,
+          where: not is_nil(i.name),
+          where: i.category_id not in ^get_second_layer_foods_ids(),
+          where: ilike(i.name, ^"%#{cleaned_term}%"),
+          where: i.id not in ^Enum.map(phase1_results, & &1.id),
+          # Get extra to filter
+          limit: ^remaining_needed * 2
+
+      # Apply exclusions for noisy patterns
+      filtered_query =
+        Enum.reduce(exclude_patterns, base_query, fn pattern, q ->
+          from i in q, where: not ilike(i.name, ^pattern)
+        end)
+
+      phase2_results =
+        filtered_query
+        |> maybe_filter_by_classes(classes)
+        |> Repo.all()
+        |> Enum.take(remaining_needed)
+
+      phase1_results ++ phase2_results
+    end
+  end
+
   def search_weighted(search_term, classes \\ []) do
     if(search_term == "") do
       []
     else
+      cleaned_term = String.trim(search_term)
+      search_lower = String.downcase(cleaned_term)
 
-    cleaned_term = String.trim(search_term)
-    search_lower = String.downcase(cleaned_term)
+      query =
+        from i in Ingredient,
+          where: not is_nil(i.name),
+          where: i.category_id not in ^get_second_layer_foods_ids(),
+          where: ilike(i.name, ^"%#{cleaned_term}%"),
+          limit: 100
 
-    query =
-      from i in Ingredient,
-        where: not is_nil(i.name),
-        where: i.category_id not in ^get_second_layer_foods_ids(),
-        where: ilike(i.name, ^"%#{cleaned_term}%"),
-        limit: 100
+      candidates =
+        query
+        |> maybe_filter_by_classes(classes)
+        |> Repo.all()
 
-    candidates =
-      query
-      |> maybe_filter_by_classes(classes)
-      |> Repo.all()
+      candidates
+      |> Enum.map(fn i ->
+        name_lower = String.downcase(i.name)
 
-    candidates
-    |> Enum.map(fn i ->
-      name_lower = String.downcase(i.name)
+        score =
+          cond do
+            # Perfect match (100 points)
+            name_lower == search_lower -> 100
+            # Starts with exact word (90 points)
+            Regex.match?(~r/^#{Regex.escape(search_lower)}(?=[,\s]|$)/, name_lower) -> 90
+            # Starts with prefix (80 points)
+            String.starts_with?(name_lower, search_lower) -> 80
+            # Contains as word (60 points)
+            Regex.match?(~r/\b#{Regex.escape(search_lower)}\b/, name_lower) -> 60
+            # Contains as substring (40 points)
+            true -> 40
+          end
 
-      score =
-        cond do
-          # Perfect match (100 points)
-          name_lower == search_lower -> 100
-          # Starts with exact word (90 points)
-          Regex.match?(~r/^#{Regex.escape(search_lower)}(?=[,\s]|$)/, name_lower) -> 90
-          # Starts with prefix (80 points)
-          String.starts_with?(name_lower, search_lower) -> 80
-          # Contains as word (60 points)
-          Regex.match?(~r/\b#{Regex.escape(search_lower)}\b/, name_lower) -> 60
-          # Contains as substring (40 points)
-          true -> 40
-        end
+        # Position bonus: earlier is better
+        position = find_position(name_lower, search_lower)
 
-      # Position bonus: earlier is better
-      position = find_position(name_lower, search_lower)
+        position_bonus =
+          case position do
+            0 -> 10
+            p when p <= 5 -> 5
+            _ -> 0
+          end
 
-      position_bonus =
-        case position do
-          0 -> 10
-          p when p <= 5 -> 5
-          _ -> 0
-        end
+        # Length bonus: shorter, more specific names get boost
+        length_bonus = if String.length(name_lower) < 20, do: 5, else: 0
 
-      # Length bonus: shorter, more specific names get boost
-      length_bonus = if String.length(name_lower) < 20, do: 5, else: 0
-
-      {i, score + position_bonus + length_bonus}
-    end)
-    |> Enum.sort_by(fn {_i, score} -> -score end)
-    |> Enum.map(fn {i, _score} -> i end)
-    |> Enum.take(20)
+        {i, score + position_bonus + length_bonus}
+      end)
+      |> Enum.sort_by(fn {_i, score} -> -score end)
+      |> Enum.map(fn {i, _score} -> i end)
+      |> Enum.take(20)
     end
   end
 
