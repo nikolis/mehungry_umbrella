@@ -55,7 +55,7 @@ defmodule MehungryWeb.IngredientComponent do
           <.live_component
             module={MehungryWeb.SelectComponentDeep}
             form={@ingredient_form}
-            item_function={&Mehungry.Food.search_ingredient_alt/1}
+                       item_function={&Mehungry.Food.IngredientSearch.search_ingredient_hybrid/1}
             get_by_id_func={&Mehungry.Food.get_ingredient!/1}
             input_variable="ingredient_id"
             label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}

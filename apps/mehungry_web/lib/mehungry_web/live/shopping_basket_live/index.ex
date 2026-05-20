@@ -67,6 +67,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   def handle_info({:perform_search, query}, socket) do
     case USDA.search_foods(query, 5) do
       {:ok, results} ->
+        IO.inspect(results, label: "Result")
         {:noreply, assign(socket, search_results: results, searching: false)}
 
       {:error, _error} ->
@@ -77,6 +78,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   def handle_event("select_usda_item", %{"fdc_id" => fdc_id}, socket) do
     case USDA.get_food_details(fdc_id) do
       {:ok, food} ->
+        IO.inspect(food, label: "Selected food details")
+
         {:noreply,
          assign(socket,
            selected_usda_item: food,
