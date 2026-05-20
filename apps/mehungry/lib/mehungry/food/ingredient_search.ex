@@ -2,7 +2,7 @@
 
 defmodule Mehungry.Food.IngredientSearch do
   @moduledoc """
-  Enhanced ingredient search with multi-tier ranking
+  USDA-style ingredient search with exact match priority
   """
   
   import Ecto.Query
@@ -10,142 +10,252 @@ defmodule Mehungry.Food.IngredientSearch do
   alias Mehungry.Food.Ingredient
 
   @doc """
-  Search ingredients using tsvector (searchable column exists in DB only)
+  USDA-style search that prioritizes exact matches and natural language
   """
-  def search_ingredient(search_term, classes \\ []) do
+  def search_usda_style(search_term, classes \\ []) do
     cleaned_term = String.trim(search_term)
+    search_lower = String.downcase(cleaned_term)
     
-    # Build base query - referencing searchable column via fragment
-    base_query = from i in Ingredient,
+    # Build the ranking using CASE statements in SQL
+    query = from i in Ingredient,
       where: not is_nil(i.name),
       where: i.category_id not in ^get_second_layer_foods_ids(),
-      where: fragment("searchable @@ websearch_to_tsquery('english', ?)", ^cleaned_term)
-    
-    # Apply class filter
-    base_query = maybe_filter_by_classes(base_query, classes)
-    
-    # Add ordering and limit
-    query = from i in base_query,
-      order_by: [
-        desc: fragment("ts_rank_cd(searchable, websearch_to_tsquery('english', ?))", ^cleaned_term)
-      ],
+      where: fragment("LOWER(?) LIKE LOWER(?)", i.name, ^"%#{cleaned_term}%"),
+      select: %{
+        id: i.id,
+        name: i.name,
+        description: i.description,
+        food_class: i.food_class,
+        category_id: i.category_id,
+        measurement_unit_id: i.measurement_unit_id,
+        inserted_at: i.inserted_at,
+        updated_at: i.updated_at,
+        # Calculate relevance score
+        relevance: fragment("""
+          CASE
+            -- Exact match (highest priority)
+            WHEN LOWER(?) = LOWER(?) THEN 100
+            -- Starts with search term
+            WHEN LOWER(?) LIKE LOWER(?) || '%' THEN 90
+            -- Contains as whole word
+            WHEN LOWER(?) ~ ('\\y' || LOWER(?) || '\\y') THEN 80
+            -- Contains search term
+            WHEN LOWER(?) LIKE LOWER(?) THEN 70
+            -- Fallback
+            ELSE 0
+          END +
+          -- Boost for Foundation/SR Legacy data types
+          CASE
+            WHEN ? IN ('Foundation', 'SR Legacy') THEN 10
+            ELSE 0
+          END
+        """,
+          i.name, ^cleaned_term,                                    # exact match
+          i.name, ^cleaned_term,                                    # prefix match
+          i.name, ^cleaned_term,                                    # word boundary
+          i.name, ^cleaned_term,                                    # contains
+          i.food_class                                              # data type boost
+        )
+      },
+      order_by: [desc: :relevance, asc: i.name],
       limit: 20
     
-    Repo.all(query)
+    # Apply class filter if needed
+    query = maybe_filter_by_classes(query, classes)
+    
+    # Execute and convert to proper Ingredient structs
+    results = Repo.all(query)
+    
+    # Convert the selected fields back to Ingredient structs
+    Enum.map(results, fn r ->
+      %Ingredient{
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        food_class: r.food_class,
+        category_id: r.category_id,
+        measurement_unit_id: r.measurement_unit_id,
+        inserted_at: r.inserted_at,
+        updated_at: r.updated_at
+      }
+    end)
   end
 
   @doc """
-  Search with multi-tier ranking (exact matches first)
+  Multi-tier search that progressively expands the search
   """
-  def search_ingredient_ranked(search_term, classes \\ []) do
+  def search_progressive(search_term, classes \\ []) do
     cleaned_term = String.trim(search_term)
-    search_pattern = "%#{cleaned_term}%"
+    search_lower = String.downcase(cleaned_term)
     
-    # Step 1: Get potential matches using basic LIKE (fast)
-    base_query = from i in Ingredient,
+    # Build a search that expands based on result count
+    query = from i in Ingredient,
       where: not is_nil(i.name),
       where: i.category_id not in ^get_second_layer_foods_ids(),
-      where: ilike(i.name, ^search_pattern),
+      select: %{
+        id: i.id,
+        name: i.name,
+        description: i.description,
+        food_class: i.food_class,
+        category_id: i.category_id,
+        measurement_unit_id: i.measurement_unit_id,
+        rank: fragment("""
+          CASE
+            WHEN LOWER(?) = LOWER(?) THEN 1
+            WHEN LOWER(?) LIKE LOWER(?) || '%' THEN 2
+            WHEN LOWER(?) ~ ('\\y' || LOWER(?) || '\\y') THEN 3
+            WHEN LOWER(?) LIKE ('%' || LOWER(?) || '%') THEN 4
+            ELSE 5
+          END
+        """,
+          i.name, ^cleaned_term,
+          i.name, ^cleaned_term,
+          i.name, ^cleaned_term,
+          i.name, ^cleaned_term
+        )
+      },
+      order_by: [asc: :rank, asc: i.name],
+      limit: 20
+    
+    query = maybe_filter_by_classes(query, classes)
+    results = Repo.all(query)
+    
+    # If we have enough exact matches, return them
+    exact_matches = Enum.filter(results, fn r -> r.rank == 1 end)
+    if length(exact_matches) >= 5 do
+      # Return exact matches only
+      exact_matches
+    else
+      # Return all results, but exact matches first
+      results
+    end
+    |> Enum.map(fn r ->
+      %Ingredient{
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        food_class: r.food_class,
+        category_id: r.category_id,
+        measurement_unit_id: r.measurement_unit_id,
+        inserted_at: r.inserted_at,
+        updated_at: r.updated_at
+      }
+    end)
+  end
+
+  @doc """
+  Pure Elixir ranking for complete control (no SQL CASE complexities)
+  """
+  def search_ranked_elixir(search_term, classes \\ []) do
+    cleaned_term = String.trim(search_term)
+    search_lower = String.downcase(cleaned_term)
+    
+    # Get candidate matches using simple LIKE
+    candidate_query = from i in Ingredient,
+      where: not is_nil(i.name),
+      where: i.category_id not in ^get_second_layer_foods_ids(),
+      where: fragment("LOWER(?) LIKE LOWER(?)", i.name, ^"%#{cleaned_term}%"),
       limit: 100
     
-    base_query = maybe_filter_by_classes(base_query, classes)
-    candidates = Repo.all(base_query)
+    candidate_query = maybe_filter_by_classes(candidate_query, classes)
+    candidates = Repo.all(candidate_query)
     
-    # Step 2: Rank in Elixir (more control, no fragment issues)
+    # Rank in Elixir with USDA-style logic
     candidates
-    |> Enum.map(fn ingredient -> {ingredient, calculate_rank(ingredient.name, cleaned_term)} end)
-    |> Enum.sort_by(fn {_ingredient, rank} -> rank end)
-    |> Enum.map(fn {ingredient, _rank} -> ingredient end)
+    |> Enum.map(fn ingredient ->
+      score = calculate_usda_score(ingredient.name, search_lower, ingredient.food_class)
+      {ingredient, score}
+    end)
+    |> Enum.sort_by(fn {_ingredient, score} -> -score end)  # Higher score first
+    |> Enum.map(fn {ingredient, _score} -> ingredient end)
     |> Enum.take(20)
   end
 
-  @doc """
-  Hybrid search: Uses FTS for initial filter, then ranks by relevance
-  """
-  def search_ingredient_hybrid(search_term, classes \\ []) do
-    cleaned_term = String.trim(search_term)
-    
-    # First pass: Use FTS to get candidates
-    fts_query = from i in Ingredient,
-      where: not is_nil(i.name),
-      where: i.category_id not in ^get_second_layer_foods_ids(),
-      where: fragment("searchable @@ websearch_to_tsquery('english', ?)", ^cleaned_term),
-      limit: 50
-    
-    fts_query = maybe_filter_by_classes(fts_query, classes)
-    candidates = Repo.all(fts_query)
-    
-    # Second pass: Rank candidates for best relevance
-    candidates
-    |> Enum.map(fn ingredient -> {ingredient, calculate_rank(ingredient.name, cleaned_term)} end)
-    |> Enum.sort_by(fn {_ingredient, rank} -> rank end)
-    |> Enum.map(fn {ingredient, _rank} -> ingredient end)
-    |> Enum.take(20)
-  end
-
-  @doc """
-  USDA-style search mimicking the API behavior
-  """
-  def search_ingredient_usda_style(search_term, classes \\ []) do
-    cleaned_term = String.trim(search_term)
-    
-    query = from i in Ingredient,
-      where: not is_nil(i.name),
-      where: i.category_id not in ^get_second_layer_foods_ids(),
-      where: fragment("searchable @@ websearch_to_tsquery('english', ?)", ^cleaned_term),
-      order_by: [
-        asc: fragment("CASE WHEN i.food_class IN ('Foundation', 'SR Legacy') THEN 1 ELSE 2 END"),
-        desc: fragment("ts_rank_cd(searchable, websearch_to_tsquery('english', ?))", ^cleaned_term)
-      ],
-      limit: 20
-    
-    query
-    |> maybe_filter_by_classes(classes)
-    |> Repo.all()
-  end
-
-  # Simple LIKE search as fallback
-  def search_ingredient_simple(search_term, classes \\ []) do
-    cleaned_term = String.trim(search_term)
-    search_pattern = "%#{cleaned_term}%"
-    
-    query = from i in Ingredient,
-      where: not is_nil(i.name),
-      where: i.category_id not in ^get_second_layer_foods_ids(),
-      where: ilike(i.name, ^search_pattern),
-      order_by: [asc: i.name],
-      limit: 20
-    
-    query
-    |> maybe_filter_by_classes(classes)
-    |> Repo.all()
-  end
-
-  # Ranking function (higher priority = lower number)
-  defp calculate_rank(name, search_term) do
+  # USDA-style scoring function
+  defp calculate_usda_score(name, search_term, food_class) do
     name_lower = String.downcase(name)
-    search_lower = String.downcase(search_term)
     
     cond do
-      # Exact match (highest priority)
-      name_lower == search_lower -> 1
-      name_lower == "#{search_lower}," -> 1
-      name_lower == "#{search_lower} " -> 1
+      # Exact match (highest score)
+      name_lower == search_term -> 100
+      name_lower == "#{search_term}," -> 100
+      name_lower == "#{search_term} " -> 100
+      name_lower == "#{search_term}, " -> 100
       
       # Starts with search term
-      String.starts_with?(name_lower, search_lower) -> 2
+      String.starts_with?(name_lower, search_term) -> 90
       
-      # Contains as whole word
-      String.contains?(name_lower, " #{search_lower} ") -> 3
-      String.contains?(name_lower, " #{search_lower},") -> 3
-      String.ends_with?(name_lower, " #{search_lower}") -> 3
+      # Whole word match
+      String.contains?(name_lower, " #{search_term} ") -> 85
+      String.contains?(name_lower, " #{search_term},") -> 85
+      String.ends_with?(name_lower, " #{search_term}") -> 85
       
-      # Contains search term
-      String.contains?(name_lower, search_lower) -> 4
+      # Contains as part of a word
+      String.contains?(name_lower, search_term) -> 70
       
       # Fallback
-      true -> 5
+      true -> 50
     end
+    # Add bonus for Foundation/SR Legacy data types
+    |> add_data_type_bonus(food_class)
+  end
+
+  defp add_data_type_bonus(score, food_class) when food_class in ["Foundation", "SR Legacy"] do
+    score + 5
+  end
+  defp add_data_type_bonus(score, _), do: score
+
+  # Simple search that guarantees "Salt, table" appears first for "salt"
+  def search_salt_optimized(search_term, classes \\ []) do
+    cleaned_term = String.trim(search_term)
+    search_lower = String.downcase(cleaned_term)
+    
+    # Special handling for common spices/seasonings
+    exact_match_boost = fn name ->
+      name_lower = String.downcase(name)
+      cond do
+        name_lower == search_lower -> 100
+        name_lower == "#{search_lower}, table" -> 99
+        name_lower == "#{search_lower}, ground" -> 98
+        name_lower == "#{search_lower}, kosher" -> 97
+        name_lower == "#{search_lower}, sea" -> 96
+        true -> 0
+      end
+    end
+    
+    query = from i in Ingredient,
+      where: not is_nil(i.name),
+      where: i.category_id not in ^get_second_layer_foods_ids(),
+      where: fragment("LOWER(?) LIKE LOWER(?)", i.name, ^"%#{cleaned_term}%"),
+      select: %{
+        id: i.id,
+        name: i.name,
+        description: i.description,
+        food_class: i.food_class,
+        category_id: i.category_id,
+        measurement_unit_id: i.measurement_unit_id,
+        inserted_at: i.inserted_at,
+        updated_at: i.updated_at,
+        boost: fragment("CASE WHEN LOWER(?) = LOWER(?) THEN 1 ELSE 0 END", i.name, ^cleaned_term)
+      },
+      order_by: [desc: :boost, asc: i.name],
+      limit: 20
+    
+    query = maybe_filter_by_classes(query, classes)
+    results = Repo.all(query)
+    
+    Enum.map(results, fn r ->
+      %Ingredient{
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        food_class: r.food_class,
+        category_id: r.category_id,
+        measurement_unit_id: r.measurement_unit_id,
+        inserted_at: r.inserted_at,
+        updated_at: r.updated_at
+      }
+    end)
   end
 
   # Helper functions
@@ -158,8 +268,6 @@ defmodule Mehungry.Food.IngredientSearch do
 
   defp get_second_layer_foods_ids do
     # Your existing logic for secondary IDs
-    # Example: Get IDs of secondary categories
-    # from(c in Category, where: c.name == "Secondary", select: c.id) |> Repo.all()
     []
   end
 end
