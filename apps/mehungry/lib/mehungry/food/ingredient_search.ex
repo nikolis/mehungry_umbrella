@@ -9,6 +9,67 @@ defmodule Mehungry.Food.IngredientSearch do
   alias Mehungry.Repo
   alias Mehungry.Food.Ingredient
 
+  def search_production(search_term, classes \\ []) do
+    cleaned_term = String.trim(search_term)
+    search_lower = String.downcase(cleaned_term)
+
+    # Single efficient query to get candidates
+    candidates =
+      from(i in Ingredient,
+        where: not is_nil(i.name),
+        where: i.category_id not in ^get_second_layer_foods_ids(),
+        where: ilike(i.name, ^"%#{cleaned_term}%"),
+        limit: 200
+      )
+      |> maybe_filter_by_classes(classes)
+      |> Repo.all()
+
+    # Transform to list with sort keys (much faster than sorting full structs)
+    candidates_with_scores =
+      Enum.map(candidates, fn i ->
+        name_lower = String.downcase(i.name)
+
+        # Primary sort key (category)
+        category =
+          cond do
+            name_lower == search_lower -> 1
+            Regex.match?(~r/^#{Regex.escape(search_lower)}[, ]/, name_lower) -> 2
+            String.starts_with?(name_lower, search_lower) -> 3
+            Regex.match?(~r/\b#{Regex.escape(search_lower)}\b/, name_lower) -> 4
+            true -> 5
+          end
+
+        # Secondary sort key (contains "with/without" penalty)
+        has_modifier = Regex.match?(~r/(with|without|no|added)/, name_lower)
+
+        # Tertiary sort key (length)
+        length_penalty = String.length(name_lower)
+
+        {i, category, has_modifier, length_penalty}
+      end)
+
+    # Sort: category asc, modifiers last, then by length
+    sorted =
+      Enum.sort(candidates_with_scores, fn
+        {_, c1, m1, l1}, {_, c2, m2, l2} ->
+          if c1 != c2 do
+            # Lower category number = better
+            c1 < c2
+          else
+            if m1 != m2 do
+              # false (no modifier) comes before true (has modifier)
+              not m1
+            else
+              # Shorter = better
+              l1 < l2
+            end
+          end
+      end)
+
+    # Extract just the ingredients
+    Enum.take(Enum.map(sorted, fn {i, _, _, _} -> i end), 20)
+  end
+
   def search_two_phase(search_term, classes \\ []) do
     cleaned_term = String.trim(search_term)
     search_lower = String.downcase(cleaned_term)
