@@ -2,88 +2,108 @@ name: Elixir CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches:
+      - "master"
 
 permissions:
   contents: read
 
 env:
   MIX_ENV: test
-  # NOTE: make sure these versions match in Containerfile and .tool-versions
+
+  # NOTE:
+  # Keep these versions aligned with:
+  # - Containerfile
+  # - .tool-versions
   ELIXIR_VERSION_SPEC: "1.16.2"
   OTP_VERSION_SPEC: "26.0.2"
-  
-jobs:
 
+jobs:
   build_and_deploy:
-     # The type of runner that the job will run on
-    needs: []
     runs-on: ubuntu-latest
 
-     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Configure AWS
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-central-1
 
+      # Login to ECR
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
-      # Runs a single command using the runners shell
-      - name: docker build mehungry_app 
+      # Build and push Docker image
+      - name: Build and push Docker image
         id: build-image
         env:
-          MIX_ENV: "prod"
+          MIX_ENV: prod
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: mehungry_ecr
           IMAGE_TAG: ${{ github.sha }}
-
         run: |
-          docker build --build-arg="DATABASE_URL=${{ secrets.DATABASE_URL }}" --build-arg="AWS_ASSETS_BUCKET_NAME=${{ secrets.AWS_ASSETS_BUCKET_NAME }}"  --build-arg="AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" --build-arg="AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}"           --build-arg="FACEBOOK_CLIENT_ID=${{ secrets.FACEBOOK_CLIENT_ID }}"  --build-arg="FACEBOOK_CLIENT_SECRET=${{ secrets.FACEBOOK_CLIENT_SECRET }}" --build-arg="GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" --build-arg="GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" --build-arg="SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}" --build-arg="MIX_ENV=prod" -t $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/mehungry_ecr:$IMAGE_TAG
-          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          set -e
 
+          docker build \
+            --build-arg="DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --build-arg="AWS_ASSETS_BUCKET_NAME=${{ secrets.AWS_ASSETS_BUCKET_NAME }}" \
+            --build-arg="AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            --build-arg="AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            --build-arg="FACEBOOK_CLIENT_ID=${{ secrets.FACEBOOK_CLIENT_ID }}" \
+            --build-arg="FACEBOOK_CLIENT_SECRET=${{ secrets.FACEBOOK_CLIENT_SECRET }}" \
+            --build-arg="GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" \
+            --build-arg="GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            --build-arg="SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}" \
+            --build-arg="MIX_ENV=prod" \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
 
-      #- name: Download task definition 
-      #  run: |
-      #     aws ecs describe-task-definition - task-definition etap-development - query taskDefinition > task-definition.json
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: Fill in new image ID in task definition
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      # Render ECS task definition with new image
+      - name: Fill in new image ID in ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-           task-definition: task-definition.json 
-           container-name: mehungry_app 
-           image: ${{ steps.build-image.outputs.image }}
-           
+          task-definition: task-definition.json
+          container-name: mehungry_app
+          image: ${{ steps.build-image.outputs.image }}
+
+      # Run database migrations
       - name: Run DB migrations
         env:
           ECS_CLUSTER: mehungry_cluster
-          TASK_DEFINITION: mehungry_app_deployment   # <-- your real task
+          TASK_DEFINITION: mehungry_app_deployment
           SUBNETS: subnet-09cf1e07290dd8745,subnet-0e737a54a16cefc1f,subnet-00a18ffb7a73744bf
           SECURITY_GROUP: sg-0a9dca773642f81cf
         run: |
+          set -e
+
+          echo "Starting migration task..."
+
           TASK_ARN=$(aws ecs run-task \
-          --cluster $ECS_CLUSTER \
-          --launch-type FARGATE \
-          --task-definition $TASK_DEFINITION \
-          --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUP],assignPublicIp=ENABLED}" \
-          --overrides '{
-            "containerOverrides": [
-              {
-                "name": "mehungry_app",
-                "command": ["bin/mehungry_umbrella", "eval", "Mehungry.Release.migrate"]
-              }
-            ]
-          }' \
-          --query "tasks[0].taskArn" \
-          --output text)
+            --cluster $ECS_CLUSTER \
+            --launch-type FARGATE \
+            --task-definition $TASK_DEFINITION \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUP],assignPublicIp=ENABLED}" \
+            --overrides '{
+              "containerOverrides": [
+                {
+                  "name": "mehungry_app",
+                  "command": ["bin/mehungry_umbrella", "eval", "Mehungry.Release.migrate"]
+                }
+              ]
+            }' \
+            --query "tasks[0].taskArn" \
+            --output text)
 
           echo "Started migration task: $TASK_ARN"
 
@@ -91,66 +111,40 @@ jobs:
             --cluster $ECS_CLUSTER \
             --tasks $TASK_ARN
 
+          echo "Migration task stopped."
+
           EXIT_CODE=$(aws ecs describe-tasks \
             --cluster $ECS_CLUSTER \
             --tasks $TASK_ARN \
-            --query "tasks[0].containers[0].exitCode" \
+            --query "tasks[0].containers[?name=='mehungry_app'].exitCode" \
+            --output text)
+
+          STOP_REASON=$(aws ecs describe-tasks \
+            --cluster $ECS_CLUSTER \
+            --tasks $TASK_ARN \
+            --query "tasks[0].stoppedReason" \
             --output text)
 
           echo "Migration exit code: $EXIT_CODE"
+          echo "Stopped reason: $STOP_REASON"
+
+          if [ -z "$EXIT_CODE" ]; then
+            echo "Could not determine migration exit code"
+            exit 1
+          fi
 
           if [ "$EXIT_CODE" != "0" ]; then
             echo "Migration failed!"
             exit 1
           fi
-      
-      - name: Run DB migrations
-        env:
-          ECS_CLUSTER: mehungry_cluster
-          TASK_DEFINITION: mehungry_app_deployment   # <-- your real task
-          SUBNETS: subnet-09cf1e07290dd8745,subnet-0e737a54a16cefc1f,subnet-00a18ffb7a73744bf
-          SECURITY_GROUP: sg-0a9dca773642f81cf
-        run: |
-          TASK_ARN=$(aws ecs run-task \
-          --cluster $ECS_CLUSTER \
-          --launch-type FARGATE \
-          --task-definition $TASK_DEFINITION \
-          --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUP],assignPublicIp=ENABLED}" \
-          --overrides '{
-            "containerOverrides": [
-              {
-                "name": "mehungry_app",
-                "command": ["bin/mehungry_umbrella", "eval", "Mehungry.Release.migrate"]
-              }
-            ]
-          }' \
-          --query "tasks[0].taskArn" \
-          --output text)
 
-        echo "Started migration task: $TASK_ARN"
+          echo "Migration completed successfully."
 
-          aws ecs wait tasks-stopped \
-            --cluster $ECS_CLUSTER \
-            --tasks $TASK_ARN
-
-          EXIT_CODE=$(aws ecs describe-tasks \
-            --cluster $ECS_CLUSTER \
-            --tasks $TASK_ARN \
-            --query "tasks[0].containers[0].exitCode" \
-            --output text)
-
-        echo "Migration exit code: $EXIT_CODE"
-
-          if [ "$EXIT_CODE" != "0" ]; then
-            echo "Migration failed!"
-            exit 1
-          fi       
-
+      # Deploy updated task definition to ECS service
       - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1 
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
           service: mh-prod-service
           cluster: mehungry_cluster
-    
-
+          wait-for-service-stability: true
