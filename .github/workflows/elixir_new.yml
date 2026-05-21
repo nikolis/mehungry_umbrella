@@ -81,7 +81,7 @@ jobs:
       - name: Run DB migrations
         env:
           ECS_CLUSTER: mehungry_cluster
-	  TASK_DEFINITION: ${{ steps.task-def.outputs.task-definition }}
+          TASK_DEFINITION: "${{ steps.task-def.outputs.task-definition }}"          
           SUBNETS: subnet-09cf1e07290dd8745,subnet-0e737a54a16cefc1f,subnet-00a18ffb7a73744bf
           SECURITY_GROUP: sg-0a9dca773642f81cf
         run: |
