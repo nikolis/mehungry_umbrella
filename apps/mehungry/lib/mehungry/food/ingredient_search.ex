@@ -32,7 +32,43 @@ defmodule Mehungry.Food.IngredientSearch do
       end
     end
   end
+# lib/mehungry/food/ingredient_search.ex
 
+def search2(search_term, classes \\ []) do
+  normalized_term = Ingredient.normalize_string(search_term)
+  
+  if normalized_term == "" do
+    []
+  else
+    query = from i in Ingredient,
+      where: not is_nil(i.search_name),
+      where: i.category_id not in ^get_second_layer_foods_ids(),
+      where: ilike(i.search_name, ^"#{normalized_term}%"),
+      order_by: [
+        # Priority 1: Exact match
+        desc: fragment("CASE WHEN ? = ? THEN 1 ELSE 0 END", i.search_name, ^normalized_term),
+        # Priority 2: Shorter names first (more specific)
+        asc: fragment("LENGTH(?)", i.search_name),
+        # Priority 3: USDA data type (Foundation > SR Legacy > others)
+        asc: fragment("""
+          CASE i.food_class
+            WHEN 'Foundation' THEN 1
+            WHEN 'SR Legacy' THEN 2
+            WHEN 'Survey (FNDDS)' THEN 3
+            WHEN 'Experimental' THEN 4
+            ELSE 5
+          END
+        """),
+        # Priority 4: Alphabetical
+        asc: i.name
+      ],
+      limit: 20
+    
+    query
+    |> maybe_filter_by_classes(classes)
+    |> Repo.all()
+  end
+end
   defp search_single_word(search_term, classes) do
     query = from i in Ingredient,
       where: not is_nil(i.search_name),
