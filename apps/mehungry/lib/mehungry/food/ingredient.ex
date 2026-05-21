@@ -9,6 +9,8 @@ defmodule Mehungry.Food.Ingredient do
     field :description, :string
     field :name, :string
     field :url, :string
+    # Add this line
+    field :search_name, :string
 
     field :food_class, :string
     field :nutrient_conversion_factors, {:array, :map}, default: []
@@ -42,6 +44,8 @@ defmodule Mehungry.Food.Ingredient do
       sort_param: :ingredient_portions_sort,
       drop_param: :ingredient_portions_drop
     )
+    # Add this line
+    |> update_search_name()
     |> cast_assoc(:ingredient_translation,
       with: &Mehungry.Food.IngredientTranslation.changeset/2,
       sort_param: :ingredient_translation_sort,
@@ -56,4 +60,23 @@ defmodule Mehungry.Food.Ingredient do
     |> validate_required([:name, :category_id])
     |> unique_constraint([:name])
   end
+
+  defp update_search_name(changeset) do
+    if name = get_change(changeset, :name) do
+      search_name = normalize_string(name)
+      put_change(changeset, :search_name, search_name)
+    else
+      changeset
+    end
+  end
+
+  def normalize_string(str) when is_binary(str) do
+    str
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9\s]/, " ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+  end
+
+  def normalize_string(_), do: ""
 end
