@@ -135,6 +135,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       usda_fdc_id: nil
     }
 
+
     case Inventory.add_item(socket.assigns.shopping_basket.id, item) do
       {:ok, item} ->
         IO.inspect(item, label: "Item added")

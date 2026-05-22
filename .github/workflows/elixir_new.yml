@@ -19,7 +19,61 @@ env:
   OTP_VERSION_SPEC: "26.0.2"
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mehungry_server_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION_SPEC }}
+          otp-version: ${{ env.OTP_VERSION_SPEC }}
+
+      - name: Restore deps cache
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: _build/test
+          key: ${{ runner.os }}-build-test-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-build-test-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile
+
+      - name: Run tests
+        run: mix test
+        env:
+          CI: "true"
+
   build_and_deploy:
+    needs: [test]
     runs-on: ubuntu-latest
 
     steps:

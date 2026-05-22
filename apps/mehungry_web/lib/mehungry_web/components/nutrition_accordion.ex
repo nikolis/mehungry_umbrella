@@ -62,14 +62,12 @@ defmodule MehungryWeb.NutritionAccordion do
 
     ~H"""
     <div
-      class="w-full max-w-full overflow-hidden  rounded-xl shadow-sm  m-auto"
-      style="max-height: 300px; max-width: 100%;"
+      class="w-full max-w-full overflow-hidden  rounded-xl shadow-sm max-h-72 px-4"
     >
       
     <!-- Scrollable container with proper overflow containment -->
       <div
-        class=" overflow-y-auto custom-scrollbar p-4 overflow-x-hidden m-auto "
-        style="max-height: 300px;"
+        class=" overflow-y-auto custom-scrollbar  overflow-x-hidden  "
       >
         <%= if Enum.empty?(@nutrient_list) do %>
           <div class="text-center  text-white text-sm">

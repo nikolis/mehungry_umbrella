@@ -117,9 +117,11 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                 {length(@shopping_basket.basket_ingredients ++ @shopping_basket.basket_items)} items • Last updated today
               </p>
             </div>
+          <%= if !is_nil(@shopping_basket) and !is_nil(@shopping_basket.id) do %>
+
             <div class="flex gap-2">
               <!-- Calendar / Meal Planning -->
-              <a
+               <a
                 href={"/basket/import_items/" <> Integer.to_string(@shopping_basket.id)}
                 class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition"
               >
@@ -147,6 +149,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                 </svg>
               </button>
             </div>
+          <% end %>
           </div>
         </div>
         
@@ -168,12 +171,15 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                 />
               </svg>
               <p class="text-slate-400">No items in this list</p>
+          <%= if !is_nil(@shopping_basket) and !is_nil(@shopping_basket.id) do %>
+
               <button
                 class="mt-4 text-primary-500 hover:text-primary-400 text-sm transition"
                 phx-click="open_add_item_modal"
               >
                 + Add your first item
               </button>
+            <% end %>
             </div>
           <% else %>
             <%= for item <- Mehungry.Utils.sort_ingredients_for_basket(@shopping_basket.basket_ingredients ++ @shopping_basket.basket_items) do %>

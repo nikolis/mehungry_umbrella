@@ -116,6 +116,7 @@ defmodule Mehungry.Inventory do
   end
 
   def add_item(basket_id, item_params) do
+    if  !is_nil(basket_id) do
     basket = get_shopping_basket!(basket_id)
 
     result =
@@ -138,6 +139,9 @@ defmodule Mehungry.Inventory do
 
       {:eror, problem} ->
         {:error, problem}
+    end
+    else 
+        {:error, :nil_basket_id}
     end
   end
 
