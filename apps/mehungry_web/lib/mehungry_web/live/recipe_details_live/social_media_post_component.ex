@@ -36,7 +36,8 @@ defmodule MehungryWeb.SocialMediaPostComponent do
 
   @impl true
   def handle_event("validate", pages_params, socket) do
-    changeset = FacebookPost.change_facebook_post(socket.assigns.post, pages_params)
+    inner = pages_params["facebook_post"] || %{}
+    changeset = FacebookPost.change_facebook_post(socket.assigns.post, inner)
 
     {:noreply, assign(socket, :changeset, changeset)}
   end
