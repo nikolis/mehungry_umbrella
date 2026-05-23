@@ -186,7 +186,7 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
     fat_subcategories = []
 
     # Saturated Fat
-    {saturated, fat_subcategories} =
+    {_saturated, fat_subcategories} =
       build_fat_subcategory_with_individuals(
         categorized.saturated_fats,
         "Saturated Fat",
@@ -194,7 +194,7 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
       )
 
     # Monounsaturated Fat
-    {monounsaturated, fat_subcategories} =
+    {_monounsaturated, fat_subcategories} =
       build_fat_subcategory_with_individuals(
         categorized.monounsaturated_fats,
         "Monounsaturated Fat",
@@ -202,7 +202,7 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
       )
 
     # Polyunsaturated Fat
-    {polyunsaturated, fat_subcategories} =
+    {_polyunsaturated, fat_subcategories} =
       build_fat_subcategory_with_individuals(
         categorized.polyunsaturated_fats,
         "Polyunsaturated Fat",
@@ -210,7 +210,7 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
       )
 
     # Trans Fat
-    {trans, fat_subcategories} =
+    {_trans, fat_subcategories} =
       build_fat_subcategory_with_individuals(
         categorized.trans_fats,
         "Trans Fat",

@@ -28,7 +28,7 @@ defmodule Mehungry.Users do
     "Absolute fun" => 2
   }
 
-  def calculate_recipe_grading(nil, user) do
+  def calculate_recipe_grading(nil, _user) do
     0
   end
 

@@ -111,6 +111,7 @@ defmodule MehungryWeb.HomeLive.Index do
   defp apply_action(socket, :share_social_media, %{"id" => id}) do
     maybe_track_user(%{}, socket)
 
+    IO.inspect(id, label: "Recipe id")
     recipe = Food.get_recipe!(id)
     Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
 
@@ -125,28 +126,30 @@ defmodule MehungryWeb.HomeLive.Index do
 
     if !is_nil(recipe) do
       Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
+
+      user = socket.assigns.user
+
+      user_recipes =
+        case is_nil(user) do
+          true ->
+            []
+
+          false ->
+            Users.list_user_saved_recipes(user)
+            |> Enum.map(fn x -> x.recipe_id end)
+        end
+
+      socket
+      |> assign(:page_title, %{
+        title: recipe.title <> "Browse Recipes",
+        img: recipe.image_url,
+        id: Integer.to_string(recipe.id)
+      })
+      |> assign(:recipe, recipe)
+      |> assign(:current_user_recipes, user_recipes)
+    else
+      socket |> put_flash(:error, "Recipe not found") |> push_navigate(to: "/home")
     end
-
-    user = socket.assigns.user
-
-    user_recipes =
-      case is_nil(user) do
-        true ->
-          []
-
-        false ->
-          Users.list_user_saved_recipes(user)
-          |> Enum.map(fn x -> x.recipe_id end)
-      end
-
-    socket
-    |> assign(:page_title, %{
-      title: recipe.title <> "Browse Recipes",
-      img: recipe.image_url,
-      id: Integer.to_string(recipe.id)
-    })
-    |> assign(:recipe, recipe)
-    |> assign(:current_user_recipes, user_recipes)
   end
 
   @impl true

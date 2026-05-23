@@ -27,7 +27,7 @@ defmodule Mehungry.RecipeCreationWorker do
 
     if length(posts) == 0 do
       recipe = Mehungry.Food.get_recipe!(recipe_id)
-      create_post = Mehungry.Posts.create_post(recipe)
+      _create_post = Mehungry.Posts.create_post(recipe)
     end
 
     :ok

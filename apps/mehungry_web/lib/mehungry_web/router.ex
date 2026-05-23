@@ -160,7 +160,7 @@ defmodule MehungryWeb.Router do
       live "/profile/show_recipe/:recipe_id", ProfileLive.Index, :show_recipe
 
       live "/show_recipe/:id", HomeLive.Index, :show_recipe
-      live "/share_social_media/:id", HomeLive.Index, :share_social_media
+      live "/share_social_media/:id/:social_media", HomeLive.Index, :share_social_media
 
       live "/search/", RecipeBrowserLive.Index, :index
       live "/search/:query", RecipeBrowserLive.Index, :index

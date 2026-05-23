@@ -11,7 +11,6 @@ import "selectize";
 import { fix_navigation_active } from './navigation.js';
 import { Hooks } from './hooks.js'
 import { Uploaders } from './uploaders.js'
-import { multiselect } from './select.js';
 import Alpine from 'alpinejs'
 
 window.Alpine = Alpine
@@ -22,41 +21,6 @@ window.addEventListener("phx:js-exec", ({detail}) => {
       liveSocket.execJS(el, el.getAttribute(detail.attr))
   })
 })
-
-
-function toggleMenu() {
-	console.log("toogle mennu")
-}
- 
-window.addEventListener('load', function() {
-	var modal = document.getElementById('modal');
-	if (modal) {
-		console.log(modal);
-		modal.removeAttribute('style');
-	}
-
- 	//document.getElementById("modal").style.visibility = "visible";
-	//modal.classList.remove("is-closing")
-	//modal.classList.add("is-closed");
-	//modal.classList.add("portfolio-modal");
-
-});
-
-$(".portfolio-modal").on("animationend", function(e) {
-	if (e.originalEvent.animationName === 'modalFadeOut') {
-		this.classList.remove("is-closing");
-		this.classList.add("is-closed");
-	}
-
-});
-
-$(".portfolio-modal").on("animationstart", function(e) {
-	if (e.originalEvent.animationName === 'modalFadeOut') {
-		//this.classList.remove("is-closing");
-		//this.classList.add("is-closed");
-	}
-
-});
 
 
 

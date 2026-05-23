@@ -36,22 +36,19 @@ defmodule MehungryWeb.SocialMediaPostComponent do
 
   @impl true
   def handle_event("validate", pages_params, socket) do
-    changeset =
-      changeset = FacebookPost.change_facebook_post(socket.assigns.post, pages_params)
+    inner = pages_params["facebook_post"] || %{}
+    changeset = FacebookPost.change_facebook_post(socket.assigns.post, inner)
 
-    # form = to_form(changeset)
-
-    socket =
-      socket
-      |> assign(:changeset, changeset)
-
-    {:noreply, socket}
+    {:noreply, assign(socket, :changeset, changeset)}
   end
 
   @impl true
   def handle_event("post", params, socket) do
+    parent = self()
+
     Task.start(fn ->
-      pages = String.split(params[:pages], ",")
+      pages_str = get_in(params, ["facebook_post", "pages"]) || ""
+      pages = String.split(pages_str, ",", trim: true)
       pages = Enum.map(pages, fn x -> Map.get(socket.assigns.user.facebook_token, x, nil) end)
 
       recipe = socket.assigns.recipe
@@ -62,25 +59,18 @@ defmodule MehungryWeb.SocialMediaPostComponent do
           result = Facebook.post_recipe_container(user, recipe, x)
 
           case result do
-            %HTTPoison.Response{status_code: status_code, body: body} ->
+            {:ok, %HTTPoison.Response{status_code: status_code, body: body}} ->
               {x["name"], status_code, body}
+
+            {:error, %HTTPoison.Error{reason: reason}} ->
+              {x["name"], 0, Jason.encode!(%{"error" => %{"message" => inspect(reason)}})}
           end
         end)
 
-      pages
-      notify_parent(self(), %{post_result: pages})
+      notify_parent(parent, %{post_result: pages})
     end)
 
-    # notify_parent(%{post: "asfdafsd"})
-
-    {:noreply,
-     socket
-     |> assign(:state, :posting)}
-  end
-
-  @impl true
-  def handle_event("post", params, socket) do
-    {:noreply, socket}
+    {:noreply, assign(socket, :state, :posting)}
   end
 
   @impl true
@@ -111,7 +101,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
 
       :normal ->
         ~H"""
-        <div class="relative h-full" style="min-height: 55vh;">
+        <div class="relative h-full bg-slate-800 p-4" style="min-height: 55vh;">
           <h3 class="w-fit m-auto">Share on Facebook</h3>
           <%= case Enum.empty?(assigns.user.facebook_token) do %>
             <% true -> %>
@@ -124,7 +114,6 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                 phx-change="validate"
                 phx-submit="post"
                 phx-target={@myself}
-                phx-change="validate"
               >
                 <.live_component
                   module={MehungryWeb.SelectComponent}
@@ -138,7 +127,12 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                   id={@recipe.id}
                   input_variable={:pages}
                 />
-                <button type="submit" class="primary_button absolute bottom-0 right-0">Post</button>
+                <button
+                  type="submit"
+                  class="text-white bg-primary-500 absolute bottom-5 right-5 px-4 py-2 rounded-full font-semibold "
+                >
+                  Post
+                </button>
               </.form>
           <% end %>
         </div>

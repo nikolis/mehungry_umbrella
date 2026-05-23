@@ -195,8 +195,17 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   defp apply_action(socket, :import_items, %{"id" => id} = _params) do
     maybe_track_user(%{}, socket)
 
-    processing_basket = Inventory.get_shopping_basket!(id)
-    assign(socket, :processing_basket, processing_basket)
+    case Inventory.get_shopping_basket!(id) do
+      basket ->
+        # Handle success
+        assign(socket, :processing_basket, basket)
+
+      {:error, :not_found} ->
+        # Handle not found - redirect or show error
+        socket
+        |> put_flash(:error, "Shopping basket not found")
+        |> push_navigate(to: ~p"/basket")
+    end
   end
 
   defp apply_action(socket, :new, _params) do
