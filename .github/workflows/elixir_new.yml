@@ -122,14 +122,14 @@ jobs:
 
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-     # Render ECS task definition with new image
+      # Render ECS task definition with new image
       - name: Fill in new image ID in ECS task definition
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-        task-definition: task-definition.json
-        container-name: mehungry_app
-        image: ${{ steps.build-image.outputs.image }}
+          task-definition: task-definition.json
+          container-name: mehungry_app
+          image: ${{ steps.build-image.outputs.image }}
 
       # Register task definition using AWS CLI directly
       - name: Register ECS task definition
