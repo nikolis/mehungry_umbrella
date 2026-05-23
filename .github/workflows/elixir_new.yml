@@ -131,19 +131,11 @@ jobs:
           container-name: mehungry_app
           image: ${{ steps.build-image.outputs.image }}
 
-      - name: Register ECS task definition
-        id: register-task-def
-        run: |
-          TASK_DEF_ARN=$(aws ecs register-task-definition \
-            --cli-input-json file://${{ steps.task-def.outputs.task-definition }} \
-            --query "taskDefinition.taskDefinitionArn" \
-            --output text)
-          echo "task-def-arn=$TASK_DEF_ARN" >> $GITHUB_OUTPUT
 
       - name: Run DB migrations
         env:
           ECS_CLUSTER: mehungry_cluster
-          TASK_DEFINITION: "${{ steps.register-task-def.outputs.task-def-arn }}"
+          TASK_DEFINITION: "${{ steps.task-def.outputs.task-def-arn }}"
           SUBNETS: subnet-09cf1e07290dd8745,subnet-0e737a54a16cefc1f,subnet-00a18ffb7a73744bf
           SECURITY_GROUP: sg-0a9dca773642f81cf
         run: |
