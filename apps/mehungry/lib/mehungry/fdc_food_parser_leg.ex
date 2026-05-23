@@ -216,7 +216,7 @@ defmodule Mehungry.FdcFoodParserLeg do
       {:ok, body} = Poison.decode(json_body)
       Enum.each(body, fn x -> create_ingredient(x) end)
     rescue
-      the_error ->
+      _the_error ->
         nil
     end
   end
