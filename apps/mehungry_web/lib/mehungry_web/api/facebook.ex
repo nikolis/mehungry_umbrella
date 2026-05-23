@@ -45,7 +45,7 @@ defmodule Mehungry.Api.Facebook do
     access_token = Map.get(page, "access_token", "")
     caption = build_caption(recipe)
 
-    HTTPoison.post!(
+    HTTPoison.post(
       @api_base <> @api_version <> "/" <> user_id <> "/photos",
       "",
       [{"Accept", "application/json"}],
@@ -54,7 +54,9 @@ defmodule Mehungry.Api.Facebook do
         caption: caption,
         published: true,
         access_token: access_token
-      }
+      },
+      timeout: 15_000,
+      recv_timeout: 15_000
     )
   end
 
@@ -145,7 +147,9 @@ defmodule Mehungry.Api.Facebook do
       end)
       |> Enum.sort_by(fn n ->
         name = n["name"] || ""
-        Enum.find_index(@priority_nutrients, &(String.downcase(name) == String.downcase(&1))) || 99
+
+        Enum.find_index(@priority_nutrients, &(String.downcase(name) == String.downcase(&1))) ||
+          99
       end)
       |> Enum.map(fn n ->
         name = n["name"] || ""
@@ -168,7 +172,9 @@ defmodule Mehungry.Api.Facebook do
   end
 
   defp format_qty(qty) when is_float(qty) do
-    if qty == Float.round(qty, 0), do: trunc(qty) |> to_string(), else: Float.round(qty, 1) |> to_string()
+    if qty == Float.round(qty, 0),
+      do: trunc(qty) |> to_string(),
+      else: Float.round(qty, 1) |> to_string()
   end
 
   defp format_qty(qty), do: to_string(qty)

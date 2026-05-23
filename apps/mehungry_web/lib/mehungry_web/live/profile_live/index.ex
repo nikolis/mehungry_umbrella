@@ -141,30 +141,35 @@ defmodule MehungryWeb.ProfileLive.Index do
     maybe_track_user(%{}, socket)
 
     recipe = Food.get_recipe!(id)
-    Posts.subscribe_to_recipe(%{recipe_id: id})
 
-    cancel_path =
-      if not is_nil(socket.assigns.user) and not is_nil(socket.assigns.current_user) do
-        ~p"/profile/#{socket.assigns.user.id}"
-      else
-        ~p"/profile"
-      end
+    if !is_nil(recipe) do
+      Posts.subscribe_to_recipe(%{recipe_id: id})
 
-    # {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
+      cancel_path =
+        if not is_nil(socket.assigns.user) and not is_nil(socket.assigns.current_user) do
+          ~p"/profile/#{socket.assigns.user.id}"
+        else
+          ~p"/profile"
+        end
 
-    {current_user_profile, current_user_follows, current_user_recipes} =
-      Accounts.get_user_essentials(socket.assigns.current_user)
+      # {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
 
-    socket
-    |> assign(:nutrients, recipe.nutrients)
-    |> assign(:primary_size, recipe.primary_nutrients_size)
-    |> assign(:page_title, recipe.title <> " from " <> recipe.user.email)
-    |> assign(:recipe, recipe)
-    |> assign(:current_user_follows, current_user_follows)
-    # |> assign(:user_recipes, user_recipes)
-    |> assign(:current_user_recipes, current_user_recipes)
-    |> assign(:current_user_profile, current_user_profile)
-    |> assign(:cancel_path, cancel_path)
+      {current_user_profile, current_user_follows, current_user_recipes} =
+        Accounts.get_user_essentials(socket.assigns.current_user)
+
+      socket
+      |> assign(:nutrients, recipe.nutrients)
+      |> assign(:primary_size, recipe.primary_nutrients_size)
+      |> assign(:page_title, recipe.title <> " from " <> recipe.user.email)
+      |> assign(:recipe, recipe)
+      |> assign(:current_user_follows, current_user_follows)
+      # |> assign(:user_recipes, user_recipes)
+      |> assign(:current_user_recipes, current_user_recipes)
+      |> assign(:current_user_profile, current_user_profile)
+      |> assign(:cancel_path, cancel_path)
+    else
+      socket |> put_flash(:error, "Recipe not found") |> push_navigate(to: "/home")
+    end
   end
 
   defp apply_action(socket, :edit, _params) do

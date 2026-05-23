@@ -329,44 +329,49 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
     recipe = Food.get_recipe!(id)
-    Posts.subscribe_to_recipe(%{recipe_id: id})
 
-    {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
-    user = socket.assigns.current_user
+    if !is_nil(recipe) do
+      Posts.subscribe_to_recipe(%{recipe_id: id})
 
-    socket =
-      if is_nil(Map.get(socket.assigns, :return_to, nil)) do
-        assign(socket, :return_to, ~p"/browse")
-      else
+      {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
+      user = socket.assigns.current_user
+
+      socket =
+        if is_nil(Map.get(socket.assigns, :return_to, nil)) do
+          assign(socket, :return_to, ~p"/browse")
+        else
+          socket
+        end
+
+      user_recipes =
+        case is_nil(user) do
+          true ->
+            []
+
+          false ->
+            Users.list_user_saved_recipes(user)
+            |> Enum.map(fn x -> x.recipe_id end)
+        end
+
+      socket =
         socket
-      end
+        |> assign(:nutrients, nutrients)
+        |> assign(:primary_size, primaries_length)
+        |> assign(:recipe, recipe)
+        |> assign(:page_title, recipe.title <> " Instrufacts")
+        |> assign(:page_title, %{
+          title: recipe.title <> " Instructions and nutrition facts",
+          img: recipe.image_url,
+          id: Integer.to_string(recipe.id)
+        })
+        |> assign(:user_recipes, user_recipes)
+        |> stream(:recipes, [])
 
-    user_recipes =
-      case is_nil(user) do
-        true ->
-          []
-
-        false ->
-          Users.list_user_saved_recipes(user)
-          |> Enum.map(fn x -> x.recipe_id end)
-      end
-
-    socket =
+      maybe_track_user(%{page: "browser", type: :show_recipe, recipe: recipe}, socket)
       socket
-      |> assign(:nutrients, nutrients)
-      |> assign(:primary_size, primaries_length)
-      |> assign(:recipe, recipe)
-      |> assign(:page_title, recipe.title <> " Instrufacts")
-      |> assign(:page_title, %{
-        title: recipe.title <> " Instructions and nutrition facts",
-        img: recipe.image_url,
-        id: Integer.to_string(recipe.id)
-      })
-      |> assign(:user_recipes, user_recipes)
-      |> stream(:recipes, [])
-
-    maybe_track_user(%{page: "browser", type: :show_recipe, recipe: recipe}, socket)
-    socket
+    else
+      socket |> put_flash(:error, "Recipe not found") |> push_navigate(to: "/home")
+    end
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do

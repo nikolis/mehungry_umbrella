@@ -59,8 +59,11 @@ defmodule MehungryWeb.SocialMediaPostComponent do
           result = Facebook.post_recipe_container(user, recipe, x)
 
           case result do
-            %HTTPoison.Response{status_code: status_code, body: body} ->
+            {:ok, %HTTPoison.Response{status_code: status_code, body: body}} ->
               {x["name"], status_code, body}
+
+            {:error, %HTTPoison.Error{reason: reason}} ->
+              {x["name"], 0, Jason.encode!(%{"error" => %{"message" => inspect(reason)}})}
           end
         end)
 
