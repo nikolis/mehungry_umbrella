@@ -641,7 +641,7 @@ defmodule MehungryWeb.CoreComponents do
                   <.icon name="hero-x-mark-solid" class="h-5 w-5" />
                 </button>
               </div>
-              <div id={"#{@id}-content"}>
+              <div id={"#{@id}-content"} class="text-slate-100">
                 {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
@@ -689,7 +689,7 @@ defmodule MehungryWeb.CoreComponents do
                   <.icon name="hero-x-mark-solid" class="h-5 w-5" />
                 </button>
               </div>
-              <div id={"#{@id}-content"}>
+              <div id={"#{@id}-content"} class="text-slate-100">
                 {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
@@ -962,7 +962,7 @@ defmodule MehungryWeb.CoreComponents do
 
     ~H"""
     <div phx-feedback-for={@name}>
-      <label class="flex items-center gap-4 text-md font-medium leading-6 text-zinc-600">
+      <label class="flex items-center gap-4 text-md font-medium leading-6 text-slate-300">
         <input type="hidden" name={@name} value="false" />
         <input
           type="checkbox"
@@ -1156,7 +1156,7 @@ defmodule MehungryWeb.CoreComponents do
       <%= if(@errors == []) do %>
         <.label for={@id} class="text-primary-500">{@label}</.label>
       <% else %>
-        <.label for={@id} class="text-slate-900">{@label}</.label>
+        <.label for={@id} class="text-rose-400">{@label}</.label>
       <% end %>
     </div>
     """
@@ -1328,7 +1328,7 @@ defmodule MehungryWeb.CoreComponents do
     >
       <div>
         <h1
-          class="text-lg font-semibold leading-8 text-zinc-800"
+          class="text-lg font-semibold leading-8 text-slate-100"
           style="margin-inline: auto; text-align: center; font-size: 1.6rem;"
         >
           {render_slot(@inner_block)}
