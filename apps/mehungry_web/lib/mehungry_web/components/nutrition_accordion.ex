@@ -61,14 +61,10 @@ defmodule MehungryWeb.NutritionAccordion do
     assigns = assign(assigns, nutrient_list: nutrient_list)
 
     ~H"""
-    <div
-      class="w-full max-w-full overflow-hidden  rounded-xl shadow-sm max-h-72 px-4"
-    >
+    <div class="w-full  custom-scrollbar overflow-y-auto max-w-full overflow-hidden  rounded-xl shadow-sm max-h-72 px-4">
       
     <!-- Scrollable container with proper overflow containment -->
-      <div
-        class=" overflow-y-auto custom-scrollbar  overflow-x-hidden  "
-      >
+      <div class="  overflow-x-hidden  ">
         <%= if Enum.empty?(@nutrient_list) do %>
           <div class="text-center  text-white text-sm">
             No nutrition data available

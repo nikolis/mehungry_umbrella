@@ -181,19 +181,19 @@ defmodule MehungryWeb.RecipeComponents do
     ~H"""
     <div class=" my-4 ">
       <div class="px-4">
-      <div class="bg-slate-800 border border-slate-700 divide-y custom-scrollbar divide-slate-700 overflow-auto max-h-72"  >
-        <%= for ingredient <- @recipe_ingredients do %>
-          <div class="flex justify-between items-center p-4 hover:bg-slate-700/30 transition">
-            <span class="text-white">
-              {Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name)}
-            </span>
-            <span class="text-slate-400">
-              {ingredient.quantity} {ingredient.measurement_unit.name}
-            </span>
-          </div>
-        <% end %>
+        <div class="bg-slate-800 border border-slate-700 divide-y custom-scrollbar divide-slate-700 overflow-auto max-h-72">
+          <%= for ingredient <- @recipe_ingredients do %>
+            <div class="flex justify-between items-center p-4 hover:bg-slate-700/30 transition">
+              <span class="text-white">
+                {Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name)}
+              </span>
+              <span class="text-slate-400">
+                {ingredient.quantity} {ingredient.measurement_unit.name}
+              </span>
+            </div>
+          <% end %>
+        </div>
       </div>
-    </div>
     </div>
     """
   end
@@ -202,19 +202,18 @@ defmodule MehungryWeb.RecipeComponents do
     ~H"""
     <div class=" my-4 ">
       <div class="px-4">
-    <div class="overflow-auto text-base custom-scrollbar text-black  bg-slate-800 max-h-72 px-4   ">
-      <%= for step <- @steps do %>
-        <div class="step_details_container p-4 border-b border-slate-700 ">
-          <div class="w-8 h-8 rounded-full bg-primary-500/20 text-primary-500 flex items-center justify-center font-semibold flex-shrink-0  ">
-            {step.index}
-          </div>
-          <div class="text-white">{step.description}</div>
+        <div class="overflow-auto text-base custom-scrollbar text-black  bg-slate-800 max-h-72 px-4   ">
+          <%= for step <- @steps do %>
+            <div class="step_details_container p-4 border-b border-slate-700 ">
+              <div class="w-8 h-8 rounded-full bg-primary-500/20 text-primary-500 flex items-center justify-center font-semibold flex-shrink-0  ">
+                {step.index}
+              </div>
+              <div class="text-white">{step.description}</div>
+            </div>
+          <% end %>
         </div>
-      <% end %>
+      </div>
     </div>
-    </div>
-
-  </div>
     """
   end
 

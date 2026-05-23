@@ -57,6 +57,7 @@ defmodule Mehungry.Food.NutrientCalculation do
       %{flat_nutrients: [], structured_nutrients: [], total_calories: 0, ingredient_count: 0}
     else
       ingredients = map_ingredients_to_structured_form(recipe_ingredients)
+
       {8, Map.get(calculate_nutrition_for_recipe(ingredients), :structured_nutrients)}
     end
   end
@@ -66,17 +67,25 @@ defmodule Mehungry.Food.NutrientCalculation do
   end
 
   def get_value_specific(map, key) when is_atom(key), do: map[key] || map[to_string(key)]
+
+  def get_value_specific(map, key) when is_atom(key), do: map[key] || map[to_string(key)]
   def get_value_specific(map, key) when is_binary(key), do: map[key] || map[String.to_atom(key)]
 
   def map_ingredients_to_structured_form(recipe_ingredient_params) do
+    IO.inspect(
+      "In hereasdfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    )
+
     gram =
       Repo.one(from m in Mehungry.Food.MeasurementUnit, where: like(m.name, "gram%"), limit: 1)
 
+    IO.inspect(recipe_ingredient_params,
+      label: "In herererererererre5////////////////////////////////////////////////////"
+    )
+
     ingredient_ids =
       recipe_ingredient_params
-      |> Map.values()
-      |> Enum.map(&String.to_integer(&1["ingredient_id"]))
-      |> Enum.uniq()
+      |> Enum.map(fn x -> x.ingredient_id end)
 
     ingredients =
       Repo.all(
@@ -95,9 +104,8 @@ defmodule Mehungry.Food.NutrientCalculation do
 
     recipe_ingredients_with_nutrients =
       recipe_ingredient_params
-      |> Map.values()
       |> Enum.map(fn params ->
-        ingredient_id = String.to_integer(params["ingredient_id"])
+        ingredient_id = params.ingredient_id
 
         ingredient =
           Map.fetch!(ingredients_by_id, ingredient_id)
@@ -105,14 +113,14 @@ defmodule Mehungry.Food.NutrientCalculation do
         gram_weight =
           calculate_gram_weight(
             ingredient,
-            get_value(params, :measurement_unit_id),
-            get_value(params, :quantity),
+            params.measurement_unit_id,
+            params.quantity,
             gram
           )
 
         %{
-          quantity: params["quantity"],
-          measurement_unit_id: params["measurement_unit_id"],
+          quantity: params.quantity,
+          measurement_unit_id: params.measurement_unit_id,
           ingredient: ingredient,
           nutrients: build_nutrient_list(ingredient, gram_weight),
           gram_weight: gram_weight
@@ -185,8 +193,6 @@ defmodule Mehungry.Food.NutrientCalculation do
             name
 
           _ ->
-            IO.inspect(nutrient_entry, label: "Nutrient entry")
-
             "g"
         end
 
@@ -283,7 +289,6 @@ defmodule Mehungry.Food.NutrientCalculation do
 
   def pretty_print_nutrition(nutrition_result) do
     IO.puts("\n" <> String.duplicate("=", 50))
-    IO.puts("📊 NUTRITION SUMMARY")
     IO.puts(String.duplicate("=", 50))
     IO.puts("Total Calories: #{Float.round(nutrition_result.total_calories, 0)} kcal")
     IO.puts("Number of Ingredients: #{nutrition_result.ingredient_count}")
