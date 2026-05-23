@@ -12,9 +12,15 @@ import Config
 config :mehungry,
   ecto_repos: [Mehungry.Repo]
 
-config :my_app, Oban,
-  repo: MyApp.Repo,
-  queues: [feeders: 1]
+config :mehungry, Oban,
+  repo: Mehungry.Repo,
+  plugins: [
+    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24}
+  ],
+  queues: [
+    default: 10,
+    mailers: 5
+  ]
 
 config :swarm,
   distribution_strategy: Swarm.Distribution.StaticQuorumRing,

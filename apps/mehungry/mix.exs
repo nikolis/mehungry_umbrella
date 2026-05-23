@@ -42,6 +42,8 @@ defmodule Mehungry.MixProject do
       {:hackney, "~> 1.18.1"},
       {:ex_aws, "~> 2.1"},
       {:aws, "~> 1.0.0"},
+      {:oban, "~> 2.17"},
+      {:igniter, "~> 0.6", only: [:dev, :test]},
       {:hackney, "~> 1.18"},
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},

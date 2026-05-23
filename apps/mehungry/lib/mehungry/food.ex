@@ -653,43 +653,39 @@ defmodule Mehungry.Food do
 
     result =
       if changeset.valid? do
-        put_nutrient_info(changeset, attrs)
-        |> Repo.update()
+        Repo.update(changeset)
       else
         {:error, changeset}
       end
 
     case result do
-      {:ok, recipe} ->
+      {:ok, %Recipe{} = recipe} ->
+        %{
+          recipe_id: recipe.id
+        }
+        |> Mehungry.RecipePutNutrientsWorker.new()
+        |> Oban.insert()
+
+        Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
+
         case Map.get(attrs, "image_url") do
           nil ->
-            Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
             result
 
           image_url ->
-            if(!is_nil(recipe_origin.image_url)) do
-              file_name = List.last(String.split(recipe_origin.image_url, "/"))
+            %{
+              recipe_id: recipe.id,
+              origin_url: recipe_origin.image_url,
+              new_url: recipe.image_url
+            }
+            |> Mehungry.RecipeCreationWorker.new()
+            |> Oban.insert()
 
-              ExAws.S3.delete_object("test-bucket-local-mehungry", file_name)
-              |> ExAws.request(region: "eu-central-1")
-            end
-
-            posts = Repo.all(from p in Post, where: p.reference_id == ^recipe.id)
-
-            posts
-            |> Enum.each(fn x ->
-              Posts.update_post(x, %{md_media_url: image_url})
-            end)
-
-            if length(posts) == 0 do
-              create_post = Mehungry.Posts.create_post(recipe)
-            end
-
-            Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
             result
         end
 
-      {:error, _} ->
+      {:error, changeset} ->
+        Logger.warning("Trying to save with errors #{inspect(changeset.errors)} ")
         result
     end
   end
@@ -709,16 +705,27 @@ defmodule Mehungry.Food do
   end
 
   def put_nutrient_info(%Ecto.Changeset{valid?: true} = changeset, attrs) do
+    start = System.monotonic_time()
+
     {primary_size, nutrients} =
       Mehungry.Food.NutrientCalculation.calculate_recipe_nutrition_value(attrs)
 
     if Enum.empty?(nutrients) do
+      duration = System.monotonic_time(start) |> System.convert_time_unit(:native, :millisecond)
+      Logger.warning("nutrition calculation(empty): #{duration}ms for recipe")
+
       changeset
     else
       nutrients =
         nutrients
         |> Enum.map(fn x -> Map.new([{x.name, x}]) end)
         |> Enum.reduce(&Map.merge/2)
+
+      duration =
+        (System.monotonic_time() - start)
+        |> System.convert_time_unit(:native, :millisecond)
+
+      Logger.warning("nutrition calculation: #{duration}ms for recipe")
 
       changeset
       |> Ecto.Changeset.put_change(:nutrients, nutrients)
@@ -755,24 +762,20 @@ defmodule Mehungry.Food do
 
     result =
       if changeset.valid? do
-        put_nutrient_info(changeset, attrs)
-        |> Repo.insert()
+        Repo.insert(changeset)
       else
+        Logger.warning("Trying to save with errors #{inspect(changeset.errors)} ")
         {:error, changeset}
       end
 
     case result do
       {:ok, %Recipe{} = recipe} ->
-        recipe =
-          recipe
-          |> Repo.preload([
-            [recipe_ingredients: [:measurement_unit, :ingredient]],
-            :user,
-            comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
-          ])
+        %{
+          recipe_id: recipe.id
+        }
+        |> Mehungry.RecipePutNutrientsWorker.new()
+        |> Oban.insert()
 
-        Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
-        create_post = Mehungry.Posts.create_post(recipe)
         result
 
       _ ->

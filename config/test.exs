@@ -1,4 +1,5 @@
 import Config
+config :mehungry, Oban, testing: :manual
 
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
@@ -25,7 +26,10 @@ config :mehungry, :sql_sandbox, true
 
 # Chrome
 # default
-config :wallaby, opt_app: :mehungry_web, chromedriver: [headless: false], driver: Wallaby.Chrome
+config :wallaby,
+  opt_app: :mehungry_web,
+  chromedriver: [headless: System.get_env("CI") == "true"],
+  driver: Wallaby.Chrome
 
 # Selenium
 # config :wallaby, driver: Wallaby.Selenium
