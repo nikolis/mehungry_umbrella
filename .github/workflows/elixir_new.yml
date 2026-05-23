@@ -132,6 +132,15 @@ jobs:
           image: ${{ steps.build-image.outputs.image }}
 
 
+        # Register the task definition in ECS
+      - name: Register ECS task definition
+        id: register-task-def
+        uses: aws-actions/amazon-ecs-register-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          family: mehungry_app
+
+      
       - name: Run DB migrations
         env:
           ECS_CLUSTER: mehungry_cluster
