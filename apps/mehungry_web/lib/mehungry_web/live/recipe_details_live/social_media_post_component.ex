@@ -46,7 +46,8 @@ defmodule MehungryWeb.SocialMediaPostComponent do
     parent = self()
 
     Task.start(fn ->
-      pages = String.split(params["pages"], ",")
+      pages_str = get_in(params, ["facebook_post", "pages"]) || ""
+      pages = String.split(pages_str, ",", trim: true)
       pages = Enum.map(pages, fn x -> Map.get(socket.assigns.user.facebook_token, x, nil) end)
 
       recipe = socket.assigns.recipe
