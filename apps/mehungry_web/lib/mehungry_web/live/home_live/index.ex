@@ -188,6 +188,11 @@ defmodule MehungryWeb.HomeLive.Index do
   end
 
   @impl true
+  def handle_info({MehungryWeb.SocialMediaPostComponent, :close}, socket) do
+    {:noreply, push_patch(socket, to: ~p"/home")}
+  end
+
+  @impl true
   def handle_info(%{new_vote: vote, type_: _type_}, socket) do
     post = Posts.get_post!(vote.post_id)
 

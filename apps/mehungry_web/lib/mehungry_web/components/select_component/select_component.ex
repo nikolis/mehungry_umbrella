@@ -308,6 +308,7 @@ defmodule MehungryWeb.SelectComponent do
             listing_open={@listing_open}
             items={@items}
             selected_items={@selected_items}
+            mode={@mode}
           />
         </div>
         <!-- End Component -->
@@ -320,7 +321,7 @@ defmodule MehungryWeb.SelectComponent do
 
   def list_selected(%{mode: :multi} = assigns) do
     ~H"""
-    <div class=" h-full flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-2 sm:col-span-2 	 ">
+    <div class="w-fit h-full flex activated:min-h-screen flex-col items-center justify-center overflow-hidden  col-span-2 sm:col-span-2 	 ">
       <!-- Tags (Selected) -->
 
 
@@ -371,7 +372,7 @@ defmodule MehungryWeb.SelectComponent do
       phx-value-id={@id}
       phx-target={@myself}
       tabindex="0"
-      class="relative h-full w-fit my-2 mx-auto px-2 py-1.5 border  border-slate-800 rounded-md cursor-pointer hover:bg-gray-100 after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2  ring-inset transition-all"
+      class="relative h-full w-fit my-2 mx-auto px-2 py-1.5 border  border-slate-800 rounded-md cursor-pointer  after:content-['x'] after:ml-1.5 after:text-red-300 outline-none focus:outline-none ring-0 focus:ring-2  ring-inset transition-all text-white"
     >
       {@name}
     </div>
@@ -402,10 +403,6 @@ defmodule MehungryWeb.SelectComponent do
   defp input_search(%{mode: :multi} = assigns) do
     ~H"""
     <div class="relative h-full">
-      <%= for x <- @selected_items do %>
-        <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode} name={elem(x, 1)} />
-      <% end %>
-
       <.input
         phx-focus="search_input_focus"
         phx-target={@myself}
@@ -415,9 +412,14 @@ defmodule MehungryWeb.SelectComponent do
             String.to_atom("search_input" <> Atom.to_string(@input_variable))
           ]
         }
-        type="saerch"
-        class="h-full test flex-grow   outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full relative"
+        type="text"
+        class="h-full flex-grow outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full relative pr-16"
       />
+      <%= if length(@selected_items) > 0 do %>
+        <span class="absolute right-8 top-1/2 -translate-y-1/2 bg-primary-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full pointer-events-none">
+          {length(@selected_items)}
+        </span>
+      <% end %>
       <.arrow_down_svg myself={@myself} selected_items_length={length(@selected_items)} mode={@mode} />
     </div>
     """
@@ -446,17 +448,20 @@ defmodule MehungryWeb.SelectComponent do
   # ----------------------------------------------------------------------------------------------------- END List Selected   ------------------------------------------------------
   # ----------------------------------------------------------------------------------------------------- Search Result -----------------------------------------------------------
   defp list_search_result(assigns) do
+    selected_ids = MapSet.new(assigns.selected_items, &elem(&1, 0))
+    assigns = assign(assigns, :selected_ids, selected_ids)
+
     ~H"""
-    <div class=" max-h-50 overflow-y-auto pr-2">
-      <ul class="text-white absolute left-0 bg-slate-700 max-h-40 overflow-y-scroll">
+    <div class="max-h-50 overflow-y-auto pr-2 w-fit">
+      <ul class="text-white absolute left-0 bg-slate-700 max-h-40 overflow-y-scroll min-w-40 z-50">
         <%= if @listing_open do %>
           <%= for x <- @items do %>
-            <!-- Item Element -->
-            <.option_item myself={@myself} x={x} />
-            <!-- Empty Text -->
-            <div>
-              <li class="cursor-pointer px-2 py-2 text-gray-400"></li>
-            </div>
+            <.option_item
+              myself={@myself}
+              x={x}
+              selected={MapSet.member?(@selected_ids, elem(x, 0))}
+              mode={@mode}
+            />
           <% end %>
         <% end %>
       </ul>
@@ -464,21 +469,30 @@ defmodule MehungryWeb.SelectComponent do
     """
   end
 
-  defp option_item(assigns) do
+  defp option_item(%{selected: true} = assigns) do
     ~H"""
-    <div class="relative z-50">
-      <div class="">
-        <li
-          class="hover:bg-slate-500 cursor-pointer px-2 py-2 bg-slate-700 "
-          phx-click="handle-item-click"
-          phx-value-id={elem(@x, 0)}
-          id={elem(@x, 0)}
-          phx-target={@myself}
-        >
-          {elem(@x, 1)}
-        </li>
-      </div>
-    </div>
+    <li
+      class="flex items-center gap-2 cursor-pointer px-3 py-2 bg-slate-600 text-primary-300 hover:bg-slate-500 relative z-50"
+      phx-click="handle-selected-item-click"
+      phx-value-id={elem(@x, 0)}
+      phx-target={@myself}
+    >
+      <.icon name="hero-check" class="h-4 w-4 text-primary-400 flex-shrink-0" />
+      {elem(@x, 1)}
+    </li>
+    """
+  end
+
+  defp option_item(%{selected: false} = assigns) do
+    ~H"""
+    <li
+      class="flex items-center gap-2 cursor-pointer px-3 py-2 bg-slate-700 hover:bg-slate-500 pl-9 relative z-50"
+      phx-click="handle-item-click"
+      phx-value-id={elem(@x, 0)}
+      phx-target={@myself}
+    >
+      {elem(@x, 1)}
+    </li>
     """
   end
 
@@ -500,7 +514,7 @@ defmodule MehungryWeb.SelectComponent do
       height="24"
       stroke-width="0"
       fill="#ccc"
-      class="absolute right-2  -translate-y-1/2 cursor-pointer focus:outline-none z-50"
+      class="absolute top-2 right-2  -translate-y-1/2 cursor-pointer focus:outline-none z-50"
       style=" top: 50%; transform: translateY(-50%);"
       tabindex="-1"
     >
