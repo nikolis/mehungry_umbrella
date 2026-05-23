@@ -143,18 +143,19 @@ jobs:
       - name: Run DB migrations
         env:
           ECS_CLUSTER: mehungry_cluster
-          TASK_DEFINITION: "${{ steps.register-task-def.outputs.task-def-arn }}"
+          TASK_DEFINITION: "${{ steps.task-def.outputs.task-definition }}"
           SUBNETS: subnet-09cf1e07290dd8745,subnet-0e737a54a16cefc1f,subnet-00a18ffb7a73744bf
           SECURITY_GROUP: sg-0a9dca773642f81cf
         run: |
           set -e
 
           echo "Starting migration task..."
+          echo "Task definition file: $TASK_DEFINITION"
 
           TASK_ARN=$(aws ecs run-task \
             --cluster $ECS_CLUSTER \
             --launch-type FARGATE \
-            --task-definition $TASK_DEFINITION \
+            --task-definition file://$TASK_DEFINITION \
             --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUP],assignPublicIp=ENABLED}" \
             --overrides '{
               "containerOverrides": [
@@ -166,6 +167,8 @@ jobs:
             }' \
             --query "tasks[0].taskArn" \
             --output text)
+
+          # ... rest of the script remains the same
 
           echo "Started migration task: $TASK_ARN"
 
