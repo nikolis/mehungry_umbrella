@@ -1,33 +1,19 @@
-<div class="invisible  md:visible h-screen w-20 md:w-64 bg-white shadow-lg fixed top-0 left-0 p-4 flex flex-col border-r-4 border-[#85cb33]">
-  <nav class="flex flex-col space-y-6">
-    <!-- Home (M3Hungry) -->
-    <a href="/" class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg">
+<div class="invisible md:visible h-screen w-16 md:w-60 bg-slate-900 border-r border-slate-800 fixed top-0 left-0 flex flex-col z-40">
+  <!-- Logo -->
+  <div class="px-4 py-5 border-b border-slate-800 flex-shrink-0">
+    <a href="/" class="flex items-center gap-3 px-2 rounded-lg">
       {MehungryWeb.SvgComponents.get_logo(%{id: "Main menu"})}
     </a>
-    <!-- Create Recipe -->
-    <a
-      href="/create_recipe"
-      class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
-    >
-      <svg
-        class="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16"></path>
-      </svg>
-      <span class="hidden md:block text-lg">Create </span>
-    </a>
-    <!-- Search Recipe -->
+  </div>
+
+  <!-- Main navigation -->
+  <nav class="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
     <a
       href="/browse"
-      class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
     >
       <svg
-        class="w-6 h-6"
+        class="w-5 h-5 flex-shrink-0"
         fill="none"
         stroke="currentColor"
         stroke-width="2"
@@ -41,80 +27,69 @@
         >
         </path>
       </svg>
-      <span class="hidden md:block text-lg">Search </span>
+      <span class="hidden md:block text-sm font-medium">Browse</span>
     </a>
-    <!-- Calendar -->
+
+    <a
+      href="/create_recipe"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+    >
+      <svg
+        class="w-5 h-5 flex-shrink-0"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16"></path>
+      </svg>
+      <span class="hidden md:block text-sm font-medium">Create Recipe</span>
+    </a>
+
     <a
       href="/calendar"
-      class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
     >
-      <.icon name="hero-calendar" class="h-7 w-7" />
-      <span class="hidden md:block text-lg">Calendar</span>
+      <.icon name="hero-calendar" class="h-5 w-5 flex-shrink-0" />
+      <span class="hidden md:block text-sm font-medium">Calendar</span>
     </a>
-    <!-- Basket -->
+
     <a
       href="/basket"
-      class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
     >
-      <.icon name="hero-shopping-cart" class="h-7 w-7" />
-      <span class="hidden md:block text-lg">Basket</span>
+      <.icon name="hero-shopping-cart" class="h-5 w-5 flex-shrink-0" />
+      <span class="hidden md:block text-sm font-medium">Basket</span>
     </a>
-    <!-- Profile -->
+  </nav>
+
+  <!-- Bottom: profile / login -->
+  <div class="p-3 border-t border-slate-800 flex-shrink-0">
     <%= if @current_user do %>
       <a
         href="/profile"
-        class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+        class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
       >
         <img
           src={@current_user.profile_pic}
-          ,
-          style=" border-radius: 50%;"
-          class={"w-7 h-7 nav_link_basic " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
+          class={"w-6 h-6 rounded-full flex-shrink-0 object-cover " <> if String.length(@query_string) > 1, do: "invisible", else: ""}
         />
-
-        <span class="hidden md:block text-lg">Profile</span>
+        <span class="hidden md:block text-sm font-medium">Profile</span>
       </a>
     <% else %>
       <a
         href="/users/log_in"
-        class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
       >
-        <img
-          src="/images/log-in-outline.svg"
-          class={"h-8 w-8 nav_link_basic "<> if String.length(@query_string) > 1, do: "hidden", else: ""}
-        />
-        <span class="hidden md:block text-lg">Log in</span>
+        <.icon name="hero-arrow-right-on-rectangle" class="h-5 w-5 flex-shrink-0" />
+        <span class="hidden md:block text-sm font-medium">Log in</span>
       </a>
     <% end %>
-    
-<!-- Professional (conditionally) -->
-    <div id="professional-menu" class="hidden">
-      <a
-        href="#"
-        class="flex items-center space-x-4 cursor-pointer p-2 rounded-lg hover:bg-[#00a0d0]"
-      >
-        <svg
-          class="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 2a10 10 0 100 20 10 10 0 000-20zM12 6a4 4 0 110 8 4 4 0 010-8z"
-          >
-          </path>
-        </svg>
-        <span class="hidden md:block text-lg">Professional</span>
-      </a>
-    </div>
-  </nav>
+  </div>
 </div>
 
-<!-- Content Area -->
-<div class="md:ml-64 h-full">
+<!-- Content area offset -->
+<div class="md:ml-60 h-full">
   {@inner_content}
 </div>
