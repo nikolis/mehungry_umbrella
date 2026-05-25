@@ -361,55 +361,77 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
           <%# SECOND CHILD — 0fr row, collapses: meal content %>
           <div>
-            <div class="p-2 sm:p-3 space-y-2">
-              <%= for meal <- Enum.filter(@user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end) do %>
-                <%= for re_u_m <- meal.recipe_user_meals do %>
-                  <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
-                    <.card_meal
-                      card_meal_text="text-white"
-                      actual_meal={meal}
-                      img_url={re_u_m.img_url}
-                      title={re_u_m.title}
-                      nutrients={re_u_m.recipe_nutrients}
-                      cooking_portions={re_u_m.cooking_portions}
-                      consume_portions={re_u_m.consume_portions}
-                      myself={@myself}
-                      recipe={
-                        %{
-                          nutrients: re_u_m.recipe_nutrients,
-                          primary_size: re_u_m.primary_size,
-                          servings: re_u_m.servings,
-                          id: Integer.to_string(re_u_m.recipe_id) <> Integer.to_string(meal.id)
+            <% day_meals = Enum.filter(@user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end) %>
+            <%= if day_meals == [] do %>
+              <div class="flex flex-col items-center gap-3 py-8 px-4">
+                <div class="w-14 h-14 rounded-full bg-slate-700/60 border border-slate-600/50 flex items-center justify-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.2"
+                    stroke="currentColor"
+                    class="size-7 text-slate-500"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-1.5-.75M3 13.5l1.5.75a3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 1.5-.75M3 13.5v6.75a.75.75 0 0 0 .75.75h16.5a.75.75 0 0 0 .75-.75V13.5" />
+                  </svg>
+                </div>
+                <div class="text-center">
+                  <p class="text-slate-400 text-sm font-medium">No meals planned</p>
+                  <p class="text-slate-600 text-xs mt-0.5">Tap <span class="text-primary-500 font-semibold">+</span> to add one</p>
+                </div>
+              </div>
+            <% else %>
+              <div class="p-2 sm:p-3 space-y-2">
+                <%= for meal <- day_meals do %>
+                  <%= for re_u_m <- meal.recipe_user_meals do %>
+                    <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
+                      <.card_meal
+                        card_meal_text="text-white"
+                        actual_meal={meal}
+                        img_url={re_u_m.img_url}
+                        title={re_u_m.title}
+                        nutrients={re_u_m.recipe_nutrients}
+                        cooking_portions={re_u_m.cooking_portions}
+                        consume_portions={re_u_m.consume_portions}
+                        myself={@myself}
+                        recipe={
+                          %{
+                            nutrients: re_u_m.recipe_nutrients,
+                            primary_size: re_u_m.primary_size,
+                            servings: re_u_m.servings,
+                            id: Integer.to_string(re_u_m.recipe_id) <> Integer.to_string(meal.id)
+                          }
                         }
-                      }
-                    />
+                      />
+                    <% end %>
+                  <% end %>
+                  <%= for re_u_m <- meal.ingredient_user_meals do %>
+                    <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
+                      <.card_meal
+                        card_meal_text="text-white"
+                        myself={@myself}
+                        actual_meal={meal}
+                        img_url={re_u_m.img_url}
+                        title={re_u_m.title}
+                        cooking_portions={re_u_m.portions}
+                        consume_portions={nil}
+                        recipe={
+                          %{
+                            nutrients:
+                              Mehungry.Food.RecipeUtils.reform_nutrients(re_u_m.recipe.nutrients),
+                            primary_size: re_u_m.primary_size,
+                            servings: re_u_m.portions,
+                            id: Integer.to_string(re_u_m.recipe.id) <> Integer.to_string(meal.id)
+                          }
+                        }
+                      />
+                    <% end %>
                   <% end %>
                 <% end %>
-                <%= for re_u_m <- meal.ingredient_user_meals do %>
-                  <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
-                    <.card_meal
-                      card_meal_text="text-white"
-                      myself={@myself}
-                      actual_meal={meal}
-                      img_url={re_u_m.img_url}
-                      title={re_u_m.title}
-                      cooking_portions={re_u_m.portions}
-                      consume_portions={nil}
-                      recipe={
-                        %{
-                          nutrients:
-                            Mehungry.Food.RecipeUtils.reform_nutrients(re_u_m.recipe.nutrients),
-                          primary_size: re_u_m.primary_size,
-                          servings: re_u_m.portions,
-                          id: Integer.to_string(re_u_m.recipe.id) <> Integer.to_string(meal.id)
-                        }
-                      }
-                    />
-                  <% end %>
-                <% end %>
-              <% end %>
-              {get_chart(@user_meals, day, "text-white")}
-            </div>
+                {get_chart(@user_meals, day, "text-white")}
+              </div>
+            <% end %>
           </div>
         </div>
       </div>
