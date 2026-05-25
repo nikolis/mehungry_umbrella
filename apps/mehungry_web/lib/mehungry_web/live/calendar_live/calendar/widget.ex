@@ -7,73 +7,105 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
   alias Mehungry.NutrientUtils, as: Nu
 
-  def get_chart(user_meals, day, text) do
+  def get_chart(user_meals, day, _text) do
     meals = Enum.filter(user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end)
 
-    if(meals == []) do
+    if meals == [] do
       nil
     else
       total_nutrients = Nu.summarize_meals_nutrients(meals)
       nutrients_sorted = Mehungry.Food.RecipeUtils.sort_nutrients_from_db(total_nutrients)
 
-      assigns = %{recipe: %{nutrients: total_nutrients, id: "test_id", primary_size: 5}}
+      meal_count = length(meals)
+
+      total_items =
+        Enum.sum(
+          Enum.map(meals, fn m ->
+            length(m.recipe_user_meals) + length(m.ingredient_user_meals)
+          end)
+        )
+
+      extract = fn key ->
+        case Enum.find(nutrients_sorted, fn {{label, _}, _} -> String.contains?(label, key) end) do
+          {{_, %{"amount" => a}}, _} -> a * 1.0
+          _ -> 0.0
+        end
+      end
+
+      energy_kcal = extract.("Energy") |> round()
+      protein_g = extract.("Protein") |> Float.round(1)
+      carbs_g = extract.("Carbohydrates") |> Float.round(1)
+      fat_g = extract.("Total Fat") |> Float.round(1)
 
       data =
-        Enum.slice(nutrients_sorted, 0, 5)
+        nutrients_sorted
+        |> Enum.reject(fn {{label, _}, _} -> String.contains?(label, "Energy") end)
+        |> Enum.take(5)
         |> Enum.map(fn {{label, %{"amount" => amount}}, _} ->
-          %{"category" => label, "value" => amount}
-        end)
-        |> Enum.filter(fn %{"category" => label, "value" => amount} ->
-          !String.contains?(label, "Energy")
-        end)
-        |> Enum.map(fn %{"category" => c, "value" => v} ->
           cleaned =
-            c
+            label
             |> String.replace("\n", " ")
             |> String.replace(~r/\s+/, " ")
             |> String.trim()
 
-          %{category: cleaned, value: v}
+          %{category: cleaned, value: amount}
         end)
 
-      spec =
-        spec =
-        Vl.new(width: 400, height: 400)
-        |> Vl.data_from_values(data)
-        |> Vl.encode_field(:theta, "value", type: :quantitative)
-        |> Vl.encode_field(:color, "category", type: :nominal)
-        |> Vl.encode(:tooltip, [
-          [field: "category", type: :nominal],
-          [field: "value", type: :quantitative]
-        ])
-        |> Vl.to_spec()
+      recipe = %{
+        nutrients: total_nutrients,
+        id: "overview_#{Date.to_string(day)}",
+        primary_size: 5
+      }
 
-      spec =
-        put_in(spec, ["mark"], %{
-          "type" => "arc",
-          "innerRadius" => 40,
-          "radius" => 160
-        })
-
-      assigns = Map.put(assigns, :spec, spec)
-      assigns = Map.put(assigns, :data, data)
+      assigns = %{
+        recipe: recipe,
+        data: data,
+        day: day,
+        meal_count: meal_count,
+        total_items: total_items,
+        energy_kcal: energy_kcal,
+        protein_g: protein_g,
+        carbs_g: carbs_g,
+        fat_g: fat_g
+      }
 
       ~H"""
-      <div class="m-auto flex flex-wrap gap-8 ">
-        <h3 class={"m-auto " <> text }>Overview</h3>
-        <div class=" m-auto pb-4">
-          {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
+      <div class="mt-2 rounded-xl border border-slate-600 overflow-hidden bg-slate-800">
+        <%# Stats header %>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 bg-slate-700/50 border-b border-slate-700">
+          <span class="text-slate-200 font-semibold text-sm">Daily Summary</span>
+          <div class="flex flex-wrap gap-2 ml-auto">
+            <span class="px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 text-xs">
+              {@meal_count} meal{if @meal_count != 1, do: "s"} · {@total_items} item{if @total_items != 1, do: "s"}
+            </span>
+            <span class="px-2.5 py-0.5 rounded-full bg-primary-500/20 text-primary-300 text-xs font-semibold">
+              {@energy_kcal} kcal
+            </span>
+            <span class="px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 text-xs">
+              {@protein_g}g protein
+            </span>
+            <span class="px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 text-xs">
+              {@carbs_g}g carbs
+            </span>
+            <span class="px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 text-xs">
+              {@fat_g}g fat
+            </span>
+          </div>
         </div>
-
-        <div class="m-auto">
-          <!-- <div class="" id="chart" phx-hook="VegaLite" data-spec={Jason.encode!(@spec)}></div>-->
-          <.live_component
-            module={MehungryWeb.CalendarLive.Calendar.PieChart}
-            id={"nutrition-chart23" <> Date.to_string(day)}
-            data={@data}
-            origin_id={"nutrition-chart23" <> Date.to_string(day)}
-            size="20rem"
-          />
+        <%# Two-column: nutrition accordion left, pie chart right %>
+        <div class="flex flex-col sm:flex-row min-h-0">
+          <div class="flex-1 sm:border-r border-b sm:border-b-0 border-slate-700 overflow-y-auto" style="max-height: 400px;">
+            {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
+          </div>
+          <div class="flex-1 flex items-center justify-center p-4 sm:p-6">
+            <.live_component
+              module={MehungryWeb.CalendarLive.Calendar.PieChart}
+              id={"nutrition-chart23" <> Date.to_string(@day)}
+              data={@data}
+              origin_id={"nutrition-chart23" <> Date.to_string(@day)}
+              size="20rem"
+            />
+          </div>
         </div>
       </div>
       """
@@ -89,14 +121,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
       false ->
         ~H"""
-        <div class="h-full" id="calendar_widget">
-          <div class="w-full relative">
+        <div class="bg-slate-900 pb-20" id="calendar_widget">
+          <div class="relative flex items-center px-3 py-3 sm:px-4">
             <.button_add_meal current_date={@current_date} myself={@myself} />
 
-            <div class="flex px-2 py-2 gap-2 bg-greyfriend1 justify-center border-2 rounded-full border-greyfriend3 	m-auto w-fit">
+            <div class="flex px-3 py-2 gap-3 bg-slate-800 justify-center border border-slate-700 rounded-full mx-auto w-fit shadow-lg">
               <button
                 type="button"
-                class="w-fit text-slate-500 font-medium"
+                class="w-fit text-slate-400 hover:text-white transition-colors"
                 phx-target={@myself}
                 phx-click="prev-month"
               >
@@ -112,7 +144,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                 </svg>
               </button>
 
-              <h3 class="text-center text-lg font-semibold ">
+              <h3 class="text-center text-lg font-semibold text-white">
                 <span>{Calendar.strftime(@current_date, "%A")},</span>
                 <span>{String.slice(Calendar.strftime(@current_date, "%d"), 0..2)}</span>
                 <span>{String.slice(Calendar.strftime(@current_date, "%B"), 0..2)}</span>
@@ -120,7 +152,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
               <button
                 type="button"
-                class="w-fit text-end text-complementary font-medium"
+                class="w-fit text-end text-primary-500 hover:text-primary-400 transition-colors font-medium"
                 phx-target={@myself}
                 phx-click="next-month"
               >
@@ -136,7 +168,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                 </svg>
               </button>
             </div>
-            <!-- Flex Container closed -->
           </div>
           <.table_week_calendar
             week_rows={@week_rows}
@@ -275,33 +306,73 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     ~H"""
     <div
       :for={week <- @week_rows}
-      class="h-full overflow-y-auto "
-      style="padding-bottom: 50px; margin-top: 10px;"
+      class="px-3 sm:px-4 pt-2"
     >
-      <div
-        :for={day <- week}
-        class={[
-          "text-center  overflow-hidden "
-        ]}
-      >
+      <div :for={day <- week} class="mb-2">
         <div
-          class="w-full border-t-2 border-greyfriend2 day_of_week relative "
+          class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden day_of_week"
           id={"dat_" <> Date.to_string(day)}
         >
-          <div class="">
-            <%= for meal <- Enum.filter(@user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end) do %>
-              <div class="py-6 rounded-lg">
+          <%# FIRST CHILD — auto row, always visible: day header %>
+          <div class="flex items-center gap-2 px-3 py-3 sm:px-4 bg-slate-700/50 border-b border-slate-700/50">
+            <span
+              class="flex items-center gap-2 text-white font-semibold text-sm sm:text-base cursor-pointer hover:text-primary-400 transition-colors"
+              phx-target={@myself}
+              phx-click="pick-date"
+              phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-4 text-primary-500 flex-shrink-0"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                />
+              </svg>
+              {Calendar.strftime(day, "%A")}
+            </span>
+            <span class="text-slate-500 text-xs sm:text-sm">{Calendar.strftime(day, "%d %b")}</span>
+            <span
+              class="ml-auto text-slate-400 hover:text-white transition-colors cursor-pointer p-1"
+              phx-click={
+                Phoenix.LiveView.JS.toggle_class("copen", to: "#dat_" <> Date.to_string(day))
+                |> Phoenix.LiveView.JS.toggle_class("copen", to: "#widget" <> Date.to_string(day))
+              }
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-5 widget_day"
+                id={"widget" <> Date.to_string(day)}
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+              </svg>
+            </span>
+          </div>
+
+          <%# SECOND CHILD — 0fr row, collapses: meal content %>
+          <div>
+            <div class="p-2 sm:p-3 space-y-2">
+              <%= for meal <- Enum.filter(@user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end) do %>
                 <%= for re_u_m <- meal.recipe_user_meals do %>
                   <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
                     <.card_meal
-                      card_meal_text="text-slate-800"
+                      card_meal_text="text-white"
                       actual_meal={meal}
                       img_url={re_u_m.img_url}
                       title={re_u_m.title}
                       nutrients={re_u_m.recipe_nutrients}
                       cooking_portions={re_u_m.cooking_portions}
                       consume_portions={re_u_m.consume_portions}
-                      v
                       myself={@myself}
                       recipe={
                         %{
@@ -312,103 +383,37 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                         }
                       }
                     />
-                  <% else %>
-                    nil
                   <% end %>
                 <% end %>
-                <div class="py-6 rounded-lg">
-                  <%= for re_u_m <- meal.ingredient_user_meals do %>
-                    <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
-                      <.card_meal
-                        myself={@myself}
-                        actual_meal={meal}
-                        img_url={re_u_m.img_url}
-                        title={re_u_m.title}
-                        cooking_portions={re_u_m.portions}
-                        consume_portions={nil}
-                        recipe={
-                          %{
-                            nutrients:
-                              Mehungry.Food.RecipeUtils.reform_nutrients(re_u_m.recipe.nutrients),
-                            primary_size: re_u_m.primary_size,
-                            servings: re_u_m.portions,
-                            id: Integer.to_string(re_u_m.recipe.id) <> Integer.to_string(meal.id)
-                          }
+                <%= for re_u_m <- meal.ingredient_user_meals do %>
+                  <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
+                    <.card_meal
+                      card_meal_text="text-white"
+                      myself={@myself}
+                      actual_meal={meal}
+                      img_url={re_u_m.img_url}
+                      title={re_u_m.title}
+                      cooking_portions={re_u_m.portions}
+                      consume_portions={nil}
+                      recipe={
+                        %{
+                          nutrients:
+                            Mehungry.Food.RecipeUtils.reform_nutrients(re_u_m.recipe.nutrients),
+                          primary_size: re_u_m.primary_size,
+                          servings: re_u_m.portions,
+                          id: Integer.to_string(re_u_m.recipe.id) <> Integer.to_string(meal.id)
                         }
-                      />
-                    <% else %>
-                      nil
-                    <% end %>
+                      }
+                    />
                   <% end %>
-                  <div></div>
-                </div>
-              </div>
-            <% end %>
-            <div>
-              <div>
-                {get_chart(@user_meals, day, "text-slate-800")}
-              </div>
+                <% end %>
+              <% end %>
+              {get_chart(@user_meals, day, "text-white")}
             </div>
           </div>
-
-          <div class="flex flex-row ">
-            <span
-              class=" font-semibold"
-              phx-target={@myself}
-              phx-click="pick-date"
-              phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
-            >
-              <div class=" w-fit m-auto">
-                <span class="">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    stroke="currentColor"
-                    class="size-7"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                    />
-                  </svg>
-                </span>
-              </div>
-            </span>
-            <span
-              phx-target={@myself}
-              phx-click="pick-date"
-              phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
-              class="text-lg font-semibold cursor-pointer "
-            >
-              {Calendar.strftime(day, "%A")}
-            </span>
-          </div>
-          <span
-            class="absolute top-4  right-4  font-semibold"
-            phx-click={
-              Phoenix.LiveView.JS.toggle_class("copen", to: "#dat_" <> Date.to_string(day))
-              |> Phoenix.LiveView.JS.toggle_class("copen", to: "#widget" <> Date.to_string(day))
-            }
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="size-6 widget_day cursor-pointer"
-              id={"widget"<> Date.to_string(day)}
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-            </svg>
-          </span>
         </div>
       </div>
     </div>
-    <!--Div bodu -->
     """
   end
 
@@ -454,17 +459,19 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
   def card_meal(assigns) do
     ~H"""
-    <div class="">
-      <div class="m-auto  flex gap-2 sm:gap-4 flex-col md:flex-row ">
-        <div class="my-auto relative">
+    <div class="bg-slate-700/40 border border-slate-600 rounded-xl p-3 sm:p-4 hover:bg-slate-700/60 transition-colors">
+      <div class="flex gap-4 items-center">
+        <div class="relative flex-shrink-0 h-20 w-20 sm:h-24 sm:w-24 rounded-xl overflow-hidden">
           <%= if is_nil(@img_url) do %>
-            {SvgComponents.get_default_recipe_image(assigns)}
+            <div class="h-full w-full bg-slate-600 flex items-center justify-center">
+              {SvgComponents.get_default_recipe_image(assigns)}
+            </div>
           <% else %>
-            <img src={@img_url} class=" h-60 w-60 m-auto" style="" />
+            <img src={@img_url} class="h-full w-full object-cover" />
           <% end %>
           <%= if @actual_meal.id != "landing_id" do %>
             <button
-              class="absolute right-2 top-2 sm:top-10 sm:right-2   bg-white p-2 rounded-full "
+              class="absolute right-1 top-1 bg-slate-900/80 hover:bg-primary-500 text-white p-1 rounded-full transition-colors [&_svg]:size-3.5"
               type="button"
               phx-click="edit_modal"
               phx-value-id={@actual_meal.id}
@@ -473,20 +480,21 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             </button>
           <% end %>
         </div>
-        <div class={"sm:p-6 m-auto " <> @card_meal_text}>
-          <h1>{@title}</h1>
-          <span class="font-semibold text-md">prepare portions: {@cooking_portions}</span>
-          <br />
-          <span class="font-semibold text-md">consume portions: {@consume_portions}</span>
-        </div>
-        <div class=" font-semibold">
-          <MehungryWeb.RecipeComponents.recipe_nutrients
-            id={to_string(@recipe.id)}
-            nutrients={@recipe.nutrients}
-            primary_size={5}
-            servings={2}
-            class="my-custom-class"
-          />
+        <div class="flex-1 min-w-0">
+          <h3 class={"font-semibold text-base leading-snug mb-3 " <> @card_meal_text}>{@title}</h3>
+          <div class="flex items-stretch gap-4">
+            <div>
+              <div class="text-slate-200 text-sm font-medium">{@cooking_portions}</div>
+              <div class="text-slate-500 text-xs mt-0.5">prepare</div>
+            </div>
+            <%= if !is_nil(@consume_portions) do %>
+              <div class="w-px bg-slate-600 self-stretch"></div>
+              <div>
+                <div class="text-slate-200 text-sm font-medium">{@consume_portions}</div>
+                <div class="text-slate-500 text-xs mt-0.5">consume</div>
+              </div>
+            <% end %>
+          </div>
         </div>
       </div>
     </div>
@@ -589,9 +597,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
     ~H"""
     <button
-      class={[
-        "text-center w-fit absolute right-0 top-0 bottom-0 "
-      ]}
+      class="absolute right-3 sm:right-4 flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary-500 hover:bg-primary-400 text-white text-xs sm:text-sm font-medium transition-colors shadow-md"
       type="button"
       id="button_calendar"
       phx-target={@myself}
@@ -599,23 +605,17 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       phx-value-date={Calendar.strftime(@day, "%Y-%m-%d")}
       phx-value-meal={@meal}
     >
-      <div class=" h-fit m-auto top-0 w-fit flex ">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="size-8"
-          style="color: var(--clr-primary) "
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-          />
-        </svg>
-      </div>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="2"
+        stroke="currentColor"
+        class="size-4 flex-shrink-0"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+      <span class="hidden sm:inline">Add Meal</span>
     </button>
     """
   end
