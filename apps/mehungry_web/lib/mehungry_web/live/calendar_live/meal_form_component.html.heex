@@ -1,10 +1,10 @@
-<div class="">
+<div class="bg-slate-900 min-h-full">
   <.form
     id={@id}
     for={@form}
     phx-change="validate"
     phx-submit="submit"
-    class="w-full "
+    class="w-full"
     phx-target={@myself}
   >
     <.input field={@form[:title]} label="Title" type="hidden" />
@@ -12,61 +12,61 @@
     <.input field={@form[:end_dt]} type="hidden" />
     <.input field={@form[:user_id]} type="hidden" />
 
-    <div class="w-full " style="margin-bottom: 50px;">
-      <div class=" h-full">
-        <%= if @mode == "recipe" do %>
-          <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
-            <Components.recipe_user_meal_render
-              f={f_recipe_user_meal}
-              parent_component={@myself}
-              recipes={@recipes}
-              mode={@mode}
-              myself={@myself}
-              recipe_ids={@recipe_ids}
-            />
-          </.inputs_for>
-        <% else %>
-          <.inputs_for :let={f_ingredient_user_meal} field={@form[:ingredient_user_meals]}>
-            <Components.ingredient_user_meal_render
-              f={f_ingredient_user_meal}
-              parent_component={@myself}
-              recipes={@recipes}
-              mode={@mode}
-              measurement_units={
-                get_measurement_units(f_ingredient_user_meal, f_ingredient_user_meal.index)
-              }
-              myself={@myself}
-              recipe_ids={@recipe_ids}
-            />
-          </.inputs_for>
-        <% end %>
-        <.inputs_for :let={f_consume_recipe_user_meal} field={@form[:consume_recipe_user_meals]}>
-          <Components.consume_recipe_user_meal_render
-            f={f_consume_recipe_user_meal}
+    <div class="w-full pb-16">
+      <%= if @mode == "recipe" do %>
+        <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
+          <Components.recipe_user_meal_render
+            f={f_recipe_user_meal}
             parent_component={@myself}
-            recipe_user_meals={@recipe_user_meals}
-            recipe_user_meal_ids={@recipe_user_meal_ids}
-            user_meal={@user_meal}
+            recipes={@recipes}
+            mode={@mode}
+            myself={@myself}
+            recipe_ids={@recipe_ids}
           />
         </.inputs_for>
-      </div>
+      <% else %>
+        <.inputs_for :let={f_ingredient_user_meal} field={@form[:ingredient_user_meals]}>
+          <Components.ingredient_user_meal_render
+            f={f_ingredient_user_meal}
+            parent_component={@myself}
+            recipes={@recipes}
+            mode={@mode}
+            measurement_units={
+              get_measurement_units(f_ingredient_user_meal, f_ingredient_user_meal.index)
+            }
+            myself={@myself}
+            recipe_ids={@recipe_ids}
+          />
+        </.inputs_for>
+      <% end %>
+      <.inputs_for :let={f_consume_recipe_user_meal} field={@form[:consume_recipe_user_meals]}>
+        <Components.consume_recipe_user_meal_render
+          f={f_consume_recipe_user_meal}
+          parent_component={@myself}
+          recipe_user_meals={@recipe_user_meals}
+          recipe_user_meal_ids={@recipe_user_meal_ids}
+          user_meal={@user_meal}
+        />
+      </.inputs_for>
     </div>
 
-    <div class="absolute bottom-3 right-4 w-fit bg-white	">
-      <button class="button_outline_primary modal-submit-button" phx_disable_with="Saving...">
-        Save
-      </button>
-    </div>
-    <%= if @live_action in [:edit] do %>
-      <div class="absolute bottom-3 end-28 w-fit	bg-white mr-2">
+    <div class="absolute bottom-3 right-4 flex gap-2 items-center">
+      <%= if @live_action in [:edit] do %>
         <button
-          class="delete_button border-2 border-transparent"
+          class="px-4 py-2 rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors"
           phx-value-id={@user_meal.id}
           phx-click="delete_user_meal"
+          type="button"
         >
           Delete
         </button>
-      </div>
-    <% end %>
+      <% end %>
+      <button
+        class="px-5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-white text-sm font-semibold transition-colors shadow-md"
+        phx_disable_with="Saving..."
+      >
+        Save
+      </button>
+    </div>
   </.form>
 </div>

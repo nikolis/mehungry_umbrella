@@ -623,28 +623,25 @@ body {
 }
 
 .day_of_week {
-  margin-top: 0.2rem;
-  display: grid; 
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 500ms; 
-  padding: 1rem;
+  display: grid;
+  grid-template-rows: auto 0fr;
+  transition: grid-template-rows 500ms;
 }
-.widget_day {
-  transition: 500ms ease; 
-}
-
-.widget_day.copen {
-  transform: rotate(90deg);
-  transition: 500ms ease-in-out; 
-}
-
 
 .day_of_week.copen {
- grid-template-rows: 1fr;
+  grid-template-rows: auto 1fr;
 }
 
 .day_of_week > div {
   overflow: hidden;
+}
+
+.widget_day {
+  transition: transform 500ms ease;
+}
+
+.widget_day.copen {
+  transform: rotate(90deg);
 }
 
 .accordion {
