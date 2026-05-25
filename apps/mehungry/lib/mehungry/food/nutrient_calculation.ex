@@ -221,7 +221,10 @@ defmodule Mehungry.Food.NutrientCalculation do
 
       portion && portion.gram_weight ->
         amount = safe_to_float(portion.amount || 1.0)
-        grams_per_unit = if amount > 0, do: portion.gram_weight / amount, else: portion.gram_weight
+
+        grams_per_unit =
+          if amount > 0, do: portion.gram_weight / amount, else: portion.gram_weight
+
         quantity_float * grams_per_unit
 
       true ->
@@ -337,7 +340,10 @@ defmodule Mehungry.Food.NutrientCalculation do
             children: []
           })
 
-        Map.put(acc, normalized_name, %{existing | amount: existing.amount + (nutrient.amount || 0.0)})
+        Map.put(acc, normalized_name, %{
+          existing
+          | amount: existing.amount + (nutrient.amount || 0.0)
+        })
       end)
       |> Map.values()
 

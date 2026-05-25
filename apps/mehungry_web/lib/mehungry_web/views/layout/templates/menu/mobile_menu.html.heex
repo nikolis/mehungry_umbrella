@@ -15,48 +15,48 @@
     >
       <img class="h-6 w-6" src="/images/logo2.svg" />
     </.link>
-
-    <!-- Browse -->
+    
+<!-- Browse -->
     <.link
       patch="/browse"
       class={"flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
     >
       <.icon name="hero-book-open" class="h-6 w-6" />
     </.link>
-
-    <!-- Create -->
+    
+<!-- Create -->
     <.link
       patch="/create_recipe"
       class={"flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
     >
       <.icon name="hero-plus-circle" class="h-6 w-6" />
     </.link>
-
-    <!-- Search toggle (open) -->
+    
+<!-- Search toggle (open) -->
     <div
       class={"flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors cursor-pointer " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
       phx-click={Phoenix.LiveView.JS.toggle_class("hidden", to: ".nav_link_basic")}
     >
       <.icon name="hero-magnifying-glass-circle" class="h-6 w-6" />
     </div>
-
-    <!-- Calendar -->
+    
+<!-- Calendar -->
     <.link
       patch="/calendar"
       class={"flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
     >
       <.icon name="hero-calendar" class="h-6 w-6" />
     </.link>
-
-    <!-- Basket -->
+    
+<!-- Basket -->
     <.link
       patch="/basket"
       class={"flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
     >
       <.icon name="hero-shopping-cart" class="h-6 w-6" />
     </.link>
-
-    <!-- Profile / Login -->
+    
+<!-- Profile / Login -->
     <a
       href={~p"/profile"}
       class={"flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors " <> if String.length(@query_string) > 1, do: "hidden", else: ""}
@@ -70,19 +70,17 @@
         <.icon name="hero-arrow-right-on-rectangle" class="h-6 w-6" />
       <% end %>
     </a>
-
-    <!-- Search close (back arrow) — shown when search is open -->
+    
+<!-- Search close (back arrow) — shown when search is open -->
     <div
       class={"flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors cursor-pointer " <> if String.length(@query_string) > 1, do: "", else: "hidden"}
       phx-click={Phoenix.LiveView.JS.toggle_class("hidden", to: ".nav_link_basic")}
     >
       <.icon name="hero-arrow-left-circle" class="h-6 w-6" />
     </div>
-
-    <!-- Search input — shown when search is open -->
-    <div
-      class={"col-span-6 flex items-center px-2 nav_link_basic " <> if String.length(@query_string) > 1, do: "", else: "hidden"}
-    >
+    
+<!-- Search input — shown when search is open -->
+    <div class={"col-span-6 flex items-center px-2 nav_link_basic " <> if String.length(@query_string) > 1, do: "", else: "hidden"}>
       <.live_component
         module={MehungryWeb.SearchLive.Index}
         id={6}

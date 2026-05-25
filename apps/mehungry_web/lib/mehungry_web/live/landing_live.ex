@@ -446,6 +446,7 @@ defmodule MehungryWeb.LandingLive do
                 [
                   %{
                     start_dt: NaiveDateTime.local_now(),
+                    ingredient_user_meals: [],
                     recipe_user_meals: [
                       %{
                         recipe_nutrients: @recipe.nutrients,

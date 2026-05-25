@@ -712,7 +712,9 @@ defmodule Mehungry.Food do
       Mehungry.Food.NutrientCalculation.calculate_recipe_nutrition_value(attrs)
 
     if Enum.empty?(nutrients) do
-      duration = (System.monotonic_time() - start) |> System.convert_time_unit(:native, :millisecond)
+      duration =
+        (System.monotonic_time() - start) |> System.convert_time_unit(:native, :millisecond)
+
       Logger.warning("nutrition calculation(empty): #{duration}ms for recipe")
 
       changeset
