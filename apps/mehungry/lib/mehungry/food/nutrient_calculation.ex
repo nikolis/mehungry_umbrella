@@ -1,54 +1,64 @@
 defmodule Mehungry.Food.NutrientCalculation do
-  alias Mehungry.Food
+  @moduledoc """
+  Calculates complete nutritional information for a recipe by summing
+  scaled per-ingredient nutrient amounts.
+
+  ## How the math works
+
+  USDA FoodData Central stores every nutrient amount **per 100 g** of the
+  ingredient.  `IngredientPortion` stores the gram equivalent for a given
+  measurement unit (e.g. 1 cup = 240 g).  The scaling factor per ingredient is:
+
+      scaling_factor = total_grams_in_recipe / 100.0
+      scaled_nutrient = usda_amount_per_100g × scaling_factor
+
+  where `total_grams_in_recipe = quantity × grams_per_unit`.
+
+  ## Assumptions
+
+  * `IngredientPortion.gram_weight` holds **grams for `amount` units** of the
+    associated MeasurementUnit.  Dividing by `amount` (default 1.0 when nil)
+    gives the true grams-per-one-unit.
+  * All gram-family units (name "g", "gram", "grammar"; alternate_name "g")
+    are treated directly as grams — no portion lookup is needed.
+  * USDA nutrients are provided in their raw units (kcal, g, mg, µg).
+    The scaling factor is dimensionless (g / 100 g), so the unit is preserved.
+
+  ## Failure handling
+
+  Call `validate_ingredient_units/1` before saving a recipe to surface
+  missing portions as user-visible changeset errors.  If an unknown unit
+  somehow reaches the calculation layer (e.g. via a direct DB update), the
+  ingredient contributes 0 g to avoid silently inflating nutrient totals.
+  """
+
+  require Logger
+
   alias Mehungry.Food.NutrientNameNormalizer
   alias Mehungry.Food.NutrientHierarchyBuilder
 
   import Ecto.Query
   alias Mehungry.Repo
 
+  # ─────────────────────────────────────────────────────────────────────────
+  # Constants
+  # ─────────────────────────────────────────────────────────────────────────
+
+  # Preferred energy entry when an ingredient has both calculation methods.
   @specific "Energy (Atwater Specific Factors)"
+  # Fallback energy entry used when Specific Factors are absent.
   @general "Energy (Atwater General Factors)"
 
-  def filter_energy_duplicates(nutrients) do
-    nutrients
-    |> Enum.group_by(& &1.nutrient.reference_id)
-    |> Enum.flat_map(fn {_food_id, food_nutrients} ->
-      keep_best_energy(food_nutrients)
-    end)
-  end
-
-  defp keep_best_energy(food_nutrients) do
-    {energy_nutrients, other_nutrients} =
-      Enum.split_with(food_nutrients, fn nutrient ->
-        String.starts_with?(nutrient.nutrient.name, "Energy")
-      end)
-
-    selected_energy =
-      cond do
-        specific = find_energy(energy_nutrients, @specific) ->
-          [specific]
-
-        general = find_energy(energy_nutrients, @general) ->
-          [general]
-
-        energy_nutrients != [] ->
-          [hd(energy_nutrients)]
-
-        true ->
-          []
-      end
-
-    other_nutrients ++ selected_energy
-  end
-
-  defp find_energy(nutrients, target_name) do
-    Enum.find(nutrients, fn nutrient ->
-      nutrient.nutrient.name == target_name
-    end)
-  end
+  # ═════════════════════════════════════════════════════════════════════════
+  # PUBLIC API
+  # ═════════════════════════════════════════════════════════════════════════
 
   @doc """
-  Main entry point - calculates complete nutrition value for a recipe
+  Main entry point.
+
+  Returns `{primary_size, [nutrient]}` where the nutrient list is the
+  priority-sorted hierarchical output of `NutrientHierarchyBuilder`.
+  Returns `{0, []}` for a recipe with no ingredients.
   """
   def calculate_recipe_nutrition_value(recipe) do
     recipe_ingredients = get_value(recipe, :recipe_ingredients)
@@ -62,30 +72,90 @@ defmodule Mehungry.Food.NutrientCalculation do
     end
   end
 
-  def get_value(map, key) do
-    get_value_specific(map, key) || get_value_specific(map, Atom.to_string(key))
+  @doc """
+  Validates that every recipe ingredient has a resolvable unit-to-gram mapping
+  before the recipe is persisted.
+
+  Accepts a list of maps with `:ingredient_id` and `:measurement_unit_id` keys.
+  Gram-family units (g, gram, grammar, alternate_name "g") are always accepted
+  without a portion entry.
+
+  Returns `:ok` or `{:error, [%{ingredient_name: string, unit_name: string}]}`
+  listing every ingredient/unit pair that lacks an `IngredientPortion` row.
+  """
+  def validate_ingredient_units(ingredient_params) do
+    gram_ids = load_gram_unit_ids()
+
+    # Gram-family units never need a portion — skip them immediately.
+    to_check =
+      Enum.reject(ingredient_params, fn p ->
+        MapSet.member?(gram_ids, p.measurement_unit_id)
+      end)
+
+    if to_check == [] do
+      :ok
+    else
+      ingredient_ids = Enum.map(to_check, & &1.ingredient_id)
+      unit_ids = Enum.map(to_check, & &1.measurement_unit_id)
+
+      ingredients =
+        Repo.all(
+          from i in Mehungry.Food.Ingredient,
+            where: i.id in ^ingredient_ids,
+            preload: [:ingredient_portions]
+        )
+
+      units = Repo.all(from m in Mehungry.Food.MeasurementUnit, where: m.id in ^unit_ids)
+
+      ingredients_by_id = Map.new(ingredients, &{&1.id, &1})
+      units_by_id = Map.new(units, &{&1.id, &1})
+
+      missing =
+        Enum.reject(to_check, fn params ->
+          ingredient = Map.get(ingredients_by_id, params.ingredient_id)
+
+          ingredient &&
+            Enum.any?(ingredient.ingredient_portions, fn portion ->
+              portion.measurement_unit_id == params.measurement_unit_id
+            end)
+        end)
+
+      if missing == [] do
+        :ok
+      else
+        errors =
+          Enum.map(missing, fn params ->
+            ingredient = Map.get(ingredients_by_id, params.ingredient_id)
+            unit = Map.get(units_by_id, params.measurement_unit_id)
+
+            %{
+              ingredient_name: (ingredient && ingredient.name) || "unknown",
+              unit_name: (unit && unit.name) || "unknown"
+            }
+          end)
+
+        {:error, errors}
+      end
+    end
   end
 
-  def get_value_specific(map, key) when is_atom(key), do: map[key] || map[to_string(key)]
+  # ═════════════════════════════════════════════════════════════════════════
+  # INGREDIENT → GRAM CONVERSION
+  # ═════════════════════════════════════════════════════════════════════════
 
-  def get_value_specific(map, key) when is_atom(key), do: map[key] || map[to_string(key)]
-  def get_value_specific(map, key) when is_binary(key), do: map[key] || map[String.to_atom(key)]
+  @doc """
+  Loads all recipe ingredients from the DB (with their nutrient data and
+  portions) and converts each one into a structured map for aggregation.
 
+  Each returned map contains:
+  * `:ingredient` — the loaded Ingredient struct
+  * `:gram_weight` — total grams contributed by this ingredient entry
+  * `:nutrients` — scaled nutrient list from `build_nutrient_list/2`
+  """
   def map_ingredients_to_structured_form(recipe_ingredient_params) do
-    IO.inspect(
-      "In hereasdfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-    )
+    gram_unit_ids = load_gram_unit_ids()
 
-    gram =
-      Repo.one(from m in Mehungry.Food.MeasurementUnit, where: like(m.name, "gram%"), limit: 1)
-
-    IO.inspect(recipe_ingredient_params,
-      label: "In herererererererre5////////////////////////////////////////////////////"
-    )
-
-    ingredient_ids =
-      recipe_ingredient_params
-      |> Enum.map(fn x -> x.ingredient_id end)
+    ingredient_ids = Enum.map(recipe_ingredient_params, & &1.ingredient_id)
 
     ingredients =
       Repo.all(
@@ -97,38 +167,47 @@ defmodule Mehungry.Food.NutrientCalculation do
           ]
       )
 
-    ingredients_by_id =
-      Map.new(ingredients, fn ingredient ->
-        {ingredient.id, ingredient}
-      end)
+    ingredients_by_id = Map.new(ingredients, &{&1.id, &1})
 
-    recipe_ingredients_with_nutrients =
-      recipe_ingredient_params
-      |> Enum.map(fn params ->
-        ingredient_id = params.ingredient_id
+    Enum.map(recipe_ingredient_params, fn params ->
+      ingredient = Map.fetch!(ingredients_by_id, params.ingredient_id)
 
-        ingredient =
-          Map.fetch!(ingredients_by_id, ingredient_id)
+      gram_weight =
+        calculate_gram_weight(
+          ingredient,
+          params.measurement_unit_id,
+          params.quantity,
+          gram_unit_ids
+        )
 
-        gram_weight =
-          calculate_gram_weight(
-            ingredient,
-            params.measurement_unit_id,
-            params.quantity,
-            gram
-          )
-
-        %{
-          quantity: params.quantity,
-          measurement_unit_id: params.measurement_unit_id,
-          ingredient: ingredient,
-          nutrients: build_nutrient_list(ingredient, gram_weight),
-          gram_weight: gram_weight
-        }
-      end)
+      %{
+        quantity: params.quantity,
+        measurement_unit_id: params.measurement_unit_id,
+        ingredient: ingredient,
+        nutrients: build_nutrient_list(ingredient, gram_weight),
+        gram_weight: gram_weight
+      }
+    end)
   end
 
-  def calculate_gram_weight(ingredient, measurement_unit_id, quantity, grammar) do
+  @doc """
+  Converts a `{quantity, measurement_unit_id}` pair into total grams.
+
+  Resolution order:
+  1. If the unit is a gram-family unit, `quantity` is already in grams.
+  2. Find the ingredient's `IngredientPortion` for this unit and compute
+     `quantity × (gram_weight / amount)`.
+  3. If no portion exists (and the unit is not a gram unit), log a warning
+     and return 0.0.  `validate_ingredient_units/1` should prevent this
+     case from arising during normal recipe creation.
+
+  The `amount` field on `IngredientPortion` is the USDA serving denominator.
+  USDA Foundation Foods almost always sets `amount = 1.0`, but when it differs
+  (e.g. `amount = 0.5` and `gram_weight = 120` meaning "half cup = 120 g"),
+  dividing restores the correct grams-per-one-unit (240 g/cup).
+  Nil `amount` is treated as 1.0.
+  """
+  def calculate_gram_weight(ingredient, measurement_unit_id, quantity, gram_unit_ids) do
     quantity_float = safe_to_float(quantity)
 
     portion =
@@ -137,42 +216,44 @@ defmodule Mehungry.Food.NutrientCalculation do
       end)
 
     cond do
-      portion && portion.gram_weight ->
-        quantity_float * portion.gram_weight
-
-      measurement_unit_id == grammar.id ->
+      MapSet.member?(gram_unit_ids, measurement_unit_id) ->
         quantity_float
+
+      portion && portion.gram_weight ->
+        amount = safe_to_float(portion.amount || 1.0)
+        grams_per_unit = if amount > 0, do: portion.gram_weight / amount, else: portion.gram_weight
+        quantity_float * grams_per_unit
 
       true ->
-        quantity_float
+        Logger.warning(
+          "NutrientCalculation: no portion found for ingredient #{ingredient.id} " <>
+            "with measurement_unit_id #{measurement_unit_id}; contributing 0 g"
+        )
+
+        0.0
     end
   end
 
-  def safe_to_float(value) when is_float(value), do: value
-  def safe_to_float(value) when is_integer(value), do: value * 1.0
+  # ═════════════════════════════════════════════════════════════════════════
+  # NUTRIENT LIST BUILDING
+  # ═════════════════════════════════════════════════════════════════════════
 
-  def safe_to_float(value) when is_binary(value) do
-    case Float.parse(value) do
-      {float, _} -> float
-      :error -> 0.0
-    end
-  end
+  @doc """
+  Builds the scaled nutrient list for a single ingredient given its total gram
+  weight in the recipe.
 
-  def safe_to_float(_), do: 0.0
+  Scaling formula: `usda_amount_per_100g × (gram_weight / 100.0)`.
 
-  def safe_nutrient_amount(amount) when is_float(amount), do: amount
-  def safe_nutrient_amount(amount) when is_integer(amount), do: amount * 1.0
-  def safe_nutrient_amount(_), do: 0.0
-
+  Energy duplicates are removed first so calories are not double-counted
+  (see `filter_energy_duplicates/1`).
+  """
   def build_nutrient_list(ingredient, gram_weight) do
-    gram_weight_float = safe_to_float(gram_weight)
-    scaling_factor = gram_weight_float / 100.0
+    scaling_factor = safe_to_float(gram_weight) / 100.0
 
-    nutrients = filter_energy_duplicates(ingredient.ingredient_nutrients)
-
-    Enum.map(nutrients, fn nutrient_entry ->
+    ingredient.ingredient_nutrients
+    |> filter_energy_duplicates()
+    |> Enum.map(fn nutrient_entry ->
       amount = safe_nutrient_amount(nutrient_entry.amount)
-      scaled_amount = amount * scaling_factor
 
       nutrient_name =
         case nutrient_entry.nutrient do
@@ -183,17 +264,10 @@ defmodule Mehungry.Food.NutrientCalculation do
 
       unit_name =
         case nutrient_entry.nutrient do
-          %{measurement_unit: %{name: name}} when is_binary(name) ->
-            name
-
-          %{measurement_unit: %{name: name}} when is_atom(name) ->
-            Atom.to_string(name)
-
-          %{measurement_unit: %{alternate_name: name}} when is_binary(name) ->
-            name
-
-          _ ->
-            "g"
+          %{measurement_unit: %{name: name}} when is_binary(name) -> name
+          %{measurement_unit: %{name: name}} when is_atom(name) -> Atom.to_string(name)
+          %{measurement_unit: %{alternate_name: name}} when is_binary(name) -> name
+          _ -> "g"
         end
 
       nutrient_number =
@@ -205,7 +279,7 @@ defmodule Mehungry.Food.NutrientCalculation do
 
       %{
         name: nutrient_name,
-        amount: scaled_amount,
+        amount: amount * scaling_factor,
         measurement_unit: unit_name,
         nutrient_id: nutrient_entry.nutrient_id,
         nutrient_number: nutrient_number
@@ -213,10 +287,43 @@ defmodule Mehungry.Food.NutrientCalculation do
     end)
   end
 
+  @doc """
+  Removes duplicate energy entries for a single ingredient's nutrient list.
+
+  USDA data often includes both "Energy (Atwater Specific Factors)" and
+  "Energy (Atwater General Factors)".  Including both would double-count
+  calories.  Strategy: prefer Specific Factors; fall back to General Factors;
+  otherwise keep the first energy entry found.  Non-energy nutrients pass
+  through unchanged.
+  """
+  def filter_energy_duplicates(nutrients) do
+    nutrients
+    |> Enum.group_by(& &1.nutrient.reference_id)
+    |> Enum.flat_map(fn {_food_id, food_nutrients} ->
+      keep_best_energy(food_nutrients)
+    end)
+  end
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # RECIPE-LEVEL AGGREGATION
+  # ═════════════════════════════════════════════════════════════════════════
+
+  @doc """
+  Aggregates scaled per-ingredient nutrients into the recipe's total nutrition.
+
+  Steps:
+  1. Flatten all per-ingredient nutrient lists into a single stream.
+  2. Group by normalised name (via `NutrientNameNormalizer`) and sum amounts.
+  3. Build a hierarchical structure (fats → sub-fats, vitamins, minerals, etc.)
+     via `NutrientHierarchyBuilder`.
+  4. Sort the top-level map by display priority.
+
+  Returns a map with `:flat_nutrients`, `:structured_nutrients`,
+  `:total_calories`, and `:ingredient_count`.
+  """
   def calculate_nutrition_for_recipe(ingredients_with_nutrients) do
     all_nutrients = Enum.flat_map(ingredients_with_nutrients, & &1.nutrients)
 
-    # Group by normalized name
     grouped_nutrients =
       Enum.reduce(all_nutrients, %{}, fn nutrient, acc ->
         normalized_name = NutrientNameNormalizer.normalize(nutrient.name)
@@ -230,30 +337,34 @@ defmodule Mehungry.Food.NutrientCalculation do
             children: []
           })
 
-        Map.put(acc, normalized_name, %{
-          existing
-          | amount: existing.amount + (nutrient.amount || 0.0)
-        })
+        Map.put(acc, normalized_name, %{existing | amount: existing.amount + (nutrient.amount || 0.0)})
       end)
       |> Map.values()
 
-    # Build hierarchical structure
-    structured_nutrients = NutrientHierarchyBuilder.build_hierarchy(grouped_nutrients)
-
-    # Sort by priority
-    sorted_nutrients = sort_nutrients_by_priority(structured_nutrients)
-
-    # Calculate total calories
-    total_calories = calculate_total_calories(grouped_nutrients)
+    structured_nutrients =
+      grouped_nutrients
+      |> NutrientHierarchyBuilder.build_hierarchy()
+      |> sort_nutrients_by_priority()
 
     %{
       flat_nutrients: grouped_nutrients,
-      structured_nutrients: sorted_nutrients,
-      total_calories: total_calories,
+      structured_nutrients: structured_nutrients,
+      total_calories: calculate_total_calories(grouped_nutrients),
       ingredient_count: length(ingredients_with_nutrients)
     }
   end
 
+  @doc """
+  Sorts the hierarchical nutrient map into a priority-ordered list for display.
+
+  Priority: Energy → Protein → Total Fat → Vitamins → Carbohydrates →
+  Fiber → Total Sugars → Minerals → everything else (999).
+
+  Keys are atoms because `NutrientHierarchyBuilder.convert_to_atom_keys/1`
+  converts them on output.  Group keys use lowercase atoms (`:total_fat`,
+  `:vitamins`, `:minerals`, `:total_sugars`); main nutrient keys preserve
+  USDA title case (`:Energy`, `:Protein`, `:Carbohydrates`, `:Fiber`).
+  """
   def sort_nutrients_by_priority(nutrient_map) when is_map(nutrient_map) do
     priority_order = %{
       :Energy => 1,
@@ -268,34 +379,101 @@ defmodule Mehungry.Food.NutrientCalculation do
 
     nutrient_map
     |> Enum.filter(fn {_name, nutrient} -> not is_nil(nutrient) end)
-    |> Enum.sort_by(fn {name, _nutrient} ->
-      {Map.get(priority_order, name, 999), name}
-    end)
+    |> Enum.sort_by(fn {name, _nutrient} -> {Map.get(priority_order, name, 999), name} end)
     |> Enum.map(fn {_name, nutrient} -> nutrient end)
   end
 
-  def calculate_total_calories(nutrients) do
-    energy_nutrient =
-      Enum.find(nutrients, fn nutrient ->
-        nutrient.name == "Energy"
-      end)
+  @doc """
+  Extracts total calories from the flat nutrient list.
 
-    if energy_nutrient do
-      Float.round(energy_nutrient.amount, 0)
-    else
-      0
+  Returns the `Energy` nutrient's amount rounded to zero decimal places,
+  or 0 if no Energy entry is present.
+  """
+  def calculate_total_calories(nutrients) do
+    case Enum.find(nutrients, fn nutrient -> nutrient.name == "Energy" end) do
+      nil -> 0
+      energy -> Float.round(energy.amount, 0)
     end
   end
 
+  # ═════════════════════════════════════════════════════════════════════════
+  # UTILITIES
+  # ═════════════════════════════════════════════════════════════════════════
+
+  @doc "Safely converts any value to a float. Returns 0.0 for nil or unparseable strings."
+  def safe_to_float(value) when is_float(value), do: value
+  def safe_to_float(value) when is_integer(value), do: value * 1.0
+
+  def safe_to_float(value) when is_binary(value) do
+    case Float.parse(value) do
+      {float, _} -> float
+      :error -> 0.0
+    end
+  end
+
+  def safe_to_float(_), do: 0.0
+
+  @doc "Coerces a nutrient amount to float. Returns 0.0 for nil or non-numeric values."
+  def safe_nutrient_amount(amount) when is_float(amount), do: amount
+  def safe_nutrient_amount(amount) when is_integer(amount), do: amount * 1.0
+  def safe_nutrient_amount(_), do: 0.0
+
+  @doc "Fetches a value from a map accepting both atom and string versions of the key."
+  def get_value(map, key) do
+    get_value_specific(map, key) || get_value_specific(map, Atom.to_string(key))
+  end
+
+  def get_value_specific(map, key) when is_atom(key), do: map[key] || map[to_string(key)]
+  def get_value_specific(map, key) when is_binary(key), do: map[key] || map[String.to_atom(key)]
+
+  # ═════════════════════════════════════════════════════════════════════════
+  # PRIVATE
+  # ═════════════════════════════════════════════════════════════════════════
+
+  # Picks the single best energy nutrient from a group that shares a reference_id.
+  # Non-energy nutrients in the group are returned unchanged.
+  defp keep_best_energy(food_nutrients) do
+    {energy_nutrients, other_nutrients} =
+      Enum.split_with(food_nutrients, fn nutrient ->
+        String.starts_with?(nutrient.nutrient.name, "Energy")
+      end)
+
+    selected_energy =
+      cond do
+        specific = find_energy(energy_nutrients, @specific) -> [specific]
+        general = find_energy(energy_nutrients, @general) -> [general]
+        energy_nutrients != [] -> [hd(energy_nutrients)]
+        true -> []
+      end
+
+    other_nutrients ++ selected_energy
+  end
+
+  defp find_energy(nutrients, target_name) do
+    Enum.find(nutrients, fn nutrient -> nutrient.nutrient.name == target_name end)
+  end
+
+  # Returns a MapSet of all MeasurementUnit IDs that represent grams.
+  # Matches by name ("g", "gram", "grammar") or alternate_name ("g") to
+  # handle units created by both the USDA importer and the mass backfill script.
+  defp load_gram_unit_ids do
+    Repo.all(
+      from m in Mehungry.Food.MeasurementUnit,
+        where: m.alternate_name == "g" or m.name in ["g", "gram", "grammar"]
+    )
+    |> MapSet.new(& &1.id)
+  end
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Debug helpers (dev / IEx only)
+  # ─────────────────────────────────────────────────────────────────────────
+
   def pretty_print_nutrition(nutrition_result) do
     IO.puts("\n" <> String.duplicate("=", 50))
-    IO.puts(String.duplicate("=", 50))
     IO.puts("Total Calories: #{Float.round(nutrition_result.total_calories, 0)} kcal")
     IO.puts("Number of Ingredients: #{nutrition_result.ingredient_count}")
     IO.puts("")
-
     print_nutrients(nutrition_result.structured_nutrients, 0)
-
     IO.puts(String.duplicate("=", 50))
   end
 
@@ -304,13 +482,10 @@ defmodule Mehungry.Food.NutrientCalculation do
   defp print_nutrients([nutrient | rest], level) do
     indent = String.duplicate("  ", level)
     amount = Float.round(nutrient.amount, 1)
-    unit = nutrient.measurement_unit
+    IO.puts("#{indent}• #{nutrient.name}: #{amount} #{nutrient.measurement_unit}")
 
-    IO.puts("#{indent}• #{nutrient.name}: #{amount} #{unit}")
-
-    if nutrient.children && length(nutrient.children) > 0 do
-      print_nutrients(nutrient.children, level + 1)
-    end
+    if nutrient.children && length(nutrient.children) > 0,
+      do: print_nutrients(nutrient.children, level + 1)
 
     print_nutrients(rest, level)
   end

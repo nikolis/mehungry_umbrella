@@ -37,13 +37,13 @@ config :mehungry_web, MehungryWeb.Endpoint,
   render_errors: [view: MehungryWeb.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: Mehungry.PubSub,
   live_view: [signing_salt: "l1ra29uq"],
-  aws_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
-  aws_secret: System.get_env("AWS_SECRET_ACCESS_KEY"),
-  aws_bucket: System.get_env("AWS_ASSETS_BUCKET_NAME")
+  aws_key_id: nil,
+  aws_secret: nil,
+  aws_bucket: nil
 
 config :ex_aws,
-  access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
-  secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY"),
+  access_key_id: nil,
+  secret_access_key: nil,
   region: "eu-central-1"
 
 config :ueberauth, Ueberauth,

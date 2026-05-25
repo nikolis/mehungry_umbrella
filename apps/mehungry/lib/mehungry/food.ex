@@ -650,6 +650,7 @@ defmodule Mehungry.Food do
     changeset =
       recipe_origin
       |> Recipe.changeset(attrs)
+      |> validate_ingredient_units_in_changeset()
 
     result =
       if changeset.valid? do
@@ -733,6 +734,41 @@ defmodule Mehungry.Food do
     end
   end
 
+  # Checks that every new/modified recipe ingredient has a resolvable
+  # unit-to-gram mapping and adds a user-visible changeset error for each
+  # missing IngredientPortion.  Called in both create_recipe and update_recipe
+  # so the user receives the error immediately rather than silently getting
+  # wrong nutrition values later.
+  defp validate_ingredient_units_in_changeset(changeset) do
+    ri_changesets = Ecto.Changeset.get_change(changeset, :recipe_ingredients) || []
+
+    ingredient_params =
+      ri_changesets
+      |> Enum.reject(fn cs -> cs.action == :delete end)
+      |> Enum.map(fn cs ->
+        %{
+          ingredient_id: Ecto.Changeset.get_field(cs, :ingredient_id),
+          measurement_unit_id: Ecto.Changeset.get_field(cs, :measurement_unit_id)
+        }
+      end)
+      |> Enum.reject(fn p -> is_nil(p.ingredient_id) or is_nil(p.measurement_unit_id) end)
+
+    case Mehungry.Food.NutrientCalculation.validate_ingredient_units(ingredient_params) do
+      :ok ->
+        changeset
+
+      {:error, missing} ->
+        Enum.reduce(missing, changeset, fn %{ingredient_name: name, unit_name: unit}, cs ->
+          Ecto.Changeset.add_error(
+            cs,
+            :recipe_ingredients,
+            "Ingredient '#{name}' has no portion defined for unit '#{unit}'. " <>
+              "Add it in the ingredient editor or choose a different unit."
+          )
+        end)
+    end
+  end
+
   defp get_hashtags_string(the_string) do
     terms = String.split(the_string, " ")
 
@@ -759,6 +795,7 @@ defmodule Mehungry.Food do
     changeset =
       %Recipe{}
       |> Recipe.changeset(attrs)
+      |> validate_ingredient_units_in_changeset()
 
     result =
       if changeset.valid? do
