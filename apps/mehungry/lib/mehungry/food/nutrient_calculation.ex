@@ -29,7 +29,7 @@ defmodule Mehungry.Food.NutrientCalculation do
           [specific]
 
         general = find_energy(energy_nutrients, @general) ->
-          []
+          [general]
 
         energy_nutrients != [] ->
           [hd(energy_nutrients)]
@@ -54,11 +54,11 @@ defmodule Mehungry.Food.NutrientCalculation do
     recipe_ingredients = get_value(recipe, :recipe_ingredients)
 
     if is_nil(recipe_ingredients) or recipe_ingredients == [] do
-      %{flat_nutrients: [], structured_nutrients: [], total_calories: 0, ingredient_count: 0}
+      {0, []}
     else
       ingredients = map_ingredients_to_structured_form(recipe_ingredients)
-
-      {8, Map.get(calculate_nutrition_for_recipe(ingredients), :structured_nutrients)}
+      result = calculate_nutrition_for_recipe(ingredients)
+      {8, Map.get(result, :structured_nutrients)}
     end
   end
 
@@ -256,14 +256,14 @@ defmodule Mehungry.Food.NutrientCalculation do
 
   def sort_nutrients_by_priority(nutrient_map) when is_map(nutrient_map) do
     priority_order = %{
-      "Energy" => 1,
-      "Protein" => 2,
-      "Total Fat" => 3,
-      "Vitamins" => 4,
-      "carbohydrates" => 5,
-      "Fiber" => 6,
-      "Total Sugars" => 7,
-      "Minerals" => 8
+      :Energy => 1,
+      :Protein => 2,
+      :total_fat => 3,
+      :vitamins => 4,
+      :Carbohydrates => 5,
+      :Fiber => 6,
+      :total_sugars => 7,
+      :minerals => 8
     }
 
     nutrient_map
