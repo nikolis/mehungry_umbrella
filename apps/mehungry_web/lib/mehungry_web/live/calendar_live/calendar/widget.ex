@@ -71,12 +71,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
       ~H"""
       <div class="mt-2 rounded-xl border border-slate-600 overflow-hidden bg-slate-800">
-        <%# Stats header %>
+        
         <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 bg-slate-700/50 border-b border-slate-700">
           <span class="text-slate-200 font-semibold text-sm">Daily Summary</span>
           <div class="flex flex-wrap gap-2 ml-auto">
             <span class="px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 text-xs">
-              {@meal_count} meal{if @meal_count != 1, do: "s"} · {@total_items} item{if @total_items != 1, do: "s"}
+              {@meal_count} meal{if @meal_count != 1, do: "s"} · {@total_items} item{if @total_items !=
+                                                                                          1,
+                                                                                        do: "s"}
             </span>
             <span class="px-2.5 py-0.5 rounded-full bg-primary-500/20 text-primary-300 text-xs font-semibold">
               {@energy_kcal} kcal
@@ -92,9 +94,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             </span>
           </div>
         </div>
-        <%# Two-column: nutrition accordion left, pie chart right %>
         <div class="flex flex-col sm:flex-row min-h-0">
-          <div class="flex-1 sm:border-r border-b sm:border-b-0 border-slate-700 overflow-y-auto" style="max-height: 400px;">
+          <div
+            class="flex-1 sm:border-r border-b sm:border-b-0 border-slate-700 overflow-y-auto"
+            style="max-height: 400px;"
+          >
             {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
           </div>
           <div class="flex-1 flex items-center justify-center p-4 sm:p-6">
@@ -313,7 +317,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden day_of_week"
           id={"dat_" <> Date.to_string(day)}
         >
-          <%# FIRST CHILD — auto row, always visible: day header %>
+          
           <div class="flex items-center gap-2 px-3 py-3 sm:px-4 bg-slate-700/50 border-b border-slate-700/50">
             <span
               class="flex items-center gap-2 text-white font-semibold text-sm sm:text-base cursor-pointer hover:text-primary-400 transition-colors"
@@ -359,9 +363,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             </span>
           </div>
 
-          <%# SECOND CHILD — 0fr row, collapses: meal content %>
           <div>
-            <% day_meals = Enum.filter(@user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end) %>
+            <% day_meals =
+              Enum.filter(@user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end) %>
             <%= if day_meals == [] do %>
               <div class="flex flex-col items-center gap-3 py-8 px-4">
                 <div class="w-14 h-14 rounded-full bg-slate-700/60 border border-slate-600/50 flex items-center justify-center">
@@ -373,12 +377,18 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                     stroke="currentColor"
                     class="size-7 text-slate-500"
                   >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-1.5-.75M3 13.5l1.5.75a3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 1.5-.75M3 13.5v6.75a.75.75 0 0 0 .75.75h16.5a.75.75 0 0 0 .75-.75V13.5" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-1.5-.75M3 13.5l1.5.75a3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 3 0 3.354 3.354 0 0 1 3 0 3.354 3.354 0 0 0 1.5-.75M3 13.5v6.75a.75.75 0 0 0 .75.75h16.5a.75.75 0 0 0 .75-.75V13.5"
+                    />
                   </svg>
                 </div>
                 <div class="text-center">
                   <p class="text-slate-400 text-sm font-medium">No meals planned</p>
-                  <p class="text-slate-600 text-xs mt-0.5">Tap <span class="text-primary-500 font-semibold">+</span> to add one</p>
+                  <p class="text-slate-600 text-xs mt-0.5">
+                    Tap <span class="text-primary-500 font-semibold">+</span> to add one
+                  </p>
                 </div>
               </div>
             <% else %>
