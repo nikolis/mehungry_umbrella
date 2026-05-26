@@ -32,6 +32,10 @@ defmodule MehungryWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :stripe_webhook do
+    plug :accepts, ["json"]
+  end
+
   scope "/auth", MehungryWeb do
     pipe_through :browser
 
@@ -91,6 +95,8 @@ defmodule MehungryWeb.Router do
       live "/create_recipe", CreateRecipeLive.Index, :index
       live "/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit
 
+      live "/upgrade", UpgradeLive.Index, :index
+
       live "/survey", SurveyLive, :index
 
       live "/posts", PostLive.Index, :index
@@ -131,6 +137,11 @@ defmodule MehungryWeb.Router do
   end
 
   ## Authentication routes
+
+  scope "/webhooks", MehungryWeb do
+    pipe_through :stripe_webhook
+    post "/stripe", StripeWebhookController, :webhook
+  end
 
   scope "/", MehungryWeb do
     pipe_through [:browser]

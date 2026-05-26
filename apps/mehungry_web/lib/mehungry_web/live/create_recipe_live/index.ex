@@ -26,6 +26,10 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:return_to_path, "/create_recipe")
      |> assign(:plain_meal, nil)
      |> assign(:active_step, 0)
+     |> assign(:ai_generating, false)
+     |> assign(:ai_task_ref, nil)
+     |> assign(:ai_unmatched, [])
+     |> assign(:ai_quota_exceeded, false)
      |> assign(:items, [
        %{id: 1, name: "easy"},
        %{id: 2, name: "medium"},
@@ -171,6 +175,27 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   ################################################################################ Event Handling ###################################################################################
   use MehungryWeb.Searchable, :transfers_to_search
+
+  def handle_event("ai_generate", %{"prompt" => prompt}, socket) when prompt != "" do
+    case Mehungry.Subscriptions.check_quota(socket.assigns.user.id, "recipe_generation") do
+      :ok ->
+        task = Task.async(fn -> Mehungry.AI.RecipeGenerator.run(prompt) end)
+
+        {:noreply,
+         socket
+         |> assign(:ai_generating, true)
+         |> assign(:ai_task_ref, task.ref)
+         |> assign(:ai_unmatched, [])
+         |> assign(:ai_quota_exceeded, false)}
+
+      {:error, :quota_exceeded} ->
+        {:noreply, assign(socket, :ai_quota_exceeded, true)}
+    end
+  end
+
+  def handle_event("ai_generate", _params, socket) do
+    {:noreply, socket}
+  end
 
   def handle_event("clear-form", _, socket) do
     # recipe = Food.get_recipe!(socket.assigns.recipe.id)
@@ -324,6 +349,48 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   ######################################################################################## External Signal Receivers #################################
+
+  @impl true
+  def handle_info({ref, result}, socket) when is_reference(ref) do
+    Process.demonitor(ref, [:flush])
+
+    if socket.assigns.ai_task_ref == ref do
+      case result do
+        {:ok, attrs, unmatched} ->
+          Mehungry.Subscriptions.record_usage(socket.assigns.user.id, "recipe_generation")
+          recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+
+          {:noreply,
+           socket
+           |> assign(:ai_generating, false)
+           |> assign(:ai_task_ref, nil)
+           |> assign(:ai_unmatched, unmatched)
+           |> init(recipe, attrs)}
+
+        {:error, reason} ->
+          {:noreply,
+           socket
+           |> assign(:ai_generating, false)
+           |> assign(:ai_task_ref, nil)
+           |> put_flash(:error, "Could not generate recipe: #{reason}")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:DOWN, ref, :process, _, _reason}, socket) when is_reference(ref) do
+    if socket.assigns.ai_task_ref == ref do
+      {:noreply,
+       socket
+       |> assign(:ai_generating, false)
+       |> assign(:ai_task_ref, nil)
+       |> put_flash(:error, "AI generation failed unexpectedly")}
+    else
+      {:noreply, socket}
+    end
+  end
 
   @impl true
   def handle_info({:select_id, id, component_id}, socket) do

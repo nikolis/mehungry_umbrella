@@ -49,6 +49,45 @@
       </div>
 
       <div class="w-full">
+        <div class="content_container mb-4 p-4" id="ai-panel">
+          <h3 class="text-white font-semibold mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Generate with AI
+          </h3>
+          <form phx-submit="ai_generate" class="flex flex-col sm:flex-row gap-3">
+            <textarea
+              name="prompt"
+              rows="3"
+              placeholder="Describe your recipe… e.g. 'Creamy mushroom risotto for 4 people, medium difficulty'"
+              class="flex-1 bg-slate-800 text-white rounded-lg p-3 text-sm resize-none border border-slate-600 focus:border-primary-500 focus:outline-none"
+            ></textarea>
+            <button
+              type="submit"
+              disabled={@ai_generating}
+              class="px-5 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white font-semibold text-sm self-end transition"
+            >
+              <%= if @ai_generating do %>
+                <span class="flex items-center gap-2">
+                  <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  Generating…
+                </span>
+              <% else %>
+                Generate
+              <% end %>
+            </button>
+          </form>
+          <%= if @ai_unmatched != [] do %>
+            <p class="text-yellow-400 text-xs mt-3">
+              Not found in database and skipped: <%= Enum.join(@ai_unmatched, ", ") %>. Add these manually if needed.
+            </p>
+          <% end %>
+        </div>
+
         <.live_component
           module={MehungryWeb.RecipeFormComponent}
           uploads={@uploads}
