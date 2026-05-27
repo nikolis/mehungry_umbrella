@@ -92,3 +92,4 @@ config :phoenix, :stacktrace_depth, 20
 config :wallaby,
   screenshot_on_failure: true,
   chromedriver: [headlesss: false]
+

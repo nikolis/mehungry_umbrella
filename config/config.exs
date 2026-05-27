@@ -12,6 +12,9 @@ import Config
 config :mehungry,
   ecto_repos: [Mehungry.Repo]
 
+config :mehungry, Mehungry.Mailer, adapter: Swoosh.Adapters.Local
+config :swoosh, :api_client, false
+
 config :mehungry, Oban,
   repo: Mehungry.Repo,
   plugins: [
