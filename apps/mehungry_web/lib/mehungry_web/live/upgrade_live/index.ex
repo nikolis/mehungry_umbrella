@@ -5,10 +5,13 @@ defmodule MehungryWeb.UpgradeLive.Index do
   alias Mehungry.Subscriptions
   alias Mehungry.Billing.StripeHandler
 
+  use MehungryWeb.Searchable, :transfers_to_search
+  use MehungryWeb.Presence, :user_tracking
+
   @monthly_price_display "€2.99"
   @yearly_price_display "€19.99"
 
-  def mount(_params, session, socket) do
+  def mount_search(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     subscription = Subscriptions.get_subscription(user.id)
 
@@ -21,6 +24,8 @@ defmodule MehungryWeb.UpgradeLive.Index do
      |> assign(:subscription, subscription)
      |> assign(:recipe_used, recipe_used)
      |> assign(:recipe_limit, recipe_limit)
+     |> assign(search_query: "")
+     |> assign(search_results: [])
      |> assign(:plan_used, plan_used)
      |> assign(:plan_limit, plan_limit)
      |> assign(:stripe_status, nil)

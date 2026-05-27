@@ -2,53 +2,35 @@ defmodule Mehungry.Accounts.UserNotifier do
   @moduledoc false
 
   import Swoosh.Email
+  alias Mehungry.Mailer
 
-  # alias Mehungry.Mailer
-
-  # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
     email =
       new()
       |> to(recipient)
-      |> from({"Mehungry", "contact@example.com"})
+      |> from({"Mehungry", "noreply@mehungry.com"})
       |> subject(subject)
       |> text_body(body)
 
-    # TODO
-    # with {:ok, _metadata} <- Mailer.deliver(email) do
-    #  {:ok, email}
-    # end
-    {:ok, email}
+    with {:ok, _metadata} <- Mailer.deliver(email) do
+      {:ok, email}
+    end
   end
 
-  @doc """
-  Deliver instructions to confirm account.
-  """
   def deliver_confirmation_instructions(user, url) do
-    deliver(user.email, "Confirmation instructions", """
-
-    ==============================
-
+    deliver(user.email, "Confirm your Mehungry account", """
     Hi #{user.email},
 
-    You can confirm your account by visiting the URL below:
+    Welcome to Mehungry! Please confirm your account by clicking the link below:
 
     #{url}
 
-    If you didn't create an account with us, please ignore this.
-
-    ==============================
+    This link expires in 24 hours. If you didn't create an account, you can ignore this email.
     """)
   end
 
-  @doc """
-  Deliver instructions to reset a user password.
-  """
   def deliver_reset_password_instructions(user, url) do
-    deliver(user.email, "Reset password instructions", """
-
-    ==============================
-
+    deliver(user.email, "Reset your Mehungry password", """
     Hi #{user.email},
 
     You can reset your password by visiting the URL below:
@@ -56,19 +38,11 @@ defmodule Mehungry.Accounts.UserNotifier do
     #{url}
 
     If you didn't request this change, please ignore this.
-
-    ==============================
     """)
   end
 
-  @doc """
-  Deliver instructions to update a user email.
-  """
   def deliver_update_email_instructions(user, url) do
-    deliver(user.email, "Update email instructions", """
-
-    ==============================
-
+    deliver(user.email, "Update your Mehungry email", """
     Hi #{user.email},
 
     You can change your email by visiting the URL below:
@@ -76,8 +50,6 @@ defmodule Mehungry.Accounts.UserNotifier do
     #{url}
 
     If you didn't request this change, please ignore this.
-
-    ==============================
     """)
   end
 end

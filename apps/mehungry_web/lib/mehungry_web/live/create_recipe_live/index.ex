@@ -29,7 +29,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:ai_generating, false)
      |> assign(:ai_task_ref, nil)
      |> assign(:ai_unmatched, [])
-     |> assign(:ai_quota_exceeded, false)
+     |> assign(:ai_quota_exceeded, Mehungry.Subscriptions.check_quota(user.id, "recipe_generation") == {:error, :quota_exceeded})
      |> assign(:show_ai_panel, false)
      |> assign(:items, [
        %{id: 1, name: "easy"},

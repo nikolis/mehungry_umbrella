@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" class="snap-y	snap-mandatory">
+<html lang="en" class="bg-slate-900">
   <.head conn={@conn} />
-  <body class="w-full  pt-8 m-auto">
-    {@inner_content}
+  <body class="w-full bg-slate-900 min-h-screen">
+    <div class="pb-20">
+      {@inner_content}
+    </div>
     <%= if @current_user do %>
       <.sidebar_nav_links current_user={@current_user} inner_content={@inner_content} />
     <% end %>

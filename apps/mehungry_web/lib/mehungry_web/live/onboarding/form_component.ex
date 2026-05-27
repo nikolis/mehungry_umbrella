@@ -148,13 +148,13 @@ defmodule MehungryWeb.Onboarding.FormComponent do
   end
 
   defp get_categories(type) do
-    [fish] = Mehungry.Food.search_category("fish")
-    [poultry] = Mehungry.Food.search_category("Poultry")
-    [dairy] = Mehungry.Food.search_category("Dairy")
-    [pork] = Mehungry.Food.search_category("Pork")
-    [sausages] = Mehungry.Food.search_category("Sausages")
-    [lamb] = Mehungry.Food.search_category("Lamb")
-    [beef] = Mehungry.Food.search_category("Beef")
+    fish = Mehungry.Food.search_category("fish") |> List.first()
+    poultry = Mehungry.Food.search_category("Poultry") |> List.first()
+    dairy = Mehungry.Food.search_category("Dairy") |> List.first()
+    pork = Mehungry.Food.search_category("Pork") |> List.first()
+    sausages = Mehungry.Food.search_category("Sausages") |> List.first()
+    lamb = Mehungry.Food.search_category("Lamb") |> List.first()
+    beef = Mehungry.Food.search_category("Beef") |> List.first()
 
     case type do
       :vegan ->

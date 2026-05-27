@@ -44,9 +44,12 @@ defmodule Mehungry.Accounts.User do
   end
 
   def registration_3rd_party_changeset(user, attrs, _opts \\ []) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
     user
     |> cast(attrs, [:email, :profile_pic, :name])
     |> validate_email()
+    |> put_change(:confirmed_at, now)
   end
 
   def tokens_changeset(user, attrs, _opts \\ []) do
