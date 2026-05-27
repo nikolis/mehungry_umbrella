@@ -823,6 +823,11 @@ defmodule Mehungry.Food do
     Repo.all(Mehungry.Food.Nutrient)
   end
 
+  def list_key_nutrients() do
+    import Ecto.Query
+    Repo.all(from n in Mehungry.Food.Nutrient, order_by: [asc: n.rank], limit: 30)
+  end
+
   def list_ingredients() do
     Repo.all(Ingredient)
     |> Repo.preload([:measurement_unit, :category])
