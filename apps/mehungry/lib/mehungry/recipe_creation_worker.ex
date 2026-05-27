@@ -4,6 +4,7 @@ defmodule Mehungry.RecipeCreationWorker do
     max_attempts: 3
 
   import Ecto.Query
+  alias Mehungry.Posts
   alias Mehungry.Posts.Post
   alias Mehungry.Repo
 

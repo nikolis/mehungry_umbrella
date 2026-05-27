@@ -37,9 +37,6 @@ defmodule Mehubgry.Apis.TheMealdbParser do
     end
   end
 
-  @doc """
-  Parses a single meal JSON map into a %Meal{} struct.
-  """
   defp parse_meal(raw) do
     %Meal{
       id: raw["idMeal"],
@@ -54,16 +51,9 @@ defmodule Mehubgry.Apis.TheMealdbParser do
     }
   end
 
-  @doc """
-  Parses the `strTags` string into a list of tags.
-  """
   defp parse_tags(nil), do: []
   defp parse_tags(tags), do: String.split(tags, ",", trim: true)
 
-  @doc """
-  Collects and combines ingredients and measurements into a list of maps like:
-  [%{ingredient: "Potatoes", measure: "500g"}, ...]
-  """
   defp parse_ingredients(raw) do
     1..20
     |> Enum.map(fn i ->
@@ -79,9 +69,6 @@ defmodule Mehubgry.Apis.TheMealdbParser do
     |> Enum.reject(&is_nil/1)
   end
 
-  @doc """
-  Cleans up a string by stripping whitespace and converting empty strings to nil.
-  """
   defp clean_string(nil), do: nil
 
   defp clean_string(str) when is_binary(str) do

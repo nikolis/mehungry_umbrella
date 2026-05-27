@@ -53,7 +53,7 @@ defmodule MehungryWeb.Api.MealFetcher do
   def fetch_and_parse(url \\ @endpoint) do
     case HTTPoison.get(url) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        {:ok, meal} = MehungryWeb.Api.TheMealDBParser.parse(body)
+        {:ok, _meal} = MehungryWeb.Api.TheMealDBParser.parse(body)
 
       {:ok, %HTTPoison.Response{status_code: code}} ->
         {:error, "Request failed with status code #{code}"}

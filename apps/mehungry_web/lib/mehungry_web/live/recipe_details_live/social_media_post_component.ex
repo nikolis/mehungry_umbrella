@@ -9,7 +9,6 @@ defmodule MehungryWeb.SocialMediaPostComponent do
   alias MehungryWeb.SvgComponents
 
   import MehungryWeb.CoreComponents
-  import MehungryWeb.RecipeComponents
 
   defmodule FacebookPost do
     defstruct [:pages]

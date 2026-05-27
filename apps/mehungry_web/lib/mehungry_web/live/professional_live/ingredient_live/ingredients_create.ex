@@ -2,7 +2,7 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsCreate do
   use MehungryWeb, :live_view
 
   alias Mehungry.Food
-  alias Mehungry.Food.{Ingredient, IngredientPortion, IngredientNutrient, IngredientTranslation}
+  alias Mehungry.Food.{Ingredient, IngredientPortion, IngredientNutrient}
   alias Mehungry.Languages
 
   def mount(_, _session, socket) do

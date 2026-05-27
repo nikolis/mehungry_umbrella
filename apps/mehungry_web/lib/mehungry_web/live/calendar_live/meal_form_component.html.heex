@@ -1,10 +1,10 @@
-<div class="bg-slate-900 min-h-full">
+<div class="flex flex-col h-full bg-slate-900">
   <.form
     id={@id}
     for={@form}
     phx-change="validate"
     phx-submit="submit"
-    class="w-full"
+    class="flex flex-col h-full"
     phx-target={@myself}
   >
     <.input field={@form[:title]} label="Title" type="hidden" />
@@ -12,61 +12,147 @@
     <.input field={@form[:end_dt]} type="hidden" />
     <.input field={@form[:user_id]} type="hidden" />
 
-    <div class="w-full pb-16">
-      <%= if @mode == "recipe" do %>
-        <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
-          <Components.recipe_user_meal_render
-            f={f_recipe_user_meal}
-            parent_component={@myself}
-            recipes={@recipes}
-            mode={@mode}
-            myself={@myself}
-            recipe_ids={@recipe_ids}
-          />
-        </.inputs_for>
-      <% else %>
-        <.inputs_for :let={f_ingredient_user_meal} field={@form[:ingredient_user_meals]}>
-          <Components.ingredient_user_meal_render
-            f={f_ingredient_user_meal}
-            parent_component={@myself}
-            recipes={@recipes}
-            mode={@mode}
-            measurement_units={
-              get_measurement_units(f_ingredient_user_meal, f_ingredient_user_meal.index)
-            }
-            myself={@myself}
-            recipe_ids={@recipe_ids}
-          />
-        </.inputs_for>
-      <% end %>
-      <.inputs_for :let={f_consume_recipe_user_meal} field={@form[:consume_recipe_user_meals]}>
-        <Components.consume_recipe_user_meal_render
-          f={f_consume_recipe_user_meal}
-          parent_component={@myself}
-          recipe_user_meals={@recipe_user_meals}
-          recipe_user_meal_ids={@recipe_user_meal_ids}
-          user_meal={@user_meal}
-        />
-      </.inputs_for>
+    <%# Mode toggle — lives here once, not duplicated in sub-components %>
+    <div class="px-4 pt-4 pb-3 border-b border-slate-700/50">
+      <div class="flex bg-slate-800 rounded-xl p-1">
+        <button
+          type="button"
+          phx-click="set_mode"
+          phx-value-mode="recipe"
+          phx-target={@myself}
+          class={
+            "flex-1 py-2 text-sm font-medium rounded-lg transition-all " <>
+            if @mode == "recipe" do
+              "bg-slate-900 text-white shadow"
+            else
+              "text-slate-400 hover:text-slate-200"
+            end
+          }
+        >
+          Recipe
+        </button>
+        <button
+          type="button"
+          phx-click="set_mode"
+          phx-value-mode="ingredient"
+          phx-target={@myself}
+          class={
+            "flex-1 py-2 text-sm font-medium rounded-lg transition-all " <>
+            if @mode == "ingredient" do
+              "bg-slate-900 text-white shadow"
+            else
+              "text-slate-400 hover:text-slate-200"
+            end
+          }
+        >
+          Ingredient
+        </button>
+      </div>
     </div>
 
-    <div class="absolute bottom-3 right-4 flex gap-2 items-center">
+    <%# Scrollable body %>
+    <div class="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+
+      <%# Prepare section %>
+      <div>
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Prepare</p>
+        <div class="space-y-2">
+          <%= if @mode == "recipe" do %>
+            <.inputs_for :let={f_recipe_user_meal} field={@form[:recipe_user_meals]}>
+              <Components.recipe_user_meal_render
+                f={f_recipe_user_meal}
+                parent_component={@myself}
+                recipes={@recipes}
+                mode={@mode}
+                myself={@myself}
+                recipe_ids={@recipe_ids}
+              />
+            </.inputs_for>
+            <button
+              type="button"
+              phx-click="new_recipe"
+              phx-target={@myself}
+              class="w-full py-2 rounded-lg border border-dashed border-slate-600 text-slate-400 hover:border-primary-500/50 hover:text-primary-400 text-sm transition-colors"
+            >
+              + Add recipe
+            </button>
+          <% else %>
+            <.inputs_for :let={f_ingredient_user_meal} field={@form[:ingredient_user_meals]}>
+              <Components.ingredient_user_meal_render
+                f={f_ingredient_user_meal}
+                parent_component={@myself}
+                recipes={@recipes}
+                mode={@mode}
+                measurement_units={
+                  get_measurement_units(f_ingredient_user_meal, f_ingredient_user_meal.index)
+                }
+                myself={@myself}
+                recipe_ids={@recipe_ids}
+              />
+            </.inputs_for>
+            <button
+              type="button"
+              phx-click="new_ingredient"
+              phx-target={@myself}
+              class="w-full py-2 rounded-lg border border-dashed border-slate-600 text-slate-400 hover:border-primary-500/50 hover:text-primary-400 text-sm transition-colors"
+            >
+              + Add ingredient
+            </button>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- 
+  <%# Log consumption section %>
+      <div>
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+          Log consumption
+        </p>
+        <div class="space-y-2">
+          <.inputs_for :let={f_consume_recipe_user_meal} field={@form[:consume_recipe_user_meals]}>
+            <Components.consume_recipe_user_meal_render
+              f={f_consume_recipe_user_meal}
+              parent_component={@myself}
+              recipe_user_meals={@recipe_user_meals}
+              recipe_user_meal_ids={@recipe_user_meal_ids}
+              user_meal={@user_meal}
+            />
+          </.inputs_for>
+          <button
+            type="button"
+            phx-click="new_consume_recipe"
+            phx-target={@myself}
+            class="w-full py-2 rounded-lg border border-dashed border-slate-600 text-slate-400 hover:border-primary-500/50 hover:text-primary-400 text-sm transition-colors"
+          >
+            + Log consumed
+          </button>
+        </div>
+      </div>
+    ---->
+    </div>
+
+    <%# Sticky footer %>
+    <div class="sticky bottom-0 bg-slate-900 border-t border-slate-700/50 px-4 py-3 flex items-center justify-between gap-2">
       <%= if @live_action in [:edit] do %>
         <button
-          class="px-4 py-2 rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors"
+          type="button"
           phx-value-id={@user_meal.id}
           phx-click="delete_user_meal"
-          type="button"
+          class="px-4 py-2 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 text-sm font-medium transition-colors"
         >
           Delete
         </button>
+      <% else %>
+        <div />
       <% end %>
       <button
-        class="px-5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-white text-sm font-semibold transition-colors shadow-md"
-        phx_disable_with="Saving..."
+        type="submit"
+        class="px-6 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-white text-sm font-semibold transition-colors shadow-md"
+        phx-disable-with="Saving…"
       >
         Save
       </button>
     </div>
+
   </.form>
 </div>

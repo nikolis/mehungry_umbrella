@@ -17,7 +17,7 @@ defmodule MehungryWeb.DistributedTaskHandler do
 
   defp via_swarm(name), do: {:via, :swarm, name}
 
-  def init(_), do: {:ok, %{}, @intervals}
+  def init(_), do: {:ok, %{}, @interval}
 
   # Public entry point to trigger tasks
   def run(task_payload) do
@@ -25,7 +25,7 @@ defmodule MehungryWeb.DistributedTaskHandler do
   end
 
   # Handle different task types dynamically
-  def handle_cast({:run_task, %{type: type, data: data}}, state) do
+  def handle_cast({:run_task, %{type: _type, data: data}}, _state) do
     nodes = [node() | Node.list()]
     # Logger.info("Spawning task on nodes: #{inspect(nodes)}")
 

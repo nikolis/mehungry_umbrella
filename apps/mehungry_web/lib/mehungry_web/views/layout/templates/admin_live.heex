@@ -1,9 +1,31 @@
-<main role="main" class="w-fit m-auto">
-  <p class="alert alert-info" role="alert" phx-click="lv:clear-flash" phx-value-key="info">
-    {Phoenix.Flash.get(@flash, :info)}
-  </p>
-  <p class="alert alert-danger" role="alert" phx-click="lv:clear-flash" phx-value-key="error">
-    {Phoenix.Flash.get(@flash, :error)}
-  </p>
+<main class="min-h-screen bg-slate-900 pl-0">
+  <%= if Phoenix.Flash.get(@flash, :info) do %>
+    <div
+      class="fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm shadow-lg max-w-sm"
+      phx-click="lv:clear-flash"
+      phx-value-key="info"
+      role="alert"
+    >
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>
+      {Phoenix.Flash.get(@flash, :info)}
+    </div>
+  <% end %>
+
+  <%= if Phoenix.Flash.get(@flash, :error) do %>
+    <div
+      class="fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm shadow-lg max-w-sm"
+      phx-click="lv:clear-flash"
+      phx-value-key="error"
+      role="alert"
+    >
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+      {Phoenix.Flash.get(@flash, :error)}
+    </div>
+  <% end %>
+
   {@inner_content}
 </main>

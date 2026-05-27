@@ -46,13 +46,22 @@ defmodule MehungryWeb.SelectComponent do
       case selected_items do
         [] ->
           if !is_nil(existing_selected) do
-            items =
-              Enum.filter(assigns.items, fn x ->
-                elem(x, 0) == Integer.to_string(existing_selected)
-              end)
+            Enum.filter(assigns.items, fn x ->
+              elem(x, 0) == Integer.to_string(existing_selected)
+            end)
           else
             []
           end
+
+        id when is_integer(id) ->
+          Enum.filter(assigns.items, fn x ->
+            elem(x, 0) == Integer.to_string(id)
+          end)
+
+        id when is_binary(id) ->
+          Enum.filter(assigns.items, fn x ->
+            elem(x, 0) == id
+          end)
 
         other ->
           other

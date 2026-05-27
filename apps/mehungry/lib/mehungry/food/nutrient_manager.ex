@@ -6,9 +6,7 @@ defmodule Mehungry.Food.NutrientMerger do
   Returns all nutrients with atom keys for consistency.
   """
 
-  @doc """
-  Master mapping of nutrient names to their canonical form
-  """
+  # Master mapping of nutrient names to their canonical form
   @canonical_mapping %{
     # Energy variations
     "energy" => "Energy",
@@ -309,7 +307,7 @@ defmodule Mehungry.Food.NutrientMerger do
   Normalizes units - converts mcg/mg to appropriate units
   """
   def normalize_units(
-        %{"name" => name, "amount" => amount, "measurement_unit" => unit} = nutrient
+        %{"name" => name, "amount" => amount, "measurement_unit" => unit} = _nutrient
       ) do
     name_lower = String.downcase(name)
     unit_lower = String.downcase(unit)
@@ -506,7 +504,7 @@ defmodule Mehungry.Food.NutrientMerger do
         if saturated_list != [] do
           sat_total = Enum.reduce(saturated_list, 0, fn n, acc -> acc + n["amount"] end)
 
-          children =
+          _children =
             children ++
               [
                 %{
@@ -522,7 +520,7 @@ defmodule Mehungry.Food.NutrientMerger do
         if monounsaturated_list != [] do
           mono_total = Enum.reduce(monounsaturated_list, 0, fn n, acc -> acc + n["amount"] end)
 
-          children =
+          _children =
             children ++
               [
                 %{
@@ -538,7 +536,7 @@ defmodule Mehungry.Food.NutrientMerger do
         if polyunsaturated_list != [] do
           poly_total = Enum.reduce(polyunsaturated_list, 0, fn n, acc -> acc + n["amount"] end)
 
-          children =
+          _children =
             children ++
               [
                 %{
@@ -554,7 +552,7 @@ defmodule Mehungry.Food.NutrientMerger do
         if trans_list != [] do
           trans_total = Enum.reduce(trans_list, 0, fn n, acc -> acc + n["amount"] end)
 
-          children =
+          _children =
             children ++
               [
                 %{
@@ -605,23 +603,6 @@ defmodule Mehungry.Food.NutrientMerger do
         "measurement_unit" => unit,
         "children" => Enum.sort_by(list, & &1["name"])
       })
-    end
-  end
-
-  defp determine_best_unit(group, canonical_name) do
-    cond do
-      canonical_name == "Energy" ->
-        "kcal"
-
-      String.contains?(canonical_name, "Vitamin") ->
-        "mg"
-
-      true ->
-        group
-        |> Enum.map(& &1["measurement_unit"])
-        |> Enum.frequencies()
-        |> Enum.max_by(fn {_unit, count} -> count end)
-        |> elem(0)
     end
   end
 

@@ -5,7 +5,6 @@ defmodule Mehungry.Inventory.BasketItem do
   import Ecto.Changeset
 
   alias Mehungry.Food.MeasurementUnit
-  alias Mehungry.Food.Ingredient
   alias Mehungry.Food.Recipe
   alias Mehungry.Inventory.ShoppingBasket
 

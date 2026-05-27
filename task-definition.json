@@ -1,20 +1,18 @@
 {
-    "taskDefinitionArn": "arn:aws:ecs:eu-central-1:011528270584:task-definition/mehungry_app_deployment:6",
+    "family": "mehungry_app_deployment",
+    "taskRoleArn": "arn:aws:iam::011528270584:role/EcsTaskCommunicationRole",
+    "executionRoleArn": "arn:aws:iam::011528270584:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": ["FARGATE"],
+    "cpu": "1024",
+    "memory": "3072",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
     "containerDefinitions": [
         {
             "name": "mehungry_app",
-            "environment": [
-              {
-                "name": "ERLANG_COOKIE",
-                "value": "MEHUNGRY_SECURE_CLUSTER_COOKIE_2024"
-              }
-            ],
-            "secrets": [
-              {
-                "name": "RELEASE_COOKIE",
-                "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/release_cookie-QYj6rK"
-              }
-            ],
             "image": "011528270584.dkr.ecr.eu-central-1.amazonaws.com/mehungry_ecr:4e3bf58c1f8ea3052f8539eaad140ed77f337b6a",
             "cpu": 0,
             "essential": true,
@@ -26,35 +24,36 @@
                     "protocol": "tcp",
                     "appProtocol": "http"
                 },
+                { "containerPort": 4369, "hostPort": 4369, "protocol": "tcp" },
+                { "containerPort": 9000, "hostPort": 9000, "protocol": "tcp" },
+                { "containerPort": 9001, "hostPort": 9001, "protocol": "tcp" },
+                { "containerPort": 9002, "hostPort": 9002, "protocol": "tcp" },
+                { "containerPort": 9003, "hostPort": 9003, "protocol": "tcp" },
+                { "containerPort": 9004, "hostPort": 9004, "protocol": "tcp" }
+            ],
+            "environment": [
+                { "name": "ERLANG_COOKIE", "value": "MEHUNGRY_SECURE_CLUSTER_COOKIE_2024" }
+            ],
+            "secrets": [
                 {
-                    "containerPort": 4369,
-                    "hostPort": 4369,
-                    "protocol": "tcp"
+                    "name": "RELEASE_COOKIE",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/release_cookie-QYj6rK"
                 },
                 {
-                    "containerPort": 9000,
-                    "hostPort": 9000,
-                    "protocol": "tcp"
+                    "name": "STRIPE_SECRET_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/stripe_secret_key-QS1Cz9"
                 },
                 {
-                    "containerPort": 9001,
-                    "hostPort": 9001,
-                    "protocol": "tcp"
+                    "name": "STRIPE_WEBHOOK_SECRET",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/stripe_webhook_secret-5RXsew"
                 },
                 {
-                    "containerPort": 9002,
-                    "hostPort": 9002,
-                    "protocol": "tcp"
+                    "name": "STRIPE_PRO_PRICE_ID",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/stripe_pro_price_id-3mHTYD"
                 },
                 {
-                    "containerPort": 9003,
-                    "hostPort": 9003,
-                    "protocol": "tcp"
-                },
-                {
-                    "containerPort": 9004,
-                    "hostPort": 9004,
-                    "protocol": "tcp"
+                    "name": "STRIPE_PRO_YEARLY_PRICE_ID",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/stripe_pro_yearly_price_id-aYKUVh"
                 }
             ],
             "environmentFiles": [],
@@ -75,57 +74,5 @@
             },
             "systemControls": []
         }
-    ],
-    "family": "mehungry_app_deployment",
-    "taskRoleArn": "arn:aws:iam::011528270584:role/EcsTaskCommunicationRole",
-    "executionRoleArn": "arn:aws:iam::011528270584:role/ecsTaskExecutionRole",
-    "networkMode": "awsvpc",
-    "revision": 6,
-    "volumes": [],
-    "status": "ACTIVE",
-    "requiresAttributes": [
-        {
-            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
-        },
-        {
-            "name": "ecs.capability.execution-role-awslogs"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.ecr-auth"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.28"
-        },
-        {
-            "name": "ecs.capability.execution-role-ecr-pull"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
-        },
-        {
-            "name": "ecs.capability.task-eni"
-        },
-        {
-            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.29"
-        }
-    ],
-    "placementConstraints": [],
-    "compatibilities": [
-        "EC2",
-        "FARGATE"
-    ],
-    "requiresCompatibilities": [
-        "FARGATE"
-    ],
-    "cpu": "1024",
-    "memory": "3072",
-    "runtimePlatform": {
-        "cpuArchitecture": "X86_64",
-        "operatingSystemFamily": "LINUX"
-    },
-    "registeredAt": "2024-08-29T15:54:25.457Z",
-    "registeredBy": "arn:aws:iam::011528270584:root"
+    ]
 }

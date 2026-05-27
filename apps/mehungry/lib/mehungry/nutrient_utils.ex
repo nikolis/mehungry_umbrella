@@ -4,9 +4,7 @@ defmodule Mehungry.NutrientUtils do
   De-duplicates equivalent nutrients (e.g., different energy calculation methods).
   """
 
-  @doc """
-  Master mapping of nutrient names to their canonical form
-  """
+  # Master mapping of nutrient names to their canonical form
   @canonical_mapping %{
     # Energy variations
     "energy" => "Energy",

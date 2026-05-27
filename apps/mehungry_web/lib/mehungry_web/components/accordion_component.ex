@@ -5,7 +5,7 @@ defmodule MehungryWeb.AccordionComponent do
   # get_value Helpers - Safely access both atom and string keys
   # ============================================================================
 
-  defp get_value(map, key) when is_tuple(map) do
+  defp get_value(map, key) when is_tuple(map) and tuple_size(map) == 2 do
     {_, inner_map} = map
     get_value(inner_map, key)
   end

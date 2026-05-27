@@ -19,55 +19,9 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   def mount_search(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
-    user_meals = History.list_history_user_meals_for_user(user.id)
+    user_meals = load_and_format_user_meals(user.id)
     recipes = list_recipes(user)
     socket = assign_device_kind(socket)
-
-    user_meals =
-      Enum.map(user_meals, fn x ->
-        %{
-          id: x.id,
-          start_dt: x.start_dt,
-          end: x.end_dt,
-          title: x.title,
-          ingredient_user_meals:
-            Enum.map(x.ingredient_user_meals, fn y ->
-              %{
-                title: y.ingredient.name,
-                portions: y.quantity,
-                measurement_unit: y.measurement_unit.name,
-                primary_size: 6,
-                img_url: nil,
-                recipe: %{
-                  id: y.ingredient.id,
-                  nutrients:
-                    Enum.map(y.ingredient.ingredient_nutrients, fn x ->
-                      %{
-                        amount: x.amount,
-                        name: x.nutrient.name,
-                        measurement_unit: %{name: x.nutrient.measurement_unit.name}
-                      }
-                    end),
-                  primary_size: 5
-                }
-              }
-            end),
-          recipe_user_meals:
-            Enum.map(x.recipe_user_meals, fn y ->
-              %{
-                title: y.recipe.title,
-                consume_portions: y.consume_portions,
-                cooking_portions: y.cooking_portions,
-                servings: y.recipe.servings,
-                recipe_nutrients: y.recipe.nutrients,
-                img_url: y.recipe.image_url,
-                primary_size: y.recipe.primary_nutrients_size,
-                recipe_id: y.recipe.id
-              }
-            end)
-        }
-      end)
-
     socket = push_event(socket, "create_meals", %{meals: user_meals})
 
     {
@@ -81,6 +35,10 @@ defmodule MehungryWeb.CalendarLive.Index do
       |> assign(:user_meals, user_meals)
       |> assign(:recipes, recipes)
       |> assign(:detail_return_to, nil)
+      |> assign(:ai_plan_generating, false)
+      |> assign(:ai_plan_task_ref, nil)
+      |> assign(:ai_plan_result, nil)
+      |> assign(:ai_quota_exceeded, Mehungry.Subscriptions.check_quota(user.id, "meal_plan") == {:error, :quota_exceeded})
     }
   end
 
@@ -178,6 +136,50 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   @impl true
+  def handle_info({ref, result}, socket) when is_reference(ref) do
+    Process.demonitor(ref, [:flush])
+
+    if socket.assigns.ai_plan_task_ref == ref do
+      case result do
+        {:ok, created, skipped} ->
+          Mehungry.Subscriptions.record_usage(socket.assigns.user.id, "meal_plan")
+          user_meals = load_and_format_user_meals(socket.assigns.user.id)
+          result_msg = build_result_message(length(created), skipped)
+
+          {:noreply,
+           socket
+           |> assign(:ai_plan_generating, false)
+           |> assign(:ai_plan_task_ref, nil)
+           |> assign(:ai_plan_result, result_msg)
+           |> assign(:user_meals, user_meals)
+           |> push_event("create_meals", %{meals: user_meals})}
+
+        {:error, reason} ->
+          {:noreply,
+           socket
+           |> assign(:ai_plan_generating, false)
+           |> assign(:ai_plan_task_ref, nil)
+           |> put_flash(:error, "Could not generate plan: #{reason}")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_info({:DOWN, ref, :process, _, _reason}, socket) when is_reference(ref) do
+    if socket.assigns.ai_plan_task_ref == ref do
+      {:noreply,
+       socket
+       |> assign(:ai_plan_generating, false)
+       |> assign(:ai_plan_task_ref, nil)
+       |> put_flash(:error, "AI plan generation failed unexpectedly")}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_info({:initial_modal, %{"date" => start_date, "title" => title}}, socket) do
     {:noreply, push_patch(socket, to: "/calendar/#{start_date}/#{title}", replace: true)}
   end
@@ -199,6 +201,35 @@ defmodule MehungryWeb.CalendarLive.Index do
   @impl true
   def handle_event("date-details", %{"date" => start_date}, socket) do
     {:noreply, push_patch(socket, to: "/calendar/details/#{start_date}", replace: true)}
+  end
+
+  def handle_event("ai_plan_week", %{"prompt" => prompt}, socket) when prompt != "" do
+    user = socket.assigns.user
+
+    case Mehungry.Subscriptions.check_quota(user.id, "meal_plan") do
+      :ok ->
+        recipes = socket.assigns.recipes
+        start_date = Date.utc_today()
+
+        task =
+          Task.async(fn ->
+            Mehungry.AI.MealPlanGenerator.run(prompt, recipes, start_date, user.id)
+          end)
+
+        {:noreply,
+         socket
+         |> assign(:ai_plan_generating, true)
+         |> assign(:ai_plan_task_ref, task.ref)
+         |> assign(:ai_plan_result, nil)
+         |> assign(:ai_quota_exceeded, false)}
+
+      {:error, :quota_exceeded} ->
+        {:noreply, assign(socket, :ai_quota_exceeded, true)}
+    end
+  end
+
+  def handle_event("ai_plan_week", _params, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("toggle_basket", %{"view" => view}, socket) do
@@ -242,4 +273,57 @@ defmodule MehungryWeb.CalendarLive.Index do
   defp list_recipes(user) do
     Food.list_user_recipes_for_selection(user)
   end
+
+  defp load_and_format_user_meals(user_id) do
+    History.list_history_user_meals_for_user(user_id)
+    |> Enum.map(fn x ->
+      %{
+        id: x.id,
+        start_dt: x.start_dt,
+        end: x.end_dt,
+        title: x.title,
+        ingredient_user_meals:
+          Enum.map(x.ingredient_user_meals, fn y ->
+            %{
+              title: y.ingredient.name,
+              portions: y.quantity,
+              measurement_unit: y.measurement_unit.name,
+              primary_size: 6,
+              img_url: nil,
+              recipe: %{
+                id: y.ingredient.id,
+                nutrients:
+                  Enum.map(y.ingredient.ingredient_nutrients, fn n ->
+                    %{
+                      amount: n.amount,
+                      name: n.nutrient.name,
+                      measurement_unit: %{name: n.nutrient.measurement_unit.name}
+                    }
+                  end),
+                primary_size: 5
+              }
+            }
+          end),
+        recipe_user_meals:
+          Enum.map(x.recipe_user_meals, fn y ->
+            %{
+              title: y.recipe.title,
+              consume_portions: y.consume_portions,
+              cooking_portions: y.cooking_portions,
+              servings: y.recipe.servings,
+              recipe_nutrients: y.recipe.nutrients,
+              img_url: y.recipe.image_url,
+              primary_size: y.recipe.primary_nutrients_size,
+              recipe_id: y.recipe.id
+            }
+          end)
+      }
+    end)
+  end
+
+  defp build_result_message(created, 0),
+    do: "Added #{created} meals to your calendar."
+
+  defp build_result_message(created, skipped),
+    do: "Added #{created} meals to your calendar (#{skipped} skipped due to errors)."
 end

@@ -3,6 +3,17 @@ defmodule MehungryWeb.JsonViewerComponent do
   use Phoenix.LiveComponent
   import Phoenix.Component
 
+  @url_regex ~r/^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w\-._~:\/?#[\]@!$&'()*+,;=]*)?$/
+  @image_regex ~r/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i
+
+  def valid_url?(url) when is_binary(url) do
+    Regex.match?(@url_regex, url)
+  end
+
+  def valid_img?(url) when is_binary(url) do
+    Regex.match?(@image_regex, url)
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -20,18 +31,6 @@ defmodule MehungryWeb.JsonViewerComponent do
       <% end %>
     </ul>
     """
-  end
-
-  @url_regex ~r/^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w\-._~:\/?#[\]@!$&'()*+,;=]*)?$/
-  @youtube_regex ~r/^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w\-]+/
-  @image_regex ~r/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i
-
-  def valid_url?(url) when is_binary(url) do
-    Regex.match?(@url_regex, url)
-  end
-
-  def valid_img?(url) when is_binary(url) do
-    Regex.match?(@image_regex, url)
   end
 
   defp json_render(%{data: data} = assigns) when is_binary(data) do

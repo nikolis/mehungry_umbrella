@@ -1,0 +1,118 @@
+<div class="min-h-screen bg-slate-900 py-10 px-4">
+  <div class="max-w-3xl mx-auto">
+
+    <%# Status banners %>
+    <%= if @stripe_status == :success do %>
+      <div class="mb-6 rounded-xl bg-green-500/10 border border-green-500/30 p-4 flex items-center gap-3">
+        <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <p class="text-green-300 text-sm font-medium">You're now on Pro! Your AI features are unlocked.</p>
+      </div>
+    <% end %>
+    <%= if @stripe_status == :cancel do %>
+      <div class="mb-6 rounded-xl bg-slate-800 border border-slate-700 p-4">
+        <p class="text-slate-400 text-sm">Checkout cancelled — no charge was made.</p>
+      </div>
+    <% end %>
+
+    <h1 class="text-3xl font-bold text-white text-center mb-2">Unlock AI Features</h1>
+    <p class="text-slate-400 text-center mb-8">Generate recipes and meal plans with AI assistance</p>
+
+    <%# Current usage (only shown when on free tier) %>
+    <%= if @subscription.tier == "free" do %>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-8">
+        <h3 class="text-white font-semibold text-sm mb-3">Your usage this month</h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <div class="text-2xl font-bold text-white">{@recipe_used} <span class="text-slate-500 text-base font-normal">/ {@recipe_limit}</span></div>
+            <div class="text-slate-400 text-xs mt-0.5">AI recipe generations</div>
+          </div>
+          <div>
+            <div class="text-2xl font-bold text-white">{@plan_used} <span class="text-slate-500 text-base font-normal">/ 0</span></div>
+            <div class="text-slate-400 text-xs mt-0.5">AI meal plans</div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <%# Pricing cards %>
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+
+      <%# Free card %>
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-white font-bold text-lg">Free</h2>
+          <%= if @subscription.tier == "free" do %>
+            <span class="px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 text-xs font-medium">Current plan</span>
+          <% end %>
+        </div>
+        <div class="text-3xl font-bold text-white mb-1">€0<span class="text-slate-500 text-base font-normal">/mo</span></div>
+        <p class="text-slate-400 text-sm mb-6">Try out AI features</p>
+        <ul class="space-y-2.5 text-sm">
+          <.feature_row text="All social features" included={true} />
+          <.feature_row text="Unlimited manual recipe creation" included={true} />
+          <.feature_row text="Calendar & nutrition tracking" included={true} />
+          <.feature_row text="3 AI recipe generations / month" included={true} />
+          <.feature_row text="AI meal plan generator" included={false} />
+        </ul>
+      </div>
+
+      <%# Pro card %>
+      <div class="bg-slate-800 border-2 border-primary-500 rounded-2xl p-6 relative">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+          <span class="px-3 py-1 rounded-full bg-primary-500 text-white text-xs font-semibold">Most popular</span>
+        </div>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-white font-bold text-lg">Pro</h2>
+          <%= if @subscription.tier == "pro" do %>
+            <span class="px-2.5 py-0.5 rounded-full bg-primary-500/20 text-primary-300 text-xs font-medium">Current plan</span>
+          <% end %>
+        </div>
+        <div class="text-3xl font-bold text-white mb-1">
+          {MehungryWeb.UpgradeLive.Index.monthly_price()}<span class="text-slate-500 text-base font-normal">/mo</span>
+        </div>
+        <p class="text-slate-400 text-sm mb-6">
+          or {MehungryWeb.UpgradeLive.Index.yearly_price()}/year
+          <span class="text-green-400 text-xs ml-1">save 44%</span>
+        </p>
+        <ul class="space-y-2.5 text-sm mb-6">
+          <.feature_row text="Everything in Free" included={true} />
+          <.feature_row text="15 AI recipe generations / month" included={true} />
+          <.feature_row text="4 AI meal plans / month" included={true} />
+          <.feature_row text="Priority support" included={true} />
+        </ul>
+
+        <%= if @subscription.tier == "pro" do %>
+          <button
+            phx-click="manage_subscription"
+            class="w-full py-2.5 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 text-sm font-medium transition"
+          >
+            Manage subscription
+          </button>
+        <% else %>
+          <div class="flex flex-col gap-2">
+            <button
+              phx-click="subscribe"
+              phx-value-interval="monthly"
+              class="w-full py-2.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold transition"
+            >
+              Subscribe monthly — {MehungryWeb.UpgradeLive.Index.monthly_price()}/mo
+            </button>
+            <button
+              phx-click="subscribe"
+              phx-value-interval="yearly"
+              class="w-full py-2.5 rounded-xl border border-primary-500/50 text-primary-400 hover:bg-primary-500/10 text-sm font-medium transition"
+            >
+              Subscribe yearly — {MehungryWeb.UpgradeLive.Index.yearly_price()}/yr
+            </button>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <p class="text-center text-slate-500 text-xs">
+      Payments are processed securely by Stripe. Cancel anytime.
+    </p>
+  </div>
+</div>
