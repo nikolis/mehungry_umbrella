@@ -11,7 +11,7 @@ defmodule Mehungry.Subscriptions do
   alias Mehungry.Subscriptions.{UserSubscription, AiUsage}
 
   @monthly_limits %{
-    "free" => %{"recipe_generation" => 3, "meal_plan" => 0},
+    "free" => %{"recipe_generation" => 0, "meal_plan" => 0},
     "pro"  => %{"recipe_generation" => 15, "meal_plan" => 4}
   }
 
@@ -150,5 +150,11 @@ defmodule Mehungry.Subscriptions do
 
   def pro?(user_id) do
     get_subscription(user_id).tier == "pro"
+  end
+
+  @doc "Returns a map of %{user_id => UserSubscription} for all users that have a subscription row."
+  def subscriptions_by_user_id do
+    Repo.all(UserSubscription)
+    |> Map.new(fn sub -> {sub.user_id, sub} end)
   end
 end

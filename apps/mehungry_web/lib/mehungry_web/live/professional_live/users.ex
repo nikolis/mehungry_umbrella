@@ -3,10 +3,18 @@ defmodule MehungryWeb.ProfessionalLive.Users do
 
   alias Mehungry.Accounts
   alias Mehungry.Accounts.User
+  alias Mehungry.Subscriptions
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, stream(socket, :users, Accounts.list_users())}
+    subscriptions = Subscriptions.subscriptions_by_user_id()
+    pro_count = Enum.count(subscriptions, fn {_id, sub} -> sub.tier == "pro" end)
+
+    {:ok,
+     socket
+     |> assign(:subscriptions, subscriptions)
+     |> assign(:pro_count, pro_count)
+     |> stream(:users, Accounts.list_users())}
   end
 
   @impl true
