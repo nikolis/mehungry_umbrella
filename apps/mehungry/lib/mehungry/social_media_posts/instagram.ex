@@ -10,7 +10,7 @@ defmodule Mehungry.SocialMediaPosts.Instagram do
     field :resource_id, :integer
     field :type_, :string, default: "Recipe"
 
-    belongs_to :user, Mehungry.Account.User
+    belongs_to :user, Mehungry.Accounts.User
 
     timestamps()
   end

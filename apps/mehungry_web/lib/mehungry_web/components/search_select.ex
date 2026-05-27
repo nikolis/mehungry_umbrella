@@ -1,7 +1,6 @@
 defmodule MehungryWeb.SearchSelect do
   use Phoenix.LiveComponent
 
-  alias Phoenix.HTML.Form
 
   @impl true
   def mount(socket) do

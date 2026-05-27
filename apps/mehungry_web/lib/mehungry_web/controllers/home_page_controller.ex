@@ -1,7 +1,5 @@
 defmodule MehungryWeb.HomePageController do
   use MehungryWeb, :controller
-  # Add this line
-  import Phoenix.VerifiedRoutes, only: [sigil_p: 2]
 
   def home(conn, _params) do
     if conn.assigns[:current_user] do

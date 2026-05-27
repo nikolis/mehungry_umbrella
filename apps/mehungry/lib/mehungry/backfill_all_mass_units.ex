@@ -131,45 +131,14 @@ defmodule Mehungry.BackfillAllMassUnits do
   end
 
   # ------------------------
-  # CONVERSIONS
-  # ------------------------
-
-  defp to_grams(gram_weight, unit_name) do
-    factor = Map.fetch!(@to_grams, unit_name)
-    gram_weight / factor
-  end
-
-  # ------------------------
   # HELPERS
   # ------------------------
-
-  defp load_units!(names) do
-    names
-    |> Enum.map(fn name ->
-      case Repo.get_by(MeasurementUnit, name: name) do
-        nil ->
-          IO.puts("⚠️ Creating missing MeasurementUnit: #{name}")
-
-          %MeasurementUnit{}
-          |> MeasurementUnit.changeset(%{name: name})
-          |> Repo.insert!()
-
-        unit ->
-          unit
-      end
-    end)
-    |> Map.new(&{&1.name, &1})
-  end
 
   defp load_units!(names) do
     MeasurementUnit
     |> where([mu], mu.name in ^names)
     |> Repo.all()
     |> Map.new(&{&1.name, &1})
-  end
-
-  defp get_unit_name(id) do
-    Repo.get!(MeasurementUnit, id).name
   end
 
   defp exists?(ingredient_id, unit_id) do

@@ -6,7 +6,7 @@ defmodule MehungryWeb.IngredientSearch do
 
   # Client API
 
-  def start_link(opts \\ []) do
+  def start_link(_opts \\ []) do
     api_key = "ICjMhFVerhu917ppnyybL7ozeXGbftEk3q7li2GM"
     GenServer.start_link(__MODULE__, api_key, name: __MODULE__)
   end
@@ -57,7 +57,7 @@ defmodule MehungryWeb.IngredientSearch do
       {:ok, %Req.Response{status: 200, body: %{"foods" => foods}}} ->
         {:ok, format_search_results(foods)}
 
-      {:ok, %Req.Response{status: status, body: body}} ->
+      {:ok, %Req.Response{status: status, body: _body}} ->
         {:error, "Search failed: HTTP #{status}"}
 
       {:error, error} ->
@@ -85,7 +85,7 @@ defmodule MehungryWeb.IngredientSearch do
 
     # Check for foodPortions array (Foundation/SR Legacy)
     if food["foodPortions"] do
-      portions =
+      _portions =
         portions ++
           Enum.map(food["foodPortions"], fn portion ->
             %{
@@ -99,7 +99,7 @@ defmodule MehungryWeb.IngredientSearch do
 
     # Check for serving size (Branded foods)
     if food["servingSize"] do
-      portions =
+      _portions =
         portions ++
           [
             %{

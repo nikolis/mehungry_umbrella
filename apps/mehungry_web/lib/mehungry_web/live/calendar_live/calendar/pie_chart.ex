@@ -44,8 +44,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.PieChart do
 
   # ---------- CHART BUILDER ----------
   def build_spec(data, width) do
-    radius = width * 0.35
-    inner = width * 0.2
+    _radius = width * 0.35
+    _inner = width * 0.2
 
     Vl.new(width: 100, height: 100)
     |> Vl.data_from_values(data)

@@ -3,7 +3,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
   alias MehungryWeb.CalendarLive.Calendar.Utils
   alias MehungryWeb.SvgComponents
-  alias VegaLite, as: Vl
 
   alias Mehungry.NutrientUtils, as: Nu
 

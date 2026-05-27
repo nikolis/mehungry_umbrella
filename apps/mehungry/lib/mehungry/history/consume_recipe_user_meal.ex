@@ -2,6 +2,7 @@ defmodule Mehungry.History.ConsumeRecipeUserMeal do
   @moduledoc false
 
   alias Mehungry.History.RecipeUserMeal
+  alias Mehungry.History.UserMeal
   alias Mehungry.History
 
   use Ecto.Schema

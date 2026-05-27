@@ -1,4 +1,11 @@
 defmodule Mehungry.Food.IngredientSearch do
+  # Trigger the fuzzy fallback when prefix results fall below this count.
+  @prefix_sufficient 10
+  # Upper bound on total results returned.
+  @max_results 20
+  # Minimum pg_trgm word_similarity score to include a fuzzy result.
+  @fuzzy_threshold 0.3
+
   @moduledoc """
   Ranked ingredient search backed by the local USDA database.
 
@@ -42,13 +49,6 @@ defmodule Mehungry.Food.IngredientSearch do
   import Ecto.Query
   alias Mehungry.Repo
   alias Mehungry.Food.Ingredient
-
-  # Trigger the fuzzy fallback when prefix results fall below this count.
-  @prefix_sufficient 10
-  # Upper bound on total results returned.
-  @max_results 20
-  # Minimum pg_trgm word_similarity score to include a fuzzy result.
-  @fuzzy_threshold 0.3
 
   # ═════════════════════════════════════════════════════════════════════════
   # Public API

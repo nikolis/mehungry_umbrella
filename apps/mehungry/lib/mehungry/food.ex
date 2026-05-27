@@ -22,8 +22,6 @@ defmodule Mehungry.Food do
     IngredientPortion
   }
 
-  alias Mehungry.Posts.Post
-  alias Mehungry.Posts
   alias Mehungry.Food.RecipeHashtag
   alias Mehungry.Languages.Language
   alias Mehungry.Hashtag
@@ -626,20 +624,19 @@ defmodule Mehungry.Food do
   end
 
   defp get_recipe_hashtags(attrs) do
-    recipe_hashtags =
-      case is_nil(attrs["description"]) do
-        true ->
-          case is_nil(attrs[:description]) do
-            true ->
-              []
+    case is_nil(attrs["description"]) do
+      true ->
+        case is_nil(attrs[:description]) do
+          true ->
+            []
 
-            false ->
-              get_hashtags_string(attrs[:description])
-          end
+          false ->
+            get_hashtags_string(attrs[:description])
+        end
 
-        false ->
-          get_hashtags_string(attrs["description"])
-      end
+      false ->
+        get_hashtags_string(attrs["description"])
+    end
   end
 
   def update_recipe(%Recipe{} = recipe_origin, attrs \\ %{}) do
@@ -673,7 +670,7 @@ defmodule Mehungry.Food do
           nil ->
             result
 
-          image_url ->
+          _image_url ->
             %{
               recipe_id: recipe.id,
               origin_url: recipe_origin.image_url,
@@ -1060,68 +1057,6 @@ defmodule Mehungry.Food do
     |> Enum.sort_by(fn x -> String.length(x.name) end)
   end
 
-  def search_ingredient(search_term, language_name) do
-    search_term = search_term <> "%"
-
-    Logger.info(
-      "Searching for ingredient with name: " <>
-        search_term <>
-        ", in: " <> language_name
-    )
-
-    if is_nil(language_name) do
-      query =
-        from ingredient in Ingredient,
-          where: ilike(ingredient.name, ^search_term)
-
-      Repo.all(query)
-      |> Repo.preload([:category, :measurement_unit])
-    else
-      if is_nil(language_name) do
-        Logger.info("Language not fount" <> language_name)
-        []
-      else
-        Logger.info("Language no doupt" <> language_name)
-
-        query =
-          from ingr_trans in IngredientTranslation,
-            where: ingr_trans.language_name == ^language_name
-
-        query_search =
-          from transl in query,
-            where: ilike(transl.name, ^search_term)
-
-        query_aggrigate =
-          from tra in query_search,
-            inner_join: ing in Ingredient,
-            on: ing.id == tra.ingredient_id,
-            inner_join: cat in Category,
-            on: true,
-            where: cat.id == ing.category_id,
-            inner_join: cat_trans in CategoryTranslation,
-            on: true,
-            where: cat_trans.category_id == cat.id and cat_trans.language_name == ^language_name,
-            inner_join: mu in MeasurementUnit,
-            on: true,
-            where: mu.id == ing.measurement_unit_id,
-            inner_join: mu_trans in MeasurementUnitTranslation,
-            on: true,
-            where:
-              mu_trans.measurement_unit_id == mu.id and mu_trans.language_name == ^language_name,
-            distinct: true,
-            select: %Ingredient{
-              name: tra.name,
-              id: ing.id,
-              category: %Category{id: cat.id, name: cat_trans.name},
-              measurement_unit: %MeasurementUnit{id: mu.id, name: mu_trans.name}
-            }
-
-        result = Repo.all(query_aggrigate)
-        Logger.info("Search: " <> search_term <> " resulted: " <> inspect(result))
-        result
-      end
-    end
-  end
 
   def list_recipes_with_user_rating(user) do
     Recipe.Query.with_user_ratings(user)

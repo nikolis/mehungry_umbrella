@@ -6,6 +6,8 @@ defmodule MehungryWeb.Application do
   use Application
   import Cachex.Spec
 
+  @env Mix.env()
+
   def start(_type, _args) do
     children = [
       # Start the Telemetry supervisor

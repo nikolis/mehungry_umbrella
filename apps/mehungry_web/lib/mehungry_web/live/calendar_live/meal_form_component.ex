@@ -9,9 +9,8 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   alias Mehungry.History
   alias MehungryWeb.CalendarLive.Components
 
-  def get_measurement_units(form, index) do
-    measurement_units = Food.get_measurement_unit_by_name("grammar")
-    measurement_units
+  def get_measurement_units(_form, _index) do
+    Food.get_measurement_unit_by_name("grammar")
   end
 
   def is_empty(%Phoenix.HTML.Form{} = form, atom_key) do
@@ -77,7 +76,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   defp init(socket, base, default_attrs) do
     changeset = UserMeal.changeset(base, default_attrs)
     existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
-    existing_ing = Ecto.Changeset.get_assoc(changeset, :ingredient_user_meals)
+    _existing_ing = Ecto.Changeset.get_assoc(changeset, :ingredient_user_meals)
 
     changeset =
       if Enum.empty?(existing) do

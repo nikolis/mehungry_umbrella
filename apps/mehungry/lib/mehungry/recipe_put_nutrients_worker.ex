@@ -2,9 +2,6 @@ defmodule Mehungry.RecipePutNutrientsWorker do
   use Oban.Worker,
     max_attempts: 3
 
-  import Ecto.Query
-
-  alias Mehungry.Posts.Post
   alias Mehungry.Repo
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
@@ -27,7 +24,7 @@ defmodule Mehungry.RecipePutNutrientsWorker do
     IO.inspect(recipe, label: "Return repo get")
     changeset = Food.change_recipe(recipe)
 
-    create_post = Mehungry.Posts.create_post(recipe)
+    _create_post = Mehungry.Posts.create_post(recipe)
 
     result =
       Food.put_nutrient_info(changeset, Map.from_struct(recipe))

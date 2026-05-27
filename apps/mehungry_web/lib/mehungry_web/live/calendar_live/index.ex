@@ -39,7 +39,6 @@ defmodule MehungryWeb.CalendarLive.Index do
       |> assign(:ai_plan_task_ref, nil)
       |> assign(:ai_plan_result, nil)
       |> assign(:ai_quota_exceeded, false)
-      |> assign(:show_ai_panel, false)
     }
   end
 
@@ -202,10 +201,6 @@ defmodule MehungryWeb.CalendarLive.Index do
   @impl true
   def handle_event("date-details", %{"date" => start_date}, socket) do
     {:noreply, push_patch(socket, to: "/calendar/details/#{start_date}", replace: true)}
-  end
-
-  def handle_event("toggle_ai_panel", _, socket) do
-    {:noreply, assign(socket, :show_ai_panel, !socket.assigns.show_ai_panel)}
   end
 
   def handle_event("ai_plan_week", %{"prompt" => prompt}, socket) when prompt != "" do

@@ -11,9 +11,17 @@ defmodule Mehungry.Languages do
     |> Repo.insert()
   end
 
-  def change_language(language, attrs \\ %{}) do
+  def update_language(%Language{} = language, attrs) do
+    language
+    |> Language.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def change_language(_language, attrs \\ %{}) do
     Language.changeset(%Language{}, attrs)
   end
+
+  def get_language!(id), do: Repo.get!(Language, id)
 
   def get_language_by_name(name) do
     query = from lang in Language, where: lang.name == ^name

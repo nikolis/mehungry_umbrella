@@ -30,6 +30,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:ai_task_ref, nil)
      |> assign(:ai_unmatched, [])
      |> assign(:ai_quota_exceeded, false)
+     |> assign(:show_ai_panel, false)
      |> assign(:items, [
        %{id: 1, name: "easy"},
        %{id: 2, name: "medium"},
@@ -46,20 +47,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   def handle_event("set_step", %{"step" => step}, socket) do
     {:noreply, assign(socket, active_step: String.to_integer(step))}
-  end
-
-  defp rebuild_form(socket, params) do
-    changeset =
-      socket.assigns.recipe
-      |> Food.change_recipe(params)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, :f, to_form(changeset))}
-  end
-
-  defp presign_upload(entry, %{assigns: %{uploads: uploads}} = socket) do
-    meta = SimpleS3Upload.meta(entry, uploads)
-    {:ok, meta, socket}
   end
 
   def handle_event("validate", %{"url_to_drill" => url} = recipe_params, socket) do
@@ -86,11 +73,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, assign(socket, :f, to_form(changeset))}
   end
 
-  @url_regex ~r/^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w\-._~:\/?#[\]@!$&'()*+,;=]*)?$/
-  def valid_url?(url) when is_binary(url) do
-    Regex.match?(@url_regex, url)
-  end
-
   def handle_event("save", %{"url_to_drill" => url} = recipe_params, socket) do
     url = "https://www.themealdb.com/api/json/v1/1/lookup.php?i=" <> url
 
@@ -115,6 +97,25 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       false ->
         {:noreply, socket}
     end
+  end
+
+  @url_regex ~r/^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w\-._~:\/?#[\]@!$&'()*+,;=]*)?$/
+  def valid_url?(url) when is_binary(url) do
+    Regex.match?(@url_regex, url)
+  end
+
+  defp rebuild_form(socket, params) do
+    changeset =
+      socket.assigns.recipe
+      |> Food.change_recipe(params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :f, to_form(changeset))}
+  end
+
+  defp presign_upload(entry, %{assigns: %{uploads: uploads}} = socket) do
+    meta = SimpleS3Upload.meta(entry, uploads)
+    {:ok, meta, socket}
   end
 
   ################################################################################## Actions #############################################################################################

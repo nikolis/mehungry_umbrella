@@ -9,12 +9,12 @@ defmodule Mehungry.Food.MeasurementUnitTranslation do
     field :name, :string
     field :alternate_name, :string
 
-    belongs_to :language, Mehungry.Language,
+    belongs_to :language, Mehungry.Languages.Language,
       references: :name,
       foreign_key: :language_name,
       type: :string
 
-    belongs_to :measurement_unit, Mehungry.Food.Measurement_unit
+    belongs_to :measurement_unit, Mehungry.Food.MeasurementUnit
 
     timestamps()
   end

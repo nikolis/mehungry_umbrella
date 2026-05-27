@@ -19,26 +19,26 @@ end
 defmodule MehungryWeb.SeedsGenWorkerServer do
   use GenServer
 
-  def start_link(url) do
+  def start_link(_url) do
     schedule_work()
     pid = GenServer.start_link(__MODULE__, %{}, name: {:global, :seed_worker})
     pid
   end
 
-  # Demands reply/synchronous 
+  # Demands reply/synchronous
   def handle_call(:submit_task_list, _from, %{agent: agent}) do
-    tasks_list = Agent.get(agent, fn x -> x.work_items end)
-    {:reply, [], %{work_items: tasks_list}}
-  end
-
-  def get_tasks() do
-    pid = :global.whereis_name(:seed_worker)
-    GenServer.call(pid, :get_work_items)
+    _tasks_list = Agent.get(agent, fn x -> x.work_items end)
+    {:reply, [], %{work_items: []}}
   end
 
   def handle_call(:get_work_items, _from, state) do
     tasks_list = Agent.get(state.agent, fn x -> x.work_items end)
     {:reply, tasks_list, state}
+  end
+
+  def get_tasks() do
+    pid = :global.whereis_name(:seed_worker)
+    GenServer.call(pid, :get_work_items)
   end
 
   def schedule_work() do
@@ -63,25 +63,20 @@ defmodule MehungryWeb.SeedsGenWorkerServer do
 
   def process_list([url]) do
     try do
-      # IO.inspect("Parsing url #{url} ", label: "Process List Signle Item")
       %HTTPoison.Response{body: body} = HTTPoison.get!(url)
       Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
     rescue
-      the_error ->
+      _the_error ->
         []
     end
   end
 
   def process_list([url | rest]) do
-    url
-
     try do
-      # IO.inspect("Parsing url #{url} ", label: "Process List")
       %HTTPoison.Response{body: body} = HTTPoison.get!(url)
       Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
     rescue
-      the_error ->
-        # IO.inspect(the_error, label: "Error in processing #{url}")
+      _the_error ->
         rest
     end
 
@@ -99,10 +94,8 @@ defmodule MehungryWeb.SeedsGenWorkerServer do
 
   # Can't reply 
   def handle_cast({:submit_tasks, task_list}, state) do
-    tasks_list = Agent.get(state.agent, fn x -> x.work_items end)
-    # Logger.debug
-    # IO.inspect("Tasks list submited to Worked(seeds gen server) #{inspect(task_list)}")
-    Agent.update(state.agent, fn state -> %{work_items: task_list} end)
+    _tasks_list = Agent.get(state.agent, fn x -> x.work_items end)
+    Agent.update(state.agent, fn _state -> %{work_items: task_list} end)
     {:noreply, state}
   end
 

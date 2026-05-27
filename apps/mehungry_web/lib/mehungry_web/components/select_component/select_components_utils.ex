@@ -56,15 +56,15 @@ defmodule MehungryWeb.SelectComponentUtils do
     Enum.filter(items, fn x -> elem(x, 0) in form_params end)
   end
 
-  def get_selected_items(nil, %{}, input_variable, label_function, assigns) do
+  def get_selected_items(nil, %{}, _input_variable, _label_function, _assigns) do
     []
   end
 
-  def get_selected_items(nil, nil, input_variable, label_function, assigns) do
+  def get_selected_items(nil, nil, _input_variable, _label_function, _assigns) do
     []
   end
 
-  def get_selected_items(changes, form_params, input_variable, label_function, assigns) do
+  def get_selected_items(changes, _form_params, input_variable, _label_function, assigns) do
     input_variable_form_params = []
 
     input_variable_changeset =
@@ -83,16 +83,16 @@ defmodule MehungryWeb.SelectComponentUtils do
        input_variable_form_data}
 
     case tuple_results do
-      {nil, nil, nil, nil} ->
+      {nil, _form_params, nil, nil} ->
         []
 
-      {nil, nil, nil, form_date} ->
+      {nil, _form_params, nil, form_date} ->
         form_date
 
-      {nil, nil, selected_items, _} ->
+      {nil, _form_params, selected_items, _} ->
         selected_items
 
-      {nil, form_params, _, _} ->
+      {nil, _form_params, _, _} ->
         []
 
       # get_items_from_params(form_params, assigns.items)

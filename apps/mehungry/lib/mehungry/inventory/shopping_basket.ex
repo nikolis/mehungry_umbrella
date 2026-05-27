@@ -7,8 +7,6 @@ defmodule Mehungry.Inventory.ShoppingBasket do
   alias Mehungry.Inventory.BasketIngredient
   alias Mehungry.Inventory.BasketItem
 
-  alias Mehungry.Inventory.Item
-
   alias Mehungry.Accounts.User
 
   schema "shopping_baskets" do

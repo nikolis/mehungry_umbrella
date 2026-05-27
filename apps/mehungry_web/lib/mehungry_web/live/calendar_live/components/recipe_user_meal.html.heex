@@ -1,65 +1,39 @@
-<div id={"root_layer" <> to_string(@f.index)} class="" style={if @deleted, do: "display: none"}>
-  <div class="w-full max-w-md mx-auto px-4 pt-4">
-    <!-- Mode Toggle -->
-    <div class="flex bg-slate-700 rounded-xl p-1 shadow-inner">
-      <button
-        type="button"
-        phx-click="set_mode"
-        phx-value-mode="recipe"
-        phx-target={@myself}
-        class={
-        "flex-1 py-2 text-sm font-medium rounded-lg transition-all px-2 " <>
-        if @mode == "recipe" do
-          "bg-slate-900 text-white shadow"
-        else
-          "text-slate-400 hover:text-slate-200"
-        end
-      }
-      >
-        Recipe
-      </button>
-      <button
-        type="button"
-        phx-click="set_mode"
-        phx-target={@myself}
-        phx-value-mode="ingredient"
-        class={
-        "flex-1 py-2 text-sm font-medium rounded-lg transition-all px-2 " <>
-        if @mode == "ingredient" do
-          "bg-slate-900 text-white shadow"
-        else
-          "text-slate-400 hover:text-slate-200"
-        end
-      }
-      >
-        Ingredient
-      </button>
-      <div class="px-3 py-2 text-slate-400 text-sm font-medium">Meal</div>
-    </div>
-  </div>
-
+<div id={"root_layer" <> to_string(@f.index)} style={if @deleted, do: "display: none"}>
   <input
     type="hidden"
     name={Phoenix.HTML.Form.input_name(@f, :delete)}
     value={to_string(Phoenix.HTML.Form.input_value(@f, :delete))}
   />
 
-  <div class="p-4 space-y-3">
-    <div class="w-full">
-      <.live_component
-        module={MehungryWeb.SelectComponent}
-        form={@f}
-        items={Enum.map(@recipes, fn x -> {Integer.to_string(x.id), x.title} end)}
-        input_variable={:recipe_id}
-        id={"recipe_search_component" <> Integer.to_string(@f.index)}
-      />
+  <div class="bg-slate-800 border border-slate-700 rounded-xl p-3 space-y-3">
+    <div class="flex items-start gap-2">
+      <div class="flex-1 min-w-0">
+        <.live_component
+          module={MehungryWeb.SelectComponent}
+          form={@f}
+          items={Enum.map(@recipes, fn x -> {Integer.to_string(x.id), x.title} end)}
+          input_variable={:recipe_id}
+          id={"recipe_search_component" <> Integer.to_string(@f.index)}
+        />
+      </div>
+      <button
+        type="button"
+        phx-click="delete_recipe_record"
+        phx-value-index={@f.index}
+        phx-target={@parent_component}
+        class="mt-1 p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+      >
+        <svg width="1.1rem" height="1.1rem" viewBox="0 0 24 24" fill="none">
+          <path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 10v8a2 2 0 002 2h8a2 2 0 002-2V10M10 12v5M14 12v5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
     </div>
 
-    <div class="flex gap-3 justify-center">
-      <div class="input-form h-10 w-32">
+    <div class="grid grid-cols-2 gap-3">
+      <div class="input-form">
         <.input field={@f[:cooking_portions]} type="text" label="Prepare" />
       </div>
-      <div class="input-form h-10 w-32">
+      <div class="input-form">
         <.input field={@f[:consume_portions]} type="text" label="Consume" />
       </div>
     </div>

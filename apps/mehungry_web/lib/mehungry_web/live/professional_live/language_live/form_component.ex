@@ -29,10 +29,6 @@ defmodule MehungryWeb.ProfessionalLive.LanguageLive.FormComponent do
     end
   end
 
-  defp assign_form(socket, changeset) do
-    assign(socket, :form, to_form(changeset))
-  end
-
   defp save_language(socket, :new, params) do
     case Languages.create_language(params) do
       {:ok, language} ->
@@ -42,6 +38,10 @@ defmodule MehungryWeb.ProfessionalLive.LanguageLive.FormComponent do
       {:error, changeset} ->
         {:noreply, assign_form(socket, changeset)}
     end
+  end
+
+  defp assign_form(socket, changeset) do
+    assign(socket, :form, to_form(changeset))
   end
 
   defp notify_parent(msg), do: send(self(), {__MODULE__, msg})

@@ -28,7 +28,6 @@ defmodule MehungryWeb.IngredientComponent do
     measurement_units =
       if(!is_nil(socket.assigns.ingredient_form[:ingredient_id].value)) do
         id = socket.assigns.ingredient_form[:ingredient_id].value
-        grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
 
         Mehungry.Food.get_measurement_unit_portions_for_ingredient(id)
         |> Enum.map(fn x -> x.measurement_unit end)
@@ -100,12 +99,12 @@ defmodule MehungryWeb.IngredientComponent do
   def get_measurement_unit(ing_val, assigns) when is_integer(ing_val),
     do: assigns.measurement_units ++ get_measurement_unit(ing_val)
 
-  def get_measurment_unit("", assigns), do: assigns.measurement_units
-
   def get_measurement_unit(ing_val, assigns) do
     ing_val = String.to_integer(ing_val)
     assigns.measurement_units ++ get_measurement_unit(ing_val)
   end
+
+  def get_measurment_unit("", assigns), do: assigns.measurement_units
 
   defp get_measurement_unit(nil) do
     []

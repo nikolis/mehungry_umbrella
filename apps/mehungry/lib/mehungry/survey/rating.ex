@@ -10,7 +10,7 @@ defmodule Mehungry.Survey.Rating do
     field :stars, :integer
 
     belongs_to :user, User
-    belongs_to :recipe, Product
+    belongs_to :recipe, Mehungry.Food.Recipe
 
     timestamps()
   end

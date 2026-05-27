@@ -2,7 +2,6 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsEdit do
   use MehungryWeb, :live_view
 
   alias Mehungry.Food
-  alias Mehungry.Food.Ingredient
   alias Mehungry.Languages
 
   def mount(%{"id" => id}, _session, socket) do
@@ -52,10 +51,6 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsEdit do
   end
 
   def handle_event("save", %{"ingredient" => params}, socket) do
-    handle_action(socket, params)
-  end
-
-  def handle_event("validate", %{"ingredient" => params}, socket) do
     handle_action(socket, params)
   end
 

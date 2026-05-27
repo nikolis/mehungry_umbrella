@@ -9,7 +9,7 @@ defmodule Mehungry.Food.CategoryTranslation do
 
     belongs_to :category, Mehungry.Food.Category
 
-    belongs_to :language, Mehungry.Language,
+    belongs_to :language, Mehungry.Languages.Language,
       references: :name,
       foreign_key: :language_name,
       type: :string
