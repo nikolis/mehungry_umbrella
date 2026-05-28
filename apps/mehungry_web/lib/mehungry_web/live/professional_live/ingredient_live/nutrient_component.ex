@@ -17,49 +17,56 @@ defmodule MehungryWeb.Professional.NutrientComponent do
 
   def render(assigns) do
     ~H"""
-    <div class="relative  p-8">
-      <h3 class="m-auto w-wrap text-2xl font-semibold mb-2">Nutrients</h3>
-      <.inputs_for :let={nutrients_form} field={@form[:ingredient_nutrients]}>
-        <div class="flex  relative py-2">
-          <input
-            type="hidden"
-            name="ingredient[ingredient_nutrients_sort][]"
-            value={nutrients_form.index}
-          />
-
-          <.live_component
-            module={MehungryWeb.SelectComponent}
-            items={Enum.map(@nutrients, fn x -> {Integer.to_string(x.id), x.name} end)}
-            form={nutrients_form}
-            id={"measurement_unit_select_component_ingredient" <> Integer.to_string(nutrients_form.index)}
-            input_variable={:nutrient_id}
-            item_function={fn x -> x.name end}
-          />
-
-          <.input
-            type="number_subscript"
-            label="Amount per 100gram"
-            subscript={get_measurement_unit_for_nutrient(nutrients_form[:nutrient_id].value)}
-            name={nutrients_form[:amount].name}
-            value={nutrients_form[:amount].value}
-          >
-            <div>
-              {get_measurement_unit_for_nutrient(nutrients_form[:nutrient_id].value)}
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-white">Nutrients</h3>
+        <button
+          name="ingredient[_action]"
+          value="add_nutrient"
+          class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 text-slate-300 hover:bg-slate-700 text-xs font-semibold transition-colors"
+        >
+          + Add Nutrient
+        </button>
+      </div>
+      <div class="space-y-3">
+        <.inputs_for :let={nutrients_form} field={@form[:ingredient_nutrients]}>
+          <div class="bg-slate-700/40 rounded-xl p-3 flex flex-col sm:flex-row sm:items-end gap-3">
+            <input
+              type="hidden"
+              name="ingredient[ingredient_nutrients_sort][]"
+              value={nutrients_form.index}
+            />
+            <div class="flex-1">
+              <.live_component
+                module={MehungryWeb.SelectComponent}
+                items={Enum.map(@nutrients, fn x -> {Integer.to_string(x.id), x.name} end)}
+                form={nutrients_form}
+                id={"measurement_unit_select_component_ingredient" <> Integer.to_string(nutrients_form.index)}
+                input_variable={:nutrient_id}
+                item_function={fn x -> x.name end}
+              />
             </div>
-          </.input>
-
-          <button name="ingredient[_action]" value={"remove_nutrient:#{nutrients_form.index}"}>
-            ❌
-          </button>
-        </div>
-      </.inputs_for>
-      <button
-        name="ingredient[_action]"
-        value="add_nutrient"
-        class="px-4 font-semibold text-md absolute right-10"
-      >
-        Add Nutrient
-      </button>
+            <div class="flex-1">
+              <.input
+                type="number_subscript"
+                label="Amount per 100g"
+                subscript={get_measurement_unit_for_nutrient(nutrients_form[:nutrient_id].value)}
+                name={nutrients_form[:amount].name}
+                value={nutrients_form[:amount].value}
+              >
+                <div>{get_measurement_unit_for_nutrient(nutrients_form[:nutrient_id].value)}</div>
+              </.input>
+            </div>
+            <button
+              name="ingredient[_action]"
+              value={"remove_nutrient:#{nutrients_form.index}"}
+              class="self-end text-slate-500 hover:text-red-400 transition-colors p-1"
+            >
+              <.icon name="hero-x-mark" class="w-4 h-4" />
+            </button>
+          </div>
+        </.inputs_for>
+      </div>
     </div>
     """
   end

@@ -287,15 +287,16 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   defp apply_action(socket, :index, %{"hashtag" => query_str} = _params) do
     maybe_track_user(%{query: query_str}, socket)
-    query_str = "#" <> query_str
+    display_tag = "#" <> query_str
 
     socket
     |> assign(:recipe, nil)
     |> assign_user_meta()
-    |> handle_search(query_str)
+    |> handle_search(display_tag)
     |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
     |> assign(:page, 1)
-    |> assign(:page_title, "search for recipe  " <> query_str)
+    |> assign(:page_title, "#{display_tag} Recipes | M3Hungry")
+    |> assign(:page_description, "Browse #{display_tag} recipes with complete USDA nutrition data. Discover ingredients, macros, and cooking instructions on M3Hungry.")
   end
 
   defp apply_action(socket, :index, %{"query" => query_str} = _params) do
@@ -307,21 +308,21 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> handle_search(query_str)
     |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
     |> assign(:page, 1)
-    |> assign(:page_title, "search for recipe  " <> query_str)
+    |> assign(:page_title, "\"#{query_str}\" Recipes | M3Hungry")
+    |> assign(:page_description, "Search results for '#{query_str}' — browse recipes with USDA nutrition analysis, macros, and step-by-step instructions on M3Hungry.")
   end
 
   defp apply_action(socket, :index, _pars) do
-    query_str = ""
-
     maybe_track_user(%{query: ""}, socket)
 
     socket =
       socket
       |> assign(:recipe, nil)
       |> assign(:page, 1)
-      |> assign(:page_title, "Browse food recipes")
+      |> assign(:page_title, "Browse Recipes")
+      |> assign(:page_description, "Browse thousands of recipes with complete USDA nutrition data. Discover new dishes, track macros, and plan your meals on M3Hungry.")
       |> assign_user_meta()
-      |> handle_search(query_str)
+      |> handle_search("")
       |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
 
     assign(socket, :search_changeset, nil)
@@ -353,17 +354,20 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
             |> Enum.map(fn x -> x.recipe_id end)
         end
 
+      description = build_recipe_description(recipe)
+
       socket =
         socket
         |> assign(:nutrients, nutrients)
         |> assign(:primary_size, primaries_length)
         |> assign(:recipe, recipe)
-        |> assign(:page_title, recipe.title <> " Instrufacts")
         |> assign(:page_title, %{
-          title: recipe.title <> " Instructions and nutrition facts",
+          title: recipe.title <> " — Instructions and Nutrition Facts",
           img: recipe.image_url,
           id: Integer.to_string(recipe.id)
         })
+        |> assign(:page_description, description)
+        |> assign(:recipe_jsonld, build_recipe_jsonld(recipe))
         |> assign(:user_recipes, user_recipes)
         |> stream(:recipes, [])
 
@@ -372,6 +376,69 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     else
       socket |> put_flash(:error, "Recipe not found") |> push_navigate(to: "/home")
     end
+  end
+
+  defp build_recipe_description(recipe) do
+    base =
+      if recipe.description && String.length(recipe.description) > 10 do
+        String.slice(recipe.description, 0, 140)
+      else
+        "#{recipe.title} recipe"
+      end
+
+    extras = []
+    extras = if recipe.servings && recipe.servings > 0, do: ["#{recipe.servings} servings" | extras], else: extras
+    extras = if recipe.cooking_time_lower_limit && recipe.cooking_time_lower_limit > 0, do: ["ready in #{recipe.cooking_time_lower_limit} min" | extras], else: extras
+
+    suffix = if extras != [], do: " — " <> Enum.join(Enum.reverse(extras), ", "), else: ""
+    base <> suffix <> ". Full nutrition facts on M3Hungry."
+  end
+
+  defp build_recipe_jsonld(recipe) do
+    base = %{
+      "@context" => "https://schema.org",
+      "@type" => "Recipe",
+      "name" => recipe.title,
+      "url" => "https://www.m3hungry.com/browse/#{recipe.id}",
+      "description" => recipe.description || recipe.title
+    }
+
+    base = if recipe.image_url, do: Map.put(base, "image", recipe.image_url), else: base
+
+    base =
+      if recipe.cooking_time_lower_limit && recipe.cooking_time_lower_limit > 0 do
+        Map.put(base, "cookTime", "PT#{recipe.cooking_time_lower_limit}M")
+      else
+        base
+      end
+
+    base =
+      if recipe.preperation_time_lower_limit && recipe.preperation_time_lower_limit > 0 do
+        Map.put(base, "prepTime", "PT#{recipe.preperation_time_lower_limit}M")
+      else
+        base
+      end
+
+    base =
+      if recipe.servings && recipe.servings > 0 do
+        Map.put(base, "recipeYield", "#{recipe.servings} servings")
+      else
+        base
+      end
+
+    base =
+      case recipe.steps do
+        steps when is_list(steps) and steps != [] ->
+          instructions =
+            Enum.map(steps, fn step ->
+              %{"@type" => "HowToStep", "text" => step.description || step.title || ""}
+            end)
+          Map.put(base, "recipeInstructions", instructions)
+        _ ->
+          base
+      end
+
+    base
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do

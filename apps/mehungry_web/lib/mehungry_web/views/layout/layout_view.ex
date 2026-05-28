@@ -81,12 +81,13 @@ defmodule MehungryWeb.LayoutView do
 
       <!-- Nav links -->
       <div class="flex-1 px-3 space-y-1 overflow-y-auto">
+        <.admin_link href="/professional/analytics" icon="hero-chart-bar" label="Analytics" />
         <.admin_link href="/professional/users" icon="hero-users" label="Users" />
-        <.admin_link href="/professional/activeusers" icon="hero-signal" label="Active Users" />
+        <.admin_link href="/professional/seo" icon="hero-magnifying-glass" label="SEO" />
         <.admin_link href="/professional/ingredients" icon="hero-beaker" label="Ingredients" />
         <.admin_link href="/professional/languages" icon="hero-language" label="Languages" />
         <.admin_link href="/professional/files" icon="hero-folder-open" label="Files" />
-        <.admin_link href="/professional/visits" icon="hero-chart-bar" label="Visits" />
+        <.admin_link href="/professional/visits" icon="hero-map-pin" label="Visits" />
       </div>
 
       <!-- Footer -->

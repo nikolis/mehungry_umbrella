@@ -68,6 +68,9 @@ defmodule MehungryWeb.Router do
       live "/languages/:id", Professional.LanguageLive.Show, :show
       live "/languages/:id/show/edit", Professional.LanguageLive.Show, :edit
 
+      live "/analytics", ProfessionalLive.AnalyticsLive, :index
+      live "/seo", ProfessionalLive.SeoLive, :index
+
       live "/visits", VisitLive.Index, :index
       live "/visits/:ip_address", VisitLive.Show, :show
     end
@@ -152,6 +155,7 @@ defmodule MehungryWeb.Router do
 
     live "/privacy_policy", PrivacyPolicyLive, :index
     get "/health", HealthController, :check
+    get "/sitemap.xml", SitemapController, :index
   end
 
   scope "/", MehungryWeb do

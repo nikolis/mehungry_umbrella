@@ -37,6 +37,12 @@ defmodule MehungryWeb.Presence do
 
       def maybe_track_user(product, socket) do
         if connected?(socket) do
+          referrer =
+            case Phoenix.LiveView.get_connect_params(socket) do
+              nil -> ""
+              params -> Map.get(params, "_live_referer", "") || ""
+            end
+
           ret =
             Presence.track(self(), "general", "general", %{
               address: socket.assigns.address,
@@ -46,8 +52,14 @@ defmodule MehungryWeb.Presence do
 
           Mehungry.Meta.create_visit(%{
             ip_address: socket.assigns.address,
-            details: %{agent: socket.assigns.agent, path: socket.assigns.path}
+            details: %{
+              agent: socket.assigns.agent,
+              path: socket.assigns.path,
+              referrer: referrer
+            }
           })
+
+          Phoenix.PubSub.broadcast(Mehungry.PubSub, "mehungry:analytics", :new_visit)
 
           ret
         else

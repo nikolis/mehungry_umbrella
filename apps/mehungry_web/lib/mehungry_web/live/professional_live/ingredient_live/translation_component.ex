@@ -3,36 +3,42 @@ defmodule MehungryWeb.Professional.TranslationsComponent do
 
   def render(assigns) do
     ~H"""
-    <div class="relative px-8">
-      <h3 class="text-xl font-semibold mb-2">Translations</h3>
-      <.inputs_for :let={tr_form} field={@form[:ingredient_translation]}>
-        <div class="grid grid-cols-5 p-2">
-          <input type="hidden" name="ingredient[ingredient_translation_sort][]" value={tr_form.index} />
-
-          <.input
-            type="text"
-            label="translated ingredient name"
-            name={tr_form[:name].name}
-            value={tr_form[:name].value}
-          />
-
-          <.live_component
-            module={MehungryWeb.SelectComponent}
-            items={Enum.map(@languages, fn x -> {x.name, x.name} end)}
-            form={tr_form}
-            id={"translation_select_id_" <> Integer.to_string(tr_form.index)}
-            input_variable={:language_name}
-          />
-        </div>
-      </.inputs_for>
-      <button
-        type="submit"
-        name="ingredient[_action]"
-        value="add_ingredient_translation"
-        class="px-4 font-semibold text-md absolute right-10"
-      >
-        + Add Translation
-      </button>
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-white">Translations</h3>
+        <button
+          type="submit"
+          name="ingredient[_action]"
+          value="add_ingredient_translation"
+          class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 text-slate-300 hover:bg-slate-700 text-xs font-semibold transition-colors"
+        >
+          + Add Translation
+        </button>
+      </div>
+      <div class="space-y-3">
+        <.inputs_for :let={tr_form} field={@form[:ingredient_translation]}>
+          <div class="bg-slate-700/40 rounded-xl p-3 flex flex-col sm:flex-row sm:items-end gap-3">
+            <input type="hidden" name="ingredient[ingredient_translation_sort][]" value={tr_form.index} />
+            <div class="flex-1">
+              <.input
+                type="text"
+                label="Translated name"
+                name={tr_form[:name].name}
+                value={tr_form[:name].value}
+              />
+            </div>
+            <div class="flex-1">
+              <.live_component
+                module={MehungryWeb.SelectComponent}
+                items={Enum.map(@languages, fn x -> {x.name, x.name} end)}
+                form={tr_form}
+                id={"translation_select_id_" <> Integer.to_string(tr_form.index)}
+                input_variable={:language_name}
+              />
+            </div>
+          </div>
+        </.inputs_for>
+      </div>
     </div>
     """
   end

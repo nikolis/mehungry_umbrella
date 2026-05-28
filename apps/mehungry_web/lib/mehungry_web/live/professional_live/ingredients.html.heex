@@ -1,73 +1,112 @@
-<div class="mx-auto  relative" style="max-width: 65%">
-  <h3 class="text-center sm:pb-4">Ingredients Explorer</h3>
-  <.link
-    phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
-    patch="/professional/ingredients/new"
-    class="fixed bottom-16 right-10 px-6 py-3 rounded-full bg-sky-700 text-white border border-transparent text-[18px] sm:text-[20px] leading-8 font-medium tracking-[-0.2px] dark:border-white/15 hover:brightness-110 transition-[filter] focus-visible:ring-white/30"
-  >
-    New
-  </.link>
-
-  <form phx-change="search_change" class="w-full">
-    <div class="flex gap-1 sm:gap-4 flex-row  flex-wrap p-1 sm:p-4">
-      <.live_component
-        module={MehungryWeb.SelectComponent}
-        items={@food_classes}
-        form={@form}
-        id="category_select_component"
-        input_variable={:classes}
-        mode={:multi}
-      />
-
-      <.input
-        class="text-black "
-        type="select"
-        options={@search_methods}
-        name="search_form[search_method]"
-        value={@search_method}
-      />
-      <.input
-        class="text-black max-w-60"
-        type="text"
-        name="search_form[query]"
-        value={@form[:query].value}
-        label="Search "
-      />
-    </div>
-  </form>
-
-  <div class="bg-gray-200 grid grid-cols-4 gap-2 w-full">
-    <div class="p-2 text-xl font-semibold">Name</div>
-    <div class="p-2 text-xl font-semibold">Class</div>
-    <div class="p-2 text-xl font-semibold">Category</div>
+<div class="px-4 py-6 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-white">Ingredients Explorer</h1>
+    <.link patch="/professional/ingredients/new">
+      <button
+        type="button"
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm transition-colors"
+      >
+        <.icon name="hero-plus" class="w-4 h-4" /> New Ingredient
+      </button>
+    </.link>
   </div>
+
+  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6">
+    <form phx-change="search_change">
+      <div class="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div class="flex-1 min-w-0">
+          <.live_component
+            module={MehungryWeb.SelectComponent}
+            items={@food_classes}
+            form={@form}
+            id="category_select_component"
+            input_variable={:classes}
+            mode={:multi}
+          />
+        </div>
+        <div>
+          <.input
+            type="select"
+            options={@search_methods}
+            name="search_form[search_method]"
+            value={@search_method}
+          />
+        </div>
+        <div class="flex-1 min-w-0 sm:max-w-xs">
+          <.input
+            type="text"
+            name="search_form[query]"
+            value={@form[:query].value}
+            placeholder="Search ingredients…"
+          />
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Table header — hidden on mobile -->
+  <div class="hidden sm:grid sm:grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-700 mb-1">
+    <div class="col-span-1">ID</div>
+    <div class="col-span-5">Name</div>
+    <div class="col-span-3">Class</div>
+    <div class="col-span-2">Category</div>
+    <div class="col-span-1"></div>
+  </div>
+
   <div
-    class="m-auto  w-full"
     id="ingredients_container"
     phx-hook="InfiniteScroll"
     phx-update="stream"
     data-page={@page}
+    class="space-y-1"
   >
     <%= for {dom_id, ingredient} <- @streams.ingredients do %>
-      <div class="relative w-full" id={dom_id}>
-        <.link patch={"/professional/ingredients/"<> Integer.to_string(ingredient.id) <>"/show"}>
-          <div class="grid grid-cols-4 gap-8 py-2 hover:bg-gray-100">
-            <div class="text-black text-base">
-              <span class="font-semibold">({ingredient.id})</span> {ingredient.name}
+      <div class="relative group" id={dom_id}>
+        <.link patch={"/professional/ingredients/" <> Integer.to_string(ingredient.id) <> "/show"}>
+          <div class="bg-slate-800/60 hover:bg-slate-800 border border-transparent hover:border-slate-700 rounded-xl px-4 py-3 transition-colors cursor-pointer">
+            <!-- Mobile layout: stacked -->
+            <div class="sm:hidden">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <span class="text-slate-500 text-xs mr-1">#{ingredient.id}</span>
+                  <span class="text-white font-medium">{ingredient.name}</span>
+                </div>
+                <.link
+                  patch={"/professional/ingredients/" <> Integer.to_string(ingredient.id) <> "/edit"}
+                  class="text-primary-400 hover:text-primary-300 text-xs font-semibold shrink-0"
+                >
+                  Edit
+                </.link>
+              </div>
+              <div class="mt-1 flex flex-wrap gap-2">
+                <span class="text-xs text-slate-400 bg-slate-700 px-2 py-0.5 rounded-full">
+                  {ingredient.food_class}
+                </span>
+                <span class="text-xs text-slate-400">
+                  {ingredient.category.name}
+                </span>
+              </div>
             </div>
-            <div class="text-black text-base" style="">{ingredient.food_class}</div>
-            <div class="text-black text-base" style="">
-              {ingredient.category.name} ( {ingredient.category_id} )
+            <!-- Desktop layout: grid -->
+            <div class="hidden sm:grid sm:grid-cols-12 gap-2 items-center">
+              <div class="col-span-1 text-slate-500 text-sm">#{ingredient.id}</div>
+              <div class="col-span-5 text-white text-sm font-medium truncate">{ingredient.name}</div>
+              <div class="col-span-3">
+                <span class="text-xs text-slate-400 bg-slate-700 px-2 py-0.5 rounded-full">
+                  {ingredient.food_class}
+                </span>
+              </div>
+              <div class="col-span-2 text-slate-400 text-sm truncate">{ingredient.category.name}</div>
+              <div class="col-span-1 flex justify-end">
+                <.link
+                  patch={"/professional/ingredients/" <> Integer.to_string(ingredient.id) <> "/edit"}
+                  class="opacity-0 group-hover:opacity-100 text-primary-400 hover:text-primary-300 text-xs font-semibold transition-opacity"
+                >
+                  Edit
+                </.link>
+              </div>
             </div>
-            <div></div>
           </div>
-        </.link>
-        <.link
-          phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
-          patch={"/professional/ingredients/"<> Integer.to_string(ingredient.id) <>"/edit"}
-          class="absolute right-0 top-2 text-xl font-semibold "
-        >
-          Edit
         </.link>
       </div>
     <% end %>
