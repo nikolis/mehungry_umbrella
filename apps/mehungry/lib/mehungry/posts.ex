@@ -23,7 +23,8 @@ defmodule Mehungry.Posts do
 
   """
   def list_posts(nil) do
-    Repo.all(Post)
+    from(p in Post, order_by: [desc: p.inserted_at])
+    |> Repo.all()
     |> Repo.preload([
       :user,
       # :upvotes,
@@ -40,7 +41,10 @@ defmodule Mehungry.Posts do
   end
 
   def list_posts(%User{} = user) do
-    Repo.all(Post)
+    now = NaiveDateTime.utc_now()
+
+    from(p in Post, order_by: [desc: p.inserted_at])
+    |> Repo.all()
     |> Repo.preload([
       :user,
       :upvotes,
@@ -55,11 +59,13 @@ defmodule Mehungry.Posts do
       ]
     ])
     |> Enum.map(fn x ->
-      {x, Users.calculate_recipe_grading(x.reference, user)}
+      grading_score = Users.calculate_recipe_grading(x.reference, user)
+      recency_hours = NaiveDateTime.diff(now, x.inserted_at, :second) / 3600.0
+      recency_score = max(0.0, 1.0 - recency_hours / 168.0)
+      {x, recency_score + grading_score}
     end)
-    |> Enum.filter(fn {_x, y} -> y > 0 end)
-    |> Enum.sort_by(fn {_x, y} -> y end, :desc)
-    |> Enum.map(fn {x, _y} -> x end)
+    |> Enum.sort_by(fn {_x, score} -> score end, :desc)
+    |> Enum.map(fn {x, _score} -> x end)
   end
 
   @doc """
