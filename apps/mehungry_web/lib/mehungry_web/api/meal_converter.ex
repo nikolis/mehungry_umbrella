@@ -43,15 +43,21 @@ defmodule MehungryWeb.Api.MealConverter do
   end
 
   defp convert_ingredient(%{ingredient: name, measure: measure}) do
-    {:ok, name} = PosTagger.rearrange_with_noun_first(name <> " \n")
-
     ingredients =
-      Food.search_ingredient_alt(name)
-      |> Repo.preload([:measurement_unit, [ingredient_portions: :measurement_unit]])
+     Food.IngredientSearch.search(name)
+     |> Repo.preload([:measurement_unit, [ingredient_portions: :measurement_unit]])
 
     {quantity, unit_string} = parse_measure(measure)
-    {ingredient_portion, _} = find_matching_ingredient(ingredients, unit_string)
+    IO.inspect(ingredients, label: "Mathcin search")
+    {ingredient_portion, _} = 
+      if unit_string in ["g", "grammar", "gram"] do
+        [ingr | _rest] = ingredients
+        {%{ingredient_id: ingr.id}, ""}
+      else 
+        find_matching_ingredient(ingredients, unit_string)
+      end
     measurement_unit = search_measurement_unit(unit_string)
+    IO.inspect(ingredient_portion, label: "Mathcin portion")
 
     Logger.info(
       "Converting ingredient with name: #{name} and the measurement unit is: #{measure}"

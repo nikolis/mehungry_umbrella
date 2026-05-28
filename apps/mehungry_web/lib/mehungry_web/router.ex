@@ -136,6 +136,10 @@ defmodule MehungryWeb.Router do
     live_dashboard "/dashboard", metrics: MehungryWeb.Telemetry
   end
 
+  if Mix.env() == :dev do
+    forward "/dev/mailbox", Plug.Swoosh.MailboxPreview
+  end
+
   ## Authentication routes
 
   scope "/webhooks", MehungryWeb do
