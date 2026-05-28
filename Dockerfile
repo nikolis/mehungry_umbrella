@@ -56,7 +56,6 @@ COPY ./apps/mehungry/mix.* ./apps/mehungry
 COPY ./apps/mehungry_web/mix.* ./apps/mehungry_web
 
 COPY config ./config
-COPY ./pos_tagger.py ./pos_tagger.py
 COPY ./entrypoint.sh ./entrypoint.sh
 
 RUN mix deps.get --only ${MIX_ENV}
@@ -92,7 +91,6 @@ FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
 
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
-COPY --from=builder /mehungry_umbrella/pos_tagger.py ./pos_tagger.py
 copy --from=builder /mehungry_umbrella/entrypoint.sh ./entrypoint.sh 
 
 RUN apk add --update openssl postgresql-client jq 
@@ -126,12 +124,6 @@ RUN python -m venv $VENV_PATH
 
 # Activate the virtual environment by modifying PATH
 ENV PATH="$VENV_PATH/bin:$PATH"
-
-# Install spaCy inside the virtual environment
-# --prefer-binary picks up the musllinux wheels (Alpine-compatible)
-RUN pip install --upgrade pip \
- && pip install --no-cache-dir --prefer-binary 'spacy==3.7.4' \
- && python -m spacy download en_core_web_sm
 
  
 CMD ["sh", "./entrypoint.sh"]
