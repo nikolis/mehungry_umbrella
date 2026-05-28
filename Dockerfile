@@ -27,7 +27,6 @@ ARG GOOGLE_CLIENT_ID
 ARG GOOGLE_CLIENT_SECRET
 ARG SECRET_KEY_BASE 
 ARG DATABASE_URL
-ARG RELEASE_COOKIE
 
 ENV MIX_ENV  ${MIX_ENV}
 ENV AWS_ASSETS_BUCKET_NAME  ${AWS_ASSETS_BUCKET_NAME}
@@ -37,7 +36,6 @@ ENV FACEBOOK_CLIENT_ID  ${FACEBOOK_CLIENT_ID}
 ENV FACEBOOK_CLIENT_SECRET  ${FACEBOOK_CLIENT_SECRET}
 ENV GOOGLE_CLIENT_ID  ${GOOGLE_CLIENT_ID}
 ENV GOOGLE_CLIENT_SECRET  ${GOOGLE_CLIENT_SECRET}
-ENV SECRET_KEY_BASE ${SECRET_KEY_BASE}
 ENV SECRET_KEY_BASE ${SECRET_KEY_BASE}
 ENV DATABASE_URL ${DATABASE_URL}
 
@@ -92,8 +90,6 @@ RUN PORT=4000 MIX_ENV=prod  mix release mehungry_umbrella
 FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
 # install runtime dependencies
 
-
-
 # copy release to app container
 COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
 COPY --from=builder /mehungry_umbrella/pos_tagger.py ./pos_tagger.py
@@ -132,15 +128,10 @@ RUN python -m venv $VENV_PATH
 ENV PATH="$VENV_PATH/bin:$PATH"
 
 # Install spaCy inside the virtual environment
+# --prefer-binary picks up the musllinux wheels (Alpine-compatible)
 RUN pip install --upgrade pip \
- && pip install --no-cache-dir spacy \
+ && pip install --no-cache-dir --prefer-binary 'spacy==3.7.4' \
  && python -m spacy download en_core_web_sm
-
-
-#RUN python3 -m venv env
-#RUN source ./env/bin/activate
-#RUN pip install spacy
-#RUN python -m spacy download en_core_web_sm
 
  
 CMD ["sh", "./entrypoint.sh"]
