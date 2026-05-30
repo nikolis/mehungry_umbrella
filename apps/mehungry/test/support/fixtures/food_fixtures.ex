@@ -141,20 +141,19 @@ defmodule Mehungry.FoodFixtures do
           value
       end
 
+    unit_name = Map.get(attrs, :name, "gram")
+
     attrs =
-      Enum.into(attrs, %{
-        name: "gram",
-        translation: [
-          %{
-            language_name: lang.name,
-            name: "gram"
-          },
-          %{
-            language_name: lang2.name,
-            name: "γραμμάριο"
-          }
-        ]
-      })
+      Map.merge(
+        %{
+          name: unit_name,
+          translation: [
+            %{language_name: lang.name, name: unit_name},
+            %{language_name: lang2.name, name: unit_name}
+          ]
+        },
+        attrs
+      )
 
     mu =
       case Food.get_measurement_unit_by_name(attrs.name) do

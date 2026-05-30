@@ -7,6 +7,7 @@ defmodule MehungryWeb.FeatureCase do
 
   using do
     quote do
+      @moduletag :wallaby
       use Wallaby.DSL
       use Wallaby.Feature
       import Wallaby.Query, only: [css: 2, text_field: 1, button: 1]

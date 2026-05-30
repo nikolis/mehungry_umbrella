@@ -1,5 +1,6 @@
 defmodule Mehungry.RutilsTest do
   use Mehungry.DataCase
+  @moduletag :local_data
 
   alias Mehungry.Users
   alias Mehungry.Languages

@@ -72,7 +72,7 @@ jobs:
         run: mix compile
 
       - name: Run tests
-        run: mix test --exclude wallaby
+        run: mix test --exclude wallaby --exclude local_data
         env:
           CI: "true"
 

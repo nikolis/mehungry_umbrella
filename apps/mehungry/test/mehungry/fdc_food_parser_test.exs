@@ -1,5 +1,6 @@
 defmodule Mehungry.FdcFoodParserTest do
   use Mehungry.DataCase
+  @moduletag :local_data
 
   alias Mehungry.FdcFoodParser
   alias Mehungry.Food

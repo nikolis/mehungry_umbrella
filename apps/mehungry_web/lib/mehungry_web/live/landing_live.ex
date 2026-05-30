@@ -403,43 +403,45 @@ defmodule MehungryWeb.LandingLive do
               </div>
             </div>
           </div>
-          <div class="flex-1">
-            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
-              <MehungryWeb.CalendarLive.Calendar.Widget.card_meal
-                img_url={@recipe.image_url}
-                card_meal_text="text-white"
-                recipe={@recipe}
-                cooking_portions="1"
-                consume_portions="1"
-                actual_meal={
-                  %{cooking_portions: 1, consume_portions: 1, recipe: @recipe, id: "landing_id"}
-                }
-                title="Breakfast"
-                myself="asdf"
-                id="landing_id"
-              />
-              {MehungryWeb.CalendarLive.Calendar.Widget.get_chart(
-                [
-                  %{
-                    start_dt: NaiveDateTime.local_now(),
-                    ingredient_user_meals: [],
-                    recipe_user_meals: [
-                      %{
-                        recipe_nutrients: @recipe.nutrients,
-                        cooking_portions: 1,
-                        consume_portions: 1,
-                        recipe: @recipe,
-                        id: "landing_id",
-                        start_dt: NaiveDateTime.local_now()
-                      }
-                    ]
+          <%= if @recipe do %>
+            <div class="flex-1">
+              <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+                <MehungryWeb.CalendarLive.Calendar.Widget.card_meal
+                  img_url={@recipe.image_url}
+                  card_meal_text="text-white"
+                  recipe={@recipe}
+                  cooking_portions="1"
+                  consume_portions="1"
+                  actual_meal={
+                    %{cooking_portions: 1, consume_portions: 1, recipe: @recipe, id: "landing_id"}
                   }
-                ],
-                Date.utc_today(),
-                "text-white"
-              )}
+                  title="Breakfast"
+                  myself="asdf"
+                  id="landing_id"
+                />
+                {MehungryWeb.CalendarLive.Calendar.Widget.get_chart(
+                  [
+                    %{
+                      start_dt: NaiveDateTime.local_now(),
+                      ingredient_user_meals: [],
+                      recipe_user_meals: [
+                        %{
+                          recipe_nutrients: @recipe.nutrients,
+                          cooking_portions: 1,
+                          consume_portions: 1,
+                          recipe: @recipe,
+                          id: "landing_id",
+                          start_dt: NaiveDateTime.local_now()
+                        }
+                      ]
+                    }
+                  ],
+                  Date.utc_today(),
+                  "text-white"
+                )}
+              </div>
             </div>
-          </div>
+          <% end %>
         </div>
       </div>
     </section>

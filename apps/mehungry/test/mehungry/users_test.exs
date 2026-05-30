@@ -1,5 +1,6 @@
 defmodule Mehungry.UsersTest do
   use Mehungry.DataCase
+  @moduletag :local_data
 
   alias Mehungry.Users
 
