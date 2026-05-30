@@ -1,6 +1,5 @@
 defmodule MehungryWeb.LandingLive do
   use MehungryWeb, :live_view
-  use MehungryWeb.Searchable, :transfers_to_search
   use MehungryWeb.Presence, :user_tracking
 
   import MehungryWeb.SvgComponents
@@ -15,7 +14,8 @@ defmodule MehungryWeb.LandingLive do
     {:noreply, socket}
   end
 
-  def mount_search(_params, _session, socket) do
+  @impl true
+  def mount(_params, _session, socket) do
     query =
       from(p in Mehungry.Food.Recipe,
         order_by: fragment("RANDOM()"),
@@ -24,10 +24,10 @@ defmodule MehungryWeb.LandingLive do
 
     recipe =
       Mehungry.Repo.one(query)
-
     {:ok,
      assign(socket,
        scrolled: false,
+       page_title: "m3hungry landing page",
        recipe: recipe,
        child_ids: [],
        selected_plan: "monthly"
@@ -258,13 +258,15 @@ defmodule MehungryWeb.LandingLive do
           </p>
         </div>
 
-        <div class="max-w-2xl mx-auto bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-          <div class="bg-slate-700 px-6 py-3 border-b border-slate-600">
-            <h3 class="text-white font-semibold">{@recipe.title}</h3>
-            <p class="text-slate-400 text-sm">Nutrition Facts per serving</p>
+        <%= if @recipe do %>
+          <div class="max-w-2xl mx-auto bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+            <div class="bg-slate-700 px-6 py-3 border-b border-slate-600">
+              <h3 class="text-white font-semibold">{@recipe.title}</h3>
+              <p class="text-slate-400 text-sm">Nutrition Facts per serving</p>
+            </div>
+            {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
           </div>
-          {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
-        </div>
+        <% end %>
       </div>
     </section>
 

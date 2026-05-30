@@ -1,6 +1,6 @@
 <%
   # ─── Compute derived SEO values ─────────────────────────────────────────────
-  page_title_data = @conn.assigns[:page_title]
+  page_title_data = @conn.assigns[:page_seo_data] || @conn.assigns[:page_title]
   page_description = @conn.assigns[:page_description] ||
     "Discover, share, and analyze recipes with M3Hungry — your AI-powered food companion with USDA nutrition data."
   recipe_jsonld = @conn.assigns[:recipe_jsonld]

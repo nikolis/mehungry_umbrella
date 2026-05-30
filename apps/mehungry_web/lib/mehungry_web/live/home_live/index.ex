@@ -1,6 +1,5 @@
 defmodule MehungryWeb.HomeLive.Index do
   use MehungryWeb, :live_view
-  use MehungryWeb.Searchable, :transfers_to_search
   use MehungryWeb.Presence, :user_tracking
 
   import MehungryWeb.RecipeComponents
@@ -16,7 +15,8 @@ defmodule MehungryWeb.HomeLive.Index do
   alias Mehungry.Food
   alias Mehungry.Food.RecipeUtils
 
-  def mount_search(_params, session, socket) do
+  @impl true
+  def mount(_params, session, socket) do
     user =
       case is_nil(session["user_token"]) do
         true ->
@@ -43,8 +43,6 @@ defmodule MehungryWeb.HomeLive.Index do
      |> assign(:user_profile, user_profile)
      |> assign(:current_user_follows, current_user_follows)
      |> assign(:current_user_recipes, user_recipes)
-     |> assign(:search_changeset, nil)
-     |> assign(:query_string, "")
      |> assign(:must_be_loged_in, nil)
      |> assign(:page_title, "Browse Recipes")}
   end
@@ -140,8 +138,9 @@ defmodule MehungryWeb.HomeLive.Index do
         end
 
       socket
-      |> assign(:page_title, %{
-        title: recipe.title <> "Browse Recipes",
+      |> assign(:page_title, recipe.title)
+      |> assign(:page_seo_data, %{
+        title: recipe.title,
         img: recipe.image_url,
         id: Integer.to_string(recipe.id)
       })

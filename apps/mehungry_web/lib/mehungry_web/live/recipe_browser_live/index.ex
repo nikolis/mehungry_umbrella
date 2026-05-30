@@ -21,6 +21,14 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     socket = assign(socket, :address, address)
     socket = assign(socket, :agent, agent)
 
+    referrer =
+      case Phoenix.LiveView.get_connect_params(socket) do
+        nil -> ""
+        cp -> Map.get(cp, "_live_referer", "") || ""
+      end
+
+    socket = assign(socket, :referrer, referrer)
+
     user =
       case is_nil(session["user_token"]) do
         true ->
@@ -174,16 +182,19 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/browse")}
 
       false ->
-        case String.slice(query_string, 0, 1) == "#" do
-          true ->
-            query_string = String.slice(query_string, 1..-1//1)
+        dest =
+          cond do
+            String.at(query_string, 0) == "#" ->
+              "/search/hashtag/" <> String.slice(query_string, 1..-1//1)
 
-            {:noreply,
-             Phoenix.LiveView.push_navigate(socket, to: "/search/hashtag/" <> query_string)}
+            String.at(query_string, 0) == "@" ->
+              "/search/ingredient/" <> URI.encode(String.slice(query_string, 1..-1//1))
 
-          false ->
-            {:noreply, Phoenix.LiveView.push_navigate(socket, to: "/search/" <> query_string)}
-        end
+            true ->
+              "/search/" <> query_string
+          end
+
+        {:noreply, Phoenix.LiveView.push_navigate(socket, to: dest)}
     end
   end
 
@@ -260,12 +271,10 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           {query_str, list_recipes()}
 
         qr ->
-          case String.at(qr, 0) == "#" do
-            true ->
-              Food.search_hashtag1(qr)
-
-            false ->
-              Food.search_recipe(qr)
+          cond do
+            String.at(qr, 0) == "#" -> Food.search_hashtag1(qr)
+            String.at(qr, 0) == "@" -> Food.search_recipes_by_ingredient(String.slice(qr, 1..-1//1))
+            true -> Food.search_recipe(qr)
           end
       end
 
@@ -285,9 +294,25 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     )
   end
 
+  defp apply_action(socket, :index, %{"ingredient" => ingredient_name} = _params) do
+    maybe_track_user(%{query: "@" <> ingredient_name}, socket)
+
+    socket
+    |> assign(:recipe, nil)
+    |> assign_user_meta()
+    |> handle_search("@" <> ingredient_name)
+    |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
+    |> assign(:page, 1)
+    |> assign(:page_title, "Recipes with #{ingredient_name} | M3Hungry")
+    |> assign(
+      :page_description,
+      "Browse recipes containing #{ingredient_name} with full USDA nutrition data on M3Hungry."
+    )
+  end
+
   defp apply_action(socket, :index, %{"hashtag" => query_str} = _params) do
     maybe_track_user(%{query: query_str}, socket)
-    display_tag = "#" <> query_str
+    display_tag = if String.starts_with?(query_str, "#"), do: query_str, else: "#" <> query_str
 
     socket
     |> assign(:recipe, nil)
@@ -322,7 +347,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       |> assign(:page_title, "Browse Recipes")
       |> assign(:page_description, "Browse thousands of recipes with complete USDA nutrition data. Discover new dishes, track macros, and plan your meals on M3Hungry.")
       |> assign_user_meta()
-      |> handle_search("")
+      |> handle_search(nil)
       |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
 
     assign(socket, :search_changeset, nil)
@@ -361,7 +386,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         |> assign(:nutrients, nutrients)
         |> assign(:primary_size, primaries_length)
         |> assign(:recipe, recipe)
-        |> assign(:page_title, %{
+        |> assign(:page_title, recipe.title <> " — Instructions and Nutrition Facts")
+        |> assign(:page_seo_data, %{
           title: recipe.title <> " — Instructions and Nutrition Facts",
           img: recipe.image_url,
           id: Integer.to_string(recipe.id)
@@ -464,7 +490,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:query_string, "")
     |> stream(:recipes, recipes)
     |> assign(:cursor_after, cursor_after)
-    |> assign(:page_title, %{
+    |> assign(:page_title, recipe.title)
+    |> assign(:page_seo_data, %{
       title: recipe.title,
       img: recipe.image_url,
       id: Integer.to_string(recipe.id)

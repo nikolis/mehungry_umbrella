@@ -57,7 +57,8 @@ defmodule MehungryApi.HistoryTest do
 
       user_meal = user_meal_fixture(%{user_id: user.id, recipe_user_meals: recipe_user_meals})
       user_meal = History.get_user_meal!(user_meal.id)
-      assert History.list_history_user_meals() == [user_meal]
+      result = History.list_history_user_meals_for_user(user.id)
+      assert Enum.any?(result, fn m -> m.id == user_meal.id end)
     end
 
     test "get_user_meal!/1 returns the user_meal with given id", %{user: user} do

@@ -31,6 +31,23 @@
     </a>
 
     <a
+      href="/foods"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+    >
+      <svg
+        class="w-5 h-5 flex-shrink-0"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16a1 1 0 0 1 1 1v3a8 8 0 0 1-8 8 8 8 0 0 1-8-8V7a1 1 0 0 1 1-1z" />
+      </svg>
+      <span class="hidden md:block text-sm font-medium">Foods</span>
+    </a>
+
+    <a
       href="/create_recipe"
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
     >
@@ -81,7 +98,7 @@
       >
         <img
           src={@current_user.profile_pic}
-          class={"w-6 h-6 rounded-full flex-shrink-0 object-cover " <> if String.length(@query_string) > 1, do: "invisible", else: ""}
+          class="w-6 h-6 rounded-full flex-shrink-0 object-cover"
         />
         <span class="hidden md:block text-sm font-medium">Profile</span>
       </a>

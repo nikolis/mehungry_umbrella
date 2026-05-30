@@ -126,37 +126,38 @@ defmodule MehungryWeb.SvgComponents do
     """
   end
 
+  attr :id, :string, default: "logo"
   def get_logo(assigns) do
     ~H"""
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 120">
       <defs>
         <!-- Warm Orange gradients matching favicon -->
-        <linearGradient id="topCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={"topCubeOrange-#{@id}"} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#FBBF24" />
           <stop offset="50%" stop-color="#F97316" />
           <stop offset="100%" stop-color="#EA580C" />
         </linearGradient>
-        <linearGradient id="middleCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={"middleCubeOrange-#{@id}"} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#F97316" />
           <stop offset="50%" stop-color="#EA580C" />
           <stop offset="100%" stop-color="#C2410C" />
         </linearGradient>
-        <linearGradient id="bottomCubeOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={"bottomCubeOrange-#{@id}"} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#EA580C" />
           <stop offset="100%" stop-color="#7C2D12" />
         </linearGradient>
       </defs>
-      
+
     <!-- Bottom Cube -->
-      <polygon points="60,95 80,82 100,95 100,115 80,128 60,115" fill="url(#bottomCubeOrange)" />
+      <polygon points="60,95 80,82 100,95 100,115 80,128 60,115" fill={"url(#bottomCubeOrange-#{@id})"} />
       <polygon points="80,82 100,95 80,108 60,95" fill="#7C2D12" opacity="0.7" />
-      
+
     <!-- Middle Cube -->
-      <polygon points="80,65 100,52 120,65 120,85 100,98 80,85" fill="url(#middleCubeOrange)" />
+      <polygon points="80,65 100,52 120,65 120,85 100,98 80,85" fill={"url(#middleCubeOrange-#{@id})"} />
       <polygon points="100,52 120,65 100,78 80,65" fill="#C2410C" opacity="0.7" />
-      
+
     <!-- Top Cube -->
-      <polygon points="100,38 120,25 140,38 140,58 120,71 100,58" fill="url(#topCubeOrange)" />
+      <polygon points="100,38 120,25 140,38 140,58 120,71 100,58" fill={"url(#topCubeOrange-#{@id})"} />
       <polygon points="120,25 140,38 120,51 100,38" fill="#F97316" opacity="0.8" />
       
     <!-- Lines -->

@@ -352,12 +352,12 @@ defmodule MehungryWeb.SelectComponent do
 
   def list_selected(assigns) do
     ~H"""
-    <div class="bg-slate-700 text-white border-slate-700">
+    <div class="text-white">
       <!-- Tags (Selected) -->
       <%= for x <- @selected_items do %>
         <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode} name={elem(x, 1)} />
       <% end %>
-      
+
     <!-- Search Input -->
       <%= if Enum.empty?(@selected_items)  or @mode == :multi do %>
         <.input_search
@@ -366,7 +366,7 @@ defmodule MehungryWeb.SelectComponent do
           selected_items={@selected_items}
           mode={@mode}
           input_variable={@input_variable}
-          class="h-full text-2xl bg-black"
+          class="h-full text-sm"
         />
       <% end %>
       <!-- Arrow Icon -->
@@ -390,20 +390,18 @@ defmodule MehungryWeb.SelectComponent do
 
   defp selected_item(%{mode: :single} = assigns) do
     ~H"""
-    <div class="text-center w-full h-full relative  border-2 border-slate-600 rounded-lg  ">
+    <div class="w-full h-full min-h-10 relative border border-slate-600 rounded-lg bg-slate-700">
       <div
         phx-click="handle-selected-item-click"
         phx-value-id={@id}
         phx-target={@myself}
         tabindex="0"
-        class=" rounded-lg  p-2 h-full text-left cursor-pointer"
+        class="rounded-lg px-3 py-2 h-full text-left cursor-pointer flex items-center pr-6"
       >
-        <div class=" p-2 h-full flex flex-col  justify-center p-2 rounded-lg ">
-          <div class="self-center text-ellipsis text-center overflow-hidden px-1 leading-4">
-            {@name}
-          </div>
+        <div class="text-white text-sm truncate">
+          {@name}
         </div>
-        <.icon name="hero-x-mark" class="absolute right-1 top-1  z-20 opacity-70 h-3 w-3" />
+        <.icon name="hero-x-mark" class="absolute right-2 top-1/2 -translate-y-1/2 z-20 text-slate-400 hover:text-red-400 h-3.5 w-3.5" />
       </div>
     </div>
     """
@@ -447,7 +445,7 @@ defmodule MehungryWeb.SelectComponent do
           ]
         }
         type="text"
-        class="h-full test flex-grow   outline-none focus:outline-none focus:ring-amber-300 focus:ring-2 ring-inset transition-all rounded-md w-full relative"
+        class="h-full min-h-10 flex-grow outline-none focus:outline-none focus:ring-primary-500 focus:ring-2 ring-inset transition-all rounded-lg w-full relative text-sm"
       />
       <.arrow_down_svg myself={@myself} selected_items_length={length(@selected_items)} mode={@mode} />
     </div>

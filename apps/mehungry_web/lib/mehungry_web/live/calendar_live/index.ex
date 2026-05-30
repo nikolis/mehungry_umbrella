@@ -1,6 +1,5 @@
 defmodule MehungryWeb.CalendarLive.Index do
   use MehungryWeb, :live_view
-  use MehungryWeb.Searchable, :transfers_to_search
   use ViewportHelpers
   use MehungryWeb.Presence, :user_tracking
 
@@ -17,7 +16,8 @@ defmodule MehungryWeb.CalendarLive.Index do
   #  render_for_device(SomeView, "show.html", assigns)
   # end
 
-  def mount_search(_params, session, socket) do
+  @impl true
+  def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_meals = load_and_format_user_meals(user.id)
     recipes = list_recipes(user)
