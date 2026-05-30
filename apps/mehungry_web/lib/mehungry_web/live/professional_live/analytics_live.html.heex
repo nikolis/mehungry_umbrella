@@ -1,62 +1,88 @@
 <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6">
-
-  <!-- Header -->
+  
+<!-- Header -->
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-white">Traffic Analytics</h1>
-      <p class="text-slate-400 text-sm mt-0.5">Visitor sources, page performance, and real-time activity</p>
+      <p class="text-slate-400 text-sm mt-0.5">
+        Visitor sources, page performance, and real-time activity
+      </p>
     </div>
     <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
       <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
       <span class="text-emerald-400 text-sm font-semibold">{@online_count} online</span>
     </div>
   </div>
-
-  <!-- Stats cards -->
+  
+<!-- Stats cards -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Visits today</div>
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        Visits today
+      </div>
       <div class="text-3xl font-bold text-white">{@today_total}</div>
       <div class="text-xs text-slate-500 mt-1">{@today_unique} unique IPs</div>
     </div>
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">All-time visits</div>
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        All-time visits
+      </div>
       <div class="text-3xl font-bold text-white">{@all_total}</div>
       <div class="text-xs text-slate-500 mt-1">{@all_unique} unique IPs</div>
     </div>
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Online now</div>
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        Online now
+      </div>
       <div class="text-3xl font-bold text-emerald-400">{@online_count}</div>
       <div class="text-xs text-slate-500 mt-1">active sessions</div>
     </div>
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">From search (30d)</div>
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        From search (30d)
+      </div>
       <div class="text-3xl font-bold text-primary-400">
         {Enum.find_value(@traffic_sources, 0, fn s -> if s.source == "search", do: s.count end)}
       </div>
       <div class="text-xs text-slate-500 mt-1">organic visits</div>
     </div>
   </div>
-
-  <!-- Charts row -->
+  
+<!-- Charts row -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-    <!-- Daily visits chart -->
+    
+<!-- Daily visits chart -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Visits — last 14 days</h2>
-      <div id="daily-chart-wrapper" phx-hook="ResponsiveChart" data-id="daily" data-origin_id="daily" data-size="full">
-        <div id="vega-daily" phx-hook="VegaLite" data-spec={Jason.encode!(@daily_chart_spec)}></div>
+      <div
+        id="daily-chart-wrapper"
+        phx-hook="ResponsiveChart"
+        data-id="daily"
+        data-origin_id="daily"
+        data-size="full"
+      >
+        <div id="vega-daily" phx-hook="VegaLite" data-spec={Jason.encode!(@daily_chart_spec)}>
+        </div>
       </div>
     </div>
-
-    <!-- Traffic sources chart -->
+    
+<!-- Traffic sources chart -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Traffic sources — last 30 days</h2>
       <%= if @traffic_sources == [] do %>
-        <p class="text-slate-500 text-sm mt-8 text-center">No data yet — referrer capture is active for new visits.</p>
+        <p class="text-slate-500 text-sm mt-8 text-center">
+          No data yet — referrer capture is active for new visits.
+        </p>
       <% else %>
-        <div id="source-chart-wrapper" phx-hook="ResponsiveChart" data-id="source" data-origin_id="source" data-size="full">
-          <div id="vega-source" phx-hook="VegaLite" data-spec={Jason.encode!(@source_chart_spec)}></div>
+        <div
+          id="source-chart-wrapper"
+          phx-hook="ResponsiveChart"
+          data-id="source"
+          data-origin_id="source"
+          data-size="full"
+        >
+          <div id="vega-source" phx-hook="VegaLite" data-spec={Jason.encode!(@source_chart_spec)}>
+          </div>
         </div>
         <div class="flex flex-wrap gap-3 mt-3">
           <%= for s <- @traffic_sources do %>
@@ -69,11 +95,11 @@
       <% end %>
     </div>
   </div>
-
-  <!-- Top pages + Recent visits -->
+  
+<!-- Top pages + Recent visits -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-    <!-- Top pages -->
+    
+<!-- Top pages -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Top pages (all time)</h2>
       <%= if @top_pages == [] do %>
@@ -84,7 +110,9 @@
             <div class="flex items-center gap-3">
               <span class="text-xs text-slate-600 w-4 shrink-0">{index + 1}</span>
               <div class="flex-1 min-w-0">
-                <div class="text-sm text-slate-300 truncate font-mono">{short_path(page.path)}</div>
+                <div class="text-sm text-slate-300 truncate font-mono">
+                  {short_path(page.path)}
+                </div>
                 <div class="mt-0.5 h-1.5 rounded-full bg-slate-700 overflow-hidden">
                   <div
                     class="h-full rounded-full bg-primary-500/70"
@@ -99,8 +127,8 @@
         </div>
       <% end %>
     </div>
-
-    <!-- Recent visits -->
+    
+<!-- Recent visits -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Recent visits</h2>
       <div class="space-y-1 overflow-y-auto max-h-80">
@@ -110,44 +138,65 @@
               {source_label(visit_source(visit))}
             </div>
             <span class="text-slate-400 text-xs font-mono shrink-0">{visit.ip_address}</span>
-            <span class="text-slate-300 text-xs truncate flex-1">{short_path(get_in(visit.details || %{}, ["path"]))}</span>
+            <span class="text-slate-300 text-xs truncate flex-1">
+              {short_path(get_in(visit.details || %{}, ["path"]))}
+            </span>
             <span class="text-slate-600 text-xs shrink-0">{format_dt(visit.inserted_at)}</span>
           </div>
         <% end %>
       </div>
     </div>
   </div>
-
-  <!-- Referrer detail table -->
+  
+<!-- Referrer detail table -->
   <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
     <h2 class="text-sm font-semibold text-white mb-4">Referrer detail — recent visits</h2>
     <div class="overflow-x-auto -mx-2">
       <table class="min-w-full text-sm">
         <thead>
           <tr class="border-b border-slate-700">
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Time</th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">IP</th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Page</th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Source</th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Referrer</th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Browser</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Time
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              IP
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Page
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Source
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Referrer
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Browser
+            </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-700/50">
           <%= for visit <- Enum.take(@recent_visits, 20) do %>
             <tr class="hover:bg-slate-700/20 transition-colors">
-              <td class="px-3 py-2 text-slate-500 text-xs whitespace-nowrap">{format_dt(visit.inserted_at)}</td>
+              <td class="px-3 py-2 text-slate-500 text-xs whitespace-nowrap">
+                {format_dt(visit.inserted_at)}
+              </td>
               <td class="px-3 py-2 text-slate-300 font-mono text-xs">{visit.ip_address}</td>
-              <td class="px-3 py-2 text-slate-300 text-xs max-w-xs truncate">{short_path(get_in(visit.details || %{}, ["path"]))}</td>
+              <td class="px-3 py-2 text-slate-300 text-xs max-w-xs truncate">
+                {short_path(get_in(visit.details || %{}, ["path"]))}
+              </td>
               <td class="px-3 py-2">
                 <span class={"text-xs px-2 py-0.5 rounded-full border " <> source_badge_class(visit_source(visit))}>
                   {source_label(visit_source(visit))}
                 </span>
               </td>
               <td class="px-3 py-2 text-slate-500 text-xs max-w-xs truncate">
-                {get_in(visit.details || %{}, ["referrer"]) |> then(fn r -> if r in [nil, ""], do: "—", else: r end)}
+                {get_in(visit.details || %{}, ["referrer"])
+                |> then(fn r -> if r in [nil, ""], do: "—", else: r end)}
               </td>
-              <td class="px-3 py-2 text-slate-400 text-xs">{short_agent(get_in(visit.details || %{}, ["agent"]))}</td>
+              <td class="px-3 py-2 text-slate-400 text-xs">
+                {short_agent(get_in(visit.details || %{}, ["agent"]))}
+              </td>
             </tr>
           <% end %>
         </tbody>

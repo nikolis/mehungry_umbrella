@@ -38,7 +38,10 @@ defmodule MehungryWeb.CalendarLive.Index do
       |> assign(:ai_plan_generating, false)
       |> assign(:ai_plan_task_ref, nil)
       |> assign(:ai_plan_result, nil)
-      |> assign(:ai_quota_exceeded, Mehungry.Subscriptions.check_quota(user.id, "meal_plan") == {:error, :quota_exceeded})
+      |> assign(
+        :ai_quota_exceeded,
+        Mehungry.Subscriptions.check_quota(user.id, "meal_plan") == {:error, :quota_exceeded}
+      )
     }
   end
 

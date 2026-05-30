@@ -12,15 +12,16 @@ defmodule MehungryWeb.SitemapController do
   def index(conn, _params) do
     recipes =
       Repo.all(
-        from r in Recipe,
+        from(r in Recipe,
           where: is_nil(r.private) or r.private == false,
           select: %{id: r.id, updated_at: r.updated_at},
           order_by: [desc: r.updated_at]
+        )
       )
 
     hashtags =
       Repo.all(
-        from h in Hashtag,
+        from(h in Hashtag,
           join: rh in RecipeHashtag,
           on: rh.hashtag_id == h.id,
           group_by: h.title,
@@ -28,6 +29,7 @@ defmodule MehungryWeb.SitemapController do
           select: h.title,
           order_by: [desc: count(rh.id)],
           limit: 200
+        )
       )
 
     xml = build_xml(recipes, hashtags)
@@ -62,13 +64,23 @@ defmodule MehungryWeb.SitemapController do
     recipe_urls =
       Enum.map(recipes, fn r ->
         date = r.updated_at |> NaiveDateTime.to_date() |> to_string()
-        url_entry("#{@base_url}/browse/#{r.id}", lastmod: date, changefreq: "weekly", priority: "0.8")
+
+        url_entry("#{@base_url}/browse/#{r.id}",
+          lastmod: date,
+          changefreq: "weekly",
+          priority: "0.8"
+        )
       end)
 
     hashtag_urls =
       Enum.map(hashtags, fn h ->
         encoded = URI.encode(h, &URI.char_unreserved?/1)
-        url_entry("#{@base_url}/search/hashtag/#{encoded}", lastmod: today, changefreq: "daily", priority: "0.7")
+
+        url_entry("#{@base_url}/search/hashtag/#{encoded}",
+          lastmod: today,
+          changefreq: "daily",
+          priority: "0.7"
+        )
       end)
 
     all_urls = Enum.join(static_urls ++ recipe_urls ++ hashtag_urls, "\n")

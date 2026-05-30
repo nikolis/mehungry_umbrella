@@ -8,41 +8,76 @@
     style="overflow: hidden; max-height: 64px;"
   >
     <!-- Logo -->
-    <.link class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors" patch="/">
+    <.link
+      class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors"
+      patch="/"
+    >
       <img class="h-6 w-6" src="/images/logo2.svg" />
     </.link>
-
-    <!-- Browse -->
-    <.link patch="/browse" class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors">
+    
+<!-- Browse -->
+    <.link
+      patch="/browse"
+      class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors"
+    >
       <.icon name="hero-book-open" class="h-6 w-6" />
     </.link>
-
-    <!-- Foods -->
-    <.link patch="/foods" class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors">
-      <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16a1 1 0 0 1 1 1v3a8 8 0 0 1-8 8 8 8 0 0 1-8-8V7a1 1 0 0 1 1-1z" />
+    
+<!-- Foods -->
+    <.link
+      patch="/foods"
+      class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors"
+    >
+      <svg
+        class="h-6 w-6"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M4 6h16a1 1 0 0 1 1 1v3a8 8 0 0 1-8 8 8 8 0 0 1-8-8V7a1 1 0 0 1 1-1z"
+        />
       </svg>
     </.link>
-
-    <!-- Create -->
-    <.link patch="/create_recipe" class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors">
+    
+<!-- Create -->
+    <.link
+      patch="/create_recipe"
+      class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors"
+    >
       <.icon name="hero-plus-circle" class="h-6 w-6" />
     </.link>
-
-    <!-- Calendar -->
-    <.link patch="/calendar" class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors">
+    
+<!-- Calendar -->
+    <.link
+      patch="/calendar"
+      class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors"
+    >
       <.icon name="hero-calendar" class="h-6 w-6" />
     </.link>
-
-    <!-- Basket -->
-    <.link patch="/basket" class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors">
+    
+<!-- Basket -->
+    <.link
+      patch="/basket"
+      class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors"
+    >
       <.icon name="hero-shopping-cart" class="h-6 w-6" />
     </.link>
-
-    <!-- Profile / Login -->
-    <a href={~p"/profile"} class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors">
+    
+<!-- Profile / Login -->
+    <a
+      href={~p"/profile"}
+      class="flex items-center justify-center p-3 nav_link_basic hover:text-white transition-colors"
+    >
       <%= if @current_user do %>
-        <img src={@current_user.profile_pic} class="w-6 h-6 rounded-full object-cover border border-slate-600" />
+        <img
+          src={@current_user.profile_pic}
+          class="w-6 h-6 rounded-full object-cover border border-slate-600"
+        />
       <% else %>
         <.icon name="hero-arrow-right-on-rectangle" class="h-6 w-6" />
       <% end %>

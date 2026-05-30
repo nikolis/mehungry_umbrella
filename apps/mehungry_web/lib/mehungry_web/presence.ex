@@ -40,10 +40,11 @@ defmodule MehungryWeb.Presence do
         if connected?(socket) do
           {address, agent} =
             case get_address_agent(socket) do
-              {a, ag} -> {a, ag}
+              {a, ag} ->
+                {a, ag}
+
               _ ->
-                {Map.get(socket.assigns, :address, ""),
-                 Map.get(socket.assigns, :agent, "")}
+                {Map.get(socket.assigns, :address, ""), Map.get(socket.assigns, :agent, "")}
             end
 
           referrer = Map.get(socket.assigns, :referrer, "")

@@ -43,8 +43,8 @@
       </div>
     </form>
   </div>
-
-  <!-- Table header — hidden on mobile -->
+  
+<!-- Table header — hidden on mobile -->
   <div class="hidden sm:grid sm:grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-700 mb-1">
     <div class="col-span-1">ID</div>
     <div class="col-span-5">Name</div>
@@ -90,13 +90,17 @@
             <!-- Desktop layout: grid -->
             <div class="hidden sm:grid sm:grid-cols-12 gap-2 items-center">
               <div class="col-span-1 text-slate-500 text-sm">#{ingredient.id}</div>
-              <div class="col-span-5 text-white text-sm font-medium truncate">{ingredient.name}</div>
+              <div class="col-span-5 text-white text-sm font-medium truncate">
+                {ingredient.name}
+              </div>
               <div class="col-span-3">
                 <span class="text-xs text-slate-400 bg-slate-700 px-2 py-0.5 rounded-full">
                   {ingredient.food_class}
                 </span>
               </div>
-              <div class="col-span-2 text-slate-400 text-sm truncate">{ingredient.category.name}</div>
+              <div class="col-span-2 text-slate-400 text-sm truncate">
+                {ingredient.category.name}
+              </div>
               <div class="col-span-1 flex justify-end">
                 <.link
                   patch={"/professional/ingredients/" <> Integer.to_string(ingredient.id) <> "/edit"}

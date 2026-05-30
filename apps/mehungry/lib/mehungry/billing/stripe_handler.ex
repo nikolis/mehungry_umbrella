@@ -137,7 +137,8 @@ defmodule Mehungry.Billing.StripeHandler do
     with timestamp when not is_nil(timestamp) <- Map.get(parts, "t"),
          expected_sig when not is_nil(expected_sig) <- Map.get(parts, "v1"),
          signed_payload = "#{timestamp}.#{body}",
-         computed = :crypto.mac(:hmac, :sha256, secret, signed_payload) |> Base.encode16(case: :lower),
+         computed =
+           :crypto.mac(:hmac, :sha256, secret, signed_payload) |> Base.encode16(case: :lower),
          true <- Plug.Crypto.secure_compare(computed, expected_sig) do
       :ok
     else

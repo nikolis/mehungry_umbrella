@@ -1084,7 +1084,6 @@ defmodule Mehungry.Food do
     |> Enum.sort_by(fn x -> String.length(x.name) end)
   end
 
-
   def list_recipes_with_user_rating(user) do
     Recipe.Query.with_user_ratings(user)
     |> Repo.all()

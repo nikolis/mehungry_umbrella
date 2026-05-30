@@ -1,41 +1,51 @@
-<%
-  # ─── Compute derived SEO values ─────────────────────────────────────────────
-  page_title_data = @conn.assigns[:page_seo_data] || @conn.assigns[:page_title]
-  page_description = @conn.assigns[:page_description] ||
+<% # ─── Compute derived SEO values ─────────────────────────────────────────────
+page_title_data = @conn.assigns[:page_seo_data] || @conn.assigns[:page_title]
+
+page_description =
+  @conn.assigns[:page_description] ||
     "Discover, share, and analyze recipes with M3Hungry — your AI-powered food companion with USDA nutrition data."
-  recipe_jsonld = @conn.assigns[:recipe_jsonld]
 
-  # Resolve title, OG image, canonical URL from page_title assign
-  {resolved_title, og_image, canonical_path} =
-    cond do
-      is_map(page_title_data) ->
-        {
-          page_title_data.title <> " | M3Hungry",
-          page_title_data[:img],
-          "/browse/" <> to_string(page_title_data[:id] || "")
-        }
-      is_binary(page_title_data) and page_title_data != "" ->
-        {page_title_data <> " | M3Hungry", nil, @conn.request_path}
-      true ->
-        {"M3Hungry — Discover & Analyze Recipes", nil, @conn.request_path}
-    end
+recipe_jsonld = @conn.assigns[:recipe_jsonld]
 
-  base_url = "https://www.m3hungry.com"
-  canonical_url = base_url <> canonical_path
+# Resolve title, OG image, canonical URL from page_title assign
+{resolved_title, og_image, canonical_path} =
+  cond do
+    is_map(page_title_data) ->
+      {
+        page_title_data.title <> " | M3Hungry",
+        page_title_data[:img],
+        "/browse/" <> to_string(page_title_data[:id] || "")
+      }
 
-  # Pages that should never be indexed
-  noindex_prefixes = [
-    "/profile", "/basket", "/calendar", "/create_recipe",
-    "/users/", "/upgrade", "/professional/", "/admin-dashboard"
-  ]
-  noindex = Enum.any?(noindex_prefixes, &String.starts_with?(@conn.request_path, &1))
-%>
+    is_binary(page_title_data) and page_title_data != "" ->
+      {page_title_data <> " | M3Hungry", nil, @conn.request_path}
+
+    true ->
+      {"M3Hungry — Discover & Analyze Recipes", nil, @conn.request_path}
+  end
+
+base_url = "https://www.m3hungry.com"
+canonical_url = base_url <> canonical_path
+
+# Pages that should never be indexed
+noindex_prefixes = [
+  "/profile",
+  "/basket",
+  "/calendar",
+  "/create_recipe",
+  "/users/",
+  "/upgrade",
+  "/professional/",
+  "/admin-dashboard"
+]
+
+noindex = Enum.any?(noindex_prefixes, &String.starts_with?(@conn.request_path, &1)) %>
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- ─── Primary SEO ──────────────────────────────────────────────────────── -->
+  
+<!-- ─── Primary SEO ──────────────────────────────────────────────────────── -->
   <title>{resolved_title}</title>
   <meta name="description" content={page_description} />
   <link rel="canonical" href={canonical_url} />
@@ -44,8 +54,8 @@
   <% else %>
     <meta name="robots" content="index, follow" />
   <% end %>
-
-  <!-- ─── Open Graph (Facebook / LinkedIn / Slack previews) ───────────────── -->
+  
+<!-- ─── Open Graph (Facebook / LinkedIn / Slack previews) ───────────────── -->
   <meta property="og:site_name" content="M3Hungry" />
   <meta property="og:title" content={resolved_title} />
   <meta property="og:description" content={page_description} />
@@ -57,23 +67,23 @@
     <meta property="og:image" content={"#{base_url}/images/og-default.png"} />
     <meta property="og:type" content="website" />
   <% end %>
-
-  <!-- ─── Twitter card ────────────────────────────────────────────────────── -->
+  
+<!-- ─── Twitter card ────────────────────────────────────────────────────── -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content={resolved_title} />
   <meta name="twitter:description" content={page_description} />
   <%= if og_image do %>
     <meta name="twitter:image" content={og_image} />
   <% end %>
-
-  <!-- ─── JSON-LD structured data (Recipe rich results) ──────────────────── -->
+  
+<!-- ─── JSON-LD structured data (Recipe rich results) ──────────────────── -->
   <%= if recipe_jsonld do %>
     <script type="application/ld+json">
       {Jason.encode!(recipe_jsonld)}
     </script>
   <% end %>
-
-  <!-- ─── Favicons ────────────────────────────────────────────────────────── -->
+  
+<!-- ─── Favicons ────────────────────────────────────────────────────────── -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="shortcut icon" href="/favicon.svg" />
   <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -86,8 +96,8 @@
       outline: none;
     }
   </style>
-
-  <!-- ─── Third-party scripts & styles ────────────────────────────────────── -->
+  
+<!-- ─── Third-party scripts & styles ────────────────────────────────────── -->
   <script
     src="https://code.jquery.com/jquery-3.6.0.min.js"
     integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="

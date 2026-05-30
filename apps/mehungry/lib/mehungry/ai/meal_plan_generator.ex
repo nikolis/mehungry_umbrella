@@ -111,15 +111,17 @@ defmodule Mehungry.AI.MealPlanGenerator do
       end)
       |> Enum.map(fn entry -> attempt_create(entry, user_id) end)
 
-    created = Enum.flat_map(results, fn
-      {:ok, meal} -> [meal]
-      _ -> []
-    end)
+    created =
+      Enum.flat_map(results, fn
+        {:ok, meal} -> [meal]
+        _ -> []
+      end)
 
-    skipped = Enum.count(results, fn
-      {:error, _} -> true
-      _ -> false
-    end)
+    skipped =
+      Enum.count(results, fn
+        {:error, _} -> true
+        _ -> false
+      end)
 
     {:ok, created, skipped}
   end

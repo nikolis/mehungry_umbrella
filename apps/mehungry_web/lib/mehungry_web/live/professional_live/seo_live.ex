@@ -102,10 +102,18 @@ defmodule MehungryWeb.ProfessionalLive.SeoLive do
       line: %{color: "#EA580C", stroke_width: 2},
       point: %{filled: true, fill: "#EA580C", size: 40}
     )
-    |> Vl.encode_field(:x, "date", type: :ordinal,
-      axis: [label_angle: -35, title: nil, label_color: "#94A3B8", domain_color: "#334155", tick_color: "#334155"]
+    |> Vl.encode_field(:x, "date",
+      type: :ordinal,
+      axis: [
+        label_angle: -35,
+        title: nil,
+        label_color: "#94A3B8",
+        domain_color: "#334155",
+        tick_color: "#334155"
+      ]
     )
-    |> Vl.encode_field(:y, "visits", type: :quantitative,
+    |> Vl.encode_field(:y, "visits",
+      type: :quantitative,
       axis: [title: nil, label_color: "#94A3B8", domain_color: "#334155", grid_color: "#1E293B"]
     )
     |> Vl.config(background: "transparent", view: [stroke: nil])
@@ -126,11 +134,13 @@ defmodule MehungryWeb.ProfessionalLive.SeoLive do
     Vl.new(width: :container, height: 160)
     |> Vl.data_from_values(data)
     |> Vl.mark(:bar, corner_radius_end: 3)
-    |> Vl.encode_field(:y, "engine", type: :nominal,
+    |> Vl.encode_field(:y, "engine",
+      type: :nominal,
       sort: "-x",
       axis: [title: nil, label_color: "#94A3B8", domain_color: "#334155", tick_color: "#334155"]
     )
-    |> Vl.encode_field(:x, "count", type: :quantitative,
+    |> Vl.encode_field(:x, "count",
+      type: :quantitative,
       axis: [title: nil, label_color: "#94A3B8", domain_color: "#334155", grid_color: "#1E293B"]
     )
     |> Vl.encode_field(:color, "engine",
@@ -138,7 +148,16 @@ defmodule MehungryWeb.ProfessionalLive.SeoLive do
       legend: nil,
       scale: [
         domain: ["Google", "Bing", "DuckDuckGo", "Yahoo", "Ecosia", "Brave", "Yandex", "Other"],
-        range: ["#4285F4", "#00897B", "#DE5833", "#720E9E", "#4CAF50", "#FB8C00", "#CC0000", "#64748B"]
+        range: [
+          "#4285F4",
+          "#00897B",
+          "#DE5833",
+          "#720E9E",
+          "#4CAF50",
+          "#FB8C00",
+          "#CC0000",
+          "#64748B"
+        ]
       ]
     )
     |> Vl.config(background: "transparent", view: [stroke: nil])
@@ -181,7 +200,9 @@ defmodule MehungryWeb.ProfessionalLive.SeoLive do
   def short_path(""), do: "Home"
 
   def short_path(p) do
-    p |> String.replace(MehungryWeb.Endpoint.url(), "") |> then(fn
+    p
+    |> String.replace(MehungryWeb.Endpoint.url(), "")
+    |> then(fn
       "" -> "Home"
       "/" -> "Home"
       x -> x

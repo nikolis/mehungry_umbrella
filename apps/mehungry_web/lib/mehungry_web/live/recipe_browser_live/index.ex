@@ -272,9 +272,14 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
         qr ->
           cond do
-            String.at(qr, 0) == "#" -> Food.search_hashtag1(qr)
-            String.at(qr, 0) == "@" -> Food.search_recipes_by_ingredient(String.slice(qr, 1..-1//1))
-            true -> Food.search_recipe(qr)
+            String.at(qr, 0) == "#" ->
+              Food.search_hashtag1(qr)
+
+            String.at(qr, 0) == "@" ->
+              Food.search_recipes_by_ingredient(String.slice(qr, 1..-1//1))
+
+            true ->
+              Food.search_recipe(qr)
           end
       end
 
@@ -321,7 +326,10 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
     |> assign(:page, 1)
     |> assign(:page_title, "#{display_tag} Recipes | M3Hungry")
-    |> assign(:page_description, "Browse #{display_tag} recipes with complete USDA nutrition data. Discover ingredients, macros, and cooking instructions on M3Hungry.")
+    |> assign(
+      :page_description,
+      "Browse #{display_tag} recipes with complete USDA nutrition data. Discover ingredients, macros, and cooking instructions on M3Hungry."
+    )
   end
 
   defp apply_action(socket, :index, %{"query" => query_str} = _params) do
@@ -334,7 +342,10 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
     |> assign(:page, 1)
     |> assign(:page_title, "\"#{query_str}\" Recipes | M3Hungry")
-    |> assign(:page_description, "Search results for '#{query_str}' — browse recipes with USDA nutrition analysis, macros, and step-by-step instructions on M3Hungry.")
+    |> assign(
+      :page_description,
+      "Search results for '#{query_str}' — browse recipes with USDA nutrition analysis, macros, and step-by-step instructions on M3Hungry."
+    )
   end
 
   defp apply_action(socket, :index, _pars) do
@@ -345,7 +356,10 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       |> assign(:recipe, nil)
       |> assign(:page, 1)
       |> assign(:page_title, "Browse Recipes")
-      |> assign(:page_description, "Browse thousands of recipes with complete USDA nutrition data. Discover new dishes, track macros, and plan your meals on M3Hungry.")
+      |> assign(
+        :page_description,
+        "Browse thousands of recipes with complete USDA nutrition data. Discover new dishes, track macros, and plan your meals on M3Hungry."
+      )
       |> assign_user_meta()
       |> handle_search(nil)
       |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
@@ -413,8 +427,16 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       end
 
     extras = []
-    extras = if recipe.servings && recipe.servings > 0, do: ["#{recipe.servings} servings" | extras], else: extras
-    extras = if recipe.cooking_time_lower_limit && recipe.cooking_time_lower_limit > 0, do: ["ready in #{recipe.cooking_time_lower_limit} min" | extras], else: extras
+
+    extras =
+      if recipe.servings && recipe.servings > 0,
+        do: ["#{recipe.servings} servings" | extras],
+        else: extras
+
+    extras =
+      if recipe.cooking_time_lower_limit && recipe.cooking_time_lower_limit > 0,
+        do: ["ready in #{recipe.cooking_time_lower_limit} min" | extras],
+        else: extras
 
     suffix = if extras != [], do: " — " <> Enum.join(Enum.reverse(extras), ", "), else: ""
     base <> suffix <> ". Full nutrition facts on M3Hungry."
@@ -459,7 +481,9 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
             Enum.map(steps, fn step ->
               %{"@type" => "HowToStep", "text" => step.description || step.title || ""}
             end)
+
           Map.put(base, "recipeInstructions", instructions)
+
         _ ->
           base
       end

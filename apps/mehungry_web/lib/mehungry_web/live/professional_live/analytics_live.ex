@@ -73,10 +73,18 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
     Vl.new(width: :container, height: 160)
     |> Vl.data_from_values(chart_data)
     |> Vl.mark(:bar, color: "#EA580C", corner_radius_end: 3)
-    |> Vl.encode_field(:x, "date", type: :ordinal,
-      axis: [label_angle: -35, title: nil, label_color: "#94A3B8", domain_color: "#334155", tick_color: "#334155"]
+    |> Vl.encode_field(:x, "date",
+      type: :ordinal,
+      axis: [
+        label_angle: -35,
+        title: nil,
+        label_color: "#94A3B8",
+        domain_color: "#334155",
+        tick_color: "#334155"
+      ]
     )
-    |> Vl.encode_field(:y, "visits", type: :quantitative,
+    |> Vl.encode_field(:y, "visits",
+      type: :quantitative,
       axis: [title: nil, label_color: "#94A3B8", domain_color: "#334155", grid_color: "#1E293B"]
     )
     |> Vl.config(background: "transparent", view: [stroke: nil])
@@ -97,11 +105,13 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
     Vl.new(width: :container, height: 160)
     |> Vl.data_from_values(data)
     |> Vl.mark(:bar, corner_radius_end: 3)
-    |> Vl.encode_field(:y, "source", type: :nominal,
+    |> Vl.encode_field(:y, "source",
+      type: :nominal,
       sort: "-x",
       axis: [title: nil, label_color: "#94A3B8", domain_color: "#334155", tick_color: "#334155"]
     )
-    |> Vl.encode_field(:x, "count", type: :quantitative,
+    |> Vl.encode_field(:x, "count",
+      type: :quantitative,
       axis: [title: nil, label_color: "#94A3B8", domain_color: "#334155", grid_color: "#1E293B"]
     )
     |> Vl.encode_field(:color, "source",
@@ -121,7 +131,10 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
   def source_badge_class("search"), do: "bg-primary-500/20 text-primary-400 border-primary-500/30"
   def source_badge_class("social"), do: "bg-blue-500/20 text-blue-400 border-blue-500/30"
   def source_badge_class("referral"), do: "bg-purple-500/20 text-purple-400 border-purple-500/30"
-  def source_badge_class("internal"), do: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+
+  def source_badge_class("internal"),
+    do: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+
   def source_badge_class(_), do: "bg-slate-700 text-slate-400 border-slate-600"
 
   def source_label("search"), do: "Search"

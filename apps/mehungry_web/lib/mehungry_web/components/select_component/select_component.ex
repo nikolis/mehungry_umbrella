@@ -357,7 +357,7 @@ defmodule MehungryWeb.SelectComponent do
       <%= for x <- @selected_items do %>
         <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode} name={elem(x, 1)} />
       <% end %>
-
+      
     <!-- Search Input -->
       <%= if Enum.empty?(@selected_items)  or @mode == :multi do %>
         <.input_search
@@ -401,7 +401,10 @@ defmodule MehungryWeb.SelectComponent do
         <div class="text-white text-sm truncate">
           {@name}
         </div>
-        <.icon name="hero-x-mark" class="absolute right-2 top-1/2 -translate-y-1/2 z-20 text-slate-400 hover:text-red-400 h-3.5 w-3.5" />
+        <.icon
+          name="hero-x-mark"
+          class="absolute right-2 top-1/2 -translate-y-1/2 z-20 text-slate-400 hover:text-red-400 h-3.5 w-3.5"
+        />
       </div>
     </div>
     """

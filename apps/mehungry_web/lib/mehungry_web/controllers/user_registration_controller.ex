@@ -20,7 +20,10 @@ defmodule MehungryWeb.UserRegistrationController do
           )
 
         conn
-        |> put_flash(:info, "Account created! Please check your email to confirm your account before logging in.")
+        |> put_flash(
+          :info,
+          "Account created! Please check your email to confirm your account before logging in."
+        )
         |> redirect(to: Routes.user_session_path(conn, :new))
 
       {:error, %Ecto.Changeset{} = changeset} ->

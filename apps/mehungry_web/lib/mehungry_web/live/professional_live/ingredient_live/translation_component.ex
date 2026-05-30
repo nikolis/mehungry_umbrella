@@ -18,7 +18,11 @@ defmodule MehungryWeb.Professional.TranslationsComponent do
       <div class="space-y-3">
         <.inputs_for :let={tr_form} field={@form[:ingredient_translation]}>
           <div class="bg-slate-700/40 rounded-xl p-3 flex flex-col sm:flex-row sm:items-end gap-3">
-            <input type="hidden" name="ingredient[ingredient_translation_sort][]" value={tr_form.index} />
+            <input
+              type="hidden"
+              name="ingredient[ingredient_translation_sort][]"
+              value={tr_form.index}
+            />
             <div class="flex-1">
               <.input
                 type="text"

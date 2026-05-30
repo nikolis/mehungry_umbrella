@@ -70,7 +70,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
       ~H"""
       <div class="mt-2 rounded-xl border border-slate-600 overflow-hidden bg-slate-800">
-        
         <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 bg-slate-700/50 border-b border-slate-700">
           <span class="text-slate-200 font-semibold text-sm">Daily Summary</span>
           <div class="flex flex-wrap gap-2 ml-auto">
@@ -316,7 +315,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden day_of_week"
           id={"dat_" <> Date.to_string(day)}
         >
-          
           <div class="flex items-center gap-2 px-3 py-3 sm:px-4 bg-slate-700/50 border-b border-slate-700/50">
             <span
               class="flex items-center gap-2 text-white font-semibold text-sm sm:text-base cursor-pointer hover:text-primary-400 transition-colors"

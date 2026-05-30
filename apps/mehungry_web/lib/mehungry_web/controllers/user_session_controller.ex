@@ -24,7 +24,10 @@ defmodule MehungryWeb.UserSessionController do
           )
 
         conn
-        |> put_flash(:error, "You need to confirm your email first. We've resent the confirmation link.")
+        |> put_flash(
+          :error,
+          "You need to confirm your email first. We've resent the confirmation link."
+        )
         |> render("new.html", error_message: nil)
 
       user ->

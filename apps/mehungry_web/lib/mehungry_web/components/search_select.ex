@@ -1,7 +1,6 @@
 defmodule MehungryWeb.SearchSelect do
   use Phoenix.LiveComponent
 
-
   @impl true
   def mount(socket) do
     {:ok,

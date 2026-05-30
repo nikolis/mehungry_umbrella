@@ -25,7 +25,10 @@ defmodule MehungryWeb.RecipeFormComponent do
       class="the_form sm:pt-6 sm:pt-2 flex md:gap-8 flex-col mx-auto relative"
     >
       <input type="hidden" name="recipe[_action]" value="" />
-      <div class="content_container grid md:grid-cols-2 gap-6 bg-slate-800/50 rounded-xl p-4" id="content-0">
+      <div
+        class="content_container grid md:grid-cols-2 gap-6 bg-slate-800/50 rounded-xl p-4"
+        id="content-0"
+      >
         <div class="flex flex-col gap-3">
           <.input required field={@f[:title]} type="text" label="Title" class="max-h-12 " />
           <.input required field={@f[:description]} type="text" label="Description" class="max-h-12" />
@@ -141,7 +144,10 @@ defmodule MehungryWeb.RecipeFormComponent do
       </div>
 
       <div class="grid md:grid-cols-2 gap-6">
-        <div class="overflowx-hidden relative content_container hidden md:block bg-slate-800/50 rounded-xl p-4" id="content-1">
+        <div
+          class="overflowx-hidden relative content_container hidden md:block bg-slate-800/50 rounded-xl p-4"
+          id="content-1"
+        >
           <h3 class="text-base font-semibold text-white mb-3">Ingredients</h3>
           <div class="md:min-h-96  sm:max-h-65 overflow-x-hidden noscrollbar	pt-4  step_ing_cont mb-14 pb-20 md:pb-0">
             <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
@@ -174,9 +180,7 @@ defmodule MehungryWeb.RecipeFormComponent do
         >
           <div class="relative h-fit">
             <h3 class="text-base font-semibold text-white mb-3">Steps</h3>
-            <div
-              class="step_ing_cont md:min-h-96 md:max-h-96  overflow-x-hidden noscrollbar	pt-4 sm:p-4 pb-20 md:pb-8"
-            >
+            <div class="step_ing_cont md:min-h-96 md:max-h-96  overflow-x-hidden noscrollbar	pt-4 sm:p-4 pb-20 md:pb-8">
               <.live_component module={MehungryWeb.StepComponent} id="recipe_step" f={@f} />
             </div>
           </div>
@@ -187,7 +191,11 @@ defmodule MehungryWeb.RecipeFormComponent do
         class="content_container hidden md:block bg-slate-800/50 rounded-xl p-6"
       >
         <h3 class="text-base font-semibold text-white mb-4">Review & Save</h3>
-        <p class={if @f.source.valid?, do: "text-sm text-emerald-400 mb-6", else: "text-sm text-slate-400 mb-6"}>
+        <p class={
+          if @f.source.valid?,
+            do: "text-sm text-emerald-400 mb-6",
+            else: "text-sm text-slate-400 mb-6"
+        }>
           <%= if @f.source.valid? do %>
             Everything looks good — ready to save!
           <% else %>
@@ -204,7 +212,8 @@ defmodule MehungryWeb.RecipeFormComponent do
             Reset
           </button>
           {submit("Save Recipe",
-            class: "px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-semibold transition-colors",
+            class:
+              "px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-semibold transition-colors",
             type: "submit",
             phx_disable_with: "Saving…",
             id: "save_button"

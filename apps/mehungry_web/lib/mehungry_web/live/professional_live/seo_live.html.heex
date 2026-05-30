@@ -1,10 +1,12 @@
 <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6">
-
-  <!-- Header -->
+  
+<!-- Header -->
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <div>
       <h1 class="text-2xl font-bold text-white">SEO Performance</h1>
-      <p class="text-slate-400 text-sm mt-0.5">Organic traffic, search engine breakdown, crawler activity</p>
+      <p class="text-slate-400 text-sm mt-0.5">
+        Organic traffic, search engine breakdown, crawler activity
+      </p>
     </div>
     <!-- Time range picker -->
     <div class="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-xl p-1">
@@ -19,46 +21,66 @@
       <% end %>
     </div>
   </div>
-
-  <!-- Stat cards -->
+  
+<!-- Stat cards -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Organic visits</div>
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        Organic visits
+      </div>
       <div class="text-3xl font-bold text-white">{@organic_total}</div>
       <div class={"text-xs mt-1 font-semibold " <> trend_color(@trend_pct)}>
         {trend_arrow(@trend_pct)} {abs(@trend_pct)}% vs prior half
       </div>
     </div>
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Search engines</div>
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        Search engines
+      </div>
       <div class="text-3xl font-bold text-white">{length(@engine_breakdown)}</div>
       <div class="text-xs text-slate-500 mt-1">sending traffic</div>
     </div>
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Crawler visits (7d)</div>
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        Crawler visits (7d)
+      </div>
       <div class="text-3xl font-bold text-white">{length(@crawlers)}</div>
       <div class="text-xs text-slate-500 mt-1">{length(@crawler_summary)} distinct bots</div>
     </div>
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Landing pages</div>
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        Landing pages
+      </div>
       <div class="text-3xl font-bold text-white">{length(@landing_pages)}</div>
       <div class="text-xs text-slate-500 mt-1">with organic traffic</div>
     </div>
   </div>
-
-  <!-- Organic trend + engine breakdown -->
+  
+<!-- Organic trend + engine breakdown -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Organic traffic trend</h2>
       <%= if @organic_total == 0 do %>
         <div class="flex flex-col items-center justify-center py-10 text-center">
           <p class="text-slate-500 text-sm">No organic traffic recorded yet.</p>
-          <p class="text-slate-600 text-xs mt-1">Referrer capture is active — data will appear once search engine visitors arrive.</p>
+          <p class="text-slate-600 text-xs mt-1">
+            Referrer capture is active — data will appear once search engine visitors arrive.
+          </p>
         </div>
       <% else %>
-        <div id="organic-chart-wrapper" phx-hook="ResponsiveChart" data-id="organic" data-origin_id="organic" data-size="full">
-          <div id="vega-organic" phx-hook="VegaLite" data-spec={Jason.encode!(@organic_chart_spec)}></div>
+        <div
+          id="organic-chart-wrapper"
+          phx-hook="ResponsiveChart"
+          data-id="organic"
+          data-origin_id="organic"
+          data-size="full"
+        >
+          <div
+            id="vega-organic"
+            phx-hook="VegaLite"
+            data-spec={Jason.encode!(@organic_chart_spec)}
+          >
+          </div>
         </div>
       <% end %>
     </div>
@@ -70,8 +92,15 @@
           <p class="text-slate-500 text-sm">No search engine referrers yet.</p>
         </div>
       <% else %>
-        <div id="engine-chart-wrapper" phx-hook="ResponsiveChart" data-id="engine" data-origin_id="engine" data-size="full">
-          <div id="vega-engine" phx-hook="VegaLite" data-spec={Jason.encode!(@engine_chart_spec)}></div>
+        <div
+          id="engine-chart-wrapper"
+          phx-hook="ResponsiveChart"
+          data-id="engine"
+          data-origin_id="engine"
+          data-size="full"
+        >
+          <div id="vega-engine" phx-hook="VegaLite" data-spec={Jason.encode!(@engine_chart_spec)}>
+          </div>
         </div>
         <div class="flex flex-wrap gap-2 mt-3">
           <%= for e <- @engine_breakdown do %>
@@ -85,11 +114,11 @@
       <% end %>
     </div>
   </div>
-
-  <!-- Organic landing pages + crawlers -->
+  
+<!-- Organic landing pages + crawlers -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-    <!-- Organic landing pages -->
+    
+<!-- Organic landing pages -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Organic landing pages</h2>
       <%= if @landing_pages == [] do %>
@@ -100,12 +129,15 @@
             <div class="flex items-center gap-3">
               <span class="text-xs text-slate-600 w-4 shrink-0">{index + 1}</span>
               <div class="flex-1 min-w-0">
-                <div class="text-sm text-slate-300 truncate font-mono">{short_path(page.path)}</div>
+                <div class="text-sm text-slate-300 truncate font-mono">
+                  {short_path(page.path)}
+                </div>
                 <div class="mt-0.5 h-1.5 rounded-full bg-slate-700 overflow-hidden">
                   <div
                     class="h-full rounded-full bg-primary-500/70"
                     style={"width: #{trunc(page.count / hd(@landing_pages).count * 100)}%"}
-                  ></div>
+                  >
+                  </div>
                 </div>
               </div>
               <span class="text-sm font-semibold text-white shrink-0">{page.count}</span>
@@ -114,14 +146,16 @@
         </div>
       <% end %>
     </div>
-
-    <!-- Crawler activity -->
+    
+<!-- Crawler activity -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Crawler activity (7d)</h2>
       <%= if @crawler_summary == [] do %>
         <div class="flex flex-col items-center justify-center py-6 text-center">
           <p class="text-slate-500 text-sm">No crawler visits recorded yet.</p>
-          <p class="text-slate-600 text-xs mt-1">Bots will appear here once they visit the site.</p>
+          <p class="text-slate-600 text-xs mt-1">
+            Bots will appear here once they visit the site.
+          </p>
         </div>
       <% else %>
         <div class="space-y-3">
@@ -132,7 +166,9 @@
                 <span class="text-sm font-medium text-white">{c.name}</span>
               </div>
               <div class="text-right">
-                <div class="text-sm font-semibold text-white">{c.count} <span class="text-slate-500 font-normal text-xs">visits</span></div>
+                <div class="text-sm font-semibold text-white">
+                  {c.count} <span class="text-slate-500 font-normal text-xs">visits</span>
+                </div>
                 <div class="text-xs text-slate-500">Last: {format_dt(c.last_seen)}</div>
               </div>
             </div>
@@ -141,36 +177,42 @@
       <% end %>
     </div>
   </div>
-
-  <!-- Search queries + recent crawler log -->
+  
+<!-- Search queries + recent crawler log -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-    <!-- Extracted search queries -->
+    
+<!-- Extracted search queries -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h2 class="text-sm font-semibold text-white">Search queries detected</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Extracted from referrer URLs (limited by HTTPS privacy)</p>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Extracted from referrer URLs (limited by HTTPS privacy)
+          </p>
         </div>
       </div>
       <%= if @queries == [] do %>
         <div class="flex flex-col items-center justify-center py-6 text-center">
           <p class="text-slate-500 text-sm">No queries extracted yet.</p>
-          <p class="text-slate-600 text-xs mt-1">Most modern search engines omit query params from referrers for privacy. You may see queries from some engines in older or non-HTTPS contexts.</p>
+          <p class="text-slate-600 text-xs mt-1">
+            Most modern search engines omit query params from referrers for privacy. You may see queries from some engines in older or non-HTTPS contexts.
+          </p>
         </div>
       <% else %>
         <div class="space-y-1.5">
           <%= for q <- @queries do %>
             <div class="flex items-center justify-between py-1.5 border-b border-slate-700/50 last:border-0">
               <span class="text-sm text-slate-300 font-mono">"{q.query}"</span>
-              <span class="text-xs font-semibold text-white bg-slate-700 px-2 py-0.5 rounded-full">{q.count}</span>
+              <span class="text-xs font-semibold text-white bg-slate-700 px-2 py-0.5 rounded-full">
+                {q.count}
+              </span>
             </div>
           <% end %>
         </div>
       <% end %>
     </div>
-
-    <!-- Recent crawler page visits -->
+    
+<!-- Recent crawler page visits -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Recent crawler page visits</h2>
       <%= if @crawlers == [] do %>
@@ -180,8 +222,12 @@
           <%= for v <- Enum.take(@crawlers, 20) do %>
             <div class="flex items-center gap-2 py-1.5 border-b border-slate-700/50 last:border-0">
               <.icon name="hero-cpu-chip" class="w-3.5 h-3.5 text-slate-500 shrink-0" />
-              <span class="text-xs text-slate-400 shrink-0">{Meta.crawler_name(get_in(v.details || %{}, ["agent"]) || "")}</span>
-              <span class="text-xs text-slate-300 truncate flex-1 font-mono">{short_path(get_in(v.details || %{}, ["path"]))}</span>
+              <span class="text-xs text-slate-400 shrink-0">
+                {Meta.crawler_name(get_in(v.details || %{}, ["agent"]) || "")}
+              </span>
+              <span class="text-xs text-slate-300 truncate flex-1 font-mono">
+                {short_path(get_in(v.details || %{}, ["path"]))}
+              </span>
               <span class="text-xs text-slate-600 shrink-0">{format_dt(v.inserted_at)}</span>
             </div>
           <% end %>
@@ -189,15 +235,26 @@
       <% end %>
     </div>
   </div>
-
-  <!-- Notes / Info box -->
+  
+<!-- Notes / Info box -->
   <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
     <div class="flex gap-3">
       <.icon name="hero-information-circle" class="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
       <div class="text-xs text-slate-500 space-y-1">
-        <p><span class="text-slate-400 font-semibold">Referrer capture:</span> Organic traffic data requires visitors to arrive from a search engine with a valid HTTP Referer header. Data accumulates with new visits — existing visits before referrer capture was enabled will show as "direct".</p>
-        <p><span class="text-slate-400 font-semibold">Missing queries:</span> Google and most modern search engines suppress the <code class="bg-slate-700 px-1 rounded">q=</code> parameter from referrer URLs for privacy reasons. Queries will only appear from engines that still include them.</p>
-        <p><span class="text-slate-400 font-semibold">Crawler detection:</span> Bots are identified by user-agent string matching against known crawler signatures (Googlebot, Bingbot, etc.).</p>
+        <p>
+          <span class="text-slate-400 font-semibold">Referrer capture:</span>
+          Organic traffic data requires visitors to arrive from a search engine with a valid HTTP Referer header. Data accumulates with new visits — existing visits before referrer capture was enabled will show as "direct".
+        </p>
+        <p>
+          <span class="text-slate-400 font-semibold">Missing queries:</span>
+          Google and most modern search engines suppress the
+          <code class="bg-slate-700 px-1 rounded">q=</code>
+          parameter from referrer URLs for privacy reasons. Queries will only appear from engines that still include them.
+        </p>
+        <p>
+          <span class="text-slate-400 font-semibold">Crawler detection:</span>
+          Bots are identified by user-agent string matching against known crawler signatures (Googlebot, Bingbot, etc.).
+        </p>
       </div>
     </div>
   </div>

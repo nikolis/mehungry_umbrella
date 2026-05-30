@@ -1,14 +1,12 @@
 <div class="min-h-screen bg-slate-900 pb-16">
   <div class="container max-w-3xl mx-auto px-4 py-8">
-
-    <%# Breadcrumb %>
+    
     <nav class="text-sm text-slate-400 mb-6">
       <a href="/foods" class="hover:text-white transition-colors">Foods</a>
       <span class="mx-2">›</span>
       <span class="text-slate-200">{@ingredient.name}</span>
     </nav>
 
-    <%# Header %>
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-white mb-2">{@ingredient.name}</h1>
       <%= if @ingredient.category do %>
@@ -21,7 +19,6 @@
       <% end %>
     </div>
 
-    <%# Macro highlights %>
     <%= if length(@top_nutrients) > 0 do %>
       <section class="mb-10">
         <h2 class="text-lg font-semibold text-white mb-4">
@@ -40,7 +37,6 @@
       </section>
     <% end %>
 
-    <%# Full nutrition breakdown %>
     <%= if length(@nutrients_by_family) > 0 do %>
       <section class="mb-10">
         <h2 class="text-lg font-semibold text-white mb-4">
@@ -52,7 +48,9 @@
           <%= for {family, nutrients} <- @nutrients_by_family do %>
             <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
               <div class="px-4 py-2 bg-slate-700/50 border-b border-slate-700">
-                <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wide">{family}</h3>
+                <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wide">
+                  {family}
+                </h3>
               </div>
               <table class="w-full">
                 <tbody>
@@ -62,7 +60,9 @@
                       <td class="px-4 py-2 text-sm text-white text-right font-medium">
                         {format_amount(n.amount)}
                         <%= if n.nutrient.measurement_unit do %>
-                          <span class="text-slate-400 font-normal">{n.nutrient.measurement_unit.name}</span>
+                          <span class="text-slate-400 font-normal">
+                            {n.nutrient.measurement_unit.name}
+                          </span>
                         <% end %>
                       </td>
                     </tr>
@@ -75,7 +75,6 @@
       </section>
     <% end %>
 
-    <%# Portion sizes %>
     <%= if length(@ingredient.ingredient_portions) > 0 do %>
       <section class="mb-10">
         <h2 class="text-lg font-semibold text-white mb-4">Common Portion Sizes</h2>
@@ -83,9 +82,15 @@
           <table class="w-full">
             <thead>
               <tr class="bg-slate-700/50 border-b border-slate-700">
-                <th class="px-4 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Portion</th>
-                <th class="px-4 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">Amount</th>
-                <th class="px-4 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">Grams</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                  Portion
+                </th>
+                <th class="px-4 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                  Amount
+                </th>
+                <th class="px-4 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                  Grams
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -108,7 +113,6 @@
       </section>
     <% end %>
 
-    <%# Recipes featuring this ingredient %>
     <section class="mb-10">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold text-white">
@@ -131,7 +135,7 @@
               href={"/browse/#{recipe.id}"}
               class="group flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl p-3 hover:border-primary-500/50 hover:bg-slate-700/80 transition-colors"
             >
-              <%# Thumbnail %>
+              
               <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-slate-700">
                 <%= if recipe.image_url do %>
                   <img
@@ -141,22 +145,39 @@
                   />
                 <% else %>
                   <div class="w-full h-full flex items-center justify-center">
-                    <svg class="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <svg
+                      class="w-6 h-6 text-slate-500"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
                     </svg>
                   </div>
                 <% end %>
               </div>
-              <%# Info %>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-white group-hover:text-primary-300 transition-colors truncate">
                   {recipe.title}
                 </p>
                 <%= if recipe.cooking_time_lower_limit do %>
-                  <p class="text-xs text-slate-400 mt-0.5">{recipe.cooking_time_lower_limit} min</p>
+                  <p class="text-xs text-slate-400 mt-0.5">
+                    {recipe.cooking_time_lower_limit} min
+                  </p>
                 <% end %>
               </div>
-              <svg class="w-4 h-4 text-slate-600 group-hover:text-slate-400 flex-shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <svg
+                class="w-4 h-4 text-slate-600 group-hover:text-slate-400 flex-shrink-0 transition-colors"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </a>
@@ -173,6 +194,5 @@
         </div>
       <% end %>
     </section>
-
   </div>
 </div>

@@ -39,5 +39,3 @@ config :mehungry_web, MehungryWeb.Endpoint,
   # force_ssl: [rewrite_on: [:x_forwarded_proto]],
   server: true,
   url: [host: "mehungry.com", port: 4000]
-
-
