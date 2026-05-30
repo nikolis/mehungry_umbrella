@@ -36,12 +36,15 @@ defmodule MehungryWeb.FoodDetailLive.Index do
         {_query, {recipes, _cursor}} = Food.search_recipes_by_ingredient(ingredient.name)
         sample_recipes = Enum.take(recipes, 5)
 
+        interactions = Food.get_interactions_for_ingredients([ingredient.id])
+
         {:ok,
          socket
          |> assign(:ingredient, ingredient)
          |> assign(:top_nutrients, top_nutrients)
          |> assign(:nutrients_by_family, nutrients_by_family)
          |> assign(:sample_recipes, sample_recipes)
+         |> assign(:interactions, interactions)
          |> assign(:page_title, "#{ingredient.name} Nutrition Facts")
          |> assign(:page_description, build_description(ingredient, top_nutrients))}
     end

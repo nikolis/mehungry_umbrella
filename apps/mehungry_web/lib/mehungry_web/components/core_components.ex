@@ -1622,6 +1622,75 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   @doc """
+  Renders a panel of nutrient interaction badges for a set of ingredients.
+
+  Pass the list returned by `Food.get_interactions_for_ingredients/1` or
+  `Food.get_interactions_for_recipe/1`.  Renders nothing when the list is empty.
+
+  ## Example
+
+      <.nutrient_interaction_panel interactions={@interactions} />
+  """
+  attr :interactions, :list, required: true
+  attr :class, :string, default: ""
+
+  def nutrient_interaction_panel(%{interactions: []} = assigns), do: ~H""
+
+  def nutrient_interaction_panel(assigns) do
+    ~H"""
+    <div class={["space-y-3", @class]}>
+      <.nutrient_interaction_badge :for={interaction <- @interactions} interaction={interaction} />
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a single nutrient interaction badge card.
+
+  Badge types:
+  - `:positive` — green, enhancing interaction
+  - `:warning`  — amber, inhibiting interaction
+  - `:tip`      — blue, missing helper nutrient
+  """
+  attr :interaction, :map, required: true
+
+  def nutrient_interaction_badge(assigns) do
+    ~H"""
+    <div class={[
+      "flex gap-3 rounded-xl border p-4",
+      badge_colors(@interaction.badge)
+    ]}>
+      <div class="flex-shrink-0 mt-0.5">
+        <span class="text-lg"><%= badge_icon(@interaction.badge) %></span>
+      </div>
+      <div class="min-w-0">
+        <p class={["text-sm font-semibold leading-snug", badge_label_color(@interaction.badge)]}>
+          <%= @interaction.label %>
+        </p>
+        <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+          <%= @interaction.detail %>
+        </p>
+        <p class="text-xs text-slate-500 mt-1.5 italic">
+          Source: <%= @interaction.source %>
+        </p>
+      </div>
+    </div>
+    """
+  end
+
+  defp badge_colors(:positive), do: "bg-emerald-950/60 border-emerald-700/50"
+  defp badge_colors(:warning), do: "bg-amber-950/60 border-amber-700/50"
+  defp badge_colors(:tip), do: "bg-sky-950/60 border-sky-700/50"
+
+  defp badge_label_color(:positive), do: "text-emerald-300"
+  defp badge_label_color(:warning), do: "text-amber-300"
+  defp badge_label_color(:tip), do: "text-sky-300"
+
+  defp badge_icon(:positive), do: "✓"
+  defp badge_icon(:warning), do: "⚠"
+  defp badge_icon(:tip), do: "💡"
+
+  @doc """
   Translates an error message using gettext.
   """
   def translate_error({msg, opts}) do

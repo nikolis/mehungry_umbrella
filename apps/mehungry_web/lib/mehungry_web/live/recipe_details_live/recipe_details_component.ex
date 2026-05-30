@@ -341,6 +341,13 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               .
             />
           </div>
+          <%= if @interactions != [] do %>
+            <div class="mt-8">
+              <h2 class="text-lg font-semibold text-white mb-4">Nutrition Insights</h2>
+              <.nutrient_interaction_panel interactions={@interactions} />
+            </div>
+          <% end %>
+
           <div
             class="mt-20 bg-slate-800 rounded-xl border border-slate-700 overflow-hidden"
             id="comments"
@@ -472,6 +479,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
     comments = Food.get_recipe_comments(assigns.recipe.id)
     reply = Map.get(assigns, :reply, nil)
+    interactions = Food.get_interactions_for_recipe(assigns.recipe)
 
     socket =
       socket
@@ -479,6 +487,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign(:reply, reply)
       |> assign(:user_follows, user_follows)
       |> assign(:recipe_comments, comments)
+      |> assign(:interactions, interactions)
       |> assign(
         :comment,
         get_when_first_exists(assigns.current_user, fn ->

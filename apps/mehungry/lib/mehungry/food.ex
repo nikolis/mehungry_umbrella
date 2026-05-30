@@ -1088,4 +1088,17 @@ defmodule Mehungry.Food do
     Recipe.Query.with_user_ratings(user)
     |> Repo.all()
   end
+
+  def get_interactions_for_ingredients(ingredient_ids) do
+    Mehungry.Food.NutrientInteractions.interactions_for_ingredients(ingredient_ids)
+  end
+
+  def get_interactions_for_recipe(recipe) do
+    ids =
+      recipe
+      |> Map.get(:recipe_ingredients, [])
+      |> Enum.map(& &1.ingredient_id)
+
+    get_interactions_for_ingredients(ids)
+  end
 end

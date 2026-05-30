@@ -37,6 +37,13 @@
       </section>
     <% end %>
 
+    <%= if @interactions != [] do %>
+      <section class="mb-10">
+        <h2 class="text-lg font-semibold text-white mb-4">Nutrition Insights</h2>
+        <.nutrient_interaction_panel interactions={@interactions} />
+      </section>
+    <% end %>
+
     <%= if length(@nutrients_by_family) > 0 do %>
       <section class="mb-10">
         <h2 class="text-lg font-semibold text-white mb-4">
