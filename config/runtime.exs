@@ -56,10 +56,7 @@ if config_env() == :prod do
         raise "DATABASE_URL environment variable is missing"
 
       value ->
-        case Jason.decode(value) do
-          {:ok, map} when is_map(map) -> map |> Map.values() |> List.first()
-          _ -> value
-        end
+        value
     end
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
