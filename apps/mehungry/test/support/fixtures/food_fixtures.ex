@@ -149,7 +149,7 @@ defmodule Mehungry.FoodFixtures do
           name: unit_name,
           translation: [
             %{language_name: lang.name, name: unit_name},
-            %{language_name: lang2.name, name: unit_name}
+            %{language_name: lang2.name, name: unit_name <> "_" <> lang2.name}
           ]
         },
         attrs
