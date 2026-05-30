@@ -1,5 +1,5 @@
 # ── Builder stage ────────────────────────────────────────────────────────────
-FROM hexpm/elixir:1.16.2-erlang-26.2.5-alpine-3.19.0 AS builder
+FROM elixir:1.16.2-alpine AS builder
 
 # Build-time tools only — not carried into the runtime image
 RUN apk add --no-cache git build-base nodejs npm
