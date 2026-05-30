@@ -139,69 +139,69 @@ jobs:
 
           echo "Registered task definition: $TASK_DEF_ARN"
 
-       # Run DB migrations
-       - name: Run DB migrations
-         env:
-           ECS_CLUSTER: mehungry_cluster
-           ECS_SERVICE: mh-prod-service
-           TASK_DEFINITION_ARN: ${{ steps.register-task.outputs.task-definition-arn }}
-         run: |
-           set -e
-      
-           NETWORK_CONFIG=$(aws ecs describe-services \
-             --cluster $ECS_CLUSTER \
-             --services $ECS_SERVICE \
-             --query "services[0].networkConfiguration" \
-             --output json)
-      
-           TASK_ARN=$(aws ecs run-task \
-             --cluster $ECS_CLUSTER \
-             --launch-type FARGATE \
-             --task-definition $TASK_DEFINITION_ARN \
-             --network-configuration "$NETWORK_CONFIG" \
-             --overrides '{
-               "containerOverrides": [{
-                 "name": "mehungry_app",
-                 "command": ["bin/mehungry_umbrella", "eval", "Mehungry.Release.migrate"]
-               }]
-             }' \
-             --query "tasks[0].taskArn" \
-             --output text)
-      
-           echo "Started migration task: $TASK_ARN"
+      # Run DB migrations
+      - name: Run DB migrations
+        env:
+          ECS_CLUSTER: mehungry_cluster
+          ECS_SERVICE: mh-prod-service
+          TASK_DEFINITION_ARN: ${{ steps.register-task.outputs.task-definition-arn }}
+        run: |
+          set -e
 
-           aws ecs wait tasks-stopped \
-             --cluster $ECS_CLUSTER \
-             --tasks $TASK_ARN
+          NETWORK_CONFIG=$(aws ecs describe-services \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --query "services[0].networkConfiguration" \
+            --output json)
 
-           echo "Migration task stopped."
+          TASK_ARN=$(aws ecs run-task \
+            --cluster $ECS_CLUSTER \
+            --launch-type FARGATE \
+            --task-definition $TASK_DEFINITION_ARN \
+            --network-configuration "$NETWORK_CONFIG" \
+            --overrides '{
+              "containerOverrides": [{
+                "name": "mehungry_app",
+                "command": ["bin/mehungry_umbrella", "eval", "Mehungry.Release.migrate"]
+              }]
+            }' \
+            --query "tasks[0].taskArn" \
+            --output text)
 
-           EXIT_CODE=$(aws ecs describe-tasks \
-             --cluster $ECS_CLUSTER \
-             --tasks $TASK_ARN \
-             --query "tasks[0].containers[?name=='mehungry_app'].exitCode" \
-             --output text)
+          echo "Started migration task: $TASK_ARN"
 
-           STOP_REASON=$(aws ecs describe-tasks \
-             --cluster $ECS_CLUSTER \
-             --tasks $TASK_ARN \
-             --query "tasks[0].stoppedReason" \
-             --output text)
+          aws ecs wait tasks-stopped \
+            --cluster $ECS_CLUSTER \
+            --tasks $TASK_ARN
 
-           echo "Migration exit code: $EXIT_CODE"
-           echo "Stopped reason: $STOP_REASON"
+          echo "Migration task stopped."
 
-           if [ -z "$EXIT_CODE" ]; then
-             echo "Could not determine migration exit code"
-             exit 1
-           fi
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster $ECS_CLUSTER \
+            --tasks $TASK_ARN \
+            --query "tasks[0].containers[?name=='mehungry_app'].exitCode" \
+            --output text)
 
-           if [ "$EXIT_CODE" != "0" ]; then
-             echo "Migration failed!"
-             exit 1
-           fi
+          STOP_REASON=$(aws ecs describe-tasks \
+            --cluster $ECS_CLUSTER \
+            --tasks $TASK_ARN \
+            --query "tasks[0].stoppedReason" \
+            --output text)
 
-           echo "Migration completed successfully."
+          echo "Migration exit code: $EXIT_CODE"
+          echo "Stopped reason: $STOP_REASON"
+
+          if [ -z "$EXIT_CODE" ]; then
+            echo "Could not determine migration exit code"
+            exit 1
+          fi
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration failed!"
+            exit 1
+          fi
+
+          echo "Migration completed successfully."
 
       # Deploy to ECS service (this registers AND deploys)
       - name: Deploy Amazon ECS task definition
