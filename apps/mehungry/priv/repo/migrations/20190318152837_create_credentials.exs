@@ -5,7 +5,7 @@ defmodule MehungryServer.Repo.Migrations.CreateCredentials do
     create table(:credentials) do
       add :email, :string, null: false
       add :password_hash, :string, null: false
-      add :user_id, references(:users, on_delete: :delete_all, null: false)
+      add :user_id, references(:users, on_delete: :delete_all), null: false
 
       timestamps()
     end
