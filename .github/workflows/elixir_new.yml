@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - "master"
+  pull_request:
+    branches:
+      - "master"
 
 permissions:
   contents: read
@@ -75,6 +78,7 @@ jobs:
 
   build_and_deploy:
     needs: [test]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
