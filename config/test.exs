@@ -20,7 +20,8 @@ config :mehungry, Mehungry.Repo,
 # you can enable the server option below.
 config :mehungry_web, MehungryWeb.Endpoint,
   http: [port: 4002],
-  server: true
+  server: true,
+  secret_key_base: String.duplicate("a", 64)
 
 config :mehungry, :sql_sandbox, true
 
