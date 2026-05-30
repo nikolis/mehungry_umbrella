@@ -156,7 +156,15 @@ defmodule Mehungry.FoodFixtures do
         ]
       })
 
-    {:ok, mu} = Food.create_measurement_unit(attrs)
+    mu =
+      case Food.get_measurement_unit_by_name(attrs.name) do
+        [] ->
+          {:ok, mu} = Food.create_measurement_unit(attrs)
+          mu
+
+        [mu | _] ->
+          mu
+      end
 
     mu
   end
