@@ -1,107 +1,73 @@
-FROM bitwalker/alpine-elixir-phoenix:latest as builder
+# ── Builder stage ────────────────────────────────────────────────────────────
+FROM hexpm/elixir:1.16.2-erlang-26.2.5-alpine-3.19.0 AS builder
 
+# Build-time tools only — not carried into the runtime image
+RUN apk add --no-cache git build-base nodejs npm
 
-# install build dependencies
-RUN apk add --update git build-base nodejs npm yarn
+WORKDIR /app
 
-RUN mkdir mehungry_umbrella
-WORKDIR /mehungry_umbrella
-
-# install Hex + Rebar
+# Install Hex + Rebar (pinned via mix.lock, not downloaded at runtime)
 RUN mix do local.hex --force, local.rebar --force
 
-# set build ENV
 ENV MIX_ENV=prod
 
-ARG MIX_ENV
-
-ENV MIX_ENV  ${MIX_ENV}
-
-# Install dependencies
-RUN mkdir ./apps
-RUN mkdir ./apps/mehungry
-RUN mkdir ./apps/mehungry_web
-RUN mkdir ./apps/mehungry_web/assets/
-
-# Install JS dependencies
-#COPY ./apps/mehungry_web/assets/package.json ./apps/mehungry_web/assets/
-#COPY ./apps/mehungry_web/assets/tailwind.config.js ./apps/mehungry_web/assets/
-
-
-# Install mix dependecies
+# ── Layer 1: dep manifests (cached until mix.lock changes) ───────────────────
 COPY mix.* ./
-COPY ./apps/mehungry/mix.* ./apps/mehungry
-COPY ./apps/mehungry_web/mix.* ./apps/mehungry_web
+COPY apps/mehungry/mix.* ./apps/mehungry/
+COPY apps/mehungry_web/mix.* ./apps/mehungry_web/
 
+RUN mix deps.get --only prod
+
+# ── Layer 2: config (cached until config files change) ───────────────────────
 COPY config ./config
-COPY ./entrypoint.sh ./entrypoint.sh
 
-RUN mix deps.get --only ${MIX_ENV}
-RUN MIX_ENV=prod mix compile
+RUN mix deps.compile
 
+# ── Layer 3: JS deps (cached until package-lock.json changes) ────────────────
+COPY apps/mehungry_web/assets/package.json \
+     apps/mehungry_web/assets/package-lock.json \
+     ./apps/mehungry_web/assets/
 
-#RUN mix assets.build  
-#RUN mix deps.compile
+RUN npm ci --prefix apps/mehungry_web/assets
 
-# Build front-end
-COPY ./apps/mehungry_web/assets ./apps/mehungry_web/assets
-COPY ./apps/mehungry/lib ./apps/mehungry/lib
-COPY ./apps/mehungry_web/lib ./apps/mehungry_web/lib
-COPY ./apps/mehungry_web/priv/static ./apps/mehungry_web/priv/static/
-
-RUN npm i --prefix ./apps/mehungry_web/assets/
-
-RUN mix tailwind.install  --if-missing
-RUN MIX_ENV=prod mix assets.deploy
-
-# Copy app code
+# ── Layer 4: application source (changes most often) ─────────────────────────
 COPY apps ./apps
-COPY rel rel
+COPY rel ./rel
 
-#RUN mix phx.digest
+# Build and digest static assets
+RUN mix tailwind.install --if-missing
+RUN mix assets.deploy
 
-# build release
-RUN PORT=4000 MIX_ENV=prod  mix release mehungry_umbrella
+# Compile app and build the OTP release
+RUN mix release mehungry_umbrella
 
-# prepare release image
-FROM bitwalker/alpine-elixir-phoenix:latest as  app_container
-# install runtime dependencies
+# ── Runtime stage ─────────────────────────────────────────────────────────────
+# Minimal Alpine — no Elixir compiler, no Node, no build tools
+FROM alpine:3.19 AS app
 
-# copy release to app container
-COPY --from=builder /mehungry_umbrella/_build/prod/rel/mehungry_umbrella/ .
-copy --from=builder /mehungry_umbrella/entrypoint.sh ./entrypoint.sh 
-
-RUN apk add --update openssl postgresql-client jq 
-# Install build dependencies for spaCy
 RUN apk add --no-cache \
-    build-base \
-    libffi-dev \
-    openssl-dev \
-    musl-dev \
-    gcc \
-    g++ \
-    python3-dev \
-    py3-pip
+    libstdc++ \
+    openssl \
+    ncurses-libs \
+    postgresql-client \
+    jq \
+    bash
 
-# Default Phoenix server port
+WORKDIR /app
+
+# Copy only the compiled release from the builder
+COPY --from=builder /app/_build/prod/rel/mehungry_umbrella ./
+COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
+
+RUN chmod +x ./entrypoint.sh
+
+# Phoenix HTTP
 EXPOSE 4000
-
-# Erlang EPMD port
+# Erlang EPMD
 EXPOSE 4369
-
-# Intra-Erlang communication ports
+# Intra-node communication
 EXPOSE 9000-9010
-
-# :erpc default port
+# :erpc
 EXPOSE 9090
 
-
-# Create a virtual environment
-ENV VENV_PATH=/opt/venv
-RUN python -m venv $VENV_PATH
-
-# Activate the virtual environment by modifying PATH
-ENV PATH="$VENV_PATH/bin:$PATH"
-
- 
 CMD ["sh", "./entrypoint.sh"]
