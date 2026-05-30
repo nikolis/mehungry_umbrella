@@ -57,7 +57,7 @@ WORKDIR /app
 
 # Copy only the compiled release from the builder
 COPY --from=builder /app/_build/prod/rel/mehungry_umbrella ./
-COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
+COPY entrypoint.sh ./entrypoint.sh
 
 RUN chmod +x ./entrypoint.sh
 
