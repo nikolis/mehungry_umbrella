@@ -32,7 +32,6 @@
                 { "containerPort": 9004, "hostPort": 9004, "protocol": "tcp" }
             ],
             "environment": [
-                { "name": "ERLANG_COOKIE", "value": "MEHUNGRY_SECURE_CLUSTER_COOKIE_2024" },
                 { "name": "SOME_APP_SSL_KEY_PATH", "value": "priv/cert/SSL_PrivateKEY_www_m3hungry_com.pem" },
                 { "name": "SOME_APP_SSL_CERT_PATH", "value": "priv/cert/SSL_CSR_www_m3hungry_com.pem" },
                 { "name": "AWS_ASSETS_BUCKET_NAME", "value": "mehungry-main-bucket" }

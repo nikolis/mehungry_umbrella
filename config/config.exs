@@ -34,9 +34,10 @@ config :mehungry_web,
   generators: [context_app: :mehungry]
 
 # Configures the endpoint
+# secret_key_base is intentionally absent here — set via SECRET_KEY_BASE env var
+# in runtime.exs for prod, and in dev.exs / test.exs for local environments.
 config :mehungry_web, MehungryWeb.Endpoint,
   url: [host: "localhost"],
-  secret_key_base: "iH7KE2sUcWxfSctkWBtzxcSkJlSKZaVWP/hDKC8Hg3gCkGYZcXhIZLrEkzw/Ddq3",
   render_errors: [view: MehungryWeb.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: Mehungry.PubSub,
   live_view: [signing_salt: "l1ra29uq"],
@@ -75,17 +76,19 @@ config :ueberauth, Ueberauth,
        ]}
   ]
 
+# OAuth credentials are nil at compile time.
+# Set in dev.exs for local development and in runtime.exs for production.
 config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
-  client_id: System.get_env("FACEBOOK_CLIENT_ID"),
-  client_secret: System.get_env("FACEBOOK_CLIENT_SECRET")
+  client_id: nil,
+  client_secret: nil
 
 config :ueberauth, Ueberauth.Strategy.Google.OAuth,
-  client_id: System.get_env("GOOGLE_CLIENT_ID"),
-  client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+  client_id: nil,
+  client_secret: nil
 
 config :ueberauth, Ueberauth.Strategy.Instagram.OAuth,
-  client_id: System.get_env("INSTAGRAM_CLIENT_ID"),
-  client_secret: System.get_env("INSTAGRAM_CLIENT_SECRET")
+  client_id: nil,
+  client_secret: nil
 
 config :esbuild,
   version: "0.17.11",

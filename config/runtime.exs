@@ -29,6 +29,27 @@ if config_env() == :prod do
 end
 
 if config_env() == :prod do
+  secret_key_base =
+    System.get_env("SECRET_KEY_BASE") ||
+      raise "SECRET_KEY_BASE environment variable is missing"
+
+  config :mehungry_web, MehungryWeb.Endpoint,
+    secret_key_base: secret_key_base
+
+  config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
+    client_id: System.get_env("FACEBOOK_CLIENT_ID"),
+    client_secret: System.get_env("FACEBOOK_CLIENT_SECRET")
+
+  config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+    client_id: System.get_env("GOOGLE_CLIENT_ID"),
+    client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+
+  config :ueberauth, Ueberauth.Strategy.Instagram.OAuth,
+    client_id: System.get_env("INSTAGRAM_CLIENT_ID"),
+    client_secret: System.get_env("INSTAGRAM_CLIENT_SECRET")
+end
+
+if config_env() == :prod do
   database_url =
     case System.get_env("DATABASE_URL") do
       {_, value} -> value

@@ -50,6 +50,7 @@ config :libcluster,
   ]
 
 config :mehungry_web, MehungryWeb.Endpoint,
+  secret_key_base: "iH7KE2sUcWxfSctkWBtzxcSkJlSKZaVWP/hDKC8Hg3gCkGYZcXhIZLrEkzw/Ddq3",
   # http: [port: 4000],
   http: [ip: {127, 0, 0, 1}, port: System.get_env("PORT", "4000")],
   debug_errors: true,
@@ -77,6 +78,20 @@ config :mehungry_web, MehungryWeb.Endpoint,
       ~r"lib/mehungry_web/templates/.*(eex)$"
     ]
   ]
+
+# OAuth credentials for local development — override with real values via
+# a local .env file or shell exports if you need to test OAuth flows.
+config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
+  client_id: System.get_env("FACEBOOK_CLIENT_ID"),
+  client_secret: System.get_env("FACEBOOK_CLIENT_SECRET")
+
+config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+  client_id: System.get_env("GOOGLE_CLIENT_ID"),
+  client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+
+config :ueberauth, Ueberauth.Strategy.Instagram.OAuth,
+  client_id: System.get_env("INSTAGRAM_CLIENT_ID"),
+  client_secret: System.get_env("INSTAGRAM_CLIENT_SECRET")
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :console, format: "[$level] $message\n"
