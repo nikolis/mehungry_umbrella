@@ -31,7 +31,10 @@
 
       <div class="input_group_container">
         {label(f, :password_confirmation, "Confirm new password")}
-        {password_input(f, :password_confirmation, required: true, placeholder: "confirm password")}
+        {password_input(f, :password_confirmation,
+          required: true,
+          placeholder: "confirm password"
+        )}
         {error_tag(f, :password_confirmation)}
       </div>
 

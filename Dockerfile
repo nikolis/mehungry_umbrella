@@ -10,12 +10,8 @@ WORKDIR /mehungry_umbrella
 # install Hex + Rebar
 RUN mix do local.hex --force, local.rebar --force
 
-# set build ARG
-ARG DATABASE_URL
-
 # set build ENV
 ENV MIX_ENV=prod
-ENV DATABASE_URL ${DATABASE_URL}
 
 ARG MIX_ENV
 

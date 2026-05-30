@@ -17,7 +17,7 @@ defmodule MehungryWeb.SelectComponentDeep do
         id={@form.name <> "_#{@input_variable}"}
         value={@selected_id}
       />
-
+      
     <!-- Trigger Button / Selected Item Display -->
       <div phx-click="open_modal" phx-target={@myself} class="w-full cursor-pointer h-full">
         <%= if @selected_item do %>

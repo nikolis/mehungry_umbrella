@@ -12,7 +12,7 @@ defmodule Mehungry.Subscriptions do
 
   @monthly_limits %{
     "free" => %{"recipe_generation" => 0, "meal_plan" => 0},
-    "pro"  => %{"recipe_generation" => 15, "meal_plan" => 4}
+    "pro" => %{"recipe_generation" => 15, "meal_plan" => 4}
   }
 
   # ── Subscription ──────────────────────────────────────────────────────────────

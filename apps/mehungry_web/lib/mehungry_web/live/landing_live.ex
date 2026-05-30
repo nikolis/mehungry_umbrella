@@ -24,6 +24,7 @@ defmodule MehungryWeb.LandingLive do
 
     recipe =
       Mehungry.Repo.one(query)
+
     {:ok,
      assign(socket,
        scrolled: false,
@@ -187,8 +188,18 @@ defmodule MehungryWeb.LandingLive do
           <!-- Feature 1: Deep Nutrition -->
           <div class="bg-slate-700/50 rounded-xl p-6 border border-slate-600 hover:border-primary-500/50 transition group">
             <div class="w-12 h-12 bg-primary-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary-500/20 transition">
-              <svg class="w-6 h-6 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <svg
+                class="w-6 h-6 text-primary-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
               </svg>
             </div>
             <h3 class="text-xl font-semibold text-white mb-2">Deep Nutrition Analysis</h3>
@@ -196,15 +207,27 @@ defmodule MehungryWeb.LandingLive do
               Track every nutrient including individual fatty acids (PUFA, MUFA, SFA), vitamins, minerals, and amino acids from USDA data.
             </p>
           </div>
-
-          <!-- Feature 2: AI Assistant -->
+          
+    <!-- Feature 2: AI Assistant -->
           <div class="bg-slate-700/50 rounded-xl p-6 border border-primary-500/40 hover:border-primary-500 transition group relative overflow-hidden">
             <div class="absolute top-3 right-3">
-              <span class="px-2 py-0.5 rounded-full bg-primary-500/20 text-primary-300 text-xs font-semibold">Pro</span>
+              <span class="px-2 py-0.5 rounded-full bg-primary-500/20 text-primary-300 text-xs font-semibold">
+                Pro
+              </span>
             </div>
             <div class="w-12 h-12 bg-primary-500/20 rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary-500/30 transition">
-              <svg class="w-6 h-6 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              <svg
+                class="w-6 h-6 text-primary-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                />
               </svg>
             </div>
             <h3 class="text-xl font-semibold text-white mb-2">AI Recipe Assistant</h3>
@@ -212,12 +235,22 @@ defmodule MehungryWeb.LandingLive do
               Describe what you want to eat and let AI generate a complete recipe with full nutrition data — instantly and tailored to your preferences.
             </p>
           </div>
-
-          <!-- Feature 3: Recipe Builder -->
+          
+    <!-- Feature 3: Recipe Builder -->
           <div class="bg-slate-700/50 rounded-xl p-6 border border-slate-600 hover:border-secondary-500/50 transition group">
             <div class="w-12 h-12 bg-secondary-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-secondary-500/20 transition">
-              <svg class="w-6 h-6 text-secondary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M3 6h18M3 18h18" />
+              <svg
+                class="w-6 h-6 text-secondary-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 12h18M3 6h18M3 18h18"
+                />
               </svg>
             </div>
             <h3 class="text-xl font-semibold text-white mb-2">Smart Recipe Builder</h3>
@@ -225,12 +258,22 @@ defmodule MehungryWeb.LandingLive do
               Create recipes by combining ingredients. See instant nutrition calculations with portion-based gram weight conversions.
             </p>
           </div>
-
-          <!-- Feature 4: Community Sharing -->
+          
+    <!-- Feature 4: Community Sharing -->
           <div class="bg-slate-700/50 rounded-xl p-6 border border-slate-600 hover:border-accent-500/50 transition group">
             <div class="w-12 h-12 bg-accent-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-accent-500/20 transition">
-              <svg class="w-6 h-6 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              <svg
+                class="w-6 h-6 text-accent-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                />
               </svg>
             </div>
             <h3 class="text-xl font-semibold text-white mb-2">Community Driven</h3>
@@ -581,32 +624,82 @@ defmodule MehungryWeb.LandingLive do
             <p class="text-slate-500 text-sm mb-6">Try out AI features</p>
             <ul class="space-y-3 mb-8">
               <li class="flex items-center gap-2 text-slate-300 text-sm">
-                <svg class="w-4 h-4 text-secondary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-4 h-4 text-secondary-500 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 All social features
               </li>
               <li class="flex items-center gap-2 text-slate-300 text-sm">
-                <svg class="w-4 h-4 text-secondary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-4 h-4 text-secondary-500 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 Unlimited manual recipe creation
               </li>
               <li class="flex items-center gap-2 text-slate-300 text-sm">
-                <svg class="w-4 h-4 text-secondary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-4 h-4 text-secondary-500 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 Calendar &amp; nutrition tracking
               </li>
               <li class="flex items-center gap-2 text-slate-300 text-sm">
-                <svg class="w-4 h-4 text-secondary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-4 h-4 text-secondary-500 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 3 AI recipe generations / month
               </li>
               <li class="flex items-center gap-2 text-slate-500 text-sm">
-                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  class="w-4 h-4 text-slate-600 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
                 AI meal plan generator
               </li>
@@ -618,8 +711,8 @@ defmodule MehungryWeb.LandingLive do
               Get Started Free
             </a>
           </div>
-
-          <!-- Pro Tier -->
+          
+    <!-- Pro Tier -->
           <div class="bg-slate-800 rounded-2xl p-8 border-2 border-primary-500 shadow-xl shadow-primary-500/10 w-full max-w-sm relative">
             <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary-500 text-white text-xs font-bold px-3 py-1 rounded-full">
               MOST POPULAR
@@ -633,26 +726,66 @@ defmodule MehungryWeb.LandingLive do
             </p>
             <ul class="space-y-3 mb-8">
               <li class="flex items-center gap-2 text-slate-300 text-sm">
-                <svg class="w-4 h-4 text-primary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-4 h-4 text-primary-500 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 Everything in Free
               </li>
               <li class="flex items-center gap-2 text-slate-300 text-sm">
-                <svg class="w-4 h-4 text-primary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-4 h-4 text-primary-500 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 15 AI recipe generations / month
               </li>
               <li class="flex items-center gap-2 text-slate-300 text-sm">
-                <svg class="w-4 h-4 text-primary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-4 h-4 text-primary-500 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 4 AI meal plans / month
               </li>
               <li class="flex items-center gap-2 text-slate-300 text-sm">
-                <svg class="w-4 h-4 text-primary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-4 h-4 text-primary-500 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 Priority support
               </li>

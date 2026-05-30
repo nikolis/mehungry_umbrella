@@ -27,7 +27,10 @@ defmodule Mehungry.AI.RecipeGenerator do
     with {:ok, names} <- extract_ingredient_names(description),
          _ = Logger.info("Phase 1 extracted: #{inspect(names)}"),
          {resolved, unmatched} <- resolve_ingredients(names),
-         _ = Logger.info("Phase 2 resolved: #{inspect(Enum.map(resolved, & &1.searched_name))}, unmatched: #{inspect(unmatched)}"),
+         _ =
+           Logger.info(
+             "Phase 2 resolved: #{inspect(Enum.map(resolved, & &1.searched_name))}, unmatched: #{inspect(unmatched)}"
+           ),
          {resolved, still_unmatched} <- create_missing_ingredients(resolved, unmatched),
          {:ok, attrs} <- generate_recipe(description, resolved) do
       {:ok, validate_ingredients(attrs, resolved), still_unmatched}
@@ -77,19 +80,21 @@ defmodule Mehungry.AI.RecipeGenerator do
   # --- Phase 2 ---
 
   defp resolve_ingredients(names) do
-    gram_unit = case Food.get_measurement_unit_by_name("grammar") do
-      [unit | _] -> unit
-      _ -> nil
-    end
+    gram_unit =
+      case Food.get_measurement_unit_by_name("grammar") do
+        [unit | _] -> unit
+        _ -> nil
+      end
 
     {resolved, unmatched} =
       names
       |> Enum.map(fn name -> {name, resolve_one(name, gram_unit)} end)
       |> Enum.split_with(fn {_name, matches} -> matches != [] end)
 
-    resolved_ctx = Enum.map(resolved, fn {name, matches} ->
-      %{searched_name: name, db_matches: matches}
-    end)
+    resolved_ctx =
+      Enum.map(resolved, fn {name, matches} ->
+        %{searched_name: name, db_matches: matches}
+      end)
 
     unmatched_names = Enum.map(unmatched, fn {name, _} -> name end)
 
@@ -198,16 +203,21 @@ defmodule Mehungry.AI.RecipeGenerator do
   defp create_missing_ingredients(resolved, []), do: {resolved, []}
 
   defp create_missing_ingredients(resolved, unmatched) do
-    Logger.info("Phase 2b: creating #{length(unmatched)} missing ingredients: #{inspect(unmatched)}")
+    Logger.info(
+      "Phase 2b: creating #{length(unmatched)} missing ingredients: #{inspect(unmatched)}"
+    )
 
-    gram_unit = case Food.get_measurement_unit_by_name("grammar") do
-      [unit | _] -> unit
-      _ -> nil
-    end
+    gram_unit =
+      case Food.get_measurement_unit_by_name("grammar") do
+        [unit | _] -> unit
+        _ -> nil
+      end
 
     case generate_usda_ingredient_json(unmatched) do
       {:ok, json_string, ingredient_list} ->
-        Logger.info("Phase 2b: AI returned #{length(ingredient_list)} ingredient(s), inserting via FdcFoodParserLeg")
+        Logger.info(
+          "Phase 2b: AI returned #{length(ingredient_list)} ingredient(s), inserting via FdcFoodParserLeg"
+        )
 
         Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(json_string)
 
@@ -225,9 +235,10 @@ defmodule Mehungry.AI.RecipeGenerator do
           end)
           |> Enum.split_with(fn {_name, matches} -> matches != [] end)
 
-        new_resolved_ctx = Enum.map(new_resolved, fn {name, matches} ->
-          %{searched_name: name, db_matches: matches}
-        end)
+        new_resolved_ctx =
+          Enum.map(new_resolved, fn {name, matches} ->
+            %{searched_name: name, db_matches: matches}
+          end)
 
         failed_names = Enum.map(failed, fn {name, _} -> name end)
 

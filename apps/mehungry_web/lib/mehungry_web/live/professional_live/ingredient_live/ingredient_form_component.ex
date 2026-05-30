@@ -3,7 +3,11 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
 
   def render(assigns) do
     ~H"""
-    <form phx-change="validate" phx-submit="save" class="px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-6">
+    <form
+      phx-change="validate"
+      phx-submit="save"
+      class="px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-6"
+    >
       <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
         <div class="flex items-center justify-between mb-6">
           <.back navigate={~p"/professional/ingredients"}>Back</.back>
@@ -15,7 +19,9 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Name</label>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              Name
+            </label>
             <.input
               type="text"
               name="ingredient[name]"
@@ -23,7 +29,9 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
             />
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Category</label>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              Category
+            </label>
             <.live_component
               module={MehungryWeb.SelectComponent}
               items={Enum.map(@categories, fn x -> {Integer.to_string(x.id), x.name} end)}
@@ -33,7 +41,9 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
             />
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Default Measurement Unit</label>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              Default Measurement Unit
+            </label>
             <.live_component
               module={MehungryWeb.SelectComponent}
               items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}

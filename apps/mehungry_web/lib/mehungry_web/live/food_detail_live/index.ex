@@ -57,7 +57,8 @@ defmodule MehungryWeb.FoodDetailLive.Index do
           []
 
         in_ ->
-          unit = if in_.nutrient.measurement_unit, do: in_.nutrient.measurement_unit.name, else: ""
+          unit =
+            if in_.nutrient.measurement_unit, do: in_.nutrient.measurement_unit.name, else: ""
 
           [%{label: Map.get(@display_labels, name, name), amount: in_.amount, unit: unit}]
       end

@@ -1,7 +1,6 @@
 <div class="min-h-screen bg-slate-900 pb-16">
   <div class="container max-w-4xl mx-auto px-4 py-8">
-
-    <%# Header %>
+    
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-white mb-2">Foods & Nutrition</h1>
       <p class="text-slate-400">
@@ -9,7 +8,6 @@
       </p>
     </div>
 
-    <%# Search bar %>
     <form phx-change="search" phx-submit="search" class="mb-8">
       <div class="relative">
         <svg
@@ -37,7 +35,6 @@
       </div>
     </form>
 
-    <%# Results count %>
     <div class="text-sm text-slate-500 mb-4">
       <%= if @query != "" do %>
         {length(@ingredients)} results for "<span class="text-slate-300">{@query}</span>"
@@ -46,11 +43,20 @@
       <% end %>
     </div>
 
-    <%# Ingredient grid %>
     <%= if length(@ingredients) == 0 do %>
       <div class="text-center py-16 text-slate-500">
-        <svg class="w-12 h-12 mx-auto mb-4 opacity-40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+        <svg
+          class="w-12 h-12 mx-auto mb-4 opacity-40"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
+          />
         </svg>
         <p>No ingredients found for "<span class="text-slate-400">{@query}</span>"</p>
       </div>
@@ -84,7 +90,6 @@
         <% end %>
       </div>
 
-      <%# Load more %>
       <%= if @cursor_after && @query == "" do %>
         <div class="mt-8 text-center">
           <button
@@ -96,6 +101,5 @@
         </div>
       <% end %>
     <% end %>
-
   </div>
 </div>

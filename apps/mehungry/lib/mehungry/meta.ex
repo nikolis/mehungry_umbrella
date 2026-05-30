@@ -65,8 +65,7 @@ defmodule Mehungry.Meta do
     today_start = NaiveDateTime.new!(Date.utc_today(), ~T[00:00:00])
 
     %{
-      total:
-        Repo.one(from v in Visit, where: v.inserted_at >= ^today_start, select: count(v.id)),
+      total: Repo.one(from v in Visit, where: v.inserted_at >= ^today_start, select: count(v.id)),
       unique_ips:
         Repo.one(
           from v in Visit,
@@ -99,8 +98,11 @@ defmodule Mehungry.Meta do
   def classify_referrer(""), do: :direct
 
   def classify_referrer(ref) do
-    search = ~w[google. bing.com yahoo.com duckduckgo.com yandex. baidu.com ecosia.org search.brave.com ask.com]
-    social = ~w[facebook.com twitter.com t.co instagram.com linkedin.com reddit.com pinterest.com tiktok.com youtube.com]
+    search =
+      ~w[google. bing.com yahoo.com duckduckgo.com yandex. baidu.com ecosia.org search.brave.com ask.com]
+
+    social =
+      ~w[facebook.com twitter.com t.co instagram.com linkedin.com reddit.com pinterest.com tiktok.com youtube.com]
 
     cond do
       Enum.any?(search, &String.contains?(ref, &1)) -> :search
@@ -260,6 +262,7 @@ defmodule Mehungry.Meta do
     |> Enum.filter(&organic?/1)
     |> Enum.flat_map(fn v ->
       ref = get_in(v.details || %{}, ["referrer"]) || ""
+
       case extract_search_query(ref) do
         nil -> []
         q -> [q]
@@ -274,7 +277,9 @@ defmodule Mehungry.Meta do
   def is_crawler?(agent) when is_nil(agent) or agent == "", do: false
 
   def is_crawler?(agent) do
-    bots = ~w[Googlebot Bingbot DuckDuckBot YandexBot Yahoo! Slurp Baiduspider AhrefsBot SemrushBot facebookexternalhit Twitterbot Slackbot LinkedInBot]
+    bots =
+      ~w[Googlebot Bingbot DuckDuckBot YandexBot Yahoo! Slurp Baiduspider AhrefsBot SemrushBot facebookexternalhit Twitterbot Slackbot LinkedInBot]
+
     Enum.any?(bots, &String.contains?(agent, &1))
   end
 
