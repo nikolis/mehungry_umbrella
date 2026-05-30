@@ -580,6 +580,22 @@ defmodule Mehungry.Food do
     |> Repo.update()
   end
 
+  def get_ingredient_by_slug(slug) do
+    search_name = String.replace(slug, "-", " ")
+
+    case Repo.get_by(Ingredient, search_name: search_name) do
+      nil ->
+        nil
+
+      ingredient ->
+        Repo.preload(ingredient, [
+          :category,
+          ingredient_portions: [:measurement_unit],
+          ingredient_nutrients: [nutrient: [:measurement_unit]]
+        ])
+    end
+  end
+
   def get_ingredient_details!(nil), do: nil
 
   def get_ingredient_details!(id) do
@@ -689,17 +705,7 @@ defmodule Mehungry.Food do
   end
 
   def create_post_from_recipe(%Recipe{} = recipe) do
-    post_params = %{
-      md_media_url: recipe.image_url,
-      description: recipe.description,
-      reference_id: recipe.id,
-      title: recipe.title,
-      type_: "RECIPE",
-      user_id: recipe.user_id,
-      recipe_id: recipe.id
-    }
-
-    Mehungry.Posts.create_post(post_params)
+    Mehungry.Posts.create_post(recipe)
   end
 
   def put_nutrient_info(%Ecto.Changeset{valid?: true} = changeset, attrs) do
@@ -901,6 +907,22 @@ defmodule Mehungry.Food do
         join: tag in Hashtag,
         on: tag.id == rec_tag.hashtag_id,
         where: tag.title == ^hashtag
+      )
+
+    {query, list_recipes(query)}
+  end
+
+  def search_recipes_by_ingredient(ingredient_name) do
+    ingredient_ids =
+      Mehungry.Food.IngredientSearch.search(ingredient_name)
+      |> Enum.map(& &1.id)
+
+    query =
+      from(r in Recipe,
+        join: ri in RecipeIngredient,
+        on: ri.recipe_id == r.id,
+        where: ri.ingredient_id in ^ingredient_ids,
+        distinct: true
       )
 
     {query, list_recipes(query)}

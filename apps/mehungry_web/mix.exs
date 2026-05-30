@@ -67,6 +67,7 @@ defmodule MehungryWeb.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:req, "~> 0.5"},
       {:floki, ">= 0.30.0", only: :test},
+      {:lazy_html, ">= 0.1.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},

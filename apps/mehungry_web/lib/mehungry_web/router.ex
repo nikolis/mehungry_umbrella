@@ -81,8 +81,6 @@ defmodule MehungryWeb.Router do
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
       live "/admin-dashboard", Admin.DashboardLive
-      live "/profile", ProfileLive.Index, :index
-      live "/profile/edit", ProfileLive.Index, :edit
       live "/basket", ShoppingBasketLive.Index, :index
       live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
 
@@ -175,6 +173,8 @@ defmodule MehungryWeb.Router do
 
       live "/browse", RecipeBrowserLive.Index, :index
       live "/browse/:id", RecipeBrowserLive.Index, :show_recipe
+      live "/profile", ProfileLive.Index, :index
+      live "/profile/edit", ProfileLive.Index, :edit
       live "/profile/:id", ProfileLive.Index, :show
       live "/profile/show_recipe/:recipe_id", ProfileLive.Index, :show_recipe
 
@@ -182,8 +182,12 @@ defmodule MehungryWeb.Router do
       live "/share_social_media/:id/:social_media", HomeLive.Index, :share_social_media
 
       live "/search/", RecipeBrowserLive.Index, :index
-      live "/search/:query", RecipeBrowserLive.Index, :index
       live "/search/hashtag/:hashtag", RecipeBrowserLive.Index, :index
+      live "/search/ingredient/:ingredient", RecipeBrowserLive.Index, :index
+      live "/search/:query", RecipeBrowserLive.Index, :index
+
+      live "/foods", FoodsLive.Index, :index
+      live "/foods/:slug", FoodDetailLive.Index, :index
 
       # live "/browse/:origin/:id", RecipeDetailsLive.Index, :index
       # live "/browse_prepop/:search_term", :searc_prepop
