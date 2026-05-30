@@ -111,15 +111,6 @@ jobs:
           set -e
 
           docker build \
-            --build-arg="DATABASE_URL=${{ secrets.DATABASE_URL }}" \
-            --build-arg="AWS_ASSETS_BUCKET_NAME=${{ secrets.AWS_ASSETS_BUCKET_NAME }}" \
-            --build-arg="AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" \
-            --build-arg="AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-            --build-arg="FACEBOOK_CLIENT_ID=${{ secrets.FACEBOOK_CLIENT_ID }}" \
-            --build-arg="FACEBOOK_CLIENT_SECRET=${{ secrets.FACEBOOK_CLIENT_SECRET }}" \
-            --build-arg="GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" \
-            --build-arg="GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-            --build-arg="SECRET_KEY_BASE=${{ secrets.SECRET_KEY_BASE }}" \
             --build-arg="MIX_ENV=prod" \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
 
@@ -160,7 +151,6 @@ jobs:
           # Reuse the same network config as the running service                                                                                                                                    
           NETWORK_CONFIG=$(aws ecs describe-services \                                    
             --cluster $ECS_CLUSTER \                                                                                                                                                                
-            --services $ECS_SERVICE \                           
             --query "services[0].networkConfiguration" \                                                                                                                                            
             --output json)                                                                                                                                                                          
                                                                                                              
