@@ -140,34 +140,34 @@ jobs:
           echo "Registered task definition: $TASK_DEF_ARN"
 
       # Run DB migrations
-      - name: Run DB migrations                                                                                                                                                                     
-        env:                                                                                                                                                                                        
-          ECS_CLUSTER: mehungry_cluster                                                                                                                                                             
-          ECS_SERVICE: mh-prod-service                                                                                                                                                              
-          TASK_DEFINITION_ARN: ${{ steps.register-task.outputs.task-definition-arn }}                                                                                                               
-        run: |                                                                                                                                                                                      
-          set -e                                                                                                                                                                                    
-                                                                                                                                                                                                    
-          # Reuse the same network config as the running service                                                                                                                                    
-          NETWORK_CONFIG=$(aws ecs describe-services \                                    
-            --cluster $ECS_CLUSTER \                                                                                                                                                                
-            --query "services[0].networkConfiguration" \                                                                                                                                            
-            --output json)                                                                                                                                                                          
-                                                                                                             
-          TASK_ARN=$(aws ecs run-task \                                                                                                                                                             
-            --cluster $ECS_CLUSTER \                                                                                                                                                              
+      - name: Run DB migrations
+        env:
+          ECS_CLUSTER: mehungry_cluster
+          ECS_SERVICE: mh-prod-service
+          TASK_DEFINITION_ARN: ${{ steps.register-task.outputs.task-definition-arn }}
+        run: |
+          set -e
+      
+          NETWORK_CONFIG=$(aws ecs describe-services \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --query "services[0].networkConfiguration" \
+            --output json)
+      
+          TASK_ARN=$(aws ecs run-task \
+            --cluster $ECS_CLUSTER \
             --launch-type FARGATE \
-            --task-definition $TASK_DEFINITION_ARN \                                                                                                                                                
+            --task-definition $TASK_DEFINITION_ARN \
             --network-configuration "$NETWORK_CONFIG" \
-            --overrides '{                                                                                                                                                                          
-              "containerOverrides": [{                                                                                                                                                            
-                "name": "mehungry_app",                                                                                                                                                             
+            --overrides '{
+              "containerOverrides": [{
+                "name": "mehungry_app",
                 "command": ["bin/mehungry_umbrella", "eval", "Mehungry.Release.migrate"]
-              }]                                                                                                                                                                                    
-            }' \                                                                                                                                                                                  
-            --query "tasks[0].taskArn" \                                                                                                                                                            
-            --output text)                  
-        
+              }]
+            }' \
+            --query "tasks[0].taskArn" \
+            --output text)
+      
           echo "Started migration task: $TASK_ARN"
 
           aws ecs wait tasks-stopped \
