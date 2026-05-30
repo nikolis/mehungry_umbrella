@@ -32,12 +32,47 @@
                 { "containerPort": 9004, "hostPort": 9004, "protocol": "tcp" }
             ],
             "environment": [
-                { "name": "ERLANG_COOKIE", "value": "MEHUNGRY_SECURE_CLUSTER_COOKIE_2024" }
+                { "name": "ERLANG_COOKIE", "value": "MEHUNGRY_SECURE_CLUSTER_COOKIE_2024" },
+                { "name": "SOME_APP_SSL_KEY_PATH", "value": "priv/cert/SSL_PrivateKEY_www_m3hungry_com.pem" },
+                { "name": "SOME_APP_SSL_CERT_PATH", "value": "priv/cert/SSL_CSR_www_m3hungry_com.pem" },
+                { "name": "AWS_ASSETS_BUCKET_NAME", "value": "mehungry-main-bucket" }
             ],
             "secrets": [
                 {
                     "name": "RELEASE_COOKIE",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/release_cookie-QYj6rK"
+                },
+                {
+                    "name": "DATABASE_URL",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/database_url-dRiOCt"
+                },
+                {
+                    "name": "AWS_ACCESS_KEY_ID",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/aws_key_id-DGDOfP"
+                },
+                {
+                    "name": "AWS_SECRET_ACCESS_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/aws_secret_access_key-3rZAyV"
+                },
+                {
+                    "name": "FACEBOOK_CLIENT_ID",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/fecebook_client_id-hWBO09"
+                },
+                {
+                    "name": "FACEBOOK_CLIENT_SECRET",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/fracebook_client_secret-SDHxEt"
+                },
+                {
+                    "name": "GOOGLE_CLIENT_ID",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/google_client_id-ThBjkh"
+                },
+                {
+                    "name": "GOOGLE_CLIENT_SECRET",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/google_client_secret-zdxPp1"
+                },
+                {
+                    "name": "SECRET_KEY_BASE",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/secret_key_base-Au2jSN"
                 },
                 {
                     "name": "STRIPE_SECRET_KEY",

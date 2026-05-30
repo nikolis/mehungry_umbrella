@@ -88,8 +88,3 @@ config :phoenix, :plug_init_mode, :runtime
 # in production as building large stacktraces may be expensive.
 config :phoenix, :stacktrace_depth, 20
 
-# Chrome
-config :wallaby,
-  screenshot_on_failure: true,
-  chromedriver: [headlesss: false]
-
