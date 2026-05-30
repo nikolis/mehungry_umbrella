@@ -6,7 +6,7 @@ defmodule MehungryWeb.SelectComponentDeep do
   def render(assigns) do
     ~H"""
     <div
-      class="h-full relative rounded-lg border-2 border-slate-700 "
+      class="h-full relative rounded-lg border border-slate-600"
       id={"select-component-#{@unique_id}"}
       data-component-id={@unique_id}
     >
@@ -17,25 +17,25 @@ defmodule MehungryWeb.SelectComponentDeep do
         id={@form.name <> "_#{@input_variable}"}
         value={@selected_id}
       />
-      
+
     <!-- Trigger Button / Selected Item Display -->
-      <div phx-click="open_modal" phx-target={@myself} class="w-full cursor-pointer">
+      <div phx-click="open_modal" phx-target={@myself} class="w-full cursor-pointer h-full">
         <%= if @selected_item do %>
-          <div class="bg-slate-700 border border-slate-800 rounded-lg text-white rounded-lg p-2 flex justify-between items-center">
-            <span class="font-semibold">
+          <div class="bg-slate-700 rounded-lg text-white px-3 py-2 min-h-10 flex justify-between items-center h-full">
+            <span class="font-semibold text-sm truncate pr-2">
               <.display_label label={@selected_item.label} />
             </span>
             <button
               phx-click="clear_selection"
               phx-target={@myself}
               phx-stop-propagation
-              class="text-gray-100 hover:text-red-500"
+              class="text-gray-400 hover:text-red-400 shrink-0"
             >
               <.icon name="hero-x-mark" class="h-4 w-4" />
             </button>
           </div>
         <% else %>
-          <div class="overflow-hidden  h-full border border-slate-800 bg-slate-700 border-2 rounded-lg p-4 text-gray-500">
+          <div class="h-full min-h-10 bg-slate-700 rounded-lg px-3 py-2 text-slate-400 text-sm flex items-center">
             {@placeholder || "Select an option..."}
           </div>
         <% end %>

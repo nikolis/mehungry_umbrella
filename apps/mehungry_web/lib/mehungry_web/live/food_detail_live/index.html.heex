@@ -1,0 +1,178 @@
+<div class="min-h-screen bg-slate-900 pb-16">
+  <div class="container max-w-3xl mx-auto px-4 py-8">
+
+    <%# Breadcrumb %>
+    <nav class="text-sm text-slate-400 mb-6">
+      <a href="/foods" class="hover:text-white transition-colors">Foods</a>
+      <span class="mx-2">›</span>
+      <span class="text-slate-200">{@ingredient.name}</span>
+    </nav>
+
+    <%# Header %>
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-white mb-2">{@ingredient.name}</h1>
+      <%= if @ingredient.category do %>
+        <span class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-slate-700 text-slate-300 mb-3">
+          {@ingredient.category.name}
+        </span>
+      <% end %>
+      <%= if @ingredient.description && @ingredient.description != "" do %>
+        <p class="text-slate-400 leading-relaxed">{@ingredient.description}</p>
+      <% end %>
+    </div>
+
+    <%# Macro highlights %>
+    <%= if length(@top_nutrients) > 0 do %>
+      <section class="mb-10">
+        <h2 class="text-lg font-semibold text-white mb-4">
+          Nutritional Highlights
+          <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
+        </h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <%= for n <- @top_nutrients do %>
+            <div class="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
+              <div class="text-2xl font-bold text-white">{format_amount(n.amount)}</div>
+              <div class="text-xs text-slate-400 mt-0.5">{n.unit}</div>
+              <div class="text-sm font-medium text-slate-300 mt-1">{n.label}</div>
+            </div>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+
+    <%# Full nutrition breakdown %>
+    <%= if length(@nutrients_by_family) > 0 do %>
+      <section class="mb-10">
+        <h2 class="text-lg font-semibold text-white mb-4">
+          Full Nutrition Breakdown
+          <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
+        </h2>
+
+        <div class="space-y-6">
+          <%= for {family, nutrients} <- @nutrients_by_family do %>
+            <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+              <div class="px-4 py-2 bg-slate-700/50 border-b border-slate-700">
+                <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wide">{family}</h3>
+              </div>
+              <table class="w-full">
+                <tbody>
+                  <%= for {n, idx} <- Enum.with_index(nutrients) do %>
+                    <tr class={if rem(idx, 2) == 0, do: "bg-slate-800", else: "bg-slate-800/50"}>
+                      <td class="px-4 py-2 text-sm text-slate-300">{n.nutrient.name}</td>
+                      <td class="px-4 py-2 text-sm text-white text-right font-medium">
+                        {format_amount(n.amount)}
+                        <%= if n.nutrient.measurement_unit do %>
+                          <span class="text-slate-400 font-normal">{n.nutrient.measurement_unit.name}</span>
+                        <% end %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+
+    <%# Portion sizes %>
+    <%= if length(@ingredient.ingredient_portions) > 0 do %>
+      <section class="mb-10">
+        <h2 class="text-lg font-semibold text-white mb-4">Common Portion Sizes</h2>
+        <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+          <table class="w-full">
+            <thead>
+              <tr class="bg-slate-700/50 border-b border-slate-700">
+                <th class="px-4 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Portion</th>
+                <th class="px-4 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">Amount</th>
+                <th class="px-4 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">Grams</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= for {portion, idx} <- Enum.with_index(@ingredient.ingredient_portions) do %>
+                <tr class={if rem(idx, 2) == 0, do: "bg-slate-800", else: "bg-slate-800/50"}>
+                  <td class="px-4 py-2 text-sm text-slate-300">
+                    {if portion.measurement_unit, do: portion.measurement_unit.name, else: "—"}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-white text-right">
+                    {format_amount(portion.amount)}
+                  </td>
+                  <td class="px-4 py-2 text-sm text-slate-300 text-right">
+                    {format_amount(portion.gram_weight)}g
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    <% end %>
+
+    <%# Recipes featuring this ingredient %>
+    <section class="mb-10">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-white">
+          Recipes with {@ingredient.name}
+        </h2>
+        <a
+          href={"/search/ingredient/#{URI.encode(@ingredient.name)}"}
+          class="text-sm text-primary-400 hover:text-primary-300 transition-colors"
+        >
+          See all →
+        </a>
+      </div>
+
+      <%= if length(@sample_recipes) == 0 do %>
+        <p class="text-slate-500 text-sm">No recipes found for this ingredient yet.</p>
+      <% else %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <%= for recipe <- @sample_recipes do %>
+            <a
+              href={"/browse/#{recipe.id}"}
+              class="group flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl p-3 hover:border-primary-500/50 hover:bg-slate-700/80 transition-colors"
+            >
+              <%# Thumbnail %>
+              <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-slate-700">
+                <%= if recipe.image_url do %>
+                  <img
+                    src={recipe.image_url}
+                    alt={recipe.title}
+                    class="w-full h-full object-cover"
+                  />
+                <% else %>
+                  <div class="w-full h-full flex items-center justify-center">
+                    <svg class="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                <% end %>
+              </div>
+              <%# Info %>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-white group-hover:text-primary-300 transition-colors truncate">
+                  {recipe.title}
+                </p>
+                <%= if recipe.cooking_time_lower_limit do %>
+                  <p class="text-xs text-slate-400 mt-0.5">{recipe.cooking_time_lower_limit} min</p>
+                <% end %>
+              </div>
+              <svg class="w-4 h-4 text-slate-600 group-hover:text-slate-400 flex-shrink-0 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          <% end %>
+        </div>
+
+        <div class="mt-4 text-center">
+          <a
+            href={"/search/ingredient/#{URI.encode(@ingredient.name)}"}
+            class="inline-block px-5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-300 hover:text-white hover:border-primary-500/50 transition-colors text-sm font-medium"
+          >
+            Browse all recipes with {@ingredient.name} →
+          </a>
+        </div>
+      <% end %>
+    </section>
+
+  </div>
+</div>

@@ -36,24 +36,26 @@ defmodule MehungryWeb.RecipeBrowserFeatureTest do
       recipe: recipe,
       user: _user
     } do
-      link_id = "recipe-card-details-link-" <> Integer.to_string(recipe.id)
-      query = Query.link(link_id)
+      id = Integer.to_string(recipe.id)
+      link_id = "recipe-card-details-link-recipes-" <> id <> "-" <> id
+      query = Query.css("#" <> link_id)
 
-      element =
-        session
-        |> visit("/search/hashtag/thetag")
-        |> find(query)
-        |> Element.click()
+      session
+      |> visit("/search/hashtag/thetag")
+      |> sleep()
+      |> find(query)
+      |> Element.click()
 
       sleep(session)
 
       assert current_path(session) == "/browse/" <> Integer.to_string(recipe.id)
 
-      Element.send_keys(element, [:escape])
+      send_keys(session, [:escape])
       sleep(session)
 
       assert current_path(session) == "/search/hashtag/thetag"
 
+      find(session, Query.css(".recipe_title"))
       whatever = all(session, Query.css(".recipe_title"))
       assert length(whatever) == 1
     end
@@ -63,20 +65,21 @@ defmodule MehungryWeb.RecipeBrowserFeatureTest do
       recipe: recipe,
       user: _user
     } do
-      link_id = "recipe-card-details-link-" <> Integer.to_string(recipe.id)
-      query = Query.link(link_id)
+      id = Integer.to_string(recipe.id)
+      link_id = "recipe-card-details-link-recipes-" <> id <> "-" <> id
+      query = Query.css("#" <> link_id)
 
-      element =
-        session
-        |> visit("/browse")
-        |> find(query)
-        |> Element.click()
+      session
+      |> visit("/browse")
+      |> sleep()
+      |> find(query)
+      |> Element.click()
 
       sleep(session)
 
       assert current_path(session) == "/browse/" <> Integer.to_string(recipe.id)
 
-      Element.send_keys(element, [:escape])
+      send_keys(session, [:escape])
       sleep(session)
 
       assert current_path(session) == "/browse"
@@ -87,7 +90,7 @@ defmodule MehungryWeb.RecipeBrowserFeatureTest do
   end
 
   def sleep(session) do
-    Process.sleep(200)
+    Process.sleep(500)
     session
   end
 

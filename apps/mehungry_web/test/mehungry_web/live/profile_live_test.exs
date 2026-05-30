@@ -9,6 +9,23 @@ defmodule MehungryWeb.ProfileLiveTest do
 
   setup [:register_and_log_in_user]
 
+  test "Clicking edit button on own recipe navigates to create_recipe edit page", %{
+    conn: conn,
+    user: user
+  } do
+    recipe = recipe_fixture(user)
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
+    Accounts.update_user_profile(user_profile, %{onboarding_level: 1})
+
+    {:ok, index_live, _html} = live(conn, Routes.profile_index_path(conn, :index))
+
+    index_live
+    |> element("#edit-recipe-#{recipe.id}")
+    |> render_click()
+
+    assert_redirect(index_live, "/create_recipe/#{recipe.id}")
+  end
+
   test "Test Visit Own Profile Page ", %{conn: conn, user: user} do
     recipe = recipe_fixture(user)
     user_profile = Accounts.get_user_profile_by_user_id(user.id)
@@ -23,7 +40,7 @@ defmodule MehungryWeb.ProfileLiveTest do
     assert html =~ recipe.title
     assert html =~ "edit-recipe"
 
-    link_to_recipe = "#recipe-card-details-link-#{recipe.id}"
+    link_to_recipe = "#recipe-card-details-link-recipe#{recipe.id}-#{recipe.id}"
 
     view =
       index_live
@@ -90,16 +107,16 @@ defmodule MehungryWeb.ProfileLiveTest do
     {:ok, index_live, html} = live(conn, Routes.profile_index_path(conn, :show, user2.id))
     assert html =~ recipe_user2.image_url
     assert html =~ recipe_user2.title
-    assert html =~ "recipe_like_container"
+    assert html =~ "button_save_recipe"
 
-    link_to_recipe = "#recipe-card-details-link-#{recipe_user2.id}"
+    link_to_recipe = "#recipe-card-details-link-recipe#{recipe_user2.id}-#{recipe_user2.id}"
 
     view =
       index_live
       |> element(link_to_recipe)
       |> render_click()
 
-    assert view =~ recipe.title
+    assert view =~ recipe_user2.title
     assert view =~ "Steps"
     assert view =~ "Ingredients"
     assert view =~ "Nutrients"
@@ -120,7 +137,7 @@ defmodule MehungryWeb.ProfileLiveTest do
     {:ok, index_live, html} = live(conn, Routes.profile_index_path(conn, :show, user2.id))
     assert html =~ recipe_user2.image_url
     assert html =~ recipe_user2.title
-    assert html =~ "recipe_like_container"
+    assert html =~ "button_save_recipe"
 
     _view =
       index_live
@@ -156,7 +173,7 @@ defmodule MehungryWeb.ProfileLiveTest do
     {:ok, index_live, html} = live(conn, Routes.profile_index_path(conn, :show, user2.id))
     assert html =~ recipe_user2.image_url
     assert html =~ recipe_user2.title
-    assert html =~ "recipe_like_container"
+    assert html =~ "button_save_recipe"
 
     _view =
       index_live

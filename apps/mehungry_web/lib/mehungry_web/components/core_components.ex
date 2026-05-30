@@ -373,7 +373,9 @@ defmodule MehungryWeb.CoreComponents do
         } = assigns
       ) do
     post = Map.get(assigns, :post, nil)
+    current_user = Map.get(assigns, :current_user, nil)
     assigns = Map.put(assigns, :post, post)
+    assigns = Map.put(assigns, :current_user, current_user)
 
     ~H"""
     <div class="flex items-center justify-between p-4">
@@ -402,30 +404,30 @@ defmodule MehungryWeb.CoreComponents do
           </div>
           <p class="text-slate-400 text-xs">{count_user_created_recipes(@user.id)} recipes</p>
         </div>
-        <%= if @user.id in @user_follows do %>
-          <!-- Follow Button -->
-          <button
-            phx-click="save_user_follow"
-            phx-value-follow_id={@user.id}
-            class={[
-              "px-2 py-1.5 rounded-full text-sm font-medium transition",
-              "bg-slate-700 text-slate-300 hover:bg-slate-600"
-            ]}
-          >
-            Following
-          </button>
-        <% else %>
-          <!-- Follow Button -->
-          <button
-            phx-click="save_user_follow"
-            phx-value-follow_id={@user.id}
-            class={[
-              "px-4 py-1.5 rounded-full text-sm font-medium transition",
-              "bg-primary-500 text-white hover:bg-primary-600"
-            ]}
-          >
-            Follow
-          </button>
+        <%= if is_nil(@current_user) or @current_user.id != @user.id do %>
+          <%= if @user.id in @user_follows do %>
+            <button
+              phx-click="save_user_follow"
+              phx-value-follow_id={@user.id}
+              class={[
+                "px-2 py-1.5 rounded-full text-sm font-medium transition",
+                "bg-slate-700 text-slate-300 hover:bg-slate-600"
+              ]}
+            >
+              Following
+            </button>
+          <% else %>
+            <button
+              phx-click="save_user_follow"
+              phx-value-follow_id={@user.id}
+              class={[
+                "px-4 py-1.5 rounded-full text-sm font-medium transition",
+                "bg-primary-500 text-white hover:bg-primary-600"
+              ]}
+            >
+              Follow
+            </button>
+          <% end %>
         <% end %>
       </div>
     </div>
@@ -1485,7 +1487,7 @@ defmodule MehungryWeb.CoreComponents do
   https://codepen.io/t_afif/pen/gOjJpeq
   """
   def stepper(assigns) do
-    steps = ["Step A", "Step B", "Step Ctroen", "Step D "]
+    steps = ["Details", "Ingredients", "Steps", "Save"]
     assigns = Map.put(assigns, :steps, steps)
 
     ~H"""
@@ -1497,6 +1499,7 @@ defmodule MehungryWeb.CoreComponents do
             id={"step"<> Integer.to_string(index)}
             step={step}
             index={index}
+            extra_show="#ai-section"
           >
           </.stepper_step>
         <% else %>
@@ -1524,6 +1527,8 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   defp stepper_step(assigns) do
+    assigns = Map.put_new(assigns, :extra_show, nil)
+
     ~H"""
     <li
       id={@id}
@@ -1533,6 +1538,9 @@ defmodule MehungryWeb.CoreComponents do
         |> JS.add_class("active", to: "#step#{@index}")
         |> JS.add_class("hidden", to: ".content_container")
         |> JS.remove_class("hidden", to: "#content-#{@index}")
+        |> then(fn js ->
+          if @extra_show, do: JS.remove_class(js, "hidden", to: @extra_show), else: js
+        end)
       }
     >
     </li>

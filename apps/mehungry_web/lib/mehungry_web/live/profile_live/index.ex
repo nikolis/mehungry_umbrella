@@ -1,6 +1,5 @@
 defmodule MehungryWeb.ProfileLive.Index do
   use MehungryWeb, :live_view
-  use MehungryWeb.Searchable, :transfers_to_search
   use MehungryWeb.Presence, :user_tracking
 
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
@@ -14,7 +13,8 @@ defmodule MehungryWeb.ProfileLive.Index do
   alias Mehungry.Posts
   alias Mehungry.Food.RecipeUtils
 
-  def mount_search(_params, session, socket) do
+  @impl true
+  def mount(_params, session, socket) do
     current_user =
       case is_nil(session["user_token"]) do
         true ->
@@ -25,7 +25,7 @@ defmodule MehungryWeb.ProfileLive.Index do
       end
 
     {current_user_profile, current_user_follows, current_user_recipes} =
-      Accounts.get_user_essentials(socket.assigns.current_user)
+      Accounts.get_user_essentials(socket.assigns[:current_user])
 
     current_user_follows = Enum.map(current_user_follows, fn x -> x.follow_id end)
 
@@ -47,6 +47,14 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
+    if is_nil(socket.assigns[:current_user]) do
+      push_redirect(socket, to: "/users/log_in")
+    else
+      do_apply_action_index(socket)
+    end
+  end
+
+  defp do_apply_action_index(socket) do
     categories = Food.list_categories()
     category_ids = Enum.map(categories, fn x -> x.id end)
     food_restrictions = Food.list_food_restriction_types()
@@ -173,6 +181,14 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   defp apply_action(socket, :edit, _params) do
+    if is_nil(socket.assigns[:current_user]) do
+      push_redirect(socket, to: "/users/log_in")
+    else
+      do_apply_action_edit(socket)
+    end
+  end
+
+  defp do_apply_action_edit(socket) do
     maybe_track_user(%{}, socket)
     categories = Food.list_categories()
     category_ids = Enum.map(categories, fn x -> x.id end)
