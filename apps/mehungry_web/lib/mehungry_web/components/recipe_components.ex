@@ -328,7 +328,7 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_card(%{myself: _myself} = assigns) do
     ~H"""
-    <div id={"recipe-card-details-container-#{@recipe.id}"} } class="group">
+    <div id={"recipe-card-details-container-#{@id}-#{@recipe.id}"} class="group">
       <.recipe_like_container
         type={@type}
         user_recipes={@user_recipes}
@@ -339,7 +339,7 @@ defmodule MehungryWeb.RecipeComponents do
       />
       <.link
         phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
-        id={"recipe-card-details-link-#{@recipe.id}"}
+        id={"recipe-card-details-link-#{@id}-#{@recipe.id}"}
         patch={@path_to_details}
       >
         <div class="bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-primary-500/50 transition-all duration-200 group-hover:transform group-hover:-translate-y-1">
@@ -380,10 +380,10 @@ defmodule MehungryWeb.RecipeComponents do
 
   def recipe_card(assigns) do
     ~H"""
-    <div id={"recipe-card-details-container-#{@recipe.id}"} } class="py-2">
+    <div id={"recipe-card-details-container-#{@id}-#{@recipe.id}"} class="py-2 relative">
       <.link
         phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
-        id={"recipe-card-details-link-#{@recipe.id}"}
+        id={"recipe-card-details-link-#{@id}-#{@recipe.id}"}
         patch={@path_to_details}
       >
         <div class="bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-primary-500/50 transition-all duration-200 group-hover:transform group-hover:-translate-y-1 relative">
@@ -412,33 +412,12 @@ defmodule MehungryWeb.RecipeComponents do
                 </svg>
               </div>
             <% end %>
-            <!-- Save Button -->
-            <%= if @type =="created" do %>
-              <a
-                phx-click="edit-recipe"
-                phx-value-id={@recipe.id}
-                class="absolute top-2 right-2 cursor-pointer  text-white z-69 rounded-full p-2 bg-slate-800"
-                href={"/create_recipe/" <> Integer.to_string(@recipe.id)}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                </svg>
-              </a>
-            <% else %>
+            <!-- Save Button (non-created only — edit button is outside the link) -->
+            <%= if @type != "created" do %>
               <button
-                phx-click="save_recipe"
-                phx-value-id={@recipe.id}
+                id={"button_save_recipe#{@recipe.id}"}
+                phx-click="save_user_recipe"
+                phx-value-recipe_id={@recipe.id}
                 class="absolute top-3 right-3 p-2 rounded-full bg-black/50 hover:bg-black/70 transition backdrop-blur-sm"
               >
                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -454,7 +433,7 @@ defmodule MehungryWeb.RecipeComponents do
           </div>
           <!-- Content -->
           <div class="p-4">
-            <h3 class="text-white font-semibold text-lg line-clamp-1 group-hover:text-primary-500 transition">
+            <h3 class="recipe_title text-white font-semibold text-lg line-clamp-1 group-hover:text-primary-500 transition">
               {@recipe.title}
             </h3>
             <p class="text-slate-400 text-sm mt-1 line-clamp-2">
@@ -571,6 +550,31 @@ defmodule MehungryWeb.RecipeComponents do
           </div>
         </div>
       </.link>
+      <%!-- Edit button outside the link so browser clicks reach phx-click, not the link --%>
+      <%= if @type == "created" do %>
+        <button
+          id={"edit-recipe-#{@recipe.id}"}
+          phx-click="edit-recipe"
+          phx-value-id={@recipe.id}
+          class="absolute top-2 right-2 cursor-pointer text-white z-10 rounded-full p-2 bg-slate-800 hover:bg-slate-700 transition"
+          type="button"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+          </svg>
+        </button>
+      <% end %>
     </div>
     """
   end
@@ -623,6 +627,7 @@ defmodule MehungryWeb.RecipeComponents do
     ~H"""
     <%= if !is_nil(Map.get(assigns, :current_user)) do %>
       <button
+        id={@id}
         phx-click="save_user_recipe"
         phx-value-recipe_id={@recipe.id}
         phx-value-dom_id={@id}

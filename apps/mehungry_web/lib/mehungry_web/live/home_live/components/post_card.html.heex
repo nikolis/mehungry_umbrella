@@ -212,7 +212,7 @@
     
 <!-- View Comments Link -->
     <.link
-      id={"card-link-to-recipe-#{@post.reference_id}"}
+      id={"card-link-to-recipe-comments-#{@post.reference_id}"}
       patch={~p"/home/#{Integer.to_string(@post.reference.id) <> "#comments"}"}
       class="block text-slate-500 text-sm mt-2 hover:text-slate-400 transition"
     >

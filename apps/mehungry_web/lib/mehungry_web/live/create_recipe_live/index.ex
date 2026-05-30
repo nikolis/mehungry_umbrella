@@ -9,7 +9,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   alias Mehungry.Accounts
   alias MehungryWeb.SimpleS3Upload
 
-  def mount_search(_params, session, socket) do
+  @impl true
+  def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_profile = Accounts.get_user_profile_by_user_id(user.id)
     grammar = Food.get_measurement_unit_by_name("grammar")
@@ -175,7 +176,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   ################################################################################ Event Handling ###################################################################################
-  use MehungryWeb.Searchable, :transfers_to_search
 
   def handle_event("ai_generate", %{"prompt" => prompt}, socket) when prompt != "" do
     case Mehungry.Subscriptions.check_quota(socket.assigns.user.id, "recipe_generation") do
@@ -196,6 +196,11 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   def handle_event("ai_generate", _params, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("add_ingredient", _params, socket) do
+    current_params = socket.assigns.f.params || %{}
+    add_ingredient(socket, current_params)
   end
 
   def handle_event("clear-form", _, socket) do
@@ -535,6 +540,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     recipe_params = get_params_with_image(socket, recipe_params)
     recipe_params = Map.put(recipe_params, "language_name", "En")
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
+    recipe_params = filter_empty_steps(recipe_params)
 
     case Food.update_recipe(socket.assigns.recipe, recipe_params) do
       {:ok, %Recipe{} = _recipe} ->
@@ -564,6 +570,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     recipe_params = get_params_with_image(socket, recipe_params)
     recipe_params = Map.put(recipe_params, "language_name", "En")
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
+    recipe_params = filter_empty_steps(recipe_params)
 
     case Food.create_recipe(recipe_params) do
       {:ok, %Recipe{} = _recipe} ->
@@ -577,6 +584,17 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
     end
+  end
+
+  defp filter_empty_steps(recipe_params) do
+    steps = Map.get(recipe_params, "steps", %{})
+
+    filtered =
+      steps
+      |> Enum.reject(fn {_k, v} -> is_nil(v["description"]) or v["description"] == "" end)
+      |> Map.new()
+
+    Map.put(recipe_params, "steps", filtered)
   end
 
   defp list_ingredients do

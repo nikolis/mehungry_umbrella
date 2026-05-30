@@ -1,7 +1,6 @@
 defmodule MehungryWeb.ShoppingBasketLive.Index do
   use MehungryWeb, :live_view
   import MehungryWeb.CoreComponents
-  use MehungryWeb.Searchable, :transfers_to_search
   use MehungryWeb.Presence, :user_tracking
 
   alias Phoenix.LiveView.JS
@@ -13,7 +12,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   alias Mehungry.USDA
   import MehungryWeb.ShoppingBasketLive.Components
 
-  def mount_search(_params, session, socket) do
+  @impl true
+  def mount(_params, session, socket) do
     measurement_units =
       Mehungry.Food.list_measurement_units()
 

@@ -13,6 +13,7 @@ defmodule MehungryWeb.HomeLiveTest do
     test "View the post of the created recipe", %{conn: conn, user: user} do
       recipe = recipe_fixture(user)
       _recipe = Food.get_recipe!(recipe.id)
+      Food.create_post_from_recipe(recipe)
 
       user_profile = Accounts.get_user_profile_by_user_id(user.id)
 
@@ -28,6 +29,7 @@ defmodule MehungryWeb.HomeLiveTest do
     test "View the details of the created recipes", %{conn: conn, user: user} do
       recipe = recipe_fixture(user)
       _recipe = Food.get_recipe!(recipe.id)
+      Food.create_post_from_recipe(recipe)
 
       user_profile = Accounts.get_user_profile_by_user_id(user.id)
 
@@ -39,7 +41,7 @@ defmodule MehungryWeb.HomeLiveTest do
       {:ok, index_live, _html} =
         live(conn, Routes.home_index_path(conn, :index))
 
-      link_to_recipe = "#link-to-recipe-#{recipe.id}"
+      link_to_recipe = "#card-link-to-recipe-#{recipe.id}"
 
       view =
         index_live

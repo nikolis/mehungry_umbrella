@@ -29,32 +29,38 @@ defmodule MehungryWeb.Presence do
           agent = Phoenix.LiveView.get_connect_info(socket, :user_agent)
 
           {address, agent}
+        rescue
+          _ -> {"", ""}
         catch
-          _ ->
-            nil
+          _ -> {"", ""}
         end
       end
 
       def maybe_track_user(product, socket) do
         if connected?(socket) do
-          referrer =
-            case Phoenix.LiveView.get_connect_params(socket) do
-              nil -> ""
-              params -> Map.get(params, "_live_referer", "") || ""
+          {address, agent} =
+            case get_address_agent(socket) do
+              {a, ag} -> {a, ag}
+              _ ->
+                {Map.get(socket.assigns, :address, ""),
+                 Map.get(socket.assigns, :agent, "")}
             end
+
+          referrer = Map.get(socket.assigns, :referrer, "")
+          path = Map.get(socket.assigns, :path, "")
 
           ret =
             Presence.track(self(), "general", "general", %{
-              address: socket.assigns.address,
-              agent: socket.assigns.agent,
-              path: socket.assigns.path
+              address: address,
+              agent: agent,
+              path: path
             })
 
           Mehungry.Meta.create_visit(%{
-            ip_address: socket.assigns.address,
+            ip_address: address,
             details: %{
-              agent: socket.assigns.agent,
-              path: socket.assigns.path,
+              agent: agent,
+              path: path,
               referrer: referrer
             }
           })

@@ -11,16 +11,14 @@ defmodule MehungryWeb.LayoutView do
   end
 
   attr :current_user, :any
-  attr :query_string, :string
 
   def get_menu(assigns) do
     ~H"""
     <.main_menu
       current_user={@current_user}
-      query_string={@query_string}
       inner_content={@inner_content}
     />
-    <.mobile_menu current_user={@current_user} query_string={@query_string} />
+    <.mobile_menu current_user={@current_user} />
     """
   end
 

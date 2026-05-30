@@ -47,7 +47,7 @@ input[type="file"] {
 }
 
 .the_form {
-  background-color: #ffffff;
+  background-color: transparent;
   position: relative;
   border-radius: var(--border-radius-smooth);
   padding: 0rem;

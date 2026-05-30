@@ -49,43 +49,56 @@ defmodule MehungryWeb.IngredientComponent do
   def render(assigns) do
     ~H"""
     <div class="py-2">
-      <div class="grid grid-cols-10 sm:grid-cols-9 gap-2 md:gap-6 display-none">
-        <div class=" col-span-4 sm:col-span-3 h-full">
-          <.live_component
-            module={MehungryWeb.SelectComponentDeep}
-            form={@ingredient_form}
-            item_function={&Mehungry.Food.IngredientSearch.search/1}
-            get_by_id_func={&Mehungry.Food.get_ingredient!/1}
-            input_variable="ingredient_id"
-            label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
-            placeholder="Select an ingredient..."
-            modal_title="Search Ingredients"
-            parent_id={@id}
-            select_function={fn x -> send(self(), {:select_id, x, @id}) end}
-            id={"ingredient_search_component" <> Integer.to_string(@ingredient_form.index)}
-          />
-        </div>
-        <div class=" col-span-2 my-auto">
-          <.input field={@ingredient_form[:quantity]} type="number_subscript" label="quantity" />
-        </div>
-
-        <div class="col-span-3 my-auto">
-          <.live_component
-            module={MehungryWeb.SelectComponent}
-            items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
-            form={@ingredient_form}
-            id={"measurement_unit_search_componentasdf" <> Integer.to_string(@ingredient_form.index)}
-            input_variable={:measurement_unit_id}
-          />
+      <%!-- Mobile: two-row stacked layout. Desktop: single-row 10-col grid via md:contents --%>
+      <div class="flex flex-col gap-2 md:grid md:grid-cols-10 md:gap-4 md:items-center">
+        <%!-- Row 1 on mobile: ingredient selector + delete button --%>
+        <div class="flex items-center gap-2 md:contents">
+          <div class="flex-1 min-w-0 md:col-span-4 h-full">
+            <.live_component
+              module={MehungryWeb.SelectComponentDeep}
+              form={@ingredient_form}
+              item_function={&Mehungry.Food.IngredientSearch.search/1}
+              get_by_id_func={&Mehungry.Food.get_ingredient!/1}
+              input_variable="ingredient_id"
+              label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
+              placeholder="Select an ingredient..."
+              modal_title="Search Ingredients"
+              parent_id={@id}
+              select_function={fn x -> send(self(), {:select_id, x, @id}) end}
+              id={"ingredient_search_component" <> Integer.to_string(@ingredient_form.index)}
+            />
+          </div>
+          <button
+            class="shrink-0 text-2xl font-bold md:hidden"
+            name="recipe[_action]"
+            value={"remove_ingredient:#{@ingredient_form.index}"}
+          >
+            ❌
+          </button>
         </div>
 
-        <button
-          class="text-3xl font-bold col-span-1 "
-          name="recipe[_action]"
-          value={"remove_ingredient:#{@ingredient_form.index}"}
-        >
-          ❌
-        </button>
+        <%!-- Row 2 on mobile: quantity + unit + desktop-only delete --%>
+        <div class="flex items-center gap-2 md:contents">
+          <div class="w-20 shrink-0 md:col-span-2">
+            <.input field={@ingredient_form[:quantity]} type="number_subscript" label="quantity" />
+          </div>
+          <div class="flex-1 md:col-span-3">
+            <.live_component
+              module={MehungryWeb.SelectComponent}
+              items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
+              form={@ingredient_form}
+              id={"measurement_unit_search_componentasdf" <> Integer.to_string(@ingredient_form.index)}
+              input_variable={:measurement_unit_id}
+            />
+          </div>
+          <button
+            class="hidden md:block text-2xl font-bold md:col-span-1"
+            name="recipe[_action]"
+            value={"remove_ingredient:#{@ingredient_form.index}"}
+          >
+            ❌
+          </button>
+        </div>
       </div>
     </div>
     """

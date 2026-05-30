@@ -1,8 +1,7 @@
 defmodule MehungryWeb.PrivacyPolicyLive do
   use MehungryWeb, :live_view
-  use MehungryWeb.Searchable, :transfers_to_search
-
-  def mount_search(_params, session, socket) do
+  @impl true
+  def mount(_params, _session, socket) do
     {:ok, socket}
   end
 

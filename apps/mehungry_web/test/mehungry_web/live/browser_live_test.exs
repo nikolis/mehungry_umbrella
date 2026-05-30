@@ -22,7 +22,7 @@ defmodule MehungryWeb.BrowserLiveTest do
     assert html =~ recipe.image_url
     assert html =~ recipe.title
 
-    link_to_recipe = "#recipe-card-details-link-#{recipe.id}"
+    link_to_recipe = "#recipe-card-details-link-recipes-#{recipe.id}-#{recipe.id}"
 
     view =
       index_live
@@ -119,7 +119,7 @@ defmodule MehungryWeb.BrowserLiveTest do
     assert html =~ "Nutrients" == false
 
     _result =
-      element(index_live, "#recipe-card-details-link-" <> Integer.to_string(recipe_2.id))
+      element(index_live, "#recipe-card-details-link-recipes-#{recipe_2.id}-#{recipe_2.id}")
       |> render_click()
 
     assert_patch(index_live)

@@ -19,12 +19,14 @@ defmodule Mehungry.InventoryTest do
     @invalid_attrs %{end_dt: nil, start_dt: nil}
 
     test "list_shopping_baskets/0 returns all shopping_baskets", %{user: user} do
-      {:ok, shopping_basket} = shopping_basket_fixture(%{user_id: user.id})
+      {:ok, created} = shopping_basket_fixture(%{user_id: user.id})
+      shopping_basket = Inventory.get_shopping_basket!(created.id)
       assert Inventory.list_shopping_baskets_for_user(user.id) == [shopping_basket]
     end
 
     test "get_shopping_basket!/1 returns the shopping_basket with given id", %{user: user} do
-      {:ok, shopping_basket} = shopping_basket_fixture(%{user_id: user.id})
+      {:ok, created} = shopping_basket_fixture(%{user_id: user.id})
+      shopping_basket = Inventory.get_shopping_basket!(created.id)
       assert Inventory.get_shopping_basket!(shopping_basket.id) == shopping_basket
     end
 
@@ -88,7 +90,8 @@ defmodule Mehungry.InventoryTest do
     end
 
     test "update_shopping_basket/2 with invalid data returns error changeset", %{user: user} do
-      {:ok, shopping_basket} = shopping_basket_fixture(%{user_id: user.id})
+      {:ok, created} = shopping_basket_fixture(%{user_id: user.id})
+      shopping_basket = Inventory.get_shopping_basket!(created.id)
 
       # assert {:error, %Ecto.Changeset{}} =
       #        Inventory.update_shopping_basket(shopping_basket, @invalid_attrs)
