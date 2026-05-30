@@ -50,6 +50,7 @@ RUN apk add --no-cache \
     openssl \
     ncurses-libs \
     postgresql-client \
+    curl \
     jq \
     bash
 
