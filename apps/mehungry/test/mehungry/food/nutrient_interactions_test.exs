@@ -129,7 +129,7 @@ defmodule Mehungry.Food.NutrientInteractionsTest do
       refute Map.has_key?(interaction, :interacting_ingredient_ids)
     end
 
-    test "fires :fat_required_for_vitamin_k with both ingredients when fat is present" do
+    test "shows positive badge for :fat_required_for_vitamin_k when fat is already present" do
       ingredient = FoodFixtures.ingredient_fixture()
       add_nutrient(ingredient, "Vitamin K", @above_vitamin_k, 1)
       add_nutrient(ingredient, "Total Fat", @above_fat, 2)
@@ -138,7 +138,8 @@ defmodule Mehungry.Food.NutrientInteractionsTest do
       interaction = Enum.find(result, &(&1.id == :fat_required_for_vitamin_k))
 
       assert interaction != nil
-      assert Map.has_key?(interaction, :interacting_ingredient_ids)
+      assert interaction.badge == :positive
+      assert interaction.type == :requires
       refute Map.has_key?(interaction, :missing_nutrient)
     end
 

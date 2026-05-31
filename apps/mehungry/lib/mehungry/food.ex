@@ -1094,11 +1094,20 @@ defmodule Mehungry.Food do
   end
 
   def get_interactions_for_recipe(recipe) do
-    ids =
-      recipe
-      |> Map.get(:recipe_ingredients, [])
-      |> Enum.map(& &1.ingredient_id)
+    alias Mehungry.Food.{NutrientInteractions, NutrientMerger, RecipeUtils}
 
-    get_interactions_for_ingredients(ids)
+    case RecipeUtils.calculate_recipe_nutrition_value(recipe) do
+      nil ->
+        []
+
+      %{flat_recipe_nutrients: flat} ->
+        nutrient_map =
+          Enum.reduce(flat, %{}, fn %{name: name, amount: amount}, acc ->
+            canonical = NutrientMerger.normalize_nutrient_name(name)
+            Map.update(acc, canonical, amount, &(&1 + amount))
+          end)
+
+        NutrientInteractions.interactions_for_nutrient_map(nutrient_map)
+    end
   end
 end

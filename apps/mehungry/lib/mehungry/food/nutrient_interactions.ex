@@ -98,6 +98,10 @@ defmodule Mehungry.Food.NutrientInteractions do
       detail:
         "Vitamin A is fat-soluble. Pair with olive oil, avocado, or nuts " <>
           "to absorb it properly.",
+      present_label: "Fat enhances Vitamin A absorption",
+      present_detail:
+        "This recipe includes a fat source, which helps your body absorb " <>
+          "the fat-soluble Vitamin A.",
       source: "NIH ODS – Vitamin A fact sheet"
     },
     %{
@@ -110,6 +114,10 @@ defmodule Mehungry.Food.NutrientInteractions do
       detail:
         "Vitamin D is fat-soluble. A fat source in the same meal " <>
           "significantly improves absorption.",
+      present_label: "Fat enhances Vitamin D absorption",
+      present_detail:
+        "This recipe includes a fat source, which helps your body absorb " <>
+          "the fat-soluble Vitamin D.",
       source: "NIH ODS – Vitamin D fact sheet"
     },
     %{
@@ -122,6 +130,10 @@ defmodule Mehungry.Food.NutrientInteractions do
       detail:
         "Vitamin E is fat-soluble. Combine with a dietary fat source " <>
           "to maximise uptake.",
+      present_label: "Fat enhances Vitamin E absorption",
+      present_detail:
+        "This recipe includes a fat source, which helps your body absorb " <>
+          "the fat-soluble Vitamin E.",
       source: "NIH ODS – Vitamin E fact sheet"
     },
     %{
@@ -134,6 +146,10 @@ defmodule Mehungry.Food.NutrientInteractions do
       detail:
         "Vitamin K is fat-soluble. A drizzle of oil with leafy greens " <>
           "makes a meaningful difference.",
+      present_label: "Fat enhances Vitamin K absorption",
+      present_detail:
+        "This recipe includes a fat source, which helps your body absorb " <>
+          "the fat-soluble Vitamin K.",
       source: "NIH ODS – Vitamin K fact sheet"
     },
     %{
@@ -178,6 +194,40 @@ defmodule Mehungry.Food.NutrientInteractions do
     nutrient_map = load_nutrient_map(ingredient_ids)
     significant = classify_significant_nutrients(nutrient_map)
     check_rules(@rules, significant)
+  end
+
+  @doc """
+  Returns interactions for a pre-computed recipe nutrient map.
+
+  `nutrient_map` is `%{canonical_name => total_amount}` — already normalised
+  and summed across all ingredients at recipe scale (e.g. from
+  `RecipeUtils.calculate_recipe_nutrition_value/1` + `NutrientMerger.normalize_nutrient_name/1`).
+  """
+  def interactions_for_nutrient_map(nutrient_map) when nutrient_map == %{}, do: []
+
+  def interactions_for_nutrient_map(nutrient_map) do
+    significant =
+      Enum.reduce(nutrient_map, MapSet.new(), fn {name, amount}, acc ->
+        case Map.get(@thresholds, name) do
+          nil -> acc
+          threshold when amount >= threshold -> MapSet.put(acc, name)
+          _ -> acc
+        end
+      end)
+
+    Enum.flat_map(@rules, fn rule ->
+      has_a = MapSet.member?(significant, rule.nutrient_a)
+      has_b = MapSet.member?(significant, rule.nutrient_b)
+
+      case {has_a, has_b, rule.type} do
+        {false, _, _} -> []
+        {true, false, :requires} -> [Map.put(rule, :missing_nutrient, rule.nutrient_b)]
+        {true, false, _} -> []
+        {true, true, :requires} ->
+          [%{rule | badge: :positive, label: rule.present_label, detail: rule.present_detail}]
+        {true, true, _} -> [rule]
+      end
+    end)
   end
 
   @doc "Exposes the full rule list for UI display (e.g. a legend or help page)."
@@ -234,6 +284,17 @@ defmodule Mehungry.Food.NutrientInteractions do
 
         {_, []} ->
           []
+
+        {a, b} when rule.type == :requires ->
+          [
+            Map.merge(rule, %{
+              source_ingredient_ids: a,
+              interacting_ingredient_ids: b,
+              badge: :positive,
+              label: rule.present_label,
+              detail: rule.present_detail
+            })
+          ]
 
         {a, b} ->
           [Map.merge(rule, %{source_ingredient_ids: a, interacting_ingredient_ids: b})]
