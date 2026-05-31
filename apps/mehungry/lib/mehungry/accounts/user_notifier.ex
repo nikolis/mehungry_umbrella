@@ -148,7 +148,7 @@ defmodule Mehungry.Accounts.UserNotifier do
     email =
       new()
       |> to(recipient)
-      |> from({"Mehungry", "noreply.m3hungry.com"})
+      |> from({"Mehungry", "noreply@m3hungry.com"})
       |> subject(subject)
       |> text_body(text)
       |> html_body(html)
