@@ -191,4 +191,92 @@ defmodule Mehungry.Food.NutrientInteractionsTest do
       assert length(matching) == 1
     end
   end
+
+  describe "interactions_for_nutrient_map/1" do
+    test "returns empty list for an empty map" do
+      assert NutrientInteractions.interactions_for_nutrient_map(%{}) == []
+    end
+
+    test "returns empty list when no amounts reach threshold" do
+      result = NutrientInteractions.interactions_for_nutrient_map(%{"Iron" => 0.1, "Vitamin C" => 0.1})
+      assert result == []
+    end
+
+    test "returns empty list when only nutrient_b is present without nutrient_a" do
+      result = NutrientInteractions.interactions_for_nutrient_map(%{"Calcium" => 200.0})
+      refute Enum.any?(result, &(&1.id == :calcium_inhibits_iron))
+    end
+
+    test "fires :vitamin_c_enhances_iron with positive badge" do
+      result = NutrientInteractions.interactions_for_nutrient_map(%{
+        "Iron" => 2.0,
+        "Vitamin C" => 10.0
+      })
+      interaction = Enum.find(result, &(&1.id == :vitamin_c_enhances_iron))
+
+      assert interaction != nil
+      assert interaction.badge == :positive
+      assert interaction.type == :enhances
+    end
+
+    test "fires :calcium_inhibits_iron with warning badge" do
+      result = NutrientInteractions.interactions_for_nutrient_map(%{
+        "Iron" => 2.0,
+        "Calcium" => 140.0
+      })
+      interaction = Enum.find(result, &(&1.id == :calcium_inhibits_iron))
+
+      assert interaction != nil
+      assert interaction.badge == :warning
+      assert interaction.type == :inhibits
+    end
+
+    test "fires :fat_required_for_vitamin_d as tip when fat is absent" do
+      result = NutrientInteractions.interactions_for_nutrient_map(%{"Vitamin D" => 3.0})
+      interaction = Enum.find(result, &(&1.id == :fat_required_for_vitamin_d))
+
+      assert interaction != nil
+      assert interaction.badge == :tip
+      assert interaction.missing_nutrient == "Total Fat"
+    end
+
+    test "fires :fat_required_for_vitamin_d as positive when fat is present" do
+      result = NutrientInteractions.interactions_for_nutrient_map(%{
+        "Vitamin D" => 3.0,
+        "Total Fat" => 37.0
+      })
+      interaction = Enum.find(result, &(&1.id == :fat_required_for_vitamin_d))
+
+      assert interaction != nil
+      assert interaction.badge == :positive
+      refute Map.has_key?(interaction, :missing_nutrient)
+    end
+
+    test "does not fire :requires tip when only fat is present without the vitamin" do
+      result = NutrientInteractions.interactions_for_nutrient_map(%{"Total Fat" => 37.0})
+      refute Enum.any?(result, &(&1.type == :requires))
+    end
+
+    test "can fire multiple rules simultaneously" do
+      result = NutrientInteractions.interactions_for_nutrient_map(%{
+        "Iron" => 2.0,
+        "Vitamin C" => 10.0,
+        "Calcium" => 140.0
+      })
+      ids = Enum.map(result, & &1.id)
+
+      assert :vitamin_c_enhances_iron in ids
+      assert :calcium_inhibits_iron in ids
+    end
+
+    test "only issues one result per matching rule" do
+      result = NutrientInteractions.interactions_for_nutrient_map(%{
+        "Iron" => 2.0,
+        "Vitamin C" => 10.0
+      })
+      matching = Enum.filter(result, &(&1.id == :vitamin_c_enhances_iron))
+
+      assert length(matching) == 1
+    end
+  end
 end
