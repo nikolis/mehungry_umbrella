@@ -846,66 +846,85 @@ defmodule Mehungry.Accounts do
   end
 
   def delete_user(%User{} = user) do
-    query =
-      from r in Mehungry.Food.Recipe,
-        where: r.user_id == ^user.id
+    uid = user.id
 
-    all_recipes = Repo.all(query) |> Repo.preload([:recipe_ingredients, :comments])
+    # Collect all recipe IDs owned by the user
+    recipe_ids =
+      Repo.all(from r in Mehungry.Food.Recipe, where: r.user_id == ^uid, select: r.id)
 
-    Enum.each(all_recipes, fn x ->
-      Enum.each(x.recipe_ingredients, fn y ->
-        Repo.delete(y)
-      end)
+    # Collect all comment IDs: comments on user's recipes (by anyone) + comments made by user
+    comment_ids_on_recipes =
+      Repo.all(from c in Mehungry.Posts.Comment, where: c.recipe_id in ^recipe_ids, select: c.id)
 
-      Enum.each(x.comments, fn z ->
-        Repo.delete_all(from c_v in Mehungry.Posts.CommentVote, where: c_v.comment_id == ^z.id)
-        Repo.delete_all(from c_d in Mehungry.Posts.PostDownvote, where: c_d.comment_id == ^z.id)
-        Repo.delete_all(from c_u in Mehungry.Posts.PostUpvote, where: c_u.comment_id == ^z.id)
-        Repo.delete_all(from c_a in Mehungry.Posts.CommentAnswer, where: c_a.comment_id == ^z.id)
-        Repo.delete(z)
-      end)
+    user_comment_ids =
+      Repo.all(from c in Mehungry.Posts.Comment, where: c.user_id == ^uid, select: c.id)
 
-      Repo.delete(x)
-    end)
+    all_comment_ids = Enum.uniq(comment_ids_on_recipes ++ user_comment_ids)
 
-    Repo.delete_all(from u_m in Mehungry.History.UserMeal, where: u_m.user_id == ^user.id)
-
-    baskets =
-      Repo.all(from bas in Mehungry.Inventory.ShoppingBasket, where: bas.user_id == ^user.id)
-      |> Repo.preload(:basket_ingredients)
-
-    Enum.each(baskets, fn x ->
-      Repo.delete_all(
-        from b_i in Mehungry.Inventory.BasketIngredient, where: b_i.shopping_basket_id == ^x.id
+    # Collect all comment answer IDs on those comments
+    all_answer_ids =
+      Repo.all(
+        from ca in Mehungry.Posts.CommentAnswer,
+          where: ca.comment_id in ^all_comment_ids or ca.user_id == ^uid,
+          select: ca.id
       )
 
-      Repo.delete(x)
-    end)
+    # Delete leaf nodes first, then work up the dependency tree
 
+    # CommentAnswerVotes (depend on comment_answers and users)
     Repo.delete_all(
-      from profile in Mehungry.Accounts.UserProfile, where: profile.user_id == ^user.id
+      from v in Mehungry.Posts.CommentAnswerVote,
+        where: v.comment_answer_id in ^all_answer_ids or v.user_id == ^uid
     )
 
-    comments =
-      Repo.all(from comment in Mehungry.Posts.Comment, where: comment.user_id == ^user.id)
+    # CommentVotes (depend on comments and users)
+    Repo.delete_all(
+      from v in Mehungry.Posts.CommentVote,
+        where: v.comment_id in ^all_comment_ids or v.user_id == ^uid
+    )
 
-    Enum.each(comments, fn x ->
-      Repo.delete_all(from co_vo in Mehungry.Posts.CommentVote, where: co_vo.comment_id == ^x.id)
-      Repo.delete_all(from co_do in Mehungry.Posts.PostDownvote, where: co_do.comment_id == ^x.id)
-      Repo.delete_all(from co_up in Mehungry.Posts.PostUpvote, where: co_up.comment_id == ^x.id)
+    # CommentAnswers (depend on comments and users)
+    Repo.delete_all(
+      from ca in Mehungry.Posts.CommentAnswer,
+        where: ca.comment_id in ^all_comment_ids or ca.user_id == ^uid
+    )
 
-      Repo.delete_all(
-        from co_an in Mehungry.Posts.CommentAnswer, where: co_an.comment_id == ^x.id
-      )
+    # All comments (on user's recipes and by the user)
+    Repo.delete_all(
+      from c in Mehungry.Posts.Comment,
+        where: c.recipe_id in ^recipe_ids or c.user_id == ^uid
+    )
 
-      Repo.delete(x)
-    end)
+    # RecipeIngredients
+    Repo.delete_all(
+      from ri in Mehungry.Food.RecipeIngredient, where: ri.recipe_id in ^recipe_ids
+    )
 
-    Repo.delete_all(from do_up in Mehungry.Posts.PostDownvote, where: do_up.user_id == ^user.id)
-    Repo.delete_all(from co_vo in Mehungry.Posts.CommentVote, where: co_vo.user_id == ^user.id)
+    # Recipes
+    Repo.delete_all(from r in Mehungry.Food.Recipe, where: r.user_id == ^uid)
 
-    Repo.delete_all(from co_up in Mehungry.Posts.PostUpvote, where: co_up.user_id == ^user.id)
+    # UserMeals (recipe_user_meals and ingredient_user_meals cascade via :delete_all)
+    Repo.delete_all(from u_m in Mehungry.History.UserMeal, where: u_m.user_id == ^uid)
 
+    # ShoppingBaskets and their items
+    basket_ids =
+      Repo.all(from b in Mehungry.Inventory.ShoppingBasket, where: b.user_id == ^uid, select: b.id)
+
+    Repo.delete_all(
+      from bi in Mehungry.Inventory.BasketIngredient, where: bi.shopping_basket_id in ^basket_ids
+    )
+
+    Repo.delete_all(from b in Mehungry.Inventory.ShoppingBasket, where: b.user_id == ^uid)
+
+    # UserProfile (cascades to user_category_rules and user_ingredient_rules via user_profile_id)
+    Repo.delete_all(from p in Mehungry.Accounts.UserProfile, where: p.user_id == ^uid)
+
+    # PostUpvotes and PostDownvotes by the user (post_id references, not comment_id)
+    Repo.delete_all(from v in Mehungry.Posts.PostUpvote, where: v.user_id == ^uid)
+    Repo.delete_all(from v in Mehungry.Posts.PostDownvote, where: v.user_id == ^uid)
+
+    # Delete the user — tokens, credentials, posts, user_recipes, follows (new table),
+    # social_media_posts, subscriptions, ai_usage all cascade via :delete_all
     Repo.delete(user)
   end
 

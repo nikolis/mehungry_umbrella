@@ -24,6 +24,8 @@ if config_env() == :prod do
   config :mehungry, Mehungry.Mailer,
     adapter: Swoosh.Adapters.AmazonSES,
     region: System.get_env("AWS_SES_REGION", "eu-central-1")
+    access_key: System.fetch_env!("AWS_ACCESS_KEY_ID"),
+    secret: System.fetch_env!("AWS_SECRET_ACCESS_KEY")
 
   config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 end
