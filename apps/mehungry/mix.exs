@@ -57,6 +57,7 @@ defmodule Mehungry.MixProject do
       {:ueberauth_google, "~> 0.8"},
       {:phoenix, "~> 1.7.10"},
       {:swoosh, "~> 1.8"},
+      {:gen_smtp, "~> 1.0"},
       {:phoenix_pubsub, "~> 2.0"},
       {:ecto_sql, "~> 3.11"},
       {:postgrex, ">= 0.0.0"},
