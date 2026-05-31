@@ -342,7 +342,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             />
           </div>
           <%= if @interactions != [] do %>
-            <div class="mt-8">
+            <div class="mt-20">
               <h2 class="text-lg font-semibold text-white mb-4">Nutrition Insights</h2>
               <.nutrient_interaction_panel interactions={@interactions} />
             </div>
