@@ -858,6 +858,9 @@ defmodule Mehungry.Accounts do
       end)
 
       Enum.each(x.comments, fn z ->
+        Repo.delete_all(from c_v in Mehungry.Posts.CommentVote, where: c_v.comment_id == ^z.id)
+        Repo.delete_all(from c_d in Mehungry.Posts.PostDownvote, where: c_d.comment_id == ^z.id)
+        Repo.delete_all(from c_u in Mehungry.Posts.PostUpvote, where: c_u.comment_id == ^z.id)
         Repo.delete_all(from c_a in Mehungry.Posts.CommentAnswer, where: c_a.comment_id == ^z.id)
         Repo.delete(z)
       end)

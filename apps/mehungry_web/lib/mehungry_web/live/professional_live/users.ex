@@ -14,7 +14,30 @@ defmodule MehungryWeb.ProfessionalLive.Users do
      socket
      |> assign(:subscriptions, subscriptions)
      |> assign(:pro_count, pro_count)
+     |> assign(:confirm_delete_user, nil)
      |> stream(:users, Accounts.list_users())}
+  end
+
+  @impl true
+  def handle_event("confirm_delete", %{"user-id" => id, "user-email" => email}, socket) do
+    {:noreply, assign(socket, :confirm_delete_user, %{id: String.to_integer(id), email: email})}
+  end
+
+  @impl true
+  def handle_event("cancel_delete", _params, socket) do
+    {:noreply, assign(socket, :confirm_delete_user, nil)}
+  end
+
+  @impl true
+  def handle_event("delete_user", %{"id" => id}, socket) do
+    user = Accounts.get_user!(id)
+    Accounts.delete_user(user)
+
+    {:noreply,
+     socket
+     |> assign(:confirm_delete_user, nil)
+     |> stream_delete(:users, user)
+     |> put_flash(:info, "User #{user.email} deleted.")}
   end
 
   @impl true

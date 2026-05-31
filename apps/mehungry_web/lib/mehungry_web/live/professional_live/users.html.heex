@@ -1,3 +1,42 @@
+<%= if @confirm_delete_user do %>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-white font-semibold">Delete User</h3>
+          <p class="text-slate-400 text-sm">This action cannot be undone.</p>
+        </div>
+      </div>
+      <p class="text-slate-300 text-sm mb-6">
+        Are you sure you want to permanently delete
+        <span class="text-white font-medium">{@confirm_delete_user.email}</span>
+        and all their data?
+      </p>
+      <div class="flex gap-3">
+        <button
+          phx-click="cancel_delete"
+          class="flex-1 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-sm font-medium transition"
+        >
+          Cancel
+        </button>
+        <button
+          phx-click="delete_user"
+          phx-value-id={@confirm_delete_user.id}
+          class="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+<% end %>
+
 <div class="min-h-screen bg-slate-900">
   <div class="container mx-auto px-4 py-6 max-w-2xl">
     
