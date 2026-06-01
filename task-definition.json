@@ -88,6 +88,10 @@
                 {
                     "name": "STRIPE_PRO_YEARLY_PRICE_ID",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/stripe_pro_yearly_price_id-aYKUVh"
+                },
+                {
+                    "name": "ANTHROPIC_API_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/anthropic_api_key-ZRv92V"
                 }
             ],
             "environmentFiles": [],
