@@ -16,7 +16,9 @@ defmodule MehungryWeb.RecipeDetailsTabsConfig do
   end
 
   def tab_content(%{state: "Ingredients"} = assigns) do
-    MehungryWeb.RecipeComponents.recipe_ingredients(assigns.recipe)
+    recipe_assigns = Map.put(assigns.recipe, :ingredient_display_names,
+      Map.get(assigns, :ingredient_display_names, %{}))
+    MehungryWeb.RecipeComponents.recipe_ingredients(recipe_assigns)
   end
 
   def tab_content(%{state: "Nutrients"} = assigns) do

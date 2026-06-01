@@ -579,6 +579,18 @@ defmodule Mehungry.Food do
     Repo.delete(ingredient)
   end
 
+  def ingredient_display_names(ingredient_ids, language_name)
+      when is_list(ingredient_ids) and language_name not in [nil, "en", "En"] do
+    from(t in IngredientTranslation,
+      where: t.language_name == ^language_name and t.ingredient_id in ^ingredient_ids,
+      select: {t.ingredient_id, t.name}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  def ingredient_display_names(_ingredient_ids, _language), do: %{}
+
   def count_untranslated_ingredients(language_name) do
     translated_ids =
       from t in IngredientTranslation,

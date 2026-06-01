@@ -16,9 +16,9 @@ defmodule MehungryWeb.TabsComponent do
           contents={@contents}
           recipe={@recipe}
           id={@recipe.id}
-          ,
           nutrients={@nutrients}
           primary_size={@primary_size}
+          ingredient_display_names={Map.get(assigns, :ingredient_display_names, %{})}
         />
       <% end %>
     </div>
@@ -65,7 +65,8 @@ defmodule MehungryWeb.TabsComponent do
         recipe: @recipe,
         id: Integer.to_string(@recipe.id),
         nutrients: @recipe.nutrients,
-        primary_size: @primary_size
+        primary_size: @primary_size,
+        ingredient_display_names: Map.get(assigns, :ingredient_display_names, %{})
       })}
     </div>
     """
@@ -82,6 +83,7 @@ defmodule MehungryWeb.TabsComponent do
           id={@recipe.id}
           nutrients={@nutrients}
           primary_size={@primary_size}
+          ingredient_display_names={Map.get(assigns, :ingredient_display_names, %{})}
         />
       </div>
     </div>

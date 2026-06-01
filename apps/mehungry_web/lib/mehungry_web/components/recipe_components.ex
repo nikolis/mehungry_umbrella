@@ -172,6 +172,7 @@ defmodule MehungryWeb.RecipeComponents do
         recipe={@recipe}
         nutrients={@nutrients}
         primary_size={@primary_size}
+        ingredient_display_names={Map.get(assigns, :ingredient_display_names, %{})}
       />
     </div>
     """
@@ -183,9 +184,12 @@ defmodule MehungryWeb.RecipeComponents do
       <div class="px-4">
         <div class="bg-slate-800 border border-slate-700 divide-y custom-scrollbar divide-slate-700 overflow-auto max-h-72">
           <%= for ingredient <- @recipe_ingredients do %>
+            <% display_names = Map.get(assigns, :ingredient_display_names, %{}) %>
+            <% name = Map.get(display_names, ingredient.ingredient_id) ||
+                      Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %>
             <div class="flex justify-between items-center p-4 hover:bg-slate-700/30 transition">
               <span class="text-white">
-                {Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name)}
+                {name}
               </span>
               <span class="text-slate-400">
                 {ingredient.quantity} {ingredient.measurement_unit.name}

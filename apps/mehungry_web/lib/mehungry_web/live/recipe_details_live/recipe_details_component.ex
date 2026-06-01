@@ -338,7 +338,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               current_user={@current_user}
               nutrients={@nutrients}
               primary_size={@primary_size}
-              .
+              ingredient_display_names={@ingredient_display_names}
             />
           </div>
           <%= if @interactions != [] do %>
@@ -481,6 +481,13 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     reply = Map.get(assigns, :reply, nil)
     interactions = Food.get_interactions_for_recipe(assigns.recipe)
 
+    ingredient_ids =
+      assigns.recipe.recipe_ingredients
+      |> Enum.map(& &1.ingredient_id)
+
+    display_names =
+      Food.ingredient_display_names(ingredient_ids, assigns.recipe.language_name)
+
     socket =
       socket
       |> assign(assigns)
@@ -488,6 +495,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign(:user_follows, user_follows)
       |> assign(:recipe_comments, comments)
       |> assign(:interactions, interactions)
+      |> assign(:ingredient_display_names, display_names)
       |> assign(
         :comment,
         get_when_first_exists(assigns.current_user, fn ->

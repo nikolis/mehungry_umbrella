@@ -147,9 +147,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
               </button>
 
               <h3 class="text-center text-lg font-semibold text-white">
-                <span>{Calendar.strftime(@current_date, "%A")},</span>
+                <span>{day_name(@current_date, (assigns[:current_language] || "en"))},</span>
                 <span>{String.slice(Calendar.strftime(@current_date, "%d"), 0..2)}</span>
-                <span>{String.slice(Calendar.strftime(@current_date, "%B"), 0..2)}</span>
+                <span>{month_short(@current_date, (assigns[:current_language] || "en"))}</span>
               </h3>
 
               <button
@@ -180,10 +180,16 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             current_date={@current_date}
             selected_date={@selected_date}
             myself={@myself}
+            current_language={@current_language}
           />
         </div>
         """
     end
+  end
+
+  @impl true
+  def mount(socket) do
+    {:ok, assign(socket, :current_language, "en")}
   end
 
   @impl true
@@ -199,6 +205,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       end
 
     {first, last, rows} = get_full_week(current_date, assigns.user_meals, 1500)
+    language = Map.get(assigns, :current_language, "en")
 
     assigns = [
       current_date: current_date,
@@ -210,7 +217,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       first: first,
       calendar_view: assigns.calendar_view,
       day_meals: @day_meals,
-      device_width: assigns.device_width
+      device_width: assigns.device_width,
+      current_language: language
     ]
 
     {:ok,
@@ -336,9 +344,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                   d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
                 />
               </svg>
-              {Calendar.strftime(day, "%A")}
+              {day_name(day, (assigns[:current_language] || "en"))}
             </span>
-            <span class="text-slate-500 text-xs sm:text-sm">{Calendar.strftime(day, "%d %b")}</span>
+            <span class="text-slate-500 text-xs sm:text-sm">
+              {Calendar.strftime(day, "%d")} {month_short(day, (assigns[:current_language] || "en"))}
+            </span>
             <span
               class="ml-auto text-slate-400 hover:text-white transition-colors cursor-pointer p-1"
               phx-click={
@@ -648,4 +658,16 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     </button>
     """
   end
+
+  @days_el %{1 => "Δευτέρα", 2 => "Τρίτη", 3 => "Τετάρτη", 4 => "Πέμπτη",
+             5 => "Παρασκευή", 6 => "Σάββατο", 7 => "Κυριακή"}
+  @months_short_el %{1 => "Ιαν", 2 => "Φεβ", 3 => "Μαρ", 4 => "Απρ", 5 => "Μαϊ",
+                     6 => "Ιουν", 7 => "Ιουλ", 8 => "Αυγ", 9 => "Σεπ",
+                     10 => "Οκτ", 11 => "Νοε", 12 => "Δεκ"}
+
+  defp day_name(%Date{} = date, "el"), do: Map.fetch!(@days_el, Date.day_of_week(date))
+  defp day_name(%Date{} = date, _), do: Calendar.strftime(date, "%A")
+
+  defp month_short(%Date{} = date, "el"), do: Map.fetch!(@months_short_el, date.month)
+  defp month_short(%Date{} = date, _), do: String.slice(Calendar.strftime(date, "%b"), 0..2)
 end
