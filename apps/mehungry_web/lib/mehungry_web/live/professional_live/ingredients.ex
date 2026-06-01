@@ -2,6 +2,7 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   use MehungryWeb, :live_view
 
   alias Mehungry.Food
+  alias Mehungry.IngredientTranslationWorker
 
   import Ecto.Changeset
 
@@ -36,10 +37,9 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   def mount(_params, _session, socket) do
     {ingredients, cursor_after} = Food.list_ingredients_paginated()
 
-    categories =
-      Food.list_categories()
-
+    categories = Food.list_categories()
     search_methods = [{"ilike", "ilike"}, {"search", "search"}]
+    translation_stats = build_translation_stats()
 
     socket =
       socket
@@ -52,6 +52,7 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
       |> assign(:ecto_query, nil)
       |> assign(:cursor_after, cursor_after)
       |> assign(:page, 1)
+      |> assign(:translation_stats, translation_stats)
       |> assign(:form, to_form(get_form_changeset(@params), as: :search_form))
 
     {:ok, socket}
@@ -86,6 +87,21 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
      |> assign(:page, socket.assigns.page + 1)
      |> stream(:ingredients, ingredients)}
   end
+
+  @impl true
+  def handle_event("enqueue_translation", _params, socket) do
+    %{} |> IngredientTranslationWorker.new() |> Oban.insert!()
+    translation_stats = build_translation_stats()
+
+    socket =
+      socket
+      |> assign(:translation_stats, translation_stats)
+      |> put_flash(:info, "Greek translation job enqueued. Oban will process it in the background.")
+
+    {:noreply, socket}
+  end
+
+  defp build_translation_stats, do: Food.ingredient_translation_stats()
 
   def execute_query(form_params, socket) do
     classes = String.split(form_params["classes"], ",")

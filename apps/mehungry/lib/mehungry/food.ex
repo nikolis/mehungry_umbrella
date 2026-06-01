@@ -561,6 +561,36 @@ defmodule Mehungry.Food do
     Repo.delete(ingredient)
   end
 
+  def count_untranslated_ingredients(language_name) do
+    translated_ids =
+      from t in IngredientTranslation,
+        where: t.language_name == ^language_name,
+        select: t.ingredient_id
+
+    Repo.aggregate(
+      from(i in Ingredient, where: i.id not in subquery(translated_ids)),
+      :count
+    )
+  end
+
+  def ingredient_translation_stats do
+    total = Repo.aggregate(Ingredient, :count)
+
+    languages =
+      Mehungry.Languages.list_languages()
+      |> Enum.map(fn lang ->
+        translated =
+          Repo.aggregate(
+            from(t in IngredientTranslation, where: t.language_name == ^lang.name),
+            :count
+          )
+
+        %{language: lang.name, translated: translated, total: total}
+      end)
+
+    %{total: total, languages: languages}
+  end
+
   def find_ingredient_translation(language_name, ingredient_id) do
     query =
       from in_tr in "ingredient_translations",
