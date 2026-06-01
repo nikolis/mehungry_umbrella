@@ -425,7 +425,7 @@ defmodule Mehungry.Food do
 
     %{entries: entries, metadata: metadata} = Repo.paginate(query, paginate_opts)
 
-    {Repo.preload(entries, :ingredient_translation), metadata.after}
+    {Repo.preload(entries, [:category, :ingredient_translation]), metadata.after}
   end
 
   def list_ingredients_paginated(%Ecto.Query{} = query) do

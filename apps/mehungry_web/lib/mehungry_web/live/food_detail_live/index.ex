@@ -38,14 +38,27 @@ defmodule MehungryWeb.FoodDetailLive.Index do
 
         interactions = Food.get_interactions_for_ingredients([ingredient.id])
 
+        language = socket.assigns[:current_language] || "en"
+
+        display_name =
+          if language == "el" do
+            case Food.find_ingredient_translation("el", ingredient.id) do
+              [greek_name | _] -> greek_name
+              [] -> ingredient.name
+            end
+          else
+            ingredient.name
+          end
+
         {:ok,
          socket
          |> assign(:ingredient, ingredient)
+         |> assign(:display_name, display_name)
          |> assign(:top_nutrients, top_nutrients)
          |> assign(:nutrients_by_family, nutrients_by_family)
          |> assign(:sample_recipes, sample_recipes)
          |> assign(:interactions, interactions)
-         |> assign(:page_title, "#{ingredient.name} Nutrition Facts")
+         |> assign(:page_title, "#{display_name} - Διατροφικά Στοιχεία")
          |> assign(:page_description, build_description(ingredient, top_nutrients))}
     end
   end

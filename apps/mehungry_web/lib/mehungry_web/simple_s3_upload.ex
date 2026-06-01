@@ -137,8 +137,10 @@ defmodule MehungryWeb.SimpleS3Upload do
   end
 
   def ext(entry) do
-    [ext | _] = MIME.extensions(entry.client_type)
-    ext
+    case MIME.extensions(entry.client_type) do
+      [ext | _] -> ext
+      [] -> "jpg"
+    end
   end
 
   defp amz_date(time) do
