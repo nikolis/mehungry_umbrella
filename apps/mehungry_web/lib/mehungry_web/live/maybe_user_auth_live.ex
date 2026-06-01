@@ -9,10 +9,18 @@ defmodule MehungryWeb.MaybeUserAuthLive do
         Accounts.get_user_by_session_token(user_token)
       end)
 
+    socket =
+      assign_new(socket, :current_language, fn ->
+        case socket.assigns[:current_user] do
+          nil -> "en"
+          user -> Accounts.get_user_language(user.id)
+        end
+      end)
+
     {:cont, socket}
   end
 
   def on_mount(_, _params, %{}, socket) do
-    {:cont, socket}
+    {:cont, assign_new(socket, :current_language, fn -> "en" end)}
   end
 end

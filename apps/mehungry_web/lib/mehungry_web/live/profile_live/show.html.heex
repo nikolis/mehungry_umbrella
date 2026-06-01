@@ -11,6 +11,24 @@
       socket={@socket}
     />
 
+    <%# Language preference toggle — visible on all screen sizes %>
+    <div class="flex justify-center mt-4 mb-2">
+      <div class="flex items-center gap-1 bg-slate-700 rounded-full p-1">
+        <a
+          href="/users/language/en"
+          class={"px-5 py-1.5 rounded-full text-sm font-semibold transition-colors #{if (@user_profile.language_preference || "en") == "en", do: "bg-primary-500 text-white", else: "text-slate-400 hover:text-white"}"}
+        >
+          EN
+        </a>
+        <a
+          href="/users/language/el"
+          class={"px-5 py-1.5 rounded-full text-sm font-semibold transition-colors #{if (@user_profile.language_preference || "en") == "el", do: "bg-primary-500 text-white", else: "text-slate-400 hover:text-white"}"}
+        >
+          ΕΛ — Ελληνικά
+        </a>
+      </div>
+    </div>
+
     <div class="flex justify-center m-6 relative  flex-wrap gap-2">
       <.link href={~p"/upgrade"}>
         <button

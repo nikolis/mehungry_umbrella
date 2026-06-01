@@ -11,11 +11,13 @@ defmodule MehungryWeb.LayoutView do
   end
 
   attr :current_user, :any
+  attr :current_language, :string, default: "en"
 
   def get_menu(assigns) do
     ~H"""
     <.main_menu
       current_user={@current_user}
+      current_language={@current_language}
       inner_content={@inner_content}
     />
     <.mobile_menu current_user={@current_user} />

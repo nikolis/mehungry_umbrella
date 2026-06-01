@@ -4,7 +4,7 @@ defmodule Mehungry.AI.IngredientTranslator do
   require Logger
 
   @api_url "https://api.anthropic.com/v1/messages"
-  @model "claude-haiku-4-5-20251001"
+  @model "claude-sonnet-4-6"
   @timeout_ms 60_000
 
   @doc """
@@ -16,13 +16,47 @@ defmodule Mehungry.AI.IngredientTranslator do
     names = Map.keys(name_to_id)
 
     system = """
-    You are a food ingredient translator. Translate English food ingredient names to Greek.
-    Return ONLY a valid JSON object mapping each English name to its Greek translation.
-    Use common Greek culinary terminology. Do not add explanations or markdown.
-    Example: {"chicken breast": "στήθος κοτόπουλου", "garlic": "σκόρδο"}
+    You are a Greek culinary expert helping localize a recipe app for Greek home cooks.
+
+    The ingredient names come from the USDA food database, which uses a very specific technical
+    naming convention: "Primary food, qualifier, qualifier, preparation method, fat trim level..."
+    For example: "Chicken, broilers or fryers, breast, meat only, cooked, roasted" or
+    "Oil, olive, salad or cooking" or "Beef, chuck, arm pot roast, separable lean only, trimmed to 0\" fat, choice, cooked, braised".
+
+    Your task is to produce the name a Greek home cook would use when writing a recipe — the same
+    vocabulary found on popular Greek recipe sites like akispetretzikis.com, gastronomos.gr, and argiro.gr.
+
+    Rules:
+    - Extract the CORE ingredient and use the everyday Greek kitchen name. Ignore USDA qualifiers
+      about fat trim levels, cooking methods, brand specifics, and preparation states unless they
+      are genuinely meaningful to a cook (e.g. "smoked" or "dried" often matter; "trimmed to 0.25 inch fat" never does).
+    - Use the nominative singular form of Greek nouns (e.g. "σκόρδο" not "σκόρδου").
+    - Prefer the short, recognizable name: "ελαιόλαδο" not "λάδι ελιάς, για σαλάτα ή μαγείρεμα".
+    - For cuts of meat, use the Greek butcher name where one exists (e.g. "μπριζόλα χοιρινή",
+      "μοσχαρίσιο φιλέτο", "κοτόπουλο μπούτι").
+    - For processed or highly specific items with no clear Greek equivalent, give the closest
+      meaningful Greek culinary term rather than a literal word-for-word translation.
+    - For branded or very American-specific products, give the Greek equivalent category
+      (e.g. "Fast food, pizza" → "πίτσα").
+
+    Return ONLY a valid JSON object mapping each original English name to its Greek culinary name.
+    No markdown, no explanation, no extra keys.
+
+    Examples of the style expected:
+    {
+      "Chicken, broilers or fryers, breast, meat only, cooked, roasted": "στήθος κοτόπουλου",
+      "Oil, olive, salad or cooking": "ελαιόλαδο",
+      "Cheese, feta": "φέτα",
+      "Tomatoes, red, ripe, raw, year round average": "ντομάτα",
+      "Beef, ground, 80% lean meat / 20% fat, patty, cooked, pan-broiled": "κιμάς βοδινός",
+      "Lemon juice, raw": "χυμός λεμονιού",
+      "Alcoholic beverage, wine, table, white": "λευκό κρασί",
+      "Spices, oregano, dried": "ρίγανη",
+      "Nuts, walnuts, english": "καρύδια"
+    }
     """
 
-    user = "Translate these ingredient names to Greek:\n#{Jason.encode!(names)}"
+    user = "Translate these USDA ingredient names to Greek culinary names:\n#{Jason.encode!(names)}"
 
     case call_api(system, user) do
       {:ok, text} ->

@@ -93,8 +93,24 @@
     </a>
   </nav>
   
-<!-- Bottom: profile / login -->
+<!-- Bottom: language toggle + profile / login -->
   <div class="p-3 border-t border-slate-800 flex-shrink-0">
+    <%= if @current_user do %>
+      <div class="flex items-center justify-center gap-1 bg-slate-800 rounded-full p-0.5 mb-2">
+        <a
+          href="/users/language/en"
+          class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "en", do: "bg-primary-500 text-white", else: "text-slate-400 hover:text-white"}"}
+        >
+          EN
+        </a>
+        <a
+          href="/users/language/el"
+          class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "el", do: "bg-primary-500 text-white", else: "text-slate-400 hover:text-white"}"}
+        >
+          ΕΛ
+        </a>
+      </div>
+    <% end %>
     <%= if @current_user do %>
       <a
         href="/profile"

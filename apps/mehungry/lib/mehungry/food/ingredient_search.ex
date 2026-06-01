@@ -49,6 +49,7 @@ defmodule Mehungry.Food.IngredientSearch do
   import Ecto.Query
   alias Mehungry.Repo
   alias Mehungry.Food.Ingredient
+  alias Mehungry.Food.IngredientTranslation
 
   # ═════════════════════════════════════════════════════════════════════════
   # Public API
@@ -84,6 +85,41 @@ defmodule Mehungry.Food.IngredientSearch do
   def search_for_select(search_term, classes \\ []) do
     search(search_term, classes)
     |> Enum.map(fn i -> %{id: i.id, name: i.name} end)
+  end
+
+  @doc """
+  Searches ingredient names via their translations for the given language code.
+  Returns `%{id: ingredient_id, name: translated_name}` maps so the result is
+  drop-in compatible with `search/1` for use in select dropdowns.
+  """
+  def search_in_language(search_term, language_name) when is_binary(search_term) do
+    normalized = String.trim(search_term)
+
+    if normalized == "" do
+      from(t in IngredientTranslation,
+        where: t.language_name == ^language_name,
+        join: i in Ingredient,
+        on: i.id == t.ingredient_id,
+        order_by: [asc: fragment("LENGTH(?)", t.name)],
+        limit: @max_results,
+        select: %{id: t.ingredient_id, name: t.name}
+      )
+      |> Repo.all()
+    else
+      from(t in IngredientTranslation,
+        where: t.language_name == ^language_name,
+        where: ilike(t.name, ^"%#{normalized}%"),
+        join: i in Ingredient,
+        on: i.id == t.ingredient_id,
+        order_by: [
+          desc: fragment("CASE WHEN lower(?) = lower(?) THEN 1 ELSE 0 END", t.name, ^normalized),
+          asc: fragment("LENGTH(?)", t.name)
+        ],
+        limit: @max_results,
+        select: %{id: t.ingredient_id, name: t.name}
+      )
+      |> Repo.all()
+    end
   end
 
   # ═════════════════════════════════════════════════════════════════════════

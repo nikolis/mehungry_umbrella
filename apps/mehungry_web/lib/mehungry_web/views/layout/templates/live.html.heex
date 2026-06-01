@@ -14,6 +14,7 @@
   </div>
   <.get_menu
     current_user={assigns[:current_user]}
+    current_language={assigns[:current_language] || "en"}
     inner_content={@inner_content}
   />
   <p class="alert alert-info" role="alert" phx-click="lv:clear-flash" phx-value-key="info">

@@ -158,7 +158,7 @@ defmodule MehungryWeb.RecipeFormComponent do
                 ingredient_form={ingredient_form}
                 ingredients={@ingredients}
                 measurement_units={@measurement_units}
-                measurement_units={@measurement_units}
+                search_language={@search_language}
               />
             </.inputs_for>
             <button

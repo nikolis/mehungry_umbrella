@@ -845,6 +845,19 @@ defmodule Mehungry.Accounts do
     |> Repo.update()
   end
 
+  def update_user_language(%UserProfile{} = profile, lang) when lang in ["en", "el"] do
+    profile
+    |> UserProfile.changeset(%{language_preference: lang})
+    |> Repo.update()
+  end
+
+  def get_user_language(user_id) do
+    case get_user_profile_by_user_id(user_id) do
+      nil -> "en"
+      profile -> profile.language_preference || "en"
+    end
+  end
+
   def delete_user(%User{} = user) do
     uid = user.id
 

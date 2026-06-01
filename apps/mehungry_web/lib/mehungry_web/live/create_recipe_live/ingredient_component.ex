@@ -22,6 +22,7 @@ defmodule MehungryWeb.IngredientComponent do
     socket =
       socket
       |> assign(assigns)
+      |> assign_search_fns()
 
     grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
 
@@ -46,6 +47,39 @@ defmodule MehungryWeb.IngredientComponent do
   def get_measurement_units() do
   end
 
+  defp assign_search_fns(socket) do
+    language = Map.get(socket.assigns, :search_language, "en")
+
+    {item_fn, label_fn, get_by_id_fn} =
+      if language == "el" do
+        item_fn = fn term ->
+          Mehungry.Food.IngredientSearch.search_in_language(term, "el")
+        end
+
+        get_by_id_fn = fn id ->
+          ingredient = Mehungry.Food.get_ingredient!(id)
+
+          case Mehungry.Food.find_ingredient_translation("el", id) do
+            [greek_name | _] -> %{ingredient | name: greek_name}
+            [] -> ingredient
+          end
+        end
+
+        {item_fn, fn item -> item.name end, get_by_id_fn}
+      else
+        {
+          &Mehungry.Food.IngredientSearch.search/1,
+          fn item -> Mehungry.Utils.remove_parenthesis(item.name) end,
+          &Mehungry.Food.get_ingredient!/1
+        }
+      end
+
+    socket
+    |> assign(:ingredient_item_fn, item_fn)
+    |> assign(:ingredient_label_fn, label_fn)
+    |> assign(:ingredient_get_by_id_fn, get_by_id_fn)
+  end
+
   def render(assigns) do
     ~H"""
     <div class="py-2">
@@ -57,10 +91,10 @@ defmodule MehungryWeb.IngredientComponent do
             <.live_component
               module={MehungryWeb.SelectComponentDeep}
               form={@ingredient_form}
-              item_function={&Mehungry.Food.IngredientSearch.search/1}
-              get_by_id_func={&Mehungry.Food.get_ingredient!/1}
+              item_function={@ingredient_item_fn}
+              get_by_id_func={@ingredient_get_by_id_fn}
               input_variable="ingredient_id"
-              label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
+              label_function={@ingredient_label_fn}
               placeholder="Select an ingredient..."
               modal_title="Search Ingredients"
               parent_id={@id}

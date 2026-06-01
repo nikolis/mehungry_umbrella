@@ -12,6 +12,11 @@ defmodule MehungryWeb.UserAuthLive do
       end)
 
     if socket.assigns.current_user do
+      socket =
+        assign_new(socket, :current_language, fn ->
+          Accounts.get_user_language(socket.assigns.current_user.id)
+        end)
+
       {:cont, socket}
     else
       {:halt, redirect(socket, to: "/users/log_in")}

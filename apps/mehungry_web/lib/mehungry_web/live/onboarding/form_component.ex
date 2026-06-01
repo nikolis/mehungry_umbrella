@@ -9,7 +9,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
     ~H"""
     <div>
       <.header>
-        <h3 class="p-6">Please specify your relationship with animal products</h3>
+        <h3 class="p-6">Welcome! Let's set up your preferences</h3>
       </.header>
       <.simple_form
         for={@form}
@@ -19,7 +19,33 @@ defmodule MehungryWeb.Onboarding.FormComponent do
         phx-submit="save"
         class="text-center"
       >
-        <div class="p-6 pt-0 text-base font-medium">
+        <div class="p-6 pt-2">
+          <p class="text-sm font-semibold text-slate-300 mb-3">Choose your language</p>
+          <div class="flex justify-center gap-2 mb-6">
+            <button
+              type="button"
+              phx-click="set_onboarding_language"
+              phx-value-lang="en"
+              phx-target={@myself}
+              class={"px-6 py-2 rounded-full text-sm font-semibold border-2 transition-colors #{if @selected_language == "en", do: "bg-primary-500 border-primary-500 text-white", else: "border-slate-600 text-slate-400 hover:border-slate-400 hover:text-white"}"}
+            >
+              EN — English
+            </button>
+            <button
+              type="button"
+              phx-click="set_onboarding_language"
+              phx-value-lang="el"
+              phx-target={@myself}
+              class={"px-6 py-2 rounded-full text-sm font-semibold border-2 transition-colors #{if @selected_language == "el", do: "bg-primary-500 border-primary-500 text-white", else: "border-slate-600 text-slate-400 hover:border-slate-400 hover:text-white"}"}
+            >
+              ΕΛ — Ελληνικά
+            </button>
+          </div>
+          <input type="hidden" name="language_preference" value={@selected_language} />
+
+          <p class="text-sm font-semibold text-slate-300 mb-3">
+            Your relationship with animal products
+          </p>
           <.input field={@form[:vegan]} type="checkbox" label="I am vegan" />
           <.input field={@form[:vegetarian]} type="checkbox" label="I am vegeterian" />
           <.input field={@form[:lactose_intolerant]} type="checkbox" label="I am lactose intolerant" />
@@ -43,10 +69,13 @@ defmodule MehungryWeb.Onboarding.FormComponent do
   def update(assigns, socket) do
     map = %{"vegan" => "false", "vegeterian" => "false", "lactose_intolerant" => "false"}
 
+    existing_lang = (assigns.user_profile && assigns.user_profile.language_preference) || "en"
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:user_profile, assigns.user_profile)
+     |> assign(:selected_language, existing_lang)
      |> assign_form(map)}
   end
 
@@ -55,12 +84,19 @@ defmodule MehungryWeb.Onboarding.FormComponent do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_event("set_onboarding_language", %{"lang" => lang}, socket)
+      when lang in ["en", "el"] do
+    {:noreply, assign(socket, :selected_language, lang)}
+  end
+
   def handle_event("save", params, socket) do
     save_onboarding(socket, params)
   end
 
   defp save_onboarding(socket, post_params) do
     user_id = socket.assigns.user_profile.user_id
+    language = Map.get(post_params, "language_preference", socket.assigns.selected_language)
 
     case Map.get(post_params, "vegan") do
       "true" ->
@@ -76,6 +112,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
           socket.assigns.user_profile,
           %{
             onboarding_level: 1,
+            language_preference: language,
             user_category_rules: categories
           }
         )
@@ -125,7 +162,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
               _ ->
                 Accounts.update_user_profile(
                   socket.assigns.user_profile,
-                  %{onboarding_level: 1}
+                  %{onboarding_level: 1, language_preference: language}
                 )
             end
         end
