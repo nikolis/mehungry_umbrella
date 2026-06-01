@@ -105,7 +105,7 @@ defmodule MehungryWeb.SelectComponentDeep do
         <span class="font-semibold text-white">{first}</span>
         <span class="text-xs text-slate-500">{Enum.join(rest, ",")}</span>
       <% else %>
-        <span class="font-semibold">{@label}</span>
+        <span class="font-semibold text-white">{@label}</span>
       <% end %>
     </div>
     """
