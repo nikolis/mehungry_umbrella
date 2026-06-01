@@ -66,7 +66,26 @@
             mode={:multi}
           />
         </div>
-        <div>
+        <%# Search language toggle — overrides user profile preference for this page only %>
+        <div class="flex items-center gap-1 bg-slate-700 rounded-lg p-0.5 self-center">
+          <button
+            type="button"
+            phx-click="set_search_language"
+            phx-value-lang="en"
+            class={"px-3 py-1.5 rounded-md text-xs font-semibold transition-colors #{if @search_language == "en", do: "bg-slate-500 text-white", else: "text-slate-400 hover:text-white"}"}
+          >
+            EN
+          </button>
+          <button
+            type="button"
+            phx-click="set_search_language"
+            phx-value-lang="el"
+            class={"px-3 py-1.5 rounded-md text-xs font-semibold transition-colors #{if @search_language == "el", do: "bg-primary-500 text-white", else: "text-slate-400 hover:text-white"}"}
+          >
+            ΕΛ
+          </button>
+        </div>
+        <div :if={@search_language == "en"}>
           <.input
             type="select"
             options={@search_methods}
@@ -79,7 +98,7 @@
             type="text"
             name="search_form[query]"
             value={@form[:query].value}
-            placeholder="Search ingredients…"
+            placeholder={if @search_language == "el", do: "Αναζήτηση…", else: "Search ingredients…"}
           />
         </div>
       </div>

@@ -53,6 +53,7 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
       |> assign(:cursor_after, cursor_after)
       |> assign(:page, 1)
       |> assign(:translation_stats, translation_stats)
+      |> assign(:search_language, socket.assigns[:current_language] || "en")
       |> assign(:form, to_form(get_form_changeset(@params), as: :search_form))
 
     {:ok, socket}
@@ -89,6 +90,12 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   end
 
   @impl true
+  def handle_event("set_search_language", %{"lang" => lang}, socket)
+      when lang in ["en", "el"] do
+    {:noreply, assign(socket, :search_language, lang)}
+  end
+
+  @impl true
   def handle_event("enqueue_translation", _params, socket) do
     %{} |> IngredientTranslationWorker.new() |> Oban.insert!()
     translation_stats = build_translation_stats()
@@ -105,22 +112,23 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
   def execute_query(form_params, socket) do
     classes = String.split(form_params["classes"], ",")
+    query = form_params["query"]
 
     {ecto_query, {ingredients, cursor}} =
-      case form_params["search_method"] do
-        "ilike" ->
-          Food.search_ingredient_admin(form_params["query"], classes)
+      case socket.assigns.search_language do
+        "el" ->
+          Food.search_ingredient_admin_translated(query, "el", classes)
 
-        "search" ->
-          Food.search_ingredient_alt_admin(form_params["query"], classes)
+        _ ->
+          case form_params["search_method"] do
+            "ilike" -> Food.search_ingredient_admin(query, classes)
+            "search" -> Food.search_ingredient_alt_admin(query, classes)
+          end
       end
 
-    # socket = assign(socket, :query, form_params)
-    socket = assign(socket, :ecto_query, ecto_query)
-
     socket
+    |> assign(:ecto_query, ecto_query)
     |> assign(:cursor_after, cursor)
-
-    stream(socket, :ingredients, ingredients, reset: true)
+    |> stream(:ingredients, ingredients, reset: true)
   end
 end

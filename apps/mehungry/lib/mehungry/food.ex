@@ -1060,6 +1060,37 @@ defmodule Mehungry.Food do
     {query, pagenate_query(query)}
   end
 
+  def search_ingredient_admin_translated(search_term, language_name, classes \\ []) do
+    ilike_term = "%#{search_term}%"
+
+    base =
+      from t in IngredientTranslation,
+        where: t.language_name == ^language_name,
+        order_by: [
+          desc: fragment("CASE WHEN lower(?) = lower(?) THEN 1 ELSE 0 END", t.name, ^search_term),
+          asc: fragment("LENGTH(?)", t.name)
+        ],
+        limit: 20,
+        select: t.ingredient_id
+
+    base =
+      if search_term == "" do
+        base
+      else
+        from t in base, where: ilike(t.name, ^ilike_term)
+      end
+
+    ingredient_ids = Repo.all(base)
+
+    ingredients =
+      from(i in Ingredient, where: i.id in ^ingredient_ids)
+      |> maybe_filter_by_classes(classes)
+      |> Repo.all()
+      |> Repo.preload([:category])
+
+    {nil, {ingredients, nil}}
+  end
+
   def search_ingredient(search_term, classes \\ []) do
     Repo.all(search_ingredient_query(search_term, classes))
     |> Repo.preload([:category, :measurement_unit])
