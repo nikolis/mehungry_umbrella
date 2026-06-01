@@ -95,31 +95,59 @@ defmodule Mehungry.Food.IngredientSearch do
   def search_in_language(search_term, language_name) when is_binary(search_term) do
     normalized = String.trim(search_term)
 
-    if normalized == "" do
-      from(t in IngredientTranslation,
-        where: t.language_name == ^language_name,
+    base =
+      from t in IngredientTranslation,
         join: i in Ingredient,
         on: i.id == t.ingredient_id,
-        order_by: [asc: fragment("LENGTH(?)", t.name)],
-        limit: @max_results,
-        select: %{id: t.ingredient_id, name: t.name}
-      )
-      |> Repo.all()
-    else
-      from(t in IngredientTranslation,
         where: t.language_name == ^language_name,
-        where: ilike(t.name, ^"%#{normalized}%"),
-        join: i in Ingredient,
-        on: i.id == t.ingredient_id,
+        where: i.category_id not in ^get_excluded_category_ids(),
         order_by: [
-          desc: fragment("CASE WHEN lower(?) = lower(?) THEN 1 ELSE 0 END", t.name, ^normalized),
-          asc: fragment("LENGTH(?)", t.name)
+          # 1. Accent-insensitive exact match
+          desc:
+            fragment(
+              "CASE WHEN lower(unaccent(?)) = lower(unaccent(?)) THEN 1 ELSE 0 END",
+              t.name,
+              ^normalized
+            ),
+          # 2. Accent-insensitive trigram word similarity
+          desc: fragment("word_similarity(unaccent(?), unaccent(?))", ^normalized, t.name),
+          # 3. Shorter translated names first
+          asc: fragment("LENGTH(?)", t.name),
+          # 4. USDA food class hierarchy: Foundation > SR Legacy > Survey > Experimental > other
+          asc:
+            fragment(
+              """
+              CASE ?
+                WHEN 'Foundation'     THEN 1
+                WHEN 'SR Legacy'      THEN 2
+                WHEN 'Survey (FNDDS)' THEN 3
+                WHEN 'Experimental'   THEN 4
+                ELSE 5
+              END
+              """,
+              i.food_class
+            ),
+          # 5. Stable tiebreak
+          asc: t.name
         ],
         limit: @max_results,
         select: %{id: t.ingredient_id, name: t.name}
-      )
-      |> Repo.all()
-    end
+
+    base =
+      if normalized == "" do
+        base
+      else
+        # Accent-insensitive ilike: strip accents from both sides before comparing
+        from [t, _i] in base,
+          where:
+            fragment(
+              "unaccent(?) ILIKE unaccent(?)",
+              t.name,
+              ^"%#{normalized}%"
+            )
+      end
+
+    Repo.all(base)
   end
 
   # ═════════════════════════════════════════════════════════════════════════

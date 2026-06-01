@@ -410,6 +410,24 @@ defmodule Mehungry.Food do
     {results, cursor_after}
   end
 
+  def list_ingredients_paginated_translated(language_name, cursor_after \\ nil) do
+    translated_ids =
+      from(t in IngredientTranslation,
+        where: t.language_name == ^language_name,
+        select: t.ingredient_id
+      )
+
+    query = from(i in Ingredient, where: i.id in subquery(translated_ids))
+
+    paginate_opts =
+      [cursor_fields: [{:inserted_at, :asc}, {:id, :asc}], limit: 20] ++
+        if cursor_after, do: [after: cursor_after], else: []
+
+    %{entries: entries, metadata: metadata} = Repo.paginate(query, paginate_opts)
+
+    {Repo.preload(entries, :ingredient_translation), metadata.after}
+  end
+
   def list_ingredients_paginated(%Ecto.Query{} = query) do
     # return the next 50 posts
 
@@ -611,9 +629,13 @@ defmodule Mehungry.Food do
   end
 
   def get_ingredient_by_slug(slug) do
-    search_name = String.replace(slug, "-", " ")
+    name = String.replace(slug, "-", " ")
 
-    case Repo.get_by(Ingredient, search_name: search_name) do
+    ingredient =
+      Repo.get_by(Ingredient, search_name: name) ||
+        get_ingredient_by_translation_name(name)
+
+    case ingredient do
       nil ->
         nil
 
@@ -624,6 +646,20 @@ defmodule Mehungry.Food do
           ingredient_nutrients: [nutrient: [:measurement_unit]]
         ])
     end
+  end
+
+  defp get_ingredient_by_translation_name(name) do
+    result =
+      from(t in IngredientTranslation,
+        join: i in Ingredient,
+        on: i.id == t.ingredient_id,
+        where: fragment("lower(?) = lower(?)", t.name, ^name),
+        limit: 1,
+        select: i
+      )
+      |> Repo.one()
+
+    result
   end
 
   def get_ingredient_details!(nil), do: nil
@@ -1067,7 +1103,12 @@ defmodule Mehungry.Food do
       from t in IngredientTranslation,
         where: t.language_name == ^language_name,
         order_by: [
-          desc: fragment("CASE WHEN lower(?) = lower(?) THEN 1 ELSE 0 END", t.name, ^search_term),
+          desc:
+            fragment(
+              "CASE WHEN lower(unaccent(?)) = lower(unaccent(?)) THEN 1 ELSE 0 END",
+              t.name,
+              ^search_term
+            ),
           asc: fragment("LENGTH(?)", t.name)
         ],
         limit: 20,
@@ -1077,7 +1118,8 @@ defmodule Mehungry.Food do
       if search_term == "" do
         base
       else
-        from t in base, where: ilike(t.name, ^ilike_term)
+        from t in base,
+          where: fragment("unaccent(?) ILIKE unaccent(?)", t.name, ^ilike_term)
       end
 
     ingredient_ids = Repo.all(base)
