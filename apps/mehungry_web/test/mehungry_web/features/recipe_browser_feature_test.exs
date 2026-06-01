@@ -90,7 +90,7 @@ defmodule MehungryWeb.RecipeBrowserFeatureTest do
   end
 
   def sleep(session) do
-    Process.sleep(500)
+    Process.sleep(1500)
     session
   end
 
