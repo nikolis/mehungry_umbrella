@@ -29,14 +29,19 @@ defmodule MehungryWeb.UserAuth do
   def log_in_user(conn, user, params \\ %{}) do
     token = Accounts.generate_user_session_token(user)
     user_return_to = get_session(conn, :user_return_to)
+    visitor_id = get_session(conn, :visitor_id)
 
     conn
     |> renew_session()
     |> put_session(:user_token, token)
     |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
+    |> maybe_restore_visitor_id(visitor_id)
     |> maybe_write_remember_me_cookie(token, params)
     |> redirect(to: user_return_to || signed_in_path(conn))
   end
+
+  defp maybe_restore_visitor_id(conn, nil), do: conn
+  defp maybe_restore_visitor_id(conn, visitor_id), do: put_session(conn, :visitor_id, visitor_id)
 
   defp maybe_write_remember_me_cookie(conn, token, %{"remember_me" => "true"}) do
     put_resp_cookie(conn, @remember_me_cookie, token, @remember_me_options)

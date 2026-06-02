@@ -40,15 +40,29 @@ defmodule MehungryWeb.Presence do
         if connected?(socket) do
           {address, agent} =
             case get_address_agent(socket) do
-              {a, ag} ->
-                {a, ag}
-
-              _ ->
-                {Map.get(socket.assigns, :address, ""), Map.get(socket.assigns, :agent, "")}
+              {a, ag} -> {a, ag}
+              _ -> {Map.get(socket.assigns, :address, ""), Map.get(socket.assigns, :agent, "")}
             end
 
           referrer = Map.get(socket.assigns, :referrer, "")
           path = Map.get(socket.assigns, :path, "")
+          current_user = Map.get(socket.assigns, :current_user)
+
+          session = Phoenix.LiveView.get_connect_info(socket, :session) || %{}
+          user_token = Map.get(session, "user_token")
+          visitor_id = Map.get(session, "visitor_id")
+
+          session_key =
+            if user_token do
+              :crypto.hash(:sha256, user_token)
+              |> Base.encode16(case: :lower)
+              |> String.slice(0, 24)
+            else
+              date = Date.utc_today() |> Date.to_string()
+              :crypto.hash(:sha256, "#{address}|#{agent}|#{date}")
+              |> Base.encode16(case: :lower)
+              |> String.slice(0, 24)
+            end
 
           ret =
             Presence.track(self(), "general", "general", %{
@@ -59,10 +73,14 @@ defmodule MehungryWeb.Presence do
 
           Mehungry.Meta.create_visit(%{
             ip_address: address,
+            session_key: session_key,
             details: %{
               agent: agent,
               path: path,
-              referrer: referrer
+              referrer: referrer,
+              visitor_id: visitor_id,
+              user_id: current_user && current_user.id,
+              user_email: current_user && current_user.email
             }
           })
 

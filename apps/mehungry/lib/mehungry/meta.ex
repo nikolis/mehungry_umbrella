@@ -199,6 +199,142 @@ defmodule Mehungry.Meta do
     Repo.delete(visit)
   end
 
+  @session_gap_sec 1800
+
+  def recent_sessions(limit \\ 30, days \\ 7) do
+    cutoff = NaiveDateTime.add(NaiveDateTime.utc_now(), -(days * 86_400), :second)
+    raw_limit = limit * 12
+
+    from(v in Visit,
+      where: v.inserted_at >= ^cutoff,
+      order_by: [desc: v.inserted_at],
+      limit: ^raw_limit
+    )
+    |> Repo.all()
+    |> Enum.sort_by(& &1.inserted_at)
+    |> group_into_sessions()
+    |> Enum.sort_by(& &1.started_at, {:desc, NaiveDateTime})
+    |> Enum.take(limit)
+  end
+
+  def user_sessions(user_id) do
+    id_str = to_string(user_id)
+
+    visitor_ids =
+      from(v in Visit,
+        where: fragment("details->>'user_id'") == ^id_str,
+        select: fragment("details->>'visitor_id'"),
+        distinct: true
+      )
+      |> Repo.all()
+      |> Enum.reject(&is_nil/1)
+      |> Enum.reject(&(&1 == ""))
+
+    query =
+      if visitor_ids == [] do
+        from(v in Visit,
+          where: fragment("details->>'user_id'") == ^id_str,
+          order_by: [asc: v.inserted_at]
+        )
+      else
+        from(v in Visit,
+          where:
+            fragment("details->>'user_id'") == ^id_str or
+              fragment("details->>'visitor_id'") in ^visitor_ids,
+          order_by: [asc: v.inserted_at]
+        )
+      end
+
+    query
+    |> Repo.all()
+    |> group_into_sessions()
+    |> Enum.sort_by(& &1.started_at, {:desc, NaiveDateTime})
+  end
+
+  defp group_into_sessions(visits) do
+    visits
+    |> Enum.group_by(&session_identifier/1)
+    |> Enum.flat_map(fn {_key, group} ->
+      group
+      |> Enum.sort_by(& &1.inserted_at)
+      |> split_by_time_gap()
+    end)
+  end
+
+  defp session_identifier(visit) do
+    visitor_id = get_in(visit.details || %{}, ["visitor_id"])
+
+    cond do
+      visitor_id && visitor_id != "" ->
+        "v:#{visitor_id}"
+
+      visit.session_key && visit.session_key != "" ->
+        visit.session_key
+
+      true ->
+        ip = visit.ip_address || ""
+        agent = get_in(visit.details || %{}, ["agent"]) || ""
+        date = NaiveDateTime.to_date(visit.inserted_at) |> Date.to_string()
+        :crypto.hash(:sha256, "#{ip}|#{agent}|#{date}") |> Base.encode16(case: :lower) |> String.slice(0, 24)
+    end
+  end
+
+  defp split_by_time_gap(visits) do
+    visits
+    |> Enum.reduce([], fn visit, acc ->
+      case acc do
+        [] ->
+          [[visit]]
+
+        [current | rest] ->
+          last = List.last(current)
+
+          if NaiveDateTime.diff(visit.inserted_at, last.inserted_at, :second) > @session_gap_sec do
+            [[visit] | [current | rest]]
+          else
+            [current ++ [visit] | rest]
+          end
+      end
+    end)
+    |> Enum.reverse()
+    |> Enum.map(&build_session_record/1)
+  end
+
+  defp build_session_record([first | _] = visits) do
+    last = List.last(visits)
+    duration_sec = NaiveDateTime.diff(last.inserted_at, first.inserted_at, :second)
+
+    pages =
+      Enum.map(visits, fn v ->
+        %{path: get_in(v.details || %{}, ["path"]) || "/", at: v.inserted_at}
+      end)
+
+    user_email =
+      visits
+      |> Enum.find_value(fn v -> get_in(v.details || %{}, ["user_email"]) end)
+
+    user_id =
+      visits
+      |> Enum.find_value(fn v -> get_in(v.details || %{}, ["user_id"]) end)
+
+    %{
+      session_key: first.session_key,
+      visitor_id: get_in(first.details || %{}, ["visitor_id"]),
+      ip_address: first.ip_address,
+      user_id: user_id,
+      user_email: user_email,
+      started_at: first.inserted_at,
+      ended_at: last.inserted_at,
+      duration_min: div(duration_sec, 60),
+      duration_sec: rem(duration_sec, 60),
+      page_count: length(visits),
+      pages: pages,
+      entry_page: get_in(first.details || %{}, ["path"]) || "/",
+      exit_page: get_in(last.details || %{}, ["path"]) || "/",
+      referrer: get_in(first.details || %{}, ["referrer"]) || ""
+    }
+  end
+
   def delete_all_visits() do
     Repo.delete_all(Visit)
   end

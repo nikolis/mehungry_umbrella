@@ -21,7 +21,7 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
       socket
       |> assign(filter_category: nil, filter_source: nil,
                  visit_offset: 0, filtered_visits: [], visits_exhausted: false,
-                 available_sources: [])
+                 available_sources: [], selected_session_idx: 0)
       |> load_stats()
       |> assign_online_count()
       |> init_visits()
@@ -60,6 +60,11 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
   def handle_event("resize_chart", _params, socket), do: {:noreply, socket}
 
   def handle_event("load-more", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("select_session", %{"idx" => idx}, socket) do
+    {:noreply, assign(socket, :selected_session_idx, String.to_integer(idx))}
+  end
 
   @impl true
   def handle_event("set_filter_category", %{"category" => cat}, socket) do
@@ -101,6 +106,7 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
       top_pages: Meta.top_pages(10),
       recent_visits: Meta.recent_visits(40),
       traffic_sources: source_data,
+      sessions: Meta.recent_sessions(30, 7),
       daily_chart_spec: build_daily_spec(daily_data),
       source_chart_spec: build_source_spec(source_data)
     )
@@ -389,6 +395,17 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
         String.slice(ref, 0, 40)
     end
   end
+
+  def session_identity(%{user_email: email}) when is_binary(email) and email != "", do: email
+  def session_identity(%{user_id: id}) when not is_nil(id), do: "User ##{id}"
+  def session_identity(%{ip_address: ip}), do: "Anon · #{ip}"
+
+  def session_duration(%{duration_min: 0, duration_sec: s}), do: "#{s}s"
+  def session_duration(%{duration_min: m, duration_sec: 0}), do: "#{m}m"
+  def session_duration(%{duration_min: m, duration_sec: s}), do: "#{m}m #{s}s"
+
+  def short_session_key(nil), do: "—"
+  def short_session_key(key), do: String.slice(key, 0, 8)
 
   def format_dt(nil), do: "—"
 

@@ -8,6 +8,7 @@ defmodule MehungryWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug MehungryWeb.VisitorPlug
     plug Plug.CSRFProtection
     plug :fetch_live_flash
     plug :put_root_layout, {MehungryWeb.LayoutView, :root}
@@ -20,6 +21,7 @@ defmodule MehungryWeb.Router do
   pipeline :admin_browser do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug MehungryWeb.VisitorPlug
     plug :fetch_live_flash
     plug :put_root_layout, {MehungryWeb.LayoutView, :admin_root}
     plug :protect_from_forgery
