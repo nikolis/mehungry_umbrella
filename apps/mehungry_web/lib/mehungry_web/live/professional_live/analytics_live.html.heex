@@ -165,37 +165,73 @@
               Page
             </th>
             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Category
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
               Source
             </th>
             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Referrer
+              Referrer domain
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Full referrer
             </th>
             <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
               Browser
             </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              OS
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Device
+            </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-700/50">
-          <%= for visit <- Enum.take(@recent_visits, 20) do %>
+          <%= for visit <- Enum.take(@recent_visits, 40) do %>
+            <% agent = get_in(visit.details || %{}, ["agent"])
+               referrer = get_in(visit.details || %{}, ["referrer"])
+               device = detect_device(agent) %>
             <tr class="hover:bg-slate-700/20 transition-colors">
               <td class="px-3 py-2 text-slate-500 text-xs whitespace-nowrap">
                 {format_dt(visit.inserted_at)}
               </td>
-              <td class="px-3 py-2 text-slate-300 font-mono text-xs">{visit.ip_address}</td>
-              <td class="px-3 py-2 text-slate-300 text-xs max-w-xs truncate">
+              <td class="px-3 py-2 text-slate-300 font-mono text-xs whitespace-nowrap">
+                {visit.ip_address}
+              </td>
+              <td class="px-3 py-2 text-slate-300 text-xs max-w-[140px] truncate">
                 {short_path(get_in(visit.details || %{}, ["path"]))}
               </td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-2 whitespace-nowrap">
                 <span class={"text-xs px-2 py-0.5 rounded-full border " <> source_badge_class(visit_source(visit))}>
                   {source_label(visit_source(visit))}
                 </span>
               </td>
-              <td class="px-3 py-2 text-slate-500 text-xs max-w-xs truncate">
-                {get_in(visit.details || %{}, ["referrer"])
-                |> then(fn r -> if r in [nil, ""], do: "—", else: r end)}
+              <td class="px-3 py-2 text-slate-300 text-xs font-medium whitespace-nowrap">
+                {specific_source(referrer)}
               </td>
-              <td class="px-3 py-2 text-slate-400 text-xs">
-                {short_agent(get_in(visit.details || %{}, ["agent"]))}
+              <td class="px-3 py-2 text-slate-400 text-xs whitespace-nowrap">
+                {referrer_domain(referrer)}
+              </td>
+              <td class="px-3 py-2 text-slate-500 text-xs max-w-[200px]">
+                <span
+                  class="block truncate"
+                  title={if referrer in [nil, ""], do: "—", else: referrer}
+                >
+                  {if referrer in [nil, ""], do: "—", else: referrer}
+                </span>
+              </td>
+              <td class="px-3 py-2 text-slate-400 text-xs whitespace-nowrap">
+                {short_agent(agent)}
+              </td>
+              <td class="px-3 py-2 text-slate-400 text-xs whitespace-nowrap">
+                {detect_os(agent)}
+              </td>
+              <td class="px-3 py-2">
+                <div class="flex items-center gap-1 text-slate-400">
+                  <.icon name={device_icon(device)} class="w-3.5 h-3.5" />
+                  <span class="text-xs capitalize">{device}</span>
+                </div>
               </td>
             </tr>
           <% end %>

@@ -23,6 +23,8 @@ defmodule MehungryWeb.ProfessionalLive.SeoLive do
     {:noreply, socket |> assign(:days, days) |> load_seo_stats()}
   end
 
+  def handle_event("resize_chart", _params, socket), do: {:noreply, socket}
+
   @impl true
   def handle_info(:new_visit, socket) do
     {:noreply, load_seo_stats(socket)}
