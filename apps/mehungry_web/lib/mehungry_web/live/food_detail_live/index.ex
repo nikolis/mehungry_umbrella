@@ -1,5 +1,6 @@
 defmodule MehungryWeb.FoodDetailLive.Index do
   use MehungryWeb, :live_view
+  use MehungryWeb.Presence, :user_tracking
   alias Mehungry.Food
 
   @top_nutrient_names [
@@ -20,6 +21,8 @@ defmodule MehungryWeb.FoodDetailLive.Index do
 
   @impl true
   def mount(%{"slug" => slug}, _session, socket) do
+    maybe_track_user(%{}, socket)
+
     case Food.get_ingredient_by_slug(slug) do
       nil ->
         {:ok, push_navigate(socket, to: "/foods")}

@@ -7,6 +7,7 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
   @presence_topic "general"
   @analytics_topic "mehungry:analytics"
   @refresh_ms 30_000
+  @visit_batch 60
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,7 +17,16 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
       Process.send_after(self(), :refresh, @refresh_ms)
     end
 
-    {:ok, socket |> load_stats() |> assign_online_count()}
+    socket =
+      socket
+      |> assign(filter_category: nil, filter_source: nil,
+                 visit_offset: 0, filtered_visits: [], visits_exhausted: false,
+                 available_sources: [], selected_session_idx: 0)
+      |> load_stats()
+      |> assign_online_count()
+      |> init_visits()
+
+    {:ok, socket}
   end
 
   @impl true
@@ -49,6 +59,39 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
 
   def handle_event("resize_chart", _params, socket), do: {:noreply, socket}
 
+  def handle_event("load-more", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("select_session", %{"idx" => idx}, socket) do
+    {:noreply, assign(socket, :selected_session_idx, String.to_integer(idx))}
+  end
+
+  @impl true
+  def handle_event("set_filter_category", %{"category" => cat}, socket) do
+    new_cat = if cat == socket.assigns.filter_category, do: nil, else: cat
+    {:noreply, socket |> assign(filter_category: new_cat, filter_source: nil) |> reload_visits()}
+  end
+
+  @impl true
+  def handle_event("set_filter_source", %{"source" => src}, socket) do
+    new_src = if src == socket.assigns.filter_source, do: nil, else: src
+    {:noreply, socket |> assign(filter_source: new_src, filter_category: nil) |> reload_visits()}
+  end
+
+  @impl true
+  def handle_event("clear_visit_filter", _params, socket) do
+    {:noreply, socket |> assign(filter_category: nil, filter_source: nil) |> reload_visits()}
+  end
+
+  @impl true
+  def handle_event("load_more_visits", _params, socket) do
+    if socket.assigns.visits_exhausted do
+      {:noreply, socket}
+    else
+      {:noreply, fetch_more_visits(socket)}
+    end
+  end
+
   defp load_stats(socket) do
     today = Meta.stats_today()
     totals = Meta.total_stats()
@@ -63,9 +106,64 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
       top_pages: Meta.top_pages(10),
       recent_visits: Meta.recent_visits(40),
       traffic_sources: source_data,
+      sessions: Meta.recent_sessions(30, 7),
       daily_chart_spec: build_daily_spec(daily_data),
       source_chart_spec: build_source_spec(source_data)
     )
+  end
+
+  defp init_visits(socket) do
+    available =
+      Meta.distinct_referrers(30)
+      |> Enum.map(&specific_source/1)
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    socket
+    |> assign(:available_sources, available)
+    |> reload_visits()
+  end
+
+  defp reload_visits(socket) do
+    raw = Meta.recent_visits_page(@visit_batch, 0)
+    filtered = apply_visit_filters(raw, socket.assigns.filter_category, socket.assigns.filter_source)
+
+    assign(socket,
+      filtered_visits: filtered,
+      visit_offset: length(raw),
+      visits_exhausted: length(raw) < @visit_batch
+    )
+  end
+
+  defp fetch_more_visits(socket) do
+    raw = Meta.recent_visits_page(@visit_batch, socket.assigns.visit_offset)
+    filtered = apply_visit_filters(raw, socket.assigns.filter_category, socket.assigns.filter_source)
+
+    assign(socket,
+      filtered_visits: socket.assigns.filtered_visits ++ filtered,
+      visit_offset: socket.assigns.visit_offset + length(raw),
+      visits_exhausted: length(raw) < @visit_batch
+    )
+  end
+
+  defp apply_visit_filters(visits, nil, nil), do: visits
+
+  defp apply_visit_filters(visits, category, nil) do
+    Enum.filter(visits, fn v -> visit_source(v) == category end)
+  end
+
+  defp apply_visit_filters(visits, nil, source) do
+    Enum.filter(visits, fn v ->
+      ref = get_in(v.details || %{}, ["referrer"]) || ""
+      specific_source(ref) == source
+    end)
+  end
+
+  defp apply_visit_filters(visits, category, source) do
+    Enum.filter(visits, fn v ->
+      visit_source(v) == category and
+        specific_source(get_in(v.details || %{}, ["referrer"]) || "") == source
+    end)
   end
 
   defp assign_online_count(socket) do
@@ -297,6 +395,22 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
         String.slice(ref, 0, 40)
     end
   end
+
+  def format_page_time(nil), do: nil
+  def format_page_time(0), do: "< 1s"
+  def format_page_time(sec) when sec < 60, do: "#{sec}s"
+  def format_page_time(sec), do: "#{div(sec, 60)}m #{rem(sec, 60)}s"
+
+  def session_identity(%{user_email: email}) when is_binary(email) and email != "", do: email
+  def session_identity(%{user_id: id}) when not is_nil(id), do: "User ##{id}"
+  def session_identity(%{ip_address: ip}), do: "Anon · #{ip}"
+
+  def session_duration(%{duration_min: 0, duration_sec: s}), do: "#{s}s"
+  def session_duration(%{duration_min: m, duration_sec: 0}), do: "#{m}m"
+  def session_duration(%{duration_min: m, duration_sec: s}), do: "#{m}m #{s}s"
+
+  def short_session_key(nil), do: "—"
+  def short_session_key(key), do: String.slice(key, 0, 8)
 
   def format_dt(nil), do: "—"
 

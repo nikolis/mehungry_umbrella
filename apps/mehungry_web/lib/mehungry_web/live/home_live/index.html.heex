@@ -1,3 +1,4 @@
+<div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
 <div class="min-h-screen bg-slate-900 pb-10">
   <div class="container max-w-2xl mx-auto px-4 py-8">
     <!-- Feed Header -->
@@ -92,16 +93,27 @@
     </MehungryWeb.RecipeComponents.recipe_modal>
     <div class="space-y-6">
       <%= for post <- @posts do %>
-        <%= if ! is_nil( post.reference) do %>
-          <.post_card
-            post={post}
-            id={post.id}
-            user={@user}
-            user_follows={@current_user_follows}
-            current_user_recipes={@current_user_recipes}
-          />
-        <% end %>
+        <.post_card
+          post={post}
+          id={post.id}
+          user={@user}
+          user_follows={@current_user_follows}
+          current_user_recipes={@current_user_recipes}
+        />
       <% end %>
     </div>
+
+    <%= unless @posts_exhausted do %>
+      <div
+        id="posts-scroll-sentinel"
+        phx-hook="InfiniteScroll"
+        data-page={@page}
+        class="h-8 flex items-center justify-center mt-4"
+      >
+        <span class="text-slate-600 text-xs">Loading more…</span>
+      </div>
+    <% else %>
+      <p class="text-center text-slate-600 text-xs mt-6 pb-4">You've seen all posts</p>
+    <% end %>
   </div>
 </div>

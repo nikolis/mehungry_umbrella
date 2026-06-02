@@ -8,6 +8,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
   embed_templates("components/*")
   @color_fill "#00A0D0"
+  @per_page 10
 
   alias Mehungry.Accounts
   alias Mehungry.Posts
@@ -26,25 +27,42 @@ defmodule MehungryWeb.HomeLive.Index do
           Accounts.get_user_by_session_token(session["user_token"])
       end
 
-    posts = Mehungry.Posts.list_posts(user)
+    all_posts =
+      Mehungry.Posts.list_posts(user)
+      |> Enum.filter(fn x -> !is_nil(x) and !is_nil(x.reference) end)
 
-    posts = Enum.filter(posts, fn x -> !is_nil(x) end)
     {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
     current_user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
-    Enum.each(posts, fn post ->
+    Enum.each(all_posts, fn post ->
       Posts.subscribe_to_post(%{post_id: post.id})
     end)
 
     {:ok,
      socket
      |> assign(:user, user)
-     |> assign(:posts, posts)
+     |> assign(:all_posts, all_posts)
+     |> assign(:posts, Enum.take(all_posts, @per_page))
+     |> assign(:page, 1)
+     |> assign(:posts_exhausted, length(all_posts) <= @per_page)
      |> assign(:user_profile, user_profile)
      |> assign(:current_user_follows, current_user_follows)
      |> assign(:current_user_recipes, user_recipes)
      |> assign(:must_be_loged_in, nil)
      |> assign(:page_title, "Browse Recipes")}
+  end
+
+  @impl true
+  def handle_event("load-more", _params, socket) do
+    %{all_posts: all_posts, page: page} = socket.assigns
+    next_page = page + 1
+    displayed = Enum.take(all_posts, next_page * @per_page)
+
+    {:noreply,
+     socket
+     |> assign(:posts, displayed)
+     |> assign(:page, next_page)
+     |> assign(:posts_exhausted, length(displayed) >= length(all_posts))}
   end
 
   @impl true
@@ -195,21 +213,13 @@ defmodule MehungryWeb.HomeLive.Index do
   def handle_info(%{new_vote: vote, type_: _type_}, socket) do
     post = Posts.get_post!(vote.post_id)
 
-    posts =
-      Enum.map(socket.assigns.posts, fn x ->
-        case x.id == post.id do
-          false ->
-            x
+    update_post = fn list ->
+      Enum.map(list, fn x -> if x.id == post.id, do: post, else: x end)
+    end
 
-          true ->
-            post
-        end
-      end)
-
-    socket =
-      socket
-      |> assign(:posts, posts)
-
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> assign(:all_posts, update_post.(socket.assigns.all_posts))
+     |> assign(:posts, update_post.(socket.assigns.posts))}
   end
 end

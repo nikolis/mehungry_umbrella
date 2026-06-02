@@ -29,7 +29,7 @@ Hooks.ResponsiveChart = {
 Hooks.VegaLite = {
   mounted() {
     const spec = JSON.parse(this.el.dataset.spec)
-    vegaEmbed(this.el, spec)
+    vegaEmbed(this.el, spec).then(result => { this._view = result.view })
 
     this.handleResize = () => {
       const width = this.el.offsetWidth
@@ -40,14 +40,63 @@ Hooks.VegaLite = {
     this.handleResize()
   },
   updated() {
+    if (this._view) { this._view.finalize(); this._view = null }
     const spec = JSON.parse(this.el.dataset.spec)
-    vegaEmbed(this.el, spec)
+    vegaEmbed(this.el, spec).then(result => { this._view = result.view })
   },
   destroyed() {
     window.removeEventListener("resize", this.handleResize)
+    if (this._view) { this._view.finalize(); this._view = null }
   }
 }
 
+
+// Capture the start of a LiveView page-level navigation so PageTimer.mounted()
+// can compute the full round-trip (request → DOM ready) for in-app navigation.
+let _liveNavStart = null
+window.addEventListener('phx:page-loading-start', (e) => {
+  if (e.detail && e.detail.kind === 'page') _liveNavStart = performance.now()
+})
+
+Hooks.PageTimer = {
+  mounted() {
+    if (_liveNavStart !== null) {
+      // LiveView navigation — measure from request start to DOM ready
+      const loadMs = Math.round(performance.now() - _liveNavStart)
+      _liveNavStart = null
+      this.pushEvent('page_timing', { ttfb_ms: null, load_ms: loadMs })
+    } else {
+      // Initial HTTP load — use Navigation Timing API for real TTFB
+      const report = () => {
+        try {
+          const nav = performance.getEntriesByType('navigation')[0]
+          if (!nav) return
+          const ttfb = Math.round(nav.responseStart - nav.fetchStart)
+          const load = nav.loadEventEnd > 0
+            ? Math.round(nav.loadEventEnd - nav.fetchStart)
+            : Math.round(nav.domInteractive - nav.fetchStart)
+          if (ttfb >= 0) this.pushEvent('page_timing', { ttfb_ms: ttfb, load_ms: load })
+        } catch (_) {}
+      }
+      if (document.readyState === 'complete') { report() }
+      else { window.addEventListener('load', report, { once: true }) }
+    }
+  }
+}
+
+Hooks.VisitScroll = {
+  mounted() {
+    this.observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        this.pushEvent("load_more_visits", {})
+      }
+    }, { rootMargin: "300px" })
+    this.observer.observe(this.el)
+  },
+  destroyed() {
+    if (this.observer) this.observer.disconnect()
+  }
+}
 
 Hooks.Copy = {
   mounted() {
@@ -237,9 +286,6 @@ Hooks.InfiniteScroll = {
 		})
 	},
 	reconnected() {
-    console.log("-------------------------- page reconnect");
-    console.log(this.page())
-    console.log("-------------------------- page reconnect --------------------------------------------------");
 		this.pending = this.page()
 	},
 	updated() {
