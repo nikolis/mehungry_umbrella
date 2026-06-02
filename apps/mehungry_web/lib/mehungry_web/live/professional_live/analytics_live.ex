@@ -35,6 +35,20 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
     {:noreply, load_stats(socket)}
   end
 
+  @impl true
+  def handle_event("resize_chart", %{"width" => width}, socket) when width > 50 do
+    daily_data = Meta.visits_per_day(14)
+    source_data = Meta.traffic_sources(30)
+
+    {:noreply,
+     assign(socket,
+       daily_chart_spec: build_daily_spec(daily_data, width),
+       source_chart_spec: build_source_spec(source_data, width)
+     )}
+  end
+
+  def handle_event("resize_chart", _params, socket), do: {:noreply, socket}
+
   defp load_stats(socket) do
     today = Meta.stats_today()
     totals = Meta.total_stats()
@@ -66,11 +80,11 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
 
   # ---------- Chart builders ----------
 
-  defp build_daily_spec(data) do
+  defp build_daily_spec(data, width \\ :container) do
     chart_data =
       Enum.map(data, fn %{date: d, count: c} -> %{"date" => to_string(d), "visits" => c} end)
 
-    Vl.new(width: :container, height: 160)
+    Vl.new(width: width, height: 160)
     |> Vl.data_from_values(chart_data)
     |> Vl.mark(:bar, color: "#EA580C", corner_radius_end: 3)
     |> Vl.encode_field(:x, "date",
@@ -91,8 +105,10 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
     |> Vl.to_spec()
   end
 
-  defp build_source_spec(data) when data == [] do
-    Vl.new(width: :container, height: 160)
+  defp build_source_spec(data, width \\ :container)
+
+  defp build_source_spec(data, width) when data == [] do
+    Vl.new(width: width, height: 160)
     |> Vl.data_from_values([%{"source" => "no data", "count" => 0}])
     |> Vl.mark(:bar)
     |> Vl.encode_field(:y, "source", type: :nominal)
@@ -101,8 +117,8 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
     |> Vl.to_spec()
   end
 
-  defp build_source_spec(data) do
-    Vl.new(width: :container, height: 160)
+  defp build_source_spec(data, width) do
+    Vl.new(width: width, height: 160)
     |> Vl.data_from_values(data)
     |> Vl.mark(:bar, corner_radius_end: 3)
     |> Vl.encode_field(:y, "source",
@@ -168,12 +184,91 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
     cond do
       String.contains?(agent, "Googlebot") -> "Googlebot"
       String.contains?(agent, "bingbot") -> "Bingbot"
-      String.contains?(agent, "iPhone") -> "iPhone"
-      String.contains?(agent, "Android") -> "Android"
-      String.contains?(agent, "Chrome") -> "Chrome"
+      String.contains?(agent, "DuckDuckBot") -> "DuckDuckBot"
+      String.contains?(agent, "YandexBot") -> "YandexBot"
+      String.contains?(agent, "AhrefsBot") -> "AhrefsBot"
+      String.contains?(agent, "SemrushBot") -> "SemrushBot"
+      String.contains?(agent, "facebookexternalhit") -> "FacebookBot"
+      String.contains?(agent, "Twitterbot") -> "Twitterbot"
+      String.contains?(agent, "iPhone") -> "Safari/iPhone"
+      String.contains?(agent, "iPad") -> "Safari/iPad"
+      String.contains?(agent, "Android") and String.contains?(agent, "Chrome") -> "Chrome/Android"
+      String.contains?(agent, "Android") -> "Android Browser"
+      String.contains?(agent, "Edg/") -> "Edge"
+      String.contains?(agent, "OPR/") or String.contains?(agent, "Opera") -> "Opera"
       String.contains?(agent, "Firefox") -> "Firefox"
+      String.contains?(agent, "Chrome") -> "Chrome"
       String.contains?(agent, "Safari") -> "Safari"
       true -> String.slice(agent, 0, 30)
+    end
+  end
+
+  def detect_os(nil), do: "—"
+  def detect_os(""), do: "—"
+
+  def detect_os(agent) do
+    cond do
+      String.contains?(agent, "Windows NT 10") -> "Win 10/11"
+      String.contains?(agent, "Windows NT 6.3") -> "Win 8.1"
+      String.contains?(agent, "Windows NT 6.1") -> "Win 7"
+      String.contains?(agent, "Windows") -> "Windows"
+      String.contains?(agent, "iPhone OS") ->
+        case Regex.run(~r/iPhone OS (\d+)_/, agent) do
+          [_, v] -> "iOS #{v}"
+          _ -> "iOS"
+        end
+      String.contains?(agent, "iPad") ->
+        case Regex.run(~r/OS (\d+)_/, agent) do
+          [_, v] -> "iPadOS #{v}"
+          _ -> "iPadOS"
+        end
+      String.contains?(agent, "Android") ->
+        case Regex.run(~r/Android (\d+)/, agent) do
+          [_, v] -> "Android #{v}"
+          _ -> "Android"
+        end
+      String.contains?(agent, "Mac OS X") ->
+        case Regex.run(~r/Mac OS X (\d+)[_.](\d+)/, agent) do
+          [_, maj, min] -> "macOS #{maj}.#{min}"
+          _ -> "macOS"
+        end
+      String.contains?(agent, "Linux") -> "Linux"
+      true -> "—"
+    end
+  end
+
+  def detect_device(nil), do: "desktop"
+  def detect_device(""), do: "desktop"
+
+  def detect_device(agent) do
+    cond do
+      String.contains?(agent, "Googlebot") or String.contains?(agent, "bot") or
+          String.contains?(agent, "Bot") or String.contains?(agent, "Crawler") ->
+        "bot"
+      String.contains?(agent, "iPhone") or String.contains?(agent, "Android") and
+          not String.contains?(agent, "Tablet") ->
+        "mobile"
+      String.contains?(agent, "iPad") or String.contains?(agent, "Tablet") ->
+        "tablet"
+      true ->
+        "desktop"
+    end
+  end
+
+  def device_icon("mobile"), do: "hero-device-phone-mobile"
+  def device_icon("tablet"), do: "hero-device-tablet"
+  def device_icon("bot"), do: "hero-cpu-chip"
+  def device_icon(_), do: "hero-computer-desktop"
+
+  def referrer_domain(nil), do: "—"
+  def referrer_domain(""), do: "direct"
+
+  def referrer_domain(ref) do
+    case URI.parse(ref) do
+      %URI{host: host} when not is_nil(host) ->
+        host |> String.replace_prefix("www.", "")
+      _ ->
+        String.slice(ref, 0, 40)
     end
   end
 
