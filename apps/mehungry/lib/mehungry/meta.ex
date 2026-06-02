@@ -160,9 +160,68 @@ defmodule Mehungry.Meta do
 
   """
   def create_visit(attrs \\ %{}) do
-    %Visit{}
-    |> Visit.changeset(attrs)
-    |> Repo.insert()
+    result =
+      %Visit{}
+      |> Visit.changeset(attrs)
+      |> Repo.insert()
+
+    case result do
+      {:ok, visit} ->
+        Task.start(fn -> enrich_visit_country(visit) end)
+        result
+
+      _ ->
+        result
+    end
+  end
+
+  defp enrich_visit_country(visit) do
+    ip = visit.ip_address
+
+    if ip && ip != "" && !local_ip?(ip) do
+      country =
+        case Cachex.get(:geo_cache, ip) do
+          {:ok, nil} ->
+            resolved = fetch_country(ip)
+            Cachex.put(:geo_cache, ip, resolved)
+            resolved
+
+          {:ok, cached} ->
+            cached
+
+          _ ->
+            nil
+        end
+
+      if country do
+        update_visit(visit, %{details: Map.put(visit.details || %{}, "country", country)})
+      end
+    end
+  end
+
+  defp local_ip?(ip) do
+    String.starts_with?(ip, ["127.", "192.168.", "10.", "172.16.", "172.17.", "172.18.",
+                              "172.19.", "172.20.", "172.21.", "172.22.", "172.23.",
+                              "172.24.", "172.25.", "172.26.", "172.27.", "172.28.",
+                              "172.29.", "172.30.", "172.31.", "::1", ""])
+  end
+
+  defp fetch_country(ip) do
+    url = "http://ip-api.com/json/#{ip}?fields=country,countryCode"
+
+    case HTTPoison.get(url, [], recv_timeout: 3_000) do
+      {:ok, %{status_code: 200, body: body}} ->
+        case Jason.decode(body) do
+          {:ok, %{"status" => "success", "country" => country, "countryCode" => code}} ->
+            "#{country} (#{code})"
+
+          _ ->
+            nil
+        end
+
+      _ ->
+        nil
+    end
   end
 
   @doc """
@@ -177,6 +236,17 @@ defmodule Mehungry.Meta do
       {:error, %Ecto.Changeset{}}
 
   """
+  def update_visit_timing(visit_id, ttfb_ms, load_ms) do
+    case Repo.get(Visit, visit_id) do
+      nil ->
+        :ok
+
+      visit ->
+        details = Map.merge(visit.details || %{}, %{"ttfb_ms" => ttfb_ms, "load_ms" => load_ms})
+        update_visit(visit, %{details: details})
+    end
+  end
+
   def update_visit(%Visit{} = visit, attrs) do
     visit
     |> Visit.changeset(attrs)
@@ -305,8 +375,23 @@ defmodule Mehungry.Meta do
     duration_sec = NaiveDateTime.diff(last.inserted_at, first.inserted_at, :second)
 
     pages =
-      Enum.map(visits, fn v ->
-        %{path: get_in(v.details || %{}, ["path"]) || "/", at: v.inserted_at}
+      visits
+      |> Enum.with_index()
+      |> Enum.map(fn {v, i} ->
+        next = Enum.at(visits, i + 1)
+
+        time_sec =
+          if next,
+            do: NaiveDateTime.diff(next.inserted_at, v.inserted_at, :second),
+            else: nil
+
+        %{
+          path: get_in(v.details || %{}, ["path"]) || "/",
+          at: v.inserted_at,
+          time_sec: time_sec,
+          ttfb_ms: get_in(v.details || %{}, ["ttfb_ms"]),
+          load_ms: get_in(v.details || %{}, ["load_ms"])
+        }
       end)
 
     user_email =

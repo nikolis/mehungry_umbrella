@@ -51,6 +51,27 @@ Hooks.VegaLite = {
 }
 
 
+Hooks.PageTimer = {
+  mounted() {
+    const report = () => {
+      try {
+        const nav = performance.getEntriesByType('navigation')[0]
+        if (!nav) return
+        const ttfb = Math.round(nav.responseStart - nav.fetchStart)
+        const load = nav.loadEventEnd > 0
+          ? Math.round(nav.loadEventEnd - nav.fetchStart)
+          : Math.round(nav.domInteractive - nav.fetchStart)
+        if (ttfb >= 0) this.pushEvent('page_timing', { ttfb_ms: ttfb, load_ms: load })
+      } catch (_) {}
+    }
+    if (document.readyState === 'complete') {
+      report()
+    } else {
+      window.addEventListener('load', report, { once: true })
+    }
+  }
+}
+
 Hooks.VisitScroll = {
   mounted() {
     this.observer = new IntersectionObserver(entries => {
@@ -253,9 +274,6 @@ Hooks.InfiniteScroll = {
 		})
 	},
 	reconnected() {
-    console.log("-------------------------- page reconnect");
-    console.log(this.page())
-    console.log("-------------------------- page reconnect --------------------------------------------------");
 		this.pending = this.page()
 	},
 	updated() {

@@ -48,9 +48,13 @@ defmodule MehungryWeb.Presence do
           path = Map.get(socket.assigns, :path, "")
           current_user = Map.get(socket.assigns, :current_user)
 
-          session = Phoenix.LiveView.get_connect_info(socket, :session) || %{}
-          user_token = Map.get(session, "user_token")
-          visitor_id = Map.get(session, "visitor_id")
+          {user_token, visitor_id} =
+            try do
+              session = Phoenix.LiveView.get_connect_info(socket, :session) || %{}
+              {Map.get(session, "user_token"), Map.get(session, "visitor_id")}
+            rescue
+              _ -> {nil, nil}
+            end
 
           session_key =
             if user_token do
@@ -71,18 +75,21 @@ defmodule MehungryWeb.Presence do
               path: path
             })
 
-          Mehungry.Meta.create_visit(%{
-            ip_address: address,
-            session_key: session_key,
-            details: %{
-              agent: agent,
-              path: path,
-              referrer: referrer,
-              visitor_id: visitor_id,
-              user_id: current_user && current_user.id,
-              user_email: current_user && current_user.email
-            }
-          })
+          case Mehungry.Meta.create_visit(%{
+                 ip_address: address,
+                 session_key: session_key,
+                 details: %{
+                   agent: agent,
+                   path: path,
+                   referrer: referrer,
+                   visitor_id: visitor_id,
+                   user_id: current_user && current_user.id,
+                   user_email: current_user && current_user.email
+                 }
+               }) do
+            {:ok, visit} -> Process.put(:current_visit_id, visit.id)
+            _ -> :ok
+          end
 
           Phoenix.PubSub.broadcast(Mehungry.PubSub, "mehungry:analytics", :new_visit)
 
@@ -90,9 +97,16 @@ defmodule MehungryWeb.Presence do
         else
           nil
         end
+      end
+
+      def handle_event("page_timing", %{"ttfb_ms" => ttfb, "load_ms" => load}, socket) do
+        visit_id = Process.get(:current_visit_id)
+        if visit_id, do: Mehungry.Meta.update_visit_timing(visit_id, ttfb, load)
+        {:noreply, socket}
+      end
 
         # Presence.track(socket, "General" ,"General", %{addres: address, agent: agent, path: path} )
-      end
+
 
       """
             def maybe_track_user(

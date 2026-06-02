@@ -137,7 +137,12 @@
             <div class={"text-xs px-2 py-0.5 rounded-full border shrink-0 " <> source_badge_class(visit_source(visit))}>
               {source_label(visit_source(visit))}
             </div>
-            <span class="text-slate-400 text-xs font-mono shrink-0">{visit.ip_address}</span>
+            <span class="text-slate-400 text-xs font-mono shrink-0">
+              {visit.ip_address}
+              <%= if c = get_in(visit.details || %{}, ["country"]) do %>
+                <span class="text-slate-600 font-sans">({c})</span>
+              <% end %>
+            </span>
             <span class="text-slate-300 text-xs truncate flex-1">
               {short_path(get_in(visit.details || %{}, ["path"]))}
             </span>
@@ -216,14 +221,26 @@
           </div>
 
 <!-- Page journey -->
-          <div class="flex flex-wrap items-center gap-1.5">
+          <div class="flex flex-wrap items-center gap-1">
             <%= for {page, pi} <- Enum.with_index(session.pages) do %>
               <%= if pi > 0 do %>
                 <.icon name="hero-arrow-right" class="w-3 h-3 text-slate-700 shrink-0" />
               <% end %>
-              <div class="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-slate-700/70 text-slate-300 font-mono">
-                <span>{short_path(page.path)}</span>
-                <span class="text-slate-600 ml-1">{format_dt(page.at)}</span>
+              <div class="flex flex-col items-center gap-0.5">
+                <div class="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-slate-700/70 text-slate-300 font-mono">
+                  <span>{short_path(page.path)}</span>
+                  <span class="text-slate-600">{format_dt(page.at)}</span>
+                </div>
+                <div class="flex gap-2">
+                  <%= if t = format_page_time(page.time_sec) do %>
+                    <span class="text-xs text-slate-600 font-sans" title="time on page">{t}</span>
+                  <% end %>
+                  <%= if page.ttfb_ms do %>
+                    <span class="text-xs text-emerald-700 font-sans" title="TTFB">
+                      {page.ttfb_ms}ms
+                    </span>
+                  <% end %>
+                </div>
               </div>
             <% end %>
           </div>
@@ -344,6 +361,9 @@
               </td>
               <td class="px-3 py-2 text-slate-300 font-mono text-xs whitespace-nowrap">
                 {visit.ip_address}
+                <%= if country = get_in(visit.details || %{}, ["country"]) do %>
+                  <span class="text-slate-500 font-sans font-normal ml-1">({country})</span>
+                <% end %>
               </td>
               <td class="px-3 py-2 text-slate-300 text-xs max-w-[140px] truncate">
                 {short_path(get_in(visit.details || %{}, ["path"]))}

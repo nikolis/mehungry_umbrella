@@ -396,6 +396,11 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
     end
   end
 
+  def format_page_time(nil), do: nil
+  def format_page_time(0), do: "< 1s"
+  def format_page_time(sec) when sec < 60, do: "#{sec}s"
+  def format_page_time(sec), do: "#{div(sec, 60)}m #{rem(sec, 60)}s"
+
   def session_identity(%{user_email: email}) when is_binary(email) and email != "", do: email
   def session_identity(%{user_id: id}) when not is_nil(id), do: "User ##{id}"
   def session_identity(%{ip_address: ip}), do: "Anon · #{ip}"
