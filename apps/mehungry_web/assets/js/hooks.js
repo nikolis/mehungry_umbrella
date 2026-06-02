@@ -51,23 +51,35 @@ Hooks.VegaLite = {
 }
 
 
+// Capture the start of a LiveView page-level navigation so PageTimer.mounted()
+// can compute the full round-trip (request → DOM ready) for in-app navigation.
+let _liveNavStart = null
+window.addEventListener('phx:page-loading-start', (e) => {
+  if (e.detail && e.detail.kind === 'page') _liveNavStart = performance.now()
+})
+
 Hooks.PageTimer = {
   mounted() {
-    const report = () => {
-      try {
-        const nav = performance.getEntriesByType('navigation')[0]
-        if (!nav) return
-        const ttfb = Math.round(nav.responseStart - nav.fetchStart)
-        const load = nav.loadEventEnd > 0
-          ? Math.round(nav.loadEventEnd - nav.fetchStart)
-          : Math.round(nav.domInteractive - nav.fetchStart)
-        if (ttfb >= 0) this.pushEvent('page_timing', { ttfb_ms: ttfb, load_ms: load })
-      } catch (_) {}
-    }
-    if (document.readyState === 'complete') {
-      report()
+    if (_liveNavStart !== null) {
+      // LiveView navigation — measure from request start to DOM ready
+      const loadMs = Math.round(performance.now() - _liveNavStart)
+      _liveNavStart = null
+      this.pushEvent('page_timing', { ttfb_ms: null, load_ms: loadMs })
     } else {
-      window.addEventListener('load', report, { once: true })
+      // Initial HTTP load — use Navigation Timing API for real TTFB
+      const report = () => {
+        try {
+          const nav = performance.getEntriesByType('navigation')[0]
+          if (!nav) return
+          const ttfb = Math.round(nav.responseStart - nav.fetchStart)
+          const load = nav.loadEventEnd > 0
+            ? Math.round(nav.loadEventEnd - nav.fetchStart)
+            : Math.round(nav.domInteractive - nav.fetchStart)
+          if (ttfb >= 0) this.pushEvent('page_timing', { ttfb_ms: ttfb, load_ms: load })
+        } catch (_) {}
+      }
+      if (document.readyState === 'complete') { report() }
+      else { window.addEventListener('load', report, { once: true }) }
     }
   }
 }

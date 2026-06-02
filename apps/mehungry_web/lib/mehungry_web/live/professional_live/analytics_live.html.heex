@@ -236,9 +236,15 @@
                     <span class="text-xs text-slate-600 font-sans" title="time on page">{t}</span>
                   <% end %>
                   <%= if page.ttfb_ms do %>
-                    <span class="text-xs text-emerald-700 font-sans" title="TTFB">
-                      {page.ttfb_ms}ms
+                    <span class="text-xs text-emerald-700 font-sans" title={"TTFB #{page.ttfb_ms}ms / load #{page.load_ms}ms"}>
+                      ↓{page.ttfb_ms}ms
                     </span>
+                  <% else %>
+                    <%= if page.load_ms do %>
+                      <span class="text-xs text-sky-700 font-sans" title={"LiveView render #{page.load_ms}ms"}>
+                        ⚡{page.load_ms}ms
+                      </span>
+                    <% end %>
                   <% end %>
                 </div>
               </div>
