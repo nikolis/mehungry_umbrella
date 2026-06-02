@@ -49,6 +49,20 @@ Hooks.VegaLite = {
 }
 
 
+Hooks.VisitScroll = {
+  mounted() {
+    this.observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        this.pushEvent("load_more_visits", {})
+      }
+    }, { rootMargin: "300px" })
+    this.observer.observe(this.el)
+  },
+  destroyed() {
+    if (this.observer) this.observer.disconnect()
+  }
+}
+
 Hooks.Copy = {
   mounted() {
     let { to } = this.el.dataset;

@@ -38,6 +38,25 @@ defmodule Mehungry.Meta do
     |> Repo.all()
   end
 
+  def recent_visits_page(limit, offset) do
+    from(v in Visit, order_by: [desc: v.inserted_at], limit: ^limit, offset: ^offset)
+    |> Repo.all()
+  end
+
+  def distinct_referrers(days \\ 30) do
+    cutoff = NaiveDateTime.add(NaiveDateTime.utc_now(), -(days * 86_400), :second)
+
+    from(v in Visit,
+      where:
+        v.inserted_at >= ^cutoff and
+          fragment("details->>'referrer'") != "" and
+          not is_nil(fragment("details->>'referrer'")),
+      group_by: fragment("details->>'referrer'"),
+      select: fragment("details->>'referrer'")
+    )
+    |> Repo.all()
+  end
+
   def top_pages(limit \\ 10) do
     from(v in Visit,
       where: not is_nil(fragment("details->>'path'")),
