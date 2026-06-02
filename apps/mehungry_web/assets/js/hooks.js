@@ -29,7 +29,7 @@ Hooks.ResponsiveChart = {
 Hooks.VegaLite = {
   mounted() {
     const spec = JSON.parse(this.el.dataset.spec)
-    vegaEmbed(this.el, spec)
+    vegaEmbed(this.el, spec).then(result => { this._view = result.view })
 
     this.handleResize = () => {
       const width = this.el.offsetWidth
@@ -40,11 +40,13 @@ Hooks.VegaLite = {
     this.handleResize()
   },
   updated() {
+    if (this._view) { this._view.finalize(); this._view = null }
     const spec = JSON.parse(this.el.dataset.spec)
-    vegaEmbed(this.el, spec)
+    vegaEmbed(this.el, spec).then(result => { this._view = result.view })
   },
   destroyed() {
     window.removeEventListener("resize", this.handleResize)
+    if (this._view) { this._view.finalize(); this._view = null }
   }
 }
 
