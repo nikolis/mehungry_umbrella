@@ -164,6 +164,32 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
     Meta.classify_referrer(ref) |> Atom.to_string()
   end
 
+  def specific_source(nil), do: "Direct"
+  def specific_source(""), do: "Direct"
+
+  def specific_source(ref) do
+    cond do
+      String.contains?(ref, "google.") -> "Google"
+      String.contains?(ref, "bing.com") -> "Bing"
+      String.contains?(ref, "duckduckgo.com") -> "DuckDuckGo"
+      String.contains?(ref, "yahoo.com") -> "Yahoo"
+      String.contains?(ref, "yandex.") -> "Yandex"
+      String.contains?(ref, "baidu.com") -> "Baidu"
+      String.contains?(ref, "ecosia.org") -> "Ecosia"
+      String.contains?(ref, "search.brave.com") -> "Brave Search"
+      String.contains?(ref, "facebook.com") -> "Facebook"
+      String.contains?(ref, "instagram.com") -> "Instagram"
+      String.contains?(ref, "twitter.com") or String.contains?(ref, "t.co") -> "Twitter/X"
+      String.contains?(ref, "linkedin.com") -> "LinkedIn"
+      String.contains?(ref, "reddit.com") -> "Reddit"
+      String.contains?(ref, "pinterest.com") -> "Pinterest"
+      String.contains?(ref, "tiktok.com") -> "TikTok"
+      String.contains?(ref, "youtube.com") -> "YouTube"
+      String.contains?(ref, "mehungry") -> "Internal"
+      true -> referrer_domain(ref)
+    end
+  end
+
   def short_path(nil), do: "Home"
   def short_path(""), do: "Home"
 
