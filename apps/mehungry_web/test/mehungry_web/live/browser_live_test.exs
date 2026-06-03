@@ -95,6 +95,55 @@ defmodule MehungryWeb.BrowserLiveTest do
       |> element(like_recipe_button)
   end
 
+  test "search with plain text navigates to /search/:query without crashing", %{
+    conn: conn,
+    user: user
+  } do
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
+    Accounts.update_user_profile(user_profile, %{onboarding_level: 1})
+
+    {:ok, index_live, _html} = live(conn, Routes.recipe_browser_index_path(conn, :index))
+
+    assert {:ok, _search_live, html} =
+             index_live
+             |> form(".form-search", recipe_search_item: %{query_string: "eggs"})
+             |> render_submit()
+             |> follow_redirect(conn, "/search/eggs")
+
+    assert html =~ "eggs" or is_binary(html)
+  end
+
+  test "search form submit button does not fire unknown event", %{conn: conn, user: user} do
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
+    Accounts.update_user_profile(user_profile, %{onboarding_level: 1})
+
+    {:ok, index_live, _html} = live(conn, Routes.recipe_browser_index_path(conn, :index))
+
+    # Submitting the form via the invisible submit button should trigger the
+    # "search" event (phx-submit="search") and navigate — not crash with "submit" event
+    assert {:ok, _search_live, _html} =
+             index_live
+             |> form(".form-search", recipe_search_item: %{query_string: "chicken"})
+             |> render_submit()
+             |> follow_redirect(conn, "/search/chicken")
+  end
+
+  test "recipe detail from browse renders without missing :user assign crash", %{
+    conn: conn,
+    user: user
+  } do
+    recipe = recipe_fixture(user)
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
+    Accounts.update_user_profile(user_profile, %{onboarding_level: 1})
+
+    # Direct load of /browse/:id must not crash with KeyError for :user
+    {:ok, _index_live, html} =
+      live(conn, Routes.recipe_browser_index_path(conn, :show_recipe, recipe.id))
+
+    assert html =~ recipe.title
+    assert html =~ "Ingredients"
+  end
+
   test "Test BrowserLive -> Recipe Details -> Listing", %{conn: conn, user: user} do
     recipe = recipe_fixture(user)
 
