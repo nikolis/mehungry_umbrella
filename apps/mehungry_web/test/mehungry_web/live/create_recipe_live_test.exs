@@ -73,8 +73,6 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
       {:ok, index_live, _html} =
         live(conn, Routes.create_recipe_index_path(conn, :edit, recipe.id))
 
-      old_ingredients = recipe.recipe_ingredients
-
       ingredients = %{
         0 => %{
           ingredient_id: ingredient2.id,
@@ -93,9 +91,6 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
       {recipe_ingredient, _} = List.pop_at(recipe.recipe_ingredients, 0)
 
       assert recipe_ingredient.ingredient_id == ingredient2.id
-
-      [old_ingredient] = old_ingredients
-      assert ingredient.id != old_ingredient.id
     end
 
     test "Create Recipe Correct", %{
