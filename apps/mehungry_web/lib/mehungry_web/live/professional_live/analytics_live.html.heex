@@ -60,8 +60,9 @@
         data-id="daily"
         data-origin_id="daily"
         data-size="full"
+        class="w-full overflow-hidden"
       >
-        <div id="vega-daily" phx-hook="VegaLite" data-spec={Jason.encode!(@daily_chart_spec)}>
+        <div id="vega-daily" phx-hook="VegaLite" data-spec={Jason.encode!(@daily_chart_spec)} class="w-full">
         </div>
       </div>
     </div>
@@ -80,8 +81,9 @@
           data-id="source"
           data-origin_id="source"
           data-size="full"
+          class="w-full overflow-hidden"
         >
-          <div id="vega-source" phx-hook="VegaLite" data-spec={Jason.encode!(@source_chart_spec)}>
+          <div id="vega-source" phx-hook="VegaLite" data-spec={Jason.encode!(@source_chart_spec)} class="w-full">
           </div>
         </div>
         <div class="flex flex-wrap gap-3 mt-3">
@@ -245,6 +247,14 @@
                         ⚡{page.load_ms}ms
                       </span>
                     <% end %>
+                  <% end %>
+                  <%= for t <- page.recipe_detail_timings do %>
+                    <span
+                      class="text-xs text-violet-400 font-sans"
+                      title={"Recipe #{t["recipe_id"]}: #{t["elapsed_ms"]}ms total, #{t["server_ms"]}ms server"}
+                    >
+                      🍽 {t["elapsed_ms"]}ms
+                    </span>
                   <% end %>
                 </div>
               </div>

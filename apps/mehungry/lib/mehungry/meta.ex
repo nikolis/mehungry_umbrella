@@ -414,7 +414,8 @@ defmodule Mehungry.Meta do
           at: v.inserted_at,
           time_sec: time_sec,
           ttfb_ms: get_in(v.details || %{}, ["ttfb_ms"]),
-          load_ms: get_in(v.details || %{}, ["load_ms"])
+          load_ms: get_in(v.details || %{}, ["load_ms"]),
+          recipe_detail_timings: get_in(v.details || %{}, ["recipe_detail_timings"]) || []
         }
       end)
 

@@ -342,8 +342,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             <.recipe_details
               recipe={@recipe}
               current_user={@current_user}
-              nutrients={@nutrients}
-              primary_size={@primary_size}
+              nutrients={@recipe.nutrients}
+              primary_size={@recipe.primary_nutrients_size}
               ingredient_display_names={@ingredient_display_names}
             />
           </div>
