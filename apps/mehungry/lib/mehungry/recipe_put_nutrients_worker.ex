@@ -21,7 +21,6 @@ defmodule Mehungry.RecipePutNutrientsWorker do
         comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
       ])
 
-    IO.inspect(recipe, label: "Return repo get")
     changeset = Food.change_recipe(recipe)
 
     _create_post = Mehungry.Posts.create_post(recipe)
