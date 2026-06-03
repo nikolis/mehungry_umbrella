@@ -182,7 +182,7 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
     chart_data =
       Enum.map(data, fn %{date: d, count: c} -> %{"date" => to_string(d), "visits" => c} end)
 
-    Vl.new(width: width, height: 160)
+    Vl.new(width: width, height: 160, autosize: [type: "fit", contains: "padding"])
     |> Vl.data_from_values(chart_data)
     |> Vl.mark(:bar, color: "#EA580C", corner_radius_end: 3)
     |> Vl.encode_field(:x, "date",
@@ -206,7 +206,7 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
   defp build_source_spec(data, width \\ :container)
 
   defp build_source_spec(data, width) when data == [] do
-    Vl.new(width: width, height: 160)
+    Vl.new(width: width, height: 160, autosize: [type: "fit", contains: "padding"])
     |> Vl.data_from_values([%{"source" => "no data", "count" => 0}])
     |> Vl.mark(:bar)
     |> Vl.encode_field(:y, "source", type: :nominal)
@@ -216,7 +216,7 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
   end
 
   defp build_source_spec(data, width) do
-    Vl.new(width: width, height: 160)
+    Vl.new(width: width, height: 160, autosize: [type: "fit", contains: "padding"])
     |> Vl.data_from_values(data)
     |> Vl.mark(:bar, corner_radius_end: 3)
     |> Vl.encode_field(:y, "source",

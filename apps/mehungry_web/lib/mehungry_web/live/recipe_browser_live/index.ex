@@ -396,8 +396,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
       socket =
         socket
-        |> assign(:nutrients, recipe.nutrients)
-        |> assign(:primary_size, recipe.primary_nutrients_size)
         |> assign(:recipe, recipe)
         |> assign(:page_title, recipe.title <> " — Instructions and Nutrition Facts")
         |> assign(:page_seo_data, %{

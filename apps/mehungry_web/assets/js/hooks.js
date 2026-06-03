@@ -58,17 +58,28 @@ window.addEventListener('phx:page-loading-start', (e) => {
   if (e.detail && e.detail.kind === 'page') _liveNavStart = performance.now()
 })
 
-// Capture patch-start timestamp for RecipeDetailTimer.
+// Capture start timestamp for RecipeDetailTimer — covers patch and page navigations.
 let _recipeDetailPatchStart = null
 window.addEventListener('phx:page-loading-start', (e) => {
-  if (e.detail && e.detail.kind === 'patch') _recipeDetailPatchStart = performance.now()
+  if (e.detail && (e.detail.kind === 'patch' || e.detail.kind === 'page')) {
+    _recipeDetailPatchStart = performance.now()
+  }
 })
 
 Hooks.RecipeDetailTimer = {
   reportTiming(phase) {
-    if (_recipeDetailPatchStart === null) return
-    const elapsed = Math.round(performance.now() - _recipeDetailPatchStart)
-    _recipeDetailPatchStart = null
+    let elapsed
+    if (_recipeDetailPatchStart !== null) {
+      elapsed = Math.round(performance.now() - _recipeDetailPatchStart)
+      _recipeDetailPatchStart = null
+    } else if (phase === 'mounted') {
+      // Direct HTTP load to a recipe URL — measure from navigation fetch start
+      try {
+        const nav = performance.getEntriesByType('navigation')[0]
+        if (nav) elapsed = Math.round(performance.now() - nav.fetchStart)
+      } catch (_) {}
+    }
+    if (elapsed == null) return
     const serverMs = parseInt(this.el.dataset.serverMs, 10)
     const recipeId = this.el.dataset.recipeId || null
     this.pushEvent('recipe_detail_timing', {
