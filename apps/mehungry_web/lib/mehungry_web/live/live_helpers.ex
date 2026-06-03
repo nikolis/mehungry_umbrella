@@ -10,6 +10,22 @@ defmodule MehungryWeb.LiveHelpers do
 
   def hook_for_update_recipe_details_component do
     quote do
+      @impl true
+      def handle_event("recipe_detail_timing", %{"elapsed_ms" => elapsed_ms} = params, socket) do
+        visit_id = Process.get(:current_visit_id)
+
+        if visit_id do
+          Mehungry.Meta.update_visit_recipe_timing(
+            visit_id,
+            elapsed_ms,
+            Map.get(params, "server_ms"),
+            Map.get(params, "recipe_id")
+          )
+        end
+
+        {:noreply, socket}
+      end
+
       def toggle_user_saved_recipe(socket, recipe_id) do
         case is_nil(socket.assigns.current_user) do
           true ->

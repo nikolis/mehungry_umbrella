@@ -12,22 +12,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
-  @impl true
-  def handle_event("recipe_detail_timing", %{"elapsed_ms" => elapsed_ms} = params, socket) do
-    visit_id = Process.get(:current_visit_id)
-
-    if visit_id do
-      Mehungry.Meta.update_visit_recipe_timing(
-        visit_id,
-        elapsed_ms,
-        Map.get(params, "server_ms"),
-        Map.get(params, "recipe_id")
-      )
-    end
-
-    {:noreply, socket}
-  end
-
   # cancel_comment_reply
   @impl true
   def handle_event("cancel_comment_reply", _, socket) do
@@ -520,8 +504,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign(:reply, reply)
       |> assign(:user_follows, user_follows)
       |> assign(:recipe_comments, comments)
-      |> assign(:interactions, interactions)
       |> assign(:ingredient_display_names, display_names)
+      |> assign(:interactions, interactions)
       |> assign(:server_ms, server_ms)
       |> assign(
         :comment,

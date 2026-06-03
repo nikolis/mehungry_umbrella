@@ -56,7 +56,7 @@ defmodule MehungryWeb.RecipeComponents do
     >
       <div
         id={"#{@id}-bg"}
-        class="bg-zinc-50/90 fixed inset-0 transition-opacity top-0 left-0 right-0"
+        class="bg-slate-950/75 backdrop-blur-sm fixed inset-0 transition-opacity top-0 left-0 right-0"
         aria-hidden="false"
       />
       <div
@@ -67,14 +67,14 @@ defmodule MehungryWeb.RecipeComponents do
         aria-modal="true"
         tabindex="0"
       >
-        <div class="flex min-h-full  sm:mt-20">
-          <div class="w-full sm:w-7/12 m-auto" style="">
+        <div class="flex min-h-full sm:mt-20">
+          <div class="w-full sm:w-7/12 m-auto">
             <.focus_wrap
               id={"#{@id}-container"}
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white  shadow-lg ring-1 transition "
+              class="relative hidden rounded-2xl bg-slate-900 ring-1 ring-slate-700 shadow-2xl shadow-black/50 transition"
             >
               <div class="absolute top-10 left-5 z-50">
                 <button
@@ -114,11 +114,11 @@ defmodule MehungryWeb.RecipeComponents do
       phx-mounted={@show && show_modal(@id)}
       phx-remove={hide_modal(@id)}
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
-      class="relative z-50 hidden max-w-1/2 m-auto "
+      class="relative z-50 hidden max-w-1/2 m-auto"
     >
       <div
         id={"#{@id}-bg"}
-        class="bg-zinc-50/90 fixed inset-0 transition-opacity top-0 left-0 right-0"
+        class="bg-slate-950/75 backdrop-blur-sm fixed inset-0 transition-opacity top-0 left-0 right-0"
         aria-hidden="false"
       />
       <div
@@ -129,16 +129,16 @@ defmodule MehungryWeb.RecipeComponents do
         aria-modal="true"
         tabindex="0"
       >
-        <div class="flex min-h-full  sm:mt-20">
-          <div class="w-full sm:w-7/12 m-auto" style="">
+        <div class="flex min-h-full sm:mt-20">
+          <div class="w-full sm:w-7/12 m-auto">
             <.focus_wrap
               id={"#{@id}-container"}
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white  shadow-lg ring-1 transition "
+              class="relative hidden rounded-2xl bg-slate-800 ring-1 ring-slate-700 shadow-2xl shadow-black/50 transition"
             >
-              <div class=" sm:hidden  absolute top-5 left-5 rounded-full w-12 h-12  bg-white">
+              <div class="sm:hidden absolute top-5 left-5 rounded-full w-12 h-12 bg-slate-700">
                 <button
                   phx-click={JS.exec("data-cancel", to: "##{@id}")}
                   type="button"
