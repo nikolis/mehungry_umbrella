@@ -58,6 +58,30 @@ window.addEventListener('phx:page-loading-start', (e) => {
   if (e.detail && e.detail.kind === 'page') _liveNavStart = performance.now()
 })
 
+// Capture patch-start timestamp for RecipeDetailTimer.
+let _recipeDetailPatchStart = null
+window.addEventListener('phx:page-loading-start', (e) => {
+  if (e.detail && e.detail.kind === 'patch') _recipeDetailPatchStart = performance.now()
+})
+
+Hooks.RecipeDetailTimer = {
+  reportTiming(phase) {
+    if (_recipeDetailPatchStart === null) return
+    const elapsed = Math.round(performance.now() - _recipeDetailPatchStart)
+    _recipeDetailPatchStart = null
+    const serverMs = parseInt(this.el.dataset.serverMs, 10)
+    const recipeId = this.el.dataset.recipeId || null
+    this.pushEvent('recipe_detail_timing', {
+      elapsed_ms: elapsed,
+      server_ms: isNaN(serverMs) ? null : serverMs,
+      recipe_id: recipeId,
+      phase
+    })
+  },
+  mounted() { this.reportTiming('mounted') },
+  updated() { this.reportTiming('updated') }
+}
+
 Hooks.PageTimer = {
   mounted() {
     if (_liveNavStart !== null) {

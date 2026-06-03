@@ -12,6 +12,22 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   embed_templates("components/*")
   @color_fill "#00A0D0"
 
+  @impl true
+  def handle_event("recipe_detail_timing", %{"elapsed_ms" => elapsed_ms} = params, socket) do
+    visit_id = Process.get(:current_visit_id)
+
+    if visit_id do
+      Mehungry.Meta.update_visit_recipe_timing(
+        visit_id,
+        elapsed_ms,
+        Map.get(params, "server_ms"),
+        Map.get(params, "recipe_id")
+      )
+    end
+
+    {:noreply, socket}
+  end
+
   # cancel_comment_reply
   @impl true
   def handle_event("cancel_comment_reply", _, socket) do
@@ -161,7 +177,13 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id="recipe_presentation_modal " class="min-h-screen bg-slate-900 pb-10">
+    <div
+      id="recipe_presentation_modal"
+      phx-hook="RecipeDetailTimer"
+      data-server-ms={@server_ms}
+      data-recipe-id={@recipe.id}
+      class="min-h-screen bg-slate-900 pb-10"
+    >
       <div class=" mx-auto px-4 py-8 max-w-4xl">
         <div class="w-full">
           <!-- Hero Section -->
@@ -470,6 +492,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   @impl true
   def update(assigns, socket) do
+    t0 = System.monotonic_time(:millisecond)
+
     user_follows =
       if(is_nil(Map.get(assigns, :user_follows))) do
         []
@@ -488,6 +512,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     display_names =
       Food.ingredient_display_names(ingredient_ids, assigns.recipe.language_name)
 
+    server_ms = System.monotonic_time(:millisecond) - t0
+
     socket =
       socket
       |> assign(assigns)
@@ -496,6 +522,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign(:recipe_comments, comments)
       |> assign(:interactions, interactions)
       |> assign(:ingredient_display_names, display_names)
+      |> assign(:server_ms, server_ms)
       |> assign(
         :comment,
         get_when_first_exists(assigns.current_user, fn ->

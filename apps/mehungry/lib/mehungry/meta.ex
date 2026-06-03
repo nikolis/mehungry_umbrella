@@ -247,6 +247,30 @@ defmodule Mehungry.Meta do
     end
   end
 
+  def update_visit_recipe_timing(visit_id, elapsed_ms, server_ms, recipe_id) do
+    case Repo.get(Visit, visit_id) do
+      nil ->
+        :ok
+
+      visit ->
+        entry = %{
+          "elapsed_ms" => elapsed_ms,
+          "server_ms" => server_ms,
+          "recipe_id" => recipe_id,
+          "at" => DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+
+        timings =
+          (visit.details || %{})
+          |> Map.get("recipe_detail_timings", [])
+          |> then(&[entry | &1])
+          |> Enum.take(20)
+
+        details = Map.merge(visit.details || %{}, %{"recipe_detail_timings" => timings})
+        update_visit(visit, %{details: details})
+    end
+  end
+
   def update_visit(%Visit{} = visit, attrs) do
     visit
     |> Visit.changeset(attrs)
