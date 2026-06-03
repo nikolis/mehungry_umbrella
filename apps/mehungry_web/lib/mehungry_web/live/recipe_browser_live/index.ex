@@ -137,8 +137,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       false ->
         {recipe_id, _ignore} = Integer.parse(recipe_id)
         toggle_user_saved_recipes(socket, recipe_id)
-        user_recipes = Users.list_user_saved_recipes(socket.assigns.current_user)
-        user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
+        user_recipes = Users.list_user_saved_recipe_ids(socket.assigns.current_user)
         socket = assign(socket, :user_recipes, user_recipes)
         {:noreply, socket}
     end
@@ -255,8 +254,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           []
 
         false ->
-          Users.list_user_saved_recipes(user)
-          |> Enum.map(fn x -> x.recipe_id end)
+          Users.list_user_saved_recipe_ids(user)
       end
 
     socket
@@ -522,15 +520,12 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   def assign_recipe_search(socket) do
     socket
-    |> assign(:recipe_search_item, %RecipeSearchItem{query_string: "asdfafsdf"})
+    |> assign(:recipe_search_item, %RecipeSearchItem{})
   end
 
   def assign_changeset(%{assigns: %{recipe_search_item: recipe_search_item}} = socket) do
-    result =
-      socket
-      |> assign(:changeset, Search.change_recipe_search_item(recipe_search_item))
-
-    result
+    socket
+    |> assign(:search_changeset, Search.change_recipe_search_item(recipe_search_item))
   end
 
   def toggle_user_saved_recipes(socket, recipe_id) do

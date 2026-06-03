@@ -293,8 +293,7 @@ defmodule Mehungry.Food do
               |> Repo.preload([
                 [recipe_ingredients: [:measurement_unit, :ingredient]],
                 :user,
-                :recipe_hashtags,
-                comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
+                :recipe_hashtags
               ])
 
             if(not is_nil(recipe)) do

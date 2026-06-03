@@ -151,8 +151,7 @@ defmodule MehungryWeb.HomeLive.Index do
             []
 
           false ->
-            Users.list_user_saved_recipes(user)
-            |> Enum.map(fn x -> x.recipe_id end)
+            Users.list_user_saved_recipe_ids(user)
         end
 
       socket

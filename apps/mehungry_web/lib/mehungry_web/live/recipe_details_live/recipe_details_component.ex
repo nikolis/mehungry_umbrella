@@ -61,8 +61,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
         toggle_user_saved_recipes(socket, recipe_id)
 
         user_recipes =
-          Users.list_user_saved_recipes(socket.assigns.user)
-          |> Enum.map(fn x -> x.recipe_id end)
+          Users.list_user_saved_recipe_ids(socket.assigns.user)
 
         socket = assign(socket, :user_recipes, user_recipes)
         {:noreply, socket}
