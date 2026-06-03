@@ -4,7 +4,6 @@ defmodule MehungryWeb.LiveHelpers do
   import Phoenix.Component
 
   alias Phoenix.LiveView.JS
-  alias Mehungry.Food.Recipe
   alias Mehungry.Users
   alias Mehungry.Food
 
@@ -78,8 +77,7 @@ defmodule MehungryWeb.LiveHelpers do
         toggle_user_saved_recipe(socket, recipe_id)
 
         user_recipes =
-          Users.list_user_saved_recipes(socket.assigns.current_user)
-          |> Enum.map(fn x -> x.recipe_id end)
+          Users.list_user_saved_recipe_ids(socket.assigns.current_user)
 
         recipe = Food.get_recipe!(recipe_id)
         socket = assign(socket, :user_recipes, user_recipes)
@@ -107,27 +105,11 @@ defmodule MehungryWeb.LiveHelpers do
 
       @impl true
       def handle_info(%{new_comment: comment}, socket) do
-        recipe = socket.assigns.recipe
-        recipe = Mehungry.Food.get_recipe!(recipe.id)
-
-        recipe = %Recipe{
-          recipe
-          | comments: Enum.sort_by(recipe.comments, & &1.updated_at)
-        }
-
-        user =
-          case is_nil(Map.get(socket.assigns, :user, nil)) do
-            true ->
-              socket.assigns.current_user
-
-            false ->
-              socket.assigns.user
-          end
+        recipe_comments = Food.get_recipe_comments(comment.recipe_id)
 
         send_update(MehungryWeb.RecipeDetailsComponent, %{
           id: "recipe_details_component",
-          recipe: recipe,
-          user: user
+          recipe_comments: recipe_comments
         })
 
         {:noreply, socket}

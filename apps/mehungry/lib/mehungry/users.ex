@@ -189,6 +189,14 @@ defmodule Mehungry.Users do
     |> Repo.preload(recipe: [:recipe_ingredients])
   end
 
+  def list_user_saved_recipe_ids(%User{} = user) do
+    from(u_r in UserRecipe,
+      where: u_r.user_id == ^user.id,
+      select: u_r.recipe_id
+    )
+    |> Repo.all()
+  end
+
   def list_user_follows(%User{} = user) do
     from(u_f in UserFollow,
       where: u_f.user_id == ^user.id
