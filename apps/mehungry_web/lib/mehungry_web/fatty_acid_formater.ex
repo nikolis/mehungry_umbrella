@@ -269,7 +269,7 @@ defmodule MehungryWeb.FattyAcidFormatter do
   end
 
   # Format polyunsaturated fatty acids (PUFA)
-  defp format_polyunsaturated(carbon, double_bonds, omega, raw) do
+  defp format_polyunsaturated(carbon, double_bonds, omega, _raw) do
     case omega do
       "n-3" -> format_omega_3(carbon, double_bonds)
       "n-6" -> format_omega_6(carbon, double_bonds)

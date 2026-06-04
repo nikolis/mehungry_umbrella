@@ -80,7 +80,7 @@
       </div>
       <div class="item-list-container w-full  sm:p-6">
         <%= if @shopping_basket do %>
-          <.render_basket_items shopping_basket={@shopping_basket} />
+          <.render_basket_items shopping_basket={@shopping_basket} current_language={@current_language} />
         <% end %>
         <%= if length(@shopping_basket.basket_ingredients) < 1 do %>
           <h4 class="text-center text-base font-semibold text-greyfriend-2">Empty</h4>

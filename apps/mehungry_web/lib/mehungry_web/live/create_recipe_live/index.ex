@@ -2,6 +2,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Presence, :user_tracking
 
+  require Logger
+
   alias Mehungry.Food
   alias Mehungry.Food.{Recipe, RecipeIngredient, Step}
 
@@ -13,7 +15,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_profile = Accounts.get_user_profile_by_user_id(user.id)
-    grammar = Food.get_measurement_unit_by_name("grammar")
+    _grammar = Food.get_measurement_unit_by_name("grammar")
 
     {:ok,
      socket
@@ -54,7 +56,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, assign(socket, active_step: String.to_integer(step))}
   end
 
-  def handle_event("validate", %{"url_to_drill" => url} = recipe_params, socket) do
+  def handle_event("validate", %{"url_to_drill" => url} = _recipe_params, socket) do
     socket =
       assign(socket, :url_to_drill, url)
 
@@ -81,7 +83,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, assign(socket, :f, to_form(changeset))}
   end
 
-  def handle_event("save", %{"url_to_drill" => url} = recipe_params, socket) do
+  def handle_event("save", %{"url_to_drill" => url} = _recipe_params, socket) do
     url = "https://www.themealdb.com/api/json/v1/1/lookup.php?i=" <> url
 
     case valid_url?(url) do
@@ -98,7 +100,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
              socket
              |> assign(plain_meal: meal)}
 
-          {:error, whatever} ->
+          {:error, _whatever} ->
             {:noreply, socket}
         end
 
@@ -106,83 +108,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         {:noreply, socket}
     end
   end
-
-  @url_regex ~r/^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w\-._~:\/?#[\]@!$&'()*+,;=]*)?$/
-  def valid_url?(url) when is_binary(url) do
-    Regex.match?(@url_regex, url)
-  end
-
-  defp rebuild_form(socket, params) do
-    changeset =
-      socket.assigns.recipe
-      |> Food.change_recipe(params)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, :f, to_form(changeset))}
-  end
-
-  defp presign_upload(entry, %{assigns: %{uploads: uploads}} = socket) do
-    meta = SimpleS3Upload.meta(entry, uploads)
-    {:ok, meta, socket}
-  end
-
-  ################################################################################## Actions #############################################################################################
-  defp apply_action(socket, :index, _params) do
-    recipe = %Recipe{
-      steps: [%Step{}],
-      recipe_ingredients: [%RecipeIngredient{}],
-      language_name: "En"
-    }
-
-    maybe_track_user(%{}, socket)
-
-    attrs =
-      case Cachex.get(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}) do
-        {:ok, nil} ->
-          %{}
-
-        {:ok, attrs} ->
-          attrs
-      end
-
-    socket
-    |> init(recipe, attrs)
-  end
-
-  defp apply_action(socket, :edit, %{"recipe_id" => id}) do
-    recipe = Food.get_recipe!(id)
-
-    socket
-    |> assign(:changeset, Food.change_recipe(recipe))
-    |> assign(:recipe, recipe)
-    |> init(recipe)
-  end
-
-  defp init(socket, base, attrs \\ %{}) do
-    changeset =
-      Recipe.changeset(base, attrs)
-      |> struct!(action: :validate)
-
-    socket
-    |> assign(:f, to_form(changeset))
-    |> assign(:recipe, base)
-  end
-
-  def get_params_with_image(socket, params) do
-    if is_nil(Map.get(socket.assigns, :image_upload)) do
-      params
-    else
-      Map.put(params, "image_url", socket.assigns.image_upload)
-    end
-  end
-
-  @impl true
-  def handle_params(params, uri, socket) do
-    socket = assign(socket, :path, uri)
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
-  end
-
-  ################################################################################ Event Handling ###################################################################################
 
   def handle_event("ai_generate", %{"prompt" => prompt}, socket) when prompt != "" do
     case Mehungry.Subscriptions.check_quota(socket.assigns.user.id, "recipe_generation") do
@@ -239,47 +164,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> init(recipe)}
   end
 
-  defp handle_action(socket, params) do
-    case params["_action"] do
-      "add_ingredient" ->
-        add_ingredient(socket, params)
-
-      "remove_ingredient:" <> index ->
-        remove_ingredient(socket, params, index)
-
-      "add_step" ->
-        add_step(socket, params)
-
-      "remove_step:" <> index ->
-        remove_step(socket, params, index)
-
-      _ ->
-        save_recipe(socket, socket.assigns.live_action, params)
-    end
-  end
-
-  defp remove_ingredient(socket, params, index) do
-    portions =
-      Map.get(params, "recipe_ingredients", %{})
-      |> Map.delete(index)
-
-    new_params =
-      Map.put(params, "recipe_ingredients", portions)
-
-    rebuild_form(socket, new_params)
-  end
-
-  defp remove_step(socket, params, index) do
-    portions =
-      Map.get(params, "steps", %{})
-      |> Map.delete(index)
-
-    new_params =
-      Map.put(params, "steps", portions)
-
-    rebuild_form(socket, new_params)
-  end
-
   def handle_event("add-step", _, socket) do
     existing = Ecto.Changeset.get_embed(socket.assigns.changeset, :steps)
 
@@ -328,37 +212,132 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, socket}
   end
 
+  @impl Phoenix.LiveView
+  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :image, ref)}
+  end
+
+  defp handle_action(socket, params) do
+    case params["_action"] do
+      "add_ingredient" ->
+        add_ingredient(socket, params)
+
+      "remove_ingredient:" <> index ->
+        remove_ingredient(socket, params, index)
+
+      "add_step" ->
+        add_step(socket, params)
+
+      "remove_step:" <> index ->
+        remove_step(socket, params, index)
+
+      _ ->
+        save_recipe(socket, socket.assigns.live_action, params)
+    end
+  end
+
+  defp remove_ingredient(socket, params, index) do
+    portions =
+      Map.get(params, "recipe_ingredients", %{})
+      |> Map.delete(index)
+
+    rebuild_form(socket, Map.put(params, "recipe_ingredients", portions))
+  end
+
+  defp remove_step(socket, params, index) do
+    portions =
+      Map.get(params, "steps", %{})
+      |> Map.delete(index)
+
+    rebuild_form(socket, Map.put(params, "steps", portions))
+  end
+
   defp add_ingredient(socket, params) do
     ingredients = Map.get(params, "recipe_ingredients", %{})
-
     new_key = "#{map_size(ingredients)}"
-
-    updated =
-      Map.put(ingredients, new_key, %{})
-
-    new_params =
-      Map.put(params, "recipe_ingredients", updated)
-
-    rebuild_form(socket, new_params)
+    updated = Map.put(ingredients, new_key, %{})
+    rebuild_form(socket, Map.put(params, "recipe_ingredients", updated))
   end
 
   defp add_step(socket, params) do
     steps = Map.get(params, "steps", %{})
-
     new_key = "#{map_size(steps)}"
-
-    updated =
-      Map.put(steps, new_key, %{})
-
-    new_params =
-      Map.put(params, "steps", updated)
-
-    rebuild_form(socket, new_params)
+    updated = Map.put(steps, new_key, %{})
+    rebuild_form(socket, Map.put(params, "steps", updated))
   end
 
-  @impl Phoenix.LiveView
-  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
-    {:noreply, cancel_upload(socket, :image, ref)}
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = assign(socket, :path, uri)
+    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+  end
+
+  @url_regex ~r/^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w\-._~:\/?#[\]@!$&'()*+,;=]*)?$/
+  def valid_url?(url) when is_binary(url) do
+    Regex.match?(@url_regex, url)
+  end
+
+  def get_params_with_image(socket, params) do
+    if is_nil(Map.get(socket.assigns, :image_upload)) do
+      params
+    else
+      Map.put(params, "image_url", socket.assigns.image_upload)
+    end
+  end
+
+  defp apply_action(socket, :index, _params) do
+    recipe = %Recipe{
+      steps: [%Step{}],
+      recipe_ingredients: [%RecipeIngredient{}],
+      language_name: "En"
+    }
+
+    maybe_track_user(%{}, socket)
+
+    attrs =
+      case Cachex.get(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}) do
+        {:ok, nil} ->
+          %{}
+
+        {:ok, attrs} ->
+          attrs
+      end
+
+    socket
+    |> init(recipe, attrs)
+  end
+
+  defp apply_action(socket, :edit, %{"recipe_id" => id}) do
+    recipe = Food.get_recipe!(id)
+
+    socket
+    |> assign(:changeset, Food.change_recipe(recipe))
+    |> assign(:recipe, recipe)
+    |> init(recipe)
+  end
+
+  defp init(socket, base, attrs \\ %{}) do
+    changeset =
+      Recipe.changeset(base, attrs)
+      |> struct!(action: :validate)
+
+    socket
+    |> assign(:f, to_form(changeset))
+    |> assign(:recipe, base)
+  end
+
+  defp rebuild_form(socket, params) do
+    changeset =
+      socket.assigns.recipe
+      |> Food.change_recipe(params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :f, to_form(changeset))}
+  end
+
+  defp presign_upload(entry, %{assigns: %{uploads: uploads}} = socket) do
+    meta = SimpleS3Upload.meta(entry, uploads)
+    {:ok, meta, socket}
   end
 
   ######################################################################################## External Signal Receivers #################################
@@ -521,7 +500,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def map_recipe_ingredient(recipe_ingredients) do
     ingredient = Food.get_ingredient(recipe_ingredients.ingredient_id)
     measurement_unit = Food.get_measurement_unit!(recipe_ingredients.measurement_unit_id)
-    Log.info("Maping: #{measurement_unit.name}")
+    Logger.info("Maping: #{measurement_unit.name}")
 
     %{
       temp_id: recipe_ingredients.temp_id,

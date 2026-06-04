@@ -147,7 +147,7 @@ defmodule MehungryWeb.SelectComponentSingle do
   @impl true
   def update(assigns, socket) do
     item_function = assigns.item_function
-    get_by_id_func = assigns.get_by_id_func
+    _get_by_id_func = assigns.get_by_id_func
     id = "select_component" <> Integer.to_string(assigns.form.index) <> assigns.input_variable
 
     label_function =

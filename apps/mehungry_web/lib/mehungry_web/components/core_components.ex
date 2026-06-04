@@ -65,7 +65,7 @@ defmodule MehungryWeb.CoreComponents do
 
   @doc """
   """
-  def share_button(%{user: user, socket: socket} = assigns) do
+  def share_button(%{user: _user, socket: _socket} = assigns) do
     ~H"""
     <div
       class="relative w-full h-full"
@@ -111,7 +111,7 @@ defmodule MehungryWeb.CoreComponents do
           id={"link-to-recipe-#{@user.id}"}
           class="block w-full overflow-hidden"
           style="width: 50px;"
-          patch={~p"/share_social_media/#{@user.id}"}
+          patch={~p"/share_social_media/#{@user.id}/facebook"}
         >
           <img
             src="/images/facebook-svgrepo-com (1).svg"
@@ -124,8 +124,6 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  @doc """
-  """
   def share_button(assigns) do
     ~H"""
     <div
@@ -171,7 +169,7 @@ defmodule MehungryWeb.CoreComponents do
           id={"link-to-recipe-#{@post.reference_id}"}
           class="block w-full overflow-hidden"
           style="width: 50px;"
-          patch={~p"/share_social_media/#{@post.reference_id}"}
+          patch={~p"/share_social_media/#{@post.reference_id}/facebook"}
         >
           <img
             src="/images/facebook-svgrepo-com (1).svg"
@@ -189,7 +187,7 @@ defmodule MehungryWeb.CoreComponents do
   """
   def user_details_card(
         %{
-          user_follows: user_follows,
+          user_follows: _user_follows,
           user: %Mehungry.Accounts.User{} = _user
         } = assigns
       ) do
@@ -311,64 +309,12 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  def get_post_age(%Mehungry.Posts.Post{} = post) do
-    diff = NaiveDateTime.diff(NaiveDateTime.local_now(), post.updated_at, :second)
-    "23m"
-    get_diff(diff)
-  end
-
-  5500
-
-  defp get_diff(diff) do
-    if diff < 60 do
-      Integer.to_string(round(diff)) <> "s"
-    else
-      get_diff(diff / 60, "min")
-    end
-  end
-
-  defp get_diff(diff, "min") do
-    if diff < 60 do
-      Integer.to_string(round(diff)) <> "m"
-    else
-      get_diff(diff / 60, "hour")
-    end
-  end
-
-  defp get_diff(diff, "hour") do
-    if diff < 24 do
-      Integer.to_string(round(diff)) <> "h"
-    else
-      get_diff(diff / 24, "day")
-    end
-  end
-
-  defp get_diff(diff, "day") do
-    if diff < 7 do
-      Integer.to_string(round(diff)) <> "d"
-    else
-      get_diff(diff / 7, "week")
-    end
-  end
-
-  defp get_diff(diff, "week") do
-    if diff < 4 do
-      Integer.to_string(round(diff)) <> "w"
-    else
-      get_diff(diff / 4, "month")
-    end
-  end
-
-  defp get_diff(diff, "month") do
-    Integer.to_string(round(diff)) <> "m"
-  end
-
   @doc """
-  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
+  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment.
   """
   def user_overview_card(
         %{
-          user_follows: user_follows,
+          user_follows: _user_follows,
           user: %Mehungry.Accounts.User{} = _user
         } = assigns
       ) do
@@ -434,12 +380,61 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
+  def get_post_age(%Mehungry.Posts.Post{} = post) do
+    diff = NaiveDateTime.diff(NaiveDateTime.local_now(), post.updated_at, :second)
+    get_diff(diff)
+  end
+
+  defp get_diff(diff) do
+    if diff < 60 do
+      Integer.to_string(round(diff)) <> "s"
+    else
+      get_diff(diff / 60, "min")
+    end
+  end
+
+  defp get_diff(diff, "min") do
+    if diff < 60 do
+      Integer.to_string(round(diff)) <> "m"
+    else
+      get_diff(diff / 60, "hour")
+    end
+  end
+
+  defp get_diff(diff, "hour") do
+    if diff < 24 do
+      Integer.to_string(round(diff)) <> "h"
+    else
+      get_diff(diff / 24, "day")
+    end
+  end
+
+  defp get_diff(diff, "day") do
+    if diff < 7 do
+      Integer.to_string(round(diff)) <> "d"
+    else
+      get_diff(diff / 7, "week")
+    end
+  end
+
+  defp get_diff(diff, "week") do
+    if diff < 4 do
+      Integer.to_string(round(diff)) <> "w"
+    else
+      get_diff(diff / 4, "month")
+    end
+  end
+
+  defp get_diff(diff, "month") do
+    Integer.to_string(round(diff)) <> "m"
+  end
+
   @doc """
-  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
+  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment.
   """
   def user_overview_card2(
         %{
-          user_follows: user_follows,
+          user_follows: _user_follows,
           user: %Mehungry.Accounts.User{} = _user
         } = assigns
       ) do
@@ -904,11 +899,12 @@ defmodule MehungryWeb.CoreComponents do
   attr :label, :string, default: nil
   attr :value, :any
 
+  attr :subscript, :string, default: nil
   attr :type, :string,
     default: "text",
     values:
       ~w(readonly checkbox color date datetime-local email file hidden month number password select_component
-               range radio search select tel text textarea time url week full-text comment checkbox_covered)
+               range radio search select tel text textarea time url week full-text comment checkbox_covered number_subscript)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -1567,10 +1563,11 @@ defmodule MehungryWeb.CoreComponents do
   """
   attr :name, :string, required: true
   attr :class, :string, default: nil
+  attr :rest, :global
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} />
+    <span class={[@name, @class]} {@rest} />
     """
   end
 

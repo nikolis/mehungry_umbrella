@@ -1,8 +1,6 @@
 defmodule MehungryWeb.RecipeFormComponent do
   use MehungryWeb, :live_component
 
-  alias MehungryWeb.CreateRecipeLive.Components
-
   def error_to_string(:too_large), do: "Too large"
   def error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
 
@@ -46,7 +44,6 @@ defmodule MehungryWeb.RecipeFormComponent do
             <.input
               required
               field={@f[:preperation_time_lower_limit]}
-              type="text"
               type="number_subscript"
               subscript="mins"
               label="Prep Time"
@@ -75,7 +72,7 @@ defmodule MehungryWeb.RecipeFormComponent do
               phx-click="delete-image"
               class="absolute top-0 right-3 bg-white rounded-full"
             >
-              <.icon name="hero-x-mark-solid" class="h-6 w-6 " phx-click="clear-image" />
+              <.icon name="hero-x-mark-solid" class="h-6 w-6" />
             </button>
           </div>
         <% else %>

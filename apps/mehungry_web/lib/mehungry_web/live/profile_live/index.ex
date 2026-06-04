@@ -11,7 +11,6 @@ defmodule MehungryWeb.ProfileLive.Index do
   alias MehungryWeb.ProfileLive.Show
   alias Mehungry.Food
   alias Mehungry.Posts
-  alias Mehungry.Food.RecipeUtils
 
   @impl true
   def mount(_params, session, socket) do
@@ -48,45 +47,10 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   defp apply_action(socket, :index, _params) do
     if is_nil(socket.assigns[:current_user]) do
-      push_redirect(socket, to: "/users/log_in")
+      push_navigate(socket, to: "/users/log_in")
     else
       do_apply_action_index(socket)
     end
-  end
-
-  defp do_apply_action_index(socket) do
-    categories = Food.list_categories()
-    category_ids = Enum.map(categories, fn x -> x.id end)
-    food_restrictions = Food.list_food_restriction_types()
-    food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
-
-    changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
-    maybe_track_user(%{}, socket)
-
-    socket =
-      socket
-      |> assign(:page_title, "Edit Profile Details")
-      |> assign(:categories, categories)
-      |> assign(:category_ids, category_ids)
-      |> assign(:food_restriction_ids, food_restriction_ids)
-      |> assign(:food_restrictions, food_restrictions)
-      |> assign(:form, to_form(changeset))
-      |> assign(:id, "form-#{System.unique_integer()}")
-
-    {user_saved_recipes, user_created_recipes} =
-      case is_nil(socket.assigns.current_user) do
-        true ->
-          {[], []}
-
-        false ->
-          {Users.list_user_saved_recipes(socket.assigns.current_user),
-           Users.list_user_created_recipes(socket.assigns.current_user)}
-      end
-
-    socket
-    |> assign(:page_title, "Profile")
-    |> assign(:user_created_recipes, user_created_recipes)
-    |> assign(:user_saved_recipes, user_saved_recipes)
   end
 
   defp apply_action(socket, :show, %{"id" => id} = _params) do
@@ -99,13 +63,13 @@ defmodule MehungryWeb.ProfileLive.Index do
     food_restrictions = Food.list_food_restriction_types()
     # Foul chnage asap
     if(food_restrictions == []) do
-      {:ok, fr} =
+      {:ok, _} =
         Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolutely not"})
 
-      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Not a fun"})
-      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Neutral"})
-      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Fun"})
-      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolute fun"})
+      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Not a fun"})
+      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Neutral"})
+      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Fun"})
+      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolute fun"})
     end
 
     food_restrictions = Food.list_food_restriction_types()
@@ -182,7 +146,7 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   defp apply_action(socket, :edit, _params) do
     if is_nil(socket.assigns[:current_user]) do
-      push_redirect(socket, to: "/users/log_in")
+      push_navigate(socket, to: "/users/log_in")
     else
       do_apply_action_edit(socket)
     end
@@ -209,6 +173,41 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:food_restrictions, food_restrictions)
     |> assign(:form, to_form(changeset))
     |> assign(:id, "form-#{System.unique_integer()}")
+  end
+
+  defp do_apply_action_index(socket) do
+    categories = Food.list_categories()
+    category_ids = Enum.map(categories, fn x -> x.id end)
+    food_restrictions = Food.list_food_restriction_types()
+    food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
+
+    changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
+    maybe_track_user(%{}, socket)
+
+    socket =
+      socket
+      |> assign(:page_title, "Edit Profile Details")
+      |> assign(:categories, categories)
+      |> assign(:category_ids, category_ids)
+      |> assign(:food_restriction_ids, food_restriction_ids)
+      |> assign(:food_restrictions, food_restrictions)
+      |> assign(:form, to_form(changeset))
+      |> assign(:id, "form-#{System.unique_integer()}")
+
+    {user_saved_recipes, user_created_recipes} =
+      case is_nil(socket.assigns.current_user) do
+        true ->
+          {[], []}
+
+        false ->
+          {Users.list_user_saved_recipes(socket.assigns.current_user),
+           Users.list_user_created_recipes(socket.assigns.current_user)}
+      end
+
+    socket
+    |> assign(:page_title, "Profile")
+    |> assign(:user_created_recipes, user_created_recipes)
+    |> assign(:user_saved_recipes, user_saved_recipes)
   end
 
   @impl true

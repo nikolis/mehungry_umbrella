@@ -13,6 +13,7 @@ defmodule MehungryWeb.SearchSelect do
      )}
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="relative z-100">

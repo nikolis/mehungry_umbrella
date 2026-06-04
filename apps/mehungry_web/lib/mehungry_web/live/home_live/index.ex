@@ -7,14 +7,12 @@ defmodule MehungryWeb.HomeLive.Index do
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
 
   embed_templates("components/*")
-  @color_fill "#00A0D0"
   @per_page 10
 
   alias Mehungry.Accounts
   alias Mehungry.Posts
   alias Mehungry.Users
   alias Mehungry.Food
-  alias Mehungry.Food.RecipeUtils
 
   @impl true
   def mount(_params, session, socket) do
@@ -70,6 +68,24 @@ defmodule MehungryWeb.HomeLive.Index do
     {:noreply, assign(socket, :must_be_loged_in, nil)}
   end
 
+  def handle_event("react", %{"type_" => type, "id" => post_id}, socket) do
+    case is_nil(socket.assigns.user) do
+      true ->
+        {:noreply, assign(socket, :must_be_loged_in, 1)}
+
+      false ->
+        case type do
+          "upvote" ->
+            Posts.upvote_post(post_id, socket.assigns.user.id)
+
+          "downvote" ->
+            Posts.downvote_post(post_id, socket.assigns.user.id)
+        end
+
+        {:noreply, socket}
+    end
+  end
+
   defp get_recipe_description(assigns) do
     terms = String.split(assigns.description, " ")
 
@@ -98,24 +114,6 @@ defmodule MehungryWeb.HomeLive.Index do
       <% end %>
     </span>
     """
-  end
-
-  def handle_event("react", %{"type_" => type, "id" => post_id}, socket) do
-    case is_nil(socket.assigns.user) do
-      true ->
-        {:noreply, assign(socket, :must_be_loged_in, 1)}
-
-      false ->
-        case type do
-          "upvote" ->
-            Posts.upvote_post(post_id, socket.assigns.user.id)
-
-          "downvote" ->
-            Posts.downvote_post(post_id, socket.assigns.user.id)
-        end
-
-        {:noreply, socket}
-    end
   end
 
   defp apply_action(socket, :index, _params) do
@@ -185,7 +183,7 @@ defmodule MehungryWeb.HomeLive.Index do
 
   @impl true
   def handle_info(
-        {MehungryWeb.SocialMediaPostComponent, %{post_result: results} = parameters},
+        {MehungryWeb.SocialMediaPostComponent, %{post_result: results} = _parameters},
         socket
       ) do
     results =

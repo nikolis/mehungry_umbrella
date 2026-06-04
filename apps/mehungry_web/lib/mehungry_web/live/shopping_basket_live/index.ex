@@ -64,17 +64,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     {:noreply, assign(socket, search_results: [], searching: false)}
   end
 
-  def handle_info({:perform_search, query}, socket) do
-    case USDA.search_foods(query, 5) do
-      {:ok, results} ->
-        IO.inspect(results, label: "Result")
-        {:noreply, assign(socket, search_results: results, searching: false)}
-
-      {:error, _error} ->
-        {:noreply, assign(socket, search_results: [], searching: false)}
-    end
-  end
-
   def handle_event("select_usda_item", %{"fdc_id" => fdc_id}, socket) do
     case USDA.get_food_details(fdc_id) do
       {:ok, food} ->
@@ -153,144 +142,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to add item")}
     end
-  end
-
-  defp get_nutrition_value(food, nutrient_name) do
-    Enum.find_value(food["food_nutrients"] || [], fn n ->
-      if String.contains?(n.nutrient_name, nutrient_name) do
-        n.value
-      end
-    end) || 0
-  end
-
-  defp get_shopping_basket(shopping_basket, user) do
-    case shopping_basket do
-      nil ->
-        %ShoppingBasket{user_id: user.id, basket_ingredients: [], basket_items: []}
-
-      shopping_basket ->
-        %ShoppingBasket{
-          shopping_basket
-          | basket_ingredients:
-              Mehungry.Utils.sort_ingredients_for_basket(shopping_basket.basket_ingredients)
-        }
-    end
-  end
-
-  @impl true
-  def handle_params(params, uri, socket) do
-    socket = assign(socket, :path, uri)
-
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
-  end
-
-  defp apply_action(socket, :edit, %{"id" => id}) do
-    maybe_track_user(%{}, socket)
-
-    socket
-    |> assign(:page_title, "Edit User profile")
-    |> assign(:user_profile, Accounts.get_user_profile!(id))
-  end
-
-  defp apply_action(socket, :import_items, %{"id" => id} = _params) do
-    maybe_track_user(%{}, socket)
-
-    case Inventory.get_shopping_basket!(id) do
-      basket ->
-        # Handle success
-        assign(socket, :processing_basket, basket)
-
-      {:error, :not_found} ->
-        # Handle not found - redirect or show error
-        socket
-        |> put_flash(:error, "Shopping basket not found")
-        |> push_navigate(to: ~p"/basket")
-    end
-  end
-
-  defp apply_action(socket, :new, _params) do
-    maybe_track_user(%{}, socket)
-
-    socket
-    |> assign(:page_title, "New User profile")
-    |> assign(:user_profile, %UserProfile{})
-  end
-
-  defp apply_action(socket, :index, _params) do
-    maybe_track_user(%{}, socket)
-
-    socket
-    |> assign(:page_title, "Listing User profiles")
-    |> assign(:user_profile, nil)
-  end
-
-  @impl true
-  def handle_info(
-        {MehungryWeb.ShoppingBasketLive.BasicFormComponent, {:saved, _shopping_basket}},
-        socket
-      ) do
-    shopping_baskets = Inventory.list_shopping_baskets_for_user(socket.assigns.user.id)
-    shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
-
-    shopping_basket =
-      if is_nil(socket.assigns.shopping_basket) do
-        List.first(shopping_baskets)
-      else
-        socket.assigns.shopping_basket
-      end
-
-    {:noreply,
-     socket
-     |> assign(:shopping_baskets, shopping_baskets)
-     |> assign(:shopping_basket, shopping_basket)
-     |> assign(:processing_basket, %ShoppingBasket{})}
-  end
-
-  def handle_info(
-        {MehungryWeb.ShoppingBasketLive.BasicFormComponent, {:update, shopping_basket}},
-        socket
-      ) do
-    shopping_baskets =
-      Enum.filter(socket.assigns.shopping_baskets, fn x -> x.id != shopping_basket.id end)
-
-    shopping_baskets = shopping_baskets ++ [shopping_basket]
-    shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
-
-    shopping_basket =
-      if socket.assigns.shopping_basket.id == shopping_basket.id do
-        shopping_basket
-      else
-        socket.assigns.shopping_basket
-      end
-
-    {:noreply,
-     socket
-     |> assign(:shopping_baskets, shopping_baskets)
-     |> assign(:shopping_basket, shopping_basket)
-     |> push_patch(to: "/basket")}
-  end
-
-  def handle_info(
-        {MehungryWeb.ShoppingBasketLive.FormComponent, {:update, shopping_basket}},
-        socket
-      ) do
-    shopping_baskets =
-      Enum.filter(socket.assigns.shopping_baskets, fn x -> x.id != shopping_basket.id end)
-
-    shopping_baskets = shopping_baskets ++ [shopping_basket]
-    shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
-
-    shopping_basket =
-      if socket.assigns.shopping_basket.id == shopping_basket.id do
-        shopping_basket
-      else
-        socket.assigns.shopping_basket
-      end
-
-    {:noreply,
-     socket
-     |> assign(:shopping_baskets, shopping_baskets)
-     |> assign(:shopping_basket, shopping_basket)}
   end
 
   def handle_event("delete_basket", %{"id" => id}, socket) do
@@ -380,6 +231,146 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   @impl true
   def handle_event("close-modal", _, socket) do
     {:noreply, push_patch(socket, to: "/basket", replace: true)}
+  end
+
+  defp get_nutrition_value(food, nutrient_name) do
+    Enum.find_value(food["food_nutrients"] || [], fn n ->
+      if String.contains?(n.nutrient_name, nutrient_name) do
+        n.value
+      end
+    end) || 0
+  end
+
+  defp get_shopping_basket(shopping_basket, user) do
+    case shopping_basket do
+      nil ->
+        %ShoppingBasket{user_id: user.id, basket_ingredients: [], basket_items: []}
+
+      shopping_basket ->
+        %ShoppingBasket{
+          shopping_basket
+          | basket_ingredients:
+              Mehungry.Utils.sort_ingredients_for_basket(shopping_basket.basket_ingredients)
+        }
+    end
+  end
+
+  @impl true
+  def handle_params(params, uri, socket) do
+    socket = assign(socket, :path, uri)
+
+    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+  end
+
+  defp apply_action(socket, :edit, %{"id" => id}) do
+    maybe_track_user(%{}, socket)
+
+    socket
+    |> assign(:page_title, "Edit User profile")
+    |> assign(:user_profile, Accounts.get_user_profile!(id))
+  end
+
+  defp apply_action(socket, :import_items, %{"id" => id} = _params) do
+    maybe_track_user(%{}, socket)
+
+    basket = Inventory.get_shopping_basket!(id)
+    assign(socket, :processing_basket, basket)
+  end
+
+  defp apply_action(socket, :new, _params) do
+    maybe_track_user(%{}, socket)
+
+    socket
+    |> assign(:page_title, "New User profile")
+    |> assign(:user_profile, %UserProfile{})
+  end
+
+  defp apply_action(socket, :index, _params) do
+    maybe_track_user(%{}, socket)
+
+    socket
+    |> assign(:page_title, "Listing User profiles")
+    |> assign(:user_profile, nil)
+  end
+
+  @impl true
+  def handle_info(
+        {MehungryWeb.ShoppingBasketLive.BasicFormComponent, {:saved, _shopping_basket}},
+        socket
+      ) do
+    shopping_baskets = Inventory.list_shopping_baskets_for_user(socket.assigns.user.id)
+    shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
+
+    shopping_basket =
+      if is_nil(socket.assigns.shopping_basket) do
+        List.first(shopping_baskets)
+      else
+        socket.assigns.shopping_basket
+      end
+
+    {:noreply,
+     socket
+     |> assign(:shopping_baskets, shopping_baskets)
+     |> assign(:shopping_basket, shopping_basket)
+     |> assign(:processing_basket, %ShoppingBasket{})}
+  end
+
+  def handle_info(
+        {MehungryWeb.ShoppingBasketLive.BasicFormComponent, {:update, shopping_basket}},
+        socket
+      ) do
+    shopping_baskets =
+      Enum.filter(socket.assigns.shopping_baskets, fn x -> x.id != shopping_basket.id end)
+
+    shopping_baskets = shopping_baskets ++ [shopping_basket]
+    shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
+
+    shopping_basket =
+      if socket.assigns.shopping_basket.id == shopping_basket.id do
+        shopping_basket
+      else
+        socket.assigns.shopping_basket
+      end
+
+    {:noreply,
+     socket
+     |> assign(:shopping_baskets, shopping_baskets)
+     |> assign(:shopping_basket, shopping_basket)
+     |> push_patch(to: "/basket")}
+  end
+
+  def handle_info(
+        {MehungryWeb.ShoppingBasketLive.FormComponent, {:update, shopping_basket}},
+        socket
+      ) do
+    shopping_baskets =
+      Enum.filter(socket.assigns.shopping_baskets, fn x -> x.id != shopping_basket.id end)
+
+    shopping_baskets = shopping_baskets ++ [shopping_basket]
+    shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
+
+    shopping_basket =
+      if socket.assigns.shopping_basket.id == shopping_basket.id do
+        shopping_basket
+      else
+        socket.assigns.shopping_basket
+      end
+
+    {:noreply,
+     socket
+     |> assign(:shopping_baskets, shopping_baskets)
+     |> assign(:shopping_basket, shopping_basket)}
+  end
+
+  def handle_info({:perform_search, query}, socket) do
+    case USDA.search_foods(query, 5) do
+      {:ok, results} ->
+        IO.inspect(results, label: "Result")
+        {:noreply, assign(socket, search_results: results, searching: false)}
+
+      {:error, _error} ->
+        {:noreply, assign(socket, search_results: [], searching: false)}
+    end
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do

@@ -10,7 +10,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   alias MehungryWeb.ImageProcessing
   alias Mehungry.Accounts
   alias Mehungry.Users
-  alias Mehungry.Food.RecipeUtils
   alias Mehungry.Posts
   alias MehungryWeb.RecipeComponents
 
@@ -413,6 +412,64 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     end
   end
 
+  defp apply_action(socket, :show, %{"id" => id}) do
+    recipe = Food.get_recipe!(id)
+    maybe_track_user(recipe, socket)
+
+    query_str = ""
+
+    {_query, {recipes, cursor_after}} =
+      case query_str do
+        nil ->
+          {query_str, list_recipes()}
+
+        qr ->
+          Food.search_recipe(qr)
+      end
+
+    socket
+    |> assign(:nutrients, recipe.nutrients)
+    |> assign(:primary_size, recipe.primary_nutrients_size)
+    |> assign(:recipe, recipe)
+    |> assign(:query_string, "")
+    |> stream(:recipes, recipes)
+    |> assign(:cursor_after, cursor_after)
+    |> assign(:page_title, recipe.title)
+    |> assign(:page_seo_data, %{
+      title: recipe.title,
+      img: recipe.image_url,
+      id: Integer.to_string(recipe.id)
+    })
+  end
+
+  ###################################################################################### UTILS #################################################################
+
+  def assign_recipe_search(socket) do
+    socket
+    |> assign(:recipe_search_item, %RecipeSearchItem{})
+  end
+
+  def assign_changeset(%{assigns: %{recipe_search_item: recipe_search_item}} = socket) do
+    socket
+    |> assign(:search_changeset, Search.change_recipe_search_item(recipe_search_item))
+  end
+
+  def toggle_user_saved_recipes(socket, recipe_id) do
+    case is_nil(socket.assigns.current_user) do
+      true ->
+        assign(socket, :must_be_loged_in, 1)
+
+      false ->
+        case Enum.any?(socket.assigns.current_user_recipes, fn x -> x == recipe_id end) do
+          true ->
+            Users.remove_user_saved_recipe(socket.assigns.current_user.id, recipe_id)
+
+          false ->
+            Users.save_user_recipe(socket.assigns.current_user.id, recipe_id)
+        end
+    end
+  end
+
   defp build_recipe_description(recipe) do
     base =
       if recipe.description && String.length(recipe.description) > 10 do
@@ -484,78 +541,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       end
 
     base
-  end
-
-  defp apply_action(socket, :show, %{"id" => id}) do
-    recipe = Food.get_recipe!(id)
-    maybe_track_user(recipe, socket)
-
-    query_str = ""
-
-    {_query, {recipes, cursor_after}} =
-      case query_str do
-        nil ->
-          {query_str, list_recipes()}
-
-        qr ->
-          Food.search_recipe(qr)
-      end
-
-    socket
-    |> assign(:nutrients, recipe.nutrients)
-    |> assign(:primary_size, recipe.primary_nutrients_size)
-    |> assign(:recipe, recipe)
-    |> assign(:query_string, "")
-    |> stream(:recipes, recipes)
-    |> assign(:cursor_after, cursor_after)
-    |> assign(:page_title, recipe.title)
-    |> assign(:page_seo_data, %{
-      title: recipe.title,
-      img: recipe.image_url,
-      id: Integer.to_string(recipe.id)
-    })
-  end
-
-  ###################################################################################### UTILS #################################################################
-
-  def assign_recipe_search(socket) do
-    socket
-    |> assign(:recipe_search_item, %RecipeSearchItem{})
-  end
-
-  def assign_changeset(%{assigns: %{recipe_search_item: recipe_search_item}} = socket) do
-    socket
-    |> assign(:search_changeset, Search.change_recipe_search_item(recipe_search_item))
-  end
-
-  def toggle_user_saved_recipes(socket, recipe_id) do
-    case is_nil(socket.assigns.current_user) do
-      true ->
-        assign(socket, :must_be_loged_in, 1)
-
-      false ->
-        case Enum.any?(socket.assigns.current_user_recipes, fn x -> x == recipe_id end) do
-          true ->
-            Users.remove_user_saved_recipe(socket.assigns.current_user.id, recipe_id)
-
-          false ->
-            Users.save_user_recipe(socket.assigns.current_user.id, recipe_id)
-        end
-    end
-  end
-
-  def get_address_agent(socket) do
-    {first, second, third, forth} =
-      Phoenix.LiveView.get_connect_info(socket, :peer_data).address
-
-    address =
-      Integer.to_string(first) <>
-        "." <>
-        Integer.to_string(second) <>
-        "." <> Integer.to_string(third) <> "." <> Integer.to_string(forth)
-
-    agent = Phoenix.LiveView.get_connect_info(socket, :user_agent)
-    {address, agent}
   end
 
   defp list_recipes do

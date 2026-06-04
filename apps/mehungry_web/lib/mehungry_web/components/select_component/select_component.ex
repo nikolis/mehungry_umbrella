@@ -20,7 +20,7 @@ defmodule MehungryWeb.SelectComponent do
           label_f
       end
 
-    form_params = assigns.form.params
+    _form_params = assigns.form.params
 
     selected_items =
       MehungryWeb.SelectComponentUtils.get_selected_items(
@@ -67,8 +67,8 @@ defmodule MehungryWeb.SelectComponent do
           other
       end
 
-    selected_items_vals =
-      Enum.reduce(Enum.map(selected_items, fn {x, y} -> x end), "", fn acc, x ->
+    _selected_items_vals =
+      Enum.reduce(Enum.map(selected_items, fn {x, _y} -> x end), "", fn acc, x ->
         case String.length(acc) == 0 do
           true ->
             x
@@ -101,7 +101,7 @@ defmodule MehungryWeb.SelectComponent do
     {:ok, socket}
   end
 
-  def handle_event("search", %{"key" => key, "value" => value}, socket) do
+  def handle_event("search", %{"key" => _key, "value" => value}, socket) do
     items = fuzzy_match(value, socket.assigns.items)
 
     socket =
@@ -111,59 +111,6 @@ defmodule MehungryWeb.SelectComponent do
       |> assign(:listing_open, true)
 
     {:noreply, socket}
-  end
-
-  def to_human(term) do
-    Map.get(@lookup, normalize(term), term)
-  end
-
-  def normalize(str) do
-    str
-    |> String.downcase()
-    |> String.trim()
-    |> :unicode.characters_to_nfd_binary()
-    |> String.replace(~r/[^a-z0-9\s]/u, "")
-  end
-
-  def build_lookup(map) do
-    Enum.reduce(map, %{}, fn {canonical, synonyms}, acc ->
-      all_terms = [canonical | synonyms]
-
-      Enum.reduce(all_terms, acc, fn term, acc2 ->
-        Map.put(acc2, normalize(term), canonical)
-      end)
-    end)
-  end
-
-  def exact_match(query, lookup) do
-    Map.get(lookup, normalize(query))
-  end
-
-  # query => strimg 
-  # terms => list<{id, string}>
-  # result => list <{id, string}>
-  def fuzzy_match(query, terms, threshold \\ 0.40) do
-    normalized_query = normalize(query)
-
-    terms
-    |> Enum.map(fn {id, term} ->
-      score = String.jaro_distance(normalize(term), normalized_query)
-      {id, term, score}
-    end)
-    |> Enum.filter(fn {_id, _term, score} -> score >= threshold end)
-    |> Enum.sort_by(fn {_id, _term, score} -> -score end)
-    |> Enum.map(fn {id, term, _} -> {id, term} end)
-    |> Enum.slice(0..10)
-  end
-
-  def find_nutrient(query, lookup) do
-    case exact_match(query, lookup) do
-      nil ->
-        fuzzy_match(query, lookup)
-
-      result ->
-        [result]
-    end
   end
 
   def handle_event("handle-item-click", %{"id" => id}, socket) do
@@ -264,6 +211,52 @@ defmodule MehungryWeb.SelectComponent do
       |> assign(:listing_open, false)
 
     {:noreply, socket}
+  end
+
+  def normalize(str) do
+    str
+    |> String.downcase()
+    |> String.trim()
+    |> :unicode.characters_to_nfd_binary()
+    |> String.replace(~r/[^a-z0-9\s]/u, "")
+  end
+
+  def build_lookup(map) do
+    Enum.reduce(map, %{}, fn {canonical, synonyms}, acc ->
+      all_terms = [canonical | synonyms]
+
+      Enum.reduce(all_terms, acc, fn term, acc2 ->
+        Map.put(acc2, normalize(term), canonical)
+      end)
+    end)
+  end
+
+  def exact_match(query, lookup) do
+    Map.get(lookup, normalize(query))
+  end
+
+  def fuzzy_match(query, terms, threshold \\ 0.40) do
+    normalized_query = normalize(query)
+
+    terms
+    |> Enum.map(fn {id, term} ->
+      score = String.jaro_distance(normalize(term), normalized_query)
+      {id, term, score}
+    end)
+    |> Enum.filter(fn {_id, _term, score} -> score >= threshold end)
+    |> Enum.sort_by(fn {_id, _term, score} -> -score end)
+    |> Enum.map(fn {id, term, _} -> {id, term} end)
+    |> Enum.slice(0..10)
+  end
+
+  def find_nutrient(query, lookup) do
+    case exact_match(query, lookup) do
+      nil ->
+        fuzzy_match(query, lookup)
+
+      result ->
+        [result]
+    end
   end
 
   # ----------------------------------------------------------------------------------Render --------------------------------------------------------------------------------------------->

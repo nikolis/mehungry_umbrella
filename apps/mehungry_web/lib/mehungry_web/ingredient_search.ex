@@ -126,7 +126,7 @@ defmodule MehungryWeb.IngredientSearch do
     end)
     |> Enum.map(fn n ->
       %{
-        name: Nutrition.NutrientMapper.get_nutrient_name(n["nutrientId"]),
+        name: MehungryWeb.NutrientMapper.get_nutrient_name(n["nutrientId"]),
         amount: n["amount"],
         unit: n["unitName"]
       }
@@ -163,7 +163,7 @@ defmodule MehungryWeb.IngredientSearch do
       %{
         id: nutrient["nutrientId"],
         name:
-          Nutrition.NutrientMapper.get_nutrient_name(
+          MehungryWeb.NutrientMapper.get_nutrient_name(
             nutrient["nutrientId"],
             nutrient["nutrientName"]
           ),

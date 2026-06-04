@@ -27,7 +27,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     recipe = Food.get_recipe!(recipe_id)
     user = Accounts.get_user!(user_id)
 
-    Facebook.post_recipe_container(user, recipe)
+    Facebook.post_recipe_container(user, recipe, %{})
 
     socket =
       socket

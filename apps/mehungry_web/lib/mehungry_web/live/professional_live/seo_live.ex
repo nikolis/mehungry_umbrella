@@ -49,7 +49,7 @@ defmodule MehungryWeb.ProfessionalLive.SeoLive do
     # Week-over-week change
     half = div(days, 2)
     cutoff_recent = NaiveDateTime.add(NaiveDateTime.utc_now(), -(half * 86_400), :second)
-    cutoff_past = NaiveDateTime.add(NaiveDateTime.utc_now(), -(days * 86_400), :second)
+    _cutoff_past = NaiveDateTime.add(NaiveDateTime.utc_now(), -(days * 86_400), :second)
 
     {recent_organic, past_organic} =
       organic_daily

@@ -293,18 +293,38 @@ defmodule Mehungry.Food.NutrientCalculation do
   @doc """
   Removes duplicate energy entries for a single ingredient's nutrient list.
 
-  USDA data often includes both "Energy (Atwater Specific Factors)" and
-  "Energy (Atwater General Factors)".  Including both would double-count
-  calories.  Strategy: prefer Specific Factors; fall back to General Factors;
-  otherwise keep the first energy entry found.  Non-energy nutrients pass
-  through unchanged.
+  USDA data includes multiple energy entries per ingredient:
+  "Energy" (kcal, ref 1008), "Energy" (kJ, ref 1062),
+  "Energy (Atwater General Factors)" (ref 2047), and
+  "Energy (Atwater Specific Factors)" (ref 2048).
+
+  All four have different reference_ids so grouping by reference_id kept
+  every entry, then NutrientNameNormalizer collapsed them all into one
+  "Energy" key and summed them — inflating calories 3-4×.
+
+  Fix: split energy vs non-energy across the whole list, then pick exactly
+  one energy entry per ingredient.  Priority: Atwater Specific > Atwater
+  General > any kcal entry > first found.
   """
   def filter_energy_duplicates(nutrients) do
-    nutrients
-    |> Enum.group_by(& &1.nutrient.reference_id)
-    |> Enum.flat_map(fn {_food_id, food_nutrients} ->
-      keep_best_energy(food_nutrients)
-    end)
+    {energy_nutrients, other_nutrients} =
+      Enum.split_with(nutrients, fn entry ->
+        String.starts_with?(entry.nutrient.name, "Energy")
+      end)
+
+    selected_energy =
+      cond do
+        specific = find_energy(energy_nutrients, @specific) -> [specific]
+        general = find_energy(energy_nutrients, @general) -> [general]
+        kcal = Enum.find(energy_nutrients, fn e ->
+          e.nutrient.name == "Energy" and
+            match?(%{name: "kilocalorie"}, e.nutrient.measurement_unit)
+        end) -> [kcal]
+        energy_nutrients != [] -> [hd(energy_nutrients)]
+        true -> []
+      end
+
+    other_nutrients ++ selected_energy
   end
 
   # ═════════════════════════════════════════════════════════════════════════
@@ -435,25 +455,6 @@ defmodule Mehungry.Food.NutrientCalculation do
   # ═════════════════════════════════════════════════════════════════════════
   # PRIVATE
   # ═════════════════════════════════════════════════════════════════════════
-
-  # Picks the single best energy nutrient from a group that shares a reference_id.
-  # Non-energy nutrients in the group are returned unchanged.
-  defp keep_best_energy(food_nutrients) do
-    {energy_nutrients, other_nutrients} =
-      Enum.split_with(food_nutrients, fn nutrient ->
-        String.starts_with?(nutrient.nutrient.name, "Energy")
-      end)
-
-    selected_energy =
-      cond do
-        specific = find_energy(energy_nutrients, @specific) -> [specific]
-        general = find_energy(energy_nutrients, @general) -> [general]
-        energy_nutrients != [] -> [hd(energy_nutrients)]
-        true -> []
-      end
-
-    other_nutrients ++ selected_energy
-  end
 
   defp find_energy(nutrients, target_name) do
     Enum.find(nutrients, fn nutrient -> nutrient.nutrient.name == target_name end)

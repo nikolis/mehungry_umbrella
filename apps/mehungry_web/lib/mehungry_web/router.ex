@@ -72,6 +72,7 @@ defmodule MehungryWeb.Router do
 
       live "/analytics", ProfessionalLive.AnalyticsLive, :index
       live "/seo", ProfessionalLive.SeoLive, :index
+      live "/maintenance", ProfessionalLive.MaintenanceLive, :index
 
       live "/visits", VisitLive.Index, :index
       live "/visits/:ip_address", VisitLive.Show, :show

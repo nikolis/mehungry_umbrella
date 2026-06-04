@@ -244,7 +244,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
                 Logger.info("Load ingredients from folder: #{url}")
                 url
 
-              {:error, the_err} ->
+              {:error, _the_err} ->
                 Logger.error("Error in parsing: #the_erre_err}")
             end
           end)

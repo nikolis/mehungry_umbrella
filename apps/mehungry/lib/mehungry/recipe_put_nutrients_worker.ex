@@ -25,6 +25,8 @@ defmodule Mehungry.RecipePutNutrientsWorker do
 
     _create_post = Mehungry.Posts.create_post(recipe)
 
+    Cachex.del(:recipes_cache, {Mehungry.Food, recipe_id})
+
     result =
       Food.put_nutrient_info(changeset, Map.from_struct(recipe))
 

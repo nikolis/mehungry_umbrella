@@ -9,10 +9,10 @@ defmodule MehungryWeb.SeedGenServerSuperServer do
 
   def init([]) do
     children = [
-      worker(MehungryWeb.SeedsGenWorkerServer, [[]])
+      {MehungryWeb.SeedsGenWorkerServer, [[]]}
     ]
 
-    supervise(children, strategy: :one_for_one)
+    Supervisor.init(children, strategy: :one_for_one)
   end
 end
 
@@ -51,7 +51,7 @@ defmodule MehungryWeb.SeedsGenWorkerServer do
 
     # IO.inspect(url_list, label: "\n Work Schedule \n")
     list = process_list(url_list)
-    Agent.update(state.agent, fn state -> %{work_items: list} end)
+    Agent.update(state.agent, fn _state -> %{work_items: list} end)
     # Reschedule next work
     schedule_work()
     {:noreply, state}
@@ -99,7 +99,7 @@ defmodule MehungryWeb.SeedsGenWorkerServer do
     {:noreply, state}
   end
 
-  def init(url) do
+  def init(_url) do
     {:ok, agent} = Agent.start_link(fn -> %{work_items: 0} end)
     schedule_work()
     {:ok, %{agent: agent}}

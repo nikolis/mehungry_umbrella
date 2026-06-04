@@ -127,6 +127,7 @@ defmodule MehungryWeb.SvgComponents do
   end
 
   attr :id, :string, default: "logo"
+  attr :class, :string, default: nil
 
   def get_logo(assigns) do
     ~H"""

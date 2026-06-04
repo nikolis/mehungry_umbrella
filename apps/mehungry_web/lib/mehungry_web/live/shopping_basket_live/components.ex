@@ -101,6 +101,23 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
     """
   end
 
+  defp ingredient_name(item, language) do
+    case Map.get(item, :ingredient) do
+      nil ->
+        item.name
+
+      ingredient ->
+        if language not in [nil, "en", "En"] do
+          translation =
+            Enum.find(ingredient.ingredient_translation, fn t -> t.language_name == language end)
+
+          if translation, do: translation.name, else: ingredient.name
+        else
+          ingredient.name
+        end
+    end
+  end
+
   def render_basket_items(assigns) do
     ~H"""
     <!-- Main Content - Items -->
@@ -213,7 +230,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
     <!-- Item Details -->
                 <div class="flex-1">
                   <div class={["text-white", if(item.in_storage, do: "line-through text-slate-500")]}>
-                    {if !is_nil(Map.get(item, :ingredient)), do: item.ingredient.name, else: item.name}
+                    {ingredient_name(item, @current_language)}
                   </div>
                   <div class="text-xs text-slate-400 mt-0.5">
                     {item.quantity} {if !is_nil(item.measurement_unit) do

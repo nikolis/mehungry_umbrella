@@ -902,6 +902,26 @@ defmodule Mehungry.Food do
     end
   end
 
+  def count_recipes do
+    Repo.aggregate(Recipe, :count)
+  end
+
+  def list_recipe_ids do
+    Repo.all(from r in Recipe, select: r.id)
+  end
+
+  def enqueue_nutrient_recalculation_for_all do
+    ids = list_recipe_ids()
+
+    Enum.each(ids, fn id ->
+      %{recipe_id: id}
+      |> Mehungry.RecipePutNutrientsWorker.new()
+      |> Oban.insert()
+    end)
+
+    length(ids)
+  end
+
   def list_nutrients() do
     Repo.all(Mehungry.Food.Nutrient)
   end
