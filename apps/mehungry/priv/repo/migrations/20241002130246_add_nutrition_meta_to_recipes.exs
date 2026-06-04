@@ -17,8 +17,40 @@ defmodule Mehungry.Repo.Migrations.AddNutritionMetaToRecipes do
     flush()
     repo = repo()
 
+    # Explicitly list columns that exist at this point in migration history,
+    # avoiding any fields added in later migrations (e.g. ingredient_interactions).
+    import Ecto.Query
+
     recipes =
-      repo.all(Mehungry.Food.Recipe)
+      repo.all(
+        from r in Mehungry.Food.Recipe,
+          select:
+            struct(r, [
+              :id,
+              :author,
+              :cooking_time_lower_limit,
+              :cooking_time_upper_limit,
+              :cousine,
+              :description,
+              :list_image_url,
+              :image_url,
+              :detail_image_url,
+              :recipe_image_remote,
+              :original_url,
+              :preperation_time_lower_limit,
+              :preperation_time_upper_limit,
+              :primary_nutrients_size,
+              :servings,
+              :private,
+              :title,
+              :difficulty,
+              :nutrients,
+              :user_id,
+              :language_name,
+              :inserted_at,
+              :updated_at
+            ])
+      )
       |> repo.preload([
         [recipe_ingredients: [:measurement_unit, :ingredient]],
         :user,
