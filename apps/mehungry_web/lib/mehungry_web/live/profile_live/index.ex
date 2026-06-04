@@ -304,6 +304,18 @@ defmodule MehungryWeb.ProfileLive.Index do
     end
   end
 
+  def handle_event("disconnect_social", %{"provider" => provider}, socket) do
+    user = socket.assigns.current_user
+    token_key = "#{provider}_token"
+    Accounts.update_user_tokens(user, %{token_key => %{}})
+    updated_user = Accounts.get_user!(user.id)
+
+    {:noreply,
+     socket
+     |> assign(:current_user, updated_user)
+     |> put_flash(:info, "#{String.capitalize(provider)} account disconnected.")}
+  end
+
   def get_profile_content(%{content_state: :created} = assigns) do
     ~H"""
     <div class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6  px-4">
@@ -390,16 +402,22 @@ defmodule MehungryWeb.ProfileLive.Index do
           </div>
         </div>
         <%= if @facebook_connected do %>
-          <span class="flex items-center gap-1.5 text-green-400 text-sm font-medium flex-shrink-0">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            Connected
-          </span>
+          <div class="flex items-center gap-3 flex-shrink-0">
+            <span class="flex items-center gap-1.5 text-green-400 text-sm font-medium">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              Connected
+            </span>
+            <button
+              phx-click="disconnect_social"
+              phx-value-provider="facebook"
+              data-confirm="Disconnect your Facebook account?"
+              class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium transition"
+            >
+              Disconnect
+            </button>
+          </div>
         <% else %>
           <a
             href="/auth/facebook"
@@ -427,16 +445,22 @@ defmodule MehungryWeb.ProfileLive.Index do
           </div>
         </div>
         <%= if @pinterest_connected do %>
-          <span class="flex items-center gap-1.5 text-green-400 text-sm font-medium flex-shrink-0">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            Connected
-          </span>
+          <div class="flex items-center gap-3 flex-shrink-0">
+            <span class="flex items-center gap-1.5 text-green-400 text-sm font-medium">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              Connected
+            </span>
+            <button
+              phx-click="disconnect_social"
+              phx-value-provider="pinterest"
+              data-confirm="Disconnect your Pinterest account?"
+              class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium transition"
+            >
+              Disconnect
+            </button>
+          </div>
         <% else %>
           <a
             href="/auth/pinterest"
