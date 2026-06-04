@@ -122,15 +122,15 @@ defmodule MehungryWeb.HomeLive.Index do
     socket
   end
 
-  defp apply_action(socket, :share_social_media, %{"id" => id}) do
+  defp apply_action(socket, :share_social_media, %{"id" => id, "social_media" => social_media}) do
     maybe_track_user(%{}, socket)
 
-    IO.inspect(id, label: "Recipe id")
     recipe = Food.get_recipe!(id)
     Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
 
     socket
     |> assign(:recipe, recipe)
+    |> assign(:social_media, social_media)
   end
 
   defp apply_action(socket, :show_recipe, %{"id" => id}) do

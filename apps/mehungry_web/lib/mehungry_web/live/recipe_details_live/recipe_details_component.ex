@@ -49,28 +49,10 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     {:noreply, socket}
   end
 
-  @impl true
-  def handle_event("save_user_recipe", %{"recipe_id" => recipe_id, "dom_id" => _dom_id}, socket) do
-    case is_nil(socket.assigns.user) do
-      true ->
-        socket = assign(socket, :must_be_loged_in, 1)
-        {:noreply, socket}
-
-      false ->
-        {recipe_id, _ignore} = Integer.parse(recipe_id)
-        toggle_user_saved_recipes(socket, recipe_id)
-
-        user_recipes =
-          Users.list_user_saved_recipe_ids(socket.assigns.user)
-
-        socket = assign(socket, :user_recipes, user_recipes)
-        {:noreply, socket}
-    end
-  end
 
   @impl true
   def handle_event("add-reply-form", %{"id" => comment_id}, socket) do
-    case is_nil(socket.assigns.user) do
+    case is_nil(socket.assigns.current_user) do
       true ->
         socket = assign(socket, :must_be_loged_in, 1)
         {:noreply, socket}
@@ -92,7 +74,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
         %{"id" => comment_id, "reaction" => reaction} = _params,
         socket
       ) do
-    case is_nil(socket.assigns.user) do
+    case is_nil(socket.assigns.current_user) do
       true ->
         socket = assign(socket, :must_be_loged_in, 1)
         {:noreply, socket}
@@ -104,7 +86,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
         # socket
         # |> assign(:reply, %{comment_id: comment_id})
 
-        Mehungry.Posts.vote_comment(comment_id, socket.assigns.user.id, reaction)
+        Mehungry.Posts.vote_comment(comment_id, socket.assigns.current_user.id, reaction)
 
         {:noreply, socket}
     end

@@ -296,6 +296,11 @@ defmodule MehungryWeb.ProfileLive.Index do
         {:noreply,
          socket
          |> assign(content_state: :edit_profile)}
+
+      "connected_accounts" ->
+        {:noreply,
+         socket
+         |> assign(content_state: :connected_accounts)}
     end
   end
 
@@ -351,4 +356,55 @@ defmodule MehungryWeb.ProfileLive.Index do
     />
     """
   end
+
+  def get_profile_content(%{content_state: :connected_accounts} = assigns) do
+    facebook_connected =
+      not is_nil(assigns.current_user) and
+        map_size(Map.get(assigns.current_user, :facebook_token, %{})) > 0
+
+    assigns = assign(assigns, :facebook_connected, facebook_connected)
+
+    ~H"""
+    <div class="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" class="w-6 h-6">
+              <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-white font-semibold">Facebook</p>
+            <p class="text-slate-400 text-sm">
+              {if @facebook_connected,
+                do: "Connected — you can publish recipes to your Facebook pages",
+                else: "Connect your account to publish recipes to your Facebook pages"}
+            </p>
+          </div>
+        </div>
+        <%= if @facebook_connected do %>
+          <span class="flex items-center gap-1.5 text-green-400 text-sm font-medium flex-shrink-0">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Connected
+          </span>
+        <% else %>
+          <a
+            href="/auth/facebook"
+            class="flex-shrink-0 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition"
+          >
+            Connect
+          </a>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  def get_profile_content(assigns), do: ~H""
 end

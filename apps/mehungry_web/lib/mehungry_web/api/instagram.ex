@@ -1,5 +1,4 @@
 defmodule Mehungry.Api.Instagram do
-  alias Mehungry.Accounts
   alias Mehungry.Food.Recipe
 
   @api_base "https://graph.instagram.com"
@@ -71,60 +70,43 @@ defmodule Mehungry.Api.Instagram do
   end
 
   def post_recipe_container(user, recipe) do
-    # token = Accounts.get_user_tokens(user, "instagram")
     token = user.instagram_token
 
-    user_id = Map.get(token, "user_id", "")
+    user_id = to_string(Map.get(token, "user_id", ""))
     access_token = Map.get(token, "access_token", "")
-
     caption = get_recipe_caption(recipe)
-
-    headers = [
-      Authorization: "Bearer #{access_token}",
-      Accept: "Application/json; Charset=utf-8",
-      image_url: recipe.image_url
-    ]
-
-    {:ok, body} = Jason.encode(%{"image_url" => recipe.image_url})
+    headers = [Authorization: "Bearer #{access_token}", Accept: "Application/json; Charset=utf-8"]
 
     response_create_container =
       HTTPoison.post(
-        @api_base <>
-          "/" <>
-          @api_version <>
-          "/" <> Integer.to_string(user_id) <> "/media",
-        body,
+        "#{@api_base}/#{@api_version}/#{user_id}/media",
+        "",
         headers,
-        params: %{image_url: recipe.image_url, caption: caption}
+        params: %{image_url: recipe.image_url, caption: caption, media_type: "IMAGE"}
       )
 
     case response_create_container do
       {:ok, %HTTPoison.Response{status_code: 200} = response} ->
         {:ok, body} = Jason.decode(response.body)
-        id = body["id"]
-        publish_recipe_container(user, id)
+        publish_recipe_container(user, body["id"])
 
       _ ->
         nil
     end
   end
 
-  def publish_recipe_container(user, code) do
-    token = Accounts.get_user_tokens(user, "instagram")
+  def publish_recipe_container(user, creation_id) do
+    token = user.instagram_token
 
-    token = Jason.decode!(token)
-    user_id = Map.get(token, "user_id", "")
+    user_id = to_string(Map.get(token, "user_id", ""))
     access_token = Map.get(token, "access_token", "")
     headers = [Authorization: "Bearer #{access_token}", Accept: "Application/json; Charset=utf-8"]
 
     HTTPoison.post(
-      @api_base <>
-        "/" <>
-        @api_version <>
-        "/" <> Integer.to_string(user_id) <> "/media_publish",
-      "{\"creation_id\" = " <> code <> "}",
+      "#{@api_base}/#{@api_version}/#{user_id}/media_publish",
+      "",
       headers,
-      params: %{creation_id: code}
+      params: %{creation_id: creation_id}
     )
   end
 end

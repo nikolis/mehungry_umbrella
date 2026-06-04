@@ -13,7 +13,7 @@ defmodule Ueberauth.Strategy.Instagram.OAuth do
   @defaults [
     strategy: __MODULE__,
     site: "https://graph.instagram.com",
-    authorize_url: "https://www.instagram.com/oauth/authorize/",
+    authorize_url: "https://www.instagram.com/oauth/authorize",
     token_url: "https://api.instagram.com/oauth/access_token"
   ]
 

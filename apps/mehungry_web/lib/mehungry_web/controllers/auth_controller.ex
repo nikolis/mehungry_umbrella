@@ -24,14 +24,13 @@ defmodule MehungryWeb.AuthController do
   end
 
   def callback(%{assigns: %{ueberauth_auth: %{provider: :instagram} = auth}} = conn, _params) do
-    token = auth.extra.raw_info.token.access_token
-    {:ok, decoded_token} = Jason.decode(token)
-    _token_save = Accounts.put_user_token(conn.assigns.current_user, token, "instagram")
+    short_lived_token = auth.extra.raw_info.token.access_token
+    instagram_user_id = auth.extra.raw_info.token.other_params["user_id"]
 
     Mehungry.Api.Instagram.get_long_lived_token(
       conn.assigns.current_user,
-      decoded_token["access_token"],
-      decoded_token["user_id"]
+      short_lived_token,
+      instagram_user_id
     )
 
     conn

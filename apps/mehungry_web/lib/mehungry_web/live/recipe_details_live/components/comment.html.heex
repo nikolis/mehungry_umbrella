@@ -92,9 +92,9 @@
               module={MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer}
               id={"comment_answer_form_alla" <> to_string(@comment.id)}
               action={@live_action}
-              user={@user}
+              user={@current_user}
               class="text-slate-800"
-              comment_answer={%{comment_id: @reply.comment_id, user_id: @user.id}}
+              comment_answer={%{comment_id: @reply.comment_id, user_id: @current_user.id}}
             />
           <% end %>
         <% end %>

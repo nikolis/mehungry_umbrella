@@ -148,6 +148,51 @@ Hooks.Copy = {
   },
 }
 
+Hooks.WebShare = {
+  mounted() {
+    if (!navigator.share) {
+      const span = this.el.querySelector("span");
+      if (span) span.textContent = "Copy Link";
+    }
+    this.el.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const url = this.el.dataset.url;
+      const title = this.el.dataset.title || "Check out this recipe on Mehungry";
+      const btn = this.el;
+      const originalText = btn.querySelector("span") ? btn.querySelector("span").textContent : btn.textContent.trim();
+
+      const showFeedback = (msg) => {
+        const span = btn.querySelector("span") || btn;
+        const prev = span.textContent;
+        span.textContent = msg;
+        setTimeout(() => { span.textContent = prev; }, 2000);
+      };
+
+      if (navigator.share) {
+        navigator.share({ title, url })
+          .then(() => showFeedback("Shared!"))
+          .catch((err) => { if (err.name !== "AbortError") console.error("Share failed", err); });
+      } else {
+        navigator.clipboard.writeText(url)
+          .then(() => showFeedback("Copied!"))
+          .catch(() => {
+            // last-resort fallback for HTTP or old browsers
+            const ta = document.createElement("textarea");
+            ta.value = url;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            showFeedback("Copied!");
+          });
+      }
+    });
+  },
+}
+
 Hooks.FocusHook = {
   mounted() {
   }
