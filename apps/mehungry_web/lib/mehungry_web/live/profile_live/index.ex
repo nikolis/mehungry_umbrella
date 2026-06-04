@@ -374,6 +374,9 @@ defmodule MehungryWeb.ProfileLive.Index do
       not is_nil(assigns.current_user) and
         map_size(Map.get(assigns.current_user, :facebook_token, %{})) > 0
 
+    facebook_is_primary_login =
+      facebook_connected and is_nil(assigns.current_user.hashed_password)
+
     pinterest_connected =
       not is_nil(assigns.current_user) and
         map_size(Map.get(assigns.current_user, :pinterest_token, %{})) > 0
@@ -381,6 +384,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     assigns =
       assigns
       |> assign(:facebook_connected, facebook_connected)
+      |> assign(:facebook_is_primary_login, facebook_is_primary_login)
       |> assign(:pinterest_connected, pinterest_connected)
 
     ~H"""
@@ -407,16 +411,18 @@ defmodule MehungryWeb.ProfileLive.Index do
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
               </svg>
-              Connected
+              {if @facebook_is_primary_login, do: "Primary login", else: "Connected"}
             </span>
-            <button
-              phx-click="disconnect_social"
-              phx-value-provider="facebook"
-              data-confirm="Disconnect your Facebook account?"
-              class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium transition"
-            >
-              Disconnect
-            </button>
+            <%= if not @facebook_is_primary_login do %>
+              <button
+                phx-click="disconnect_social"
+                phx-value-provider="facebook"
+                data-confirm="Disconnect your Facebook account?"
+                class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium transition"
+              >
+                Disconnect
+              </button>
+            <% end %>
           </div>
         <% else %>
           <a
