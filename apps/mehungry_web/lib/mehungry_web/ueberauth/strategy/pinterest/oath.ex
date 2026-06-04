@@ -45,7 +45,7 @@ defmodule Ueberauth.Strategy.Pinterest.OAuth do
 
     client
     |> put_header("Authorization", "Basic #{credentials}")
-    |> put_header("Content-Type", "application/x-www-form-urlencoded")
+    |> put_header("Accept", "application/json")
     |> OAuth2.Strategy.AuthCode.get_token(params, headers)
   end
 end

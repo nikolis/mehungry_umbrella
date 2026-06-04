@@ -4,6 +4,8 @@ defmodule Mehungry.Api.Pinterest do
   Handles board listing and pin creation for connected user accounts.
   """
 
+  require Logger
+
   alias Mehungry.Food.Recipe
 
   @api_base "https://api.pinterest.com/v5"
@@ -17,20 +19,34 @@ defmodule Mehungry.Api.Pinterest do
   def get_boards(user) do
     case access_token(user) do
       nil ->
+        Logger.warning("[Pinterest] get_boards: no access token for user #{user.id}")
         []
 
       token ->
-        case HTTPoison.get(
-               "#{@api_base}/boards?page_size=25",
-               [{"Authorization", "Bearer #{token}"}]
-             ) do
+        url = "#{@api_base}/boards?page_size=25"
+
+        case HTTPoison.get(url, [{"Authorization", "Bearer #{token}"}]) do
           {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
             case Jason.decode(body) do
-              {:ok, %{"items" => boards}} -> boards
-              _ -> []
+              {:ok, %{"items" => boards}} ->
+                Logger.info("[Pinterest] get_boards: #{length(boards)} boards for user #{user.id}")
+                boards
+
+              {:ok, other} ->
+                Logger.warning("[Pinterest] get_boards: unexpected response shape: #{inspect(other)}")
+                []
+
+              {:error, err} ->
+                Logger.warning("[Pinterest] get_boards: JSON decode error: #{inspect(err)}")
+                []
             end
 
-          _ ->
+          {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
+            Logger.warning("[Pinterest] get_boards: HTTP #{status} — #{body}")
+            []
+
+          {:error, %HTTPoison.Error{reason: reason}} ->
+            Logger.warning("[Pinterest] get_boards: request error — #{inspect(reason)}")
             []
         end
     end
@@ -102,8 +118,15 @@ defmodule Mehungry.Api.Pinterest do
 
   defp access_token(user) do
     case Map.get(user.pinterest_token || %{}, "access_token") do
+      nil -> nil
       "" -> nil
-      token -> token
+      # OAuth2 library stored the raw JSON body instead of just the token
+      # when Accept: application/json was missing. Unwrap it transparently.
+      val ->
+        case Jason.decode(val) do
+          {:ok, %{"access_token" => inner}} -> inner
+          _ -> val
+        end
     end
   end
 end
