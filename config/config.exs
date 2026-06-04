@@ -67,7 +67,7 @@ config :ueberauth, Ueberauth,
     pinterest:
       {Ueberauth.Strategy.Pinterest,
        [
-         default_scope: "boards:read,pins:read,pins:write,user_accounts:read"
+         default_scope: "boards:read,boards:write,pins:read,pins:write,user_accounts:read"
        ]},
     google: {Ueberauth.Strategy.Google, []},
     identity:

@@ -6,7 +6,7 @@ defmodule Ueberauth.Strategy.Pinterest do
   """
 
   use Ueberauth.Strategy,
-    default_scope: "boards:read,pins:read,pins:write,user_accounts:read",
+    default_scope: "boards:read,boards:write,pins:read,pins:write,user_accounts:read",
     uid_field: :username,
     allowed_request_params: [:scope]
 
