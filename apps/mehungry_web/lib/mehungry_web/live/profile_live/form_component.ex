@@ -9,7 +9,7 @@ defmodule MehungryWeb.ProfileLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="bg-slate-800 rounded-xl border border-slate-700 p-6 text-white">
+    <div class="bg-slate-800 rounded-xl border border-slate-700  text-white px-6 mx-2 mb-12">
       <h3 class="text-center mt-4 mb-8i text-white">
         {@title}
       </h3>

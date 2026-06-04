@@ -388,7 +388,7 @@ defmodule MehungryWeb.ProfileLive.Index do
       |> assign(:pinterest_connected, pinterest_connected)
 
     ~H"""
-    <div class="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
+    <div class="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4 mb-10">
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 flex items-center justify-between gap-4">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
