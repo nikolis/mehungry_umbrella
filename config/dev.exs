@@ -93,6 +93,10 @@ config :ueberauth, Ueberauth.Strategy.Instagram.OAuth,
   client_id: System.get_env("INSTAGRAM_CLIENT_ID"),
   client_secret: System.get_env("INSTAGRAM_CLIENT_SECRET")
 
+config :ueberauth, Ueberauth.Strategy.Pinterest.OAuth,
+  client_id: System.get_env("PINTEREST_CLIENT_ID"),
+  client_secret: System.get_env("PINTEREST_CLIENT_SECRET")
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :console, format: "[$level] $message\n"
 
