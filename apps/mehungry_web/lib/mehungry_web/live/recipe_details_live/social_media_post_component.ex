@@ -7,6 +7,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
   alias Mehungry.Accounts
   alias Mehungry.Api.Facebook
   alias Mehungry.Api.Instagram
+  alias Mehungry.Api.Pinterest
   alias MehungryWeb.SvgComponents
 
   import MehungryWeb.CoreComponents
@@ -24,12 +25,22 @@ defmodule MehungryWeb.SocialMediaPostComponent do
   def update(assigns, socket) do
     changeset = FacebookPost.change_facebook_post(%FacebookPost{}, %{})
 
+    pinterest_boards =
+      if Map.get(assigns, :social_media) == "pinterest" do
+        user = Map.get(assigns, :user)
+        if user, do: Pinterest.get_boards(user), else: []
+      else
+        []
+      end
+
     socket =
       socket
       |> assign(assigns)
       |> assign(:changeset, changeset)
       |> assign(:post, %FacebookPost{})
       |> assign(:state, Map.get(assigns, :state, :normal))
+      |> assign(:pinterest_boards, pinterest_boards)
+      |> assign(:pinterest_board_id, nil)
 
     {:ok, socket}
   end
@@ -77,6 +88,40 @@ defmodule MehungryWeb.SocialMediaPostComponent do
     end)
 
     {:noreply, assign(socket, :state, :posting)}
+  end
+
+  @impl true
+  def handle_event("select_pinterest_board", %{"board_id" => board_id}, socket) do
+    {:noreply, assign(socket, :pinterest_board_id, board_id)}
+  end
+
+  @impl true
+  def handle_event("post_pinterest", _params, socket) do
+    board_id = socket.assigns.pinterest_board_id
+
+    if is_nil(board_id) do
+      {:noreply, socket}
+    else
+      parent = self()
+
+      Task.start(fn ->
+        user = Accounts.get_user!(socket.assigns.user.id)
+        recipe = socket.assigns.recipe
+
+        result =
+          case Pinterest.create_pin(user, recipe, board_id) do
+            {:ok, _pin} ->
+              [{"Pinterest", 200, nil}]
+
+            {:error, reason} ->
+              [{"Pinterest", 0, Jason.encode!(%{"error" => %{"message" => reason}})}]
+          end
+
+        notify_parent(parent, %{post_result: result})
+      end)
+
+      {:noreply, assign(socket, :state, :posting)}
+    end
   end
 
   @impl true
@@ -156,6 +201,79 @@ defmodule MehungryWeb.SocialMediaPostComponent do
 
       :normal ->
         case assigns.social_media do
+          "pinterest" ->
+            ~H"""
+            <div class="space-y-5">
+              <div class="flex items-center gap-3 pb-4 border-b border-slate-700">
+                <div class="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" class="w-6 h-6">
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-white">Pin to Pinterest</h3>
+                  <p class="text-sm text-slate-400">Save this recipe to one of your boards</p>
+                </div>
+              </div>
+              <%= if is_nil(@user.pinterest_token) or map_size(@user.pinterest_token) == 0 do %>
+                <div class="flex items-center gap-3 p-4 rounded-lg bg-slate-700/50">
+                  <.icon name="hero-exclamation-circle" class="h-5 w-5 text-slate-400 flex-shrink-0" />
+                  <p class="text-sm text-slate-400">
+                    No Pinterest account connected.
+                    <.link navigate={~p"/profile"} class="text-red-400 hover:text-red-300 underline">Connect it in your profile settings.</.link>
+                  </p>
+                </div>
+              <% else %>
+                <%= if @pinterest_boards == [] do %>
+                  <div class="flex items-center gap-3 p-4 rounded-lg bg-slate-700/50">
+                    <.icon name="hero-exclamation-circle" class="h-5 w-5 text-slate-400 flex-shrink-0" />
+                    <p class="text-sm text-slate-400">No Pinterest boards found. Create a board on Pinterest first.</p>
+                  </div>
+                <% else %>
+                  <div class="space-y-3">
+                    <p class="text-sm text-slate-300">
+                      Pinning <span class="font-semibold text-white">{@recipe.title}</span> — choose a board:
+                    </p>
+                    <div class="grid gap-2 max-h-48 overflow-y-auto pr-1">
+                      <%= for board <- @pinterest_boards do %>
+                        <button
+                          phx-click="select_pinterest_board"
+                          phx-value-board_id={board["id"]}
+                          phx-target={@myself}
+                          class={[
+                            "w-full text-left px-4 py-3 rounded-lg border text-sm transition",
+                            if(@pinterest_board_id == board["id"],
+                              do: "bg-red-600/20 border-red-500/60 text-white",
+                              else: "bg-slate-700/50 border-slate-600 text-slate-300 hover:border-slate-500"
+                            )
+                          ]}
+                        >
+                          {board["name"]}
+                        </button>
+                      <% end %>
+                    </div>
+                    <div class="flex justify-end pt-2">
+                      <button
+                        phx-click="post_pinterest"
+                        phx-target={@myself}
+                        disabled={is_nil(@pinterest_board_id)}
+                        class={[
+                          "flex items-center gap-2 px-5 py-2 rounded-lg font-semibold transition-colors",
+                          if(is_nil(@pinterest_board_id),
+                            do: "bg-slate-700 text-slate-500 cursor-not-allowed",
+                            else: "bg-red-600 hover:bg-red-500 text-white"
+                          )
+                        ]}
+                      >
+                        <.icon name="hero-paper-airplane" class="h-4 w-4" /> Pin Recipe
+                      </button>
+                    </div>
+                  </div>
+                <% end %>
+              <% end %>
+            </div>
+            """
+
           "instagram" ->
             ~H"""
             <div class="space-y-5">

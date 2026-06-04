@@ -46,6 +46,14 @@
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/database_url-dRiOCt"
                 },
                 {
+                    "name": "PINTEREST_CLIENT_ID",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/pinterest_client_id-Gyq1Ms"
+                },
+                {
+                    "name": "PINTEREST_CLIENT_SECRET",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/pinterest_client_secret-cN7CS0"
+                },
+                {
                     "name": "AWS_ACCESS_KEY_ID",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/aws_key_id-DGDOfP"
                 },
@@ -53,6 +61,7 @@
                     "name": "AWS_SECRET_ACCESS_KEY",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/aws_secret_access_key-3rZAyV"
                 },
+
                 {
                     "name": "FACEBOOK_CLIENT_ID",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/fecebook_client_id-hWBO09"

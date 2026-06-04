@@ -23,6 +23,23 @@ defmodule MehungryWeb.AuthController do
     |> redirect(to: "/")
   end
 
+  def callback(%{assigns: %{ueberauth_auth: %{provider: :pinterest} = auth}} = conn, _params) do
+    token = auth.extra.raw_info.token
+
+    token_data = %{
+      "access_token" => token.access_token,
+      "refresh_token" => token.refresh_token,
+      "expires_at" => token.expires_at,
+      "scope" => token.other_params["scope"] || ""
+    }
+
+    Accounts.update_user_tokens(conn.assigns.current_user, %{"pinterest_token" => token_data})
+
+    conn
+    |> put_flash(:info, "Pinterest account connected successfully.")
+    |> redirect(to: "/profile")
+  end
+
   def callback(%{assigns: %{ueberauth_auth: %{provider: :instagram} = auth}} = conn, _params) do
     short_lived_token = auth.extra.raw_info.token.access_token
     instagram_user_id = auth.extra.raw_info.token.other_params["user_id"]
@@ -39,32 +56,37 @@ defmodule MehungryWeb.AuthController do
   end
 
   def callback(%{assigns: %{ueberauth_auth: %{provider: :facebook} = auth}} = conn, _params) do
-    case Accounts.find_or_create(auth) do
-      {:ok, user} ->
-        conn =
+    if conn.assigns[:current_user] do
+      user = conn.assigns.current_user
+      token = auth.extra.raw_info.token.access_token
+
+      Task.start(fn ->
+        Mehungry.Api.Facebook.get_user_pages(user, token, auth.extra.raw_info.user["id"])
+      end)
+
+      conn
+      |> put_flash(:info, "Facebook account connected successfully.")
+      |> redirect(to: "/profile")
+    else
+      case Accounts.find_or_create(auth) do
+        {:ok, user} ->
+          token = auth.extra.raw_info.token.access_token
+
+          Task.start(fn ->
+            Accounts.put_user_token(user, token, "facebook")
+            Mehungry.Api.Facebook.get_user_pages(user, token, auth.extra.raw_info.user["id"])
+          end)
+
           conn
           |> UserAuth.log_in_user(user, %{})
-          |> put_flash(:info, "Successfully connected with Facebook")
+          |> put_flash(:info, "Successfully logged in with Facebook.")
           |> redirect(to: "/profile")
 
-        token = auth.extra.raw_info.token.access_token
-
-        Task.start(fn ->
-          Accounts.put_user_token(user, token, "facebook")
-
-          Mehungry.Api.Facebook.get_user_pages(
-            user,
-            token,
-            auth.extra.raw_info.user["id"]
-          )
-        end)
-
-        conn
-
-      {:error, reason} ->
-        conn
-        |> put_flash(:error, reason)
-        |> redirect(to: "/")
+        {:error, reason} ->
+          conn
+          |> put_flash(:error, reason)
+          |> redirect(to: "/")
+      end
     end
   end
 
