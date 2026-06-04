@@ -27,17 +27,16 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   ]
 
   defp get_form_changeset(params) do
-    changeset =
-      {params, @types}
-      |> cast(params, Map.keys(@types))
-      |> validate_required([:query])
+    {params, @types}
+    |> cast(params, Map.keys(@types))
+    |> validate_required([:query])
   end
 
   @impl true
   def mount(_params, _session, socket) do
     {ingredients, cursor_after} = Food.list_ingredients_paginated()
 
-    categories = Food.list_categories()
+    _categories = Food.list_categories()
     search_methods = [{"ilike", "ilike"}, {"search", "search"}]
     translation_stats = build_translation_stats()
 
@@ -60,7 +59,7 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   end
 
   @impl true
-  def handle_event("search_change", %{"search_form" => search_form} = rest, socket) do
+  def handle_event("search_change", %{"search_form" => search_form} = _rest, socket) do
     socket = execute_query(search_form, socket)
 
     {:noreply, socket}
@@ -68,7 +67,7 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
   @impl true
   def handle_event("filter_change", %{"_target" => [target]} = vari, socket) do
-    value = Map.get(vari, target, nil)
+    _value = Map.get(vari, target, nil)
 
     {:noreply, socket}
   end

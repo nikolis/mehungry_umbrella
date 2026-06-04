@@ -112,7 +112,7 @@
         <%= if @comment.id == @reply.comment_id  do %>
           <%= if @current_user do %>
             <.live_component
-              module={MehungryWeb.HomeLive.FormComponentCommentAnswer}
+              module={MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer}
               id={"comment_answer_form_alla" <> to_string(@comment.id)}
               action={@live_action}
               user={@user}

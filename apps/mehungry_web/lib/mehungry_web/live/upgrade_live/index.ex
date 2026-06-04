@@ -32,6 +32,7 @@ defmodule MehungryWeb.UpgradeLive.Index do
      |> assign(:page_title, "Upgrade to Pro")}
   end
 
+  @impl true
   def handle_params(%{"stripe_status" => "success"}, _uri, socket) do
     subscription = Subscriptions.get_subscription(socket.assigns.user.id)
     {:noreply, socket |> assign(:stripe_status, :success) |> assign(:subscription, subscription)}

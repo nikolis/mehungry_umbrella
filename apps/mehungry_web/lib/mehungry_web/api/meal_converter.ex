@@ -82,7 +82,7 @@ defmodule MehungryWeb.Api.MealConverter do
     }
   end
 
-  defp find_matching_ingredient(ingredients, mu_name) do
+  defp find_matching_ingredient(ingredients, _mu_name) do
     ingredients =
       Enum.map(ingredients, fn x -> x.ingredient_portions end)
       |> List.flatten()

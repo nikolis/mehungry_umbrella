@@ -2,7 +2,16 @@ defmodule MehungryWeb.NutrientMapper do
   use GenServer
   require Logger
 
-  # ... (keep all your existing code, just replace the humanize functions)
+  def init(init_arg), do: {:ok, init_arg}
+
+  def get_nutrient_name(nutrient_id, fallback_name \\ nil) do
+    name = if fallback_name && fallback_name != "", do: fallback_name, else: to_string(nutrient_id)
+    humanize_nutrient_name(name)
+  end
+
+  def get_all_mappings, do: %{}
+
+  def status, do: %{loaded_count: 1}
 
   def humanize_nutrient_name(name) when is_binary(name) do
     name
@@ -390,24 +399,6 @@ defmodule MehungryWeb.NutrientMapper do
       carbon == 20 and double_bonds == 5 -> "Eicosapentaenoic Acid (EPA)"
       carbon == 22 and double_bonds == 6 -> "Docosahexaenoic Acid (DHA)"
       true -> "C#{carbon}:#{double_bonds} Polyunsaturated Fatty Acid"
-    end
-  end
-
-  # Helper function for unknown fatty acids
-  defp format_unknown_fatty_acid(original_name) do
-    # Try to extract and format nicely
-    cond do
-      String.contains?(original_name, "PUFA") ->
-        String.replace(original_name, "PUFA", "Polyunsaturated Fatty Acid")
-
-      String.contains?(original_name, "MUFA") ->
-        String.replace(original_name, "MUFA", "Monounsaturated Fatty Acid")
-
-      String.contains?(original_name, "SFA") ->
-        String.replace(original_name, "SFA", "Saturated Fatty Acid")
-
-      true ->
-        original_name
     end
   end
 

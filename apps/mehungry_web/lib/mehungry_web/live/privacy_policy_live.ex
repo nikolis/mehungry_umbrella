@@ -5,6 +5,7 @@ defmodule MehungryWeb.PrivacyPolicyLive do
     {:ok, socket}
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
     <h1 class="text-center p-4 pb-2">Privacy policy</h1>

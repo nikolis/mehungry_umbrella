@@ -36,25 +36,4 @@ defmodule MehungryWeb.DistributedTaskHandler do
     {:noreply, %{working: nodes, waiting: []}, @interval}
   end
 
-  defp handle_task(:parse_and_insert, %{file_url: {:ok, file_url}}) do
-    %HTTPoison.Response{body: body} = HTTPoison.get!(file_url)
-    Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
-    # parsed = MehungryWeb.Parser.parse(%{raw: raw})
-    # MehungryWeb.Repo.insert!(parsed)
-  end
-
-  defp handle_task(:notify_user, %{user_id: id, message: msg}) do
-    Logger.info("📣 Notify user #{id}: #{msg}")
-
-    # Maybe call your mailer or PubSub here
-  end
-
-  defp handle_task(:export_csv, %{report_id: id}) do
-    IO.puts("📤 Exporting CSV for report #{id}")
-    # Imagine generating and saving a report here
-  end
-
-  defp handle_task(other, _) do
-    IO.puts("❓ Unknown task type: #{inspect(other)}")
-  end
 end

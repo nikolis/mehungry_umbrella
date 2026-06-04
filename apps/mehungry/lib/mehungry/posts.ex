@@ -91,8 +91,13 @@ defmodule Mehungry.Posts do
       :user,
       :upvotes,
       :downvotes,
-      # comments: [:user],
-      reference: [:user, recipe_ingredients: [:ingredient], comments: [:user]]
+      reference: [
+        :user,
+        :user_recipes,
+        :recipe_hashtags,
+        recipe_ingredients: [:ingredient],
+        comments: [:user]
+      ]
     ])
   end
 

@@ -1,5 +1,14 @@
 <div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
 <div class=" min-h-screen bg-slate-900  text-white">
+  <%= if !is_nil(@must_be_loged_in) do %>
+    <.modal
+      id="profile_must_be_login"
+      show
+      on_cancel={JS.push("keep_browsing")}
+    >
+      <.live_component module={MehungryWeb.MustBeLoginComponent} id={:new} patch={~p"/browse"} />
+    </.modal>
+  <% end %>
   <%= if !is_nil(@current_user) do %>
     <.modal
       :if={
@@ -149,6 +158,26 @@
                 />
               </svg>
               <span>Edit Profile</span>
+            </div>
+          </button>
+          <button
+            phx-click="content_state_change"
+            phx-value-state="connected_accounts"
+            class={[
+              "px-6 py-3 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
+                get_active(@content_state, :connected_accounts)
+            ]}
+          >
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                />
+              </svg>
+              <span>Connected Accounts</span>
             </div>
           </button>
         <% end %>

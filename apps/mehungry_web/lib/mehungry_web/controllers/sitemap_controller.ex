@@ -39,7 +39,7 @@ defmodule MehungryWeb.SitemapController do
     |> send_resp(200, xml)
   end
 
-  defp url_entry(loc, opts \\ []) do
+  defp url_entry(loc, opts) do
     lastmod = if v = opts[:lastmod], do: "\n    <lastmod>#{v}</lastmod>", else: ""
     changefreq = opts[:changefreq] || "weekly"
     priority = opts[:priority] || "0.8"

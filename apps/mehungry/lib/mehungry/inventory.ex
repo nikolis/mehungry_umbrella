@@ -164,33 +164,6 @@ defmodule Mehungry.Inventory do
     Repo.insert_all(BasketItem, items)
   end
 
-  def add_items_from_calendar_span(basket_id, start_date, end_date) do
-    # Fetch all planned meals in date range
-    planned_meals =
-      Repo.all(
-        from pm in PlannedMeal,
-          where: pm.date >= ^start_date and pm.date <= ^end_date,
-          preload: [recipe: [:ingredients]]
-      )
-
-    items =
-      Enum.flat_map(planned_meals, fn meal ->
-        Enum.map(meal.recipe.ingredients, fn ingredient ->
-          %{
-            list_id: basket_id,
-            name: ingredient.name,
-            quantity: ingredient.quantity,
-            unit: ingredient.unit,
-            recipe_id: meal.recipe_id,
-            meal_plan_id: meal.id,
-            checked: false
-          }
-        end)
-      end)
-
-    Repo.insert_all(BasketItem, items)
-  end
-
   def create_shopping_basket(attrs \\ %{}) do
     result =
       %ShoppingBasket{}

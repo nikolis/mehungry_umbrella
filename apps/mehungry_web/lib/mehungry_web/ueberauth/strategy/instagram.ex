@@ -34,10 +34,10 @@ defmodule Ueberauth.Strategy.Instagram do
       |> Keyword.put(:redirect_uri, callback_url(conn))
       |> with_state_param(conn)
 
-    # |> Ueberauth.Strategy.Instagram.OAuth.authorize_url!
-
-    # redirect!(conn, authorize_url)
-    redirect!(conn, Ueberauth.Strategy.Instagram.OAuth.authorize_url!(params, opts))
+    authorize_url = Ueberauth.Strategy.Instagram.OAuth.authorize_url!(params, opts)
+    require Logger
+    Logger.info("[Instagram OAuth] Redirecting to: #{authorize_url}")
+    redirect!(conn, authorize_url)
   end
 
   defp oauth_client_options_from_conn(conn) do

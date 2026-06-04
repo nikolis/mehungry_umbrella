@@ -2,7 +2,7 @@ defmodule MehungryWeb.IngredientComponent do
   use MehungryWeb, :live_component
 
   @impl true
-  def update(%{new_ingredient_id: ingredient_id} = assigns, socket) do
+  def update(%{new_ingredient_id: ingredient_id} = _assigns, socket) do
     grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
 
     measurement_units =
@@ -80,6 +80,7 @@ defmodule MehungryWeb.IngredientComponent do
     |> assign(:ingredient_get_by_id_fn, get_by_id_fn)
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="py-2">

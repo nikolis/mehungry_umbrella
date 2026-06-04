@@ -7,7 +7,7 @@ defmodule MehungryWeb.LandingLive do
 
   @impl true
   def handle_event("resize_chart", %{"width" => width}, socket) do
-    for child_id <- socket.assigns.child_ids do
+    for _child_id <- socket.assigns.child_ids do
       send_update(MehungryWeb.CalendarLive.Calendar.PieChart, resize: width)
     end
 
@@ -35,6 +35,7 @@ defmodule MehungryWeb.LandingLive do
      )}
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
     <!-- Navigation -->

@@ -298,7 +298,7 @@ defmodule MehungryWeb.VitaminsFormatter do
   # AMINO ACIDS
   # ============================================================================
 
-  defp format_amino_acid(id, name) do
+  defp format_amino_acid(_id, name) do
     name_lower = String.downcase(name)
 
     # Essential vs Non-essential mapping

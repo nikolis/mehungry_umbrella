@@ -65,7 +65,7 @@ defmodule MehungryWeb.CoreComponents do
 
   @doc """
   """
-  def share_button(%{user: user, socket: socket} = assigns) do
+  def share_button(%{user: _user, socket: _socket} = assigns) do
     ~H"""
     <div
       class="relative w-full h-full"
@@ -111,7 +111,7 @@ defmodule MehungryWeb.CoreComponents do
           id={"link-to-recipe-#{@user.id}"}
           class="block w-full overflow-hidden"
           style="width: 50px;"
-          patch={~p"/share_social_media/#{@user.id}"}
+          patch={~p"/share_social_media/#{@user.id}/facebook"}
         >
           <img
             src="/images/facebook-svgrepo-com (1).svg"
@@ -124,8 +124,6 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  @doc """
-  """
   def share_button(assigns) do
     ~H"""
     <div
@@ -171,7 +169,7 @@ defmodule MehungryWeb.CoreComponents do
           id={"link-to-recipe-#{@post.reference_id}"}
           class="block w-full overflow-hidden"
           style="width: 50px;"
-          patch={~p"/share_social_media/#{@post.reference_id}"}
+          patch={~p"/share_social_media/#{@post.reference_id}/facebook"}
         >
           <img
             src="/images/facebook-svgrepo-com (1).svg"
@@ -189,7 +187,7 @@ defmodule MehungryWeb.CoreComponents do
   """
   def user_details_card(
         %{
-          user_follows: user_follows,
+          user_follows: _user_follows,
           user: %Mehungry.Accounts.User{} = _user
         } = assigns
       ) do
@@ -311,64 +309,12 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  def get_post_age(%Mehungry.Posts.Post{} = post) do
-    diff = NaiveDateTime.diff(NaiveDateTime.local_now(), post.updated_at, :second)
-    "23m"
-    get_diff(diff)
-  end
-
-  5500
-
-  defp get_diff(diff) do
-    if diff < 60 do
-      Integer.to_string(round(diff)) <> "s"
-    else
-      get_diff(diff / 60, "min")
-    end
-  end
-
-  defp get_diff(diff, "min") do
-    if diff < 60 do
-      Integer.to_string(round(diff)) <> "m"
-    else
-      get_diff(diff / 60, "hour")
-    end
-  end
-
-  defp get_diff(diff, "hour") do
-    if diff < 24 do
-      Integer.to_string(round(diff)) <> "h"
-    else
-      get_diff(diff / 24, "day")
-    end
-  end
-
-  defp get_diff(diff, "day") do
-    if diff < 7 do
-      Integer.to_string(round(diff)) <> "d"
-    else
-      get_diff(diff / 7, "week")
-    end
-  end
-
-  defp get_diff(diff, "week") do
-    if diff < 4 do
-      Integer.to_string(round(diff)) <> "w"
-    else
-      get_diff(diff / 4, "month")
-    end
-  end
-
-  defp get_diff(diff, "month") do
-    Integer.to_string(round(diff)) <> "m"
-  end
-
   @doc """
-  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
+  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment.
   """
   def user_overview_card(
         %{
-          user_follows: user_follows,
+          user_follows: _user_follows,
           user: %Mehungry.Accounts.User{} = _user
         } = assigns
       ) do
@@ -434,71 +380,55 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  @doc """
-  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
-  """
-  def user_overview_card2(
-        %{
-          user_follows: user_follows,
-          user: %Mehungry.Accounts.User{} = _user
-        } = assigns
-      ) do
-    post = Map.get(assigns, :post, nil)
-    assigns = Map.put(assigns, :post, post)
-
-    ~H"""
-    <div style="margin-bottom: 0.75rem; " class="w-full ">
-      <div class=" flex gap-2 w-11/12 m-auto sm:w-full m-0 ">
-        <.link
-          patch={"/profile/"<>Integer.to_string(@user.id)}
-          style="min-height: 50px; min-width: 50px;"
-        >
-          <%= if @user.profile_pic do %>
-            <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
-          <% else %>
-            <.icon name="hero-user-circle" class="h-12 w-12" />
-          <% end %>
-        </.link>
-        <div class="flex flex-col justify-center w-full">
-          <div class="text-sm font-bold leading-4">
-            <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-              {@user.email}
-              <%= if not is_nil(@post) do %>
-                <span class="font-normal text-greyfriend3">{get_post_age(@post)}</span>
-              <% end %>
-            </.link>
-            <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
-            </div>
-          </div>
-          <div class="text-sm leading-4">
-            {"#{count_user_created_recipes(@user.id)} posted recipes"}
-          </div>
-        </div>
-        <%= if @user.id in @user_follows do %>
-          <div class="m-auto border-slate-400 border-2 rounded-full h-fit w-fit px-3 ">
-            <button
-              class="text-slate-400 font-semibold  text-sm sm:text-xl "
-              phx-click="save_user_follow"
-              phx-value-follow_id={@user.id}
-            >
-              Following
-            </button>
-          </div>
-        <% else %>
-          <div class="m-auto h-fit w-fit px-3 ">
-            <button
-              class="text-accent-500 font-semibold  text-sm sm:text-xl "
-              phx-click="save_user_follow"
-              phx-value-follow_id={@user.id}
-            >
-              Follow
-            </button>
-          </div>
-        <% end %>
-      </div>
-    </div>
-    """
+  def get_post_age(%Mehungry.Posts.Post{} = post) do
+    diff = NaiveDateTime.diff(NaiveDateTime.local_now(), post.updated_at, :second)
+    get_diff(diff)
   end
+
+  defp get_diff(diff) do
+    if diff < 60 do
+      Integer.to_string(round(diff)) <> "s"
+    else
+      get_diff(diff / 60, "min")
+    end
+  end
+
+  defp get_diff(diff, "min") do
+    if diff < 60 do
+      Integer.to_string(round(diff)) <> "m"
+    else
+      get_diff(diff / 60, "hour")
+    end
+  end
+
+  defp get_diff(diff, "hour") do
+    if diff < 24 do
+      Integer.to_string(round(diff)) <> "h"
+    else
+      get_diff(diff / 24, "day")
+    end
+  end
+
+  defp get_diff(diff, "day") do
+    if diff < 7 do
+      Integer.to_string(round(diff)) <> "d"
+    else
+      get_diff(diff / 7, "week")
+    end
+  end
+
+  defp get_diff(diff, "week") do
+    if diff < 4 do
+      Integer.to_string(round(diff)) <> "w"
+    else
+      get_diff(diff / 4, "month")
+    end
+  end
+
+  defp get_diff(diff, "month") do
+    Integer.to_string(round(diff)) <> "m"
+  end
+
 
   @doc """
   Recipe Hedder
@@ -525,45 +455,6 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  @doc """
-  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
-  """
-  def footer_user_overview_card(
-        %{
-          user_follows: _user_follows,
-          user: %Mehungry.Accounts.User{} = _user
-        } = assigns
-      ) do
-    ~H"""
-    <div class="footer_user_overview w-full absolute bottom-10 right-0 left-0 m-auto rounded-full z-10">
-      <div class=" flex gap-2 w-11/12 m-auto sm:w-full m-0 ">
-        <.link
-          patch={"/profile/"<>Integer.to_string(@user.id)}
-          style="min-height: 50px; min-width: 50px;"
-        >
-          <%= if @user.profile_pic do %>
-            <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
-          <% else %>
-            <.icon name="hero-user-circle" class="h-12 w-12" />
-          <% end %>
-        </.link>
-        <div class="flex flex-col justify-center w-full">
-          <div class="text-base font-bold text-white leading-4">
-            <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-              {@user.email}
-            </.link>
-            <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
-            </div>
-          </div>
-          <div class="text-sm font-semibold leading-4 text-white">
-            {"#{count_user_created_recipes(@user.id)} posted recipes"}
-          </div>
-        </div>
-        <.follow_button user_follows={@user_follows} user={@user} />
-      </div>
-    </div>
-    """
-  end
 
   def follow_button(%{user_follows: nil} = assigns) do
     ~H"""
@@ -904,11 +795,12 @@ defmodule MehungryWeb.CoreComponents do
   attr :label, :string, default: nil
   attr :value, :any
 
+  attr :subscript, :string, default: nil
   attr :type, :string,
     default: "text",
     values:
       ~w(readonly checkbox color date datetime-local email file hidden month number password select_component
-               range radio search select tel text textarea time url week full-text comment checkbox_covered)
+               range radio search select tel text textarea time url week full-text comment checkbox_covered number_subscript)
 
   attr :field, Phoenix.HTML.FormField,
     doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -1567,10 +1459,11 @@ defmodule MehungryWeb.CoreComponents do
   """
   attr :name, :string, required: true
   attr :class, :string, default: nil
+  attr :rest, :global
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} />
+    <span class={[@name, @class]} {@rest} />
     """
   end
 

@@ -213,16 +213,163 @@ select {
 
 }
 .flatpickr-input{
-	display: invisible;	
+	display: invisible;
 }
 
-.flatpickr-calendar{
+/* ── Flatpickr theme – matches app dark/slate + orange-primary palette ────── */
+.flatpickr-calendar {
 	margin-inline: auto !important;
-	box-shadow: none;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
 	display: block !important;
 	visibility: visible;
 	opacity: 1;
+	background: #1E293B;
+	border: 1px solid #334155;
+	border-radius: 12px;
+	font-family: inherit;
 }
+
+/* Arrow pointers (when used as popup) */
+.flatpickr-calendar.arrowTop:before { border-bottom-color: #334155; }
+.flatpickr-calendar.arrowTop:after  { border-bottom-color: #1E293B; }
+.flatpickr-calendar.arrowBottom:before { border-top-color: #334155; }
+.flatpickr-calendar.arrowBottom:after  { border-top-color: #1E293B; }
+
+/* Month header */
+.flatpickr-months { background: #0F172A; border-radius: 12px 12px 0 0; }
+.flatpickr-months .flatpickr-month {
+	background: #0F172A;
+	color: #F1F5F9;
+	fill: #F1F5F9;
+	height: 40px;
+}
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+	color: #94A3B8;
+	fill: #94A3B8;
+}
+.flatpickr-months .flatpickr-prev-month:hover,
+.flatpickr-months .flatpickr-next-month:hover { color: #F97316; }
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg { fill: #F97316; }
+
+/* Month/year input */
+.flatpickr-current-month {
+	color: #F1F5F9;
+	font-size: 115%;
+	font-weight: 600;
+	padding-top: 8px;
+}
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+	background: #0F172A;
+	color: #F1F5F9;
+}
+.flatpickr-current-month input.cur-year { color: #F1F5F9; }
+
+/* Weekday labels */
+span.flatpickr-weekday {
+	background: #0F172A;
+	color: #64748B;
+	font-weight: 600;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+/* Day grid background */
+.flatpickr-days { background: #1E293B; }
+.dayContainer {
+	margin-inline: auto;
+	background: #1E293B;
+}
+
+/* Individual day cells */
+.flatpickr-day {
+	color: #CBD5E1;
+	border-radius: 8px;
+	height: 36px;
+	line-height: 36px;
+	max-width: 36px;
+}
+.flatpickr-day:hover,
+.flatpickr-day:focus,
+.flatpickr-day.prevMonthDay:hover,
+.flatpickr-day.nextMonthDay:hover {
+	background: #334155;
+	border-color: #334155;
+	color: #F1F5F9;
+}
+
+/* Today */
+.flatpickr-day.today {
+	border-color: #F97316;
+	color: #F97316;
+	font-weight: 700;
+}
+.flatpickr-day.today:hover,
+.flatpickr-day.today:focus {
+	background: #F97316;
+	border-color: #F97316;
+	color: #fff;
+}
+
+/* Selected / range */
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover,
+.flatpickr-day.selected:focus,
+.flatpickr-day.startRange:focus,
+.flatpickr-day.endRange:focus,
+.flatpickr-day.selected.inRange,
+.flatpickr-day.selected.prevMonthDay,
+.flatpickr-day.selected.nextMonthDay {
+	background: #F97316;
+	border-color: #F97316;
+	color: #fff;
+	font-weight: 600;
+}
+.flatpickr-day.inRange {
+	background: #431407;
+	border-color: #431407;
+	color: #FDBA74;
+	border-radius: 0;
+	box-shadow: -5px 0 0 #431407, 5px 0 0 #431407;
+}
+
+/* Prev/next month days (dimmed) */
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+	color: #475569;
+}
+
+/* Disabled */
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover {
+	color: #334155;
+	cursor: not-allowed;
+}
+
+/* Time picker */
+.flatpickr-time {
+	background: #1E293B;
+	border-top: 1px solid #334155;
+}
+.flatpickr-time input,
+.flatpickr-time .flatpickr-time-separator,
+.flatpickr-time .flatpickr-am-pm { color: #CBD5E1; }
+.flatpickr-time input:hover,
+.flatpickr-time .flatpickr-am-pm:hover,
+.flatpickr-time input:focus,
+.flatpickr-time .flatpickr-am-pm:focus { background: #334155; }
+
+/* Num input spinners */
+.numInputWrapper span { border-color: rgba(255,255,255,0.1); }
+.numInputWrapper span:hover { background: rgba(249,115,22,0.15); }
+/* ── end flatpickr overrides ────────────────────────────────────────────────── */
+
 .dayContainer{
 	margin-inline: auto;
 }

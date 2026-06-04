@@ -11,7 +11,6 @@ defmodule MehungryWeb.ProfileLive.Index do
   alias MehungryWeb.ProfileLive.Show
   alias Mehungry.Food
   alias Mehungry.Posts
-  alias Mehungry.Food.RecipeUtils
 
   @impl true
   def mount(_params, session, socket) do
@@ -35,6 +34,7 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:user_recipes, [])
      |> assign(:current_user, current_user)
      |> assign(:user, nil)
+     |> assign(:must_be_loged_in, nil)
      |> assign(:current_user_profile, current_user_profile)
      |> assign(:current_user_follows, current_user_follows)
      |> assign(:current_user_recipes, current_user_recipes)}
@@ -48,45 +48,10 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   defp apply_action(socket, :index, _params) do
     if is_nil(socket.assigns[:current_user]) do
-      push_redirect(socket, to: "/users/log_in")
+      push_navigate(socket, to: "/users/log_in")
     else
       do_apply_action_index(socket)
     end
-  end
-
-  defp do_apply_action_index(socket) do
-    categories = Food.list_categories()
-    category_ids = Enum.map(categories, fn x -> x.id end)
-    food_restrictions = Food.list_food_restriction_types()
-    food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
-
-    changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
-    maybe_track_user(%{}, socket)
-
-    socket =
-      socket
-      |> assign(:page_title, "Edit Profile Details")
-      |> assign(:categories, categories)
-      |> assign(:category_ids, category_ids)
-      |> assign(:food_restriction_ids, food_restriction_ids)
-      |> assign(:food_restrictions, food_restrictions)
-      |> assign(:form, to_form(changeset))
-      |> assign(:id, "form-#{System.unique_integer()}")
-
-    {user_saved_recipes, user_created_recipes} =
-      case is_nil(socket.assigns.current_user) do
-        true ->
-          {[], []}
-
-        false ->
-          {Users.list_user_saved_recipes(socket.assigns.current_user),
-           Users.list_user_created_recipes(socket.assigns.current_user)}
-      end
-
-    socket
-    |> assign(:page_title, "Profile")
-    |> assign(:user_created_recipes, user_created_recipes)
-    |> assign(:user_saved_recipes, user_saved_recipes)
   end
 
   defp apply_action(socket, :show, %{"id" => id} = _params) do
@@ -99,13 +64,13 @@ defmodule MehungryWeb.ProfileLive.Index do
     food_restrictions = Food.list_food_restriction_types()
     # Foul chnage asap
     if(food_restrictions == []) do
-      {:ok, fr} =
+      {:ok, _} =
         Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolutely not"})
 
-      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Not a fun"})
-      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Neutral"})
-      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Fun"})
-      {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolute fun"})
+      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Not a fun"})
+      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Neutral"})
+      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Fun"})
+      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolute fun"})
     end
 
     food_restrictions = Food.list_food_restriction_types()
@@ -182,7 +147,7 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   defp apply_action(socket, :edit, _params) do
     if is_nil(socket.assigns[:current_user]) do
-      push_redirect(socket, to: "/users/log_in")
+      push_navigate(socket, to: "/users/log_in")
     else
       do_apply_action_edit(socket)
     end
@@ -209,6 +174,41 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:food_restrictions, food_restrictions)
     |> assign(:form, to_form(changeset))
     |> assign(:id, "form-#{System.unique_integer()}")
+  end
+
+  defp do_apply_action_index(socket) do
+    categories = Food.list_categories()
+    category_ids = Enum.map(categories, fn x -> x.id end)
+    food_restrictions = Food.list_food_restriction_types()
+    food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
+
+    changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
+    maybe_track_user(%{}, socket)
+
+    socket =
+      socket
+      |> assign(:page_title, "Edit Profile Details")
+      |> assign(:categories, categories)
+      |> assign(:category_ids, category_ids)
+      |> assign(:food_restriction_ids, food_restriction_ids)
+      |> assign(:food_restrictions, food_restrictions)
+      |> assign(:form, to_form(changeset))
+      |> assign(:id, "form-#{System.unique_integer()}")
+
+    {user_saved_recipes, user_created_recipes} =
+      case is_nil(socket.assigns.current_user) do
+        true ->
+          {[], []}
+
+        false ->
+          {Users.list_user_saved_recipes(socket.assigns.current_user),
+           Users.list_user_created_recipes(socket.assigns.current_user)}
+      end
+
+    socket
+    |> assign(:page_title, "Profile")
+    |> assign(:user_created_recipes, user_created_recipes)
+    |> assign(:user_saved_recipes, user_saved_recipes)
   end
 
   @impl true
@@ -243,6 +243,10 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply,
      socket
      |> push_navigate(to: "/create_recipe/#{id}")}
+  end
+
+  def handle_event("keep_browsing", _thing, socket) do
+    {:noreply, assign(socket, :must_be_loged_in, nil)}
   end
 
   def handle_event("unsave-recipe", %{"id" => id}, socket) do
@@ -292,6 +296,11 @@ defmodule MehungryWeb.ProfileLive.Index do
         {:noreply,
          socket
          |> assign(content_state: :edit_profile)}
+
+      "connected_accounts" ->
+        {:noreply,
+         socket
+         |> assign(content_state: :connected_accounts)}
     end
   end
 
@@ -347,4 +356,55 @@ defmodule MehungryWeb.ProfileLive.Index do
     />
     """
   end
+
+  def get_profile_content(%{content_state: :connected_accounts} = assigns) do
+    facebook_connected =
+      not is_nil(assigns.current_user) and
+        map_size(Map.get(assigns.current_user, :facebook_token, %{})) > 0
+
+    assigns = assign(assigns, :facebook_connected, facebook_connected)
+
+    ~H"""
+    <div class="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" class="w-6 h-6">
+              <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-white font-semibold">Facebook</p>
+            <p class="text-slate-400 text-sm">
+              {if @facebook_connected,
+                do: "Connected — you can publish recipes to your Facebook pages",
+                else: "Connect your account to publish recipes to your Facebook pages"}
+            </p>
+          </div>
+        </div>
+        <%= if @facebook_connected do %>
+          <span class="flex items-center gap-1.5 text-green-400 text-sm font-medium flex-shrink-0">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Connected
+          </span>
+        <% else %>
+          <a
+            href="/auth/facebook"
+            class="flex-shrink-0 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition"
+          >
+            Connect
+          </a>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  def get_profile_content(assigns), do: ~H""
 end

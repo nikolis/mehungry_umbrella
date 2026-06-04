@@ -69,6 +69,21 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsEdit do
     {:noreply, assign(socket, :form, to_form(changeset))}
   end
 
+  # Add new translation
+  def handle_event("add_translation", _, socket) do
+    translations =
+      socket.assigns.form.source.data.ingredient_translation ++ [%{}]
+
+    changeset =
+      Ecto.Changeset.put_assoc(
+        socket.assigns.form.source,
+        :ingredient_translation,
+        translations
+      )
+
+    {:noreply, assign(socket, :form, to_form(changeset))}
+  end
+
   defp handle_action(socket, params) do
     case params["_action"] do
       "add_portion" ->
@@ -95,30 +110,16 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsEdit do
 
   defp add_portion(socket, params) do
     portions = Map.get(params, "ingredient_portions", %{})
-
     new_key = "#{map_size(portions)}"
-
-    updated =
-      Map.put(portions, new_key, %{})
-
-    new_params =
-      Map.put(params, "ingredient_portions", updated)
-
-    rebuild_form(socket, new_params)
+    updated = Map.put(portions, new_key, %{})
+    rebuild_form(socket, Map.put(params, "ingredient_portions", updated))
   end
 
   defp add_nutrient(socket, params) do
     nutrients = Map.get(params, "ingredient_nutrients", %{})
-
     new_key = "#{map_size(nutrients)}"
-
-    updated =
-      Map.put(nutrients, new_key, %{})
-
-    new_params =
-      Map.put(params, "ingredient_nutrients", updated)
-
-    rebuild_form(socket, new_params)
+    updated = Map.put(nutrients, new_key, %{})
+    rebuild_form(socket, Map.put(params, "ingredient_nutrients", updated))
   end
 
   defp remove_portion(socket, params, index) do
@@ -126,36 +127,7 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsEdit do
       Map.get(params, "ingredient_portions", %{})
       |> Map.delete(index)
 
-    new_params =
-      Map.put(params, "ingredient_portions", portions)
-
-    rebuild_form(socket, new_params)
-  end
-
-  defp remove_nutrient(socket, params, index) do
-    portions =
-      Map.get(params, "ingredient_nutrients", %{})
-      |> Map.delete(index)
-
-    new_params =
-      Map.put(params, "ingredient_nutrients", portions)
-
-    rebuild_form(socket, new_params)
-  end
-
-  # Add new translation
-  def handle_event("add_translation", _, socket) do
-    translations =
-      socket.assigns.form.source.data.ingredient_translation ++ [%{}]
-
-    changeset =
-      Ecto.Changeset.put_assoc(
-        socket.assigns.form.source,
-        :ingredient_translation,
-        translations
-      )
-
-    {:noreply, assign(socket, :form, to_form(changeset))}
+    rebuild_form(socket, Map.put(params, "ingredient_portions", portions))
   end
 
   defp rebuild_form(socket, params) do

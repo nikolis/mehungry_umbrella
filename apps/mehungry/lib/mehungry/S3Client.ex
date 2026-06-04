@@ -144,9 +144,7 @@ defmodule Mehungry.S3Client do
   Copies an object from one location to another within S3.
   """
   def copy_object(source_bucket, source_key, destination_bucket, destination_key) do
-    source = "#{source_bucket}/#{source_key}"
-
-    ExAws.S3.put_object_copy(destination_bucket, destination_key, source)
+    ExAws.S3.put_object_copy(destination_bucket, destination_key, source_bucket, source_key)
     |> ExAws.request()
     |> case do
       {:ok, response} -> {:ok, response}

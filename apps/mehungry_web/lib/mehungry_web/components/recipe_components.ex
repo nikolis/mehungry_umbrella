@@ -416,24 +416,6 @@ defmodule MehungryWeb.RecipeComponents do
                 </svg>
               </div>
             <% end %>
-            <!-- Save Button (non-created only — edit button is outside the link) -->
-            <%= if @type != "created" do %>
-              <button
-                id={"button_save_recipe#{@recipe.id}"}
-                phx-click="save_user_recipe"
-                phx-value-recipe_id={@recipe.id}
-                class="absolute top-3 right-3 p-2 rounded-full bg-black/50 hover:bg-black/70 transition backdrop-blur-sm"
-              >
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                  />
-                </svg>
-              </button>
-            <% end %>
           </div>
           <!-- Content -->
           <div class="p-4">
@@ -554,7 +536,30 @@ defmodule MehungryWeb.RecipeComponents do
           </div>
         </div>
       </.link>
-      <%!-- Edit button outside the link so browser clicks reach phx-click, not the link --%>
+      <%!-- Buttons outside the link so browser clicks reach phx-click, not the link --%>
+      <%= if @type != "created" do %>
+        <button
+          id={"button_save_recipe#{@recipe.id}"}
+          phx-click="save_user_recipe"
+          phx-value-recipe_id={@recipe.id}
+          class="absolute top-5 right-5 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 transition backdrop-blur-sm"
+          type="button"
+        >
+          <svg
+            class="w-5 h-5"
+            fill={get_color(Enum.any?(Map.get(assigns, :user_recipes, []), fn x -> x == @recipe.id end))}
+            stroke="#eb4034"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+            />
+          </svg>
+        </button>
+      <% end %>
       <%= if @type == "created" do %>
         <button
           id={"edit-recipe-#{@recipe.id}"}
@@ -583,7 +588,7 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_like_container2(%{myself: _myself} = assigns) do
+  def recipe_like_container2(assigns) do
     ~H"""
     <div class="bg-white  ">
       <%= case @type do %>
@@ -602,7 +607,6 @@ defmodule MehungryWeb.RecipeComponents do
               viewBox="0 0 24 24"
               fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
               phx-click="save_user_recipe"
-              phx-target={@myself}
               id={"svg-"<> Integer.to_string(@id)}
               phx-value-recipe_id={@recipe.id}
               phx-value-dom_id={@id}
@@ -706,49 +710,6 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  """
-  <div class="recipe_like_container z-10">
-    <%= case @type do %>
-      <% "saved" -> %>
-        <button
-          phx-click="unsave-recipe"
-          phx-value-id={@recipe.id}
-          id={"button_save_recipe{@recipe.id}"}
-        >
-          <.icon name="hero-trash-solid" class="h-5 w-5" />
-        </button>
-      <% "browse" -> %>
-        <svg
-          width="35px"
-          height="35px"
-          viewBox="0 0 24 24"
-          fill={get_color(Enum.any?(@user_recipes, fn x -> x == @recipe.id end))}
-          phx-click="save_user_recipe"
-          phx-value-recipe_id={@recipe.id}
-          phx-value-dom_id={@id}
-          id={"button_save_recipe{@recipe.id}"}
-        >
-          <path
-            fill-rule="evenodd"
-            clip-rule="evenodd"
-            d="M12 6.00019C10.2006 3.90317 7.19377 3.2551 4.93923 5.17534C2.68468 7.09558 2.36727 10.3061 4.13778 12.5772C5.60984 14.4654 10.0648 18.4479 11.5249 19.7369C11.6882 19.8811 11.7699 19.9532 11.8652 19.9815C11.9483 20.0062 12.0393 20.0062 12.1225 19.9815C12.2178 19.9532 12.2994 19.8811 12.4628 19.7369C13.9229 18.4479 18.3778 14.4654 19.8499 12.5772C21.6204 10.3061 21.3417 7.07538 19.0484 5.17534C16.7551 3.2753 13.7994 3.90317 12 6.00019Z"
-            stroke="#eb1111"
-            stroke-width="1"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      <% "created" -> %>
-        <button phx-click="edit-recipe" phx-value-id={@recipe.id}>
-          <.icon name="hero-pencil-square-solid" />
-        </button>
-    <% end %>
-  </div>
-  """
-
-  @doc """
-  Renders an accordion for recipe nutrients - with visual indicators for clickable items
-  """
   def recipe_nutrients(%Mehungry.Food.Recipe{} = recipe) do
     assigns = %{
       id: recipe.id,
@@ -800,45 +761,6 @@ defmodule MehungryWeb.RecipeComponents do
 
   def get_value_specific(map, key) when is_atom(key), do: map[key] || map[to_string(key)]
   def get_value_specific(map, key) when is_binary(key), do: map[key] || map[String.to_atom(key)]
-
-  defp render_nutrient_panel(assigns) do
-    ~H"""
-    <div class={[
-      "accordion-panel relative border-b border-gray-200 last:border-0",
-      @is_primary && "bg-gray-50"
-    ]}>
-      <!-- Header Button with visual indicators for clickability -->
-      <.render_nutrient_button
-        nutrient={@nutrient}
-        servings={@servings}
-        index={@index}
-        accordion_id={@accordion_id}
-        is_primary={@is_primary}
-        has_children={@has_children}
-      />
-      
-    <!-- Content Panel - only rendered if there are children -->
-      <%= if @has_children do %>
-        <div class="accordion-content hidden" role="region" aria-hidden="true">
-          <div class="px-3 pb-3 pt-1 border-t border-gray-100 bg-white">
-            <ul class="space-y-1">
-              <%= for child <- get_value(@nutrient, :children) || [] do %>
-                <li class="flex justify-between items-center text-sm py-1">
-                  <span class="text-gray-600 pl-2">
-                    {format_nutrient_name(child)}
-                  </span>
-                  <span class="font-mono text-gray-500 text-xs">
-                    {Float.round(get_value(child, :amount), 2)} {get_value(child, :measurement_unit)}
-                  </span>
-                </li>
-              <% end %>
-            </ul>
-          </div>
-        </div>
-      <% end %>
-    </div>
-    """
-  end
 
   def render_nutrient_button(assigns) do
     ~H"""
@@ -912,40 +834,12 @@ defmodule MehungryWeb.RecipeComponents do
   # Helper Functions
   # ============================================================================
 
-  defp sort_nutrients(nutrients) do
-    Enum.sort_by(nutrients, fn {key, nutrient} ->
-      priority =
-        case Map.get(nutrient, "name", Map.get(nutrient, :name, "")) do
-          "Energy" -> 1
-          "Total Fat" -> 2
-          "Saturated Fat" -> 3
-          "Protein" -> 4
-          "Carbohydrates" -> 5
-          "Fiber" -> 6
-          "Sugars" -> 7
-          "Sodium" -> 8
-          _ -> 10
-        end
-
-      {priority, Map.get(nutrient, "name", "")}
-    end)
-  end
-
-  defp get_nutrient_index(nutrient, sorted_nutrients) do
-    Enum.find_index(sorted_nutrients, fn {_k, v} -> v == nutrient end) || 0
-  end
-
-  defp is_primary?(nutrient, sorted_nutrients, primary_size) do
-    index = get_nutrient_index(nutrient, sorted_nutrients)
-    index <= primary_size
-  end
-
   defp format_nutrient_name(nutrient) do
     name = Map.get(nutrient, "name", Map.get(nutrient, :name, ""))
 
     case MehungryWeb.FattyAcidFormatter.format(name) do
       "Unknown Fatty Acid" ->
-        MehungryWeb.NutrientFormatter.format("", name)
+        MehungryWeb.NutrientMapper.humanize_nutrient_name(name)
 
       formatted ->
         formatted
@@ -974,16 +868,5 @@ defmodule MehungryWeb.RecipeComponents do
       %{measurement_unit: unit} when not is_nil(unit) and unit != "" -> unit
       _ -> "g"
     end
-  end
-
-  defp has_children?(nutrient) do
-    result =
-      case nutrient do
-        %{"children" => children} when is_list(children) and length(children) > 0 -> true
-        %{children: children} when is_list(children) and length(children) > 0 -> true
-        _ -> false
-      end
-
-    result
   end
 end

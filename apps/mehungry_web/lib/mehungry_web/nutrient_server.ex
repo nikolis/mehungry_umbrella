@@ -11,7 +11,7 @@ defmodule MehungryWeb.NutrientServer do
 
   # Client API
 
-  def start_link(opts \\ []) do
+  def start_link(_opts \\ []) do
     api_key = "ICjMhFVerhu917ppnyybL7ozeXGbftEk3q7li2GM"
     GenServer.start_link(__MODULE__, api_key, name: __MODULE__)
   end
@@ -72,7 +72,7 @@ defmodule MehungryWeb.NutrientServer do
       {:ok, %Req.Response{status: 200, body: %{"foods" => [food | _]}}} ->
         extract_nutrient_mappings(food)
 
-      {:ok, %Req.Response{status: status, body: body}} ->
+      {:ok, %Req.Response{status: status, body: _body}} ->
         {:error, "HTTP #{status}"}
 
       {:error, error} ->
