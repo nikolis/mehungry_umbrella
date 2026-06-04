@@ -540,21 +540,6 @@ defmodule Mehungry.Food do
     result
   end
 
-  def recipes_with_average_ratings(%{
-        age_group_filter: age_group_filter
-      }) do
-    Recipe.Query.with_average_ratings()
-    |> Recipe.Query.join_users()
-    |> Recipe.Query.join_demographics()
-    |> Recipe.Query.filter_by_age_group(age_group_filter)
-    |> Repo.all()
-  end
-
-  def recipes_with_zero_ratings do
-    Recipe.Query.with_zero_ratings()
-    |> Repo.all()
-  end
-
   alias Mehungry.Food.Category
 
   def create_category(attrs) do
@@ -866,7 +851,12 @@ defmodule Mehungry.Food do
       end)
 
     Enum.map(hashtags, fn x ->
-      %{hashtag: %{title: String.slice(x, 1..-1//1)}}
+      title = String.slice(x, 1..-1//1)
+
+      case Mehungry.Hashtag.get_hashtag_by_title(title) do
+        nil -> %{hashtag: %{title: title}}
+        existing -> %{"hashtag_id" => existing.id}
+      end
     end)
   end
 
@@ -1216,11 +1206,6 @@ defmodule Mehungry.Food do
     Repo.all(query)
     |> Repo.preload([:category, :measurement_unit])
     |> Enum.sort_by(fn x -> String.length(x.name) end)
-  end
-
-  def list_recipes_with_user_rating(user) do
-    Recipe.Query.with_user_ratings(user)
-    |> Repo.all()
   end
 
   def get_interactions_for_ingredients(ingredient_ids) do

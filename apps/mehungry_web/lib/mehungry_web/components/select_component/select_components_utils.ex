@@ -1,47 +1,4 @@
 defmodule MehungryWeb.SelectComponentUtils do
-  def get_selected_items_database(form_params, input_variable, assigns, get_by_id_func) do
-    label_function =
-      case Map.get(assigns, :label_function) do
-        nil ->
-          fn x -> x.name end
-
-        label_f ->
-          label_f
-      end
-
-    case Map.get(form_params, input_variable) do
-      nil ->
-        case Map.get(assigns.form.data, :ingredient_id) do
-          nil ->
-            nil
-
-          _ ->
-            item = Map.get(assigns.form.data, :ingredient)
-            %{label: label_function.(item), id: item.id}
-        end
-
-      str_id ->
-        result =
-          if is_integer(str_id) do
-            str_id
-          else
-            Integer.parse(str_id)
-          end
-
-        case result do
-          :error ->
-            nil
-
-          {num_id, _} ->
-            item = get_by_id_func.(num_id)
-            %{name: label_function.(item), id: item.id}
-
-          num_id ->
-            item = get_by_id_func.(num_id)
-            %{name: label_function.(item), id: item.id}
-        end
-    end
-  end
 
   def transform_item(nil) do
     nil

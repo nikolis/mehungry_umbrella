@@ -6,7 +6,6 @@ defmodule Mehungry.Food.Recipe do
 
   alias Mehungry.Accounts.User
   alias Mehungry.Languages.Language
-  alias Mehungry.Survey.Rating
 
   schema "recipes" do
     field :author, :string
@@ -28,7 +27,6 @@ defmodule Mehungry.Food.Recipe do
     field :difficulty, :integer
     field :nutrients, :map, default: %{}
 
-    has_many :ratings, Rating
     has_many :user_recipes, Mehungry.Accounts.UserRecipe
     has_one :post, Mehungry.Posts.Post
 

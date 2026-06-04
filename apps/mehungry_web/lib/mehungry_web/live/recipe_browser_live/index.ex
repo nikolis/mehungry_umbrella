@@ -7,11 +7,11 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   alias Mehungry.Food.Recipe
   alias Mehungry.Search.RecipeSearchItem
   alias Mehungry.Search
-  alias MehungryWeb.ImageProcessing
   alias Mehungry.Accounts
   alias Mehungry.Users
   alias Mehungry.Posts
   alias MehungryWeb.RecipeComponents
+  alias MehungryWeb.ImageProcessing
 
   @impl true
   def mount(params, session, socket) do
@@ -285,7 +285,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:query_string, query_str)
     |> assign(:query, query)
     |> assign(:search_changeset, nil)
-    |> stream(:recipes, recipes)
+    |> stream(:recipes, recipes, reset: true)
     |> assign(
       :not_empty,
       if length(recipes) > 0 do
@@ -548,8 +548,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
     result =
       Enum.map(result, fn recipe ->
-        return = ImageProcessing.resize(recipe.image_url, 100, 100)
-        %Recipe{recipe | recipe_image_remote: return}
+        #return = ImageProcessing.resize(recipe.image_url, 100, 100)
+        %Recipe{recipe | recipe_image_remote: recipe.image_url}
       end)
 
     {result, cursor_after}

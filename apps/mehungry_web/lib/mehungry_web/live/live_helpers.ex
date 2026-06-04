@@ -73,34 +73,40 @@ defmodule MehungryWeb.LiveHelpers do
 
       @impl true
       def handle_event("save_user_recipe", %{"recipe_id" => recipe_id}, socket) do
-        {recipe_id, _ignore} = Integer.parse(recipe_id)
-        toggle_user_saved_recipe(socket, recipe_id)
+        if is_nil(socket.assigns[:current_user]) do
+          {:noreply, assign(socket, :must_be_loged_in, 1)}
+        else
+          {recipe_id, _ignore} = Integer.parse(recipe_id)
+          toggle_user_saved_recipe(socket, recipe_id)
 
-        user_recipes =
-          Users.list_user_saved_recipe_ids(socket.assigns.current_user)
+          user_recipes = Users.list_user_saved_recipe_ids(socket.assigns.current_user)
+          recipe = Food.get_recipe!(recipe_id)
+          socket = assign(socket, :user_recipes, user_recipes)
+          socket = assign(socket, :current_user_recipes, user_recipes)
 
-        recipe = Food.get_recipe!(recipe_id)
-        socket = assign(socket, :user_recipes, user_recipes)
-        socket = assign(socket, :current_user_recipes, user_recipes)
+          socket =
+            if is_nil(Map.get(socket.assigns, :streams, nil)) do
+              socket
+            else
+              stream_insert(socket, :recipes, recipe)
+            end
 
-        socket =
-          if is_nil(Map.get(socket.assigns, :streams, nil)) do
-            socket
-          else
-            socket = stream_insert(socket, :recipes, recipe)
-          end
-
-        {:noreply, socket}
+          {:noreply, socket}
+        end
       end
 
       @impl true
       def handle_event("save_user_follow", %{"follow_id" => follow_id}, socket) do
-        {follow_id, _ignore} = Integer.parse(follow_id)
-        toggle_user_follow(socket, follow_id)
-        user_follows = Users.list_user_follows(socket.assigns.current_user)
-        user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
-        socket = assign(socket, :current_user_follows, user_follows)
-        {:noreply, socket}
+        if is_nil(socket.assigns[:current_user]) do
+          {:noreply, assign(socket, :must_be_loged_in, 1)}
+        else
+          {follow_id, _ignore} = Integer.parse(follow_id)
+          toggle_user_follow(socket, follow_id)
+          user_follows = Users.list_user_follows(socket.assigns.current_user)
+          user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
+          socket = assign(socket, :current_user_follows, user_follows)
+          {:noreply, socket}
+        end
       end
 
       @impl true

@@ -1,5 +1,14 @@
 <div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
 <div class=" min-h-screen bg-slate-900  text-white">
+  <%= if !is_nil(@must_be_loged_in) do %>
+    <.modal
+      id="profile_must_be_login"
+      show
+      on_cancel={JS.push("keep_browsing")}
+    >
+      <.live_component module={MehungryWeb.MustBeLoginComponent} id={:new} patch={~p"/browse"} />
+    </.modal>
+  <% end %>
   <%= if !is_nil(@current_user) do %>
     <.modal
       :if={

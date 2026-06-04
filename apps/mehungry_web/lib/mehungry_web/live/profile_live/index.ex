@@ -34,6 +34,7 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:user_recipes, [])
      |> assign(:current_user, current_user)
      |> assign(:user, nil)
+     |> assign(:must_be_loged_in, nil)
      |> assign(:current_user_profile, current_user_profile)
      |> assign(:current_user_follows, current_user_follows)
      |> assign(:current_user_recipes, current_user_recipes)}
@@ -242,6 +243,10 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply,
      socket
      |> push_navigate(to: "/create_recipe/#{id}")}
+  end
+
+  def handle_event("keep_browsing", _thing, socket) do
+    {:noreply, assign(socket, :must_be_loged_in, nil)}
   end
 
   def handle_event("unsave-recipe", %{"id" => id}, socket) do

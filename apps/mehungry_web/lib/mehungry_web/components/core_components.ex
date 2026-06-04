@@ -429,71 +429,6 @@ defmodule MehungryWeb.CoreComponents do
     Integer.to_string(round(diff)) <> "m"
   end
 
-  @doc """
-  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment.
-  """
-  def user_overview_card2(
-        %{
-          user_follows: _user_follows,
-          user: %Mehungry.Accounts.User{} = _user
-        } = assigns
-      ) do
-    post = Map.get(assigns, :post, nil)
-    assigns = Map.put(assigns, :post, post)
-
-    ~H"""
-    <div style="margin-bottom: 0.75rem; " class="w-full ">
-      <div class=" flex gap-2 w-11/12 m-auto sm:w-full m-0 ">
-        <.link
-          patch={"/profile/"<>Integer.to_string(@user.id)}
-          style="min-height: 50px; min-width: 50px;"
-        >
-          <%= if @user.profile_pic do %>
-            <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
-          <% else %>
-            <.icon name="hero-user-circle" class="h-12 w-12" />
-          <% end %>
-        </.link>
-        <div class="flex flex-col justify-center w-full">
-          <div class="text-sm font-bold leading-4">
-            <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-              {@user.email}
-              <%= if not is_nil(@post) do %>
-                <span class="font-normal text-greyfriend3">{get_post_age(@post)}</span>
-              <% end %>
-            </.link>
-            <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
-            </div>
-          </div>
-          <div class="text-sm leading-4">
-            {"#{count_user_created_recipes(@user.id)} posted recipes"}
-          </div>
-        </div>
-        <%= if @user.id in @user_follows do %>
-          <div class="m-auto border-slate-400 border-2 rounded-full h-fit w-fit px-3 ">
-            <button
-              class="text-slate-400 font-semibold  text-sm sm:text-xl "
-              phx-click="save_user_follow"
-              phx-value-follow_id={@user.id}
-            >
-              Following
-            </button>
-          </div>
-        <% else %>
-          <div class="m-auto h-fit w-fit px-3 ">
-            <button
-              class="text-accent-500 font-semibold  text-sm sm:text-xl "
-              phx-click="save_user_follow"
-              phx-value-follow_id={@user.id}
-            >
-              Follow
-            </button>
-          </div>
-        <% end %>
-      </div>
-    </div>
-    """
-  end
 
   @doc """
   Recipe Hedder
@@ -520,45 +455,6 @@ defmodule MehungryWeb.CoreComponents do
     """
   end
 
-  @doc """
-  Renders a user overview card to be used to present the user on their activities such as a recipe post or a comment. 
-  """
-  def footer_user_overview_card(
-        %{
-          user_follows: _user_follows,
-          user: %Mehungry.Accounts.User{} = _user
-        } = assigns
-      ) do
-    ~H"""
-    <div class="footer_user_overview w-full absolute bottom-10 right-0 left-0 m-auto rounded-full z-10">
-      <div class=" flex gap-2 w-11/12 m-auto sm:w-full m-0 ">
-        <.link
-          patch={"/profile/"<>Integer.to_string(@user.id)}
-          style="min-height: 50px; min-width: 50px;"
-        >
-          <%= if @user.profile_pic do %>
-            <img src={@user.profile_pic} , style="width: 50px; height: 50px; border-radius: 50%;" />
-          <% else %>
-            <.icon name="hero-user-circle" class="h-12 w-12" />
-          <% end %>
-        </.link>
-        <div class="flex flex-col justify-center w-full">
-          <div class="text-base font-bold text-white leading-4">
-            <.link patch={"/profile/"<>Integer.to_string(@user.id)}>
-              {@user.email}
-            </.link>
-            <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
-            </div>
-          </div>
-          <div class="text-sm font-semibold leading-4 text-white">
-            {"#{count_user_created_recipes(@user.id)} posted recipes"}
-          </div>
-        </div>
-        <.follow_button user_follows={@user_follows} user={@user} />
-      </div>
-    </div>
-    """
-  end
 
   def follow_button(%{user_follows: nil} = assigns) do
     ~H"""
