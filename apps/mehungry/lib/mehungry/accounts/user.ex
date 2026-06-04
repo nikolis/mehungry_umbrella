@@ -13,6 +13,7 @@ defmodule Mehungry.Accounts.User do
     field :name, :string
     field :instagram_token, :map, default: %{}
     field :facebook_token, :map, default: %{}
+    field :pinterest_token, :map, default: %{}
 
     has_one :recipes, Mehungry.Food.Recipe
 
@@ -54,7 +55,7 @@ defmodule Mehungry.Accounts.User do
 
   def tokens_changeset(user, attrs, _opts \\ []) do
     user
-    |> cast(attrs, [:instagram_token, :facebook_token])
+    |> cast(attrs, [:instagram_token, :facebook_token, :pinterest_token])
   end
 
   defp validate_email(changeset) do

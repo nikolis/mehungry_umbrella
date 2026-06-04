@@ -61,10 +61,13 @@ config :ueberauth, Ueberauth,
     instagram:
       {Ueberauth.Strategy.Instagram,
        [
-         ~c"instagram_business_basic",
-         ~c"instagram_business_content_publish",
-         ~c"instagram_business_manage_messages",
-         ~c"instagram_business_manage_comments"
+         default_scope:
+           "instagram_business_basic,instagram_business_content_publish"
+       ]},
+    pinterest:
+      {Ueberauth.Strategy.Pinterest,
+       [
+         default_scope: "boards:read,pins:write,user_accounts:read"
        ]},
     google: {Ueberauth.Strategy.Google, []},
     identity:
@@ -87,6 +90,10 @@ config :ueberauth, Ueberauth.Strategy.Google.OAuth,
   client_secret: nil
 
 config :ueberauth, Ueberauth.Strategy.Instagram.OAuth,
+  client_id: nil,
+  client_secret: nil
+
+config :ueberauth, Ueberauth.Strategy.Pinterest.OAuth,
   client_id: nil,
   client_secret: nil
 

@@ -138,12 +138,10 @@ Hooks.Copy = {
     let { to } = this.el.dataset;
     this.el.addEventListener("click", (ev) => {
       ev.preventDefault();
-      let text = document.querySelector(to).value
-      var host = window.location.protocol + "//" + window.location.host;
-
-      navigator.clipboard.writeText(host + text).then(() => {
-        console.log("All done again!")
-      })
+      let text = document.querySelector(to).value;
+      navigator.clipboard.writeText(text).then(() => {
+        console.log("Copied to clipboard")
+      });
     });
   },
 }

@@ -36,7 +36,8 @@ if config_env() == :prod do
       raise "SECRET_KEY_BASE environment variable is missing"
 
   config :mehungry_web, MehungryWeb.Endpoint,
-    secret_key_base: secret_key_base
+    secret_key_base: secret_key_base,
+    url: [scheme: "https", host: "www.mehungry.com", port: 443]
 
   config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
     client_id: System.get_env("FACEBOOK_CLIENT_ID"),
@@ -49,6 +50,10 @@ if config_env() == :prod do
   config :ueberauth, Ueberauth.Strategy.Instagram.OAuth,
     client_id: System.get_env("INSTAGRAM_CLIENT_ID"),
     client_secret: System.get_env("INSTAGRAM_CLIENT_SECRET")
+
+  config :ueberauth, Ueberauth.Strategy.Pinterest.OAuth,
+    client_id: System.get_env("PINTEREST_CLIENT_ID"),
+    client_secret: System.get_env("PINTEREST_CLIENT_SECRET")
 end
 
 if config_env() == :prod do

@@ -23,6 +23,23 @@ defmodule MehungryWeb.AuthController do
     |> redirect(to: "/")
   end
 
+  def callback(%{assigns: %{ueberauth_auth: %{provider: :pinterest} = auth}} = conn, _params) do
+    token = auth.extra.raw_info.token
+
+    token_data = %{
+      "access_token" => token.access_token,
+      "refresh_token" => token.refresh_token,
+      "expires_at" => token.expires_at,
+      "scope" => token.other_params["scope"] || ""
+    }
+
+    Accounts.update_user_tokens(conn.assigns.current_user, %{"pinterest_token" => token_data})
+
+    conn
+    |> put_flash(:info, "Pinterest account connected successfully.")
+    |> redirect(to: "/profile")
+  end
+
   def callback(%{assigns: %{ueberauth_auth: %{provider: :instagram} = auth}} = conn, _params) do
     short_lived_token = auth.extra.raw_info.token.access_token
     instagram_user_id = auth.extra.raw_info.token.other_params["user_id"]
