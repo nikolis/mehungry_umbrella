@@ -19,7 +19,9 @@ defmodule Mehungry.Food do
     Nutrient,
     IngredientTranslation,
     Like,
-    IngredientPortion
+    IngredientPortion,
+    NutrientInteractions,
+    NutrientMerger
   }
 
   alias Mehungry.Food.RecipeHashtag
@@ -789,6 +791,16 @@ defmodule Mehungry.Food do
         |> Enum.map(fn x -> Map.new([{x.name, x}]) end)
         |> Enum.reduce(&Map.merge/2)
 
+      interactions =
+        nutrients
+        |> Enum.reduce(%{}, fn {name, data}, acc ->
+          amount = Map.get(data, :amount) || 0.0
+          canonical = NutrientMerger.normalize_nutrient_name(name)
+          Map.update(acc, canonical, amount, &(&1 + amount))
+        end)
+        |> NutrientInteractions.interactions_for_nutrient_map()
+        |> Enum.map(&NutrientMerger.to_string_keys/1)
+
       duration =
         (System.monotonic_time() - start)
         |> System.convert_time_unit(:native, :millisecond)
@@ -798,6 +810,7 @@ defmodule Mehungry.Food do
       changeset
       |> Ecto.Changeset.put_change(:nutrients, nutrients)
       |> Ecto.Changeset.put_change(:primary_nutrients_size, primary_size)
+      |> Ecto.Changeset.put_change(:ingredient_interactions, interactions)
     end
   end
 
@@ -1213,21 +1226,45 @@ defmodule Mehungry.Food do
   end
 
   def get_interactions_for_recipe(recipe) do
-    alias Mehungry.Food.{NutrientInteractions, NutrientMerger}
+    stored = Map.get(recipe, :ingredient_interactions, [])
 
-    nutrients = recipe.nutrients || %{}
-
-    if map_size(nutrients) == 0 do
-      []
+    if is_list(stored) and stored != [] do
+      Enum.map(stored, &atomize_interaction/1)
     else
-      nutrient_map =
-        Enum.reduce(nutrients, %{}, fn {name, data}, acc ->
-          amount = Map.get(data, "amount") || Map.get(data, :amount) || 0.0
-          canonical = NutrientMerger.normalize_nutrient_name(name)
-          Map.update(acc, canonical, amount, &(&1 + amount))
-        end)
+      nutrients = recipe.nutrients || %{}
 
-      NutrientInteractions.interactions_for_nutrient_map(nutrient_map)
+      if map_size(nutrients) == 0 do
+        []
+      else
+        nutrient_map =
+          Enum.reduce(nutrients, %{}, fn {name, data}, acc ->
+            amount = Map.get(data, "amount") || Map.get(data, :amount) || 0.0
+            canonical = NutrientMerger.normalize_nutrient_name(name)
+            Map.update(acc, canonical, amount, &(&1 + amount))
+          end)
+
+        NutrientInteractions.interactions_for_nutrient_map(nutrient_map)
+      end
     end
   end
+
+  def enqueue_interaction_recalculation_for_all do
+    enqueue_nutrient_recalculation_for_all()
+  end
+
+  defp atomize_interaction(i) do
+    %{
+      id: Map.get(i, "id", "") |> safe_to_atom(),
+      type: Map.get(i, "type", "") |> safe_to_atom(),
+      badge: Map.get(i, "badge", "tip") |> safe_to_atom(),
+      label: Map.get(i, "label", ""),
+      detail: Map.get(i, "detail", ""),
+      source: Map.get(i, "source", ""),
+      nutrient_a: Map.get(i, "nutrient_a"),
+      nutrient_b: Map.get(i, "nutrient_b")
+    }
+  end
+
+  defp safe_to_atom(str) when is_binary(str), do: String.to_existing_atom(str)
+  defp safe_to_atom(atom) when is_atom(atom), do: atom
 end
