@@ -37,6 +37,13 @@ defmodule Mehungry.Food.NutrientNameNormalizer do
         "Carbohydrates"
 
       # ===== FIBER =====
+      # LMWDF and HMWDF are sub-fractions of the total — keep them distinct so
+      # they don't get summed with the canonical fiber total and cause double-counting.
+      String.contains?(name_lower, "lmwdf") or String.contains?(name_lower, "hmwdf") or
+          String.contains?(name_lower, "low molecular weight dietary fiber") or
+          String.contains?(name_lower, "high molecular weight dietary fiber") ->
+        original_name
+
       String.contains?(name_lower, "fiber") ->
         "Fiber"
 
@@ -51,7 +58,14 @@ defmodule Mehungry.Food.NutrientNameNormalizer do
         String.capitalize(name_lower)
 
       # ===== TOTAL FAT =====
-      name_lower in ["total lipid (fat)", "total fat", "fat", "lipid"] ->
+      name_lower in [
+        "total lipid (fat)",
+        "total fat",
+        "fat",
+        "lipid",
+        "total fat (nlea)",
+        "total lipid (fat) (nlea)"
+      ] ->
         "Total Fat"
 
       # ===== SATURATED FAT =====
