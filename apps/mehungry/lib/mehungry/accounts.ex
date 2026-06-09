@@ -233,9 +233,9 @@ defmodule Mehungry.Accounts do
   end
 
   def find_or_create(%Auth{} = auth) do
-    user =
-      email_from_auth(auth)
-      |> get_user_by_email()
+    email = email_from_auth(auth) || fallback_email_from_auth(auth)
+
+    user = if is_binary(email), do: get_user_by_email(email), else: nil
 
     if user do
       verify_3rd_party_user_changes(auth, user)
@@ -260,6 +260,9 @@ defmodule Mehungry.Accounts do
 
   defp email_from_auth(%{info: %{email: email}}), do: email
 
+  defp fallback_email_from_auth(%{provider: :facebook, uid: uid}), do: "#{uid}@facebook.user"
+  defp fallback_email_from_auth(_), do: nil
+
   # default case if nothing matches
   # defp avatar_from_auth(auth) do
   # Logger.warn("#{auth.provider} needs to find an avatar URL!")
@@ -275,7 +278,7 @@ defmodule Mehungry.Accounts do
         %{
           # uid: auth.uid,
           name: name_from_auth(auth),
-          email: email,
+          email: email || fallback_email_from_auth(auth),
           profile_pic: avatar_from_auth(auth),
           provider: "facebook"
         }
