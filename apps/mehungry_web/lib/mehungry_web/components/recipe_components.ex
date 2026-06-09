@@ -837,13 +837,7 @@ defmodule MehungryWeb.RecipeComponents do
   defp format_nutrient_name(nutrient) do
     name = Map.get(nutrient, "name", Map.get(nutrient, :name, ""))
 
-    case MehungryWeb.FattyAcidFormatter.format(name) do
-      "Unknown Fatty Acid" ->
-        MehungryWeb.NutrientMapper.humanize_nutrient_name(name)
-
-      formatted ->
-        formatted
-    end
+    MehungryWeb.NutrientMapper.humanize_nutrient_name(name)
   end
 
   defp format_amount(nutrient, servings) do

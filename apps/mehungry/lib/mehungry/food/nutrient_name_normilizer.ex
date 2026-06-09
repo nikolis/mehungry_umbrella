@@ -51,7 +51,14 @@ defmodule Mehungry.Food.NutrientNameNormalizer do
         String.capitalize(name_lower)
 
       # ===== TOTAL FAT =====
-      name_lower in ["total lipid (fat)", "total fat", "fat", "lipid"] ->
+      name_lower in [
+        "total lipid (fat)",
+        "total fat",
+        "fat",
+        "lipid",
+        "total fat (nlea)",
+        "total lipid (fat) (nlea)"
+      ] ->
         "Total Fat"
 
       # ===== SATURATED FAT =====
