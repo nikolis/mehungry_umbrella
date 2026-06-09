@@ -233,9 +233,9 @@ defmodule Mehungry.Accounts do
   end
 
   def find_or_create(%Auth{} = auth) do
-    user =
-      email_from_auth(auth)
-      |> get_user_by_email()
+    email = email_from_auth(auth)
+
+    user = if is_binary(email), do: get_user_by_email(email), else: nil
 
     if user do
       verify_3rd_party_user_changes(auth, user)
