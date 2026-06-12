@@ -38,6 +38,13 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          {:error, :quota_exceeded}
      )
      |> assign(:show_ai_panel, false)
+     |> assign(:spoonacular_results, [])
+     |> assign(:spoonacular_unmatched, [])
+     |> assign(:spoonacular_search_loading, false)
+     |> assign(:spoonacular_fetch_loading, false)
+     |> assign(:show_spoonacular_modal, false)
+     |> assign(:spoonacular_search_ref, nil)
+     |> assign(:spoonacular_fetch_ref, nil)
      |> assign(:items, [
        %{id: 1, name: "easy"},
        %{id: 2, name: "medium"},
@@ -128,6 +135,41 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   def handle_event("ai_generate", _params, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("spoonacular_search", %{"query" => query}, socket) when query != "" do
+    api_key = System.get_env("SPOONACULAR_API_KEY")
+    task = Task.async(fn -> Mehungry.Apis.SpoonacularImporter.search(query, api_key) end)
+
+    {:noreply,
+     assign(socket,
+       spoonacular_search_loading: true,
+       spoonacular_search_ref: task.ref
+     )}
+  end
+
+  def handle_event("spoonacular_search", _params, socket), do: {:noreply, socket}
+
+  def handle_event("spoonacular_select", %{"id" => id}, socket) do
+    api_key = System.get_env("SPOONACULAR_API_KEY")
+    user_id = socket.assigns.user.id
+    spoonacular_id = String.to_integer(id)
+
+    task =
+      Task.async(fn ->
+        Mehungry.Apis.SpoonacularImporter.fetch_for_form(spoonacular_id, user_id, api_key)
+      end)
+
+    {:noreply,
+     assign(socket,
+       spoonacular_fetch_loading: true,
+       spoonacular_fetch_ref: task.ref,
+       show_spoonacular_modal: false
+     )}
+  end
+
+  def handle_event("close_spoonacular_modal", _, socket) do
+    {:noreply, assign(socket, show_spoonacular_modal: false)}
   end
 
   def handle_event("add_ingredient", _params, socket) do
@@ -346,28 +388,69 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def handle_info({ref, result}, socket) when is_reference(ref) do
     Process.demonitor(ref, [:flush])
 
-    if socket.assigns.ai_task_ref == ref do
-      case result do
-        {:ok, attrs, unmatched} ->
-          Mehungry.Subscriptions.record_usage(socket.assigns.user.id, "recipe_generation")
-          recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+    cond do
+      socket.assigns.ai_task_ref == ref ->
+        case result do
+          {:ok, attrs, unmatched} ->
+            Mehungry.Subscriptions.record_usage(socket.assigns.user.id, "recipe_generation")
+            recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
 
-          {:noreply,
-           socket
-           |> assign(:ai_generating, false)
-           |> assign(:ai_task_ref, nil)
-           |> assign(:ai_unmatched, unmatched)
-           |> init(recipe, attrs)}
+            {:noreply,
+             socket
+             |> assign(:ai_generating, false)
+             |> assign(:ai_task_ref, nil)
+             |> assign(:ai_unmatched, unmatched)
+             |> init(recipe, attrs)}
 
-        {:error, reason} ->
-          {:noreply,
-           socket
-           |> assign(:ai_generating, false)
-           |> assign(:ai_task_ref, nil)
-           |> put_flash(:error, "Could not generate recipe: #{reason}")}
-      end
-    else
-      {:noreply, socket}
+          {:error, reason} ->
+            {:noreply,
+             socket
+             |> assign(:ai_generating, false)
+             |> assign(:ai_task_ref, nil)
+             |> put_flash(:error, "Could not generate recipe: #{reason}")}
+        end
+
+      socket.assigns.spoonacular_search_ref == ref ->
+        case result do
+          {:ok, results} ->
+            {:noreply,
+             assign(socket,
+               spoonacular_results: results,
+               spoonacular_search_loading: false,
+               show_spoonacular_modal: true,
+               spoonacular_search_ref: nil
+             )}
+
+          {:error, reason} ->
+            {:noreply,
+             socket
+             |> assign(:spoonacular_search_loading, false)
+             |> assign(:spoonacular_search_ref, nil)
+             |> put_flash(:error, "Spoonacular search failed: #{inspect(reason)}")}
+        end
+
+      socket.assigns.spoonacular_fetch_ref == ref ->
+        case result do
+          {:ok, attrs, unmatched} ->
+            recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+
+            {:noreply,
+             socket
+             |> assign(:spoonacular_fetch_loading, false)
+             |> assign(:spoonacular_fetch_ref, nil)
+             |> assign(:spoonacular_unmatched, unmatched)
+             |> init(recipe, attrs)}
+
+          {:error, reason} ->
+            {:noreply,
+             socket
+             |> assign(:spoonacular_fetch_loading, false)
+             |> assign(:spoonacular_fetch_ref, nil)
+             |> put_flash(:error, "Could not load recipe: #{inspect(reason)}")}
+        end
+
+      true ->
+        {:noreply, socket}
     end
   end
 

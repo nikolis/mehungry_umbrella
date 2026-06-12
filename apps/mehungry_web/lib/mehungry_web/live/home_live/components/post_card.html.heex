@@ -193,7 +193,7 @@
       >
         {@post.reference.user.name}
       </a>
-      <span class="text-slate-300 text-sm">{@post.reference.description}</span>
+      <span class="text-slate-300 text-sm">{if String.length(@post.reference.description || "") > 150, do: String.slice(@post.reference.description, 0, 150) <> "…", else: @post.reference.description}</span>
     </div>
     
 <!-- Hashtags -->
@@ -213,7 +213,7 @@
 <!-- View Comments Link -->
     <.link
       id={"card-link-to-recipe-comments-#{@post.reference_id}"}
-      patch={~p"/home/#{Integer.to_string(@post.reference.id) <> "#comments"}"}
+      patch={~p"/home/#{@post.reference.id}"}
       class="block text-slate-500 text-sm mt-2 hover:text-slate-400 transition"
     >
       View all {length(@post.reference.comments)} comments

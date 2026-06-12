@@ -4,6 +4,7 @@ defmodule MehungryWeb.Api.TheMealDBParser do
   """
   def parse(json) do
     with {:ok, %{"meals" => [meal_data | _]}} <- Jason.decode(json) do
+      IO.inspect(meal_data, label: "Meal data")
       meal = %{
         id: meal_data["idMeal"],
         name: meal_data["strMeal"],

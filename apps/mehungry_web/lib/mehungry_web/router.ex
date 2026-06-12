@@ -76,6 +76,8 @@ defmodule MehungryWeb.Router do
 
       live "/visits", VisitLive.Index, :index
       live "/visits/:ip_address", VisitLive.Show, :show
+
+      live "/feedback", ProfessionalLive.FeedbackLive, :index
     end
   end
 
@@ -191,6 +193,8 @@ defmodule MehungryWeb.Router do
 
       live "/foods", FoodsLive.Index, :index
       live "/foods/:slug", FoodDetailLive.Index, :index
+
+      live "/feedback", FeedbackLive, :index
 
       # live "/browse/:origin/:id", RecipeDetailsLive.Index, :index
       # live "/browse_prepop/:search_term", :searc_prepop

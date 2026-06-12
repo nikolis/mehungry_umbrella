@@ -48,7 +48,6 @@ defmodule MehungryWeb.Api.MealConverter do
       |> Repo.preload([:measurement_unit, [ingredient_portions: :measurement_unit]])
 
     {quantity, unit_string} = parse_measure(measure)
-    IO.inspect(ingredients, label: "Mathcin search")
 
     {ingredient_portion, _} =
       if unit_string in ["g", "grammar", "gram"] do
@@ -59,7 +58,6 @@ defmodule MehungryWeb.Api.MealConverter do
       end
 
     measurement_unit = search_measurement_unit(unit_string)
-    IO.inspect(ingredient_portion, label: "Mathcin portion")
 
     Logger.info(
       "Converting ingredient with name: #{name} and the measurement unit is: #{measure}"

@@ -62,11 +62,12 @@ defmodule MehungryWeb.RecipeFormComponent do
           </div>
 
           <.input field={@f[:language_name]} type="hidden" />
+          <.input field={@f[:image_url]} type="hidden" />
         </div>
 
-        <%= if @f.data.image_url do %>
+        <%= if @f[:image_url].value do %>
           <div class="relative">
-            <img src={@f.data.image_url} class="m-auto relative" style="max-height: 30vh;" />
+            <img src={@f[:image_url].value} class="m-auto relative" style="max-height: 30vh;" />
             <button
               type="button"
               phx-click="delete-image"
@@ -104,7 +105,7 @@ defmodule MehungryWeb.RecipeFormComponent do
             </div>
           </div>
         <% end %>
-        <%= if is_nil(@f.data.image_url) do %>
+        <%= if is_nil(@f[:image_url].value) do %>
           <div class="">
             <%= for entry <- @uploads.image.entries do %>
               <div class="img_preview_container">
@@ -141,12 +142,13 @@ defmodule MehungryWeb.RecipeFormComponent do
       </div>
 
       <div class="grid md:grid-cols-2 gap-6">
+        <%!-- Ingredients (content-1) — always in column 1 --%>
         <div
           class="overflowx-hidden relative content_container hidden md:block bg-slate-800/50 rounded-xl p-4"
           id="content-1"
         >
           <h3 class="text-base font-semibold text-white mb-3">Ingredients</h3>
-          <div class="md:min-h-96  sm:max-h-65 overflow-x-hidden noscrollbar	pt-4  step_ing_cont mb-14 pb-20 md:pb-0">
+          <div class="md:min-h-96 sm:max-h-65 overflow-x-hidden noscrollbar pt-4 step_ing_cont mb-14 pb-20 md:pb-0">
             <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
               <.live_component
                 module={MehungryWeb.IngredientComponent}
@@ -171,18 +173,75 @@ defmodule MehungryWeb.RecipeFormComponent do
           </div>
         </div>
 
-        <div
-          class="overflowx-hidden relative content_container hidden md:block bg-slate-800/50 rounded-xl p-4"
-          id="content-2"
-        >
-          <div class="relative h-fit">
-            <h3 class="text-base font-semibold text-white mb-3">Steps</h3>
-            <div class="step_ing_cont md:min-h-96 md:max-h-96  overflow-x-hidden noscrollbar	pt-4 sm:p-4 pb-20 md:pb-8">
-              <.live_component module={MehungryWeb.StepComponent} id="recipe_step" f={@f} />
+        <%!-- Column 2: unmatched panel when present, otherwise steps --%>
+        <%= if @spoonacular_unmatched != [] do %>
+          <div class="overflowx-hidden relative content_container hidden md:block bg-amber-950/40 border border-amber-700/40 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <h3 class="text-base font-semibold text-amber-300">
+                Unmatched Ingredients ({length(@spoonacular_unmatched)})
+              </h3>
+            </div>
+            <p class="text-slate-400 text-xs mb-3">
+              Not found in the database — add them manually using the ingredients section.
+            </p>
+            <div class="space-y-1.5 md:max-h-96 overflow-y-auto noscrollbar">
+              <%= for item <- @spoonacular_unmatched do %>
+                <div class="rounded-lg bg-slate-900/60 px-3 py-2 text-sm">
+                  <div class="flex items-center justify-between gap-2 mb-0.5">
+                    <span class="text-white font-medium truncate">{item.name}</span>
+                    <span class={[
+                      "flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-medium",
+                      item.reason == :ingredient_not_found && "bg-red-900/50 text-red-300",
+                      item.reason == :unit_not_found && "bg-orange-900/50 text-orange-300",
+                      item.reason == :portion_not_found && "bg-yellow-900/50 text-yellow-300"
+                    ]}>
+                      {case item.reason do
+                        :ingredient_not_found -> "not in DB"
+                        :unit_not_found -> "unknown unit"
+                        :portion_not_found -> "no portion"
+                        _ -> to_string(item.reason)
+                      end}
+                    </span>
+                  </div>
+                  <span class="text-slate-400 text-xs">{item.original}</span>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% else %>
+          <div
+            class="overflowx-hidden relative content_container hidden md:block bg-slate-800/50 rounded-xl p-4"
+            id="content-2"
+          >
+            <div class="relative h-fit">
+              <h3 class="text-base font-semibold text-white mb-3">Steps</h3>
+              <div class="step_ing_cont md:min-h-96 md:max-h-96 overflow-x-hidden noscrollbar pt-4 sm:p-4 pb-20 md:pb-8">
+                <.live_component module={MehungryWeb.StepComponent} id="recipe_step" f={@f} />
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <%!-- Steps row: only rendered when unmatched panel occupies column 2 --%>
+      <%= if @spoonacular_unmatched != [] do %>
+        <div class="grid gap-6">
+          <div
+            class="overflowx-hidden relative content_container hidden md:block bg-slate-800/50 rounded-xl p-4"
+            id="content-2"
+          >
+            <div class="relative h-fit">
+              <h3 class="text-base font-semibold text-white mb-3">Steps</h3>
+              <div class="step_ing_cont md:min-h-96 md:max-h-96 overflow-x-hidden noscrollbar pt-4 sm:p-4 pb-20 md:pb-8">
+                <.live_component module={MehungryWeb.StepComponent} id="recipe_step" f={@f} />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      <% end %>
       <div
         id="content-3"
         class="content_container hidden md:block bg-slate-800/50 rounded-xl p-6"

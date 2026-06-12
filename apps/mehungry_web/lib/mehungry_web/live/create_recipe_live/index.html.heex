@@ -152,35 +152,80 @@
           measurement_units={@measurement_units}
           f={@f}
           search_language={@current_language}
+          spoonacular_unmatched={@spoonacular_unmatched}
         />
 
-        <%= if @current_user.email in ["nikolisgal@gmail.com", "r3qviem@hotmail.com"]  do %>
-          <div class="content_container " id="url_component_container">
-            <.form
-              :let={b}
-              id={@f.id<>"2"}
-              for={%{}}
-              phx-change="validate"
-              phx-submit="save"
-              class="gap-2 flex  flex-col  relative w-fit m-auto"
-              style=""
-            >
-              <.input
-                field={b[:url_to_drill]}
+        <%= if @current_user.email in ["nikolisgal@gmail.com", "r3qviem@hotmail.com"] do %>
+          <div class="content_container mt-4 p-4 bg-slate-800/50 rounded-xl" id="url_component_container">
+            <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-3">
+              Import from Spoonacular
+            </p>
+            <form phx-submit="spoonacular_search" class="flex gap-3">
+              <input
+                name="query"
                 type="text"
-                label="themealdb id i.e 52764"
-                class="px-10"
+                placeholder="Search recipes e.g. pasta carbonara"
+                class="flex-1 bg-slate-900 text-white rounded-lg px-4 py-2.5 text-sm border border-slate-600 focus:border-primary-500 focus:outline-none"
               />
-              <div class=" absolute right-0 ">
-                {submit("Get blueprint",
-                  class: "button bg-complementary border-2 border-transparent  ",
-                  type: "submit",
-                  phx_disable_with: "Saving...",
-                  id: "save_button2"
-                )}
-              </div>
-            </.form>
+              <button
+                type="submit"
+                disabled={@spoonacular_search_loading}
+                class="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white font-semibold text-sm transition-colors"
+              >
+                <%= if @spoonacular_search_loading do %>
+                  <span class="flex items-center gap-2">
+                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Searching…
+                  </span>
+                <% else %>
+                  Search
+                <% end %>
+              </button>
+            </form>
+            <%= if @spoonacular_fetch_loading do %>
+              <p class="text-slate-400 text-sm mt-3 animate-pulse flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Importing recipe into form…
+              </p>
+            <% end %>
           </div>
+
+          <.modal
+            :if={@show_spoonacular_modal}
+            id="spoonacular-modal"
+            show
+            on_cancel={JS.push("close_spoonacular_modal")}
+          >
+            <h2 class="text-lg font-semibold text-white mb-1">Select a recipe</h2>
+            <p class="text-slate-400 text-sm mb-4">
+              Click a recipe to import it into the form for review before saving.
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-1">
+              <%= for result <- @spoonacular_results do %>
+                <button
+                  type="button"
+                  phx-click="spoonacular_select"
+                  phx-value-id={result["id"]}
+                  class="flex flex-col rounded-xl bg-slate-900 hover:bg-slate-700 border border-slate-700 hover:border-primary-500 transition-colors overflow-hidden text-left group"
+                >
+                  <img
+                    src={result["image"]}
+                    alt={result["title"]}
+                    class="w-full object-cover h-32 group-hover:opacity-90 transition-opacity"
+                  />
+                  <p class="text-sm text-white font-medium px-3 py-2 line-clamp-2">
+                    {result["title"]}
+                  </p>
+                </button>
+              <% end %>
+            </div>
+          </.modal>
         <% end %>
       </div>
     </div>
