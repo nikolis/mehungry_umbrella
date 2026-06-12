@@ -21,6 +21,13 @@ defmodule MehungryWeb.LayoutView do
       inner_content={@inner_content}
     />
     <.mobile_menu current_user={@current_user} />
+    <a
+      href="/feedback"
+      class="md:hidden fixed bottom-20 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-full bg-slate-700 text-slate-200 text-xs font-medium shadow-lg hover:bg-slate-600 transition-colors"
+    >
+      <.icon name="hero-chat-bubble-left-ellipsis" class="h-4 w-4" />
+      Feedback
+    </a>
     """
   end
 
@@ -98,6 +105,7 @@ defmodule MehungryWeb.LayoutView do
         <.admin_link href="/professional/languages" icon="hero-language" label="Languages" />
         <.admin_link href="/professional/files" icon="hero-folder-open" label="Files" />
         <.admin_link href="/professional/visits" icon="hero-map-pin" label="Visits" />
+        <.admin_link href="/professional/feedback" icon="hero-chat-bubble-left-ellipsis" label="Feedback" />
       </div>
       
     <!-- Footer -->

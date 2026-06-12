@@ -87,28 +87,19 @@ defmodule MehungryWeb.HomeLive.Index do
   end
 
   defp get_recipe_description(assigns) do
-    terms = String.split(assigns.description, " ")
+    terms = String.split(assigns.description || "", " ")
 
-    {hashtags, other} =
-      Enum.split_with(terms, fn x ->
-        case String.at(x, 0) == "#" do
-          true ->
-            true
+    {_hashtags, other} =
+      Enum.split_with(terms, fn x -> String.starts_with?(x, "#") end)
 
-          false ->
-            false
-        end
-      end)
+    text = Enum.join(other, " ")
+    truncated = if String.length(text) > 150, do: String.slice(text, 0, 150) <> "…", else: text
 
-    Enum.map(hashtags, fn x ->
-      %{hashtag: %{title: x}}
-    end)
-
-    assigns = Map.put(assigns, :description, other)
+    assigns = Map.put(assigns, :description, truncated)
 
     ~H"""
-    <span class=" flex gap-2  flex-wrap">
-      <div class="w-full break-words	">{@description}</div>
+    <span class="flex gap-2 flex-wrap">
+      <div class="w-full break-words">{@description}</div>
       <%= for tag <- @recipe.recipe_hashtags do %>
         <.recipe_tag hashtag={tag.hashtag} />
       <% end %>
@@ -136,7 +127,7 @@ defmodule MehungryWeb.HomeLive.Index do
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
     maybe_track_user(%{}, socket)
 
-    recipe = Food.get_recipe!(String.to_integer(id))
+    recipe = Food.get_recipe!(id |> String.split("#") |> List.first() |> String.to_integer())
 
     if !is_nil(recipe) do
       Posts.subscribe_to_recipe(%{recipe_id: recipe.id})

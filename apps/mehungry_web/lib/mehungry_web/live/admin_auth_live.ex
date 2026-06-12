@@ -5,21 +5,30 @@ defmodule MehungryWeb.AdminAuthLive do
 
   alias Mehungry.Accounts
 
+  @admin_email "nikolisgal@gmail.com"
+
   def on_mount(_, _params, %{"user_token" => user_token}, socket) do
     socket =
       assign_new(socket, :current_user, fn ->
         Accounts.get_user_by_session_token(user_token)
       end)
 
-    if socket.assigns.current_user do
-      socket =
-        assign_new(socket, :current_language, fn ->
-          Accounts.get_user_language(socket.assigns.current_user.id)
-        end)
+    user = socket.assigns.current_user
 
-      {:cont, socket}
-    else
-      {:halt, redirect(socket, to: "/login")}
+    cond do
+      is_nil(user) ->
+        {:halt, redirect(socket, to: "/login")}
+
+      user.email != @admin_email ->
+        {:halt, redirect(socket, to: "/home")}
+
+      true ->
+        socket =
+          assign_new(socket, :current_language, fn ->
+            Accounts.get_user_language(user.id)
+          end)
+
+        {:cont, socket}
     end
   end
 end
