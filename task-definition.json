@@ -63,6 +63,11 @@
                 },
 
                 {
+                    "name": "SPOONACULAR_API_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/spoonacular_api_key-NkCqGZ"
+                },
+
+                {
                     "name": "FACEBOOK_CLIENT_ID",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/fecebook_client_id-hWBO09"
                 },
