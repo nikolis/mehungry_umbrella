@@ -2,8 +2,9 @@ defmodule Mehungry.Subscriptions do
   @moduledoc """
   Manages user subscription tiers and AI feature quota enforcement.
 
-  Tiers: "free" (3 recipe / 0 meal_plan per month),
-         "pro"  (15 recipe / 4 meal_plan per month).
+  Tiers: "free"          (0 recipe / 0 meal_plan per month),
+         "m3hungry_plus" (15 recipe / 4 meal_plan per month — consumer premium),
+         "pro"           (30 recipe / 10 meal_plan per month — professional/nutritionist).
   """
 
   import Ecto.Query
@@ -12,7 +13,8 @@ defmodule Mehungry.Subscriptions do
 
   @monthly_limits %{
     "free" => %{"recipe_generation" => 0, "meal_plan" => 0},
-    "pro" => %{"recipe_generation" => 15, "meal_plan" => 4}
+    "m3hungry_plus" => %{"recipe_generation" => 15, "meal_plan" => 4},
+    "pro" => %{"recipe_generation" => 30, "meal_plan" => 10}
   }
 
   # ── Subscription ──────────────────────────────────────────────────────────────
@@ -39,6 +41,17 @@ defmodule Mehungry.Subscriptions do
   end
 
   def activate_pro(user_id, stripe_customer_id, stripe_subscription_id, period_end) do
+    upsert_subscription(user_id, %{
+      tier: "m3hungry_plus",
+      status: "active",
+      stripe_customer_id: stripe_customer_id,
+      stripe_subscription_id: stripe_subscription_id,
+      period_start: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+      period_end: period_end
+    })
+  end
+
+  def activate_nutritionist(user_id, stripe_customer_id, stripe_subscription_id, period_end) do
     upsert_subscription(user_id, %{
       tier: "pro",
       status: "active",
@@ -149,7 +162,18 @@ defmodule Mehungry.Subscriptions do
   end
 
   def pro?(user_id) do
-    get_subscription(user_id).tier == "pro"
+    owner?(user_id) or get_subscription(user_id).tier in ["m3hungry_plus", "pro"]
+  end
+
+  def nutritionist?(user_id) do
+    owner?(user_id) or get_subscription(user_id).tier == "pro"
+  end
+
+  defp owner?(user_id) do
+    case Repo.get(Mehungry.Accounts.User, user_id) do
+      nil -> false
+      user -> user.email == @owner_email
+    end
   end
 
   @doc "Returns a map of %{user_id => UserSubscription} for all users that have a subscription row."

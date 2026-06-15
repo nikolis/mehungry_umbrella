@@ -29,7 +29,7 @@ defmodule Mehungry.Subscriptions.UserSubscription do
       :period_end
     ])
     |> validate_required([:user_id, :tier, :status])
-    |> validate_inclusion(:tier, ["free", "pro"])
+    |> validate_inclusion(:tier, ["free", "m3hungry_plus", "pro"])
     |> validate_inclusion(:status, ["active", "canceled", "past_due", "trialing"])
     |> unique_constraint(:user_id)
     |> foreign_key_constraint(:user_id)

@@ -92,6 +92,36 @@
       <span class="hidden md:block text-sm font-medium">Give Feedback</span>
     </a>
 
+    <!-- Nutritionist Panel (only for pro/nutritionist subscribers) -->
+    <%= if @current_user && Mehungry.Subscriptions.nutritionist?(@current_user.id) do %>
+      <a
+        href="/nutritionist"
+        class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-teal-400 hover:text-white hover:bg-teal-500/20 border border-teal-500/30 hover:border-teal-500/60 transition-colors mt-2"
+      >
+        <.icon name="hero-academic-cap" class="h-5 w-5 flex-shrink-0" />
+        <span class="hidden md:block text-sm font-medium">Nutritionist Panel</span>
+      </a>
+    <% end %>
+
+    <!-- Tutor invitations badge (for non-professional users who have pending invitations) -->
+    <%= if @current_user && !Mehungry.Subscriptions.nutritionist?(@current_user.id) do %>
+      <% pending_count = Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id) %>
+      <%= if pending_count > 0 do %>
+        <a
+          href="/notifications/invitations"
+          class="nav_link_basic relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors mt-1"
+        >
+          <div class="relative flex-shrink-0">
+            <.icon name="hero-bell" class="h-5 w-5" />
+            <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
+              {pending_count}
+            </span>
+          </div>
+          <span class="hidden md:block text-sm font-medium">Tutor Invitations</span>
+        </a>
+      <% end %>
+    <% end %>
+
     <a
       href="/upgrade"
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-primary-400 hover:text-white hover:bg-primary-500/20 border border-primary-500/30 hover:border-primary-500/60 transition-colors mt-2"

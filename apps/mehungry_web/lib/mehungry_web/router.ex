@@ -81,11 +81,28 @@ defmodule MehungryWeb.Router do
     end
   end
 
+  scope "/nutritionist", MehungryWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :nutritionist,
+      on_mount: MehungryWeb.NutritionistAuthLive,
+      layout: {MehungryWeb.LayoutView, :nutritionist_live} do
+      live "/", NutritionistLive.Dashboard, :index
+      live "/invitations", NutritionistLive.Invitations, :index
+      live "/clients", NutritionistLive.Clients, :index
+      live "/clients/:id", NutritionistLive.ClientDetail, :show
+      live "/clients/:id/calendar", NutritionistLive.ClientCalendar, :index
+      live "/clients/:id/calendar/:date", NutritionistLive.ClientCalendar, :particular
+      live "/appointments", NutritionistLive.AppointmentCalendar, :index
+    end
+  end
+
   scope "/", MehungryWeb do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
       live "/admin-dashboard", Admin.DashboardLive
+      live "/notifications/invitations", NutritionistLive.UserInvitations, :index
       live "/basket", ShoppingBasketLive.Index, :index
       live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
 

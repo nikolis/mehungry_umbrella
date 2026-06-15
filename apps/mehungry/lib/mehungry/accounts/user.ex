@@ -16,6 +16,7 @@ defmodule Mehungry.Accounts.User do
     field :pinterest_token, :map, default: %{}
 
     has_one :recipes, Mehungry.Food.Recipe
+    has_one :user_profile, Mehungry.Accounts.UserProfile
 
     timestamps()
   end
