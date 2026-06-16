@@ -15,7 +15,7 @@ defmodule Mehungry.Professionals.ProfessionalProfile do
     profile
     |> cast(attrs, [:user_id, :specialization, :bio])
     |> validate_required([:user_id, :specialization])
-    |> validate_inclusion(:specialization, ["nutritionist", "dietologist"])
+    |> validate_length(:specialization, max: 100)
     |> unique_constraint(:user_id)
     |> foreign_key_constraint(:user_id)
   end

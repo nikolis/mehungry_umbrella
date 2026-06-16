@@ -230,6 +230,9 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     "#{String.pad_leading(Integer.to_string(h), 2, "0")}:#{String.pad_leading(Integer.to_string(m), 2, "0")}"
   end
 
+  defp initial_client_type(%{external_client_name: name}) when is_binary(name) and name != "", do: "external"
+  defp initial_client_type(_), do: "internal"
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -324,26 +327,59 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
               <!-- Scrollable fields -->
               <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
 
-                <!-- Client select -->
-                <div>
+                <!-- Client selector (internal or external) -->
+                <div x-data={"{ clientType: '#{initial_client_type(@editing_appointment)}' }"}>
                   <label class="block text-sm text-slate-300 mb-1">Client</label>
-                  <select
-                    name="appointment[client_id]"
-                    class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
-                  >
-                    <option value="">Select client...</option>
-                    <%= for assignment <- @clients do %>
-                      <option
-                        value={assignment.client.id}
-                        selected={
-                          (@editing_appointment && @editing_appointment.client_id == assignment.client.id) ||
-                            (@modal_client_id == assignment.client.id)
-                        }
-                      >
-                        {assignment.client.name || assignment.client.email}
-                      </option>
-                    <% end %>
-                  </select>
+
+                  <!-- Toggle -->
+                  <div class="flex gap-1 mb-2 p-0.5 bg-slate-900 rounded-lg w-fit">
+                    <button
+                      type="button"
+                      x-on:click="clientType = 'internal'"
+                      x-bind:class="clientType === 'internal' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'"
+                      class="px-3 py-1 rounded-md text-xs font-medium transition"
+                    >M3Hungry Client</button>
+                    <button
+                      type="button"
+                      x-on:click="clientType = 'external'"
+                      x-bind:class="clientType === 'external' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'"
+                      class="px-3 py-1 rounded-md text-xs font-medium transition"
+                    >External Client</button>
+                  </div>
+
+                  <!-- Internal: dropdown of assigned clients -->
+                  <div x-show="clientType === 'internal'">
+                    <select
+                      name="appointment[client_id]"
+                      x-bind:disabled="clientType !== 'internal'"
+                      class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
+                    >
+                      <option value="">Select client...</option>
+                      <%= for assignment <- @clients do %>
+                        <option
+                          value={assignment.client.id}
+                          selected={
+                            (@editing_appointment && @editing_appointment.client_id == assignment.client.id) ||
+                              (@modal_client_id == assignment.client.id)
+                          }
+                        >
+                          {assignment.client.name || assignment.client.email}
+                        </option>
+                      <% end %>
+                    </select>
+                  </div>
+
+                  <!-- External: free-text name -->
+                  <div x-show="clientType === 'external'">
+                    <input
+                      type="text"
+                      name="appointment[external_client_name]"
+                      x-bind:disabled="clientType !== 'external'"
+                      value={@editing_appointment && @editing_appointment.external_client_name}
+                      placeholder="Client name (external)"
+                      class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
                 </div>
 
                 <!-- Title -->

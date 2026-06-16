@@ -22,7 +22,8 @@ config :mehungry, Oban,
   ],
   queues: [
     default: 10,
-    mailers: 5
+    mailers: 5,
+    ai_agents: 2
   ]
 
 config :swarm,

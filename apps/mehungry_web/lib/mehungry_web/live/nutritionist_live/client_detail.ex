@@ -4,18 +4,25 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   alias Mehungry.Professionals
   alias Mehungry.Accounts
   alias Mehungry.Plans, as: PlansCtx
+  alias Mehungry.ObanWorkers.NutritionistAgentWorker
 
   @impl true
   def mount(%{"id" => client_id}, _session, socket) do
     professional_id = socket.assigns.current_user.id
     client_id_int = String.to_integer(client_id)
 
-    # Verify this is actually one of our clients
     case Professionals.get_assignment(professional_id, client_id_int) do
       nil ->
         {:ok, socket |> put_flash(:error, "Client not found.") |> redirect(to: "/nutritionist/clients")}
 
       _assignment ->
+        if connected?(socket) do
+          Phoenix.PubSub.subscribe(
+            Mehungry.PubSub,
+            NutritionistAgentWorker.topic(professional_id)
+          )
+        end
+
         client = Accounts.get_user!(client_id_int)
         appointments = Professionals.list_appointments_for_client(client_id_int)
         ratings = Professionals.list_ratings_for_client(client_id_int)
@@ -28,9 +35,86 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:appointments, appointments)
          |> assign(:ratings, ratings)
          |> assign(:meal_plans, meal_plans)
-         |> assign(:page_title, "Client: #{client.name || client.email}")}
+         |> assign(:page_title, "Client: #{client.name || client.email}")
+         |> assign(:ai_running, false)
+         |> assign(:ai_steps, [])
+         |> assign(:ai_result, nil)
+         |> assign(:ai_error, nil)
+         |> assign(:ai_preferences, "")}
     end
   end
+
+  # ── AI Assist events ──────────────────────────────────────────────────────────
+
+  @impl true
+  def handle_event("ai_assist", %{"preferences" => prefs}, socket) do
+    professional_id = socket.assigns.current_user.id
+    client = socket.assigns.client
+
+    case NutritionistAgentWorker.enqueue(
+           professional_id,
+           socket.assigns.client_id,
+           client.name || client.email,
+           prefs
+         ) do
+      {:ok, _job} ->
+        {:noreply,
+         socket
+         |> assign(:ai_running, true)
+         |> assign(:ai_steps, [])
+         |> assign(:ai_result, nil)
+         |> assign(:ai_error, nil)
+         |> assign(:ai_preferences, prefs)}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Could not start AI assistant: #{inspect(reason)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("ai_dismiss", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:ai_running, false)
+     |> assign(:ai_steps, [])
+     |> assign(:ai_result, nil)
+     |> assign(:ai_error, nil)}
+  end
+
+  # ── PubSub messages ───────────────────────────────────────────────────────────
+
+  @impl true
+  def handle_info({:nutritionist_agent, {:started, client_name}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:ai_running, true)
+     |> assign(:ai_steps, ["Starting analysis for #{client_name}…"])
+     |> assign(:ai_result, nil)
+     |> assign(:ai_error, nil)}
+  end
+
+  def handle_info({:nutritionist_agent, {:step, label}}, socket) do
+    steps = socket.assigns.ai_steps ++ [label]
+    {:noreply, assign(socket, :ai_steps, steps)}
+  end
+
+  def handle_info({:nutritionist_agent, {:done, summary}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:ai_running, false)
+     |> assign(:ai_result, summary)}
+  end
+
+  def handle_info({:nutritionist_agent, {:error, reason}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:ai_running, false)
+     |> assign(:ai_error, reason)}
+  end
+
+  def handle_info(_msg, socket), do: {:noreply, socket}
+
+  # ── render ────────────────────────────────────────────────────────────────────
 
   @impl true
   def render(assigns) do
@@ -68,6 +152,97 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
             Schedule Appointment
           </a>
         </div>
+      </div>
+
+      <!-- AI Assist panel -->
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 mb-6">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            <h2 class="text-white font-semibold text-sm">AI Meal Plan Assistant</h2>
+          </div>
+          <%= if @ai_result || @ai_error do %>
+            <button phx-click="ai_dismiss" class="text-slate-500 hover:text-slate-300 text-xs">
+              Dismiss
+            </button>
+          <% end %>
+        </div>
+
+        <%= if not @ai_running and is_nil(@ai_result) and is_nil(@ai_error) do %>
+          <!-- Idle state: show form -->
+          <.form :let={f} for={%{}} phx-submit="ai_assist" class="flex gap-2">
+            <input
+              type="text"
+              name="preferences"
+              value={@ai_preferences}
+              placeholder="Dietary notes for this client, e.g. 'low-carb, avoid shellfish'"
+              class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-teal-500"
+            />
+            <button
+              type="submit"
+              class="bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition whitespace-nowrap"
+            >
+              Draft 7-day Plan
+            </button>
+          </.form>
+        <% end %>
+
+        <!-- Running: streaming steps -->
+        <%= if @ai_running or @ai_steps != [] do %>
+          <div class="space-y-1.5 mt-2">
+            <%= for {step, idx} <- Enum.with_index(@ai_steps) do %>
+              <div class="flex items-center gap-2">
+                <%= if idx == length(@ai_steps) - 1 and @ai_running do %>
+                  <!-- Latest step: animated dot -->
+                  <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse shrink-0"></span>
+                <% else %>
+                  <svg class="w-3.5 h-3.5 text-teal-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                <% end %>
+                <span class={["text-sm", if(idx == length(@ai_steps) - 1 and @ai_running, do: "text-white", else: "text-slate-400")]}>
+                  {step}
+                </span>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+        <!-- Done: show result -->
+        <%= if @ai_result do %>
+          <div class="mt-3 p-3 bg-teal-900/30 border border-teal-700/40 rounded-lg">
+            <p class="text-teal-300 text-sm whitespace-pre-wrap">{@ai_result}</p>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <a
+              href={"/nutritionist/clients/#{@client_id}/calendar"}
+              class="text-sm bg-teal-600 hover:bg-teal-500 text-white px-3 py-1.5 rounded-lg transition"
+            >
+              View Plan →
+            </a>
+            <button
+              phx-click="ai_dismiss"
+              class="text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg transition"
+            >
+              Draft Another
+            </button>
+          </div>
+        <% end %>
+
+        <!-- Error state -->
+        <%= if @ai_error do %>
+          <div class="mt-3 p-3 bg-red-900/30 border border-red-700/40 rounded-lg">
+            <p class="text-red-300 text-sm">{@ai_error}</p>
+          </div>
+          <button
+            phx-click="ai_dismiss"
+            class="mt-2 text-sm text-slate-400 hover:text-slate-300"
+          >
+            Try again
+          </button>
+        <% end %>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

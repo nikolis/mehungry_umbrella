@@ -5,6 +5,7 @@ import Config
 # than being baked in at compile time.
 config :mehungry,
   anthropic_api_key: System.get_env("ANTHROPIC_API_KEY", ""),
+  openai_api_key: System.get_env("OPENAI_API_KEY", ""),
   stripe_secret_key: System.get_env("STRIPE_SECRET_KEY", ""),
   stripe_webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET", ""),
   stripe_pro_price_id: System.get_env("STRIPE_PRO_PRICE_ID", ""),

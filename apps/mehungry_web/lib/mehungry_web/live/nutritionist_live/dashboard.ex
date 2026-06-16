@@ -76,8 +76,8 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
               <label class="block text-sm text-slate-300 mb-1">Specialization</label>
               <.input
                 field={f[:specialization]}
-                type="select"
-                options={[{"Nutritionist", "nutritionist"}, {"Dietologist", "dietologist"}]}
+                type="text"
+                placeholder="e.g. Nutritionist, Dietitian, Sports Dietitian…"
                 class="w-full"
               />
             </div>
@@ -131,10 +131,12 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
                 <div>
                   <p class="text-white text-sm font-medium">{appt.title}</p>
                   <p class="text-slate-400 text-xs">
-                    {appt.client && appt.client.name} · {Calendar.strftime(appt.scheduled_at, "%b %d, %Y %H:%M")}
+                    {(appt.client && appt.client.name) || appt.external_client_name} · {Calendar.strftime(appt.scheduled_at, "%b %d, %Y %H:%M")}
                   </p>
                 </div>
-                <a href={"/nutritionist/clients/#{appt.client_id}"} class="text-teal-400 text-xs hover:underline">View client</a>
+                <%= if appt.client_id do %>
+                  <a href={"/nutritionist/clients/#{appt.client_id}"} class="text-teal-400 text-xs hover:underline">View client</a>
+                <% end %>
               </div>
             <% end %>
           </div>

@@ -892,11 +892,15 @@ defmodule Mehungry.Food do
 
     case result do
       {:ok, %Recipe{} = recipe} ->
-        %{
-          recipe_id: recipe.id
-        }
+        %{recipe_id: recipe.id}
         |> Mehungry.RecipePutNutrientsWorker.new()
         |> Oban.insert()
+
+        if attrs["image_url"] in [nil, ""] do
+          %{recipe_id: recipe.id}
+          |> Mehungry.RecipeImageWorker.new()
+          |> Oban.insert()
+        end
 
         result
 

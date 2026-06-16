@@ -7,16 +7,28 @@ defmodule Mehungry.AI.MealPlanGenerator do
   require Logger
   alias Mehungry.History
 
-  @api_url "https://api.anthropic.com/v1/messages"
   @model "claude-haiku-4-5-20251001"
-  @timeout_ms 60_000
   @max_recipes 80
 
   @doc """
   Full pipeline. Returns {:ok, [%UserMeal{}], count} or {:error, reason}.
   recipes: preloaded list already available in the LiveView assigns.
+
+  Delegates to MealPlanAgent (history-aware tool-use loop). Falls back to
+  the legacy single-shot pipeline if the agent returns an error.
   """
   def run(preferences, recipes, start_date, user_id) do
+    case Mehungry.AI.Agents.MealPlanAgent.run(preferences, recipes, start_date, user_id) do
+      {:ok, meals, skipped} ->
+        {:ok, meals, skipped}
+
+      {:error, reason} ->
+        Logger.warning("MealPlanAgent failed (#{inspect(reason)}), falling back to legacy pipeline")
+        run_legacy(preferences, recipes, start_date, user_id)
+    end
+  end
+
+  defp run_legacy(preferences, recipes, start_date, user_id) do
     catalog = build_catalog(recipes)
 
     if catalog == [] do
@@ -168,48 +180,14 @@ defmodule Mehungry.AI.MealPlanGenerator do
   # --- HTTP ---
 
   defp call_api(system, user) do
-    api_key = Application.get_env(:mehungry, :anthropic_api_key, "")
-
-    if api_key == "" do
-      {:error, "ANTHROPIC_API_KEY is not configured"}
-    else
-      do_call(api_key, system, user)
-    end
-  end
-
-  defp do_call(api_key, system, user) do
-    body =
-      Jason.encode!(%{
-        model: @model,
-        max_tokens: 4096,
-        system: system,
-        messages: [%{role: "user", content: user}]
-      })
-
-    headers = [
-      {"Content-Type", "application/json"},
-      {"x-api-key", api_key},
-      {"anthropic-version", "2023-06-01"}
-    ]
-
-    case HTTPoison.post(@api_url, body, headers, recv_timeout: @timeout_ms) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: resp_body}} ->
-        case Jason.decode(resp_body) do
-          {:ok, %{"content" => [%{"text" => text} | _]}} ->
-            {:ok, text}
-
-          {:ok, resp} ->
-            Logger.warning("Unexpected Anthropic response: #{inspect(resp)}")
-            {:error, "Unexpected API response format"}
-        end
-
-      {:ok, %HTTPoison.Response{status_code: code, body: body}} ->
-        Logger.warning("Anthropic API #{code}: #{body}")
-        {:error, "API returned status #{code}"}
-
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        Logger.warning("Anthropic HTTP error: #{inspect(reason)}")
-        {:error, "HTTP request failed: #{inspect(reason)}"}
+    case Mehungry.AI.Client.request(%{
+           model: @model,
+           system: system,
+           messages: [%{role: "user", content: user}],
+           max_tokens: 4096
+         }) do
+      {:ok, response} -> {:ok, Mehungry.AI.Client.text_from(response)}
+      error -> error
     end
   end
 end
