@@ -99,6 +99,10 @@ defmodule Mehungry.AI.Agent do
 
         loop(new_messages, handler, ctx, req_base, iteration + 1, max_iter)
 
+      {:ok, %{stop_reason: "max_tokens"}} ->
+        Logger.warning("AI.Agent: stop_reason max_tokens — increase max_tokens or reduce prompt size")
+        {:error, :max_tokens_reached}
+
       {:ok, %{stop_reason: stop, content: content}} ->
         Logger.warning("AI.Agent: unexpected stop_reason #{inspect(stop)}")
         {:ok, Mehungry.AI.Client.text_from(%{content: content})}

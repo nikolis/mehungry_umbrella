@@ -2,6 +2,7 @@ defmodule MehungryWeb.SocialMediaPublisher do
   @moduledoc """
   Publishes bot recipes to all connected social media platforms.
   Uses the translated title/description when a RecipeTranslation exists for the given language.
+  Facebook page and Pinterest board are resolved per-language from the bot config.
   """
 
   require Logger
@@ -14,17 +15,20 @@ defmodule MehungryWeb.SocialMediaPublisher do
   @doc """
   Publishes a recipe to all platforms that have connected tokens on the bot_user.
   Uses the translation for `language_name` when building captions.
+  Page and board targets are resolved from bot_config per language.
 
   Returns %{instagram: result, facebook: result, pinterest: result}
   where result is :ok | :skipped | {:error, reason}.
   """
   def publish_recipe(recipe, bot_user, ai_bot_recipe_id, language_name) do
     localized_recipe = apply_translation(recipe, language_name)
+    bot_recipe = AiBot.get_bot_recipe!(ai_bot_recipe_id)
+    config = bot_recipe.bot_config
 
     results = %{
       instagram: post_instagram(bot_user, localized_recipe),
-      facebook: post_facebook(bot_user, localized_recipe),
-      pinterest: post_pinterest(bot_user, localized_recipe, ai_bot_recipe_id)
+      facebook: post_facebook(bot_user, localized_recipe, config, language_name),
+      pinterest: post_pinterest(bot_user, localized_recipe, config, language_name)
     }
 
     log_results(results, ai_bot_recipe_id, language_name)
@@ -70,26 +74,31 @@ defmodule MehungryWeb.SocialMediaPublisher do
     end
   end
 
-  defp post_facebook(bot_user, recipe) do
+  defp post_facebook(bot_user, recipe, config, language_name) do
     if map_non_empty?(bot_user.facebook_token) do
-      page = bot_user.facebook_token |> Map.values() |> List.first()
+      page = resolve_facebook_page(bot_user, config, language_name)
 
-      case Facebook.post_recipe_container(bot_user, recipe, page) do
-        {:ok, _response} -> :ok
-        {:ok, %HTTPoison.Response{status_code: status}} when status in 200..299 -> :ok
-        {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
-          {:error, "Facebook HTTP #{status}: #{body}"}
-        {:error, reason} -> {:error, reason}
-        _ -> :ok
+      if is_nil(page) do
+        Logger.warning("[SocialMediaPublisher] No Facebook page configured for language #{language_name}")
+        :skipped
+      else
+        case Facebook.post_recipe_container(bot_user, recipe, page) do
+          {:ok, _response} -> :ok
+          {:ok, %HTTPoison.Response{status_code: status}} when status in 200..299 -> :ok
+          {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
+            {:error, "Facebook HTTP #{status}: #{body}"}
+          {:error, reason} -> {:error, reason}
+          _ -> :ok
+        end
       end
     else
       :skipped
     end
   end
 
-  defp post_pinterest(bot_user, recipe, ai_bot_recipe_id) do
+  defp post_pinterest(bot_user, recipe, config, language_name) do
     if map_non_empty?(bot_user.pinterest_token) do
-      board_id = get_pinterest_board_id(ai_bot_recipe_id)
+      board_id = resolve_pinterest_board(config, language_name)
 
       if board_id do
         case Pinterest.create_pin(bot_user, recipe, board_id) do
@@ -97,7 +106,7 @@ defmodule MehungryWeb.SocialMediaPublisher do
           {:error, reason} -> {:error, reason}
         end
       else
-        Logger.warning("[SocialMediaPublisher] No Pinterest board configured for bot_recipe #{ai_bot_recipe_id}")
+        Logger.warning("[SocialMediaPublisher] No Pinterest board configured for language #{language_name}")
         :skipped
       end
     else
@@ -105,9 +114,25 @@ defmodule MehungryWeb.SocialMediaPublisher do
     end
   end
 
-  defp get_pinterest_board_id(ai_bot_recipe_id) do
-    bot_recipe = AiBot.get_bot_recipe!(ai_bot_recipe_id)
-    bot_recipe.bot_config.pinterest_default_board_id
+  # Resolve Facebook page: per-language first, then single fallback, then first page.
+  defp resolve_facebook_page(bot_user, config, language_name) do
+    token_pages = bot_user.facebook_token || %{}
+
+    page_id =
+      get_in(config.facebook_page_ids || %{}, [language_name]) ||
+        config.facebook_page_id
+
+    if page_id do
+      Enum.find(Map.values(token_pages), fn p -> Map.get(p, "id") == page_id end)
+    else
+      Map.values(token_pages) |> List.first()
+    end
+  end
+
+  # Resolve Pinterest board: per-language first, then single fallback.
+  defp resolve_pinterest_board(config, language_name) do
+    get_in(config.pinterest_board_ids || %{}, [language_name]) ||
+      config.pinterest_default_board_id
   end
 
   defp log_results(results, ai_bot_recipe_id, language_name) do

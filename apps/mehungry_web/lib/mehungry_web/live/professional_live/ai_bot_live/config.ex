@@ -24,16 +24,24 @@ defmodule MehungryWeb.AiBotLive.Config do
   end
 
   defp apply_action(socket, :index, _params) do
-    assign(socket, :form, nil)
+    socket
+    |> assign(:form, nil)
+    |> assign(:bot_user_social, nil)
   end
 
   defp apply_action(socket, :new, _params) do
-    assign(socket, :form, to_form(AiBot.change_bot_config(%AiBotConfig{})))
+    socket
+    |> assign(:form, to_form(AiBot.change_bot_config(%AiBotConfig{})))
+    |> assign(:bot_user_social, nil)
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
     config = AiBot.get_bot_config!(id)
-    assign(socket, :form, to_form(AiBot.change_bot_config(config)))
+    bot_user = Accounts.get_user!(config.bot_user_id)
+
+    socket
+    |> assign(:form, to_form(AiBot.change_bot_config(config)))
+    |> assign(:bot_user_social, bot_user)
   end
 
   @impl true
@@ -221,18 +229,38 @@ defmodule MehungryWeb.AiBotLive.Config do
                       </button>
                     </div>
                   </div>
-                  <div>
-                    <label class="block text-xs text-slate-400 mb-1">Pinterest Default Board ID</label>
-                    <.input field={@form[:pinterest_default_board_id]} type="text"
-                            placeholder="board_id from Pinterest"
-                            class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none" />
-                  </div>
                   <div class="flex items-center gap-3">
                     <.input field={@form[:active]} type="checkbox" class="w-4 h-4 rounded border-slate-600 bg-slate-700 text-primary-500 focus:ring-primary-500" />
                     <label class="text-sm text-slate-300">Active configuration</label>
                   </div>
                 </div>
               </div>
+
+              <!-- Social accounts status (edit mode only) -->
+              <%= if @bot_user_social do %>
+                <div class="border-t border-slate-700/60 pt-5">
+                  <div class="flex items-center justify-between mb-3">
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Social Accounts</p>
+                    <.link navigate={~p"/professional/ai-bot/social"}
+                           class="flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300 transition-colors">
+                      <.icon name="hero-arrow-top-right-on-square" class="h-3 w-3" /> Configure
+                    </.link>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <.social_status_pill
+                      label="Instagram"
+                      connected={map_non_empty?(@bot_user_social.instagram_token)} />
+                    <.social_status_pill
+                      label="Facebook"
+                      connected={map_non_empty?(@bot_user_social.facebook_token)}
+                      detail={facebook_pages_summary(@bot_user_social)} />
+                    <.social_status_pill
+                      label="Pinterest"
+                      connected={map_non_empty?(@bot_user_social.pinterest_token)}
+                      detail={pinterest_boards_summary(@form.source.data)} />
+                  </div>
+                </div>
+              <% end %>
 
               <!-- Publish times grid -->
               <div class="border-t border-slate-700/60 pt-5">
@@ -341,6 +369,44 @@ defmodule MehungryWeb.AiBotLive.Config do
     </.modal>
     """
   end
+
+  attr :label, :string, required: true
+  attr :connected, :boolean, required: true
+  attr :detail, :string, default: nil
+
+  defp social_status_pill(assigns) do
+    ~H"""
+    <div class={[
+      "rounded-lg px-3 py-2 border text-xs",
+      if(@connected,
+        do: "bg-emerald-500/10 border-emerald-500/25",
+        else: "bg-slate-700/40 border-slate-600/40")
+    ]}>
+      <div class="flex items-center gap-1.5 mb-0.5">
+        <div class={["w-1.5 h-1.5 rounded-full flex-shrink-0", if(@connected, do: "bg-emerald-400", else: "bg-slate-600")]}></div>
+        <span class={if(@connected, do: "text-emerald-300 font-medium", else: "text-slate-500")}><%= @label %></span>
+      </div>
+      <%= if @detail do %>
+        <p class="text-slate-500 truncate pl-3"><%= @detail %></p>
+      <% end %>
+    </div>
+    """
+  end
+
+  defp facebook_pages_summary(bot_user) do
+    pages = bot_user.facebook_token || %{}
+    count = map_size(pages)
+    if count > 0, do: "#{count} page(s) available", else: nil
+  end
+
+  defp pinterest_boards_summary(config) do
+    boards = config.pinterest_board_ids || %{}
+    count = map_size(boards)
+    if count > 0, do: "#{count} board(s) configured", else: nil
+  end
+
+  defp map_non_empty?(map) when is_map(map) and map_size(map) > 0, do: true
+  defp map_non_empty?(_), do: false
 
   defp month_name(1), do: "January"
   defp month_name(2), do: "February"

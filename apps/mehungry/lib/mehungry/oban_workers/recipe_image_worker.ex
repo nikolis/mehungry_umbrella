@@ -27,12 +27,11 @@ defmodule Mehungry.RecipeImageWorker do
   defp generate_and_store(recipe) do
     case ImageGenerator.generate(recipe.title, recipe.description) do
       {:ok, binary} ->
-        bucket = Application.get_env(:mehungry, :aws_bucket) ||
-                   Application.get_env(:mehungry_web, :aws_bucket)
+        bucket = Application.get_env(:mehungry_web, :aws_bucket)
 
         key = "recipe_images/#{recipe.id}.jpg"
 
-        case S3Manager.upload_binary(binary, bucket, key, [{"Content-Type", "image/jpeg"}]) do
+        case S3Manager.upload_binary(binary, bucket, key, content_type: "image/jpeg") do
           {:ok, _} ->
             url = "https://#{bucket}.s3.eu-central-1.amazonaws.com/#{key}"
 

@@ -44,7 +44,6 @@ defmodule MehungryWeb.SimpleS3Upload do
         "conditions": [
           {"bucket":  "#{bucket()}"},
           ["eq", "$key", "#{key}"],
-          {"acl": "public-read"},
           ["eq", "$Content-Type", "#{content_type}"],
           ["content-length-range", 0, #{max_file_size}],
           {"x-amz-server-side-encryption": "AES256"},
@@ -57,7 +56,6 @@ defmodule MehungryWeb.SimpleS3Upload do
 
     fields = %{
       "key" => key,
-      "acl" => "public-read",
       "content-type" => content_type,
       "x-amz-server-side-encryption" => "AES256",
       "x-amz-credential" => credential,
@@ -98,8 +96,7 @@ defmodule MehungryWeb.SimpleS3Upload do
   end
 
   def bucket do
-    "test-bucket-local-mehungry"
-    # Application.fetch_env!(:mehungry_web, :aws_bucket)
+    Application.fetch_env!(:mehungry_web, :aws_bucket)
   end
 
   def region do

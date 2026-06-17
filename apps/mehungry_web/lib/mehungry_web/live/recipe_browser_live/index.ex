@@ -39,13 +39,15 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
     {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
 
+    language = user_profile && user_profile.language_preference
+
     {query, {recipes, cursor_after}} =
       case query_str do
         nil ->
-          {query_str, list_recipes()}
+          {query_str, list_recipes(language)}
 
         qr ->
-          Food.search_recipe(qr)
+          Food.search_recipe(qr, language)
       end
 
     {:ok,
@@ -109,7 +111,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           end
       end
 
-    {:noreply, stream(socket, :recipes, list_recipes())}
+    language = get_user_language(socket)
+    {:noreply, stream(socket, :recipes, list_recipes(language))}
   end
 
   @impl true
@@ -147,7 +150,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     cursor_after = Map.get(socket.assigns, :cursor_after)
 
     {recipes, cursor_after} =
-      Food.list_recipes(cursor_after, Map.get(socket.assigns, :query, nil))
+      Food.list_recipes(cursor_after, Map.get(socket.assigns, :query, nil), get_user_language(socket))
 
     {:noreply,
      socket
@@ -218,7 +221,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
          |> assign(:changeset, changeset)}
 
       {:ok, %RecipeSearchItem{} = recipe_search_item} ->
-        recipes = Search.search_recipe(recipe_search_item.query_string)
+        recipes = Search.search_recipe(recipe_search_item.query_string, get_user_language(socket))
 
         {:noreply,
          socket
@@ -262,10 +265,12 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   end
 
   defp handle_search(socket, query_str) do
+    language = get_user_language(socket)
+
     {query, {recipes, cursor_after}} =
       case query_str do
         nil ->
-          {query_str, list_recipes()}
+          {query_str, list_recipes(language)}
 
         qr ->
           cond do
@@ -276,7 +281,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
               Food.search_recipes_by_ingredient(String.slice(qr, 1..-1//1))
 
             true ->
-              Food.search_recipe(qr)
+              Food.search_recipe(qr, language)
           end
       end
 
@@ -365,7 +370,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   end
 
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
-    recipe = Food.get_recipe!(id)
+    recipe = Food.get_recipe!(id, get_user_language(socket))
 
     if !is_nil(recipe) do
       Posts.subscribe_to_recipe(%{recipe_id: id})
@@ -413,18 +418,19 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do
-    recipe = Food.get_recipe!(id)
+    recipe = Food.get_recipe!(id, get_user_language(socket))
     maybe_track_user(recipe, socket)
 
     query_str = ""
+    language = get_user_language(socket)
 
     {_query, {recipes, cursor_after}} =
       case query_str do
         nil ->
-          {query_str, list_recipes()}
+          {query_str, list_recipes(language)}
 
         qr ->
-          Food.search_recipe(qr)
+          Food.search_recipe(qr, language)
       end
 
     socket
@@ -543,15 +549,19 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     base
   end
 
-  defp list_recipes do
-    {result, cursor_after} = Food.list_recipes(nil)
+  defp list_recipes(language \\ nil) do
+    {result, cursor_after} = Food.list_recipes(nil, nil, language)
 
     result =
       Enum.map(result, fn recipe ->
-        #return = ImageProcessing.resize(recipe.image_url, 100, 100)
         %Recipe{recipe | recipe_image_remote: recipe.image_url}
       end)
 
     {result, cursor_after}
+  end
+
+  defp get_user_language(socket) do
+    profile = Map.get(socket.assigns, :current_user_profile) || Map.get(socket.assigns, :user_profile)
+    profile && profile.language_preference
   end
 end

@@ -22,18 +22,13 @@ defmodule Mehungry.Search do
     end
   end
 
-  def search_recipe(search_term) do
+  def search_recipe(search_term, language_name \\ nil) do
     query = RecipeSearch.run(Recipe, search_term)
 
     results =
       Repo.all(query)
       |> Repo.preload([:recipe_ingredients, :user])
 
-    result =
-      Enum.map(results, fn rec ->
-        Food.translate_recipe_if_needed(rec)
-      end)
-
-    result
+    Food.localize_recipes(results, language_name)
   end
 end

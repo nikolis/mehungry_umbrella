@@ -68,6 +68,40 @@ defmodule Mehungry.Posts do
     |> Enum.map(fn {x, _score} -> x end)
   end
 
+  # For each recipe, prefer the post whose language_name matches the user's language.
+  # Falls back to the first post for that recipe (original language) if no translation post exists.
+  # Also applies recipe_translations to post.reference so the recipe title is in the user's language.
+  def localize_for_language(posts, nil), do: posts
+
+  def localize_for_language(posts, language_name) do
+    # Pick best post per reference_id, preserving score-based order
+    selected_by_ref =
+      posts
+      |> Enum.group_by(& &1.reference_id)
+      |> Map.new(fn {ref_id, group} ->
+        best = Enum.find(group, List.first(group), &(&1.language_name == language_name))
+        {ref_id, best}
+      end)
+
+    selected =
+      posts
+      |> Enum.uniq_by(& &1.reference_id)
+      |> Enum.map(&Map.get(selected_by_ref, &1.reference_id))
+      |> Enum.reject(&is_nil/1)
+
+    recipe_ids = selected |> Enum.map(& &1.reference_id) |> Enum.reject(&is_nil/1)
+    translations = Mehungry.Food.load_recipe_translations_map(recipe_ids, language_name)
+
+    Enum.map(selected, fn post ->
+      case {post.reference, Map.get(translations, post.reference_id)} do
+        {nil, _} -> post
+        {_, nil} -> post
+        {ref, translation} ->
+          %{post | reference: Mehungry.Food.apply_recipe_translation(ref, translation)}
+      end
+    end)
+  end
+
   @doc """
   Gets a single post.
 
@@ -160,6 +194,31 @@ defmodule Mehungry.Posts do
     %Post{}
     |> Post.changeset(attrs)
     |> Repo.insert()
+  end
+
+  def create_post_for_translation(%Recipe{} = recipe, translation) do
+    attrs = %{
+      reference_id: recipe.id,
+      md_media_url: recipe.image_url,
+      user_id: recipe.user_id,
+      title: translation.title,
+      language_name: translation.language_name,
+      type_: "RECIPE"
+    }
+
+    %Post{}
+    |> Post.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def post_exists_for?(recipe_id, nil) do
+    from(p in Post, where: p.reference_id == ^recipe_id and is_nil(p.language_name))
+    |> Repo.exists?()
+  end
+
+  def post_exists_for?(recipe_id, language_name) do
+    from(p in Post, where: p.reference_id == ^recipe_id and p.language_name == ^language_name)
+    |> Repo.exists?()
   end
 
   @doc """

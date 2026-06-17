@@ -2,6 +2,7 @@ defmodule Mehungry.AiBot do
   import Ecto.Query
 
   alias Mehungry.Repo
+  alias Mehungry.Posts
   alias Mehungry.AiBot.{AiBotConfig, AiBotRecipe, RecipeTranslation, SocialMediaPostLog}
 
   # ── Config ──────────────────────────────────────────────────────────────────
@@ -43,8 +44,19 @@ defmodule Mehungry.AiBot do
   # ── Bot Recipes ──────────────────────────────────────────────────────────────
 
   def list_pending_recipes do
+    list_bot_recipes("pending_review")
+  end
+
+  def list_bot_recipes("all") do
     AiBotRecipe
-    |> where([r], r.status == "pending_review")
+    |> order_by([r], [asc: r.scheduled_date, asc: r.meal_type])
+    |> preload([:recipe, :bot_config])
+    |> Repo.all()
+  end
+
+  def list_bot_recipes(status) do
+    AiBotRecipe
+    |> where([r], r.status == ^status)
     |> order_by([r], [asc: r.scheduled_date, asc: r.meal_type])
     |> preload([:recipe, :bot_config])
     |> Repo.all()
@@ -126,9 +138,28 @@ defmodule Mehungry.AiBot do
   end
 
   def approve_recipe(%AiBotRecipe{} = bot_recipe) do
-    bot_recipe
-    |> AiBotRecipe.changeset(%{status: "approved"})
-    |> Repo.update()
+    with {:ok, updated} <-
+           bot_recipe
+           |> AiBotRecipe.changeset(%{status: "approved"})
+           |> Repo.update() do
+      recipe = Repo.get!(Mehungry.Food.Recipe, bot_recipe.recipe_id)
+      ensure_posts_for_recipe(recipe)
+      {:ok, updated}
+    end
+  end
+
+  defp ensure_posts_for_recipe(recipe) do
+    unless Posts.post_exists_for?(recipe.id, nil) do
+      Posts.create_post(recipe)
+    end
+
+    recipe.id
+    |> list_translations_for_recipe()
+    |> Enum.each(fn translation ->
+      unless Posts.post_exists_for?(recipe.id, translation.language_name) do
+        Posts.create_post_for_translation(recipe, translation)
+      end
+    end)
   end
 
   def reject_recipe(%AiBotRecipe{} = bot_recipe) do

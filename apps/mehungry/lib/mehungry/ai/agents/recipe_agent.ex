@@ -35,7 +35,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
         &handle_tool/3,
         context,
         model: @model,
-        max_tokens: 1024,
+        max_tokens: 8192,
         max_iterations: 10
       )
 

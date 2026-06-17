@@ -4,6 +4,14 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
   alias Mehungry.AiBot
   alias Mehungry.ObanWorkers.DailyRecipeGenerationWorker
 
+  @status_filters [
+    {"Pending", "pending_review"},
+    {"Approved", "approved"},
+    {"Rejected", "rejected"},
+    {"Published", "published"},
+    {"All", "all"}
+  ]
+
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
@@ -14,9 +22,24 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
      socket
      |> assign(:page_title, "AI Bot Review Queue")
      |> assign(:generating, false)
+     |> assign(:status_filter, "pending_review")
      |> assign(:selected_date, Date.to_iso8601(Date.add(Date.utc_today(), 1)))
      |> load_recipes()
      |> load_untracked()}
+  end
+
+  @impl true
+  def handle_event("set_filter", %{"status" => status}, socket) do
+    valid = Enum.map(@status_filters, &elem(&1, 1))
+
+    if status in valid do
+      {:noreply,
+       socket
+       |> assign(:status_filter, status)
+       |> load_recipes()}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
@@ -42,6 +65,22 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
   @impl true
   def handle_event("update_date", %{"target_date" => date}, socket) do
     {:noreply, assign(socket, :selected_date, date)}
+  end
+
+  @impl true
+  def handle_event("approve", %{"id" => id}, socket) do
+    bot_recipe = AiBot.get_bot_recipe!(String.to_integer(id))
+
+    case AiBot.approve_recipe(bot_recipe) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Recipe approved.")
+         |> load_recipes()}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to approve recipe.")}
+    end
   end
 
   @impl true
@@ -110,7 +149,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
 
   defp load_recipes(socket) do
     grouped =
-      AiBot.list_pending_recipes()
+      AiBot.list_bot_recipes(socket.assigns.status_filter)
       |> Enum.group_by(& &1.scheduled_date)
       |> Enum.sort_by(fn {date, _} -> date end)
 
@@ -129,6 +168,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
 
   @impl true
   def render(assigns) do
+    assigns = assign(assigns, :status_filters, @status_filters)
     total = Enum.reduce(assigns.grouped, 0, fn {_, recipes}, acc -> acc + length(recipes) end)
     assigns = assign(assigns, :total, total)
 
@@ -138,7 +178,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
       <div class="flex items-center justify-between mb-4">
         <div>
           <h1 class="text-xl font-bold text-white">Review Queue</h1>
-          <p class="text-sm text-slate-400 mt-0.5">AI-generated recipes pending your approval</p>
+          <p class="text-sm text-slate-400 mt-0.5">AI-generated recipes — review, approve, or reconsider</p>
         </div>
         <div class="flex items-center gap-2">
           <form phx-submit="generate_now" class="flex items-center gap-2">
@@ -168,8 +208,23 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
         </div>
       </div>
 
-      <!-- Untracked recipes section -->
-      <%= if length(@untracked) > 0 do %>
+      <!-- Status filter tabs -->
+      <div class="flex items-center gap-1 mb-5 bg-slate-800/60 rounded-xl p-1 w-fit">
+        <%= for {label, status} <- @status_filters do %>
+          <button phx-click="set_filter" phx-value-status={status}
+                  class={[
+                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                    if(@status_filter == status,
+                      do: filter_active_class(status),
+                      else: "text-slate-400 hover:text-white hover:bg-slate-700")
+                  ]}>
+            <%= label %>
+          </button>
+        <% end %>
+      </div>
+
+      <!-- Untracked recipes section (only shown on pending filter) -->
+      <%= if @status_filter == "pending_review" and length(@untracked) > 0 do %>
         <div class="mb-6 bg-amber-500/5 border border-amber-500/25 rounded-xl overflow-hidden">
           <div class="flex items-center gap-2 px-4 py-3 border-b border-amber-500/20">
             <.icon name="hero-exclamation-triangle" class="h-4 w-4 text-amber-400 flex-shrink-0" />
@@ -213,9 +268,8 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
       <%= if @total > 0 do %>
         <div class="flex items-center gap-3 mb-6">
           <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-800 border border-slate-700/60 rounded-lg text-sm">
-            <.icon name="hero-clock" class="h-4 w-4 text-amber-400" />
             <span class="text-white font-semibold"><%= @total %></span>
-            <span class="text-slate-400">pending</span>
+            <span class="text-slate-400">recipes</span>
           </div>
           <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-800 border border-slate-700/60 rounded-lg text-sm">
             <.icon name="hero-calendar-days" class="h-4 w-4 text-slate-400" />
@@ -226,17 +280,20 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
       <% end %>
 
       <%= if @grouped == [] do %>
-        <!-- Empty state -->
         <div class="flex flex-col items-center justify-center py-24 text-center">
           <div class="w-16 h-16 rounded-full bg-slate-800 border border-slate-700/60 flex items-center justify-center mb-4">
             <.icon name="hero-inbox" class="h-8 w-8 text-slate-500" />
           </div>
-          <p class="text-slate-300 font-medium">No recipes pending review</p>
-          <p class="text-slate-500 text-sm mt-1 mb-6">Generate new recipes to start filling the queue</p>
-          <button phx-click="generate_now" disabled={@generating}
-                  class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
-            <.icon name="hero-bolt" class="h-4 w-4" /> Generate Now
-          </button>
+          <p class="text-slate-300 font-medium">No recipes in this category</p>
+          <%= if @status_filter == "pending_review" do %>
+            <p class="text-slate-500 text-sm mt-1 mb-6">Generate new recipes to start filling the queue</p>
+            <button phx-click="generate_now" disabled={@generating}
+                    class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
+              <.icon name="hero-bolt" class="h-4 w-4" /> Generate Now
+            </button>
+          <% else %>
+            <p class="text-slate-500 text-sm mt-1">Switch to a different filter to see recipes</p>
+          <% end %>
         </div>
       <% else %>
         <div class="space-y-8">
@@ -261,13 +318,21 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
                     <% end %>
                     <div class="flex-1 min-w-0">
                       <div class="font-medium text-white truncate text-sm"><%= recipe.recipe.title %></div>
-                      <div class="mt-1">
+                      <div class="flex items-center gap-2 mt-1">
                         <span class={[
                           "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
                           meal_badge_class(recipe.meal_type)
                         ]}>
                           <%= String.replace(recipe.meal_type, "_", " ") |> String.capitalize() %>
                         </span>
+                        <%= if @status_filter == "all" do %>
+                          <span class={[
+                            "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+                            status_badge_class(recipe.status)
+                          ]}>
+                            <%= status_label(recipe.status) %>
+                          </span>
+                        <% end %>
                       </div>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
@@ -275,12 +340,30 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
                              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-xs font-medium transition-colors">
                         <.icon name="hero-eye" class="h-3.5 w-3.5" /> Review
                       </.link>
-                      <button phx-click="reject" phx-value-id={recipe.id}
-                              data-confirm="Reject this recipe?"
-                              class="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                              title="Reject">
-                        <.icon name="hero-x-mark" class="h-4 w-4" />
-                      </button>
+                      <%= if recipe.status in ["approved", "rejected", "published"] do %>
+                        <%= if recipe.status != "approved" and recipe.status != "published" do %>
+                          <button phx-click="approve" phx-value-id={recipe.id}
+                                  title="Re-approve"
+                                  class="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors">
+                            <.icon name="hero-check-circle" class="h-4 w-4" />
+                          </button>
+                        <% end %>
+                        <%= if recipe.status != "rejected" do %>
+                          <button phx-click="reject" phx-value-id={recipe.id}
+                                  data-confirm="Reject this recipe?"
+                                  title="Reject"
+                                  class="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                            <.icon name="hero-x-mark" class="h-4 w-4" />
+                          </button>
+                        <% end %>
+                      <% else %>
+                        <button phx-click="reject" phx-value-id={recipe.id}
+                                data-confirm="Reject this recipe?"
+                                class="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                title="Reject">
+                          <.icon name="hero-x-mark" class="h-4 w-4" />
+                        </button>
+                      <% end %>
                     </div>
                   </div>
                 <% end %>
@@ -299,4 +382,22 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
   defp meal_badge_class("afternoon_snack"), do: "bg-rose-500/20 text-rose-400 border-rose-500/30"
   defp meal_badge_class("dinner"), do: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30"
   defp meal_badge_class(_), do: "bg-slate-700/50 text-slate-400 border-slate-600/40"
+
+  defp status_badge_class("pending_review"), do: "bg-amber-500/20 text-amber-400 border-amber-500/30"
+  defp status_badge_class("approved"), do: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+  defp status_badge_class("rejected"), do: "bg-red-500/20 text-red-400 border-red-500/30"
+  defp status_badge_class("published"), do: "bg-blue-500/20 text-blue-400 border-blue-500/30"
+  defp status_badge_class(_), do: "bg-slate-700/50 text-slate-400 border-slate-600/40"
+
+  defp status_label("pending_review"), do: "Pending"
+  defp status_label("approved"), do: "Approved"
+  defp status_label("rejected"), do: "Rejected"
+  defp status_label("published"), do: "Published"
+  defp status_label(s), do: s
+
+  defp filter_active_class("pending_review"), do: "bg-amber-500/20 text-amber-300"
+  defp filter_active_class("approved"), do: "bg-emerald-500/20 text-emerald-300"
+  defp filter_active_class("rejected"), do: "bg-red-500/20 text-red-300"
+  defp filter_active_class("published"), do: "bg-blue-500/20 text-blue-300"
+  defp filter_active_class(_), do: "bg-slate-700 text-white"
 end

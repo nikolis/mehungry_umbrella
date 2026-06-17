@@ -24,7 +24,7 @@ defmodule Mehungry.AI.RecipeTranslator do
            model: @model,
            system: system,
            messages: [%{role: "user", content: user}],
-           max_tokens: 1024
+           max_tokens: 4096
          }) do
       {:ok, response} ->
         text = Mehungry.AI.Client.text_from(response)

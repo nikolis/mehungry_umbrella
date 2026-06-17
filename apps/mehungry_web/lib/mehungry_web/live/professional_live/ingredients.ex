@@ -95,6 +95,21 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   end
 
   @impl true
+  def handle_event("delete_without_nutrients", _params, socket) do
+    {:ok, {ingredient_count, recipe_count}} = Food.delete_ingredients_without_nutrients()
+
+    socket =
+      socket
+      |> put_flash(
+        :info,
+        "Deleted #{ingredient_count} ingredient(s) and #{recipe_count} recipe(s) with no nutrients."
+      )
+      |> push_navigate(to: ~p"/professional/ingredients")
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("enqueue_translation", _params, socket) do
     %{} |> IngredientTranslationWorker.new() |> Oban.insert!()
     translation_stats = build_translation_stats()

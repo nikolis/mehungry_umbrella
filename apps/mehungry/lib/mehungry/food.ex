@@ -27,6 +27,7 @@ defmodule Mehungry.Food do
   alias Mehungry.Food.RecipeHashtag
   alias Mehungry.Languages.Language
   alias Mehungry.Hashtag
+  alias Mehungry.AiBot.RecipeTranslation
 
   def create_ingredient_portion(attrs) do
     %IngredientPortion{}
@@ -134,6 +135,48 @@ defmodule Mehungry.Food do
   #    Repo.get_by(User, query)
   #  end
 
+  def apply_recipe_translation(recipe, nil), do: recipe
+  def apply_recipe_translation(recipe, %RecipeTranslation{title: nil}), do: recipe
+  def apply_recipe_translation(recipe, %RecipeTranslation{} = translation) do
+    %{recipe | title: translation.title || recipe.title, description: translation.description || recipe.description}
+  end
+
+  # Bulk-apply user-language translations to a list of recipes, sorting translated ones first.
+  def localize_recipes(recipes, nil), do: Enum.map(recipes, &translate_recipe_if_needed/1)
+  def localize_recipes(recipes, language_name) do
+    recipe_ids = Enum.map(recipes, & &1.id)
+    translations = load_translations_map(recipe_ids, language_name)
+    ing_lang = ingredient_language_for(language_name)
+
+    recipes
+    |> Enum.sort_by(fn rec -> if Map.has_key?(translations, rec.id), do: 0, else: 1 end)
+    |> Enum.map(fn rec ->
+      translation = Map.get(translations, rec.id)
+
+      if translation && ing_lang do
+        rec
+        |> apply_recipe_translation(translation)
+        |> translate_ingredients_to(ing_lang)
+      else
+        rec
+        |> apply_recipe_translation(translation)
+        |> translate_recipe_if_needed()
+      end
+    end)
+  end
+
+  def load_recipe_translations_map([], _language_name), do: %{}
+  def load_recipe_translations_map(recipe_ids, language_name) do
+    from(rt in RecipeTranslation,
+      where: rt.recipe_id in ^recipe_ids and rt.language_name == ^language_name
+    )
+    |> Repo.all()
+    |> Map.new(fn rt -> {rt.recipe_id, rt} end)
+  end
+
+  defp load_translations_map(recipe_ids, language_name),
+    do: load_recipe_translations_map(recipe_ids, language_name)
+
   def translate_recipe_if_needed(recipe) do
     language =
       from(lan in Language,
@@ -143,43 +186,7 @@ defmodule Mehungry.Food do
 
     case language do
       %{name: "Gr"} ->
-        query =
-          from rec_ing in RecipeIngredient,
-            where: rec_ing.recipe_id == ^recipe.id,
-            join: ingredient in Ingredient,
-            on: true,
-            where: ingredient.id == rec_ing.ingredient_id,
-            join: tra in IngredientTranslation,
-            on: true,
-            where: tra.ingredient_id == ingredient.id,
-            join: cat in Category,
-            on: true,
-            where: cat.id == ingredient.category_id,
-            join: cat_trans in CategoryTranslation,
-            on: true,
-            where: cat_trans.category_id == cat.id and ^language.id == cat_trans.language_name,
-            join: mu in MeasurementUnit,
-            on: true,
-            where: mu.id == rec_ing.measurement_unit_id,
-            join: mu_trans in MeasurementUnitTranslation,
-            on: true,
-            where:
-              mu_trans.measurement_unit_id == mu.id and ^language.id == mu_trans.language_name,
-            select: %RecipeIngredient{
-              quantity: rec_ing.quantity,
-              ingredient_allias: rec_ing.ingredient_allias,
-              measurement_unit: %MeasurementUnit{id: mu.id, name: mu_trans.name},
-              ingredient: %Ingredient{
-                name: tra.name,
-                id: ingredient.id,
-                measurement_unit: %MeasurementUnit{id: mu.id, name: mu_trans.name},
-                category: %Category{id: cat.id, name: cat_trans.name}
-              }
-            }
-
-        result = Repo.all(query)
-        ret_rec = %Recipe{recipe | recipe_ingredients: result}
-        ret_rec
+        translate_ingredients_to(recipe, "Gr")
 
       _ ->
         recipe
@@ -191,6 +198,54 @@ defmodule Mehungry.Food do
              {:ingredient, :category}
            ]}
         ])
+    end
+  end
+
+  # Maps user language preference codes to the ingredient translation language codes.
+  # Ingredient/category/unit translations use the legacy "Gr"/"En" naming scheme.
+  defp ingredient_language_for("el"), do: "Gr"
+  defp ingredient_language_for(_), do: nil
+
+  defp translate_ingredients_to(recipe, language_name) do
+    query =
+      from rec_ing in RecipeIngredient,
+        where: rec_ing.recipe_id == ^recipe.id,
+        join: ingredient in Ingredient,
+        on: true,
+        where: ingredient.id == rec_ing.ingredient_id,
+        join: tra in IngredientTranslation,
+        on: true,
+        where: tra.ingredient_id == ingredient.id,
+        join: cat in Category,
+        on: true,
+        where: cat.id == ingredient.category_id,
+        join: cat_trans in CategoryTranslation,
+        on: true,
+        where: cat_trans.category_id == cat.id and ^language_name == cat_trans.language_name,
+        join: mu in MeasurementUnit,
+        on: true,
+        where: mu.id == rec_ing.measurement_unit_id,
+        join: mu_trans in MeasurementUnitTranslation,
+        on: true,
+        where: mu_trans.measurement_unit_id == mu.id and ^language_name == mu_trans.language_name,
+        select: %RecipeIngredient{
+          quantity: rec_ing.quantity,
+          ingredient_allias: rec_ing.ingredient_allias,
+          measurement_unit: %MeasurementUnit{id: mu.id, name: mu_trans.name},
+          ingredient: %Ingredient{
+            name: tra.name,
+            id: ingredient.id,
+            measurement_unit: %MeasurementUnit{id: mu.id, name: mu_trans.name},
+            category: %Category{id: cat.id, name: cat_trans.name}
+          }
+        }
+
+    case Repo.all(query) do
+      [] ->
+        Repo.preload(recipe, [{:recipe_ingredients, [:measurement_unit, {:ingredient, :category}]}])
+
+      translated ->
+        %Recipe{recipe | recipe_ingredients: translated}
     end
   end
 
@@ -321,6 +376,25 @@ defmodule Mehungry.Food do
       else
         translate_recipe_if_needed(result)
       end
+    end
+  end
+
+  def get_recipe!(id, language_name) do
+    recipe = get_recipe!(id)
+
+    if recipe && language_name do
+      translation = Map.get(load_translations_map([recipe.id], language_name), recipe.id)
+      ing_lang = ingredient_language_for(language_name)
+
+      if translation && ing_lang do
+        recipe
+        |> apply_recipe_translation(translation)
+        |> translate_ingredients_to(ing_lang)
+      else
+        apply_recipe_translation(recipe, translation)
+      end
+    else
+      recipe
     end
   end
 
@@ -481,9 +555,9 @@ defmodule Mehungry.Food do
     {results, cursor_after}
   end
 
-  def list_recipes(%Ecto.Query{} = query) do
-    # return the next 50 posts
+  def list_recipes(%Ecto.Query{} = query), do: list_recipes(query, nil)
 
+  def list_recipes(%Ecto.Query{} = query, language_name) do
     %{entries: entries, metadata: metadata} =
       Repo.paginate(
         query,
@@ -491,28 +565,20 @@ defmodule Mehungry.Food do
         limit: 10
       )
 
-    # assign the `after` cursor to a variable
     cursor_after = metadata.after
-
     results = Repo.preload(entries, [:user, :user_recipes])
-
-    result =
-      Enum.map(results, fn rec ->
-        translate_recipe_if_needed(rec)
-      end)
-
-    {result, cursor_after}
+    {localize_recipes(results, language_name), cursor_after}
   end
 
-  def list_recipes(cursor_after, query \\ nil) do
-    # return the next 50 posts
+  def list_recipes(cursor_after), do: list_recipes(cursor_after, nil, nil)
+
+  def list_recipes(cursor_after, query), do: list_recipes(cursor_after, query, nil)
+
+  def list_recipes(cursor_after, query, language_name) do
     query =
       case query do
-        nil ->
-          from recipe in Recipe, where: not is_nil(recipe.image_url)
-
-        _ ->
-          query
+        nil -> from recipe in Recipe, where: not is_nil(recipe.image_url)
+        _ -> query
       end
 
     %{entries: entries, metadata: metadata} =
@@ -523,17 +589,9 @@ defmodule Mehungry.Food do
         limit: 10
       )
 
-    # assign the `after` cursor to a variable
     cursor_after = metadata.after
-
     results = Repo.preload(entries, [:user])
-
-    result =
-      Enum.map(results, fn rec ->
-        translate_recipe_if_needed(rec)
-      end)
-
-    {result, cursor_after}
+    {localize_recipes(results, language_name), cursor_after}
   end
 
   def list_user_recipes(user_id) do
@@ -574,6 +632,101 @@ defmodule Mehungry.Food do
 
   def delete_ingredient(%Ingredient{} = ingredient) do
     Repo.delete(ingredient)
+  end
+
+  def delete_ingredients_without_nutrients do
+    ids_with_nutrients =
+      from(n in IngredientNutrient, select: n.ingredient_id, distinct: true)
+
+    ingredient_ids_q =
+      from(i in Ingredient, where: i.id not in subquery(ids_with_nutrients), select: i.id)
+
+    recipe_ids_q =
+      from(ri in RecipeIngredient,
+        where: ri.ingredient_id in subquery(ingredient_ids_q),
+        select: ri.recipe_id,
+        distinct: true
+      )
+
+    comment_ids_q =
+      from(c in Mehungry.Posts.Comment, where: c.recipe_id in subquery(recipe_ids_q), select: c.id)
+
+    comment_answer_ids_q =
+      from(ca in Mehungry.Posts.CommentAnswer,
+        where: ca.comment_id in subquery(comment_ids_q),
+        select: ca.id
+      )
+
+    post_ids_q =
+      from(p in Mehungry.Posts.Post, where: p.recipe_id in subquery(recipe_ids_q), select: p.id)
+
+    Repo.transaction(fn ->
+      from(cav in Mehungry.Posts.CommentAnswerVote,
+        where: cav.comment_answer_id in subquery(comment_answer_ids_q)
+      )
+      |> Repo.delete_all()
+
+      from(cv in Mehungry.Posts.CommentVote, where: cv.comment_id in subquery(comment_ids_q))
+      |> Repo.delete_all()
+
+      from(ca in Mehungry.Posts.CommentAnswer, where: ca.comment_id in subquery(comment_ids_q))
+      |> Repo.delete_all()
+
+      from(pv in Mehungry.Posts.PostUpvote, where: pv.post_id in subquery(post_ids_q))
+      |> Repo.delete_all()
+
+      from(pv in Mehungry.Posts.PostDownvote, where: pv.post_id in subquery(post_ids_q))
+      |> Repo.delete_all()
+
+      from(l in Mehungry.Food.Like, where: l.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(r in "ratings", where: r.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(m in Mehungry.Plans.Meal, where: m.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(bi in Mehungry.Inventory.BasketItem, where: bi.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(a in Mehungry.Food.Annotation, where: a.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(ab in Mehungry.AiBot.AiBotRecipe, where: ab.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(ri in RecipeIngredient, where: ri.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(bi in Mehungry.Inventory.BasketIngredient,
+        where: bi.ingredient_id in subquery(ingredient_ids_q)
+      )
+      |> Repo.delete_all()
+
+      from(uir in Mehungry.Accounts.UserIngredientRule,
+        where: uir.ingredient_id in subquery(ingredient_ids_q)
+      )
+      |> Repo.delete_all()
+
+      from(hium in Mehungry.History.IngredientUserMeal,
+        where: hium.ingredient_id in subquery(ingredient_ids_q)
+      )
+      |> Repo.delete_all()
+
+      from(ip in IngredientPortion, where: ip.ingredient_id in subquery(ingredient_ids_q))
+      |> Repo.delete_all()
+
+      {recipe_count, _} =
+        from(r in Recipe, where: r.id in subquery(recipe_ids_q))
+        |> Repo.delete_all()
+
+      {ingredient_count, _} =
+        from(i in Ingredient, where: i.id not in subquery(ids_with_nutrients))
+        |> Repo.delete_all()
+
+      {ingredient_count, recipe_count}
+    end)
   end
 
   def ingredient_display_names(ingredient_ids, language_name)
@@ -1043,14 +1196,16 @@ defmodule Mehungry.Food do
     {query, list_recipes(query)}
   end
 
-  def search_recipe("") do
+  def search_recipe(query_string, language_name \\ nil)
+
+  def search_recipe("", language_name) do
     query = from(r in Recipe)
-    {query, list_recipes(query)}
+    {query, list_recipes(query, language_name)}
   end
 
-  def search_recipe(query_string) do
+  def search_recipe(query_string, language_name) do
     query = Mehungry.Search.RecipeSearch.run(Recipe, query_string)
-    {query, list_recipes(query)}
+    {query, list_recipes(query, language_name)}
   end
 
   def pagenate_query(query) do

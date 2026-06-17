@@ -88,7 +88,7 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
         attrs =
           attrs
           |> Map.put("user_id", bot_user.id)
-          |> Map.put("language_name", "en")
+          |> Map.put("language_name", "En")
 
         result =
           Repo.transaction(fn ->

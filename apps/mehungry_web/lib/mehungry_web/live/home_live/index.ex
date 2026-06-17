@@ -25,11 +25,13 @@ defmodule MehungryWeb.HomeLive.Index do
           Accounts.get_user_by_session_token(session["user_token"])
       end
 
+    {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
+    language = user_profile && user_profile.language_preference
+
     all_posts =
       Mehungry.Posts.list_posts(user)
       |> Enum.filter(fn x -> !is_nil(x) and !is_nil(x.reference) end)
-
-    {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
+      |> Posts.localize_for_language(language)
     current_user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
     Enum.each(all_posts, fn post ->
@@ -113,10 +115,15 @@ defmodule MehungryWeb.HomeLive.Index do
     socket
   end
 
+  defp get_user_language(socket) do
+    profile = Map.get(socket.assigns, :user_profile)
+    profile && profile.language_preference
+  end
+
   defp apply_action(socket, :share_social_media, %{"id" => id, "social_media" => social_media}) do
     maybe_track_user(%{}, socket)
 
-    recipe = Food.get_recipe!(id)
+    recipe = Food.get_recipe!(id, get_user_language(socket))
     Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
 
     socket
@@ -127,7 +134,7 @@ defmodule MehungryWeb.HomeLive.Index do
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
     maybe_track_user(%{}, socket)
 
-    recipe = Food.get_recipe!(id |> String.split("#") |> List.first() |> String.to_integer())
+    recipe = Food.get_recipe!(id |> String.split("#") |> List.first() |> String.to_integer(), get_user_language(socket))
 
     if !is_nil(recipe) do
       Posts.subscribe_to_recipe(%{recipe_id: recipe.id})

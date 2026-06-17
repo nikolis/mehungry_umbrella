@@ -1,6 +1,6 @@
 defmodule Mehungry.AI.ImageGenerator do
   @moduledoc """
-  Generates recipe cover images using the OpenAI DALL-E 3 API.
+  Generates recipe cover images using the OpenAI gpt-image-1 API.
 
   Returns JPEG binary data ready to upload to S3.
   """
@@ -8,9 +8,9 @@ defmodule Mehungry.AI.ImageGenerator do
   require Logger
 
   @api_url "https://api.openai.com/v1/images/generations"
-  @model "dall-e-3"
-  @size "1792x1024"
-  @quality "standard"
+  @model "gpt-image-1"
+  @size "1024x1024"
+  @quality "medium"
   @timeout_ms 60_000
 
   @doc """
@@ -26,11 +26,7 @@ defmodule Mehungry.AI.ImageGenerator do
     else
       prompt = build_prompt(title, description)
       Logger.info("ImageGenerator: generating image for '#{title}'")
-
-      case request_image(api_key, prompt) do
-        {:ok, image_url} -> download_image(image_url)
-        error -> error
-      end
+      request_image(api_key, prompt)
     end
   end
 
@@ -55,8 +51,7 @@ defmodule Mehungry.AI.ImageGenerator do
         prompt: prompt,
         n: 1,
         size: @size,
-        quality: @quality,
-        response_format: "url"
+        quality: @quality
       })
 
     headers = [
@@ -67,8 +62,8 @@ defmodule Mehungry.AI.ImageGenerator do
     case HTTPoison.post(@api_url, body, headers, recv_timeout: @timeout_ms) do
       {:ok, %HTTPoison.Response{status_code: 200, body: resp_body}} ->
         case Jason.decode(resp_body) do
-          {:ok, %{"data" => [%{"url" => url} | _]}} ->
-            {:ok, url}
+          {:ok, %{"data" => [%{"b64_json" => b64} | _]}} ->
+            {:ok, Base.decode64!(b64)}
 
           {:ok, unexpected} ->
             Logger.warning("ImageGenerator: unexpected response: #{inspect(unexpected)}")
@@ -85,19 +80,6 @@ defmodule Mehungry.AI.ImageGenerator do
       {:error, %HTTPoison.Error{reason: reason}} ->
         Logger.warning("ImageGenerator: HTTP error: #{inspect(reason)}")
         {:error, "HTTP request failed: #{inspect(reason)}"}
-    end
-  end
-
-  defp download_image(url) do
-    case HTTPoison.get(url, [], recv_timeout: @timeout_ms, follow_redirect: true) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: binary}} ->
-        {:ok, binary}
-
-      {:ok, %HTTPoison.Response{status_code: code}} ->
-        {:error, "Image download returned status #{code}"}
-
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        {:error, "Image download failed: #{inspect(reason)}"}
     end
   end
 end
