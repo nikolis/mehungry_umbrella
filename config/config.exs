@@ -18,7 +18,12 @@ config :swoosh, :api_client, false
 config :mehungry, Oban,
   repo: Mehungry.Repo,
   plugins: [
-    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24}
+    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24},
+    {Oban.Plugins.Cron,
+     crontab: [
+       # 2am UTC daily — generate recipes for the next day + schedule publish jobs
+       {"0 2 * * *", Mehungry.ObanWorkers.DailyRecipeGenerationWorker}
+     ]}
   ],
   queues: [
     default: 10,

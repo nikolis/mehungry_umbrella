@@ -214,6 +214,13 @@ defmodule Mehungry.Food do
     |> Repo.preload(:measurement_unit)
   end
 
+  def get_measurement_unit_portions_for_ingredients(ingredient_ids) when is_list(ingredient_ids) do
+    from(ingp in IngredientPortion, where: ingp.ingredient_id in ^ingredient_ids)
+    |> Repo.all()
+    |> Repo.preload(:measurement_unit)
+    |> Enum.group_by(& &1.ingredient_id)
+  end
+
   def get_measurement_unit_by_name(name) do
     from(mu in MeasurementUnit,
       where: mu.name == ^name or mu.alternate_name == ^name
@@ -554,6 +561,10 @@ defmodule Mehungry.Food do
     category
     |> Category.changeset(attrs)
     |> Repo.update()
+  end
+
+  def get_ingredient_by_name(name) do
+    Repo.get_by(Ingredient, name: name)
   end
 
   def create_ingredient(attrs) do

@@ -164,22 +164,29 @@ defmodule Mehungry.FdcFoodParserLeg do
       category_id: category_id
     }
 
-    case Food.create_ingredient(attrs) do
-      {:ok, ingredient} ->
-        Logger.info("#{ingredient.name} was created Successfulle ")
+    case Food.get_ingredient_by_name(attrs.name) do
+      nil ->
+        case Food.create_ingredient(attrs) do
+          {:ok, ingredient} ->
+            Logger.info("#{ingredient.name} was created successfully")
 
-        if not is_nil(food_portions) do
-          create_ingredient_portions(food_portions, ingredient)
+            if not is_nil(food_portions) do
+              create_ingredient_portions(food_portions, ingredient)
+            end
+
+            Enum.map(food_nutrients, fn x ->
+              {:ok, nutrient} = get_or_create_nutrient(ingredient, x)
+              nutrient
+            end)
+
+          {:error, changeset} ->
+            Logger.error("[FdcFoodParserLeg] Failed to create ingredient: #{inspect(changeset.errors)}")
+            ""
         end
 
-        Enum.map(food_nutrients, fn x ->
-          {:ok, nutrient} = get_or_create_nutrient(ingredient, x)
-          nutrient
-        end)
-
-      {:error, error} ->
-        Logger.error(error)
-        ""
+      existing ->
+        Logger.debug("[FdcFoodParserLeg] Ingredient '#{existing.name}' already exists, skipping insert")
+        existing
     end
   end
 

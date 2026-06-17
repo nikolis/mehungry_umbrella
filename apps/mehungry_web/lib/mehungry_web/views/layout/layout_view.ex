@@ -106,6 +106,7 @@ defmodule MehungryWeb.LayoutView do
         <.admin_link href="/professional/files" icon="hero-folder-open" label="Files" />
         <.admin_link href="/professional/visits" icon="hero-map-pin" label="Visits" />
         <.admin_link href="/professional/feedback" icon="hero-chat-bubble-left-ellipsis" label="Feedback" />
+        <.admin_link href="/professional/ai-bot" icon="hero-cpu-chip" label="AI Bot" />
       </div>
       
     <!-- Footer -->

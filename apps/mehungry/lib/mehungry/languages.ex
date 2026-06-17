@@ -31,4 +31,8 @@ defmodule Mehungry.Languages do
   def list_languages() do
     Repo.all(Language)
   end
+
+  def delete_language(%Language{} = language) do
+    Repo.delete(language)
+  end
 end

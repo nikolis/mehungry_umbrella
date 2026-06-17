@@ -92,6 +92,17 @@
       <span class="hidden md:block text-sm font-medium">Give Feedback</span>
     </a>
 
+    <!-- Admin/Professional Panel (only for admin users) -->
+    <%= if @current_user && @current_user.email == "nikolisgal@gmail.com" do %>
+      <a
+        href="/professional/users"
+        class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-amber-400 hover:text-white hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-500/60 transition-colors mt-2"
+      >
+        <.icon name="hero-cog-6-tooth" class="h-5 w-5 flex-shrink-0" />
+        <span class="hidden md:block text-sm font-medium">Admin Panel</span>
+      </a>
+    <% end %>
+
     <!-- Nutritionist Panel (only for pro/nutritionist subscribers) -->
     <%= if @current_user && Mehungry.Subscriptions.nutritionist?(@current_user.id) do %>
       <a
