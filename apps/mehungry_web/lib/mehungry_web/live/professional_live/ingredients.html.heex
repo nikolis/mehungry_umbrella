@@ -4,6 +4,14 @@
     <div class="flex items-center gap-3">
       <button
         type="button"
+        phx-click="delete_without_nutrients"
+        data-confirm="Delete all ingredients with no nutrients? This cannot be undone."
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-700 hover:bg-red-600 text-white font-semibold text-sm transition-colors"
+      >
+        <.icon name="hero-trash" class="w-4 h-4" /> Delete without nutrients
+      </button>
+      <button
+        type="button"
         phx-click="enqueue_translation"
         class="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm transition-colors"
       >

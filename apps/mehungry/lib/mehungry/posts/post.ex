@@ -16,6 +16,7 @@ defmodule Mehungry.Posts.Post do
     field :sm_media_url, :string
     field :title, :string
     field :type_, :string
+    field :language_name, :string
 
     belongs_to :user, Mehungry.Accounts.User
     belongs_to :recipe, Mehungry.Food.Recipe
@@ -33,13 +34,15 @@ defmodule Mehungry.Posts.Post do
     post
     |> cast(attrs, [
       :type_,
+      :user_id,
       :reference_id,
       :title,
       :reference_url,
       :sm_media_url,
       :md_media_url,
       :bg_media_url,
-      :description
+      :description,
+      :language_name
     ])
     |> validate_required([:type_, :reference_id, :title, :md_media_url])
   end

@@ -33,40 +33,46 @@ defmodule MehungryWeb.AuthController do
       "scope" => token.other_params["scope"] || ""
     }
 
-    Accounts.update_user_tokens(conn.assigns.current_user, %{"pinterest_token" => token_data})
+    {target_user, redirect_path} = resolve_token_target(conn)
+    Accounts.update_user_tokens(target_user, %{"pinterest_token" => token_data})
 
     conn
+    |> delete_session("oauth_target_user_id")
     |> put_flash(:info, "Pinterest account connected successfully.")
-    |> redirect(to: "/profile")
+    |> redirect(to: redirect_path)
   end
 
   def callback(%{assigns: %{ueberauth_auth: %{provider: :instagram} = auth}} = conn, _params) do
     short_lived_token = auth.extra.raw_info.token.access_token
     instagram_user_id = auth.extra.raw_info.token.other_params["user_id"]
 
+    {target_user, redirect_path} = resolve_token_target(conn)
+
     Mehungry.Api.Instagram.get_long_lived_token(
-      conn.assigns.current_user,
+      target_user,
       short_lived_token,
       instagram_user_id
     )
 
     conn
+    |> delete_session("oauth_target_user_id")
     |> put_flash(:info, "Successfully connected with Instagram")
-    |> redirect(to: "/profile")
+    |> redirect(to: redirect_path)
   end
 
   def callback(%{assigns: %{ueberauth_auth: %{provider: :facebook} = auth}} = conn, _params) do
     if conn.assigns[:current_user] do
-      user = conn.assigns.current_user
+      {target_user, redirect_path} = resolve_token_target(conn)
       token = auth.extra.raw_info.token.access_token
 
       Task.start(fn ->
-        Mehungry.Api.Facebook.get_user_pages(user, token, auth.extra.raw_info.user["id"])
+        Mehungry.Api.Facebook.get_user_pages(target_user, token, auth.extra.raw_info.user["id"])
       end)
 
       conn
+      |> delete_session("oauth_target_user_id")
       |> put_flash(:info, "Facebook account connected successfully.")
-      |> redirect(to: "/profile")
+      |> redirect(to: redirect_path)
     else
       case Accounts.find_or_create(auth) do
         {:ok, user} ->
@@ -101,6 +107,19 @@ defmodule MehungryWeb.AuthController do
         conn
         |> put_flash(:error, reason)
         |> redirect(to: "/")
+    end
+  end
+
+  # When oauth_target_user_id is in session, save the token to that user (bot user)
+  # and redirect back to the admin social accounts page.
+  defp resolve_token_target(conn) do
+    case get_session(conn, "oauth_target_user_id") do
+      nil ->
+        {conn.assigns.current_user, "/profile"}
+
+      bot_user_id ->
+        bot_user = Accounts.get_user!(bot_user_id)
+        {bot_user, "/professional/ai-bot/social"}
     end
   end
 end

@@ -3,7 +3,7 @@ defmodule MehungryWeb.AdminAuthLive do
 
   use MehungryWeb, :live_view
 
-  alias Mehungry.Accounts
+  alias Mehungry.{Accounts, AiBot}
 
   @admin_email "nikolisgal@gmail.com"
 
@@ -24,9 +24,9 @@ defmodule MehungryWeb.AdminAuthLive do
 
       true ->
         socket =
-          assign_new(socket, :current_language, fn ->
-            Accounts.get_user_language(user.id)
-          end)
+          socket
+          |> assign_new(:current_language, fn -> Accounts.get_user_language(user.id) end)
+          |> assign(:pending_bot_reviews, AiBot.count_pending_reviews())
 
         {:cont, socket}
     end

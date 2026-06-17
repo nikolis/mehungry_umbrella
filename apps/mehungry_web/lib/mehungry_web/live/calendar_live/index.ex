@@ -8,6 +8,7 @@ defmodule MehungryWeb.CalendarLive.Index do
   alias Mehungry.History.UserMeal
   alias Mehungry.Accounts
   alias Mehungry.History
+  alias Mehungry.Professionals
   alias Mehungry.Repo
   alias Mehungry.Food
 
@@ -42,6 +43,8 @@ defmodule MehungryWeb.CalendarLive.Index do
         :ai_quota_exceeded,
         Mehungry.Subscriptions.check_quota(user.id, "meal_plan") == {:error, :quota_exceeded}
       )
+      |> assign(:has_nutritionist, not is_nil(Professionals.get_assignment_for_client(user.id)))
+      |> assign(:week_rating, nil)
     }
   end
 
@@ -271,6 +274,30 @@ defmodule MehungryWeb.CalendarLive.Index do
   @impl true
   def handle_event("edit_modal", %{"id" => id}, socket) do
     {:noreply, push_patch(socket, to: "/calendar/#{id}", replace: true)}
+  end
+
+  @impl true
+  def handle_event("rate_meal_plan", %{"score" => score, "date" => date_str, "type" => type} = params, socket) do
+    user_id = socket.assigns.user.id
+    comment = Map.get(params, "comment", nil)
+
+    date = Date.from_iso8601!(date_str)
+
+    attrs = %{
+      user_id: user_id,
+      rating_type: type,
+      score: String.to_integer(score),
+      comment: comment,
+      rated_for_date: date
+    }
+
+    case Professionals.upsert_meal_plan_rating(attrs) do
+      {:ok, _rating} ->
+        {:noreply, put_flash(socket, :info, "Rating saved!")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not save rating.")}
+    end
   end
 
   defp list_recipes(user) do

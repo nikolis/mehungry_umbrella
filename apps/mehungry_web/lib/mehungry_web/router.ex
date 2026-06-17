@@ -78,6 +78,35 @@ defmodule MehungryWeb.Router do
       live "/visits/:ip_address", VisitLive.Show, :show
 
       live "/feedback", ProfessionalLive.FeedbackLive, :index
+
+      live "/ai-bot", AiBotLive.Config, :index
+      live "/ai-bot/new", AiBotLive.Config, :new
+      live "/ai-bot/:id/edit", AiBotLive.Config, :edit
+      live "/ai-bot/review", AiBotLive.ReviewQueue, :index
+      live "/ai-bot/review/:id", AiBotLive.RecipeReview, :show
+      live "/ai-bot/review/:id/translate/:lang", AiBotLive.RecipeTranslate, :show
+      live "/ai-bot/social", AiBotLive.SocialAccounts, :index
+    end
+  end
+
+  scope "/auth/bot", MehungryWeb do
+    pipe_through [:admin_browser, :require_authenticated_user]
+    get "/target/:bot_user_id/:provider", BotOAuthController, :set_target
+  end
+
+  scope "/nutritionist", MehungryWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :nutritionist,
+      on_mount: MehungryWeb.NutritionistAuthLive,
+      layout: {MehungryWeb.LayoutView, :nutritionist_live} do
+      live "/", NutritionistLive.Dashboard, :index
+      live "/invitations", NutritionistLive.Invitations, :index
+      live "/clients", NutritionistLive.Clients, :index
+      live "/clients/:id", NutritionistLive.ClientDetail, :show
+      live "/clients/:id/calendar", NutritionistLive.ClientCalendar, :index
+      live "/clients/:id/calendar/:date", NutritionistLive.ClientCalendar, :particular
+      live "/appointments", NutritionistLive.AppointmentCalendar, :index
     end
   end
 
@@ -86,6 +115,7 @@ defmodule MehungryWeb.Router do
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
       live "/admin-dashboard", Admin.DashboardLive
+      live "/notifications/invitations", NutritionistLive.UserInvitations, :index
       live "/basket", ShoppingBasketLive.Index, :index
       live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
 

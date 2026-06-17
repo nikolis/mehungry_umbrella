@@ -106,6 +106,7 @@ defmodule MehungryWeb.LayoutView do
         <.admin_link href="/professional/files" icon="hero-folder-open" label="Files" />
         <.admin_link href="/professional/visits" icon="hero-map-pin" label="Visits" />
         <.admin_link href="/professional/feedback" icon="hero-chat-bubble-left-ellipsis" label="Feedback" />
+        <.admin_link href="/professional/ai-bot" icon="hero-cpu-chip" label="AI Bot" />
       </div>
       
     <!-- Footer -->
@@ -123,6 +124,95 @@ defmodule MehungryWeb.LayoutView do
         </a>
       </div>
     </nav>
+    """
+  end
+
+  attr :current_user, :any
+
+  def nutritionist_sidebar(assigns) do
+    ~H"""
+    <!-- Mobile toggle -->
+    <button
+      id="nutritionist_menu_button"
+      class="md:hidden fixed bottom-4 right-4 z-50 w-12 h-12 flex items-center justify-center rounded-full bg-teal-600 hover:bg-teal-500 text-white transition shadow-lg"
+      phx-click={
+        JS.toggle_class("open", to: "#nav_bar_nutritionist")
+        |> JS.toggle_class("hidden", to: "#nutritionist_backdrop")
+      }
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+
+    <!-- Backdrop (mobile) -->
+    <div
+      id="nutritionist_backdrop"
+      class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"
+      phx-click={
+        JS.toggle_class("open", to: "#nav_bar_nutritionist")
+        |> JS.toggle_class("hidden", to: "#nutritionist_backdrop")
+      }
+    />
+
+    <!-- Sidebar -->
+    <nav
+      id="nav_bar_nutritionist"
+      class="fixed top-0 left-0 h-full w-64 bg-slate-900 border-r border-slate-700/60 z-50 flex flex-col shadow-2xl transition-transform duration-300 -translate-x-full md:translate-x-0"
+    >
+      <div class="flex items-center justify-between px-5 py-5 border-b border-slate-700/60">
+        <a href="/nutritionist" class="block w-32">
+          {SvgComponents.get_logo(%{id: "nutritionist-sidebar"})}
+        </a>
+        <button
+          class="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+          phx-click={
+            JS.toggle_class("open", to: "#nav_bar_nutritionist")
+            |> JS.toggle_class("hidden", to: "#nutritionist_backdrop")
+          }
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="px-5 py-3">
+        <span class="text-xs font-semibold text-teal-400 uppercase tracking-wider">Nutritionist Panel</span>
+      </div>
+
+      <div class="flex-1 px-3 space-y-1 overflow-y-auto">
+        <.nutritionist_link href="/nutritionist" icon="hero-squares-2x2" label="Dashboard" />
+        <.nutritionist_link href="/nutritionist/clients" icon="hero-user-group" label="My Clients" />
+        <.nutritionist_link href="/nutritionist/invitations" icon="hero-envelope" label="Invitations" />
+        <.nutritionist_link href="/nutritionist/appointments" icon="hero-calendar-days" label="Appointments" />
+      </div>
+
+      <div class="px-5 py-4 border-t border-slate-700/60">
+        <a href="/home" class="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to app
+        </a>
+      </div>
+    </nav>
+    """
+  end
+
+  attr :href, :string, required: true
+  attr :icon, :string, required: true
+  attr :label, :string, required: true
+
+  defp nutritionist_link(assigns) do
+    ~H"""
+    <a
+      href={@href}
+      class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-sm font-medium group"
+    >
+      <.icon name={@icon} class="w-5 h-5 text-slate-400 group-hover:text-teal-400 transition flex-shrink-0" />
+      {@label}
+    </a>
     """
   end
 

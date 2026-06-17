@@ -17,6 +17,11 @@ defmodule Mehungry.Plans do
       [%MealPlan{}, ...]
 
   """
+  def list_meal_plans_for_user(user_id) do
+    import Ecto.Query
+    Repo.all(from m in MealPlan, where: m.user_id == ^user_id, order_by: [desc: m.inserted_at])
+  end
+
   def list_meal_plans do
     Repo.all(MealPlan)
     |> Repo.preload([

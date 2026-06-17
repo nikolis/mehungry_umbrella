@@ -24,7 +24,7 @@ defmodule Mehungry.Food.Recipe do
     field :servings, :integer
     field :private, :boolean
     field :title, :string
-    field :difficulty, :integer
+    field :difficulty, :integer, default: 1
     field :nutrients, :map, default: %{}
     field :ingredient_interactions, {:array, :map}, default: []
 
@@ -52,17 +52,18 @@ defmodule Mehungry.Food.Recipe do
     %{
       attrs
       | "recipe_hashtags" =>
-          Enum.map(attrs["recipe_hashtags"], fn x ->
-            title = x.hashtag.title
-            existing = Mehungry.Hashtag.get_hashtag_by_title(title)
+          Enum.map(attrs["recipe_hashtags"], fn
+            %{"hashtag_id" => _} = x ->
+              x
 
-            case is_nil(existing) do
-              true ->
-                x
+            x ->
+              title = x.hashtag.title
+              existing = Mehungry.Hashtag.get_hashtag_by_title(title)
 
-              false ->
-                %{"hashtag_id" => existing.id}
-            end
+              case is_nil(existing) do
+                true -> x
+                false -> %{"hashtag_id" => existing.id}
+              end
           end)
     }
   end
@@ -99,6 +100,7 @@ defmodule Mehungry.Food.Recipe do
       :difficulty
     ])
     |> unique_constraint(:title_user_constraint, name: :title_user_index)
+    |> foreign_key_constraint(:language_name, name: :recipes_language_name_fkey)
     |> foreign_key_constraint(:language_id)
     |> foreign_key_constraint(:user_id)
     |> validate_required([
@@ -106,8 +108,7 @@ defmodule Mehungry.Food.Recipe do
       :language_name,
       :user_id,
       :cooking_time_lower_limit,
-      :preperation_time_lower_limit,
-      :difficulty
+      :preperation_time_lower_limit
     ])
     |> cast_embed(:steps, [:required_message])
     |> cast_assoc(:recipe_ingredients, required: true)

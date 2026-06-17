@@ -492,6 +492,7 @@ defmodule MehungryWeb.RecipeComponents do
                           d="M6 18L18 6M6 6l12 12"
                         />
                       </svg>
+                    <% _ -> %>
                   <% end %>
                   <span class="text-slate-400 text-xs capitalize">{@recipe.difficulty}</span>
                 </div>

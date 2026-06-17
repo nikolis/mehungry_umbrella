@@ -35,6 +35,22 @@ defmodule MehungryWeb.Professional.LanguageLive.Index do
   end
 
   @impl true
+  def handle_event("delete", %{"id" => name}, socket) do
+    language = Languages.get_language!(name)
+
+    case Languages.delete_language(language) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> stream_delete(:languages, language)
+         |> put_flash(:info, "Language deleted.")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Cannot delete language — it may be in use.")}
+    end
+  end
+
+  @impl true
   def handle_info({MehungryWeb.LanguageLive.FormComponent, {:saved, language}}, socket) do
     {:noreply, stream_insert(socket, :languages, language)}
   end

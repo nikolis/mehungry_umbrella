@@ -10,9 +10,7 @@ defmodule Mehungry.AI.RecipeGenerator do
   require Logger
   alias Mehungry.Food
 
-  @api_url "https://api.anthropic.com/v1/messages"
-  @model "claude-haiku-4-5-20251001"
-  @timeout_ms 60_000
+  @model "claude-sonnet-4-6"
 
   # Words that indicate a partial/processed ingredient form.
   # When none of these appear in the search term but they appear in a candidate
@@ -22,8 +20,22 @@ defmodule Mehungry.AI.RecipeGenerator do
   @doc """
   Full pipeline. Returns {:ok, attrs_map, unmatched_names} or {:error, reason}.
   attrs_map is ready to pass to Recipe.changeset/2 via init/3.
+
+  Delegates to RecipeAgent (tool-use loop). Falls back to the legacy
+  hardcoded pipeline if the agent returns an error.
   """
   def run(description) do
+    case Mehungry.AI.Agents.RecipeAgent.run(description) do
+      {:ok, attrs, unmatched} ->
+        {:ok, attrs, unmatched}
+
+      {:error, reason} ->
+        Logger.warning("RecipeAgent failed (#{inspect(reason)}), falling back to legacy pipeline")
+        run_legacy(description)
+    end
+  end
+
+  defp run_legacy(description) do
     with {:ok, names} <- extract_ingredient_names(description),
          _ = Logger.info("Phase 1 extracted: #{inspect(names)}"),
          {resolved, unmatched} <- resolve_ingredients(names),
@@ -337,7 +349,8 @@ defmodule Mehungry.AI.RecipeGenerator do
 
   defp generate_recipe(description, resolved_context) do
     system = """
-    You are a recipe creator. Generate complete recipes as valid JSON.
+    You are an expert chef and recipe writer with deep knowledge of global cuisines,
+    culinary technique, and flavour balance. Generate complete recipes as valid JSON.
 
     CONSTRAINTS:
     - Use ONLY the ingredient_id and measurement_unit_id values listed in "Available Ingredients". Do NOT invent IDs.
@@ -346,6 +359,11 @@ defmodule Mehungry.AI.RecipeGenerator do
     - For measurement units, pick the most natural unit for that ingredient in this recipe (e.g. grams for solids, ml for liquids). Only use unit_ids listed under that ingredient's units.
     - If no candidate is a reasonable match for an ingredient, omit it entirely rather than substituting a wrong one.
     - Return ONLY valid JSON. No markdown, no explanation, no code fences.
+
+    QUALITY STANDARDS:
+    - description: 2-3 sentences of genuine culinary prose — evoke aroma, texture, and occasion. No hashtags here.
+    - hashtags: 4-6 bare topic keywords (no # symbol) covering cuisine, main ingredient, dietary style, occasion.
+    - steps: each step must state what to do, how long it takes, and sensory cues for doneness (colour, texture, smell). Write full paragraphs, not skeletons. Include an optional tip field for technique nuance.
     """
 
     user = build_generation_prompt(description, resolved_context)
@@ -394,12 +412,13 @@ defmodule Mehungry.AI.RecipeGenerator do
     Return JSON with this exact structure:
     {
       "title": "string",
-      "description": "string (1-2 sentences followed by 4-6 relevant SEO hashtags, e.g. 'A hearty breakfast bowl. #breakfast #eggs #avocado #healthy')",
+      "description": "string — 2-3 sentences of culinary prose describing aroma, texture, and occasion. No hashtags here.",
+      "hashtags": ["string"] — 4-6 bare topic keywords without # symbol, e.g. ["pasta","italian","vegetarian","dinner"],
       "servings": integer,
       "cooking_time_lower_limit": integer (minutes),
       "preperation_time_lower_limit": integer (minutes),
       "difficulty": integer (1=easy, 2=medium, 3=difficult),
-      "steps": [{"description": "string", "index": integer}],
+      "steps": [{"description": "string — full paragraph with timing and sensory doneness cues", "tip": "optional technique tip string", "index": integer}],
       "recipe_ingredients": [{"ingredient_id": integer, "measurement_unit_id": integer, "quantity": float}]
     }
 
@@ -413,7 +432,13 @@ defmodule Mehungry.AI.RecipeGenerator do
       (data["steps"] || [])
       |> Enum.with_index()
       |> Enum.map(fn {s, i} ->
-        %{"description" => s["description"] || "", "index" => i}
+        desc =
+          case s["tip"] do
+            tip when is_binary(tip) and tip != "" -> "#{s["description"]} — #{tip}"
+            _ -> s["description"] || ""
+          end
+
+        %{"description" => desc, "index" => i}
       end)
 
     recipe_ingredients =
@@ -429,9 +454,18 @@ defmodule Mehungry.AI.RecipeGenerator do
         is_nil(ri["ingredient_id"]) or is_nil(ri["measurement_unit_id"])
       end)
 
+    hashtag_str =
+      case data["hashtags"] do
+        tags when is_list(tags) and tags != [] ->
+          " " <> Enum.map_join(tags, " ", &"##{&1}")
+
+        _ ->
+          ""
+      end
+
     %{
       "title" => data["title"],
-      "description" => data["description"],
+      "description" => "#{data["description"]}#{hashtag_str}",
       "servings" => data["servings"],
       "cooking_time_lower_limit" => data["cooking_time_lower_limit"],
       "preperation_time_lower_limit" => data["preperation_time_lower_limit"],
@@ -490,48 +524,14 @@ defmodule Mehungry.AI.RecipeGenerator do
   # --- HTTP ---
 
   defp call_api(system, user, max_tokens \\ 2048) do
-    api_key = Application.get_env(:mehungry, :anthropic_api_key, "")
-
-    if api_key == "" do
-      {:error, "ANTHROPIC_API_KEY is not configured"}
-    else
-      do_call_api(api_key, system, user, max_tokens)
-    end
-  end
-
-  defp do_call_api(api_key, system, user, max_tokens) do
-    body =
-      Jason.encode!(%{
-        model: @model,
-        max_tokens: max_tokens,
-        system: system,
-        messages: [%{role: "user", content: user}]
-      })
-
-    headers = [
-      {"Content-Type", "application/json"},
-      {"x-api-key", api_key},
-      {"anthropic-version", "2023-06-01"}
-    ]
-
-    case HTTPoison.post(@api_url, body, headers, recv_timeout: @timeout_ms) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: resp_body}} ->
-        case Jason.decode(resp_body) do
-          {:ok, %{"content" => [%{"text" => text} | _]}} ->
-            {:ok, text}
-
-          {:ok, response} ->
-            Logger.warning("Unexpected Anthropic response shape: #{inspect(response)}")
-            {:error, "Unexpected API response format"}
-        end
-
-      {:ok, %HTTPoison.Response{status_code: code, body: body}} ->
-        Logger.warning("Anthropic API error #{code}: #{body}")
-        {:error, "API returned status #{code}"}
-
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        Logger.warning("Anthropic HTTP error: #{inspect(reason)}")
-        {:error, "HTTP request failed: #{inspect(reason)}"}
+    case Mehungry.AI.Client.request(%{
+           model: @model,
+           system: system,
+           messages: [%{role: "user", content: user}],
+           max_tokens: max_tokens
+         }) do
+      {:ok, response} -> {:ok, Mehungry.AI.Client.text_from(response)}
+      error -> error
     end
   end
 end

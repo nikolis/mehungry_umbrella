@@ -8,7 +8,7 @@ defmodule MehungryWeb.ProfessionalLive.Users do
   @impl true
   def mount(_params, _session, socket) do
     subscriptions = Subscriptions.subscriptions_by_user_id()
-    pro_count = Enum.count(subscriptions, fn {_id, sub} -> sub.tier == "pro" end)
+    pro_count = Enum.count(subscriptions, fn {_id, sub} -> sub.tier in ["m3hungry_plus", "pro"] end)
 
     {:ok,
      socket
