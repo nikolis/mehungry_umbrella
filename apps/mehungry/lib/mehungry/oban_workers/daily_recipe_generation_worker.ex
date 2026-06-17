@@ -71,7 +71,7 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
       end,
       timeout: 180_000,
       on_timeout: :kill_task,
-      max_concurrency: 5
+      max_concurrency: 2
     )
     |> Enum.count(fn
       {:ok, :ok} -> true

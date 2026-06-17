@@ -15,6 +15,7 @@ defmodule Mehungry.Food.Ingredient do
     field :food_class, :string
     field :nutrient_conversion_factors, {:array, :map}, default: []
     field :publication_date, :string
+    field :nutrient_data_source, :string
 
     belongs_to :category, Mehungry.Food.Category
     belongs_to :measurement_unit, Mehungry.Food.MeasurementUnit
@@ -37,7 +38,8 @@ defmodule Mehungry.Food.Ingredient do
       :category_id,
       :nutrient_conversion_factors,
       :publication_date,
-      :food_class
+      :food_class,
+      :nutrient_data_source
     ])
     |> cast_assoc(:ingredient_portions,
       with: &Mehungry.Food.IngredientPortion.changeset/2,

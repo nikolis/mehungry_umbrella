@@ -126,7 +126,7 @@ defmodule Mehungry.FdcFoodParserLeg do
     end)
   end
 
-  def create_ingredient(attrs) do
+  def create_ingredient(attrs, nutrient_data_source \\ nil) do
     attrs_description =
       case attrs["foodCategory"]["description"] do
         nil ->
@@ -161,7 +161,8 @@ defmodule Mehungry.FdcFoodParserLeg do
       food_class: attrs["foodClass"],
       nutrient_conversion_factors: attrs["nutrientConversionFactors"],
       publication_date: attrs["publicationDate"],
-      category_id: category_id
+      category_id: category_id,
+      nutrient_data_source: nutrient_data_source
     }
 
     case Food.get_ingredient_by_name(attrs.name) do
@@ -218,10 +219,10 @@ defmodule Mehungry.FdcFoodParserLeg do
     Enum.each(total, fn x -> create_ingredient(x) end)
   end
 
-  def get_ingredients_from_json_body(json_body) do
+  def get_ingredients_from_json_body(json_body, nutrient_data_source \\ nil) do
     try do
       {:ok, body} = Poison.decode(json_body)
-      Enum.each(body, fn x -> create_ingredient(x) end)
+      Enum.each(body, fn x -> create_ingredient(x, nutrient_data_source) end)
     rescue
       _the_error ->
         nil

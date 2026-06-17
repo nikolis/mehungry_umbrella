@@ -235,20 +235,20 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   defp handle_tool("create_ingredient", %{"name" => name}, %{gram_unit: gram_unit}) do
     Logger.info("RecipeAgent: creating missing ingredient '#{name}'")
 
-    json_result =
+    {json_result, data_source} =
       case Mehungry.USDA.FdcClient.lookup(name) do
-        {:ok, _} = ok ->
+        {:ok, json} ->
           Logger.info("RecipeAgent: found '#{name}' in USDA FDC database")
-          ok
+          {{:ok, json}, "usda_fdc"}
 
         {:error, reason} ->
           Logger.info("RecipeAgent: USDA FDC lookup failed (#{reason}), falling back to AI estimation")
-          generate_usda_json_for(name)
+          {generate_usda_json_for(name), "ai_estimate"}
       end
 
     case json_result do
       {:ok, json_string} ->
-        Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(json_string)
+        Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(json_string, data_source)
 
         case Food.IngredientSearch.search(name)
              |> rerank_by_name(name)
