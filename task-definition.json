@@ -38,7 +38,7 @@
             ],
             "secrets": [
                 {
-                    "name": "RELEASE_COOKIE",
+                    "name": "OPENAI_API_KEY",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/open_api_key-jzV1rM"
                 },
 
