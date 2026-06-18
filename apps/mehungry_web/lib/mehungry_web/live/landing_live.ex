@@ -16,440 +16,205 @@ defmodule MehungryWeb.LandingLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    query =
-      from(p in Mehungry.Food.Recipe,
-        order_by: fragment("RANDOM()"),
-        limit: 1
-      )
-
-    recipe =
-      Mehungry.Repo.one(query)
-
+    # For the meal planning demo, prefer the AI bot user's recipe, then fall back
+    # to any recipe in the DB — we only need nutrients for the chart, not an image.
+    now = Date.utc_today()
+    recipes = find_bot_recipe(now.month, now.year) || []
+    recipe = List.first(recipes)
+    IO.inspect(recipes, label: "recipe")
     {:ok,
      assign(socket,
-       scrolled: false,
-       page_title: "m3hungry landing page",
+       page_title: "M3Hungry — Know What's On Your Plate",
+       page_description:
+         "Track 168 nutrients per meal. Generate AI recipes backed by USDA FoodData Central. Plan your week. Share what you cook.",
        recipe: recipe,
-       child_ids: [],
-       selected_plan: "monthly"
+       recipes: recipes,
+       child_ids: []
      )}
+  end
+
+  defp find_bot_recipe(month, year) do
+    config = Mehungry.AiBot.get_active_config_for_month(month, year)
+
+    case config do
+      nil ->
+        nil
+
+      %{bot_user_id: bot_user_id} ->
+        IO.inspect("actual quer====================================================================================y")
+        query =
+          from(r in Mehungry.Food.Recipe,
+            where: r.user_id == ^bot_user_id and not r.private,
+            order_by: fragment("RANDOM()"),
+            limit: 3
+          )
+
+        result  = Mehungry.Repo.all(query)
+        case result do
+          [] ->
+            query =
+              from(r in Mehungry.Food.Recipe,
+                order_by: fragment("RANDOM()"),
+                limit: 3
+              )
+
+            result  = Mehungry.Repo.all(query)
+        end
+
+    end
   end
 
   @impl true
   def render(assigns) do
     ~H"""
-    <!-- Navigation -->
+    <%!-- ═══════════════════════════════════════════ NAV ══════════════════════════════════════════════ --%>
     <nav
-      class="fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 transition-all duration-300 h-18"
-      style="max-height: 15rem;"
+      class="fixed inset-x-0 top-0 z-50 h-16 border-b border-white/5 bg-slate-900/90 backdrop-blur-md"
+      aria-label="Main navigation"
     >
-      <div class="container mx-auto px-4 py-3 flex items-center justify-between">
-        <.get_logo id="landind-2" class="h-6 w-auto" />
+      <div class="mx-auto flex h-full max-w-6xl items-center justify-between px-4 sm:px-6">
+        <.get_logo id="landing-nav" class="h-6 w-auto" />
 
-        <div class="hidden md:flex items-center gap-6">
-          <a href="#features" class="text-slate-300 hover:text-primary-500 transition">Features</a>
-          <a href="#nutrition" class="text-slate-300 hover:text-primary-500 transition">
-            Nutrition Data
+        <div class="hidden items-center gap-8 text-sm md:flex">
+          <a href="#features" class="text-slate-400 transition-colors hover:text-white">Features</a>
+          <a href="#pricing" class="text-slate-400 transition-colors hover:text-white">Pricing</a>
+          <a href="/browse" class="text-slate-400 transition-colors hover:text-white">
+            Browse Recipes
           </a>
-          <a href="#how-it-works" class="text-slate-300 hover:text-primary-500 transition">
-            How It Works
-          </a>
-          <a href="#ai" class="text-slate-300 hover:text-primary-500 transition">AI Assistant</a>
-          <a href="#pricing" class="text-slate-300 hover:text-primary-500 transition">Pricing</a>
         </div>
 
-        <div class="flex items-center gap-2">
-          <a href="/login" class="text-slate-300 hover:text-white transition px-4 py-2">Sign In</a>
+        <div class="flex items-center gap-3">
+          <a
+            href="/login"
+            class="hidden text-sm text-slate-400 transition-colors hover:text-white sm:block"
+          >
+            Sign in
+          </a>
           <a
             href="/register"
-            class="bg-primary-500 hover:bg-primary-600 text-white px-5 py-2 rounded-lg transition shadow-lg shadow-primary-500/20"
+            class="rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
           >
-            Get Started
+            Get started
           </a>
         </div>
       </div>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="relative pt-32 pb-20 overflow-hidden sm:pt-60">
-      <!-- Background gradient -->
-      <div class="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800"></div>
-      
-    <!-- Animated cubes background -->
-      <div class="absolute inset-0 opacity-10">
-        <div class="absolute top-20 left-10 w-32 h-32 border border-primary-500 rounded-lg animate-pulse">
-        </div>
-        <div class="absolute bottom-40 right-20 w-24 h-24 border border-secondary-500 rounded-lg animate-bounce">
-        </div>
-        <div class="absolute top-1/2 left-1/3 w-16 h-16 border border-accent-500 rounded-lg animate-spin">
-        </div>
+    <%!-- ═══════════════════════════════════════════ HERO ══════════════════════════════════════════════ --%>
+    <section class="relative bg-slate-900 pb-20 pt-32 sm:pt-40" aria-labelledby="hero-heading">
+      <%!-- Accent line at top --%>
+      <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary-500/30 to-transparent">
       </div>
 
-      <div class="container mx-auto px-4 relative z-10">
-        <div class="max-w-4xl mx-auto text-center">
-          <div class="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/20 rounded-full px-4 py-1 mb-6">
-            <span class="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></span>
-            <span class="text-primary-400 text-sm">Powered by USDA FoodData Central + AI</span>
+      <div class="relative mx-auto max-w-6xl px-4 sm:px-6">
+        <div class="mx-auto max-w-3xl text-center">
+          <%!-- Eyebrow --%>
+          <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-primary-500/20 bg-primary-500/10 px-3 py-1 text-xs font-medium text-primary-400">
+            <span class="h-1.5 w-1.5 rounded-full bg-primary-500" aria-hidden="true"></span>
+            Backed by USDA FoodData Central
           </div>
 
-          <h1 class="text-5xl md:text-7xl font-bold text-white mb-6">
-            Know Exactly What's
-            <span class="bg-gradient-to-r from-primary-500 to-primary-300 bg-clip-text text-transparent">
-              On Your Plate
-            </span>
+          <%!-- Headline — the DM Serif Display type is the design's signature --%>
+          <h1
+            id="hero-heading"
+            class="mb-5 text-5xl font-normal leading-[1.1] tracking-tight text-white sm:text-6xl md:text-7xl"
+            style="font-family: 'DM Serif Display', Georgia, serif;"
+          >
+            Know what's on your plate.
+            <em class="not-italic text-primary-400">Really.</em>
           </h1>
 
-          <p class="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
-            Track every nutrient, generate recipes with AI, and plan your meals intelligently.
-            M3HUNGRY gives you institutional-grade nutrition analysis — now with an AI assistant that creates personalised recipes and meal plans for you.
+          <p class="mb-9 text-lg leading-relaxed text-slate-400 sm:text-xl">
+            Track 168 nutrients per meal. Generate AI recipes backed by USDA science.
+            Plan your week. Share what you cook.
           </p>
 
-          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <div class="flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
               href="/register"
-              class="bg-primary-500 hover:bg-primary-600 text-white px-8 py-3 rounded-lg font-semibold transition shadow-lg shadow-primary-500/30"
+              class="w-full rounded-lg bg-primary-500 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-primary-500/20 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 sm:w-auto"
             >
-              Start Tracking Free
+              Start for free
             </a>
             <a
-              href="#ai"
-              class="border border-slate-600 hover:border-primary-500 text-slate-300 hover:text-white px-8 py-3 rounded-lg font-semibold transition"
+              href="/browse"
+              class="w-full rounded-lg border border-slate-700 px-8 py-3 text-base font-medium text-slate-300 transition-all hover:border-slate-500 hover:text-white sm:w-auto"
             >
-              See AI Features →
+              Browse recipes →
             </a>
           </div>
 
-          <div class="flex items-center justify-center gap-8 mt-12 text-slate-400 text-sm">
-            <div class="flex items-center gap-2">
+          <%!-- Trust strip — only honest, verifiable claims --%>
+          <div
+            class="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-500"
+            aria-label="Key facts"
+          >
+            <span class="flex items-center gap-1.5">
               <svg
-                class="w-5 h-5 text-secondary-500"
+                class="h-4 w-4 text-secondary-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M5 13l4 4L19 7"
                 />
               </svg>
-              <span>USDA Database</span>
-            </div>
-            <div class="flex items-center gap-2">
+              10,000+ foods in the database
+            </span>
+            <span class="flex items-center gap-1.5">
               <svg
-                class="w-5 h-5 text-secondary-500"
+                class="h-4 w-4 text-secondary-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M5 13l4 4L19 7"
                 />
               </svg>
-              <span>10,000+ Foods</span>
-            </div>
-            <div class="flex items-center gap-2">
+              168 nutrients tracked per food
+            </span>
+            <span class="flex items-center gap-1.5">
               <svg
-                class="w-5 h-5 text-secondary-500"
+                class="h-4 w-4 text-secondary-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M5 13l4 4L19 7"
                 />
               </svg>
-              <span>168 Nutrients Tracked</span>
-            </div>
+              Free to start · No credit card
+            </span>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- Features Grid -->
-    <section id="features" class="py-8 bg-slate-800" style="scroll-margin-top: 20rem;">
-      <div class="container mx-auto px-4">
-        <div class="text-center mb-12">
-          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-            Everything You Need to <span class="text-primary-500">Master Your Nutrition</span>
-          </h2>
-          <p class="text-slate-400 max-w-2xl mx-auto">
-            From deep nutrient analysis to community sharing, M3HUNGRY empowers you to make informed food choices.
-          </p>
-        </div>
-
-        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <!-- Feature 1: Deep Nutrition -->
-          <div class="bg-slate-700/50 rounded-xl p-6 border border-slate-600 hover:border-primary-500/50 transition group">
-            <div class="w-12 h-12 bg-primary-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary-500/20 transition">
-              <svg
-                class="w-6 h-6 text-primary-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-            </div>
-            <h3 class="text-xl font-semibold text-white mb-2">Deep Nutrition Analysis</h3>
-            <p class="text-slate-400">
-              Track every nutrient including individual fatty acids (PUFA, MUFA, SFA), vitamins, minerals, and amino acids from USDA data.
-            </p>
-          </div>
-          
-    <!-- Feature 2: AI Assistant -->
-          <div class="bg-slate-700/50 rounded-xl p-6 border border-primary-500/40 hover:border-primary-500 transition group relative overflow-hidden">
-            <div class="absolute top-3 right-3">
-              <span class="px-2 py-0.5 rounded-full bg-primary-500/20 text-primary-300 text-xs font-semibold">
-                Pro
-              </span>
-            </div>
-            <div class="w-12 h-12 bg-primary-500/20 rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary-500/30 transition">
-              <svg
-                class="w-6 h-6 text-primary-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                />
-              </svg>
-            </div>
-            <h3 class="text-xl font-semibold text-white mb-2">AI Recipe Assistant</h3>
-            <p class="text-slate-400">
-              Describe what you want to eat and let AI generate a complete recipe with full nutrition data — instantly and tailored to your preferences.
-            </p>
-          </div>
-          
-    <!-- Feature 3: Recipe Builder -->
-          <div class="bg-slate-700/50 rounded-xl p-6 border border-slate-600 hover:border-secondary-500/50 transition group">
-            <div class="w-12 h-12 bg-secondary-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-secondary-500/20 transition">
-              <svg
-                class="w-6 h-6 text-secondary-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M3 12h18M3 6h18M3 18h18"
-                />
-              </svg>
-            </div>
-            <h3 class="text-xl font-semibold text-white mb-2">Smart Recipe Builder</h3>
-            <p class="text-slate-400">
-              Create recipes by combining ingredients. See instant nutrition calculations with portion-based gram weight conversions.
-            </p>
-          </div>
-          
-    <!-- Feature 4: Community Sharing -->
-          <div class="bg-slate-700/50 rounded-xl p-6 border border-slate-600 hover:border-accent-500/50 transition group">
-            <div class="w-12 h-12 bg-accent-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-accent-500/20 transition">
-              <svg
-                class="w-6 h-6 text-accent-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            </div>
-            <h3 class="text-xl font-semibold text-white mb-2">Community Driven</h3>
-            <p class="text-slate-400">
-              Share your recipes, comment on others, and discover new meal ideas from a community of health-conscious cooks.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Nutrition Demo Accordion -->
-    <section
-      id="nutrition"
-      class=" bg-slate-900"
-      style="scroll-margin-top: 14rem; padding-top: 2.5rem; padding-bottom: 2.5rem;"
-    >
-      <div class="container mx-auto px-4">
-        <div class="text-center mb-12">
-          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-            See the <span class="text-secondary-500">Difference</span>
-          </h2>
-          <p class="text-slate-400 max-w-2xl mx-auto">
-            Most apps show calories and macros. M3HUNGRY shows you everything.
-          </p>
-        </div>
-
+        <%!-- Hero visual: real recipe widget from DB --%>
         <%= if @recipe do %>
-          <div class="max-w-2xl mx-auto bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-            <div class="bg-slate-700 px-6 py-3 border-b border-slate-600">
-              <h3 class="text-white font-semibold">{@recipe.title}</h3>
-              <p class="text-slate-400 text-sm">Nutrition Facts per serving</p>
-            </div>
-            {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
-          </div>
-        <% end %>
-      </div>
-    </section>
-
-    <!-- How It Works -->
-    <section id="how-it-works" class="py-20 bg-slate-800" style="scroll-margin-top: 12rem;">
-      >
-      <div class="container mx-auto px-4">
-        <div class="text-center mb-12">
-          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-            How <span class="text-primary-500">M3HUNGRY</span> Works
-          </h2>
-          <p class="text-slate-400 max-w-2xl mx-auto">
-            Three simple steps to master your nutrition
-          </p>
-        </div>
-
-        <div class="grid md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-          <div class="text-center">
-            <div class="w-16 h-16 bg-primary-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary-500/30">
-              <span class="text-2xl font-bold text-primary-500">1</span>
-            </div>
-            <h3 class="text-white font-semibold mb-2">Search Foods</h3>
-            <p class="text-slate-400 text-sm">Browse 10,000+ foods from the USDA database</p>
-          </div>
-
-          <div class="text-center">
-            <div class="w-16 h-16 bg-secondary-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-secondary-500/30">
-              <span class="text-2xl font-bold text-secondary-500">2</span>
-            </div>
-            <h3 class="text-white font-semibold mb-2">Create Recipes</h3>
-            <p class="text-slate-400 text-sm">Create your own recipes or get inspired by community</p>
-          </div>
-          <div class="text-center">
-            <div class="w-16 h-16 bg-primary-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-secondary-500/30">
-              <span class="text-2xl font-bold text-secondary-500">3</span>
-            </div>
-            <h3 class="text-white font-semibold mb-2">Plan your meals</h3>
-            <p class="text-slate-400 text-sm">
-              Combine recipes and final foods to create the ideal plan
-            </p>
-          </div>
-
-          <div class="text-center">
-            <div class="w-16 h-16 bg-accent-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-accent-500/30">
-              <span class="text-2xl font-bold text-accent-500">4</span>
-            </div>
-            <h3 class="text-white font-semibold mb-2">Analyze & Share</h3>
-            <p class="text-slate-400 text-sm">Get deep nutrient insights and share with community</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- USDA Data Section -->
-    <section class="py-12 bg-gradient-to-b from-slate-900 to-slate-800">
-      <div class="container mx-auto px-4">
-        <div class="flex flex-col md:flex-row items-center gap-12">
-          <div class="flex-1">
-            <div class="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/20 rounded-full px-3 py-1 mb-4">
-              <span class="text-primary-400 text-xs font-medium">POWERED BY</span>
-            </div>
-            <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-              Professional <span class="text-secondary-500">Meal Planning </span> Experience
-            </h2>
-            <p class="text-slate-300 mb-6">
-              Every nutrient comes directly from the USDA's authoritative database.
-              Track everything from energy and macros to specific fatty acids like
-              PUFA 18:2 n-6 and DHA.
-            </p>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="flex items-center gap-2">
-                <svg
-                  class="w-5 h-5 text-secondary-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span class="text-slate-300 text-sm">168+ Nutrients Tracked</span>
+          <div class="relative mx-auto mt-16 max-w-2xl">
+            <div class="overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/80 shadow-2xl shadow-black/40">
+              <%!-- Browser chrome --%>
+              <div class="flex items-center gap-1.5 border-b border-slate-700/60 bg-slate-800 px-4 py-3">
+                <span class="h-2.5 w-2.5 rounded-full bg-red-500/60" aria-hidden="true"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-yellow-500/60" aria-hidden="true"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-green-500/60" aria-hidden="true"></span>
+                <span class="ml-3 text-xs text-slate-600">m3hungry.com/calendar</span>
               </div>
-              <div class="flex items-center gap-2">
-                <svg
-                  class="w-5 h-5 text-secondary-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span class="text-slate-300 text-sm">Foundation & SR Legacy Foods</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <svg
-                  class="w-5 h-5 text-secondary-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span class="text-slate-300 text-sm">Fatty Acid Profiles</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <svg
-                  class="w-5 h-5 text-secondary-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span class="text-slate-300 text-sm">Vitamin & Mineral Analysis</span>
-              </div>
-            </div>
-          </div>
-          <%= if @recipe do %>
-            <div class="flex-1">
-              <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+              <div class="p-4">
                 <MehungryWeb.CalendarLive.Calendar.Widget.card_meal
                   img_url={@recipe.image_url}
                   card_meal_text="text-white"
@@ -457,179 +222,154 @@ defmodule MehungryWeb.LandingLive do
                   cooking_portions="1"
                   consume_portions="1"
                   actual_meal={
-                    %{cooking_portions: 1, consume_portions: 1, recipe: @recipe, id: "landing_id"}
-                  }
-                  title="Breakfast"
-                  myself="asdf"
-                  id="landing_id"
-                />
-                {MehungryWeb.CalendarLive.Calendar.Widget.get_chart(
-                  [
                     %{
-                      start_dt: NaiveDateTime.local_now(),
-                      ingredient_user_meals: [],
-                      recipe_user_meals: [
-                        %{
-                          recipe_nutrients: @recipe.nutrients,
-                          cooking_portions: 1,
-                          consume_portions: 1,
-                          recipe: @recipe,
-                          id: "landing_id",
-                          start_dt: NaiveDateTime.local_now()
-                        }
-                      ]
+                      cooking_portions: 1,
+                      consume_portions: 1,
+                      recipe: @recipe,
+                      id: "hero_meal"
                     }
-                  ],
-                  Date.utc_today(),
-                  "text-white"
-                )}
+                  }
+                  title="Lunch"
+                  myself="hero"
+                  id="hero_meal"
+                />
               </div>
             </div>
-          <% end %>
-        </div>
+
+            <%!-- Floating badge --%>
+            <div class="absolute -right-2 -top-3 hidden rounded-xl border border-secondary-500/30 bg-slate-800 px-3 py-2 shadow-lg sm:block">
+              <p class="text-xs font-semibold text-secondary-400">168 nutrients</p>
+              <p class="text-xs text-slate-500">per serving, from USDA</p>
+            </div>
+          </div>
+        <% end %>
       </div>
     </section>
 
-    <!-- AI Assistant Section -->
-    <section id="ai" class="py-20 bg-slate-800" style="scroll-margin-top: 12rem;">
-      <div class="container mx-auto px-4">
-        <div class="text-center mb-12">
-          <div class="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/20 rounded-full px-4 py-1 mb-4">
-            <span class="w-2 h-2 bg-primary-400 rounded-full animate-pulse"></span>
-            <span class="text-primary-400 text-sm font-medium">Powered by Claude AI</span>
-          </div>
-          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-            Your Personal <span class="text-primary-500">AI Nutrition Assistant</span>
-          </h2>
-          <p class="text-slate-400 max-w-2xl mx-auto">
-            Stop spending time searching for recipes. Tell the AI what you feel like eating, your dietary goals, or what's in your fridge — and get a complete, nutrition-analysed recipe in seconds.
+    <%!-- ══════════════════════ THE DEPTH COMPARISON — signature section ══════════════════════════════ --%>
+    <section
+      id="features"
+      class="border-y border-slate-800 bg-slate-900 py-24"
+      aria-labelledby="depth-heading"
+      style="scroll-margin-top: 4rem;"
+    >
+      <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <div class="mb-14 text-center">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-secondary-500">
+            Nutrition depth
           </p>
-        </div>
-
-        <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
-          <div class="bg-slate-700/40 rounded-xl p-6 border border-slate-600">
-            <div class="text-2xl mb-3">🍝</div>
-            <h3 class="text-white font-semibold mb-2">Generate Recipes</h3>
-            <p class="text-slate-400 text-sm">
-              "Give me a high-protein pasta dish under 600 kcal" — the AI creates the recipe, selects USDA-verified ingredients, and calculates the full nutrient breakdown instantly.
-            </p>
-          </div>
-          <div class="bg-slate-700/40 rounded-xl p-6 border border-slate-600">
-            <div class="text-2xl mb-3">📅</div>
-            <h3 class="text-white font-semibold mb-2">Plan Your Week</h3>
-            <p class="text-slate-400 text-sm">
-              Generate a full weekly meal plan tailored to your calorie targets and nutritional goals. Each day is balanced, varied, and ready to drop straight into your calendar.
-            </p>
-          </div>
-          <div class="bg-slate-700/40 rounded-xl p-6 border border-slate-600">
-            <div class="text-2xl mb-3">📊</div>
-            <h3 class="text-white font-semibold mb-2">Real Nutrition Data</h3>
-            <p class="text-slate-400 text-sm">
-              Every AI-generated recipe is backed by USDA FoodData Central. You get the same 168-nutrient breakdown as manually built recipes — not estimates.
-            </p>
-          </div>
-        </div>
-
-        <div class="text-center">
-          <a
-            href="/upgrade"
-            class="inline-block bg-primary-500 hover:bg-primary-600 text-white px-8 py-3 rounded-lg font-semibold transition shadow-lg shadow-primary-500/30"
+          <h2
+            id="depth-heading"
+            class="text-4xl text-white sm:text-5xl"
+            style="font-family: 'DM Serif Display', Georgia, serif;"
           >
-            Unlock AI Features →
-          </a>
-          <p class="text-slate-500 text-sm mt-3">Free plan includes 3 AI recipe generations/month</p>
+            Not 4 nutrients. 168.
+          </h2>
+          <p class="mx-auto mt-4 max-w-xl text-slate-400">
+            Most trackers give you calories and macros. We give you the full picture — the same
+            data nutritionists and researchers actually use.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <%!-- Other apps --%>
+          <div class="rounded-2xl border border-slate-700/50 bg-slate-800/50 p-6">
+            <p class="mb-4 text-sm font-medium text-slate-500">What most apps track</p>
+            <div class="space-y-2">
+              <%= for {nutrient, unit} <- [
+                {"Calories", "kcal"},
+                {"Protein", "g"},
+                {"Carbohydrates", "g"},
+                {"Total Fat", "g"}
+              ] do %>
+                <div class="flex items-center justify-between rounded-lg bg-slate-700/30 px-4 py-2.5">
+                  <span class="text-sm text-slate-400">{nutrient}</span>
+                  <span class="text-xs text-slate-600">{unit}</span>
+                </div>
+              <% end %>
+              <div class="flex items-center justify-center py-4">
+                <span class="text-sm text-slate-700">… and that's it</span>
+              </div>
+            </div>
+          </div>
+
+          <%!-- M3Hungry — real USDA nutrient names --%>
+          <div class="rounded-2xl border border-secondary-500/20 bg-slate-800/50 p-6 ring-1 ring-secondary-500/10">
+            <p class="mb-4 text-sm font-medium text-secondary-400">What M3Hungry tracks</p>
+            <div class="space-y-1.5">
+              <%= for {nutrient, unit, highlight} <- [
+                {"Energy", "kcal", false},
+                {"Protein", "g", false},
+                {"Total Fat", "g", false},
+                {"Carbohydrates", "g", false},
+                {"Dietary Fiber", "g", true},
+                {"Saturated Fat (SFA)", "g", true},
+                {"Monounsaturated Fat (MUFA)", "g", true},
+                {"PUFA 18:2 n-6 (Linoleic acid)", "g", true},
+                {"DHA 22:6 n-3", "g", true},
+                {"Vitamin K (phylloquinone)", "µg", true},
+                {"Folate, food", "µg DFE", true},
+                {"Selenium", "µg", true}
+              ] do %>
+                <div class={[
+                  "flex items-center justify-between rounded-lg px-3 py-2",
+                  if(highlight,
+                    do: "border border-secondary-500/15 bg-secondary-500/10",
+                    else: "bg-slate-700/30"
+                  )
+                ]}>
+                  <span class={[
+                    "text-sm",
+                    if(highlight, do: "text-slate-200", else: "text-slate-400")
+                  ]}>
+                    {nutrient}
+                  </span>
+                  <span class={[
+                    "text-xs",
+                    if(highlight, do: "text-secondary-500", else: "text-slate-600")
+                  ]}>
+                    {unit}
+                  </span>
+                </div>
+              <% end %>
+
+              <div class="flex items-center justify-center rounded-lg border border-dashed border-secondary-500/20 py-2.5">
+                <span class="text-sm font-medium text-secondary-400">+ 156 more nutrients tracked</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Community Section -->
-    <section id="community" class="py-20 bg-slate-800" style="scroll-margin-top: 14rem; display: none">
-      <div class="container mx-auto px-4">
-        <div class="text-center mb-12">
-          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-            Join a Growing <span class="text-accent-500">Community</span>
-          </h2>
-          <p class="text-slate-400 max-w-2xl mx-auto">
-            10,000+ home cooks are already tracking their nutrition with M3HUNGRY
-          </p>
-        </div>
-
-        <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          <div class="bg-slate-700/50 rounded-xl p-6 border border-slate-600">
-            <div class="flex items-center gap-2 mb-4">
-              <div class="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-500 font-bold">
-                JD
-              </div>
-              <div>
-                <div class="text-white text-sm font-medium">Jordan D.</div>
-                <div class="text-slate-400 text-xs">⭐⭐⭐⭐⭐</div>
-              </div>
-            </div>
-            <p class="text-slate-300 text-sm">
-              "The level of detail in nutrient tracking is incredible. I can finally see exactly what fatty acids I'm eating!"
+    <%!-- ══════════════════════════════ MEAL PLANNING ══════════════════════════════════════════════════ --%>
+    <section class="bg-slate-800 py-24" aria-labelledby="meal-planning-heading">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <div class="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
+          <div>
+            <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-primary-500">
+              Meal planning
             </p>
-          </div>
-
-          <div class="bg-slate-700/50 rounded-xl p-6 border border-slate-600">
-            <div class="flex items-center gap-2 mb-4">
-              <div class="w-10 h-10 rounded-full bg-secondary-500/20 flex items-center justify-center text-secondary-500 font-bold">
-                SM
-              </div>
-              <div>
-                <div class="text-white text-sm font-medium">Sarah M.</div>
-                <div class="text-slate-400 text-xs">⭐⭐⭐⭐⭐</div>
-              </div>
-            </div>
-            <p class="text-slate-300 text-sm">
-              "The recipe builder with gram weight conversion is a game changer. No more guessing portions!"
+            <h2
+              id="meal-planning-heading"
+              class="mb-4 text-4xl text-white"
+              style="font-family: 'DM Serif Display', Georgia, serif;"
+            >
+              Your week, planned. Your nutrition, balanced.
+            </h2>
+            <p class="mb-6 text-slate-400">
+              Add any recipe to your meal calendar. See your daily nutrition at a glance across
+              every tracked nutrient. Generate your shopping list automatically from your weekly
+              plan.
             </p>
-          </div>
-
-          <div class="bg-slate-700/50 rounded-xl p-6 border border-slate-600">
-            <div class="flex items-center gap-2 mb-4">
-              <div class="w-10 h-10 rounded-full bg-accent-500/20 flex items-center justify-center text-accent-500 font-bold">
-                MC
-              </div>
-              <div>
-                <div class="text-white text-sm font-medium">Mike C.</div>
-                <div class="text-slate-400 text-xs">⭐⭐⭐⭐⭐</div>
-              </div>
-            </div>
-            <p class="text-slate-300 text-sm">
-              "Love sharing recipes with friends. The community features make healthy eating social and fun!"
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Pricing Section -->
-    <section id="pricing" class="py-20 bg-slate-900" style="scroll-margin-top: 14rem;">
-      <div class="container mx-auto px-4">
-        <div class="text-center mb-12">
-          <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-            Simple, <span class="text-primary-500">Transparent</span> Pricing
-          </h2>
-          <p class="text-slate-400 max-w-2xl mx-auto">
-            Start free, unlock AI when you're ready
-          </p>
-        </div>
-
-        <div class="flex flex-col md:flex-row gap-8 justify-center items-center">
-          <!-- Free Tier -->
-          <div class="bg-slate-800 rounded-2xl p-8 border border-slate-700 w-full max-w-sm">
-            <h3 class="text-xl font-bold text-white mb-2">Free</h3>
-            <div class="text-3xl font-bold text-white mb-1">
-              €0<span class="text-slate-400 text-base font-normal">/month</span>
-            </div>
-            <p class="text-slate-500 text-sm mb-6">Try out AI features</p>
-            <ul class="space-y-3 mb-8">
-              <li class="flex items-center gap-2 text-slate-300 text-sm">
+            <ul class="space-y-3 text-sm text-slate-300">
+              <li class="flex items-start gap-2.5">
                 <svg
-                  class="w-4 h-4 text-secondary-500 flex-shrink-0"
+                  class="mt-0.5 h-4 w-4 shrink-0 text-primary-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     stroke-linecap="round"
@@ -638,14 +378,15 @@ defmodule MehungryWeb.LandingLive do
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                All social features
+                Calendar view for breakfast, lunch, dinner, and snacks
               </li>
-              <li class="flex items-center gap-2 text-slate-300 text-sm">
+              <li class="flex items-start gap-2.5">
                 <svg
-                  class="w-4 h-4 text-secondary-500 flex-shrink-0"
+                  class="mt-0.5 h-4 w-4 shrink-0 text-primary-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     stroke-linecap="round"
@@ -654,14 +395,15 @@ defmodule MehungryWeb.LandingLive do
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Unlimited manual recipe creation
+                Daily nutrition totals across all 168 tracked nutrients
               </li>
-              <li class="flex items-center gap-2 text-slate-300 text-sm">
+              <li class="flex items-start gap-2.5">
                 <svg
-                  class="w-4 h-4 text-secondary-500 flex-shrink-0"
+                  class="mt-0.5 h-4 w-4 shrink-0 text-primary-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     stroke-linecap="round"
@@ -670,14 +412,15 @@ defmodule MehungryWeb.LandingLive do
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Calendar &amp; nutrition tracking
+                Import meal ingredients into your shopping basket with one tap
               </li>
-              <li class="flex items-center gap-2 text-slate-300 text-sm">
+              <li class="flex items-start gap-2.5">
                 <svg
-                  class="w-4 h-4 text-secondary-500 flex-shrink-0"
+                  class="mt-0.5 h-4 w-4 shrink-0 text-primary-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     stroke-linecap="round"
@@ -686,52 +429,250 @@ defmodule MehungryWeb.LandingLive do
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                3 AI recipe generations / month
-              </li>
-              <li class="flex items-center gap-2 text-slate-500 text-sm">
-                <svg
-                  class="w-4 h-4 text-slate-600 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                AI meal plan generator
+                Adjust portion sizes and serving counts per meal
               </li>
             </ul>
             <a
               href="/register"
-              class="block w-full text-center border border-slate-600 hover:border-primary-500 text-slate-300 hover:text-white py-2.5 rounded-xl transition"
+              class="mt-8 inline-block rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
             >
-              Get Started Free
+              Plan your week →
             </a>
           </div>
-          
-    <!-- Pro Tier -->
-          <div class="bg-slate-800 rounded-2xl p-8 border-2 border-primary-500 shadow-xl shadow-primary-500/10 w-full max-w-sm relative">
-            <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-              MOST POPULAR
-            </div>
-            <h3 class="text-xl font-bold text-white mb-2">Pro</h3>
-            <div class="text-3xl font-bold text-white mb-1">
-              €2.99<span class="text-slate-400 text-base font-normal">/month</span>
-            </div>
-            <p class="text-slate-400 text-sm mb-6">
-              or €19.99/year <span class="text-green-400 text-xs ml-1">save 44%</span>
+
+          <%!-- Meal planning demo: recipe card + nutrition chart from the AI bot user --%>
+          <div
+            class="overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-900 p-4"
+            aria-label="Meal planning preview"
+          >
+            <%= if @recipe do %>
+              <MehungryWeb.CalendarLive.Calendar.Widget.card_meal
+                img_url={@recipe.image_url}
+                card_meal_text="text-white"
+                recipe={@recipe}
+                cooking_portions="1"
+                consume_portions="1"
+                actual_meal={
+                  %{
+                    cooking_portions: 1,
+                    consume_portions: 1,
+                    recipe: @recipe,
+                    id: "plan_meal"
+                  }
+                }
+                title="Lunch"
+                myself="plan"
+                id="plan_meal"
+              />
+              {MehungryWeb.CalendarLive.Calendar.Widget.get_chart(
+                [
+                  %{
+                    start_dt: NaiveDateTime.local_now(),
+                    ingredient_user_meals: [],
+                    recipe_user_meals: [
+                      %{
+                        recipe_nutrients: @recipe.nutrients,
+                        cooking_portions: 1,
+                        consume_portions: 1,
+                        recipe: @recipe,
+                        id: "plan_chart",
+                        start_dt: NaiveDateTime.local_now()
+                      }
+                    ]
+                  }
+                ],
+                Date.utc_today(),
+                "text-white"
+              )}
+            <% else %>
+                <p class="text-sm text-slate-600">Add meals to your calendar to see your daily nutrition overview</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <%!-- ══════════════════════════ RECIPE DISCOVERY + SOCIAL ══════════════════════════════════════════ --%>
+    <section class="bg-slate-900 py-24" aria-labelledby="discover-heading">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <div class="mb-12 text-center">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-primary-500">
+            Discover &amp; share
+          </p>
+          <h2
+            id="discover-heading"
+            class="text-4xl text-white"
+            style="font-family: 'DM Serif Display', Georgia, serif;"
+          >
+            Recipes with the nutrition already done.
+          </h2>
+          <p class="mx-auto mt-4 max-w-xl text-slate-400">
+            Browse community recipes — each one built with real USDA ingredients, so the nutrition
+            facts are exact, not estimated. Save any recipe to your calendar in one click.
+          </p>
+        </div>
+
+        <%!-- Real recipe cards from DB --%>
+        <%= if length(@recipes) > 0 do %>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <%= for recipe <- Enum.take(@recipes, 3) do %>
+              <a
+                href={"/browse/#{recipe.id}"}
+                class="group overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800 transition-all hover:border-primary-500/30 hover:shadow-lg hover:shadow-primary-500/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500"
+              >
+                <%= if recipe.image_url do %>
+                  <div class="aspect-video overflow-hidden">
+                    <img
+                      src={recipe.image_url}
+                      alt={recipe.title}
+                      class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  </div>
+                <% else %>
+                  <div class="flex aspect-video items-center justify-center bg-slate-700">
+                    <svg
+                      class="h-8 w-8 text-slate-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                <% end %>
+                <div class="p-4">
+                  <h3 class="line-clamp-1 font-semibold text-white">{recipe.title}</h3>
+                  <p class="mt-1 text-xs text-slate-500">
+                    <%= if recipe.servings do %>
+                      {recipe.servings} servings<%= if recipe.cooking_time_lower_limit do %>
+                        &nbsp;· {recipe.cooking_time_lower_limit} min
+                      <% end %>
+                    <% end %>
+                  </p>
+                  <div class="mt-2.5">
+                    <span class="inline-block rounded-full border border-secondary-500/20 bg-secondary-500/10 px-2.5 py-0.5 text-xs text-secondary-400">
+                      168 nutrients tracked
+                    </span>
+                  </div>
+                </div>
+              </a>
+            <% end %>
+          </div>
+        <% end %>
+
+        <div class="mt-8 text-center">
+          <a
+            href="/browse"
+            class="rounded-lg border border-slate-700 px-6 py-2.5 text-sm font-medium text-slate-300 transition-all hover:border-slate-500 hover:text-white"
+          >
+            Browse all recipes →
+          </a>
+        </div>
+
+        <%!-- Social proof — real features, not fake stats --%>
+        <div class="mt-14 grid grid-cols-1 gap-4 border-t border-slate-800 pt-10 sm:grid-cols-3">
+          <div class="text-center">
+            <p class="text-sm font-medium text-white">Post your recipes</p>
+            <p class="mt-1 text-sm text-slate-500">
+              Share what you cook and tag it with food hashtags for others to discover
             </p>
-            <ul class="space-y-3 mb-8">
-              <li class="flex items-center gap-2 text-slate-300 text-sm">
+          </div>
+          <div class="text-center">
+            <p class="text-sm font-medium text-white">Comment &amp; vote</p>
+            <p class="mt-1 text-sm text-slate-500">
+              Leave feedback, ask questions, and vote on the recipes you love
+            </p>
+          </div>
+          <div class="text-center">
+            <p class="text-sm font-medium text-white">Follow creators</p>
+            <p class="mt-1 text-sm text-slate-500">
+              Build a feed from the cooks whose nutrition philosophy matches yours
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <%!-- ══════════════════════════════════ AI ASSISTANT ═══════════════════════════════════════════════ --%>
+    <section
+      class="border-y border-slate-800 bg-slate-800/50 py-24"
+      aria-labelledby="ai-heading"
+    >
+      <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <div class="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
+          <%!-- Interface demo — labeled as example to avoid misleading --%>
+          <div class="order-2 md:order-1" aria-label="AI recipe assistant interface example">
+            <div class="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 p-5">
+              <div class="mb-4 flex items-center gap-2">
+                <span
+                  class="h-2 w-2 rounded-full bg-primary-500 animate-pulse"
+                  aria-hidden="true"
+                >
+                </span>
+                <span class="text-xs text-slate-500">AI Recipe Assistant</span>
+              </div>
+
+              <div class="mb-3 flex justify-end">
+                <div class="max-w-xs rounded-2xl rounded-tr-sm border border-primary-500/20 bg-primary-500/10 px-4 py-2.5 text-sm text-slate-200">
+                  High-protein pasta under 600 kcal. Make it Mediterranean.
+                </div>
+              </div>
+
+              <div class="rounded-xl border border-slate-700 bg-slate-800 p-4">
+                <p class="mb-1 text-sm font-semibold text-white">Mediterranean Chicken Orzo</p>
+                <p class="mb-3 text-xs text-slate-500">
+                  Generated using USDA-verified ingredients
+                </p>
+                <div class="rounded-lg border border-secondary-500/20 bg-secondary-500/10 px-3 py-2.5">
+                  <p class="text-xs font-medium text-secondary-300">
+                    Full 168-nutrient breakdown calculated from USDA data
+                  </p>
+                  <p class="mt-0.5 text-xs text-slate-500">
+                    Protein · Fatty acids · Vitamins · Minerals · Amino acids…
+                  </p>
+                </div>
+                <p class="mt-2 text-right text-xs text-secondary-400">
+                  View full breakdown →
+                </p>
+              </div>
+
+              <p class="mt-3 text-center text-xs text-slate-700">
+                Example output — your results will vary by request
+              </p>
+            </div>
+          </div>
+
+          <div class="order-1 md:order-2">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-primary-500">
+              AI-powered
+            </p>
+            <h2
+              id="ai-heading"
+              class="mb-4 text-4xl text-white"
+              style="font-family: 'DM Serif Display', Georgia, serif;"
+            >
+              Tell it what you want to eat. It handles the rest.
+            </h2>
+            <p class="mb-6 text-slate-400">
+              Describe your meal — a dietary goal, a cuisine, what's in your fridge.
+              The AI generates a complete recipe with ingredients mapped directly to the USDA
+              database, so you get exact nutrition data, not estimates.
+            </p>
+            <ul class="space-y-3 text-sm text-slate-300">
+              <li class="flex items-start gap-2.5">
                 <svg
-                  class="w-4 h-4 text-primary-500 flex-shrink-0"
+                  class="mt-0.5 h-4 w-4 shrink-0 text-primary-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     stroke-linecap="round"
@@ -740,14 +681,15 @@ defmodule MehungryWeb.LandingLive do
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Everything in Free
+                Recipes generated to your calorie and macro targets
               </li>
-              <li class="flex items-center gap-2 text-slate-300 text-sm">
+              <li class="flex items-start gap-2.5">
                 <svg
-                  class="w-4 h-4 text-primary-500 flex-shrink-0"
+                  class="mt-0.5 h-4 w-4 shrink-0 text-primary-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     stroke-linecap="round"
@@ -756,14 +698,15 @@ defmodule MehungryWeb.LandingLive do
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                15 AI recipe generations / month
+                Every ingredient mapped to USDA FoodData Central
               </li>
-              <li class="flex items-center gap-2 text-slate-300 text-sm">
+              <li class="flex items-start gap-2.5">
                 <svg
-                  class="w-4 h-4 text-primary-500 flex-shrink-0"
+                  class="mt-0.5 h-4 w-4 shrink-0 text-primary-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     stroke-linecap="round"
@@ -772,14 +715,15 @@ defmodule MehungryWeb.LandingLive do
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                4 AI meal plans / month
+                Generate a full weekly meal plan in one request
               </li>
-              <li class="flex items-center gap-2 text-slate-300 text-sm">
+              <li class="flex items-start gap-2.5">
                 <svg
-                  class="w-4 h-4 text-primary-500 flex-shrink-0"
+                  class="mt-0.5 h-4 w-4 shrink-0 text-primary-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  aria-hidden="true"
                 >
                   <path
                     stroke-linecap="round"
@@ -788,72 +732,469 @@ defmodule MehungryWeb.LandingLive do
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Priority support
+                Save generated recipes directly to your calendar
+              </li>
+            </ul>
+            <div class="mt-8 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <a
+                href="/register"
+                class="inline-block rounded-lg bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
+              >
+                Try the AI assistant →
+              </a>
+              <p class="text-xs text-slate-600">Plus plan required · From €2.99/mo</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <%!-- ═════════════════════ NUTRITION INTELLIGENCE (sustainability angle) ══════════════════════════ --%>
+    <section class="bg-slate-900 py-24" aria-labelledby="intelligence-heading">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <div class="mb-12 text-center">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-secondary-500">
+            Nutrition intelligence
+          </p>
+          <h2
+            id="intelligence-heading"
+            class="text-4xl text-white"
+            style="font-family: 'DM Serif Display', Georgia, serif;"
+          >
+            Built for how nutrition actually works.
+          </h2>
+          <p class="mx-auto mt-4 max-w-xl text-slate-400">
+            Nutrients don't exist in isolation. M3Hungry tracks how nutrients interact with each
+            other — and adapts to the foods your body actually needs.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+          <div class="rounded-xl border border-slate-700/50 bg-slate-800 p-6">
+            <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-lg border border-secondary-500/20 bg-secondary-500/10">
+              <svg
+                class="h-5 w-5 text-secondary-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+            </div>
+            <h3 class="mb-2 font-semibold text-white">Nutrient interactions</h3>
+            <p class="text-sm text-slate-400">
+              Some nutrients enhance absorption; others inhibit it. Vitamin C improves iron uptake.
+              Vitamin D activates calcium metabolism. We surface these relationships per recipe.
+            </p>
+          </div>
+
+          <div class="rounded-xl border border-slate-700/50 bg-slate-800 p-6">
+            <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-lg border border-primary-500/20 bg-primary-500/10">
+              <svg
+                class="h-5 w-5 text-primary-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 4a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                />
+              </svg>
+            </div>
+            <h3 class="mb-2 font-semibold text-white">Dietary preferences</h3>
+            <p class="text-sm text-slate-400">
+              Set dietary restrictions — vegetarian, gluten-free, specific allergies.
+              Exclude ingredients or entire food categories from your experience.
+              Your feed and AI adapt accordingly.
+            </p>
+          </div>
+
+          <div class="rounded-xl border border-slate-700/50 bg-slate-800 p-6">
+            <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-lg border border-secondary-500/20 bg-secondary-500/10">
+              <svg
+                class="h-5 w-5 text-secondary-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                />
+              </svg>
+            </div>
+            <h3 class="mb-2 font-semibold text-white">Survey-guided setup</h3>
+            <p class="text-sm text-slate-400">
+              Complete a short dietary preferences survey when you join. Your food feed,
+              recipe recommendations, and AI outputs adapt to your actual lifestyle and goals
+              from the start.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <%!-- ══════════════════════════════ FOR NUTRITIONISTS ══════════════════════════════════════════════ --%>
+    <section
+      class="border-y border-slate-800 bg-gradient-to-b from-slate-800 to-slate-900 py-24"
+      aria-labelledby="nutritionist-heading"
+    >
+      <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <div class="overflow-hidden rounded-2xl border border-secondary-500/20 bg-slate-900">
+          <div class="grid grid-cols-1 md:grid-cols-2">
+            <div class="p-8 sm:p-10">
+              <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-secondary-500/20 bg-secondary-500/10 px-3 py-1 text-xs font-medium text-secondary-400">
+                Professional tier
+              </div>
+              <h2
+                id="nutritionist-heading"
+                class="mb-4 text-3xl text-white"
+                style="font-family: 'DM Serif Display', Georgia, serif;"
+              >
+                Built for nutritionists, not just individuals.
+              </h2>
+              <p class="mb-6 text-slate-400">
+                Manage your client roster, assign meal plans, track progress, and schedule
+                appointments — within the same platform your clients use to log their food.
+              </p>
+              <ul class="space-y-2.5 text-sm text-slate-300">
+                <li class="flex items-start gap-2">
+                  <svg
+                    class="mt-0.5 h-4 w-4 shrink-0 text-secondary-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  Client invitation and management system
+                </li>
+                <li class="flex items-start gap-2">
+                  <svg
+                    class="mt-0.5 h-4 w-4 shrink-0 text-secondary-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  View and manage client meal calendars
+                </li>
+                <li class="flex items-start gap-2">
+                  <svg
+                    class="mt-0.5 h-4 w-4 shrink-0 text-secondary-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  Appointment scheduling with calendar view
+                </li>
+                <li class="flex items-start gap-2">
+                  <svg
+                    class="mt-0.5 h-4 w-4 shrink-0 text-secondary-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  30 AI recipe generations + 10 meal plans per month
+                </li>
+              </ul>
+              <a
+                href="/register"
+                class="mt-8 inline-block rounded-lg bg-secondary-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-secondary-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-500"
+              >
+                Explore the professional tier →
+              </a>
+            </div>
+
+            <%!-- Dashboard preview --%>
+            <div class="hidden items-center justify-center border-l border-slate-700/50 bg-slate-800/30 p-8 md:flex">
+              <div class="w-full space-y-3" aria-hidden="true">
+                <div class="rounded-xl border border-slate-700 bg-slate-800 p-4">
+                  <p class="mb-2 text-xs text-slate-500">Your clients</p>
+                  <div class="flex items-center justify-between">
+                    <span class="text-2xl font-bold text-white">—</span>
+                    <span class="text-xs text-secondary-400">Manage →</span>
+                  </div>
+                </div>
+                <div class="rounded-xl border border-slate-700 bg-slate-800 p-4">
+                  <p class="mb-2 text-xs text-slate-500">Upcoming appointments</p>
+                  <div class="flex items-center justify-between">
+                    <span class="text-2xl font-bold text-white">—</span>
+                    <span class="text-xs text-secondary-400">Calendar →</span>
+                  </div>
+                </div>
+                <div class="rounded-xl border border-slate-700 bg-slate-800 p-4">
+                  <p class="mb-2 text-xs text-slate-500">AI meal plans this month</p>
+                  <div class="flex items-center gap-2">
+                    <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-700">
+                      <div class="h-full w-1/4 rounded-full bg-secondary-500"></div>
+                    </div>
+                    <span class="text-xs text-slate-400">0 / 10 used</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <%!-- ══════════════════════════════════ PRICING ════════════════════════════════════════════════════ --%>
+    <section id="pricing" class="bg-slate-900 py-24" aria-labelledby="pricing-heading" style="scroll-margin-top: 4rem;">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <div class="mb-12 text-center">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-primary-500">
+            Pricing
+          </p>
+          <h2
+            id="pricing-heading"
+            class="text-4xl text-white"
+            style="font-family: 'DM Serif Display', Georgia, serif;"
+          >
+            Start free. Upgrade when you're ready.
+          </h2>
+          <p class="mt-3 text-slate-400">
+            All plans include full nutrition tracking. AI features are the upgrade.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <%!-- Free --%>
+          <div class="rounded-2xl border border-slate-700/50 bg-slate-800 p-6">
+            <h3 class="mb-1 text-base font-semibold text-white">Free</h3>
+            <div class="mb-1 flex items-baseline gap-1">
+              <span class="text-3xl font-bold text-white">€0</span>
+              <span class="text-sm text-slate-500">/month</span>
+            </div>
+            <p class="mb-5 text-xs text-slate-500">No credit card required</p>
+            <ul class="mb-6 space-y-2.5 text-sm">
+              <%= for text <- [
+                "Full nutrition tracking (168 nutrients)",
+                "Unlimited manual recipe creation",
+                "Meal calendar planning",
+                "Browse and share community recipes",
+                "Shopping basket"
+              ] do %>
+                <li class="flex items-center gap-2 text-slate-300">
+                  <svg
+                    class="h-3.5 w-3.5 shrink-0 text-secondary-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  {text}
+                </li>
+              <% end %>
+              <li class="flex items-center gap-2 text-slate-600">
+                <svg
+                  class="h-3.5 w-3.5 shrink-0 text-slate-700"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2.5"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+                <span class="line-through">AI recipe generator</span>
               </li>
             </ul>
             <a
-              href="/upgrade"
-              class="block w-full text-center bg-primary-500 hover:bg-primary-600 text-white py-2.5 rounded-xl transition shadow-lg shadow-primary-500/30 font-semibold"
+              href="/register"
+              class="block w-full rounded-lg border border-slate-600 py-2 text-center text-sm font-medium text-slate-300 transition-colors hover:border-slate-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500"
             >
-              Upgrade to Pro
+              Get started free
+            </a>
+          </div>
+
+          <%!-- Plus — most popular --%>
+          <div class="relative rounded-2xl border-2 border-primary-500 bg-slate-800 p-6 shadow-xl shadow-primary-500/10">
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary-500 px-3 py-0.5 text-xs font-bold text-white">
+              Most popular
+            </div>
+            <h3 class="mb-1 text-base font-semibold text-white">Plus</h3>
+            <div class="mb-1 flex items-baseline gap-1">
+              <span class="text-3xl font-bold text-white">€2.99</span>
+              <span class="text-sm text-slate-500">/month</span>
+            </div>
+            <p class="mb-5 text-xs text-slate-500">
+              or €19.99/yr —
+              <span class="text-green-400">save 44%</span>
+            </p>
+            <ul class="mb-6 space-y-2.5 text-sm">
+              <%= for text <- [
+                "Everything in Free",
+                "15 AI recipe generations / month",
+                "4 AI meal plan generations / month",
+                "Priority support"
+              ] do %>
+                <li class="flex items-center gap-2 text-slate-300">
+                  <svg
+                    class="h-3.5 w-3.5 shrink-0 text-primary-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  {text}
+                </li>
+              <% end %>
+            </ul>
+            <a
+              href="/upgrade"
+              class="block w-full rounded-lg bg-primary-500 py-2 text-center text-sm font-semibold text-white shadow-lg shadow-primary-500/20 transition-colors hover:bg-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
+            >
+              Upgrade to Plus
+            </a>
+          </div>
+
+          <%!-- Pro / Nutritionist --%>
+          <div class="rounded-2xl border border-slate-700/50 bg-slate-800 p-6">
+            <h3 class="mb-1 text-base font-semibold text-white">Pro</h3>
+            <p class="mb-5 text-xs font-medium text-secondary-400">For nutritionists</p>
+            <ul class="mb-6 space-y-2.5 text-sm">
+              <%= for text <- [
+                "Everything in Plus",
+                "30 AI recipe generations / month",
+                "10 AI meal plans / month",
+                "Full client management portal",
+                "Appointment calendar"
+              ] do %>
+                <li class="flex items-center gap-2 text-slate-300">
+                  <svg
+                    class="h-3.5 w-3.5 shrink-0 text-secondary-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  {text}
+                </li>
+              <% end %>
+            </ul>
+            <a
+              href="/upgrade"
+              class="block w-full rounded-lg border border-secondary-500/30 py-2 text-center text-sm font-medium text-secondary-400 transition-colors hover:border-secondary-500 hover:text-secondary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-secondary-500"
+            >
+              Explore Pro
             </a>
           </div>
         </div>
 
-        <p class="text-center text-slate-500 text-xs mt-8">
-          Payments processed securely by Stripe. Cancel anytime.
+        <p class="mt-6 text-center text-xs text-slate-600">
+          Payments processed securely by Stripe. Cancel any subscription anytime.
         </p>
       </div>
     </section>
 
-    <!-- CTA Section -->
-    <section class="py-20 bg-gradient-to-r from-primary-600 to-primary-800">
-      <div class="container mx-auto px-4 text-center">
-        <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-          Ready to Master Your Nutrition?
+    <%!-- ══════════════════════════════════ BOTTOM CTA ══════════════════════════════════════════════════ --%>
+    <section class="bg-gradient-to-b from-slate-800 to-slate-900 py-24" aria-labelledby="cta-heading">
+      <div class="mx-auto max-w-2xl px-4 text-center sm:px-6">
+        <h2
+          id="cta-heading"
+          class="mb-4 text-4xl text-white"
+          style="font-family: 'DM Serif Display', Georgia, serif;"
+        >
+          Start tracking what actually matters.
         </h2>
-        <p class="text-primary-100 mb-8 max-w-2xl mx-auto">
-          Start free today. Upgrade to Pro for AI-generated recipes and meal plans.
+        <p class="mb-8 text-slate-400">
+          Join free. No credit card. Access the full nutrition database and start building
+          recipes today.
         </p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a
-            href="/register"
-            class="inline-block bg-white text-primary-600 hover:bg-slate-100 px-8 py-3 rounded-lg font-semibold transition shadow-lg"
-          >
-            Start Tracking Free →
-          </a>
-          <a
-            href="/upgrade"
-            class="inline-block border-2 border-white/60 hover:border-white text-white px-8 py-3 rounded-lg font-semibold transition"
-          >
-            See Pro Plans
-          </a>
-        </div>
+        <a
+          href="/register"
+          class="inline-block rounded-lg bg-primary-500 px-9 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary-500/20 transition-all hover:bg-primary-600 hover:shadow-primary-500/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
+        >
+          Create your free account →
+        </a>
       </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="bg-slate-900 border-t border-slate-800 py-12">
-      <div class="container mx-auto px-4">
-        <div class="flex flex-col md:flex-row justify-between items-center">
-          <div class="mb-6 md:mb-0">
-            <.get_logo id="landing" class="h-8 w-auto" />
-            <p class="text-slate-500 text-sm mt-2">Know exactly what's on your plate.</p>
+    <%!-- ══════════════════════════════════ FOOTER ═══════════════════════════════════════════════════════ --%>
+    <footer class="border-t border-slate-800 bg-slate-900 py-10" aria-label="Site footer">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <div class="flex flex-col items-center justify-between gap-6 sm:flex-row">
+          <div>
+            <.get_logo id="footer-logo" class="mb-1 h-6 w-auto" />
+            <p class="text-xs text-slate-600">Know what's on your plate.</p>
           </div>
-          <div class="flex gap-8">
-            <a href="#features" class="text-slate-400 hover:text-primary-500 text-sm transition">
-              Features
-            </a>
-            <a href="#pricing" class="text-slate-400 hover:text-primary-500 text-sm transition">
-              Pricing
-            </a>
-            <a href="/privacy_policy" class="text-slate-400 hover:text-primary-500 text-sm transition">
-              Privacy
-            </a>
-          </div>
+          <nav class="flex gap-8 text-sm text-slate-500" aria-label="Footer navigation">
+            <a href="/browse" class="transition-colors hover:text-slate-300">Browse</a>
+            <a href="#pricing" class="transition-colors hover:text-slate-300">Pricing</a>
+            <a href="/privacy_policy" class="transition-colors hover:text-slate-300">Privacy</a>
+            <a href="/feedback" class="transition-colors hover:text-slate-300">Feedback</a>
+          </nav>
         </div>
-        <div class="border-t border-slate-800 mt-8 pt-8 text-center text-slate-500 text-xs">
-          &copy; 2025 M3HUNGRY. All rights reserved. Powered by USDA FoodData Central.
+        <div class="mt-8 border-t border-slate-800 pt-6 text-center text-xs text-slate-700">
+          &copy; 2025 M3Hungry. Nutrition data from USDA FoodData Central.
         </div>
       </div>
     </footer>

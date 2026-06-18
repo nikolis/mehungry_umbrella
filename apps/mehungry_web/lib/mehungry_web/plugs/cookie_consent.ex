@@ -6,7 +6,7 @@ defmodule MehungryWeb.Plugs.CookieConsent do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    conn = fetch_cookies(conn, signed: [@cookie])
+    conn = fetch_cookies(conn)
 
     status =
       case conn.cookies[@cookie] do

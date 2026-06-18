@@ -8,6 +8,7 @@ defmodule MehungryWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug MehungryWeb.Plugs.CookieConsent
     plug MehungryWeb.VisitorPlug
     plug Plug.CSRFProtection
     plug :fetch_live_flash
@@ -21,6 +22,7 @@ defmodule MehungryWeb.Router do
   pipeline :admin_browser do
     plug :accepts, ["html"]
     plug :fetch_session
+    plug MehungryWeb.Plugs.CookieConsent
     plug MehungryWeb.VisitorPlug
     plug :fetch_live_flash
     plug :put_root_layout, {MehungryWeb.LayoutView, :admin_root}
@@ -189,6 +191,10 @@ defmodule MehungryWeb.Router do
     live "/privacy_policy", PrivacyPolicyLive, :index
     get "/health", HealthController, :check
     get "/sitemap.xml", SitemapController, :index
+    post "/cookie-consent/accept", ConsentController, :accept
+    post "/cookie-consent/decline", ConsentController, :decline
+    # /cookies route goes to CookiesPolicyController, created in Task 4
+    get "/cookies", CookiesPolicyController, :index
   end
 
   scope "/", MehungryWeb do
