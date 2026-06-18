@@ -14,7 +14,8 @@ defmodule MehungryWeb.LayoutView do
 
   def cookie_consent_banner(assigns) do
     ~H"""
-    <%= if @conn.assigns[:cookie_consent] == :pending do %>
+    <%= if @conn.assigns[:cookie_consent] == :pending and
+          not String.starts_with?(@conn.request_path, "/nutritionist") do %>
       <div
         id="cookie-consent-banner"
         role="dialog"
