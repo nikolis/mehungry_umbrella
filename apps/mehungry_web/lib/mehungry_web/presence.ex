@@ -38,7 +38,13 @@ defmodule MehungryWeb.Presence do
 
       def maybe_track_user(product, socket) do
         if connected?(socket) do
-          session = Phoenix.LiveView.get_connect_info(socket, :session) || %{}
+          session =
+            try do
+              Phoenix.LiveView.get_connect_info(socket, :session) || %{}
+            rescue
+              _ -> %{}
+            end
+
           consent = Map.get(session, "cookie_consent")
 
           if consent == "accepted" do
@@ -53,11 +59,7 @@ defmodule MehungryWeb.Presence do
             current_user = Map.get(socket.assigns, :current_user)
 
             {user_token, visitor_id} =
-              try do
-                {Map.get(session, "user_token"), Map.get(session, "visitor_id")}
-              rescue
-                _ -> {nil, nil}
-              end
+              {Map.get(session, "user_token"), Map.get(session, "visitor_id")}
 
             session_key =
               if user_token do
