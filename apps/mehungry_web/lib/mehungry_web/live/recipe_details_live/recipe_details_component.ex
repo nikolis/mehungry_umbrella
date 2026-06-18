@@ -474,8 +474,18 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       assigns.recipe.recipe_ingredients
       |> Enum.map(& &1.ingredient_id)
 
+    user_language =
+      case assigns.current_user do
+        nil ->
+          assigns.recipe.language_name
+
+        user ->
+          profile = Accounts.get_user_profile_by_user_id(user.id)
+          (profile && profile.language_preference) || assigns.recipe.language_name
+      end
+
     display_names =
-      Food.ingredient_display_names(ingredient_ids, assigns.recipe.language_name)
+      Food.ingredient_display_names(ingredient_ids, user_language)
 
     server_ms = System.monotonic_time(:millisecond) - t0
 

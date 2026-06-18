@@ -741,6 +741,51 @@ defmodule Mehungry.Food do
 
   def ingredient_display_names(_ingredient_ids, _language), do: %{}
 
+  def get_unit_translations_map(unit_ids, language_name)
+      when language_name not in [nil, "en", "En"] do
+    from(t in MeasurementUnitTranslation,
+      where: t.language_name == ^language_name and t.measurement_unit_id in ^unit_ids,
+      select: {t.measurement_unit_id, t.name}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  def get_unit_translations_map(_unit_ids, _language), do: %{}
+
+  def upsert_ingredient_translation(ingredient_id, language_name, name) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    Repo.insert(
+      %IngredientTranslation{
+        ingredient_id: ingredient_id,
+        language_name: language_name,
+        name: name,
+        inserted_at: now,
+        updated_at: now
+      },
+      on_conflict: {:replace, [:name, :updated_at]},
+      conflict_target: [:ingredient_id, :language_name]
+    )
+  end
+
+  def upsert_measurement_unit_translation(unit_id, language_name, name) do
+    case Repo.get_by(MeasurementUnitTranslation,
+           measurement_unit_id: unit_id,
+           language_name: language_name
+         ) do
+      nil ->
+        %MeasurementUnitTranslation{measurement_unit_id: unit_id}
+        |> MeasurementUnitTranslation.changeset(%{language_name: language_name, name: name})
+        |> Repo.insert()
+
+      existing ->
+        existing
+        |> MeasurementUnitTranslation.changeset(%{name: name})
+        |> Repo.update()
+    end
+  end
+
   def count_untranslated_ingredients(language_name) do
     translated_ids =
       from t in IngredientTranslation,

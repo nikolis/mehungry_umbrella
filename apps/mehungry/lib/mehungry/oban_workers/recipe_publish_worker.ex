@@ -12,7 +12,7 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
   alias Mehungry.{AiBot, Accounts, Food}
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"ai_bot_recipe_id" => bot_recipe_id, "language_name" => lang}}) do
+  def perform(%Oban.Job{args: %{"ai_bot_recipe_id" => bot_recipe_id, "language_name" => lang} = args}) do
     bot_recipe = AiBot.get_bot_recipe!(bot_recipe_id)
 
     if bot_recipe.status != "approved" do
@@ -30,8 +30,14 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
           recipe_hashtags: []
         ])
 
+      opts = %{
+        "platforms" => Map.get(args, "platforms"),
+        "facebook_page_id" => Map.get(args, "facebook_page_id"),
+        "pinterest_board_id" => Map.get(args, "pinterest_board_id")
+      }
+
       publisher = Application.get_env(:mehungry, :social_media_publisher, MehungryWeb.SocialMediaPublisher)
-      apply(publisher, :publish_recipe, [recipe, bot_user, bot_recipe_id, lang])
+      apply(publisher, :publish_recipe, [recipe, bot_user, bot_recipe_id, lang, opts])
 
       maybe_mark_published(bot_recipe, config)
 

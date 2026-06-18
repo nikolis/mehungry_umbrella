@@ -10,7 +10,7 @@ defmodule MehungryWeb.SocialMediaPublisher do
   alias Mehungry.Api.Instagram
   alias Mehungry.Api.Facebook
   alias Mehungry.Api.Pinterest
-  alias Mehungry.AiBot
+  alias Mehungry.{AiBot, Food}
 
   @doc """
   Publishes a recipe to all platforms that have connected tokens on the bot_user.
@@ -20,22 +20,30 @@ defmodule MehungryWeb.SocialMediaPublisher do
   Returns %{instagram: result, facebook: result, pinterest: result}
   where result is :ok | :skipped | {:error, reason}.
   """
-  def publish_recipe(recipe, bot_user, ai_bot_recipe_id, language_name) do
+  def publish_recipe(recipe, bot_user, ai_bot_recipe_id, language_name, opts \\ %{}) do
     localized_recipe = apply_translation(recipe, language_name)
     bot_recipe = AiBot.get_bot_recipe!(ai_bot_recipe_id)
     config = bot_recipe.bot_config
+    allowed = opts["platforms"] || opts[:platforms]
 
     results = %{
-      instagram: post_instagram(bot_user, localized_recipe),
-      facebook: post_facebook(bot_user, localized_recipe, config, language_name),
-      pinterest: post_pinterest(bot_user, localized_recipe, config, language_name)
+      instagram: post_platform("instagram", allowed, fn -> post_instagram(bot_user, localized_recipe) end),
+      facebook: post_platform("facebook", allowed, fn -> post_facebook(bot_user, localized_recipe, config, language_name, opts) end),
+      pinterest: post_platform("pinterest", allowed, fn -> post_pinterest(bot_user, localized_recipe, config, language_name, opts) end)
     }
 
     log_results(results, ai_bot_recipe_id, language_name)
-    results
+    Map.new(results, fn {k, {result, _, _}} -> {k, result} end)
+  end
+
+  defp post_platform(_platform, nil, fun), do: fun.()
+  defp post_platform(platform, allowed, fun) when is_list(allowed) do
+    if platform in allowed, do: fun.(), else: {:skipped, nil, nil}
   end
 
   defp apply_translation(recipe, language_name) do
+    recipe = apply_ingredient_translations(recipe, language_name)
+
     case AiBot.get_recipe_translation(recipe.id, language_name) do
       nil ->
         recipe
@@ -46,6 +54,25 @@ defmodule MehungryWeb.SocialMediaPublisher do
         |> Map.put(:description, description || recipe.description)
         |> maybe_apply_translated_steps(translation)
     end
+  end
+
+  defp apply_ingredient_translations(recipe, language_name) do
+    items = recipe.recipe_ingredients
+
+    ingredient_ids = Enum.map(items, & &1.ingredient_id)
+    unit_ids = items |> Enum.map(& &1.measurement_unit_id) |> Enum.uniq()
+
+    ing_names = Food.ingredient_display_names(ingredient_ids, language_name)
+    unit_names = Food.get_unit_translations_map(unit_ids, language_name)
+
+    translated_items =
+      Enum.map(items, fn ri ->
+        ingredient = Map.put(ri.ingredient, :name, Map.get(ing_names, ri.ingredient_id, ri.ingredient.name))
+        unit = Map.put(ri.measurement_unit, :name, Map.get(unit_names, ri.measurement_unit_id, ri.measurement_unit.name))
+        ri |> Map.put(:ingredient, ingredient) |> Map.put(:measurement_unit, unit)
+      end)
+
+    Map.put(recipe, :recipe_ingredients, translated_items)
   end
 
   defp maybe_apply_translated_steps(recipe, %{steps: steps}) when is_list(steps) and steps != [] do
@@ -62,57 +89,90 @@ defmodule MehungryWeb.SocialMediaPublisher do
   defp maybe_apply_translated_steps(recipe, _), do: recipe
 
   defp post_instagram(bot_user, recipe) do
-    if map_non_empty?(bot_user.instagram_token) do
-      case Instagram.post_recipe_container(bot_user, recipe) do
-        {:ok, _} -> :ok
-        nil -> {:error, "Instagram returned nil"}
-        {:error, reason} -> {:error, reason}
-        _ -> :ok
-      end
-    else
-      :skipped
-    end
-  end
+    token = bot_user.instagram_token || %{}
 
-  defp post_facebook(bot_user, recipe, config, language_name) do
-    if map_non_empty?(bot_user.facebook_token) do
-      page = resolve_facebook_page(bot_user, config, language_name)
+    if map_non_empty?(token) do
+      user_id = Map.get(token, "user_id", "") |> to_string()
 
-      if is_nil(page) do
-        Logger.warning("[SocialMediaPublisher] No Facebook page configured for language #{language_name}")
-        :skipped
-      else
-        case Facebook.post_recipe_container(bot_user, recipe, page) do
-          {:ok, _response} -> :ok
-          {:ok, %HTTPoison.Response{status_code: status}} when status in 200..299 -> :ok
-          {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
-            {:error, "Facebook HTTP #{status}: #{body}"}
+      result =
+        case Instagram.post_recipe_container(bot_user, recipe) do
+          {:ok, _} -> :ok
+          nil -> {:error, "Instagram returned nil"}
           {:error, reason} -> {:error, reason}
           _ -> :ok
         end
-      end
+
+      {result, user_id, nil}
     else
-      :skipped
+      {:skipped, nil, nil}
     end
   end
 
-  defp post_pinterest(bot_user, recipe, config, language_name) do
+  defp post_facebook(bot_user, recipe, config, language_name, opts \\ %{}) do
+    if map_non_empty?(bot_user.facebook_token) do
+      override_id = nonempty(opts["facebook_page_id"] || opts[:facebook_page_id])
+
+      page =
+        if override_id,
+          do: find_facebook_page(bot_user, override_id),
+          else: resolve_facebook_page(bot_user, config, language_name)
+
+      if is_nil(page) do
+        Logger.warning("[SocialMediaPublisher] No Facebook page configured for language #{language_name}")
+        {:skipped, nil, nil}
+      else
+        page_id = Map.get(page, "id")
+        page_name = Map.get(page, "name")
+
+        result =
+          case Facebook.post_recipe_container(bot_user, recipe, page) do
+            {:ok, _response} -> :ok
+            {:ok, %HTTPoison.Response{status_code: status}} when status in 200..299 -> :ok
+            {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
+              {:error, "Facebook HTTP #{status}: #{body}"}
+            {:error, reason} -> {:error, reason}
+            _ -> :ok
+          end
+
+        {result, page_id, page_name}
+      end
+    else
+      {:skipped, nil, nil}
+    end
+  end
+
+  defp post_pinterest(bot_user, recipe, config, language_name, opts \\ %{}) do
     if map_non_empty?(bot_user.pinterest_token) do
-      board_id = resolve_pinterest_board(config, language_name)
+      board_id =
+        nonempty(opts["pinterest_board_id"] || opts[:pinterest_board_id]) ||
+          resolve_pinterest_board(config, language_name)
 
       if board_id do
-        case Pinterest.create_pin(bot_user, recipe, board_id) do
-          {:ok, _} -> :ok
-          {:error, reason} -> {:error, reason}
-        end
+        result =
+          case Pinterest.create_pin(bot_user, recipe, board_id) do
+            {:ok, _} -> :ok
+            {:error, reason} -> {:error, reason}
+          end
+
+        {result, board_id, nil}
       else
         Logger.warning("[SocialMediaPublisher] No Pinterest board configured for language #{language_name}")
-        :skipped
+        {:skipped, nil, nil}
       end
     else
-      :skipped
+      {:skipped, nil, nil}
     end
   end
+
+  defp find_facebook_page(bot_user, page_id) do
+    (bot_user.facebook_token || %{})
+    |> Map.values()
+    |> Enum.find(fn p -> Map.get(p, "id") == page_id end)
+  end
+
+  defp nonempty(nil), do: nil
+  defp nonempty(""), do: nil
+  defp nonempty(val), do: val
 
   # Resolve Facebook page: per-language first, then single fallback, then first page.
   defp resolve_facebook_page(bot_user, config, language_name) do
@@ -136,7 +196,7 @@ defmodule MehungryWeb.SocialMediaPublisher do
   end
 
   defp log_results(results, ai_bot_recipe_id, language_name) do
-    Enum.each(results, fn {platform, result} ->
+    Enum.each(results, fn {platform, {result, target_id, target_name}} ->
       {status, error} =
         case result do
           :skipped -> {"skipped", nil}
@@ -152,7 +212,9 @@ defmodule MehungryWeb.SocialMediaPublisher do
         status: status,
         language_name: language_name,
         error: error,
-        posted_at: posted_at
+        posted_at: posted_at,
+        target_id: target_id,
+        target_name: target_name
       })
     end)
   end

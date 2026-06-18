@@ -4,6 +4,7 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
   alias Mehungry.AiBot
   alias Mehungry.AiBot.RecipeTranslation
   alias Mehungry.AI.RecipeTranslator
+  alias Mehungry.Food
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,8 +17,18 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
     recipe = bot_recipe.recipe
 
     existing = AiBot.get_recipe_translation(recipe.id, lang)
-
     form = build_form(existing, recipe, lang)
+
+    ingredient_ids = Enum.map(recipe.recipe_ingredients, & &1.ingredient_id)
+    unit_ids = recipe.recipe_ingredients |> Enum.map(& &1.measurement_unit_id) |> Enum.uniq()
+
+    ing_translations = Food.ingredient_display_names(ingredient_ids, lang)
+    unit_translations = Food.get_unit_translations_map(unit_ids, lang)
+
+    unique_units =
+      recipe.recipe_ingredients
+      |> Enum.uniq_by(& &1.measurement_unit_id)
+      |> Enum.map(& &1.measurement_unit)
 
     {:noreply,
      socket
@@ -26,6 +37,9 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
      |> assign(:lang, lang)
      |> assign(:translation, existing)
      |> assign(:form, form)
+     |> assign(:ing_translations, ing_translations)
+     |> assign(:unit_translations, unit_translations)
+     |> assign(:unique_units, unique_units)
      |> assign(:page_title, "Translate: #{recipe.title} → #{lang}")}
   end
 
@@ -73,6 +87,60 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
     end
+  end
+
+  @impl true
+  def handle_event(
+        "save_ingredient_translations",
+        %{"ingredient_translations" => ing_params, "unit_translations" => unit_params},
+        socket
+      ) do
+    lang = socket.assigns.lang
+
+    ing_errors =
+      ing_params
+      |> Enum.reject(fn {_, v} -> v == "" end)
+      |> Enum.flat_map(fn {id_str, name} ->
+        id = String.to_integer(id_str)
+
+        case Food.upsert_ingredient_translation(id, lang, name) do
+          {:ok, _} -> []
+          {:error, _} -> [id]
+        end
+      end)
+
+    unit_errors =
+      unit_params
+      |> Enum.reject(fn {_, v} -> v == "" end)
+      |> Enum.flat_map(fn {id_str, name} ->
+        id = String.to_integer(id_str)
+
+        case Food.upsert_measurement_unit_translation(id, lang, name) do
+          {:ok, _} -> []
+          {:error, _} -> [id]
+        end
+      end)
+
+    ingredient_ids = Enum.map(socket.assigns.recipe.recipe_ingredients, & &1.ingredient_id)
+    unit_ids = socket.assigns.unique_units |> Enum.map(& &1.id)
+
+    ing_translations = Food.ingredient_display_names(ingredient_ids, lang)
+    unit_translations = Food.get_unit_translations_map(unit_ids, lang)
+
+    socket =
+      socket
+      |> assign(:ing_translations, ing_translations)
+      |> assign(:unit_translations, unit_translations)
+
+    if ing_errors == [] and unit_errors == [] do
+      {:noreply, put_flash(socket, :info, "Ingredient & unit translations saved.")}
+    else
+      {:noreply, put_flash(socket, :error, "Some translations could not be saved.")}
+    end
+  end
+
+  def handle_event("save_ingredient_translations", _params, socket) do
+    {:noreply, socket}
   end
 
   @impl true
@@ -250,6 +318,93 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
           </.form>
         </div>
       </div>
+
+      <!-- Ingredients & Units translation -->
+      <.form for={%{}} phx-submit="save_ingredient_translations" class="mt-6 space-y-4">
+        <div class="flex items-center gap-2 mb-1">
+          <.icon name="hero-beaker" class="h-4 w-4 text-slate-500" />
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ingredients & Units</span>
+        </div>
+
+        <!-- Ingredients -->
+        <div class="grid grid-cols-2 gap-5">
+          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ingredient</span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 text-[10px] font-bold">EN</span>
+            </div>
+            <ul class="space-y-2">
+              <%= for ri <- @recipe.recipe_ingredients do %>
+                <li class="flex items-center gap-2 text-sm py-1 border-b border-slate-700/40 last:border-0">
+                  <span class="text-slate-200 flex-1"><%= ri.ingredient.name %></span>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+
+          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ingredient</span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-primary-600/30 text-primary-300 border border-primary-500/30 text-[10px] font-bold uppercase"><%= @lang %></span>
+            </div>
+            <ul class="space-y-2">
+              <%= for ri <- @recipe.recipe_ingredients do %>
+                <li class="py-1 border-b border-slate-700/40 last:border-0">
+                  <input
+                    type="text"
+                    name={"ingredient_translations[#{ri.ingredient_id}]"}
+                    value={Map.get(@ing_translations, ri.ingredient_id, "")}
+                    placeholder={ri.ingredient.name}
+                    class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none"
+                  />
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Units -->
+        <div class="grid grid-cols-2 gap-5">
+          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Measurement Unit</span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 text-[10px] font-bold">EN</span>
+            </div>
+            <ul class="space-y-2">
+              <%= for unit <- @unique_units do %>
+                <li class="flex items-center gap-2 text-sm py-1 border-b border-slate-700/40 last:border-0">
+                  <span class="text-slate-200 flex-1"><%= unit.name %></span>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+
+          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Measurement Unit</span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-primary-600/30 text-primary-300 border border-primary-500/30 text-[10px] font-bold uppercase"><%= @lang %></span>
+            </div>
+            <ul class="space-y-2">
+              <%= for unit <- @unique_units do %>
+                <li class="py-1 border-b border-slate-700/40 last:border-0">
+                  <input
+                    type="text"
+                    name={"unit_translations[#{unit.id}]"}
+                    value={Map.get(@unit_translations, unit.id, "")}
+                    placeholder={unit.name}
+                    class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none"
+                  />
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+
+        <button type="submit"
+                class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors">
+          <.icon name="hero-check" class="h-4 w-4" /> Save Ingredient & Unit Translations
+        </button>
+      </.form>
     </div>
     """
   end

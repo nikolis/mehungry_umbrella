@@ -11,6 +11,8 @@ defmodule Mehungry.AiBot.SocialMediaPostLog do
     field :language_name, :string
     field :error, :string
     field :posted_at, :utc_datetime
+    field :target_id, :string
+    field :target_name, :string
 
     belongs_to :ai_bot_recipe, Mehungry.AiBot.AiBotRecipe
 
@@ -19,7 +21,7 @@ defmodule Mehungry.AiBot.SocialMediaPostLog do
 
   def changeset(log, attrs) do
     log
-    |> cast(attrs, [:ai_bot_recipe_id, :platform, :status, :language_name, :error, :posted_at])
+    |> cast(attrs, [:ai_bot_recipe_id, :platform, :status, :language_name, :error, :posted_at, :target_id, :target_name])
     |> validate_required([:ai_bot_recipe_id, :platform, :status])
     |> validate_inclusion(:platform, @valid_platforms)
     |> validate_inclusion(:status, @valid_statuses)

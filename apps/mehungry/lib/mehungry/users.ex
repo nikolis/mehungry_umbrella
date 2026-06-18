@@ -10,7 +10,6 @@ defmodule Mehungry.Users do
   alias Mehungry.Accounts.UserCategoryRule
   alias Mehungry.Food.FoodRestrictionType
   alias Mehungry.Food.FoodRestrictionType
-  alias Mehungry.Food.RecipeUtils
 
   @meat [
     "Poultry Products",
@@ -33,36 +32,26 @@ defmodule Mehungry.Users do
   end
 
   def calculate_recipe_grading(recipe, user) do
-    recipe_grade =
-      RecipeUtils.calculate_recipe_ingredient_categories_array(recipe)
-      |> Enum.map(fn x -> {x, 1.0} end)
-      |> Enum.into(%{})
+    user_pref_table = calculate_user_pref_table(user)
+    follow_ids = list_user_follows(user) |> Enum.map(& &1.follow_id)
+    calculate_recipe_grading(recipe, user_pref_table, follow_ids)
+  end
 
-    user_pref_array = calculate_user_pref_table(user)
-    user_follows = list_user_follows(user)
-    user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
+  def calculate_recipe_grading(nil, _user_pref_table, _follow_ids), do: 0
 
+  def calculate_recipe_grading(recipe, user_pref_table, follow_ids) do
     grade =
-      Enum.reduce(recipe_grade, 1, fn {key, _grade}, acc ->
-        case Map.get(user_pref_array, key) do
-          nil ->
-            1 * acc
-
-          grade ->
-            grade * acc
-        end
+      recipe.recipe_ingredients
+      |> Enum.map(fn ri -> ri.ingredient.category.name end)
+      |> Enum.uniq()
+      |> Enum.reduce(1.0, fn name, acc ->
+        Map.get(user_pref_table, name, 1.0) * acc
       end)
 
-    case recipe.user_id in user_follows do
-      false ->
-        grade
-
-      true ->
-        if(grade > 0) do
-          grade + 4
-        else
-          grade
-        end
+    if recipe.user_id in follow_ids and grade > 0 do
+      grade + 4
+    else
+      grade
     end
   end
 

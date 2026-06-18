@@ -42,6 +42,8 @@ defmodule Mehungry.Posts do
 
   def list_posts(%User{} = user) do
     now = NaiveDateTime.utc_now()
+    user_pref_table = Users.calculate_user_pref_table(user)
+    follow_ids = Users.list_user_follows(user) |> Enum.map(& &1.follow_id)
 
     from(p in Post, order_by: [desc: p.inserted_at])
     |> Repo.all()
@@ -54,14 +56,14 @@ defmodule Mehungry.Posts do
         :user,
         :user_recipes,
         recipe_hashtags: [:hashtag],
-        recipe_ingredients: [:ingredient],
+        recipe_ingredients: [ingredient: [:category]],
         comments: [:user]
       ]
     ])
     |> Enum.map(fn x ->
-      grading_score = Users.calculate_recipe_grading(x.reference, user)
+      grading_score = Users.calculate_recipe_grading(x.reference, user_pref_table, follow_ids)
       recency_hours = NaiveDateTime.diff(now, x.inserted_at, :second) / 3600.0
-      recency_score = max(0.0, 1.0 - recency_hours / 168.0)
+      recency_score = :math.exp(-recency_hours / 96.0) * 3.0
       {x, recency_score + grading_score}
     end)
     |> Enum.sort_by(fn {_x, score} -> score end, :desc)
