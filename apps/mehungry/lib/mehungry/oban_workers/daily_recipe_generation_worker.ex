@@ -80,7 +80,8 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
   end
 
   defp generate_one(config, bot_user, meal_type, target_date) do
-    description = build_description(config.theme, meal_type)
+    context = AiBot.get_context_for_date(config, target_date)
+    description = build_description(context, meal_type)
     Logger.info("[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date}: #{description}")
 
     case RecipeAgent.run(description) do
@@ -143,9 +144,12 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
     end)
   end
 
-  defp build_description(theme, meal_type) do
+  defp build_description(%{month_theme: mt, week_theme: wt, day_focus: df}, meal_type) do
     meal_hint = Map.get(@meal_prompts, meal_type, "recipe")
-    "A #{theme} themed #{meal_hint}. The recipe must fit the #{theme} theme in ingredients and style."
+    base = "A #{mt} themed #{meal_hint}"
+    base = if wt, do: base <> ", following the '#{wt}' week theme", else: base
+    base = if df, do: base <> ", with today's focus: #{df}", else: base
+    base <> ". The recipe must fit the #{mt} style in ingredients and spirit."
   end
 
   defp broadcast_pending_update do

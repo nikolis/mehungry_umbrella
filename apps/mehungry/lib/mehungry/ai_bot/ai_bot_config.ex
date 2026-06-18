@@ -20,6 +20,8 @@ defmodule Mehungry.AiBot.AiBotConfig do
 
     belongs_to :bot_user, Mehungry.Accounts.User
     has_many :ai_bot_recipes, Mehungry.AiBot.AiBotRecipe, foreign_key: :bot_config_id
+    has_many :week_configs, Mehungry.AiBot.WeekConfig, foreign_key: :bot_config_id
+    has_many :day_configs, Mehungry.AiBot.DayConfig, foreign_key: :bot_config_id
 
     timestamps()
   end

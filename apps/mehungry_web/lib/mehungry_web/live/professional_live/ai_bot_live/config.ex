@@ -27,12 +27,18 @@ defmodule MehungryWeb.AiBotLive.Config do
     socket
     |> assign(:form, nil)
     |> assign(:bot_user_social, nil)
+    |> assign(:week_configs, [])
+    |> assign(:day_configs, [])
+    |> assign(:editing_config_id, nil)
   end
 
   defp apply_action(socket, :new, _params) do
     socket
     |> assign(:form, to_form(AiBot.change_bot_config(%AiBotConfig{})))
     |> assign(:bot_user_social, nil)
+    |> assign(:week_configs, [])
+    |> assign(:day_configs, [])
+    |> assign(:editing_config_id, nil)
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
@@ -42,6 +48,9 @@ defmodule MehungryWeb.AiBotLive.Config do
     socket
     |> assign(:form, to_form(AiBot.change_bot_config(config)))
     |> assign(:bot_user_social, bot_user)
+    |> assign(:week_configs, AiBot.list_week_configs(config.id))
+    |> assign(:day_configs, AiBot.list_day_configs(config.id))
+    |> assign(:editing_config_id, config.id)
   end
 
   @impl true
@@ -91,6 +100,78 @@ defmodule MehungryWeb.AiBotLive.Config do
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Cannot delete configuration with existing recipes.")}
+    end
+  end
+
+  @impl true
+  def handle_event("save_week_themes", %{"week_themes" => themes}, socket) do
+    config_id = socket.assigns.editing_config_id
+
+    results =
+      Enum.map(themes, fn {week_str, theme} ->
+        week_number = String.to_integer(week_str)
+        theme = String.trim(theme)
+
+        if theme == "" do
+          case AiBot.get_week_config(config_id, week_number) do
+            nil -> :ok
+            wc -> AiBot.delete_week_config(wc)
+          end
+        else
+          AiBot.upsert_week_config(%{bot_config_id: config_id, week_number: week_number, theme: theme})
+        end
+      end)
+
+    if Enum.any?(results, &match?({:error, _}, &1)) do
+      {:noreply, put_flash(socket, :error, "Some week themes could not be saved.")}
+    else
+      {:noreply,
+       socket
+       |> assign(:week_configs, AiBot.list_week_configs(config_id))
+       |> put_flash(:info, "Week themes saved.")}
+    end
+  end
+
+  @impl true
+  def handle_event("save_day_config", %{"day_config" => params}, socket) do
+    config_id = socket.assigns.editing_config_id
+
+    attrs = %{
+      bot_config_id: config_id,
+      date: params["date"],
+      focus_hint: String.trim(params["focus_hint"] || "")
+    }
+
+    if attrs.focus_hint == "" or attrs.date == "" do
+      {:noreply, put_flash(socket, :error, "Date and focus hint are required.")}
+    else
+      case AiBot.upsert_day_config(attrs) do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> assign(:day_configs, AiBot.list_day_configs(config_id))
+           |> put_flash(:info, "Day focus saved.")}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, "Could not save day focus.")}
+      end
+    end
+  end
+
+  @impl true
+  def handle_event("delete_day_config", %{"id" => id}, socket) do
+    config_id = socket.assigns.editing_config_id
+    dc = Mehungry.Repo.get!(Mehungry.AiBot.DayConfig, String.to_integer(id))
+
+    case AiBot.delete_day_config(dc) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(:day_configs, AiBot.list_day_configs(config_id))
+         |> put_flash(:info, "Day focus removed.")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not remove day focus.")}
     end
   end
 
@@ -309,6 +390,91 @@ defmodule MehungryWeb.AiBotLive.Config do
                 </.link>
               </div>
             </.form>
+
+            <!-- Week Themes (edit mode only) -->
+            <%= if @live_action == :edit do %>
+              <div class="border-t border-slate-700/60 pt-5 mt-5">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Week Themes</p>
+                <p class="text-xs text-slate-500 mb-4">
+                  Sub-theme per week of the month (days 1–7 = week 1, 8–14 = week 2, etc.).
+                  Leave a week blank to use only the monthly theme.
+                </p>
+                <form phx-submit="save_week_themes" class="space-y-2">
+                  <%= for week_num <- 1..6 do %>
+                    <% existing = Enum.find(@week_configs, &(&1.week_number == week_num)) %>
+                    <div class="flex items-center gap-3">
+                      <span class="w-16 text-xs font-semibold text-slate-400 flex-shrink-0">Week <%= week_num %></span>
+                      <input type="text"
+                             name={"week_themes[#{week_num}]"}
+                             value={existing && existing.theme || ""}
+                             placeholder="e.g. Greek Diet Week"
+                             class="flex-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none placeholder-slate-500" />
+                      <%= if existing do %>
+                        <.icon name="hero-check-circle" class="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                      <% else %>
+                        <.icon name="hero-minus-circle" class="h-4 w-4 text-slate-600 flex-shrink-0" />
+                      <% end %>
+                    </div>
+                  <% end %>
+                  <div class="pt-2">
+                    <button type="submit"
+                            class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors">
+                      <.icon name="hero-check" class="h-4 w-4" /> Save Week Themes
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Day Overrides (edit mode only) -->
+              <div class="border-t border-slate-700/60 pt-5 mt-5">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Day Focus Overrides</p>
+                <p class="text-xs text-slate-500 mb-4">
+                  Set a specific generation focus for any day, e.g. "6 ingredients only", "no meat", "quick under 20 min".
+                </p>
+
+                <!-- Add new day override -->
+                <form phx-submit="save_day_config" class="flex items-end gap-2 mb-4">
+                  <div class="flex-shrink-0">
+                    <label class="block text-xs text-slate-500 mb-1">Date</label>
+                    <input type="date"
+                           name="day_config[date]"
+                           class="bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none" />
+                  </div>
+                  <div class="flex-1">
+                    <label class="block text-xs text-slate-500 mb-1">Focus Hint</label>
+                    <input type="text"
+                           name="day_config[focus_hint]"
+                           placeholder="e.g. 6 ingredients recipes"
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none placeholder-slate-500" />
+                  </div>
+                  <button type="submit"
+                          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors flex-shrink-0">
+                    <.icon name="hero-plus" class="h-4 w-4" /> Add
+                  </button>
+                </form>
+
+                <!-- Existing day overrides -->
+                <%= if @day_configs == [] do %>
+                  <p class="text-xs text-slate-600 italic">No day overrides set.</p>
+                <% else %>
+                  <div class="space-y-1.5">
+                    <%= for dc <- @day_configs do %>
+                      <div class="flex items-center gap-3 bg-slate-700/40 rounded-lg px-3 py-2">
+                        <span class="text-xs font-semibold text-slate-400 w-24 flex-shrink-0">
+                          <%= Calendar.strftime(dc.date, "%b %d, %Y") %>
+                        </span>
+                        <span class="text-sm text-slate-200 flex-1 truncate"><%= dc.focus_hint %></span>
+                        <button phx-click="delete_day_config" phx-value-id={dc.id}
+                                data-confirm="Remove this day focus?"
+                                class="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0">
+                          <.icon name="hero-x-mark" class="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
           </div>
         <% else %>
           <div class="flex flex-col items-center justify-center h-64 text-center">

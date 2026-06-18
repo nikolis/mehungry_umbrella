@@ -3,7 +3,7 @@ defmodule Mehungry.AiBot do
 
   alias Mehungry.Repo
   alias Mehungry.Posts
-  alias Mehungry.AiBot.{AiBotConfig, AiBotRecipe, RecipeTranslation, SocialMediaPostLog}
+  alias Mehungry.AiBot.{AiBotConfig, AiBotRecipe, RecipeTranslation, SocialMediaPostLog, WeekConfig, DayConfig}
 
   # ── Config ──────────────────────────────────────────────────────────────────
 
@@ -172,6 +172,90 @@ defmodule Mehungry.AiBot do
     bot_recipe
     |> AiBotRecipe.changeset(%{status: "published"})
     |> Repo.update()
+  end
+
+  # ── Week Configs ─────────────────────────────────────────────────────────────
+
+  def week_number_of_month(%Date{day: day}), do: div(day - 1, 7) + 1
+
+  def list_week_configs(bot_config_id) do
+    WeekConfig
+    |> where([w], w.bot_config_id == ^bot_config_id)
+    |> order_by([w], w.week_number)
+    |> Repo.all()
+  end
+
+  def get_week_config(bot_config_id, week_number) do
+    WeekConfig
+    |> where([w], w.bot_config_id == ^bot_config_id and w.week_number == ^week_number)
+    |> Repo.one()
+  end
+
+  def upsert_week_config(attrs) do
+    bot_config_id = attrs[:bot_config_id] || attrs["bot_config_id"]
+    week_number = attrs[:week_number] || attrs["week_number"]
+    existing = get_week_config(bot_config_id, week_number)
+
+    case existing do
+      nil ->
+        %WeekConfig{}
+        |> WeekConfig.changeset(attrs)
+        |> Repo.insert()
+
+      wc ->
+        wc
+        |> WeekConfig.changeset(attrs)
+        |> Repo.update()
+    end
+  end
+
+  def delete_week_config(%WeekConfig{} = wc), do: Repo.delete(wc)
+
+  # ── Day Configs ───────────────────────────────────────────────────────────────
+
+  def list_day_configs(bot_config_id) do
+    DayConfig
+    |> where([d], d.bot_config_id == ^bot_config_id)
+    |> order_by([d], d.date)
+    |> Repo.all()
+  end
+
+  def get_day_config(bot_config_id, date) do
+    DayConfig
+    |> where([d], d.bot_config_id == ^bot_config_id and d.date == ^date)
+    |> Repo.one()
+  end
+
+  def upsert_day_config(attrs) do
+    bot_config_id = attrs[:bot_config_id] || attrs["bot_config_id"]
+    date = attrs[:date] || attrs["date"]
+    existing = get_day_config(bot_config_id, date)
+
+    case existing do
+      nil ->
+        %DayConfig{}
+        |> DayConfig.changeset(attrs)
+        |> Repo.insert()
+
+      dc ->
+        dc
+        |> DayConfig.changeset(attrs)
+        |> Repo.update()
+    end
+  end
+
+  def delete_day_config(%DayConfig{} = dc), do: Repo.delete(dc)
+
+  def get_context_for_date(%AiBotConfig{} = config, date) do
+    week_num = week_number_of_month(date)
+    week = get_week_config(config.id, week_num)
+    day = get_day_config(config.id, date)
+
+    %{
+      month_theme: config.theme,
+      week_theme: week && week.theme,
+      day_focus: day && day.focus_hint
+    }
   end
 
   # ── Translations ─────────────────────────────────────────────────────────────
