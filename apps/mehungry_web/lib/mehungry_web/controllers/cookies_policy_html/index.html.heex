@@ -1,0 +1,98 @@
+<div class="max-w-3xl mx-auto px-6 py-16 text-slate-200">
+  <h1 class="text-3xl font-semibold mb-2">Cookie Policy</h1>
+  <p class="text-sm text-slate-400 mb-10">Last updated: June 2026</p>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">1. Strictly Necessary Cookies</h2>
+    <p class="text-slate-300 mb-3">
+      These cookies are required for the site to function. They cannot be switched off.
+    </p>
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr class="border-b border-slate-700">
+          <th class="text-left py-2 pr-4 text-slate-400">Cookie</th>
+          <th class="text-left py-2 pr-4 text-slate-400">Purpose</th>
+          <th class="text-left py-2 text-slate-400">Expires</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-slate-800">
+          <td class="py-2 pr-4 font-mono text-xs">_mehungry_web_key</td>
+          <td class="py-2 pr-4">Keeps you logged in and protects against request forgery</td>
+          <td class="py-2">Session</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">2. Functional Cookies</h2>
+    <p class="text-slate-300 mb-3">
+      Set only when you explicitly choose "Remember me" at login.
+    </p>
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr class="border-b border-slate-700">
+          <th class="text-left py-2 pr-4 text-slate-400">Cookie</th>
+          <th class="text-left py-2 pr-4 text-slate-400">Purpose</th>
+          <th class="text-left py-2 text-slate-400">Expires</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-slate-800">
+          <td class="py-2 pr-4 font-mono text-xs">_mehungry_web_user_remember_me</td>
+          <td class="py-2 pr-4">Keeps you logged in across browser restarts</td>
+          <td class="py-2">60 days</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">3. Analytics Cookies</h2>
+    <p class="text-slate-300 mb-3">
+      Used to understand how visitors use the site. All data is processed internally — we do not share it with any third party.
+    </p>
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr class="border-b border-slate-700">
+          <th class="text-left py-2 pr-4 text-slate-400">Data</th>
+          <th class="text-left py-2 pr-4 text-slate-400">Purpose</th>
+          <th class="text-left py-2 text-slate-400">Retention</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-slate-800">
+          <td class="py-2 pr-4 font-mono text-xs">visitor_id (session)</td>
+          <td class="py-2 pr-4">Anonymous identifier to count unique visitors</td>
+          <td class="py-2">Session</td>
+        </tr>
+        <tr class="border-b border-slate-800">
+          <td class="py-2 pr-4 font-mono text-xs">Visit records (database)</td>
+          <td class="py-2 pr-4">IP address, browser type, page visited, referrer, page load time</td>
+          <td class="py-2">90 days</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="text-sm text-slate-400 mt-3">
+      These are only set if you click <strong>Accept</strong> on the cookie banner.
+    </p>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">4. Withdraw Consent</h2>
+    <p class="text-slate-300 mb-4">
+      You can withdraw your analytics consent at any time. This stops all future visit recording and removes your visitor identifier from your session.
+    </p>
+    <form action="/cookie-consent/decline" method="post">
+      <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+      <input type="hidden" name="_method" value="post" />
+      <button
+        type="submit"
+        class="btn btn-outline btn-sm border-slate-600 text-slate-300 hover:bg-slate-700"
+      >
+        Withdraw analytics consent
+      </button>
+    </form>
+  </section>
+</div>
