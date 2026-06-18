@@ -57,40 +57,95 @@ mix dialyzer
 | `Languages` | Multi-language translations for ingredients and units |
 | `Meta` | Visit tracking |
 | `History` | User activity history |
+| `Professionals` | Nutritionist profiles, client invitations, assignments, appointments, meal plan ratings |
+| `Subscriptions` | Subscription tiers, Stripe integration, AI feature quota enforcement |
+| `AiBot` | Managed social media recipe pipeline — monthly configs, review queue, translations, post logs |
+| `Billing` | Stripe checkout sessions and webhook handling (`Billing.StripeHandler`) |
 
-Cachex runs two named caches: `:recipes_cache` (LRU, limit 150) and `:cache_user_tokens`. Both are started in `Mehungry.Application`.
+**Cachex** runs three named caches started in `Mehungry.Application`:
+- `:recipes_cache` — LRU, limit 150
+- `:cache_user_tokens`
+- `:geo_cache` — LRU, limit 5000
+
+### AI Subsystem (`apps/mehungry/lib/mehungry/ai/`)
+
+A custom Anthropic API layer — do not use raw HTTPoison calls for AI work:
+
+- `AI.Client` — shared HTTP client for the Anthropic Messages API. Handles auth, retries (exponential backoff on 529 rate-limit and timeouts), and response parsing. Default model: `claude-haiku-4-5-20251001`, default max_tokens: 2048.
+- `AI.Agent` — generic tool-use loop. Runs a conversation until `end_turn` or `max_iterations` (default 10). Accepts a `handler` function `fn(tool_name, input, context) -> result` and dispatches tool calls automatically.
+- `AI.Agents.RecipeAgent`, `MealPlanAgent`, `NutritionistAgent` — domain-specific agents built on `AI.Agent`.
+- `AI.ImageGenerator`, `AI.IngredientTranslator`, `AI.RecipeTranslator`, `AI.MealPlanGenerator` — standalone AI utilities.
+
+Config key: `:anthropic_api_key` (read from `ANTHROPIC_API_KEY` env var in `runtime.exs`).
+
+### AI Bot Pipeline (`apps/mehungry/lib/mehungry/ai_bot/`)
+
+Automated recipe-to-social-media pipeline:
+
+1. `AiBotConfig` — monthly config with theme, bot user, and `publish_times` map (meal_type → language → UTC time string).
+2. `WeekConfig` / `DayConfig` — optional sub-configs to override week/day themes.
+3. `AiBotRecipe` — tracks each generated recipe with status: `pending_review → approved/rejected → published`.
+4. Oban cron fires `DailyRecipeGenerationWorker` at **2am UTC daily** → generates one recipe per meal type via `RecipeAgent` → schedules `RecipePublishWorker` jobs (one per meal × language) at the times in `publish_times`.
+5. Admin reviews at `/professional/ai-bot/review` before publish jobs run.
+6. `RecipePublishWorker` calls `SocialMediaPublisher.publish_recipe/5` (mockable via app config key `:social_media_publisher`).
+7. `AiBot.Notifier` sends admin email when batch is ready for review.
+
+### Subscription Tiers (`Mehungry.Subscriptions`)
+
+Three tiers enforced via `check_quota/2` and `record_usage/2`:
+- `"free"` — 0 recipe generations / 0 meal plans per month
+- `"m3hungry_plus"` — 15 / 4 per month (consumer premium, billed via Stripe)
+- `"pro"` — 30 / 10 per month (nutritionist tier, billed via Stripe)
+
+The owner email (`nikolisgal@gmail.com`) bypasses all quota checks. Use `Subscriptions.pro?/1` and `Subscriptions.nutritionist?/1` for gate checks.
+
+Stripe events are handled via `POST /webhooks/stripe` → `StripeWebhookController` → `Billing.StripeHandler`.
+
+### Oban Queues
+
+```
+default:    10 concurrent  — ingredient translation, recipe publishing
+ai_agents:   2 concurrent  — recipe generation, translation, image generation, nutritionist agent
+mailers:     5 concurrent  — email
+```
+
+Cron: `DailyRecipeGenerationWorker` at `0 2 * * *`.
 
 ### Web Layer (`apps/mehungry_web/lib/mehungry_web/`)
 
-All authenticated UI is built with **Phoenix LiveView**. Key live sessions in `router.ex`:
-- `:default` — authenticated routes (`/profile`, `/basket`, `/calendar`, `/create_recipe`, etc.)
-- `:default2` — professional/admin routes under `/professional/`
-- `:maybe` — public-facing routes (`/home`, `/browse`, `/search`)
+All authenticated UI is built with **Phoenix LiveView**. Live sessions in `router.ex`:
 
-**Authentication** uses Ueberauth with Facebook, Google, and Instagram OAuth providers. Session state is injected in LiveView `on_mount` callbacks (`UserAuthLive`, `AdminAuthLive`, `MaybeUserAuthLive`).
+| Session | `on_mount` | Routes |
+|---|---|---|
+| `:default` | `UserAuthLive` | `/basket`, `/calendar`, `/create_recipe`, `/upgrade`, `/posts`, etc. |
+| `:default2` | `AdminAuthLive` | `/professional/**` (admin/internal tools) |
+| `:nutritionist` | `NutritionistAuthLive` | `/nutritionist/**` (dashboard, clients, appointments) |
+| `:maybe` | `MaybeUserAuthLive` | `/home`, `/browse`, `/search`, `/profile`, `/foods` |
+| `:default3` | none | `/welcome` (landing) |
 
-**Presence** (`MehungryWeb.Presence`) tracks active users and records visits. Live views use `use MehungryWeb.Presence, :user_tracking` to opt in.
+**Authentication** uses Ueberauth with Facebook, Google, and Instagram OAuth. Session state is injected via `on_mount` callbacks. `BotOAuthController` handles OAuth for bot social accounts (`/auth/bot/target/:bot_user_id/:provider`).
+
+**Presence** (`MehungryWeb.Presence`) tracks active users and records visits. Live views opt in with `use MehungryWeb.Presence, :user_tracking`.
 
 ### Frontend
 
 - **Tailwind CSS** + **DaisyUI** for styling
 - **Alpine.js** for client-side interactivity
-- **jQuery** + **Select2/Selectize** for legacy select components (being phased out)
-- **Vega-Lite** for charts (via `Hooks.VegaLite` and `Hooks.ResponsiveChart` JS hooks)
+- **jQuery** + **Select2/Selectize** — legacy select components (being phased out)
+- **Vega-Lite** for charts via `Hooks.VegaLite` and `Hooks.ResponsiveChart` JS hooks
 - **esbuild** bundles JS; `mix assets.build` / `mix assets.deploy` compile assets
 
-Client hooks are defined in `apps/mehungry_web/assets/js/hooks.js`. Navigation active-state highlighting is handled in JS via a `Proxy` intercepting URL changes (see `navigation.js`).
+Client hooks: `apps/mehungry_web/assets/js/hooks.js`. Navigation active-state handled by a JS `Proxy` intercepting URL changes (`navigation.js`).
 
 ### Modal Approaches
 
-Two coexisting patterns (documented in `apps/mehungry_web/README.md`):
-1. CSS + `Phoenix.LiveView.JS` — used in recipe browser
-2. CSS + client Hooks — used elsewhere
-3. `core_components.ex` modal (preferred for new code)
+Three coexisting patterns — prefer option 3 for new code:
+1. CSS + `Phoenix.LiveView.JS` — recipe browser
+2. CSS + client Hooks — elsewhere
+3. `core_components.ex` modal — **preferred for new code**
 
 ## Testing Layers
 
-Tests follow a layered strategy (run the faster layers first):
 1. **Unit** — `ExUnit` in `apps/mehungry/test/`
 2. **Integration/smoke** — `ExUnit` with `ConnCase`/`LiveViewTest` in `apps/mehungry_web/test/`
 3. **Functional** — Wallaby (browser-driven) in `apps/mehungry_web/test/features/`
@@ -99,11 +154,10 @@ Wallaby tests require ChromeDriver. The `chromedriver-linux64` binary is in the 
 
 ## LiveView Conventions
 
-From `README.md`:
 - Build Live Components with a clear division between **View (Render)** and **Update** code.
 - Define view functions in the order they are invoked, starting with `render`.
 
-**Hierarchical Selection pattern** — when picking the first non-nil value from a priority-ordered set of sources, use a tuple case match:
+**Hierarchical Selection pattern** — when picking the first non-nil value from a priority-ordered set of sources:
 
 ```elixir
 case {first, second, third} do
@@ -116,13 +170,16 @@ end
 
 ## Environment Variables
 
-Required at runtime (set as Docker build args and ECS task environment):
+Required at runtime:
 - `DATABASE_URL` — PostgreSQL connection string (watch for stray spaces when copy-pasting)
 - `SECRET_KEY_BASE`
+- `ANTHROPIC_API_KEY` — for all AI features
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRO_PRICE_ID`, `STRIPE_PRO_YEARLY_PRICE_ID`
 - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ASSETS_BUCKET_NAME`
 - `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `INSTAGRAM_CLIENT_ID`, `INSTAGRAM_CLIENT_SECRET`
+- `FDC_API_KEY`, `OPENAI_API_KEY` — optional integrations
 
 ## Deployment Notes
 

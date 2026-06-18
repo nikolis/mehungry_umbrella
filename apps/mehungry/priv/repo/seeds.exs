@@ -16,7 +16,7 @@ require Logger
 {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Not a fun"})
 {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Neutral"})
 {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Fun"})
-{:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolute fun"})
+{:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolutely fun"})
 
 """
 {:ok, gram} = Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnit{name: "gram"})

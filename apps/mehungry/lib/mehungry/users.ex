@@ -60,7 +60,7 @@ defmodule Mehungry.Users do
 
     Enum.map(user_category_rules, fn x ->
       title = x.category.name
-      grade = Map.get(@restrictions, x.food_restriction_type.title)
+      grade = Map.get(@restrictions, x.food_restriction_type.title, 1.0)
       {title, grade}
     end)
     |> Enum.into(%{})

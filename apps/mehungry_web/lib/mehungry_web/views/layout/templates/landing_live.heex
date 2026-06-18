@@ -1,9 +1,27 @@
-<main role="main" class="w-full m-auto">
-  <p class="alert alert-info" role="alert" phx-click="lv:clear-flash" phx-value-key="info">
-    {Phoenix.Flash.get(@flash, :info)}
-  </p>
-  <p class="alert alert-danger" role="alert" phx-click="lv:clear-flash" phx-value-key="error">
-    {Phoenix.Flash.get(@flash, :error)}
-  </p>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+
+<div class="w-full">
+  <%= if Phoenix.Flash.get(@flash, :info) do %>
+    <div
+      class="fixed top-20 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-secondary-500/30 bg-slate-800 px-4 py-3 text-sm text-secondary-300 shadow-xl"
+      role="alert"
+      phx-click="lv:clear-flash"
+      phx-value-key="info"
+    >
+      {Phoenix.Flash.get(@flash, :info)}
+    </div>
+  <% end %>
+  <%= if Phoenix.Flash.get(@flash, :error) do %>
+    <div
+      class="fixed top-20 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-red-500/30 bg-slate-800 px-4 py-3 text-sm text-red-300 shadow-xl"
+      role="alert"
+      phx-click="lv:clear-flash"
+      phx-value-key="error"
+    >
+      {Phoenix.Flash.get(@flash, :error)}
+    </div>
+  <% end %>
   {@inner_content}
-</main>
+</div>
