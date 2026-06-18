@@ -2,7 +2,7 @@ defmodule MehungryWeb.ConsentController do
   use MehungryWeb, :controller
 
   @cookie "cookie_consent"
-  @cookie_opts [max_age: 31_536_000, same_site: "Lax"]
+  @cookie_opts [sign: true, max_age: 31_536_000, same_site: "Lax"]
 
   def accept(conn, _params) do
     conn
