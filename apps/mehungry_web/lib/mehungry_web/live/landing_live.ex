@@ -21,7 +21,6 @@ defmodule MehungryWeb.LandingLive do
     now = Date.utc_today()
     recipes = find_bot_recipe(now.month, now.year) || []
     recipe = List.first(recipes)
-    IO.inspect(recipes, label: "recipe")
     {:ok,
      assign(socket,
        page_title: "M3Hungry — Know What's On Your Plate",
@@ -41,7 +40,6 @@ defmodule MehungryWeb.LandingLive do
         nil
 
       %{bot_user_id: bot_user_id} ->
-        IO.inspect("actual quer====================================================================================y")
         query =
           from(r in Mehungry.Food.Recipe,
             where: r.user_id == ^bot_user_id and not r.private,
