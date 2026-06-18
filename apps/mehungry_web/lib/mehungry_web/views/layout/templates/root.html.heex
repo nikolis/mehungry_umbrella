@@ -4,6 +4,7 @@
   <.head conn={@conn} />
   <body>
     {@inner_content}
+    <.cookie_consent_banner conn={@conn} />
     <.footer />
   </body>
 </html>

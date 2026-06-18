@@ -10,6 +10,40 @@ defmodule MehungryWeb.LayoutView do
     "main-content-container"
   end
 
+  attr :conn, :any, required: true
+
+  def cookie_consent_banner(assigns) do
+    ~H"""
+    <%= if @conn.assigns[:cookie_consent] == :pending do %>
+      <div
+        id="cookie-consent-banner"
+        role="dialog"
+        aria-label="Cookie consent"
+        class="fixed bottom-0 left-0 right-0 z-50 flex flex-col gap-3 border-t border-slate-700 bg-slate-900/95 px-4 py-4 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:px-8"
+      >
+        <p class="text-sm text-slate-300">
+          We use cookies to keep you logged in and to understand how the site is used.
+          <a href="/cookies" class="ml-1 underline hover:text-white">Cookie Policy</a>
+        </p>
+        <div class="flex shrink-0 gap-3">
+          <form action="/cookie-consent/decline" method="post">
+            <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+            <button type="submit" class="btn btn-sm btn-ghost border border-slate-600 text-slate-300 hover:bg-slate-700">
+              Decline
+            </button>
+          </form>
+          <form action="/cookie-consent/accept" method="post">
+            <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+            <button type="submit" class="btn btn-sm btn-primary">
+              Accept
+            </button>
+          </form>
+        </div>
+      </div>
+    <% end %>
+    """
+  end
+
   attr :current_user, :any
   attr :current_language, :string, default: "en"
 
