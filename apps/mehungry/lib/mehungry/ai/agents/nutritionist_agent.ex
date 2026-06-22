@@ -13,7 +13,7 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
   """
 
   require Logger
-  alias Mehungry.{Food, History, Professionals, AI.Agent, AI.Client}
+  alias Mehungry.{Food, History, Professionals, AI.Agent, Search.RecipeVectorSearch}
 
   @model "claude-haiku-4-5-20251001"
   @history_days 21
@@ -128,8 +128,10 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
       %{
         name: "search_recipes",
         description:
-          "Search the professional's recipe catalog by keyword. " <>
+          "Semantically search the professional's recipe catalog. " <>
             "Returns recipe_id, title, difficulty (1–3), and servings. " <>
+            "Use natural language queries like 'light chicken breakfast', " <>
+            "'high protein vegetarian dinner', or 'quick pasta lunch'. " <>
             "Call multiple times with different queries to build a slot-appropriate selection.",
         input_schema: %{
           type: "object",
@@ -137,7 +139,7 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
             query: %{
               type: "string",
               description:
-                "Keyword to match against recipe titles, e.g. 'chicken', 'salad', 'pasta', 'soup', 'breakfast'"
+                "Natural language query, e.g. 'light high-protein breakfast', 'Mediterranean fish dinner', 'quick vegetarian lunch'"
             }
           },
           required: ["query"]
@@ -243,18 +245,19 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
   end
 
   defp do_handle_tool("search_recipes", %{"query" => query}, %{professional_id: professional_id}) do
-    query_lower = String.downcase(query)
-
     recipes =
-      Food.list_user_recipes(professional_id)
-      |> Enum.filter(fn r -> String.contains?(String.downcase(r.title), query_lower) end)
-      |> Enum.take(20)
+      RecipeVectorSearch.search(query, user_id: professional_id, limit: 20)
       |> Enum.map(fn r ->
-        %{recipe_id: r.id, title: r.title, difficulty: r.difficulty || 1, servings: r.servings || 2}
+        %{
+          recipe_id: r.id,
+          title: r.title,
+          difficulty: r.difficulty || 1,
+          servings: r.servings || 2
+        }
       end)
 
     if recipes == [] do
-      %{found: false, message: "No recipes matched '#{query}'. Try a broader keyword."}
+      %{found: false, message: "No recipes found for '#{query}'. Try a different query."}
     else
       %{found: true, count: length(recipes), recipes: recipes}
     end
