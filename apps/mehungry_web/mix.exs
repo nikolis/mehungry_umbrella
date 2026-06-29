@@ -30,7 +30,7 @@ defmodule MehungryWeb.MixProject do
         region: "eu-central-1"
       ],
       mod: {MehungryWeb.Application, []},
-      extra_applications: [:logger, :runtime_tools, :ueberauth_facebook]
+      extra_applications: [:logger, :runtime_tools, :ueberauth_facebook, :os_mon]
     ]
   end
 
