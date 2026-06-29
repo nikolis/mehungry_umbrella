@@ -953,6 +953,7 @@ defmodule Mehungry.Food do
         |> Mehungry.RecipePutNutrientsWorker.new()
         |> Oban.insert()
 
+        Mehungry.ObanWorkers.RecipeEmbeddingWorker.enqueue(recipe.id)
         Cachex.put(:recipes_cache, {__MODULE__, recipe.id}, recipe)
 
         case Map.get(attrs, "image_url") do
@@ -1111,6 +1112,8 @@ defmodule Mehungry.Food do
           |> Oban.insert()
         end
 
+        Mehungry.ObanWorkers.RecipeEmbeddingWorker.enqueue(recipe.id)
+
         result
 
       _ ->
@@ -1120,6 +1123,10 @@ defmodule Mehungry.Food do
 
   def count_recipes do
     Repo.aggregate(Recipe, :count)
+  end
+
+  def count_recipes_missing_embeddings do
+    Repo.aggregate(from(r in Recipe, where: is_nil(r.embedding)), :count)
   end
 
   def list_recipe_ids do

@@ -14,7 +14,8 @@ config :mehungry, Mehungry.Repo,
   password: "postgres",
   database: "mehungry_server_test",
   hostname: "localhost",
-  pool: Ecto.Adapters.SQL.Sandbox
+  pool: Ecto.Adapters.SQL.Sandbox,
+  types: Mehungry.PostgrexTypes
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.

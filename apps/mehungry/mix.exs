@@ -65,7 +65,8 @@ defmodule Mehungry.MixProject do
       {:paginator, "~> 1.2.0"},
       {:httpoison, "~> 2.2"},
       {:jason, "~> 1.2"},
-      {:cachex, "~> 3.4"}
+      {:cachex, "~> 3.4"},
+      {:pgvector, "~> 0.3"}
     ]
   end
 

@@ -1,7 +1,7 @@
 defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
   use MehungryWeb, :live_view
 
-  alias Mehungry.Food
+  alias Mehungry.{Food, ObanWorkers.RecipeEmbeddingWorker}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -13,7 +13,11 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
      |> assign(:running, false)
      |> assign(:interactions_job_status, nil)
      |> assign(:interactions_enqueued_count, nil)
-     |> assign(:interactions_running, false)}
+     |> assign(:interactions_running, false)
+     |> assign(:embeddings_missing, Food.count_recipes_missing_embeddings())
+     |> assign(:embeddings_job_status, nil)
+     |> assign(:embeddings_enqueued_count, nil)
+     |> assign(:embeddings_running, false)}
   end
 
   @impl true
@@ -38,6 +42,19 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
      |> assign(:interactions_enqueued_count, count)
      |> assign(:interactions_job_status, :enqueued)
      |> put_flash(:info, "Enqueued interaction recalculation for #{count} recipes.")}
+  end
+
+  @impl true
+  def handle_event("backfill_embeddings", _params, socket) do
+    count = RecipeEmbeddingWorker.enqueue_all()
+
+    {:noreply,
+     socket
+     |> assign(:embeddings_running, true)
+     |> assign(:embeddings_enqueued_count, count)
+     |> assign(:embeddings_job_status, :enqueued)
+     |> assign(:embeddings_missing, 0)
+     |> put_flash(:info, "Enqueued embedding generation for #{count} recipes.")}
   end
 
   @impl true
@@ -163,6 +180,82 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
             <strong>{@interactions_enqueued_count} Oban jobs</strong> have been enqueued.
             Processing happens in the background — check server logs for progress.
             Each job recomputes interactions from the recipe's stored nutrient data and saves the result.
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Recipe Embedding Backfill -->
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold text-white">Backfill Recipe Embeddings</h2>
+            <p class="text-slate-400 text-sm mt-1 max-w-lg">
+              Generates semantic vector embeddings for all recipes that don't have one yet.
+              Embeddings power the AI agents' semantic recipe search — required for
+              nutritionist and user meal plan generation to work well.
+              Each recipe is processed as a background Oban job via OpenAI.
+            </p>
+            <div class="mt-3 flex items-center gap-3 text-sm text-slate-400">
+              <span class="inline-flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <span><strong class="text-white">{@recipe_count}</strong> recipes total</span>
+              </span>
+              <span class={["inline-flex items-center gap-1.5", if(@embeddings_missing > 0, do: "text-amber-400", else: "text-emerald-400")]}>
+                <%= if @embeddings_missing > 0 do %>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span><strong>{@embeddings_missing}</strong> missing embeddings</span>
+                <% else %>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>All recipes embedded</span>
+                <% end %>
+              </span>
+              <%= if @embeddings_enqueued_count do %>
+                <span class="inline-flex items-center gap-1.5 text-emerald-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span><strong>{@embeddings_enqueued_count}</strong> jobs enqueued</span>
+                </span>
+              <% end %>
+            </div>
+          </div>
+
+          <button
+            phx-click="backfill_embeddings"
+            data-confirm={"Generate embeddings for #{@embeddings_missing} recipes? Each recipe will call the OpenAI API as a background job."}
+            class={[
+              "flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition",
+              if(@embeddings_running || @embeddings_missing == 0,
+                do: "bg-slate-700 text-slate-400 cursor-not-allowed",
+                else: "bg-primary-500 hover:bg-primary-600 text-white"
+              )
+            ]}
+            disabled={@embeddings_running || @embeddings_missing == 0}
+          >
+            <svg class={["w-4 h-4", if(@embeddings_running, do: "animate-spin")]} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <%= cond do %>
+              <% @embeddings_running -> %> Jobs enqueued
+              <% @embeddings_missing == 0 -> %> Up to date
+              <% true -> %> Backfill <%= @embeddings_missing %> recipes
+            <% end %>
+          </button>
+        </div>
+
+        <%= if @embeddings_job_status == :enqueued do %>
+          <div class="mt-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm">
+            <strong>{@embeddings_enqueued_count} Oban jobs</strong> have been enqueued in the <code>:default</code> queue.
+            Each job calls the OpenAI embeddings API and stores the result in the database.
+            Check server logs for progress — new recipes will automatically get embeddings going forward.
           </div>
         <% end %>
       </div>

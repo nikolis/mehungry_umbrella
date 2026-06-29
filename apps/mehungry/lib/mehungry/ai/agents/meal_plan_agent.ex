@@ -14,7 +14,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   """
 
   require Logger
-  alias Mehungry.{History, AI.Agent}
+  alias Mehungry.{History, AI.Agent, Search.RecipeVectorSearch}
 
   @model "claude-haiku-4-5-20251001"
   @history_days 21
@@ -29,42 +29,35 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
 
   Returns {:ok, [%UserMeal{}], skipped_count} or {:error, reason}.
   """
-  def run(preferences, recipes, start_date, user_id) do
-    catalog = build_catalog(recipes)
+  def run(preferences, _recipes, start_date, user_id) do
+    Process.put(__MODULE__, nil)
 
-    if catalog == [] do
-      {:error, "No recipes found. Create some recipes first."}
-    else
-      Process.put(__MODULE__, nil)
+    context = %{
+      user_id: user_id,
+      start_date: start_date
+    }
 
-      context = %{
-        user_id: user_id,
-        start_date: start_date,
-        catalog: catalog
-      }
+    result =
+      Agent.run(
+        system_prompt(preferences, start_date),
+        initial_message(preferences, start_date),
+        tool_defs(),
+        &handle_tool/3,
+        context,
+        model: @model,
+        max_tokens: 4096,
+        max_iterations: 12
+      )
 
-      result =
-        Agent.run(
-          system_prompt(preferences, start_date),
-          initial_message(preferences, start_date),
-          tool_defs(),
-          &handle_tool/3,
-          context,
-          model: @model,
-          max_tokens: 4096,
-          max_iterations: 12
-        )
+    case result do
+      {:ok, _text} ->
+        case Process.get(__MODULE__) do
+          nil -> {:error, "Agent completed without submitting a plan"}
+          saved -> saved
+        end
 
-      case result do
-        {:ok, _text} ->
-          case Process.get(__MODULE__) do
-            nil -> {:error, "Agent completed without submitting a plan"}
-            saved -> saved
-          end
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -123,16 +116,18 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
       %{
         name: "search_catalog",
         description:
-          "Search the available recipe catalog by keyword. " <>
+          "Semantically search the available recipe catalog by natural language query. " <>
             "Returns matching recipes with their recipe_id, title, difficulty (1–3), and servings. " <>
-            "Call with different queries to find recipes for each meal slot type. " <>
-            "Examples: 'breakfast', 'salad', 'chicken', 'vegetarian', 'pasta', 'soup'.",
+            "Use descriptive phrases like 'light high-protein breakfast', " <>
+            "'quick vegetarian lunch', or 'hearty Mediterranean dinner'. " <>
+            "Call with different queries to find recipes for each meal slot type.",
         input_schema: %{
           type: "object",
           properties: %{
             query: %{
               type: "string",
-              description: "Keyword or phrase to filter recipes by title or category"
+              description:
+                "Natural language query, e.g. 'light high-protein breakfast', 'quick vegetarian lunch', 'hearty Mediterranean dinner'"
             }
           },
           required: ["query"]
@@ -203,30 +198,23 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
     end
   end
 
-  defp handle_tool("search_catalog", %{"query" => query}, %{catalog: catalog}) do
-    query_lower = String.downcase(query)
-
-    matches =
-      catalog
-      |> Enum.filter(fn r ->
-        String.contains?(String.downcase(r.title), query_lower)
+  defp handle_tool("search_catalog", %{"query" => query}, %{user_id: user_id}) do
+    recipes =
+      RecipeVectorSearch.search(query, user_id: user_id, limit: 20)
+      |> Enum.map(fn r ->
+        %{id: r.id, title: r.title, difficulty: r.difficulty || 1, servings: r.servings || 2}
       end)
 
-    if matches == [] do
-      all_sample = Enum.take(catalog, 20)
-      %{
-        found: false,
-        message: "No recipes matched '#{query}'. Sample from full catalog:",
-        sample: all_sample
-      }
+    if recipes == [] do
+      %{found: false, message: "No recipes found for '#{query}'. Try a different query."}
     else
-      %{found: true, count: length(matches), recipes: matches}
+      %{found: true, count: length(recipes), recipes: recipes}
     end
   end
 
   defp handle_tool("submit_plan", %{"entries" => entries} = input, context) do
-    %{user_id: user_id, start_date: start_date, catalog: catalog} = context
-    valid_ids = MapSet.new(catalog, & &1.id)
+    %{user_id: user_id, start_date: start_date} = context
+    valid_ids = Mehungry.Food.list_user_recipes(user_id) |> MapSet.new(& &1.id)
     end_date = Date.add(start_date, 6)
 
     errors = validate_plan(entries, valid_ids, start_date, end_date)
@@ -368,13 +356,4 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   defp slot_time("Dinner"), do: ~T[19:00:00]
   defp slot_time(_), do: ~T[12:00:00]
 
-  # ── catalog helpers ───────────────────────────────────────────────────────────
-
-  defp build_catalog(recipes) do
-    recipes
-    |> Enum.take(200)
-    |> Enum.map(fn r ->
-      %{id: r.id, title: r.title, servings: r.servings || 2, difficulty: r.difficulty || 1}
-    end)
-  end
 end
