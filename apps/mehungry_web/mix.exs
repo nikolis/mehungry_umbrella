@@ -62,6 +62,7 @@ defmodule MehungryWeb.MixProject do
       {:phoenix_live_view, "~> 1.0"},
       {:phoenix_view, "~> 2.0"},
       {:phoenix_ecto, "~> 4.4"},
+      {:ecto_psql_extras, "~> 0.6"},
       {:paginator, "~> 1.2.0"},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
