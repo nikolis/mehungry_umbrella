@@ -6,6 +6,8 @@ defmodule Mehungry.Application do
   use Application
 
   def start(_type, _args) do
+    Mehungry.Telemetry.SlowQueryLogger.attach()
+
     children = [
       # Start the Ecto repository
       Mehungry.Repo,

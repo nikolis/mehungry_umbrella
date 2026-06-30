@@ -171,7 +171,9 @@ defmodule MehungryWeb.Router do
 
   scope "/" do
     pipe_through :admin_browser
-    live_dashboard "/dashboard", metrics: MehungryWeb.Telemetry
+    live_dashboard "/dashboard",
+      metrics: MehungryWeb.Telemetry,
+      ecto_repos: [Mehungry.Repo]
   end
 
   if Mix.env() == :dev do

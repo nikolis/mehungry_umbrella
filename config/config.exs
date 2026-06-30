@@ -19,6 +19,7 @@ config :mehungry, Oban,
   repo: Mehungry.Repo,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24},
+    {Oban.Plugins.Lifeline, rescue_after: :timer.hours(24)},
     {Oban.Plugins.Cron,
      crontab: [
        # 2am UTC daily — generate recipes for the next day + schedule publish jobs

@@ -11,11 +11,7 @@ defmodule MehungryWeb.Telemetry do
   @impl true
   def init(_arg) do
     children = [
-      # Telemetry poller will execute the given period measurements
-      # every 10_000ms. Learn more here: https://hexdocs.pm/telemetry_metrics
       {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}
-      # Add reporters as children of your supervision tree.
-      # {Telemetry.Metrics.ConsoleReporter, metrics: metrics()}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
@@ -39,19 +35,65 @@ defmodule MehungryWeb.Telemetry do
       summary("mehungry.repo.query.queue_time", unit: {:native, :millisecond}),
       summary("mehungry.repo.query.idle_time", unit: {:native, :millisecond}),
 
+      # Oban Job Metrics
+      summary("oban.job.stop.duration",
+        tags: [:queue, :worker],
+        unit: {:native, :millisecond}
+      ),
+      summary("oban.job.stop.queue_time",
+        tags: [:queue, :worker],
+        unit: {:native, :millisecond}
+      ),
+      counter("oban.job.exception.count",
+        tags: [:queue, :worker]
+      ),
+
       # VM Metrics
       summary("vm.memory.total", unit: {:byte, :kilobyte}),
       summary("vm.total_run_queue_lengths.total"),
       summary("vm.total_run_queue_lengths.cpu"),
-      summary("vm.total_run_queue_lengths.io")
+      summary("vm.total_run_queue_lengths.io"),
+
+      # Cachex Size Metrics (from periodic measurements)
+      last_value("mehungry.cache.size", tags: [:cache]),
+
+      # Oban Queue Depth (from periodic measurements)
+      last_value("mehungry.oban.queue.depth", tags: [:queue])
     ]
   end
 
   defp periodic_measurements do
     [
-      # A module, function and arguments to be invoked periodically.
-      # This function must call :telemetry.execute/3 and a metric must be added above.
-      # {MehungryWeb, :count_users, []}
+      {__MODULE__, :emit_cache_sizes, []},
+      {__MODULE__, :emit_oban_queue_depths, []}
     ]
+  end
+
+  def emit_cache_sizes do
+    for cache <- [:recipes_cache, :cache_user_tokens, :geo_cache] do
+      case Cachex.size(cache) do
+        {:ok, size} ->
+          :telemetry.execute([:mehungry, :cache], %{size: size}, %{cache: cache})
+
+        _ ->
+          :ok
+      end
+    end
+  end
+
+  def emit_oban_queue_depths do
+    import Ecto.Query
+
+    depths =
+      Mehungry.Repo.all(
+        from j in Oban.Job,
+          where: j.state == "available",
+          group_by: j.queue,
+          select: {j.queue, count(j.id)}
+      )
+
+    for {queue, depth} <- depths do
+      :telemetry.execute([:mehungry, :oban, :queue], %{depth: depth}, %{queue: queue})
+    end
   end
 end
