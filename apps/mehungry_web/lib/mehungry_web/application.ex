@@ -14,7 +14,7 @@ defmodule MehungryWeb.Application do
       # MehungryWeb.Telemetry,
       # Manually Crated Presence Model
       MehungryWeb.Presence,
-      # MehungryWeb.Telemetry,
+      MehungryWeb.Telemetry,
       # Start the Endpoint (http/https)
 
       MehungryWeb.Endpoint,
