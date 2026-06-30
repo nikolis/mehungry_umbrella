@@ -78,6 +78,8 @@ defmodule MehungryWeb.MixProject do
       {:daisy_ui_components, "~> 0.8"},
       {:hackney, "~> 1.9"},
       {:sweet_xml, "~> 0.6"},
+      {:telemetry_metrics, "~> 1.0"},
+      {:telemetry_poller, "~> 1.0"},
       {:timex, "~> 3.6"},
       {:heroicons,
        github: "tailwindlabs/heroicons",
