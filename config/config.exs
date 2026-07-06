@@ -12,6 +12,8 @@ import Config
 config :mehungry,
   ecto_repos: [Mehungry.Repo]
 
+config :mehungry, :admin_email, "nikolisgal@gmail.com"
+
 config :mehungry, Mehungry.Mailer, adapter: Swoosh.Adapters.Local
 config :swoosh, :api_client, false
 
@@ -23,7 +25,9 @@ config :mehungry, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        # 2am UTC daily — generate recipes for the next day + schedule publish jobs
-       {"0 2 * * *", Mehungry.ObanWorkers.DailyRecipeGenerationWorker}
+       {"0 2 * * *", Mehungry.ObanWorkers.DailyRecipeGenerationWorker},
+       # 3am UTC daily — prune telemetry snapshots older than 30 days
+       {"0 3 * * *", Mehungry.ObanWorkers.TelemetryPrunerWorker}
      ]}
   ],
   queues: [
