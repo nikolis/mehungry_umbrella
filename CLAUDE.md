@@ -109,7 +109,11 @@ ai_agents:   2 concurrent  — recipe generation, translation, image generation,
 mailers:     5 concurrent  — email
 ```
 
-Cron: `DailyRecipeGenerationWorker` at `0 2 * * *`.
+Cron: `DailyRecipeGenerationWorker` at `0 2 * * *`, `TelemetryPrunerWorker` at `0 3 * * *`.
+
+### Observability
+
+Full operator's manual: **`docs/observability.md`** (architecture, metric reference, diagnostic playbooks, limitations). Summary: telemetry events fan out to live LiveDashboard metrics (`MehungryWeb.Telemetry`), a persistent snapshot store (`Mehungry.Telemetry.MetricsBuffer` → `telemetry_snapshots`, 5-min aggregates, 30-day retention), a DIY error tracker (`Mehungry.Telemetry.ErrorTracker` → `error_events`, fingerprint-deduped), and warning logs (`[SlowQuery]` ≥500ms, `[SlowRequest]` ≥2s, `[ProcessWatchdog]` mailbox ≥1000). Everything is viewed at `/dashboard` (admin-gated via `config :mehungry, :admin_email` + `MehungryWeb.Plugs.RequireAdmin`), including custom pages Metrics History and Errors. Error tracking is deliberately in-app (no Sentry) and dashboard-only (no alerting).
 
 ### Web Layer (`apps/mehungry_web/lib/mehungry_web/`)
 

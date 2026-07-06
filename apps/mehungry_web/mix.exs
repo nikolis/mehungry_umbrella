@@ -60,7 +60,7 @@ defmodule MehungryWeb.MixProject do
       {:ueberauth_facebook, "~> 0.8"},
       {:ueberauth_google, "~> 0.10"},
       {:phoenix, "~> 1.7.11", override: true},
-      {:phoenix_live_view, "~> 1.0"},
+      {:phoenix_live_view, "~> 1.2"},
       {:phoenix_view, "~> 2.0"},
       {:phoenix_ecto, "~> 4.4"},
       {:ecto_psql_extras, "~> 0.6"},

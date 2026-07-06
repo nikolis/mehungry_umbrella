@@ -28,7 +28,7 @@
     </div>
   </div>
 
-  <%# Translation coverage stats %>
+  <%!-- Translation coverage stats --%>
   <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-4">
     <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
       Translation Coverage
@@ -62,7 +62,7 @@
   </div>
 
   <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6">
-    <form phx-change="search_change">
+    <form id="ingredients-search-form" phx-change="search_change">
       <div class="flex flex-col sm:flex-row gap-3 flex-wrap">
         <div class="flex-1 min-w-0">
           <.live_component
@@ -74,7 +74,7 @@
             mode={:multi}
           />
         </div>
-        <%# Search language toggle — overrides user profile preference for this page only %>
+        <%!-- Search language toggle — overrides user profile preference for this page only --%>
         <div class="flex items-center gap-1 bg-slate-700 rounded-lg p-0.5 self-center">
           <button
             type="button"

@@ -36,8 +36,6 @@ defmodule MehungryWeb.FoodDetailLive.Index do
           |> Enum.group_by(&(&1.nutrient.family || "Other"))
           |> Enum.sort_by(fn {family, _} -> family_sort_order(family) end)
 
-        {_query, {recipes, _cursor}} = Food.search_recipes_by_ingredient(ingredient.name)
-        sample_recipes = Enum.take(recipes, 5)
 
         interactions = Food.get_interactions_for_ingredients([ingredient.id])
 
@@ -59,7 +57,9 @@ defmodule MehungryWeb.FoodDetailLive.Index do
          |> assign(:display_name, display_name)
          |> assign(:top_nutrients, top_nutrients)
          |> assign(:nutrients_by_family, nutrients_by_family)
-         |> assign(:sample_recipes, sample_recipes)
+         |> assign_async(:sample_recipes, fn ->
+           {:ok, %{sample_recipes: Food.list_sample_recipes_for_ingredient(ingredient.id)}}
+         end)
          |> assign(:interactions, interactions)
          |> assign(:page_title, "#{display_name} - Διατροφικά Στοιχεία")
          |> assign(:page_description, build_description(ingredient, top_nutrients))}

@@ -855,7 +855,7 @@ defmodule Mehungry.Food do
     end
   end
 
-  defp get_ingredient_by_translation_name(name) do
+  def get_ingredient_by_translation_name(name) do
     result =
       from(t in IngredientTranslation,
         join: i in Ingredient,
@@ -1246,6 +1246,19 @@ defmodule Mehungry.Food do
       )
 
     {query, list_recipes(query)}
+  end
+
+  def list_sample_recipes_for_ingredient(ingredient_id, limit \\ 4) do
+    query =
+      from(r in Recipe,
+        join: ri in RecipeIngredient,
+        on: ri.recipe_id == r.id,
+        where: ri.ingredient_id == ^ingredient_id,
+        limit: ^limit,
+        distinct: true
+      )
+
+    Repo.all(query)
   end
 
   def search_recipe(query_string, language_name \\ nil)
