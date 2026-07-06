@@ -23,6 +23,7 @@ defmodule MehungryWeb.Application do
       # {MehungryWeb.OnlineRecommender, []},
       # MehungryWeb.NutrientMapper, 
       MehungryWeb.IngredientSearch,
+      {Task.Supervisor, name: MehungryWeb.TaskSupervisor},
       %{
         id: :create_recipe_cache,
         start:
@@ -40,7 +41,6 @@ defmodule MehungryWeb.Application do
         [
           {Cluster.Supervisor,
            [Application.get_env(:libcluster, :topologies), [name: Mehungry.ClusterSupervisor]]},
-          {Task.Supervisor, name: MehungryWeb.TaskSupervisor},
           %{
             id: MehungryWeb.SeedGenServerSuperServer,
             start: {MehungryWeb.SeedGenServerSuperServer, :start_link, []},

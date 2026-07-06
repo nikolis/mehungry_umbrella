@@ -6,7 +6,7 @@ defmodule Mehungry.Application do
   use Application
 
   def start(_type, _args) do
-    Mehungry.Telemetry.SlowQueryLogger.attach()
+    Mehungry.Telemetry.ActionContext.attach()
 
     children = [
       # Start the Ecto repository
@@ -21,9 +21,10 @@ defmodule Mehungry.Application do
       # {Cachex, [:recipe_cache, [limit: 300]], id: :recipes_cache_worker}  # with custom options
       %{id: :recipes_cache, start: {Cachex, :start_link, [:recipes_cache, [limit: 150]]}},
       %{id: :cache_user_tokens, start: {Cachex, :start_link, [:cache_user_tokens]}},
-      %{id: :geo_cache, start: {Cachex, :start_link, [:geo_cache, [limit: 5000]]}}
-
-      # Supervisor.Spec.worker(Cachex, [:recipes_cache, [limit: 500]], id: :recipes_cache)
+      %{id: :geo_cache, start: {Cachex, :start_link, [:geo_cache, [limit: 5000]]}},
+      Mehungry.Telemetry.MetricsBuffer,
+      Mehungry.Telemetry.ErrorTracker,
+      {Task.Supervisor, name: Mehungry.TaskSupervisor}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: Mehungry.Supervisor)

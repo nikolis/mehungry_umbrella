@@ -32,6 +32,10 @@ defmodule MehungryWeb.Router do
     plug :fetch_current_user
   end
 
+  pipeline :require_admin do
+    plug MehungryWeb.Plugs.RequireAdmin
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -116,7 +120,6 @@ defmodule MehungryWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
-      live "/admin-dashboard", Admin.DashboardLive
       live "/notifications/invitations", NutritionistLive.UserInvitations, :index
       live "/basket", ShoppingBasketLive.Index, :index
       live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
@@ -170,10 +173,17 @@ defmodule MehungryWeb.Router do
   import Phoenix.LiveDashboard.Router
 
   scope "/" do
-    pipe_through :admin_browser
+    pipe_through [:admin_browser, :require_authenticated_user, :require_admin]
+
     live_dashboard "/dashboard",
       metrics: MehungryWeb.Telemetry,
-      ecto_repos: [Mehungry.Repo]
+      ecto_repos: [Mehungry.Repo],
+      additional_pages: [
+        errors: MehungryWeb.ErrorsPage,
+        queries: MehungryWeb.QueryTimesPage,
+        endpoints: MehungryWeb.EndpointTimesPage,
+        timeline: MehungryWeb.QueryTimelinePage
+      ]
   end
 
   if Mix.env() == :dev do
