@@ -65,7 +65,7 @@ defmodule MehungryWeb.AuthController do
       {target_user, redirect_path} = resolve_token_target(conn)
       token = auth.extra.raw_info.token.access_token
 
-      Task.start(fn ->
+      Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
         Mehungry.Api.Facebook.get_user_pages(target_user, token, auth.extra.raw_info.user["id"])
       end)
 
@@ -78,7 +78,7 @@ defmodule MehungryWeb.AuthController do
         {:ok, user} ->
           token = auth.extra.raw_info.token.access_token
 
-          Task.start(fn ->
+          Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
             Accounts.put_user_token(user, token, "facebook")
             Mehungry.Api.Facebook.get_user_pages(user, token, auth.extra.raw_info.user["id"])
           end)

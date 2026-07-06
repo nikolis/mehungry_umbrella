@@ -167,7 +167,9 @@ defmodule Mehungry.Meta do
 
     case result do
       {:ok, visit} ->
-        Task.start(fn -> enrich_visit_country(visit) end)
+        Task.Supervisor.start_child(Mehungry.TaskSupervisor, fn ->
+          enrich_visit_country(visit)
+        end)
         result
 
       _ ->

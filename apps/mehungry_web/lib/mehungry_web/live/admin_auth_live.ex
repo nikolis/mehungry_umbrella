@@ -5,8 +5,6 @@ defmodule MehungryWeb.AdminAuthLive do
 
   alias Mehungry.{Accounts, AiBot}
 
-  @admin_email "nikolisgal@gmail.com"
-
   def on_mount(_, _params, %{"user_token" => user_token}, socket) do
     socket =
       assign_new(socket, :current_user, fn ->
@@ -19,7 +17,7 @@ defmodule MehungryWeb.AdminAuthLive do
       is_nil(user) ->
         {:halt, redirect(socket, to: "/login")}
 
-      user.email != @admin_email ->
+      user.email != Application.get_env(:mehungry, :admin_email) ->
         {:halt, redirect(socket, to: "/home")}
 
       true ->
