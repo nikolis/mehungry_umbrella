@@ -1,4 +1,20 @@
 defmodule Mehungry.ObanWorkers.TelemetryPrunerWorker do
+  @moduledoc """
+  Daily Oban cron worker (`0 3 * * *`, see `config/config.exs`) that enforces
+  the 30-day retention policy described in `docs/observability.md`.
+
+  Deletes rows older than 30 days from the three tables written by
+  `Mehungry.Telemetry.MetricsBuffer` and the DIY error tracker:
+
+    * `telemetry_snapshots` (`Mehungry.Telemetry.Snapshot`) — pruned by `period_start`
+    * `error_events` (`Mehungry.Telemetry.ErrorEvent`) — pruned by `last_seen`, so a
+      recurring error stays alive for as long as it keeps occurring
+    * `query_time_profiles` (`Mehungry.Telemetry.QueryProfile`) — pruned by `period_start`
+
+  The retention window is a module attribute (`@retention_days`), not runtime
+  configuration — there is no environment variable or admin setting for it.
+  """
+
   use Oban.Worker, queue: :default, max_attempts: 3
 
   require Logger
@@ -7,6 +23,11 @@ defmodule Mehungry.ObanWorkers.TelemetryPrunerWorker do
   @retention_days 30
 
   @impl Oban.Worker
+  @doc """
+  Deletes snapshot, error-event, and query-profile rows whose retention
+  timestamp is older than #{@retention_days} days, logs the counts removed,
+  and always returns `:ok`.
+  """
   def perform(_job) do
     cutoff = DateTime.add(DateTime.utc_now(), -@retention_days * 86_400, :second)
 

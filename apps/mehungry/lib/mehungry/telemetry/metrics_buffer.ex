@@ -1,4 +1,27 @@
 defmodule Mehungry.Telemetry.MetricsBuffer do
+  @moduledoc """
+  Central telemetry collector. Attaches `:telemetry` handlers for repo
+  queries, HTTP/LiveView dispatch, Oban jobs, cache sizes, and VM stats, and
+  buffers every sample in three ETS tables owned by this GenServer:
+
+    * `#{inspect(__MODULE__)}` — generic `{metric, tags} => value` samples
+      (one entry per event), aggregated on flush into
+      `Mehungry.Telemetry.Snapshot` rows.
+    * `QueryTimes` — repo query samples keyed by
+      `fingerprint_query/2` (source + SQL shape), aggregated on flush into
+      `Mehungry.Telemetry.QueryProfile` rows.
+    * `QueryTimeline` — raw, unaggregated repo query executions tagged with
+      the action (`Mehungry.Telemetry.ActionContext`) that triggered them,
+      for the LiveDashboard "Query Timeline" page. Kept in-memory only —
+      never flushed to Postgres — and trimmed to the last 60 minutes on
+      every flush tick.
+
+  A timer fires every 5 minutes (`schedule_flush/0`) to aggregate and
+  persist the two Postgres-backed tables and prune the timeline table. See
+  `docs/observability.md` for the full architecture, metric reference, and
+  diagnostic playbooks.
+  """
+
   use GenServer
   require Logger
   import Ecto.Query
@@ -10,10 +33,12 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
   @query_text_limit 1_000
   @timeline_retention :timer.minutes(60)
 
+  @doc "Starts the GenServer under the given `opts`, registered as `#{inspect(__MODULE__)}`."
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
+  @doc false
   @impl true
   def init(_opts) do
     :ets.new(@table, [:public, :named_table, :duplicate_bag])
@@ -24,6 +49,7 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
     {:ok, %{}}
   end
 
+  @doc "Every `@flush_interval` (5 min): aggregates and persists both ETS tables, then prunes the timeline."
   @impl true
   def handle_info(:flush, state) do
     flush()
@@ -34,7 +60,20 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
   end
 
   # --- Telemetry handlers ---
+  #
+  # Each of these is attached (see `attach_handlers/0`) to one `:telemetry`
+  # event and records one or more samples into the ETS tables via `record/3`
+  # (generic metrics), `record_query/3` and `record_timeline_event/3` (repo
+  # queries). They run synchronously in the emitting process, so they must
+  # stay cheap and never raise.
 
+  @doc """
+  Handles `[:mehungry, :repo, :query]`. Records the query's own `query_time`
+  (grouped by `fingerprint_query/2` into the per-statement `QueryTimes`
+  table, and appended to the raw `QueryTimeline` table), plus
+  `"mehungry.repo.query.total_time"` and `"mehungry.repo.query.queue_time"`
+  tagged by `source`.
+  """
   def handle_repo_query(_event, measurements, metadata, _config) do
     source = metadata[:source] || "unknown"
 
@@ -53,18 +92,30 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
     end
   end
 
+  @doc """
+  Handles `[:phoenix, :router_dispatch, :stop]`. Records
+  `"phoenix.request.duration"` tagged by `route`.
+  """
   def handle_router_dispatch(_event, measurements, metadata, _config) do
     with duration when is_integer(duration) <- measurements[:duration] do
       record("phoenix.request.duration", %{route: metadata[:route] || "unknown"}, to_ms(duration))
     end
   end
 
+  @doc """
+  Handles `[:phoenix, :live_view, :mount, :stop]`. Records
+  `"live_view.mount.duration"` tagged by the mounted view's module name.
+  """
   def handle_live_view_mount(_event, measurements, metadata, _config) do
     with duration when is_integer(duration) <- measurements[:duration] do
       record("live_view.mount.duration", %{view: view_name(metadata)}, to_ms(duration))
     end
   end
 
+  @doc """
+  Handles `[:phoenix, :live_view, :handle_event, :stop]`. Records
+  `"live_view.handle_event.duration"` tagged by view and `event` name.
+  """
   def handle_live_view_event(_event, measurements, metadata, _config) do
     with duration when is_integer(duration) <- measurements[:duration] do
       tags = %{view: view_name(metadata), event: to_string(metadata[:event] || "unknown")}
@@ -72,6 +123,11 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
     end
   end
 
+  @doc """
+  Handles `[:oban, :job, :stop]`. Records `"oban.job.duration"` and
+  `"oban.job.queue_time"`, both tagged by `queue` and `worker`
+  (`oban_job_tags/1`).
+  """
   def handle_oban_job_stop(_event, measurements, metadata, _config) do
     tags = oban_job_tags(metadata)
 
@@ -84,22 +140,40 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
     end
   end
 
+  @doc """
+  Handles `[:oban, :job, :exception]`. Records one `"oban.job.exception.count"`
+  sample (value `1.0`) tagged by `queue` and `worker`.
+  """
   def handle_oban_job_exception(_event, _measurements, metadata, _config) do
     record("oban.job.exception.count", oban_job_tags(metadata), 1.0)
   end
 
+  @doc """
+  Handles `[:mehungry, :cache]`, emitted by the Cachex-wrapping code for each
+  named cache. Records `"mehungry.cache.size"` tagged by `cache`.
+  """
   def handle_cache_size(_event, measurements, metadata, _config) do
     with size when is_integer(size) <- measurements[:size] do
       record("mehungry.cache.size", %{cache: to_string(metadata[:cache])}, size * 1.0)
     end
   end
 
+  @doc """
+  Handles `[:mehungry, :oban, :queue]`, emitted by the periodic queue-depth
+  poller. Records `"mehungry.oban.queue.depth"` tagged by `queue`.
+  """
   def handle_oban_queue_depth(_event, measurements, metadata, _config) do
     with depth when is_integer(depth) <- measurements[:depth] do
       record("mehungry.oban.queue.depth", %{queue: to_string(metadata[:queue])}, depth * 1.0)
     end
   end
 
+  @doc """
+  Handles `[:mehungry, :vm, :process]`, emitted by the process watchdog poll.
+  Records `"mehungry.vm.process.max_message_queue"` (the largest mailbox
+  seen) and `"mehungry.vm.process.over_threshold_count"` (how many processes
+  were over the `[ProcessWatchdog]` mailbox threshold), both untagged.
+  """
   def handle_vm_process_stats(_event, measurements, _metadata, _config) do
     record("mehungry.vm.process.max_message_queue", %{}, (measurements[:max_message_queue] || 0) * 1.0)
 
@@ -110,6 +184,11 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
     )
   end
 
+  @doc """
+  Handles `[:mehungry, :vm, :scheduler]`, emitted by the periodic scheduler
+  poll. Records `"mehungry.vm.scheduler.utilization"` and
+  `"mehungry.vm.scheduler.weighted"`, both untagged.
+  """
   def handle_vm_scheduler(_event, measurements, _metadata, _config) do
     with utilization when is_number(utilization) <- measurements[:utilization] do
       record("mehungry.vm.scheduler.utilization", %{}, utilization * 1.0)
@@ -120,18 +199,31 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
     end
   end
 
+  @doc """
+  Handles `[:vm, :memory]` (emitted by `:telemetry_poller`'s built-in VM
+  memory measurement). Records `"vm.memory.total"` in kilobytes, untagged.
+  """
   def handle_vm_memory(_event, measurements, _metadata, _config) do
     with total when is_integer(total) <- measurements[:total] do
       record("vm.memory.total", %{}, total / 1024.0)
     end
   end
 
+  @doc """
+  Handles `[:mehungry, :vm, :live_view]`, emitted by the periodic LiveView
+  process count poll. Records `"mehungry.vm.live_view.count"`, untagged.
+  """
   def handle_vm_live_view_count(_event, measurements, _metadata, _config) do
     with count when is_integer(count) <- measurements[:count] do
       record("mehungry.vm.live_view.count", %{}, count * 1.0)
     end
   end
 
+  @doc """
+  Handles `[:mehungry, :repo, :pool]`, emitted by the periodic DBConnection
+  pool poll. Records `"mehungry.repo.pool.busy"`, `"mehungry.repo.pool.total"`,
+  and `"mehungry.repo.pool.pool_size"`, all untagged.
+  """
   def handle_repo_pool_stats(_event, measurements, _metadata, _config) do
     record("mehungry.repo.pool.busy", %{}, (measurements[:busy] || 0) * 1.0)
     record("mehungry.repo.pool.total", %{}, (measurements[:total] || 0) * 1.0)
@@ -140,6 +232,9 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
 
   # --- Private ---
 
+  # Wires each `handle_*` function above to its `:telemetry` event. Attach
+  # ids are unique per-clause so re-attaching (e.g. hot code reload) is a
+  # no-op rather than a crash.
   defp attach_handlers do
     handlers = [
       {"buffer-repo-query", [:mehungry, :repo, :query], &handle_repo_query/4},
@@ -220,7 +315,25 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
     end
   end
 
-  defp fingerprint_query(source, query_text) do
+  @doc """
+  Deterministic id for a query "shape": `source` (the Ecto schema/table name)
+  plus the raw SQL text, hashed with SHA-256. Used to group per-execution
+  samples into one `query_time_profiles` row instead of one row per literal
+  execution — the same `{source, query_text}` pair always hashes to the same
+  fingerprint, across processes and restarts, so a query's historical rows
+  stay comparable on the LiveDashboard "Queries" page.
+
+  ## Examples
+
+      iex> Mehungry.Telemetry.MetricsBuffer.fingerprint_query("recipes", "SELECT * FROM recipes WHERE id = $1")
+      "c9d1f7de985b002152f408a6496e45f1"
+
+      iex> Mehungry.Telemetry.MetricsBuffer.fingerprint_query("recipes", "SELECT * FROM recipes WHERE id = $1") ==
+      ...>   Mehungry.Telemetry.MetricsBuffer.fingerprint_query("recipes", "SELECT * FROM recipes WHERE id = $1")
+      true
+
+  """
+  def fingerprint_query(source, query_text) do
     :crypto.hash(:sha256, "#{source}|#{query_text}") |> Base.encode16(case: :lower) |> String.slice(0, 32)
   end
 
@@ -262,7 +375,15 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
     e -> Logger.error("[MetricsBuffer] Timeline trim failed: #{inspect(e)}")
   end
 
-  @doc "Raw query executions from the last `minutes`, newest first."
+  @doc """
+  Raw query executions from the last `minutes`, newest first — backs the
+  LiveDashboard "Query Timeline" page. Reads the in-memory `QueryTimeline`
+  ETS table directly (never touches Postgres), so it only sees events from
+  roughly the last #{div(:timer.minutes(60), 60_000)} minutes regardless of
+  `minutes` (see the module doc on `@timeline_retention`), and returns `[]`
+  rather than raising if the table doesn't exist yet (e.g. right after boot).
+  Not doctested: results depend on real, in-flight query traffic.
+  """
   def list_recent_query_events(minutes) do
     cutoff = DateTime.add(DateTime.utc_now(), -minutes * 60, :second)
 

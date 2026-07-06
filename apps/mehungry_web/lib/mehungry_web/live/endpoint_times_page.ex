@@ -1,4 +1,19 @@
 defmodule MehungryWeb.EndpointTimesPage do
+  @moduledoc """
+  Custom LiveDashboard page ("Endpoints" menu item) listing HTTP routes,
+  LiveView mounts, and LiveView events by worst observed latency.
+
+  Reads `Mehungry.Telemetry.Snapshot` rows (5-minute aggregates written by
+  `Mehungry.Telemetry.MetricsBuffer`) for the three endpoint-shaped metrics
+  in `@endpoint_metrics`, restricted to the selected time range (one of
+  `@ranges`: 1h/6h/24h/7d). Because a single endpoint can appear in several
+  5-minute windows within the range, each `{metric, tags}` pair is collapsed
+  to its single worst (highest p95) window before the table is sorted worst
+  first — this page answers "what's the worst this endpoint has looked
+  recently", not "what does it look like right now" (see
+  `docs/observability.md` for the full dashboard tour).
+  """
+
   use Phoenix.LiveDashboard.PageBuilder
   import Ecto.Query
 
@@ -96,8 +111,11 @@ defmodule MehungryWeb.EndpointTimesPage do
 
   # --- Data fetching ---
 
-  # One row per {metric, tags} per window; an endpoint can appear in several
-  # windows within the range, so keep only its worst (highest p95) window.
+  # Loads the endpoint table for `range` (one of the `@ranges` labels):
+  # fetches up to 2000 `Snapshot` rows for the endpoint metrics within the
+  # range, collapses each `{metric, tags}` pair to its single worst (highest
+  # p95) window, and sorts worst-first. Returns `[]` on any query error
+  # rather than crashing the dashboard page.
   defp fetch_endpoints(range) do
     seconds = range_to_seconds(range)
     cutoff = DateTime.add(DateTime.utc_now(), -seconds, :second)
@@ -115,7 +133,23 @@ defmodule MehungryWeb.EndpointTimesPage do
     _ -> []
   end
 
-  defp range_to_seconds(range) do
+  @doc """
+  Resolves a range button label to its width in seconds, defaulting to 24h
+  (86400s) for a label not found in `@ranges`.
+
+  ## Examples
+
+      iex> MehungryWeb.EndpointTimesPage.range_to_seconds("1h")
+      3_600
+
+      iex> MehungryWeb.EndpointTimesPage.range_to_seconds("7d")
+      604_800
+
+      iex> MehungryWeb.EndpointTimesPage.range_to_seconds("nonsense")
+      86_400
+
+  """
+  def range_to_seconds(range) do
     @ranges
     |> Enum.find({nil, 86_400}, fn {label, _} -> label == range end)
     |> elem(1)
@@ -123,22 +157,79 @@ defmodule MehungryWeb.EndpointTimesPage do
 
   # --- Formatting helpers ---
 
-  defp type_label("phoenix.request.duration"), do: "HTTP"
-  defp type_label("live_view.mount.duration"), do: "LV mount"
-  defp type_label("live_view.handle_event.duration"), do: "LV event"
-  defp type_label(other), do: other
+  @doc """
+  Human label for the "Type" column, keyed off the raw metric name. Unknown
+  metrics fall back to the metric name itself.
 
-  defp endpoint_label("phoenix.request.duration", tags), do: Map.get(tags, "route", "unknown")
-  defp endpoint_label("live_view.mount.duration", tags), do: Map.get(tags, "view", "unknown")
+  ## Examples
 
-  defp endpoint_label("live_view.handle_event.duration", tags) do
+      iex> MehungryWeb.EndpointTimesPage.type_label("phoenix.request.duration")
+      "HTTP"
+
+      iex> MehungryWeb.EndpointTimesPage.type_label("live_view.mount.duration")
+      "LV mount"
+
+      iex> MehungryWeb.EndpointTimesPage.type_label("live_view.handle_event.duration")
+      "LV event"
+
+      iex> MehungryWeb.EndpointTimesPage.type_label("something.else")
+      "something.else"
+
+  """
+  def type_label("phoenix.request.duration"), do: "HTTP"
+  def type_label("live_view.mount.duration"), do: "LV mount"
+  def type_label("live_view.handle_event.duration"), do: "LV event"
+  def type_label(other), do: other
+
+  @doc """
+  Human label for the "Endpoint" column. Which tag identifies the endpoint
+  differs per metric: `route` for HTTP requests, `view` for LiveView mounts,
+  and `view` + `event` for LiveView events. Falls back to `"unknown"` when
+  the expected tag is missing.
+
+  ## Examples
+
+      iex> MehungryWeb.EndpointTimesPage.endpoint_label("phoenix.request.duration", %{"route" => "/recipes/:id"})
+      "/recipes/:id"
+
+      iex> MehungryWeb.EndpointTimesPage.endpoint_label("live_view.mount.duration", %{"view" => "RecipeLive"})
+      "RecipeLive"
+
+      iex> MehungryWeb.EndpointTimesPage.endpoint_label("live_view.handle_event.duration", %{"view" => "RecipeLive", "event" => "save"})
+      "RecipeLive #save"
+
+      iex> MehungryWeb.EndpointTimesPage.endpoint_label("phoenix.request.duration", %{})
+      "unknown"
+
+  """
+  def endpoint_label("phoenix.request.duration", tags), do: Map.get(tags, "route", "unknown")
+  def endpoint_label("live_view.mount.duration", tags), do: Map.get(tags, "view", "unknown")
+
+  def endpoint_label("live_view.handle_event.duration", tags) do
     "#{Map.get(tags, "view", "unknown")} ##{Map.get(tags, "event", "unknown")}"
   end
 
-  defp endpoint_label(_metric, tags), do: inspect(tags)
+  def endpoint_label(_metric, tags), do: inspect(tags)
 
-  defp fmt(nil), do: "—"
-  defp fmt(v), do: :erlang.float_to_binary(v, decimals: 2)
+  @doc """
+  Formats a metric value for table display. `nil` (no samples in the
+  selected window for that column) renders as an em dash; everything else is
+  fixed to two decimal places.
+
+  ## Examples
+
+      iex> MehungryWeb.EndpointTimesPage.fmt(nil)
+      "—"
+
+      iex> MehungryWeb.EndpointTimesPage.fmt(12.3)
+      "12.30"
+
+      iex> MehungryWeb.EndpointTimesPage.fmt(12.3456)
+      "12.35"
+
+  """
+  def fmt(nil), do: "—"
+  def fmt(v), do: :erlang.float_to_binary(v, decimals: 2)
 
   # --- Style helpers ---
 
