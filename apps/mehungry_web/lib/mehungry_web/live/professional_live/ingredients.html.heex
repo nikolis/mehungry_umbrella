@@ -35,18 +35,21 @@
     </h2>
     <div class="flex items-center gap-2 mb-1">
       <span class="text-slate-400 text-sm w-24">Total</span>
-      <span class="text-white font-semibold text-sm"><%= @translation_stats.total %></span>
+      <span class="text-white font-semibold text-sm">{@translation_stats.total}</span>
     </div>
     <%= if @translation_stats.languages == [] do %>
       <p class="text-slate-500 text-sm italic">No languages configured yet.</p>
     <% else %>
       <%= for stat <- @translation_stats.languages do %>
-        <% pct = if @translation_stats.total > 0, do: round(stat.translated / @translation_stats.total * 100), else: 0 %>
+        <% pct =
+          if @translation_stats.total > 0,
+            do: round(stat.translated / @translation_stats.total * 100),
+            else: 0 %>
         <div class="mt-2">
           <div class="flex items-center justify-between mb-1">
-            <span class="text-slate-300 text-sm font-medium uppercase"><%= stat.language %></span>
+            <span class="text-slate-300 text-sm font-medium uppercase">{stat.language}</span>
             <span class="text-slate-400 text-xs">
-              <%= stat.translated %> / <%= stat.total %> (<%= pct %>%)
+              {stat.translated} / {stat.total} ({pct}%)
             </span>
           </div>
           <div class="w-full bg-slate-700 rounded-full h-1.5">
@@ -106,14 +109,16 @@
             type="text"
             name="search_form[query]"
             value={@form[:query].value}
-            placeholder={if @search_language == "el", do: "Αναζήτηση…", else: "Search ingredients…"}
+            placeholder={
+              if @search_language == "el", do: "Αναζήτηση…", else: "Search ingredients…"
+            }
           />
         </div>
       </div>
     </form>
   </div>
-  
-<!-- Table header — hidden on mobile -->
+
+  <!-- Table header — hidden on mobile -->
   <div class="hidden sm:grid sm:grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-700 mb-1">
     <div class="col-span-1">ID</div>
     <div class="col-span-5">Name</div>

@@ -27,9 +27,16 @@ defmodule MehungryWeb.SocialMediaPublisher do
     allowed = opts["platforms"] || opts[:platforms]
 
     results = %{
-      instagram: post_platform("instagram", allowed, fn -> post_instagram(bot_user, localized_recipe) end),
-      facebook: post_platform("facebook", allowed, fn -> post_facebook(bot_user, localized_recipe, config, language_name, opts) end),
-      pinterest: post_platform("pinterest", allowed, fn -> post_pinterest(bot_user, localized_recipe, config, language_name, opts) end)
+      instagram:
+        post_platform("instagram", allowed, fn -> post_instagram(bot_user, localized_recipe) end),
+      facebook:
+        post_platform("facebook", allowed, fn ->
+          post_facebook(bot_user, localized_recipe, config, language_name, opts)
+        end),
+      pinterest:
+        post_platform("pinterest", allowed, fn ->
+          post_pinterest(bot_user, localized_recipe, config, language_name, opts)
+        end)
     }
 
     log_results(results, ai_bot_recipe_id, language_name)
@@ -37,6 +44,7 @@ defmodule MehungryWeb.SocialMediaPublisher do
   end
 
   defp post_platform(_platform, nil, fun), do: fun.()
+
   defp post_platform(platform, allowed, fun) when is_list(allowed) do
     if platform in allowed, do: fun.(), else: {:skipped, nil, nil}
   end
@@ -67,20 +75,29 @@ defmodule MehungryWeb.SocialMediaPublisher do
 
     translated_items =
       Enum.map(items, fn ri ->
-        ingredient = Map.put(ri.ingredient, :name, Map.get(ing_names, ri.ingredient_id, ri.ingredient.name))
-        unit = Map.put(ri.measurement_unit, :name, Map.get(unit_names, ri.measurement_unit_id, ri.measurement_unit.name))
+        ingredient =
+          Map.put(ri.ingredient, :name, Map.get(ing_names, ri.ingredient_id, ri.ingredient.name))
+
+        unit =
+          Map.put(
+            ri.measurement_unit,
+            :name,
+            Map.get(unit_names, ri.measurement_unit_id, ri.measurement_unit.name)
+          )
+
         ri |> Map.put(:ingredient, ingredient) |> Map.put(:measurement_unit, unit)
       end)
 
     Map.put(recipe, :recipe_ingredients, translated_items)
   end
 
-  defp maybe_apply_translated_steps(recipe, %{steps: steps}) when is_list(steps) and steps != [] do
+  defp maybe_apply_translated_steps(recipe, %{steps: steps})
+       when is_list(steps) and steps != [] do
     translated_steps =
       Enum.map(steps, fn step_map ->
         desc = step_map["description"] || step_map[:description] || ""
         idx = step_map["index"] || step_map[:index] || 0
-        %{recipe.steps |> Enum.at(idx) || %{} | description: desc}
+        %{(recipe.steps |> Enum.at(idx) || %{}) | description: desc}
       end)
 
     Map.put(recipe, :steps, translated_steps)
@@ -118,7 +135,10 @@ defmodule MehungryWeb.SocialMediaPublisher do
           else: resolve_facebook_page(bot_user, config, language_name)
 
       if is_nil(page) do
-        Logger.warning("[SocialMediaPublisher] No Facebook page configured for language #{language_name}")
+        Logger.warning(
+          "[SocialMediaPublisher] No Facebook page configured for language #{language_name}"
+        )
+
         {:skipped, nil, nil}
       else
         page_id = Map.get(page, "id")
@@ -126,12 +146,20 @@ defmodule MehungryWeb.SocialMediaPublisher do
 
         result =
           case Facebook.post_recipe_container(bot_user, recipe, page) do
-            {:ok, _response} -> :ok
-            {:ok, %HTTPoison.Response{status_code: status}} when status in 200..299 -> :ok
+            {:ok, _response} ->
+              :ok
+
+            {:ok, %HTTPoison.Response{status_code: status}} when status in 200..299 ->
+              :ok
+
             {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
               {:error, "Facebook HTTP #{status}: #{body}"}
-            {:error, reason} -> {:error, reason}
-            _ -> :ok
+
+            {:error, reason} ->
+              {:error, reason}
+
+            _ ->
+              :ok
           end
 
         {result, page_id, page_name}
@@ -156,7 +184,10 @@ defmodule MehungryWeb.SocialMediaPublisher do
 
         {result, board_id, nil}
       else
-        Logger.warning("[SocialMediaPublisher] No Pinterest board configured for language #{language_name}")
+        Logger.warning(
+          "[SocialMediaPublisher] No Pinterest board configured for language #{language_name}"
+        )
+
         {:skipped, nil, nil}
       end
     else

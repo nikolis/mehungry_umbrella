@@ -181,7 +181,10 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
 
   # ── tool handlers ─────────────────────────────────────────────────────────────
 
-  defp do_handle_tool("get_client_summary", _input, %{client_id: client_id, start_date: start_date}) do
+  defp do_handle_tool("get_client_summary", _input, %{
+         client_id: client_id,
+         start_date: start_date
+       }) do
     client = Mehungry.Accounts.get_user!(client_id)
 
     lookback = Date.add(start_date, -@history_days)
@@ -351,15 +354,17 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
       end)
       |> Enum.map(&create_user_meal(&1, client_id))
 
-    created = Enum.flat_map(results, fn
-      {:ok, m} -> [m]
-      _ -> []
-    end)
+    created =
+      Enum.flat_map(results, fn
+        {:ok, m} -> [m]
+        _ -> []
+      end)
 
-    skipped = Enum.count(results, fn
-      {:error, _} -> true
-      _ -> false
-    end)
+    skipped =
+      Enum.count(results, fn
+        {:error, _} -> true
+        _ -> false
+      end)
 
     {created, skipped}
   end

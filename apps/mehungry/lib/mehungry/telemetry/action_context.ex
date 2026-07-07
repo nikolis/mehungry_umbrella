@@ -16,9 +16,9 @@ defmodule Mehungry.Telemetry.ActionContext do
 
   def attach do
     handlers = [
-      {"action-context-http", [:phoenix, :router_dispatch, :start],
-       &__MODULE__.handle_start/4},
-      {"action-context-http-stop", [:phoenix, :router_dispatch, :stop], &__MODULE__.handle_stop/4},
+      {"action-context-http", [:phoenix, :router_dispatch, :start], &__MODULE__.handle_start/4},
+      {"action-context-http-stop", [:phoenix, :router_dispatch, :stop],
+       &__MODULE__.handle_stop/4},
       {"action-context-http-exception", [:phoenix, :router_dispatch, :exception],
        &__MODULE__.handle_stop/4},
       {"action-context-lv-mount", [:phoenix, :live_view, :mount, :start],
@@ -58,7 +58,10 @@ defmodule Mehungry.Telemetry.ActionContext do
   end
 
   def handle_start(event, _measurements, metadata, _config) do
-    Process.put(@context_key, {label(event, metadata), System.unique_integer([:positive, :monotonic])})
+    Process.put(
+      @context_key,
+      {label(event, metadata), System.unique_integer([:positive, :monotonic])}
+    )
   rescue
     _ -> :ok
   end

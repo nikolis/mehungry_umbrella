@@ -1,6 +1,5 @@
 <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-6">
-  
-<!-- Header card -->
+  <!-- Header card -->
   <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
     <div class="flex items-center justify-between mb-4">
       <.back navigate={~p"/professional/ingredients"}>Back</.back>
@@ -42,8 +41,8 @@
       </div>
     </div>
   </div>
-  
-<!-- Nutrients -->
+
+  <!-- Nutrients -->
   <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
     <h2 class="text-lg font-semibold text-white mb-4">Nutrients</h2>
     <%= if @ingredient.ingredient_nutrients == [] do %>
@@ -85,8 +84,8 @@
       </div>
     <% end %>
   </div>
-  
-<!-- Portions -->
+
+  <!-- Portions -->
   <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
     <h2 class="text-lg font-semibold text-white mb-4">Portions</h2>
     <%= if @ingredient.ingredient_portions == [] do %>
@@ -114,8 +113,8 @@
       </div>
     <% end %>
   </div>
-  
-<!-- Translations -->
+
+  <!-- Translations -->
   <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
     <h2 class="text-lg font-semibold text-white mb-4">Translations</h2>
     <%= if @ingredient.ingredient_translation == [] do %>

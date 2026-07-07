@@ -23,7 +23,10 @@ defmodule Mehungry.AI.MealPlanGenerator do
         {:ok, meals, skipped}
 
       {:error, reason} ->
-        Logger.warning("MealPlanAgent failed (#{inspect(reason)}), falling back to legacy pipeline")
+        Logger.warning(
+          "MealPlanAgent failed (#{inspect(reason)}), falling back to legacy pipeline"
+        )
+
         run_legacy(preferences, recipes, start_date, user_id)
     end
   end

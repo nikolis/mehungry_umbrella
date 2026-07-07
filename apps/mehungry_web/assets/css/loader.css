@@ -1,0 +1,77 @@
+/* Branded three-dot orbit spinner — see MehungryWeb.SvgComponents.get_loading/1 */
+@keyframes m3-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes m3-loader-pulse {
+  0%,
+  100% {
+    transform: scale(0.7);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.m3-loader-dot {
+  transform-origin: 50px 50px;
+  animation: m3-loader-spin 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.m3-loader-dot circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: m3-loader-pulse 1.2s ease-in-out infinite;
+}
+
+.m3-loader-dot--1 {
+  animation-delay: 0ms;
+}
+.m3-loader-dot--1 circle {
+  animation-delay: 0ms;
+}
+
+.m3-loader-dot--2 {
+  animation-delay: -400ms;
+}
+.m3-loader-dot--2 circle {
+  animation-delay: -400ms;
+}
+
+.m3-loader-dot--3 {
+  animation-delay: -800ms;
+}
+.m3-loader-dot--3 circle {
+  animation-delay: -800ms;
+}
+
+/* Skeleton shimmer — pair with a Tailwind bg-slate-* base and rounded shape */
+.m3-skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.m3-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.06) 20%,
+    rgba(255, 255, 255, 0.14) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: m3-skeleton-shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes m3-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

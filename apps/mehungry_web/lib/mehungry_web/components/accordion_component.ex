@@ -135,8 +135,8 @@ defmodule MehungryWeb.AccordionComponent do
       <%= if @has_children do %>
         <!-- Hidden checkbox for the accordion hack -->
         <input type="checkbox" id={@item_id} class="hidden peer" />
-        
-    <!-- Clickable label that toggles the checkbox -->
+
+        <!-- Clickable label that toggles the checkbox -->
         <label
           for={@item_id}
           class={[
@@ -171,8 +171,8 @@ defmodule MehungryWeb.AccordionComponent do
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
           </svg>
         </label>
-        
-    <!-- Content that expands/collapses based on checkbox state -->
+
+        <!-- Content that expands/collapses based on checkbox state -->
         <div class="hidden peer-checked:block bg-slate-800   w-full overflow-hidden">
           <div class="py-1 w-full overflow-hidden">
             <.accordion items={@children_list} level={@level + 1} accordion_id={@item_id} />

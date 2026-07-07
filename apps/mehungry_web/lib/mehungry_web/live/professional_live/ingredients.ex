@@ -117,7 +117,10 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
     socket =
       socket
       |> assign(:translation_stats, translation_stats)
-      |> put_flash(:info, "Greek translation job enqueued. Oban will process it in the background.")
+      |> put_flash(
+        :info,
+        "Greek translation job enqueued. Oban will process it in the background."
+      )
 
     {:noreply, socket}
   end

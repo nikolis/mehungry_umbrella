@@ -17,7 +17,15 @@ defmodule Mehungry.Professionals.Appointment do
 
   def changeset(appointment, attrs) do
     appointment
-    |> cast(attrs, [:professional_id, :client_id, :external_client_name, :scheduled_at, :ends_at, :title, :notes])
+    |> cast(attrs, [
+      :professional_id,
+      :client_id,
+      :external_client_name,
+      :scheduled_at,
+      :ends_at,
+      :title,
+      :notes
+    ])
     |> validate_required([:professional_id, :scheduled_at, :title])
     |> validate_client_present()
     |> foreign_key_constraint(:professional_id)

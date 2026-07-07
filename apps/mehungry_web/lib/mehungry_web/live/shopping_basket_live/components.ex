@@ -168,8 +168,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
             <% end %>
           </div>
         </div>
-        
-    <!-- Items List -->
+
+        <!-- Items List -->
         <div class="divide-y divide-slate-700 max-h-[60vh] overflow-y-auto">
           <%= if Enum.empty?(@shopping_basket.basket_ingredients ++  @shopping_basket.basket_items) do %>
             <div class="text-center py-12">
@@ -226,8 +226,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                     </svg>
                   <% end %>
                 </button>
-                
-    <!-- Item Details -->
+
+                <!-- Item Details -->
                 <div class="flex-1">
                   <div class={["text-white", if(item.in_storage, do: "line-through text-slate-500")]}>
                     {ingredient_name(item, @current_language)}
@@ -238,8 +238,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                     end}
                   </div>
                 </div>
-                
-    <!-- Actions -->
+
+                <!-- Actions -->
                 <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
                   <button
                     phx-click="edit_item"

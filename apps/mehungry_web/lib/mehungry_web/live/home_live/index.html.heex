@@ -89,16 +89,16 @@
         />
       </div>
     </MehungryWeb.RecipeComponents.recipe_modal>
-    <div class="space-y-6">
-      <%= for post <- @posts do %>
-        <.post_card
-          post={post}
-          id={post.id}
-          user={@user}
-          user_follows={@current_user_follows}
-          current_user_recipes={@current_user_recipes}
-        />
-      <% end %>
+    <div id="posts" phx-update="stream" class="space-y-6">
+      <.post_card
+        :for={{dom_id, post} <- @streams.posts}
+        post={post}
+        id={dom_id}
+        user={@user}
+        user_follows={@current_user_follows}
+        current_user_recipes={@current_user_recipes}
+        recipe_counts_by_user={@recipe_counts_by_user}
+      />
     </div>
 
     <%= unless @posts_exhausted do %>

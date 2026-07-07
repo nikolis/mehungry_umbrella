@@ -61,11 +61,11 @@ defmodule MehungryWeb.QueryTimelinePage do
             phx-value-range={label}
             style={range_button_style(@range == label)}
           >
-            <%= label %>
+            {label}
           </button>
         <% end %>
         <span style="margin-left: auto; color: #6b7280; font-size: 0.85rem;">
-          <%= length(@groups) %> actions · raw executions, in-memory only ·
+          {length(@groups)} actions · raw executions, in-memory only ·
           grouped by the mount/event/request/job that fired them · retained 60 min
         </span>
       </div>
@@ -84,10 +84,11 @@ defmodule MehungryWeb.QueryTimelinePage do
               phx-value-key={group_key}
               style="padding: 0.5rem 0.75rem; background: #f3f4f6; font-weight: 600; display: flex; justify-content: space-between; cursor: pointer; user-select: none;"
             >
-              <span><%= if is_open, do: "▾", else: "▸" %> <%= group.action %></span>
+              <span>{if is_open, do: "▾", else: "▸"} {group.action}</span>
               <span style="color: #6b7280; font-weight: 400; font-size: 0.85rem;">
-                <%= length(group.events) %> quer<%= if length(group.events) == 1, do: "y", else: "ies" %> ·
-                <%= fmt(group.total_ms) %>ms total · latest <%= fmt_time(group.latest) %>
+                {length(group.events)} quer{if length(group.events) == 1, do: "y", else: "ies"} · {fmt(
+                  group.total_ms
+                )}ms total · latest {fmt_time(group.latest)}
               </span>
             </div>
             <%= if is_open do %>
@@ -104,14 +105,17 @@ defmodule MehungryWeb.QueryTimelinePage do
                   <%= for {event, idx} <- Enum.with_index(group.events) do %>
                     <% key = "#{group_key}-#{idx}" %>
                     <tr phx-click="toggle" phx-value-key={key} style="cursor: pointer;">
-                      <td style={td_style()}><code><%= fmt_time(event.time) %></code></td>
-                      <td style={td_style()}><code><%= event.source %></code></td>
-                      <td style={td_style()}><code><%= truncate(event.query, 90) %></code></td>
-                      <td style={td_style(:right)}><%= fmt(event.duration_ms) %></td>
+                      <td style={td_style()}><code>{fmt_time(event.time)}</code></td>
+                      <td style={td_style()}><code>{event.source}</code></td>
+                      <td style={td_style()}><code>{truncate(event.query, 90)}</code></td>
+                      <td style={td_style(:right)}>{fmt(event.duration_ms)}</td>
                     </tr>
                     <%= if @expanded == key do %>
                       <tr>
-                        <td colspan="4" style="padding: 0.75rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                        <td
+                          colspan="4"
+                          style="padding: 0.75rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb;"
+                        >
                           <strong>Full query:</strong>
                           <pre style={pre_style()}><%= event.query %></pre>
                         </td>
@@ -175,7 +179,8 @@ defmodule MehungryWeb.QueryTimelinePage do
   # --- Style helpers ---
 
   defp range_button_style(active) do
-    base = "padding: 0.25rem 0.75rem; border-radius: 4px; border: 1px solid #d1d5db; cursor: pointer; font-size: 0.85rem;"
+    base =
+      "padding: 0.25rem 0.75rem; border-radius: 4px; border: 1px solid #d1d5db; cursor: pointer; font-size: 0.85rem;"
 
     if active do
       base <> " background: #3b82f6; color: white; border-color: #3b82f6; font-weight: 600;"

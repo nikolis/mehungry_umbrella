@@ -26,17 +26,28 @@ defmodule Mehungry.Food.NutrientInteractions do
   # Minimum amount per 100 g to treat a nutrient as "significant".
   # Based on 10% of FDA daily value unless noted.
   @thresholds %{
-    "Iron"        => 1.8,    # 10% of 18 mg DV
-    "Calcium"     => 130.0,  # 10% of 1300 mg DV
-    "Vitamin C"   => 9.0,    # 10% of 90 mg DV
-    "Vitamin D"   => 2.0,    # 10% of 20 µg DV
-    "Vitamin A"   => 90.0,   # 10% of 900 µg DV
-    "Vitamin E"   => 1.5,    # 10% of 15 mg DV
-    "Vitamin K"   => 12.0,   # 10% of 120 µg DV
-    "Zinc"        => 1.1,    # 10% of 11 mg DV
-    "Total Fat"   => 5.0,    # meaningful fat content
-    "Magnesium"   => 42.0,   # 10% of 420 mg DV
-    "Folate (Vitamin B9)" => 40.0  # 10% of 400 µg DV
+    # 10% of 18 mg DV
+    "Iron" => 1.8,
+    # 10% of 1300 mg DV
+    "Calcium" => 130.0,
+    # 10% of 90 mg DV
+    "Vitamin C" => 9.0,
+    # 10% of 20 µg DV
+    "Vitamin D" => 2.0,
+    # 10% of 900 µg DV
+    "Vitamin A" => 90.0,
+    # 10% of 15 mg DV
+    "Vitamin E" => 1.5,
+    # 10% of 120 µg DV
+    "Vitamin K" => 12.0,
+    # 10% of 11 mg DV
+    "Zinc" => 1.1,
+    # meaningful fat content
+    "Total Fat" => 5.0,
+    # 10% of 420 mg DV
+    "Magnesium" => 42.0,
+    # 10% of 400 µg DV
+    "Folate (Vitamin B9)" => 40.0
   }
 
   @rules [
@@ -220,12 +231,20 @@ defmodule Mehungry.Food.NutrientInteractions do
       has_b = MapSet.member?(significant, rule.nutrient_b)
 
       case {has_a, has_b, rule.type} do
-        {false, _, _} -> []
-        {true, false, :requires} -> [Map.put(rule, :missing_nutrient, rule.nutrient_b)]
-        {true, false, _} -> []
+        {false, _, _} ->
+          []
+
+        {true, false, :requires} ->
+          [Map.put(rule, :missing_nutrient, rule.nutrient_b)]
+
+        {true, false, _} ->
+          []
+
         {true, true, :requires} ->
           [%{rule | badge: :positive, label: rule.present_label, detail: rule.present_detail}]
-        {true, true, _} -> [rule]
+
+        {true, true, _} ->
+          [rule]
       end
     end)
   end

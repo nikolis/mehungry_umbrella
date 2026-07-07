@@ -150,7 +150,11 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     cursor_after = Map.get(socket.assigns, :cursor_after)
 
     {recipes, cursor_after} =
-      Food.list_recipes(cursor_after, Map.get(socket.assigns, :query, nil), get_user_language(socket))
+      Food.list_recipes(
+        cursor_after,
+        Map.get(socket.assigns, :query, nil),
+        get_user_language(socket)
+      )
 
     {:noreply,
      socket
@@ -561,7 +565,9 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   end
 
   defp get_user_language(socket) do
-    profile = Map.get(socket.assigns, :current_user_profile) || Map.get(socket.assigns, :user_profile)
+    profile =
+      Map.get(socket.assigns, :current_user_profile) || Map.get(socket.assigns, :user_profile)
+
     profile && profile.language_preference
   end
 end

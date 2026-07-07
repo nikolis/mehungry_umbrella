@@ -1,9 +1,9 @@
-<div class="bg-slate-800 rounded-xl border border-slate-700">
+<div id={@id} class="bg-slate-800 rounded-xl border border-slate-700">
   <%= if ! is_nil(@post.reference) do %>
     <.user_overview_card
       user={@post.reference.user}
       post={@post}
-      total_recipes={count_user_created_recipes(@post.user_id)}
+      total_recipes={Map.get(@recipe_counts_by_user, @post.user_id, 0)}
       user_follows={@user_follows}
       current_user={@user}
     />
@@ -41,8 +41,8 @@
       </div>
     </.link>
   </div>
-  
-<!-- Action Buttons -->
+
+  <!-- Action Buttons -->
   <div class="p-3">
     <div class="flex items-center gap-4">
       <!-- Like Button -->
@@ -75,8 +75,8 @@
         </svg>
         <span class="text-sm text-slate-400">{length(@post.reference.user_recipes)}</span>
       </button>
-      
-<!-- Comment Button -->
+
+      <!-- Comment Button -->
       <.link
         id={"card-link2-to-recipe-#{@post.reference_id}"}
         patch={~p"/home/#{@post.reference_id}"}
@@ -97,8 +97,8 @@
         </svg>
         <span class="text-sm text-slate-400">{length(@post.reference.comments)}</span>
       </.link>
-      
-<!-- Share Button -->
+
+      <!-- Share Button -->
       <div class="relative">
         <button
           phx-click={
@@ -173,8 +173,8 @@
       </div>
     </div>
   </div>
-  
-<!-- Likes Count -->
+
+  <!-- Likes Count -->
   <div class="px-4 pb-2">
     <span class="text-white text-sm font-semibold">
       {length(@post.reference.user_recipes)} {if {length(@post.reference.user_recipes)} == 1,
@@ -182,8 +182,8 @@
         else: "likes"}
     </span>
   </div>
-  
-<!-- Recipe Caption -->
+
+  <!-- Recipe Caption -->
   <div class="px-4 pb-3">
     <div class="flex flex-wrap items-baseline gap-1">
       <a
@@ -192,10 +192,15 @@
       >
         {@post.reference.user.name}
       </a>
-      <span class="text-slate-300 text-sm">{if String.length(@post.reference.description || "") > 150, do: String.slice(@post.reference.description, 0, 150) <> "…", else: @post.reference.description}</span>
+      <span class="text-slate-300 text-sm">{if String.length(@post.reference.description || "") >
+                                                 150,
+                                               do:
+                                                 String.slice(@post.reference.description, 0, 150) <>
+                                                   "…",
+                                               else: @post.reference.description}</span>
     </div>
-    
-<!-- Hashtags -->
+
+    <!-- Hashtags -->
     <%= if @post.reference.recipe_hashtags != [] do %>
       <div class="flex flex-wrap gap-1 mt-1">
         <%= for hashtag <- @post.reference.recipe_hashtags do %>
@@ -208,8 +213,8 @@
         <% end %>
       </div>
     <% end %>
-    
-<!-- View Comments Link -->
+
+    <!-- View Comments Link -->
     <.link
       id={"card-link-to-recipe-comments-#{@post.reference_id}"}
       patch={~p"/home/#{@post.reference.id}"}

@@ -35,5 +35,4 @@ defmodule MehungryWeb.DistributedTaskHandler do
 
     {:noreply, %{working: nodes, waiting: []}, @interval}
   end
-
 end

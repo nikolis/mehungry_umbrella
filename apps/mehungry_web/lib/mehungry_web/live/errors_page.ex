@@ -31,7 +31,7 @@ defmodule MehungryWeb.ErrorsPage do
     ~H"""
     <div style="padding: 1rem;">
       <div style="margin-bottom: 1rem; color: #6b7280; font-size: 0.85rem;">
-        <%= length(@errors) %> distinct errors (last <%= @limit %>, grouped by fingerprint) · retained 30 days · click a row for details
+        {length(@errors)} distinct errors (last {@limit}, grouped by fingerprint) · retained 30 days · click a row for details
       </div>
 
       <%= if @errors == [] do %>
@@ -56,18 +56,21 @@ defmodule MehungryWeb.ErrorsPage do
                   phx-value-fingerprint={error.fingerprint}
                   style={row_style(@expanded == error.fingerprint)}
                 >
-                  <td style={td_style()}><%= source_badge(error.source) %></td>
-                  <td style={td_style()}><code><%= error.kind %></code></td>
-                  <td style={td_style()}><%= truncate(error.reason, 120) %></td>
-                  <td style={td_style(:right)}><strong><%= error.count %></strong></td>
-                  <td style={td_style()}><%= format_dt(error.first_seen) %></td>
-                  <td style={td_style()}><%= format_dt(error.last_seen) %></td>
+                  <td style={td_style()}>{source_badge(error.source)}</td>
+                  <td style={td_style()}><code>{error.kind}</code></td>
+                  <td style={td_style()}>{truncate(error.reason, 120)}</td>
+                  <td style={td_style(:right)}><strong>{error.count}</strong></td>
+                  <td style={td_style()}>{format_dt(error.first_seen)}</td>
+                  <td style={td_style()}>{format_dt(error.last_seen)}</td>
                 </tr>
                 <%= if @expanded == error.fingerprint do %>
                   <tr>
-                    <td colspan="6" style="padding: 0.75rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                    <td
+                      colspan="6"
+                      style="padding: 0.75rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb;"
+                    >
                       <div style="margin-bottom: 0.5rem;">
-                        <strong>Context:</strong> <%= format_context(error.context) %>
+                        <strong>Context:</strong> {format_context(error.context)}
                       </div>
                       <div style="margin-bottom: 0.5rem;">
                         <strong>Reason:</strong>
@@ -93,9 +96,10 @@ defmodule MehungryWeb.ErrorsPage do
 
   defp fetch_errors do
     Mehungry.Repo.all(
-      from e in Mehungry.Telemetry.ErrorEvent,
+      from(e in Mehungry.Telemetry.ErrorEvent,
         order_by: [desc: e.last_seen],
         limit: @limit
+      )
     )
   rescue
     _ -> []

@@ -28,7 +28,18 @@ defmodule Mehungry.AiBot.AiBotConfig do
 
   def changeset(config, attrs) do
     config
-    |> cast(attrs, [:theme, :month, :year, :bot_user_id, :active, :pinterest_default_board_id, :facebook_page_id, :publish_times, :facebook_page_ids, :pinterest_board_ids])
+    |> cast(attrs, [
+      :theme,
+      :month,
+      :year,
+      :bot_user_id,
+      :active,
+      :pinterest_default_board_id,
+      :facebook_page_id,
+      :publish_times,
+      :facebook_page_ids,
+      :pinterest_board_ids
+    ])
     |> validate_required([:theme, :month, :year, :bot_user_id])
     |> validate_inclusion(:month, 1..12)
     |> validate_number(:year, greater_than: 2020)

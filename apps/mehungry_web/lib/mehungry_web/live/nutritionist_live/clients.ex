@@ -52,7 +52,10 @@ defmodule MehungryWeb.NutritionistLive.Clients do
     <div class="max-w-4xl mx-auto">
       <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-bold text-white">My Clients</h1>
-        <a href="/nutritionist/invitations" class="btn btn-sm bg-teal-600 hover:bg-teal-500 text-white border-0">
+        <a
+          href="/nutritionist/invitations"
+          class="btn btn-sm bg-teal-600 hover:bg-teal-500 text-white border-0"
+        >
           + Invite Client
         </a>
       </div>
@@ -77,7 +80,9 @@ defmodule MehungryWeb.NutritionistLive.Clients do
                 <% end %>
                 <div>
                   <p class="text-white font-medium text-sm">{client.name || client.email}</p>
-                  <p class="text-slate-500 text-xs">Client since {Calendar.strftime(assignment.inserted_at, "%b %Y")}</p>
+                  <p class="text-slate-500 text-xs">
+                    Client since {Calendar.strftime(assignment.inserted_at, "%b %Y")}
+                  </p>
                 </div>
               </div>
 

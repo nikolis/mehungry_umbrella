@@ -3,13 +3,21 @@ defmodule Mehungry.AiBot do
 
   alias Mehungry.Repo
   alias Mehungry.Posts
-  alias Mehungry.AiBot.{AiBotConfig, AiBotRecipe, RecipeTranslation, SocialMediaPostLog, WeekConfig, DayConfig}
+
+  alias Mehungry.AiBot.{
+    AiBotConfig,
+    AiBotRecipe,
+    RecipeTranslation,
+    SocialMediaPostLog,
+    WeekConfig,
+    DayConfig
+  }
 
   # ── Config ──────────────────────────────────────────────────────────────────
 
   def list_bot_configs do
     AiBotConfig
-    |> order_by([c], [desc: c.year, desc: c.month])
+    |> order_by([c], desc: c.year, desc: c.month)
     |> preload(:bot_user)
     |> Repo.all()
   end
@@ -49,7 +57,7 @@ defmodule Mehungry.AiBot do
 
   def list_bot_recipes("all") do
     AiBotRecipe
-    |> order_by([r], [asc: r.scheduled_date, asc: r.meal_type])
+    |> order_by([r], asc: r.scheduled_date, asc: r.meal_type)
     |> preload([:recipe, :bot_config])
     |> Repo.all()
   end
@@ -57,7 +65,7 @@ defmodule Mehungry.AiBot do
   def list_bot_recipes(status) do
     AiBotRecipe
     |> where([r], r.status == ^status)
-    |> order_by([r], [asc: r.scheduled_date, asc: r.meal_type])
+    |> order_by([r], asc: r.scheduled_date, asc: r.meal_type)
     |> preload([:recipe, :bot_config])
     |> Repo.all()
   end
@@ -79,7 +87,10 @@ defmodule Mehungry.AiBot do
   def get_bot_recipe!(id) do
     AiBotRecipe
     |> Repo.get!(id)
-    |> Repo.preload([:bot_config, recipe: [recipe_ingredients: [:ingredient, :measurement_unit], recipe_hashtags: []]])
+    |> Repo.preload([
+      :bot_config,
+      recipe: [recipe_ingredients: [:ingredient, :measurement_unit], recipe_hashtags: []]
+    ])
   end
 
   def list_untracked_bot_recipes(bot_user_id) do
@@ -127,7 +138,11 @@ defmodule Mehungry.AiBot do
 
   def bot_recipe_exists?(bot_config_id, meal_type, scheduled_date) do
     AiBotRecipe
-    |> where([r], r.bot_config_id == ^bot_config_id and r.meal_type == ^meal_type and r.scheduled_date == ^scheduled_date)
+    |> where(
+      [r],
+      r.bot_config_id == ^bot_config_id and r.meal_type == ^meal_type and
+        r.scheduled_date == ^scheduled_date
+    )
     |> Repo.exists?()
   end
 
@@ -273,7 +288,11 @@ defmodule Mehungry.AiBot do
   end
 
   def upsert_recipe_translation(attrs) do
-    existing = get_recipe_translation(attrs[:recipe_id] || attrs["recipe_id"], attrs[:language_name] || attrs["language_name"])
+    existing =
+      get_recipe_translation(
+        attrs[:recipe_id] || attrs["recipe_id"],
+        attrs[:language_name] || attrs["language_name"]
+      )
 
     case existing do
       nil ->

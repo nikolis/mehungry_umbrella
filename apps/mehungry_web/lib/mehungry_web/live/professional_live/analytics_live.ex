@@ -19,9 +19,15 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
 
     socket =
       socket
-      |> assign(filter_category: nil, filter_source: nil,
-                 visit_offset: 0, filtered_visits: [], visits_exhausted: false,
-                 available_sources: [], selected_session_idx: 0)
+      |> assign(
+        filter_category: nil,
+        filter_source: nil,
+        visit_offset: 0,
+        filtered_visits: [],
+        visits_exhausted: false,
+        available_sources: [],
+        selected_session_idx: 0
+      )
       |> load_stats()
       |> assign_online_count()
       |> init_visits()
@@ -126,7 +132,9 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
 
   defp reload_visits(socket) do
     raw = Meta.recent_visits_page(@visit_batch, 0)
-    filtered = apply_visit_filters(raw, socket.assigns.filter_category, socket.assigns.filter_source)
+
+    filtered =
+      apply_visit_filters(raw, socket.assigns.filter_category, socket.assigns.filter_source)
 
     assign(socket,
       filtered_visits: filtered,
@@ -137,7 +145,9 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
 
   defp fetch_more_visits(socket) do
     raw = Meta.recent_visits_page(@visit_batch, socket.assigns.visit_offset)
-    filtered = apply_visit_filters(raw, socket.assigns.filter_category, socket.assigns.filter_source)
+
+    filtered =
+      apply_visit_filters(raw, socket.assigns.filter_category, socket.assigns.filter_source)
 
     assign(socket,
       filtered_visits: socket.assigns.filtered_visits ++ filtered,
@@ -332,32 +342,47 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
 
   def detect_os(agent) do
     cond do
-      String.contains?(agent, "Windows NT 10") -> "Win 10/11"
-      String.contains?(agent, "Windows NT 6.3") -> "Win 8.1"
-      String.contains?(agent, "Windows NT 6.1") -> "Win 7"
-      String.contains?(agent, "Windows") -> "Windows"
+      String.contains?(agent, "Windows NT 10") ->
+        "Win 10/11"
+
+      String.contains?(agent, "Windows NT 6.3") ->
+        "Win 8.1"
+
+      String.contains?(agent, "Windows NT 6.1") ->
+        "Win 7"
+
+      String.contains?(agent, "Windows") ->
+        "Windows"
+
       String.contains?(agent, "iPhone OS") ->
         case Regex.run(~r/iPhone OS (\d+)_/, agent) do
           [_, v] -> "iOS #{v}"
           _ -> "iOS"
         end
+
       String.contains?(agent, "iPad") ->
         case Regex.run(~r/OS (\d+)_/, agent) do
           [_, v] -> "iPadOS #{v}"
           _ -> "iPadOS"
         end
+
       String.contains?(agent, "Android") ->
         case Regex.run(~r/Android (\d+)/, agent) do
           [_, v] -> "Android #{v}"
           _ -> "Android"
         end
+
       String.contains?(agent, "Mac OS X") ->
         case Regex.run(~r/Mac OS X (\d+)[_.](\d+)/, agent) do
           [_, maj, min] -> "macOS #{maj}.#{min}"
           _ -> "macOS"
         end
-      String.contains?(agent, "Linux") -> "Linux"
-      true -> "—"
+
+      String.contains?(agent, "Linux") ->
+        "Linux"
+
+      true ->
+        "—"
     end
   end
 
@@ -367,13 +392,17 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
   def detect_device(agent) do
     cond do
       String.contains?(agent, "Googlebot") or String.contains?(agent, "bot") or
-          String.contains?(agent, "Bot") or String.contains?(agent, "Crawler") ->
+        String.contains?(agent, "Bot") or String.contains?(agent, "Crawler") ->
         "bot"
-      String.contains?(agent, "iPhone") or String.contains?(agent, "Android") and
-          not String.contains?(agent, "Tablet") ->
+
+      String.contains?(agent, "iPhone") or
+          (String.contains?(agent, "Android") and
+             not String.contains?(agent, "Tablet")) ->
         "mobile"
+
       String.contains?(agent, "iPad") or String.contains?(agent, "Tablet") ->
         "tablet"
+
       true ->
         "desktop"
     end
@@ -391,6 +420,7 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
     case URI.parse(ref) do
       %URI{host: host} when not is_nil(host) ->
         host |> String.replace_prefix("www.", "")
+
       _ ->
         String.slice(ref, 0, 40)
     end

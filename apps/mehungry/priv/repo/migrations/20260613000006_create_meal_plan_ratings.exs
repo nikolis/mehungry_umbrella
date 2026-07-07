@@ -14,13 +14,15 @@ defmodule Mehungry.Repo.Migrations.CreateMealPlanRatings do
     end
 
     create index(:meal_plan_ratings, [:user_id])
+
     create unique_index(:meal_plan_ratings, [:user_id, :daily_meal_plan_id],
-      where: "daily_meal_plan_id IS NOT NULL",
-      name: :meal_plan_ratings_user_daily_unique
-    )
+             where: "daily_meal_plan_id IS NOT NULL",
+             name: :meal_plan_ratings_user_daily_unique
+           )
+
     create unique_index(:meal_plan_ratings, [:user_id, :meal_plan_id],
-      where: "meal_plan_id IS NOT NULL",
-      name: :meal_plan_ratings_user_weekly_unique
-    )
+             where: "meal_plan_id IS NOT NULL",
+             name: :meal_plan_ratings_user_weekly_unique
+           )
   end
 end

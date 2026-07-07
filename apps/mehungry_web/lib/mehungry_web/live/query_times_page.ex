@@ -49,11 +49,11 @@ defmodule MehungryWeb.QueryTimesPage do
             phx-value-range={label}
             style={range_button_style(@range == label)}
           >
-            <%= label %>
+            {label}
           </button>
         <% end %>
         <span style="margin-left: auto; color: #6b7280; font-size: 0.85rem;">
-          <%= length(@profiles) %> distinct queries · grouped by fingerprint (source + SQL shape) ·
+          {length(@profiles)} distinct queries · grouped by fingerprint (source + SQL shape) ·
           worst p95 first · flushed every 5 min · retained 30 days · click a row for the full statement
         </span>
       </div>
@@ -83,17 +83,20 @@ defmodule MehungryWeb.QueryTimesPage do
                   phx-value-fingerprint={profile.fingerprint}
                   style={row_style(@expanded == profile.fingerprint)}
                 >
-                  <td style={td_style()}><code><%= profile.source %></code></td>
-                  <td style={td_style()}><code><%= truncate(profile.query, 90) %></code></td>
-                  <td style={td_style(:right)}><%= fmt(profile.avg) %></td>
-                  <td style={td_style(:right)}><%= fmt(profile.min) %></td>
-                  <td style={td_style(:right)}><%= fmt(profile.max) %></td>
-                  <td style={td_style(:right)}><%= fmt(profile.p95) %></td>
-                  <td style={td_style(:right)}><%= profile.sample_count %></td>
+                  <td style={td_style()}><code>{profile.source}</code></td>
+                  <td style={td_style()}><code>{truncate(profile.query, 90)}</code></td>
+                  <td style={td_style(:right)}>{fmt(profile.avg)}</td>
+                  <td style={td_style(:right)}>{fmt(profile.min)}</td>
+                  <td style={td_style(:right)}>{fmt(profile.max)}</td>
+                  <td style={td_style(:right)}>{fmt(profile.p95)}</td>
+                  <td style={td_style(:right)}>{profile.sample_count}</td>
                 </tr>
                 <%= if @expanded == profile.fingerprint do %>
                   <tr>
-                    <td colspan="7" style="padding: 0.75rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                    <td
+                      colspan="7"
+                      style="padding: 0.75rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb;"
+                    >
                       <strong>Full query:</strong>
                       <pre style={pre_style()}><%= profile.query %></pre>
                     </td>
@@ -117,10 +120,11 @@ defmodule MehungryWeb.QueryTimesPage do
     cutoff = DateTime.add(DateTime.utc_now(), -seconds, :second)
 
     Mehungry.Repo.all(
-      from p in Mehungry.Telemetry.QueryProfile,
+      from(p in Mehungry.Telemetry.QueryProfile,
         where: p.period_start >= ^cutoff,
         order_by: [desc: p.p95],
         limit: 2000
+      )
     )
     |> Enum.group_by(& &1.fingerprint)
     |> Enum.map(fn {_fp, rows} -> Enum.max_by(rows, & &1.p95) end)
@@ -149,7 +153,8 @@ defmodule MehungryWeb.QueryTimesPage do
   # --- Style helpers ---
 
   defp range_button_style(active) do
-    base = "padding: 0.25rem 0.75rem; border-radius: 4px; border: 1px solid #d1d5db; cursor: pointer; font-size: 0.85rem;"
+    base =
+      "padding: 0.25rem 0.75rem; border-radius: 4px; border: 1px solid #d1d5db; cursor: pointer; font-size: 0.85rem;"
 
     if active do
       base <> " background: #3b82f6; color: white; border-color: #3b82f6; font-weight: 600;"

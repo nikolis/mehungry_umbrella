@@ -175,7 +175,11 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
   were over the `[ProcessWatchdog]` mailbox threshold), both untagged.
   """
   def handle_vm_process_stats(_event, measurements, _metadata, _config) do
-    record("mehungry.vm.process.max_message_queue", %{}, (measurements[:max_message_queue] || 0) * 1.0)
+    record(
+      "mehungry.vm.process.max_message_queue",
+      %{},
+      (measurements[:max_message_queue] || 0) * 1.0
+    )
 
     record(
       "mehungry.vm.process.over_threshold_count",
@@ -240,7 +244,8 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
       {"buffer-repo-query", [:mehungry, :repo, :query], &handle_repo_query/4},
       {"buffer-router-dispatch", [:phoenix, :router_dispatch, :stop], &handle_router_dispatch/4},
       {"buffer-lv-mount", [:phoenix, :live_view, :mount, :stop], &handle_live_view_mount/4},
-      {"buffer-lv-event", [:phoenix, :live_view, :handle_event, :stop], &handle_live_view_event/4},
+      {"buffer-lv-event", [:phoenix, :live_view, :handle_event, :stop],
+       &handle_live_view_event/4},
       {"buffer-oban-job-stop", [:oban, :job, :stop], &handle_oban_job_stop/4},
       {"buffer-oban-job-exception", [:oban, :job, :exception], &handle_oban_job_exception/4},
       {"buffer-cache-size", [:mehungry, :cache], &handle_cache_size/4},
@@ -334,7 +339,9 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
 
   """
   def fingerprint_query(source, query_text) do
-    :crypto.hash(:sha256, "#{source}|#{query_text}") |> Base.encode16(case: :lower) |> String.slice(0, 32)
+    :crypto.hash(:sha256, "#{source}|#{query_text}")
+    |> Base.encode16(case: :lower)
+    |> String.slice(0, 32)
   end
 
   # Raw, per-execution samples tagged with the action (LiveView event / HTTP

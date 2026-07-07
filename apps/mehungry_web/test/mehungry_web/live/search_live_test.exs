@@ -23,22 +23,23 @@ defmodule MehungryWeb.SearchLiveTest do
     import Ecto.Query
 
     recipe_ids =
-      Repo.all(from r in Mehungry.Food.Recipe, where: r.user_id == ^user_id, select: r.id)
+      Repo.all(from(r in Mehungry.Food.Recipe, where: r.user_id == ^user_id, select: r.id))
 
     if recipe_ids != [] do
       ingredient_ids =
         Repo.all(
-          from ri in Mehungry.Food.RecipeIngredient,
+          from(ri in Mehungry.Food.RecipeIngredient,
             where: ri.recipe_id in ^recipe_ids,
             select: ri.ingredient_id,
             distinct: true
+          )
         )
 
       Repo.delete_all(
-        from ri in Mehungry.Food.RecipeIngredient, where: ri.recipe_id in ^recipe_ids
+        from(ri in Mehungry.Food.RecipeIngredient, where: ri.recipe_id in ^recipe_ids)
       )
 
-      Repo.delete_all(from r in Mehungry.Food.Recipe, where: r.id in ^recipe_ids)
+      Repo.delete_all(from(r in Mehungry.Food.Recipe, where: r.id in ^recipe_ids))
 
       # Clean up orphaned ingredients (not referenced by any other recipe_ingredients)
       orphan_ids =
@@ -51,15 +52,15 @@ defmodule MehungryWeb.SearchLiveTest do
 
       if orphan_ids != [] do
         Repo.delete_all(
-          from it in Mehungry.Food.IngredientTranslation, where: it.ingredient_id in ^orphan_ids
+          from(it in Mehungry.Food.IngredientTranslation, where: it.ingredient_id in ^orphan_ids)
         )
 
-        Repo.delete_all(from i in Mehungry.Food.Ingredient, where: i.id in ^orphan_ids)
+        Repo.delete_all(from(i in Mehungry.Food.Ingredient, where: i.id in ^orphan_ids))
       end
     end
 
-    Repo.delete_all(from up in Mehungry.Accounts.UserProfile, where: up.user_id == ^user_id)
-    Repo.delete_all(from u in Mehungry.Accounts.User, where: u.id == ^user_id)
+    Repo.delete_all(from(up in Mehungry.Accounts.UserProfile, where: up.user_id == ^user_id))
+    Repo.delete_all(from(u in Mehungry.Accounts.User, where: u.id == ^user_id))
   end
 
   setup_all do
@@ -71,12 +72,13 @@ defmodule MehungryWeb.SearchLiveTest do
 
     stale_ids =
       Repo.all(
-        from u in Mehungry.Accounts.User,
+        from(u in Mehungry.Accounts.User,
           join: r in Mehungry.Food.Recipe,
           on: r.user_id == u.id,
           where: like(r.title, ^"#{@prefix}%"),
           select: u.id,
           distinct: true
+        )
       )
 
     Enum.each(stale_ids, &delete_user_recipes/1)
@@ -89,8 +91,8 @@ defmodule MehungryWeb.SearchLiveTest do
     )
 
     chicken = recipe_fixture(user, %{title: "#{@prefix}Chicken Souvlaki"})
-    eggs    = recipe_fixture(user, %{title: "#{@prefix}Scrambled Eggs Breakfast"})
-    _pasta  = recipe_fixture(user, %{title: "#{@prefix}Pasta Carbonara"})
+    eggs = recipe_fixture(user, %{title: "#{@prefix}Scrambled Eggs Breakfast"})
+    _pasta = recipe_fixture(user, %{title: "#{@prefix}Pasta Carbonara"})
 
     hashtag_recipe =
       recipe_fixture(user, %{
@@ -187,10 +189,12 @@ defmodule MehungryWeb.SearchLiveTest do
       # Re-checkout a connection for the LiveView tests (setup_all uses :auto)
       conn = Phoenix.ConnTest.build_conn()
       user = user_fixture()
+
       Accounts.update_user_profile(
         Accounts.get_user_profile_by_user_id(user.id),
         %{onboarding_level: 1}
       )
+
       conn = log_in_user(conn, user)
       %{conn: conn}
     end

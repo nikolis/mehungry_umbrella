@@ -28,17 +28,6 @@ defmodule MehungryWeb.FoodDetailLive.Index do
         {:ok, push_navigate(socket, to: "/foods")}
 
       ingredient ->
-        top_nutrients = build_top_nutrients(ingredient.ingredient_nutrients)
-
-        nutrients_by_family =
-          ingredient.ingredient_nutrients
-          |> Enum.sort_by(& &1.nutrient.rank)
-          |> Enum.group_by(&(&1.nutrient.family || "Other"))
-          |> Enum.sort_by(fn {family, _} -> family_sort_order(family) end)
-
-
-        interactions = Food.get_interactions_for_ingredients([ingredient.id])
-
         language = socket.assigns[:current_language] || "en"
 
         display_name =
@@ -51,18 +40,32 @@ defmodule MehungryWeb.FoodDetailLive.Index do
             ingredient.name
           end
 
+        top_nutrients= build_top_nutrients(ingredient.ingredient_nutrients)
+
+
         {:ok,
          socket
          |> assign(:ingredient, ingredient)
          |> assign(:display_name, display_name)
-         |> assign(:top_nutrients, top_nutrients)
-         |> assign(:nutrients_by_family, nutrients_by_family)
-         |> assign_async(:sample_recipes, fn ->
-           {:ok, %{sample_recipes: Food.list_sample_recipes_for_ingredient(ingredient.id)}}
-         end)
-         |> assign(:interactions, interactions)
-         |> assign(:page_title, "#{display_name} - Διατροφικά Στοιχεία")
-         |> assign(:page_description, build_description(ingredient, top_nutrients))}
+         |> assign_async(
+           [:sample_recipes, :interactions, :top_nutrients, :nutrients_by_family],
+           fn ->
+             {:ok,
+              %{
+                sample_recipes: Food.list_sample_recipes_for_ingredient(ingredient.id),
+                interactions: Food.get_interactions_for_ingredients([ingredient.id]),
+                top_nutrients: build_top_nutrients(ingredient.ingredient_nutrients),
+                nutrients_by_family:
+                  ingredient.ingredient_nutrients
+                  |> Enum.sort_by(& &1.nutrient.rank)
+                  |> Enum.group_by(&(&1.nutrient.family || "Other"))
+                  |> Enum.sort_by(fn {family, _} -> family_sort_order(family) end)
+              }}
+           end,
+           []
+         )
+         |> assign(:page_title, "#{display_name} - #{page_title_suffix(language)}")
+         |> assign(:page_description, build_description(display_name, top_nutrients))}
     end
   end
 
@@ -91,16 +94,19 @@ defmodule MehungryWeb.FoodDetailLive.Index do
   defp family_sort_order("Amino Acids"), do: 4
   defp family_sort_order(_), do: 5
 
-  defp build_description(ingredient, top_nutrients) do
+  defp page_title_suffix("el"), do: "Διατροφικά Στοιχεία"
+  defp page_title_suffix(_), do: "Nutrition Facts"
+
+  defp build_description(display_name, top_nutrients) do
     macro_str =
       top_nutrients
       |> Enum.map(fn n -> "#{n.label}: #{format_amount(n.amount)}#{n.unit}" end)
       |> Enum.join(", ")
 
     if macro_str != "" do
-      "#{ingredient.name} nutrition facts per 100g — #{macro_str}. Full breakdown of vitamins, minerals, and macronutrients."
+      "#{display_name} nutrition facts per 100g — #{macro_str}. Full breakdown of vitamins, minerals, and macronutrients."
     else
-      "Complete nutrition facts for #{ingredient.name} — vitamins, minerals, and macronutrient breakdown."
+      "Complete nutrition facts for #{display_name} — vitamins, minerals, and macronutrient breakdown."
     end
   end
 

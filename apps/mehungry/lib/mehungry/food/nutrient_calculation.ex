@@ -314,14 +314,24 @@ defmodule Mehungry.Food.NutrientCalculation do
 
     selected_energy =
       cond do
-        specific = find_energy(energy_nutrients, @specific) -> [specific]
-        general = find_energy(energy_nutrients, @general) -> [general]
-        kcal = Enum.find(energy_nutrients, fn e ->
-          e.nutrient.name == "Energy" and
-            match?(%{name: "kilocalorie"}, e.nutrient.measurement_unit)
-        end) -> [kcal]
-        energy_nutrients != [] -> [hd(energy_nutrients)]
-        true -> []
+        specific = find_energy(energy_nutrients, @specific) ->
+          [specific]
+
+        general = find_energy(energy_nutrients, @general) ->
+          [general]
+
+        kcal =
+            Enum.find(energy_nutrients, fn e ->
+              e.nutrient.name == "Energy" and
+                  match?(%{name: "kilocalorie"}, e.nutrient.measurement_unit)
+            end) ->
+          [kcal]
+
+        energy_nutrients != [] ->
+          [hd(energy_nutrients)]
+
+        true ->
+          []
       end
 
     other_nutrients ++ selected_energy

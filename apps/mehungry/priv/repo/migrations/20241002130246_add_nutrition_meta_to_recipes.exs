@@ -23,7 +23,7 @@ defmodule Mehungry.Repo.Migrations.AddNutritionMetaToRecipes do
 
     recipes =
       repo.all(
-        from r in Mehungry.Food.Recipe,
+        from(r in Mehungry.Food.Recipe,
           select:
             struct(r, [
               :id,
@@ -50,6 +50,7 @@ defmodule Mehungry.Repo.Migrations.AddNutritionMetaToRecipes do
               :inserted_at,
               :updated_at
             ])
+        )
       )
       |> repo.preload([
         [recipe_ingredients: [:measurement_unit, :ingredient]],

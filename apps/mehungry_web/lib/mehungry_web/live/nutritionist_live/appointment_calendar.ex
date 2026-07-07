@@ -15,7 +15,9 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     start_dt = NaiveDateTime.new!(month_start, ~T[00:00:00])
     end_dt = NaiveDateTime.new!(month_end, ~T[23:59:59])
 
-    appointments = Professionals.list_appointments_for_professional(professional_id, start_dt, end_dt)
+    appointments =
+      Professionals.list_appointments_for_professional(professional_id, start_dt, end_dt)
+
     clients = Professionals.list_clients(professional_id)
 
     preselected_client_id =
@@ -34,7 +36,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       |> assign(:show_modal, not is_nil(preselected_client_id))
       |> assign(:editing_appointment, nil)
       |> assign(:modal_client_id, preselected_client_id)
-      |> assign(:appointment_changeset, new_appointment_changeset(professional_id, preselected_client_id))
+      |> assign(
+        :appointment_changeset,
+        new_appointment_changeset(professional_id, preselected_client_id)
+      )
       |> assign(:form_date, Date.to_iso8601(today))
       |> assign(:form_start_hour, 9)
       |> assign(:form_start_minute, 0)
@@ -154,7 +159,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     month_end = Date.end_of_month(month_date)
     start_dt = NaiveDateTime.new!(month_start, ~T[00:00:00])
     end_dt = NaiveDateTime.new!(month_end, ~T[23:59:59])
-    appointments = Professionals.list_appointments_for_professional(professional_id, start_dt, end_dt)
+
+    appointments =
+      Professionals.list_appointments_for_professional(professional_id, start_dt, end_dt)
+
     assign(socket, :appointments, appointments)
   end
 
@@ -230,7 +238,9 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     "#{String.pad_leading(Integer.to_string(h), 2, "0")}:#{String.pad_leading(Integer.to_string(m), 2, "0")}"
   end
 
-  defp initial_client_type(%{external_client_name: name}) when is_binary(name) and name != "", do: "external"
+  defp initial_client_type(%{external_client_name: name}) when is_binary(name) and name != "",
+    do: "external"
+
   defp initial_client_type(_), do: "internal"
 
   @impl true
@@ -241,7 +251,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
       <!-- Month navigation -->
       <div class="flex items-center justify-between mb-4">
-        <button phx-click="prev_month" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition">
+        <button
+          phx-click="prev_month"
+          class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition"
+        >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
@@ -249,7 +262,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
         <h2 class="text-white font-semibold text-lg">
           {Calendar.strftime(@current_month, "%B %Y")}
         </h2>
-        <button phx-click="next_month" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition">
+        <button
+          phx-click="next_month"
+          class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition"
+        >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
@@ -268,9 +284,11 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
           <div class="grid grid-cols-7 border-b border-slate-700 last:border-0">
             <%= for day <- week do %>
               <% is_current_month = day.month == @current_month.month
-                 day_appointments = Enum.filter(@appointments, fn a ->
-                   NaiveDateTime.to_date(a.scheduled_at) == day
-                 end) %>
+
+              day_appointments =
+                Enum.filter(@appointments, fn a ->
+                  NaiveDateTime.to_date(a.scheduled_at) == day
+                end) %>
               <div
                 class={[
                   "min-h-20 p-2 border-r border-slate-700 last:border-0 cursor-pointer hover:bg-slate-700/50 transition",
@@ -308,7 +326,6 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       <%= if @show_modal do %>
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div class="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
-
             <!-- Modal header (fixed) -->
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700 flex-shrink-0">
               <h3 class="text-white font-semibold">
@@ -316,17 +333,25 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
               </h3>
               <button phx-click="close_modal" class="text-slate-400 hover:text-white transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
 
             <!-- Form (scrollable body + fixed footer) -->
-            <.form :let={f} for={@appointment_changeset} phx-submit="save_appointment" class="flex flex-col flex-1 min-h-0">
-
+            <.form
+              :let={f}
+              for={@appointment_changeset}
+              phx-submit="save_appointment"
+              class="flex flex-col flex-1 min-h-0"
+            >
               <!-- Scrollable fields -->
               <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-
                 <!-- Client selector (internal or external) -->
                 <div x-data={"{ clientType: '#{initial_client_type(@editing_appointment)}' }"}>
                   <label class="block text-sm text-slate-300 mb-1">Client</label>
@@ -359,8 +384,9 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                         <option
                           value={assignment.client.id}
                           selected={
-                            (@editing_appointment && @editing_appointment.client_id == assignment.client.id) ||
-                              (@modal_client_id == assignment.client.id)
+                            (@editing_appointment &&
+                               @editing_appointment.client_id == assignment.client.id) ||
+                              @modal_client_id == assignment.client.id
                           }
                         >
                           {assignment.client.name || assignment.client.email}

@@ -184,7 +184,9 @@ defmodule MehungryWeb.BrowserLiveTest do
     test "save recipe from detail modal saves it", %{conn: conn, user: user} do
       complete_onboarding(user)
       recipe = recipe_fixture(user)
-      {:ok, view, _html} = live(conn, Routes.recipe_browser_index_path(conn, :show_recipe, recipe.id))
+
+      {:ok, view, _html} =
+        live(conn, Routes.recipe_browser_index_path(conn, :show_recipe, recipe.id))
 
       view |> element("#recipe_details_componentlike_container") |> render_click()
 
@@ -262,10 +264,13 @@ defmodule MehungryWeb.BrowserLiveTest do
       ingredient = ingredient_fixture(%{name: "unique_test_ingredient_xyz"})
       mu = measurement_unit_fixture()
 
-      recipe_with = recipe_fixture(user, %{
-        title: "Recipe With Unique Ingredient",
-        recipe_ingredients: [%{ingredient_id: ingredient.id, measurement_unit_id: mu.id, quantity: 1}]
-      })
+      recipe_with =
+        recipe_fixture(user, %{
+          title: "Recipe With Unique Ingredient",
+          recipe_ingredients: [
+            %{ingredient_id: ingredient.id, measurement_unit_id: mu.id, quantity: 1}
+          ]
+        })
 
       {:ok, _view, html} = live(conn, ~p"/search/ingredient/unique_test_ingredient_xyz")
       assert html =~ recipe_with.title

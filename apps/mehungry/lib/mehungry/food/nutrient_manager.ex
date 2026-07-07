@@ -427,8 +427,7 @@ defmodule Mehungry.Food.NutrientMerger do
 
     # Categorize each nutrient
     {saturated_list, monounsaturated_list, polyunsaturated_list, trans_list, vitamin_list,
-     mineral_list, sugar_list,
-     other_list} =
+     mineral_list, sugar_list, other_list} =
       Enum.reduce(
         flat_map,
         {saturated_list, monounsaturated_list, polyunsaturated_list, trans_list, vitamin_list,

@@ -48,7 +48,17 @@ defmodule Mehungry.Telemetry.QueryProfile do
   """
   def changeset(profile, attrs) do
     profile
-    |> cast(attrs, [:fingerprint, :query, :source, :period_start, :min, :avg, :max, :p95, :sample_count])
+    |> cast(attrs, [
+      :fingerprint,
+      :query,
+      :source,
+      :period_start,
+      :min,
+      :avg,
+      :max,
+      :p95,
+      :sample_count
+    ])
     |> validate_required([:fingerprint, :query, :period_start, :sample_count])
   end
 end

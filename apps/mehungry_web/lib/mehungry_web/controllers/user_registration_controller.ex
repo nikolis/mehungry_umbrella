@@ -3,6 +3,7 @@ defmodule MehungryWeb.UserRegistrationController do
 
   alias Mehungry.Accounts
   alias Mehungry.Accounts.User
+
   def new(conn, _params) do
     changeset = Accounts.change_user_registration(%User{})
     render(conn, "new.html", changeset: changeset)

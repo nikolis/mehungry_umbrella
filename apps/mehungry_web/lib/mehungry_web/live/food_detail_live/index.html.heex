@@ -20,67 +20,134 @@
       <% end %>
     </div>
 
-    <%= if length(@top_nutrients) > 0 do %>
-      <section class="mb-10">
-        <h2 class="text-lg font-semibold text-white mb-4">
-          Nutritional Highlights
-          <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
-        </h2>
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          <%= for n <- @top_nutrients do %>
-            <div class="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
-              <div class="text-2xl font-bold text-white">{format_amount(n.amount)}</div>
-              <div class="text-xs text-slate-400 mt-0.5">{n.unit}</div>
-              <div class="text-sm font-medium text-slate-300 mt-1">{n.label}</div>
+    <%= cond do %>
+      <% @top_nutrients.loading -> %>
+        <section class="mb-10">
+          <h2 class="text-lg font-semibold text-white mb-4">
+            Nutritional Highlights
+            <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
+          </h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3" aria-hidden="true">
+            <div
+              :for={_ <- 1..5}
+              class="bg-slate-800 rounded-xl p-4 text-center border border-slate-700"
+            >
+              <div class="m3-skeleton h-7 w-3/5 mx-auto rounded bg-slate-700" />
+              <div class="m3-skeleton h-3 w-2/5 mx-auto rounded bg-slate-700 mt-2" />
+              <div class="m3-skeleton h-3 w-3/5 mx-auto rounded bg-slate-700 mt-2" />
             </div>
-          <% end %>
-        </div>
-      </section>
-    <% end %>
-
-    <%= if @interactions != [] do %>
-      <section class="mb-10">
-        <h2 class="text-lg font-semibold text-white mb-4">Nutrition Insights</h2>
-        <.nutrient_interaction_panel interactions={@interactions} />
-      </section>
-    <% end %>
-
-    <%= if length(@nutrients_by_family) > 0 do %>
-      <section class="mb-10">
-        <h2 class="text-lg font-semibold text-white mb-4">
-          Full Nutrition Breakdown
-          <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
-        </h2>
-
-        <div class="space-y-6">
-          <%= for {family, nutrients} <- @nutrients_by_family do %>
-            <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-              <div class="px-4 py-2 bg-slate-700/50 border-b border-slate-700">
-                <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wide">
-                  {family}
-                </h3>
+          </div>
+        </section>
+      <% @top_nutrients.failed -> %>
+        <p class="text-slate-500 text-sm">Couldn't load nutritional highlights.</p>
+      <% @top_nutrients.ok? && length(@top_nutrients.result) > 0 -> %>
+        <section class="mb-10">
+          <h2 class="text-lg font-semibold text-white mb-4">
+            Nutritional Highlights
+            <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
+          </h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <%= for n <- @top_nutrients.result do %>
+              <div class="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
+                <div class="text-2xl font-bold text-white">{format_amount(n.amount)}</div>
+                <div class="text-xs text-slate-400 mt-0.5">{n.unit}</div>
+                <div class="text-sm font-medium text-slate-300 mt-1">{n.label}</div>
               </div>
-              <table class="w-full">
-                <tbody>
-                  <%= for {n, idx} <- Enum.with_index(nutrients) do %>
-                    <tr class={if rem(idx, 2) == 0, do: "bg-slate-800", else: "bg-slate-800/50"}>
-                      <td class="px-4 py-2 text-sm text-slate-300">{n.nutrient.name}</td>
-                      <td class="px-4 py-2 text-sm text-white text-right font-medium">
-                        {format_amount(n.amount)}
-                        <%= if n.nutrient.measurement_unit do %>
-                          <span class="text-slate-400 font-normal">
-                            {n.nutrient.measurement_unit.name}
-                          </span>
-                        <% end %>
-                      </td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
+            <% end %>
+          </div>
+        </section>
+      <% true -> %>
+    <% end %>
+
+    <%= cond do %>
+      <% @interactions.loading -> %>
+        <section class="mb-10">
+          <h2 class="text-lg font-semibold text-white mb-4">Nutrition Insights</h2>
+          <div class="space-y-3" aria-hidden="true">
+            <div
+              :for={_ <- 1..3}
+              class="flex gap-3 rounded-xl border border-slate-700 bg-slate-800 p-4"
+            >
+              <div class="m3-skeleton w-5 h-5 rounded-full bg-slate-700 flex-shrink-0 mt-0.5" />
+              <div class="flex-1 min-w-0 space-y-2">
+                <div class="m3-skeleton h-3.5 w-2/5 rounded bg-slate-700" />
+                <div class="m3-skeleton h-3 w-full rounded bg-slate-700" />
+                <div class="m3-skeleton h-3 w-4/5 rounded bg-slate-700" />
+              </div>
             </div>
-          <% end %>
-        </div>
-      </section>
+          </div>
+        </section>
+        <% @interactions.failed -> %>
+          <p class="text-slate-500 text-sm">Couldn't load recipes for this ingredient.</p>
+        <% @interactions.ok? && length(@interactions.result) == 0 -> %>
+          <p class="text-slate-500 text-sm">No interactions for the particular ingredient</p>
+        <% true -> %>
+
+          <section class="mb-10">
+            <h2 class="text-lg font-semibold text-white mb-4">Nutrition Insights</h2>
+            <.nutrient_interaction_panel interactions={@interactions} />
+          </section>
+<% end %>
+    <%= cond do %>
+      <% @nutrients_by_family.loading -> %>
+        <section class="mb-10">
+          <h2 class="text-lg font-semibold text-white mb-4">
+            Full Nutrition Breakdown
+            <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
+          </h2>
+          <div class="space-y-6" aria-hidden="true">
+            <div
+              :for={_ <- 1..3}
+              class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden"
+            >
+              <div class="px-4 py-2 bg-slate-700/50 border-b border-slate-700">
+                <div class="m3-skeleton h-3 w-1/4 rounded bg-slate-700" />
+              </div>
+              <div class="p-4 space-y-2">
+                <div :for={_ <- 1..3} class="m3-skeleton h-3 w-full rounded bg-slate-700" />
+              </div>
+            </div>
+          </div>
+        </section>
+      <% @nutrients_by_family.failed -> %>
+        <p class="text-slate-500 text-sm">Couldn't load the full nutrition breakdown.</p>
+      <% @nutrients_by_family.ok? && length(@nutrients_by_family.result) > 0 -> %>
+        <section class="mb-10">
+          <h2 class="text-lg font-semibold text-white mb-4">
+            Full Nutrition Breakdown
+            <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
+          </h2>
+
+          <div class="space-y-6">
+            <%= for {family, nutrients} <- @nutrients_by_family.result do %>
+              <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                <div class="px-4 py-2 bg-slate-700/50 border-b border-slate-700">
+                  <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wide">
+                    {family}
+                  </h3>
+                </div>
+                <table class="w-full">
+                  <tbody>
+                    <%= for {n, idx} <- Enum.with_index(nutrients) do %>
+                      <tr class={if rem(idx, 2) == 0, do: "bg-slate-800", else: "bg-slate-800/50"}>
+                        <td class="px-4 py-2 text-sm text-slate-300">{n.nutrient.name}</td>
+                        <td class="px-4 py-2 text-sm text-white text-right font-medium">
+                          {format_amount(n.amount)}
+                          <%= if n.nutrient.measurement_unit do %>
+                            <span class="text-slate-400 font-normal">
+                              {n.nutrient.measurement_unit.name}
+                            </span>
+                          <% end %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            <% end %>
+          </div>
+        </section>
+      <% true -> %>
     <% end %>
 
     <%= if length(@ingredient.ingredient_portions) > 0 do %>
@@ -136,7 +203,18 @@
 
       <%= cond do %>
         <% @sample_recipes.loading -> %>
-          <p class="text-slate-500 text-sm">Loading recipes…</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" aria-hidden="true">
+            <div
+              :for={_ <- 1..4}
+              class="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl p-3"
+            >
+              <div class="m3-skeleton w-16 h-16 rounded-lg bg-slate-700 flex-shrink-0" />
+              <div class="flex-1 min-w-0 space-y-2">
+                <div class="m3-skeleton h-3.5 w-4/5 rounded bg-slate-700" />
+                <div class="m3-skeleton h-3 w-1/3 rounded bg-slate-700" />
+              </div>
+            </div>
+          </div>
         <% @sample_recipes.failed -> %>
           <p class="text-slate-500 text-sm">Couldn't load recipes for this ingredient.</p>
         <% @sample_recipes.ok? && length(@sample_recipes.result) == 0 -> %>

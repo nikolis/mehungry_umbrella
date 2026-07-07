@@ -17,8 +17,8 @@ defmodule MehungryWeb.SelectComponentDeep do
         id={@form.name <> "_#{@input_variable}"}
         value={@selected_id}
       />
-      
-    <!-- Trigger Button / Selected Item Display -->
+
+      <!-- Trigger Button / Selected Item Display -->
       <div phx-click="open_modal" phx-target={@myself} class="w-full cursor-pointer h-full">
         <%= if @selected_item do %>
           <div class="bg-slate-700 rounded-lg text-white px-3 py-2 min-h-10 flex justify-between items-center h-full">
@@ -40,8 +40,8 @@ defmodule MehungryWeb.SelectComponentDeep do
           </div>
         <% end %>
       </div>
-      
-    <!-- Modal/Dropdown -->
+
+      <!-- Modal/Dropdown -->
       <div
         id={"select-modal-#{@unique_id}"}
         class={"fixed inset-0 bg-black/50 rounded-lg border-2 border-slate-700 flex items-center justify-center z-50 #{if @modal_open, do: "", else: "hidden"}"}

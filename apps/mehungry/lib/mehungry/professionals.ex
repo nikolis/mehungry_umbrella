@@ -2,6 +2,7 @@ defmodule Mehungry.Professionals do
   import Ecto.Query
   alias Mehungry.Repo
   alias Mehungry.Accounts
+
   alias Mehungry.Professionals.{
     ProfessionalProfile,
     TutorInvitation,
@@ -45,7 +46,8 @@ defmodule Mehungry.Professionals do
         {:error, :client_not_found}
 
       client ->
-        existing = Repo.get_by(TutorInvitation, professional_id: professional_id, client_id: client.id)
+        existing =
+          Repo.get_by(TutorInvitation, professional_id: professional_id, client_id: client.id)
 
         cond do
           not is_nil(existing) and existing.status == "pending" ->
@@ -79,9 +81,7 @@ defmodule Mehungry.Professionals do
          true <- inv.status == "pending",
          {:ok, inv} <- inv |> TutorInvitation.changeset(%{status: "accepted"}) |> Repo.update() do
       # Remove any existing assignment for this client (one nutritionist max)
-      Repo.delete_all(
-        from a in TutorClientAssignment, where: a.client_id == ^client_id
-      )
+      Repo.delete_all(from a in TutorClientAssignment, where: a.client_id == ^client_id)
 
       case %TutorClientAssignment{}
            |> TutorClientAssignment.changeset(%{

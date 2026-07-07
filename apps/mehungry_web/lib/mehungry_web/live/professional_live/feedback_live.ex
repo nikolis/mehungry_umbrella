@@ -22,10 +22,14 @@ defmodule MehungryWeb.ProfessionalLive.FeedbackLive do
       <div class="container mx-auto px-4 py-6 max-w-3xl">
         <div class="mb-6">
           <h1 class="text-2xl font-bold text-white flex items-center gap-3">
-            <.icon name="hero-chat-bubble-left-ellipsis" class="w-7 h-7 text-primary-500 flex-shrink-0" />
-            User Feedback
+            <.icon
+              name="hero-chat-bubble-left-ellipsis"
+              class="w-7 h-7 text-primary-500 flex-shrink-0"
+            /> User Feedback
           </h1>
-          <p class="text-slate-400 text-sm mt-1">{length(@feedbacks)} submission{if length(@feedbacks) != 1, do: "s", else: ""}</p>
+          <p class="text-slate-400 text-sm mt-1">
+            {length(@feedbacks)} submission{if length(@feedbacks) != 1, do: "s", else: ""}
+          </p>
         </div>
 
         <%= if @feedbacks == [] do %>

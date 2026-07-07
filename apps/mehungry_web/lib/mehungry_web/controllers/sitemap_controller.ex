@@ -6,6 +6,7 @@ defmodule MehungryWeb.SitemapController do
   alias Mehungry.Food.Recipe
   alias Mehungry.Hashtag
   alias Mehungry.Food.RecipeHashtag
+  alias Mehungry.Food.Ingredient
 
   @base_url "https://www.m3hungry.com"
 
@@ -24,6 +25,7 @@ defmodule MehungryWeb.SitemapController do
         from(h in Hashtag,
           join: rh in RecipeHashtag,
           on: rh.hashtag_id == h.id,
+          where: not is_nil(h.title) and h.title != "",
           group_by: h.title,
           having: count(rh.id) > 1,
           select: h.title,
@@ -32,7 +34,17 @@ defmodule MehungryWeb.SitemapController do
         )
       )
 
-    xml = build_xml(recipes, hashtags)
+    ingredients =
+      Repo.all(
+        from(i in Ingredient,
+          where: not is_nil(i.search_name) and i.search_name != "",
+          distinct: i.search_name,
+          select: %{search_name: i.search_name, updated_at: i.updated_at},
+          order_by: [asc: i.search_name, desc: i.updated_at]
+        )
+      )
+
+    xml = build_xml(recipes, hashtags, ingredients)
 
     conn
     |> put_resp_content_type("application/xml")
@@ -52,7 +64,7 @@ defmodule MehungryWeb.SitemapController do
       "\n</url>"
   end
 
-  defp build_xml(recipes, hashtags) do
+  defp build_xml(recipes, hashtags, ingredients) do
     today = Date.utc_today() |> to_string()
 
     static_urls = [
@@ -83,7 +95,19 @@ defmodule MehungryWeb.SitemapController do
         )
       end)
 
-    all_urls = Enum.join(static_urls ++ recipe_urls ++ hashtag_urls, "\n")
+    food_urls =
+      Enum.map(ingredients, fn i ->
+        slug = String.replace(i.search_name, " ", "-")
+        date = i.updated_at |> NaiveDateTime.to_date() |> to_string()
+
+        url_entry("#{@base_url}/foods/#{slug}",
+          lastmod: date,
+          changefreq: "monthly",
+          priority: "0.5"
+        )
+      end)
+
+    all_urls = Enum.join(static_urls ++ recipe_urls ++ hashtag_urls ++ food_urls, "\n")
 
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" <>
       "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n" <>

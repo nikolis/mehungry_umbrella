@@ -19,7 +19,12 @@ defmodule Mehungry.Accounts.UserIngredientRule do
     changeset =
       user_ingredient_rule
       |> cast(attrs, [:user_profile_id, :user_id, :food_restriction_type_id, :delete])
-      |> validate_required([:user_profile_id, :user_id, :food_restriction_type_id, :ingredient_id])
+      |> validate_required([
+        :user_profile_id,
+        :user_id,
+        :food_restriction_type_id,
+        :ingredient_id
+      ])
 
     if get_change(changeset, :delete) do
       %{changeset | action: :delete}

@@ -198,7 +198,9 @@ defmodule Mehungry.Food.NutrientInteractionsTest do
     end
 
     test "returns empty list when no amounts reach threshold" do
-      result = NutrientInteractions.interactions_for_nutrient_map(%{"Iron" => 0.1, "Vitamin C" => 0.1})
+      result =
+        NutrientInteractions.interactions_for_nutrient_map(%{"Iron" => 0.1, "Vitamin C" => 0.1})
+
       assert result == []
     end
 
@@ -208,10 +210,12 @@ defmodule Mehungry.Food.NutrientInteractionsTest do
     end
 
     test "fires :vitamin_c_enhances_iron with positive badge" do
-      result = NutrientInteractions.interactions_for_nutrient_map(%{
-        "Iron" => 2.0,
-        "Vitamin C" => 10.0
-      })
+      result =
+        NutrientInteractions.interactions_for_nutrient_map(%{
+          "Iron" => 2.0,
+          "Vitamin C" => 10.0
+        })
+
       interaction = Enum.find(result, &(&1.id == :vitamin_c_enhances_iron))
 
       assert interaction != nil
@@ -220,10 +224,12 @@ defmodule Mehungry.Food.NutrientInteractionsTest do
     end
 
     test "fires :calcium_inhibits_iron with warning badge" do
-      result = NutrientInteractions.interactions_for_nutrient_map(%{
-        "Iron" => 2.0,
-        "Calcium" => 140.0
-      })
+      result =
+        NutrientInteractions.interactions_for_nutrient_map(%{
+          "Iron" => 2.0,
+          "Calcium" => 140.0
+        })
+
       interaction = Enum.find(result, &(&1.id == :calcium_inhibits_iron))
 
       assert interaction != nil
@@ -241,10 +247,12 @@ defmodule Mehungry.Food.NutrientInteractionsTest do
     end
 
     test "fires :fat_required_for_vitamin_d as positive when fat is present" do
-      result = NutrientInteractions.interactions_for_nutrient_map(%{
-        "Vitamin D" => 3.0,
-        "Total Fat" => 37.0
-      })
+      result =
+        NutrientInteractions.interactions_for_nutrient_map(%{
+          "Vitamin D" => 3.0,
+          "Total Fat" => 37.0
+        })
+
       interaction = Enum.find(result, &(&1.id == :fat_required_for_vitamin_d))
 
       assert interaction != nil
@@ -258,11 +266,13 @@ defmodule Mehungry.Food.NutrientInteractionsTest do
     end
 
     test "can fire multiple rules simultaneously" do
-      result = NutrientInteractions.interactions_for_nutrient_map(%{
-        "Iron" => 2.0,
-        "Vitamin C" => 10.0,
-        "Calcium" => 140.0
-      })
+      result =
+        NutrientInteractions.interactions_for_nutrient_map(%{
+          "Iron" => 2.0,
+          "Vitamin C" => 10.0,
+          "Calcium" => 140.0
+        })
+
       ids = Enum.map(result, & &1.id)
 
       assert :vitamin_c_enhances_iron in ids
@@ -270,10 +280,12 @@ defmodule Mehungry.Food.NutrientInteractionsTest do
     end
 
     test "only issues one result per matching rule" do
-      result = NutrientInteractions.interactions_for_nutrient_map(%{
-        "Iron" => 2.0,
-        "Vitamin C" => 10.0
-      })
+      result =
+        NutrientInteractions.interactions_for_nutrient_map(%{
+          "Iron" => 2.0,
+          "Vitamin C" => 10.0
+        })
+
       matching = Enum.filter(result, &(&1.id == :vitamin_c_enhances_iron))
 
       assert length(matching) == 1

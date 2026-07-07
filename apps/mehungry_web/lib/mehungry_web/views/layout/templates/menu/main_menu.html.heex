@@ -5,8 +5,8 @@
       {MehungryWeb.SvgComponents.get_logo(%{id: "Main menu"})}
     </a>
   </div>
-  
-<!-- Main navigation -->
+
+  <!-- Main navigation -->
   <nav class="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
     <a
       href="/browse"
@@ -116,7 +116,8 @@
 
     <!-- Tutor invitations badge (for non-professional users who have pending invitations) -->
     <%= if @current_user && !Mehungry.Subscriptions.nutritionist?(@current_user.id) do %>
-      <% pending_count = Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id) %>
+      <% pending_count =
+        Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id) %>
       <%= if pending_count > 0 do %>
         <a
           href="/notifications/invitations"
@@ -141,8 +142,8 @@
       <span class="hidden md:block text-sm font-medium">Upgrade to Pro</span>
     </a>
   </nav>
-  
-<!-- Bottom: language toggle + profile / login -->
+
+  <!-- Bottom: language toggle + profile / login -->
   <div class="p-3 border-t border-slate-800 flex-shrink-0">
     <%= if @current_user do %>
       <div class="flex items-center justify-center gap-1 bg-slate-800 rounded-full p-0.5 mb-2">
