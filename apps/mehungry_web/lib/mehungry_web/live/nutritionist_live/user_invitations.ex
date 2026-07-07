@@ -45,7 +45,9 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
     case Professionals.decline_invitation(String.to_integer(id), client_id) do
       {:ok, _} ->
         invitations = Professionals.list_pending_invitations_for_client(client_id)
-        {:noreply, socket |> assign(:invitations, invitations) |> put_flash(:info, "Invitation declined.")}
+
+        {:noreply,
+         socket |> assign(:invitations, invitations) |> put_flash(:info, "Invitation declined.")}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Could not decline invitation.")}
@@ -88,7 +90,10 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
             <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
               <div class="flex items-start gap-3 mb-4">
                 <%= if professional.profile_pic do %>
-                  <img src={professional.profile_pic} class="w-10 h-10 rounded-full object-cover shrink-0" />
+                  <img
+                    src={professional.profile_pic}
+                    class="w-10 h-10 rounded-full object-cover shrink-0"
+                  />
                 <% else %>
                   <div class="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
                     {String.first(professional.name || "?")}

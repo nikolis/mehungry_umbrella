@@ -218,7 +218,12 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
         Enum.map(top, fn ing ->
           portions = Map.get(portions_by_id, ing.id, [])
-          %{ingredient_id: ing.id, name: ing.name, units: build_units(portions, gram_unit) |> Enum.take(3)}
+
+          %{
+            ingredient_id: ing.id,
+            name: ing.name,
+            units: build_units(portions, gram_unit) |> Enum.take(3)
+          }
         end)
       end
 
@@ -242,7 +247,10 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
           {{:ok, json}, "usda_fdc"}
 
         {:error, reason} ->
-          Logger.info("RecipeAgent: USDA FDC lookup failed (#{reason}), falling back to AI estimation")
+          Logger.info(
+            "RecipeAgent: USDA FDC lookup failed (#{reason}), falling back to AI estimation"
+          )
+
           {generate_usda_json_for(name), "ai_estimate"}
       end
 
@@ -599,7 +607,10 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       end)
 
     if gram_unit do
-      Enum.uniq_by(units ++ [%{unit_id: gram_unit.id, unit_name: "gram", gram_weight: 1.0}], & &1.unit_id)
+      Enum.uniq_by(
+        units ++ [%{unit_id: gram_unit.id, unit_name: "gram", gram_weight: 1.0}],
+        & &1.unit_id
+      )
     else
       units
     end
@@ -623,7 +634,9 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       search_term |> String.downcase() |> String.split(~r/[\s,]+/) |> Enum.reject(&(&1 == ""))
 
     Enum.filter(ingredients, fn ing ->
-      candidate_first = ing.name |> String.downcase() |> String.split(~r/[\s,]+/) |> List.first("")
+      candidate_first =
+        ing.name |> String.downcase() |> String.split(~r/[\s,]+/) |> List.first("")
+
       Enum.any?(search_words, &(String.jaro_distance(&1, candidate_first) >= threshold))
     end)
   end

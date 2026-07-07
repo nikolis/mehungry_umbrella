@@ -912,9 +912,7 @@ defmodule Mehungry.Accounts do
     )
 
     # RecipeIngredients
-    Repo.delete_all(
-      from ri in Mehungry.Food.RecipeIngredient, where: ri.recipe_id in ^recipe_ids
-    )
+    Repo.delete_all(from ri in Mehungry.Food.RecipeIngredient, where: ri.recipe_id in ^recipe_ids)
 
     # Recipes
     Repo.delete_all(from r in Mehungry.Food.Recipe, where: r.user_id == ^uid)
@@ -924,7 +922,9 @@ defmodule Mehungry.Accounts do
 
     # ShoppingBaskets and their items
     basket_ids =
-      Repo.all(from b in Mehungry.Inventory.ShoppingBasket, where: b.user_id == ^uid, select: b.id)
+      Repo.all(
+        from b in Mehungry.Inventory.ShoppingBasket, where: b.user_id == ^uid, select: b.id
+      )
 
     Repo.delete_all(
       from bi in Mehungry.Inventory.BasketIngredient, where: bi.shopping_basket_id in ^basket_ids

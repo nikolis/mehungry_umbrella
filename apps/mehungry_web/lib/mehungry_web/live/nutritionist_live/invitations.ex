@@ -39,7 +39,8 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
         {:noreply, assign(socket, :invite_error, "No user found with that email address.")}
 
       {:error, :already_invited} ->
-        {:noreply, assign(socket, :invite_error, "You already have a pending invitation to this user.")}
+        {:noreply,
+         assign(socket, :invite_error, "You already have a pending invitation to this user.")}
 
       {:error, :already_client} ->
         {:noreply, assign(socket, :invite_error, "This user is already your client.")}
@@ -56,7 +57,9 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
     case Professionals.revoke_invitation(String.to_integer(id), professional_id) do
       {:ok, _} ->
         invitations = Professionals.list_sent_invitations(professional_id)
-        {:noreply, socket |> assign(:invitations, invitations) |> put_flash(:info, "Invitation revoked.")}
+
+        {:noreply,
+         socket |> assign(:invitations, invitations) |> put_flash(:info, "Invitation revoked.")}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Could not revoke invitation.")}

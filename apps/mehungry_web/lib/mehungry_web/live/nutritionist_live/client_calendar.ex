@@ -14,7 +14,8 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
 
     case Professionals.get_assignment(professional_id, client_id) do
       nil ->
-        {:ok, socket |> put_flash(:error, "Client not found.") |> redirect(to: "/nutritionist/clients")}
+        {:ok,
+         socket |> put_flash(:error, "Client not found.") |> redirect(to: "/nutritionist/clients")}
 
       _assignment ->
         client = Accounts.get_user!(client_id)
@@ -53,7 +54,9 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
   @impl true
   def handle_info({:initial_modal, %{"date" => start_date, "title" => title}}, socket) do
     client_id = socket.assigns.client_id
-    {:noreply, push_patch(socket, to: "/nutritionist/clients/#{client_id}/calendar/#{start_date}/#{title}")}
+
+    {:noreply,
+     push_patch(socket, to: "/nutritionist/clients/#{client_id}/calendar/#{start_date}/#{title}")}
   end
 
   @impl true
@@ -99,7 +102,12 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
       <div class="bg-teal-900/40 border-b border-teal-700/40 px-4 py-2 flex items-center gap-3">
         <a href={"/nutritionist/clients/#{@client_id}"} class="text-teal-400 hover:text-teal-300">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
           </svg>
         </a>
         <%= if @client.profile_pic do %>

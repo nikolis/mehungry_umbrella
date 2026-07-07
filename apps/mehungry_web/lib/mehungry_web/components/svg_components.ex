@@ -70,20 +70,20 @@ defmodule MehungryWeb.SvgComponents do
         stroke-width="4"
         stroke-linecap="round"
       />
-      
-    <!-- Plate -->
+
+      <!-- Plate -->
       <ellipse cx="120" cy="140" rx="45" ry="12" fill="#1E293B" stroke="#334155" stroke-width="2" />
       <ellipse cx="120" cy="138" rx="35" ry="8" fill="#0F172A" />
-      
-    <!-- Fork -->
+
+      <!-- Fork -->
       <line x1="100" y1="110" x2="100" y2="145" stroke="#475569" stroke-width="2" />
       <line x1="92" y1="110" x2="92" y2="105" stroke="#475569" stroke-width="2" />
       <line x1="96" y1="108" x2="96" y2="103" stroke="#475569" stroke-width="2" />
       <line x1="100" y1="107" x2="100" y2="102" stroke="#475569" stroke-width="2" />
       <line x1="104" y1="108" x2="104" y2="103" stroke="#475569" stroke-width="2" />
       <line x1="108" y1="110" x2="108" y2="105" stroke="#475569" stroke-width="2" />
-      
-    <!-- Question Mark -->
+
+      <!-- Question Mark -->
       <text
         x="135"
         y="80"
@@ -109,8 +109,8 @@ defmodule MehungryWeb.SvgComponents do
       <polygon points="25,35 35,28 45,35 45,45 35,52 25,45" fill="#14B8A6" opacity="0.9" />
       <polygon points="35,20 45,13 55,20 55,30 45,37 35,30" fill="#5EEAD4" opacity="0.9" />
       <polygon points="45,13 55,6 65,13 65,23 55,30 45,23" fill="#99F6E4" opacity="0.9" />
-      
-    <!-- Compact text -->
+
+      <!-- Compact text -->
       <text
         x="75"
         y="30"
@@ -149,26 +149,26 @@ defmodule MehungryWeb.SvgComponents do
           <stop offset="100%" stop-color="#7C2D12" />
         </linearGradient>
       </defs>
-      
-    <!-- Bottom Cube -->
+
+      <!-- Bottom Cube -->
       <polygon
         points="60,95 80,82 100,95 100,115 80,128 60,115"
         fill={"url(#bottomCubeOrange-#{@id})"}
       />
       <polygon points="80,82 100,95 80,108 60,95" fill="#7C2D12" opacity="0.7" />
-      
-    <!-- Middle Cube -->
+
+      <!-- Middle Cube -->
       <polygon
         points="80,65 100,52 120,65 120,85 100,98 80,85"
         fill={"url(#middleCubeOrange-#{@id})"}
       />
       <polygon points="100,52 120,65 100,78 80,65" fill="#C2410C" opacity="0.7" />
-      
-    <!-- Top Cube -->
+
+      <!-- Top Cube -->
       <polygon points="100,38 120,25 140,38 140,58 120,71 100,58" fill={"url(#topCubeOrange-#{@id})"} />
       <polygon points="120,25 140,38 120,51 100,38" fill="#F97316" opacity="0.8" />
-      
-    <!-- Lines -->
+
+      <!-- Lines -->
       <line
         x1="100"
         y1="58"
@@ -188,8 +188,8 @@ defmodule MehungryWeb.SvgComponents do
         stroke-width="2"
         stroke-dasharray="3,3"
       />
-      
-    <!-- Text - Dark slate to match favicon text -->
+
+      <!-- Text - Dark slate to match favicon text -->
       <text
         x="160"
         y="65"
@@ -201,8 +201,8 @@ defmodule MehungryWeb.SvgComponents do
       >
         M3<tspan fill="#EA580C">HUNGRY</tspan>
       </text>
-      
-    <!-- Tagline -->
+
+      <!-- Tagline -->
       <text
         x="160"
         y="88"
@@ -262,61 +262,25 @@ defmodule MehungryWeb.SvgComponents do
     """
   end
 
+  @doc """
+  Branded loading spinner: three dots in the primary, secondary, and accent
+  brand colors orbiting in sequence, echoing the logo's layered color trio.
+  """
   def get_loading(assigns) do
     ~H"""
-    <div style="max-width: 60vh; margin: auto;">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-        <radialGradient
-          id="a12"
-          cx=".66"
-          fx=".66"
-          cy=".3125"
-          fy=".3125"
-          gradientTransform="scale(1.5)"
-        >
-          <stop offset="0" stop-color="#00A0D0"></stop>
-          <stop offset=".3" stop-color="#00A0D0" stop-opacity=".9"></stop>
-          <stop offset=".6" stop-color="#00A0D0" stop-opacity=".6"></stop>
-          <stop offset=".8" stop-color="#00A0D0" stop-opacity=".3"></stop>
-          <stop offset="1" stop-color="#00A0D0" stop-opacity="0"></stop>
-        </radialGradient>
-        <circle
-          transform-origin="center"
-          fill="none"
-          stroke="url(#a12)"
-          stroke-width="15"
-          stroke-linecap="round"
-          stroke-dasharray="200 1000"
-          stroke-dashoffset="0"
-          cx="100"
-          cy="100"
-          r="70"
-        >
-          <animateTransform
-            type="rotate"
-            attributeName="transform"
-            calcMode="spline"
-            dur="2"
-            values="360;0"
-            keyTimes="0;1"
-            keySplines="0 0 1 1"
-            repeatCount="indefinite"
-          >
-          </animateTransform>
-        </circle>
-        <circle
-          transform-origin="center"
-          fill="none"
-          opacity=".2"
-          stroke="#FF156D"
-          stroke-width="15"
-          stroke-linecap="round"
-          cx="100"
-          cy="100"
-          r="70"
-        >
-        </circle>
+    <div class="flex items-center justify-center w-16 h-16 mx-auto" role="status">
+      <svg viewBox="0 0 100 100" class="w-full h-full" aria-hidden="true">
+        <g class="m3-loader-dot m3-loader-dot--1 text-primary-500">
+          <circle cx="50" cy="12" r="7" fill="currentColor" />
+        </g>
+        <g class="m3-loader-dot m3-loader-dot--2 text-secondary-500">
+          <circle cx="50" cy="12" r="7" fill="currentColor" />
+        </g>
+        <g class="m3-loader-dot m3-loader-dot--3 text-accent-500">
+          <circle cx="50" cy="12" r="7" fill="currentColor" />
+        </g>
       </svg>
+      <span class="sr-only">Loading…</span>
     </div>
     """
   end

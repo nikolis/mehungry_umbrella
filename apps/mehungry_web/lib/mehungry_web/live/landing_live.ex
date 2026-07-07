@@ -21,6 +21,7 @@ defmodule MehungryWeb.LandingLive do
     now = Date.utc_today()
     recipes = find_bot_recipe(now.month, now.year) || []
     recipe = List.first(recipes)
+
     {:ok,
      assign(socket,
        page_title: "M3Hungry — Know What's On Your Plate",
@@ -47,7 +48,8 @@ defmodule MehungryWeb.LandingLive do
             limit: 3
           )
 
-        result  = Mehungry.Repo.all(query)
+        result = Mehungry.Repo.all(query)
+
         case result do
           [] ->
             query =
@@ -56,9 +58,8 @@ defmodule MehungryWeb.LandingLive do
                 limit: 3
               )
 
-            result  = Mehungry.Repo.all(query)
+            result = Mehungry.Repo.all(query)
         end
-
     end
   end
 
@@ -118,8 +119,7 @@ defmodule MehungryWeb.LandingLive do
             class="mb-5 text-5xl font-normal leading-[1.1] tracking-tight text-white sm:text-6xl md:text-7xl"
             style="font-family: 'DM Serif Display', Georgia, serif;"
           >
-            Know what's on your plate.
-            <em class="not-italic text-primary-400">Really.</em>
+            Know what's on your plate. <em class="not-italic text-primary-400">Really.</em>
           </h1>
 
           <p class="mb-9 text-lg leading-relaxed text-slate-400 sm:text-xl">
@@ -483,7 +483,9 @@ defmodule MehungryWeb.LandingLive do
                 "text-white"
               )}
             <% else %>
-                <p class="text-sm text-slate-600">Add meals to your calendar to see your daily nutrition overview</p>
+              <p class="text-sm text-slate-600">
+                Add meals to your calendar to see your daily nutrition overview
+              </p>
             <% end %>
           </div>
         </div>
@@ -612,8 +614,7 @@ defmodule MehungryWeb.LandingLive do
                 <span
                   class="h-2 w-2 rounded-full bg-primary-500 animate-pulse"
                   aria-hidden="true"
-                >
-                </span>
+                ></span>
                 <span class="text-xs text-slate-500">AI Recipe Assistant</span>
               </div>
 
@@ -980,7 +981,12 @@ defmodule MehungryWeb.LandingLive do
     </section>
 
     <%!-- ══════════════════════════════════ PRICING ════════════════════════════════════════════════════ --%>
-    <section id="pricing" class="bg-slate-900 py-24" aria-labelledby="pricing-heading" style="scroll-margin-top: 4rem;">
+    <section
+      id="pricing"
+      class="bg-slate-900 py-24"
+      aria-labelledby="pricing-heading"
+      style="scroll-margin-top: 4rem;"
+    >
       <div class="mx-auto max-w-6xl px-4 sm:px-6">
         <div class="mb-12 text-center">
           <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-primary-500">
@@ -1070,8 +1076,7 @@ defmodule MehungryWeb.LandingLive do
               <span class="text-sm text-slate-500">/month</span>
             </div>
             <p class="mb-5 text-xs text-slate-500">
-              or €19.99/yr —
-              <span class="text-green-400">save 44%</span>
+              or €19.99/yr — <span class="text-green-400">save 44%</span>
             </p>
             <ul class="mb-6 space-y-2.5 text-sm">
               <%= for text <- [

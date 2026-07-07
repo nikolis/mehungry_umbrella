@@ -32,37 +32,53 @@ defmodule MehungryWeb.HomeLive.Index do
       Mehungry.Posts.list_posts(user)
       |> Enum.filter(fn x -> !is_nil(x) and !is_nil(x.reference) end)
       |> Posts.localize_for_language(language)
+
     current_user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
     Enum.each(all_posts, fn post ->
       Posts.subscribe_to_post(%{post_id: post.id})
     end)
 
+    recipe_counts_by_user =
+      all_posts
+      |> Enum.map(& &1.user_id)
+      |> Enum.uniq()
+      |> Food.count_recipes_created_by_user_ids()
+
+    first_page = Enum.take(all_posts, @per_page)
+
     {:ok,
      socket
      |> assign(:user, user)
      |> assign(:all_posts, all_posts)
-     |> assign(:posts, Enum.take(all_posts, @per_page))
+     |> assign(:displayed_post_ids, MapSet.new(first_page, & &1.id))
+     |> stream(:posts, first_page)
      |> assign(:page, 1)
      |> assign(:posts_exhausted, length(all_posts) <= @per_page)
      |> assign(:user_profile, user_profile)
      |> assign(:current_user_follows, current_user_follows)
      |> assign(:current_user_recipes, user_recipes)
+     |> assign(:recipe_counts_by_user, recipe_counts_by_user)
      |> assign(:must_be_loged_in, nil)
      |> assign(:page_title, "Browse Recipes")}
   end
 
   @impl true
   def handle_event("load-more", _params, socket) do
-    %{all_posts: all_posts, page: page} = socket.assigns
+    %{all_posts: all_posts, page: page, displayed_post_ids: displayed_post_ids} = socket.assigns
     next_page = page + 1
-    displayed = Enum.take(all_posts, next_page * @per_page)
+    new_page_items = Enum.slice(all_posts, page * @per_page, @per_page)
+    total_displayed = min(next_page * @per_page, length(all_posts))
 
     {:noreply,
      socket
-     |> assign(:posts, displayed)
+     |> stream(:posts, new_page_items)
+     |> assign(
+       :displayed_post_ids,
+       MapSet.union(displayed_post_ids, MapSet.new(new_page_items, & &1.id))
+     )
      |> assign(:page, next_page)
-     |> assign(:posts_exhausted, length(displayed) >= length(all_posts))}
+     |> assign(:posts_exhausted, total_displayed >= length(all_posts))}
   end
 
   @impl true
@@ -134,7 +150,11 @@ defmodule MehungryWeb.HomeLive.Index do
   defp apply_action(socket, :show_recipe, %{"id" => id}) do
     maybe_track_user(%{}, socket)
 
-    recipe = Food.get_recipe!(id |> String.split("#") |> List.first() |> String.to_integer(), get_user_language(socket))
+    recipe =
+      Food.get_recipe!(
+        id |> String.split("#") |> List.first() |> String.to_integer(),
+        get_user_language(socket)
+      )
 
     if !is_nil(recipe) do
       Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
@@ -212,9 +232,15 @@ defmodule MehungryWeb.HomeLive.Index do
       Enum.map(list, fn x -> if x.id == post.id, do: post, else: x end)
     end
 
-    {:noreply,
-     socket
-     |> assign(:all_posts, update_post.(socket.assigns.all_posts))
-     |> assign(:posts, update_post.(socket.assigns.posts))}
+    socket = assign(socket, :all_posts, update_post.(socket.assigns.all_posts))
+
+    socket =
+      if MapSet.member?(socket.assigns.displayed_post_ids, post.id) do
+        stream_insert(socket, :posts, post)
+      else
+        socket
+      end
+
+    {:noreply, socket}
   end
 end

@@ -7,8 +7,8 @@ defmodule Mehungry.Repo.Migrations.AddRatedForDateToMealPlanRatings do
     end
 
     create unique_index(:meal_plan_ratings, [:user_id, :rated_for_date, :rating_type],
-      where: "rated_for_date IS NOT NULL",
-      name: :meal_plan_ratings_user_date_type_unique
-    )
+             where: "rated_for_date IS NOT NULL",
+             name: :meal_plan_ratings_user_date_type_unique
+           )
   end
 end

@@ -21,7 +21,16 @@ defmodule Mehungry.AiBot.SocialMediaPostLog do
 
   def changeset(log, attrs) do
     log
-    |> cast(attrs, [:ai_bot_recipe_id, :platform, :status, :language_name, :error, :posted_at, :target_id, :target_name])
+    |> cast(attrs, [
+      :ai_bot_recipe_id,
+      :platform,
+      :status,
+      :language_name,
+      :error,
+      :posted_at,
+      :target_id,
+      :target_name
+    ])
     |> validate_required([:ai_bot_recipe_id, :platform, :status])
     |> validate_inclusion(:platform, @valid_platforms)
     |> validate_inclusion(:status, @valid_statuses)

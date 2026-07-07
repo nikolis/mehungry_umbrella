@@ -147,9 +147,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
               </button>
 
               <h3 class="text-center text-lg font-semibold text-white">
-                <span>{day_name(@current_date, (assigns[:current_language] || "en"))},</span>
+                <span>{day_name(@current_date, assigns[:current_language] || "en")},</span>
                 <span>{String.slice(Calendar.strftime(@current_date, "%d"), 0..2)}</span>
-                <span>{month_short(@current_date, (assigns[:current_language] || "en"))}</span>
+                <span>{month_short(@current_date, assigns[:current_language] || "en")}</span>
               </h3>
 
               <button
@@ -344,10 +344,10 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                   d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
                 />
               </svg>
-              {day_name(day, (assigns[:current_language] || "en"))}
+              {day_name(day, assigns[:current_language] || "en")}
             </span>
             <span class="text-slate-500 text-xs sm:text-sm">
-              {Calendar.strftime(day, "%d")} {month_short(day, (assigns[:current_language] || "en"))}
+              {Calendar.strftime(day, "%d")} {month_short(day, assigns[:current_language] || "en")}
             </span>
             <span
               class="ml-auto text-slate-400 hover:text-white transition-colors cursor-pointer p-1"
@@ -582,11 +582,29 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     """
   end
 
-  @days_el %{1 => "Δευτέρα", 2 => "Τρίτη", 3 => "Τετάρτη", 4 => "Πέμπτη",
-             5 => "Παρασκευή", 6 => "Σάββατο", 7 => "Κυριακή"}
-  @months_short_el %{1 => "Ιαν", 2 => "Φεβ", 3 => "Μαρ", 4 => "Απρ", 5 => "Μαϊ",
-                     6 => "Ιουν", 7 => "Ιουλ", 8 => "Αυγ", 9 => "Σεπ",
-                     10 => "Οκτ", 11 => "Νοε", 12 => "Δεκ"}
+  @days_el %{
+    1 => "Δευτέρα",
+    2 => "Τρίτη",
+    3 => "Τετάρτη",
+    4 => "Πέμπτη",
+    5 => "Παρασκευή",
+    6 => "Σάββατο",
+    7 => "Κυριακή"
+  }
+  @months_short_el %{
+    1 => "Ιαν",
+    2 => "Φεβ",
+    3 => "Μαρ",
+    4 => "Απρ",
+    5 => "Μαϊ",
+    6 => "Ιουν",
+    7 => "Ιουλ",
+    8 => "Αυγ",
+    9 => "Σεπ",
+    10 => "Οκτ",
+    11 => "Νοε",
+    12 => "Δεκ"
+  }
 
   defp day_name(%Date{} = date, "el"), do: Map.fetch!(@days_el, Date.day_of_week(date))
   defp day_name(%Date{} = date, _), do: Calendar.strftime(date, "%A")

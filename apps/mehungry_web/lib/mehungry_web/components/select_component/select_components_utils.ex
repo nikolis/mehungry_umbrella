@@ -1,5 +1,4 @@
 defmodule MehungryWeb.SelectComponentUtils do
-
   def transform_item(nil) do
     nil
   end

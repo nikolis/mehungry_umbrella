@@ -72,10 +72,12 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   @impl true
   def handle_event("validate", %{"recipe" => recipe_params}, socket) do
-    recipe_params = case socket.assigns[:current_language] do
-      lang when lang not in [nil, "en"] -> Map.put(recipe_params, "language_name", lang)
-      _ -> recipe_params
-    end
+    recipe_params =
+      case socket.assigns[:current_language] do
+        lang when lang not in [nil, "en"] -> Map.put(recipe_params, "language_name", lang)
+        _ -> recipe_params
+      end
+
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
 
     changeset =
@@ -607,10 +609,13 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     path = Enum.at(path, 0)
     socket = assign(socket, :image_upload, path)
     recipe_params = get_params_with_image(socket, recipe_params)
-    recipe_params = case socket.assigns[:current_language] do
-      lang when lang not in [nil, "en"] -> Map.put(recipe_params, "language_name", lang)
-      _ -> recipe_params
-    end
+
+    recipe_params =
+      case socket.assigns[:current_language] do
+        lang when lang not in [nil, "en"] -> Map.put(recipe_params, "language_name", lang)
+        _ -> recipe_params
+      end
+
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
     recipe_params = filter_empty_steps(recipe_params)
 
@@ -640,10 +645,13 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     path = Enum.at(path, 0)
     socket = assign(socket, :image_upload, path)
     recipe_params = get_params_with_image(socket, recipe_params)
-    recipe_params = case socket.assigns[:current_language] do
-      lang when lang not in [nil, "en"] -> Map.put(recipe_params, "language_name", lang)
-      _ -> recipe_params
-    end
+
+    recipe_params =
+      case socket.assigns[:current_language] do
+        lang when lang not in [nil, "en"] -> Map.put(recipe_params, "language_name", lang)
+        _ -> recipe_params
+      end
+
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
     recipe_params = filter_empty_steps(recipe_params)
 

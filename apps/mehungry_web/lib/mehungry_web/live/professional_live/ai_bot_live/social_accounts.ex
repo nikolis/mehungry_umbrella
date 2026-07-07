@@ -71,8 +71,10 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
     ~H"""
     <div>
       <div class="flex items-center gap-3 mb-6">
-        <.link navigate={~p"/professional/ai-bot"}
-               class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+        <.link
+          navigate={~p"/professional/ai-bot"}
+          class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+        >
           <.icon name="hero-arrow-left" class="h-5 w-5" />
         </.link>
         <div>
@@ -85,14 +87,16 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
       <%= if is_nil(@config) do %>
         <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 text-amber-300 text-sm">
-          No active bot configuration found for this month.
-          <.link navigate={~p"/professional/ai-bot/new"} class="underline ml-1">Create one</.link>.
+          No active bot configuration found for this month. <.link
+            navigate={~p"/professional/ai-bot/new"}
+            class="underline ml-1"
+          >Create one</.link>.
         </div>
       <% else %>
         <div class="mb-5 bg-slate-800 border border-slate-700/60 rounded-xl px-4 py-3 text-sm text-slate-300">
           Configuring accounts for bot user:
-          <strong class="text-white"><%= @bot_user.name || @bot_user.email %></strong>
-          <span class="text-slate-500 ml-1">(<%= @config.theme %> · <%= month_name(@config.month) %> <%= @config.year %>)</span>
+          <strong class="text-white">{@bot_user.name || @bot_user.email}</strong>
+          <span class="text-slate-500 ml-1">({@config.theme} · {month_name(@config.month)} {@config.year})</span>
         </div>
 
         <!-- Connection status cards -->
@@ -115,7 +119,11 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
             name="Pinterest"
             icon="📌"
             connected={map_non_empty?(@bot_user.pinterest_token)}
-            detail={if @pinterest_boards != [], do: "#{length(@pinterest_boards)} board(s) available", else: nil}
+            detail={
+              if @pinterest_boards != [],
+                do: "#{length(@pinterest_boards)} board(s) available",
+                else: nil
+            }
             connect_url={~p"/auth/bot/target/#{@bot_user.id}/pinterest"}
           />
         </div>
@@ -131,15 +139,19 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
               <%= for lang <- @languages do %>
                 <div class="flex items-center gap-3">
                   <span class="w-10 text-xs font-semibold text-slate-400 uppercase flex-shrink-0">
-                    <%= lang.name %>
+                    {lang.name}
                   </span>
-                  <select name={"facebook_pages[#{lang.name}]"}
-                          class="flex-1 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-primary-500 focus:outline-none">
+                  <select
+                    name={"facebook_pages[#{lang.name}]"}
+                    class="flex-1 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                  >
                     <option value="">— not set —</option>
                     <%= for {page_name, page} <- @bot_user.facebook_token do %>
-                      <option value={page["id"]}
-                              selected={get_in(@config.facebook_page_ids || %{}, [lang.name]) == page["id"]}>
-                        <%= page_name %> (<%= page["id"] %>)
+                      <option
+                        value={page["id"]}
+                        selected={get_in(@config.facebook_page_ids || %{}, [lang.name]) == page["id"]}
+                      >
+                        {page_name} ({page["id"]})
                       </option>
                     <% end %>
                   </select>
@@ -151,8 +163,10 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
                 </div>
               <% end %>
               <div class="pt-2">
-                <button type="submit"
-                        class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors">
+                <button
+                  type="submit"
+                  class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+                >
                   <.icon name="hero-check" class="h-4 w-4" /> Save Facebook Pages
                 </button>
               </div>
@@ -171,15 +185,21 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
               <%= for lang <- @languages do %>
                 <div class="flex items-center gap-3">
                   <span class="w-10 text-xs font-semibold text-slate-400 uppercase flex-shrink-0">
-                    <%= lang.name %>
+                    {lang.name}
                   </span>
-                  <select name={"pinterest_boards[#{lang.name}]"}
-                          class="flex-1 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-primary-500 focus:outline-none">
+                  <select
+                    name={"pinterest_boards[#{lang.name}]"}
+                    class="flex-1 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                  >
                     <option value="">— not set —</option>
                     <%= for board <- @pinterest_boards do %>
-                      <option value={board["id"]}
-                              selected={get_in(@config.pinterest_board_ids || %{}, [lang.name]) == board["id"]}>
-                        <%= board["name"] %>
+                      <option
+                        value={board["id"]}
+                        selected={
+                          get_in(@config.pinterest_board_ids || %{}, [lang.name]) == board["id"]
+                        }
+                      >
+                        {board["name"]}
                       </option>
                     <% end %>
                   </select>
@@ -191,8 +211,10 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
                 </div>
               <% end %>
               <div class="pt-2">
-                <button type="submit"
-                        class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors">
+                <button
+                  type="submit"
+                  class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+                >
                   <.icon name="hero-check" class="h-4 w-4" /> Save Pinterest Boards
                 </button>
               </div>
@@ -221,23 +243,26 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
     ~H"""
     <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
       <div class="flex items-center gap-2 mb-3">
-        <span class="text-xl"><%= @icon %></span>
-        <h3 class="font-semibold text-white text-sm"><%= @name %></h3>
+        <span class="text-xl">{@icon}</span>
+        <h3 class="font-semibold text-white text-sm">{@name}</h3>
         <span class={[
           "ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
           if(@connected,
             do: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-            else: "bg-slate-700/50 text-slate-500 border-slate-600/40")
+            else: "bg-slate-700/50 text-slate-500 border-slate-600/40"
+          )
         ]}>
-          <%= if @connected, do: "Connected", else: "Not connected" %>
+          {if @connected, do: "Connected", else: "Not connected"}
         </span>
       </div>
       <%= if @detail do %>
-        <p class="text-xs text-slate-400 mb-3"><%= @detail %></p>
+        <p class="text-xs text-slate-400 mb-3">{@detail}</p>
       <% end %>
-      <a href={@connect_url}
-         class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-600 text-slate-300 hover:text-white hover:border-slate-500 text-xs font-medium transition-colors w-full">
-        <%= if @connected, do: "Reconnect", else: "Connect" %>
+      <a
+        href={@connect_url}
+        class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-600 text-slate-300 hover:text-white hover:border-slate-500 text-xs font-medium transition-colors w-full"
+      >
+        {if @connected, do: "Reconnect", else: "Connect"}
       </a>
     </div>
     """
@@ -253,7 +278,10 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
   defp facebook_detail(bot_user) do
     pages = bot_user.facebook_token || %{}
     count = map_size(pages)
-    if count > 0, do: "#{count} page(s): #{Enum.map_join(pages, ", ", fn {name, _} -> name end)}", else: nil
+
+    if count > 0,
+      do: "#{count} page(s): #{Enum.map_join(pages, ", ", fn {name, _} -> name end)}",
+      else: nil
   end
 
   defp map_non_empty?(map) when is_map(map) and map_size(map) > 0, do: true

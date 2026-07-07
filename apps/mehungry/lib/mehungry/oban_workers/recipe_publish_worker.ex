@@ -12,11 +12,16 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
   alias Mehungry.{AiBot, Accounts, Food}
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"ai_bot_recipe_id" => bot_recipe_id, "language_name" => lang} = args}) do
+  def perform(%Oban.Job{
+        args: %{"ai_bot_recipe_id" => bot_recipe_id, "language_name" => lang} = args
+      }) do
     bot_recipe = AiBot.get_bot_recipe!(bot_recipe_id)
 
     if bot_recipe.status != "approved" do
-      Logger.info("[RecipePublishWorker] bot_recipe #{bot_recipe_id} status=#{bot_recipe.status}, skipping publish")
+      Logger.info(
+        "[RecipePublishWorker] bot_recipe #{bot_recipe_id} status=#{bot_recipe.status}, skipping publish"
+      )
+
       :ok
     else
       config = bot_recipe.bot_config
@@ -36,7 +41,9 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
         "pinterest_board_id" => Map.get(args, "pinterest_board_id")
       }
 
-      publisher = Application.get_env(:mehungry, :social_media_publisher, MehungryWeb.SocialMediaPublisher)
+      publisher =
+        Application.get_env(:mehungry, :social_media_publisher, MehungryWeb.SocialMediaPublisher)
+
       apply(publisher, :publish_recipe, [recipe, bot_user, bot_recipe_id, lang, opts])
 
       maybe_mark_published(bot_recipe, config)

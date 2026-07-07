@@ -68,6 +68,7 @@ defmodule MehungryWeb.Presence do
                 |> String.slice(0, 24)
               else
                 date = Date.utc_today() |> Date.to_string()
+
                 :crypto.hash(:sha256, "#{address}|#{agent}|#{date}")
                 |> Base.encode16(case: :lower)
                 |> String.slice(0, 24)
@@ -111,8 +112,7 @@ defmodule MehungryWeb.Presence do
         {:noreply, socket}
       end
 
-        # Presence.track(socket, "General" ,"General", %{addres: address, agent: agent, path: path} )
-
+      # Presence.track(socket, "General" ,"General", %{addres: address, agent: agent, path: path} )
 
       """
             def maybe_track_user(

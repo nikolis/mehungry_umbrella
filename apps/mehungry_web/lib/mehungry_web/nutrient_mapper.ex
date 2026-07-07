@@ -5,7 +5,9 @@ defmodule MehungryWeb.NutrientMapper do
   def init(init_arg), do: {:ok, init_arg}
 
   def get_nutrient_name(nutrient_id, fallback_name \\ nil) do
-    name = if fallback_name && fallback_name != "", do: fallback_name, else: to_string(nutrient_id)
+    name =
+      if fallback_name && fallback_name != "", do: fallback_name, else: to_string(nutrient_id)
+
     humanize_nutrient_name(name)
   end
 

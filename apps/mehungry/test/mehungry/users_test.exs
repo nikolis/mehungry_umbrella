@@ -21,8 +21,12 @@ defmodule Mehungry.UsersTest do
   defp create_ingredients(_) do
     _lang =
       case Languages.get_language_by_name("En") do
-        nil -> {:ok, lang} = Languages.create_language(%{name: "En"}); lang
-        lang -> lang
+        nil ->
+          {:ok, lang} = Languages.create_language(%{name: "En"})
+          lang
+
+        lang ->
+          lang
       end
 
     FdcFoodParser.get_ingredients_from_food_data_central_json_file(
@@ -81,7 +85,7 @@ defmodule Mehungry.UsersTest do
         user_id: user.id
       })
 
-      recipe = Mehungry.Repo.preload(recipe, [recipe_ingredients: [ingredient: :category]])
+      recipe = Mehungry.Repo.preload(recipe, recipe_ingredients: [ingredient: :category])
       _recipe_grade = Users.calculate_recipe_grading(recipe, user)
     end
   end

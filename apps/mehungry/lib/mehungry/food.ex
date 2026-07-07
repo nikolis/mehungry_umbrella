@@ -137,12 +137,18 @@ defmodule Mehungry.Food do
 
   def apply_recipe_translation(recipe, nil), do: recipe
   def apply_recipe_translation(recipe, %RecipeTranslation{title: nil}), do: recipe
+
   def apply_recipe_translation(recipe, %RecipeTranslation{} = translation) do
-    %{recipe | title: translation.title || recipe.title, description: translation.description || recipe.description}
+    %{
+      recipe
+      | title: translation.title || recipe.title,
+        description: translation.description || recipe.description
+    }
   end
 
   # Bulk-apply user-language translations to a list of recipes, sorting translated ones first.
   def localize_recipes(recipes, nil), do: Enum.map(recipes, &translate_recipe_if_needed/1)
+
   def localize_recipes(recipes, language_name) do
     recipe_ids = Enum.map(recipes, & &1.id)
     translations = load_translations_map(recipe_ids, language_name)
@@ -166,6 +172,7 @@ defmodule Mehungry.Food do
   end
 
   def load_recipe_translations_map([], _language_name), do: %{}
+
   def load_recipe_translations_map(recipe_ids, language_name) do
     from(rt in RecipeTranslation,
       where: rt.recipe_id in ^recipe_ids and rt.language_name == ^language_name
@@ -242,7 +249,9 @@ defmodule Mehungry.Food do
 
     case Repo.all(query) do
       [] ->
-        Repo.preload(recipe, [{:recipe_ingredients, [:measurement_unit, {:ingredient, :category}]}])
+        Repo.preload(recipe, [
+          {:recipe_ingredients, [:measurement_unit, {:ingredient, :category}]}
+        ])
 
       translated ->
         %Recipe{recipe | recipe_ingredients: translated}
@@ -269,7 +278,8 @@ defmodule Mehungry.Food do
     |> Repo.preload(:measurement_unit)
   end
 
-  def get_measurement_unit_portions_for_ingredients(ingredient_ids) when is_list(ingredient_ids) do
+  def get_measurement_unit_portions_for_ingredients(ingredient_ids)
+      when is_list(ingredient_ids) do
     from(ingp in IngredientPortion, where: ingp.ingredient_id in ^ingredient_ids)
     |> Repo.all()
     |> Repo.preload(:measurement_unit)
@@ -446,6 +456,16 @@ defmodule Mehungry.Food do
       select: count(rec.id)
     )
     |> Repo.one()
+  end
+
+  def count_recipes_created_by_user_ids(user_ids) do
+    from(rec in Recipe,
+      where: rec.user_id in ^user_ids,
+      group_by: rec.user_id,
+      select: {rec.user_id, count(rec.id)}
+    )
+    |> Repo.all()
+    |> Map.new()
   end
 
   def list_user_recipes_for_selection(nil) do
@@ -649,7 +669,10 @@ defmodule Mehungry.Food do
       )
 
     comment_ids_q =
-      from(c in Mehungry.Posts.Comment, where: c.recipe_id in subquery(recipe_ids_q), select: c.id)
+      from(c in Mehungry.Posts.Comment,
+        where: c.recipe_id in subquery(recipe_ids_q),
+        select: c.id
+      )
 
     comment_answer_ids_q =
       from(ca in Mehungry.Posts.CommentAnswer,

@@ -1,6 +1,5 @@
 <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-6">
-  
-<!-- Header -->
+  <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-white">Traffic Analytics</h1>
@@ -13,8 +12,8 @@
       <span class="text-emerald-400 text-sm font-semibold">{@online_count} online</span>
     </div>
   </div>
-  
-<!-- Stats cards -->
+
+  <!-- Stats cards -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
       <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
@@ -47,11 +46,10 @@
       <div class="text-xs text-slate-500 mt-1">organic visits</div>
     </div>
   </div>
-  
-<!-- Charts row -->
+
+  <!-- Charts row -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    
-<!-- Daily visits chart -->
+    <!-- Daily visits chart -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Visits — last 14 days</h2>
       <div
@@ -62,12 +60,17 @@
         data-size="full"
         class="w-full overflow-hidden"
       >
-        <div id="vega-daily" phx-hook="VegaLite" data-spec={Jason.encode!(@daily_chart_spec)} class="w-full">
+        <div
+          id="vega-daily"
+          phx-hook="VegaLite"
+          data-spec={Jason.encode!(@daily_chart_spec)}
+          class="w-full"
+        >
         </div>
       </div>
     </div>
-    
-<!-- Traffic sources chart -->
+
+    <!-- Traffic sources chart -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Traffic sources — last 30 days</h2>
       <%= if @traffic_sources == [] do %>
@@ -83,7 +86,12 @@
           data-size="full"
           class="w-full overflow-hidden"
         >
-          <div id="vega-source" phx-hook="VegaLite" data-spec={Jason.encode!(@source_chart_spec)} class="w-full">
+          <div
+            id="vega-source"
+            phx-hook="VegaLite"
+            data-spec={Jason.encode!(@source_chart_spec)}
+            class="w-full"
+          >
           </div>
         </div>
         <div class="flex flex-wrap gap-3 mt-3">
@@ -97,11 +105,10 @@
       <% end %>
     </div>
   </div>
-  
-<!-- Top pages + Recent visits -->
+
+  <!-- Top pages + Recent visits -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    
-<!-- Top pages -->
+    <!-- Top pages -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Top pages (all time)</h2>
       <%= if @top_pages == [] do %>
@@ -129,8 +136,8 @@
         </div>
       <% end %>
     </div>
-    
-<!-- Recent visits -->
+
+    <!-- Recent visits -->
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Recent visits</h2>
       <div class="space-y-1 overflow-y-auto max-h-80">
@@ -154,8 +161,8 @@
       </div>
     </div>
   </div>
-  
-<!-- Sessions -->
+
+  <!-- Sessions -->
   <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
     <div class="flex items-center justify-between mb-4">
       <div>
@@ -170,7 +177,7 @@
     <% else %>
       <% session = Enum.at(@sessions, @selected_session_idx) %>
 
-<!-- Dropdown selector -->
+      <!-- Dropdown selector -->
       <form id="analytics-session-select-form" phx-change="select_session">
         <select
           name="idx"
@@ -185,11 +192,10 @@
         </select>
       </form>
 
-<!-- Detail panel for the selected session only -->
+      <!-- Detail panel for the selected session only -->
       <%= if session do %>
         <div class="rounded-xl border border-slate-700 bg-slate-900/30 p-4">
-
-<!-- Identity + stats bar -->
+          <!-- Identity + stats bar -->
           <div class="flex flex-wrap items-center gap-3 mb-3 pb-3 border-b border-slate-700/60">
             <%= if session.user_email do %>
               <div class="flex items-center gap-1.5">
@@ -222,7 +228,7 @@
             </div>
           </div>
 
-<!-- Page journey -->
+          <!-- Page journey -->
           <div class="flex flex-wrap items-center gap-1">
             <%= for {page, pi} <- Enum.with_index(session.pages) do %>
               <%= if pi > 0 do %>
@@ -238,12 +244,18 @@
                     <span class="text-xs text-slate-600 font-sans" title="time on page">{t}</span>
                   <% end %>
                   <%= if page.ttfb_ms do %>
-                    <span class="text-xs text-emerald-700 font-sans" title={"TTFB #{page.ttfb_ms}ms / load #{page.load_ms}ms"}>
+                    <span
+                      class="text-xs text-emerald-700 font-sans"
+                      title={"TTFB #{page.ttfb_ms}ms / load #{page.load_ms}ms"}
+                    >
                       ↓{page.ttfb_ms}ms
                     </span>
                   <% else %>
                     <%= if page.load_ms do %>
-                      <span class="text-xs text-sky-700 font-sans" title={"LiveView render #{page.load_ms}ms"}>
+                      <span
+                        class="text-xs text-sky-700 font-sans"
+                        title={"LiveView render #{page.load_ms}ms"}
+                      >
                         ⚡{page.load_ms}ms
                       </span>
                     <% end %>
@@ -271,10 +283,9 @@
     <% end %>
   </div>
 
-<!-- Referrer detail table -->
+  <!-- Referrer detail table -->
   <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
-
-<!-- Header + clear button -->
+    <!-- Header + clear button -->
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-sm font-semibold text-white">Referrer detail — recent visits</h2>
       <%= if @filter_category || @filter_source do %>
@@ -287,7 +298,7 @@
       <% end %>
     </div>
 
-<!-- Category filter chips -->
+    <!-- Category filter chips -->
     <div class="flex flex-wrap items-center gap-2 mb-2">
       <span class="text-xs text-slate-500 shrink-0">Category</span>
       <%= for cat <- ["direct", "search", "social", "referral", "internal"] do %>
@@ -307,7 +318,7 @@
       <% end %>
     </div>
 
-<!-- Source filter chips (only shown when sources exist) -->
+    <!-- Source filter chips (only shown when sources exist) -->
     <%= if @available_sources != [] do %>
       <div class="flex flex-wrap items-center gap-2 mb-4">
         <span class="text-xs text-slate-500 shrink-0">Source</span>
@@ -329,7 +340,7 @@
       </div>
     <% end %>
 
-<!-- Table -->
+    <!-- Table -->
     <div class="overflow-x-auto -mx-2">
       <table class="min-w-full text-sm">
         <thead>
@@ -369,8 +380,8 @@
         <tbody class="divide-y divide-slate-700/50">
           <%= for visit <- @filtered_visits do %>
             <% agent = get_in(visit.details || %{}, ["agent"])
-               referrer = get_in(visit.details || %{}, ["referrer"])
-               device = detect_device(agent) %>
+            referrer = get_in(visit.details || %{}, ["referrer"])
+            device = detect_device(agent) %>
             <tr class="hover:bg-slate-700/20 transition-colors">
               <td class="px-3 py-2 text-slate-500 text-xs whitespace-nowrap">
                 {format_dt(visit.inserted_at)}
@@ -421,19 +432,25 @@
       </table>
     </div>
 
-<!-- Empty state -->
+    <!-- Empty state -->
     <%= if @filtered_visits == [] and @visits_exhausted do %>
       <p class="text-slate-500 text-sm text-center py-6">No visits match the selected filter.</p>
     <% end %>
 
-<!-- Infinite scroll sentinel — only when there are rows and more pages exist -->
+    <!-- Infinite scroll sentinel — only when there are rows and more pages exist -->
     <%= if @filtered_visits != [] and not @visits_exhausted do %>
-      <div id="visit-scroll-sentinel" phx-hook="VisitScroll" class="h-6 flex items-center justify-center mt-2">
+      <div
+        id="visit-scroll-sentinel"
+        phx-hook="VisitScroll"
+        class="h-6 flex items-center justify-center mt-2"
+      >
         <span class="text-xs text-slate-600">Loading more…</span>
       </div>
     <% end %>
     <%= if @filtered_visits != [] and @visits_exhausted do %>
-      <p class="text-xs text-slate-700 text-center pt-3">All visits loaded ({length(@filtered_visits)})</p>
+      <p class="text-xs text-slate-700 text-center pt-3">
+        All visits loaded ({length(@filtered_visits)})
+      </p>
     <% end %>
   </div>
 </div>

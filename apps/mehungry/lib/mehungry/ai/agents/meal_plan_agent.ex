@@ -272,7 +272,10 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
                Date.compare(date, end_date) in [:lt, :eq] do
             errors
           else
-            ["Date #{entry["date"]} is outside the plan range #{start_date} – #{end_date}" | errors]
+            [
+              "Date #{entry["date"]} is outside the plan range #{start_date} – #{end_date}"
+              | errors
+            ]
           end
 
         _ ->
@@ -292,7 +295,10 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
           if MapSet.member?(valid_ids, id) do
             errors
           else
-            ["recipe_id #{id} is not in the catalog — use search_catalog to find valid IDs" | errors]
+            [
+              "recipe_id #{id} is not in the catalog — use search_catalog to find valid IDs"
+              | errors
+            ]
           end
 
         _ ->
@@ -313,15 +319,17 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
       end)
       |> Enum.map(&attempt_create(&1, user_id))
 
-    created = Enum.flat_map(results, fn
-      {:ok, meal} -> [meal]
-      _ -> []
-    end)
+    created =
+      Enum.flat_map(results, fn
+        {:ok, meal} -> [meal]
+        _ -> []
+      end)
 
-    skipped = Enum.count(results, fn
-      {:error, _} -> true
-      _ -> false
-    end)
+    skipped =
+      Enum.count(results, fn
+        {:error, _} -> true
+        _ -> false
+      end)
 
     {created, skipped}
   end
@@ -355,5 +363,4 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   defp slot_time("Lunch"), do: ~T[13:00:00]
   defp slot_time("Dinner"), do: ~T[19:00:00]
   defp slot_time(_), do: ~T[12:00:00]
-
 end

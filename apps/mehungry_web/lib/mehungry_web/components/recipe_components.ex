@@ -185,8 +185,9 @@ defmodule MehungryWeb.RecipeComponents do
         <div class="bg-slate-800 border border-slate-700 divide-y custom-scrollbar divide-slate-700 overflow-auto max-h-72">
           <%= for ingredient <- @recipe_ingredients do %>
             <% display_names = Map.get(assigns, :ingredient_display_names, %{}) %>
-            <% name = Map.get(display_names, ingredient.ingredient_id) ||
-                      Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %>
+            <% name =
+              Map.get(display_names, ingredient.ingredient_id) ||
+                Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %>
             <div class="flex justify-between items-center p-4 hover:bg-slate-700/30 transition">
               <span class="text-white">
                 {name}
@@ -330,58 +331,6 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_card(%{myself: _myself} = assigns) do
-    ~H"""
-    <div id={"recipe-card-details-container-#{@id}-#{@recipe.id}"} class="group">
-      <.recipe_like_container
-        type={@type}
-        user_recipes={@user_recipes}
-        recipe={@recipe}
-        id={@id}
-        current_user={@current_user}
-        myself={@myself}
-      />
-      <.link
-        phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
-        id={"recipe-card-details-link-#{@id}-#{@recipe.id}"}
-        patch={@path_to_details}
-      >
-        <div class="bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-primary-500/50 transition-all duration-200 group-hover:transform group-hover:-translate-y-1">
-          
-    <!-- Image Container -->
-          <div class="relative aspect-video overflow-hidden bg-slate-700">
-            <%= if ! is_nil(@recipe.image_url) do %>
-              {inspect(@recipe.image_url)}
-              <img class="w-full rounded-xl m-auto" src={@recipe.image_url} />
-            <% else %>
-              <div class="w-full h-full flex items-center justify-center">
-                <svg
-                  class="w-12 h-12 text-slate-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-            <% end %>
-          </div>
-          <h1 class="recipe_title text-center">{@recipe.title}</h1>
-          <div class="recipe_sub_text text-center">
-            Sub title
-          </div>
-          <.recipe_attrs_container recipe={@recipe} />
-        </div>
-      </.link>
-    </div>
-    """
-  end
-
   def recipe_card(assigns) do
     ~H"""
     <div id={"recipe-card-details-container-#{@id}-#{@recipe.id}"} class="py-2 relative">
@@ -425,8 +374,8 @@ defmodule MehungryWeb.RecipeComponents do
             <p class="text-slate-400 text-sm mt-1 line-clamp-2">
               {@recipe.description || "No description available"}
             </p>
-            
-    <!-- Recipe Stats -->
+
+            <!-- Recipe Stats -->
             <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-700">
               <div class="flex items-center gap-3">
                 <!-- Cooking Time -->
@@ -446,8 +395,8 @@ defmodule MehungryWeb.RecipeComponents do
                   </svg>
                   <span class="text-slate-400 text-xs">{@recipe.cooking_time_lower_limit} min</span>
                 </div>
-                
-    <!-- Difficulty -->
+
+                <!-- Difficulty -->
                 <div class="flex items-center gap-1">
                   <%= case @recipe.difficulty do %>
                     <% 1 -> %>
@@ -496,8 +445,8 @@ defmodule MehungryWeb.RecipeComponents do
                   <% end %>
                   <span class="text-slate-400 text-xs capitalize">{@recipe.difficulty}</span>
                 </div>
-                
-    <!-- Servings -->
+
+                <!-- Servings -->
                 <div class="flex items-center gap-1">
                   <svg
                     class="w-4 h-4 text-slate-500"
@@ -515,8 +464,8 @@ defmodule MehungryWeb.RecipeComponents do
                   <span class="text-slate-400 text-xs">{@recipe.servings}</span>
                 </div>
               </div>
-              
-    <!-- Save Count -->
+
+              <!-- Save Count -->
               <div class="flex items-center gap-1">
                 <svg
                   class="w-4 h-4 text-red-400"
@@ -548,7 +497,9 @@ defmodule MehungryWeb.RecipeComponents do
         >
           <svg
             class="w-5 h-5"
-            fill={get_color(Enum.any?(Map.get(assigns, :user_recipes, []), fn x -> x == @recipe.id end))}
+            fill={
+              get_color(Enum.any?(Map.get(assigns, :user_recipes, []), fn x -> x == @recipe.id end))
+            }
             stroke="#eb4034"
             viewBox="0 0 24 24"
           >

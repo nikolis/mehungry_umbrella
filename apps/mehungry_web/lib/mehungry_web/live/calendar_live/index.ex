@@ -277,7 +277,11 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   @impl true
-  def handle_event("rate_meal_plan", %{"score" => score, "date" => date_str, "type" => type} = params, socket) do
+  def handle_event(
+        "rate_meal_plan",
+        %{"score" => score, "date" => date_str, "type" => type} = params,
+        socket
+      ) do
     user_id = socket.assigns.user.id
     comment = Map.get(params, "comment", nil)
 

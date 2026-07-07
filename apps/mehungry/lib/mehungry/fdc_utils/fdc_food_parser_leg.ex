@@ -181,12 +181,18 @@ defmodule Mehungry.FdcFoodParserLeg do
             end)
 
           {:error, changeset} ->
-            Logger.error("[FdcFoodParserLeg] Failed to create ingredient: #{inspect(changeset.errors)}")
+            Logger.error(
+              "[FdcFoodParserLeg] Failed to create ingredient: #{inspect(changeset.errors)}"
+            )
+
             ""
         end
 
       existing ->
-        Logger.debug("[FdcFoodParserLeg] Ingredient '#{existing.name}' already exists, skipping insert")
+        Logger.debug(
+          "[FdcFoodParserLeg] Ingredient '#{existing.name}' already exists, skipping insert"
+        )
+
         existing
     end
   end

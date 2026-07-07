@@ -73,9 +73,7 @@ defmodule Mehungry.AI.Client do
   end
 
   defp do_request(api_key, params, attempt) do
-    case HTTPoison.post(@api_url, build_body(params), headers(api_key),
-           recv_timeout: @timeout_ms
-         ) do
+    case HTTPoison.post(@api_url, build_body(params), headers(api_key), recv_timeout: @timeout_ms) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         parse_response(body)
 

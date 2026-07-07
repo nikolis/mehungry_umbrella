@@ -13,7 +13,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
     case Professionals.get_assignment(professional_id, client_id_int) do
       nil ->
-        {:ok, socket |> put_flash(:error, "Client not found.") |> redirect(to: "/nutritionist/clients")}
+        {:ok,
+         socket |> put_flash(:error, "Client not found.") |> redirect(to: "/nutritionist/clients")}
 
       _assignment ->
         if connected?(socket) do
@@ -124,7 +125,12 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       <div class="flex items-center gap-4 mb-6">
         <a href="/nutritionist/clients" class="text-slate-400 hover:text-white">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
           </svg>
         </a>
         <%= if @client.profile_pic do %>
@@ -159,7 +165,12 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
             <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+              />
             </svg>
             <h2 class="text-white font-semibold text-sm">AI Meal Plan Assistant</h2>
           </div>
@@ -198,11 +209,27 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                   <!-- Latest step: animated dot -->
                   <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse shrink-0"></span>
                 <% else %>
-                  <svg class="w-3.5 h-3.5 text-teal-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                  <svg
+                    class="w-3.5 h-3.5 text-teal-500 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 <% end %>
-                <span class={["text-sm", if(idx == length(@ai_steps) - 1 and @ai_running, do: "text-white", else: "text-slate-400")]}>
+                <span class={[
+                  "text-sm",
+                  if(idx == length(@ai_steps) - 1 and @ai_running,
+                    do: "text-white",
+                    else: "text-slate-400"
+                  )
+                ]}>
                   {step}
                 </span>
               </div>
@@ -283,7 +310,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                     <div class="flex items-center gap-1">
                       <%= for i <- 1..5 do %>
                         <svg
-                          class={["w-4 h-4", if(i <= rating.score, do: "text-yellow-400", else: "text-slate-600")]}
+                          class={[
+                            "w-4 h-4",
+                            if(i <= rating.score, do: "text-yellow-400", else: "text-slate-600")
+                          ]}
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >

@@ -18,10 +18,13 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
   alias Mehungry.ObanWorkers.RecipePublishWorker
 
   @meal_prompts %{
-    "breakfast" => "light and nourishing breakfast recipe — suitable for the morning, could be egg-based, yogurt-based, or grain-based",
+    "breakfast" =>
+      "light and nourishing breakfast recipe — suitable for the morning, could be egg-based, yogurt-based, or grain-based",
     "morning_snack" => "healthy mid-morning snack recipe — light, easy to prepare, energizing",
-    "lunch" => "satisfying main lunch recipe — a full meal with vegetables, protein, and grains or legumes",
-    "afternoon_snack" => "light afternoon snack recipe — sweet or savory, easy to prepare quickly",
+    "lunch" =>
+      "satisfying main lunch recipe — a full meal with vegetables, protein, and grains or legumes",
+    "afternoon_snack" =>
+      "light afternoon snack recipe — sweet or savory, easy to prepare quickly",
     "dinner" => "hearty dinner recipe — a warming complete evening meal with rich flavors"
   }
 
@@ -44,7 +47,10 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
 
     case AiBot.get_active_config_for_month(month, year) do
       nil ->
-        Logger.info("[DailyRecipeGenerationWorker] No active bot config for #{month}/#{year}, skipping")
+        Logger.info(
+          "[DailyRecipeGenerationWorker] No active bot config for #{month}/#{year}, skipping"
+        )
+
         :ok
 
       config ->
@@ -63,7 +69,10 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
     |> Task.async_stream(
       fn meal_type ->
         if AiBot.bot_recipe_exists?(config.id, meal_type, target_date) do
-          Logger.info("[DailyRecipeGenerationWorker] #{meal_type} for #{target_date} already exists, skipping")
+          Logger.info(
+            "[DailyRecipeGenerationWorker] #{meal_type} for #{target_date} already exists, skipping"
+          )
+
           :skipped
         else
           generate_one(config, bot_user, meal_type, target_date)
@@ -82,7 +91,10 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
   defp generate_one(config, bot_user, meal_type, target_date) do
     context = AiBot.get_context_for_date(config, target_date)
     description = build_description(context, meal_type)
-    Logger.info("[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date}: #{description}")
+
+    Logger.info(
+      "[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date}: #{description}"
+    )
 
     case RecipeAgent.run(description) do
       {:ok, attrs, _} ->
@@ -114,12 +126,18 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
             :ok
 
           {:error, reason} ->
-            Logger.error("[DailyRecipeGenerationWorker] Failed to persist #{meal_type}: #{inspect(reason)}")
+            Logger.error(
+              "[DailyRecipeGenerationWorker] Failed to persist #{meal_type}: #{inspect(reason)}"
+            )
+
             :error
         end
 
       {:error, reason} ->
-        Logger.error("[DailyRecipeGenerationWorker] RecipeAgent failed for #{meal_type}: #{inspect(reason)}")
+        Logger.error(
+          "[DailyRecipeGenerationWorker] RecipeAgent failed for #{meal_type}: #{inspect(reason)}"
+        )
+
         :error
     end
   end
@@ -139,7 +157,9 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
           |> Oban.insert()
 
         {:error, reason} ->
-          Logger.warning("[DailyRecipeGenerationWorker] Invalid time #{time_str} for #{meal_type}/#{lang}: #{inspect(reason)}")
+          Logger.warning(
+            "[DailyRecipeGenerationWorker] Invalid time #{time_str} for #{meal_type}/#{lang}: #{inspect(reason)}"
+          )
       end
     end)
   end
@@ -154,7 +174,12 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
 
   defp broadcast_pending_update do
     count = AiBot.count_pending_reviews()
-    Phoenix.PubSub.broadcast(Mehungry.PubSub, "admin:bot_recipes", {:pending_count_updated, count})
+
+    Phoenix.PubSub.broadcast(
+      Mehungry.PubSub,
+      "admin:bot_recipes",
+      {:pending_count_updated, count}
+    )
   end
 
   defp notify_admin(recipe_count, target_date) do
@@ -162,10 +187,14 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
 
     case Notifier.deliver_recipes_ready(recipe_count, review_url) do
       {:ok, _} ->
-        Logger.info("[DailyRecipeGenerationWorker] Admin notified: #{recipe_count} recipes for #{target_date}")
+        Logger.info(
+          "[DailyRecipeGenerationWorker] Admin notified: #{recipe_count} recipes for #{target_date}"
+        )
 
       {:error, reason} ->
-        Logger.warning("[DailyRecipeGenerationWorker] Failed to send admin notification: #{inspect(reason)}")
+        Logger.warning(
+          "[DailyRecipeGenerationWorker] Failed to send admin notification: #{inspect(reason)}"
+        )
     end
   end
 end

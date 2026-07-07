@@ -191,10 +191,11 @@ defmodule MehungryWeb.Telemetry do
 
     depths =
       Mehungry.Repo.all(
-        from j in Oban.Job,
+        from(j in Oban.Job,
           where: j.state == "available",
           group_by: j.queue,
           select: {j.queue, count(j.id)}
+        )
       )
 
     for {queue, depth} <- depths do

@@ -8,6 +8,7 @@ defmodule Mehungry.AiBot.RecipeTranslation do
     field :steps, {:array, :map}, default: []
 
     belongs_to :recipe, Mehungry.Food.Recipe
+
     belongs_to :language, Mehungry.Languages.Language,
       references: :name,
       foreign_key: :language_name,

@@ -10,7 +10,9 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
     profile = Professionals.get_professional_profile(user.id)
     client_count = Professionals.count_clients(user.id)
     upcoming = Professionals.list_upcoming_appointments(user.id, 5)
-    pending_sent = length(Enum.filter(Professionals.list_sent_invitations(user.id), &(&1.status == "pending")))
+
+    pending_sent =
+      length(Enum.filter(Professionals.list_sent_invitations(user.id), &(&1.status == "pending")))
 
     socket =
       socket
@@ -117,7 +119,10 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
           <p class="text-slate-400 text-sm">Upcoming Appointments</p>
           <p class="text-3xl font-bold text-white mt-1">{length(@upcoming_appointments)}</p>
-          <a href="/nutritionist/appointments" class="text-teal-400 text-xs mt-2 block hover:underline">Calendar →</a>
+          <a
+            href="/nutritionist/appointments"
+            class="text-teal-400 text-xs mt-2 block hover:underline"
+          >Calendar →</a>
         </div>
       </div>
 
@@ -131,11 +136,17 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
                 <div>
                   <p class="text-white text-sm font-medium">{appt.title}</p>
                   <p class="text-slate-400 text-xs">
-                    {(appt.client && appt.client.name) || appt.external_client_name} · {Calendar.strftime(appt.scheduled_at, "%b %d, %Y %H:%M")}
+                    {(appt.client && appt.client.name) || appt.external_client_name} · {Calendar.strftime(
+                      appt.scheduled_at,
+                      "%b %d, %Y %H:%M"
+                    )}
                   </p>
                 </div>
                 <%= if appt.client_id do %>
-                  <a href={"/nutritionist/clients/#{appt.client_id}"} class="text-teal-400 text-xs hover:underline">View client</a>
+                  <a
+                    href={"/nutritionist/clients/#{appt.client_id}"}
+                    class="text-teal-400 text-xs hover:underline"
+                  >View client</a>
                 <% end %>
               </div>
             <% end %>

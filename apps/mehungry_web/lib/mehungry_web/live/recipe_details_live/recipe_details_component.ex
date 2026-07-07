@@ -49,7 +49,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     {:noreply, socket}
   end
 
-
   @impl true
   def handle_event("add-reply-form", %{"id" => comment_id}, socket) do
     case is_nil(socket.assigns.current_user) do
@@ -187,8 +186,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             <div class="p-6">
               <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">{@recipe.title}</h1>
               <p class="text-slate-400 mb-4">{@recipe.description}</p>
-              
-    <!-- Recipe Stats -->
+
+              <!-- Recipe Stats -->
               <div class="flex flex-wrap gap-4 mb-6">
                 <div class="flex items-center gap-2">
                   <svg

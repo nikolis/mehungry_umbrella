@@ -227,10 +227,18 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
       build_fat_subcategory(categorized.saturated_fats, "Saturated Fat", fat_subcategories)
 
     {_m, fat_subcategories} =
-      build_fat_subcategory(categorized.monounsaturated_fats, "Monounsaturated Fat", fat_subcategories)
+      build_fat_subcategory(
+        categorized.monounsaturated_fats,
+        "Monounsaturated Fat",
+        fat_subcategories
+      )
 
     {_p, fat_subcategories} =
-      build_fat_subcategory(categorized.polyunsaturated_fats, "Polyunsaturated Fat", fat_subcategories)
+      build_fat_subcategory(
+        categorized.polyunsaturated_fats,
+        "Polyunsaturated Fat",
+        fat_subcategories
+      )
 
     {_t, fat_subcategories} =
       build_fat_subcategory(categorized.trans_fats, "Trans Fat", fat_subcategories)
@@ -241,13 +249,19 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
       Logger.debug("NutrientHierarchyBuilder.build_total_fat subcategory breakdown:")
 
       Enum.each(fat_subcategories, fn s ->
-        Logger.debug("  [fat subcategory] #{s.name}: amount=#{s.amount} children_sum=#{s.children_sum}")
+        Logger.debug(
+          "  [fat subcategory] #{s.name}: amount=#{s.amount} children_sum=#{s.children_sum}"
+        )
       end)
 
       children_sum = sum_amounts(fat_subcategories)
-      {amount, children_sum} = resolve_amounts("Total Fat", total_fat_parent && total_fat_parent.amount, children_sum)
 
-      Logger.debug("  => Total Fat: official=#{total_fat_parent && total_fat_parent.amount} children_sum=#{children_sum}")
+      {amount, children_sum} =
+        resolve_amounts("Total Fat", total_fat_parent && total_fat_parent.amount, children_sum)
+
+      Logger.debug(
+        "  => Total Fat: official=#{total_fat_parent && total_fat_parent.amount} children_sum=#{children_sum}"
+      )
 
       unit = if total_fat_parent, do: total_fat_parent.measurement_unit, else: "g"
       name = if total_fat_parent, do: total_fat_parent.name, else: "Total Fat"
@@ -271,7 +285,12 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
       Enum.filter(nutrients, fn n ->
         n.name != category_name and
           not String.contains?(n.name, "Fatty Acids, Total") and
-          n.name not in ["Saturated Fat", "Monounsaturated Fat", "Polyunsaturated Fat", "Trans Fat"]
+          n.name not in [
+            "Saturated Fat",
+            "Monounsaturated Fat",
+            "Polyunsaturated Fat",
+            "Trans Fat"
+          ]
       end)
 
     extra_totals =
@@ -308,7 +327,9 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
         end)
 
       children_sum = sum_amounts(all_children)
-      {amount, children_sum} = resolve_amounts(category_name, parent && parent.amount, children_sum)
+
+      {amount, children_sum} =
+        resolve_amounts(category_name, parent && parent.amount, children_sum)
 
       Logger.debug("    => amount=#{amount} children_sum=#{children_sum}")
 
@@ -391,7 +412,11 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
         children_sum = sum_amounts(carb_subcategories)
 
         {amount, children_sum} =
-          resolve_amounts("Carbohydrates", total_carb_parent && total_carb_parent.amount, children_sum)
+          resolve_amounts(
+            "Carbohydrates",
+            total_carb_parent && total_carb_parent.amount,
+            children_sum
+          )
 
         unit = if total_carb_parent, do: total_carb_parent.measurement_unit, else: "g"
         name = if total_carb_parent, do: total_carb_parent.name, else: "Carbohydrates"
@@ -440,7 +465,10 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
       if fiber_parents != [] or fiber_children != [] do
         parent = List.first(fiber_parents)
         children_sum = sum_amounts(fiber_children)
-        {amount, children_sum} = resolve_amounts("Dietary Fiber", parent && parent.amount, children_sum)
+
+        {amount, children_sum} =
+          resolve_amounts("Dietary Fiber", parent && parent.amount, children_sum)
+
         unit = if parent, do: parent.measurement_unit, else: "g"
 
         Logger.debug("  => Dietary Fiber: amount=#{amount} children_sum=#{children_sum}")
@@ -510,7 +538,10 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
     children_sum = sum_amounts(children)
 
     parent = List.first(total_sugars)
-    {amount, children_sum} = resolve_amounts("Total Sugars", parent && parent.amount, children_sum)
+
+    {amount, children_sum} =
+      resolve_amounts("Total Sugars", parent && parent.amount, children_sum)
+
     unit = if parent, do: parent.measurement_unit, else: "g"
 
     if parent != nil or children != [] do
@@ -534,7 +565,10 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
       children = Enum.filter(nutrients, fn n -> n.name != "Sugar Alcohols" end)
 
       children_sum = sum_amounts(children)
-      {amount, children_sum} = resolve_amounts("Sugar Alcohols", parent && parent.amount, children_sum)
+
+      {amount, children_sum} =
+        resolve_amounts("Sugar Alcohols", parent && parent.amount, children_sum)
+
       unit = if parent, do: parent.measurement_unit, else: "g"
 
       subcategory = %{

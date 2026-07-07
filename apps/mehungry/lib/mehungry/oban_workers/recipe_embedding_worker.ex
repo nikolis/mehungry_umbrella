@@ -18,7 +18,7 @@ defmodule Mehungry.ObanWorkers.RecipeEmbeddingWorker do
   def perform(%Oban.Job{args: %{"recipe_id" => recipe_id}}) do
     recipe =
       Food.get_recipe_no_caching!(recipe_id)
-      |> Repo.preload([recipe_ingredients: :ingredient, recipe_hashtags: :hashtag])
+      |> Repo.preload(recipe_ingredients: :ingredient, recipe_hashtags: :hashtag)
 
     text = build_text(recipe)
 

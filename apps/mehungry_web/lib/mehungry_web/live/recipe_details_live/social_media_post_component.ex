@@ -227,7 +227,9 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                 <%= if @pinterest_boards == [] do %>
                   <div class="flex items-center gap-3 p-4 rounded-lg bg-slate-700/50">
                     <.icon name="hero-exclamation-circle" class="h-5 w-5 text-slate-400 flex-shrink-0" />
-                    <p class="text-sm text-slate-400">No Pinterest boards found. Create a board on Pinterest first.</p>
+                    <p class="text-sm text-slate-400">
+                      No Pinterest boards found. Create a board on Pinterest first.
+                    </p>
                   </div>
                 <% else %>
                   <div class="space-y-3">
@@ -296,7 +298,8 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                 </div>
               <% else %>
                 <div class="p-4 rounded-lg bg-slate-700/50 text-sm text-slate-300">
-                  This will post <span class="font-semibold text-white">{@recipe.title}</span> as an image with the recipe caption to your connected Instagram account.
+                  This will post <span class="font-semibold text-white">{@recipe.title}</span>
+                  as an image with the recipe caption to your connected Instagram account.
                 </div>
                 <div class="flex justify-end">
                   <button

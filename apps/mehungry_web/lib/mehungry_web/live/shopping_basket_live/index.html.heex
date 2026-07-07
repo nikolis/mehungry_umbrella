@@ -24,14 +24,13 @@
       </h1>
       <p class="text-slate-400 mt-1">Manage your grocery lists and track items</p>
     </div>
-    
-<!-- Two Column Layout -->
+
+    <!-- Two Column Layout -->
     <div
       class="h-full flex flex-col sm:flex-row gap-6 relative"
       style="height: 100%; overflow:hidden; "
     >
-      
-<!-- Sidebar - Shopping Lists -->
+      <!-- Sidebar - Shopping Lists -->
       <div
         class="lg:w-80 flex-shrink-0 bakset-side-nav-hidden bg-black-400  bd-black-400"
         id="basket-side-navbar"
@@ -80,7 +79,10 @@
       </div>
       <div class="item-list-container w-full  sm:p-6">
         <%= if @shopping_basket do %>
-          <.render_basket_items shopping_basket={@shopping_basket} current_language={@current_language} />
+          <.render_basket_items
+            shopping_basket={@shopping_basket}
+            current_language={@current_language}
+          />
         <% end %>
         <%= if length(@shopping_basket.basket_ingredients) < 1 do %>
           <h4 class="text-center text-base font-semibold text-greyfriend-2">Empty</h4>
@@ -119,8 +121,8 @@
               </svg>
             </button>
           </div>
-          
-<!-- Modal Body -->
+
+          <!-- Modal Body -->
           <div class="p-4 overflow-visible ">
             <%= if @selected_usda_item do %>
               <!-- USDA Item Selected - Show nutrition preview -->
@@ -157,8 +159,8 @@
                     </div>
                   </div>
                 </div>
-                
-<!-- Quantity and Unit -->
+
+                <!-- Quantity and Unit -->
                 <div class="flex gap-3 mb-4  overflow-visible  ">
                   <div class="flex-1">
                     <label class="block text-slate-400 text-sm mb-1">Quantity</label>
@@ -259,8 +261,8 @@
                   </div>
                 <% end %>
               </div>
-              
-<!-- Divider -->
+
+              <!-- Divider -->
 <!-- 
               <div class="relative my-4">
                 <div class="absolute inset-0 flex items-center">

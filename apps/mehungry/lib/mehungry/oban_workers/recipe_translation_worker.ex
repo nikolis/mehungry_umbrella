@@ -34,12 +34,18 @@ defmodule Mehungry.ObanWorkers.RecipeTranslationWorker do
             :ok
 
           {:error, reason} ->
-            Logger.error("[RecipeTranslationWorker] Failed to save translation: #{inspect(reason)}")
+            Logger.error(
+              "[RecipeTranslationWorker] Failed to save translation: #{inspect(reason)}"
+            )
+
             {:error, reason}
         end
 
       {:error, reason} ->
-        Logger.error("[RecipeTranslationWorker] Translation failed for recipe #{recipe_id}: #{inspect(reason)}")
+        Logger.error(
+          "[RecipeTranslationWorker] Translation failed for recipe #{recipe_id}: #{inspect(reason)}"
+        )
+
         {:error, reason}
     end
   end

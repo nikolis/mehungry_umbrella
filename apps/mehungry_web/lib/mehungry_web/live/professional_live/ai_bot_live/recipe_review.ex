@@ -103,9 +103,12 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
           {lang,
            %{
              instagram: instagram_connected,
-             facebook: facebook_connected and not is_nil(get_in(config.facebook_page_ids || %{}, [lang])),
+             facebook:
+               facebook_connected and not is_nil(get_in(config.facebook_page_ids || %{}, [lang])),
              facebook_page_id: fb_page_id,
-             pinterest: pinterest_connected and not is_nil(get_in(config.pinterest_board_ids || %{}, [lang])),
+             pinterest:
+               pinterest_connected and
+                 not is_nil(get_in(config.pinterest_board_ids || %{}, [lang])),
              pinterest_board_id: pt_board_id
            }}
         end)
@@ -161,7 +164,10 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
     {:noreply,
      socket
      |> assign(:show_publish_modal, false)
-     |> put_flash(:info, "Publish jobs queued for #{jobs_inserted} language(s) — check social media shortly.")}
+     |> put_flash(
+       :info,
+       "Publish jobs queued for #{jobs_inserted} language(s) — check social media shortly."
+     )}
   end
 
   @impl true
@@ -307,7 +313,10 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
       changes ->
         original = length(changes)
-        filtered = Enum.reject(changes, fn %{changes: ri} -> Map.get(ri, :temp_id) == remove_id end)
+
+        filtered =
+          Enum.reject(changes, fn %{changes: ri} -> Map.get(ri, :temp_id) == remove_id end)
+
         if length(filtered) == original, do: {:repeat, filtered}, else: {:ok, filtered}
     end
   end
@@ -326,7 +335,11 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
   defp filter_empty_steps(recipe_params) do
     steps = Map.get(recipe_params, "steps", %{})
-    filtered = Enum.reject(steps, fn {_, v} -> is_nil(v["description"]) or v["description"] == "" end) |> Map.new()
+
+    filtered =
+      Enum.reject(steps, fn {_, v} -> is_nil(v["description"]) or v["description"] == "" end)
+      |> Map.new()
+
     Map.put(recipe_params, "steps", filtered)
   end
 
@@ -338,18 +351,23 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
     <div>
       <!-- Header -->
       <div class="flex items-center gap-3 mb-5">
-        <.link navigate={~p"/professional/ai-bot/review"}
-               class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+        <.link
+          navigate={~p"/professional/ai-bot/review"}
+          class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+        >
           <.icon name="hero-arrow-left" class="h-5 w-5" />
         </.link>
-        <h1 class="text-lg font-semibold text-white flex-1 truncate"><%= @recipe && @recipe.title %></h1>
+        <h1 class="text-lg font-semibold text-white flex-1 truncate">{@recipe && @recipe.title}</h1>
       </div>
 
       <%= if @bot_recipe do %>
         <!-- Status banner -->
-        <div class={["flex items-center gap-2 px-4 py-2.5 rounded-xl mb-5 text-sm font-medium", status_banner_class(@bot_recipe.status)]}>
+        <div class={[
+          "flex items-center gap-2 px-4 py-2.5 rounded-xl mb-5 text-sm font-medium",
+          status_banner_class(@bot_recipe.status)
+        ]}>
           <.icon name={status_icon(@bot_recipe.status)} class="h-4 w-4" />
-          <%= status_label(@bot_recipe.status) %>
+          {status_label(@bot_recipe.status)}
         </div>
 
         <div class="grid grid-cols-3 gap-5">
@@ -357,15 +375,21 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
           <div class="col-span-2 space-y-4">
             <!-- Edit toggle header -->
             <div class="flex items-center justify-end">
-              <button phx-click="toggle_edit"
-                      class={[
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                        if(@editing,
-                          do: "bg-slate-700 text-white",
-                          else: "text-slate-400 hover:text-white hover:bg-slate-700")
-                      ]}>
-                <.icon name={if @editing, do: "hero-eye", else: "hero-pencil-square"} class="h-3.5 w-3.5" />
-                <%= if @editing, do: "View", else: "Edit" %>
+              <button
+                phx-click="toggle_edit"
+                class={[
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                  if(@editing,
+                    do: "bg-slate-700 text-white",
+                    else: "text-slate-400 hover:text-white hover:bg-slate-700"
+                  )
+                ]}
+              >
+                <.icon
+                  name={if @editing, do: "hero-eye", else: "hero-pencil-square"}
+                  class="h-3.5 w-3.5"
+                />
+                {if @editing, do: "View", else: "Edit"}
               </button>
             </div>
 
@@ -378,17 +402,33 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
                   <.input field={@f[:title]} type="text" label="Title" />
                   <.input field={@f[:description]} type="text" label="Description" />
                   <div class="grid grid-cols-2 gap-3">
-                    <.input field={@f[:cooking_time_lower_limit]} type="number_subscript" subscript="mins" label="Cooking time" />
-                    <.input field={@f[:preperation_time_lower_limit]} type="number_subscript" subscript="mins" label="Prep time" />
+                    <.input
+                      field={@f[:cooking_time_lower_limit]}
+                      type="number_subscript"
+                      subscript="mins"
+                      label="Cooking time"
+                    />
+                    <.input
+                      field={@f[:preperation_time_lower_limit]}
+                      type="number_subscript"
+                      subscript="mins"
+                      label="Prep time"
+                    />
                   </div>
                   <div class="grid grid-cols-2 gap-3">
                     <.input field={@f[:servings]} type="text" label="Servings" />
-                    <.input field={@f[:difficulty]} type="select" options={[Easy: "1", Medium: "2", Difficult: "3"]} />
+                    <.input
+                      field={@f[:difficulty]}
+                      type="select"
+                      options={[Easy: "1", Medium: "2", Difficult: "3"]}
+                    />
                   </div>
                 </div>
 
                 <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
-                  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Ingredients</h3>
+                  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                    Ingredients
+                  </h3>
                   <div class="space-y-1">
                     <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
                       <.live_component
@@ -402,24 +442,34 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
                       />
                     </.inputs_for>
                   </div>
-                  <button type="button" phx-click="add_ingredient"
-                          class="mt-3 px-3 py-1.5 bg-primary-500 hover:bg-primary-600 rounded-lg text-white text-xs font-semibold transition-colors">
+                  <button
+                    type="button"
+                    phx-click="add_ingredient"
+                    class="mt-3 px-3 py-1.5 bg-primary-500 hover:bg-primary-600 rounded-lg text-white text-xs font-semibold transition-colors"
+                  >
                     + Add Ingredient
                   </button>
                 </div>
 
                 <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
-                  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Steps</h3>
+                  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                    Steps
+                  </h3>
                   <.live_component module={MehungryWeb.StepComponent} id="review_recipe_steps" f={@f} />
                 </div>
 
                 <div class="flex items-center gap-3">
-                  <button type="submit"
-                          class="px-5 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-semibold transition-colors">
+                  <button
+                    type="submit"
+                    class="px-5 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-semibold transition-colors"
+                  >
                     Save Changes
                   </button>
-                  <button type="button" phx-click="toggle_edit"
-                          class="px-5 py-2 border border-slate-600 text-slate-300 rounded-lg text-sm font-medium hover:border-slate-400 hover:text-white transition-colors">
+                  <button
+                    type="button"
+                    phx-click="toggle_edit"
+                    class="px-5 py-2 border border-slate-600 text-slate-300 rounded-lg text-sm font-medium hover:border-slate-400 hover:text-white transition-colors"
+                  >
                     Cancel
                   </button>
                 </div>
@@ -430,27 +480,29 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
                 <div class="relative rounded-xl overflow-hidden">
                   <img src={@recipe.image_url} class="w-full aspect-video object-cover" />
                   <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-4">
-                    <h2 class="font-bold text-white text-lg leading-tight"><%= @recipe.title %></h2>
+                    <h2 class="font-bold text-white text-lg leading-tight">{@recipe.title}</h2>
                   </div>
                 </div>
               <% end %>
 
               <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
                 <%= if !@recipe.image_url do %>
-                  <h2 class="font-bold text-white text-base mb-2"><%= @recipe.title %></h2>
+                  <h2 class="font-bold text-white text-base mb-2">{@recipe.title}</h2>
                 <% end %>
-                <p class="text-slate-300 text-sm leading-relaxed"><%= @recipe.description %></p>
+                <p class="text-slate-300 text-sm leading-relaxed">{@recipe.description}</p>
               </div>
 
               <%= if @recipe.recipe_ingredients != [] do %>
                 <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
-                  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Ingredients</h3>
+                  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                    Ingredients
+                  </h3>
                   <ul class="space-y-1.5">
                     <%= for ri <- @recipe.recipe_ingredients do %>
                       <li class="flex items-baseline gap-2 text-sm">
-                        <span class="text-slate-400 text-xs tabular-nums w-8 text-right flex-shrink-0"><%= ri.quantity %></span>
-                        <span class="text-slate-500 text-xs flex-shrink-0"><%= ri.measurement_unit.name %></span>
-                        <span class="text-slate-200"><%= ri.ingredient.name %></span>
+                        <span class="text-slate-400 text-xs tabular-nums w-8 text-right flex-shrink-0">{ri.quantity}</span>
+                        <span class="text-slate-500 text-xs flex-shrink-0">{ri.measurement_unit.name}</span>
+                        <span class="text-slate-200">{ri.ingredient.name}</span>
                       </li>
                     <% end %>
                   </ul>
@@ -459,7 +511,9 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
               <%= if @recipe.nutrients && map_size(@recipe.nutrients) > 0 do %>
                 <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
-                  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Nutrition Facts</h3>
+                  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                    Nutrition Facts
+                  </h3>
                   <MehungryWeb.NutritionAccordion.nutrition_accordion
                     nutrients={@recipe.nutrients}
                     title="Nutrition Facts"
@@ -471,14 +525,16 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
               <%= if @recipe.steps && @recipe.steps != [] do %>
                 <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
-                  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Steps</h3>
+                  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                    Steps
+                  </h3>
                   <ol class="space-y-3">
                     <%= for {step, i} <- Enum.with_index(@recipe.steps) do %>
                       <li class="flex gap-3">
                         <span class="flex-shrink-0 w-6 h-6 rounded-full bg-slate-700 text-slate-400 text-xs font-bold flex items-center justify-center mt-0.5">
-                          <%= i + 1 %>
+                          {i + 1}
                         </span>
-                        <p class="text-sm text-slate-300 leading-relaxed"><%= step.description %></p>
+                        <p class="text-sm text-slate-300 leading-relaxed">{step.description}</p>
                       </li>
                     <% end %>
                   </ol>
@@ -491,44 +547,63 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
           <div class="space-y-4">
             <!-- Actions -->
             <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
-              <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Actions</h3>
+              <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                Actions
+              </h3>
               <div class="space-y-2">
                 <%= if @bot_recipe.status == "pending_review" do %>
-                  <button phx-click="approve"
-                          class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors">
+                  <button
+                    phx-click="approve"
+                    class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors"
+                  >
                     <.icon name="hero-check-circle" class="h-4 w-4" /> Approve
                   </button>
-                  <button phx-click="reject" data-confirm="Reject this recipe?"
-                          class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 text-sm font-medium transition-colors">
+                  <button
+                    phx-click="reject"
+                    data-confirm="Reject this recipe?"
+                    class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 text-sm font-medium transition-colors"
+                  >
                     <.icon name="hero-x-circle" class="h-4 w-4" /> Reject
                   </button>
                 <% end %>
                 <%= if @bot_recipe.status == "approved" do %>
-                  <button phx-click="publish_now"
-                          class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors">
+                  <button
+                    phx-click="publish_now"
+                    class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+                  >
                     <.icon name="hero-paper-airplane" class="h-4 w-4" /> Publish Now…
                   </button>
-                  <p class="text-xs text-slate-500 text-center">Posts to all configured social accounts</p>
-                  <button phx-click="reject"
-                          class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 text-sm transition-colors">
+                  <p class="text-xs text-slate-500 text-center">
+                    Posts to all configured social accounts
+                  </p>
+                  <button
+                    phx-click="reject"
+                    class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 text-sm transition-colors"
+                  >
                     <.icon name="hero-arrow-uturn-left" class="h-4 w-4" /> Undo / Reject
                   </button>
                 <% end %>
                 <%= if @bot_recipe.status == "rejected" do %>
-                  <button phx-click="approve"
-                          class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 text-sm transition-colors">
+                  <button
+                    phx-click="approve"
+                    class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 text-sm transition-colors"
+                  >
                     <.icon name="hero-arrow-uturn-left" class="h-4 w-4" /> Undo / Approve
                   </button>
                 <% end %>
                 <%= if @bot_recipe.status == "published" do %>
-                  <p class="text-xs text-slate-500 text-center py-2">This recipe has been published.</p>
+                  <p class="text-xs text-slate-500 text-center py-2">
+                    This recipe has been published.
+                  </p>
                 <% end %>
               </div>
             </div>
 
             <!-- Translations -->
             <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
-              <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Translations</h3>
+              <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                Translations
+              </h3>
               <div class="space-y-1.5">
                 <%= for lang <- @languages do %>
                   <div class="flex items-center justify-between bg-slate-700/40 rounded-lg px-3 py-2">
@@ -538,21 +613,32 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
                       <% else %>
                         <.icon name="hero-language" class="h-4 w-4 text-slate-500 flex-shrink-0" />
                       <% end %>
-                      <span class="text-sm text-slate-200 uppercase font-medium"><%= lang.name %></span>
+                      <span class="text-sm text-slate-200 uppercase font-medium">{lang.name}</span>
                     </div>
                     <div class="flex items-center gap-1">
                       <%= if lang.name in @translated_langs do %>
-                        <.link navigate={~p"/professional/ai-bot/review/#{@bot_recipe.id}/translate/#{lang.name}"}
-                               class="flex items-center gap-1 px-2 py-0.5 rounded text-emerald-400 hover:bg-emerald-500/10 text-xs transition-colors">
+                        <.link
+                          navigate={
+                            ~p"/professional/ai-bot/review/#{@bot_recipe.id}/translate/#{lang.name}"
+                          }
+                          class="flex items-center gap-1 px-2 py-0.5 rounded text-emerald-400 hover:bg-emerald-500/10 text-xs transition-colors"
+                        >
                           <.icon name="hero-pencil-square" class="h-3 w-3" /> Edit
                         </.link>
                       <% else %>
-                        <button phx-click="trigger_translation" phx-value-lang={lang.name}
-                                class="flex items-center gap-1 px-2 py-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-600 text-xs transition-colors">
+                        <button
+                          phx-click="trigger_translation"
+                          phx-value-lang={lang.name}
+                          class="flex items-center gap-1 px-2 py-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-600 text-xs transition-colors"
+                        >
                           <.icon name="hero-cpu-chip" class="h-3 w-3" /> AI
                         </button>
-                        <.link navigate={~p"/professional/ai-bot/review/#{@bot_recipe.id}/translate/#{lang.name}"}
-                               class="flex items-center gap-1 px-2 py-0.5 rounded text-slate-500 hover:text-white hover:bg-slate-600 text-xs transition-colors">
+                        <.link
+                          navigate={
+                            ~p"/professional/ai-bot/review/#{@bot_recipe.id}/translate/#{lang.name}"
+                          }
+                          class="flex items-center gap-1 px-2 py-0.5 rounded text-slate-500 hover:text-white hover:bg-slate-600 text-xs transition-colors"
+                        >
                           <.icon name="hero-pencil" class="h-3 w-3" /> Manual
                         </.link>
                       <% end %>
@@ -564,15 +650,21 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
             <!-- Schedule info -->
             <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
-              <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Schedule</h3>
+              <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                Schedule
+              </h3>
               <div class="space-y-2">
                 <div class="flex items-center gap-2 text-sm">
                   <.icon name="hero-calendar-days" class="h-4 w-4 text-slate-500 flex-shrink-0" />
-                  <span class="text-slate-300"><%= @bot_recipe.scheduled_date %></span>
+                  <span class="text-slate-300">{@bot_recipe.scheduled_date}</span>
                 </div>
                 <div class="flex items-center gap-2 text-sm">
                   <.icon name="hero-clock" class="h-4 w-4 text-slate-500 flex-shrink-0" />
-                  <span class="text-slate-300 capitalize"><%= String.replace(@bot_recipe.meal_type, "_", " ") %></span>
+                  <span class="text-slate-300 capitalize">{String.replace(
+                    @bot_recipe.meal_type,
+                    "_",
+                    " "
+                  )}</span>
                 </div>
               </div>
             </div>
@@ -581,27 +673,46 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
       <% end %>
 
       <!-- Publish modal -->
-      <.modal :if={@show_publish_modal} id="publish-modal" show
-              on_cancel={JS.push("close_publish_modal")}>
+      <.modal
+        :if={@show_publish_modal}
+        id="publish-modal"
+        show
+        on_cancel={JS.push("close_publish_modal")}
+      >
         <h3 class="text-base font-semibold text-white mb-1">Publish Recipe</h3>
-        <p class="text-sm text-slate-400 mb-5">Choose which platforms and pages to publish to for each language.</p>
+        <p class="text-sm text-slate-400 mb-5">
+          Choose which platforms and pages to publish to for each language.
+        </p>
 
         <%= if @publish_modal_data do %>
           <form phx-submit="confirm_publish" class="space-y-5">
             <%= for {lang, idx} <- Enum.with_index(@publish_modal_data.languages) do %>
               <% defaults = Map.get(@publish_modal_data.defaults, lang, %{}) %>
-              <div class={["space-y-2", if(idx > 0, do: "pt-5 border-t border-slate-700/40")]}
-                   x-data={publish_xdata(defaults)}>
+              <div
+                class={["space-y-2", if(idx > 0, do: "pt-5 border-t border-slate-700/40")]}
+                x-data={publish_xdata(defaults)}
+              >
                 <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-700 text-slate-300 text-xs font-bold uppercase mb-1">
-                  <%= lang %>
+                  {lang}
                 </span>
 
                 <%= if @publish_modal_data.instagram_connected do %>
                   <div class="flex items-center gap-3 py-1.5">
-                    <input type="hidden" name={"publish[#{lang}][instagram]"} x-bind:value="instagram ? 'true' : 'false'" />
-                    <input type="checkbox" id={"ig_#{lang}"} x-model="instagram"
-                           class="w-4 h-4 rounded border-slate-600 bg-slate-700 text-primary-500 focus:ring-primary-500" />
-                    <label for={"ig_#{lang}"} class="flex items-center gap-2 text-sm text-slate-200 cursor-pointer select-none">
+                    <input
+                      type="hidden"
+                      name={"publish[#{lang}][instagram]"}
+                      x-bind:value="instagram ? 'true' : 'false'"
+                    />
+                    <input
+                      type="checkbox"
+                      id={"ig_#{lang}"}
+                      x-model="instagram"
+                      class="w-4 h-4 rounded border-slate-600 bg-slate-700 text-primary-500 focus:ring-primary-500"
+                    />
+                    <label
+                      for={"ig_#{lang}"}
+                      class="flex items-center gap-2 text-sm text-slate-200 cursor-pointer select-none"
+                    >
                       <span>📸</span> Instagram
                     </label>
                   </div>
@@ -610,19 +721,32 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
                 <%= if @publish_modal_data.facebook_connected do %>
                   <div class="py-1.5">
                     <div class="flex items-center gap-3 mb-2">
-                      <input type="hidden" name={"publish[#{lang}][facebook]"} x-bind:value="facebook ? 'true' : 'false'" />
-                      <input type="checkbox" id={"fb_#{lang}"} x-model="facebook"
-                             class="w-4 h-4 rounded border-slate-600 bg-slate-700 text-primary-500 focus:ring-primary-500" />
-                      <label for={"fb_#{lang}"} class="flex items-center gap-2 text-sm text-slate-200 cursor-pointer select-none">
+                      <input
+                        type="hidden"
+                        name={"publish[#{lang}][facebook]"}
+                        x-bind:value="facebook ? 'true' : 'false'"
+                      />
+                      <input
+                        type="checkbox"
+                        id={"fb_#{lang}"}
+                        x-model="facebook"
+                        class="w-4 h-4 rounded border-slate-600 bg-slate-700 text-primary-500 focus:ring-primary-500"
+                      />
+                      <label
+                        for={"fb_#{lang}"}
+                        class="flex items-center gap-2 text-sm text-slate-200 cursor-pointer select-none"
+                      >
                         <span>📘</span> Facebook
                       </label>
                     </div>
                     <div x-show="facebook" class="ml-7">
-                      <select name={"publish[#{lang}][facebook_page_id]"}
-                              class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none">
+                      <select
+                        name={"publish[#{lang}][facebook_page_id]"}
+                        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none"
+                      >
                         <%= for page <- @publish_modal_data.facebook_pages do %>
                           <option value={page.id} selected={defaults[:facebook_page_id] == page.id}>
-                            <%= page.name %>
+                            {page.name}
                           </option>
                         <% end %>
                       </select>
@@ -633,19 +757,35 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
                 <%= if @publish_modal_data.pinterest_connected do %>
                   <div class="py-1.5">
                     <div class="flex items-center gap-3 mb-2">
-                      <input type="hidden" name={"publish[#{lang}][pinterest]"} x-bind:value="pinterest ? 'true' : 'false'" />
-                      <input type="checkbox" id={"pt_#{lang}"} x-model="pinterest"
-                             class="w-4 h-4 rounded border-slate-600 bg-slate-700 text-primary-500 focus:ring-primary-500" />
-                      <label for={"pt_#{lang}"} class="flex items-center gap-2 text-sm text-slate-200 cursor-pointer select-none">
+                      <input
+                        type="hidden"
+                        name={"publish[#{lang}][pinterest]"}
+                        x-bind:value="pinterest ? 'true' : 'false'"
+                      />
+                      <input
+                        type="checkbox"
+                        id={"pt_#{lang}"}
+                        x-model="pinterest"
+                        class="w-4 h-4 rounded border-slate-600 bg-slate-700 text-primary-500 focus:ring-primary-500"
+                      />
+                      <label
+                        for={"pt_#{lang}"}
+                        class="flex items-center gap-2 text-sm text-slate-200 cursor-pointer select-none"
+                      >
                         <span>📌</span> Pinterest
                       </label>
                     </div>
                     <div x-show="pinterest" class="ml-7">
-                      <select name={"publish[#{lang}][pinterest_board_id]"}
-                              class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none">
+                      <select
+                        name={"publish[#{lang}][pinterest_board_id]"}
+                        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none"
+                      >
                         <%= for board <- @publish_modal_data.pinterest_boards do %>
-                          <option value={board["id"]} selected={defaults[:pinterest_board_id] == board["id"]}>
-                            <%= board["name"] %>
+                          <option
+                            value={board["id"]}
+                            selected={defaults[:pinterest_board_id] == board["id"]}
+                          >
+                            {board["name"]}
                           </option>
                         <% end %>
                       </select>
@@ -654,18 +794,25 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
                 <% end %>
 
                 <%= if not @publish_modal_data.instagram_connected and not @publish_modal_data.facebook_connected and not @publish_modal_data.pinterest_connected do %>
-                  <p class="text-xs text-slate-500 py-2">No social accounts connected — configure them in Bot Social Accounts.</p>
+                  <p class="text-xs text-slate-500 py-2">
+                    No social accounts connected — configure them in Bot Social Accounts.
+                  </p>
                 <% end %>
               </div>
             <% end %>
 
             <div class="flex gap-2 pt-3 border-t border-slate-700/40">
-              <button type="submit"
-                      class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors">
+              <button
+                type="submit"
+                class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+              >
                 <.icon name="hero-paper-airplane" class="h-4 w-4" /> Publish
               </button>
-              <button type="button" phx-click="close_publish_modal"
-                      class="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 text-sm transition-colors">
+              <button
+                type="button"
+                phx-click="close_publish_modal"
+                class="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 text-sm transition-colors"
+              >
                 Cancel
               </button>
             </div>
@@ -686,10 +833,17 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
   defp map_non_empty?(map) when is_map(map) and map_size(map) > 0, do: true
   defp map_non_empty?(_), do: false
 
-  defp status_banner_class("pending_review"), do: "bg-amber-500/15 text-amber-300 border border-amber-500/25"
-  defp status_banner_class("approved"), do: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25"
+  defp status_banner_class("pending_review"),
+    do: "bg-amber-500/15 text-amber-300 border border-amber-500/25"
+
+  defp status_banner_class("approved"),
+    do: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25"
+
   defp status_banner_class("rejected"), do: "bg-red-500/15 text-red-300 border border-red-500/25"
-  defp status_banner_class("published"), do: "bg-blue-500/15 text-blue-300 border border-blue-500/25"
+
+  defp status_banner_class("published"),
+    do: "bg-blue-500/15 text-blue-300 border border-blue-500/25"
+
   defp status_banner_class(_), do: "bg-slate-700/40 text-slate-400 border border-slate-600/40"
 
   defp status_icon("pending_review"), do: "hero-clock"

@@ -15,8 +15,9 @@ defmodule Mix.Tasks.Knowledge.Schemas do
   def run(_args) do
     Mix.shell().info("Generating schema documentation...")
 
-    #File.mkdir_p!("docs/knowledge")
+    # File.mkdir_p!("docs/knowledge")
     IO.inspect(File.cwd())
+
     schemas =
       "apps"
       |> Path.join("**/*.ex")
@@ -91,7 +92,6 @@ defmodule Mix.Tasks.Knowledge.Schemas do
   defp extract_schema_block(ast, acc) do
     {_ast, acc} =
       Macro.prewalk(ast, acc, fn
-
         {:field, _, [name, type | _]} = node, acc ->
           field = %{
             name: name,
@@ -102,7 +102,6 @@ defmodule Mix.Tasks.Knowledge.Schemas do
 
         {rel_type, _, [name, target | _]} = node, acc
         when rel_type in @relationship_types ->
-
           relation = %{
             type: rel_type,
             name: name,

@@ -350,8 +350,8 @@ defmodule MehungryWeb.SelectComponent do
       <%= for x <- @selected_items do %>
         <.selected_item id={elem(x, 0)} myself={@myself} mode={@mode} name={elem(x, 1)} />
       <% end %>
-      
-    <!-- Search Input -->
+
+      <!-- Search Input -->
       <%= if Enum.empty?(@selected_items)  or @mode == :multi do %>
         <.input_search
           myself={@myself}

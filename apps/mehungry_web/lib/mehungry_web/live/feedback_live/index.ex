@@ -66,7 +66,9 @@ defmodule MehungryWeb.FeedbackLive do
               <.icon name="hero-check-circle" class="h-6 w-6 text-green-400" />
             </div>
             <h2 class="text-lg font-semibold text-white">Thank you!</h2>
-            <p class="text-slate-400 text-sm mt-1">Your feedback has been saved. We really appreciate it.</p>
+            <p class="text-slate-400 text-sm mt-1">
+              Your feedback has been saved. We really appreciate it.
+            </p>
             <a
               href="/browse"
               class="inline-block mt-6 px-5 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium transition"
@@ -91,7 +93,8 @@ defmodule MehungryWeb.FeedbackLive do
               <%= if is_nil(@current_user) do %>
                 <div>
                   <label class="block text-sm font-medium text-slate-300 mb-1.5">
-                    Email <span class="text-slate-500 font-normal">(optional — if you'd like a reply)</span>
+                    Email
+                    <span class="text-slate-500 font-normal">(optional — if you'd like a reply)</span>
                   </label>
                   <.input
                     field={@form[:email]}

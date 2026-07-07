@@ -27,8 +27,12 @@ defmodule Mehungry.FdcFoodParserTest do
     test "parsing basic example", %{user: user} do
       _lang =
         case Languages.get_language_by_name("En") do
-          nil -> {:ok, lang} = Languages.create_language(%{name: "En"}); lang
-          lang -> lang
+          nil ->
+            {:ok, lang} = Languages.create_language(%{name: "En"})
+            lang
+
+          lang ->
+            lang
         end
 
       FdcFoodParser.get_ingredients_from_food_data_central_json_file(

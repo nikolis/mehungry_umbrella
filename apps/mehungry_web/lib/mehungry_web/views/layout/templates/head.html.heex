@@ -44,8 +44,8 @@ noindex = Enum.any?(noindex_prefixes, &String.starts_with?(@conn.request_path, &
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
-<!-- ─── Primary SEO ──────────────────────────────────────────────────────── -->
+
+  <!-- ─── Primary SEO ──────────────────────────────────────────────────────── -->
   <title>{resolved_title}</title>
   <meta name="description" content={page_description} />
   <link rel="canonical" href={canonical_url} />
@@ -54,8 +54,8 @@ noindex = Enum.any?(noindex_prefixes, &String.starts_with?(@conn.request_path, &
   <% else %>
     <meta name="robots" content="index, follow" />
   <% end %>
-  
-<!-- ─── Open Graph (Facebook / LinkedIn / Slack previews) ───────────────── -->
+
+  <!-- ─── Open Graph (Facebook / LinkedIn / Slack previews) ───────────────── -->
   <meta property="og:site_name" content="M3Hungry" />
   <meta property="og:title" content={resolved_title} />
   <meta property="og:description" content={page_description} />
@@ -67,23 +67,23 @@ noindex = Enum.any?(noindex_prefixes, &String.starts_with?(@conn.request_path, &
     <meta property="og:image" content={"#{base_url}/images/og-default.png"} />
     <meta property="og:type" content="website" />
   <% end %>
-  
-<!-- ─── Twitter card ────────────────────────────────────────────────────── -->
+
+  <!-- ─── Twitter card ────────────────────────────────────────────────────── -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content={resolved_title} />
   <meta name="twitter:description" content={page_description} />
   <%= if og_image do %>
     <meta name="twitter:image" content={og_image} />
   <% end %>
-  
-<!-- ─── JSON-LD structured data (Recipe rich results) ──────────────────── -->
+
+  <!-- ─── JSON-LD structured data (Recipe rich results) ──────────────────── -->
   <%= if recipe_jsonld do %>
     <script type="application/ld+json">
       {Jason.encode!(recipe_jsonld)}
     </script>
   <% end %>
-  
-<!-- ─── Favicons ────────────────────────────────────────────────────────── -->
+
+  <!-- ─── Favicons ────────────────────────────────────────────────────────── -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="shortcut icon" href="/favicon.svg" />
   <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -96,8 +96,8 @@ noindex = Enum.any?(noindex_prefixes, &String.starts_with?(@conn.request_path, &
       outline: none;
     }
   </style>
-  
-<!-- ─── Third-party scripts & styles ────────────────────────────────────── -->
+
+  <!-- ─── Third-party scripts & styles ────────────────────────────────────── -->
   <script
     src="https://code.jquery.com/jquery-3.6.0.min.js"
     integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="

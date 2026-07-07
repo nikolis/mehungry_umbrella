@@ -170,6 +170,7 @@ defmodule Mehungry.Meta do
         Task.Supervisor.start_child(Mehungry.TaskSupervisor, fn ->
           enrich_visit_country(visit)
         end)
+
         result
 
       _ ->
@@ -202,10 +203,29 @@ defmodule Mehungry.Meta do
   end
 
   defp local_ip?(ip) do
-    String.starts_with?(ip, ["127.", "192.168.", "10.", "172.16.", "172.17.", "172.18.",
-                              "172.19.", "172.20.", "172.21.", "172.22.", "172.23.",
-                              "172.24.", "172.25.", "172.26.", "172.27.", "172.28.",
-                              "172.29.", "172.30.", "172.31.", "::1", ""])
+    String.starts_with?(ip, [
+      "127.",
+      "192.168.",
+      "10.",
+      "172.16.",
+      "172.17.",
+      "172.18.",
+      "172.19.",
+      "172.20.",
+      "172.21.",
+      "172.22.",
+      "172.23.",
+      "172.24.",
+      "172.25.",
+      "172.26.",
+      "172.27.",
+      "172.28.",
+      "172.29.",
+      "172.30.",
+      "172.31.",
+      "::1",
+      ""
+    ])
   end
 
   defp fetch_country(ip) do
@@ -371,7 +391,10 @@ defmodule Mehungry.Meta do
         ip = visit.ip_address || ""
         agent = get_in(visit.details || %{}, ["agent"]) || ""
         date = NaiveDateTime.to_date(visit.inserted_at) |> Date.to_string()
-        :crypto.hash(:sha256, "#{ip}|#{agent}|#{date}") |> Base.encode16(case: :lower) |> String.slice(0, 24)
+
+        :crypto.hash(:sha256, "#{ip}|#{agent}|#{date}")
+        |> Base.encode16(case: :lower)
+        |> String.slice(0, 24)
     end
   end
 

@@ -79,16 +79,30 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
             </p>
             <div class="mt-3 flex items-center gap-3 text-sm text-slate-400">
               <span class="inline-flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                <svg
+                  class="w-4 h-4 text-primary-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
                 </svg>
                 <span><strong class="text-white">{@recipe_count}</strong> recipes in DB</span>
               </span>
               <%= if @enqueued_count do %>
                 <span class="inline-flex items-center gap-1.5 text-emerald-400">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span><strong>{@enqueued_count}</strong> jobs enqueued</span>
                 </span>
@@ -108,11 +122,20 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
             ]}
             disabled={@running}
           >
-            <svg class={["w-4 h-4", if(@running, do: "animate-spin")]} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <svg
+              class={["w-4 h-4", if(@running, do: "animate-spin")]}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
             </svg>
-            <%= if @running, do: "Jobs enqueued", else: "Recalculate all" %>
+            {if @running, do: "Jobs enqueued", else: "Recalculate all"}
           </button>
         </div>
 
@@ -138,16 +161,30 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
             </p>
             <div class="mt-3 flex items-center gap-3 text-sm text-slate-400">
               <span class="inline-flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                <svg
+                  class="w-4 h-4 text-primary-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
                 </svg>
                 <span><strong class="text-white">{@recipe_count}</strong> recipes in DB</span>
               </span>
               <%= if @interactions_enqueued_count do %>
                 <span class="inline-flex items-center gap-1.5 text-emerald-400">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span><strong>{@interactions_enqueued_count}</strong> jobs enqueued</span>
                 </span>
@@ -167,11 +204,20 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
             ]}
             disabled={@interactions_running}
           >
-            <svg class={["w-4 h-4", if(@interactions_running, do: "animate-spin")]} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <svg
+              class={["w-4 h-4", if(@interactions_running, do: "animate-spin")]}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
             </svg>
-            <%= if @interactions_running, do: "Jobs enqueued", else: "Backfill all" %>
+            {if @interactions_running, do: "Jobs enqueued", else: "Backfill all"}
           </button>
         </div>
 
@@ -197,21 +243,43 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
             </p>
             <div class="mt-3 flex items-center gap-3 text-sm text-slate-400">
               <span class="inline-flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                <svg
+                  class="w-4 h-4 text-primary-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
                 </svg>
                 <span><strong class="text-white">{@recipe_count}</strong> recipes total</span>
               </span>
-              <span class={["inline-flex items-center gap-1.5", if(@embeddings_missing > 0, do: "text-amber-400", else: "text-emerald-400")]}>
+              <span class={[
+                "inline-flex items-center gap-1.5",
+                if(@embeddings_missing > 0, do: "text-amber-400", else: "text-emerald-400")
+              ]}>
                 <%= if @embeddings_missing > 0 do %>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <span><strong>{@embeddings_missing}</strong> missing embeddings</span>
                 <% else %>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span>All recipes embedded</span>
                 <% end %>
@@ -219,7 +287,12 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
               <%= if @embeddings_enqueued_count do %>
                 <span class="inline-flex items-center gap-1.5 text-emerald-400">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span><strong>{@embeddings_enqueued_count}</strong> jobs enqueued</span>
                 </span>
@@ -239,21 +312,35 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
             ]}
             disabled={@embeddings_running || @embeddings_missing == 0}
           >
-            <svg class={["w-4 h-4", if(@embeddings_running, do: "animate-spin")]} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <svg
+              class={["w-4 h-4", if(@embeddings_running, do: "animate-spin")]}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
             </svg>
             <%= cond do %>
-              <% @embeddings_running -> %> Jobs enqueued
-              <% @embeddings_missing == 0 -> %> Up to date
-              <% true -> %> Backfill <%= @embeddings_missing %> recipes
+              <% @embeddings_running -> %>
+                Jobs enqueued
+              <% @embeddings_missing == 0 -> %>
+                Up to date
+              <% true -> %>
+                Backfill {@embeddings_missing} recipes
             <% end %>
           </button>
         </div>
 
         <%= if @embeddings_job_status == :enqueued do %>
           <div class="mt-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm">
-            <strong>{@embeddings_enqueued_count} Oban jobs</strong> have been enqueued in the <code>:default</code> queue.
+            <strong>{@embeddings_enqueued_count} Oban jobs</strong>
+            have been enqueued in the <code>:default</code>
+            queue.
             Each job calls the OpenAI embeddings API and stores the result in the database.
             Check server logs for progress — new recipes will automatically get embeddings going forward.
           </div>

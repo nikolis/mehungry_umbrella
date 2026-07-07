@@ -156,7 +156,10 @@
         />
 
         <%= if @current_user.email in ["nikolisgal@gmail.com", "r3qviem@hotmail.com"] do %>
-          <div class="content_container mt-4 p-4 bg-slate-800/50 rounded-xl" id="url_component_container">
+          <div
+            class="content_container mt-4 p-4 bg-slate-800/50 rounded-xl"
+            id="url_component_container"
+          >
             <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-3">
               Import from Spoonacular
             </p>
@@ -175,8 +178,19 @@
                 <%= if @spoonacular_search_loading do %>
                   <span class="flex items-center gap-2">
                     <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      />
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
                     </svg>
                     Searching…
                   </span>
@@ -188,8 +202,19 @@
             <%= if @spoonacular_fetch_loading do %>
               <p class="text-slate-400 text-sm mt-3 animate-pulse flex items-center gap-2">
                 <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  />
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
                 </svg>
                 Importing recipe into form…
               </p>

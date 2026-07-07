@@ -96,8 +96,12 @@ defmodule Mehungry.Posts do
 
     Enum.map(selected, fn post ->
       case {post.reference, Map.get(translations, post.reference_id)} do
-        {nil, _} -> post
-        {_, nil} -> post
+        {nil, _} ->
+          post
+
+        {_, nil} ->
+          post
+
         {ref, translation} ->
           %{post | reference: Mehungry.Food.apply_recipe_translation(ref, translation)}
       end

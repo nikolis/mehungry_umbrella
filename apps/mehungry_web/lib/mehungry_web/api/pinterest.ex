@@ -29,11 +29,17 @@ defmodule Mehungry.Api.Pinterest do
           {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
             case Jason.decode(body) do
               {:ok, %{"items" => boards}} ->
-                Logger.info("[Pinterest] get_boards: #{length(boards)} boards for user #{user.id}")
+                Logger.info(
+                  "[Pinterest] get_boards: #{length(boards)} boards for user #{user.id}"
+                )
+
                 boards
 
               {:ok, other} ->
-                Logger.warning("[Pinterest] get_boards: unexpected response shape: #{inspect(other)}")
+                Logger.warning(
+                  "[Pinterest] get_boards: unexpected response shape: #{inspect(other)}"
+                )
+
                 []
 
               {:error, err} ->
@@ -118,8 +124,12 @@ defmodule Mehungry.Api.Pinterest do
 
   defp access_token(user) do
     case Map.get(user.pinterest_token || %{}, "access_token") do
-      nil -> nil
-      "" -> nil
+      nil ->
+        nil
+
+      "" ->
+        nil
+
       # OAuth2 library stored the raw JSON body instead of just the token
       # when Accept: application/json was missing. Unwrap it transparently.
       val ->

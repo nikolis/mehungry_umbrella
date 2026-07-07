@@ -54,7 +54,8 @@ defmodule Mehungry.AI.IngredientTranslator do
     }
     """
 
-    user = "Translate these USDA ingredient names to Greek culinary names:\n#{Jason.encode!(names)}"
+    user =
+      "Translate these USDA ingredient names to Greek culinary names:\n#{Jason.encode!(names)}"
 
     case call_api(system, user) do
       {:ok, text} ->
