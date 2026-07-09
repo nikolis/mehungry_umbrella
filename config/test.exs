@@ -26,6 +26,9 @@ config :mehungry_web, MehungryWeb.Endpoint,
 
 config :mehungry, :sql_sandbox, true
 
+# Open Food Facts client is stubbed in tests — no network calls
+config :mehungry, :off_client, Mehungry.OpenFoodFacts.ClientStub
+
 # Chrome
 # default
 config :wallaby,

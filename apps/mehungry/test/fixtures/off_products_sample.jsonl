@@ -1,0 +1,7 @@
+{"code":"3017620422003","product_name":"Nutella","product_name_fr":"Nutella pâte à tartiner","product_name_en":"Nutella hazelnut spread","product_name_el":"Νutella άλειμμα φουντουκιού","ingredients_text_en":"Sugar, palm oil, hazelnuts, cocoa","brands":"Ferrero","quantity":"400 g","countries_tags":["en:france","en:germany","en:greece"],"categories_tags":["en:spreads","en:sweet-spreads"],"nutriments":{"energy-kcal_100g":539,"fat_100g":30.9,"saturated-fat_100g":10.6,"carbohydrates_100g":57.5,"sugars_100g":56.3,"proteins_100g":6.3,"salt_100g":0.107,"serving_size":"15 g"},"image_front_url":"https://images.openfoodfacts.org/nutella.jpg","image_front_small_url":"https://images.openfoodfacts.org/nutella.200.jpg","nutriscore_grade":"e","ecoscore_grade":"d","completeness":0.9,"last_modified_t":1700000000}
+{"code":"5201004013000","product_name":"Feta AOP","product_name_el":"Φέτα ΠΟΠ","countries_tags":["en:greece"],"categories_tags":["en:cheeses"],"nutriments":{"energy-kcal_100g":264,"fat_100g":21.0,"proteins_100g":14.0},"completeness":0.5,"last_modified_t":1710000000}
+{"code":"0041220576302","product_name":"American Only Snack","countries_tags":["en:united-states"],"last_modified_t":1690000000}
+{"product_name":"No Barcode Product","countries_tags":["en:france"]}
+{"code":"abc123","product_name":"Bad Barcode","countries_tags":["en:france"]}
+{"code":"012345678905","product_name":"Pasta Italiana","countries_tags":["en:italy"],"last_modified_t":1705000000}
+{"code":"4000417025005","countries_tags":["en:germany"],"last_modified_t":1701000000}

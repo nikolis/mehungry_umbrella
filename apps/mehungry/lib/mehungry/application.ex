@@ -22,6 +22,8 @@ defmodule Mehungry.Application do
       %{id: :recipes_cache, start: {Cachex, :start_link, [:recipes_cache, [limit: 150]]}},
       %{id: :cache_user_tokens, start: {Cachex, :start_link, [:cache_user_tokens]}},
       %{id: :geo_cache, start: {Cachex, :start_link, [:geo_cache, [limit: 5000]]}},
+      # Negative cache for Open Food Facts barcode lookups (respects OFF's 100 req/min limit)
+      %{id: :off_lookup_cache, start: {Cachex, :start_link, [:off_lookup_cache, [limit: 1000]]}},
       Mehungry.Telemetry.MetricsBuffer,
       Mehungry.Telemetry.ErrorTracker,
       {Task.Supervisor, name: Mehungry.TaskSupervisor}

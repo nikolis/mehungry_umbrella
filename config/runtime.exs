@@ -12,6 +12,13 @@ config :mehungry,
   stripe_pro_price_id: System.get_env("STRIPE_PRO_PRICE_ID", ""),
   stripe_pro_yearly_price_id: System.get_env("STRIPE_PRO_YEARLY_PRICE_ID", "")
 
+# Open Food Facts (no API key; OFF requires an identifying User-Agent contact)
+config :mehungry,
+  off_base_url: System.get_env("OFF_BASE_URL", "https://world.openfoodfacts.org"),
+  off_static_url: System.get_env("OFF_STATIC_URL", "https://static.openfoodfacts.org"),
+  off_dump_dir: System.get_env("OFF_DUMP_DIR"),
+  off_contact_email: System.get_env("OFF_CONTACT_EMAIL", "nikolisgal@gmail.com")
+
 config :mehungry_web,
   aws_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
   aws_secret: System.get_env("AWS_SECRET_ACCESS_KEY"),

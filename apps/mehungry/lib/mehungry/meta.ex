@@ -104,11 +104,18 @@ defmodule Mehungry.Meta do
   def traffic_sources(days \\ 30) do
     cutoff = NaiveDateTime.add(NaiveDateTime.utc_now(), -(days * 86_400), :second)
 
-    from(v in Visit, where: v.inserted_at >= ^cutoff)
+    from(v in Visit,
+      where: v.inserted_at >= ^cutoff,
+      group_by: fragment("COALESCE(details->>'referrer', '')"),
+      select: {fragment("COALESCE(details->>'referrer', '')"), count(v.id)}
+    )
     |> Repo.all()
-    |> Enum.group_by(fn v -> classify_referrer(Map.get(v.details || %{}, "referrer", "")) end)
-    |> Enum.map(fn {source, visits} ->
-      %{source: Atom.to_string(source), count: length(visits)}
+    |> Enum.group_by(fn {referrer, _count} -> classify_referrer(referrer) end)
+    |> Enum.map(fn {source, referrers} ->
+      %{
+        source: Atom.to_string(source),
+        count: referrers |> Enum.map(fn {_referrer, count} -> count end) |> Enum.sum()
+      }
     end)
     |> Enum.sort_by(& &1.count, :desc)
   end
@@ -223,8 +230,7 @@ defmodule Mehungry.Meta do
       "172.29.",
       "172.30.",
       "172.31.",
-      "::1",
-      ""
+      "::1"
     ])
   end
 

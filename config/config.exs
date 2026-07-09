@@ -27,13 +27,16 @@ config :mehungry, Oban,
        # 2am UTC daily — generate recipes for the next day + schedule publish jobs
        {"0 2 * * *", Mehungry.ObanWorkers.DailyRecipeGenerationWorker},
        # 3am UTC daily — prune telemetry snapshots older than 30 days
-       {"0 3 * * *", Mehungry.ObanWorkers.TelemetryPrunerWorker}
+       {"0 3 * * *", Mehungry.ObanWorkers.TelemetryPrunerWorker},
+       # 4am UTC Mondays — sync food products from Open Food Facts delta exports
+       {"0 4 * * 1", Mehungry.ObanWorkers.OffDeltaSyncWorker}
      ]}
   ],
   queues: [
     default: 10,
     mailers: 5,
-    ai_agents: 2
+    ai_agents: 2,
+    imports: 2
   ]
 
 config :swarm,
@@ -72,8 +75,7 @@ config :ueberauth, Ueberauth,
     instagram:
       {Ueberauth.Strategy.Instagram,
        [
-         default_scope:
-           "instagram_business_basic,instagram_business_content_publish"
+         default_scope: "instagram_business_basic,instagram_business_content_publish"
        ]},
     pinterest:
       {Ueberauth.Strategy.Pinterest,
