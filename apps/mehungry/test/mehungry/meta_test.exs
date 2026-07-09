@@ -68,5 +68,41 @@ defmodule Mehungry.MetaTest do
       visit = visit_fixture()
       assert %Ecto.Changeset{} = Meta.change_visit(visit)
     end
+
+    test "traffic_sources/1 aggregates visits by referrer category" do
+      visit_fixture(%{details: %{"referrer" => "https://www.google.com/"}})
+      visit_fixture(%{details: %{"referrer" => "https://www.google.com/search?q=pasta"}})
+      visit_fixture(%{details: %{"referrer" => "https://www.facebook.com/"}})
+      visit_fixture(%{details: %{"referrer" => "https://mehungry.net/browse"}})
+      visit_fixture(%{details: %{"referrer" => "https://someblog.example.com/post"}})
+      visit_fixture(%{details: %{"referrer" => ""}})
+      visit_fixture(%{details: %{}})
+
+      counts = Meta.traffic_sources(30) |> Map.new(fn %{source: s, count: c} -> {s, c} end)
+
+      assert counts == %{
+               "search" => 2,
+               "social" => 1,
+               "internal" => 1,
+               "referral" => 1,
+               "direct" => 2
+             }
+    end
+
+    test "traffic_sources/1 sorts by count descending and excludes old visits" do
+      visit_fixture(%{details: %{"referrer" => "https://www.google.com/"}})
+      visit_fixture(%{details: %{"referrer" => "https://bing.com/search?q=x"}})
+      visit_fixture(%{details: %{"referrer" => ""}})
+
+      old = visit_fixture(%{details: %{"referrer" => "https://www.google.com/"}})
+      before_cutoff = NaiveDateTime.add(NaiveDateTime.utc_now(), -40 * 86_400, :second)
+
+      old
+      |> Ecto.Changeset.change(inserted_at: NaiveDateTime.truncate(before_cutoff, :second))
+      |> Mehungry.Repo.update!()
+
+      assert [%{source: "search", count: 2}, %{source: "direct", count: 1}] =
+               Meta.traffic_sources(30)
+    end
   end
 end

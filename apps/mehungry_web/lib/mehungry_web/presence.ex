@@ -12,97 +12,125 @@ defmodule MehungryWeb.Presence do
 
   def user_tracking do
     quote do
+      require Logger
+
       @topic "user_activity"
       @recipe_activity "recipe_activity"
 
       def get_address_agent(socket) do
-        try do
-          {first, second, third, forth} =
-            Phoenix.LiveView.get_connect_info(socket, :peer_data).address
-
-          address =
-            Integer.to_string(first) <>
-              "." <>
-              Integer.to_string(second) <>
-              "." <> Integer.to_string(third) <> "." <> Integer.to_string(forth)
-
-          agent = Phoenix.LiveView.get_connect_info(socket, :user_agent)
-
-          {address, agent}
-        rescue
-          _ -> {"", ""}
-        catch
-          _ -> {"", ""}
+        case tracking_context(socket) do
+          %{address: address, agent: agent} -> {address, agent}
+          nil -> {"", ""}
         end
       end
 
-      def maybe_track_user(product, socket) do
-        if connected?(socket) do
-          session =
-            try do
-              Phoenix.LiveView.get_connect_info(socket, :session) || %{}
-            rescue
-              _ -> %{}
-            end
+      # Connect info only exists while the LiveView is mounting; cache it in
+      # the process dictionary so patch navigations (handle_params after
+      # mount) can still record visits.
+      def tracking_context(socket) do
+        case read_connect_context(socket) do
+          {:ok, context} ->
+            Process.put(:tracking_context, context)
+            context
 
-          consent = Map.get(session, "cookie_consent")
+          :error ->
+            Process.get(:tracking_context)
+        end
+      end
 
-          if consent == "accepted" do
-            {address, agent} =
-              case get_address_agent(socket) do
-                {a, ag} -> {a, ag}
-                _ -> {Map.get(socket.assigns, :address, ""), Map.get(socket.assigns, :agent, "")}
-              end
+      defp read_connect_context(socket) do
+        session = Phoenix.LiveView.get_connect_info(socket, :session) || %{}
+        agent = Phoenix.LiveView.get_connect_info(socket, :user_agent) || ""
 
-            referrer = Map.get(socket.assigns, :referrer, "")
-            path = Map.get(socket.assigns, :path, "")
-            current_user = Map.get(socket.assigns, :current_user)
+        {:ok, %{address: client_address(socket), agent: agent, session: session}}
+      rescue
+        _ -> :error
+      end
 
-            {user_token, visitor_id} =
-              {Map.get(session, "user_token"), Map.get(session, "visitor_id")}
+      # Behind the ALB the socket peer is the load balancer, so prefer the
+      # first hop of x-forwarded-for.
+      defp client_address(socket) do
+        x_headers = Phoenix.LiveView.get_connect_info(socket, :x_headers) || []
+        forwarded_address(x_headers) || peer_address(socket)
+      end
 
-            session_key =
-              if user_token do
-                :crypto.hash(:sha256, user_token)
-                |> Base.encode16(case: :lower)
-                |> String.slice(0, 24)
-              else
-                date = Date.utc_today() |> Date.to_string()
-
-                :crypto.hash(:sha256, "#{address}|#{agent}|#{date}")
-                |> Base.encode16(case: :lower)
-                |> String.slice(0, 24)
-              end
-
-            ret =
-              Presence.track(self(), "general", "general", %{
-                address: address,
-                agent: agent,
-                path: path
-              })
-
-            case Mehungry.Meta.create_visit(%{
-                   ip_address: address,
-                   session_key: session_key,
-                   details: %{
-                     agent: agent,
-                     path: path,
-                     referrer: referrer,
-                     visitor_id: visitor_id,
-                     user_id: current_user && current_user.id,
-                     user_email: current_user && current_user.email
-                   }
-                 }) do
-              {:ok, visit} -> Process.put(:current_visit_id, visit.id)
-              _ -> :ok
-            end
-
-            Phoenix.PubSub.broadcast(Mehungry.PubSub, "mehungry:analytics", :new_visit)
-
-            ret
-          end
+      defp forwarded_address(x_headers) do
+        with {_, forwarded} <- List.keyfind(x_headers, "x-forwarded-for", 0),
+             address when address != "" <-
+               forwarded |> String.split(",") |> List.first() |> String.trim() do
+          address
         else
-          nil
+          _ -> nil
+        end
+      end
+
+      defp peer_address(socket) do
+        with %{address: address} when is_tuple(address) <-
+               Phoenix.LiveView.get_connect_info(socket, :peer_data),
+             formatted when is_list(formatted) <- :inet.ntoa(address) do
+          to_string(formatted)
+        else
+          _ -> ""
+        end
+      end
+
+      def maybe_track_user(_product, socket) do
+        context = if connected?(socket), do: tracking_context(socket)
+
+        with %{session: session, address: address, agent: agent} <- context,
+             "accepted" <- Map.get(session, "cookie_consent") do
+          referrer = Map.get(socket.assigns, :referrer, "")
+          path = Map.get(socket.assigns, :path, "")
+          current_user = Map.get(socket.assigns, :current_user)
+
+          {user_token, visitor_id} =
+            {Map.get(session, "user_token"), Map.get(session, "visitor_id")}
+
+          session_key =
+            if user_token do
+              :crypto.hash(:sha256, user_token)
+              |> Base.encode16(case: :lower)
+              |> String.slice(0, 24)
+            else
+              date = Date.utc_today() |> Date.to_string()
+
+              :crypto.hash(:sha256, "#{address}|#{agent}|#{date}")
+              |> Base.encode16(case: :lower)
+              |> String.slice(0, 24)
+            end
+
+          ret =
+            Presence.track(self(), "general", "general", %{
+              address: address,
+              agent: agent,
+              path: path
+            })
+
+          case Mehungry.Meta.create_visit(%{
+                 ip_address: address,
+                 session_key: session_key,
+                 details: %{
+                   agent: agent,
+                   path: path,
+                   referrer: referrer,
+                   visitor_id: visitor_id,
+                   user_id: current_user && current_user.id,
+                   user_email: current_user && current_user.email
+                 }
+               }) do
+            {:ok, visit} ->
+              Process.put(:current_visit_id, visit.id)
+              Phoenix.PubSub.broadcast(Mehungry.PubSub, "mehungry:analytics", :new_visit)
+
+            {:error, changeset} ->
+              Logger.warning(
+                "[VisitTracking] failed to record visit: #{inspect(changeset.errors)}"
+              )
+          end
+
+          ret
+        else
+          _ -> nil
         end
       end
 

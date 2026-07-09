@@ -19,6 +19,19 @@ defmodule Mehungry.Release do
     FdcFoodParser.get_ingredients_from_food_data_central_json_file(file_path)
   end
 
+  @doc """
+  Bulk-imports European food products from Open Food Facts inside a prod
+  release (where Mix is unavailable). Same options as
+  `Mehungry.OpenFoodFacts.BulkImporter.run/1`:
+
+      Mehungry.Release.import_off_products(download: true)
+      Mehungry.Release.import_off_products(path: "/data/off.jsonl.gz", resume_from: 500_000)
+  """
+  def import_off_products(opts \\ []) do
+    Application.ensure_all_started(@app)
+    Mehungry.OpenFoodFacts.BulkImporter.run(opts)
+  end
+
   defp print_migrations_for(repo) do
     paths = repo_migrations_path(repo)
 
