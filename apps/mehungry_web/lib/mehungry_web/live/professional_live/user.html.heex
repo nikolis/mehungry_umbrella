@@ -1,12 +1,98 @@
-<.header>
-  User {@user.id}
-  <:subtitle>This is a user record from your database.</:subtitle>
-</.header>
+<div class="min-h-screen bg-slate-900">
+  <div class="container mx-auto px-4 py-6 max-w-4xl space-y-6">
+    <% display_name = @user.name || List.first(String.split(@user.email, "@")) %>
+    <!-- Profile header -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+      <div class="flex items-start gap-4">
+        <!-- Avatar -->
+        <%= if @user.profile_pic && @user.profile_pic != "" do %>
+          <img
+            src={@user.profile_pic}
+            alt={display_name}
+            class="w-16 h-16 rounded-full object-cover border border-slate-600 flex-shrink-0"
+          />
+        <% else %>
+          <div class="w-16 h-16 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center flex-shrink-0">
+            <span class="text-xl font-bold text-slate-300">
+              {String.upcase(String.first(display_name) || "?")}
+            </span>
+          </div>
+        <% end %>
 
-<.list>
-  <:item title="Email">{@user.email}</:item>
-  <:item title="Profile pic">{@user.profile_pic}</:item>
-  <:item title="Name">{@user.name}</:item>
-</.list>
+        <div class="flex-1 min-w-0">
+          <h1 class="text-2xl font-bold text-white truncate">{display_name}</h1>
+          <p class="text-slate-400 text-sm truncate mt-0.5">{@user.email}</p>
 
-<.back navigate={~p"/professional/users"}>Back to users</.back>
+          <!-- Badges -->
+          <div class="flex items-center gap-2 flex-wrap mt-3">
+            <%= if is_nil(@user.confirmed_at) do %>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">
+                Unconfirmed
+              </span>
+            <% else %>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30">
+                Confirmed
+              </span>
+            <% end %>
+
+            <%= if @subscription.tier in ["pro", "m3hungry_plus"] do %>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">
+                {tier_label(@subscription.tier)}
+              </span>
+            <% else %>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">
+                Free
+              </span>
+            <% end %>
+
+            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">
+              {@subscription.status}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity stats -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <.stat_card label="Recipes created" value={@stats.recipes_created} highlight="text-white" />
+      <.stat_card label="Recipes liked" value={@stats.recipes_liked} highlight="text-primary-400" />
+      <.stat_card label="Recipes saved" value={@stats.recipes_saved} highlight="text-primary-400" />
+      <.stat_card label="Comments" value={@stats.comments} highlight="text-white" />
+      <.stat_card label="Posts" value={@stats.posts} highlight="text-white" />
+      <.stat_card label="Followers" value={@stats.followers} highlight="text-emerald-400" />
+      <.stat_card label="Following" value={@stats.following} highlight="text-emerald-400" />
+    </div>
+
+    <!-- Details -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+      <h2 class="text-sm font-semibold text-white mb-4">Details</h2>
+      <dl class="divide-y divide-slate-700">
+        <.detail_row label="ID">#{@user.id}</.detail_row>
+        <.detail_row label="Email">{@user.email}</.detail_row>
+        <.detail_row label="Canonical email">{@user.canonical_email || "—"}</.detail_row>
+        <.detail_row label="Confirmed at">{format_date(@user.confirmed_at)}</.detail_row>
+        <.detail_row label="Joined">{format_date(@user.inserted_at)}</.detail_row>
+        <.detail_row label="Last updated">{format_date(@user.updated_at)}</.detail_row>
+        <%= if @subscription.period_end do %>
+          <.detail_row label="Subscription renews">
+            {format_date(@subscription.period_end)}
+          </.detail_row>
+        <% end %>
+        <.detail_row label="Instagram">{connected_label(@user.instagram_token)}</.detail_row>
+        <.detail_row label="Facebook">{connected_label(@user.facebook_token)}</.detail_row>
+        <.detail_row label="Pinterest">{connected_label(@user.pinterest_token)}</.detail_row>
+      </dl>
+    </div>
+
+    <!-- Back -->
+    <div>
+      <.link
+        navigate={~p"/professional/users"}
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition text-sm font-semibold"
+      >
+        <.icon name="hero-arrow-left-solid" class="w-4 h-4" /> Back to users
+      </.link>
+    </div>
+  </div>
+</div>

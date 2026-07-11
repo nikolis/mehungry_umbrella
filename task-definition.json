@@ -109,6 +109,14 @@
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/stripe_pro_yearly_price_id-aYKUVh"
                 },
                 {
+                    "name": "TURNSTILE_SECRET_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/turnstile_secret_key-2BaXdF"
+                },
+                {
+                    "name": "TURNSTILE_SITE_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/turnstile_site_key-Arm0F6"
+                },
+                {
                     "name": "ANTHROPIC_API_KEY",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/anthropic_api_key-ZRv92V"
                 }

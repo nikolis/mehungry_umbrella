@@ -11,15 +11,23 @@ defmodule MehungryWeb.UserAuthLive do
         Accounts.get_user_by_session_token(user_token)
       end)
 
-    if socket.assigns.current_user do
-      socket =
-        assign_new(socket, :current_language, fn ->
-          Accounts.get_user_language(socket.assigns.current_user.id)
-        end)
+    cond do
+      is_nil(socket.assigns.current_user) ->
+        {:halt, redirect(socket, to: "/users/log_in")}
 
-      {:cont, socket}
-    else
-      {:halt, redirect(socket, to: "/users/log_in")}
+      is_nil(socket.assigns.current_user.confirmed_at) ->
+        {:halt,
+         socket
+         |> put_flash(:error, "Please confirm your email address to continue.")
+         |> redirect(to: "/users/log_in")}
+
+      true ->
+        socket =
+          assign_new(socket, :current_language, fn ->
+            Accounts.get_user_language(socket.assigns.current_user.id)
+          end)
+
+        {:cont, socket}
     end
   end
 

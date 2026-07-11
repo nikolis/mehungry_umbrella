@@ -458,6 +458,16 @@ defmodule Mehungry.Food do
     |> Repo.one()
   end
 
+  def count_user_liked_recipes(nil), do: nil
+
+  def count_user_liked_recipes(user_id) do
+    from(l in Like,
+      where: l.user_id == ^user_id,
+      select: count(l.id)
+    )
+    |> Repo.one()
+  end
+
   def count_recipes_created_by_user_ids(user_ids) do
     from(rec in Recipe,
       where: rec.user_id in ^user_ids,

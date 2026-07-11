@@ -68,6 +68,16 @@ defmodule Mehungry.Accounts do
     |> Repo.one()
   end
 
+  def count_user_saved_recipes(nil), do: nil
+
+  def count_user_saved_recipes(user_id) do
+    from(u_re in Mehungry.Accounts.UserRecipe,
+      where: u_re.user_id == ^user_id,
+      select: count(u_re.id)
+    )
+    |> Repo.one()
+  end
+
   ## Database getters
 
   @doc """
@@ -84,6 +94,14 @@ defmodule Mehungry.Accounts do
   """
   def get_user_by_email(email) when is_binary(email) do
     Repo.get_by(User, email: email)
+  end
+
+  @doc """
+  Gets a user by the canonicalized form of an email, so that any Gmail-style
+  alias of a registered address resolves to the same account.
+  """
+  def get_user_by_canonical_email(email) when is_binary(email) do
+    Repo.get_by(User, canonical_email: User.canonical_email(email))
   end
 
   def list_users() do
@@ -104,7 +122,7 @@ defmodule Mehungry.Accounts do
   """
   def get_user_by_email_and_password(email, password)
       when is_binary(email) and is_binary(password) do
-    user = Repo.get_by(User, email: email)
+    user = Repo.get_by(User, email: email) || get_user_by_canonical_email(email)
     if User.valid_password?(user, password), do: user
   end
 
@@ -235,7 +253,7 @@ defmodule Mehungry.Accounts do
   def find_or_create(%Auth{} = auth) do
     email = email_from_auth(auth) || fallback_email_from_auth(auth)
 
-    user = if is_binary(email), do: get_user_by_email(email), else: nil
+    user = if is_binary(email), do: get_user_by_canonical_email(email), else: nil
 
     if user do
       verify_3rd_party_user_changes(auth, user)
@@ -858,6 +876,57 @@ defmodule Mehungry.Accounts do
     case get_user_profile_by_user_id(user_id) do
       nil -> "en"
       profile -> profile.language_preference || "en"
+    end
+  end
+
+  @doc """
+  Finds accounts that share a canonical email (Gmail-alias clusters) and, for
+  each cluster of more than one, keeps the oldest account and deletes the rest
+  via `delete_user/1` (which cascades through the user's data).
+
+  Options:
+
+    * `:dry_run` (default `true`) — when true, nothing is deleted; the function
+      only computes and returns what *would* happen.
+
+  Returns `%{clusters: n, kept: [ids], deleted: [%{id, email, canonical_email}], dry_run: bool}`.
+  """
+  def dedupe_alias_accounts(opts \\ []) do
+    dry_run = Keyword.get(opts, :dry_run, true)
+
+    clusters =
+      from(u in User,
+        where: not is_nil(u.canonical_email),
+        order_by: [asc: u.inserted_at, asc: u.id],
+        select: %{id: u.id, email: u.email, canonical_email: u.canonical_email}
+      )
+      |> Repo.all()
+      |> Enum.group_by(& &1.canonical_email)
+      |> Enum.filter(fn {_canonical, members} -> length(members) > 1 end)
+
+    {kept, to_delete} =
+      Enum.reduce(clusters, {[], []}, fn {_canonical, [keep | rest]}, {kept, del} ->
+        {[keep.id | kept], del ++ rest}
+      end)
+
+    unless dry_run, do: Enum.each(to_delete, &delete_alias_account/1)
+
+    %{
+      clusters: length(clusters),
+      kept: kept,
+      deleted: to_delete,
+      dry_run: dry_run
+    }
+  end
+
+  defp delete_alias_account(%{id: id, email: email, canonical_email: canonical}) do
+    Logger.warning(
+      "[dedupe_alias_accounts] deleting user id=#{id} email=#{email} canonical=#{canonical}"
+    )
+
+    case Repo.get(User, id) do
+      nil -> :ok
+      user -> delete_user(user)
     end
   end
 

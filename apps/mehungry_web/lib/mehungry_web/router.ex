@@ -36,6 +36,10 @@ defmodule MehungryWeb.Router do
     plug MehungryWeb.Plugs.RequireAdmin
   end
 
+  pipeline :registration_throttle do
+    plug MehungryWeb.Plugs.RegistrationThrottle
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -248,19 +252,25 @@ defmodule MehungryWeb.Router do
       # live "/browse_prepop/:search_term", :searc_prepop
     end
 
-    get "/register", UserRegistrationController, :new
-    post "/register", UserRegistrationController, :create
     get "/login", UserSessionController, :new
     post "/login", UserSessionController, :create
 
-    get "/users/register", UserRegistrationController, :new
-    post "/users/register", UserRegistrationController, :create
     get "/users/log_in", UserSessionController, :new
     post "/users/log_in", UserSessionController, :create
     get "/users/reset_password", UserResetPasswordController, :new
     post "/users/reset_password", UserResetPasswordController, :create
     get "/users/reset_password/:token", UserResetPasswordController, :edit
     put "/users/reset_password/:token", UserResetPasswordController, :update
+  end
+
+  # Registration routes are rate-limited per IP to blunt scripted signups.
+  scope "/", MehungryWeb do
+    pipe_through [:browser, :registration_throttle]
+
+    get "/register", UserRegistrationController, :new
+    post "/register", UserRegistrationController, :create
+    get "/users/register", UserRegistrationController, :new
+    post "/users/register", UserRegistrationController, :create
   end
 
   scope "/", MehungryWeb do

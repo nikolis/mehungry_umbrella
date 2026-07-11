@@ -61,10 +61,23 @@ defmodule MehungryWeb.ConnCase do
   It returns an updated `conn`.
   """
   def log_in_user(conn, user) do
+    user = confirm_user_for_test(user)
     token = Mehungry.Accounts.generate_user_session_token(user)
 
     conn
     |> Phoenix.ConnTest.init_test_session(%{})
     |> Plug.Conn.put_session(:user_token, token)
   end
+
+  # Authenticated routes now require a confirmed email
+  # (MehungryWeb.UserAuth.require_authenticated_user), so a logged-in test user
+  # must be confirmed. Password fixtures are created unconfirmed.
+  defp confirm_user_for_test(%{confirmed_at: nil} = user) do
+    {:ok, %{user: user}} =
+      Mehungry.Repo.transaction(Mehungry.Accounts.confirm_user_multi(user))
+
+    user
+  end
+
+  defp confirm_user_for_test(user), do: user
 end

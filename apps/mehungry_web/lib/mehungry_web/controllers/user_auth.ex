@@ -160,20 +160,29 @@ defmodule MehungryWeb.UserAuth do
   end
 
   @doc """
-  Used for routes that require the user to be authenticated.
+  Used for routes that require the user to be authenticated AND email-confirmed.
 
-  If you want to enforce the user email is confirmed before
-  they use the application at all, here would be a good place.
+  Password signups are unconfirmed until they click the emailed link; OAuth
+  signups are auto-confirmed. Enforcing confirmation here (not only at the login
+  form) blunts scripted/alias signups that never verify an inbox.
   """
   def require_authenticated_user(conn, _opts) do
-    if conn.assigns[:current_user] do
-      conn
-    else
-      conn
-      |> put_flash(:error, "You must log in to access this page.")
-      |> maybe_store_return_to()
-      |> redirect(to: Routes.user_session_path(conn, :new))
-      |> halt()
+    case conn.assigns[:current_user] do
+      %{confirmed_at: confirmed_at} when not is_nil(confirmed_at) ->
+        conn
+
+      %{} ->
+        conn
+        |> put_flash(:error, "Please confirm your email address to continue.")
+        |> redirect(to: Routes.user_session_path(conn, :new))
+        |> halt()
+
+      _ ->
+        conn
+        |> put_flash(:error, "You must log in to access this page.")
+        |> maybe_store_return_to()
+        |> redirect(to: Routes.user_session_path(conn, :new))
+        |> halt()
     end
   end
 

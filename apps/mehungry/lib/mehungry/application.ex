@@ -24,6 +24,8 @@ defmodule Mehungry.Application do
       %{id: :geo_cache, start: {Cachex, :start_link, [:geo_cache, [limit: 5000]]}},
       # Negative cache for Open Food Facts barcode lookups (respects OFF's 100 req/min limit)
       %{id: :off_lookup_cache, start: {Cachex, :start_link, [:off_lookup_cache, [limit: 1000]]}},
+      # Fixed-window rate limiting counters (registration throttle, Spoonacular gating)
+      %{id: :rate_limit, start: {Cachex, :start_link, [:rate_limit, [limit: 100_000]]}},
       Mehungry.Telemetry.MetricsBuffer,
       Mehungry.Telemetry.ErrorTracker,
       {Task.Supervisor, name: Mehungry.TaskSupervisor}
