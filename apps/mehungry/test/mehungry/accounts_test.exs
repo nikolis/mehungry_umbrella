@@ -17,6 +17,104 @@ defmodule Mehungry.AccountsTest do
     end
   end
 
+  describe "User.canonical_email/1" do
+    test "strips dots and +tags and normalizes googlemail for Gmail addresses" do
+      assert User.canonical_email("R.uz.uf.i.w.owog8.21+promo@googlemail.com") ==
+               "ruzufiwowog821@gmail.com"
+
+      assert User.canonical_email("john.doe@gmail.com") == "johndoe@gmail.com"
+      assert User.canonical_email("johndoe+anything@gmail.com") == "johndoe@gmail.com"
+    end
+
+    test "strips only +tags (keeps dots) for non-Gmail domains" do
+      assert User.canonical_email("Jane.Doe+news@outlook.com") == "jane.doe@outlook.com"
+    end
+
+    test "returns a downcased string unchanged when there is no single @" do
+      assert User.canonical_email("not-an-email") == "not-an-email"
+    end
+  end
+
+  describe "get_user_by_canonical_email/1" do
+    test "resolves any Gmail alias of a registered address to the same account" do
+      %{id: id} = user_fixture(%{email: "aliashunter@gmail.com"})
+
+      assert %User{id: ^id} = Accounts.get_user_by_canonical_email("a.lias.hunter+x@googlemail.com")
+    end
+  end
+
+  describe "canonical email uniqueness on registration" do
+    test "rejects a Gmail alias of an already-registered address" do
+      _user = user_fixture(%{email: "aliashunter@gmail.com"})
+
+      {:error, changeset} =
+        Accounts.register_user(%{
+          email: "a.lias.hunter+promo@gmail.com",
+          password: valid_user_password()
+        })
+
+      assert %{canonical_email: [_ | _]} = errors_on(changeset)
+    end
+  end
+
+  describe "dedupe_alias_accounts/1" do
+    test "keeps the oldest account per inbox and deletes the aliases" do
+      # Reproduce the pre-unique-index state: drop the index for this sandboxed
+      # transaction so alias rows (which the index normally forbids) can exist.
+      Mehungry.Repo.query!("DROP INDEX IF EXISTS users_canonical_email_index")
+
+      now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+      older = NaiveDateTime.add(now, -3600)
+
+      {2, _} =
+        Mehungry.Repo.insert_all("users", [
+          %{
+            email: "a.lias.hunter+one@gmail.com",
+            canonical_email: "aliashunter@gmail.com",
+            inserted_at: now,
+            updated_at: now
+          },
+          %{
+            email: "aliashunter@gmail.com",
+            canonical_email: "aliashunter@gmail.com",
+            inserted_at: older,
+            updated_at: older
+          }
+        ])
+
+      keeper = Accounts.get_user_by_email("aliashunter@gmail.com")
+
+      result = Accounts.dedupe_alias_accounts(dry_run: false)
+
+      assert result.clusters == 1
+      assert result.kept == [keeper.id]
+      assert [%{email: "a.lias.hunter+one@gmail.com"}] = result.deleted
+
+      assert Accounts.get_user_by_email("aliashunter@gmail.com")
+      refute Accounts.get_user_by_email("a.lias.hunter+one@gmail.com")
+    end
+
+    test "dry run reports but deletes nothing" do
+      Mehungry.Repo.query!("DROP INDEX IF EXISTS users_canonical_email_index")
+
+      now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+      {2, _} =
+        Mehungry.Repo.insert_all("users", [
+          %{email: "dot.ted@gmail.com", canonical_email: "dotted@gmail.com", inserted_at: now, updated_at: now},
+          %{email: "dotted@gmail.com", canonical_email: "dotted@gmail.com", inserted_at: now, updated_at: now}
+        ])
+
+      result = Accounts.dedupe_alias_accounts(dry_run: true)
+
+      assert result.dry_run
+      assert length(result.deleted) == 1
+      # Nothing actually removed
+      assert Accounts.get_user_by_email("dot.ted@gmail.com")
+      assert Accounts.get_user_by_email("dotted@gmail.com")
+    end
+  end
+
   describe "get_user_by_email_and_password/2" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email_and_password("unknown@example.com", "hello world!")

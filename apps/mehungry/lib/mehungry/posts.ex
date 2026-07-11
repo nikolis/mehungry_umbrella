@@ -22,6 +22,16 @@ defmodule Mehungry.Posts do
       [%Post{}, ...]
 
   """
+  def count_user_posts(nil), do: nil
+
+  def count_user_posts(user_id) do
+    from(p in Post,
+      where: p.user_id == ^user_id,
+      select: count(p.id)
+    )
+    |> Repo.one()
+  end
+
   def list_posts(nil) do
     from(p in Post, order_by: [desc: p.inserted_at])
     |> Repo.all()
@@ -287,6 +297,16 @@ defmodule Mehungry.Posts do
   """
   def list_comments do
     Repo.all(Comment)
+  end
+
+  def count_user_comments(nil), do: nil
+
+  def count_user_comments(user_id) do
+    from(c in Comment,
+      where: c.user_id == ^user_id,
+      select: count(c.id)
+    )
+    |> Repo.one()
   end
 
   @doc """

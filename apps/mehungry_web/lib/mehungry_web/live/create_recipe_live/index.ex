@@ -140,34 +140,56 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   def handle_event("spoonacular_search", %{"query" => query}, socket) when query != "" do
-    api_key = System.get_env("SPOONACULAR_API_KEY")
-    task = Task.async(fn -> Mehungry.Apis.SpoonacularImporter.search(query, api_key) end)
+    case spoonacular_rate_limit(socket.assigns.user.id) do
+      :ok ->
+        api_key = System.get_env("SPOONACULAR_API_KEY")
+        task = Task.async(fn -> Mehungry.Apis.SpoonacularImporter.search(query, api_key) end)
 
-    {:noreply,
-     assign(socket,
-       spoonacular_search_loading: true,
-       spoonacular_search_ref: task.ref
-     )}
+        {:noreply,
+         assign(socket,
+           spoonacular_search_loading: true,
+           spoonacular_search_ref: task.ref
+         )}
+
+      {:error, :rate_limited} ->
+        {:noreply, put_flash(socket, :error, "Too many searches. Please slow down for a moment.")}
+    end
   end
 
   def handle_event("spoonacular_search", _params, socket), do: {:noreply, socket}
 
   def handle_event("spoonacular_select", %{"id" => id}, socket) do
-    api_key = System.get_env("SPOONACULAR_API_KEY")
     user_id = socket.assigns.user.id
-    spoonacular_id = String.to_integer(id)
 
-    task =
-      Task.async(fn ->
-        Mehungry.Apis.SpoonacularImporter.fetch_for_form(spoonacular_id, user_id, api_key)
-      end)
+    case spoonacular_rate_limit(user_id) do
+      :ok ->
+        api_key = System.get_env("SPOONACULAR_API_KEY")
+        spoonacular_id = String.to_integer(id)
 
-    {:noreply,
-     assign(socket,
-       spoonacular_fetch_loading: true,
-       spoonacular_fetch_ref: task.ref,
-       show_spoonacular_modal: false
-     )}
+        task =
+          Task.async(fn ->
+            Mehungry.Apis.SpoonacularImporter.fetch_for_form(spoonacular_id, user_id, api_key)
+          end)
+
+        {:noreply,
+         assign(socket,
+           spoonacular_fetch_loading: true,
+           spoonacular_fetch_ref: task.ref,
+           show_spoonacular_modal: false
+         )}
+
+      {:error, :rate_limited} ->
+        {:noreply,
+         socket
+         |> assign(show_spoonacular_modal: false)
+         |> put_flash(:error, "Too many imports. Please slow down for a moment.")}
+    end
+  end
+
+  # Per-user fixed-window limit on the paid Spoonacular API (search + import
+  # share one bucket) to prevent burning the shared key from free accounts.
+  defp spoonacular_rate_limit(user_id) do
+    Mehungry.RateLimit.hit("spoonacular:#{user_id}", 20, :timer.minutes(1))
   end
 
   def handle_event("close_spoonacular_modal", _, socket) do
