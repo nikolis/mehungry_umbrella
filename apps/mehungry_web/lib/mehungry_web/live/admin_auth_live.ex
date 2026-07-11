@@ -29,4 +29,12 @@ defmodule MehungryWeb.AdminAuthLive do
         {:cont, socket}
     end
   end
+
+  # Session reached the socket without a user_token (e.g. a returning session or
+  # remember-me auth that did not carry the token into the LiveView session).
+  # Match the sibling auth modules and redirect to login instead of raising a
+  # FunctionClauseError.
+  def on_mount(_, _params, %{}, socket) do
+    {:halt, redirect(socket, to: "/login")}
+  end
 end
