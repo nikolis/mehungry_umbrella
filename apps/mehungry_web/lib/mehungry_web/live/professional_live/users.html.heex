@@ -62,10 +62,89 @@
         User Management
       </h1>
       <div class="flex gap-4 mt-2">
-        <span class="text-slate-400 text-sm">Total: {Enum.count(@streams.users)}</span>
+        <span class="text-slate-400 text-sm">Showing {@shown_count} of {@total_count}</span>
         <span class="text-amber-400 text-sm">Pro: {@pro_count}</span>
       </div>
     </div>
+
+    <!-- Filters -->
+    <form
+      phx-change="filter"
+      class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-5 flex flex-wrap items-end gap-3"
+    >
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+          Confirmation
+        </label>
+        <select
+          name="confirmation"
+          class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        >
+          <option value="all" selected={@filters["confirmation"] == "all"}>All</option>
+          <option value="confirmed" selected={@filters["confirmation"] == "confirmed"}>
+            Confirmed
+          </option>
+          <option value="unconfirmed" selected={@filters["confirmation"] == "unconfirmed"}>
+            Unconfirmed
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+          Activity
+        </label>
+        <select
+          name="activity"
+          class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        >
+          <option value="all" selected={@filters["activity"] == "all"}>All</option>
+          <option value="with_recipes" selected={@filters["activity"] == "with_recipes"}>
+            Has created recipes
+          </option>
+          <option value="no_recipes" selected={@filters["activity"] == "no_recipes"}>
+            No recipes
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+          Registered
+        </label>
+        <select
+          name="registered"
+          class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        >
+          <option value="all" selected={@filters["registered"] == "all"}>All time</option>
+          <option value="7d" selected={@filters["registered"] == "7d"}>Last 7 days</option>
+          <option value="30d" selected={@filters["registered"] == "30d"}>Last 30 days</option>
+          <option value="90d" selected={@filters["registered"] == "90d"}>Last 90 days</option>
+        </select>
+      </div>
+
+      <div class="flex-1 min-w-[12rem]">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+          Search
+        </label>
+        <input
+          type="text"
+          name="q"
+          value={@filters["q"]}
+          placeholder="Email or name…"
+          phx-debounce="300"
+          class="w-full bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        />
+      </div>
+
+      <button
+        type="button"
+        phx-click="clear_filters"
+        class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-sm font-medium transition"
+      >
+        Clear
+      </button>
+    </form>
 
     <!-- User Cards -->
     <div class="space-y-3">
@@ -104,6 +183,15 @@
                     Free
                   </span>
                 <% end %>
+                <%= if is_nil(user.confirmed_at) do %>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">
+                    Unconfirmed
+                  </span>
+                <% else %>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30">
+                    Confirmed
+                  </span>
+                <% end %>
               </div>
 
               <!-- Email -->
@@ -113,6 +201,10 @@
               <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 text-xs text-slate-500">
                 <span>ID: #{user.id}</span>
                 <span>Joined: {Calendar.strftime(user.inserted_at, "%Y-%m-%d")}</span>
+                <% recipe_count = Map.get(@recipe_counts, user.id, 0) %>
+                <span class={if recipe_count == 0, do: "text-slate-600", else: "text-slate-400"}>
+                  Recipes: {recipe_count}
+                </span>
                 <%= if sub && sub.tier == "pro" && sub.period_end do %>
                   <span class="text-amber-500/70">
                     Renews: {Calendar.strftime(sub.period_end, "%Y-%m-%d")}

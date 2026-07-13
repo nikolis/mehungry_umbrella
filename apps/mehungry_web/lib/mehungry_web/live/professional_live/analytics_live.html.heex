@@ -6,6 +6,10 @@
       <p class="text-slate-400 text-sm mt-0.5">
         Visitor sources, page performance, and real-time activity
       </p>
+      <p class="text-slate-600 text-xs mt-1">
+        Server-side, cookie-consented views in {Mehungry.Meta.reporting_timezone()} time. Roughly
+        comparable to Google Analytics but not identical (GA also counts pre-consent and non-LiveView page loads).
+      </p>
     </div>
     <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
       <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -17,17 +21,17 @@
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
       <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-        Visits today
+        Views today
       </div>
       <div class="text-3xl font-bold text-white">{@today_total}</div>
-      <div class="text-xs text-slate-500 mt-1">{@today_unique} unique IPs</div>
+      <div class="text-xs text-slate-500 mt-1">{@today_users} users · {@today_unique} IPs</div>
     </div>
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
       <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-        All-time visits
+        All-time views
       </div>
       <div class="text-3xl font-bold text-white">{@all_total}</div>
-      <div class="text-xs text-slate-500 mt-1">{@all_unique} unique IPs</div>
+      <div class="text-xs text-slate-500 mt-1">{@all_users} users · {@all_unique} IPs</div>
     </div>
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
       <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">

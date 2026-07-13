@@ -448,6 +448,21 @@ defmodule Mehungry.Food do
     Recipe.changeset(recipe, attrs)
   end
 
+  @doc """
+  Returns a `%{user_id => created_recipe_count}` map for every user who has
+  created at least one recipe. Used to filter/annotate the admin users listing
+  without an N+1 query per user.
+  """
+  def recipe_counts_by_user_id do
+    from(rec in Recipe,
+      where: not is_nil(rec.user_id),
+      group_by: rec.user_id,
+      select: {rec.user_id, count(rec.id)}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
   def count_user_created_recipes(nil), do: nil
 
   def count_user_created_recipes(user_id) do

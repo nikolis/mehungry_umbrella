@@ -3,7 +3,15 @@ defmodule MehungryWeb.ProfessionalLive.Users do
 
   alias Mehungry.Accounts
   alias Mehungry.Accounts.User
+  alias Mehungry.Food
   alias Mehungry.Subscriptions
+
+  @default_filters %{
+    "confirmation" => "all",
+    "activity" => "all",
+    "registered" => "all",
+    "q" => ""
+  }
 
   @impl true
   def mount(_params, _session, socket) do
@@ -12,12 +20,28 @@ defmodule MehungryWeb.ProfessionalLive.Users do
     pro_count =
       Enum.count(subscriptions, fn {_id, sub} -> sub.tier in ["m3hungry_plus", "pro"] end)
 
-    {:ok,
-     socket
-     |> assign(:subscriptions, subscriptions)
-     |> assign(:pro_count, pro_count)
-     |> assign(:confirm_delete_user, nil)
-     |> stream(:users, Accounts.list_users())}
+    socket =
+      socket
+      |> assign(:subscriptions, subscriptions)
+      |> assign(:pro_count, pro_count)
+      |> assign(:recipe_counts, Food.recipe_counts_by_user_id())
+      |> assign(:total_count, Accounts.count_users())
+      |> assign(:filters, @default_filters)
+      |> assign(:confirm_delete_user, nil)
+      |> load_users()
+
+    {:ok, socket}
+  end
+
+  @impl true
+  def handle_event("filter", params, socket) do
+    filters = Map.merge(@default_filters, Map.take(params, Map.keys(@default_filters)))
+    {:noreply, socket |> assign(:filters, filters) |> load_users()}
+  end
+
+  @impl true
+  def handle_event("clear_filters", _params, socket) do
+    {:noreply, socket |> assign(:filters, @default_filters) |> load_users()}
   end
 
   @impl true
@@ -38,6 +62,8 @@ defmodule MehungryWeb.ProfessionalLive.Users do
     {:noreply,
      socket
      |> assign(:confirm_delete_user, nil)
+     |> assign(:shown_count, max(socket.assigns.shown_count - 1, 0))
+     |> assign(:total_count, max(socket.assigns.total_count - 1, 0))
      |> stream_delete(:users, user)
      |> put_flash(:info, "User #{user.email} deleted.")}
   end
@@ -74,4 +100,23 @@ defmodule MehungryWeb.ProfessionalLive.Users do
   def handle_info({MehungryWeb.UserLive.FormComponent, {:saved, user}}, socket) do
     {:noreply, stream_insert(socket, :users, user)}
   end
+
+  defp load_users(socket) do
+    users =
+      socket.assigns.filters
+      |> Accounts.list_users()
+      |> apply_activity_filter(socket.assigns.filters["activity"], socket.assigns.recipe_counts)
+
+    socket
+    |> assign(:shown_count, length(users))
+    |> stream(:users, users, reset: true)
+  end
+
+  defp apply_activity_filter(users, "with_recipes", counts),
+    do: Enum.filter(users, &(Map.get(counts, &1.id, 0) > 0))
+
+  defp apply_activity_filter(users, "no_recipes", counts),
+    do: Enum.filter(users, &(Map.get(counts, &1.id, 0) == 0))
+
+  defp apply_activity_filter(users, _activity, _counts), do: users
 end

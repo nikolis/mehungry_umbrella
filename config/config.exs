@@ -14,6 +14,11 @@ config :mehungry,
 
 config :mehungry, :admin_email, "nikolisgal@gmail.com"
 
+# Timezone used for analytics "today" boundaries and daily buckets, so the
+# dashboard lines up with the Google Analytics property timezone. Must be a
+# valid Postgres/IANA zone name (e.g. "Europe/Athens", "Etc/UTC").
+config :mehungry, :reporting_timezone, "Europe/Athens"
+
 config :mehungry, Mehungry.Mailer, adapter: Swoosh.Adapters.Local
 config :swoosh, :api_client, false
 

@@ -104,9 +104,58 @@ defmodule Mehungry.Accounts do
     Repo.get_by(User, canonical_email: User.canonical_email(email))
   end
 
-  def list_users() do
-    Repo.all(User)
+  @doc """
+  Lists users, newest first, optionally filtered. `filters` is a string-keyed
+  map (as sent by a LiveView form):
+
+    * `"confirmation"` — `"confirmed"` | `"unconfirmed"` | anything else = all
+    * `"registered"`   — `"7d"` | `"30d"` | `"90d"` (registration recency) | else all
+    * `"q"`            — case-insensitive substring match on email or name
+
+  The `activity` (has-recipes) filter is applied in the caller, since it needs
+  the per-user recipe counts (see `Mehungry.Food.recipe_counts_by_user_id/0`).
+  """
+  def list_users(filters \\ %{}) do
+    User
+    |> filter_confirmation(filters["confirmation"])
+    |> filter_registered(filters["registered"])
+    |> filter_user_query(filters["q"])
+    |> order_by([u], desc: u.inserted_at)
+    |> Repo.all()
   end
+
+  def count_users do
+    Repo.aggregate(User, :count, :id)
+  end
+
+  defp filter_confirmation(query, "confirmed"),
+    do: where(query, [u], not is_nil(u.confirmed_at))
+
+  defp filter_confirmation(query, "unconfirmed"),
+    do: where(query, [u], is_nil(u.confirmed_at))
+
+  defp filter_confirmation(query, _), do: query
+
+  defp filter_registered(query, period) when period in ["7d", "30d", "90d"] do
+    days = %{"7d" => 7, "30d" => 30, "90d" => 90}[period]
+    cutoff = NaiveDateTime.add(NaiveDateTime.utc_now(), -(days * 86_400), :second)
+    where(query, [u], u.inserted_at >= ^cutoff)
+  end
+
+  defp filter_registered(query, _), do: query
+
+  defp filter_user_query(query, q) when is_binary(q) do
+    case String.trim(q) do
+      "" ->
+        query
+
+      term ->
+        like = "%#{term}%"
+        where(query, [u], ilike(u.email, ^like) or ilike(u.name, ^like))
+    end
+  end
+
+  defp filter_user_query(query, _), do: query
 
   @doc """
   Gets a user by email and password.
