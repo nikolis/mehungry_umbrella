@@ -17,7 +17,7 @@
           />
         </svg>
         <p class="text-green-300 text-sm font-medium">
-          You're now on Pro! Your AI features are unlocked.
+          Your subscription is active! Your AI features are unlocked.
         </p>
       </div>
     <% end %>
@@ -83,8 +83,8 @@
           </span>
         </div>
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-white font-bold text-lg">Pro</h2>
-          <%= if @subscription.tier == "pro" do %>
+          <h2 class="text-white font-bold text-lg">Mehungry Plus</h2>
+          <%= if @subscription.tier == "m3hungry_plus" do %>
             <span class="px-2.5 py-0.5 rounded-full bg-primary-500/20 text-primary-300 text-xs font-medium">
               Current plan
             </span>
@@ -95,7 +95,7 @@
         </div>
         <p class="text-slate-400 text-sm mb-6">
           or {MehungryWeb.UpgradeLive.Index.yearly_price()}/year
-          <span class="text-green-400 text-xs ml-1">save 44%</span>
+          <span class="text-green-400 text-xs ml-1">save 17%</span>
         </p>
         <ul class="space-y-2.5 text-sm mb-6">
           <.feature_row text="Everything in Free" included={true} />
@@ -104,7 +104,7 @@
           <.feature_row text="Priority support" included={true} />
         </ul>
 
-        <%= if @subscription.tier == "pro" do %>
+        <%= if @subscription.tier == "m3hungry_plus" do %>
           <button
             phx-click="manage_subscription"
             class="w-full py-2.5 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 text-sm font-medium transition"
@@ -130,6 +130,58 @@
           </div>
         <% end %>
       </div>
+    </div>
+
+    <div class="bg-slate-800 border border-amber-500/40 rounded-2xl p-6 mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-white font-bold text-lg">For Nutritionists</h2>
+          <p class="text-slate-400 text-sm">Professional tools for client management</p>
+        </div>
+        <%= if @subscription.tier == "pro" do %>
+          <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-medium">
+            Current plan
+          </span>
+        <% end %>
+      </div>
+      <div class="text-3xl font-bold text-white mb-1">
+        {MehungryWeb.UpgradeLive.Index.nutritionist_monthly_price()}<span class="text-slate-500 text-base font-normal">/mo</span>
+      </div>
+      <p class="text-slate-400 text-sm mb-6">
+        or {MehungryWeb.UpgradeLive.Index.nutritionist_yearly_price()}/year
+      </p>
+      <ul class="space-y-2.5 text-sm mb-6">
+        <.feature_row text="Everything in Mehungry Plus" included={true} />
+        <.feature_row text="30 AI recipe generations / month" included={true} />
+        <.feature_row text="10 AI meal plans / month" included={true} />
+        <.feature_row text="Nutritionist dashboard & client management" included={true} />
+      </ul>
+
+      <%= if @subscription.tier == "pro" do %>
+        <button
+          phx-click="manage_subscription"
+          class="w-full py-2.5 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 text-sm font-medium transition"
+        >
+          Manage subscription
+        </button>
+      <% else %>
+        <div class="flex flex-col gap-2">
+          <button
+            phx-click="subscribe_nutritionist"
+            phx-value-interval="monthly"
+            class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition"
+          >
+            Subscribe monthly — {MehungryWeb.UpgradeLive.Index.nutritionist_monthly_price()}/mo
+          </button>
+          <button
+            phx-click="subscribe_nutritionist"
+            phx-value-interval="yearly"
+            class="w-full py-2.5 rounded-xl border border-amber-500/50 text-amber-400 hover:bg-amber-500/10 text-sm font-medium transition"
+          >
+            Subscribe yearly — {MehungryWeb.UpgradeLive.Index.nutritionist_yearly_price()}/yr
+          </button>
+        </div>
+      <% end %>
     </div>
 
     <p class="text-center text-slate-500 text-xs">
