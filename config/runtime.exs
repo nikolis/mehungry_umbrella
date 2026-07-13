@@ -11,6 +11,8 @@ config :mehungry,
   stripe_webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET", ""),
   stripe_pro_price_id: System.get_env("STRIPE_PRO_PRICE_ID", ""),
   stripe_pro_yearly_price_id: System.get_env("STRIPE_PRO_YEARLY_PRICE_ID", ""),
+  stripe_nutritionist_price_id: System.get_env("STRIPE_NUTRITIONIST_PRICE_ID", ""),
+  stripe_nutritionist_yearly_price_id: System.get_env("STRIPE_NUTRITIONIST_YEARLY_PRICE_ID", ""),
   # Cloudflare Turnstile CAPTCHA on the registration form. When the secret key
   # is unset (dev/test), verification is skipped so local signups still work.
   turnstile_site_key: System.get_env("TURNSTILE_SITE_KEY"),

@@ -741,7 +741,7 @@ defmodule MehungryWeb.LandingLive do
               >
                 Try the AI assistant →
               </a>
-              <p class="text-xs text-slate-600">Plus plan required · From €2.99/mo</p>
+              <p class="text-xs text-slate-600">Mehungry Plus plan required · From €9.99/mo</p>
             </div>
           </div>
         </div>
@@ -1070,13 +1070,13 @@ defmodule MehungryWeb.LandingLive do
             <div class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary-500 px-3 py-0.5 text-xs font-bold text-white">
               Most popular
             </div>
-            <h3 class="mb-1 text-base font-semibold text-white">Plus</h3>
+            <h3 class="mb-1 text-base font-semibold text-white">Mehungry Plus</h3>
             <div class="mb-1 flex items-baseline gap-1">
-              <span class="text-3xl font-bold text-white">€2.99</span>
+              <span class="text-3xl font-bold text-white">€9.99</span>
               <span class="text-sm text-slate-500">/month</span>
             </div>
             <p class="mb-5 text-xs text-slate-500">
-              or €19.99/yr — <span class="text-green-400">save 44%</span>
+              or €99/yr — <span class="text-green-400">save 17%</span>
             </p>
             <ul class="mb-6 space-y-2.5 text-sm">
               <%= for text <- [
@@ -1108,17 +1108,22 @@ defmodule MehungryWeb.LandingLive do
               href="/upgrade"
               class="block w-full rounded-lg bg-primary-500 py-2 text-center text-sm font-semibold text-white shadow-lg shadow-primary-500/20 transition-colors hover:bg-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
             >
-              Upgrade to Plus
+              Upgrade to Mehungry Plus
             </a>
           </div>
 
           <%!-- Pro / Nutritionist --%>
           <div class="rounded-2xl border border-slate-700/50 bg-slate-800 p-6">
             <h3 class="mb-1 text-base font-semibold text-white">Pro</h3>
-            <p class="mb-5 text-xs font-medium text-secondary-400">For nutritionists</p>
+            <p class="mb-1 text-xs font-medium text-secondary-400">For nutritionists</p>
+            <div class="mb-1 flex items-baseline gap-1">
+              <span class="text-3xl font-bold text-white">€59</span>
+              <span class="text-sm text-slate-500">/month</span>
+            </div>
+            <p class="mb-5 text-xs text-slate-500">or €599/yr</p>
             <ul class="mb-6 space-y-2.5 text-sm">
               <%= for text <- [
-                "Everything in Plus",
+                "Everything in Mehungry Plus",
                 "30 AI recipe generations / month",
                 "10 AI meal plans / month",
                 "Full client management portal",

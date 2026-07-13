@@ -18,10 +18,22 @@ defmodule Mehungry.Billing.StripeHandler do
   # ── Checkout ──────────────────────────────────────────────────────────────────
 
   @doc """
-  Creates a Stripe Checkout Session for the Pro subscription.
+  Creates a Stripe Checkout Session for a subscription.
+
+  `tier` is the target subscription tier ("m3hungry_plus" or "pro") and is stored
+  in the session metadata so the `checkout.session.completed` webhook can activate
+  the correct tier. Defaults to "m3hungry_plus" (consumer premium).
+
   Returns {:ok, checkout_url} or {:error, reason}.
   """
-  def create_checkout_session(user_id, user_email, price_id, success_url, cancel_url) do
+  def create_checkout_session(
+        user_id,
+        user_email,
+        price_id,
+        success_url,
+        cancel_url,
+        tier \\ "m3hungry_plus"
+      ) do
     params = %{
       "mode" => "subscription",
       "customer_email" => user_email,
@@ -30,7 +42,9 @@ defmodule Mehungry.Billing.StripeHandler do
       "success_url" => success_url,
       "cancel_url" => cancel_url,
       "metadata[user_id]" => to_string(user_id),
-      "subscription_data[metadata][user_id]" => to_string(user_id)
+      "metadata[tier]" => tier,
+      "subscription_data[metadata][user_id]" => to_string(user_id),
+      "subscription_data[metadata][tier]" => tier
     }
 
     case post("/checkout/sessions", params) do
@@ -82,13 +96,13 @@ defmodule Mehungry.Billing.StripeHandler do
 
   defp dispatch_event(%{"type" => "checkout.session.completed", "data" => %{"object" => session}}) do
     user_id = get_in(session, ["metadata", "user_id"]) |> parse_int()
+    tier = get_in(session, ["metadata", "tier"])
     stripe_customer_id = session["customer"]
     stripe_subscription_id = session["subscription"]
 
     if user_id && stripe_subscription_id do
       period_end = fetch_subscription_period_end(stripe_subscription_id)
-      Subscriptions.activate_pro(user_id, stripe_customer_id, stripe_subscription_id, period_end)
-      Logger.info("Activated Pro for user #{user_id}")
+      activate_tier(tier, user_id, stripe_customer_id, stripe_subscription_id, period_end)
     end
 
     :ok
@@ -116,6 +130,19 @@ defmodule Mehungry.Billing.StripeHandler do
   defp dispatch_event(%{"type" => type}) do
     Logger.debug("Unhandled Stripe event: #{type}")
     :ok
+  end
+
+  # Routes checkout completion to the correct tier activation based on the tier
+  # stored in session metadata. Unknown/missing tiers fall back to the consumer
+  # premium tier so pre-existing checkout links keep working.
+  defp activate_tier("pro", user_id, customer_id, subscription_id, period_end) do
+    Subscriptions.activate_nutritionist(user_id, customer_id, subscription_id, period_end)
+    Logger.info("Activated Pro (nutritionist) for user #{user_id}")
+  end
+
+  defp activate_tier(_tier, user_id, customer_id, subscription_id, period_end) do
+    Subscriptions.activate_pro(user_id, customer_id, subscription_id, period_end)
+    Logger.info("Activated m3hungry_plus for user #{user_id}")
   end
 
   # ── Private: signature verification ──────────────────────────────────────────
@@ -175,7 +202,17 @@ defmodule Mehungry.Billing.StripeHandler do
     end
   end
 
+  # The period-end fetcher can be overridden in tests via the
+  # :stripe_period_end_fetcher app config key (a fun/1) so webhook dispatch can
+  # be exercised without hitting the live Stripe API.
   defp fetch_subscription_period_end(subscription_id) do
+    case Application.get_env(:mehungry, :stripe_period_end_fetcher) do
+      fun when is_function(fun, 1) -> fun.(subscription_id)
+      _ -> fetch_subscription_period_end_via_api(subscription_id)
+    end
+  end
+
+  defp fetch_subscription_period_end_via_api(subscription_id) do
     secret_key = config(:stripe_secret_key)
     headers = [{"Authorization", "Bearer #{secret_key}"}]
 

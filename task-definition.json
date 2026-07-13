@@ -109,6 +109,15 @@
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/stripe_pro_yearly_price_id-aYKUVh"
                 },
                 {
+                    "name": "STRIPE_NUTRITIONIST_PRICE_ID",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/stripe_nutritionist_monthly-HFBOkJ"
+                },
+                {
+                    "name": "STRIPE_NUTRITIONIST_YEARLY_PRICE_ID",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/stripe_nutritionist_yearly-VquqA2"
+                },
+ 
+                {
                     "name": "TURNSTILE_SECRET_KEY",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/turnstile_secret_key-2BaXdF"
                 },

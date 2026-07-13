@@ -256,12 +256,39 @@ defmodule Mehungry.Accounts do
     user = if is_binary(email), do: get_user_by_canonical_email(email), else: nil
 
     if user do
-      verify_3rd_party_user_changes(auth, user)
+      user =
+        auth
+        |> verify_3rd_party_user_changes(user)
+        |> maybe_confirm_user()
+
       {:ok, user}
     else
       register_3rd_party_user(basic_info(auth))
     end
   end
+
+  @doc """
+  Confirms a user's email if it is not already confirmed.
+
+  Google/Facebook have already verified the address, so an existing account that
+  never confirmed (a password signup that never clicked the email link, or a
+  legacy account missing `confirmed_at`) should be treated as confirmed the
+  moment they authenticate via OAuth. New OAuth signups are confirmed by
+  `registration_3rd_party_changeset`, so this only matters for pre-existing
+  accounts. Returns the (possibly updated) user.
+  """
+  def maybe_confirm_user(%User{confirmed_at: nil} = user) do
+    case user |> User.confirm_changeset() |> Repo.update() do
+      {:ok, confirmed_user} ->
+        confirmed_user
+
+      {:error, error} ->
+        Logger.error("Failed to auto-confirm OAuth user #{user.id}: #{inspect(error)}")
+        user
+    end
+  end
+
+  def maybe_confirm_user(%User{} = user), do: user
 
   # github does it this way
   defp avatar_from_auth(%{info: %{urls: %{avatar_url: image}}}), do: image

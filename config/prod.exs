@@ -38,4 +38,7 @@ config :mehungry_web, MehungryWeb.Endpoint,
   check_origin: false,
   # force_ssl: [rewrite_on: [:x_forwarded_proto]],
   server: true,
-  url: [host: "mehungry.com", port: 4000]
+  # Canonical host. Keep this in sync with config/runtime.exs, which sets the
+  # runtime scheme/port (https/443). Host must match so the session cookie is
+  # scoped consistently (apex vs www would otherwise drop the session).
+  url: [host: "www.mehungry.com", port: 4000]
