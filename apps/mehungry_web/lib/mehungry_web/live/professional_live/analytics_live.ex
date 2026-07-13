@@ -107,8 +107,10 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
     assign(socket,
       today_total: today.total,
       today_unique: today.unique_ips,
+      today_users: today.users,
       all_total: totals.total,
       all_unique: totals.unique_ips,
+      all_users: totals.users,
       top_pages: Meta.top_pages(10),
       recent_visits: Meta.recent_visits(40),
       traffic_sources: source_data,
@@ -445,8 +447,19 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
   def format_dt(nil), do: "—"
 
   def format_dt(dt) do
+    dt = to_local(dt)
     "#{pad(dt.hour)}:#{pad(dt.minute)} #{dt.day}/#{dt.month}"
   end
+
+  # `inserted_at` is stored as naive UTC; render it in the reporting timezone so
+  # the timeline matches the "today"/daily numbers and Google Analytics.
+  defp to_local(%NaiveDateTime{} = naive) do
+    naive
+    |> DateTime.from_naive!("Etc/UTC")
+    |> Timex.Timezone.convert(Mehungry.Meta.reporting_timezone())
+  end
+
+  defp to_local(other), do: other
 
   defp pad(n), do: String.pad_leading(Integer.to_string(n), 2, "0")
 end

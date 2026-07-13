@@ -9,6 +9,14 @@ defmodule Mehungry.Meta do
   alias Mehungry.Meta.Visit
 
   @doc """
+  IANA timezone the analytics dashboard reports in, so its day boundaries and
+  daily buckets match the Google Analytics property timezone instead of UTC.
+  """
+  def reporting_timezone do
+    Application.get_env(:mehungry, :reporting_timezone, "Etc/UTC")
+  end
+
+  @doc """
   Returns the list of visits.
 
   ## Examples
@@ -69,27 +77,50 @@ defmodule Mehungry.Meta do
   end
 
   def visits_per_day(days \\ 7) do
+    tz = reporting_timezone()
     cutoff = NaiveDateTime.add(NaiveDateTime.utc_now(), -(days * 86_400), :second)
 
+    # Bucket by local calendar date in the reporting timezone (Postgres carries
+    # its own tz database, so no Elixir tz dependency is needed in this app).
     from(v in Visit,
       where: v.inserted_at >= ^cutoff,
-      group_by: fragment("DATE(inserted_at)"),
-      select: %{date: fragment("DATE(inserted_at)"), count: count(v.id)},
-      order_by: [asc: fragment("DATE(inserted_at)")]
+      select: %{
+        date:
+          selected_as(
+            fragment("DATE(? AT TIME ZONE 'UTC' AT TIME ZONE ?)", v.inserted_at, ^tz),
+            :local_date
+          ),
+        count: count(v.id)
+      },
+      group_by: selected_as(:local_date),
+      order_by: selected_as(:local_date)
     )
     |> Repo.all()
   end
 
+  @doc """
+  Today's counts in the reporting timezone. `total` is page views (one row per
+  tracked mount/navigation ≈ GA "Views"), `users` is distinct visitor cookies
+  (≈ GA "Users"), `unique_ips` is kept for reference.
+  """
   def stats_today do
-    today_start = NaiveDateTime.new!(Date.utc_today(), ~T[00:00:00])
+    tz = reporting_timezone()
+
+    # A row belongs to "today" when its local calendar date equals the current
+    # local calendar date — both computed in the reporting timezone.
+    today =
+      from v in Visit,
+        where:
+          fragment("DATE(? AT TIME ZONE 'UTC' AT TIME ZONE ?)", v.inserted_at, ^tz) ==
+            fragment("(now() AT TIME ZONE ?)::date", ^tz)
 
     %{
-      total: Repo.one(from v in Visit, where: v.inserted_at >= ^today_start, select: count(v.id)),
-      unique_ips:
+      total: Repo.one(from(v in today, select: count(v.id))),
+      unique_ips: Repo.one(from(v in today, select: count(v.ip_address, :distinct))),
+      users:
         Repo.one(
-          from v in Visit,
-            where: v.inserted_at >= ^today_start,
-            select: count(v.ip_address, :distinct)
+          from v in today,
+            select: count(fragment("?->>'visitor_id'", v.details), :distinct)
         )
     }
   end
@@ -97,7 +128,11 @@ defmodule Mehungry.Meta do
   def total_stats do
     %{
       total: Repo.one(from v in Visit, select: count(v.id)),
-      unique_ips: Repo.one(from v in Visit, select: count(v.ip_address, :distinct))
+      unique_ips: Repo.one(from v in Visit, select: count(v.ip_address, :distinct)),
+      users:
+        Repo.one(
+          from v in Visit, select: count(fragment("?->>'visitor_id'", v.details), :distinct)
+        )
     }
   end
 
