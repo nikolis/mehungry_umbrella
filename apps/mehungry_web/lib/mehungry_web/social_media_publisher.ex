@@ -235,18 +235,34 @@ defmodule MehungryWeb.SocialMediaPublisher do
           {:error, reason} -> {"error", to_string(reason)}
         end
 
+      if status == "error" do
+        Logger.error(
+          "[SocialMediaPublisher] #{platform} publish failed for bot_recipe #{ai_bot_recipe_id} " <>
+            "(language #{language_name}, target #{inspect(target_id)}): #{error}"
+        )
+      end
+
       posted_at = if status == "ok", do: DateTime.utc_now() |> DateTime.truncate(:second)
 
-      AiBot.create_post_log(%{
-        ai_bot_recipe_id: ai_bot_recipe_id,
-        platform: to_string(platform),
-        status: status,
-        language_name: language_name,
-        error: error,
-        posted_at: posted_at,
-        target_id: target_id,
-        target_name: target_name
-      })
+      case AiBot.create_post_log(%{
+             ai_bot_recipe_id: ai_bot_recipe_id,
+             platform: to_string(platform),
+             status: status,
+             language_name: language_name,
+             error: error,
+             posted_at: posted_at,
+             target_id: target_id,
+             target_name: target_name
+           }) do
+        {:ok, _log} ->
+          :ok
+
+        {:error, changeset} ->
+          Logger.error(
+            "[SocialMediaPublisher] failed to persist post log for #{platform} " <>
+              "bot_recipe #{ai_bot_recipe_id} (language #{language_name}): #{inspect(changeset.errors)}"
+          )
+      end
     end)
   end
 

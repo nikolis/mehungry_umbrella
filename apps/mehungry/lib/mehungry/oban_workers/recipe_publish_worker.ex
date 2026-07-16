@@ -44,12 +44,39 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
       publisher =
         Application.get_env(:mehungry, :social_media_publisher, MehungryWeb.SocialMediaPublisher)
 
-      apply(publisher, :publish_recipe, [recipe, bot_user, bot_recipe_id, lang, opts])
+      results = apply(publisher, :publish_recipe, [recipe, bot_user, bot_recipe_id, lang, opts])
+
+      log_outcome(results, bot_recipe_id, lang)
 
       maybe_mark_published(bot_recipe, config)
 
       :ok
     end
+  end
+
+  # Surface the per-platform outcome in the app log so production/network
+  # failures are visible without querying social_media_post_logs.
+  defp log_outcome(results, bot_recipe_id, lang) when is_map(results) do
+    errored =
+      for {platform, {:error, reason}} <- results,
+          do: "#{platform}: #{inspect(reason)}"
+
+    if errored == [] do
+      Logger.info(
+        "[RecipePublishWorker] bot_recipe #{bot_recipe_id} (#{lang}) publish outcome: #{inspect(results)}"
+      )
+    else
+      Logger.error(
+        "[RecipePublishWorker] bot_recipe #{bot_recipe_id} (#{lang}) had publish failures — " <>
+          Enum.join(errored, "; ")
+      )
+    end
+  end
+
+  defp log_outcome(results, bot_recipe_id, lang) do
+    Logger.warning(
+      "[RecipePublishWorker] bot_recipe #{bot_recipe_id} (#{lang}) publisher returned unexpected result: #{inspect(results)}"
+    )
   end
 
   defp maybe_mark_published(bot_recipe, config) do

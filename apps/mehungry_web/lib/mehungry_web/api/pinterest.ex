@@ -75,20 +75,43 @@ defmodule Mehungry.Api.Pinterest do
            ) do
         {:ok, %HTTPoison.Response{status_code: status, body: resp_body}}
         when status in 200..299 ->
+          Logger.info(
+            "[Pinterest] create_pin: pin created for user #{user.id} on board #{board_id} (recipe #{recipe.id})"
+          )
+
           case Jason.decode(resp_body) do
             {:ok, pin} -> {:ok, pin}
             _ -> {:ok, %{}}
           end
 
         {:ok, %HTTPoison.Response{status_code: status, body: resp_body}} ->
+          Logger.warning(
+            "[Pinterest] create_pin: HTTP #{status} for user #{user.id} board #{board_id} (recipe #{recipe.id}) — #{resp_body}"
+          )
+
           {:error, "Pinterest API returned #{status}: #{resp_body}"}
 
         {:error, %HTTPoison.Error{reason: reason}} ->
+          Logger.error(
+            "[Pinterest] create_pin: request error for user #{user.id} board #{board_id} (recipe #{recipe.id}) — #{inspect(reason)}"
+          )
+
           {:error, inspect(reason)}
       end
     else
-      nil -> {:error, "No Pinterest account connected"}
-      {:error, reason} -> {:error, reason}
+      nil ->
+        Logger.warning(
+          "[Pinterest] create_pin: no access token for user #{user.id} (recipe #{recipe.id})"
+        )
+
+        {:error, "No Pinterest account connected"}
+
+      {:error, reason} ->
+        Logger.error(
+          "[Pinterest] create_pin: could not build pin body for user #{user.id} (recipe #{recipe.id}) — #{inspect(reason)}"
+        )
+
+        {:error, reason}
     end
   end
 
