@@ -179,6 +179,8 @@ defmodule MehungryWeb.Router do
   scope "/" do
     pipe_through [:admin_browser, :require_authenticated_user, :require_admin]
 
+    forward "/beam_scope", BeamScope.Exporter.Router
+
     live_dashboard "/dashboard",
       metrics: MehungryWeb.Telemetry,
       ecto_repos: [Mehungry.Repo],

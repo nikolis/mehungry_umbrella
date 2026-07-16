@@ -82,6 +82,7 @@ defmodule MehungryWeb.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:timex, "~> 3.6"},
+      {:beam_scope, github: "nikolis/BeamScope"},
       {:heroicons,
        github: "tailwindlabs/heroicons",
        tag: "v2.1.1",

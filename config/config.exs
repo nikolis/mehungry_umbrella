@@ -64,6 +64,19 @@ config :mehungry_web, MehungryWeb.Endpoint,
   aws_secret: nil,
   aws_bucket: nil
 
+
+config :beam_scope,
+  # Point at your host's Phoenix.PubSub server (BeamScope does NOT start it in embedded mode).
+  pubsub: Mehungry.PubSub,
+
+  # Default synchronization strategy: gossip compact snapshots over PubSub (ADR-0005).
+  sync: BeamScope.Synchronization.SnapshotGossip,
+  sync_interval: :timer.seconds(1),
+  node_ttl: :timer.seconds(5),
+
+  # Top-N bound for the Process/ETS providers (largest mailboxes / memory / tables).
+  top_n: 5
+
 config :ex_aws,
   access_key_id: nil,
   secret_access_key: nil,

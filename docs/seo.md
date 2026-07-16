@@ -304,12 +304,24 @@ Phoenix LiveView is unusual from an SEO perspective because it has two rendering
 
 ---
 
+## Food/ingredient pages (`/foods/:slug`)
+
+`FoodDetailLive.Index` (nutrition-facts pages for individual ingredients) follows a deliberately smaller subset of the recipe-page pattern above:
+
+- **`page_title` / `page_description`**: set as plain strings, language-aware (mirroring the page's own `display_name` logic — English or Greek depending on `current_language`).
+- **No `page_seo_data` map**: the map form in `head.html.heex` hardcodes canonical resolution as `/browse/<id>`, which is recipe-specific. `Mehungry.Food.Ingredient` also has no image field to put in an OG image slot. Since there's nothing to gain (no image) and something to lose (wrong canonical unless `head.html.heex` is also made type-aware), food pages stick to the plain-string `page_title` path, which already resolves canonical correctly via `@conn.request_path`.
+- **No JSON-LD**: `schema.org/Recipe` doesn't fit a raw ingredient (no ingredient list or instructions — forcing it risks Google flagging misleading structured data). `NutritionInformation` isn't a standalone schema.org type; it's only valid nested inside a `Recipe`/`Diet` node. There's no clean schema.org type for a bare nutrition-facts page, so none is emitted. Plain title/description/semantic HTML (h1/h2 + tables) is the right amount of SEO investment here.
+- **hreflang**: not implemented anywhere in the app (recipe or food pages) because there are no language-specific URL paths — `current_language` is a runtime session assign, not part of the URL, so there's no second URL for `hreflang` to point at. Proper support would require a URL-structure change (e.g. `/en/...` vs `/el/...`) well beyond incremental SEO work. Revisit only if the app ever adopts language-prefixed routes.
+- Food pages **are** included in `sitemap.xml` (see below) since they're publicly indexable and not in the `noindex` prefix list.
+
+---
+
 ## Checklist: verifying the implementation
 
 After deploying, confirm these work:
 
 - [ ] `https://www.m3hungry.com/robots.txt` — opens and shows the disallow rules
-- [ ] `https://www.m3hungry.com/sitemap.xml` — opens and lists recipe and hashtag URLs
+- [ ] `https://www.m3hungry.com/sitemap.xml` — opens and lists recipe, hashtag, and food (`/foods/:slug`) URLs
 - [ ] View source of a recipe page (`/browse/42`) — check `<title>`, `<meta name="description">`, and `<script type="application/ld+json">` are present
 - [ ] View source of `/profile` — check `<meta name="robots" content="noindex, nofollow">` is present
 - [ ] Google's [Rich Results Test](https://search.google.com/test/rich-results) with a recipe URL — confirms JSON-LD is valid
