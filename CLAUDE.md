@@ -47,8 +47,8 @@ mix dialyzer
 
 | Context | Responsibility |
 |---|---|
-| `Accounts` | Users, auth tokens, follows, profile, ingredient/category rules |
-| `Food` | Recipes, ingredients, nutrients, measurement units, categories, hashtags |
+| `Accounts` | Facade over `Accounts.{Auth, OAuth, Profiles, Rules, Admin, UserContent, Grading}` — see `docs/accounts.md`. `Mehungry.Users` is a deprecated facade over the same sub-modules |
+| `Food` | Facade over `Food.{Recipes, Ingredients, IngredientQueries, Nutrients, Measurements, Categories, Localization, Engagement}` — see `docs/food.md` |
 | `Inventory` | Shopping baskets and basket items |
 | `Plans` | Meal plans and daily meal plans |
 | `Posts` | Posts, comments, comment answers, votes |
@@ -61,6 +61,14 @@ mix dialyzer
 | `Subscriptions` | Subscription tiers, Stripe integration, AI feature quota enforcement |
 | `AiBot` | Managed social media recipe pipeline — monthly configs, review queue, translations, post logs |
 | `Billing` | Stripe checkout sessions and webhook handling (`Billing.StripeHandler`) |
+| `Api.Facebook` / `Api.Pinterest` | Social platform HTTP clients (moved from the web app) — see `docs/social_publishing.md` |
+| `S3` | The single ExAws S3 wrapper (`s3.ex`) — use it instead of inline `ExAws.S3` calls |
+
+**Facade convention:** `Mehungry.Food`, `Mehungry.Accounts`, and
+`Mehungry.Users` are permanent defdelegate facades — public functions never
+break when internals move. New code may call sub-modules directly; when adding
+a public function to a sub-module, add a matching `defdelegate` to the facade.
+Architecture overview: **`docs/architecture.md`**.
 
 **Cachex** runs three named caches started in `Mehungry.Application`:
 - `:recipes_cache` — LRU, limit 150
@@ -87,7 +95,7 @@ Automated recipe-to-social-media pipeline:
 3. `AiBotRecipe` — tracks each generated recipe with status: `pending_review → approved/rejected → published`.
 4. Oban cron fires `DailyRecipeGenerationWorker` at **2am UTC daily** → generates one recipe per meal type via `RecipeAgent` → schedules `RecipePublishWorker` jobs (one per meal × language) at the times in `publish_times`.
 5. Admin reviews at `/professional/ai-bot/review` before publish jobs run.
-6. `RecipePublishWorker` calls `SocialMediaPublisher.publish_recipe/5` (mockable via app config key `:social_media_publisher`).
+6. `RecipePublishWorker` calls `Mehungry.SocialMediaPublisher.publish_recipe/5` (mockable via app config key `:social_media_publisher`) — see `docs/social_publishing.md`.
 7. `AiBot.Notifier` sends admin email when batch is ready for review.
 
 ### Subscription Tiers (`Mehungry.Subscriptions`)
@@ -158,7 +166,7 @@ Three coexisting patterns — prefer option 3 for new code:
 2. **Integration/smoke** — `ExUnit` with `ConnCase`/`LiveViewTest` in `apps/mehungry_web/test/`
 3. **Functional** — Wallaby (browser-driven) in `apps/mehungry_web/test/features/`
 
-Wallaby tests require ChromeDriver. The `chromedriver-linux64` binary is in the repo root.
+Wallaby tests require a `chromedriver` binary on `PATH` (no longer vendored in the repo — see `docs/operations.md`).
 
 ## LiveView Conventions
 
