@@ -8,7 +8,9 @@ defmodule Mehungry.Api.Pinterest do
 
   alias Mehungry.Food.Recipe
 
-  @api_base "https://api.pinterest.com/v5"
+  # TEMPORARY: pointed at the Pinterest sandbox for demo purposes.
+  # Restore to "https://api.pinterest.com/v5" after the demo.
+  @api_base "https://api-sandbox.pinterest.com/v5"
 
   use MehungryWeb, :verified_routes
 
