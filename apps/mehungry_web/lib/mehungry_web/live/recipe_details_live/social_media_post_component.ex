@@ -41,6 +41,8 @@ defmodule MehungryWeb.SocialMediaPostComponent do
       |> assign(:state, Map.get(assigns, :state, :normal))
       |> assign(:pinterest_boards, pinterest_boards)
       |> assign(:pinterest_board_id, nil)
+      |> assign(:show_create_board, false)
+      |> assign(:create_board_error, nil)
 
     {:ok, socket}
   end
@@ -93,6 +95,32 @@ defmodule MehungryWeb.SocialMediaPostComponent do
   @impl true
   def handle_event("select_pinterest_board", %{"board_id" => board_id}, socket) do
     {:noreply, assign(socket, :pinterest_board_id, board_id)}
+  end
+
+  @impl true
+  def handle_event("toggle_create_board", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:show_create_board, !socket.assigns.show_create_board)
+     |> assign(:create_board_error, nil)}
+  end
+
+  @impl true
+  def handle_event("create_pinterest_board", %{"board" => board_params}, socket) do
+    user = Accounts.get_user!(socket.assigns.user.id)
+
+    case Pinterest.create_board(user, board_params) do
+      {:ok, board} ->
+        {:noreply,
+         socket
+         |> assign(:pinterest_boards, Pinterest.get_boards(user))
+         |> assign(:pinterest_board_id, board["id"])
+         |> assign(:show_create_board, false)
+         |> assign(:create_board_error, nil)}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :create_board_error, reason)}
+    end
   end
 
   @impl true
@@ -225,11 +253,14 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                 </div>
               <% else %>
                 <%= if @pinterest_boards == [] do %>
-                  <div class="flex items-center gap-3 p-4 rounded-lg bg-slate-700/50">
-                    <.icon name="hero-exclamation-circle" class="h-5 w-5 text-slate-400 flex-shrink-0" />
-                    <p class="text-sm text-slate-400">
-                      No Pinterest boards found. Create a board on Pinterest first.
-                    </p>
+                  <div class="space-y-3">
+                    <div class="flex items-center gap-3 p-4 rounded-lg bg-slate-700/50">
+                      <.icon name="hero-exclamation-circle" class="h-5 w-5 text-slate-400 flex-shrink-0" />
+                      <p class="text-sm text-slate-400">
+                        No Pinterest boards found. Create your first board below.
+                      </p>
+                    </div>
+                    <.create_board_form myself={@myself} error={@create_board_error} />
                   </div>
                 <% else %>
                   <div class="space-y-3">
@@ -254,6 +285,16 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                         </button>
                       <% end %>
                     </div>
+                    <button
+                      phx-click="toggle_create_board"
+                      phx-target={@myself}
+                      class="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+                    >
+                      <.icon name="hero-plus" class="h-4 w-4" /> New board
+                    </button>
+                    <%= if @show_create_board do %>
+                      <.create_board_form myself={@myself} error={@create_board_error} />
+                    <% end %>
                     <div class="flex justify-end pt-2">
                       <button
                         phx-click="post_pinterest"
@@ -369,6 +410,54 @@ defmodule MehungryWeb.SocialMediaPostComponent do
             """
         end
     end
+  end
+
+  attr :myself, :any, required: true
+  attr :error, :string, default: nil
+
+  defp create_board_form(assigns) do
+    ~H"""
+    <form
+      phx-submit="create_pinterest_board"
+      phx-target={@myself}
+      class="space-y-3 p-4 rounded-lg bg-slate-700/30 border border-slate-600"
+    >
+      <p class="text-sm font-semibold text-white">Create a new board</p>
+      <input
+        type="text"
+        name="board[name]"
+        required
+        maxlength="180"
+        placeholder="Board name"
+        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 placeholder-slate-500 focus:border-red-500 focus:outline-none"
+      />
+      <textarea
+        name="board[description]"
+        rows="2"
+        maxlength="500"
+        placeholder="Description (optional)"
+        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 placeholder-slate-500 focus:border-red-500 focus:outline-none"
+      ></textarea>
+      <select
+        name="board[privacy]"
+        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-red-500 focus:outline-none"
+      >
+        <option value="PUBLIC">Public</option>
+        <option value="SECRET">Secret</option>
+      </select>
+      <%= if @error do %>
+        <p class="text-xs text-red-400">{@error}</p>
+      <% end %>
+      <div class="flex justify-end">
+        <button
+          type="submit"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors"
+        >
+          <.icon name="hero-plus" class="h-4 w-4" /> Create Board
+        </button>
+      </div>
+    </form>
+    """
   end
 
   defp notify_parent(self, msg) do

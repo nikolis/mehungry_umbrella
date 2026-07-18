@@ -20,6 +20,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
        |> assign(:bot_user, bot_user)
        |> assign(:languages, languages)
        |> assign(:pinterest_boards, boards)
+       |> assign(:show_create_board, false)
        |> assign(:page_title, "Bot Social Accounts")}
     else
       {:ok,
@@ -28,6 +29,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
        |> assign(:bot_user, nil)
        |> assign(:languages, languages)
        |> assign(:pinterest_boards, [])
+       |> assign(:show_create_board, false)
        |> assign(:page_title, "Bot Social Accounts")}
     end
   end
@@ -63,6 +65,28 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to save Pinterest boards.")}
+    end
+  end
+
+  @impl true
+  def handle_event("toggle_create_board", _params, socket) do
+    {:noreply, assign(socket, :show_create_board, !socket.assigns.show_create_board)}
+  end
+
+  @impl true
+  def handle_event("create_pinterest_board", %{"board" => board_params}, socket) do
+    bot_user = socket.assigns.bot_user
+
+    case Pinterest.create_board(bot_user, board_params) do
+      {:ok, board} ->
+        {:noreply,
+         socket
+         |> assign(:pinterest_boards, Pinterest.get_boards(bot_user))
+         |> assign(:show_create_board, false)
+         |> put_flash(:info, "Pinterest board \"#{board["name"]}\" created.")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to create board: #{reason}")}
     end
   end
 
@@ -175,6 +199,16 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
         <% end %>
 
         <!-- Pinterest per-language board selector -->
+        <%= if map_non_empty?(@bot_user.pinterest_token) and @pinterest_boards == [] do %>
+          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-5 mb-5">
+            <h2 class="text-sm font-semibold text-white mb-1">Pinterest — Boards</h2>
+            <p class="text-xs text-slate-500 mb-4">
+              No boards on this account yet. Create one to configure per-language pinning.
+            </p>
+            <.create_board_form />
+          </div>
+        <% end %>
+
         <%= if map_non_empty?(@bot_user.pinterest_token) and @pinterest_boards != [] do %>
           <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-5 mb-5">
             <h2 class="text-sm font-semibold text-white mb-1">Pinterest — Board per Language</h2>
@@ -219,6 +253,19 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
                 </button>
               </div>
             </form>
+            <div class="mt-4 pt-4 border-t border-slate-700/60">
+              <button
+                phx-click="toggle_create_board"
+                class="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+              >
+                <.icon name="hero-plus" class="h-4 w-4" /> New board
+              </button>
+              <%= if @show_create_board do %>
+                <div class="mt-3">
+                  <.create_board_form />
+                </div>
+              <% end %>
+            </div>
           </div>
         <% end %>
 
@@ -265,6 +312,41 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
         {if @connected, do: "Reconnect", else: "Connect"}
       </a>
     </div>
+    """
+  end
+
+  defp create_board_form(assigns) do
+    ~H"""
+    <form phx-submit="create_pinterest_board" class="space-y-3 max-w-md">
+      <input
+        type="text"
+        name="board[name]"
+        required
+        maxlength="180"
+        placeholder="Board name"
+        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 placeholder-slate-500 focus:border-primary-500 focus:outline-none"
+      />
+      <textarea
+        name="board[description]"
+        rows="2"
+        maxlength="500"
+        placeholder="Description (optional)"
+        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 placeholder-slate-500 focus:border-primary-500 focus:outline-none"
+      ></textarea>
+      <select
+        name="board[privacy]"
+        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+      >
+        <option value="PUBLIC">Public</option>
+        <option value="SECRET">Secret</option>
+      </select>
+      <button
+        type="submit"
+        class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+      >
+        <.icon name="hero-plus" class="h-4 w-4" /> Create Board
+      </button>
+    </form>
     """
   end
 
