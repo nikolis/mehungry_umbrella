@@ -170,7 +170,7 @@ defmodule Mehungry.USDA.FdcClient do
     |> Enum.find(fn word -> String.length(word) > 1 and Regex.match?(~r/^[a-zA-Z]+$/, word) end)
   end
 
-  # Falls back to the key already used by MehungryWeb.IngredientSearch / NutrientServer.
+  # Falls back to the legacy hardcoded FDC key when FDC_API_KEY is unset.
   @hardcoded_fallback "ICjMhFVerhu917ppnyybL7ozeXGbftEk3q7li2GM"
 
   defp api_key do

@@ -12,8 +12,6 @@ defmodule Mehungry.Api.Pinterest do
   # Restore to "https://api.pinterest.com/v5" after the demo.
   @api_base "https://api-sandbox.pinterest.com/v5"
 
-  use MehungryWeb, :verified_routes
-
   @doc """
   Returns the user's Pinterest boards. Returns [] if no token is connected
   or if the API call fails.
@@ -180,7 +178,7 @@ defmodule Mehungry.Api.Pinterest do
       board_id: board_id,
       title: recipe.title,
       description: build_description(recipe),
-      link: MehungryWeb.Endpoint.url() <> ~p"/browse/#{recipe.id}",
+      link: endpoint_module().url() <> "/browse/#{recipe.id}",
       media_source: %{
         source_type: "image_url",
         url: recipe.image_url || ""
@@ -203,6 +201,13 @@ defmodule Mehungry.Api.Pinterest do
       end
 
     String.slice(base <> cooking_time <> " #mehungry", 0, 500)
+  end
+
+  # Runtime seam: core cannot reference the web endpoint at compile time,
+  # but pin links must point at the public site. The module is resolved at
+  # runtime, mirroring the :social_media_publisher config-key pattern.
+  defp endpoint_module do
+    Application.get_env(:mehungry, :endpoint_module, MehungryWeb.Endpoint)
   end
 
   defp access_token(user) do

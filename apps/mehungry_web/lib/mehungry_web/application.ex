@@ -18,7 +18,6 @@ defmodule MehungryWeb.Application do
       # Start the Endpoint (http/https)
 
       MehungryWeb.Endpoint,
-      MehungryWeb.IngredientSearch,
       {Task.Supervisor, name: MehungryWeb.TaskSupervisor},
       %{
         id: :create_recipe_cache,

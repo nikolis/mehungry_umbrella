@@ -1,4 +1,4 @@
-defmodule MehungryWeb.NutrientMapper do
+defmodule Mehungry.Food.NutrientMapper do
   use GenServer
   require Logger
 

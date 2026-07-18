@@ -85,7 +85,7 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
   end
 
   defp publisher do
-    Application.get_env(:mehungry, :social_media_publisher, MehungryWeb.SocialMediaPublisher)
+    Application.get_env(:mehungry, :social_media_publisher, Mehungry.SocialMediaPublisher)
   end
 
   defp collect_errors(results) when is_map(results) do
