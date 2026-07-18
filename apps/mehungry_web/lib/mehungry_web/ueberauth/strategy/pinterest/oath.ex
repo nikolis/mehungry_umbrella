@@ -8,11 +8,14 @@ defmodule Ueberauth.Strategy.Pinterest.OAuth do
   """
   use OAuth2.Strategy
 
+  # TEMPORARY: token exchange pointed at the Pinterest sandbox for demo purposes,
+  # matching @api_base in Mehungry.Api.Pinterest. Sandbox and production tokens are
+  # not interchangeable. Restore to "https://api.pinterest.com/v5/oauth/token" after the demo.
   @defaults [
     strategy: __MODULE__,
-    site: "https://api.pinterest.com",
+    site: "https://api-sandbox.pinterest.com",
     authorize_url: "https://www.pinterest.com/oauth/",
-    token_url: "https://api.pinterest.com/v5/oauth/token"
+    token_url: "https://api-sandbox.pinterest.com/v5/oauth/token"
   ]
 
   def client(opts \\ []) do
