@@ -10,7 +10,8 @@ defmodule Mehungry.RecipeImageWorker do
 
   require Logger
 
-  alias Mehungry.{Food, S3Manager, AI.ImageGenerator}
+  alias Mehungry.{Food, AI.ImageGenerator}
+  alias Mehungry.S3
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"recipe_id" => recipe_id}}) do
@@ -31,7 +32,7 @@ defmodule Mehungry.RecipeImageWorker do
 
         key = "recipe_images/#{recipe.id}.jpg"
 
-        case S3Manager.upload_binary(binary, bucket, key, content_type: "image/jpeg") do
+        case S3.upload_binary(binary, bucket, key, content_type: "image/jpeg") do
           {:ok, _} ->
             url = "https://#{bucket}.s3.eu-central-1.amazonaws.com/#{key}"
 

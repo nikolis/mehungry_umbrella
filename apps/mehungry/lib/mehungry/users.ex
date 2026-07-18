@@ -92,21 +92,11 @@ defmodule Mehungry.Users do
     |> Repo.insert()
   end
 
-  def list_food_restriction_types() do
-    FoodRestrictionType
-    |> Repo.all()
-  end
+  defdelegate list_food_restriction_types(), to: Mehungry.Food
 
-  def create_user_category_rule(attrs) do
-    %UserCategoryRule{}
-    |> UserCategoryRule.changeset(attrs)
-    |> Repo.insert()
-  end
+  defdelegate create_user_category_rule(attrs), to: Mehungry.Accounts
 
-  def list_user_category_rules() do
-    UserCategoryRule
-    |> Repo.all()
-  end
+  defdelegate list_user_category_rules(), to: Mehungry.Accounts
 
   def get_user_category_rulles(%User{} = user) do
     from(u_c_r in UserCategoryRule,

@@ -173,7 +173,12 @@ defmodule Mehungry.NutrientUtils do
   }
 
   @doc """
-  Normalizes a nutrient name to its canonical form
+  Normalizes a nutrient name to its canonical form.
+
+  Divergent twin: `Mehungry.Food.NutrientManager.normalize_nutrient_name/1`
+  uses a different mapping table and falls back to capitalization, while this
+  one falls back to fuzzy pattern matching. Callers depend on the respective
+  behavior, so they are deliberately not unified.
   """
   def normalize_nutrient_name(name) when is_binary(name) do
     normalized =

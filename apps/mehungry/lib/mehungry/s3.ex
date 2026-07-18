@@ -1,4 +1,4 @@
-defmodule Mehungry.S3Manager do
+defmodule Mehungry.S3 do
   @moduledoc """
   A module for interacting with AWS S3.
   Provides functions for uploading, downloading, listing, and deleting objects in S3 buckets.
@@ -100,9 +100,9 @@ defmodule Mehungry.S3Manager do
     - {:ok, response} on success
     - {:error, reason} on failure
   """
-  def delete_object(bucket, key) do
+  def delete_object(bucket, key, request_opts \\ []) do
     ExAws.S3.delete_object(bucket, key)
-    |> ExAws.request()
+    |> ExAws.request(request_opts)
   end
 
   @doc """

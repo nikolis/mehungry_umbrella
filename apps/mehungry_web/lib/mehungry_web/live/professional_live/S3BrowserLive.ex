@@ -1,7 +1,7 @@
 defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   use Phoenix.LiveView
 
-  alias Mehungry.S3Manager
+  alias Mehungry.S3
   require Logger
 
   @impl true
@@ -220,7 +220,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   def handle_event("list_objects", %{"bucket_name" => bucket_name}, socket) do
     socket = assign(socket, bucket_name: bucket_name, loading: true, error: nil)
 
-    case S3Manager.list_objects(bucket_name, socket.assigns.prefix) do
+    case S3.list_objects(bucket_name, socket.assigns.prefix) do
       {:ok, objects} ->
         {:noreply, assign(socket, objects: objects.body.contents, loading: false)}
 
@@ -235,11 +235,11 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
     socket = assign(socket, bucket_name: bucket_name, loading: true, error: nil)
     Logger.info("Load ingredients from folder: #{bucket_name}")
 
-    case S3Manager.list_objects(bucket_name, socket.assigns.prefix) do
+    case S3.list_objects(bucket_name, socket.assigns.prefix) do
       {:ok, objects} ->
         urls =
           Enum.map(objects.body.contents, fn x ->
-            case S3Manager.presigned_url(bucket_name, x.key) do
+            case S3.presigned_url(bucket_name, x.key) do
               {:ok, {:ok, url}} ->
                 Logger.info("Load ingredients from folder: #{url}")
                 url
@@ -269,7 +269,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
     prefix = socket.assigns.prefix
     socket = assign(socket, loading: true, error: nil)
 
-    case S3Manager.list_objects(bucket_name, prefix) do
+    case S3.list_objects(bucket_name, prefix) do
       {:ok, objects} ->
         {:noreply, assign(socket, objects: objects, loading: false)}
 
@@ -284,7 +284,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
     bucket_name = socket.assigns.bucket_name
     socket = assign(socket, loading: true, error: nil, prefix: folder)
 
-    case S3Manager.list_objects(bucket_name, folder) do
+    case S3.list_objects(bucket_name, folder) do
       {:ok, objects} ->
         {:noreply, assign(socket, objects: objects, loading: false)}
 
@@ -316,7 +316,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
 
     socket = assign(socket, loading: true, error: nil, prefix: new_prefix)
 
-    case S3Manager.list_objects(bucket_name, new_prefix) do
+    case S3.list_objects(bucket_name, new_prefix) do
       {:ok, objects} ->
         {:noreply, assign(socket, objects: objects, loading: false)}
 
@@ -330,7 +330,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   def handle_event("load_file", %{"key" => key}, socket) do
     bucket_name = socket.assigns.bucket_name
 
-    case S3Manager.presigned_url(bucket_name, key) do
+    case S3.presigned_url(bucket_name, key) do
       {:ok, url} ->
         {:ok, url} = url
         %HTTPoison.Response{body: body} = HTTPoison.get!(url)
@@ -348,10 +348,10 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
     bucket_name = socket.assigns.bucket_name
     socket = assign(socket, loading: true, error: nil)
 
-    case S3Manager.delete_object(bucket_name, key) do
+    case S3.delete_object(bucket_name, key) do
       {:ok, _} ->
         # Refresh the list after deletion
-        case S3Manager.list_objects(bucket_name, socket.assigns.prefix) do
+        case S3.list_objects(bucket_name, socket.assigns.prefix) do
           {:ok, objects} ->
             {:noreply, assign(socket, objects: objects, loading: false)}
 

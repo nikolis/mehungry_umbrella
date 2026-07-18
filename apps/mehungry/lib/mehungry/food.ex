@@ -316,8 +316,7 @@ defmodule Mehungry.Food do
     if !is_nil(recipe.image_url) and not String.starts_with?(recipe.image_url, "http") do
       file_name = List.last(String.split(recipe.image_url))
 
-      ExAws.S3.delete_object("test-bucket-local-mehungry", file_name)
-      |> ExAws.request(region: "eu-central-1")
+      Mehungry.S3.delete_object("test-bucket-local-mehungry", file_name, region: "eu-central-1")
     end
 
     Repo.delete(recipe)
