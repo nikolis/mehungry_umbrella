@@ -36,8 +36,6 @@ defmodule MehungryWeb.TabsComponent do
     assigns = Map.put(assigns, :extra_class, extra_class)
     assigns = Map.put(assigns, :extra_content, extra_content)
 
-    IO.inspect(extra_class)
-
     ~H"""
     <button
       id={@state}

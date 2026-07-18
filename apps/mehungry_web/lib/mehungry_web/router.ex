@@ -141,29 +141,6 @@ defmodule MehungryWeb.Router do
       live "/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit
 
       live "/upgrade", UpgradeLive.Index, :index
-
-      live "/survey", SurveyLive, :index
-
-      live "/posts", PostLive.Index, :index
-      live "/posts/new", PostLive.Index, :new
-      live "/posts/:id/edit", PostLive.Index, :edit
-
-      live "/posts/:id", PostLive.Show, :show
-      live "/posts/:id/show/edit", PostLive.Show, :edit
-
-      live "/comments", CommentLive.Index, :index
-      live "/comments/new", CommentLive.Index, :new
-      live "/comments/:id/edit", CommentLive.Index, :edit
-
-      live "/comments/:id", CommentLive.Show, :show
-      live "/comments/:id/show/edit", CommentLive.Show, :edit
-
-      live "/comment_answers", CommentAnswerLive.Index, :index
-      live "/comment_answers/new", CommentAnswerLive.Index, :new
-      live "/comment_answers/:id/edit", CommentAnswerLive.Index, :edit
-
-      live "/comment_answers/:id", CommentAnswerLive.Show, :show
-      live "/comment_answers/:id/show/edit", CommentAnswerLive.Show, :edit
     end
   end
 
@@ -226,7 +203,6 @@ defmodule MehungryWeb.Router do
     live_session :maybe, on_mount: MehungryWeb.MaybeUserAuthLive do
       get "/", HomePageController, :home
 
-      # live "/", HomeLive.Index, :index
       live "/home", HomeLive.Index, :index
       live "/home/:id", HomeLive.Index, :show_recipe
 
@@ -249,9 +225,6 @@ defmodule MehungryWeb.Router do
       live "/foods/:slug", FoodDetailLive.Index, :index
 
       live "/feedback", FeedbackLive, :index
-
-      # live "/browse/:origin/:id", RecipeDetailsLive.Index, :index
-      # live "/browse_prepop/:search_term", :searc_prepop
     end
 
     get "/login", UserSessionController, :new

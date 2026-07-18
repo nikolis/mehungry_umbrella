@@ -24,9 +24,6 @@ defmodule Mehungry.Inventory.BasketItem do
 
   @doc false
   def changeset(basket_ingredient, attrs) do
-    attrs
-    |> IO.inspect(label: "Ceate item")
-
     basket_ingredient
     |> cast(attrs, [
       :quantity,

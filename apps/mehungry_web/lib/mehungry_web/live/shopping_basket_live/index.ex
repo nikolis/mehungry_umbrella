@@ -67,8 +67,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   def handle_event("select_usda_item", %{"fdc_id" => fdc_id}, socket) do
     case USDA.get_food_details(fdc_id) do
       {:ok, food} ->
-        IO.inspect(food, label: "Selected food details")
-
         {:noreply,
          assign(socket,
            selected_usda_item: food,
@@ -126,8 +124,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
 
     case Inventory.add_item(socket.assigns.shopping_basket.id, item) do
       {:ok, item} ->
-        IO.inspect(item, label: "Item added")
-
         basket = %ShoppingBasket{
           socket.assigns.shopping_basket
           | basket_items: socket.assigns.shopping_basket.basket_items ++ [item]
@@ -174,13 +170,8 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
         fn x -> x.id == id end
       )
 
-    IO.inspect(item, label: "Item")
-    IO.inspect(item, label: "Item")
-
     shopping_basket =
       if(item.__struct__ == Mehungry.Inventory.BasketIngredient) do
-        IO.inspect("here")
-
         rest =
           Enum.filter(socket.assigns.shopping_basket.basket_ingredients, fn x ->
             x.id != item.id
@@ -194,8 +185,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
           | basket_ingredients: all_ingredients
         }
       else
-        IO.inspect("here2342")
-
         rest =
           Enum.filter(socket.assigns.shopping_basket.basket_items, fn x -> x.id != item.id end)
 
@@ -365,7 +354,6 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   def handle_info({:perform_search, query}, socket) do
     case USDA.search_foods(query, 5) do
       {:ok, results} ->
-        IO.inspect(results, label: "Result")
         {:noreply, assign(socket, search_results: results, searching: false)}
 
       {:error, _error} ->

@@ -142,7 +142,6 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
 
   defp create_basket(socket, basket_params_params) do
     shopping_basket = Inventory.create_shopping_basket(basket_params_params)
-    IO.inspect(shopping_basket, label: "Result")
 
     case shopping_basket do
       {:ok, basket} ->
