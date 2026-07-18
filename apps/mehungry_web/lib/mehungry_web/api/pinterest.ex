@@ -117,6 +117,64 @@ defmodule Mehungry.Api.Pinterest do
     end
   end
 
+  @doc """
+  Creates a Pinterest board for the user.
+  Accepts a map with "name" (required), "description" and "privacy" (optional).
+  Returns {:ok, board_map} or {:error, reason}.
+  """
+  def create_board(user, attrs) do
+    case access_token(user) do
+      nil ->
+        Logger.warning("[Pinterest] create_board: no access token for user #{user.id}")
+        {:error, "No Pinterest account connected"}
+
+      token ->
+        body =
+          %{
+            "name" => attrs["name"],
+            "privacy" => attrs["privacy"] || "PUBLIC"
+          }
+          |> maybe_put_description(attrs["description"])
+          |> Jason.encode!()
+
+        case HTTPoison.post(
+               "#{@api_base}/boards",
+               body,
+               [
+                 {"Authorization", "Bearer #{token}"},
+                 {"Content-Type", "application/json"}
+               ]
+             ) do
+          {:ok, %HTTPoison.Response{status_code: status, body: resp_body}}
+          when status in 200..299 ->
+            Logger.info("[Pinterest] create_board: board created for user #{user.id}")
+
+            case Jason.decode(resp_body) do
+              {:ok, board} -> {:ok, board}
+              _ -> {:ok, %{}}
+            end
+
+          {:ok, %HTTPoison.Response{status_code: status, body: resp_body}} ->
+            Logger.warning(
+              "[Pinterest] create_board: HTTP #{status} for user #{user.id} — #{resp_body}"
+            )
+
+            {:error, "Pinterest API returned #{status}: #{resp_body}"}
+
+          {:error, %HTTPoison.Error{reason: reason}} ->
+            Logger.error(
+              "[Pinterest] create_board: request error for user #{user.id} — #{inspect(reason)}"
+            )
+
+            {:error, inspect(reason)}
+        end
+    end
+  end
+
+  defp maybe_put_description(body, nil), do: body
+  defp maybe_put_description(body, ""), do: body
+  defp maybe_put_description(body, description), do: Map.put(body, "description", description)
+
   defp build_pin_body(%Recipe{} = recipe, board_id) do
     pin = %{
       board_id: board_id,
