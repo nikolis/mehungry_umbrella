@@ -1,5 +1,6 @@
 defmodule MehungryWeb.AiBotLive.SocialAccounts do
   use MehungryWeb, :live_view
+  import MehungryWeb.FormatHelpers, only: [month_name: 1]
 
   alias Mehungry.{AiBot, Accounts, Languages}
   alias Mehungry.Api.Pinterest
@@ -385,17 +386,4 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
   defp map_non_empty?(map) when is_map(map) and map_size(map) > 0, do: true
   defp map_non_empty?(_), do: false
 
-  defp month_name(1), do: "January"
-  defp month_name(2), do: "February"
-  defp month_name(3), do: "March"
-  defp month_name(4), do: "April"
-  defp month_name(5), do: "May"
-  defp month_name(6), do: "June"
-  defp month_name(7), do: "July"
-  defp month_name(8), do: "August"
-  defp month_name(9), do: "September"
-  defp month_name(10), do: "October"
-  defp month_name(11), do: "November"
-  defp month_name(12), do: "December"
-  defp month_name(_), do: "Unknown"
 end
