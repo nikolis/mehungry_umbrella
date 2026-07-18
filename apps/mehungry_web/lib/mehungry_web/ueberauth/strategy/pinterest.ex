@@ -12,7 +12,10 @@ defmodule Ueberauth.Strategy.Pinterest do
 
   alias Ueberauth.Auth.{Info, Credentials, Extra}
 
-  @user_url "https://api.pinterest.com/v5/user_account"
+  # TEMPORARY: pointed at the Pinterest sandbox to match the token endpoint in
+  # Ueberauth.Strategy.Pinterest.OAuth — sandbox tokens are rejected by production.
+  # Restore to "https://api.pinterest.com/v5/user_account" after the demo.
+  @user_url "https://api-sandbox.pinterest.com/v5/user_account"
 
   def handle_request!(conn) do
     allowed_params =
