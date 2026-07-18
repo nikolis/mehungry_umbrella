@@ -146,12 +146,15 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
         if platforms == [] do
           count
         else
+          # force: a manual "publish now" may intentionally re-post platforms
+          # that already have an "ok" post log.
           args = %{
             ai_bot_recipe_id: bot_recipe.id,
             language_name: lang,
             platforms: platforms,
             facebook_page_id: Map.get(platform_params, "facebook_page_id"),
-            pinterest_board_id: Map.get(platform_params, "pinterest_board_id")
+            pinterest_board_id: Map.get(platform_params, "pinterest_board_id"),
+            force: true
           }
 
           case RecipePublishWorker.new(args) |> Oban.insert() do

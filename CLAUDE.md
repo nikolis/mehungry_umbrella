@@ -109,7 +109,11 @@ ai_agents:   2 concurrent  — recipe generation, translation, image generation,
 mailers:     5 concurrent  — email
 ```
 
-Cron: `DailyRecipeGenerationWorker` at `0 2 * * *`, `TelemetryPrunerWorker` at `0 3 * * *`.
+Cron: `InstagramTokenRefreshWorker` at `30 1 * * *`, `DailyRecipeGenerationWorker` at `0 2 * * *`, `TelemetryPrunerWorker` at `0 3 * * *`.
+
+### Instagram Integration (`Mehungry.Instagram`)
+
+Core-app context for the Instagram Graph API: `Instagram.Token` (token map lifecycle/status), `Instagram.Caption` (2200-char capped captions), `Instagram.Client` behind `Instagram.ClientBehaviour` (stubbed in tests via `:instagram_client` config key). Long-lived tokens are refreshed daily by `InstagramTokenRefreshWorker`; invalid tokens are marked stale and surface as "reconnect" in `/professional/ai-bot/social`. `RecipePublishWorker` publish failures return `{:error, _}` for Oban retries, skipping platforms that already have an `"ok"` post log (manual re-publish passes `force: true`). The publisher seam is typed by `Mehungry.SocialMediaPublisherBehaviour` (`:social_media_publisher` config key).
 
 ### Observability
 

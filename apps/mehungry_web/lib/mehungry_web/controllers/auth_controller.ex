@@ -48,15 +48,17 @@ defmodule MehungryWeb.AuthController do
 
     {target_user, redirect_path} = resolve_token_target(conn)
 
-    Mehungry.Api.Instagram.get_long_lived_token(
-      target_user,
-      short_lived_token,
-      instagram_user_id
-    )
+    conn =
+      case Mehungry.Instagram.connect_account(target_user, short_lived_token, instagram_user_id) do
+        {:ok, _user} ->
+          put_flash(conn, :info, "Successfully connected with Instagram")
+
+        {:error, reason} ->
+          put_flash(conn, :error, "Instagram connection failed: #{inspect(reason)}")
+      end
 
     conn
     |> delete_session("oauth_target_user_id")
-    |> put_flash(:info, "Successfully connected with Instagram")
     |> redirect(to: redirect_path)
   end
 

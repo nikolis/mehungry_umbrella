@@ -6,7 +6,6 @@ defmodule MehungryWeb.SocialMediaPostComponent do
 
   alias Mehungry.Accounts
   alias Mehungry.Api.Facebook
-  alias Mehungry.Api.Instagram
   alias Mehungry.Api.Pinterest
   alias MehungryWeb.SvgComponents
 
@@ -161,12 +160,15 @@ defmodule MehungryWeb.SocialMediaPostComponent do
       user = Accounts.get_user!(socket.assigns.user.id)
 
       result =
-        case Instagram.post_recipe_container(user, recipe) do
-          {:ok, %HTTPoison.Response{status_code: status_code, body: body}} ->
-            [{"Instagram", status_code, body}]
+        case Mehungry.Instagram.post_recipe(user, recipe) do
+          {:ok, %{media_id: _}} ->
+            [{"Instagram", 200, nil}]
 
-          _ ->
-            [{"Instagram", 0, Jason.encode!(%{"error" => %{"message" => "Post failed"}})}]
+          {:error, {:http_error, status, body}} ->
+            [{"Instagram", status, Jason.encode!(%{"error" => %{"message" => inspect(body)}})}]
+
+          {:error, reason} ->
+            [{"Instagram", 0, Jason.encode!(%{"error" => %{"message" => inspect(reason)}})}]
         end
 
       notify_parent(parent, %{post_result: result})

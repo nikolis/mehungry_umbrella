@@ -29,6 +29,8 @@ config :mehungry, Oban,
     {Oban.Plugins.Lifeline, rescue_after: :timer.hours(24)},
     {Oban.Plugins.Cron,
      crontab: [
+       # 1:30am UTC daily — refresh Instagram long-lived tokens before the 2am run
+       {"30 1 * * *", Mehungry.ObanWorkers.InstagramTokenRefreshWorker},
        # 2am UTC daily — generate recipes for the next day + schedule publish jobs
        {"0 2 * * *", Mehungry.ObanWorkers.DailyRecipeGenerationWorker},
        # 3am UTC daily — prune telemetry snapshots older than 30 days

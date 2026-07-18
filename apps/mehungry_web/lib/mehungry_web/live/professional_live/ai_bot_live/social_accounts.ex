@@ -128,7 +128,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
           <.platform_card
             name="Instagram"
             icon="📸"
-            connected={map_non_empty?(@bot_user.instagram_token)}
+            connected={Mehungry.Instagram.token_status(@bot_user) in [:connected, :expiring]}
             detail={instagram_detail(@bot_user)}
             connect_url={~p"/auth/bot/target/#{@bot_user.id}/instagram"}
           />
@@ -351,9 +351,25 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
   end
 
   defp instagram_detail(bot_user) do
-    case Map.get(bot_user.instagram_token || %{}, "user_id") do
-      nil -> nil
-      id -> "User ID: #{id}"
+    token = bot_user.instagram_token || %{}
+    user_id = Map.get(token, "user_id")
+
+    case Mehungry.Instagram.token_status(bot_user) do
+      :connected ->
+        case Mehungry.Instagram.Token.expires_at(token) do
+          nil -> user_id && "User ID: #{user_id}"
+          expires_at -> "User ID: #{user_id} — token expires #{Date.to_string(DateTime.to_date(expires_at))}"
+        end
+
+      :expiring ->
+        days = DateTime.diff(Mehungry.Instagram.Token.expires_at(token), DateTime.utc_now(), :day)
+        "User ID: #{user_id} — token expires in #{days} day(s)"
+
+      status when status in [:stale, :error] ->
+        "Token expired/invalid — reconnect"
+
+      :not_connected ->
+        nil
     end
   end
 

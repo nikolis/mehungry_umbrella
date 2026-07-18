@@ -5,12 +5,13 @@ defmodule MehungryWeb.SocialMediaPublisher do
   Facebook page and Pinterest board are resolved per-language from the bot config.
   """
 
+  @behaviour Mehungry.SocialMediaPublisherBehaviour
+
   require Logger
 
-  alias Mehungry.Api.Instagram
   alias Mehungry.Api.Facebook
   alias Mehungry.Api.Pinterest
-  alias Mehungry.{AiBot, Food}
+  alias Mehungry.{AiBot, Food, Instagram}
 
   @doc """
   Publishes a recipe to all platforms that have connected tokens on the bot_user.
@@ -20,6 +21,7 @@ defmodule MehungryWeb.SocialMediaPublisher do
   Returns %{instagram: result, facebook: result, pinterest: result}
   where result is :ok | :skipped | {:error, reason}.
   """
+  @impl true
   def publish_recipe(recipe, bot_user, ai_bot_recipe_id, language_name, opts \\ %{}) do
     localized_recipe = apply_translation(recipe, language_name)
     bot_recipe = AiBot.get_bot_recipe!(ai_bot_recipe_id)
@@ -106,22 +108,23 @@ defmodule MehungryWeb.SocialMediaPublisher do
   defp maybe_apply_translated_steps(recipe, _), do: recipe
 
   defp post_instagram(bot_user, recipe) do
-    token = bot_user.instagram_token || %{}
+    user_id = (bot_user.instagram_token || %{}) |> Map.get("user_id", "") |> to_string()
 
-    if map_non_empty?(token) do
-      user_id = Map.get(token, "user_id", "") |> to_string()
+    case Instagram.post_recipe(bot_user, recipe) do
+      {:ok, %{media_id: _}} ->
+        {:ok, user_id, nil}
 
-      result =
-        case Instagram.post_recipe_container(bot_user, recipe) do
-          {:ok, _} -> :ok
-          nil -> {:error, "Instagram returned nil"}
-          {:error, reason} -> {:error, reason}
-          _ -> :ok
-        end
+      {:error, :not_connected} ->
+        {:skipped, nil, nil}
 
-      {result, user_id, nil}
-    else
-      {:skipped, nil, nil}
+      {:error, :token_stale} ->
+        {{:error, "Instagram token expired/invalid — reconnect the account"}, user_id, nil}
+
+      {:error, {:http_error, status, body}} ->
+        {{:error, "Instagram HTTP #{status}: #{inspect(body)}"}, user_id, nil}
+
+      {:error, reason} ->
+        {{:error, inspect(reason)}, user_id, nil}
     end
   end
 

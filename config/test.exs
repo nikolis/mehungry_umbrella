@@ -29,6 +29,10 @@ config :mehungry, :sql_sandbox, true
 # Open Food Facts client is stubbed in tests — no network calls
 config :mehungry, :off_client, Mehungry.OpenFoodFacts.ClientStub
 
+# Instagram Graph API client + social media publisher are stubbed in tests
+config :mehungry, :instagram_client, Mehungry.Instagram.ClientStub
+config :mehungry, :social_media_publisher, Mehungry.SocialMediaPublisherStub
+
 # Chrome
 # default
 config :wallaby,

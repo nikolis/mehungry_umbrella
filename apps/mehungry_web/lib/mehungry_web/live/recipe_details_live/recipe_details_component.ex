@@ -6,7 +6,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   alias Mehungry.Posts.Comment
   alias Mehungry.{Posts, Users, Food, Accounts}
-  alias Mehungry.Api.Instagram
   alias Mehungry.Api.Facebook
 
   embed_templates("components/*")
@@ -40,7 +39,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   def handle_event("post-on-instagram", %{"recipe_id" => recipe_id, "user_id" => user_id}, socket) do
     recipe = Food.get_recipe!(recipe_id)
     user = Accounts.get_user!(user_id)
-    Instagram.post_recipe_container(user, recipe)
+    Mehungry.Instagram.post_recipe(user, recipe)
 
     socket =
       socket

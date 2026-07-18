@@ -326,6 +326,18 @@ defmodule Mehungry.AiBot do
     |> Repo.all()
   end
 
+  def platforms_successfully_posted(ai_bot_recipe_id, language_name) do
+    SocialMediaPostLog
+    |> where(
+      [l],
+      l.ai_bot_recipe_id == ^ai_bot_recipe_id and l.language_name == ^language_name and
+        l.status == "ok"
+    )
+    |> select([l], l.platform)
+    |> distinct(true)
+    |> Repo.all()
+  end
+
   def all_languages_published?(ai_bot_recipe_id, languages) do
     logged_langs =
       SocialMediaPostLog
