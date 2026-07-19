@@ -27,7 +27,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:measurement_units, nil)
      |> assign(:page_title, "Share your recipes ")
      |> assign(:return_to_path, "/create_recipe")
-     |> assign(:plain_meal, nil)
      |> assign(:active_step, 0)
      |> assign(:ai_generating, false)
      |> assign(:ai_task_ref, nil)
@@ -63,13 +62,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, assign(socket, active_step: String.to_integer(step))}
   end
 
-  def handle_event("validate", %{"url_to_drill" => url} = _recipe_params, socket) do
-    socket =
-      assign(socket, :url_to_drill, url)
-
-    {:noreply, socket}
-  end
-
   @impl true
   def handle_event("validate", %{"recipe" => recipe_params}, socket) do
     recipe_params =
@@ -90,32 +82,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     end
 
     {:noreply, assign(socket, :f, to_form(changeset))}
-  end
-
-  def handle_event("save", %{"url_to_drill" => url} = _recipe_params, socket) do
-    url = "https://www.themealdb.com/api/json/v1/1/lookup.php?i=" <> url
-
-    case valid_url?(url) do
-      true ->
-        case MehungryWeb.Api.MealFetcher.fetch_and_parse(url) do
-          {:ok, meal} ->
-            converted_meal = MehungryWeb.Api.MealConverter.convert(meal)
-            recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
-
-            socket =
-              init(socket, recipe, converted_meal)
-
-            {:noreply,
-             socket
-             |> assign(plain_meal: meal)}
-
-          {:error, _whatever} ->
-            {:noreply, socket}
-        end
-
-      false ->
-        {:noreply, socket}
-    end
   end
 
   def handle_event("ai_generate", %{"prompt" => prompt}, socket) when prompt != "" do
@@ -205,9 +171,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     # recipe = Food.get_recipe!(socket.assigns.recipe.id)
     socket = init(socket, %Recipe{}, %{})
 
-    socket =
-      assign(socket, :recipe, %Recipe{})
-      |> assign(:plain_meal, nil)
+    socket = assign(socket, :recipe, %Recipe{})
 
     {:noreply, socket}
   end
@@ -336,11 +300,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def handle_params(params, uri, socket) do
     socket = assign(socket, :path, uri)
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
-  end
-
-  @url_regex ~r/^(https?:\/\/)?([\w.-]+)+(:\d+)?(\/[\w\-._~:\/?#[\]@!$&'()*+,;=]*)?$/
-  def valid_url?(url) when is_binary(url) do
-    Regex.match?(@url_regex, url)
   end
 
   def get_params_with_image(socket, params) do
