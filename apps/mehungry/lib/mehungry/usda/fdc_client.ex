@@ -170,13 +170,7 @@ defmodule Mehungry.USDA.FdcClient do
     |> Enum.find(fn word -> String.length(word) > 1 and Regex.match?(~r/^[a-zA-Z]+$/, word) end)
   end
 
-  # Falls back to the legacy hardcoded FDC key when FDC_API_KEY is unset.
-  @hardcoded_fallback "ICjMhFVerhu917ppnyybL7ozeXGbftEk3q7li2GM"
-
   defp api_key do
-    case Application.get_env(:mehungry, :fdc_api_key, "") do
-      key when key not in [nil, ""] -> key
-      _ -> @hardcoded_fallback
-    end
+    Application.get_env(:mehungry, :fdc_api_key, "")
   end
 end
