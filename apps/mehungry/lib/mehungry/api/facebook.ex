@@ -1,5 +1,4 @@
 defmodule Mehungry.Api.Facebook do
-  alias Mehungry.Accounts
   alias Mehungry.Food.Recipe
 
   @api_base "https://graph.facebook.com/"
@@ -57,28 +56,6 @@ defmodule Mehungry.Api.Facebook do
       },
       timeout: 15_000,
       recv_timeout: 15_000
-    )
-  end
-
-  def publish_recipe_container(user, code) do
-    token = Accounts.get_user_tokens(user, "instagram")
-    token = Jason.decode!(token)
-    user_id = Map.get(token, "user_id", "")
-    access_token = Map.get(token, "access_token", "")
-
-    headers = [
-      Authorization: "Bearer #{access_token}",
-      Accept: "Application/json; Charset=utf-8"
-    ]
-
-    HTTPoison.post(
-      @api_base <>
-        "/" <>
-        @api_version <>
-        "/" <> Integer.to_string(user_id) <> "/media_publish",
-      "{\"creation_id\" = " <> code <> "}",
-      headers,
-      params: %{creation_id: code}
     )
   end
 
