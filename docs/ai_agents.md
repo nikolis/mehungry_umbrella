@@ -233,7 +233,7 @@ The polish step is **best-effort** — a plain recipe beats no recipe:
 
 ```elixir
 {json_result, data_source} =
-  case Mehungry.USDA.FdcClient.lookup(name) do
+  case Mehungry.FoodData.Usda.FdcClient.lookup(name) do
     {:ok, json} ->
       {{:ok, json}, "usda_fdc"}
 
@@ -243,7 +243,7 @@ The polish step is **best-effort** — a plain recipe beats no recipe:
   end
 
 # …
-Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(json_string, data_source)
+Mehungry.FoodData.Usda.FoodParser.get_ingredients_from_json_body(json_string, data_source)
 ```
 
 **Tradeoff:** AI-estimated nutrition is approximate, but the alternative is a recipe that fails because one exotic ingredient is missing — and the `data_source` tag keeps estimates auditable.

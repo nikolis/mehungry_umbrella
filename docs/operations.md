@@ -21,8 +21,8 @@ credentials + assets bucket, Facebook/Google/Instagram OAuth, optional
 - **2026-07-18**: a `secret_anthropic.txt` containing an Anthropic API key
   sat unignored in the repo root (never committed). The file was deleted;
   the key should be rotated.
-- The legacy hardcoded FDC API key fallback lives in `usda/fdc_client.ex`;
-  prefer setting `FDC_API_KEY`.
+- The legacy hardcoded FDC API key fallback was removed from the USDA clients
+  (2026-07-19); `FDC_API_KEY` must be set and the leaked key rotated at USDA.
 
 ## Local testing
 

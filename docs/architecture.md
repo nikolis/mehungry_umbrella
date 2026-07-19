@@ -19,10 +19,10 @@ without a compile-time dependency; both are `Application.get_env/3` module
 lookups whose default is only resolved at call time:
 
 1. `:social_media_publisher` (read by `RecipePublishWorker`) — defaults to
-   `Mehungry.SocialMediaPublisher`; `config/test.exs` points it at a stub.
-   `MehungryWeb.SocialMediaPublisher` survives only as a defdelegate shim in
-   case an environment still names it.
-2. `:endpoint_module` (read by `Mehungry.Api.Pinterest`) — defaults to
+   `Mehungry.Social.Publisher`; `config/test.exs` points it at a stub.
+   `Mehungry.SocialMediaPublisher` and `MehungryWeb.SocialMediaPublisher` survive only as defdelegate shims in
+   case an environment still names them.
+2. `:endpoint_module` (read by `Mehungry.Social.Pinterest`) — defaults to
    `MehungryWeb.Endpoint`; used to build public recipe links for pins.
 
 ## Context map (core app)

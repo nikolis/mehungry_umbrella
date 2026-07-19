@@ -187,6 +187,23 @@
 - belongs_to ingredient -> Mehungry.Food.Ingredient
 
 
+## Mehungry.FoodProducts.FoodProduct
+
+- belongs_to ingredient -> Mehungry.Food.Ingredient
+- has_many translations -> Mehungry.FoodProducts.FoodProductTranslation
+
+
+## Mehungry.FoodProducts.FoodProductTranslation
+
+- belongs_to food_product -> Mehungry.FoodProducts.FoodProduct
+- belongs_to language -> Mehungry.Languages.Language
+
+
+## Mehungry.FoodProducts.SyncState
+
+
+
+
 ## Mehungry.Hashtag
 
 - has_many recipe_hashtags -> Mehungry.Food.RecipeHashtag
@@ -350,11 +367,6 @@
 - belongs_to client -> Mehungry.Accounts.User
 
 
-## Mehungry.SocialMediaPosts.Instagram
-
-- belongs_to user -> Mehungry.Accounts.User
-
-
 ## Mehungry.Subscriptions.AiUsage
 
 - belongs_to user -> Mehungry.Accounts.User
@@ -363,3 +375,18 @@
 ## Mehungry.Subscriptions.UserSubscription
 
 - belongs_to user -> Mehungry.Accounts.User
+
+
+## Mehungry.Telemetry.ErrorEvent
+
+
+
+
+## Mehungry.Telemetry.QueryProfile
+
+
+
+
+## Mehungry.Telemetry.Snapshot
+
+

@@ -2,25 +2,26 @@
 
 ## Seam
 
-`Mehungry.SocialMediaPublisherBehaviour` defines `publish_recipe/5`.
-The canonical implementation is **`Mehungry.SocialMediaPublisher`** (core).
+`Mehungry.Social.PublisherBehaviour` defines `publish_recipe/5`.
+The canonical implementation is **`Mehungry.Social.Publisher`** (core).
 `RecipePublishWorker` resolves the module at runtime:
 
 ```elixir
-Application.get_env(:mehungry, :social_media_publisher, Mehungry.SocialMediaPublisher)
+Application.get_env(:mehungry, :social_media_publisher, Mehungry.Social.Publisher)
 ```
 
-- `config/test.exs` sets the key to `Mehungry.SocialMediaPublisherStub`.
-- `MehungryWeb.SocialMediaPublisher` is a deprecated defdelegate shim kept in
-  case an environment config still names it.
+- `config/test.exs` sets the key to `Mehungry.Social.PublisherStub`.
+- `Mehungry.SocialMediaPublisher` (old core name) and
+  `MehungryWeb.SocialMediaPublisher` are deprecated defdelegate shims kept in
+  case an environment config still names them.
 
-## Platform clients (all in core)
+## Platform clients (all in core, under `Mehungry.Social.*`)
 
 | Client | Transport | Notes |
 |---|---|---|
-| `Mehungry.Instagram` (+ `Instagram.Client` behind `Instagram.ClientBehaviour`) | HTTPoison | Long-lived token lifecycle in `Instagram.Token`; captions capped at 2200 chars by `Instagram.Caption`; stubbed in tests via `:instagram_client` |
-| `Mehungry.Api.Facebook` | HTTPoison | Page posts via stored page tokens on `facebook_token` |
-| `Mehungry.Api.Pinterest` | HTTPoison | **Currently pointed at the Pinterest sandbox API** (`@api_base`) — restore the production URL after the demo. Builds pin links via the `:endpoint_module` runtime seam |
+| `Mehungry.Social.Instagram` (+ `Instagram.Client` behind `Instagram.ClientBehaviour`) | HTTPoison | Long-lived token lifecycle in `Instagram.Token`; captions capped at 2200 chars by `Instagram.Caption`; stubbed in tests via `:instagram_client` |
+| `Mehungry.Social.Facebook` | HTTPoison | Page posts via stored page tokens on `facebook_token`; returns `{:ok, body} \| {:error, {:http_error \| :transport_error, ...}}` |
+| `Mehungry.Social.Pinterest` | HTTPoison | Host comes from `:pinterest_api_base` (production by default; set to the sandbox URL to demo — tokens are not interchangeable between environments and the ueberauth strategy reads the same key). Builds pin links via the `:endpoint_module` runtime seam |
 
 OAuth strategies for connecting accounts stay in the web app
 (`mehungry_web/ueberauth/strategy/{facebook,instagram,pinterest}/`), wired in

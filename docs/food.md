@@ -30,9 +30,9 @@ worker invalidation cover it).
 
 ## USDA clients — two, deliberately
 
-- `Mehungry.USDA` (`usda.ex`) — Req-based FoodData Central client used by the
+- `Mehungry.FoodData.Usda.SearchClient` (`food_data/usda/search_client.ex`) — Req-based FoodData Central client used by the
   shopping-basket USDA item flow.
-- `Mehungry.Usda.FdcClient` (`usda/fdc_client.ex`) — HTTPoison-based client
+- `Mehungry.FoodData.Usda.FdcClient` (`food_data/usda/fdc_client.ex`) — HTTPoison-based client
   used by the AI recipe agent tool path.
 
 They differ in HTTP stack, retry and parsing semantics; unifying them is a

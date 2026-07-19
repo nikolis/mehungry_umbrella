@@ -61,7 +61,8 @@ mix dialyzer
 | `Subscriptions` | Subscription tiers, Stripe integration, AI feature quota enforcement |
 | `AiBot` | Managed social media recipe pipeline — monthly configs, review queue, translations, post logs |
 | `Billing` | Stripe checkout sessions and webhook handling (`Billing.StripeHandler`) |
-| `Api.Facebook` / `Api.Pinterest` | Social platform HTTP clients (moved from the web app) — see `docs/social_publishing.md` |
+| `Social` | Social platform layer (`social/`): `Social.Publisher` fan-out (behind `Social.PublisherBehaviour`), `Social.{Facebook, Pinterest}` HTTP clients, and the `Social.Instagram` context — see `docs/social_publishing.md` |
+| `FoodData` | External food-data sources (`food_data/`): `FoodData.Usda.{SearchClient, FdcClient, FoodParser, SeedFileParser}`, `FoodData.OpenFoodFacts.*`, `FoodData.SpoonacularImporter` |
 | `S3` | The single ExAws S3 wrapper (`s3.ex`) — use it instead of inline `ExAws.S3` calls |
 
 **Facade convention:** `Mehungry.Food`, `Mehungry.Accounts`, and
@@ -95,7 +96,7 @@ Automated recipe-to-social-media pipeline:
 3. `AiBotRecipe` — tracks each generated recipe with status: `pending_review → approved/rejected → published`.
 4. Oban cron fires `DailyRecipeGenerationWorker` at **2am UTC daily** → generates one recipe per meal type via `RecipeAgent` → schedules `RecipePublishWorker` jobs (one per meal × language) at the times in `publish_times`.
 5. Admin reviews at `/professional/ai-bot/review` before publish jobs run.
-6. `RecipePublishWorker` calls `Mehungry.SocialMediaPublisher.publish_recipe/5` (mockable via app config key `:social_media_publisher`) — see `docs/social_publishing.md`.
+6. `RecipePublishWorker` calls `Mehungry.Social.Publisher.publish_recipe/5` (mockable via app config key `:social_media_publisher`) — see `docs/social_publishing.md`.
 7. `AiBot.Notifier` sends admin email when batch is ready for review.
 
 ### Subscription Tiers (`Mehungry.Subscriptions`)
@@ -119,9 +120,9 @@ mailers:     5 concurrent  — email
 
 Cron: `InstagramTokenRefreshWorker` at `30 1 * * *`, `DailyRecipeGenerationWorker` at `0 2 * * *`, `TelemetryPrunerWorker` at `0 3 * * *`.
 
-### Instagram Integration (`Mehungry.Instagram`)
+### Instagram Integration (`Mehungry.Social.Instagram`)
 
-Core-app context for the Instagram Graph API: `Instagram.Token` (token map lifecycle/status), `Instagram.Caption` (2200-char capped captions), `Instagram.Client` behind `Instagram.ClientBehaviour` (stubbed in tests via `:instagram_client` config key). Long-lived tokens are refreshed daily by `InstagramTokenRefreshWorker`; invalid tokens are marked stale and surface as "reconnect" in `/professional/ai-bot/social`. `RecipePublishWorker` publish failures return `{:error, _}` for Oban retries, skipping platforms that already have an `"ok"` post log (manual re-publish passes `force: true`). The publisher seam is typed by `Mehungry.SocialMediaPublisherBehaviour` (`:social_media_publisher` config key).
+Core-app context for the Instagram Graph API: `Social.Instagram.Token` (token map lifecycle/status), `Social.Instagram.Caption` (2200-char capped captions), `Social.Instagram.Client` behind `Social.Instagram.ClientBehaviour` (stubbed in tests via `:instagram_client` config key). Long-lived tokens are refreshed daily by `InstagramTokenRefreshWorker`; invalid tokens are marked stale and surface as "reconnect" in `/professional/ai-bot/social`. `RecipePublishWorker` publish failures return `{:error, _}` for Oban retries, skipping platforms that already have an `"ok"` post log (manual re-publish passes `force: true`). The publisher seam is typed by `Mehungry.Social.PublisherBehaviour` (`:social_media_publisher` config key).
 
 ### Observability
 
@@ -195,7 +196,8 @@ Required at runtime:
 - `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `INSTAGRAM_CLIENT_ID`, `INSTAGRAM_CLIENT_SECRET`
-- `FDC_API_KEY`, `OPENAI_API_KEY` — optional integrations
+- `FDC_API_KEY` — required for USDA food lookups (basket search + AI ingredient creation); there is no fallback key
+- `OPENAI_API_KEY` — optional (embeddings, cover images)
 - `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` — Cloudflare Turnstile CAPTCHA on registration (optional; verification is skipped when the secret key is unset)
 
 ## Deployment Notes

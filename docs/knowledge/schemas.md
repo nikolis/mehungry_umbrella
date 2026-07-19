@@ -7,6 +7,7 @@
 ### Fields
 
 - email: :string
+- canonical_email: :string
 - password: :string
 - hashed_password: :string
 - confirmed_at: :naive_datetime
@@ -541,6 +542,69 @@ _none_
 - belongs_to ingredient -> Mehungry.Food.Ingredient
 
 
+## Mehungry.FoodProducts.FoodProduct
+
+**Table:** `food_products`
+
+### Fields
+
+- barcode: :string
+- name: :string
+- brands: :string
+- quantity: :string
+- countries: {:array, :string}
+- categories_tags: {:array, :string}
+- nutriments: :map
+- image_url: :string
+- image_small_url: :string
+- nutriscore_grade: :string
+- ecoscore_grade: :string
+- completeness: :float
+- off_last_modified_t: :integer
+- data_source: :string
+- ingredient_match_score: :float
+- ingredient_match_status: :string
+- timestamps: timestamps
+
+### Relationships
+
+- belongs_to ingredient -> Mehungry.Food.Ingredient
+- has_many translations -> Mehungry.FoodProducts.FoodProductTranslation
+
+
+## Mehungry.FoodProducts.FoodProductTranslation
+
+**Table:** `food_product_translations`
+
+### Fields
+
+- name: :string
+- ingredients_text: :string
+- timestamps: timestamps
+
+### Relationships
+
+- belongs_to food_product -> Mehungry.FoodProducts.FoodProduct
+- belongs_to language -> Mehungry.Languages.Language
+
+
+## Mehungry.FoodProducts.SyncState
+
+**Table:** `off_sync_state`
+
+### Fields
+
+- key: :string
+- last_processed_file: :string
+- last_synced_at: :utc_datetime
+- products_upserted: :integer
+- timestamps: timestamps
+
+### Relationships
+
+_none_
+
+
 ## Mehungry.Hashtag
 
 **Table:** `hashtags`
@@ -973,21 +1037,6 @@ _none_
 - belongs_to client -> Mehungry.Accounts.User
 
 
-## Mehungry.SocialMediaPosts.Instagram
-
-**Table:** `social_media_posts_intagram`
-
-### Fields
-
-- resource_id: :integer
-- type_: :string
-- timestamps: timestamps
-
-### Relationships
-
-- belongs_to user -> Mehungry.Accounts.User
-
-
 ## Mehungry.Subscriptions.AiUsage
 
 **Table:** `ai_usage`
@@ -1020,3 +1069,65 @@ _none_
 ### Relationships
 
 - belongs_to user -> Mehungry.Accounts.User
+
+
+## Mehungry.Telemetry.ErrorEvent
+
+**Table:** `error_events`
+
+### Fields
+
+- fingerprint: :string
+- kind: :string
+- source: :string
+- reason: :string
+- stacktrace: :string
+- context: :map
+- count: :integer
+- first_seen: :utc_datetime
+- last_seen: :utc_datetime
+
+### Relationships
+
+_none_
+
+
+## Mehungry.Telemetry.QueryProfile
+
+**Table:** `query_time_profiles`
+
+### Fields
+
+- fingerprint: :string
+- query: :string
+- source: :string
+- period_start: :utc_datetime
+- min: :float
+- avg: :float
+- max: :float
+- p95: :float
+- sample_count: :integer
+
+### Relationships
+
+_none_
+
+
+## Mehungry.Telemetry.Snapshot
+
+**Table:** `telemetry_snapshots`
+
+### Fields
+
+- metric: :string
+- tags: :map
+- period_start: :utc_datetime
+- min: :float
+- avg: :float
+- max: :float
+- p95: :float
+- sample_count: :integer
+
+### Relationships
+
+_none_
