@@ -1,4 +1,4 @@
-defmodule Mehungry.OpenFoodFacts.Client do
+defmodule Mehungry.FoodData.OpenFoodFacts.Client do
   @moduledoc """
   HTTP client for Open Food Facts.
 
@@ -10,7 +10,7 @@ defmodule Mehungry.OpenFoodFacts.Client do
   No API key is needed.
   """
 
-  @behaviour Mehungry.OpenFoodFacts.ClientBehaviour
+  @behaviour Mehungry.FoodData.OpenFoodFacts.ClientBehaviour
 
   require Logger
 

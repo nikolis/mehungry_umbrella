@@ -1,4 +1,4 @@
-defmodule Mehungry.USDA do
+defmodule Mehungry.FoodData.Usda.SearchClient do
   @moduledoc """
   USDA FoodData Central API client for shopping basket item search
   """

@@ -1,10 +1,10 @@
-defmodule Mehungry.USDA.FdcClient do
+defmodule Mehungry.FoodData.Usda.FdcClient do
   @moduledoc """
   HTTP client for the USDA FoodData Central (FDC) API.
 
   Searches for an ingredient by name (SR Legacy → Foundation data priority),
   fetches full nutrient detail, and returns a JSON string in the same format
-  that FdcFoodParserLeg.get_ingredients_from_json_body/1 expects.
+  that FoodParser.get_ingredients_from_json_body/1 expects.
 
   Set FDC_API_KEY in the environment. Free API keys:
   https://api.nal.usda.gov/api-key-signup
@@ -19,7 +19,7 @@ defmodule Mehungry.USDA.FdcClient do
   Looks up an ingredient by name in the USDA FDC database.
 
   Returns `{:ok, json_string}` where json_string is a single-element JSON array
-  in the FdcFoodParserLeg-compatible format, or `{:error, reason}` if the lookup
+  in the FoodParser-compatible format, or `{:error, reason}` if the lookup
   fails (caller should fall back to AI estimation).
   """
   def lookup(name) do
@@ -93,7 +93,7 @@ defmodule Mehungry.USDA.FdcClient do
   end
 
   # Converts the FDC API /food/{fdcId} response to the nested-map format expected
-  # by FdcFoodParserLeg.create_ingredient/1.
+  # by FoodParser.create_ingredient/1.
   defp to_parser_format(food) do
     %{
       "description" => food["description"],

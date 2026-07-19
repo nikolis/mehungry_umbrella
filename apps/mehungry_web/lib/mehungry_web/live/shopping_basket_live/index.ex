@@ -9,7 +9,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   alias Mehungry.Accounts.UserProfile
   alias Mehungry.Inventory.{ShoppingBasket, BasketItem}
   alias Mehungry.Inventory
-  alias Mehungry.USDA
+  alias Mehungry.FoodData.Usda.SearchClient
   import MehungryWeb.ShoppingBasketLive.Components
 
   @impl true
@@ -65,7 +65,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   end
 
   def handle_event("select_usda_item", %{"fdc_id" => fdc_id}, socket) do
-    case USDA.get_food_details(fdc_id) do
+    case SearchClient.get_food_details(fdc_id) do
       {:ok, food} ->
         {:noreply,
          assign(socket,
@@ -352,7 +352,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   end
 
   def handle_info({:perform_search, query}, socket) do
-    case USDA.search_foods(query, 5) do
+    case SearchClient.search_foods(query, 5) do
       {:ok, results} ->
         {:noreply, assign(socket, search_results: results, searching: false)}
 

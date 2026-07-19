@@ -1,12 +1,12 @@
-defmodule Mehungry.OpenFoodFacts.ProductParserTest do
+defmodule Mehungry.FoodData.OpenFoodFacts.ProductParserTest do
   use ExUnit.Case, async: true
 
-  alias Mehungry.OpenFoodFacts.ProductParser
+  alias Mehungry.FoodData.OpenFoodFacts.ProductParser
 
   @languages MapSet.new(["en", "el", "fr"])
 
   defp fixture_lines do
-    Path.expand("../../fixtures/off_products_sample.jsonl", __DIR__)
+    Path.expand("../../../fixtures/off_products_sample.jsonl", __DIR__)
     |> File.read!()
     |> String.split("\n", trim: true)
   end

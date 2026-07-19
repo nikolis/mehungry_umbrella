@@ -1,4 +1,4 @@
-defmodule Mehungry.OpenFoodFacts.ClientBehaviour do
+defmodule Mehungry.FoodData.OpenFoodFacts.ClientBehaviour do
   @moduledoc """
   Contract for the Open Food Facts HTTP client, so tests can swap in a stub
   via the `:off_client` app config key (same pattern as `:social_media_publisher`).

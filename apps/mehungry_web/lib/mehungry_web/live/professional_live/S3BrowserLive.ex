@@ -334,7 +334,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
       {:ok, url} ->
         {:ok, url} = url
         %HTTPoison.Response{body: body} = HTTPoison.get!(url)
-        Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
+        Mehungry.FoodData.Usda.FoodParser.get_ingredients_from_json_body(body)
         {:noreply, socket}
 
       {:error, error} ->

@@ -1,4 +1,4 @@
-defmodule Mehungry.Apis.SpoonacularImporter do
+defmodule Mehungry.FoodData.SpoonacularImporter do
   @moduledoc """
   Imports recipes from the Spoonacular API into the Food context.
 

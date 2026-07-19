@@ -109,7 +109,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     case spoonacular_rate_limit(socket.assigns.user.id) do
       :ok ->
         api_key = System.get_env("SPOONACULAR_API_KEY")
-        task = Task.async(fn -> Mehungry.Apis.SpoonacularImporter.search(query, api_key) end)
+        task = Task.async(fn -> Mehungry.FoodData.SpoonacularImporter.search(query, api_key) end)
 
         {:noreply,
          assign(socket,
@@ -134,7 +134,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
         task =
           Task.async(fn ->
-            Mehungry.Apis.SpoonacularImporter.fetch_for_form(spoonacular_id, user_id, api_key)
+            Mehungry.FoodData.SpoonacularImporter.fetch_for_form(spoonacular_id, user_id, api_key)
           end)
 
         {:noreply,

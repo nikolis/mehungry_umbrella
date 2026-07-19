@@ -1,4 +1,4 @@
-defmodule Mehungry.OpenFoodFacts.BulkImporter do
+defmodule Mehungry.FoodData.OpenFoodFacts.BulkImporter do
   @moduledoc """
   One-time bulk import of the Open Food Facts JSONL dump (~10 GB gzipped,
   ~4M products) filtered to European countries.
@@ -19,7 +19,7 @@ defmodule Mehungry.OpenFoodFacts.BulkImporter do
   require Logger
 
   alias Mehungry.FoodProducts
-  alias Mehungry.OpenFoodFacts.ProductParser
+  alias Mehungry.FoodData.OpenFoodFacts.ProductParser
 
   @chunk_size 500
   @progress_every 10_000
@@ -113,6 +113,6 @@ defmodule Mehungry.OpenFoodFacts.BulkImporter do
   end
 
   defp off_client do
-    Application.get_env(:mehungry, :off_client, Mehungry.OpenFoodFacts.Client)
+    Application.get_env(:mehungry, :off_client, Mehungry.FoodData.OpenFoodFacts.Client)
   end
 end

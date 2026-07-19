@@ -1,8 +1,8 @@
-defmodule Mehungry.FdcFoodParserTest do
+defmodule Mehungry.FoodData.Usda.SeedFileParserTest do
   use Mehungry.DataCase
   @moduletag :local_data
 
-  alias Mehungry.FdcFoodParser
+  alias Mehungry.FoodData.Usda.SeedFileParser
   alias Mehungry.Food
   alias Mehungry.Languages
   import Mehungry.{AccountsFixtures}
@@ -35,7 +35,7 @@ defmodule Mehungry.FdcFoodParserTest do
             lang
         end
 
-      FdcFoodParser.get_ingredients_from_food_data_central_json_file(
+      SeedFileParser.get_ingredients_from_food_data_central_json_file(
         "/home/nikolis/Documents/foundationDownload.json"
       )
 

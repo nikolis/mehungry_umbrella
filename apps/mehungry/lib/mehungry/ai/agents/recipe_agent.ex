@@ -241,7 +241,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     Logger.info("RecipeAgent: creating missing ingredient '#{name}'")
 
     {json_result, data_source} =
-      case Mehungry.USDA.FdcClient.lookup(name) do
+      case Mehungry.FoodData.Usda.FdcClient.lookup(name) do
         {:ok, json} ->
           Logger.info("RecipeAgent: found '#{name}' in USDA FDC database")
           {{:ok, json}, "usda_fdc"}
@@ -256,7 +256,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
     case json_result do
       {:ok, json_string} ->
-        case Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(json_string, data_source) do
+        case Mehungry.FoodData.Usda.FoodParser.get_ingredients_from_json_body(json_string, data_source) do
           {:ok, _count} ->
             :ok
 

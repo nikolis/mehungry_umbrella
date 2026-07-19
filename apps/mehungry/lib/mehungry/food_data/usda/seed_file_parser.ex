@@ -1,4 +1,4 @@
-defmodule Mehungry.FdcFoodParser do
+defmodule Mehungry.FoodData.Usda.SeedFileParser do
   @moduledoc """
   This module is responsible for parsing food and nutrition related data gotten from Food Data Central and translate them into a form that fits the database model goten from  https://www.usda.gov/
   """

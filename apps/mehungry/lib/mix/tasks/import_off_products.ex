@@ -29,7 +29,7 @@ defmodule Mix.Tasks.Import.OffProducts do
       opts
       |> Keyword.take([:path, :download, :resume_from])
 
-    case Mehungry.OpenFoodFacts.BulkImporter.run(importer_opts) do
+    case Mehungry.FoodData.OpenFoodFacts.BulkImporter.run(importer_opts) do
       {:ok, %{imported: imported}} ->
         Mix.shell().info("Imported #{imported} products from Open Food Facts.")
 

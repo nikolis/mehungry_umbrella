@@ -1,6 +1,6 @@
-defmodule Mehungry.OpenFoodFacts.ClientStub do
+defmodule Mehungry.FoodData.OpenFoodFacts.ClientStub do
   @moduledoc """
-  Test stand-in for `Mehungry.OpenFoodFacts.Client` (wired up via the
+  Test stand-in for `Mehungry.FoodData.OpenFoodFacts.Client` (wired up via the
   `:off_client` config key in `config/test.exs`) so tests never hit the
   network.
 
@@ -12,7 +12,7 @@ defmodule Mehungry.OpenFoodFacts.ClientStub do
       on_exit(fn -> Application.delete_env(:mehungry, :off_stub) end)
   """
 
-  @behaviour Mehungry.OpenFoodFacts.ClientBehaviour
+  @behaviour Mehungry.FoodData.OpenFoodFacts.ClientBehaviour
 
   @impl true
   def fetch_product(barcode),

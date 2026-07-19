@@ -1,4 +1,4 @@
-defmodule Mehungry.OpenFoodFacts.ProductParser do
+defmodule Mehungry.FoodData.OpenFoodFacts.ProductParser do
   @moduledoc """
   Pure parsing of Open Food Facts product JSON (one JSONL dump line or a
   v2 API `product` map) into `food_products` attrs plus translation rows.
