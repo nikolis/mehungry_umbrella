@@ -225,13 +225,39 @@ defmodule Mehungry.FdcFoodParserLeg do
     Enum.each(total, fn x -> create_ingredient(x) end)
   end
 
+  @doc """
+  Parses a JSON array of FDC-format foods and inserts them (with portions,
+  nutrients, units, and categories) inside a single transaction, so a failure
+  mid-batch rolls everything back instead of leaving partial rows.
+
+  Returns `{:ok, count}` or `{:error, reason}`.
+  """
   def get_ingredients_from_json_body(json_body, nutrient_data_source \\ nil) do
-    try do
-      {:ok, body} = Poison.decode(json_body)
-      Enum.each(body, fn x -> create_ingredient(x, nutrient_data_source) end)
-    rescue
-      _the_error ->
-        nil
+    case Poison.decode(json_body) do
+      {:ok, body} when is_list(body) ->
+        Mehungry.Repo.transaction(fn ->
+          Enum.each(body, fn x -> create_ingredient(x, nutrient_data_source) end)
+          length(body)
+        end)
+
+      {:ok, other} ->
+        Logger.error(
+          "[FdcFoodParserLeg] Expected a JSON array of foods, got: #{inspect(other, limit: 5)}"
+        )
+
+        {:error, :not_a_list}
+
+      {:error, reason} ->
+        Logger.error("[FdcFoodParserLeg] JSON decode failed: #{inspect(reason)}")
+        {:error, {:invalid_json, reason}}
     end
+  rescue
+    error ->
+      Logger.error(
+        "[FdcFoodParserLeg] Ingredient batch insert failed and was rolled back: " <>
+          Exception.format(:error, error, __STACKTRACE__)
+      )
+
+      {:error, error}
   end
 end
