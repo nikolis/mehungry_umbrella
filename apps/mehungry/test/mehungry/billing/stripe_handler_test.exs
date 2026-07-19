@@ -32,7 +32,10 @@ defmodule Mehungry.Billing.StripeHandlerTest do
   # Builds the Stripe-Signature header for a raw JSON body using the same
   # HMAC-SHA256 scheme the handler verifies against.
   defp sign(body, secret \\ @webhook_secret) do
-    ts = Integer.to_string(System.system_time(:second))
+    sign_at(body, Integer.to_string(System.system_time(:second)), secret)
+  end
+
+  defp sign_at(body, ts, secret \\ @webhook_secret) do
     sig = :crypto.mac(:hmac, :sha256, secret, "#{ts}.#{body}") |> Base.encode16(case: :lower)
     "t=#{ts},v1=#{sig}"
   end
@@ -91,6 +94,42 @@ defmodule Mehungry.Billing.StripeHandlerTest do
     test "rejects a missing signature header", %{user: user} do
       body = checkout_completed_body(user.id, %{"tier" => "pro"})
       assert {:error, :missing_signature} = StripeHandler.handle_webhook(body, nil)
+    end
+
+    test "rejects a replayed event with a stale timestamp", %{user: user} do
+      body = checkout_completed_body(user.id, %{"tier" => "pro"})
+      stale_ts = Integer.to_string(System.system_time(:second) - 600)
+
+      assert {:error, :timestamp_outside_tolerance} =
+               StripeHandler.handle_webhook(body, sign_at(body, stale_ts))
+
+      assert Subscriptions.get_subscription(user.id).tier == "free"
+    end
+
+    test "rejects a non-numeric timestamp", %{user: user} do
+      body = checkout_completed_body(user.id, %{"tier" => "pro"})
+
+      assert {:error, :invalid_signature} =
+               StripeHandler.handle_webhook(body, sign_at(body, "garbage"))
+    end
+  end
+
+  describe "malformed metadata" do
+    test "non-numeric metadata.user_id is ignored instead of crashing", %{user: user} do
+      body =
+        Jason.encode!(%{
+          "type" => "checkout.session.completed",
+          "data" => %{
+            "object" => %{
+              "customer" => "cus_x",
+              "subscription" => "sub_x",
+              "metadata" => %{"user_id" => "not-a-number", "tier" => "pro"}
+            }
+          }
+        })
+
+      assert :ok = StripeHandler.handle_webhook(body, sign(body))
+      assert Subscriptions.get_subscription(user.id).tier == "free"
     end
   end
 

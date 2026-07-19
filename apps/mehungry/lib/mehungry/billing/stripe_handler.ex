@@ -163,13 +163,32 @@ defmodule Mehungry.Billing.StripeHandler do
 
     with timestamp when not is_nil(timestamp) <- Map.get(parts, "t"),
          expected_sig when not is_nil(expected_sig) <- Map.get(parts, "v1"),
+         :ok <- check_timestamp_tolerance(timestamp),
          signed_payload = "#{timestamp}.#{body}",
          computed =
            :crypto.mac(:hmac, :sha256, secret, signed_payload) |> Base.encode16(case: :lower),
          true <- Plug.Crypto.secure_compare(computed, expected_sig) do
       :ok
     else
+      {:error, :timestamp_outside_tolerance} = error -> error
       _ -> {:error, :invalid_signature}
+    end
+  end
+
+  # Stripe's default replay-protection window
+  @timestamp_tolerance_seconds 300
+
+  defp check_timestamp_tolerance(timestamp) do
+    case Integer.parse(timestamp) do
+      {ts, ""} ->
+        if abs(System.system_time(:second) - ts) <= @timestamp_tolerance_seconds do
+          :ok
+        else
+          {:error, :timestamp_outside_tolerance}
+        end
+
+      _ ->
+        {:error, :invalid_signature}
     end
   end
 
@@ -244,6 +263,13 @@ defmodule Mehungry.Billing.StripeHandler do
   defp map_stripe_status(_), do: "canceled"
 
   defp parse_int(nil), do: nil
-  defp parse_int(s) when is_binary(s), do: String.to_integer(s)
+
+  defp parse_int(s) when is_binary(s) do
+    case Integer.parse(s) do
+      {i, ""} -> i
+      _ -> nil
+    end
+  end
+
   defp parse_int(i) when is_integer(i), do: i
 end
