@@ -12,10 +12,13 @@ defmodule Ueberauth.Strategy.Pinterest do
 
   alias Ueberauth.Auth.{Info, Credentials, Extra}
 
-  # TEMPORARY: pointed at the Pinterest sandbox to match the token endpoint in
-  # Ueberauth.Strategy.Pinterest.OAuth — sandbox tokens are rejected by production.
-  # Restore to "https://api.pinterest.com/v5/user_account" after the demo.
-  @user_url "https://api-sandbox.pinterest.com/v5/user_account"
+  # Follows the same :pinterest_api_base key as Mehungry.Social.Pinterest and
+  # the OAuth token endpoint — sandbox and production tokens are not
+  # interchangeable, so all three must point at the same environment.
+  defp user_url do
+    Application.get_env(:mehungry, :pinterest_api_base, "https://api.pinterest.com/v5") <>
+      "/user_account"
+  end
 
   def handle_request!(conn) do
     allowed_params =
@@ -98,7 +101,7 @@ defmodule Ueberauth.Strategy.Pinterest do
   defp fetch_user(conn, token) do
     conn = put_private(conn, :pinterest_token, token)
 
-    case HTTPoison.get(@user_url, [{"Authorization", "Bearer #{token.access_token}"}]) do
+    case HTTPoison.get(user_url(), [{"Authorization", "Bearer #{token.access_token}"}]) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         case Jason.decode(body) do
           {:ok, user} -> put_private(conn, :pinterest_user, user)

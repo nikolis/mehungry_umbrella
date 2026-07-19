@@ -182,7 +182,7 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
 
           {:error, changeset} ->
             Logger.error(
-              "[FdcFoodParserLeg] Failed to create ingredient: #{inspect(changeset.errors)}"
+              "[FoodData.Usda.FoodParser] Failed to create ingredient: #{inspect(changeset.errors)}"
             )
 
             ""
@@ -190,7 +190,7 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
 
       existing ->
         Logger.debug(
-          "[FdcFoodParserLeg] Ingredient '#{existing.name}' already exists, skipping insert"
+          "[FoodData.Usda.FoodParser] Ingredient '#{existing.name}' already exists, skipping insert"
         )
 
         existing
@@ -242,19 +242,19 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
 
       {:ok, other} ->
         Logger.error(
-          "[FdcFoodParserLeg] Expected a JSON array of foods, got: #{inspect(other, limit: 5)}"
+          "[FoodData.Usda.FoodParser] Expected a JSON array of foods, got: #{inspect(other, limit: 5)}"
         )
 
         {:error, :not_a_list}
 
       {:error, reason} ->
-        Logger.error("[FdcFoodParserLeg] JSON decode failed: #{inspect(reason)}")
+        Logger.error("[FoodData.Usda.FoodParser] JSON decode failed: #{inspect(reason)}")
         {:error, {:invalid_json, reason}}
     end
   rescue
     error ->
       Logger.error(
-        "[FdcFoodParserLeg] Ingredient batch insert failed and was rolled back: " <>
+        "[FoodData.Usda.FoodParser] Ingredient batch insert failed and was rolled back: " <>
           Exception.format(:error, error, __STACKTRACE__)
       )
 
