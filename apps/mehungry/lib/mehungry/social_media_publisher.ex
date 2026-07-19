@@ -152,17 +152,11 @@ defmodule Mehungry.SocialMediaPublisher do
             {:ok, _response} ->
               :ok
 
-            {:ok, %HTTPoison.Response{status_code: status}} when status in 200..299 ->
-              :ok
-
-            {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
-              {:error, "Facebook HTTP #{status}: #{body}"}
+            {:error, {:http_error, status, body}} ->
+              {:error, "Facebook HTTP #{status}: #{inspect(body)}"}
 
             {:error, reason} ->
-              {:error, reason}
-
-            _ ->
-              :ok
+              {:error, inspect(reason)}
           end
 
         {result, page_id, page_name}

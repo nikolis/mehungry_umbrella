@@ -1,8 +1,11 @@
 defmodule Mehungry.Api.Facebook do
+  require Logger
+
   alias Mehungry.Food.Recipe
 
   @api_base "https://graph.facebook.com/"
   @api_version "v21.0"
+  @timeout_ms 15_000
 
   @priority_nutrients [
     "Energy",
@@ -16,47 +19,84 @@ defmodule Mehungry.Api.Facebook do
   ]
 
   @doc """
-  Exchange a short-lived Facebook token for a long-lived one and fetch page list.
+  Fetch the user's Facebook page list and store it on the user's tokens.
+
+  Returns `{:ok, user} | {:error, {:http_error, status, body}} |
+  {:error, {:transport_error, reason}} | {:error, {:invalid_json, reason}}`.
   """
   def get_user_pages(user, token, facebook_user_id) do
-    url =
-      @api_base <>
-        @api_version <> "/" <> facebook_user_id <> "/accounts?access_token=#{token}"
+    url = @api_base <> @api_version <> "/" <> facebook_user_id <> "/accounts"
 
-    {:ok, response} = HTTPoison.get(url)
-    {:ok, decoded} = Jason.decode(response.body)
+    headers = [
+      {"Authorization", "Bearer #{token}"},
+      {"Accept", "application/json"}
+    ]
 
-    pages =
-      Enum.reduce(decoded["data"] || [], %{}, fn page, acc ->
-        Map.put(acc, page["name"], page)
-      end)
+    with {:ok, %HTTPoison.Response{status_code: 200, body: body}} <-
+           HTTPoison.get(url, headers, recv_timeout: @timeout_ms),
+         {:ok, decoded} <- Jason.decode(body) do
+      pages =
+        Enum.reduce(decoded["data"] || [], %{}, fn page, acc ->
+          Map.put(acc, page["name"], page)
+        end)
 
-    Mehungry.Accounts.update_user_tokens(user, %{"facebook_token" => pages})
+      Mehungry.Accounts.update_user_tokens(user, %{"facebook_token" => pages})
+    else
+      {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
+        Logger.warning("[Facebook] page fetch failed with HTTP #{status}: #{inspect(body)}")
+        {:error, {:http_error, status, body}}
+
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        Logger.warning("[Facebook] page fetch transport error: #{inspect(reason)}")
+        {:error, {:transport_error, reason}}
+
+      {:error, reason} ->
+        Logger.warning("[Facebook] page fetch returned invalid JSON: #{inspect(reason)}")
+        {:error, {:invalid_json, reason}}
+    end
   end
 
   @doc """
   Post the recipe as a photo to the given Facebook page.
   Uses recipe.image_url as the photo and a formatted caption with
   ingredients and key nutrients.
+
+  Returns `{:ok, decoded_body} | {:error, {:http_error, status, body}} |
+  {:error, {:transport_error, reason}}`.
   """
   def post_recipe_container(_user, recipe, page) do
     user_id = Map.get(page, "id", "")
     access_token = Map.get(page, "access_token", "")
     caption = build_caption(recipe)
 
-    HTTPoison.post(
-      @api_base <> @api_version <> "/" <> user_id <> "/photos",
-      "",
-      [{"Accept", "application/json"}],
-      params: %{
-        url: recipe.image_url,
-        caption: caption,
-        published: true,
-        access_token: access_token
-      },
-      timeout: 15_000,
-      recv_timeout: 15_000
-    )
+    response =
+      HTTPoison.post(
+        @api_base <> @api_version <> "/" <> user_id <> "/photos",
+        "",
+        [{"Accept", "application/json"}],
+        params: %{
+          url: recipe.image_url,
+          caption: caption,
+          published: true,
+          access_token: access_token
+        },
+        timeout: @timeout_ms,
+        recv_timeout: @timeout_ms
+      )
+
+    case response do
+      {:ok, %HTTPoison.Response{status_code: status, body: body}} when status in 200..299 ->
+        case Jason.decode(body) do
+          {:ok, decoded} -> {:ok, decoded}
+          {:error, _} -> {:ok, body}
+        end
+
+      {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
+        {:error, {:http_error, status, body}}
+
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        {:error, {:transport_error, reason}}
+    end
   end
 
   # ---------------------------------------------------------------------------

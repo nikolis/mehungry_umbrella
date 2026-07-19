@@ -74,13 +74,14 @@ defmodule MehungryWeb.SocialMediaPostComponent do
 
       pages =
         Enum.map(pages, fn x ->
-          result = Facebook.post_recipe_container(user, recipe, x)
+          case Facebook.post_recipe_container(user, recipe, x) do
+            {:ok, _response} ->
+              {x["name"], 200, nil}
 
-          case result do
-            {:ok, %HTTPoison.Response{status_code: status_code, body: body}} ->
-              {x["name"], status_code, body}
+            {:error, {:http_error, status, body}} ->
+              {x["name"], status, body}
 
-            {:error, %HTTPoison.Error{reason: reason}} ->
+            {:error, reason} ->
               {x["name"], 0, Jason.encode!(%{"error" => %{"message" => inspect(reason)}})}
           end
         end)
