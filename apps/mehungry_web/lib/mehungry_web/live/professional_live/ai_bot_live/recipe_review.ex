@@ -77,7 +77,14 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
     else
       config = bot_recipe.bot_config
       bot_user = Accounts.get_user!(config.bot_user_id)
-      boards = Pinterest.get_boards(bot_user)
+
+      # A board-fetch failure (stale token) disables Pinterest in the modal,
+      # same as having no boards — reconnect happens on the social accounts page.
+      boards =
+        case Pinterest.get_boards(bot_user) do
+          {:ok, boards} -> boards
+          {:error, _} -> []
+        end
 
       lang_times = get_in(config.publish_times, [bot_recipe.meal_type]) || %{}
       languages = if map_size(lang_times) > 0, do: Map.keys(lang_times), else: ["en"]

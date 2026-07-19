@@ -13,7 +13,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
     if config do
       bot_user = Accounts.get_user!(config.bot_user_id)
-      boards = Pinterest.get_boards(bot_user)
+      {boards, boards_error} = fetch_boards(bot_user)
 
       {:ok,
        socket
@@ -21,6 +21,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
        |> assign(:bot_user, bot_user)
        |> assign(:languages, languages)
        |> assign(:pinterest_boards, boards)
+       |> assign(:pinterest_boards_error, boards_error)
        |> assign(:show_create_board, false)
        |> assign(:page_title, "Bot Social Accounts")}
     else
@@ -30,8 +31,19 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
        |> assign(:bot_user, nil)
        |> assign(:languages, languages)
        |> assign(:pinterest_boards, [])
+       |> assign(:pinterest_boards_error, nil)
        |> assign(:show_create_board, false)
        |> assign(:page_title, "Bot Social Accounts")}
+    end
+  end
+
+  # Distinguishes an API/auth failure (surface "reconnect") from a genuinely
+  # empty board list (surface "create your first board").
+  defp fetch_boards(bot_user) do
+    case Pinterest.get_boards(bot_user) do
+      {:ok, boards} -> {boards, nil}
+      {:error, :not_connected} -> {[], nil}
+      {:error, _reason} -> {[], :fetch_failed}
     end
   end
 
@@ -80,9 +92,12 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
     case Pinterest.create_board(bot_user, board_params) do
       {:ok, board} ->
+        {boards, boards_error} = fetch_boards(bot_user)
+
         {:noreply,
          socket
-         |> assign(:pinterest_boards, Pinterest.get_boards(bot_user))
+         |> assign(:pinterest_boards, boards)
+         |> assign(:pinterest_boards_error, boards_error)
          |> assign(:show_create_board, false)
          |> put_flash(:info, "Pinterest board \"#{board["name"]}\" created.")}
 
@@ -145,9 +160,11 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
             icon="📌"
             connected={map_non_empty?(@bot_user.pinterest_token)}
             detail={
-              if @pinterest_boards != [],
-                do: "#{length(@pinterest_boards)} board(s) available",
-                else: nil
+              cond do
+                @pinterest_boards_error -> "Could not load boards — reconnect"
+                @pinterest_boards != [] -> "#{length(@pinterest_boards)} board(s) available"
+                true -> nil
+              end
             }
             connect_url={~p"/auth/bot/target/#{@bot_user.id}/pinterest"}
           />
@@ -200,7 +217,24 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
         <% end %>
 
         <!-- Pinterest per-language board selector -->
-        <%= if map_non_empty?(@bot_user.pinterest_token) and @pinterest_boards == [] do %>
+        <%= if map_non_empty?(@bot_user.pinterest_token) and @pinterest_boards_error do %>
+          <div class="bg-slate-800 border border-amber-700/60 rounded-xl p-5 mb-5">
+            <h2 class="text-sm font-semibold text-white mb-1">Pinterest — Boards</h2>
+            <p class="text-xs text-amber-400 mb-4">
+              Could not load boards from Pinterest — the token is likely expired or invalid.
+              Reconnect the account to continue.
+            </p>
+            <.link
+              href={~p"/auth/bot/target/#{@bot_user.id}/pinterest"}
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+            >
+              Reconnect Pinterest
+            </.link>
+          </div>
+        <% end %>
+
+        <%= if map_non_empty?(@bot_user.pinterest_token) and is_nil(@pinterest_boards_error) and
+              @pinterest_boards == [] do %>
           <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-5 mb-5">
             <h2 class="text-sm font-semibold text-white mb-1">Pinterest — Boards</h2>
             <p class="text-xs text-slate-500 mb-4">

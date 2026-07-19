@@ -8,25 +8,31 @@ defmodule Ueberauth.Strategy.Pinterest.OAuth do
   """
   use OAuth2.Strategy
 
-  # TEMPORARY: token exchange pointed at the Pinterest sandbox for demo purposes,
-  # matching @api_base in Mehungry.Api.Pinterest. Sandbox and production tokens are
-  # not interchangeable. Restore to "https://api.pinterest.com/v5/oauth/token" after the demo.
-  @defaults [
-    strategy: __MODULE__,
-    site: "https://api-sandbox.pinterest.com",
-    authorize_url: "https://www.pinterest.com/oauth/",
-    token_url: "https://api-sandbox.pinterest.com/v5/oauth/token"
-  ]
-
   def client(opts \\ []) do
     config = Application.get_env(:ueberauth, Ueberauth.Strategy.Pinterest.OAuth, [])
 
     opts =
-      @defaults
+      defaults()
       |> Keyword.merge(config)
       |> Keyword.merge(opts)
 
     OAuth2.Client.new(opts)
+  end
+
+  # Token exchange must hit the same environment as Mehungry.Api.Pinterest:
+  # sandbox and production tokens are not interchangeable, so both derive their
+  # host from the :pinterest_api_base config key (production by default).
+  # Accounts must be reconnected after switching environments.
+  defp defaults do
+    api_base =
+      Application.get_env(:mehungry, :pinterest_api_base, "https://api.pinterest.com/v5")
+
+    [
+      strategy: __MODULE__,
+      site: String.replace_suffix(api_base, "/v5", ""),
+      authorize_url: "https://www.pinterest.com/oauth/",
+      token_url: api_base <> "/oauth/token"
+    ]
   end
 
   def authorize_url!(params \\ [], opts \\ []) do

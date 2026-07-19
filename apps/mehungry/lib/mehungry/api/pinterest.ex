@@ -8,22 +8,20 @@ defmodule Mehungry.Api.Pinterest do
 
   alias Mehungry.Food.Recipe
 
-  # TEMPORARY: pointed at the Pinterest sandbox for demo purposes.
-  # Restore to "https://api.pinterest.com/v5" after the demo.
-  @api_base "https://api-sandbox.pinterest.com/v5"
-
   @doc """
-  Returns the user's Pinterest boards. Returns [] if no token is connected
-  or if the API call fails.
+  Returns `{:ok, boards}` with the user's Pinterest boards, `{:error, :not_connected}`
+  when no token is stored, or `{:error, {:http_error, status, body}} |
+  {:error, {:transport_error, reason}}` when the API call fails (callers should
+  surface a "reconnect" state rather than an empty board list).
   """
   def get_boards(user) do
     case access_token(user) do
       nil ->
         Logger.warning("[Pinterest] get_boards: no access token for user #{user.id}")
-        []
+        {:error, :not_connected}
 
       token ->
-        url = "#{@api_base}/boards?page_size=25"
+        url = "#{api_base()}/boards?page_size=25"
 
         case HTTPoison.get(url, [{"Authorization", "Bearer #{token}"}]) do
           {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
@@ -33,27 +31,27 @@ defmodule Mehungry.Api.Pinterest do
                   "[Pinterest] get_boards: #{length(boards)} boards for user #{user.id}"
                 )
 
-                boards
+                {:ok, boards}
 
               {:ok, other} ->
                 Logger.warning(
                   "[Pinterest] get_boards: unexpected response shape: #{inspect(other)}"
                 )
 
-                []
+                {:error, {:http_error, 200, other}}
 
               {:error, err} ->
                 Logger.warning("[Pinterest] get_boards: JSON decode error: #{inspect(err)}")
-                []
+                {:error, {:http_error, 200, body}}
             end
 
           {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
             Logger.warning("[Pinterest] get_boards: HTTP #{status} — #{body}")
-            []
+            {:error, {:http_error, status, body}}
 
           {:error, %HTTPoison.Error{reason: reason}} ->
             Logger.warning("[Pinterest] get_boards: request error — #{inspect(reason)}")
-            []
+            {:error, {:transport_error, reason}}
         end
     end
   end
@@ -66,7 +64,7 @@ defmodule Mehungry.Api.Pinterest do
     with token when not is_nil(token) <- access_token(user),
          {:ok, body} <- build_pin_body(recipe, board_id) do
       case HTTPoison.post(
-             "#{@api_base}/pins",
+             "#{api_base()}/pins",
              body,
              [
                {"Authorization", "Bearer #{token}"},
@@ -136,7 +134,7 @@ defmodule Mehungry.Api.Pinterest do
           |> Jason.encode!()
 
         case HTTPoison.post(
-               "#{@api_base}/boards",
+               "#{api_base()}/boards",
                body,
                [
                  {"Authorization", "Bearer #{token}"},
@@ -208,6 +206,14 @@ defmodule Mehungry.Api.Pinterest do
   # runtime, mirroring the :social_media_publisher config-key pattern.
   defp endpoint_module do
     Application.get_env(:mehungry, :endpoint_module, MehungryWeb.Endpoint)
+  end
+
+  # Production by default; set :pinterest_api_base to
+  # "https://api-sandbox.pinterest.com/v5" to pin back to the sandbox.
+  # Sandbox and production tokens are not interchangeable — accounts must be
+  # reconnected after switching (the ueberauth strategy reads the same key).
+  defp api_base do
+    Application.get_env(:mehungry, :pinterest_api_base, "https://api.pinterest.com/v5")
   end
 
   defp access_token(user) do
