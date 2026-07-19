@@ -319,9 +319,15 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
 
     errors =
       case Date.from_iso8601(entry["date"] || "") do
-        {:ok, d} when d >= start_date and d <= end_date -> errors
-        {:ok, d} -> ["Date #{d} is outside the plan window #{start_date}–#{end_date}" | errors]
-        _ -> ["Invalid date '#{entry["date"]}'" | errors]
+        {:ok, d} ->
+          if Date.compare(d, start_date) != :lt and Date.compare(d, end_date) != :gt do
+            errors
+          else
+            ["Date #{d} is outside the plan window #{start_date}–#{end_date}" | errors]
+          end
+
+        _ ->
+          ["Invalid date '#{entry["date"]}'" | errors]
       end
 
     errors =
