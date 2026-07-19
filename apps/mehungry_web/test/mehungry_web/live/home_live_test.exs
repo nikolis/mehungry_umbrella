@@ -94,9 +94,10 @@ defmodule MehungryWeb.HomeLiveTest do
 
     test "load-more displays the 11th post", %{conn: conn, user: user} do
       complete_onboarding(user)
-      # Create 10 posts with generic titles and 1 with a unique one we can detect
-      for i <- 1..10, do: create_recipe_with_post(user, %{title: "Filler recipe #{i}"})
+      # The feed is newest-first, so create the uniquely-titled post FIRST —
+      # as the oldest post it deterministically lands on page 2.
       unique = create_recipe_with_post(user, %{title: "The Unique Eleventh Recipe"})
+      for i <- 1..10, do: create_recipe_with_post(user, %{title: "Filler recipe #{i}"})
 
       {:ok, view, html} = live(conn, ~p"/home")
       refute html =~ unique.title

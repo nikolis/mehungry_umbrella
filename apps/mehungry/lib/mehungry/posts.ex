@@ -33,7 +33,7 @@ defmodule Mehungry.Posts do
   end
 
   def list_posts(nil) do
-    from(p in Post, order_by: [desc: p.inserted_at])
+    from(p in Post, order_by: [desc: p.inserted_at, desc: p.id])
     |> Repo.all()
     |> Repo.preload([
       :user,
@@ -55,7 +55,7 @@ defmodule Mehungry.Posts do
     user_pref_table = Users.calculate_user_pref_table(user)
     follow_ids = Users.list_user_follows(user) |> Enum.map(& &1.follow_id)
 
-    from(p in Post, order_by: [desc: p.inserted_at])
+    from(p in Post, order_by: [desc: p.inserted_at, desc: p.id])
     |> Repo.all()
     |> Repo.preload([
       :user,
