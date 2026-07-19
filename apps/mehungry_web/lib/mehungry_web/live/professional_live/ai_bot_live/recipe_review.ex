@@ -1,9 +1,10 @@
 defmodule MehungryWeb.AiBotLive.RecipeReview do
   use MehungryWeb, :live_view
 
-  alias Mehungry.{AiBot, Languages, Food, Accounts}
+  alias Mehungry.{Languages, Food, Accounts}
+  alias Mehungry.AI.Bot
   alias Mehungry.Food.Recipe
-  alias Mehungry.Api.Pinterest
+  alias Mehungry.Social.Pinterest
   alias Mehungry.ObanWorkers.{RecipeTranslationWorker, RecipePublishWorker}
 
   @impl true
@@ -21,8 +22,8 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
   @impl true
   def handle_params(%{"id" => id}, _url, socket) do
-    bot_recipe = AiBot.get_bot_recipe!(String.to_integer(id))
-    translations = AiBot.list_translations_for_recipe(bot_recipe.recipe.id)
+    bot_recipe = Bot.get_bot_recipe!(String.to_integer(id))
+    translations = Bot.list_translations_for_recipe(bot_recipe.recipe.id)
     languages = Languages.list_languages()
     translated_langs = Enum.map(translations, & &1.language_name)
 
@@ -42,7 +43,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
   @impl true
   def handle_event("approve", _, socket) do
-    case AiBot.approve_recipe(socket.assigns.bot_recipe) do
+    case Bot.approve_recipe(socket.assigns.bot_recipe) do
       {:ok, updated} ->
         {:noreply,
          socket
@@ -56,7 +57,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
   @impl true
   def handle_event("reject", _, socket) do
-    case AiBot.reject_recipe(socket.assigns.bot_recipe) do
+    case Bot.reject_recipe(socket.assigns.bot_recipe) do
       {:ok, updated} ->
         {:noreply,
          socket
@@ -77,7 +78,14 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
     else
       config = bot_recipe.bot_config
       bot_user = Accounts.get_user!(config.bot_user_id)
-      boards = Pinterest.get_boards(bot_user)
+
+      # A board-fetch failure (stale token) disables Pinterest in the modal,
+      # same as having no boards — reconnect happens on the social accounts page.
+      boards =
+        case Pinterest.get_boards(bot_user) do
+          {:ok, boards} -> boards
+          {:error, _} -> []
+        end
 
       lang_times = get_in(config.publish_times, [bot_recipe.meal_type]) || %{}
       languages = if map_size(lang_times) > 0, do: Map.keys(lang_times), else: ["en"]
@@ -146,12 +154,15 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
         if platforms == [] do
           count
         else
+          # force: a manual "publish now" may intentionally re-post platforms
+          # that already have an "ok" post log.
           args = %{
             ai_bot_recipe_id: bot_recipe.id,
             language_name: lang,
             platforms: platforms,
             facebook_page_id: Map.get(platform_params, "facebook_page_id"),
-            pinterest_board_id: Map.get(platform_params, "pinterest_board_id")
+            pinterest_board_id: Map.get(platform_params, "pinterest_board_id"),
+            force: true
           }
 
           case RecipePublishWorker.new(args) |> Oban.insert() do
@@ -289,7 +300,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
     case Food.update_recipe(socket.assigns.recipe, recipe_params) do
       {:ok, %Recipe{}} ->
-        bot_recipe = AiBot.get_bot_recipe!(socket.assigns.bot_recipe.id)
+        bot_recipe = Bot.get_bot_recipe!(socket.assigns.bot_recipe.id)
         changeset = Food.change_recipe(bot_recipe.recipe) |> struct!(action: :validate)
 
         {:noreply,

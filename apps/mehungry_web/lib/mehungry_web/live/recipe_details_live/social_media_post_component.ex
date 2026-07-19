@@ -5,9 +5,8 @@ defmodule MehungryWeb.SocialMediaPostComponent do
   use MehungryWeb, :live_component
 
   alias Mehungry.Accounts
-  alias Mehungry.Api.Facebook
-  alias Mehungry.Api.Instagram
-  alias Mehungry.Api.Pinterest
+  alias Mehungry.Social.Facebook
+  alias Mehungry.Social.Pinterest
   alias MehungryWeb.SvgComponents
 
   import MehungryWeb.CoreComponents
@@ -25,12 +24,12 @@ defmodule MehungryWeb.SocialMediaPostComponent do
   def update(assigns, socket) do
     changeset = FacebookPost.change_facebook_post(%FacebookPost{}, %{})
 
-    pinterest_boards =
+    {pinterest_boards, pinterest_boards_error} =
       if Map.get(assigns, :social_media) == "pinterest" do
         user = Map.get(assigns, :user)
-        if user, do: Pinterest.get_boards(user), else: []
+        if user, do: fetch_boards(user), else: {[], nil}
       else
-        []
+        {[], nil}
       end
 
     socket =
@@ -40,11 +39,22 @@ defmodule MehungryWeb.SocialMediaPostComponent do
       |> assign(:post, %FacebookPost{})
       |> assign(:state, Map.get(assigns, :state, :normal))
       |> assign(:pinterest_boards, pinterest_boards)
+      |> assign(:pinterest_boards_error, pinterest_boards_error)
       |> assign(:pinterest_board_id, nil)
       |> assign(:show_create_board, false)
       |> assign(:create_board_error, nil)
 
     {:ok, socket}
+  end
+
+  # Distinguishes an API/auth failure (surface "reconnect") from a genuinely
+  # empty board list (surface "create your first board").
+  defp fetch_boards(user) do
+    case Pinterest.get_boards(user) do
+      {:ok, boards} -> {boards, nil}
+      {:error, :not_connected} -> {[], nil}
+      {:error, _reason} -> {[], :fetch_failed}
+    end
   end
 
   @impl true
@@ -75,13 +85,14 @@ defmodule MehungryWeb.SocialMediaPostComponent do
 
       pages =
         Enum.map(pages, fn x ->
-          result = Facebook.post_recipe_container(user, recipe, x)
+          case Facebook.post_recipe_container(user, recipe, x) do
+            {:ok, _response} ->
+              {x["name"], 200, nil}
 
-          case result do
-            {:ok, %HTTPoison.Response{status_code: status_code, body: body}} ->
-              {x["name"], status_code, body}
+            {:error, {:http_error, status, body}} ->
+              {x["name"], status, body}
 
-            {:error, %HTTPoison.Error{reason: reason}} ->
+            {:error, reason} ->
               {x["name"], 0, Jason.encode!(%{"error" => %{"message" => inspect(reason)}})}
           end
         end)
@@ -111,9 +122,12 @@ defmodule MehungryWeb.SocialMediaPostComponent do
 
     case Pinterest.create_board(user, board_params) do
       {:ok, board} ->
+        {boards, boards_error} = fetch_boards(user)
+
         {:noreply,
          socket
-         |> assign(:pinterest_boards, Pinterest.get_boards(user))
+         |> assign(:pinterest_boards, boards)
+         |> assign(:pinterest_boards_error, boards_error)
          |> assign(:pinterest_board_id, board["id"])
          |> assign(:show_create_board, false)
          |> assign(:create_board_error, nil)}
@@ -161,12 +175,15 @@ defmodule MehungryWeb.SocialMediaPostComponent do
       user = Accounts.get_user!(socket.assigns.user.id)
 
       result =
-        case Instagram.post_recipe_container(user, recipe) do
-          {:ok, %HTTPoison.Response{status_code: status_code, body: body}} ->
-            [{"Instagram", status_code, body}]
+        case Mehungry.Social.Instagram.post_recipe(user, recipe) do
+          {:ok, %{media_id: _}} ->
+            [{"Instagram", 200, nil}]
 
-          _ ->
-            [{"Instagram", 0, Jason.encode!(%{"error" => %{"message" => "Post failed"}})}]
+          {:error, {:http_error, status, body}} ->
+            [{"Instagram", status, Jason.encode!(%{"error" => %{"message" => inspect(body)}})}]
+
+          {:error, reason} ->
+            [{"Instagram", 0, Jason.encode!(%{"error" => %{"message" => inspect(reason)}})}]
         end
 
       notify_parent(parent, %{post_result: result})
@@ -252,6 +269,15 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                   </p>
                 </div>
               <% else %>
+                <%= if @pinterest_boards_error do %>
+                  <div class="flex items-center gap-3 p-4 rounded-lg bg-slate-700/50">
+                    <.icon name="hero-exclamation-circle" class="h-5 w-5 text-amber-400 flex-shrink-0" />
+                    <p class="text-sm text-slate-400">
+                      Could not load your Pinterest boards — the connection is likely expired.
+                      <.link navigate={~p"/profile"} class="text-red-400 hover:text-red-300 underline">Reconnect it in your profile settings.</.link>
+                    </p>
+                  </div>
+                <% else %>
                 <%= if @pinterest_boards == [] do %>
                   <div class="space-y-3">
                     <div class="flex items-center gap-3 p-4 rounded-lg bg-slate-700/50">
@@ -312,6 +338,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                       </button>
                     </div>
                   </div>
+                <% end %>
                 <% end %>
               <% end %>
             </div>

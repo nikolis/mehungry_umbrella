@@ -126,7 +126,7 @@ The nutritionist section — "Manage your client roster, assign meal plans, trac
 **Core pain**: Creating consistent food content is exhausting. Existing scheduling tools (Later, Buffer, Hootsuite) have no food intelligence — no recipe generation, no automatic macro labeling for posts, no multi-language adaptation.
 
 **Why it wins**:
-- You already have the AiBot pipeline: daily generation → human review → multi-language → scheduled publish to Instagram/Facebook/Pinterest. This is a complete product loop.
+- You already have the AI.Bot pipeline: daily generation → human review → multi-language → scheduled publish to Instagram/Facebook/Pinterest. This is a complete product loop.
 - The USDA nutrition data lets you add "450kcal / 32g protein" to posts automatically — something food content creators explicitly want and no scheduling tool provides.
 - The review queue (generate 7 days of content at once, approve/reject in 20 min) is the key workflow differentiator.
 
@@ -137,7 +137,7 @@ The nutritionist section — "Manage your client roster, assign meal plans, trac
 - Meal planning for end users
 
 **MVP scope (2–3 weeks)**:
-1. Clean up AiBot flow for external users (currently admin-only and tied to one account)
+1. Clean up AI.Bot flow for external users (currently admin-only and tied to one account)
 2. Per-user Instagram/Facebook OAuth (infrastructure already exists)
 3. Proper content calendar UI showing scheduled, published, pending
 4. Automatic nutritional callout injection into captions

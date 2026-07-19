@@ -47,8 +47,8 @@ mix dialyzer
 
 | Context | Responsibility |
 |---|---|
-| `Accounts` | Users, auth tokens, follows, profile, ingredient/category rules |
-| `Food` | Recipes, ingredients, nutrients, measurement units, categories, hashtags |
+| `Accounts` | Facade over `Accounts.{Auth, OAuth, Profiles, Rules, Admin, UserContent, Grading}` — see `docs/accounts.md`. `Mehungry.Users` is a deprecated facade over the same sub-modules |
+| `Food` | Facade over `Food.{Recipes, Ingredients, IngredientQueries, Nutrients, Measurements, Categories, Localization, Engagement}` — see `docs/food.md` |
 | `Inventory` | Shopping baskets and basket items |
 | `Plans` | Meal plans and daily meal plans |
 | `Posts` | Posts, comments, comment answers, votes |
@@ -59,8 +59,17 @@ mix dialyzer
 | `History` | User activity history |
 | `Professionals` | Nutritionist profiles, client invitations, assignments, appointments, meal plan ratings |
 | `Subscriptions` | Subscription tiers, Stripe integration, AI feature quota enforcement |
-| `AiBot` | Managed social media recipe pipeline — monthly configs, review queue, translations, post logs |
+| `AI.Bot` | Managed social media recipe pipeline — monthly configs, review queue, translations, post logs |
 | `Billing` | Stripe checkout sessions and webhook handling (`Billing.StripeHandler`) |
+| `Social` | Social platform layer (`social/`): `Social.Publisher` fan-out (behind `Social.PublisherBehaviour`), `Social.{Facebook, Pinterest}` HTTP clients, and the `Social.Instagram` context — see `docs/social_publishing.md` |
+| `FoodData` | External food-data sources (`food_data/`): `FoodData.Usda.{SearchClient, FdcClient, FoodParser, SeedFileParser}`, `FoodData.OpenFoodFacts.*`, `FoodData.SpoonacularImporter` |
+| `S3` | The single ExAws S3 wrapper (`s3.ex`) — use it instead of inline `ExAws.S3` calls |
+
+**Facade convention:** `Mehungry.Food`, `Mehungry.Accounts`, and
+`Mehungry.Users` are permanent defdelegate facades — public functions never
+break when internals move. New code may call sub-modules directly; when adding
+a public function to a sub-module, add a matching `defdelegate` to the facade.
+Architecture overview: **`docs/architecture.md`**.
 
 **Cachex** runs three named caches started in `Mehungry.Application`:
 - `:recipes_cache` — LRU, limit 150
@@ -78,7 +87,7 @@ A custom Anthropic API layer — do not use raw HTTPoison calls for AI work:
 
 Config key: `:anthropic_api_key` (read from `ANTHROPIC_API_KEY` env var in `runtime.exs`).
 
-### AI Bot Pipeline (`apps/mehungry/lib/mehungry/ai_bot/`)
+### AI Bot Pipeline (`apps/mehungry/lib/mehungry/ai/bot/`)
 
 Automated recipe-to-social-media pipeline:
 
@@ -87,8 +96,8 @@ Automated recipe-to-social-media pipeline:
 3. `AiBotRecipe` — tracks each generated recipe with status: `pending_review → approved/rejected → published`.
 4. Oban cron fires `DailyRecipeGenerationWorker` at **2am UTC daily** → generates one recipe per meal type via `RecipeAgent` → schedules `RecipePublishWorker` jobs (one per meal × language) at the times in `publish_times`.
 5. Admin reviews at `/professional/ai-bot/review` before publish jobs run.
-6. `RecipePublishWorker` calls `SocialMediaPublisher.publish_recipe/5` (mockable via app config key `:social_media_publisher`).
-7. `AiBot.Notifier` sends admin email when batch is ready for review.
+6. `RecipePublishWorker` calls `Mehungry.Social.Publisher.publish_recipe/5` (mockable via app config key `:social_media_publisher`) — see `docs/social_publishing.md`.
+7. `AI.Bot.Notifier` sends admin email when batch is ready for review.
 
 ### Subscription Tiers (`Mehungry.Subscriptions`)
 
@@ -109,7 +118,11 @@ ai_agents:   2 concurrent  — recipe generation, translation, image generation,
 mailers:     5 concurrent  — email
 ```
 
-Cron: `DailyRecipeGenerationWorker` at `0 2 * * *`, `TelemetryPrunerWorker` at `0 3 * * *`.
+Cron: `InstagramTokenRefreshWorker` at `30 1 * * *`, `DailyRecipeGenerationWorker` at `0 2 * * *`, `TelemetryPrunerWorker` at `0 3 * * *`.
+
+### Instagram Integration (`Mehungry.Social.Instagram`)
+
+Core-app context for the Instagram Graph API: `Social.Instagram.Token` (token map lifecycle/status), `Social.Instagram.Caption` (2200-char capped captions), `Social.Instagram.Client` behind `Social.Instagram.ClientBehaviour` (stubbed in tests via `:instagram_client` config key). Long-lived tokens are refreshed daily by `InstagramTokenRefreshWorker`; invalid tokens are marked stale and surface as "reconnect" in `/professional/ai-bot/social`. `RecipePublishWorker` publish failures return `{:error, _}` for Oban retries, skipping platforms that already have an `"ok"` post log (manual re-publish passes `force: true`). The publisher seam is typed by `Mehungry.Social.PublisherBehaviour` (`:social_media_publisher` config key).
 
 ### Observability
 
@@ -154,7 +167,7 @@ Three coexisting patterns — prefer option 3 for new code:
 2. **Integration/smoke** — `ExUnit` with `ConnCase`/`LiveViewTest` in `apps/mehungry_web/test/`
 3. **Functional** — Wallaby (browser-driven) in `apps/mehungry_web/test/features/`
 
-Wallaby tests require ChromeDriver. The `chromedriver-linux64` binary is in the repo root.
+Wallaby tests require a `chromedriver` binary on `PATH` (no longer vendored in the repo — see `docs/operations.md`).
 
 ## LiveView Conventions
 
@@ -183,7 +196,9 @@ Required at runtime:
 - `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `INSTAGRAM_CLIENT_ID`, `INSTAGRAM_CLIENT_SECRET`
-- `FDC_API_KEY`, `OPENAI_API_KEY` — optional integrations
+- `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET`; `PINTEREST_ENV` selects the API environment — `live` for the real API, anything else (or unset) for the sandbox
+- `FDC_API_KEY` — required for USDA food lookups (basket search + AI ingredient creation); there is no fallback key
+- `OPENAI_API_KEY` — optional (embeddings, cover images)
 - `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` — Cloudflare Turnstile CAPTCHA on registration (optional; verification is skipped when the secret key is unset)
 
 ## Deployment Notes

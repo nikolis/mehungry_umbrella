@@ -3,7 +3,8 @@ defmodule MehungryWeb.AdminAuthLive do
 
   use MehungryWeb, :live_view
 
-  alias Mehungry.{Accounts, AiBot}
+  alias Mehungry.Accounts
+  alias Mehungry.AI.Bot
 
   def on_mount(_, _params, %{"user_token" => user_token}, socket) do
     socket =
@@ -24,7 +25,7 @@ defmodule MehungryWeb.AdminAuthLive do
         socket =
           socket
           |> assign_new(:current_language, fn -> Accounts.get_user_language(user.id) end)
-          |> assign(:pending_bot_reviews, AiBot.count_pending_reviews())
+          |> assign(:pending_bot_reviews, Bot.count_pending_reviews())
 
         {:cont, socket}
     end

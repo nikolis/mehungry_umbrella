@@ -18,6 +18,19 @@ config :mehungry,
   turnstile_site_key: System.get_env("TURNSTILE_SITE_KEY"),
   turnstile_secret_key: System.get_env("TURNSTILE_SECRET_KEY")
 
+# Pinterest environment switch: PINTEREST_ENV=live hits the real API,
+# anything else (including unset) stays on the sandbox. Sandbox and live
+# tokens are not interchangeable — accounts must be reconnected after
+# switching. The OAuth token exchange and user_account lookup derive their
+# host from this same key.
+pinterest_api_base =
+  case System.get_env("PINTEREST_ENV", "sandbox") do
+    "live" -> "https://api.pinterest.com/v5"
+    _ -> "https://api-sandbox.pinterest.com/v5"
+  end
+
+config :mehungry, pinterest_api_base: pinterest_api_base
+
 # Open Food Facts (no API key; OFF requires an identifying User-Agent contact)
 config :mehungry,
   off_base_url: System.get_env("OFF_BASE_URL", "https://world.openfoodfacts.org"),

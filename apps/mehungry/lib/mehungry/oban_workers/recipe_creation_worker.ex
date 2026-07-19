@@ -17,8 +17,7 @@ defmodule Mehungry.RecipeCreationWorker do
     if !is_nil(origin_url) and origin_url != new_url do
       file_name = List.last(String.split(origin_url, "/"))
 
-      ExAws.S3.delete_object("test-bucket-local-mehungry", file_name)
-      |> ExAws.request(region: "eu-central-1")
+      Mehungry.S3.delete_object("test-bucket-local-mehungry", file_name, region: "eu-central-1")
 
       posts
       |> Enum.each(fn x ->

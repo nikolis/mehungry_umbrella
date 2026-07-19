@@ -1,221 +1,41 @@
 defmodule Mehungry.Users do
-  import Ecto.Query
+  @moduledoc """
+  Deprecated facade kept for existing call sites. The implementation lives in
+  the Accounts context: `Mehungry.Accounts.UserContent` (saved recipes/posts,
+  follows) and `Mehungry.Accounts.Grading` (personalized recipe grading).
+  New code should call those modules (or `Mehungry.Accounts`) directly.
+  """
 
-  alias Mehungry.Repo
-  alias Mehungry.Food.Recipe
-  alias Mehungry.Accounts.User
-  alias Mehungry.Accounts.UserRecipe
-  alias Mehungry.Accounts.UserPost
-  alias Mehungry.Accounts.UserFollow
-  alias Mehungry.Accounts.UserCategoryRule
-  alias Mehungry.Food.FoodRestrictionType
-  alias Mehungry.Food.FoodRestrictionType
+  alias Mehungry.Accounts.{Grading, UserContent}
 
-  @meat [
-    "Poultry Products",
-    "Sausages and Luncheon Meats",
-    "Pork Products",
-    "Beef Products",
-    "Lamb, Veal, and Game Products"
-  ]
-  @seafood ["Finfish and Shellfish Products", "Fish"]
-  @restrictions %{
-    "Absolutely not" => 0,
-    "Not a fun" => 0.5,
-    "Neutral" => 1,
-    "Fun" => 1.5,
-    "Absolute fun" => 2
-  }
+  # ── Grading ────────────────────────────────────────────────────────────
 
-  def calculate_recipe_grading(nil, _user) do
-    0
-  end
+  defdelegate calculate_recipe_grading(recipe, user), to: Grading
+  defdelegate calculate_recipe_grading(recipe, user_pref_table, follow_ids), to: Grading
+  defdelegate calculate_user_pref_table(user), to: Grading
+  defdelegate get_category_name(category), to: Grading
+  defdelegate get_user_category_rules(user), to: Grading
+  defdelegate get_user_category_rulles(user), to: Grading
 
-  def calculate_recipe_grading(recipe, user) do
-    user_pref_table = calculate_user_pref_table(user)
-    follow_ids = list_user_follows(user) |> Enum.map(& &1.follow_id)
-    calculate_recipe_grading(recipe, user_pref_table, follow_ids)
-  end
+  # ── Saved content and follows ──────────────────────────────────────────
 
-  def calculate_recipe_grading(nil, _user_pref_table, _follow_ids), do: 0
+  defdelegate save_user_recipe(user_id, recipe_id), to: UserContent
+  defdelegate save_user_post(user_id, post_id), to: UserContent
+  defdelegate save_user_follow(user_id, follow_id), to: UserContent
+  defdelegate remove_user_saved_recipe(user_id, recipe_id), to: UserContent
+  defdelegate remove_user_saved_post(user_id, post_id), to: UserContent
+  defdelegate remove_user_follow(user_id, follow_id), to: UserContent
+  defdelegate list_user_saved_recipes(user), to: UserContent
+  defdelegate list_user_saved_recipe_ids(user), to: UserContent
+  defdelegate list_user_follows(user), to: UserContent
+  defdelegate list_user_saved_posts(user), to: UserContent
+  defdelegate list_user_created_recipes(user), to: UserContent
+  defdelegate remove_recipe_from_users_list(user, recipe), to: UserContent
+  defdelegate create_user_restriction_type(attrs), to: UserContent
 
-  def calculate_recipe_grading(recipe, user_pref_table, follow_ids) do
-    grade =
-      recipe.recipe_ingredients
-      |> Enum.map(fn ri -> ri.ingredient.category.name end)
-      |> Enum.uniq()
-      |> Enum.reduce(1.0, fn name, acc ->
-        Map.get(user_pref_table, name, 1.0) * acc
-      end)
+  # ── Rules / restriction types (canonical homes) ────────────────────────
 
-    if recipe.user_id in follow_ids and grade > 0 do
-      grade + 4
-    else
-      grade
-    end
-  end
-
-  def calculate_user_pref_table(user) do
-    user_category_rules = get_user_category_rules(user)
-
-    Enum.map(user_category_rules, fn x ->
-      title = x.category.name
-      grade = Map.get(@restrictions, x.food_restriction_type.title, 1.0)
-      {title, grade}
-    end)
-    |> Enum.into(%{})
-  end
-
-  def get_category_name(category) do
-    if category.category.name in @meat do
-      "meat"
-    else
-      if category.category.name in @seafood do
-        "seafood"
-      else
-        category.category.name
-      end
-    end
-  end
-
-  def get_user_category_rules(user) do
-    from(u_c_r in UserCategoryRule,
-      where: u_c_r.user_id == ^user.id
-    )
-    |> Repo.all()
-    |> Repo.preload([:category, :food_restriction_type])
-  end
-
-  def create_user_restriction_type(attrs) do
-    %FoodRestrictionType{}
-    |> Mehungry.Food.FoodRestrictionType.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  def list_food_restriction_types() do
-    FoodRestrictionType
-    |> Repo.all()
-  end
-
-  def create_user_category_rule(attrs) do
-    %UserCategoryRule{}
-    |> UserCategoryRule.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  def list_user_category_rules() do
-    UserCategoryRule
-    |> Repo.all()
-  end
-
-  def get_user_category_rulles(%User{} = user) do
-    from(u_c_r in UserCategoryRule,
-      where: u_c_r.user_id == ^user.id
-    )
-    |> Repo.all()
-    |> Repo.preload([:category])
-  end
-
-  def save_user_recipe(user_id, recipe_id) do
-    attrs = %{user_id: user_id, recipe_id: recipe_id}
-
-    %UserRecipe{}
-    |> UserRecipe.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  def save_user_post(user_id, post_id) do
-    attrs = %{user_id: user_id, post_id: post_id}
-
-    %UserPost{}
-    |> UserPost.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  def save_user_follow(user_id, follow_id) when is_integer(user_id) and is_integer(follow_id) do
-    attrs = %{user_id: user_id, follow_id: follow_id}
-
-    %UserFollow{}
-    |> UserFollow.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  def remove_user_saved_recipe(user_id, recipe_id)
-      when is_integer(user_id) and is_integer(recipe_id) do
-    from(u_r in UserRecipe,
-      where:
-        u_r.user_id == ^user_id and
-          u_r.recipe_id == ^recipe_id
-    )
-    |> Repo.delete_all()
-  end
-
-  def remove_user_saved_post(user_id, post_id)
-      when is_integer(user_id) and is_integer(post_id) do
-    from(u_p in UserPost,
-      where:
-        u_p.user_id == ^user_id and
-          u_p.post_id == ^post_id
-    )
-    |> Repo.delete_all()
-  end
-
-  def remove_user_follow(user_id, follow_id)
-      when is_integer(user_id) and is_integer(follow_id) do
-    from(u_f in UserFollow,
-      where:
-        u_f.user_id == ^user_id and
-          u_f.follow_id == ^follow_id
-    )
-    |> Repo.delete_all()
-  end
-
-  def list_user_saved_recipes(%User{} = user) do
-    from(u_r in UserRecipe,
-      where: u_r.user_id == ^user.id
-    )
-    |> Repo.all()
-    |> Repo.preload(recipe: [:recipe_ingredients])
-  end
-
-  def list_user_saved_recipe_ids(%User{} = user) do
-    from(u_r in UserRecipe,
-      where: u_r.user_id == ^user.id,
-      select: u_r.recipe_id
-    )
-    |> Repo.all()
-  end
-
-  def list_user_follows(%User{} = user) do
-    from(u_f in UserFollow,
-      where: u_f.user_id == ^user.id
-    )
-    |> Repo.all()
-    |> Repo.preload(:follow)
-  end
-
-  def list_user_saved_posts(%User{} = user) do
-    from(u_p in UserPost,
-      where: u_p.user_id == ^user.id
-    )
-    |> Repo.all()
-    |> Repo.preload(post: [:recipe])
-  end
-
-  def list_user_created_recipes(%User{} = user) do
-    from(recipe in Recipe,
-      where: recipe.user_id == ^user.id
-    )
-    |> Repo.all()
-    |> Repo.preload(:recipe_ingredients)
-  end
-
-  def remove_recipe_from_users_list(%User{} = user, %Recipe{} = recipe) do
-    from(u_r in UserRecipe,
-      where:
-        u_r.user_id == ^user.id and
-          u_r.recipe_id == ^recipe.id
-    )
-    |> Repo.delete()
-  end
+  defdelegate list_food_restriction_types(), to: Mehungry.Food
+  defdelegate create_user_category_rule(attrs), to: Mehungry.Accounts
+  defdelegate list_user_category_rules(), to: Mehungry.Accounts
 end

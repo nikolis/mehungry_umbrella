@@ -16,8 +16,6 @@ defmodule Mix.Tasks.Knowledge.Schemas do
     Mix.shell().info("Generating schema documentation...")
 
     # File.mkdir_p!("docs/knowledge")
-    IO.inspect(File.cwd())
-
     schemas =
       "apps"
       |> Path.join("**/*.ex")

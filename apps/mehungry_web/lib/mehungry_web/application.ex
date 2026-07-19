@@ -18,11 +18,6 @@ defmodule MehungryWeb.Application do
       # Start the Endpoint (http/https)
 
       MehungryWeb.Endpoint,
-      # Start a worker by calling: MehungryWeb.Worker.start_link(arg)
-      # {MehungryWeb.Worker, arg}
-      # {MehungryWeb.OnlineRecommender, []},
-      # MehungryWeb.NutrientMapper, 
-      MehungryWeb.IngredientSearch,
       {Task.Supervisor, name: MehungryWeb.TaskSupervisor},
       %{
         id: :create_recipe_cache,

@@ -228,10 +228,10 @@ defmodule Mehungry.AI.RecipeGenerator do
     case generate_usda_ingredient_json(unmatched) do
       {:ok, json_string, ingredient_list} ->
         Logger.info(
-          "Phase 2b: AI returned #{length(ingredient_list)} ingredient(s), inserting via FdcFoodParserLeg"
+          "Phase 2b: AI returned #{length(ingredient_list)} ingredient(s), inserting via the FDC food parser"
         )
 
-        Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(json_string)
+        Mehungry.FoodData.Usda.FoodParser.get_ingredients_from_json_body(json_string)
 
         # Any names beyond what the AI returned go straight to still_unmatched
         extra_unmatched = Enum.drop(unmatched, length(ingredient_list))

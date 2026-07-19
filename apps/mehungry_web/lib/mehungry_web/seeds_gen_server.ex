@@ -64,7 +64,7 @@ defmodule MehungryWeb.SeedsGenWorkerServer do
   def process_list([url]) do
     try do
       %HTTPoison.Response{body: body} = HTTPoison.get!(url)
-      Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
+      Mehungry.FoodData.Usda.FoodParser.get_ingredients_from_json_body(body)
     rescue
       _the_error ->
         []
@@ -74,7 +74,7 @@ defmodule MehungryWeb.SeedsGenWorkerServer do
   def process_list([url | rest]) do
     try do
       %HTTPoison.Response{body: body} = HTTPoison.get!(url)
-      Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(body)
+      Mehungry.FoodData.Usda.FoodParser.get_ingredients_from_json_body(body)
     rescue
       _the_error ->
         rest

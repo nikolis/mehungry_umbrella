@@ -24,3 +24,19 @@ usda_rest_call
 *.auth
 *.sh
 .env
+
+# Editor swap files
+*.swp
+
+# Local logs and scratch output
+*.log
+output*.txt
+ouput.txt
+
+# Local secrets — never commit; keep in .env or deployment secret store
+secret_*.txt
+
+# Local tooling
+chromedriver-linux64/
+chromedriver-linux64.zip
+myenv/

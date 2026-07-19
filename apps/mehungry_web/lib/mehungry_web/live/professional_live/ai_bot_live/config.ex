@@ -1,14 +1,16 @@
 defmodule MehungryWeb.AiBotLive.Config do
   use MehungryWeb, :live_view
+  import MehungryWeb.FormatHelpers, only: [month_name: 1]
 
-  alias Mehungry.{AiBot, Accounts, Languages}
-  alias Mehungry.AiBot.AiBotConfig
+  alias Mehungry.{Accounts, Languages}
+  alias Mehungry.AI.Bot
+  alias Mehungry.AI.Bot.AiBotConfig
 
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> stream(:configs, AiBot.list_bot_configs())
+     |> stream(:configs, Bot.list_bot_configs())
      |> assign(:users, Accounts.list_users())
      |> assign(:languages, Languages.list_languages())
      |> assign(:meal_types, AiBotConfig.meal_types())
@@ -34,7 +36,7 @@ defmodule MehungryWeb.AiBotLive.Config do
 
   defp apply_action(socket, :new, _params) do
     socket
-    |> assign(:form, to_form(AiBot.change_bot_config(%AiBotConfig{})))
+    |> assign(:form, to_form(Bot.change_bot_config(%AiBotConfig{})))
     |> assign(:bot_user_social, nil)
     |> assign(:week_configs, [])
     |> assign(:day_configs, [])
@@ -42,14 +44,14 @@ defmodule MehungryWeb.AiBotLive.Config do
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
-    config = AiBot.get_bot_config!(id)
+    config = Bot.get_bot_config!(id)
     bot_user = Accounts.get_user!(config.bot_user_id)
 
     socket
-    |> assign(:form, to_form(AiBot.change_bot_config(config)))
+    |> assign(:form, to_form(Bot.change_bot_config(config)))
     |> assign(:bot_user_social, bot_user)
-    |> assign(:week_configs, AiBot.list_week_configs(config.id))
-    |> assign(:day_configs, AiBot.list_day_configs(config.id))
+    |> assign(:week_configs, Bot.list_week_configs(config.id))
+    |> assign(:day_configs, Bot.list_day_configs(config.id))
     |> assign(:editing_config_id, config.id)
   end
 
@@ -57,8 +59,8 @@ defmodule MehungryWeb.AiBotLive.Config do
   def handle_event("validate", %{"ai_bot_config" => params}, socket) do
     form =
       case socket.assigns.live_action do
-        :new -> AiBot.change_bot_config(%AiBotConfig{}, params)
-        :edit -> AiBot.change_bot_config(socket.assigns.form.source.data, params)
+        :new -> Bot.change_bot_config(%AiBotConfig{}, params)
+        :edit -> Bot.change_bot_config(socket.assigns.form.source.data, params)
       end
       |> Map.put(:action, :validate)
       |> to_form()
@@ -70,8 +72,8 @@ defmodule MehungryWeb.AiBotLive.Config do
   def handle_event("save", %{"ai_bot_config" => params}, socket) do
     result =
       case socket.assigns.live_action do
-        :new -> AiBot.create_bot_config(params)
-        :edit -> AiBot.update_bot_config(socket.assigns.form.source.data, params)
+        :new -> Bot.create_bot_config(params)
+        :edit -> Bot.update_bot_config(socket.assigns.form.source.data, params)
       end
 
     case result do
@@ -89,9 +91,9 @@ defmodule MehungryWeb.AiBotLive.Config do
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    config = AiBot.get_bot_config!(String.to_integer(id))
+    config = Bot.get_bot_config!(String.to_integer(id))
 
-    case AiBot.delete_bot_config(config) do
+    case Bot.delete_bot_config(config) do
       {:ok, _} ->
         {:noreply,
          socket
@@ -114,12 +116,12 @@ defmodule MehungryWeb.AiBotLive.Config do
         theme = String.trim(theme)
 
         if theme == "" do
-          case AiBot.get_week_config(config_id, week_number) do
+          case Bot.get_week_config(config_id, week_number) do
             nil -> :ok
-            wc -> AiBot.delete_week_config(wc)
+            wc -> Bot.delete_week_config(wc)
           end
         else
-          AiBot.upsert_week_config(%{
+          Bot.upsert_week_config(%{
             bot_config_id: config_id,
             week_number: week_number,
             theme: theme
@@ -132,7 +134,7 @@ defmodule MehungryWeb.AiBotLive.Config do
     else
       {:noreply,
        socket
-       |> assign(:week_configs, AiBot.list_week_configs(config_id))
+       |> assign(:week_configs, Bot.list_week_configs(config_id))
        |> put_flash(:info, "Week themes saved.")}
     end
   end
@@ -150,11 +152,11 @@ defmodule MehungryWeb.AiBotLive.Config do
     if attrs.focus_hint == "" or attrs.date == "" do
       {:noreply, put_flash(socket, :error, "Date and focus hint are required.")}
     else
-      case AiBot.upsert_day_config(attrs) do
+      case Bot.upsert_day_config(attrs) do
         {:ok, _} ->
           {:noreply,
            socket
-           |> assign(:day_configs, AiBot.list_day_configs(config_id))
+           |> assign(:day_configs, Bot.list_day_configs(config_id))
            |> put_flash(:info, "Day focus saved.")}
 
         {:error, _} ->
@@ -166,13 +168,13 @@ defmodule MehungryWeb.AiBotLive.Config do
   @impl true
   def handle_event("delete_day_config", %{"id" => id}, socket) do
     config_id = socket.assigns.editing_config_id
-    dc = Mehungry.Repo.get!(Mehungry.AiBot.DayConfig, String.to_integer(id))
+    dc = Mehungry.Repo.get!(Mehungry.AI.Bot.DayConfig, String.to_integer(id))
 
-    case AiBot.delete_day_config(dc) do
+    case Bot.delete_day_config(dc) do
       {:ok, _} ->
         {:noreply,
          socket
-         |> assign(:day_configs, AiBot.list_day_configs(config_id))
+         |> assign(:day_configs, Bot.list_day_configs(config_id))
          |> put_flash(:info, "Day focus removed.")}
 
       {:error, _} ->
@@ -707,17 +709,4 @@ defmodule MehungryWeb.AiBotLive.Config do
   defp map_non_empty?(map) when is_map(map) and map_size(map) > 0, do: true
   defp map_non_empty?(_), do: false
 
-  defp month_name(1), do: "January"
-  defp month_name(2), do: "February"
-  defp month_name(3), do: "March"
-  defp month_name(4), do: "April"
-  defp month_name(5), do: "May"
-  defp month_name(6), do: "June"
-  defp month_name(7), do: "July"
-  defp month_name(8), do: "August"
-  defp month_name(9), do: "September"
-  defp month_name(10), do: "October"
-  defp month_name(11), do: "November"
-  defp month_name(12), do: "December"
-  defp month_name(_), do: "Unknown"
 end

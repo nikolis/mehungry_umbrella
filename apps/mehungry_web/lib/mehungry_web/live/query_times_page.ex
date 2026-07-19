@@ -1,5 +1,6 @@
 defmodule MehungryWeb.QueryTimesPage do
   use Phoenix.LiveDashboard.PageBuilder
+  import MehungryWeb.FormatHelpers, only: [truncate: 2]
   import Ecto.Query
 
   @ranges [{"1h", 3_600}, {"6h", 21_600}, {"24h", 86_400}, {"7d", 604_800}]
@@ -141,11 +142,6 @@ defmodule MehungryWeb.QueryTimesPage do
 
   # --- Formatting helpers ---
 
-  defp truncate(nil, _), do: "—"
-
-  defp truncate(text, max) do
-    if String.length(text) > max, do: String.slice(text, 0, max) <> "…", else: text
-  end
 
   defp fmt(nil), do: "—"
   defp fmt(v), do: :erlang.float_to_binary(v, decimals: 2)

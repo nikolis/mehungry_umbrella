@@ -173,8 +173,6 @@ defmodule MehungryWeb.Presence do
               if connected?(socket) do
                 result =
                   if(is_nil(current_user)) do
-                    IO.inspect(current_user, label: "Current user is")
-
                     Presence.track(self(), @topic, "Unknown User", %{
                       users: [recipe_search: metadata.query]
                     })

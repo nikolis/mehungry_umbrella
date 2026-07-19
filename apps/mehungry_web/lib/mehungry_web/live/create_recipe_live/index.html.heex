@@ -38,17 +38,7 @@
       <.stepper />
     </div>
 
-    <div class={if !is_nil(@plain_meal), do: "flex gap-4", else: ""}>
-      <%= if !is_nil(@plain_meal) do %>
-        <div class="w-full h-full p-2">
-          <.live_component
-            module={MehungryWeb.JsonViewerComponent}
-            id="json-viewer"
-            json={@plain_meal}
-          />
-        </div>
-      <% end %>
-
+    <div>
       <div class="w-full">
         <div id="ai-section" class="content_container">
           <div class="flex justify-end mb-2">

@@ -205,9 +205,20 @@ defmodule MehungryWeb.HomeLive.Index do
         socket
       ) do
     results =
-      Enum.map(results, fn {name, status, body} ->
-        {:ok, body} = Jason.decode(body)
-        {name, status, body["error"]["message"]}
+      Enum.map(results, fn
+        # Successful posts carry no body; decoding nil would crash the
+        # LiveView and swallow the result screen.
+        {name, status, nil} ->
+          {name, status, nil}
+
+        {name, status, body} ->
+          message =
+            case Jason.decode(body) do
+              {:ok, decoded} -> get_in(decoded, ["error", "message"]) || body
+              {:error, _} -> body
+            end
+
+          {name, status, message}
       end)
 
     send_update(MehungryWeb.SocialMediaPostComponent, %{

@@ -82,7 +82,7 @@ defmodule MehungryWeb.SelectComponent do
 
     items =
       Enum.map(items, fn {x, y} ->
-        {x, MehungryWeb.NutrientMapper.humanize_nutrient_name(y)}
+        {x, Mehungry.Food.NutrientMapper.humanize_nutrient_name(y)}
       end)
 
     presenting_items = Enum.slice(items, 0..10)

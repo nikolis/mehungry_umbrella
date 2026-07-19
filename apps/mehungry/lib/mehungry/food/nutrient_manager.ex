@@ -169,6 +169,9 @@ defmodule Mehungry.Food.NutrientMerger do
     end
   end
 
+  # Divergent twin: `Mehungry.NutrientUtils.normalize_nutrient_name/1` uses a
+  # different mapping table and a fuzzy-match fallback; this one falls back to
+  # capitalization. Deliberately not unified — callers rely on each behavior.
   def normalize_nutrient_name(nil), do: "Unknown"
 
   def normalize_nutrient_name(name) when is_atom(name),

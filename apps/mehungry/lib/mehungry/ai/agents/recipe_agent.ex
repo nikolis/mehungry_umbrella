@@ -241,7 +241,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     Logger.info("RecipeAgent: creating missing ingredient '#{name}'")
 
     {json_result, data_source} =
-      case Mehungry.USDA.FdcClient.lookup(name) do
+      case Mehungry.FoodData.Usda.FdcClient.lookup(name) do
         {:ok, json} ->
           Logger.info("RecipeAgent: found '#{name}' in USDA FDC database")
           {{:ok, json}, "usda_fdc"}
@@ -256,7 +256,15 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
     case json_result do
       {:ok, json_string} ->
-        Mehungry.FdcFoodParserLeg.get_ingredients_from_json_body(json_string, data_source)
+        case Mehungry.FoodData.Usda.FoodParser.get_ingredients_from_json_body(json_string, data_source) do
+          {:ok, _count} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning(
+              "RecipeAgent: ingredient insert for '#{name}' failed and was rolled back: #{inspect(reason)}"
+            )
+        end
 
         case Food.IngredientSearch.search(name)
              |> rerank_by_name(name)

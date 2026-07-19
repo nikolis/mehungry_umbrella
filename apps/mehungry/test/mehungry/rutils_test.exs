@@ -4,7 +4,7 @@ defmodule Mehungry.RutilsTest do
 
   alias Mehungry.Users
   alias Mehungry.Languages
-  alias Mehungry.FdcFoodParser
+  alias Mehungry.FoodData.Usda.SeedFileParser
   alias Mehungry.Food
 
   alias Mehungry.AccountsFixtures
@@ -22,7 +22,7 @@ defmodule Mehungry.RutilsTest do
           lang
       end
 
-    FdcFoodParser.get_ingredients_from_food_data_central_json_file(
+    SeedFileParser.get_ingredients_from_food_data_central_json_file(
       "/home/nikolis/Documents/foundationDownload.json"
     )
   end

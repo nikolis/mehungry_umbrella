@@ -1,5 +1,6 @@
 defmodule MehungryWeb.QueryTimelinePage do
   use Phoenix.LiveDashboard.PageBuilder
+  import MehungryWeb.FormatHelpers, only: [truncate: 2]
 
   @ranges [{"5m", 5}, {"15m", 15}, {"30m", 30}, {"60m", 60}]
 
@@ -163,11 +164,6 @@ defmodule MehungryWeb.QueryTimelinePage do
 
   # --- Formatting helpers ---
 
-  defp truncate(nil, _), do: "—"
-
-  defp truncate(text, max) do
-    if String.length(text) > max, do: String.slice(text, 0, max) <> "…", else: text
-  end
 
   defp fmt(nil), do: "—"
   defp fmt(v) when is_float(v), do: :erlang.float_to_binary(v, decimals: 2)

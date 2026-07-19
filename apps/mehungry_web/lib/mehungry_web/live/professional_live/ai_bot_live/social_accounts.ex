@@ -1,18 +1,20 @@
 defmodule MehungryWeb.AiBotLive.SocialAccounts do
   use MehungryWeb, :live_view
+  import MehungryWeb.FormatHelpers, only: [month_name: 1]
 
-  alias Mehungry.{AiBot, Accounts, Languages}
-  alias Mehungry.Api.Pinterest
+  alias Mehungry.{Accounts, Languages}
+  alias Mehungry.AI.Bot
+  alias Mehungry.Social.Pinterest
 
   @impl true
   def mount(_params, _session, socket) do
     today = Date.utc_today()
-    config = AiBot.get_active_config_for_month(today.month, today.year)
+    config = Bot.get_active_config_for_month(today.month, today.year)
     languages = Languages.list_languages()
 
     if config do
       bot_user = Accounts.get_user!(config.bot_user_id)
-      boards = Pinterest.get_boards(bot_user)
+      {boards, boards_error} = fetch_boards(bot_user)
 
       {:ok,
        socket
@@ -20,6 +22,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
        |> assign(:bot_user, bot_user)
        |> assign(:languages, languages)
        |> assign(:pinterest_boards, boards)
+       |> assign(:pinterest_boards_error, boards_error)
        |> assign(:show_create_board, false)
        |> assign(:page_title, "Bot Social Accounts")}
     else
@@ -29,8 +32,19 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
        |> assign(:bot_user, nil)
        |> assign(:languages, languages)
        |> assign(:pinterest_boards, [])
+       |> assign(:pinterest_boards_error, nil)
        |> assign(:show_create_board, false)
        |> assign(:page_title, "Bot Social Accounts")}
+    end
+  end
+
+  # Distinguishes an API/auth failure (surface "reconnect") from a genuinely
+  # empty board list (surface "create your first board").
+  defp fetch_boards(bot_user) do
+    case Pinterest.get_boards(bot_user) do
+      {:ok, boards} -> {boards, nil}
+      {:error, :not_connected} -> {[], nil}
+      {:error, _reason} -> {[], :fetch_failed}
     end
   end
 
@@ -39,7 +53,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
     config = socket.assigns.config
     clean = Map.reject(pages, fn {_, v} -> v == "" end)
 
-    case AiBot.update_bot_config(config, %{facebook_page_ids: clean}) do
+    case Bot.update_bot_config(config, %{facebook_page_ids: clean}) do
       {:ok, updated} ->
         {:noreply,
          socket
@@ -56,7 +70,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
     config = socket.assigns.config
     clean = Map.reject(boards, fn {_, v} -> v == "" end)
 
-    case AiBot.update_bot_config(config, %{pinterest_board_ids: clean}) do
+    case Bot.update_bot_config(config, %{pinterest_board_ids: clean}) do
       {:ok, updated} ->
         {:noreply,
          socket
@@ -79,9 +93,12 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
     case Pinterest.create_board(bot_user, board_params) do
       {:ok, board} ->
+        {boards, boards_error} = fetch_boards(bot_user)
+
         {:noreply,
          socket
-         |> assign(:pinterest_boards, Pinterest.get_boards(bot_user))
+         |> assign(:pinterest_boards, boards)
+         |> assign(:pinterest_boards_error, boards_error)
          |> assign(:show_create_board, false)
          |> put_flash(:info, "Pinterest board \"#{board["name"]}\" created.")}
 
@@ -128,7 +145,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
           <.platform_card
             name="Instagram"
             icon="📸"
-            connected={map_non_empty?(@bot_user.instagram_token)}
+            connected={Mehungry.Social.Instagram.token_status(@bot_user) in [:connected, :expiring]}
             detail={instagram_detail(@bot_user)}
             connect_url={~p"/auth/bot/target/#{@bot_user.id}/instagram"}
           />
@@ -144,9 +161,11 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
             icon="📌"
             connected={map_non_empty?(@bot_user.pinterest_token)}
             detail={
-              if @pinterest_boards != [],
-                do: "#{length(@pinterest_boards)} board(s) available",
-                else: nil
+              cond do
+                @pinterest_boards_error -> "Could not load boards — reconnect"
+                @pinterest_boards != [] -> "#{length(@pinterest_boards)} board(s) available"
+                true -> nil
+              end
             }
             connect_url={~p"/auth/bot/target/#{@bot_user.id}/pinterest"}
           />
@@ -199,7 +218,24 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
         <% end %>
 
         <!-- Pinterest per-language board selector -->
-        <%= if map_non_empty?(@bot_user.pinterest_token) and @pinterest_boards == [] do %>
+        <%= if map_non_empty?(@bot_user.pinterest_token) and @pinterest_boards_error do %>
+          <div class="bg-slate-800 border border-amber-700/60 rounded-xl p-5 mb-5">
+            <h2 class="text-sm font-semibold text-white mb-1">Pinterest — Boards</h2>
+            <p class="text-xs text-amber-400 mb-4">
+              Could not load boards from Pinterest — the token is likely expired or invalid.
+              Reconnect the account to continue.
+            </p>
+            <.link
+              href={~p"/auth/bot/target/#{@bot_user.id}/pinterest"}
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+            >
+              Reconnect Pinterest
+            </.link>
+          </div>
+        <% end %>
+
+        <%= if map_non_empty?(@bot_user.pinterest_token) and is_nil(@pinterest_boards_error) and
+              @pinterest_boards == [] do %>
           <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-5 mb-5">
             <h2 class="text-sm font-semibold text-white mb-1">Pinterest — Boards</h2>
             <p class="text-xs text-slate-500 mb-4">
@@ -351,9 +387,25 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
   end
 
   defp instagram_detail(bot_user) do
-    case Map.get(bot_user.instagram_token || %{}, "user_id") do
-      nil -> nil
-      id -> "User ID: #{id}"
+    token = bot_user.instagram_token || %{}
+    user_id = Map.get(token, "user_id")
+
+    case Mehungry.Social.Instagram.token_status(bot_user) do
+      :connected ->
+        case Mehungry.Social.Instagram.Token.expires_at(token) do
+          nil -> user_id && "User ID: #{user_id}"
+          expires_at -> "User ID: #{user_id} — token expires #{Date.to_string(DateTime.to_date(expires_at))}"
+        end
+
+      :expiring ->
+        days = DateTime.diff(Mehungry.Social.Instagram.Token.expires_at(token), DateTime.utc_now(), :day)
+        "User ID: #{user_id} — token expires in #{days} day(s)"
+
+      status when status in [:stale, :error] ->
+        "Token expired/invalid — reconnect"
+
+      :not_connected ->
+        nil
     end
   end
 
@@ -369,17 +421,4 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
   defp map_non_empty?(map) when is_map(map) and map_size(map) > 0, do: true
   defp map_non_empty?(_), do: false
 
-  defp month_name(1), do: "January"
-  defp month_name(2), do: "February"
-  defp month_name(3), do: "March"
-  defp month_name(4), do: "April"
-  defp month_name(5), do: "May"
-  defp month_name(6), do: "June"
-  defp month_name(7), do: "July"
-  defp month_name(8), do: "August"
-  defp month_name(9), do: "September"
-  defp month_name(10), do: "October"
-  defp month_name(11), do: "November"
-  defp month_name(12), do: "December"
-  defp month_name(_), do: "Unknown"
 end

@@ -10,8 +10,6 @@ defmodule Mehungry.RecipePutNutrientsWorker do
   def perform(%Oban.Job{
         args: %{"recipe_id" => recipe_id}
       }) do
-    IO.inspect(recipe_id, label: "Recipe id")
-
     recipe =
       Repo.get(Recipe, recipe_id)
       |> Repo.preload([

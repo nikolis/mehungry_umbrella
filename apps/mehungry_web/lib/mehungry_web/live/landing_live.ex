@@ -34,7 +34,7 @@ defmodule MehungryWeb.LandingLive do
   end
 
   defp find_bot_recipe(month, year) do
-    config = Mehungry.AiBot.get_active_config_for_month(month, year)
+    config = Mehungry.AI.Bot.get_active_config_for_month(month, year)
 
     case config do
       nil ->

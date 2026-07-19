@@ -1,5 +1,6 @@
 defmodule MehungryWeb.ErrorsPage do
   use Phoenix.LiveDashboard.PageBuilder
+  import MehungryWeb.FormatHelpers, only: [truncate: 2]
   import Ecto.Query
 
   @limit 100
@@ -107,11 +108,6 @@ defmodule MehungryWeb.ErrorsPage do
 
   # --- Formatting helpers ---
 
-  defp truncate(nil, _), do: "—"
-
-  defp truncate(text, max) do
-    if String.length(text) > max, do: String.slice(text, 0, max) <> "…", else: text
-  end
 
   defp format_dt(nil), do: "—"
 

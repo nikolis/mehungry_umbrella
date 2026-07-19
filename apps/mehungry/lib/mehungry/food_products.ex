@@ -4,7 +4,7 @@ defmodule Mehungry.FoodProducts do
   Open Food Facts (OFF).
 
   Data arrives through three paths that share `upsert_products/1`:
-  the one-time bulk import (`Mehungry.OpenFoodFacts.BulkImporter`), the
+  the one-time bulk import (`Mehungry.FoodData.OpenFoodFacts.BulkImporter`), the
   weekly delta sync (`Mehungry.ObanWorkers.OffDeltaSyncWorker`), and the
   live API fallback inside `get_product_by_barcode/2`.
 
@@ -20,7 +20,7 @@ defmodule Mehungry.FoodProducts do
   alias Mehungry.FoodProducts.FoodProductTranslation
   alias Mehungry.FoodProducts.SyncState
   alias Mehungry.Languages
-  alias Mehungry.OpenFoodFacts.ProductParser
+  alias Mehungry.FoodData.OpenFoodFacts.ProductParser
   alias Mehungry.Repo
 
   @max_search_results 20
@@ -356,6 +356,6 @@ defmodule Mehungry.FoodProducts do
   end
 
   defp off_client do
-    Application.get_env(:mehungry, :off_client, Mehungry.OpenFoodFacts.Client)
+    Application.get_env(:mehungry, :off_client, Mehungry.FoodData.OpenFoodFacts.Client)
   end
 end

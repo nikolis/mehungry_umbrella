@@ -789,7 +789,7 @@ defmodule MehungryWeb.RecipeComponents do
   defp format_nutrient_name(nutrient) do
     name = Map.get(nutrient, "name", Map.get(nutrient, :name, ""))
 
-    MehungryWeb.NutrientMapper.humanize_nutrient_name(name)
+    Mehungry.Food.NutrientMapper.humanize_nutrient_name(name)
   end
 
   defp format_amount(nutrient, servings) do

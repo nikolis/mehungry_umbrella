@@ -1,7 +1,7 @@
 defmodule MehungryWeb.CreateRecipeLiveTest do
   use MehungryWeb.ConnCase
 
-  alias Mehungry.FdcFoodParser
+  alias Mehungry.FoodData.Usda.SeedFileParser
   alias Mehungry.Food
 
   import Phoenix.LiveViewTest
@@ -15,7 +15,7 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
     # from each test so the data doesn't exist for each test.
     Ecto.Adapters.SQL.Sandbox.mode(Mehungry.Repo, :auto)
 
-    FdcFoodParser.get_ingredients_from_food_data_central_json_file("test/foundationDownload.json")
+    SeedFileParser.get_ingredients_from_food_data_central_json_file("test/foundationDownload.json")
     :ok
   end
 

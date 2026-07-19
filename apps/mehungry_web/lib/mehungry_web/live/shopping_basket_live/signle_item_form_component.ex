@@ -57,7 +57,6 @@ defmodule Mehungryweb.ShoppingBasketLive.SignleItemFormComponent do
   end
 
   def handle_event("save", %{"shopping_basket" => shopping_basket_params}, socket) do
-    IO.inspect("Save ----------------------------------------------------->")
     save_shopping_basket(socket, socket.assigns.action, shopping_basket_params)
   end
 

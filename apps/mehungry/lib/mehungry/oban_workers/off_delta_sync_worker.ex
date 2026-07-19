@@ -18,7 +18,7 @@ defmodule Mehungry.ObanWorkers.OffDeltaSyncWorker do
   require Logger
 
   alias Mehungry.FoodProducts
-  alias Mehungry.OpenFoodFacts.BulkImporter
+  alias Mehungry.FoodData.OpenFoodFacts.BulkImporter
 
   @sync_key "delta"
   @filename_format ~r/^products_(\d+)_(\d+)\.json\.gz$/
@@ -115,6 +115,6 @@ defmodule Mehungry.ObanWorkers.OffDeltaSyncWorker do
   end
 
   defp off_client do
-    Application.get_env(:mehungry, :off_client, Mehungry.OpenFoodFacts.Client)
+    Application.get_env(:mehungry, :off_client, Mehungry.FoodData.OpenFoodFacts.Client)
   end
 end
