@@ -1,7 +1,7 @@
 defmodule MehungryWeb.AiBotLive.ReviewQueue do
   use MehungryWeb, :live_view
 
-  alias Mehungry.AiBot
+  alias Mehungry.AI.Bot
   alias Mehungry.ObanWorkers.DailyRecipeGenerationWorker
 
   @status_filters [
@@ -72,9 +72,9 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
 
   @impl true
   def handle_event("approve", %{"id" => id}, socket) do
-    bot_recipe = AiBot.get_bot_recipe!(String.to_integer(id))
+    bot_recipe = Bot.get_bot_recipe!(String.to_integer(id))
 
-    case AiBot.approve_recipe(bot_recipe) do
+    case Bot.approve_recipe(bot_recipe) do
       {:ok, _} ->
         {:noreply,
          socket
@@ -88,9 +88,9 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
 
   @impl true
   def handle_event("reject", %{"id" => id}, socket) do
-    bot_recipe = AiBot.get_bot_recipe!(String.to_integer(id))
+    bot_recipe = Bot.get_bot_recipe!(String.to_integer(id))
 
-    case AiBot.reject_recipe(bot_recipe) do
+    case Bot.reject_recipe(bot_recipe) do
       {:ok, _} ->
         {:noreply,
          socket
@@ -105,7 +105,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
   @impl true
   def handle_event("import_one", %{"id" => recipe_id}, socket) do
     today = Date.utc_today()
-    config = AiBot.get_active_config_for_month(today.month, today.year)
+    config = Bot.get_active_config_for_month(today.month, today.year)
 
     if is_nil(config) do
       {:noreply,
@@ -114,7 +114,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
       recipe = Enum.find(socket.assigns.untracked, &(to_string(&1.id) == recipe_id))
       scheduled_date = (recipe && NaiveDateTime.to_date(recipe.inserted_at)) || today
 
-      case AiBot.import_single_recipe(String.to_integer(recipe_id), config, scheduled_date) do
+      case Bot.import_single_recipe(String.to_integer(recipe_id), config, scheduled_date) do
         {:ok, _} ->
           {:noreply,
            socket
@@ -136,13 +136,13 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
   @impl true
   def handle_event("dismiss_one", %{"id" => recipe_id}, socket) do
     today = Date.utc_today()
-    config = AiBot.get_active_config_for_month(today.month, today.year)
+    config = Bot.get_active_config_for_month(today.month, today.year)
 
     if is_nil(config) do
       {:noreply,
        put_flash(socket, :error, "No active bot config for this month — create one first.")}
     else
-      case AiBot.dismiss_untracked_recipe(String.to_integer(recipe_id), config) do
+      case Bot.dismiss_untracked_recipe(String.to_integer(recipe_id), config) do
         {:ok, _} ->
           {:noreply, socket |> load_untracked()}
 
@@ -159,7 +159,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
 
   defp load_recipes(socket) do
     grouped =
-      AiBot.list_bot_recipes(socket.assigns.status_filter)
+      Bot.list_bot_recipes(socket.assigns.status_filter)
       |> Enum.group_by(& &1.scheduled_date)
       |> Enum.sort_by(fn {date, _} -> date end)
 
@@ -168,10 +168,10 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
 
   defp load_untracked(socket) do
     today = Date.utc_today()
-    config = AiBot.get_active_config_for_month(today.month, today.year)
+    config = Bot.get_active_config_for_month(today.month, today.year)
 
     untracked =
-      if config, do: AiBot.list_untracked_bot_recipes(config.bot_user_id), else: []
+      if config, do: Bot.list_untracked_bot_recipes(config.bot_user_id), else: []
 
     assign(socket, :untracked, untracked)
   end

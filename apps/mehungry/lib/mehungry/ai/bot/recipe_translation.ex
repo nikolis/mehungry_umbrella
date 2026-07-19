@@ -1,4 +1,4 @@
-defmodule Mehungry.AiBot.RecipeTranslation do
+defmodule Mehungry.AI.Bot.RecipeTranslation do
   use Ecto.Schema
   import Ecto.Changeset
 

@@ -23,24 +23,21 @@
 - apps/mehungry/lib/mehungry/ai/agents/recipe_agent.ex
 - apps/mehungry/lib/mehungry/ai/agents/meal_plan_agent.ex
 - apps/mehungry/lib/mehungry/ai/recipe_generator.ex
+- apps/mehungry/lib/mehungry/ai/bot.ex
 - apps/mehungry/lib/mehungry/ai/recipe_translator.ex
 - apps/mehungry/lib/mehungry/ai/agent.ex
 - apps/mehungry/lib/mehungry/ai/ingredient_translator.ex
 - apps/mehungry/lib/mehungry/ai/image_generator.ex
 - apps/mehungry/lib/mehungry/ai/meal_plan_generator.ex
 - apps/mehungry/lib/mehungry/ai/client.ex
+- apps/mehungry/lib/mehungry/ai/bot/day_config.ex
+- apps/mehungry/lib/mehungry/ai/bot/ai_bot_recipe.ex
+- apps/mehungry/lib/mehungry/ai/bot/week_config.ex
+- apps/mehungry/lib/mehungry/ai/bot/ai_bot_config.ex
+- apps/mehungry/lib/mehungry/ai/bot/notifier.ex
+- apps/mehungry/lib/mehungry/ai/bot/recipe_translation.ex
+- apps/mehungry/lib/mehungry/ai/bot/social_media_post_log.ex
 - apps/mehungry/lib/mehungry/ai/embedding_client.ex
-
-## ai_bot
-- apps/mehungry/lib/mehungry/ai_bot/day_config.ex
-- apps/mehungry/lib/mehungry/ai_bot/ai_bot_recipe.ex
-- apps/mehungry/lib/mehungry/ai_bot/week_config.ex
-- apps/mehungry/lib/mehungry/ai_bot/ai_bot_config.ex
-- apps/mehungry/lib/mehungry/ai_bot/notifier.ex
-- apps/mehungry/lib/mehungry/ai_bot/recipe_translation.ex
-- apps/mehungry/lib/mehungry/ai_bot/social_media_post_log.ex
-
-## api
 
 ## billing
 - apps/mehungry/lib/mehungry/billing/stripe_handler.ex
@@ -120,9 +117,6 @@
 
 ## meta
 - apps/mehungry/lib/mehungry/meta/visit.ex
-
-## news_letter
-- apps/mehungry/lib/mehungry/news_letter/nuser.ex
 
 ## oban_workers
 - apps/mehungry/lib/mehungry/oban_workers/telemetry_pruner_worker.ex

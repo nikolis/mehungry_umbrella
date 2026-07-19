@@ -9,7 +9,8 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
 
   require Logger
 
-  alias Mehungry.{AiBot, Accounts, Food}
+  alias Mehungry.{Accounts, Food}
+  alias Mehungry.AI.Bot
 
   @all_platforms ["instagram", "facebook", "pinterest"]
 
@@ -17,7 +18,7 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
   def perform(%Oban.Job{
         args: %{"ai_bot_recipe_id" => bot_recipe_id, "language_name" => lang} = args
       }) do
-    bot_recipe = AiBot.get_bot_recipe!(bot_recipe_id)
+    bot_recipe = Bot.get_bot_recipe!(bot_recipe_id)
 
     if bot_recipe.status != "approved" do
       Logger.info(
@@ -35,7 +36,7 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
       already_ok =
         if Map.get(args, "force"),
           do: [],
-          else: AiBot.platforms_successfully_posted(bot_recipe_id, lang)
+          else: Bot.platforms_successfully_posted(bot_recipe_id, lang)
 
       remaining = requested -- already_ok
 
@@ -122,8 +123,8 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
   defp maybe_mark_published(bot_recipe, config) do
     languages = Map.keys(get_in(config.publish_times, [bot_recipe.meal_type]) || %{})
 
-    if AiBot.all_languages_published?(bot_recipe.id, languages) do
-      AiBot.mark_published(bot_recipe)
+    if Bot.all_languages_published?(bot_recipe.id, languages) do
+      Bot.mark_published(bot_recipe)
     end
   end
 end

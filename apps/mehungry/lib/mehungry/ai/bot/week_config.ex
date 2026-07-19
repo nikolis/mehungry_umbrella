@@ -1,4 +1,4 @@
-defmodule Mehungry.AiBot.WeekConfig do
+defmodule Mehungry.AI.Bot.WeekConfig do
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -6,7 +6,7 @@ defmodule Mehungry.AiBot.WeekConfig do
     field :week_number, :integer
     field :theme, :string
 
-    belongs_to :bot_config, Mehungry.AiBot.AiBotConfig
+    belongs_to :bot_config, Mehungry.AI.Bot.AiBotConfig
 
     timestamps()
   end

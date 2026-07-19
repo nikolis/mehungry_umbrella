@@ -21,7 +21,7 @@ Application.get_env(:mehungry, :social_media_publisher, Mehungry.Social.Publishe
 |---|---|---|
 | `Mehungry.Social.Instagram` (+ `Instagram.Client` behind `Instagram.ClientBehaviour`) | HTTPoison | Long-lived token lifecycle in `Instagram.Token`; captions capped at 2200 chars by `Instagram.Caption`; stubbed in tests via `:instagram_client` |
 | `Mehungry.Social.Facebook` | HTTPoison | Page posts via stored page tokens on `facebook_token`; returns `{:ok, body} \| {:error, {:http_error \| :transport_error, ...}}` |
-| `Mehungry.Social.Pinterest` | HTTPoison | Host comes from `:pinterest_api_base` (production by default; set to the sandbox URL to demo — tokens are not interchangeable between environments and the ueberauth strategy reads the same key). Builds pin links via the `:endpoint_module` runtime seam |
+| `Mehungry.Social.Pinterest` | HTTPoison | Host comes from `:pinterest_api_base`, set in `runtime.exs` from `PINTEREST_ENV` (`live` → real API, anything else/unset → sandbox). Tokens are not interchangeable between environments — reconnect accounts after switching; the ueberauth strategy and token exchange read the same key. Builds pin links via the `:endpoint_module` runtime seam |
 
 OAuth strategies for connecting accounts stay in the web app
 (`mehungry_web/ueberauth/strategy/{facebook,instagram,pinterest}/`), wired in
@@ -32,9 +32,9 @@ OAuth strategies for connecting accounts stay in the web app
 Two intentionally separate paths:
 
 - **Bot flow** — `RecipePublishWorker` → publisher: applies
-  `AiBot.RecipeTranslation` + ingredient/unit translations, resolves
+  `AI.Bot.RecipeTranslation` + ingredient/unit translations, resolves
   per-language Facebook pages / Pinterest boards from the bot config, writes
-  an `AiBot.SocialMediaPostLog` row per platform, returns per-platform
+  an `AI.Bot.SocialMediaPostLog` row per platform, returns per-platform
   results. Worker retries on `{:error, _}`; platforms with an existing `"ok"`
   post log are skipped unless `force: true`.
 - **User flow** — `recipe_details_live/social_media_post_component.ex` and

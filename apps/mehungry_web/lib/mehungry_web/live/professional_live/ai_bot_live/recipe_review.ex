@@ -1,7 +1,8 @@
 defmodule MehungryWeb.AiBotLive.RecipeReview do
   use MehungryWeb, :live_view
 
-  alias Mehungry.{AiBot, Languages, Food, Accounts}
+  alias Mehungry.{Languages, Food, Accounts}
+  alias Mehungry.AI.Bot
   alias Mehungry.Food.Recipe
   alias Mehungry.Social.Pinterest
   alias Mehungry.ObanWorkers.{RecipeTranslationWorker, RecipePublishWorker}
@@ -21,8 +22,8 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
   @impl true
   def handle_params(%{"id" => id}, _url, socket) do
-    bot_recipe = AiBot.get_bot_recipe!(String.to_integer(id))
-    translations = AiBot.list_translations_for_recipe(bot_recipe.recipe.id)
+    bot_recipe = Bot.get_bot_recipe!(String.to_integer(id))
+    translations = Bot.list_translations_for_recipe(bot_recipe.recipe.id)
     languages = Languages.list_languages()
     translated_langs = Enum.map(translations, & &1.language_name)
 
@@ -42,7 +43,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
   @impl true
   def handle_event("approve", _, socket) do
-    case AiBot.approve_recipe(socket.assigns.bot_recipe) do
+    case Bot.approve_recipe(socket.assigns.bot_recipe) do
       {:ok, updated} ->
         {:noreply,
          socket
@@ -56,7 +57,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
   @impl true
   def handle_event("reject", _, socket) do
-    case AiBot.reject_recipe(socket.assigns.bot_recipe) do
+    case Bot.reject_recipe(socket.assigns.bot_recipe) do
       {:ok, updated} ->
         {:noreply,
          socket
@@ -299,7 +300,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
     case Food.update_recipe(socket.assigns.recipe, recipe_params) do
       {:ok, %Recipe{}} ->
-        bot_recipe = AiBot.get_bot_recipe!(socket.assigns.bot_recipe.id)
+        bot_recipe = Bot.get_bot_recipe!(socket.assigns.bot_recipe.id)
         changeset = Food.change_recipe(bot_recipe.recipe) |> struct!(action: :validate)
 
         {:noreply,

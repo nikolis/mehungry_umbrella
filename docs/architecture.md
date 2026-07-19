@@ -38,7 +38,7 @@ lookups whose default is only resolved at call time:
 | `Survey`, `Languages`, `Meta`, `History`, `Feedback` | Supporting contexts |
 | `Professionals` | Nutritionist profiles, clients, appointments |
 | `Subscriptions` | Tiers + Stripe quota enforcement |
-| `AiBot` | Managed social-media recipe pipeline |
+| `AI.Bot` | Managed social-media recipe pipeline (`ai/bot/`) |
 | `Billing` | Stripe checkout + webhooks (`Billing.StripeHandler`) |
 | `Instagram` | Instagram Graph API context (`Instagram.Client` behind `Instagram.ClientBehaviour`, `:instagram_client` config key) |
 | `Api.Facebook` / `Api.Pinterest` | Platform HTTP clients — see `docs/social_publishing.md` |

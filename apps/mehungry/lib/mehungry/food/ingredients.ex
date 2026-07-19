@@ -111,7 +111,7 @@ defmodule Mehungry.Food.Ingredients do
       from(a in Mehungry.Food.Annotation, where: a.recipe_id in subquery(recipe_ids_q))
       |> Repo.delete_all()
 
-      from(ab in Mehungry.AiBot.AiBotRecipe, where: ab.recipe_id in subquery(recipe_ids_q))
+      from(ab in Mehungry.AI.Bot.AiBotRecipe, where: ab.recipe_id in subquery(recipe_ids_q))
       |> Repo.delete_all()
 
       from(ri in RecipeIngredient, where: ri.recipe_id in subquery(recipe_ids_q))

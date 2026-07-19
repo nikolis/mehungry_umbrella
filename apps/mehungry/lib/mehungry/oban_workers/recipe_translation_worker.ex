@@ -8,7 +8,8 @@ defmodule Mehungry.ObanWorkers.RecipeTranslationWorker do
 
   require Logger
 
-  alias Mehungry.{Food, AiBot}
+  alias Mehungry.Food
+  alias Mehungry.AI.Bot
   alias Mehungry.AI.RecipeTranslator
 
   @impl Oban.Worker
@@ -20,7 +21,7 @@ defmodule Mehungry.ObanWorkers.RecipeTranslationWorker do
     case RecipeTranslator.translate_recipe(recipe, lang) do
       {:ok, %{title: title, description: description, steps: steps}} ->
         result =
-          AiBot.upsert_recipe_translation(%{
+          Bot.upsert_recipe_translation(%{
             recipe_id: recipe_id,
             language_name: lang,
             title: title,

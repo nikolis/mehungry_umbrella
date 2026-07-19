@@ -12,7 +12,8 @@ defmodule Mehungry.Social.Publisher do
   alias Mehungry.Social.Facebook
   alias Mehungry.Social.Instagram
   alias Mehungry.Social.Pinterest
-  alias Mehungry.{AiBot, Food}
+  alias Mehungry.Food
+  alias Mehungry.AI.Bot
 
   @doc """
   Publishes a recipe to all platforms that have connected tokens on the bot_user.
@@ -25,7 +26,7 @@ defmodule Mehungry.Social.Publisher do
   @impl true
   def publish_recipe(recipe, bot_user, ai_bot_recipe_id, language_name, opts \\ %{}) do
     localized_recipe = apply_translation(recipe, language_name)
-    bot_recipe = AiBot.get_bot_recipe!(ai_bot_recipe_id)
+    bot_recipe = Bot.get_bot_recipe!(ai_bot_recipe_id)
     config = bot_recipe.bot_config
     allowed = opts["platforms"] || opts[:platforms]
 
@@ -55,7 +56,7 @@ defmodule Mehungry.Social.Publisher do
   defp apply_translation(recipe, language_name) do
     recipe = apply_ingredient_translations(recipe, language_name)
 
-    case AiBot.get_recipe_translation(recipe.id, language_name) do
+    case Bot.get_recipe_translation(recipe.id, language_name) do
       nil ->
         recipe
 
@@ -242,7 +243,7 @@ defmodule Mehungry.Social.Publisher do
 
       posted_at = if status == "ok", do: DateTime.utc_now() |> DateTime.truncate(:second)
 
-      case AiBot.create_post_log(%{
+      case Bot.create_post_log(%{
              ai_bot_recipe_id: ai_bot_recipe_id,
              platform: to_string(platform),
              status: status,

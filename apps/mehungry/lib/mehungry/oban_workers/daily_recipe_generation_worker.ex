@@ -12,9 +12,10 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
 
   require Logger
 
-  alias Mehungry.{Food, Posts, AiBot, Accounts, Repo}
+  alias Mehungry.{Food, Posts, Accounts, Repo}
+  alias Mehungry.AI.Bot
   alias Mehungry.AI.Agents.RecipeAgent
-  alias Mehungry.AiBot.Notifier
+  alias Mehungry.AI.Bot.Notifier
   alias Mehungry.ObanWorkers.RecipePublishWorker
 
   @meal_prompts %{
@@ -45,7 +46,7 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
     month = target_date.month
     year = target_date.year
 
-    case AiBot.get_active_config_for_month(month, year) do
+    case Bot.get_active_config_for_month(month, year) do
       nil ->
         Logger.info(
           "[DailyRecipeGenerationWorker] No active bot config for #{month}/#{year}, skipping"
@@ -65,10 +66,10 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
   end
 
   defp generate_recipes(config, bot_user, target_date) do
-    AiBot.AiBotConfig.meal_types()
+    Bot.AiBotConfig.meal_types()
     |> Task.async_stream(
       fn meal_type ->
-        if AiBot.bot_recipe_exists?(config.id, meal_type, target_date) do
+        if Bot.bot_recipe_exists?(config.id, meal_type, target_date) do
           Logger.info(
             "[DailyRecipeGenerationWorker] #{meal_type} for #{target_date} already exists, skipping"
           )
@@ -89,7 +90,7 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
   end
 
   defp generate_one(config, bot_user, meal_type, target_date) do
-    context = AiBot.get_context_for_date(config, target_date)
+    context = Bot.get_context_for_date(config, target_date)
     description = build_description(context, meal_type)
 
     Logger.info(
@@ -108,7 +109,7 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
             with {:ok, recipe} <- Food.create_recipe(attrs),
                  _ <- Posts.create_post(recipe),
                  {:ok, bot_recipe} <-
-                   AiBot.create_bot_recipe(%{
+                   Bot.create_bot_recipe(%{
                      recipe_id: recipe.id,
                      bot_config_id: config.id,
                      meal_type: meal_type,
@@ -173,7 +174,7 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
   end
 
   defp broadcast_pending_update do
-    count = AiBot.count_pending_reviews()
+    count = Bot.count_pending_reviews()
 
     Phoenix.PubSub.broadcast(
       Mehungry.PubSub,

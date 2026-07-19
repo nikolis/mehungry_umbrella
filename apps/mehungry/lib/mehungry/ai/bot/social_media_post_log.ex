@@ -1,4 +1,4 @@
-defmodule Mehungry.AiBot.SocialMediaPostLog do
+defmodule Mehungry.AI.Bot.SocialMediaPostLog do
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -14,7 +14,7 @@ defmodule Mehungry.AiBot.SocialMediaPostLog do
     field :target_id, :string
     field :target_name, :string
 
-    belongs_to :ai_bot_recipe, Mehungry.AiBot.AiBotRecipe
+    belongs_to :ai_bot_recipe, Mehungry.AI.Bot.AiBotRecipe
 
     timestamps()
   end

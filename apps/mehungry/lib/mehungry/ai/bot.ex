@@ -1,10 +1,10 @@
-defmodule Mehungry.AiBot do
+defmodule Mehungry.AI.Bot do
   import Ecto.Query
 
   alias Mehungry.Repo
   alias Mehungry.Posts
 
-  alias Mehungry.AiBot.{
+  alias Mehungry.AI.Bot.{
     AiBotConfig,
     AiBotRecipe,
     RecipeTranslation,

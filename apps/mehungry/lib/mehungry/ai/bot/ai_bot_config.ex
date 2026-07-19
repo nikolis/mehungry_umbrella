@@ -1,4 +1,4 @@
-defmodule Mehungry.AiBot.AiBotConfig do
+defmodule Mehungry.AI.Bot.AiBotConfig do
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -19,9 +19,9 @@ defmodule Mehungry.AiBot.AiBotConfig do
     field :pinterest_board_ids, :map, default: %{}
 
     belongs_to :bot_user, Mehungry.Accounts.User
-    has_many :ai_bot_recipes, Mehungry.AiBot.AiBotRecipe, foreign_key: :bot_config_id
-    has_many :week_configs, Mehungry.AiBot.WeekConfig, foreign_key: :bot_config_id
-    has_many :day_configs, Mehungry.AiBot.DayConfig, foreign_key: :bot_config_id
+    has_many :ai_bot_recipes, Mehungry.AI.Bot.AiBotRecipe, foreign_key: :bot_config_id
+    has_many :week_configs, Mehungry.AI.Bot.WeekConfig, foreign_key: :bot_config_id
+    has_many :day_configs, Mehungry.AI.Bot.DayConfig, foreign_key: :bot_config_id
 
     timestamps()
   end

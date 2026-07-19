@@ -1,4 +1,4 @@
-defmodule Mehungry.AiBot.Notifier do
+defmodule Mehungry.AI.Bot.Notifier do
   import Swoosh.Email
   alias Mehungry.Mailer
 

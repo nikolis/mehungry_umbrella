@@ -2,47 +2,6 @@
 
 ## defmodule Mehungry.Users do
 
-## defmodule Mehungry.AiBot do
-  def list_bot_configs do
-  def get_bot_config!(id), do: Repo.get!(AiBotConfig, id) |> Repo.preload(:bot_user)
-  def get_active_config_for_month(month, year) do
-  def create_bot_config(attrs \\ %{}) do
-  def update_bot_config(%AiBotConfig{} = config, attrs) do
-  def delete_bot_config(%AiBotConfig{} = config), do: Repo.delete(config)
-  def change_bot_config(%AiBotConfig{} = config, attrs \\ %{}) do
-  def list_pending_recipes do
-  def list_bot_recipes("all") do
-  def list_bot_recipes(status) do
-  def count_pending_reviews do
-  def list_recipes_for_date(date) do
-  def get_bot_recipe!(id) do
-  def list_untracked_bot_recipes(bot_user_id) do
-  def import_single_recipe(recipe_id, %AiBotConfig{} = config, scheduled_date) do
-  def dismiss_untracked_recipe(recipe_id, %AiBotConfig{} = config) do
-  def bot_recipe_exists?(bot_config_id, meal_type, scheduled_date) do
-  def create_bot_recipe(attrs \\ %{}) do
-  def approve_recipe(%AiBotRecipe{} = bot_recipe) do
-  def reject_recipe(%AiBotRecipe{} = bot_recipe) do
-  def mark_published(%AiBotRecipe{} = bot_recipe) do
-  def week_number_of_month(%Date{day: day}), do: div(day - 1, 7) + 1
-  def list_week_configs(bot_config_id) do
-  def get_week_config(bot_config_id, week_number) do
-  def upsert_week_config(attrs) do
-  def delete_week_config(%WeekConfig{} = wc), do: Repo.delete(wc)
-  def list_day_configs(bot_config_id) do
-  def get_day_config(bot_config_id, date) do
-  def upsert_day_config(attrs) do
-  def delete_day_config(%DayConfig{} = dc), do: Repo.delete(dc)
-  def get_context_for_date(%AiBotConfig{} = config, date) do
-  def get_recipe_translation(recipe_id, language_name) do
-  def list_translations_for_recipe(recipe_id) do
-  def upsert_recipe_translation(attrs) do
-  def change_recipe_translation(%RecipeTranslation{} = translation, attrs \\ %{}) do
-  def create_post_log(attrs \\ %{}) do
-  def list_post_logs_for_bot_recipe(ai_bot_recipe_id) do
-  def platforms_successfully_posted(ai_bot_recipe_id, language_name) do
-  def all_languages_published?(ai_bot_recipe_id, languages) do
-
 ## defmodule Mehungry.SocialMediaPublisher do
 
 ## defmodule Mehungry.Accounts.UserIngredientRule do
@@ -258,30 +217,6 @@
   def delete_user_meal(%UserMeal{} = user_meal) do
   def change_user_meal(%UserMeal{} = user_meal, attrs \\ %{}) do
 
-## defmodule Mehungry.AiBot.DayConfig do
-  def changeset(day_config, attrs) do
-
-## defmodule Mehungry.AiBot.AiBotRecipe do
-  def changeset(bot_recipe, attrs) do
-  def valid_statuses, do: @valid_statuses
-  def valid_meal_types, do: @valid_meal_types
-
-## defmodule Mehungry.AiBot.WeekConfig do
-  def changeset(week_config, attrs) do
-
-## defmodule Mehungry.AiBot.AiBotConfig do
-  def changeset(config, attrs) do
-  def meal_types, do: @meal_types
-
-## defmodule Mehungry.AiBot.Notifier do
-  def deliver_recipes_ready(recipe_count, review_url) do
-
-## defmodule Mehungry.AiBot.RecipeTranslation do
-  def changeset(translation, attrs) do
-
-## defmodule Mehungry.AiBot.SocialMediaPostLog do
-  def changeset(log, attrs) do
-
 ## defmodule Mehungry.Mailer do
 
 ## defmodule Mehungry.Professionals do
@@ -331,9 +266,6 @@
   def create_checkout_session(
   def create_billing_portal_session(stripe_customer_id, return_url) do
   def handle_webhook(raw_body, signature_header) do
-
-## defmodule Mehungry.NewsLetter.Nuser do
-  def changeset(nuser, attrs) do
 
 ## defmodule Mehungry.Search do
   def change_recipe_search_item(%RecipeSearchItem{} = recipe_search, attrs \\ %{}) do
@@ -740,6 +672,47 @@
 ## defmodule Mehungry.AI.RecipeGenerator do
   def run(description) do
 
+## defmodule Mehungry.AI.Bot do
+  def list_bot_configs do
+  def get_bot_config!(id), do: Repo.get!(AiBotConfig, id) |> Repo.preload(:bot_user)
+  def get_active_config_for_month(month, year) do
+  def create_bot_config(attrs \\ %{}) do
+  def update_bot_config(%AiBotConfig{} = config, attrs) do
+  def delete_bot_config(%AiBotConfig{} = config), do: Repo.delete(config)
+  def change_bot_config(%AiBotConfig{} = config, attrs \\ %{}) do
+  def list_pending_recipes do
+  def list_bot_recipes("all") do
+  def list_bot_recipes(status) do
+  def count_pending_reviews do
+  def list_recipes_for_date(date) do
+  def get_bot_recipe!(id) do
+  def list_untracked_bot_recipes(bot_user_id) do
+  def import_single_recipe(recipe_id, %AiBotConfig{} = config, scheduled_date) do
+  def dismiss_untracked_recipe(recipe_id, %AiBotConfig{} = config) do
+  def bot_recipe_exists?(bot_config_id, meal_type, scheduled_date) do
+  def create_bot_recipe(attrs \\ %{}) do
+  def approve_recipe(%AiBotRecipe{} = bot_recipe) do
+  def reject_recipe(%AiBotRecipe{} = bot_recipe) do
+  def mark_published(%AiBotRecipe{} = bot_recipe) do
+  def week_number_of_month(%Date{day: day}), do: div(day - 1, 7) + 1
+  def list_week_configs(bot_config_id) do
+  def get_week_config(bot_config_id, week_number) do
+  def upsert_week_config(attrs) do
+  def delete_week_config(%WeekConfig{} = wc), do: Repo.delete(wc)
+  def list_day_configs(bot_config_id) do
+  def get_day_config(bot_config_id, date) do
+  def upsert_day_config(attrs) do
+  def delete_day_config(%DayConfig{} = dc), do: Repo.delete(dc)
+  def get_context_for_date(%AiBotConfig{} = config, date) do
+  def get_recipe_translation(recipe_id, language_name) do
+  def list_translations_for_recipe(recipe_id) do
+  def upsert_recipe_translation(attrs) do
+  def change_recipe_translation(%RecipeTranslation{} = translation, attrs \\ %{}) do
+  def create_post_log(attrs \\ %{}) do
+  def list_post_logs_for_bot_recipe(ai_bot_recipe_id) do
+  def platforms_successfully_posted(ai_bot_recipe_id, language_name) do
+  def all_languages_published?(ai_bot_recipe_id, languages) do
+
 ## defmodule Mehungry.AI.RecipeTranslator do
   def translate_recipe(%{title: title, description: description} = recipe, target_language_name) do
 
@@ -758,6 +731,30 @@
 ## defmodule Mehungry.AI.Client do
   def request(params) do
   def text_from(%{content: blocks}) do
+
+## defmodule Mehungry.AI.Bot.DayConfig do
+  def changeset(day_config, attrs) do
+
+## defmodule Mehungry.AI.Bot.AiBotRecipe do
+  def changeset(bot_recipe, attrs) do
+  def valid_statuses, do: @valid_statuses
+  def valid_meal_types, do: @valid_meal_types
+
+## defmodule Mehungry.AI.Bot.WeekConfig do
+  def changeset(week_config, attrs) do
+
+## defmodule Mehungry.AI.Bot.AiBotConfig do
+  def changeset(config, attrs) do
+  def meal_types, do: @meal_types
+
+## defmodule Mehungry.AI.Bot.Notifier do
+  def deliver_recipes_ready(recipe_count, review_url) do
+
+## defmodule Mehungry.AI.Bot.RecipeTranslation do
+  def changeset(translation, attrs) do
+
+## defmodule Mehungry.AI.Bot.SocialMediaPostLog do
+  def changeset(log, attrs) do
 
 ## defmodule Mehungry.AI.EmbeddingClient do
   def embed(text) when is_binary(text) do

@@ -1,8 +1,8 @@
 defmodule MehungryWeb.AiBotLive.RecipeTranslate do
   use MehungryWeb, :live_view
 
-  alias Mehungry.AiBot
-  alias Mehungry.AiBot.RecipeTranslation
+  alias Mehungry.AI.Bot
+  alias Mehungry.AI.Bot.RecipeTranslation
   alias Mehungry.AI.RecipeTranslator
   alias Mehungry.Food
 
@@ -13,10 +13,10 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
 
   @impl true
   def handle_params(%{"id" => bot_recipe_id, "lang" => lang}, _url, socket) do
-    bot_recipe = AiBot.get_bot_recipe!(String.to_integer(bot_recipe_id))
+    bot_recipe = Bot.get_bot_recipe!(String.to_integer(bot_recipe_id))
     recipe = bot_recipe.recipe
 
-    existing = AiBot.get_recipe_translation(recipe.id, lang)
+    existing = Bot.get_recipe_translation(recipe.id, lang)
     form = build_form(existing, recipe, lang)
 
     ingredient_ids = Enum.map(recipe.recipe_ingredients, & &1.ingredient_id)
@@ -54,7 +54,7 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
     translation = socket.assigns.translation || %RecipeTranslation{}
 
     form =
-      AiBot.change_recipe_translation(translation, params)
+      Bot.change_recipe_translation(translation, params)
       |> Map.put(:action, :validate)
       |> to_form()
 
@@ -76,7 +76,7 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
       steps: steps
     }
 
-    case AiBot.upsert_recipe_translation(attrs) do
+    case Bot.upsert_recipe_translation(attrs) do
       {:ok, translation} ->
         {:noreply,
          socket
@@ -161,7 +161,7 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
           |> Map.put(:steps, steps)
 
         form =
-          AiBot.change_recipe_translation(prefilled, %{
+          Bot.change_recipe_translation(prefilled, %{
             recipe_id: recipe.id,
             language_name: lang,
             title: title,
@@ -198,12 +198,12 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
 
   defp build_form(nil, recipe, lang) do
     %RecipeTranslation{recipe_id: recipe.id, language_name: lang}
-    |> AiBot.change_recipe_translation()
+    |> Bot.change_recipe_translation()
     |> to_form()
   end
 
   defp build_form(translation, _recipe, _lang) do
-    AiBot.change_recipe_translation(translation)
+    Bot.change_recipe_translation(translation)
     |> to_form()
   end
 

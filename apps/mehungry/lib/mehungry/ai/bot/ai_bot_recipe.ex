@@ -1,4 +1,4 @@
-defmodule Mehungry.AiBot.AiBotRecipe do
+defmodule Mehungry.AI.Bot.AiBotRecipe do
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -11,8 +11,8 @@ defmodule Mehungry.AiBot.AiBotRecipe do
     field :status, :string, default: "pending_review"
 
     belongs_to :recipe, Mehungry.Food.Recipe
-    belongs_to :bot_config, Mehungry.AiBot.AiBotConfig
-    has_many :social_media_post_logs, Mehungry.AiBot.SocialMediaPostLog
+    belongs_to :bot_config, Mehungry.AI.Bot.AiBotConfig
+    has_many :social_media_post_logs, Mehungry.AI.Bot.SocialMediaPostLog
 
     timestamps()
   end

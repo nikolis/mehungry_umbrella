@@ -24,6 +24,15 @@ apps/mehungry/lib
 │   │   │   ├── meal_plan_agent.ex
 │   │   │   ├── nutritionist_agent.ex
 │   │   │   └── recipe_agent.ex
+│   │   ├── bot
+│   │   │   ├── ai_bot_config.ex
+│   │   │   ├── ai_bot_recipe.ex
+│   │   │   ├── day_config.ex
+│   │   │   ├── notifier.ex
+│   │   │   ├── recipe_translation.ex
+│   │   │   ├── social_media_post_log.ex
+│   │   │   └── week_config.ex
+│   │   ├── bot.ex
 │   │   ├── client.ex
 │   │   ├── embedding_client.ex
 │   │   ├── image_generator.ex
@@ -31,16 +40,6 @@ apps/mehungry/lib
 │   │   ├── meal_plan_generator.ex
 │   │   ├── recipe_generator.ex
 │   │   └── recipe_translator.ex
-│   ├── ai_bot
-│   │   ├── ai_bot_config.ex
-│   │   ├── ai_bot_recipe.ex
-│   │   ├── day_config.ex
-│   │   ├── notifier.ex
-│   │   ├── recipe_translation.ex
-│   │   ├── social_media_post_log.ex
-│   │   └── week_config.ex
-│   ├── ai_bot.ex
-│   ├── api
 │   ├── application.ex
 │   ├── billing
 │   │   └── stripe_handler.ex
@@ -124,8 +123,6 @@ apps/mehungry/lib
 │   ├── meta
 │   │   └── visit.ex
 │   ├── meta.ex
-│   ├── news_letter
-│   │   └── nuser.ex
 │   ├── nutrient_utils.ex
 │   ├── oban_workers
 │   │   ├── daily_recipe_generation_worker.ex
@@ -457,4 +454,4 @@ apps/mehungry_web/lib
 ├── mehungry_web.ex
 └── viewport_helpers.ex
 
-84 directories, 374 files
+82 directories, 373 files

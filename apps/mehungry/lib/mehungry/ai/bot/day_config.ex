@@ -1,4 +1,4 @@
-defmodule Mehungry.AiBot.DayConfig do
+defmodule Mehungry.AI.Bot.DayConfig do
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -6,7 +6,7 @@ defmodule Mehungry.AiBot.DayConfig do
     field :date, :date
     field :focus_hint, :string
 
-    belongs_to :bot_config, Mehungry.AiBot.AiBotConfig
+    belongs_to :bot_config, Mehungry.AI.Bot.AiBotConfig
 
     timestamps()
   end

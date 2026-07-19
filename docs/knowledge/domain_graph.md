@@ -1,5 +1,41 @@
 # Domain Graph
 
+## Mehungry.AI.Bot.AiBotConfig
+
+- belongs_to bot_user -> Mehungry.Accounts.User
+- has_many ai_bot_recipes -> Mehungry.AI.Bot.AiBotRecipe
+- has_many week_configs -> Mehungry.AI.Bot.WeekConfig
+- has_many day_configs -> Mehungry.AI.Bot.DayConfig
+
+
+## Mehungry.AI.Bot.AiBotRecipe
+
+- belongs_to recipe -> Mehungry.Food.Recipe
+- belongs_to bot_config -> Mehungry.AI.Bot.AiBotConfig
+- has_many social_media_post_logs -> Mehungry.AI.Bot.SocialMediaPostLog
+
+
+## Mehungry.AI.Bot.DayConfig
+
+- belongs_to bot_config -> Mehungry.AI.Bot.AiBotConfig
+
+
+## Mehungry.AI.Bot.RecipeTranslation
+
+- belongs_to recipe -> Mehungry.Food.Recipe
+- belongs_to language -> Mehungry.Languages.Language
+
+
+## Mehungry.AI.Bot.SocialMediaPostLog
+
+- belongs_to ai_bot_recipe -> Mehungry.AI.Bot.AiBotRecipe
+
+
+## Mehungry.AI.Bot.WeekConfig
+
+- belongs_to bot_config -> Mehungry.AI.Bot.AiBotConfig
+
+
 ## Mehungry.Accounts.User
 
 - has_one recipes -> Mehungry.Food.Recipe
@@ -46,42 +82,6 @@
 ## Mehungry.Accounts.UserToken
 
 - belongs_to user -> Mehungry.Accounts.User
-
-
-## Mehungry.AiBot.AiBotConfig
-
-- belongs_to bot_user -> Mehungry.Accounts.User
-- has_many ai_bot_recipes -> Mehungry.AiBot.AiBotRecipe
-- has_many week_configs -> Mehungry.AiBot.WeekConfig
-- has_many day_configs -> Mehungry.AiBot.DayConfig
-
-
-## Mehungry.AiBot.AiBotRecipe
-
-- belongs_to recipe -> Mehungry.Food.Recipe
-- belongs_to bot_config -> Mehungry.AiBot.AiBotConfig
-- has_many social_media_post_logs -> Mehungry.AiBot.SocialMediaPostLog
-
-
-## Mehungry.AiBot.DayConfig
-
-- belongs_to bot_config -> Mehungry.AiBot.AiBotConfig
-
-
-## Mehungry.AiBot.RecipeTranslation
-
-- belongs_to recipe -> Mehungry.Food.Recipe
-- belongs_to language -> Mehungry.Languages.Language
-
-
-## Mehungry.AiBot.SocialMediaPostLog
-
-- belongs_to ai_bot_recipe -> Mehungry.AiBot.AiBotRecipe
-
-
-## Mehungry.AiBot.WeekConfig
-
-- belongs_to bot_config -> Mehungry.AiBot.AiBotConfig
 
 
 ## Mehungry.Feedback.Feedback
@@ -263,11 +263,6 @@
 
 
 ## Mehungry.Meta.Visit
-
-
-
-
-## Mehungry.NewsLetter.Nuser
 
 
 

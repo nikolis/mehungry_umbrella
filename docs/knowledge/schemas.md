@@ -1,5 +1,115 @@
 # Schema Inventory
 
+## Mehungry.AI.Bot.AiBotConfig
+
+**Table:** `ai_bot_configs`
+
+### Fields
+
+- theme: :string
+- month: :integer
+- year: :integer
+- active: :boolean
+- pinterest_default_board_id: :string
+- facebook_page_id: :string
+- publish_times: :map
+- facebook_page_ids: :map
+- pinterest_board_ids: :map
+- timestamps: timestamps
+
+### Relationships
+
+- belongs_to bot_user -> Mehungry.Accounts.User
+- has_many ai_bot_recipes -> Mehungry.AI.Bot.AiBotRecipe
+- has_many week_configs -> Mehungry.AI.Bot.WeekConfig
+- has_many day_configs -> Mehungry.AI.Bot.DayConfig
+
+
+## Mehungry.AI.Bot.AiBotRecipe
+
+**Table:** `ai_bot_recipes`
+
+### Fields
+
+- meal_type: :string
+- scheduled_date: :date
+- status: :string
+- timestamps: timestamps
+
+### Relationships
+
+- belongs_to recipe -> Mehungry.Food.Recipe
+- belongs_to bot_config -> Mehungry.AI.Bot.AiBotConfig
+- has_many social_media_post_logs -> Mehungry.AI.Bot.SocialMediaPostLog
+
+
+## Mehungry.AI.Bot.DayConfig
+
+**Table:** `ai_bot_day_configs`
+
+### Fields
+
+- date: :date
+- focus_hint: :string
+- timestamps: timestamps
+
+### Relationships
+
+- belongs_to bot_config -> Mehungry.AI.Bot.AiBotConfig
+
+
+## Mehungry.AI.Bot.RecipeTranslation
+
+**Table:** `recipe_translations`
+
+### Fields
+
+- title: :string
+- description: :string
+- steps: {:array, :map}
+- timestamps: timestamps
+
+### Relationships
+
+- belongs_to recipe -> Mehungry.Food.Recipe
+- belongs_to language -> Mehungry.Languages.Language
+
+
+## Mehungry.AI.Bot.SocialMediaPostLog
+
+**Table:** `social_media_post_logs`
+
+### Fields
+
+- platform: :string
+- status: :string
+- language_name: :string
+- error: :string
+- posted_at: :utc_datetime
+- target_id: :string
+- target_name: :string
+- timestamps: timestamps
+
+### Relationships
+
+- belongs_to ai_bot_recipe -> Mehungry.AI.Bot.AiBotRecipe
+
+
+## Mehungry.AI.Bot.WeekConfig
+
+**Table:** `ai_bot_week_configs`
+
+### Fields
+
+- week_number: :integer
+- theme: :string
+- timestamps: timestamps
+
+### Relationships
+
+- belongs_to bot_config -> Mehungry.AI.Bot.AiBotConfig
+
+
 ## Mehungry.Accounts.User
 
 **Table:** `users`
@@ -133,116 +243,6 @@
 ### Relationships
 
 - belongs_to user -> Mehungry.Accounts.User
-
-
-## Mehungry.AiBot.AiBotConfig
-
-**Table:** `ai_bot_configs`
-
-### Fields
-
-- theme: :string
-- month: :integer
-- year: :integer
-- active: :boolean
-- pinterest_default_board_id: :string
-- facebook_page_id: :string
-- publish_times: :map
-- facebook_page_ids: :map
-- pinterest_board_ids: :map
-- timestamps: timestamps
-
-### Relationships
-
-- belongs_to bot_user -> Mehungry.Accounts.User
-- has_many ai_bot_recipes -> Mehungry.AiBot.AiBotRecipe
-- has_many week_configs -> Mehungry.AiBot.WeekConfig
-- has_many day_configs -> Mehungry.AiBot.DayConfig
-
-
-## Mehungry.AiBot.AiBotRecipe
-
-**Table:** `ai_bot_recipes`
-
-### Fields
-
-- meal_type: :string
-- scheduled_date: :date
-- status: :string
-- timestamps: timestamps
-
-### Relationships
-
-- belongs_to recipe -> Mehungry.Food.Recipe
-- belongs_to bot_config -> Mehungry.AiBot.AiBotConfig
-- has_many social_media_post_logs -> Mehungry.AiBot.SocialMediaPostLog
-
-
-## Mehungry.AiBot.DayConfig
-
-**Table:** `ai_bot_day_configs`
-
-### Fields
-
-- date: :date
-- focus_hint: :string
-- timestamps: timestamps
-
-### Relationships
-
-- belongs_to bot_config -> Mehungry.AiBot.AiBotConfig
-
-
-## Mehungry.AiBot.RecipeTranslation
-
-**Table:** `recipe_translations`
-
-### Fields
-
-- title: :string
-- description: :string
-- steps: {:array, :map}
-- timestamps: timestamps
-
-### Relationships
-
-- belongs_to recipe -> Mehungry.Food.Recipe
-- belongs_to language -> Mehungry.Languages.Language
-
-
-## Mehungry.AiBot.SocialMediaPostLog
-
-**Table:** `social_media_post_logs`
-
-### Fields
-
-- platform: :string
-- status: :string
-- language_name: :string
-- error: :string
-- posted_at: :utc_datetime
-- target_id: :string
-- target_name: :string
-- timestamps: timestamps
-
-### Relationships
-
-- belongs_to ai_bot_recipe -> Mehungry.AiBot.AiBotRecipe
-
-
-## Mehungry.AiBot.WeekConfig
-
-**Table:** `ai_bot_week_configs`
-
-### Fields
-
-- week_number: :integer
-- theme: :string
-- timestamps: timestamps
-
-### Relationships
-
-- belongs_to bot_config -> Mehungry.AiBot.AiBotConfig
 
 
 ## Mehungry.Feedback.Feedback
@@ -764,20 +764,6 @@ _none_
 - details: :map
 - ip_address: :string
 - session_key: :string
-- timestamps: timestamps
-
-### Relationships
-
-_none_
-
-
-## Mehungry.NewsLetter.Nuser
-
-**Table:** `nusers`
-
-### Fields
-
-- email: :string
 - timestamps: timestamps
 
 ### Relationships

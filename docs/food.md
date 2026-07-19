@@ -11,7 +11,7 @@ eight sub-modules under `apps/mehungry/lib/mehungry/food/`:
 | `Food.Nutrients` | Nutrient records, key-nutrient listing, nutrient interactions, recalculation enqueues |
 | `Food.Measurements` | Measurement units + translations, ingredient portions bridge, unit search |
 | `Food.Categories` | Category CRUD/search, food restriction types (canonical `list_food_restriction_types/0`) |
-| `Food.Localization` | Recipe translations (`AiBot.RecipeTranslation`), ingredient/category/unit translations, `localize_recipes/2` bulk localization, translation stats/upserts |
+| `Food.Localization` | Recipe translations (`AI.Bot.RecipeTranslation`), ingredient/category/unit translations, `localize_recipes/2` bulk localization, translation stats/upserts |
 | `Food.Engagement` | Likes, recipe comments, annotations |
 
 Standalone modules in `food/`: schemas, `Food.IngredientSearch` (ranked

@@ -5,7 +5,7 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorkerTest do
   import Mehungry.AccountsFixtures
   import Mehungry.FoodFixtures
 
-  alias Mehungry.AiBot
+  alias Mehungry.AI.Bot
   alias Mehungry.ObanWorkers.RecipePublishWorker
 
   setup do
@@ -15,7 +15,7 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorkerTest do
     recipe = recipe_fixture(user)
 
     {:ok, config} =
-      AiBot.create_bot_config(%{
+      Bot.create_bot_config(%{
         theme: "summer",
         month: 7,
         year: 2026,
@@ -24,7 +24,7 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorkerTest do
       })
 
     {:ok, bot_recipe} =
-      AiBot.create_bot_recipe(%{
+      Bot.create_bot_recipe(%{
         recipe_id: recipe.id,
         bot_config_id: config.id,
         meal_type: "dinner",
@@ -44,7 +44,7 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorkerTest do
 
   defp ok_log(bot_recipe, platform) do
     {:ok, _} =
-      AiBot.create_post_log(%{
+      Bot.create_post_log(%{
         ai_bot_recipe_id: bot_recipe.id,
         platform: platform,
         status: "ok",
@@ -123,7 +123,7 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorkerTest do
     config: config
   } do
     {:ok, pending} =
-      AiBot.create_bot_recipe(%{
+      Bot.create_bot_recipe(%{
         recipe_id: recipe.id,
         bot_config_id: config.id,
         meal_type: "lunch",

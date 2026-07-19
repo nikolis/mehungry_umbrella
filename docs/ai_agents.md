@@ -660,10 +660,10 @@ Two patterns worth copying:
 **The daily worker fans out with bounded concurrency and is idempotent.** Each meal type is generated in parallel (max 2 at a time, matching the queue limit), already-generated recipes are skipped, and each recipe is persisted in a transaction together with its review-queue entry and its scheduled publish jobs:
 
 ```elixir
-AiBot.AiBotConfig.meal_types()
+Bot.AiBotConfig.meal_types()
 |> Task.async_stream(
   fn meal_type ->
-    if AiBot.bot_recipe_exists?(config.id, meal_type, target_date) do
+    if Bot.bot_recipe_exists?(config.id, meal_type, target_date) do
       :skipped
     else
       generate_one(config, bot_user, meal_type, target_date)
@@ -680,7 +680,7 @@ Repo.transaction(fn ->
   with {:ok, recipe} <- Food.create_recipe(attrs),
        _ <- Posts.create_post(recipe),
        {:ok, bot_recipe} <-
-         AiBot.create_bot_recipe(%{recipe_id: recipe.id, …, status: "pending_review"}) do
+         Bot.create_bot_recipe(%{recipe_id: recipe.id, …, status: "pending_review"}) do
     schedule_publish_jobs(config, bot_recipe, target_date, meal_type)
   else
     {:error, reason} -> Repo.rollback(reason)

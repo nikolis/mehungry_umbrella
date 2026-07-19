@@ -208,10 +208,10 @@ defmodule Mehungry.Social.Pinterest do
     Application.get_env(:mehungry, :endpoint_module, MehungryWeb.Endpoint)
   end
 
-  # Production by default; set :pinterest_api_base to
-  # "https://api-sandbox.pinterest.com/v5" to pin back to the sandbox.
-  # Sandbox and production tokens are not interchangeable — accounts must be
-  # reconnected after switching (the ueberauth strategy reads the same key).
+  # :pinterest_api_base is set in runtime.exs from PINTEREST_ENV
+  # (sandbox unless PINTEREST_ENV=live). Sandbox and live tokens are not
+  # interchangeable — accounts must be reconnected after switching (the
+  # ueberauth strategy reads the same key).
   defp api_base do
     Application.get_env(:mehungry, :pinterest_api_base, "https://api.pinterest.com/v5")
   end

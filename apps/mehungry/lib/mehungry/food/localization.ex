@@ -20,7 +20,7 @@ defmodule Mehungry.Food.Localization do
     RecipeIngredient
   }
 
-  alias Mehungry.AiBot.RecipeTranslation
+  alias Mehungry.AI.Bot.RecipeTranslation
   alias Mehungry.Languages.Language
 
   def apply_recipe_translation(recipe, nil), do: recipe

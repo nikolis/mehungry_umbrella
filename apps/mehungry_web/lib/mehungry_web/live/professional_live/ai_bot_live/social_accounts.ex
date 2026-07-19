@@ -2,13 +2,14 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
   use MehungryWeb, :live_view
   import MehungryWeb.FormatHelpers, only: [month_name: 1]
 
-  alias Mehungry.{AiBot, Accounts, Languages}
+  alias Mehungry.{Accounts, Languages}
+  alias Mehungry.AI.Bot
   alias Mehungry.Social.Pinterest
 
   @impl true
   def mount(_params, _session, socket) do
     today = Date.utc_today()
-    config = AiBot.get_active_config_for_month(today.month, today.year)
+    config = Bot.get_active_config_for_month(today.month, today.year)
     languages = Languages.list_languages()
 
     if config do
@@ -52,7 +53,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
     config = socket.assigns.config
     clean = Map.reject(pages, fn {_, v} -> v == "" end)
 
-    case AiBot.update_bot_config(config, %{facebook_page_ids: clean}) do
+    case Bot.update_bot_config(config, %{facebook_page_ids: clean}) do
       {:ok, updated} ->
         {:noreply,
          socket
@@ -69,7 +70,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
     config = socket.assigns.config
     clean = Map.reject(boards, fn {_, v} -> v == "" end)
 
-    case AiBot.update_bot_config(config, %{pinterest_board_ids: clean}) do
+    case Bot.update_bot_config(config, %{pinterest_board_ids: clean}) do
       {:ok, updated} ->
         {:noreply,
          socket

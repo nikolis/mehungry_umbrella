@@ -59,7 +59,7 @@ mix dialyzer
 | `History` | User activity history |
 | `Professionals` | Nutritionist profiles, client invitations, assignments, appointments, meal plan ratings |
 | `Subscriptions` | Subscription tiers, Stripe integration, AI feature quota enforcement |
-| `AiBot` | Managed social media recipe pipeline — monthly configs, review queue, translations, post logs |
+| `AI.Bot` | Managed social media recipe pipeline — monthly configs, review queue, translations, post logs |
 | `Billing` | Stripe checkout sessions and webhook handling (`Billing.StripeHandler`) |
 | `Social` | Social platform layer (`social/`): `Social.Publisher` fan-out (behind `Social.PublisherBehaviour`), `Social.{Facebook, Pinterest}` HTTP clients, and the `Social.Instagram` context — see `docs/social_publishing.md` |
 | `FoodData` | External food-data sources (`food_data/`): `FoodData.Usda.{SearchClient, FdcClient, FoodParser, SeedFileParser}`, `FoodData.OpenFoodFacts.*`, `FoodData.SpoonacularImporter` |
@@ -87,7 +87,7 @@ A custom Anthropic API layer — do not use raw HTTPoison calls for AI work:
 
 Config key: `:anthropic_api_key` (read from `ANTHROPIC_API_KEY` env var in `runtime.exs`).
 
-### AI Bot Pipeline (`apps/mehungry/lib/mehungry/ai_bot/`)
+### AI Bot Pipeline (`apps/mehungry/lib/mehungry/ai/bot/`)
 
 Automated recipe-to-social-media pipeline:
 
@@ -97,7 +97,7 @@ Automated recipe-to-social-media pipeline:
 4. Oban cron fires `DailyRecipeGenerationWorker` at **2am UTC daily** → generates one recipe per meal type via `RecipeAgent` → schedules `RecipePublishWorker` jobs (one per meal × language) at the times in `publish_times`.
 5. Admin reviews at `/professional/ai-bot/review` before publish jobs run.
 6. `RecipePublishWorker` calls `Mehungry.Social.Publisher.publish_recipe/5` (mockable via app config key `:social_media_publisher`) — see `docs/social_publishing.md`.
-7. `AiBot.Notifier` sends admin email when batch is ready for review.
+7. `AI.Bot.Notifier` sends admin email when batch is ready for review.
 
 ### Subscription Tiers (`Mehungry.Subscriptions`)
 
@@ -196,6 +196,7 @@ Required at runtime:
 - `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `INSTAGRAM_CLIENT_ID`, `INSTAGRAM_CLIENT_SECRET`
+- `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET`; `PINTEREST_ENV` selects the API environment — `live` for the real API, anything else (or unset) for the sandbox
 - `FDC_API_KEY` — required for USDA food lookups (basket search + AI ingredient creation); there is no fallback key
 - `OPENAI_API_KEY` — optional (embeddings, cover images)
 - `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` — Cloudflare Turnstile CAPTCHA on registration (optional; verification is skipped when the secret key is unset)

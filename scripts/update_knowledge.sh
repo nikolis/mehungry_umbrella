@@ -2,7 +2,7 @@
 
 mkdir -p docs/knowledge
 
-tree lib > docs/knowledge/project_tree.md
+tree apps/mehungry/lib apps/mehungry_web/lib > docs/knowledge/project_tree.md
 
 mix phx.routes \
   > docs/knowledge/routes.md

@@ -20,9 +20,10 @@ defmodule Ueberauth.Strategy.Pinterest.OAuth do
   end
 
   # Token exchange must hit the same environment as Mehungry.Social.Pinterest:
-  # sandbox and production tokens are not interchangeable, so both derive their
-  # host from the :pinterest_api_base config key (production by default).
-  # Accounts must be reconnected after switching environments.
+  # sandbox and live tokens are not interchangeable, so both derive their
+  # host from the :pinterest_api_base config key (set in runtime.exs from
+  # PINTEREST_ENV; sandbox unless PINTEREST_ENV=live). Accounts must be
+  # reconnected after switching environments.
   defp defaults do
     api_base =
       Application.get_env(:mehungry, :pinterest_api_base, "https://api.pinterest.com/v5")
