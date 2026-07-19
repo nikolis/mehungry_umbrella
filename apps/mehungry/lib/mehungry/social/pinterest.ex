@@ -1,4 +1,4 @@
-defmodule Mehungry.Api.Pinterest do
+defmodule Mehungry.Social.Pinterest do
   @moduledoc """
   Pinterest v5 API client.
   Handles board listing and pin creation for connected user accounts.

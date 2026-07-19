@@ -1,4 +1,4 @@
-defmodule Mehungry.Instagram.Caption do
+defmodule Mehungry.Social.Instagram.Caption do
   @moduledoc """
   Builds Instagram captions for recipes, keeping within Instagram's
   2200-character caption limit. When a recipe is too long, whole sections are

@@ -30,8 +30,8 @@ config :mehungry, :sql_sandbox, true
 config :mehungry, :off_client, Mehungry.OpenFoodFacts.ClientStub
 
 # Instagram Graph API client + social media publisher are stubbed in tests
-config :mehungry, :instagram_client, Mehungry.Instagram.ClientStub
-config :mehungry, :social_media_publisher, Mehungry.SocialMediaPublisherStub
+config :mehungry, :instagram_client, Mehungry.Social.Instagram.ClientStub
+config :mehungry, :social_media_publisher, Mehungry.Social.PublisherStub
 
 # Chrome
 # default

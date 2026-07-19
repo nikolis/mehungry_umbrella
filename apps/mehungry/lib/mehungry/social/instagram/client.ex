@@ -1,11 +1,11 @@
-defmodule Mehungry.Instagram.Client do
+defmodule Mehungry.Social.Instagram.Client do
   @moduledoc """
   HTTP client for the Instagram Graph API (Instagram Business Login tokens).
   All calls return `{:ok, decoded_body}` (or the extracted id for media calls)
   or `{:error, {:http_error, status, body} | {:transport_error, reason}}`.
   """
 
-  @behaviour Mehungry.Instagram.ClientBehaviour
+  @behaviour Mehungry.Social.Instagram.ClientBehaviour
 
   require Logger
 

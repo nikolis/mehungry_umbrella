@@ -1,4 +1,4 @@
-defmodule Mehungry.SocialMediaPublisherBehaviour do
+defmodule Mehungry.Social.PublisherBehaviour do
   @moduledoc """
   Contract between `Mehungry.ObanWorkers.RecipePublishWorker` (core app) and the
   publisher implementation (web app), resolved at runtime via the

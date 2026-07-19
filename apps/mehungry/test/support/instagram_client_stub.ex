@@ -1,6 +1,6 @@
-defmodule Mehungry.Instagram.ClientStub do
+defmodule Mehungry.Social.Instagram.ClientStub do
   @moduledoc """
-  Test stand-in for `Mehungry.Instagram.Client` (wired up via the
+  Test stand-in for `Mehungry.Social.Instagram.Client` (wired up via the
   `:instagram_client` config key in `config/test.exs`) so tests never hit the
   network.
 
@@ -12,7 +12,7 @@ defmodule Mehungry.Instagram.ClientStub do
       on_exit(fn -> Application.delete_env(:mehungry, :instagram_stub) end)
   """
 
-  @behaviour Mehungry.Instagram.ClientBehaviour
+  @behaviour Mehungry.Social.Instagram.ClientBehaviour
 
   @impl true
   def exchange_long_lived_token(short_lived_token),

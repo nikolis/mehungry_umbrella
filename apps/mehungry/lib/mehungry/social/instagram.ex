@@ -1,9 +1,9 @@
-defmodule Mehungry.Instagram do
+defmodule Mehungry.Social.Instagram do
   @moduledoc """
   Instagram integration context: OAuth token lifecycle (exchange, refresh,
   staleness) and media publishing for both bot and regular users.
 
-  The HTTP layer is behind `Mehungry.Instagram.ClientBehaviour`, resolved via
+  The HTTP layer is behind `Mehungry.Social.Instagram.ClientBehaviour`, resolved via
   the `:instagram_client` app config key so tests can stub it.
   """
 
@@ -13,7 +13,7 @@ defmodule Mehungry.Instagram do
 
   alias Mehungry.Accounts
   alias Mehungry.Accounts.User
-  alias Mehungry.Instagram.{Caption, Token}
+  alias Mehungry.Social.Instagram.{Caption, Token}
   alias Mehungry.Repo
 
   @doc """
@@ -97,7 +97,7 @@ defmodule Mehungry.Instagram do
   end
 
   @doc """
-  Token status for a user or raw token map — see `Mehungry.Instagram.Token.status/1`.
+  Token status for a user or raw token map — see `Mehungry.Social.Instagram.Token.status/1`.
   """
   def token_status(%User{instagram_token: token}), do: Token.status(token)
   def token_status(token), do: Token.status(token)
@@ -139,6 +139,6 @@ defmodule Mehungry.Instagram do
   defp format_reason(reason), do: inspect(reason)
 
   defp client do
-    Application.get_env(:mehungry, :instagram_client, Mehungry.Instagram.Client)
+    Application.get_env(:mehungry, :instagram_client, Mehungry.Social.Instagram.Client)
   end
 end

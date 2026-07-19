@@ -1,4 +1,4 @@
-defmodule Mehungry.Instagram.ClientBehaviour do
+defmodule Mehungry.Social.Instagram.ClientBehaviour do
   @moduledoc """
   Contract for the Instagram Graph API client, so tests can swap in a stub via
   the `:instagram_client` app config key (same pattern as `:off_client`).

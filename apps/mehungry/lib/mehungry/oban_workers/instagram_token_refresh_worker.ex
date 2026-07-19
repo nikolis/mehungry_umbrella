@@ -15,8 +15,8 @@ defmodule Mehungry.ObanWorkers.InstagramTokenRefreshWorker do
 
   require Logger
 
-  alias Mehungry.Instagram
-  alias Mehungry.Instagram.Token
+  alias Mehungry.Social.Instagram
+  alias Mehungry.Social.Instagram.Token
 
   @refresh_window_days 45
 

@@ -1,4 +1,4 @@
-defmodule Mehungry.Api.Facebook do
+defmodule Mehungry.Social.Facebook do
   require Logger
 
   alias Mehungry.Food.Recipe

@@ -4,8 +4,8 @@ defmodule Mehungry.InstagramTest do
   import Mehungry.AccountsFixtures
 
   alias Mehungry.Accounts
-  alias Mehungry.Instagram
-  alias Mehungry.Instagram.Token
+  alias Mehungry.Social.Instagram
+  alias Mehungry.Social.Instagram.Token
 
   setup do
     on_exit(fn -> Application.delete_env(:mehungry, :instagram_stub) end)

@@ -3,7 +3,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
 
   alias Mehungry.{AiBot, Languages, Food, Accounts}
   alias Mehungry.Food.Recipe
-  alias Mehungry.Api.Pinterest
+  alias Mehungry.Social.Pinterest
   alias Mehungry.ObanWorkers.{RecipeTranslationWorker, RecipePublishWorker}
 
   @impl true

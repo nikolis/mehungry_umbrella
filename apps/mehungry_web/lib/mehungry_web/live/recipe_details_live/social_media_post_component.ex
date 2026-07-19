@@ -5,8 +5,8 @@ defmodule MehungryWeb.SocialMediaPostComponent do
   use MehungryWeb, :live_component
 
   alias Mehungry.Accounts
-  alias Mehungry.Api.Facebook
-  alias Mehungry.Api.Pinterest
+  alias Mehungry.Social.Facebook
+  alias Mehungry.Social.Pinterest
   alias MehungryWeb.SvgComponents
 
   import MehungryWeb.CoreComponents
@@ -175,7 +175,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
       user = Accounts.get_user!(socket.assigns.user.id)
 
       result =
-        case Mehungry.Instagram.post_recipe(user, recipe) do
+        case Mehungry.Social.Instagram.post_recipe(user, recipe) do
           {:ok, %{media_id: _}} ->
             [{"Instagram", 200, nil}]
 

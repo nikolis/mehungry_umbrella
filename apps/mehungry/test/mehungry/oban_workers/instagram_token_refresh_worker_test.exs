@@ -5,7 +5,7 @@ defmodule Mehungry.ObanWorkers.InstagramTokenRefreshWorkerTest do
   import Mehungry.AccountsFixtures
 
   alias Mehungry.Accounts
-  alias Mehungry.Instagram.Token
+  alias Mehungry.Social.Instagram.Token
   alias Mehungry.ObanWorkers.InstagramTokenRefreshWorker
 
   setup do

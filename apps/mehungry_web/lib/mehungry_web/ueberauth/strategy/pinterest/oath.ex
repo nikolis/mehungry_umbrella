@@ -19,7 +19,7 @@ defmodule Ueberauth.Strategy.Pinterest.OAuth do
     OAuth2.Client.new(opts)
   end
 
-  # Token exchange must hit the same environment as Mehungry.Api.Pinterest:
+  # Token exchange must hit the same environment as Mehungry.Social.Pinterest:
   # sandbox and production tokens are not interchangeable, so both derive their
   # host from the :pinterest_api_base config key (production by default).
   # Accounts must be reconnected after switching environments.

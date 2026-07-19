@@ -1,7 +1,7 @@
-defmodule Mehungry.Instagram.TokenTest do
+defmodule Mehungry.Social.Instagram.TokenTest do
   use ExUnit.Case, async: true
 
-  alias Mehungry.Instagram.Token
+  alias Mehungry.Social.Instagram.Token
 
   @now ~U[2026-07-18 12:00:00Z]
 

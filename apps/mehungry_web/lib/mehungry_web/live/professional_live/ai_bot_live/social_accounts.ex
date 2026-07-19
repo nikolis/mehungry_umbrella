@@ -3,7 +3,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
   import MehungryWeb.FormatHelpers, only: [month_name: 1]
 
   alias Mehungry.{AiBot, Accounts, Languages}
-  alias Mehungry.Api.Pinterest
+  alias Mehungry.Social.Pinterest
 
   @impl true
   def mount(_params, _session, socket) do
@@ -144,7 +144,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
           <.platform_card
             name="Instagram"
             icon="📸"
-            connected={Mehungry.Instagram.token_status(@bot_user) in [:connected, :expiring]}
+            connected={Mehungry.Social.Instagram.token_status(@bot_user) in [:connected, :expiring]}
             detail={instagram_detail(@bot_user)}
             connect_url={~p"/auth/bot/target/#{@bot_user.id}/instagram"}
           />
@@ -389,15 +389,15 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
     token = bot_user.instagram_token || %{}
     user_id = Map.get(token, "user_id")
 
-    case Mehungry.Instagram.token_status(bot_user) do
+    case Mehungry.Social.Instagram.token_status(bot_user) do
       :connected ->
-        case Mehungry.Instagram.Token.expires_at(token) do
+        case Mehungry.Social.Instagram.Token.expires_at(token) do
           nil -> user_id && "User ID: #{user_id}"
           expires_at -> "User ID: #{user_id} — token expires #{Date.to_string(DateTime.to_date(expires_at))}"
         end
 
       :expiring ->
-        days = DateTime.diff(Mehungry.Instagram.Token.expires_at(token), DateTime.utc_now(), :day)
+        days = DateTime.diff(Mehungry.Social.Instagram.Token.expires_at(token), DateTime.utc_now(), :day)
         "User ID: #{user_id} — token expires in #{days} day(s)"
 
       status when status in [:stale, :error] ->

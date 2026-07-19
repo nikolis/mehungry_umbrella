@@ -1,7 +1,7 @@
-defmodule Mehungry.Instagram.CaptionTest do
+defmodule Mehungry.Social.Instagram.CaptionTest do
   use ExUnit.Case, async: true
 
-  alias Mehungry.Instagram.Caption
+  alias Mehungry.Social.Instagram.Caption
 
   @max_length 2200
 

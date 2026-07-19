@@ -1,4 +1,4 @@
-defmodule Mehungry.Instagram.Token do
+defmodule Mehungry.Social.Instagram.Token do
   @moduledoc """
   Pure helpers for the `instagram_token` map stored on the user.
 
