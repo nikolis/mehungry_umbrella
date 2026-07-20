@@ -3,6 +3,16 @@
   <!-- Favicon - SVG for modern browsers -->
   <.head conn={@conn} />
   <body>
+    <%= if ga_event_json = Phoenix.Flash.get(@conn.assigns.flash, :ga_event) do %>
+      <script>
+        (function() {
+          if (typeof gtag === "function") {
+            var ev = <%= raw ga_event_json %>;
+            if (ev && ev.name) { gtag('event', ev.name, ev.params || {}); }
+          }
+        })();
+      </script>
+    <% end %>
     {@inner_content}
     <.cookie_consent_banner conn={@conn} />
     <.footer />

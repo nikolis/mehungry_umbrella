@@ -34,6 +34,7 @@ defmodule MehungryWeb.UserRegistrationController do
           )
 
         conn
+        |> put_flash(:ga_event, Jason.encode!(%{name: "sign_up", params: %{method: "email"}}))
         |> put_flash(
           :info,
           "Account created! Please check your email to confirm your account before logging in."

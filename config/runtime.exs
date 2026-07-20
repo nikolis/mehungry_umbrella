@@ -41,7 +41,8 @@ config :mehungry,
 config :mehungry_web,
   aws_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
   aws_secret: System.get_env("AWS_SECRET_ACCESS_KEY"),
-  aws_bucket: System.get_env("AWS_ASSETS_BUCKET_NAME")
+  aws_bucket: System.get_env("AWS_ASSETS_BUCKET_NAME"),
+  ga_measurement_id: System.get_env("GA_MEASUREMENT_ID", "G-JPGJG6GCSK")
 
 config :ex_aws,
   access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),

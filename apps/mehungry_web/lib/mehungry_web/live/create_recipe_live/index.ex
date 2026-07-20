@@ -637,11 +637,12 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     recipe_params = filter_empty_steps(recipe_params)
 
     case Food.create_recipe(recipe_params) do
-      {:ok, %Recipe{} = _recipe} ->
+      {:ok, %Recipe{} = recipe} ->
         Cachex.put(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}, %{})
 
         {:noreply,
          socket
+         |> MehungryWeb.GoogleAnalytics.track("create_recipe", %{recipe_id: recipe.id})
          |> put_flash(:info, "Recipe created succesfully")
          |> push_navigate(to: "/profile")}
 
