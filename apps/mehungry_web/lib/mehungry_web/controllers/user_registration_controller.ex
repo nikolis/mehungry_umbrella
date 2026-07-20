@@ -7,7 +7,12 @@ defmodule MehungryWeb.UserRegistrationController do
 
   def new(conn, _params) do
     changeset = Accounts.change_user_registration(%User{})
-    render(conn, "new.html", changeset: changeset, turnstile_site_key: Turnstile.site_key())
+
+    render(conn, "new.html",
+      changeset: changeset,
+      turnstile_site_key: Turnstile.site_key(),
+      page_title: "Create Your Free Account"
+    )
   end
 
   def create(conn, %{"user" => user_params} = params) do
@@ -42,7 +47,11 @@ defmodule MehungryWeb.UserRegistrationController do
         |> redirect(to: Routes.user_session_path(conn, :new))
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, "new.html", changeset: changeset, turnstile_site_key: Turnstile.site_key())
+        render(conn, "new.html",
+          changeset: changeset,
+          turnstile_site_key: Turnstile.site_key(),
+          page_title: "Create Your Free Account"
+        )
     end
   end
 

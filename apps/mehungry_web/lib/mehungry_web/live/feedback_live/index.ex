@@ -11,6 +11,7 @@ defmodule MehungryWeb.FeedbackLive do
 
     {:ok,
      socket
+     |> assign(:page_title, "Share Your Feedback")
      |> assign(:form, to_form(changeset))
      |> assign(:submitted, false)
      |> assign(:current_user, user)}
