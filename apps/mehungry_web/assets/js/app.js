@@ -22,6 +22,30 @@ window.addEventListener("phx:js-exec", ({detail}) => {
   })
 })
 
+// Generic bridge for LiveView-driven GA4 custom events pushed via
+// MehungryWeb.GoogleAnalytics.track/3. Consent Mode (set in head.html.heex)
+// handles the pre-consent cookieless-ping downgrade automatically, so no
+// consent check is needed here.
+window.addEventListener("phx:ga_event", ({detail}) => {
+  if (typeof gtag === "function" && detail && detail.name) {
+    gtag('event', detail.name, detail.params || {})
+  }
+})
+
+// GA's automatic page_view only fires once, on the very first script load —
+// this app is a LiveView SPA, so subsequent in-app navigation needs a manual
+// page_view per navigation. `send_page_view: false` is set in head.html.heex
+// so this is the only page_view source (initial load included).
+window.addEventListener("phx:page-loading-stop", (e) => {
+  if (typeof gtag === "function" && (!e.detail || e.detail.kind !== "error")) {
+    gtag('event', 'page_view', {
+      page_location: window.location.href,
+      page_path: window.location.pathname + window.location.search,
+      page_title: document.title
+    })
+  }
+})
+
 
 
 var dirty_bit = document.getElementById('page_is_dirty');

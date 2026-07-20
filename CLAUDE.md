@@ -154,6 +154,8 @@ All authenticated UI is built with **Phoenix LiveView**. Live sessions in `route
 
 Client hooks: `apps/mehungry_web/assets/js/hooks.js`. Navigation active-state handled by a JS `Proxy` intercepting URL changes (`navigation.js`).
 
+**Google Analytics (GA4)**: Consent Mode v2-gated `gtag.js` in `head.html.heex`, manual `page_view` tracking for LiveView SPA navigation, and a `MehungryWeb.GoogleAnalytics.track/3` seam for custom events — see **`docs/google_analytics.md`**.
+
 ### Modal Approaches
 
 Three coexisting patterns — prefer option 3 for new code:

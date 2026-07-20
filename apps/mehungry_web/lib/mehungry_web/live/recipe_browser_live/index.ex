@@ -199,6 +199,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
               "/search/" <> query_string
           end
 
+        socket = MehungryWeb.GoogleAnalytics.track(socket, "search", %{search_term: query_string})
+
         {:noreply, Phoenix.LiveView.push_navigate(socket, to: dest)}
     end
   end

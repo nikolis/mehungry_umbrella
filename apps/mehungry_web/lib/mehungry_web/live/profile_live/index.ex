@@ -46,15 +46,27 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :index, _params) do
+  @profile_tabs ~w(created saved edit_profile connected_accounts)
+
+  defp content_state_from_tab(tab, live_action) when tab in @profile_tabs do
+    case {tab, live_action} do
+      {tab, :show} when tab in ["edit_profile", "connected_accounts"] -> :created
+      {tab, _live_action} -> String.to_existing_atom(tab)
+    end
+  end
+
+  defp content_state_from_tab(_tab, _live_action), do: :created
+
+  defp apply_action(socket, :index, params) do
     if is_nil(socket.assigns[:current_user]) do
       push_navigate(socket, to: "/users/log_in")
     else
       do_apply_action_index(socket)
+      |> assign(:content_state, content_state_from_tab(params["tab"], :index))
     end
   end
 
-  defp apply_action(socket, :show, %{"id" => id} = _params) do
+  defp apply_action(socket, :show, %{"id" => id} = params) do
     maybe_track_user(%{}, socket)
 
     user = Accounts.get_user!(id)
@@ -108,6 +120,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:user_profile, user_profile)
     |> assign(:user_recipes, user_recipes)
     |> assign(:user_follows, [])
+    |> assign(:content_state, content_state_from_tab(params["tab"], :show))
   end
 
   defp apply_action(socket, :show_recipe, %{"recipe_id" => id}) do
@@ -120,9 +133,9 @@ defmodule MehungryWeb.ProfileLive.Index do
 
       cancel_path =
         if not is_nil(socket.assigns.user) and not is_nil(socket.assigns.current_user) do
-          ~p"/profile/#{socket.assigns.user.id}"
+          ~p"/profile/#{socket.assigns.user.id}?#{[tab: to_string(socket.assigns.content_state)]}"
         else
-          ~p"/profile"
+          ~p"/profile?#{[tab: to_string(socket.assigns.content_state)]}"
         end
 
       # {primaries_length, nutrients} = RecipeUtils.get_nutrients(recipe)
@@ -239,6 +252,9 @@ defmodule MehungryWeb.ProfileLive.Index do
     end
   end
 
+  def tab_path(%{live_action: :show, user: user}, tab), do: ~p"/profile/#{user.id}?#{[tab: tab]}"
+  def tab_path(%{live_action: :index}, tab), do: ~p"/profile?#{[tab: tab]}"
+
   def handle_event("edit-recipe", %{"id" => id}, socket) do
     {:noreply,
      socket
@@ -277,31 +293,6 @@ defmodule MehungryWeb.ProfileLive.Index do
       |> assign(:user_created_recipes, user_created_recipes)
 
     {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("content_state_change", %{"state" => state}, socket) do
-    case state do
-      "created" ->
-        {:noreply,
-         socket
-         |> assign(content_state: :created)}
-
-      "saved" ->
-        {:noreply,
-         socket
-         |> assign(content_state: :saved)}
-
-      "edit_profile" ->
-        {:noreply,
-         socket
-         |> assign(content_state: :edit_profile)}
-
-      "connected_accounts" ->
-        {:noreply,
-         socket
-         |> assign(content_state: :connected_accounts)}
-    end
   end
 
   def handle_event("disconnect_social", %{"provider" => provider}, socket) do
@@ -381,11 +372,16 @@ defmodule MehungryWeb.ProfileLive.Index do
       not is_nil(assigns.current_user) and
         map_size(Map.get(assigns.current_user, :pinterest_token, %{})) > 0
 
+    instagram_connected =
+      not is_nil(assigns.current_user) and
+        map_size(Map.get(assigns.current_user, :instagram_token, %{})) > 0
+
     assigns =
       assigns
       |> assign(:facebook_connected, facebook_connected)
       |> assign(:facebook_is_primary_login, facebook_is_primary_login)
       |> assign(:pinterest_connected, pinterest_connected)
+      |> assign(:instagram_connected, instagram_connected)
 
     ~H"""
     <div class="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4 mb-10">
@@ -479,6 +475,51 @@ defmodule MehungryWeb.ProfileLive.Index do
           <a
             href="/auth/pinterest"
             class="flex-shrink-0 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition"
+          >
+            Connect
+          </a>
+        <% end %>
+      </div>
+
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center flex-shrink-0">
+            <img src="/images/instagram-svgrepo-com.svg" class="w-6 h-6 brightness-0 invert" />
+          </div>
+          <div>
+            <p class="text-white font-semibold">Instagram</p>
+            <p class="text-slate-400 text-sm">
+              {if @instagram_connected,
+                do: "Connected — you can post recipes to your Instagram account",
+                else: "Connect your account to post recipes to Instagram"}
+            </p>
+          </div>
+        </div>
+        <%= if @instagram_connected do %>
+          <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+            <span class="flex items-center gap-1.5 text-green-400 text-sm font-medium">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              Connected
+            </span>
+            <button
+              phx-click="disconnect_social"
+              phx-value-provider="instagram"
+              data-confirm="Disconnect your Instagram account?"
+              class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium transition"
+            >
+              Disconnect
+            </button>
+          </div>
+        <% else %>
+          <a
+            href="/auth/instagram"
+            class="flex-shrink-0 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-sm font-medium transition"
           >
             Connect
           </a>

@@ -265,7 +265,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                   <.icon name="hero-exclamation-circle" class="h-5 w-5 text-slate-400 flex-shrink-0" />
                   <p class="text-sm text-slate-400">
                     No Pinterest account connected.
-                    <.link navigate={~p"/profile"} class="text-red-400 hover:text-red-300 underline">Connect it in your profile settings.</.link>
+                    <.link navigate={~p"/profile?#{[tab: "connected_accounts"]}"} class="text-red-400 hover:text-red-300 underline">Connect it in your profile settings.</.link>
                   </p>
                 </div>
               <% else %>
@@ -274,7 +274,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                     <.icon name="hero-exclamation-circle" class="h-5 w-5 text-amber-400 flex-shrink-0" />
                     <p class="text-sm text-slate-400">
                       Could not load your Pinterest boards — the connection is likely expired.
-                      <.link navigate={~p"/profile"} class="text-red-400 hover:text-red-300 underline">Reconnect it in your profile settings.</.link>
+                      <.link navigate={~p"/profile?#{[tab: "connected_accounts"]}"} class="text-red-400 hover:text-red-300 underline">Reconnect it in your profile settings.</.link>
                     </p>
                   </div>
                 <% else %>
@@ -361,7 +361,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                   <.icon name="hero-exclamation-circle" class="h-5 w-5 text-slate-400 flex-shrink-0" />
                   <p class="text-sm text-slate-400">
                     No Instagram account connected.
-                    <.link navigate={~p"/profile"} class="text-pink-400 hover:text-pink-300 underline">Connect it in your profile settings.</.link>
+                    <.link navigate={~p"/profile?#{[tab: "connected_accounts"]}"} class="text-pink-400 hover:text-pink-300 underline">Connect it in your profile settings.</.link>
                   </p>
                 </div>
               <% else %>
