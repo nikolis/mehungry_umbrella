@@ -128,10 +128,11 @@ defmodule MehungryWeb.SvgComponents do
 
   attr :id, :string, default: "logo"
   attr :class, :string, default: nil
+  attr :show_tagline, :boolean, default: false
 
   def get_logo(assigns) do
     ~H"""
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 120">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 200" class={@class}>
       <defs>
         <!-- Warm Orange gradients matching favicon -->
         <linearGradient id={"topCubeOrange-#{@id}"} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -152,51 +153,65 @@ defmodule MehungryWeb.SvgComponents do
 
       <!-- Bottom Cube -->
       <polygon
-        points="60,95 80,82 100,95 100,115 80,128 60,115"
+        points="36,129.6 68,108.8 100,129.6 100,161.6 68,182.4 36,161.6"
         fill={"url(#bottomCubeOrange-#{@id})"}
       />
-      <polygon points="80,82 100,95 80,108 60,95" fill="#7C2D12" opacity="0.7" />
+      <polygon points="68,108.8 100,129.6 68,150.4 36,108.8" fill="#7C2D12" opacity="0.7" />
 
       <!-- Middle Cube -->
       <polygon
-        points="80,65 100,52 120,65 120,85 100,98 80,85"
+        points="68,81.6 100,60.8 132,81.6 132,113.6 100,134.4 68,113.6"
         fill={"url(#middleCubeOrange-#{@id})"}
       />
-      <polygon points="100,52 120,65 100,78 80,65" fill="#C2410C" opacity="0.7" />
+      <polygon points="100,60.8 132,81.6 100,102.4 68,81.6" fill="#C2410C" opacity="0.7" />
 
       <!-- Top Cube -->
-      <polygon points="100,38 120,25 140,38 140,58 120,71 100,58" fill={"url(#topCubeOrange-#{@id})"} />
-      <polygon points="120,25 140,38 120,51 100,38" fill="#F97316" opacity="0.8" />
+      <polygon
+        points="100,38.4 132,17.6 164,38.4 164,70.4 132,91.2 100,70.4"
+        fill={"url(#topCubeOrange-#{@id})"}
+      />
+      <polygon points="132,17.6 164,38.4 132,59.2 100,38.4" fill="#F97316" opacity="0.8" />
 
       <!-- Lines -->
       <line
         x1="100"
-        y1="58"
+        y1="70.4"
         x2="100"
-        y2="78"
+        y2="102.4"
         stroke="#FBBF24"
         stroke-width="2"
         stroke-dasharray="3,3"
       />
-      <line x1="80" y1="65" x2="80" y2="82" stroke="#FBBF24" stroke-width="2" stroke-dasharray="3,3" />
       <line
-        x1="120"
-        y1="52"
-        x2="120"
-        y2="65"
+        x1="68"
+        y1="81.6"
+        x2="68"
+        y2="108.8"
+        stroke="#FBBF24"
+        stroke-width="2"
+        stroke-dasharray="3,3"
+      />
+      <line
+        x1="132"
+        y1="60.8"
+        x2="132"
+        y2="81.6"
         stroke="#FBBF24"
         stroke-width="2"
         stroke-dasharray="3,3"
       />
 
-      <!-- Text - Dark slate to match favicon text -->
+      <!-- Text fill/tagline color default to the original dark-on-light values;
+           callers on a dark background override --logo-text-color /
+           --logo-tagline-color (see landing_live.ex nav) without affecting
+           other call sites. -->
       <text
-        x="160"
-        y="65"
+        x="195"
+        y="137"
         font-family="'Inter', system-ui, -apple-system, sans-serif"
-        font-size="38"
+        font-size="104"
         font-weight="800"
-        fill="#0F172A"
+        fill="var(--logo-text-color, #0F172A)"
         letter-spacing="2"
       >
         M3<tspan fill="#EA580C">HUNGRY</tspan>
@@ -204,12 +219,14 @@ defmodule MehungryWeb.SvgComponents do
 
       <!-- Tagline -->
       <text
-        x="160"
-        y="88"
+        :if={@show_tagline}
+        x="195"
+        y="188"
         font-family="'Inter', system-ui, -apple-system, sans-serif"
-        font-size="11"
-        fill="#64748B"
-        letter-spacing="3"
+        font-size="26"
+        font-weight="600"
+        fill="var(--logo-tagline-color, #A9A08C)"
+        letter-spacing="4"
       >
         ANALYZE • SHARE • CONNECT
       </text>
