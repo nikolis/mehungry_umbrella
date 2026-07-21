@@ -69,15 +69,15 @@ defmodule MehungryWeb.LandingLive do
     <div class="landing-page bg-ink text-parchment">
       <%!-- ═══════════════════════════════════════════ NAV ══════════════════════════════════════════════ --%>
       <nav
-        class="fixed inset-x-0 top-0 z-50 h-16 border-b border-ink-panel2 bg-ink/90 backdrop-blur-md"
+        class="fixed inset-x-0 top-0 z-50 h-24 border-b border-ink-panel2 bg-ink/90 backdrop-blur-md"
         aria-label="Main navigation"
       >
         <div class="mx-auto flex h-full max-w-6xl items-center justify-between px-4 sm:px-6">
           <span
             class="contents"
-            style="--logo-text-color: #F4EEDD; --logo-tagline-color: transparent;"
+            style="--logo-text-color: #F4EEDD; --logo-tagline-color: #A9A08C;"
           >
-            <.get_logo id="landing-nav" class="h-10 w-[190px]" />
+            <.get_logo id="landing-nav" class="h-16 w-[304px]" show_tagline />
           </span>
 
           <div class="hidden items-center gap-8 text-sm md:flex">
@@ -1204,7 +1204,7 @@ defmodule MehungryWeb.LandingLive do
         <div class="mx-auto max-w-6xl px-4 sm:px-6">
           <div class="flex flex-col items-center justify-between gap-6 sm:flex-row">
             <div>
-              <.get_logo id="footer-logo" class="mb-1 h-6 w-auto" />
+              <.get_logo id="footer-logo" class="mb-1 h-6 w-auto" show_tagline />
               <p class="text-xs text-parchment-dim">Know what's on your plate.</p>
             </div>
             <nav class="flex gap-8 text-sm text-parchment-dim" aria-label="Footer navigation">

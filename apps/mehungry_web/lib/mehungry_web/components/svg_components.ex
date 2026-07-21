@@ -128,6 +128,7 @@ defmodule MehungryWeb.SvgComponents do
 
   attr :id, :string, default: "logo"
   attr :class, :string, default: nil
+  attr :show_tagline, :boolean, default: false
 
   def get_logo(assigns) do
     ~H"""
@@ -218,12 +219,14 @@ defmodule MehungryWeb.SvgComponents do
 
       <!-- Tagline -->
       <text
+        :if={@show_tagline}
         x="195"
-        y="185"
+        y="188"
         font-family="'Inter', system-ui, -apple-system, sans-serif"
-        font-size="11"
-        fill="var(--logo-tagline-color, #64748B)"
-        letter-spacing="3"
+        font-size="26"
+        font-weight="600"
+        fill="var(--logo-tagline-color, #A9A08C)"
+        letter-spacing="4"
       >
         ANALYZE • SHARE • CONNECT
       </text>
