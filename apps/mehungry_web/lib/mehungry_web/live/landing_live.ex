@@ -73,7 +73,12 @@ defmodule MehungryWeb.LandingLive do
         aria-label="Main navigation"
       >
         <div class="mx-auto flex h-full max-w-6xl items-center justify-between px-4 sm:px-6">
-          <.get_logo id="landing-nav" class="h-6 w-auto" />
+          <span
+            class="contents"
+            style="--logo-text-color: #F4EEDD; --logo-tagline-color: transparent;"
+          >
+            <.get_logo id="landing-nav" class="h-10 w-[190px]" />
+          </span>
 
           <div class="hidden items-center gap-8 text-sm md:flex">
             <a href="#features" class="text-parchment-dim transition-colors hover:text-parchment">

@@ -2,7 +2,12 @@
   <!-- Logo -->
   <div class="px-4 py-5 border-b border-ink-panel2 flex-shrink-0">
     <a href="/" class="flex items-center gap-3 px-2 rounded-lg">
-      {MehungryWeb.SvgComponents.get_logo(%{id: "Main menu"})}
+      <span
+        class="contents"
+        style="--logo-text-color: #F4EEDD; --logo-tagline-color: transparent;"
+      >
+        {MehungryWeb.SvgComponents.get_logo(%{id: "landing-nav", class: "h-10 w-[190px]"})}
+      </span>
     </a>
   </div>
 
