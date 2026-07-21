@@ -6,7 +6,7 @@
   />
   <.input field={@f[:user_meal_id]} value={to_string(@user_meal.id)} type="hidden" />
 
-  <div class="bg-slate-800 border border-slate-700 rounded-xl p-3 space-y-3">
+  <div class="bg-black/20 border border-ink-panel2 rounded-xl p-3 space-y-3">
     <div class="flex items-start gap-2">
       <div class="flex-1 min-w-0">
         <.live_component
@@ -23,7 +23,7 @@
         phx-click="delete_consume_record"
         phx-target={@parent_component}
         phx-value-index={@f.index}
-        class="mt-1 p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+        class="mt-1 p-1.5 rounded-lg text-parchment-dim hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
       >
         <svg width="1.1rem" height="1.1rem" viewBox="0 0 24 24" fill="none">
           <path

@@ -69,7 +69,28 @@ module.exports = {
         warning: { 500: '#F59E0B' },
         error: { 500: '#EF4444' },
         info: { 500: '#3B82F6' },
-      },    },
+        ink: {
+          DEFAULT: '#17140F',
+          panel: '#211D16',
+          panel2: '#2B2619',
+        },
+        paprika: {
+          DEFAULT: '#E8622C',
+          soft: '#F0906B',
+        },
+        basil: {
+          DEFAULT: '#45C4AE',
+          soft: '#8FDDCE',
+        },
+        parchment: {
+          DEFAULT: '#F4EEDD',
+          dim: '#A9A08C',
+        },
+      },
+      fontFamily: {
+        display: ['"Iowan Old Style"', '"Palatino Linotype"', '"Book Antiqua"', 'Georgia', 'serif'],
+      },
+    },
   },
   plugins: [
     require("@tailwindcss/forms"),

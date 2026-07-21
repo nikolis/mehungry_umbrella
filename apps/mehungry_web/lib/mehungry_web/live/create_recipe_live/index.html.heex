@@ -1,11 +1,11 @@
 <div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
-<div class="min-h-screen bg-slate-900">
+<div class="create-recipe-page min-h-screen bg-ink text-parchment">
   <div class="container mx-auto px-4 py-4">
     <!-- Header -->
     <div class="mb-4">
-      <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+      <h1 class="text-3xl font-display font-medium text-parchment flex items-center gap-3">
         <svg
-          class="w-8 h-8 text-primary-500"
+          class="w-8 h-8 text-paprika"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -55,11 +55,11 @@
                     {"transition-all duration-200 ease-in", "opacity-100 translate-y-0 scale-100",
                      "opacity-0 -translate-y-2 scale-95"}
                 )
-                |> Phoenix.LiveView.JS.toggle_class("bg-primary-500/20 border-primary-500",
+                |> Phoenix.LiveView.JS.toggle_class("bg-paprika/20 border-paprika",
                   to: "#ai-panel-toggle"
                 )
               }
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary-500/50 text-primary-400 hover:bg-primary-500/10 text-xs font-medium transition-colors"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim text-xs font-medium transition-colors"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -73,18 +73,18 @@
             </button>
           </div>
 
-          <div class="content_container mb-4 p-4 hidden" id="ai-panel">
+          <div class="content_container mb-4 p-4 hidden border border-ink-panel2 bg-black/20 rounded-lg" id="ai-panel">
             <form phx-submit="ai_generate" class="flex flex-col sm:flex-row gap-3">
               <textarea
                 name="prompt"
                 rows="3"
                 placeholder="Describe your recipe… e.g. 'Creamy mushroom risotto for 4 people, medium difficulty'"
-                class="flex-1 bg-slate-800 text-white rounded-lg p-3 text-sm resize-none border border-slate-600 focus:border-primary-500 focus:outline-none"
+                class="flex-1 bg-ink-panel2 text-parchment rounded-lg p-3 text-sm resize-none border border-ink-panel2 focus:border-paprika focus:outline-none"
               ></textarea>
               <button
                 type="submit"
                 disabled={@ai_generating}
-                class="px-5 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white font-semibold text-sm self-end transition"
+                class="px-5 py-2 border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold text-sm self-end transition"
               >
                 <%= if @ai_generating do %>
                   <span class="flex items-center gap-2">
@@ -124,7 +124,7 @@
                 </p>
                 <.link
                   navigate={~p"/upgrade"}
-                  class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold transition"
+                  class="flex-shrink-0 text-paprika-soft hover:text-paprika text-xs font-semibold transition-colors"
                 >
                   Upgrade
                 </.link>
@@ -147,10 +147,10 @@
 
         <%= if @current_user.email in ["nikolisgal@gmail.com", "r3qviem@hotmail.com"] do %>
           <div
-            class="content_container mt-4 p-4 bg-slate-800/50 rounded-xl"
+            class="content_container mt-4 p-4 border border-ink-panel2 bg-ink-panel rounded-xl"
             id="url_component_container"
           >
-            <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold mb-3">
+            <p class="text-xs text-parchment-dim uppercase tracking-wide font-semibold mb-3">
               Import from Spoonacular
             </p>
             <form phx-submit="spoonacular_search" class="flex gap-3">
@@ -158,12 +158,12 @@
                 name="query"
                 type="text"
                 placeholder="Search recipes e.g. pasta carbonara"
-                class="flex-1 bg-slate-900 text-white rounded-lg px-4 py-2.5 text-sm border border-slate-600 focus:border-primary-500 focus:outline-none"
+                class="flex-1 bg-ink-panel2 text-parchment rounded-lg px-4 py-2.5 text-sm border border-ink-panel2 focus:border-paprika focus:outline-none"
               />
               <button
                 type="submit"
                 disabled={@spoonacular_search_loading}
-                class="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white font-semibold text-sm transition-colors"
+                class="px-5 py-2.5 border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold text-sm transition-colors"
               >
                 <%= if @spoonacular_search_loading do %>
                   <span class="flex items-center gap-2">
@@ -190,7 +190,7 @@
               </button>
             </form>
             <%= if @spoonacular_fetch_loading do %>
-              <p class="text-slate-400 text-sm mt-3 animate-pulse flex items-center gap-2">
+              <p class="text-parchment-dim text-sm mt-3 animate-pulse flex items-center gap-2">
                 <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                   <circle
                     class="opacity-25"
@@ -217,8 +217,8 @@
             show
             on_cancel={JS.push("close_spoonacular_modal")}
           >
-            <h2 class="text-lg font-semibold text-white mb-1">Select a recipe</h2>
-            <p class="text-slate-400 text-sm mb-4">
+            <h2 class="text-lg font-display font-medium text-parchment mb-1">Select a recipe</h2>
+            <p class="text-parchment-dim text-sm mb-4">
               Click a recipe to import it into the form for review before saving.
             </p>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-1">
@@ -227,14 +227,14 @@
                   type="button"
                   phx-click="spoonacular_select"
                   phx-value-id={result["id"]}
-                  class="flex flex-col rounded-xl bg-slate-900 hover:bg-slate-700 border border-slate-700 hover:border-primary-500 transition-colors overflow-hidden text-left group"
+                  class="flex flex-col rounded-xl bg-ink-panel hover:bg-ink-panel2 border border-ink-panel2 hover:border-paprika transition-colors overflow-hidden text-left group"
                 >
                   <img
                     src={result["image"]}
                     alt={result["title"]}
                     class="w-full object-cover h-32 group-hover:opacity-90 transition-opacity"
                   />
-                  <p class="text-sm text-white font-medium px-3 py-2 line-clamp-2">
+                  <p class="text-sm text-parchment font-medium px-3 py-2 line-clamp-2">
                     {result["title"]}
                   </p>
                 </button>

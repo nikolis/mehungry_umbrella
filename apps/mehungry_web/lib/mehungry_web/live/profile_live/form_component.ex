@@ -9,8 +9,8 @@ defmodule MehungryWeb.ProfileLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="bg-slate-800 rounded-xl border border-slate-700  text-white px-6 mx-2 mb-12">
-      <h3 class="text-center mt-4 mb-8i text-white">
+    <div class="bg-ink-panel rounded-xl border border-ink-panel2 text-parchment w-fit lg:w-1/2 m-auto p-2 pb-10">
+      <h3 class="text-center mb-8 text-parchment font-display text-2xl font-medium">
         {@title}
       </h3>
       <.simple_form
@@ -19,16 +19,23 @@ defmodule MehungryWeb.ProfileLive.Form do
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save"
-        class="profile-form pb-10 relative w-fit md:w-8/12 m-auto"
+        class="profile-form relative w-full max-w-xl m-auto"
       >
-        <div class="text-slate-800">
-          <.input required field={@form[:alias]} type="text" label="Alias" class="mt-4" />
+        <div class="flex flex-col gap-5">
+          <.input required field={@form[:alias]} type="text" label="Alias" />
+          <.input required field={@form[:intro]} type="textarea" label="Intro" />
         </div>
-        <div class="mt-4 text-slate-800">
-          <.input required field={@form[:intro]} type="textarea" label="Intro" class="" />
+
+        <div class="mt-10 mb-4">
+          <h3 class="text-center text-parchment font-display text-xl font-medium">
+            Dietary Restrictions
+          </h3>
+          <p class="text-center text-parchment-dim text-sm mt-1">
+            Foods to avoid, and how strongly you feel about them.
+          </p>
         </div>
-        <h3 class="text-center m-8 text-white ">Diatery Restrictions</h3>
-        <div class="max-h-64 overflow-auto min-h-80	m-auto">
+
+        <div class="flex flex-col gap-2.5">
           <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>
             <FormCategoryComponent.render
               category_ids={@category_ids}
@@ -40,21 +47,23 @@ defmodule MehungryWeb.ProfileLive.Form do
             />
           </.inputs_for>
         </div>
-        <div class="flex justify-end">
+
+        <div class="flex justify-center mt-4">
           <button
             type="button"
             phx-target={@myself}
             phx-click="add_category_rule"
-            class="mt-3 text-sm text-primary-500 hover:text-primary-400 transition text-xl font-semibold"
+            class="flex items-center gap-1.5 text-sm text-paprika-soft hover:text-paprika transition font-semibold"
           >
-            + Add Rule
+            <.icon name="hero-plus-circle" class="w-5 h-5" /> Add a rule
           </button>
         </div>
-        <div class="flex gap-4 pt-4">
+
+        <div class="flex gap-4 pt-8">
           <button
             type="submit"
             phx-disable-with="Saving..."
-            class="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-semibold py-2 px-4 rounded-lg transition"
+            class="flex-1 bg-paprika hover:bg-paprika-soft text-ink font-bold py-2.5 px-4 rounded-lg transition"
           >
             Save Changes
           </button>

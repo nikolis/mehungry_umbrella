@@ -1,92 +1,86 @@
 <div
-  class="min-h-screen bg-slate-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
+  class="min-h-screen bg-ink flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
   style="min-height: 95vh;"
 >
-  <div class="max-w-md w-full space-y-8">
+  <div class="max-w-md w-full space-y-6 bg-ink-panel border border-ink-panel2 rounded-2xl p-8">
     <div>
       <img src="/images/logo2.svg" width="55px;" style="margin-left: auto; margin-right: auto;" />
     </div>
-    <div class="text-center font-bold text-3xl">
-      Login in
-      <p class="quote">Explore more</p>
+    <div class="text-center">
+      <h1 class="font-display font-medium text-2xl text-parchment">Log in</h1>
+      <p class="text-parchment-dim text-sm mt-1">Explore more</p>
     </div>
     <.form
       :let={f}
-      class="login_form"
+      class="space-y-4"
       for={@conn}
       action={Routes.user_session_path(@conn, :create)}
       as={:user}
     >
       <%= if @error_message do %>
-        <div class="alert alert-danger">
+        <div class="rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm px-3 py-2">
           <p>{@error_message}</p>
         </div>
       <% end %>
 
-      <div class="input_group_container">
-        {label(f, :email)}
-        {email_input(f, :email, required: true, placeholder: "email")}
-      </div>
-
-      <div class="input_group_container">
-        {label(f, :password)}
-        {password_input(f, :password, required: true)}
-        {link("Forgot your password?", to: Routes.user_reset_password_path(@conn, :new))}
-      </div>
-
-      <div class="login_submit_button">
-        {submit("Log in",
-          style:
-            "color: white; border: 1px solid #77b255; height: 3rem; border-radius: 990px; font-size: calc(0.8rem + 0.35vw ); ",
-          class: "link_button "
+      <div>
+        {label(f, :email, class: "block text-sm text-parchment-dim mb-1")}
+        {email_input(f, :email,
+          required: true,
+          placeholder: "email",
+          class:
+            "w-full rounded-lg bg-ink-panel2 border border-ink-panel2 text-parchment px-3 py-2.5 focus:border-paprika focus:outline-none"
         )}
-        <span style="text-align: center"> OR </span>
+      </div>
+
+      <div>
+        {label(f, :password, class: "block text-sm text-parchment-dim mb-1")}
+        {password_input(f, :password,
+          required: true,
+          class:
+            "w-full rounded-lg bg-ink-panel2 border border-ink-panel2 text-parchment px-3 py-2.5 focus:border-paprika focus:outline-none"
+        )}
+        <div class="text-right mt-1">
+          {link("Forgot your password?",
+            to: Routes.user_reset_password_path(@conn, :new),
+            class: "text-xs text-parchment-dim hover:text-parchment"
+          )}
+        </div>
+      </div>
+
+      <div class="space-y-3 pt-2">
+        {submit("Log in",
+          class: "w-full bg-paprika hover:bg-paprika-soft text-ink font-bold py-2.5 rounded-lg transition"
+        )}
+
+        <div class="flex items-center gap-3 text-parchment-dim text-xs">
+          <div class="flex-1 h-px bg-ink-panel2"></div>
+          OR
+          <div class="flex-1 h-px bg-ink-panel2"></div>
+        </div>
+
         <a
-          class=" text-center flex items-center  rounded-full"
-          style="height: 3rem; background-color: #039be5; color: white"
           href="/auth/facebook"
+          class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-ink-panel2 text-parchment hover:border-parchment-dim transition"
         >
-          <div
-            class="w-full font-semibold flex items-center  gap-1"
-            style="font-size: calc(0.7rem + 0.5vw );"
-          >
-            <img style="width: 40px;" src="/images/facebook.svg" />
-            <div class="w-full text-center">Sign in with Facebook</div>
-          </div>
+          <img style="width: 20px;" src="/images/facebook.svg" />
+          <span class="text-sm font-medium">Sign in with Facebook</span>
         </a>
         <a
-          class=" text-center flex items-center  rounded-full"
-          style="height: 3rem; background-color: white; color: black"
           href={Routes.auth_path(@conn, :request, "google")}
+          class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-ink-panel2 text-parchment hover:border-parchment-dim transition"
         >
-          <div
-            class="w-full font-semibold flex items-center border-radius w-full h-full gap-1"
-            style="font-size: calc(0.7rem + 0.5vw ); border-radius: 100px; border: 2px solid #747775; 
-  "
-          >
-            <img style="width: 40px" src="/images/google_login.svg" />
-            <span class="w-full text-center" style="color:  #1F1F1F;"> Sign in with Google </span>
-          </div>
+          <img style="width: 20px" src="/images/google_login.svg" />
+          <span class="text-sm font-medium">Sign in with Google</span>
         </a>
 
         <a
-          class="flex items-center rounded-full border-solid  border-2"
-          style="height: 3rem; border-color: var(--clr-complementary-middle)"
           href="/users/register"
+          class="flex items-center justify-center w-full py-2.5 rounded-lg text-parchment-dim hover:text-parchment transition text-sm"
         >
-          <div
-            class="w-full p-2 flex items-center gap-1 font-medium w-full"
-            style=" font-size: calc(0.7rem + 0.5vw );"
-          >
-            <img style=" width: 40px;" src="/images/logo2.svg" />
-            <span class="w-full text-center" style="color: var(--clr-complementary-middle);">
-              Register with email
-            </span>
-          </div>
+          New here? <span class="text-paprika-soft ml-1">Register with email</span>
         </a>
       </div>
     </.form>
-    <div></div>
-    <p></p>
   </div>
 </div>

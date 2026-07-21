@@ -34,7 +34,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.PieChart do
       phx-hook="ResponsiveChart"
       data-size={@size}
       data-id={@id}
-      class="w-full bg-red"
+      class="w-full bg-transparent"
       data-origin_id={@origin_id}
     >
       <div id={"vega-#{@id}"} phx-hook="VegaLite" data-spec={Jason.encode!(@spec)}></div>
@@ -57,25 +57,25 @@ defmodule MehungryWeb.CalendarLive.Calendar.PieChart do
       [field: "value", type: :quantitative, title: "Value", format: ".2f"]
     ])
     |> Vl.config(
-      background: "#1E293B",
+      background: "#211D16",
       # Override all text elements
       style: [
-        "guide-label": [fill: "#FFFFFF", font: "Inter"],
-        "guide-title": [fill: "#FFFFFF", font: "Inter"],
-        "group-title": [fill: "#FFFFFF", font: "Inter"],
-        "group-subtitle": [fill: "#FFFFFF", font: "Inter"],
-        "legend-label": [fill: "#FFFFFF", font: "Inter"],
-        "legend-title": [fill: "#FFFFFF", font: "Inter"]
+        "guide-label": [fill: "#F4EEDD", font: "Inter"],
+        "guide-title": [fill: "#F4EEDD", font: "Inter"],
+        "group-title": [fill: "#F4EEDD", font: "Inter"],
+        "group-subtitle": [fill: "#F4EEDD", font: "Inter"],
+        "legend-label": [fill: "#F4EEDD", font: "Inter"],
+        "legend-title": [fill: "#F4EEDD", font: "Inter"]
       ],
       axis: [
-        labelColor: "#FFFFFF",
-        titleColor: "#FFFFFF",
-        domainColor: "#64748B",
-        tickColor: "#64748B"
+        labelColor: "#F4EEDD",
+        titleColor: "#F4EEDD",
+        domainColor: "#A9A08C",
+        tickColor: "#A9A08C"
       ],
       legend: [
-        labelColor: "#FFFFFF",
-        titleColor: "#FFFFFF",
+        labelColor: "#F4EEDD",
+        titleColor: "#F4EEDD",
         labelFont: "Inter",
         titleFont: "Inter"
       ]

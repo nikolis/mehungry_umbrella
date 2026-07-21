@@ -1,0 +1,27 @@
+/* Feedback page identity — scoped so it never leaks into shared components used elsewhere */
+.feedback-page input:not([type="hidden"]),
+.feedback-page textarea {
+  background-color: #2B2619;
+  border-color: #3A3323;
+  color: #F4EEDD;
+}
+
+.feedback-page input:not([type="hidden"])::placeholder,
+.feedback-page textarea::placeholder {
+  color: #A9A08C;
+}
+
+.feedback-page input:not([type="hidden"]):focus,
+.feedback-page textarea:focus {
+  border-color: #E8622C;
+}
+
+.feedback-page input + .placeholder,
+.feedback-page textarea + .placeholder {
+  color: #A9A08C;
+}
+
+.feedback-page input:focus + .placeholder,
+.feedback-page textarea:focus + .placeholder {
+  color: #F0906B;
+}

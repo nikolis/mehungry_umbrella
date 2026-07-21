@@ -1,0 +1,48 @@
+/* Foods & Food Detail page identity — scoped so it never leaks into shared
+   components used elsewhere (foods_live/index.html.heex,
+   food_detail_live/index.html.heex). Neither page currently renders
+   SelectComponent or the shared <.input>/<.textarea> core components, but
+   these overrides are pre-wired following the .profile-form pattern so any
+   future shared-component usage on these pages (e.g. an ingredient search
+   autocomplete) picks up the new palette automatically instead of the
+   default slate one. */
+.foods-page input:not([type="hidden"]),
+.foods-page textarea,
+.food-detail-page input:not([type="hidden"]),
+.food-detail-page textarea {
+  background-color: #211D16;
+  border-color: #2B2619;
+  color: #F4EEDD;
+}
+
+.foods-page input:not([type="hidden"])::placeholder,
+.foods-page textarea::placeholder,
+.food-detail-page input:not([type="hidden"])::placeholder,
+.food-detail-page textarea::placeholder {
+  color: #A9A08C;
+}
+
+.foods-page input:not([type="hidden"]):focus,
+.foods-page textarea:focus,
+.food-detail-page input:not([type="hidden"]):focus,
+.food-detail-page textarea:focus {
+  border-color: #E8622C;
+}
+
+.foods-page {
+  --sc-bg: #211D16;
+  --sc-border: #2B2619;
+  --sc-dropdown-bg: #211D16;
+  --sc-option-bg: #211D16;
+  --sc-option-selected: #2B2619;
+  --sc-option-hover: #332C1E;
+}
+
+.food-detail-page {
+  --sc-bg: #211D16;
+  --sc-border: #2B2619;
+  --sc-dropdown-bg: #211D16;
+  --sc-option-bg: #211D16;
+  --sc-option-selected: #2B2619;
+  --sc-option-hover: #332C1E;
+}

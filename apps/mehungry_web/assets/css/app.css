@@ -2,6 +2,9 @@
 @import "./loader.css";
 @import "./card.css";
 @import "./profile.css";
+@import "./recipe_details.css";
+@import "./feedback.css";
+@import "./foods.css";
 @import "./onboarding.css";
 @import "./nav_bar.css";
 @import "./basket.css";
@@ -94,6 +97,12 @@
   	padding: 5px 25px;
   	font-weight: bold;
     @apply rounded-2xl text-white hover:opacity-65;
+  }
+
+  .primary_button {
+    padding: 0.6rem 1.5rem;
+    font-weight: bold;
+    @apply rounded-xl bg-paprika text-ink hover:bg-paprika-soft transition;
   }
 
   .button_outline_primary {

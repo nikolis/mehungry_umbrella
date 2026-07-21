@@ -104,7 +104,7 @@ defmodule MehungryWeb.IngredientComponent do
             />
           </div>
           <button
-            class="shrink-0 text-2xl font-bold md:hidden"
+            class="shrink-0 text-xl font-bold text-red-500/70 hover:text-red-400 transition-colors md:hidden"
             name="recipe[_action]"
             value={"remove_ingredient:#{@ingredient_form.index}"}
           >
@@ -127,7 +127,7 @@ defmodule MehungryWeb.IngredientComponent do
             />
           </div>
           <button
-            class="hidden md:block text-2xl font-bold md:col-span-1"
+            class="hidden md:block text-xl font-bold text-red-500/70 hover:text-red-400 transition-colors md:col-span-1"
             name="recipe[_action]"
             value={"remove_ingredient:#{@ingredient_form.index}"}
           >

@@ -1,0 +1,11 @@
+/* Recipe details identity — scoped so it never leaks into shared components
+   used elsewhere (SelectComponent is also used on /create_recipe, ingredient
+   search, etc). Same technique as .profile-form in profile.css. */
+.recipe-details-page {
+  --sc-bg: #2B2619;
+  --sc-border: #3A3323;
+  --sc-dropdown-bg: #2B2619;
+  --sc-option-bg: #2B2619;
+  --sc-option-selected: #3A3323;
+  --sc-option-hover: #45392A;
+}

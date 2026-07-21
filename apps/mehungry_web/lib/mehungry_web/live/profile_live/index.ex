@@ -245,10 +245,9 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def get_active(state, param) do
     if state == param do
-      " bg-slate-800 text-primary-500 border-b-2 border-primary-500 " <>
-        "text-slate-400 hover:text-slate-300 hover:bg-slate-800/50"
+      " bg-ink-panel text-paprika border-b-2 border-paprika "
     else
-      ""
+      " text-parchment-dim hover:text-parchment hover:bg-ink-panel/50"
     end
   end
 
@@ -385,7 +384,7 @@ defmodule MehungryWeb.ProfileLive.Index do
 
     ~H"""
     <div class="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4 mb-10">
-      <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 flex items-center justify-between gap-4">
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 flex items-center justify-between gap-4">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" class="w-6 h-6">
@@ -393,8 +392,8 @@ defmodule MehungryWeb.ProfileLive.Index do
             </svg>
           </div>
           <div>
-            <p class="text-white font-semibold">Facebook</p>
-            <p class="text-slate-400 text-sm">
+            <p class="text-parchment font-semibold">Facebook</p>
+            <p class="text-parchment-dim text-sm">
               {if @facebook_connected,
                 do: "Connected — you can publish recipes to your Facebook pages",
                 else: "Connect your account to publish recipes to your Facebook pages"}
@@ -418,7 +417,7 @@ defmodule MehungryWeb.ProfileLive.Index do
                 phx-click="disconnect_social"
                 phx-value-provider="facebook"
                 data-confirm="Disconnect your Facebook account?"
-                class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium transition"
+                class="px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-ink-panel text-parchment-dim text-xs font-medium transition"
               >
                 Disconnect
               </button>
@@ -434,7 +433,7 @@ defmodule MehungryWeb.ProfileLive.Index do
         <% end %>
       </div>
 
-      <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 flex items-center justify-between gap-4">
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 flex items-center justify-between gap-4">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 rounded-xl bg-red-600 flex items-center justify-center flex-shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" class="w-6 h-6">
@@ -442,8 +441,8 @@ defmodule MehungryWeb.ProfileLive.Index do
             </svg>
           </div>
           <div>
-            <p class="text-white font-semibold">Pinterest</p>
-            <p class="text-slate-400 text-sm">
+            <p class="text-parchment font-semibold">Pinterest</p>
+            <p class="text-parchment-dim text-sm">
               {if @pinterest_connected,
                 do: "Connected — you can pin recipes directly to your boards",
                 else: "Connect your account to pin recipes to your Pinterest boards"}
@@ -466,7 +465,7 @@ defmodule MehungryWeb.ProfileLive.Index do
               phx-click="disconnect_social"
               phx-value-provider="pinterest"
               data-confirm="Disconnect your Pinterest account?"
-              class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium transition"
+              class="px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-ink-panel text-parchment-dim text-xs font-medium transition"
             >
               Disconnect
             </button>
@@ -481,14 +480,14 @@ defmodule MehungryWeb.ProfileLive.Index do
         <% end %>
       </div>
 
-      <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 flex items-center justify-between gap-4">
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 flex items-center justify-between gap-4">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center flex-shrink-0">
             <img src="/images/instagram-svgrepo-com.svg" class="w-6 h-6 brightness-0 invert" />
           </div>
           <div>
-            <p class="text-white font-semibold">Instagram</p>
-            <p class="text-slate-400 text-sm">
+            <p class="text-parchment font-semibold">Instagram</p>
+            <p class="text-parchment-dim text-sm">
               {if @instagram_connected,
                 do: "Connected — you can post recipes to your Instagram account",
                 else: "Connect your account to post recipes to Instagram"}
@@ -511,7 +510,7 @@ defmodule MehungryWeb.ProfileLive.Index do
               phx-click="disconnect_social"
               phx-value-provider="instagram"
               data-confirm="Disconnect your Instagram account?"
-              class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium transition"
+              class="px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-ink-panel text-parchment-dim text-xs font-medium transition"
             >
               Disconnect
             </button>

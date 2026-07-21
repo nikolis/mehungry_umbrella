@@ -82,3 +82,43 @@
 .toastui-calendar-accumulated .toastui-calendar-grid-selection{
 	background-color: red;
 }
+
+/* Calendar page identity — scoped so it never leaks into shared components used elsewhere */
+.calendar-page input:not([type="hidden"]),
+.calendar-page textarea {
+  background-color: #2B2619;
+  border-color: #3A3323;
+  color: #F4EEDD;
+}
+
+.calendar-page input:not([type="hidden"])::placeholder,
+.calendar-page textarea::placeholder {
+  color: #A9A08C;
+}
+
+.calendar-page input:not([type="hidden"]):focus,
+.calendar-page textarea:focus {
+  border-color: #E8622C;
+}
+
+.calendar-page input + .placeholder,
+.calendar-page textarea + .placeholder {
+  color: #A9A08C;
+}
+
+.calendar-page input:focus + .placeholder,
+.calendar-page textarea:focus + .placeholder {
+  color: #F0906B;
+}
+
+/* Retheme the shared SelectComponent's chip/dropdown colors only inside the
+   calendar page, via the CSS variables it reads (falls back to its normal
+   slate palette everywhere else it's used — recipe creation, ingredients, etc). */
+.calendar-page {
+  --sc-bg: #2B2619;
+  --sc-border: #3A3323;
+  --sc-dropdown-bg: #2B2619;
+  --sc-option-bg: #2B2619;
+  --sc-option-selected: #3A3323;
+  --sc-option-hover: #45392A;
+}

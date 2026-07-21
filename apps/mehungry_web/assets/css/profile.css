@@ -1,22 +1,33 @@
+/* Recipe details tab bar (MehungryWeb.TabsComponent) — un-scoped and global,
+   but only ever rendered from RecipeComponents.recipe_details, i.e. the
+   recipe detail view, so it's safe to edit these rules directly. */
+.nav_button {
+	color: #A9A08C; /* parchment-dim */
+}
+
+.nav_button:hover {
+	color: #F4EEDD; /* parchment */
+}
+
 .nav_button svg {
-	stroke: var(--clr-grey-friend_3); 
-	fill: var(--clr-grey-friend_3); 
+	stroke: #A9A08C; /* parchment-dim */
+	fill: #A9A08C;
 }
 
 .nav_button.active svg {
-	stroke:#F97316;
-	fill:  #F97316; 
+	stroke:#E8622C; /* paprika */
+	fill:  #E8622C;
 }
 
 .nav_button.active {
-	color: var(--clr-complementary-middle);
-	border-bottom: 3px solid var(--clr-complementary-middle);
-	
+	color: #E8622C; /* paprika */
+	border-bottom: 3px solid #E8622C;
+
 }
 .nav_button.selected {
-  background-color: #1E293B; 
-  color: #F97316; 
-  border-bottom: 3px solid #F97316;
+  background-color: #2B2619; /* ink-panel2 */
+  color: #E8622C; /* paprika */
+  border-bottom: 3px solid #E8622C;
 }
 .text {
   font-size: 1rem;
@@ -25,11 +36,50 @@
   .nav_button .text {
     display: none;
   }
-	
+
   .nav_button span {
     width: 20px;
     height: 20px;
 	}
 }
 
+/* Profile page identity — scoped so it never leaks into shared components used elsewhere */
+.profile-form input:not([type="hidden"]),
+.profile-form textarea {
+  background-color: #2B2619;
+  border-color: #3A3323;
+  color: #F4EEDD;
+}
+
+.profile-form input:not([type="hidden"])::placeholder,
+.profile-form textarea::placeholder {
+  color: #A9A08C;
+}
+
+.profile-form input:not([type="hidden"]):focus,
+.profile-form textarea:focus {
+  border-color: #E8622C;
+}
+
+.profile-form input + .placeholder,
+.profile-form textarea + .placeholder {
+  color: #A9A08C;
+}
+
+.profile-form input:focus + .placeholder,
+.profile-form textarea:focus + .placeholder {
+  color: #F0906B;
+}
+
+/* Retheme the shared SelectComponent's chip/dropdown colors only inside the
+   profile form, via the CSS variables it reads (falls back to its normal
+   slate palette everywhere else it's used — recipe creation, ingredients, etc). */
+.profile-form {
+  --sc-bg: #2B2619;
+  --sc-border: #3A3323;
+  --sc-dropdown-bg: #2B2619;
+  --sc-option-bg: #2B2619;
+  --sc-option-selected: #3A3323;
+  --sc-option-hover: #45392A;
+}
 

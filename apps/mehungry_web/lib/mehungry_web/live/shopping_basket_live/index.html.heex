@@ -1,14 +1,14 @@
 <div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
 <div
-  class="h-full pb-4 sm:min-h-screen bg-slate-900 "
+  class="basket-page h-full pb-4 sm:min-h-screen bg-ink text-parchment "
   id="shopping_basket_index"
 >
   <div class="h-full mx-auto px-4 py-8 overflow-hidden">
     <!-- Header -->
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+      <h1 class="text-3xl font-display font-medium text-parchment flex items-center gap-3">
         <svg
-          class="w-8 h-8 text-primary-500"
+          class="w-8 h-8 text-parchment-dim"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -22,7 +22,7 @@
         </svg>
         Shopping Lists
       </h1>
-      <p class="text-slate-400 mt-1">Manage your grocery lists and track items</p>
+      <p class="text-parchment-dim mt-1">Manage your grocery lists and track items</p>
     </div>
 
     <!-- Two Column Layout -->
@@ -35,10 +35,10 @@
         class="lg:w-80 flex-shrink-0 bakset-side-nav-hidden bg-black-400  bd-black-400"
         id="basket-side-navbar"
       >
-        <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+        <div class="bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden">
           <!-- Header with New List Button -->
-          <div class="p-4 border-b border-slate-700 flex justify-between items-center">
-            <h2 class="text-white font-semibold">My Lists</h2>
+          <div class="p-4 border-b border-ink-panel2 flex justify-between items-center">
+            <h2 class="font-display font-medium text-parchment">My Lists</h2>
             <button
               phx-click={
                 case @live_action in ["index"] do
@@ -50,7 +50,7 @@
                     |> JS.add_class("active", to: "#basket-basic-form:not(.active)")
                 end
               }
-              class="p-1.5 rounded-lg bg-primary-500/10 hover:bg-primary-500/20 text-primary-500 transition"
+              class="p-1.5 rounded-lg text-parchment-dim hover:text-parchment transition-colors"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -85,7 +85,7 @@
           />
         <% end %>
         <%= if length(@shopping_basket.basket_ingredients) < 1 do %>
-          <h4 class="text-center text-base font-semibold text-greyfriend-2">Empty</h4>
+          <h4 class="text-center text-base font-display font-medium text-parchment-dim">Empty</h4>
         <% end %>
       </div>
     </div>
@@ -104,13 +104,13 @@
         phx-click=""
       >
         <div
-          class="bg-slate-800 rounded-xl max-w-lg w-full mx-4"
+          class="bg-ink-panel border border-ink-panel2 rounded-xl max-w-lg w-full mx-4"
           phx-click-away="close_add_item_modal"
         >
           <!-- Modal Header -->
-          <div class="flex justify-between items-center p-4 border-b border-slate-700">
-            <h2 class="text-xl font-semibold text-white">Add Item to List</h2>
-            <button phx-click="close_add_item_modal" class="text-slate-400 hover:text-white">
+          <div class="flex justify-between items-center p-4 border-b border-ink-panel2">
+            <h2 class="text-xl font-display font-medium text-parchment">Add Item to List</h2>
+            <button phx-click="close_add_item_modal" class="text-parchment-dim hover:text-parchment">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
@@ -127,33 +127,33 @@
             <%= if @selected_usda_item do %>
               <!-- USDA Item Selected - Show nutrition preview -->
               <div class="mb-4">
-                <h3 class="text-white font-semibold mb-2">
+                <h3 class="font-display font-medium text-parchment mb-2">
                   {@selected_usda_item["description"]}
                 </h3>
-                <div class="bg-slate-700 rounded-lg p-3 mb-4">
-                  <p class="text-slate-300 text-sm mb-2">Nutrition per 100g:</p>
+                <div class="border border-ink-panel2 bg-black/20 rounded-lg p-3 mb-4">
+                  <p class="text-parchment-dim text-sm mb-2">Nutrition per 100g:</p>
                   <div class="grid grid-cols-2 gap-2 text-sm">
                     <div class="flex justify-between">
-                      <span class="text-slate-400">Calories:</span>
-                      <span class="text-white">
+                      <span class="text-parchment-dim">Calories:</span>
+                      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
                         {get_nutrition_value(@selected_usda_item, "Energy")} kcal
                       </span>
                     </div>
                     <div class="flex justify-between">
-                      <span class="text-slate-400">Protein:</span>
-                      <span class="text-white">
+                      <span class="text-parchment-dim">Protein:</span>
+                      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
                         {get_nutrition_value(@selected_usda_item, "Protein")} g
                       </span>
                     </div>
                     <div class="flex justify-between">
-                      <span class="text-slate-400">Fat:</span>
-                      <span class="text-white">
+                      <span class="text-parchment-dim">Fat:</span>
+                      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
                         {get_nutrition_value(@selected_usda_item, "Total Fat")} g
                       </span>
                     </div>
                     <div class="flex justify-between">
-                      <span class="text-slate-400">Carbs:</span>
-                      <span class="text-white">
+                      <span class="text-parchment-dim">Carbs:</span>
+                      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
                         {get_nutrition_value(@selected_usda_item, "Carbohydrates")} g
                       </span>
                     </div>
@@ -163,22 +163,22 @@
                 <!-- Quantity and Unit -->
                 <div class="flex gap-3 mb-4  overflow-visible  ">
                   <div class="flex-1">
-                    <label class="block text-slate-400 text-sm mb-1">Quantity</label>
+                    <label class="block text-parchment-dim text-sm mb-1">Quantity</label>
                     <input
                       type="number"
                       id="quantity"
                       value={@custom_quantity}
                       phx-keyup="update_quantity"
-                      class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                      class="w-full px-3 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment"
                     />
                   </div>
                   <div class="flex-1 overflow-auto  ">
-                    <label class="block text-slate-400 text-sm mb-1">Unit</label>
+                    <label class="block text-parchment-dim text-sm mb-1">Unit</label>
 
                     <select
                       id="unit"
                       phx-change="update_unit"
-                      class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white overflow-auto"
+                      class="w-full px-3 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment overflow-auto"
                     >
                       <option value="g">grams (g)</option>
                       <option value="kg">kilograms (kg)</option>
@@ -195,13 +195,13 @@
                     phx-click="add_usda_item"
                     phx-value-quantity={@custom_quantity}
                     phx-value-unit={@custom_unit}
-                    class="flex-1 bg-primary-500 hover:bg-primary-600 text-white py-2 rounded-lg transition"
+                    class="flex-1 bg-paprika hover:bg-paprika-soft text-ink font-bold py-2 rounded-lg transition"
                   >
                     Add with Nutrition
                   </button>
                   <button
                     phx-click="cancel_usda_selection"
-                    class="flex-1 border border-slate-600 text-slate-300 hover:text-white py-2 rounded-lg transition"
+                    class="flex-1 text-parchment-dim hover:text-parchment py-2 rounded-lg transition"
                   >
                     Back
                   </button>
@@ -235,16 +235,16 @@
                   <div class="mt-3 space-y-2 max-h-64 overflow-y-auto">
                     <%= for result <- @search_results do %>
                       <div
-                        class="flex justify-between items-center p-3 bg-slate-700/50 hover:bg-slate-700 rounded-lg cursor-pointer transition"
+                        class="flex justify-between items-center p-3 border border-ink-panel2 bg-black/20 hover:bg-black/30 rounded-lg cursor-pointer transition"
                         phx-click="select_usda_item"
                         phx-value-fdc_id={result.fdc_id}
                       >
                         <div>
-                          <div class="text-white font-medium">{result.description}</div>
-                          <div class="text-slate-400 text-xs">{result.data_type}</div>
+                          <div class="text-parchment font-medium">{result.description}</div>
+                          <div class="text-parchment-dim text-xs">{result.data_type}</div>
                         </div>
                         <svg
-                          class="w-5 h-5 text-primary-500"
+                          class="w-5 h-5 text-parchment-dim"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -275,7 +275,7 @@
 -->
               <!-- Manual entry -->
               <div>
-                <label class="block text-slate-400 text-sm mb-1">Add manually</label>
+                <label class="block text-parchment-dim text-sm mb-1">Add manually</label>
                 <.simple_form
                   :let={f}
                   for={@change_basket}
@@ -287,7 +287,7 @@
                     name="name"
                     placeholder="Item name"
                     required
-                    class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary-500"
+                    class="w-full px-4 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment focus:outline-none focus:border-paprika"
                   />
                   <div class="flex gap-3 overflow-visible">
                     <input
@@ -296,7 +296,7 @@
                       placeholder="Quantity"
                       value="1"
                       step="0.25"
-                      class="w-1/2 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                      class="w-1/2 px-3 py-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment"
                     />
                     <.live_component
                       module={MehungryWeb.SelectComponent}
@@ -310,7 +310,7 @@
                   </div>
                   <button
                     type="submit"
-                    class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg transition"
+                    class="w-full bg-paprika hover:bg-paprika-soft text-ink font-bold py-2 rounded-lg transition"
                   >
                     Add to List
                   </button>
@@ -345,6 +345,6 @@
       |> JS.add_class("active", to: "#basket-side-navbar:not(.active)")
     }
   >
-    <.icon name="hero-arrow-down-circle" class="md:hidden h-10 w-10 text-primary-500" />
+    <.icon name="hero-arrow-down-circle" class="md:hidden h-10 w-10 text-parchment-dim" />
   </button>
 </div>

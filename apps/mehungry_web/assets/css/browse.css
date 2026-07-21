@@ -1,3 +1,15 @@
+/* Browse/Search page identity — scoped so it never leaks into shared components
+   used elsewhere (recipe creation, ingredient search, admin pages, etc). See
+   docs/design_system.md for the retheming pattern. */
+.browse-page {
+  --sc-bg: #2B2619;
+  --sc-border: #3A3323;
+  --sc-dropdown-bg: #2B2619;
+  --sc-option-bg: #2B2619;
+  --sc-option-selected: #3A3323;
+  --sc-option-hover: #45392A;
+}
+
 .recipe_details_title{
 	font-size: 1.5rem;
         text-transform: uppercase;

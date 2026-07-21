@@ -18,6 +18,7 @@ defmodule MehungryWeb.CoreComponents do
   alias Phoenix.LiveView.JS
   alias Mehungry.Food
   alias Mehungry.Accounts
+  alias Mehungry.Subscriptions
   import MehungryWeb.Gettext
 
   def drop_down(assigns) do
@@ -213,7 +214,30 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   @doc """
-  Renders a user details presentation for the moment just in profile maybe needs to be moved in more speicic context. 
+  Renders a small pill badge for a user's subscription tier ("m3hungry_plus" / "pro").
+  Renders nothing for the free tier.
+  """
+  attr :tier, :string, required: true
+
+  def subscription_badge(assigns) do
+    ~H"""
+    <%= if @tier in ["m3hungry_plus", "pro"] do %>
+      <span class={[
+        "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold self-center",
+        if(@tier == "pro", do: "bg-paprika text-ink", else: "bg-basil text-ink")
+      ]}>
+        <.icon name="hero-sparkles" class="w-3 h-3" />
+        {tier_label(@tier)}
+      </span>
+    <% end %>
+    """
+  end
+
+  defp tier_label("m3hungry_plus"), do: "Plus"
+  defp tier_label("pro"), do: "Pro"
+
+  @doc """
+  Renders a user details presentation for the moment just in profile maybe needs to be moved in more speicic context.
   """
   def user_details_card(
         %{
@@ -236,10 +260,14 @@ defmodule MehungryWeb.CoreComponents do
         </.link>
         <div class="flex flex-col justify-center w-fit h-full">
           <div class="text-sm  font-bold leading-4 flex">
-            <.link patch={"/profile/"<>Integer.to_string(@user.id)} class="flex flex-wrap">
-              <span class="w-full text-center sm:w-fit m-auto text-lg md:text-2xl mr-4">
+            <.link
+              patch={"/profile/"<>Integer.to_string(@user.id)}
+              class="flex flex-wrap items-center gap-2"
+            >
+              <span class="w-full text-center sm:w-fit m-auto text-lg md:text-2xl mr-4 font-display font-medium text-parchment">
                 {@user.email}
               </span>
+              <.subscription_badge tier={Subscriptions.get_subscription(@user.id).tier} />
             </.link>
             <%= if @current_user == @user do %>
               <div class="py-2 pr-4">
@@ -277,27 +305,27 @@ defmodule MehungryWeb.CoreComponents do
             <div class="cursor-pointer" phx-click="save_user_follow" phx-value-follow_id={@user.id}>
             </div>
           </div>
-          <div class="flex gap-2 mt-2 flex-wrap justify-center sm:justify-start	">
-            <div class="text-sm leading-4 ">
-              <span class="font-semibold text-lg">
+          <div class="flex gap-6 mt-2 flex-wrap justify-center sm:justify-start">
+            <div class="text-sm leading-4">
+              <span class="font-bold text-lg text-basil [font-variant-numeric:tabular-nums]">
                 {"#{count_user_created_recipes(@user.id)}"}
               </span>
-              <span class="text-lg"> Posted recipes </span>
+              <span class="text-lg text-parchment-dim"> Posted recipes </span>
             </div>
-            <div class="text-sm leading-4 ">
-              <span class="font-semibold text-lg">{"#{count_user_followers(@user.id)}"}</span>
-              <span class="text-lg"> Followers </span>
+            <div class="text-sm leading-4">
+              <span class="font-bold text-lg text-basil [font-variant-numeric:tabular-nums]">{"#{count_user_followers(@user.id)}"}</span>
+              <span class="text-lg text-parchment-dim"> Followers </span>
             </div>
 
             <div class="text-sm leading-4">
-              <span class="font-semibold text-lg">{"#{count_user_following(@user.id)}"}</span>
-              <span class="text-lg"> Following </span>
+              <span class="font-bold text-lg text-basil [font-variant-numeric:tabular-nums]">{"#{count_user_following(@user.id)}"}</span>
+              <span class="text-lg text-parchment-dim"> Following </span>
             </div>
           </div>
 
           <div class="mt-2 w-fit m-auto sm:m-0">
-            <div class="font-semibold text-center sm:text-left">{@user_profile.alias}</div>
-            <div class="text-center sm:text-left">{@user_profile.intro}</div>
+            <div class="font-semibold text-center sm:text-left text-parchment">{@user_profile.alias}</div>
+            <div class="text-center sm:text-left text-parchment-dim">{@user_profile.intro}</div>
           </div>
         </div>
       </div>
@@ -536,7 +564,7 @@ defmodule MehungryWeb.CoreComponents do
     >
       <div
         id={"#{@id}-bg"}
-        class="bg-slate-900/80 fixed inset-0 transition-opacity"
+        class="bg-ink/80 fixed inset-0 transition-opacity"
         aria-hidden="true"
       />
       <div
@@ -554,19 +582,19 @@ defmodule MehungryWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="relative hidden rounded-2xl bg-slate-800 p-6 shadow-2xl shadow-slate-900/50 ring-1 ring-slate-700 transition"
+              class="relative hidden rounded-2xl bg-ink-panel p-6 shadow-2xl shadow-black/50 ring-1 ring-ink-panel2 transition"
             >
               <div class="absolute top-4 right-4">
                 <button
                   phx-click={JS.exec("data-cancel", to: "##{@id}")}
                   type="button"
-                  class="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                  class="rounded-lg p-1.5 text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
                   aria-label={gettext("close")}
                 >
                   <.icon name="hero-x-mark-solid" class="h-5 w-5" />
                 </button>
               </div>
-              <div id={"#{@id}-content"} class="text-slate-100">
+              <div id={"#{@id}-content"} class="text-parchment">
                 {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
@@ -588,7 +616,7 @@ defmodule MehungryWeb.CoreComponents do
     >
       <div
         id={"#{@id}-bg"}
-        class="bg-slate-900/80 fixed inset-0 transition-opacity"
+        class="bg-ink/80 fixed inset-0 transition-opacity"
         aria-hidden="true"
       />
       <div
@@ -606,19 +634,19 @@ defmodule MehungryWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="relative hidden rounded-2xl bg-slate-800 p-6 min-h-64 shadow-2xl shadow-slate-900/50 ring-1 ring-slate-700 transition"
+              class="relative hidden rounded-2xl bg-ink-panel p-6 min-h-64 shadow-2xl shadow-black/50 ring-1 ring-ink-panel2 transition"
             >
               <div class="absolute top-4 right-4">
                 <button
                   phx-click={JS.exec("data-cancel", to: "##{@id}")}
                   type="button"
-                  class="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                  class="rounded-lg p-1.5 text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
                   aria-label={gettext("close")}
                 >
                   <.icon name="hero-x-mark-solid" class="h-5 w-5" />
                 </button>
               </div>
-              <div id={"#{@id}-content"} class="text-slate-100">
+              <div id={"#{@id}-content"} class="text-parchment">
                 {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
@@ -1259,7 +1287,7 @@ defmodule MehungryWeb.CoreComponents do
     >
       <div>
         <h1
-          class="text-lg font-semibold leading-8 text-slate-100"
+          class="text-lg font-semibold leading-8 text-parchment"
           style="margin-inline: auto; text-align: center; font-size: 1.6rem;"
         >
           {render_slot(@inner_block)}

@@ -5,7 +5,7 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
     assigns = assign(assigns, :deleted, Phoenix.HTML.Form.input_value(assigns.f, :delete) == true)
 
     ~H"""
-    <div class={"min-h-16 w-full gap-2 p-2 h-full grid grid-cols-6 sm:grid-cols-5  sm:gap-10 m-auto" <> if(@deleted, do: " hidden", else: "")}>
+    <div class={"flex items-center gap-2 sm:gap-4 rounded-lg border border-ink-panel2 bg-black/20 p-2 sm:p-2.5" <> if(@deleted, do: " hidden", else: "")}>
       <input
         type="hidden"
         name={Phoenix.HTML.Form.input_name(@f, :delete)}
@@ -22,7 +22,7 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
         value={to_string(Phoenix.HTML.Form.input_value(@f, :user_profile_id))}
       />
 
-      <div class="col-span-3 sm:col-span-2">
+      <div class="flex-1 min-w-0">
         <.live_component
           module={MehungryWeb.SelectComponent}
           form={@f}
@@ -32,7 +32,7 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
         />
       </div>
 
-      <div class="col-span-2">
+      <div class="flex-1 min-w-0">
         <.live_component
           module={MehungryWeb.SelectComponent}
           form={@f}
@@ -41,65 +41,59 @@ defmodule MehungryWeb.ProfileLive.FormCategoryComponent do
           id={"food_restriction_search_component" <> Integer.to_string(@f.index)}
         />
       </div>
-      <div class="flex gap-4 items-end max-h-16">
-        <div
-          class="h-full m-auto"
-          type=""
-          phx-click="delete_category_rule"
-          phx-value-index={@f.index}
-          phx-target={@parent}
-          disabled={@deleted}
+
+      <button
+        type="button"
+        phx-click="delete_category_rule"
+        phx-value-index={@f.index}
+        phx-target={@parent}
+        disabled={@deleted}
+        aria-label="Remove rule"
+        class="flex-none text-parchment-dim hover:text-red-400 transition-colors p-1.5"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          style="height: 1.375rem; width: 1.375rem;"
         >
-          <div class="py-2 h-fit">
-            <svg
-              phx-click="delete_category_rule"
-              phx-target={@parent}
-              phx-value-index={@f.index}
-              style="height: 2rem; width=2rem;"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              style="margin: auto"
-            >
-              <path
-                d="M10 12V17"
-                stroke="#000000"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M14 12V17"
-                stroke="#000000"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M4 7H20"
-                stroke="#000000"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M6 10V18C6 19.6569 7.34315 21 9 21H15C16.6569 21 18 19.6569 18 18V10"
-                stroke="#000000"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V7H9V5Z"
-                stroke="#000000"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </div>
-        </div>
-      </div>
+          <path
+            d="M10 12V17"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M14 12V17"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M4 7H20"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M6 10V18C6 19.6569 7.34315 21 9 21H15C16.6569 21 18 19.6569 18 18V10"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V7H9V5Z"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
     </div>
     """
   end
