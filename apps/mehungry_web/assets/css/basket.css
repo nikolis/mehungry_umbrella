@@ -120,7 +120,7 @@ check_list_container {
 	position: fixed;
 	bottom: 80px;
   right: 20px;
-	background-color: #0F172A;
+	background-color: #211D16;
 	border-radius: 200px;
 	max-width: 40px;
 	max-height: 40px;
@@ -147,7 +147,7 @@ check_list_container {
 	  max-width: 90%;
   }
   .bakset-side-nav-hidden.active {
-	background: #0F172A;
+	background: #17140F;
 	left: 0;
 	height: 100%;
 	overflow: hidden;
@@ -402,10 +402,10 @@ input.hamburger-input {
     border-radius: 20px;
     opacity: 1;
     user-select: auto;
-  }  
-  
+  }
+
   &:checked ~ .icon-wrapper .hamburger-line.second {
-    transform: rotate(-45deg); 
+    transform: rotate(-45deg);
   }
 
   &:checked ~ .icon-wrapper .hamburger-line.first {
@@ -415,8 +415,21 @@ input.hamburger-input {
   &:checked ~ .icon-wrapper .hamburger-line.third {
     transform: translate(11px, -3px) rotate(-135deg);
   }
-  
+
   &:checked ~ .icon-wrapper .hamburger:before {
     transform: rotate(45deg);
   }
+}
+
+/* Basket page identity — scoped so it never leaks into shared components used elsewhere.
+   Retheme the shared SelectComponent's chip/dropdown colors only inside the basket
+   page, via the CSS variables it reads (falls back to its normal slate palette
+   everywhere else it's used — recipe creation, ingredients, profile, etc). */
+.basket-page {
+  --sc-bg: #2B2619;
+  --sc-border: #3A3323;
+  --sc-dropdown-bg: #2B2619;
+  --sc-option-bg: #2B2619;
+  --sc-option-selected: #3A3323;
+  --sc-option-hover: #45392A;
 }

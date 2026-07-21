@@ -72,7 +72,7 @@ defmodule MehungryWeb.TabsComponent do
 
   def render_tabs(assigns) do
     ~H"""
-    <div class="border-b border-slate-700 mb-6" id={@id}>
+    <div class="border-b border-ink-panel2 mb-6" id={@id}>
       <div class="nav_buttons relative flex gap-2">
         <.nav_buttons
           states={@contents.get_states()}

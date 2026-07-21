@@ -11,7 +11,7 @@
     <div class="h-full">
       <div class="relative">
         <svg
-          class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-500"
+          class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-parchment-dim"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -25,7 +25,7 @@
         </svg>
         {text_input(f, :query_string,
           class:
-            "w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition",
+            "w-full pl-10 pr-4 py-3 bg-ink-panel border border-ink-panel2 rounded-xl text-parchment placeholder-parchment-dim focus:outline-none focus:border-paprika focus:ring-1 focus:ring-paprika transition",
           id: "text-search-input#{@id}",
           placeholder: "e.g Crispy broccoli steaks ..",
           value: @query_string || ""
@@ -36,7 +36,7 @@
         >
           <.icon
             name="hero-arrow-right-circle"
-            class="h-9 w-9 flex-none text-primary-500 cursor-pointer mr-4"
+            class="h-9 w-9 flex-none text-paprika cursor-pointer mr-4"
           />
         </button>
       </div>

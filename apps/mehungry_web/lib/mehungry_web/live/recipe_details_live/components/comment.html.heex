@@ -1,5 +1,5 @@
 <div class="p-2 transition">
-  <div class="flex flew-row text-slate-400">
+  <div class="flex flew-row text-parchment-dim">
     <%= if !is_nil(@comment.user.profile_pic) do %>
       <img
         src={@comment.user.profile_pic}
@@ -12,18 +12,18 @@
 
     <div style="margin-left: 1rem;">
       <div
-        class="text-white font-medium"
+        class="text-parchment font-medium"
         style="font-weight: bold; text-align: start; font-size: 0.75rem;"
       >
         {@comment.user.email}
       </div>
-      <div style="font-size: 1rem; text-align: start;" class="text-slate-300">
+      <div style="font-size: 1rem; text-align: start;" class="text-parchment">
         {@comment.text}
       </div>
       <div style="display: flex; ">
         <div class="flex gap-2 py-2" style="">
           <div
-            class="text-primary-500  font-semibold cursor-pointer"
+            class="text-parchment-dim hover:text-parchment  font-semibold cursor-pointer"
             phx-click="add-reply-form"
             phx-target={@myself}
             phx-value-id={@comment.id}
@@ -31,7 +31,7 @@
             Reply
           </div>
           <div
-            class="cursor-pointer"
+            class="text-parchment-dim hover:text-parchment cursor-pointer"
             phx-click="vote_comment"
             phx-value-reaction="true"
             phx-value-id={@comment.id}
@@ -40,7 +40,7 @@
             Like
           </div>
           <div class="flex gap-1">
-            <span class="text-primary-500">{get_positive_votes(@comment.votes)}</span>
+            <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{get_positive_votes(@comment.votes)}</span>
             <svg
               width="20"
               height="20"
@@ -49,7 +49,7 @@
               xmlns="http://www.w3.org/2000/svg"
             >
               <!-- Rounded background -->
-              <rect width="24" height="24" rx="6" fill="#2563EB" />
+              <rect width="24" height="24" rx="6" fill="#45C4AE" />
 
               <!-- Upvote arrow -->
               <path
@@ -75,10 +75,10 @@
             <% end %>
 
             <div style="margin-left: 1rem;">
-              <div style="font-weight: bold; text-align: start; font-size: 0.75rem;">
+              <div class="text-parchment" style="font-weight: bold; text-align: start; font-size: 0.75rem;">
                 {@comment.user.email}
               </div>
-              <div style="font-size: 1rem; text-align: start; color: var(--clr-dark_1)">
+              <div class="text-parchment-dim" style="font-size: 1rem; text-align: start;">
                 {co_an.text}
               </div>
             </div>
@@ -93,7 +93,7 @@
               id={"comment_answer_form_alla" <> to_string(@comment.id)}
               action={@live_action}
               user={@current_user}
-              class="text-slate-800"
+              class="text-parchment"
               comment_answer={%{comment_id: @reply.comment_id, user_id: @current_user.id}}
             />
           <% end %>

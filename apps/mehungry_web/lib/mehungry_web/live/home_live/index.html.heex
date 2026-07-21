@@ -1,11 +1,11 @@
 <div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
-<div class="min-h-screen bg-slate-900 pb-10">
+<div class="home-page min-h-screen bg-ink text-parchment pb-10">
   <div class="container max-w-2xl mx-auto px-4 py-8">
     <!-- Feed Header -->
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+      <h1 class="text-2xl font-display font-medium text-parchment flex items-center gap-2">
         <svg
-          class="w-7 h-7 text-primary-500"
+          class="w-7 h-7 text-paprika"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -19,7 +19,7 @@
         </svg>
         Recipe Feed
       </h1>
-      <p class="text-slate-400 text-sm mt-1">Discover recipes from your community</p>
+      <p class="text-parchment-dim text-sm mt-1">Discover recipes from your community</p>
     </div>
 
     <%= if !is_nil(@must_be_loged_in) do %>
@@ -108,10 +108,10 @@
         data-page={@page}
         class="h-8 flex items-center justify-center mt-4"
       >
-        <span class="text-slate-600 text-xs">Loading more…</span>
+        <span class="text-parchment-dim text-xs">Loading more…</span>
       </div>
     <% else %>
-      <p class="text-center text-slate-600 text-xs mt-6 pb-4">You've seen all posts</p>
+      <p class="text-center text-parchment-dim text-xs mt-6 pb-4">You've seen all posts</p>
     <% end %>
   </div>
 </div>

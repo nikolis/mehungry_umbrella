@@ -69,32 +69,32 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       }
 
       ~H"""
-      <div class="mt-2 rounded-xl border border-slate-600 overflow-hidden bg-slate-800">
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 bg-slate-700/50 border-b border-slate-700">
-          <span class="text-slate-200 font-semibold text-sm">Daily Summary</span>
+      <div class="mt-2 rounded-xl border border-ink-panel2 overflow-hidden bg-ink-panel">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 bg-black/20 border-b border-ink-panel2">
+          <span class="font-display font-medium text-parchment text-sm">Daily Summary</span>
           <div class="flex flex-wrap gap-2 ml-auto">
-            <span class="px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 text-xs">
-              {@meal_count} meal{if @meal_count != 1, do: "s"} · {@total_items} item{if @total_items !=
+            <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
+              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@meal_count}</span> meal{if @meal_count != 1, do: "s"} · <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@total_items}</span> item{if @total_items !=
                                                                                           1,
                                                                                         do: "s"}
             </span>
-            <span class="px-2.5 py-0.5 rounded-full bg-primary-500/20 text-primary-300 text-xs font-semibold">
+            <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-basil font-bold [font-variant-numeric:tabular-nums] text-xs">
               {@energy_kcal} kcal
             </span>
-            <span class="px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 text-xs">
-              {@protein_g}g protein
+            <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
+              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@protein_g}</span>g protein
             </span>
-            <span class="px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 text-xs">
-              {@carbs_g}g carbs
+            <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
+              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@carbs_g}</span>g carbs
             </span>
-            <span class="px-2.5 py-0.5 rounded-full bg-slate-700 text-slate-300 text-xs">
-              {@fat_g}g fat
+            <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
+              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fat_g}</span>g fat
             </span>
           </div>
         </div>
         <div class="flex flex-col sm:flex-row min-h-0">
           <div
-            class="flex-1 sm:border-r border-b sm:border-b-0 border-slate-700 overflow-y-auto"
+            class="flex-1 sm:border-r border-b sm:border-b-0 border-ink-panel2 overflow-y-auto"
             style="max-height: 400px;"
           >
             {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
@@ -123,14 +123,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
       false ->
         ~H"""
-        <div class="bg-slate-900 pb-20" id="calendar_widget">
+        <div class="bg-ink pb-20" id="calendar_widget">
           <div class="relative flex items-center px-3 py-3 sm:px-4">
             <.button_add_meal current_date={@current_date} myself={@myself} />
 
-            <div class="flex px-3 py-2 gap-3 bg-slate-800 justify-center border border-slate-700 rounded-full mx-auto w-fit shadow-lg">
+            <div class="flex px-3 py-2 gap-3 bg-ink-panel justify-center border border-ink-panel2 rounded-full mx-auto w-fit shadow-lg">
               <button
                 type="button"
-                class="w-fit text-slate-400 hover:text-white transition-colors"
+                class="w-fit text-parchment-dim hover:text-parchment transition-colors"
                 phx-target={@myself}
                 phx-click="prev-month"
               >
@@ -146,7 +146,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                 </svg>
               </button>
 
-              <h3 class="text-center text-lg font-semibold text-white">
+              <h3 class="text-center text-lg font-display font-medium text-parchment">
                 <span>{day_name(@current_date, assigns[:current_language] || "en")},</span>
                 <span>{String.slice(Calendar.strftime(@current_date, "%d"), 0..2)}</span>
                 <span>{month_short(@current_date, assigns[:current_language] || "en")}</span>
@@ -154,7 +154,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
               <button
                 type="button"
-                class="w-fit text-end text-primary-500 hover:text-primary-400 transition-colors font-medium"
+                class="w-fit text-end text-parchment-dim hover:text-parchment transition-colors font-medium"
                 phx-target={@myself}
                 phx-click="next-month"
               >
@@ -320,12 +320,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     >
       <div :for={day <- week} class="mb-2">
         <div
-          class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden day_of_week"
+          class="bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden day_of_week"
           id={"dat_" <> Date.to_string(day)}
         >
-          <div class="flex items-center gap-2 px-3 py-3 sm:px-4 bg-slate-700/50 border-b border-slate-700/50">
+          <div class="flex items-center gap-2 px-3 py-3 sm:px-4 bg-black/20 border-b border-ink-panel2">
             <span
-              class="flex items-center gap-2 text-white font-semibold text-sm sm:text-base cursor-pointer hover:text-primary-400 transition-colors"
+              class="flex items-center gap-2 text-parchment font-semibold text-sm sm:text-base cursor-pointer hover:text-parchment-dim transition-colors"
               phx-target={@myself}
               phx-click="pick-date"
               phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
@@ -336,7 +336,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                 viewBox="0 0 24 24"
                 stroke-width="1.5"
                 stroke="currentColor"
-                class="size-4 text-primary-500 flex-shrink-0"
+                class="size-4 text-parchment-dim flex-shrink-0"
               >
                 <path
                   stroke-linecap="round"
@@ -346,11 +346,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
               </svg>
               {day_name(day, assigns[:current_language] || "en")}
             </span>
-            <span class="text-slate-500 text-xs sm:text-sm">
+            <span class="text-parchment-dim text-xs sm:text-sm">
               {Calendar.strftime(day, "%d")} {month_short(day, assigns[:current_language] || "en")}
             </span>
             <span
-              class="ml-auto text-slate-400 hover:text-white transition-colors cursor-pointer p-1"
+              class="ml-auto text-parchment-dim hover:text-parchment transition-colors cursor-pointer p-1"
               phx-click={
                 Phoenix.LiveView.JS.toggle_class("copen", to: "#dat_" <> Date.to_string(day))
                 |> Phoenix.LiveView.JS.toggle_class("copen", to: "#widget" <> Date.to_string(day))
@@ -375,14 +375,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
               Enum.filter(@user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end) %>
             <%= if day_meals == [] do %>
               <div class="flex flex-col items-center gap-3 py-8 px-4">
-                <div class="w-14 h-14 rounded-full bg-slate-700/60 border border-slate-600/50 flex items-center justify-center">
+                <div class="w-14 h-14 rounded-full bg-ink-panel2/60 border border-ink-panel2/50 flex items-center justify-center">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke-width="1.2"
                     stroke="currentColor"
-                    class="size-7 text-slate-500"
+                    class="size-7 text-parchment-dim"
                   >
                     <path
                       stroke-linecap="round"
@@ -392,9 +392,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                   </svg>
                 </div>
                 <div class="text-center">
-                  <p class="text-slate-400 text-sm font-medium">No meals planned</p>
-                  <p class="text-slate-600 text-xs mt-0.5">
-                    Tap <span class="text-primary-500 font-semibold">+</span> to add one
+                  <p class="text-parchment-dim text-sm font-medium">No meals planned</p>
+                  <p class="text-parchment-dim/70 text-xs mt-0.5">
+                    Tap <span class="text-paprika-soft font-semibold">+</span> to add one
                   </p>
                 </div>
               </div>
@@ -404,7 +404,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                   <%= for re_u_m <- meal.recipe_user_meals do %>
                     <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
                       <.card_meal
-                        card_meal_text="text-white"
+                        card_meal_text="text-parchment"
                         actual_meal={meal}
                         img_url={re_u_m.img_url}
                         title={re_u_m.title}
@@ -426,7 +426,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                   <%= for re_u_m <- meal.ingredient_user_meals do %>
                     <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
                       <.card_meal
-                        card_meal_text="text-white"
+                        card_meal_text="text-parchment"
                         myself={@myself}
                         actual_meal={meal}
                         img_url={re_u_m.img_url}
@@ -446,7 +446,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                     <% end %>
                   <% end %>
                 <% end %>
-                {get_chart(@user_meals, day, "text-white")}
+                {get_chart(@user_meals, day, "text-parchment")}
               </div>
             <% end %>
           </div>
@@ -498,11 +498,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
   def card_meal(assigns) do
     ~H"""
-    <div class="bg-slate-700/40 border border-slate-600 rounded-xl p-3 sm:p-4 hover:bg-slate-700/60 transition-colors">
+    <div class="bg-black/20 border border-ink-panel2 rounded-xl p-3 sm:p-4 hover:bg-black/30 transition-colors">
       <div class="flex gap-4 items-center">
         <div class="relative flex-shrink-0 h-20 w-20 sm:h-24 sm:w-24 rounded-xl overflow-hidden">
           <%= if is_nil(@img_url) do %>
-            <div class="h-full w-full bg-slate-600 flex items-center justify-center">
+            <div class="h-full w-full bg-ink-panel2 flex items-center justify-center">
               {SvgComponents.get_default_recipe_image(assigns)}
             </div>
           <% else %>
@@ -510,7 +510,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           <% end %>
           <%= if @actual_meal.id != "landing_id" do %>
             <button
-              class="absolute right-1 top-1 bg-slate-900/80 hover:bg-primary-500 text-white p-1 rounded-full transition-colors [&_svg]:size-3.5"
+              class="absolute right-1 top-1 bg-ink/80 hover:bg-ink-panel2 text-parchment p-1 rounded-full transition-colors [&_svg]:size-3.5"
               type="button"
               phx-click="edit_modal"
               phx-value-id={@actual_meal.id}
@@ -520,17 +520,17 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           <% end %>
         </div>
         <div class="flex-1 min-w-0">
-          <h3 class={"font-semibold text-base leading-snug mb-3 " <> @card_meal_text}>{@title}</h3>
+          <h3 class={"font-display font-medium text-base leading-snug mb-3 " <> @card_meal_text}>{@title}</h3>
           <div class="flex items-stretch gap-4">
             <div>
-              <div class="text-slate-200 text-sm font-medium">{@cooking_portions}</div>
-              <div class="text-slate-500 text-xs mt-0.5">prepare</div>
+              <div class="text-basil font-bold [font-variant-numeric:tabular-nums] text-sm">{@cooking_portions}</div>
+              <div class="text-parchment-dim text-xs mt-0.5">prepare</div>
             </div>
             <%= if !is_nil(@consume_portions) do %>
-              <div class="w-px bg-slate-600 self-stretch"></div>
+              <div class="w-px bg-ink-panel2 self-stretch"></div>
               <div>
-                <div class="text-slate-200 text-sm font-medium">{@consume_portions}</div>
-                <div class="text-slate-500 text-xs mt-0.5">consume</div>
+                <div class="text-basil font-bold [font-variant-numeric:tabular-nums] text-sm">{@consume_portions}</div>
+                <div class="text-parchment-dim text-xs mt-0.5">consume</div>
               </div>
             <% end %>
           </div>
@@ -559,7 +559,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
     ~H"""
     <button
-      class="absolute right-3 sm:right-4 flex items-center gap-1.5 px-3 py-2 rounded-full bg-primary-500 hover:bg-primary-400 text-white text-xs sm:text-sm font-medium transition-colors shadow-md"
+      class="absolute right-3 sm:right-4 flex items-center gap-1.5 px-3 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-ink text-xs sm:text-sm font-bold transition-colors shadow-md"
       type="button"
       id="button_calendar"
       phx-target={@myself}

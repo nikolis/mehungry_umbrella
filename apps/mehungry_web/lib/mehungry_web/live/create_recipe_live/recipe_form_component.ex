@@ -24,7 +24,7 @@ defmodule MehungryWeb.RecipeFormComponent do
     >
       <input type="hidden" name="recipe[_action]" value="" />
       <div
-        class="content_container grid md:grid-cols-2 gap-6 bg-slate-800/50 rounded-xl p-4"
+        class="content_container grid md:grid-cols-2 gap-6 border border-ink-panel2 bg-ink-panel rounded-xl p-4"
         id="content-0"
       >
         <div class="flex flex-col gap-3">
@@ -71,7 +71,7 @@ defmodule MehungryWeb.RecipeFormComponent do
             <button
               type="button"
               phx-click="delete-image"
-              class="absolute top-0 right-3 bg-white rounded-full"
+              class="absolute top-0 right-3 bg-parchment rounded-full"
             >
               <.icon name="hero-x-mark-solid" class="h-6 w-6" />
             </button>
@@ -79,12 +79,12 @@ defmodule MehungryWeb.RecipeFormComponent do
         <% else %>
           <div class={"drop-container  #{drop_hidden?(@uploads.image.entries)}"}>
             <div
-              class=" border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-primary-500 transition cursor-pointer group h-full "
+              class=" border-2 border-dashed border-ink-panel2 rounded-lg p-8 text-center hover:border-paprika transition cursor-pointer group h-full "
               phx-drop-target=" {@uploads.image.ref}"
             >
               <div id="lab1" phx-hook="ImageSelect" for={@uploads.image.ref} class="h-full w-full ">
                 <svg
-                  class="w-12 h-12 mx-auto text-slate-500 mb-3 group-hover:text-primary-500 transition"
+                  class="w-12 h-12 mx-auto text-parchment-dim mb-3 group-hover:text-paprika transition"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -97,7 +97,7 @@ defmodule MehungryWeb.RecipeFormComponent do
                   />
                 </svg>
 
-                <p class="text-slate-400 text-sm group-hover:text-slate-300">
+                <p class="text-parchment-dim text-sm group-hover:text-parchment">
                   Click or drag to upload image
                 </p>
               </div>
@@ -144,10 +144,10 @@ defmodule MehungryWeb.RecipeFormComponent do
       <div class="grid md:grid-cols-2 gap-6">
         <%!-- Ingredients (content-1) — always in column 1 --%>
         <div
-          class="overflowx-hidden relative content_container hidden md:block bg-slate-800/50 rounded-xl p-4"
+          class="overflowx-hidden relative content_container hidden md:block border border-ink-panel2 bg-ink-panel rounded-xl p-4"
           id="content-1"
         >
-          <h3 class="text-base font-semibold text-white mb-3">Ingredients</h3>
+          <h3 class="text-base font-display font-medium text-parchment mb-3">Ingredients</h3>
           <div class="md:min-h-96 sm:max-h-65 overflow-x-hidden noscrollbar pt-4 step_ing_cont mb-14 pb-20 md:pb-0">
             <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
               <.live_component
@@ -166,7 +166,7 @@ defmodule MehungryWeb.RecipeFormComponent do
               name="recipe[_action]"
               value="add_ingredient"
               type="button"
-              class="font-semibold px-4 py-2 bg-primary-500 hover:bg-primary-600 rounded-lg text-white transition self-end mt-3"
+              class="inline-flex items-center gap-1.5 text-sm font-semibold text-paprika-soft hover:text-paprika transition-colors self-end mt-3"
             >
               + Add
             </button>
@@ -194,14 +194,14 @@ defmodule MehungryWeb.RecipeFormComponent do
                 Unmatched Ingredients ({length(@spoonacular_unmatched)})
               </h3>
             </div>
-            <p class="text-slate-400 text-xs mb-3">
+            <p class="text-parchment-dim text-xs mb-3">
               Not found in the database — add them manually using the ingredients section.
             </p>
             <div class="space-y-1.5 md:max-h-96 overflow-y-auto noscrollbar">
               <%= for item <- @spoonacular_unmatched do %>
-                <div class="rounded-lg bg-slate-900/60 px-3 py-2 text-sm">
+                <div class="rounded-lg bg-black/20 px-3 py-2 text-sm">
                   <div class="flex items-center justify-between gap-2 mb-0.5">
-                    <span class="text-white font-medium truncate">{item.name}</span>
+                    <span class="text-parchment font-medium truncate">{item.name}</span>
                     <span class={[
                       "flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-medium",
                       item.reason == :ingredient_not_found && "bg-red-900/50 text-red-300",
@@ -216,18 +216,18 @@ defmodule MehungryWeb.RecipeFormComponent do
                       end}
                     </span>
                   </div>
-                  <span class="text-slate-400 text-xs">{item.original}</span>
+                  <span class="text-parchment-dim text-xs">{item.original}</span>
                 </div>
               <% end %>
             </div>
           </div>
         <% else %>
           <div
-            class="overflowx-hidden relative content_container hidden md:block bg-slate-800/50 rounded-xl p-4"
+            class="overflowx-hidden relative content_container hidden md:block border border-ink-panel2 bg-ink-panel rounded-xl p-4"
             id="content-2"
           >
             <div class="relative h-fit">
-              <h3 class="text-base font-semibold text-white mb-3">Steps</h3>
+              <h3 class="text-base font-display font-medium text-parchment mb-3">Steps</h3>
               <div class="step_ing_cont md:min-h-96 md:max-h-96 overflow-x-hidden noscrollbar pt-4 sm:p-4 pb-20 md:pb-8">
                 <.live_component module={MehungryWeb.StepComponent} id="recipe_step" f={@f} />
               </div>
@@ -240,11 +240,11 @@ defmodule MehungryWeb.RecipeFormComponent do
       <%= if @spoonacular_unmatched != [] do %>
         <div class="grid gap-6">
           <div
-            class="overflowx-hidden relative content_container hidden md:block bg-slate-800/50 rounded-xl p-4"
+            class="overflowx-hidden relative content_container hidden md:block border border-ink-panel2 bg-ink-panel rounded-xl p-4"
             id="content-2"
           >
             <div class="relative h-fit">
-              <h3 class="text-base font-semibold text-white mb-3">Steps</h3>
+              <h3 class="text-base font-display font-medium text-parchment mb-3">Steps</h3>
               <div class="step_ing_cont md:min-h-96 md:max-h-96 overflow-x-hidden noscrollbar pt-4 sm:p-4 pb-20 md:pb-8">
                 <.live_component module={MehungryWeb.StepComponent} id="recipe_step" f={@f} />
               </div>
@@ -254,13 +254,13 @@ defmodule MehungryWeb.RecipeFormComponent do
       <% end %>
       <div
         id="content-3"
-        class="content_container hidden md:block bg-slate-800/50 rounded-xl p-6"
+        class="content_container hidden md:block border border-ink-panel2 bg-ink-panel rounded-xl p-6"
       >
-        <h3 class="text-base font-semibold text-white mb-4">Review & Save</h3>
+        <h3 class="text-base font-display font-medium text-parchment mb-4">Review & Save</h3>
         <p class={
           if @f.source.valid?,
             do: "text-sm text-emerald-400 mb-6",
-            else: "text-sm text-slate-400 mb-6"
+            else: "text-sm text-parchment-dim mb-6"
         }>
           <%= if @f.source.valid? do %>
             Everything looks good — ready to save!
@@ -273,13 +273,13 @@ defmodule MehungryWeb.RecipeFormComponent do
             id="button_delete"
             type="button"
             phx-click="clear-form"
-            class="px-5 py-2.5 border border-slate-600 text-slate-300 rounded-lg font-medium hover:border-slate-400 hover:text-white transition-colors"
+            class="px-5 py-2.5 border border-ink-panel2 text-parchment-dim rounded-lg font-medium hover:border-parchment-dim hover:text-parchment transition-colors"
           >
             Reset
           </button>
           {submit("Save Recipe",
             class:
-              "px-6 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-semibold transition-colors",
+              "px-6 py-2.5 bg-paprika hover:bg-paprika-soft text-ink rounded-lg font-bold transition-colors",
             type: "submit",
             phx_disable_with: "Saving…",
             id: "save_button"

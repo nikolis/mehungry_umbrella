@@ -103,16 +103,16 @@ defmodule MehungryWeb.AccordionComponent do
     # Background color based on level
     bg_class =
       case assigns.level do
-        1 -> "bg-slate-800"
-        2 -> "bg-slate-750"
-        3 -> "bg-slate-800"
-        _ -> "bg-slate-800"
+        1 -> "bg-ink-panel"
+        2 -> "bg-ink-panel2"
+        3 -> "bg-ink-panel"
+        _ -> "bg-ink-panel"
       end
 
     # Left border for nested items
     border_class =
       if assigns.level > 1 do
-        "border-l-2 border-gray-200 ml-4"
+        "border-l-2 border-ink-panel2 ml-4"
       else
         ""
       end
@@ -131,7 +131,7 @@ defmodule MehungryWeb.AccordionComponent do
       )
 
     ~H"""
-    <div class={["border-b border-slate-700 w-full overflow-hidden", @border_class]}>
+    <div class={["border-b border-ink-panel2 w-full overflow-hidden", @border_class]}>
       <%= if @has_children do %>
         <!-- Hidden checkbox for the accordion hack -->
         <input type="checkbox" id={@item_id} class="hidden peer" />
@@ -143,25 +143,25 @@ defmodule MehungryWeb.AccordionComponent do
             "flex justify-between items-center w-full py-3 cursor-pointer transition-colors",
             @indent_class,
             @bg_class,
-            "hover:bg-slate-700"
+            "hover:bg-black/20"
           ]}
         >
           <div class="flex-1 text-left min-w-0">
             <div class={[
-              "text-white truncate",
+              "text-parchment truncate",
               @level == 1 && "font-semibold text-base",
               @level == 2 && "font-medium text-sm",
               @level >= 3 && "font-normal text-sm"
             ]}>
               {@name}
             </div>
-            <div class="text-xs text-gray-500 mt-0.5">
+            <div class="text-xs font-bold text-basil [font-variant-numeric:tabular-nums] mt-0.5">
               {@amount} {@unit}
             </div>
           </div>
           <svg
             class={[
-              "w-5 h-5 text-gray-400 transition-transform duration-200 flex-shrink-0 ml-2",
+              "w-5 h-5 text-parchment-dim transition-transform duration-200 flex-shrink-0 ml-2",
               "peer-checked:rotate-180"
             ]}
             fill="none"
@@ -173,7 +173,7 @@ defmodule MehungryWeb.AccordionComponent do
         </label>
 
         <!-- Content that expands/collapses based on checkbox state -->
-        <div class="hidden peer-checked:block bg-slate-800   w-full overflow-hidden">
+        <div class="hidden peer-checked:block bg-ink-panel   w-full overflow-hidden">
           <div class="py-1 w-full overflow-hidden">
             <.accordion items={@children_list} level={@level + 1} accordion_id={@item_id} />
           </div>
@@ -187,14 +187,14 @@ defmodule MehungryWeb.AccordionComponent do
         ]}>
           <div class="flex-1 text-left min-w-0">
             <div class={[
-              "text-white truncate",
+              "text-parchment truncate",
               @level == 1 && "font-semibold text-base",
               @level == 2 && "font-medium text-sm",
               @level >= 3 && "font-normal text-sm"
             ]}>
               {@name}
             </div>
-            <div class="text-xs text-gray-500 mt-0.5">
+            <div class="text-xs font-bold text-basil [font-variant-numeric:tabular-nums] mt-0.5">
               {@amount} {@unit}
             </div>
           </div>

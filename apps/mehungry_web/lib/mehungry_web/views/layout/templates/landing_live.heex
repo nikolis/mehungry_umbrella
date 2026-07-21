@@ -1,14 +1,7 @@
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link
-  href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap"
-  rel="stylesheet"
-/>
-
-<div class="w-full">
+<div class="w-full bg-ink">
   <%= if Phoenix.Flash.get(@flash, :info) do %>
     <div
-      class="fixed top-20 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-secondary-500/30 bg-slate-800 px-4 py-3 text-sm text-secondary-300 shadow-xl"
+      class="fixed top-20 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-basil/30 bg-ink-panel px-4 py-3 text-sm text-basil-soft shadow-xl"
       role="alert"
       phx-click="lv:clear-flash"
       phx-value-key="info"
@@ -18,7 +11,7 @@
   <% end %>
   <%= if Phoenix.Flash.get(@flash, :error) do %>
     <div
-      class="fixed top-20 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-red-500/30 bg-slate-800 px-4 py-3 text-sm text-red-300 shadow-xl"
+      class="fixed top-20 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-red-500/30 bg-ink-panel px-4 py-3 text-sm text-red-300 shadow-xl"
       role="alert"
       phx-click="lv:clear-flash"
       phx-value-key="error"

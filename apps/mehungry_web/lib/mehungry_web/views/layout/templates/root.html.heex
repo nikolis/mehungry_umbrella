@@ -2,7 +2,7 @@
 <html lang="en" class="snap-y	snap-mandatory">
   <!-- Favicon - SVG for modern browsers -->
   <.head conn={@conn} />
-  <body>
+  <body class="bg-ink">
     <%= if ga_event_json = Phoenix.Flash.get(@conn.assigns.flash, :ga_event) do %>
       <script>
         (function() {

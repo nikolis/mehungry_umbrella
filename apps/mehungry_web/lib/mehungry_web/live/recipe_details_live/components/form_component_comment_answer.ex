@@ -46,11 +46,12 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer do
             <button
               phx-click="cancel_comment_reply"
               type="button"
-              style="margin-right: 1.5rem; color: var(--clr-grey-friend_3)"
+              class="text-parchment-dim hover:text-parchment"
+              style="margin-right: 1.5rem;"
             >
               Cancel
             </button>
-            <button class="primary_button" phx-disable-with="Saving...">Post</button>
+            <button class="text-parchment-dim hover:text-parchment font-semibold" phx-disable-with="Saving...">Post</button>
           </div>
         </:actions>
       </.simple_form>

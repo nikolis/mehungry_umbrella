@@ -56,7 +56,7 @@ defmodule MehungryWeb.RecipeComponents do
     >
       <div
         id={"#{@id}-bg"}
-        class="bg-slate-950/75 backdrop-blur-sm fixed inset-0 transition-opacity top-0 left-0 right-0"
+        class="bg-ink/80 backdrop-blur-sm fixed inset-0 transition-opacity top-0 left-0 right-0"
         aria-hidden="false"
       />
       <div
@@ -74,13 +74,13 @@ defmodule MehungryWeb.RecipeComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="relative hidden rounded-2xl bg-slate-900 ring-1 ring-slate-700 shadow-2xl shadow-black/50 transition"
+              class="relative hidden rounded-2xl bg-ink-panel ring-1 ring-ink-panel2 shadow-2xl shadow-black/50 transition"
             >
               <div class="absolute top-10 left-5 z-50">
                 <button
                   phx-click={JS.exec("data-cancel", to: "##{@id}")}
                   type="button"
-                  class="inline-flex items-center gap-2 text-slate-300 hover:text-white mb-6 transition"
+                  class="inline-flex items-center gap-2 text-parchment-dim hover:text-parchment mb-6 transition"
                   aria-label="close"
                   id="close-recipe-modal"
                 >
@@ -118,7 +118,7 @@ defmodule MehungryWeb.RecipeComponents do
     >
       <div
         id={"#{@id}-bg"}
-        class="bg-slate-950/75 backdrop-blur-sm fixed inset-0 transition-opacity top-0 left-0 right-0"
+        class="bg-ink/80 backdrop-blur-sm fixed inset-0 transition-opacity top-0 left-0 right-0"
         aria-hidden="false"
       />
       <div
@@ -136,9 +136,9 @@ defmodule MehungryWeb.RecipeComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="relative hidden rounded-2xl bg-slate-800 ring-1 ring-slate-700 shadow-2xl shadow-black/50 transition"
+              class="relative hidden rounded-2xl bg-ink-panel ring-1 ring-ink-panel2 shadow-2xl shadow-black/50 transition"
             >
-              <div class="sm:hidden absolute top-5 left-5 rounded-full w-12 h-12 bg-slate-700">
+              <div class="sm:hidden absolute top-5 left-5 rounded-full w-12 h-12 bg-ink-panel2">
                 <button
                   phx-click={JS.exec("data-cancel", to: "##{@id}")}
                   type="button"
@@ -182,17 +182,17 @@ defmodule MehungryWeb.RecipeComponents do
     ~H"""
     <div class=" my-4 ">
       <div class="px-4">
-        <div class="bg-slate-800 border border-slate-700 divide-y custom-scrollbar divide-slate-700 overflow-auto max-h-72">
+        <div class="bg-ink-panel border border-ink-panel2 divide-y custom-scrollbar divide-ink-panel2 overflow-auto max-h-72">
           <%= for ingredient <- @recipe_ingredients do %>
             <% display_names = Map.get(assigns, :ingredient_display_names, %{}) %>
             <% name =
               Map.get(display_names, ingredient.ingredient_id) ||
                 Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %>
-            <div class="flex justify-between items-center p-4 hover:bg-slate-700/30 transition">
-              <span class="text-white">
+            <div class="flex justify-between items-center p-4 hover:bg-black/20 transition">
+              <span class="text-parchment">
                 {name}
               </span>
-              <span class="text-slate-400">
+              <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
                 {ingredient.quantity} {ingredient.measurement_unit.name}
               </span>
             </div>
@@ -207,13 +207,13 @@ defmodule MehungryWeb.RecipeComponents do
     ~H"""
     <div class=" my-4 ">
       <div class="px-4">
-        <div class="overflow-auto text-base custom-scrollbar text-black  bg-slate-800 max-h-72 px-4   ">
+        <div class="overflow-auto text-base custom-scrollbar bg-ink-panel border border-ink-panel2 max-h-72 px-4   ">
           <%= for step <- @steps do %>
-            <div class="step_details_container p-4 border-b border-slate-700 ">
-              <div class="w-8 h-8 rounded-full bg-primary-500/20 text-primary-500 flex items-center justify-center font-semibold flex-shrink-0  ">
+            <div class="step_details_container p-4 border-b border-ink-panel2 ">
+              <div class="w-8 h-8 rounded-full bg-paprika/20 text-paprika flex items-center justify-center font-bold flex-shrink-0 [font-variant-numeric:tabular-nums] ">
                 {step.index}
               </div>
-              <div class="text-white">{step.description}</div>
+              <div class="text-parchment">{step.description}</div>
             </div>
           <% end %>
         </div>
@@ -339,9 +339,9 @@ defmodule MehungryWeb.RecipeComponents do
         id={"recipe-card-details-link-#{@id}-#{@recipe.id}"}
         patch={@path_to_details}
       >
-        <div class="bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-primary-500/50 transition-all duration-200 group-hover:transform group-hover:-translate-y-1 relative">
+        <div class="bg-ink-panel rounded-xl overflow-hidden border border-ink-panel2 hover:border-paprika/50 transition-all duration-200 group-hover:transform group-hover:-translate-y-1 relative">
           <!-- Image Container -->
-          <div class="aspect-video overflow-hidden bg-slate-700 w-full ">
+          <div class="aspect-video overflow-hidden bg-ink-panel2 w-full ">
             <%= if @recipe.image_url do %>
               <img
                 src={@recipe.image_url}
@@ -351,7 +351,7 @@ defmodule MehungryWeb.RecipeComponents do
             <% else %>
               <div class="w-full h-full flex items-center justify-center">
                 <svg
-                  class="w-12 h-12 text-slate-500"
+                  class="w-12 h-12 text-parchment-dim"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -368,20 +368,20 @@ defmodule MehungryWeb.RecipeComponents do
           </div>
           <!-- Content -->
           <div class="p-4">
-            <h3 class="recipe_title text-white font-semibold text-lg line-clamp-1 group-hover:text-primary-500 transition">
+            <h3 class="recipe_title text-parchment font-semibold text-lg line-clamp-1 group-hover:text-paprika transition">
               {@recipe.title}
             </h3>
-            <p class="text-slate-400 text-sm mt-1 line-clamp-2">
+            <p class="text-parchment-dim text-sm mt-1 line-clamp-2">
               {@recipe.description || "No description available"}
             </p>
 
             <!-- Recipe Stats -->
-            <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-700">
+            <div class="flex items-center justify-between mt-4 pt-3 border-t border-ink-panel2">
               <div class="flex items-center gap-3">
                 <!-- Cooking Time -->
                 <div class="flex items-center gap-1">
                   <svg
-                    class="w-4 h-4 text-slate-500"
+                    class="w-4 h-4 text-parchment-dim"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -393,7 +393,9 @@ defmodule MehungryWeb.RecipeComponents do
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <span class="text-slate-400 text-xs">{@recipe.cooking_time_lower_limit} min</span>
+                  <span class="text-parchment-dim text-xs">
+                    <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{@recipe.cooking_time_lower_limit}</span> min
+                  </span>
                 </div>
 
                 <!-- Difficulty -->
@@ -443,13 +445,13 @@ defmodule MehungryWeb.RecipeComponents do
                       </svg>
                     <% _ -> %>
                   <% end %>
-                  <span class="text-slate-400 text-xs capitalize">{@recipe.difficulty}</span>
+                  <span class="text-basil text-xs font-bold capitalize [font-variant-numeric:tabular-nums]">{@recipe.difficulty}</span>
                 </div>
 
                 <!-- Servings -->
                 <div class="flex items-center gap-1">
                   <svg
-                    class="w-4 h-4 text-slate-500"
+                    class="w-4 h-4 text-parchment-dim"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -461,7 +463,7 @@ defmodule MehungryWeb.RecipeComponents do
                       d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
                     />
                   </svg>
-                  <span class="text-slate-400 text-xs">{@recipe.servings}</span>
+                  <span class="text-basil text-xs font-bold [font-variant-numeric:tabular-nums]">{@recipe.servings}</span>
                 </div>
               </div>
 
@@ -480,7 +482,7 @@ defmodule MehungryWeb.RecipeComponents do
                     d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                   />
                 </svg>
-                <span class="text-slate-400 text-xs">{0}</span>
+                <span class="text-basil text-xs font-bold [font-variant-numeric:tabular-nums]">{0}</span>
               </div>
             </div>
           </div>
@@ -517,7 +519,7 @@ defmodule MehungryWeb.RecipeComponents do
           id={"edit-recipe-#{@recipe.id}"}
           phx-click="edit-recipe"
           phx-value-id={@recipe.id}
-          class="absolute top-2 right-2 cursor-pointer text-white z-10 rounded-full p-2 bg-slate-800 hover:bg-slate-700 transition"
+          class="absolute top-2 right-2 cursor-pointer text-parchment z-10 rounded-full p-2 bg-ink-panel hover:bg-ink-panel2 transition"
           type="button"
         >
           <svg
@@ -672,7 +674,7 @@ defmodule MehungryWeb.RecipeComponents do
     }
 
     ~H"""
-    <div class="my-4 ">
+    <div class="my-4 bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden">
       <MehungryWeb.NutritionAccordion.nutrition_accordion
         nutrients={@nutrients}
         title="Nutrition Facts"
@@ -696,7 +698,7 @@ defmodule MehungryWeb.RecipeComponents do
     }
 
     ~H"""
-    <div class="my-4">
+    <div class="my-4 bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden">
       <MehungryWeb.NutritionAccordion.nutrition_accordion
         nutrients={@nutrients}
         title="Nutrition Facts"

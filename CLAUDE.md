@@ -58,9 +58,9 @@ mix dialyzer
 | `Meta` | Visit tracking |
 | `History` | User activity history |
 | `Professionals` | Nutritionist profiles, client invitations, assignments, appointments, meal plan ratings |
-| `Subscriptions` | Subscription tiers, Stripe integration, AI feature quota enforcement |
+| `Subscriptions` | Subscription tiers, Stripe integration, AI feature quota enforcement — see `docs/subscriptions_billing.md` |
 | `AI.Bot` | Managed social media recipe pipeline — monthly configs, review queue, translations, post logs |
-| `Billing` | Stripe checkout sessions and webhook handling (`Billing.StripeHandler`) |
+| `Billing` | Stripe checkout sessions and webhook handling (`Billing.StripeHandler`) — see `docs/subscriptions_billing.md` |
 | `Social` | Social platform layer (`social/`): `Social.Publisher` fan-out (behind `Social.PublisherBehaviour`), `Social.{Facebook, Pinterest}` HTTP clients, and the `Social.Instagram` context — see `docs/social_publishing.md` |
 | `FoodData` | External food-data sources (`food_data/`): `FoodData.Usda.{SearchClient, FdcClient, FoodParser, SeedFileParser}`, `FoodData.OpenFoodFacts.*`, `FoodData.SpoonacularImporter` |
 | `S3` | The single ExAws S3 wrapper (`s3.ex`) — use it instead of inline `ExAws.S3` calls |
@@ -155,6 +155,8 @@ All authenticated UI is built with **Phoenix LiveView**. Live sessions in `route
 Client hooks: `apps/mehungry_web/assets/js/hooks.js`. Navigation active-state handled by a JS `Proxy` intercepting URL changes (`navigation.js`).
 
 **Google Analytics (GA4)**: Consent Mode v2-gated `gtag.js` in `head.html.heex`, manual `page_view` tracking for LiveView SPA navigation, and a `MehungryWeb.GoogleAnalytics.track/3` seam for custom events — see **`docs/google_analytics.md`**.
+
+**Design system**: warm-charcoal/paprika/basil token set (`ink`, `paprika`, `basil`, `parchment` in `tailwind.config.js`) rolled out to `/profile` only so far — palette rationale, component rules, and the CSS-variable pattern for retheming shared components (e.g. `SelectComponent`) without breaking their other call sites are in **`docs/design_system.md`**.
 
 ### Modal Approaches
 

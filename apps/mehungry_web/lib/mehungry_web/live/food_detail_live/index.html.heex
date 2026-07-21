@@ -1,57 +1,59 @@
 <div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
-<div class="min-h-screen bg-slate-900 pb-16">
+<div class="food-detail-page min-h-screen bg-ink text-parchment pb-16">
   <div class="container max-w-3xl mx-auto px-4 py-8">
-    
-    <nav class="text-sm text-slate-400 mb-6">
-      <a href="/foods" class="hover:text-white transition-colors">Foods</a>
+
+    <nav class="text-sm text-parchment-dim mb-6">
+      <a href="/foods" class="hover:text-parchment transition-colors">Foods</a>
       <span class="mx-2">›</span>
-      <span class="text-slate-200">{@display_name}</span>
+      <span class="text-parchment">{@display_name}</span>
     </nav>
 
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-white mb-2">{@display_name}</h1>
+      <h1 class="text-3xl font-display font-medium text-parchment mb-2">{@display_name}</h1>
       <%= if @ingredient.category do %>
-        <span class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-slate-700 text-slate-300 mb-3">
+        <span class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-ink-panel2 text-parchment-dim mb-3">
           {@ingredient.category.name}
         </span>
       <% end %>
       <%= if @ingredient.description && @ingredient.description != "" do %>
-        <p class="text-slate-400 leading-relaxed">{@ingredient.description}</p>
+        <p class="text-parchment-dim leading-relaxed">{@ingredient.description}</p>
       <% end %>
     </div>
 
     <%= cond do %>
       <% @top_nutrients.loading -> %>
         <section class="mb-10">
-          <h2 class="text-lg font-semibold text-white mb-4">
+          <h2 class="text-lg font-display font-medium text-parchment mb-4">
             Nutritional Highlights
-            <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
+            <span class="text-parchment-dim font-normal text-sm ml-2">per 100g</span>
           </h2>
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3" aria-hidden="true">
             <div
               :for={_ <- 1..5}
-              class="bg-slate-800 rounded-xl p-4 text-center border border-slate-700"
+              class="bg-ink-panel rounded-xl p-4 text-center border border-ink-panel2"
             >
-              <div class="m3-skeleton h-7 w-3/5 mx-auto rounded bg-slate-700" />
-              <div class="m3-skeleton h-3 w-2/5 mx-auto rounded bg-slate-700 mt-2" />
-              <div class="m3-skeleton h-3 w-3/5 mx-auto rounded bg-slate-700 mt-2" />
+              <div class="m3-skeleton h-7 w-3/5 mx-auto rounded bg-ink-panel2" />
+              <div class="m3-skeleton h-3 w-2/5 mx-auto rounded bg-ink-panel2 mt-2" />
+              <div class="m3-skeleton h-3 w-3/5 mx-auto rounded bg-ink-panel2 mt-2" />
             </div>
           </div>
         </section>
       <% @top_nutrients.failed -> %>
-        <p class="text-slate-500 text-sm">Couldn't load nutritional highlights.</p>
+        <p class="text-parchment-dim text-sm">Couldn't load nutritional highlights.</p>
       <% @top_nutrients.ok? && length(@top_nutrients.result) > 0 -> %>
         <section class="mb-10">
-          <h2 class="text-lg font-semibold text-white mb-4">
+          <h2 class="text-lg font-display font-medium text-parchment mb-4">
             Nutritional Highlights
-            <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
+            <span class="text-parchment-dim font-normal text-sm ml-2">per 100g</span>
           </h2>
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             <%= for n <- @top_nutrients.result do %>
-              <div class="bg-slate-800 rounded-xl p-4 text-center border border-slate-700">
-                <div class="text-2xl font-bold text-white">{format_amount(n.amount)}</div>
-                <div class="text-xs text-slate-400 mt-0.5">{n.unit}</div>
-                <div class="text-sm font-medium text-slate-300 mt-1">{n.label}</div>
+              <div class="bg-ink-panel rounded-xl p-4 text-center border border-ink-panel2">
+                <div class="text-2xl font-bold text-basil [font-variant-numeric:tabular-nums]">
+                  {format_amount(n.amount)}
+                </div>
+                <div class="text-xs text-parchment-dim mt-0.5">{n.unit}</div>
+                <div class="text-sm font-medium text-parchment-dim mt-1">{n.label}</div>
               </div>
             <% end %>
           </div>
@@ -62,79 +64,79 @@
     <%= cond do %>
       <% @interactions.loading -> %>
         <section class="mb-10">
-          <h2 class="text-lg font-semibold text-white mb-4">Nutrition Insights</h2>
+          <h2 class="text-lg font-display font-medium text-parchment mb-4">Nutrition Insights</h2>
           <div class="space-y-3" aria-hidden="true">
             <div
               :for={_ <- 1..3}
-              class="flex gap-3 rounded-xl border border-slate-700 bg-slate-800 p-4"
+              class="flex gap-3 rounded-xl border border-ink-panel2 bg-ink-panel p-4"
             >
-              <div class="m3-skeleton w-5 h-5 rounded-full bg-slate-700 flex-shrink-0 mt-0.5" />
+              <div class="m3-skeleton w-5 h-5 rounded-full bg-ink-panel2 flex-shrink-0 mt-0.5" />
               <div class="flex-1 min-w-0 space-y-2">
-                <div class="m3-skeleton h-3.5 w-2/5 rounded bg-slate-700" />
-                <div class="m3-skeleton h-3 w-full rounded bg-slate-700" />
-                <div class="m3-skeleton h-3 w-4/5 rounded bg-slate-700" />
+                <div class="m3-skeleton h-3.5 w-2/5 rounded bg-ink-panel2" />
+                <div class="m3-skeleton h-3 w-full rounded bg-ink-panel2" />
+                <div class="m3-skeleton h-3 w-4/5 rounded bg-ink-panel2" />
               </div>
             </div>
           </div>
         </section>
         <% @interactions.failed -> %>
-          <p class="text-slate-500 text-sm">Couldn't load recipes for this ingredient.</p>
+          <p class="text-parchment-dim text-sm">Couldn't load recipes for this ingredient.</p>
         <% @interactions.ok? && length(@interactions.result) == 0 -> %>
-          <p class="text-slate-500 text-sm">No interactions for the particular ingredient</p>
+          <p class="text-parchment-dim text-sm">No interactions for the particular ingredient</p>
         <% true -> %>
 
           <section class="mb-10">
-            <h2 class="text-lg font-semibold text-white mb-4">Nutrition Insights</h2>
+            <h2 class="text-lg font-display font-medium text-parchment mb-4">Nutrition Insights</h2>
             <.nutrient_interaction_panel interactions={@interactions} />
           </section>
 <% end %>
     <%= cond do %>
       <% @nutrients_by_family.loading -> %>
         <section class="mb-10">
-          <h2 class="text-lg font-semibold text-white mb-4">
+          <h2 class="text-lg font-display font-medium text-parchment mb-4">
             Full Nutrition Breakdown
-            <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
+            <span class="text-parchment-dim font-normal text-sm ml-2">per 100g</span>
           </h2>
           <div class="space-y-6" aria-hidden="true">
             <div
               :for={_ <- 1..3}
-              class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden"
+              class="bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden"
             >
-              <div class="px-4 py-2 bg-slate-700/50 border-b border-slate-700">
-                <div class="m3-skeleton h-3 w-1/4 rounded bg-slate-700" />
+              <div class="px-4 py-2 bg-ink-panel2/50 border-b border-ink-panel2">
+                <div class="m3-skeleton h-3 w-1/4 rounded bg-ink-panel2" />
               </div>
               <div class="p-4 space-y-2">
-                <div :for={_ <- 1..3} class="m3-skeleton h-3 w-full rounded bg-slate-700" />
+                <div :for={_ <- 1..3} class="m3-skeleton h-3 w-full rounded bg-ink-panel2" />
               </div>
             </div>
           </div>
         </section>
       <% @nutrients_by_family.failed -> %>
-        <p class="text-slate-500 text-sm">Couldn't load the full nutrition breakdown.</p>
+        <p class="text-parchment-dim text-sm">Couldn't load the full nutrition breakdown.</p>
       <% @nutrients_by_family.ok? && length(@nutrients_by_family.result) > 0 -> %>
         <section class="mb-10">
-          <h2 class="text-lg font-semibold text-white mb-4">
+          <h2 class="text-lg font-display font-medium text-parchment mb-4">
             Full Nutrition Breakdown
-            <span class="text-slate-400 font-normal text-sm ml-2">per 100g</span>
+            <span class="text-parchment-dim font-normal text-sm ml-2">per 100g</span>
           </h2>
 
           <div class="space-y-6">
             <%= for {family, nutrients} <- @nutrients_by_family.result do %>
-              <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-                <div class="px-4 py-2 bg-slate-700/50 border-b border-slate-700">
-                  <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wide">
+              <div class="bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden">
+                <div class="px-4 py-2 bg-ink-panel2/50 border-b border-ink-panel2">
+                  <h3 class="text-sm font-semibold text-parchment-dim uppercase tracking-wide">
                     {family}
                   </h3>
                 </div>
                 <table class="w-full">
                   <tbody>
                     <%= for {n, idx} <- Enum.with_index(nutrients) do %>
-                      <tr class={if rem(idx, 2) == 0, do: "bg-slate-800", else: "bg-slate-800/50"}>
-                        <td class="px-4 py-2 text-sm text-slate-300">{n.nutrient.name}</td>
-                        <td class="px-4 py-2 text-sm text-white text-right font-medium">
+                      <tr class={if rem(idx, 2) == 0, do: "bg-ink-panel", else: "bg-ink-panel/50"}>
+                        <td class="px-4 py-2 text-sm text-parchment-dim">{n.nutrient.name}</td>
+                        <td class="px-4 py-2 text-sm text-basil text-right font-bold [font-variant-numeric:tabular-nums]">
                           {format_amount(n.amount)}
                           <%= if n.nutrient.measurement_unit do %>
-                            <span class="text-slate-400 font-normal">
+                            <span class="text-parchment-dim font-normal">
                               {n.nutrient.measurement_unit.name}
                             </span>
                           <% end %>
@@ -152,32 +154,32 @@
 
     <%= if length(@ingredient.ingredient_portions) > 0 do %>
       <section class="mb-10">
-        <h2 class="text-lg font-semibold text-white mb-4">Common Portion Sizes</h2>
-        <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+        <h2 class="text-lg font-display font-medium text-parchment mb-4">Common Portion Sizes</h2>
+        <div class="bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden">
           <table class="w-full">
             <thead>
-              <tr class="bg-slate-700/50 border-b border-slate-700">
-                <th class="px-4 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">
+              <tr class="bg-ink-panel2/50 border-b border-ink-panel2">
+                <th class="px-4 py-2 text-left text-xs font-semibold text-parchment-dim uppercase tracking-wide">
                   Portion
                 </th>
-                <th class="px-4 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                <th class="px-4 py-2 text-right text-xs font-semibold text-parchment-dim uppercase tracking-wide">
                   Amount
                 </th>
-                <th class="px-4 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                <th class="px-4 py-2 text-right text-xs font-semibold text-parchment-dim uppercase tracking-wide">
                   Grams
                 </th>
               </tr>
             </thead>
             <tbody>
               <%= for {portion, idx} <- Enum.with_index(@ingredient.ingredient_portions) do %>
-                <tr class={if rem(idx, 2) == 0, do: "bg-slate-800", else: "bg-slate-800/50"}>
-                  <td class="px-4 py-2 text-sm text-slate-300">
+                <tr class={if rem(idx, 2) == 0, do: "bg-ink-panel", else: "bg-ink-panel/50"}>
+                  <td class="px-4 py-2 text-sm text-parchment-dim">
                     {if portion.measurement_unit, do: portion.measurement_unit.name, else: "—"}
                   </td>
-                  <td class="px-4 py-2 text-sm text-white text-right">
+                  <td class="px-4 py-2 text-sm font-bold text-basil text-right [font-variant-numeric:tabular-nums]">
                     {format_amount(portion.amount)}
                   </td>
-                  <td class="px-4 py-2 text-sm text-slate-300 text-right">
+                  <td class="px-4 py-2 text-sm font-bold text-basil text-right [font-variant-numeric:tabular-nums]">
                     {format_amount(portion.gram_weight)}g
                   </td>
                 </tr>
@@ -190,12 +192,12 @@
 
     <section class="mb-10">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-white">
+        <h2 class="text-lg font-display font-medium text-parchment">
           Recipes with {@display_name}
         </h2>
         <a
           href={"/search/ingredient/#{URI.encode(@ingredient.name)}"}
-          class="text-sm text-primary-400 hover:text-primary-300 transition-colors"
+          class="text-sm text-parchment-dim hover:text-parchment transition-colors"
         >
           See all →
         </a>
@@ -206,28 +208,28 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" aria-hidden="true">
             <div
               :for={_ <- 1..4}
-              class="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl p-3"
+              class="flex items-center gap-3 bg-ink-panel border border-ink-panel2 rounded-xl p-3"
             >
-              <div class="m3-skeleton w-16 h-16 rounded-lg bg-slate-700 flex-shrink-0" />
+              <div class="m3-skeleton w-16 h-16 rounded-lg bg-ink-panel2 flex-shrink-0" />
               <div class="flex-1 min-w-0 space-y-2">
-                <div class="m3-skeleton h-3.5 w-4/5 rounded bg-slate-700" />
-                <div class="m3-skeleton h-3 w-1/3 rounded bg-slate-700" />
+                <div class="m3-skeleton h-3.5 w-4/5 rounded bg-ink-panel2" />
+                <div class="m3-skeleton h-3 w-1/3 rounded bg-ink-panel2" />
               </div>
             </div>
           </div>
         <% @sample_recipes.failed -> %>
-          <p class="text-slate-500 text-sm">Couldn't load recipes for this ingredient.</p>
+          <p class="text-parchment-dim text-sm">Couldn't load recipes for this ingredient.</p>
         <% @sample_recipes.ok? && length(@sample_recipes.result) == 0 -> %>
-          <p class="text-slate-500 text-sm">No recipes found for this ingredient yet.</p>
+          <p class="text-parchment-dim text-sm">No recipes found for this ingredient yet.</p>
         <% true -> %>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <%= for recipe <- @sample_recipes.result do %>
             <a
               href={"/browse/#{recipe.id}"}
-              class="group flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl p-3 hover:border-primary-500/50 hover:bg-slate-700/80 transition-colors"
+              class="group flex items-center gap-3 bg-ink-panel border border-ink-panel2 rounded-xl p-3 hover:border-paprika/50 hover:bg-ink-panel2/80 transition-colors"
             >
-              
-              <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-slate-700">
+
+              <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-ink-panel2">
                 <%= if recipe.image_url do %>
                   <img
                     src={recipe.image_url}
@@ -237,7 +239,7 @@
                 <% else %>
                   <div class="w-full h-full flex items-center justify-center">
                     <svg
-                      class="w-6 h-6 text-slate-500"
+                      class="w-6 h-6 text-parchment-dim"
                       fill="none"
                       stroke="currentColor"
                       stroke-width="2"
@@ -253,17 +255,17 @@
                 <% end %>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-white group-hover:text-primary-300 transition-colors truncate">
+                <p class="text-sm font-medium text-parchment group-hover:text-paprika-soft transition-colors truncate">
                   {recipe.title}
                 </p>
                 <%= if recipe.cooking_time_lower_limit do %>
-                  <p class="text-xs text-slate-400 mt-0.5">
-                    {recipe.cooking_time_lower_limit} min
+                  <p class="text-xs text-parchment-dim mt-0.5">
+                    <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{recipe.cooking_time_lower_limit}</span> min
                   </p>
                 <% end %>
               </div>
               <svg
-                class="w-4 h-4 text-slate-600 group-hover:text-slate-400 flex-shrink-0 transition-colors"
+                class="w-4 h-4 text-parchment-dim/50 group-hover:text-parchment-dim flex-shrink-0 transition-colors"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
@@ -278,7 +280,7 @@
         <div class="mt-4 text-center">
           <a
             href={"/search/ingredient/#{URI.encode(@ingredient.name)}"}
-            class="inline-block px-5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-300 hover:text-white hover:border-primary-500/50 transition-colors text-sm font-medium"
+            class="inline-block px-5 py-2.5 bg-paprika hover:bg-paprika-soft text-ink rounded-xl transition-colors text-sm font-bold"
           >
             Browse all recipes with {@display_name} →
           </a>

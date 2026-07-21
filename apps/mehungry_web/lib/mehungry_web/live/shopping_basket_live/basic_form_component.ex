@@ -22,18 +22,18 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
           type="text"
           name={@form[:title].name}
           placeholder="List name..."
-          class=" h-fit flex-1 mt-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500"
+          class=" h-fit flex-1 mt-2 bg-black/20 border border-ink-panel2 rounded-lg text-parchment text-sm placeholder:text-parchment-dim focus:outline-none focus:border-paprika"
         />
         <div clas="w-fit mx-4 my-4 ">
           <button
             type="submit"
-            class="px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm transition mr-2 font-semibold"
+            class="px-3 py-2 bg-paprika hover:bg-paprika-soft text-ink rounded-lg text-sm transition mr-2 font-bold"
             phx-click={JS.remove_class("active", to: "#basket-basic-form.active")}
           >
             SAVE
           </button>
           <button
-            class="text-slate-400 font-semibold "
+            class="text-parchment-dim hover:text-parchment font-semibold "
             phx-click={JS.remove_class("active", to: "#basket-basic-form.active")}
           >
             CANCEL

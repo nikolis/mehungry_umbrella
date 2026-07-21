@@ -145,20 +145,20 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       phx-hook="RecipeDetailTimer"
       data-server-ms={@server_ms}
       data-recipe-id={@recipe.id}
-      class="min-h-screen bg-slate-900 pb-10"
+      class="recipe-details-page min-h-screen bg-ink text-parchment pb-10"
     >
       <div class=" mx-auto px-4 py-8 max-w-4xl">
         <div class="w-full">
           <!-- Hero Section -->
-          <div class="bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 mb-8">
+          <div class="bg-ink-panel rounded-2xl overflow-hidden border border-ink-panel2 mb-8">
             <!-- Image -->
-            <div class="relative aspect-video bg-slate-700">
+            <div class="relative aspect-video bg-ink-panel2">
               <%= if @recipe.image_url do %>
                 <img src={@recipe.image_url} alt={@recipe.title} class="w-full h-full object-cover" />
               <% else %>
                 <div class="w-full h-full flex items-center justify-center">
                   <svg
-                    class="w-20 h-20 text-slate-500"
+                    class="w-20 h-20 text-parchment-dim"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -183,14 +183,16 @@ defmodule MehungryWeb.RecipeDetailsComponent do
             </div>
             <!-- Content -->
             <div class="p-6">
-              <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">{@recipe.title}</h1>
-              <p class="text-slate-400 mb-4">{@recipe.description}</p>
+              <h1 class="text-2xl md:text-3xl font-display font-medium text-parchment mb-2">
+                {@recipe.title}
+              </h1>
+              <p class="text-parchment-dim mb-4">{@recipe.description}</p>
 
               <!-- Recipe Stats -->
               <div class="flex flex-wrap gap-4 mb-6">
                 <div class="flex items-center gap-2">
                   <svg
-                    class="w-5 h-5 text-slate-500"
+                    class="w-5 h-5 text-parchment-dim"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -202,16 +204,17 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <span class="text-slate-300">
-                    {@recipe.cooking_time_lower_limit + @recipe.preperation_time_lower_limit} min total
+                  <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
+                    {@recipe.cooking_time_lower_limit + @recipe.preperation_time_lower_limit}
                   </span>
-                  <span class="text-slate-500 text-sm">
-                    (Prep: {@recipe.preperation_time_lower_limit} | Cook: {@recipe.cooking_time_lower_limit})
+                  <span class="text-parchment-dim">min total</span>
+                  <span class="text-parchment-dim text-sm">
+                    (Prep: <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{@recipe.preperation_time_lower_limit}</span> | Cook: <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{@recipe.cooking_time_lower_limit}</span>)
                   </span>
                 </div>
                 <div class="flex items-center gap-2">
                   <svg
-                    class="w-5 h-5 text-slate-500"
+                    class="w-5 h-5 text-parchment-dim"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -223,7 +226,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                       d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
                     />
                   </svg>
-                  <span class="text-slate-300">{@recipe.servings} servings</span>
+                  <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{@recipe.servings}</span>
+                  <span class="text-parchment-dim">servings</span>
                 </div>
                 <div class="flex items-center gap-2">
                   <%= case @recipe.difficulty do %>
@@ -270,11 +274,11 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                         />
                       </svg>
                   <% end %>
-                  <span class="text-slate-300">{@recipe.difficulty}</span>
+                  <span class="text-parchment">{@recipe.difficulty}</span>
                 </div>
               </div>
               <!-- Author Section -->
-              <div class="flex items-center justify-between p-4 bg-slate-700/50 rounded-xl">
+              <div class="flex items-center justify-between p-4 border border-ink-panel2 bg-black/20 rounded-xl">
                 <div class="flex items-center gap-3">
                   <img
                     src={@recipe.user.profile_pic}
@@ -284,11 +288,13 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                   <div>
                     <a
                       href={"/profile/#{@recipe.user.id}"}
-                      class="text-white font-semibold hover:text-primary-500 transition"
+                      class="text-parchment font-semibold hover:text-paprika-soft transition"
                     >
                       {@recipe.user.name}
                     </a>
-                    <p class="text-slate-400 text-sm">{5} recipes</p>
+                    <p class="text-parchment-dim text-sm">
+                      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{5}</span> recipes
+                    </p>
                   </div>
                 </div>
                 <%= if !is_nil(@current_user) do %>
@@ -296,10 +302,10 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                     phx-click="save_user_follow"
                     phx-value-follow_id={@recipe.user.id}
                     class={[
-                      "px-4 py-2 rounded-lg font-medium transition",
+                      "px-4 py-2 rounded-lg font-bold transition",
                       (@recipe.user.id not in @user_follows &&
-                         "bg-slate-600 text-white hover:bg-slate-500") ||
-                        "bg-primary-500 text-white hover:bg-primary-600"
+                         "text-parchment-dim hover:text-parchment") ||
+                        "bg-paprika hover:bg-paprika-soft text-ink"
                     ]}
                   >
                     {if @recipe.user.id not in @user_follows, do: "Following", else: "Follow"}
@@ -307,7 +313,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                 <% else %>
                   <a
                     href="/users/log_in"
-                    class="px-4 py-2 rounded-lg font-medium transition bg-primary-500 text-white hover:bg-primary-600 rounded-full"
+                    class="px-4 py-2 rounded-lg font-bold transition bg-paprika hover:bg-paprika-soft text-ink rounded-full"
                   >
                     Follow
                   </a>
@@ -328,24 +334,24 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           </div>
           <%= if @interactions != [] do %>
             <div class="mt-20">
-              <h2 class="text-lg font-semibold text-white mb-4">Nutrition Insights</h2>
+              <h2 class="text-lg font-display font-medium text-parchment mb-4">Nutrition Insights</h2>
               <.nutrient_interaction_panel interactions={@interactions} />
             </div>
           <% end %>
 
           <div
-            class="mt-20 bg-slate-800 rounded-xl border border-slate-700 overflow-hidden"
+            class="mt-20 bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden"
             id="comments"
           >
             <button
-              class="w-full flex justify-between items-center p-4 hover:bg-slate-700/30 transition relative"
+              class="w-full flex justify-between items-center p-4 hover:bg-black/20 transition relative"
               phx-click={JS.toggle_class("h-0 overflow-hidden mt-6", to: ".comment")}
             >
-              <h3 class="text-white font-semibold">{"Comments (#{length(@recipe_comments)})"}</h3>
+              <h3 class="text-parchment font-semibold">{"Comments (#{length(@recipe_comments)})"}</h3>
 
               <svg
                 class={[
-                  "w-5 h-5 text-slate-400 transition-transform"
+                  "w-5 h-5 text-parchment-dim transition-transform"
                 ]}
                 fill="none"
                 stroke="currentColor"
@@ -371,7 +377,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                 />
               <% end %>
               <%= if Enum.empty?(@recipe_comments) do %>
-                <div class="text-center py-8 text-slate-500">
+                <div class="text-center py-8 text-parchment-dim">
                   No comments yet. Be the first to comment!
                 </div>
               <% else %>

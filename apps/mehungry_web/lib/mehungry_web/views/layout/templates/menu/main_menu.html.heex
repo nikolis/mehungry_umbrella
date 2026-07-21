@@ -1,6 +1,6 @@
-<div class="invisible md:visible h-screen w-16 md:w-60 bg-slate-900 border-r border-slate-800 fixed top-0 left-0 flex flex-col z-40">
+<div class="invisible md:visible h-screen w-16 md:w-60 bg-ink-panel border-r border-ink-panel2 fixed top-0 left-0 flex flex-col z-40">
   <!-- Logo -->
-  <div class="px-4 py-5 border-b border-slate-800 flex-shrink-0">
+  <div class="px-4 py-5 border-b border-ink-panel2 flex-shrink-0">
     <a href="/" class="flex items-center gap-3 px-2 rounded-lg">
       {MehungryWeb.SvgComponents.get_logo(%{id: "Main menu"})}
     </a>
@@ -10,7 +10,7 @@
   <nav class="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
     <a
       href="/browse"
-      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <svg
         class="w-5 h-5 flex-shrink-0"
@@ -32,7 +32,7 @@
 
     <a
       href="/foods"
-      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <svg
         class="w-5 h-5 flex-shrink-0"
@@ -53,7 +53,7 @@
 
     <a
       href="/create_recipe"
-      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <svg
         class="w-5 h-5 flex-shrink-0"
@@ -70,7 +70,7 @@
 
     <a
       href="/calendar"
-      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <.icon name="hero-calendar" class="h-5 w-5 flex-shrink-0" />
       <span class="hidden md:block text-sm font-medium">Calendar</span>
@@ -78,7 +78,7 @@
 
     <a
       href="/basket"
-      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <.icon name="hero-shopping-cart" class="h-5 w-5 flex-shrink-0" />
       <span class="hidden md:block text-sm font-medium">Basket</span>
@@ -86,7 +86,7 @@
 
     <a
       href="/feedback"
-      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <.icon name="hero-chat-bubble-left-ellipsis" class="h-5 w-5 flex-shrink-0" />
       <span class="hidden md:block text-sm font-medium">Give Feedback</span>
@@ -121,7 +121,7 @@
       <%= if pending_count > 0 do %>
         <a
           href="/notifications/invitations"
-          class="nav_link_basic relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors mt-1"
+          class="nav_link_basic relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors mt-1"
         >
           <div class="relative flex-shrink-0">
             <.icon name="hero-bell" class="h-5 w-5" />
@@ -136,26 +136,26 @@
 
     <a
       href="/upgrade"
-      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-primary-400 hover:text-white hover:bg-primary-500/20 border border-primary-500/30 hover:border-primary-500/60 transition-colors mt-2"
+      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-paprika-soft hover:text-parchment hover:bg-paprika/20 border border-paprika/30 hover:border-paprika/60 transition-colors mt-2"
     >
       <.icon name="hero-sparkles" class="h-5 w-5 flex-shrink-0" />
-      <span class="hidden md:block text-sm font-medium">Upgrade to Mehungry Plus</span>
+      <span class="hidden md:block text-sm font-medium">Manage subscriptions</span>
     </a>
   </nav>
 
   <!-- Bottom: language toggle + profile / login -->
-  <div class="p-3 border-t border-slate-800 flex-shrink-0">
+  <div class="p-3 border-t border-ink-panel2 flex-shrink-0">
     <%= if @current_user do %>
-      <div class="flex items-center justify-center gap-1 bg-slate-800 rounded-full p-0.5 mb-2">
+      <div class="flex items-center justify-center gap-1 bg-ink-panel2 rounded-full p-0.5 mb-2">
         <a
           href="/users/language/en"
-          class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "en", do: "bg-primary-500 text-white", else: "text-slate-400 hover:text-white"}"}
+          class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "en", do: "bg-paprika text-ink", else: "text-parchment-dim hover:text-parchment"}"}
         >
           EN
         </a>
         <a
           href="/users/language/el"
-          class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "el", do: "bg-primary-500 text-white", else: "text-slate-400 hover:text-white"}"}
+          class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "el", do: "bg-paprika text-ink", else: "text-parchment-dim hover:text-parchment"}"}
         >
           ΕΛ
         </a>
@@ -164,7 +164,7 @@
     <%= if @current_user do %>
       <a
         href="/profile"
-        class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+        class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
       >
         <img
           src={@current_user.profile_pic}
@@ -175,7 +175,7 @@
     <% else %>
       <a
         href="/users/log_in"
-        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
       >
         <.icon name="hero-arrow-right-on-rectangle" class="h-5 w-5 flex-shrink-0" />
         <span class="hidden md:block text-sm font-medium">Log in</span>

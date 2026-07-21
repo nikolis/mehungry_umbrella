@@ -18,9 +18,9 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
       <%= for basket <- @shopping_baskets do %>
         <div
           class={[
-            "p-4 hover:bg-slate-700/50 transition cursor-pointer",
+            "p-4 hover:bg-black/20 transition cursor-pointer",
             if(@shopping_basket.id == basket.id,
-              do: "bg-slate-700/50 border-l-4 border-l-primary-500"
+              do: "bg-black/20 border-l-4 border-l-paprika"
             )
           ]}
           phx-click="select_shopping_basket"
@@ -30,7 +30,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
             <div class="flex-1">
               <div class="flex items-center gap-2">
                 <svg
-                  class="w-4 h-4 text-slate-400"
+                  class="w-4 h-4 text-parchment-dim"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -42,10 +42,15 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                   />
                 </svg>
-                <h3 class="text-white font-medium">{basket.title}</h3>
+                <h3 class="font-display font-medium text-parchment">{basket.title}</h3>
               </div>
-              <div class="flex gap-3 mt-1 text-xs text-slate-400">
-                <span>{length(basket.basket_ingredients ++ basket.basket_items)} items</span>
+              <div class="flex gap-3 mt-1 text-xs text-parchment-dim">
+                <span>
+                  <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
+                    {length(basket.basket_ingredients ++ basket.basket_items)}
+                  </span>
+                  items
+                </span>
                 <span>{basket.start_dt}</span>
               </div>
             </div>
@@ -53,7 +58,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
               <.link
                 patch={~p"/basket/import_items/#{basket.id}"}
                 phx-value-id={basket.id}
-                class="p-1.5 text-slate-400 hover:text-primary-500 transition"
+                class="p-1.5 text-parchment-dim hover:text-parchment transition"
                 phx-click={
                   Phoenix.LiveView.JS.push("select_shopping_basket")
                   |> Phoenix.LiveView.JS.remove_class("active", to: "#basket-side-navbar.active")
@@ -67,7 +72,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                 phx-click="edit_basket"
                 phx-value-id={basket.id}
                 phx-stop-propagation="click"
-                class="p-1.5 text-slate-400 hover:text-primary-500 transition"
+                class="p-1.5 text-parchment-dim hover:text-parchment transition"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -82,7 +87,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                 phx-click="delete_basket"
                 phx-value-id={basket.id}
                 phx-stop-propagation="click"
-                class="p-1.5 text-slate-400 hover:text-red-400 transition"
+                class="p-1.5 text-red-500/70 hover:text-red-400 transition"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -122,16 +127,19 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
     ~H"""
     <!-- Main Content - Items -->
     <div class="flex-1">
-      <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+      <div class="bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden">
         <!-- Active List Header -->
-        <div class="p-5 border-b border-slate-700">
+        <div class="p-5 border-b border-ink-panel2">
           <div class="flex justify-between items-start">
             <div>
-              <h2 class="text-xl font-bold text-white">
+              <h2 class="text-xl font-display font-medium text-parchment">
                 {@shopping_basket.title}
               </h2>
-              <p class="text-slate-400 text-sm mt-1">
-                {length(@shopping_basket.basket_ingredients ++ @shopping_basket.basket_items)} items • Last updated today
+              <p class="text-parchment-dim text-sm mt-1">
+                <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
+                  {length(@shopping_basket.basket_ingredients ++ @shopping_basket.basket_items)}
+                </span>
+                items • Last updated today
               </p>
             </div>
             <%= if !is_nil(@shopping_basket) and !is_nil(@shopping_basket.id) do %>
@@ -139,7 +147,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                 <!-- Calendar / Meal Planning -->
                 <a
                   href={"/basket/import_items/" <> Integer.to_string(@shopping_basket.id)}
-                  class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition"
+                  class="p-2 rounded-lg text-parchment-dim hover:text-parchment transition"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -150,10 +158,10 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                     />
                   </svg>
                 </a>
-                <!-- Add Item -->
+                <!-- Add Item (primary action) -->
                 <button
                   phx-click="open_add_item_modal"
-                  class="p-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white transition"
+                  class="p-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink transition"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -170,11 +178,11 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
         </div>
 
         <!-- Items List -->
-        <div class="divide-y divide-slate-700 max-h-[60vh] overflow-y-auto">
+        <div class="divide-y divide-ink-panel2 max-h-[60vh] overflow-y-auto">
           <%= if Enum.empty?(@shopping_basket.basket_ingredients ++  @shopping_basket.basket_items) do %>
             <div class="text-center py-12">
               <svg
-                class="w-16 h-16 mx-auto text-slate-600 mb-4"
+                class="w-16 h-16 mx-auto text-parchment-dim mb-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -186,10 +194,10 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                   d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 1.5M17 13l1.5 1.5M9 21h6M12 21v-8"
                 />
               </svg>
-              <p class="text-slate-400">No items in this list</p>
+              <p class="text-parchment-dim">No items in this list</p>
               <%= if !is_nil(@shopping_basket) and !is_nil(@shopping_basket.id) do %>
                 <button
-                  class="mt-4 text-primary-500 hover:text-primary-400 text-sm transition"
+                  class="mt-4 text-paprika-soft hover:text-paprika text-sm transition"
                   phx-click="open_add_item_modal"
                 >
                   + Add your first item
@@ -198,7 +206,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
             </div>
           <% else %>
             <%= for item <- Mehungry.Utils.sort_ingredients_for_basket(@shopping_basket.basket_ingredients ++ @shopping_basket.basket_items) do %>
-              <div class="flex items-center gap-4 p-4 hover:bg-slate-700/30 transition group">
+              <div class="flex items-center gap-4 p-4 hover:bg-black/20 transition group">
                 <!-- Checkbox -->
                 <button
                   phx-click="toggle_basket"
@@ -206,13 +214,15 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                   class={[
                     "w-5 h-5 rounded border-2 flex-shrink-0 transition",
                     if(item.in_storage) do
-                      "bg-primary-500 border-primary-500 border-slate-500 hover:border-primary-500"
+                      "bg-paprika border-paprika hover:border-paprika-soft"
+                    else
+                      "border-ink-panel2 hover:border-paprika-soft"
                     end
                   ]}
                 >
                   <%= if item.in_storage do %>
                     <svg
-                      class="w-4 h-4 text-white"
+                      class="w-4 h-4 text-ink"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -229,11 +239,17 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
 
                 <!-- Item Details -->
                 <div class="flex-1">
-                  <div class={["text-white", if(item.in_storage, do: "line-through text-slate-500")]}>
+                  <div class={[
+                    "text-parchment",
+                    if(item.in_storage, do: "line-through text-parchment-dim")
+                  ]}>
                     {ingredient_name(item, @current_language)}
                   </div>
-                  <div class="text-xs text-slate-400 mt-0.5">
-                    {item.quantity} {if !is_nil(item.measurement_unit) do
+                  <div class="text-xs text-parchment-dim mt-0.5">
+                    <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
+                      {item.quantity}
+                    </span>
+                    {if !is_nil(item.measurement_unit) do
                       item.measurement_unit.name
                     end}
                   </div>
@@ -244,7 +260,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                   <button
                     phx-click="edit_item"
                     phx-value-id={item.id}
-                    class="p-1.5 text-slate-400 hover:text-primary-500"
+                    class="p-1.5 text-parchment-dim hover:text-parchment"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path

@@ -383,7 +383,7 @@ defmodule MehungryWeb.SelectComponent do
 
   defp selected_item(%{mode: :single} = assigns) do
     ~H"""
-    <div class="w-full h-full min-h-10 relative border border-slate-600 rounded-lg bg-slate-700">
+    <div class="w-full h-full min-h-10 relative border border-[var(--sc-border,#475569)] rounded-lg bg-[var(--sc-bg,#334155)]">
       <div
         phx-click="handle-selected-item-click"
         phx-value-id={@id}
@@ -456,7 +456,7 @@ defmodule MehungryWeb.SelectComponent do
 
     ~H"""
     <div class="max-h-50 overflow-y-auto pr-2 w-fit">
-      <ul class="text-white absolute left-0 bg-slate-700 max-h-40 overflow-y-scroll min-w-40 z-50">
+      <ul class="text-white absolute left-0 bg-[var(--sc-dropdown-bg,#334155)] max-h-40 overflow-y-scroll min-w-40 z-50">
         <%= if @listing_open do %>
           <%= for x <- @items do %>
             <.option_item
@@ -475,7 +475,7 @@ defmodule MehungryWeb.SelectComponent do
   defp option_item(%{selected: true} = assigns) do
     ~H"""
     <li
-      class="flex items-center gap-2 cursor-pointer px-3 py-2 bg-slate-600 text-primary-300 hover:bg-slate-500 relative z-50"
+      class="flex items-center gap-2 cursor-pointer px-3 py-2 bg-[var(--sc-option-selected,#475569)] text-primary-300 hover:bg-[var(--sc-option-hover,#64748b)] relative z-50"
       phx-click="handle-selected-item-click"
       phx-value-id={elem(@x, 0)}
       phx-target={@myself}
@@ -489,7 +489,7 @@ defmodule MehungryWeb.SelectComponent do
   defp option_item(%{selected: false} = assigns) do
     ~H"""
     <li
-      class="flex items-center gap-2 cursor-pointer px-3 py-2 bg-slate-700 hover:bg-slate-500 pl-9 relative z-50"
+      class="flex items-center gap-2 cursor-pointer px-3 py-2 bg-[var(--sc-option-bg,#334155)] hover:bg-[var(--sc-option-hover,#64748b)] pl-9 relative z-50"
       phx-click="handle-item-click"
       phx-value-id={elem(@x, 0)}
       phx-target={@myself}

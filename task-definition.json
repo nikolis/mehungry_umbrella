@@ -94,7 +94,7 @@
                 },
                 {
                     "name": "STRIPE_SECRET_KEY",
-                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/stripe_secret_key-QS1Cz9"
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/stripe_secret-0PCbJD"
                 },
                 {
                     "name": "STRIPE_WEBHOOK_SECRET",

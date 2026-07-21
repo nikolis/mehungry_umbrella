@@ -37,7 +37,7 @@ defmodule MehungryWeb.UpgradeLive.Index do
      |> assign(:plan_used, plan_used)
      |> assign(:plan_limit, plan_limit)
      |> assign(:stripe_status, nil)
-     |> assign(:page_title, "Upgrade to Mehungry Plus")}
+     |> assign(:page_title, "Manage subscriptions")}
   end
 
   @impl true
@@ -65,38 +65,15 @@ defmodule MehungryWeb.UpgradeLive.Index do
   end
 
   def handle_event("subscribe", %{"interval" => interval}, socket) do
-    user = socket.assigns.user
-    price_id = get_price_id(interval)
-    base_url = MehungryWeb.Endpoint.url()
-
-    success_url =
-      base_url <> "/upgrade?stripe_status=success&tier=m3hungry_plus&interval=#{interval}"
-
-    cancel_url = base_url <> "/upgrade?stripe_status=cancel"
-
-    case StripeHandler.create_checkout_session(
-           user.id,
-           user.email,
-           price_id,
-           success_url,
-           cancel_url,
-           "m3hungry_plus"
-         ) do
-      {:ok, checkout_url} ->
-        socket =
-          MehungryWeb.GoogleAnalytics.track(socket, "begin_checkout", %{
-            currency: "EUR",
-            value: price_value("m3hungry_plus", interval),
-            items: [%{item_name: "m3hungry_plus"}]
-          })
-
-        {:noreply, redirect(socket, external: checkout_url)}
-
-      {:error, :stripe_not_configured} ->
-        {:noreply, put_flash(socket, :error, "Payment system is not configured yet.")}
-
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Could not start checkout: #{reason}")}
+    if socket.assigns.subscription.tier == "pro" do
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         "Your Pro plan already includes everything in Mehungry Plus."
+       )}
+    else
+      do_subscribe(socket, interval)
     end
   end
 
@@ -150,6 +127,42 @@ defmodule MehungryWeb.UpgradeLive.Index do
     end
   end
 
+  defp do_subscribe(socket, interval) do
+    user = socket.assigns.user
+    price_id = get_price_id(interval)
+    base_url = MehungryWeb.Endpoint.url()
+
+    success_url =
+      base_url <> "/upgrade?stripe_status=success&tier=m3hungry_plus&interval=#{interval}"
+
+    cancel_url = base_url <> "/upgrade?stripe_status=cancel"
+
+    case StripeHandler.create_checkout_session(
+           user.id,
+           user.email,
+           price_id,
+           success_url,
+           cancel_url,
+           "m3hungry_plus"
+         ) do
+      {:ok, checkout_url} ->
+        socket =
+          MehungryWeb.GoogleAnalytics.track(socket, "begin_checkout", %{
+            currency: "EUR",
+            value: price_value("m3hungry_plus", interval),
+            items: [%{item_name: "m3hungry_plus"}]
+          })
+
+        {:noreply, redirect(socket, external: checkout_url)}
+
+      {:error, :stripe_not_configured} ->
+        {:noreply, put_flash(socket, :error, "Payment system is not configured yet.")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Could not start checkout: #{reason}")}
+    end
+  end
+
   attr :text, :string, required: true
   attr :included, :boolean, required: true
 
@@ -165,10 +178,10 @@ defmodule MehungryWeb.UpgradeLive.Index do
         >
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
         </svg>
-        <span class="text-slate-300">{@text}</span>
+        <span class="text-parchment">{@text}</span>
       <% else %>
         <svg
-          class="w-4 h-4 text-slate-600 flex-shrink-0"
+          class="w-4 h-4 text-parchment-dim/40 flex-shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -180,7 +193,7 @@ defmodule MehungryWeb.UpgradeLive.Index do
             d="M6 18L18 6M6 6l12 12"
           />
         </svg>
-        <span class="text-slate-600">{@text}</span>
+        <span class="text-parchment-dim/40">{@text}</span>
       <% end %>
     </li>
     """
