@@ -72,7 +72,7 @@ defmodule MehungryWeb.TaxonomyReviewTest do
     {:ok, view, _html} = live(conn, ~p"/professional/taxonomy/review")
 
     view
-    |> form("form[phx-change='override']", %{"id" => mapping.id, "node_id" => lamb.id})
+    |> form("form[phx-change='override']", %{"mapping_id" => mapping.id, "node_id" => lamb.id})
     |> render_change()
 
     refute render(view) =~ "beef brisket"

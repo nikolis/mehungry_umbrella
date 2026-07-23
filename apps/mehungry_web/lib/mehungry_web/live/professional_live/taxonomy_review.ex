@@ -42,7 +42,7 @@ defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
   end
 
   @impl true
-  def handle_event("override", %{"id" => id, "node_id" => node_id}, socket)
+  def handle_event("override", %{"mapping_id" => id, "node_id" => node_id}, socket)
       when node_id != "" do
     {:ok, _} = Food.review_mapping(String.to_integer(id), {:override, String.to_integer(node_id)})
 

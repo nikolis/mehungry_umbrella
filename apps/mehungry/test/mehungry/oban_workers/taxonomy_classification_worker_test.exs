@@ -55,10 +55,13 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorkerTest do
   end
 
   test "writes ai rows with confidence and re-enqueues on progress", ctx do
+    # Pre-classify everything else so the batch is exactly our new ingredient,
+    # independent of how many rows the DB holds or their physical order.
+    classify_all_ingredients(ctx.other.id)
     ing = ingredient_fixture(%{name: "beef steak"})
 
     stub(fn ingredients, _leaves ->
-      send(self(), {:classified, length(ingredients)})
+      send(self(), {:classified, Enum.map(ingredients, & &1.id)})
       rows = Enum.map(ingredients, &%{ingredient_id: &1.id, taxonomy_node_id: ctx.beef.id, confidence: 0.9})
       {:ok, rows}
     end)
@@ -66,7 +69,8 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorkerTest do
     assert :ok =
              perform_job(TaxonomyClassificationWorker, %{"taxonomy_id" => ctx.taxonomy.id})
 
-    assert_received {:classified, n} when n >= 1
+    assert_received {:classified, [classified_id]}
+    assert classified_id == ing.id
 
     mapping = Repo.get_by!(IngredientTaxonomyNode, ingredient_id: ing.id)
     assert mapping.taxonomy_node_id == ctx.beef.id
