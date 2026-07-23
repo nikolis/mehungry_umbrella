@@ -33,6 +33,9 @@ config :mehungry, :off_client, Mehungry.FoodData.OpenFoodFacts.ClientStub
 config :mehungry, :instagram_client, Mehungry.Social.Instagram.ClientStub
 config :mehungry, :social_media_publisher, Mehungry.Social.PublisherStub
 
+# Taxonomy classifier is stubbed in tests — no AI/API calls
+config :mehungry, :taxonomy_classifier, Mehungry.AI.TaxonomyClassifierStub
+
 # Chrome
 # default
 config :wallaby,
