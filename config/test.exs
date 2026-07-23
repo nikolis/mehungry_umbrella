@@ -32,6 +32,7 @@ config :mehungry, :off_client, Mehungry.FoodData.OpenFoodFacts.ClientStub
 # Instagram Graph API client + social media publisher are stubbed in tests
 config :mehungry, :instagram_client, Mehungry.Social.Instagram.ClientStub
 config :mehungry, :social_media_publisher, Mehungry.Social.PublisherStub
+config :mehungry, :taxonomy_classifier, Mehungry.AI.TaxonomyClassifierStub
 
 # Chrome
 # default
