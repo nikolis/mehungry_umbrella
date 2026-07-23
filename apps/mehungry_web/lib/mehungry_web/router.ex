@@ -96,6 +96,8 @@ defmodule MehungryWeb.Router do
       live "/ai-bot/review/:id", AiBotLive.RecipeReview, :show
       live "/ai-bot/review/:id/translate/:lang", AiBotLive.RecipeTranslate, :show
       live "/ai-bot/social", AiBotLive.SocialAccounts, :index
+
+      live "/taxonomy/review", ProfessionalLive.TaxonomyReview, :index
     end
   end
 

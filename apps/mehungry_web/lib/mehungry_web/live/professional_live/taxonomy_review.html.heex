@@ -1,0 +1,74 @@
+<div class="max-w-5xl mx-auto p-4 space-y-8">
+  <h1 class="text-2xl font-semibold text-parchment">Taxonomy Review</h1>
+
+  <%= if @taxonomy do %>
+    <p class="text-parchment-dim text-sm">
+      Reviewing <span class="font-medium">{@taxonomy.name}</span>
+      (<code>{@taxonomy.slug}</code>). Lowest-confidence assignments first.
+    </p>
+
+    <section>
+      <h2 class="text-lg font-medium text-parchment mb-2">Tree</h2>
+      <MehungryWeb.AccordionComponent.accordion items={@tree} accordion_id="taxonomy-tree" />
+    </section>
+
+    <section>
+      <h2 class="text-lg font-medium text-parchment mb-2">Pending assignments</h2>
+
+      <div
+        id="taxonomy_pending"
+        phx-hook="InfiniteScroll"
+        phx-update="stream"
+        data-page={@page}
+        class="divide-y divide-ink-panel2"
+      >
+        <div
+          :for={{dom_id, mapping} <- @streams.mappings}
+          id={dom_id}
+          class="py-3 flex flex-wrap items-center gap-3 justify-between"
+        >
+          <div class="min-w-0 flex-1">
+            <div class="text-parchment font-medium truncate">{mapping.ingredient.name}</div>
+            <div class="text-xs text-parchment-dim">
+              category: {(mapping.ingredient.category && mapping.ingredient.category.name) || "—"}
+              · confidence: {confidence_label(mapping.confidence)} · source: {mapping.source}
+            </div>
+            <div class="text-xs text-basil mt-0.5">
+              → {node_path(@node_paths, mapping.taxonomy_node)}
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              phx-click="confirm"
+              phx-value-id={mapping.id}
+              class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+            >
+              Confirm
+            </button>
+
+            <form id={"override-#{mapping.id}"} phx-change="override" class="flex items-center gap-1">
+              <input type="hidden" name="id" value={mapping.id} />
+              <select
+                name="node_id"
+                class="text-sm rounded bg-ink-panel border border-ink-panel2 text-parchment px-2 py-1"
+              >
+                <option value="">Override…</option>
+                <option :for={{path, id} <- @leaf_options} value={id}>{path}</option>
+              </select>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-parchment-dim text-sm mt-4">
+        Scroll to load more. Confirmed and overridden rows leave this list.
+      </p>
+    </section>
+  <% else %>
+    <p class="text-parchment-dim">
+      No taxonomy found. Run <code>mix taxonomy.seed</code> to create one.
+    </p>
+  <% end %>
+</div>
