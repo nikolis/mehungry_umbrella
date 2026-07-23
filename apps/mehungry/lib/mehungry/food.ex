@@ -14,6 +14,7 @@ defmodule Mehungry.Food do
     * `Mehungry.Food.Categories` — categories and food restriction types
     * `Mehungry.Food.Localization` — recipe/ingredient/unit translations
     * `Mehungry.Food.Engagement` — likes, comments, annotations
+    * `Mehungry.Food.Taxonomies` — hierarchical ingredient taxonomies
   """
 
   alias Mehungry.Food.{
@@ -24,7 +25,8 @@ defmodule Mehungry.Food do
     Localization,
     Measurements,
     Nutrients,
-    Recipes
+    Recipes,
+    Taxonomies
   }
 
   # ── Recipes ────────────────────────────────────────────────────────────
@@ -166,4 +168,26 @@ defmodule Mehungry.Food do
   defdelegate count_user_liked_recipes(user_id), to: Engagement
   defdelegate get_recipe_comments(recipe_id), to: Engagement
   defdelegate list_annotations(recipe), to: Engagement
+
+  # ── Taxonomies ─────────────────────────────────────────────────────────
+
+  defdelegate create_taxonomy(attrs), to: Taxonomies
+  defdelegate get_taxonomy!(id), to: Taxonomies
+  defdelegate get_taxonomy_by_slug(slug), to: Taxonomies
+  defdelegate list_taxonomies(), to: Taxonomies
+  defdelegate create_node(attrs), to: Taxonomies
+  defdelegate update_node(node, attrs), to: Taxonomies
+  defdelegate delete_node(node), to: Taxonomies
+  defdelegate get_node!(id), to: Taxonomies
+  defdelegate get_node_by_slug(taxonomy_id, slug), to: Taxonomies
+  defdelegate list_nodes(taxonomy_id), to: Taxonomies
+  defdelegate list_leaf_nodes(taxonomy_id), to: Taxonomies
+  defdelegate list_leaves_with_paths(taxonomy_id), to: Taxonomies
+  defdelegate build_tree(taxonomy_id), to: Taxonomies
+  defdelegate subtree_node_ids(node_id), to: Taxonomies
+  defdelegate list_ingredients_under_node(node_id), to: Taxonomies
+  defdelegate attach_ingredient(ingredient_id, node_id, attrs \\ %{}), to: Taxonomies
+  defdelegate detach_ingredient(ingredient_id, node_id), to: Taxonomies
+  defdelegate list_pending_review(taxonomy_id, opts \\ []), to: Taxonomies
+  defdelegate review_mapping(id, action), to: Taxonomies
 end
