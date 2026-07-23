@@ -73,6 +73,8 @@ defmodule MehungryWeb.Router do
       live "/ingredients/new", ProfessionalLive.IngredientsCreate, :create
       live "/ingredients/:id/show", Professional.IngredientLive.Show, :show
 
+      live "/taxonomy/review", ProfessionalLive.TaxonomyReview, :index
+
       live "/languages", Professional.LanguageLive.Index, :index
       live "/languages/new", Professional.LanguageLive.Index, :new
       live "/languages/:id/edit", Professional.LanguageLive.Index, :edit
