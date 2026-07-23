@@ -75,6 +75,7 @@ config :beam_scope,
   sync: BeamScope.Synchronization.SnapshotGossip,
   sync_interval: :timer.seconds(1),
   node_ttl: :timer.seconds(5),
+  providers: [{BeamScope.Provider.Phoenix, :phoenix}],
 
   # Top-N bound for the Process/ETS providers (largest mailboxes / memory / tables).
   top_n: 5
