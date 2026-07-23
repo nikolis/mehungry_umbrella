@@ -816,3 +816,5 @@ Mehungry.Repo.insert(%Mehungry.Food.Ingredient{
   measurement_unit: gram
   })
 """
+
+Mehungry.Food.TaxonomySeeder.seed()
