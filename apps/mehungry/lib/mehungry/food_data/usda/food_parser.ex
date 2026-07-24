@@ -142,7 +142,13 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
           description
       end
 
-    category = get_or_create_food_category(attrs_description)
+    usda_code =
+      case attrs["foodCategory"]["code"] || attrs["wweiaFoodCategory"]["wweiaFoodCategoryCode"] do
+        nil -> nil
+        code -> to_string(code)
+      end
+
+    category = get_or_create_food_category(attrs_description, usda_code)
 
     category_id =
       case is_nil(category) do
@@ -197,16 +203,20 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
     end
   end
 
-  defp get_or_create_food_category(nil), do: nil
+  defp get_or_create_food_category(nil, _usda_code), do: nil
 
-  defp get_or_create_food_category(category_name) do
-    category = Food.get_category_by_name(category_name)
+  defp get_or_create_food_category(category_name, usda_code) do
+    case Food.get_category_by_name(category_name) do
+      nil ->
+        {:ok, category} = Food.create_category(%{name: category_name, usda_code: usda_code})
+        category
 
-    if is_nil(category) do
-      {:ok, category} = Food.create_category(%{name: category_name})
-      category
-    else
-      category
+      %{usda_code: nil} = category when not is_nil(usda_code) ->
+        {:ok, category} = Food.update_category(category, %{usda_code: usda_code})
+        category
+
+      category ->
+        category
     end
   end
 

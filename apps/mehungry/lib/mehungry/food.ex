@@ -12,6 +12,7 @@ defmodule Mehungry.Food do
     * `Mehungry.Food.Nutrients` — nutrient records and interactions
     * `Mehungry.Food.Measurements` — measurement units and portions
     * `Mehungry.Food.Categories` — categories and food restriction types
+    * `Mehungry.Food.Taxonomies` — hierarchical ingredient taxonomies
     * `Mehungry.Food.Localization` — recipe/ingredient/unit translations
     * `Mehungry.Food.Engagement` — likes, comments, annotations
   """
@@ -24,7 +25,8 @@ defmodule Mehungry.Food do
     Localization,
     Measurements,
     Nutrients,
-    Recipes
+    Recipes,
+    Taxonomies
   }
 
   # ── Recipes ────────────────────────────────────────────────────────────
@@ -139,6 +141,29 @@ defmodule Mehungry.Food do
   defdelegate list_categories(), to: Categories
   defdelegate search_category(term), to: Categories
   defdelegate list_food_restriction_types(), to: Categories
+
+  # ── Taxonomies ─────────────────────────────────────────────────────────
+
+  defdelegate create_taxonomy(attrs), to: Taxonomies
+  defdelegate get_taxonomy!(id), to: Taxonomies
+  defdelegate get_taxonomy_by_slug(slug), to: Taxonomies
+  defdelegate list_taxonomies(), to: Taxonomies
+  defdelegate create_node(attrs), to: Taxonomies
+  defdelegate update_node(node, attrs), to: Taxonomies
+  defdelegate delete_node(node), to: Taxonomies
+  defdelegate get_node!(id), to: Taxonomies
+  defdelegate get_node_by_slug(taxonomy_id, slug), to: Taxonomies
+  defdelegate list_nodes(taxonomy_id), to: Taxonomies
+  defdelegate list_leaf_nodes(taxonomy_id), to: Taxonomies
+  defdelegate list_leaf_paths(taxonomy_id), to: Taxonomies
+  defdelegate build_tree(taxonomy_id), to: Taxonomies
+  defdelegate subtree_node_ids(node_id), to: Taxonomies
+  defdelegate list_ingredients_under_node(node_id), to: Taxonomies
+  defdelegate attach_ingredient(ingredient_id, node_id, attrs \\ %{}), to: Taxonomies
+  defdelegate detach_ingredient(ingredient_id, node_id), to: Taxonomies
+  defdelegate list_pending_review(taxonomy_id, opts \\ []), to: Taxonomies
+  defdelegate count_pending_review(taxonomy_id), to: Taxonomies
+  defdelegate review_mapping(mapping, action), to: Taxonomies
 
   # ── Localization ───────────────────────────────────────────────────────
 
