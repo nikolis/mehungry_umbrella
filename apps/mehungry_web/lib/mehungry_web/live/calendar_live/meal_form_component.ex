@@ -10,7 +10,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   alias MehungryWeb.CalendarLive.Components
 
   def get_measurement_units(_form, _index) do
-    Food.get_measurement_unit_by_name("grammar")
+    Food.get_measurement_unit_by_name("gram")
   end
 
   def is_empty(%Phoenix.HTML.Form{} = form, atom_key) do

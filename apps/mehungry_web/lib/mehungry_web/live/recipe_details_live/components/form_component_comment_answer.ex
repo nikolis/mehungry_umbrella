@@ -51,7 +51,10 @@ defmodule MehungryWeb.RecipeDetailsLive.FormComponentCommentAnswer do
             >
               Cancel
             </button>
-            <button class="text-parchment-dim hover:text-parchment font-semibold" phx-disable-with="Saving...">Post</button>
+            <button
+              class="text-parchment-dim hover:text-parchment font-semibold"
+              phx-disable-with="Saving..."
+            >Post</button>
           </div>
         </:actions>
       </.simple_form>

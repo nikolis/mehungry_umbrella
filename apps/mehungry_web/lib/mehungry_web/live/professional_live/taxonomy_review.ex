@@ -1,181 +1,158 @@
 defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
   use MehungryWeb, :live_view
 
-  alias Mehungry.Food.Taxonomies
-  alias MehungryWeb.AccordionComponent
+  alias Mehungry.Food
+  alias Mehungry.Food.TaxonomySeeder
 
-  @taxonomy_slug "bio-nutritional"
-  @page_size 50
+  @per_page 25
+  @slug "bio-nutritional"
 
   @impl true
   def mount(_params, _session, socket) do
-    taxonomy = Taxonomies.get_taxonomy_by_slug(@taxonomy_slug)
+    taxonomy = Food.get_taxonomy_by_slug(@slug) || List.first(Food.list_taxonomies())
 
     socket =
       socket
-      |> assign(:page_title, "Ingredient Taxonomy Review")
       |> assign(:taxonomy, taxonomy)
-      |> assign(:limit, @page_size)
-      |> load_taxonomy_data()
+      |> assign(:page, 1)
+      |> assign(:progress, progress_for(taxonomy))
+      |> load_taxonomy_assigns()
+      |> load_first_page()
 
     {:ok, socket}
   end
 
   @impl true
-  def render(%{taxonomy: nil} = assigns) do
-    ~H"""
-    <div class="text-slate-300">
-      <h1 class="text-xl font-bold text-white mb-2">Ingredient Taxonomy Review</h1>
-      <p>
-        No taxonomy found. Seed it first with <code class="text-amber-400">mix taxonomy.seed</code>.
-      </p>
-    </div>
-    """
-  end
+  def handle_event("load-more", _params, socket) do
+    taxonomy = socket.assigns.taxonomy
+    page = socket.assigns.page + 1
+    offset = (page - 1) * @per_page
 
-  def render(assigns) do
-    ~H"""
-    <div>
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h1 class="text-xl font-bold text-white">Ingredient Taxonomy Review</h1>
-          <p class="text-sm text-slate-400 mt-0.5">
-            {@taxonomy.name} — confirm or override AI leaf assignments
-          </p>
-        </div>
-        <div class="text-sm text-slate-400">
-          <span class="text-amber-400 font-semibold">{@pending_count}</span> pending review
-        </div>
-      </div>
+    mappings = pending(taxonomy, offset)
 
-      <div class="mb-6 rounded-xl border border-slate-700/60 overflow-hidden">
-        <div class="px-4 py-2 bg-slate-800/60 text-sm font-medium text-slate-300">
-          Taxonomy tree (rolled-up ingredient counts)
-        </div>
-        <AccordionComponent.accordion items={@tree} accordion_id="taxonomy-tree" />
-      </div>
-
-      <div class="rounded-xl border border-slate-700/60 overflow-x-auto">
-        <table class="w-full text-sm text-left">
-          <thead class="bg-slate-800/60 text-slate-300">
-            <tr>
-              <th class="px-4 py-2 font-medium">Ingredient</th>
-              <th class="px-4 py-2 font-medium">USDA category</th>
-              <th class="px-4 py-2 font-medium">Assigned node</th>
-              <th class="px-4 py-2 font-medium">Confidence</th>
-              <th class="px-4 py-2 font-medium">Source</th>
-              <th class="px-4 py-2 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr :if={@pending == []}>
-              <td colspan="6" class="px-4 py-6 text-center text-slate-400">
-                Nothing pending review.
-              </td>
-            </tr>
-            <tr
-              :for={mapping <- @pending}
-              id={"mapping-#{mapping.id}"}
-              class="border-t border-slate-700/40 text-slate-200"
-            >
-              <td class="px-4 py-2">{mapping.ingredient.name}</td>
-              <td class="px-4 py-2 text-slate-400">
-                {mapping.ingredient.category && mapping.ingredient.category.name}
-              </td>
-              <td class="px-4 py-2">{node_path(mapping.taxonomy_node, @leaf_paths)}</td>
-              <td class="px-4 py-2">{format_confidence(mapping.confidence)}</td>
-              <td class="px-4 py-2 text-slate-400">{mapping.source}</td>
-              <td class="px-4 py-2">
-                <div class="flex items-center gap-2">
-                  <button
-                    phx-click="confirm"
-                    phx-value-id={mapping.id}
-                    class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 text-xs font-medium transition-colors"
-                  >
-                    Confirm
-                  </button>
-                  <form phx-submit="override" class="flex items-center gap-1">
-                    <input type="hidden" name="id" value={mapping.id} />
-                    <select
-                      name="node_id"
-                      class="bg-slate-800 border border-slate-700/60 rounded-lg text-slate-200 text-xs px-2 py-1 focus:border-amber-500/50 focus:outline-none"
-                    >
-                      <option
-                        :for={leaf <- @leaf_paths}
-                        value={leaf.id}
-                        selected={leaf.id == mapping.taxonomy_node_id}
-                      >
-                        {leaf.path}
-                      </option>
-                    </select>
-                    <button
-                      type="submit"
-                      class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 text-xs font-medium transition-colors"
-                    >
-                      Override
-                    </button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div :if={@pending_count > length(@pending)} class="mt-4 text-center">
-        <button
-          phx-click="load-more"
-          class="px-4 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/60 text-sm transition-colors"
-        >
-          Load more
-        </button>
-      </div>
-    </div>
-    """
+    {:noreply,
+     socket
+     |> assign(:page, page)
+     |> stream(:mappings, mappings)}
   end
 
   @impl true
   def handle_event("confirm", %{"id" => id}, socket) do
-    {:ok, _} = Taxonomies.review_mapping(String.to_integer(id), :confirm)
+    {:ok, _} = Food.review_mapping(String.to_integer(id), :confirm)
 
-    {:noreply, load_taxonomy_data(socket)}
+    {:noreply, stream_delete_by_dom_id(socket, :mappings, "mappings-#{id}")}
   end
 
   @impl true
-  def handle_event("override", %{"id" => id, "node_id" => node_id}, socket) do
-    {:ok, _} =
-      Taxonomies.review_mapping(
-        String.to_integer(id),
-        {:override, String.to_integer(node_id)}
-      )
+  def handle_event("override", %{"mapping_id" => id, "node_id" => node_id}, socket)
+      when node_id != "" do
+    {:ok, _} = Food.review_mapping(String.to_integer(id), {:override, String.to_integer(node_id)})
 
-    {:noreply, load_taxonomy_data(socket)}
+    {:noreply,
+     socket
+     |> stream_delete_by_dom_id(:mappings, "mappings-#{id}")
+     |> refresh_tree()}
+  end
+
+  def handle_event("override", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("seed", _params, socket) do
+    TaxonomySeeder.seed()
+    taxonomy = Food.get_taxonomy_by_slug(@slug) || List.first(Food.list_taxonomies())
+
+    socket =
+      socket
+      |> assign(:taxonomy, taxonomy)
+      |> assign(:page, 1)
+      |> assign(:progress, progress_for(taxonomy))
+      |> load_taxonomy_assigns()
+      |> reset_first_page()
+      |> put_flash(:info, "Taxonomy seeded")
+
+    {:noreply, socket}
   end
 
   @impl true
-  def handle_event("load-more", _params, socket) do
-    socket = assign(socket, :limit, socket.assigns.limit + @page_size)
-
-    {:noreply, load_taxonomy_data(socket)}
+  def handle_event("classify", _params, %{assigns: %{taxonomy: nil}} = socket) do
+    {:noreply, put_flash(socket, :error, "Seed a taxonomy first")}
   end
 
-  defp load_taxonomy_data(%{assigns: %{taxonomy: nil}} = socket), do: socket
+  def handle_event("classify", _params, socket) do
+    Food.enqueue_classification(socket.assigns.taxonomy.id)
 
-  defp load_taxonomy_data(%{assigns: %{taxonomy: taxonomy}} = socket) do
+    {:noreply, put_flash(socket, :info, "Classification started — refresh to watch progress")}
+  end
+
+  @impl true
+  def handle_event("refresh", _params, socket) do
+    taxonomy = socket.assigns.taxonomy
+
+    {:noreply,
+     socket
+     |> assign(:page, 1)
+     |> assign(:progress, progress_for(taxonomy))
+     |> refresh_tree()
+     |> reset_first_page()}
+  end
+
+  # ── Data loading ───────────────────────────────────────────────────────
+
+  defp progress_for(nil), do: %{classified: 0, total: 0}
+  defp progress_for(taxonomy), do: Food.classification_progress(taxonomy.id)
+
+  defp reset_first_page(%{assigns: %{taxonomy: nil}} = socket) do
+    stream(socket, :mappings, [], reset: true)
+  end
+
+  defp reset_first_page(%{assigns: %{taxonomy: taxonomy}} = socket) do
+    stream(socket, :mappings, pending(taxonomy, 0), reset: true)
+  end
+
+  defp load_taxonomy_assigns(%{assigns: %{taxonomy: nil}} = socket) do
     socket
-    |> assign(:tree, Taxonomies.build_tree(taxonomy.id))
-    |> assign(:pending, Taxonomies.list_pending_review(taxonomy.id, limit: socket.assigns.limit))
-    |> assign(:pending_count, Taxonomies.count_pending_review(taxonomy.id))
-    |> assign(:leaf_paths, Taxonomies.list_leaf_paths(taxonomy.id))
+    |> assign(:tree, [])
+    |> assign(:leaf_options, [])
+    |> assign(:node_paths, %{})
   end
 
-  defp node_path(node, leaf_paths) do
-    case Enum.find(leaf_paths, &(&1.id == node.id)) do
-      nil -> node.name
-      leaf -> leaf.path
-    end
+  defp load_taxonomy_assigns(%{assigns: %{taxonomy: taxonomy}} = socket) do
+    leaves = Food.list_leaves_with_paths(taxonomy.id)
+
+    socket
+    |> assign(:tree, Food.build_tree(taxonomy.id))
+    |> assign(:leaf_options, Enum.map(leaves, &{&1.path, &1.id}))
+    |> assign(:node_paths, Map.new(leaves, &{&1.id, &1.path}))
   end
 
-  defp format_confidence(nil), do: "—"
-  defp format_confidence(confidence), do: "#{round(confidence * 100)}%"
+  defp load_first_page(%{assigns: %{taxonomy: nil}} = socket) do
+    stream(socket, :mappings, [])
+  end
+
+  defp load_first_page(%{assigns: %{taxonomy: taxonomy}} = socket) do
+    stream(socket, :mappings, pending(taxonomy, 0))
+  end
+
+  defp refresh_tree(%{assigns: %{taxonomy: nil}} = socket), do: socket
+
+  defp refresh_tree(%{assigns: %{taxonomy: taxonomy}} = socket) do
+    assign(socket, :tree, Food.build_tree(taxonomy.id))
+  end
+
+  defp pending(taxonomy, offset) do
+    Food.list_pending_review(taxonomy.id, limit: @per_page, offset: offset)
+  end
+
+  # ── View helpers ───────────────────────────────────────────────────────
+
+  defp node_path(node_paths, node) do
+    Map.get(node_paths, node.id, node.name)
+  end
+
+  defp confidence_label(nil), do: "—"
+  defp confidence_label(c) when is_float(c), do: :erlang.float_to_binary(c, decimals: 2)
+  defp confidence_label(c), do: to_string(c)
+
+  defp percent(%{total: total}) when total in [0, nil], do: 0
+  defp percent(%{classified: classified, total: total}), do: round(classified / total * 100)
 end

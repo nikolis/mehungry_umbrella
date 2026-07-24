@@ -1,8 +1,9 @@
 defmodule Mehungry.AI.TaxonomyClassifier do
   @moduledoc """
-  Classifies USDA ingredient names into the leaf nodes of an ingredient
-  taxonomy. Single-shot JSON prompt over `Mehungry.AI.Client`, mirroring
-  `Mehungry.AI.IngredientTranslator`.
+  Single-shot AI classification of USDA ingredients into taxonomy leaves.
+  Mirrors `Mehungry.AI.IngredientTranslator`: one JSON prompt via
+  `AI.Client.request/1`, fence-strip + `Jason.decode`, remap names→ids and
+  slugs→node_ids, dropping any leaf the model invented.
   """
 
   @behaviour Mehungry.AI.TaxonomyClassifierBehaviour
@@ -10,65 +11,52 @@ defmodule Mehungry.AI.TaxonomyClassifier do
   require Logger
 
   @model "claude-sonnet-4-6"
-  @fallback_slug "other-unclassified"
 
-  @impl true
+  @impl Mehungry.AI.TaxonomyClassifierBehaviour
   def classify(ingredients, leaves) when is_list(ingredients) and is_list(leaves) do
     name_to_id = Map.new(ingredients, fn %{id: id, name: name} -> {name, id} end)
-    valid_slugs = MapSet.new(leaves, & &1.slug)
+    slug_to_node_id = Map.new(leaves, fn %{id: id, slug: slug} -> {slug, id} end)
 
     system = system_prompt(leaves)
-
-    user =
-      "Classify these USDA ingredient names:\n#{Jason.encode!(Map.keys(name_to_id))}"
+    user = "Classify these USDA ingredient names:\n#{Jason.encode!(Map.keys(name_to_id))}"
 
     case call_api(system, user) do
-      {:ok, text} ->
-        parse_classification_map(text, name_to_id, valid_slugs)
-
-      error ->
-        error
+      {:ok, text} -> parse(text, name_to_id, slug_to_node_id)
+      error -> error
     end
   end
 
   defp system_prompt(leaves) do
-    leaf_lines =
+    leaf_list =
       Enum.map_join(leaves, "\n", fn %{slug: slug, path: path} -> "- #{slug}: #{path}" end)
 
     """
-    You are a food scientist classifying ingredients from the USDA food database
-    into a hierarchical food taxonomy.
+    You are a food taxonomist classifying ingredients for a recipe app.
 
-    The ingredient names use the USDA naming convention: "Primary food, qualifier,
-    qualifier, preparation method, fat trim level...". For example:
-    "Chicken, broilers or fryers, breast, meat only, cooked, roasted" or
-    "Oil, olive, salad or cooking". Identify the CORE ingredient and ignore
-    qualifiers about fat trim, cooking method, and brand specifics.
+    The ingredient names come from the USDA food database, which uses a specific
+    technical naming convention: "Primary food, qualifier, qualifier, preparation
+    method, fat trim level...". For example: "Beef, chuck, arm pot roast, separable
+    lean only, cooked, braised" or "Oil, olive, salad or cooking". Focus on the CORE
+    ingredient, not the qualifiers, when choosing a category.
 
-    These are the available taxonomy leaves, given as "slug: full path":
-    #{leaf_lines}
+    Assign each ingredient to exactly ONE of these leaf categories (identified by slug):
 
-    Rules:
-    - Assign each ingredient to exactly one leaf slug from the list above.
-    - Choose the most specific leaf that fits the core ingredient.
-    - Composite or prepared dishes belong under the prepared/composite leaves,
-      not under their main ingredient.
-    - If nothing fits, use "#{@fallback_slug}" with a low confidence.
-    - Confidence is a number between 0.0 and 1.0 reflecting how certain you are.
+    #{leaf_list}
 
-    Return ONLY a valid JSON object mapping each original ingredient name to an
-    object with "leaf" (a slug from the list) and "confidence".
-    No markdown, no explanation, no extra keys.
+    When nothing fits, use "other-unclassified" with a low confidence.
 
-    Example:
+    Return ONLY a valid JSON object mapping each original ingredient name to an object
+    with the chosen leaf slug and a confidence between 0.0 and 1.0. No markdown, no
+    explanation, no extra keys. Example:
     {
-      "Beef, ground, 80% lean meat / 20% fat, raw": {"leaf": "beef", "confidence": 0.98},
-      "Fast food, pizza chain, 14\\" pizza": {"leaf": "fast-food", "confidence": 0.9}
+      "Beef, ground, 80% lean meat / 20% fat, cooked": {"leaf": "beef", "confidence": 0.95},
+      "Oil, olive, salad or cooking": {"leaf": "vegetable-oils", "confidence": 0.9},
+      "Some novelty product": {"leaf": "other-unclassified", "confidence": 0.2}
     }
     """
   end
 
-  defp parse_classification_map(text, name_to_id, valid_slugs) do
+  defp parse(text, name_to_id, slug_to_node_id) do
     cleaned =
       text
       |> String.trim()
@@ -78,26 +66,8 @@ defmodule Mehungry.AI.TaxonomyClassifier do
 
     case Jason.decode(cleaned) do
       {:ok, map} when is_map(map) ->
-        result =
-          map
-          |> Enum.flat_map(fn {name, assignment} ->
-            with id when not is_nil(id) <- Map.get(name_to_id, name),
-                 %{"leaf" => slug} <- assignment,
-                 true <- MapSet.member?(valid_slugs, slug) do
-              confidence = normalize_confidence(assignment["confidence"])
-              [{id, %{slug: slug, confidence: confidence}}]
-            else
-              _ ->
-                Logger.warning(
-                  "TaxonomyClassifier: dropping unusable assignment #{inspect(name)} => #{inspect(assignment)}"
-                )
-
-                []
-            end
-          end)
-          |> Map.new()
-
-        {:ok, result}
+        rows = Enum.flat_map(map, &to_row(&1, name_to_id, slug_to_node_id))
+        {:ok, rows}
 
       _ ->
         Logger.warning("TaxonomyClassifier: failed to parse response: #{inspect(text)}")
@@ -105,11 +75,21 @@ defmodule Mehungry.AI.TaxonomyClassifier do
     end
   end
 
-  defp normalize_confidence(confidence) when is_number(confidence) do
-    confidence |> max(0.0) |> min(1.0) |> Kernel.*(1.0)
+  defp to_row({name, assignment}, name_to_id, slug_to_node_id) do
+    with id when not is_nil(id) <- Map.get(name_to_id, name),
+         slug when is_binary(slug) <- get_in_map(assignment, "leaf"),
+         node_id when not is_nil(node_id) <- Map.get(slug_to_node_id, slug) do
+      [%{ingredient_id: id, taxonomy_node_id: node_id, confidence: confidence(assignment)}]
+    else
+      _ -> []
+    end
   end
 
-  defp normalize_confidence(_), do: 0.0
+  defp get_in_map(assignment, key) when is_map(assignment), do: Map.get(assignment, key)
+  defp get_in_map(_, _), do: nil
+
+  defp confidence(%{"confidence" => c}) when is_number(c), do: c * 1.0
+  defp confidence(_), do: nil
 
   defp call_api(system, user) do
     case Mehungry.AI.Client.request(%{

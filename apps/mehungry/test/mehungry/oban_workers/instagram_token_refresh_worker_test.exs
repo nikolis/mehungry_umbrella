@@ -24,7 +24,9 @@ defmodule Mehungry.ObanWorkers.InstagramTokenRefreshWorkerTest do
     Application.put_env(:mehungry, :instagram_stub,
       refresh_long_lived_token: fn token ->
         send(test_pid, {:refresh_called, token})
-        {:ok, %{"access_token" => "refreshed", "token_type" => "bearer", "expires_in" => 5_184_000}}
+
+        {:ok,
+         %{"access_token" => "refreshed", "token_type" => "bearer", "expires_in" => 5_184_000}}
       end
     )
   end

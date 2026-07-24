@@ -57,7 +57,9 @@ defmodule Mehungry.Social.Instagram.CaptionTest do
     test "integer nutrient amounts do not crash (legacy Float.to_string bug)" do
       caption =
         recipe(%{
-          nutrients: %{"kcal" => %{"name" => "Energy", "amount" => 250, "measurement_unit" => "kcal"}}
+          nutrients: %{
+            "kcal" => %{"name" => "Energy", "amount" => 250, "measurement_unit" => "kcal"}
+          }
         })
         |> Caption.build()
 

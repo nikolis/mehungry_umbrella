@@ -20,13 +20,11 @@ defmodule Mehungry.Food.IngredientTaxonomyNode do
     timestamps()
   end
 
-  def changeset(ingredient_taxonomy_node, attrs) do
-    ingredient_taxonomy_node
-    |> cast(attrs, [:source, :confidence, :reviewed, :ingredient_id, :taxonomy_node_id])
-    |> validate_required([:source, :ingredient_id, :taxonomy_node_id])
+  def changeset(mapping, attrs) do
+    mapping
+    |> cast(attrs, [:ingredient_id, :taxonomy_node_id, :source, :confidence, :reviewed])
+    |> validate_required([:ingredient_id, :taxonomy_node_id, :source])
     |> validate_inclusion(:source, @sources)
-    |> foreign_key_constraint(:ingredient_id)
-    |> foreign_key_constraint(:taxonomy_node_id)
     |> unique_constraint([:ingredient_id, :taxonomy_node_id])
   end
 end

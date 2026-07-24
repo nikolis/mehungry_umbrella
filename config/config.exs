@@ -22,6 +22,20 @@ config :mehungry, :reporting_timezone, "Europe/Athens"
 config :mehungry, Mehungry.Mailer, adapter: Swoosh.Adapters.Local
 config :swoosh, :api_client, false
 
+# USDA FoodData Central rate-management tunables. Consumed by the shared
+# `FoodData.Usda.FdcHttp` client and `ObanWorkers.IngredientReconciliationWorker`
+# to pace lookups and snooze the reconciliation job when the FDC quota runs low
+# or a 429 is returned. See docs/food.md / the worker moduledoc.
+config :mehungry,
+  # Delay (ms) between successive USDA lookups within a reconciliation batch.
+  fdc_pace_ms: 250,
+  # Snooze the batch early once the API's remaining quota drops to this.
+  fdc_rate_floor: 5,
+  # How long (s) to snooze when stopping early on low quota.
+  fdc_low_remaining_snooze_seconds: 120,
+  # Upper bound (s) applied to a 429 Retry-After before snoozing.
+  fdc_max_snooze_seconds: 3600
+
 config :mehungry, Oban,
   repo: Mehungry.Repo,
   plugins: [
@@ -66,7 +80,6 @@ config :mehungry_web, MehungryWeb.Endpoint,
   aws_secret: nil,
   aws_bucket: nil
 
-
 config :beam_scope,
   # Point at your host's Phoenix.PubSub server (BeamScope does NOT start it in embedded mode).
   pubsub: Mehungry.PubSub,
@@ -75,6 +88,7 @@ config :beam_scope,
   sync: BeamScope.Synchronization.SnapshotGossip,
   sync_interval: :timer.seconds(1),
   node_ttl: :timer.seconds(5),
+  providers: [{BeamScope.Provider.Phoenix, :phoenix}],
 
   # Top-N bound for the Process/ETS providers (largest mailboxes / memory / tables).
   top_n: 5

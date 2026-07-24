@@ -40,7 +40,9 @@
             Like
           </div>
           <div class="flex gap-1">
-            <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{get_positive_votes(@comment.votes)}</span>
+            <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{get_positive_votes(
+              @comment.votes
+            )}</span>
             <svg
               width="20"
               height="20"
@@ -75,7 +77,10 @@
             <% end %>
 
             <div style="margin-left: 1rem;">
-              <div class="text-parchment" style="font-weight: bold; text-align: start; font-size: 0.75rem;">
+              <div
+                class="text-parchment"
+                style="font-weight: bold; text-align: start; font-size: 0.75rem;"
+              >
                 {@comment.user.email}
               </div>
               <div class="text-parchment-dim" style="font-size: 1rem; text-align: start;">

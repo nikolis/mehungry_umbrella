@@ -93,7 +93,7 @@ defmodule Mehungry.AI.RecipeGenerator do
 
   defp resolve_ingredients(names) do
     gram_unit =
-      case Food.get_measurement_unit_by_name("grammar") do
+      case Food.get_measurement_unit_by_name("gram") do
         [unit | _] -> unit
         _ -> nil
       end
@@ -220,7 +220,7 @@ defmodule Mehungry.AI.RecipeGenerator do
     )
 
     gram_unit =
-      case Food.get_measurement_unit_by_name("grammar") do
+      case Food.get_measurement_unit_by_name("gram") do
         [unit | _] -> unit
         _ -> nil
       end

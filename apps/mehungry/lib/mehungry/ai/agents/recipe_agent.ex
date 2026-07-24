@@ -248,7 +248,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
         {:error, reason} ->
           Logger.info(
-            "RecipeAgent: USDA FDC lookup failed (#{reason}), falling back to AI estimation"
+            "RecipeAgent: USDA FDC lookup failed (#{inspect(reason)}), falling back to AI estimation"
           )
 
           {generate_usda_json_for(name), "ai_estimate"}
@@ -256,7 +256,10 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
     case json_result do
       {:ok, json_string} ->
-        case Mehungry.FoodData.Usda.FoodParser.get_ingredients_from_json_body(json_string, data_source) do
+        case Mehungry.FoodData.Usda.FoodParser.get_ingredients_from_json_body(
+               json_string,
+               data_source
+             ) do
           {:ok, _count} ->
             :ok
 
@@ -596,7 +599,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   # ── ingredient search helpers ─────────────────────────────────────────────────
 
   defp fetch_gram_unit do
-    case Food.get_measurement_unit_by_name("grammar") do
+    case Food.get_measurement_unit_by_name("gram") do
       [unit | _] -> unit
       _ -> nil
     end

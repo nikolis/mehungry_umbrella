@@ -1,149 +1,163 @@
 defmodule Mehungry.Food.TaxonomySeeder do
   @moduledoc """
-  Seeds the first ingredient taxonomy: "Biological / Nutritional".
+  Idempotently seeds the first curated taxonomy, "Biological / Nutritional"
+  (slug `bio-nutritional`), as nested literal data. Re-running is safe: nodes
+  are matched by `(taxonomy_id, slug)` and only created when missing.
 
-  The tree is curated by hand — USDA food-group codes are too coarse to give
-  levels like "Red Meat". Seeding is idempotent: taxonomies and nodes are
-  looked up by slug and only created when missing, so the task can be re-run
-  after adding nodes to `@tree`.
-
-  The "Other / Unclassified" leaf is load-bearing: the AI classifier uses it
-  as the fallback assignment, which guarantees every ingredient eventually
-  gets a mapping and the classification worker terminates.
+  The tree includes an **"Other / Unclassified"** leaf that the classification
+  worker relies on as a fallback so every ingredient eventually receives a row.
   """
 
   alias Mehungry.Food.Taxonomies
 
-  @taxonomy %{
-    name: "Biological / Nutritional",
-    slug: "bio-nutritional",
-    description:
-      "Groups ingredients by what they are biologically and nutritionally, " <>
-        "e.g. Meat > Red Meat > Beef."
-  }
+  @taxonomy %{name: "Biological / Nutritional", slug: "bio-nutritional"}
 
-  # {name, children} — slugs are derived from names.
+  # {name, slug, children}
   @tree [
-    {"Meat",
+    {"Meat", "meat",
      [
-       {"Red Meat", [{"Beef", []}, {"Lamb", []}, {"Pork", []}, {"Goat", []}, {"Veal", []}]},
-       {"Poultry", [{"Chicken", []}, {"Turkey", []}, {"Duck", []}, {"Other Poultry", []}]},
-       {"Game Meat", []},
-       {"Organ Meat", []},
-       {"Processed Meat", []}
+       {"Red Meat", "red-meat",
+        [
+          {"Beef", "beef", []},
+          {"Lamb", "lamb", []},
+          {"Pork", "pork", []},
+          {"Goat", "goat", []}
+        ]},
+       {"Poultry", "poultry",
+        [
+          {"Chicken", "chicken", []},
+          {"Turkey", "turkey", []},
+          {"Duck", "duck", []}
+        ]},
+       {"Game", "game", []}
      ]},
-    {"Fish & Seafood",
+    {"Fish & Seafood", "fish-seafood",
      [
-       {"Fatty Fish", []},
-       {"Lean Fish", []},
-       {"Crustaceans", []},
-       {"Mollusks", []},
-       {"Other Seafood", []}
+       {"Fatty Fish", "fatty-fish", []},
+       {"Lean Fish", "lean-fish", []},
+       {"Crustaceans", "crustaceans", []},
+       {"Mollusks", "mollusks", []}
      ]},
-    {"Dairy & Eggs",
+    {"Dairy & Eggs", "dairy-eggs",
      [
-       {"Milk", []},
-       {"Yogurt & Fermented Dairy", []},
-       {"Cheese", []},
-       {"Cream & Butter", []},
-       {"Eggs", []}
+       {"Milk", "milk", []},
+       {"Cheese", "cheese", []},
+       {"Yogurt", "yogurt", []},
+       {"Butter & Cream", "butter-cream", []},
+       {"Eggs", "eggs", []}
      ]},
-    {"Vegetables",
+    {"Vegetables", "vegetables",
      [
-       {"Leafy Greens", []},
-       {"Cruciferous Vegetables", []},
-       {"Root Vegetables", []},
-       {"Nightshades", []},
-       {"Alliums", []},
-       {"Squashes & Gourds", []},
-       {"Stalks & Shoots", []},
-       {"Mushrooms", []},
-       {"Sea Vegetables", []},
-       {"Other Vegetables", []}
+       {"Leafy Greens", "leafy-greens", []},
+       {"Cruciferous", "cruciferous", []},
+       {"Root Vegetables", "root-vegetables", []},
+       {"Nightshades", "nightshades", []},
+       {"Alliums", "alliums", []},
+       {"Squashes", "squashes", []},
+       {"Mushrooms", "mushrooms", []}
      ]},
-    {"Fruits",
+    {"Fruits", "fruits",
      [
-       {"Berries", []},
-       {"Citrus Fruits", []},
-       {"Stone Fruits", []},
-       {"Pome Fruits", []},
-       {"Tropical Fruits", []},
-       {"Melons", []},
-       {"Dried Fruits", []},
-       {"Other Fruits", []}
+       {"Berries", "berries", []},
+       {"Citrus", "citrus", []},
+       {"Stone Fruits", "stone-fruits", []},
+       {"Pome Fruits", "pome-fruits", []},
+       {"Tropical Fruits", "tropical-fruits", []},
+       {"Melons", "melons", []}
      ]},
-    {"Grains & Cereals",
+    {"Grains & Cereals", "grains-cereals",
      [
-       {"Whole Grains", []},
-       {"Refined Grains", []},
-       {"Breads & Baked Grains", []},
-       {"Pasta & Noodles", []},
-       {"Breakfast Cereals", []}
+       {"Whole Grains", "whole-grains", []},
+       {"Refined Grains", "refined-grains", []},
+       {"Breakfast Cereals", "breakfast-cereals", []},
+       {"Bread & Bakery", "bread-bakery", []},
+       {"Pasta", "pasta", []}
      ]},
-    {"Legumes",
-     [{"Beans", []}, {"Lentils", []}, {"Peas", []}, {"Soy Products", []}, {"Peanuts", []}]},
-    {"Nuts & Seeds", [{"Tree Nuts", []}, {"Seeds", []}, {"Nut & Seed Butters", []}]},
-    {"Fats & Oils", [{"Plant Oils", []}, {"Animal Fats", []}]},
-    {"Herbs & Spices", [{"Fresh Herbs", []}, {"Dried Herbs & Spices", []}, {"Salt & Blends", []}]},
-    {"Sweeteners", [{"Sugars & Syrups", []}, {"Honey", []}, {"Sugar Substitutes", []}]},
-    {"Condiments & Sauces", []},
-    {"Beverages",
+    {"Legumes", "legumes",
      [
-       {"Water", []},
-       {"Juices", []},
-       {"Coffee & Tea", []},
-       {"Soft Drinks", []},
-       {"Alcoholic Beverages", []},
-       {"Plant Milks", []}
+       {"Beans", "beans", []},
+       {"Lentils", "lentils", []},
+       {"Peas", "peas", []},
+       {"Soy Products", "soy-products", []}
      ]},
-    {"Sweets & Snacks",
-     [{"Chocolate & Confectionery", []}, {"Baked Sweets", []}, {"Savory Snacks", []}]},
-    {"Prepared & Composite Foods",
-     [{"Soups & Stews", []}, {"Fast Food", []}, {"Ready Meals", []}, {"Baby Food", []}]},
-    {"Supplements & Additives", []},
-    {"Other / Unclassified", []}
+    {"Nuts & Seeds", "nuts-seeds",
+     [
+       {"Tree Nuts", "tree-nuts", []},
+       {"Peanuts", "peanuts", []},
+       {"Seeds", "seeds", []},
+       {"Nut & Seed Butters", "nut-seed-butters", []}
+     ]},
+    {"Fats & Oils", "fats-oils",
+     [
+       {"Vegetable Oils", "vegetable-oils", []},
+       {"Animal Fats", "animal-fats", []}
+     ]},
+    {"Herbs & Spices", "herbs-spices",
+     [
+       {"Fresh Herbs", "fresh-herbs", []},
+       {"Dried Spices", "dried-spices", []}
+     ]},
+    {"Sweeteners", "sweeteners",
+     [
+       {"Sugars", "sugars", []},
+       {"Syrups & Honey", "syrups-honey", []},
+       {"Sugar Substitutes", "sugar-substitutes", []}
+     ]},
+    {"Beverages", "beverages",
+     [
+       {"Water", "water", []},
+       {"Coffee & Tea", "coffee-tea", []},
+       {"Juices", "juices", []},
+       {"Soft Drinks", "soft-drinks", []},
+       {"Alcoholic Beverages", "alcoholic-beverages", []}
+     ]},
+    {"Prepared & Composite Foods", "prepared-composite",
+     [
+       {"Soups & Sauces", "soups-sauces", []},
+       {"Snacks", "snacks", []},
+       {"Ready Meals", "ready-meals", []},
+       {"Condiments", "condiments", []}
+     ]},
+    {"Other / Unclassified", "other-unclassified", []}
   ]
 
-  @doc """
-  Idempotently creates the Biological/Nutritional taxonomy and its node tree.
-  Returns the taxonomy.
-  """
+  @doc "Upserts the taxonomy and its full node tree. Returns the taxonomy."
   def seed do
-    taxonomy =
-      case Taxonomies.get_taxonomy_by_slug(@taxonomy.slug) do
-        nil ->
-          {:ok, taxonomy} = Taxonomies.create_taxonomy(@taxonomy)
-          taxonomy
-
-        taxonomy ->
-          taxonomy
-      end
-
-    seed_nodes(taxonomy, @tree, nil)
+    taxonomy = upsert_taxonomy()
+    seed_children(taxonomy, nil, @tree)
     taxonomy
   end
 
-  defp seed_nodes(taxonomy, children, parent_id) do
+  defp upsert_taxonomy do
+    case Taxonomies.get_taxonomy_by_slug(@taxonomy.slug) do
+      nil ->
+        {:ok, taxonomy} = Taxonomies.create_taxonomy(@taxonomy)
+        taxonomy
+
+      taxonomy ->
+        taxonomy
+    end
+  end
+
+  defp seed_children(taxonomy, parent, children) do
     children
     |> Enum.with_index()
-    |> Enum.each(fn {{name, grandchildren}, position} ->
-      node = get_or_create_node(taxonomy, name, parent_id, position)
-      seed_nodes(taxonomy, grandchildren, node.id)
+    |> Enum.each(fn {{name, slug, grandchildren}, position} ->
+      node = upsert_node(taxonomy, parent, name, slug, position)
+      seed_children(taxonomy, node, grandchildren)
     end)
   end
 
-  defp get_or_create_node(taxonomy, name, parent_id, position) do
-    slug = slugify(name)
-
+  defp upsert_node(taxonomy, parent, name, slug, position) do
     case Taxonomies.get_node_by_slug(taxonomy.id, slug) do
       nil ->
         {:ok, node} =
           Taxonomies.create_node(%{
-            taxonomy_id: taxonomy.id,
-            parent_id: parent_id,
             name: name,
             slug: slug,
-            position: position
+            position: position,
+            taxonomy_id: taxonomy.id,
+            parent_id: parent && parent.id
           })
 
         node
@@ -151,12 +165,5 @@ defmodule Mehungry.Food.TaxonomySeeder do
       node ->
         node
     end
-  end
-
-  def slugify(name) do
-    name
-    |> String.downcase()
-    |> String.replace(~r/[^a-z0-9]+/, "-")
-    |> String.trim("-")
   end
 end

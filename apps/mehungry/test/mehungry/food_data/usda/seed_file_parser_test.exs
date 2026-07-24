@@ -64,7 +64,7 @@ defmodule Mehungry.FoodData.Usda.SeedFileParserTest do
         ingredient8
       ]
 
-      measurement_unit = Enum.at(Food.get_measurement_unit_by_name("grammar"), 0)
+      measurement_unit = Enum.at(Food.get_measurement_unit_by_name("gram"), 0)
 
       ingredients =
         Enum.map(ingredients, fn x ->

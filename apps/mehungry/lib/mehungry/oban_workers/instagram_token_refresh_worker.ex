@@ -32,9 +32,7 @@ defmodule Mehungry.ObanWorkers.InstagramTokenRefreshWorker do
           Logger.info("[Instagram] refreshed token for user #{user.id}")
 
         {:error, reason} ->
-          Logger.error(
-            "[Instagram] token refresh failed for user #{user.id}: #{inspect(reason)}"
-          )
+          Logger.error("[Instagram] token refresh failed for user #{user.id}: #{inspect(reason)}")
       end
     end)
 

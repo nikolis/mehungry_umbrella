@@ -1,12 +1,13 @@
 defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
   @moduledoc """
-  Classifies ingredients into a taxonomy's leaf nodes in batches, re-enqueueing
-  itself until every ingredient has a mapping (mirrors
-  `Mehungry.IngredientTranslationWorker`).
+  Classifies ingredients into one taxonomy's leaves, one batch per run,
+  self-re-enqueueing until every ingredient has a mapping — same shape as
+  `Mehungry.IngredientTranslationWorker`.
 
-  Termination is guaranteed by two mechanisms: the seeded "Other / Unclassified"
-  fallback leaf means the AI can always place an ingredient somewhere, and a
-  batch that produces zero inserts stops the chain instead of re-enqueueing.
+  Termination:
+    * empty batch → every ingredient is classified, stop.
+    * non-empty batch with **zero** inserts → the classifier returned nothing
+      usable; stop rather than loop forever on unclassifiable rows.
   """
 
   use Oban.Worker, queue: :ai_agents, max_attempts: 3
@@ -15,38 +16,33 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
 
   import Ecto.Query
 
-  alias Mehungry.Food.{IngredientTaxonomyNode, Taxonomies}
+  alias Mehungry.Food
+  alias Mehungry.Food.{Ingredient, IngredientTaxonomyNode, TaxonomyNode}
   alias Mehungry.Repo
 
   @batch_size 40
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"taxonomy_id" => taxonomy_id}}) do
-    batch = fetch_unclassified_batch(taxonomy_id)
-
-    case batch do
+    case fetch_unclassified_batch(taxonomy_id) do
       [] ->
-        Logger.info(
-          "[TaxonomyClassificationWorker] all ingredients classified for taxonomy #{taxonomy_id}"
-        )
-
+        Logger.info("TaxonomyClassificationWorker: taxonomy #{taxonomy_id} fully classified")
         :ok
 
-      ingredients ->
-        leaves = Taxonomies.list_leaf_paths(taxonomy_id)
-
+      batch ->
         Logger.info(
-          "[TaxonomyClassificationWorker] classifying batch of #{length(ingredients)} " <>
-            "into #{length(leaves)} leaves (taxonomy #{taxonomy_id})"
+          "TaxonomyClassificationWorker: classifying batch of #{length(batch)} for taxonomy #{taxonomy_id}"
         )
 
-        case classifier().classify(ingredients, leaves) do
+        leaves = Food.list_leaves_with_paths(taxonomy_id)
+
+        case classifier().classify(batch, leaves) do
           {:ok, assignments} ->
-            handle_assignments(taxonomy_id, assignments, leaves)
+            handle_assignments(taxonomy_id, batch, assignments)
 
           {:error, reason} ->
             Logger.warning(
-              "[TaxonomyClassificationWorker] classification failed: #{inspect(reason)}"
+              "TaxonomyClassificationWorker: classification failed: #{inspect(reason)}"
             )
 
             {:error, reason}
@@ -54,24 +50,16 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
     end
   end
 
-  def enqueue(taxonomy_id) do
-    %{taxonomy_id: taxonomy_id}
-    |> new()
-    |> Oban.insert()
-  end
-
-  defp handle_assignments(taxonomy_id, assignments, leaves) do
-    slug_to_node_id = Map.new(leaves, fn %{slug: slug, id: id} -> {slug, id} end)
-    inserted = insert_assignments(assignments, slug_to_node_id)
-
-    if inserted > 0 do
-      Logger.info("[TaxonomyClassificationWorker] inserted #{inserted} mappings")
-      enqueue(taxonomy_id)
+  defp handle_assignments(taxonomy_id, batch, assignments) do
+    if insert_assignments(assignments) > 0 do
+      enqueue_next_batch(taxonomy_id)
       :ok
     else
+      # Non-empty batch but nothing usable came back — stop to avoid an
+      # infinite refetch loop.
       Logger.warning(
-        "[TaxonomyClassificationWorker] batch produced no usable assignments, " <>
-          "stopping to avoid a retry loop (taxonomy #{taxonomy_id})"
+        "TaxonomyClassificationWorker: batch of #{length(batch)} produced no mappings for " <>
+          "taxonomy #{taxonomy_id}; halting"
       )
 
       :ok
@@ -79,36 +67,37 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
   end
 
   defp fetch_unclassified_batch(taxonomy_id) do
-    taxonomy_id
-    |> Taxonomies.unclassified_ingredients_query()
-    |> order_by([i], asc: i.id)
-    |> limit(@batch_size)
-    |> select([i], %{id: i.id, name: i.name})
-    |> Repo.all()
+    classified_ids =
+      from(itn in IngredientTaxonomyNode,
+        join: n in TaxonomyNode,
+        on: n.id == itn.taxonomy_node_id,
+        where: n.taxonomy_id == ^taxonomy_id,
+        select: itn.ingredient_id
+      )
+
+    Repo.all(
+      from(i in Ingredient,
+        where: i.id not in subquery(classified_ids),
+        limit: @batch_size,
+        select: %{id: i.id, name: i.name}
+      )
+    )
   end
 
-  defp insert_assignments(assignments, slug_to_node_id) do
+  defp insert_assignments(assignments) do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
     rows =
-      Enum.flat_map(assignments, fn {ingredient_id, %{slug: slug, confidence: confidence}} ->
-        case Map.get(slug_to_node_id, slug) do
-          nil ->
-            []
-
-          node_id ->
-            [
-              %{
-                ingredient_id: ingredient_id,
-                taxonomy_node_id: node_id,
-                source: "ai",
-                confidence: confidence,
-                reviewed: false,
-                inserted_at: now,
-                updated_at: now
-              }
-            ]
-        end
+      Enum.map(assignments, fn %{ingredient_id: ing_id, taxonomy_node_id: node_id} = a ->
+        %{
+          ingredient_id: ing_id,
+          taxonomy_node_id: node_id,
+          source: "ai",
+          confidence: Map.get(a, :confidence),
+          reviewed: false,
+          inserted_at: now,
+          updated_at: now
+        }
       end)
 
     {count, _} =
@@ -118,6 +107,10 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
       )
 
     count
+  end
+
+  defp enqueue_next_batch(taxonomy_id) do
+    %{"taxonomy_id" => taxonomy_id} |> new() |> Oban.insert!()
   end
 
   defp classifier do

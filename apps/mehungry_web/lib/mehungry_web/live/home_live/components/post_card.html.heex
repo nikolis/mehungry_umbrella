@@ -207,12 +207,18 @@
       >
         {@post.reference.user.name}
       </a>
-      <span class="text-parchment-dim text-sm">{if String.length(@post.reference.description || "") >
-                                                 150,
-                                               do:
-                                                 String.slice(@post.reference.description, 0, 150) <>
-                                                   "…",
-                                               else: @post.reference.description}</span>
+      <span class="text-parchment-dim text-sm">{if String.length(
+                                                     @post.reference.description || ""
+                                                   ) >
+                                                     150,
+                                                   do:
+                                                     String.slice(
+                                                       @post.reference.description,
+                                                       0,
+                                                       150
+                                                     ) <>
+                                                       "…",
+                                                   else: @post.reference.description}</span>
     </div>
 
     <!-- Hashtags -->

@@ -45,7 +45,7 @@ defmodule MehungryWeb.MixProject do
     [
       {:cachex, "~> 3.4"},
       {:contex, "~> 0.5.0"},
-      {:igniter, "~> 0.5", only: [:dev]},
+      {:igniter, "~> 0.6", only: [:dev, :test]},
       {:vega_lite, "~> 0.1.10"},
       {:vix, "~> 0.23.0"},
       {:image, "~> 0.37"},

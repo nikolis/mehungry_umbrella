@@ -1,0 +1,35 @@
+defmodule MehungryWeb.S3BrowserLiveTest do
+  use MehungryWeb.ConnCase
+
+  import Phoenix.LiveViewTest
+  import Mehungry.AccountsFixtures
+
+  alias Mehungry.FoodData.Usda.SeedFiles
+
+  @admin_email Application.compile_env(:mehungry, :admin_email)
+
+  setup %{conn: conn} do
+    admin = user_fixture(%{email: @admin_email})
+    %{conn: log_in_user(conn, admin)}
+  end
+
+  test "renders the browser with the empty prompt for an admin", %{conn: conn} do
+    {:ok, _view, html} = live(conn, "/professional/files")
+
+    assert html =~ "AWS S3 Browser"
+    assert html =~ "Enter a bucket name"
+  end
+
+  test "a seed_file broadcast is merged into the socket without crashing", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/professional/files")
+
+    # Simulate a live status update arriving from a running import job. The view
+    # is not yet subscribed to any bucket (nothing listed), but handle_info must
+    # accept the message and update its status map.
+    seed_file = SeedFiles.upsert_pending("some-bucket", "foods/a.json")
+    send(view.pid, {:seed_file, seed_file})
+
+    # Still alive and rendering after processing the message.
+    assert render(view) =~ "AWS S3 Browser"
+  end
+end

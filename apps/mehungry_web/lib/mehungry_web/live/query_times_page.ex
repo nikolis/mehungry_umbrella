@@ -142,7 +142,6 @@ defmodule MehungryWeb.QueryTimesPage do
 
   # --- Formatting helpers ---
 
-
   defp fmt(nil), do: "—"
   defp fmt(v), do: :erlang.float_to_binary(v, decimals: 2)
 

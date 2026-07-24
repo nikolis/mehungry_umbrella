@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Taxonomy.Seed do
-  @shortdoc "Seeds the Biological/Nutritional ingredient taxonomy node tree"
+  @shortdoc "Idempotently seeds the bio-nutritional ingredient taxonomy"
 
   use Mix.Task
 
@@ -8,7 +8,7 @@ defmodule Mix.Tasks.Taxonomy.Seed do
   @impl Mix.Task
   def run(_args) do
     taxonomy = Mehungry.Food.TaxonomySeeder.seed()
-    node_count = length(Mehungry.Food.Taxonomies.list_nodes(taxonomy.id))
-    Mix.shell().info("Taxonomy '#{taxonomy.slug}' seeded with #{node_count} nodes.")
+    node_count = taxonomy.id |> Mehungry.Food.list_nodes() |> length()
+    Mix.shell().info("Seeded taxonomy #{taxonomy.slug} with #{node_count} nodes.")
   end
 end

@@ -92,10 +92,31 @@ defmodule MehungryWeb.SeedsGenWorkerServer do
     GenServer.cast(pid, {:submit_tasks, work_list})
   end
 
-  # Can't reply 
+  @doc """
+  Clears the pending work queue so a fresh seeding run can be submitted.
+
+  Returns `:ok` when the reset was dispatched, or `{:error, :not_running}`
+  when the worker isn't registered.
+  """
+  def reset() do
+    case :global.whereis_name(:seed_worker) do
+      :undefined ->
+        {:error, :not_running}
+
+      pid ->
+        GenServer.cast(pid, :reset)
+    end
+  end
+
+  # Can't reply
   def handle_cast({:submit_tasks, task_list}, state) do
     _tasks_list = Agent.get(state.agent, fn x -> x.work_items end)
     Agent.update(state.agent, fn _state -> %{work_items: task_list} end)
+    {:noreply, state}
+  end
+
+  def handle_cast(:reset, state) do
+    Agent.update(state.agent, fn _state -> %{work_items: []} end)
     {:noreply, state}
   end
 

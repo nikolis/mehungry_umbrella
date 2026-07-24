@@ -15,7 +15,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
     user_profile = Accounts.get_user_profile_by_user_id(user.id)
-    _grammar = Food.get_measurement_unit_by_name("grammar")
+    _gram = Food.get_measurement_unit_by_name("gram")
 
     {:ok,
      socket

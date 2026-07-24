@@ -13,6 +13,11 @@ defmodule Mehungry.Food.Ingredient do
     field :search_name, :string
 
     field :food_class, :string
+    field :data_type, :string
+    field :fdc_id, :integer
+    field :ndb_number, :integer
+    # Monotonic reconciliation counter, bumped by IngredientReconciliationWorker.
+    field :version, :integer, default: 0
     field :nutrient_conversion_factors, {:array, :map}, default: []
     field :publication_date, :string
     field :nutrient_data_source, :string
@@ -39,6 +44,9 @@ defmodule Mehungry.Food.Ingredient do
       :nutrient_conversion_factors,
       :publication_date,
       :food_class,
+      :data_type,
+      :fdc_id,
+      :ndb_number,
       :nutrient_data_source
     ])
     |> cast_assoc(:ingredient_portions,

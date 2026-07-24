@@ -12,20 +12,23 @@ defmodule Mehungry.NutrientTest do
     # from each test so the data doesn't exist for each test.
     Ecto.Adapters.SQL.Sandbox.mode(Mehungry.Repo, :auto)
 
-    SeedFileParser.get_ingredients_from_food_data_central_json_file("test/foundationDownload.json")
+    SeedFileParser.get_ingredients_from_food_data_central_json_file(
+      "test/foundationDownload.json"
+    )
+
     :ok
   end
 
   describe "Parsing the data" do
     test "parsing basic example" do
       [ingredient | _rest] = Food.search_ingredient("beans", nil)
-      [grammar] = Food.search_measurement_unit("grammar")
+      [gram] = Food.search_measurement_unit("gram")
       user = Mehungry.AccountsFixtures.user_fixture()
 
       recipe =
         Mehungry.FoodFixtures.recipe_fixture(user, %{
           recipe_ingredients: [
-            %{ingredient_id: ingredient.id, measurement_unit_id: grammar.id, quantity: 500}
+            %{ingredient_id: ingredient.id, measurement_unit_id: gram.id, quantity: 500}
           ]
         })
 

@@ -13,7 +13,6 @@ defmodule Mehungry.Food.Taxonomy do
     field :description, :string
 
     has_many :nodes, TaxonomyNode
-
     timestamps()
   end
 

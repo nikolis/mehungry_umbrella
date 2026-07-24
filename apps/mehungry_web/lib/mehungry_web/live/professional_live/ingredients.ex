@@ -15,16 +15,9 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   @params %{
     "query" => "",
     "classes" => nil,
+    "data_types" => nil,
     "search_method" => ""
   }
-
-  @food_classes [
-    {"Branded", "Branded"},
-    {"FinalFood", "FinalFood"},
-    {"Admin created", "Admin created"},
-    {"Survey", "Survey"},
-    {"Foundation", "Foundation"}
-  ]
 
   defp get_form_changeset(params) do
     {params, @types}
@@ -39,18 +32,22 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
     _categories = Food.list_categories()
     search_methods = [{"ilike", "ilike"}, {"search", "search"}]
     translation_stats = build_translation_stats()
+    food_classes = Enum.map(Food.list_distinct_food_classes(), &{&1, &1})
+    data_types = Enum.map(Food.list_distinct_data_types(), &{&1, &1})
 
     socket =
       socket
       |> stream(:ingredients, ingredients)
       |> assign(:category, nil)
-      |> assign(:food_classes, @food_classes)
+      |> assign(:food_classes, food_classes)
+      |> assign(:data_types, data_types)
       |> assign(:search_methods, search_methods)
       |> assign(:search_method, "ilike")
       |> assign(:query, "")
       |> assign(:ecto_query, nil)
       |> assign(:cursor_after, cursor_after)
       |> assign(:page, 1)
+      |> assign(:total_count, nil)
       |> assign(:translation_stats, translation_stats)
       |> assign(:search_language, socket.assigns[:current_language] || "en")
       |> assign(:form, to_form(get_form_changeset(@params), as: :search_form))
@@ -128,24 +125,26 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   defp build_translation_stats, do: Food.ingredient_translation_stats()
 
   def execute_query(form_params, socket) do
-    classes = String.split(form_params["classes"], ",")
+    classes = String.split(form_params["classes"] || "", ",")
+    data_types = String.split(form_params["data_types"] || "", ",")
     query = form_params["query"]
 
-    {ecto_query, {ingredients, cursor}} =
+    {ecto_query, {ingredients, cursor}, total_count} =
       case socket.assigns.search_language do
         "el" ->
-          Food.search_ingredient_admin_translated(query, "el", classes)
+          Food.search_ingredient_admin_translated(query, "el", classes, data_types)
 
         _ ->
           case form_params["search_method"] do
-            "ilike" -> Food.search_ingredient_admin(query, classes)
-            "search" -> Food.search_ingredient_alt_admin(query, classes)
+            "ilike" -> Food.search_ingredient_admin(query, classes, data_types)
+            "search" -> Food.search_ingredient_alt_admin(query, classes, data_types)
           end
       end
 
     socket
     |> assign(:ecto_query, ecto_query)
     |> assign(:cursor_after, cursor)
+    |> assign(:total_count, total_count)
     |> stream(:ingredients, ingredients, reset: true)
   end
 end
