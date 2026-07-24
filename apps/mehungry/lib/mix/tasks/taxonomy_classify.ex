@@ -14,9 +14,7 @@ defmodule Mix.Tasks.Taxonomy.Classify do
         Mix.shell().error("Taxonomy #{@slug} not found. Run `mix taxonomy.seed` first.")
 
       taxonomy ->
-        %{"taxonomy_id" => taxonomy.id}
-        |> Mehungry.ObanWorkers.TaxonomyClassificationWorker.new()
-        |> Oban.insert!()
+        Mehungry.Food.enqueue_classification(taxonomy.id)
 
         Mix.shell().info("Taxonomy classification job enqueued. Check Oban for progress.")
     end

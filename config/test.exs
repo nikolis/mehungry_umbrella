@@ -36,6 +36,9 @@ config :mehungry, :social_media_publisher, Mehungry.Social.PublisherStub
 # Taxonomy classifier is stubbed in tests — no AI/API calls
 config :mehungry, :taxonomy_classifier, Mehungry.AI.TaxonomyClassifierStub
 
+# S3 seed-file fetcher is stubbed in tests — no S3/network calls
+config :mehungry, :seed_file_fetcher, Mehungry.FoodData.Usda.SeedFileFetcherStub
+
 # Chrome
 # default
 config :wallaby,

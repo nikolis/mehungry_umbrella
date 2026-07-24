@@ -78,8 +78,11 @@ defmodule Mehungry.Accounts.User do
 
   defp put_canonical_email(changeset) do
     case get_field(changeset, :email) do
-      email when is_binary(email) -> put_change(changeset, :canonical_email, canonical_email(email))
-      _ -> changeset
+      email when is_binary(email) ->
+        put_change(changeset, :canonical_email, canonical_email(email))
+
+      _ ->
+        changeset
     end
   end
 

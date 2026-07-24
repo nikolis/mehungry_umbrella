@@ -108,7 +108,6 @@ defmodule MehungryWeb.ErrorsPage do
 
   # --- Formatting helpers ---
 
-
   defp format_dt(nil), do: "—"
 
   defp format_dt(dt) do

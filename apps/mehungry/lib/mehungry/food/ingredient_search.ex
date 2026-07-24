@@ -101,6 +101,9 @@ defmodule Mehungry.Food.IngredientSearch do
         on: i.id == t.ingredient_id,
         where: t.language_name == ^language_name,
         where: i.category_id not in ^get_excluded_category_ids(),
+        # Keep Branded ingredients out of user-facing translated search too, for
+        # consistency with search/2 (translation indexes themselves stay full).
+        where: fragment("? IS DISTINCT FROM 'Branded'", i.food_class),
         order_by: [
           # 1. Accent-insensitive exact match
           desc:
@@ -165,6 +168,10 @@ defmodule Mehungry.Food.IngredientSearch do
     from(i in Ingredient,
       where: not is_nil(i.search_name),
       where: i.category_id not in ^get_excluded_category_ids(),
+      # Exclude USDA "Branded" rows from user search. The IS DISTINCT FROM form
+      # matches the partial-index predicate (ingredients_*_active_idx) so the
+      # planner can use those smaller indexes; NULL food_class rows are kept.
+      where: fragment("? IS DISTINCT FROM 'Branded'", i.food_class),
       where: ^where_clause,
       order_by: [
         # 1. Exact normalized match
@@ -223,6 +230,8 @@ defmodule Mehungry.Food.IngredientSearch do
       from i in Ingredient,
         where: not is_nil(i.search_name),
         where: i.category_id not in ^get_excluded_category_ids(),
+        # Exclude Branded rows; matches the partial GIN trgm index predicate.
+        where: fragment("? IS DISTINCT FROM 'Branded'", i.food_class),
         where:
           fragment(
             "word_similarity(?, ?) > ?",

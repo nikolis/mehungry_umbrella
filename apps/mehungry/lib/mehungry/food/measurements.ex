@@ -65,8 +65,15 @@ defmodule Mehungry.Food.Measurements do
     |> Repo.update()
   end
 
-  def delete_measurement_unit(%MeasurementUnit{} = measrement_unit) do
-    Repo.delete(measrement_unit)
+  @doc """
+  Deletes a measurement unit. Returns `{:error, :referenced}` instead of
+  raising when the unit is still referenced (by ingredients, ingredient
+  portions, etc.) so callers can surface a friendly message.
+  """
+  def delete_measurement_unit(%MeasurementUnit{} = measurement_unit) do
+    Repo.delete(measurement_unit)
+  rescue
+    Ecto.ConstraintError -> {:error, :referenced}
   end
 
   def change_measurement_unit(measurement_unit, attrs \\ %{}) do

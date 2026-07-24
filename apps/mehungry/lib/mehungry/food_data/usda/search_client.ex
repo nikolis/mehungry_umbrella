@@ -1,7 +1,14 @@
 defmodule Mehungry.FoodData.Usda.SearchClient do
   @moduledoc """
-  USDA FoodData Central API client for shopping basket item search
+  USDA FoodData Central API client for shopping basket item search.
+
+  Goes through `Mehungry.FoodData.Usda.FdcHttp` so it shares the same
+  retry/backoff and rate-limit handling as the rest of the FDC callers. A
+  rate-limited request surfaces as `{:error, {:rate_limited, retry_after}}`;
+  callers currently treat any `{:error, _}` as "no results".
   """
+
+  alias Mehungry.FoodData.Usda.FdcHttp
 
   @api_url "https://api.nal.usda.gov/fdc/v1"
 
@@ -10,26 +17,19 @@ defmodule Mehungry.FoodData.Usda.SearchClient do
       url =
         "#{@api_url}/foods/search?api_key=#{api_key}&query=#{URI.encode(query)}&pageSize=#{page_size}&dataType=Foundation,SR%20Legacy"
 
-      case Req.get(url) do
-        {:ok, %Req.Response{status: 200, body: %{"foods" => foods}}} ->
-          {:ok, format_search_results(foods)}
-
-        {:error, error} ->
-          {:error, error}
+      case FdcHttp.get(url) do
+        {:ok, %{"foods" => foods}, _meta} -> {:ok, format_search_results(foods)}
+        {:ok, _other, _meta} -> {:ok, []}
+        {:error, _} = err -> err
       end
     end
   end
 
   def get_food_details(fdc_id) do
     with {:ok, api_key} <- api_key() do
-      url = "#{@api_url}/food/#{fdc_id}?api_key=#{api_key}"
-
-      case Req.get(url) do
-        {:ok, %Req.Response{status: 200, body: food}} ->
-          {:ok, food}
-
-        {:error, error} ->
-          {:error, error}
+      case FdcHttp.get("#{@api_url}/food/#{fdc_id}?api_key=#{api_key}") do
+        {:ok, food, _meta} -> {:ok, food}
+        {:error, _} = err -> err
       end
     end
   end

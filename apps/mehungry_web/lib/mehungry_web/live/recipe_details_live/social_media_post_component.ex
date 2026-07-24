@@ -265,7 +265,10 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                   <.icon name="hero-exclamation-circle" class="h-5 w-5 text-parchment-dim flex-shrink-0" />
                   <p class="text-sm text-parchment-dim">
                     No Pinterest account connected.
-                    <.link navigate={~p"/profile?#{[tab: "connected_accounts"]}"} class="text-paprika-soft hover:text-paprika underline">Connect it in your profile settings.</.link>
+                    <.link
+                      navigate={~p"/profile?#{[tab: "connected_accounts"]}"}
+                      class="text-paprika-soft hover:text-paprika underline"
+                    >Connect it in your profile settings.</.link>
                   </p>
                 </div>
               <% else %>
@@ -274,71 +277,79 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                     <.icon name="hero-exclamation-circle" class="h-5 w-5 text-amber-400 flex-shrink-0" />
                     <p class="text-sm text-parchment-dim">
                       Could not load your Pinterest boards — the connection is likely expired.
-                      <.link navigate={~p"/profile?#{[tab: "connected_accounts"]}"} class="text-paprika-soft hover:text-paprika underline">Reconnect it in your profile settings.</.link>
+                      <.link
+                        navigate={~p"/profile?#{[tab: "connected_accounts"]}"}
+                        class="text-paprika-soft hover:text-paprika underline"
+                      >Reconnect it in your profile settings.</.link>
                     </p>
                   </div>
                 <% else %>
-                <%= if @pinterest_boards == [] do %>
-                  <div class="space-y-3">
-                    <div class="flex items-center gap-3 p-4 rounded-lg border border-ink-panel2 bg-black/20">
-                      <.icon name="hero-exclamation-circle" class="h-5 w-5 text-parchment-dim flex-shrink-0" />
-                      <p class="text-sm text-parchment-dim">
-                        No Pinterest boards found. Create your first board below.
-                      </p>
+                  <%= if @pinterest_boards == [] do %>
+                    <div class="space-y-3">
+                      <div class="flex items-center gap-3 p-4 rounded-lg border border-ink-panel2 bg-black/20">
+                        <.icon
+                          name="hero-exclamation-circle"
+                          class="h-5 w-5 text-parchment-dim flex-shrink-0"
+                        />
+                        <p class="text-sm text-parchment-dim">
+                          No Pinterest boards found. Create your first board below.
+                        </p>
+                      </div>
+                      <.create_board_form myself={@myself} error={@create_board_error} />
                     </div>
-                    <.create_board_form myself={@myself} error={@create_board_error} />
-                  </div>
-                <% else %>
-                  <div class="space-y-3">
-                    <p class="text-sm text-parchment-dim">
-                      Pinning <span class="font-semibold text-parchment">{@recipe.title}</span> — choose a board:
-                    </p>
-                    <div class="grid gap-2 max-h-48 overflow-y-auto pr-1">
-                      <%= for board <- @pinterest_boards do %>
+                  <% else %>
+                    <div class="space-y-3">
+                      <p class="text-sm text-parchment-dim">
+                        Pinning <span class="font-semibold text-parchment">{@recipe.title}</span>
+                        — choose a board:
+                      </p>
+                      <div class="grid gap-2 max-h-48 overflow-y-auto pr-1">
+                        <%= for board <- @pinterest_boards do %>
+                          <button
+                            phx-click="select_pinterest_board"
+                            phx-value-board_id={board["id"]}
+                            phx-target={@myself}
+                            class={[
+                              "w-full text-left px-4 py-3 rounded-lg border text-sm transition",
+                              if(@pinterest_board_id == board["id"],
+                                do: "bg-paprika/20 border-paprika text-parchment",
+                                else:
+                                  "border-ink-panel2 bg-black/20 text-parchment-dim hover:border-parchment-dim"
+                              )
+                            ]}
+                          >
+                            {board["name"]}
+                          </button>
+                        <% end %>
+                      </div>
+                      <button
+                        phx-click="toggle_create_board"
+                        phx-target={@myself}
+                        class="flex items-center gap-1.5 text-sm text-parchment-dim hover:text-parchment transition-colors"
+                      >
+                        <.icon name="hero-plus" class="h-4 w-4" /> New board
+                      </button>
+                      <%= if @show_create_board do %>
+                        <.create_board_form myself={@myself} error={@create_board_error} />
+                      <% end %>
+                      <div class="flex justify-end pt-2">
                         <button
-                          phx-click="select_pinterest_board"
-                          phx-value-board_id={board["id"]}
+                          phx-click="post_pinterest"
                           phx-target={@myself}
+                          disabled={is_nil(@pinterest_board_id)}
                           class={[
-                            "w-full text-left px-4 py-3 rounded-lg border text-sm transition",
-                            if(@pinterest_board_id == board["id"],
-                              do: "bg-paprika/20 border-paprika text-parchment",
-                              else: "border-ink-panel2 bg-black/20 text-parchment-dim hover:border-parchment-dim"
+                            "flex items-center gap-2 px-5 py-2 rounded-lg font-bold transition-colors",
+                            if(is_nil(@pinterest_board_id),
+                              do: "bg-ink-panel2 text-parchment-dim cursor-not-allowed",
+                              else: "bg-paprika hover:bg-paprika-soft text-ink"
                             )
                           ]}
                         >
-                          {board["name"]}
+                          <.icon name="hero-paper-airplane" class="h-4 w-4" /> Pin Recipe
                         </button>
-                      <% end %>
+                      </div>
                     </div>
-                    <button
-                      phx-click="toggle_create_board"
-                      phx-target={@myself}
-                      class="flex items-center gap-1.5 text-sm text-parchment-dim hover:text-parchment transition-colors"
-                    >
-                      <.icon name="hero-plus" class="h-4 w-4" /> New board
-                    </button>
-                    <%= if @show_create_board do %>
-                      <.create_board_form myself={@myself} error={@create_board_error} />
-                    <% end %>
-                    <div class="flex justify-end pt-2">
-                      <button
-                        phx-click="post_pinterest"
-                        phx-target={@myself}
-                        disabled={is_nil(@pinterest_board_id)}
-                        class={[
-                          "flex items-center gap-2 px-5 py-2 rounded-lg font-bold transition-colors",
-                          if(is_nil(@pinterest_board_id),
-                            do: "bg-ink-panel2 text-parchment-dim cursor-not-allowed",
-                            else: "bg-paprika hover:bg-paprika-soft text-ink"
-                          )
-                        ]}
-                      >
-                        <.icon name="hero-paper-airplane" class="h-4 w-4" /> Pin Recipe
-                      </button>
-                    </div>
-                  </div>
-                <% end %>
+                  <% end %>
                 <% end %>
               <% end %>
             </div>
@@ -361,7 +372,10 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                   <.icon name="hero-exclamation-circle" class="h-5 w-5 text-parchment-dim flex-shrink-0" />
                   <p class="text-sm text-parchment-dim">
                     No Instagram account connected.
-                    <.link navigate={~p"/profile?#{[tab: "connected_accounts"]}"} class="text-paprika-soft hover:text-paprika underline">Connect it in your profile settings.</.link>
+                    <.link
+                      navigate={~p"/profile?#{[tab: "connected_accounts"]}"}
+                      class="text-paprika-soft hover:text-paprika underline"
+                    >Connect it in your profile settings.</.link>
                   </p>
                 </div>
               <% else %>

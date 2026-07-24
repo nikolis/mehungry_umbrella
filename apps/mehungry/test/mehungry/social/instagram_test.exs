@@ -72,7 +72,13 @@ defmodule Mehungry.InstagramTest do
         refresh_long_lived_token: fn _token ->
           {:error,
            {:http_error, 400,
-            %{"error" => %{"type" => "OAuthException", "code" => 190, "message" => "Session expired"}}}}
+            %{
+              "error" => %{
+                "type" => "OAuthException",
+                "code" => 190,
+                "message" => "Session expired"
+              }
+            }}}
         end
       )
 

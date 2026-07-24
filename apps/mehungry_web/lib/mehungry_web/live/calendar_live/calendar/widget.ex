@@ -74,9 +74,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           <span class="font-display font-medium text-parchment text-sm">Daily Summary</span>
           <div class="flex flex-wrap gap-2 ml-auto">
             <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@meal_count}</span> meal{if @meal_count != 1, do: "s"} · <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@total_items}</span> item{if @total_items !=
-                                                                                          1,
-                                                                                        do: "s"}
+              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@meal_count}</span>
+              meal{if @meal_count != 1, do: "s"} ·
+              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@total_items}</span>
+              item{if @total_items !=
+                        1,
+                      do: "s"}
             </span>
             <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-basil font-bold [font-variant-numeric:tabular-nums] text-xs">
               {@energy_kcal} kcal
@@ -520,16 +523,22 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           <% end %>
         </div>
         <div class="flex-1 min-w-0">
-          <h3 class={"font-display font-medium text-base leading-snug mb-3 " <> @card_meal_text}>{@title}</h3>
+          <h3 class={"font-display font-medium text-base leading-snug mb-3 " <> @card_meal_text}>
+            {@title}
+          </h3>
           <div class="flex items-stretch gap-4">
             <div>
-              <div class="text-basil font-bold [font-variant-numeric:tabular-nums] text-sm">{@cooking_portions}</div>
+              <div class="text-basil font-bold [font-variant-numeric:tabular-nums] text-sm">
+                {@cooking_portions}
+              </div>
               <div class="text-parchment-dim text-xs mt-0.5">prepare</div>
             </div>
             <%= if !is_nil(@consume_portions) do %>
               <div class="w-px bg-ink-panel2 self-stretch"></div>
               <div>
-                <div class="text-basil font-bold [font-variant-numeric:tabular-nums] text-sm">{@consume_portions}</div>
+                <div class="text-basil font-bold [font-variant-numeric:tabular-nums] text-sm">
+                  {@consume_portions}
+                </div>
                 <div class="text-parchment-dim text-xs mt-0.5">consume</div>
               </div>
             <% end %>

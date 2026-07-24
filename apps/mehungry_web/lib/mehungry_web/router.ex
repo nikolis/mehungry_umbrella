@@ -73,6 +73,10 @@ defmodule MehungryWeb.Router do
       live "/ingredients/new", ProfessionalLive.IngredientsCreate, :create
       live "/ingredients/:id/show", Professional.IngredientLive.Show, :show
 
+      live "/measurement_units", ProfessionalLive.MeasurementUnits, :index
+      live "/measurement_units/new", ProfessionalLive.MeasurementUnits, :new
+      live "/measurement_units/:id/edit", ProfessionalLive.MeasurementUnits, :edit
+
       live "/languages", Professional.LanguageLive.Index, :index
       live "/languages/new", Professional.LanguageLive.Index, :new
       live "/languages/:id/edit", Professional.LanguageLive.Index, :edit
@@ -98,6 +102,7 @@ defmodule MehungryWeb.Router do
       live "/ai-bot/social", AiBotLive.SocialAccounts, :index
 
       live "/taxonomy/review", ProfessionalLive.TaxonomyReview, :index
+      live "/ingredients/reconciliation", ProfessionalLive.IngredientReconciliation, :index
     end
   end
 

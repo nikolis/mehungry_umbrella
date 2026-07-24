@@ -209,7 +209,9 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                   </span>
                   <span class="text-parchment-dim">min total</span>
                   <span class="text-parchment-dim text-sm">
-                    (Prep: <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{@recipe.preperation_time_lower_limit}</span> | Cook: <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{@recipe.cooking_time_lower_limit}</span>)
+                    (Prep:
+                    <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{@recipe.preperation_time_lower_limit}</span>
+                    | Cook: <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{@recipe.cooking_time_lower_limit}</span>)
                   </span>
                 </div>
                 <div class="flex items-center gap-2">
@@ -293,7 +295,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                       {@recipe.user.name}
                     </a>
                     <p class="text-parchment-dim text-sm">
-                      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{5}</span> recipes
+                      <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{5}</span>
+                      recipes
                     </p>
                   </div>
                 </div>

@@ -394,7 +394,8 @@ defmodule MehungryWeb.RecipeComponents do
                     />
                   </svg>
                   <span class="text-parchment-dim text-xs">
-                    <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{@recipe.cooking_time_lower_limit}</span> min
+                    <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{@recipe.cooking_time_lower_limit}</span>
+                    min
                   </span>
                 </div>
 

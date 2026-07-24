@@ -708,5 +708,4 @@ defmodule MehungryWeb.AiBotLive.Config do
 
   defp map_non_empty?(map) when is_map(map) and map_size(map) > 0, do: true
   defp map_non_empty?(_), do: false
-
 end

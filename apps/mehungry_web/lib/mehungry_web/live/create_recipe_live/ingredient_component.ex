@@ -3,7 +3,7 @@ defmodule MehungryWeb.IngredientComponent do
 
   @impl true
   def update(%{new_ingredient_id: ingredient_id} = _assigns, socket) do
-    grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
+    gram = Mehungry.Food.get_measurement_unit_by_name("gram")
 
     measurement_units =
       Mehungry.Food.get_measurement_unit_portions_for_ingredient(ingredient_id)
@@ -12,7 +12,7 @@ defmodule MehungryWeb.IngredientComponent do
 
     socket =
       socket
-      |> assign(:measurement_units, measurement_units ++ grammar)
+      |> assign(:measurement_units, measurement_units ++ gram)
 
     {:ok, socket}
   end
@@ -24,7 +24,7 @@ defmodule MehungryWeb.IngredientComponent do
       |> assign(assigns)
       |> assign_search_fns()
 
-    grammar = Mehungry.Food.get_measurement_unit_by_name("grammar")
+    gram = Mehungry.Food.get_measurement_unit_by_name("gram")
 
     measurement_units =
       if(!is_nil(socket.assigns.ingredient_form[:ingredient_id].value)) do
@@ -37,7 +37,7 @@ defmodule MehungryWeb.IngredientComponent do
         []
       end
 
-    measurement_units = measurement_units ++ grammar
+    measurement_units = measurement_units ++ gram
 
     socket = assign(socket, :measurement_units, measurement_units)
 

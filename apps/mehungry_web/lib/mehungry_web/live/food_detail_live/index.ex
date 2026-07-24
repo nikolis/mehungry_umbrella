@@ -40,8 +40,7 @@ defmodule MehungryWeb.FoodDetailLive.Index do
             ingredient.name
           end
 
-        top_nutrients= build_top_nutrients(ingredient.ingredient_nutrients)
-
+        top_nutrients = build_top_nutrients(ingredient.ingredient_nutrients)
 
         {:ok,
          socket

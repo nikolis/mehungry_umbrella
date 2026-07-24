@@ -1,5 +1,5 @@
 defmodule Mehungry.Utils do
-  @measurement_units [["ml", "l"], ["gram", "kg"], ["grammar", "kg"]]
+  @measurement_units [["ml", "l"], ["gram", "kg"]]
 
   @doc """
    A function that a Map , Key as string and value

@@ -65,6 +65,8 @@ defmodule Mehungry.Food do
   defdelegate change_ingredient(ingredient, attrs \\ %{}), to: Ingredients
   defdelegate update_ingredient(ingredient, attrs \\ %{}), to: Ingredients
   defdelegate get_ingredient_by_slug(slug), to: Ingredients
+  defdelegate enqueue_ingredient_backfill(), to: Ingredients
+  defdelegate reconciliation_progress(), to: Ingredients
   defdelegate get_ingredient_by_translation_name(name), to: Ingredients
   defdelegate get_ingredient_details!(id), to: Ingredients
   defdelegate get_ingredient_with_category!(id), to: Ingredients
@@ -75,6 +77,7 @@ defmodule Mehungry.Food do
   defdelegate list_ingredients_paginated(), to: Ingredients
   defdelegate list_ingredients_paginated(query_or_cursor), to: Ingredients
   defdelegate list_ingredients_paginated(cursor_after, query), to: Ingredients
+
   defdelegate list_ingredients_paginated_translated(language_name, cursor_after \\ nil),
     to: Ingredients
 
@@ -89,15 +92,27 @@ defmodule Mehungry.Food do
   defdelegate list_sample_recipes_for_ingredient(ingredient_id, limit \\ 4), to: IngredientQueries
   defdelegate search_recipe(query_string, language_name \\ nil), to: IngredientQueries
   defdelegate pagenate_query(query), to: IngredientQueries
+  defdelegate count_search_results(query), to: IngredientQueries
   defdelegate get_second_layer_foods_ids(), to: IngredientQueries
   defdelegate maybe_filter_by_classes(query, classes), to: IngredientQueries
+  defdelegate maybe_filter_by_data_types(query, data_types), to: IngredientQueries
+  defdelegate list_distinct_food_classes(), to: IngredientQueries
+  defdelegate list_distinct_data_types(), to: IngredientQueries
   defdelegate search_ingredient_search(search_term, classes \\ []), to: IngredientQueries
-  defdelegate search_ingredient_alt_admin(search_term, classes \\ []), to: IngredientQueries
-  defdelegate search_ingredient_alt(search_term, classes \\ []), to: IngredientQueries
-  defdelegate search_ingredient_admin(search_term, classes \\ []), to: IngredientQueries
-
-  defdelegate search_ingredient_admin_translated(search_term, language_name, classes \\ []),
+  defdelegate search_ingredient_alt_admin(search_term, classes \\ [], data_types \\ []),
     to: IngredientQueries
+
+  defdelegate search_ingredient_alt(search_term, classes \\ []), to: IngredientQueries
+  defdelegate search_ingredient_admin(search_term, classes \\ [], data_types \\ []),
+    to: IngredientQueries
+
+  defdelegate search_ingredient_admin_translated(
+                search_term,
+                language_name,
+                classes \\ [],
+                data_types \\ []
+              ),
+              to: IngredientQueries
 
   defdelegate search_ingredient(search_term, classes \\ []), to: IngredientQueries
   defdelegate search_ingredient_query(search_term, classes \\ []), to: IngredientQueries
@@ -190,4 +205,6 @@ defmodule Mehungry.Food do
   defdelegate detach_ingredient(ingredient_id, node_id), to: Taxonomies
   defdelegate list_pending_review(taxonomy_id, opts \\ []), to: Taxonomies
   defdelegate review_mapping(id, action), to: Taxonomies
+  defdelegate classification_progress(taxonomy_id), to: Taxonomies
+  defdelegate enqueue_classification(taxonomy_id), to: Taxonomies
 end

@@ -27,7 +27,8 @@ defmodule Mehungry.AI.TaxonomyClassifier do
   end
 
   defp system_prompt(leaves) do
-    leaf_list = Enum.map_join(leaves, "\n", fn %{slug: slug, path: path} -> "- #{slug}: #{path}" end)
+    leaf_list =
+      Enum.map_join(leaves, "\n", fn %{slug: slug, path: path} -> "- #{slug}: #{path}" end)
 
     """
     You are a food taxonomist classifying ingredients for a recipe app.

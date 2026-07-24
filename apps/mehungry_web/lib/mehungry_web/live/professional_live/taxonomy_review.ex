@@ -2,6 +2,7 @@ defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
   use MehungryWeb, :live_view
 
   alias Mehungry.Food
+  alias Mehungry.Food.TaxonomySeeder
 
   @per_page 25
   @slug "bio-nutritional"
@@ -14,6 +15,7 @@ defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
       socket
       |> assign(:taxonomy, taxonomy)
       |> assign(:page, 1)
+      |> assign(:progress, progress_for(taxonomy))
       |> load_taxonomy_assigns()
       |> load_first_page()
 
@@ -54,7 +56,58 @@ defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
 
   def handle_event("override", _params, socket), do: {:noreply, socket}
 
+  @impl true
+  def handle_event("seed", _params, socket) do
+    TaxonomySeeder.seed()
+    taxonomy = Food.get_taxonomy_by_slug(@slug) || List.first(Food.list_taxonomies())
+
+    socket =
+      socket
+      |> assign(:taxonomy, taxonomy)
+      |> assign(:page, 1)
+      |> assign(:progress, progress_for(taxonomy))
+      |> load_taxonomy_assigns()
+      |> reset_first_page()
+      |> put_flash(:info, "Taxonomy seeded")
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("classify", _params, %{assigns: %{taxonomy: nil}} = socket) do
+    {:noreply, put_flash(socket, :error, "Seed a taxonomy first")}
+  end
+
+  def handle_event("classify", _params, socket) do
+    Food.enqueue_classification(socket.assigns.taxonomy.id)
+
+    {:noreply, put_flash(socket, :info, "Classification started — refresh to watch progress")}
+  end
+
+  @impl true
+  def handle_event("refresh", _params, socket) do
+    taxonomy = socket.assigns.taxonomy
+
+    {:noreply,
+     socket
+     |> assign(:page, 1)
+     |> assign(:progress, progress_for(taxonomy))
+     |> refresh_tree()
+     |> reset_first_page()}
+  end
+
   # ── Data loading ───────────────────────────────────────────────────────
+
+  defp progress_for(nil), do: %{classified: 0, total: 0}
+  defp progress_for(taxonomy), do: Food.classification_progress(taxonomy.id)
+
+  defp reset_first_page(%{assigns: %{taxonomy: nil}} = socket) do
+    stream(socket, :mappings, [], reset: true)
+  end
+
+  defp reset_first_page(%{assigns: %{taxonomy: taxonomy}} = socket) do
+    stream(socket, :mappings, pending(taxonomy, 0), reset: true)
+  end
 
   defp load_taxonomy_assigns(%{assigns: %{taxonomy: nil}} = socket) do
     socket
@@ -99,4 +152,7 @@ defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
   defp confidence_label(nil), do: "—"
   defp confidence_label(c) when is_float(c), do: :erlang.float_to_binary(c, decimals: 2)
   defp confidence_label(c), do: to_string(c)
+
+  defp percent(%{total: total}) when total in [0, nil], do: 0
+  defp percent(%{classified: classified, total: total}), do: round(classified / total * 100)
 end

@@ -19,7 +19,11 @@ defmodule Mehungry.Social.Instagram.ClientStub do
     do:
       call(:exchange_long_lived_token, [short_lived_token], {
         :ok,
-        %{"access_token" => "stub-long-lived", "token_type" => "bearer", "expires_in" => 5_184_000}
+        %{
+          "access_token" => "stub-long-lived",
+          "token_type" => "bearer",
+          "expires_in" => 5_184_000
+        }
       })
 
   @impl true

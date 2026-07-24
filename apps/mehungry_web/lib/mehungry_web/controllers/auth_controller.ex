@@ -49,7 +49,11 @@ defmodule MehungryWeb.AuthController do
     {target_user, redirect_path} = resolve_token_target(conn)
 
     conn =
-      case Mehungry.Social.Instagram.connect_account(target_user, short_lived_token, instagram_user_id) do
+      case Mehungry.Social.Instagram.connect_account(
+             target_user,
+             short_lived_token,
+             instagram_user_id
+           ) do
         {:ok, _user} ->
           put_flash(conn, :info, "Successfully connected with Instagram")
 
@@ -68,7 +72,11 @@ defmodule MehungryWeb.AuthController do
       token = auth.extra.raw_info.token.access_token
 
       Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
-        Mehungry.Social.Facebook.get_user_pages(target_user, token, auth.extra.raw_info.user["id"])
+        Mehungry.Social.Facebook.get_user_pages(
+          target_user,
+          token,
+          auth.extra.raw_info.user["id"]
+        )
       end)
 
       conn

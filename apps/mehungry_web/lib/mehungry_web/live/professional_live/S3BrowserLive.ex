@@ -12,7 +12,8 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
        objects: [],
        prefix: nil,
        loading: false,
-       error: nil
+       error: nil,
+       info: nil
      )}
   end
 
@@ -60,9 +61,27 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
             >
               Refresh
             </button>
+
+            <button
+              phx-click="reset-seed-status"
+              data-confirm="Clear the pending seed queue so a fresh run can be started?"
+              class="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              disabled={@loading}
+            >
+              Reset seed status
+            </button>
           </div>
         <% end %>
       </div>
+
+      <%= if @info do %>
+        <div
+          class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4"
+          role="status"
+        >
+          <span class="block sm:inline">{@info}</span>
+        </div>
+      <% end %>
 
       <%= if @prefix do %>
         <div class="mb-4">
@@ -233,33 +252,53 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   @impl true
   def handle_event("load-ingredients", %{"bucket_name" => bucket_name}, socket) do
     socket = assign(socket, bucket_name: bucket_name, loading: true, error: nil)
-    Logger.info("Load ingredients from folder: #{bucket_name}")
+    prefix = socket.assigns.prefix
+    Logger.info("Enqueue seed-file imports from bucket #{bucket_name} (prefix: #{inspect(prefix)})")
 
-    case S3.list_objects(bucket_name, socket.assigns.prefix) do
+    case S3.list_objects(bucket_name, prefix) do
       {:ok, objects} ->
-        urls =
-          Enum.map(objects.body.contents, fn x ->
-            case S3.presigned_url(bucket_name, x.key) do
-              {:ok, {:ok, url}} ->
-                Logger.info("Load ingredients from folder: #{url}")
-                url
+        contents = objects.body.contents
 
-              {:error, _the_err} ->
-                Logger.error("Error in parsing: #the_erre_err}")
+        # Enqueue one tracked SeedFileImportWorker job per object (skipping folder
+        # placeholder keys). Presigning + fetching happen inside the job, so URLs
+        # can't expire while work waits in the :imports queue. Re-clicking simply
+        # re-enqueues the pending/failed files.
+        {enqueued, failed} =
+          contents
+          |> Enum.reject(fn obj -> String.ends_with?(obj.key, "/") end)
+          |> Enum.reduce({0, 0}, fn obj, {ok, err} ->
+            case Mehungry.ObanWorkers.SeedFileImportWorker.enqueue(bucket_name, obj.key) do
+              {:ok, _job} ->
+                {ok + 1, err}
+
+              {:error, reason} ->
+                Logger.error("[S3Browser] failed to enqueue #{obj.key}: #{inspect(reason)}")
+                {ok, err + 1}
             end
           end)
 
-        # MehungryWeb.DistributedTaskHandler.run(%{
-        # type: :parse_and_insert,
-        # data: %{files_urls: urls}
-        # })
+        info =
+          "Queued #{enqueued} file(s) for import" <>
+            if(failed > 0, do: " (#{failed} failed to queue)", else: "")
 
-        MehungryWeb.SeedsGenWorkerServer.put_work_list(urls)
-        {:noreply, assign(socket, objects: objects.body.contents, loading: false)}
+        {:noreply, assign(socket, objects: contents, loading: false, info: info, error: nil)}
 
       {:error, error} ->
         error_message = extract_error_message(error)
         {:noreply, assign(socket, error: error_message, objects: [], loading: false)}
+    end
+  end
+
+  @impl true
+  def handle_event("reset-seed-status", _, socket) do
+    case MehungryWeb.SeedsGenWorkerServer.reset() do
+      :ok ->
+        {:noreply,
+         assign(socket, info: "Seed status reset — you can start a fresh run.", error: nil)}
+
+      {:error, :not_running} ->
+        {:noreply,
+         assign(socket, error: "Seed worker is not running; nothing to reset.", info: nil)}
     end
   end
 

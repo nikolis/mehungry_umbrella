@@ -139,6 +139,7 @@ defmodule MehungryWeb.LayoutView do
         <.admin_link href="/professional/users" icon="hero-users" label="Users" />
         <.admin_link href="/professional/seo" icon="hero-magnifying-glass" label="SEO" />
         <.admin_link href="/professional/ingredients" icon="hero-beaker" label="Ingredients" />
+        <.admin_link href="/professional/measurement_units" icon="hero-scale" label="Units" />
         <.admin_link href="/professional/languages" icon="hero-language" label="Languages" />
         <.admin_link href="/professional/files" icon="hero-folder-open" label="Files" />
         <.admin_link href="/professional/visits" icon="hero-map-pin" label="Visits" />
@@ -148,6 +149,16 @@ defmodule MehungryWeb.LayoutView do
           label="Feedback"
         />
         <.admin_link href="/professional/ai-bot" icon="hero-cpu-chip" label="AI Bot" />
+        <.admin_link
+          href="/professional/taxonomy/review"
+          icon="hero-rectangle-stack"
+          label="Taxonomy"
+        />
+        <.admin_link
+          href="/professional/ingredients/reconciliation"
+          icon="hero-arrow-path"
+          label="Reconcile"
+        />
       </div>
 
       <!-- Footer -->

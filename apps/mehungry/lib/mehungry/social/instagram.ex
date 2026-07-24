@@ -49,7 +49,10 @@ defmodule Mehungry.Social.Instagram do
         refreshed =
           response
           |> Token.build(token["user_id"])
-          |> Map.put("obtained_at", token["obtained_at"] || DateTime.to_iso8601(DateTime.utc_now()))
+          |> Map.put(
+            "obtained_at",
+            token["obtained_at"] || DateTime.to_iso8601(DateTime.utc_now())
+          )
 
         Accounts.update_user_tokens(user, %{"instagram_token" => refreshed})
 

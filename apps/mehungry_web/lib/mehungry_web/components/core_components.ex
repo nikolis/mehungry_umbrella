@@ -324,7 +324,9 @@ defmodule MehungryWeb.CoreComponents do
           </div>
 
           <div class="mt-2 w-fit m-auto sm:m-0">
-            <div class="font-semibold text-center sm:text-left text-parchment">{@user_profile.alias}</div>
+            <div class="font-semibold text-center sm:text-left text-parchment">
+              {@user_profile.alias}
+            </div>
             <div class="text-center sm:text-left text-parchment-dim">{@user_profile.intro}</div>
           </div>
         </div>

@@ -164,7 +164,6 @@ defmodule MehungryWeb.QueryTimelinePage do
 
   # --- Formatting helpers ---
 
-
   defp fmt(nil), do: "—"
   defp fmt(v) when is_float(v), do: :erlang.float_to_binary(v, decimals: 2)
   defp fmt(v), do: to_string(v)

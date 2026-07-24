@@ -1,14 +1,19 @@
 defmodule Mehungry.Food.TaxonomiesTest do
   use Mehungry.DataCase
+  use Oban.Testing, repo: Mehungry.Repo
 
   import Mehungry.FoodFixtures
 
   alias Mehungry.Food
   alias Mehungry.Food.Taxonomies
+  alias Mehungry.ObanWorkers.TaxonomyClassificationWorker
 
   defp taxonomy_fixture do
     {:ok, taxonomy} =
-      Taxonomies.create_taxonomy(%{name: "Bio", slug: "bio-#{System.unique_integer([:positive])}"})
+      Taxonomies.create_taxonomy(%{
+        name: "Bio",
+        slug: "bio-#{System.unique_integer([:positive])}"
+      })
 
     taxonomy
   end
@@ -187,7 +192,10 @@ defmodule Mehungry.Food.TaxonomiesTest do
     setup do
       t = tree_fixture()
       ing = ingredient_fixture(%{name: "review steak"})
-      {:ok, mapping} = Taxonomies.attach_ingredient(ing.id, t.beef.id, %{source: "ai", confidence: 0.3})
+
+      {:ok, mapping} =
+        Taxonomies.attach_ingredient(ing.id, t.beef.id, %{source: "ai", confidence: 0.3})
+
       Map.merge(t, %{mapping: mapping})
     end
 
@@ -217,7 +225,10 @@ defmodule Mehungry.Food.TaxonomiesTest do
 
       Taxonomies.attach_ingredient(a.id, t.beef.id, %{source: "ai", confidence: 0.9})
       Taxonomies.attach_ingredient(b.id, t.lamb.id, %{source: "ai", confidence: 0.2})
-      {:ok, reviewed} = Taxonomies.attach_ingredient(c.id, t.chicken.id, %{source: "ai", confidence: 0.1})
+
+      {:ok, reviewed} =
+        Taxonomies.attach_ingredient(c.id, t.chicken.id, %{source: "ai", confidence: 0.1})
+
       Taxonomies.review_mapping(reviewed.id, :confirm)
 
       rows = Taxonomies.list_pending_review(t.taxonomy.id)
@@ -226,6 +237,41 @@ defmodule Mehungry.Food.TaxonomiesTest do
       assert confidences == [0.2, 0.9]
       # preloads available
       assert Enum.all?(rows, &(&1.ingredient != nil and &1.taxonomy_node != nil))
+    end
+  end
+
+  describe "classification_progress/1" do
+    test "counts distinct classified ingredients against the total" do
+      t = tree_fixture()
+      a = ingredient_fixture(%{name: "ing a"})
+      b = ingredient_fixture(%{name: "ing b"})
+      _c = ingredient_fixture(%{name: "ing c"})
+
+      Taxonomies.attach_ingredient(a.id, t.beef.id, %{source: "ai", confidence: 0.9})
+      # attaching the same ingredient to a second node still counts once
+      Taxonomies.attach_ingredient(a.id, t.lamb.id, %{source: "manual"})
+      Taxonomies.attach_ingredient(b.id, t.chicken.id, %{source: "ai", confidence: 0.2})
+
+      progress = Taxonomies.classification_progress(t.taxonomy.id)
+
+      # Only a and b are attached in this taxonomy (a counted once across two nodes).
+      assert progress.classified == 2
+      # total reflects every ingredient row, not just this taxonomy's.
+      assert progress.total == Mehungry.Repo.aggregate(Mehungry.Food.Ingredient, :count)
+      assert progress.total >= 3
+    end
+  end
+
+  describe "enqueue_classification/1" do
+    test "inserts a TaxonomyClassificationWorker job for the taxonomy" do
+      t = taxonomy_fixture()
+
+      assert {:ok, _job} = Taxonomies.enqueue_classification(t.id)
+
+      assert_enqueued(
+        worker: TaxonomyClassificationWorker,
+        args: %{"taxonomy_id" => t.id}
+      )
     end
   end
 end

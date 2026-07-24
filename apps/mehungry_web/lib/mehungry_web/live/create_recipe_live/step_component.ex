@@ -7,7 +7,8 @@ defmodule MehungryWeb.StepComponent do
       <.inputs_for :let={steps_form} field={@f[:steps]}>
         <div class={"grid grid-cols-7 gap-2 h-14  m-2" <> if Map.get(steps_form.source.changes, :delete)  do " hidden"  else ""  end}>
           <div class="m-auto">
-            <span class="text-2xl font-bold text-basil [font-variant-numeric:tabular-nums]">{steps_form.index + 1}</span>
+            <span class="text-2xl font-bold text-basil [font-variant-numeric:tabular-nums]">{steps_form.index +
+              1}</span>
           </div>
           {hidden_input(steps_form, :delete)}
           <.input required field={steps_form[:index]} type="hidden" value={steps_form.index} />

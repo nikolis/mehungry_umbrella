@@ -39,7 +39,8 @@ defmodule Mehungry.AccountsTest do
     test "resolves any Gmail alias of a registered address to the same account" do
       %{id: id} = user_fixture(%{email: "aliashunter@gmail.com"})
 
-      assert %User{id: ^id} = Accounts.get_user_by_canonical_email("a.lias.hunter+x@googlemail.com")
+      assert %User{id: ^id} =
+               Accounts.get_user_by_canonical_email("a.lias.hunter+x@googlemail.com")
     end
   end
 
@@ -101,8 +102,18 @@ defmodule Mehungry.AccountsTest do
 
       {2, _} =
         Mehungry.Repo.insert_all("users", [
-          %{email: "dot.ted@gmail.com", canonical_email: "dotted@gmail.com", inserted_at: now, updated_at: now},
-          %{email: "dotted@gmail.com", canonical_email: "dotted@gmail.com", inserted_at: now, updated_at: now}
+          %{
+            email: "dot.ted@gmail.com",
+            canonical_email: "dotted@gmail.com",
+            inserted_at: now,
+            updated_at: now
+          },
+          %{
+            email: "dotted@gmail.com",
+            canonical_email: "dotted@gmail.com",
+            inserted_at: now,
+            updated_at: now
+          }
         ])
 
       result = Accounts.dedupe_alias_accounts(dry_run: true)

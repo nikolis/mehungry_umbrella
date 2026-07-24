@@ -86,6 +86,19 @@ defmodule Mehungry.Food.IngredientQueries do
     {query, Recipes.list_recipes(query, language_name)}
   end
 
+  @doc """
+  Counts every ingredient matching a search/filter query. The display `limit`,
+  `offset` and `order_by` are stripped so the count reflects the true total
+  number of matches, not just the page-sized slice that gets rendered.
+  """
+  def count_search_results(%Ecto.Query{} = query) do
+    query
+    |> exclude(:limit)
+    |> exclude(:offset)
+    |> exclude(:order_by)
+    |> Repo.aggregate(:count)
+  end
+
   def pagenate_query(query) do
     # return the next 50 posts
 
@@ -139,6 +152,48 @@ defmodule Mehungry.Food.IngredientQueries do
     from(i in query, where: i.food_class in ^classes)
   end
 
+  def maybe_filter_by_data_types(query, nil), do: query
+  def maybe_filter_by_data_types(query, []), do: query
+  def maybe_filter_by_data_types(query, [""]), do: query
+
+  def maybe_filter_by_data_types(query, data_types) do
+    from(i in query, where: i.data_type in ^data_types)
+  end
+
+  @doc "Distinct non-nil `food_class` values, alphabetically — for admin filter options."
+  def list_distinct_food_classes do
+    from(i in Ingredient,
+      where: not is_nil(i.food_class),
+      distinct: true,
+      select: i.food_class,
+      order_by: i.food_class
+    )
+    |> Repo.all()
+  end
+
+  @doc "Distinct non-nil `data_type` values, alphabetically — for admin filter options."
+  def list_distinct_data_types do
+    from(i in Ingredient,
+      where: not is_nil(i.data_type),
+      distinct: true,
+      select: i.data_type,
+      order_by: i.data_type
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Excludes USDA "Branded" ingredients from a query. The `IS DISTINCT FROM` form
+  keeps rows with a NULL `food_class` and matches the partial-index predicate
+  on the `ingredients_*_active_idx` indexes, so the planner can use them.
+
+  Applied to user-facing search entry points only — admin builders skip it so
+  admins can still filter to `Branded`.
+  """
+  def exclude_branded(query) do
+    from(i in query, where: fragment("? IS DISTINCT FROM 'Branded'", i.food_class))
+  end
+
   def search_ingredient_search(search_term, classes \\ []) do
     secondary_ids = get_second_layer_foods_ids()
 
@@ -161,29 +216,60 @@ defmodule Mehungry.Food.IngredientQueries do
     |> maybe_filter_by_classes(classes)
   end
 
-  def search_ingredient_alt_admin(search_term, classes \\ []) do
-    {search_ingredient_search(search_term, classes),
-     pagenate_query(search_ingredient_search(search_term, classes))}
+  def search_ingredient_alt_admin(search_term, classes \\ [], data_types \\ []) do
+    query =
+      search_ingredient_search(search_term, classes)
+      |> maybe_filter_by_data_types(data_types)
+
+    {query, pagenate_query(query), count_search_results(query)}
   end
 
   def search_ingredient_alt(search_term, classes \\ []) do
-    result = Repo.all(search_ingredient_search(search_term, classes))
+    result =
+      search_ingredient_search(search_term, classes)
+      |> exclude_branded()
+      |> Repo.all()
+
     Logger.info("Search ingredient: " <> search_term <> " resulted: " <> inspect(result))
 
     result
   end
 
-  def search_ingredient_admin(search_term, classes \\ []) do
-    query = search_ingredient_query(search_term, classes)
-    {query, pagenate_query(query)}
+  def search_ingredient_admin(search_term, classes \\ [], data_types \\ []) do
+    query =
+      search_ingredient_query(search_term, classes)
+      |> maybe_filter_by_data_types(data_types)
+
+    {query, pagenate_query(query), count_search_results(query)}
   end
 
-  def search_ingredient_admin_translated(search_term, language_name, classes \\ []) do
+  def search_ingredient_admin_translated(search_term, language_name, classes \\ [], data_types \\ []) do
     ilike_term = "%#{search_term}%"
 
-    base =
+    # Unlimited set of matching translation ingredient_ids — used for the true
+    # total count. The 20-row display slice is derived from it below.
+    ids_base =
       from t in IngredientTranslation,
         where: t.language_name == ^language_name,
+        select: t.ingredient_id
+
+    ids_base =
+      if search_term == "" do
+        ids_base
+      else
+        from t in ids_base,
+          where: fragment("unaccent(?) ILIKE unaccent(?)", t.name, ^ilike_term)
+      end
+
+    total_count =
+      from(i in Ingredient, where: i.id in subquery(ids_base))
+      |> maybe_filter_by_classes(classes)
+      |> maybe_filter_by_data_types(data_types)
+      |> Repo.aggregate(:count)
+
+    # Top-20 display slice, ranked by relevance.
+    ingredient_ids =
+      from(t in ids_base,
         order_by: [
           desc:
             fragment(
@@ -193,26 +279,18 @@ defmodule Mehungry.Food.IngredientQueries do
             ),
           asc: fragment("LENGTH(?)", t.name)
         ],
-        limit: 20,
-        select: t.ingredient_id
-
-    base =
-      if search_term == "" do
-        base
-      else
-        from t in base,
-          where: fragment("unaccent(?) ILIKE unaccent(?)", t.name, ^ilike_term)
-      end
-
-    ingredient_ids = Repo.all(base)
+        limit: 20
+      )
+      |> Repo.all()
 
     ingredients =
       from(i in Ingredient, where: i.id in ^ingredient_ids)
       |> maybe_filter_by_classes(classes)
+      |> maybe_filter_by_data_types(data_types)
       |> Repo.all()
       |> Repo.preload([:category])
 
-    {nil, {ingredients, nil}}
+    {nil, {ingredients, nil}, total_count}
   end
 
   def search_ingredient(search_term, classes \\ []) do

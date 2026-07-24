@@ -35,12 +35,7 @@ defmodule MehungryWeb.Application do
         # Start libcluster
         [
           {Cluster.Supervisor,
-           [Application.get_env(:libcluster, :topologies), [name: Mehungry.ClusterSupervisor]]},
-          %{
-            id: MehungryWeb.SeedGenServerSuperServer,
-            start: {MehungryWeb.SeedGenServerSuperServer, :start_link, []},
-            restart: :transient
-          }
+           [Application.get_env(:libcluster, :topologies), [name: Mehungry.ClusterSupervisor]]}
         ] ++
           children
       else

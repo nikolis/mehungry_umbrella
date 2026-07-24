@@ -1,0 +1,166 @@
+{
+  "fdcId": 333281,
+  "description": "Tomatoes, canned, red, ripe, diced",
+  "dataType": null,
+  "foodType": "Foundation",
+  "foodClass": "FinalFood",
+  "ndbNumber": 100193,
+  "publicationDate": null,
+  "lastUpdated": "4/1/2019",
+  "foodCategory": null,
+  "foodGroup": {
+    "id": 11,
+    "code": "1100",
+    "description": "Vegetables and Vegetable Products"
+  },
+  "nutrientConversionFactors": [
+    {
+      "id": 22621,
+      "value": 6.25,
+      "type": ".ProteinConversionFactor",
+      "name": "Protein From Nitrogen"
+    },
+    {
+      "id": 22620,
+      "proteinValue": 2.44,
+      "fatValue": 8.37,
+      "carbohydrateValue": 3.57,
+      "type": ".CalorieConversionFactor",
+      "name": "Calories From Proximates"
+    }
+  ],
+  "foodMeasures": [
+    {
+      "id": 121582,
+      "dataPoints": 33,
+      "gramWeight": 245.0,
+      "rank": 1,
+      "value": 1.0,
+      "modifier": "",
+      "minDateAcquired": "10/8/2016",
+      "measureUnit": {
+        "id": 1000,
+        "name": "cup",
+        "abbreviation": "cup"
+      },
+      "minYearAcquired": 2016
+    },
+    {
+      "id": 312816,
+      "dataPoints": 0,
+      "gramWeight": 130.0,
+      "rank": 1,
+      "value": 1.0,
+      "measureUnit": {
+        "id": 1121,
+        "name": "RACC",
+        "abbreviation": "RACC"
+      }
+    },
+    {
+      "id": 555111,
+      "gramWeight": 28.0,
+      "value": 1.0,
+      "rank": 3,
+      "modifier": "piece",
+      "minYearAcquired": null,
+      "measureUnit": {
+        "id": 9999,
+        "name": "undetermined",
+        "abbreviation": "undetermined"
+      }
+    }
+  ],
+  "foodNutrients": [
+    {
+      "type": "FoodNutrient",
+      "nutrient": {
+        "id": 2045,
+        "number": "951",
+        "name": "Proximates",
+        "rank": 50.0,
+        "isNutrientLabel": true,
+        "nutrientUnit": {
+          "name": "g",
+          "conversionToMicroGram": 1000000,
+          "aliases": [
+            "% (w/w)",
+            "%"
+          ]
+        }
+      }
+    },
+    {
+      "type": "FoodNutrient",
+      "nutrient": {
+        "id": 1051,
+        "number": "255",
+        "name": "Water",
+        "rank": 100.0,
+        "isNutrientLabel": false,
+        "nutrientUnit": {
+          "name": "g",
+          "conversionToMicroGram": 1000000,
+          "aliases": [
+            "% (w/w)",
+            "%"
+          ]
+        }
+      },
+      "value": 94.6,
+      "median": 94.5,
+      "dataPoints": 36
+    },
+    {
+      "type": "FoodNutrient",
+      "nutrient": {
+        "id": 1003,
+        "number": "203",
+        "name": "Protein",
+        "rank": 600.0,
+        "isNutrientLabel": false,
+        "nutrientUnit": {
+          "name": "g",
+          "conversionToMicroGram": 1000000,
+          "aliases": [
+            "% (w/w)",
+            "%"
+          ]
+        }
+      },
+      "value": 0.84,
+      "median": 0.88
+    },
+    {
+      "type": "FoodNutrient",
+      "nutrient": {
+        "id": 1093,
+        "number": "307",
+        "name": "Sodium, Na",
+        "rank": 5800.0,
+        "isNutrientLabel": false,
+        "nutrientUnit": {
+          "name": "mg",
+          "conversionToMicroGram": 1000,
+          "aliases": []
+        }
+      },
+      "value": 125,
+      "median": 120,
+      "dataPoints": 36
+    },
+    {
+      "type": "FoodNutrient",
+      "nutrient": {
+        "id": 9999,
+        "number": "999",
+        "name": "Missing Value Nutrient",
+        "rank": 9999.0,
+        "isNutrientLabel": false,
+        "nutrientUnit": {
+          "name": "g"
+        }
+      }
+    }
+  ]
+}

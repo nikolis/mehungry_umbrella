@@ -10,7 +10,8 @@
   >
     <div class="">
       {text_input(f, :query_string,
-        class: "w-full h-full rounded-full p-3 bg-ink-panel2 text-parchment placeholder-parchment-dim",
+        class:
+          "w-full h-full rounded-full p-3 bg-ink-panel2 text-parchment placeholder-parchment-dim",
         id: "text-search-input"
       )}
       {submit("", phx_disable_with: "Searching...", class: "invisible")}

@@ -30,7 +30,10 @@ defmodule Mix.Tasks.Mehungry.DedupeAliases do
 
     shell.info("Alias clusters found (>1 account per inbox): #{result.clusters}")
     shell.info("Accounts to keep (oldest per inbox):        #{length(result.kept)}")
-    shell.info("Accounts #{if dry_run, do: "that WOULD be", else: "DELETED"}: #{length(result.deleted)}")
+
+    shell.info(
+      "Accounts #{if dry_run, do: "that WOULD be", else: "DELETED"}: #{length(result.deleted)}"
+    )
 
     Enum.each(result.deleted, fn %{id: id, email: email, canonical_email: canonical} ->
       shell.info("  - id=#{id} #{email} -> #{canonical}")

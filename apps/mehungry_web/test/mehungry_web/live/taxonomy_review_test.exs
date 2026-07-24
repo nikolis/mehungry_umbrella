@@ -1,5 +1,6 @@
 defmodule MehungryWeb.TaxonomyReviewTest do
   use MehungryWeb.ConnCase
+  use Oban.Testing, repo: Mehungry.Repo
 
   import Phoenix.LiveViewTest
   import Mehungry.FoodFixtures
@@ -7,6 +8,7 @@ defmodule MehungryWeb.TaxonomyReviewTest do
 
   alias Mehungry.Food
   alias Mehungry.Food.Taxonomies
+  alias Mehungry.ObanWorkers.TaxonomyClassificationWorker
 
   @admin_email Application.compile_env(:mehungry, :admin_email)
 
@@ -21,10 +23,20 @@ defmodule MehungryWeb.TaxonomyReviewTest do
     {:ok, meat} = Taxonomies.create_node(%{name: "Meat", slug: "meat", taxonomy_id: taxonomy.id})
 
     {:ok, beef} =
-      Taxonomies.create_node(%{name: "Beef", slug: "beef", taxonomy_id: taxonomy.id, parent_id: meat.id})
+      Taxonomies.create_node(%{
+        name: "Beef",
+        slug: "beef",
+        taxonomy_id: taxonomy.id,
+        parent_id: meat.id
+      })
 
     {:ok, lamb} =
-      Taxonomies.create_node(%{name: "Lamb", slug: "lamb", taxonomy_id: taxonomy.id, parent_id: meat.id})
+      Taxonomies.create_node(%{
+        name: "Lamb",
+        slug: "lamb",
+        taxonomy_id: taxonomy.id,
+        parent_id: meat.id
+      })
 
     ingredient = ingredient_fixture(%{name: "beef brisket"})
 
@@ -88,6 +100,46 @@ defmodule MehungryWeb.TaxonomyReviewTest do
       lamb.id |> Food.list_ingredients_under_node() |> Enum.map(& &1.id)
 
     assert ingredient.id in lamb_ingredient_ids
+  end
+
+  test "Run Seeds seeds the full tree and flashes", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/professional/taxonomy/review")
+
+    # Setup only created Meat/Beef/Lamb; the seeder adds much more.
+    refute render(view) =~ "Chicken"
+
+    html =
+      view
+      |> element("button[phx-click='seed']")
+      |> render_click()
+
+    assert html =~ "Taxonomy seeded"
+    assert html =~ "Chicken"
+  end
+
+  test "Run Classification enqueues a classification job", %{conn: conn, taxonomy: taxonomy} do
+    {:ok, view, _html} = live(conn, ~p"/professional/taxonomy/review")
+
+    view
+    |> element("button[phx-click='classify']")
+    |> render_click()
+
+    assert_enqueued(
+      worker: TaxonomyClassificationWorker,
+      args: %{"taxonomy_id" => taxonomy.id}
+    )
+  end
+
+  test "Refresh re-renders progress and the pending list", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/professional/taxonomy/review")
+
+    html =
+      view
+      |> element("button[phx-click='refresh']")
+      |> render_click()
+
+    assert html =~ "Classified:"
+    assert html =~ "beef brisket"
   end
 
   test "non-admin is redirected away", %{taxonomy: _taxonomy} do

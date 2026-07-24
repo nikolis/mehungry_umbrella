@@ -393,12 +393,21 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
     case Mehungry.Social.Instagram.token_status(bot_user) do
       :connected ->
         case Mehungry.Social.Instagram.Token.expires_at(token) do
-          nil -> user_id && "User ID: #{user_id}"
-          expires_at -> "User ID: #{user_id} — token expires #{Date.to_string(DateTime.to_date(expires_at))}"
+          nil ->
+            user_id && "User ID: #{user_id}"
+
+          expires_at ->
+            "User ID: #{user_id} — token expires #{Date.to_string(DateTime.to_date(expires_at))}"
         end
 
       :expiring ->
-        days = DateTime.diff(Mehungry.Social.Instagram.Token.expires_at(token), DateTime.utc_now(), :day)
+        days =
+          DateTime.diff(
+            Mehungry.Social.Instagram.Token.expires_at(token),
+            DateTime.utc_now(),
+            :day
+          )
+
         "User ID: #{user_id} — token expires in #{days} day(s)"
 
       status when status in [:stale, :error] ->
@@ -420,5 +429,4 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
   defp map_non_empty?(map) when is_map(map) and map_size(map) > 0, do: true
   defp map_non_empty?(_), do: false
-
 end

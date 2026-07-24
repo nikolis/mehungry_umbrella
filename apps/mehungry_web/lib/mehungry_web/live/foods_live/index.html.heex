@@ -36,11 +36,15 @@
 
     <div class="text-sm text-parchment-dim mb-4">
       <%= if @query != "" do %>
-        <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(@ingredients)}</span>
+        <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(
+          @ingredients
+        )}</span>
         results for "<span class="text-parchment">{@query}</span>"
       <% else %>
         Showing
-        <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(@ingredients)}</span>
+        <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(
+          @ingredients
+        )}</span>
         ingredients
       <% end %>
     </div>

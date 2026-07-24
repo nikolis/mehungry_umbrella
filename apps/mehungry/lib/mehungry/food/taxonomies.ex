@@ -47,9 +47,7 @@ defmodule Mehungry.Food.Taxonomies do
   def get_node!(id), do: Repo.get!(TaxonomyNode, id)
 
   def get_node_by_slug(taxonomy_id, slug) do
-    Repo.one(
-      from(n in TaxonomyNode, where: n.taxonomy_id == ^taxonomy_id and n.slug == ^slug)
-    )
+    Repo.one(from(n in TaxonomyNode, where: n.taxonomy_id == ^taxonomy_id and n.slug == ^slug))
   end
 
   def list_nodes(taxonomy_id) do
@@ -247,5 +245,35 @@ defmodule Mehungry.Food.Taxonomies do
       confidence: nil
     })
     |> Repo.update()
+  end
+
+  # ── Classification ─────────────────────────────────────────────────────
+
+  @doc """
+  Classification coverage for a taxonomy as `%{classified: n, total: m}`:
+  `classified` is the number of distinct ingredients that already have a mapping
+  in this taxonomy, `total` the full ingredient count.
+  """
+  def classification_progress(taxonomy_id) do
+    classified =
+      from(itn in IngredientTaxonomyNode,
+        join: n in TaxonomyNode,
+        on: n.id == itn.taxonomy_node_id,
+        where: n.taxonomy_id == ^taxonomy_id,
+        select: count(itn.ingredient_id, :distinct)
+      )
+      |> Repo.one()
+
+    %{classified: classified, total: Repo.aggregate(Ingredient, :count)}
+  end
+
+  @doc """
+  Enqueues an Oban job that classifies this taxonomy's ingredients into its
+  leaves (batches of 40, self-re-enqueueing until exhausted).
+  """
+  def enqueue_classification(taxonomy_id) do
+    %{"taxonomy_id" => taxonomy_id}
+    |> Mehungry.ObanWorkers.TaxonomyClassificationWorker.new()
+    |> Oban.insert()
   end
 end

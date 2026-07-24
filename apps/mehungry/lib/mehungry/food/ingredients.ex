@@ -328,4 +328,28 @@ defmodule Mehungry.Food.Ingredients do
   def change_recipe_ingredient(%RecipeIngredient{} = recipe_ingredient, attrs \\ %{}) do
     RecipeIngredient.changeset(recipe_ingredient, attrs)
   end
+
+  # ── USDA reconciliation ────────────────────────────────────────────────
+
+  @doc """
+  Enqueues the batched Oban job that backfills `data_type` from `food_class` and
+  bumps each row's `version` (self-re-enqueueing until exhausted).
+  """
+  def enqueue_ingredient_backfill do
+    %{}
+    |> Mehungry.ObanWorkers.IngredientReconciliationWorker.new()
+    |> Oban.insert()
+  end
+
+  @doc """
+  Backfill coverage as `%{done: n, total: m}`: `done` is the number of rows that
+  have reached the current reconciliation pass's target `version`, `total` the
+  full ingredient count. Version-based (not `data_type`-based) so NULL
+  `food_class` rows still count as done — see the worker's moduledoc.
+  """
+  def reconciliation_progress do
+    target = Mehungry.ObanWorkers.IngredientReconciliationWorker.target_version()
+    done = Repo.aggregate(from(i in Ingredient, where: i.version >= ^target), :count)
+    %{done: done, total: Repo.aggregate(Ingredient, :count)}
+  end
 end

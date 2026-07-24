@@ -6,7 +6,7 @@ defmodule Mehungry.FoodData.Usda.SeedFileParser do
   alias Mehungry.Food
 
   @measurement_unit_dict [
-    {"grammar", "g"},
+    {"gram", "g"},
     {"gigatonne", "Gt"},
     {"milligram", "mg"},
     {"microgram", "µg"},
@@ -129,7 +129,12 @@ defmodule Mehungry.FoodData.Usda.SeedFileParser do
 
     attrs = %{
       name: attrs["description"],
-      food_class: attrs["foodClass"],
+      food_class: attrs["dataType"] || attrs["foodClass"],
+      # Keep the new structured columns consistent with food_class on import so
+      # freshly-created rows don't need a reconciliation pass to be corrected.
+      data_type: attrs["dataType"] || attrs["foodClass"],
+      fdc_id: attrs["fdcId"],
+      ndb_number: attrs["ndbNumber"],
       nutrient_conversion_factors: attrs["nutrientConversionFactors"],
       publication_date: attrs["publicationDate"],
       category_id: category.id

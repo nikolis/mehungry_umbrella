@@ -108,18 +108,17 @@ ga_consent_granted = @conn.assigns[:cookie_consent] == :accepted %>
   >
   </script>
 
-<script async src={"https://www.googletagmanager.com/gtag/js?id=#{ga_measurement_id}"}>
-</script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('consent', 'default', {
-    analytics_storage: '<%= if ga_consent_granted, do: "granted", else: "denied" %>'
-  });
-  gtag('js', new Date());
-  gtag('config', '<%= ga_measurement_id %>', { send_page_view: false });
-</script>
-
+  <script async src={"https://www.googletagmanager.com/gtag/js?id=#{ga_measurement_id}"}>
+  </script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('consent', 'default', {
+      analytics_storage: '<%= if ga_consent_granted, do: "granted", else: "denied" %>'
+    });
+    gtag('js', new Date());
+    gtag('config', '<%= ga_measurement_id %>', { send_page_view: false });
+  </script>
 
   <link
     rel="stylesheet"

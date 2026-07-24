@@ -15,13 +15,27 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorkerTest do
     on_exit(fn -> Application.delete_env(:mehungry, :taxonomy_classifier_stub) end)
 
     {:ok, taxonomy} =
-      Taxonomies.create_taxonomy(%{name: "Bio", slug: "bio-#{System.unique_integer([:positive])}"})
+      Taxonomies.create_taxonomy(%{
+        name: "Bio",
+        slug: "bio-#{System.unique_integer([:positive])}"
+      })
 
     {:ok, meat} = Taxonomies.create_node(%{name: "Meat", slug: "meat", taxonomy_id: taxonomy.id})
-    {:ok, beef} = Taxonomies.create_node(%{name: "Beef", slug: "beef", taxonomy_id: taxonomy.id, parent_id: meat.id})
+
+    {:ok, beef} =
+      Taxonomies.create_node(%{
+        name: "Beef",
+        slug: "beef",
+        taxonomy_id: taxonomy.id,
+        parent_id: meat.id
+      })
 
     {:ok, other} =
-      Taxonomies.create_node(%{name: "Other", slug: "other-unclassified", taxonomy_id: taxonomy.id})
+      Taxonomies.create_node(%{
+        name: "Other",
+        slug: "other-unclassified",
+        taxonomy_id: taxonomy.id
+      })
 
     %{taxonomy: taxonomy, beef: beef, other: other}
   end
@@ -62,7 +76,13 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorkerTest do
 
     stub(fn ingredients, _leaves ->
       send(self(), {:classified, Enum.map(ingredients, & &1.id)})
-      rows = Enum.map(ingredients, &%{ingredient_id: &1.id, taxonomy_node_id: ctx.beef.id, confidence: 0.9})
+
+      rows =
+        Enum.map(
+          ingredients,
+          &%{ingredient_id: &1.id, taxonomy_node_id: ctx.beef.id, confidence: 0.9}
+        )
+
       {:ok, rows}
     end)
 

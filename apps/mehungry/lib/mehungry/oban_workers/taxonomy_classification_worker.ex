@@ -41,7 +41,10 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
             handle_assignments(taxonomy_id, batch, assignments)
 
           {:error, reason} ->
-            Logger.warning("TaxonomyClassificationWorker: classification failed: #{inspect(reason)}")
+            Logger.warning(
+              "TaxonomyClassificationWorker: classification failed: #{inspect(reason)}"
+            )
+
             {:error, reason}
         end
     end
