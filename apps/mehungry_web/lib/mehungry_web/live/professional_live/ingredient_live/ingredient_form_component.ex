@@ -30,6 +30,16 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              FDC ID
+            </label>
+            <.input
+              type="number"
+              name="ingredient[fdc_id]"
+              value={@form[:fdc_id].value}
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
               Category
             </label>
             <.live_component
