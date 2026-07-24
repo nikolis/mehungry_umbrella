@@ -12,9 +12,9 @@ defmodule Mehungry.Food do
     * `Mehungry.Food.Nutrients` — nutrient records and interactions
     * `Mehungry.Food.Measurements` — measurement units and portions
     * `Mehungry.Food.Categories` — categories and food restriction types
+    * `Mehungry.Food.Taxonomies` — hierarchical ingredient taxonomies
     * `Mehungry.Food.Localization` — recipe/ingredient/unit translations
     * `Mehungry.Food.Engagement` — likes, comments, annotations
-    * `Mehungry.Food.Taxonomies` — hierarchical ingredient taxonomies
   """
 
   alias Mehungry.Food.{

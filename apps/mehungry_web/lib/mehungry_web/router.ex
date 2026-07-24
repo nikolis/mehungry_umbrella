@@ -77,6 +77,8 @@ defmodule MehungryWeb.Router do
       live "/measurement_units/new", ProfessionalLive.MeasurementUnits, :new
       live "/measurement_units/:id/edit", ProfessionalLive.MeasurementUnits, :edit
 
+      live "/taxonomy/review", ProfessionalLive.TaxonomyReview, :index
+
       live "/languages", Professional.LanguageLive.Index, :index
       live "/languages/new", Professional.LanguageLive.Index, :new
       live "/languages/:id/edit", Professional.LanguageLive.Index, :edit

@@ -137,7 +137,7 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
   end
 
   defp build_ingredient_attrs(attrs, nutrient_data_source) do
-    category = get_or_create_food_category(category_description(attrs))
+    category = get_or_create_food_category(category_description(attrs), category_usda_code(attrs))
 
     %{
       name: attrs["description"],
@@ -165,12 +165,25 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
       attrs["brandedFoodCategory"]
   end
 
-  defp get_or_create_food_category(nil), do: nil
+  # FDC exposes the category's USDA code under one of two keys depending on
+  # dataset; use the first present and stringify it.
+  defp category_usda_code(attrs) do
+    case attrs["foodCategory"]["code"] || attrs["wweiaFoodCategory"]["wweiaFoodCategoryCode"] do
+      nil -> nil
+      code -> to_string(code)
+    end
+  end
 
-  defp get_or_create_food_category(category_name) do
+  defp get_or_create_food_category(nil, _usda_code), do: nil
+
+  defp get_or_create_food_category(category_name, usda_code) do
     case Food.get_category_by_name(category_name) do
       nil ->
-        {:ok, category} = Food.create_category(%{name: category_name})
+        {:ok, category} = Food.create_category(%{name: category_name, usda_code: usda_code})
+        category
+
+      %{usda_code: nil} = category when not is_nil(usda_code) ->
+        {:ok, category} = Food.update_category(category, %{usda_code: usda_code})
         category
 
       category ->

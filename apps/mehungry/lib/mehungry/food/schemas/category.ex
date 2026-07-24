@@ -10,6 +10,7 @@ defmodule Mehungry.Food.Category do
   schema "categories" do
     field :name, :string
     field :description, :string
+    field :usda_code, :string
 
     has_many :category_translation, CategoryTranslation
     timestamps()
@@ -17,7 +18,7 @@ defmodule Mehungry.Food.Category do
 
   def changeset(category, attrs) do
     category
-    |> cast(attrs, [:name, :description])
+    |> cast(attrs, [:name, :description, :usda_code])
     |> cast_assoc(:category_translation, with: &Mehungry.Food.CategoryTranslation.changeset/2)
     |> validate_required([:name])
     |> unique_constraint(:name)

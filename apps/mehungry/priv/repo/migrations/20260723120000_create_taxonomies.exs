@@ -5,7 +5,7 @@ defmodule Mehungry.Repo.Migrations.CreateTaxonomies do
     create table(:taxonomies) do
       add :name, :string, null: false
       add :slug, :string, null: false
-      add :description, :string
+      add :description, :text
 
       timestamps()
     end
@@ -17,15 +17,13 @@ defmodule Mehungry.Repo.Migrations.CreateTaxonomies do
       add :parent_id, references(:taxonomy_nodes, on_delete: :delete_all)
       add :name, :string, null: false
       add :slug, :string, null: false
-      add :position, :integer, default: 0
+      add :position, :integer, default: 0, null: false
 
       timestamps()
     end
 
-    # UNIQUE(taxonomy_id, slug) rather than (taxonomy_id, parent_id, slug):
-    # on PG14 NULL parent_id rows are never treated as duplicates
-    # (NULLS NOT DISTINCT is PG15+). Slugs unique per taxonomy also let the
-    # classifier identify a leaf by slug alone.
+    # UNIQUE(taxonomy_id, parent_id, slug) would not catch duplicate roots on
+    # PG14 (NULL parent_id rows are never equal), so slugs are unique per taxonomy.
     create unique_index(:taxonomy_nodes, [:taxonomy_id, :slug])
     create index(:taxonomy_nodes, [:parent_id])
 
@@ -42,9 +40,17 @@ defmodule Mehungry.Repo.Migrations.CreateTaxonomies do
     create unique_index(:ingredient_taxonomy_nodes, [:ingredient_id, :taxonomy_node_id])
     create index(:ingredient_taxonomy_nodes, [:taxonomy_node_id])
     create index(:ingredient_taxonomy_nodes, [:reviewed, :confidence])
+
+    alter table(:categories) do
+      add :usda_code, :string
+    end
   end
 
   def down do
+    alter table(:categories) do
+      remove :usda_code
+    end
+
     drop table(:ingredient_taxonomy_nodes)
     drop table(:taxonomy_nodes)
     drop table(:taxonomies)

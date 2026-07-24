@@ -18,6 +18,8 @@ require Logger
 {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Fun"})
 {:ok, fr} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolutely fun"})
 
+Mehungry.Food.TaxonomySeeder.seed()
+
 """
 {:ok, gram} = Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnit{name: "gram"})
 {:ok, kg} = Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnit{name: "kg"})
@@ -816,5 +818,3 @@ Mehungry.Repo.insert(%Mehungry.Food.Ingredient{
   measurement_unit: gram
   })
 """
-
-Mehungry.Food.TaxonomySeeder.seed()
