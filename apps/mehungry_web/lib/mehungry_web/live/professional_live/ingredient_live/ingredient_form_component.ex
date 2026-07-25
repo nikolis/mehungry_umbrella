@@ -4,6 +4,7 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
   def render(assigns) do
     ~H"""
     <form
+      id="ingredient-details-form"
       phx-change="validate"
       phx-submit="save"
       class="px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-6"
@@ -62,6 +63,26 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
               input_variable={:measurement_unit_id}
             />
           </div>
+          <%= if @taxonomy do %>
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                Taxonomy ({@taxonomy.name})
+              </label>
+              <select
+                name="ingredient[taxonomy_node_id]"
+                class="w-full rounded-lg bg-slate-900 border border-slate-700 text-white text-sm px-3 py-2"
+              >
+                <option value="" selected={is_nil(@taxonomy_node_id)}>— Unassigned —</option>
+                <option
+                  :for={{path, id} <- @taxonomy_leaf_options}
+                  value={id}
+                  selected={id == @taxonomy_node_id}
+                >
+                  {path}
+                </option>
+              </select>
+            </div>
+          <% end %>
         </div>
       </div>
 

@@ -6,9 +6,14 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
   import Ecto.Changeset
 
+  # `classes`/`data_types` are stored as the comma-joined strings the filter
+  # SelectComponents write into their hidden inputs, so the form can carry them
+  # back across re-renders (otherwise LiveView patches the hidden inputs empty
+  # and the filters silently drop).
   @types %{
     query: :string,
-    categories: {:array, :string},
+    classes: :string,
+    data_types: :string,
     search_method: :string
   }
 
@@ -136,8 +141,8 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
         _ ->
           case form_params["search_method"] do
-            "ilike" -> Food.search_ingredient_admin(query, classes, data_types)
             "search" -> Food.search_ingredient_alt_admin(query, classes, data_types)
+            _ -> Food.search_ingredient_admin(query, classes, data_types)
           end
       end
 
@@ -145,6 +150,10 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
     |> assign(:ecto_query, ecto_query)
     |> assign(:cursor_after, cursor)
     |> assign(:total_count, total_count)
+    |> assign(:search_method, form_params["search_method"] || socket.assigns.search_method)
+    # Re-render the form from the submitted params so the filter hidden inputs
+    # (and their chips) keep their selected values across this re-render.
+    |> assign(:form, to_form(get_form_changeset(form_params), as: :search_form))
     |> stream(:ingredients, ingredients, reset: true)
   end
 end

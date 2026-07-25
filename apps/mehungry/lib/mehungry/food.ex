@@ -26,7 +26,8 @@ defmodule Mehungry.Food do
     Measurements,
     Nutrients,
     Recipes,
-    Taxonomies
+    Taxonomies,
+    TaxonomyClassificationRuns
   }
 
   # ── Recipes ────────────────────────────────────────────────────────────
@@ -204,8 +205,11 @@ defmodule Mehungry.Food do
   defdelegate list_ingredients_under_node(node_id), to: Taxonomies
   defdelegate attach_ingredient(ingredient_id, node_id, attrs \\ %{}), to: Taxonomies
   defdelegate detach_ingredient(ingredient_id, node_id), to: Taxonomies
+  defdelegate get_ingredient_node_id(taxonomy_id, ingredient_id), to: Taxonomies
+  defdelegate set_ingredient_node(taxonomy_id, ingredient_id, node_id), to: Taxonomies
   defdelegate list_pending_review(taxonomy_id, opts \\ []), to: Taxonomies
   defdelegate review_mapping(id, action), to: Taxonomies
   defdelegate classification_progress(taxonomy_id), to: Taxonomies
   defdelegate enqueue_classification(taxonomy_id), to: Taxonomies
+  defdelegate latest_classification_run(taxonomy_id), to: TaxonomyClassificationRuns, as: :latest_run
 end

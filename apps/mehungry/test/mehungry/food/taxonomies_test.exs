@@ -5,8 +5,10 @@ defmodule Mehungry.Food.TaxonomiesTest do
   import Mehungry.FoodFixtures
 
   alias Mehungry.Food
+  alias Mehungry.Food.IngredientTaxonomyNode
   alias Mehungry.Food.Taxonomies
   alias Mehungry.ObanWorkers.TaxonomyClassificationWorker
+  alias Mehungry.Repo
 
   defp taxonomy_fixture do
     {:ok, taxonomy} =
@@ -241,23 +243,36 @@ defmodule Mehungry.Food.TaxonomiesTest do
   end
 
   describe "classification_progress/1" do
-    test "counts distinct classified ingredients against the total" do
+    test "counts distinct fdc-backed classified ingredients against the fdc-backed total" do
       t = tree_fixture()
-      a = ingredient_fixture(%{name: "ing a"})
-      b = ingredient_fixture(%{name: "ing b"})
-      _c = ingredient_fixture(%{name: "ing c"})
+      a = ingredient_fixture(%{name: "ing a", fdc_id: 11})
+      b = ingredient_fixture(%{name: "ing b", fdc_id: 12})
+      _c = ingredient_fixture(%{name: "ing c", fdc_id: 13})
+      # Ingredients without a proper fdc_id are ignored on both sides — they are
+      # never classified, so counting them would strand the progress bar.
+      no_fdc = ingredient_fixture(%{name: "ing no fdc"})
+      zero_fdc = ingredient_fixture(%{name: "ing zero fdc", fdc_id: 0})
 
       Taxonomies.attach_ingredient(a.id, t.beef.id, %{source: "ai", confidence: 0.9})
       # attaching the same ingredient to a second node still counts once
       Taxonomies.attach_ingredient(a.id, t.lamb.id, %{source: "manual"})
       Taxonomies.attach_ingredient(b.id, t.chicken.id, %{source: "ai", confidence: 0.2})
+      # A mapping for an ingredient without a proper fdc_id does not count.
+      Taxonomies.attach_ingredient(no_fdc.id, t.beef.id, %{source: "manual"})
+      Taxonomies.attach_ingredient(zero_fdc.id, t.beef.id, %{source: "manual"})
 
       progress = Taxonomies.classification_progress(t.taxonomy.id)
 
-      # Only a and b are attached in this taxonomy (a counted once across two nodes).
+      # Only a and b are fdc-backed and attached (a counted once across two nodes).
       assert progress.classified == 2
-      # total reflects every ingredient row, not just this taxonomy's.
-      assert progress.total == Mehungry.Repo.aggregate(Mehungry.Food.Ingredient, :count)
+
+      fdc_total =
+        Mehungry.Repo.aggregate(
+          from(i in Mehungry.Food.Ingredient, where: not is_nil(i.fdc_id) and i.fdc_id > 0),
+          :count
+        )
+
+      assert progress.total == fdc_total
       assert progress.total >= 3
     end
   end
@@ -272,6 +287,63 @@ defmodule Mehungry.Food.TaxonomiesTest do
         worker: TaxonomyClassificationWorker,
         args: %{"taxonomy_id" => t.id}
       )
+    end
+  end
+
+  describe "list_leaves_with_paths/1" do
+    test "returns leaves ordered alphabetically by their displayed path" do
+      t = tree_fixture()
+
+      paths = t.taxonomy.id |> Taxonomies.list_leaves_with_paths() |> Enum.map(& &1.path)
+
+      assert paths == Enum.sort_by(paths, &String.downcase/1)
+      # chicken sits under poultry, so it sorts ahead of red-meat's beef/lamb.
+      assert paths == [
+               "food > meat > poultry > chicken",
+               "food > meat > red-meat > beef",
+               "food > meat > red-meat > lamb"
+             ]
+    end
+  end
+
+  describe "get_ingredient_node_id/2 and set_ingredient_node/3" do
+    test "sets a reviewed manual mapping and reads it back" do
+      t = tree_fixture()
+      ing = ingredient_fixture(%{name: "brisket"})
+
+      assert Taxonomies.get_ingredient_node_id(t.taxonomy.id, ing.id) == nil
+
+      {:ok, _} = Taxonomies.set_ingredient_node(t.taxonomy.id, ing.id, t.beef.id)
+
+      assert Taxonomies.get_ingredient_node_id(t.taxonomy.id, ing.id) == t.beef.id
+
+      mapping = Repo.get_by!(IngredientTaxonomyNode, ingredient_id: ing.id)
+      assert mapping.taxonomy_node_id == t.beef.id
+      assert mapping.source == "manual"
+      assert mapping.reviewed
+    end
+
+    test "changing the node replaces the previous mapping within the taxonomy" do
+      t = tree_fixture()
+      ing = ingredient_fixture(%{name: "brisket"})
+
+      {:ok, _} = Taxonomies.set_ingredient_node(t.taxonomy.id, ing.id, t.beef.id)
+      {:ok, _} = Taxonomies.set_ingredient_node(t.taxonomy.id, ing.id, t.lamb.id)
+
+      assert Taxonomies.get_ingredient_node_id(t.taxonomy.id, ing.id) == t.lamb.id
+
+      mappings = Repo.all(from(m in IngredientTaxonomyNode, where: m.ingredient_id == ^ing.id))
+      assert length(mappings) == 1
+    end
+
+    test "a blank node id clears the placement" do
+      t = tree_fixture()
+      ing = ingredient_fixture(%{name: "brisket"})
+
+      {:ok, _} = Taxonomies.set_ingredient_node(t.taxonomy.id, ing.id, t.beef.id)
+      {:ok, _} = Taxonomies.set_ingredient_node(t.taxonomy.id, ing.id, "")
+
+      assert Taxonomies.get_ingredient_node_id(t.taxonomy.id, ing.id) == nil
     end
   end
 end

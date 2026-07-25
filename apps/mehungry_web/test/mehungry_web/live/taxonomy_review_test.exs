@@ -8,6 +8,8 @@ defmodule MehungryWeb.TaxonomyReviewTest do
 
   alias Mehungry.Food
   alias Mehungry.Food.Taxonomies
+  alias Mehungry.Food.TaxonomyClassificationRun
+  alias Mehungry.Food.TaxonomyClassificationRuns
   alias Mehungry.ObanWorkers.TaxonomyClassificationWorker
 
   @admin_email Application.compile_env(:mehungry, :admin_email)
@@ -117,17 +119,54 @@ defmodule MehungryWeb.TaxonomyReviewTest do
     assert html =~ "Chicken"
   end
 
-  test "Run Classification enqueues a classification job", %{conn: conn, taxonomy: taxonomy} do
+  test "Run Classification opens a tracked run and enqueues a job with run_id", %{
+    conn: conn,
+    taxonomy: taxonomy
+  } do
     {:ok, view, _html} = live(conn, ~p"/professional/taxonomy/review")
 
-    view
-    |> element("button[phx-click='classify']")
-    |> render_click()
+    html =
+      view
+      |> element("button[phx-click='classify']")
+      |> render_click()
+
+    run = TaxonomyClassificationRuns.latest_run(taxonomy.id)
+    assert run
+    assert run.status == "pending"
 
     assert_enqueued(
       worker: TaxonomyClassificationWorker,
-      args: %{"taxonomy_id" => taxonomy.id}
+      args: %{"taxonomy_id" => taxonomy.id, "run_id" => run.id}
     )
+
+    # Button reflects the running state.
+    assert html =~ "Classifying…"
+  end
+
+  test "live run broadcasts update the progress bar and status badge", %{
+    conn: conn,
+    taxonomy: taxonomy
+  } do
+    {:ok, view, _html} = live(conn, ~p"/professional/taxonomy/review")
+
+    run = %TaxonomyClassificationRun{
+      id: 1,
+      taxonomy_id: taxonomy.id,
+      status: "processing",
+      classified: 7,
+      total: 10
+    }
+
+    Phoenix.PubSub.broadcast(
+      Mehungry.PubSub,
+      TaxonomyClassificationRuns.topic(taxonomy.id),
+      {:classification_run, run}
+    )
+
+    html = render(view)
+    assert html =~ "Classifying…"
+    assert html =~ "7 / 10"
+    assert html =~ "70%"
   end
 
   test "Refresh re-renders progress and the pending list", %{conn: conn} do
