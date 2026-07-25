@@ -201,6 +201,43 @@
                 </.link>
               </div>
             </div>
+            <%!-- Metadata row — provenance/versioning fields, only shown when present --%>
+            <div
+              :if={
+                ingredient.data_type || ingredient.fdc_id || ingredient.ndb_number ||
+                  ingredient.nutrient_data_source || ingredient.publication_date ||
+                  (is_integer(ingredient.version) && ingredient.version > 0)
+              }
+              class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500"
+            >
+              <span :if={ingredient.data_type} class="inline-flex items-center gap-1">
+                <span class="text-slate-600 uppercase tracking-wide">Type</span>
+                <span class="text-slate-300">{ingredient.data_type}</span>
+              </span>
+              <span :if={ingredient.fdc_id} class="inline-flex items-center gap-1">
+                <span class="text-slate-600 uppercase tracking-wide">FDC</span>
+                <span class="text-slate-300">{ingredient.fdc_id}</span>
+              </span>
+              <span :if={ingredient.ndb_number} class="inline-flex items-center gap-1">
+                <span class="text-slate-600 uppercase tracking-wide">NDB</span>
+                <span class="text-slate-300">{ingredient.ndb_number}</span>
+              </span>
+              <span :if={ingredient.nutrient_data_source} class="inline-flex items-center gap-1">
+                <span class="text-slate-600 uppercase tracking-wide">Source</span>
+                <span class="text-slate-300">{ingredient.nutrient_data_source}</span>
+              </span>
+              <span :if={ingredient.publication_date} class="inline-flex items-center gap-1">
+                <span class="text-slate-600 uppercase tracking-wide">Pub</span>
+                <span class="text-slate-300">{ingredient.publication_date}</span>
+              </span>
+              <span
+                :if={is_integer(ingredient.version) && ingredient.version > 0}
+                class="inline-flex items-center gap-1"
+              >
+                <span class="text-slate-600 uppercase tracking-wide">v</span>
+                <span class="text-slate-300">{ingredient.version}</span>
+              </span>
+            </div>
           </div>
         </.link>
       </div>
