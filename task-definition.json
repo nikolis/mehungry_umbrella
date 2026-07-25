@@ -89,6 +89,10 @@
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/google_client_secret-zdxPp1"
                 },
                 {
+                    "name": "FDC_API_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/fdc_api_key-52KibC"
+                },
+                {
                     "name": "SECRET_KEY_BASE",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/secret_key_base-Au2jSN"
                 },

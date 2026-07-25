@@ -285,33 +285,49 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
         nil
 
       name ->
-        result = Food.get_measurement_unit_by_name(name)
+        # Resolve the canonical full name up front and look it up by *that* — the
+        # same value we'd insert. Looking up by the raw modifier ("g") while
+        # inserting the full name ("gram") let an existing "gram" row slip past the
+        # lookup and then collide on the unique name index, aborting the batch's
+        # transaction.
+        {full_name, abbreviation} = get_measurement_unit_foul_name(name)
+        result = Food.get_measurement_unit_by_name(full_name)
 
         Logger.info(
-          "For #{inspect(ingredient.name)} Get/Create measurement unit with name #{name} and the search result replied #{inspect(result)}"
+          "For #{inspect(ingredient.name)} Get/Create measurement unit with name #{full_name} and the search result replied #{inspect(result)}"
         )
 
         case result do
           [measurement_unit | _] -> measurement_unit
-          [] -> create_measurement_unit(name)
+          [] -> create_measurement_unit(full_name, abbreviation)
         end
     end
   end
 
-  defp create_measurement_unit(name) do
-    {full_name, abbreviation} = get_measurement_unit_foul_name(name)
+  defp create_measurement_unit(full_name, abbreviation) do
+    # This insert runs inside the caller's batch transaction. A raised unique_constraint
+    # violation would abort that whole transaction, so every subsequent query (including
+    # the re-fetch below) would fail with 25P02. Insert idempotently instead: ON CONFLICT
+    # DO NOTHING never raises, so a row that already exists — or a concurrent insert that
+    # wins the race on the unique name index — leaves the transaction intact.
+    {:ok, measurement_unit} =
+      Food.create_measurement_unit(
+        %{name: full_name, alternate_name: abbreviation},
+        on_conflict: :nothing,
+        conflict_target: :name
+      )
 
-    case Food.create_measurement_unit(%{name: full_name, alternate_name: abbreviation}) do
-      {:ok, measurement_unit} ->
-        measurement_unit
-
-      # A concurrent insert can win the unique_constraint(:name) race; re-fetch
-      # rather than turning it into a MatchError that rolls back the batch.
-      {:error, _changeset} ->
+    case measurement_unit do
+      # On conflict nothing is inserted, so the returned struct has no generated id;
+      # re-fetch the existing/winning row to get the real record.
+      %{id: nil} ->
         case Food.get_measurement_unit_by_name(full_name) do
-          [measurement_unit | _] -> measurement_unit
+          [existing | _] -> existing
           [] -> raise "Could not get or create measurement unit #{inspect(full_name)}"
         end
+
+      measurement_unit ->
+        measurement_unit
     end
   end
 
