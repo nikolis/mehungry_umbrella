@@ -81,8 +81,10 @@ defmodule Mehungry.Food.Taxonomies do
     by_parent = Enum.group_by(nodes, & &1.parent_id)
 
     for node <- nodes, Map.get(by_parent, node.id, []) == [] do
-      %{id: node.id, slug: node.slug, path: node_path(node, by_id)}
+      %{id: node.id, name: node.name, slug: node.slug, path: node_path(node, by_id)}
     end
+    # Alphabetical by displayed path so the selects that render these read in name order.
+    |> Enum.sort_by(&String.downcase(&1.path))
   end
 
   defp node_path(%TaxonomyNode{parent_id: nil} = node, _by_id), do: node.name
@@ -206,6 +208,54 @@ defmodule Mehungry.Food.Taxonomies do
     |> Repo.delete_all()
   end
 
+  @doc "The node id an ingredient is currently mapped to within `taxonomy_id`, or nil."
+  def get_ingredient_node_id(taxonomy_id, ingredient_id) do
+    from(itn in IngredientTaxonomyNode,
+      join: n in TaxonomyNode,
+      on: n.id == itn.taxonomy_node_id,
+      where: n.taxonomy_id == ^taxonomy_id and itn.ingredient_id == ^ingredient_id,
+      select: itn.taxonomy_node_id,
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Sets an ingredient's placement within a single taxonomy from a human edit:
+  drops any existing mapping(s) for that ingredient inside the taxonomy, then
+  attaches the chosen leaf as a reviewed `manual` mapping. A blank `node_id`
+  just clears the placement. Runs in one transaction.
+  """
+  def set_ingredient_node(taxonomy_id, ingredient_id, node_id) do
+    Repo.transaction(fn ->
+      taxonomy_node_ids =
+        from(n in TaxonomyNode, where: n.taxonomy_id == ^taxonomy_id, select: n.id)
+
+      Repo.delete_all(
+        from(itn in IngredientTaxonomyNode,
+          where:
+            itn.ingredient_id == ^ingredient_id and
+              itn.taxonomy_node_id in subquery(taxonomy_node_ids)
+        )
+      )
+
+      case node_id do
+        blank when blank in [nil, ""] ->
+          nil
+
+        node_id ->
+          {:ok, mapping} =
+            attach_ingredient(ingredient_id, node_id, %{
+              source: "manual",
+              reviewed: true,
+              confidence: nil
+            })
+
+          mapping
+      end
+    end)
+  end
+
   # ── Review ─────────────────────────────────────────────────────────────
 
   @doc """
@@ -250,30 +300,46 @@ defmodule Mehungry.Food.Taxonomies do
   # ── Classification ─────────────────────────────────────────────────────
 
   @doc """
-  Classification coverage for a taxonomy as `%{classified: n, total: m}`:
-  `classified` is the number of distinct ingredients that already have a mapping
-  in this taxonomy, `total` the full ingredient count.
+  Classification coverage for a taxonomy as `%{classified: n, total: m}`.
+
+  Only ingredients backed by a proper `fdc_id` are counted on either side —
+  classification skips rows without one (see
+  `TaxonomyClassificationWorker.fetch_unclassified_batch/1`), so counting them
+  in `total` would leave the progress bar permanently short of 100%.
   """
   def classification_progress(taxonomy_id) do
     classified =
       from(itn in IngredientTaxonomyNode,
         join: n in TaxonomyNode,
         on: n.id == itn.taxonomy_node_id,
-        where: n.taxonomy_id == ^taxonomy_id,
+        join: i in Ingredient,
+        on: i.id == itn.ingredient_id,
+        where: n.taxonomy_id == ^taxonomy_id and not is_nil(i.fdc_id) and i.fdc_id > 0,
         select: count(itn.ingredient_id, :distinct)
       )
       |> Repo.one()
 
-    %{classified: classified, total: Repo.aggregate(Ingredient, :count)}
+    total =
+      from(i in Ingredient, where: not is_nil(i.fdc_id) and i.fdc_id > 0)
+      |> Repo.aggregate(:count)
+
+    %{classified: classified, total: total}
   end
 
   @doc """
-  Enqueues an Oban job that classifies this taxonomy's ingredients into its
-  leaves (batches of 40, self-re-enqueueing until exhausted).
+  Starts a tracked classification run: opens a durable
+  `TaxonomyClassificationRun` (so `TaxonomyReview` can render live progress) and
+  enqueues the first `TaxonomyClassificationWorker` batch, threading `run_id`
+  through the self-re-enqueueing chain. Returns `{:ok, run}`.
   """
   def enqueue_classification(taxonomy_id) do
-    %{"taxonomy_id" => taxonomy_id}
-    |> Mehungry.ObanWorkers.TaxonomyClassificationWorker.new()
-    |> Oban.insert()
+    run = Mehungry.Food.TaxonomyClassificationRuns.start_run(taxonomy_id)
+
+    {:ok, _job} =
+      %{"taxonomy_id" => taxonomy_id, "run_id" => run.id}
+      |> Mehungry.ObanWorkers.TaxonomyClassificationWorker.new()
+      |> Oban.insert()
+
+    {:ok, run}
   end
 end

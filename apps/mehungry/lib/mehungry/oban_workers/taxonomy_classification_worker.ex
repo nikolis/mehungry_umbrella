@@ -17,16 +17,24 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
   import Ecto.Query
 
   alias Mehungry.Food
-  alias Mehungry.Food.{Ingredient, IngredientTaxonomyNode, TaxonomyNode}
+  alias Mehungry.Food.{Ingredient, IngredientTaxonomyNode, TaxonomyClassificationRuns, TaxonomyNode}
   alias Mehungry.Repo
 
   @batch_size 40
 
+  # Mappings the classifier is this confident about skip human review — they land
+  # already `reviewed: true`, so they never surface in the TaxonomyReview queue.
+  @auto_confirm_confidence 0.80
+
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"taxonomy_id" => taxonomy_id}}) do
+  def perform(%Oban.Job{args: %{"taxonomy_id" => taxonomy_id} = args}) do
+    run_id = Map.get(args, "run_id")
+    TaxonomyClassificationRuns.mark_processing(run_id)
+
     case fetch_unclassified_batch(taxonomy_id) do
       [] ->
         Logger.info("TaxonomyClassificationWorker: taxonomy #{taxonomy_id} fully classified")
+        TaxonomyClassificationRuns.mark_completed(run_id, Food.classification_progress(taxonomy_id))
         :ok
 
       batch ->
@@ -38,21 +46,23 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
 
         case classifier().classify(batch, leaves) do
           {:ok, assignments} ->
-            handle_assignments(taxonomy_id, batch, assignments)
+            handle_assignments(taxonomy_id, run_id, batch, assignments)
 
           {:error, reason} ->
             Logger.warning(
               "TaxonomyClassificationWorker: classification failed: #{inspect(reason)}"
             )
 
+            TaxonomyClassificationRuns.mark_failed(run_id, reason)
             {:error, reason}
         end
     end
   end
 
-  defp handle_assignments(taxonomy_id, batch, assignments) do
+  defp handle_assignments(taxonomy_id, run_id, batch, assignments) do
     if insert_assignments(assignments) > 0 do
-      enqueue_next_batch(taxonomy_id)
+      TaxonomyClassificationRuns.update_progress(run_id, Food.classification_progress(taxonomy_id))
+      enqueue_next_batch(taxonomy_id, run_id)
       :ok
     else
       # Non-empty batch but nothing usable came back — stop to avoid an
@@ -62,6 +72,7 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
           "taxonomy #{taxonomy_id}; halting"
       )
 
+      TaxonomyClassificationRuns.mark_completed(run_id, Food.classification_progress(taxonomy_id))
       :ok
     end
   end
@@ -77,7 +88,8 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
 
     Repo.all(
       from(i in Ingredient,
-        where: i.id not in subquery(classified_ids),
+        where:
+          i.id not in subquery(classified_ids) and not is_nil(i.fdc_id) and i.fdc_id > 0,
         limit: @batch_size,
         select: %{id: i.id, name: i.name}
       )
@@ -89,12 +101,14 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
 
     rows =
       Enum.map(assignments, fn %{ingredient_id: ing_id, taxonomy_node_id: node_id} = a ->
+        confidence = Map.get(a, :confidence)
+
         %{
           ingredient_id: ing_id,
           taxonomy_node_id: node_id,
           source: "ai",
-          confidence: Map.get(a, :confidence),
-          reviewed: false,
+          confidence: confidence,
+          reviewed: auto_confirm?(confidence),
           inserted_at: now,
           updated_at: now
         }
@@ -109,8 +123,13 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
     count
   end
 
-  defp enqueue_next_batch(taxonomy_id) do
-    %{"taxonomy_id" => taxonomy_id} |> new() |> Oban.insert!()
+  # Guarded against a nil confidence: `nil > 0.80` is `true` under Elixir term
+  # ordering, which would wrongly auto-confirm unscored mappings.
+  defp auto_confirm?(confidence) when is_number(confidence), do: confidence > @auto_confirm_confidence
+  defp auto_confirm?(_), do: false
+
+  defp enqueue_next_batch(taxonomy_id, run_id) do
+    %{"taxonomy_id" => taxonomy_id, "run_id" => run_id} |> new() |> Oban.insert!()
   end
 
   defp classifier do

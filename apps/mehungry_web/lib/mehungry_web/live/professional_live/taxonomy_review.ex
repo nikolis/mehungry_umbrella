@@ -2,6 +2,7 @@ defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
   use MehungryWeb, :live_view
 
   alias Mehungry.Food
+  alias Mehungry.Food.TaxonomyClassificationRuns
   alias Mehungry.Food.TaxonomySeeder
 
   @per_page 25
@@ -16,6 +17,8 @@ defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
       |> assign(:taxonomy, taxonomy)
       |> assign(:page, 1)
       |> assign(:progress, progress_for(taxonomy))
+      |> assign(:run, run_for(taxonomy))
+      |> maybe_subscribe(taxonomy)
       |> load_taxonomy_assigns()
       |> load_first_page()
 
@@ -66,6 +69,8 @@ defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
       |> assign(:taxonomy, taxonomy)
       |> assign(:page, 1)
       |> assign(:progress, progress_for(taxonomy))
+      |> assign(:run, run_for(taxonomy))
+      |> maybe_subscribe(taxonomy)
       |> load_taxonomy_assigns()
       |> reset_first_page()
       |> put_flash(:info, "Taxonomy seeded")
@@ -79,9 +84,12 @@ defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
   end
 
   def handle_event("classify", _params, socket) do
-    Food.enqueue_classification(socket.assigns.taxonomy.id)
+    {:ok, run} = Food.enqueue_classification(socket.assigns.taxonomy.id)
 
-    {:noreply, put_flash(socket, :info, "Classification started — refresh to watch progress")}
+    {:noreply,
+     socket
+     |> assign(:run, run)
+     |> put_flash(:info, "Classification started — progress updates live below")}
   end
 
   @impl true
@@ -92,14 +100,47 @@ defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
      socket
      |> assign(:page, 1)
      |> assign(:progress, progress_for(taxonomy))
+     |> assign(:run, run_for(taxonomy))
      |> refresh_tree()
      |> reset_first_page()}
+  end
+
+  # Live run updates broadcast by `TaxonomyClassificationRuns` as batches run.
+  # Progress-bar only — the pending-review stream is left untouched so rows don't
+  # shift under a reviewer mid-run (they refresh it manually). Ignores updates
+  # for a different taxonomy than the one on screen.
+  @impl true
+  def handle_info({:classification_run, run}, socket) do
+    if socket.assigns.taxonomy && run.taxonomy_id == socket.assigns.taxonomy.id do
+      {:noreply,
+       socket
+       |> assign(:run, run)
+       |> assign(:progress, %{classified: run.classified || 0, total: run.total || 0})}
+    else
+      {:noreply, socket}
+    end
   end
 
   # ── Data loading ───────────────────────────────────────────────────────
 
   defp progress_for(nil), do: %{classified: 0, total: 0}
   defp progress_for(taxonomy), do: Food.classification_progress(taxonomy.id)
+
+  defp run_for(nil), do: nil
+  defp run_for(taxonomy), do: Food.latest_classification_run(taxonomy.id)
+
+  # Subscribes once to the taxonomy's classification topic so run broadcasts drive
+  # the live progress bar. No-op until connected and idempotent across re-seeds.
+  defp maybe_subscribe(socket, nil), do: socket
+
+  defp maybe_subscribe(socket, taxonomy) do
+    if connected?(socket) and socket.assigns[:subscribed_taxonomy_id] != taxonomy.id do
+      Phoenix.PubSub.subscribe(Mehungry.PubSub, TaxonomyClassificationRuns.topic(taxonomy.id))
+      assign(socket, :subscribed_taxonomy_id, taxonomy.id)
+    else
+      socket
+    end
+  end
 
   defp reset_first_page(%{assigns: %{taxonomy: nil}} = socket) do
     stream(socket, :mappings, [], reset: true)
@@ -155,4 +196,25 @@ defmodule MehungryWeb.ProfessionalLive.TaxonomyReview do
 
   defp percent(%{total: total}) when total in [0, nil], do: 0
   defp percent(%{classified: classified, total: total}), do: round(classified / total * 100)
+
+  # ── Run status badge ───────────────────────────────────────────────────
+
+  defp running?(%{status: status}) when status in ["pending", "processing"], do: true
+  defp running?(_), do: false
+
+  defp run_label(nil), do: "Idle"
+  defp run_label(%{status: "pending"}), do: "Queued…"
+  defp run_label(%{status: "processing"}), do: "Classifying…"
+  defp run_label(%{status: "completed"}), do: "Completed"
+  defp run_label(%{status: "failed"}), do: "Failed"
+  defp run_label(_), do: "Idle"
+
+  defp run_class(%{status: "pending"}), do: "text-parchment-dim"
+  defp run_class(%{status: "processing"}), do: "text-basil"
+  defp run_class(%{status: "completed"}), do: "text-basil"
+  defp run_class(%{status: "failed"}), do: "text-red-400"
+  defp run_class(_), do: "text-parchment-dim"
+
+  defp run_error(%{status: "failed", error: error}) when is_binary(error), do: error
+  defp run_error(_), do: nil
 end

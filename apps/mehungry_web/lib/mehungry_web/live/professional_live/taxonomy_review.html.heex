@@ -15,11 +15,11 @@
       <button
         type="button"
         phx-click="classify"
-        disabled={is_nil(@taxonomy)}
+        disabled={is_nil(@taxonomy) or running?(@run)}
         data-confirm="Classify all ingredients into taxonomy leaves via AI? This uses API quota."
         class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        Run Classification
+        {if running?(@run), do: "Classifying…", else: "Run Classification"}
       </button>
 
       <button
@@ -35,6 +35,9 @@
       <div class="flex items-center justify-between text-xs text-parchment-dim mb-1">
         <span>
           Classified: {@progress.classified} / {@progress.total} ({percent(@progress)}%)
+        </span>
+        <span class={"font-medium #{run_class(@run)}"} title={run_error(@run)}>
+          {run_label(@run)}
         </span>
       </div>
       <div class="h-2 w-full rounded bg-ink-panel2 overflow-hidden">

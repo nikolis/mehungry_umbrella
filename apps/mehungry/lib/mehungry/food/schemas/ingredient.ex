@@ -63,8 +63,8 @@ defmodule Mehungry.Food.Ingredient do
     )
     |> cast_assoc(:ingredient_nutrients,
       with: &Mehungry.Food.IngredientNutrient.changeset/2,
-      sort_param: :ingredient_translation_sort,
-      drop_param: :ingredient_translation_drop
+      sort_param: :ingredient_nutrients_sort,
+      drop_param: :ingredient_nutrients_drop
     )
     |> foreign_key_constraint(:category_id)
     |> validate_required([:name, :category_id])

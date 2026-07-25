@@ -7,9 +7,10 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorkerTest do
   import Ecto.Query
 
   alias Mehungry.Food.Taxonomies
+  alias Mehungry.Food.TaxonomyClassificationRuns
   alias Mehungry.ObanWorkers.TaxonomyClassificationWorker
   alias Mehungry.Repo
-  alias Mehungry.Food.{Ingredient, IngredientTaxonomyNode}
+  alias Mehungry.Food.{Ingredient, IngredientTaxonomyNode, TaxonomyClassificationRun}
 
   setup do
     on_exit(fn -> Application.delete_env(:mehungry, :taxonomy_classifier_stub) end)
@@ -72,7 +73,7 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorkerTest do
     # Pre-classify everything else so the batch is exactly our new ingredient,
     # independent of how many rows the DB holds or their physical order.
     classify_all_ingredients(ctx.other.id)
-    ing = ingredient_fixture(%{name: "beef steak"})
+    ing = ingredient_fixture(%{name: "beef steak", fdc_id: 111_111})
 
     stub(fn ingredients, _leaves ->
       send(self(), {:classified, Enum.map(ingredients, & &1.id)})
@@ -80,7 +81,7 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorkerTest do
       rows =
         Enum.map(
           ingredients,
-          &%{ingredient_id: &1.id, taxonomy_node_id: ctx.beef.id, confidence: 0.9}
+          &%{ingredient_id: &1.id, taxonomy_node_id: ctx.beef.id, confidence: 0.5}
         )
 
       {:ok, rows}
@@ -95,13 +96,51 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorkerTest do
     mapping = Repo.get_by!(IngredientTaxonomyNode, ingredient_id: ing.id)
     assert mapping.taxonomy_node_id == ctx.beef.id
     assert mapping.source == "ai"
-    assert mapping.confidence == 0.9
+    assert mapping.confidence == 0.5
+    # Below the 0.80 auto-confirm threshold, so it still needs human review.
     refute mapping.reviewed
 
     assert_enqueued(
       worker: TaxonomyClassificationWorker,
       args: %{"taxonomy_id" => ctx.taxonomy.id}
     )
+  end
+
+  test "auto-confirms mappings above the 0.80 confidence threshold", ctx do
+    classify_all_ingredients(ctx.other.id)
+    high = ingredient_fixture(%{name: "obvious beef", fdc_id: 666_666})
+
+    stub(fn ingredients, _leaves ->
+      {:ok,
+       Enum.map(
+         ingredients,
+         &%{ingredient_id: &1.id, taxonomy_node_id: ctx.beef.id, confidence: 0.95}
+       )}
+    end)
+
+    assert :ok =
+             perform_job(TaxonomyClassificationWorker, %{"taxonomy_id" => ctx.taxonomy.id})
+
+    mapping = Repo.get_by!(IngredientTaxonomyNode, ingredient_id: high.id)
+    assert mapping.confidence == 0.95
+    # High confidence skips the review queue.
+    assert mapping.reviewed
+  end
+
+  test "a nil confidence is never auto-confirmed", ctx do
+    classify_all_ingredients(ctx.other.id)
+    unscored = ingredient_fixture(%{name: "mystery meat", fdc_id: 777_777})
+
+    stub(fn ingredients, _leaves ->
+      {:ok, Enum.map(ingredients, &%{ingredient_id: &1.id, taxonomy_node_id: ctx.beef.id})}
+    end)
+
+    assert :ok =
+             perform_job(TaxonomyClassificationWorker, %{"taxonomy_id" => ctx.taxonomy.id})
+
+    mapping = Repo.get_by!(IngredientTaxonomyNode, ingredient_id: unscored.id)
+    assert is_nil(mapping.confidence)
+    refute mapping.reviewed
   end
 
   test "empty batch (all classified) terminates without calling classifier or enqueueing", ctx do
@@ -119,7 +158,7 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorkerTest do
   end
 
   test "zero-insert non-empty batch halts (loop guard)", ctx do
-    ingredient_fixture(%{name: "unusable thing"})
+    ingredient_fixture(%{name: "unusable thing", fdc_id: 222_222})
 
     # Classifier returns nothing usable for a non-empty batch.
     stub(fn _ingredients, _leaves -> {:ok, []} end)
@@ -131,7 +170,7 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorkerTest do
   end
 
   test "classifier error returns {:error, _} for Oban retry", ctx do
-    ingredient_fixture(%{name: "boom"})
+    ingredient_fixture(%{name: "boom", fdc_id: 333_333})
 
     stub(fn _ingredients, _leaves -> {:error, "api down"} end)
 
@@ -139,5 +178,96 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorkerTest do
              perform_job(TaxonomyClassificationWorker, %{"taxonomy_id" => ctx.taxonomy.id})
 
     refute_enqueued(worker: TaxonomyClassificationWorker)
+  end
+
+  test "skips ingredients without a proper fdc_id", ctx do
+    # Neutralize any pre-seeded fdc-backed rows so the only unclassified
+    # ingredients are the two ineligible ones we add below.
+    classify_all_ingredients(ctx.other.id)
+
+    # No fdc_id (nil) and a non-positive fdc_id are both ineligible; the batch is
+    # empty, so the classifier is never called and the worker just terminates.
+    ingredient_fixture(%{name: "no fdc"})
+    ingredient_fixture(%{name: "zero fdc", fdc_id: 0})
+
+    stub(fn _ingredients, _leaves ->
+      flunk("classifier should not be called for ingredients without a proper fdc_id")
+    end)
+
+    assert :ok =
+             perform_job(TaxonomyClassificationWorker, %{"taxonomy_id" => ctx.taxonomy.id})
+
+    refute_enqueued(worker: TaxonomyClassificationWorker)
+  end
+
+  describe "run tracking" do
+    test "marks the run processing then completed on an empty batch", ctx do
+      ingredient_fixture(%{name: "already beef"})
+      classify_all_ingredients(ctx.beef.id)
+      run = TaxonomyClassificationRuns.start_run(ctx.taxonomy.id)
+
+      assert :ok =
+               perform_job(TaxonomyClassificationWorker, %{
+                 "taxonomy_id" => ctx.taxonomy.id,
+                 "run_id" => run.id
+               })
+
+      reloaded = Repo.get!(TaxonomyClassificationRun, run.id)
+      assert reloaded.status == "completed"
+      assert reloaded.completed_at
+    end
+
+    test "updates progress and keeps the run processing across a re-enqueue", ctx do
+      classify_all_ingredients(ctx.other.id)
+      ingredient_fixture(%{name: "beef steak", fdc_id: 444_444})
+      run = TaxonomyClassificationRuns.start_run(ctx.taxonomy.id)
+
+      Phoenix.PubSub.subscribe(
+        Mehungry.PubSub,
+        TaxonomyClassificationRuns.topic(ctx.taxonomy.id)
+      )
+
+      stub(fn ingredients, _leaves ->
+        {:ok,
+         Enum.map(
+           ingredients,
+           &%{ingredient_id: &1.id, taxonomy_node_id: ctx.beef.id, confidence: 0.9}
+         )}
+      end)
+
+      assert :ok =
+               perform_job(TaxonomyClassificationWorker, %{
+                 "taxonomy_id" => ctx.taxonomy.id,
+                 "run_id" => run.id
+               })
+
+      assert_received {:classification_run, %TaxonomyClassificationRun{status: "processing"}}
+
+      reloaded = Repo.get!(TaxonomyClassificationRun, run.id)
+      assert reloaded.status == "processing"
+
+      # The chained batch carries the run_id forward.
+      assert_enqueued(
+        worker: TaxonomyClassificationWorker,
+        args: %{"taxonomy_id" => ctx.taxonomy.id, "run_id" => run.id}
+      )
+    end
+
+    test "marks the run failed on a classifier error", ctx do
+      ingredient_fixture(%{name: "boom", fdc_id: 555_555})
+      run = TaxonomyClassificationRuns.start_run(ctx.taxonomy.id)
+
+      stub(fn _ingredients, _leaves -> {:error, "api down"} end)
+
+      assert {:error, "api down"} =
+               perform_job(TaxonomyClassificationWorker, %{
+                 "taxonomy_id" => ctx.taxonomy.id,
+                 "run_id" => run.id
+               })
+
+      reloaded = Repo.get!(TaxonomyClassificationRun, run.id)
+      assert reloaded.status == "failed"
+      assert reloaded.error =~ "api down"
+    end
   end
 end
