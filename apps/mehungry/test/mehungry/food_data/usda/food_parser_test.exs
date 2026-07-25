@@ -48,6 +48,30 @@ defmodule Mehungry.FoodData.Usda.FoodParserTest do
     end
   end
 
+  describe "get_ingredients_from_json_body/2 with a food missing its description" do
+    test "skips the nameless food instead of raising and rolling back the whole file" do
+      good_name = "Named Food #{System.unique_integer([:positive])}"
+
+      body =
+        Poison.encode!([
+          # No "description" — historically this raised on get_ingredient_by_name(nil)
+          # inside the transaction, rolling back every other food in the file.
+          %{"fdcId" => 999_001, "foodClass" => "FinalFood", "foodNutrients" => []},
+          %{
+            "description" => good_name,
+            "foodClass" => "FinalFood",
+            "foodCategory" => %{"description" => "Legumes and Legume Products"},
+            "foodNutrients" => [],
+            "foodPortions" => []
+          }
+        ])
+
+      # The batch still commits; the good food lands, the nameless one is skipped.
+      assert {:ok, 2} = FoodParser.get_ingredients_from_json_body(body)
+      assert Food.get_ingredient_by_name(good_name)
+    end
+  end
+
   describe "get_ingredients_from_json_body/2 food_class" do
     test "stores the FDC dataType, not the always-\"FinalFood\" foodClass" do
       name = "DataType Test Food #{System.unique_integer([:positive])}"

@@ -9,7 +9,7 @@ defmodule Mehungry.ObanWorkers.SeedFileImportWorker do
   Oban records the error and retries up to `max_attempts`. The durable
   `seed_files` row is what lets the S3 browser re-do only the undone files.
 
-  Replaces the fire-and-forget `MehungryWeb.SeedsGenWorkerServer`, which tracked
+  Replaces the earlier fire-and-forget in-memory seed worker, which tracked
   nothing and silently dropped failures.
   """
 
@@ -18,7 +18,7 @@ defmodule Mehungry.ObanWorkers.SeedFileImportWorker do
     max_attempts: 3,
     unique: [
       fields: [:args],
-      keys: [:key],
+      keys: [:bucket, :key],
       states: [:available, :scheduled, :executing, :retryable]
     ]
 
