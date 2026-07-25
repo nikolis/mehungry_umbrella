@@ -53,10 +53,10 @@ defmodule Mehungry.Food.Measurements do
     |> Repo.all()
   end
 
-  def create_measurement_unit(attrs) do
+  def create_measurement_unit(attrs, opts \\ []) do
     %MeasurementUnit{}
     |> MeasurementUnit.changeset(attrs)
-    |> Repo.insert()
+    |> Repo.insert(opts)
   end
 
   def update_measurement_unit(%MeasurementUnit{} = measurement_unit, attrs \\ %{}) do
