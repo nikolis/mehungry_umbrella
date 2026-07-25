@@ -71,7 +71,8 @@ defmodule Mehungry.S3 do
   end
 
   @doc """
-  Lists objects in an S3 bucket.
+  Lists objects in an S3 bucket, following pagination so every key is returned
+  (a single `list_objects` page caps at 1000 keys).
 
   ## Parameters
     - bucket: The name of the S3 bucket
@@ -79,15 +80,40 @@ defmodule Mehungry.S3 do
     - opts: Additional options for listing
 
   ## Returns
-    - {:ok, objects} on success
+    - {:ok, %{body: %{contents: [...]}}} on success — the aggregated contents
+      across every page, in the same shape as a single-page response
     - {:error, reason} on failure
   """
   def list_objects(bucket, prefix \\ nil, opts \\ []) do
     opts = if prefix, do: Keyword.put(opts, :prefix, prefix), else: opts
 
-    ExAws.S3.list_objects(bucket, opts)
-    |> ExAws.request()
+    list_objects_paged(bucket, opts, nil, [])
   end
+
+  # Walks the marker-based pagination, accumulating contents. On the last page
+  # (is_truncated falsey) it returns the aggregated contents in a single-page
+  # response shape so callers can keep reading `objects.body.contents`.
+  defp list_objects_paged(bucket, opts, marker, acc) do
+    opts = if marker, do: Keyword.put(opts, :marker, marker), else: opts
+
+    case ExAws.S3.list_objects(bucket, opts) |> ExAws.request() do
+      {:ok, %{body: %{contents: contents} = body} = response} ->
+        acc = acc ++ contents
+
+        if truncated?(body) and contents != [] do
+          list_objects_paged(bucket, opts, List.last(contents).key, acc)
+        else
+          {:ok, put_in(response.body.contents, acc)}
+        end
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  # ExAws surfaces is_truncated as the string "true"/"false" from the XML body.
+  defp truncated?(%{is_truncated: t}), do: t in [true, "true"]
+  defp truncated?(_), do: false
 
   @doc """
   Deletes an object from an S3 bucket.
@@ -119,8 +145,7 @@ defmodule Mehungry.S3 do
     - {:error, reason} on failure
   """
   def presigned_url(bucket, key, expires_in \\ 3600, operation \\ :get) do
-    {:ok,
-     ExAws.S3.presigned_url(ExAws.Config.new(:s3), operation, bucket, key, expires_in: expires_in)}
+    ExAws.S3.presigned_url(ExAws.Config.new(:s3), operation, bucket, key, expires_in: expires_in)
   end
 
   @doc """

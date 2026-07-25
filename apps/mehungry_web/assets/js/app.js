@@ -22,6 +22,14 @@ window.addEventListener("phx:js-exec", ({detail}) => {
   })
 })
 
+// Opens a server-provided URL (e.g. a presigned S3 download from the S3 browser)
+// in a new tab. Pushed from LiveView via push_event(socket, "open_url", %{url:}).
+window.addEventListener("phx:open_url", ({detail}) => {
+  if (detail && detail.url) {
+    window.open(detail.url, "_blank", "noopener")
+  }
+})
+
 // Generic bridge for LiveView-driven GA4 custom events pushed via
 // MehungryWeb.GoogleAnalytics.track/3. Consent Mode (set in head.html.heex)
 // handles the pre-consent cookieless-ping downgrade automatically, so no

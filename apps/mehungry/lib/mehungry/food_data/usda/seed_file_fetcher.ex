@@ -19,7 +19,7 @@ defmodule Mehungry.FoodData.Usda.SeedFileFetcher do
   @impl true
   def fetch(bucket, key) do
     case S3.presigned_url(bucket, key) do
-      {:ok, {:ok, url}} ->
+      {:ok, url} ->
         case HTTPoison.get(url) do
           {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
             {:ok, body}
@@ -30,9 +30,6 @@ defmodule Mehungry.FoodData.Usda.SeedFileFetcher do
           {:error, %HTTPoison.Error{reason: reason}} ->
             {:error, reason}
         end
-
-      {:ok, {:error, reason}} ->
-        {:error, reason}
 
       {:error, reason} ->
         {:error, reason}

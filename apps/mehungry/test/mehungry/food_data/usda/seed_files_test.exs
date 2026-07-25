@@ -79,6 +79,44 @@ defmodule Mehungry.FoodData.Usda.SeedFilesTest do
     end
   end
 
+  describe "reset/2" do
+    test "deletes tracking rows and cancels pending import jobs for the bucket" do
+      keep = SeedFiles.upsert_pending("other-bucket", "foods/a.json")
+      SeedFiles.upsert_pending("b", "foods/a.json")
+      {:ok, job} = Mehungry.ObanWorkers.SeedFileImportWorker.enqueue("b", "foods/b.json")
+
+      assert SeedFiles.reset("b") == 2
+
+      # Rows for the reset bucket are gone; other buckets are untouched.
+      assert SeedFiles.list_by_bucket("b") == %{}
+      assert Map.has_key?(SeedFiles.list_by_bucket("other-bucket"), "foods/a.json")
+      assert Repo.get(SeedFile, keep.id)
+
+      # The queued import job was cancelled, not left to run against a deleted row.
+      assert %Oban.Job{state: "cancelled"} = Repo.get(Oban.Job, job.id)
+    end
+
+    test "prefix scope only resets matching keys" do
+      SeedFiles.upsert_pending("b", "foods/a.json")
+      SeedFiles.upsert_pending("b", "other/c.json")
+
+      assert SeedFiles.reset("b", "foods/") == 1
+      assert Map.keys(SeedFiles.list_by_bucket("b")) == ["other/c.json"]
+    end
+  end
+
+  describe "status transitions tolerate a deleted row" do
+    test "mark_* on a reset (deleted) row is a no-op returning nil" do
+      seed_file = SeedFiles.upsert_pending("b", "k.json")
+      SeedFiles.reset("b")
+
+      # A job still running after reset must not crash on the missing row.
+      assert SeedFiles.mark_processing(seed_file.id) == nil
+      assert SeedFiles.mark_completed(seed_file.id, 5) == nil
+      assert SeedFiles.mark_failed(seed_file.id, :boom) == nil
+    end
+  end
+
   test "changeset rejects invalid status" do
     changeset = SeedFile.changeset(%SeedFile{}, %{bucket: "b", key: "k", status: "bogus"})
     refute changeset.valid?

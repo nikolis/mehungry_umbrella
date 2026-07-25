@@ -34,6 +34,25 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
     food_nutrients = attrs["foodNutrients"]
     ingredient_attrs = build_ingredient_attrs(attrs, nutrient_data_source)
 
+    # A food with no description has no name — the natural key we upsert on.
+    # Skip it (rather than letting get_ingredient_by_name(nil) raise) so one
+    # incomplete record can't roll back the whole file's transaction.
+    if blank_name?(ingredient_attrs.name) do
+      Logger.warning(
+        "[FoodData.Usda.FoodParser] skipping food with no description (fdcId=#{inspect(attrs["fdcId"])})"
+      )
+
+      :skipped
+    else
+      upsert_and_persist(ingredient_attrs, food_portions, food_nutrients)
+    end
+  end
+
+  defp blank_name?(nil), do: true
+  defp blank_name?(name) when is_binary(name), do: String.trim(name) == ""
+  defp blank_name?(_), do: false
+
+  defp upsert_and_persist(ingredient_attrs, food_portions, food_nutrients) do
     case upsert_ingredient(ingredient_attrs) do
       {:ok, ingredient, "created"} ->
         Logger.info("#{ingredient.name} was created successfully")

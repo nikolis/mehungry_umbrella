@@ -20,16 +20,18 @@ defmodule MehungryWeb.S3BrowserLiveTest do
     assert html =~ "Enter a bucket name"
   end
 
-  test "a seed_file broadcast is merged into the socket without crashing", %{conn: conn} do
+  test "a seed_file broadcast for another bucket is ignored without crashing", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/professional/files")
 
-    # Simulate a live status update arriving from a running import job. The view
-    # is not yet subscribed to any bucket (nothing listed), but handle_info must
-    # accept the message and update its status map.
+    # Simulate a live status update arriving from a running import job for a
+    # bucket the view is not currently browsing (nothing listed yet). handle_info
+    # must accept the message and leave the (empty) status summary untouched.
     seed_file = SeedFiles.upsert_pending("some-bucket", "foods/a.json")
     send(view.pid, {:seed_file, seed_file})
 
-    # Still alive and rendering after processing the message.
-    assert render(view) =~ "AWS S3 Browser"
+    html = render(view)
+    # Still alive, and the seed-status summary stays hidden for the empty bucket.
+    assert html =~ "AWS S3 Browser"
+    refute html =~ "Seed status:"
   end
 end

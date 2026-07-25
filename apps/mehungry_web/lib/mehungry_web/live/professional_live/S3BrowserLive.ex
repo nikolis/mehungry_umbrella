@@ -2,6 +2,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   use Phoenix.LiveView
 
   alias Mehungry.S3
+  alias Mehungry.FoodData.Usda.SeedFiles
   require Logger
 
   @impl true
@@ -13,7 +14,9 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
        prefix: nil,
        loading: false,
        error: nil,
-       info: nil
+       info: nil,
+       seed_files: %{},
+       subscribed_bucket: nil
      )}
   end
 
@@ -83,6 +86,20 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
         </div>
       <% end %>
 
+      <%= if map_size(@seed_files) > 0 do %>
+        <% counts = status_counts(@seed_files) %>
+        <div
+          class="flex flex-wrap gap-4 bg-gray-50 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4 text-sm"
+          role="status"
+        >
+          <span class="font-medium">Seed status:</span>
+          <span class="text-gray-500">Pending {Map.get(counts, "pending", 0)}</span>
+          <span class="text-blue-600">Processing {Map.get(counts, "processing", 0)}</span>
+          <span class="text-green-600">Completed {Map.get(counts, "completed", 0)}</span>
+          <span class="text-red-600">Failed {Map.get(counts, "failed", 0)}</span>
+        </div>
+      <% end %>
+
       <%= if @prefix do %>
         <div class="mb-4">
           <button
@@ -103,10 +120,21 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
       <% end %>
 
       <%= if @bucket_name != "" do %>
+        <%= if not @loading do %>
+          <div class="mb-2 text-sm text-gray-600">
+            {length(files(@objects, @prefix))} file(s)<%= if folders(@objects, @prefix) != [] do %>, {length(folders(@objects, @prefix))} folder(s)<% end %>
+          </div>
+        <% end %>
         <div class="bg-white shadow overflow-hidden border-b border-gray-200 rounded-lg">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  #
+                </th>
                 <th
                   scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -135,6 +163,12 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
                   scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
+                  Seed status
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
                   Actions
                 </th>
               </tr>
@@ -142,7 +176,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
             <tbody class="bg-white divide-y divide-gray-200">
               <%= if @loading do %>
                 <tr>
-                  <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                  <td colspan="7" class="px-6 py-4 text-center text-gray-500">
                     Loading...
                   </td>
                 </tr>
@@ -150,6 +184,9 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
                 <%= if folders(@objects, @prefix) != [] do %>
                   <%= for folder <- folders(@objects, @prefix) do %>
                     <tr>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-400">-</div>
+                      </td>
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm text-blue-500">📁 Folder</div>
                       </td>
@@ -171,13 +208,19 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm text-gray-500">-</div>
                       </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-500">-</div>
+                      </td>
                     </tr>
                   <% end %>
                 <% end %>
 
                 <%= if files(@objects, @prefix) != [] do %>
-                  <%= for file <- files(@objects, @prefix) do %>
+                  <%= for {file, index} <- Enum.with_index(files(@objects, @prefix), 1) do %>
                     <tr>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-500">{index}</div>
+                      </td>
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm text-gray-900">📄 File</div>
                       </td>
@@ -192,13 +235,29 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm text-gray-500">{format_date(file.last_modified)}</div>
                       </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <% seed_file = Map.get(@seed_files, file.key) %>
+                        <div
+                          class={"text-sm font-medium #{seed_status_class(seed_file)}"}
+                          title={seed_status_title(seed_file)}
+                        >
+                          {seed_status_label(seed_file)}
+                        </div>
+                      </td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
-                          phx-click="load_file"
+                          phx-click="download_file"
                           phx-value-key={file.key}
                           class="text-indigo-600 hover:text-indigo-900 mr-3"
                         >
                           Download
+                        </button>
+                        <button
+                          phx-click="redo_file"
+                          phx-value-key={file.key}
+                          class="text-amber-600 hover:text-amber-900 mr-3"
+                        >
+                          Re-do
                         </button>
                         <button
                           phx-click="delete_file"
@@ -215,7 +274,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
 
                 <%= if @objects == [] do %>
                   <tr>
-                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                    <td colspan="7" class="px-6 py-4 text-center text-gray-500">
                       No files found in this {if @prefix, do: "folder", else: "bucket"}.
                     </td>
                   </tr>
@@ -237,105 +296,85 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
 
   @impl true
   def handle_event("list_objects", %{"bucket_name" => bucket_name}, socket) do
-    socket = assign(socket, bucket_name: bucket_name, loading: true, error: nil)
-
-    case S3.list_objects(bucket_name, socket.assigns.prefix) do
-      {:ok, objects} ->
-        {:noreply, assign(socket, objects: objects.body.contents, loading: false)}
-
-      {:error, error} ->
-        error_message = extract_error_message(error)
-        {:noreply, assign(socket, error: error_message, objects: [], loading: false)}
-    end
+    socket = assign(socket, bucket_name: bucket_name, error: nil, info: nil)
+    {:noreply, start_list(socket, bucket_name, socket.assigns.prefix)}
   end
 
   @impl true
   def handle_event("load-ingredients", %{"bucket_name" => bucket_name}, socket) do
-    socket = assign(socket, bucket_name: bucket_name, loading: true, error: nil)
     prefix = socket.assigns.prefix
     Logger.info("Enqueue seed-file imports from bucket #{bucket_name} (prefix: #{inspect(prefix)})")
 
-    case S3.list_objects(bucket_name, prefix) do
-      {:ok, objects} ->
-        contents = objects.body.contents
+    socket =
+      socket
+      |> assign(bucket_name: bucket_name, loading: true, error: nil, info: nil)
+      |> start_async({:load_ingredients, bucket_name, prefix}, fn ->
+        case S3.list_objects(bucket_name, prefix) do
+          {:ok, objects} ->
+            contents = objects.body.contents
 
-        # Enqueue one tracked SeedFileImportWorker job per object (skipping folder
-        # placeholder keys). Presigning + fetching happen inside the job, so URLs
-        # can't expire while work waits in the :imports queue. Re-clicking simply
-        # re-enqueues the pending/failed files.
-        {enqueued, failed} =
-          contents
-          |> Enum.reject(fn obj -> String.ends_with?(obj.key, "/") end)
-          |> Enum.reduce({0, 0}, fn obj, {ok, err} ->
-            case Mehungry.ObanWorkers.SeedFileImportWorker.enqueue(bucket_name, obj.key) do
-              {:ok, _job} ->
-                {ok + 1, err}
+            # Only enqueue files not already completed — SeedFiles.pending_or_failed/2
+            # filters the keys so a re-click skips finished imports. Presigning +
+            # fetching happen inside the job, so URLs can't expire in the :imports queue.
+            keys =
+              contents
+              |> Enum.map(& &1.key)
+              |> Enum.reject(&String.ends_with?(&1, "/"))
+              |> then(&SeedFiles.pending_or_failed(bucket_name, &1))
 
-              {:error, reason} ->
-                Logger.error("[S3Browser] failed to enqueue #{obj.key}: #{inspect(reason)}")
-                {ok, err + 1}
-            end
-          end)
+            {enqueued, failed} =
+              Enum.reduce(keys, {0, 0}, fn key, {ok, err} ->
+                case Mehungry.ObanWorkers.SeedFileImportWorker.enqueue(bucket_name, key) do
+                  {:ok, _job} ->
+                    {ok + 1, err}
 
-        info =
-          "Queued #{enqueued} file(s) for import" <>
-            if(failed > 0, do: " (#{failed} failed to queue)", else: "")
+                  {:error, reason} ->
+                    Logger.error("[S3Browser] failed to enqueue #{key}: #{inspect(reason)}")
+                    {ok, err + 1}
+                end
+              end)
 
-        {:noreply, assign(socket, objects: contents, loading: false, info: info, error: nil)}
+            {:ok, contents, SeedFiles.list_by_bucket(bucket_name, prefix), enqueued, failed}
 
-      {:error, error} ->
-        error_message = extract_error_message(error)
-        {:noreply, assign(socket, error: error_message, objects: [], loading: false)}
-    end
+          {:error, error} ->
+            {:error, error}
+        end
+      end)
+
+    {:noreply, socket}
   end
 
   @impl true
   def handle_event("reset-seed-status", _, socket) do
-    case MehungryWeb.SeedsGenWorkerServer.reset() do
-      :ok ->
-        {:noreply,
-         assign(socket, info: "Seed status reset — you can start a fresh run.", error: nil)}
+    bucket_name = socket.assigns.bucket_name
 
-      {:error, :not_running} ->
-        {:noreply,
-         assign(socket, error: "Seed worker is not running; nothing to reset.", info: nil)}
+    if bucket_name == "" do
+      {:noreply,
+       assign(socket, error: "List a bucket first — there is no seed status to reset.", info: nil)}
+    else
+      count = SeedFiles.reset(bucket_name, socket.assigns.prefix)
+
+      {:noreply,
+       assign(socket,
+         seed_files: %{},
+         info: "Seed status reset — cleared #{count} tracking row(s). You can start a fresh run.",
+         error: nil
+       )}
     end
   end
 
   @impl true
   def handle_event("refresh", _, socket) do
-    bucket_name = socket.assigns.bucket_name
-    prefix = socket.assigns.prefix
-    socket = assign(socket, loading: true, error: nil)
-
-    case S3.list_objects(bucket_name, prefix) do
-      {:ok, objects} ->
-        {:noreply, assign(socket, objects: objects, loading: false)}
-
-      {:error, error} ->
-        error_message = extract_error_message(error)
-        {:noreply, assign(socket, error: error_message, loading: false)}
-    end
+    {:noreply, start_list(socket, socket.assigns.bucket_name, socket.assigns.prefix)}
   end
 
   @impl true
   def handle_event("navigate_folder", %{"folder" => folder}, socket) do
-    bucket_name = socket.assigns.bucket_name
-    socket = assign(socket, loading: true, error: nil, prefix: folder)
-
-    case S3.list_objects(bucket_name, folder) do
-      {:ok, objects} ->
-        {:noreply, assign(socket, objects: objects, loading: false)}
-
-      {:error, error} ->
-        error_message = extract_error_message(error)
-        {:noreply, assign(socket, error: error_message, loading: false)}
-    end
+    {:noreply, start_list(socket, socket.assigns.bucket_name, folder)}
   end
 
   @impl true
   def handle_event("navigate_up", _, socket) do
-    bucket_name = socket.assigns.bucket_name
     current_prefix = socket.assigns.prefix
 
     new_prefix =
@@ -353,55 +392,150 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
           |> then(fn p -> p <> "/" end)
       end
 
-    socket = assign(socket, loading: true, error: nil, prefix: new_prefix)
-
-    case S3.list_objects(bucket_name, new_prefix) do
-      {:ok, objects} ->
-        {:noreply, assign(socket, objects: objects, loading: false)}
-
-      {:error, error} ->
-        error_message = extract_error_message(error)
-        {:noreply, assign(socket, error: error_message, loading: false)}
-    end
+    {:noreply, start_list(socket, socket.assigns.bucket_name, new_prefix)}
   end
 
   @impl true
-  def handle_event("load_file", %{"key" => key}, socket) do
+  def handle_event("redo_file", %{"key" => key}, socket) do
     bucket_name = socket.assigns.bucket_name
 
-    case S3.presigned_url(bucket_name, key) do
+    case Mehungry.ObanWorkers.SeedFileImportWorker.enqueue(bucket_name, key) do
+      {:ok, _job} ->
+        {:noreply, assign(socket, info: "Re-queued #{key} for import.", error: nil)}
+
+      {:error, reason} ->
+        {:noreply,
+         assign(socket, error: "Failed to re-queue #{key}: #{inspect(reason)}", info: nil)}
+    end
+  end
+
+  # Real file download: presign a short-lived URL and open the raw object in a new
+  # browser tab (handled by the `phx:open_url` listener in app.js). No parsing here
+  # — importing is the tracked worker's job, reachable via "Load ingredients"/"Re-do".
+  @impl true
+  def handle_event("download_file", %{"key" => key}, socket) do
+    case S3.presigned_url(socket.assigns.bucket_name, key) do
       {:ok, url} ->
-        {:ok, url} = url
-        %HTTPoison.Response{body: body} = HTTPoison.get!(url)
-        Mehungry.FoodData.Usda.FoodParser.get_ingredients_from_json_body(body)
-        {:noreply, socket}
+        {:noreply, push_event(socket, "open_url", %{url: url})}
 
       {:error, error} ->
-        error_message = extract_error_message(error)
-        {:noreply, assign(socket, error: error_message)}
+        {:noreply, assign(socket, error: extract_error_message(error))}
     end
   end
 
   @impl true
   def handle_event("delete_file", %{"key" => key}, socket) do
     bucket_name = socket.assigns.bucket_name
-    socket = assign(socket, loading: true, error: nil)
 
     case S3.delete_object(bucket_name, key) do
       {:ok, _} ->
         # Refresh the list after deletion
-        case S3.list_objects(bucket_name, socket.assigns.prefix) do
-          {:ok, objects} ->
-            {:noreply, assign(socket, objects: objects, loading: false)}
-
-          {:error, error} ->
-            error_message = extract_error_message(error)
-            {:noreply, assign(socket, error: error_message, loading: false)}
-        end
+        {:noreply, start_list(socket, bucket_name, socket.assigns.prefix)}
 
       {:error, error} ->
         error_message = extract_error_message(error)
         {:noreply, assign(socket, error: error_message, loading: false)}
+    end
+  end
+
+  # Live status updates broadcast by `SeedFiles` as import jobs run. Merge the
+  # row into the status map (keyed by object key) when it belongs to the bucket
+  # currently on screen; ignore stragglers from other buckets.
+  @impl true
+  def handle_info({:seed_file, %{bucket: bucket, key: key} = seed_file}, socket) do
+    if bucket == socket.assigns.bucket_name do
+      {:noreply, assign(socket, seed_files: Map.put(socket.assigns.seed_files, key, seed_file))}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Kicks off an async bucket/prefix listing so the "Loading…" state actually
+  # renders during the (potentially slow) S3 round-trip. Sets the prefix eagerly
+  # so the breadcrumb updates immediately; the contents/seed rows land in
+  # `handle_async(:list, ...)`. Single entry point for every navigation path.
+  defp start_list(socket, bucket_name, prefix) do
+    socket
+    |> assign(prefix: prefix, loading: true, error: nil)
+    |> start_async({:list, bucket_name, prefix}, fn ->
+      case S3.list_objects(bucket_name, prefix) do
+        {:ok, objects} ->
+          {:ok, objects.body.contents, SeedFiles.list_by_bucket(bucket_name, prefix)}
+
+        {:error, error} ->
+          {:error, error}
+      end
+    end)
+  end
+
+  @impl true
+  def handle_async({:list, bucket_name, _prefix}, {:ok, {:ok, contents, seed_files}}, socket) do
+    socket =
+      socket
+      |> ensure_subscribed(bucket_name)
+      |> assign(objects: contents, seed_files: seed_files, loading: false, error: nil)
+
+    {:noreply, socket}
+  end
+
+  def handle_async({:list, _bucket, _prefix}, {:ok, {:error, error}}, socket) do
+    {:noreply, assign(socket, error: extract_error_message(error), objects: [], loading: false)}
+  end
+
+  def handle_async({:list, _bucket, _prefix}, {:exit, reason}, socket) do
+    {:noreply,
+     assign(socket, error: "Listing failed: #{inspect(reason)}", objects: [], loading: false)}
+  end
+
+  def handle_async(
+        {:load_ingredients, bucket_name, _prefix},
+        {:ok, {:ok, contents, seed_files, enqueued, failed}},
+        socket
+      ) do
+    info =
+      "Queued #{enqueued} file(s) for import" <>
+        if(failed > 0, do: " (#{failed} failed to queue)", else: "")
+
+    socket =
+      socket
+      |> ensure_subscribed(bucket_name)
+      |> assign(
+        objects: contents,
+        seed_files: seed_files,
+        loading: false,
+        info: info,
+        error: nil
+      )
+
+    {:noreply, socket}
+  end
+
+  def handle_async({:load_ingredients, _bucket, _prefix}, {:ok, {:error, error}}, socket) do
+    {:noreply, assign(socket, error: extract_error_message(error), objects: [], loading: false)}
+  end
+
+  def handle_async({:load_ingredients, _bucket, _prefix}, {:exit, reason}, socket) do
+    {:noreply,
+     assign(socket, error: "Import enqueue failed: #{inspect(reason)}", loading: false)}
+  end
+
+  # Subscribes to a bucket's seed-status topic exactly once, swapping the
+  # subscription when the browsed bucket changes. No-op until connected.
+  defp ensure_subscribed(socket, bucket_name) do
+    cond do
+      not connected?(socket) ->
+        socket
+
+      socket.assigns.subscribed_bucket == bucket_name ->
+        socket
+
+      true ->
+        if prev = socket.assigns.subscribed_bucket do
+          Phoenix.PubSub.unsubscribe(Mehungry.PubSub, SeedFiles.topic(prev))
+        end
+
+        Phoenix.PubSub.subscribe(Mehungry.PubSub, SeedFiles.topic(bucket_name))
+        assign(socket, subscribed_bucket: bucket_name)
     end
   end
 
@@ -422,13 +556,13 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
 
   defp folder?(key, prefix) do
     prefix_length = if prefix, do: String.length(prefix), else: 0
-    remaining = String.slice(key, prefix_length..-1)
+    remaining = String.slice(key, prefix_length..-1//1)
     String.contains?(remaining, "/")
   end
 
   defp folder_name(key, prefix) do
     prefix_length = if prefix, do: String.length(prefix), else: 0
-    remaining = String.slice(key, prefix_length..-1)
+    remaining = String.slice(key, prefix_length..-1//1)
 
     parts = String.split(remaining, "/", trim: true)
     folder_part = List.first(parts)
@@ -467,6 +601,33 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   end
 
   defp format_date(_), do: "-"
+
+  # Seed-status rendering ----------------------------------------------------
+
+  defp status_counts(seed_files) do
+    seed_files
+    |> Map.values()
+    |> Enum.frequencies_by(& &1.status)
+  end
+
+  defp seed_status_label(nil), do: "—"
+  defp seed_status_label(%{status: "pending"}), do: "Pending"
+  defp seed_status_label(%{status: "processing"}), do: "Processing…"
+  defp seed_status_label(%{status: "completed", ingredient_count: count}),
+    do: "Completed (#{count || 0})"
+
+  defp seed_status_label(%{status: "failed"}), do: "Failed"
+  defp seed_status_label(_), do: "—"
+
+  defp seed_status_class(nil), do: "text-gray-400"
+  defp seed_status_class(%{status: "pending"}), do: "text-gray-500"
+  defp seed_status_class(%{status: "processing"}), do: "text-blue-600"
+  defp seed_status_class(%{status: "completed"}), do: "text-green-600"
+  defp seed_status_class(%{status: "failed"}), do: "text-red-600"
+  defp seed_status_class(_), do: "text-gray-400"
+
+  defp seed_status_title(%{status: "failed", error: error}) when is_binary(error), do: error
+  defp seed_status_title(_), do: nil
 
   defp extract_error_message({:error, error}) do
     extract_error_message(error)
