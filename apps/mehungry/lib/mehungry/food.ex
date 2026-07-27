@@ -13,6 +13,8 @@ defmodule Mehungry.Food do
     * `Mehungry.Food.Measurements` — measurement units and portions
     * `Mehungry.Food.Categories` — categories and food restriction types
     * `Mehungry.Food.Taxonomies` — hierarchical ingredient taxonomies
+    * `Mehungry.Food.Enrichment` — scientific enrichment sidecar
+    * `Mehungry.Food.IdentityResolution` — scientific identity resolution
     * `Mehungry.Food.Localization` — recipe/ingredient/unit translations
     * `Mehungry.Food.Engagement` — likes, comments, annotations
   """
@@ -20,6 +22,9 @@ defmodule Mehungry.Food do
   alias Mehungry.Food.{
     Categories,
     Engagement,
+    Enrichment,
+    IdentityResolution,
+    IdentityResolutionRuns,
     IngredientQueries,
     Ingredients,
     Localization,
@@ -212,4 +217,41 @@ defmodule Mehungry.Food do
   defdelegate classification_progress(taxonomy_id), to: Taxonomies
   defdelegate enqueue_classification(taxonomy_id), to: Taxonomies
   defdelegate latest_classification_run(taxonomy_id), to: TaxonomyClassificationRuns, as: :latest_run
+
+  # ── Enrichment (scientific sidecar) ────────────────────────────────────
+
+  defdelegate create_enrichment_source(attrs), to: Enrichment
+  defdelegate get_enrichment_source!(id), to: Enrichment
+  defdelegate list_enrichment_sources(), to: Enrichment
+  defdelegate upsert_enrichment_source(attrs), to: Enrichment
+  defdelegate create_scientific_property(attrs), to: Enrichment
+  defdelegate upsert_scientific_property(attrs), to: Enrichment
+  defdelegate list_scientific_properties(ingredient_id), to: Enrichment
+  defdelegate delete_scientific_property(property), to: Enrichment
+  defdelegate create_classification(attrs), to: Enrichment
+  defdelegate upsert_classification(attrs), to: Enrichment
+  defdelegate list_classifications(ingredient_id), to: Enrichment
+  defdelegate delete_classification(classification), to: Enrichment
+  defdelegate create_health_attribute(attrs), to: Enrichment
+  defdelegate upsert_health_attribute(attrs), to: Enrichment
+  defdelegate list_health_attributes(ingredient_id), to: Enrichment
+  defdelegate delete_health_attribute(attribute), to: Enrichment
+  defdelegate list_enrichment(ingredient_id), to: Enrichment
+
+  # ── Identity resolution (scientific identifiers) ───────────────────────
+
+  defdelegate enqueue_resolution(), to: IdentityResolution
+  defdelegate resolve_ingredient(ingredient), to: IdentityResolution
+  defdelegate resolution_progress(), to: IdentityResolution
+  defdelegate add_identity_candidate(attrs), to: IdentityResolution
+  defdelegate get_identity!(id), to: IdentityResolution
+  defdelegate list_identities(ingredient_id), to: IdentityResolution
+  defdelegate verified_identity(ingredient_id), to: IdentityResolution
+  defdelegate add_synonym(attrs), to: IdentityResolution
+  defdelegate list_synonyms(scientific_identity_id), to: IdentityResolution
+  defdelegate list_synonyms_for_ingredient(ingredient_id), to: IdentityResolution
+  defdelegate verify_identity(identity_id, user_id \\ nil), to: IdentityResolution
+  defdelegate reject_identity(identity_id, user_id \\ nil), to: IdentityResolution
+  defdelegate list_pending_verification(opts \\ []), to: IdentityResolution
+  defdelegate latest_identity_resolution_run(), to: IdentityResolutionRuns, as: :latest_run
 end
