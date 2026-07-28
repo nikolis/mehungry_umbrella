@@ -1,6 +1,8 @@
 defmodule MehungryWeb.ProfessionalLive.Ingredients do
   use MehungryWeb, :live_view
 
+  require Logger
+
   alias Mehungry.Food
   alias Mehungry.IngredientTranslationWorker
 
@@ -113,15 +115,32 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
   @impl true
   def handle_event("delete_branded", _params, socket) do
-    {:ok, {ingredient_count, recipe_count}} = Food.delete_branded_ingredients()
+    Logger.info("[delete_branded] handler invoked by user #{inspect(socket.assigns[:current_user] && socket.assigns.current_user.id)}")
 
     socket =
-      socket
-      |> put_flash(
-        :info,
-        "Deleted #{ingredient_count} USDA branded ingredient(s) and #{recipe_count} recipe(s)."
-      )
-      |> push_navigate(to: ~p"/professional/ingredients")
+      try do
+        case Food.delete_branded_ingredients() do
+          {:ok, {ingredient_count, recipe_count}} ->
+            socket
+            |> put_flash(
+              :info,
+              "Deleted #{ingredient_count} USDA branded ingredient(s) and #{recipe_count} recipe(s)."
+            )
+            |> push_navigate(to: ~p"/professional/ingredients")
+
+          {:error, reason} ->
+            Logger.error("[delete_branded] returned error: #{inspect(reason)}")
+            put_flash(socket, :error, "Delete failed: #{inspect(reason)}")
+        end
+      rescue
+        e ->
+          Logger.error(
+            "[delete_branded] raised: #{Exception.message(e)}\n" <>
+              Exception.format_stacktrace(__STACKTRACE__)
+          )
+
+          put_flash(socket, :error, "Delete crashed: #{Exception.message(e)}")
+      end
 
     {:noreply, socket}
   end
