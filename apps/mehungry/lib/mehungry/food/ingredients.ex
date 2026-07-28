@@ -6,6 +6,8 @@ defmodule Mehungry.Food.Ingredients do
 
   import Ecto.Query, warn: false
 
+  require Logger
+
   alias Mehungry.Repo
 
   alias Mehungry.Food.{
@@ -154,8 +156,29 @@ defmodule Mehungry.Food.Ingredients do
   branded ingredient. Returns `{:ok, {ingredient_count, recipe_count}}`.
   """
   def delete_branded_ingredients do
+    # Preflight diagnostics: the deployed DB may store the "Branded" marker under
+    # a different column/casing than we expect, which would make the delete a
+    # silent no-op. Log what actually matches before we touch anything.
+    branded_by_food_class =
+      Repo.aggregate(from(i in Ingredient, where: i.food_class == "Branded"), :count)
+
+    branded_by_data_type =
+      Repo.aggregate(from(i in Ingredient, where: i.data_type == "Branded"), :count)
+
+    distinct_food_classes =
+      Repo.all(from(i in Ingredient, select: i.food_class, distinct: true))
+
+    Logger.info(
+      "[delete_branded] preflight: food_class=='Branded' -> #{branded_by_food_class}, " <>
+        "data_type=='Branded' -> #{branded_by_data_type}, " <>
+        "distinct food_class values: #{inspect(distinct_food_classes)}"
+    )
+
     ingredient_ids_q =
-      from(i in Ingredient, where: i.food_class == "Branded", select: i.id)
+      from(i in Ingredient,
+        where: i.food_class == "Branded" or i.data_type == "Branded",
+        select: i.id
+      )
 
     recipe_ids_q =
       from(ri in RecipeIngredient,
@@ -179,79 +202,137 @@ defmodule Mehungry.Food.Ingredients do
     post_ids_q =
       from(p in Mehungry.Posts.Post, where: p.recipe_id in subquery(recipe_ids_q), select: p.id)
 
-    Repo.transaction(fn ->
-      from(cav in Mehungry.Posts.CommentAnswerVote,
-        where: cav.comment_answer_id in subquery(comment_answer_ids_q)
-      )
-      |> Repo.delete_all()
+    del = fn step, query ->
+      {count, _} = Repo.delete_all(query)
+      Logger.info("[delete_branded] #{step}: deleted #{count} row(s)")
+      count
+    end
 
-      from(cv in Mehungry.Posts.CommentVote, where: cv.comment_id in subquery(comment_ids_q))
-      |> Repo.delete_all()
+    result =
+      Repo.transaction(fn ->
+        del.(
+          "comment_answer_votes",
+          from(cav in Mehungry.Posts.CommentAnswerVote,
+            where: cav.comment_answer_id in subquery(comment_answer_ids_q)
+          )
+        )
 
-      from(ca in Mehungry.Posts.CommentAnswer, where: ca.comment_id in subquery(comment_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "comment_votes",
+          from(cv in Mehungry.Posts.CommentVote, where: cv.comment_id in subquery(comment_ids_q))
+        )
 
-      from(pv in Mehungry.Posts.PostUpvote, where: pv.post_id in subquery(post_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "comment_answers",
+          from(ca in Mehungry.Posts.CommentAnswer, where: ca.comment_id in subquery(comment_ids_q))
+        )
 
-      from(pv in Mehungry.Posts.PostDownvote, where: pv.post_id in subquery(post_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "post_upvotes",
+          from(pv in Mehungry.Posts.PostUpvote, where: pv.post_id in subquery(post_ids_q))
+        )
 
-      from(l in Mehungry.Food.Like, where: l.recipe_id in subquery(recipe_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "post_downvotes",
+          from(pv in Mehungry.Posts.PostDownvote, where: pv.post_id in subquery(post_ids_q))
+        )
 
-      from(r in "ratings", where: r.recipe_id in subquery(recipe_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "likes",
+          from(l in Mehungry.Food.Like, where: l.recipe_id in subquery(recipe_ids_q))
+        )
 
-      from(m in Mehungry.Plans.Meal, where: m.recipe_id in subquery(recipe_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "ratings",
+          from(r in "ratings", where: r.recipe_id in subquery(recipe_ids_q))
+        )
 
-      from(bi in Mehungry.Inventory.BasketItem, where: bi.recipe_id in subquery(recipe_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "meals",
+          from(m in Mehungry.Plans.Meal, where: m.recipe_id in subquery(recipe_ids_q))
+        )
 
-      from(a in Mehungry.Food.Annotation, where: a.recipe_id in subquery(recipe_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "basket_items",
+          from(bi in Mehungry.Inventory.BasketItem, where: bi.recipe_id in subquery(recipe_ids_q))
+        )
 
-      from(ab in Mehungry.AI.Bot.AiBotRecipe, where: ab.recipe_id in subquery(recipe_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "annotations",
+          from(a in Mehungry.Food.Annotation, where: a.recipe_id in subquery(recipe_ids_q))
+        )
 
-      from(ri in RecipeIngredient, where: ri.recipe_id in subquery(recipe_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "ai_bot_recipes",
+          from(ab in Mehungry.AI.Bot.AiBotRecipe, where: ab.recipe_id in subquery(recipe_ids_q))
+        )
 
-      from(bi in Mehungry.Inventory.BasketIngredient,
-        where: bi.ingredient_id in subquery(ingredient_ids_q)
-      )
-      |> Repo.delete_all()
+        del.(
+          "recipe_ingredients",
+          from(ri in RecipeIngredient, where: ri.recipe_id in subquery(recipe_ids_q))
+        )
 
-      from(uir in Mehungry.Accounts.UserIngredientRule,
-        where: uir.ingredient_id in subquery(ingredient_ids_q)
-      )
-      |> Repo.delete_all()
+        del.(
+          "basket_ingredients",
+          from(bi in Mehungry.Inventory.BasketIngredient,
+            where: bi.ingredient_id in subquery(ingredient_ids_q)
+          )
+        )
 
-      from(hium in Mehungry.History.IngredientUserMeal,
-        where: hium.ingredient_id in subquery(ingredient_ids_q)
-      )
-      |> Repo.delete_all()
+        del.(
+          "user_ingredient_rules",
+          from(uir in Mehungry.Accounts.UserIngredientRule,
+            where: uir.ingredient_id in subquery(ingredient_ids_q)
+          )
+        )
 
-      from(ip in IngredientPortion, where: ip.ingredient_id in subquery(ingredient_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "ingredient_user_meals",
+          from(hium in Mehungry.History.IngredientUserMeal,
+            where: hium.ingredient_id in subquery(ingredient_ids_q)
+          )
+        )
 
-      from(int in IngredientNutrient, where: int.ingredient_id in subquery(ingredient_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "ingredient_portions",
+          from(ip in IngredientPortion, where: ip.ingredient_id in subquery(ingredient_ids_q))
+        )
 
-      from(it in IngredientTranslation, where: it.ingredient_id in subquery(ingredient_ids_q))
-      |> Repo.delete_all()
+        del.(
+          "ingredient_nutrients",
+          from(int in IngredientNutrient, where: int.ingredient_id in subquery(ingredient_ids_q))
+        )
 
-      {recipe_count, _} =
-        from(r in Recipe, where: r.id in subquery(recipe_ids_q))
-        |> Repo.delete_all()
+        del.(
+          "ingredient_translations",
+          from(it in IngredientTranslation, where: it.ingredient_id in subquery(ingredient_ids_q))
+        )
 
-      {ingredient_count, _} =
-        from(i in Ingredient, where: i.food_class == "Branded")
-        |> Repo.delete_all()
+        recipe_count =
+          del.("recipes", from(r in Recipe, where: r.id in subquery(recipe_ids_q)))
 
-      {ingredient_count, recipe_count}
-    end)
+        ingredient_count =
+          del.(
+            "ingredients",
+            from(i in Ingredient,
+              where: i.food_class == "Branded" or i.data_type == "Branded"
+            )
+          )
+
+        {ingredient_count, recipe_count}
+      end)
+
+    case result do
+      {:ok, {ingredient_count, recipe_count}} ->
+        Logger.info(
+          "[delete_branded] committed: #{ingredient_count} ingredient(s), #{recipe_count} recipe(s)"
+        )
+
+      {:error, reason} ->
+        Logger.error("[delete_branded] transaction failed/rolled back: #{inspect(reason)}")
+    end
+
+    result
   end
 
   def change_ingredient(%Ingredient{} = ingredient, attrs \\ %{}) do
