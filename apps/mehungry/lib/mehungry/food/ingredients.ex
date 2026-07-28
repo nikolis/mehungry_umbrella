@@ -202,14 +202,24 @@ defmodule Mehungry.Food.Ingredients do
     post_ids_q =
       from(p in Mehungry.Posts.Post, where: p.recipe_id in subquery(recipe_ids_q), select: p.id)
 
+    # This deletes hundreds of thousands of branded ingredients plus millions of
+    # dependent nutrient/portion rows, which far exceeds Ecto's default 15s query
+    # timeout and any DB `statement_timeout` (Postgres cancels with 57014). Give
+    # every statement a long timeout and disable the per-statement timeout for the
+    # duration of the transaction.
+    tx_timeout = :timer.minutes(30)
+
     del = fn step, query ->
-      {count, _} = Repo.delete_all(query)
+      {count, _} = Repo.delete_all(query, timeout: tx_timeout)
       Logger.info("[delete_branded] #{step}: deleted #{count} row(s)")
       count
     end
 
     result =
-      Repo.transaction(fn ->
+      Repo.transaction(
+        fn ->
+          Repo.query!("SET LOCAL statement_timeout = 0")
+
         del.(
           "comment_answer_votes",
           from(cav in Mehungry.Posts.CommentAnswerVote,
@@ -320,7 +330,9 @@ defmodule Mehungry.Food.Ingredients do
           )
 
         {ingredient_count, recipe_count}
-      end)
+      end,
+      timeout: tx_timeout
+    )
 
     case result do
       {:ok, {ingredient_count, recipe_count}} ->
