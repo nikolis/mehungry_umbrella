@@ -35,6 +35,10 @@ defmodule Mehungry.Food.Ingredient do
     has_many :scientific_properties, Mehungry.Food.IngredientScientificProperty
     has_many :classifications, Mehungry.Food.IngredientClassification
     has_many :health_attributes, Mehungry.Food.IngredientHealthAttribute
+    has_many :compound_relationships, Mehungry.Food.IngredientCompoundRelationship
+    has_many :compounds, through: [:compound_relationships, :compound]
+    has_many :study_links, Mehungry.Literature.StudyIngredient
+    has_many :studies, through: [:study_links, :study]
 
     timestamps()
   end

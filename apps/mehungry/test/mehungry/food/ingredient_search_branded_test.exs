@@ -34,6 +34,7 @@ defmodule Mehungry.Food.IngredientSearchBrandedTest do
   test "admin search_ingredient_alt_admin can still filter to Branded", %{branded: branded} do
     {_query, {ingredients, _cursor}, _count} =
       Food.search_ingredient_alt_admin("zzqsalt", ["Branded"])
+
     ids = Enum.map(ingredients, & &1.id)
 
     assert branded.id in ids

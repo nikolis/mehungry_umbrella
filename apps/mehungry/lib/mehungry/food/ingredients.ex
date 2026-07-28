@@ -147,6 +147,113 @@ defmodule Mehungry.Food.Ingredients do
     end)
   end
 
+  @doc """
+  Deletes every USDA "Branded" ingredient (`food_class == "Branded"`) and all of
+  its dependent rows. Mirrors the cascade in `delete_ingredients_without_nutrients/0`
+  so foreign-key constraints are satisfied, including any recipes that reference a
+  branded ingredient. Returns `{:ok, {ingredient_count, recipe_count}}`.
+  """
+  def delete_branded_ingredients do
+    ingredient_ids_q =
+      from(i in Ingredient, where: i.food_class == "Branded", select: i.id)
+
+    recipe_ids_q =
+      from(ri in RecipeIngredient,
+        where: ri.ingredient_id in subquery(ingredient_ids_q),
+        select: ri.recipe_id,
+        distinct: true
+      )
+
+    comment_ids_q =
+      from(c in Mehungry.Posts.Comment,
+        where: c.recipe_id in subquery(recipe_ids_q),
+        select: c.id
+      )
+
+    comment_answer_ids_q =
+      from(ca in Mehungry.Posts.CommentAnswer,
+        where: ca.comment_id in subquery(comment_ids_q),
+        select: ca.id
+      )
+
+    post_ids_q =
+      from(p in Mehungry.Posts.Post, where: p.recipe_id in subquery(recipe_ids_q), select: p.id)
+
+    Repo.transaction(fn ->
+      from(cav in Mehungry.Posts.CommentAnswerVote,
+        where: cav.comment_answer_id in subquery(comment_answer_ids_q)
+      )
+      |> Repo.delete_all()
+
+      from(cv in Mehungry.Posts.CommentVote, where: cv.comment_id in subquery(comment_ids_q))
+      |> Repo.delete_all()
+
+      from(ca in Mehungry.Posts.CommentAnswer, where: ca.comment_id in subquery(comment_ids_q))
+      |> Repo.delete_all()
+
+      from(pv in Mehungry.Posts.PostUpvote, where: pv.post_id in subquery(post_ids_q))
+      |> Repo.delete_all()
+
+      from(pv in Mehungry.Posts.PostDownvote, where: pv.post_id in subquery(post_ids_q))
+      |> Repo.delete_all()
+
+      from(l in Mehungry.Food.Like, where: l.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(r in "ratings", where: r.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(m in Mehungry.Plans.Meal, where: m.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(bi in Mehungry.Inventory.BasketItem, where: bi.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(a in Mehungry.Food.Annotation, where: a.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(ab in Mehungry.AI.Bot.AiBotRecipe, where: ab.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(ri in RecipeIngredient, where: ri.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(bi in Mehungry.Inventory.BasketIngredient,
+        where: bi.ingredient_id in subquery(ingredient_ids_q)
+      )
+      |> Repo.delete_all()
+
+      from(uir in Mehungry.Accounts.UserIngredientRule,
+        where: uir.ingredient_id in subquery(ingredient_ids_q)
+      )
+      |> Repo.delete_all()
+
+      from(hium in Mehungry.History.IngredientUserMeal,
+        where: hium.ingredient_id in subquery(ingredient_ids_q)
+      )
+      |> Repo.delete_all()
+
+      from(ip in IngredientPortion, where: ip.ingredient_id in subquery(ingredient_ids_q))
+      |> Repo.delete_all()
+
+      from(int in IngredientNutrient, where: int.ingredient_id in subquery(ingredient_ids_q))
+      |> Repo.delete_all()
+
+      from(it in IngredientTranslation, where: it.ingredient_id in subquery(ingredient_ids_q))
+      |> Repo.delete_all()
+
+      {recipe_count, _} =
+        from(r in Recipe, where: r.id in subquery(recipe_ids_q))
+        |> Repo.delete_all()
+
+      {ingredient_count, _} =
+        from(i in Ingredient, where: i.food_class == "Branded")
+        |> Repo.delete_all()
+
+      {ingredient_count, recipe_count}
+    end)
+  end
+
   def change_ingredient(%Ingredient{} = ingredient, attrs \\ %{}) do
     Ingredient.changeset(ingredient, attrs)
   end

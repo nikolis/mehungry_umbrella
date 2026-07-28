@@ -29,6 +29,23 @@ config :mehungry, :sql_sandbox, true
 # Open Food Facts client is stubbed in tests — no network calls
 config :mehungry, :off_client, Mehungry.FoodData.OpenFoodFacts.ClientStub
 
+# PubChem PUG REST is stubbed per-test via the `:pubchem_http_adapter` seam; pin a
+# deterministic base URL so no test can accidentally reach the real API.
+config :mehungry, :pubchem_base_url, "http://pubchem.test/rest/pug"
+# Lift the local 5 req/s throttle so the shared rate-limit window never trips
+# across fast async tests (retry/throttle is exercised via stubbed HTTP 503s).
+config :mehungry, :pubchem_rate_limit, 1_000_000
+
+# NCBI Entrez E-utilities is stubbed per-test via the `:entrez_http_adapter` seam;
+# pin a deterministic base URL and lift the local rate throttle for fast tests.
+config :mehungry, :entrez_base_url, "http://entrez.test/entrez/eutils"
+config :mehungry, :entrez_rate_limit, 1_000_000
+
+# NCBI PubTator3 is stubbed per-test via the `:pubtator_http_adapter` seam; pin a
+# deterministic base URL and lift the local rate throttle for fast tests.
+config :mehungry, :pubtator_base_url, "http://pubtator.test/research/pubtator3-api"
+config :mehungry, :pubtator_rate_limit, 1_000_000
+
 # Instagram Graph API client + social media publisher are stubbed in tests
 config :mehungry, :instagram_client, Mehungry.Social.Instagram.ClientStub
 config :mehungry, :social_media_publisher, Mehungry.Social.PublisherStub

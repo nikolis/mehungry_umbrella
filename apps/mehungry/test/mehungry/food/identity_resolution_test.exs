@@ -12,10 +12,18 @@ defmodule Mehungry.Food.IdentityResolutionTest do
   # Deterministic stub sources swapped in via the app-env seams.
   defmodule SpinachUsdaStub do
     def fetch_scientific_name(999_001),
-      do: {:ok, %{scientific_name: "Spinacia oleracea", description: "Spinach, raw", data_type: "Foundation"}, %{remaining: 100}}
+      do:
+        {:ok,
+         %{
+           scientific_name: "Spinacia oleracea",
+           description: "Spinach, raw",
+           data_type: "Foundation"
+         }, %{remaining: 100}}
 
     def fetch_scientific_name(_other),
-      do: {:ok, %{scientific_name: nil, description: "Mystery", data_type: "Foundation"}, %{remaining: 100}}
+      do:
+        {:ok, %{scientific_name: nil, description: "Mystery", data_type: "Foundation"},
+         %{remaining: 100}}
   end
 
   defmodule SpinachIdStub do
@@ -63,8 +71,11 @@ defmodule Mehungry.Food.IdentityResolutionTest do
     test "creates then finds; the same natural key is never duplicated or mutated" do
       ing = ingredient_fixture(%{name: "spinach"})
 
-      {:ok, first, :created} = IdentityResolution.add_identity_candidate(candidate_attrs(ing, %{confidence: 0.9}))
-      {:ok, second, :exists} = IdentityResolution.add_identity_candidate(candidate_attrs(ing, %{confidence: 0.1}))
+      {:ok, first, :created} =
+        IdentityResolution.add_identity_candidate(candidate_attrs(ing, %{confidence: 0.9}))
+
+      {:ok, second, :exists} =
+        IdentityResolution.add_identity_candidate(candidate_attrs(ing, %{confidence: 0.1}))
 
       assert first.id == second.id
       # The existing row is returned untouched — the new (lower) confidence is ignored.

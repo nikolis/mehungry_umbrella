@@ -290,4 +290,34 @@ End-to-end (optional, needs `FDC_API_KEY` and network): seed a spinach ingredien
 its real `fdc_id`, run `Mehungry.Food.enqueue_resolution()`, and confirm a
 `Spinacia oleracea` identity with NCBI/Wikidata ids appears and the run reaches
 `completed`.
-```
+
+---
+
+## 10. Known issues / caveats
+
+Minor gaps between this document and the current implementation. None affects the
+core guarantees in §8; they are tracked here so the doc and code stay honest.
+
+- **`rank` is never populated.** `insert_resolution/3` writes `rank: ids[:rank]`,
+  but neither `UsdaScientificSource` nor `ExternalScientificIdClient` ever returns a
+  `:rank` key, so the column is always `nil` in practice. The `rank` field in §2 and
+  the `optional(:rank)` in the `ScientificIdClient` behaviour describe a
+  planned-but-unwired capability. Populating it (e.g. from the Wikidata "taxon rank"
+  claim `P105`) is a follow-on.
+
+- **The non-FDC guard clause skips the attempt ledger.** `resolve_ingredient/1`'s
+  first clause returns `{:ok, :no_scientific_name}` for an ingredient with a
+  `nil`/`≤0` `fdc_id` **without** recording an attempt. The §3.3 diagram's
+  "nil name → record attempt" only actually fires on the *valid-fdc-but-blank-
+  `scientificName`* path. This is harmless in the batch pipeline because
+  `list_unresolved_ingredients/1` filters to `fdc_id > 0` (the guard clause is
+  unreachable there), but a direct facade call on a non-FDC ingredient reports
+  `:no_scientific_name` with no ledger row.
+
+- **`notes` column is undocumented in §2.** The schema, migration, and
+  `insert_resolution/3` (`notes: usda[:description]`) all carry a `notes` field; the
+  §2 column table omits it.
+
+- **`id_source` values `ncbi` / `foodon` / `manual` are allowed but never emitted**
+  by the live client, which only sets `"wikidata"` or `"ols"` (via `put_id_source/1`).
+  They remain valid for `manual`/`ai`-sourced rows added by other paths.

@@ -14,7 +14,13 @@ defmodule Mehungry.ObanWorkers.IngredientIdentityResolutionWorkerTest do
 
   defmodule SpinachUsdaStub do
     def fetch_scientific_name(999_001),
-      do: {:ok, %{scientific_name: "Spinacia oleracea", description: "Spinach, raw", data_type: "Foundation"}, %{remaining: 100}}
+      do:
+        {:ok,
+         %{
+           scientific_name: "Spinacia oleracea",
+           description: "Spinach, raw",
+           data_type: "Foundation"
+         }, %{remaining: 100}}
 
     def fetch_scientific_name(_other),
       do: {:ok, %{scientific_name: nil, description: nil, data_type: nil}, %{remaining: 100}}
@@ -28,7 +34,15 @@ defmodule Mehungry.ObanWorkers.IngredientIdentityResolutionWorkerTest do
     @behaviour Mehungry.Food.IdentityResolution.ScientificIdClient
     @impl true
     def resolve("Spinacia oleracea"),
-      do: {:ok, %{ncbi_taxonomy_id: 3562, foodon_id: "FOODON:00003278", wikidata_id: "Q37937", id_source: "wikidata", synonyms: []}}
+      do:
+        {:ok,
+         %{
+           ncbi_taxonomy_id: 3562,
+           foodon_id: "FOODON:00003278",
+           wikidata_id: "Q37937",
+           id_source: "wikidata",
+           synonyms: []
+         }}
 
     def resolve(_), do: {:ok, %{}}
   end

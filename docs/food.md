@@ -1,7 +1,7 @@
 # Food context
 
 `Mehungry.Food` is a permanent defdelegate facade; the implementation lives in
-eight sub-modules under `apps/mehungry/lib/mehungry/food/`:
+sub-modules under `apps/mehungry/lib/mehungry/food/`:
 
 | Module | Owns |
 |---|---|
@@ -13,6 +13,7 @@ eight sub-modules under `apps/mehungry/lib/mehungry/food/`:
 | `Food.Categories` | Category CRUD/search, food restriction types (canonical `list_food_restriction_types/0`) |
 | `Food.Localization` | Recipe translations (`AI.Bot.RecipeTranslation`), ingredient/category/unit translations, `localize_recipes/2` bulk localization, translation stats/upserts |
 | `Food.Engagement` | Likes, recipe comments, annotations |
+| `Food.Compounds` | Bioactive compound knowledge — `Compound` registry (oxalates, lectins, polyphenols…) + `IngredientCompoundRelationship` facts ("Spinach contains Oxalate"). Scientific facts only, no recommendations. See `docs/food_compounds.md` |
 
 Standalone modules in `food/`: schemas, `Food.IngredientSearch` (ranked
 prefix+fuzzy DB search), `Food.NutrientCalculation`, `Food.NutrientManager`,

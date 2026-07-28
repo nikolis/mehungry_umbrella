@@ -243,7 +243,12 @@ defmodule Mehungry.Food.IngredientQueries do
     {query, pagenate_query(query), count_search_results(query)}
   end
 
-  def search_ingredient_admin_translated(search_term, language_name, classes \\ [], data_types \\ []) do
+  def search_ingredient_admin_translated(
+        search_term,
+        language_name,
+        classes \\ [],
+        data_types \\ []
+      ) do
     ilike_term = "%#{search_term}%"
 
     # Unlimited set of matching translation ingredient_ids — used for the true

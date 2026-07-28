@@ -79,6 +79,10 @@ defmodule MehungryWeb.Router do
 
       live "/taxonomy/review", ProfessionalLive.TaxonomyReview, :index
 
+      live "/literature", ProfessionalLive.LiteratureRuns, :index
+
+      live "/compound-candidates", ProfessionalLive.CompoundCandidates, :index
+
       live "/languages", Professional.LanguageLive.Index, :index
       live "/languages/new", Professional.LanguageLive.Index, :new
       live "/languages/:id/edit", Professional.LanguageLive.Index, :edit
@@ -232,6 +236,9 @@ defmodule MehungryWeb.Router do
 
       live "/foods", FoodsLive.Index, :index
       live "/foods/:slug", FoodDetailLive.Index, :index
+
+      live "/conditions", HealthLive.Index, :index
+      live "/conditions/:id", ConditionDetailLive.Index, :index
 
       live "/feedback", FeedbackLive, :index
     end
