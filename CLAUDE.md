@@ -43,6 +43,10 @@ mix dialyzer
 
 ## Architecture
 
+**Scientific pipeline** (`Chemistry` → `Literature` → `Food.*` compound layers →
+`Health`): how the discover → curate → advise stages compose, plus the ordered
+"run X, then run Y" setup runbook, is in **`docs/scientific_pipeline.md`**.
+
 ### Domain Contexts (`apps/mehungry/lib/mehungry/`)
 
 | Context | Responsibility |
