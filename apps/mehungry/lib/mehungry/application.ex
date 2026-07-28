@@ -24,6 +24,15 @@ defmodule Mehungry.Application do
       %{id: :geo_cache, start: {Cachex, :start_link, [:geo_cache, [limit: 5000]]}},
       # Negative cache for Open Food Facts barcode lookups (respects OFF's 100 req/min limit)
       %{id: :off_lookup_cache, start: {Cachex, :start_link, [:off_lookup_cache, [limit: 1000]]}},
+      # Hot name->CID cache for the PubChem importer; the durable cache is the
+      # `pubchem_responses` ledger (Mehungry.Chemistry).
+      %{id: :pubchem_cache, start: {Cachex, :start_link, [:pubchem_cache, [limit: 5000]]}},
+      # Hot search->PMIDs cache for the Entrez literature crawler; the durable
+      # cache is the `entrez_responses` ledger (Mehungry.Literature).
+      %{id: :entrez_cache, start: {Cachex, :start_link, [:entrez_cache, [limit: 5000]]}},
+      # Hot pmid->mentions cache for the PubTator3 annotator; the raw payloads are
+      # retained in the `pubtator_responses` ledger (Mehungry.Literature).
+      %{id: :pubtator_cache, start: {Cachex, :start_link, [:pubtator_cache, [limit: 5000]]}},
       # Fixed-window rate limiting counters (registration throttle, Spoonacular gating)
       %{id: :rate_limit, start: {Cachex, :start_link, [:rate_limit, [limit: 100_000]]}},
       Mehungry.Telemetry.MetricsBuffer,

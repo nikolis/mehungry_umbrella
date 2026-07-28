@@ -13,13 +13,25 @@ defmodule Mehungry.Food do
     * `Mehungry.Food.Measurements` — measurement units and portions
     * `Mehungry.Food.Categories` — categories and food restriction types
     * `Mehungry.Food.Taxonomies` — hierarchical ingredient taxonomies
+    * `Mehungry.Food.Enrichment` — scientific enrichment sidecar
+    * `Mehungry.Food.IdentityResolution` — scientific identity resolution
+    * `Mehungry.Food.Compounds` — bioactive compound knowledge (scientific facts)
+    * `Mehungry.Food.CompoundMeasurements` — quantitative compound measurements (immutable)
+    * `Mehungry.Food.EvidenceAggregation` — read-only summaries of compound measurements
     * `Mehungry.Food.Localization` — recipe/ingredient/unit translations
     * `Mehungry.Food.Engagement` — likes, comments, annotations
   """
 
   alias Mehungry.Food.{
     Categories,
+    CompoundCandidates,
+    Compounds,
+    CompoundMeasurements,
     Engagement,
+    Enrichment,
+    EvidenceAggregation,
+    IdentityResolution,
+    IdentityResolutionRuns,
     IngredientQueries,
     Ingredients,
     Localization,
@@ -63,6 +75,7 @@ defmodule Mehungry.Food do
   defdelegate create_ingredient(attrs), to: Ingredients
   defdelegate delete_ingredient(ingredient), to: Ingredients
   defdelegate delete_ingredients_without_nutrients(), to: Ingredients
+  defdelegate delete_branded_ingredients(), to: Ingredients
   defdelegate change_ingredient(ingredient, attrs \\ %{}), to: Ingredients
   defdelegate update_ingredient(ingredient, attrs \\ %{}), to: Ingredients
   defdelegate get_ingredient_by_slug(slug), to: Ingredients
@@ -100,10 +113,12 @@ defmodule Mehungry.Food do
   defdelegate list_distinct_food_classes(), to: IngredientQueries
   defdelegate list_distinct_data_types(), to: IngredientQueries
   defdelegate search_ingredient_search(search_term, classes \\ []), to: IngredientQueries
+
   defdelegate search_ingredient_alt_admin(search_term, classes \\ [], data_types \\ []),
     to: IngredientQueries
 
   defdelegate search_ingredient_alt(search_term, classes \\ []), to: IngredientQueries
+
   defdelegate search_ingredient_admin(search_term, classes \\ [], data_types \\ []),
     to: IngredientQueries
 
@@ -211,5 +226,97 @@ defmodule Mehungry.Food do
   defdelegate review_mapping(id, action), to: Taxonomies
   defdelegate classification_progress(taxonomy_id), to: Taxonomies
   defdelegate enqueue_classification(taxonomy_id), to: Taxonomies
-  defdelegate latest_classification_run(taxonomy_id), to: TaxonomyClassificationRuns, as: :latest_run
+
+  defdelegate latest_classification_run(taxonomy_id),
+    to: TaxonomyClassificationRuns,
+    as: :latest_run
+
+  # ── Enrichment (scientific sidecar) ────────────────────────────────────
+
+  defdelegate create_enrichment_source(attrs), to: Enrichment
+  defdelegate get_enrichment_source!(id), to: Enrichment
+  defdelegate list_enrichment_sources(), to: Enrichment
+  defdelegate upsert_enrichment_source(attrs), to: Enrichment
+  defdelegate create_scientific_property(attrs), to: Enrichment
+  defdelegate upsert_scientific_property(attrs), to: Enrichment
+  defdelegate list_scientific_properties(ingredient_id), to: Enrichment
+  defdelegate delete_scientific_property(property), to: Enrichment
+  defdelegate create_classification(attrs), to: Enrichment
+  defdelegate upsert_classification(attrs), to: Enrichment
+  defdelegate list_classifications(ingredient_id), to: Enrichment
+  defdelegate delete_classification(classification), to: Enrichment
+  defdelegate create_health_attribute(attrs), to: Enrichment
+  defdelegate upsert_health_attribute(attrs), to: Enrichment
+  defdelegate list_health_attributes(ingredient_id), to: Enrichment
+  defdelegate delete_health_attribute(attribute), to: Enrichment
+  defdelegate list_enrichment(ingredient_id), to: Enrichment
+
+  # ── Identity resolution (scientific identifiers) ───────────────────────
+
+  defdelegate enqueue_resolution(), to: IdentityResolution
+  defdelegate resolve_ingredient(ingredient), to: IdentityResolution
+  defdelegate resolution_progress(), to: IdentityResolution
+  defdelegate add_identity_candidate(attrs), to: IdentityResolution
+  defdelegate get_identity!(id), to: IdentityResolution
+  defdelegate list_identities(ingredient_id), to: IdentityResolution
+  defdelegate verified_identity(ingredient_id), to: IdentityResolution
+  defdelegate add_synonym(attrs), to: IdentityResolution
+  defdelegate list_synonyms(scientific_identity_id), to: IdentityResolution
+  defdelegate list_synonyms_for_ingredient(ingredient_id), to: IdentityResolution
+  defdelegate verify_identity(identity_id, user_id \\ nil), to: IdentityResolution
+  defdelegate reject_identity(identity_id, user_id \\ nil), to: IdentityResolution
+  defdelegate list_pending_verification(opts \\ []), to: IdentityResolution
+  defdelegate latest_identity_resolution_run(), to: IdentityResolutionRuns, as: :latest_run
+
+  # ── Compounds (scientific facts) ───────────────────────────────────────
+
+  defdelegate create_compound(attrs), to: Compounds
+  defdelegate upsert_compound(attrs), to: Compounds
+  defdelegate enrich_compound(compound, attrs), to: Compounds
+  defdelegate get_compound!(id), to: Compounds
+  defdelegate get_compound_by_name(name), to: Compounds
+  defdelegate get_compound_by_identifier(namespace, identifier), to: Compounds
+  defdelegate upsert_compound_identifier(attrs), to: Compounds
+  defdelegate list_compound_identifiers(compound_id), to: Compounds
+  defdelegate list_compounds(), to: Compounds
+  defdelegate list_compounds_by_type(compound_type), to: Compounds
+  defdelegate link_compound(attrs), to: Compounds
+  defdelegate upsert_compound_relationship(attrs), to: Compounds
+  defdelegate delete_compound_relationship(relationship), to: Compounds
+  defdelegate list_compounds_for_ingredient(ingredient_id), to: Compounds
+  defdelegate list_positive_compounds_for_ingredient(ingredient_id), to: Compounds
+  defdelegate list_ingredients_for_compound(compound_id), to: Compounds
+  defdelegate list_compound_relationships(ingredient_id), to: Compounds
+  defdelegate add_compound_to_ingredient(ingredient_id, compound_attrs, rel_attrs), to: Compounds
+
+  # ── Compound measurements (immutable quantitative facts) ───────────────────
+
+  defdelegate create_measurement(attrs), to: CompoundMeasurements
+  defdelegate record_measurement(attrs), to: CompoundMeasurements
+  defdelegate get_measurement!(id), to: CompoundMeasurements
+  defdelegate list_measurements_for_ingredient(ingredient_id), to: CompoundMeasurements
+  defdelegate list_measurements_for_compound(compound_id), to: CompoundMeasurements
+  defdelegate list_measurements_for_study(study_id), to: CompoundMeasurements
+  defdelegate list_measurements(ingredient_id, compound_id), to: CompoundMeasurements
+
+  # ── Evidence aggregation (read-only summaries of measurements) ─────────────
+
+  defdelegate summarize(ingredient_id, compound_id), to: EvidenceAggregation
+  defdelegate summarize_for_ingredient(ingredient_id), to: EvidenceAggregation
+
+  # ── Compound candidates (derived → curated relationship pipeline) ──────────
+
+  defdelegate enqueue_candidate_derivation(), to: CompoundCandidates
+  defdelegate derive_candidate(ingredient_id, compound_id), to: CompoundCandidates
+  defdelegate derive_candidates_batch(offset, limit), to: CompoundCandidates
+  defdelegate score_candidate(ingredient_id, compound_id), to: CompoundCandidates
+  defdelegate evidence_pairs(), to: CompoundCandidates
+  defdelegate count_evidence_pairs(), to: CompoundCandidates
+  defdelegate promote_candidate(candidate), to: CompoundCandidates
+  defdelegate reject_candidate(candidate), to: CompoundCandidates
+  defdelegate import_manual_candidate(ingredient_id, compound_id, attrs), to: CompoundCandidates
+  defdelegate list_pending_candidates(opts \\ []), to: CompoundCandidates
+  defdelegate list_candidates_for_ingredient(ingredient_id), to: CompoundCandidates
+  defdelegate get_candidate!(id), to: CompoundCandidates
+  defdelegate candidate_derivation_progress(), to: CompoundCandidates
 end

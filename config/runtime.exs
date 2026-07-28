@@ -6,6 +6,9 @@ import Config
 config :mehungry,
   anthropic_api_key: System.get_env("ANTHROPIC_API_KEY", ""),
   fdc_api_key: System.get_env("FDC_API_KEY", ""),
+  # Optional NCBI API key — lifts the rate ceiling from 3 to 10 req/s for both the
+  # Entrez crawler and the PubTator3 annotator (same NCBI host); works without it.
+  entrez_api_key: System.get_env("NCBI_API_KEY"),
   openai_api_key: System.get_env("OPENAI_API_KEY", ""),
   stripe_secret_key: System.get_env("STRIPE_SECRET_KEY", ""),
   stripe_webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET", ""),

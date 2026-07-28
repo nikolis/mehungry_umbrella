@@ -17,7 +17,14 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
   import Ecto.Query
 
   alias Mehungry.Food
-  alias Mehungry.Food.{Ingredient, IngredientTaxonomyNode, TaxonomyClassificationRuns, TaxonomyNode}
+
+  alias Mehungry.Food.{
+    Ingredient,
+    IngredientTaxonomyNode,
+    TaxonomyClassificationRuns,
+    TaxonomyNode
+  }
+
   alias Mehungry.Repo
 
   @batch_size 40
@@ -34,7 +41,12 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
     case fetch_unclassified_batch(taxonomy_id) do
       [] ->
         Logger.info("TaxonomyClassificationWorker: taxonomy #{taxonomy_id} fully classified")
-        TaxonomyClassificationRuns.mark_completed(run_id, Food.classification_progress(taxonomy_id))
+
+        TaxonomyClassificationRuns.mark_completed(
+          run_id,
+          Food.classification_progress(taxonomy_id)
+        )
+
         :ok
 
       batch ->
@@ -61,7 +73,11 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
 
   defp handle_assignments(taxonomy_id, run_id, batch, assignments) do
     if insert_assignments(assignments) > 0 do
-      TaxonomyClassificationRuns.update_progress(run_id, Food.classification_progress(taxonomy_id))
+      TaxonomyClassificationRuns.update_progress(
+        run_id,
+        Food.classification_progress(taxonomy_id)
+      )
+
       enqueue_next_batch(taxonomy_id, run_id)
       :ok
     else
@@ -88,8 +104,7 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
 
     Repo.all(
       from(i in Ingredient,
-        where:
-          i.id not in subquery(classified_ids) and not is_nil(i.fdc_id) and i.fdc_id > 0,
+        where: i.id not in subquery(classified_ids) and not is_nil(i.fdc_id) and i.fdc_id > 0,
         limit: @batch_size,
         select: %{id: i.id, name: i.name}
       )
@@ -125,7 +140,9 @@ defmodule Mehungry.ObanWorkers.TaxonomyClassificationWorker do
 
   # Guarded against a nil confidence: `nil > 0.80` is `true` under Elixir term
   # ordering, which would wrongly auto-confirm unscored mappings.
-  defp auto_confirm?(confidence) when is_number(confidence), do: confidence > @auto_confirm_confidence
+  defp auto_confirm?(confidence) when is_number(confidence),
+    do: confidence > @auto_confirm_confidence
+
   defp auto_confirm?(_), do: false
 
   defp enqueue_next_batch(taxonomy_id, run_id) do

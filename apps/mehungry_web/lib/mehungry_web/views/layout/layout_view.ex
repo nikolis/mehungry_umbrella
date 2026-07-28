@@ -154,6 +154,12 @@ defmodule MehungryWeb.LayoutView do
           icon="hero-rectangle-stack"
           label="Taxonomy"
         />
+        <.admin_link href="/professional/literature" icon="hero-document-text" label="Literature" />
+        <.admin_link
+          href="/professional/compound-candidates"
+          icon="hero-beaker"
+          label="Candidates"
+        />
         <.admin_link
           href="/professional/ingredients/reconciliation"
           icon="hero-arrow-path"

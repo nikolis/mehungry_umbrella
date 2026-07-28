@@ -112,6 +112,21 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
   end
 
   @impl true
+  def handle_event("delete_branded", _params, socket) do
+    {:ok, {ingredient_count, recipe_count}} = Food.delete_branded_ingredients()
+
+    socket =
+      socket
+      |> put_flash(
+        :info,
+        "Deleted #{ingredient_count} USDA branded ingredient(s) and #{recipe_count} recipe(s)."
+      )
+      |> push_navigate(to: ~p"/professional/ingredients")
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("enqueue_translation", _params, socket) do
     %{} |> IngredientTranslationWorker.new() |> Oban.insert!()
     translation_stats = build_translation_stats()

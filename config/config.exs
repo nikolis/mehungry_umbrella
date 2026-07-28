@@ -34,7 +34,18 @@ config :mehungry,
   # How long (s) to snooze when stopping early on low quota.
   fdc_low_remaining_snooze_seconds: 120,
   # Upper bound (s) applied to a 429 Retry-After before snoozing.
-  fdc_max_snooze_seconds: 3600
+  fdc_max_snooze_seconds: 3600,
+  # Delay (ms) between successive ingredient crawls in a literature-crawl batch.
+  entrez_pace_ms: 300,
+  # Upper bound (s) applied to an Entrez rate-limit Retry-After before snoozing.
+  entrez_max_snooze_seconds: 3600,
+  # Delay (ms) between successive study annotations in a PubTator3 batch.
+  pubtator_pace_ms: 300,
+  # Upper bound (s) applied to a PubTator rate-limit Retry-After before snoozing.
+  pubtator_max_snooze_seconds: 3600,
+  # Evidence-score cutoff (0.0–1.0) at/above which a derived ingredient↔compound
+  # candidate is auto-promoted to a curated relationship; below it waits for review.
+  candidate_promotion_threshold: 0.75
 
 config :mehungry, Oban,
   repo: Mehungry.Repo,

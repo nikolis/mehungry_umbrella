@@ -1,0 +1,106 @@
+<div class="max-w-5xl mx-auto p-4 space-y-8">
+  <h1 class="text-2xl font-semibold text-parchment">Compound Candidates</h1>
+  <p class="text-parchment-dim text-sm">
+    Proposed ingredient↔compound relationships derived from literature co-occurrence and
+    measurements. Strong evidence auto-promotes into curated facts; the rest waits here for review.
+    Promoted relationships feed back as targeted literature-crawl terms.
+  </p>
+
+  <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        phx-click="derive"
+        disabled={running?(@run)}
+        data-confirm="Derive candidates from all current evidence and auto-promote strong ones?"
+        class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {if running?(@run), do: "Deriving…", else: "Derive candidates"}
+      </button>
+
+      <button
+        type="button"
+        phx-click="refresh"
+        class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90 ml-auto"
+      >
+        Refresh
+      </button>
+    </div>
+
+    <div>
+      <div class="flex items-center justify-between text-xs text-parchment-dim mb-1">
+        <span>
+          Derived: {@progress.processed} / {@progress.total} ({percent(@progress)}%)
+        </span>
+        <span class={"font-medium #{run_class(@run)}"} title={run_error(@run)}>
+          {run_label(@run)}
+        </span>
+      </div>
+      <div class="h-2 w-full rounded bg-ink-panel2 overflow-hidden">
+        <div class="h-full bg-basil rounded" style={"width: #{percent(@progress)}%"}></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-lg font-medium text-parchment mb-2">Pending review</h2>
+    <p class="text-parchment-dim text-sm mb-3">
+      Strongest evidence first. <span class="font-medium">Promote</span>
+      writes a curated relationship; <span class="font-medium">Reject</span>
+      drops it. Both leave the queue.
+    </p>
+
+    <div
+      id="compound_candidates"
+      phx-hook="InfiniteScroll"
+      phx-update="stream"
+      data-page={@page}
+      class="divide-y divide-ink-panel2"
+    >
+      <div
+        :for={{dom_id, candidate} <- @streams.candidates}
+        id={dom_id}
+        class="py-3 flex flex-wrap items-center gap-3 justify-between"
+      >
+        <div class="min-w-0 flex-1">
+          <div class="text-parchment font-medium truncate">
+            {candidate.ingredient.name} <span class="text-parchment-dim">contains</span>
+            {candidate.compound.name}
+          </div>
+          <div class="text-xs text-parchment-dim">
+            evidence:
+            <span class={"font-medium #{level_class(candidate.evidence_level)}"}>
+              {candidate.evidence_level || "insufficient"}
+            </span>
+            · score: {score_label(candidate.evidence_score)} · {candidate.study_count} lit · {candidate.measurement_study_count} meas
+            · sources: {(candidate.sources || []) |> Enum.join(", ")}
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            phx-click="promote"
+            phx-value-id={candidate.id}
+            class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+          >
+            Promote
+          </button>
+          <button
+            type="button"
+            phx-click="reject"
+            phx-value-id={candidate.id}
+            data-confirm="Reject this candidate? It will not be promoted."
+            class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90"
+          >
+            Reject
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-parchment-dim text-sm mt-4">
+      Scroll to load more. Promoted and rejected rows leave this list.
+    </p>
+  </section>
+</div>
