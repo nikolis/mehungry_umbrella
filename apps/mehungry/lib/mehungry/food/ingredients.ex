@@ -149,11 +149,31 @@ defmodule Mehungry.Food.Ingredients do
     end)
   end
 
+  @doc "PubSub topic carrying `{:branded_delete, payload}` progress updates."
+  def branded_delete_topic, do: "branded_ingredient_delete"
+
   @doc """
-  Deletes every USDA "Branded" ingredient (`food_class == "Branded"`) and all of
-  its dependent rows. Mirrors the cascade in `delete_ingredients_without_nutrients/0`
-  so foreign-key constraints are satisfied, including any recipes that reference a
-  branded ingredient. Returns `{:ok, {ingredient_count, recipe_count}}`.
+  Broadcasts a branded-delete progress update to `branded_delete_topic/0`.
+  `payload` is one of `:started`, `{:completed, {ingredient_count, recipe_count}}`,
+  or `{:failed, reason}`.
+  """
+  def broadcast_branded_delete(payload) do
+    Phoenix.PubSub.broadcast(
+      Mehungry.PubSub,
+      branded_delete_topic(),
+      {:branded_delete, payload}
+    )
+  end
+
+  @doc """
+  Deletes every USDA "Branded" ingredient (`food_class == "Branded"` or
+  `data_type == "Branded"`) and all of its dependent rows. Mirrors the cascade in
+  `delete_ingredients_without_nutrients/0` so foreign-key constraints are
+  satisfied, including any recipes that reference a branded ingredient. Returns
+  `{:ok, {ingredient_count, recipe_count}}`.
+
+  This is a heavy, long-running bulk delete — run it from
+  `Mehungry.ObanWorkers.BrandedIngredientDeleteWorker`, never inline in a request.
   """
   def delete_branded_ingredients do
     # Preflight diagnostics: the deployed DB may store the "Branded" marker under

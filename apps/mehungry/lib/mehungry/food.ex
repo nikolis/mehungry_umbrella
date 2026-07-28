@@ -76,6 +76,8 @@ defmodule Mehungry.Food do
   defdelegate delete_ingredient(ingredient), to: Ingredients
   defdelegate delete_ingredients_without_nutrients(), to: Ingredients
   defdelegate delete_branded_ingredients(), to: Ingredients
+  defdelegate branded_delete_topic(), to: Ingredients
+  defdelegate broadcast_branded_delete(payload), to: Ingredients
   defdelegate change_ingredient(ingredient, attrs \\ %{}), to: Ingredients
   defdelegate update_ingredient(ingredient, attrs \\ %{}), to: Ingredients
   defdelegate get_ingredient_by_slug(slug), to: Ingredients

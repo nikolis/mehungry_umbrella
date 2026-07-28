@@ -34,6 +34,10 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Mehungry.PubSub, Food.branded_delete_topic())
+    end
+
     {ingredients, cursor_after} = Food.list_ingredients_paginated()
 
     _categories = Food.list_categories()
@@ -57,6 +61,7 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
       |> assign(:total_count, nil)
       |> assign(:translation_stats, translation_stats)
       |> assign(:search_language, socket.assigns[:current_language] || "en")
+      |> assign(:branded_deleting, false)
       |> assign(:form, to_form(get_form_changeset(@params), as: :search_form))
 
     {:ok, socket}
@@ -115,31 +120,23 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
 
   @impl true
   def handle_event("delete_branded", _params, socket) do
-    Logger.info("[delete_branded] handler invoked by user #{inspect(socket.assigns[:current_user] && socket.assigns.current_user.id)}")
+    Logger.info(
+      "[delete_branded] enqueue requested by user #{inspect(socket.assigns[:current_user] && socket.assigns.current_user.id)}"
+    )
 
     socket =
-      try do
-        case Food.delete_branded_ingredients() do
-          {:ok, {ingredient_count, recipe_count}} ->
-            socket
-            |> put_flash(
-              :info,
-              "Deleted #{ingredient_count} USDA branded ingredient(s) and #{recipe_count} recipe(s)."
-            )
-            |> push_navigate(to: ~p"/professional/ingredients")
-
-          {:error, reason} ->
-            Logger.error("[delete_branded] returned error: #{inspect(reason)}")
-            put_flash(socket, :error, "Delete failed: #{inspect(reason)}")
-        end
-      rescue
-        e ->
-          Logger.error(
-            "[delete_branded] raised: #{Exception.message(e)}\n" <>
-              Exception.format_stacktrace(__STACKTRACE__)
+      case Mehungry.ObanWorkers.BrandedIngredientDeleteWorker.enqueue() do
+        {:ok, _job} ->
+          socket
+          |> assign(:branded_deleting, true)
+          |> put_flash(
+            :info,
+            "USDA branded deletion started in the background. This can take a while — you'll be notified here when it finishes."
           )
 
-          put_flash(socket, :error, "Delete crashed: #{Exception.message(e)}")
+        {:error, reason} ->
+          Logger.error("[delete_branded] enqueue failed: #{inspect(reason)}")
+          put_flash(socket, :error, "Could not start deletion: #{inspect(reason)}")
       end
 
     {:noreply, socket}
@@ -157,6 +154,38 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
         :info,
         "Greek translation job enqueued. Oban will process it in the background."
       )
+
+    {:noreply, socket}
+  end
+
+  # Progress broadcasts from BrandedIngredientDeleteWorker (see
+  # Food.branded_delete_topic/0). Any admin viewing this page — including the one
+  # who triggered it — reacts to the same events.
+  @impl true
+  def handle_info({:branded_delete, :started}, socket) do
+    {:noreply, assign(socket, :branded_deleting, true)}
+  end
+
+  @impl true
+  def handle_info({:branded_delete, {:completed, {ingredient_count, recipe_count}}}, socket) do
+    socket =
+      socket
+      |> assign(:branded_deleting, false)
+      |> put_flash(
+        :info,
+        "Deleted #{ingredient_count} USDA branded ingredient(s) and #{recipe_count} recipe(s)."
+      )
+      |> push_navigate(to: ~p"/professional/ingredients")
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:branded_delete, {:failed, reason}}, socket) do
+    socket =
+      socket
+      |> assign(:branded_deleting, false)
+      |> put_flash(:error, "USDA branded deletion failed: #{inspect(reason)}")
 
     {:noreply, socket}
   end
