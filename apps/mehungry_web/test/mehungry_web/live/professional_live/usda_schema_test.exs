@@ -58,6 +58,49 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchemaTest do
     assert expanded =~ "Apple, raw"
   end
 
+  test "assigning a streamed row removes it from the open panel", %{conn: conn} do
+    # Sorts first (within the 100-row cap) and matches a real schema.
+    name = "Aaaatest, raw"
+    ingredient = ingredient_fixture(%{name: name, fdc_id: 987_654})
+    {:ok, species} = Food.create_foundemental_species(%{"name" => "Aaaa"})
+
+    {:ok, view, _html} = live(conn, ~p"/professional/usda-schema")
+    _ = render(view)
+
+    # Open whichever panel (a schema, or Unmatched) the parser placed it in.
+    analysis = Mehungry.FoodData.Usda.SchemaMatcher.analyze()
+
+    key =
+      if Enum.any?(analysis.unmatched, &(&1.ingredient.id == ingredient.id)) do
+        "__unmatched__"
+      else
+        Enum.find_value(analysis.schemas, fn s ->
+          if Enum.any?(s.matched, &(&1.id == ingredient.id)), do: s.key
+        end)
+      end
+
+    assert key, "seeded fdc ingredient did not appear in any panel"
+
+    view |> element(~s|button[phx-value-key="#{key}"]|) |> render_click()
+    # The row is streamed into the panel (assert on the row's hidden input — the
+    # name also shows up in the always-visible schema "e.g. …" header examples).
+    row = ~s|input[name="usda_name"][value="#{name}"]|
+    assert has_element?(view, row)
+
+    # Pick the existing species → confirm modal → assign.
+    render_change(view, "select_species", %{
+      "species_id" => Integer.to_string(species.id),
+      "ingredient_id" => Integer.to_string(ingredient.id),
+      "usda_name" => name
+    })
+
+    view |> element("#assign-modal button", "Assign") |> render_click()
+
+    assert MapSet.member?(Food.assigned_foundemental_ingredient_ids(), ingredient.id)
+    # stream_delete removed the row without re-rendering the whole panel
+    refute has_element?(view, row)
+  end
+
   test "choosing '+ New species…' opens the create-species modal", %{conn: conn} do
     ingredient = ingredient_fixture(%{name: "Pear, raw"})
 
