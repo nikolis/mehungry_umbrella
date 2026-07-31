@@ -24,7 +24,10 @@ config :mehungry, :usda_schema_reference_paths, []
 
 # Nx uses the EXLA (CPU) backend for the shared embedding serving
 # (Mehungry.AI.EmbeddingServer, gated by :enable_embeddings above).
-config :nx, default_backend: EXLA.Backend
+# EXLA is temporarily disabled (see apps/mehungry/mix.exs) — fall back to the
+# pure-Elixir binary backend so Nx stays loadable without the EXLA dep. Restore
+# `default_backend: EXLA.Backend` when re-enabling embeddings.
+config :nx, default_backend: Nx.BinaryBackend
 
 # Timezone used for analytics "today" boundaries and daily buckets, so the
 # dashboard lines up with the Google Analytics property timezone. Must be a

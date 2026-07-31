@@ -72,8 +72,14 @@ defmodule Mehungry.MixProject do
       # CPU compiler for Nx; the model + serving are only loaded when
       # `:parser_embeddings_enabled` is true (see Mehungry.Application), so the
       # web/test tasks never pay the memory cost.
+      #
+      # EXLA is temporarily disabled — embeddings are gated off everywhere
+      # (:enable_embeddings defaults to false), so the runtime EXLA references in
+      # Mehungry.AI.EmbeddingServer.build_serving/0 are never reached. Re-add
+      # {:exla, "~> 0.9"} and restore the Nx EXLA backend in config/config.exs to
+      # turn embeddings back on.
       {:nx, "~> 0.9"},
-      {:exla, "~> 0.9"},
+      # {:exla, "~> 0.9"},
       {:bumblebee, "~> 0.6"}
     ]
   end
