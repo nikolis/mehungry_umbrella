@@ -377,14 +377,72 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
 
   # ── Render helpers ──────────────────────────────────────────────────────────
 
-  def expanded?(expanded, key), do: MapSet.member?(expanded, key)
-
-  def species_options(species) do
-    Enum.map(species, fn s ->
-      label = if s.variety in [nil, ""], do: s.name, else: "#{s.name} — #{s.variety}"
-      {label, s.id}
-    end)
+  @doc """
+  Searchable species picker for one curation row. Client-side (Alpine) filter
+  over the small species list — no per-keystroke round-trip — pre-seeded with the
+  first two letters of the row's ingredient name. Picking an option (or "+ New
+  species…") pushes the shared `select_species` event via `phx-click`, so the
+  create/confirm modal flow is unchanged.
+  """
+  def species_combobox(assigns) do
+    ~H"""
+    <div
+      class="relative"
+      x-data={"{ open: false, q: #{Jason.encode!(search_seed(@row.name))} }"}
+      @click.outside="open = false"
+    >
+      <input
+        type="text"
+        x-model="q"
+        value={search_seed(@row.name)}
+        @focus="open = true"
+        placeholder="Search species…"
+        autocomplete="off"
+        class="bg-ink-panel2 text-parchment border border-ink-panel2 rounded text-xs px-2 py-1 w-44 focus:outline-none"
+      />
+      <div
+        x-show="open"
+        class="absolute right-0 z-20 mt-1 w-56 max-h-56 overflow-auto rounded border border-ink-panel2 bg-ink-panel shadow-lg"
+      >
+        <button
+          :for={s <- @species}
+          type="button"
+          x-show={species_match_js(s)}
+          phx-click="select_species"
+          phx-value-species_id={s.id}
+          phx-value-ingredient_id={@row.id}
+          phx-value-usda_name={@row.name}
+          @click="open = false"
+          class="block w-full text-left px-2 py-1 text-xs text-parchment hover:bg-ink-panel2"
+        >
+          {species_label(s)}
+        </button>
+        <p :if={@species == []} class="px-2 py-1 text-xs text-parchment-dim">No species yet.</p>
+        <button
+          type="button"
+          phx-click="select_species"
+          phx-value-species_id="__new__"
+          phx-value-ingredient_id={@row.id}
+          phx-value-usda_name={@row.name}
+          @click="open = false"
+          class="block w-full text-left px-2 py-1 text-xs text-parchment font-medium border-t border-ink-panel2 hover:bg-ink-panel2"
+        >
+          + New species…
+        </button>
+      </div>
+    </div>
+    """
   end
+
+  # First two letters of the ingredient name — the search box's default query.
+  defp search_seed(name), do: name |> to_string() |> String.slice(0, 2)
+
+  # Alpine `x-show` test: the (constant) species label contains the live query.
+  defp species_match_js(species) do
+    "#{Jason.encode!(String.downcase(species_label(species)))}.includes(q.toLowerCase())"
+  end
+
+  def expanded?(expanded, key), do: MapSet.member?(expanded, key)
 
   def species_label(%{variety: v} = s) when v in [nil, ""], do: s.name
   def species_label(s), do: "#{s.name} — #{s.variety}"

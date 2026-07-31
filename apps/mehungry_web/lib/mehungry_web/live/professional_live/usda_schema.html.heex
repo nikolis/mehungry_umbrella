@@ -55,7 +55,7 @@
     <div class="space-y-2">
       <div
         :for={{schema, idx} <- Enum.with_index(@schemas)}
-        class="rounded-lg border border-ink-panel2 bg-ink-panel overflow-hidden"
+        class="rounded-lg border border-ink-panel2 bg-ink-panel"
       >
         <button
           type="button"
@@ -118,20 +118,7 @@
                 </span>
               </div>
               <div class="flex items-center gap-2 shrink-0">
-                <form phx-change="select_species">
-                  <input type="hidden" name="ingredient_id" value={row.id} />
-                  <input type="hidden" name="usda_name" value={row.name} />
-                  <select
-                    name="species_id"
-                    class="bg-ink-panel2 text-parchment border border-ink-panel2 rounded text-xs px-2 py-1 max-w-[12rem] focus:outline-none"
-                  >
-                    <option value="">— assign species —</option>
-                    <option :for={{label, id} <- species_options(@species)} value={id}>
-                      {label}
-                    </option>
-                    <option value="__new__">+ New species…</option>
-                  </select>
-                </form>
+                <.species_combobox row={row} species={@species} />
                 <a
                   href={~p"/professional/ingredients/#{row.id}/show"}
                   class="text-parchment-dim text-xs hover:text-parchment"
@@ -161,7 +148,7 @@
   <section :if={@unmatched_count > 0} class="space-y-3">
     <h2 class="text-lg font-semibold text-parchment">Unmatched</h2>
 
-    <div class="rounded-lg border border-ink-panel2 bg-ink-panel overflow-hidden">
+    <div class="rounded-lg border border-ink-panel2 bg-ink-panel">
       <button
         type="button"
         phx-click="open_panel"
@@ -194,20 +181,7 @@
           >
             <span class="text-parchment text-sm truncate">{row.name}</span>
             <div class="flex items-center gap-2 shrink-0">
-              <form phx-change="select_species">
-                <input type="hidden" name="ingredient_id" value={row.id} />
-                <input type="hidden" name="usda_name" value={row.name} />
-                <select
-                  name="species_id"
-                  class="bg-ink-panel2 text-parchment border border-ink-panel2 rounded text-xs px-2 py-1 max-w-[12rem] focus:outline-none"
-                >
-                  <option value="">— assign species —</option>
-                  <option :for={{label, id} <- species_options(@species)} value={id}>
-                    {label}
-                  </option>
-                  <option value="__new__">+ New species…</option>
-                </select>
-              </form>
+              <.species_combobox row={row} species={@species} />
               <span :if={row.reason} class="text-parchment-dim text-xs">{row.reason}</span>
             </div>
           </li>
@@ -310,6 +284,11 @@
     >
       <.input field={@species_form[:name]} type="text" label="Name" />
       <.input field={@species_form[:variety]} type="text" label="Variety (optional)" />
+      <.input
+        field={@species_form[:alternative_name]}
+        type="text"
+        label="Alternative name (optional)"
+      />
       <.input
         field={@species_form[:scientific_name]}
         type="text"
