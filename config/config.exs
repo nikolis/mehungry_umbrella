@@ -12,7 +12,7 @@ import Config
 config :mehungry,
   ecto_repos: [Mehungry.Repo],
   # Set to true in prod with larger instances
-  enable_embeddings: true
+  enable_embeddings: false
 
 config :mehungry, :admin_email, "nikolisgal@gmail.com"
 
