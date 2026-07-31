@@ -29,6 +29,12 @@ config :mehungry, :usda_schema_reference_paths, []
 # `default_backend: EXLA.Backend` when re-enabling embeddings.
 config :nx, default_backend: Nx.BinaryBackend
 
+# The `image` library (a transitive dep) autostarts an ML image classifier /
+# generator that default to the EXLA Nx compiler. We don't use those, and with
+# EXLA disabled their supervised servers fail to boot — turn autostart off.
+config :image, :classifier, autostart: false
+config :image, :generator, autostart: false
+
 # Timezone used for analytics "today" boundaries and daily buckets, so the
 # dashboard lines up with the Google Analytics property timezone. Must be a
 # valid Postgres/IANA zone name (e.g. "Europe/Athens", "Etc/UTC").
