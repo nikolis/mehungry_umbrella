@@ -54,17 +54,17 @@
 
     <div class="space-y-2">
       <div
-        :for={schema <- @schemas}
+        :for={{schema, idx} <- Enum.with_index(@schemas)}
         class="rounded-lg border border-ink-panel2 bg-ink-panel overflow-hidden"
       >
         <button
           type="button"
-          phx-click="toggle"
+          phx-click="open_panel"
           phx-value-key={schema.key}
           class="w-full flex items-center gap-3 px-4 py-3 text-left hover:opacity-90"
         >
           <span class="text-parchment-dim text-xs w-4">
-            {if expanded?(@expanded, schema.key), do: "▾", else: "▸"}
+            {if @active_key == schema.key, do: "▾", else: "▸"}
           </span>
           <div class="flex-1 min-w-0">
             <div class="flex flex-wrap items-center gap-1.5">
@@ -87,34 +87,40 @@
           </div>
         </button>
 
-        <div :if={expanded?(@expanded, schema.key)} class="border-t border-ink-panel2">
-          <p :if={schema.matched_count == 0} class="px-4 py-3 text-parchment-dim text-sm">
+        <div :if={@active_key == schema.key} class="border-t border-ink-panel2">
+          <p :if={@active_rows == []} class="px-4 py-3 text-parchment-dim text-sm">
             No ingredients matched this schema.
           </p>
-          <ul :if={schema.matched_count > 0} class="divide-y divide-ink-panel2">
+          <ul
+            :if={@active_rows != []}
+            id={"schema-rows-#{idx}"}
+            phx-update="stream"
+            class="divide-y divide-ink-panel2"
+          >
             <li
-              :for={ingredient <- schema.matched}
+              :for={{dom_id, row} <- @streams.rows}
+              id={dom_id}
               class="px-4 py-2 flex items-center justify-between gap-3"
             >
               <div class="min-w-0 flex items-center gap-2">
-                <span class="text-parchment text-sm truncate">{ingredient.name}</span>
+                <span class="text-parchment text-sm truncate">{row.name}</span>
                 <span
-                  :if={ingredient.data_type}
+                  :if={row.data_type}
                   class="inline-block px-2 py-0.5 rounded text-xs border bg-ink-panel2 text-parchment-dim border-ink-panel2 shrink-0"
                 >
-                  {ingredient.data_type}
+                  {row.data_type}
                 </span>
                 <span
-                  :if={ingredient.food_class}
+                  :if={row.food_class}
                   class="inline-block px-2 py-0.5 rounded text-xs border bg-ink-panel2 text-parchment-dim border-ink-panel2 shrink-0"
                 >
-                  {ingredient.food_class}
+                  {row.food_class}
                 </span>
               </div>
               <div class="flex items-center gap-2 shrink-0">
                 <form phx-change="select_species">
-                  <input type="hidden" name="ingredient_id" value={ingredient.id} />
-                  <input type="hidden" name="usda_name" value={ingredient.name} />
+                  <input type="hidden" name="ingredient_id" value={row.id} />
+                  <input type="hidden" name="usda_name" value={row.name} />
                   <select
                     name="species_id"
                     class="bg-ink-panel2 text-parchment border border-ink-panel2 rounded text-xs px-2 py-1 max-w-[12rem] focus:outline-none"
@@ -127,14 +133,22 @@
                   </select>
                 </form>
                 <a
-                  href={~p"/professional/ingredients/#{ingredient.id}/show"}
+                  href={~p"/professional/ingredients/#{row.id}/show"}
                   class="text-parchment-dim text-xs hover:text-parchment"
                 >
-                  #{ingredient.id}
+                  #{row.id}
                 </a>
               </div>
             </li>
           </ul>
+          <div
+            :if={@row_limit < length(@active_rows)}
+            class="px-4 py-2 border-t border-ink-panel2"
+          >
+            <button type="button" phx-click="load_more" class="text-parchment text-xs hover:opacity-90">
+              Show more — {@row_limit} of {length(@active_rows)}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -144,18 +158,18 @@
     </div>
   </section>
 
-  <section :if={@unmatched != []} class="space-y-3">
+  <section :if={@unmatched_count > 0} class="space-y-3">
     <h2 class="text-lg font-semibold text-parchment">Unmatched</h2>
 
     <div class="rounded-lg border border-ink-panel2 bg-ink-panel overflow-hidden">
       <button
         type="button"
-        phx-click="toggle"
+        phx-click="open_panel"
         phx-value-key="__unmatched__"
         class="w-full flex items-center gap-3 px-4 py-3 text-left hover:opacity-90"
       >
         <span class="text-parchment-dim text-xs w-4">
-          {if expanded?(@expanded, "__unmatched__"), do: "▾", else: "▸"}
+          {if @active_key == "__unmatched__", do: "▾", else: "▸"}
         </span>
         <div class="flex-1">
           <div class="text-parchment font-medium">No exact schema match</div>
@@ -166,17 +180,23 @@
         <div class="text-parchment text-lg font-semibold shrink-0">{@unmatched_count}</div>
       </button>
 
-      <div :if={expanded?(@expanded, "__unmatched__")} class="border-t border-ink-panel2">
-        <ul class="divide-y divide-ink-panel2">
+      <div :if={@active_key == "__unmatched__"} class="border-t border-ink-panel2">
+        <ul
+          :if={@active_rows != []}
+          id="unmatched-rows"
+          phx-update="stream"
+          class="divide-y divide-ink-panel2"
+        >
           <li
-            :for={entry <- @unmatched}
+            :for={{dom_id, row} <- @streams.rows}
+            id={dom_id}
             class="px-4 py-2 flex items-center justify-between gap-3"
           >
-            <span class="text-parchment text-sm truncate">{entry.ingredient.name}</span>
+            <span class="text-parchment text-sm truncate">{row.name}</span>
             <div class="flex items-center gap-2 shrink-0">
               <form phx-change="select_species">
-                <input type="hidden" name="ingredient_id" value={entry.ingredient.id} />
-                <input type="hidden" name="usda_name" value={entry.ingredient.name} />
+                <input type="hidden" name="ingredient_id" value={row.id} />
+                <input type="hidden" name="usda_name" value={row.name} />
                 <select
                   name="species_id"
                   class="bg-ink-panel2 text-parchment border border-ink-panel2 rounded text-xs px-2 py-1 max-w-[12rem] focus:outline-none"
@@ -188,10 +208,15 @@
                   <option value="__new__">+ New species…</option>
                 </select>
               </form>
-              <span class="text-parchment-dim text-xs">{entry.reason}</span>
+              <span :if={row.reason} class="text-parchment-dim text-xs">{row.reason}</span>
             </div>
           </li>
         </ul>
+        <div :if={@row_limit < length(@active_rows)} class="px-4 py-2 border-t border-ink-panel2">
+          <button type="button" phx-click="load_more" class="text-parchment text-xs hover:opacity-90">
+            Show more — {@row_limit} of {length(@active_rows)}
+          </button>
+        </div>
       </div>
     </div>
   </section>

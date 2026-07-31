@@ -15,14 +15,28 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
   drops out of the schema/unmatched lists and reappears in a second accordion
   grouped under its species.
 
-  The heavy corpus parse runs on mount and explicit "Recompute" only; assigning
-  an ingredient only re-queries the (small) curation tables and re-filters.
+  ## Performance
+
+  The biggest schemas hold >1k ingredients, so the matched-row lists must never
+  be re-rendered wholesale. Two measures keep the page responsive:
+
+    * only **one** schema/unmatched panel is open at a time, and its rows are a
+      LiveView **stream** (`:rows`) — assigning an ingredient is a single
+      `stream_delete` (one-row diff), not a re-render of the whole panel;
+    * the panel renders at most `@page` rows up front, revealing more on demand.
+
+  The heavy corpus parse runs off the mount critical path (async `:load`) and on
+  explicit "Recompute" only; assigning an ingredient never re-parses — it patches
+  the in-memory lists and the small curation tables.
   """
   use MehungryWeb, :live_view
 
   alias Mehungry.Food
   alias Mehungry.Food.FoundementalFoodSpecies
   alias Mehungry.FoodData.Usda.SchemaMatcher
+
+  # Rows rendered per panel before "Show more".
+  @page 100
 
   @impl true
   def mount(_params, _session, socket) do
@@ -35,7 +49,11 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
       |> assign(:pending_assignment, nil)
       |> assign(:species_form, new_species_form())
       |> assign(:loading, true)
+      |> assign(:active_key, nil)
+      |> assign(:active_rows, [])
+      |> assign(:row_limit, @page)
       |> assign_empty_analysis()
+      |> stream(:rows, [])
 
     # The heavy corpus parse must not block the mount (it runs the full USDA
     # parser over every ingredient). Skip it on the dead render entirely, and on
@@ -59,6 +77,7 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
      |> put_flash(:info, "Recomputed from current ingredients")}
   end
 
+  # Species-foods accordions (bottom section) — small, plain expand/collapse.
   @impl true
   def handle_event("toggle", %{"key" => key}, socket) do
     expanded = socket.assigns.expanded
@@ -69,6 +88,34 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
         else: MapSet.put(expanded, key)
 
     {:noreply, assign(socket, :expanded, expanded)}
+  end
+
+  # Schema / unmatched panels — single-active, streamed rows. Re-clicking the
+  # open panel collapses it.
+  def handle_event("open_panel", %{"key" => key}, socket) do
+    if socket.assigns.active_key == key do
+      {:noreply, collapse_panel(socket)}
+    else
+      rows = rows_for(socket.assigns, key)
+
+      {:noreply,
+       socket
+       |> assign(:active_key, key)
+       |> assign(:active_rows, rows)
+       |> assign(:row_limit, @page)
+       |> stream(:rows, Enum.take(rows, @page), reset: true)}
+    end
+  end
+
+  def handle_event("load_more", _params, socket) do
+    %{active_rows: rows, row_limit: limit} = socket.assigns
+
+    socket =
+      rows
+      |> Enum.slice(limit, @page)
+      |> Enum.reduce(socket, fn row, acc -> stream_insert(acc, :rows, row) end)
+
+    {:noreply, assign(socket, :row_limit, limit + @page)}
   end
 
   # Blank selection ("— assign species —") is a no-op.
@@ -124,7 +171,11 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
 
     case Food.assign_foundemental_ingredient(species_id, ingredient_id, usda_name) do
       {:ok, _} ->
-        {:noreply, socket |> refresh_curation() |> put_flash(:info, "Assigned to species")}
+        {:noreply,
+         socket
+         |> after_assign_data(ingredient_id)
+         |> stream_delete(:rows, %{id: ingredient_id})
+         |> put_flash(:info, "Assigned to species")}
 
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Could not assign ingredient to species")}
@@ -141,14 +192,26 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
   def handle_event("create_species", %{"foundemental_food_species" => params}, socket) do
     case Food.create_foundemental_species(params) do
       {:ok, species} ->
-        socket = maybe_assign_pending(socket, species)
+        pending = socket.assigns.pending_assignment
+        maybe_assign_pending(socket, species)
 
-        {:noreply,
-         socket
-         |> assign(:show_species_modal, false)
-         |> assign(:pending_assignment, nil)
-         |> refresh_curation()
-         |> put_flash(:info, "Created species \"#{species.name}\"")}
+        socket =
+          socket
+          |> assign(:show_species_modal, false)
+          |> assign(:pending_assignment, nil)
+
+        socket =
+          case pending do
+            %{ingredient_id: ingredient_id} ->
+              # New species now exists — re-stream the visible rows so their
+              # dropdowns include it, dropping the just-assigned one.
+              socket |> after_assign_data(ingredient_id) |> restream_active()
+
+            _ ->
+              reload_species(socket)
+          end
+
+        {:noreply, put_flash(socket, :info, "Created species \"#{species.name}\"")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :species_form, to_form(changeset))}
@@ -167,8 +230,7 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
   # Heavy: parses the whole corpus (full USDA parser over every ingredient), so
   # it is only ever run off the mount critical path — from the async :load
   # message and explicit Recompute, never on the dead render. Layers the (cheap)
-  # curation filter on top. Assignment events never call this; they only re-run
-  # refresh_curation.
+  # curation filter on top and collapses any open panel.
   defp load(socket) do
     analysis = SchemaMatcher.analyze()
 
@@ -179,6 +241,7 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     |> assign(:total_ingredients, analysis.total_ingredients)
     |> assign(:schema_count, analysis.schema_count)
     |> refresh_curation()
+    |> collapse_panel()
   end
 
   # Safe empty defaults so the template renders during the "Computing…" window
@@ -199,7 +262,8 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
   end
 
   # Cheap: re-reads the curation tables and drops already-assigned ingredients
-  # from the schema/unmatched lists, then rebuilds the species accordion.
+  # from the schema/unmatched lists, then rebuilds the species accordion. Called
+  # only from load/1 — assignment events patch the lists in place instead.
   defp refresh_curation(socket) do
     assigned = Food.assigned_foundemental_ingredient_ids()
 
@@ -219,6 +283,79 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     |> assign(:unmatched, unmatched)
     |> assign(:matched_count, matched_count)
     |> assign(:unmatched_count, length(unmatched))
+    |> reload_species()
+  end
+
+  # ── Curation panel (streamed rows) ────────────────────────────────────────────
+
+  defp collapse_panel(socket) do
+    socket
+    |> assign(:active_key, nil)
+    |> assign(:active_rows, [])
+    |> assign(:row_limit, @page)
+    |> stream(:rows, [], reset: true)
+  end
+
+  defp restream_active(socket) do
+    stream(socket, :rows, Enum.take(socket.assigns.active_rows, socket.assigns.row_limit),
+      reset: true
+    )
+  end
+
+  # Normalized, stream-friendly rows (uniform shape + an :id for the dom id).
+  defp rows_for(assigns, "__unmatched__"),
+    do: Enum.map(assigns.unmatched, &normalize_unmatched_row/1)
+
+  defp rows_for(assigns, key) do
+    case Enum.find(assigns.schemas, &(&1.key == key)) do
+      nil -> []
+      schema -> Enum.map(schema.matched, &normalize_matched_row/1)
+    end
+  end
+
+  defp normalize_matched_row(ing) do
+    %{id: ing.id, name: ing.name, data_type: ing.data_type, food_class: ing.food_class, reason: nil}
+  end
+
+  defp normalize_unmatched_row(%{ingredient: ing, reason: reason}) do
+    %{
+      id: ing.id,
+      name: ing.name,
+      data_type: ing.data_type,
+      food_class: ing.food_class,
+      reason: reason
+    }
+  end
+
+  # Patch the in-memory lists after one ingredient is assigned — decrements its
+  # schema's count, drops it from unmatched/active_rows, and reloads the (small)
+  # species tables. Re-renders the 92 headers only; the streamed rows are patched
+  # separately by the caller (stream_delete / restream).
+  defp after_assign_data(socket, ingredient_id) do
+    schemas =
+      for schema <- socket.assigns.schemas do
+        if Enum.any?(schema.matched, &(&1.id == ingredient_id)) do
+          matched = Enum.reject(schema.matched, &(&1.id == ingredient_id))
+          %{schema | matched: matched, matched_count: length(matched)}
+        else
+          schema
+        end
+      end
+
+    unmatched = Enum.reject(socket.assigns.unmatched, &(&1.ingredient.id == ingredient_id))
+    active_rows = Enum.reject(socket.assigns.active_rows, &(&1.id == ingredient_id))
+
+    socket
+    |> assign(:schemas, schemas)
+    |> assign(:unmatched, unmatched)
+    |> assign(:active_rows, active_rows)
+    |> assign(:matched_count, schemas |> Enum.map(& &1.matched_count) |> Enum.sum())
+    |> assign(:unmatched_count, length(unmatched))
+    |> reload_species()
+  end
+
+  defp reload_species(socket) do
+    socket
     |> assign(:species, Food.list_foundemental_species())
     |> assign(:species_with_foods, Food.list_foundemental_species_with_foods())
   end
