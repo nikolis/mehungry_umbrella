@@ -291,3 +291,33 @@
     </.simple_form>
   </div>
 </.modal>
+
+<.modal
+  :if={@show_assign_modal}
+  id="assign-modal"
+  show={true}
+  on_cancel={JS.push("close_assign_modal")}
+>
+  <div class="space-y-4">
+    <div>
+      <h3 class="text-lg font-semibold text-parchment">Assign to species</h3>
+      <p :if={@pending_assignment} class="text-parchment-dim text-sm mt-1">
+        “{@pending_assignment.usda_name}” will be assigned to
+        “{@pending_assignment.species_label}”.
+      </p>
+    </div>
+
+    <div class="flex justify-end gap-2">
+      <button
+        type="button"
+        phx-click="close_assign_modal"
+        class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90"
+      >
+        Cancel
+      </button>
+      <.button phx-click="confirm_assignment" phx-disable-with="Assigning...">
+        Assign
+      </.button>
+    </div>
+  </div>
+</.modal>
