@@ -16,10 +16,18 @@
     <button
       type="button"
       phx-click="recompute"
-      class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90"
+      disabled={@loading}
+      class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90 disabled:opacity-50"
     >
       Recompute
     </button>
+  </div>
+
+  <div
+    :if={@loading}
+    class="rounded-lg border border-ink-panel2 bg-ink-panel p-4 text-parchment-dim text-sm"
+  >
+    Computing schema analysis from the ingredient corpus…
   </div>
 
   <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -273,7 +281,6 @@
     <.simple_form
       for={@species_form}
       id="species-form"
-      phx-change="validate_species"
       phx-submit="create_species"
     >
       <.input field={@species_form[:name]} type="text" label="Name" />
