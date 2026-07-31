@@ -154,6 +154,7 @@ defmodule MehungryWeb.LayoutView do
           icon="hero-rectangle-stack"
           label="Taxonomy"
         />
+        <.admin_link href="/professional/science" icon="hero-sparkles" label="Science" />
         <.admin_link href="/professional/literature" icon="hero-document-text" label="Literature" />
         <.admin_link
           href="/professional/compound-candidates"
@@ -164,6 +165,16 @@ defmodule MehungryWeb.LayoutView do
           href="/professional/ingredients/reconciliation"
           icon="hero-arrow-path"
           label="Reconcile"
+        />
+        <.admin_link
+          href="/professional/schema-discovery"
+          icon="hero-table-cells"
+          label="Schema"
+        />
+        <.admin_link
+          href="/professional/usda-schema"
+          icon="hero-squares-2x2"
+          label="USDA Schema"
         />
       </div>
 

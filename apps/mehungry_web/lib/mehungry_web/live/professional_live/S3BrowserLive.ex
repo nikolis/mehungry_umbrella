@@ -122,7 +122,9 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
       <%= if @bucket_name != "" do %>
         <%= if not @loading do %>
           <div class="mb-2 text-sm text-gray-600">
-            {length(files(@objects, @prefix))} file(s)<%= if folders(@objects, @prefix) != [] do %>, {length(folders(@objects, @prefix))} folder(s)<% end %>
+            {length(files(@objects, @prefix))} file(s)<%= if folders(@objects, @prefix) != [] do %>
+              , {length(folders(@objects, @prefix))} folder(s)
+            <% end %>
           </div>
         <% end %>
         <div class="bg-white shadow overflow-hidden border-b border-gray-200 rounded-lg">
@@ -303,7 +305,10 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   @impl true
   def handle_event("load-ingredients", %{"bucket_name" => bucket_name}, socket) do
     prefix = socket.assigns.prefix
-    Logger.info("Enqueue seed-file imports from bucket #{bucket_name} (prefix: #{inspect(prefix)})")
+
+    Logger.info(
+      "Enqueue seed-file imports from bucket #{bucket_name} (prefix: #{inspect(prefix)})"
+    )
 
     socket =
       socket
@@ -515,8 +520,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   end
 
   def handle_async({:load_ingredients, _bucket, _prefix}, {:exit, reason}, socket) do
-    {:noreply,
-     assign(socket, error: "Import enqueue failed: #{inspect(reason)}", loading: false)}
+    {:noreply, assign(socket, error: "Import enqueue failed: #{inspect(reason)}", loading: false)}
   end
 
   # Subscribes to a bucket's seed-status topic exactly once, swapping the
@@ -613,6 +617,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   defp seed_status_label(nil), do: "—"
   defp seed_status_label(%{status: "pending"}), do: "Pending"
   defp seed_status_label(%{status: "processing"}), do: "Processing…"
+
   defp seed_status_label(%{status: "completed", ingredient_count: count}),
     do: "Completed (#{count || 0})"
 

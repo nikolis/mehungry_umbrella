@@ -69,7 +69,9 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
      |> assign(:page, 1)
      |> assign(:run, run)
      |> assign(:progress, progress_for(run))
-     |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0), reset: true)}
+     |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0),
+       reset: true
+     )}
   end
 
   # Live run broadcasts drive ONLY the progress bar; the review stream is left
@@ -96,7 +98,10 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
   defp run_label(nil), do: "Idle"
   defp run_label(%{status: "pending"}), do: "Queued…"
   defp run_label(%{status: "processing"}), do: "Deriving…"
-  defp run_label(%{status: "completed"} = r), do: "Completed · #{r.promoted_count || 0} auto-promoted"
+
+  defp run_label(%{status: "completed"} = r),
+    do: "Completed · #{r.promoted_count || 0} auto-promoted"
+
   defp run_label(%{status: "failed"}), do: "Failed"
   defp run_label(_), do: "Idle"
 

@@ -195,6 +195,31 @@ defmodule Mehungry.Food.IdentityResolution do
     )
   end
 
+  # Attempt outcomes that produced no identity — an fdc-backed ingredient was
+  # processed but yielded nothing to review. `matched` is excluded (it becomes a
+  # candidate in `list_pending_verification/1`).
+  @skipped_outcomes ~w(no_scientific_name error)
+
+  @doc """
+  Resolution attempts that produced **no** identity — the "skipped" ingredients —
+  most recently attempted first, with `:ingredient` preloaded. Read-only review;
+  `outcome` says which reason and `detail` carries the specifics.
+  """
+  def list_skipped_resolutions(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 25)
+    offset = Keyword.get(opts, :offset, 0)
+
+    Repo.all(
+      from(a in IngredientIdentityResolutionAttempt,
+        where: a.outcome in @skipped_outcomes,
+        order_by: [desc: a.attempted_at, desc: a.id],
+        preload: [:ingredient],
+        limit: ^limit,
+        offset: ^offset
+      )
+    )
+  end
+
   # ── Resolution ledger + progress ─────────────────────────────────────────
 
   @doc "Upserts the per-ingredient attempt row for `source` (defaults to usda_fdc)."

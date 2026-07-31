@@ -174,7 +174,8 @@ defmodule Mehungry.Food.EvidenceAggregationTest do
 
       Enum.each([700.0, 800.0], &record(ctx, &1))
 
-      {:ok, study} = Literature.upsert_study(%{pmid: 99_001, title: "lectin", publication_date: "2024"})
+      {:ok, study} =
+        Literature.upsert_study(%{pmid: 99_001, title: "lectin", publication_date: "2024"})
 
       {:ok, _} =
         Food.create_measurement(%{

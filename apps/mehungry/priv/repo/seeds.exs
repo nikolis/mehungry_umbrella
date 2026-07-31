@@ -20,6 +20,8 @@ require Logger
 
 Mehungry.Food.TaxonomySeeder.seed()
 
+Mehungry.Food.ParserVocabularySeeder.seed()
+
 """
 {:ok, gram} = Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnit{name: "gram"})
 {:ok, kg} = Mehungry.Repo.insert(%Mehungry.Food.MeasurementUnit{name: "kg"})

@@ -7,7 +7,9 @@
 
   <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
     <div class="flex flex-wrap items-center gap-2">
-      <h2 class="text-lg font-medium text-parchment mr-2">Paper discovery (Entrez/PubMed crawl)</h2>
+      <h2 class="text-lg font-medium text-parchment mr-2">
+        Paper discovery (Entrez/PubMed crawl)
+      </h2>
 
       <button
         type="button"
@@ -75,12 +77,16 @@
             @annotation_progress
           )}%)
         </span>
-        <span class={"font-medium #{run_class(@annotation_run)}"} title={run_error(@annotation_run)}>
+        <span
+          class={"font-medium #{run_class(@annotation_run)}"}
+          title={run_error(@annotation_run)}
+        >
           {run_label(@annotation_run)}
         </span>
       </div>
       <div class="h-2 w-full rounded bg-ink-panel2 overflow-hidden">
-        <div class="h-full bg-basil rounded" style={"width: #{percent(@annotation_progress)}%"}></div>
+        <div class="h-full bg-basil rounded" style={"width: #{percent(@annotation_progress)}%"}>
+        </div>
       </div>
     </div>
   </section>

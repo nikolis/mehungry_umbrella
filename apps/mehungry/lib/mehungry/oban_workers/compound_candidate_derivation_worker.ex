@@ -32,6 +32,7 @@ defmodule Mehungry.ObanWorkers.CompoundCandidateDerivationWorker do
     case CompoundCandidates.derive_candidates_batch(offset, @batch_size) do
       {0, _promoted} ->
         Logger.info("CompoundCandidateDerivationWorker: all evidence pairs derived")
+
         CandidateDerivationRuns.mark_completed(
           run_id,
           CompoundCandidates.candidate_derivation_progress()

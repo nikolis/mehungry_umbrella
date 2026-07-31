@@ -42,7 +42,9 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
 
   defp measurement(ingredient, compound, value) do
     pmid = System.unique_integer([:positive])
-    {:ok, study} = Literature.upsert_study(%{pmid: pmid, title: "m#{pmid}", publication_date: "2024"})
+
+    {:ok, study} =
+      Literature.upsert_study(%{pmid: pmid, title: "m#{pmid}", publication_date: "2024"})
 
     {:ok, _} =
       Food.create_measurement(%{
@@ -153,12 +155,16 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
 
     test "re-derivation refreshes evidence but never un-reviews a decided candidate", ctx do
       cooccur(ctx.spinach, ctx.oxalate)
-      {:ok, %{candidate: candidate}} = CompoundCandidates.derive_candidate(ctx.spinach.id, ctx.oxalate.id)
+
+      {:ok, %{candidate: candidate}} =
+        CompoundCandidates.derive_candidate(ctx.spinach.id, ctx.oxalate.id)
+
       {:ok, rejected} = CompoundCandidates.reject_candidate(candidate)
       assert rejected.status == "rejected"
 
       # More evidence arrives; re-derive.
       for _ <- 1..5, do: cooccur(ctx.spinach, ctx.oxalate)
+
       {:ok, %{candidate: re_derived, promoted: promoted}} =
         CompoundCandidates.derive_candidate(ctx.spinach.id, ctx.oxalate.id)
 
@@ -172,7 +178,10 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
   describe "manual review" do
     test "promote_candidate writes the fact, is idempotent, and marks promoted", ctx do
       cooccur(ctx.spinach, ctx.oxalate)
-      {:ok, %{candidate: candidate}} = CompoundCandidates.derive_candidate(ctx.spinach.id, ctx.oxalate.id)
+
+      {:ok, %{candidate: candidate}} =
+        CompoundCandidates.derive_candidate(ctx.spinach.id, ctx.oxalate.id)
+
       assert candidate.status == "pending"
 
       {:ok, promoted} = CompoundCandidates.promote_candidate(candidate)
@@ -186,7 +195,9 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
 
     test "reject_candidate leaves the queue and writes no fact", ctx do
       cooccur(ctx.spinach, ctx.oxalate)
-      {:ok, %{candidate: candidate}} = CompoundCandidates.derive_candidate(ctx.spinach.id, ctx.oxalate.id)
+
+      {:ok, %{candidate: candidate}} =
+        CompoundCandidates.derive_candidate(ctx.spinach.id, ctx.oxalate.id)
 
       {:ok, rejected} = CompoundCandidates.reject_candidate(candidate)
       assert rejected.status == "rejected"
@@ -215,7 +226,9 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       cooccur(ctx.spinach, weak)
 
       # Oxalate would auto-promote; derive with a high threshold so both stay pending.
-      {:ok, _} = CompoundCandidates.derive_candidate(ctx.spinach.id, ctx.oxalate.id, threshold: 2.0)
+      {:ok, _} =
+        CompoundCandidates.derive_candidate(ctx.spinach.id, ctx.oxalate.id, threshold: 2.0)
+
       {:ok, _} = CompoundCandidates.derive_candidate(ctx.spinach.id, weak.id, threshold: 2.0)
 
       [first, second] = CompoundCandidates.list_pending_candidates()

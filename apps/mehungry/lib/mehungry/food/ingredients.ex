@@ -240,119 +240,129 @@ defmodule Mehungry.Food.Ingredients do
         fn ->
           Repo.query!("SET LOCAL statement_timeout = 0")
 
-        del.(
-          "comment_answer_votes",
-          from(cav in Mehungry.Posts.CommentAnswerVote,
-            where: cav.comment_answer_id in subquery(comment_answer_ids_q)
-          )
-        )
-
-        del.(
-          "comment_votes",
-          from(cv in Mehungry.Posts.CommentVote, where: cv.comment_id in subquery(comment_ids_q))
-        )
-
-        del.(
-          "comment_answers",
-          from(ca in Mehungry.Posts.CommentAnswer, where: ca.comment_id in subquery(comment_ids_q))
-        )
-
-        del.(
-          "post_upvotes",
-          from(pv in Mehungry.Posts.PostUpvote, where: pv.post_id in subquery(post_ids_q))
-        )
-
-        del.(
-          "post_downvotes",
-          from(pv in Mehungry.Posts.PostDownvote, where: pv.post_id in subquery(post_ids_q))
-        )
-
-        del.(
-          "likes",
-          from(l in Mehungry.Food.Like, where: l.recipe_id in subquery(recipe_ids_q))
-        )
-
-        del.(
-          "ratings",
-          from(r in "ratings", where: r.recipe_id in subquery(recipe_ids_q))
-        )
-
-        del.(
-          "meals",
-          from(m in Mehungry.Plans.Meal, where: m.recipe_id in subquery(recipe_ids_q))
-        )
-
-        del.(
-          "basket_items",
-          from(bi in Mehungry.Inventory.BasketItem, where: bi.recipe_id in subquery(recipe_ids_q))
-        )
-
-        del.(
-          "annotations",
-          from(a in Mehungry.Food.Annotation, where: a.recipe_id in subquery(recipe_ids_q))
-        )
-
-        del.(
-          "ai_bot_recipes",
-          from(ab in Mehungry.AI.Bot.AiBotRecipe, where: ab.recipe_id in subquery(recipe_ids_q))
-        )
-
-        del.(
-          "recipe_ingredients",
-          from(ri in RecipeIngredient, where: ri.recipe_id in subquery(recipe_ids_q))
-        )
-
-        del.(
-          "basket_ingredients",
-          from(bi in Mehungry.Inventory.BasketIngredient,
-            where: bi.ingredient_id in subquery(ingredient_ids_q)
-          )
-        )
-
-        del.(
-          "user_ingredient_rules",
-          from(uir in Mehungry.Accounts.UserIngredientRule,
-            where: uir.ingredient_id in subquery(ingredient_ids_q)
-          )
-        )
-
-        del.(
-          "ingredient_user_meals",
-          from(hium in Mehungry.History.IngredientUserMeal,
-            where: hium.ingredient_id in subquery(ingredient_ids_q)
-          )
-        )
-
-        del.(
-          "ingredient_portions",
-          from(ip in IngredientPortion, where: ip.ingredient_id in subquery(ingredient_ids_q))
-        )
-
-        del.(
-          "ingredient_nutrients",
-          from(int in IngredientNutrient, where: int.ingredient_id in subquery(ingredient_ids_q))
-        )
-
-        del.(
-          "ingredient_translations",
-          from(it in IngredientTranslation, where: it.ingredient_id in subquery(ingredient_ids_q))
-        )
-
-        recipe_count =
-          del.("recipes", from(r in Recipe, where: r.id in subquery(recipe_ids_q)))
-
-        ingredient_count =
           del.(
-            "ingredients",
-            from(i in Ingredient,
-              where: i.food_class == "Branded" or i.data_type == "Branded"
+            "comment_answer_votes",
+            from(cav in Mehungry.Posts.CommentAnswerVote,
+              where: cav.comment_answer_id in subquery(comment_answer_ids_q)
             )
           )
 
-        {ingredient_count, recipe_count}
-      end,
-      timeout: tx_timeout
-    )
+          del.(
+            "comment_votes",
+            from(cv in Mehungry.Posts.CommentVote,
+              where: cv.comment_id in subquery(comment_ids_q)
+            )
+          )
+
+          del.(
+            "comment_answers",
+            from(ca in Mehungry.Posts.CommentAnswer,
+              where: ca.comment_id in subquery(comment_ids_q)
+            )
+          )
+
+          del.(
+            "post_upvotes",
+            from(pv in Mehungry.Posts.PostUpvote, where: pv.post_id in subquery(post_ids_q))
+          )
+
+          del.(
+            "post_downvotes",
+            from(pv in Mehungry.Posts.PostDownvote, where: pv.post_id in subquery(post_ids_q))
+          )
+
+          del.(
+            "likes",
+            from(l in Mehungry.Food.Like, where: l.recipe_id in subquery(recipe_ids_q))
+          )
+
+          del.(
+            "ratings",
+            from(r in "ratings", where: r.recipe_id in subquery(recipe_ids_q))
+          )
+
+          del.(
+            "meals",
+            from(m in Mehungry.Plans.Meal, where: m.recipe_id in subquery(recipe_ids_q))
+          )
+
+          del.(
+            "basket_items",
+            from(bi in Mehungry.Inventory.BasketItem,
+              where: bi.recipe_id in subquery(recipe_ids_q)
+            )
+          )
+
+          del.(
+            "annotations",
+            from(a in Mehungry.Food.Annotation, where: a.recipe_id in subquery(recipe_ids_q))
+          )
+
+          del.(
+            "ai_bot_recipes",
+            from(ab in Mehungry.AI.Bot.AiBotRecipe, where: ab.recipe_id in subquery(recipe_ids_q))
+          )
+
+          del.(
+            "recipe_ingredients",
+            from(ri in RecipeIngredient, where: ri.recipe_id in subquery(recipe_ids_q))
+          )
+
+          del.(
+            "basket_ingredients",
+            from(bi in Mehungry.Inventory.BasketIngredient,
+              where: bi.ingredient_id in subquery(ingredient_ids_q)
+            )
+          )
+
+          del.(
+            "user_ingredient_rules",
+            from(uir in Mehungry.Accounts.UserIngredientRule,
+              where: uir.ingredient_id in subquery(ingredient_ids_q)
+            )
+          )
+
+          del.(
+            "ingredient_user_meals",
+            from(hium in Mehungry.History.IngredientUserMeal,
+              where: hium.ingredient_id in subquery(ingredient_ids_q)
+            )
+          )
+
+          del.(
+            "ingredient_portions",
+            from(ip in IngredientPortion, where: ip.ingredient_id in subquery(ingredient_ids_q))
+          )
+
+          del.(
+            "ingredient_nutrients",
+            from(int in IngredientNutrient,
+              where: int.ingredient_id in subquery(ingredient_ids_q)
+            )
+          )
+
+          del.(
+            "ingredient_translations",
+            from(it in IngredientTranslation,
+              where: it.ingredient_id in subquery(ingredient_ids_q)
+            )
+          )
+
+          recipe_count =
+            del.("recipes", from(r in Recipe, where: r.id in subquery(recipe_ids_q)))
+
+          ingredient_count =
+            del.(
+              "ingredients",
+              from(i in Ingredient,
+                where: i.food_class == "Branded" or i.data_type == "Branded"
+              )
+            )
+
+          {ingredient_count, recipe_count}
+        end,
+        timeout: tx_timeout
+      )
 
     case result do
       {:ok, {ingredient_count, recipe_count}} ->

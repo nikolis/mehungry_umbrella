@@ -48,6 +48,12 @@ defmodule MehungryWeb.Router do
     plug :accepts, ["json"]
   end
 
+  scope "/api", MehungryWeb.Api do
+    pipe_through :api
+
+    post "/parser/parse", ParserController, :parse
+  end
+
   scope "/auth", MehungryWeb do
     pipe_through :browser
 
@@ -79,9 +85,17 @@ defmodule MehungryWeb.Router do
 
       live "/taxonomy/review", ProfessionalLive.TaxonomyReview, :index
 
+      live "/science", ProfessionalLive.SciencePipeline, :index
+      live "/science/identity-review", ProfessionalLive.SciencePipeline, :identity_review
+      live "/science/parse-review", ProfessionalLive.SciencePipeline, :parse_review
+
       live "/literature", ProfessionalLive.LiteratureRuns, :index
 
       live "/compound-candidates", ProfessionalLive.CompoundCandidates, :index
+
+      live "/schema-discovery", ProfessionalLive.SchemaDiscovery, :index
+
+      live "/usda-schema", ProfessionalLive.UsdaSchema, :index
 
       live "/languages", Professional.LanguageLive.Index, :index
       live "/languages/new", Professional.LanguageLive.Index, :new

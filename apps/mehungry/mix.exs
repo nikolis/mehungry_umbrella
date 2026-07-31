@@ -66,7 +66,15 @@ defmodule Mehungry.MixProject do
       {:httpoison, "~> 2.2"},
       {:jason, "~> 1.2"},
       {:cachex, "~> 3.4"},
-      {:pgvector, "~> 0.3"}
+      {:pgvector, "~> 0.3"},
+      # Local, on-CPU sentence embeddings for the USDA parser's semantic
+      # candidate-suggestion layer (Mehungry.Food.Parser.Embedder). EXLA is the
+      # CPU compiler for Nx; the model + serving are only loaded when
+      # `:parser_embeddings_enabled` is true (see Mehungry.Application), so the
+      # web/test tasks never pay the memory cost.
+      {:nx, "~> 0.9"},
+      {:exla, "~> 0.9"},
+      {:bumblebee, "~> 0.6"}
     ]
   end
 
