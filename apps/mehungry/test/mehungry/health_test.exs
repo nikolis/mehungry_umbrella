@@ -185,7 +185,10 @@ defmodule Mehungry.HealthTest do
       {:ok, purine} = Food.upsert_compound(%{name: "Purine", compound_type: "purine"})
 
       {:ok, _} =
-        Health.add_recommendation(cond.id, purine.id, %{recommendation: "limit", source: "guideline"})
+        Health.add_recommendation(cond.id, purine.id, %{
+          recommendation: "limit",
+          source: "guideline"
+        })
 
       liver = ingredient_fixture(%{name: "liver"})
 

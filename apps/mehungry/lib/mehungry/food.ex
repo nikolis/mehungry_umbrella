@@ -30,6 +30,8 @@ defmodule Mehungry.Food do
     Engagement,
     Enrichment,
     EvidenceAggregation,
+    FoodParsingRuns,
+    FoundementalFoods,
     IdentityResolution,
     IdentityResolutionRuns,
     IngredientQueries,
@@ -37,6 +39,9 @@ defmodule Mehungry.Food do
     Localization,
     Measurements,
     Nutrients,
+    ParsedFoods,
+    ParserSuggestions,
+    ParserVocabulary,
     Recipes,
     Taxonomies,
     TaxonomyClassificationRuns
@@ -268,7 +273,35 @@ defmodule Mehungry.Food do
   defdelegate verify_identity(identity_id, user_id \\ nil), to: IdentityResolution
   defdelegate reject_identity(identity_id, user_id \\ nil), to: IdentityResolution
   defdelegate list_pending_verification(opts \\ []), to: IdentityResolution
+  defdelegate list_skipped_resolutions(opts \\ []), to: IdentityResolution
   defdelegate latest_identity_resolution_run(), to: IdentityResolutionRuns, as: :latest_run
+
+  # Description parsing (deterministic USDA parser — Food.ParsedFoods)
+  defdelegate enqueue_food_parsing(), to: ParsedFoods
+  defdelegate parse_ingredient(ingredient), to: ParsedFoods
+  defdelegate parsing_progress(), to: ParsedFoods
+  defdelegate get_parsed_food!(id), to: ParsedFoods
+  defdelegate list_pending_parse_review(opts \\ []), to: ParsedFoods
+  defdelegate list_skipped_parses(opts \\ []), to: ParsedFoods
+  defdelegate update_parsed_candidate(id, attrs), to: ParsedFoods
+  defdelegate verify_parsed_food(id, user_id \\ nil), to: ParsedFoods
+  defdelegate reject_parsed_food(id, user_id \\ nil), to: ParsedFoods
+
+  # Semantic parser suggestions (review-gated, over low-confidence parses —
+  # Food.ParserSuggestions)
+  defdelegate list_pending_parser_suggestions(opts \\ []),
+    to: ParserSuggestions,
+    as: :list_pending
+
+  defdelegate accept_parser_suggestion(id, user_id \\ nil), to: ParserSuggestions, as: :accept
+  defdelegate reject_parser_suggestion(id, user_id \\ nil), to: ParserSuggestions, as: :reject
+
+  defdelegate generate_parser_suggestions(after_id \\ 0, opts \\ []),
+    to: ParserSuggestions,
+    as: :generate_batch
+
+  defdelegate latest_food_parsing_run(), to: FoodParsingRuns, as: :latest_run
+  defdelegate parser_vocabulary_dump(), to: ParserVocabulary, as: :dump
 
   # ── Compounds (scientific facts) ───────────────────────────────────────
 
@@ -321,4 +354,15 @@ defmodule Mehungry.Food do
   defdelegate list_candidates_for_ingredient(ingredient_id), to: CompoundCandidates
   defdelegate get_candidate!(id), to: CompoundCandidates
   defdelegate candidate_derivation_progress(), to: CompoundCandidates
+
+  # ── Foundemental foods ─────────────────────────────────────────────────────
+
+  defdelegate list_foundemental_species(), to: FoundementalFoods, as: :list_species
+  defdelegate list_foundemental_species_with_foods(), to: FoundementalFoods, as: :list_species_with_foods
+  defdelegate get_foundemental_species!(id), to: FoundementalFoods, as: :get_species!
+  defdelegate change_foundemental_species(species, attrs \\ %{}), to: FoundementalFoods, as: :change_species
+  defdelegate create_foundemental_species(attrs), to: FoundementalFoods, as: :create_species
+  defdelegate create_foundemental_food(attrs), to: FoundementalFoods
+  defdelegate assign_foundemental_ingredient(species_id, ingredient_id, usda_name), to: FoundementalFoods, as: :assign_ingredient
+  defdelegate assigned_foundemental_ingredient_ids(), to: FoundementalFoods, as: :assigned_ingredient_ids
 end

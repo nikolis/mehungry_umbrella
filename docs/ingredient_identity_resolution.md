@@ -193,9 +193,9 @@ Mehungry.Food.latest_identity_resolution_run() #=> %IngredientIdentityResolution
 ```
 
 The run broadcasts `{:identity_resolution_run, run}` on `Mehungry.PubSub` topic
-`"identity_resolution_runs"` — an admin LiveView can subscribe and render a live
-progress bar exactly like `taxonomy_review.ex` does for classification runs. (Building
-that LiveView is a follow-on; the data + broadcasts are in place.)
+`"identity_resolution_runs"`. The admin **Science Pipeline** LiveView subscribes and
+renders a live progress bar for this run as its stage 0 — `/professional/science` →
+**Run resolution** (see `docs/scientific_pipeline.md` and §5.1 below).
 
 ---
 
@@ -204,10 +204,11 @@ that LiveView is a follow-on; the data + broadcasts are in place.)
 Candidates start as `status: "candidate"`. A reviewer promotes one:
 
 ```elixir
-Mehungry.Food.list_pending_verification(limit: 50)      # lowest-confidence first
+Mehungry.Food.list_pending_verification(limit: 50)      # candidates, lowest-confidence first
 Mehungry.Food.verify_identity(identity_id, user_id)     # → verified
 Mehungry.Food.reject_identity(identity_id, user_id)     # → rejected (kept)
 Mehungry.Food.verified_identity(ingredient_id)          # the current verified one, or nil
+Mehungry.Food.list_skipped_resolutions(limit: 25)       # attempts that yielded no identity
 ```
 
 `verify_identity/2` runs in a transaction: any currently-`verified` identity for the
@@ -215,6 +216,23 @@ same ingredient is first marked **`superseded`** and chained via `superseded_by_
 to the new one (never deleted), then the chosen identity becomes `verified`. This
 preserves the full history of what was verified and when, and satisfies the
 one-verified-per-ingredient partial unique index.
+
+### 5.1 Reviewing outcomes in the admin UI
+
+`/professional/science/identity-review` (the **Identity review** tab of the Science
+Pipeline page — `MehungryWeb.ProfessionalLive.IdentityReviewComponent`) renders two
+lists:
+
+- **Identity verification** — the `list_pending_verification/1` queue with
+  **Verify** / **Reject** buttons wired to `verify_identity/2` / `reject_identity/1`.
+  Verifying is what promotes a candidate to `verified` — the status the literature
+  crawler reads — so this queue gates the rest of the pipeline.
+- **Skipped (no identity)** — a **read-only** list of fdc-backed ingredients that
+  were processed but produced no identity, and *why*. It is backed by
+  `list_skipped_resolutions/1`, which reads the attempt ledger for the non-match
+  outcomes: `no_scientific_name` (shown as "No scientific name in USDA data") and
+  `error` (shown with the reason from the attempt's `detail`). Nothing to action —
+  it exists so an operator can see what fell out and why.
 
 ---
 
@@ -241,7 +259,7 @@ config :mehungry, :scientific_id_client, Mehungry.Food.IdentityResolution.NullSc
 
 | Module | File | Role |
 |---|---|---|
-| `Food.IdentityResolution` | `food/identity_resolution.ex` | Context: writes, queries, verification, orchestration, progress. |
+| `Food.IdentityResolution` | `food/identity_resolution.ex` | Context: writes, queries, verification (incl. `list_skipped_resolutions/1`), orchestration, progress. |
 | `Food.IdentityResolutionRuns` | `food/identity_resolution_runs.ex` | Run lifecycle + PubSub progress. |
 | `Food.IngredientScientificIdentity` | `food/schemas/ingredient_scientific_identity.ex` | Candidate identity schema. |
 | `Food.IngredientIdentitySynonym` | `food/schemas/ingredient_identity_synonym.ex` | Synonym schema. |
@@ -252,9 +270,11 @@ config :mehungry, :scientific_id_client, Mehungry.Food.IdentityResolution.NullSc
 | `Food.IdentityResolution.ExternalScientificIdClient` | `.../external_scientific_id_client.ex` | Live Wikidata + OLS impl (default). |
 | `Food.IdentityResolution.NullScientificIdClient` | `.../null_scientific_id_client.ex` | No-op impl / stub base. |
 | `ObanWorkers.IngredientIdentityResolutionWorker` | `oban_workers/ingredient_identity_resolution_worker.ex` | Run chain worker. |
+| `MehungryWeb.ProfessionalLive.SciencePipeline` | `mehungry_web/.../professional_live/science_pipeline.ex` | Admin panel; stage 0 = **Run resolution** + progress; hosts the review tab. |
+| `MehungryWeb.ProfessionalLive.IdentityReviewComponent` | `mehungry_web/.../professional_live/identity_review_component.ex` | Verify/reject queue + read-only skipped list. |
 
-All public functions are also exposed via the `Mehungry.Food` facade (per the facade
-convention in `CLAUDE.md`).
+All public context functions are also exposed via the `Mehungry.Food` facade (per the
+facade convention in `CLAUDE.md`).
 
 ---
 
@@ -312,7 +332,10 @@ core guarantees in §8; they are tracked here so the doc and code stay honest.
   `scientificName`* path. This is harmless in the batch pipeline because
   `list_unresolved_ingredients/1` filters to `fdc_id > 0` (the guard clause is
   unreachable there), but a direct facade call on a non-FDC ingredient reports
-  `:no_scientific_name` with no ledger row.
+  `:no_scientific_name` with no ledger row. A consequence: the **Skipped (no
+  identity)** review (§5.1, `list_skipped_resolutions/1`) reads the attempt ledger,
+  so it lists only *attempted* fdc-backed ingredients — non-FDC ingredients (never
+  attempted) never appear there.
 
 - **`notes` column is undocumented in §2.** The schema, migration, and
   `insert_resolution/3` (`notes: usda[:description]`) all carry a `notes` field; the

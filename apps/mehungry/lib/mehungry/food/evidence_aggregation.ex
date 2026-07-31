@@ -245,7 +245,16 @@ defmodule Mehungry.Food.EvidenceAggregation do
     m = String.downcase(method)
 
     cond do
-      contains_any?(m, ["hplc", "uplc", "lc-ms", "lc/ms", "gc-ms", "gc/ms", "mass spec", "chromatograph"]) ->
+      contains_any?(m, [
+        "hplc",
+        "uplc",
+        "lc-ms",
+        "lc/ms",
+        "gc-ms",
+        "gc/ms",
+        "mass spec",
+        "chromatograph"
+      ]) ->
         :high
 
       contains_any?(m, ["spectrophotom", "colorimetr", "enzymatic", "titration", "elisa"]) ->

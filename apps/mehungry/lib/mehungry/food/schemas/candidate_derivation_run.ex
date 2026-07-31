@@ -28,7 +28,15 @@ defmodule Mehungry.Food.CandidateDerivationRun do
 
   def changeset(run, attrs) do
     run
-    |> cast(attrs, [:status, :processed, :total, :promoted_count, :error, :started_at, :completed_at])
+    |> cast(attrs, [
+      :status,
+      :processed,
+      :total,
+      :promoted_count,
+      :error,
+      :started_at,
+      :completed_at
+    ])
     |> validate_required([:status])
     |> validate_inclusion(:status, @statuses)
   end

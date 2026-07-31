@@ -10,9 +10,21 @@
 import Config
 # Configure Mix tasks and generators
 config :mehungry,
-  ecto_repos: [Mehungry.Repo]
+  ecto_repos: [Mehungry.Repo],
+  # Set to true in prod with larger instances
+  enable_embeddings: true
 
 config :mehungry, :admin_email, "nikolisgal@gmail.com"
+
+# Reference FDC dataset JSON files the /professional/usda-schema view derives
+# its schema catalog from (Mehungry.FoodData.Usda.SchemaMatcher). A path or list
+# of paths; when none is readable the catalog falls back to the ingredient
+# corpus. Left empty here — set per-environment to the local seed files.
+config :mehungry, :usda_schema_reference_paths, []
+
+# Nx uses the EXLA (CPU) backend for the shared embedding serving
+# (Mehungry.AI.EmbeddingServer, gated by :enable_embeddings above).
+config :nx, default_backend: EXLA.Backend
 
 # Timezone used for analytics "today" boundaries and daily buckets, so the
 # dashboard lines up with the Google Analytics property timezone. Must be a

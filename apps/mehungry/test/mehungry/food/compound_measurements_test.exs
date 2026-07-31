@@ -49,7 +49,8 @@ defmodule Mehungry.Food.CompoundMeasurementsTest do
 
     test "supports all three extraction methods", ctx do
       for {method, study_pmid} <- [{"manual", 1}, {"automated", 2}, {"pdf", 3}] do
-        {:ok, study} = Literature.upsert_study(%{pmid: 40_000 + study_pmid, title: "s#{study_pmid}"})
+        {:ok, study} =
+          Literature.upsert_study(%{pmid: 40_000 + study_pmid, title: "s#{study_pmid}"})
 
         {:ok, m} =
           Food.create_measurement(
@@ -117,7 +118,9 @@ defmodule Mehungry.Food.CompoundMeasurementsTest do
       refute m1.id == m2.id
 
       values =
-        Food.list_measurements(ctx.spinach.id, ctx.oxalate.id) |> Enum.map(& &1.value) |> Enum.sort()
+        Food.list_measurements(ctx.spinach.id, ctx.oxalate.id)
+        |> Enum.map(& &1.value)
+        |> Enum.sort()
 
       assert values == [645.0, 750.0]
     end
@@ -207,7 +210,10 @@ defmodule Mehungry.Food.CompoundMeasurementsTest do
 
       assert length(Food.list_measurements_for_ingredient(ctx.spinach.id)) == 2
       assert length(Food.list_measurements_for_compound(ctx.oxalate.id)) == 2
-      assert [%CompoundMeasurement{study_id: sid}] = Food.list_measurements_for_study(ctx.study.id)
+
+      assert [%CompoundMeasurement{study_id: sid}] =
+               Food.list_measurements_for_study(ctx.study.id)
+
       assert sid == ctx.study.id
     end
   end

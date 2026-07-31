@@ -21,6 +21,14 @@ config :mehungry,
   turnstile_site_key: System.get_env("TURNSTILE_SITE_KEY"),
   turnstile_secret_key: System.get_env("TURNSTILE_SECRET_KEY")
 
+# The shared Bumblebee embedding serving (Mehungry.AI.EmbeddingServer) is gated
+# by :enable_embeddings. In prod it defaults OFF so the 1 vCPU / 3 GB web+worker
+# task never loads the model; the dedicated bumped-sizing backfill task sets
+# ENABLE_EMBEDDINGS=true. Dev/test keep their config.exs / test.exs values.
+if config_env() == :prod do
+  config :mehungry, enable_embeddings: System.get_env("ENABLE_EMBEDDINGS") in ~w(true 1)
+end
+
 # Pinterest environment switch: PINTEREST_ENV=live hits the real API,
 # anything else (including unset) stays on the sandbox. Sandbox and live
 # tokens are not interchangeable — accounts must be reconnected after

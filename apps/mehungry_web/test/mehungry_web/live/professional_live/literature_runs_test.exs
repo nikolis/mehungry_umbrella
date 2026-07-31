@@ -69,7 +69,12 @@ defmodule MehungryWeb.ProfessionalLive.LiteratureRunsTest do
     {:ok, view, _html} = live(conn, ~p"/professional/literature")
 
     run = %AnnotationRun{status: "completed", processed: 4, total: 4}
-    Phoenix.PubSub.broadcast(Mehungry.PubSub, AnnotationRuns.topic(), {:pubtator_annotation_run, run})
+
+    Phoenix.PubSub.broadcast(
+      Mehungry.PubSub,
+      AnnotationRuns.topic(),
+      {:pubtator_annotation_run, run}
+    )
 
     html = render(view)
     assert html =~ "4 / 4 (100%)"

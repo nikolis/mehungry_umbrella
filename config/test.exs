@@ -70,3 +70,7 @@ config :libcluster, topologies: []
 
 # Print only warnings and errors during test
 config :logger, level: :warning
+
+# Never load the Bumblebee embedding model in the test suite — SemanticMatcher /
+# EmbeddingServer return {:error, :embeddings_disabled} and callers fall back.
+config :mehungry, enable_embeddings: false

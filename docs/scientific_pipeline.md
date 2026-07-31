@@ -97,7 +97,23 @@ Each stage is an Oban **run-chain** on the `:imports` queue that is idempotent a
 self-terminating (a per-item ledger table excludes already-processed items, so
 re-running is safe and cheap). Run each from the admin UI **or** IEx.
 
-Two admin pages drive the runs and show **live progress bars** (PubSub-backed):
+One unified control panel drives the whole pipeline with **live progress bars**
+(PubSub-backed):
+- **`/professional/science`** (nav **Science**) — the Science Pipeline panel: a Run
+  button + progress bar for every stage (P description parsing, 0 resolution, 1 crawl,
+  2 annotation, 4 derivation) and the candidate Promote/Reject review queue, all on one
+  page. An **Identity review** tab (`/professional/science/identity-review`) reviews
+  resolved identities, and a **Parse review** tab
+  (`/professional/science/parse-review`) reviews structured description parses
+  (edit/verify/reject) and the **skipped** ones (read-only, with the reason).
+
+Stage **P** (Description parsing) is a self-contained, deterministic normalizer that
+runs alongside — not gating — the discover chain: it turns each USDA `ingredients.name`
+into a canonical structured food (`carrot`, `harvest_stage: :baby`,
+`processing: [:raw]`) as reviewable candidates. Rule-based, no AI, no network. Details:
+[`usda_description_parser.md`](usda_description_parser.md).
+
+The two original focused pages still exist and do the same work for a single stage:
 - `/professional/literature` — "Run crawl" and "Run annotation" (steps 1 & 2)
 - `/professional/compound-candidates` — "Derive" + the Promote/Reject queue (step 4)
 
@@ -106,17 +122,22 @@ Two admin pages drive the runs and show **live progress bars** (PubSub-backed):
 The crawler reads `Food.verified_identity/1` for each ingredient's scientific name;
 **ingredients with no verified identity are skipped**, so do this first.
 
+UI: `/professional/science` → **Run resolution**. Then open the **Identity review**
+tab to verify resolved candidates (only `verified` identities feed the crawl) and to
+see the **skipped** ones with their reason. Or:
+
 ```elixir
 {:ok, _run} = Mehungry.Food.enqueue_resolution()
 Mehungry.Food.resolution_progress()   #=> %{processed: _, total: _}
 ```
 
-Produces: `ingredient_scientific_identities` rows (e.g. `Spinacia oleracea`).
+Produces: `ingredient_scientific_identities` rows (e.g. `Spinacia oleracea`), each as
+a `candidate` awaiting verification.
 Details: [`ingredient_identity_resolution.md`](ingredient_identity_resolution.md).
 
 ### Step 1 — Find the papers (literature crawl)
 
-UI: `/professional/literature` → **Run crawl**. Or:
+UI: `/professional/science` (or `/professional/literature`) → **Run crawl**. Or:
 
 ```elixir
 {:ok, _run} = Mehungry.Literature.enqueue_crawl()
@@ -131,7 +152,7 @@ phytochemistry keywords (`phytochemical polyphenol flavonoid antioxidant bioacti
 
 ### Step 2 — Find the compounds (PubTator annotation)
 
-UI: `/professional/literature` → **Run annotation**. Or:
+UI: `/professional/science` (or `/professional/literature`) → **Run annotation**. Or:
 
 ```elixir
 {:ok, _run} = Mehungry.Literature.enqueue_annotation()
@@ -162,7 +183,7 @@ Details: [`compound_measurements.md`](compound_measurements.md).
 
 ### Step 4 — Create the connections (derive + promote candidates)
 
-UI: `/professional/compound-candidates` → **Derive**. Or:
+UI: `/professional/science` (or `/professional/compound-candidates`) → **Derive**. Or:
 
 ```elixir
 {:ok, _run} = Mehungry.Food.enqueue_candidate_derivation()

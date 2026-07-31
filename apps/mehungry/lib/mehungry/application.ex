@@ -14,6 +14,8 @@ defmodule Mehungry.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: Mehungry.PubSub},
       {Oban, Application.fetch_env!(:mehungry, Oban)},
+      # Embeddings server test
+      {Mehungry.AI.EmbeddingServer, []},
       # Start a worker by calling: Mehungry.Worker.start_link(arg)
       # {Mehungry.Worker, arg}
       # Supervisor.child_spec({Cachex, name: :recipe_cache}, id: :recipe_cache)
