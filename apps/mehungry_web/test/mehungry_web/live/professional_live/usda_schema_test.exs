@@ -82,10 +82,12 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchemaTest do
     assert key, "seeded fdc ingredient did not appear in any panel"
 
     view |> element(~s|button[phx-value-key="#{key}"]|) |> render_click()
-    # The row is streamed into the panel (assert on the row's hidden input — the
-    # name also shows up in the always-visible schema "e.g. …" header examples).
-    row = ~s|input[name="usda_name"][value="#{name}"]|
+    # The row is streamed into the panel (asserted via its stream dom id, since
+    # the name also shows up in the always-visible schema "e.g. …" header examples).
+    row = "#rows-#{ingredient.id}"
     assert has_element?(view, row)
+    # The search box is pre-seeded with the first two letters of the row name.
+    assert has_element?(view, ~s|#{row} input[value="Aa"]|)
 
     # Pick the existing species → confirm modal → assign.
     render_change(view, "select_species", %{

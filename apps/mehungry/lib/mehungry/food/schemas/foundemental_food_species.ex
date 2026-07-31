@@ -14,6 +14,7 @@ defmodule Mehungry.Food.FoundementalFoodSpecies do
   schema "foundemental_food_species" do
     field :name, :string
     field :variety, :string
+    field :alternative_name, :string
     field :scientific_name, :string
     field :family, :string
 
@@ -25,7 +26,7 @@ defmodule Mehungry.Food.FoundementalFoodSpecies do
 
   def changeset(species, attrs) do
     species
-    |> cast(attrs, [:name, :variety, :scientific_name, :family])
+    |> cast(attrs, [:name, :variety, :alternative_name, :scientific_name, :family])
     |> validate_required([:name])
     |> unique_constraint([:name, :variety])
   end
