@@ -39,7 +39,11 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchemaTest do
     {:ok, species} = Food.create_foundemental_species(%{"name" => "Apple", "family" => "Rosaceae"})
     {:ok, _} = Food.assign_foundemental_ingredient(species.id, ingredient.id, "Apple, raw")
 
-    {:ok, view, html} = live(conn, ~p"/professional/usda-schema")
+    {:ok, view, _html} = live(conn, ~p"/professional/usda-schema")
+
+    # The corpus parse runs off the mount critical path (async :load), so read
+    # the rendered view after it has populated rather than the initial html.
+    html = render(view)
 
     # species header renders in the second accordion
     assert html =~ "Apple"

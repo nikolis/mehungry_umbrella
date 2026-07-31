@@ -26,20 +26,37 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok,
-     socket
-     |> assign(:page_title, "USDA Schema")
-     |> assign(:expanded, MapSet.new())
-     |> assign(:show_species_modal, false)
-     |> assign(:show_assign_modal, false)
-     |> assign(:pending_assignment, nil)
-     |> assign(:species_form, new_species_form())
-     |> load()}
+    socket =
+      socket
+      |> assign(:page_title, "USDA Schema")
+      |> assign(:expanded, MapSet.new())
+      |> assign(:show_species_modal, false)
+      |> assign(:show_assign_modal, false)
+      |> assign(:pending_assignment, nil)
+      |> assign(:species_form, new_species_form())
+      |> assign(:loading, true)
+      |> assign_empty_analysis()
+
+    # The heavy corpus parse must not block the mount (it runs the full USDA
+    # parser over every ingredient). Skip it on the dead render entirely, and on
+    # the connected socket kick it off in a follow-up message so the page paints
+    # a "Computing…" state immediately instead of freezing.
+    if connected?(socket), do: send(self(), :load)
+
+    {:ok, socket}
+  end
+
+  @impl true
+  def handle_info(:load, socket) do
+    {:noreply, socket |> load() |> assign(:loading, false)}
   end
 
   @impl true
   def handle_event("recompute", _params, socket) do
-    {:noreply, socket |> load() |> put_flash(:info, "Recomputed from current ingredients")}
+    {:noreply,
+     socket
+     |> load()
+     |> put_flash(:info, "Recomputed from current ingredients")}
   end
 
   @impl true
@@ -121,15 +138,6 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
      |> assign(:pending_assignment, nil)}
   end
 
-  def handle_event("validate_species", %{"foundemental_food_species" => params}, socket) do
-    changeset =
-      %FoundementalFoodSpecies{}
-      |> Food.change_foundemental_species(params)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, :species_form, to_form(changeset))}
-  end
-
   def handle_event("create_species", %{"foundemental_food_species" => params}, socket) do
     case Food.create_foundemental_species(params) do
       {:ok, species} ->
@@ -156,8 +164,11 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
 
   # ── Loading / filtering ──────────────────────────────────────────────────────
 
-  # Heavy: parses the whole corpus. Stores the raw analysis, then layers the
-  # (cheap) curation filter on top.
+  # Heavy: parses the whole corpus (full USDA parser over every ingredient), so
+  # it is only ever run off the mount critical path — from the async :load
+  # message and explicit Recompute, never on the dead render. Layers the (cheap)
+  # curation filter on top. Assignment events never call this; they only re-run
+  # refresh_curation.
   defp load(socket) do
     analysis = SchemaMatcher.analyze()
 
@@ -168,6 +179,23 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
     |> assign(:total_ingredients, analysis.total_ingredients)
     |> assign(:schema_count, analysis.schema_count)
     |> refresh_curation()
+  end
+
+  # Safe empty defaults so the template renders during the "Computing…" window
+  # before the async :load has populated the real analysis.
+  defp assign_empty_analysis(socket) do
+    socket
+    |> assign(:source, :ingredients)
+    |> assign(:raw_schemas, [])
+    |> assign(:raw_unmatched, [])
+    |> assign(:total_ingredients, 0)
+    |> assign(:schema_count, 0)
+    |> assign(:schemas, [])
+    |> assign(:unmatched, [])
+    |> assign(:matched_count, 0)
+    |> assign(:unmatched_count, 0)
+    |> assign(:species, [])
+    |> assign(:species_with_foods, [])
   end
 
   # Cheap: re-reads the curation tables and drops already-assigned ingredients
