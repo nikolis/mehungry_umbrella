@@ -31,6 +31,7 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
      |> assign(:page_title, "USDA Schema")
      |> assign(:expanded, MapSet.new())
      |> assign(:show_species_modal, false)
+     |> assign(:show_assign_modal, false)
      |> assign(:pending_assignment, nil)
      |> assign(:species_form, new_species_form())
      |> load()}
@@ -73,22 +74,51 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
      |> assign(:show_species_modal, true)}
   end
 
+  # Existing species — mirror the "+ New species…" flow: stash the pending
+  # assignment and open a confirmation modal to submit, skipping species creation.
   def handle_event(
         "select_species",
         %{"species_id" => species_id, "ingredient_id" => ingredient_id, "usda_name" => usda_name},
         socket
       ) do
-    case Food.assign_foundemental_ingredient(
-           String.to_integer(species_id),
-           String.to_integer(ingredient_id),
-           usda_name
-         ) do
+    species_id = String.to_integer(species_id)
+    species = Enum.find(socket.assigns.species, &(&1.id == species_id))
+
+    {:noreply,
+     socket
+     |> assign(:pending_assignment, %{
+       ingredient_id: String.to_integer(ingredient_id),
+       usda_name: usda_name,
+       species_id: species_id,
+       species_label: species && species_label(species)
+     })
+     |> assign(:show_assign_modal, true)}
+  end
+
+  # Submit of the confirmation modal for an existing species.
+  def handle_event("confirm_assignment", _params, socket) do
+    %{ingredient_id: ingredient_id, usda_name: usda_name, species_id: species_id} =
+      socket.assigns.pending_assignment
+
+    socket =
+      socket
+      |> assign(:show_assign_modal, false)
+      |> assign(:pending_assignment, nil)
+
+    case Food.assign_foundemental_ingredient(species_id, ingredient_id, usda_name) do
       {:ok, _} ->
         {:noreply, socket |> refresh_curation() |> put_flash(:info, "Assigned to species")}
 
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Could not assign ingredient to species")}
     end
+  end
+
+  def handle_event("close_assign_modal", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:show_assign_modal, false)
+     |> assign(:pending_assignment, nil)}
   end
 
   def handle_event("validate_species", %{"foundemental_food_species" => params}, socket) do
