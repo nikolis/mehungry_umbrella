@@ -356,9 +356,18 @@ defmodule Mehungry.FoodData.Usda.SchemaMatcher do
     uppercase_pattern = "(^|[^a-zA-Z])[A-Z]{2,}([^a-zA-Z]|$)"
     pattern = Enum.join(escaped_brands ++ [uppercase_pattern], "|")
 
+    # Rows a predefined pattern claims (e.g. "Alcoholic Beverage, …") must survive
+    # the noise filter, even though a term like "Beverage" would otherwise drop
+    # them — the predefined pattern is meant to rescue exactly these.
+    keep_pattern =
+      "^(" <> Enum.map_join(@predefined_patterns, "|", &Regex.escape(&1.type)) <> ")"
+
     Repo.all(
       from(i in Ingredient,
-        where: not is_nil(i.fdc_id) and i.fdc_id > 0 and not is_nil(i.name) and i.name != "" and fragment("? !~ ?", i.name, ^pattern) and i.data_type != ^"Survey (FNDDS)",
+        where:
+          not is_nil(i.fdc_id) and i.fdc_id > 0 and not is_nil(i.name) and i.name != "" and
+            (fragment("? !~ ?", i.name, ^pattern) or fragment("? ~* ?", i.name, ^keep_pattern)) and
+            (is_nil(i.data_type) or i.data_type != ^"Survey (FNDDS)"),
         select: %{id: i.id, name: i.name, data_type: i.data_type, food_class: i.food_class}
       )
     )
