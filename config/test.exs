@@ -71,6 +71,9 @@ config :libcluster, topologies: []
 # Print only warnings and errors during test
 config :logger, level: :warning
 
-# Never load the Bumblebee embedding model in the test suite — SemanticMatcher /
-# EmbeddingServer return {:error, :embeddings_disabled} and callers fall back.
-config :mehungry, enable_embeddings: false
+# A dummy token so the local-AI REST API guard is exercisable in tests.
+config :mehungry, :local_ai_api_token, "test-local-ai-token"
+
+# Never load the Bumblebee QA model in the test suite — extraction falls back to the
+# rule-based path (MehungryLocalAi.QA.available? is false).
+config :mehungry_local_ai, start_qa: false

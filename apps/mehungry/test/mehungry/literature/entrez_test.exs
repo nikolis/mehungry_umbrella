@@ -38,6 +38,7 @@ defmodule Mehungry.Literature.EntrezTest do
   defp efetch_xml do
     """
     <?xml version="1.0"?>
+    <!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2019//EN" "https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_190101.dtd">
     <PubmedArticleSet>
       <PubmedArticle>
         <MedlineCitation>
@@ -64,34 +65,38 @@ defmodule Mehungry.Literature.EntrezTest do
     """
   end
 
-  # Spinach ingredient + a "Spinacia oleracea" identity + a linked "Oxalate" compound.
+  # A "Spinach" species (scientific_name "Spinacia oleracea") with one curated
+  # ingredient that is linked to an "Oxalate" compound.
   defp spinach_setup do
     ingredient = ingredient_fixture(%{name: "spinach"})
 
-    {:ok, _identity, _} =
-      Food.add_identity_candidate(%{
-        ingredient_id: ingredient.id,
-        scientific_name: "Spinacia oleracea",
-        source: "usda_fdc",
-        confidence: 0.9,
-        status: "candidate"
+    {:ok, species} =
+      Food.create_foundemental_species(%{
+        "name" => "Spinach",
+        "scientific_name" => "Spinacia oleracea"
       })
 
-    {:ok, _rel} =
-      Food.add_compound_to_ingredient(
-        ingredient.id,
-        %{name: "Oxalate", compound_type: "oxalate"},
-        %{relationship_type: "contains", source: "literature", confidence: 0.9}
-      )
+    {:ok, _} = Food.assign_foundemental_ingredient(species.id, ingredient.id, "spinach")
 
-    compound = Food.get_compound_by_name("Oxalate")
-    %{ingredient: ingredient, compound: compound}
+    {:ok, compound} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+
+    # The crawl reads the species' positive compounds to build targeted terms.
+    {:ok, _rel} =
+      Food.upsert_species_relationship(%{
+        foundemental_species_id: species.id,
+        compound_id: compound.id,
+        relationship_type: "contains",
+        source: "literature",
+        confidence: 0.9
+      })
+
+    %{ingredient: ingredient, species: species, compound: compound}
   end
 
   test "crawls the spinach/oxalate example: study, ingredient link, compound link" do
-    %{ingredient: ingredient, compound: compound} = spinach_setup()
+    %{ingredient: ingredient, species: species, compound: compound} = spinach_setup()
 
-    assert {:ok, found} = Literature.import_ingredient(ingredient.id)
+    assert {:ok, found} = Literature.import_species(species.id)
     assert found >= 1
 
     # The paper landed in the registry with all fields parsed.
@@ -103,7 +108,7 @@ defmodule Mehungry.Literature.EntrezTest do
     assert study.publication_date == "2019 Mar"
     assert study.authors == ["Jane Smith"]
 
-    # Linked back to the ingredient with the exact search term as provenance.
+    # Fanned out to the species' ingredient with the exact search term as provenance.
     assert [linked_study] = Literature.list_studies_for_ingredient(ingredient.id)
     assert linked_study.id == study.id
 
@@ -119,9 +124,9 @@ defmodule Mehungry.Literature.EntrezTest do
   end
 
   test "the same PMID discovered under several terms yields a single study (dedup)" do
-    %{ingredient: ingredient} = spinach_setup()
+    %{ingredient: ingredient, species: species} = spinach_setup()
 
-    assert {:ok, _} = Literature.import_ingredient(ingredient.id)
+    assert {:ok, _} = Literature.import_species(species.id)
 
     # One compound term + five generic keywords all return PMID 11111 → one study,
     # but a StudyIngredient row per distinct term.
@@ -134,9 +139,9 @@ defmodule Mehungry.Literature.EntrezTest do
   end
 
   test "a generic keyword term links the ingredient but not a compound" do
-    %{ingredient: ingredient} = spinach_setup()
+    %{ingredient: ingredient, species: species} = spinach_setup()
 
-    assert {:ok, _} = Literature.import_ingredient(ingredient.id)
+    assert {:ok, _} = Literature.import_species(species.id)
 
     # The generic "phytochemical" term produced an ingredient link…
     assert Repo.get_by(StudyIngredient,
@@ -151,34 +156,34 @@ defmodule Mehungry.Literature.EntrezTest do
   test "re-crawling performs no HTTP (ledger short-circuit) and creates no duplicates", %{
     calls: calls
   } do
-    %{ingredient: ingredient} = spinach_setup()
+    %{species: species} = spinach_setup()
 
-    assert {:ok, _} = Literature.import_ingredient(ingredient.id)
+    assert {:ok, _} = Literature.import_species(species.id)
     after_first = calls.()
     studies_after_first = Repo.aggregate(ScientificStudy, :count)
 
-    assert {:ok, _} = Literature.import_ingredient(ingredient.id)
+    assert {:ok, _} = Literature.import_species(species.id)
 
     assert calls.() == after_first, "expected the crawl ledger to short-circuit all HTTP"
     assert Repo.aggregate(ScientificStudy, :count) == studies_after_first
   end
 
   test "raw esearch and efetch payloads are stored append-only" do
-    %{ingredient: ingredient} = spinach_setup()
+    %{species: species} = spinach_setup()
 
-    assert {:ok, _} = Literature.import_ingredient(ingredient.id)
+    assert {:ok, _} = Literature.import_species(species.id)
 
     endpoints = Repo.all(from(r in RawResponse, select: r.endpoint)) |> Enum.uniq()
     assert "esearch" in endpoints
     assert "efetch" in endpoints
   end
 
-  test "an ingredient with no scientific identity is ledgered and produces no terms" do
-    ingredient = ingredient_fixture(%{name: "mystery"})
+  test "a species with no scientific name is ledgered and produces no terms" do
+    {:ok, species} = Food.create_foundemental_species(%{"name" => "Mystery"})
 
-    assert {:ok, 0} = Literature.import_ingredient(ingredient.id)
-    assert Literature.search_terms_for_ingredient(ingredient.id) == []
+    assert {:ok, 0} = Literature.import_species(species.id)
+    assert Literature.search_terms_for_species(species.id) == []
     # Ledgered so the batch worker can still terminate.
-    assert Literature.crawl_attempted?(ingredient.id, "(no scientific name)")
+    assert Literature.crawl_attempted?(species.id, "(no scientific name)")
   end
 end

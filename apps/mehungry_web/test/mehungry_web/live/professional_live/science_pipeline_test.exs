@@ -10,16 +10,10 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipelineTest do
   alias Mehungry.Food.CandidateDerivationRun
   alias Mehungry.Food.CandidateDerivationRuns
   alias Mehungry.Food.CompoundCandidates
-  alias Mehungry.Food.FoodParsingRuns
-  alias Mehungry.Food.IdentityResolutionRuns
-  alias Mehungry.Food.IngredientFoodParsingRun
-  alias Mehungry.Food.IngredientIdentityResolutionRun
   alias Mehungry.Literature.AnnotationRuns
   alias Mehungry.Literature.CrawlRuns
 
   alias Mehungry.ObanWorkers.CompoundCandidateDerivationWorker
-  alias Mehungry.ObanWorkers.IngredientFoodParsingWorker
-  alias Mehungry.ObanWorkers.IngredientIdentityResolutionWorker
   alias Mehungry.ObanWorkers.LiteratureCrawlWorker
   alias Mehungry.ObanWorkers.PubTatorAnnotationWorker
 
@@ -32,63 +26,30 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipelineTest do
     spinach = ingredient_fixture(%{name: "spinach"})
     {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
 
-    {:ok, candidate} =
-      CompoundCandidates.import_manual_candidate(spinach.id, oxalate.id, %{notes: "expert"})
+    {:ok, species} =
+      Food.create_foundemental_species(%{"name" => "Spinach", "scientific_name" => "Spinacia oleracea"})
 
-    %{conn: conn, spinach: spinach, oxalate: oxalate, candidate: candidate}
+    {:ok, _} = Food.assign_foundemental_ingredient(species.id, spinach.id, "spinach")
+
+    {:ok, candidate} =
+      CompoundCandidates.import_manual_candidate(species.id, oxalate.id, %{notes: "expert"})
+
+    %{conn: conn, spinach: spinach, species: species, oxalate: oxalate, candidate: candidate}
   end
 
-  test "renders all four stage controls and the pending candidate", %{conn: conn} do
+  test "renders the three stage controls and the pending candidate", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/professional/science")
 
     assert html =~ "Science Pipeline"
-    assert html =~ "Run resolution"
     assert html =~ "Run crawl"
     assert html =~ "Run annotation"
     assert html =~ "Derive candidates"
-    assert html =~ "spinach"
+    assert html =~ "Spinach"
     assert html =~ "Oxalate"
-  end
 
-  test "Run parsing opens a run and enqueues the worker", %{conn: conn} do
-    {:ok, view, html} = live(conn, ~p"/professional/science")
-
-    assert html =~ "Run parsing"
-    assert Food.latest_food_parsing_run() == nil
-
-    html = view |> element("button", "Run parsing") |> render_click()
-
-    assert html =~ "Description parsing started"
-    assert Food.latest_food_parsing_run()
-    assert_enqueued(worker: IngredientFoodParsingWorker)
-  end
-
-  test "a food-parsing broadcast moves the parsing bar", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/professional/science")
-
-    run = %IngredientFoodParsingRun{status: "processing", processed: 3, total: 4}
-
-    Phoenix.PubSub.broadcast(
-      Mehungry.PubSub,
-      FoodParsingRuns.topic(),
-      {:food_parsing_run, run}
-    )
-
-    html = render(view)
-    assert html =~ "3 / 4 (75%)"
-    assert html =~ "Parsing…"
-  end
-
-  test "Run resolution opens a run and enqueues the worker", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/professional/science")
-
-    assert Food.latest_identity_resolution_run() == nil
-
-    html = view |> element("button", "Run resolution") |> render_click()
-
-    assert html =~ "Identity resolution started"
-    assert Food.latest_identity_resolution_run()
-    assert_enqueued(worker: IngredientIdentityResolutionWorker)
+    # Steps P & 0 are gone.
+    refute html =~ "Run parsing"
+    refute html =~ "Run resolution"
   end
 
   test "Run crawl opens a run and enqueues the worker", %{conn: conn} do
@@ -126,7 +87,7 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipelineTest do
   test "Promote writes a curated relationship and drops the row", %{
     conn: conn,
     candidate: candidate,
-    spinach: spinach
+    species: species
   } do
     {:ok, view, _html} = live(conn, ~p"/professional/science")
 
@@ -137,7 +98,7 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipelineTest do
     |> render_click()
 
     refute render(view) =~ "Oxalate"
-    assert [rel] = Food.list_compound_relationships(spinach.id)
+    assert [rel] = Mehungry.Food.SpeciesCompounds.list_species_relationships(species.id)
     assert rel.source == "manual"
     assert Food.get_candidate!(candidate.id).status == "promoted"
   end
@@ -145,7 +106,7 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipelineTest do
   test "Reject drops the row and writes no fact", %{
     conn: conn,
     candidate: candidate,
-    spinach: spinach
+    species: species
   } do
     {:ok, view, _html} = live(conn, ~p"/professional/science")
 
@@ -154,26 +115,8 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipelineTest do
     |> render_click()
 
     refute render(view) =~ "Oxalate"
-    assert Food.list_compound_relationships(spinach.id) == []
+    assert Mehungry.Food.SpeciesCompounds.list_species_relationships(species.id) == []
     assert Food.get_candidate!(candidate.id).status == "rejected"
-  end
-
-  test "an identity-resolution broadcast moves the resolution bar (resolved→processed)", %{
-    conn: conn
-  } do
-    {:ok, view, _html} = live(conn, ~p"/professional/science")
-
-    run = %IngredientIdentityResolutionRun{status: "processing", resolved: 3, total: 4}
-
-    Phoenix.PubSub.broadcast(
-      Mehungry.PubSub,
-      IdentityResolutionRuns.topic(),
-      {:identity_resolution_run, run}
-    )
-
-    html = render(view)
-    assert html =~ "3 / 4 (75%)"
-    assert html =~ "Running…"
   end
 
   test "a derivation broadcast moves the bar", %{conn: conn} do
@@ -190,6 +133,13 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipelineTest do
     html = render(view)
     assert html =~ "3 / 4 (75%)"
     assert html =~ "Deriving…"
+  end
+
+  test "shows read-only full-text extraction status (runs in the external local-AI service)", %{conn: conn} do
+    {:ok, _view, html} = live(conn, ~p"/professional/science")
+    assert html =~ "Full-text extraction"
+    assert html =~ "local-AI service"
+    assert html =~ "pending review"
   end
 
   test "non-admin is redirected away" do

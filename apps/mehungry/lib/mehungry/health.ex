@@ -9,17 +9,18 @@ defmodule Mehungry.Health do
 
   This is the **advice** layer that the "facts only" compound stack
   (`docs/food_compounds.md` §4) deliberately defers to. Its hard rule: a condition
-  references a **compound**, never an ingredient. "Which foods should a
-  kidney-stone patient avoid?" is answered by `ingredients_for_condition/2`, which
-  **composes** this layer with `Food.IngredientCompoundRelationship` at read time —
-  the schemas themselves stay decoupled from ingredient data.
+  references a **compound**, never a species or ingredient. "Which foods should a
+  kidney-stone patient avoid?" is answered by `species_for_condition/2` (the primary
+  read), which **composes** this layer with `Food.SpeciesCompoundRelationship` at read
+  time; `ingredients_for_condition/2` derives the ingredients strictly through those
+  species. The schemas themselves stay decoupled from food data.
   """
 
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
 
-  alias Mehungry.Food.{Compound, IngredientCompoundRelationship}
+  alias Mehungry.Food.{Compound, FoundementalFood, SpeciesCompoundRelationship}
   alias Mehungry.Health.{Condition, CompoundRecommendation}
 
   # ── Condition registry ────────────────────────────────────────────────────
@@ -28,6 +29,19 @@ defmodule Mehungry.Health do
     %Condition{}
     |> Condition.changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc "A changeset for a condition — for admin forms."
+  def change_condition(condition \\ %Condition{}, attrs \\ %{}) do
+    Condition.changeset(condition, attrs)
+  end
+
+  @doc "Delete a condition by id; its `compound_recommendations` cascade (`on_delete`)."
+  def delete_condition(id) do
+    case Repo.get(Condition, id) do
+      nil -> {:error, :not_found}
+      condition -> Repo.delete(condition)
+    end
   end
 
   @doc "Find-or-create a condition by its natural key `name`, backed by the unique index."
@@ -87,6 +101,8 @@ defmodule Mehungry.Health do
   def delete_recommendation(%CompoundRecommendation{} = recommendation),
     do: Repo.delete(recommendation)
 
+  def get_recommendation!(id), do: Repo.get!(CompoundRecommendation, id)
+
   @doc "The recommendation rows for a condition, each with its `:compound` preloaded."
   def recommendations_for_condition(condition_id) do
     Repo.all(
@@ -137,36 +153,63 @@ defmodule Mehungry.Health do
   # ── Derived cross-layer read (composition, not schema coupling) ───────────
 
   @doc """
-  The ingredients implicated for a condition, by composing this advice layer with
-  the food-facts layer at **read time**: `condition → compound_recommendations →
-  compounds → ingredient_compound_relationships → ingredients`.
+  The **food species** implicated for a condition, composing this advice layer with
+  the species-facts layer at **read time**: `condition → compound_recommendations →
+  compounds → species_compound_relationships → species`.
 
-  Conditions never reference ingredients directly — this join resolves the food
-  through the shared compound. Pass a `recommendation` (e.g. `"avoid"` / `:avoid`)
-  to filter, or `nil`/omit for every recommendation. Returns maps of
-  `%{ingredient, compound, recommendation, severity, evidence_level}` so a caller
-  can render "avoid Spinach (high Oxalate)".
+  Conditions never reference species (or ingredients) directly — this join resolves
+  the food through the shared compound. Pass a `recommendation` (e.g. `"avoid"` /
+  `:avoid`) to filter, or `nil`/omit for every recommendation. Returns maps of
+  `%{species, compound, recommendation, severity, evidence_level}` so a caller can
+  render "avoid Spinach (high Oxalate)".
+  """
+  def species_for_condition(condition_id, recommendation \\ nil) do
+    from(rec in CompoundRecommendation,
+      join: scr in SpeciesCompoundRelationship,
+      on: scr.compound_id == rec.compound_id,
+      join: cmp in Compound,
+      on: cmp.id == rec.compound_id,
+      join: sp in assoc(scr, :species),
+      where: rec.condition_id == ^condition_id,
+      order_by: [asc: sp.name, asc: cmp.name],
+      select: %{
+        species: sp,
+        compound: cmp,
+        recommendation: rec.recommendation,
+        severity: rec.severity,
+        evidence_level: rec.evidence_level
+      }
+    )
+    |> maybe_filter_recommendation(recommendation)
+    |> Repo.all()
+  end
+
+  @doc """
+  The ingredients implicated for a condition — a convenience **derived strictly
+  through species**: `condition → compound → species → (species' ingredients)`. There
+  is no condition↔ingredient or fact↔ingredient link; ingredients are only reachable
+  via the `FoundementalFoodSpecies` that carries the compound. Same filtering + shape
+  as `species_for_condition/2`, but with `ingredient` in place of `species`.
   """
   def ingredients_for_condition(condition_id, recommendation \\ nil) do
-    query =
-      from(rec in CompoundRecommendation,
-        join: icr in IngredientCompoundRelationship,
-        on: icr.compound_id == rec.compound_id,
-        join: cmp in Compound,
-        on: cmp.id == rec.compound_id,
-        join: ing in assoc(icr, :ingredient),
-        where: rec.condition_id == ^condition_id,
-        order_by: [asc: ing.name, asc: cmp.name],
-        select: %{
-          ingredient: ing,
-          compound: cmp,
-          recommendation: rec.recommendation,
-          severity: rec.severity,
-          evidence_level: rec.evidence_level
-        }
-      )
-
-    query
+    from(rec in CompoundRecommendation,
+      join: scr in SpeciesCompoundRelationship,
+      on: scr.compound_id == rec.compound_id,
+      join: cmp in Compound,
+      on: cmp.id == rec.compound_id,
+      join: ff in FoundementalFood,
+      on: ff.foundemental_species_id == scr.foundemental_species_id,
+      join: ing in assoc(ff, :ingredient),
+      where: rec.condition_id == ^condition_id,
+      order_by: [asc: ing.name, asc: cmp.name],
+      select: %{
+        ingredient: ing,
+        compound: cmp,
+        recommendation: rec.recommendation,
+        severity: rec.severity,
+        evidence_level: rec.evidence_level
+      }
+    )
     |> maybe_filter_recommendation(recommendation)
     |> Repo.all()
   end

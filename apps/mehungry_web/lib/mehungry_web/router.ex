@@ -48,10 +48,24 @@ defmodule MehungryWeb.Router do
     plug :accepts, ["json"]
   end
 
+  # Shared-secret REST API for the non-deployed mehungry_local_ai service.
+  pipeline :local_ai_api do
+    plug :accepts, ["json"]
+    plug MehungryWeb.Plugs.RequireLocalAiToken
+  end
+
   scope "/api", MehungryWeb.Api do
     pipe_through :api
 
     post "/parser/parse", ParserController, :parse
+  end
+
+  scope "/api/local_ai", MehungryWeb.Api.LocalAi do
+    pipe_through :local_ai_api
+
+    get "/pending", PendingController, :index
+    post "/full_text", FullTextController, :create
+    post "/candidates", CandidatesController, :create
   end
 
   scope "/auth", MehungryWeb do
@@ -86,14 +100,14 @@ defmodule MehungryWeb.Router do
       live "/taxonomy/review", ProfessionalLive.TaxonomyReview, :index
 
       live "/science", ProfessionalLive.SciencePipeline, :index
-      live "/science/identity-review", ProfessionalLive.SciencePipeline, :identity_review
-      live "/science/parse-review", ProfessionalLive.SciencePipeline, :parse_review
+      live "/science/studies", ProfessionalLive.Studies, :index
+      live "/science/entities", ProfessionalLive.Entities, :index
 
       live "/literature", ProfessionalLive.LiteratureRuns, :index
 
       live "/compound-candidates", ProfessionalLive.CompoundCandidates, :index
 
-      live "/schema-discovery", ProfessionalLive.SchemaDiscovery, :index
+      live "/health", ProfessionalLive.HealthConditions, :index
 
       live "/usda-schema", ProfessionalLive.UsdaSchema, :index
 

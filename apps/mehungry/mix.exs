@@ -39,7 +39,7 @@ defmodule Mehungry.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:poison, "~> 5.0"},
       {:numexy, "~> 0.1.9"},
-      {:hackney, "~> 1.18.1"},
+      {:hackney, "~> 1.19"},
       {:ex_aws, "~> 2.1"},
       {:aws, "~> 1.0.0"},
       {:oban, "~> 2.17"},
@@ -66,21 +66,10 @@ defmodule Mehungry.MixProject do
       {:httpoison, "~> 2.2"},
       {:jason, "~> 1.2"},
       {:cachex, "~> 3.4"},
-      {:pgvector, "~> 0.3"},
-      # Local, on-CPU sentence embeddings for the USDA parser's semantic
-      # candidate-suggestion layer (Mehungry.Food.Parser.Embedder). EXLA is the
-      # CPU compiler for Nx; the model + serving are only loaded when
-      # `:parser_embeddings_enabled` is true (see Mehungry.Application), so the
-      # web/test tasks never pay the memory cost.
-      #
-      # EXLA is temporarily disabled — embeddings are gated off everywhere
-      # (:enable_embeddings defaults to false), so the runtime EXLA references in
-      # Mehungry.AI.EmbeddingServer.build_serving/0 are never reached. Re-add
-      # {:exla, "~> 0.9"} and restore the Nx EXLA backend in config/config.exs to
-      # turn embeddings back on.
-      {:nx, "~> 0.9"},
-      # {:exla, "~> 0.9"},
-      {:bumblebee, "~> 0.6"}
+      {:pgvector, "~> 0.3"}
+      # The heavy Bumblebee/EXLA/Nx stack lives in apps/mehungry_local_ai (a
+      # non-deployed, local-only measurement-extraction service) — deliberately
+      # absent here so the production release stays lean.
     ]
   end
 

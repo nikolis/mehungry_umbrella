@@ -25,7 +25,7 @@ defmodule Mehungry.Food.CompoundMeasurements do
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
-  alias Mehungry.Food.CompoundMeasurement
+  alias Mehungry.Food.{CompoundMeasurement, CompoundMeasurementCandidate, FoundementalFood}
 
   # The columns that identify "the same measurement" for dedup on re-extraction.
   @natural_key [:study_id, :ingredient_id, :compound_id, :preparation_method, :analytical_method]
@@ -115,6 +115,94 @@ defmodule Mehungry.Food.CompoundMeasurements do
       from(m in CompoundMeasurement,
         where: m.ingredient_id == ^ingredient_id and m.compound_id == ^compound_id,
         order_by: [asc: m.id]
+      )
+    )
+  end
+
+  # ── Extracted measurement candidates (review-gated) ─────────────────────────
+
+  @doc "Upsert an extracted measurement candidate (refreshes evidence fields, keeps status)."
+  def upsert_measurement_candidate(attrs) do
+    %CompoundMeasurementCandidate{}
+    |> CompoundMeasurementCandidate.changeset(attrs)
+    |> Repo.insert(
+      on_conflict:
+        {:replace, [:score, :raw_span, :preparation_method, :analytical_method, :extraction_method, :updated_at]},
+      conflict_target: [:study_id, :foundemental_species_id, :compound_id, :value, :unit],
+      returning: true
+    )
+  end
+
+  @doc "Pending extracted candidates, highest score first; species/compound/study preloaded."
+  def list_measurement_candidates(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 50)
+    offset = Keyword.get(opts, :offset, 0)
+
+    Repo.all(
+      from(c in CompoundMeasurementCandidate,
+        where: c.status == "pending",
+        order_by: [desc: c.score, asc: c.id],
+        preload: [:species, :compound, :study],
+        limit: ^limit,
+        offset: ^offset
+      )
+    )
+  end
+
+  def count_pending_measurement_candidates,
+    do: Repo.aggregate(from(c in CompoundMeasurementCandidate, where: c.status == "pending"), :count)
+
+  def get_measurement_candidate!(id),
+    do: Repo.get!(CompoundMeasurementCandidate, id) |> Repo.preload([:species, :compound])
+
+  @doc """
+  Accept a candidate: materialize it as an immutable `CompoundMeasurement` against a
+  representative curated ingredient of the species (measurements are ingredient-keyed
+  but roll up to the species for scoring), then flip the candidate to `accepted`.
+  """
+  def accept_measurement_candidate(id) do
+    candidate = get_measurement_candidate!(id)
+
+    case representative_ingredient(candidate.foundemental_species_id) do
+      nil ->
+        {:error, :no_curated_ingredient}
+
+      ingredient_id ->
+        {:ok, measurement} =
+          record_measurement(%{
+            ingredient_id: ingredient_id,
+            compound_id: candidate.compound_id,
+            study_id: candidate.study_id,
+            value: candidate.value,
+            unit: candidate.unit,
+            preparation_method: candidate.preparation_method,
+            analytical_method: candidate.analytical_method,
+            sample_size: candidate.sample_size,
+            extraction_method: "automated"
+          })
+
+        candidate
+        |> CompoundMeasurementCandidate.changeset(%{
+          status: "accepted",
+          accepted_measurement_id: measurement.id
+        })
+        |> Repo.update()
+    end
+  end
+
+  def reject_measurement_candidate(id) do
+    get_measurement_candidate!(id)
+    |> CompoundMeasurementCandidate.changeset(%{status: "rejected"})
+    |> Repo.update()
+  end
+
+  defp representative_ingredient(species_id) do
+    Repo.one(
+      from(f in FoundementalFood,
+        where: f.foundemental_species_id == ^species_id,
+        order_by: [asc: f.ingredient_id],
+        limit: 1,
+        select: f.ingredient_id
       )
     )
   end

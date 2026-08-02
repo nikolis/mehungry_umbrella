@@ -1,0 +1,156 @@
+<div class="max-w-5xl mx-auto p-4 space-y-8">
+  <h1 class="text-2xl font-semibold text-parchment">Health Conditions</h1>
+  <p class="text-parchment-dim text-sm">
+    Curate the advice layer: create conditions and attach compound recommendations
+    (condition → <span class="font-medium">compound</span> → advice). Recommendations
+    reference compounds only — the implicated food species are resolved at read time and
+    shown on <code class="text-parchment">/conditions/:id</code>.
+  </p>
+
+  <%!-- ── Add condition ──────────────────────────────────────────────── --%>
+  <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
+    <h2 class="text-lg font-medium text-parchment">Add condition</h2>
+    <form phx-submit="save_condition" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <input
+        type="text"
+        name="condition[name]"
+        required
+        placeholder="Name (e.g. Kidney Stones)"
+        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 placeholder:text-parchment-dim"
+      />
+      <input
+        type="text"
+        name="condition[category]"
+        placeholder="Category (e.g. renal, GI)"
+        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 placeholder:text-parchment-dim"
+      />
+      <input
+        type="text"
+        name="condition[synonyms]"
+        placeholder="Synonyms (comma-separated)"
+        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 placeholder:text-parchment-dim sm:col-span-2"
+      />
+      <textarea
+        name="condition[description]"
+        placeholder="Description (optional)"
+        rows="2"
+        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 placeholder:text-parchment-dim sm:col-span-2"
+      ></textarea>
+      <button
+        type="submit"
+        class="justify-self-start px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+      >
+        Add condition
+      </button>
+    </form>
+  </section>
+
+  <%!-- ── Add recommendation ─────────────────────────────────────────── --%>
+  <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
+    <h2 class="text-lg font-medium text-parchment">Add recommendation</h2>
+    <p :if={@conditions == []} class="text-parchment-dim text-sm">
+      Add a condition first.
+    </p>
+    <form
+      :if={@conditions != []}
+      phx-submit="save_recommendation"
+      class="grid grid-cols-1 sm:grid-cols-3 gap-3"
+    >
+      <select name="recommendation[condition_id]" required class={select_class()}>
+        <option value="">Condition…</option>
+        <option :for={c <- @conditions} value={c.id}>{c.name}</option>
+      </select>
+      <select name="recommendation[compound_id]" required class={select_class()}>
+        <option value="">Compound…</option>
+        <option :for={c <- @compounds} value={c.id}>{c.name}</option>
+      </select>
+      <select name="recommendation[recommendation]" class={select_class()}>
+        <option :for={r <- recommendations()} value={r}>{r}</option>
+      </select>
+      <select name="recommendation[severity]" class={select_class()}>
+        <option value="">Severity…</option>
+        <option :for={s <- severities()} value={s}>{s}</option>
+      </select>
+      <select name="recommendation[evidence_level]" class={select_class()}>
+        <option value="">Evidence…</option>
+        <option :for={e <- evidence_levels()} value={e}>{e}</option>
+      </select>
+      <select name="recommendation[source]" class={select_class()}>
+        <option :for={s <- sources()} value={s}>{s}</option>
+      </select>
+      <input
+        type="text"
+        name="recommendation[notes]"
+        placeholder="Notes (optional)"
+        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 placeholder:text-parchment-dim sm:col-span-2"
+      />
+      <button
+        type="submit"
+        class="justify-self-start px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+      >
+        Add recommendation
+      </button>
+    </form>
+  </section>
+
+  <%!-- ── Conditions list ────────────────────────────────────────────── --%>
+  <section class="space-y-3">
+    <h2 class="text-lg font-medium text-parchment">
+      Conditions ({length(@conditions)})
+    </h2>
+
+    <p :if={@conditions == []} class="text-parchment-dim text-sm">
+      No conditions yet.
+    </p>
+
+    <div
+      :for={condition <- @conditions}
+      class="rounded-lg border border-ink-panel2 bg-ink-panel p-4 space-y-2"
+    >
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-parchment font-medium">{condition.name}</span>
+        <span :if={condition.category} class="text-xs rounded bg-ink-panel2 text-parchment-dim px-2 py-0.5">
+          {condition.category}
+        </span>
+        <button
+          type="button"
+          phx-click="delete_condition"
+          phx-value-id={condition.id}
+          data-confirm={"Delete “#{condition.name}” and all its recommendations?"}
+          class="ml-auto text-xs text-red-400 hover:underline"
+        >
+          Delete condition
+        </button>
+      </div>
+
+      <p :if={condition.description} class="text-xs text-parchment-dim">{condition.description}</p>
+
+      <div class="divide-y divide-ink-panel2 border-t border-ink-panel2 pt-1">
+        <p :if={@recs[condition.id] == []} class="text-xs text-parchment-dim py-2">
+          No recommendations yet.
+        </p>
+        <div
+          :for={rec <- @recs[condition.id]}
+          class="py-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+        >
+          <span class={"font-medium #{rec_class(rec.recommendation)}"}>{rec.recommendation}</span>
+          <span class="text-parchment">{rec.compound.name}</span>
+          <span class="text-xs text-parchment-dim">
+            {[rec.severity, rec.evidence_level, rec.source]
+            |> Enum.reject(&is_nil/1)
+            |> Enum.join(" · ")}
+          </span>
+          <button
+            type="button"
+            phx-click="delete_recommendation"
+            phx-value-id={rec.id}
+            data-confirm="Remove this recommendation?"
+            class="ml-auto text-xs text-red-400 hover:underline"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

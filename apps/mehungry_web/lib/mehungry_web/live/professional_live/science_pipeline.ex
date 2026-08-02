@@ -1,10 +1,12 @@
 defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
   @moduledoc """
-  Unified control panel for the food-science pipeline. Runs the five operable
-  stages in order — P) USDA description parsing, 0) identity resolution,
-  1) literature crawl, 2) PubTator annotation, 4) candidate derivation — each
-  with a Run button and a live progress bar, plus the candidate Promote/Reject
-  review queue inline.
+  Unified control panel for the food-science pipeline. Runs the three operable
+  stages in order — 1) literature crawl, 2) PubTator annotation, 4) candidate
+  derivation — each with a Run button and a live progress bar, plus the candidate
+  Promote/Reject review queue inline.
+
+  The crawl reads each `FoundementalFoodSpecies`' curated `scientific_name`
+  (set in the USDA Schema view), so there is no identity-resolution prerequisite.
 
   Each stage reuses an existing enqueue fn, `*_progress/0`, a runs module
   (`topic/0` + `latest_run/0`), and a PubSub broadcast tuple; this LiveView is
@@ -14,8 +16,6 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
 
   alias Mehungry.Food
   alias Mehungry.Food.CandidateDerivationRuns
-  alias Mehungry.Food.FoodParsingRuns
-  alias Mehungry.Food.IdentityResolutionRuns
   alias Mehungry.Literature
   alias Mehungry.Literature.AnnotationRuns
   alias Mehungry.Literature.CrawlRuns
@@ -25,8 +25,6 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(Mehungry.PubSub, FoodParsingRuns.topic())
-      Phoenix.PubSub.subscribe(Mehungry.PubSub, IdentityResolutionRuns.topic())
       Phoenix.PubSub.subscribe(Mehungry.PubSub, CrawlRuns.topic())
       Phoenix.PubSub.subscribe(Mehungry.PubSub, AnnotationRuns.topic())
       Phoenix.PubSub.subscribe(Mehungry.PubSub, CandidateDerivationRuns.topic())
@@ -38,42 +36,29 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
       socket
       |> assign(:page_title, "Science Pipeline")
       |> assign(:page, 1)
-      |> assign(:parsing_run, Food.latest_food_parsing_run())
-      |> assign(:parsing_progress, normalize(Food.parsing_progress()))
-      |> assign(:resolution_run, Food.latest_identity_resolution_run())
-      |> assign(:resolution_progress, normalize(Food.resolution_progress()))
       |> assign(:crawl_run, CrawlRuns.latest_run())
       |> assign(:crawl_progress, normalize(Literature.crawl_progress()))
       |> assign(:annotation_run, AnnotationRuns.latest_run())
       |> assign(:annotation_progress, normalize(Literature.annotation_progress()))
       |> assign(:derivation_run, derivation_run)
       |> assign(:derivation_progress, derivation_progress(derivation_run))
+      |> assign_extraction()
       |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0))
 
     {:ok, socket}
   end
 
+  # Full-text fetch + measurement extraction runs in the non-deployed
+  # `mehungry_local_ai` service (GPU box) and posts results back over REST. Here we
+  # only surface read-only status: studies still awaiting a fetch attempt, and the
+  # count of pending measurement candidates waiting for review.
+  defp assign_extraction(socket) do
+    socket
+    |> assign(:pmc_progress, normalize(Literature.pmc_fetch_progress()))
+    |> assign(:mcand_count, Food.count_pending_measurement_candidates())
+  end
+
   # ── Stage triggers ─────────────────────────────────────────────────────────
-
-  @impl true
-  def handle_event("run_food_parsing", _params, socket) do
-    {:ok, run} = Food.enqueue_food_parsing()
-
-    {:noreply,
-     socket
-     |> assign(:parsing_run, run)
-     |> put_flash(:info, "Description parsing started — progress updates live below")}
-  end
-
-  @impl true
-  def handle_event("run_resolution", _params, socket) do
-    {:ok, run} = Food.enqueue_resolution()
-
-    {:noreply,
-     socket
-     |> assign(:resolution_run, run)
-     |> put_flash(:info, "Identity resolution started — progress updates live below")}
-  end
 
   @impl true
   def handle_event("run_crawl", _params, socket) do
@@ -137,16 +122,13 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
     {:noreply,
      socket
      |> assign(:page, 1)
-     |> assign(:parsing_run, Food.latest_food_parsing_run())
-     |> assign(:parsing_progress, normalize(Food.parsing_progress()))
-     |> assign(:resolution_run, Food.latest_identity_resolution_run())
-     |> assign(:resolution_progress, normalize(Food.resolution_progress()))
      |> assign(:crawl_run, CrawlRuns.latest_run())
      |> assign(:crawl_progress, normalize(Literature.crawl_progress()))
      |> assign(:annotation_run, AnnotationRuns.latest_run())
      |> assign(:annotation_progress, normalize(Literature.annotation_progress()))
      |> assign(:derivation_run, derivation_run)
      |> assign(:derivation_progress, derivation_progress(derivation_run))
+     |> assign_extraction()
      |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0),
        reset: true
      )}
@@ -156,22 +138,6 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
   # Broadcast by each stage's runs module as batches run. Progress-bar only; the
   # review stream is deliberately left untouched mid-run so rows don't shift under
   # a reviewer (they Refresh manually).
-
-  @impl true
-  def handle_info({:food_parsing_run, run}, socket) do
-    {:noreply,
-     socket
-     |> assign(:parsing_run, run)
-     |> assign(:parsing_progress, %{processed: run.processed || 0, total: run.total || 0})}
-  end
-
-  @impl true
-  def handle_info({:identity_resolution_run, run}, socket) do
-    {:noreply,
-     socket
-     |> assign(:resolution_run, run)
-     |> assign(:resolution_progress, %{processed: run.resolved || 0, total: run.total || 0})}
-  end
 
   @impl true
   def handle_info({:literature_crawl_run, run}, socket) do
@@ -199,16 +165,12 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
 
   # ── View helpers ───────────────────────────────────────────────────────────
 
-  # Identity resolution reports `resolved`/`total`; the other three stages report
-  # `processed`/`total`. Normalize to `%{processed, total}` so one helper set serves all.
-  defp normalize(%{resolved: resolved, total: total}), do: %{processed: resolved, total: total}
+  # All three stages report `%{processed, total}` already; kept as a single
+  # pass-through so the progress-bar helpers have one shape to render.
   defp normalize(%{processed: _, total: _} = progress), do: progress
 
   defp derivation_progress(nil), do: normalize(Food.candidate_derivation_progress())
   defp derivation_progress(run), do: %{processed: run.processed || 0, total: run.total || 0}
-
-  defp tab_class(true), do: "bg-basil text-ink"
-  defp tab_class(false), do: "text-parchment-dim hover:text-parchment"
 
   defp percent(%{total: total}) when total in [0, nil], do: 0
   defp percent(%{processed: processed, total: total}), do: round(processed / total * 100)

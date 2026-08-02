@@ -1,9 +1,10 @@
 <div class="max-w-5xl mx-auto p-4 space-y-8">
   <h1 class="text-2xl font-semibold text-parchment">Compound Candidates</h1>
   <p class="text-parchment-dim text-sm">
-    Proposed ingredient↔compound relationships derived from literature co-occurrence and
-    measurements. Strong evidence auto-promotes into curated facts; the rest waits here for review.
-    Promoted relationships feed back as targeted literature-crawl terms.
+    Proposed <span class="font-medium">species</span>↔compound relationships derived from literature
+    co-occurrence and measurements, each citing the reference studies it came from. Strong evidence
+    auto-promotes into curated facts; the rest waits here for review. Promoted facts feed back as
+    targeted literature-crawl terms and are what <code class="text-parchment">Health</code> resolves to.
   </p>
 
   <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
@@ -42,6 +43,110 @@
     </div>
   </section>
 
+  <%!-- ── Add measurement (the strong "contains" evidence) ───────────────── --%>
+  <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
+    <h2 class="text-lg font-medium text-parchment">Add measurement</h2>
+    <p class="text-parchment-dim text-xs">
+      Quantitative "contains" evidence for an ingredient (rolls up to its species and is
+      blended into the candidate score via noisy-OR — stronger than co-occurrence).
+      Immutable once saved; adding one re-scores that species candidate.
+    </p>
+
+    <p :if={@measurable == []} class="text-parchment-dim text-sm">
+      No curated ingredients yet — assign ingredients to a species in the USDA Schema view first.
+    </p>
+
+    <form
+      :if={@measurable != []}
+      phx-submit="add_measurement"
+      class="grid grid-cols-1 sm:grid-cols-3 gap-3"
+    >
+      <select name="measurement[ingredient_id]" required class={field_class()}>
+        <option value="">Ingredient (→ species)…</option>
+        <option :for={m <- @measurable} value={m.ingredient_id}>
+          {m.ingredient_name} → {m.species_name}
+        </option>
+      </select>
+      <select name="measurement[compound_id]" required class={field_class()}>
+        <option value="">Compound…</option>
+        <option :for={c <- @compounds} value={c.id}>{c.name}</option>
+      </select>
+      <select name="measurement[extraction_method]" class={field_class()}>
+        <option :for={m <- extraction_methods()} value={m}>{m}</option>
+      </select>
+      <input type="number" step="any" name="measurement[value]" required placeholder="Value (e.g. 750)" class={field_class()} />
+      <input type="text" name="measurement[unit]" required placeholder="Unit (e.g. mg/100g)" class={field_class()} />
+      <input type="text" name="measurement[preparation_method]" placeholder="Preparation (e.g. Raw)" class={field_class()} />
+      <input type="text" name="measurement[analytical_method]" placeholder="Analytical method (e.g. HPLC)" class={field_class()} />
+      <input type="number" name="measurement[sample_size]" placeholder="Sample size (optional)" class={field_class()} />
+      <input type="text" name="measurement[pmid]" placeholder="Source PMID (optional)" class={field_class()} />
+      <button
+        type="submit"
+        class="justify-self-start px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+      >
+        Record measurement
+      </button>
+    </form>
+  </section>
+
+  <%!-- ── Extracted measurement candidates (review) ──────────────────────── --%>
+  <section>
+    <h2 class="text-lg font-medium text-parchment mb-2">
+      Measurement candidates ({@mcand_count})
+    </h2>
+    <p class="text-parchment-dim text-sm mb-3">
+      Auto-extracted from paper full text by the extraction pipeline.
+      <span class="font-medium">Accept</span> records an immutable measurement (re-scoring the
+      species candidate); <span class="font-medium">Reject</span> drops it.
+    </p>
+
+    <div id="measurement_candidates" phx-update="stream" class="divide-y divide-ink-panel2">
+      <div
+        :for={{dom_id, mc} <- @streams.measurement_candidates}
+        id={dom_id}
+        class="py-3 flex flex-wrap items-center gap-3 justify-between"
+      >
+        <div class="min-w-0 flex-1">
+          <div class="text-parchment font-medium truncate">
+            {mc.species.name} <span class="text-parchment-dim">·</span> {mc.compound.name}
+            <span class="text-basil">{mc.value} {mc.unit}</span>
+          </div>
+          <div class="text-xs text-parchment-dim">
+            {[mc.preparation_method, mc.analytical_method] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")}
+            <span :if={mc.study && mc.study.pmid}>
+              · <a href={"https://pubmed.ncbi.nlm.nih.gov/#{mc.study.pmid}/"} target="_blank" rel="noopener" class="text-basil hover:underline">PMID {mc.study.pmid}</a>
+            </span>
+            · score {score_label(mc.score)}
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            phx-click="accept_measurement"
+            phx-value-id={mc.id}
+            class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+          >
+            Accept
+          </button>
+          <button
+            type="button"
+            phx-click="reject_measurement"
+            phx-value-id={mc.id}
+            data-confirm="Reject this extracted measurement?"
+            class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90"
+          >
+            Reject
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <p :if={@mcand_count == 0} class="text-parchment-dim text-sm">
+      None pending — run the full-text extraction pipeline from the Science page.
+    </p>
+  </section>
+
   <section>
     <h2 class="text-lg font-medium text-parchment mb-2">Pending review</h2>
     <p class="text-parchment-dim text-sm mb-3">
@@ -64,7 +169,7 @@
       >
         <div class="min-w-0 flex-1">
           <div class="text-parchment font-medium truncate">
-            {candidate.ingredient.name} <span class="text-parchment-dim">contains</span>
+            {candidate.species.name} <span class="text-parchment-dim">contains</span>
             {candidate.compound.name}
           </div>
           <div class="text-xs text-parchment-dim">
@@ -74,6 +179,16 @@
             </span>
             · score: {score_label(candidate.evidence_score)} · {candidate.study_count} lit · {candidate.measurement_study_count} meas
             · sources: {(candidate.sources || []) |> Enum.join(", ")}
+          </div>
+          <div :if={candidate.studies != []} class="text-xs text-parchment-dim mt-0.5">
+            refs:
+            <a
+              :for={study <- candidate.studies}
+              href={"https://pubmed.ncbi.nlm.nih.gov/#{study.pmid}/"}
+              target="_blank"
+              rel="noopener"
+              class="text-basil hover:underline mr-1"
+            >{study.pmid}</a>
           </div>
         </div>
 
@@ -102,5 +217,64 @@
     <p class="text-parchment-dim text-sm mt-4">
       Scroll to load more. Promoted and rejected rows leave this list.
     </p>
+  </section>
+
+  <section>
+    <div class="flex flex-wrap items-center gap-2 mb-2">
+      <h2 class="text-lg font-medium text-parchment">Curated facts ({@rel_count})</h2>
+      <button
+        type="button"
+        phx-click="purge"
+        data-confirm={"Delete all curated facts for non-dietary compounds (#{Enum.join(non_dietary_names(), ", ")})? They are assay reagents, not foods."}
+        class="ml-auto px-3 py-1.5 rounded border border-red-400/40 text-red-400 text-sm font-medium hover:opacity-90"
+      >
+        Purge non-dietary
+      </button>
+    </div>
+    <p class="text-parchment-dim text-sm mb-3">
+      Promoted ingredient↔compound relationships — the facts the crawl reads back as targeted terms.
+      <span class="font-medium">Undo</span> deletes the fact and rejects its candidate so it won't re-promote.
+    </p>
+
+    <div id="curated_relationships" phx-update="stream" class="divide-y divide-ink-panel2">
+      <div
+        :for={{dom_id, rel} <- @streams.relationships}
+        id={dom_id}
+        class="py-3 flex flex-wrap items-center gap-3 justify-between"
+      >
+        <div class="min-w-0 flex-1">
+          <div class="text-parchment font-medium truncate">
+            {rel.species.name} <span class="text-parchment-dim">{rel.relationship_type}</span>
+            {rel.compound.name}
+          </div>
+          <div class="text-xs text-parchment-dim">
+            source: {rel.source} · confidence: {score_label(rel.confidence)}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          phx-click="undo"
+          phx-value-id={rel.id}
+          data-confirm="Delete this curated fact and reject its candidate?"
+          class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90"
+        >
+          Undo
+        </button>
+      </div>
+    </div>
+
+    <p :if={@rel_count == 0} class="text-parchment-dim text-sm">
+      No curated facts yet — promote candidates above (or strong ones auto-promote on derive).
+    </p>
+
+    <button
+      :if={@rel_count > @rel_page * 25}
+      type="button"
+      phx-click="load-more-rel"
+      class="mt-4 px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90"
+    >
+      Load more
+    </button>
   </section>
 </div>

@@ -35,8 +35,9 @@ defmodule Mehungry.Literature.PubTatorTest do
   end
 
   defp biocjson do
+    # PubTator3's /export/biocjson wraps documents under a "PubTator3" key.
     Jason.encode!(%{
-      "documents" => [
+      "PubTator3" => [
         %{
           "id" => "11111",
           "passages" => [

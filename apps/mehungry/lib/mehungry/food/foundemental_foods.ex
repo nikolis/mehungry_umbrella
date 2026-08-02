@@ -61,6 +61,45 @@ defmodule Mehungry.Food.FoundementalFoods do
     })
   end
 
+  @doc "The ingredient ids curated onto a species (its `foundemental_foods`)."
+  def list_ingredient_ids_for_species(species_id) do
+    FoundementalFood
+    |> where([f], f.foundemental_species_id == ^species_id)
+    |> select([f], f.ingredient_id)
+    |> Repo.all()
+  end
+
+  @doc "The species id an ingredient is curated onto, or `nil`."
+  def species_id_for_ingredient(ingredient_id) do
+    Repo.one(
+      from(f in FoundementalFood,
+        where: f.ingredient_id == ^ingredient_id,
+        select: f.foundemental_species_id
+      )
+    )
+  end
+
+  @doc """
+  All curated ingredients with their species, ordered by species then ingredient —
+  for admin selectors that record species-rollup data (e.g. compound measurements).
+  Returns `[%{ingredient_id, ingredient_name, species_id, species_name}]`.
+  """
+  def list_curated_ingredients do
+    Repo.all(
+      from(f in FoundementalFood,
+        join: i in assoc(f, :ingredient),
+        join: s in assoc(f, :species),
+        order_by: [asc: s.name, asc: i.name],
+        select: %{
+          ingredient_id: f.ingredient_id,
+          ingredient_name: i.name,
+          species_id: f.foundemental_species_id,
+          species_name: s.name
+        }
+      )
+    )
+  end
+
   @doc "MapSet of ingredient ids already curated onto some species."
   def assigned_ingredient_ids do
     FoundementalFood

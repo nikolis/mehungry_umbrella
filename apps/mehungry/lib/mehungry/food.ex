@@ -14,7 +14,6 @@ defmodule Mehungry.Food do
     * `Mehungry.Food.Categories` — categories and food restriction types
     * `Mehungry.Food.Taxonomies` — hierarchical ingredient taxonomies
     * `Mehungry.Food.Enrichment` — scientific enrichment sidecar
-    * `Mehungry.Food.IdentityResolution` — scientific identity resolution
     * `Mehungry.Food.Compounds` — bioactive compound knowledge (scientific facts)
     * `Mehungry.Food.CompoundMeasurements` — quantitative compound measurements (immutable)
     * `Mehungry.Food.EvidenceAggregation` — read-only summaries of compound measurements
@@ -30,19 +29,15 @@ defmodule Mehungry.Food do
     Engagement,
     Enrichment,
     EvidenceAggregation,
-    FoodParsingRuns,
     FoundementalFoods,
-    IdentityResolution,
-    IdentityResolutionRuns,
     IngredientQueries,
     Ingredients,
     Localization,
     Measurements,
     Nutrients,
-    ParsedFoods,
-    ParserSuggestions,
     ParserVocabulary,
     Recipes,
+    SpeciesCompounds,
     Taxonomies,
     TaxonomyClassificationRuns
   }
@@ -258,49 +253,6 @@ defmodule Mehungry.Food do
   defdelegate delete_health_attribute(attribute), to: Enrichment
   defdelegate list_enrichment(ingredient_id), to: Enrichment
 
-  # ── Identity resolution (scientific identifiers) ───────────────────────
-
-  defdelegate enqueue_resolution(), to: IdentityResolution
-  defdelegate resolve_ingredient(ingredient), to: IdentityResolution
-  defdelegate resolution_progress(), to: IdentityResolution
-  defdelegate add_identity_candidate(attrs), to: IdentityResolution
-  defdelegate get_identity!(id), to: IdentityResolution
-  defdelegate list_identities(ingredient_id), to: IdentityResolution
-  defdelegate verified_identity(ingredient_id), to: IdentityResolution
-  defdelegate add_synonym(attrs), to: IdentityResolution
-  defdelegate list_synonyms(scientific_identity_id), to: IdentityResolution
-  defdelegate list_synonyms_for_ingredient(ingredient_id), to: IdentityResolution
-  defdelegate verify_identity(identity_id, user_id \\ nil), to: IdentityResolution
-  defdelegate reject_identity(identity_id, user_id \\ nil), to: IdentityResolution
-  defdelegate list_pending_verification(opts \\ []), to: IdentityResolution
-  defdelegate list_skipped_resolutions(opts \\ []), to: IdentityResolution
-  defdelegate latest_identity_resolution_run(), to: IdentityResolutionRuns, as: :latest_run
-
-  # Description parsing (deterministic USDA parser — Food.ParsedFoods)
-  defdelegate enqueue_food_parsing(), to: ParsedFoods
-  defdelegate parse_ingredient(ingredient), to: ParsedFoods
-  defdelegate parsing_progress(), to: ParsedFoods
-  defdelegate get_parsed_food!(id), to: ParsedFoods
-  defdelegate list_pending_parse_review(opts \\ []), to: ParsedFoods
-  defdelegate list_skipped_parses(opts \\ []), to: ParsedFoods
-  defdelegate update_parsed_candidate(id, attrs), to: ParsedFoods
-  defdelegate verify_parsed_food(id, user_id \\ nil), to: ParsedFoods
-  defdelegate reject_parsed_food(id, user_id \\ nil), to: ParsedFoods
-
-  # Semantic parser suggestions (review-gated, over low-confidence parses —
-  # Food.ParserSuggestions)
-  defdelegate list_pending_parser_suggestions(opts \\ []),
-    to: ParserSuggestions,
-    as: :list_pending
-
-  defdelegate accept_parser_suggestion(id, user_id \\ nil), to: ParserSuggestions, as: :accept
-  defdelegate reject_parser_suggestion(id, user_id \\ nil), to: ParserSuggestions, as: :reject
-
-  defdelegate generate_parser_suggestions(after_id \\ 0, opts \\ []),
-    to: ParserSuggestions,
-    as: :generate_batch
-
-  defdelegate latest_food_parsing_run(), to: FoodParsingRuns, as: :latest_run
   defdelegate parser_vocabulary_dump(), to: ParserVocabulary, as: :dump
 
   # ── Compounds (scientific facts) ───────────────────────────────────────
@@ -309,6 +261,7 @@ defmodule Mehungry.Food do
   defdelegate upsert_compound(attrs), to: Compounds
   defdelegate enrich_compound(compound, attrs), to: Compounds
   defdelegate get_compound!(id), to: Compounds
+  defdelegate get_compounds_by_ids(ids), to: Compounds
   defdelegate get_compound_by_name(name), to: Compounds
   defdelegate get_compound_by_identifier(namespace, identifier), to: Compounds
   defdelegate upsert_compound_identifier(attrs), to: Compounds
@@ -324,6 +277,13 @@ defmodule Mehungry.Food do
   defdelegate list_compound_relationships(ingredient_id), to: Compounds
   defdelegate add_compound_to_ingredient(ingredient_id, compound_attrs, rel_attrs), to: Compounds
 
+  # Species-keyed curated facts (stage-4 promotion target; read by Health + crawl)
+  defdelegate upsert_species_relationship(attrs), to: SpeciesCompounds
+  defdelegate delete_species_relationship(relationship), to: SpeciesCompounds
+  defdelegate list_compounds_for_species(species_id), to: SpeciesCompounds
+  defdelegate list_positive_compounds_for_species(species_id), to: SpeciesCompounds
+  defdelegate list_species_for_compound(compound_id), to: SpeciesCompounds
+
   # ── Compound measurements (immutable quantitative facts) ───────────────────
 
   defdelegate create_measurement(attrs), to: CompoundMeasurements
@@ -332,6 +292,13 @@ defmodule Mehungry.Food do
   defdelegate list_measurements_for_ingredient(ingredient_id), to: CompoundMeasurements
   defdelegate list_measurements_for_compound(compound_id), to: CompoundMeasurements
   defdelegate list_measurements_for_study(study_id), to: CompoundMeasurements
+
+  # Extracted measurement candidates (review-gated, from the PMC/QA pipeline)
+  defdelegate upsert_measurement_candidate(attrs), to: CompoundMeasurements
+  defdelegate list_measurement_candidates(opts \\ []), to: CompoundMeasurements
+  defdelegate count_pending_measurement_candidates(), to: CompoundMeasurements
+  defdelegate accept_measurement_candidate(id), to: CompoundMeasurements
+  defdelegate reject_measurement_candidate(id), to: CompoundMeasurements
   defdelegate list_measurements(ingredient_id, compound_id), to: CompoundMeasurements
 
   # ── Evidence aggregation (read-only summaries of measurements) ─────────────
@@ -342,18 +309,24 @@ defmodule Mehungry.Food do
   # ── Compound candidates (derived → curated relationship pipeline) ──────────
 
   defdelegate enqueue_candidate_derivation(), to: CompoundCandidates
-  defdelegate derive_candidate(ingredient_id, compound_id), to: CompoundCandidates
+  defdelegate derive_candidate(species_id, compound_id), to: CompoundCandidates
   defdelegate derive_candidates_batch(offset, limit), to: CompoundCandidates
-  defdelegate score_candidate(ingredient_id, compound_id), to: CompoundCandidates
+  defdelegate score_candidate(species_id, compound_id), to: CompoundCandidates
   defdelegate evidence_pairs(), to: CompoundCandidates
   defdelegate count_evidence_pairs(), to: CompoundCandidates
   defdelegate promote_candidate(candidate), to: CompoundCandidates
   defdelegate reject_candidate(candidate), to: CompoundCandidates
-  defdelegate import_manual_candidate(ingredient_id, compound_id, attrs), to: CompoundCandidates
+  defdelegate unpromote_relationship(relationship_id), to: CompoundCandidates
+  defdelegate import_manual_candidate(species_id, compound_id, attrs), to: CompoundCandidates
   defdelegate list_pending_candidates(opts \\ []), to: CompoundCandidates
-  defdelegate list_candidates_for_ingredient(ingredient_id), to: CompoundCandidates
+  defdelegate list_candidates_for_species(species_id), to: CompoundCandidates
+  defdelegate list_candidate_studies(candidate_id), to: CompoundCandidates
   defdelegate get_candidate!(id), to: CompoundCandidates
   defdelegate candidate_derivation_progress(), to: CompoundCandidates
+  defdelegate non_dietary_compound_names(), to: CompoundCandidates
+  defdelegate purge_blocklisted(), to: CompoundCandidates
+  defdelegate count_relationships(), to: SpeciesCompounds
+  defdelegate list_relationships_page(opts \\ []), to: SpeciesCompounds
 
   # ── Foundemental foods ─────────────────────────────────────────────────────
 
@@ -365,4 +338,7 @@ defmodule Mehungry.Food do
   defdelegate create_foundemental_food(attrs), to: FoundementalFoods
   defdelegate assign_foundemental_ingredient(species_id, ingredient_id, usda_name), to: FoundementalFoods, as: :assign_ingredient
   defdelegate assigned_foundemental_ingredient_ids(), to: FoundementalFoods, as: :assigned_ingredient_ids
+  defdelegate list_ingredient_ids_for_species(species_id), to: FoundementalFoods
+  defdelegate species_id_for_ingredient(ingredient_id), to: FoundementalFoods
+  defdelegate list_curated_ingredients(), to: FoundementalFoods
 end

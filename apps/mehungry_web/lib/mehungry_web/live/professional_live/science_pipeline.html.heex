@@ -1,36 +1,15 @@
 <div class="max-w-5xl mx-auto p-4 space-y-8">
   <div class="flex flex-wrap items-center gap-3">
     <h1 class="text-2xl font-semibold text-parchment">Science Pipeline</h1>
-
-    <nav class="flex items-center gap-1 ml-auto rounded-lg border border-ink-panel2 p-1">
-      <.link
-        patch={~p"/professional/science"}
-        class={"px-3 py-1 rounded text-sm font-medium #{tab_class(@live_action == :index)}"}
-      >
-        Pipeline
-      </.link>
-      <.link
-        patch={~p"/professional/science/identity-review"}
-        class={"px-3 py-1 rounded text-sm font-medium #{tab_class(@live_action == :identity_review)}"}
-      >
-        Identity review
-      </.link>
-      <.link
-        patch={~p"/professional/science/parse-review"}
-        class={"px-3 py-1 rounded text-sm font-medium #{tab_class(@live_action == :parse_review)}"}
-      >
-        Parse review
-      </.link>
-    </nav>
   </div>
 
-  <div :if={@live_action == :index} class="space-y-8">
+  <div class="space-y-8">
     <div class="flex flex-wrap items-center gap-2">
       <p class="text-parchment-dim text-sm flex-1">
         Run the food-science pipeline end to end. Each stage feeds the next:
-        resolve scientific identities → discover papers → extract compounds →
-        derive & promote ingredient↔compound facts (which then feed back as targeted
-        crawl terms). Progress updates live as batches run. See <code class="text-parchment">docs/scientific_pipeline.md</code>.
+        discover papers (per food species, by its curated scientific name) →
+        extract compounds → derive & promote ingredient↔compound facts (which then
+        feed back as targeted crawl terms). Progress updates live as batches run. See <code class="text-parchment">docs/scientific_pipeline.md</code>.
       </p>
       <button
         type="button"
@@ -40,110 +19,6 @@
         Refresh
       </button>
     </div>
-
-    <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-ink-panel2 text-parchment text-xs font-semibold">
-          P
-        </span>
-        <h2 class="text-lg font-medium text-parchment mr-2">
-          Description parsing (deterministic)
-        </h2>
-
-        <button
-          type="button"
-          phx-click="run_food_parsing"
-          disabled={running?(@parsing_run)}
-          data-confirm="Parse every FDC-backed ingredient description into a structured canonical food? Pure local computation, no external calls."
-          class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {if running?(@parsing_run), do: "Parsing…", else: "Run parsing"}
-        </button>
-
-        <.link
-          patch={~p"/professional/science/parse-review"}
-          class="text-sm text-basil hover:underline ml-auto"
-        >
-          Review parsed foods →
-        </.link>
-      </div>
-
-      <p class="text-parchment-dim text-xs">
-        Rule-based parse of each USDA description ("Pickles, cucumber, dill" →
-        food <em>cucumber</em>, processing <em>pickled</em>, modifier <em>dill</em>) into
-        reviewable candidates. No AI, no network — see <code class="text-parchment">docs/usda_description_parser.md</code>.
-      </p>
-
-      <div>
-        <div class="flex items-center justify-between text-xs text-parchment-dim mb-1">
-          <span>
-            Parsed: {@parsing_progress.processed} / {@parsing_progress.total} ({percent(
-              @parsing_progress
-            )}%)
-          </span>
-          <span class={"font-medium #{run_class(@parsing_run)}"} title={run_error(@parsing_run)}>
-            {run_label(@parsing_run)}
-          </span>
-        </div>
-        <div class="h-2 w-full rounded bg-ink-panel2 overflow-hidden">
-          <div class="h-full bg-basil rounded" style={"width: #{percent(@parsing_progress)}%"}>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-ink-panel2 text-parchment text-xs font-semibold">
-          0
-        </span>
-        <h2 class="text-lg font-medium text-parchment mr-2">
-          Identity resolution (prerequisite)
-        </h2>
-
-        <button
-          type="button"
-          phx-click="run_resolution"
-          disabled={running?(@resolution_run)}
-          data-confirm="Resolve scientific identities for every FDC-backed ingredient? This calls external services and can be long-running."
-          class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {if running?(@resolution_run), do: "Resolving…", else: "Run resolution"}
-        </button>
-
-        <.link
-          patch={~p"/professional/science/identity-review"}
-          class="text-sm text-basil hover:underline ml-auto"
-        >
-          Review resolved identities →
-        </.link>
-      </div>
-
-      <p class="text-parchment-dim text-xs">
-        Assigns each ingredient its scientific name (e.g. <em>Spinacia oleracea</em>).
-        Required first — the crawler skips ingredients with no verified identity.
-      </p>
-
-      <div>
-        <div class="flex items-center justify-between text-xs text-parchment-dim mb-1">
-          <span>
-            Resolved: {@resolution_progress.processed} / {@resolution_progress.total} ({percent(
-              @resolution_progress
-            )}%)
-          </span>
-          <span
-            class={"font-medium #{run_class(@resolution_run)}"}
-            title={run_error(@resolution_run)}
-          >
-            {run_label(@resolution_run)}
-          </span>
-        </div>
-        <div class="h-2 w-full rounded bg-ink-panel2 overflow-hidden">
-          <div class="h-full bg-basil rounded" style={"width: #{percent(@resolution_progress)}%"}>
-          </div>
-        </div>
-      </div>
-    </section>
 
     <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
       <div class="flex flex-wrap items-center gap-2">
@@ -158,16 +33,24 @@
           type="button"
           phx-click="run_crawl"
           disabled={running?(@crawl_run)}
-          data-confirm="Crawl PubMed for every identity-backed ingredient? This calls the NCBI API and can be long-running."
+          data-confirm="Crawl PubMed for every food species with a curated scientific name? This calls the NCBI API and can be long-running."
           class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {if running?(@crawl_run), do: "Crawling…", else: "Run crawl"}
         </button>
+
+        <.link
+          navigate={~p"/professional/science/studies"}
+          class="text-sm text-basil hover:underline ml-auto"
+        >
+          Review studies →
+        </.link>
       </div>
 
       <p class="text-parchment-dim text-xs">
-        Finds research papers linking each ingredient (by scientific name) to
-        compounds and phytochemistry keywords.
+        Finds research papers for each food species (by its curated scientific
+        name) against its linked compounds and phytochemistry keywords, linking
+        each paper to every ingredient curated onto that species.
       </p>
 
       <div>
@@ -204,6 +87,13 @@
         >
           {if running?(@annotation_run), do: "Annotating…", else: "Run annotation"}
         </button>
+
+        <.link
+          navigate={~p"/professional/science/entities"}
+          class="text-sm text-basil hover:underline ml-auto"
+        >
+          Review entities →
+        </.link>
       </div>
 
       <p class="text-parchment-dim text-xs">
@@ -248,6 +138,13 @@
         >
           {if running?(@derivation_run), do: "Deriving…", else: "Derive candidates"}
         </button>
+
+        <.link
+          navigate={~p"/professional/compound-candidates"}
+          class="text-sm text-basil hover:underline ml-auto"
+        >
+          Review candidates & facts →
+        </.link>
       </div>
 
       <p class="text-parchment-dim text-xs">
@@ -276,6 +173,35 @@
       </div>
     </section>
 
+    <%!-- ── Full-text (PMC) + measurement extraction (external local-AI service) ── --%>
+    <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-ink-panel2 text-parchment text-xs font-semibold">
+          FT
+        </span>
+        <h2 class="text-lg font-medium text-parchment mr-2">Full-text extraction (measurements)</h2>
+        <span class="font-medium text-sm ml-auto text-parchment-dim">External · local-AI service</span>
+      </div>
+
+      <p class="text-parchment-dim text-xs">
+        PMC open-access full text + compound-measurement extraction (Bumblebee QA) runs off-box in the
+        <code class="text-parchment">mehungry_local_ai</code> service and posts candidates back over REST
+        (<code class="text-parchment">mix local_ai.extract</code>). This panel is read-only status.
+      </p>
+
+      <div>
+        <div class="flex items-center justify-between text-xs text-parchment-dim mb-1">
+          <span>PMC fetched: {@pmc_progress.processed} / {@pmc_progress.total} ({percent(@pmc_progress)}%)</span>
+          <span>
+            <.link navigate={~p"/professional/compound-candidates"} class="text-basil hover:underline">{@mcand_count} pending review →</.link>
+          </span>
+        </div>
+        <div class="h-2 w-full rounded bg-ink-panel2 overflow-hidden">
+          <div class="h-full bg-basil rounded" style={"width: #{percent(@pmc_progress)}%"}></div>
+        </div>
+      </div>
+    </section>
+
     <section>
       <h2 class="text-lg font-medium text-parchment mb-2">Pending review</h2>
       <p class="text-parchment-dim text-sm mb-3">
@@ -298,7 +224,7 @@
         >
           <div class="min-w-0 flex-1">
             <div class="text-parchment font-medium truncate">
-              {candidate.ingredient.name} <span class="text-parchment-dim">contains</span>
+              {candidate.species.name} <span class="text-parchment-dim">contains</span>
               {candidate.compound.name}
             </div>
             <div class="text-xs text-parchment-dim">
@@ -308,6 +234,16 @@
               </span>
               · score: {score_label(candidate.evidence_score)} · {candidate.study_count} lit · {candidate.measurement_study_count} meas
               · sources: {(candidate.sources || []) |> Enum.join(", ")}
+            </div>
+            <div :if={candidate.studies != []} class="text-xs text-parchment-dim mt-0.5">
+              refs:
+              <a
+                :for={study <- candidate.studies}
+                href={"https://pubmed.ncbi.nlm.nih.gov/#{study.pmid}/"}
+                target="_blank"
+                rel="noopener"
+                class="text-basil hover:underline mr-1"
+              >{study.pmid}</a>
             </div>
           </div>
 
@@ -344,18 +280,4 @@
       run-buttons — see <code class="text-parchment">docs/scientific_pipeline.md</code>.
     </p>
   </div>
-
-  <.live_component
-    :if={@live_action == :identity_review}
-    module={MehungryWeb.ProfessionalLive.IdentityReviewComponent}
-    id="identity-review"
-    current_user_id={@current_user.id}
-  />
-
-  <.live_component
-    :if={@live_action == :parse_review}
-    module={MehungryWeb.ProfessionalLive.ParseReviewComponent}
-    id="parse-review"
-    current_user_id={@current_user.id}
-  />
 </div>

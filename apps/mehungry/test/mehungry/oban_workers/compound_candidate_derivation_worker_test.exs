@@ -7,9 +7,22 @@ defmodule Mehungry.ObanWorkers.CompoundCandidateDerivationWorkerTest do
   alias Mehungry.Food
   alias Mehungry.Food.CandidateDerivationRuns
   alias Mehungry.Food.CandidateDerivationRun, as: Run
+  alias Mehungry.Food.SpeciesCompounds
   alias Mehungry.Literature
   alias Mehungry.ObanWorkers.CompoundCandidateDerivationWorker, as: Worker
   alias Mehungry.Repo
+
+  # A spinach ingredient curated onto a Spinach species — evidence linked to the
+  # ingredient rolls up to the species for derivation.
+  defp spinach_species do
+    spinach = ingredient_fixture(%{name: "spinach"})
+
+    {:ok, species} =
+      Food.create_foundemental_species(%{"name" => "Spinach", "scientific_name" => "Spinacia oleracea"})
+
+    {:ok, _} = Food.assign_foundemental_ingredient(species.id, spinach.id, "spinach")
+    {species, spinach}
+  end
 
   defp cooccur(ingredient, compound) do
     pmid = System.unique_integer([:positive])
@@ -34,15 +47,15 @@ defmodule Mehungry.ObanWorkers.CompoundCandidateDerivationWorkerTest do
   end
 
   test "derives a batch, auto-promotes strong evidence, tracks progress, chains next batch" do
-    spinach = ingredient_fixture(%{name: "spinach"})
+    {species, spinach} = spinach_species()
     {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
     for _ <- 1..5, do: cooccur(spinach, oxalate)
 
     run = CandidateDerivationRuns.start_run()
     assert :ok = perform_job(Worker, %{"run_id" => run.id})
 
-    # Strong (5-study) candidate auto-promoted → curated fact written.
-    assert [rel] = Food.list_compound_relationships(spinach.id)
+    # Strong (5-study) species candidate auto-promoted → curated species fact written.
+    assert [rel] = SpeciesCompounds.list_species_relationships(species.id)
     assert rel.compound_id == oxalate.id
     assert rel.source == "literature"
 
@@ -63,7 +76,7 @@ defmodule Mehungry.ObanWorkers.CompoundCandidateDerivationWorkerTest do
   end
 
   test "a later tick past the end completes without re-promoting" do
-    spinach = ingredient_fixture(%{name: "spinach"})
+    {species, spinach} = spinach_species()
     {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
     for _ <- 1..5, do: cooccur(spinach, oxalate)
 
@@ -76,6 +89,6 @@ defmodule Mehungry.ObanWorkers.CompoundCandidateDerivationWorkerTest do
     assert completed.status == "completed"
     # Exactly one promotion happened, on the first tick.
     assert completed.promoted_count == 1
-    assert length(Food.list_compound_relationships(spinach.id)) == 1
+    assert length(SpeciesCompounds.list_species_relationships(species.id)) == 1
   end
 end

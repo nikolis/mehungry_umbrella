@@ -23,14 +23,22 @@ defmodule MehungryWeb.HealthLiveTest do
         source: "guideline"
       })
 
+    # Species-facts layer: Spinach species high_in Oxalate, with spinach curated onto
+    # it — the condition's "foods to be mindful of" derive strictly through the species.
     spinach = ingredient_fixture(%{name: "spinach"})
 
+    {:ok, species} =
+      Food.create_foundemental_species(%{"name" => "Spinach", "scientific_name" => "Spinacia oleracea"})
+
+    {:ok, _} = Food.assign_foundemental_ingredient(species.id, spinach.id, "spinach")
+
     {:ok, _} =
-      Food.add_compound_to_ingredient(
-        spinach.id,
-        %{name: "Oxalate", compound_type: "oxalate"},
-        %{relationship_type: "high_in", source: "literature"}
-      )
+      Food.upsert_species_relationship(%{
+        foundemental_species_id: species.id,
+        compound_id: oxalate.id,
+        relationship_type: "high_in",
+        source: "literature"
+      })
 
     %{condition: kidney, compound: oxalate, ingredient: spinach}
   end
@@ -77,9 +85,11 @@ defmodule MehungryWeb.HealthLiveTest do
       assert html =~ "Dietary Recommendations"
       assert html =~ "Avoid"
       assert html =~ "Oxalate"
-      # The recommendation references a compound; spinach is derived at read time.
+      # The recommendation references a compound; the Spinach species is derived
+      # at read time (its scientific name shown too).
       assert html =~ "Foods to Be Mindful Of"
-      assert html =~ "spinach"
+      assert html =~ "Spinach"
+      assert html =~ "Spinacia oleracea"
 
       assert page_title(view) =~ "Kidney Stones"
     end

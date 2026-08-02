@@ -17,7 +17,7 @@ facts — never here."*). It is a top-level `Mehungry.Health` context, a sibling
    conditions ──has concern──▶ compound_recommendations ──▶ compounds
    (Mehungry.Health)          (avoid | limit | …)          (Food.Compounds)
                                                               │
-                                        ingredient_compound_relationships
+                                        species_compound_relationships
                                         ("Oxalate is contained in Spinach")
                                                               │
                                                           ingredients
@@ -30,7 +30,7 @@ facts — never here."*). It is a top-level `Mehungry.Health` context, a sibling
 A condition references a **compound**, never an ingredient. There is no
 `ingredient_id` anywhere in this layer. The food a patient should avoid is
 **derived** by composing this layer with the existing
-`IngredientCompoundRelationship` facts through the shared compound — at read time,
+`SpeciesCompoundRelationship` facts through the shared compound — at read time,
 in `ingredients_for_condition/2`. The schemas stay fully decoupled from ingredient
 data, so USDA ingestion and the food-facts layer are untouched.
 
@@ -117,13 +117,20 @@ Health.add_recommendation(kidney.id, oxalate.id, %{recommendation: "avoid", sour
 **Derived cross-layer read** — the payoff of the decoupling:
 
 ```elixir
-Health.ingredients_for_condition(kidney.id, :avoid)
-#=> [%{ingredient: %Ingredient{name: "spinach"}, compound: %Compound{name: "Oxalate"},
+# Primary read → the implicated FoundementalFoodSpecies.
+Health.species_for_condition(kidney.id, :avoid)
+#=> [%{species: %FoundementalFoodSpecies{name: "Spinach"}, compound: %Compound{name: "Oxalate"},
 #      recommendation: "avoid", severity: "high", evidence_level: "strong"}]
+
+# Convenience → the ingredients, derived STRICTLY through those species.
+Health.ingredients_for_condition(kidney.id, :avoid)
+#=> [%{ingredient: %Ingredient{name: "spinach"}, compound: %Compound{name: "Oxalate"}, ...}]
 ```
 
-It joins `condition → compound_recommendations → compounds →
-ingredient_compound_relationships → ingredients` at read time. Pass a recommendation
+`species_for_condition/2` joins `condition → compound_recommendations → compounds →
+species_compound_relationships → species` at read time;
+`ingredients_for_condition/2` extends it one hop `→ foundemental_foods → ingredients`.
+There is no condition↔ingredient or fact↔ingredient link. Pass a recommendation
 (`"avoid"` / `:avoid`) to filter, or omit for every recommendation.
 
 ---

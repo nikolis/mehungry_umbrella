@@ -86,6 +86,10 @@ defmodule Mehungry.Literature.PubTator.Client do
   # JSON (one document per line). Handle both, and normalize to a document list.
   defp decode_documents(body) do
     case Jason.decode(body) do
+      # PubTator3's /export/biocjson wraps the document list under a "PubTator3" key.
+      {:ok, %{"PubTator3" => documents} = raw} when is_list(documents) ->
+        {:ok, documents, raw}
+
       {:ok, %{"documents" => documents} = raw} when is_list(documents) ->
         {:ok, documents, raw}
 
@@ -109,6 +113,7 @@ defmodule Mehungry.Literature.PubTator.Client do
       |> String.split("\n", trim: true)
       |> Enum.map(&Jason.decode/1)
       |> Enum.flat_map(fn
+        {:ok, %{"PubTator3" => docs}} when is_list(docs) -> docs
         {:ok, %{"documents" => docs}} when is_list(docs) -> docs
         {:ok, %{"passages" => _} = doc} -> [doc]
         _ -> []

@@ -1,26 +1,25 @@
 defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
   @moduledoc """
-  Crawls NCBI Entrez (PubMed) for literature linking ingredients to compounds,
+  Crawls NCBI Entrez (PubMed) for literature linking food species to compounds,
   one batch per run tick.
 
-  Mirrors `IngredientIdentityResolutionWorker`: a single job threads a `run_id`
-  through a self-re-enqueueing chain, refreshing the run's progress each batch
-  until every identity-backed ingredient has been crawled, then marking the run
-  `completed`.
+  A single job threads a `run_id` through a self-re-enqueueing chain, refreshing
+  the run's progress each batch until every named food species has been crawled,
+  then marking the run `completed`.
 
-  Termination is guaranteed by the crawl ledger — `crawl_ingredient/1` records an
-  attempt for every `(ingredient, term)` pair it touches, and the next batch
-  excludes any ingredient already attempted.
+  Termination is guaranteed by the crawl ledger — `crawl_species/1` records an
+  attempt for every `(species, term)` pair it touches, and the next batch excludes
+  any species already attempted.
 
   Retries/rate limits (Oban `max_attempts: 3`):
 
-    * a transient `{:error, {:rate_limited, retry_after}}` from an ingredient crawl
+    * a transient `{:error, {:rate_limited, retry_after}}` from a species crawl
       short-circuits the batch into an Oban `{:snooze, seconds}` so the still-
-      uncrawled ingredients are retried later rather than skipped;
+      uncrawled species are retried later rather than skipped;
     * any other transient `{:error, reason}` marks the run `failed` and returns
       `{:error, reason}` for Oban backoff.
 
-  Both are idempotent because already-attempted `(ingredient, term)` pairs are
+  Both are idempotent because already-attempted `(species, term)` pairs are
   skipped on the retry.
   """
 
@@ -31,7 +30,7 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
   alias Mehungry.Literature
   alias Mehungry.Literature.CrawlRuns
 
-  # Each ingredient is several Entrez round-trips (one esearch + one efetch per
+  # Each species is several Entrez round-trips (one esearch + one efetch per
   # search term), so the batch is small to keep each pass inside NCBI rate limits.
   @batch_size 10
 
@@ -46,9 +45,9 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
     run_id = Map.get(args, "run_id")
     CrawlRuns.mark_processing(run_id)
 
-    case Literature.list_uncrawled_ingredients(@batch_size) do
+    case Literature.list_uncrawled_species(@batch_size) do
       [] ->
-        Logger.info("LiteratureCrawlWorker: all identity-backed ingredients crawled")
+        Logger.info("LiteratureCrawlWorker: all named food species crawled")
         CrawlRuns.mark_completed(run_id, Literature.crawl_progress())
         :ok
 
@@ -66,7 +65,7 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
 
       {:snooze, seconds} ->
         Logger.warning(
-          "LiteratureCrawlWorker: rate-limited, snoozing #{seconds}s (retry uncrawled ingredients)"
+          "LiteratureCrawlWorker: rate-limited, snoozing #{seconds}s (retry uncrawled species)"
         )
 
         {:snooze, seconds}
@@ -81,15 +80,15 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
     end
   end
 
-  # Crawl each ingredient in order. A rate-limit short-circuits into a snooze (the
+  # Crawl each species in order. A rate-limit short-circuits into a snooze (the
   # already-crawled rows are ledgered); any other transient error halts for an
   # Oban retry with backoff.
   defp crawl_all(batch) do
     batch
-    |> Enum.reduce_while({:ok, 0}, fn ingredient, {:ok, idx} ->
+    |> Enum.reduce_while({:ok, 0}, fn species, {:ok, idx} ->
       pace(idx)
 
-      case Literature.import_ingredient(ingredient.id) do
+      case Literature.import_species(species.id) do
         {:ok, _studies_found} ->
           {:cont, {:ok, idx + 1}}
 
