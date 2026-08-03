@@ -1,7 +1,31 @@
-# PubTator3 relations → condition recommendations (PROPOSED — not implemented)
+# PubTator3 relations → condition recommendations (IMPLEMENTED)
 
-**Status:** design note / backlog. Nothing here is built yet. Captured after an
-empirical spike on 2026-08-01.
+**Status:** built (Phase 1 — the relations→recommendations slice over the existing
+corpus). Captured after an empirical spike on 2026-08-01; implemented 2026-08-03.
+The disease-seeded crawl (Phase 2) that discovers *new* literature per condition is
+still backlog — see the bottom of this doc.
+
+## What shipped
+
+| Piece | Where |
+|---|---|
+| Parse relations from the BioC-JSON payload | `Literature.PubTator.Client.parse_relations/1` |
+| Persist as structured rows (both endpoints resolved) | `Literature.StudyEntityRelation` (`study_entity_relations`), `Literature.upsert_entity_relation/1` / `persist_study_relations/2` |
+| Chemical endpoint → `Food.Compound` | DB-only `Food.get_compound_by_identifier/2` (identity was already resolved as a mention) |
+| Disease endpoint → `Health.Condition` | `Health.ConditionResolver` + `condition_identifiers` (identifier-first, then token-set name/synonym match that auto-writes the MeSH id) |
+| Re-mine the corpus already on disk (no re-fetch) | `Literature.remine_relations/0` |
+| Scored, valence-mapped, review-gated candidates | `Health.RecommendationCandidates` (+ `CompoundRecommendationCandidate` / `…Study`) |
+| Derivation run stage (worker + runs + PubSub) | `RecommendationCandidateDerivationWorker`, `Health.RecommendationDerivationRuns` |
+| Derive stage card | `/professional/science` (stage 5) |
+| Promote/reject review queue (confirm direction + severity) | `/professional/health` |
+| Ops | `Science.PipelineReset.reset_recommendations/0`, `RunReconciler` stage |
+
+Promotion writes a `Health.CompoundRecommendation` with `source: "literature"` and a
+conservative default `evidence_level: "limited"`. **Nothing is auto-promoted.**
+
+---
+
+## Original design note (2026-08-01 spike)
 
 ## Why
 

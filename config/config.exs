@@ -69,7 +69,32 @@ config :mehungry,
   candidate_promotion_threshold: 0.75,
   # Assay reagents / non-food chemicals that PubTator extracts as "chemicals" but
   # must never become dietary facts — excluded from derivation and purged on derive.
-  non_dietary_compounds: ~w(DPPH ABTS TPTZ Trolox FRAP ORAC BHT BHA)
+  # Matched case-insensitively against the exact compound name (use a plain list,
+  # not ~w, so multi-word names like "Hydrogen Peroxide" are kept intact).
+  non_dietary_compounds: [
+    # antioxidant-assay reagents
+    "DPPH",
+    "ABTS",
+    "TPTZ",
+    "Trolox",
+    "FRAP",
+    "ORAC",
+    "BHT",
+    "BHA",
+    # lab reagents / non-food chemicals / mis-annotations surfaced by PubTator
+    "(3-(4,5-Dimethylthiazol-2-yl)-2,5-diphenyltetrazolium bromide)",
+    "3,4-Methylenedioxyamphetamine",
+    "Hydrogen Peroxide",
+    "Ferric cation",
+    "SDS",
+    "LPS",
+    "Hydrochloric Acid",
+    "Water",
+    "PS",
+    "Gln-Glu",
+    "sugar-acid",
+    "oil"
+  ]
 
 config :mehungry, Oban,
   repo: Mehungry.Repo,

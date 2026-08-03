@@ -16,9 +16,12 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
 
   alias Mehungry.Food
   alias Mehungry.Food.CandidateDerivationRuns
+  alias Mehungry.Health.RecommendationCandidates
+  alias Mehungry.Health.RecommendationDerivationRuns
   alias Mehungry.Literature
   alias Mehungry.Literature.AnnotationRuns
   alias Mehungry.Literature.CrawlRuns
+  alias Mehungry.Science.PipelineReset
 
   @per_page 25
 
@@ -28,9 +31,11 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
       Phoenix.PubSub.subscribe(Mehungry.PubSub, CrawlRuns.topic())
       Phoenix.PubSub.subscribe(Mehungry.PubSub, AnnotationRuns.topic())
       Phoenix.PubSub.subscribe(Mehungry.PubSub, CandidateDerivationRuns.topic())
+      Phoenix.PubSub.subscribe(Mehungry.PubSub, RecommendationDerivationRuns.topic())
     end
 
     derivation_run = CandidateDerivationRuns.latest_run()
+    recommendation_run = RecommendationDerivationRuns.latest_run()
 
     socket =
       socket
@@ -42,6 +47,8 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
       |> assign(:annotation_progress, normalize(Literature.annotation_progress()))
       |> assign(:derivation_run, derivation_run)
       |> assign(:derivation_progress, derivation_progress(derivation_run))
+      |> assign(:recommendation_run, recommendation_run)
+      |> assign(:recommendation_progress, recommendation_progress(recommendation_run))
       |> assign_extraction()
       |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0))
 
@@ -90,6 +97,16 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
      |> put_flash(:info, "Derivation started — progress updates live below")}
   end
 
+  @impl true
+  def handle_event("derive_recommendations", _params, socket) do
+    {:ok, run} = RecommendationCandidates.enqueue_recommendation_derivation()
+
+    {:noreply,
+     socket
+     |> assign(:recommendation_run, run)
+     |> put_flash(:info, "Recommendation derivation started — review candidates at Health conditions")}
+  end
+
   # ── Candidate review ───────────────────────────────────────────────────────
 
   @impl true
@@ -117,21 +134,77 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
 
   @impl true
   def handle_event("refresh", _params, socket) do
+    {:noreply, reload(socket)}
+  end
+
+  # ── Stage resets ───────────────────────────────────────────────────────────
+  # Each clears its stage's generated data (crawl cascades to everything
+  # downstream), then reloads every panel so the progress bars/labels drop back to
+  # Idle · 0/0. Curated inputs are preserved — see `Science.PipelineReset`.
+
+  @impl true
+  def handle_event("reset_crawl", _params, socket) do
+    counts = PipelineReset.reset_crawl()
+    {:noreply, reload_with_flash(socket, "Crawl reset", counts)}
+  end
+
+  @impl true
+  def handle_event("reset_annotation", _params, socket) do
+    counts = PipelineReset.reset_annotation()
+    {:noreply, reload_with_flash(socket, "Annotation reset", counts)}
+  end
+
+  @impl true
+  def handle_event("reset_extraction", _params, socket) do
+    counts = PipelineReset.reset_extraction()
+    {:noreply, reload_with_flash(socket, "Extraction reset", counts)}
+  end
+
+  @impl true
+  def handle_event("reset_derivation", _params, socket) do
+    counts = PipelineReset.reset_derivation()
+    {:noreply, reload_with_flash(socket, "Derivation reset", counts)}
+  end
+
+  @impl true
+  def handle_event("reset_recommendations", _params, socket) do
+    counts = PipelineReset.reset_recommendations()
+    {:noreply, reload_with_flash(socket, "Recommendation derivation reset", counts)}
+  end
+
+  # Re-read every panel from scratch (shared by Refresh and all resets).
+  defp reload(socket) do
     derivation_run = CandidateDerivationRuns.latest_run()
 
-    {:noreply,
-     socket
-     |> assign(:page, 1)
-     |> assign(:crawl_run, CrawlRuns.latest_run())
-     |> assign(:crawl_progress, normalize(Literature.crawl_progress()))
-     |> assign(:annotation_run, AnnotationRuns.latest_run())
-     |> assign(:annotation_progress, normalize(Literature.annotation_progress()))
-     |> assign(:derivation_run, derivation_run)
-     |> assign(:derivation_progress, derivation_progress(derivation_run))
-     |> assign_extraction()
-     |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0),
-       reset: true
-     )}
+    socket
+    |> assign(:page, 1)
+    |> assign(:crawl_run, CrawlRuns.latest_run())
+    |> assign(:crawl_progress, normalize(Literature.crawl_progress()))
+    |> assign(:annotation_run, AnnotationRuns.latest_run())
+    |> assign(:annotation_progress, normalize(Literature.annotation_progress()))
+    |> assign(:derivation_run, derivation_run)
+    |> assign(:derivation_progress, derivation_progress(derivation_run))
+    |> assign(:recommendation_run, RecommendationDerivationRuns.latest_run())
+    |> assign(
+      :recommendation_progress,
+      recommendation_progress(RecommendationDerivationRuns.latest_run())
+    )
+    |> assign_extraction()
+    |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0), reset: true)
+  end
+
+  defp reload_with_flash(socket, label, counts) do
+    total = counts |> Map.values() |> Enum.sum()
+
+    detail =
+      counts
+      |> Enum.filter(fn {_t, n} -> n > 0 end)
+      |> Enum.sort_by(fn {_t, n} -> -n end)
+      |> Enum.map_join(", ", fn {t, n} -> "#{n} #{t}" end)
+
+    message = if total == 0, do: "#{label} — nothing to clear", else: "#{label} — cleared #{total} rows (#{detail})"
+
+    socket |> reload() |> put_flash(:info, message)
   end
 
   # ── Live run updates ───────────────────────────────────────────────────────
@@ -163,6 +236,14 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
      |> assign(:derivation_progress, %{processed: run.processed || 0, total: run.total || 0})}
   end
 
+  @impl true
+  def handle_info({:recommendation_derivation_run, run}, socket) do
+    {:noreply,
+     socket
+     |> assign(:recommendation_run, run)
+     |> assign(:recommendation_progress, %{processed: run.processed || 0, total: run.total || 0})}
+  end
+
   # ── View helpers ───────────────────────────────────────────────────────────
 
   # All three stages report `%{processed, total}` already; kept as a single
@@ -171,6 +252,11 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
 
   defp derivation_progress(nil), do: normalize(Food.candidate_derivation_progress())
   defp derivation_progress(run), do: %{processed: run.processed || 0, total: run.total || 0}
+
+  defp recommendation_progress(nil),
+    do: normalize(RecommendationCandidates.recommendation_derivation_progress())
+
+  defp recommendation_progress(run), do: %{processed: run.processed || 0, total: run.total || 0}
 
   defp percent(%{total: total}) when total in [0, nil], do: 0
   defp percent(%{processed: processed, total: total}), do: round(processed / total * 100)

@@ -28,6 +28,7 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
       |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0))
       |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0))
       |> stream(:measurement_candidates, Food.list_measurement_candidates(limit: @per_page, offset: 0))
+      |> stream(:measurements, Food.list_recent_measurements(limit: @per_page))
 
     {:ok, socket}
   end
@@ -112,7 +113,8 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
          socket
          |> put_flash(:info, "Measurement accepted and recorded.")
          |> assign(:mcand_count, max(socket.assigns.mcand_count - 1, 0))
-         |> stream_delete_by_dom_id(:measurement_candidates, "measurement_candidates-#{id}")}
+         |> stream_delete_by_dom_id(:measurement_candidates, "measurement_candidates-#{id}")
+         |> stream(:measurements, Food.list_recent_measurements(limit: @per_page), reset: true)}
 
       {:error, :no_curated_ingredient} ->
         {:noreply,
@@ -182,7 +184,8 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
      |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0), reset: true)
      |> stream(:measurement_candidates, Food.list_measurement_candidates(limit: @per_page, offset: 0),
        reset: true
-     )}
+     )
+     |> stream(:measurements, Food.list_recent_measurements(limit: @per_page), reset: true)}
   end
 
   # Live run broadcasts drive ONLY the progress bar; the review stream is left

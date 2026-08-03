@@ -85,7 +85,7 @@
       <% true -> %>
         <section class="mb-10">
           <h2 class="text-lg font-display font-medium text-parchment mb-4">Nutrition Insights</h2>
-          <.nutrient_interaction_panel interactions={@interactions} />
+          <.nutrient_interaction_panel interactions={@interactions.result} />
         </section>
     <% end %>
     <%= cond do %>

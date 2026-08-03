@@ -263,7 +263,7 @@ defmodule MehungryWeb.Router do
       live "/search/:query", RecipeBrowserLive.Index, :index
 
       live "/foods", FoodsLive.Index, :index
-      live "/foods/:slug", FoodDetailLive.Index, :index
+      live "/foods/:slug", SpeciesDetailLive.Index, :index
 
       live "/conditions", HealthLive.Index, :index
       live "/conditions/:id", ConditionDetailLive.Index, :index

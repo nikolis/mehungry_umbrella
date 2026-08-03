@@ -56,13 +56,15 @@ defmodule MehungryLocalAi.Extractor do
 
     with %{text: answer, score: score} <- QA.answer(question, text),
          [frag | _] <- Regex.run(@value_rx, answer),
-         {value, unit} when not is_nil(value) <- split_value_unit(String.trim(frag)) do
+         {value, unit} when not is_nil(value) <- split_value_unit(String.trim(frag)),
+         span = sentence_containing(text, String.trim(frag)),
+         true <- composition_context?(span) do
       %{
         value: value,
         unit: unit,
         preparation_method: find_prep(answer),
         analytical_method: find_method(text),
-        raw_span: String.slice(answer, 0, 240),
+        raw_span: span,
         score: Float.round(score, 3),
         extraction_method: "automated"
       }
@@ -89,19 +91,25 @@ defmodule MehungryLocalAi.Extractor do
         frag = binary_part(text, pos, len)
 
         if Enum.min(Enum.map(name_positions, &abs(&1 - pos))) <= 160 do
+          span = sentence_containing(text, frag)
+
           case split_value_unit(String.trim(frag)) do
             {value, unit} when not is_nil(value) ->
-              [
-                %{
-                  value: value,
-                  unit: unit,
-                  preparation_method: find_prep(window(low, pos)),
-                  analytical_method: method,
-                  raw_span: frag,
-                  score: @rule_score,
-                  extraction_method: "automated"
-                }
-              ]
+              if composition_context?(span) do
+                [
+                  %{
+                    value: value,
+                    unit: unit,
+                    preparation_method: find_prep(window(low, pos)),
+                    analytical_method: method,
+                    raw_span: span,
+                    score: @rule_score,
+                    extraction_method: "automated"
+                  }
+                ]
+              else
+                []
+              end
 
             _ ->
               []
@@ -138,6 +146,32 @@ defmodule MehungryLocalAi.Extractor do
   end
 
   defp find_prep(window), do: Enum.find(@prep_words, &String.contains?(window, &1))
+
+  # The sentence in `text` that contains `needle` (the extracted value token) — the
+  # human-readable context that says what the bare number actually refers to, so a
+  # reviewer can tell "40% of headspace gas" from a real "40 mg/100g" composition.
+  # Falls back to the needle itself when no sentence match is found.
+  # Reject values whose sentence describes a change/emission/inhibition rather than a
+  # static composition — "reduced by 40%", "methane emission", "headspace gas". These
+  # are the classic false positives (e.g. Alfalfa · Methane 40%). Heuristic, so it
+  # pairs with the source sentence now shown in review for the ones that slip through.
+  @noncomposition_rx ~r/\b(emissions?|headspace|inhibit\w*|mitigat\w*|excret\w*)\b|\b(reduc\w+|decreas\w+|increas\w+|declin\w+)\s+(by|of|to|from)\b/i
+
+  defp composition_context?(span) when span in [nil, ""], do: true
+  defp composition_context?(span), do: not Regex.match?(@noncomposition_rx, span)
+
+  @max_context 300
+  defp sentence_containing(_text, needle) when needle in [nil, ""], do: needle
+
+  defp sentence_containing(text, needle) do
+    text
+    |> String.split(~r/(?<=[.!?])\s+|\n+/u, trim: true)
+    |> Enum.find(&String.contains?(&1, needle))
+    |> case do
+      nil -> String.slice(needle, 0, @max_context)
+      sentence -> sentence |> String.trim() |> String.slice(0, @max_context)
+    end
+  end
 
   defp window(low, pos) do
     start = max(pos - 90, 0)

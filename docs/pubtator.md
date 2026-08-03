@@ -11,6 +11,16 @@ a study's PMID into a set of entity mentions and **syncs them into
 `Mehungry.Literature`**. The rest of the application never talks to PubTator — it
 only reads `Mehungry.Literature`.
 
+The same BioC-JSON payload also carries a document-level **`relations`** array —
+directional co-mentions (`Negative_Correlation` / `Positive_Correlation` /
+`Association` / `Cotreatment`) between two entities. These are parsed by
+`PubTator.Client.parse_relations/1` and stored as `StudyEntityRelation` rows with
+**both endpoints resolved** (chemical → `Food.Compound`, disease → `Health.Condition`);
+`Literature.remine_relations/0` back-fills them from payloads already on disk. Unlike
+mentions, a chemical↔disease relation carries *direction*, which is what feeds the
+review-gated `Health.RecommendationCandidates` — see
+`docs/pubtator_relations_recommendations.md`.
+
 ```
         USDA     ──▶ canonical ingredient registry   (Food.Ingredients)
         PubChem  ──▶ canonical compound registry     (Food.Compounds)

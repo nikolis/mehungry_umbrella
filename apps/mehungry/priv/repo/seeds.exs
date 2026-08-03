@@ -821,6 +821,13 @@ Mehungry.Repo.insert(%Mehungry.Food.Ingredient{
   })
 """
 
+# ── Health condition registry (bulk catalogue) ───────────────────────────────
+# Idempotent bulk load of the ~193-condition reference registry from
+# priv/repo/seeds/data/health_conditions.json (name/synonyms/category/
+# subcategory/description). Conditions only — no compound advice.
+{:ok, %{inserted: inserted, total: total}} = Mehungry.Health.ConditionSeeder.seed()
+IO.puts("Seeded health conditions: #{inserted} new, #{total} total.")
+
 # ── Health conditions + compound recommendations (advice layer) ──────────────
 # Idempotent: upserts the referenced compound, then find-or-creates the condition
 # and links it via a guideline recommendation. Conditions link to COMPOUNDS only;

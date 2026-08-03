@@ -9,6 +9,7 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
   alias Mehungry.Food
   alias Mehungry.Health
+  alias Mehungry.Health.RecommendationCandidates
 
   @recommendations ~w(avoid limit caution monitor encourage)
   @severities ~w(low moderate high severe)
@@ -28,6 +29,7 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
     |> assign(:conditions, conditions)
     |> assign(:recs, recs)
     |> assign(:compounds, Food.list_compounds())
+    |> assign(:rec_candidates, RecommendationCandidates.list_pending_candidates())
   end
 
   # ── Events ─────────────────────────────────────────────────────────────────
@@ -71,6 +73,29 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   end
 
   @impl true
+  def handle_event("promote_recommendation", %{"id" => id} = params, socket) do
+    attrs =
+      params
+      |> Map.take(["recommendation", "severity", "evidence_level"])
+      |> Enum.reject(fn {_k, v} -> v in [nil, ""] end)
+      |> Map.new()
+
+    case RecommendationCandidates.promote_candidate(String.to_integer(id), attrs) do
+      {:ok, _} ->
+        {:noreply, socket |> put_flash(:info, "Recommendation promoted from literature.") |> load()}
+
+      {:error, changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not promote: #{errors(changeset)}")}
+    end
+  end
+
+  @impl true
+  def handle_event("reject_recommendation", %{"id" => id}, socket) do
+    {:ok, _} = RecommendationCandidates.reject_candidate(String.to_integer(id))
+    {:noreply, socket |> put_flash(:info, "Candidate rejected.") |> load()}
+  end
+
+  @impl true
   def handle_event("delete_condition", %{"id" => id}, socket) do
     Health.delete_condition(String.to_integer(id))
     {:noreply, socket |> put_flash(:info, "Condition removed.") |> load()}
@@ -104,4 +129,9 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   defp rec_class("limit"), do: "text-paprika"
   defp rec_class("caution"), do: "text-parchment"
   defp rec_class(_), do: "text-basil"
+
+  # The suggested direction, mapped to a valid CompoundRecommendation value for the
+  # promote form's default (a "neutral"/nil suggestion has no valid value → caution).
+  defp default_rec(s) when s in ~w(avoid limit caution monitor encourage), do: s
+  defp default_rec(_), do: "caution"
 end

@@ -40,6 +40,15 @@ defmodule Mehungry.Application do
       {Task.Supervisor, name: Mehungry.TaskSupervisor}
     ]
 
-    Supervisor.start_link(children, strategy: :one_for_one, name: Mehungry.Supervisor)
+    case Supervisor.start_link(children, strategy: :one_for_one, name: Mehungry.Supervisor) do
+      {:ok, _pid} = ok ->
+        # Reset any pipeline run left stuck "processing" by a mid-run restart, so
+        # the /professional/science Run buttons don't stay disabled forever.
+        Mehungry.Science.RunReconciler.reconcile_on_boot()
+        ok
+
+      other ->
+        other
+    end
   end
 end

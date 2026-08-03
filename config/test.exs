@@ -77,3 +77,7 @@ config :mehungry, :local_ai_api_token, "test-local-ai-token"
 # Never load the Bumblebee QA model in the test suite — extraction falls back to the
 # rule-based path (MehungryLocalAi.QA.available? is false).
 config :mehungry_local_ai, start_qa: false
+
+# Don't run the pipeline run-reconciler at boot in tests — it would query the DB
+# outside the Ecto sandbox before any test checks out a connection.
+config :mehungry, reconcile_runs_on_boot: false

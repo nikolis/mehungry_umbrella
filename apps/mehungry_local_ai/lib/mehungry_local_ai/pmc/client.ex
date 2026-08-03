@@ -11,9 +11,10 @@ defmodule MehungryLocalAi.PMC.Client do
   under NCBI's ~3 req/s courtesy limit (no shared Cachex budget needed).
   """
 
-  require Logger
-
-  @idconv "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
+  # NCBI migrated PMC off www.ncbi.nlm.nih.gov in 2024; the old
+  # /pmc/utils/idconv/v1.0/ path now 301-redirects here (HTTPoison does not follow
+  # redirects, so the stale URL surfaced as {:http, 301} on every call). Same JSON shape.
+  @idconv "https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/"
   @efetch "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
   @timeout_ms 30_000
   @pace_ms 350

@@ -39,6 +39,16 @@
           {if running?(@crawl_run), do: "Crawling…", else: "Run crawl"}
         </button>
 
+        <button
+          type="button"
+          phx-click="reset_crawl"
+          disabled={running?(@crawl_run)}
+          data-confirm="Reset the crawl? This deletes ALL discovered studies and everything downstream — entity annotations, full-texts, measurement candidates, and derived candidates. Curated species, the compound registry, and relationships are kept. This cannot be undone."
+          class="px-3 py-1.5 rounded border border-red-500/40 text-red-300 text-sm font-medium hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Reset
+        </button>
+
         <.link
           navigate={~p"/professional/science/studies"}
           class="text-sm text-basil hover:underline ml-auto"
@@ -86,6 +96,16 @@
           class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {if running?(@annotation_run), do: "Annotating…", else: "Run annotation"}
+        </button>
+
+        <button
+          type="button"
+          phx-click="reset_annotation"
+          disabled={running?(@annotation_run)}
+          data-confirm="Reset annotation? This deletes all PubTator entity mentions and the annotation cache/ledger so annotation can re-run. Discovered studies are kept."
+          class="px-3 py-1.5 rounded border border-red-500/40 text-red-300 text-sm font-medium hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Reset
         </button>
 
         <.link
@@ -139,6 +159,16 @@
           {if running?(@derivation_run), do: "Deriving…", else: "Derive candidates"}
         </button>
 
+        <button
+          type="button"
+          phx-click="reset_derivation"
+          disabled={running?(@derivation_run)}
+          data-confirm="Reset derivation? This deletes all derived candidates, their study citations, and derivation runs, plus the auto-promoted 'contains' facts. Manually-curated relationships are kept."
+          class="px-3 py-1.5 rounded border border-red-500/40 text-red-300 text-sm font-medium hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Reset
+        </button>
+
         <.link
           navigate={~p"/professional/compound-candidates"}
           class="text-sm text-basil hover:underline ml-auto"
@@ -173,6 +203,70 @@
       </div>
     </section>
 
+    <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-ink-panel2 text-parchment text-xs font-semibold">
+          5
+        </span>
+        <h2 class="text-lg font-medium text-parchment mr-2">Recommendation derivation (disease → compound)</h2>
+
+        <button
+          type="button"
+          phx-click="derive_recommendations"
+          disabled={running?(@recommendation_run)}
+          data-confirm="Derive condition↔compound recommendation candidates from the directional literature relations already on disk? These are review-gated — nothing is auto-promoted."
+          class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {if running?(@recommendation_run), do: "Deriving…", else: "Derive recommendations"}
+        </button>
+
+        <button
+          type="button"
+          phx-click="reset_recommendations"
+          disabled={running?(@recommendation_run)}
+          data-confirm="Reset recommendation derivation? This deletes all derived recommendation candidates, their citations, and derivation runs. Curated health recommendations and the underlying relations are kept."
+          class="px-3 py-1.5 rounded border border-red-500/40 text-red-300 text-sm font-medium hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Reset
+        </button>
+
+        <.link
+          navigate={~p"/professional/health"}
+          class="text-sm text-basil hover:underline ml-auto"
+        >
+          Review recommendations →
+        </.link>
+      </div>
+
+      <p class="text-parchment-dim text-xs">
+        Aggregates PubTator's directional chemical↔disease relations (negative → lean
+        <span class="font-medium">encourage</span>, positive → lean
+        <span class="font-medium">avoid</span>) into scored, review-gated candidates.
+        An admin confirms direction & severity to promote into a curated
+        <code class="text-parchment">Health.CompoundRecommendation</code> — never auto-promoted.
+      </p>
+
+      <div>
+        <div class="flex items-center justify-between text-xs text-parchment-dim mb-1">
+          <span>
+            Derived: {@recommendation_progress.processed} / {@recommendation_progress.total} ({percent(
+              @recommendation_progress
+            )}%)
+          </span>
+          <span
+            class={"font-medium #{run_class(@recommendation_run)}"}
+            title={run_error(@recommendation_run)}
+          >
+            {run_label(@recommendation_run)}
+          </span>
+        </div>
+        <div class="h-2 w-full rounded bg-ink-panel2 overflow-hidden">
+          <div class="h-full bg-basil rounded" style={"width: #{percent(@recommendation_progress)}%"}>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <%!-- ── Full-text (PMC) + measurement extraction (external local-AI service) ── --%>
     <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
       <div class="flex flex-wrap items-center gap-2">
@@ -180,6 +274,16 @@
           FT
         </span>
         <h2 class="text-lg font-medium text-parchment mr-2">Full-text extraction (measurements)</h2>
+
+        <button
+          type="button"
+          phx-click="reset_extraction"
+          data-confirm="Reset extraction? This deletes all PMC full-texts, fetch attempts, and extracted measurement candidates so the local-AI service re-processes every study from scratch. Discovered studies and accepted measurements are kept."
+          class="px-3 py-1.5 rounded border border-red-500/40 text-red-300 text-sm font-medium hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Reset
+        </button>
+
         <span class="font-medium text-sm ml-auto text-parchment-dim">External · local-AI service</span>
       </div>
 

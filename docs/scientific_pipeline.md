@@ -218,10 +218,16 @@ measurements (read-only, nothing persisted).
 Details: [`food_compounds.md`](food_compounds.md),
 [`evidence_aggregation.md`](evidence_aggregation.md).
 
-### Step 7 — Add health advice (separate, manual / guideline)
+### Step 7 — Add health advice (manual / guideline **or** literature-derived)
 
-The advice layer is **not** derived from the pipeline — it is curated by hand or
-from clinical guidelines, and it links a condition to a **compound**:
+The advice layer links a condition to a **compound**. It can be curated by hand /
+from clinical guidelines, **or** derived (review-gated) from the literature: PubTator's
+directional chemical↔disease relations feed `Health.RecommendationCandidates`, which an
+admin reviews at `/professional/health` and promotes into a `CompoundRecommendation`
+(`source: "literature"`). The derive stage lives on `/professional/science` (stage 5).
+Nothing is auto-promoted. See
+[`pubtator_relations_recommendations.md`](pubtator_relations_recommendations.md). The
+manual path:
 
 ```elixir
 Mehungry.Health.add_recommendation(

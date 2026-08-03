@@ -21,7 +21,7 @@ defmodule Mehungry.Health do
   alias Mehungry.Repo
 
   alias Mehungry.Food.{Compound, FoundementalFood, SpeciesCompoundRelationship}
-  alias Mehungry.Health.{Condition, CompoundRecommendation}
+  alias Mehungry.Health.{Condition, CompoundRecommendation, ConditionIdentifier}
 
   # ── Condition registry ────────────────────────────────────────────────────
 
@@ -74,6 +74,34 @@ defmodule Mehungry.Health do
         order_by: [asc: c.name]
       )
     )
+  end
+
+  # ── Condition cross-database identifiers (mesh/icd…) ──────────────────────
+  # Mirror of the `Food.Compounds` identifier API — the disease-resolution seam.
+
+  @doc "Fetch the condition owning `(namespace, identifier)`, or nil."
+  def get_condition_by_identifier(namespace, identifier) do
+    Repo.one(
+      from(c in Condition,
+        join: i in ConditionIdentifier,
+        on: i.condition_id == c.id,
+        where: i.namespace == ^namespace and i.identifier == ^identifier
+      )
+    )
+  end
+
+  @doc "Insert-or-update a condition identifier, keyed on `(namespace, identifier)`."
+  def upsert_condition_identifier(attrs) do
+    %ConditionIdentifier{}
+    |> ConditionIdentifier.changeset(attrs)
+    |> Repo.insert(
+      on_conflict: {:replace, [:condition_id, :is_primary, :source, :updated_at]},
+      conflict_target: [:namespace, :identifier]
+    )
+  end
+
+  def list_condition_identifiers(condition_id) do
+    Repo.all(from(i in ConditionIdentifier, where: i.condition_id == ^condition_id))
   end
 
   # ── Condition ↔ compound recommendations (dietary advice) ─────────────────
@@ -182,6 +210,40 @@ defmodule Mehungry.Health do
     )
     |> maybe_filter_recommendation(recommendation)
     |> Repo.all()
+  end
+
+  @doc """
+  The dietary advice implicated for a **food species** — the inverse of
+  `species_for_condition/2`: `species → species_compound_relationships → compounds →
+  compound_recommendations → conditions`. Returns maps of
+  `%{compound, condition, recommendation, severity, evidence_level, source}` so a
+  species page can render "Oxalate — avoid for Kidney Stones (high)". Ordered by
+  condition then compound.
+  """
+  def recommendations_for_species(species_id) do
+    Repo.all(
+      from(scr in SpeciesCompoundRelationship,
+        join: rec in CompoundRecommendation,
+        on: rec.compound_id == scr.compound_id,
+        join: cmp in Compound,
+        on: cmp.id == scr.compound_id,
+        join: cond in Condition,
+        on: cond.id == rec.condition_id,
+        where: scr.foundemental_species_id == ^species_id,
+        order_by: [asc: cond.name, asc: cmp.name],
+        select: %{
+          compound: cmp,
+          condition: cond,
+          recommendation: rec.recommendation,
+          severity: rec.severity,
+          evidence_level: rec.evidence_level,
+          source: rec.source
+        }
+      )
+    )
+    # A species can carry a compound via several relationship rows; collapse to one
+    # advice line per (condition, compound, recommendation).
+    |> Enum.uniq_by(&{&1.condition.id, &1.compound.id, &1.recommendation})
   end
 
   @doc """

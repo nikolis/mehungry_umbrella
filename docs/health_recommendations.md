@@ -50,10 +50,21 @@ A shared reference entity, one row per condition (like `compounds`).
 |---|---|
 | `name` | e.g. `"Kidney Stones"`, `"IBS"`. Required, **unique**. |
 | `synonyms` | `text[]`, default `[]` — abbreviations/aliases (`"Irritable Bowel Syndrome"`). |
-| `category` | Optional grouping (`renal`, `digestive`, `metabolic`). |
+| `category` | Optional grouping (`Endocrine`, `Digestive`, `Renal`). |
+| `subcategory` | Optional finer grouping under `category` (`Endocrine → Diabetes`, `Digestive → Liver Disease`). Added `20260811120000`. |
 | `description` | Optional factual description. |
 
-**Indexes:** `unique (name)`; `index (category)`.
+**Indexes:** `unique (name)`; `index (category)`; `index (subcategory)`.
+
+### Bulk seed — the condition catalogue
+`Mehungry.Health.ConditionSeeder.seed/1` idempotently loads the ~193-condition
+reference registry from `priv/repo/seeds/data/health_conditions.json` (one object
+per condition: `main_name`/`synonyms`/`category`/`subcategory`/`description`),
+upserting on the unique `name` (`on_conflict: :replace`, so re-seeding refreshes
+edits without duplicates). Wired into `priv/repo/seeds.exs`, so `mix ecto.reset`
+loads it; also runnable standalone. Seeds **conditions only** — no
+`CompoundRecommendation` advice (that stays curated, since it needs a resolved
+compound).
 
 ### `compound_recommendations` — the advice facts
 A condition↔compound recommendation with provenance. **No ingredient reference.**
@@ -150,6 +161,8 @@ never writes them, and it never asserts a new scientific fact.
 |---|---|---|
 | `Health` | `health.ex` | Context: condition registry, recommendation CRUD, derived composition read. |
 | `Health.Condition` | `health/condition.ex` | Condition registry schema. |
+| `Health.ConditionSeeder` | `health/condition_seeder.ex` | Idempotent bulk seed of the condition registry from the bundled JSON catalogue. |
+| — | `priv/repo/seeds/data/health_conditions.json` | ~193-condition source catalogue. |
 | `Health.CompoundRecommendation` | `health/compound_recommendation.ex` | Condition↔compound recommendation schema. |
 | — | `priv/repo/migrations/20260731120000_create_health_recommendations.exs` | Both tables + natural-key unique index. |
 
@@ -176,8 +189,20 @@ mix test apps/mehungry/test/mehungry/health_test.exs
 
 ## 7. Out of scope / follow-ons
 
-- No Oban worker, cache, or config seam — a plain synchronous registry+facts layer
-  like `Food.Enrichment` / `Food.Compounds`.
+- **Literature-derived recommendations — BUILT.** Recommendations no longer have to be
+  hand-entered: `Health.RecommendationCandidates` (mirroring `Food.CompoundCandidates`)
+  aggregates PubTator's directional chemical↔disease relations
+  (`Literature.StudyEntityRelation`) into scored, **review-gated**
+  `CompoundRecommendationCandidate`s. Relation valence maps to a *suggested* direction
+  (negative-correlation → `encourage`, positive → `avoid`, association → neutral); an
+  admin confirms direction + severity at `/professional/health` to promote into a
+  `CompoundRecommendation` (`source: "literature"`, conservative default
+  `evidence_level`). Nothing is auto-promoted. Diseases resolve to conditions via
+  `Health.ConditionResolver` + `condition_identifiers`. Derivation runs as an Oban stage
+  (`RecommendationCandidateDerivationWorker`) surfaced on `/professional/science`.
+  See `docs/pubtator_relations_recommendations.md`. The **disease-seeded crawl** (Phase 2 —
+  discovering *new* literature per condition) is still backlog.
+- The registry+facts CRUD itself remains a plain synchronous layer (no cache/config seam).
 - **Evidence integration.** `evidence_level` is entered by the source today; wiring
   it to `Food.summarize/2` (so a recommendation's strength tracks the measured
   evidence for its compound in linked foods) is a natural follow-on.

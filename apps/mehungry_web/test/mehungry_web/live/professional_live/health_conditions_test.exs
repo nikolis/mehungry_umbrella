@@ -4,7 +4,8 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
   import Phoenix.LiveViewTest
   import Mehungry.AccountsFixtures
 
-  alias Mehungry.{Food, Health}
+  alias Mehungry.{Food, Health, Literature}
+  alias Mehungry.Health.RecommendationCandidates
 
   @admin_email Application.compile_env(:mehungry, :admin_email)
 
@@ -71,6 +72,49 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
 
     assert Health.get_condition(gout.id) == nil
     assert Health.recommendations_for_condition(gout.id) == []
+  end
+
+  test "reviews a literature-derived candidate and promotes it into a recommendation", %{
+    conn: conn,
+    oxalate: oxalate
+  } do
+    {:ok, condition} = Health.create_condition(%{name: "Kidney Stones"})
+    {:ok, study} = Literature.upsert_study(%{pmid: 770_001, title: "s"})
+
+    {:ok, _} =
+      Literature.upsert_entity_relation(%{
+        study_id: study.id,
+        type: "Positive_Correlation",
+        score: 0.98,
+        entity1_type: "chemical",
+        entity1_identifier: "mesh:D010070",
+        entity2_type: "disease",
+        entity2_identifier: "mesh:D007669",
+        compound_id: oxalate.id,
+        condition_id: condition.id
+      })
+
+    {:ok, %{candidate: candidate}} =
+      RecommendationCandidates.derive_candidate(condition.id, oxalate.id)
+
+    {:ok, view, _html} = live(conn, ~p"/professional/health")
+    assert render(view) =~ "Review derived recommendations"
+    assert render(view) =~ "suggests avoid"
+
+    view
+    |> form("form[phx-submit=promote_recommendation]",
+      id: candidate.id,
+      recommendation: "avoid",
+      severity: "high"
+    )
+    |> render_submit()
+
+    assert [rec] = Health.recommendations_for_condition(condition.id)
+    assert rec.recommendation == "avoid"
+    assert rec.source == "literature"
+    assert rec.compound_id == oxalate.id
+    # Promoted candidate leaves the review queue.
+    assert RecommendationCandidates.list_pending_candidates() == []
   end
 
   test "non-admin is redirected away" do

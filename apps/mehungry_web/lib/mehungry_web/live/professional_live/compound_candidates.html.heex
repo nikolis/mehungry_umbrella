@@ -107,11 +107,18 @@
         class="py-3 flex flex-wrap items-center gap-3 justify-between"
       >
         <div class="min-w-0 flex-1">
-          <div class="text-parchment font-medium truncate">
-            {mc.species.name} <span class="text-parchment-dim">·</span> {mc.compound.name}
-            <span class="text-basil">{mc.value} {mc.unit}</span>
+          <div class="text-parchment font-medium">
+            {mc.species.name} <span class="text-parchment-dim">contains</span> {mc.compound.name}
+            <span class="text-basil">· {mc.value} {mc.unit}</span>
           </div>
-          <div class="text-xs text-parchment-dim">
+          <p
+            :if={mc.raw_span && mc.raw_span != ""}
+            class="text-xs text-parchment-dim italic mt-1 border-l-2 border-ink-panel2 pl-2"
+            title="Source sentence the value was extracted from — check it actually describes a composition, not e.g. a reduction or a gas fraction."
+          >
+            “{mc.raw_span}”
+          </p>
+          <div class="text-xs text-parchment-dim mt-1">
             {[mc.preparation_method, mc.analytical_method] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")}
             <span :if={mc.study && mc.study.pmid}>
               · <a href={"https://pubmed.ncbi.nlm.nih.gov/#{mc.study.pmid}/"} target="_blank" rel="noopener" class="text-basil hover:underline">PMID {mc.study.pmid}</a>
@@ -145,6 +152,41 @@
     <p :if={@mcand_count == 0} class="text-parchment-dim text-sm">
       None pending — run the full-text extraction pipeline from the Science page.
     </p>
+  </section>
+
+  <%!-- ── Recorded measurements (accepted, immutable) ──────────────────────── --%>
+  <section>
+    <h2 class="text-lg font-medium text-parchment mb-2">Recorded measurements</h2>
+    <p class="text-parchment-dim text-sm mb-3">
+      Accepted measurements, newest first. The quoted sentence is the source context
+      the value was extracted from — kept as provenance.
+    </p>
+
+    <div id="recorded_measurements" phx-update="stream" class="divide-y divide-ink-panel2">
+      <div
+        :for={{dom_id, m} <- @streams.measurements}
+        id={dom_id}
+        class="py-3"
+      >
+        <div class="text-parchment font-medium">
+          {m.ingredient.name} <span class="text-parchment-dim">contains</span> {m.compound.name}
+          <span class="text-basil">· {m.value} {m.unit}</span>
+        </div>
+        <p
+          :if={m.raw_span && m.raw_span != ""}
+          class="text-xs text-parchment-dim italic mt-1 border-l-2 border-ink-panel2 pl-2"
+        >
+          “{m.raw_span}”
+        </p>
+        <div class="text-xs text-parchment-dim mt-1">
+          {[m.preparation_method, m.analytical_method] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")}
+          <span :if={m.study && m.study.pmid}>
+            · <a href={"https://pubmed.ncbi.nlm.nih.gov/#{m.study.pmid}/"} target="_blank" rel="noopener" class="text-basil hover:underline">PMID {m.study.pmid}</a>
+          </span>
+          · {m.extraction_method}
+        </div>
+      </div>
+    </div>
   </section>
 
   <section>

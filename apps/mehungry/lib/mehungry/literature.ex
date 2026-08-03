@@ -31,6 +31,7 @@ defmodule Mehungry.Literature do
     StudyIngredient,
     StudyCompound,
     StudyEntityMention,
+    StudyEntityRelation,
     StudyFullText,
     PmcFetchAttempt,
     CrawlAttempt,
@@ -229,6 +230,26 @@ defmodule Mehungry.Literature do
     |> Enum.uniq_by(& &1.id)
   end
 
+  @doc """
+  All studies discovered for a food **species**, newest first — the union across the
+  species' curated ingredients (studies link to ingredients via `StudyIngredient`, and
+  ingredients belong to a species via `FoundementalFood`). Deduped.
+  """
+  def list_studies_for_species(species_id) do
+    Repo.all(
+      from(l in StudyIngredient,
+        join: ff in FoundementalFood,
+        on: ff.ingredient_id == l.ingredient_id,
+        join: s in ScientificStudy,
+        on: s.id == l.study_id,
+        where: ff.foundemental_species_id == ^species_id,
+        distinct: s.id,
+        order_by: [desc: s.id],
+        select: s
+      )
+    )
+  end
+
   @doc "All studies linked to a compound."
   def list_studies_for_compound(compound_id) do
     Repo.all(
@@ -266,6 +287,154 @@ defmodule Mehungry.Literature do
       on_conflict: {:replace_all_except, [:id, :inserted_at]},
       conflict_target: [:study_id, :entity_type, :normalized_identifier, :offset]
     )
+  end
+
+  # ── PubTator3 entity relations (directional co-mentions) ──────────────────
+
+  @doc "Insert-or-update an extracted entity relation on its natural key."
+  def upsert_entity_relation(attrs) do
+    %StudyEntityRelation{}
+    |> StudyEntityRelation.changeset(attrs)
+    |> Repo.insert(
+      on_conflict: {:replace_all_except, [:id, :inserted_at]},
+      conflict_target: [:study_id, :type, :entity1_identifier, :entity2_identifier]
+    )
+  end
+
+  @doc """
+  Persist the relations parsed from one study's BioC-JSON payload, resolving each
+  endpoint against our registries (chemical → compound, disease → condition) with
+  **DB-only** lookups (no external API — the entities were already resolved as
+  mentions). Returns the number of relations persisted.
+  """
+  def persist_study_relations(study_id, relations) when is_list(relations) do
+    Enum.reduce(relations, 0, fn rel, count ->
+      attrs =
+        rel
+        |> Map.put(:study_id, study_id)
+        |> Map.put(:compound_id, resolve_relation_compound(rel))
+        |> Map.put(:condition_id, resolve_relation_condition(rel))
+
+      case upsert_entity_relation(attrs) do
+        {:ok, _} -> count + 1
+        {:error, _} -> count
+      end
+    end)
+  end
+
+  @doc """
+  Re-mine every stored PubTator payload for relations (no re-fetch). Parses
+  `pubtator_responses.raw_json`, persists `study_entity_relations` idempotently, and
+  resolves both endpoints. Safe to re-run. Returns `%{studies: n, relations: m}`.
+  """
+  def remine_relations do
+    from(r in PubTatorRawResponse,
+      where: not is_nil(r.pmid),
+      select: {r.pmid, r.raw_json}
+    )
+    |> Repo.all()
+    |> Enum.reduce(%{studies: 0, relations: 0}, fn {pmid, raw}, acc ->
+      case get_study_by_pmid(pmid) do
+        %{id: study_id} ->
+          relations = PubTator.Client.parse_relations(raw)
+          persisted = persist_study_relations(study_id, relations)
+          %{studies: acc.studies + 1, relations: acc.relations + persisted}
+
+        _ ->
+          acc
+      end
+    end)
+  end
+
+  # ── Relation aggregation for recommendation candidates ────────────────────
+
+  @doc """
+  Deterministic, deduped `{condition_id, compound_id}` pairs that carry at least one
+  fully-resolved chemical↔disease relation. The stable sort keeps offset-paged batch
+  derivation reproducible.
+  """
+  def condition_compound_relation_pairs do
+    Repo.all(
+      from(r in StudyEntityRelation,
+        where: not is_nil(r.condition_id) and not is_nil(r.compound_id),
+        distinct: true,
+        order_by: [asc: r.condition_id, asc: r.compound_id],
+        select: {r.condition_id, r.compound_id}
+      )
+    )
+  end
+
+  @doc "All resolved relations for a `(condition, compound)` pair — `type`, `score`, `study_id`."
+  def condition_compound_relations(condition_id, compound_id) do
+    Repo.all(
+      from(r in StudyEntityRelation,
+        where: r.condition_id == ^condition_id and r.compound_id == ^compound_id,
+        select: %{type: r.type, score: r.score, study_id: r.study_id}
+      )
+    )
+  end
+
+  @doc "Distinct reference study ids backing a `(condition, compound)` relation pair."
+  def condition_compound_relation_study_ids(condition_id, compound_id) do
+    Repo.all(
+      from(r in StudyEntityRelation,
+        where: r.condition_id == ^condition_id and r.compound_id == ^compound_id,
+        distinct: true,
+        select: r.study_id
+      )
+    )
+  end
+
+  @doc "Count of distinct resolved condition↔compound relation pairs (progress total)."
+  def count_condition_compound_relation_pairs do
+    Repo.one(
+      from(r in StudyEntityRelation,
+        where: not is_nil(r.condition_id) and not is_nil(r.compound_id),
+        select: fragment("count(distinct (?, ?))", r.condition_id, r.compound_id)
+      )
+    ) || 0
+  end
+
+  # Resolve the chemical endpoint (if any) to a compound id — identifier-only DB
+  # lookup, so no PubChem call. Nil when neither endpoint is a resolvable chemical.
+  defp resolve_relation_compound(rel) do
+    with %{identifier: id} when is_binary(id) <- relation_endpoint(rel, "chemical"),
+         {ns, ident} <- split_namespaced(id),
+         %{id: compound_id} <- Mehungry.Food.get_compound_by_identifier(ns, ident) do
+      compound_id
+    else
+      _ -> nil
+    end
+  end
+
+  # Resolve the disease endpoint (if any) to a condition id via the local resolver.
+  defp resolve_relation_condition(rel) do
+    case relation_endpoint(rel, "disease") do
+      %{identifier: id, name: name} ->
+        case Mehungry.Health.ConditionResolver.resolve_normalized(id, name) do
+          {:ok, condition} -> condition.id
+          {:error, _} -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  # The endpoint (role1/role2) whose biotype is `type`, as `%{identifier, name}`.
+  defp relation_endpoint(rel, type) do
+    cond do
+      rel[:entity1_type] == type -> %{identifier: rel[:entity1_identifier], name: rel[:entity1_name]}
+      rel[:entity2_type] == type -> %{identifier: rel[:entity2_identifier], name: rel[:entity2_name]}
+      true -> nil
+    end
+  end
+
+  defp split_namespaced(id) do
+    case String.split(id, ":", parts: 2) do
+      [ns, ident] -> {ns, ident}
+      _ -> nil
+    end
   end
 
   @doc "Persist a raw PubTator payload. Append-only — never overwritten."

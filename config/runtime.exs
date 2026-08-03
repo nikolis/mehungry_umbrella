@@ -28,6 +28,9 @@ config :mehungry,
 if token = System.get_env("LOCAL_AI_API_TOKEN") do
   # Server side: the value the guard plug compares against.
   config :mehungry, :local_ai_api_token, token
+
+  config :mehungry_web, :local_ai_api_token, token
+
   # Client side (only read on the GPU box; the deployed release never starts this app).
   config :mehungry_local_ai, api_token: token
 end

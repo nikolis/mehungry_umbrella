@@ -128,4 +128,48 @@ defmodule Mehungry.Literature.PubTator.ClientTest do
 
     assert {:error, {:rate_limited, 120}} = Client.annotate([11_111])
   end
+
+  describe "parse_relations/1" do
+    test "parses directional relations, normalizing endpoint identifiers" do
+      raw = %{
+        "PubTator3" => [
+          %{
+            "relations" => [
+              %{
+                "id" => "R1",
+                "infons" => %{
+                  "type" => "Negative_Correlation",
+                  "score" => "0.9989",
+                  "role1" => %{
+                    "biotype" => "chemical",
+                    "identifier" => "MESH:D005419",
+                    "name" => "Flavonoids"
+                  },
+                  "role2" => %{
+                    "biotype" => "disease",
+                    "identifier" => "MESH:D007249",
+                    "name" => "Inflammation"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+
+      assert [rel] = Client.parse_relations(raw)
+      assert rel.type == "Negative_Correlation"
+      assert rel.score == 0.9989
+      assert rel.entity1_type == "chemical"
+      assert rel.entity1_identifier == "mesh:D005419"
+      assert rel.entity2_type == "disease"
+      assert rel.entity2_identifier == "mesh:D007249"
+      assert rel.entity2_name == "Inflammation"
+    end
+
+    test "returns [] for documents without a relations array" do
+      assert Client.parse_relations(%{"PubTator3" => [%{"passages" => []}]}) == []
+      assert Client.parse_relations(%{"documents" => []}) == []
+    end
+  end
 end

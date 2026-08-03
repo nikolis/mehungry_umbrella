@@ -66,13 +66,13 @@ defmodule Mehungry.Literature.PubTator do
   # ── annotation ─────────────────────────────────────────────────────────────
 
   defp annotate(study_id, pmid, refresh) do
-    case fetch_mentions(pmid, refresh) do
-      {:ok, []} ->
+    case fetch_data(pmid, refresh) do
+      {:ok, %{mentions: [], relations: []}} ->
         record_attempt(study_id, "no_results", 0)
         {:ok, 0}
 
-      {:ok, mentions} ->
-        persist_mentions(study_id, mentions)
+      {:ok, %{mentions: mentions, relations: relations}} ->
+        persist(study_id, mentions, relations)
 
       {:error, {:rate_limited, _} = reason} ->
         {:error, reason}
@@ -88,6 +88,21 @@ defmodule Mehungry.Literature.PubTator do
         Logger.warning("PubTator: annotate failed for pmid #{pmid} — #{inspect(reason)}")
         record_attempt(study_id, "error", 0)
         {:ok, 0}
+    end
+  end
+
+  # Persist mentions first (a transient chemical-resolver failure bubbles up for a
+  # retry); then the directional relations (DB-only resolution, best-effort); then
+  # ledger the attempt once.
+  defp persist(study_id, mentions, relations) do
+    case persist_mentions(study_id, mentions) do
+      {:ok, count} ->
+        Literature.persist_study_relations(study_id, relations)
+        record_attempt(study_id, "annotated", count)
+        {:ok, count}
+
+      {:error, _reason} = err ->
+        err
     end
   end
 
@@ -107,7 +122,6 @@ defmodule Mehungry.Literature.PubTator do
     end)
     |> case do
       {:ok, count} ->
-        record_attempt(study_id, "annotated", count)
         {:ok, count}
 
       {:error, _reason} = err ->
@@ -162,11 +176,11 @@ defmodule Mehungry.Literature.PubTator do
 
   # ── fetch (hot cache in front of the API) ────────────────────────────────────
 
-  defp fetch_mentions(pmid, true), do: fetch_and_store(pmid)
+  defp fetch_data(pmid, true), do: fetch_and_store(pmid)
 
-  defp fetch_mentions(pmid, false) do
+  defp fetch_data(pmid, false) do
     case Cachex.get(@cache, {:pmid, pmid}) do
-      {:ok, mentions} when is_list(mentions) -> {:ok, mentions}
+      {:ok, %{mentions: _} = data} -> {:ok, data}
       _ -> fetch_and_store(pmid)
     end
   end
@@ -181,8 +195,9 @@ defmodule Mehungry.Literature.PubTator do
           retrieved_at: now()
         })
 
-        Cachex.put(@cache, {:pmid, pmid}, mentions)
-        {:ok, mentions}
+        data = %{mentions: mentions, relations: Client.parse_relations(raw)}
+        Cachex.put(@cache, {:pmid, pmid}, data)
+        {:ok, data}
 
       {:error, _reason} = err ->
         err

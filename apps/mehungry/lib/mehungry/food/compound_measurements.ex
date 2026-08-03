@@ -76,6 +76,21 @@ defmodule Mehungry.Food.CompoundMeasurements do
 
   def get_measurement!(id), do: Repo.get!(CompoundMeasurement, id)
 
+  @doc "Recently recorded measurements (newest first), ingredient/compound/study preloaded — for the review UI."
+  def list_recent_measurements(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 25)
+    offset = Keyword.get(opts, :offset, 0)
+
+    Repo.all(
+      from(m in CompoundMeasurement,
+        order_by: [desc: m.inserted_at, desc: m.id],
+        preload: [:ingredient, :compound, :study],
+        limit: ^limit,
+        offset: ^offset
+      )
+    )
+  end
+
   @doc "All measurements recorded for an ingredient (newest first)."
   def list_measurements_for_ingredient(ingredient_id) do
     Repo.all(
@@ -178,6 +193,7 @@ defmodule Mehungry.Food.CompoundMeasurements do
             preparation_method: candidate.preparation_method,
             analytical_method: candidate.analytical_method,
             sample_size: candidate.sample_size,
+            raw_span: candidate.raw_span,
             extraction_method: "automated"
           })
 

@@ -11,13 +11,96 @@ defmodule Mehungry.Food.FoundementalFoods do
 
   alias Mehungry.Repo
 
-  alias Mehungry.Food.{FoundementalFood, FoundementalFoodSpecies}
+  alias Mehungry.Food.{
+    FoundementalFood,
+    FoundementalFoodSpecies,
+    FoundementalFoodSpeciesTranslation
+  }
 
   # ── Species ────────────────────────────────────────────────────────────────
 
   @doc "All species ordered by name (then variety)."
   def list_species do
     Repo.all(from s in FoundementalFoodSpecies, order_by: [asc: s.name, asc: s.variety])
+  end
+
+  @doc """
+  Fetch a species by its URL slug (hyphens → spaces), matching on `name` first and
+  falling back to a translated name. Preloads its curated foods (with ingredient) and
+  its translations. Returns `nil` when nothing matches. Mirrors
+  `Mehungry.Food.Ingredients.get_ingredient_by_slug/1`.
+  """
+  def get_species_by_slug(slug) do
+    name = String.replace(slug, "-", " ")
+
+    species =
+      Repo.one(
+        from(s in FoundementalFoodSpecies,
+          where: fragment("lower(?) = lower(?)", s.name, ^name),
+          order_by: [asc: s.variety],
+          limit: 1
+        )
+      ) || get_species_by_translation_name(name)
+
+    case species do
+      nil ->
+        nil
+
+      species ->
+        Repo.preload(species, [
+          [foundemental_foods: :ingredient],
+          :translations
+        ])
+    end
+  end
+
+  defp get_species_by_translation_name(name) do
+    Repo.one(
+      from(t in FoundementalFoodSpeciesTranslation,
+        join: s in FoundementalFoodSpecies,
+        on: s.id == t.foundemental_species_id,
+        where: fragment("lower(?) = lower(?)", t.name, ^name),
+        select: s,
+        limit: 1
+      )
+    )
+  end
+
+  @doc "The translated names for `(language, species)` — mirror of `find_ingredient_translation/2`."
+  def find_species_translation(language_name, species_id) do
+    Repo.all(
+      from(t in FoundementalFoodSpeciesTranslation,
+        where: t.language_name == ^language_name and t.foundemental_species_id == ^species_id,
+        select: t.name
+      )
+    )
+  end
+
+  @doc "A cursor page (20) of species, oldest first, ordered like the ingredient browse."
+  def list_species_paginated(cursor_after \\ nil) do
+    paginate_species(from(s in FoundementalFoodSpecies), cursor_after)
+  end
+
+  @doc "A cursor page (20) of only the species that have a translation in `language_name`."
+  def list_species_paginated_translated(language_name, cursor_after \\ nil) do
+    translated_ids =
+      from(t in FoundementalFoodSpeciesTranslation,
+        where: t.language_name == ^language_name,
+        select: t.foundemental_species_id
+      )
+
+    from(s in FoundementalFoodSpecies, where: s.id in subquery(translated_ids))
+    |> paginate_species(cursor_after)
+  end
+
+  defp paginate_species(query, cursor_after) do
+    paginate_opts =
+      [cursor_fields: [{:inserted_at, :asc}, {:id, :asc}], limit: 20] ++
+        if cursor_after, do: [after: cursor_after], else: []
+
+    %{entries: entries, metadata: metadata} = Repo.paginate(query, paginate_opts)
+
+    {Repo.preload(entries, [:translations]), metadata.after}
   end
 
   @doc "Species with their curated `foundemental_foods` preloaded, name-ordered."
