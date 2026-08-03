@@ -17,10 +17,25 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
       short-circuits the batch into an Oban `{:snooze, seconds}` so the still-
       uncrawled species are retried later rather than skipped;
     * any other transient `{:error, reason}` marks the run `failed` and returns
-      `{:error, reason}` for Oban backoff.
+      `{:error, reason}` for Oban backoff **on all but the final attempt**.
 
   Both are idempotent because already-attempted `(species, term)` pairs are
   skipped on the retry.
+
+  ## Poison-pill guard
+
+  Mirrors `PubTatorAnnotationWorker`: a species whose first uncrawled term
+  *persistently* errors (an NCBI network failure that never clears) bubbles
+  `{:error, reason}` and is never ledgered — so it's re-selected on every retry and
+  wedges the whole chain (batch halts → job exhausts its 3 attempts → `discarded` →
+  no successor enqueued → the run strands in `processing`). On the **final** Oban
+  attempt we stop bubbling and instead ledger the culprit species (a sentinel
+  attempt row) so `list_uncrawled_species/1` stops selecting it, then enqueue the
+  next batch so the chain steps past the pill. Genuine blips keep their full retry
+  budget first.
+
+  A chain that broke leaving nothing enqueued at all is resumed out-of-band by
+  `Mehungry.Science.PipelineWatchdog`.
   """
 
   use Oban.Worker, queue: :imports, max_attempts: 3
@@ -41,7 +56,7 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
   @max_snooze_seconds Application.compile_env(:mehungry, :entrez_max_snooze_seconds, 3600)
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args}) do
+  def perform(%Oban.Job{args: args, attempt: attempt, max_attempts: max_attempts}) do
     run_id = Map.get(args, "run_id")
     CrawlRuns.mark_processing(run_id)
 
@@ -52,16 +67,14 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
         :ok
 
       batch ->
-        process_batch(batch, run_id)
+        process_batch(batch, run_id, final_attempt?(attempt, max_attempts))
     end
   end
 
-  defp process_batch(batch, run_id) do
+  defp process_batch(batch, run_id, final_attempt?) do
     case crawl_all(batch) do
       :ok ->
-        CrawlRuns.update_progress(run_id, Literature.crawl_progress())
-        enqueue_next_batch(run_id)
-        :ok
+        advance(run_id)
 
       {:snooze, seconds} ->
         Logger.warning(
@@ -70,7 +83,18 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
 
         {:snooze, seconds}
 
-      {:error, reason} ->
+      # Final attempt on a persistently-failing species: ledger it as skipped so the
+      # chain can step past the poison pill, then keep going. See the moduledoc.
+      {:error, species_id, reason} when final_attempt? ->
+        Logger.error(
+          "LiteratureCrawlWorker: species #{species_id} failed every attempt (#{inspect(reason)}) — " <>
+            "marking it errored and skipping so the run can continue"
+        )
+
+        skip_poison_species(species_id)
+        advance(run_id)
+
+      {:error, _species_id, reason} ->
         Logger.warning(
           "LiteratureCrawlWorker: transient failure, will retry — #{inspect(reason)}"
         )
@@ -80,9 +104,17 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
     end
   end
 
+  # Refresh the coverage snapshot and hand the baton to the next batch.
+  defp advance(run_id) do
+    CrawlRuns.update_progress(run_id, Literature.crawl_progress())
+    enqueue_next_batch(run_id)
+    :ok
+  end
+
   # Crawl each species in order. A rate-limit short-circuits into a snooze (the
   # already-crawled rows are ledgered); any other transient error halts for an
-  # Oban retry with backoff.
+  # Oban retry with backoff, naming the species that failed so the worker can skip
+  # it once its retry budget is spent.
   defp crawl_all(batch) do
     batch
     |> Enum.reduce_while({:ok, 0}, fn species, {:ok, idx} ->
@@ -96,7 +128,7 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
           {:halt, {:snooze, clamp_snooze(retry_after)}}
 
         {:error, reason} ->
-          {:halt, {:error, reason}}
+          {:halt, {:error, species.id, reason}}
       end
     end)
     |> case do
@@ -104,6 +136,20 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorker do
       other -> other
     end
   end
+
+  # Ledger a sentinel attempt so `list_uncrawled_species/1` stops re-selecting the
+  # species (its selection guard is "has no attempt row at all").
+  defp skip_poison_species(species_id) do
+    Literature.record_crawl_attempt(%{
+      foundemental_species_id: species_id,
+      search_term: "(skipped after repeated crawl failure)",
+      outcome: "error",
+      studies_found: 0,
+      last_crawled_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    })
+  end
+
+  defp final_attempt?(attempt, max_attempts), do: attempt >= max_attempts
 
   # Space out ingredient crawls under the shared rate budget; never before the first.
   defp pace(0), do: :ok

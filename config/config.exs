@@ -109,6 +109,8 @@ config :mehungry, Oban,
        {"0 2 * * *", Mehungry.ObanWorkers.DailyRecipeGenerationWorker},
        # 3am UTC daily — prune telemetry snapshots older than 30 days
        {"0 3 * * *", Mehungry.ObanWorkers.TelemetryPrunerWorker},
+       # every 10 min — resume any pipeline run (crawl/annotation/derivation) whose chain broke
+       {"*/10 * * * *", Mehungry.ObanWorkers.PipelineWatchdogWorker},
        # 4am UTC Mondays — sync food products from Open Food Facts delta exports
        {"0 4 * * 1", Mehungry.ObanWorkers.OffDeltaSyncWorker}
      ]}

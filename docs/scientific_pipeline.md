@@ -260,6 +260,55 @@ shared compound. Details: [`health_recommendations.md`](health_recommendations.m
 - **Progress.** `*_progress/0` returns `%{processed, total}`; every run also
   broadcasts on `Mehungry.PubSub` (`"literature_crawl_runs"`,
   `"pubtator_annotation_runs"`, `"candidate_derivation_runs"`) for the live bars.
+
+### Stuck-run recovery — why runs wedge, and how they self-heal
+
+**Symptom.** A stage (most visibly PubTator annotation) sits at "Running…" on
+`/professional/science` and never finishes; its Run button stays disabled because
+the `running?/1` guard treats a `processing` run as still-live.
+
+**Root cause — the single-threaded chain.** Every stage advances through *one*
+self-re-enqueueing Oban job at a time: process a batch → enqueue the successor →
+repeat, until an empty batch marks the run `completed`. That guarantees clean
+termination *only while the chain keeps advancing*. Because there is exactly one
+live job, if that job ever ends without enqueuing a successor, the whole run is
+stranded — nothing re-enqueues, the remaining work never runs, and the run is
+frozen in `processing`. Two independent failure modes cause that:
+
+1. **Poison pill (crawl & annotation only).** These two stages call an external
+   NCBI API and, by design, do *not* ledger a study/species that hits a transient
+   error (rate-limit / network) — so a genuine blip isn't lost and the item is
+   retried. But if that item fails *every* time (a PMID PubTator keeps 5xx-ing, a
+   dead network route for one term), it is re-selected newest-first on every retry:
+   the batch halts on it, the job burns its 3 Oban attempts, goes `discarded`, and
+   no successor is enqueued. One bad item starves the entire corpus behind it. This
+   is the "keeps getting stuck" case. (The derivation stages are pure DB with no
+   bubbling transient path, so they can't poison-pill.)
+2. **Broken chain (all stages).** The one live job vanishes with no successor for a
+   reason unrelated to any item: a hard crash / OOM, a node kill, a deploy
+   mid-batch, or an Oban `discarded`. Nothing re-enqueues; the run strands.
+
+**Fix — two complementary mechanisms:**
+
+- *Poison-pill guard (at the source).* `LiteratureCrawlWorker` and
+  `PubTatorAnnotationWorker` thread the failing item's id out of the batch, and on
+  the worker's **final** Oban attempt (after the full retry budget is spent) they
+  ledger that one item as `error` — an annotation attempt for the study, a sentinel
+  `(species, "(skipped after repeated crawl failure)")` crawl attempt for the
+  species — and then enqueue the next batch. `list_unannotated_studies/1` /
+  `list_uncrawled_species/1` stop selecting it, so the chain steps past the pill.
+  Real blips still get all three attempts first; only a truly persistent failure is
+  skipped.
+- *Online watchdog (broken chains).* `Mehungry.Science.PipelineWatchdog` sweeps
+  **all four** stages every 10 minutes (cron worker
+  `PipelineWatchdogWorker`). For each run that is non-terminal, quiet past a grace
+  window (`updated_at` older than ~10 min), and has **no live Oban job** referencing
+  it, it re-enqueues a first batch; the stage worker then resumes where the chain
+  broke (already-ledgered work is skipped — idempotent) or completes the run if
+  nothing is left. A run whose job is `executing`, or `scheduled` because it is
+  snoozing on a rate limit, counts as live and is left strictly alone. This is the
+  online counterpart to `Science.RunReconciler`, which only heals orphaned runs at
+  boot (and by marking them `failed` rather than resuming).
 - **Gotchas.**
   - *Manual measurements don't dedupe.* On PostgreSQL 14 (this deployment) NULLs
     are distinct in a unique index, so a `manual` measurement with a `nil`

@@ -41,6 +41,10 @@
                     "name": "OPENAI_API_KEY",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/open_api_key-jzV1rM"
                 },
+                {
+                    "name": "LOCAL_AI_API_TOKEN",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/local_ai_api_key-85FS2Q"
+                },
 
                 {
                     "name": "RELEASE_COOKIE",
