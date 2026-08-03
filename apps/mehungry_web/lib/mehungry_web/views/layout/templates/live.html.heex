@@ -1,15 +1,16 @@
 <main role="main" class="" style="height: 100vh; ">
   <div
     class="mobile_header text-xl text-center text-parchment font-semibold m-auto bg-ink-panel  border-b border-ink-panel2"
-    style="padding-bottom: 4.5rem;  "
   >
     <nav
-      class="ml-6 absolute top-0 left-0 right-0 z-50 bg-ink-panel/95 backdrop-blur-md  transition-all duration-300 h-18"
-      style="height: 4; width: 16rem;"
+      class=" m-auto bg-ink-panel/95 backdrop-blur-md  transition-all duration-300 h-18"
     >
-      <div class="container mx-auto  flex items-center justify-between">
-        {MehungryWeb.SvgComponents.get_logo(%{id: "Live logo"})}
-      </div>
+        <span
+          class="w-fit m-auto block p-2"
+          style="--logo-text-color: #F4EEDD; --logo-tagline-color: transparent;"
+        >
+          {MehungryWeb.SvgComponents.get_logo(%{id: "live-nav", class: "h-14 w-[220px]"})}
+        </span>
     </nav>
   </div>
   <.get_menu
