@@ -58,6 +58,20 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorkerTest do
     on_exit(fn -> Application.delete_env(:mehungry, :pubtator_http_adapter) end)
   end
 
+  # A study whose annotation *raises* instead of returning `{:error, _}` — a
+  # PubChem/PubTator payload that overflows a column, a resolver crash, an
+  # undecodable payload. The raise propagates un-rescued out of `annotate_study/1`;
+  # without the worker's `safe_annotate/1` guard it would crash the job and wedge
+  # the whole run ("stuck even after restart").
+  defp stub_raises do
+    Application.put_env(:mehungry, :pubtator_http_adapter, fn _url, _h, _o ->
+      raise "boom: value too long for type character varying(255)"
+    end)
+
+    Cachex.clear(:pubtator_cache)
+    on_exit(fn -> Application.delete_env(:mehungry, :pubtator_http_adapter) end)
+  end
+
   defp biocjson do
     Jason.encode!(%{
       "documents" => [
@@ -149,6 +163,36 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorkerTest do
     assert attempt.outcome == "error"
 
     # ...the chain keeps going (next batch enqueued) and the run stays alive.
+    assert_enqueued(worker: Worker)
+    refute Repo.get!(AnnotationRun, run.id).status == "failed"
+  end
+
+  test "a study whose annotation raises fails the batch for a retry, not a crash, on a non-final attempt" do
+    stub_raises()
+    study = study_fixture(11_111)
+    run = AnnotationRuns.start_run()
+
+    # The raise is caught and funnelled into the same {:error, _} retry path —
+    # perform returns an error tuple rather than crashing.
+    assert {:error, _reason} = perform_job(Worker, %{"run_id" => run.id}, attempt: 1)
+
+    # Not ledgered — a raise that might be transient keeps its full retry budget.
+    refute Repo.exists?(from(a in AnnotationAttempt, where: a.study_id == ^study.id))
+    assert Repo.get!(AnnotationRun, run.id).status == "failed"
+  end
+
+  test "on the final attempt a study that raises every time is skipped so the chain continues" do
+    stub_raises()
+    study = study_fixture(11_111)
+    run = AnnotationRuns.start_run()
+
+    # This is the "stuck even after restart" regression: a persistent raise must
+    # be ledgered and stepped past, exactly like a persistent {:error, _}.
+    assert :ok = perform_job(Worker, %{"run_id" => run.id}, attempt: 3, max_attempts: 3)
+
+    attempt = Repo.get_by!(AnnotationAttempt, study_id: study.id)
+    assert attempt.outcome == "error"
+
     assert_enqueued(worker: Worker)
     refute Repo.get!(AnnotationRun, run.id).status == "failed"
   end
