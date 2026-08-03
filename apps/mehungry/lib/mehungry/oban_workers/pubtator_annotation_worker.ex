@@ -17,9 +17,29 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorker do
       into an Oban `{:snooze, seconds}` so the still-unannotated studies are retried
       later rather than skipped;
     * any other transient `{:error, reason}` marks the run `failed` and returns
-      `{:error, reason}` for Oban backoff.
+      `{:error, reason}` for Oban backoff **on all but the final attempt**.
 
   Both are idempotent because already-attempted studies are skipped on the retry.
+
+  ## Poison-pill guard
+
+  A study that *persistently* errors (a PMID PubTator keeps 5xx-ing on, a chemical
+  whose resolver keeps failing, an undecodable payload) is never ledgered by
+  `annotate_study/1` — by design, so a genuine blip isn't lost. But that same
+  study is re-selected newest-first on every retry, so without a bound it wedges
+  the whole chain forever: the batch halts on it, the job exhausts its 3 attempts,
+  goes `discarded`, and no successor is ever enqueued — the run sits in
+  `processing` and every downstream study stays unannotated. This is the classic
+  "annotation stuck" failure.
+
+  So on the **final** Oban attempt we stop bubbling and instead ledger the culprit
+  study as `"error"` (recording that we tried and gave up) and enqueue the next
+  batch, letting the chain step past the pill. Transient blips still get their full
+  retry budget first; only a study that fails every attempt is skipped.
+
+  A broken chain that leaves nothing enqueued at all (a hard crash, an OOM, a
+  node kill, a deploy mid-batch) can't be recovered from inside the worker — that
+  is what `Mehungry.Science.PipelineWatchdog` resumes out-of-band.
   """
 
   use Oban.Worker, queue: :imports, max_attempts: 3
@@ -40,7 +60,7 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorker do
   @max_snooze_seconds Application.compile_env(:mehungry, :pubtator_max_snooze_seconds, 3600)
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args}) do
+  def perform(%Oban.Job{args: args, attempt: attempt, max_attempts: max_attempts}) do
     run_id = Map.get(args, "run_id")
     AnnotationRuns.mark_processing(run_id)
 
@@ -51,16 +71,14 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorker do
         :ok
 
       batch ->
-        process_batch(batch, run_id)
+        process_batch(batch, run_id, final_attempt?(attempt, max_attempts))
     end
   end
 
-  defp process_batch(batch, run_id) do
+  defp process_batch(batch, run_id, final_attempt?) do
     case annotate_all(batch) do
       :ok ->
-        AnnotationRuns.update_progress(run_id, Literature.annotation_progress())
-        enqueue_next_batch(run_id)
-        :ok
+        advance(run_id)
 
       {:snooze, seconds} ->
         Logger.warning(
@@ -69,7 +87,18 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorker do
 
         {:snooze, seconds}
 
-      {:error, reason} ->
+      # Final attempt on a persistently-failing study: ledger it as an error so the
+      # chain can step past the poison pill, then keep going. See the moduledoc.
+      {:error, study_id, reason} when final_attempt? ->
+        Logger.error(
+          "PubTatorAnnotationWorker: study #{study_id} failed every attempt (#{inspect(reason)}) — " <>
+            "marking it errored and skipping so the run can continue"
+        )
+
+        skip_poison_study(study_id, reason)
+        advance(run_id)
+
+      {:error, _study_id, reason} ->
         Logger.warning(
           "PubTatorAnnotationWorker: transient failure, will retry — #{inspect(reason)}"
         )
@@ -79,9 +108,17 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorker do
     end
   end
 
+  # Refresh the coverage snapshot and hand the baton to the next batch.
+  defp advance(run_id) do
+    AnnotationRuns.update_progress(run_id, Literature.annotation_progress())
+    enqueue_next_batch(run_id)
+    :ok
+  end
+
   # Annotate each study in order. A rate-limit short-circuits into a snooze (the
   # already-annotated rows are ledgered); any other transient error halts for an
-  # Oban retry with backoff.
+  # Oban retry with backoff, naming the study that failed so the worker can skip it
+  # once its retry budget is spent.
   defp annotate_all(batch) do
     batch
     |> Enum.reduce_while({:ok, 0}, fn study, {:ok, idx} ->
@@ -95,7 +132,7 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorker do
           {:halt, {:snooze, clamp_snooze(retry_after)}}
 
         {:error, reason} ->
-          {:halt, {:error, reason}}
+          {:halt, {:error, study.id, reason}}
       end
     end)
     |> case do
@@ -103,6 +140,18 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorker do
       other -> other
     end
   end
+
+  # Ledger a give-up attempt so `list_unannotated_studies/1` stops re-selecting it.
+  defp skip_poison_study(study_id, _reason) do
+    Literature.record_annotation_attempt(%{
+      study_id: study_id,
+      outcome: "error",
+      mentions_found: 0,
+      last_annotated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    })
+  end
+
+  defp final_attempt?(attempt, max_attempts), do: attempt >= max_attempts
 
   # Space out annotations under the shared rate budget; never before the first.
   defp pace(0), do: :ok

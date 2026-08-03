@@ -130,7 +130,7 @@ imports:             2 concurrent  — literature crawl, PubTator annotation, ca
 
 Full-text (PMC) + measurement extraction is **no longer a server-side Oban pipeline** — it moved to the non-deployed `apps/mehungry_local_ai` service, which posts full text + review-gated candidates back over `/api/local_ai/*`. `/professional/science` shows read-only status; review stays at `/professional/compound-candidates`. See `docs/measurement_extraction.md`.
 
-Cron: `InstagramTokenRefreshWorker` at `30 1 * * *`, `DailyRecipeGenerationWorker` at `0 2 * * *`, `TelemetryPrunerWorker` at `0 3 * * *`.
+Cron: `InstagramTokenRefreshWorker` at `30 1 * * *`, `DailyRecipeGenerationWorker` at `0 2 * * *`, `TelemetryPrunerWorker` at `0 3 * * *`, `PipelineWatchdogWorker` every 10 min (resumes any science-pipeline run whose single-threaded chain broke — see `Mehungry.Science.PipelineWatchdog` + `docs/scientific_pipeline.md`).
 
 ### Instagram Integration (`Mehungry.Social.Instagram`)
 

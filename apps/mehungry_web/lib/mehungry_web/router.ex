@@ -66,6 +66,7 @@ defmodule MehungryWeb.Router do
     get "/pending", PendingController, :index
     post "/full_text", FullTextController, :create
     post "/candidates", CandidatesController, :create
+    get "/metrics", MetricsController, :index
   end
 
   scope "/auth", MehungryWeb do
@@ -206,7 +207,8 @@ defmodule MehungryWeb.Router do
         errors: MehungryWeb.ErrorsPage,
         queries: MehungryWeb.QueryTimesPage,
         endpoints: MehungryWeb.EndpointTimesPage,
-        timeline: MehungryWeb.QueryTimelinePage
+        timeline: MehungryWeb.QueryTimelinePage,
+        local_ai_rate: MehungryWeb.LocalAiRatePage
       ]
   end
 

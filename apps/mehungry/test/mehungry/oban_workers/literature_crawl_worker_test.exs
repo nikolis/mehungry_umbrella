@@ -38,6 +38,17 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorkerTest do
     on_exit(fn -> Application.delete_env(:mehungry, :entrez_http_adapter) end)
   end
 
+  # A species Entrez persistently fails to crawl with a (non rate-limit) transient
+  # network error on its first term — the poison-pill case.
+  defp stub_network_error do
+    Application.put_env(:mehungry, :entrez_http_adapter, fn _url, _headers, _opts ->
+      {:error, %HTTPoison.Error{reason: :timeout}}
+    end)
+
+    Cachex.clear(:entrez_cache)
+    on_exit(fn -> Application.delete_env(:mehungry, :entrez_http_adapter) end)
+  end
+
   defp efetch_xml do
     """
     <?xml version="1.0"?>
@@ -109,6 +120,37 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorkerTest do
     assert {:snooze, 30} = perform_job(Worker, %{"run_id" => run.id})
 
     # Snooze (not fail) so the uncrawled species is retried later.
+    refute Repo.get!(CrawlRun, run.id).status == "failed"
+  end
+
+  test "a persistently-failing species fails the batch for a retry on a non-final attempt" do
+    stub_network_error()
+    %{species: species} = spinach_species()
+    run = CrawlRuns.start_run()
+
+    assert {:error, _reason} = perform_job(Worker, %{"run_id" => run.id}, attempt: 1)
+
+    # Not ledgered — a genuine blip must keep its full retry budget.
+    refute Repo.exists?(
+             from(a in CrawlAttempt, where: a.foundemental_species_id == ^species.id)
+           )
+
+    assert Repo.get!(CrawlRun, run.id).status == "failed"
+  end
+
+  test "on the final attempt a poison-pill species is skipped so the chain continues" do
+    stub_network_error()
+    %{species: species} = spinach_species()
+    run = CrawlRuns.start_run()
+
+    assert :ok = perform_job(Worker, %{"run_id" => run.id}, attempt: 3, max_attempts: 3)
+
+    # The culprit is ledgered so it is never re-selected...
+    attempt = Repo.get_by!(CrawlAttempt, foundemental_species_id: species.id)
+    assert attempt.outcome == "error"
+
+    # ...the chain keeps going (next batch enqueued) and the run stays alive.
+    assert_enqueued(worker: Worker)
     refute Repo.get!(CrawlRun, run.id).status == "failed"
   end
 end

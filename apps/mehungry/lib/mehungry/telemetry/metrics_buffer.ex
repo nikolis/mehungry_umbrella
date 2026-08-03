@@ -32,6 +32,10 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
   @flush_interval :timer.minutes(5)
   @query_text_limit 1_000
   @timeline_retention :timer.minutes(60)
+  # Monotonic timestamp (ms) of the last generic-table flush/clear, so readers
+  # can turn the live count-since-flush into a per-minute rate. See
+  # `since_last_flush_ms/0`.
+  @flush_key {__MODULE__, :last_flush}
 
   @doc "Starts the GenServer under the given `opts`, registered as `#{inspect(__MODULE__)}`."
   def start_link(opts \\ []) do
@@ -44,6 +48,7 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
     :ets.new(@table, [:public, :named_table, :duplicate_bag])
     :ets.new(@query_table, [:public, :named_table, :duplicate_bag])
     :ets.new(@timeline_table, [:public, :named_table, :ordered_set])
+    mark_flushed()
     attach_handlers()
     schedule_flush()
     {:ok, %{}}
@@ -53,10 +58,61 @@ defmodule Mehungry.Telemetry.MetricsBuffer do
   @impl true
   def handle_info(:flush, state) do
     flush()
+    mark_flushed()
     flush_queries()
     trim_timeline()
     schedule_flush()
     {:noreply, state}
+  end
+
+  @doc """
+  Milliseconds since the generic metrics table was last flushed (and cleared),
+  or `nil` if the buffer has not booted yet. The live count returned by
+  `live_route_counts/2` accumulated over this window, so `count / (ms / 60_000)`
+  is the current per-minute rate.
+  """
+  def since_last_flush_ms do
+    case :persistent_term.get(@flush_key, nil) do
+      ts when is_integer(ts) -> System.monotonic_time(:millisecond) - ts
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Live per-route request counts accumulated in the in-memory buffer since the
+  last flush, for the given `metric` whose `route` tag starts with
+  `route_prefix`. Reads the public ETS table directly (values keyed by an atom
+  `:route` in-memory, unlike the string-keyed `tags` in flushed snapshots) and
+  returns `%{route => count}`, or `%{}` if the table does not exist yet.
+  """
+  def live_route_counts(metric, route_prefix) do
+    @table
+    |> safe_tab2list()
+    |> Enum.reduce(%{}, fn
+      {{^metric, tags}, _value}, acc ->
+        route = tags[:route] || tags["route"]
+
+        if is_binary(route) and String.starts_with?(route, route_prefix) do
+          Map.update(acc, route, 1, &(&1 + 1))
+        else
+          acc
+        end
+
+      _other, acc ->
+        acc
+    end)
+  end
+
+  defp mark_flushed do
+    :persistent_term.put(@flush_key, System.monotonic_time(:millisecond))
+  end
+
+  defp safe_tab2list(table) do
+    :ets.tab2list(table)
+  rescue
+    ArgumentError -> []
+  catch
+    :error, :badarg -> []
   end
 
   # --- Telemetry handlers ---

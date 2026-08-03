@@ -47,6 +47,17 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorkerTest do
     on_exit(fn -> Application.delete_env(:mehungry, :pubtator_http_adapter) end)
   end
 
+  # A study PubTator persistently fails to annotate with a (non rate-limit)
+  # transient network error — the poison-pill case.
+  defp stub_network_error do
+    Application.put_env(:mehungry, :pubtator_http_adapter, fn _url, _h, _o ->
+      {:error, %HTTPoison.Error{reason: :timeout}}
+    end)
+
+    Cachex.clear(:pubtator_cache)
+    on_exit(fn -> Application.delete_env(:mehungry, :pubtator_http_adapter) end)
+  end
+
   defp biocjson do
     Jason.encode!(%{
       "documents" => [
@@ -111,6 +122,34 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorkerTest do
 
     assert {:snooze, 30} = perform_job(Worker, %{"run_id" => run.id})
 
+    refute Repo.get!(AnnotationRun, run.id).status == "failed"
+  end
+
+  test "a persistently-failing study fails the batch for a retry on a non-final attempt" do
+    stub_network_error()
+    study = study_fixture(11_111)
+    run = AnnotationRuns.start_run()
+
+    assert {:error, _reason} = perform_job(Worker, %{"run_id" => run.id}, attempt: 1)
+
+    # Not ledgered — a genuine blip must keep its full retry budget.
+    refute Repo.exists?(from(a in AnnotationAttempt, where: a.study_id == ^study.id))
+    assert Repo.get!(AnnotationRun, run.id).status == "failed"
+  end
+
+  test "on the final attempt a poison-pill study is skipped so the chain continues" do
+    stub_network_error()
+    study = study_fixture(11_111)
+    run = AnnotationRuns.start_run()
+
+    assert :ok = perform_job(Worker, %{"run_id" => run.id}, attempt: 3, max_attempts: 3)
+
+    # The culprit is ledgered as an error so it is never re-selected...
+    attempt = Repo.get_by!(AnnotationAttempt, study_id: study.id)
+    assert attempt.outcome == "error"
+
+    # ...the chain keeps going (next batch enqueued) and the run stays alive.
+    assert_enqueued(worker: Worker)
     refute Repo.get!(AnnotationRun, run.id).status == "failed"
   end
 end

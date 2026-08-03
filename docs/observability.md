@@ -156,6 +156,7 @@ config key drives `AdminAuthLive` for the `/professional` LiveViews.
 | **Queries** | Per-query `query_time` history from `query_time_profiles`, one row per distinct query shape (`source` + SQL text), worst p95 first over the selected range (1h/6h/24h/7d). Click a row to expand the full SQL text |
 | **Endpoints** | Persisted p95 history for `phoenix.request.duration`, `live_view.mount.duration` and `live_view.handle_event.duration` from `telemetry_snapshots`, worst p95 first over the selected range |
 | **Query Timeline** | Raw, unaggregated query executions from the last 5/15/30/60 minutes, grouped by the HTTP request / LiveView callback / Oban job that fired them. In-memory only, not written to Postgres. The tool for spotting N+1s: one group with many small queries and a high total is the tell |
+| **LocalAI Rate** | Requests/min for the token-guarded LocalAi REST API (`/api/local_ai/*`), per route and overall, over the selected range (1h/6h/24h/7d). Computed by `Mehungry.Telemetry.RequestRate.local_ai/1` from the `phoenix.request.duration` snapshots (`sample_count / window`); a banner adds the live count from the in-memory buffer since the last flush. Also exposed as curl-able JSON at `GET /api/local_ai/metrics?window_seconds=` (same shared-secret token as the rest of that API) |
 
 Note: `mehungry.cache.size`, `oban.job.duration`/`.queue_time`/`.exception.count`,
 `mehungry.oban.queue.depth`, `mehungry.vm.process.*`, `mehungry.vm.scheduler.*`,
