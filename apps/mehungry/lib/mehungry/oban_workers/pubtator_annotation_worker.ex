@@ -23,14 +23,16 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorker do
 
   ## Poison-pill guard
 
-  A study that *persistently* errors (a PMID PubTator keeps 5xx-ing on, a chemical
-  whose resolver keeps failing, an undecodable payload) is never ledgered by
-  `annotate_study/1` — by design, so a genuine blip isn't lost. But that same
-  study is re-selected newest-first on every retry, so without a bound it wedges
-  the whole chain forever: the batch halts on it, the job exhausts its 3 attempts,
-  goes `discarded`, and no successor is ever enqueued — the run sits in
-  `processing` and every downstream study stays unannotated. This is the classic
-  "annotation stuck" failure.
+  A study that *persistently* fails — whether `annotate_study/1` returns an error
+  (a PMID PubTator keeps 5xx-ing on, a chemical whose resolver keeps failing) or
+  *raises* (a PubChem/PubTator payload that overflows a column, an undecodable
+  relations payload) — is never ledgered by `annotate_study/1`, by design, so a
+  genuine blip isn't lost. But that same study is re-selected newest-first on every
+  retry, so without a bound it wedges the whole chain forever: the batch halts on
+  it, the job exhausts its 3 attempts, goes `discarded`, and no successor is ever
+  enqueued — the run sits in `processing` and every downstream study stays
+  unannotated. This is the classic "annotation stuck" failure. `safe_annotate/1`
+  turns a raise into the same `{:error, …}` path so it can't slip past this guard.
 
   So on the **final** Oban attempt we stop bubbling and instead ledger the culprit
   study as `"error"` (recording that we tried and gave up) and enqueue the next
@@ -124,7 +126,7 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorker do
     |> Enum.reduce_while({:ok, 0}, fn study, {:ok, idx} ->
       pace(idx)
 
-      case Literature.annotate_study(study.id) do
+      case safe_annotate(study.id) do
         {:ok, _mentions_found} ->
           {:cont, {:ok, idx + 1}}
 
@@ -139,6 +141,24 @@ defmodule Mehungry.ObanWorkers.PubTatorAnnotationWorker do
       {:ok, _count} -> :ok
       other -> other
     end
+  end
+
+  # `annotate_study/1` bubbles transient failures as `{:error, reason}`, but it can
+  # also *raise* — a PubChem/PubTator payload that overflows a column
+  # (`22001 string_data_right_truncation`), a resolver crash, an undecodable
+  # relations payload. A raised exception must be funnelled into the same
+  # `{:error, study_id, reason}` path as a returned error, or it escapes the
+  # poison-pill guard entirely: the job crashes, exhausts its retries, goes
+  # `discarded` without ever ledgering the study, and the chain re-picks the same
+  # study forever — the "stuck even after restart" wedge. Rescuing here preserves
+  # the retry budget (early attempts still back off and retry) while letting the
+  # final-attempt skip step past a study that raises every time.
+  defp safe_annotate(study_id) do
+    Literature.annotate_study(study_id)
+  rescue
+    error -> {:error, {:exception, error}}
+  catch
+    kind, reason -> {:error, {:exception, {kind, reason}}}
   end
 
   # Ledger a give-up attempt so `list_unannotated_studies/1` stops re-selecting it.
