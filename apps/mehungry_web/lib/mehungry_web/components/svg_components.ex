@@ -126,6 +126,87 @@ defmodule MehungryWeb.SvgComponents do
     """
   end
 
+  @doc """
+  Square logomark — just the stacked cubes from `get_logo/1`, cropped to a
+  square viewBox so it fits small square slots (e.g. the mobile bottom nav)
+  while staying visually identical to the desktop logo.
+  """
+  attr :id, :string, default: "logo-mark"
+  attr :class, :string, default: nil
+
+  def logo_mark(assigns) do
+    ~H"""
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 180 180" class={@class}>
+      <defs>
+        <linearGradient id={"topCubeOrange-#{@id}"} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#FBBF24" />
+          <stop offset="50%" stop-color="#F97316" />
+          <stop offset="100%" stop-color="#EA580C" />
+        </linearGradient>
+        <linearGradient id={"middleCubeOrange-#{@id}"} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#F97316" />
+          <stop offset="50%" stop-color="#EA580C" />
+          <stop offset="100%" stop-color="#C2410C" />
+        </linearGradient>
+        <linearGradient id={"bottomCubeOrange-#{@id}"} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#EA580C" />
+          <stop offset="100%" stop-color="#7C2D12" />
+        </linearGradient>
+      </defs>
+
+      <!-- Bottom Cube -->
+      <polygon
+        points="36,129.6 68,108.8 100,129.6 100,161.6 68,182.4 36,161.6"
+        fill={"url(#bottomCubeOrange-#{@id})"}
+      />
+      <polygon points="68,108.8 100,129.6 68,150.4 36,108.8" fill="#7C2D12" opacity="0.7" />
+
+      <!-- Middle Cube -->
+      <polygon
+        points="68,81.6 100,60.8 132,81.6 132,113.6 100,134.4 68,113.6"
+        fill={"url(#middleCubeOrange-#{@id})"}
+      />
+      <polygon points="100,60.8 132,81.6 100,102.4 68,81.6" fill="#C2410C" opacity="0.7" />
+
+      <!-- Top Cube -->
+      <polygon
+        points="100,38.4 132,17.6 164,38.4 164,70.4 132,91.2 100,70.4"
+        fill={"url(#topCubeOrange-#{@id})"}
+      />
+      <polygon points="132,17.6 164,38.4 132,59.2 100,38.4" fill="#F97316" opacity="0.8" />
+
+      <!-- Lines -->
+      <line
+        x1="100"
+        y1="70.4"
+        x2="100"
+        y2="102.4"
+        stroke="#FBBF24"
+        stroke-width="2"
+        stroke-dasharray="3,3"
+      />
+      <line
+        x1="68"
+        y1="81.6"
+        x2="68"
+        y2="108.8"
+        stroke="#FBBF24"
+        stroke-width="2"
+        stroke-dasharray="3,3"
+      />
+      <line
+        x1="132"
+        y1="60.8"
+        x2="132"
+        y2="81.6"
+        stroke="#FBBF24"
+        stroke-width="2"
+        stroke-dasharray="3,3"
+      />
+    </svg>
+    """
+  end
+
   attr :id, :string, default: "logo"
   attr :class, :string, default: nil
   attr :show_tagline, :boolean, default: false
