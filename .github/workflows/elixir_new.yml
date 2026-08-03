@@ -71,6 +71,16 @@ jobs:
       - name: Compile
         run: mix compile
 
+      # Migrate the test DB up front. `mix test` boots the full `mehungry` OTP app
+      # (including Oban, which refuses to start without the `oban_jobs` table), so the
+      # schema must exist before ExUnit runs — we can't rely on a child app's `test`
+      # alias migrating in time once other umbrella apps (e.g. mehungry_local_ai) are
+      # in the recursion.
+      - name: Set up test database
+        run: |
+          mix ecto.create --quiet
+          mix ecto.migrate --quiet
+
       - name: Run tests
         run: mix test --exclude wallaby --exclude local_data
         env:
