@@ -161,15 +161,11 @@ defmodule MehungryWeb.LayoutView do
           icon="hero-beaker"
           label="Candidates"
         />
+        <.admin_link href="/professional/health" icon="hero-heart" label="Health" />
         <.admin_link
           href="/professional/ingredients/reconciliation"
           icon="hero-arrow-path"
           label="Reconcile"
-        />
-        <.admin_link
-          href="/professional/schema-discovery"
-          icon="hero-table-cells"
-          label="Schema"
         />
         <.admin_link
           href="/professional/usda-schema"

@@ -38,6 +38,7 @@ defmodule Mehungry.Food.CompoundMeasurement do
     field :sample_size, :integer
     field :confidence, :float
     field :extraction_method, :string
+    field :raw_span, :string
 
     belongs_to :ingredient, Ingredient
     belongs_to :compound, Compound
@@ -63,7 +64,8 @@ defmodule Mehungry.Food.CompoundMeasurement do
       :analytical_method,
       :sample_size,
       :confidence,
-      :extraction_method
+      :extraction_method,
+      :raw_span
     ])
     |> validate_required([:ingredient_id, :compound_id, :value, :unit, :extraction_method])
     |> validate_number(:value, greater_than_or_equal_to: 0)

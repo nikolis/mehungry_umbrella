@@ -9,18 +9,19 @@ defmodule Mehungry.Health do
 
   This is the **advice** layer that the "facts only" compound stack
   (`docs/food_compounds.md` §4) deliberately defers to. Its hard rule: a condition
-  references a **compound**, never an ingredient. "Which foods should a
-  kidney-stone patient avoid?" is answered by `ingredients_for_condition/2`, which
-  **composes** this layer with `Food.IngredientCompoundRelationship` at read time —
-  the schemas themselves stay decoupled from ingredient data.
+  references a **compound**, never a species or ingredient. "Which foods should a
+  kidney-stone patient avoid?" is answered by `species_for_condition/2` (the primary
+  read), which **composes** this layer with `Food.SpeciesCompoundRelationship` at read
+  time; `ingredients_for_condition/2` derives the ingredients strictly through those
+  species. The schemas themselves stay decoupled from food data.
   """
 
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
 
-  alias Mehungry.Food.{Compound, IngredientCompoundRelationship}
-  alias Mehungry.Health.{Condition, CompoundRecommendation}
+  alias Mehungry.Food.{Compound, FoundementalFood, SpeciesCompoundRelationship}
+  alias Mehungry.Health.{Condition, CompoundRecommendation, ConditionIdentifier}
 
   # ── Condition registry ────────────────────────────────────────────────────
 
@@ -28,6 +29,19 @@ defmodule Mehungry.Health do
     %Condition{}
     |> Condition.changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc "A changeset for a condition — for admin forms."
+  def change_condition(condition \\ %Condition{}, attrs \\ %{}) do
+    Condition.changeset(condition, attrs)
+  end
+
+  @doc "Delete a condition by id; its `compound_recommendations` cascade (`on_delete`)."
+  def delete_condition(id) do
+    case Repo.get(Condition, id) do
+      nil -> {:error, :not_found}
+      condition -> Repo.delete(condition)
+    end
   end
 
   @doc "Find-or-create a condition by its natural key `name`, backed by the unique index."
@@ -62,6 +76,34 @@ defmodule Mehungry.Health do
     )
   end
 
+  # ── Condition cross-database identifiers (mesh/icd…) ──────────────────────
+  # Mirror of the `Food.Compounds` identifier API — the disease-resolution seam.
+
+  @doc "Fetch the condition owning `(namespace, identifier)`, or nil."
+  def get_condition_by_identifier(namespace, identifier) do
+    Repo.one(
+      from(c in Condition,
+        join: i in ConditionIdentifier,
+        on: i.condition_id == c.id,
+        where: i.namespace == ^namespace and i.identifier == ^identifier
+      )
+    )
+  end
+
+  @doc "Insert-or-update a condition identifier, keyed on `(namespace, identifier)`."
+  def upsert_condition_identifier(attrs) do
+    %ConditionIdentifier{}
+    |> ConditionIdentifier.changeset(attrs)
+    |> Repo.insert(
+      on_conflict: {:replace, [:condition_id, :is_primary, :source, :updated_at]},
+      conflict_target: [:namespace, :identifier]
+    )
+  end
+
+  def list_condition_identifiers(condition_id) do
+    Repo.all(from(i in ConditionIdentifier, where: i.condition_id == ^condition_id))
+  end
+
   # ── Condition ↔ compound recommendations (dietary advice) ─────────────────
 
   def create_recommendation(attrs) do
@@ -86,6 +128,8 @@ defmodule Mehungry.Health do
 
   def delete_recommendation(%CompoundRecommendation{} = recommendation),
     do: Repo.delete(recommendation)
+
+  def get_recommendation!(id), do: Repo.get!(CompoundRecommendation, id)
 
   @doc "The recommendation rows for a condition, each with its `:compound` preloaded."
   def recommendations_for_condition(condition_id) do
@@ -137,36 +181,97 @@ defmodule Mehungry.Health do
   # ── Derived cross-layer read (composition, not schema coupling) ───────────
 
   @doc """
-  The ingredients implicated for a condition, by composing this advice layer with
-  the food-facts layer at **read time**: `condition → compound_recommendations →
-  compounds → ingredient_compound_relationships → ingredients`.
+  The **food species** implicated for a condition, composing this advice layer with
+  the species-facts layer at **read time**: `condition → compound_recommendations →
+  compounds → species_compound_relationships → species`.
 
-  Conditions never reference ingredients directly — this join resolves the food
-  through the shared compound. Pass a `recommendation` (e.g. `"avoid"` / `:avoid`)
-  to filter, or `nil`/omit for every recommendation. Returns maps of
-  `%{ingredient, compound, recommendation, severity, evidence_level}` so a caller
-  can render "avoid Spinach (high Oxalate)".
+  Conditions never reference species (or ingredients) directly — this join resolves
+  the food through the shared compound. Pass a `recommendation` (e.g. `"avoid"` /
+  `:avoid`) to filter, or `nil`/omit for every recommendation. Returns maps of
+  `%{species, compound, recommendation, severity, evidence_level}` so a caller can
+  render "avoid Spinach (high Oxalate)".
   """
-  def ingredients_for_condition(condition_id, recommendation \\ nil) do
-    query =
-      from(rec in CompoundRecommendation,
-        join: icr in IngredientCompoundRelationship,
-        on: icr.compound_id == rec.compound_id,
+  def species_for_condition(condition_id, recommendation \\ nil) do
+    from(rec in CompoundRecommendation,
+      join: scr in SpeciesCompoundRelationship,
+      on: scr.compound_id == rec.compound_id,
+      join: cmp in Compound,
+      on: cmp.id == rec.compound_id,
+      join: sp in assoc(scr, :species),
+      where: rec.condition_id == ^condition_id,
+      order_by: [asc: sp.name, asc: cmp.name],
+      select: %{
+        species: sp,
+        compound: cmp,
+        recommendation: rec.recommendation,
+        severity: rec.severity,
+        evidence_level: rec.evidence_level
+      }
+    )
+    |> maybe_filter_recommendation(recommendation)
+    |> Repo.all()
+  end
+
+  @doc """
+  The dietary advice implicated for a **food species** — the inverse of
+  `species_for_condition/2`: `species → species_compound_relationships → compounds →
+  compound_recommendations → conditions`. Returns maps of
+  `%{compound, condition, recommendation, severity, evidence_level, source}` so a
+  species page can render "Oxalate — avoid for Kidney Stones (high)". Ordered by
+  condition then compound.
+  """
+  def recommendations_for_species(species_id) do
+    Repo.all(
+      from(scr in SpeciesCompoundRelationship,
+        join: rec in CompoundRecommendation,
+        on: rec.compound_id == scr.compound_id,
         join: cmp in Compound,
-        on: cmp.id == rec.compound_id,
-        join: ing in assoc(icr, :ingredient),
-        where: rec.condition_id == ^condition_id,
-        order_by: [asc: ing.name, asc: cmp.name],
+        on: cmp.id == scr.compound_id,
+        join: cond in Condition,
+        on: cond.id == rec.condition_id,
+        where: scr.foundemental_species_id == ^species_id,
+        order_by: [asc: cond.name, asc: cmp.name],
         select: %{
-          ingredient: ing,
           compound: cmp,
+          condition: cond,
           recommendation: rec.recommendation,
           severity: rec.severity,
-          evidence_level: rec.evidence_level
+          evidence_level: rec.evidence_level,
+          source: rec.source
         }
       )
+    )
+    # A species can carry a compound via several relationship rows; collapse to one
+    # advice line per (condition, compound, recommendation).
+    |> Enum.uniq_by(&{&1.condition.id, &1.compound.id, &1.recommendation})
+  end
 
-    query
+  @doc """
+  The ingredients implicated for a condition — a convenience **derived strictly
+  through species**: `condition → compound → species → (species' ingredients)`. There
+  is no condition↔ingredient or fact↔ingredient link; ingredients are only reachable
+  via the `FoundementalFoodSpecies` that carries the compound. Same filtering + shape
+  as `species_for_condition/2`, but with `ingredient` in place of `species`.
+  """
+  def ingredients_for_condition(condition_id, recommendation \\ nil) do
+    from(rec in CompoundRecommendation,
+      join: scr in SpeciesCompoundRelationship,
+      on: scr.compound_id == rec.compound_id,
+      join: cmp in Compound,
+      on: cmp.id == rec.compound_id,
+      join: ff in FoundementalFood,
+      on: ff.foundemental_species_id == scr.foundemental_species_id,
+      join: ing in assoc(ff, :ingredient),
+      where: rec.condition_id == ^condition_id,
+      order_by: [asc: ing.name, asc: cmp.name],
+      select: %{
+        ingredient: ing,
+        compound: cmp,
+        recommendation: rec.recommendation,
+        severity: rec.severity,
+        evidence_level: rec.evidence_level
+      }
+    )
     |> maybe_filter_recommendation(recommendation)
     |> Repo.all()
   end

@@ -21,13 +21,22 @@ config :mehungry,
   turnstile_site_key: System.get_env("TURNSTILE_SITE_KEY"),
   turnstile_secret_key: System.get_env("TURNSTILE_SECRET_KEY")
 
-# The shared Bumblebee embedding serving (Mehungry.AI.EmbeddingServer) is gated
-# by :enable_embeddings. In prod it defaults OFF so the 1 vCPU / 3 GB web+worker
-# task never loads the model; the dedicated bumped-sizing backfill task sets
-# ENABLE_EMBEDDINGS=true. Dev/test keep their config.exs / test.exs values.
-if config_env() == :prod do
-  config :mehungry, enable_embeddings: System.get_env("ENABLE_EMBEDDINGS") in ~w(true 1)
+# Shared-secret bearer token for the local-AI REST API (/api/local_ai/*) that the
+# non-deployed mehungry_local_ai service posts full text + candidates to. Only override
+# the compile-time config when the env var is actually set, so dev/test keep their
+# values instead of being nilled out (this file runs in every environment).
+if token = System.get_env("LOCAL_AI_API_TOKEN") do
+  # Server side: the value the guard plug compares against.
+  config :mehungry, :local_ai_api_token, token
+
+  config :mehungry_web, :local_ai_api_token, token
+
+  # Client side (only read on the GPU box; the deployed release never starts this app).
+  config :mehungry_local_ai, api_token: token
 end
+
+config :mehungry_local_ai,
+  server_base_url: System.get_env("LOCAL_AI_SERVER_URL", "http://localhost:4000")
 
 # Pinterest environment switch: PINTEREST_ENV=live hits the real API,
 # anything else (including unset) stays on the sandbox. Sandbox and live

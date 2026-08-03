@@ -820,3 +820,41 @@ Mehungry.Repo.insert(%Mehungry.Food.Ingredient{
   measurement_unit: gram
   })
 """
+
+# ── Health condition registry (bulk catalogue) ───────────────────────────────
+# Idempotent bulk load of the ~193-condition reference registry from
+# priv/repo/seeds/data/health_conditions.json (name/synonyms/category/
+# subcategory/description). Conditions only — no compound advice.
+{:ok, %{inserted: inserted, total: total}} = Mehungry.Health.ConditionSeeder.seed()
+IO.puts("Seeded health conditions: #{inserted} new, #{total} total.")
+
+# ── Health conditions + compound recommendations (advice layer) ──────────────
+# Idempotent: upserts the referenced compound, then find-or-creates the condition
+# and links it via a guideline recommendation. Conditions link to COMPOUNDS only;
+# the implicated food species resolve at read time (Health.species_for_condition/2).
+health_seeds = [
+  {"Kidney Stones", "renal", "Oxalate", "oxalate",
+   %{recommendation: "avoid", severity: "high", evidence_level: "strong"}},
+  {"Gout", "metabolic", "Purine", "purine",
+   %{recommendation: "limit", severity: "moderate", evidence_level: "strong"}},
+  {"IBS", "gastrointestinal", "FODMAP", "fodmap",
+   %{recommendation: "limit", severity: "moderate", evidence_level: "moderate"}},
+  {"Histamine Intolerance", "immune", "Histamine", "histamine",
+   %{recommendation: "avoid", severity: "high", evidence_level: "moderate"}},
+  {"Salicylate Sensitivity", "immune", "Salicylate", "salicylate",
+   %{recommendation: "avoid", severity: "moderate", evidence_level: "limited"}}
+]
+
+for {condition_name, category, compound_name, compound_type, rec} <- health_seeds do
+  {:ok, compound} =
+    Mehungry.Food.upsert_compound(%{name: compound_name, compound_type: compound_type})
+
+  {:ok, _} =
+    Mehungry.Health.add_recommendation(
+      %{name: condition_name, category: category},
+      compound.id,
+      Map.put(rec, :source, "guideline")
+    )
+end
+
+IO.puts("Seeded #{length(health_seeds)} health conditions with compound recommendations.")

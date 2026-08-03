@@ -5,8 +5,8 @@ defmodule Mehungry.Health.Condition do
 
   A shared registry (like `Mehungry.Food.Compound`): one row per condition with a
   canonical `name`, its `synonyms` (abbreviations/aliases such as
-  `"Irritable Bowel Syndrome"`), an optional `category`, and an optional factual
-  `description`.
+  `"Irritable Bowel Syndrome"`), an optional `category` and finer `subcategory`
+  (e.g. *Endocrine → Diabetes*), and an optional factual `description`.
 
   A condition is linked to bioactive compounds — never to ingredients — through
   `CompoundRecommendation`. Any ingredient-facing answer ("which foods should a
@@ -18,7 +18,7 @@ defmodule Mehungry.Health.Condition do
 
   import Ecto.Changeset
 
-  alias Mehungry.Health.CompoundRecommendation
+  alias Mehungry.Health.{CompoundRecommendation, ConditionIdentifier}
 
   @type t :: %__MODULE__{}
 
@@ -26,16 +26,19 @@ defmodule Mehungry.Health.Condition do
     field :name, :string
     field :synonyms, {:array, :string}, default: []
     field :category, :string
+    field :subcategory, :string
     field :description, :string
 
     has_many :compound_recommendations, CompoundRecommendation
+    # Cross-database identity (mesh/icd…), written only via Mehungry.Health.
+    has_many :identifiers, ConditionIdentifier
 
     timestamps()
   end
 
   def changeset(condition, attrs) do
     condition
-    |> cast(attrs, [:name, :synonyms, :category, :description])
+    |> cast(attrs, [:name, :synonyms, :category, :subcategory, :description])
     |> validate_required([:name])
     |> unique_constraint(:name)
   end

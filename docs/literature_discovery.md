@@ -1,16 +1,16 @@
 # Literature context
 
 `Mehungry.Literature` is the scientific-literature **discovery layer** for the
-food domain. It finds research papers connecting an ingredient (by its scientific
-name) to bioactive compounds, and records each paper as a first-class
-`ScientificStudy` linked back to the ingredient and — when the search matches the
-compound registry — the compound.
+food domain. It finds research papers connecting a **food species** (by its
+curated scientific name) to bioactive compounds, and records each paper as a
+first-class `ScientificStudy` linked back to every ingredient curated onto that
+species and — when the search matches the compound registry — the compound.
 
 NCBI Entrez (PubMed) is treated as an external authority in exactly the way USDA
-is for ingredients and PubChem is for compounds: a crawler normalizes an
-ingredient's scientific identity into a set of searches and **syncs the results
-into `Mehungry.Literature`**. The rest of the application never talks to Entrez —
-it only reads `Mehungry.Literature`.
+is for ingredients and PubChem is for compounds: a crawler turns each
+`FoundementalFoodSpecies`' `scientific_name` into a set of searches and **syncs the
+results into `Mehungry.Literature`**. The rest of the application never talks to
+Entrez — it only reads `Mehungry.Literature`.
 
 ```
         USDA    ──▶ canonical ingredient registry   (Food.Ingredients)
@@ -26,10 +26,9 @@ facts (Chemicals, Species, Diseases) — a sibling adapter in this same context.
 
 ## 1. Why this exists
 
-Ingredients carry scientific identities (`Spinacia oleracea`, NCBI `3562` — see
-`docs/ingredient_identity_resolution.md`) and compounds carry chemical identities
-(`docs/chemistry.md`), but there was no **evidence layer**: the published research
-that links the two. This layer adds it as an importer/adapter, not a data store —
+Food species carry a curated `scientific_name` (`Spinacia oleracea` — set in the
+USDA Schema view) and compounds carry chemical identities (`docs/chemistry.md`),
+but there was no **evidence layer**: the published research that links the two. This layer adds it as an importer/adapter, not a data store —
 it discovers and catalogues papers, it does not assert dietary facts.
 
 **Boundaries honored:**
@@ -53,10 +52,10 @@ it discovers and catalogues papers, it does not assert dietary facts.
                  ▼
   Literature.Entrez  (crawler / discovery adapter — never queried by the app)
         ├── search terms ───────▶ scientific_studies         (PMID-keyed registry)
-        │                          ├─ study_ingredients        (study↔ingredient + search-term provenance)
+        │                          ├─ study_ingredients        (study↔ingredient, fanned out to the species' ingredients + search-term provenance)
         │                          └─ study_compounds          (study↔compound)
         ├── raw payload ────────▶ entrez_responses            (append-only cache)
-        └── ledger ─────────────▶ literature_crawl_attempts   (per (ingredient, term) dedup + watermark)
+        └── ledger ─────────────▶ literature_crawl_attempts   (per (species, term) dedup + watermark)
 
   LiteratureCrawlWorker  (Oban :imports queue, self-re-enqueuing run chain)
         └── literature_crawl_runs   (aggregate progress + PubSub)
@@ -79,10 +78,10 @@ One row per successful `esearch`/`efetch` fetch; never overwritten. efetch XML i
 decoded to a map before storage so the cache stays queryable. Also the durable
 search→PMID cache: `latest_search_pmids/1` reads the newest `esearch` row.
 
-### `literature_crawl_attempts` — per-`(ingredient, term)` ledger
+### `literature_crawl_attempts` — per-`(species, term)` ledger
 `outcome` (`matched | no_results | error`), `studies_found`, `last_crawled_at`.
-Unique on `(ingredient_id, search_term)` (upsertable). This is what makes the
-batch crawl terminate — already-attempted pairs are excluded from the next batch —
+Unique on `(foundemental_species_id, search_term)` (upsertable). This is what makes
+the batch crawl terminate — already-attempted pairs are excluded from the next batch —
 and `last_crawled_at` is the incremental-crawl watermark.
 
 ---
@@ -90,12 +89,12 @@ and `last_crawled_at` is the incremental-crawl watermark.
 ## 3. The crawler (`Mehungry.Literature.Entrez`)
 
 ```elixir
-Mehungry.Literature.import_ingredient(spinach.id)
-#=> {:ok, 3}   # three studies discovered/synced across this ingredient's terms
+Mehungry.Literature.import_species(spinach_species.id)
+#=> {:ok, 3}   # three studies discovered/synced across this species' terms
 ```
 
-**Search-term builder** — `search_terms_for_ingredient/1` builds
-`scientific_name × (compounds already linked to the ingredient ∪ a fixed
+**Search-term builder** — `search_terms_for_species/1` builds
+`scientific_name × (compounds already linked to the species' ingredients ∪ a fixed
 phytochemistry keyword set)`:
 
 ```
@@ -104,8 +103,10 @@ Spinacia oleracea polyphenol    -> ingredient link only     (class term)
 Spinacia oleracea phytochemical -> ingredient link only     (generic)
 ```
 
-The scientific name is read from `Food.verified_identity/1` (falling back to the
-highest-confidence candidate via `Food.list_identities/1`).
+The scientific name is read from the species' curated `scientific_name`; a species
+with no name yields no terms (defensively ledgered so the batch still terminates).
+Each matched study is fanned out to **every ingredient curated onto the species**
+(one `study_ingredients` row per ingredient per distinct term).
 
 Flow (idempotent, cached, history-preserving) per term:
 
@@ -159,14 +160,13 @@ The hot search→PMID cache is the `:entrez_cache` Cachex instance started in
 
 ## 5. The pipeline (Oban run with retries + progress)
 
-`Mehungry.ObanWorkers.LiteratureCrawlWorker` mirrors
-`IngredientIdentityResolutionWorker`:
+`Mehungry.ObanWorkers.LiteratureCrawlWorker`:
 
 - `use Oban.Worker, queue: :imports, max_attempts: 3` (concurrency 2 — gentle on
   the API).
 - A single job threads a `run_id` through a self-re-enqueueing chain. Each tick:
-  `mark_processing` → a batch of up to **10** identity-backed ingredients with no
-  crawl attempt yet → `import_ingredient/1` each (paced by `:entrez_pace_ms`) →
+  `mark_processing` → a batch of up to **10** named species (with a `scientific_name`)
+  with no crawl attempt yet → `import_species/1` each (paced by `:entrez_pace_ms`) →
   `update_progress` → enqueue the next batch. An empty batch marks the run
   `completed` and stops.
 - **Termination** is guaranteed by the ledger.
@@ -230,14 +230,14 @@ mix test test/mehungry/literature/ \
 - `entrez_test.exs` — the spinach/oxalate worked example (study fields + ingredient
   and compound links), PMID dedup across terms, generic-keyword path (ingredient
   link, no compound link), idempotent re-crawl (zero HTTP via the ledger),
-  append-only raw storage, and the no-identity ledger case.
+  append-only raw storage, and the no-scientific-name ledger case.
 - `literature_crawl_worker_test.exs` — batch crawl + progress + chaining, run
   completion/stop, and `{:snooze, _}` on a rate limit.
 
-End-to-end (optional; needs network, `NCBI_API_KEY` optional): seed spinach + its
-`Spinacia oleracea` identity, run `Mehungry.Literature.enqueue_crawl()`, and
-confirm real PubMed studies appear linked to the ingredient and the run reaches
-`completed`.
+End-to-end (optional; needs network, `NCBI_API_KEY` optional): curate a spinach
+ingredient onto a `FoundementalFoodSpecies` with `scientific_name: "Spinacia
+oleracea"`, run `Mehungry.Literature.enqueue_crawl()`, and confirm real PubMed
+studies appear linked to the ingredient and the run reaches `completed`.
 
 ---
 
@@ -247,6 +247,6 @@ confirm real PubMed studies appear linked to the ingredient and the run reaches
 - No promotion of studies into `IngredientCompoundRelationship` facts — the crawler never
   asserts a dietary fact. That curation step now exists as `Food.CompoundCandidates`
   (**`docs/compound_candidates.md`**); promoted relationships feed back into
-  `search_terms_for_ingredient/1` as targeted crawl terms.
+  `search_terms_for_species/1` as targeted crawl terms.
 - Additional literature sources (Europe PMC, Semantic Scholar, CrossRef) reuse the
   `study_ingredients.source` field and the raw-cache layer.

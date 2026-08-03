@@ -86,6 +86,10 @@ defmodule Mehungry.Literature.PubTator.Client do
   # JSON (one document per line). Handle both, and normalize to a document list.
   defp decode_documents(body) do
     case Jason.decode(body) do
+      # PubTator3's /export/biocjson wraps the document list under a "PubTator3" key.
+      {:ok, %{"PubTator3" => documents} = raw} when is_list(documents) ->
+        {:ok, documents, raw}
+
       {:ok, %{"documents" => documents} = raw} when is_list(documents) ->
         {:ok, documents, raw}
 
@@ -109,6 +113,7 @@ defmodule Mehungry.Literature.PubTator.Client do
       |> String.split("\n", trim: true)
       |> Enum.map(&Jason.decode/1)
       |> Enum.flat_map(fn
+        {:ok, %{"PubTator3" => docs}} when is_list(docs) -> docs
         {:ok, %{"documents" => docs}} when is_list(docs) -> docs
         {:ok, %{"passages" => _} = doc} -> [doc]
         _ -> []
@@ -133,6 +138,69 @@ defmodule Mehungry.Literature.PubTator.Client do
   end
 
   defp passage_mentions(_), do: []
+
+  @doc """
+  Extract the directional `relations` from a decoded BioC-JSON payload (the map
+  kept in `pubtator_responses.raw_json`). Returns a list of relation attr maps,
+  each with `:type` (`Negative_Correlation` / `Positive_Correlation` /
+  `Association` / `Cotreatment`), a float `:score`, and both endpoints'
+  `entity{1,2}_type` (biotype), `entity{1,2}_identifier` (namespaced, e.g.
+  `"mesh:D007249"`, or nil), and `entity{1,2}_name`.
+
+  Used both by the live annotation path and the corpus re-mine, so it takes the
+  already-decoded payload rather than a raw body.
+  """
+  @spec parse_relations(map() | list()) :: [map()]
+  def parse_relations(raw) do
+    raw
+    |> documents_from_raw()
+    |> Enum.flat_map(&document_relations/1)
+  end
+
+  defp documents_from_raw(%{"PubTator3" => docs}) when is_list(docs), do: docs
+  defp documents_from_raw(%{"documents" => docs}) when is_list(docs), do: docs
+  defp documents_from_raw(%{"passages" => _} = doc), do: [doc]
+  defp documents_from_raw(docs) when is_list(docs), do: docs
+  defp documents_from_raw(_), do: []
+
+  defp document_relations(%{"relations" => relations}) when is_list(relations) do
+    relations
+    |> Enum.map(&relation/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp document_relations(_), do: []
+
+  defp relation(%{"infons" => %{"role1" => r1, "role2" => r2, "type" => type} = infons})
+       when is_map(r1) and is_map(r2) do
+    case {role(r1), role(r2)} do
+      {{t1, id1, n1}, {t2, id2, n2}} ->
+        %{
+          type: type,
+          score: parse_float(infons["score"]),
+          entity1_type: t1,
+          entity1_identifier: id1,
+          entity1_name: n1,
+          entity2_type: t2,
+          entity2_identifier: id2,
+          entity2_name: n2
+        }
+
+      _ ->
+        nil
+    end
+  end
+
+  defp relation(_), do: nil
+
+  # A relation endpoint. `biotype` is already lowercase ("chemical"/"disease"/…);
+  # the identifier is normalized the same way as a mention ("MESH:D…" → "mesh:D…").
+  defp role(%{"biotype" => biotype} = role) when is_binary(biotype) do
+    raw_id = role["identifier"] || role["normalized_id"]
+    {biotype, normalized_identifier(biotype, raw_id), role["name"]}
+  end
+
+  defp role(_), do: nil
 
   defp mention(%{"infons" => infons} = annotation) do
     case Map.get(@entity_types, infons["type"]) do

@@ -4,16 +4,17 @@ defmodule Mehungry.Literature do
 
   NCBI Entrez (PubMed) is treated as an external authority, exactly like USDA is
   for ingredients and PubChem is for compounds: `Mehungry.Literature.Entrez`
-  crawls an ingredient's scientific name combined with compound/phytochemistry
-  terms and records each discovered paper as a `ScientificStudy`, linked back to
-  the ingredient (`StudyIngredient`) and — when the term matches the compound
-  registry — the compound (`StudyCompound`).
+  crawls a food species' curated scientific name combined with
+  compound/phytochemistry terms and records each discovered paper as a
+  `ScientificStudy`, linked back to every ingredient curated onto the species
+  (`StudyIngredient`) and — when the term matches the compound registry — the
+  compound (`StudyCompound`).
 
   This context owns the registry, the join facts, and the two sidecar concerns:
 
     * `Entrez.RawResponse` (`entrez_responses`) — an append-only cache of every
       raw E-utilities payload, so the original response is never lost.
-    * `CrawlAttempt` (`literature_crawl_attempts`) — a per-`(ingredient, term)`
+    * `CrawlAttempt` (`literature_crawl_attempts`) — a per-`(species, term)`
       ledger that dedupes work and guarantees the batch crawl terminates.
 
   It represents **discovered literature only** — a study never asserts a dietary
@@ -23,13 +24,16 @@ defmodule Mehungry.Literature do
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
-  alias Mehungry.Food.{Ingredient, IngredientScientificIdentity}
+  alias Mehungry.Food.{FoundementalFood, FoundementalFoodSpecies}
 
   alias Mehungry.Literature.{
     ScientificStudy,
     StudyIngredient,
     StudyCompound,
     StudyEntityMention,
+    StudyEntityRelation,
+    StudyFullText,
+    PmcFetchAttempt,
     CrawlAttempt,
     AnnotationAttempt,
     Entrez,
@@ -40,14 +44,14 @@ defmodule Mehungry.Literature do
   alias Mehungry.Literature.PubTator.RawResponse, as: PubTatorRawResponse
 
   @doc """
-  Crawl NCBI Entrez for one ingredient and sync discovered studies.
+  Crawl NCBI Entrez for one food species and sync discovered studies.
 
-  See `Mehungry.Literature.Entrez.crawl_ingredient/2`.
+  See `Mehungry.Literature.Entrez.crawl_species/2`.
   """
-  defdelegate import_ingredient(ingredient_id, opts \\ []), to: Entrez, as: :crawl_ingredient
+  defdelegate import_species(species_id, opts \\ []), to: Entrez, as: :crawl_species
 
-  @doc "The search terms (scientific name × compounds ∪ keywords) for an ingredient."
-  defdelegate search_terms_for_ingredient(ingredient_id), to: Entrez
+  @doc "The search terms (scientific name × compounds ∪ keywords) for a species."
+  defdelegate search_terms_for_species(species_id), to: Entrez
 
   @doc "Opens a tracked run and enqueues the first crawl batch."
   def enqueue_crawl do
@@ -145,30 +149,30 @@ defmodule Mehungry.Literature do
 
   # ── Crawl ledger (dedup + incremental watermark) ──────────────────────────
 
-  @doc "Upsert a crawl attempt for a `(ingredient, search_term)` pair."
+  @doc "Upsert a crawl attempt for a `(species, search_term)` pair."
   def record_crawl_attempt(attrs) do
     %CrawlAttempt{}
     |> CrawlAttempt.changeset(attrs)
     |> Repo.insert(
       on_conflict: {:replace_all_except, [:id, :inserted_at]},
-      conflict_target: [:ingredient_id, :search_term]
+      conflict_target: [:foundemental_species_id, :search_term]
     )
   end
 
-  @doc "Has `(ingredient, search_term)` already been crawled?"
-  def crawl_attempted?(ingredient_id, search_term) do
+  @doc "Has `(species, search_term)` already been crawled?"
+  def crawl_attempted?(species_id, search_term) do
     Repo.exists?(
       from(a in CrawlAttempt,
-        where: a.ingredient_id == ^ingredient_id and a.search_term == ^search_term
+        where: a.foundemental_species_id == ^species_id and a.search_term == ^search_term
       )
     )
   end
 
-  @doc "The last time `(ingredient, search_term)` was crawled, or `nil` — the incremental watermark."
-  def last_crawled_at(ingredient_id, search_term) do
+  @doc "The last time `(species, search_term)` was crawled, or `nil` — the incremental watermark."
+  def last_crawled_at(species_id, search_term) do
     Repo.one(
       from(a in CrawlAttempt,
-        where: a.ingredient_id == ^ingredient_id and a.search_term == ^search_term,
+        where: a.foundemental_species_id == ^species_id and a.search_term == ^search_term,
         select: a.last_crawled_at
       )
     )
@@ -176,37 +180,37 @@ defmodule Mehungry.Literature do
 
   # ── Batch selection + progress ────────────────────────────────────────────
 
-  @doc "A batch of ingredients that have a scientific identity but no crawl attempt yet, newest first."
-  def list_uncrawled_ingredients(limit) do
+  @doc "A batch of food species that have a scientific name but no crawl attempt yet, newest first."
+  def list_uncrawled_species(limit) do
     Repo.all(
-      from(i in Ingredient,
+      from(s in FoundementalFoodSpecies,
         left_join: a in CrawlAttempt,
-        on: a.ingredient_id == i.id,
-        where: i.id in subquery(identity_ingredient_ids()) and is_nil(a.id),
-        order_by: [desc: i.id],
+        on: a.foundemental_species_id == s.id,
+        where: not is_nil(s.scientific_name) and s.scientific_name != "" and is_nil(a.id),
+        order_by: [desc: s.id],
         limit: ^limit
       )
     )
   end
 
-  @doc "Crawl coverage: how many identity-backed ingredients have been crawled, out of the total."
+  @doc "Crawl coverage: how many named food species have been crawled, out of the total."
   def crawl_progress do
     total =
-      from(i in Ingredient, where: i.id in subquery(identity_ingredient_ids()))
+      from(s in FoundementalFoodSpecies,
+        where: not is_nil(s.scientific_name) and s.scientific_name != ""
+      )
       |> Repo.aggregate(:count)
 
     processed =
       from(a in CrawlAttempt,
-        where: a.ingredient_id in subquery(identity_ingredient_ids()),
-        select: count(a.ingredient_id, :distinct)
+        join: s in FoundementalFoodSpecies,
+        on: s.id == a.foundemental_species_id,
+        where: not is_nil(s.scientific_name) and s.scientific_name != "",
+        select: count(a.foundemental_species_id, :distinct)
       )
       |> Repo.one()
 
     %{processed: processed, total: total}
-  end
-
-  defp identity_ingredient_ids do
-    from(sid in IngredientScientificIdentity, select: sid.ingredient_id)
   end
 
   # ── Read API (for future UIs) ─────────────────────────────────────────────
@@ -224,6 +228,26 @@ defmodule Mehungry.Literature do
     )
     |> Enum.map(& &1.study)
     |> Enum.uniq_by(& &1.id)
+  end
+
+  @doc """
+  All studies discovered for a food **species**, newest first — the union across the
+  species' curated ingredients (studies link to ingredients via `StudyIngredient`, and
+  ingredients belong to a species via `FoundementalFood`). Deduped.
+  """
+  def list_studies_for_species(species_id) do
+    Repo.all(
+      from(l in StudyIngredient,
+        join: ff in FoundementalFood,
+        on: ff.ingredient_id == l.ingredient_id,
+        join: s in ScientificStudy,
+        on: s.id == l.study_id,
+        where: ff.foundemental_species_id == ^species_id,
+        distinct: s.id,
+        order_by: [desc: s.id],
+        select: s
+      )
+    )
   end
 
   @doc "All studies linked to a compound."
@@ -263,6 +287,154 @@ defmodule Mehungry.Literature do
       on_conflict: {:replace_all_except, [:id, :inserted_at]},
       conflict_target: [:study_id, :entity_type, :normalized_identifier, :offset]
     )
+  end
+
+  # ── PubTator3 entity relations (directional co-mentions) ──────────────────
+
+  @doc "Insert-or-update an extracted entity relation on its natural key."
+  def upsert_entity_relation(attrs) do
+    %StudyEntityRelation{}
+    |> StudyEntityRelation.changeset(attrs)
+    |> Repo.insert(
+      on_conflict: {:replace_all_except, [:id, :inserted_at]},
+      conflict_target: [:study_id, :type, :entity1_identifier, :entity2_identifier]
+    )
+  end
+
+  @doc """
+  Persist the relations parsed from one study's BioC-JSON payload, resolving each
+  endpoint against our registries (chemical → compound, disease → condition) with
+  **DB-only** lookups (no external API — the entities were already resolved as
+  mentions). Returns the number of relations persisted.
+  """
+  def persist_study_relations(study_id, relations) when is_list(relations) do
+    Enum.reduce(relations, 0, fn rel, count ->
+      attrs =
+        rel
+        |> Map.put(:study_id, study_id)
+        |> Map.put(:compound_id, resolve_relation_compound(rel))
+        |> Map.put(:condition_id, resolve_relation_condition(rel))
+
+      case upsert_entity_relation(attrs) do
+        {:ok, _} -> count + 1
+        {:error, _} -> count
+      end
+    end)
+  end
+
+  @doc """
+  Re-mine every stored PubTator payload for relations (no re-fetch). Parses
+  `pubtator_responses.raw_json`, persists `study_entity_relations` idempotently, and
+  resolves both endpoints. Safe to re-run. Returns `%{studies: n, relations: m}`.
+  """
+  def remine_relations do
+    from(r in PubTatorRawResponse,
+      where: not is_nil(r.pmid),
+      select: {r.pmid, r.raw_json}
+    )
+    |> Repo.all()
+    |> Enum.reduce(%{studies: 0, relations: 0}, fn {pmid, raw}, acc ->
+      case get_study_by_pmid(pmid) do
+        %{id: study_id} ->
+          relations = PubTator.Client.parse_relations(raw)
+          persisted = persist_study_relations(study_id, relations)
+          %{studies: acc.studies + 1, relations: acc.relations + persisted}
+
+        _ ->
+          acc
+      end
+    end)
+  end
+
+  # ── Relation aggregation for recommendation candidates ────────────────────
+
+  @doc """
+  Deterministic, deduped `{condition_id, compound_id}` pairs that carry at least one
+  fully-resolved chemical↔disease relation. The stable sort keeps offset-paged batch
+  derivation reproducible.
+  """
+  def condition_compound_relation_pairs do
+    Repo.all(
+      from(r in StudyEntityRelation,
+        where: not is_nil(r.condition_id) and not is_nil(r.compound_id),
+        distinct: true,
+        order_by: [asc: r.condition_id, asc: r.compound_id],
+        select: {r.condition_id, r.compound_id}
+      )
+    )
+  end
+
+  @doc "All resolved relations for a `(condition, compound)` pair — `type`, `score`, `study_id`."
+  def condition_compound_relations(condition_id, compound_id) do
+    Repo.all(
+      from(r in StudyEntityRelation,
+        where: r.condition_id == ^condition_id and r.compound_id == ^compound_id,
+        select: %{type: r.type, score: r.score, study_id: r.study_id}
+      )
+    )
+  end
+
+  @doc "Distinct reference study ids backing a `(condition, compound)` relation pair."
+  def condition_compound_relation_study_ids(condition_id, compound_id) do
+    Repo.all(
+      from(r in StudyEntityRelation,
+        where: r.condition_id == ^condition_id and r.compound_id == ^compound_id,
+        distinct: true,
+        select: r.study_id
+      )
+    )
+  end
+
+  @doc "Count of distinct resolved condition↔compound relation pairs (progress total)."
+  def count_condition_compound_relation_pairs do
+    Repo.one(
+      from(r in StudyEntityRelation,
+        where: not is_nil(r.condition_id) and not is_nil(r.compound_id),
+        select: fragment("count(distinct (?, ?))", r.condition_id, r.compound_id)
+      )
+    ) || 0
+  end
+
+  # Resolve the chemical endpoint (if any) to a compound id — identifier-only DB
+  # lookup, so no PubChem call. Nil when neither endpoint is a resolvable chemical.
+  defp resolve_relation_compound(rel) do
+    with %{identifier: id} when is_binary(id) <- relation_endpoint(rel, "chemical"),
+         {ns, ident} <- split_namespaced(id),
+         %{id: compound_id} <- Mehungry.Food.get_compound_by_identifier(ns, ident) do
+      compound_id
+    else
+      _ -> nil
+    end
+  end
+
+  # Resolve the disease endpoint (if any) to a condition id via the local resolver.
+  defp resolve_relation_condition(rel) do
+    case relation_endpoint(rel, "disease") do
+      %{identifier: id, name: name} ->
+        case Mehungry.Health.ConditionResolver.resolve_normalized(id, name) do
+          {:ok, condition} -> condition.id
+          {:error, _} -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  # The endpoint (role1/role2) whose biotype is `type`, as `%{identifier, name}`.
+  defp relation_endpoint(rel, type) do
+    cond do
+      rel[:entity1_type] == type -> %{identifier: rel[:entity1_identifier], name: rel[:entity1_name]}
+      rel[:entity2_type] == type -> %{identifier: rel[:entity2_identifier], name: rel[:entity2_name]}
+      true -> nil
+    end
+  end
+
+  defp split_namespaced(id) do
+    case String.split(id, ":", parts: 2) do
+      [ns, ident] -> {ns, ident}
+      _ -> nil
+    end
   end
 
   @doc "Persist a raw PubTator payload. Append-only — never overwritten."
@@ -342,6 +514,152 @@ defmodule Mehungry.Literature do
     |> Enum.uniq_by(& &1.id)
   end
 
+  # ── Review reads (admin UI) ────────────────────────────────────────────────
+
+  @doc "Total number of discovered studies."
+  def count_studies, do: Repo.aggregate(ScientificStudy, :count)
+
+  @doc "A page of studies, newest first, with an optional title/PMID search."
+  def list_studies_page(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 25)
+    offset = Keyword.get(opts, :offset, 0)
+
+    ScientificStudy
+    |> studies_search(normalize_search(Keyword.get(opts, :search)))
+    |> order_by(desc: :id)
+    |> limit(^limit)
+    |> offset(^offset)
+    |> Repo.all()
+  end
+
+  @doc "Count of studies matching the same optional search as `list_studies_page/1`."
+  def count_studies_matching(search) do
+    ScientificStudy
+    |> studies_search(normalize_search(search))
+    |> Repo.aggregate(:count)
+  end
+
+  defp normalize_search(term) when is_binary(term) do
+    case String.trim(term) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
+  defp normalize_search(_), do: nil
+
+  defp studies_search(query, nil), do: query
+
+  defp studies_search(query, term) do
+    like = "%#{term}%"
+
+    case Integer.parse(term) do
+      {pmid, ""} -> from(s in query, where: ilike(s.title, ^like) or s.pmid == ^pmid)
+      _ -> from(s in query, where: ilike(s.title, ^like))
+    end
+  end
+
+  @doc "Map of `study_id => linked-ingredient count` for the given study ids."
+  def study_ingredient_counts(study_ids) do
+    from(l in StudyIngredient,
+      where: l.study_id in ^study_ids,
+      group_by: l.study_id,
+      select: {l.study_id, count(l.ingredient_id, :distinct)}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc "Map of `study_id => entity-mention count` for the given study ids."
+  def study_mention_counts(study_ids) do
+    from(m in StudyEntityMention,
+      where: m.study_id in ^study_ids,
+      group_by: m.study_id,
+      select: {m.study_id, count(m.id)}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc "Crawl-ledger outcome summary: counts per outcome + total studies found."
+  def crawl_ledger_summary do
+    rows =
+      from(a in CrawlAttempt,
+        group_by: a.outcome,
+        select: {a.outcome, count(a.id), sum(a.studies_found)}
+      )
+      |> Repo.all()
+
+    base = %{"matched" => 0, "no_results" => 0, "error" => 0}
+
+    counts = Enum.reduce(rows, base, fn {outcome, c, _}, acc -> Map.put(acc, outcome, c) end)
+    studies_found = Enum.reduce(rows, 0, fn {_, _, s}, acc -> acc + (s || 0) end)
+
+    Map.put(counts, :studies_found, studies_found)
+  end
+
+  @doc """
+  Annotation-ledger summary: how many studies were processed, the outcome breakdown
+  (`annotated | no_results | error`), and the total mentions found. Lets the review
+  UI show that annotation *ran* even when it extracted nothing (e.g. papers too
+  recent for PubTator3).
+  """
+  def annotation_ledger_summary do
+    rows =
+      from(a in AnnotationAttempt,
+        group_by: a.outcome,
+        select: {a.outcome, count(a.id), sum(a.mentions_found)}
+      )
+      |> Repo.all()
+
+    base = %{"annotated" => 0, "no_results" => 0, "error" => 0}
+    counts = Enum.reduce(rows, base, fn {outcome, c, _}, acc -> Map.put(acc, outcome, c) end)
+    mentions = Enum.reduce(rows, 0, fn {_, _, m}, acc -> acc + (m || 0) end)
+    processed = Enum.reduce(rows, 0, fn {_, c, _}, acc -> acc + c end)
+
+    counts |> Map.put(:mentions_found, mentions) |> Map.put(:processed, processed)
+  end
+
+  @doc "Totals of entity mentions by type (`chemical | species | disease`)."
+  def mention_type_totals do
+    from(m in StudyEntityMention, group_by: m.entity_type, select: {m.entity_type, count(m.id)})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc "Number of studies that have at least one entity mention."
+  def count_annotated_studies do
+    Repo.one(from(m in StudyEntityMention, select: count(m.study_id, :distinct))) || 0
+  end
+
+  @doc "A page of studies that have entity mentions, newest first."
+  def list_annotated_studies_page(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 25)
+    offset = Keyword.get(opts, :offset, 0)
+    annotated = from(m in StudyEntityMention, select: m.study_id)
+
+    from(s in ScientificStudy,
+      where: s.id in subquery(annotated),
+      order_by: [desc: s.id],
+      limit: ^limit,
+      offset: ^offset
+    )
+    |> Repo.all()
+  end
+
+  @doc "Map of `study_id => %{entity_type => count}` for the given study ids."
+  def study_mention_type_counts(study_ids) do
+    from(m in StudyEntityMention,
+      where: m.study_id in ^study_ids,
+      group_by: [m.study_id, m.entity_type],
+      select: {m.study_id, m.entity_type, count(m.id)}
+    )
+    |> Repo.all()
+    |> Enum.reduce(%{}, fn {sid, type, count}, acc ->
+      Map.update(acc, sid, %{type => count}, &Map.put(&1, type, count))
+    end)
+  end
+
   @doc """
   Distinct-study co-occurrence counts per `(ingredient_id, compound_id)`: a
   resolved chemical mention appearing in a paper that is also linked to the
@@ -377,6 +695,140 @@ defmodule Mehungry.Literature do
         select: count(m.study_id, :distinct)
       )
     ) || 0
+  end
+
+  # ── Species-level co-occurrence (candidate derivation, stage 4) ─────────────
+  # Same evidence as the ingredient version, one join deeper: a study's linked
+  # ingredients are grouped up to their `FoundementalFoodSpecies` via `FoundementalFood`.
+
+  @doc """
+  Distinct-study co-occurrence counts per `(species_id, compound_id)`: a resolved
+  chemical mention appearing in a paper linked to any ingredient of the species.
+  Returns `[%{species_id: _, compound_id: _, study_count: _}]`.
+  """
+  def species_compound_cooccurrences do
+    Repo.all(
+      from(m in StudyEntityMention,
+        join: si in StudyIngredient,
+        on: si.study_id == m.study_id,
+        join: ff in FoundementalFood,
+        on: ff.ingredient_id == si.ingredient_id,
+        where: m.entity_type == "chemical" and not is_nil(m.compound_id),
+        group_by: [ff.foundemental_species_id, m.compound_id],
+        select: %{
+          species_id: ff.foundemental_species_id,
+          compound_id: m.compound_id,
+          study_count: count(m.study_id, :distinct)
+        }
+      )
+    )
+  end
+
+  @doc "Distinct co-occurrence study count for one `(species_id, compound_id)` pair."
+  def species_cooccurrence_study_count(species_id, compound_id) do
+    Repo.one(
+      from(m in StudyEntityMention,
+        join: si in StudyIngredient,
+        on: si.study_id == m.study_id,
+        join: ff in FoundementalFood,
+        on: ff.ingredient_id == si.ingredient_id,
+        where:
+          m.entity_type == "chemical" and m.compound_id == ^compound_id and
+            ff.foundemental_species_id == ^species_id,
+        select: count(m.study_id, :distinct)
+      )
+    ) || 0
+  end
+
+  @doc "Distinct study ids backing a `(species_id, compound_id)` co-occurrence — the provenance."
+  def species_cooccurrence_studies(species_id, compound_id) do
+    Repo.all(
+      from(m in StudyEntityMention,
+        join: si in StudyIngredient,
+        on: si.study_id == m.study_id,
+        join: ff in FoundementalFood,
+        on: ff.ingredient_id == si.ingredient_id,
+        where:
+          m.entity_type == "chemical" and m.compound_id == ^compound_id and
+            ff.foundemental_species_id == ^species_id,
+        distinct: true,
+        select: m.study_id
+      )
+    )
+  end
+
+  # ── PMC full-text (measurement extraction pipeline) ────────────────────────
+
+  @doc "Store (or refresh) a study's fetched PMC full text; one row per study."
+  def upsert_full_text(attrs) do
+    %StudyFullText{}
+    |> StudyFullText.changeset(attrs)
+    |> Repo.insert(
+      on_conflict: {:replace_all_except, [:id, :inserted_at]},
+      conflict_target: [:study_id]
+    )
+  end
+
+  @doc "Upsert the PMC fetch-attempt ledger row for a study."
+  def record_pmc_attempt(attrs) do
+    %PmcFetchAttempt{}
+    |> PmcFetchAttempt.changeset(attrs)
+    |> Repo.insert(
+      on_conflict: {:replace_all_except, [:id, :inserted_at]},
+      conflict_target: [:study_id]
+    )
+  end
+
+  @doc "Has a PMC fetch been attempted for this study?"
+  def pmc_attempted?(study_id),
+    do: Repo.exists?(from(a in PmcFetchAttempt, where: a.study_id == ^study_id))
+
+  @doc "A study's stored PMC full text, or `nil`."
+  def get_full_text(study_id), do: Repo.get_by(StudyFullText, study_id: study_id)
+
+  @doc "A batch of PMID-bearing studies with no PMC fetch attempt yet, newest first."
+  def list_unfetched_studies(limit) do
+    Repo.all(
+      from(s in ScientificStudy,
+        left_join: a in PmcFetchAttempt,
+        on: a.study_id == s.id,
+        where: not is_nil(s.pmid) and is_nil(a.id),
+        order_by: [desc: s.id],
+        limit: ^limit
+      )
+    )
+  end
+
+  @doc "PMC fetch coverage: attempted studies / PMID-bearing studies."
+  def pmc_fetch_progress do
+    total = Repo.aggregate(from(s in ScientificStudy, where: not is_nil(s.pmid)), :count)
+    processed = Repo.aggregate(PmcFetchAttempt, :count, :study_id)
+    %{processed: processed, total: total}
+  end
+
+  @doc "Distinct `FoundementalFoodSpecies` ids a study is linked to (via its ingredients)."
+  def species_ids_for_study(study_id) do
+    Repo.all(
+      from(l in StudyIngredient,
+        join: ff in FoundementalFood,
+        on: ff.ingredient_id == l.ingredient_id,
+        where: l.study_id == ^study_id,
+        distinct: true,
+        select: ff.foundemental_species_id
+      )
+    )
+  end
+
+  @doc "Distinct resolved compound ids a study mentions (chemicals)."
+  def compound_ids_for_study(study_id) do
+    Repo.all(
+      from(m in StudyEntityMention,
+        where:
+          m.study_id == ^study_id and m.entity_type == "chemical" and not is_nil(m.compound_id),
+        distinct: true,
+        select: m.compound_id
+      )
+    )
   end
 
   defp to_int(v) when is_integer(v), do: v

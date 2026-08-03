@@ -1,0 +1,144 @@
+<div class="max-w-5xl mx-auto p-4 space-y-6">
+  <div class="flex flex-wrap items-center gap-3">
+    <h1 class="text-2xl font-semibold text-parchment">Extracted Entities</h1>
+
+    <nav class="flex items-center gap-1 ml-auto rounded-lg border border-ink-panel2 p-1 text-sm font-medium">
+      <.link patch={~p"/professional/science"} class="px-3 py-1 rounded text-parchment-dim hover:text-parchment">
+        Pipeline
+      </.link>
+      <.link patch={~p"/professional/science/studies"} class="px-3 py-1 rounded text-parchment-dim hover:text-parchment">
+        Studies
+      </.link>
+      <span class="px-3 py-1 rounded bg-basil text-ink">Entities</span>
+    </nav>
+
+    <button
+      type="button"
+      phx-click="refresh"
+      class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90"
+    >
+      Refresh
+    </button>
+  </div>
+
+  <p class="text-parchment-dim text-sm">
+    Chemicals, species and diseases extracted from the discovered papers by PubTator3
+    (stage 2). Chemicals resolve into the compound registry. Expand a study to see its
+    mentions; chemicals show the compound they resolved to.
+  </p>
+
+  <section class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+    <div class="rounded-lg border border-ink-panel2 bg-ink-panel p-3">
+      <div class="text-2xl font-semibold text-basil">{Map.get(@totals, "chemical", 0)}</div>
+      <div class="text-xs text-parchment-dim">chemical mentions</div>
+    </div>
+    <div class="rounded-lg border border-ink-panel2 bg-ink-panel p-3">
+      <div class="text-2xl font-semibold text-parchment">{Map.get(@totals, "species", 0)}</div>
+      <div class="text-xs text-parchment-dim">species mentions</div>
+    </div>
+    <div class="rounded-lg border border-ink-panel2 bg-ink-panel p-3">
+      <div class="text-2xl font-semibold text-red-400">{Map.get(@totals, "disease", 0)}</div>
+      <div class="text-xs text-parchment-dim">disease mentions</div>
+    </div>
+    <div class="rounded-lg border border-ink-panel2 bg-ink-panel p-3">
+      <div class="text-2xl font-semibold text-parchment">{@annotated} / {@studies_total}</div>
+      <div class="text-xs text-parchment-dim">studies annotated</div>
+    </div>
+    <div class="rounded-lg border border-ink-panel2 bg-ink-panel p-3">
+      <div class="text-2xl font-semibold text-basil">{compounds_count(@compounds_by_id)}</div>
+      <div class="text-xs text-parchment-dim">compounds resolved</div>
+    </div>
+  </section>
+
+  <div class="text-xs text-parchment-dim">
+    Annotation processed <span class="text-parchment">{@ledger.processed}</span> / {@studies_total} studies
+    · <span class="text-basil">{@ledger["annotated"]}</span> produced entities
+    · <span class="text-parchment-dim">{@ledger["no_results"]}</span> none
+    · <span class={if @ledger["error"] > 0, do: "text-red-400", else: "text-parchment-dim"}>{@ledger["error"]}</span> errored
+  </div>
+
+  <section class="divide-y divide-ink-panel2 rounded-lg border border-ink-panel2">
+    <div :if={@studies == [] && @ledger.processed == 0} class="p-6 text-center text-parchment-dim text-sm">
+      No studies annotated yet. Run <span class="font-medium">annotation</span> on the Pipeline tab
+      (it needs discovered studies first — see the Studies tab).
+    </div>
+
+    <div :if={@studies == [] && @ledger.processed > 0} class="p-6 text-center text-parchment-dim text-sm">
+      Annotation ran on {@ledger.processed} studies but extracted no entities. Usually the papers are
+      too recent for PubTator3 to have indexed, or annotation ran before a parser fix — in that case
+      clear the annotation ledger and re-run.
+    </div>
+
+    <div :for={study <- @studies} class="p-3">
+      <div class="flex flex-wrap items-start gap-3 justify-between">
+        <div class="min-w-0 flex-1">
+          <a
+            href={pubmed_url(study.pmid)}
+            target="_blank"
+            rel="noopener"
+            class="text-parchment font-medium hover:underline"
+          >
+            {study.title || "(untitled)"}
+          </a>
+          <div class="text-xs text-parchment-dim mt-0.5">
+            PMID {study.pmid}
+            · <span class="text-basil">{type_count(@type_counts, study.id, "chemical")}</span> chem
+            · <span class="text-parchment">{type_count(@type_counts, study.id, "species")}</span> species
+            · <span class="text-red-400">{type_count(@type_counts, study.id, "disease")}</span> disease
+          </div>
+        </div>
+
+        <button
+          type="button"
+          phx-click="toggle"
+          phx-value-id={study.id}
+          class="px-3 py-1 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90 shrink-0"
+        >
+          {if @open_id == study.id, do: "Hide", else: "Mentions"}
+        </button>
+      </div>
+
+      <div :if={@open_id == study.id && @detail} class="mt-3 pl-3 border-l-2 border-ink-panel2 space-y-3">
+        <div :for={type <- ["chemical", "species", "disease"]}>
+          <div :if={Map.get(@detail, type, []) != []}>
+            <div class={"text-xs font-semibold mb-1 #{mention_class(type)}"}>
+              {String.capitalize(type)} ({length(Map.get(@detail, type, []))})
+            </div>
+            <div class="flex flex-wrap gap-1">
+              <span
+                :for={m <- Map.get(@detail, type, [])}
+                class="text-xs rounded border border-ink-panel2 text-parchment px-2 py-0.5"
+                title={m.normalized_identifier}
+              >
+                {m.text_span}<span
+                  :if={type == "chemical" && m.compound_id && Map.get(@compounds_by_id, m.compound_id)}
+                  class="text-basil"
+                > → {Map.get(@compounds_by_id, m.compound_id)}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="flex items-center justify-between text-sm">
+    <button
+      type="button"
+      phx-click="prev"
+      disabled={@page <= 1}
+      class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+    >
+      ← Prev
+    </button>
+    <span class="text-parchment-dim">Page {@page} of {max(ceil(@total / 25), 1)}</span>
+    <button
+      type="button"
+      phx-click="next"
+      disabled={@page >= max(ceil(@total / 25), 1)}
+      class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+    >
+      Next →
+    </button>
+  </div>
+</div>

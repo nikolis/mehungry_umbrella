@@ -131,6 +131,7 @@ defmodule Mehungry.Literature.Entrez.Client do
   defp parse_efetch(body) do
     articles =
       body
+      |> strip_doctype()
       |> xpath(
         ~x"//PubmedArticle"l,
         pmid: ~x"./MedlineCitation/PMID/text()"s,
@@ -156,6 +157,12 @@ defmodule Mehungry.Literature.Entrez.Client do
   rescue
     error -> {:error, {:decode, error}}
   end
+
+  # Real PubMed efetch XML declares an external DTD (`<!DOCTYPE PubmedArticleSet
+  # PUBLIC … "https://dtd.nlm.nih.gov/…dtd">`) that xmerl tries to resolve at parse
+  # time, failing with `{:error, :enoent}`. We don't need the DTD — the payload uses
+  # numeric character references — so drop the declaration before parsing.
+  defp strip_doctype(xml), do: Regex.replace(~r/<!DOCTYPE[^>]*>/i, xml, "")
 
   defp normalize_article(raw) do
     %{

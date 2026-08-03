@@ -24,17 +24,17 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
         {:ok,
          socket
          |> assign(:condition, condition)
-         |> assign_async([:recommendations, :ingredients], fn ->
+         |> assign_async([:recommendations, :species], fn ->
            {:ok,
             %{
               recommendations: Health.recommendations_for_condition(condition.id),
-              ingredients: Health.ingredients_for_condition(condition.id)
+              species: Health.species_for_condition(condition.id)
             }}
          end)
          |> assign(:page_title, "#{condition.name} — Dietary Guidance")
          |> assign(
            :page_description,
-           "Dietary guidance for #{condition.name}: bioactive compounds to be mindful of and the foods that contain them."
+           "Dietary guidance for #{condition.name}: bioactive compounds to be mindful of and the food species that contain them."
          )}
     end
   end
@@ -54,11 +54,4 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   end
 
   def recommendation_label(rec), do: Map.get(@recommendation_labels, rec, String.capitalize(rec))
-
-  # URL slug for the /foods/:slug detail page — mirrors FoodsLive.Index.ingredient_slug/1.
-  def ingredient_slug(%{search_name: name}) when is_binary(name) and name != "",
-    do: String.replace(name, " ", "-")
-
-  def ingredient_slug(%{name: name}) when is_binary(name), do: String.replace(name, " ", "-")
-  def ingredient_slug(_), do: nil
 end

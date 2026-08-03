@@ -1,0 +1,1353 @@
+[
+  {
+    "main_name": "Type 2 Diabetes Mellitus",
+    "synonyms": ["Type 2 Diabetes", "T2DM", "Non-insulin-dependent diabetes mellitus", "Adult-onset diabetes"],
+    "category": "Endocrine",
+    "subcategory": "Diabetes",
+    "description": "A chronic metabolic disorder characterized by insulin resistance and relative insulin deficiency, leading to hyperglycemia."
+  },
+  {
+    "main_name": "Type 1 Diabetes Mellitus",
+    "synonyms": ["Type 1 Diabetes", "T1DM", "Insulin-dependent diabetes mellitus", "Juvenile-onset diabetes"],
+    "category": "Endocrine",
+    "subcategory": "Diabetes",
+    "description": "An autoimmune condition where the pancreas produces little to no insulin, requiring lifelong insulin therapy."
+  },
+  {
+    "main_name": "Gestational Diabetes Mellitus",
+    "synonyms": ["GDM", "Pregnancy-induced diabetes"],
+    "category": "Endocrine",
+    "subcategory": "Diabetes",
+    "description": "A form of diabetes that develops during pregnancy, typically resolving after delivery but increasing future diabetes risk."
+  },
+  {
+    "main_name": "Prediabetes",
+    "synonyms": ["Impaired glucose tolerance", "Impaired fasting glucose", "Intermediate hyperglycemia"],
+    "category": "Endocrine",
+    "subcategory": "Diabetes",
+    "description": "A condition where blood glucose levels are higher than normal but not high enough to be classified as diabetes."
+  },
+  {
+    "main_name": "Metabolic Syndrome",
+    "synonyms": ["Syndrome X", "Insulin resistance syndrome", "MetS", "Dysmetabolic syndrome"],
+    "category": "Endocrine",
+    "subcategory": "Metabolic Disorder",
+    "description": "A cluster of conditions including central obesity, hypertension, hyperglycemia, and dyslipidemia occurring together."
+  },
+  {
+    "main_name": "Obesity",
+    "synonyms": ["Adiposity", "Overweight (severe)", "Class I/II/III obesity"],
+    "category": "Endocrine",
+    "subcategory": "Nutritional Disorder",
+    "description": "Excess accumulation of body fat causing health risks, defined by BMI ≥ 30 kg/m²."
+  },
+  {
+    "main_name": "Non-Alcoholic Fatty Liver Disease",
+    "synonyms": ["NAFLD", "Hepatic steatosis", "Metabolic dysfunction-associated steatotic liver disease", "MASLD"],
+    "category": "Digestive",
+    "subcategory": "Liver Disease",
+    "description": "A condition characterized by the buildup of fat in the liver unrelated to alcohol use, often linked to diet and obesity."
+  },
+  {
+    "main_name": "Non-Alcoholic Steatohepatitis",
+    "synonyms": ["NASH", "Metabolic dysfunction-associated steatohepatitis", "MASH"],
+    "category": "Digestive",
+    "subcategory": "Liver Disease",
+    "description": "A more severe form of NAFLD involving liver inflammation and damage, which can progress to cirrhosis."
+  },
+  {
+    "main_name": "Cirrhosis",
+    "synonyms": ["Hepatic cirrhosis", "End-stage liver disease"],
+    "category": "Digestive",
+    "subcategory": "Liver Disease",
+    "description": "Advanced scarring of the liver resulting from chronic liver damage, including from alcohol and NAFLD."
+  },
+  {
+    "main_name": "Alcoholic Liver Disease",
+    "synonyms": ["ALD", "Alcoholic hepatitis", "Alcoholic cirrhosis", "Alcohol-related liver disease"],
+    "category": "Digestive",
+    "subcategory": "Liver Disease",
+    "description": "Liver damage caused by excessive alcohol consumption, ranging from fatty liver to cirrhosis."
+  },
+  {
+    "main_name": "Celiac Disease",
+    "synonyms": ["Celiac sprue", "Gluten-sensitive enteropathy", "Coeliac disease"],
+    "category": "Digestive",
+    "subcategory": "Autoimmune Disease",
+    "description": "An autoimmune disorder triggered by gluten ingestion, causing damage to the small intestine."
+  },
+  {
+    "main_name": "Crohn's Disease",
+    "synonyms": ["Regional enteritis", "Inflammatory bowel disease (IBD) - Crohn's type"],
+    "category": "Digestive",
+    "subcategory": "Inflammatory Bowel Disease",
+    "description": "A chronic inflammatory bowel disease that can affect any part of the gastrointestinal tract."
+  },
+  {
+    "main_name": "Ulcerative Colitis",
+    "synonyms": ["UC", "IBD - Ulcerative colitis type"],
+    "category": "Digestive",
+    "subcategory": "Inflammatory Bowel Disease",
+    "description": "A chronic inflammatory bowel disease affecting the large intestine, characterized by ulcers in the colon."
+  },
+  {
+    "main_name": "Irritable Bowel Syndrome",
+    "synonyms": ["IBS", "Spastic colon", "Irritable colon"],
+    "category": "Digestive",
+    "subcategory": "Functional Gastrointestinal Disorder",
+    "description": "A functional gastrointestinal disorder characterized by abdominal pain, bloating, and altered bowel habits."
+  },
+  {
+    "main_name": "Gastroesophageal Reflux Disease",
+    "synonyms": ["GERD", "Acid reflux", "Heartburn (chronic)"],
+    "category": "Digestive",
+    "subcategory": "Esophageal Disorder",
+    "description": "A chronic condition where stomach acid frequently flows back into the esophagus, causing irritation."
+  },
+  {
+    "main_name": "Peptic Ulcer Disease",
+    "synonyms": ["PUD", "Gastric ulcer", "Duodenal ulcer", "Stomach ulcer"],
+    "category": "Digestive",
+    "subcategory": "Esophageal Disorder",
+    "description": "Open sores that develop on the inner lining of the stomach and the upper portion of the small intestine."
+  },
+  {
+    "main_name": "Diverticulitis",
+    "synonyms": ["Diverticular disease (acute)", "Colonic diverticulitis"],
+    "category": "Digestive",
+    "subcategory": "Colonic Disorder",
+    "description": "Inflammation or infection of small pouches (diverticula) that can form in the digestive tract."
+  },
+  {
+    "main_name": "Diverticulosis",
+    "synonyms": ["Diverticular disease (asymptomatic)"],
+    "category": "Digestive",
+    "subcategory": "Colonic Disorder",
+    "description": "The presence of small outpouchings (diverticula) in the colon without inflammation."
+  },
+  {
+    "main_name": "Gallstones",
+    "synonyms": ["Cholelithiasis", "Biliary calculi", "Gallbladder stones"],
+    "category": "Digestive",
+    "subcategory": "Biliary Disorder",
+    "description": "Hardened deposits of digestive fluid that can form in the gallbladder."
+  },
+  {
+    "main_name": "Pancreatitis",
+    "synonyms": ["Acute pancreatitis", "Chronic pancreatitis"],
+    "category": "Digestive",
+    "subcategory": "Pancreatic Disorder",
+    "description": "Inflammation of the pancreas, which can be acute or chronic, often linked to alcohol or gallstones."
+  },
+  {
+    "main_name": "Lactose Intolerance",
+    "synonyms": ["Lactase deficiency", "Maldigestion of lactose"],
+    "category": "Digestive",
+    "subcategory": "Carbohydrate Malabsorption",
+    "description": "The inability to digest lactose due to a deficiency of the enzyme lactase, causing gastrointestinal symptoms."
+  },
+  {
+    "main_name": "Fructose Malabsorption",
+    "synonyms": ["Dietary fructose intolerance (non-hereditary)", "Fructose intolerance (intestinal)"],
+    "category": "Digestive",
+    "subcategory": "Carbohydrate Malabsorption",
+    "description": "A condition where the small intestine cannot properly absorb fructose, leading to digestive distress."
+  },
+  {
+    "main_name": "Small Intestinal Bacterial Overgrowth",
+    "synonyms": ["SIBO", "Bacterial overgrowth syndrome"],
+    "category": "Digestive",
+    "subcategory": "Functional Gastrointestinal Disorder",
+    "description": "Excessive growth of bacteria in the small intestine causing bloating, diarrhea, and malabsorption."
+  },
+  {
+    "main_name": "Dumping Syndrome",
+    "synonyms": ["Rapid gastric emptying", "Post-gastrectomy syndrome"],
+    "category": "Digestive",
+    "subcategory": "Post-surgical",
+    "description": "A condition where food moves too quickly from the stomach to the small intestine, often after gastric surgery."
+  },
+  {
+    "main_name": "Constipation (Chronic)",
+    "synonyms": ["Chronic idiopathic constipation", "CIC", "Functional constipation"],
+    "category": "Digestive",
+    "subcategory": "Functional Gastrointestinal Disorder",
+    "description": "Infrequent or difficult bowel movements lasting for several weeks or longer."
+  },
+  {
+    "main_name": "Chronic Diarrhea",
+    "synonyms": ["Persistent diarrhea", "Chronic loose stools"],
+    "category": "Digestive",
+    "subcategory": "Functional Gastrointestinal Disorder",
+    "description": "Loose, watery stools occurring frequently for more than four weeks."
+  },
+  {
+    "main_name": "Hemorrhoids",
+    "synonyms": ["Piles", "Anal varices"],
+    "category": "Digestive",
+    "subcategory": "Anorectal Disorder",
+    "description": "Swollen veins in the lower rectum and anus, often caused by straining during bowel movements."
+  },
+  {
+    "main_name": "Anal Fissure",
+    "synonyms": ["Fissure in ano"],
+    "category": "Digestive",
+    "subcategory": "Anorectal Disorder",
+    "description": "A small tear in the lining of the anal canal, often caused by passing hard stools."
+  },
+  {
+    "main_name": "Gastroparesis",
+    "synonyms": ["Delayed gastric emptying", "Gastric stasis"],
+    "category": "Digestive",
+    "subcategory": "Gastric Disorder",
+    "description": "A condition that slows or stops the normal movement of food from the stomach to the small intestine."
+  },
+  {
+    "main_name": "Helicobacter pylori Infection",
+    "synonyms": ["H. pylori", "HP infection"],
+    "category": "Digestive",
+    "subcategory": "Infectious",
+    "description": "A bacterial infection of the stomach lining, a major cause of peptic ulcers and gastritis."
+  },
+  {
+    "main_name": "Gastritis",
+    "synonyms": ["Acute gastritis", "Chronic gastritis", "Inflammation of stomach lining"],
+    "category": "Digestive",
+    "subcategory": "Gastric Disorder",
+    "description": "Inflammation of the stomach lining, which can be acute or chronic."
+  },
+  {
+    "main_name": "Protein-Energy Malnutrition",
+    "synonyms": ["PEM", "Protein-calorie malnutrition", "Undernutrition"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "General Malnutrition",
+    "description": "A condition resulting from inadequate intake of protein and calories, leading to muscle wasting and growth failure."
+  },
+  {
+    "main_name": "Kwashiorkor",
+    "synonyms": ["Protein deficiency malnutrition", "Edematous malnutrition"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Protein Deficiency",
+    "description": "A form of severe protein malnutrition characterized by edema, seen in children with inadequate protein intake."
+  },
+  {
+    "main_name": "Marasmus",
+    "synonyms": ["Severe wasting", "Non-edematous malnutrition", "Starvation (chronic)"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Calorie Deficiency",
+    "description": "A severe form of malnutrition characterized by energy deficiency, wasting, and weight loss."
+  },
+  {
+    "main_name": "Vitamin A Deficiency",
+    "synonyms": ["Hypovitaminosis A", "Night blindness (due to deficiency)"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing xerophthalmia, night blindness, and increased infection risk."
+  },
+  {
+    "main_name": "Vitamin B1 Deficiency",
+    "synonyms": ["Thiamine deficiency", "Beriberi", "Wernicke-Korsakoff syndrome (severe)"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing beriberi (wet or dry) and Wernicke encephalopathy."
+  },
+  {
+    "main_name": "Vitamin B2 Deficiency",
+    "synonyms": ["Riboflavin deficiency", "Ariboflavinosis"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing cracked lips, sore throat, and skin disorders."
+  },
+  {
+    "main_name": "Vitamin B3 Deficiency",
+    "synonyms": ["Niacin deficiency", "Pellagra"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing dermatitis, diarrhea, dementia, and death (the four Ds)."
+  },
+  {
+    "main_name": "Vitamin B6 Deficiency",
+    "synonyms": ["Pyridoxine deficiency", "Hypovitaminosis B6"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing neurological symptoms, anemia, and dermatitis."
+  },
+  {
+    "main_name": "Vitamin B9 Deficiency",
+    "synonyms": ["Folate deficiency", "Folic acid deficiency"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing megaloblastic anemia and neural tube defects in pregnancy."
+  },
+  {
+    "main_name": "Vitamin B12 Deficiency",
+    "synonyms": ["Cobalamin deficiency", "Pernicious anemia (autoimmune form)"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing megaloblastic anemia, neuropathy, and cognitive impairment."
+  },
+  {
+    "main_name": "Vitamin C Deficiency",
+    "synonyms": ["Ascorbic acid deficiency", "Scurvy"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing bleeding gums, bruising, and impaired wound healing."
+  },
+  {
+    "main_name": "Vitamin D Deficiency",
+    "synonyms": ["Hypovitaminosis D", "Rickets (children)", "Osteomalacia (adults)"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing bone pain, muscle weakness, and increased fracture risk."
+  },
+  {
+    "main_name": "Vitamin E Deficiency",
+    "synonyms": ["Tocopherol deficiency", "Hypovitaminosis E"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing neurological problems, anemia, and retinopathy."
+  },
+  {
+    "main_name": "Vitamin K Deficiency",
+    "synonyms": ["Hypovitaminosis K", "Phylloquinone deficiency"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing bleeding tendency and impaired bone health."
+  },
+  {
+    "main_name": "Iron Deficiency Anaemia",
+    "synonyms": ["Iron deficiency anemia", "IDA", "Sideropenic anemia"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Mineral Deficiency",
+    "description": "A condition caused by lack of iron, leading to reduced hemoglobin and fatigue."
+  },
+  {
+    "main_name": "Iodine Deficiency",
+    "synonyms": ["Hypothyroidism (iodine deficiency)", "Goiter (endemic)"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Mineral Deficiency",
+    "description": "A deficiency causing goiter, hypothyroidism, and cognitive impairment."
+  },
+  {
+    "main_name": "Zinc Deficiency",
+    "synonyms": ["Hypozincemia", "Zinc depletion"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Mineral Deficiency",
+    "description": "A deficiency causing hair loss, skin lesions, diarrhea, and immune dysfunction."
+  },
+  {
+    "main_name": "Calcium Deficiency",
+    "synonyms": ["Hypocalcemia (severe)", "Osteoporosis (chronic)"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Mineral Deficiency",
+    "description": "A deficiency causing poor bone health, muscle spasms, and osteopenia."
+  },
+  {
+    "main_name": "Magnesium Deficiency",
+    "synonyms": ["Hypomagnesemia", "Magnesium depletion"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Mineral Deficiency",
+    "description": "A deficiency causing muscle cramps, arrhythmias, and mood disorders."
+  },
+  {
+    "main_name": "Selenium Deficiency",
+    "synonyms": ["Selenium insufficiency"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Mineral Deficiency",
+    "description": "A deficiency causing cardiomyopathy, muscle weakness, and impaired immunity."
+  },
+  {
+    "main_name": "Potassium Deficiency",
+    "synonyms": ["Hypokalemia", "Potassium depletion"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Mineral Deficiency",
+    "description": "A deficiency causing muscle weakness, cramps, and cardiac arrhythmias."
+  },
+  {
+    "main_name": "Sodium Deficiency",
+    "synonyms": ["Hyponatremia", "Salt depletion"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Mineral Deficiency",
+    "description": "A deficiency causing confusion, seizures, and in severe cases, coma."
+  },
+  {
+    "main_name": "Copper Deficiency",
+    "synonyms": ["Hypocupremia"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Mineral Deficiency",
+    "description": "A deficiency causing anemia, neutropenia, and neurological symptoms."
+  },
+  {
+    "main_name": "Manganese Deficiency",
+    "synonyms": [],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Mineral Deficiency",
+    "description": "A rare deficiency causing impaired growth, bone abnormalities, and altered glucose metabolism."
+  },
+  {
+    "main_name": "Essential Fatty Acid Deficiency",
+    "synonyms": ["EFAD", "Fatty acid deficiency", "Linoleic acid deficiency"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Fatty Acid Deficiency",
+    "description": "A deficiency of essential fats causing skin scaling, hair loss, and wound healing impairment."
+  },
+  {
+    "main_name": "Biotin Deficiency",
+    "synonyms": ["Vitamin B7 deficiency", "Vitamin H deficiency"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A deficiency causing hair loss, brittle nails, and neurological symptoms."
+  },
+  {
+    "main_name": "Choline Deficiency",
+    "synonyms": [],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Other Deficiency",
+    "description": "A deficiency causing liver damage, muscle damage, and cognitive impairment."
+  },
+  {
+    "main_name": "Salmonellosis",
+    "synonyms": ["Non-typhoidal Salmonella infection", "Salmonella gastroenteritis"],
+    "category": "Foodborne Illness",
+    "subcategory": "Bacterial Infection",
+    "description": "A common gastrointestinal infection caused by Salmonella bacteria, transmitted via contaminated food."
+  },
+  {
+    "main_name": "Campylobacteriosis",
+    "synonyms": ["Campylobacter infection", "Campylobacter gastroenteritis"],
+    "category": "Foodborne Illness",
+    "subcategory": "Bacterial Infection",
+    "description": "A gastrointestinal disease caused by Campylobacter bacteria, often from undercooked poultry."
+  },
+  {
+    "main_name": "Listeriosis",
+    "synonyms": ["Listeria monocytogenes infection"],
+    "category": "Foodborne Illness",
+    "subcategory": "Bacterial Infection",
+    "description": "A serious infection caused by Listeria monocytogenes, particularly dangerous in pregnancy."
+  },
+  {
+    "main_name": "E. coli O157:H7 Infection",
+    "synonyms": ["STEC O157", "Shiga toxin-producing E. coli", "Enterohemorrhagic E. coli"],
+    "category": "Foodborne Illness",
+    "subcategory": "Bacterial Infection",
+    "description": "A severe infection from Shiga toxin-producing E. coli, potentially causing HUS."
+  },
+  {
+    "main_name": "Norovirus Infection",
+    "synonyms": ["Norwalk virus", "Viral gastroenteritis (norovirus)"],
+    "category": "Foodborne Illness",
+    "subcategory": "Viral Infection",
+    "description": "A highly contagious viral infection causing vomiting and diarrhea, the leading cause of foodborne illness."
+  },
+  {
+    "main_name": "Hepatitis A",
+    "synonyms": ["HAV infection", "Infectious hepatitis"],
+    "category": "Foodborne Illness",
+    "subcategory": "Viral Infection",
+    "description": "A contagious liver infection transmitted via contaminated food, water, or person-to-person."
+  },
+  {
+    "main_name": "Botulism",
+    "synonyms": ["Clostridium botulinum toxin", "Foodborne botulism", "Infant botulism (not foodborne)"],
+    "category": "Foodborne Illness",
+    "subcategory": "Bacterial Toxin",
+    "description": "A rare but serious illness caused by botulinum toxin from improperly preserved foods."
+  },
+  {
+    "main_name": "Staphylococcal Food Poisoning",
+    "synonyms": ["Staphylococcus aureus intoxication", "Staphylococcal enterotoxin"],
+    "category": "Foodborne Illness",
+    "subcategory": "Bacterial Toxin",
+    "description": "An illness caused by consuming heat-stable toxin from Staphylococcus aureus in improperly stored foods."
+  },
+  {
+    "main_name": "Vibriosis",
+    "synonyms": ["Vibrio parahaemolyticus", "Vibrio vulnificus infection"],
+    "category": "Foodborne Illness",
+    "subcategory": "Bacterial Infection",
+    "description": "A bacterial illness from Vibrio species, often from raw or undercooked shellfish."
+  },
+  {
+    "main_name": "Cyclosporiasis",
+    "synonyms": ["Cyclospora cayetanensis infection"],
+    "category": "Foodborne Illness",
+    "subcategory": "Parasitic Infection",
+    "description": "An intestinal illness caused by the parasite Cyclospora, often from contaminated fresh produce."
+  },
+  {
+    "main_name": "Toxoplasmosis",
+    "synonyms": ["Toxoplasma gondii infection"],
+    "category": "Foodborne Illness",
+    "subcategory": "Parasitic Infection",
+    "description": "A parasitic infection from undercooked meat or cat feces, dangerous during pregnancy."
+  },
+  {
+    "main_name": "Trichinosis",
+    "synonyms": ["Trichinellosis", "Trichinella infection"],
+    "category": "Foodborne Illness",
+    "subcategory": "Parasitic Infection",
+    "description": "A parasitic disease from eating raw or undercooked pork or wild game containing Trichinella larvae."
+  },
+  {
+    "main_name": "Anisakiasis",
+    "synonyms": ["Anisakis infection", "Herring worm disease"],
+    "category": "Foodborne Illness",
+    "subcategory": "Parasitic Infection",
+    "description": "A parasitic infection from eating raw or undercooked fish containing Anisakis larvae."
+  },
+  {
+    "main_name": "Ciguatera Poisoning",
+    "synonyms": ["Ciguatera fish poisoning"],
+    "category": "Foodborne Illness",
+    "subcategory": "Marine Toxin",
+    "description": "A foodborne illness from eating reef fish contaminated with ciguatoxins from algae."
+  },
+  {
+    "main_name": "Scombroid Poisoning",
+    "synonyms": ["Histamine fish poisoning", "Scombroid fish poisoning"],
+    "category": "Foodborne Illness",
+    "subcategory": "Marine Toxin",
+    "description": "A foodborne illness from eating improperly refrigerated fish high in histamine."
+  },
+  {
+    "main_name": "Paralytic Shellfish Poisoning",
+    "synonyms": ["PSP", "Saxitoxin poisoning"],
+    "category": "Foodborne Illness",
+    "subcategory": "Marine Toxin",
+    "description": "A severe illness from eating shellfish contaminated with saxitoxins from algal blooms."
+  },
+  {
+    "main_name": "Amnesic Shellfish Poisoning",
+    "synonyms": ["ASP", "Domoic acid poisoning"],
+    "category": "Foodborne Illness",
+    "subcategory": "Marine Toxin",
+    "description": "A shellfish poisoning causing short-term memory loss and neurological symptoms."
+  },
+  {
+    "main_name": "Diarrhetic Shellfish Poisoning",
+    "synonyms": ["DSP", "Okadaic acid poisoning"],
+    "category": "Foodborne Illness",
+    "subcategory": "Marine Toxin",
+    "description": "A shellfish poisoning causing gastrointestinal symptoms from okadaic acid."
+  },
+  {
+    "main_name": "Neurotoxic Shellfish Poisoning",
+    "synonyms": ["NSP", "Brevetoxin poisoning"],
+    "category": "Foodborne Illness",
+    "subcategory": "Marine Toxin",
+    "description": "A shellfish poisoning causing neurological and gastrointestinal symptoms from brevetoxins."
+  },
+  {
+    "main_name": "Yersiniosis",
+    "synonyms": ["Yersinia enterocolitica infection"],
+    "category": "Foodborne Illness",
+    "subcategory": "Bacterial Infection",
+    "description": "A bacterial infection from Yersinia, often from undercooked pork or contaminated milk."
+  },
+  {
+    "main_name": "Shigellosis",
+    "synonyms": ["Shigella infection", "Bacillary dysentery"],
+    "category": "Foodborne Illness",
+    "subcategory": "Bacterial Infection",
+    "description": "A bacterial infection from Shigella, causing bloody diarrhea and transmitted via contaminated food or water."
+  },
+  {
+    "main_name": "Brucellosis",
+    "synonyms": ["Undulant fever", "Brucella infection", "Malta fever"],
+    "category": "Foodborne Illness",
+    "subcategory": "Bacterial Infection",
+    "description": "A bacterial infection from unpasteurized dairy products or undercooked meat."
+  },
+  {
+    "main_name": "Q Fever",
+    "synonyms": ["Query fever", "Coxiella burnetii infection"],
+    "category": "Foodborne Illness",
+    "subcategory": "Bacterial Infection",
+    "description": "A bacterial infection from unpasteurized milk or contact with infected animals."
+  },
+  {
+    "main_name": "Tapeworm Infection (Taeniasis)",
+    "synonyms": ["Taenia saginata (beef tapeworm)", "Taenia solium (pork tapeworm)", "Taeniasis"],
+    "category": "Foodborne Illness",
+    "subcategory": "Parasitic Infection",
+    "description": "A parasitic infection from eating undercooked beef or pork containing tapeworm cysts."
+  },
+  {
+    "main_name": "Neurocysticercosis",
+    "synonyms": ["Cysticercosis (CNS)", "Taenia solium neurocysticercosis"],
+    "category": "Foodborne Illness",
+    "subcategory": "Parasitic Infection",
+    "description": "A severe neurological condition from the larvae of Taenia solium in the brain."
+  },
+  {
+    "main_name": "Echinococcosis",
+    "synonyms": ["Hydatid disease", "Echinococcus granulosus infection"],
+    "category": "Foodborne Illness",
+    "subcategory": "Parasitic Infection",
+    "description": "A parasitic disease from ingestion of Echinococcus eggs from contaminated food or water."
+  },
+  {
+    "main_name": "Fascioliasis",
+    "synonyms": ["Fasciola hepatica infection", "Liver fluke disease"],
+    "category": "Foodborne Illness",
+    "subcategory": "Parasitic Infection",
+    "description": "A parasitic infection from eating contaminated watercress or aquatic plants containing Fasciola larvae."
+  },
+  {
+    "main_name": "Opisthorchiasis",
+    "synonyms": ["Opisthorchis viverrini", "Southeast Asian liver fluke", "Clonorchiasis (related)"],
+    "category": "Foodborne Illness",
+    "subcategory": "Parasitic Infection",
+    "description": "A parasitic infection from eating raw or undercooked freshwater fish containing liver flukes."
+  },
+  {
+    "main_name": "Paragonimiasis",
+    "synonyms": ["Lung fluke infection", "Paragonimus westermani"],
+    "category": "Foodborne Illness",
+    "subcategory": "Parasitic Infection",
+    "description": "A parasitic infection from eating raw or undercooked freshwater crabs or crayfish."
+  },
+  {
+    "main_name": "Gnathostomiasis",
+    "synonyms": ["Gnathostoma spinigerum infection"],
+    "category": "Foodborne Illness",
+    "subcategory": "Parasitic Infection",
+    "description": "A parasitic infection from eating raw or undercooked freshwater fish, eels, or poultry."
+  },
+  {
+    "main_name": "Aflatoxicosis",
+    "synonyms": ["Aflatoxin poisoning"],
+    "category": "Foodborne Illness",
+    "subcategory": "Mycotoxin",
+    "description": "A toxicity from consuming aflatoxins (fungal toxins) in contaminated grains and nuts."
+  },
+  {
+    "main_name": "Ergotism",
+    "synonyms": ["Ergot poisoning", "St Anthony's fire"],
+    "category": "Foodborne Illness",
+    "subcategory": "Mycotoxin",
+    "description": "A toxicity from consuming ergot alkaloids in contaminated rye and other grains."
+  },
+  {
+    "main_name": "Fumonisin Toxicity",
+    "synonyms": ["Fumonisin poisoning", "Fusarium toxin"],
+    "category": "Foodborne Illness",
+    "subcategory": "Mycotoxin",
+    "description": "A toxicity from consuming fumonisins in contaminated corn, causing esophageal cancer risk."
+  },
+  {
+    "main_name": "Lead Poisoning (Dietary)",
+    "synonyms": ["Plumbism", "Lead toxicity from food"],
+    "category": "Foodborne Illness",
+    "subcategory": "Heavy Metal Toxicity",
+    "description": "A toxicity from ingestion of lead-contaminated food or water, causing neurological damage."
+  },
+  {
+    "main_name": "Mercury Poisoning (Dietary)",
+    "synonyms": ["Methylmercury toxicity", "Minamata disease"],
+    "category": "Foodborne Illness",
+    "subcategory": "Heavy Metal Toxicity",
+    "description": "A toxicity from consuming mercury-contaminated fish, causing neurological and developmental issues."
+  },
+  {
+    "main_name": "Arsenic Poisoning (Dietary)",
+    "synonyms": ["Arsenicosis", "Arsenic toxicity from food"],
+    "category": "Foodborne Illness",
+    "subcategory": "Heavy Metal Toxicity",
+    "description": "A toxicity from consuming arsenic-contaminated rice and water, causing cancers and skin lesions."
+  },
+  {
+    "main_name": "Cadmium Poisoning (Dietary)",
+    "synonyms": ["Cadmium toxicity from food", "Itai-itai disease"],
+    "category": "Foodborne Illness",
+    "subcategory": "Heavy Metal Toxicity",
+    "description": "A toxicity from consuming cadmium-contaminated foods, causing kidney and bone disease."
+  },
+  {
+    "main_name": "Bisphenol A Toxicity",
+    "synonyms": ["BPA toxicity", "Endocrine disruptor (BPA)"],
+    "category": "Foodborne Illness",
+    "subcategory": "Chemical Contaminant",
+    "description": "A toxicity from BPA leaching from food packaging, acting as an endocrine disruptor."
+  },
+  {
+    "main_name": "Phthalate Toxicity",
+    "synonyms": ["Phthalate exposure (dietary)", "Endocrine disruptor (phthalates)"],
+    "category": "Foodborne Illness",
+    "subcategory": "Chemical Contaminant",
+    "description": "A toxicity from phthalates in food packaging, associated with reproductive and developmental issues."
+  },
+  {
+    "main_name": "Cardiovascular Disease",
+    "synonyms": ["Heart disease", "CVD", "Coronary artery disease"],
+    "category": "Cardiovascular",
+    "subcategory": "Heart Disease",
+    "description": "A group of disorders affecting the heart and blood vessels, often linked to diet."
+  },
+  {
+    "main_name": "Coronary Artery Disease",
+    "synonyms": ["CAD", "Ischemic heart disease", "Atherosclerotic heart disease"],
+    "category": "Cardiovascular",
+    "subcategory": "Heart Disease",
+    "description": "Narrowing of the coronary arteries from atherosclerosis, causing angina and MI."
+  },
+  {
+    "main_name": "Myocardial Infarction",
+    "synonyms": ["Heart attack", "MI", "Acute coronary syndrome"],
+    "category": "Cardiovascular",
+    "subcategory": "Heart Disease",
+    "description": "A heart attack caused by reduced blood flow to the heart muscle, often diet-related."
+  },
+  {
+    "main_name": "Stroke",
+    "synonyms": ["Cerebrovascular accident", "CVA", "Brain attack"],
+    "category": "Cardiovascular",
+    "subcategory": "Cerebrovascular Disease",
+    "description": "A sudden loss of brain function due to disrupted blood supply, linked to diet and hypertension."
+  },
+  {
+    "main_name": "Hypertension",
+    "synonyms": ["High blood pressure", "HBP", "Essential hypertension"],
+    "category": "Cardiovascular",
+    "subcategory": "Hypertensive Disease",
+    "description": "A chronic condition of elevated blood pressure, strongly influenced by dietary sodium and lifestyle."
+  },
+  {
+    "main_name": "Dyslipidemia",
+    "synonyms": ["Hyperlipidemia", "High cholesterol", "Hypercholesterolemia", "Hypertriglyceridemia"],
+    "category": "Endocrine",
+    "subcategory": "Lipid Disorder",
+    "description": "Abnormal levels of lipids (cholesterol, triglycerides) in the blood, highly diet-responsive."
+  },
+  {
+    "main_name": "Hypercholesterolemia",
+    "synonyms": ["High LDL cholesterol", "Familial hypercholesterolemia (genetic)"],
+    "category": "Endocrine",
+    "subcategory": "Lipid Disorder",
+    "description": "Elevated total or LDL cholesterol levels, a major risk factor for cardiovascular disease."
+  },
+  {
+    "main_name": "Hypertriglyceridemia",
+    "synonyms": ["High triglycerides", "Elevated TG"],
+    "category": "Endocrine",
+    "subcategory": "Lipid Disorder",
+    "description": "Elevated levels of triglycerides in the blood, often linked to high carbohydrate intake."
+  },
+  {
+    "main_name": "Gout",
+    "synonyms": ["Gouty arthritis", "Urate crystal arthropathy"],
+    "category": "Musculoskeletal",
+    "subcategory": "Metabolic Arthritis",
+    "description": "An inflammatory arthritis caused by uric acid crystal deposition, triggered by purine-rich foods."
+  },
+  {
+    "main_name": "Osteoporosis",
+    "synonyms": ["Bone loss", "Low bone mass", "Brittle bones"],
+    "category": "Musculoskeletal",
+    "subcategory": "Bone Disease",
+    "description": "Reduced bone mineral density, increasing fracture risk, influenced by calcium and vitamin D intake."
+  },
+  {
+    "main_name": "Osteopenia",
+    "synonyms": ["Low bone density (pre-osteoporosis)"],
+    "category": "Musculoskeletal",
+    "subcategory": "Bone Disease",
+    "description": "Lower than normal bone density, a precursor to osteoporosis."
+  },
+  {
+    "main_name": "Rheumatoid Arthritis",
+    "synonyms": ["RA", "Autoimmune arthritis"],
+    "category": "Musculoskeletal",
+    "subcategory": "Autoimmune Arthritis",
+    "description": "A chronic autoimmune inflammatory disease affecting joints, with potential dietary influences."
+  },
+  {
+    "main_name": "Osteoarthritis",
+    "synonyms": ["OA", "Degenerative joint disease", "Wear-and-tear arthritis"],
+    "category": "Musculoskeletal",
+    "subcategory": "Degenerative Arthritis",
+    "description": "A degenerative joint disease worsened by obesity and metabolic factors."
+  },
+  {
+    "main_name": "Dental Caries",
+    "synonyms": ["Tooth decay", "Cavities", "Dental cavities"],
+    "category": "Oral Health",
+    "subcategory": "Dental Disease",
+    "description": "Tooth decay caused by bacterial fermentation of dietary sugars, producing acid that damages enamel."
+  },
+  {
+    "main_name": "Erosive Tooth Wear",
+    "synonyms": ["Dental erosion", "Acidic tooth wear"],
+    "category": "Oral Health",
+    "subcategory": "Dental Disease",
+    "description": "Loss of tooth enamel caused by acidic foods, drinks, or gastric reflux."
+  },
+  {
+    "main_name": "Periodontal Disease",
+    "synonyms": ["Gum disease", "Periodontitis", "Gingivitis"],
+    "category": "Oral Health",
+    "subcategory": "Periodontal Disease",
+    "description": "Inflammatory disease of the gums and supporting structures, linked to diet and nutrition."
+  },
+  {
+    "main_name": "Hyperuricemia",
+    "synonyms": ["High uric acid", "Elevated serum urate"],
+    "category": "Endocrine",
+    "subcategory": "Metabolic Disorder",
+    "description": "Elevated uric acid levels in the blood, a precursor to gout and kidney stones."
+  },
+  {
+    "main_name": "Renal Calculi",
+    "synonyms": ["Kidney stones", "Nephrolithiasis", "Urolithiasis"],
+    "category": "Renal",
+    "subcategory": "Metabolic Disease",
+    "description": "Stone formation in the kidneys, influenced by dietary oxalate, calcium, and fluid intake."
+  },
+  {
+    "main_name": "Chronic Kidney Disease",
+    "synonyms": ["CKD", "Chronic renal failure", "Chronic kidney insufficiency"],
+    "category": "Renal",
+    "subcategory": "Kidney Disease",
+    "description": "Progressive loss of kidney function, often linked to diabetes and hypertension."
+  },
+  {
+    "main_name": "Nephrotic Syndrome",
+    "synonyms": ["Nephrosis"],
+    "category": "Renal",
+    "subcategory": "Kidney Disease",
+    "description": "A kidney disorder causing proteinuria and edema, requiring dietary protein and sodium management."
+  },
+  {
+    "main_name": "Acute Kidney Injury",
+    "synonyms": ["AKI", "Acute renal failure", "Acute kidney failure"],
+    "category": "Renal",
+    "subcategory": "Kidney Disease",
+    "description": "Sudden loss of kidney function, potentially from dehydration or toxin ingestion."
+  },
+  {
+    "main_name": "Hypothyroidism",
+    "synonyms": ["Underactive thyroid", "Low thyroid function", "Myxedema"],
+    "category": "Endocrine",
+    "subcategory": "Thyroid Disorder",
+    "description": "A condition of insufficient thyroid hormone production, influenced by iodine intake."
+  },
+  {
+    "main_name": "Hyperthyroidism",
+    "synonyms": ["Overactive thyroid", "Thyrotoxicosis", "Graves' disease (autoimmune)"],
+    "category": "Endocrine",
+    "subcategory": "Thyroid Disorder",
+    "description": "A condition of excessive thyroid hormone production, can be worsened by excess iodine."
+  },
+  {
+    "main_name": "Goiter",
+    "synonyms": ["Enlarged thyroid", "Thyroid enlargement"],
+    "category": "Endocrine",
+    "subcategory": "Thyroid Disorder",
+    "description": "Enlargement of the thyroid gland, often due to iodine deficiency or excess."
+  },
+  {
+    "main_name": "Polycystic Ovary Syndrome",
+    "synonyms": ["PCOS", "Stein-Leventhal syndrome"],
+    "category": "Endocrine",
+    "subcategory": "Reproductive Disorder",
+    "description": "A hormonal disorder common in women, linked to insulin resistance and obesity."
+  },
+  {
+    "main_name": "Infertility (Nutrition-Related)",
+    "synonyms": ["Subfertility", "Impaired fertility (diet-related)"],
+    "category": "Reproductive",
+    "subcategory": "Fertility Disorder",
+    "description": "Impaired fertility associated with obesity, malnutrition, or specific nutrient deficiencies."
+  },
+  {
+    "main_name": "Polyneuropathy (Nutritional)",
+    "synonyms": ["Nutritional neuropathy", "Thiamine deficiency neuropathy"],
+    "category": "Neurological",
+    "subcategory": "Peripheral Neuropathy",
+    "description": "Nerve damage caused by deficiencies in B vitamins (especially B1, B6, B12)."
+  },
+  {
+    "main_name": "Wernicke-Korsakoff Syndrome",
+    "synonyms": ["WKS", "Wernicke encephalopathy", "Korsakoff psychosis"],
+    "category": "Neurological",
+    "subcategory": "Thiamine Deficiency",
+    "description": "A severe neurological disorder caused by thiamine deficiency, often associated with alcohol abuse."
+  },
+  {
+    "main_name": "Neural Tube Defects",
+    "synonyms": ["NTD", "Spina bifida", "Anencephaly"],
+    "category": "Congenital",
+    "subcategory": "Developmental Defect",
+    "description": "Birth defects of the brain and spinal cord, preventable with adequate folate intake."
+  },
+  {
+    "main_name": "Fetal Alcohol Spectrum Disorder",
+    "synonyms": ["FASD", "Fetal alcohol syndrome (FAS)"],
+    "category": "Congenital",
+    "subcategory": "Developmental Defect",
+    "description": "A group of conditions caused by maternal alcohol consumption during pregnancy."
+  },
+  {
+    "main_name": "Anemia (Nutritional)",
+    "synonyms": ["Nutritional anemia", "Megaloblastic anemia (B12/folate)", "Microcytic anemia (iron)"],
+    "category": "Hematological",
+    "subcategory": "Anemia",
+    "description": "A condition of low red blood cells or hemoglobin caused by nutrient deficiencies."
+  },
+  {
+    "main_name": "Scurvy",
+    "synonyms": ["Vitamin C deficiency disease", "Ascorbic acid deficiency"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A disease caused by vitamin C deficiency, resulting in bleeding gums, bruising, and joint pain."
+  },
+  {
+    "main_name": "Rickets",
+    "synonyms": ["Vitamin D deficiency in children", "Osteomalacia (children)"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A childhood disease of softened and weakened bones from vitamin D deficiency."
+  },
+  {
+    "main_name": "Osteomalacia",
+    "synonyms": ["Vitamin D deficiency in adults", "Adult rickets"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A condition of soft bones in adults from vitamin D deficiency."
+  },
+  {
+    "main_name": "Pellagra",
+    "synonyms": ["Niacin deficiency", "Vitamin B3 deficiency disease"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A disease caused by niacin deficiency, characterized by dermatitis, diarrhea, dementia, and death."
+  },
+  {
+    "main_name": "Beriberi",
+    "synonyms": ["Thiamine deficiency disease", "Wet beriberi", "Dry beriberi"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Vitamin Deficiency",
+    "description": "A disease caused by thiamine deficiency, affecting the cardiovascular and nervous systems."
+  },
+  {
+    "main_name": "Kwashiorkor (Severe)",
+    "synonyms": ["Edematous malnutrition", "Protein deficiency syndrome"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Protein Deficiency",
+    "description": "A severe form of protein malnutrition in children, characterized by edema and fatty liver."
+  },
+  {
+    "main_name": "Marasmus (Severe)",
+    "synonyms": ["Severe wasting", "Non-edematous malnutrition"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "Calorie Deficiency",
+    "description": "A severe form of calorie malnutrition causing emaciation and growth failure."
+  },
+  {
+    "main_name": "Anorexia Nervosa",
+    "synonyms": ["Anorexia", "Eating disorder (restrictive)"],
+    "category": "Psychiatric",
+    "subcategory": "Eating Disorder",
+    "description": "An eating disorder characterized by restricted intake, fear of weight gain, and distorted body image."
+  },
+  {
+    "main_name": "Bulimia Nervosa",
+    "synonyms": ["Bulimia", "Binge-purge syndrome"],
+    "category": "Psychiatric",
+    "subcategory": "Eating Disorder",
+    "description": "An eating disorder characterized by binge eating followed by compensatory behaviors (purging)."
+  },
+  {
+    "main_name": "Binge Eating Disorder",
+    "synonyms": ["BED", "Compulsive overeating"],
+    "category": "Psychiatric",
+    "subcategory": "Eating Disorder",
+    "description": "An eating disorder characterized by recurrent episodes of binge eating without compensatory behaviors."
+  },
+  {
+    "main_name": "Avoidant/Restrictive Food Intake Disorder",
+    "synonyms": ["ARFID", "Selective eating disorder", "Food neophobia (severe)"],
+    "category": "Psychiatric",
+    "subcategory": "Eating Disorder",
+    "description": "An eating disorder characterized by limited food intake due to sensory or fear-based avoidance."
+  },
+  {
+    "main_name": "Pica",
+    "synonyms": ["Eating disorder (non-food)", "Geophagia", "Pagophagia"],
+    "category": "Psychiatric",
+    "subcategory": "Eating Disorder",
+    "description": "An eating disorder characterized by craving and consuming non-food substances (e.g., dirt, chalk)."
+  },
+  {
+    "main_name": "Rumination Disorder",
+    "synonyms": ["Rumination syndrome"],
+    "category": "Psychiatric",
+    "subcategory": "Eating Disorder",
+    "description": "A disorder where individuals repeatedly regurgitate food after eating, re-chewing or re-swallowing it."
+  },
+  {
+    "main_name": "Food Addiction",
+    "synonyms": ["Compulsive eating", "Hyperphagia (psychological)"],
+    "category": "Psychiatric",
+    "subcategory": "Behavioral Addiction",
+    "description": "A proposed condition characterized by addictive-like responses to highly palatable foods."
+  },
+  {
+    "main_name": "Allergic Contact Dermatitis (Food-Related)",
+    "synonyms": ["Food-induced contact dermatitis"],
+    "category": "Dermatological",
+    "subcategory": "Allergic Reaction",
+    "description": "A skin reaction triggered by food allergens (e.g., nickel, preservatives) on contact or ingestion."
+  },
+  {
+    "main_name": "Atopic Dermatitis (Food-Triggered)",
+    "synonyms": ["Eczema (food-sensitive)", "Food-induced atopic dermatitis"],
+    "category": "Dermatological",
+    "subcategory": "Allergic Reaction",
+    "description": "A chronic inflammatory skin condition exacerbated by food allergens in some individuals."
+  },
+  {
+    "main_name": "Food Protein-Induced Enterocolitis Syndrome",
+    "synonyms": ["FPIES", "Food protein-induced enteropathy"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "A non-IgE-mediated food allergy causing severe vomiting, diarrhea, and dehydration in infants."
+  },
+  {
+    "main_name": "Food Protein-Induced Allergic Proctocolitis",
+    "synonyms": ["FPIAP", "Allergic proctocolitis"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "A benign condition in infants causing blood-streaked stools from cow's milk or soy allergy."
+  },
+  {
+    "main_name": "Eosinophilic Esophagitis",
+    "synonyms": ["EoE", "Allergic esophagitis"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "A chronic immune-mediated disease of the esophagus, triggered by food allergens."
+  },
+  {
+    "main_name": "Eosinophilic Gastroenteritis",
+    "synonyms": ["EGE", "Eosinophilic enteritis"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "A rare condition with eosinophilic infiltration of the GI tract, often triggered by food allergens."
+  },
+  {
+    "main_name": "Oral Allergy Syndrome",
+    "synonyms": ["OAS", "Pollen-food allergy syndrome", "PFAS"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "A cross-reactivity reaction between pollen and fresh fruits/vegetables, causing oral itching."
+  },
+  {
+    "main_name": "Alpha-Gal Syndrome",
+    "synonyms": ["Alpha-gal allergy", "Red meat allergy", "Mammalian meat allergy"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "A delayed allergic reaction to mammalian meat (e.g., beef, pork) caused by tick bite-induced IgE."
+  },
+  {
+    "main_name": "Food-Dependent Exercise-Induced Anaphylaxis",
+    "synonyms": ["FDEIA", "Exercise-induced food allergy"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "Anaphylaxis triggered by exercise after consuming specific foods (e.g., wheat, shellfish)."
+  },
+  {
+    "main_name": "Wheat Allergy",
+    "synonyms": ["Wheat hypersensitivity", "Gluten allergy (distinct from celiac)"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "An allergic reaction to wheat proteins, distinct from celiac disease and non-celiac gluten sensitivity."
+  },
+  {
+    "main_name": "Milk Allergy",
+    "synonyms": ["Cow's milk allergy", "CMA", "Dairy allergy"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "An allergic reaction to proteins in cow's milk, common in infants."
+  },
+  {
+    "main_name": "Egg Allergy",
+    "synonyms": ["Egg hypersensitivity"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "An allergic reaction to proteins in eggs, common in children."
+  },
+  {
+    "main_name": "Soy Allergy",
+    "synonyms": ["Soy protein allergy"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "An allergic reaction to soy proteins, common in infants."
+  },
+  {
+    "main_name": "Peanut Allergy",
+    "synonyms": ["Peanut hypersensitivity"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "A common and potentially severe food allergy to peanuts."
+  },
+  {
+    "main_name": "Tree Nut Allergy",
+    "synonyms": ["Nut allergy (tree nuts)", "Almond allergy", "Walnut allergy", "Cashew allergy"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "An allergic reaction to tree nuts (e.g., almonds, walnuts, cashews, pistachios)."
+  },
+  {
+    "main_name": "Shellfish Allergy",
+    "synonyms": ["Shrimp allergy", "Crab allergy", "Lobster allergy", "Crustacean allergy"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "An allergic reaction to shellfish (crustaceans or mollusks)."
+  },
+  {
+    "main_name": "Fish Allergy",
+    "synonyms": ["Fin fish allergy", "Salmon allergy", "Tuna allergy"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "An allergic reaction to fin fish (e.g., salmon, tuna, cod)."
+  },
+  {
+    "main_name": "Sesame Allergy",
+    "synonyms": ["Sesame seed allergy"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "An allergic reaction to sesame seeds, increasingly common and a major allergen."
+  },
+  {
+    "main_name": "Mustard Allergy",
+    "synonyms": ["Mustard seed allergy"],
+    "category": "Digestive",
+    "subcategory": "Food Allergy",
+    "description": "An allergic reaction to mustard seeds, common in some regions."
+  },
+  {
+    "main_name": "Sulfite Sensitivity",
+    "synonyms": ["Sulfite intolerance", "Asthma (sulfite-induced)"],
+    "category": "Digestive",
+    "subcategory": "Food Intolerance",
+    "description": "A sensitivity to sulfites (used as preservatives), causing asthma symptoms or hives."
+  },
+  {
+    "main_name": "Histamine Intolerance",
+    "synonyms": ["Histaminosis", "Histamine sensitivity"],
+    "category": "Digestive",
+    "subcategory": "Food Intolerance",
+    "description": "A condition where the body cannot break down histamine from foods, causing allergy-like symptoms."
+  },
+  {
+    "main_name": "Caffeine Sensitivity",
+    "synonyms": ["Caffeine intolerance", "Adenosine receptor sensitivity"],
+    "category": "Digestive",
+    "subcategory": "Food Intolerance",
+    "description": "A heightened sensitivity to caffeine, causing jitters, insomnia, and palpitations."
+  },
+  {
+    "main_name": "Alcohol Flush Reaction",
+    "synonyms": ["Asian flush", "Aldehyde dehydrogenase deficiency", "ALDH2 deficiency"],
+    "category": "Digestive",
+    "subcategory": "Food Intolerance",
+    "description": "A reaction to alcohol causing facial flushing, caused by an enzyme deficiency."
+  },
+  {
+    "main_name": "Phenylketonuria (Dietary Management)",
+    "synonyms": ["PKU", "Phenylalanine hydroxylase deficiency"],
+    "category": "Metabolic",
+    "subcategory": "Inborn Error of Metabolism",
+    "description": "A genetic disorder requiring a low-phenylalanine diet to prevent neurological damage."
+  },
+  {
+    "main_name": "Maple Syrup Urine Disease (Dietary)",
+    "synonyms": ["MSUD", "Branched-chain ketoaciduria"],
+    "category": "Metabolic",
+    "subcategory": "Inborn Error of Metabolism",
+    "description": "A genetic disorder requiring a diet low in leucine, isoleucine, and valine."
+  },
+  {
+    "main_name": "Galactosemia (Dietary)",
+    "synonyms": ["Galactose-1-phosphate uridyltransferase deficiency"],
+    "category": "Metabolic",
+    "subcategory": "Inborn Error of Metabolism",
+    "description": "A genetic disorder requiring a galactose-free diet (no milk/dairy)."
+  },
+  {
+    "main_name": "Hereditary Fructose Intolerance",
+    "synonyms": ["HFI", "Fructose-1-phosphate aldolase deficiency", "Fructose aldolase B deficiency"],
+    "category": "Metabolic",
+    "subcategory": "Inborn Error of Metabolism",
+    "description": "A genetic disorder requiring a fructose-free diet to prevent liver and kidney damage."
+  },
+  {
+    "main_name": "Glucose-6-Phosphate Dehydrogenase Deficiency",
+    "synonyms": ["G6PD deficiency", "Favism (specific trigger)"],
+    "category": "Metabolic",
+    "subcategory": "Inborn Error of Metabolism",
+    "description": "A genetic enzyme deficiency where fava beans and certain foods trigger hemolytic anemia."
+  },
+  {
+    "main_name": "Homocystinuria (Dietary)",
+    "synonyms": ["Cystathionine beta-synthase deficiency"],
+    "category": "Metabolic",
+    "subcategory": "Inborn Error of Metabolism",
+    "description": "A genetic disorder requiring a diet low in methionine and supplementation with B vitamins."
+  },
+  {
+    "main_name": "Tyrosinemia (Dietary)",
+    "synonyms": ["Tyrosinemia type I", "Tyrosinemia type II"],
+    "category": "Metabolic",
+    "subcategory": "Inborn Error of Metabolism",
+    "description": "A genetic disorder requiring a diet low in tyrosine and phenylalanine."
+  },
+  {
+    "main_name": "Wilson's Disease (Dietary)",
+    "synonyms": ["Hepatolenticular degeneration", "Copper storage disease"],
+    "category": "Metabolic",
+    "subcategory": "Inborn Error of Metabolism",
+    "description": "A genetic disorder of copper accumulation, requiring a low-copper diet."
+  },
+  {
+    "main_name": "Hemochromatosis (Dietary)",
+    "synonyms": ["Iron overload disorder", "Hereditary hemochromatosis"],
+    "category": "Metabolic",
+    "subcategory": "Inborn Error of Metabolism",
+    "description": "A genetic disorder of iron accumulation, requiring dietary iron restriction."
+  },
+  {
+    "main_name": "Acrodermatitis Enteropathica",
+    "synonyms": ["Zinc deficiency syndrome", "Genetic zinc deficiency"],
+    "category": "Dermatological",
+    "subcategory": "Mineral Deficiency",
+    "description": "A rare genetic disorder of zinc malabsorption requiring high-dose zinc supplementation."
+  },
+  {
+    "main_name": "Menkes Disease (Dietary)",
+    "synonyms": ["Kinky hair syndrome", "Copper transport disease"],
+    "category": "Metabolic",
+    "subcategory": "Inborn Error of Metabolism",
+    "description": "A genetic disorder of copper absorption requiring parenteral copper supplementation."
+  },
+  {
+    "main_name": "Disaccharidase Deficiency",
+    "synonyms": ["Sucrase-isomaltase deficiency", "Trehalase deficiency"],
+    "category": "Digestive",
+    "subcategory": "Carbohydrate Malabsorption",
+    "description": "A deficiency of enzymes breaking down disaccharides, causing malabsorption."
+  },
+  {
+    "main_name": "Glucose-Galactose Malabsorption",
+    "synonyms": ["GGM", "Congenital glucose-galactose malabsorption"],
+    "category": "Digestive",
+    "subcategory": "Carbohydrate Malabsorption",
+    "description": "A rare genetic condition causing severe diarrhea from glucose and galactose intake."
+  },
+  {
+    "main_name": "Abetalipoproteinemia (Dietary)",
+    "synonyms": ["Microsomal triglyceride transfer protein deficiency", "Bassen-Kornzweig syndrome"],
+    "category": "Digestive",
+    "subcategory": "Fat Malabsorption",
+    "description": "A genetic disorder requiring a low-fat diet with fat-soluble vitamin supplementation."
+  },
+  {
+    "main_name": "Tangier Disease (Dietary)",
+    "synonyms": ["Familial HDL deficiency", "Low HDL cholesterol"],
+    "category": "Endocrine",
+    "subcategory": "Lipid Disorder",
+    "description": "A genetic disorder of low HDL, requiring dietary management of fats."
+  },
+  {
+    "main_name": "Sickle Cell Anemia (Nutritional Support)",
+    "synonyms": ["SCD", "HbSS disease"],
+    "category": "Hematological",
+    "subcategory": "Hemoglobinopathy",
+    "description": "A genetic blood disorder requiring nutritional support to manage symptoms and prevent deficiencies."
+  },
+  {
+    "main_name": "Thalassemia (Nutritional Support)",
+    "synonyms": ["Mediterranean anemia", "Cooley's anemia"],
+    "category": "Hematological",
+    "subcategory": "Hemoglobinopathy",
+    "description": "A genetic blood disorder requiring nutritional management of iron overload and folate deficiency."
+  },
+  {
+    "main_name": "Chronic Alcohol Use Disorder",
+    "synonyms": ["Alcoholism", "Alcohol dependence", "Alcohol use disorder"],
+    "category": "Psychiatric",
+    "subcategory": "Substance Use Disorder",
+    "description": "A chronic condition of alcohol dependence requiring nutritional rehabilitation for deficiencies."
+  },
+  {
+    "main_name": "Refeeding Syndrome",
+    "synonyms": ["Nutritional recovery syndrome"],
+    "category": "Nutritional Deficiency",
+    "subcategory": "General Malnutrition",
+    "description": "A metabolic complication that can occur during refeeding after starvation, requiring careful monitoring."
+  },
+  {
+    "main_name": "Foodborne Chemical Toxicity (Acute)",
+    "synonyms": ["Food poisoning (chemical)", "Acute chemical foodborne illness"],
+    "category": "Foodborne Illness",
+    "subcategory": "Chemical Toxicity",
+    "description": "Acute illness from ingestion of chemical contaminants (e.g., cleaning agents, pesticides)."
+  },
+  {
+    "main_name": "Methanol Poisoning (Food/Drink)",
+    "synonyms": ["Wood alcohol poisoning", "Methanol toxicity (ingested)"],
+    "category": "Foodborne Illness",
+    "subcategory": "Chemical Toxicity",
+    "description": "A toxicity from methanol-contaminated alcohol or foods, causing blindness and death."
+  },
+  {
+    "main_name": "Ethylene Glycol Poisoning (Food/Drink)",
+    "synonyms": ["Antifreeze poisoning (ingested)"],
+    "category": "Foodborne Illness",
+    "subcategory": "Chemical Toxicity",
+    "description": "A toxicity from ethylene glycol contamination in food or drink, causing kidney failure."
+  },
+  {
+    "main_name": "Mycotoxicosis (Chronic)",
+    "synonyms": ["Chronic mycotoxin exposure", "Fungal toxin accumulation"],
+    "category": "Foodborne Illness",
+    "subcategory": "Mycotoxin",
+    "description": "Chronic health effects from prolonged low-level mycotoxin exposure in food."
+  },
+  {
+    "main_name": "Polycyclic Aromatic Hydrocarbon Toxicity",
+    "synonyms": ["PAH toxicity", "Benzo[a]pyrene exposure (food)"],
+    "category": "Foodborne Illness",
+    "subcategory": "Chemical Contaminant",
+    "description": "A toxicity from PAHs in charred or smoked foods, linked to cancer risk."
+  },
+  {
+    "main_name": "Heterocyclic Amine Toxicity",
+    "synonyms": ["HCA toxicity", "HCAs from cooked meat"],
+    "category": "Foodborne Illness",
+    "subcategory": "Chemical Contaminant",
+    "description": "A toxicity from HCAs formed in high-temperature cooked meats, associated with cancer."
+  },
+  {
+    "main_name": "Acrylamide Toxicity",
+    "synonyms": ["Acrylamide (dietary)"],
+    "category": "Foodborne Illness",
+    "subcategory": "Chemical Contaminant",
+    "description": "A toxicity from acrylamide in fried/roasted foods, a potential neurotoxin and carcinogen."
+  },
+  {
+    "main_name": "Bisphenols (Chronic Exposure)",
+    "synonyms": ["BPA exposure", "BPS exposure", "BPF exposure"],
+    "category": "Foodborne Illness",
+    "subcategory": "Chemical Contaminant",
+    "description": "Chronic health effects from dietary bisphenols, acting as endocrine disruptors."
+  },
+  {
+    "main_name": "Per- and Polyfluoroalkyl Substances (PFAS) Toxicity",
+    "synonyms": ["PFAS exposure (dietary)", "Forever chemicals (food packaging)"],
+    "category": "Foodborne Illness",
+    "subcategory": "Chemical Contaminant",
+    "description": "Toxicity from PFAS in food packaging and contaminated food, affecting immunity and metabolism."
+  }
+]

@@ -148,8 +148,27 @@ defmodule Mehungry.HealthTest do
     end
   end
 
-  describe "ingredients_for_condition/2 — cross-layer composition" do
-    test "surfaces the food via the shared compound, with no condition→ingredient FK" do
+  # Curate `ingredient` onto a new species and assert `species high_in compound`.
+  defp species_fact(ingredient, species_name, sci_name, compound, rel_type \\ "high_in") do
+    {:ok, species} =
+      Food.create_foundemental_species(%{"name" => species_name, "scientific_name" => sci_name})
+
+    {:ok, _} = Food.assign_foundemental_ingredient(species.id, ingredient.id, ingredient.name)
+
+    {:ok, _} =
+      Food.upsert_species_relationship(%{
+        foundemental_species_id: species.id,
+        compound_id: compound.id,
+        relationship_type: rel_type,
+        source: "literature",
+        confidence: 0.9
+      })
+
+    species
+  end
+
+  describe "condition resolution — species facts, ingredients derived through species" do
+    test "species_for_condition surfaces the species via the shared compound; ingredients derive through it" do
       # Advice layer: Kidney Stones → avoid → Oxalate
       {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones", category: "renal"})
       {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
@@ -162,22 +181,21 @@ defmodule Mehungry.HealthTest do
           source: "guideline"
         })
 
-      # Independent food-facts layer: Spinach high_in Oxalate
+      # Species-facts layer: Spinach species high_in Oxalate (with a curated ingredient).
       spinach = ingredient_fixture(%{name: "spinach"})
+      species = species_fact(spinach, "Spinach", "Spinacia oleracea", oxalate)
 
-      {:ok, _} =
-        Food.add_compound_to_ingredient(
-          spinach.id,
-          %{name: "Oxalate", compound_type: "oxalate"},
-          %{relationship_type: "high_in", source: "literature", confidence: 0.9}
-        )
+      # Primary read resolves to the species through the shared compound.
+      assert [srow] = Health.species_for_condition(kidney.id, :avoid)
+      assert srow.species.id == species.id
+      assert srow.compound.name == "Oxalate"
+      assert srow.recommendation == "avoid"
+      assert srow.severity == "high"
 
-      # Composition resolves the food through the compound.
-      assert [row] = Health.ingredients_for_condition(kidney.id, :avoid)
-      assert row.ingredient.id == spinach.id
-      assert row.compound.name == "Oxalate"
-      assert row.recommendation == "avoid"
-      assert row.severity == "high"
+      # Ingredients are derived strictly through the species.
+      assert [irow] = Health.ingredients_for_condition(kidney.id, :avoid)
+      assert irow.ingredient.id == spinach.id
+      assert irow.compound.name == "Oxalate"
     end
 
     test "filters by recommendation and returns all when unfiltered" do
@@ -191,14 +209,9 @@ defmodule Mehungry.HealthTest do
         })
 
       liver = ingredient_fixture(%{name: "liver"})
+      _species = species_fact(liver, "Cattle", "Bos taurus", purine)
 
-      {:ok, _} =
-        Food.add_compound_to_ingredient(
-          liver.id,
-          %{name: "Purine", compound_type: "purine"},
-          %{relationship_type: "high_in", source: "literature"}
-        )
-
+      assert [%{species: %{name: "Cattle"}}] = Health.species_for_condition(cond.id, :limit)
       assert [%{ingredient: %{name: "liver"}}] = Health.ingredients_for_condition(cond.id, :limit)
       assert [] == Health.ingredients_for_condition(cond.id, :avoid)
       assert [%{ingredient: %{name: "liver"}}] = Health.ingredients_for_condition(cond.id)

@@ -36,12 +36,12 @@ The subsystem has **three phases** and one iron rule that keeps them legible:
   ┌─────────────────────────── CURATE ─────────────────────────────┐
   │  Food.CompoundCandidates — the ONLY layer allowed to write facts │
   │                                                                  │
-  │   evidence ──score (noisy-OR)──▶ ingredient_compound_candidates  │
-  │            (co-occurrence + measurements)   (pending)            │
+  │   evidence ──score (noisy-OR)──▶ species_compound_candidates     │
+  │      (co-occurrence + measurements,  + reference-study links)     │
   │                    │                                             │
   │        auto ≥0.75 ─┤─ admin Promote/Reject                       │
   │                    ▼                                             │
-  │        ingredient_compound_relationships   (curated FACTS)       │
+  │        species_compound_relationships   (curated FACTS)          │
   └──────────────────────────────┬───────────────────────────────────┘
                                   │  facts feed back as targeted crawl terms ↺
                                   ▼
@@ -49,8 +49,8 @@ The subsystem has **three phases** and one iron rule that keeps them legible:
   │  Mehungry.Health — the ONLY layer that gives guidance            │
   │                                                                  │
   │   conditions ──▶ compound_recommendations ──▶ compounds          │
-  │   Health.ingredients_for_condition/2 derives the foods at read   │
-  │   time via the shared compound (no condition→ingredient FK)      │
+  │   Health.species_for_condition/2 resolves the species at read    │
+  │   time via the shared compound (ingredients derived via species) │
   └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -75,19 +75,20 @@ Following one fact through every table:
 
 | # | Table | Row that appears | Written by |
 |---|---|---|---|
-| 0 | `ingredient_scientific_identities` | `Spinach → Spinacia oleracea` (`status: verified`) | `Food.IdentityResolution` (USDA/NCBI) |
-| 1 | `scientific_studies` + `study_ingredients` | a PubMed paper, linked to Spinach with `search_term` | `Literature.Entrez` crawl |
+| 0 | `foundemental_food_species` | `Spinach → Spinacia oleracea` (curated) | admin in the USDA Schema view |
+| 1 | `scientific_studies` + `study_ingredients` | a PubMed paper, linked to each ingredient curated onto Spinach with `search_term` | `Literature.Entrez` crawl (per species) |
 | 2 | `study_entity_mentions` + `compounds` | `Chemical "oxalate"` mention → resolved to compound **Oxalic acid** (CID 971) | `Literature.PubTator` + `Chemistry.Resolver` |
 | 3 | `compound_measurements` *(optional)* | `Spinach, Oxalate, Raw: 750 mg/100g` (PMID …) | `Food.record_measurement/1` |
-| 4 | `ingredient_compound_candidates` | `Spinach/Oxalate` scored **1.0 (strong)**, `pending` | `Food.CompoundCandidates` derive |
-| 5 | `ingredient_compound_relationships` | `Spinach contains Oxalate` (`source: literature`) | auto-promote (≥0.75) or admin |
+| 4 | `species_compound_candidates` (+ `species_compound_candidate_studies`) | `Spinach‑species/Oxalate` scored **1.0 (strong)**, `pending`, citing its reference PMIDs | `Food.CompoundCandidates` derive |
+| 5 | `species_compound_relationships` | `Spinach‑species contains Oxalate` (`source: literature`) | auto-promote (≥0.75) or admin |
 | 6 | `compound_recommendations` + `conditions` | `Kidney Stones → avoid → Oxalate` | `Health.add_recommendation/3` (manual) |
-| → | *(derived, not stored)* | `Health.ingredients_for_condition(kidney, :avoid)` yields **Spinach** | join at read time |
+| → | *(derived, not stored)* | `Health.species_for_condition(kidney, :avoid)` yields the **Spinach species** (its ingredients derived through it) | join at read time |
 
 Note the seam between rows 2 and 5: PubTator only records that a paper *mentions*
-oxalate near spinach (row 2). That co-occurrence becomes a curated
-`contains` **fact** (row 5) only after scoring + promotion (rows 4→5). And the
-condition (row 6) never names spinach — it names the compound; spinach is derived.
+oxalate near a spinach ingredient (row 2). That co-occurrence, rolled up to the
+species, becomes a curated `contains` **fact** (row 5) only after scoring + promotion
+(rows 4→5). And the condition (row 6) never names spinach — it names the compound; the
+species (and its ingredients) is derived.
 
 ---
 
@@ -100,40 +101,30 @@ re-running is safe and cheap). Run each from the admin UI **or** IEx.
 One unified control panel drives the whole pipeline with **live progress bars**
 (PubSub-backed):
 - **`/professional/science`** (nav **Science**) — the Science Pipeline panel: a Run
-  button + progress bar for every stage (P description parsing, 0 resolution, 1 crawl,
-  2 annotation, 4 derivation) and the candidate Promote/Reject review queue, all on one
-  page. An **Identity review** tab (`/professional/science/identity-review`) reviews
-  resolved identities, and a **Parse review** tab
-  (`/professional/science/parse-review`) reviews structured description parses
-  (edit/verify/reject) and the **skipped** ones (read-only, with the reason).
+  button + progress bar for every stage (1 crawl, 2 annotation, 4 derivation) and the
+  candidate Promote/Reject review queue, all on one page. Each stage's **results** are
+  reviewable on their own pages: **Studies** (`/professional/science/studies` — the
+  discovered papers, searchable, expandable to linked ingredients + extracted mentions)
+  and **Entities** (`/professional/science/entities` — the extracted chemical/species/
+  disease mentions and the compounds they resolved into).
 
-Stage **P** (Description parsing) is a self-contained, deterministic normalizer that
-runs alongside — not gating — the discover chain: it turns each USDA `ingredients.name`
-into a canonical structured food (`carrot`, `harvest_stage: :baby`,
-`processing: [:raw]`) as reviewable candidates. Rule-based, no AI, no network. Details:
-[`usda_description_parser.md`](usda_description_parser.md).
+The crawl reads each `FoundementalFoodSpecies`' curated `scientific_name` (set by an
+admin in the **USDA Schema** view, `/professional/usda-schema`), so there is **no
+identity-resolution prerequisite** — a species with a scientific name and at least one
+curated ingredient is crawlable.
 
 The two original focused pages still exist and do the same work for a single stage:
 - `/professional/literature` — "Run crawl" and "Run annotation" (steps 1 & 2)
 - `/professional/compound-candidates` — "Derive" + the Promote/Reject queue (step 4)
 
-### Step 0 — Prereq: resolve scientific identities
+### Step 0 — Prereq: curate species + scientific names
 
-The crawler reads `Food.verified_identity/1` for each ingredient's scientific name;
-**ingredients with no verified identity are skipped**, so do this first.
-
-UI: `/professional/science` → **Run resolution**. Then open the **Identity review**
-tab to verify resolved candidates (only `verified` identities feed the crawl) and to
-see the **skipped** ones with their reason. Or:
-
-```elixir
-{:ok, _run} = Mehungry.Food.enqueue_resolution()
-Mehungry.Food.resolution_progress()   #=> %{processed: _, total: _}
-```
-
-Produces: `ingredient_scientific_identities` rows (e.g. `Spinacia oleracea`), each as
-a `candidate` awaiting verification.
-Details: [`ingredient_identity_resolution.md`](ingredient_identity_resolution.md).
+The crawler reads each `FoundementalFoodSpecies`' `scientific_name`; **only species
+with a scientific name (and at least one curated ingredient) are crawled**, so do this
+first. In the **USDA Schema** view (`/professional/usda-schema`) curate USDA
+ingredients onto a species and give the species its binomial `scientific_name`
+(e.g. `Spinacia oleracea`). `crawl_progress/0`'s `total` counts exactly these
+crawlable (named) species.
 
 ### Step 1 — Find the papers (literature crawl)
 
@@ -144,11 +135,13 @@ UI: `/professional/science` (or `/professional/literature`) → **Run crawl**. O
 Mehungry.Literature.crawl_progress()   #=> %{processed: _, total: _}
 ```
 
-Builds searches as `scientific_name × (linked compounds ∪ generic keywords)`. On
-the **first** pass there are no linked compounds, so it uses only the generic
-phytochemistry keywords (`phytochemical polyphenol flavonoid antioxidant bioactive`
-— `literature/entrez.ex`). Produces `scientific_studies` + `study_ingredients` /
-`study_compounds`. Details: [`literature_discovery.md`](literature_discovery.md).
+Builds searches per species as `scientific_name × (linked compounds ∪ generic
+keywords)`. On the **first** pass there are no linked compounds, so it uses only the
+generic phytochemistry keywords (`phytochemical polyphenol flavonoid antioxidant
+bioactive` — `literature/entrez.ex`). Each discovered study is fanned out to **every
+ingredient curated onto the species**. Produces `scientific_studies` +
+`study_ingredients` / `study_compounds`.
+Details: [`literature_discovery.md`](literature_discovery.md).
 
 ### Step 2 — Find the compounds (PubTator annotation)
 
@@ -190,13 +183,14 @@ UI: `/professional/science` (or `/professional/compound-candidates`) → **Deriv
 Mehungry.Food.candidate_derivation_progress()   #=> %{processed: _, total: _}
 ```
 
-Reads the evidence — literature **co-occurrence** (a resolved chemical mentioned in
-a paper that is also linked to the ingredient) blended with **measurement**
-evidence via noisy-OR — and scores each `(ingredient, compound)` pair. Candidates
-scoring ≥ `:candidate_promotion_threshold` (config, **default 0.75**) **auto-promote**
-into `ingredient_compound_relationships`; everything else waits in the
-Promote/Reject queue on the same page. This is the **only** step that writes curated
-facts. Details: [`compound_candidates.md`](compound_candidates.md).
+Reads the evidence — literature **co-occurrence** (a resolved chemical mentioned in a
+paper linked to any ingredient of the species) blended with **measurement** evidence
+via noisy-OR — and scores each `(species, compound)` pair, recording the reference
+studies on each candidate. Candidates scoring ≥ `:candidate_promotion_threshold`
+(config, **default 0.75**) **auto-promote** into `species_compound_relationships`;
+everything else waits in the Promote/Reject queue on the same page. This is the
+**only** step that writes curated facts. Details:
+[`compound_candidates.md`](compound_candidates.md).
 
 ### Step 5 — Close the loop (re-crawl)
 
@@ -224,10 +218,16 @@ measurements (read-only, nothing persisted).
 Details: [`food_compounds.md`](food_compounds.md),
 [`evidence_aggregation.md`](evidence_aggregation.md).
 
-### Step 7 — Add health advice (separate, manual / guideline)
+### Step 7 — Add health advice (manual / guideline **or** literature-derived)
 
-The advice layer is **not** derived from the pipeline — it is curated by hand or
-from clinical guidelines, and it links a condition to a **compound**:
+The advice layer links a condition to a **compound**. It can be curated by hand /
+from clinical guidelines, **or** derived (review-gated) from the literature: PubTator's
+directional chemical↔disease relations feed `Health.RecommendationCandidates`, which an
+admin reviews at `/professional/health` and promotes into a `CompoundRecommendation`
+(`source: "literature"`). The derive stage lives on `/professional/science` (stage 5).
+Nothing is auto-promoted. See
+[`pubtator_relations_recommendations.md`](pubtator_relations_recommendations.md). The
+manual path:
 
 ```elixir
 Mehungry.Health.add_recommendation(
@@ -236,12 +236,13 @@ Mehungry.Health.add_recommendation(
   %{recommendation: "avoid", severity: "high", evidence_level: "strong", source: "guideline"}
 )
 
-Mehungry.Health.ingredients_for_condition(kidney.id, :avoid)
-#=> [%{ingredient: %Ingredient{name: "spinach"}, compound: %Compound{name: "Oxalate"}, ...}]
+Mehungry.Health.species_for_condition(kidney.id, :avoid)
+#=> [%{species: %FoundementalFoodSpecies{name: "Spinach"}, compound: %Compound{name: "Oxalate"}, ...}]
+# ingredients_for_condition/2 derives the ingredients strictly through those species.
 ```
 
-The derived read composes the advice with the step-4 facts through the shared
-compound. Details: [`health_recommendations.md`](health_recommendations.md).
+The derived read composes the advice with the step-4 **species** facts through the
+shared compound. Details: [`health_recommendations.md`](health_recommendations.md).
 
 ---
 

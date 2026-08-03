@@ -65,6 +65,27 @@
   scrollbar-color: #FB923C #1f2937;
 }
 
+/* Warm-charcoal design-system scrollbar (ink / parchment / paprika tokens).
+   Used by the Foods pages' scrollable panels. */
+.m3-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.m3-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.m3-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(169, 160, 140, 0.35); /* parchment-dim, muted */
+  border-radius: 9999px;
+}
+.m3-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #E8622C; /* paprika */
+}
+/* Firefox */
+.m3-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(169, 160, 140, 0.4) transparent;
+}
+
 
 @layer base {
 

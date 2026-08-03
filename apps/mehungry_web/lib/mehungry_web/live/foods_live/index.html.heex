@@ -3,7 +3,7 @@
     <div class="mb-8">
       <h1 class="text-3xl font-display font-medium text-parchment mb-2">Foods & Nutrition</h1>
       <p class="text-parchment-dim">
-        Search our database of ingredients for detailed nutrition facts, vitamins, and minerals.
+        Browse food species for nutrition facts, the research behind them, and the bioactive compounds they carry.
       </p>
     </div>
 
@@ -26,7 +26,7 @@
           type="text"
           name="q"
           value={@query}
-          placeholder="Search ingredients — e.g. banana, olive oil, feta..."
+          placeholder="Search species — e.g. apple, spinach, cattle..."
           phx-debounce="300"
           class="w-full bg-ink-panel border border-ink-panel2 rounded-xl pl-10 pr-4 py-3 text-parchment placeholder-parchment-dim focus:outline-none focus:border-paprika focus:ring-1 focus:ring-paprika transition-colors"
           autocomplete="off"
@@ -36,20 +36,16 @@
 
     <div class="text-sm text-parchment-dim mb-4">
       <%= if @query != "" do %>
-        <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(
-          @ingredients
-        )}</span>
+        <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(@species)}</span>
         results for "<span class="text-parchment">{@query}</span>"
       <% else %>
         Showing
-        <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(
-          @ingredients
-        )}</span>
-        ingredients
+        <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(@species)}</span>
+        species
       <% end %>
     </div>
 
-    <%= if length(@ingredients) == 0 do %>
+    <%= if length(@species) == 0 do %>
       <div class="text-center py-16 text-parchment-dim">
         <svg
           class="w-12 h-12 mx-auto mb-4 opacity-40"
@@ -64,18 +60,18 @@
             d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
           />
         </svg>
-        <p>No ingredients found for "<span class="text-parchment-dim">{@query}</span>"</p>
+        <p>No species found for "<span class="text-parchment-dim">{@query}</span>"</p>
       </div>
     <% else %>
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-        <%= for ingredient <- @ingredients do %>
+        <%= for species <- @species do %>
           <a
-            href={"/foods/#{ingredient_slug(ingredient)}"}
+            href={"/foods/#{species_slug(species)}"}
             class="group block bg-ink-panel border border-ink-panel2 rounded-xl p-4 hover:border-paprika/50 hover:bg-ink-panel2/80 transition-colors"
           >
             <div class="flex items-start justify-between gap-2">
               <h2 class="text-sm font-semibold text-parchment group-hover:text-paprika-soft transition-colors leading-snug">
-                {Map.get(ingredient, :display_name) || ingredient.name}
+                {species_label(species)}
               </h2>
               <svg
                 class="w-4 h-4 text-parchment-dim/50 group-hover:text-parchment-dim flex-shrink-0 mt-0.5 transition-colors"
@@ -87,9 +83,9 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </div>
-            <%= if ingredient.category do %>
+            <%= if sub = species_sublabel(species) do %>
               <span class="mt-2 inline-block text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim group-hover:text-parchment transition-colors">
-                {ingredient.category.name}
+                {sub}
               </span>
             <% end %>
           </a>

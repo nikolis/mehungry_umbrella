@@ -208,8 +208,8 @@ and `upsert_compound/1`. The rest of the app still reads only `Food.Compounds`.
 
 ## 8. Out of scope / follow-ons
 
-- No Oban worker or progress-run tracker (unlike
-  `docs/ingredient_identity_resolution.md`) — the registry is a plain layer like
+- No Oban worker or progress-run tracker (unlike the literature crawl in
+  `docs/literature_discovery.md`) — the registry is a plain layer like
   `Enrichment`, and PubChem population (`Chemistry`) is synchronous.
 - Additional external sources (FooDB, ChEBI, HMDB) reuse the `compound_sources`
   provenance layer and the `upsert_compound_by_cid/1` seam.

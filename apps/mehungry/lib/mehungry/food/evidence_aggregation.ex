@@ -57,7 +57,7 @@ defmodule Mehungry.Food.EvidenceAggregation do
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
-  alias Mehungry.Food.{CompoundMeasurement, IngredientCompoundSummary}
+  alias Mehungry.Food.{CompoundMeasurement, FoundementalFood, IngredientCompoundSummary}
 
   # Weights for the evidence-score components; must sum to 1.0. Tunable here.
   @component_weights %{
@@ -107,6 +107,26 @@ defmodule Mehungry.Food.EvidenceAggregation do
       summary
     end)
     |> Enum.sort_by(& &1.compound_id)
+  end
+
+  @doc """
+  Summarize every measurement of `compound_id` across the ingredients curated onto
+  `species_id` (via `FoundementalFood`) — the species-level counterpart of
+  `summarize/2` used by species candidate scoring. Returns `{:ok, summary}` or
+  `{:error, :no_measurements}`. The summary's `ingredient_id` is `nil` (it spans the
+  species' ingredients); only its `evidence_score`/`study_count` are consumed.
+  """
+  @spec summarize_species(integer(), integer()) ::
+          {:ok, IngredientCompoundSummary.t()} | {:error, :no_measurements}
+  def summarize_species(species_id, compound_id) do
+    from(m in CompoundMeasurement,
+      join: ff in FoundementalFood,
+      on: ff.ingredient_id == m.ingredient_id,
+      where: ff.foundemental_species_id == ^species_id and m.compound_id == ^compound_id,
+      preload: [:study]
+    )
+    |> Repo.all()
+    |> build_summary(nil, compound_id)
   end
 
   # ── Query (reads the immutable measurement rows; preloads the study) ─────────

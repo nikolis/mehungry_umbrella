@@ -17,7 +17,11 @@ defmodule Mehungry.Food.Compounds do
 
   alias Mehungry.Repo
 
-  alias Mehungry.Food.{Compound, CompoundIdentifier, IngredientCompoundRelationship}
+  alias Mehungry.Food.{
+    Compound,
+    CompoundIdentifier,
+    IngredientCompoundRelationship
+  }
 
   # ── Compound registry ────────────────────────────────────────────────────
 
@@ -109,6 +113,10 @@ defmodule Mehungry.Food.Compounds do
   end
 
   def get_compound!(id), do: Repo.get!(Compound, id)
+
+  @doc "Fetch compounds by a list of ids (name + synonyms), for extraction/lookup."
+  def get_compounds_by_ids([]), do: []
+  def get_compounds_by_ids(ids), do: Repo.all(from(c in Compound, where: c.id in ^ids))
 
   def get_compound_by_name(name), do: Repo.get_by(Compound, name: name)
 

@@ -21,12 +21,20 @@ defmodule Mehungry.Food.FoundementalFoodSpecies do
     has_many :foundemental_foods, Mehungry.Food.FoundementalFood,
       foreign_key: :foundemental_species_id
 
+    has_many :translations, Mehungry.Food.FoundementalFoodSpeciesTranslation,
+      foreign_key: :foundemental_species_id
+
     timestamps()
   end
 
   def changeset(species, attrs) do
     species
     |> cast(attrs, [:name, :variety, :alternative_name, :scientific_name, :family])
+    |> cast_assoc(:translations,
+      with: &Mehungry.Food.FoundementalFoodSpeciesTranslation.changeset/2,
+      sort_param: :translations_sort,
+      drop_param: :translations_drop
+    )
     |> validate_required([:name])
     |> unique_constraint([:name, :variety])
   end

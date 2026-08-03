@@ -6,7 +6,7 @@ defmodule MehungryWeb.SitemapController do
   alias Mehungry.Food.Recipe
   alias Mehungry.Hashtag
   alias Mehungry.Food.RecipeHashtag
-  alias Mehungry.Food.Ingredient
+  alias Mehungry.Food.FoundementalFoodSpecies
 
   @base_url "https://www.m3hungry.com"
 
@@ -34,17 +34,17 @@ defmodule MehungryWeb.SitemapController do
         )
       )
 
-    ingredients =
+    species =
       Repo.all(
-        from(i in Ingredient,
-          where: not is_nil(i.search_name) and i.search_name != "",
-          distinct: i.search_name,
-          select: %{search_name: i.search_name, updated_at: i.updated_at},
-          order_by: [asc: i.search_name, desc: i.updated_at]
+        from(s in FoundementalFoodSpecies,
+          where: not is_nil(s.name) and s.name != "",
+          distinct: s.name,
+          select: %{name: s.name, updated_at: s.updated_at},
+          order_by: [asc: s.name, desc: s.updated_at]
         )
       )
 
-    xml = build_xml(recipes, hashtags, ingredients)
+    xml = build_xml(recipes, hashtags, species)
 
     conn
     |> put_resp_content_type("application/xml")
@@ -64,7 +64,7 @@ defmodule MehungryWeb.SitemapController do
       "\n</url>"
   end
 
-  defp build_xml(recipes, hashtags, ingredients) do
+  defp build_xml(recipes, hashtags, species) do
     today = Date.utc_today() |> to_string()
 
     static_urls = [
@@ -96,9 +96,9 @@ defmodule MehungryWeb.SitemapController do
       end)
 
     food_urls =
-      Enum.map(ingredients, fn i ->
-        slug = String.replace(i.search_name, " ", "-")
-        date = i.updated_at |> NaiveDateTime.to_date() |> to_string()
+      Enum.map(species, fn s ->
+        slug = String.replace(s.name, " ", "-")
+        date = s.updated_at |> NaiveDateTime.to_date() |> to_string()
 
         url_entry("#{@base_url}/foods/#{slug}",
           lastmod: date,

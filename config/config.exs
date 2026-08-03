@@ -10,11 +10,13 @@
 import Config
 # Configure Mix tasks and generators
 config :mehungry,
-  ecto_repos: [Mehungry.Repo],
-  # Set to true in prod with larger instances
-  enable_embeddings: false
+  ecto_repos: [Mehungry.Repo]
 
 config :mehungry, :admin_email, "nikolisgal@gmail.com"
+
+# Base URL + shared-secret bearer token the non-deployed mehungry_local_ai service
+# uses to reach the local-AI REST API. Overridden in runtime.exs from env vars.
+config :mehungry_local_ai, server_base_url: "http://localhost:4000"
 
 # Reference FDC dataset JSON files the /professional/usda-schema view derives
 # its schema catalog from (Mehungry.FoodData.Usda.SchemaMatcher). A path or list
@@ -22,11 +24,9 @@ config :mehungry, :admin_email, "nikolisgal@gmail.com"
 # corpus. Left empty here — set per-environment to the local seed files.
 config :mehungry, :usda_schema_reference_paths, []
 
-# Nx uses the EXLA (CPU) backend for the shared embedding serving
-# (Mehungry.AI.EmbeddingServer, gated by :enable_embeddings above).
-# EXLA is temporarily disabled (see apps/mehungry/mix.exs) — fall back to the
-# pure-Elixir binary backend so Nx stays loadable without the EXLA dep. Restore
-# `default_backend: EXLA.Backend` when re-enabling embeddings.
+# Nx only loads inside the non-deployed apps/mehungry_local_ai service. Keep the
+# global backend on the pure-Elixir binary backend; the QA serving there compiles
+# with `compiler: EXLA` per-serving, so this doesn't force EXLA globally.
 config :nx, default_backend: Nx.BinaryBackend
 
 # The `image` library (a transitive dep) autostarts an ML image classifier /
@@ -66,7 +66,35 @@ config :mehungry,
   pubtator_max_snooze_seconds: 3600,
   # Evidence-score cutoff (0.0–1.0) at/above which a derived ingredient↔compound
   # candidate is auto-promoted to a curated relationship; below it waits for review.
-  candidate_promotion_threshold: 0.75
+  candidate_promotion_threshold: 0.75,
+  # Assay reagents / non-food chemicals that PubTator extracts as "chemicals" but
+  # must never become dietary facts — excluded from derivation and purged on derive.
+  # Matched case-insensitively against the exact compound name (use a plain list,
+  # not ~w, so multi-word names like "Hydrogen Peroxide" are kept intact).
+  non_dietary_compounds: [
+    # antioxidant-assay reagents
+    "DPPH",
+    "ABTS",
+    "TPTZ",
+    "Trolox",
+    "FRAP",
+    "ORAC",
+    "BHT",
+    "BHA",
+    # lab reagents / non-food chemicals / mis-annotations surfaced by PubTator
+    "(3-(4,5-Dimethylthiazol-2-yl)-2,5-diphenyltetrazolium bromide)",
+    "3,4-Methylenedioxyamphetamine",
+    "Hydrogen Peroxide",
+    "Ferric cation",
+    "SDS",
+    "LPS",
+    "Hydrochloric Acid",
+    "Water",
+    "PS",
+    "Gln-Glu",
+    "sugar-acid",
+    "oil"
+  ]
 
 config :mehungry, Oban,
   repo: Mehungry.Repo,

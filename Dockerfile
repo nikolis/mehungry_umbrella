@@ -34,6 +34,11 @@ RUN npm ci --prefix apps/mehungry_web/assets
 COPY apps ./apps
 COPY rel ./rel
 
+# mehungry_local_ai is a local-only GPU service (Bumblebee/EXLA) — never part of the
+# release. Its mix.* was not copied in the deps layer, so bumblebee/exla were never
+# fetched; drop the source too so the umbrella compile/release doesn't try to build it.
+RUN rm -rf apps/mehungry_local_ai
+
 # Build and digest static assets
 RUN mix tailwind.install --if-missing
 RUN mix assets.deploy

@@ -17,7 +17,7 @@ facts — never here."*). It is a top-level `Mehungry.Health` context, a sibling
    conditions ──has concern──▶ compound_recommendations ──▶ compounds
    (Mehungry.Health)          (avoid | limit | …)          (Food.Compounds)
                                                               │
-                                        ingredient_compound_relationships
+                                        species_compound_relationships
                                         ("Oxalate is contained in Spinach")
                                                               │
                                                           ingredients
@@ -30,7 +30,7 @@ facts — never here."*). It is a top-level `Mehungry.Health` context, a sibling
 A condition references a **compound**, never an ingredient. There is no
 `ingredient_id` anywhere in this layer. The food a patient should avoid is
 **derived** by composing this layer with the existing
-`IngredientCompoundRelationship` facts through the shared compound — at read time,
+`SpeciesCompoundRelationship` facts through the shared compound — at read time,
 in `ingredients_for_condition/2`. The schemas stay fully decoupled from ingredient
 data, so USDA ingestion and the food-facts layer are untouched.
 
@@ -50,10 +50,21 @@ A shared reference entity, one row per condition (like `compounds`).
 |---|---|
 | `name` | e.g. `"Kidney Stones"`, `"IBS"`. Required, **unique**. |
 | `synonyms` | `text[]`, default `[]` — abbreviations/aliases (`"Irritable Bowel Syndrome"`). |
-| `category` | Optional grouping (`renal`, `digestive`, `metabolic`). |
+| `category` | Optional grouping (`Endocrine`, `Digestive`, `Renal`). |
+| `subcategory` | Optional finer grouping under `category` (`Endocrine → Diabetes`, `Digestive → Liver Disease`). Added `20260811120000`. |
 | `description` | Optional factual description. |
 
-**Indexes:** `unique (name)`; `index (category)`.
+**Indexes:** `unique (name)`; `index (category)`; `index (subcategory)`.
+
+### Bulk seed — the condition catalogue
+`Mehungry.Health.ConditionSeeder.seed/1` idempotently loads the ~193-condition
+reference registry from `priv/repo/seeds/data/health_conditions.json` (one object
+per condition: `main_name`/`synonyms`/`category`/`subcategory`/`description`),
+upserting on the unique `name` (`on_conflict: :replace`, so re-seeding refreshes
+edits without duplicates). Wired into `priv/repo/seeds.exs`, so `mix ecto.reset`
+loads it; also runnable standalone. Seeds **conditions only** — no
+`CompoundRecommendation` advice (that stays curated, since it needs a resolved
+compound).
 
 ### `compound_recommendations` — the advice facts
 A condition↔compound recommendation with provenance. **No ingredient reference.**
@@ -117,13 +128,20 @@ Health.add_recommendation(kidney.id, oxalate.id, %{recommendation: "avoid", sour
 **Derived cross-layer read** — the payoff of the decoupling:
 
 ```elixir
-Health.ingredients_for_condition(kidney.id, :avoid)
-#=> [%{ingredient: %Ingredient{name: "spinach"}, compound: %Compound{name: "Oxalate"},
+# Primary read → the implicated FoundementalFoodSpecies.
+Health.species_for_condition(kidney.id, :avoid)
+#=> [%{species: %FoundementalFoodSpecies{name: "Spinach"}, compound: %Compound{name: "Oxalate"},
 #      recommendation: "avoid", severity: "high", evidence_level: "strong"}]
+
+# Convenience → the ingredients, derived STRICTLY through those species.
+Health.ingredients_for_condition(kidney.id, :avoid)
+#=> [%{ingredient: %Ingredient{name: "spinach"}, compound: %Compound{name: "Oxalate"}, ...}]
 ```
 
-It joins `condition → compound_recommendations → compounds →
-ingredient_compound_relationships → ingredients` at read time. Pass a recommendation
+`species_for_condition/2` joins `condition → compound_recommendations → compounds →
+species_compound_relationships → species` at read time;
+`ingredients_for_condition/2` extends it one hop `→ foundemental_foods → ingredients`.
+There is no condition↔ingredient or fact↔ingredient link. Pass a recommendation
 (`"avoid"` / `:avoid`) to filter, or omit for every recommendation.
 
 ---
@@ -143,6 +161,8 @@ never writes them, and it never asserts a new scientific fact.
 |---|---|---|
 | `Health` | `health.ex` | Context: condition registry, recommendation CRUD, derived composition read. |
 | `Health.Condition` | `health/condition.ex` | Condition registry schema. |
+| `Health.ConditionSeeder` | `health/condition_seeder.ex` | Idempotent bulk seed of the condition registry from the bundled JSON catalogue. |
+| — | `priv/repo/seeds/data/health_conditions.json` | ~193-condition source catalogue. |
 | `Health.CompoundRecommendation` | `health/compound_recommendation.ex` | Condition↔compound recommendation schema. |
 | — | `priv/repo/migrations/20260731120000_create_health_recommendations.exs` | Both tables + natural-key unique index. |
 
@@ -169,8 +189,20 @@ mix test apps/mehungry/test/mehungry/health_test.exs
 
 ## 7. Out of scope / follow-ons
 
-- No Oban worker, cache, or config seam — a plain synchronous registry+facts layer
-  like `Food.Enrichment` / `Food.Compounds`.
+- **Literature-derived recommendations — BUILT.** Recommendations no longer have to be
+  hand-entered: `Health.RecommendationCandidates` (mirroring `Food.CompoundCandidates`)
+  aggregates PubTator's directional chemical↔disease relations
+  (`Literature.StudyEntityRelation`) into scored, **review-gated**
+  `CompoundRecommendationCandidate`s. Relation valence maps to a *suggested* direction
+  (negative-correlation → `encourage`, positive → `avoid`, association → neutral); an
+  admin confirms direction + severity at `/professional/health` to promote into a
+  `CompoundRecommendation` (`source: "literature"`, conservative default
+  `evidence_level`). Nothing is auto-promoted. Diseases resolve to conditions via
+  `Health.ConditionResolver` + `condition_identifiers`. Derivation runs as an Oban stage
+  (`RecommendationCandidateDerivationWorker`) surfaced on `/professional/science`.
+  See `docs/pubtator_relations_recommendations.md`. The **disease-seeded crawl** (Phase 2 —
+  discovering *new* literature per condition) is still backlog.
+- The registry+facts CRUD itself remains a plain synchronous layer (no cache/config seam).
 - **Evidence integration.** `evidence_level` is entered by the source today; wiring
   it to `Food.summarize/2` (so a recommendation's strength tracks the measured
   evidence for its compound in linked foods) is a natural follow-on.

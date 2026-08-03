@@ -41,6 +41,7 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorkerTest do
   defp efetch_xml do
     """
     <?xml version="1.0"?>
+    <!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2019//EN" "https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_190101.dtd">
     <PubmedArticleSet>
       <PubmedArticle>
         <MedlineCitation>
@@ -55,24 +56,23 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorkerTest do
     """
   end
 
-  defp spinach_with_identity(name \\ "spinach") do
+  defp spinach_species(name \\ "spinach") do
     ingredient = ingredient_fixture(%{name: name})
 
-    {:ok, _identity, _} =
-      Food.add_identity_candidate(%{
-        ingredient_id: ingredient.id,
-        scientific_name: "Spinacia oleracea",
-        source: "usda_fdc",
-        confidence: 0.9,
-        status: "candidate"
+    {:ok, species} =
+      Food.create_foundemental_species(%{
+        "name" => "Spinach",
+        "scientific_name" => "Spinacia oleracea"
       })
 
-    ingredient
+    {:ok, _} = Food.assign_foundemental_ingredient(species.id, ingredient.id, name)
+
+    %{ingredient: ingredient, species: species}
   end
 
   test "crawls a batch, records studies + attempts, tracks progress, chains next batch" do
     stub_ok()
-    ingredient = spinach_with_identity()
+    %{species: species} = spinach_species()
     run = CrawlRuns.start_run()
 
     assert :ok = perform_job(Worker, %{"run_id" => run.id})
@@ -80,7 +80,7 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorkerTest do
     assert Repo.aggregate(from(s in ScientificStudy, where: s.pmid == 11111), :count) == 1
 
     assert Repo.aggregate(
-             from(a in CrawlAttempt, where: a.ingredient_id == ^ingredient.id),
+             from(a in CrawlAttempt, where: a.foundemental_species_id == ^species.id),
              :count
            ) >= 1
 
@@ -92,7 +92,7 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorkerTest do
 
   test "completes the run and stops chaining when nothing is left to crawl" do
     stub_ok()
-    # No ingredient has a scientific identity → nothing to crawl.
+    # No species has a scientific name → nothing to crawl.
     run = CrawlRuns.start_run()
 
     assert :ok = perform_job(Worker, %{"run_id" => run.id})
@@ -103,12 +103,12 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorkerTest do
 
   test "a rate limit snoozes the job and leaves the run un-failed for retry" do
     stub_rate_limited()
-    _ingredient = spinach_with_identity()
+    _spinach = spinach_species()
     run = CrawlRuns.start_run()
 
     assert {:snooze, 30} = perform_job(Worker, %{"run_id" => run.id})
 
-    # Snooze (not fail) so the uncrawled ingredient is retried later.
+    # Snooze (not fail) so the uncrawled species is retried later.
     refute Repo.get!(CrawlRun, run.id).status == "failed"
   end
 end
