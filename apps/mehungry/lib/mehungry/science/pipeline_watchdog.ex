@@ -29,6 +29,21 @@ defmodule Mehungry.Science.PipelineWatchdog do
   from racing a job that just finished a batch and is about to enqueue its
   successor.
 
+  ## Zombie `executing` jobs
+
+  There is one crucial exception to "`executing` counts as live". A hard crash /
+  OOM / node kill / `kill -9` mid-batch leaves Oban's job row wedged in
+  `executing` with no OS process behind it — Oban only rescues such an orphan back
+  to `available` after its `Lifeline` `rescue_after` window (24h here). If we
+  naïvely treated that zombie as a live job, the watchdog would see the run as
+  healthy and refuse to touch it for a full day — the exact "annotation stuck and
+  never reconciles after a restart" wedge this module exists to prevent. So an
+  `executing` job whose `attempted_at` is older than the grace `cutoff` is treated
+  as **not** live: no real pipeline batch runs that long, so a stale one is a
+  zombie, and the run is resumed past it. Re-enqueuing is idempotent (ledgered
+  work is skipped), and the zombie never actually re-runs — it just sits until
+  Lifeline reaps it, by which point the fresh chain has already finished.
+
   Poison pills (a single item that fails *every* attempt) are handled at the
   source in the crawl/annotation workers, not here — otherwise a resumed run would
   just re-hit the pill and be discarded again each tick. This watchdog only
@@ -50,7 +65,9 @@ defmodule Mehungry.Science.PipelineWatchdog do
      Mehungry.ObanWorkers.RecommendationCandidateDerivationWorker}
   ]
 
-  @live_states ~w(available scheduled executing retryable)
+  # `executing` is handled separately (see `live_run_ids/2`): a fresh one is live,
+  # a stale one is a crash-orphaned zombie and must not mask a wedged run.
+  @live_states ~w(available scheduled retryable)
 
   # Only touch a run that has been quiet for this long, so we never race a job that
   # just finished a batch and is about to enqueue its successor.
@@ -73,7 +90,7 @@ defmodule Mehungry.Science.PipelineWatchdog do
   end
 
   defp resume_stage(table, worker, cutoff) do
-    live = live_run_ids(worker)
+    live = live_run_ids(worker, cutoff)
 
     orphaned =
       Repo.query!(
@@ -95,11 +112,20 @@ defmodule Mehungry.Science.PipelineWatchdog do
     {:ok, _job} = %{"run_id" => run_id} |> worker.new() |> Oban.insert()
   end
 
-  # run_ids referenced by any not-yet-finished job for this stage worker.
-  defp live_run_ids(worker) do
+  # run_ids referenced by any not-yet-finished job for this stage worker. A queued
+  # (`available`/`scheduled`/`retryable`) job is always live; an `executing` job is
+  # live only if it started after `cutoff` — a stale one is a crash-orphaned zombie
+  # (see the "Zombie `executing` jobs" section of the moduledoc) and must not mask
+  # the wedged run it belongs to.
+  defp live_run_ids(worker, cutoff) do
     Repo.query!(
-      "SELECT (args->>'run_id')::bigint FROM oban_jobs WHERE worker = $1 AND state = ANY($2)",
-      [worker_name(worker), @live_states]
+      """
+      SELECT (args->>'run_id')::bigint
+      FROM oban_jobs
+      WHERE worker = $1
+        AND (state = ANY($2) OR (state = 'executing' AND attempted_at >= $3))
+      """,
+      [worker_name(worker), @live_states, cutoff]
     ).rows
     |> List.flatten()
     |> Enum.reject(&is_nil/1)
