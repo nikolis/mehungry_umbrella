@@ -100,7 +100,11 @@ config :mehungry, Oban,
   repo: Mehungry.Repo,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24},
-    {Oban.Plugins.Lifeline, rescue_after: :timer.hours(24)},
+    # Reap jobs left `executing` by a crash/OOM/node-kill back to `available` after
+    # 30 min. Every real job (annotation batch of 10, a RecipeAgent tool loop) runs
+    # well under this, so a job still `executing` past it is an orphan, not slow
+    # work. Keeps a wedged science-pipeline chain from stalling ~24h post-restart.
+    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(30)},
     {Oban.Plugins.Cron,
      crontab: [
        # 1:30am UTC daily — refresh Instagram long-lived tokens before the 2am run

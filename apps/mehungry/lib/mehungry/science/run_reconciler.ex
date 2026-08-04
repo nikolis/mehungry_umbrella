@@ -8,9 +8,22 @@ defmodule Mehungry.Science.RunReconciler do
   stage's Run button in `/professional/science` (its `running?/1` guard stays true).
 
   On every boot we mark any `pending`/`processing` run that has **no live Oban job**
-  (a job in `available`/`scheduled`/`executing`/`retryable` whose `args.run_id`
-  points at it) as `failed`, so a restart never leaves the UI blocked. A run with a
-  genuinely in-flight job is left alone.
+  (a job in `available`/`scheduled`/`retryable`, or a *fresh* `executing` one, whose
+  `args.run_id` points at it) as `failed`, so a restart never leaves the UI blocked.
+  A run with a genuinely in-flight job is left alone.
+
+  ## Zombie `executing` jobs
+
+  A crash / OOM / `kill -9` mid-batch leaves the job row wedged in `executing` with
+  no process behind it; Oban's `Lifeline` only reaps it back to `available` after
+  its (24h) `rescue_after` window. If we counted that zombie as a live job, the
+  reconciler would leave the run stuck in `processing` — the Run button disabled —
+  for up to a day after the very restart it is meant to heal. So an `executing` job
+  whose `attempted_at` predates `@executing_grace_seconds` is treated as **not**
+  live: no real pipeline batch runs that long, and at boot nothing this node
+  started is executing yet, so a stale `executing` row is always a previous-life
+  orphan. The run is then marked `failed` like any other orphan, re-enabling its
+  Run button.
 
   Gated by `config :mehungry, :reconcile_runs_on_boot` (default `true`; off in test
   so it never races the Ecto sandbox).
@@ -34,7 +47,12 @@ defmodule Mehungry.Science.RunReconciler do
      RecommendationDerivationRuns}
   ]
 
-  @live_states ~w(available scheduled executing retryable)
+  # `executing` is handled separately (see `live_run_ids/1`): a fresh one is live, a
+  # stale one is a crash-orphaned zombie and must not keep a wedged run alive.
+  @live_states ~w(available scheduled retryable)
+
+  # An `executing` job older than this is a previous-life orphan, not live work.
+  @executing_grace_seconds 300
 
   @doc "Runs `reconcile/0` unless disabled by config; never crashes boot."
   def reconcile_on_boot do
@@ -71,11 +89,21 @@ defmodule Mehungry.Science.RunReconciler do
     length(orphaned)
   end
 
-  # run_ids referenced by any not-yet-finished Oban job for this worker.
+  # run_ids referenced by any not-yet-finished Oban job for this worker. A queued
+  # (`available`/`scheduled`/`retryable`) job is always live; an `executing` job is
+  # live only if it started within the grace window — a stale one is a
+  # crash-orphaned zombie (see the moduledoc) that must not keep a run wedged.
   defp live_run_ids(worker) do
+    cutoff = DateTime.utc_now() |> DateTime.add(-@executing_grace_seconds, :second)
+
     Repo.query!(
-      "SELECT (args->>'run_id')::bigint FROM oban_jobs WHERE worker = $1 AND state = ANY($2)",
-      [worker, @live_states]
+      """
+      SELECT (args->>'run_id')::bigint
+      FROM oban_jobs
+      WHERE worker = $1
+        AND (state = ANY($2) OR (state = 'executing' AND attempted_at >= $3))
+      """,
+      [worker, @live_states, cutoff]
     ).rows
     |> List.flatten()
     |> Enum.reject(&is_nil/1)
