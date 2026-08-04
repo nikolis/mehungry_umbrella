@@ -27,7 +27,10 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipelineTest do
     {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
 
     {:ok, species} =
-      Food.create_foundemental_species(%{"name" => "Spinach", "scientific_name" => "Spinacia oleracea"})
+      Food.create_foundemental_species(%{
+        "name" => "Spinach",
+        "scientific_name" => "Spinacia oleracea"
+      })
 
     {:ok, _} = Food.assign_foundemental_ingredient(species.id, spinach.id, "spinach")
 
@@ -135,7 +138,9 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipelineTest do
     assert html =~ "Deriving…"
   end
 
-  test "shows read-only full-text extraction status (runs in the external local-AI service)", %{conn: conn} do
+  test "shows read-only full-text extraction status (runs in the external local-AI service)", %{
+    conn: conn
+  } do
     {:ok, _view, html} = live(conn, ~p"/professional/science")
     assert html =~ "Full-text extraction"
     assert html =~ "local-AI service"

@@ -23,7 +23,10 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
 
     {:ok, species} =
-      Food.create_foundemental_species(%{"name" => "Spinach", "scientific_name" => "Spinacia oleracea"})
+      Food.create_foundemental_species(%{
+        "name" => "Spinach",
+        "scientific_name" => "Spinacia oleracea"
+      })
 
     {:ok, _} = Food.assign_foundemental_ingredient(species.id, spinach.id, "spinach")
 
@@ -144,7 +147,10 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     {:ok, view, _html} = live(conn, ~p"/professional/compound-candidates")
     view |> element("button", "Purge non-dietary") |> render_click()
 
-    assert Enum.filter(SpeciesCompounds.list_species_relationships(species.id), &(&1.compound_id == dpph.id)) == []
+    assert Enum.filter(
+             SpeciesCompounds.list_species_relationships(species.id),
+             &(&1.compound_id == dpph.id)
+           ) == []
   end
 
   test "Add measurement records it and re-scores the species candidate", %{

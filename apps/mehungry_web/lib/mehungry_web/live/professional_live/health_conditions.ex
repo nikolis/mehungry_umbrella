@@ -97,7 +97,8 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
     case RecommendationCandidates.promote_candidate(String.to_integer(id), attrs) do
       {:ok, _} ->
-        {:noreply, socket |> put_flash(:info, "Recommendation promoted from literature.") |> load()}
+        {:noreply,
+         socket |> put_flash(:info, "Recommendation promoted from literature.") |> load()}
 
       {:error, changeset} ->
         {:noreply, put_flash(socket, :error, "Could not promote: #{errors(changeset)}")}
@@ -120,7 +121,11 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
   # Split a comma-separated synonyms field into the array the schema expects.
   defp normalize_synonyms(%{"synonyms" => syn} = params) when is_binary(syn) do
-    Map.put(params, "synonyms", syn |> String.split(",") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == "")))
+    Map.put(
+      params,
+      "synonyms",
+      syn |> String.split(",") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+    )
   end
 
   defp normalize_synonyms(params), do: params

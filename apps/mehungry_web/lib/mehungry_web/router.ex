@@ -157,7 +157,9 @@ defmodule MehungryWeb.Router do
       live "/clients", NutritionistLive.Clients, :index
       live "/clients/:id", NutritionistLive.ClientDetail, :show
       live "/clients/:id/calendar", NutritionistLive.ClientCalendar, :index
+      live "/clients/:id/calendar/edit/:meal_id", NutritionistLive.ClientCalendar, :edit
       live "/clients/:id/calendar/:date", NutritionistLive.ClientCalendar, :particular
+      live "/clients/:id/calendar/:date/:title", NutritionistLive.ClientCalendar, :new
       live "/appointments", NutritionistLive.AppointmentCalendar, :index
     end
   end

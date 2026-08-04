@@ -59,7 +59,14 @@ defmodule Mehungry.Science.PipelineWatchdogTest do
 
     # Only the pre-existing job — no second one enqueued by the watchdog.
     assert 0 = PipelineWatchdog.resume_stalled()
-    assert 1 = Repo.aggregate(from(j in Oban.Job, where: j.worker == ^"Mehungry.ObanWorkers.PubTatorAnnotationWorker"), :count)
+
+    assert 1 =
+             Repo.aggregate(
+               from(j in Oban.Job,
+                 where: j.worker == ^"Mehungry.ObanWorkers.PubTatorAnnotationWorker"
+               ),
+               :count
+             )
   end
 
   test "leaves a run alone while a fresh (recently-started) executing job holds it" do

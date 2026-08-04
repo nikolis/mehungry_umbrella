@@ -146,7 +146,12 @@ defmodule Mehungry.Food.CompoundCandidates do
       })
 
     {:ok, candidate} = upsert_candidate(attrs)
-    replace_candidate_studies(candidate.id, Literature.species_cooccurrence_studies(species_id, compound_id))
+
+    replace_candidate_studies(
+      candidate.id,
+      Literature.species_cooccurrence_studies(species_id, compound_id)
+    )
+
     maybe_auto_promote(candidate, opts)
   end
 
@@ -325,8 +330,11 @@ defmodule Mehungry.Food.CompoundCandidates do
   @doc "Compound ids whose name matches the non-dietary blocklist (case-insensitive)."
   def blocklisted_compound_ids do
     case Enum.map(non_dietary_compound_names(), &String.downcase/1) do
-      [] -> []
-      names -> Repo.all(from(c in Compound, where: fragment("lower(?)", c.name) in ^names, select: c.id))
+      [] ->
+        []
+
+      names ->
+        Repo.all(from(c in Compound, where: fragment("lower(?)", c.name) in ^names, select: c.id))
     end
   end
 
@@ -396,7 +404,8 @@ defmodule Mehungry.Food.CompoundCandidates do
     )
   end
 
-  def get_candidate!(id), do: Repo.get!(Candidate, id) |> Repo.preload([:species, :compound, :studies])
+  def get_candidate!(id),
+    do: Repo.get!(Candidate, id) |> Repo.preload([:species, :compound, :studies])
 
   @doc "Coverage snapshot for the progress bar: pairs with a candidate row / all evidence pairs."
   def candidate_derivation_progress do

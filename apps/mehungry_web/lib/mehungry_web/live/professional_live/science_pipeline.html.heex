@@ -208,7 +208,9 @@
         <span class="flex h-6 w-6 items-center justify-center rounded-full bg-ink-panel2 text-parchment text-xs font-semibold">
           5
         </span>
-        <h2 class="text-lg font-medium text-parchment mr-2">Recommendation derivation (disease → compound)</h2>
+        <h2 class="text-lg font-medium text-parchment mr-2">
+          Recommendation derivation (disease → compound)
+        </h2>
 
         <button
           type="button"
@@ -239,11 +241,10 @@
       </div>
 
       <p class="text-parchment-dim text-xs">
-        Aggregates PubTator's directional chemical↔disease relations (negative → lean
-        <span class="font-medium">encourage</span>, positive → lean
-        <span class="font-medium">avoid</span>) into scored, review-gated candidates.
+        Aggregates PubTator's directional chemical↔disease relations (negative → lean <span class="font-medium">encourage</span>, positive → lean <span class="font-medium">avoid</span>) into scored, review-gated candidates.
         An admin confirms direction & severity to promote into a curated
-        <code class="text-parchment">Health.CompoundRecommendation</code> — never auto-promoted.
+        <code class="text-parchment">Health.CompoundRecommendation</code>
+        — never auto-promoted.
       </p>
 
       <div>
@@ -261,7 +262,10 @@
           </span>
         </div>
         <div class="h-2 w-full rounded bg-ink-panel2 overflow-hidden">
-          <div class="h-full bg-basil rounded" style={"width: #{percent(@recommendation_progress)}%"}>
+          <div
+            class="h-full bg-basil rounded"
+            style={"width: #{percent(@recommendation_progress)}%"}
+          >
           </div>
         </div>
       </div>
@@ -273,7 +277,9 @@
         <span class="flex h-6 w-6 items-center justify-center rounded-full bg-ink-panel2 text-parchment text-xs font-semibold">
           FT
         </span>
-        <h2 class="text-lg font-medium text-parchment mr-2">Full-text extraction (measurements)</h2>
+        <h2 class="text-lg font-medium text-parchment mr-2">
+          Full-text extraction (measurements)
+        </h2>
 
         <button
           type="button"
@@ -289,15 +295,21 @@
 
       <p class="text-parchment-dim text-xs">
         PMC open-access full text + compound-measurement extraction (Bumblebee QA) runs off-box in the
-        <code class="text-parchment">mehungry_local_ai</code> service and posts candidates back over REST
+        <code class="text-parchment">mehungry_local_ai</code>
+        service and posts candidates back over REST
         (<code class="text-parchment">mix local_ai.extract</code>). This panel is read-only status.
       </p>
 
       <div>
         <div class="flex items-center justify-between text-xs text-parchment-dim mb-1">
-          <span>PMC fetched: {@pmc_progress.processed} / {@pmc_progress.total} ({percent(@pmc_progress)}%)</span>
+          <span>PMC fetched: {@pmc_progress.processed} / {@pmc_progress.total} ({percent(
+            @pmc_progress
+          )}%)</span>
           <span>
-            <.link navigate={~p"/professional/compound-candidates"} class="text-basil hover:underline">{@mcand_count} pending review →</.link>
+            <.link
+              navigate={~p"/professional/compound-candidates"}
+              class="text-basil hover:underline"
+            >{@mcand_count} pending review →</.link>
           </span>
         </div>
         <div class="h-2 w-full rounded bg-ink-panel2 overflow-hidden">

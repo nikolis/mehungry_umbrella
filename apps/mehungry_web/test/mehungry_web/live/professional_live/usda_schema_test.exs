@@ -36,7 +36,10 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchemaTest do
 
   test "a curated ingredient appears under its species", %{conn: conn} do
     ingredient = ingredient_fixture(%{name: "Apple, raw"})
-    {:ok, species} = Food.create_foundemental_species(%{"name" => "Apple", "family" => "Rosaceae"})
+
+    {:ok, species} =
+      Food.create_foundemental_species(%{"name" => "Apple", "family" => "Rosaceae"})
+
     {:ok, _} = Food.assign_foundemental_ingredient(species.id, ingredient.id, "Apple, raw")
 
     {:ok, view, _html} = live(conn, ~p"/professional/usda-schema")

@@ -43,8 +43,7 @@ defmodule Mehungry.Science.RunReconciler do
     {"candidate_derivation_runs", "Mehungry.ObanWorkers.CompoundCandidateDerivationWorker",
      CandidateDerivationRuns},
     {"recommendation_derivation_runs",
-     "Mehungry.ObanWorkers.RecommendationCandidateDerivationWorker",
-     RecommendationDerivationRuns}
+     "Mehungry.ObanWorkers.RecommendationCandidateDerivationWorker", RecommendationDerivationRuns}
   ]
 
   # `executing` is handled separately (see `live_run_ids/1`): a fresh one is live, a
@@ -82,7 +81,10 @@ defmodule Mehungry.Science.RunReconciler do
     orphaned = Enum.reject(stuck, &(&1 in live))
 
     Enum.each(orphaned, fn id ->
-      Logger.warning("[RunReconciler] #{table} run #{id} orphaned (no live Oban job) — marking failed")
+      Logger.warning(
+        "[RunReconciler] #{table} run #{id} orphaned (no live Oban job) — marking failed"
+      )
+
       run_mod.mark_failed(id, "orphaned at boot — no live Oban job (server stopped mid-run)")
     end)
 

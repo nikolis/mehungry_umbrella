@@ -3,11 +3,17 @@
     <h1 class="text-2xl font-semibold text-parchment">Discovered Studies</h1>
 
     <nav class="flex items-center gap-1 ml-auto rounded-lg border border-ink-panel2 p-1 text-sm font-medium">
-      <.link patch={~p"/professional/science"} class="px-3 py-1 rounded text-parchment-dim hover:text-parchment">
+      <.link
+        patch={~p"/professional/science"}
+        class="px-3 py-1 rounded text-parchment-dim hover:text-parchment"
+      >
         Pipeline
       </.link>
       <span class="px-3 py-1 rounded bg-basil text-ink">Studies</span>
-      <.link patch={~p"/professional/science/entities"} class="px-3 py-1 rounded text-parchment-dim hover:text-parchment">
+      <.link
+        patch={~p"/professional/science/entities"}
+        class="px-3 py-1 rounded text-parchment-dim hover:text-parchment"
+      >
         Entities
       </.link>
     </nav>
@@ -55,7 +61,10 @@
       placeholder="Search title or PMID…"
       class="flex-1 rounded border border-ink-panel2 bg-ink-panel text-parchment text-sm px-3 py-1.5 placeholder:text-parchment-dim"
     />
-    <button type="submit" class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90">
+    <button
+      type="submit"
+      class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+    >
       Search
     </button>
     <button
@@ -69,7 +78,9 @@
   </form>
 
   <div class="text-xs text-parchment-dim">
-    {@total} result{if @total == 1, do: "", else: "s"}{if @search != "", do: " for “#{@search}”", else: ""}
+    {@total} result{if @total == 1, do: "", else: "s"}{if @search != "",
+      do: " for “#{@search}”",
+      else: ""}
   </div>
 
   <section class="divide-y divide-ink-panel2 rounded-lg border border-ink-panel2">
@@ -91,9 +102,11 @@
           <div class="text-xs text-parchment-dim mt-0.5">
             {meta_line(study)}
             <span :if={meta_line(study) != ""}>·</span>
-            PMID {study.pmid}
-            · <span class="text-basil">{Map.get(@ing_counts, study.id, 0)}</span> ingredients
-            · <span class="text-parchment">{Map.get(@mention_counts, study.id, 0)}</span> mentions
+            PMID {study.pmid} ·
+            <span class="text-basil">{Map.get(@ing_counts, study.id, 0)}</span>
+            ingredients
+            · <span class="text-parchment">{Map.get(@mention_counts, study.id, 0)}</span>
+            mentions
           </div>
         </div>
 
@@ -107,8 +120,13 @@
         </button>
       </div>
 
-      <div :if={@open_id == study.id && @detail} class="mt-3 pl-3 border-l-2 border-ink-panel2 space-y-3">
-        <p :if={study.abstract} class="text-xs text-parchment-dim line-clamp-4">{study.abstract}</p>
+      <div
+        :if={@open_id == study.id && @detail}
+        class="mt-3 pl-3 border-l-2 border-ink-panel2 space-y-3"
+      >
+        <p :if={study.abstract} class="text-xs text-parchment-dim line-clamp-4">
+          {study.abstract}
+        </p>
 
         <div>
           <div class="text-xs font-semibold text-parchment mb-1">Linked ingredients</div>

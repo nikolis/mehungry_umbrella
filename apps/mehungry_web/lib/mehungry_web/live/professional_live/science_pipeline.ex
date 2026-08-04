@@ -104,7 +104,10 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
     {:noreply,
      socket
      |> assign(:recommendation_run, run)
-     |> put_flash(:info, "Recommendation derivation started — review candidates at Health conditions")}
+     |> put_flash(
+       :info,
+       "Recommendation derivation started — review candidates at Health conditions"
+     )}
   end
 
   # ── Candidate review ───────────────────────────────────────────────────────
@@ -202,7 +205,10 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
       |> Enum.sort_by(fn {_t, n} -> -n end)
       |> Enum.map_join(", ", fn {t, n} -> "#{n} #{t}" end)
 
-    message = if total == 0, do: "#{label} — nothing to clear", else: "#{label} — cleared #{total} rows (#{detail})"
+    message =
+      if total == 0,
+        do: "#{label} — nothing to clear",
+        else: "#{label} — cleared #{total} rows (#{detail})"
 
     socket |> reload() |> put_flash(:info, message)
   end

@@ -88,7 +88,9 @@ defmodule MehungryWeb.ProfessionalLive.ScienceReviewTest do
 
     test "non-admin is redirected" do
       conn = log_in_user(build_conn(), user_fixture(%{email: "no@example.com"}))
-      assert {:error, {:redirect, %{to: "/home"}}} = live(conn, ~p"/professional/science/entities")
+
+      assert {:error, {:redirect, %{to: "/home"}}} =
+               live(conn, ~p"/professional/science/entities")
     end
   end
 end

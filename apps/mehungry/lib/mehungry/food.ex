@@ -332,13 +332,28 @@ defmodule Mehungry.Food do
   # ── Foundemental foods ─────────────────────────────────────────────────────
 
   defdelegate list_foundemental_species(), to: FoundementalFoods, as: :list_species
-  defdelegate list_foundemental_species_with_foods(), to: FoundementalFoods, as: :list_species_with_foods
+
+  defdelegate list_foundemental_species_with_foods(),
+    to: FoundementalFoods,
+    as: :list_species_with_foods
+
   defdelegate get_foundemental_species!(id), to: FoundementalFoods, as: :get_species!
-  defdelegate change_foundemental_species(species, attrs \\ %{}), to: FoundementalFoods, as: :change_species
+
+  defdelegate change_foundemental_species(species, attrs \\ %{}),
+    to: FoundementalFoods,
+    as: :change_species
+
   defdelegate create_foundemental_species(attrs), to: FoundementalFoods, as: :create_species
   defdelegate create_foundemental_food(attrs), to: FoundementalFoods
-  defdelegate assign_foundemental_ingredient(species_id, ingredient_id, usda_name), to: FoundementalFoods, as: :assign_ingredient
-  defdelegate assigned_foundemental_ingredient_ids(), to: FoundementalFoods, as: :assigned_ingredient_ids
+
+  defdelegate assign_foundemental_ingredient(species_id, ingredient_id, usda_name),
+    to: FoundementalFoods,
+    as: :assign_ingredient
+
+  defdelegate assigned_foundemental_ingredient_ids(),
+    to: FoundementalFoods,
+    as: :assigned_ingredient_ids
+
   defdelegate list_ingredient_ids_for_species(species_id), to: FoundementalFoods
   defdelegate species_id_for_ingredient(ingredient_id), to: FoundementalFoods
   defdelegate list_curated_ingredients(), to: FoundementalFoods

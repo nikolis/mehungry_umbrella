@@ -314,7 +314,13 @@ defmodule MehungryWeb.ProfessionalLive.UsdaSchema do
   end
 
   defp normalize_matched_row(ing) do
-    %{id: ing.id, name: ing.name, data_type: ing.data_type, food_class: ing.food_class, reason: nil}
+    %{
+      id: ing.id,
+      name: ing.name,
+      data_type: ing.data_type,
+      food_class: ing.food_class,
+      reason: nil
+    }
   end
 
   defp normalize_unmatched_row(%{ingredient: ing, reason: reason}) do

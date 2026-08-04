@@ -98,7 +98,9 @@ defmodule Mehungry.Science.PipelineReset do
       counts = delete_tables(@derivation_tables)
 
       %{num_rows: rels} =
-        Repo.query!("DELETE FROM species_compound_relationships WHERE source IS DISTINCT FROM 'manual'")
+        Repo.query!(
+          "DELETE FROM species_compound_relationships WHERE source IS DISTINCT FROM 'manual'"
+        )
 
       Map.put(counts, "species_compound_relationships (auto)", rels)
     end)

@@ -67,6 +67,19 @@ defmodule Mehungry.Health do
 
   def list_conditions, do: Repo.all(from(c in Condition, order_by: [asc: c.name]))
 
+  def list_conditions_for_presentation do
+    query =
+      from c in Condition,
+        as: :condition,
+        where:
+          exists(
+            from cr in CompoundRecommendation,
+              where: cr.condition_id == parent_as(:condition).id
+          )
+
+    Repo.all(query)
+  end
+
   def list_conditions_by_category(category) do
     Repo.all(
       from(c in Condition,
