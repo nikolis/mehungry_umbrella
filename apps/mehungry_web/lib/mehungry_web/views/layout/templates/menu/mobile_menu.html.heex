@@ -7,12 +7,12 @@
   phx-update="ignore"
 >
   <div
-    class={"grid #{if show_invitations, do: "grid-cols-8", else: "grid-cols-7"} bg-inherit"}
+    class={"grid #{if show_invitations, do: "grid-cols-9", else: "grid-cols-8"} bg-inherit"}
     style="overflow: hidden; max-height: 64px;"
   >
     <!-- Logo -->
     <.link
-      class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment transition-colors"
+      class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg  transition-colors"
       patch="/"
     >
       {MehungryWeb.SvgComponents.logo_mark(%{id: "nav-mobile", class: "h-7 w-7 text-white"})}
@@ -21,28 +21,28 @@
     <!-- Browse -->
     <.link
       patch="/browse"
-      class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment transition-colors"
+      class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
     >
-      <.icon name="hero-book-open" class="h-6 w-6" />
+      <.icon name="hero-book-open" class="h-7 w-7" />
     </.link>
 
     <a
       href="/conditions"
-      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
+      class=" flex items-center   rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <.icon
         name="hero-heart"
-        class="w-5 h-5 flex-shrink-0"
+        class="w-7 h-7 flex-shrink-0 mx-auto"
       />
     </a>
 
     <!-- Foods -->
     <.link
       patch="/foods"
-      class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment transition-colors"
+      class="flex items-center justify-center p-3 nav_link_basic rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <svg
-        class="h-6 w-6"
+        class="h-7 w-7"
         fill="none"
         stroke="currentColor"
         stroke-width="2"
@@ -60,35 +60,35 @@
     <!-- Create -->
     <.link
       patch="/create_recipe"
-      class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment transition-colors"
+      class="flex items-center justify-center p-3 nav_link_basic rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
-      <.icon name="hero-plus-circle" class="h-6 w-6" />
+      <.icon name="hero-plus-circle" class="h-7 w-7" />
     </.link>
 
     <!-- Calendar -->
     <.link
       patch="/calendar"
-      class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment transition-colors"
+      class="flex items-center justify-center p-3 nav_link_basic text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors rounded-lg"
     >
-      <.icon name="hero-calendar" class="h-6 w-6" />
+      <.icon name="hero-calendar" class="h-7 w-7" />
     </.link>
 
     <!-- Basket -->
     <.link
       patch="/basket"
-      class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment transition-colors"
+      class="flex items-center justify-center p-3 nav_link_basic text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors rounded-lg"
     >
-      <.icon name="hero-shopping-cart" class="h-6 w-6" />
+      <.icon name="hero-shopping-cart" class="h-7 w-7" />
     </.link>
 
     <!-- Tutor invitations (non-professional users with pending invitations) -->
     <%= if show_invitations do %>
       <a
         href="/notifications/invitations"
-        class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment transition-colors"
+        class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
       >
         <div class="relative">
-          <.icon name="hero-bell" class="h-6 w-6" />
+          <.icon name="hero-bell" class="h-7 w-7" />
           <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
             {Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id)}
           </span>
@@ -104,10 +104,10 @@
       <%= if @current_user do %>
         <img
           src={@current_user.profile_pic}
-          class="w-6 h-6 rounded-full object-cover border border-ink-panel2"
+          class="w-7 h-7 rounded-full object-cover border border-ink-panel2"
         />
       <% else %>
-        <.icon name="hero-arrow-right-on-rectangle" class="h-6 w-6" />
+        <.icon name="hero-arrow-right-on-rectangle" class="h-7 w-7" />
       <% end %>
     </a>
   </div>

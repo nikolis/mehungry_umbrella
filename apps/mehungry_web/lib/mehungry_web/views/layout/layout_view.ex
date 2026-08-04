@@ -138,6 +138,7 @@ defmodule MehungryWeb.LayoutView do
         <.admin_link href="/professional/analytics" icon="hero-chart-bar" label="Analytics" />
         <.admin_link href="/professional/users" icon="hero-users" label="Users" />
         <.admin_link href="/professional/seo" icon="hero-magnifying-glass" label="SEO" />
+        <.admin_link href="/professional/recipes" icon="hero-book-open" label="Recipes" />
         <.admin_link href="/professional/ingredients" icon="hero-beaker" label="Ingredients" />
         <.admin_link href="/professional/measurement_units" icon="hero-scale" label="Units" />
         <.admin_link href="/professional/languages" icon="hero-language" label="Languages" />
