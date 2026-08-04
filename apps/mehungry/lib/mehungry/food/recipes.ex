@@ -114,6 +114,114 @@ defmodule Mehungry.Food.Recipes do
     Repo.delete(recipe)
   end
 
+  @doc """
+  Ecto query selecting the ids of recipes that have zero linked ingredients
+  (no `RecipeIngredient` rows). Shared by the count/list/delete helpers below so
+  they all agree on what "empty" means.
+  """
+  def recipe_ids_without_ingredients_query do
+    with_ingredients =
+      from(ri in Mehungry.Food.RecipeIngredient, select: ri.recipe_id, distinct: true)
+
+    from(r in Recipe, where: r.id not in subquery(with_ingredients), select: r.id)
+  end
+
+  @doc "Number of recipes that have no linked ingredients."
+  def count_recipes_without_ingredients do
+    from(r in Recipe, where: r.id in subquery(recipe_ids_without_ingredients_query()))
+    |> Repo.aggregate(:count)
+  end
+
+  @doc "Lists recipes with no linked ingredients (for admin preview)."
+  def list_recipes_without_ingredients do
+    from(r in Recipe,
+      where: r.id in subquery(recipe_ids_without_ingredients_query()),
+      order_by: [desc: r.inserted_at]
+    )
+    |> Repo.all()
+    |> Repo.preload(:user)
+  end
+
+  @doc """
+  Deletes every recipe that has zero linked ingredients along with all of its
+  dependent rows, in a single transaction. Mirrors the cascade in
+  `Ingredients.delete_ingredients_without_nutrients/0` so foreign-key
+  constraints are satisfied. Returns `{:ok, deleted_count}`.
+  """
+  def delete_recipes_without_ingredients do
+    recipe_ids_q = recipe_ids_without_ingredients_query()
+
+    comment_ids_q =
+      from(c in Mehungry.Posts.Comment,
+        where: c.recipe_id in subquery(recipe_ids_q),
+        select: c.id
+      )
+
+    comment_answer_ids_q =
+      from(ca in Mehungry.Posts.CommentAnswer,
+        where: ca.comment_id in subquery(comment_ids_q),
+        select: ca.id
+      )
+
+    post_ids_q =
+      from(p in Mehungry.Posts.Post, where: p.recipe_id in subquery(recipe_ids_q), select: p.id)
+
+    Repo.transaction(fn ->
+      from(cav in Mehungry.Posts.CommentAnswerVote,
+        where: cav.comment_answer_id in subquery(comment_answer_ids_q)
+      )
+      |> Repo.delete_all()
+
+      from(cv in Mehungry.Posts.CommentVote, where: cv.comment_id in subquery(comment_ids_q))
+      |> Repo.delete_all()
+
+      from(ca in Mehungry.Posts.CommentAnswer, where: ca.comment_id in subquery(comment_ids_q))
+      |> Repo.delete_all()
+
+      from(pv in Mehungry.Posts.PostUpvote, where: pv.post_id in subquery(post_ids_q))
+      |> Repo.delete_all()
+
+      from(pv in Mehungry.Posts.PostDownvote, where: pv.post_id in subquery(post_ids_q))
+      |> Repo.delete_all()
+
+      from(c in Mehungry.Posts.Comment, where: c.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(p in Mehungry.Posts.Post, where: p.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(l in Mehungry.Food.Like, where: l.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(r in "ratings", where: r.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(ur in Mehungry.Accounts.UserRecipe, where: ur.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(m in Mehungry.Plans.Meal, where: m.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(bi in Mehungry.Inventory.BasketItem, where: bi.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(a in Mehungry.Food.Annotation, where: a.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(rh in Mehungry.Food.RecipeHashtag, where: rh.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      from(ab in Mehungry.AI.Bot.AiBotRecipe, where: ab.recipe_id in subquery(recipe_ids_q))
+      |> Repo.delete_all()
+
+      {recipe_count, _} =
+        from(r in Recipe, where: r.id in subquery(recipe_ids_q))
+        |> Repo.delete_all()
+
+      recipe_count
+    end)
+  end
+
   def change_recipe(recipe, attrs \\ %{}) do
     Recipe.changeset(recipe, attrs)
   end

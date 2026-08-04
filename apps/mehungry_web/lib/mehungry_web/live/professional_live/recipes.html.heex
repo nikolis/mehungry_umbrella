@@ -1,0 +1,54 @@
+<div class="px-4 py-6 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold text-white">Recipes Admin</h1>
+    <button
+      type="button"
+      phx-click="delete_without_ingredients"
+      disabled={@empty_count == 0}
+      data-confirm={"Delete all #{@empty_count} recipe(s) with zero ingredients? This cannot be undone."}
+      class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-700 hover:bg-red-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <.icon name="hero-trash" class="w-4 h-4" /> Delete recipes with zero ingredients
+    </button>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4 mb-6">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+        Total recipes
+      </p>
+      <p class="text-3xl font-bold text-white">{@total_count}</p>
+    </div>
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+        With zero ingredients
+      </p>
+      <p class="text-3xl font-bold text-red-400">{@empty_count}</p>
+    </div>
+  </div>
+
+  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+      Recipes with zero ingredients
+    </h2>
+    <div id="empty-recipes" phx-update="stream" class="divide-y divide-slate-700">
+      <div id="empty-recipes-empty" class="only:block hidden text-slate-500 text-sm italic py-3">
+        No recipes with zero ingredients.
+      </div>
+      <div
+        :for={{dom_id, recipe} <- @streams.empty_recipes}
+        id={dom_id}
+        class="flex items-center justify-between py-2.5"
+      >
+        <div class="min-w-0">
+          <p class="text-white text-sm font-medium truncate">
+            {recipe.title || "(untitled)"}
+          </p>
+          <p class="text-slate-500 text-xs">
+            #{recipe.id} · {(recipe.user && recipe.user.email) || "no owner"}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

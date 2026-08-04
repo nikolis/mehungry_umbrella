@@ -89,6 +89,7 @@ defmodule MehungryWeb.Router do
 
       live "/files", ProfessionalLive.S3BrowserLive, :index
       live "/activeusers", ProfessionalLive.ActiveUsers, :index
+      live "/recipes", ProfessionalLive.Recipes, :index
       live "/ingredients", ProfessionalLive.Ingredients, :index
       live "/ingredients/:id/edit", ProfessionalLive.IngredientsEdit, :edit
       live "/ingredients/new", ProfessionalLive.IngredientsCreate, :create

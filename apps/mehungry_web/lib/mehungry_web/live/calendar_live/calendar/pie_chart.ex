@@ -53,8 +53,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.PieChart do
     |> Vl.encode_field(:theta, "value", type: :quantitative)
     |> Vl.encode_field(:color, "category", type: :nominal)
     |> Vl.encode(:tooltip, [
-      [field: "category", type: :nominal, title: "Category"],
-      [field: "value", type: :quantitative, title: "Value", format: ".2f"]
+      [field: "category", type: :nominal, title: "Nutrient"],
+      [field: "display", type: :nominal, title: "Amount"],
+      [field: "value", type: :quantitative, title: "Grams", format: ".3f"]
     ])
     |> Vl.config(
       background: "#211D16",

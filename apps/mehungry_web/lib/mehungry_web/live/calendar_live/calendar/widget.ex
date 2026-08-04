@@ -36,19 +36,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       carbs_g = extract.("Carbohydrates") |> Float.round(1)
       fat_g = extract.("Total Fat") |> Float.round(1)
 
-      data =
-        nutrients_sorted
-        |> Enum.reject(fn {{label, _}, _} -> String.contains?(label, "Energy") end)
-        |> Enum.take(5)
-        |> Enum.map(fn {{label, %{"amount" => amount}}, _} ->
-          cleaned =
-            label
-            |> String.replace("\n", " ")
-            |> String.replace(~r/\s+/, " ")
-            |> String.trim()
-
-          %{category: cleaned, value: amount}
-        end)
+      # Two separate pies: macros (grams) and micronutrients (mg/µg). They can't
+      # share one chart because the units live on different scales — a slice is
+      # only meaningful against others in the same unit. Within each pie we still
+      # convert every value to grams so the arc angles reflect real proportions.
+      macro_data = build_slices(nutrients_sorted, &Nu.macronutrient?/1)
+      micro_data = build_slices(nutrients_sorted, &(not Nu.macronutrient?(&1)))
 
       recipe = %{
         nutrients: total_nutrients,
@@ -58,7 +51,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
       assigns = %{
         recipe: recipe,
-        data: data,
+        macro_data: macro_data,
+        micro_data: micro_data,
         day: day,
         meal_count: meal_count,
         total_items: total_items,
@@ -102,14 +96,39 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           >
             {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
           </div>
-          <div class="flex-1 flex items-center justify-center p-4 sm:p-6">
-            <.live_component
-              module={MehungryWeb.CalendarLive.Calendar.PieChart}
-              id={"nutrition-chart23" <> Date.to_string(@day)}
-              data={@data}
-              origin_id={"nutrition-chart23" <> Date.to_string(@day)}
-              size="20rem"
-            />
+          <div class="flex-1 flex flex-col sm:flex-row items-stretch justify-center gap-2 p-4 sm:p-6">
+            <div class="flex-1 flex flex-col items-center">
+              <span class="font-display font-medium text-parchment-dim text-xs uppercase tracking-wide mb-1">
+                Macros
+              </span>
+              <%= if @macro_data == [] do %>
+                <p class="text-parchment-dim/70 text-xs italic my-auto">No macro data</p>
+              <% else %>
+                <.live_component
+                  module={MehungryWeb.CalendarLive.Calendar.PieChart}
+                  id={"macro-chart" <> Date.to_string(@day)}
+                  data={@macro_data}
+                  origin_id={"macro-chart" <> Date.to_string(@day)}
+                  size="20rem"
+                />
+              <% end %>
+            </div>
+            <div class="flex-1 flex flex-col items-center">
+              <span class="font-display font-medium text-parchment-dim text-xs uppercase tracking-wide mb-1">
+                Micronutrients
+              </span>
+              <%= if @micro_data == [] do %>
+                <p class="text-parchment-dim/70 text-xs italic my-auto">No micronutrient data</p>
+              <% else %>
+                <.live_component
+                  module={MehungryWeb.CalendarLive.Calendar.PieChart}
+                  id={"micro-chart" <> Date.to_string(@day)}
+                  data={@micro_data}
+                  origin_id={"micro-chart" <> Date.to_string(@day)}
+                  size="20rem"
+                />
+              <% end %>
+            </div>
           </div>
         </div>
       </div>
@@ -230,6 +249,38 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   end
 
   ## ------------------------------------ Utility Functions  ---------------------------------------------------------------
+
+  # Builds the pie-slice list for one chart: keeps nutrients matching `keep?`,
+  # drops Energy and the mixed-unit "Vitamins" umbrella, converts each remaining
+  # value to grams (so proportions are honest) and keeps the original amount+unit
+  # for the tooltip. Capped at 6 slices so the pie stays readable.
+  defp build_slices(nutrients_sorted, keep?) do
+    nutrients_sorted
+    |> Enum.reject(fn {{label, _}, _} ->
+      String.contains?(label, "Energy") or String.contains?(label, "Vitamins")
+    end)
+    |> Enum.filter(fn {{label, _}, _} -> keep?.(label) end)
+    |> Enum.flat_map(fn {{label, nutrient}, _} ->
+      amount = nutrient["amount"]
+      unit = nutrient["measurement_unit"]
+
+      case Nu.to_grams(amount, unit) do
+        {:ok, grams} when grams > 0 ->
+          [%{category: clean_label(label), value: Float.round(grams, 6), display: "#{amount} #{unit}"}]
+
+        _ ->
+          []
+      end
+    end)
+    |> Enum.take(6)
+  end
+
+  defp clean_label(label) do
+    label
+    |> String.replace("\n", " ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+  end
 
   defp get_full_week(current_date, _user_meals, _device_width) do
     days = 6

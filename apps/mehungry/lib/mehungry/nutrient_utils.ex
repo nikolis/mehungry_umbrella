@@ -366,6 +366,59 @@ defmodule Mehungry.NutrientUtils do
     end)
   end
 
+  @gram_scale %{
+    "g" => 1.0,
+    "gr" => 1.0,
+    "gram" => 1.0,
+    "grams" => 1.0,
+    "mg" => 0.001,
+    "milligram" => 0.001,
+    "milligrams" => 0.001,
+    "µg" => 1.0e-6,
+    "ug" => 1.0e-6,
+    "mcg" => 1.0e-6,
+    "microgram" => 1.0e-6,
+    "micrograms" => 1.0e-6
+  }
+
+  @doc """
+  Converts a nutrient `amount` expressed in `unit` to grams so quantities
+  measured in different mass units (g / mg / µg) share one comparable scale —
+  e.g. before charting them together, where the raw numbers alone are
+  meaningless (500 mg would otherwise dwarf 20 g).
+
+  Returns `{:ok, grams}` for a recognized mass unit, or `:error` for anything
+  without a gram equivalent (kcal, kJ, IU, …) or a missing/blank unit.
+  """
+  def to_grams(amount, unit) when is_number(amount) and is_binary(unit) do
+    key = unit |> String.trim() |> String.downcase()
+
+    case Map.get(@gram_scale, key) do
+      nil -> :error
+      scale -> {:ok, amount * scale}
+    end
+  end
+
+  def to_grams(_amount, _unit), do: :error
+
+  # Macronutrients are the energy-yielding bulk nutrients (protein, carbs, fats
+  # and their subtypes, fiber, sugars). Everything else that is a nutrient —
+  # vitamins and minerals — is a micronutrient. Matched on the normalized
+  # display name (see `normalize_nutrient_name/1`).
+  @macro_keywords ["protein", "carbohydrate", "fiber", "fibre", "sugar", "fat", "lipid"]
+
+  @doc """
+  True when `label` names a macronutrient (protein / carbohydrate / fat family /
+  fiber / sugar). Used to split nutrients into the macro vs micronutrient pies,
+  which must be charted separately because grams and mg/µg can't share a scale.
+  """
+  def macronutrient?(label) when is_binary(label) do
+    downcased = String.downcase(label)
+    Enum.any?(@macro_keywords, &String.contains?(downcased, &1))
+  end
+
+  def macronutrient?(_), do: false
+
   @doc """
   Your original summarize_meals_nutrients but using the enhanced merger
   """
