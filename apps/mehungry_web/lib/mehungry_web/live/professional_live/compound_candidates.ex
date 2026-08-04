@@ -27,7 +27,10 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
       |> assign(:mcand_count, Food.count_pending_measurement_candidates())
       |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0))
       |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0))
-      |> stream(:measurement_candidates, Food.list_measurement_candidates(limit: @per_page, offset: 0))
+      |> stream(
+        :measurement_candidates,
+        Food.list_measurement_candidates(limit: @per_page, offset: 0)
+      )
       |> stream(:measurements, Food.list_recent_measurements(limit: @per_page))
 
     {:ok, socket}
@@ -86,10 +89,15 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
 
     {:noreply,
      socket
-     |> put_flash(:info, "Purged #{rels} non-dietary fact#{if rels == 1, do: "", else: "s"} (blocklist)")
+     |> put_flash(
+       :info,
+       "Purged #{rels} non-dietary fact#{if rels == 1, do: "", else: "s"} (blocklist)"
+     )
      |> assign(:rel_page, 1)
      |> assign(:rel_count, Food.count_relationships())
-     |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0), reset: true)}
+     |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0),
+       reset: true
+     )}
   end
 
   @impl true
@@ -118,7 +126,11 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
 
       {:error, :no_curated_ingredient} ->
         {:noreply,
-         put_flash(socket, :error, "That species has no curated ingredient to attach the measurement to.")}
+         put_flash(
+           socket,
+           :error,
+           "That species has no curated ingredient to attach the measurement to."
+         )}
     end
   end
 
@@ -154,7 +166,9 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
        |> assign(:page, 1)
        |> assign(:rel_page, 1)
        |> assign(:rel_count, Food.count_relationships())
-       |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0), reset: true)
+       |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0),
+         reset: true
+       )
        |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0),
          reset: true
        )}
@@ -180,11 +194,15 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
      |> assign(:run, run)
      |> assign(:progress, progress_for(run))
      |> assign(:mcand_count, Food.count_pending_measurement_candidates())
-     |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0), reset: true)
-     |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0), reset: true)
-     |> stream(:measurement_candidates, Food.list_measurement_candidates(limit: @per_page, offset: 0),
+     |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0),
        reset: true
      )
+     |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0),
+       reset: true
+     )
+     |> stream(
+       :measurement_candidates,
+       Food.list_measurement_candidates(limit: @per_page, offset: 0), reset: true)
      |> stream(:measurements, Food.list_recent_measurements(limit: @per_page), reset: true)}
   end
 

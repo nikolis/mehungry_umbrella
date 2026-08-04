@@ -14,7 +14,10 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
     {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
 
     {:ok, species} =
-      Food.create_foundemental_species(%{"name" => "Spinach", "scientific_name" => "Spinacia oleracea"})
+      Food.create_foundemental_species(%{
+        "name" => "Spinach",
+        "scientific_name" => "Spinacia oleracea"
+      })
 
     {:ok, _} = Food.assign_foundemental_ingredient(species.id, spinach.id, "spinach")
 
@@ -277,7 +280,11 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
   end
 
   describe "non-dietary blocklist" do
-    test "excludes blocklisted compounds from evidence pairs", %{spinach: spinach, oxalate: oxalate, species: species} do
+    test "excludes blocklisted compounds from evidence pairs", %{
+      spinach: spinach,
+      oxalate: oxalate,
+      species: species
+    } do
       {:ok, dpph} = Food.upsert_compound(%{name: "DPPH", compound_type: "other"})
       cooccur(spinach, oxalate)
       cooccur(spinach, dpph)
@@ -294,16 +301,27 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       {:ok, cand} = CompoundCandidates.import_manual_candidate(species.id, dpph.id, %{})
       {:ok, _} = CompoundCandidates.promote_candidate(cand.id)
 
-      assert Repo.aggregate(from(r in SpeciesCompoundRelationship, where: r.compound_id == ^dpph.id), :count) == 1
+      assert Repo.aggregate(
+               from(r in SpeciesCompoundRelationship, where: r.compound_id == ^dpph.id),
+               :count
+             ) == 1
 
       assert {rels, cands} = CompoundCandidates.purge_blocklisted()
       assert rels >= 1 and cands >= 1
-      assert Repo.aggregate(from(r in SpeciesCompoundRelationship, where: r.compound_id == ^dpph.id), :count) == 0
+
+      assert Repo.aggregate(
+               from(r in SpeciesCompoundRelationship, where: r.compound_id == ^dpph.id),
+               :count
+             ) == 0
     end
   end
 
   describe "unpromote_relationship/1" do
-    test "deletes the fact and rejects its candidate", %{spinach: spinach, oxalate: oxalate, species: species} do
+    test "deletes the fact and rejects its candidate", %{
+      spinach: spinach,
+      oxalate: oxalate,
+      species: species
+    } do
       cooccur(spinach, oxalate)
 
       {:ok, %{candidate: cand, promoted: true}} =

@@ -44,8 +44,9 @@ config :mehungry, Mehungry.Repo,
 
 # Watch static and templates for browser reloading.
 
-config :mehungry_local_ai, api_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmMxMjNkZWY0NTYiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNzg1NzI0ODAwLCJleHAiOjE3ODU3Mjg0MDB9.rX9gVvQh8L2N5pZcJ7Yw3eFaM1nSb6TdUk4Ai0XqLe8"
-
+config :mehungry_local_ai,
+  api_token:
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYmMxMjNkZWY0NTYiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNzg1NzI0ODAwLCJleHAiOjE3ODU3Mjg0MDB9.rX9gVvQh8L2N5pZcJ7Yw3eFaM1nSb6TdUk4Ai0XqLe8"
 
 config :libcluster,
   topologies: [

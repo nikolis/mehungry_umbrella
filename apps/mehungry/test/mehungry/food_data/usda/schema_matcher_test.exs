@@ -85,7 +85,11 @@ defmodule Mehungry.FoodData.Usda.SchemaMatcherTest do
       path =
         Path.join(System.tmp_dir!(), "usda_schema_ref_#{System.unique_integer([:positive])}.json")
 
-      File.write!(path, Jason.encode!(%{"FoundationFoods" => [%{"description" => "Carrot, raw"}]}))
+      File.write!(
+        path,
+        Jason.encode!(%{"FoundationFoods" => [%{"description" => "Carrot, raw"}]})
+      )
+
       Application.put_env(:mehungry, :usda_schema_reference_paths, [path])
 
       on_exit(fn ->

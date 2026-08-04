@@ -8,7 +8,7 @@ defmodule USDA.Corpus.TFIDF do
     Enum.filter(high_tfidf, fn {x, _y} -> x in entropies end)
   end
 
-   def get_top_20_percent(items) when is_list(items) do
+  def get_top_20_percent(items) when is_list(items) do
     # 1. Sort descending by price
     sorted = Enum.sort_by(items, fn {_, price} -> price end, :asc)
 
@@ -18,8 +18,7 @@ defmodule USDA.Corpus.TFIDF do
 
     # 3. Take the top items
     Enum.take(sorted, take_count)
-   end
-
+  end
 
   # TF-IDF score (Term Frequency-Inverse Document Frequency) είναι μια αριθμητική στατιστική τιμή που μετρά τη σπουδαιότητα μιας λέξης μέσα σε ένα συγκεκριμένο έγγραφο σε σχέση με μια ολόκληρη συλλογή εγγράφων
   def compute_tfidf_for_all_ingredients() do

@@ -3,10 +3,16 @@
     <h1 class="text-2xl font-semibold text-parchment">Extracted Entities</h1>
 
     <nav class="flex items-center gap-1 ml-auto rounded-lg border border-ink-panel2 p-1 text-sm font-medium">
-      <.link patch={~p"/professional/science"} class="px-3 py-1 rounded text-parchment-dim hover:text-parchment">
+      <.link
+        patch={~p"/professional/science"}
+        class="px-3 py-1 rounded text-parchment-dim hover:text-parchment"
+      >
         Pipeline
       </.link>
-      <.link patch={~p"/professional/science/studies"} class="px-3 py-1 rounded text-parchment-dim hover:text-parchment">
+      <.link
+        patch={~p"/professional/science/studies"}
+        class="px-3 py-1 rounded text-parchment-dim hover:text-parchment"
+      >
         Studies
       </.link>
       <span class="px-3 py-1 rounded bg-basil text-ink">Entities</span>
@@ -51,19 +57,33 @@
   </section>
 
   <div class="text-xs text-parchment-dim">
-    Annotation processed <span class="text-parchment">{@ledger.processed}</span> / {@studies_total} studies
-    · <span class="text-basil">{@ledger["annotated"]}</span> produced entities
-    · <span class="text-parchment-dim">{@ledger["no_results"]}</span> none
-    · <span class={if @ledger["error"] > 0, do: "text-red-400", else: "text-parchment-dim"}>{@ledger["error"]}</span> errored
+    Annotation processed <span class="text-parchment">{@ledger.processed}</span>
+    / {@studies_total} studies
+    · <span class="text-basil">{@ledger["annotated"]}</span>
+    produced entities
+    · <span class="text-parchment-dim">{@ledger["no_results"]}</span>
+    none
+    ·
+    <span class={if @ledger["error"] > 0, do: "text-red-400", else: "text-parchment-dim"}>{@ledger[
+      "error"
+    ]}</span>
+    errored
   </div>
 
   <section class="divide-y divide-ink-panel2 rounded-lg border border-ink-panel2">
-    <div :if={@studies == [] && @ledger.processed == 0} class="p-6 text-center text-parchment-dim text-sm">
-      No studies annotated yet. Run <span class="font-medium">annotation</span> on the Pipeline tab
+    <div
+      :if={@studies == [] && @ledger.processed == 0}
+      class="p-6 text-center text-parchment-dim text-sm"
+    >
+      No studies annotated yet. Run <span class="font-medium">annotation</span>
+      on the Pipeline tab
       (it needs discovered studies first — see the Studies tab).
     </div>
 
-    <div :if={@studies == [] && @ledger.processed > 0} class="p-6 text-center text-parchment-dim text-sm">
+    <div
+      :if={@studies == [] && @ledger.processed > 0}
+      class="p-6 text-center text-parchment-dim text-sm"
+    >
       Annotation ran on {@ledger.processed} studies but extracted no entities. Usually the papers are
       too recent for PubTator3 to have indexed, or annotation ran before a parser fix — in that case
       clear the annotation ledger and re-run.
@@ -81,10 +101,13 @@
             {study.title || "(untitled)"}
           </a>
           <div class="text-xs text-parchment-dim mt-0.5">
-            PMID {study.pmid}
-            · <span class="text-basil">{type_count(@type_counts, study.id, "chemical")}</span> chem
-            · <span class="text-parchment">{type_count(@type_counts, study.id, "species")}</span> species
-            · <span class="text-red-400">{type_count(@type_counts, study.id, "disease")}</span> disease
+            PMID {study.pmid} ·
+            <span class="text-basil">{type_count(@type_counts, study.id, "chemical")}</span>
+            chem
+            · <span class="text-parchment">{type_count(@type_counts, study.id, "species")}</span>
+            species
+            · <span class="text-red-400">{type_count(@type_counts, study.id, "disease")}</span>
+            disease
           </div>
         </div>
 
@@ -98,7 +121,10 @@
         </button>
       </div>
 
-      <div :if={@open_id == study.id && @detail} class="mt-3 pl-3 border-l-2 border-ink-panel2 space-y-3">
+      <div
+        :if={@open_id == study.id && @detail}
+        class="mt-3 pl-3 border-l-2 border-ink-panel2 space-y-3"
+      >
         <div :for={type <- ["chemical", "species", "disease"]}>
           <div :if={Map.get(@detail, type, []) != []}>
             <div class={"text-xs font-semibold mb-1 #{mention_class(type)}"}>
@@ -111,7 +137,10 @@
                 title={m.normalized_identifier}
               >
                 {m.text_span}<span
-                  :if={type == "chemical" && m.compound_id && Map.get(@compounds_by_id, m.compound_id)}
+                  :if={
+                    type == "chemical" && m.compound_id &&
+                      Map.get(@compounds_by_id, m.compound_id)
+                  }
                   class="text-basil"
                 > → {Map.get(@compounds_by_id, m.compound_id)}</span>
               </span>

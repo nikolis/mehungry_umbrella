@@ -32,8 +32,7 @@
     <section class="mb-10">
       <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
         <h2 class="text-lg font-display font-medium text-parchment">
-          Nutrition
-          <span class="text-parchment-dim font-normal text-sm ml-2">per 100g</span>
+          Nutrition <span class="text-parchment-dim font-normal text-sm ml-2">per 100g</span>
         </h2>
         <%= if length(@ingredients) > 0 do %>
           <form id="species-ingredient-form" phx-change="select_ingredient">
@@ -133,7 +132,9 @@
             <%= for rel <- @compounds.result do %>
               <span class="inline-flex items-center gap-2 bg-ink-panel border border-ink-panel2 rounded-xl px-3 py-1.5 text-sm">
                 <span class="text-parchment">{rel.compound.name}</span>
-                <span class="text-xs text-parchment-dim">{relationship_label(rel.relationship_type)}</span>
+                <span class="text-xs text-parchment-dim">{relationship_label(
+                  rel.relationship_type
+                )}</span>
               </span>
             <% end %>
           </div>
@@ -169,7 +170,13 @@
                 </span>
                 <span class="text-sm text-parchment font-medium">{rec.condition.name}</span>
                 <span class="text-xs text-parchment-dim">
-                  via {rec.compound.name}<%= if rec.severity && rec.severity != "" do %> · {rec.severity}<% end %><%= if rec.evidence_level && rec.evidence_level != "" do %> · evidence: {rec.evidence_level}<% end %>
+                  via {rec.compound.name}
+                  <%= if rec.severity && rec.severity != "" do %>
+                    · {rec.severity}
+                  <% end %>
+                  <%= if rec.evidence_level && rec.evidence_level != "" do %>
+                    · evidence: {rec.evidence_level}
+                  <% end %>
                 </span>
               </div>
             <% end %>
@@ -193,7 +200,9 @@
           </p>
         <% true -> %>
           <p class="text-sm text-parchment-dim mb-3">
-            <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(@studies.result)}</span>
+            <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(
+              @studies.result
+            )}</span>
             studies discovered for {@display_name}.
           </p>
           <%!-- Capped height, then scroll — matches the nutrition breakdown. --%>
@@ -209,7 +218,15 @@
                   {study.title || "Untitled study"}
                 </p>
                 <p class="text-xs text-parchment-dim mt-1">
-                  <%= if study.journal && study.journal != "" do %>{study.journal}<% end %><%= if study.publication_date && study.publication_date != "" do %> · {study.publication_date}<% end %><%= if study.pmid do %> · PMID {study.pmid}<% end %>
+                  <%= if study.journal && study.journal != "" do %>
+                    {study.journal}
+                  <% end %>
+                  <%= if study.publication_date && study.publication_date != "" do %>
+                    · {study.publication_date}
+                  <% end %>
+                  <%= if study.pmid do %>
+                    · PMID {study.pmid}
+                  <% end %>
                 </p>
               </a>
             <% end %>

@@ -23,7 +23,9 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
 
     # Create a condition.
     view
-    |> form("form[phx-submit=save_condition]", condition: %{name: "Kidney Stones", category: "renal"})
+    |> form("form[phx-submit=save_condition]",
+      condition: %{name: "Kidney Stones", category: "renal"}
+    )
     |> render_submit()
 
     assert render(view) =~ "Kidney Stones"

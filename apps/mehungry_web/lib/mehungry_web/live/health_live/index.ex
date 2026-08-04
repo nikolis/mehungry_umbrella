@@ -7,7 +7,7 @@ defmodule MehungryWeb.HealthLive.Index do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:conditions, Health.list_conditions())
+     |> assign(:conditions, Health.list_conditions_for_presentation())
      |> assign(:page_title, "Health Conditions & Dietary Guidance")
      |> assign(
        :page_description,

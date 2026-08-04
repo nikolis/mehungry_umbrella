@@ -5,6 +5,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
   alias Mehungry.Professionals
   alias Mehungry.Accounts
   alias Mehungry.History
+  alias Mehungry.History.UserMeal
   alias Mehungry.Food
 
   @impl true
@@ -51,6 +52,31 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
     |> assign(:particular_date, date)
   end
 
+  defp apply_action(socket, :new, %{"date" => start_date, "title" => title}) do
+    socket
+    |> assign(:page_title, "Create Meal")
+    |> assign(:user_meal, struct(UserMeal))
+    |> assign(:title, title)
+    |> assign(:dates, %{start: start_date})
+  end
+
+  defp apply_action(socket, :edit, %{"meal_id" => meal_id}) do
+    user_meal = History.get_user_meal!(meal_id)
+
+    # Guard: nutritionists may only edit meals belonging to their assigned client.
+    if user_meal.user_id == socket.assigns.client_id do
+      socket
+      |> assign(:page_title, "Edit Meal")
+      |> assign(:user_meal, user_meal)
+      |> assign(:title, user_meal.title)
+      |> assign(:dates, %{start: user_meal.start_dt, end: user_meal.end_dt})
+    else
+      socket
+      |> put_flash(:error, "Not authorized.")
+      |> push_patch(to: "/nutritionist/clients/#{socket.assigns.client_id}/calendar")
+    end
+  end
+
   @impl true
   def handle_info({:initial_modal, %{"date" => start_date, "title" => title}}, socket) do
     client_id = socket.assigns.client_id
@@ -95,9 +121,41 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
   end
 
   @impl true
+  def handle_event("edit_modal", %{"id" => id}, socket) do
+    client_id = socket.assigns.client_id
+
+    {:noreply, push_patch(socket, to: "/nutritionist/clients/#{client_id}/calendar/edit/#{id}")}
+  end
+
+  @impl true
+  def handle_event("close-modal", _params, socket) do
+    client_id = socket.assigns.client_id
+    {:noreply, push_patch(socket, to: "/nutritionist/clients/#{client_id}/calendar")}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="bg-slate-900 min-h-screen">
+      <.modal
+        :if={@live_action in [:new, :edit]}
+        on_cancel={JS.patch("/nutritionist/clients/#{@client_id}/calendar")}
+        id="client_calendar_modal"
+        show
+      >
+        <div class="w-full h-full">
+          <.live_component
+            module={MehungryWeb.CalendarLive.MealFormComponent}
+            id={@user_meal.id || :new}
+            title={@user_meal.title || @title}
+            live_action={@live_action}
+            recipes={@recipes}
+            dates={@dates}
+            current_user={@client}
+            return_to={"/nutritionist/clients/#{@client_id}/calendar"}
+          />
+        </div>
+      </.modal>
       <!-- Banner -->
       <div class="bg-teal-900/40 border-b border-teal-700/40 px-4 py-2 flex items-center gap-3">
         <a href={"/nutritionist/clients/#{@client_id}"} class="text-teal-400 hover:text-teal-300">

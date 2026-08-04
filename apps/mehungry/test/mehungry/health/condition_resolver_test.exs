@@ -37,7 +37,11 @@ defmodule Mehungry.Health.ConditionResolverTest do
       })
 
     assert {:ok, resolved} =
-             ConditionResolver.resolve(%{namespace: "mesh", identifier: "D003924", name: "nonsense"})
+             ConditionResolver.resolve(%{
+               namespace: "mesh",
+               identifier: "D003924",
+               name: "nonsense"
+             })
 
     assert resolved.id == condition.id
   end

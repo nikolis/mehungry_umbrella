@@ -184,7 +184,10 @@ defmodule Mehungry.FoodData.Usda.SchemaMatcher do
         case parse_signature(name, opts) do
           {:ok, dims} ->
             key = signature_key(dims)
-            if Map.has_key?(catalog, key), do: {:matched, key}, else: {:unmatched, "no matching schema"}
+
+            if Map.has_key?(catalog, key),
+              do: {:matched, key},
+              else: {:unmatched, "no matching schema"}
 
           :error ->
             {:unmatched, "unparseable"}
@@ -341,17 +344,92 @@ defmodule Mehungry.FoodData.Usda.SchemaMatcher do
   defp present_string?(value), do: is_binary(value) and String.trim(value) != ""
 
   # ── Data access ───────────────────────────────────────────────────────────
-  #and not like(i.name, ^"%APPLEBEE'S%")  and not like(i.name, ^"%Archway%") and not like(i.name, ^"%ARBY'S%") and not like(i.name, ^"%BURGER KING%" ) and not like(i.name, ^"%Babyfood%") and (is_nil(i.data_type) VVor i.data_type != ^"Survey (FNDDS)")
+  # and not like(i.name, ^"%APPLEBEE'S%")  and not like(i.name, ^"%Archway%") and not like(i.name, ^"%ARBY'S%") and not like(i.name, ^"%BURGER KING%" ) and not like(i.name, ^"%Babyfood%") and (is_nil(i.data_type) VVor i.data_type != ^"Survey (FNDDS)")
 
-  
   defp list_ingredients do
-    brand_names = ["APPLEBEE'S", "%Archway%", "ARBY'S", "BURGER KING", "Baby Foods", "Beverage" ,"Archway", "Andrea's", "Babyfood", "MARS SNACKFOOD", "M&M", "CAMPBELL'S", "CHICK-FIL-A","CRACKER BARREL", "CARRABBA'S", "REESE'S", "HERSHEYS", "KIT KAT", "KRACKEL", "McDONALD'S", "Glutino", "Oscar Mayer", "Pillsbury"]
-    second_pass = ["Candies", "beverage", "Cake", "Bread", "Bologna", "Bagel", "Biscuit", "Meatball" , "restaurant", "Ice cream", "Gravy", "Baker", "sauce", "Macaroni", "Cookies", "Cereals", "Breakfast", "Bacon", "Snacks", "Muffins", "Crackers", "Cream", "Croissants", "Dessert", "Danish pastry", "Doughnuts", "muffins", "cream", "Frozen novelties", "Frozen yogurts", "Margarine", "dessert", "Noodles", "Pancakes", "Pie", "Puddings", "Restaurant", "Pizza","dressing","Waffles","Bratwurst", "Butter", "Cheese food", "Pasta", "Salami", "Sauce", "Sandwich", "spread", "Sausage", "mixed"]
-   ex_set = brand_names ++ second_pass 
-    #escaped_names = Enum.map(names, &Regex.escape/1)
+    brand_names = [
+      "APPLEBEE'S",
+      "%Archway%",
+      "ARBY'S",
+      "BURGER KING",
+      "Baby Foods",
+      "Beverage",
+      "Archway",
+      "Andrea's",
+      "Babyfood",
+      "MARS SNACKFOOD",
+      "M&M",
+      "CAMPBELL'S",
+      "CHICK-FIL-A",
+      "CRACKER BARREL",
+      "CARRABBA'S",
+      "REESE'S",
+      "HERSHEYS",
+      "KIT KAT",
+      "KRACKEL",
+      "McDONALD'S",
+      "Glutino",
+      "Oscar Mayer",
+      "Pillsbury"
+    ]
+
+    second_pass = [
+      "Candies",
+      "beverage",
+      "Cake",
+      "Bread",
+      "Bologna",
+      "Bagel",
+      "Biscuit",
+      "Meatball",
+      "restaurant",
+      "Ice cream",
+      "Gravy",
+      "Baker",
+      "sauce",
+      "Macaroni",
+      "Cookies",
+      "Cereals",
+      "Breakfast",
+      "Bacon",
+      "Snacks",
+      "Muffins",
+      "Crackers",
+      "Cream",
+      "Croissants",
+      "Dessert",
+      "Danish pastry",
+      "Doughnuts",
+      "muffins",
+      "cream",
+      "Frozen novelties",
+      "Frozen yogurts",
+      "Margarine",
+      "dessert",
+      "Noodles",
+      "Pancakes",
+      "Pie",
+      "Puddings",
+      "Restaurant",
+      "Pizza",
+      "dressing",
+      "Waffles",
+      "Bratwurst",
+      "Butter",
+      "Cheese food",
+      "Pasta",
+      "Salami",
+      "Sauce",
+      "Sandwich",
+      "spread",
+      "Sausage",
+      "mixed"
+    ]
+
+    ex_set = brand_names ++ second_pass
+    # escaped_names = Enum.map(names, &Regex.escape/1)
     escaped_brands = Enum.map(ex_set, &Regex.escape/1)
 
-    
     # 3. Join the brands AND manually append the uppercase regex rule without escaping it
     uppercase_pattern = "(^|[^a-zA-Z])[A-Z]{2,}([^a-zA-Z]|$)"
     pattern = Enum.join(escaped_brands ++ [uppercase_pattern], "|")

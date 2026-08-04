@@ -74,7 +74,10 @@ defmodule Mehungry.Health.RecommendationDerivationRuns do
   defp update_status(run_id, attrs) do
     case Repo.get(Run, run_id) do
       nil ->
-        Logger.debug("RecommendationDerivationRuns: run #{run_id} missing, skipping #{inspect(attrs)}")
+        Logger.debug(
+          "RecommendationDerivationRuns: run #{run_id} missing, skipping #{inspect(attrs)}"
+        )
+
         nil
 
       run ->

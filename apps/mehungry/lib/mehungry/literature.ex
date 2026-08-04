@@ -424,9 +424,14 @@ defmodule Mehungry.Literature do
   # The endpoint (role1/role2) whose biotype is `type`, as `%{identifier, name}`.
   defp relation_endpoint(rel, type) do
     cond do
-      rel[:entity1_type] == type -> %{identifier: rel[:entity1_identifier], name: rel[:entity1_name]}
-      rel[:entity2_type] == type -> %{identifier: rel[:entity2_identifier], name: rel[:entity2_name]}
-      true -> nil
+      rel[:entity1_type] == type ->
+        %{identifier: rel[:entity1_identifier], name: rel[:entity1_name]}
+
+      rel[:entity2_type] == type ->
+        %{identifier: rel[:entity2_identifier], name: rel[:entity2_name]}
+
+      true ->
+        nil
     end
   end
 

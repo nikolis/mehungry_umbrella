@@ -71,7 +71,9 @@ defmodule MehungryWeb.ProfessionalLive.Entities do
 
   defp max_page(total), do: max(ceil(total / @per_page), 1)
   defp pubmed_url(pmid), do: "https://pubmed.ncbi.nlm.nih.gov/#{pmid}/"
-  defp type_count(counts, study_id, type), do: counts |> Map.get(study_id, %{}) |> Map.get(type, 0)
+
+  defp type_count(counts, study_id, type),
+    do: counts |> Map.get(study_id, %{}) |> Map.get(type, 0)
 
   defp compounds_count(compounds_by_id), do: map_size(compounds_by_id)
 

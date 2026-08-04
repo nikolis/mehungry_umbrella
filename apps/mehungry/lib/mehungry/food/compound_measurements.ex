@@ -142,7 +142,15 @@ defmodule Mehungry.Food.CompoundMeasurements do
     |> CompoundMeasurementCandidate.changeset(attrs)
     |> Repo.insert(
       on_conflict:
-        {:replace, [:score, :raw_span, :preparation_method, :analytical_method, :extraction_method, :updated_at]},
+        {:replace,
+         [
+           :score,
+           :raw_span,
+           :preparation_method,
+           :analytical_method,
+           :extraction_method,
+           :updated_at
+         ]},
       conflict_target: [:study_id, :foundemental_species_id, :compound_id, :value, :unit],
       returning: true
     )
@@ -165,7 +173,11 @@ defmodule Mehungry.Food.CompoundMeasurements do
   end
 
   def count_pending_measurement_candidates,
-    do: Repo.aggregate(from(c in CompoundMeasurementCandidate, where: c.status == "pending"), :count)
+    do:
+      Repo.aggregate(
+        from(c in CompoundMeasurementCandidate, where: c.status == "pending"),
+        :count
+      )
 
   def get_measurement_candidate!(id),
     do: Repo.get!(CompoundMeasurementCandidate, id) |> Repo.preload([:species, :compound])

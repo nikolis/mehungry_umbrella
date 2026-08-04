@@ -16,7 +16,10 @@ defmodule Mehungry.Food.CompoundMeasurementCandidatesTest do
     {:ok, vitc} = Food.upsert_compound(%{name: "L-Ascorbic Acid", compound_type: "other"})
 
     {:ok, species} =
-      Food.create_foundemental_species(%{"name" => "Spinach", "scientific_name" => "Spinacia oleracea"})
+      Food.create_foundemental_species(%{
+        "name" => "Spinach",
+        "scientific_name" => "Spinacia oleracea"
+      })
 
     {:ok, _} = Food.assign_foundemental_ingredient(species.id, spinach.id, "spinach")
 

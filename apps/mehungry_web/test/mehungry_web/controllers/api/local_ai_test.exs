@@ -13,7 +13,10 @@ defmodule MehungryWeb.Api.LocalAiTest do
     {:ok, vitc} = Food.upsert_compound(%{name: "L-Ascorbic Acid", compound_type: "other"})
 
     {:ok, species} =
-      Food.create_foundemental_species(%{"name" => "Spinach", "scientific_name" => "Spinacia oleracea"})
+      Food.create_foundemental_species(%{
+        "name" => "Spinach",
+        "scientific_name" => "Spinacia oleracea"
+      })
 
     {:ok, _} = Food.assign_foundemental_ingredient(species.id, spinach.id, "spinach")
 
@@ -76,7 +79,10 @@ defmodule MehungryWeb.Api.LocalAiTest do
   end
 
   describe "POST /full_text" do
-    test "stores body + ledgers the attempt so the study leaves pending", %{conn: conn, study: study} do
+    test "stores body + ledgers the attempt so the study leaves pending", %{
+      conn: conn,
+      study: study
+    } do
       conn =
         conn
         |> auth()

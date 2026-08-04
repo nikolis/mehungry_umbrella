@@ -25,8 +25,12 @@ defmodule MehungryWeb.Api.LocalAi.CandidatesController do
     |> json(%{error: "missing required field: candidates (list)"})
   end
 
-  defp persist(%{"study_id" => study_id, "compound_id" => compound_id, "value" => value, "unit" => unit} = c)
-       when not is_nil(study_id) and not is_nil(compound_id) and not is_nil(value) and is_binary(unit) do
+  defp persist(
+         %{"study_id" => study_id, "compound_id" => compound_id, "value" => value, "unit" => unit} =
+           c
+       )
+       when not is_nil(study_id) and not is_nil(compound_id) and not is_nil(value) and
+              is_binary(unit) do
     Literature.species_ids_for_study(study_id)
     |> Enum.reduce(0, fn species_id, acc ->
       case Food.upsert_measurement_candidate(%{

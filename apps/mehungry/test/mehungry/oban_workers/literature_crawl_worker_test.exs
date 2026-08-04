@@ -131,9 +131,7 @@ defmodule Mehungry.ObanWorkers.LiteratureCrawlWorkerTest do
     assert {:error, _reason} = perform_job(Worker, %{"run_id" => run.id}, attempt: 1)
 
     # Not ledgered — a genuine blip must keep its full retry budget.
-    refute Repo.exists?(
-             from(a in CrawlAttempt, where: a.foundemental_species_id == ^species.id)
-           )
+    refute Repo.exists?(from(a in CrawlAttempt, where: a.foundemental_species_id == ^species.id))
 
     assert Repo.get!(CrawlRun, run.id).status == "failed"
   end

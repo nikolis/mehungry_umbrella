@@ -1,9 +1,8 @@
 defmodule USDA.Corpus.Phrases do
-
   alias Mehungry.Repo
   alias Mehungry.Food.Ingredient
 
-   def get_top_20_percent(items) when is_list(items) do
+  def get_top_20_percent(items) when is_list(items) do
     # 1. Sort descending by price
     sorted = Enum.sort_by(items, fn {_, price} -> price end, :desc)
 
@@ -13,7 +12,7 @@ defmodule USDA.Corpus.Phrases do
 
     # 3. Take the top items
     Enum.take(sorted, take_count)
-   end
+  end
 
   def word_entropies() do
     Repo.all(Ingredient)

@@ -111,15 +111,20 @@
       <h2 class="text-lg font-medium text-parchment mr-2">
         Review derived recommendations ({length(@rec_candidates)})
       </h2>
-      <.link navigate={~p"/professional/science"} class="text-sm text-basil hover:underline ml-auto">
+      <.link
+        navigate={~p"/professional/science"}
+        class="text-sm text-basil hover:underline ml-auto"
+      >
         Derive more →
       </.link>
     </div>
     <p class="text-parchment-dim text-sm">
       Candidates derived from PubTator's directional chemical↔disease relations. The
-      <span class="font-medium">suggested</span> direction comes from relation valence
+      <span class="font-medium">suggested</span>
+      direction comes from relation valence
       (negative → encourage, positive → avoid); confirm the direction & severity, then
-      <span class="font-medium">Promote</span> to write a curated recommendation
+      <span class="font-medium">Promote</span>
+      to write a curated recommendation
       (<code class="text-parchment">source: literature</code>). Nothing is auto-promoted.
     </p>
 
@@ -142,10 +147,14 @@
         </div>
         <div class="text-xs text-parchment-dim">
           evidence: <span class="font-medium">{cand.evidence_level || "insufficient"}</span>
-          · score: {cand.evidence_score} · relations −{(cand.relation_counts || %{})["negative"] || 0}
-          / +{(cand.relation_counts || %{})["positive"] || 0}
-          / ~{(cand.relation_counts || %{})["association"] || 0}
-          · {cand.study_count} stud{if cand.study_count == 1, do: "y", else: "ies"}
+          · score: {cand.evidence_score} · relations −{(cand.relation_counts || %{})["negative"] ||
+            0} / +{(cand.relation_counts || %{})["positive"] || 0} / ~{(cand.relation_counts ||
+                                                                          %{})["association"] || 0} · {cand.study_count} stud{if cand.study_count ==
+                                                                                                                                   1,
+                                                                                                                                 do:
+                                                                                                                                   "y",
+                                                                                                                                 else:
+                                                                                                                                   "ies"}
         </div>
         <div :if={cand.studies != []} class="text-xs text-parchment-dim mt-0.5">
           refs:
@@ -166,7 +175,9 @@
             :for={r <- recommendations()}
             value={r}
             selected={r == default_rec(cand.suggested_recommendation)}
-          >{r}</option>
+          >
+            {r}
+          </option>
         </select>
         <select name="severity" class={select_class()}>
           <option value="">Severity…</option>
@@ -207,7 +218,10 @@
     >
       <div class="flex flex-wrap items-center gap-2">
         <span class="text-parchment font-medium">{condition.name}</span>
-        <span :if={condition.category} class="text-xs rounded bg-ink-panel2 text-parchment-dim px-2 py-0.5">
+        <span
+          :if={condition.category}
+          class="text-xs rounded bg-ink-panel2 text-parchment-dim px-2 py-0.5"
+        >
           {condition.category}
         </span>
         <button
@@ -221,7 +235,9 @@
         </button>
       </div>
 
-      <p :if={condition.description} class="text-xs text-parchment-dim">{condition.description}</p>
+      <p :if={condition.description} class="text-xs text-parchment-dim">
+        {condition.description}
+      </p>
 
       <div class="divide-y divide-ink-panel2 border-t border-ink-panel2 pt-1">
         <p :if={@recs[condition.id] == []} class="text-xs text-parchment-dim py-2">

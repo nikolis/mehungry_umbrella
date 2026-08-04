@@ -4,7 +4,8 @@
     Proposed <span class="font-medium">species</span>↔compound relationships derived from literature
     co-occurrence and measurements, each citing the reference studies it came from. Strong evidence
     auto-promotes into curated facts; the rest waits here for review. Promoted facts feed back as
-    targeted literature-crawl terms and are what <code class="text-parchment">Health</code> resolves to.
+    targeted literature-crawl terms and are what <code class="text-parchment">Health</code>
+    resolves to.
   </p>
 
   <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
@@ -74,12 +75,45 @@
       <select name="measurement[extraction_method]" class={field_class()}>
         <option :for={m <- extraction_methods()} value={m}>{m}</option>
       </select>
-      <input type="number" step="any" name="measurement[value]" required placeholder="Value (e.g. 750)" class={field_class()} />
-      <input type="text" name="measurement[unit]" required placeholder="Unit (e.g. mg/100g)" class={field_class()} />
-      <input type="text" name="measurement[preparation_method]" placeholder="Preparation (e.g. Raw)" class={field_class()} />
-      <input type="text" name="measurement[analytical_method]" placeholder="Analytical method (e.g. HPLC)" class={field_class()} />
-      <input type="number" name="measurement[sample_size]" placeholder="Sample size (optional)" class={field_class()} />
-      <input type="text" name="measurement[pmid]" placeholder="Source PMID (optional)" class={field_class()} />
+      <input
+        type="number"
+        step="any"
+        name="measurement[value]"
+        required
+        placeholder="Value (e.g. 750)"
+        class={field_class()}
+      />
+      <input
+        type="text"
+        name="measurement[unit]"
+        required
+        placeholder="Unit (e.g. mg/100g)"
+        class={field_class()}
+      />
+      <input
+        type="text"
+        name="measurement[preparation_method]"
+        placeholder="Preparation (e.g. Raw)"
+        class={field_class()}
+      />
+      <input
+        type="text"
+        name="measurement[analytical_method]"
+        placeholder="Analytical method (e.g. HPLC)"
+        class={field_class()}
+      />
+      <input
+        type="number"
+        name="measurement[sample_size]"
+        placeholder="Sample size (optional)"
+        class={field_class()}
+      />
+      <input
+        type="text"
+        name="measurement[pmid]"
+        placeholder="Source PMID (optional)"
+        class={field_class()}
+      />
       <button
         type="submit"
         class="justify-self-start px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
@@ -96,8 +130,10 @@
     </h2>
     <p class="text-parchment-dim text-sm mb-3">
       Auto-extracted from paper full text by the extraction pipeline.
-      <span class="font-medium">Accept</span> records an immutable measurement (re-scoring the
-      species candidate); <span class="font-medium">Reject</span> drops it.
+      <span class="font-medium">Accept</span>
+      records an immutable measurement (re-scoring the
+      species candidate); <span class="font-medium">Reject</span>
+      drops it.
     </p>
 
     <div id="measurement_candidates" phx-update="stream" class="divide-y divide-ink-panel2">
@@ -119,9 +155,17 @@
             “{mc.raw_span}”
           </p>
           <div class="text-xs text-parchment-dim mt-1">
-            {[mc.preparation_method, mc.analytical_method] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")}
+            {[mc.preparation_method, mc.analytical_method]
+            |> Enum.reject(&is_nil/1)
+            |> Enum.join(" · ")}
             <span :if={mc.study && mc.study.pmid}>
-              · <a href={"https://pubmed.ncbi.nlm.nih.gov/#{mc.study.pmid}/"} target="_blank" rel="noopener" class="text-basil hover:underline">PMID {mc.study.pmid}</a>
+              ·
+              <a
+                href={"https://pubmed.ncbi.nlm.nih.gov/#{mc.study.pmid}/"}
+                target="_blank"
+                rel="noopener"
+                class="text-basil hover:underline"
+              >PMID {mc.study.pmid}</a>
             </span>
             · score {score_label(mc.score)}
           </div>
@@ -179,9 +223,17 @@
           “{m.raw_span}”
         </p>
         <div class="text-xs text-parchment-dim mt-1">
-          {[m.preparation_method, m.analytical_method] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")}
+          {[m.preparation_method, m.analytical_method]
+          |> Enum.reject(&is_nil/1)
+          |> Enum.join(" · ")}
           <span :if={m.study && m.study.pmid}>
-            · <a href={"https://pubmed.ncbi.nlm.nih.gov/#{m.study.pmid}/"} target="_blank" rel="noopener" class="text-basil hover:underline">PMID {m.study.pmid}</a>
+            ·
+            <a
+              href={"https://pubmed.ncbi.nlm.nih.gov/#{m.study.pmid}/"}
+              target="_blank"
+              rel="noopener"
+              class="text-basil hover:underline"
+            >PMID {m.study.pmid}</a>
           </span>
           · {m.extraction_method}
         </div>
@@ -275,7 +327,8 @@
     </div>
     <p class="text-parchment-dim text-sm mb-3">
       Promoted ingredient↔compound relationships — the facts the crawl reads back as targeted terms.
-      <span class="font-medium">Undo</span> deletes the fact and rejects its candidate so it won't re-promote.
+      <span class="font-medium">Undo</span>
+      deletes the fact and rejects its candidate so it won't re-promote.
     </p>
 
     <div id="curated_relationships" phx-update="stream" class="divide-y divide-ink-panel2">
