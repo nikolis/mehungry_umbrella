@@ -15,6 +15,29 @@ defmodule Mehungry.Release do
     for repo <- repos(), do: print_migrations_for(repo)
   end
 
+  @doc """
+  Seeds the `Mehungry.Health` condition registry from the bundled catalogue
+  inside a prod release (where Mix — and thus `mix run priv/repo/seeds.exs` —
+  is unavailable).
+
+  Starts `Mehungry.Repo` temporarily (an `eval` task does not boot the app
+  supervision tree), then runs `Mehungry.Health.ConditionSeeder.seed/0`, which
+  is idempotent (upsert on the unique `name`), so it is safe to re-run:
+
+      bin/mehungry_umbrella eval "Mehungry.Release.seed_health_conditions"
+  """
+  def seed_health_conditions do
+    Application.load(@app)
+
+    {:ok, {:ok, %{inserted: inserted, total: total}}, _} =
+      Ecto.Migrator.with_repo(Mehungry.Repo, fn _repo ->
+        Mehungry.Health.ConditionSeeder.seed()
+      end)
+
+    IO.puts("Seeded health conditions: #{inserted} new, #{total} total.")
+    :ok
+  end
+
   def load_fdc_ingredients(file_path) do
     SeedFileParser.get_ingredients_from_food_data_central_json_file(file_path)
   end

@@ -1,11 +1,23 @@
 <div class="max-w-5xl mx-auto p-4 space-y-8">
-  <h1 class="text-2xl font-semibold text-parchment">Health Conditions</h1>
-  <p class="text-parchment-dim text-sm">
-    Curate the advice layer: create conditions and attach compound recommendations
-    (condition → <span class="font-medium">compound</span> → advice). Recommendations
-    reference compounds only — the implicated food species are resolved at read time and
-    shown on <code class="text-parchment">/conditions/:id</code>.
-  </p>
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold text-parchment">Health Conditions</h1>
+      <p class="text-parchment-dim text-sm">
+        Curate the advice layer: create conditions and attach compound recommendations
+        (condition → <span class="font-medium">compound</span> → advice). Recommendations
+        reference compounds only — the implicated food species are resolved at read time and
+        shown on <code class="text-parchment">/conditions/:id</code>.
+      </p>
+    </div>
+    <button
+      type="button"
+      phx-click="seed_conditions"
+      data-confirm="Bulk-load the bundled condition catalogue? Idempotent — existing conditions are refreshed, not duplicated."
+      class="shrink-0 rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 hover:bg-ink-panel"
+    >
+      Seed registry
+    </button>
+  </div>
 
   <%!-- ── Add condition ──────────────────────────────────────────────── --%>
   <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">

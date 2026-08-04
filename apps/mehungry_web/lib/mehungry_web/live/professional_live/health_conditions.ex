@@ -9,6 +9,7 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
   alias Mehungry.Food
   alias Mehungry.Health
+  alias Mehungry.Health.ConditionSeeder
   alias Mehungry.Health.RecommendationCandidates
 
   @recommendations ~w(avoid limit caution monitor encourage)
@@ -33,6 +34,20 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   end
 
   # ── Events ─────────────────────────────────────────────────────────────────
+
+  # Bulk-load the bundled ~193-condition catalogue from
+  # priv/repo/seeds/data/health_conditions.json. Idempotent (upsert on `name`),
+  # so it is safe to click repeatedly — mirrors `mix run priv/repo/seeds.exs`,
+  # which never runs against a prod release.
+  @impl true
+  def handle_event("seed_conditions", _params, socket) do
+    {:ok, %{inserted: inserted, total: total}} = ConditionSeeder.seed()
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Seeded condition registry: #{inserted} new, #{total} total.")
+     |> load()}
+  end
 
   @impl true
   def handle_event("save_condition", %{"condition" => params}, socket) do
