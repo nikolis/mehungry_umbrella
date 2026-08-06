@@ -49,11 +49,12 @@ defmodule MehungryWeb.IngredientComponent do
 
   defp assign_search_fns(socket) do
     language = Map.get(socket.assigns, :search_language, "en")
+    owner_id = Map.get(socket.assigns, :current_user_id)
 
     {item_fn, label_fn, get_by_id_fn} =
       if language == "el" do
         item_fn = fn term ->
-          Mehungry.Food.IngredientSearch.search_in_language(term, "el")
+          Mehungry.Food.IngredientSearch.search_in_language(term, "el", owner_id)
         end
 
         get_by_id_fn = fn id ->
@@ -68,7 +69,7 @@ defmodule MehungryWeb.IngredientComponent do
         {item_fn, fn item -> item.name end, get_by_id_fn}
       else
         {
-          &Mehungry.Food.IngredientSearch.search/1,
+          fn term -> Mehungry.Food.IngredientSearch.search(term, [], owner_id) end,
           fn item -> Mehungry.Utils.remove_parenthesis(item.name) end,
           &Mehungry.Food.get_ingredient!/1
         }

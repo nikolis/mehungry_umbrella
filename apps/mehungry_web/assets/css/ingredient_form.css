@@ -1,0 +1,45 @@
+/* Ingredient form identity — scoped so it never leaks into the shared
+   components used elsewhere (the <.input>/<.textarea>/<.select> core
+   components and SelectComponent, both also used on /profile, /create_recipe,
+   admin, etc). Mirrors the .profile-form pattern in profile.css. Applied to
+   both MehungryWeb.MyIngredientLive.Form and the professional
+   MehungryWeb.Professional.IngredientFormComponent, which share the same
+   nutrient/portion/translation sub-components. */
+.ingredient-form input:not([type="hidden"]),
+.ingredient-form textarea,
+.ingredient-form select {
+  background-color: #2B2619;
+  border-color: #3A3323;
+  color: #F4EEDD;
+}
+
+.ingredient-form input:not([type="hidden"])::placeholder,
+.ingredient-form textarea::placeholder {
+  color: #A9A08C;
+}
+
+.ingredient-form input:not([type="hidden"]):focus,
+.ingredient-form textarea:focus,
+.ingredient-form select:focus {
+  border-color: #E8622C;
+}
+
+/* Nutrient amounts / gram weights read as data, not chrome */
+.ingredient-form input[type="number"],
+.ingredient-form input[type="number_subscript"] {
+  color: #45C4AE;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Retheme the shared SelectComponent's chip/dropdown colors only inside the
+   ingredient form, via the CSS variables it reads (falls back to its normal
+   slate palette everywhere else it's used). */
+.ingredient-form {
+  --sc-bg: #2B2619;
+  --sc-border: #3A3323;
+  --sc-dropdown-bg: #2B2619;
+  --sc-option-bg: #2B2619;
+  --sc-option-selected: #3A3323;
+  --sc-option-hover: #45392A;
+}

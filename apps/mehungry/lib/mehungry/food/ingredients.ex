@@ -47,6 +47,68 @@ defmodule Mehungry.Food.Ingredients do
     |> Repo.insert()
   end
 
+  @doc """
+  Creates a private, user-owned ingredient. Forces `user_id` (and a
+  `"User created"` `food_class` marker unless one is supplied) so the row is
+  scoped to its creator and only surfaces in that user's searches.
+  """
+  def create_user_ingredient(%{id: user_id}, attrs) do
+    attrs =
+      attrs
+      |> put_attr(:user_id, user_id)
+      |> maybe_put_food_class()
+
+    create_ingredient(attrs)
+  end
+
+  @doc """
+  Lists the private ingredients owned by `user`, newest first, with nutrients
+  and portions preloaded for display.
+  """
+  def list_user_ingredients(%{id: user_id}) do
+    from(i in Ingredient,
+      where: i.user_id == ^user_id,
+      order_by: [desc: i.inserted_at]
+    )
+    |> Repo.all()
+    |> Repo.preload([
+      [ingredient_nutrients: :nutrient],
+      :ingredient_portions,
+      :ingredient_translation
+    ])
+  end
+
+  @doc """
+  Fetches one of `user`'s own ingredients by id (raises if it doesn't exist or
+  isn't owned by `user`). Use for the edit/update/delete authorization boundary.
+  """
+  def get_user_ingredient!(%{id: user_id}, id) do
+    from(i in Ingredient, where: i.id == ^id and i.user_id == ^user_id)
+    |> Repo.one!()
+    |> Repo.preload([
+      [ingredient_nutrients: :nutrient],
+      :ingredient_portions,
+      :ingredient_translation
+    ])
+  end
+
+  # Sets attrs[key] regardless of whether the map uses atom or string keys.
+  defp put_attr(attrs, key, value) do
+    if Enum.any?(Map.keys(attrs), &is_binary/1) do
+      Map.put(attrs, Atom.to_string(key), value)
+    else
+      Map.put(attrs, key, value)
+    end
+  end
+
+  defp maybe_put_food_class(attrs) do
+    cond do
+      Map.get(attrs, :food_class) not in [nil, ""] -> attrs
+      Map.get(attrs, "food_class") not in [nil, ""] -> attrs
+      true -> put_attr(attrs, :food_class, "User created")
+    end
+  end
+
   def delete_ingredient(%Ingredient{} = ingredient) do
     Repo.delete(ingredient)
   end

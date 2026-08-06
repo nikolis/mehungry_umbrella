@@ -32,6 +32,7 @@ defmodule MehungryWeb.ProfileLive.Index do
      assign(socket, :content_state, :created)
      |> assign(:recipe, nil)
      |> assign(:user_recipes, [])
+     |> assign(:user_ingredients, [])
      |> assign(:current_user, current_user)
      |> assign(:user, nil)
      |> assign(:must_be_loged_in, nil)
@@ -46,11 +47,11 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  @profile_tabs ~w(created saved edit_profile connected_accounts)
+  @profile_tabs ~w(created saved my_ingredients edit_profile connected_accounts)
 
   defp content_state_from_tab(tab, live_action) when tab in @profile_tabs do
     case {tab, live_action} do
-      {tab, :show} when tab in ["edit_profile", "connected_accounts"] -> :created
+      {tab, :show} when tab in ["edit_profile", "connected_accounts", "my_ingredients"] -> :created
       {tab, _live_action} -> String.to_existing_atom(tab)
     end
   end
@@ -218,10 +219,16 @@ defmodule MehungryWeb.ProfileLive.Index do
            Users.list_user_created_recipes(socket.assigns.current_user)}
       end
 
+    user_ingredients =
+      if is_nil(socket.assigns.current_user),
+        do: [],
+        else: Food.list_user_ingredients(socket.assigns.current_user)
+
     socket
     |> assign(:page_title, "Profile")
     |> assign(:user_created_recipes, user_created_recipes)
     |> assign(:user_saved_recipes, user_saved_recipes)
+    |> assign(:user_ingredients, user_ingredients)
   end
 
   @impl true
@@ -253,6 +260,18 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def tab_path(%{live_action: :show, user: user}, tab), do: ~p"/profile/#{user.id}?#{[tab: tab]}"
   def tab_path(%{live_action: :index}, tab), do: ~p"/profile?#{[tab: tab]}"
+
+  def handle_event("delete_my_ingredient", %{"id" => id}, socket) do
+    # Re-fetch through the owner-scoped getter so a forged id can't delete
+    # someone else's ingredient.
+    ingredient = Food.get_user_ingredient!(socket.assigns.current_user, id)
+    {:ok, _} = Food.delete_ingredient(ingredient)
+
+    {:noreply,
+     socket
+     |> assign(:user_ingredients, Food.list_user_ingredients(socket.assigns.current_user))
+     |> put_flash(:info, "Ingredient deleted")}
+  end
 
   def handle_event("edit-recipe", %{"id" => id}, socket) do
     {:noreply,
@@ -335,6 +354,60 @@ defmodule MehungryWeb.ProfileLive.Index do
           path_to_details={"/profile/show_recipe/#{user_recipe.recipe.id}"}
           id={"recipe" <> Integer.to_string(user_recipe.recipe.id)}
         />
+      <% end %>
+    </div>
+    """
+  end
+
+  def get_profile_content(%{content_state: :my_ingredients} = assigns) do
+    ~H"""
+    <div class="pb-20 w-full max-w-3xl mx-auto px-4">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-display font-medium text-parchment">My Ingredients</h3>
+        <.link
+          navigate={~p"/my_ingredients/new"}
+          class="px-4 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-ink font-bold text-sm transition-colors"
+        >
+          + Create ingredient
+        </.link>
+      </div>
+
+      <%= if @user_ingredients == [] do %>
+        <div class="text-parchment-dim text-sm border border-ink-panel2 bg-ink-panel rounded-xl p-6 text-center">
+          You haven't created any ingredients yet. Create one to use it in your
+          recipes, meal plans, and shopping basket.
+        </div>
+      <% else %>
+        <div class="space-y-3">
+          <div
+            :for={ingredient <- @user_ingredients}
+            class="flex items-center justify-between border border-ink-panel2 bg-ink-panel rounded-xl p-4"
+          >
+            <div class="min-w-0">
+              <div class="text-parchment font-medium truncate">{ingredient.name}</div>
+              <div class="text-parchment-dim text-xs">
+                {length(ingredient.ingredient_nutrients)} nutrients
+              </div>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+              <.link
+                navigate={~p"/my_ingredients/#{ingredient.id}/edit"}
+                class="text-parchment-dim hover:text-parchment text-sm"
+              >
+                Edit
+              </.link>
+              <button
+                type="button"
+                phx-click="delete_my_ingredient"
+                phx-value-id={ingredient.id}
+                data-confirm="Delete this ingredient? This cannot be undone."
+                class="text-parchment-dim hover:text-red-400 text-sm transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       <% end %>
     </div>
     """

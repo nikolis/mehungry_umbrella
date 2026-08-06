@@ -39,6 +39,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
      |> assign(show_add_item_modal: false)
      |> assign(search_query: "")
      |> assign(search_results: [])
+     |> assign(custom_results: [])
      |> assign(searching: false)
      |> assign(selected_usda_item: nil)
      |> assign(custom_quantity: 1)
@@ -48,7 +49,13 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   end
 
   def handle_event("open_add_item_modal", _params, socket) do
-    {:noreply, assign(socket, show_add_item_modal: true, search_query: "", search_results: [])}
+    {:noreply,
+     assign(socket,
+       show_add_item_modal: true,
+       search_query: "",
+       search_results: [],
+       custom_results: []
+     )}
   end
 
   def handle_event("close_add_item_modal", _params, socket) do
@@ -61,7 +68,20 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   end
 
   def handle_event("search_usda", %{"value" => _query}, socket) do
-    {:noreply, assign(socket, search_results: [], searching: false)}
+    {:noreply, assign(socket, search_results: [], custom_results: [], searching: false)}
+  end
+
+  # Selecting one of the user's own custom ingredients: reuse the USDA confirm
+  # panel by shaping the local ingredient into the same map the panel expects.
+  def handle_event("select_custom_ingredient", %{"ingredient_id" => id}, socket) do
+    ingredient = Mehungry.Food.get_user_ingredient!(socket.assigns.user, id)
+
+    {:noreply,
+     assign(socket,
+       selected_usda_item: custom_ingredient_to_item(ingredient),
+       custom_quantity: 100,
+       custom_unit: "g"
+     )}
   end
 
   def handle_event("select_usda_item", %{"fdc_id" => fdc_id}, socket) do
@@ -352,14 +372,44 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   end
 
   def handle_info({:perform_search, query}, socket) do
+    # The user's own private ingredients, surfaced alongside USDA results. Only
+    # rows owned by this user are kept (global local-DB rows stay out of the
+    # USDA-centric basket flow).
+    user_id = socket.assigns.user.id
+
+    custom_results =
+      Mehungry.Food.IngredientSearch.search(query, [], user_id)
+      |> Enum.filter(&(&1.user_id == user_id))
+
     case SearchClient.search_foods(query, 5) do
       {:ok, results} ->
-        {:noreply, assign(socket, search_results: results, searching: false)}
+        {:noreply,
+         assign(socket, search_results: results, custom_results: custom_results, searching: false)}
 
       {:error, _error} ->
-        {:noreply, assign(socket, search_results: [], searching: false)}
+        {:noreply,
+         assign(socket, search_results: [], custom_results: custom_results, searching: false)}
     end
   end
+
+  # Shapes a private ingredient into the map the USDA confirm panel expects
+  # (string "description"/"fdcId"/"food_nutrients" keys), so selecting a custom
+  # ingredient flows through the existing quantity-confirm + add_usda_item path.
+  defp custom_ingredient_to_item(ingredient) do
+    food_nutrients =
+      Enum.map(ingredient.ingredient_nutrients, fn n ->
+        %{nutrient_name: nutrient_name(n), value: n.amount || 0}
+      end)
+
+    %{
+      "description" => ingredient.name,
+      "fdcId" => nil,
+      "food_nutrients" => food_nutrients
+    }
+  end
+
+  defp nutrient_name(%{nutrient: %{name: name}}) when is_binary(name), do: name
+  defp nutrient_name(_), do: ""
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do
     assign(socket, :form, to_form(changeset))

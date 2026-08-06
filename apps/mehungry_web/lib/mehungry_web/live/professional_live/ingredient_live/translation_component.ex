@@ -3,21 +3,21 @@ defmodule MehungryWeb.Professional.TranslationsComponent do
 
   def render(assigns) do
     ~H"""
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-6">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-white">Translations</h3>
+        <h3 class="text-lg font-display font-medium text-parchment">Translations</h3>
         <button
           type="submit"
           name="ingredient[_action]"
           value="add_ingredient_translation"
-          class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 text-slate-300 hover:bg-slate-700 text-xs font-semibold transition-colors"
+          class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:bg-ink-panel2 hover:text-parchment text-xs font-semibold transition-colors"
         >
           + Add Translation
         </button>
       </div>
       <div class="space-y-3">
         <.inputs_for :let={tr_form} field={@form[:ingredient_translation]}>
-          <div class="bg-slate-700/40 rounded-xl p-3 flex flex-col sm:flex-row sm:items-end gap-3">
+          <div class="bg-black/20 border border-ink-panel2 rounded-xl p-3 flex flex-col sm:flex-row sm:items-end gap-3">
             <input
               type="hidden"
               name="ingredient[ingredient_translation_sort][]"

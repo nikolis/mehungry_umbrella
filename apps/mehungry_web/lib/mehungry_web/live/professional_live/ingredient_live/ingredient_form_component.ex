@@ -7,12 +7,12 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
       id="ingredient-details-form"
       phx-change="validate"
       phx-submit="save"
-      class="px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-6"
+      class="ingredient-form px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-6"
     >
-      <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-6">
         <div class="flex items-center justify-between mb-6">
           <.back navigate={~p"/professional/ingredients"}>Back</.back>
-          <h2 class="text-lg font-semibold text-white">Ingredient Details</h2>
+          <h2 class="text-lg font-display font-medium text-parchment">Ingredient Details</h2>
         </div>
 
         <input type="hidden" name="ingredient[_action]" value="" />
@@ -20,7 +20,7 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
               Name
             </label>
             <.input
@@ -30,7 +30,7 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
             />
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
               FDC ID
             </label>
             <.input
@@ -40,7 +40,7 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
             />
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
               Category
             </label>
             <.live_component
@@ -52,7 +52,7 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
             />
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
               Default Measurement Unit
             </label>
             <.live_component
@@ -65,12 +65,12 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
           </div>
           <%= if @taxonomy do %>
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
                 Taxonomy ({@taxonomy.name})
               </label>
               <select
                 name="ingredient[taxonomy_node_id]"
-                class="w-full rounded-lg bg-slate-900 border border-slate-700 text-white text-sm px-3 py-2"
+                class="w-full rounded-lg bg-black/30 border border-ink-panel2 text-parchment text-sm px-3 py-2"
               >
                 <option value="" selected={is_nil(@taxonomy_node_id)}>— Unassigned —</option>
                 <option
@@ -110,7 +110,7 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
       <div class="flex justify-end pb-8">
         <button
           type="submit"
-          class="px-6 py-3 rounded-full bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm transition-colors"
+          class="px-6 py-3 rounded-full bg-paprika hover:bg-paprika-soft text-ink font-bold text-sm transition-colors"
         >
           Save Ingredient
         </button>

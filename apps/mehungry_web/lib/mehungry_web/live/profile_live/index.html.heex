@@ -149,6 +149,30 @@
         </.link>
         <%= if @live_action in [:index] do %>
           <.link
+            patch={tab_path(assigns, "my_ingredients")}
+            class={[
+              "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
+                get_active(@content_state, :my_ingredients)
+            ]}
+          >
+            <div class="flex items-center gap-2">
+              <svg
+                class="w-5 h-5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 3v18m0-18c-1.657 0-3 1.79-3 4s1.343 4 3 4m0-8c1.657 0 3 1.79 3 4s-1.343 4-3 4m-6 6h12"
+                />
+              </svg>
+              <span class="hidden sm:inline">My Ingredients ({length(@user_ingredients)})</span>
+            </div>
+          </.link>
+          <.link
             patch={tab_path(assigns, "edit_profile")}
             class={[
               "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
@@ -204,6 +228,7 @@
         content_state={@content_state}
         user_created_recipes={@user_created_recipes}
         user_saved_recipes={@user_saved_recipes}
+        user_ingredients={@user_ingredients}
         live_action={@live_action}
         user_recipes={@user_recipes}
         current_user_recipes={@current_user_recipes}

@@ -25,6 +25,10 @@ defmodule Mehungry.Food.Ingredient do
     belongs_to :category, Mehungry.Food.Category
     belongs_to :measurement_unit, Mehungry.Food.MeasurementUnit
 
+    # Owner of a private, user-created ingredient. NULL for the shared/global
+    # USDA + admin-created catalog. Visibility scoping lives in the search layer.
+    belongs_to :user, Mehungry.Accounts.User
+
     has_many :ingredient_portions, IngredientPortion
     has_many :ingredient_nutrients, IngredientNutrient
     has_many :ingredient_translation, Mehungry.Food.IngredientTranslation
@@ -52,6 +56,7 @@ defmodule Mehungry.Food.Ingredient do
       :description,
       :measurement_unit_id,
       :category_id,
+      :user_id,
       :nutrient_conversion_factors,
       :publication_date,
       :food_class,
@@ -79,7 +84,10 @@ defmodule Mehungry.Food.Ingredient do
     )
     |> foreign_key_constraint(:category_id)
     |> validate_required([:name, :category_id])
-    |> unique_constraint([:name])
+    # Global names are unique across the shared catalog; each user's own names are
+    # unique per user. These map to the two partial indexes from the migration.
+    |> unique_constraint(:name, name: :ingredients_global_name_index)
+    |> unique_constraint([:user_id, :name], name: :ingredients_user_name_index)
   end
 
   defp update_search_name(changeset) do
