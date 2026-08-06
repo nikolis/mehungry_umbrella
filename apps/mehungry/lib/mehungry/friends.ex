@@ -189,6 +189,31 @@ defmodule Mehungry.Friends do
     Repo.exists?(from f in Friendship, where: f.user_low_id == ^low and f.user_high_id == ^high)
   end
 
+  @doc """
+  The friendship relationship between `viewer_id` and `other_id`, from the
+  viewer's perspective — drives the "Add Friend" control on profile pages:
+  `:self`, `:friends`, `:request_sent`, `:request_received`, or `:none`.
+  """
+  def relationship_status(viewer_id, viewer_id), do: :self
+
+  def relationship_status(viewer_id, other_id) do
+    if friends?(viewer_id, other_id) do
+      :friends
+    else
+      case Repo.one(
+             from r in FriendRequest,
+               where:
+                 r.status == "pending" and
+                   ((r.requester_id == ^viewer_id and r.recipient_id == ^other_id) or
+                      (r.requester_id == ^other_id and r.recipient_id == ^viewer_id))
+           ) do
+        nil -> :none
+        %FriendRequest{requester_id: ^viewer_id} -> :request_sent
+        %FriendRequest{} -> :request_received
+      end
+    end
+  end
+
   @doc "Ends a friendship (deletes the normalized row). Leaves follows intact."
   def unfriend(user_id, friend_id) do
     {low, high} = Friendship.normalize(user_id, friend_id)

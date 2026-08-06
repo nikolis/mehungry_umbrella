@@ -112,14 +112,32 @@
     />
     <%= if @current_user && @current_user.id != @user.id do %>
       <div class="flex justify-center mt-4">
-        <button
-          type="button"
-          phx-click="add_friend"
-          phx-value-id={@user.id}
-          class="flex items-center gap-1.5 py-2 px-5 rounded-full bg-basil hover:bg-basil-soft text-ink text-sm font-bold transition-colors"
-        >
-          <.icon name="hero-user-plus" class="w-4 h-4 flex-none" /> Add Friend
-        </button>
+        <%= case @friend_status do %>
+          <% :friends -> %>
+            <span class="flex items-center gap-1.5 py-2 px-5 rounded-full bg-ink-panel2 text-parchment-dim text-sm font-medium">
+              <.icon name="hero-check" class="w-4 h-4 flex-none" /> Friends
+            </span>
+          <% :request_sent -> %>
+            <span class="flex items-center gap-1.5 py-2 px-5 rounded-full bg-ink-panel2 text-parchment-dim text-sm font-medium">
+              <.icon name="hero-clock" class="w-4 h-4 flex-none" /> Request sent
+            </span>
+          <% :request_received -> %>
+            <.link
+              navigate={~p"/friends"}
+              class="flex items-center gap-1.5 py-2 px-5 rounded-full bg-paprika hover:bg-paprika-soft text-ink text-sm font-bold transition-colors"
+            >
+              <.icon name="hero-user-plus" class="w-4 h-4 flex-none" /> Respond to request
+            </.link>
+          <% _ -> %>
+            <button
+              type="button"
+              phx-click="add_friend"
+              phx-value-id={@user.id}
+              class="flex items-center gap-1.5 py-2 px-5 rounded-full bg-paprika hover:bg-paprika-soft text-ink text-sm font-bold transition-colors"
+            >
+              <.icon name="hero-user-plus" class="w-4 h-4 flex-none" /> Add Friend
+            </button>
+        <% end %>
       </div>
     <% end %>
   <% end %>

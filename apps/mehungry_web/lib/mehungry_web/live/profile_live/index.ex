@@ -270,14 +270,20 @@ defmodule MehungryWeb.ProfileLive.Index do
   def handle_event("add_friend", %{"id" => id}, socket) do
     requester_id = socket.assigns.current_user.id
 
-    message =
+    {message, new_status} =
       case Mehungry.Friends.send_friend_request(requester_id, String.to_integer(id)) do
-        {:ok, _} -> {:info, "Friend request sent."}
-        {:error, :already_friends} -> {:info, "You are already friends."}
-        {:error, :already_requested} -> {:info, "You already have a pending request to this user."}
-        {:error, :self} -> {:error, "You can't friend yourself."}
-        {:error, _} -> {:error, "Could not send friend request."}
+        {:ok, _} -> {{:info, "Friend request sent."}, :request_sent}
+        {:error, :already_friends} -> {{:info, "You are already friends."}, :friends}
+        {:error, :already_requested} ->
+          {{:info, "You already have a pending request to this user."}, :request_sent}
+
+        {:error, :self} -> {{:error, "You can't friend yourself."}, nil}
+        {:error, _} -> {{:error, "Could not send friend request."}, nil}
       end
+
+    # Refresh the profile card's button in place so the outcome is visible
+    # immediately, without a page reload.
+    if new_status, do: send_update(Show, id: "hero", friend_status: new_status)
 
     {:noreply, put_flash(socket, elem(message, 0), elem(message, 1))}
   end
