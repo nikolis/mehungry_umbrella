@@ -68,18 +68,33 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
       |> assign(:recipes, recipes)
       |> assign(:user_meal, base_user_meal)
       |> assign(:recipe_ids, recipe_ids)
-      |> assign(:mode, "recipe")
+      |> assign(:mode, initial_mode(id, base_user_meal))
 
     {:ok, init(socket, base_user_meal, default_attrs)}
   end
 
+  # New meals open on the recipe tab; when editing, open on whichever tab has the
+  # meal's content so it's visible without hunting for the right tab.
+  defp initial_mode(:new, _base), do: "recipe"
+
+  defp initial_mode(_id, base) do
+    if Enum.empty?(base.recipe_user_meals) and not Enum.empty?(base.ingredient_user_meals) do
+      "ingredient"
+    else
+      "recipe"
+    end
+  end
+
   defp init(socket, base, default_attrs) do
     changeset = UserMeal.changeset(base, default_attrs)
-    existing = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
-    _existing_ing = Ecto.Changeset.get_assoc(changeset, :ingredient_user_meals)
+    existing_recipes = Ecto.Changeset.get_assoc(changeset, :recipe_user_meals)
+    existing_ingredients = Ecto.Changeset.get_assoc(changeset, :ingredient_user_meals)
 
+    # Only seed empty starter rows for a genuinely new meal (nothing on either
+    # side). Keying on recipes alone would wipe an ingredient-only meal's loaded
+    # ingredients when editing it.
     changeset =
-      if Enum.empty?(existing) do
+      if Enum.empty?(existing_recipes) and Enum.empty?(existing_ingredients) do
         Ecto.Changeset.put_assoc(changeset, :ingredient_user_meals, [%{}])
         |> Ecto.Changeset.put_assoc(:recipe_user_meals, [%{}])
       else
