@@ -173,6 +173,25 @@
             </div>
           </.link>
           <.link
+            patch={tab_path(assigns, "friends_ingredients")}
+            class={[
+              "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
+                get_active(@content_state, :friends_ingredients)
+            ]}
+          >
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6-4a3 3 0 11-3-3"
+                />
+              </svg>
+              <span class="hidden sm:inline">Friends' Ingredients ({length(@friends_ingredients)})</span>
+            </div>
+          </.link>
+          <.link
             patch={tab_path(assigns, "edit_profile")}
             class={[
               "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
@@ -229,6 +248,7 @@
         user_created_recipes={@user_created_recipes}
         user_saved_recipes={@user_saved_recipes}
         user_ingredients={@user_ingredients}
+        friends_ingredients={@friends_ingredients}
         live_action={@live_action}
         user_recipes={@user_recipes}
         current_user_recipes={@current_user_recipes}

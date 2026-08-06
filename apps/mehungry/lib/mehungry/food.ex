@@ -78,6 +78,7 @@ defmodule Mehungry.Food do
   defdelegate create_ingredient(attrs), to: Ingredients
   defdelegate create_user_ingredient(user, attrs), to: Ingredients
   defdelegate list_user_ingredients(user), to: Ingredients
+  defdelegate list_friends_ingredients(user), to: Ingredients
   defdelegate get_user_ingredient!(user, id), to: Ingredients
   defdelegate delete_ingredient(ingredient), to: Ingredients
   defdelegate delete_ingredients_without_nutrients(), to: Ingredients

@@ -110,5 +110,17 @@
       user_profile={@user_profile}
       current_user={@current_user}
     />
+    <%= if @current_user && @current_user.id != @user.id do %>
+      <div class="flex justify-center mt-4">
+        <button
+          type="button"
+          phx-click="add_friend"
+          phx-value-id={@user.id}
+          class="flex items-center gap-1.5 py-2 px-5 rounded-full bg-basil hover:bg-basil-soft text-ink text-sm font-bold transition-colors"
+        >
+          <.icon name="hero-user-plus" class="w-4 h-4 flex-none" /> Add Friend
+        </button>
+      </div>
+    <% end %>
   <% end %>
 </div>

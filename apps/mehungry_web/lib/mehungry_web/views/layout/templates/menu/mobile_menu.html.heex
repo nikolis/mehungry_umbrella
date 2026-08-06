@@ -1,13 +1,16 @@
 <% show_invitations =
   @current_user && !Mehungry.Subscriptions.nutritionist?(@current_user.id) &&
     Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id) > 0 %>
+<% friend_requests_count = (@current_user && Mehungry.Friends.count_pending_requests_for(@current_user.id)) || 0 %>
+<% show_friend_requests = friend_requests_count > 0 %>
+<% menu_cols = 8 + (if show_invitations, do: 1, else: 0) + (if show_friend_requests, do: 1, else: 0) %>
 <nav
   class="nav_container_mobile fixed border-t border-ink-panel2 bg-ink-panel text-parchment-dim"
   id="nav_bar_mobile"
   phx-update="ignore"
 >
   <div
-    class={"grid #{if show_invitations, do: "grid-cols-9", else: "grid-cols-8"} bg-inherit"}
+    class={"grid #{%{8 => "grid-cols-8", 9 => "grid-cols-9", 10 => "grid-cols-10"}[menu_cols]} bg-inherit"}
     style="overflow: hidden; max-height: 64px;"
   >
     <!-- Logo -->
@@ -91,6 +94,21 @@
           <.icon name="hero-bell" class="h-7 w-7" />
           <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
             {Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id)}
+          </span>
+        </div>
+      </a>
+    <% end %>
+
+    <!-- Friend requests -->
+    <%= if show_friend_requests do %>
+      <a
+        href="/friends"
+        class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
+      >
+        <div class="relative">
+          <.icon name="hero-users" class="h-7 w-7" />
+          <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
+            {friend_requests_count}
           </span>
         </div>
       </a>

@@ -33,6 +33,7 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:recipe, nil)
      |> assign(:user_recipes, [])
      |> assign(:user_ingredients, [])
+     |> assign(:friends_ingredients, [])
      |> assign(:current_user, current_user)
      |> assign(:user, nil)
      |> assign(:must_be_loged_in, nil)
@@ -47,11 +48,13 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  @profile_tabs ~w(created saved my_ingredients edit_profile connected_accounts)
+  @profile_tabs ~w(created saved my_ingredients friends_ingredients edit_profile connected_accounts)
 
   defp content_state_from_tab(tab, live_action) when tab in @profile_tabs do
     case {tab, live_action} do
-      {tab, :show} when tab in ["edit_profile", "connected_accounts", "my_ingredients"] -> :created
+      {tab, :show}
+      when tab in ["edit_profile", "connected_accounts", "my_ingredients", "friends_ingredients"] ->
+        :created
       {tab, _live_action} -> String.to_existing_atom(tab)
     end
   end
@@ -219,16 +222,19 @@ defmodule MehungryWeb.ProfileLive.Index do
            Users.list_user_created_recipes(socket.assigns.current_user)}
       end
 
-    user_ingredients =
+    {user_ingredients, friends_ingredients} =
       if is_nil(socket.assigns.current_user),
-        do: [],
-        else: Food.list_user_ingredients(socket.assigns.current_user)
+        do: {[], []},
+        else:
+          {Food.list_user_ingredients(socket.assigns.current_user),
+           Food.list_friends_ingredients(socket.assigns.current_user)}
 
     socket
     |> assign(:page_title, "Profile")
     |> assign(:user_created_recipes, user_created_recipes)
     |> assign(:user_saved_recipes, user_saved_recipes)
     |> assign(:user_ingredients, user_ingredients)
+    |> assign(:friends_ingredients, friends_ingredients)
   end
 
   @impl true
@@ -260,6 +266,21 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def tab_path(%{live_action: :show, user: user}, tab), do: ~p"/profile/#{user.id}?#{[tab: tab]}"
   def tab_path(%{live_action: :index}, tab), do: ~p"/profile?#{[tab: tab]}"
+
+  def handle_event("add_friend", %{"id" => id}, socket) do
+    requester_id = socket.assigns.current_user.id
+
+    message =
+      case Mehungry.Friends.send_friend_request(requester_id, String.to_integer(id)) do
+        {:ok, _} -> {:info, "Friend request sent."}
+        {:error, :already_friends} -> {:info, "You are already friends."}
+        {:error, :already_requested} -> {:info, "You already have a pending request to this user."}
+        {:error, :self} -> {:error, "You can't friend yourself."}
+        {:error, _} -> {:error, "Could not send friend request."}
+      end
+
+    {:noreply, put_flash(socket, elem(message, 0), elem(message, 1))}
+  end
 
   def handle_event("delete_my_ingredient", %{"id" => id}, socket) do
     # Re-fetch through the owner-scoped getter so a forged id can't delete
@@ -405,6 +426,36 @@ defmodule MehungryWeb.ProfileLive.Index do
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  def get_profile_content(%{content_state: :friends_ingredients} = assigns) do
+    ~H"""
+    <div class="pb-20 w-full max-w-3xl mx-auto px-4">
+      <h3 class="text-lg font-display font-medium text-parchment mb-4">Friends' Ingredients</h3>
+
+      <%= if @friends_ingredients == [] do %>
+        <div class="text-parchment-dim text-sm border border-ink-panel2 bg-ink-panel rounded-xl p-6 text-center">
+          None yet. Ingredients your friends create are shared with you here and
+          become available in your recipes, meal plans, and shopping basket.
+        </div>
+      <% else %>
+        <div class="space-y-3">
+          <div
+            :for={ingredient <- @friends_ingredients}
+            class="flex items-center justify-between border border-ink-panel2 bg-ink-panel rounded-xl p-4"
+          >
+            <div class="min-w-0">
+              <div class="text-parchment font-medium truncate">{ingredient.name}</div>
+              <div class="text-parchment-dim text-xs">
+                {length(ingredient.ingredient_nutrients)} nutrients · shared by {ingredient.user &&
+                  (ingredient.user.name || ingredient.user.email)}
+              </div>
             </div>
           </div>
         </div>

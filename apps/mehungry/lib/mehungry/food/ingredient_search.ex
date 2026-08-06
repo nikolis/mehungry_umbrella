@@ -156,12 +156,17 @@ defmodule Mehungry.Food.IngredientSearch do
             )
       end
 
-    # Visibility: global rows always, plus the viewer's own private rows. The
-    # ingredient is the second binding here; branch on nil (Ecto forbids `== nil`).
+    # Visibility: global rows always, plus the viewer's own private rows and
+    # those of their friends. The ingredient is the second binding here; branch
+    # on nil (Ecto forbids `== nil`).
     base =
       case owner_id do
-        nil -> from([_t, i] in base, where: is_nil(i.user_id))
-        id -> from([_t, i] in base, where: is_nil(i.user_id) or i.user_id == ^id)
+        nil ->
+          from([_t, i] in base, where: is_nil(i.user_id))
+
+        id ->
+          ids = visible_owner_ids(id)
+          from([_t, i] in base, where: is_nil(i.user_id) or i.user_id in ^ids)
       end
 
     Repo.all(base)
@@ -288,12 +293,19 @@ defmodule Mehungry.Food.IngredientSearch do
   end
 
   # Visibility filter: global rows (user_id IS NULL) are always returned; when a
-  # viewer id is given, their own private rows are included too. Branches on nil
-  # because Ecto forbids `== nil` comparisons.
+  # viewer id is given, their own private rows and their friends' are included
+  # too. Branches on nil because Ecto forbids `== nil` comparisons.
   defp filter_by_owner(query, nil), do: from(i in query, where: is_nil(i.user_id))
 
   defp filter_by_owner(query, owner_id) do
-    from(i in query, where: is_nil(i.user_id) or i.user_id == ^owner_id)
+    ids = visible_owner_ids(owner_id)
+    from(i in query, where: is_nil(i.user_id) or i.user_id in ^ids)
+  end
+
+  # The set of user ids whose private ingredients `owner_id` may see: themselves
+  # plus their friends (blanket sharing via `Mehungry.Friends`).
+  defp visible_owner_ids(owner_id) do
+    [owner_id | Mehungry.Friends.friend_ids(owner_id)]
   end
 
   # ═════════════════════════════════════════════════════════════════════════

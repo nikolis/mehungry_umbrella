@@ -170,6 +170,7 @@ defmodule MehungryWeb.Router do
 
     live_session :default, on_mount: MehungryWeb.UserAuthLive do
       live "/notifications/invitations", NutritionistLive.UserInvitations, :index
+      live "/friends", FriendsLive.Index, :index
       live "/basket", ShoppingBasketLive.Index, :index
       live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
 
