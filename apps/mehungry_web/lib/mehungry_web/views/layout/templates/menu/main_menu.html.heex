@@ -150,6 +150,25 @@
       <% end %>
     <% end %>
 
+    <!-- Friend requests badge -->
+    <%= if @current_user do %>
+      <% friend_requests_count = Mehungry.Friends.count_pending_requests_for(@current_user.id) %>
+      <a
+        href="/friends"
+        class="nav_link_basic relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors mt-1"
+      >
+        <div class="relative flex-shrink-0">
+          <.icon name="hero-users" class="h-5 w-5" />
+          <%= if friend_requests_count > 0 do %>
+            <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
+              {friend_requests_count}
+            </span>
+          <% end %>
+        </div>
+        <span class="hidden md:block text-sm font-medium">Friends</span>
+      </a>
+    <% end %>
+
     <a
       href="/upgrade"
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-paprika-soft hover:text-parchment hover:bg-paprika/20 border border-paprika/30 hover:border-paprika/60 transition-colors mt-2"

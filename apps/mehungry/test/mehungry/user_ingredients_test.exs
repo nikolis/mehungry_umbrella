@@ -109,11 +109,25 @@ defmodule Mehungry.UserIngredientsTest do
   # hides the composite/prepared "second layer" USDA categories. A user's own
   # ingredient must never be hidden by that filter, whatever category they pick.
   describe "search_ingredient_alt/3 second-layer categories" do
-    test "owner's private ingredient in a hidden category is still found" do
+    setup do
+      # Build a genuine second-layer category directly (the shared category_fixture
+      # dedups on a mis-spelled key and can't reliably create a named category).
+      # "Baked Products" is one of the titles get_second_layer_foods_ids/0 hides.
+      baked =
+        Food.get_category_by_name("Baked Products") ||
+          (
+            {:ok, c} = Food.create_category(%{name: "Baked Products", description: "x"})
+            c
+          )
+
+      %{baked: baked, mu: measurement_unit_fixture()}
+    end
+
+    test "owner's private ingredient in a hidden category is still found", %{
+      baked: baked,
+      mu: mu
+    } do
       owner = user_fixture()
-      # "Baked Products" is one of the second-layer categories excluded from search.
-      baked = category_fixture(%{name: "Baked Products"})
-      mu = measurement_unit_fixture()
 
       {:ok, private} =
         Food.create_user_ingredient(owner, %{
@@ -129,9 +143,18 @@ defmodule Mehungry.UserIngredientsTest do
       assert private.id in owner_ids
     end
 
-    test "the same category still hides global ingredients from search" do
-      baked = category_fixture(%{name: "Baked Products"})
-      global = ingredient_fixture(%{name: "Plain Zonkloaf", category_id: baked.id})
+    test "the same category still hides global ingredients from search", %{
+      baked: baked,
+      mu: mu
+    } do
+      {:ok, global} =
+        Food.create_ingredient(%{
+          name: "Plain Zonkloaf",
+          description: "shared",
+          category_id: baked.id,
+          measurement_unit_id: mu.id
+        })
+
       owner = user_fixture()
 
       owner_ids =

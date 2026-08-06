@@ -79,6 +79,27 @@ defmodule Mehungry.Food.Ingredients do
   end
 
   @doc """
+  Lists the private ingredients owned by `user`'s friends (read-only sharing),
+  newest first, with the owner (`:user`) preloaded for display alongside the
+  same nutrient/portion/translation associations as `list_user_ingredients/1`.
+  """
+  def list_friends_ingredients(%{id: user_id}) do
+    friend_ids = Mehungry.Friends.friend_ids(user_id)
+
+    from(i in Ingredient,
+      where: i.user_id in ^friend_ids,
+      order_by: [desc: i.inserted_at]
+    )
+    |> Repo.all()
+    |> Repo.preload([
+      [ingredient_nutrients: :nutrient],
+      :ingredient_portions,
+      :ingredient_translation,
+      :user
+    ])
+  end
+
+  @doc """
   Fetches one of `user`'s own ingredients by id (raises if it doesn't exist or
   isn't owned by `user`). Use for the edit/update/delete authorization boundary.
   """
