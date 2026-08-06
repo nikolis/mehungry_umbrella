@@ -1,139 +1,299 @@
 defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   use MehungryWeb, :live_component
 
-  alias MehungryWeb.CalendarLive.Calendar.Utils
   alias MehungryWeb.SvgComponents
 
   alias Mehungry.NutrientUtils, as: Nu
 
-  def get_chart(user_meals, day, _text) do
+  def get_chart(user_meals, day, current_date) do
     meals = Enum.filter(user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end)
 
     if meals == [] do
       nil
     else
       total_nutrients = Nu.summarize_meals_nutrients(meals)
-      nutrients_sorted = Mehungry.Food.RecipeUtils.sort_nutrients_from_db(total_nutrients)
 
-      meal_count = length(meals)
+      total_nutrients
+      |> summary_assigns(meals, "day-#{Date.to_string(day)}")
+      # The current day already shows these tags on its accordion header button,
+      # so drop the redundant tag row here (keeping the Nutrition Facts + charts).
+      |> Map.merge(%{
+        title: "Daily Summary",
+        subtitle: nil,
+        foldable: false,
+        show_tags: day != current_date
+      })
+      |> summary_card()
+    end
+  end
 
-      total_items =
-        Enum.sum(
-          Enum.map(meals, fn m ->
-            length(m.recipe_user_meals) + length(m.ingredient_user_meals)
-          end)
-        )
+  # Weekly summary rendered once, below the day accordions. Shows the *daily
+  # average* consumption over the week: the week's total nutrients divided by the
+  # number of days in the range, then run through the same summary card as the
+  # per-day chart. The meal/item counts stay as week totals for context.
+  def get_week_chart(user_meals, first, last) do
+    days = Date.diff(last, first) + 1
 
-      extract = fn key ->
-        case Enum.find(nutrients_sorted, fn {{label, _}, _} -> String.contains?(label, key) end) do
-          {{_, %{"amount" => a}}, _} -> a * 1.0
-          _ -> 0.0
-        end
+    meals =
+      Enum.filter(user_meals, fn x ->
+        d = NaiveDateTime.to_date(x.start_dt)
+        Date.compare(d, first) != :lt and Date.compare(d, last) != :gt
+      end)
+
+    if meals == [] do
+      nil
+    else
+      total_nutrients =
+        meals
+        |> Nu.summarize_meals_nutrients()
+        |> scale_nutrients(days)
+
+      total_nutrients
+      |> summary_assigns(meals, "week-#{Date.to_string(first)}")
+      |> Map.merge(%{
+        title: "Weekly Summary",
+        subtitle: "Daily average over #{days} days",
+        foldable: true,
+        show_tags: true
+      })
+      |> summary_card()
+    end
+  end
+
+  # Builds the shared assigns for a summary card from an already-aggregated
+  # nutrient map. `id_key` disambiguates the chart/live_component DOM ids between
+  # the daily and weekly cards.
+  defp summary_assigns(total_nutrients, meals, id_key) do
+    nutrients_sorted = Mehungry.Food.RecipeUtils.sort_nutrients_from_db(total_nutrients)
+
+    # Two separate pies: macros (grams) and micronutrients (mg/µg). They can't
+    # share one chart because the units live on different scales — a slice is
+    # only meaningful against others in the same unit. Within each pie we still
+    # convert every value to grams so the arc angles reflect real proportions.
+    macro_data = build_macro_slices(total_nutrients)
+    micro_data = build_slices(nutrients_sorted, &(not Nu.macronutrient?(&1)))
+
+    recipe = %{
+      nutrients: total_nutrients,
+      id: "overview_#{id_key}",
+      primary_size: 5
+    }
+
+    summary_metrics(total_nutrients, meals)
+    |> Map.merge(%{
+      recipe: recipe,
+      macro_data: macro_data,
+      micro_data: micro_data,
+      id_key: id_key
+    })
+  end
+
+  # Scalar badge metrics (counts + energy/macros) shared by the summary card
+  # header and each day's accordion header. `total_nutrients` is the aggregated
+  # `name => nutrient` map from `Nu.summarize_meals_nutrients/1`.
+  defp summary_metrics(total_nutrients, meals) do
+    macros = Nu.macro_totals(total_nutrients)
+    amount = fn bucket -> macros |> Map.get(bucket, %{}) |> Map.get("amount", 0) end
+
+    total_items =
+      Enum.sum(
+        Enum.map(meals, fn m ->
+          length(m.recipe_user_meals) + length(m.ingredient_user_meals)
+        end)
+      )
+
+    %{
+      meal_count: length(meals),
+      total_items: total_items,
+      energy_kcal: energy_amount(total_nutrients) |> round(),
+      protein_g: amount.(:protein) |> to_number() |> Float.round(1),
+      fat_g: amount.(:fat) |> to_number() |> Float.round(1),
+      carbs_g: amount.(:carbs) |> to_number() |> Float.round(1),
+      sugars_g: amount.(:sugars) |> to_number() |> Float.round(1),
+      fiber_g: amount.(:fiber) |> to_number() |> Float.round(1)
+    }
+  end
+
+  # Energy isn't a macro bucket, so pull it out separately by canonical name.
+  defp energy_amount(total_nutrients) do
+    case Enum.find(total_nutrients, fn {label, _} -> String.contains?(label, "Energy") end) do
+      {_label, %{"amount" => a}} when is_number(a) -> a * 1.0
+      _ -> 0.0
+    end
+  end
+
+  defp to_number(n) when is_number(n), do: n * 1.0
+  defp to_number(_), do: 0.0
+
+  # Scales every nutrient amount by `1 / divisor` (e.g. week total → daily
+  # average), preserving the map shape the summary card expects.
+  defp scale_nutrients(total_nutrients, divisor) when divisor > 0 do
+    Map.new(total_nutrients, fn
+      {label, %{"amount" => amount} = nutrient} when is_number(amount) ->
+        {label, Map.put(nutrient, "amount", amount / divisor)}
+
+      {label, nutrient} ->
+        {label, nutrient}
+    end)
+  end
+
+  # The nutrient badge row (meals · items, kcal, protein, carbs, fat) shared by
+  # the summary-card headers and each day's accordion header.
+  def summary_tags(assigns) do
+    ~H"""
+    <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@meal_count}</span>
+      meal{if @meal_count != 1, do: "s"} ·
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@total_items}</span>
+      item{if @total_items != 1, do: "s"}
+    </span>
+    <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-basil font-bold [font-variant-numeric:tabular-nums] text-xs">
+      {@energy_kcal} kcal
+    </span>
+    <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@protein_g}</span>g protein
+    </span>
+    <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fat_g}</span>g fat
+    </span>
+    <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@carbs_g}</span>g carbs
+    </span>
+    <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@sugars_g}</span>g sugars
+    </span>
+    <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fiber_g}</span>g fiber
+    </span>
+    """
+  end
+
+  # Per-day nutrient tags for the accordion header. Renders nothing when the day
+  # has no meals (the collapsed body already shows the empty state).
+  def day_header_tags(assigns) do
+    meals =
+      Enum.filter(assigns.user_meals, fn x ->
+        NaiveDateTime.to_date(x.start_dt) == assigns.day
+      end)
+
+    assigns =
+      case meals do
+        [] ->
+          assign(assigns, :metrics, nil)
+
+        _ ->
+          total_nutrients = Nu.summarize_meals_nutrients(meals)
+          assign(assigns, :metrics, summary_metrics(total_nutrients, meals))
       end
 
-      energy_kcal = extract.("Energy") |> round()
-      protein_g = extract.("Protein") |> Float.round(1)
-      carbs_g = extract.("Carbohydrates") |> Float.round(1)
-      fat_g = extract.("Total Fat") |> Float.round(1)
+    ~H"""
+    <div :if={@metrics} class="ml-auto flex flex-wrap gap-2 items-center justify-start">
+      <.summary_tags {@metrics} />
+    </div>
+    """
+  end
 
-      # Two separate pies: macros (grams) and micronutrients (mg/µg). They can't
-      # share one chart because the units live on different scales — a slice is
-      # only meaningful against others in the same unit. Within each pie we still
-      # convert every value to grams so the arc angles reflect real proportions.
-      macro_data = build_slices(nutrients_sorted, &Nu.macronutrient?/1)
-      micro_data = build_slices(nutrients_sorted, &(not Nu.macronutrient?(&1)))
-
-      recipe = %{
-        nutrients: total_nutrients,
-        id: "overview_#{Date.to_string(day)}",
-        primary_size: 5
-      }
-
-      assigns = %{
-        recipe: recipe,
-        macro_data: macro_data,
-        micro_data: micro_data,
-        day: day,
-        meal_count: meal_count,
-        total_items: total_items,
-        energy_kcal: energy_kcal,
-        protein_g: protein_g,
-        carbs_g: carbs_g,
-        fat_g: fat_g
-      }
-
-      ~H"""
-      <div class="mt-2 rounded-xl border border-ink-panel2 overflow-hidden bg-ink-panel">
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 bg-black/20 border-b border-ink-panel2">
-          <span class="font-display font-medium text-parchment text-sm">Daily Summary</span>
-          <div class="flex flex-wrap gap-2 ml-auto">
-            <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@meal_count}</span>
-              meal{if @meal_count != 1, do: "s"} ·
-              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@total_items}</span>
-              item{if @total_items !=
-                        1,
-                      do: "s"}
-            </span>
-            <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-basil font-bold [font-variant-numeric:tabular-nums] text-xs">
-              {@energy_kcal} kcal
-            </span>
-            <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@protein_g}</span>g protein
-            </span>
-            <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@carbs_g}</span>g carbs
-            </span>
-            <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fat_g}</span>g fat
-            </span>
-          </div>
+  def summary_card(assigns) do
+    ~H"""
+    <div class="mt-2 rounded-xl border border-ink-panel2 overflow-hidden bg-ink-panel">
+      <div
+        class={[
+          "flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 bg-black/20 border-b border-ink-panel2",
+          @foldable && "cursor-pointer select-none"
+        ]}
+        phx-click={
+          @foldable &&
+            Phoenix.LiveView.JS.toggle(
+              to: "#summary-body-" <> @id_key,
+              in:
+                {"transition-all duration-300 ease-out", "opacity-0 -translate-y-2",
+                 "opacity-100 translate-y-0"},
+              out:
+                {"transition-all duration-200 ease-in", "opacity-100 translate-y-0",
+                 "opacity-0 -translate-y-2"}
+            )
+            |> Phoenix.LiveView.JS.toggle_class("rotate-180", to: "#summary-chevron-" <> @id_key)
+        }
+      >
+        <div class="flex flex-col">
+          <span class="font-display font-medium text-parchment text-sm">{@title}</span>
+          <%= if @subtitle do %>
+            <span class="text-parchment-dim/70 text-xs">{@subtitle}</span>
+          <% end %>
         </div>
-        <div class="flex flex-col sm:flex-row min-h-0">
-          <div
-            class="flex-1 sm:border-r border-b sm:border-b-0 border-ink-panel2 overflow-y-auto"
-            style="max-height: 400px;"
+        <div :if={@show_tags} class="flex flex-wrap gap-2 ml-auto md:pr-8">
+          <.summary_tags
+            meal_count={@meal_count}
+            total_items={@total_items}
+            energy_kcal={@energy_kcal}
+            protein_g={@protein_g}
+            fat_g={@fat_g}
+            carbs_g={@carbs_g}
+            sugars_g={@sugars_g}
+            fiber_g={@fiber_g}
+          />
+        </div>
+              <%= if @foldable do %>
+              <div class="w-full relative">
+          <svg
+            id={"summary-chevron-" <> @id_key}
+            class="w-6 h-6 ml-2 text-parchment-dim transition-transform duration-300 ease-out flex-shrink-0 absolute right-0 bottom-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+              </div>
+        <% end %>
+      </div>
+      <div
+        id={"summary-body-" <> @id_key}
+        class={["flex flex-col sm:flex-row min-h-0", @foldable && "hidden"]}
+      >
+        <div
+          class="flex-1 sm:border-r border-b sm:border-b-0 border-ink-panel2 overflow-y-auto"
+          style="max-height: 400px;"
+        >
+          {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
+        </div>
+        <div class="flex-1 flex flex-col sm:flex-row items-stretch justify-center gap-2 p-4 sm:p-6">
+          <div class="flex-1 flex flex-col items-center">
+            <span class="font-display font-medium text-parchment-dim text-xs uppercase tracking-wide mb-1">
+              Macros
+            </span>
+            <%= if @macro_data == [] do %>
+              <p class="text-parchment-dim/70 text-xs italic my-auto">No macro data</p>
+            <% else %>
+              <.live_component
+                module={MehungryWeb.CalendarLive.Calendar.PieChart}
+                id={"macro-chart-" <> @id_key}
+                data={@macro_data}
+                origin_id={"macro-chart-" <> @id_key}
+                size="20rem"
+              />
+            <% end %>
           </div>
-          <div class="flex-1 flex flex-col sm:flex-row items-stretch justify-center gap-2 p-4 sm:p-6">
-            <div class="flex-1 flex flex-col items-center">
-              <span class="font-display font-medium text-parchment-dim text-xs uppercase tracking-wide mb-1">
-                Macros
-              </span>
-              <%= if @macro_data == [] do %>
-                <p class="text-parchment-dim/70 text-xs italic my-auto">No macro data</p>
-              <% else %>
-                <.live_component
-                  module={MehungryWeb.CalendarLive.Calendar.PieChart}
-                  id={"macro-chart" <> Date.to_string(@day)}
-                  data={@macro_data}
-                  origin_id={"macro-chart" <> Date.to_string(@day)}
-                  size="20rem"
-                />
-              <% end %>
-            </div>
-            <div class="flex-1 flex flex-col items-center">
-              <span class="font-display font-medium text-parchment-dim text-xs uppercase tracking-wide mb-1">
-                Micronutrients
-              </span>
-              <%= if @micro_data == [] do %>
-                <p class="text-parchment-dim/70 text-xs italic my-auto">No micronutrient data</p>
-              <% else %>
-                <.live_component
-                  module={MehungryWeb.CalendarLive.Calendar.PieChart}
-                  id={"micro-chart" <> Date.to_string(@day)}
-                  data={@micro_data}
-                  origin_id={"micro-chart" <> Date.to_string(@day)}
-                  size="20rem"
-                />
-              <% end %>
-            </div>
+          <div class="flex-1 flex flex-col items-center">
+            <span class="font-display font-medium text-parchment-dim text-xs uppercase tracking-wide mb-1">
+              Micronutrients
+            </span>
+            <%= if @micro_data == [] do %>
+              <p class="text-parchment-dim/70 text-xs italic my-auto">No micronutrient data</p>
+            <% else %>
+              <.live_component
+                module={MehungryWeb.CalendarLive.Calendar.PieChart}
+                id={"micro-chart-" <> @id_key}
+                data={@micro_data}
+                origin_id={"micro-chart-" <> @id_key}
+                size="20rem"
+              />
+            <% end %>
           </div>
         </div>
       </div>
-      """
-    end
+    </div>
+    """
   end
 
   @day_meals ["breakfast", "elevenses", "lunch", "after lunch", "dinner"]
@@ -219,7 +379,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     current_date =
       case assigns.particular_date do
         nil ->
-          Utils.calculate_initial_date(Date.utc_today(), assigns.device_width)
+          Date.utc_today()
 
         date ->
           {:ok, date} = Date.from_iso8601(date)
@@ -249,6 +409,54 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   end
 
   ## ------------------------------------ Utility Functions  ---------------------------------------------------------------
+
+  # Builds the macros pie from the aggregated `name => nutrient` map. Each of the
+  # five macro buckets contributes at most one slice (`Nu.macro_totals/1` already
+  # collapsed the messy USDA name variants). Carbs are shown *net* — carbs minus
+  # sugars minus fiber (both are subsets of total carbs) — so the three slices
+  # don't double-count and the arc angles add up honestly.
+  @macro_slice_labels %{
+    protein: "Protein",
+    fat: "Total Fat",
+    carbs: "Net Carbs",
+    sugars: "Total Sugars",
+    fiber: "Fiber"
+  }
+
+  defp build_macro_slices(total_nutrients) do
+    macros = Nu.macro_totals(total_nutrients)
+
+    grams =
+      Map.new(macros, fn {bucket, nutrient} ->
+        case Nu.to_grams(to_number(nutrient["amount"]), nutrient["measurement_unit"] || "") do
+          {:ok, g} -> {bucket, g}
+          :error -> {bucket, nil}
+        end
+      end)
+
+    net_subtract = (grams[:sugars] || 0.0) + (grams[:fiber] || 0.0)
+
+    Enum.flat_map([:protein, :fat, :carbs, :sugars, :fiber], fn bucket ->
+      grams_value =
+        case {bucket, grams[bucket]} do
+          {_, nil} -> nil
+          {:carbs, g} -> max(g - net_subtract, 0.0)
+          {_, g} -> g
+        end
+
+      if is_number(grams_value) and grams_value > 0 do
+        [
+          %{
+            category: @macro_slice_labels[bucket],
+            value: Float.round(grams_value, 6),
+            display: "#{Float.round(grams_value, 1)} g"
+          }
+        ]
+      else
+        []
+      end
+    end)
+  end
 
   # Builds the pie-slice list for one chart: keeps nutrients matching `keep?`,
   # drops Energy and the mixed-unit "Vitamins" umbrella, converts each remaining
@@ -296,15 +504,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     {first, last, week_rows}
   end
 
-  defp get_week_rows(current_date, _user_meals, _device_width) do
-    week_rows =
-      Date.range(current_date, current_date)
-      |> Enum.map(& &1)
-      |> Enum.chunk_every(7)
-
-    {current_date, current_date, week_rows}
-  end
-
   ## ------------------------------------ Event Handlers  ---------------------------------------------------------------
 
   @impl true
@@ -330,7 +529,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     new_date = socket.assigns.current_date |> Date.add(1)
 
     {first, last, rows} =
-      get_week_rows(new_date, socket.assigns.user_meals, 300)
+      get_full_week(new_date, socket.assigns.user_meals, 300)
 
     assigns = [
       current_date: new_date,
@@ -377,7 +576,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           class="bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden day_of_week"
           id={"dat_" <> Date.to_string(day)}
         >
-          <div class="flex items-center gap-2 px-3 py-3 sm:px-4 bg-black/20 border-b border-ink-panel2">
+          <div class="flex flex-wrap items-center gap-2 px-3 py-3 sm:px-4 bg-black/20 border-b border-ink-panel2">
             <span
               class="flex items-center gap-2 text-parchment font-semibold text-sm sm:text-base cursor-pointer hover:text-parchment-dim transition-colors"
               phx-target={@myself}
@@ -403,6 +602,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             <span class="text-parchment-dim text-xs sm:text-sm">
               {Calendar.strftime(day, "%d")} {month_short(day, assigns[:current_language] || "en")}
             </span>
+            <.day_header_tags :if={day == @current_date} user_meals={@user_meals} day={day} />
             <span
               class="ml-auto text-parchment-dim hover:text-parchment transition-colors cursor-pointer p-1"
               phx-click={
@@ -500,11 +700,15 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                     <% end %>
                   <% end %>
                 <% end %>
-                {get_chart(@user_meals, day, "text-parchment")}
+                {get_chart(@user_meals, day, @current_date)}
               </div>
             <% end %>
           </div>
         </div>
+      </div>
+
+      <div class="mt-4 mb-2">
+        {get_week_chart(@user_meals, @first, @last)}
       </div>
     </div>
     """

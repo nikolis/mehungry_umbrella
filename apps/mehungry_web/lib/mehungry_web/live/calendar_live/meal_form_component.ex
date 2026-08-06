@@ -266,10 +266,11 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   defp save_user_meal(socket, :edit, user_meal_params) do
     case History.update_user_meal(socket.assigns.user_meal, user_meal_params) do
       {:ok, _user_meal} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "User Meal updated successfully")
-         |> push_navigate(to: socket.assigns.return_to)}
+        # Notify the parent to reload meals + close the modal via push_patch,
+        # instead of push_navigate — a full remount would reset the calendar's
+        # client-side accordion (JS-toggled `copen`) state.
+        send(self(), {:meal_saved, %{return_to: socket.assigns.return_to, flash: "User Meal updated successfully"}})
+        {:noreply, socket}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -283,9 +284,9 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
 
     case History.create_user_meal(user_meals_params) do
       {:ok, _user_meal} ->
-        {:noreply,
-         socket
-         |> push_navigate(to: socket.assigns.return_to)}
+        # See :edit above — patch back rather than remount to preserve accordion state.
+        send(self(), {:meal_saved, %{return_to: socket.assigns.return_to, flash: nil}})
+        {:noreply, socket}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
