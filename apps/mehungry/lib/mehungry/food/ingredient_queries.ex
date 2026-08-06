@@ -229,17 +229,28 @@ defmodule Mehungry.Food.IngredientQueries do
   end
 
   defp exclude_secondary_categories(query, secondary_ids, owner_id) do
+    ids = visible_owner_ids(owner_id)
+
     from(i in query,
-      where: i.category_id not in ^secondary_ids or i.user_id == ^owner_id
+      where: i.category_id not in ^secondary_ids or i.user_id in ^ids
     )
   end
 
   # Visibility filter: global rows (user_id IS NULL) always; plus the viewer's
-  # own private rows when an id is given. Branches on nil (Ecto forbids `== nil`).
+  # own private rows and their friends' when an id is given. Branches on nil
+  # (Ecto forbids `== nil`).
   defp filter_by_owner(query, nil), do: from(i in query, where: is_nil(i.user_id))
 
   defp filter_by_owner(query, owner_id) do
-    from(i in query, where: is_nil(i.user_id) or i.user_id == ^owner_id)
+    ids = visible_owner_ids(owner_id)
+    from(i in query, where: is_nil(i.user_id) or i.user_id in ^ids)
+  end
+
+  # The set of user ids whose private ingredients `owner_id` may see: themselves
+  # plus their friends (blanket sharing via `Mehungry.Friends`), mirroring
+  # `Mehungry.Food.IngredientSearch`.
+  defp visible_owner_ids(owner_id) do
+    [owner_id | Mehungry.Friends.friend_ids(owner_id)]
   end
 
   def search_ingredient_alt_admin(search_term, classes \\ [], data_types \\ []) do
