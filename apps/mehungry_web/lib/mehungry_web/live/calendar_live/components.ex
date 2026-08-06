@@ -31,6 +31,7 @@ defmodule MehungryWeb.CalendarLive.Components do
       mode={@mode}
       myself={@myself}
       measurement_units={@measurement_units}
+      current_user_id={assigns.current_user_id}
       parent_component={assigns.parent_component}
       deleted={assigns.deleted}
     />

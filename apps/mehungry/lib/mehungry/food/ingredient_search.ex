@@ -61,29 +61,34 @@ defmodule Mehungry.Food.IngredientSearch do
 
   Accepts an optional `classes` list to restrict results to specific USDA
   food classes (e.g. `["Foundation", "SR Legacy"]`).
+
+  `owner_id` scopes visibility: global rows (`user_id IS NULL`) are always
+  returned, plus the caller's own private ingredients when their id is passed.
+  With `owner_id = nil` only global rows are visible, so private ingredients
+  never leak to callers that don't pass a viewer.
   """
-  def search(search_term, classes \\ []) do
+  def search(search_term, classes \\ [], owner_id \\ nil) do
     normalized = Ingredient.normalize_string(search_term)
 
     if normalized == "" do
       []
     else
-      prefix_results = run_prefix_query(normalized, search_term, classes)
+      prefix_results = run_prefix_query(normalized, search_term, classes, owner_id)
 
       if length(prefix_results) >= @prefix_sufficient do
         prefix_results
       else
         needed = @max_results - length(prefix_results)
         exclude_ids = Enum.map(prefix_results, & &1.id)
-        fuzzy_results = run_fuzzy_query(normalized, exclude_ids, needed, classes)
+        fuzzy_results = run_fuzzy_query(normalized, exclude_ids, needed, classes, owner_id)
         prefix_results ++ fuzzy_results
       end
     end
   end
 
   @doc "Returns only `%{id: id, name: name}` maps — lightweight version for select dropdowns."
-  def search_for_select(search_term, classes \\ []) do
-    search(search_term, classes)
+  def search_for_select(search_term, classes \\ [], owner_id \\ nil) do
+    search(search_term, classes, owner_id)
     |> Enum.map(fn i -> %{id: i.id, name: i.name} end)
   end
 
@@ -92,7 +97,8 @@ defmodule Mehungry.Food.IngredientSearch do
   Returns `%{id: ingredient_id, name: translated_name}` maps so the result is
   drop-in compatible with `search/1` for use in select dropdowns.
   """
-  def search_in_language(search_term, language_name) when is_binary(search_term) do
+  def search_in_language(search_term, language_name, owner_id \\ nil)
+      when is_binary(search_term) do
     normalized = String.trim(search_term)
 
     base =
@@ -150,6 +156,14 @@ defmodule Mehungry.Food.IngredientSearch do
             )
       end
 
+    # Visibility: global rows always, plus the viewer's own private rows. The
+    # ingredient is the second binding here; branch on nil (Ecto forbids `== nil`).
+    base =
+      case owner_id do
+        nil -> from([_t, i] in base, where: is_nil(i.user_id))
+        id -> from([_t, i] in base, where: is_nil(i.user_id) or i.user_id == ^id)
+      end
+
     Repo.all(base)
   end
 
@@ -160,7 +174,7 @@ defmodule Mehungry.Food.IngredientSearch do
   # Prefix search on the normalized search_name column with full ranking.
   # For multi-word terms the WHERE is broadened to include all-words-any-order
   # matches in addition to the strict phrase prefix.
-  defp run_prefix_query(normalized, original_term, classes) do
+  defp run_prefix_query(normalized, original_term, classes, owner_id) do
     search_words = String.split(normalized, " ")
 
     where_clause = build_where(normalized, search_words)
@@ -199,6 +213,7 @@ defmodule Mehungry.Food.IngredientSearch do
       ],
       limit: @max_results
     )
+    |> filter_by_owner(owner_id)
     |> maybe_filter_by_classes(classes)
     |> Repo.all()
   end
@@ -225,7 +240,7 @@ defmodule Mehungry.Food.IngredientSearch do
   # Trigram word-similarity fallback.
   # Uses the GIN trigram index on `name` (created by ingredient_gin_trgm migration)
   # to efficiently find approximate matches when the prefix search comes up short.
-  defp run_fuzzy_query(normalized, exclude_ids, limit, classes) do
+  defp run_fuzzy_query(normalized, exclude_ids, limit, classes, owner_id) do
     base =
       from i in Ingredient,
         where: not is_nil(i.search_name),
@@ -267,8 +282,18 @@ defmodule Mehungry.Food.IngredientSearch do
       end
 
     base
+    |> filter_by_owner(owner_id)
     |> maybe_filter_by_classes(classes)
     |> Repo.all()
+  end
+
+  # Visibility filter: global rows (user_id IS NULL) are always returned; when a
+  # viewer id is given, their own private rows are included too. Branches on nil
+  # because Ecto forbids `== nil` comparisons.
+  defp filter_by_owner(query, nil), do: from(i in query, where: is_nil(i.user_id))
+
+  defp filter_by_owner(query, owner_id) do
+    from(i in query, where: is_nil(i.user_id) or i.user_id == ^owner_id)
   end
 
   # ═════════════════════════════════════════════════════════════════════════

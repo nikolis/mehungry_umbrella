@@ -185,6 +185,9 @@ defmodule MehungryWeb.Router do
       live "/create_recipe", CreateRecipeLive.Index, :index
       live "/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit
 
+      live "/my_ingredients/new", MyIngredientLive.Form, :new
+      live "/my_ingredients/:id/edit", MyIngredientLive.Form, :edit
+
       live "/upgrade", UpgradeLive.Index, :index
     end
   end

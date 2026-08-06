@@ -158,6 +158,7 @@ defmodule MehungryWeb.RecipeFormComponent do
                 ingredients={@ingredients}
                 measurement_units={@measurement_units}
                 search_language={@search_language}
+                current_user_id={@current_user_id}
               />
             </.inputs_for>
             <button

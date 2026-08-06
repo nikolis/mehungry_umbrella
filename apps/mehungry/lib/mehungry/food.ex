@@ -76,6 +76,9 @@ defmodule Mehungry.Food do
   defdelegate create_ingredient_nutrient(attrs), to: Ingredients
   defdelegate get_ingredient_by_name(name), to: Ingredients
   defdelegate create_ingredient(attrs), to: Ingredients
+  defdelegate create_user_ingredient(user, attrs), to: Ingredients
+  defdelegate list_user_ingredients(user), to: Ingredients
+  defdelegate get_user_ingredient!(user, id), to: Ingredients
   defdelegate delete_ingredient(ingredient), to: Ingredients
   defdelegate delete_ingredients_without_nutrients(), to: Ingredients
   defdelegate delete_branded_ingredients(), to: Ingredients
@@ -117,12 +120,14 @@ defmodule Mehungry.Food do
   defdelegate maybe_filter_by_data_types(query, data_types), to: IngredientQueries
   defdelegate list_distinct_food_classes(), to: IngredientQueries
   defdelegate list_distinct_data_types(), to: IngredientQueries
-  defdelegate search_ingredient_search(search_term, classes \\ []), to: IngredientQueries
+  defdelegate search_ingredient_search(search_term, classes \\ [], owner_id \\ nil),
+    to: IngredientQueries
 
   defdelegate search_ingredient_alt_admin(search_term, classes \\ [], data_types \\ []),
     to: IngredientQueries
 
-  defdelegate search_ingredient_alt(search_term, classes \\ []), to: IngredientQueries
+  defdelegate search_ingredient_alt(search_term, classes \\ [], owner_id \\ nil),
+    to: IngredientQueries
 
   defdelegate search_ingredient_admin(search_term, classes \\ [], data_types \\ []),
     to: IngredientQueries

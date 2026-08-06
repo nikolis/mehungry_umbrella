@@ -194,16 +194,15 @@ defmodule Mehungry.Food.IngredientQueries do
     from(i in query, where: fragment("? IS DISTINCT FROM 'Branded'", i.food_class))
   end
 
-  def search_ingredient_search(search_term, classes \\ []) do
+  def search_ingredient_search(search_term, classes \\ [], owner_id \\ nil) do
     secondary_ids = get_second_layer_foods_ids()
 
     from(i in Ingredient,
       where:
-        i.category_id not in ^secondary_ids and
-          fragment(
-            "searchable @@ websearch_to_tsquery('english',?)",
-            ^search_term
-          ),
+        fragment(
+          "searchable @@ websearch_to_tsquery('english',?)",
+          ^search_term
+        ),
       limit: 20,
       order_by: {
         :desc,
@@ -213,7 +212,34 @@ defmodule Mehungry.Food.IngredientQueries do
         )
       }
     )
+    |> exclude_secondary_categories(secondary_ids, owner_id)
+    |> filter_by_owner(owner_id)
     |> maybe_filter_by_classes(classes)
+  end
+
+  # Hides the composite/prepared USDA "second layer" categories (Snacks,
+  # Beverages, Baked Products, …) from ingredient search — but never the
+  # viewer's own private ingredients. A user deliberately picks the category
+  # for an ingredient they created, so it must stay searchable for them
+  # regardless of which category that is.
+  defp exclude_secondary_categories(query, [], _owner_id), do: query
+
+  defp exclude_secondary_categories(query, secondary_ids, nil) do
+    from(i in query, where: i.category_id not in ^secondary_ids)
+  end
+
+  defp exclude_secondary_categories(query, secondary_ids, owner_id) do
+    from(i in query,
+      where: i.category_id not in ^secondary_ids or i.user_id == ^owner_id
+    )
+  end
+
+  # Visibility filter: global rows (user_id IS NULL) always; plus the viewer's
+  # own private rows when an id is given. Branches on nil (Ecto forbids `== nil`).
+  defp filter_by_owner(query, nil), do: from(i in query, where: is_nil(i.user_id))
+
+  defp filter_by_owner(query, owner_id) do
+    from(i in query, where: is_nil(i.user_id) or i.user_id == ^owner_id)
   end
 
   def search_ingredient_alt_admin(search_term, classes \\ [], data_types \\ []) do
@@ -224,9 +250,9 @@ defmodule Mehungry.Food.IngredientQueries do
     {query, pagenate_query(query), count_search_results(query)}
   end
 
-  def search_ingredient_alt(search_term, classes \\ []) do
+  def search_ingredient_alt(search_term, classes \\ [], owner_id \\ nil) do
     result =
-      search_ingredient_search(search_term, classes)
+      search_ingredient_search(search_term, classes, owner_id)
       |> exclude_branded()
       |> Repo.all()
 
