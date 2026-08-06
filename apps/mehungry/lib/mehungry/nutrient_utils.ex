@@ -371,6 +371,10 @@ defmodule Mehungry.NutrientUtils do
     "gr" => 1.0,
     "gram" => 1.0,
     "grams" => 1.0,
+    # "grammar" is this app's own (misspelled) name for grams in stored recipe
+    # nutrient data — the most common unit there — so it must scale as grams.
+    "grammar" => 1.0,
+    "grammars" => 1.0,
     "mg" => 0.001,
     "milligram" => 0.001,
     "milligrams" => 0.001,
@@ -418,6 +422,77 @@ defmodule Mehungry.NutrientUtils do
   end
 
   def macronutrient?(_), do: false
+
+  # The five headline macronutrients surfaced in the calendar overviews (the
+  # macros pie + the daily/weekly summary badges), in display order. Buckets are
+  # matched on the raw nutrient label — not the normalized name — because the
+  # stored nutrients arrive under many spellings (clean "Total Fat" from recipes,
+  # USDA-style "Lipids" / "Carbohydrate, By Difference" / "Fiber, Total Dietary"
+  # from ingredients). `macro_bucket/1` collapses all of those into one of these
+  # five, deliberately excluding fat/sugar subtypes so they aren't double-counted.
+  @macro_buckets [:protein, :fat, :carbs, :sugars, :fiber]
+
+  @doc """
+  Classifies a nutrient `label` into one of the five headline macronutrient
+  buckets (`:protein`, `:fat`, `:carbs`, `:sugars`, `:fiber`) or `nil`.
+
+  Matches on the raw label so both clean canonical names and messy USDA variants
+  land in the right bucket. Fat/sugar *subtypes* (Saturated/Mono/Poly Fat, fatty
+  acids, Added Sugars) are intentionally left out — the umbrella nutrient already
+  covers them, and counting both would inflate the totals.
+  """
+  def macro_bucket(label) when is_binary(label) do
+    d = label |> String.downcase() |> String.replace(~r/\s+/, " ") |> String.trim()
+
+    cond do
+      d == "" -> nil
+      String.contains?(d, "protein") -> :protein
+      String.contains?(d, "lipid") or d == "total fat" or d == "fat" -> :fat
+      String.contains?(d, "fiber") or String.contains?(d, "fibre") -> :fiber
+      String.contains?(d, "sugar") and not String.contains?(d, "added") -> :sugars
+      String.contains?(d, "carbohydrate") or d == "carbs" -> :carbs
+      true -> nil
+    end
+  end
+
+  def macro_bucket(_), do: nil
+
+  @doc """
+  Reduces a collection of `{label, nutrient_map}` pairs (or a `name => nutrient`
+  map) to a single representative nutrient per macro bucket.
+
+  When several labels fall in the same bucket (e.g. the "Carbohydrates",
+  "Carbohydrate, By Difference" and "Carbohydrate, By Summation" variants) the
+  one with the largest amount wins — that picks the umbrella total over a `0.0`
+  placeholder or a partial subtype. Returns a `%{bucket => nutrient_map}` map.
+  """
+  def macro_totals(nutrients) do
+    Enum.reduce(nutrients, %{}, fn {label, nutrient}, acc ->
+      case macro_bucket(label) do
+        nil ->
+          acc
+
+        bucket ->
+          case acc do
+            %{^bucket => current} ->
+              if macro_amount(nutrient) > macro_amount(current),
+                do: Map.put(acc, bucket, nutrient),
+                else: acc
+
+            _ ->
+              Map.put(acc, bucket, nutrient)
+          end
+      end
+    end)
+  end
+
+  @doc """
+  The macro bucket atoms in display order.
+  """
+  def macro_buckets, do: @macro_buckets
+
+  defp macro_amount(%{"amount" => a}) when is_number(a), do: a * 1.0
+  defp macro_amount(_), do: 0.0
 
   @doc """
   Your original summarize_meals_nutrients but using the enhanced merger

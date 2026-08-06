@@ -186,6 +186,20 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   @impl true
+  def handle_info({:meal_saved, %{return_to: return_to, flash: flash}}, socket) do
+    user_meals = load_and_format_user_meals(socket.assigns.user.id)
+
+    socket =
+      socket
+      |> assign(:user_meals, user_meals)
+      |> push_event("create_meals", %{meals: user_meals})
+
+    socket = if flash, do: put_flash(socket, :info, flash), else: socket
+
+    {:noreply, push_patch(socket, to: return_to, replace: true)}
+  end
+
+  @impl true
   def handle_info({:initial_modal, %{"date" => start_date, "title" => title}}, socket) do
     {:noreply, push_patch(socket, to: "/calendar/#{start_date}/#{title}", replace: true)}
   end
@@ -256,10 +270,16 @@ defmodule MehungryWeb.CalendarLive.Index do
 
     case History.delete_user_meal(user_meal) do
       {:ok, _} ->
+        # Patch back rather than push_navigate so the calendar's client-side
+        # accordion (JS-toggled `copen`) state survives the delete.
+        user_meals = load_and_format_user_meals(socket.assigns.user.id)
+
         {:noreply,
          socket
+         |> assign(:user_meals, user_meals)
+         |> push_event("create_meals", %{meals: user_meals})
          |> put_flash(:info, "User Meal Deleted")
-         |> push_navigate(to: Routes.calendar_index_path(socket, :index))}
+         |> push_patch(to: Routes.calendar_index_path(socket, :index), replace: true)}
 
       {:error, _changeset} ->
         {:noreply, socket}
