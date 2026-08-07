@@ -20,73 +20,73 @@ env:
   OTP_VERSION_SPEC: "26.0.2"
 
 jobs:
-#  test:
-#    runs-on: ubuntu-latest
-#
-#    services:
-#      db:
-#       image: pgvector/pgvector:pg14
-#      env:
-#       POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: postgres
-#          POSTGRES_DB: mehungry_server_test
-#        ports:
-#          - 5432:5432
-#        options: >-
-#          --health-cmd pg_isready
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 5
-#
-#    env:
-#      MIX_ENV: test
-#    steps:
-#      - name: Checkout repository
-#        uses: actions/checkout@v4
-#
-#      - name: Set up Elixir
-#        uses: erlef/setup-beam@v1
-#        with:
-#          elixir-version: ${{ env.ELIXIR_VERSION_SPEC }}
-#          otp-version: ${{ env.OTP_VERSION_SPEC }}
-#
-#      - name: Restore deps cache
-#        uses: actions/cache@v4
-#        with:
-#          path: deps
-#          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-#          restore-keys: ${{ runner.os }}-mix-
-#
-#      - name: Restore build cache
-#        uses: actions/cache@v4
-#        with:
-#          path: _build/test
-#          key: ${{ runner.os }}-build-test-${{ hashFiles('**/mix.lock') }}
-#          restore-keys: ${{ runner.os }}-build-test-
-#
-#      - name: Install dependencies
-#        run: mix deps.get
-#
-#      - name: Compile
-#        run: mix compile
-#
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+       image: pgvector/pgvector:pg14
+      env:
+       POSTGRES_USER: postgres
+       POSTGRES_PASSWORD: postgres
+       POSTGRES_DB: mehungry_server_test
+       ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      MIX_ENV: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION_SPEC }}
+          otp-version: ${{ env.OTP_VERSION_SPEC }}
+
+      - name: Restore deps cache
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: _build/test
+          key: ${{ runner.os }}-build-test-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-build-test-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile
+
       # Migrate the test DB up front. `mix test` boots the full `mehungry` OTP app
       # (including Oban, which refuses to start without the `oban_jobs` table), so the
       # schema must exist before ExUnit runs — we can't rely on a child app's `test`
       # alias migrating in time once other umbrella apps (e.g. mehungry_local_ai) are
       # in the recursion.
-#      - name: Set up test database
-#        run: |
-#          mix ecto.create --quiet
-#          mix ecto.migrate --quiet
-#
-#      - name: Run tests
-#        run: mix test --exclude wallaby --exclude local_data
-#        env:
-#          CI: "true"
+      - name: Set up test database
+        run: |
+          mix ecto.create --quiet
+          mix ecto.migrate --quiet
+
+      - name: Run tests
+        run: mix test --exclude wallaby --exclude local_data
+        env:
+          CI: "true"
 
   build_and_deploy:
-#    needs: [test]
+    needs: [test]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
