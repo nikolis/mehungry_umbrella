@@ -1,3 +1,31 @@
+<div class="border-solid border-black border-2 p-4 m-4">
+  <h3 class="text-center font-bold">Test Accounts (3rd-party / bot testing)</h3>
+  <p class="text-center text-sm">
+    Password (all accounts): <code>{@test_accounts_password}</code>
+  </p>
+  <div class="flex justify-center gap-4 my-3">
+    <button phx-click="seed_test_accounts" class="btn btn-primary">
+      Seed test accounts
+    </button>
+    <button
+      phx-click="reset_test_accounts"
+      data-confirm="Delete and recreate the 3 test accounts? This wipes their data."
+      class="btn btn-warning"
+    >
+      Reset test accounts
+    </button>
+  </div>
+  <div class="flex flex-col items-center gap-1">
+    <%= for acc <- @test_accounts do %>
+      <div class="text-sm">
+        <code>{acc.email}</code>
+        &mdash; {if acc.exists, do: "exists", else: "missing"},
+        {if acc.confirmed, do: "confirmed", else: "unconfirmed"}
+      </div>
+    <% end %>
+  </div>
+</div>
+
 <h3 class="text-center">Active Users</h3>
 <div class="w-full">
   <%= for record <- @active_users do %>

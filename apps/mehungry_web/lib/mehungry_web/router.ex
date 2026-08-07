@@ -230,6 +230,16 @@ defmodule MehungryWeb.Router do
     post "/stripe", StripeWebhookController, :webhook
   end
 
+  # Deterministic pre-confirmed accounts for third-party/bot integration
+  # testing. Gated inside the controller: dev/test always, other envs require a
+  # matching TEST_ACCOUNTS_TOKEN. See MehungryWeb.TestAccountsController.
+  scope "/test-accounts", MehungryWeb do
+    pipe_through :api
+    get "/", TestAccountsController, :index
+    get "/seed", TestAccountsController, :seed
+    get "/reset", TestAccountsController, :reset
+  end
+
   scope "/", MehungryWeb do
     pipe_through [:browser]
 

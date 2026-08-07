@@ -14,6 +14,11 @@ config :mehungry,
 
 config :mehungry, :admin_email, "nikolisgal@gmail.com"
 
+# Compile-time env marker for the /test-accounts routes. In dev/test the routes
+# are open; other envs additionally require a matching TEST_ACCOUNTS_TOKEN
+# (set in runtime.exs). See MehungryWeb.TestAccountsController.
+config :mehungry_web, :test_accounts_env, config_env()
+
 # Base URL + shared-secret bearer token the non-deployed mehungry_local_ai service
 # uses to reach the local-AI REST API. Overridden in runtime.exs from env vars.
 config :mehungry_local_ai, server_base_url: "http://localhost:4000"
