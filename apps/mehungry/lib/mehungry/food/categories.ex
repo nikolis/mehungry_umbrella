@@ -60,4 +60,30 @@ defmodule Mehungry.Food.Categories do
   def list_food_restriction_types() do
     Repo.all(from(a in FoodRestrictionType))
   end
+
+  # Animal-product categories excluded by each base diet, plus flag add-ons.
+  @diet_category_names %{
+    vegan: ~w(fish Poultry Dairy Pork Sausages Lamb Beef),
+    vegetarian: ~w(fish Poultry Pork Sausages Lamb Beef),
+    pescatarian: ~w(Poultry Pork Sausages Lamb Beef),
+    omnivore: []
+  }
+
+  @doc """
+  Resolves a base diet (`:omnivore | :vegetarian | :vegan | :pescatarian`) plus
+  combinable flags (currently `:lactose_intolerant`) into the **union** of the
+  ingredient-category ids a user of that diet avoids. Additive and deduped, so
+  e.g. `diet_category_ids(:vegetarian, [:lactose_intolerant])` includes Dairy.
+  """
+  def diet_category_ids(base_diet, flags \\ []) do
+    base = Map.get(@diet_category_names, base_diet, [])
+    flag_names = if :lactose_intolerant in flags, do: ["Dairy"], else: []
+
+    (base ++ flag_names)
+    |> Enum.uniq()
+    |> Enum.map(fn name -> name |> search_category() |> List.first() end)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(& &1.id)
+    |> Enum.uniq()
+  end
 end

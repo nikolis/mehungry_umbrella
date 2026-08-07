@@ -7,6 +7,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   alias Mehungry.Posts.Comment
   alias Mehungry.{Posts, Users, Food, Accounts}
   alias Mehungry.Social.Facebook
+  alias MehungryWeb.RecipeFlags
 
   embed_templates("components/*")
   @color_fill "#00A0D0"
@@ -481,24 +482,25 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       assigns.recipe.recipe_ingredients
       |> Enum.map(& &1.ingredient_id)
 
-    user_language =
+    profile =
       case assigns.current_user do
-        nil ->
-          assigns.recipe.language_name
-
-        user ->
-          profile = Accounts.get_user_profile_by_user_id(user.id)
-          (profile && profile.language_preference) || assigns.recipe.language_name
+        nil -> nil
+        user -> Accounts.get_user_profile_by_user_id(user.id)
       end
+
+    user_language = (profile && profile.language_preference) || assigns.recipe.language_name
 
     display_names =
       Food.ingredient_display_names(ingredient_ids, user_language)
+
+    recipe = RecipeFlags.enrich_one(assigns.recipe, RecipeFlags.opted_in_condition_ids(profile))
 
     server_ms = System.monotonic_time(:millisecond) - t0
 
     socket =
       socket
       |> assign(assigns)
+      |> assign(:recipe, recipe)
       |> assign(:reply, reply)
       |> assign(:user_follows, user_follows)
       |> assign(:recipe_comments, comments)

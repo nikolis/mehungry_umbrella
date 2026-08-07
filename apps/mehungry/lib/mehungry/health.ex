@@ -20,7 +20,7 @@ defmodule Mehungry.Health do
 
   alias Mehungry.Repo
 
-  alias Mehungry.Food.{Compound, FoundementalFood, SpeciesCompoundRelationship}
+  alias Mehungry.Food.{Compound, FoundementalFood, RecipeIngredient, SpeciesCompoundRelationship}
   alias Mehungry.Health.{Condition, CompoundRecommendation, ConditionIdentifier}
 
   # ── Condition registry ────────────────────────────────────────────────────
@@ -294,5 +294,59 @@ defmodule Mehungry.Health do
   defp maybe_filter_recommendation(query, recommendation) do
     value = to_string(recommendation)
     from(rec in query, where: rec.recommendation == ^value)
+  end
+
+  @doc """
+  Condition badges implicated for a set of recipes, restricted to the given
+  opted-in `condition_ids`. Walks `recipe_ingredients → ingredient →
+  foundemental_foods → species_compound_relationships → compound_recommendations
+  → conditions`, the same composition as `recommendations_for_species/1` but
+  anchored on recipes.
+
+  Returns `%{recipe_id => [%{condition, compound, recommendation, severity}]}`,
+  deduped per `{recipe_id, condition_id, compound_id, recommendation}`. Recipes
+  with no flagged compound are absent from the map. Returns `%{}` immediately
+  when either list is empty, so callers can pass a non-opted-in user's empty set
+  without hitting the database.
+  """
+  def flags_for_recipes([], _condition_ids), do: %{}
+  def flags_for_recipes(_recipe_ids, []), do: %{}
+
+  def flags_for_recipes(recipe_ids, condition_ids) do
+    from(ri in RecipeIngredient,
+      join: ff in FoundementalFood,
+      on: ff.ingredient_id == ri.ingredient_id,
+      join: scr in SpeciesCompoundRelationship,
+      on: scr.foundemental_species_id == ff.foundemental_species_id,
+      join: rec in CompoundRecommendation,
+      on: rec.compound_id == scr.compound_id,
+      join: cmp in Compound,
+      on: cmp.id == scr.compound_id,
+      join: cond in Condition,
+      on: cond.id == rec.condition_id,
+      where:
+        ri.recipe_id in ^recipe_ids and rec.condition_id in ^condition_ids and
+          scr.relationship_type != "absent",
+      order_by: [asc: cond.name, asc: cmp.name],
+      select: %{
+        recipe_id: ri.recipe_id,
+        condition: cond,
+        compound: cmp,
+        recommendation: rec.recommendation,
+        severity: rec.severity
+      }
+    )
+    |> Repo.all()
+    |> Enum.uniq_by(&{&1.recipe_id, &1.condition.id, &1.compound.id, &1.recommendation})
+    |> Enum.group_by(& &1.recipe_id, &Map.delete(&1, :recipe_id))
+  end
+
+  @doc """
+  Convenience wrapper over `flags_for_recipes/2` for a single recipe. Returns
+  the flag list (possibly empty).
+  """
+  def flags_for_recipe(recipe_id, condition_ids) do
+    flags_for_recipes([recipe_id], condition_ids)
+    |> Map.get(recipe_id, [])
   end
 end

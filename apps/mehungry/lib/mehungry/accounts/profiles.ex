@@ -7,7 +7,7 @@ defmodule Mehungry.Accounts.Profiles do
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
-  alias Mehungry.Accounts.{User, UserContent, UserFollow, UserProfile}
+  alias Mehungry.Accounts.{User, UserConditionOptIn, UserContent, UserFollow, UserProfile}
 
   def list_user_profiles do
     Repo.all(UserProfile)
@@ -68,6 +68,69 @@ defmodule Mehungry.Accounts.Profiles do
   def delete_user_profile(%UserProfile{} = user_profile) do
     Repo.delete(user_profile)
   end
+
+  @doc """
+  The condition ids a profile has opted into (for health-condition badges).
+  """
+  def list_opted_in_condition_ids(user_profile_id) do
+    from(o in UserConditionOptIn,
+      where: o.user_profile_id == ^user_profile_id,
+      select: o.condition_id
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Replaces a profile's set of opted-in conditions with `condition_ids`
+  (a list of ids, possibly as strings). Deletes rows no longer selected and
+  inserts newly selected ones in a single transaction. Returns `:ok`.
+  """
+  def set_condition_opt_ins(user_profile_id, condition_ids) do
+    desired =
+      condition_ids
+      |> List.wrap()
+      |> Enum.map(&normalize_id/1)
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+
+    current = MapSet.new(list_opted_in_condition_ids(user_profile_id))
+
+    to_add = MapSet.difference(desired, current)
+    to_remove = MapSet.difference(current, desired)
+
+    Repo.transaction(fn ->
+      if MapSet.size(to_remove) > 0 do
+        from(o in UserConditionOptIn,
+          where:
+            o.user_profile_id == ^user_profile_id and
+              o.condition_id in ^MapSet.to_list(to_remove)
+        )
+        |> Repo.delete_all()
+      end
+
+      Enum.each(to_add, fn condition_id ->
+        %UserConditionOptIn{}
+        |> UserConditionOptIn.changeset(%{
+          user_profile_id: user_profile_id,
+          condition_id: condition_id
+        })
+        |> Repo.insert!()
+      end)
+    end)
+
+    :ok
+  end
+
+  defp normalize_id(id) when is_integer(id), do: id
+
+  defp normalize_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int, _} -> int
+      :error -> nil
+    end
+  end
+
+  defp normalize_id(_), do: nil
 
   def change_user_profile(%UserProfile{} = user_profile, attrs \\ %{}) do
     UserProfile.changeset(user_profile, attrs)

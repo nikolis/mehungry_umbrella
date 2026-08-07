@@ -5,7 +5,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
   alias Mehungry.NutrientUtils, as: Nu
 
-  def get_chart(user_meals, day, current_date) do
+  def get_chart(user_meals, day, current_date, calorie_target \\ nil) do
     meals = Enum.filter(user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end)
 
     if meals == [] do
@@ -14,7 +14,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       total_nutrients = Nu.summarize_meals_nutrients(meals)
 
       total_nutrients
-      |> summary_assigns(meals, "day-#{Date.to_string(day)}")
+      |> summary_assigns(meals, "day-#{Date.to_string(day)}", calorie_target)
       # The current day already shows these tags on its accordion header button,
       # so drop the redundant tag row here (keeping the Nutrition Facts + charts).
       |> Map.merge(%{
@@ -31,7 +31,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   # average* consumption over the week: the week's total nutrients divided by the
   # number of days in the range, then run through the same summary card as the
   # per-day chart. The meal/item counts stay as week totals for context.
-  def get_week_chart(user_meals, first, last) do
+  def get_week_chart(user_meals, first, last, calorie_target \\ nil) do
     days = Date.diff(last, first) + 1
 
     meals =
@@ -49,7 +49,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         |> scale_nutrients(days)
 
       total_nutrients
-      |> summary_assigns(meals, "week-#{Date.to_string(first)}")
+      |> summary_assigns(meals, "week-#{Date.to_string(first)}", calorie_target)
       |> Map.merge(%{
         title: "Weekly Summary",
         subtitle: "Daily average over #{days} days",
@@ -63,7 +63,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   # Builds the shared assigns for a summary card from an already-aggregated
   # nutrient map. `id_key` disambiguates the chart/live_component DOM ids between
   # the daily and weekly cards.
-  defp summary_assigns(total_nutrients, meals, id_key) do
+  defp summary_assigns(total_nutrients, meals, id_key, calorie_target \\ nil) do
     nutrients_sorted = Mehungry.Food.RecipeUtils.sort_nutrients_from_db(total_nutrients)
 
     # Two separate pies: macros (grams) and micronutrients (mg/µg). They can't
@@ -79,7 +79,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       primary_size: 5
     }
 
-    summary_metrics(total_nutrients, meals)
+    summary_metrics(total_nutrients, meals, calorie_target)
     |> Map.merge(%{
       recipe: recipe,
       macro_data: macro_data,
@@ -91,7 +91,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   # Scalar badge metrics (counts + energy/macros) shared by the summary card
   # header and each day's accordion header. `total_nutrients` is the aggregated
   # `name => nutrient` map from `Nu.summarize_meals_nutrients/1`.
-  defp summary_metrics(total_nutrients, meals) do
+  defp summary_metrics(total_nutrients, meals, calorie_target \\ nil) do
     macros = Nu.macro_totals(total_nutrients)
     amount = fn bucket -> macros |> Map.get(bucket, %{}) |> Map.get("amount", 0) end
 
@@ -106,6 +106,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       meal_count: length(meals),
       total_items: total_items,
       energy_kcal: energy_amount(total_nutrients) |> round(),
+      calorie_target: calorie_target,
       protein_g: amount.(:protein) |> to_number() |> Float.round(1),
       fat_g: amount.(:fat) |> to_number() |> Float.round(1),
       carbs_g: amount.(:carbs) |> to_number() |> Float.round(1),
@@ -124,6 +125,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
   defp to_number(n) when is_number(n), do: n * 1.0
   defp to_number(_), do: 0.0
+
+  # Colour the actual kcal relative to the target: paprika when over, basil when
+  # at/under. A 5% grace band keeps small overages from reading as "over".
+  defp target_kcal_class(actual, target) when is_number(actual) and is_number(target) do
+    if actual > target * 1.05, do: "text-paprika", else: "text-basil"
+  end
+
+  defp target_kcal_class(_actual, _target), do: "text-basil"
 
   # Scales every nutrient amount by `1 / divisor` (e.g. week total → daily
   # average), preserving the map shape the summary card expects.
@@ -147,8 +156,13 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@total_items}</span>
       item{if @total_items != 1, do: "s"}
     </span>
-    <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-basil font-bold [font-variant-numeric:tabular-nums] text-xs">
-      {@energy_kcal} kcal
+    <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 font-bold [font-variant-numeric:tabular-nums] text-xs">
+      <%= if @calorie_target do %>
+        <span class={target_kcal_class(@energy_kcal, @calorie_target)}>{@energy_kcal}</span>
+        <span class="text-parchment-dim">/ {@calorie_target} kcal</span>
+      <% else %>
+        <span class="text-basil">{@energy_kcal} kcal</span>
+      <% end %>
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
       <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@protein_g}</span>g protein
@@ -171,6 +185,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   # Per-day nutrient tags for the accordion header. Renders nothing when the day
   # has no meals (the collapsed body already shows the empty state).
   def day_header_tags(assigns) do
+    assigns = assign_new(assigns, :calorie_target, fn -> nil end)
+
     meals =
       Enum.filter(assigns.user_meals, fn x ->
         NaiveDateTime.to_date(x.start_dt) == assigns.day
@@ -183,7 +199,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
         _ ->
           total_nutrients = Nu.summarize_meals_nutrients(meals)
-          assign(assigns, :metrics, summary_metrics(total_nutrients, meals))
+
+          assign(
+            assigns,
+            :metrics,
+            summary_metrics(total_nutrients, meals, assigns.calorie_target)
+          )
       end
 
     ~H"""
@@ -389,6 +410,16 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     {first, last, rows} = get_full_week(current_date, assigns.user_meals, 1500)
     language = Map.get(assigns, :current_language, "en")
 
+    calorie_target =
+      case Map.get(assigns, :user) do
+        nil ->
+          nil
+
+        user ->
+          profile = Mehungry.Accounts.get_user_profile_by_user_id(user.id)
+          profile && profile.daily_calorie_target
+      end
+
     assigns = [
       current_date: current_date,
       selected_date: nil,
@@ -400,7 +431,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       calendar_view: assigns.calendar_view,
       day_meals: @day_meals,
       device_width: assigns.device_width,
-      current_language: language
+      current_language: language,
+      calorie_target: calorie_target
     ]
 
     {:ok,
@@ -602,7 +634,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             <span class="text-parchment-dim text-xs sm:text-sm">
               {Calendar.strftime(day, "%d")} {month_short(day, assigns[:current_language] || "en")}
             </span>
-            <.day_header_tags :if={day == @current_date} user_meals={@user_meals} day={day} />
+            <.day_header_tags
+              :if={day == @current_date}
+              user_meals={@user_meals}
+              day={day}
+              calorie_target={@calorie_target}
+            />
             <span
               class="ml-auto text-parchment-dim hover:text-parchment transition-colors cursor-pointer p-1"
               phx-click={
@@ -700,7 +737,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                     <% end %>
                   <% end %>
                 <% end %>
-                {get_chart(@user_meals, day, @current_date)}
+                {get_chart(@user_meals, day, @current_date, @calorie_target)}
               </div>
             <% end %>
           </div>
@@ -708,7 +745,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       </div>
 
       <div class="mt-4 mb-2">
-        {get_week_chart(@user_meals, @first, @last)}
+        {get_week_chart(@user_meals, @first, @last, @calorie_target)}
       </div>
     </div>
     """

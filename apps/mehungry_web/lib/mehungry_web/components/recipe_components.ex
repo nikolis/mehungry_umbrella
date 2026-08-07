@@ -164,16 +164,23 @@ defmodule MehungryWeb.RecipeComponents do
         %{recipe: _recipe, nutrients: _nutrients, primary_size: _primary_size} = assigns
       ) do
     ~H"""
-    <div class="" style="height: 280px;">
-      <.render_tabs
-        id="live_comp_tabs_rec"
-        contents={MehungryWeb.RecipeDetailsTabsConfig}
-        current_user={@current_user}
-        recipe={@recipe}
-        nutrients={@nutrients}
-        primary_size={@primary_size}
-        ingredient_display_names={Map.get(assigns, :ingredient_display_names, %{})}
+    <div class="">
+      <.condition_flag_badges
+        flags={recipe_condition_flags(@recipe)}
+        limit={nil}
+        class="px-4 mb-2"
       />
+      <div style="height: 280px;">
+        <.render_tabs
+          id="live_comp_tabs_rec"
+          contents={MehungryWeb.RecipeDetailsTabsConfig}
+          current_user={@current_user}
+          recipe={@recipe}
+          nutrients={@nutrients}
+          primary_size={@primary_size}
+          ingredient_display_names={Map.get(assigns, :ingredient_display_names, %{})}
+        />
+      </div>
     </div>
     """
   end
@@ -331,6 +338,58 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
+  @doc """
+  A compact row of health-condition badges for a recipe. `flags` is the list
+  returned by `Mehungry.Health.flags_for_recipe/2`
+  (`%{condition, compound, recommendation, severity}`). Renders nothing when
+  empty, so non-opted-in users are unaffected. `limit` caps how many chips show
+  before a "+N" overflow (use `nil` on the detail view to show them all).
+  """
+  attr :flags, :list, default: []
+  attr :limit, :any, default: 3
+  attr :class, :string, default: ""
+
+  def condition_flag_badges(%{flags: []} = assigns), do: ~H""
+
+  def condition_flag_badges(assigns) do
+    shown = if assigns.limit, do: Enum.take(assigns.flags, assigns.limit), else: assigns.flags
+    overflow = length(assigns.flags) - length(shown)
+    assigns = assign(assigns, shown: shown, overflow: overflow)
+
+    ~H"""
+    <div class={["flex flex-wrap gap-1", @class]}>
+      <span
+        :for={flag <- @shown}
+        class={[
+          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border",
+          recommendation_badge_class(flag.recommendation)
+        ]}
+        title={"#{flag.compound.name} — #{flag.recommendation} for #{flag.condition.name}"}
+      >
+        <.icon name="hero-exclamation-triangle-mini" class="w-3 h-3" />
+        {flag.compound.name} · {flag.recommendation} ({flag.condition.name})
+      </span>
+      <span
+        :if={@overflow > 0}
+        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border border-ink-panel2 text-parchment-dim"
+      >
+        +{@overflow}
+      </span>
+    </div>
+    """
+  end
+
+  defp recommendation_badge_class(recommendation) when recommendation in ["encourage", "monitor"],
+    do: "bg-basil/15 border-basil/40 text-basil"
+
+  defp recommendation_badge_class(_recommendation),
+    do: "bg-paprika/15 border-paprika/40 text-paprika"
+
+  # Safely reads the recipe's virtual :condition_flags (populated by
+  # MehungryWeb.RecipeFlags); tolerates plain maps / missing field.
+  defp recipe_condition_flags(%{condition_flags: flags}) when is_list(flags), do: flags
+  defp recipe_condition_flags(_recipe), do: []
+
   def recipe_card(assigns) do
     ~H"""
     <div id={"recipe-card-details-container-#{@id}-#{@recipe.id}"} class="py-2 relative">
@@ -374,6 +433,8 @@ defmodule MehungryWeb.RecipeComponents do
             <p class="text-parchment-dim text-sm mt-1 line-clamp-2">
               {@recipe.description || "No description available"}
             </p>
+
+            <.condition_flag_badges flags={recipe_condition_flags(@recipe)} class="mt-2" />
 
             <!-- Recipe Stats -->
             <div class="flex items-center justify-between mt-4 pt-3 border-t border-ink-panel2">

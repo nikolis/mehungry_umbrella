@@ -5,6 +5,7 @@ defmodule MehungryWeb.ProfileLive.Index do
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
 
   alias MehungryWeb.RecipeComponents
+  alias MehungryWeb.RecipeFlags
 
   alias Mehungry.Accounts
   alias Mehungry.Users
@@ -24,7 +25,7 @@ defmodule MehungryWeb.ProfileLive.Index do
       end
 
     {current_user_profile, current_user_follows, current_user_recipes} =
-      Accounts.get_user_essentials(socket.assigns[:current_user])
+      Accounts.get_user_essentials(current_user)
 
     current_user_follows = Enum.map(current_user_follows, fn x -> x.follow_id end)
 
@@ -78,18 +79,6 @@ defmodule MehungryWeb.ProfileLive.Index do
     categories = Food.list_categories()
     category_ids = Enum.map(categories, fn x -> x.id end)
     food_restrictions = Food.list_food_restriction_types()
-    # Foul chnage asap
-    if(food_restrictions == []) do
-      {:ok, _} =
-        Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolutely not"})
-
-      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Not a fun"})
-      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Neutral"})
-      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Fun"})
-      {:ok, _} = Mehungry.Repo.insert(%Mehungry.Food.FoodRestrictionType{title: "Absolute fun"})
-    end
-
-    food_restrictions = Food.list_food_restriction_types()
     food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
 
     changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
@@ -123,7 +112,6 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:user_saved_recipes, user_saved_recipes)
     |> assign(:user_profile, user_profile)
     |> assign(:user_recipes, user_recipes)
-    |> assign(:user_follows, [])
     |> assign(:content_state, content_state_from_tab(params["tab"], :show))
   end
 
@@ -212,14 +200,23 @@ defmodule MehungryWeb.ProfileLive.Index do
       |> assign(:form, to_form(changeset))
       |> assign(:id, "form-#{System.unique_integer()}")
 
+    condition_ids = RecipeFlags.opted_in_condition_ids(socket.assigns.current_user_profile)
+
     {user_saved_recipes, user_created_recipes} =
       case is_nil(socket.assigns.current_user) do
         true ->
           {[], []}
 
         false ->
-          {Users.list_user_saved_recipes(socket.assigns.current_user),
-           Users.list_user_created_recipes(socket.assigns.current_user)}
+          saved = Users.list_user_saved_recipes(socket.assigns.current_user)
+          created = Users.list_user_created_recipes(socket.assigns.current_user)
+
+          saved =
+            Enum.map(saved, fn ur ->
+              %{ur | recipe: RecipeFlags.enrich_one(ur.recipe, condition_ids)}
+            end)
+
+          {saved, RecipeFlags.enrich(created, condition_ids)}
       end
 
     {user_ingredients, friends_ingredients} =
@@ -239,11 +236,12 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   @impl true
   def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
-    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
+    current_user_profile =
+      Accounts.get_user_profile_by_user_id(socket.assigns.current_user.id)
 
     {:noreply,
      socket
-     |> assign(:user_profile, user_profile)}
+     |> assign(:current_user_profile, current_user_profile)}
   end
 
   def handle_info(

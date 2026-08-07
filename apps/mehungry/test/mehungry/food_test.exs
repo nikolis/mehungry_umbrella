@@ -128,4 +128,36 @@ defmodule Mehungry.FoodTest do
       assert {:ok, %UserMeal{} = _user_meal} = History.create_user_meal(user_meal_params)
     end
   end
+
+  # Property-based: these hold against whatever categories the DB carries (the
+  # test DB is seeded with the real category catalogue), without pinning ids.
+  describe "diet_category_ids/2" do
+    test "omnivore excludes nothing" do
+      assert Food.diet_category_ids(:omnivore) == []
+    end
+
+    test "vegan is a superset of vegetarian (vegan additionally excludes dairy)" do
+      veg = MapSet.new(Food.diet_category_ids(:vegetarian))
+      vegan = MapSet.new(Food.diet_category_ids(:vegan))
+      assert MapSet.subset?(veg, vegan)
+    end
+
+    test "the lactose flag is additive and deduped: vegetarian + lactose == vegan" do
+      veg_lactose = Food.diet_category_ids(:vegetarian, [:lactose_intolerant])
+      vegan = Food.diet_category_ids(:vegan)
+
+      # vegan = vegetarian ∪ {dairy}, so adding the lactose (dairy) flag to the
+      # vegetarian set yields exactly the vegan set — and stays deduped.
+      assert Enum.sort(veg_lactose) == Enum.sort(vegan)
+      assert veg_lactose == Enum.uniq(veg_lactose)
+    end
+
+    test "lactose flag alone yields at most the single dairy category, within the vegan set" do
+      lactose = Food.diet_category_ids(:omnivore, [:lactose_intolerant])
+      vegan = MapSet.new(Food.diet_category_ids(:vegan))
+
+      assert length(lactose) <= 1
+      assert MapSet.subset?(MapSet.new(lactose), vegan)
+    end
+  end
 end
