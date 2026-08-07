@@ -25,12 +25,12 @@ jobs:
 
     services:
       db:
-       image: pgvector/pgvector:pg14
-      env:
-       POSTGRES_USER: postgres
-       POSTGRES_PASSWORD: postgres
-       POSTGRES_DB: mehungry_server_test
-       ports:
+        image: pgvector/pgvector:pg14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mehungry_server_test
+        ports:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
@@ -40,6 +40,7 @@ jobs:
 
     env:
       MIX_ENV: test
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
