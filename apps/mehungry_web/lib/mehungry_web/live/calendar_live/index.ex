@@ -11,6 +11,7 @@ defmodule MehungryWeb.CalendarLive.Index do
   alias Mehungry.Professionals
   alias Mehungry.Repo
   alias Mehungry.Food
+  alias MehungryWeb.RecipeFlags
 
   # https://gist.github.com/cblavier/0e227de6fd1dfa00814b88642cdcb2a9
   # def render(assigns) do
@@ -20,6 +21,12 @@ defmodule MehungryWeb.CalendarLive.Index do
   @impl true
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
+
+    condition_ids =
+      user.id
+      |> Accounts.get_user_profile_by_user_id()
+      |> RecipeFlags.opted_in_condition_ids()
+
     user_meals = load_and_format_user_meals(user.id)
     recipes = list_recipes(user)
     socket = assign_device_kind(socket)
@@ -29,6 +36,7 @@ defmodule MehungryWeb.CalendarLive.Index do
       :ok,
       socket
       |> assign(:user, user)
+      |> assign(:condition_ids, condition_ids)
       |> assign(:child_ids, [])
       |> assign(:calendar_view, "week_view")
       |> assign(:particular_date, nil)

@@ -20,6 +20,12 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     change_basket = Mehungry.Inventory.BasketItem.changeset(%BasketItem{}, %{})
 
     user = Accounts.get_user_by_session_token(session["user_token"])
+
+    condition_ids =
+      user.id
+      |> Accounts.get_user_profile_by_user_id()
+      |> MehungryWeb.RecipeFlags.opted_in_condition_ids()
+
     shopping_baskets = Inventory.list_shopping_baskets_for_user(user.id)
     shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
     shopping_basket = List.first(shopping_baskets)
@@ -29,6 +35,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
     {:ok,
      socket
      |> assign(:user, user)
+     |> assign(:condition_ids, condition_ids)
      |> assign(change_basket: change_basket)
      |> assign(:shopping_basket, shopping_basket)
      |> assign(:page_title, "Ingredient shopping basket")

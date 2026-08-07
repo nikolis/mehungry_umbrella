@@ -24,6 +24,11 @@ defmodule MehungryWeb.SelectComponentDeep do
           <div class="bg-ink border border-ink-panel2 rounded-lg text-parchment px-3 py-2 min-h-10 flex justify-between items-center h-full transition-colors hover:border-basil/40">
             <span class="font-semibold text-sm truncate pr-2">
               <.display_label label={@selected_item.label} />
+              <MehungryWeb.RecipeComponents.condition_flag_badges
+                flags={Map.get(@selected_item, :flags, [])}
+                limit={2}
+                class="mt-1"
+              />
             </span>
             <button
               phx-click="clear_selection"
@@ -91,6 +96,11 @@ defmodule MehungryWeb.SelectComponentDeep do
                       class="cursor-pointer hover:bg-ink-panel2 p-2 rounded-lg transition-colors"
                     >
                       <.display_label label={item.label} />
+                      <MehungryWeb.RecipeComponents.condition_flag_badges
+                        flags={Map.get(item, :flags, [])}
+                        limit={2}
+                        class="mt-1"
+                      />
                     </li>
                   <% end %>
                 </ul>
@@ -146,8 +156,13 @@ defmodule MehungryWeb.SelectComponentDeep do
     selected_item =
       if current_id do
         case assigns.get_by_id_func.(current_id) do
-          nil -> nil
-          item -> %{label: assigns.label_function.(item), id: item.id}
+          nil ->
+            nil
+
+          item ->
+            [%{label: assigns.label_function.(item), id: item.id}]
+            |> then(&attach_flags(socket, &1))
+            |> List.first()
         end
       else
         nil
@@ -228,9 +243,26 @@ defmodule MehungryWeb.SelectComponentDeep do
   end
 
   defp load_items(socket, search_term) do
-    socket.assigns.item_function.(search_term)
-    |> Enum.map(fn item ->
-      %{label: socket.assigns.label_function.(item), id: item.id}
-    end)
+    items =
+      socket.assigns.item_function.(search_term)
+      |> Enum.map(fn item ->
+        %{label: socket.assigns.label_function.(item), id: item.id}
+      end)
+
+    attach_flags(socket, items)
+  end
+
+  # When a `flags_function` (`fn ids -> %{id => flags} end`) is provided, batch-load
+  # health-condition flags for every result and stamp each item's `:flags`. No-ops
+  # (leaves items untouched) for non-ingredient call sites that omit the function.
+  defp attach_flags(socket, items) do
+    case Map.get(socket.assigns, :flags_function) do
+      nil ->
+        items
+
+      flags_function when is_function(flags_function, 1) ->
+        flags_by_id = flags_function.(Enum.map(items, & &1.id))
+        Enum.map(items, fn item -> Map.put(item, :flags, Map.get(flags_by_id, item.id, [])) end)
+    end
   end
 end

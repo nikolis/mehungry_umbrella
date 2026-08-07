@@ -349,4 +349,55 @@ defmodule Mehungry.Health do
     flags_for_recipes([recipe_id], condition_ids)
     |> Map.get(recipe_id, [])
   end
+
+  @doc """
+  Condition badges implicated for a set of **ingredients**, restricted to the
+  given opted-in `condition_ids`. The ingredient-anchored sibling of
+  `flags_for_recipes/2`: walks `ingredient → foundemental_foods →
+  species_compound_relationships → compound_recommendations → conditions`.
+
+  Returns `%{ingredient_id => [%{condition, compound, recommendation, severity}]}`,
+  deduped per `{ingredient_id, condition_id, compound_id, recommendation}`.
+  Ingredients with no flagged compound are absent from the map. Returns `%{}`
+  immediately when either list is empty, so callers can pass a non-opted-in
+  user's empty set without hitting the database.
+  """
+  def flags_for_ingredients([], _condition_ids), do: %{}
+  def flags_for_ingredients(_ingredient_ids, []), do: %{}
+
+  def flags_for_ingredients(ingredient_ids, condition_ids) do
+    from(ff in FoundementalFood,
+      join: scr in SpeciesCompoundRelationship,
+      on: scr.foundemental_species_id == ff.foundemental_species_id,
+      join: rec in CompoundRecommendation,
+      on: rec.compound_id == scr.compound_id,
+      join: cmp in Compound,
+      on: cmp.id == scr.compound_id,
+      join: cond in Condition,
+      on: cond.id == rec.condition_id,
+      where:
+        ff.ingredient_id in ^ingredient_ids and rec.condition_id in ^condition_ids and
+          scr.relationship_type != "absent",
+      order_by: [asc: cond.name, asc: cmp.name],
+      select: %{
+        ingredient_id: ff.ingredient_id,
+        condition: cond,
+        compound: cmp,
+        recommendation: rec.recommendation,
+        severity: rec.severity
+      }
+    )
+    |> Repo.all()
+    |> Enum.uniq_by(&{&1.ingredient_id, &1.condition.id, &1.compound.id, &1.recommendation})
+    |> Enum.group_by(& &1.ingredient_id, &Map.delete(&1, :ingredient_id))
+  end
+
+  @doc """
+  Convenience wrapper over `flags_for_ingredients/2` for a single ingredient.
+  Returns the flag list (possibly empty).
+  """
+  def flags_for_ingredient(ingredient_id, condition_ids) do
+    flags_for_ingredients([ingredient_id], condition_ids)
+    |> Map.get(ingredient_id, [])
+  end
 end

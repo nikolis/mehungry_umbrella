@@ -334,6 +334,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               nutrients={@recipe.nutrients}
               primary_size={@recipe.primary_nutrients_size}
               ingredient_display_names={@ingredient_display_names}
+              ingredient_flags={@ingredient_flags}
             />
           </div>
           <%= if @interactions != [] do %>
@@ -493,7 +494,10 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     display_names =
       Food.ingredient_display_names(ingredient_ids, user_language)
 
-    recipe = RecipeFlags.enrich_one(assigns.recipe, RecipeFlags.opted_in_condition_ids(profile))
+    condition_ids = RecipeFlags.opted_in_condition_ids(profile)
+    ingredient_flags = RecipeFlags.flags_for_ingredient_ids(ingredient_ids, condition_ids)
+
+    recipe = RecipeFlags.enrich_one(assigns.recipe, condition_ids)
 
     server_ms = System.monotonic_time(:millisecond) - t0
 
@@ -505,6 +509,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign(:user_follows, user_follows)
       |> assign(:recipe_comments, comments)
       |> assign(:ingredient_display_names, display_names)
+      |> assign(:ingredient_flags, ingredient_flags)
       |> assign(:interactions, interactions)
       |> assign(:server_ms, server_ms)
       |> assign(

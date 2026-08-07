@@ -44,4 +44,14 @@ defmodule MehungryWeb.RecipeFlags do
   def enrich_one(recipe, condition_ids) do
     %{recipe | condition_flags: Health.flags_for_recipe(recipe.id, condition_ids)}
   end
+
+  @doc """
+  Condition badges keyed by ingredient id, for the viewer's opted-in
+  `condition_ids`. Delegates to `Health.flags_for_ingredients/2`; returns `%{}`
+  cheaply for a non-opted-in user (empty `condition_ids`), so any ingredient
+  surface (search dropdown, calendar entry, recipe ingredient list) can look up
+  `Map.get(flags, ingredient_id, [])` and render `condition_flag_badges`.
+  """
+  def flags_for_ingredient_ids(ingredient_ids, condition_ids),
+    do: Health.flags_for_ingredients(ingredient_ids, condition_ids)
 end

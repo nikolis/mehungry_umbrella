@@ -247,6 +247,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             meal_count={@meal_count}
             total_items={@total_items}
             energy_kcal={@energy_kcal}
+            calorie_target={@calorie_target}
             protein_g={@protein_g}
             fat_g={@fat_g}
             carbs_g={@carbs_g}
@@ -384,6 +385,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             selected_date={@selected_date}
             myself={@myself}
             current_language={@current_language}
+            calorie_target={@calorie_target}
           />
         </div>
         """

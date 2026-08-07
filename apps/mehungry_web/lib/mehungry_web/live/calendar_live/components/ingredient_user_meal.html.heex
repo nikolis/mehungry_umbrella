@@ -15,6 +15,9 @@
           module={MehungryWeb.SelectComponentDeep}
           form={@f}
           item_function={fn term -> Mehungry.Food.search_ingredient_alt(term, [], @current_user_id) end}
+          flags_function={
+            fn ids -> MehungryWeb.RecipeFlags.flags_for_ingredient_ids(ids, @condition_ids) end
+          }
           get_by_id_func={&Mehungry.Food.get_ingredient!/1}
           input_variable="ingredient_id"
           label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
