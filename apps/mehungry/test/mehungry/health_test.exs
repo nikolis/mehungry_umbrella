@@ -2,6 +2,7 @@ defmodule Mehungry.HealthTest do
   use Mehungry.DataCase
 
   import Mehungry.FoodFixtures
+  import Mehungry.AccountsFixtures
 
   alias Mehungry.Food
   alias Mehungry.Health
@@ -216,5 +217,82 @@ defmodule Mehungry.HealthTest do
       assert [] == Health.ingredients_for_condition(cond.id, :avoid)
       assert [%{ingredient: %{name: "liver"}}] = Health.ingredients_for_condition(cond.id)
     end
+  end
+
+  describe "flags_for_recipes/2 — recipe badges" do
+    test "flags a recipe whose ingredient carries a compound recommended for an opted-in condition" do
+      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones", category: "renal"})
+      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, oxalate.id, %{
+          recommendation: "avoid",
+          severity: "high",
+          source: "guideline"
+        })
+
+      spinach = ingredient_fixture(%{name: "spinach"})
+      species_fact(spinach, "Spinach", "Spinacia oleracea", oxalate)
+
+      recipe = recipe_with_ingredient(spinach)
+
+      flags = Health.flags_for_recipes([recipe.id], [kidney.id])
+      assert [flag] = Map.fetch!(flags, recipe.id)
+      assert flag.condition.id == kidney.id
+      assert flag.compound.name == "Oxalate"
+      assert flag.recommendation == "avoid"
+      assert flag.severity == "high"
+
+      # Single-recipe convenience wrapper.
+      assert [%{compound: %{name: "Oxalate"}}] = Health.flags_for_recipe(recipe.id, [kidney.id])
+    end
+
+    test "returns %{} when the user has opted into no conditions, and skips unrelated conditions" do
+      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones", category: "renal"})
+      {:ok, gout} = Health.upsert_condition(%{name: "Gout"})
+      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, oxalate.id, %{
+          recommendation: "avoid",
+          source: "guideline"
+        })
+
+      spinach = ingredient_fixture(%{name: "spinach"})
+      species_fact(spinach, "Spinach", "Spinacia oleracea", oxalate)
+      recipe = recipe_with_ingredient(spinach)
+
+      # No opted-in conditions → no DB hit, empty map.
+      assert Health.flags_for_recipes([recipe.id], []) == %{}
+      # Opted into an unrelated condition → recipe not flagged.
+      assert Health.flags_for_recipes([recipe.id], [gout.id]) == %{}
+    end
+  end
+
+  # A recipe using `ingredient` (recipe_fixture builds its own ingredient, so we
+  # create one directly to control the ingredient→species→compound chain).
+  defp recipe_with_ingredient(ingredient) do
+    user = user_fixture()
+    mu = measurement_unit_fixture()
+
+    {:ok, recipe} =
+      Food.create_recipe(%{
+        title: "flagged recipe",
+        user_id: user.id,
+        author: "author",
+        cousine: "cuisine",
+        description: "desc",
+        servings: 2,
+        language_name: "En",
+        difficulty: 1,
+        image_url: "https://example.com/i.jpg",
+        cooking_time_lower_limit: 5,
+        preperation_time_lower_limit: 5,
+        recipe_ingredients: [
+          %{ingredient_id: ingredient.id, measurement_unit_id: mu.id, quantity: 5}
+        ]
+      })
+
+    recipe
   end
 end

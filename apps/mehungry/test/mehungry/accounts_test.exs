@@ -615,6 +615,56 @@ defmodule Mehungry.AccountsTest do
     end
   end
 
+  describe "daily_calorie_target on user profile" do
+    test "persists a valid target and rejects out-of-range values" do
+      user = user_fixture()
+      {:ok, profile} = Accounts.create_user_profile(%{user_id: user.id})
+
+      assert {:ok, updated} =
+               Accounts.update_user_profile(profile, %{daily_calorie_target: 2000})
+
+      assert updated.daily_calorie_target == 2000
+
+      assert {:error, changeset} =
+               Accounts.update_user_profile(profile, %{daily_calorie_target: 0})
+
+      assert %{daily_calorie_target: [_ | _]} = errors_on(changeset)
+    end
+  end
+
+  describe "condition opt-ins" do
+    setup do
+      user = user_fixture()
+      {:ok, profile} = Accounts.create_user_profile(%{user_id: user.id})
+      {:ok, c1} = Mehungry.Health.upsert_condition(%{name: "Kidney Stones"})
+      {:ok, c2} = Mehungry.Health.upsert_condition(%{name: "Gout"})
+      %{profile: profile, c1: c1, c2: c2}
+    end
+
+    test "set replaces the set; list reads it back", %{profile: profile, c1: c1, c2: c2} do
+      assert Accounts.list_opted_in_condition_ids(profile.id) == []
+
+      :ok = Accounts.set_condition_opt_ins(profile.id, [c1.id, c2.id])
+      assert Enum.sort(Accounts.list_opted_in_condition_ids(profile.id)) == Enum.sort([c1.id, c2.id])
+
+      # Replacing with a subset removes the dropped one; idempotent on re-set.
+      :ok = Accounts.set_condition_opt_ins(profile.id, [c1.id])
+      assert Accounts.list_opted_in_condition_ids(profile.id) == [c1.id]
+
+      :ok = Accounts.set_condition_opt_ins(profile.id, [c1.id])
+      assert Accounts.list_opted_in_condition_ids(profile.id) == [c1.id]
+
+      # Clearing removes everything.
+      :ok = Accounts.set_condition_opt_ins(profile.id, [])
+      assert Accounts.list_opted_in_condition_ids(profile.id) == []
+    end
+
+    test "accepts string ids (as they arrive from the form)", %{profile: profile, c1: c1} do
+      :ok = Accounts.set_condition_opt_ins(profile.id, [to_string(c1.id)])
+      assert Accounts.list_opted_in_condition_ids(profile.id) == [c1.id]
+    end
+  end
+
   """
   describe "user_category_rules" do
     alias Mehungry.Accounts.UserCategoryRule

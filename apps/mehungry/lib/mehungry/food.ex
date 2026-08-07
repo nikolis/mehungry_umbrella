@@ -184,6 +184,7 @@ defmodule Mehungry.Food do
   defdelegate list_categories(), to: Categories
   defdelegate search_category(term), to: Categories
   defdelegate list_food_restriction_types(), to: Categories
+  defdelegate diet_category_ids(base_diet, flags \\ []), to: Categories
 
   # ── Localization ───────────────────────────────────────────────────────
 

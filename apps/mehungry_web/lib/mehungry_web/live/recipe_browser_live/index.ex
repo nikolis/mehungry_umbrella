@@ -11,6 +11,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   alias Mehungry.Users
   alias Mehungry.Posts
   alias MehungryWeb.RecipeComponents
+  alias MehungryWeb.RecipeFlags
   alias MehungryWeb.ImageProcessing
 
   @impl true
@@ -80,11 +81,12 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   ######################################################################## MESSAGES ############################################################################# 
   @impl true
   def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
-    user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.current_user.id)
+    current_user_profile =
+      Accounts.get_user_profile_by_user_id(socket.assigns.current_user.id)
 
     {:noreply,
      socket
-     |> assign(:user_profile, user_profile)}
+     |> assign(:current_user_profile, current_user_profile)}
   end
 
   ######################################################################## EVENTS #################################################################################
@@ -112,7 +114,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       end
 
     language = get_user_language(socket)
-    {:noreply, stream(socket, :recipes, list_recipes(language))}
+    {:noreply, stream_recipes(socket, list_recipes(language))}
   end
 
   @impl true
@@ -160,7 +162,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      socket
      |> assign(:cursor_after, cursor_after)
      |> assign(:page, socket.assigns.page + 1)
-     |> stream(:recipes, recipes)}
+     |> stream_recipes(recipes)}
   end
 
   @impl true
@@ -231,7 +233,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
         {:noreply,
          socket
-         |> stream(:recipes, recipes, reset: true)
+         |> stream_recipes(recipes, reset: true)
          |> assign(:changeset, changeset)}
     end
   end
@@ -296,7 +298,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:query_string, query_str)
     |> assign(:query, query)
     |> assign(:search_changeset, nil)
-    |> stream(:recipes, recipes, reset: true)
+    |> stream_recipes(recipes, reset: true)
     |> assign(
       :not_empty,
       if length(recipes) > 0 do
@@ -444,7 +446,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:primary_size, recipe.primary_nutrients_size)
     |> assign(:recipe, recipe)
     |> assign(:query_string, "")
-    |> stream(:recipes, recipes)
+    |> stream_recipes(recipes)
     |> assign(:cursor_after, cursor_after)
     |> assign(:page_title, recipe.title)
     |> assign(:page_seo_data, %{
@@ -459,6 +461,13 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   def assign_recipe_search(socket) do
     socket
     |> assign(:recipe_search_item, %RecipeSearchItem{})
+  end
+
+  # Streams recipes into the :recipes stream, first stamping health-condition
+  # badges for the viewing user's opted-in conditions (no-op when none).
+  defp stream_recipes(socket, recipes, opts \\ []) do
+    condition_ids = RecipeFlags.opted_in_condition_ids(socket.assigns[:current_user_profile])
+    stream(socket, :recipes, RecipeFlags.enrich(recipes, condition_ids), opts)
   end
 
   def assign_changeset(%{assigns: %{recipe_search_item: recipe_search_item}} = socket) do
