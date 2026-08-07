@@ -26,7 +26,7 @@ jobs:
     services:
       db:
        image: pgvector/pgvector:pg14
-    env:
+      env:
        POSTGRES_USER: postgres
        POSTGRES_PASSWORD: postgres
        POSTGRES_DB: mehungry_server_test
