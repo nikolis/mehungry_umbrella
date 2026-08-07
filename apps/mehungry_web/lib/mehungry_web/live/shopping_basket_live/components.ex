@@ -124,6 +124,23 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
   end
 
   def render_basket_items(assigns) do
+    # Health-condition badges for basket ingredients. `flags_for_ingredient_ids/2`
+    # short-circuits to `%{}` for a non-opted-in user (empty condition_ids), so
+    # this is a no-op query-free path for them. Custom `basket_items` have no
+    # `ingredient_id` and simply resolve to `[]`.
+    ingredient_ids =
+      assigns.shopping_basket.basket_ingredients
+      |> Enum.map(&Map.get(&1, :ingredient_id))
+      |> Enum.reject(&is_nil/1)
+
+    ingredient_flags =
+      MehungryWeb.RecipeFlags.flags_for_ingredient_ids(
+        ingredient_ids,
+        Map.get(assigns, :condition_ids, [])
+      )
+
+    assigns = assign(assigns, :ingredient_flags, ingredient_flags)
+
     ~H"""
     <!-- Main Content - Items -->
     <div class="flex-1">
@@ -244,6 +261,11 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                     if(item.in_storage, do: "line-through text-parchment-dim")
                   ]}>
                     {ingredient_name(item, @current_language)}
+                    <MehungryWeb.RecipeComponents.condition_flag_badges
+                      flags={Map.get(@ingredient_flags, Map.get(item, :ingredient_id), [])}
+                      limit={2}
+                      class="mt-1"
+                    />
                   </div>
                   <div class="text-xs text-parchment-dim mt-0.5">
                     <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">

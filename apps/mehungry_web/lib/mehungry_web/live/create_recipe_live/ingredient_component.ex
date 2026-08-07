@@ -75,10 +75,24 @@ defmodule MehungryWeb.IngredientComponent do
         }
       end
 
+    condition_ids = ingredient_condition_ids(owner_id)
+    flags_fn = fn ids -> MehungryWeb.RecipeFlags.flags_for_ingredient_ids(ids, condition_ids) end
+
     socket
     |> assign(:ingredient_item_fn, item_fn)
     |> assign(:ingredient_label_fn, label_fn)
     |> assign(:ingredient_get_by_id_fn, get_by_id_fn)
+    |> assign(:ingredient_flags_fn, flags_fn)
+  end
+
+  # The viewer's opted-in health-condition ids, for ingredient badges. `[]` when
+  # logged-out or not opted-in, so the picker renders no badges.
+  defp ingredient_condition_ids(nil), do: []
+
+  defp ingredient_condition_ids(user_id) do
+    user_id
+    |> Mehungry.Accounts.get_user_profile_by_user_id()
+    |> MehungryWeb.RecipeFlags.opted_in_condition_ids()
   end
 
   @impl true
@@ -94,6 +108,7 @@ defmodule MehungryWeb.IngredientComponent do
               module={MehungryWeb.SelectComponentDeep}
               form={@ingredient_form}
               item_function={@ingredient_item_fn}
+              flags_function={@ingredient_flags_fn}
               get_by_id_func={@ingredient_get_by_id_fn}
               input_variable="ingredient_id"
               label_function={@ingredient_label_fn}

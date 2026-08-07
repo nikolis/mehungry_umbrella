@@ -179,6 +179,7 @@ defmodule MehungryWeb.RecipeComponents do
           nutrients={@nutrients}
           primary_size={@primary_size}
           ingredient_display_names={Map.get(assigns, :ingredient_display_names, %{})}
+          ingredient_flags={Map.get(assigns, :ingredient_flags, %{})}
         />
       </div>
     </div>
@@ -190,6 +191,7 @@ defmodule MehungryWeb.RecipeComponents do
     <div class=" my-4 ">
       <div class="px-4">
         <div class="bg-ink-panel border border-ink-panel2 divide-y custom-scrollbar divide-ink-panel2 overflow-auto max-h-72">
+          <% ingredient_flags = Map.get(assigns, :ingredient_flags, %{}) %>
           <%= for ingredient <- @recipe_ingredients do %>
             <% display_names = Map.get(assigns, :ingredient_display_names, %{}) %>
             <% name =
@@ -198,6 +200,11 @@ defmodule MehungryWeb.RecipeComponents do
             <div class="flex justify-between items-center p-4 hover:bg-black/20 transition">
               <span class="text-parchment">
                 {name}
+                <.condition_flag_badges
+                  flags={Map.get(ingredient_flags, ingredient.ingredient_id, [])}
+                  limit={2}
+                  class="mt-1"
+                />
               </span>
               <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
                 {ingredient.quantity} {ingredient.measurement_unit.name}
