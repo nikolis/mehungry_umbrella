@@ -38,6 +38,12 @@ end
 config :mehungry_local_ai,
   server_base_url: System.get_env("LOCAL_AI_SERVER_URL", "http://localhost:4000")
 
+# Optional shared secret that unlocks the /test-accounts routes outside of
+# dev/test. When unset, those routes 404 in staging/prod.
+if token = System.get_env("TEST_ACCOUNTS_TOKEN") do
+  config :mehungry_web, :test_accounts_token, token
+end
+
 # Pinterest environment switch: PINTEREST_ENV=live hits the real API,
 # anything else (including unset) stays on the sandbox. Sandbox and live
 # tokens are not interchangeable — accounts must be reconnected after
