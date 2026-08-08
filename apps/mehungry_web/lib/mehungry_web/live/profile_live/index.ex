@@ -66,8 +66,10 @@ defmodule MehungryWeb.ProfileLive.Index do
     if is_nil(socket.assigns[:current_user]) do
       push_navigate(socket, to: "/users/log_in")
     else
-      do_apply_action_index(socket)
-      |> assign(:content_state, content_state_from_tab(params["tab"], :index))
+      content_state = content_state_from_tab(params["tab"], :index)
+
+      do_apply_action_index(socket, content_state)
+      |> assign(:content_state, content_state)
     end
   end
 
@@ -181,7 +183,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:id, "form-#{System.unique_integer()}")
   end
 
-  defp do_apply_action_index(socket) do
+  defp do_apply_action_index(socket, content_state) do
     categories = Food.list_categories()
     category_ids = Enum.map(categories, fn x -> x.id end)
     food_restrictions = Food.list_food_restriction_types()
@@ -201,30 +203,32 @@ defmodule MehungryWeb.ProfileLive.Index do
       |> assign(:id, "form-#{System.unique_integer()}")
 
     condition_ids = RecipeFlags.opted_in_condition_ids(socket.assigns.current_user_profile)
+    current_user = socket.assigns.current_user
 
+    # Only the active tab's recipe list is rendered, so load just that one. The
+    # other assign stays [] and is filled in when the user switches tabs.
     {user_saved_recipes, user_created_recipes} =
-      case is_nil(socket.assigns.current_user) do
-        true ->
-          {[], []}
-
-        false ->
-          saved = Users.list_user_saved_recipes(socket.assigns.current_user)
-          created = Users.list_user_created_recipes(socket.assigns.current_user)
-
-          saved =
-            Enum.map(saved, fn ur ->
-              %{ur | recipe: RecipeFlags.enrich_one(ur.recipe, condition_ids)}
-            end)
-
-          {saved, RecipeFlags.enrich(created, condition_ids)}
+      case {content_state, is_nil(current_user)} do
+        {_content_state, true} -> {[], []}
+        {:created, false} -> {[], load_created_recipes(current_user, condition_ids)}
+        {:saved, false} -> {load_saved_recipes(current_user, condition_ids), []}
+        {_content_state, false} -> {[], []}
       end
 
+    # Ingredient lists are only rendered by the two ingredient tabs — skip the
+    # queries entirely on the default created/saved tabs. mount/3 seeds both to
+    # [], so the non-active tab's assign stays empty here.
     {user_ingredients, friends_ingredients} =
-      if is_nil(socket.assigns.current_user),
-        do: {[], []},
-        else:
-          {Food.list_user_ingredients(socket.assigns.current_user),
-           Food.list_friends_ingredients(socket.assigns.current_user)}
+      case content_state do
+        :my_ingredients ->
+          {Food.list_user_ingredients(socket.assigns.current_user), []}
+
+        :friends_ingredients ->
+          {[], Food.list_friends_ingredients(socket.assigns.current_user)}
+
+        _ ->
+          {[], []}
+      end
 
     socket
     |> assign(:page_title, "Profile")
@@ -232,6 +236,28 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:user_saved_recipes, user_saved_recipes)
     |> assign(:user_ingredients, user_ingredients)
     |> assign(:friends_ingredients, friends_ingredients)
+  end
+
+  defp load_created_recipes(user, condition_ids) do
+    user
+    |> Users.list_user_created_recipes()
+    |> RecipeFlags.enrich(condition_ids)
+  end
+
+  defp load_saved_recipes(user, condition_ids) do
+    saved = Users.list_user_saved_recipes(user)
+
+    # Batch-enrich the saved recipes in one query instead of calling enrich_one
+    # per UserRecipe (which fired a flags_for_recipe query each).
+    enriched_by_id =
+      saved
+      |> Enum.map(& &1.recipe)
+      |> RecipeFlags.enrich(condition_ids)
+      |> Map.new(fn recipe -> {recipe.id, recipe} end)
+
+    Enum.map(saved, fn ur ->
+      %{ur | recipe: Map.get(enriched_by_id, ur.recipe.id, ur.recipe)}
+    end)
   end
 
   @impl true

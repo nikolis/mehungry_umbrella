@@ -35,10 +35,6 @@ defmodule MehungryWeb.HomeLive.Index do
 
     current_user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
-    Enum.each(all_posts, fn post ->
-      Posts.subscribe_to_post(%{post_id: post.id})
-    end)
-
     recipe_counts_by_user =
       all_posts
       |> Enum.map(& &1.user_id)
@@ -46,6 +42,12 @@ defmodule MehungryWeb.HomeLive.Index do
       |> Food.count_recipes_created_by_user_ids()
 
     first_page = Enum.take(all_posts, @per_page)
+
+    # Subscribe only to the posts actually rendered (the first page). Further
+    # pages subscribe as they are streamed in on "load-more". This keeps live
+    # vote updates for what the user can see without opening one PubSub
+    # subscription per post in the candidate window.
+    subscribe_to_posts(first_page)
 
     {:ok,
      socket
@@ -69,6 +71,9 @@ defmodule MehungryWeb.HomeLive.Index do
     next_page = page + 1
     new_page_items = Enum.slice(all_posts, page * @per_page, @per_page)
     total_displayed = min(next_page * @per_page, length(all_posts))
+
+    # Subscribe to the newly revealed posts so their vote counts stay live too.
+    subscribe_to_posts(new_page_items)
 
     {:noreply,
      socket
@@ -134,6 +139,10 @@ defmodule MehungryWeb.HomeLive.Index do
   defp get_user_language(socket) do
     profile = Map.get(socket.assigns, :user_profile)
     profile && profile.language_preference
+  end
+
+  defp subscribe_to_posts(posts) do
+    Enum.each(posts, fn post -> Posts.subscribe_to_post(%{post_id: post.id}) end)
   end
 
   defp apply_action(socket, :share_social_media, %{"id" => id, "social_media" => social_media}) do
