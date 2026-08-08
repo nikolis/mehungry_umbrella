@@ -5,12 +5,51 @@ defmodule MehungryWeb.BrowserLiveTest do
 
   import Mehungry.{FoodFixtures, AccountsFixtures}
   import Phoenix.LiveViewTest
-  alias Mehungry.{Accounts, Users}
+  alias Mehungry.{Accounts, Food, Health, Users}
 
   defp complete_onboarding(user) do
     profile = Accounts.get_user_profile_by_user_id(user.id)
     {:ok, _} = Accounts.update_user_profile(profile, %{onboarding_level: 1})
     :ok
+  end
+
+  # Wires a condition → encourage → compound advice row down to a recipe through
+  # the ingredient → species → compound chain, returning {condition, recipe}.
+  defp seed_encouraged_recipe(user) do
+    {:ok, kidney} = Health.create_condition(%{name: "Kidney Stones", category: "renal"})
+    {:ok, citrate} = Food.upsert_compound(%{name: "Citrate", compound_type: "other"})
+
+    {:ok, _} =
+      Health.add_recommendation(kidney.id, citrate.id, %{
+        recommendation: "encourage",
+        source: "guideline"
+      })
+
+    lemon = ingredient_fixture(%{name: "lemon_xyz"})
+
+    {:ok, species} =
+      Food.create_foundemental_species(%{"name" => "Lemon", "scientific_name" => "Citrus limon"})
+
+    {:ok, _} = Food.assign_foundemental_ingredient(species.id, lemon.id, "lemon_xyz")
+
+    {:ok, _} =
+      Food.upsert_species_relationship(%{
+        foundemental_species_id: species.id,
+        compound_id: citrate.id,
+        relationship_type: "high_in",
+        source: "literature",
+        confidence: 0.9
+      })
+
+    mu = measurement_unit_fixture()
+
+    good =
+      recipe_fixture(user, %{
+        title: "Lemon Citrate Bowl",
+        recipe_ingredients: [%{ingredient_id: lemon.id, measurement_unit_id: mu.id, quantity: 1}]
+      })
+
+    {kidney, good}
   end
 
   # ──────────────────────────────────────────────────────────────────────────
@@ -282,6 +321,109 @@ defmodule MehungryWeb.BrowserLiveTest do
 
       {:ok, _view, html} = live(conn, ~p"/search/Spinach Quiche Special")
       assert html =~ recipe.title
+    end
+  end
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Extended search settings — filter by health condition
+  # ──────────────────────────────────────────────────────────────────────────
+
+  describe "condition filter" do
+    setup [:register_and_log_in_user]
+
+    test "toggling the settings button expands the panel", %{conn: conn, user: user} do
+      complete_onboarding(user)
+      {kidney, _good} = seed_encouraged_recipe(user)
+
+      {:ok, view, _html} = live(conn, ~p"/browse")
+      html = render_hook(view, "toggle_search_settings", %{})
+
+      assert html =~ "Filter by health condition"
+      assert html =~ kidney.name
+      # Panel is expanded (open-state classes present).
+      assert html =~ "opacity-100"
+    end
+
+    test "the query underlying the filter returns only encouraged recipes", %{
+      conn: _conn,
+      user: user
+    } do
+      {kidney, good} = seed_encouraged_recipe(user)
+      bad = recipe_fixture(user, %{title: "Unrelated Beef Stew"})
+
+      query_ids =
+        [kidney.id]
+        |> Health.recipes_for_conditions_query()
+        |> Mehungry.Repo.all()
+        |> Enum.map(& &1.id)
+
+      assert good.id in query_ids
+      refute bad.id in query_ids
+    end
+
+    test "applying a matching condition keeps the encouraged recipe", %{conn: conn, user: user} do
+      complete_onboarding(user)
+      {kidney, good} = seed_encouraged_recipe(user)
+
+      {:ok, view, _html} = live(conn, ~p"/browse")
+
+      render_hook(view, "toggle_condition", %{"id" => to_string(kidney.id)})
+      render_hook(view, "apply_condition_filter", %{})
+
+      assert view |> element("#recipes_container") |> render() =~ good.title
+    end
+
+    test "applying a condition with no matching recipes empties the list", %{
+      conn: conn,
+      user: user
+    } do
+      complete_onboarding(user)
+      # Encouraged recipe exists, but we filter by a *different* condition whose
+      # encouraged compound is present in no recipe → the list should go empty.
+      {_kidney, good} = seed_encouraged_recipe(user)
+
+      {:ok, diabetes} = Health.create_condition(%{name: "Diabetes", category: "endocrine"})
+      {:ok, fiber} = Food.upsert_compound(%{name: "Fiber", compound_type: "other"})
+
+      {:ok, _} =
+        Health.add_recommendation(diabetes.id, fiber.id, %{
+          recommendation: "encourage",
+          source: "guideline"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/browse")
+      assert render(view) =~ good.title
+
+      render_hook(view, "toggle_condition", %{"id" => to_string(diabetes.id)})
+      html = render_hook(view, "apply_condition_filter", %{})
+
+      assert html =~ "We were not able to find a recipe"
+      refute html =~ good.title
+    end
+
+    test "clearing the filter restores the full list", %{conn: conn, user: user} do
+      complete_onboarding(user)
+      good = recipe_fixture(user, %{title: "Restored Recipe"})
+
+      {:ok, diabetes} = Health.create_condition(%{name: "Diabetes", category: "endocrine"})
+      {:ok, fiber} = Food.upsert_compound(%{name: "Fiber", compound_type: "other"})
+
+      {:ok, _} =
+        Health.add_recommendation(diabetes.id, fiber.id, %{
+          recommendation: "encourage",
+          source: "guideline"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/browse")
+
+      # Filter to a no-match condition → empty list.
+      render_hook(view, "toggle_condition", %{"id" => to_string(diabetes.id)})
+      html = render_hook(view, "apply_condition_filter", %{})
+      assert html =~ "We were not able to find a recipe"
+
+      # Clearing brings the recipes back.
+      html = render_hook(view, "clear_conditions", %{})
+      assert html =~ good.title
     end
   end
 

@@ -292,7 +292,8 @@ defmodule Mehungry.HealthTest do
       assert flag.severity == "high"
 
       # Single-ingredient convenience wrapper.
-      assert [%{compound: %{name: "Oxalate"}}] = Health.flags_for_ingredient(spinach.id, [kidney.id])
+      assert [%{compound: %{name: "Oxalate"}}] =
+               Health.flags_for_ingredient(spinach.id, [kidney.id])
     end
 
     test "returns %{} for no opted-in conditions, and skips unrelated conditions" do
@@ -315,6 +316,74 @@ defmodule Mehungry.HealthTest do
       assert Health.flags_for_ingredients([spinach.id], [gout.id]) == %{}
       # Empty ingredient list → empty map.
       assert Health.flags_for_ingredients([], [kidney.id]) == %{}
+    end
+  end
+
+  describe "recipes_for_conditions_query/1 — recipes good for a condition" do
+    test "returns recipes carrying an 'encourage' compound, excluding 'avoid'-only ones" do
+      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones", category: "renal"})
+      {:ok, citrate} = Food.upsert_compound(%{name: "Citrate", compound_type: "other"})
+      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+
+      # Same condition: encourage citrate, avoid oxalate.
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, citrate.id, %{
+          recommendation: "encourage",
+          source: "guideline"
+        })
+
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, oxalate.id, %{
+          recommendation: "avoid",
+          source: "guideline"
+        })
+
+      lemon = ingredient_fixture(%{name: "lemon"})
+      species_fact(lemon, "Lemon", "Citrus limon", citrate)
+      good = recipe_with_ingredient(lemon)
+
+      spinach = ingredient_fixture(%{name: "spinach"})
+      species_fact(spinach, "Spinach", "Spinacia oleracea", oxalate)
+      bad = recipe_with_ingredient(spinach)
+
+      ids =
+        [kidney.id]
+        |> Health.recipes_for_conditions_query()
+        |> Mehungry.Repo.all()
+        |> Enum.map(& &1.id)
+
+      assert good.id in ids
+      refute bad.id in ids
+    end
+
+    test "a condition with only 'avoid' advice matches no recipes" do
+      {:ok, gout} = Health.upsert_condition(%{name: "Gout"})
+      {:ok, purine} = Food.upsert_compound(%{name: "Purine", compound_type: "purine"})
+
+      {:ok, _} =
+        Health.add_recommendation(gout.id, purine.id, %{
+          recommendation: "avoid",
+          source: "guideline"
+        })
+
+      liver = ingredient_fixture(%{name: "liver"})
+      species_fact(liver, "Cattle", "Bos taurus", purine)
+      _recipe = recipe_with_ingredient(liver)
+
+      assert [] == Health.recipes_for_conditions_query([gout.id]) |> Mehungry.Repo.all()
+    end
+
+    test "empty condition list falls back to all image-bearing recipes" do
+      lemon = ingredient_fixture(%{name: "lemon"})
+      recipe = recipe_with_ingredient(lemon)
+
+      ids =
+        []
+        |> Health.recipes_for_conditions_query()
+        |> Mehungry.Repo.all()
+        |> Enum.map(& &1.id)
+
+      assert recipe.id in ids
     end
   end
 

@@ -31,12 +31,26 @@
           value: @query_string || ""
         )}
         <button
+          type="button"
+          phx-click="toggle_search_settings"
+          aria-label="Filter by health condition"
+          title="Filter by health condition"
+          class="absolute right-14 md:right-3 top-1/2 -translate-y-1/2 text-parchment-dim hover:text-paprika transition"
+        >
+          <.icon name="hero-adjustments-horizontal" class="h-6 w-6" />
+          <span
+            :if={assigns[:filter_active]}
+            class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-paprika"
+          >
+          </span>
+        </button>
+        <button
           type="submit"
-          class="absolute right-2 top-0 bottom-0 sm:right-4 m-auto md:hidden"
+          class="absolute right-0 top-0 bottom-0 sm:right-4 m-auto md:hidden"
         >
           <.icon
             name="hero-arrow-right-circle"
-            class="h-9 w-9 flex-none text-paprika cursor-pointer mr-4"
+            class="h-7 w-7 flex-none text-paprika cursor-pointer mr-4"
           />
         </button>
       </div>
