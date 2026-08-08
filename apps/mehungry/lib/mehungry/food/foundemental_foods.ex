@@ -114,6 +114,17 @@ defmodule Mehungry.Food.FoundementalFoods do
 
   def get_species!(id), do: Repo.get!(FoundementalFoodSpecies, id)
 
+  @doc """
+  Fetches a species by id with its ingredients preloaded. Mirrors the preload
+  `get_species_by_slug/1` uses, so callers holding only an id can reach the
+  species' curated ingredients (e.g. for nutrition + sample-recipe lookups).
+  """
+  def get_species_with_ingredients!(id) do
+    FoundementalFoodSpecies
+    |> Repo.get!(id)
+    |> Repo.preload(foundemental_foods: :ingredient)
+  end
+
   def change_species(%FoundementalFoodSpecies{} = species, attrs \\ %{}) do
     FoundementalFoodSpecies.changeset(species, attrs)
   end

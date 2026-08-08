@@ -286,6 +286,7 @@ defmodule MehungryWeb.Router do
 
       live "/conditions", HealthLive.Index, :index
       live "/conditions/:id", ConditionDetailLive.Index, :index
+      live "/conditions/:id/food/:species_id", ConditionDetailLive.Index, :show_food
 
       live "/feedback", FeedbackLive, :index
     end
