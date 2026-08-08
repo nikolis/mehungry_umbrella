@@ -101,5 +101,130 @@ defmodule MehungryWeb.HealthLiveTest do
       assert {:error, {:live_redirect, %{to: "/conditions"}}} =
                live(conn, ~p"/conditions/#{0}")
     end
+
+    test "encouraged foods are split out and open a preview modal", %{
+      conn: conn,
+      condition: condition
+    } do
+      # Encourage layer: Folate is encouraged for the condition, and Kale contains it.
+      {:ok, folate} = Food.upsert_compound(%{name: "Folate", compound_type: "other"})
+
+      {:ok, _} =
+        Health.add_recommendation(condition.id, folate.id, %{
+          recommendation: "encourage",
+          severity: "low",
+          evidence_level: "moderate",
+          source: "guideline"
+        })
+
+      kale = ingredient_fixture(%{name: "kale"})
+
+      {:ok, kale_species} =
+        Food.create_foundemental_species(%{
+          "name" => "Kale",
+          "scientific_name" => "Brassica oleracea"
+        })
+
+      {:ok, _} = Food.assign_foundemental_ingredient(kale_species.id, kale.id, "kale")
+
+      {:ok, _} =
+        Food.upsert_species_relationship(%{
+          foundemental_species_id: kale_species.id,
+          compound_id: folate.id,
+          relationship_type: "contains",
+          source: "literature"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/conditions/#{condition.id}")
+      html = render_async(view)
+
+      # Kale surfaces under its own "Encouraged Foods" section (not "Mindful Of").
+      assert html =~ "Encouraged Foods"
+      assert html =~ "Kale"
+
+      # The Details link patches to :show_food and opens the preview modal.
+      html =
+        view
+        |> element(~s{a[href="/conditions/#{condition.id}/food/#{kale_species.id}"]})
+        |> render_click()
+
+      assert html =~ "encouraged-food-modal"
+      assert html =~ "Brassica oleracea"
+      assert html =~ "View full food page"
+      assert html =~ "/foods/Kale"
+
+      # Drain the modal's assign_async tasks before the test tears down its
+      # sandbox connection (otherwise the still-running query races teardown).
+      render_async(view)
+    end
+  end
+
+  describe "detail page (logged in)" do
+    setup [:register_and_log_in_user, :seed_condition]
+
+    test "a sample recipe can be saved for later from the modal", %{
+      conn: conn,
+      condition: condition,
+      user: user
+    } do
+      # Encouraged food (Kale) plus a recipe that uses it, so a sample recipe shows.
+      {:ok, folate} = Food.upsert_compound(%{name: "Folate", compound_type: "other"})
+
+      {:ok, _} =
+        Health.add_recommendation(condition.id, folate.id, %{
+          recommendation: "encourage",
+          severity: "low",
+          evidence_level: "moderate",
+          source: "guideline"
+        })
+
+      kale = ingredient_fixture(%{name: "kale"})
+
+      {:ok, kale_species} =
+        Food.create_foundemental_species(%{"name" => "Kale", "scientific_name" => "Brassica"})
+
+      {:ok, _} = Food.assign_foundemental_ingredient(kale_species.id, kale.id, "kale")
+
+      {:ok, _} =
+        Food.upsert_species_relationship(%{
+          foundemental_species_id: kale_species.id,
+          compound_id: folate.id,
+          relationship_type: "contains",
+          source: "literature"
+        })
+
+      mu = measurement_unit_fixture()
+
+      # A recipe by someone else (savable) and one the user authored (not savable).
+      other_user = Mehungry.AccountsFixtures.user_fixture()
+
+      recipe =
+        recipe_fixture(other_user, %{
+          title: "Kale Salad",
+          recipe_ingredients: [%{ingredient_id: kale.id, measurement_unit_id: mu.id, quantity: 5}]
+        })
+
+      own_recipe =
+        recipe_fixture(user, %{
+          title: "My Kale Dish",
+          recipe_ingredients: [%{ingredient_id: kale.id, measurement_unit_id: mu.id, quantity: 5}]
+        })
+
+      # Open the modal directly on the encouraged food.
+      {:ok, view, _html} = live(conn, ~p"/conditions/#{condition.id}/food/#{kale_species.id}")
+      html = render_async(view)
+
+      assert html =~ "Kale Salad"
+      assert html =~ "save-modal-recipe-#{recipe.id}"
+      # The user's own recipe shows, but without a save button.
+      assert html =~ "My Kale Dish"
+      refute html =~ "save-modal-recipe-#{own_recipe.id}"
+      refute recipe.id in Mehungry.Accounts.UserContent.list_user_saved_recipe_ids(user)
+
+      # Clicking the heart saves the other user's recipe for later.
+      view |> element("#save-modal-recipe-#{recipe.id}") |> render_click()
+
+      assert recipe.id in Mehungry.Accounts.UserContent.list_user_saved_recipe_ids(user)
+    end
   end
 end

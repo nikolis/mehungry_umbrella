@@ -32,19 +32,22 @@ defmodule Mehungry.Posts do
     |> Repo.one()
   end
 
+  # The feed grades and re-ranks candidate posts in Elixir, so it can't order in
+  # SQL. Instead of loading the whole table on every mount, we cap the candidate
+  # set to the most recent N posts and rank within that window. This keeps mount
+  # cost (query, preload, grading, socket memory) constant regardless of how many
+  # posts exist. Only the fields the feed card actually renders are preloaded.
+  @feed_candidate_window 200
+
   def list_posts(nil) do
-    from(p in Post, order_by: [desc: p.inserted_at, desc: p.id])
+    from(p in Post, order_by: [desc: p.inserted_at, desc: p.id], limit: @feed_candidate_window)
     |> Repo.all()
     |> Repo.preload([
       :user,
-      # :upvotes,
-      # :downvotes,
-      # comments: [:user],
       reference: [
         :user_recipes,
         :user,
-        # recipe_ingredients: [:ingredient],
-        comments: [:user],
+        :comments,
         recipe_hashtags: [:hashtag]
       ]
     ])
@@ -55,19 +58,18 @@ defmodule Mehungry.Posts do
     user_pref_table = Users.calculate_user_pref_table(user)
     follow_ids = Users.list_user_follows(user) |> Enum.map(& &1.follow_id)
 
-    from(p in Post, order_by: [desc: p.inserted_at, desc: p.id])
+    from(p in Post, order_by: [desc: p.inserted_at, desc: p.id], limit: @feed_candidate_window)
     |> Repo.all()
     |> Repo.preload([
       :user,
-      :upvotes,
-      :downvotes,
-      # comments: [:user],
       reference: [
         :user,
         :user_recipes,
+        # Feed card only counts comments; the :user preload is dropped here (it is
+        # loaded on the recipe-detail view, not the feed).
+        :comments,
         recipe_hashtags: [:hashtag],
-        recipe_ingredients: [ingredient: [:category]],
-        comments: [:user]
+        recipe_ingredients: [ingredient: [:category]]
       ]
     ])
     |> Enum.map(fn x ->

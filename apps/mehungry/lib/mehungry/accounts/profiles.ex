@@ -142,8 +142,9 @@ defmodule Mehungry.Accounts.Profiles do
     user_profile = get_user_profile_by_user_id(user.id)
     user_follows = UserContent.list_user_follows(user)
 
-    user_recipes = UserContent.list_user_saved_recipes(user)
-    user_recipes = Enum.map(user_recipes, fn x -> x.recipe_id end)
+    # Only the recipe ids are needed here; use the id-only query so we don't
+    # load full recipes and preload their recipe_ingredients on every mount.
+    user_recipes = UserContent.list_user_saved_recipe_ids(user)
 
     {user_profile, user_follows, user_recipes}
   end

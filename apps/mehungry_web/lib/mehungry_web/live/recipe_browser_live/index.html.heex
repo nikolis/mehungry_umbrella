@@ -70,7 +70,72 @@
         ,
         class="search_comp"
         query_string={@query_string}
+        filter_active={not Enum.empty?(@selected_condition_ids)}
       />
+      <!-- Extended search settings — filter by health condition -->
+      <div class={[
+        "overflow-hidden transition-all duration-300 ease-in-out",
+        (@show_search_settings && "max-h-[600px] opacity-100 mt-2") || "max-h-0 opacity-0"
+      ]}>
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-4">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <p class="text-sm font-display font-medium text-parchment">
+                Filter by health condition
+              </p>
+              <p class="text-xs text-parchment-dim mt-0.5">
+                Show recipes containing compounds recommended for these conditions.
+              </p>
+            </div>
+            <button
+              type="button"
+              phx-click="toggle_search_settings"
+              aria-label="Close filters"
+              class="text-parchment-dim hover:text-parchment transition"
+            >
+              <.icon name="hero-x-mark" class="h-5 w-5" />
+            </button>
+          </div>
+
+          <div :if={@conditions_by_category == []} class="text-sm text-parchment-dim py-2">
+            No health conditions available yet.
+          </div>
+
+          <div class="m3-scrollbar max-h-64 overflow-y-auto space-y-3 pr-1">
+            <div :for={{category, conditions} <- @conditions_by_category}>
+              <p class="text-xs uppercase tracking-wide text-parchment-dim mb-1.5">{category}</p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  :for={condition <- conditions}
+                  type="button"
+                  phx-click="toggle_condition"
+                  phx-value-id={condition.id}
+                  class={condition_pill_class(MapSet.member?(@selected_condition_ids, condition.id))}
+                >
+                  {if MapSet.member?(@selected_condition_ids, condition.id), do: "✓ ", else: ""}{condition.name}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 mt-4">
+            <button
+              type="button"
+              phx-click="clear_conditions"
+              class="px-4 py-1.5 rounded-full text-sm font-medium text-parchment-dim hover:text-parchment transition"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              phx-click="apply_condition_filter"
+              class="px-5 py-1.5 rounded-full text-sm font-semibold bg-paprika text-white hover:opacity-90 transition"
+            >
+              Apply filters
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     <%= if !is_nil(@must_be_loged_in) do %>
       <.modal

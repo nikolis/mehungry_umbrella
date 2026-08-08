@@ -20,7 +20,14 @@ defmodule Mehungry.Health do
 
   alias Mehungry.Repo
 
-  alias Mehungry.Food.{Compound, FoundementalFood, RecipeIngredient, SpeciesCompoundRelationship}
+  alias Mehungry.Food.{
+    Compound,
+    FoundementalFood,
+    Recipe,
+    RecipeIngredient,
+    SpeciesCompoundRelationship
+  }
+
   alias Mehungry.Health.{Condition, CompoundRecommendation, ConditionIdentifier}
 
   # ── Condition registry ────────────────────────────────────────────────────
@@ -348,6 +355,44 @@ defmodule Mehungry.Health do
   def flags_for_recipe(recipe_id, condition_ids) do
     flags_for_recipes([recipe_id], condition_ids)
     |> Map.get(recipe_id, [])
+  end
+
+  @doc """
+  Builds (but does not run) an Ecto `Recipe` query restricted to recipes that
+  are **good for** the given conditions — i.e. recipes whose ingredients carry a
+  compound the condition recommends to `"encourage"`. Walks the same chain as
+  `flags_for_recipes/2` (`recipe_ingredients → ingredient → foundemental_foods →
+  species_compound_relationships → compound_recommendations`) as a recipe-id
+  subquery so the returned top-level `Recipe` query stays compatible with the
+  cursor paginator (`Food.list_recipes/3`, `cursor_fields:
+  [{:inserted_at, :asc}, {:id, :asc}]`) and can be further composed with the
+  full-text search (`Mehungry.Search.RecipeSearch.run/2`).
+
+  Returns the empty-image-filtered `Recipe` query when `condition_ids` is empty,
+  matching the default browse behavior.
+  """
+  def recipes_for_conditions_query([]), do: from(r in Recipe, where: not is_nil(r.image_url))
+
+  def recipes_for_conditions_query(condition_ids) do
+    from(r in Recipe,
+      where: not is_nil(r.image_url),
+      where:
+        r.id in subquery(
+          from(ri in RecipeIngredient,
+            join: ff in FoundementalFood,
+            on: ff.ingredient_id == ri.ingredient_id,
+            join: scr in SpeciesCompoundRelationship,
+            on: scr.foundemental_species_id == ff.foundemental_species_id,
+            join: rec in CompoundRecommendation,
+            on: rec.compound_id == scr.compound_id,
+            where:
+              rec.condition_id in ^condition_ids and
+                rec.recommendation == "encourage" and
+                scr.relationship_type != "absent",
+            select: ri.recipe_id
+          )
+        )
+    )
   end
 
   @doc """
