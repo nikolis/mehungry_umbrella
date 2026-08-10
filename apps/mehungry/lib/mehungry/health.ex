@@ -296,6 +296,33 @@ defmodule Mehungry.Health do
     |> Repo.all()
   end
 
+  @discouraged_recommendations ~w(avoid limit caution)
+
+  @doc """
+  Encouraged and discouraged **ingredients** for a condition — a convenience over
+  `ingredients_for_condition/2` for recipe generation. Encouraged ingredients carry
+  a compound the condition recommends to `"encourage"`; discouraged ones carry a
+  compound recommended to `"avoid"`, `"limit"`, or `"caution"`. Both lists are the
+  bare `Ingredient` structs, deduped by id.
+
+  Returns `%{encouraged: [ingredient], discouraged: [ingredient]}`.
+  """
+  def ingredient_guidance_for_condition(condition_id) do
+    encouraged =
+      condition_id
+      |> ingredients_for_condition("encourage")
+      |> Enum.map(& &1.ingredient)
+      |> Enum.uniq_by(& &1.id)
+
+    discouraged =
+      @discouraged_recommendations
+      |> Enum.flat_map(&ingredients_for_condition(condition_id, &1))
+      |> Enum.map(& &1.ingredient)
+      |> Enum.uniq_by(& &1.id)
+
+    %{encouraged: encouraged, discouraged: discouraged}
+  end
+
   defp maybe_filter_recommendation(query, nil), do: query
 
   defp maybe_filter_recommendation(query, recommendation) do

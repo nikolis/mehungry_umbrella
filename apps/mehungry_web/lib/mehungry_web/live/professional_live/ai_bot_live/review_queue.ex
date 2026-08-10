@@ -18,12 +18,18 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
       Phoenix.PubSub.subscribe(Mehungry.PubSub, "admin:bot_recipes")
     end
 
+    configs = Bot.list_bot_configs()
+    today = Date.utc_today()
+    default_config = Bot.get_active_config_for_month(today.month, today.year) || List.first(configs)
+
     {:ok,
      socket
      |> assign(:page_title, "AI Bot Review Queue")
      |> assign(:generating, false)
      |> assign(:status_filter, "pending_review")
      |> assign(:selected_date, Date.to_iso8601(Date.add(Date.utc_today(), 1)))
+     |> assign(:configs, configs)
+     |> assign(:selected_config_id, default_config && to_string(default_config.id))
      |> load_recipes()
      |> load_untracked()}
   end
@@ -50,19 +56,37 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
         _ -> socket.assigns.selected_date
       end
 
-    case DailyRecipeGenerationWorker.new(%{target_date: target_date}) |> Oban.insert() do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> assign(:generating, true)
-         |> put_flash(
-           :info,
-           "Generation job queued for #{target_date} — recipes will appear here shortly."
-         )}
+    config_id =
+      case Map.get(params, "bot_config_id") do
+        id when is_binary(id) and id != "" -> id
+        _ -> socket.assigns.selected_config_id
+      end
 
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to queue generation: #{inspect(reason)}")}
+    if is_nil(config_id) do
+      {:noreply,
+       put_flash(socket, :error, "Select a bot config to generate for — create one first if none exist.")}
+    else
+      job_args = %{target_date: target_date, bot_config_id: config_id}
+
+      case DailyRecipeGenerationWorker.new(job_args) |> Oban.insert() do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> assign(:generating, true)
+           |> put_flash(
+             :info,
+             "Generation job queued for #{config_label(config_id, socket.assigns.configs)} on #{target_date} — recipes will appear here shortly."
+           )}
+
+        {:error, reason} ->
+          {:noreply, put_flash(socket, :error, "Failed to queue generation: #{inspect(reason)}")}
+      end
     end
+  end
+
+  @impl true
+  def handle_event("select_config", %{"bot_config_id" => id}, socket) do
+    {:noreply, assign(socket, :selected_config_id, id)}
   end
 
   @impl true
@@ -194,6 +218,23 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
         </div>
         <div class="flex items-center gap-2">
           <form phx-submit="generate_now" class="flex items-center gap-2">
+            <select
+              name="bot_config_id"
+              phx-change="select_config"
+              disabled={@generating or @configs == []}
+              title="Which bot config to generate for"
+              class="bg-slate-800 border border-slate-700/60 rounded-lg text-slate-200 text-sm px-2 py-1.5 focus:border-amber-500/50 focus:outline-none disabled:opacity-50 max-w-[16rem]"
+            >
+              <%= if @configs == [] do %>
+                <option value="">No configs — create one</option>
+              <% else %>
+                <%= for config <- @configs do %>
+                  <option value={config.id} selected={to_string(config.id) == @selected_config_id}>
+                    {config_option_label(config)}
+                  </option>
+                <% end %>
+              <% end %>
+            </select>
             <input
               type="date"
               name="target_date"
@@ -205,7 +246,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
             />
             <button
               type="submit"
-              disabled={@generating}
+              disabled={@generating or @configs == []}
               class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <%= if @generating do %>
@@ -334,11 +375,18 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
             </p>
             <button
               phx-click="generate_now"
-              disabled={@generating}
+              phx-value-bot_config_id={@selected_config_id}
+              phx-value-target_date={@selected_date}
+              disabled={@generating or is_nil(@selected_config_id)}
               class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
             >
               <.icon name="hero-bolt" class="h-4 w-4" /> Generate Now
             </button>
+            <%= if @selected_config_id do %>
+              <p class="text-slate-600 text-xs mt-2">
+                Generating for <span class="text-slate-400">{config_label(@selected_config_id, @configs)}</span>
+              </p>
+            <% end %>
           <% else %>
             <p class="text-slate-500 text-sm mt-1">Switch to a different filter to see recipes</p>
           <% end %>
@@ -470,4 +518,27 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
   defp filter_active_class("rejected"), do: "bg-red-500/20 text-red-300"
   defp filter_active_class("published"), do: "bg-blue-500/20 text-blue-300"
   defp filter_active_class(_), do: "bg-slate-700 text-white"
+
+  # Dropdown label: a readable name for the config plus its month/year, e.g.
+  # "Kidney Stones (condition) · 8/2026" or "Mediterranean Summer · 8/2026".
+  defp config_option_label(config) do
+    name =
+      case config.setup_type do
+        "condition" ->
+          direction = if config.diet_direction not in [nil, ""], do: config.diet_direction, else: "Condition setup"
+          "#{direction} (condition)"
+
+        _ ->
+          config.theme || "Untitled"
+      end
+
+    "#{name} · #{config.month}/#{config.year}"
+  end
+
+  defp config_label(config_id, configs) do
+    case Enum.find(configs, &(to_string(&1.id) == to_string(config_id))) do
+      nil -> "config ##{config_id}"
+      config -> config_option_label(config)
+    end
+  end
 end

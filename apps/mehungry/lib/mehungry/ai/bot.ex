@@ -22,12 +22,12 @@ defmodule Mehungry.AI.Bot do
     |> Repo.all()
   end
 
-  def get_bot_config!(id), do: Repo.get!(AiBotConfig, id) |> Repo.preload(:bot_user)
+  def get_bot_config!(id), do: Repo.get!(AiBotConfig, id) |> Repo.preload([:bot_user, :condition])
 
   def get_active_config_for_month(month, year) do
     AiBotConfig
     |> where([c], c.month == ^month and c.year == ^year and c.active == true)
-    |> preload(:bot_user)
+    |> preload([:bot_user, :condition])
     |> Repo.one()
   end
 

@@ -2,7 +2,7 @@ defmodule MehungryWeb.AiBotLive.Config do
   use MehungryWeb, :live_view
   import MehungryWeb.FormatHelpers, only: [month_name: 1]
 
-  alias Mehungry.{Accounts, Languages}
+  alias Mehungry.{Accounts, Health, Languages}
   alias Mehungry.AI.Bot
   alias Mehungry.AI.Bot.AiBotConfig
 
@@ -13,6 +13,7 @@ defmodule MehungryWeb.AiBotLive.Config do
      |> stream(:configs, Bot.list_bot_configs())
      |> assign(:users, Accounts.list_users())
      |> assign(:languages, Languages.list_languages())
+     |> assign(:conditions, Health.list_conditions_for_presentation())
      |> assign(:meal_types, AiBotConfig.meal_types())
      |> assign(:form, nil)
      |> assign(:show_create_user_modal, false)
@@ -253,9 +254,15 @@ defmodule MehungryWeb.AiBotLive.Config do
           >
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0 flex-1">
-                <div class="font-semibold text-white truncate text-sm">{config.theme}</div>
-                <div class="text-xs text-slate-400 mt-0.5">
-                  {month_name(config.month)} {config.year}
+                <div class="font-semibold text-white truncate text-sm">{config_title(config)}</div>
+                <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+                  <span>{month_name(config.month)} {config.year}</span>
+                  <span
+                    :if={config.setup_type == "condition"}
+                    class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30"
+                  >
+                    Condition
+                  </span>
                 </div>
               </div>
               <div class="flex items-center gap-1 flex-shrink-0 mt-0.5">
@@ -298,6 +305,7 @@ defmodule MehungryWeb.AiBotLive.Config do
               {if @live_action == :new, do: "New Configuration", else: "Edit Configuration"}
             </h2>
             <.form for={@form} phx-change="validate" phx-submit="save" class="space-y-5">
+              <% setup_type = to_string(@form[:setup_type].value || "theme") %>
               <!-- Basic info -->
               <div>
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
@@ -305,6 +313,19 @@ defmodule MehungryWeb.AiBotLive.Config do
                 </p>
                 <div class="space-y-3">
                   <div>
+                    <label class="block text-xs text-slate-400 mb-1">Setup Type</label>
+                    <.input
+                      field={@form[:setup_type]}
+                      type="select"
+                      options={[
+                        {"Month → Week → Day themes", "theme"},
+                        {"Health condition", "condition"}
+                      ]}
+                      class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div :if={setup_type == "theme"}>
                     <label class="block text-xs text-slate-400 mb-1">Theme</label>
                     <.input
                       field={@form[:theme]}
@@ -313,6 +334,34 @@ defmodule MehungryWeb.AiBotLive.Config do
                       class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
                     />
                   </div>
+
+                  <div :if={setup_type == "condition"} class="space-y-3">
+                    <div>
+                      <label class="block text-xs text-slate-400 mb-1">Health Condition</label>
+                      <.input
+                        field={@form[:condition_id]}
+                        type="select"
+                        prompt="Select a condition…"
+                        options={Enum.map(@conditions, &{&1.name, &1.id})}
+                        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                      />
+                      <p class="text-[11px] text-slate-500 mt-1">
+                        Only conditions that already have dietary recommendations are listed.
+                        Recipes are built around its encouraged ingredients and never include
+                        its discouraged ones.
+                      </p>
+                    </div>
+                    <div>
+                      <label class="block text-xs text-slate-400 mb-1">Diet Direction</label>
+                      <.input
+                        field={@form[:diet_direction]}
+                        type="text"
+                        placeholder="e.g. Mediterranean diet"
+                        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label class="block text-xs text-slate-400 mb-1">Month</label>
@@ -440,7 +489,8 @@ defmodule MehungryWeb.AiBotLive.Config do
                               type="time"
                               name={"ai_bot_config[publish_times][#{meal}][#{lang.name}]"}
                               value={
-                                get_in(@form[:publish_times].value || %{}, [meal, lang.name]) || ""
+                                get_in(@form[:publish_times].value || %{}, [meal, lang.name]) ||
+                                  AiBotConfig.default_time_for(meal)
                               }
                               class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-xs px-2 py-1.5 focus:border-primary-500 focus:outline-none"
                             />
@@ -708,4 +758,13 @@ defmodule MehungryWeb.AiBotLive.Config do
 
   defp map_non_empty?(map) when is_map(map) and map_size(map) > 0, do: true
   defp map_non_empty?(_), do: false
+
+  defp config_title(%{setup_type: "condition"} = config) do
+    case config.diet_direction do
+      d when is_binary(d) and d != "" -> d
+      _ -> "Condition setup"
+    end
+  end
+
+  defp config_title(config), do: config.theme || "Untitled"
 end
