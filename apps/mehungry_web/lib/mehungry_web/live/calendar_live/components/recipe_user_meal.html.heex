@@ -37,10 +37,10 @@
 
     <div class="grid grid-cols-2 gap-3">
       <div class="input-form">
-        <.input field={@f[:cooking_portions]} type="text" label="Prepare" />
+        <.input field={@f[:cooking_portions]} type="number" min="0" label="Prepare" />
       </div>
       <div class="input-form">
-        <.input field={@f[:consume_portions]} type="text" label="Consume" />
+        <.input field={@f[:consume_portions]} type="number" min="0" label="Consume" />
       </div>
     </div>
   </div>

@@ -495,6 +495,65 @@ defmodule Mehungry.NutrientUtils do
   defp macro_amount(_), do: 0.0
 
   @doc """
+  Scales a recipe's *total* nutrition down to the amount actually consumed.
+
+  A recipe's stored `nutrients` are the total for the whole recipe (which yields
+  `recipe.servings` servings). A logged meal records how many of those servings
+  were eaten (`consume_portions`), so the nutrition attributable to the meal is
+  the total times `consume_portions / servings`.
+
+  `servings` is read from the `:servings` key on the recipe_user_meal map, or the
+  nested `:recipe`'s `servings` when it isn't hoisted (the `LandingLive` shape).
+  Falls back to `1.0` (the raw total) when either value is missing or `servings`
+  is non-positive, so callers that don't supply portions are unaffected.
+  """
+  def consumed_fraction(recipe_user_meal) do
+    servings = recipe_servings(recipe_user_meal)
+    consumed = Map.get(recipe_user_meal, :consume_portions)
+
+    case {consumed, servings} do
+      {c, s} when is_number(c) and is_number(s) and s > 0 -> c / s
+      _ -> 1.0
+    end
+  end
+
+  defp recipe_servings(recipe_user_meal) do
+    cond do
+      is_number(Map.get(recipe_user_meal, :servings)) ->
+        Map.get(recipe_user_meal, :servings)
+
+      is_map(Map.get(recipe_user_meal, :recipe)) ->
+        Map.get(Map.get(recipe_user_meal, :recipe), :servings)
+
+      true ->
+        nil
+    end
+  end
+
+  @doc """
+  Scales every nutrient `amount` in a `name => nutrient` map (including nested
+  `children`) by `factor`, preserving the rest of the map shape. Used to turn a
+  recipe's stored total nutrition into the amount actually consumed.
+  """
+  def scale_nutrient_map(nutrients, factor) when is_map(nutrients) and is_number(factor) do
+    Map.new(nutrients, fn {name, nutrient} -> {name, scale_nutrient(nutrient, factor)} end)
+  end
+
+  defp scale_nutrient(%{"children" => children} = nutrient, factor) when is_list(children) do
+    nutrient
+    |> scale_amount(factor)
+    |> Map.put("children", Enum.map(children, &scale_nutrient(&1, factor)))
+  end
+
+  defp scale_nutrient(nutrient, factor), do: scale_amount(nutrient, factor)
+
+  defp scale_amount(%{"amount" => amount} = nutrient, factor) when is_number(amount) do
+    Map.put(nutrient, "amount", amount * factor)
+  end
+
+  defp scale_amount(nutrient, _factor), do: nutrient
+
+  @doc """
   Your original summarize_meals_nutrients but using the enhanced merger
   """
   def summarize_meals_nutrients(user_meals) do
@@ -503,8 +562,12 @@ defmodule Mehungry.NutrientUtils do
       |> Enum.flat_map(fn item ->
         recipe_nutrients =
           item
-          |> Map.get(:recipe_user_meals)
-          |> Enum.map(&Map.get(&1, :recipe_nutrients, %{}))
+          |> Map.get(:recipe_user_meals, [])
+          |> Enum.map(fn recipe_user_meal ->
+            recipe_user_meal
+            |> Map.get(:recipe_nutrients, %{})
+            |> scale_nutrient_map(consumed_fraction(recipe_user_meal))
+          end)
           |> Enum.filter(&(&1 != %{}))
 
         ingredient_nutrients =

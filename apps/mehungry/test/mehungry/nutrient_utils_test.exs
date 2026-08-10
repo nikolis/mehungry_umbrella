@@ -69,4 +69,73 @@ defmodule Mehungry.NutrientUtilsTest do
       refute Nu.macronutrient?(nil)
     end
   end
+
+  describe "consumed_fraction/1" do
+    test "scales by consume_portions / servings" do
+      assert Nu.consumed_fraction(%{consume_portions: 1, servings: 4}) == 0.25
+      assert Nu.consumed_fraction(%{consume_portions: 3, servings: 2}) == 1.5
+    end
+
+    test "reads servings from a nested recipe when not hoisted" do
+      rum = %{consume_portions: 2, recipe: %{servings: 4}}
+      assert Nu.consumed_fraction(rum) == 0.5
+    end
+
+    test "falls back to 1.0 when servings or portions are missing or non-positive" do
+      assert Nu.consumed_fraction(%{consume_portions: 2}) == 1.0
+      assert Nu.consumed_fraction(%{servings: 4}) == 1.0
+      assert Nu.consumed_fraction(%{consume_portions: 2, servings: 0}) == 1.0
+      assert Nu.consumed_fraction(%{consume_portions: nil, servings: 4}) == 1.0
+    end
+  end
+
+  describe "scale_nutrient_map/2" do
+    test "scales top-level and nested children amounts, leaving other fields intact" do
+      nutrients = %{
+        "Total Fat" => %{
+          "name" => "Total Fat",
+          "amount" => 10.0,
+          "measurement_unit" => "g",
+          "children" => [
+            %{"name" => "Saturated Fat", "amount" => 4.0, "measurement_unit" => "g"}
+          ]
+        }
+      }
+
+      scaled = Nu.scale_nutrient_map(nutrients, 0.25)
+
+      fat = scaled["Total Fat"]
+      assert fat["amount"] == 2.5
+      assert fat["measurement_unit"] == "g"
+      assert [%{"amount" => child_amount, "name" => "Saturated Fat"}] = fat["children"]
+      assert child_amount == 1.0
+    end
+
+    test "leaves entries without a numeric amount untouched" do
+      nutrients = %{"Water" => %{"name" => "Water", "measurement_unit" => "g"}}
+      assert Nu.scale_nutrient_map(nutrients, 0.5) == nutrients
+    end
+  end
+
+  describe "summarize_meals_nutrients/1 with portions" do
+    test "aggregates recipe nutrients scaled to the consumed portions" do
+      meal = %{
+        recipe_user_meals: [
+          %{
+            consume_portions: 1,
+            servings: 4,
+            recipe_nutrients: %{
+              "Protein" => %{"name" => "Protein", "amount" => 40.0, "measurement_unit" => "g"}
+            }
+          }
+        ],
+        ingredient_user_meals: []
+      }
+
+      summary = Nu.summarize_meals_nutrients([meal])
+
+      assert %{"Protein" => %{"amount" => amount}} = summary
+      assert_in_delta amount, 10.0, 1.0e-9
+    end
+  end
 end

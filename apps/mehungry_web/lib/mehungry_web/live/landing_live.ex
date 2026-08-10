@@ -33,33 +33,39 @@ defmodule MehungryWeb.LandingLive do
      )}
   end
 
+  # Picks up to 3 recipes for the meal-planning demo. Prefers the current month's
+  # AI bot user, then falls back to any public recipe — but only ones that carry
+  # nutrients, since the chart needs them. Always returns a list.
   defp find_bot_recipe(month, year) do
-    config = Mehungry.AI.Bot.get_active_config_for_month(month, year)
+    bot_recipes =
+      case Mehungry.AI.Bot.get_active_config_for_month(month, year) do
+        %{bot_user_id: bot_user_id} ->
+          Mehungry.Repo.all(recipes_with_nutrients_query(user_id: bot_user_id))
 
-    case config do
-      nil ->
-        nil
+        _ ->
+          []
+      end
 
-      %{bot_user_id: bot_user_id} ->
-        query =
-          from(r in Mehungry.Food.Recipe,
-            where: r.user_id == ^bot_user_id and not r.private,
-            order_by: fragment("RANDOM()"),
-            limit: 3
-          )
+    case bot_recipes do
+      [] -> Mehungry.Repo.all(recipes_with_nutrients_query([]))
+      recipes -> recipes
+    end
+  end
 
-        result = Mehungry.Repo.all(query)
+  # Public recipes that have a non-empty `nutrients` map, 3 at random. Optionally
+  # scoped to a single author via the `:user_id` option.
+  defp recipes_with_nutrients_query(opts) do
+    query =
+      from(r in Mehungry.Food.Recipe,
+        where:
+          (is_nil(r.private) or not r.private) and fragment("? <> '{}'::jsonb", r.nutrients),
+        order_by: fragment("RANDOM()"),
+        limit: 3
+      )
 
-        case result do
-          [] ->
-            query =
-              from(r in Mehungry.Food.Recipe,
-                order_by: fragment("RANDOM()"),
-                limit: 3
-              )
-
-            result = Mehungry.Repo.all(query)
-        end
+    case Keyword.fetch(opts, :user_id) do
+      {:ok, user_id} -> from(r in query, where: r.user_id == ^user_id)
+      :error -> query
     end
   end
 
