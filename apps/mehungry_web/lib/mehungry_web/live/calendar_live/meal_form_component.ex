@@ -14,6 +14,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     default_attrs = %{
       start_dt: dates.start,
       title: title,
+      meal_type: Map.get(assigns, :meal_type),
       user_id: user.id
     }
 
@@ -99,6 +100,19 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
 
   def handle_event("set_mode", %{"mode" => mode}, socket) do
     socket = assign(socket, :mode, mode)
+    {:noreply, socket}
+  end
+
+  def handle_event("set_meal_type", %{"meal_type" => meal_type}, socket) do
+    meal_type = if meal_type == "unsorted", do: nil, else: meal_type
+
+    socket =
+      update(socket, :form, fn %{source: changeset} ->
+        changeset
+        |> Ecto.Changeset.put_change(:meal_type, meal_type)
+        |> to_form()
+      end)
+
     {:noreply, socket}
   end
 

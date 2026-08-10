@@ -208,6 +208,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
         start_dt: x.start_dt,
         end: x.end_dt,
         title: x.title,
+        meal_type: x.meal_type,
         ingredient_user_meals:
           Enum.map(x.ingredient_user_meals, fn y ->
             %{

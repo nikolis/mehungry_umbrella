@@ -16,7 +16,10 @@ defmodule MehungryApi.HistoryTest do
       %{user: user}
     end
 
-    @invalid_attrs %{meal_datetime: nil, title: nil}
+    # `title` is now auto-derived from `meal_type` in the changeset, so a blank
+    # title alone is no longer invalid. An out-of-vocabulary `meal_type` (plus a
+    # missing user_id for the create path) is the reliable "invalid data" input.
+    @invalid_attrs %{meal_datetime: nil, title: nil, meal_type: "brunch"}
 
     test "list_pending_user_meals/0 returns all history_user_meals", %{user: user} do
       recipe = FoodFixtures.recipe_fixture(user, %{name: "other name 2"})
@@ -203,6 +206,65 @@ defmodule MehungryApi.HistoryTest do
 
       user_meal = user_meal_fixture(%{user_id: user.id, recipe_user_meals: recipe_user_meals})
       assert %Ecto.Changeset{} = History.change_user_meal(user_meal)
+    end
+
+    test "create_user_meal/1 persists a valid meal_type", %{user: user} do
+      recipe = FoodFixtures.recipe_fixture(user, %{name: "mt valid", nutrients: %{}})
+
+      assert {:ok, %UserMeal{} = user_meal} =
+               History.create_user_meal(%{
+                 start_dt: ~U[2022-02-13 16:50:00Z],
+                 title: "Breakfast bowl",
+                 meal_type: "breakfast",
+                 user_id: user.id,
+                 recipe_user_meals: [
+                   %{recipe_id: recipe.id, cooking_portions: 2, consume_portions: 1}
+                 ]
+               })
+
+      assert user_meal.meal_type == "breakfast"
+    end
+
+    test "create_user_meal/1 rejects an invalid meal_type", %{user: user} do
+      assert {:error, %Ecto.Changeset{} = cs} =
+               History.create_user_meal(%{
+                 start_dt: ~U[2022-02-13 16:50:00Z],
+                 title: "x",
+                 meal_type: "brunch",
+                 user_id: user.id
+               })
+
+      assert "is invalid" in errors_on(cs).meal_type
+    end
+
+    test "create_user_meal/1 allows a nil meal_type (unsorted)", %{user: user} do
+      assert {:ok, %UserMeal{meal_type: nil}} =
+               History.create_user_meal(%{
+                 start_dt: ~U[2022-02-13 16:50:00Z],
+                 title: "Untyped",
+                 meal_type: nil,
+                 user_id: user.id
+               })
+    end
+
+    test "create_user_meal/1 derives title from meal_type when title is blank", %{user: user} do
+      assert {:ok, %UserMeal{title: "Lunch", meal_type: "lunch"}} =
+               History.create_user_meal(%{
+                 start_dt: ~U[2022-02-13 16:50:00Z],
+                 title: "",
+                 meal_type: "lunch",
+                 user_id: user.id
+               })
+    end
+
+    test "create_user_meal/1 falls back to a generic title when both blank", %{user: user} do
+      assert {:ok, %UserMeal{title: "Meal", meal_type: nil}} =
+               History.create_user_meal(%{
+                 start_dt: ~U[2022-02-13 16:50:00Z],
+                 title: "",
+                 meal_type: "",
+                 user_id: user.id
+               })
     end
   end
 end

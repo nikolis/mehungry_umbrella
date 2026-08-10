@@ -5,6 +5,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   alias MehungryWeb.CalendarLive.Calendar.Locale
 
   alias Mehungry.NutrientUtils, as: Nu
+  alias Mehungry.History.MealType
 
   # Public entry (used by `LandingLive` with raw meals): filters + aggregates,
   # then renders. The widget itself renders from a per-day summary precomputed
@@ -27,13 +28,41 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   defp render_day_chart(%{meals: meals, total_nutrients: total_nutrients}, day, current_date, calorie_target) do
     total_nutrients
     |> summary_assigns(meals, "day-#{Date.to_string(day)}", calorie_target)
-    # The current day already shows these tags on its accordion header button,
-    # so drop the redundant tag row here (keeping the Nutrition Facts + charts).
+    # Folded by default like each meal-type section — tap the header (which shows
+    # the day's totals) to reveal the Nutrition Facts + charts. On the current day
+    # the totals also sit on the day's accordion header, so drop the redundant row.
     |> Map.merge(%{
       title: "Daily Summary",
       subtitle: nil,
-      foldable: false,
+      foldable: true,
       show_tags: day != current_date
+    })
+    |> summary_card()
+  end
+
+  # Renders one meal-type section's summary card from an already-aggregated
+  # per-type summary (`%{meal_type, label, meals, total_nutrients}`). The
+  # `id_key` is suffixed with the type slug so its charts/DOM ids never collide
+  # with the overall daily/weekly cards. Meals in the unsorted bucket carry a
+  # nil meal_type, so fall back to the "unsorted" slug for a stable key.
+  defp render_meal_type_chart(%{total_nutrients: nil}, _day, _calorie_target), do: nil
+
+  defp render_meal_type_chart(
+         %{meal_type: meal_type, label: label, meals: meals, total_nutrients: total_nutrients},
+         day,
+         calorie_target
+       ) do
+    type_slug = meal_type || "unsorted"
+
+    total_nutrients
+    |> summary_assigns(meals, "day-#{Date.to_string(day)}-#{type_slug}", calorie_target)
+    |> Map.merge(%{
+      title: "#{label} Summary",
+      subtitle: nil,
+      foldable: false,
+      # The badges already show on the section's accordion header, so keep the
+      # inner nutrition card to just the facts table + charts.
+      show_tags: false
     })
     |> summary_card()
   end
@@ -515,8 +544,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     |> String.trim()
   end
 
-  # Precomputes a `date => %{meals: _, total_nutrients: _}` map for every day in
-  # the visible week. `total_nutrients` is nil for days with no meals.
+  # Precomputes a `date => %{meals, total_nutrients, type_summaries}` map for
+  # every day in the visible week. `total_nutrients` is nil for days with no
+  # meals; `type_summaries` is the ordered per-meal-type breakdown (see
+  # `build_meal_type_summaries/1`). Aggregating here (once per update) keeps the
+  # render functions from re-summarizing on every LiveView update.
   defp build_day_summaries(user_meals, first, last) do
     Map.new(Date.range(first, last), fn day ->
       meals = Enum.filter(user_meals, fn m -> NaiveDateTime.to_date(m.start_dt) == day end)
@@ -527,8 +559,33 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           _ -> Nu.summarize_meals_nutrients(meals)
         end
 
-      {day, %{meals: meals, total_nutrients: total_nutrients}}
+      {day,
+       %{
+         meals: meals,
+         total_nutrients: total_nutrients,
+         type_summaries: build_meal_type_summaries(meals)
+       }}
     end)
+  end
+
+  # Groups a day's meals by `meal_type` and aggregates nutrients per group,
+  # returning an ordered list (`MealType.ordered()` then the nil/unsorted bucket
+  # last). Empty groups are dropped so only populated meal-type sections render.
+  # Uses `Map.get/2` defensively since synthetic meals (LandingLive) may omit the
+  # key — those paths don't call this, but it keeps grouping total.
+  defp build_meal_type_summaries(meals) do
+    by_type = Enum.group_by(meals, fn m -> Map.get(m, :meal_type) end)
+
+    for meal_type <- MealType.ordered() ++ [nil],
+        group = by_type[meal_type],
+        group not in [nil, []] do
+      %{
+        meal_type: meal_type,
+        label: MealType.label(meal_type),
+        meals: group,
+        total_nutrients: Nu.summarize_meals_nutrients(group)
+      }
+    end
   end
 
   # Precomputes the weekly summary (daily-average nutrients over the range), or
@@ -717,53 +774,105 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                 </div>
               </div>
             <% else %>
-              <div class="p-2 sm:p-3 space-y-2">
-                <%= for meal <- day_meals do %>
-                  <%= for re_u_m <- meal.recipe_user_meals do %>
-                    <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
-                      <.card_meal
-                        card_meal_text="text-parchment"
-                        actual_meal={meal}
-                        img_url={re_u_m.img_url}
-                        title={re_u_m.title}
-                        nutrients={re_u_m.recipe_nutrients}
-                        cooking_portions={re_u_m.cooking_portions}
-                        consume_portions={re_u_m.consume_portions}
-                        myself={@myself}
-                        recipe_id={re_u_m.recipe_id}
-                        recipe={
-                          %{
-                            nutrients: re_u_m.recipe_nutrients,
-                            primary_size: re_u_m.primary_size,
-                            servings: re_u_m.servings,
-                            id: "#{re_u_m.recipe_id}-#{meal.id}"
-                          }
-                        }
-                      />
-                    <% end %>
-                  <% end %>
-                  <%= for re_u_m <- meal.ingredient_user_meals do %>
-                    <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
-                      <.card_meal
-                        card_meal_text="text-parchment"
-                        myself={@myself}
-                        actual_meal={meal}
-                        img_url={re_u_m.img_url}
-                        title={re_u_m.title}
-                        cooking_portions={re_u_m.portions}
-                        consume_portions={nil}
-                        recipe={
-                          %{
-                            nutrients:
-                              Mehungry.Food.RecipeUtils.reform_nutrients(re_u_m.recipe.nutrients),
-                            primary_size: re_u_m.primary_size,
-                            servings: re_u_m.portions,
-                            id: "#{re_u_m.recipe.id}-#{meal.id}"
-                          }
-                        }
-                      />
-                    <% end %>
-                  <% end %>
+              <div class="p-2 sm:p-3 space-y-6">
+                <%!-- Meals grouped by type (breakfast … dinner, unsorted last), each
+                      with its own nutrition summary; the combined Daily Summary
+                      follows all sections. Groups are already day-scoped in
+                      `build_day_summaries`, so no per-card date guard is needed. --%>
+                <%= for group <- @day_summaries[day].type_summaries do %>
+                  <% type_slug = group.meal_type || "unsorted" %>
+                  <% section_key = "meal-type-#{Date.to_string(day)}-#{type_slug}" %>
+                  <% metrics = summary_metrics(group.total_nutrients, group.meals, @calorie_target) %>
+                  <%!-- Each meal type is its own accordion: the header button shows the
+                        label + summary badges; the cards and nutrition breakdown live in a
+                        body that stays hidden until the header is tapped. --%>
+                  <section class="rounded-xl border border-ink-panel2 overflow-hidden bg-ink-panel/60">
+                    <button
+                      type="button"
+                      class="w-full flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 bg-black/20 hover:bg-black/30 transition-colors text-left cursor-pointer select-none"
+                      phx-click={
+                        Phoenix.LiveView.JS.toggle(
+                          to: "#" <> section_key <> "-body",
+                          in:
+                            {"transition-all duration-300 ease-out", "opacity-0 -translate-y-2",
+                             "opacity-100 translate-y-0"},
+                          out:
+                            {"transition-all duration-200 ease-in", "opacity-100 translate-y-0",
+                             "opacity-0 -translate-y-2"}
+                        )
+                        |> Phoenix.LiveView.JS.toggle_class("rotate-180",
+                          to: "#" <> section_key <> "-chevron"
+                        )
+                      }
+                    >
+                      <span class="font-display font-medium text-parchment text-sm">
+                        {group.label}
+                      </span>
+                      <div class="flex flex-wrap gap-2 items-center ml-auto">
+                        <.summary_tags {metrics} />
+                        <svg
+                          id={section_key <> "-chevron"}
+                          class="w-5 h-5 text-parchment-dim transition-transform duration-300 ease-out flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                    </button>
+                    <div id={section_key <> "-body"} class="hidden p-2 sm:p-3 space-y-2">
+                      <%= for meal <- group.meals do %>
+                        <%= for re_u_m <- meal.recipe_user_meals do %>
+                          <.card_meal
+                            card_meal_text="text-parchment"
+                            actual_meal={meal}
+                            img_url={re_u_m.img_url}
+                            title={re_u_m.title}
+                            nutrients={re_u_m.recipe_nutrients}
+                            cooking_portions={re_u_m.cooking_portions}
+                            consume_portions={re_u_m.consume_portions}
+                            myself={@myself}
+                            recipe_id={re_u_m.recipe_id}
+                            recipe={
+                              %{
+                                nutrients: re_u_m.recipe_nutrients,
+                                primary_size: re_u_m.primary_size,
+                                servings: re_u_m.servings,
+                                id: "#{re_u_m.recipe_id}-#{meal.id}"
+                              }
+                            }
+                          />
+                        <% end %>
+                        <%= for re_u_m <- meal.ingredient_user_meals do %>
+                          <.card_meal
+                            card_meal_text="text-parchment"
+                            myself={@myself}
+                            actual_meal={meal}
+                            img_url={re_u_m.img_url}
+                            title={re_u_m.title}
+                            cooking_portions={re_u_m.portions}
+                            consume_portions={nil}
+                            recipe={
+                              %{
+                                nutrients:
+                                  Mehungry.Food.RecipeUtils.reform_nutrients(re_u_m.recipe.nutrients),
+                                primary_size: re_u_m.primary_size,
+                                servings: re_u_m.portions,
+                                id: "#{re_u_m.recipe.id}-#{meal.id}"
+                              }
+                            }
+                          />
+                        <% end %>
+                      <% end %>
+                      {render_meal_type_chart(group, day, @calorie_target)}
+                    </div>
+                  </section>
                 <% end %>
                 {render_day_chart(@day_summaries[day], day, @current_date, @calorie_target)}
               </div>
