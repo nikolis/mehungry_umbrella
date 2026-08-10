@@ -146,6 +146,7 @@ defmodule Mehungry.AI.MealPlanGenerator do
       {:ok, dt} ->
         attrs = %{
           title: entry["slot"],
+          meal_type: Mehungry.History.MealType.from_slot(entry["slot"]),
           start_dt: dt,
           user_id: user_id,
           recipe_user_meals: [

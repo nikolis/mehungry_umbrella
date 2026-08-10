@@ -339,6 +339,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
          {:ok, dt} <- NaiveDateTime.new(date, slot_time(entry["slot"])) do
       attrs = %{
         title: entry["slot"],
+        meal_type: Mehungry.History.MealType.from_slot(entry["slot"]),
         start_dt: dt,
         user_id: user_id,
         recipe_user_meals: [
