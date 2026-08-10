@@ -12,11 +12,15 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
 
   require Logger
 
-  alias Mehungry.{Food, Posts, Accounts, Repo}
+  alias Mehungry.{Food, Health, Posts, Accounts, Repo}
   alias Mehungry.AI.Bot
   alias Mehungry.AI.Agents.RecipeAgent
   alias Mehungry.AI.Bot.Notifier
   alias Mehungry.ObanWorkers.RecipePublishWorker
+
+  # How many times to re-ask the agent when a condition-setup recipe comes back
+  # carrying a discouraged ingredient before giving up on that meal.
+  @max_condition_attempts 3
 
   @meal_prompts %{
     "breakfast" =>
@@ -43,13 +47,10 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
           Date.add(Date.utc_today(), 1)
       end
 
-    month = target_date.month
-    year = target_date.year
-
-    case Bot.get_active_config_for_month(month, year) do
+    case resolve_config(args, target_date) do
       nil ->
         Logger.info(
-          "[DailyRecipeGenerationWorker] No active bot config for #{month}/#{year}, skipping"
+          "[DailyRecipeGenerationWorker] No bot config to generate for (target #{target_date}), skipping"
         )
 
         :ok
@@ -62,6 +63,20 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
         if generated > 0, do: notify_admin(generated, target_date)
 
         :ok
+    end
+  end
+
+  # An admin-triggered "Generate now" passes an explicit `bot_config_id` (chosen
+  # in the review queue), so we generate against that exact config regardless of
+  # its month. The scheduled 2am cron run passes no id and falls back to the
+  # active config for the target date's month.
+  defp resolve_config(args, target_date) do
+    case Map.get(args, "bot_config_id") do
+      id when is_integer(id) or (is_binary(id) and id != "") ->
+        Bot.get_bot_config!(id)
+
+      _ ->
+        Bot.get_active_config_for_month(target_date.month, target_date.year)
     end
   end
 
@@ -90,15 +105,8 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
   end
 
   defp generate_one(config, bot_user, meal_type, target_date) do
-    context = Bot.get_context_for_date(config, target_date)
-    description = build_description(context, meal_type)
-
-    Logger.info(
-      "[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date}: #{description}"
-    )
-
-    case RecipeAgent.run(description) do
-      {:ok, attrs, _} ->
+    case resolve_recipe_attrs(config, meal_type, target_date) do
+      {:ok, attrs} ->
         attrs =
           attrs
           |> Map.put("user_id", bot_user.id)
@@ -136,11 +144,82 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
 
       {:error, reason} ->
         Logger.error(
-          "[DailyRecipeGenerationWorker] RecipeAgent failed for #{meal_type}: #{inspect(reason)}"
+          "[DailyRecipeGenerationWorker] Recipe generation failed for #{meal_type}: #{inspect(reason)}"
         )
 
         :error
     end
+  end
+
+  # Resolve the recipe attrs for a meal, branching on the config's setup type.
+  # Condition setups derive encouraged/discouraged ingredients from the linked
+  # health condition and hard-reject any recipe that includes a discouraged one.
+  defp resolve_recipe_attrs(
+         %{setup_type: "condition", condition_id: condition_id} = config,
+         meal_type,
+         target_date
+       )
+       when not is_nil(condition_id) do
+    %{encouraged: encouraged, discouraged: discouraged} =
+      Health.ingredient_guidance_for_condition(condition_id)
+
+    discouraged_ids = MapSet.new(discouraged, & &1.id)
+    context = Bot.get_context_for_date(config, target_date)
+    description = build_condition_description(config, context, meal_type, encouraged, discouraged)
+
+    Logger.info(
+      "[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date} (condition setup): #{description}"
+    )
+
+    generate_avoiding(description, discouraged_ids, meal_type, @max_condition_attempts)
+  end
+
+  defp resolve_recipe_attrs(config, meal_type, target_date) do
+    context = Bot.get_context_for_date(config, target_date)
+    description = build_description(context, meal_type)
+
+    Logger.info(
+      "[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date}: #{description}"
+    )
+
+    case RecipeAgent.run(description) do
+      {:ok, attrs, _} -> {:ok, attrs}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # Run the agent, rejecting and retrying any recipe that contains a discouraged
+  # ingredient. The prompt asks the agent to avoid them; this is the hard guard.
+  defp generate_avoiding(_description, _discouraged_ids, meal_type, 0) do
+    {:error, "#{meal_type}: could not generate a recipe free of discouraged ingredients"}
+  end
+
+  defp generate_avoiding(description, discouraged_ids, meal_type, attempts_left) do
+    case RecipeAgent.run(description) do
+      {:ok, attrs, _} ->
+        case offending_ingredient_ids(attrs, discouraged_ids) do
+          [] ->
+            {:ok, attrs}
+
+          offending ->
+            Logger.warning(
+              "[DailyRecipeGenerationWorker] #{meal_type} recipe contained discouraged " <>
+                "ingredient_ids #{inspect(offending)}, retrying (#{attempts_left - 1} left)"
+            )
+
+            generate_avoiding(description, discouraged_ids, meal_type, attempts_left - 1)
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp offending_ingredient_ids(attrs, discouraged_ids) do
+    (attrs["recipe_ingredients"] || [])
+    |> Enum.map(fn ri -> ri["ingredient_id"] || ri[:ingredient_id] end)
+    |> Enum.filter(&MapSet.member?(discouraged_ids, &1))
+    |> Enum.uniq()
   end
 
   defp schedule_publish_jobs(config, bot_recipe, target_date, meal_type) do
@@ -171,6 +250,53 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
     base = if wt, do: base <> ", following the '#{wt}' week theme", else: base
     base = if df, do: base <> ", with today's focus: #{df}", else: base
     base <> ". The recipe must fit the #{mt} style in ingredients and spirit."
+  end
+
+  # Cap the ingredient lists injected into the prompt so it stays bounded; the
+  # full discouraged set is still enforced by the post-generation id check.
+  @ingredient_name_limit 50
+
+  defp build_condition_description(config, context, meal_type, encouraged, discouraged) do
+    meal_hint = Map.get(@meal_prompts, meal_type, "recipe")
+    condition_name = (config.condition && config.condition.name) || "the selected health condition"
+    encouraged_names = ingredient_names(encouraged)
+    discouraged_names = ingredient_names(discouraged)
+
+    base =
+      "A #{config.diet_direction} #{meal_hint}, designed to be suitable and beneficial " <>
+        "for people with #{condition_name}."
+
+    base =
+      if encouraged_names != "",
+        do:
+          base <>
+            " Build the recipe around these encouraged ingredients wherever they fit naturally: " <>
+            "#{encouraged_names}.",
+        else: base
+
+    base =
+      if discouraged_names != "",
+        do:
+          base <>
+            " The recipe MUST NOT contain any of these ingredients under any circumstance: " <>
+            "#{discouraged_names}.",
+        else: base
+
+    base =
+      if context.week_theme,
+        do: base <> " Follow the '#{context.week_theme}' week theme.",
+        else: base
+
+    base = if context.day_focus, do: base <> " Today's focus: #{context.day_focus}.", else: base
+    base
+  end
+
+  defp ingredient_names(ingredients) do
+    ingredients
+    |> Enum.map(& &1.name)
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.take(@ingredient_name_limit)
+    |> Enum.join(", ")
   end
 
   defp broadcast_pending_update do
