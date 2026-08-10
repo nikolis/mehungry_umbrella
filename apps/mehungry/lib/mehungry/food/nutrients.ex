@@ -9,6 +9,7 @@ defmodule Mehungry.Food.Nutrients do
 
   alias Mehungry.Repo
   alias Mehungry.Food.{Nutrient, NutrientInteractions, NutrientMerger, Recipes}
+  alias Mehungry.Food.NutrientRecalculationRuns
 
   def get_nutrient(id) do
     if not is_nil(id) and id != "" do
@@ -55,6 +56,26 @@ defmodule Mehungry.Food.Nutrients do
     end)
 
     length(ids)
+  end
+
+  @doc """
+  Recompute nutrients for every recipe as a tracked batch: opens a
+  `NutrientRecalculationRun`, enqueues one `RecipePutNutrientsWorker` per recipe
+  (each carrying the `run_id` so it reports its outcome back), and returns the
+  run so the caller can render live progress. See
+  `Mehungry.Food.NutrientRecalculationRuns`.
+  """
+  def start_full_recalculation_run do
+    ids = Recipes.list_recipe_ids()
+    run = NutrientRecalculationRuns.start_run(length(ids))
+
+    Enum.each(ids, fn id ->
+      %{recipe_id: id, run_id: run.id}
+      |> Mehungry.RecipePutNutrientsWorker.new()
+      |> Oban.insert()
+    end)
+
+    run
   end
 
   def get_interactions_for_ingredients(ingredient_ids) do

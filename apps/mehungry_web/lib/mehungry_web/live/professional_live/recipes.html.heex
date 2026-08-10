@@ -1,16 +1,75 @@
 <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-6xl mx-auto">
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-2xl font-bold text-white">Recipes Admin</h1>
-    <button
-      type="button"
-      phx-click="delete_without_ingredients"
-      disabled={@empty_count == 0}
-      data-confirm={"Delete all #{@empty_count} recipe(s) with zero ingredients? This cannot be undone."}
-      class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-700 hover:bg-red-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      <.icon name="hero-trash" class="w-4 h-4" /> Delete recipes with zero ingredients
-    </button>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        phx-click="recompute_nutrients"
+        disabled={recalc_running?(@recalc_run)}
+        data-confirm={"Recompute nutrients for all #{@total_count} recipe(s)? This enqueues one background job per recipe."}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <.icon
+          name="hero-arrow-path"
+          class={"w-4 h-4 #{if recalc_running?(@recalc_run), do: "animate-spin"}"}
+        />
+        {if recalc_running?(@recalc_run), do: "Recomputing…", else: "Recompute all nutrients"}
+      </button>
+      <button
+        type="button"
+        phx-click="delete_without_ingredients"
+        disabled={@empty_count == 0}
+        data-confirm={"Delete all #{@empty_count} recipe(s) with zero ingredients? This cannot be undone."}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-700 hover:bg-red-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <.icon name="hero-trash" class="w-4 h-4" /> Delete recipes with zero ingredients
+      </button>
+    </div>
   </div>
+
+  <%= if @recalc_run do %>
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Nutrient recomputation
+          <span class={[
+            "ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+            if(recalc_running?(@recalc_run),
+              do: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+              else: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+            )
+          ]}>
+            {if recalc_running?(@recalc_run), do: "Running", else: "Completed"}
+          </span>
+        </p>
+        <p class="text-sm font-semibold text-white">{recalc_percent(@recalc_run)}%</p>
+      </div>
+
+      <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden mb-3">
+        <div
+          class={[
+            "h-2 rounded-full transition-all duration-500",
+            if(recalc_running?(@recalc_run), do: "bg-amber-500", else: "bg-emerald-500")
+          ]}
+          style={"width: #{recalc_percent(@recalc_run)}%"}
+        >
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-4 text-sm">
+        <span class="text-slate-400">Total <span class="text-white font-semibold">{@recalc_run.total}</span></span>
+        <span class="text-green-400">Done <span class="font-semibold">{@recalc_run.completed}</span></span>
+        <span class="text-red-400">Failed <span class="font-semibold">{@recalc_run.failed}</span></span>
+        <span class="text-blue-400">Remaining <span class="font-semibold">{recalc_remaining(@recalc_run)}</span></span>
+      </div>
+
+      <%= if @recalc_run.failed > 0 and @recalc_run.error do %>
+        <p class="mt-2 text-xs text-red-400/80 truncate" title={@recalc_run.error}>
+          Last error: {@recalc_run.error}
+        </p>
+      <% end %>
+    </div>
+  <% end %>
 
   <div class="grid grid-cols-2 gap-4 mb-6">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
