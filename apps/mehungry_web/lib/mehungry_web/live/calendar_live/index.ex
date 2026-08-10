@@ -2,6 +2,7 @@ defmodule MehungryWeb.CalendarLive.Index do
   use MehungryWeb, :live_view
   use ViewportHelpers
   use MehungryWeb.Presence, :user_tracking
+  use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
 
   import MehungryWeb.CoreComponents
 
@@ -11,6 +12,7 @@ defmodule MehungryWeb.CalendarLive.Index do
   alias Mehungry.Professionals
   alias Mehungry.Repo
   alias Mehungry.Food
+  alias Mehungry.Users
   alias MehungryWeb.RecipeFlags
 
   # https://gist.github.com/cblavier/0e227de6fd1dfa00814b88642cdcb2a9
@@ -22,10 +24,9 @@ defmodule MehungryWeb.CalendarLive.Index do
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
 
-    condition_ids =
-      user.id
-      |> Accounts.get_user_profile_by_user_id()
-      |> RecipeFlags.opted_in_condition_ids()
+    profile = Accounts.get_user_profile_by_user_id(user.id)
+    condition_ids = RecipeFlags.opted_in_condition_ids(profile)
+    calorie_target = profile && profile.daily_calorie_target
 
     user_meals = load_and_format_user_meals(user.id)
     recipes = list_recipes(user)
@@ -37,7 +38,7 @@ defmodule MehungryWeb.CalendarLive.Index do
       socket
       |> assign(:user, user)
       |> assign(:condition_ids, condition_ids)
-      |> assign(:child_ids, [])
+      |> assign(:calorie_target, calorie_target)
       |> assign(:calendar_view, "week_view")
       |> assign(:particular_date, nil)
       |> assign(:page_title, "Meal planner")
@@ -53,6 +54,14 @@ defmodule MehungryWeb.CalendarLive.Index do
       )
       |> assign(:has_nutritionist, not is_nil(Professionals.get_assignment_for_client(user.id)))
       |> assign(:week_rating, nil)
+      # Assigns the recipe-details modal (RecipeDetailsComponent via the shared
+      # LiveHelpers hook) reads for save/follow toggles.
+      |> assign(:recipe, nil)
+      |> assign(:current_user_recipes, Users.list_user_saved_recipe_ids(user))
+      |> assign(
+        :current_user_follows,
+        user |> Users.list_user_follows() |> Enum.map(& &1.follow_id)
+      )
     }
   end
 
@@ -78,10 +87,22 @@ defmodule MehungryWeb.CalendarLive.Index do
     |> assign(:nutrition_details, date)
   end
 
+  defp apply_action(socket, :show_recipe, %{"recipe_id" => recipe_id} = _params) do
+    maybe_track_user(%{}, socket)
+
+    recipe = Food.get_recipe!(String.to_integer(recipe_id), socket.assigns.current_language)
+
+    Mehungry.Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
+
+    socket
+    |> assign(:page_title, recipe.title)
+    |> assign(:recipe, recipe)
+  end
+
   defp apply_action(socket, :edit, %{"id" => id} = _params) do
     maybe_track_user(%{}, socket)
 
-    user_meal = History.get_user_meal!(id)
+    user_meal = History.get_user_meal!(socket.assigns.user.id, id)
 
     # user_meal = %UserMeal{user_meal| recipe_user_meals: Enum.map(user_meal.recipe_user_meals, fn x -> x.recipe_id end) }
     socket =
@@ -218,11 +239,9 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   @impl true
-  def handle_event("resize_chart", %{"width" => width}, socket) do
-    for _child_id <- socket.assigns.child_ids do
-      send_update(MehungryWeb.CalendarLive.Calendar.PieChart, resize: width)
-    end
-
+  # The VegaLite JS hook fires this on window resize. Pie charts render at a
+  # fixed size, so there's nothing to recompute — just acknowledge it.
+  def handle_event("resize_chart", _params, socket) do
     {:noreply, socket}
   end
 
@@ -231,6 +250,7 @@ defmodule MehungryWeb.CalendarLive.Index do
     {:noreply, push_patch(socket, to: "/calendar/details/#{start_date}", replace: true)}
   end
 
+  @impl true
   def handle_event("ai_plan_week", %{"prompt" => prompt}, socket) when prompt != "" do
     user = socket.assigns.user
 
@@ -260,21 +280,23 @@ defmodule MehungryWeb.CalendarLive.Index do
     {:noreply, socket}
   end
 
+  @impl true
   def handle_event("toggle_basket", %{"view" => view}, socket) do
     socket =
       case view do
-        "week_view" ->
-          assign(socket, :calendar_view, "week_view")
-
         "day_view" ->
           assign(socket, :calendar_view, "day_view")
+
+        _ ->
+          assign(socket, :calendar_view, "week_view")
       end
 
     {:noreply, socket}
   end
 
+  @impl true
   def handle_event("delete_user_meal", %{"id" => meal_id}, socket) do
-    user_meal = History.get_user_meal!(meal_id)
+    user_meal = History.get_user_meal!(socket.assigns.user.id, meal_id)
 
     case History.delete_user_meal(user_meal) do
       {:ok, _} ->
@@ -287,7 +309,7 @@ defmodule MehungryWeb.CalendarLive.Index do
          |> assign(:user_meals, user_meals)
          |> push_event("create_meals", %{meals: user_meals})
          |> put_flash(:info, "User Meal Deleted")
-         |> push_patch(to: Routes.calendar_index_path(socket, :index), replace: true)}
+         |> push_patch(to: ~p"/calendar", replace: true)}
 
       {:error, _changeset} ->
         {:noreply, socket}
@@ -305,6 +327,11 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   @impl true
+  def handle_event("show_recipe_details", %{"recipe_id" => recipe_id}, socket) do
+    {:noreply, push_patch(socket, to: ~p"/calendar/recipe/#{recipe_id}", replace: true)}
+  end
+
+  @impl true
   def handle_event(
         "rate_meal_plan",
         %{"score" => score, "date" => date_str, "type" => type} = params,
@@ -313,21 +340,25 @@ defmodule MehungryWeb.CalendarLive.Index do
     user_id = socket.assigns.user.id
     comment = Map.get(params, "comment", nil)
 
-    date = Date.from_iso8601!(date_str)
+    with {:ok, date} <- Date.from_iso8601(date_str),
+         {parsed_score, ""} <- Integer.parse(score) do
+      attrs = %{
+        user_id: user_id,
+        rating_type: type,
+        score: parsed_score,
+        comment: comment,
+        rated_for_date: date
+      }
 
-    attrs = %{
-      user_id: user_id,
-      rating_type: type,
-      score: String.to_integer(score),
-      comment: comment,
-      rated_for_date: date
-    }
+      case Professionals.upsert_meal_plan_rating(attrs) do
+        {:ok, _rating} ->
+          {:noreply, put_flash(socket, :info, "Rating saved!")}
 
-    case Professionals.upsert_meal_plan_rating(attrs) do
-      {:ok, _rating} ->
-        {:noreply, put_flash(socket, :info, "Rating saved!")}
-
-      {:error, _changeset} ->
+        {:error, _changeset} ->
+          {:noreply, put_flash(socket, :error, "Could not save rating.")}
+      end
+    else
+      _ ->
         {:noreply, put_flash(socket, :error, "Could not save rating.")}
     end
   end

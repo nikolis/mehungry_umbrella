@@ -2,62 +2,59 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   use MehungryWeb, :live_component
 
   alias MehungryWeb.SvgComponents
+  alias MehungryWeb.CalendarLive.Calendar.Locale
 
   alias Mehungry.NutrientUtils, as: Nu
 
+  # Public entry (used by `LandingLive` with raw meals): filters + aggregates,
+  # then renders. The widget itself renders from a per-day summary precomputed
+  # once in `update/2` via `render_day_chart/4` so it doesn't re-aggregate on
+  # every LiveView update.
   def get_chart(user_meals, day, current_date, calorie_target \\ nil) do
     meals = Enum.filter(user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end)
 
-    if meals == [] do
-      nil
-    else
-      total_nutrients = Nu.summarize_meals_nutrients(meals)
-
-      total_nutrients
-      |> summary_assigns(meals, "day-#{Date.to_string(day)}", calorie_target)
-      # The current day already shows these tags on its accordion header button,
-      # so drop the redundant tag row here (keeping the Nutrition Facts + charts).
-      |> Map.merge(%{
-        title: "Daily Summary",
-        subtitle: nil,
-        foldable: false,
-        show_tags: day != current_date
-      })
-      |> summary_card()
+    case meals do
+      [] -> nil
+      _ -> render_day_chart(%{meals: meals, total_nutrients: Nu.summarize_meals_nutrients(meals)}, day, current_date, calorie_target)
     end
+  end
+
+  # Renders a day's summary card from an already-aggregated summary
+  # (`%{meals: _, total_nutrients: _}`). Returns nil for a day with no meals.
+  defp render_day_chart(nil, _day, _current_date, _calorie_target), do: nil
+  defp render_day_chart(%{total_nutrients: nil}, _day, _current_date, _calorie_target), do: nil
+
+  defp render_day_chart(%{meals: meals, total_nutrients: total_nutrients}, day, current_date, calorie_target) do
+    total_nutrients
+    |> summary_assigns(meals, "day-#{Date.to_string(day)}", calorie_target)
+    # The current day already shows these tags on its accordion header button,
+    # so drop the redundant tag row here (keeping the Nutrition Facts + charts).
+    |> Map.merge(%{
+      title: "Daily Summary",
+      subtitle: nil,
+      foldable: false,
+      show_tags: day != current_date
+    })
+    |> summary_card()
   end
 
   # Weekly summary rendered once, below the day accordions. Shows the *daily
   # average* consumption over the week: the week's total nutrients divided by the
   # number of days in the range, then run through the same summary card as the
   # per-day chart. The meal/item counts stay as week totals for context.
-  def get_week_chart(user_meals, first, last, calorie_target \\ nil) do
-    days = Date.diff(last, first) + 1
+  # Renders from a summary precomputed in `update/2`.
+  defp render_week_chart(nil, _first, _days, _calorie_target), do: nil
 
-    meals =
-      Enum.filter(user_meals, fn x ->
-        d = NaiveDateTime.to_date(x.start_dt)
-        Date.compare(d, first) != :lt and Date.compare(d, last) != :gt
-      end)
-
-    if meals == [] do
-      nil
-    else
-      total_nutrients =
-        meals
-        |> Nu.summarize_meals_nutrients()
-        |> scale_nutrients(days)
-
-      total_nutrients
-      |> summary_assigns(meals, "week-#{Date.to_string(first)}", calorie_target)
-      |> Map.merge(%{
-        title: "Weekly Summary",
-        subtitle: "Daily average over #{days} days",
-        foldable: true,
-        show_tags: true
-      })
-      |> summary_card()
-    end
+  defp render_week_chart(%{meals: meals, total_nutrients: total_nutrients}, first, days, calorie_target) do
+    total_nutrients
+    |> summary_assigns(meals, "week-#{Date.to_string(first)}", calorie_target)
+    |> Map.merge(%{
+      title: "Weekly Summary",
+      subtitle: "Daily average over #{days} days",
+      foldable: true,
+      show_tags: true
+    })
+    |> summary_card()
   end
 
   # Builds the shared assigns for a summary card from an already-aggregated
@@ -183,29 +180,21 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   end
 
   # Per-day nutrient tags for the accordion header. Renders nothing when the day
-  # has no meals (the collapsed body already shows the empty state).
+  # has no meals (the collapsed body already shows the empty state). Reads the
+  # day's summary precomputed in `update/2` rather than re-aggregating.
   def day_header_tags(assigns) do
     assigns = assign_new(assigns, :calorie_target, fn -> nil end)
 
-    meals =
-      Enum.filter(assigns.user_meals, fn x ->
-        NaiveDateTime.to_date(x.start_dt) == assigns.day
-      end)
-
-    assigns =
-      case meals do
-        [] ->
-          assign(assigns, :metrics, nil)
+    metrics =
+      case assigns.summary do
+        %{total_nutrients: tn, meals: meals} when not is_nil(tn) ->
+          summary_metrics(tn, meals, assigns.calorie_target)
 
         _ ->
-          total_nutrients = Nu.summarize_meals_nutrients(meals)
-
-          assign(
-            assigns,
-            :metrics,
-            summary_metrics(total_nutrients, meals, assigns.calorie_target)
-          )
+          nil
       end
+
+    assigns = assign(assigns, :metrics, metrics)
 
     ~H"""
     <div :if={@metrics} class="ml-auto flex flex-wrap gap-2 items-center justify-start">
@@ -318,7 +307,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     """
   end
 
-  @day_meals ["breakfast", "elevenses", "lunch", "after lunch", "dinner"]
   @impl true
   def render(assigns) do
     case is_nil(assigns.device_width) do
@@ -336,7 +324,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                 type="button"
                 class="w-fit text-parchment-dim hover:text-parchment transition-colors"
                 phx-target={@myself}
-                phx-click="prev-month"
+                phx-click="prev-day"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -360,7 +348,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                 type="button"
                 class="w-fit text-end text-parchment-dim hover:text-parchment transition-colors font-medium"
                 phx-target={@myself}
-                phx-click="next-month"
+                phx-click="next-day"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -378,9 +366,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           <.table_week_calendar
             week_rows={@week_rows}
             first={@first}
-            last={@last}
-            user_meals={@user_meals}
-            day_meals={@day_meals}
+            day_summaries={@day_summaries}
+            week_summary={@week_summary}
+            days_in_week={@days_in_week}
             current_date={@current_date}
             selected_date={@selected_date}
             myself={@myself}
@@ -409,18 +397,19 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           date
       end
 
-    {first, last, rows} = get_full_week(current_date, assigns.user_meals, 1500)
+    {first, last, rows} = get_full_week(current_date)
     language = Map.get(assigns, :current_language, "en")
 
-    calorie_target =
-      case Map.get(assigns, :user) do
-        nil ->
-          nil
+    # calorie_target is resolved once in the parent LiveView's mount and passed
+    # in, so this component doesn't hit the DB for the profile on every re-render.
+    calorie_target = Map.get(assigns, :calorie_target)
 
-        user ->
-          profile = Mehungry.Accounts.get_user_profile_by_user_id(user.id)
-          profile && profile.daily_calorie_target
-      end
+    # Aggregate each day's (and the week's) nutrients once here instead of inside
+    # the render functions, which used to re-summarize on every LiveView update
+    # (and re-summarize the current day twice — for its header tags and chart).
+    days_in_week = Date.diff(last, first) + 1
+    day_summaries = build_day_summaries(assigns.user_meals, first, last)
+    week_summary = build_week_summary(assigns.user_meals, first, last, days_in_week)
 
     assigns = [
       current_date: current_date,
@@ -431,10 +420,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       last: last,
       first: first,
       calendar_view: assigns.calendar_view,
-      day_meals: @day_meals,
       device_width: assigns.device_width,
       current_language: language,
-      calorie_target: calorie_target
+      calorie_target: calorie_target,
+      day_summaries: day_summaries,
+      week_summary: week_summary,
+      days_in_week: days_in_week
     ]
 
     {:ok,
@@ -524,7 +515,46 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     |> String.trim()
   end
 
-  defp get_full_week(current_date, _user_meals, _device_width) do
+  # Precomputes a `date => %{meals: _, total_nutrients: _}` map for every day in
+  # the visible week. `total_nutrients` is nil for days with no meals.
+  defp build_day_summaries(user_meals, first, last) do
+    Map.new(Date.range(first, last), fn day ->
+      meals = Enum.filter(user_meals, fn m -> NaiveDateTime.to_date(m.start_dt) == day end)
+
+      total_nutrients =
+        case meals do
+          [] -> nil
+          _ -> Nu.summarize_meals_nutrients(meals)
+        end
+
+      {day, %{meals: meals, total_nutrients: total_nutrients}}
+    end)
+  end
+
+  # Precomputes the weekly summary (daily-average nutrients over the range), or
+  # nil when the week has no meals.
+  defp build_week_summary(user_meals, first, last, days_in_week) do
+    meals =
+      Enum.filter(user_meals, fn m ->
+        d = NaiveDateTime.to_date(m.start_dt)
+        Date.compare(d, first) != :lt and Date.compare(d, last) != :gt
+      end)
+
+    case meals do
+      [] ->
+        nil
+
+      _ ->
+        total_nutrients =
+          meals
+          |> Nu.summarize_meals_nutrients()
+          |> scale_nutrients(days_in_week)
+
+        %{meals: meals, total_nutrients: total_nutrients}
+    end
+  end
+
+  defp get_full_week(current_date) do
     days = 6
     first = Date.beginning_of_week(current_date)
 
@@ -541,12 +571,10 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   ## ------------------------------------ Event Handlers  ---------------------------------------------------------------
 
   @impl true
-  def handle_event("prev-month", _, socket) do
-    days = 0
-    new_date = socket.assigns.current_date |> Date.add(days) |> Date.add(-1)
+  def handle_event("prev-day", _, socket) do
+    new_date = Date.add(socket.assigns.current_date, -1)
 
-    {first, last, rows} =
-      get_full_week(new_date, socket.assigns.user_meals, 100)
+    {first, last, rows} = get_full_week(new_date)
 
     assigns = [
       current_date: new_date,
@@ -559,11 +587,10 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     {:noreply, assign(socket, assigns)}
   end
 
-  def handle_event("next-month", _, socket) do
-    new_date = socket.assigns.current_date |> Date.add(1)
+  def handle_event("next-day", _, socket) do
+    new_date = Date.add(socket.assigns.current_date, 1)
 
-    {first, last, rows} =
-      get_full_week(new_date, socket.assigns.user_meals, 300)
+    {first, last, rows} = get_full_week(new_date)
 
     assigns = [
       current_date: new_date,
@@ -638,8 +665,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             </span>
             <.day_header_tags
               :if={day == @current_date}
-              user_meals={@user_meals}
-              day={day}
+              summary={@day_summaries[day]}
               calorie_target={@calorie_target}
             />
             <span
@@ -664,8 +690,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           </div>
 
           <div>
-            <% day_meals =
-              Enum.filter(@user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end) %>
+            <% day_meals = @day_summaries[day].meals %>
             <%= if day_meals == [] do %>
               <div class="flex flex-col items-center gap-3 py-8 px-4">
                 <div class="w-14 h-14 rounded-full bg-ink-panel2/60 border border-ink-panel2/50 flex items-center justify-center">
@@ -705,12 +730,13 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                         cooking_portions={re_u_m.cooking_portions}
                         consume_portions={re_u_m.consume_portions}
                         myself={@myself}
+                        recipe_id={re_u_m.recipe_id}
                         recipe={
                           %{
                             nutrients: re_u_m.recipe_nutrients,
                             primary_size: re_u_m.primary_size,
                             servings: re_u_m.servings,
-                            id: Integer.to_string(re_u_m.recipe_id) <> Integer.to_string(meal.id)
+                            id: "#{re_u_m.recipe_id}-#{meal.id}"
                           }
                         }
                       />
@@ -732,14 +758,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                               Mehungry.Food.RecipeUtils.reform_nutrients(re_u_m.recipe.nutrients),
                             primary_size: re_u_m.primary_size,
                             servings: re_u_m.portions,
-                            id: Integer.to_string(re_u_m.recipe.id) <> Integer.to_string(meal.id)
+                            id: "#{re_u_m.recipe.id}-#{meal.id}"
                           }
                         }
                       />
                     <% end %>
                   <% end %>
                 <% end %>
-                {get_chart(@user_meals, day, @current_date, @calorie_target)}
+                {render_day_chart(@day_summaries[day], day, @current_date, @calorie_target)}
               </div>
             <% end %>
           </div>
@@ -747,53 +773,17 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       </div>
 
       <div class="mt-4 mb-2">
-        {get_week_chart(@user_meals, @first, @last, @calorie_target)}
+        {render_week_chart(@week_summary, @first, @days_in_week, @calorie_target)}
       </div>
     </div>
-    """
-  end
-
-  def table_day_calendar(assigns) do
-    user_meals =
-      Enum.filter(assigns.user_meals, fn x ->
-        NaiveDateTime.to_date(x.start_dt) == assigns.current_date
-      end)
-
-    assigns = Map.put(assigns, :user_meals, user_meals)
-
-    ~H"""
-    <div
-      :for={week <- @week_rows}
-      class="h-full overflow-y-auto "
-      style="padding-bottom: 50px; margin-top: 10px;"
-    >
-      <div
-        :for={day <- week}
-        class={[
-          " text-center"
-        ]}
-      >
-        <div :for={meal <- @user_meals}>
-          <div class="py-2 rounded-lg">
-            <%= for re_u_m <- meal.recipe_user_meals do %>
-              <%= if NaiveDateTime.to_date(meal.start_dt) == day do %>
-                <.card_meal
-                  actual_meal={meal}
-                  img_url={re_u_m.img_url}
-                  title={re_u_m.title}
-                  myself={@myself}
-                />
-              <% end %>
-            <% end %>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!--Div bodu -->
     """
   end
 
   def card_meal(assigns) do
+    # `recipe_id` is the numeric recipe id for recipe cards (nil for ingredient
+    # cards); it gates the "View recipe" button that opens the details modal.
+    assigns = assign_new(assigns, :recipe_id, fn -> nil end)
+
     ~H"""
     <div class="bg-black/20 border border-ink-panel2 rounded-xl p-3 sm:p-4 hover:bg-black/30 transition-colors">
       <div class="flex gap-4 items-center">
@@ -837,18 +827,35 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
               </div>
             <% end %>
           </div>
+          <%= if @recipe_id do %>
+            <button
+              type="button"
+              phx-click="show_recipe_details"
+              phx-value-recipe_id={@recipe_id}
+              class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-basil/40 text-xs font-medium transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+                class="size-3.5 flex-shrink-0"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+              View recipe
+            </button>
+          <% end %>
         </div>
       </div>
     </div>
     """
-  end
-
-  def get_class_for_toggle_button(in_stock, calendar_view) do
-    if(calendar_view == in_stock) do
-      "checked"
-    else
-      "unchecked"
-    end
   end
 
   defp button_add_meal(assigns) do
@@ -885,33 +892,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     """
   end
 
-  @days_el %{
-    1 => "Δευτέρα",
-    2 => "Τρίτη",
-    3 => "Τετάρτη",
-    4 => "Πέμπτη",
-    5 => "Παρασκευή",
-    6 => "Σάββατο",
-    7 => "Κυριακή"
-  }
-  @months_short_el %{
-    1 => "Ιαν",
-    2 => "Φεβ",
-    3 => "Μαρ",
-    4 => "Απρ",
-    5 => "Μαϊ",
-    6 => "Ιουν",
-    7 => "Ιουλ",
-    8 => "Αυγ",
-    9 => "Σεπ",
-    10 => "Οκτ",
-    11 => "Νοε",
-    12 => "Δεκ"
-  }
-
-  defp day_name(%Date{} = date, "el"), do: Map.fetch!(@days_el, Date.day_of_week(date))
-  defp day_name(%Date{} = date, _), do: Calendar.strftime(date, "%A")
-
-  defp month_short(%Date{} = date, "el"), do: Map.fetch!(@months_short_el, date.month)
-  defp month_short(%Date{} = date, _), do: String.slice(Calendar.strftime(date, "%b"), 0..2)
+  # Locale-aware day/month names live in `Calendar.Locale` (single source for
+  # i18n). These thin wrappers keep the template call sites terse.
+  defp day_name(%Date{} = date, lang), do: Locale.day_name(date, lang)
+  defp month_short(%Date{} = date, lang), do: Locale.month_short(date, lang)
 end

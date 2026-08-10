@@ -71,6 +71,37 @@ defmodule MehungryApi.HistoryTest do
       assert History.get_user_meal!(user_meal.id) == user_meal
     end
 
+    test "get_user_meal!/2 returns the meal when owned by the user", %{user: user} do
+      recipe = FoodFixtures.recipe_fixture(user)
+      recipe_user_meals = [%{recipe_id: recipe.id, consume_portions: 2, cooking_portions: 6}]
+      user_meal = user_meal_fixture(%{user_id: user.id, recipe_user_meals: recipe_user_meals})
+
+      assert %UserMeal{} = fetched = History.get_user_meal!(user.id, user_meal.id)
+      assert fetched.id == user_meal.id
+    end
+
+    test "get_user_meal!/2 raises for a meal owned by another user", %{user: user} do
+      other = AccountsFixtures.user_fixture()
+      recipe = FoodFixtures.recipe_fixture(user)
+      recipe_user_meals = [%{recipe_id: recipe.id, consume_portions: 2, cooking_portions: 6}]
+      user_meal = user_meal_fixture(%{user_id: user.id, recipe_user_meals: recipe_user_meals})
+
+      assert_raise Ecto.NoResultsError, fn ->
+        History.get_user_meal!(other.id, user_meal.id)
+      end
+    end
+
+    test "get_user_meal_raw!/2 raises for a meal owned by another user", %{user: user} do
+      other = AccountsFixtures.user_fixture()
+      recipe = FoodFixtures.recipe_fixture(user)
+      recipe_user_meals = [%{recipe_id: recipe.id, consume_portions: 2, cooking_portions: 6}]
+      user_meal = user_meal_fixture(%{user_id: user.id, recipe_user_meals: recipe_user_meals})
+
+      assert_raise Ecto.NoResultsError, fn ->
+        History.get_user_meal_raw!(other.id, user_meal.id)
+      end
+    end
+
     test "create_user_meal/1 with valid data creates a user_meal" do
       user = AccountsFixtures.user_fixture()
       recipe = FoodFixtures.recipe_fixture(user, %{nutrients: %{}})

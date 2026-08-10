@@ -174,8 +174,47 @@ defmodule Mehungry.History do
     )
   end
 
+  @doc """
+  Gets a single user_meal owned by `user_id`.
+
+  Scopes the lookup by owner so a meal id belonging to another user raises
+  `Ecto.NoResultsError` instead of leaking/mutating that user's data.
+  """
+  def get_user_meal!(user_id, id) do
+    from(m in UserMeal, where: m.id == ^id and m.user_id == ^user_id)
+    |> Repo.one!()
+    |> Repo.preload(
+      recipe_user_meals: [
+        recipe: [
+          recipe_ingredients: [
+            :measurement_unit,
+            ingredient: [:category, :ingredient_translation]
+          ]
+        ]
+      ]
+    )
+  end
+
   def get_user_meal_raw!(id) do
     Repo.get!(UserMeal, id)
+    |> Repo.preload(
+      consume_recipe_user_meals: [recipe_user_meal: :recipe],
+      recipe_user_meals: [
+        :recipe
+      ],
+      ingredient_user_meals: [
+        :ingredient
+      ]
+    )
+  end
+
+  @doc """
+  Gets a single user_meal owned by `user_id`, with the raw associations used by
+  the edit form. Scoped by owner (see `get_user_meal!/2`).
+  """
+  def get_user_meal_raw!(user_id, id) do
+    from(m in UserMeal, where: m.id == ^id and m.user_id == ^user_id)
+    |> Repo.one!()
     |> Repo.preload(
       consume_recipe_user_meals: [recipe_user_meal: :recipe],
       recipe_user_meals: [

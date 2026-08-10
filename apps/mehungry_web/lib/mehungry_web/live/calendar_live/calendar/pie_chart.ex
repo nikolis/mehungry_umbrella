@@ -3,25 +3,17 @@ defmodule MehungryWeb.CalendarLive.Calendar.PieChart do
 
   alias VegaLite, as: Vl
 
-  # ---------- MOUNT ----------
-  def mount(socket) do
-    {:ok, assign(socket, width: 150)}
-  end
-
   # ---------- UPDATE ----------
   def update(assigns, socket) do
-    assigns = Map.put(assigns, :width, 300)
-
-    socket =
-      socket
-      |> assign(:spec, build_spec(assigns.data, assigns.width))
-
+    socket = assign(socket, :spec, build_spec(assigns.data))
     {:ok, assign(socket, assigns)}
   end
 
   # ---------- HANDLE RESIZE ----------
-  def handle_event("resize", %{"width" => width}, socket) do
-    {:noreply, assign(socket, width: width)}
+  # Fired by the ResponsiveChart JS hook on window resize. The chart renders at
+  # a fixed size, so there's nothing to recompute.
+  def handle_event("resize", _params, socket) do
+    {:noreply, socket}
   end
 
   # ---------- VIEW ----------
@@ -43,10 +35,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.PieChart do
   end
 
   # ---------- CHART BUILDER ----------
-  def build_spec(data, width) do
-    _radius = width * 0.35
-    _inner = width * 0.2
-
+  def build_spec(data) do
     Vl.new(width: 100, height: 100)
     |> Vl.data_from_values(data)
     |> Vl.mark(:arc, radius: 50)
