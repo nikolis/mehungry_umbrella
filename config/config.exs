@@ -139,6 +139,16 @@ config :mehungry_web,
   ecto_repos: [Mehungry.Repo],
   generators: [context_app: :mehungry]
 
+# Supported UI/content locales, carried as the leading URL path segment
+# (`/en/…`, `/el/…`). `default` is used for bare `/`, unknown locales, and the
+# Gettext fallback. Single source of truth read by `MehungryWeb.Locale`.
+config :mehungry_web, :locales,
+  supported: ["en", "el"],
+  default: "en"
+
+# Gettext's process-locale default when nothing sets it (matches :locales default).
+config :gettext, :default_locale, "en"
+
 # Configures the endpoint
 # secret_key_base is intentionally absent here — set via SECRET_KEY_BASE env var
 # in runtime.exs for prod, and in dev.exs / test.exs for local environments.

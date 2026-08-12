@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="snap-y	snap-mandatory">
+<html lang={@conn.assigns[:locale] || "en"} class="snap-y	snap-mandatory">
   <!-- Favicon - SVG for modern browsers -->
   <.head conn={@conn} />
   <body class="bg-ink">

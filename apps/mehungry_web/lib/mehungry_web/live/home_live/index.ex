@@ -26,7 +26,7 @@ defmodule MehungryWeb.HomeLive.Index do
       end
 
     {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
-    language = user_profile && user_profile.language_preference
+    language = socket.assigns[:current_language] || (user_profile && user_profile.language_preference)
 
     all_posts =
       Mehungry.Posts.list_posts(user)
@@ -137,8 +137,9 @@ defmodule MehungryWeb.HomeLive.Index do
   end
 
   defp get_user_language(socket) do
+    # URL locale (RestoreLocale) wins; profile preference is the fallback.
     profile = Map.get(socket.assigns, :user_profile)
-    profile && profile.language_preference
+    socket.assigns[:current_language] || (profile && profile.language_preference)
   end
 
   defp subscribe_to_posts(posts) do

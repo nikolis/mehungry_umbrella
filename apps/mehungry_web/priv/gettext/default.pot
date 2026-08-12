@@ -1,0 +1,94 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/mehungry_web/components/core_components.ex:1346
+#, elixir-autogen, elixir-format
+msgid "Actions"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:118
+#, elixir-autogen, elixir-format
+msgid "Admin Panel"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:100
+#, elixir-autogen, elixir-format
+msgid "Basket"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:35
+#, elixir-autogen, elixir-format
+msgid "Browse"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:92
+#, elixir-autogen, elixir-format
+msgid "Calendar"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:84
+#, elixir-autogen, elixir-format
+msgid "Create Recipe"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:56
+#, elixir-autogen, elixir-format
+msgid "Foods"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:168
+#, elixir-autogen, elixir-format
+msgid "Friends"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:108
+#, elixir-autogen, elixir-format
+msgid "Give Feedback"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:67
+#, elixir-autogen, elixir-format
+msgid "Health"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:214
+#, elixir-autogen, elixir-format
+msgid "Log in"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:177
+#, elixir-autogen, elixir-format
+msgid "Manage subscriptions"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:129
+#, elixir-autogen, elixir-format
+msgid "Nutritionist Panel"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:206
+#, elixir-autogen, elixir-format
+msgid "Profile"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:148
+#, elixir-autogen, elixir-format
+msgid "Tutor Invitations"
+msgstr ""
+
+#: lib/mehungry_web/components/core_components.ex:594
+#: lib/mehungry_web/components/core_components.ex:646
+#: lib/mehungry_web/components/core_components.ex:700
+#, elixir-autogen, elixir-format
+msgid "close"
+msgstr ""

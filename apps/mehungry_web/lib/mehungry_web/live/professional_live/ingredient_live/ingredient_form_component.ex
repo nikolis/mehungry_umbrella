@@ -118,13 +118,4 @@ defmodule MehungryWeb.Professional.IngredientFormComponent do
     </form>
     """
   end
-
-  def handle_event("validate", %{"ingredient" => _params}, socket) do
-    {:noreply, socket}
-  end
-
-  def handle_event("save", %{"ingredient" => params}, socket) do
-    send(self(), {:save, params})
-    {:noreply, socket}
-  end
 end

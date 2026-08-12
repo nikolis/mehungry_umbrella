@@ -23,14 +23,14 @@
 
     <!-- Browse -->
     <.link
-      patch="/browse"
+      patch={"/#{@current_language}/browse"}
       class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
     >
       <.icon name="hero-book-open" class="h-7 w-7" />
     </.link>
 
     <a
-      href="/conditions"
+      href={"/#{@current_language}/conditions"}
       class=" flex items-center   rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <.icon
@@ -41,7 +41,7 @@
 
     <!-- Foods -->
     <.link
-      patch="/foods"
+      patch={"/#{@current_language}/foods"}
       class="flex items-center justify-center p-3 nav_link_basic rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <svg
@@ -62,7 +62,7 @@
 
     <!-- Create -->
     <.link
-      patch="/create_recipe"
+      patch={"/#{@current_language}/create_recipe"}
       class="flex items-center justify-center p-3 nav_link_basic rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <.icon name="hero-plus-circle" class="h-7 w-7" />
@@ -70,7 +70,7 @@
 
     <!-- Calendar -->
     <.link
-      patch="/calendar"
+      patch={"/#{@current_language}/calendar"}
       class="flex items-center justify-center p-3 nav_link_basic text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors rounded-lg"
     >
       <.icon name="hero-calendar" class="h-7 w-7" />
@@ -78,7 +78,7 @@
 
     <!-- Basket -->
     <.link
-      patch="/basket"
+      patch={"/#{@current_language}/basket"}
       class="flex items-center justify-center p-3 nav_link_basic text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors rounded-lg"
     >
       <.icon name="hero-shopping-cart" class="h-7 w-7" />
@@ -87,7 +87,7 @@
     <!-- Tutor invitations (non-professional users with pending invitations) -->
     <%= if show_invitations do %>
       <a
-        href="/notifications/invitations"
+        href={"/#{@current_language}/notifications/invitations"}
         class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
       >
         <div class="relative">
@@ -102,7 +102,7 @@
     <!-- Friend requests -->
     <%= if show_friend_requests do %>
       <a
-        href="/friends"
+        href={"/#{@current_language}/friends"}
         class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
       >
         <div class="relative">
@@ -116,7 +116,7 @@
 
     <!-- Profile / Login -->
     <a
-      href={~p"/profile"}
+      href={"/#{@current_language}/profile"}
       class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment transition-colors"
     >
       <%= if @current_user do %>

@@ -46,33 +46,42 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsCreate do
     handle_action(socket, params)
   end
 
+  # `validate` must never persist — it only refreshes the in-memory changeset
+  # so inline errors show as the admin types.
   def handle_event("validate", %{"ingredient" => params}, socket) do
-    handle_action(socket, params)
+    rebuild_form(socket, params)
   end
 
+  # Row add/remove for the nested sub-forms is driven through cast_assoc's
+  # `sort_param`/`drop_param` (see `Ingredient.changeset`); anything else is the
+  # real create. Mirrors `ProfessionalLive.IngredientsEdit`.
   defp handle_action(socket, params) do
     case params["_action"] do
       "add_portion" ->
-        add_portion(socket, params)
+        rebuild_form(socket, add_row(params, "ingredient_portions"))
 
       "add_nutrient" ->
-        add_nutrient(socket, params)
+        rebuild_form(socket, add_row(params, "ingredient_nutrients"))
 
       "add_ingredient_translation" ->
-        add_ingredient_translation(socket, params)
+        rebuild_form(socket, add_row(params, "ingredient_translation"))
 
       "remove_portion:" <> index ->
-        remove_portion(socket, params, index)
+        rebuild_form(socket, drop_row(params, "ingredient_portions", index))
 
       "remove_nutrient:" <> index ->
-        remove_nutrient(socket, params, index)
+        rebuild_form(socket, drop_row(params, "ingredient_nutrients", index))
+
+      "remove_ingredient_translation:" <> index ->
+        rebuild_form(socket, drop_row(params, "ingredient_translation", index))
 
       _ ->
         case Food.create_ingredient(params) do
           {:ok, _ingredient} ->
             {:noreply,
              socket
-             |> put_flash(:info, "Saved successfully")}
+             |> put_flash(:info, "Saved successfully")
+             |> push_navigate(to: ~p"/professional/ingredients")}
 
           {:error, changeset} ->
             {:noreply, assign(socket, :form, to_form(changeset))}
@@ -80,81 +89,14 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsCreate do
     end
   end
 
-  defp add_portion(socket, params) do
-    portions = Map.get(params, "ingredient_portions", %{})
-
-    new_key = "#{map_size(portions)}"
-
-    updated =
-      Map.put(portions, new_key, %{})
-
-    new_params =
-      Map.put(params, "ingredient_portions", updated)
-
-    rebuild_form(socket, new_params)
+  # Append a sentinel to `<field>_sort` so cast_assoc adds one new empty child.
+  defp add_row(params, field) do
+    Map.update(params, "#{field}_sort", ["new"], &(&1 ++ ["new"]))
   end
 
-  defp add_ingredient_translation(socket, params) do
-    nutrients = Map.get(params, "ingredient_translation", %{})
-
-    new_key = "#{map_size(nutrients)}"
-
-    updated =
-      Map.put(nutrients, new_key, %{})
-
-    new_params =
-      Map.put(params, "ingredient_translation", updated)
-
-    rebuild_form(socket, new_params)
-  end
-
-  defp add_nutrient(socket, params) do
-    nutrients = Map.get(params, "ingredient_nutrients", %{})
-
-    new_key = "#{map_size(nutrients)}"
-
-    updated =
-      Map.put(nutrients, new_key, %{})
-
-    new_params =
-      Map.put(params, "ingredient_nutrients", updated)
-
-    rebuild_form(socket, new_params)
-  end
-
-  defp remove_portion(socket, params, index) do
-    portions =
-      Map.get(params, "ingredient_portions", %{})
-      |> Map.delete(index)
-
-    new_params =
-      Map.put(params, "ingredient_portions", portions)
-
-    rebuild_form(socket, new_params)
-  end
-
-  defp remove_nutrient(socket, params, index) do
-    portions =
-      Map.get(params, "ingredient_nutrients", %{})
-      |> Map.delete(index)
-
-    new_params =
-      Map.put(params, "ingredient_nutrients", portions)
-
-    rebuild_form(socket, new_params)
-  end
-
-  def handle_info({:save, params}, socket) do
-    case Food.update_ingredient(socket.assigns.ingredient, params) do
-      {:ok, ingredient} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Saved")
-         |> assign(:ingredient, ingredient)}
-
-      {:error, cs} ->
-        {:noreply, assign(socket, :form, to_form(cs))}
-    end
+  # Append the row index to `<field>_drop` so cast_assoc drops that child.
+  defp drop_row(params, field, index) do
+    Map.update(params, "#{field}_drop", [index], &(&1 ++ [index]))
   end
 
   defp rebuild_form(socket, params) do

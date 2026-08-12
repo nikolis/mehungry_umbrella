@@ -13,7 +13,9 @@ defmodule MehungryWeb.NutritionistLive.MobileInvitationNavTest do
 
   alias Mehungry.Professionals
 
-  @mobile_invite_link "#nav_bar_mobile a[href='/notifications/invitations']"
+  # Nav links are locale-prefixed; a logged-in user with no locale in the URL
+  # defaults to "en".
+  @mobile_invite_link "#nav_bar_mobile a[href='/en/notifications/invitations']"
 
   setup do
     nutritionist = Mehungry.AccountsFixtures.user_fixture()

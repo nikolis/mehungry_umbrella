@@ -8,14 +8,22 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
-     assign(socket,
+     socket
+     |> stream(:files, [])
+     |> assign(
        bucket_name: "",
-       objects: [],
        prefix: nil,
        loading: false,
        error: nil,
        info: nil,
-       seed_files: %{},
+       folders: [],
+       # key => row map (server-side bookkeeping; never rendered directly, so
+       # updating it never re-renders the streamed table). Holds the S3 metadata
+       # (size/last_modified/name) a live `{:seed_file, ...}` update lacks.
+       file_index: %{},
+       # status string => count, maintained incrementally so the summary line can
+       # update without walking the whole listing on every broadcast.
+       counts: %{},
        subscribed_bucket: nil
      )}
   end
@@ -86,17 +94,16 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
         </div>
       <% end %>
 
-      <%= if map_size(@seed_files) > 0 do %>
-        <% counts = status_counts(@seed_files) %>
+      <%= if seed_counts_present?(@counts) do %>
         <div
           class="flex flex-wrap gap-4 bg-gray-50 border border-gray-200 text-gray-700 px-4 py-3 rounded mb-4 text-sm"
           role="status"
         >
           <span class="font-medium">Seed status:</span>
-          <span class="text-gray-500">Pending {Map.get(counts, "pending", 0)}</span>
-          <span class="text-blue-600">Processing {Map.get(counts, "processing", 0)}</span>
-          <span class="text-green-600">Completed {Map.get(counts, "completed", 0)}</span>
-          <span class="text-red-600">Failed {Map.get(counts, "failed", 0)}</span>
+          <span class="text-gray-500">Pending {Map.get(@counts, "pending", 0)}</span>
+          <span class="text-blue-600">Processing {Map.get(@counts, "processing", 0)}</span>
+          <span class="text-green-600">Completed {Map.get(@counts, "completed", 0)}</span>
+          <span class="text-red-600">Failed {Map.get(@counts, "failed", 0)}</span>
         </div>
       <% end %>
 
@@ -122,8 +129,8 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
       <%= if @bucket_name != "" do %>
         <%= if not @loading do %>
           <div class="mb-2 text-sm text-gray-600">
-            {length(files(@objects, @prefix))} file(s)<%= if folders(@objects, @prefix) != [] do %>
-              , {length(folders(@objects, @prefix))} folder(s)
+            {map_size(@file_index)} file(s)<%= if @folders != [] do %>
+              , {length(@folders)} folder(s)
             <% end %>
           </div>
         <% end %>
@@ -175,114 +182,114 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
                 </th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <%= if @loading do %>
+
+            <%= if @loading do %>
+              <tbody>
                 <tr>
                   <td colspan="7" class="px-6 py-4 text-center text-gray-500">
                     Loading...
                   </td>
                 </tr>
-              <% else %>
-                <%= if folders(@objects, @prefix) != [] do %>
-                  <%= for folder <- folders(@objects, @prefix) do %>
-                    <tr>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-400">-</div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-blue-500">📁 Folder</div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div
-                          class="text-sm font-medium text-blue-500 cursor-pointer"
-                          phx-click="navigate_folder"
-                          phx-value-folder={folder}
-                        >
-                          {display_name(folder, @prefix)}
-                        </div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-500">-</div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-500">-</div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-500">-</div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-500">-</div>
-                      </td>
-                    </tr>
-                  <% end %>
-                <% end %>
+              </tbody>
+            <% else %>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr :for={folder <- @folders}>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-400">-</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-blue-500">📁 Folder</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div
+                      class="text-sm font-medium text-blue-500 cursor-pointer"
+                      phx-click="navigate_folder"
+                      phx-value-folder={folder}
+                    >
+                      {display_name(folder, @prefix)}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">-</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">-</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">-</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">-</div>
+                  </td>
+                </tr>
+              </tbody>
 
-                <%= if files(@objects, @prefix) != [] do %>
-                  <%= for {file, index} <- Enum.with_index(files(@objects, @prefix), 1) do %>
-                    <tr>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-500">{index}</div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">📄 File</div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">
-                          {display_name(file.key, @prefix)}
-                        </div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-500">{format_size(file.size)}</div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-500">{format_date(file.last_modified)}</div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <% seed_file = Map.get(@seed_files, file.key) %>
-                        <div
-                          class={"text-sm font-medium #{seed_status_class(seed_file)}"}
-                          title={seed_status_title(seed_file)}
-                        >
-                          {seed_status_label(seed_file)}
-                        </div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          phx-click="download_file"
-                          phx-value-key={file.key}
-                          class="text-indigo-600 hover:text-indigo-900 mr-3"
-                        >
-                          Download
-                        </button>
-                        <button
-                          phx-click="redo_file"
-                          phx-value-key={file.key}
-                          class="text-amber-600 hover:text-amber-900 mr-3"
-                        >
-                          Re-do
-                        </button>
-                        <button
-                          phx-click="delete_file"
-                          phx-value-key={file.key}
-                          data-confirm="Are you sure you want to delete this file?"
-                          class="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  <% end %>
-                <% end %>
+              <tbody
+                id="seed-file-rows"
+                phx-update="stream"
+                class="bg-white divide-y divide-gray-200"
+              >
+                <tr :for={{dom_id, row} <- @streams.files} id={dom_id}>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-500">•</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">📄 File</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">{row.name}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">{format_size(row.size)}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">{format_date(row.last_modified)}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div
+                      class={"text-sm font-medium #{seed_status_class(row)}"}
+                      title={seed_status_title(row)}
+                    >
+                      {seed_status_label(row)}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      phx-click="download_file"
+                      phx-value-key={row.key}
+                      class="text-indigo-600 hover:text-indigo-900 mr-3"
+                    >
+                      Download
+                    </button>
+                    <button
+                      phx-click="redo_file"
+                      phx-value-key={row.key}
+                      class="text-amber-600 hover:text-amber-900 mr-3"
+                    >
+                      Re-do
+                    </button>
+                    <button
+                      phx-click="delete_file"
+                      phx-value-key={row.key}
+                      data-confirm="Are you sure you want to delete this file?"
+                      class="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
 
-                <%= if @objects == [] do %>
+              <%= if @folders == [] and map_size(@file_index) == 0 do %>
+                <tbody>
                   <tr>
                     <td colspan="7" class="px-6 py-4 text-center text-gray-500">
                       No files found in this {if @prefix, do: "folder", else: "bucket"}.
                     </td>
                   </tr>
-                <% end %>
+                </tbody>
               <% end %>
-            </tbody>
+            <% end %>
           </table>
         </div>
       <% else %>
@@ -359,9 +366,20 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
     else
       count = SeedFiles.reset(bucket_name, socket.assigns.prefix)
 
+      # Keep the files on screen but clear their status back to "—" without a
+      # re-list round-trip: strip the status fields off the cached rows and
+      # re-stream them.
+      cleared =
+        Map.new(socket.assigns.file_index, fn {key, row} ->
+          {key, %{row | status: nil, ingredient_count: nil, error: nil}}
+        end)
+
       {:noreply,
-       assign(socket,
-         seed_files: %{},
+       socket
+       |> stream(:files, ordered_rows(cleared), reset: true)
+       |> assign(
+         file_index: cleared,
+         counts: %{},
          info: "Seed status reset — cleared #{count} tracking row(s). You can start a fresh run.",
          error: nil
        )}
@@ -443,15 +461,36 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
     end
   end
 
-  # Live status updates broadcast by `SeedFiles` as import jobs run. Merge the
-  # row into the status map (keyed by object key) when it belongs to the bucket
-  # currently on screen; ignore stragglers from other buckets.
+  # Live status updates broadcast by `SeedFiles` as import jobs finish. Because the
+  # row is a stream entry, we patch just that one <tr> (O(1) diff) instead of
+  # re-rendering the whole table, and adjust the summary counts incrementally.
+  # Ignores broadcasts for other buckets or for keys not on the current page.
   @impl true
   def handle_info({:seed_file, %{bucket: bucket, key: key} = seed_file}, socket) do
-    if bucket == socket.assigns.bucket_name do
-      {:noreply, assign(socket, seed_files: Map.put(socket.assigns.seed_files, key, seed_file))}
-    else
-      {:noreply, socket}
+    cond do
+      bucket != socket.assigns.bucket_name ->
+        {:noreply, socket}
+
+      not Map.has_key?(socket.assigns.file_index, key) ->
+        {:noreply, socket}
+
+      true ->
+        old = Map.fetch!(socket.assigns.file_index, key)
+
+        row = %{
+          old
+          | status: seed_file.status,
+            ingredient_count: seed_file.ingredient_count,
+            error: seed_file.error
+        }
+
+        {:noreply,
+         socket
+         |> stream_insert(:files, row)
+         |> assign(
+           file_index: Map.put(socket.assigns.file_index, key, row),
+           counts: adjust_counts(socket.assigns.counts, old.status, seed_file.status)
+         )}
     end
   end
 
@@ -475,21 +514,15 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
 
   @impl true
   def handle_async({:list, bucket_name, _prefix}, {:ok, {:ok, contents, seed_files}}, socket) do
-    socket =
-      socket
-      |> ensure_subscribed(bucket_name)
-      |> assign(objects: contents, seed_files: seed_files, loading: false, error: nil)
-
-    {:noreply, socket}
+    {:noreply, apply_listing(socket, bucket_name, contents, seed_files, loading: false, error: nil)}
   end
 
   def handle_async({:list, _bucket, _prefix}, {:ok, {:error, error}}, socket) do
-    {:noreply, assign(socket, error: extract_error_message(error), objects: [], loading: false)}
+    {:noreply, clear_listing(socket, error: extract_error_message(error))}
   end
 
   def handle_async({:list, _bucket, _prefix}, {:exit, reason}, socket) do
-    {:noreply,
-     assign(socket, error: "Listing failed: #{inspect(reason)}", objects: [], loading: false)}
+    {:noreply, clear_listing(socket, error: "Listing failed: #{inspect(reason)}")}
   end
 
   def handle_async(
@@ -501,27 +534,87 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
       "Queued #{enqueued} file(s) for import" <>
         if(failed > 0, do: " (#{failed} failed to queue)", else: "")
 
-    socket =
-      socket
-      |> ensure_subscribed(bucket_name)
-      |> assign(
-        objects: contents,
-        seed_files: seed_files,
-        loading: false,
-        info: info,
-        error: nil
-      )
-
-    {:noreply, socket}
+    {:noreply,
+     apply_listing(socket, bucket_name, contents, seed_files, loading: false, info: info, error: nil)}
   end
 
   def handle_async({:load_ingredients, _bucket, _prefix}, {:ok, {:error, error}}, socket) do
-    {:noreply, assign(socket, error: extract_error_message(error), objects: [], loading: false)}
+    {:noreply, clear_listing(socket, error: extract_error_message(error))}
   end
 
   def handle_async({:load_ingredients, _bucket, _prefix}, {:exit, reason}, socket) do
     {:noreply, assign(socket, error: "Import enqueue failed: #{inspect(reason)}", loading: false)}
   end
+
+  # Merges the S3 listing with the DB seed-status rows into stream entries, resets
+  # the stream to exactly that set, and rebuilds the server-side `file_index` +
+  # `counts` bookkeeping. `extra` carries per-call flags (loading/info/error).
+  defp apply_listing(socket, bucket_name, contents, seed_files, extra) do
+    prefix = socket.assigns.prefix
+    folder_list = folders(contents, prefix)
+
+    rows =
+      contents
+      |> files(prefix)
+      |> Enum.map(&build_row(&1, Map.get(seed_files, &1.key), prefix))
+
+    file_index = Map.new(rows, &{&1.key, &1})
+    counts = count_statuses(rows)
+
+    socket
+    |> ensure_subscribed(bucket_name)
+    |> stream(:files, rows, reset: true)
+    |> assign(
+      [bucket_name: bucket_name, folders: folder_list, file_index: file_index, counts: counts] ++
+        extra
+    )
+  end
+
+  # Empties the listing (used on a failed load) while surfacing an error.
+  defp clear_listing(socket, extra) do
+    socket
+    |> stream(:files, [], reset: true)
+    |> assign([folders: [], file_index: %{}, counts: %{}, loading: false] ++ extra)
+  end
+
+  # Builds one stream row, merging the S3 object metadata with its (optional)
+  # seed-status row. `id` must be a stable, HTML-id-safe token; S3 keys contain
+  # slashes/dots, so encode them.
+  defp build_row(object, seed_file, prefix) do
+    %{
+      id: "seed-file-" <> Base.url_encode64(object.key, padding: false),
+      key: object.key,
+      name: display_name(object.key, prefix),
+      size: object.size,
+      last_modified: object.last_modified,
+      status: seed_file && seed_file.status,
+      ingredient_count: seed_file && seed_file.ingredient_count,
+      error: seed_file && seed_file.error
+    }
+  end
+
+  defp ordered_rows(file_index), do: file_index |> Map.values() |> Enum.sort_by(& &1.key)
+
+  defp count_statuses(rows) do
+    rows
+    |> Enum.reject(&is_nil(&1.status))
+    |> Enum.frequencies_by(& &1.status)
+  end
+
+  # Decrement the old status bucket, increment the new — keeps `counts` correct
+  # without re-scanning `file_index`. nil statuses (files never imported) don't
+  # participate in any bucket.
+  defp adjust_counts(counts, old_status, new_status) do
+    counts
+    |> then(fn c ->
+      if old_status, do: Map.update(c, old_status, 0, &max(&1 - 1, 0)), else: c
+    end)
+    |> then(fn c ->
+      if new_status, do: Map.update(c, new_status, 1, &(&1 + 1)), else: c
+    end)
+  end
+
+  defp seed_counts_present?(counts), do: map_size(counts) > 0
 
   # Subscribes to a bucket's seed-status topic exactly once, swapping the
   # subscription when the browsed bucket changes. No-op until connected.
@@ -608,13 +701,6 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
 
   # Seed-status rendering ----------------------------------------------------
 
-  defp status_counts(seed_files) do
-    seed_files
-    |> Map.values()
-    |> Enum.frequencies_by(& &1.status)
-  end
-
-  defp seed_status_label(nil), do: "—"
   defp seed_status_label(%{status: "pending"}), do: "Pending"
   defp seed_status_label(%{status: "processing"}), do: "Processing…"
 
@@ -624,7 +710,6 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   defp seed_status_label(%{status: "failed"}), do: "Failed"
   defp seed_status_label(_), do: "—"
 
-  defp seed_status_class(nil), do: "text-gray-400"
   defp seed_status_class(%{status: "pending"}), do: "text-gray-500"
   defp seed_status_class(%{status: "processing"}), do: "text-blue-600"
   defp seed_status_class(%{status: "completed"}), do: "text-green-600"
