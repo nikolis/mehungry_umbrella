@@ -58,7 +58,7 @@ defmodule MehungryWeb.LayoutView do
       current_language={@current_language}
       inner_content={@inner_content}
     />
-    <.mobile_menu current_user={@current_user} />
+    <.mobile_menu current_user={@current_user} current_language={@current_language} />
     <a
       href="/feedback"
       class="md:hidden fixed bottom-20 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-full bg-slate-700 text-slate-200 text-xs font-medium shadow-lg hover:bg-slate-600 transition-colors"

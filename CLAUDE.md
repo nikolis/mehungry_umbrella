@@ -61,7 +61,7 @@ mix dialyzer
 | `Posts` | Posts, comments, comment answers, votes |
 | `Search` | Full-text recipe search |
 | `Survey` | User dietary preference surveys |
-| `Languages` | Multi-language translations for ingredients and units |
+| `Languages` | Multi-language translations for ingredients and units. App-wide localization (locale-prefixed URLs `/en/…`·`/el/…`, `MehungryWeb.Locale` + `SetLocale` plug + `RestoreLocale` on_mount, Gettext UI strings, hreflang/canonical) is in **`docs/localization.md`** |
 | `Meta` | Visit tracking |
 | `History` | User activity history |
 | `Professionals` | Nutritionist profiles, client invitations, assignments, appointments, meal plan ratings |

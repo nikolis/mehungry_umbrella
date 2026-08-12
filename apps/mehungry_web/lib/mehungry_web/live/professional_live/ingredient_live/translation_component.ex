@@ -40,20 +40,18 @@ defmodule MehungryWeb.Professional.TranslationsComponent do
                 input_variable={:language_name}
               />
             </div>
+            <button
+              type="submit"
+              name="ingredient[_action]"
+              value={"remove_ingredient_translation:#{tr_form.index}"}
+              class="self-end text-parchment-dim hover:text-red-400 transition-colors p-1"
+            >
+              <.icon name="hero-x-mark" class="w-4 h-4" />
+            </button>
           </div>
         </.inputs_for>
       </div>
     </div>
     """
-  end
-
-  def handle_event("add_translation", _, socket) do
-    send(self(), :add_translation)
-    {:noreply, socket}
-  end
-
-  def handle_event("remove_translation", %{"index" => i}, socket) do
-    send(self(), {:remove_translation, String.to_integer(i)})
-    {:noreply, socket}
   end
 end

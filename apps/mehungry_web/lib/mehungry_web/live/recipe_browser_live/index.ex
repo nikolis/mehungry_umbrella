@@ -42,7 +42,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
     {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
 
-    language = user_profile && user_profile.language_preference
+    language = socket.assigns[:current_language] || (user_profile && user_profile.language_preference)
 
     {query, {recipes, cursor_after}} =
       case query_str do
@@ -652,9 +652,11 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   end
 
   defp get_user_language(socket) do
+    # The URL locale (set from `/:locale/…` via RestoreLocale) is authoritative;
+    # fall back to the stored profile preference only when it's absent.
     profile =
       Map.get(socket.assigns, :current_user_profile) || Map.get(socket.assigns, :user_profile)
 
-    profile && profile.language_preference
+    socket.assigns[:current_language] || (profile && profile.language_preference)
   end
 end

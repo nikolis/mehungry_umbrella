@@ -21,6 +21,7 @@ defmodule MehungryWeb.Professional.NutrientComponent do
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-display font-medium text-parchment">Nutrients</h3>
         <button
+          type="submit"
           name="ingredient[_action]"
           value="add_nutrient"
           class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:bg-ink-panel2 hover:text-parchment text-xs font-semibold transition-colors"
@@ -58,6 +59,7 @@ defmodule MehungryWeb.Professional.NutrientComponent do
               </.input>
             </div>
             <button
+              type="submit"
               name="ingredient[_action]"
               value={"remove_nutrient:#{nutrients_form.index}"}
               class="self-end text-parchment-dim hover:text-red-400 transition-colors p-1"

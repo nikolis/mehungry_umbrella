@@ -97,6 +97,13 @@ defmodule MehungryWeb.SelectComponent do
       |> assign(:selected_items, selected_items)
       |> assign(:form, assigns.form)
       |> assign(:input_variable, assigns.input_variable)
+      # The caller-supplied component `id` is unique per page (LiveView requires
+      # it), so it — not the row `index` — is what makes this widget's DOM ids and
+      # its client push_event name unique. Two `measurement_unit_id` selects (the
+      # ingredient's default unit and a portion's unit) both live at index 0 and
+      # would otherwise collide. Keep this in sync with `data-reference-index` in
+      # render/1 and the `Hooks.SelectComponent` listener name in hooks.js.
+      |> assign(:sc_id, assigns.id)
 
     {:ok, socket}
   end
@@ -127,17 +134,10 @@ defmodule MehungryWeb.SelectComponent do
       Enum.map(selected_items, fn x -> elem(x, 0) end)
       |> Enum.uniq()
 
-    index =
-      if is_nil(Map.get(socket.assigns.form, :index, 0)) do
-        0
-      else
-        socket.assigns.form.index
-      end
-
     {:noreply,
      push_event(
        socket,
-       "selected_id" <> Integer.to_string(index) <> Atom.to_string(socket.assigns.input_variable),
+       "selected_id" <> socket.assigns.sc_id <> Atom.to_string(socket.assigns.input_variable),
        %{id: selected_items}
      )}
   end
@@ -153,20 +153,11 @@ defmodule MehungryWeb.SelectComponent do
 
     selected_items = Enum.map(selected_items, fn x -> elem(x, 0) end)
 
-    index =
-      case socket.assigns.form.index do
-        nil ->
-          0
-
-        anything ->
-          anything
-      end
-
     {:noreply,
      push_event(
        socket,
        "selected_id" <>
-         Integer.to_string(index) <>
+         socket.assigns.sc_id <>
          Atom.to_string(socket.assigns.input_variable),
        %{id: selected_items}
      )}
@@ -285,16 +276,16 @@ defmodule MehungryWeb.SelectComponent do
     <div
       class="w-full h-full"
       data-reference-id={@input_variable}
-      data-reference-index={@index}
+      data-reference-index={@sc_id}
       phx-hook="SelectComponent"
-      id={"select_component"<>  Atom.to_string(@input_variable) <> Integer.to_string(@index)}
+      id={"select_component_" <> @sc_id}
     >
       <.input field={@form[@input_variable]} type="hidden" />
       <div
         class="h-full w-full max-w-lg "
         phx-click-away="close-listing"
         phx-target={@myself}
-        id={"select-item"<> Atom.to_string(@input_variable) <> Integer.to_string(@index)}
+        id={"select-item_" <> @sc_id}
       >
         <!-- Start Component -->
         <div class="relative h-full">

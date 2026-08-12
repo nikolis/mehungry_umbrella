@@ -29,9 +29,16 @@ defmodule Mehungry.Food.Ingredient do
     # USDA + admin-created catalog. Visibility scoping lives in the search layer.
     belongs_to :user, Mehungry.Accounts.User
 
-    has_many :ingredient_portions, IngredientPortion
-    has_many :ingredient_nutrients, IngredientNutrient
-    has_many :ingredient_translation, Mehungry.Food.IngredientTranslation
+    # `on_replace: :delete` so the admin form (see ProfessionalLive.Ingredients*)
+    # can remove a row via cast_assoc's `drop_param` and have the orphaned child
+    # deleted rather than raising. The USDA ingestion/reconciliation path never
+    # passes these keys to the changeset (it replaces rows with its own
+    # delete_all + create), so this only affects the form-driven edits.
+    has_many :ingredient_portions, IngredientPortion, on_replace: :delete
+    has_many :ingredient_nutrients, IngredientNutrient, on_replace: :delete
+
+    has_many :ingredient_translation, Mehungry.Food.IngredientTranslation,
+      on_replace: :delete
 
     # Scientific enrichment sidecar (read-only here). These are intentionally NOT
     # added to `changeset/2`'s cast_assoc list — enrichment is written only via

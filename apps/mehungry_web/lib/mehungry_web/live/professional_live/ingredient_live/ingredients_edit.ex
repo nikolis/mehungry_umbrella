@@ -9,14 +9,7 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsEdit do
   @taxonomy_slug "bio-nutritional"
 
   def mount(%{"id" => id}, _session, socket) do
-    ingredient =
-      Food.get_ingredient!(id)
-      |> Mehungry.Repo.preload([
-        :ingredient_portions,
-        :ingredient_translation,
-        :ingredient_nutrients
-      ])
-
+    ingredient = load_ingredient(id)
     changeset = Food.change_ingredient(ingredient)
     taxonomy = Food.get_taxonomy_by_slug(@taxonomy_slug)
 
@@ -65,61 +58,87 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsEdit do
     handle_action(socket, params)
   end
 
-  # Add new portion
-  def handle_event("add_portion", _, socket) do
-    portions =
-      socket.assigns.form.source.data.ingredient_portions ++ [%{}]
-
-    changeset =
-      Ecto.Changeset.put_assoc(
-        socket.assigns.form.source,
-        :ingredient_portions,
-        portions
-      )
-
-    {:noreply, assign(socket, :form, to_form(changeset))}
-  end
-
-  # Add new translation
-  def handle_event("add_translation", _, socket) do
-    translations =
-      socket.assigns.form.source.data.ingredient_translation ++ [%{}]
-
-    changeset =
-      Ecto.Changeset.put_assoc(
-        socket.assigns.form.source,
-        :ingredient_translation,
-        translations
-      )
-
-    {:noreply, assign(socket, :form, to_form(changeset))}
-  end
-
+  # The portion/nutrient/translation sub-forms add and remove rows through the
+  # `sort_param`/`drop_param` mechanism declared on `Ingredient.changeset`:
+  # "add" appends a sentinel to the collection's sort param so cast_assoc
+  # materialises a new empty child; "remove" appends the clicked row index to
+  # the drop param so cast_assoc drops it (deleting the persisted row via
+  # `on_replace: :delete`). Both only rebuild the in-memory form — nothing is
+  # persisted until the ingredient itself is saved (the `_` clause).
   defp handle_action(socket, params) do
     case params["_action"] do
       "add_portion" ->
-        add_portion(socket, params)
+        rebuild_form(socket, add_row(params, "ingredient_portions"))
 
       "add_nutrient" ->
-        add_nutrient(socket, params)
+        rebuild_form(socket, add_row(params, "ingredient_nutrients"))
+
+      "add_ingredient_translation" ->
+        rebuild_form(socket, add_row(params, "ingredient_translation"))
 
       "remove_portion:" <> index ->
-        remove_portion(socket, params, index)
+        rebuild_form(socket, drop_row(params, "ingredient_portions", index))
+
+      "remove_nutrient:" <> index ->
+        rebuild_form(socket, drop_row(params, "ingredient_nutrients", index))
+
+      "remove_ingredient_translation:" <> index ->
+        rebuild_form(socket, drop_row(params, "ingredient_translation", index))
 
       _ ->
-        case Food.update_ingredient(socket.assigns.ingredient, params) do
-          {:ok, ingredient} ->
-            node_id = save_taxonomy_node(socket, ingredient, params)
-
-            {:noreply,
-             socket
-             |> assign(:taxonomy_node_id, node_id)
-             |> put_flash(:info, "Updated successfully")}
-
-          {:error, changeset} ->
-            {:noreply, assign(socket, :form, to_form(changeset))}
-        end
+        save_ingredient(socket, params)
     end
+  end
+
+  # Collections cast_assoc-ed by `Ingredient.changeset`. When the admin removes
+  # the *last* row of one, the form submits no key for it at all, and cast_assoc
+  # would then leave the existing children untouched. Injecting an empty map for
+  # any missing key makes cast_assoc cast it to `[]` and delete the orphans
+  # (via `on_replace: :delete`).
+  @collections ~w(ingredient_portions ingredient_nutrients ingredient_translation)
+
+  defp save_ingredient(socket, params) do
+    params =
+      Enum.reduce(@collections, params, fn key, acc ->
+        if Map.has_key?(acc, key), do: acc, else: Map.put(acc, key, %{})
+      end)
+
+    case Food.update_ingredient(socket.assigns.ingredient, params) do
+      {:ok, ingredient} ->
+        node_id = save_taxonomy_node(socket, ingredient, params)
+        # Reload with associations so a follow-up edit works against current DB
+        # state (e.g. a just-deleted portion is really gone from the struct).
+        ingredient = load_ingredient(ingredient.id)
+
+        {:noreply,
+         socket
+         |> assign(:ingredient, ingredient)
+         |> assign(:taxonomy_node_id, node_id)
+         |> assign(:form, to_form(Food.change_ingredient(ingredient)))
+         |> put_flash(:info, "Updated successfully")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :form, to_form(changeset))}
+    end
+  end
+
+  # Append a sentinel to `<field>_sort` so cast_assoc adds one new empty child.
+  defp add_row(params, field) do
+    Map.update(params, "#{field}_sort", ["new"], &(&1 ++ ["new"]))
+  end
+
+  # Append the row index to `<field>_drop` so cast_assoc drops that child.
+  defp drop_row(params, field, index) do
+    Map.update(params, "#{field}_drop", [index], &(&1 ++ [index]))
+  end
+
+  defp load_ingredient(id) do
+    Food.get_ingredient!(id)
+    |> Mehungry.Repo.preload([
+      :ingredient_portions,
+      :ingredient_translation,
+      :ingredient_nutrients
+    ])
   end
 
   # Persists the taxonomy placement chosen in the form (a plain
@@ -145,28 +164,6 @@ defmodule MehungryWeb.ProfessionalLive.IngredientsEdit do
 
   defp current_taxonomy_node_id(taxonomy, ingredient) do
     Food.get_ingredient_node_id(taxonomy.id, ingredient.id)
-  end
-
-  defp add_portion(socket, params) do
-    portions = Map.get(params, "ingredient_portions", %{})
-    new_key = "#{map_size(portions)}"
-    updated = Map.put(portions, new_key, %{})
-    rebuild_form(socket, Map.put(params, "ingredient_portions", updated))
-  end
-
-  defp add_nutrient(socket, params) do
-    nutrients = Map.get(params, "ingredient_nutrients", %{})
-    new_key = "#{map_size(nutrients)}"
-    updated = Map.put(nutrients, new_key, %{})
-    rebuild_form(socket, Map.put(params, "ingredient_nutrients", updated))
-  end
-
-  defp remove_portion(socket, params, index) do
-    portions =
-      Map.get(params, "ingredient_portions", %{})
-      |> Map.delete(index)
-
-    rebuild_form(socket, Map.put(params, "ingredient_portions", portions))
   end
 
   defp rebuild_form(socket, params) do

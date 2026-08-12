@@ -3,9 +3,14 @@ defmodule Mehungry.FoodData.Usda.SeedFiles do
   Query/command layer for `Mehungry.FoodData.Usda.SeedFile` — the durable
   tracking rows behind the S3 ingredient-seeding flow.
 
-  Every status transition broadcasts the updated row on `Mehungry.PubSub` under
-  `topic(bucket)`, so `MehungryWeb.ProfessionalLive.S3BrowserLive` can render
-  live progress and offer per-file re-do controls.
+  Every status transition except `processing` broadcasts the updated row on
+  `Mehungry.PubSub` under `topic(bucket)`, so
+  `MehungryWeb.ProfessionalLive.S3BrowserLive` can render live progress and offer
+  per-file re-do controls. The intermediate `processing` transition is
+  intentionally silent: a bucket seed fans out thousands of jobs, and one
+  broadcast per job start would flood the browsing LiveView's mailbox for a
+  transient state the UI doesn't need. The row still moves to `completed`/`failed`
+  (which do broadcast), so nothing is lost.
   """
 
   import Ecto.Query
@@ -43,7 +48,9 @@ defmodule Mehungry.FoodData.Usda.SeedFiles do
     seed_file
   end
 
-  def mark_processing(id), do: update_status(id, %{status: "processing"})
+  # Deliberately does not broadcast — see the moduledoc. Marking the row keeps the
+  # durable audit trail; the UI simply doesn't need the pending→processing tick.
+  def mark_processing(id), do: update_status(id, %{status: "processing"}, broadcast?: false)
 
   def mark_completed(id, count) do
     update_status(id, %{
@@ -130,7 +137,7 @@ defmodule Mehungry.FoodData.Usda.SeedFiles do
   # Tolerant of a missing row: `reset/2` can delete tracking rows out from under
   # a job that is still running, so a raise here would crash the job into
   # pointless retries. Missing row => no-op returning nil.
-  defp update_status(id, attrs) do
+  defp update_status(id, attrs, opts \\ []) do
     case Repo.get(SeedFile, id) do
       nil ->
         Logger.info("[SeedFiles] update_status skipped — seed_file ##{id} no longer exists")
@@ -142,7 +149,7 @@ defmodule Mehungry.FoodData.Usda.SeedFiles do
           |> SeedFile.changeset(attrs)
           |> Repo.update!()
 
-        broadcast(seed_file)
+        if Keyword.get(opts, :broadcast?, true), do: broadcast(seed_file)
         seed_file
     end
   end

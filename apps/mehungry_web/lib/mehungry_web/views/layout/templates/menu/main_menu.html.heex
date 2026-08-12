@@ -14,7 +14,7 @@
   <!-- Main navigation -->
   <nav class="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
     <a
-      href="/browse"
+      href={"/#{@current_language}/browse"}
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <svg
@@ -32,11 +32,11 @@
         >
         </path>
       </svg>
-      <span class="hidden md:block text-sm font-medium">Browse</span>
+      <span class="hidden md:block text-sm font-medium">{gettext("Browse")}</span>
     </a>
 
     <a
-      href="/foods"
+      href={"/#{@current_language}/foods"}
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <svg
@@ -53,22 +53,22 @@
           d="M4 6h16a1 1 0 0 1 1 1v3a8 8 0 0 1-8 8 8 8 0 0 1-8-8V7a1 1 0 0 1 1-1z"
         />
       </svg>
-      <span class="hidden md:block text-sm font-medium">Foods</span>
+      <span class="hidden md:block text-sm font-medium">{gettext("Foods")}</span>
     </a>
 
     <a
-      href="/conditions"
+      href={"/#{@current_language}/conditions"}
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <.icon
         name="hero-heart"
         class="w-5 h-5 flex-shrink-0"
       />
-      {"Health"}
+      {gettext("Health")}
     </a>
 
     <a
-      href="/create_recipe"
+      href={"/#{@current_language}/create_recipe"}
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <svg
@@ -81,31 +81,31 @@
       >
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m-8-8h16"></path>
       </svg>
-      <span class="hidden md:block text-sm font-medium">Create Recipe</span>
+      <span class="hidden md:block text-sm font-medium">{gettext("Create Recipe")}</span>
     </a>
 
     <a
-      href="/calendar"
+      href={"/#{@current_language}/calendar"}
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <.icon name="hero-calendar" class="h-5 w-5 flex-shrink-0" />
-      <span class="hidden md:block text-sm font-medium">Calendar</span>
+      <span class="hidden md:block text-sm font-medium">{gettext("Calendar")}</span>
     </a>
 
     <a
-      href="/basket"
+      href={"/#{@current_language}/basket"}
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <.icon name="hero-shopping-cart" class="h-5 w-5 flex-shrink-0" />
-      <span class="hidden md:block text-sm font-medium">Basket</span>
+      <span class="hidden md:block text-sm font-medium">{gettext("Basket")}</span>
     </a>
 
     <a
-      href="/feedback"
+      href={"/#{@current_language}/feedback"}
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
       <.icon name="hero-chat-bubble-left-ellipsis" class="h-5 w-5 flex-shrink-0" />
-      <span class="hidden md:block text-sm font-medium">Give Feedback</span>
+      <span class="hidden md:block text-sm font-medium">{gettext("Give Feedback")}</span>
     </a>
 
     <!-- Admin/Professional Panel (only for admin users) -->
@@ -115,7 +115,7 @@
         class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-amber-400 hover:text-white hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-500/60 transition-colors mt-2"
       >
         <.icon name="hero-cog-6-tooth" class="h-5 w-5 flex-shrink-0" />
-        <span class="hidden md:block text-sm font-medium">Admin Panel</span>
+        <span class="hidden md:block text-sm font-medium">{gettext("Admin Panel")}</span>
       </a>
     <% end %>
 
@@ -126,7 +126,7 @@
         class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-teal-400 hover:text-white hover:bg-teal-500/20 border border-teal-500/30 hover:border-teal-500/60 transition-colors mt-2"
       >
         <.icon name="hero-academic-cap" class="h-5 w-5 flex-shrink-0" />
-        <span class="hidden md:block text-sm font-medium">Nutritionist Panel</span>
+        <span class="hidden md:block text-sm font-medium">{gettext("Nutritionist Panel")}</span>
       </a>
     <% end %>
 
@@ -136,7 +136,7 @@
         Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id) %>
       <%= if pending_count > 0 do %>
         <a
-          href="/notifications/invitations"
+          href={"/#{@current_language}/notifications/invitations"}
           class="nav_link_basic relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors mt-1"
         >
           <div class="relative flex-shrink-0">
@@ -145,7 +145,7 @@
               {pending_count}
             </span>
           </div>
-          <span class="hidden md:block text-sm font-medium">Tutor Invitations</span>
+          <span class="hidden md:block text-sm font-medium">{gettext("Tutor Invitations")}</span>
         </a>
       <% end %>
     <% end %>
@@ -154,7 +154,7 @@
     <%= if @current_user do %>
       <% friend_requests_count = Mehungry.Friends.count_pending_requests_for(@current_user.id) %>
       <a
-        href="/friends"
+        href={"/#{@current_language}/friends"}
         class="nav_link_basic relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors mt-1"
       >
         <div class="relative flex-shrink-0">
@@ -165,47 +165,45 @@
             </span>
           <% end %>
         </div>
-        <span class="hidden md:block text-sm font-medium">Friends</span>
+        <span class="hidden md:block text-sm font-medium">{gettext("Friends")}</span>
       </a>
     <% end %>
 
     <a
-      href="/upgrade"
+      href={"/#{@current_language}/upgrade"}
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-paprika-soft hover:text-parchment hover:bg-paprika/20 border border-paprika/30 hover:border-paprika/60 transition-colors mt-2"
     >
       <.icon name="hero-sparkles" class="h-5 w-5 flex-shrink-0" />
-      <span class="hidden md:block text-sm font-medium">Manage subscriptions</span>
+      <span class="hidden md:block text-sm font-medium">{gettext("Manage subscriptions")}</span>
     </a>
   </nav>
 
   <!-- Bottom: language toggle + profile / login -->
   <div class="p-3 border-t border-ink-panel2 flex-shrink-0">
-    <%= if @current_user do %>
-      <div class="flex items-center justify-center gap-1 bg-ink-panel2 rounded-full p-0.5 mb-2">
-        <a
-          href="/users/language/en"
-          class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "en", do: "bg-paprika text-ink", else: "text-parchment-dim hover:text-parchment"}"}
-        >
-          EN
-        </a>
-        <a
-          href="/users/language/el"
-          class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "el", do: "bg-paprika text-ink", else: "text-parchment-dim hover:text-parchment"}"}
-        >
-          ΕΛ
-        </a>
-      </div>
-    <% end %>
+    <div class="flex items-center justify-center gap-1 bg-ink-panel2 rounded-full p-0.5 mb-2">
+      <a
+        href="/users/language/en"
+        class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "en", do: "bg-paprika text-ink", else: "text-parchment-dim hover:text-parchment"}"}
+      >
+        EN
+      </a>
+      <a
+        href="/users/language/el"
+        class={"flex-1 text-center px-2 py-1 rounded-full text-xs font-semibold transition-colors #{if @current_language == "el", do: "bg-paprika text-ink", else: "text-parchment-dim hover:text-parchment"}"}
+      >
+        ΕΛ
+      </a>
+    </div>
     <%= if @current_user do %>
       <a
-        href="/profile"
+        href={"/#{@current_language}/profile"}
         class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
       >
         <img
           src={@current_user.profile_pic}
           class="w-6 h-6 rounded-full flex-shrink-0 object-cover"
         />
-        <span class="hidden md:block text-sm font-medium">Profile</span>
+        <span class="hidden md:block text-sm font-medium">{gettext("Profile")}</span>
       </a>
     <% else %>
       <a
@@ -213,7 +211,7 @@
         class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
       >
         <.icon name="hero-arrow-right-on-rectangle" class="h-5 w-5 flex-shrink-0" />
-        <span class="hidden md:block text-sm font-medium">Log in</span>
+        <span class="hidden md:block text-sm font-medium">{gettext("Log in")}</span>
       </a>
     <% end %>
   </div>

@@ -51,14 +51,36 @@ defmodule MehungryWeb.SitemapController do
     |> send_resp(200, xml)
   end
 
-  defp url_entry(loc, opts) do
-    lastmod = if v = opts[:lastmod], do: "\n    <lastmod>#{v}</lastmod>", else: ""
+  # Emit one <url> per supported locale for a bare (locale-less) content path,
+  # each carrying reciprocal <xhtml:link rel="alternate" hreflang> entries + an
+  # x-default, per the sitemap i18n spec.
+  defp localized_entries(bare_path, opts) do
+    locales = MehungryWeb.Locale.supported()
+    default = MehungryWeb.Locale.default()
+
+    alternates =
+      Enum.map(locales, fn loc -> {loc, alt_url(bare_path, loc)} end) ++
+        [{"x-default", alt_url(bare_path, default)}]
+
+    links =
+      Enum.map_join(alternates, "", fn {hreflang, href} ->
+        "\n  <xhtml:link rel=\"alternate\" hreflang=\"#{hreflang}\" href=\"#{href}\" />"
+      end)
+
+    Enum.map_join(locales, "\n", fn loc -> url_entry(alt_url(bare_path, loc), links, opts) end)
+  end
+
+  defp alt_url(bare_path, locale), do: @base_url <> MehungryWeb.Locale.swap_path(bare_path, locale)
+
+  defp url_entry(loc, alt_links, opts) do
+    lastmod = if v = opts[:lastmod], do: "\n  <lastmod>#{v}</lastmod>", else: ""
     changefreq = opts[:changefreq] || "weekly"
     priority = opts[:priority] || "0.8"
 
     "<url>" <>
       "\n  <loc>#{loc}</loc>" <>
       lastmod <>
+      alt_links <>
       "\n  <changefreq>#{changefreq}</changefreq>" <>
       "\n  <priority>#{priority}</priority>" <>
       "\n</url>"
@@ -68,16 +90,16 @@ defmodule MehungryWeb.SitemapController do
     today = Date.utc_today() |> to_string()
 
     static_urls = [
-      url_entry("#{@base_url}/", changefreq: "daily", priority: "1.0"),
-      url_entry("#{@base_url}/browse", changefreq: "hourly", priority: "0.9"),
-      url_entry("#{@base_url}/home", changefreq: "daily", priority: "0.8")
+      localized_entries("/home", changefreq: "daily", priority: "1.0"),
+      localized_entries("/browse", changefreq: "hourly", priority: "0.9"),
+      localized_entries("/foods", changefreq: "daily", priority: "0.7")
     ]
 
     recipe_urls =
       Enum.map(recipes, fn r ->
         date = r.updated_at |> NaiveDateTime.to_date() |> to_string()
 
-        url_entry("#{@base_url}/browse/#{r.id}",
+        localized_entries("/browse/#{r.id}",
           lastmod: date,
           changefreq: "weekly",
           priority: "0.8"
@@ -88,7 +110,7 @@ defmodule MehungryWeb.SitemapController do
       Enum.map(hashtags, fn h ->
         encoded = URI.encode(h, &URI.char_unreserved?/1)
 
-        url_entry("#{@base_url}/search/hashtag/#{encoded}",
+        localized_entries("/search/hashtag/#{encoded}",
           lastmod: today,
           changefreq: "daily",
           priority: "0.7"
@@ -100,7 +122,7 @@ defmodule MehungryWeb.SitemapController do
         slug = String.replace(s.name, " ", "-")
         date = s.updated_at |> NaiveDateTime.to_date() |> to_string()
 
-        url_entry("#{@base_url}/foods/#{slug}",
+        localized_entries("/foods/#{slug}",
           lastmod: date,
           changefreq: "monthly",
           priority: "0.5"
@@ -110,7 +132,7 @@ defmodule MehungryWeb.SitemapController do
     all_urls = Enum.join(static_urls ++ recipe_urls ++ hashtag_urls ++ food_urls, "\n")
 
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" <>
-      "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n" <>
+      "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n" <>
       all_urls <>
       "\n</urlset>"
   end

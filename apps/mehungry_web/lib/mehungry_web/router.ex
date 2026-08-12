@@ -4,6 +4,7 @@ defmodule MehungryWeb.Router do
 
   import MehungryWeb.UserAuth
   import MehungryWeb.PathPlug
+  import MehungryWeb.RouterHelpers
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -17,6 +18,7 @@ defmodule MehungryWeb.Router do
     plug :put_secure_browser_headers
     plug :fetch_path_info
     plug :fetch_current_user
+    plug MehungryWeb.Plugs.SetLocale
   end
 
   pipeline :admin_browser do
@@ -168,29 +170,29 @@ defmodule MehungryWeb.Router do
   scope "/", MehungryWeb do
     pipe_through [:browser, :require_authenticated_user]
 
-    live_session :default, on_mount: MehungryWeb.UserAuthLive do
-      live "/notifications/invitations", NutritionistLive.UserInvitations, :index
-      live "/friends", FriendsLive.Index, :index
-      live "/basket", ShoppingBasketLive.Index, :index
-      live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
+    live_session :default, on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.UserAuthLive] do
+      localized_live "/notifications/invitations", NutritionistLive.UserInvitations, :index
+      localized_live "/friends", FriendsLive.Index, :index
+      localized_live "/basket", ShoppingBasketLive.Index, :index
+      localized_live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
 
-      live "/calendar", CalendarLive.Index, :index
-      live "/calendar/ondate/:date", CalendarLive.Index, :particular
-      live "/calendar/details/:date", CalendarLive.Index, :nutrition_details
-      live "/calendar/recipe/:recipe_id", CalendarLive.Index, :show_recipe
+      localized_live "/calendar", CalendarLive.Index, :index
+      localized_live "/calendar/ondate/:date", CalendarLive.Index, :particular
+      localized_live "/calendar/details/:date", CalendarLive.Index, :nutrition_details
+      localized_live "/calendar/recipe/:recipe_id", CalendarLive.Index, :show_recipe
 
-      live "/calendar/:start/:title", CalendarLive.Index, :new
+      localized_live "/calendar/:start/:title", CalendarLive.Index, :new
 
-      live "/calendar/:id", CalendarLive.Index, :edit
+      localized_live "/calendar/:id", CalendarLive.Index, :edit
 
-      live "/stepper", CreateRecipeLive.Show, :show
-      live "/create_recipe", CreateRecipeLive.Index, :index
-      live "/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit
+      localized_live "/stepper", CreateRecipeLive.Show, :show
+      localized_live "/create_recipe", CreateRecipeLive.Index, :index
+      localized_live "/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit
 
-      live "/my_ingredients/new", MyIngredientLive.Form, :new
-      live "/my_ingredients/:id/edit", MyIngredientLive.Form, :edit
+      localized_live "/my_ingredients/new", MyIngredientLive.Form, :new
+      localized_live "/my_ingredients/:id/edit", MyIngredientLive.Form, :edit
 
-      live "/upgrade", UpgradeLive.Index, :index
+      localized_live "/upgrade", UpgradeLive.Index, :index
     end
   end
 
@@ -257,39 +259,40 @@ defmodule MehungryWeb.Router do
     pipe_through [:browser, :maybe_require_authenticated_user]
 
     live_session :default3,
+      on_mount: MehungryWeb.RestoreLocale,
       layout: {MehungryWeb.LayoutView, :landing_live} do
-      live "/welcome", LandingLive, :index
+      localized_live "/welcome", LandingLive, :index
     end
 
-    live_session :maybe, on_mount: MehungryWeb.MaybeUserAuthLive do
+    live_session :maybe, on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.MaybeUserAuthLive] do
       get "/", HomePageController, :home
 
-      live "/home", HomeLive.Index, :index
-      live "/home/:id", HomeLive.Index, :show_recipe
+      localized_live "/home", HomeLive.Index, :index
+      localized_live "/home/:id", HomeLive.Index, :show_recipe
 
-      live "/browse", RecipeBrowserLive.Index, :index
-      live "/browse/:id", RecipeBrowserLive.Index, :show_recipe
-      live "/profile", ProfileLive.Index, :index
-      live "/profile/edit", ProfileLive.Index, :edit
-      live "/profile/:id", ProfileLive.Index, :show
-      live "/profile/show_recipe/:recipe_id", ProfileLive.Index, :show_recipe
+      localized_live "/browse", RecipeBrowserLive.Index, :index
+      localized_live "/browse/:id", RecipeBrowserLive.Index, :show_recipe
+      localized_live "/profile", ProfileLive.Index, :index
+      localized_live "/profile/edit", ProfileLive.Index, :edit
+      localized_live "/profile/:id", ProfileLive.Index, :show
+      localized_live "/profile/show_recipe/:recipe_id", ProfileLive.Index, :show_recipe
 
-      live "/show_recipe/:id", HomeLive.Index, :show_recipe
-      live "/share_social_media/:id/:social_media", HomeLive.Index, :share_social_media
+      localized_live "/show_recipe/:id", HomeLive.Index, :show_recipe
+      localized_live "/share_social_media/:id/:social_media", HomeLive.Index, :share_social_media
 
-      live "/search/", RecipeBrowserLive.Index, :index
-      live "/search/hashtag/:hashtag", RecipeBrowserLive.Index, :index
-      live "/search/ingredient/:ingredient", RecipeBrowserLive.Index, :index
-      live "/search/:query", RecipeBrowserLive.Index, :index
+      localized_live "/search/", RecipeBrowserLive.Index, :index
+      localized_live "/search/hashtag/:hashtag", RecipeBrowserLive.Index, :index
+      localized_live "/search/ingredient/:ingredient", RecipeBrowserLive.Index, :index
+      localized_live "/search/:query", RecipeBrowserLive.Index, :index
 
-      live "/foods", FoodsLive.Index, :index
-      live "/foods/:slug", SpeciesDetailLive.Index, :index
+      localized_live "/foods", FoodsLive.Index, :index
+      localized_live "/foods/:slug", SpeciesDetailLive.Index, :index
 
-      live "/conditions", HealthLive.Index, :index
-      live "/conditions/:id", ConditionDetailLive.Index, :index
-      live "/conditions/:id/food/:species_id", ConditionDetailLive.Index, :show_food
+      localized_live "/conditions", HealthLive.Index, :index
+      localized_live "/conditions/:id", ConditionDetailLive.Index, :index
+      localized_live "/conditions/:id/food/:species_id", ConditionDetailLive.Index, :show_food
 
-      live "/feedback", FeedbackLive, :index
+      localized_live "/feedback", FeedbackLive, :index
     end
 
     get "/login", UserSessionController, :new
@@ -316,7 +319,6 @@ defmodule MehungryWeb.Router do
   scope "/", MehungryWeb do
     pipe_through [:browser, :require_authenticated_user]
 
-    get "/users/language/:lang", UserLanguageController, :set
     get "/users/settings", UserSettingsController, :edit
     put "/users/settings", UserSettingsController, :update
     get "/users/settings/confirm_email/:token", UserSettingsController, :confirm_email
@@ -324,6 +326,9 @@ defmodule MehungryWeb.Router do
 
   scope "/", MehungryWeb do
     pipe_through [:browser]
+
+    # Language switch works for anonymous visitors too (swaps the URL locale).
+    get "/users/language/:lang", UserLanguageController, :set
 
     get "/users/log_out", UserSessionController, :delete
     get "/users/delete", UserSessionController, :delete_user

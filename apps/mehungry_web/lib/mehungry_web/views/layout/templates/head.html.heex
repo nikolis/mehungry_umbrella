@@ -25,7 +25,24 @@ recipe_jsonld = @conn.assigns[:recipe_jsonld]
   end
 
 base_url = "https://www.m3hungry.com"
-canonical_url = base_url <> canonical_path
+
+# Locale-aware canonical + hreflang alternates. `@locale` is only assigned on
+# the localized `:browser` surface (admin/nutritionist run a different pipeline
+# and leave it nil) — there we prefix the canonical path with the active locale
+# and emit one <link rel="alternate" hreflang> per supported locale + x-default.
+locale = @conn.assigns[:locale]
+
+{canonical_url, hreflang_alternates} =
+  if locale do
+    {
+      base_url <> MehungryWeb.Locale.swap_path(canonical_path, locale),
+      Enum.map(MehungryWeb.Locale.supported(), fn loc ->
+        {loc, base_url <> MehungryWeb.Locale.swap_path(canonical_path, loc)}
+      end)
+    }
+  else
+    {base_url <> canonical_path, []}
+  end
 
 # Pages that should never be indexed
 noindex_prefixes = [
@@ -52,6 +69,16 @@ ga_consent_granted = @conn.assigns[:cookie_consent] == :accepted %>
   <title>{resolved_title}</title>
   <meta name="description" content={page_description} />
   <link rel="canonical" href={canonical_url} />
+  <%= if not noindex and hreflang_alternates != [] do %>
+    <%= for {loc, href} <- hreflang_alternates do %>
+      <link rel="alternate" hreflang={loc} href={href} />
+    <% end %>
+    <link
+      rel="alternate"
+      hreflang="x-default"
+      href={base_url <> MehungryWeb.Locale.swap_path(canonical_path, MehungryWeb.Locale.default())}
+    />
+  <% end %>
   <%= if noindex do %>
     <meta name="robots" content="noindex, nofollow" />
   <% else %>
