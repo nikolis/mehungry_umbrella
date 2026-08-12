@@ -188,6 +188,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Normalise the quantity input's height so it lines up with the two select
+   widgets in an ingredient row (both min-h-10 / 2.5rem). Overrides the shared
+   number_subscript's sm:p-4 without touching the component or other pages. */
+.create-recipe-page input[type="number_subscript"] {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  box-sizing: border-box;
+}
+
 /* Retheme the shared SelectComponent's chip/dropdown colors only inside the
    create-recipe form, via the CSS variables it reads (falls back to its
    normal slate palette everywhere else it's used — /profile, admin, etc). */

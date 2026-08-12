@@ -53,7 +53,7 @@ defmodule Mehungry.RecipePutNutrientsWorker do
       recipe ->
         recipe =
           Repo.preload(recipe, [
-            [recipe_ingredients: [:measurement_unit, :ingredient]],
+            [recipe_ingredients: [:measurement_unit, :ingredient, :ingredient_portion]],
             :user,
             :recipe_hashtags,
             comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]

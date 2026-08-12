@@ -1114,10 +1114,12 @@ defmodule MehungryWeb.CoreComponents do
         }
         {@rest}
       />
-      <%= if(@errors == []) do %>
-        <.label for={@id} class="text-primary-500">{@label}</.label>
-      <% else %>
-        <.label for={@id} class="text-rose-400">{@label}</.label>
+      <%= if @label do %>
+        <%= if(@errors == []) do %>
+          <.label for={@id} class="text-primary-500">{@label}</.label>
+        <% else %>
+          <.label for={@id} class="text-rose-400">{@label}</.label>
+        <% end %>
       <% end %>
     </div>
     """

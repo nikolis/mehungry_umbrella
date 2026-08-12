@@ -82,14 +82,24 @@ defmodule Mehungry.Social.Publisher do
         ingredient =
           Map.put(ri.ingredient, :name, Map.get(ing_names, ri.ingredient_id, ri.ingredient.name))
 
-        unit =
-          Map.put(
-            ri.measurement_unit,
-            :name,
-            Map.get(unit_names, ri.measurement_unit_id, ri.measurement_unit.name)
-          )
+        ri = Map.put(ri, :ingredient, ingredient)
 
-        ri |> Map.put(:ingredient, ingredient) |> Map.put(:measurement_unit, unit)
+        # Description-only portions have no measurement unit; leave it nil so
+        # downstream captions fall back to RecipeIngredient.unit_label/1.
+        case ri.measurement_unit do
+          nil ->
+            ri
+
+          measurement_unit ->
+            unit =
+              Map.put(
+                measurement_unit,
+                :name,
+                Map.get(unit_names, ri.measurement_unit_id, measurement_unit.name)
+              )
+
+            Map.put(ri, :measurement_unit, unit)
+        end
       end)
 
     Map.put(recipe, :recipe_ingredients, translated_items)

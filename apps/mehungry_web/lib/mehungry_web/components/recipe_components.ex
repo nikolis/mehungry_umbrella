@@ -207,7 +207,7 @@ defmodule MehungryWeb.RecipeComponents do
                 />
               </span>
               <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
-                {ingredient.quantity} {ingredient.measurement_unit.name}
+                {ingredient.quantity} {Mehungry.Food.RecipeIngredient.unit_label(ingredient)}
               </span>
             </div>
           <% end %>

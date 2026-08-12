@@ -100,6 +100,156 @@ defmodule Mehungry.FoodTest do
              ]
     end
 
+    test "non-gram recipe ingredient resolves ingredient_portion_id from its unit", %{
+      ingredient: ingredient,
+      user: user
+    } do
+      cup = measurement_unit_fixture(%{name: "cup"})
+
+      {:ok, portion} =
+        Food.create_ingredient_portion(%{
+          ingredient_id: ingredient.id,
+          measurement_unit_id: cup.id,
+          gram_weight: 240.0,
+          amount: 1.0
+        })
+
+      ingredients = [%{ingredient_id: ingredient.id, measurement_unit_id: cup.id, quantity: 2}]
+
+      recipe_params =
+        @create_params_recipe
+        |> Enum.into(%{
+          recipe_ingredients: ingredients,
+          user_id: user.id,
+          cooking_time_lower_limit: 15,
+          preperation_time_lower_limit: 15,
+          difficulty: 1,
+          description: "portion linkage"
+        })
+
+      assert {:ok, recipe} = Food.create_recipe(recipe_params)
+      recipe = Food.get_recipe_no_caching!(recipe.id)
+      assert [ri] = recipe.recipe_ingredients
+      assert ri.ingredient_portion_id == portion.id
+    end
+
+    test "gram-family recipe ingredient leaves ingredient_portion_id nil", %{
+      ingredient: ingredient,
+      measurement_unit: gram_unit,
+      user: user
+    } do
+      ingredients = [
+        %{ingredient_id: ingredient.id, measurement_unit_id: gram_unit.id, quantity: 100}
+      ]
+
+      recipe_params =
+        @create_params_recipe
+        |> Enum.into(%{
+          recipe_ingredients: ingredients,
+          user_id: user.id,
+          cooking_time_lower_limit: 15,
+          preperation_time_lower_limit: 15,
+          difficulty: 1,
+          description: "gram linkage"
+        })
+
+      assert {:ok, recipe} = Food.create_recipe(recipe_params)
+      recipe = Food.get_recipe_no_caching!(recipe.id)
+      assert [ri] = recipe.recipe_ingredients
+      assert is_nil(ri.ingredient_portion_id)
+    end
+
+    test "updating a recipe re-resolves ingredient_portion_id", %{
+      ingredient: ingredient,
+      measurement_unit: gram_unit,
+      user: user
+    } do
+      cup = measurement_unit_fixture(%{name: "cup"})
+
+      {:ok, portion} =
+        Food.create_ingredient_portion(%{
+          ingredient_id: ingredient.id,
+          measurement_unit_id: cup.id,
+          gram_weight: 240.0,
+          amount: 1.0
+        })
+
+      recipe_params =
+        @create_params_recipe
+        |> Enum.into(%{
+          recipe_ingredients: [
+            %{ingredient_id: ingredient.id, measurement_unit_id: cup.id, quantity: 2}
+          ],
+          user_id: user.id,
+          cooking_time_lower_limit: 15,
+          preperation_time_lower_limit: 15,
+          difficulty: 1,
+          description: "reresolve"
+        })
+
+      assert {:ok, recipe} = Food.create_recipe(recipe_params)
+      recipe = Food.get_recipe_no_caching!(recipe.id)
+      assert [ri] = recipe.recipe_ingredients
+      assert ri.ingredient_portion_id == portion.id
+
+      # Switch the same row to grams — the FK must clear back to nil.
+      assert {:ok, _} =
+               Food.update_recipe(recipe, %{
+                 recipe_ingredients: [
+                   %{
+                     id: ri.id,
+                     ingredient_id: ingredient.id,
+                     measurement_unit_id: gram_unit.id,
+                     quantity: 100
+                   }
+                 ]
+               })
+
+      updated = Food.get_recipe_no_caching!(recipe.id)
+      assert [updated_ri] = updated.recipe_ingredients
+      assert is_nil(updated_ri.ingredient_portion_id)
+    end
+
+    test "description-only portion selection persists via unit_selection and clears the unit", %{
+      ingredient: ingredient,
+      user: user
+    } do
+      {:ok, portion} =
+        Food.create_ingredient_portion(%{
+          ingredient_id: ingredient.id,
+          gram_weight: 118.0,
+          amount: 1.0,
+          description: "1 medium"
+        })
+
+      ingredients = [
+        %{ingredient_id: ingredient.id, unit_selection: -portion.id, quantity: 1}
+      ]
+
+      recipe_params =
+        @create_params_recipe
+        |> Enum.into(%{
+          recipe_ingredients: ingredients,
+          user_id: user.id,
+          cooking_time_lower_limit: 15,
+          preperation_time_lower_limit: 15,
+          difficulty: 1,
+          description: "desc-only"
+        })
+
+      assert {:ok, recipe} = Food.create_recipe(recipe_params)
+      recipe = Food.get_recipe_no_caching!(recipe.id)
+      assert [ri] = recipe.recipe_ingredients
+      assert ri.ingredient_portion_id == portion.id
+      assert is_nil(ri.measurement_unit_id)
+
+      # unit_label falls back to the portion's free-text description; the
+      # dropdown re-selection value is the -portion_id encoding.
+      ri = %{ri | ingredient_portion: portion}
+      assert Mehungry.Food.RecipeIngredient.unit_label(ri) == "1 medium"
+      assert Mehungry.Food.RecipeIngredient.unit_selection_value(ri) == -portion.id
+    end
+
     test "Test recipe search_hashtag", %{user: user} do
       _recipe = recipe_fixture(user, %{description: "some description with #hashtag"})
       _recipe2 = recipe_fixture(user, %{description: "some description"})

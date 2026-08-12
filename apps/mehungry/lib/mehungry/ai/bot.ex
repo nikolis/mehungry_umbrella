@@ -89,7 +89,10 @@ defmodule Mehungry.AI.Bot do
     |> Repo.get!(id)
     |> Repo.preload([
       :bot_config,
-      recipe: [recipe_ingredients: [:ingredient, :measurement_unit], recipe_hashtags: []]
+      recipe: [
+        recipe_ingredients: [:ingredient, :measurement_unit, :ingredient_portion],
+        recipe_hashtags: []
+      ]
     ])
   end
 

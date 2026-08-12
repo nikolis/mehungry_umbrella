@@ -333,13 +333,27 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   defp apply_action(socket, :edit, %{"recipe_id" => id}) do
-    recipe = Food.get_recipe!(id)
+    recipe = Food.get_recipe!(id) |> put_unit_selections()
 
     socket
     |> assign(:changeset, Food.change_recipe(recipe))
     |> assign(:recipe, recipe)
     |> init(recipe)
   end
+
+  # Seeds each recipe ingredient's virtual `unit_selection` from its persisted
+  # unit/portion so the unit dropdown shows the saved choice when editing.
+  defp put_unit_selections(%Recipe{recipe_ingredients: ris} = recipe) when is_list(ris) do
+    %Recipe{
+      recipe
+      | recipe_ingredients:
+          Enum.map(ris, fn ri ->
+            %RecipeIngredient{ri | unit_selection: RecipeIngredient.unit_selection_value(ri)}
+          end)
+    }
+  end
+
+  defp put_unit_selections(recipe), do: recipe
 
   defp init(socket, base, attrs \\ %{}) do
     changeset =

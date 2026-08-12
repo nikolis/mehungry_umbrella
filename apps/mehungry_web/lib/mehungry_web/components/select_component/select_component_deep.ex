@@ -21,7 +21,7 @@ defmodule MehungryWeb.SelectComponentDeep do
       <!-- Trigger Button / Selected Item Display -->
       <div phx-click="open_modal" phx-target={@myself} class="w-full cursor-pointer h-full">
         <%= if @selected_item do %>
-          <div class="bg-ink border border-ink-panel2 rounded-lg text-parchment px-3 py-2 min-h-10 flex justify-between items-center h-full transition-colors hover:border-basil/40">
+          <div class="bg-ink-panel2 border border-[#3A3323] rounded-lg text-parchment px-4 py-2 min-h-10 flex justify-between items-center h-full transition-colors hover:border-paprika">
             <span class="font-semibold text-sm truncate pr-2">
               <.display_label label={@selected_item.label} />
               <MehungryWeb.RecipeComponents.condition_flag_badges
@@ -40,7 +40,7 @@ defmodule MehungryWeb.SelectComponentDeep do
             </button>
           </div>
         <% else %>
-          <div class="h-full min-h-10 bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment-dim text-sm flex items-center transition-colors hover:border-basil/40">
+          <div class="h-full min-h-10 bg-ink-panel2 border border-[#3A3323] rounded-lg px-4 py-2 text-parchment-dim text-sm flex items-center transition-colors hover:border-paprika">
             {@placeholder || "Select an option..."}
           </div>
         <% end %>

@@ -207,48 +207,6 @@ defmodule Mehungry.Food.NutrientInteractions do
     check_rules(@rules, significant)
   end
 
-  @doc """
-  Returns interactions for a pre-computed recipe nutrient map.
-
-  `nutrient_map` is `%{canonical_name => total_amount}` — already normalised
-  and summed across all ingredients at recipe scale (e.g. from
-  `RecipeUtils.calculate_recipe_nutrition_value/1` + `NutrientMerger.normalize_nutrient_name/1`).
-  """
-  def interactions_for_nutrient_map(nutrient_map) when nutrient_map == %{}, do: []
-
-  def interactions_for_nutrient_map(nutrient_map) do
-    significant =
-      Enum.reduce(nutrient_map, MapSet.new(), fn {name, amount}, acc ->
-        case Map.get(@thresholds, name) do
-          nil -> acc
-          threshold when amount >= threshold -> MapSet.put(acc, name)
-          _ -> acc
-        end
-      end)
-
-    Enum.flat_map(@rules, fn rule ->
-      has_a = MapSet.member?(significant, rule.nutrient_a)
-      has_b = MapSet.member?(significant, rule.nutrient_b)
-
-      case {has_a, has_b, rule.type} do
-        {false, _, _} ->
-          []
-
-        {true, false, :requires} ->
-          [Map.put(rule, :missing_nutrient, rule.nutrient_b)]
-
-        {true, false, _} ->
-          []
-
-        {true, true, :requires} ->
-          [%{rule | badge: :positive, label: rule.present_label, detail: rule.present_detail}]
-
-        {true, true, _} ->
-          [rule]
-      end
-    end)
-  end
-
   @doc "Exposes the full rule list for UI display (e.g. a legend or help page)."
   def rules, do: @rules
 

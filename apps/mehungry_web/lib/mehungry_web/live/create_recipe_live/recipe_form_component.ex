@@ -3,6 +3,14 @@ defmodule MehungryWeb.RecipeFormComponent do
 
   def error_to_string(:too_large), do: "Too large"
   def error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
+  def error_to_string(:too_many_files), do: "You have selected too many files"
+  def error_to_string(:external_client_failure), do: "Upload failed, please try again"
+  def error_to_string(_), do: "Something went wrong with the upload"
+
+  # The hidden `image_url` input submits "" (not nil) on every validate event,
+  # and "" is truthy in Elixir. Treat blank as "no image" so the upload UI and
+  # the selected-file preview keep showing until a real URL exists.
+  def has_image?(value), do: value not in [nil, ""]
 
   def drop_hidden?(images) do
     case Enum.empty?(images) do
@@ -24,7 +32,7 @@ defmodule MehungryWeb.RecipeFormComponent do
     >
       <input type="hidden" name="recipe[_action]" value="" />
       <div
-        class="content_container grid md:grid-cols-2 gap-6 border border-ink-panel2 bg-ink-panel rounded-xl p-4"
+        class="content_container grid md:grid-cols-2 gap-6 border border-ink-panel2 bg-ink-panel rounded-xl p-4 " 
         id="content-0"
       >
         <div class="flex flex-col gap-3">
@@ -65,7 +73,7 @@ defmodule MehungryWeb.RecipeFormComponent do
           <.input field={@f[:image_url]} type="hidden" />
         </div>
 
-        <%= if @f[:image_url].value do %>
+        <%= if has_image?(@f[:image_url].value) do %>
           <div class="relative">
             <img src={@f[:image_url].value} class="m-auto relative" style="max-height: 30vh;" />
             <button
@@ -73,14 +81,14 @@ defmodule MehungryWeb.RecipeFormComponent do
               phx-click="delete-image"
               class="absolute top-0 right-3 bg-parchment rounded-full"
             >
-              <.icon name="hero-x-mark-solid" class="h-6 w-6" />
+              <.icon name="hero-x-mark-solid" class="h-6 w-6 text-red-500/70" />
             </button>
           </div>
         <% else %>
           <div class={"drop-container  #{drop_hidden?(@uploads.image.entries)}"}>
             <div
               class=" border-2 border-dashed border-ink-panel2 rounded-lg p-8 text-center hover:border-paprika transition cursor-pointer group h-full "
-              phx-drop-target=" {@uploads.image.ref}"
+              phx-drop-target={@uploads.image.ref}
             >
               <div id="lab1" phx-hook="ImageSelect" for={@uploads.image.ref} class="h-full w-full ">
                 <svg
@@ -105,14 +113,13 @@ defmodule MehungryWeb.RecipeFormComponent do
             </div>
           </div>
         <% end %>
-        <%= if is_nil(@f[:image_url].value) do %>
+        <%= if not has_image?(@f[:image_url].value) do %>
           <div class="">
             <%= for entry <- @uploads.image.entries do %>
               <div class="img_preview_container">
                 <.live_img_preview
                   entry={entry}
-                  width="500rem"
-                  class="m-auto"
+                  class="m-auto max-w-full rounded-lg"
                   style="max-height: 30vh;"
                 />
                 <article class="upload-entry">

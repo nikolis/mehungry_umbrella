@@ -11,6 +11,8 @@ defmodule Mehungry.Inventory.BasketIngredient do
   schema "basket_ingredients" do
     field :quantity, :float
     field :in_storage, :boolean, default: false
+    # Free-text unit label for description-only portions (no measurement unit).
+    field :description, :string
 
     belongs_to :measurement_unit, MeasurementUnit
     belongs_to :ingredient, Ingredient
@@ -27,7 +29,8 @@ defmodule Mehungry.Inventory.BasketIngredient do
       :in_storage,
       :ingredient_id,
       :shopping_basket_id,
-      :measurement_unit_id
+      :measurement_unit_id,
+      :description
     ])
     |> validate_required([:quantity, :ingredient_id])
   end

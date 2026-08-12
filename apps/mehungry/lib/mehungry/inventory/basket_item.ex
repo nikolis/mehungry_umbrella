@@ -14,6 +14,8 @@ defmodule Mehungry.Inventory.BasketItem do
     field :name, :string
     field :nutrition_data, :map, default: %{}
     field :usda_fdc_id, :integer
+    # Free-text unit label for description-only portions (no measurement unit).
+    field :description, :string
 
     belongs_to :measurement_unit, MeasurementUnit
     belongs_to :shopping_basket, ShoppingBasket
@@ -32,7 +34,8 @@ defmodule Mehungry.Inventory.BasketItem do
       :name,
       :recipe_id,
       :shopping_basket_id,
-      :measurement_unit_id
+      :measurement_unit_id,
+      :description
     ])
     |> validate_required([:quantity, :name])
   end

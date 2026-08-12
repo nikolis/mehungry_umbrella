@@ -26,7 +26,6 @@ defmodule Mehungry.Food.Recipe do
     field :title, :string
     field :difficulty, :integer, default: 1
     field :nutrients, :map, default: %{}
-    field :ingredient_interactions, {:array, :map}, default: []
     # Populated at display time by MehungryWeb.RecipeFlags for opted-in users;
     # each entry is %{condition, compound, recommendation, severity}.
     field :condition_flags, {:array, :map}, virtual: true, default: []
@@ -94,7 +93,6 @@ defmodule Mehungry.Food.Recipe do
       :cooking_time_lower_limit,
       :description,
       :nutrients,
-      :ingredient_interactions,
       :image_url,
       :original_url,
       :detail_image_url,

@@ -124,6 +124,7 @@ defmodule MehungryWeb.CalendarLive.Index do
           recipe: [
             recipe_ingredients: [
               :measurement_unit,
+              :ingredient_portion,
               ingredient: [:category, :ingredient_translation]
             ]
           ]

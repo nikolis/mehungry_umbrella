@@ -1,15 +1,85 @@
 <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-6xl mx-auto">
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-2xl font-bold text-white">Measurement Units</h1>
-    <.link patch={~p"/professional/measurement_units/new"}>
+    <div class="flex items-center gap-2">
       <button
         type="button"
-        class="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm transition-colors"
+        phx-click="purge_junk_units"
+        disabled={@junk_count == 0}
+        data-confirm={"Permanently delete #{@junk_count} unit(s) that are not genuine measurement units (numeric codes, portion descriptions, and USDA food pseudo-units like \"Banana\"/\"tomatoes\")? Any recipe that uses one will be DELETED, and referencing portions will be reconciled to no unit. This cannot be undone."}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-700 hover:bg-red-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <.icon name="hero-plus" class="w-4 h-4" /> New Measurement Unit
+        <.icon name="hero-trash" class="w-4 h-4" /> Purge junk units ({@junk_count})
       </button>
-    </.link>
+      <button
+        type="button"
+        phx-click="reconcile_numeric_units"
+        disabled={@numeric_count == 0 or reconcile_running?(@reconcile_run)}
+        data-confirm={"Look up #{@numeric_count} numeric-named unit(s) against the USDA API and rename them to their real food descriptions?"}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-700 hover:bg-emerald-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <.icon
+          name="hero-arrow-path"
+          class={"w-4 h-4 #{if reconcile_running?(@reconcile_run), do: "animate-spin"}"}
+        />
+        {if reconcile_running?(@reconcile_run),
+          do: "Reconciling…",
+          else: "Reconcile numeric units (#{@numeric_count})"}
+      </button>
+      <.link patch={~p"/professional/measurement_units/new"}>
+        <button
+          type="button"
+          class="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm transition-colors"
+        >
+          <.icon name="hero-plus" class="w-4 h-4" /> New Measurement Unit
+        </button>
+      </.link>
+    </div>
   </div>
+
+  <%= if @reconcile_run do %>
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          NDB-number reconciliation
+          <span class={[
+            "ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+            if(reconcile_running?(@reconcile_run),
+              do: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+              else: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+            )
+          ]}>
+            {if reconcile_running?(@reconcile_run), do: "Running", else: "Completed"}
+          </span>
+        </p>
+        <p class="text-sm font-semibold text-white">{reconcile_percent(@reconcile_run)}%</p>
+      </div>
+
+      <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden mb-3">
+        <div
+          class={[
+            "h-2 rounded-full transition-all duration-500",
+            if(reconcile_running?(@reconcile_run), do: "bg-amber-500", else: "bg-emerald-500")
+          ]}
+          style={"width: #{reconcile_percent(@reconcile_run)}%"}
+        >
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-4 text-sm">
+        <span class="text-slate-400">Total <span class="text-white font-semibold">{@reconcile_run.total}</span></span>
+        <span class="text-green-400">Renamed <span class="font-semibold">{@reconcile_run.completed}</span></span>
+        <span class="text-red-400">Failed <span class="font-semibold">{@reconcile_run.failed}</span></span>
+        <span class="text-blue-400">Remaining <span class="font-semibold">{reconcile_remaining(@reconcile_run)}</span></span>
+      </div>
+
+      <%= if @reconcile_run.failed > 0 and @reconcile_run.error do %>
+        <p class="mt-2 text-xs text-red-400/80 truncate" title={@reconcile_run.error}>
+          Last error: {@reconcile_run.error}
+        </p>
+      <% end %>
+    </div>
+  <% end %>
 
   <!-- Table header — hidden on mobile -->
   <div class="hidden sm:grid sm:grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-700 mb-1">

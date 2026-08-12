@@ -271,8 +271,10 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                     <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
                       {item.quantity}
                     </span>
-                    {if !is_nil(item.measurement_unit) do
-                      item.measurement_unit.name
+                    {cond do
+                      not is_nil(item.measurement_unit) -> item.measurement_unit.name
+                      not is_nil(Map.get(item, :description)) -> item.description
+                      true -> nil
                     end}
                   </div>
                 </div>

@@ -1,8 +1,9 @@
 defmodule Mehungry.Food.NutrientMapper do
-  use GenServer
-  require Logger
-
-  def init(init_arg), do: {:ok, init_arg}
+  @moduledoc """
+  Turns raw/shorthand nutrient names (fatty-acid notation, vitamin/mineral
+  abbreviations) into human-readable display names. Pure functions — despite the
+  name it holds no state and runs no process.
+  """
 
   def get_nutrient_name(nutrient_id, fallback_name \\ nil) do
     name =
@@ -10,10 +11,6 @@ defmodule Mehungry.Food.NutrientMapper do
 
     humanize_nutrient_name(name)
   end
-
-  def get_all_mappings, do: %{}
-
-  def status, do: %{loaded_count: 1}
 
   def humanize_nutrient_name(name) when is_binary(name) do
     name

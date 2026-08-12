@@ -157,6 +157,11 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
      |> push_patch(to: socket.assigns.patch)}
   end
 
+  # Free-text label for a recipe ingredient that uses a description-only portion
+  # (no measurement unit), so the basket can still show e.g. "1 medium banana".
+  defp portion_description(%{measurement_unit_id: nil, ingredient_portion: %{description: d}}), do: d
+  defp portion_description(_), do: nil
+
   def crete_ingredient_basket(user_meals) do
     user_meals
     |> Enum.reduce([], fn x, acc -> acc ++ x.recipe_user_meals end)
@@ -171,21 +176,28 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
     end)
     |> Enum.reduce([], fn x, acc -> acc ++ x end)
     # [{2, recipe_ingredient}]
-    |> Enum.map(fn {x, z, p} -> {p.ingredient_id, p.quantity / z * x, p.measurement_unit.id} end)
-    # [{ingredient_id, quantity, measurement_unit_id}]
+    |> Enum.map(fn {x, z, p} ->
+      {p.ingredient_id, p.quantity / z * x, p.measurement_unit_id, portion_description(p)}
+    end)
+    # [{ingredient_id, quantity, measurement_unit_id, description}]
     # |> Enum.reduce([], fn x, acc -> acc ++ x.recipe.recipe_ingredients end)
 
-    |> Enum.reduce(%{}, fn {ing, quant_out, mu}, acc ->
-      with {ing, quant, mu_e} <- Map.get(acc, Integer.to_string(ing)),
+    |> Enum.reduce(%{}, fn {ing, quant_out, mu, desc}, acc ->
+      with {ing, quant, mu_e, desc_e} <- Map.get(acc, Integer.to_string(ing)),
            true <- mu == mu_e do
-        Map.replace(acc, Integer.to_string(ing), {ing, quant + quant_out, mu_e})
+        Map.replace(acc, Integer.to_string(ing), {ing, quant + quant_out, mu_e, desc_e})
       else
-        _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant_out, mu})
+        _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant_out, mu, desc})
       end
     end)
     |> Map.values()
-    |> Enum.map(fn {ing, quant, mu} ->
-      %{"ingredient_id" => ing, "quantity" => quant, "measurement_unit_id" => mu}
+    |> Enum.map(fn {ing, quant, mu, desc} ->
+      %{
+        "ingredient_id" => ing,
+        "quantity" => quant,
+        "measurement_unit_id" => mu,
+        "description" => desc
+      }
     end)
 
     # |> Enum.map(fn x -> {x.ingredient.id, x.quantity, x.measurement_unit.id} end)

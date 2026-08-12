@@ -213,24 +213,110 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
   # --- Portions -------------------------------------------------------------
 
   defp create_ingredient_portions(food_portions, ingredient) do
-    food_portions
-    |> Enum.map(fn portion ->
-      {portion, get_or_create_measurement_unit(portion["modifier"], ingredient)}
+    Enum.each(food_portions, fn portion ->
+      measurement_unit = resolve_portion_unit(portion, ingredient)
+
+      # With a real unit, keep only USDA's `portionDescription` as extra detail
+      # (a bare modifier like "sliced" shouldn't shadow the unit name at display
+      # time). Without a unit, fall back through the full label chain so the
+      # portion still carries a name.
+      description =
+        if measurement_unit do
+          normalize_unit_name(portion["portionDescription"])
+        else
+          portion_description(portion)
+        end
+
+      # A portion with neither a real unit nor a description carries no usable
+      # label; skip it rather than inserting an empty row.
+      if is_nil(measurement_unit) and is_nil(description) do
+        :skip
+      else
+        Food.create_ingredient_portion(%{
+          amount: portion["amount"],
+          value: portion["value"],
+          gram_weight: portion["gramWeight"],
+          reference_id: portion["id"],
+          min_year_acquired: portion["minYearAcquired"],
+          sequence_number: portion["sequenceNumber"],
+          ingredient_id: ingredient.id,
+          measurement_unit_id: measurement_unit && measurement_unit.id,
+          description: description
+        })
+      end
     end)
-    # A portion with no unit can't be stored; skip it rather than invent a unit.
-    |> Enum.reject(fn {_portion, measurement_unit} -> is_nil(measurement_unit) end)
-    |> Enum.each(fn {portion, measurement_unit} ->
-      Food.create_ingredient_portion(%{
-        amount: portion["amount"],
-        value: portion["value"],
-        gram_weight: portion["gramWeight"],
-        reference_id: portion["id"],
-        min_year_acquired: portion["minYearAcquired"],
-        sequence_number: portion["sequenceNumber"],
-        ingredient_id: ingredient.id,
-        measurement_unit_id: measurement_unit.id
-      })
-    end)
+  end
+
+  # A portion gets a measurement unit ONLY when its `measureUnit.name` is a
+  # genuine unit (Food.real_unit_name?/1). USDA's measureUnit vocabulary also
+  # contains food-specific pseudo-units with normal ids ("Banana", "tomatoes",
+  # "fruit", "drumstick") and, historically, free text landed here too — none of
+  # those belong in the units table, so they resolve to nil and their label is
+  # kept on the portion's `description` instead. Undetermined (id 9999) also → nil.
+  defp resolve_portion_unit(portion, ingredient) do
+    case measure_unit_name(portion) do
+      nil -> nil
+      name -> if Food.real_unit_name?(name), do: get_or_create_measurement_unit(name, ingredient)
+    end
+  end
+
+  # The `measureUnit.name` when it is a usable label (not undetermined/blank),
+  # else nil. Shared by unit resolution, the description fallback, and cleanup.
+  defp measure_unit_name(portion) do
+    case portion["measureUnit"] do
+      %{"id" => 9999} ->
+        nil
+
+      %{"name" => name} when is_binary(name) ->
+        case normalize_unit_name(name) do
+          "undetermined" -> nil
+          other -> other
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  # Human-readable portion label: USDA `portionDescription`, then `modifier`, then
+  # the measureUnit label itself (so a food pseudo-unit like "tomatoes" that we
+  # refused to mint as a unit still survives as the portion's description).
+  # Blank/missing everywhere → nil.
+  defp portion_description(portion) do
+    normalize_unit_name(portion["portionDescription"]) ||
+      normalize_unit_name(portion["modifier"]) ||
+      measure_unit_name(portion)
+  end
+
+  # --- Junk-unit cleanup ----------------------------------------------------
+
+  # For every portion in the reparsed batch, collect the unit names an import
+  # (old or new) could have minted — from both `measureUnit.name` and the
+  # canonical `modifier` — and purge the ones that are NOT genuine units. That
+  # sweeps numeric codes ("60919"), free-text descriptions, and USDA food
+  # pseudo-units ("Banana", "tomatoes", "watermelon balls") alike. Portions still
+  # pointing at a purged unit are reconciled (unit nulled, description kept) and
+  # any recipe that used it is deleted via its full cascade
+  # (Measurements.purge_junk_measurement_unit/1). Must run after the insert
+  # transaction commits, so its own transaction can't roll the import back.
+  defp cleanup_junk_units(foods) do
+    foods
+    |> Enum.flat_map(fn food -> food["foodPortions"] || [] end)
+    |> Enum.flat_map(&candidate_unit_names/1)
+    |> Enum.uniq()
+    |> Enum.reject(&Food.real_unit_name?/1)
+    |> Enum.each(&Food.purge_junk_measurement_unit/1)
+  end
+
+  defp candidate_unit_names(portion) do
+    modifier_name =
+      case normalize_unit_name(portion["modifier"]) do
+        nil -> nil
+        modifier -> elem(get_measurement_unit_foul_name(modifier), 0)
+      end
+
+    [measure_unit_name(portion), modifier_name]
+    |> Enum.reject(&is_nil/1)
   end
 
   # --- Nutrients ------------------------------------------------------------
@@ -378,6 +464,7 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
         Map.get(json_body, "BrandedFoods", [])
 
     Enum.each(foods, fn food -> create_ingredient(food) end)
+    cleanup_junk_units(foods)
   end
 
   @doc """
@@ -392,10 +479,18 @@ defmodule Mehungry.FoodData.Usda.FoodParser do
       {:ok, decoded} ->
         case normalize_foods(decoded) do
           {:ok, foods} ->
-            Mehungry.Repo.transaction(fn ->
-              Enum.each(foods, fn x -> create_ingredient(x, nutrient_data_source) end)
-              length(foods)
-            end)
+            result =
+              Mehungry.Repo.transaction(fn ->
+                Enum.each(foods, fn x -> create_ingredient(x, nutrient_data_source) end)
+                length(foods)
+              end)
+
+            # Sweep the bogus units the reparsed portions used to reference, but
+            # only after the transaction commits (delete rescues FK violations,
+            # which would be useless inside an aborted transaction).
+            with {:ok, _count} <- result, do: cleanup_junk_units(foods)
+
+            result
 
           :error ->
             Logger.error(
