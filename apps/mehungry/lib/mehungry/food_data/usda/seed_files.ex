@@ -3,14 +3,18 @@ defmodule Mehungry.FoodData.Usda.SeedFiles do
   Query/command layer for `Mehungry.FoodData.Usda.SeedFile` — the durable
   tracking rows behind the S3 ingredient-seeding flow.
 
-  Every status transition except `processing` broadcasts the updated row on
-  `Mehungry.PubSub` under `topic(bucket)`, so
-  `MehungryWeb.ProfessionalLive.S3BrowserLive` can render live progress and offer
-  per-file re-do controls. The intermediate `processing` transition is
-  intentionally silent: a bucket seed fans out thousands of jobs, and one
-  broadcast per job start would flood the browsing LiveView's mailbox for a
-  transient state the UI doesn't need. The row still moves to `completed`/`failed`
-  (which do broadcast), so nothing is lost.
+  The terminal `pending → completed`/`failed` transitions each broadcast the full
+  updated row (`{:seed_file, %SeedFile{}}`) on `Mehungry.PubSub` under
+  `topic(bucket)`, so `MehungryWeb.ProfessionalLive.S3BrowserLive` can patch that
+  row and offer per-file re-do controls.
+
+  The intermediate `processing` transition instead emits a deliberately
+  lightweight `{:seed_file_processing, bucket, key}` signal (identifiers only, no
+  row) rather than a full-row broadcast: a bucket seed fans out thousands of jobs,
+  so the browsing LiveView coalesces these behind a flush timer into periodic
+  "processing" patches. That keeps the mailbox/render cost bounded while still
+  showing that work is in flight. The row always moves on to `completed`/`failed`
+  (full broadcast), so nothing is lost if a `processing` signal is dropped.
   """
 
   import Ecto.Query
@@ -48,9 +52,24 @@ defmodule Mehungry.FoodData.Usda.SeedFiles do
     seed_file
   end
 
-  # Deliberately does not broadcast — see the moduledoc. Marking the row keeps the
-  # durable audit trail; the UI simply doesn't need the pending→processing tick.
-  def mark_processing(id), do: update_status(id, %{status: "processing"}, broadcast?: false)
+  # Marks the row processing (durable audit trail) and emits only the lightweight
+  # coalesce-friendly `{:seed_file_processing, bucket, key}` signal — never the
+  # full-row broadcast the terminal transitions use. See the moduledoc.
+  def mark_processing(id) do
+    case update_status(id, %{status: "processing"}, broadcast?: false) do
+      %SeedFile{bucket: bucket, key: key} = seed_file ->
+        Phoenix.PubSub.broadcast(
+          Mehungry.PubSub,
+          topic(bucket),
+          {:seed_file_processing, bucket, key}
+        )
+
+        seed_file
+
+      nil ->
+        nil
+    end
+  end
 
   def mark_completed(id, count) do
     update_status(id, %{
@@ -91,7 +110,7 @@ defmodule Mehungry.FoodData.Usda.SeedFiles do
     query =
       from(j in Oban.Job,
         where:
-          j.queue == "imports" and
+          j.queue == "seed_imports" and
             fragment("?->>'bucket' = ?", j.args, ^bucket) and
             j.state in ["available", "scheduled", "retryable"]
       )

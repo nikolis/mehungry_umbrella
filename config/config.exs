@@ -128,7 +128,12 @@ config :mehungry, Oban,
     default: 10,
     mailers: 5,
     ai_agents: 2,
-    imports: 2
+    imports: 2,
+    # Bulk USDA seed-file imports get their own slots so a full-bucket "Load
+    # ingredients" run can't starve behind the long-running, self-resuming
+    # science pipeline (literature crawl / PubTator / candidate derivation) that
+    # shares the 2-slot `:imports` queue. Capped at 2 to bound DB write pressure.
+    seed_imports: 2
   ]
 
 config :swarm,

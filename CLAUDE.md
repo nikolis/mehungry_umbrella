@@ -126,7 +126,10 @@ default:            10 concurrent  — ingredient translation, recipe publishing
 ai_agents:           2 concurrent  — recipe generation, translation, image generation, nutritionist agent
 mailers:             5 concurrent  — email
 imports:             2 concurrent  — literature crawl, PubTator annotation, candidate derivation
+seed_imports:        2 concurrent  — USDA S3 seed-file imports (SeedFileImportWorker) only
 ```
+
+`SeedFileImportWorker` is deliberately on its own `seed_imports` queue so a bulk "Load ingredients" run over a full bucket can't starve behind the long-running, self-resuming science pipeline that shares `:imports`. `SeedFiles.reset/2` cancels in-flight jobs by that queue name.
 
 Full-text (PMC) + measurement extraction is **no longer a server-side Oban pipeline** — it moved to the non-deployed `apps/mehungry_local_ai` service, which posts full text + review-gated candidates back over `/api/local_ai/*`. `/professional/science` shows read-only status; review stays at `/professional/compound-candidates`. See `docs/measurement_extraction.md`.
 

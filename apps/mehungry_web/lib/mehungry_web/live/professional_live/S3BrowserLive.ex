@@ -5,6 +5,11 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
   alias Mehungry.FoodData.Usda.SeedFiles
   require Logger
 
+  # How long to buffer `:seed_file_processing` signals before applying them in one
+  # batched render. Bounds re-renders to ~1000/@processing_flush_ms per second no
+  # matter how fast import jobs churn.
+  @processing_flush_ms 400
+
   @impl true
   def mount(_params, _session, socket) do
     # Give the durable (connected) process a human-readable OTP label so it isn't an
@@ -29,7 +34,12 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
        # status string => count, maintained incrementally so the summary line can
        # update without walking the whole listing on every broadcast.
        counts: %{},
-       subscribed_bucket: nil
+       subscribed_bucket: nil,
+       # Keys signalled as `processing` since the last flush. Import jobs fan out
+       # fast, so we buffer these and apply them in one batched patch per
+       # `@processing_flush_ms` instead of one render per job start.
+       processing_pending: MapSet.new(),
+       processing_flush_scheduled: false
      )}
   end
 
@@ -496,6 +506,61 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
            file_index: Map.put(socket.assigns.file_index, key, row),
            counts: adjust_counts(socket.assigns.counts, old.status, seed_file.status)
          )}
+    end
+  end
+
+  # Lightweight `processing` signal (see `SeedFiles` moduledoc): buffer the key and
+  # arm a single flush timer. Only worth buffering if it's a row on this page that
+  # is still `pending` — otherwise a terminal broadcast already moved it on.
+  @impl true
+  def handle_info({:seed_file_processing, bucket, key}, socket) do
+    still_pending? =
+      bucket == socket.assigns.bucket_name and
+        match?(%{status: "pending"}, Map.get(socket.assigns.file_index, key))
+
+    if still_pending? do
+      {:noreply,
+       socket
+       |> update(:processing_pending, &MapSet.put(&1, key))
+       |> arm_processing_flush()}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Applies every buffered `processing` key that is still `pending` in one batch,
+  # then disarms so the next signal re-arms the timer.
+  def handle_info(:flush_processing, socket) do
+    socket =
+      Enum.reduce(socket.assigns.processing_pending, socket, fn key, socket ->
+        case Map.get(socket.assigns.file_index, key) do
+          %{status: "pending"} = old ->
+            row = %{old | status: "processing"}
+
+            socket
+            |> stream_insert(:files, row)
+            |> assign(
+              file_index: Map.put(socket.assigns.file_index, key, row),
+              counts: adjust_counts(socket.assigns.counts, "pending", "processing")
+            )
+
+          _ ->
+            socket
+        end
+      end)
+
+    {:noreply,
+     assign(socket, processing_pending: MapSet.new(), processing_flush_scheduled: false)}
+  end
+
+  # Schedules the batched flush at most once per window; subsequent signals within
+  # the window just accumulate into `processing_pending`.
+  defp arm_processing_flush(socket) do
+    if socket.assigns.processing_flush_scheduled do
+      socket
+    else
+      Process.send_after(self(), :flush_processing, @processing_flush_ms)
+      assign(socket, processing_flush_scheduled: true)
     end
   end
 
