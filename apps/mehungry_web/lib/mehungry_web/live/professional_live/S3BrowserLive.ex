@@ -7,6 +7,11 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    # Give the durable (connected) process a human-readable OTP label so it isn't an
+    # anonymous pid in observer / :recon / LiveDashboard / the ProcessWatchdog when
+    # its mailbox backs up under a seed run. Refined with the bucket in `apply_listing/5`.
+    if connected?(socket), do: Process.set_label({:s3_browser_live, "(no bucket)"})
+
     {:ok,
      socket
      |> stream(:files, [])
@@ -560,6 +565,8 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
 
     file_index = Map.new(rows, &{&1.key, &1})
     counts = count_statuses(rows)
+
+    if connected?(socket), do: Process.set_label({:s3_browser_live, bucket_name})
 
     socket
     |> ensure_subscribed(bucket_name)
