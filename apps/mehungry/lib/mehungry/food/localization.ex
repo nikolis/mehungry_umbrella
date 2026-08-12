@@ -13,6 +13,7 @@ defmodule Mehungry.Food.Localization do
     Category,
     CategoryTranslation,
     Ingredient,
+    IngredientPortion,
     IngredientTranslation,
     MeasurementUnit,
     MeasurementUnitTranslation,
@@ -87,6 +88,7 @@ defmodule Mehungry.Food.Localization do
           {:recipe_ingredients,
            [
              {:measurement_unit, :translation},
+             :ingredient_portion,
              {:ingredient, :category}
            ]}
         ])
@@ -117,16 +119,22 @@ defmodule Mehungry.Food.Localization do
         join: cat_trans in CategoryTranslation,
         on: true,
         where: cat_trans.category_id == cat.id and ^language_name == cat_trans.language_name,
-        join: mu in MeasurementUnit,
-        on: true,
-        where: mu.id == rec_ing.measurement_unit_id,
-        join: mu_trans in MeasurementUnitTranslation,
-        on: true,
-        where: mu_trans.measurement_unit_id == mu.id and ^language_name == mu_trans.language_name,
+        # LEFT joins so description-only rows (no measurement unit) survive; the
+        # portion is carried so RecipeIngredient.unit_label/1 can fall back to
+        # its free-text description at render time.
+        left_join: mu in MeasurementUnit,
+        on: mu.id == rec_ing.measurement_unit_id,
+        left_join: mu_trans in MeasurementUnitTranslation,
+        on: mu_trans.measurement_unit_id == mu.id and ^language_name == mu_trans.language_name,
+        left_join: portion in IngredientPortion,
+        on: portion.id == rec_ing.ingredient_portion_id,
         select: %RecipeIngredient{
           quantity: rec_ing.quantity,
           ingredient_allias: rec_ing.ingredient_allias,
+          measurement_unit_id: rec_ing.measurement_unit_id,
+          ingredient_portion_id: rec_ing.ingredient_portion_id,
           measurement_unit: %MeasurementUnit{id: mu.id, name: mu_trans.name},
+          ingredient_portion: %IngredientPortion{id: portion.id, description: portion.description},
           ingredient: %Ingredient{
             name: tra.name,
             id: ingredient.id,
@@ -138,7 +146,7 @@ defmodule Mehungry.Food.Localization do
     case Repo.all(query) do
       [] ->
         Repo.preload(recipe, [
-          {:recipe_ingredients, [:measurement_unit, {:ingredient, :category}]}
+          {:recipe_ingredients, [:measurement_unit, :ingredient_portion, {:ingredient, :category}]}
         ])
 
       translated ->

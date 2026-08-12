@@ -33,16 +33,21 @@ defmodule Mehungry.NutrientTest do
         })
 
       recipe = Food.get_recipe!(recipe.id)
-      {_num, nutrients} = Mehungry.Food.RecipeUtils.get_nutrients(recipe)
 
-      nutrients_changed =
-        nutrients
-        |> Enum.map(fn x -> Map.new([{x.name, x}]) end)
-        |> Enum.reduce(&Map.merge/2)
+      # Mirrors the production call in RecipePutNutrientsWorker, which passes a
+      # plain map (calculate_recipe_nutrition_value indexes with map[key], so a
+      # bare %Recipe{} struct — which doesn't implement Access — would fail).
+      {primary_size, nutrients} =
+        Mehungry.Food.NutrientCalculation.calculate_recipe_nutrition_value(
+          Map.from_struct(recipe)
+        )
 
-      assert map_size(nutrients_changed) > 0
-      assert Map.has_key?(nutrients_changed, "Protein")
-      assert Map.has_key?(nutrients_changed, "Total Fat")
+      names = MapSet.new(nutrients, & &1.name)
+
+      assert primary_size == 8
+      assert MapSet.size(names) > 0
+      assert MapSet.member?(names, "Protein")
+      assert MapSet.member?(names, "Carbohydrates")
     end
   end
 end

@@ -50,7 +50,11 @@ defmodule Mehungry.Social.Instagram.Caption do
 
     lines =
       Enum.map(items, fn ri ->
-        [format_number(ri.quantity), ri.measurement_unit.name, ri.ingredient.name]
+        [
+          format_number(ri.quantity),
+          Mehungry.Food.RecipeIngredient.unit_label(ri),
+          ri.ingredient.name
+        ]
         |> Enum.reject(&(&1 in [nil, ""]))
         |> Enum.join(" ")
       end)

@@ -68,6 +68,47 @@ defmodule Mehungry.FoodData.Usda.FdcClient do
   @doc false
   def adapt_portal_food(portal_json), do: portal_to_parser_format(portal_json)
 
+  @doc """
+  Resolves a bare USDA NDB number (e.g. `"10205"`) to its real food description.
+
+  The FDC API has no direct by-NDB endpoint, so this searches the SR Legacy
+  dataset (which carries `ndbNumber`) for the number and returns the description
+  of the row whose `ndbNumber` matches exactly.
+
+  Returns `{:ok, %{name: description, fdc_id: id, ndb_number: ndb}, meta}`,
+  `{:error, :no_ndb_match}` when nothing matches, `{:error, {:rate_limited, secs}}`
+  when throttled, or `{:error, reason}` for other failures.
+  """
+  def lookup_name_by_ndb_number(ndb_number) when is_binary(ndb_number) do
+    with {:ok, key} <- require_key() do
+      params =
+        URI.encode_query(%{
+          query: ndb_number,
+          dataType: "SR Legacy",
+          pageSize: 50,
+          api_key: key
+        })
+
+      case FdcHttp.get("#{@base_url}/foods/search?#{params}") do
+        {:ok, %{"foods" => foods}, meta} when is_list(foods) ->
+          case Enum.find(foods, fn f -> to_string(f["ndbNumber"]) == ndb_number end) do
+            %{"description" => desc} = food ->
+              {:ok,
+               %{name: desc, fdc_id: food["fdcId"], ndb_number: ndb_number}, meta}
+
+            _ ->
+              {:error, :no_ndb_match}
+          end
+
+        {:ok, _other, _meta} ->
+          {:error, :unexpected_response}
+
+        {:error, _} = err ->
+          err
+      end
+    end
+  end
+
   # ── private ──────────────────────────────────────────────────────────────────
 
   defp require_key do

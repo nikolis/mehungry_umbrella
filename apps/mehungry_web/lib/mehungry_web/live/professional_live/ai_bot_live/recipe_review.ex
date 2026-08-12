@@ -512,7 +512,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
                     <%= for ri <- @recipe.recipe_ingredients do %>
                       <li class="flex items-baseline gap-2 text-sm">
                         <span class="text-slate-400 text-xs tabular-nums w-8 text-right flex-shrink-0">{ri.quantity}</span>
-                        <span class="text-slate-500 text-xs flex-shrink-0">{ri.measurement_unit.name}</span>
+                        <span class="text-slate-500 text-xs flex-shrink-0">{Mehungry.Food.RecipeIngredient.unit_label(ri)}</span>
                         <span class="text-slate-200">{ri.ingredient.name}</span>
                       </li>
                     <% end %>

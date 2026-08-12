@@ -104,7 +104,7 @@ defmodule MehungryWeb.SimpleS3Upload do
   end
 
   def s3_filepath(entry) do
-    "#{entry.uuid}.#{ext(entry)}"
+    "recipe_images/#{entry.uuid}.#{ext(entry)}"
   end
 
   def entry_url(entry) do

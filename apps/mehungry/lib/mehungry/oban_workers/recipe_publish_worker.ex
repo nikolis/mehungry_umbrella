@@ -61,7 +61,7 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
       Food.get_recipe_no_caching!(bot_recipe.recipe_id)
       |> Mehungry.Repo.preload([
         :user,
-        recipe_ingredients: [:ingredient, :measurement_unit],
+        recipe_ingredients: [:ingredient, :measurement_unit, :ingredient_portion],
         recipe_hashtags: []
       ])
 

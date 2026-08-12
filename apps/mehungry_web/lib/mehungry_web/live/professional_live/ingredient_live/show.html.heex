@@ -109,7 +109,7 @@
             <div class="text-sm">
               <span class="text-slate-500 text-xs">Unit</span>
               <div class="text-white font-medium">
-                {(portion.measurement_unit && portion.measurement_unit.name) || "—"}
+                {Mehungry.Food.IngredientPortion.display_name(portion) || "—"}
               </div>
             </div>
           </div>

@@ -1,18 +1,11 @@
 defmodule MehungryWeb.IngredientComponent do
   use MehungryWeb, :live_component
 
+  alias Mehungry.Food.IngredientPortion
+
   @impl true
   def update(%{new_ingredient_id: ingredient_id} = _assigns, socket) do
-    gram = Mehungry.Food.get_measurement_unit_by_name("gram")
-
-    measurement_units =
-      Mehungry.Food.get_measurement_unit_portions_for_ingredient(ingredient_id)
-      |> Enum.map(fn x -> x.measurement_unit end)
-      |> Enum.filter(fn x -> !is_nil(x) end)
-
-    socket =
-      socket
-      |> assign(:measurement_units, measurement_units ++ gram)
+    socket = assign(socket, :unit_options, unit_options(ingredient_id))
 
     {:ok, socket}
   end
@@ -24,25 +17,44 @@ defmodule MehungryWeb.IngredientComponent do
       |> assign(assigns)
       |> assign_search_fns()
 
-    gram = Mehungry.Food.get_measurement_unit_by_name("gram")
-
-    measurement_units =
-      if(!is_nil(socket.assigns.ingredient_form[:ingredient_id].value)) do
-        id = socket.assigns.ingredient_form[:ingredient_id].value
-
-        Mehungry.Food.get_measurement_unit_portions_for_ingredient(id)
-        |> Enum.map(fn x -> x.measurement_unit end)
-        |> Enum.filter(fn x -> !is_nil(x) end)
-      else
-        []
+    options =
+      case socket.assigns.ingredient_form[:ingredient_id].value do
+        nil -> unit_options(nil)
+        id -> unit_options(id)
       end
 
-    measurement_units = measurement_units ++ gram
-
-    socket = assign(socket, :measurement_units, measurement_units)
+    socket = assign(socket, :unit_options, options)
 
     {:ok, socket}
   end
+
+  # Builds the unit dropdown options for an ingredient. Every portion becomes an
+  # option — including description-only ones (no measurement unit) — labelled via
+  # IngredientPortion.display_name/1. Option values are the integer encoding used
+  # by RecipeIngredient.unit_selection: a measurement_unit_id for unit-bearing
+  # portions, or -portion_id for description-only portions. "gram" is always
+  # appended.
+  defp unit_options(nil) do
+    Enum.map(gram_units(), fn mu -> {Integer.to_string(mu.id), mu.name} end)
+  end
+
+  defp unit_options(ingredient_id) do
+    portion_options =
+      ingredient_id
+      |> Mehungry.Food.get_measurement_unit_portions_for_ingredient()
+      |> Enum.map(fn portion ->
+        value =
+          if portion.measurement_unit_id, do: portion.measurement_unit_id, else: -portion.id
+
+        {Integer.to_string(value), IngredientPortion.display_name(portion) || "portion"}
+      end)
+
+    gram_options = Enum.map(gram_units(), fn mu -> {Integer.to_string(mu.id), mu.name} end)
+
+    portion_options ++ gram_options
+  end
+
+  defp gram_units, do: Mehungry.Food.get_measurement_unit_by_name("gram")
 
   def get_measurement_units() do
   end
@@ -98,85 +110,72 @@ defmodule MehungryWeb.IngredientComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="py-2">
-      <%!-- Mobile: two-row stacked layout. Desktop: single-row 10-col grid via md:contents --%>
-      <div class="flex flex-col gap-2 md:grid md:grid-cols-10 md:gap-4 md:items-center">
-        <%!-- Row 1 on mobile: ingredient selector + delete button --%>
-        <div class="flex items-center gap-2 md:contents">
-          <div class="flex-1 min-w-0 md:col-span-4 h-full">
-            <.live_component
-              module={MehungryWeb.SelectComponentDeep}
-              form={@ingredient_form}
-              item_function={@ingredient_item_fn}
-              flags_function={@ingredient_flags_fn}
-              get_by_id_func={@ingredient_get_by_id_fn}
-              input_variable="ingredient_id"
-              label_function={@ingredient_label_fn}
-              placeholder="Select an ingredient..."
-              modal_title="Search Ingredients"
-              parent_id={@id}
-              select_function={fn x -> send(self(), {:select_id, x, @id}) end}
-              id={"ingredient_search_component" <> Integer.to_string(@ingredient_form.index)}
-            />
-          </div>
-          <button
-            class="shrink-0 text-xl font-bold text-red-500/70 hover:text-red-400 transition-colors md:hidden"
-            name="recipe[_action]"
-            value={"remove_ingredient:#{@ingredient_form.index}"}
-          >
-            ❌
-          </button>
+    <div class="group rounded-xl border border-ink-panel2 bg-black/20 p-3 transition-colors hover:border-paprika/30">
+      <%!--
+        Mobile: ingredient on its own row, then quantity + unit + delete.
+        Desktop (md+): a single 12-column row, all controls the same height and
+        vertically centred. Every field carries a small parchment-dim label so
+        the two select widgets and the quantity input read as one set.
+      --%>
+      <div class="flex flex-col gap-3 md:grid md:grid-cols-12 md:gap-3 md:items-end">
+        <%!-- Ingredient --%>
+        <div class="min-w-0 md:col-span-6">
+          <.field_label>Ingredient</.field_label>
+          <.live_component
+            module={MehungryWeb.SelectComponentDeep}
+            form={@ingredient_form}
+            item_function={@ingredient_item_fn}
+            flags_function={@ingredient_flags_fn}
+            get_by_id_func={@ingredient_get_by_id_fn}
+            input_variable="ingredient_id"
+            label_function={@ingredient_label_fn}
+            placeholder="Select an ingredient…"
+            modal_title="Search Ingredients"
+            parent_id={@id}
+            select_function={fn x -> send(self(), {:select_id, x, @id}) end}
+            id={"ingredient_search_component" <> Integer.to_string(@ingredient_form.index)}
+          />
         </div>
 
-        <%!-- Row 2 on mobile: quantity + unit + desktop-only delete --%>
-        <div class="flex items-center gap-2 md:contents">
-          <div class="w-20 shrink-0 md:col-span-2">
-            <.input field={@ingredient_form[:quantity]} type="number_subscript" label="quantity" />
+        <%!-- Quantity + Unit + delete: inline on mobile, columns on desktop --%>
+        <div class="flex items-end gap-3 md:contents">
+          <div class="w-24 shrink-0 md:col-span-2">
+            <.field_label>Qty</.field_label>
+            <.input field={@ingredient_form[:quantity]} type="number_subscript" placeholder="0" />
           </div>
-          <div class="flex-1 md:col-span-3">
+          <div class="min-w-0 flex-1 md:col-span-3">
+            <.field_label>Unit</.field_label>
             <.live_component
               module={MehungryWeb.SelectComponent}
-              items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
+              items={@unit_options}
               form={@ingredient_form}
               id={"measurement_unit_search_componentasdf" <> Integer.to_string(@ingredient_form.index)}
-              input_variable={:measurement_unit_id}
+              input_variable={:unit_selection}
             />
           </div>
-          <button
-            class="hidden md:block text-xl font-bold text-red-500/70 hover:text-red-400 transition-colors md:col-span-1"
-            name="recipe[_action]"
-            value={"remove_ingredient:#{@ingredient_form.index}"}
-          >
-            ❌
-          </button>
+          <div class="md:col-span-1 md:flex md:justify-end">
+            <button
+              name="recipe[_action]"
+              value={"remove_ingredient:#{@ingredient_form.index}"}
+              aria-label="Remove ingredient"
+              class="shrink-0 h-10 w-10 grid place-items-center rounded-lg text-parchment-dim hover:text-red-400 hover:bg-ink-panel2 transition-colors"
+            >
+              <.icon name="hero-trash" class="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
     """
   end
 
-  def get_measurement_unit(nil, assigns), do: assigns.measurement_units
-
-  def get_measurement_unit(ing_val, assigns) when is_binary(ing_val),
-    do: assigns.measurement_units ++ get_measurement_unit(ing_val)
-
-  def get_measurement_unit(ing_val, assigns) when is_integer(ing_val),
-    do: assigns.measurement_units ++ get_measurement_unit(ing_val)
-
-  def get_measurement_unit(ing_val, assigns) do
-    ing_val = String.to_integer(ing_val)
-    assigns.measurement_units ++ get_measurement_unit(ing_val)
+  # Small, consistent field label shared by all three controls in a row.
+  defp field_label(assigns) do
+    ~H"""
+    <span class="mb-1 block text-[11px] font-medium uppercase tracking-wide text-parchment-dim">
+      {render_slot(@inner_block)}
+    </span>
+    """
   end
 
-  def get_measurment_unit("", assigns), do: assigns.measurement_units
-
-  defp get_measurement_unit(nil) do
-    []
-  end
-
-  defp get_measurement_unit(ing_val) do
-    Mehungry.Food.get_measurement_unit_portions_for_ingredient(ing_val)
-    |> Enum.map(fn x -> x.measurement_unit end)
-    |> Enum.filter(fn x -> !is_nil(x) end)
-  end
 end

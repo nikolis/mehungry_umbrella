@@ -8,7 +8,8 @@ defmodule Mehungry.Food.Nutrients do
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
-  alias Mehungry.Food.{Nutrient, NutrientInteractions, NutrientMerger, Recipes}
+  alias Mehungry.Food.{Nutrient, NutrientInteractions, Recipes}
+  alias Mehungry.Food.NutrientRecalculationRuns
 
   def get_nutrient(id) do
     if not is_nil(id) and id != "" do
@@ -57,50 +58,58 @@ defmodule Mehungry.Food.Nutrients do
     length(ids)
   end
 
+  @doc """
+  Recompute nutrients for every recipe as a tracked batch: opens a
+  `NutrientRecalculationRun`, enqueues one `RecipePutNutrientsWorker` per recipe
+  (each carrying the `run_id` so it reports its outcome back), and returns the
+  run so the caller can render live progress. See
+  `Mehungry.Food.NutrientRecalculationRuns`.
+  """
+  def start_full_recalculation_run do
+    ids = Recipes.list_recipe_ids()
+    run = NutrientRecalculationRuns.start_run(length(ids))
+
+    Enum.each(ids, fn id ->
+      %{recipe_id: id, run_id: run.id}
+      |> Mehungry.RecipePutNutrientsWorker.new()
+      |> Oban.insert()
+    end)
+
+    run
+  end
+
   def get_interactions_for_ingredients(ingredient_ids) do
     Mehungry.Food.NutrientInteractions.interactions_for_ingredients(ingredient_ids)
   end
 
+  @doc """
+  Nutrient interactions for a recipe, derived from its ingredients.
+
+  Uses the same per-ingredient path as the food-detail page
+  (`interactions_for_ingredients/1`), which classifies each ingredient's
+  significant nutrients directly from the DB. This is the only correct source:
+  the interaction rules key on individual vitamins/minerals (Iron, Vitamin C,
+  …) which are nested as children in the recipe's hierarchical `nutrients` map,
+  so summing that map's top-level entries would never surface them.
+
+  Requires `recipe_ingredients` to be preloaded; returns `[]` otherwise.
+  """
   def get_interactions_for_recipe(recipe) do
-    stored = Map.get(recipe, :ingredient_interactions, [])
+    ingredient_ids =
+      case Map.get(recipe, :recipe_ingredients) do
+        ingredients when is_list(ingredients) ->
+          ingredients
+          |> Enum.map(&Map.get(&1, :ingredient_id))
+          |> Enum.reject(&is_nil/1)
 
-    if is_list(stored) and stored != [] do
-      Enum.map(stored, &atomize_interaction/1)
-    else
-      nutrients = recipe.nutrients || %{}
-
-      if map_size(nutrients) == 0 do
-        []
-      else
-        nutrient_map =
-          Enum.reduce(nutrients, %{}, fn {name, data}, acc ->
-            amount = Map.get(data, "amount") || Map.get(data, :amount) || 0.0
-            canonical = NutrientMerger.normalize_nutrient_name(name)
-            Map.update(acc, canonical, amount, &(&1 + amount))
-          end)
-
-        NutrientInteractions.interactions_for_nutrient_map(nutrient_map)
+        _ ->
+          []
       end
-    end
+
+    NutrientInteractions.interactions_for_ingredients(ingredient_ids)
   end
 
   def enqueue_interaction_recalculation_for_all do
     enqueue_nutrient_recalculation_for_all()
   end
-
-  defp atomize_interaction(i) do
-    %{
-      id: Map.get(i, "id", "") |> safe_to_atom(),
-      type: Map.get(i, "type", "") |> safe_to_atom(),
-      badge: Map.get(i, "badge", "tip") |> safe_to_atom(),
-      label: Map.get(i, "label", ""),
-      detail: Map.get(i, "detail", ""),
-      source: Map.get(i, "source", ""),
-      nutrient_a: Map.get(i, "nutrient_a"),
-      nutrient_b: Map.get(i, "nutrient_b")
-    }
-  end
-
-  defp safe_to_atom(str) when is_binary(str), do: String.to_existing_atom(str)
-  defp safe_to_atom(atom) when is_atom(atom), do: atom
 end

@@ -25,7 +25,7 @@ defmodule Mehungry.Food.Recipes do
 
     Repo.get(Recipe, id)
     |> Repo.preload([
-      [recipe_ingredients: [:measurement_unit, :ingredient]],
+      [recipe_ingredients: [:measurement_unit, :ingredient, :ingredient_portion]],
       :user,
       recipe_hashtags: [:hashtag],
       comments: [:user, votes: [:user], comment_answers: [:user, votes: [:user]]]
@@ -51,7 +51,7 @@ defmodule Mehungry.Food.Recipes do
             recipe =
               Repo.get(Recipe, id)
               |> Repo.preload([
-                [recipe_ingredients: [:measurement_unit, :ingredient]],
+                [recipe_ingredients: [:measurement_unit, :ingredient, :ingredient_portion]],
                 :user,
                 :recipe_hashtags
               ])
@@ -217,6 +217,86 @@ defmodule Mehungry.Food.Recipes do
       {recipe_count, _} =
         from(r in Recipe, where: r.id in subquery(recipe_ids_q))
         |> Repo.delete_all()
+
+      recipe_count
+    end)
+  end
+
+  @doc """
+  Deletes the given recipes and **all** of their dependent rows in one
+  transaction. Unlike `delete_recipes_without_ingredients/0`, this also removes
+  `recipe_ingredients` (and `recipe_posts`/`recipe_translations`/
+  `history_recipe_user_meals`), so it is safe for recipes that still have
+  ingredients — used when a recipe is collateral of a junk measurement-unit
+  purge (see `Mehungry.Food.Measurements.purge_junk_measurement_unit/1`).
+  Returns `{:ok, deleted_recipe_count}`.
+  """
+  def delete_recipes_by_ids([]), do: {:ok, 0}
+
+  def delete_recipes_by_ids(recipe_ids) when is_list(recipe_ids) do
+    comment_ids =
+      from(c in Mehungry.Posts.Comment, where: c.recipe_id in ^recipe_ids, select: c.id)
+      |> Repo.all()
+
+    comment_answer_ids =
+      from(ca in Mehungry.Posts.CommentAnswer, where: ca.comment_id in ^comment_ids, select: ca.id)
+      |> Repo.all()
+
+    post_ids =
+      from(p in Mehungry.Posts.Post, where: p.recipe_id in ^recipe_ids, select: p.id)
+      |> Repo.all()
+
+    Repo.transaction(fn ->
+      from(cav in Mehungry.Posts.CommentAnswerVote,
+        where: cav.comment_answer_id in ^comment_answer_ids
+      )
+      |> Repo.delete_all()
+
+      from(cv in Mehungry.Posts.CommentVote, where: cv.comment_id in ^comment_ids)
+      |> Repo.delete_all()
+
+      from(ca in Mehungry.Posts.CommentAnswer, where: ca.comment_id in ^comment_ids)
+      |> Repo.delete_all()
+
+      from(pv in Mehungry.Posts.PostUpvote, where: pv.post_id in ^post_ids)
+      |> Repo.delete_all()
+
+      from(pv in Mehungry.Posts.PostDownvote, where: pv.post_id in ^post_ids)
+      |> Repo.delete_all()
+
+      from(c in Mehungry.Posts.Comment, where: c.recipe_id in ^recipe_ids) |> Repo.delete_all()
+      from(p in Mehungry.Posts.Post, where: p.recipe_id in ^recipe_ids) |> Repo.delete_all()
+      from(l in Mehungry.Food.Like, where: l.recipe_id in ^recipe_ids) |> Repo.delete_all()
+      from(r in "ratings", where: r.recipe_id in ^recipe_ids) |> Repo.delete_all()
+
+      from(ur in Mehungry.Accounts.UserRecipe, where: ur.recipe_id in ^recipe_ids)
+      |> Repo.delete_all()
+
+      from(m in Mehungry.Plans.Meal, where: m.recipe_id in ^recipe_ids) |> Repo.delete_all()
+
+      from(bi in Mehungry.Inventory.BasketItem, where: bi.recipe_id in ^recipe_ids)
+      |> Repo.delete_all()
+
+      from(a in Mehungry.Food.Annotation, where: a.recipe_id in ^recipe_ids) |> Repo.delete_all()
+
+      from(rh in Mehungry.Food.RecipeHashtag, where: rh.recipe_id in ^recipe_ids)
+      |> Repo.delete_all()
+
+      from(ab in Mehungry.AI.Bot.AiBotRecipe, where: ab.recipe_id in ^recipe_ids)
+      |> Repo.delete_all()
+
+      from(ri in Mehungry.Food.RecipeIngredient, where: ri.recipe_id in ^recipe_ids)
+      |> Repo.delete_all()
+
+      # Schemaless sources for the remaining recipe-referencing tables.
+      from(rp in "recipe_posts", where: rp.recipe_id in ^recipe_ids) |> Repo.delete_all()
+      from(rt in "recipe_translations", where: rt.recipe_id in ^recipe_ids) |> Repo.delete_all()
+
+      from(hr in "history_recipe_user_meals", where: hr.recipe_id in ^recipe_ids)
+      |> Repo.delete_all()
+
+      {recipe_count, _} =
+        from(r in Recipe, where: r.id in ^recipe_ids) |> Repo.delete_all()
 
       recipe_count
     end)
@@ -465,16 +545,6 @@ defmodule Mehungry.Food.Recipes do
         |> Enum.map(fn x -> Map.new([{x.name, x}]) end)
         |> Enum.reduce(&Map.merge/2)
 
-      interactions =
-        nutrients
-        |> Enum.reduce(%{}, fn {name, data}, acc ->
-          amount = Map.get(data, :amount) || 0.0
-          canonical = Mehungry.Food.NutrientMerger.normalize_nutrient_name(name)
-          Map.update(acc, canonical, amount, &(&1 + amount))
-        end)
-        |> Mehungry.Food.NutrientInteractions.interactions_for_nutrient_map()
-        |> Enum.map(&Mehungry.Food.NutrientMerger.to_string_keys/1)
-
       duration =
         (System.monotonic_time() - start)
         |> System.convert_time_unit(:native, :millisecond)
@@ -484,7 +554,6 @@ defmodule Mehungry.Food.Recipes do
       changeset
       |> Ecto.Changeset.put_change(:nutrients, nutrients)
       |> Ecto.Changeset.put_change(:primary_nutrients_size, primary_size)
-      |> Ecto.Changeset.put_change(:ingredient_interactions, interactions)
     end
   end
 

@@ -172,7 +172,7 @@
               <%= for {portion, idx} <- Enum.with_index(@ingredient.ingredient_portions) do %>
                 <tr class={if rem(idx, 2) == 0, do: "bg-ink-panel", else: "bg-ink-panel/50"}>
                   <td class="px-4 py-2 text-sm text-parchment-dim">
-                    {if portion.measurement_unit, do: portion.measurement_unit.name, else: "—"}
+                    {Mehungry.Food.IngredientPortion.display_name(portion) || "—"}
                   </td>
                   <td class="px-4 py-2 text-sm font-bold text-basil text-right [font-variant-numeric:tabular-nums]">
                     {format_amount(portion.amount)}

@@ -168,10 +168,21 @@ defmodule Mehungry.Food do
   defdelegate create_measurement_unit(attrs, opts), to: Measurements
   defdelegate update_measurement_unit(measurement_unit, attrs \\ %{}), to: Measurements
   defdelegate delete_measurement_unit(measurement_unit), to: Measurements
+  defdelegate delete_measurement_unit_if_unreferenced(name), to: Measurements
+  defdelegate delete_numeric_named_measurement_units(), to: Measurements
+  defdelegate purge_junk_measurement_unit(name), to: Measurements
+  defdelegate real_unit_name?(name), to: Measurements
+  defdelegate count_junk_measurement_units(), to: Measurements
+  defdelegate list_junk_measurement_units(limit \\ 50), to: Measurements
+  defdelegate purge_all_junk_measurement_units(), to: Measurements
   defdelegate change_measurement_unit(measurement_unit, attrs \\ %{}), to: Measurements
   defdelegate list_measurement_units(), to: Measurements
   defdelegate search_measurement_unit(term), to: Measurements
   defdelegate search_measurement_unit(search_term, language_str), to: Measurements
+  defdelegate count_numeric_named_measurement_units(), to: Measurements
+  defdelegate list_numeric_named_measurement_units(limit \\ 50), to: Measurements
+  defdelegate reconcile_measurement_unit(unit, resolved_name), to: Measurements
+  defdelegate start_measurement_unit_reconciliation_run(), to: Measurements, as: :start_reconciliation_run
 
   # ── Categories ─────────────────────────────────────────────────────────
 

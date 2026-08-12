@@ -171,11 +171,13 @@ defmodule Mehungry.Food.NutrientCalculation do
 
     Enum.map(recipe_ingredient_params, fn params ->
       ingredient = Map.fetch!(ingredients_by_id, params.ingredient_id)
+      ingredient_portion_id = Map.get(params, :ingredient_portion_id)
 
       gram_weight =
         calculate_gram_weight(
           ingredient,
           params.measurement_unit_id,
+          ingredient_portion_id,
           params.quantity,
           gram_unit_ids
         )
@@ -183,6 +185,7 @@ defmodule Mehungry.Food.NutrientCalculation do
       %{
         quantity: params.quantity,
         measurement_unit_id: params.measurement_unit_id,
+        ingredient_portion_id: ingredient_portion_id,
         ingredient: ingredient,
         nutrients: build_nutrient_list(ingredient, gram_weight),
         gram_weight: gram_weight
@@ -191,15 +194,18 @@ defmodule Mehungry.Food.NutrientCalculation do
   end
 
   @doc """
-  Converts a `{quantity, measurement_unit_id}` pair into total grams.
+  Converts a recipe ingredient's `quantity` into total grams.
 
   Resolution order:
   1. If the unit is a gram-family unit, `quantity` is already in grams.
-  2. Find the ingredient's `IngredientPortion` for this unit and compute
-     `quantity × (gram_weight / amount)`.
-  3. If no portion exists (and the unit is not a gram unit), log a warning
-     and return 0.0.  `validate_ingredient_units/1` should prevent this
-     case from arising during normal recipe creation.
+  2. Use the recipe ingredient's own `ingredient_portion_id` when set (the
+     portion selected at save time — this is the authoritative link and also
+     resolves description-only portions whose `measurement_unit_id` is nil).
+  3. Otherwise fall back to the ingredient's `IngredientPortion` for this unit.
+  4. Compute `quantity × (gram_weight / amount)` for the resolved portion.
+  5. If none resolves (and the unit is not a gram unit), log a warning and
+     return 0.0.  `validate_ingredient_units/1` should prevent this during
+     normal recipe creation.
 
   The `amount` field on `IngredientPortion` is the USDA serving denominator.
   USDA Foundation Foods almost always sets `amount = 1.0`, but when it differs
@@ -207,13 +213,20 @@ defmodule Mehungry.Food.NutrientCalculation do
   dividing restores the correct grams-per-one-unit (240 g/cup).
   Nil `amount` is treated as 1.0.
   """
-  def calculate_gram_weight(ingredient, measurement_unit_id, quantity, gram_unit_ids) do
+  def calculate_gram_weight(
+        ingredient,
+        measurement_unit_id,
+        ingredient_portion_id,
+        quantity,
+        gram_unit_ids
+      ) do
     quantity_float = safe_to_float(quantity)
+    portions = ingredient.ingredient_portions || []
 
     portion =
-      Enum.find(ingredient.ingredient_portions || [], fn p ->
-        p.measurement_unit_id == measurement_unit_id
-      end)
+      if ingredient_portion_id do
+        Enum.find(portions, fn p -> p.id == ingredient_portion_id end)
+      end || Enum.find(portions, fn p -> p.measurement_unit_id == measurement_unit_id end)
 
     cond do
       MapSet.member?(gram_unit_ids, measurement_unit_id) ->
@@ -309,7 +322,10 @@ defmodule Mehungry.Food.NutrientCalculation do
   def filter_energy_duplicates(nutrients) do
     {energy_nutrients, other_nutrients} =
       Enum.split_with(nutrients, fn entry ->
-        String.starts_with?(entry.nutrient.name, "Energy")
+        case entry.nutrient do
+          %{name: name} when is_binary(name) -> String.starts_with?(name, "Energy")
+          _ -> false
+        end
       end)
 
     selected_energy =
@@ -397,9 +413,12 @@ defmodule Mehungry.Food.NutrientCalculation do
   Fiber → Total Sugars → Minerals → everything else (999).
 
   Keys are atoms because `NutrientHierarchyBuilder.convert_to_atom_keys/1`
-  converts them on output.  Group keys use lowercase atoms (`:total_fat`,
-  `:vitamins`, `:minerals`, `:total_sugars`); main nutrient keys preserve
-  USDA title case (`:Energy`, `:Protein`, `:Carbohydrates`, `:Fiber`).
+  converts them on output. The keys used here are the actual top-level keys
+  `build_result/1` emits: lowercase group keys (`:total_fat`,
+  `:total_carbohydrates`, `:vitamins`, `:minerals`) and title-case main
+  nutrients (`:Energy`, `:Protein`). Fiber and sugars are nested under
+  `:total_carbohydrates`, so they never appear at the top level and aren't
+  listed here.
   """
   def sort_nutrients_by_priority(nutrient_map) when is_map(nutrient_map) do
     priority_order = %{
@@ -407,10 +426,8 @@ defmodule Mehungry.Food.NutrientCalculation do
       :Protein => 2,
       :total_fat => 3,
       :vitamins => 4,
-      :Carbohydrates => 5,
-      :Fiber => 6,
-      :total_sugars => 7,
-      :minerals => 8
+      :total_carbohydrates => 5,
+      :minerals => 6
     }
 
     nutrient_map

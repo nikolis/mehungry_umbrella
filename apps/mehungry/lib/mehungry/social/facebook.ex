@@ -141,7 +141,7 @@ defmodule Mehungry.Social.Facebook do
       end)
       |> Enum.map(fn ri ->
         qty = format_qty(ri.quantity)
-        "  • #{qty} #{ri.measurement_unit.name}  #{ri.ingredient.name}"
+        "  • #{qty} #{Mehungry.Food.RecipeIngredient.unit_label(ri)}  #{ri.ingredient.name}"
       end)
 
     if lines == [] do
