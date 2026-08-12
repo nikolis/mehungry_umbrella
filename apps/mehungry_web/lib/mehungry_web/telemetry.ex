@@ -204,13 +204,20 @@ defmodule MehungryWeb.Telemetry do
 
       info ->
         identity =
-          case :proc_lib.get_label(pid) do
+          case proc_label(pid) do
             :undefined -> registered_or_initial_call(pid, info[:registered_name])
             label -> inspect(label)
           end
 
         "#{inspect(pid)} #{identity} (mailbox #{info[:message_queue_len]}, running #{inspect(info[:current_function])})"
     end
+  end
+
+  # `:proc_lib.get_label/1` only exists on OTP 27+; older runtimes (CI still runs
+  # OTP 26) simply have no labels, so fall through to the registered-name/initial-call
+  # identity rather than crashing the watchdog.
+  defp proc_label(pid) do
+    if function_exported?(:proc_lib, :get_label, 1), do: :proc_lib.get_label(pid), else: :undefined
   end
 
   defp registered_or_initial_call(_pid, name) when is_atom(name) and not is_nil(name),

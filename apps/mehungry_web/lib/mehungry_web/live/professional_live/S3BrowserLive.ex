@@ -10,7 +10,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
     # Give the durable (connected) process a human-readable OTP label so it isn't an
     # anonymous pid in observer / :recon / LiveDashboard / the ProcessWatchdog when
     # its mailbox backs up under a seed run. Refined with the bucket in `apply_listing/5`.
-    if connected?(socket), do: :proc_lib.set_label({:s3_browser_live, "(no bucket)"})
+    if connected?(socket), do: maybe_set_label({:s3_browser_live, "(no bucket)"})
 
     {:ok,
      socket
@@ -566,7 +566,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
     file_index = Map.new(rows, &{&1.key, &1})
     counts = count_statuses(rows)
 
-    if connected?(socket), do: :proc_lib.set_label({:s3_browser_live, bucket_name})
+    if connected?(socket), do: maybe_set_label({:s3_browser_live, bucket_name})
 
     socket
     |> ensure_subscribed(bucket_name)
@@ -575,6 +575,13 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
       [bucket_name: bucket_name, folders: folder_list, file_index: file_index, counts: counts] ++
         extra
     )
+  end
+
+  # Best-effort OTP process label — `:proc_lib.set_label/1` (and the `Process.set_label/1`
+  # wrapper) only exist on OTP 27+. On older runtimes (CI still runs OTP 26) this is a
+  # no-op rather than a crash; the label is purely a diagnostics nicety.
+  defp maybe_set_label(label) do
+    if function_exported?(:proc_lib, :set_label, 1), do: :proc_lib.set_label(label)
   end
 
   # Empties the listing (used on a failed load) while surfacing an error.
