@@ -34,4 +34,17 @@ defmodule MehungryWeb.S3BrowserLiveTest do
     assert html =~ "AWS S3 Browser"
     refute html =~ "Seed status:"
   end
+
+  test "a processing signal for an unlisted key is buffered-and-ignored without crashing",
+       %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/professional/files")
+
+    # The lightweight processing signal must be tolerated even when the key isn't
+    # on the current page (nothing listed): the guard drops it, and a manual flush
+    # must not crash on the empty buffer either.
+    send(view.pid, {:seed_file_processing, "some-bucket", "foods/a.json"})
+    send(view.pid, :flush_processing)
+
+    assert render(view) =~ "AWS S3 Browser"
+  end
 end

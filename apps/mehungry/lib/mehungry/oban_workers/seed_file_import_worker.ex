@@ -14,7 +14,7 @@ defmodule Mehungry.ObanWorkers.SeedFileImportWorker do
   """
 
   use Oban.Worker,
-    queue: :imports,
+    queue: :seed_imports,
     max_attempts: 3,
     unique: [
       fields: [:args],

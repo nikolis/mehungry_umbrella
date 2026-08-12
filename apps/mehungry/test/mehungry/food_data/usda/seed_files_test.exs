@@ -34,9 +34,10 @@ defmodule Mehungry.FoodData.Usda.SeedFilesTest do
       seed_file = SeedFiles.upsert_pending("b", "k.json")
       assert_received {:seed_file, %SeedFile{status: "pending"}}
 
-      # mark_processing deliberately does not broadcast — the UI doesn't need the
-      # pending→processing tick, only the terminal completed/failed transitions.
+      # mark_processing emits only the lightweight, coalesce-friendly identifiers
+      # signal — never the full-row broadcast the terminal transitions use.
       SeedFiles.mark_processing(seed_file.id)
+      assert_received {:seed_file_processing, "b", "k.json"}
       refute_received {:seed_file, %SeedFile{status: "processing"}}
 
       SeedFiles.mark_completed(seed_file.id, 7)
