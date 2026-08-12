@@ -80,36 +80,41 @@ plus a count of connected sockets **per node** would explain "why is this node h
 in the common case where the answer is "it's holding N live sessions." Connected-socket
 count per node is also the natural denominator for interpreting mailbox/memory outliers.
 
-## P4 — Make outliers legible, not just visible
+## P4 & P5 — handled in **this app**, not BeamScope
 
-The table sorts by node name and leaves comparison to the eye. Two low-cost aids:
+Outlier legibility (P4) and process attribution (P5) don't need to live in a generic
+cluster tool — the app already runs a `ProcessWatchdog` and owns the processes, so it's
+the better place to answer "which of *our* processes is backing up." These are now done
+in `apps/mehungry_web/lib/mehungry_web/telemetry.ex` and don't require any BeamScope change:
 
-- **Flag the outlier.** Highlight a cell that's a large multiple of the cluster median
-  (the 1.65 GB / 383 MB cells here). Turns "notice it yourself" into "it's marked."
-- **Normalize by uptime where it matters.** The hot node also had **6× the uptime** of
-  the freshest one; much of its ETS/memory is just accumulation, not live pressure.
-  A "since last window" delta (the Phoenix provider already does windowed deltas via
-  its `:prev` marker) for memory/ETS would separate *growing* from merely *large*.
+- **Attribution (P5)** — `emit_process_stats/0` now resolves a process to a readable
+  identity (`describe/1`): its OTP **label** → registered name → the module its
+  `$initial_call` resolves to (a LiveView reports `TheView.mount/3`). And the operator
+  LiveViews set an instance label via `Process.set_label/1` (e.g. `S3BrowserLive` labels
+  itself `{:s3_browser_live, bucket}`), so it's self-identifying in the watchdog log,
+  LiveDashboard's process list, `observer`, and `:recon` alike.
+- **Outlier legibility (P4)** — the watchdog gained an **elevated** floor
+  (`@message_queue_elevated 200`) below the hard 1000 "stuck" threshold, and now tracks
+  the single **worst** mailbox and attributes it. A mailbox that's merely *growing*
+  (the 259-deep S3 browser) now surfaces before it wedges — the exact blind spot from
+  this incident.
 
-## P5 — Attribute state to the owning OTP app / supervisor
-
-Registered-name is often `nil` for the processes that matter (LiveView, Cowboy request
-procs). Where cheap, tagging a top-N process with its `:"$initial_call"` or ancestor
-supervisor would let "an anonymous pid with a 259 mailbox" read as
-"a `Phoenix.LiveView` process" without the operator reverse-engineering it.
+BeamScope reads `:registered_name` for its top-N, not `:proc_lib` labels, so these app-side
+labels won't flow to the cluster dashboard unless P1/P5-in-BeamScope also reads labels —
+but that's a nice-to-have, not required, now that the app attributes its own processes.
 
 ---
 
 ## Priority summary
 
-| # | Change | Cost | Would it have solved this incident? |
-|---|---|---|---|
-| P1 | Render already-collected top-N processes / ETS / mailbox histogram | **Exporter only** | **Yes, instantly** |
-| P2 | Oban/queue provider | New event-driven provider | Yes — answers "are jobs distributed" directly |
-| P3 | LiveView/socket provider | New provider | Yes — explains the hot node |
-| P4 | Outlier highlighting + uptime-normalized deltas | Exporter + reuse `:prev` | Partially — flags what to look at |
-| P5 | Owning-app attribution for top-N procs | Provider tweak | Nice-to-have |
+| # | Change | Where | Cost | Solved this incident? |
+|---|---|---|---|---|
+| P1 | Render already-collected top-N processes / ETS / mailbox histogram | BeamScope | **Exporter only** | **Yes, instantly** |
+| P2 | Oban/queue provider | BeamScope | New event-driven provider | Yes — answers "are jobs distributed" |
+| P3 | LiveView/socket provider | BeamScope | New provider | Yes — explains the hot node |
+| P4 | Elevated-floor + worst-mailbox attribution in the watchdog | **This app ✓ done** | Watchdog tweak | Surfaces the growing mailbox pre-limit |
+| P5 | Process labels + identity resolution (`describe/1`) | **This app ✓ done** | Watchdog + `set_label` | Names the culprit process |
 
-**Start with P1.** The data is already flowing to `ClusterState`; only
+**In BeamScope, start with P1.** The data is already flowing to `ClusterState`; only
 `BeamScope.Exporter.Dashboard` needs to render it, and it alone would have turned this
-investigation into a glance.
+investigation into a glance. P4/P5 are already covered app-side.

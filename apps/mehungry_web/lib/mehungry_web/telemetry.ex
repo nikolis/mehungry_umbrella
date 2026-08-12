@@ -140,9 +140,16 @@ defmodule MehungryWeb.Telemetry do
   # Any process whose mailbox exceeds this is considered stuck/overloaded.
   @message_queue_threshold 1_000
 
+  # A softer floor: a mailbox this deep isn't "stuck" yet, but is worth attributing
+  # so a *growing* backlog is legible before it reaches the hard threshold. The S3
+  # seed browser peaked at ~260 (below 1000) while visibly lagging — exactly the
+  # case this floor is meant to surface.
+  @message_queue_elevated 200
+
   def emit_process_stats do
-    {max_queue, offenders, live_view_count} =
-      Enum.reduce(Process.list(), {0, [], 0}, fn pid, {acc_max, acc_offenders, acc_lv} ->
+    {max_queue, worst_pid, offenders, live_view_count} =
+      Enum.reduce(Process.list(), {0, nil, [], 0}, fn pid,
+                                                      {acc_max, acc_worst, acc_offenders, acc_lv} ->
         acc_lv =
           case :proc_lib.translate_initial_call(pid) do
             {_mod, :mount, 3} -> acc_lv + 1
@@ -150,14 +157,17 @@ defmodule MehungryWeb.Telemetry do
           end
 
         case Process.info(pid, :message_queue_len) do
-          {:message_queue_len, len} when len >= @message_queue_threshold ->
-            {max(acc_max, len), [pid | acc_offenders], acc_lv}
-
           {:message_queue_len, len} ->
-            {max(acc_max, len), acc_offenders, acc_lv}
+            {acc_max2, acc_worst2} =
+              if len > acc_max, do: {len, pid}, else: {acc_max, acc_worst}
+
+            acc_offenders2 =
+              if len >= @message_queue_threshold, do: [pid | acc_offenders], else: acc_offenders
+
+            {acc_max2, acc_worst2, acc_offenders2, acc_lv}
 
           nil ->
-            {acc_max, acc_offenders, acc_lv}
+            {acc_max, acc_worst, acc_offenders, acc_lv}
         end
       end)
 
@@ -169,21 +179,48 @@ defmodule MehungryWeb.Telemetry do
 
     :telemetry.execute([:mehungry, :vm, :live_view], %{count: live_view_count}, %{})
 
+    # Hard-stuck offenders stay a warning — now with resolved identity, not a bare pid.
     for pid <- offenders do
-      info =
-        Process.info(pid, [
-          :registered_name,
-          :initial_call,
-          :current_function,
-          :message_queue_len
-        ])
+      Logger.warning("[ProcessWatchdog] Mailbox over #{@message_queue_threshold}: #{describe(pid)}")
+    end
 
-      Logger.warning(
-        "[ProcessWatchdog] Mailbox over #{@message_queue_threshold}: #{inspect(pid)} #{inspect(info)}"
-      )
+    # Elevated-but-not-stuck: attribute the single worst mailbox so an operator can see
+    # *which* process is backing up (e.g. a specific LiveView) before it trips the limit.
+    if worst_pid && max_queue >= @message_queue_elevated && max_queue < @message_queue_threshold do
+      Logger.info("[ProcessWatchdog] Elevated mailbox #{max_queue}: #{describe(worst_pid)}")
     end
 
     :ok
+  end
+
+  # Best-effort human identity for a process: its OTP label (set via
+  # `Process.set_label/1`), else its registered name, else the module/function its
+  # `$initial_call` resolves to — which for a LiveView is `TheView.mount/3`. Tolerant
+  # of the process having exited between the scan and here (`Process.info/2` → nil).
+  defp describe(pid) do
+    case Process.info(pid, [:registered_name, :current_function, :message_queue_len]) do
+      nil ->
+        "#{inspect(pid)} (exited)"
+
+      info ->
+        identity =
+          case :proc_lib.get_label(pid) do
+            :undefined -> registered_or_initial_call(pid, info[:registered_name])
+            label -> inspect(label)
+          end
+
+        "#{inspect(pid)} #{identity} (mailbox #{info[:message_queue_len]}, running #{inspect(info[:current_function])})"
+    end
+  end
+
+  defp registered_or_initial_call(_pid, name) when is_atom(name) and not is_nil(name),
+    do: inspect(name)
+
+  defp registered_or_initial_call(pid, _name) do
+    case :proc_lib.translate_initial_call(pid) do
+      {mod, fun, arity} -> "#{inspect(mod)}.#{fun}/#{arity}"
+      other -> inspect(other)
+    end
   end
 
   def emit_oban_queue_depths do
