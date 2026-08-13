@@ -15,6 +15,11 @@ defmodule MehungryWeb.Professional.PortionsComponent do
           + Add Portion
         </button>
       </div>
+      <p class="text-xs text-parchment-dim mb-3">
+        A portion needs a gram weight and <span class="text-parchment">either</span>
+        a measurement unit <span class="text-parchment">or</span>
+        a free-text name (e.g. "1 medium banana", "1 slice").
+      </p>
       <div class="space-y-3">
         <.inputs_for :let={portion_form} field={@form[:ingredient_portions]}>
           <div class="bg-black/20 border border-ink-panel2 rounded-xl p-3 flex flex-col sm:flex-row sm:items-end gap-3">
@@ -24,6 +29,18 @@ defmodule MehungryWeb.Professional.PortionsComponent do
               value={portion_form.index}
             />
             <div class="flex-1">
+              <.input
+                type="text"
+                label="Portion name (optional)"
+                placeholder="e.g. 1 medium banana"
+                name={portion_form[:description].name}
+                value={portion_form[:description].value}
+              />
+            </div>
+            <div class="flex-1">
+              <label class="block text-sm font-semibold text-parchment-dim mb-1">
+                Measurement unit (optional)
+              </label>
               <.live_component
                 module={MehungryWeb.SelectComponent}
                 items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}

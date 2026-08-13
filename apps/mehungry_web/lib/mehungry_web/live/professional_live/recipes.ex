@@ -6,6 +6,7 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
   alias Mehungry.Food
   alias Mehungry.Food.Nutrients
   alias Mehungry.Food.NutrientRecalculationRuns
+  alias Mehungry.ReconcileRecipeIngredientPortions
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,6 +17,8 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
     socket =
       socket
       |> assign(:recalc_run, NutrientRecalculationRuns.latest_run())
+      |> assign(:portion_report, nil)
+      |> assign(:portion_running, false)
       |> load_stats()
 
     {:ok, socket}
@@ -58,6 +61,64 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
     {:noreply, socket}
   end
 
+  # Reconcile legacy RecipeIngredient rows onto the IngredientPortion model.
+  # `dry_run` only assesses (no writes); otherwise it backfills, synthesizes
+  # missing mass/volume portions, and reports the unresolvable pairs for review.
+  # See Mehungry.ReconcileRecipeIngredientPortions.
+  @impl true
+  def handle_event("reconcile_portions", params, socket) do
+    if socket.assigns.portion_running do
+      {:noreply, socket}
+    else
+      dry_run? = params["dry_run"] == "true"
+
+      Logger.info(
+        "[reconcile_recipe_ingredient_portions] dry_run=#{dry_run?} requested by user " <>
+          "#{inspect(socket.assigns[:current_user] && socket.assigns.current_user.id)}"
+      )
+
+      socket =
+        socket
+        |> assign(:portion_running, true)
+        |> start_async(:reconcile_portions, fn ->
+          ReconcileRecipeIngredientPortions.run(dry_run: dry_run?)
+        end)
+
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_async(:reconcile_portions, {:ok, report}, socket) do
+    verb = if report.dry_run, do: "Assessed", else: "Reconciled"
+
+    socket =
+      socket
+      |> assign(:portion_running, false)
+      |> assign(:portion_report, report)
+      |> put_flash(
+        :info,
+        "#{verb} recipe ingredients: #{report.backfilled} linked, " <>
+          "#{report.description_linked} named-linked, " <>
+          "#{report.synthesized_portions} portion(s) created, " <>
+          "#{length(report.unresolved)} pair(s) need review."
+      )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_async(:reconcile_portions, {:exit, reason}, socket) do
+    Logger.error("[reconcile_recipe_ingredient_portions] crashed: #{inspect(reason)}")
+
+    socket =
+      socket
+      |> assign(:portion_running, false)
+      |> put_flash(:error, "Reconciliation failed: #{inspect(reason)}")
+
+    {:noreply, socket}
+  end
+
   # Live progress broadcast by NutrientRecalculationRuns as worker jobs finish.
   @impl true
   def handle_info({:nutrient_recalculation_run, run}, socket) do
@@ -79,6 +140,14 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
   end
 
   def recalc_remaining(_), do: 0
+
+  def portion_reason_label(:no_conversion),
+    do: "unit has no mass/volume conversion — remap the unit or add a portion by hand"
+
+  def portion_reason_label(:no_anchor_portion),
+    do: "no existing portion to derive density from — add one portion for this ingredient"
+
+  def portion_reason_label(_), do: "needs review"
 
   defp load_stats(socket) do
     empty_recipes = Food.list_recipes_without_ingredients()

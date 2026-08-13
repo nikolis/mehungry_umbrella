@@ -568,6 +568,12 @@ defmodule Mehungry.Food.Recipes do
     ingredient_params =
       ri_changesets
       |> Enum.reject(fn cs -> cs.action == :delete end)
+      # Only validate rows the user actually touched: brand-new rows, or existing
+      # rows whose unit/ingredient selection changed. Legacy rows are re-submitted
+      # unchanged by the edit form and may predate their IngredientPortion (see
+      # Mehungry.ReconcileRecipeIngredientPortions) — flagging those would make an
+      # old recipe unsaveable even when the edit doesn't touch the offending row.
+      |> Enum.filter(&unit_selection_touched?/1)
       |> Enum.map(fn cs ->
         %{
           ingredient_id: Ecto.Changeset.get_field(cs, :ingredient_id),
@@ -590,6 +596,19 @@ defmodule Mehungry.Food.Recipes do
           )
         end)
     end
+  end
+
+  # A row is worth validating when it is new (no persisted id) or when this save
+  # actually changes what unit/ingredient it resolves to. `unit_selection` is the
+  # form's picker; `measurement_unit_id`/`ingredient_portion_id`/`ingredient_id`
+  # cover non-form callers.
+  defp unit_selection_touched?(%Ecto.Changeset{data: %{id: nil}}), do: true
+
+  defp unit_selection_touched?(%Ecto.Changeset{} = cs) do
+    Enum.any?(
+      [:unit_selection, :measurement_unit_id, :ingredient_portion_id, :ingredient_id],
+      &Map.has_key?(cs.changes, &1)
+    )
   end
 
   defp get_recipe_hashtags(attrs) do

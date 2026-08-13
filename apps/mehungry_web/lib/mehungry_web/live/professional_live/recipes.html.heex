@@ -17,6 +17,29 @@
       </button>
       <button
         type="button"
+        phx-click="reconcile_portions"
+        phx-value-dry_run="true"
+        disabled={@portion_running}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <.icon name="hero-magnifying-glass" class="w-4 h-4" /> Assess portions
+      </button>
+      <button
+        type="button"
+        phx-click="reconcile_portions"
+        phx-value-dry_run="false"
+        disabled={@portion_running}
+        data-confirm="Reconcile all legacy recipe ingredients onto IngredientPortions? This backfills links and creates missing mass/volume portions."
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-700 hover:bg-indigo-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <.icon
+          name="hero-wrench-screwdriver"
+          class={"w-4 h-4 #{if @portion_running, do: "animate-spin"}"}
+        />
+        {if @portion_running, do: "Reconciling…", else: "Reconcile portions"}
+      </button>
+      <button
+        type="button"
         phx-click="delete_without_ingredients"
         disabled={@empty_count == 0}
         data-confirm={"Delete all #{@empty_count} recipe(s) with zero ingredients? This cannot be undone."}
@@ -67,6 +90,83 @@
         <p class="mt-2 text-xs text-red-400/80 truncate" title={@recalc_run.error}>
           Last error: {@recalc_run.error}
         </p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= if @portion_report do %>
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Ingredient portion reconciliation
+          <span class={[
+            "ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+            if(@portion_report.dry_run,
+              do: "bg-slate-500/20 text-slate-300 border-slate-500/30",
+              else: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
+            )
+          ]}>
+            {if @portion_report.dry_run, do: "Dry run (no writes)", else: "Applied"}
+          </span>
+        </p>
+      </div>
+
+      <div class="flex flex-wrap gap-4 text-sm mb-2">
+        <span class="text-slate-400">
+          Rows with a unit <span class="text-white font-semibold">{@portion_report.total_with_unit}</span>
+        </span>
+        <span class="text-slate-400">
+          Already linked <span class="text-white font-semibold">{@portion_report.already_set}</span>
+        </span>
+        <span class="text-slate-400">
+          Grams (skipped) <span class="text-white font-semibold">{@portion_report.gram_skipped}</span>
+        </span>
+        <span class="text-slate-400">
+          Need work <span class="text-white font-semibold">{@portion_report.needs_work}</span>
+        </span>
+        <span class="text-green-400">
+          Linked <span class="font-semibold">{@portion_report.backfilled}</span>
+        </span>
+        <span class="text-teal-400">
+          Named-linked <span class="font-semibold">{@portion_report.description_linked}</span>
+        </span>
+        <span class="text-blue-400">
+          Portions created <span class="font-semibold">{@portion_report.synthesized_portions}</span>
+        </span>
+        <span class="text-amber-400">
+          Need review <span class="font-semibold">{length(@portion_report.unresolved)}</span>
+        </span>
+      </div>
+
+      <%= if @portion_report.unresolved == [] do %>
+        <p class="text-sm text-emerald-400">
+          ✅ Every non-gram recipe ingredient resolves to a portion.
+        </p>
+      <% else %>
+        <div class="mt-2 border-t border-slate-700 pt-3">
+          <p class="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-2">
+            Pairs needing admin review
+          </p>
+          <div class="divide-y divide-slate-700 max-h-80 overflow-y-auto">
+            <div :for={u <- @portion_report.unresolved} class="py-2">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-white text-sm font-medium truncate">
+                  {u.ingredient_name || "ingredient ##{u.ingredient_id}"}
+                  <span class="text-slate-400 font-normal">× {u.unit_name || "unit ##{u.measurement_unit_id}"}</span>
+                </p>
+                <span class="shrink-0 text-xs text-slate-400">
+                  {u.row_count} row(s) · {length(u.recipe_ids)} recipe(s)
+                </span>
+              </div>
+              <p class="text-xs text-amber-300/80 mt-0.5">
+                {portion_reason_label(u.reason)}
+              </p>
+              <p class="text-[11px] text-slate-500 mt-0.5 truncate">
+                recipes: {Enum.join(u.recipe_ids, ", ")}
+              </p>
+            </div>
+          </div>
+        </div>
       <% end %>
     </div>
   <% end %>

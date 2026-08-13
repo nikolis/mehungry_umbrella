@@ -539,3 +539,138 @@ queueing, then verify `POOL_SIZE × task_count + overhead` stays under ~80 % of
 `max_connections` — and re-verify that product **every time** you change task
 count or RDS instance class.
 
+
+---
+
+## 10. Erlang VM scheduler tuning & why we left `rel/vm.args.eex` untouched
+
+We applied the scheduler flags via `ERL_AFLAGS` in `task-definition.json` (§8.1)
+and **deliberately did not edit `rel/vm.args.eex` (§8.3)**. This section explains
+that choice and lays out the full menu of VM tuning knobs mapped to the actual
+ECS task resources, so future changes are principled rather than cargo-culted.
+
+### 10.1 The problem restated — cgroup quota vs. BEAM scheduler count
+
+Fargate caps the container's CPU via a cgroup (`cpu: 2048` → 2 vCPU). But the
+BEAM, by default, sizes its scheduler pool from the number of logical processors
+it *detects*, and **it does not read the cgroup CPU quota** (still true as of
+OTP 26 — there is no automatic CFS-quota-to-scheduler mapping). In a container it
+can therefore start more schedulers than the quota allows. The kernel then
+throttles them mid-run (CFS), freezing whatever a scheduler was holding — a DB
+call, a `GenServer.call`, a socket read — until its next slice. Those freezes are
+how root cause #2/#3 turn into timeouts. **Pinning the scheduler count to the
+vCPU allocation is the fix**, and it must therefore *track the `cpu` value*.
+
+### 10.2 Why `ERL_AFLAGS` (task definition), not `rel/vm.args.eex`
+
+Both mechanisms feed the same flags to the VM; the difference is **when and where
+they're set**, and that's the whole decision:
+
+| | `rel/vm.args.eex` (§8.3) | `ERL_AFLAGS` env var (§8.1, chosen) |
+|---|---|---|
+| Rendered | EEx **at release-build time** — baked into the image | Read by the VM **at boot**, from the environment |
+| To retune | rebuild image → push to ECR → redeploy | edit `task-definition.json`, register revision, redeploy — **no rebuild** |
+| Lives next to | the code | **the `cpu`/`memory` values it must stay in sync with** |
+| Coupling risk | scheduler count drifts from `cpu` in a *different* file | flag and the resource it depends on are in the **same file** |
+
+The deciding factor is **coupling**: `+S N:N` is a function of the ECS `cpu`
+allocation, and that allocation lives in `task-definition.json`. Putting the flag
+in the *same file* as the number it depends on makes "change the vCPU → change
+the scheduler count" a single, local, reviewable edit. Splitting them across
+`task-definition.json` (cpu) and `rel/vm.args.eex` (scheduler count) invites the
+classic drift where someone bumps the task to 4 vCPU and the VM stays pinned at
+`2:2`. Bonus: `ERL_AFLAGS` retunes without a Docker rebuild, so scheduler
+experiments are a task-revision away, not a full CI cycle.
+
+We also **avoided setting the flags in both places** — duplicated, possibly
+conflicting VM args is its own footgun. One home only.
+
+> Note on templating: `rel/vm.args.eex` is rendered by EEx at *assembly* time, so
+> it can't interpolate the container's runtime `cpu` value — another reason the
+> resource-coupled flag belongs in the task definition, which *is* evaluated per
+> deployment.
+
+### 10.3 The scheduler flags that matter, mapped to ECS resources
+
+What we set — `+S 2:2 +sbwt none +sbwtdcpu none +sbwtdio none` — and the wider menu:
+
+- **`+S Schedulers:SchedulersOnline`** — normal scheduler threads (total:online).
+  Set both to the **vCPU count** (`cpu_units / 1024`). This is the core fix.
+- **`+SDcpu N` / `+SDPcpu p%`** — **dirty CPU schedulers** (default = number of
+  normal schedulers). Long CPU-bound NIFs/BIFs run here. On a constrained
+  container leave them coupled to the vCPU count too, so dirty work can't
+  oversubscribe the cores either. (We rely on the default tracking `+S`; set
+  `+SDcpu 2` explicitly if you want it pinned independently.)
+- **`+SDio N`** — **dirty IO schedulers** (default 10). These are for blocking IO
+  NIFs and are cheap/mostly-parked; the default 10 is usually fine even on a
+  small box. Lower only if you see contention.
+- **`+sbwt none +sbwtdcpu none +sbwtdio none`** — **scheduler busy-wait**. By
+  default (`medium`) an idle scheduler *spins* for a while before sleeping, to
+  cut wake-up latency. On a scarce 2-vCPU box that spinning **burns the exact
+  cores job work needs** for no benefit — set to `none` on normal, dirty-CPU, and
+  dirty-IO schedulers. (This matters most on *burstable* instances where spinning
+  drains CPU credits; the Fargate app task has dedicated vCPU, so here it "only"
+  wastes the scarce cores — still worth eliminating.)
+- **`+sbt` (bind type, e.g. `db`)** — pins schedulers to specific logical cores.
+  **Intentionally NOT set.** Core-binding assumes you own the physical cores; in a
+  shared/throttled container you don't, and binding can hurt. Leave unbound.
+- **`+A N`** — async thread pool for file IO (default 1 in modern OTP). Default
+  is fine; raise only for heavy file IO workloads (not ours).
+
+### 10.4 Keep `+S` in lockstep with the `cpu` value
+
+The single rule to remember when resizing the task:
+
+| Fargate `cpu` | vCPU | scheduler flag |
+|---|---|---|
+| `1024` | 1 | `+S 1:1` |
+| `2048` (current) | 2 | `+S 2:2` |
+| `4096` | 4 | `+S 4:4` |
+
+`+S N:N` where **N = `cpu` ÷ 1024**. Changing one without the other re-introduces
+the oversubscription this whole section exists to prevent. Because both values
+now live in `task-definition.json`, that's a one-file edit.
+
+### 10.5 What *does* belong in `rel/vm.args.eex`
+
+"Leave it untouched" is specific to the *resource-coupled* flags — it is not a
+blanket rule. `rel/vm.args.eex` is the right home for **deployment-invariant**
+tuning that's the same wherever the release runs and that you want versioned with
+the code, e.g.:
+
+- `+Q 65536` — raise the max concurrent ports/sockets (already stubbed as a
+  comment in the file).
+- `+P` / `+e` / `+t` — max processes / ETS tables / atoms, if you ever outgrow
+  defaults.
+- distribution buffer / GC policy flags that don't depend on CPU count.
+
+Rule of thumb: **flag depends on the ECS task's CPU/memory → task definition;
+flag is invariant to where it runs → `vm.args.eex`.**
+
+### 10.6 Memory-side VM knobs for the 4 GB constraint (optional)
+
+Scheduling is CPU-side; the 4 GB ceiling (root cause #4) has its own VM levers,
+should OOM persist after the resource bump:
+
+- **`ERL_FULLSWEEP_AFTER=10`** (env, or the commented `-env` line in
+  `vm.args.eex`) — forces fullsweep GC more often, trading a little CPU for lower
+  peak per-process memory. Useful for the large-binary jobs (AI payloads,
+  PubTator/PMC JSON) that spike RSS. Worth trying before buying more RAM.
+- Erlang allocator tuning (`+MBas`, `+MMmcs`, …) — powerful but easy to make
+  worse; only after profiling `Memory Allocators` in LiveDashboard.
+
+### 10.7 Verify the VM actually took the flags
+
+From a running prod node (`bin/mehungry_umbrella remote`):
+
+```elixir
+:erlang.system_info(:schedulers_online)        #=> 2  (must equal the vCPU count)
+:erlang.system_info(:dirty_cpu_schedulers)     #=> 2  (should track +S unless pinned)
+:erlang.system_info(:logical_processors)       #=> what the BEAM *detected* — if this
+                                                #   is > vCPU, it confirms why pinning
+                                                #   +S was necessary
+```
+
+If `schedulers_online` doesn't equal the vCPU count after deploy, the `ERL_AFLAGS`
+env var isn't reaching the VM (typo, or overridden) — fix that before chasing
+anything else, because every other scheduler symptom flows from it.
