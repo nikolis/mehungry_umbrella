@@ -32,6 +32,8 @@ defmodule Mehungry.Health.Condition do
     has_many :compound_recommendations, CompoundRecommendation
     # Cross-database identity (mesh/icd…), written only via Mehungry.Health.
     has_many :identifiers, ConditionIdentifier
+    # Per-language name/description translations.
+    has_many :translations, Mehungry.Health.ConditionTranslation
 
     timestamps()
   end

@@ -17,6 +17,8 @@ defmodule Mehungry.Food.Nutrient do
     field :reference_id, :integer
 
     belongs_to :measurement_unit, Mehungry.Food.MeasurementUnit
+    # Per-language name/alternate_name/description translations.
+    has_many :translations, Mehungry.Food.NutrientTranslation
 
     timestamps()
   end

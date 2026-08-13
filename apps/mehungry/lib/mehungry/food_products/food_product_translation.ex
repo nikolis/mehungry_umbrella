@@ -8,6 +8,10 @@ defmodule Mehungry.FoodProducts.FoodProductTranslation do
     field :name, :string
     field :ingredients_text, :string
 
+    field :status, :string, default: "verified"
+    field :verified_at, :utc_datetime
+    field :verified_by_id, :id
+
     belongs_to :food_product, Mehungry.FoodProducts.FoodProduct
 
     belongs_to :language, Mehungry.Languages.Language,
@@ -20,8 +24,17 @@ defmodule Mehungry.FoodProducts.FoodProductTranslation do
 
   def changeset(translation, attrs) do
     translation
-    |> cast(attrs, [:name, :ingredients_text, :language_name, :food_product_id])
+    |> cast(attrs, [
+      :name,
+      :ingredients_text,
+      :language_name,
+      :food_product_id,
+      :status,
+      :verified_at,
+      :verified_by_id
+    ])
     |> validate_required([:name, :language_name])
+    |> validate_inclusion(:status, ["ai_draft", "verified"])
     |> unique_constraint([:food_product_id, :language_name])
   end
 end

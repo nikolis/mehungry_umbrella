@@ -122,6 +122,10 @@ defmodule MehungryWeb.Router do
       live "/languages/:id", Professional.LanguageLive.Show, :show
       live "/languages/:id/show/edit", Professional.LanguageLive.Show, :edit
 
+      live "/translations", ProfessionalLive.TranslationsLive.Index, :index
+      live "/translations/:resource", ProfessionalLive.TranslationsLive.Panel, :index
+      live "/translations/:resource/:id", ProfessionalLive.TranslationsLive.Panel, :show
+
       live "/analytics", ProfessionalLive.AnalyticsLive, :index
       live "/seo", ProfessionalLive.SeoLive, :index
       live "/maintenance", ProfessionalLive.MaintenanceLive, :index

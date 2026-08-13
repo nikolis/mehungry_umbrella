@@ -1,24 +1,23 @@
-defmodule Mehungry.Food.FoundementalFoodSpeciesTranslation do
+defmodule Mehungry.Health.ConditionTranslation do
   @moduledoc """
-  A per-language translation of a `FoundementalFoodSpecies` name (and optional
-  description/url). Mirrors `Mehungry.Food.IngredientTranslation`: one row per
-  `(species, language)`, keyed by the language's natural `name`.
+  A per-language translation of a `Health.Condition` name/description. One row
+  per `(condition, language)`, keyed by the language's natural `name`. Carries
+  the shared translation `status` (`"ai_draft"` | `"verified"`) + verification
+  audit fields.
   """
 
   use Ecto.Schema
   import Ecto.Changeset
 
-  schema "foundemental_food_species_translations" do
+  schema "condition_translations" do
     field :name, :string
     field :description, :string
-    field :url, :string
 
     field :status, :string, default: "verified"
     field :verified_at, :utc_datetime
     field :verified_by_id, :id
 
-    belongs_to :species, Mehungry.Food.FoundementalFoodSpecies,
-      foreign_key: :foundemental_species_id
+    belongs_to :condition, Mehungry.Health.Condition
 
     belongs_to :language, Mehungry.Languages.Language,
       references: :name,
@@ -32,16 +31,15 @@ defmodule Mehungry.Food.FoundementalFoodSpeciesTranslation do
     translation
     |> cast(attrs, [
       :name,
-      :language_name,
       :description,
-      :url,
-      :foundemental_species_id,
+      :language_name,
+      :condition_id,
       :status,
       :verified_at,
       :verified_by_id
     ])
     |> validate_required([:name, :language_name])
     |> validate_inclusion(:status, ["ai_draft", "verified"])
-    |> unique_constraint([:foundemental_species_id, :language_name])
+    |> unique_constraint([:condition_id, :language_name])
   end
 end

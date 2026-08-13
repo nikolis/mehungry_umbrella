@@ -39,6 +39,8 @@ defmodule Mehungry.Food.Compound do
     has_many :study_links, Mehungry.Literature.StudyCompound
     # Read-only health-recommendation link (written only via Mehungry.Health).
     has_many :condition_recommendations, Mehungry.Health.CompoundRecommendation
+    # Per-language name/description translations.
+    has_many :translations, Mehungry.Food.CompoundTranslation
 
     timestamps()
   end

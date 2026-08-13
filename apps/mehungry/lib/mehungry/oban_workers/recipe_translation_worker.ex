@@ -26,7 +26,10 @@ defmodule Mehungry.ObanWorkers.RecipeTranslationWorker do
             language_name: lang,
             title: title,
             description: description,
-            steps: steps
+            steps: steps,
+            # Machine-generated for auto-publish — a human verifies it in the
+            # translation hub before it counts as verified coverage.
+            status: "ai_draft"
           })
 
         case result do

@@ -9,6 +9,10 @@ defmodule Mehungry.Food.IngredientTranslation do
     field :description, :string
     field :url, :string
 
+    field :status, :string, default: "verified"
+    field :verified_at, :utc_datetime
+    field :verified_by_id, :id
+
     belongs_to :ingredient, Mehungry.Food.Ingredient
 
     belongs_to :language, Mehungry.Languages.Language,
@@ -29,8 +33,18 @@ defmodule Mehungry.Food.IngredientTranslation do
         ) :: Ecto.Changeset.t()
   def changeset(ingredient_translation, attrs) do
     ingredient_translation
-    |> cast(attrs, [:name, :language_name, :description, :url, :ingredient_id])
+    |> cast(attrs, [
+      :name,
+      :language_name,
+      :description,
+      :url,
+      :ingredient_id,
+      :status,
+      :verified_at,
+      :verified_by_id
+    ])
     |> validate_required([:name, :language_name])
+    |> validate_inclusion(:status, ["ai_draft", "verified"])
     |> unique_constraint(:name)
   end
 end

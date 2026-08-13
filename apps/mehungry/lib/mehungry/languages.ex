@@ -28,6 +28,25 @@ defmodule Mehungry.Languages do
     Repo.one(query)
   end
 
+  @doc """
+  Returns the `Language` row for `name`, creating it if missing. Used before
+  writing a translation row so the `language_name` FK never fails (e.g. the
+  ISO `"el"` code may not have been seeded alongside the legacy `"Gr"`).
+  """
+  def ensure_language(name) do
+    case get_language_by_name(name) do
+      nil ->
+        case create_language(%{name: name}) do
+          {:ok, lang} -> lang
+          # Lost a race — the row now exists.
+          {:error, _} -> get_language_by_name(name)
+        end
+
+      lang ->
+        lang
+    end
+  end
+
   def list_languages() do
     Repo.all(Language)
   end

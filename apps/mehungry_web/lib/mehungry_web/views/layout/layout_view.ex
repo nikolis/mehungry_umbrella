@@ -142,6 +142,7 @@ defmodule MehungryWeb.LayoutView do
         <.admin_link href="/professional/ingredients" icon="hero-beaker" label="Ingredients" />
         <.admin_link href="/professional/measurement_units" icon="hero-scale" label="Units" />
         <.admin_link href="/professional/languages" icon="hero-language" label="Languages" />
+        <.admin_link href="/professional/translations" icon="hero-globe-alt" label="Translations" />
         <.admin_link href="/professional/files" icon="hero-folder-open" label="Files" />
         <.admin_link href="/professional/visits" icon="hero-map-pin" label="Visits" />
         <.admin_link

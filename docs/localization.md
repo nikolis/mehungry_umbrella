@@ -150,6 +150,36 @@ rather than only the user's profile. Representative call sites:
 fallback to the base record; ingredient/category/unit joins go through the
 `"el" → "Gr"` bridge.
 
+### Translation coverage hub (`/professional/translations`)
+
+A single admin surface that tracks and drives DB-content translation across every
+user-facing resource. Driven off one declarative registry so all resources share
+one code path:
+
+- **Registry** — `Mehungry.Languages.TranslationRegistry` lists a descriptor per
+  resource (base schema, `*_translation` schema, FK, translatable fields, AI mode).
+  Covered today: recipes, ingredients, measurement units, categories, food species,
+  food products, **compounds, health conditions, nutrients** (the last three got new
+  `*_translation` tables in this work).
+- **Every translation row carries a `status`** (`"ai_draft"` | `"verified"`) plus
+  `verified_at`/`verified_by_id`. Pre-existing rows were backfilled `"verified"`.
+- **Coverage** — `Mehungry.Languages.Coverage.stats/0` reports, per resource × target
+  locale, `verified`/`ai_draft`/`missing` counts + a verified `pct` (e.g. "Ingredients
+  EL: 62%"). A base row counts *verified* if any verified translation exists, *ai_draft*
+  if only a draft exists, else *missing*.
+- **Generic ops** — `Mehungry.Languages.Translations.{list_items, get_pair, upsert,
+  verify, missing_ids}` read/write any `*_translation` table from a descriptor.
+- **AI** — `Mehungry.AI.FieldTranslator` (generic field maps) + `AI.RecipeTranslator`
+  (structured steps). Per-item "AI Translate → review → Save & Verify", or bulk
+  "AI-translate all missing" via `ObanWorkers.ResourceTranslationWorker` (`:ai_agents`
+  queue) which writes `ai_draft`s for a human to confirm.
+- **Locale codes** — `Mehungry.Languages.Locale` is the core-side twin of
+  `MehungryWeb.Locale`: new rows are written under the ISO code (`"el"`), while coverage
+  counts **both** ISO and legacy codes (`["el", "Gr"]`) so pre-existing `Gr` rows still
+  count. Normalizing the legacy `Gr`↔`el` split in the data is a sensible follow-up.
+- **UI** — `MehungryWeb.ProfessionalLive.TranslationsLive.{Index, Panel}` (coverage
+  grid + per-resource panel), linked from the admin sidebar.
+
 ---
 
 ## SEO
