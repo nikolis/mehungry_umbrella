@@ -125,15 +125,19 @@ config :mehungry, Oban,
      ]}
   ],
   queues: [
-    default: 10,
-    mailers: 5,
-    ai_agents: 2,
-    imports: 2,
-    # Bulk USDA seed-file imports get their own slots so a full-bucket "Load
+    # Total concurrency is capped at 11 job slots so it fits within the DB pool
+    # (POOL_SIZE 18) with headroom for web/LiveView/Presence checkouts. Sized to
+    # close the connection-pool starvation confirmed in prod (queue_time spiking
+    # to ~10s) — see oban_production_diagnostics.md.
+    default: 5,
+    mailers: 3,
+    ai_agents: 1,
+    imports: 1,
+    # Bulk USDA seed-file imports get their own slot so a full-bucket "Load
     # ingredients" run can't starve behind the long-running, self-resuming
     # science pipeline (literature crawl / PubTator / candidate derivation) that
-    # shares the 2-slot `:imports` queue. Capped at 2 to bound DB write pressure.
-    seed_imports: 2
+    # shares the `:imports` queue. Capped to bound DB write pressure.
+    seed_imports: 1
   ]
 
 config :swarm,
