@@ -45,13 +45,12 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
     avoid_ids = setup_avoid_ids(setup)
     meal_types = meal_type_sequence(order)
 
-    description = order_description(setup)
-
     generated =
       meal_types
       |> Enum.with_index()
       |> Task.async_stream(
         fn {meal_type, _idx} ->
+          description = order_description(setup, meal_type)
           generate_one(order, bot_user, meal_type, description, brief_opts, avoid_ids)
         end,
         timeout: 180_000,
@@ -180,18 +179,36 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
     |> MapSet.new()
   end
 
+  # Meal-type hints so the agent always has a concrete dish class to anchor on —
+  # a too-vague prompt makes it flail without ever submitting a recipe. Mirrors
+  # DailyRecipeGenerationWorker's @meal_prompts.
+  @meal_prompts %{
+    "breakfast" =>
+      "light and nourishing breakfast recipe — suitable for the morning, could be egg-based, yogurt-based, or grain-based",
+    "morning_snack" => "healthy mid-morning snack recipe — light, easy to prepare, energizing",
+    "lunch" =>
+      "satisfying main lunch recipe — a full meal with vegetables, protein, and grains or legumes",
+    "afternoon_snack" =>
+      "light afternoon snack recipe — sweet or savory, easy to prepare quickly",
+    "dinner" => "hearty dinner recipe — a warming complete evening meal with rich flavors"
+  }
+
   # The persona/origin/story/seed-ingredient steering comes through brief_opts;
-  # this description just names the dish class so the agent has a starting point.
-  defp order_description(nil), do: "a recipe"
+  # this description names the dish class + any diet/condition steer.
+  defp order_description(setup, meal_type) do
+    meal_hint = Map.get(@meal_prompts, meal_type, "recipe")
 
-  defp order_description(setup) do
-    base = "a recipe"
-    base = if setup.diet_direction, do: "a #{setup.diet_direction} recipe", else: base
+    base =
+      case setup && setup.diet_direction do
+        nil -> "A #{meal_hint}"
+        "" -> "A #{meal_hint}"
+        direction -> "A #{direction} #{meal_hint}"
+      end
 
-    if setup.condition && setup.condition.name do
-      base <> ", suitable and beneficial for people with #{setup.condition.name}"
+    if setup && setup.condition && setup.condition.name do
+      base <> ", designed to be suitable and beneficial for people with #{setup.condition.name}."
     else
-      base
+      base <> "."
     end
   end
 
