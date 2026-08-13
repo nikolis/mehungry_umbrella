@@ -122,12 +122,14 @@ Stripe events are handled via `POST /webhooks/stripe` → `StripeWebhookControll
 ### Oban Queues
 
 ```
-default:            10 concurrent  — ingredient translation, recipe publishing
-ai_agents:           2 concurrent  — recipe generation, translation, image generation, nutritionist agent
-mailers:             5 concurrent  — email
-imports:             2 concurrent  — literature crawl, PubTator annotation, candidate derivation
-seed_imports:        2 concurrent  — USDA S3 seed-file imports (SeedFileImportWorker) only
+default:             5 concurrent  — ingredient translation, recipe publishing
+ai_agents:           1 concurrent  — recipe generation, translation, image generation, nutritionist agent
+mailers:             3 concurrent  — email
+imports:             1 concurrent  — literature crawl, PubTator annotation, candidate derivation
+seed_imports:        1 concurrent  — USDA S3 seed-file imports (SeedFileImportWorker) only
 ```
+
+Total concurrency is capped at **11 job slots** so background jobs fit within the DB pool (`POOL_SIZE` 18 in prod) with headroom for web/LiveView/Presence — this closes the connection-pool starvation confirmed in prod (`queue_time` spiking to ~10s). See `oban_production_diagnostics.md`.
 
 `SeedFileImportWorker` is deliberately on its own `seed_imports` queue so a bulk "Load ingredients" run over a full bucket can't starve behind the long-running, self-resuming science pipeline that shares `:imports`. `SeedFiles.reset/2` cancels in-flight jobs by that queue name.
 

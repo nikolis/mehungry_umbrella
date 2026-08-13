@@ -4,8 +4,8 @@
     "executionRoleArn": "arn:aws:iam::011528270584:role/ecsTaskExecutionRole",
     "networkMode": "awsvpc",
     "requiresCompatibilities": ["FARGATE"],
-    "cpu": "1024",
-    "memory": "3072",
+    "cpu": "2048",
+    "memory": "4096",
     "runtimePlatform": {
         "cpuArchitecture": "X86_64",
         "operatingSystemFamily": "LINUX"
@@ -34,7 +34,9 @@
             "environment": [
                 { "name": "SOME_APP_SSL_KEY_PATH", "value": "priv/cert/SSL_PrivateKEY_www_m3hungry_com.pem" },
                 { "name": "SOME_APP_SSL_CERT_PATH", "value": "priv/cert/SSL_CSR_www_m3hungry_com.pem" },
-                { "name": "AWS_ASSETS_BUCKET_NAME", "value": "mehungry-main-bucket" }
+                { "name": "AWS_ASSETS_BUCKET_NAME", "value": "mehungry-main-bucket" },
+                { "name": "POOL_SIZE", "value": "18" },
+                { "name": "ERL_AFLAGS", "value": "+S 2:2 +sbwt none +sbwtdcpu none +sbwtdio none" }
             ],
             "secrets": [
                 {
