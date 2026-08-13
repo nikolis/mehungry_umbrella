@@ -99,6 +99,7 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
       |> put_flash(
         :info,
         "#{verb} recipe ingredients: #{report.backfilled} linked, " <>
+          "#{report.description_linked} named-linked, " <>
           "#{report.synthesized_portions} portion(s) created, " <>
           "#{length(report.unresolved)} pair(s) need review."
       )

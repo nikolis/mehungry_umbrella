@@ -31,6 +31,18 @@ defmodule Mehungry.ReconcileRecipeIngredientPortionsTest do
     })
   end
 
+  # A description-only portion (no measurement unit), as USDA "undetermined"
+  # portions are stored.
+  defp seed_description_portion(ingredient, description, gram_weight) do
+    Repo.insert!(%IngredientPortion{
+      ingredient_id: ingredient.id,
+      measurement_unit_id: nil,
+      description: description,
+      gram_weight: gram_weight,
+      amount: 1.0
+    })
+  end
+
   setup do
     user = user_fixture()
     recipe = recipe_fixture(user)
@@ -108,6 +120,91 @@ defmodule Mehungry.ReconcileRecipeIngredientPortionsTest do
 
     assert report.backfilled >= 3
     assert report.synthesized_portions >= 2
+  end
+
+  test "links a unit-named row to a matching description-only portion", ctx do
+    # The "Tomatoes, sun-dried × piece" case: the row references the `piece`
+    # measurement unit, but the ingredient's matching portion is description-only.
+    piece = measurement_unit_fixture(%{name: "piece"})
+    ingredient = ingredient_fixture()
+    named_portion = seed_description_portion(ingredient, "piece", 2.0)
+    ri = seed_ri(ctx.recipe, ingredient, piece, nil)
+
+    capture_io(fn -> send(self(), {:report, Reconcile.run()}) end)
+    report = receive_report()
+
+    # Row is linked to the description-only portion, not reported as unresolved.
+    assert Repo.get!(RecipeIngredient, ri.id).ingredient_portion_id == named_portion.id
+    assert report.description_linked >= 1
+    refute Enum.any?(report.unresolved, &(&1.ingredient_id == ingredient.id))
+  end
+
+  test "plural unit name matches a singular description portion", ctx do
+    pieces = measurement_unit_fixture(%{name: "pieces"})
+    ingredient = ingredient_fixture()
+    named_portion = seed_description_portion(ingredient, "piece", 2.0)
+    ri = seed_ri(ctx.recipe, ingredient, pieces, nil)
+
+    capture_io(fn -> send(self(), {:report, Reconcile.run()}) end)
+    _report = receive_report()
+
+    assert Repo.get!(RecipeIngredient, ri.id).ingredient_portion_id == named_portion.id
+  end
+
+  test "abbreviated unit name matches a spelled-out description (teaspoon → tsp)", ctx do
+    teaspoon = measurement_unit_fixture(%{name: "teaspoon"})
+    ingredient = ingredient_fixture()
+    named_portion = seed_description_portion(ingredient, "tsp", 6.0)
+    ri = seed_ri(ctx.recipe, ingredient, teaspoon, nil)
+
+    capture_io(fn -> send(self(), {:report, Reconcile.run()}) end)
+    _report = receive_report()
+
+    assert Repo.get!(RecipeIngredient, ri.id).ingredient_portion_id == named_portion.id
+  end
+
+  test "matching is case-insensitive", ctx do
+    piece = measurement_unit_fixture(%{name: "Piece"})
+    ingredient = ingredient_fixture()
+    named_portion = seed_description_portion(ingredient, "PIECE", 2.0)
+    ri = seed_ri(ctx.recipe, ingredient, piece, nil)
+
+    capture_io(fn -> send(self(), {:report, Reconcile.run()}) end)
+    _report = receive_report()
+
+    assert Repo.get!(RecipeIngredient, ri.id).ingredient_portion_id == named_portion.id
+  end
+
+  test "synthesizes a volume portion from a description-only volume anchor", ctx do
+    tablespoon = measurement_unit_fixture(%{name: "tablespoon"})
+    ingredient = ingredient_fixture()
+    # Only a description-only "cup" portion exists (240 g / cup → water-like).
+    seed_description_portion(ingredient, "cup", 240.0)
+    ri = seed_ri(ctx.recipe, ingredient, tablespoon, nil)
+
+    capture_io(fn -> send(self(), {:report, Reconcile.run()}) end)
+    _report = receive_report()
+
+    linked = Repo.get!(RecipeIngredient, ri.id)
+    assert linked.ingredient_portion_id
+    portion = Repo.get!(IngredientPortion, linked.ingredient_portion_id)
+    assert portion.measurement_unit_id == tablespoon.id
+    # 240 g/cup → 240/240 * 15 = 15 g/tbsp
+    assert_in_delta portion.gram_weight, 15.0, 0.001
+  end
+
+  test "dry run predicts named-linkable pairs as resolvable (not unresolved)", ctx do
+    piece = measurement_unit_fixture(%{name: "piece"})
+    ingredient = ingredient_fixture()
+    seed_description_portion(ingredient, "piece", 2.0)
+    ri = seed_ri(ctx.recipe, ingredient, piece, nil)
+
+    capture_io(fn -> send(self(), {:report, Reconcile.run(dry_run: true)}) end)
+    report = receive_report()
+
+    # Nothing written, but the pair is not flagged for review.
+    assert Repo.get!(RecipeIngredient, ri.id).ingredient_portion_id == nil
+    refute Enum.any?(report.unresolved, &(&1.ingredient_id == ingredient.id))
   end
 
   test "dry_run writes nothing", ctx do

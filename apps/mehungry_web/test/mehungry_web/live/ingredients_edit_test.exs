@@ -102,6 +102,41 @@ defmodule MehungryWeb.IngredientsEditTest do
       assert nutrient_count(ingredient) == 0
     end
 
+    test "the portion editor exposes a free-text name field", ctx do
+      %{conn: conn, ingredient: ingredient} = ctx
+      {:ok, view, _html} = live(conn, ~p"/professional/ingredients/#{ingredient.id}/edit")
+
+      added_html = submit_action(view, ingredient, "add_portion")
+
+      assert added_html =~ "Portion name (optional)"
+      assert added_html =~ ~s(name="ingredient[ingredient_portions][0][description]")
+    end
+
+    test "saving a portion with a name but no unit creates a description-only portion", ctx do
+      %{conn: conn, ingredient: ingredient} = ctx
+      {:ok, view, _html} = live(conn, ~p"/professional/ingredients/#{ingredient.id}/edit")
+
+      view
+      |> form("#ingredient-details-form", %{"ingredient" => base_params(ingredient)})
+      |> render_submit(%{
+        "ingredient" => %{
+          "ingredient_portions_sort" => ["0"],
+          "ingredient_portions" => %{
+            "0" => %{
+              "description" => "1 medium banana",
+              "gram_weight" => "118",
+              "measurement_unit_id" => ""
+            }
+          }
+        }
+      })
+
+      assert [portion] = portions(ingredient)
+      assert portion.description == "1 medium banana"
+      assert portion.measurement_unit_id == nil
+      assert portion.gram_weight == 118.0
+    end
+
     test "adding a translation renders a new empty row without saving", ctx do
       %{conn: conn, ingredient: ingredient} = ctx
       {:ok, view, html} = live(conn, ~p"/professional/ingredients/#{ingredient.id}/edit")
