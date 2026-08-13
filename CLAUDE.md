@@ -108,6 +108,8 @@ Automated recipe-to-social-media pipeline:
 6. `RecipePublishWorker` calls `Mehungry.Social.Publisher.publish_recipe/5` (mockable via app config key `:social_media_publisher`) — see `docs/social_publishing.md`.
 7. `AI.Bot.Notifier` sends admin email when batch is ready for review.
 
+**Personas / Setups / Orders (authentic voice)** — recipes can be authored in the voice of a reusable **`AI.Bot.Persona`** (grandma, tavern, dietologist…), bound to a place/story/condition/seed-ingredients by a named **`AI.Bot.RecipeSetup`**. A config (and per-`WeekConfig`/`DayConfig` override, cascading day→week→config) references a setup; `Bot.build_brief/1` threads persona + origin + story + seed ingredients (roles: primary/garnish/spice/avoid) into `RecipeAgent.run/2`, which speaks in the persona's voice through both the generation prompt **and** the final polish (hashtags only if `persona.uses_hashtags`). **`AI.Bot.RecipeOrder`** + `RecipeOrderWorker` generate N recipes for a setup on demand into the review queue (no calendar coupling; order rows carry `bot_config_id: nil` + `recipe_order_id`). Admin UI: `/professional/ai-bot/{personas,setups,orders}`. See **`docs/ai_bot_personas.md`**.
+
 ### Subscription Tiers (`Mehungry.Subscriptions`)
 
 Three tiers enforced via `check_quota/2` and `record_usage/2`:

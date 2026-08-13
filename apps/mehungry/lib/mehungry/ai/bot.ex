@@ -7,6 +7,10 @@ defmodule Mehungry.AI.Bot do
   alias Mehungry.AI.Bot.{
     AiBotConfig,
     AiBotRecipe,
+    Persona,
+    RecipeOrder,
+    RecipeSetup,
+    RecipeSetupIngredient,
     RecipeTranslation,
     SocialMediaPostLog,
     WeekConfig,
@@ -22,12 +26,17 @@ defmodule Mehungry.AI.Bot do
     |> Repo.all()
   end
 
-  def get_bot_config!(id), do: Repo.get!(AiBotConfig, id) |> Repo.preload([:bot_user, :condition])
+  @setup_preload [:persona, :condition, seed_ingredients: :ingredient]
+
+  def get_bot_config!(id) do
+    Repo.get!(AiBotConfig, id)
+    |> Repo.preload([:bot_user, :condition, recipe_setup: @setup_preload])
+  end
 
   def get_active_config_for_month(month, year) do
     AiBotConfig
     |> where([c], c.month == ^month and c.year == ^year and c.active == true)
-    |> preload([:bot_user, :condition])
+    |> preload([:bot_user, :condition, recipe_setup: ^@setup_preload])
     |> Repo.one()
   end
 
@@ -269,11 +278,230 @@ defmodule Mehungry.AI.Bot do
     week = get_week_config(config.id, week_num)
     day = get_day_config(config.id, date)
 
+    setup =
+      resolve_setup([
+        day && day.recipe_setup_id,
+        week && week.recipe_setup_id,
+        config.recipe_setup_id
+      ])
+
     %{
       month_theme: config.theme,
       week_theme: week && week.theme,
-      day_focus: day && day.focus_hint
+      day_focus: day && day.focus_hint,
+      setup: setup
     }
+  end
+
+  # First non-nil setup id wins (day → week → config), preloaded ready for the
+  # brief builder.
+  defp resolve_setup(ids) do
+    case Enum.find(ids, & &1) do
+      nil -> nil
+      id -> get_recipe_setup(id)
+    end
+  end
+
+  # ── Personas ─────────────────────────────────────────────────────────────────
+
+  def list_personas do
+    Persona
+    |> order_by([p], asc: p.name)
+    |> Repo.all()
+  end
+
+  def list_active_personas do
+    Persona
+    |> where([p], p.active == true)
+    |> order_by([p], asc: p.name)
+    |> Repo.all()
+  end
+
+  def get_persona!(id), do: Repo.get!(Persona, id)
+
+  def create_persona(attrs \\ %{}) do
+    %Persona{}
+    |> Persona.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_persona(%Persona{} = persona, attrs) do
+    persona
+    |> Persona.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def delete_persona(%Persona{} = persona), do: Repo.delete(persona)
+
+  def change_persona(%Persona{} = persona, attrs \\ %{}) do
+    Persona.changeset(persona, attrs)
+  end
+
+  # ── Recipe Setups ────────────────────────────────────────────────────────────
+
+  def list_recipe_setups do
+    RecipeSetup
+    |> order_by([s], asc: s.name)
+    |> preload([:persona, :condition])
+    |> Repo.all()
+  end
+
+  def list_active_recipe_setups do
+    RecipeSetup
+    |> where([s], s.active == true)
+    |> order_by([s], asc: s.name)
+    |> preload([:persona, :condition])
+    |> Repo.all()
+  end
+
+  @doc "Get a fully-preloaded setup, or nil."
+  def get_recipe_setup(nil), do: nil
+
+  def get_recipe_setup(id) do
+    RecipeSetup
+    |> Repo.get(id)
+    |> Repo.preload(@setup_preload)
+  end
+
+  def get_recipe_setup!(id) do
+    RecipeSetup
+    |> Repo.get!(id)
+    |> Repo.preload(@setup_preload)
+  end
+
+  def create_recipe_setup(attrs \\ %{}) do
+    %RecipeSetup{}
+    |> RecipeSetup.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_recipe_setup(%RecipeSetup{} = setup, attrs) do
+    setup
+    |> RecipeSetup.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def delete_recipe_setup(%RecipeSetup{} = setup), do: Repo.delete(setup)
+
+  def change_recipe_setup(%RecipeSetup{} = setup, attrs \\ %{}) do
+    RecipeSetup.changeset(setup, attrs)
+  end
+
+  # ── Setup seed ingredients ───────────────────────────────────────────────────
+
+  def list_setup_ingredients(recipe_setup_id) do
+    RecipeSetupIngredient
+    |> where([si], si.recipe_setup_id == ^recipe_setup_id)
+    |> preload(:ingredient)
+    |> Repo.all()
+  end
+
+  def add_setup_ingredient(attrs \\ %{}) do
+    %RecipeSetupIngredient{}
+    |> RecipeSetupIngredient.changeset(attrs)
+    |> Repo.insert(
+      on_conflict: :nothing,
+      conflict_target: [:recipe_setup_id, :ingredient_id, :role]
+    )
+  end
+
+  def delete_setup_ingredient(%RecipeSetupIngredient{} = si), do: Repo.delete(si)
+
+  def get_setup_ingredient!(id) do
+    RecipeSetupIngredient |> Repo.get!(id) |> Repo.preload(:ingredient)
+  end
+
+  @doc """
+  Seed a setup's ingredient roles from its linked condition: the condition's
+  encouraged ingredients become `primary`, its discouraged ones become `avoid`.
+  Existing rows are left untouched (insert is conflict-safe).
+  """
+  def populate_setup_ingredients_from_condition(%RecipeSetup{condition_id: nil}), do: {:ok, 0}
+
+  def populate_setup_ingredients_from_condition(%RecipeSetup{} = setup) do
+    %{encouraged: encouraged, discouraged: discouraged} =
+      Mehungry.Health.ingredient_guidance_for_condition(setup.condition_id)
+
+    rows =
+      Enum.map(encouraged, &{&1.id, "primary"}) ++ Enum.map(discouraged, &{&1.id, "avoid"})
+
+    count =
+      Enum.reduce(rows, 0, fn {ingredient_id, role}, acc ->
+        case add_setup_ingredient(%{
+               recipe_setup_id: setup.id,
+               ingredient_id: ingredient_id,
+               role: role
+             }) do
+          {:ok, %{id: id}} when not is_nil(id) -> acc + 1
+          _ -> acc
+        end
+      end)
+
+    {:ok, count}
+  end
+
+  # ── Recipe Orders ────────────────────────────────────────────────────────────
+
+  def list_recipe_orders do
+    RecipeOrder
+    |> order_by([o], desc: o.inserted_at)
+    |> preload([:recipe_setup, :bot_user])
+    |> Repo.all()
+  end
+
+  def get_recipe_order!(id) do
+    RecipeOrder
+    |> Repo.get!(id)
+    |> Repo.preload(recipe_setup: @setup_preload, bot_user: [])
+  end
+
+  def create_recipe_order(attrs \\ %{}) do
+    %RecipeOrder{}
+    |> RecipeOrder.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_recipe_order(%RecipeOrder{} = order, attrs) do
+    order
+    |> RecipeOrder.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def change_recipe_order(%RecipeOrder{} = order, attrs \\ %{}) do
+    RecipeOrder.changeset(order, attrs)
+  end
+
+  def increment_order_completed(%RecipeOrder{} = order) do
+    {1, [count]} =
+      RecipeOrder
+      |> where([o], o.id == ^order.id)
+      |> select([o], o.completed_count)
+      |> Repo.update_all(inc: [completed_count: 1])
+
+    count
+  end
+
+  # ── Brief builder ────────────────────────────────────────────────────────────
+
+  @doc """
+  Build the structured creative brief passed to `RecipeAgent.run/2` from a
+  resolved setup. Returns `nil` when there is no setup (agent falls back to
+  its generic voice). Seed ingredients are grouped by role.
+  """
+  def build_brief(nil), do: nil
+
+  def build_brief(%RecipeSetup{} = setup) do
+    by_role =
+      (setup.seed_ingredients || [])
+      |> Enum.group_by(& &1.role, &(&1.ingredient && &1.ingredient.name))
+      |> Map.new(fn {role, names} -> {role, Enum.reject(names, &is_nil/1)} end)
+
+    [
+      persona: setup.persona,
+      origin: setup.origin,
+      story: setup.story,
+      seed_ingredients: by_role
+    ]
   end
 
   # ── Translations ─────────────────────────────────────────────────────────────

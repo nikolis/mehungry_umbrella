@@ -20,16 +20,28 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   @doc """
   Generates a recipe from a natural-language description.
+
+  `opts` may carry a persona voice and creative grounding so the recipe reads
+  as authored by a character rather than a generic AI food writer:
+
+    * `:persona` — an `%AI.Bot.Persona{}` (voice_prompt, uses_hashtags)
+    * `:origin` — free-text place, e.g. "Rethymno -> Crete -> Greece"
+    * `:story` — optional backstory
+    * `:seed_ingredients` — `%{"primary" => [names], "spice" => [...], "avoid" => [...]}`
+
+  With no persona the behavior is unchanged (generic expert-chef voice).
+
   Returns {:ok, attrs_map, []} or {:error, reason}.
   """
-  def run(description) do
+  def run(description, opts \\ []) do
     Process.put(__MODULE__, nil)
 
-    context = %{gram_unit: fetch_gram_unit()}
+    brief = build_brief(opts)
+    context = %{gram_unit: fetch_gram_unit(), brief: brief}
 
     result =
       Agent.run(
-        system_prompt(),
+        system_prompt(brief),
         "Create a recipe from this description: #{description}",
         tool_defs(),
         &handle_tool/3,
@@ -51,13 +63,46 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     end
   end
 
+  # ── brief ─────────────────────────────────────────────────────────────────────
+
+  # Normalize run/2 opts into a bounded map the prompts consume. nil persona
+  # means "no character" — the generic voice is used everywhere.
+  defp build_brief(opts) do
+    persona = Keyword.get(opts, :persona)
+    seed = Keyword.get(opts, :seed_ingredients) || %{}
+
+    %{
+      persona: persona,
+      persona_name: persona && persona.name,
+      voice_prompt: persona && persona.voice_prompt,
+      uses_hashtags: (persona && persona.uses_hashtags) || false,
+      origin: blank_to_nil(Keyword.get(opts, :origin)),
+      story: blank_to_nil(Keyword.get(opts, :story)),
+      primary: seed_names(seed, "primary"),
+      spice: seed_names(seed, "spice"),
+      garnish: seed_names(seed, "garnish"),
+      avoid: seed_names(seed, "avoid")
+    }
+  end
+
+  defp seed_names(seed, role) do
+    (Map.get(seed, role) || Map.get(seed, String.to_atom(role)) || [])
+    |> Enum.reject(&(&1 in [nil, ""]))
+  end
+
+  defp blank_to_nil(nil), do: nil
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(str) when is_binary(str), do: String.trim(str) |> then(&if(&1 == "", do: nil, else: &1))
+  defp blank_to_nil(other), do: other
+
+  defp has_persona?(%{persona: p}) when not is_nil(p), do: true
+  defp has_persona?(_), do: false
+
   # ── system prompt ─────────────────────────────────────────────────────────────
 
-  defp system_prompt do
+  defp system_prompt(brief) do
     """
-    You are an expert chef and recipe writer with deep knowledge of global cuisines,
-    culinary technique, and flavour balance.
-
+    #{persona_block(brief)}
     To generate a recipe from the user's description, follow these steps IN ORDER:
 
     1. Identify all ingredients the recipe needs — think about the full flavour profile:
@@ -71,7 +116,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
        your tool results — never invent or guess numeric IDs
     5. Call submit_recipe with the complete recipe to validate and save it
     6. If submit_recipe returns errors, fix ONLY the reported invalid IDs and resubmit
-
+    #{ingredient_directive(brief)}
     ## Recipe writing standards
 
     **Description:** Write 2-3 sentences of genuine culinary prose — evoke the aroma,
@@ -85,13 +130,70 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     - Be a natural paragraph, not a one-liner skeleton
     - Include an optional `tip` for technique nuance (e.g. "Don't crowd the pan or
       the mushrooms will steam instead of brown")
-
-    **Hashtags:** 4–6 short topic keywords as bare strings without the # symbol,
-    e.g. ["pasta", "italian", "vegetarian", "comfort food"]. Cover cuisine, main
-    ingredient, dietary style, and occasion.
-
+    #{hashtag_directive(brief)}
     submit_recipe is the ONLY way to finish — always call it when the recipe is ready.
     """
+  end
+
+  # The opening identity. With a persona it becomes the character's voice;
+  # without one it keeps the original generic expert-chef framing.
+  defp persona_block(brief) do
+    if has_persona?(brief) do
+      origin = if brief.origin, do: " You cook from #{brief.origin}.", else: ""
+      story = if brief.story, do: " #{brief.story}", else: ""
+
+      """
+      You are #{brief.persona_name}. #{brief.voice_prompt}#{origin}#{story}
+
+      Write this recipe entirely in your own voice — the title, the description, and
+      every step should sound like you, not like a generic recipe website. Keep your
+      quirks, your measures, and your way of speaking about food.
+      """
+    else
+      """
+      You are an expert chef and recipe writer with deep knowledge of global cuisines,
+      culinary technique, and flavour balance.
+      """
+    end
+  end
+
+  # Steers ingredient selection from the setup's seed ingredients, and hard-bans
+  # the avoid list. Empty string when there are no seed ingredients.
+  defp ingredient_directive(%{primary: [], spice: [], garnish: [], avoid: []}), do: ""
+
+  defp ingredient_directive(brief) do
+    parts =
+      [
+        list_line("Build the recipe around these ingredients", brief.primary),
+        list_line("Season with", brief.spice),
+        list_line("Finish/garnish with", brief.garnish),
+        list_line("NEVER use any of these ingredients under any circumstance", brief.avoid)
+      ]
+      |> Enum.reject(&(&1 == ""))
+
+    if parts == [] do
+      ""
+    else
+      "\n## Ingredient guidance\n\n" <> Enum.join(parts, "\n") <> "\n"
+    end
+  end
+
+  defp list_line(_label, []), do: ""
+  defp list_line(label, names), do: "- #{label}: #{Enum.join(names, ", ")}."
+
+  # A folksy persona (grandma, tavern) doesn't hashtag; only ask for them when
+  # the persona opts in, or when there is no persona (legacy social behaviour).
+  defp hashtag_directive(brief) do
+    if has_persona?(brief) and not brief.uses_hashtags do
+      "\n**Hashtags:** Leave the hashtags array empty — this voice does not use hashtags.\n"
+    else
+      """
+
+      **Hashtags:** 4–6 short topic keywords as bare strings without the # symbol,
+      e.g. ["pasta", "italian", "vegetarian", "comfort food"]. Cover cuisine, main
+      ingredient, dietary style, and occasion.
+      """
+    end
   end
 
   # ── tool definitions ──────────────────────────────────────────────────────────
@@ -299,11 +401,11 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     end
   end
 
-  defp handle_tool("submit_recipe", recipe_input, %{gram_unit: gram_unit}) do
+  defp handle_tool("submit_recipe", recipe_input, %{gram_unit: gram_unit} = context) do
     errors = validate_recipe(recipe_input, gram_unit && gram_unit.id)
 
     if errors == [] do
-      polished_input = polish_prose(recipe_input)
+      polished_input = polish_prose(recipe_input, Map.get(context, :brief))
       attrs = normalize_attrs(polished_input)
       Process.put(__MODULE__, {:ok, attrs, []})
       Logger.info("RecipeAgent: recipe '#{recipe_input["title"]}' submitted successfully")
@@ -368,10 +470,54 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   # ── prose polish ──────────────────────────────────────────────────────────────
 
-  defp polish_prose(recipe_input) do
-    original_step_count = length(recipe_input["steps"] || [])
+  # With a persona, the final rewrite speaks in the character's voice instead of
+  # the generic Instagram/Pinterest "food writer" voice that flattens everything.
+  defp polish_system_prompt(brief, step_count) when is_map(brief) do
+    if has_persona?(brief) do
+      origin = if brief.origin, do: " You cook from #{brief.origin}.", else: ""
+      story = if brief.story, do: " #{brief.story}", else: ""
+      hashtags = persona_polish_hashtags(brief)
 
-    system = """
+      """
+      You are #{brief.persona_name}. #{brief.voice_prompt}#{origin}#{story}
+
+      You receive a structurally complete but plainly-written draft of one of your own
+      recipes and must return it rewritten entirely in YOUR voice — as if you wrote it.
+
+      Rewrite ONLY these four fields: title, description, steps, hashtags.
+      Every other field must be omitted — do not echo ingredient IDs, quantities, or servings.
+
+      title — how YOU would name this dish. Natural, not clickbait. Avoid generic
+      "Golden/Ultimate/Perfect" recipe-website adjectives unless that is genuinely your voice.
+
+      description — 2-3 sentences in your voice: where it comes from, when you make it,
+      why it matters to you. Do NOT include hashtags here.
+
+      steps — keep EXACTLY #{step_count} steps in the same order. Each step in your voice,
+      but still practical: what to do, rough timing, and a sensory doneness cue. Weave in
+      your tips and asides naturally.
+
+      #{hashtags}
+
+      Return ONLY valid JSON, no markdown fences, no explanation:
+      {"title":"...","description":"...","steps":[{"index":0,"description":"..."}],"hashtags":["..."]}
+      """
+    else
+      generic_polish_system_prompt(step_count)
+    end
+  end
+
+  defp polish_system_prompt(_brief, step_count), do: generic_polish_system_prompt(step_count)
+
+  defp persona_polish_hashtags(%{uses_hashtags: true}),
+    do:
+      "hashtags — 4-6 bare keywords without # prefix covering cuisine, main ingredient, dietary style, occasion."
+
+  defp persona_polish_hashtags(_),
+    do: "hashtags — return an empty array []; this voice does not use hashtags."
+
+  defp generic_polish_system_prompt(step_count) do
+    """
     You are a professional food writer for a recipe social media platform (Instagram, Pinterest).
     You receive a structurally complete but plainly-written draft recipe and must return a polished version.
 
@@ -383,7 +529,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     description — 2-3 sentences of genuine culinary prose. Evoke aroma, texture, and the occasion it suits.
     Do NOT include hashtags here; they go in the separate hashtags array.
 
-    steps — keep EXACTLY #{original_step_count} steps in the same order.
+    steps — keep EXACTLY #{step_count} steps in the same order.
     Each step must: state what to do, include timing ("cook for 3-4 minutes"), and one sensory doneness cue
     ("until the onions are soft and starting to colour at the edges"). Weave technique tips in naturally.
 
@@ -392,6 +538,11 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     Return ONLY valid JSON, no markdown fences, no explanation:
     {"title":"...","description":"...","steps":[{"index":0,"description":"..."}],"hashtags":["..."]}
     """
+  end
+
+  defp polish_prose(recipe_input, brief) do
+    original_step_count = length(recipe_input["steps"] || [])
+    system = polish_system_prompt(brief, original_step_count)
 
     user =
       Jason.encode!(%{

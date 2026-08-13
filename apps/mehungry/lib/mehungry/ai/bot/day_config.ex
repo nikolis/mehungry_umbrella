@@ -7,15 +7,17 @@ defmodule Mehungry.AI.Bot.DayConfig do
     field :focus_hint, :string
 
     belongs_to :bot_config, Mehungry.AI.Bot.AiBotConfig
+    belongs_to :recipe_setup, Mehungry.AI.Bot.RecipeSetup
 
     timestamps()
   end
 
   def changeset(day_config, attrs) do
     day_config
-    |> cast(attrs, [:bot_config_id, :date, :focus_hint])
+    |> cast(attrs, [:bot_config_id, :date, :focus_hint, :recipe_setup_id])
     |> validate_required([:bot_config_id, :date, :focus_hint])
     |> unique_constraint([:bot_config_id, :date])
     |> foreign_key_constraint(:bot_config_id)
+    |> foreign_key_constraint(:recipe_setup_id)
   end
 end

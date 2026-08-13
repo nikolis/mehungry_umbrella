@@ -143,6 +143,15 @@ defmodule MehungryWeb.Router do
       live "/ai-bot/review/:id/translate/:lang", AiBotLive.RecipeTranslate, :show
       live "/ai-bot/social", AiBotLive.SocialAccounts, :index
 
+      live "/ai-bot/personas", AiBotLive.Personas, :index
+      live "/ai-bot/personas/new", AiBotLive.Personas, :new
+      live "/ai-bot/personas/:id/edit", AiBotLive.Personas, :edit
+      live "/ai-bot/setups", AiBotLive.Setups, :index
+      live "/ai-bot/setups/new", AiBotLive.Setups, :new
+      live "/ai-bot/setups/:id/edit", AiBotLive.Setups, :edit
+      live "/ai-bot/orders", AiBotLive.Orders, :index
+      live "/ai-bot/orders/new", AiBotLive.Orders, :new
+
       live "/taxonomy/review", ProfessionalLive.TaxonomyReview, :index
       live "/ingredients/reconciliation", ProfessionalLive.IngredientReconciliation, :index
     end

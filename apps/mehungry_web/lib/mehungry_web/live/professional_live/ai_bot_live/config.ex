@@ -14,6 +14,7 @@ defmodule MehungryWeb.AiBotLive.Config do
      |> assign(:users, Accounts.list_users())
      |> assign(:languages, Languages.list_languages())
      |> assign(:conditions, Health.list_conditions_for_presentation())
+     |> assign(:recipe_setups, Bot.list_active_recipe_setups())
      |> assign(:meal_types, AiBotConfig.meal_types())
      |> assign(:form, nil)
      |> assign(:show_create_user_modal, false)
@@ -108,13 +109,15 @@ defmodule MehungryWeb.AiBotLive.Config do
   end
 
   @impl true
-  def handle_event("save_week_themes", %{"week_themes" => themes}, socket) do
+  def handle_event("save_week_themes", %{"week_themes" => themes} = params, socket) do
     config_id = socket.assigns.editing_config_id
+    setups = params["week_setups"] || %{}
 
     results =
       Enum.map(themes, fn {week_str, theme} ->
         week_number = String.to_integer(week_str)
         theme = String.trim(theme)
+        setup_id = blank_to_nil(setups[week_str])
 
         if theme == "" do
           case Bot.get_week_config(config_id, week_number) do
@@ -125,7 +128,8 @@ defmodule MehungryWeb.AiBotLive.Config do
           Bot.upsert_week_config(%{
             bot_config_id: config_id,
             week_number: week_number,
-            theme: theme
+            theme: theme,
+            recipe_setup_id: setup_id
           })
         end
       end)
@@ -147,7 +151,8 @@ defmodule MehungryWeb.AiBotLive.Config do
     attrs = %{
       bot_config_id: config_id,
       date: params["date"],
-      focus_hint: String.trim(params["focus_hint"] || "")
+      focus_hint: String.trim(params["focus_hint"] || ""),
+      recipe_setup_id: blank_to_nil(params["recipe_setup_id"])
     }
 
     if attrs.focus_hint == "" or attrs.date == "" do
@@ -224,6 +229,18 @@ defmodule MehungryWeb.AiBotLive.Config do
           class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 text-sm transition-colors"
         >
           <.icon name="hero-queue-list" class="h-4 w-4" /> Review Queue
+        </.link>
+        <.link
+          navigate={~p"/professional/ai-bot/setups"}
+          class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 text-sm transition-colors"
+        >
+          <.icon name="hero-user-circle" class="h-4 w-4" /> Setups
+        </.link>
+        <.link
+          navigate={~p"/professional/ai-bot/orders"}
+          class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 text-sm transition-colors"
+        >
+          <.icon name="hero-clipboard-document-list" class="h-4 w-4" /> Orders
         </.link>
         <.link
           navigate={~p"/professional/ai-bot/social"}
@@ -360,6 +377,23 @@ defmodule MehungryWeb.AiBotLive.Config do
                         class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs text-slate-400 mb-1">Persona / Setup (optional)</label>
+                    <.input
+                      field={@form[:recipe_setup_id]}
+                      type="select"
+                      prompt="No setup (generic voice)…"
+                      options={Enum.map(@recipe_setups, &{&1.name, &1.id})}
+                      class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                    />
+                    <p class="text-[11px] text-slate-500 mt-1">
+                      Gives every recipe this month a character voice, origin, and seed
+                      ingredients. Manage these under
+                      <.link navigate={~p"/professional/ai-bot/setups"} class="text-primary-400 hover:underline">Setups</.link>.
+                      A week or day override below can swap it.
+                    </p>
                   </div>
 
                   <div class="grid grid-cols-2 gap-3">
@@ -540,6 +574,19 @@ defmodule MehungryWeb.AiBotLive.Config do
                         placeholder="e.g. Greek Diet Week"
                         class="flex-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none placeholder-slate-500"
                       />
+                      <select
+                        name={"week_setups[#{week_num}]"}
+                        class="w-40 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs px-2 py-1.5 focus:border-primary-500 focus:outline-none flex-shrink-0"
+                      >
+                        <option value="">Setup: month default</option>
+                        <option
+                          :for={s <- @recipe_setups}
+                          value={s.id}
+                          selected={existing && existing.recipe_setup_id == s.id}
+                        >
+                          {s.name}
+                        </option>
+                      </select>
                       <%= if existing do %>
                         <.icon
                           name="hero-check-circle"
@@ -588,6 +635,16 @@ defmodule MehungryWeb.AiBotLive.Config do
                       placeholder="e.g. 6 ingredients recipes"
                       class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none placeholder-slate-500"
                     />
+                  </div>
+                  <div class="flex-shrink-0">
+                    <label class="block text-xs text-slate-500 mb-1">Setup</label>
+                    <select
+                      name="day_config[recipe_setup_id]"
+                      class="w-40 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs px-2 py-1.5 focus:border-primary-500 focus:outline-none"
+                    >
+                      <option value="">Month default</option>
+                      <option :for={s <- @recipe_setups} value={s.id}>{s.name}</option>
+                    </select>
                   </div>
                   <button
                     type="submit"
@@ -767,4 +824,8 @@ defmodule MehungryWeb.AiBotLive.Config do
   end
 
   defp config_title(config), do: config.theme || "Untitled"
+
+  defp blank_to_nil(nil), do: nil
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(str) when is_binary(str), do: str
 end

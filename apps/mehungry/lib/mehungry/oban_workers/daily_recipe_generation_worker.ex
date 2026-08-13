@@ -163,39 +163,60 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
     %{encouraged: encouraged, discouraged: discouraged} =
       Health.ingredient_guidance_for_condition(condition_id)
 
-    discouraged_ids = MapSet.new(discouraged, & &1.id)
     context = Bot.get_context_for_date(config, target_date)
+    brief_opts = Bot.build_brief(context.setup) || []
+
+    discouraged_ids =
+      MapSet.union(MapSet.new(discouraged, & &1.id), setup_avoid_ids(context.setup))
+
     description = build_condition_description(config, context, meal_type, encouraged, discouraged)
 
     Logger.info(
       "[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date} (condition setup): #{description}"
     )
 
-    generate_avoiding(description, discouraged_ids, meal_type, @max_condition_attempts)
+    generate_avoiding(description, discouraged_ids, meal_type, @max_condition_attempts, brief_opts)
   end
 
   defp resolve_recipe_attrs(config, meal_type, target_date) do
     context = Bot.get_context_for_date(config, target_date)
+    brief_opts = Bot.build_brief(context.setup) || []
+    avoid_ids = setup_avoid_ids(context.setup)
     description = build_description(context, meal_type)
 
     Logger.info(
       "[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date}: #{description}"
     )
 
-    case RecipeAgent.run(description) do
-      {:ok, attrs, _} -> {:ok, attrs}
-      {:error, reason} -> {:error, reason}
+    if MapSet.size(avoid_ids) > 0 do
+      generate_avoiding(description, avoid_ids, meal_type, @max_condition_attempts, brief_opts)
+    else
+      case RecipeAgent.run(description, brief_opts) do
+        {:ok, attrs, _} -> {:ok, attrs}
+        {:error, reason} -> {:error, reason}
+      end
     end
+  end
+
+  # Ingredient ids the setup's seed list marks as "avoid" — enforced by the
+  # same post-generation guard used for condition-discouraged ingredients.
+  defp setup_avoid_ids(nil), do: MapSet.new()
+
+  defp setup_avoid_ids(setup) do
+    (setup.seed_ingredients || [])
+    |> Enum.filter(&(&1.role == "avoid"))
+    |> Enum.map(& &1.ingredient_id)
+    |> MapSet.new()
   end
 
   # Run the agent, rejecting and retrying any recipe that contains a discouraged
   # ingredient. The prompt asks the agent to avoid them; this is the hard guard.
-  defp generate_avoiding(_description, _discouraged_ids, meal_type, 0) do
+  defp generate_avoiding(_description, _discouraged_ids, meal_type, 0, _brief_opts) do
     {:error, "#{meal_type}: could not generate a recipe free of discouraged ingredients"}
   end
 
-  defp generate_avoiding(description, discouraged_ids, meal_type, attempts_left) do
-    case RecipeAgent.run(description) do
+  defp generate_avoiding(description, discouraged_ids, meal_type, attempts_left, brief_opts) do
+    case RecipeAgent.run(description, brief_opts) do
       {:ok, attrs, _} ->
         case offending_ingredient_ids(attrs, discouraged_ids) do
           [] ->
@@ -207,7 +228,7 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
                 "ingredient_ids #{inspect(offending)}, retrying (#{attempts_left - 1} left)"
             )
 
-            generate_avoiding(description, discouraged_ids, meal_type, attempts_left - 1)
+            generate_avoiding(description, discouraged_ids, meal_type, attempts_left - 1, brief_opts)
         end
 
       {:error, reason} ->

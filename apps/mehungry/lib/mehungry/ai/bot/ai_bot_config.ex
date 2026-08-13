@@ -35,6 +35,7 @@ defmodule Mehungry.AI.Bot.AiBotConfig do
 
     belongs_to :bot_user, Mehungry.Accounts.User
     belongs_to :condition, Mehungry.Health.Condition
+    belongs_to :recipe_setup, Mehungry.AI.Bot.RecipeSetup
     has_many :ai_bot_recipes, Mehungry.AI.Bot.AiBotRecipe, foreign_key: :bot_config_id
     has_many :week_configs, Mehungry.AI.Bot.WeekConfig, foreign_key: :bot_config_id
     has_many :day_configs, Mehungry.AI.Bot.DayConfig, foreign_key: :bot_config_id
@@ -53,6 +54,7 @@ defmodule Mehungry.AI.Bot.AiBotConfig do
       :setup_type,
       :condition_id,
       :diet_direction,
+      :recipe_setup_id,
       :pinterest_default_board_id,
       :facebook_page_id,
       :publish_times,
@@ -68,6 +70,7 @@ defmodule Mehungry.AI.Bot.AiBotConfig do
     |> unique_constraint([:month, :year])
     |> foreign_key_constraint(:bot_user_id)
     |> foreign_key_constraint(:condition_id)
+    |> foreign_key_constraint(:recipe_setup_id)
   end
 
   # Coerce every submitted time to "HH:MM:SS" (the format the publish worker
