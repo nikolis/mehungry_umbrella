@@ -193,22 +193,17 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
     "dinner" => "hearty dinner recipe — a warming complete evening meal with rich flavors"
   }
 
-  # The persona/origin/story/seed-ingredient steering comes through brief_opts;
-  # this description names the dish class + any diet/condition steer.
+  # The persona/origin/story steering comes through brief_opts, and any
+  # condition's benefit is carried concretely by the setup's encouraged
+  # (primary) and avoided seed ingredients — NOT by asking the model to reason
+  # about the disease. So this description only names the dish class and the
+  # culinary diet direction (e.g. "Mediterranean diet"), never the condition.
   defp order_description(setup, meal_type) do
     meal_hint = Map.get(@meal_prompts, meal_type, "recipe")
 
-    base =
-      case setup && setup.diet_direction do
-        nil -> "A #{meal_hint}"
-        "" -> "A #{meal_hint}"
-        direction -> "A #{direction} #{meal_hint}"
-      end
-
-    if setup && setup.condition && setup.condition.name do
-      base <> ", designed to be suitable and beneficial for people with #{setup.condition.name}."
-    else
-      base <> "."
+    case setup && setup.diet_direction do
+      direction when is_binary(direction) and direction != "" -> "A #{direction} #{meal_hint}."
+      _ -> "A #{meal_hint}."
     end
   end
 

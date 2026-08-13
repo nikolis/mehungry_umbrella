@@ -279,13 +279,13 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
 
   defp build_condition_description(config, context, meal_type, encouraged, discouraged) do
     meal_hint = Map.get(@meal_prompts, meal_type, "recipe")
-    condition_name = (config.condition && config.condition.name) || "the selected health condition"
     encouraged_names = ingredient_names(encouraged)
     discouraged_names = ingredient_names(discouraged)
 
-    base =
-      "A #{config.diet_direction} #{meal_hint}, designed to be suitable and beneficial " <>
-        "for people with #{condition_name}."
+    # The condition's benefit is carried concretely by the encouraged/avoided
+    # ingredient lists below — never by asking the model to be "beneficial for
+    # a disease". So the base names only the dish class + culinary direction.
+    base = "A #{config.diet_direction} #{meal_hint}."
 
     base =
       if encouraged_names != "",
