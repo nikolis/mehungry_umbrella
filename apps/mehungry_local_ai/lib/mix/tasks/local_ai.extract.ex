@@ -6,9 +6,12 @@ defmodule Mix.Tasks.LocalAi.Extract do
 
       mix local_ai.extract --limit 200
       mix local_ai.extract --limit 50 --offset 0
+      mix local_ai.extract --no-qa          # rule-based only, skip the model load
 
   Requires `LOCAL_AI_SERVER_URL` and `LOCAL_AI_API_TOKEN` (see config/runtime.exs).
-  Booting the app loads the QA model once (slow on first run — downloads the model).
+  The QA model is **not** loaded at app boot; this task loads it once via
+  `MehungryLocalAi.QA.ensure_started/0` (slow on first run — downloads the model).
+  Pass `--no-qa` to skip the load and run the rule-based extractor only.
   """
 
   use Mix.Task
@@ -21,12 +24,22 @@ defmodule Mix.Tasks.LocalAi.Extract do
 
   @impl true
   def run(argv) do
-    {opts, _, _} = OptionParser.parse(argv, strict: [limit: :integer, offset: :integer])
+    {opts, _, _} =
+      OptionParser.parse(argv, strict: [limit: :integer, offset: :integer, qa: :boolean])
+
     limit = opts[:limit] || 100
     offset = opts[:offset] || 0
 
-    # Boots MehungryLocalAi.Application → loads the QA serving once.
     {:ok, _} = Application.ensure_all_started(:mehungry_local_ai)
+
+    # The QA model is off at boot; load it here unless --no-qa was passed (which runs
+    # the rule-based extractor only). This is the explicit "flag to start" the serving.
+    unless opts[:qa] == false do
+      case MehungryLocalAi.QA.ensure_started() do
+        :ok -> :ok
+        {:error, reason} -> Mix.shell().error("QA failed to start: #{inspect(reason)} — falling back to rule-based extraction")
+      end
+    end
 
     Mix.shell().info("local_ai.extract: processing up to #{limit} studies (QA available? #{MehungryLocalAi.QA.available?()})")
 

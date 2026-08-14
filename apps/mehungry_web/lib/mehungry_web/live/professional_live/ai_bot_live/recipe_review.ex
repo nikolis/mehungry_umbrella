@@ -76,8 +76,10 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
     if bot_recipe.status != "approved" do
       {:noreply, put_flash(socket, :error, "Recipe must be approved before publishing.")}
     else
+      # `config` is nil for ad-hoc order recipes (bot_config_id: nil); the owning
+      # bot user and per-language publish targets then come from the order.
       config = bot_recipe.bot_config
-      bot_user = Accounts.get_user!(config.bot_user_id)
+      bot_user = Accounts.get_user!(Bot.owner_bot_user_id(bot_recipe))
 
       # A board-fetch failure (stale token) disables Pinterest in the modal,
       # same as having no boards — reconnect happens on the social accounts page.
@@ -87,8 +89,16 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
           {:error, _} -> []
         end
 
-      lang_times = get_in(config.publish_times, [bot_recipe.meal_type]) || %{}
-      languages = if map_size(lang_times) > 0, do: Map.keys(lang_times), else: ["en"]
+      lang_times = (config && get_in(config.publish_times, [bot_recipe.meal_type])) || %{}
+      fb_page_ids = (config && config.facebook_page_ids) || %{}
+      pt_board_ids = (config && config.pinterest_board_ids) || %{}
+
+      languages =
+        cond do
+          map_size(lang_times) > 0 -> Map.keys(lang_times)
+          bot_recipe.recipe_order -> [bot_recipe.recipe_order.language_name]
+          true -> ["en"]
+        end
 
       facebook_pages =
         (bot_user.facebook_token || %{})
@@ -101,22 +111,20 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
       defaults =
         Map.new(languages, fn lang ->
           fb_page_id =
-            get_in(config.facebook_page_ids || %{}, [lang]) ||
+            get_in(fb_page_ids, [lang]) ||
               (List.first(facebook_pages) && List.first(facebook_pages).id)
 
           pt_board_id =
-            get_in(config.pinterest_board_ids || %{}, [lang]) ||
+            get_in(pt_board_ids, [lang]) ||
               (List.first(boards) && List.first(boards)["id"])
 
           {lang,
            %{
              instagram: instagram_connected,
-             facebook:
-               facebook_connected and not is_nil(get_in(config.facebook_page_ids || %{}, [lang])),
+             facebook: facebook_connected and not is_nil(get_in(fb_page_ids, [lang])),
              facebook_page_id: fb_page_id,
              pinterest:
-               pinterest_connected and
-                 not is_nil(get_in(config.pinterest_board_ids || %{}, [lang])),
+               pinterest_connected and not is_nil(get_in(pt_board_ids, [lang])),
              pinterest_board_id: pt_board_id
            }}
         end)

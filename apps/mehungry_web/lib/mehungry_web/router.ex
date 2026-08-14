@@ -236,6 +236,22 @@ defmodule MehungryWeb.Router do
   end
 
   if Mix.env() == :dev do
+    pipeline :dev_browser do
+      plug :accepts, ["html"]
+      plug :fetch_session
+      plug :fetch_live_flash
+      plug :put_root_layout, {MehungryWeb.LayoutView, :dev_root}
+      plug :protect_from_forgery
+      plug :put_secure_browser_headers
+    end
+
+    scope "/dev", MehungryWeb do
+      pipe_through :dev_browser
+
+      # Dev-only Markdown browser / viewer / editor over the repo's docs.
+      live "/docs", Dev.MarkdownBrowserLive, :index
+    end
+
     forward "/dev/mailbox", Plug.Swoosh.MailboxPreview
   end
 

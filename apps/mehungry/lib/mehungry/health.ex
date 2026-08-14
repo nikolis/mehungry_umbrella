@@ -8,7 +8,7 @@ defmodule Mehungry.Health do
   advice (e.g. *Kidney Stones: avoid Oxalate*, *IBS: limit FODMAP*).
 
   This is the **advice** layer that the "facts only" compound stack
-  (`docs/food_compounds.md` §4) deliberately defers to. Its hard rule: a condition
+  (`docs/science/food_compounds.md` §4) deliberately defers to. Its hard rule: a condition
   references a **compound**, never a species or ingredient. "Which foods should a
   kidney-stone patient avoid?" is answered by `species_for_condition/2` (the primary
   read), which **composes** this layer with `Food.SpeciesCompoundRelationship` at read

@@ -3,7 +3,7 @@ defmodule Mehungry.Food.NutrientMergerTest do
   Coverage for `Mehungry.Food.NutrientMerger` — the shared nutrient-name and
   key primitives (`normalize_nutrient_name/1`, `to_string_keys/1`,
   `to_atom_keys/1`) used by the stored-recipe display path. See
-  `docs/nutrition_calculation.md`.
+  `docs/food/nutrition_calculation.md`.
   """
   use ExUnit.Case, async: true
 

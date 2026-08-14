@@ -6,7 +6,7 @@ defmodule MehungryWeb.ProfessionalLive.Studies do
   linked to and the entity mentions extracted from it (stage 2).
 
   Pure web wiring over `Mehungry.Literature` review reads. See
-  `docs/scientific_pipeline.md`.
+  `docs/science/scientific_pipeline.md`.
   """
   use MehungryWeb, :live_view
 
