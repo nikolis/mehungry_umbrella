@@ -55,7 +55,7 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
 
   defp publish_platforms(bot_recipe, platforms, args, lang) do
     config = bot_recipe.bot_config
-    bot_user = Accounts.get_user!(config.bot_user_id)
+    bot_user = Accounts.get_user!(Bot.owner_bot_user_id(bot_recipe))
 
     recipe =
       Food.get_recipe_no_caching!(bot_recipe.recipe_id)
@@ -118,6 +118,20 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorker do
     Logger.warning(
       "[RecipePublishWorker] bot_recipe #{bot_recipe_id} (#{lang}) publisher returned unexpected result: #{inspect(results)}"
     )
+  end
+
+  # Order recipes (no calendar config) publish a single language manually — mark
+  # published once that language has been logged.
+  defp maybe_mark_published(bot_recipe, nil) do
+    languages =
+      case bot_recipe.recipe_order do
+        %{language_name: lang} when is_binary(lang) -> [lang]
+        _ -> []
+      end
+
+    if languages != [] and Bot.all_languages_published?(bot_recipe.id, languages) do
+      Bot.mark_published(bot_recipe)
+    end
   end
 
   defp maybe_mark_published(bot_recipe, config) do

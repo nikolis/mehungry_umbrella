@@ -98,11 +98,31 @@ defmodule Mehungry.AI.Bot do
     |> Repo.get!(id)
     |> Repo.preload([
       :bot_config,
+      :recipe_order,
       recipe: [
         recipe_ingredients: [:ingredient, :measurement_unit, :ingredient_portion],
         recipe_hashtags: []
       ]
     ])
+  end
+
+  @doc """
+  The bot user that owns a recipe's social posts: from its calendar `bot_config`,
+  or its ad-hoc `recipe_order` when there is no config (order recipes carry
+  `bot_config_id: nil`). Requires `:bot_config`/`:recipe_order` to be preloaded;
+  returns nil when neither is present.
+  """
+  def owner_bot_user_id(%AiBotRecipe{} = bot_recipe) do
+    case bot_recipe.bot_config do
+      %AiBotConfig{bot_user_id: id} when not is_nil(id) ->
+        id
+
+      _ ->
+        case bot_recipe.recipe_order do
+          %RecipeOrder{bot_user_id: id} when not is_nil(id) -> id
+          _ -> nil
+        end
+    end
   end
 
   def list_untracked_bot_recipes(bot_user_id) do

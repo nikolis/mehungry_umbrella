@@ -5,7 +5,7 @@ defmodule Mehungry.Food.NutrientCalculationTest do
   hand-built structs (no DB); `validate_ingredient_units/1` is exercised against
   the database via `DataCase`.
 
-  See `docs/nutrition_calculation.md`.
+  See `docs/food/nutrition_calculation.md`.
   """
   use Mehungry.DataCase, async: false
 

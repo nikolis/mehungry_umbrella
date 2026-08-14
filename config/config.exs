@@ -51,7 +51,7 @@ config :swoosh, :api_client, false
 # USDA FoodData Central rate-management tunables. Consumed by the shared
 # `FoodData.Usda.FdcHttp` client and `ObanWorkers.IngredientReconciliationWorker`
 # to pace lookups and snooze the reconciliation job when the FDC quota runs low
-# or a 429 is returned. See docs/food.md / the worker moduledoc.
+# or a 429 is returned. See docs/food/food.md / the worker moduledoc.
 config :mehungry,
   # Delay (ms) between successive USDA lookups within a reconciliation batch.
   fdc_pace_ms: 250,

@@ -22,7 +22,7 @@ server), and it becomes a batch worker for measurement extraction.
 
 ## 1. Where it sits in the science pipeline
 
-The full science pipeline (see `docs/scientific_pipeline.md`) runs on the server in
+The full science pipeline (see `docs/science/scientific_pipeline.md`) runs on the server in
 ordered stages. Measurement extraction is the **last discovery stage**, and it is the
 only one that runs **off-box** in this app:
 
@@ -149,7 +149,7 @@ is actually present, so dev/test keep their defaults.)
 |---|---|---|---|
 | `LOCAL_AI_SERVER_URL` | `:mehungry_local_ai, :server_base_url` | `http://localhost:4000` | Base URL of the Mehungry server to pull from / post to. |
 | `LOCAL_AI_API_TOKEN` | `:mehungry_local_ai, :api_token` | *(none)* | Bearer token — **must equal the server's** `LOCAL_AI_API_TOKEN`. |
-| *(none)* | `:mehungry_local_ai, :start_qa` | `true` | Whether to load the Bumblebee model at boot. Set `false` in tests to use the rule-based path and skip the download. |
+| *(none)* | `:mehungry_local_ai, :start_qa` | `false` | Whether to **auto-load** the Bumblebee model at app boot. Off by default so the umbrella/dev/tests never download or compile the model; `mix local_ai.extract` loads it on demand via `MehungryLocalAi.QA.ensure_started/0` regardless. Set `true` only on a dedicated GPU box that should have the serving up at boot. |
 | *(none)* | `:mehungry_local_ai, :pmc_http_adapter` | `&HTTPoison.get/3` | HTTP seam for NCBI calls; stubbed in tests. |
 
 Example:
@@ -186,6 +186,9 @@ Options:
 - `--offset M` — starting offset (default `0`). Note: because posting a fetch result
   removes a study from `pending`, the set naturally advances; `--offset` is accepted for
   forward-compatibility but is currently a no-op server-side.
+- `--no-qa` — skip loading the Bumblebee model and run the rule-based extractor only.
+  The QA serving is otherwise loaded once at the start of the run (slow on first run —
+  downloads the model), since it does not auto-start at app boot.
 
 Typical output:
 
@@ -265,7 +268,7 @@ Persist findings; the server fans each one across `species_ids_for_study/1` and 
 |---|---|
 | `Mix.Tasks.LocalAi.Extract` | CLI entry point; boots the app + drives the pull → fetch → extract → push loop. |
 | `MehungryLocalAi.Application` | Supervises `MehungryLocalAi.QA`. |
-| `MehungryLocalAi.QA` | Bumblebee extractive-QA `Nx.Serving` (`distilbert-squad`, `compiler: EXLA`). Gated by `:start_qa`. |
+| `MehungryLocalAi.QA` | Bumblebee extractive-QA `Nx.Serving` (`distilbert-squad`, `compiler: EXLA`). Not started at boot unless `:start_qa` is `true`; `ensure_started/0` loads it on demand (used by `mix local_ai.extract`). |
 | `MehungryLocalAi.PMC` | Orchestrates one study's fetch: resolve PMCID → efetch → parse → outcome. |
 | `MehungryLocalAi.PMC.Client` | NCBI HTTP (idconv + `efetch db=pmc`), with a `Process.sleep` pace and the `:pmc_http_adapter` seam. |
 | `MehungryLocalAi.PMC.Parser` | JATS XML → plain text (regex tag-strip + entity decode, capped at 200k chars). |
@@ -319,5 +322,5 @@ REST endpoints are tested in
 | `pending fetch failed … — stopping` | Server URL/network/token problem; the loop exits gracefully. Check `LOCAL_AI_SERVER_URL`. |
 | Frequent `rate_limited` on NCBI | The client already paces requests; set an NCBI API key upstream or lower `--limit` if you're also crawling at the same time. |
 
-See also: `docs/measurement_extraction.md` (the split + endpoint reference) and
-`docs/scientific_pipeline.md` (the whole discover → curate → advise flow).
+See also: `docs/ai/measurement_extraction.md` (the split + endpoint reference) and
+`docs/science/scientific_pipeline.md` (the whole discover → curate → advise flow).
