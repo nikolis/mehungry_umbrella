@@ -34,15 +34,55 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   Returns {:ok, attrs_map, []} or {:error, reason}.
   """
   def run(description, opts \\ []) do
-    Process.put(__MODULE__, nil)
-
     brief = build_brief(opts)
     context = %{gram_unit: fetch_gram_unit(), brief: brief}
 
+    sys_prompt = system_prompt(brief)
+    user_prompt = "Create a recipe from this description: #{description}"
+
+    Logger.debug("""
+    [RecipeAgent] Prompt for this run:
+    ── SYSTEM ──────────────────────────────────────────────
+    #{sys_prompt}
+    ── USER ────────────────────────────────────────────────
+    #{user_prompt}
+    ────────────────────────────────────────────────────────
+    """)
+
+    case run_once(sys_prompt, user_prompt, context) do
+      {:error, :no_submit} ->
+        # A persona-heavy run can end in prose without ever calling submit_recipe.
+        # Retry once with a firmer, unmissable instruction before giving up.
+        Logger.warning(
+          "[RecipeAgent] Run ended without submitting a recipe; retrying once with a firmer submit instruction"
+        )
+
+        firm_prompt =
+          user_prompt <>
+            "\n\nIMPORTANT: You MUST finish by calling the submit_recipe tool with the " <>
+            "complete recipe. Do NOT reply with prose or a description of the recipe — " <>
+            "the ONLY way to complete this task is to call submit_recipe."
+
+        case run_once(sys_prompt, firm_prompt, context) do
+          {:error, :no_submit} -> {:error, "Agent completed without submitting a recipe"}
+          other -> other
+        end
+
+      other ->
+        other
+    end
+  end
+
+  # One agent pass. Returns the submitted `{:ok, attrs, unmatched}` (smuggled out
+  # of the submit_recipe handler via the process dictionary), `{:error, :no_submit}`
+  # when the loop ended without submitting, or the agent's own `{:error, reason}`.
+  defp run_once(sys_prompt, user_prompt, context) do
+    Process.put(__MODULE__, nil)
+
     result =
       Agent.run(
-        system_prompt(brief),
-        "Create a recipe from this description: #{description}",
+        sys_prompt,
+        user_prompt,
         tool_defs(),
         &handle_tool/3,
         context,
@@ -54,7 +94,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     case result do
       {:ok, _text} ->
         case Process.get(__MODULE__) do
-          nil -> {:error, "Agent completed without submitting a recipe"}
+          nil -> {:error, :no_submit}
           saved -> saved
         end
 

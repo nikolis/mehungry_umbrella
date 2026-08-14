@@ -1,4 +1,18 @@
 <div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
+<div
+  :if={@ai_generating}
+  class="fixed inset-0 z-[60] bg-ink/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
+>
+  <svg class="animate-spin h-8 w-8 text-paprika" fill="none" viewBox="0 0 24 24">
+    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+    <path
+      class="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+    />
+  </svg>
+  <p class="text-parchment text-sm">Generating your recipe…</p>
+</div>
 <div class="create-recipe-page min-h-screen bg-ink text-parchment">
   <div class="container mx-auto px-4 py-4">
     <!-- Header -->
@@ -135,6 +149,38 @@
             <% end %>
           </div>
         </div>
+
+        <.modal
+          :if={@show_ai_ingredients_modal}
+          id="ai-ingredients-modal"
+          show
+          on_cancel={JS.push("ai_cancel_generate")}
+        >
+          <h2 class="text-lg font-display font-medium text-parchment mb-1">
+            Use your ingredients?
+          </h2>
+          <p class="text-parchment-dim text-sm mb-4">
+            You've already added: {Enum.join(@ai_existing_ingredients, ", ")}. Should the AI build the recipe around them?
+          </p>
+          <div class="flex gap-3">
+            <button
+              type="button"
+              phx-click="ai_generate_confirm"
+              phx-value-keep="true"
+              class="px-5 py-2 rounded-lg bg-paprika text-parchment font-semibold text-sm hover:bg-paprika/90 transition-colors"
+            >
+              Yes, use them
+            </button>
+            <button
+              type="button"
+              phx-click="ai_generate_confirm"
+              phx-value-keep="false"
+              class="px-5 py-2 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim font-semibold text-sm transition-colors"
+            >
+              No, start fresh
+            </button>
+          </div>
+        </.modal>
 
         <.live_component
           module={MehungryWeb.RecipeFormComponent}

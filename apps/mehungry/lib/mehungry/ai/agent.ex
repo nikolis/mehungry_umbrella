@@ -23,7 +23,7 @@ defmodule Mehungry.AI.Agent do
 
       handler = fn
         "search_ingredient", %{"name" => name}, _ctx ->
-          Mehungry.Food.search_ingredient_alt(name) |> Enum.take(5) |> Enum.map(& &1.name)
+          Mehungry.Food.IngredientSearch.search(name) |> Enum.take(5) |> Enum.map(& &1.name)
         _, _, _ ->
           %{error: "unknown tool"}
       end

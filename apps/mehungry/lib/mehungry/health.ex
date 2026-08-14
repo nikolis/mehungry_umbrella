@@ -308,17 +308,25 @@ defmodule Mehungry.Health do
   Returns `%{encouraged: [ingredient], discouraged: [ingredient]}`.
   """
   def ingredient_guidance_for_condition(condition_id) do
-    encouraged =
-      condition_id
-      |> ingredients_for_condition("encourage")
-      |> Enum.map(& &1.ingredient)
-      |> Enum.uniq_by(& &1.id)
-
     discouraged =
       @discouraged_recommendations
       |> Enum.flat_map(&ingredients_for_condition(condition_id, &1))
       |> Enum.map(& &1.ingredient)
       |> Enum.uniq_by(& &1.id)
+
+    discouraged_ids = MapSet.new(discouraged, & &1.id)
+
+    # An ingredient whose species carries both an "encourage" and an
+    # "avoid"/"limit"/"caution" compound would otherwise land in both lists and
+    # be seeded as primary AND avoid — a "build around X" / "never use X"
+    # contradiction that makes the avoid-guard reject every recipe. Keep such
+    # contested ingredients as discouraged only.
+    encouraged =
+      condition_id
+      |> ingredients_for_condition("encourage")
+      |> Enum.map(& &1.ingredient)
+      |> Enum.uniq_by(& &1.id)
+      |> Enum.reject(&MapSet.member?(discouraged_ids, &1.id))
 
     %{encouraged: encouraged, discouraged: discouraged}
   end
@@ -401,24 +409,66 @@ defmodule Mehungry.Health do
   def recipes_for_conditions_query([]), do: from(r in Recipe, where: not is_nil(r.image_url))
 
   def recipes_for_conditions_query(condition_ids) do
+    encouraged_ids =
+      from(e in subquery(encouraged_recipe_ids_query(condition_ids)), select: e.recipe_id)
+
     from(r in Recipe,
       where: not is_nil(r.image_url),
+      where: r.id in subquery(encouraged_ids)
+    )
+  end
+
+  @doc """
+  Builds (but does not run) the browse `Recipe` query **prioritized** for the
+  given conditions: the full image-filtered catalog, ordered so recipes
+  encouraged for the conditions (via `recipes_for_conditions_query/1`'s chain)
+  sort to the top, then everything else, each group by `inserted_at`/`id`. This
+  is the "prioritize, don't restrict" ordering behind the browse condition
+  filter — nothing is hidden, encouraged recipes just lead.
+
+  Because the priority is a computed expression (not a plain column), the
+  resulting query is **offset-paginated** via `Food.list_recipes_page/4` rather
+  than the cursor paginator. It stays composable with the full-text search
+  (`Mehungry.Search.RecipeSearch.run/2`), which appends a rank `order_by` after
+  this one, so the priority stays primary and relevance breaks ties.
+
+  Returns the plain image-filtered `Recipe` query when `condition_ids` is empty.
+  """
+  def recipes_prioritized_for_conditions_query([]),
+    do: from(r in Recipe, where: not is_nil(r.image_url), order_by: [asc: r.inserted_at, asc: r.id])
+
+  def recipes_prioritized_for_conditions_query(condition_ids) do
+    encouraged_ids = encouraged_recipe_ids_query(condition_ids)
+
+    from(r in Recipe,
+      left_join: e in subquery(encouraged_ids),
+      on: e.recipe_id == r.id,
+      where: not is_nil(r.image_url),
+      # `e.recipe_id IS NULL` is false (0) for encouraged recipes, true (1) for
+      # the rest → ascending puts encouraged first.
+      order_by: [asc: fragment("? IS NULL", e.recipe_id), asc: r.inserted_at, asc: r.id]
+    )
+  end
+
+  # Distinct recipe-id subquery for recipes whose ingredients carry a compound
+  # the given conditions recommend to "encourage". Shared by the "encouraged"
+  # (`recipes_for_conditions_query/1`) and "prioritized" browse queries so both
+  # agree on the same set; `distinct` keeps the prioritized query's left join
+  # from multiplying recipe rows.
+  defp encouraged_recipe_ids_query(condition_ids) do
+    from(ri in RecipeIngredient,
+      join: ff in FoundementalFood,
+      on: ff.ingredient_id == ri.ingredient_id,
+      join: scr in SpeciesCompoundRelationship,
+      on: scr.foundemental_species_id == ff.foundemental_species_id,
+      join: rec in CompoundRecommendation,
+      on: rec.compound_id == scr.compound_id,
       where:
-        r.id in subquery(
-          from(ri in RecipeIngredient,
-            join: ff in FoundementalFood,
-            on: ff.ingredient_id == ri.ingredient_id,
-            join: scr in SpeciesCompoundRelationship,
-            on: scr.foundemental_species_id == ff.foundemental_species_id,
-            join: rec in CompoundRecommendation,
-            on: rec.compound_id == scr.compound_id,
-            where:
-              rec.condition_id in ^condition_ids and
-                rec.recommendation == "encourage" and
-                scr.relationship_type != "absent",
-            select: ri.recipe_id
-          )
-        )
+        rec.condition_id in ^condition_ids and
+          rec.recommendation == "encourage" and
+          scr.relationship_type != "absent",
+      distinct: true,
+      select: %{recipe_id: ri.recipe_id}
     )
   end
 

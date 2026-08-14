@@ -421,6 +421,22 @@ defmodule Mehungry.Food.Recipes do
     {Localization.localize_recipes(results, language_name), cursor_after}
   end
 
+  @doc """
+  Offset-paginated listing for an already-ordered `Recipe` query. Unlike the
+  cursor-based `list_recipes/3`, this preserves the query's own `order_by`
+  (e.g. a condition-prioritized ordering that can't be expressed as cursor
+  fields), returning page `page` (1-based) of `per_page` localized recipes.
+  """
+  def list_recipes_page(%Ecto.Query{} = query, page, per_page, language_name \\ nil)
+      when is_integer(page) and page >= 1 and is_integer(per_page) and per_page >= 1 do
+    offset = (page - 1) * per_page
+
+    from(r in query, limit: ^per_page, offset: ^offset)
+    |> Repo.all()
+    |> Repo.preload([:user])
+    |> Localization.localize_recipes(language_name)
+  end
+
   def list_user_recipes(user_id) do
     query = from recipe in Recipe, where: recipe.user_id == ^user_id
     results = Repo.all(query)

@@ -17,15 +17,10 @@ defmodule Mehungry.Food.IngredientSearchBrandedTest do
     %{plain: plain, branded: branded}
   end
 
+  # User-facing name search goes through IngredientSearch.search (the single
+  # user path); it must drop Branded rows. Admin search can still reach them.
   test "IngredientSearch.search/1 excludes Branded rows", %{plain: plain, branded: branded} do
     ids = "zzqsalt" |> IngredientSearch.search() |> Enum.map(& &1.id)
-
-    assert plain.id in ids
-    refute branded.id in ids
-  end
-
-  test "user search_ingredient_alt excludes Branded", %{plain: plain, branded: branded} do
-    ids = "zzqsalt" |> Food.search_ingredient_alt() |> Enum.map(& &1.id)
 
     assert plain.id in ids
     refute branded.id in ids

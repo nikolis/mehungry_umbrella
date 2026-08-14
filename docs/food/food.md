@@ -21,7 +21,7 @@ directly, but every public function stays reachable through the facade.
 |---|---|---|
 | **Recipes** | `Food.Recipes` — CRUD, cached `get_recipe!/1,2`, hashtag extraction, nutrition enrichment on save, Oban enqueues | [`recipes.md`](recipes.md) |
 | **Ingredients** | `Food.Ingredients` — CRUD + lookups (id/name/slug/translation), private user ingredients, portions & nutrients | [`ingredients.md`](ingredients.md) |
-| **Ingredient search** | `Food.IngredientSearch` (ranked prefix+fuzzy) · `Food.IngredientQueries` (FTS/trigram/admin/translated) | [`ingredients.md`](ingredients.md#search) |
+| **Ingredient search** | `Food.IngredientSearch` (ranked prefix+fuzzy) · `Food.IngredientQueries` (FTS/trigram/admin/translated) | [`ingredient_search.md`](ingredient_search.md) |
 | **Measurement units & portions** | `Food.Measurements` — units, translations, the ingredient↔unit portion bridge, unit reconciliation | [`measurement_units_and_portions.md`](measurement_units_and_portions.md) |
 | **Nutrients (data model)** | `Food.Nutrients` + `Food.Nutrition.*` helpers (merger, hierarchy, interactions, mapper) | [`nutrients.md`](nutrients.md) |
 | **Nutrition calculation** | `Food.Nutrition.NutrientCalculation`, `RecipeUtils`, `RecipePutNutrientsWorker` | [`nutrition_calculation.md`](nutrition_calculation.md) |

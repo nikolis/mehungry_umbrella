@@ -6,13 +6,12 @@ defmodule Mehungry.Food.IngredientQueries do
   """
 
   import Ecto.Query, warn: false
-  require Logger
 
   alias Mehungry.Repo
 
   alias Mehungry.Food.{
-    Categories,
     Ingredient,
+    IngredientScope,
     IngredientTranslation,
     Recipe,
     RecipeHashtag,
@@ -117,40 +116,15 @@ defmodule Mehungry.Food.IngredientQueries do
     {results, cursor_after}
   end
 
-  def get_second_layer_foods_ids() do
-    category_titles = [
-      "Meals, Entrees, and Side Dishes",
-      "Restaurant Foods",
-      "Baked Products",
-      "Snacks",
-      "Sweets",
-      "Baby Foods",
-      "Breakfast Cereals",
-      "Beverages"
-    ]
+  # Second-layer category resolution lives in the shared `IngredientScope` so both
+  # search paths hide the same categories; re-exported here to keep the
+  # `Mehungry.Food` facade delegate and the in-module caller working.
+  defdelegate get_second_layer_foods_ids(), to: IngredientScope, as: :second_layer_category_ids
 
-    Enum.map(
-      category_titles,
-      fn x ->
-        category = Categories.get_category_by_name(x)
-
-        if(is_nil(category)) do
-          nil
-        else
-          category.id
-        end
-      end
-    )
-    |> Enum.filter(fn x -> !is_nil(x) end)
-  end
-
-  def maybe_filter_by_classes(query, nil), do: query
-  def maybe_filter_by_classes(query, []), do: query
-  def maybe_filter_by_classes(query, [""]), do: query
-
-  def maybe_filter_by_classes(query, classes) do
-    from(i in query, where: i.food_class in ^classes)
-  end
+  # USDA food-class filtering lives in the shared `IngredientScope` so both search
+  # paths agree; re-exported here to keep the `Mehungry.Food` facade delegate and
+  # the unqualified in-module callers working.
+  defdelegate maybe_filter_by_classes(query, classes), to: IngredientScope
 
   def maybe_filter_by_data_types(query, nil), do: query
   def maybe_filter_by_data_types(query, []), do: query
@@ -182,18 +156,6 @@ defmodule Mehungry.Food.IngredientQueries do
     |> Repo.all()
   end
 
-  @doc """
-  Excludes USDA "Branded" ingredients from a query. The `IS DISTINCT FROM` form
-  keeps rows with a NULL `food_class` and matches the partial-index predicate
-  on the `ingredients_*_active_idx` indexes, so the planner can use them.
-
-  Applied to user-facing search entry points only — admin builders skip it so
-  admins can still filter to `Branded`.
-  """
-  def exclude_branded(query) do
-    from(i in query, where: fragment("? IS DISTINCT FROM 'Branded'", i.food_class))
-  end
-
   def search_ingredient_search(search_term, classes \\ [], owner_id \\ nil) do
     secondary_ids = get_second_layer_foods_ids()
 
@@ -212,45 +174,9 @@ defmodule Mehungry.Food.IngredientQueries do
         )
       }
     )
-    |> exclude_secondary_categories(secondary_ids, owner_id)
-    |> filter_by_owner(owner_id)
+    |> IngredientScope.exclude_secondary_categories(secondary_ids, owner_id)
+    |> IngredientScope.filter_by_owner(owner_id)
     |> maybe_filter_by_classes(classes)
-  end
-
-  # Hides the composite/prepared USDA "second layer" categories (Snacks,
-  # Beverages, Baked Products, …) from ingredient search — but never the
-  # viewer's own private ingredients. A user deliberately picks the category
-  # for an ingredient they created, so it must stay searchable for them
-  # regardless of which category that is.
-  defp exclude_secondary_categories(query, [], _owner_id), do: query
-
-  defp exclude_secondary_categories(query, secondary_ids, nil) do
-    from(i in query, where: i.category_id not in ^secondary_ids)
-  end
-
-  defp exclude_secondary_categories(query, secondary_ids, owner_id) do
-    ids = visible_owner_ids(owner_id)
-
-    from(i in query,
-      where: i.category_id not in ^secondary_ids or i.user_id in ^ids
-    )
-  end
-
-  # Visibility filter: global rows (user_id IS NULL) always; plus the viewer's
-  # own private rows and their friends' when an id is given. Branches on nil
-  # (Ecto forbids `== nil`).
-  defp filter_by_owner(query, nil), do: from(i in query, where: is_nil(i.user_id))
-
-  defp filter_by_owner(query, owner_id) do
-    ids = visible_owner_ids(owner_id)
-    from(i in query, where: is_nil(i.user_id) or i.user_id in ^ids)
-  end
-
-  # The set of user ids whose private ingredients `owner_id` may see: themselves
-  # plus their friends (blanket sharing via `Mehungry.Friends`), mirroring
-  # `Mehungry.Food.IngredientSearch`.
-  defp visible_owner_ids(owner_id) do
-    [owner_id | Mehungry.Friends.friend_ids(owner_id)]
   end
 
   def search_ingredient_alt_admin(search_term, classes \\ [], data_types \\ []) do
@@ -259,17 +185,6 @@ defmodule Mehungry.Food.IngredientQueries do
       |> maybe_filter_by_data_types(data_types)
 
     {query, pagenate_query(query), count_search_results(query)}
-  end
-
-  def search_ingredient_alt(search_term, classes \\ [], owner_id \\ nil) do
-    result =
-      search_ingredient_search(search_term, classes, owner_id)
-      |> exclude_branded()
-      |> Repo.all()
-
-    Logger.info("Search ingredient: " <> search_term <> " resulted: " <> inspect(result))
-
-    result
   end
 
   def search_ingredient_admin(search_term, classes \\ [], data_types \\ []) do
@@ -355,37 +270,5 @@ defmodule Mehungry.Food.IngredientQueries do
       |> maybe_filter_by_classes(classes)
 
     query
-  end
-
-  def search_ingredient3(search_term) do
-    ilike_search_term = "%#{search_term}%"
-
-    query =
-      from(
-        ingredient in Ingredient,
-        where:
-          ingredient.category_id != 212 and ingredient.category_id != 197 and
-            ingredient.category_id != 192 and ingredient.category_id != 193 and
-            ingredient.category_id != 194 and ilike(ingredient.name, ^ilike_search_term),
-        order_by: {:desc, fragment("? % ?", ^search_term, ingredient.name)}
-      )
-
-    Repo.all(query)
-  end
-
-  def search_ingredient2(search_term) do
-    search_term = "%" <> search_term <> "%"
-
-    query =
-      from ingredient in Ingredient,
-        where:
-          ingredient.category_id != 212 and ingredient.category_id != 197 and
-            ingredient.category_id != 192 and ingredient.category_id != 193 and
-            ingredient.category_id != 194 and ilike(ingredient.name, ^search_term),
-        limit: 20
-
-    Repo.all(query)
-    |> Repo.preload([:category, :measurement_unit])
-    |> Enum.sort_by(fn x -> String.length(x.name) end)
   end
 end

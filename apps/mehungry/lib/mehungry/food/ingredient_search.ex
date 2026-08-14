@@ -49,6 +49,7 @@ defmodule Mehungry.Food.IngredientSearch do
   import Ecto.Query
   alias Mehungry.Repo
   alias Mehungry.Food.Ingredient
+  alias Mehungry.Food.IngredientScope
   alias Mehungry.Food.IngredientTranslation
 
   # ═════════════════════════════════════════════════════════════════════════
@@ -73,14 +74,22 @@ defmodule Mehungry.Food.IngredientSearch do
     if normalized == "" do
       []
     else
-      prefix_results = run_prefix_query(normalized, search_term, classes, owner_id)
+      # Resolved once and shared by both queries so the second-layer category
+      # lookups (8 category reads) don't run twice when the fuzzy fallback fires.
+      secondary_ids = IngredientScope.second_layer_category_ids()
+
+      prefix_results =
+        run_prefix_query(normalized, search_term, classes, owner_id, secondary_ids)
 
       if length(prefix_results) >= @prefix_sufficient do
         prefix_results
       else
         needed = @max_results - length(prefix_results)
         exclude_ids = Enum.map(prefix_results, & &1.id)
-        fuzzy_results = run_fuzzy_query(normalized, exclude_ids, needed, classes, owner_id)
+
+        fuzzy_results =
+          run_fuzzy_query(normalized, exclude_ids, needed, classes, owner_id, secondary_ids)
+
         prefix_results ++ fuzzy_results
       end
     end
@@ -106,7 +115,6 @@ defmodule Mehungry.Food.IngredientSearch do
         join: i in Ingredient,
         on: i.id == t.ingredient_id,
         where: t.language_name == ^language_name,
-        where: i.category_id not in ^get_excluded_category_ids(),
         # Keep Branded ingredients out of user-facing translated search too, for
         # consistency with search/2 (translation indexes themselves stay full).
         where: fragment("? IS DISTINCT FROM 'Branded'", i.food_class),
@@ -156,17 +164,27 @@ defmodule Mehungry.Food.IngredientSearch do
             )
       end
 
-    # Visibility: global rows always, plus the viewer's own private rows and
-    # those of their friends. The ingredient is the second binding here; branch
-    # on nil (Ecto forbids `== nil`).
+    # Visibility + second-layer category hiding. Both mirror `IngredientScope`,
+    # inlined here because the ingredient is the *second* binding (`[_t, i]`) so
+    # the scope helpers (which assume the first binding) don't apply. A viewer's
+    # own private ingredient is never hidden by the category filter.
+    secondary_ids = IngredientScope.second_layer_category_ids()
+
     base =
       case owner_id do
         nil ->
-          from([_t, i] in base, where: is_nil(i.user_id))
+          from([_t, i] in base,
+            where: is_nil(i.user_id),
+            where: i.category_id not in ^secondary_ids
+          )
 
         id ->
-          ids = visible_owner_ids(id)
-          from([_t, i] in base, where: is_nil(i.user_id) or i.user_id in ^ids)
+          ids = IngredientScope.visible_owner_ids(id)
+
+          from([_t, i] in base,
+            where: is_nil(i.user_id) or i.user_id in ^ids,
+            where: i.category_id not in ^secondary_ids or i.user_id in ^ids
+          )
       end
 
     Repo.all(base)
@@ -179,14 +197,13 @@ defmodule Mehungry.Food.IngredientSearch do
   # Prefix search on the normalized search_name column with full ranking.
   # For multi-word terms the WHERE is broadened to include all-words-any-order
   # matches in addition to the strict phrase prefix.
-  defp run_prefix_query(normalized, original_term, classes, owner_id) do
+  defp run_prefix_query(normalized, original_term, classes, owner_id, secondary_ids) do
     search_words = String.split(normalized, " ")
 
     where_clause = build_where(normalized, search_words)
 
     from(i in Ingredient,
       where: not is_nil(i.search_name),
-      where: i.category_id not in ^get_excluded_category_ids(),
       # Exclude USDA "Branded" rows from user search. The IS DISTINCT FROM form
       # matches the partial-index predicate (ingredients_*_active_idx) so the
       # planner can use those smaller indexes; NULL food_class rows are kept.
@@ -218,8 +235,9 @@ defmodule Mehungry.Food.IngredientSearch do
       ],
       limit: @max_results
     )
-    |> filter_by_owner(owner_id)
-    |> maybe_filter_by_classes(classes)
+    |> IngredientScope.exclude_secondary_categories(secondary_ids, owner_id)
+    |> IngredientScope.filter_by_owner(owner_id)
+    |> IngredientScope.maybe_filter_by_classes(classes)
     |> Repo.all()
   end
 
@@ -245,11 +263,10 @@ defmodule Mehungry.Food.IngredientSearch do
   # Trigram word-similarity fallback.
   # Uses the GIN trigram index on `name` (created by ingredient_gin_trgm migration)
   # to efficiently find approximate matches when the prefix search comes up short.
-  defp run_fuzzy_query(normalized, exclude_ids, limit, classes, owner_id) do
+  defp run_fuzzy_query(normalized, exclude_ids, limit, classes, owner_id, secondary_ids) do
     base =
       from i in Ingredient,
         where: not is_nil(i.search_name),
-        where: i.category_id not in ^get_excluded_category_ids(),
         # Exclude Branded rows; matches the partial GIN trgm index predicate.
         where: fragment("? IS DISTINCT FROM 'Branded'", i.food_class),
         where:
@@ -287,40 +304,9 @@ defmodule Mehungry.Food.IngredientSearch do
       end
 
     base
-    |> filter_by_owner(owner_id)
-    |> maybe_filter_by_classes(classes)
+    |> IngredientScope.exclude_secondary_categories(secondary_ids, owner_id)
+    |> IngredientScope.filter_by_owner(owner_id)
+    |> IngredientScope.maybe_filter_by_classes(classes)
     |> Repo.all()
   end
-
-  # Visibility filter: global rows (user_id IS NULL) are always returned; when a
-  # viewer id is given, their own private rows and their friends' are included
-  # too. Branches on nil because Ecto forbids `== nil` comparisons.
-  defp filter_by_owner(query, nil), do: from(i in query, where: is_nil(i.user_id))
-
-  defp filter_by_owner(query, owner_id) do
-    ids = visible_owner_ids(owner_id)
-    from(i in query, where: is_nil(i.user_id) or i.user_id in ^ids)
-  end
-
-  # The set of user ids whose private ingredients `owner_id` may see: themselves
-  # plus their friends (blanket sharing via `Mehungry.Friends`).
-  defp visible_owner_ids(owner_id) do
-    [owner_id | Mehungry.Friends.friend_ids(owner_id)]
-  end
-
-  # ═════════════════════════════════════════════════════════════════════════
-  # Helpers
-  # ═════════════════════════════════════════════════════════════════════════
-
-  defp maybe_filter_by_classes(query, nil), do: query
-  defp maybe_filter_by_classes(query, []), do: query
-  defp maybe_filter_by_classes(query, [""]), do: query
-
-  defp maybe_filter_by_classes(query, classes) do
-    from i in query, where: i.food_class in ^classes
-  end
-
-  # Returns category IDs to exclude from all searches.
-  # Extend this to filter out secondary/derived food categories.
-  defp get_excluded_category_ids, do: []
 end

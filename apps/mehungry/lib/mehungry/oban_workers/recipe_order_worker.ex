@@ -19,7 +19,7 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
   alias Mehungry.{Food, Accounts, Repo}
   alias Mehungry.AI.Bot
   alias Mehungry.AI.Bot.AiBotConfig
-  alias Mehungry.AI.Agents.RecipeAgent
+  alias Mehungry.AI.Bot.RecipeGeneration
   alias Mehungry.AI.Bot.Notifier
 
   @impl Oban.Worker
@@ -42,16 +42,52 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
     bot_user = Accounts.get_user!(order.bot_user_id)
     setup = order.recipe_setup
     brief_opts = Bot.build_brief(setup) || []
-    avoid_ids = setup_avoid_ids(setup)
     meal_types = meal_type_sequence(order)
+
+    # Live condition guidance resolved from the setup's linked health condition at
+    # generation time — the same source the daily worker uses. Encouraged names
+    # steer the prompt; discouraged ids join the hard avoid-guard alongside any
+    # "avoid" seed ingredients. This makes the condition take effect even when the
+    # setup was never "populated from condition" into seed ingredients.
+    %{encouraged: encouraged, discouraged: discouraged} =
+      RecipeGeneration.condition_guidance(setup)
+
+    encouraged_names = RecipeGeneration.encouraged_names(encouraged)
+    discouraged_names = RecipeGeneration.ingredient_names(discouraged)
+
+    avoid_ids =
+      MapSet.union(RecipeGeneration.setup_avoid_ids(setup), MapSet.new(discouraged, & &1.id))
+
+    avoid_names =
+      Map.merge(RecipeGeneration.setup_avoid_names(setup), Map.new(discouraged, &{&1.id, &1.name}))
+
+    Logger.debug("""
+    [RecipeOrderWorker] Starting order ##{order.id} (#{order.quantity} recipe(s))
+      setup:       #{(setup && setup.name) || "—"}
+      persona:     #{(setup && setup.persona && setup.persona.name) || "none"}
+      condition:   #{(setup && setup.condition && setup.condition.name) || "none"}
+      encouraged:  #{length(encouraged)}
+      avoid ids:   #{MapSet.size(avoid_ids)}
+      meal seq:    #{Enum.join(meal_types, ", ")}
+    """)
+
+    if setup && setup.condition_id && encouraged == [] and discouraged == [] do
+      Logger.warning(
+        "[RecipeOrderWorker] Order ##{order.id}: setup '#{setup.name}' is linked to a " <>
+          "condition but it yields no encouraged or discouraged ingredients (no compounds " <>
+          "wired to curated species) — the condition will have no effect on generation."
+      )
+    end
 
     generated =
       meal_types
       |> Enum.with_index()
       |> Task.async_stream(
         fn {meal_type, _idx} ->
-          description = order_description(setup, meal_type)
-          generate_one(order, bot_user, meal_type, description, brief_opts, avoid_ids)
+          description =
+            order_description(setup, meal_type, encouraged_names, discouraged_names)
+
+          generate_one(order, bot_user, meal_type, description, brief_opts, avoid_ids, avoid_names)
         end,
         timeout: 180_000,
         on_timeout: :kill_task,
@@ -75,8 +111,14 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
     :ok
   end
 
-  defp generate_one(order, bot_user, meal_type, description, brief_opts, avoid_ids) do
-    case generate_attrs(description, brief_opts, avoid_ids) do
+  defp generate_one(order, bot_user, meal_type, description, brief_opts, avoid_ids, avoid_names) do
+    result =
+      RecipeGeneration.generate(description, avoid_ids, brief_opts,
+        avoid_names: avoid_names,
+        label: meal_type
+      )
+
+    case result do
       {:ok, attrs} ->
         attrs = attrs |> Map.put("user_id", bot_user.id) |> Map.put("language_name", "En")
         persist(order, meal_type, attrs)
@@ -117,44 +159,6 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
     end
   end
 
-  # Same hard-exclude guard as the daily worker: retry when the recipe carries a
-  # seed "avoid" ingredient.
-  @max_attempts 3
-
-  defp generate_attrs(description, brief_opts, avoid_ids) do
-    if MapSet.size(avoid_ids) > 0 do
-      generate_avoiding(description, brief_opts, avoid_ids, @max_attempts)
-    else
-      case RecipeAgent.run(description, brief_opts) do
-        {:ok, attrs, _} -> {:ok, attrs}
-        {:error, reason} -> {:error, reason}
-      end
-    end
-  end
-
-  defp generate_avoiding(_description, _brief_opts, _avoid_ids, 0) do
-    {:error, "could not generate a recipe free of avoided ingredients"}
-  end
-
-  defp generate_avoiding(description, brief_opts, avoid_ids, attempts_left) do
-    case RecipeAgent.run(description, brief_opts) do
-      {:ok, attrs, _} ->
-        offending =
-          (attrs["recipe_ingredients"] || [])
-          |> Enum.map(fn ri -> ri["ingredient_id"] || ri[:ingredient_id] end)
-          |> Enum.filter(&MapSet.member?(avoid_ids, &1))
-
-        if offending == [] do
-          {:ok, attrs}
-        else
-          generate_avoiding(description, brief_opts, avoid_ids, attempts_left - 1)
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
   # A nil order meal_type cycles across all meal types; a set one repeats.
   defp meal_type_sequence(order) do
     meal_types = AiBotConfig.meal_types()
@@ -170,41 +174,21 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
     end
   end
 
-  defp setup_avoid_ids(nil), do: MapSet.new()
+  # The persona/origin/story steering comes through brief_opts. A condition's
+  # benefit is carried concretely by its encouraged/discouraged ingredient
+  # names — NOT by asking the model to reason about the disease. So the
+  # description names the dish class, the culinary diet direction (e.g.
+  # "Mediterranean diet"), and those ingredient lists, but never the condition.
+  defp order_description(setup, meal_type, encouraged_names, discouraged_names) do
+    meal_hint = RecipeGeneration.meal_prompt(meal_type)
 
-  defp setup_avoid_ids(setup) do
-    (setup.seed_ingredients || [])
-    |> Enum.filter(&(&1.role == "avoid"))
-    |> Enum.map(& &1.ingredient_id)
-    |> MapSet.new()
-  end
+    base =
+      case setup && setup.diet_direction do
+        direction when is_binary(direction) and direction != "" -> "A #{direction} #{meal_hint}."
+        _ -> "A #{meal_hint}."
+      end
 
-  # Meal-type hints so the agent always has a concrete dish class to anchor on —
-  # a too-vague prompt makes it flail without ever submitting a recipe. Mirrors
-  # DailyRecipeGenerationWorker's @meal_prompts.
-  @meal_prompts %{
-    "breakfast" =>
-      "light and nourishing breakfast recipe — suitable for the morning, could be egg-based, yogurt-based, or grain-based",
-    "morning_snack" => "healthy mid-morning snack recipe — light, easy to prepare, energizing",
-    "lunch" =>
-      "satisfying main lunch recipe — a full meal with vegetables, protein, and grains or legumes",
-    "afternoon_snack" =>
-      "light afternoon snack recipe — sweet or savory, easy to prepare quickly",
-    "dinner" => "hearty dinner recipe — a warming complete evening meal with rich flavors"
-  }
-
-  # The persona/origin/story steering comes through brief_opts, and any
-  # condition's benefit is carried concretely by the setup's encouraged
-  # (primary) and avoided seed ingredients — NOT by asking the model to reason
-  # about the disease. So this description only names the dish class and the
-  # culinary diet direction (e.g. "Mediterranean diet"), never the condition.
-  defp order_description(setup, meal_type) do
-    meal_hint = Map.get(@meal_prompts, meal_type, "recipe")
-
-    case setup && setup.diet_direction do
-      direction when is_binary(direction) and direction != "" -> "A #{direction} #{meal_hint}."
-      _ -> "A #{meal_hint}."
-    end
+    RecipeGeneration.append_guidance(base, encouraged_names, discouraged_names)
   end
 
   defp broadcast_pending_update do

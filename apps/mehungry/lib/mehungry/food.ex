@@ -66,6 +66,7 @@ defmodule Mehungry.Food do
   defdelegate list_recipes(query_or_cursor), to: Recipes
   defdelegate list_recipes(query_or_cursor, language_or_query), to: Recipes
   defdelegate list_recipes(cursor_after, query, language_name), to: Recipes
+  defdelegate list_recipes_page(query, page, per_page, language_name \\ nil), to: Recipes
   defdelegate list_user_recipes(user_id), to: Recipes
   defdelegate list_user_recipes_for_selection(user_id), to: Recipes
 
@@ -127,9 +128,6 @@ defmodule Mehungry.Food do
   defdelegate search_ingredient_alt_admin(search_term, classes \\ [], data_types \\ []),
     to: IngredientQueries
 
-  defdelegate search_ingredient_alt(search_term, classes \\ [], owner_id \\ nil),
-    to: IngredientQueries
-
   defdelegate search_ingredient_admin(search_term, classes \\ [], data_types \\ []),
     to: IngredientQueries
 
@@ -143,8 +141,6 @@ defmodule Mehungry.Food do
 
   defdelegate search_ingredient(search_term, classes \\ []), to: IngredientQueries
   defdelegate search_ingredient_query(search_term, classes \\ []), to: IngredientQueries
-  defdelegate search_ingredient3(search_term), to: IngredientQueries
-  defdelegate search_ingredient2(search_term), to: IngredientQueries
 
   # ── Nutrients ──────────────────────────────────────────────────────────
 

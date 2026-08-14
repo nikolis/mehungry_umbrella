@@ -36,8 +36,31 @@ With **no** setup/persona the behavior is unchanged (generic expert-chef voice,
 social polish, hashtags).
 
 The `avoid` role feeds the same post-generation hard-exclude guard used for
-condition-discouraged ingredients (`DailyRecipeGenerationWorker.generate_avoiding/5`
-and the equivalent in `RecipeOrderWorker`).
+condition-discouraged ingredients — both workers share it via
+`AI.Bot.RecipeGeneration.generate/4` (the guard, meal-prompt hints, condition
+guidance resolution, and encouraged/discouraged prompt injection all live there,
+so the daily and order paths can't drift).
+
+When a setup carries a **condition**, both workers now resolve its
+encouraged/discouraged ingredients **live** at generation time
+(`RecipeGeneration.condition_guidance/1` → `Health.ingredient_guidance_for_condition/1`)
+— the encouraged names are injected into the description and the discouraged ids
+join the avoid-guard. This no longer depends on the setup having been "populated
+from condition" into seed ingredients.
+
+A condition can imply a large ingredient set, so the two lists are bounded before
+they reach the prompt: **discouraged** is a soft hint capped at 50 (the *full* set
+is still enforced by the id-guard regardless), while **encouraged** is a small
+**random sample of 12** (`RecipeGeneration.encouraged_names/1`) — sampled rather
+than taking the alphabetical head, so "build around these" stays focused per
+recipe and varies across a batch.
+
+> **Log-line change:** the avoid-guard's retry/exhaustion warnings are now emitted
+> by the shared module, so they carry the `[RecipeGeneration] <label>` prefix
+> (label = the meal type, e.g. `[RecipeGeneration] breakfast: …`) instead of the
+> old per-worker `[DailyRecipeGenerationWorker]` / `[RecipeOrderWorker]` tags. The
+> meal-type label still identifies the source; grep on `RecipeGeneration` for guard
+> activity across both workers.
 
 ## Recipe Orders (ad-hoc batches)
 
@@ -60,6 +83,7 @@ by `Mehungry.ObanWorkers.RecipeOrderWorker` (queue `:ai_agents`):
 - Schemas: `apps/mehungry/lib/mehungry/ai/bot/{persona,recipe_setup,recipe_setup_ingredient,recipe_order}.ex`
 - Context: `Mehungry.AI.Bot` — persona/setup/order CRUD, `build_brief/1`, `populate_setup_ingredients_from_condition/1`, `get_context_for_date/2`
 - Generation: `Mehungry.AI.Agents.RecipeAgent` (`run/2`, `system_prompt/1`, `polish_prose/2`)
+- Shared generation helpers: `Mehungry.AI.Bot.RecipeGeneration` (meal prompts, live condition guidance, avoid-guard) — used by both workers
 - Workers: `DailyRecipeGenerationWorker`, `RecipeOrderWorker`
 - Admin UI: `MehungryWeb.AiBotLive.{Personas,Setups,Orders}` + the setup picker / per-week / per-day override in `AiBotLive.Config`
 - Seeds: predefined personas in `apps/mehungry/priv/repo/seeds.exs`
