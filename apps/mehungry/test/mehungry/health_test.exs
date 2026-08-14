@@ -219,6 +219,58 @@ defmodule Mehungry.HealthTest do
     end
   end
 
+  describe "ingredient_guidance_for_condition/1 — encouraged/discouraged de-overlap" do
+    test "an ingredient that is both encouraged and discouraged stays discouraged only" do
+      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones", category: "renal"})
+      {:ok, citrate} = Food.upsert_compound(%{name: "Citrate", compound_type: "other"})
+      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+
+      # Same condition: encourage Citrate, avoid Oxalate.
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, citrate.id, %{
+          recommendation: "encourage",
+          source: "guideline"
+        })
+
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, oxalate.id, %{
+          recommendation: "avoid",
+          source: "guideline"
+        })
+
+      # Spinach's species carries BOTH compounds → it is encouraged (citrate) AND
+      # discouraged (oxalate). Without de-overlap it would be seeded primary+avoid.
+      spinach = ingredient_fixture(%{name: "spinach"})
+      contested = species_fact(spinach, "Spinach", "Spinacia oleracea", oxalate)
+
+      {:ok, _} =
+        Food.upsert_species_relationship(%{
+          foundemental_species_id: contested.id,
+          compound_id: citrate.id,
+          relationship_type: "high_in",
+          source: "literature",
+          confidence: 0.9
+        })
+
+      # Lemon carries only Citrate → a clean encouraged ingredient.
+      lemon = ingredient_fixture(%{name: "lemon"})
+      species_fact(lemon, "Lemon", "Citrus limon", citrate)
+
+      %{encouraged: encouraged, discouraged: discouraged} =
+        Health.ingredient_guidance_for_condition(kidney.id)
+
+      encouraged_ids = Enum.map(encouraged, & &1.id)
+      discouraged_ids = Enum.map(discouraged, & &1.id)
+
+      # Contested ingredient is discouraged only, never encouraged.
+      assert spinach.id in discouraged_ids
+      refute spinach.id in encouraged_ids
+
+      # A non-contested encouraged ingredient still comes through.
+      assert lemon.id in encouraged_ids
+    end
+  end
+
   describe "flags_for_recipes/2 — recipe badges" do
     test "flags a recipe whose ingredient carries a compound recommended for an opted-in condition" do
       {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones", category: "renal"})

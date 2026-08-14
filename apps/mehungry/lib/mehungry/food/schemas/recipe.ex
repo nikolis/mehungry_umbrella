@@ -26,6 +26,9 @@ defmodule Mehungry.Food.Recipe do
     field :title, :string
     field :difficulty, :integer, default: 1
     field :nutrients, :map, default: %{}
+    # pgvector column created by 20260622000001_add_pgvector_and_recipe_embeddings.exs;
+    # written by RecipeEmbeddingWorker, read by Search.RecipeVectorSearch.
+    field :embedding, Pgvector.Ecto.Vector
     # Populated at display time by MehungryWeb.RecipeFlags for opted-in users;
     # each entry is %{condition, compound, recommendation, severity}.
     field :condition_flags, {:array, :map}, virtual: true, default: []

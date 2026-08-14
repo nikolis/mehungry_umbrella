@@ -105,10 +105,10 @@ defmodule Mehungry.UserIngredientsTest do
     end
   end
 
-  # The calendar ingredient picker searches via search_ingredient_alt, which
+  # The user-facing ingredient pickers search via IngredientSearch.search, which
   # hides the composite/prepared "second layer" USDA categories. A user's own
   # ingredient must never be hidden by that filter, whatever category they pick.
-  describe "search_ingredient_alt/3 second-layer categories" do
+  describe "IngredientSearch.search/3 second-layer categories" do
     setup do
       # Build a genuine second-layer category directly (the shared category_fixture
       # dedups on a mis-spelled key and can't reliably create a named category).
@@ -138,7 +138,7 @@ defmodule Mehungry.UserIngredientsTest do
         })
 
       owner_ids =
-        "Zonkbread" |> Food.search_ingredient_alt([], owner.id) |> Enum.map(& &1.id)
+        "Zonkbread" |> IngredientSearch.search([], owner.id) |> Enum.map(& &1.id)
 
       assert private.id in owner_ids
     end
@@ -158,9 +158,9 @@ defmodule Mehungry.UserIngredientsTest do
       owner = user_fixture()
 
       owner_ids =
-        "Zonkloaf" |> Food.search_ingredient_alt([], owner.id) |> Enum.map(& &1.id)
+        "Zonkloaf" |> IngredientSearch.search([], owner.id) |> Enum.map(& &1.id)
 
-      anon_ids = "Zonkloaf" |> Food.search_ingredient_alt([], nil) |> Enum.map(& &1.id)
+      anon_ids = "Zonkloaf" |> IngredientSearch.search([], nil) |> Enum.map(& &1.id)
 
       refute global.id in owner_ids
       refute global.id in anon_ids

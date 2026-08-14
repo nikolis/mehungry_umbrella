@@ -14,24 +14,13 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
 
   alias Mehungry.{Food, Health, Posts, Accounts, Repo}
   alias Mehungry.AI.Bot
-  alias Mehungry.AI.Agents.RecipeAgent
+  alias Mehungry.AI.Bot.RecipeGeneration
   alias Mehungry.AI.Bot.Notifier
   alias Mehungry.ObanWorkers.RecipePublishWorker
 
   # How many times to re-ask the agent when a condition-setup recipe comes back
   # carrying a discouraged ingredient before giving up on that meal.
   @max_condition_attempts 3
-
-  @meal_prompts %{
-    "breakfast" =>
-      "light and nourishing breakfast recipe — suitable for the morning, could be egg-based, yogurt-based, or grain-based",
-    "morning_snack" => "healthy mid-morning snack recipe — light, easy to prepare, energizing",
-    "lunch" =>
-      "satisfying main lunch recipe — a full meal with vegetables, protein, and grains or legumes",
-    "afternoon_snack" =>
-      "light afternoon snack recipe — sweet or savory, easy to prepare quickly",
-    "dinner" => "hearty dinner recipe — a warming complete evening meal with rich flavors"
-  }
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
@@ -163,11 +152,19 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
     %{encouraged: encouraged, discouraged: discouraged} =
       Health.ingredient_guidance_for_condition(condition_id)
 
+    if encouraged == [] and discouraged == [] do
+      Logger.warning(
+        "[DailyRecipeGenerationWorker] Condition ##{condition_id} yielded no encouraged or " <>
+          "discouraged ingredients (no compounds wired to curated species) — the condition " <>
+          "will have no effect on this #{meal_type} generation."
+      )
+    end
+
     context = Bot.get_context_for_date(config, target_date)
     brief_opts = Bot.build_brief(context.setup) || []
 
     discouraged_ids =
-      MapSet.union(MapSet.new(discouraged, & &1.id), setup_avoid_ids(context.setup))
+      MapSet.union(MapSet.new(discouraged, & &1.id), RecipeGeneration.setup_avoid_ids(context.setup))
 
     description = build_condition_description(config, context, meal_type, encouraged, discouraged)
 
@@ -175,72 +172,28 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
       "[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date} (condition setup): #{description}"
     )
 
-    generate_avoiding(description, discouraged_ids, meal_type, @max_condition_attempts, brief_opts)
+    RecipeGeneration.generate(description, discouraged_ids, brief_opts,
+      attempts: @max_condition_attempts,
+      label: meal_type
+    )
   end
 
   defp resolve_recipe_attrs(config, meal_type, target_date) do
     context = Bot.get_context_for_date(config, target_date)
     brief_opts = Bot.build_brief(context.setup) || []
-    avoid_ids = setup_avoid_ids(context.setup)
+    avoid_ids = RecipeGeneration.setup_avoid_ids(context.setup)
+    avoid_names = RecipeGeneration.setup_avoid_names(context.setup)
     description = build_description(context, meal_type)
 
     Logger.info(
       "[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date}: #{description}"
     )
 
-    if MapSet.size(avoid_ids) > 0 do
-      generate_avoiding(description, avoid_ids, meal_type, @max_condition_attempts, brief_opts)
-    else
-      case RecipeAgent.run(description, brief_opts) do
-        {:ok, attrs, _} -> {:ok, attrs}
-        {:error, reason} -> {:error, reason}
-      end
-    end
-  end
-
-  # Ingredient ids the setup's seed list marks as "avoid" — enforced by the
-  # same post-generation guard used for condition-discouraged ingredients.
-  defp setup_avoid_ids(nil), do: MapSet.new()
-
-  defp setup_avoid_ids(setup) do
-    (setup.seed_ingredients || [])
-    |> Enum.filter(&(&1.role == "avoid"))
-    |> Enum.map(& &1.ingredient_id)
-    |> MapSet.new()
-  end
-
-  # Run the agent, rejecting and retrying any recipe that contains a discouraged
-  # ingredient. The prompt asks the agent to avoid them; this is the hard guard.
-  defp generate_avoiding(_description, _discouraged_ids, meal_type, 0, _brief_opts) do
-    {:error, "#{meal_type}: could not generate a recipe free of discouraged ingredients"}
-  end
-
-  defp generate_avoiding(description, discouraged_ids, meal_type, attempts_left, brief_opts) do
-    case RecipeAgent.run(description, brief_opts) do
-      {:ok, attrs, _} ->
-        case offending_ingredient_ids(attrs, discouraged_ids) do
-          [] ->
-            {:ok, attrs}
-
-          offending ->
-            Logger.warning(
-              "[DailyRecipeGenerationWorker] #{meal_type} recipe contained discouraged " <>
-                "ingredient_ids #{inspect(offending)}, retrying (#{attempts_left - 1} left)"
-            )
-
-            generate_avoiding(description, discouraged_ids, meal_type, attempts_left - 1, brief_opts)
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp offending_ingredient_ids(attrs, discouraged_ids) do
-    (attrs["recipe_ingredients"] || [])
-    |> Enum.map(fn ri -> ri["ingredient_id"] || ri[:ingredient_id] end)
-    |> Enum.filter(&MapSet.member?(discouraged_ids, &1))
-    |> Enum.uniq()
+    RecipeGeneration.generate(description, avoid_ids, brief_opts,
+      attempts: @max_condition_attempts,
+      avoid_names: avoid_names,
+      label: meal_type
+    )
   end
 
   defp schedule_publish_jobs(config, bot_recipe, target_date, meal_type) do
@@ -266,58 +219,31 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
   end
 
   defp build_description(%{month_theme: mt, week_theme: wt, day_focus: df}, meal_type) do
-    meal_hint = Map.get(@meal_prompts, meal_type, "recipe")
+    meal_hint = RecipeGeneration.meal_prompt(meal_type)
     base = "A #{mt} themed #{meal_hint}"
     base = if wt, do: base <> ", following the '#{wt}' week theme", else: base
     base = if df, do: base <> ", with today's focus: #{df}", else: base
     base <> ". The recipe must fit the #{mt} style in ingredients and spirit."
   end
 
-  # Cap the ingredient lists injected into the prompt so it stays bounded; the
-  # full discouraged set is still enforced by the post-generation id check.
-  @ingredient_name_limit 50
-
   defp build_condition_description(config, context, meal_type, encouraged, discouraged) do
-    meal_hint = Map.get(@meal_prompts, meal_type, "recipe")
-    encouraged_names = ingredient_names(encouraged)
-    discouraged_names = ingredient_names(discouraged)
+    meal_hint = RecipeGeneration.meal_prompt(meal_type)
+    encouraged_names = RecipeGeneration.encouraged_names(encouraged)
+    discouraged_names = RecipeGeneration.ingredient_names(discouraged)
 
     # The condition's benefit is carried concretely by the encouraged/avoided
-    # ingredient lists below — never by asking the model to be "beneficial for
-    # a disease". So the base names only the dish class + culinary direction.
-    base = "A #{config.diet_direction} #{meal_hint}."
-
+    # ingredient lists — never by asking the model to be "beneficial for a
+    # disease". So the base names only the dish class + culinary direction.
     base =
-      if encouraged_names != "",
-        do:
-          base <>
-            " Build the recipe around these encouraged ingredients wherever they fit naturally: " <>
-            "#{encouraged_names}.",
-        else: base
-
-    base =
-      if discouraged_names != "",
-        do:
-          base <>
-            " The recipe MUST NOT contain any of these ingredients under any circumstance: " <>
-            "#{discouraged_names}.",
-        else: base
+      "A #{config.diet_direction} #{meal_hint}."
+      |> RecipeGeneration.append_guidance(encouraged_names, discouraged_names)
 
     base =
       if context.week_theme,
         do: base <> " Follow the '#{context.week_theme}' week theme.",
         else: base
 
-    base = if context.day_focus, do: base <> " Today's focus: #{context.day_focus}.", else: base
-    base
-  end
-
-  defp ingredient_names(ingredients) do
-    ingredients
-    |> Enum.map(& &1.name)
-    |> Enum.reject(&(&1 in [nil, ""]))
-    |> Enum.take(@ingredient_name_limit)
-    |> Enum.join(", ")
+    if context.day_focus, do: base <> " Today's focus: #{context.day_focus}.", else: base
   end
 
   defp broadcast_pending_update do

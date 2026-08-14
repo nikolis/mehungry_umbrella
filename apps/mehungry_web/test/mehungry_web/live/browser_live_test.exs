@@ -361,6 +361,30 @@ defmodule MehungryWeb.BrowserLiveTest do
       refute bad.id in query_ids
     end
 
+    test "the prioritized query sorts encouraged recipes ahead of the rest", %{
+      conn: _conn,
+      user: user
+    } do
+      # `other` is created *first* (older + lower id), so without prioritization
+      # it would sort ahead of `good`; the prioritized ordering must still float
+      # the encouraged recipe to the top.
+      other = recipe_fixture(user, %{title: "Unrelated Beef Stew"})
+      {kidney, good} = seed_encouraged_recipe(user)
+
+      ordered =
+        [kidney.id]
+        |> Health.recipes_prioritized_for_conditions_query()
+        |> Food.list_recipes_page(1, 10)
+        |> Enum.map(& &1.id)
+
+      # Nothing is hidden — both recipes are present…
+      assert good.id in ordered
+      assert other.id in ordered
+      # …but the encouraged recipe leads.
+      assert Enum.find_index(ordered, &(&1 == good.id)) <
+               Enum.find_index(ordered, &(&1 == other.id))
+    end
+
     test "applying a matching condition keeps the encouraged recipe", %{conn: conn, user: user} do
       complete_onboarding(user)
       {kidney, good} = seed_encouraged_recipe(user)
@@ -373,13 +397,34 @@ defmodule MehungryWeb.BrowserLiveTest do
       assert view |> element("#recipes_container") |> render() =~ good.title
     end
 
-    test "applying a condition with no matching recipes empties the list", %{
+    test "applying a filter keeps the whole catalog visible (prioritized, not restricted)", %{
       conn: conn,
       user: user
     } do
       complete_onboarding(user)
-      # Encouraged recipe exists, but we filter by a *different* condition whose
-      # encouraged compound is present in no recipe → the list should go empty.
+      {kidney, good} = seed_encouraged_recipe(user)
+      other = recipe_fixture(user, %{title: "Unrelated Beef Stew"})
+
+      {:ok, view, _html} = live(conn, ~p"/browse")
+
+      render_hook(view, "toggle_condition", %{"id" => to_string(kidney.id)})
+      render_hook(view, "apply_condition_filter", %{})
+
+      # One continuous, prioritized list: both the encouraged recipe and the rest
+      # are present (the encouraged one leads — see the query-level ordering test).
+      container = view |> element("#recipes_container") |> render()
+      assert container =~ good.title
+      assert container =~ other.title
+    end
+
+    test "applying a condition with no encouraged recipes still shows the rest", %{
+      conn: conn,
+      user: user
+    } do
+      complete_onboarding(user)
+      # Encouraged recipe exists for kidney, but we filter by a *different*
+      # condition no recipe is encouraged for. Prioritization keeps all recipes
+      # visible — the list is not emptied.
       {_kidney, good} = seed_encouraged_recipe(user)
 
       {:ok, diabetes} = Health.create_condition(%{name: "Diabetes", category: "endocrine"})
@@ -397,33 +442,30 @@ defmodule MehungryWeb.BrowserLiveTest do
       render_hook(view, "toggle_condition", %{"id" => to_string(diabetes.id)})
       html = render_hook(view, "apply_condition_filter", %{})
 
-      assert html =~ "We were not able to find a recipe"
-      refute html =~ good.title
+      refute html =~ "We were not able to find a recipe"
+      assert html =~ good.title
     end
 
-    test "clearing the filter restores the full list", %{conn: conn, user: user} do
+    test "condition badges appear only once the matching filter is applied", %{
+      conn: conn,
+      user: user
+    } do
       complete_onboarding(user)
-      good = recipe_fixture(user, %{title: "Restored Recipe"})
-
-      {:ok, diabetes} = Health.create_condition(%{name: "Diabetes", category: "endocrine"})
-      {:ok, fiber} = Food.upsert_compound(%{name: "Fiber", compound_type: "other"})
-
-      {:ok, _} =
-        Health.add_recommendation(diabetes.id, fiber.id, %{
-          recommendation: "encourage",
-          source: "guideline"
-        })
+      {kidney, good} = seed_encouraged_recipe(user)
 
       {:ok, view, _html} = live(conn, ~p"/browse")
 
-      # Filter to a no-match condition → empty list.
-      render_hook(view, "toggle_condition", %{"id" => to_string(diabetes.id)})
-      html = render_hook(view, "apply_condition_filter", %{})
-      assert html =~ "We were not able to find a recipe"
+      # No filter selected → the card carries no condition badge. (The badge is
+      # the only place the condition name appears inside the recipe list.)
+      refute view |> element("#recipes_container") |> render() =~ "(#{kidney.name})"
 
-      # Clearing brings the recipes back.
-      html = render_hook(view, "clear_conditions", %{})
-      assert html =~ good.title
+      # Selecting and applying the condition stamps the badge onto the card.
+      render_hook(view, "toggle_condition", %{"id" => to_string(kidney.id)})
+      render_hook(view, "apply_condition_filter", %{})
+
+      container = view |> element("#recipes_container") |> render()
+      assert container =~ good.title
+      assert container =~ "encourage (#{kidney.name})"
     end
   end
 

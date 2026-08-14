@@ -124,10 +124,22 @@ defmodule MehungryWeb.AiBotLive.Setups do
   def handle_event("populate_from_condition", _params, socket) do
     {:ok, count} = Bot.populate_setup_ingredients_from_condition(socket.assigns.setup)
 
-    {:noreply,
-     socket
-     |> assign(:seed_ingredients, Bot.list_setup_ingredients(socket.assigns.setup.id))
-     |> put_flash(:info, "Added #{count} ingredient(s) from the condition.")}
+    socket = assign(socket, :seed_ingredients, Bot.list_setup_ingredients(socket.assigns.setup.id))
+
+    socket =
+      if count == 0 do
+        put_flash(
+          socket,
+          :error,
+          "No ingredients derived from this condition — it has no encouraged/discouraged " <>
+            "compounds wired to curated species yet, so the condition will have no effect on " <>
+            "generation. Add seed ingredients manually or wire up the condition's compounds first."
+        )
+      else
+        put_flash(socket, :info, "Added #{count} ingredient(s) from the condition.")
+      end
+
+    {:noreply, socket}
   end
 
   @impl true

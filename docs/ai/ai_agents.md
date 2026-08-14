@@ -441,11 +441,11 @@ end
 
 `RecipeImageWorker` runs it, uploads the JPEG to S3, and writes `image_url` back to the recipe — skipping recipes that already have an image.
 
-**`EmbeddingClient`** — OpenAI `text-embedding-3-small`, 1536-dim vectors stored in `recipes.embedding` (pgvector). `RecipeEmbeddingWorker` builds the text to embed from title + description + cuisine + ingredient names + hashtags, and is triggered on recipe create/update (plus a `enqueue_all/0` backfill callable from iex). Full breakdown, including a write-path bug that currently defeats the whole subsystem, in **Recipe Embeddings & Semantic Search** below.
+**`EmbeddingClient`** — OpenAI `text-embedding-3-small`, 1536-dim vectors stored in `recipes.embedding` (pgvector). `RecipeEmbeddingWorker` builds the text to embed from title + description + cuisine + ingredient names + hashtags, and is triggered on recipe create/update (plus a `enqueue_all/0` backfill callable from iex). Full breakdown in **Recipe Embeddings & Semantic Search** below.
 
 ## Recipe Embeddings & Semantic Search
 
-Three pieces make up the write side of semantic search: an OpenAI HTTP client, the Oban worker that writes embeddings, and the pgvector column they're written to. The read side (`RecipeVectorSearch`) was already introduced under `MealPlanAgent` above — this section is the full picture, including a schema gap that currently makes the write side fail on every run.
+Three pieces make up the write side of semantic search: an OpenAI HTTP client, the Oban worker that writes embeddings, and the pgvector column they're written to. The read side (`RecipeVectorSearch`) was already introduced under `MealPlanAgent` above — this section is the full picture. It also documents a schema gap that used to make the write side fail on every run (now fixed — see below).
 
 ### `AI.EmbeddingClient` (`ai/embedding_client.ex`)
 
@@ -526,9 +526,11 @@ def enqueue_all do
 end
 ```
 
-### `recipes.embedding` — the pgvector column, and a bug in how it's written
+### `recipes.embedding` — the pgvector column, and the schema-field bug that used to break writes
 
-The column comes purely from a migration, not from an Ecto schema field:
+> **Fixed 2026-08-14.** `Mehungry.Food.Recipe` now declares `field :embedding, Pgvector.Ecto.Vector` (`food/schemas/recipe.ex`). The write path below no longer raises. This section is kept as the history + rationale; the one remaining action is a **backfill** (existing rows are still `NULL` — see the note at the end).
+
+The column comes purely from a migration:
 
 ```elixir
 # 20260622000001_add_pgvector_and_recipe_embeddings.exs
@@ -541,41 +543,36 @@ end
 execute("CREATE INDEX ON recipes USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)")
 ```
 
-`Mehungry.Food.Recipe` (`food/recipe.ex`) has **no corresponding `field :embedding, ...`** in its `schema "recipes" do` block — checked directly against the running app:
+For a long time `Mehungry.Food.Recipe` had **no corresponding `field :embedding, ...`** in its `schema "recipes" do` block. That gap didn't break every query that touches the column — it broke exactly one, and it was the one that mattered:
 
-```elixir
-iex> Mehungry.Food.Recipe.__schema__(:fields)
-[:id, :author, ..., :steps, :inserted_at, :updated_at]   # :embedding is not in this list
-```
-
-That gap doesn't break every query that touches the column — it breaks exactly one, and it's the one that matters. Verified against the dev database for each usage in the codebase:
-
-| Usage | Where | Validated against schema fields? | Result |
+| Usage | Where | Validated against schema fields? | Result (before fix) |
 |---|---|---|---|
 | `where: is_nil(r.embedding)` | `enqueue_all/0`, `Food.count_recipes_missing_embeddings/0` | No — bare column refs in `where`/`order_by` compile straight to SQL | Works |
 | `order_by: fragment("embedding <=> ?", ...)` | `RecipeVectorSearch.vector_search/4` | No — raw fragment | Works |
-| `Repo.update_all(query, set: [embedding: ...])` | `RecipeEmbeddingWorker.perform/1` | **Yes** — `update_all`'s `set:` keys are checked against `__schema__(:fields)` | **Raises** |
+| `Repo.update_all(query, set: [embedding: ...])` | `RecipeEmbeddingWorker.perform/1` | **Yes** — `update_all`'s `set:` keys are checked against `__schema__(:fields)` | **Raised** |
 
 ```
 ** (Ecto.QueryError) field `embedding` in `update` does not exist in schema Mehungry.Food.Recipe in query
 ```
 
-So the one write path that actually stores an embedding — `RecipeEmbeddingWorker.perform/1` — raises every single time it runs. Oban retries it up to `max_attempts: 3`, then marks the job `discarded`. The `Logger.info("... embedding stored ...")` line right after that `Repo.update_all` call has never fired in this codebase. Every recipe's `embedding` column is `NULL`, permanently — clicking "Backfill Recipe Embeddings" in the maintenance page enqueues jobs that all fail, and the "missing embeddings" counter never moves.
+So the one write path that actually stores an embedding — `RecipeEmbeddingWorker.perform/1` — raised every single time it ran. Oban retried it up to `max_attempts: 3`, then marked the job `discarded`. The `Logger.info("... embedding stored ...")` line right after that `Repo.update_all` call never fired. Every recipe's `embedding` column stayed `NULL` — clicking "Backfill Recipe Embeddings" in the maintenance page enqueued jobs that all failed, and the "missing embeddings" counter never moved.
 
-**Downstream effect on search:** `RecipeVectorSearch.search/2` only falls back to full-text search when `EmbeddingClient.embed/1` itself errors (e.g. OpenAI is unreachable). Given a working OpenAI call, it embeds the *query* successfully, then runs `where: not is_nil(r.embedding)` against a table where that's true for zero rows, and returns `[]` — silently, without falling back. So `MealPlanAgent`'s `search_catalog` tool (and any other caller of `RecipeVectorSearch`) isn't "degraded to full-text search" today; it gets nothing back from the vector path at all, and the agent only sees whatever it can do with an empty catalog search.
+**Downstream effect on search (before the fix):** `RecipeVectorSearch.search/2` only falls back to full-text search when `EmbeddingClient.embed/1` itself errors (e.g. OpenAI is unreachable). Given a working OpenAI call, it embedded the *query* successfully, then ran `where: not is_nil(r.embedding)` against a table where that was true for zero rows, and returned `[]` — silently, without falling back. So `MealPlanAgent`'s `search_catalog` tool (and any other caller of `RecipeVectorSearch`) wasn't "degraded to full-text search"; it got nothing back from the vector path at all.
 
-**The fix is one line** — declare the field the migration already created a column for:
+**The fix was one line** — declare the field the migration already created a column for:
 
 ```elixir
 field :embedding, Pgvector.Ecto.Vector
 ```
 
-(`Pgvector.Ecto.Vector` is the Ecto type the `pgvector` hex package — already a dependency, `mix.exs:69` — ships for exactly this case.) Once declared, `Repo.update_all`'s `set:` validation passes and the whole pipeline, write and read, starts working as originally designed.
+(`Pgvector.Ecto.Vector` is the Ecto type the `pgvector` hex package — already a dependency, `mix.exs:69` — ships for exactly this case; `canonical_food.ex` already used the same field.) With it declared, `Repo.update_all`'s `set:` validation passes and the pipeline, write and read, works as originally designed.
+
+> **Side effect of declaring the field:** `:embedding` is now loaded on every full-struct Recipe query (1536 floats each), including the LRU `:recipes_cache`. `canonical_food` accepts the same cost. If it ever shows up in hot-path read latency, scope it out with `select`/`Ecto.Query.exclude` on the cached reads.
 
 ### How the three pieces fit together
 
 ```
-WRITE PATH (currently broken)
+WRITE PATH (fixed 2026-08-14)
   Food.create_recipe/1 or update_recipe/2
         │
         ▼
@@ -585,12 +582,12 @@ WRITE PATH (currently broken)
   perform/1: preload ingredients+hashtags → build_text/1 → EmbeddingClient.embed/1 (OpenAI)
         │
         ▼
-  Repo.update_all(set: [embedding: ...])   ✗ Ecto.QueryError — :embedding not in schema
+  Repo.update_all(set: [embedding: ...])   ✓ persists now that :embedding is a schema field
         │
         ▼
-  Oban retries ×3, then discards the job.  recipes.embedding stays NULL for every row.
+  recipes.embedding set for that row.  (Older rows stay NULL until a backfill runs.)
 
-READ PATH (silently starved by the write-path bug)
+READ PATH
   MealPlanAgent "search_catalog" tool  /  any RecipeVectorSearch.search/2 caller
         │
         ▼
@@ -600,10 +597,10 @@ READ PATH (silently starved by the write-path bug)
   where: not is_nil(r.embedding), order_by: cosine distance
         │
         ▼
-  []   — no row has ever had an embedding written
+  rows within a newly-embedded catalog  (empty until the backfill fills historical rows)
 ```
 
-Both call sites pay the OpenAI bill (query embedding on every search, recipe embedding on every create/update) while the feature itself has never worked end-to-end in this codebase — the write half fails before it can persist anything, and the read half has no non-null rows to find.
+**Remaining action — backfill.** The fix only makes *new* create/update writes succeed. Every recipe that predates the fix still has `embedding IS NULL`. Run the "Backfill Recipe Embeddings" button in the maintenance page (`RecipeEmbeddingWorker.enqueue_all/0`) once to embed the existing catalog; until then vector search only sees recipes touched since 2026-08-14.
 
 ## Fallback Strategy
 
@@ -653,7 +650,7 @@ Agent and image work runs on the `ai_agents` queue with **concurrency 2** — de
 | `RecipeEmbeddingWorker`¹ | default | 3 | Recipe create/update + backfill | `EmbeddingClient` |
 | `IngredientTranslationWorker` | default | 3 | New ingredients; self-chaining | `IngredientTranslator` |
 
-¹ Currently fails on every run and exhausts its retries — see **Recipe Embeddings & Semantic Search** above.
+¹ Persists correctly since the `field :embedding` fix (2026-08-14); a one-time backfill is still needed for pre-fix rows — see **Recipe Embeddings & Semantic Search** above.
 
 Two patterns worth copying:
 
@@ -755,4 +752,4 @@ Found while checking this document against the code. Roughly ordered by expected
 
 15. **Small doc/code drifts.** `RecipeImageWorker`'s moduledoc says "DALL-E 3" but the code uses `gpt-image-1`. The gram measurement unit is looked up by the name `"grammar"` — worth a comment at the lookup site (or a data migration to rename it) so nobody "fixes" the unit name and breaks every agent run.
 
-16. **Bug, not just an improvement: `recipes.embedding` has no matching schema field, so `RecipeEmbeddingWorker` can never persist an embedding.** `Mehungry.Food.Recipe` doesn't declare `field :embedding, ...`, and `Repo.update_all(..., set: [embedding: ...])` validates its `set:` keys against the schema (unlike the `where:`/`order_by:` uses elsewhere, which don't) — so every run raises `Ecto.QueryError: field \`embedding\` in \`update\` does not exist in schema`, verified live against the dev DB. Oban retries 3× and discards. The result: `recipes.embedding` is `NULL` for every row, semantic search always returns `[]` from the vector branch, and the OpenAI calls on both the write and read side are currently pure cost with no product effect. One-line fix: add `field :embedding, Pgvector.Ecto.Vector` to `Recipe`. Full writeup in **Recipe Embeddings & Semantic Search**.
+16. **✅ Fixed (2026-08-14): `recipes.embedding` had no matching schema field, so `RecipeEmbeddingWorker` could never persist an embedding.** `Mehungry.Food.Recipe` didn't declare `field :embedding, ...`, and `Repo.update_all(..., set: [embedding: ...])` validates its `set:` keys against the schema (unlike the `where:`/`order_by:` uses elsewhere, which don't) — so every run raised `Ecto.QueryError: field \`embedding\` in \`update\` does not exist in schema`. Oban retried 3× and discarded; `recipes.embedding` stayed `NULL` for every row and semantic search always returned `[]` from the vector branch. Fixed by adding `field :embedding, Pgvector.Ecto.Vector` to `Recipe`. **Remaining follow-up:** run `RecipeEmbeddingWorker.enqueue_all/0` (maintenance page) once to backfill pre-fix rows. Full writeup in **Recipe Embeddings & Semantic Search**.

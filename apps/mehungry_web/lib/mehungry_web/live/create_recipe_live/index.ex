@@ -31,6 +31,9 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:ai_generating, false)
      |> assign(:ai_task_ref, nil)
      |> assign(:ai_unmatched, [])
+     |> assign(:show_ai_ingredients_modal, false)
+     |> assign(:ai_pending_prompt, nil)
+     |> assign(:ai_existing_ingredients, [])
      |> assign(
        :ai_quota_exceeded,
        Mehungry.Subscriptions.check_quota(user.id, "recipe_generation") ==
@@ -87,14 +90,17 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def handle_event("ai_generate", %{"prompt" => prompt}, socket) when prompt != "" do
     case Mehungry.Subscriptions.check_quota(socket.assigns.user.id, "recipe_generation") do
       :ok ->
-        task = Task.async(fn -> Mehungry.AI.RecipeGenerator.run(prompt) end)
+        case existing_ingredient_names(socket) do
+          [] ->
+            start_ai_generation(socket, prompt)
 
-        {:noreply,
-         socket
-         |> assign(:ai_generating, true)
-         |> assign(:ai_task_ref, task.ref)
-         |> assign(:ai_unmatched, [])
-         |> assign(:ai_quota_exceeded, false)}
+          names ->
+            {:noreply,
+             socket
+             |> assign(:show_ai_ingredients_modal, true)
+             |> assign(:ai_pending_prompt, prompt)
+             |> assign(:ai_existing_ingredients, names)}
+        end
 
       {:error, :quota_exceeded} ->
         {:noreply, assign(socket, :ai_quota_exceeded, true)}
@@ -103,6 +109,29 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   def handle_event("ai_generate", _params, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("ai_generate_confirm", %{"keep" => keep}, socket) do
+    prompt = socket.assigns.ai_pending_prompt || ""
+    names = socket.assigns.ai_existing_ingredients
+
+    description =
+      if keep == "true" and names != [] do
+        prompt <>
+          "\n\nTry to use these ingredients I already have where they fit naturally: " <>
+          Enum.join(names, ", ") <> "."
+      else
+        prompt
+      end
+
+    start_ai_generation(socket, description)
+  end
+
+  def handle_event("ai_cancel_generate", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:show_ai_ingredients_modal, false)
+     |> assign(:ai_pending_prompt, nil)}
   end
 
   def handle_event("spoonacular_search", %{"query" => query}, socket) when query != "" do
@@ -389,15 +418,43 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       socket.assigns.ai_task_ref == ref ->
         case result do
           {:ok, attrs, unmatched} ->
-            Mehungry.Subscriptions.record_usage(socket.assigns.user.id, "recipe_generation")
-            recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+            attrs =
+              attrs
+              |> Map.put("user_id", socket.assigns.user.id)
+              |> Map.put("language_name", "En")
 
-            {:noreply,
-             socket
-             |> assign(:ai_generating, false)
-             |> assign(:ai_task_ref, nil)
-             |> assign(:ai_unmatched, unmatched)
-             |> init(recipe, attrs)}
+            case Food.create_recipe(attrs) do
+              {:ok, recipe} ->
+                Mehungry.Subscriptions.record_usage(
+                  socket.assigns.user.id,
+                  "recipe_generation"
+                )
+
+                Cachex.put(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}, %{})
+
+                {:noreply,
+                 socket
+                 |> assign(:ai_generating, false)
+                 |> assign(:ai_task_ref, nil)
+                 |> push_navigate(to: ~p"/create_recipe/#{recipe.id}")}
+
+              {:error, %Ecto.Changeset{}} ->
+                # Safety net: the AI omitted a required field (e.g. cook time) or
+                # returned no valid ingredients. Fall back to loading the draft
+                # into the form so the generated content isn't lost.
+                recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+
+                {:noreply,
+                 socket
+                 |> assign(:ai_generating, false)
+                 |> assign(:ai_task_ref, nil)
+                 |> assign(:ai_unmatched, unmatched)
+                 |> put_flash(
+                   :error,
+                   "Your recipe was generated but needs a couple of fixes before saving."
+                 )
+                 |> init(recipe, attrs)}
+            end
 
           {:error, reason} ->
             {:noreply,
@@ -674,6 +731,50 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       |> Map.new()
 
     Map.put(recipe_params, "steps", filtered)
+  end
+
+  # Launches the background generation task and enters the frozen state. Re-checks
+  # quota defensively so a stale modal can't slip past the limit.
+  defp start_ai_generation(socket, description) do
+    case Mehungry.Subscriptions.check_quota(socket.assigns.user.id, "recipe_generation") do
+      :ok ->
+        task = Task.async(fn -> Mehungry.AI.RecipeGenerator.run(description) end)
+
+        {:noreply,
+         socket
+         |> assign(:ai_generating, true)
+         |> assign(:ai_task_ref, task.ref)
+         |> assign(:show_ai_ingredients_modal, false)
+         |> assign(:ai_pending_prompt, nil)
+         |> assign(:ai_unmatched, [])
+         |> assign(:ai_quota_exceeded, false)}
+
+      {:error, :quota_exceeded} ->
+        {:noreply,
+         socket
+         |> assign(:show_ai_ingredients_modal, false)
+         |> assign(:ai_quota_exceeded, true)}
+    end
+  end
+
+  # Names of the ingredients the user has already added to the in-progress form,
+  # read from the changeset behind `@f`. Empty list when there are none (or no
+  # form yet), which is the signal to skip the confirmation modal.
+  defp existing_ingredient_names(socket) do
+    case socket.assigns[:f] do
+      %{source: %Ecto.Changeset{} = changeset} ->
+        changeset
+        |> Ecto.Changeset.get_assoc(:recipe_ingredients)
+        |> Enum.map(&Ecto.Changeset.get_field(&1, :ingredient_id))
+        |> Enum.reject(&is_nil/1)
+        |> Enum.map(&Food.get_ingredient/1)
+        |> Enum.reject(&is_nil/1)
+        |> Enum.map(& &1.name)
+        |> Enum.uniq()
+
+      _ ->
+        []
+    end
   end
 
   defp list_ingredients do
