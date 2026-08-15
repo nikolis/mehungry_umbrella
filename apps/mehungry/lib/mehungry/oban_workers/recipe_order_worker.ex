@@ -42,6 +42,7 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
     bot_user = Accounts.get_user!(order.bot_user_id)
     setup = order.recipe_setup
     brief_opts = Bot.build_brief(setup) || []
+    cuisine = Bot.setup_cuisine(setup)
     meal_types = meal_type_sequence(order)
 
     # Live condition guidance resolved from the setup's linked health condition at
@@ -85,9 +86,10 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
       |> Task.async_stream(
         fn {meal_type, _idx} ->
           description =
-            order_description(setup, meal_type, encouraged_names, discouraged_names)
+            cuisine
+            |> with_cuisine(order_description(setup, meal_type, encouraged_names, discouraged_names))
 
-          generate_one(order, bot_user, meal_type, description, brief_opts, avoid_ids, avoid_names)
+          generate_one(order, bot_user, meal_type, description, brief_opts, avoid_ids, avoid_names, cuisine)
         end,
         timeout: 180_000,
         on_timeout: :kill_task,
@@ -111,7 +113,7 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
     :ok
   end
 
-  defp generate_one(order, bot_user, meal_type, description, brief_opts, avoid_ids, avoid_names) do
+  defp generate_one(order, bot_user, meal_type, description, brief_opts, avoid_ids, avoid_names, cuisine) do
     result =
       RecipeGeneration.generate(description, avoid_ids, brief_opts,
         avoid_names: avoid_names,
@@ -120,7 +122,12 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
 
     case result do
       {:ok, attrs} ->
-        attrs = attrs |> Map.put("user_id", bot_user.id) |> Map.put("language_name", "En")
+        attrs =
+          attrs
+          |> Map.put("user_id", bot_user.id)
+          |> Map.put("language_name", "En")
+          |> maybe_put_cuisine(cuisine)
+
         persist(order, meal_type, attrs)
 
       {:error, reason} ->
@@ -128,6 +135,16 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
         :error
     end
   end
+
+  # Stamp the resolved cuisine onto the recipe (the `cousine` column) so the cover
+  # image is styled per cuisine. Lead the description with it too.
+  defp with_cuisine(nil, description), do: description
+  defp with_cuisine(cuisine, description), do: "Cuisine: #{cuisine}. " <> description
+
+  defp maybe_put_cuisine(attrs, cuisine) when is_binary(cuisine),
+    do: Map.put(attrs, "cousine", cuisine)
+
+  defp maybe_put_cuisine(attrs, _cuisine), do: attrs
 
   defp persist(order, meal_type, attrs) do
     result =

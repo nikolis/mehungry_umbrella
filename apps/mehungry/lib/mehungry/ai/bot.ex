@@ -517,11 +517,66 @@ defmodule Mehungry.AI.Bot do
       |> Map.new(fn {role, names} -> {role, Enum.reject(names, &is_nil/1)} end)
 
     [
+      cuisine: setup_cuisine(setup),
       persona: setup.persona,
       origin: setup.origin,
       story: setup.story,
       seed_ingredients: by_role
     ]
+  end
+
+  @doc """
+  The cuisine that should anchor generation for a setup: the explicit `cuisine`
+  field when set, otherwise a best-effort derivation from the free-text `origin`
+  (last place segment → demonym, e.g. "Rethymno -> Crete -> Greece" → "Greek").
+  Returns `nil` when neither yields anything.
+  """
+  def setup_cuisine(nil), do: nil
+
+  def setup_cuisine(%RecipeSetup{cuisine: c, origin: origin}) do
+    case c && String.trim(c) do
+      nil -> derive_cuisine(origin)
+      "" -> derive_cuisine(origin)
+      trimmed -> trimmed
+    end
+  end
+
+  # Very small heuristic: take the last "place" in an arrow/comma path and map a
+  # handful of common country names to their culinary demonym. Anything we don't
+  # recognize is returned verbatim so the origin still carries *some* signal.
+  # This is intentionally shallow — an admin who cares sets `cuisine` explicitly.
+  @country_to_cuisine %{
+    "greece" => "Greek",
+    "italy" => "Italian",
+    "france" => "French",
+    "spain" => "Spanish",
+    "mexico" => "Mexican",
+    "japan" => "Japanese",
+    "china" => "Chinese",
+    "india" => "Indian",
+    "thailand" => "Thai",
+    "turkey" => "Turkish",
+    "lebanon" => "Lebanese",
+    "morocco" => "Moroccan",
+    "vietnam" => "Vietnamese",
+    "korea" => "Korean",
+    "portugal" => "Portuguese"
+  }
+
+  def derive_cuisine(nil), do: nil
+
+  def derive_cuisine(origin) when is_binary(origin) do
+    last =
+      origin
+      |> String.split(~r/->|→|,|\//)
+      |> List.last()
+      |> to_string()
+      |> String.trim()
+
+    cond do
+      last == "" -> nil
+      true -> Map.get(@country_to_cuisine, String.downcase(last), last)
+    end
   end
 
   # ── Translations ─────────────────────────────────────────────────────────────
