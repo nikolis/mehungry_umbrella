@@ -162,11 +162,13 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
 
     context = Bot.get_context_for_date(config, target_date)
     brief_opts = Bot.build_brief(context.setup) || []
+    cuisine = Bot.setup_cuisine(context.setup)
 
     discouraged_ids =
       MapSet.union(MapSet.new(discouraged, & &1.id), RecipeGeneration.setup_avoid_ids(context.setup))
 
-    description = build_condition_description(config, context, meal_type, encouraged, discouraged)
+    description =
+      with_cuisine(cuisine, build_condition_description(config, context, meal_type, encouraged, discouraged))
 
     Logger.info(
       "[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date} (condition setup): #{description}"
@@ -176,14 +178,16 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
       attempts: @max_condition_attempts,
       label: meal_type
     )
+    |> put_recipe_cuisine(cuisine)
   end
 
   defp resolve_recipe_attrs(config, meal_type, target_date) do
     context = Bot.get_context_for_date(config, target_date)
     brief_opts = Bot.build_brief(context.setup) || []
+    cuisine = Bot.setup_cuisine(context.setup)
     avoid_ids = RecipeGeneration.setup_avoid_ids(context.setup)
     avoid_names = RecipeGeneration.setup_avoid_names(context.setup)
-    description = build_description(context, meal_type)
+    description = with_cuisine(cuisine, build_description(context, meal_type))
 
     Logger.info(
       "[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date}: #{description}"
@@ -194,7 +198,19 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
       avoid_names: avoid_names,
       label: meal_type
     )
+    |> put_recipe_cuisine(cuisine)
   end
+
+  # Lead the description with the cuisine when we have one, and stamp the resolved
+  # cuisine onto the recipe attrs (the `cousine` column) so the cover-image worker
+  # can style the photo per cuisine instead of the old one-size warm/rustic look.
+  defp with_cuisine(nil, description), do: description
+  defp with_cuisine(cuisine, description), do: "Cuisine: #{cuisine}. " <> description
+
+  defp put_recipe_cuisine({:ok, attrs}, cuisine) when is_binary(cuisine),
+    do: {:ok, Map.put(attrs, "cousine", cuisine)}
+
+  defp put_recipe_cuisine(result, _cuisine), do: result
 
   defp schedule_publish_jobs(config, bot_recipe, target_date, meal_type) do
     lang_times = get_in(config.publish_times, [meal_type]) || %{}

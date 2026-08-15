@@ -18,6 +18,39 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   @writer_model "claude-sonnet-4-6"
   @partial_indicators ~w(yolk white albumen powder dried dehydrated freeze extract concentrate)
 
+  # Realism guardrails injected into every generation prompt. The overriding test
+  # is: would this pass as something a real home cook of this cuisine actually
+  # makes? Restraint beats novelty — these rules exist to suppress the invented,
+  # "creative fusion" output an unconstrained model drifts toward.
+  @culinary_rules """
+  ## The one test that overrides everything
+
+  Would a real home cook of this cuisine recognize this as a genuine dish they
+  actually make? If not, it is wrong — no matter how "interesting" it sounds.
+  You are not inventing a novel dish; you are writing down a real, plausible,
+  edible one.
+
+  ## Culinary rules
+
+  - The cuisine is the top constraint. Every ingredient must belong to that
+    cuisine's real pantry and appear in dishes cooks from there actually make.
+  - Prefer familiar, traditional, widely recognizable combinations. Boring-but-real
+    beats clever-but-invented, every time.
+  - Every ingredient must earn its place with a clear culinary purpose. If you are
+    unsure whether an ingredient belongs, omit it.
+  - 5-12 primary ingredients is normal. Do not pad the list to seem sophisticated.
+  - One main protein, unless the dish traditionally combines several. Never combine
+    unrelated proteins.
+  - Fruit only when it is a genuine part of the dish for that cuisine — not as a
+    surprise "twist".
+  - FUSION IS FORBIDDEN unless the request explicitly asks for a named fusion
+    cuisine. Do not blend cuisines, and do not bolt one cuisine's signature
+    ingredient onto another's dish.
+  - Reject any justification that reduces to "adds complexity", "a unique flavor",
+    "an unexpected twist", or "elevates the dish". Those are the tells of invented
+    food. Cut it.
+  """
+
   @doc """
   Generates a recipe from a natural-language description.
 
@@ -78,6 +111,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   # when the loop ended without submitting, or the agent's own `{:error, reason}`.
   defp run_once(sys_prompt, user_prompt, context) do
     Process.put(__MODULE__, nil)
+    Process.put({__MODULE__, :offered}, %{})
 
     result =
       Agent.run(
@@ -88,7 +122,10 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
         context,
         model: @model,
         max_tokens: 8192,
-        max_iterations: 10
+        # Authentic specialty cuisines (e.g. Japanese: mirin, panko, dashi, bonito…)
+        # trigger several create_ingredient calls before the recipe can be submitted;
+        # 10 iterations could be exhausted mid-resolution (:max_iterations_reached).
+        max_iterations: 14
       )
 
     case result do
@@ -116,6 +153,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       persona_name: persona && persona.name,
       voice_prompt: persona && persona.voice_prompt,
       uses_hashtags: (persona && persona.uses_hashtags) || false,
+      cuisine: blank_to_nil(Keyword.get(opts, :cuisine)),
       origin: blank_to_nil(Keyword.get(opts, :origin)),
       story: blank_to_nil(Keyword.get(opts, :story)),
       primary: seed_names(seed, "primary"),
@@ -143,24 +181,33 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   defp system_prompt(brief) do
     """
     #{persona_block(brief)}
+    #{cuisine_block(brief)}
     To generate a recipe from the user's description, follow these steps IN ORDER:
 
-    1. Identify all ingredients the recipe needs — think about the full flavour profile:
-       aromatics, fats, acids, seasoning, and finishing touches
-    2. For EACH ingredient, call search_ingredient — inspect the returned candidates
+    1. First commit to ONE specific, real, traditional dish of the cuisine and name
+       it in the title (e.g. Greek → "Fasolada", Sicilian → "Pasta alla Norma",
+       Oaxacan → "Tlayuda"). Do not invent a novel dish or a "twist" on one.
+    2. List only the ingredients that dish genuinely contains — nothing added to seem
+       creative or sophisticated. Cross-check each against the cuisine's real pantry.
+    3. For EACH ingredient, call search_ingredient — inspect the returned candidates
        carefully and pick the best match (prefer whole/raw/plain forms over processed
        or flavoured variants)
-    3. If search_ingredient returns no results for an ingredient, call create_ingredient
+    4. If search_ingredient returns no results for an ingredient, call create_ingredient
        to add it, then use the IDs it returns
-    4. Draft the recipe using ONLY ingredient_id and measurement_unit_id values from
-       your tool results — never invent or guess numeric IDs
-    5. Call submit_recipe with the complete recipe to validate and save it
-    6. If submit_recipe returns errors, fix ONLY the reported invalid IDs and resubmit
+    5. Draft the recipe using ONLY ingredient_id and measurement_unit_id values from
+       your tool results — never invent or guess numeric IDs. For each recipe
+       ingredient also include the `name` you searched for; its id is verified
+       against that name, so a mismatched or made-up id will be rejected
+    6. Call submit_recipe with the complete recipe to validate and save it
+    7. If submit_recipe returns errors, fix ONLY the reported invalid IDs and resubmit
     #{ingredient_directive(brief)}
+    #{@culinary_rules}
     ## Recipe writing standards
 
-    **Description:** Write 2-3 sentences of genuine culinary prose — evoke the aroma,
-    texture, and occasion. Do NOT include hashtags in the description field; put them
+    **Description:** Write 2-3 plain, honest sentences about the dish — what it is,
+    how it tastes, when it's eaten. Sound like a real cook describing their food, not
+    a food-blog headline: no purple prose, no piled-up adjectives, no "elevate/twist/
+    symphony of flavours". Do NOT include hashtags in the description field; put them
     in the separate `hashtags` array instead.
 
     **Steps:** Each step must:
@@ -196,6 +243,21 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       """
     end
   end
+
+  # The cuisine is the single most important constraint — it is stated first and
+  # loudest so every downstream choice (dish, ingredients, technique) descends from
+  # it. Empty string when no cuisine was supplied (the description then carries
+  # whatever direction it has).
+  defp cuisine_block(%{cuisine: cuisine}) when is_binary(cuisine) and cuisine != "" do
+    """
+    THE CUISINE IS: #{cuisine}. This is the top constraint and overrides everything
+    else. The dish, and every single ingredient, must be authentic to #{cuisine}
+    cooking. Do not drift toward other cuisines and do not fuse #{cuisine} with
+    anything else.
+    """
+  end
+
+  defp cuisine_block(_), do: ""
 
   # Steers ingredient selection from the setup's seed ingredients, and hard-bans
   # the avoid list. Empty string when there are no seed ingredients.
@@ -327,11 +389,18 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
               items: %{
                 type: "object",
                 properties: %{
+                  name: %{
+                    type: "string",
+                    description:
+                      "The ingredient name you searched for (e.g. 'Pecorino Romano', " <>
+                        "'black pepper'). Must describe the same ingredient the " <>
+                        "ingredient_id resolves to — it is checked against the search result."
+                  },
                   ingredient_id: %{type: "integer"},
                   measurement_unit_id: %{type: "integer"},
                   quantity: %{type: "number"}
                 },
-                required: ["ingredient_id", "measurement_unit_id", "quantity"]
+                required: ["name", "ingredient_id", "measurement_unit_id", "quantity"]
               }
             }
           },
@@ -368,6 +437,8 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
           }
         end)
       end
+
+    Enum.each(candidates, &remember_offered(&1.ingredient_id, &1.name))
 
     if candidates == [] do
       %{
@@ -416,6 +487,8 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
              |> filter_by_name_relevance(name)
              |> Enum.take(1) do
           [ing | _] ->
+            remember_offered(ing.id, ing.name)
+
             portions =
               Food.get_measurement_unit_portions_for_ingredients([ing.id])
               |> Map.get(ing.id, [])
@@ -442,7 +515,8 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   end
 
   defp handle_tool("submit_recipe", recipe_input, %{gram_unit: gram_unit} = context) do
-    errors = validate_recipe(recipe_input, gram_unit && gram_unit.id)
+    offered = Process.get({__MODULE__, :offered}) || %{}
+    errors = validate_recipe(recipe_input, gram_unit && gram_unit.id, offered)
 
     if errors == [] do
       polished_input = polish_prose(recipe_input, Map.get(context, :brief))
@@ -462,11 +536,12 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   # ── validation ────────────────────────────────────────────────────────────────
 
-  defp validate_recipe(input, gram_unit_id) do
+  defp validate_recipe(input, gram_unit_id, offered) do
     (input["recipe_ingredients"] || [])
     |> Enum.flat_map(fn ri ->
       ing_id = ri["ingredient_id"]
       unit_id = ri["measurement_unit_id"]
+      name = ri["name"]
 
       cond do
         is_nil(ing_id) ->
@@ -476,7 +551,13 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
           ["ingredient_id #{ing_id} is missing measurement_unit_id"]
 
         true ->
-          check_ingredient_unit(ing_id, unit_id, gram_unit_id)
+          # Provenance first: an id the model never received from a tool result
+          # (a hallucinated or cross-wired id) is the dominant failure mode, and
+          # it slips past a pure existence check because the table has ~100k rows.
+          case check_provenance(ing_id, name, offered) do
+            [] -> check_ingredient_unit(ing_id, unit_id, gram_unit_id)
+            errors -> errors
+          end
       end
     end)
   end
@@ -506,6 +587,68 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
           ]
         end
     end
+  end
+
+  # ── provenance ────────────────────────────────────────────────────────────────
+
+  # Binds each submitted ingredient_id back to what the model was actually handed
+  # by search_ingredient/create_ingredient this run. The existence check above
+  # can't catch a hallucinated id that happens to point at a real row (e.g. a
+  # Branded "DOMINO'S Pizza" that search never returns) or two offered ids swapped
+  # between ingredients — this does, and feeds the self-correction loop a fix.
+  @doc false
+  def check_provenance(ing_id, name, offered) do
+    case Map.fetch(offered, ing_id) do
+      :error ->
+        [
+          "ingredient_id #{ing_id}#{named(name)} was never returned by search_ingredient " <>
+            "or create_ingredient. Only use ingredient_id values from your tool results — " <>
+            "search for this ingredient first, then use the id it returns."
+        ]
+
+      {:ok, offered_name} ->
+        if name_matches?(name, offered_name) do
+          []
+        else
+          [
+            "ingredient_id #{ing_id} is \"#{offered_name}\", not \"#{name}\". Use the " <>
+              "ingredient_id that search_ingredient returned for \"#{name}\"."
+          ]
+        end
+    end
+  end
+
+  defp named(name) when is_binary(name) and name != "", do: " (\"#{name}\")"
+  defp named(_), do: ""
+
+  # Lenient agreement between the name the model says it is submitting and the
+  # candidate name we returned for that id. Kept loose (substring either way, or
+  # a close word-level jaro) so legitimate variants ("pecorino" vs "Cheese,
+  # pecorino romano") don't cause resubmit thrash, while gross mismatches
+  # (pepper vs pecorino) are still rejected. A blank name can't be checked, so it
+  # passes the name gate — the id-provenance gate above still applies.
+  @doc false
+  def name_matches?(name, _offered) when not is_binary(name) or name == "", do: true
+
+  def name_matches?(submitted, offered_name) do
+    sub = String.downcase(submitted)
+    off = String.downcase(offered_name)
+
+    String.contains?(off, sub) or String.contains?(sub, off) or
+      Enum.any?(normalize_words(sub), fn sw ->
+        Enum.any?(normalize_words(off), &(String.jaro_distance(sw, &1) >= 0.8))
+      end)
+  end
+
+  defp normalize_words(text) do
+    text |> String.split(~r/[\s,]+/) |> Enum.reject(&(&1 == ""))
+  end
+
+  # Records an id→name the agent has actually been shown, so submit_recipe can
+  # verify every submitted ingredient_id came from a real tool result this run.
+  defp remember_offered(id, name) do
+    offered = Process.get({__MODULE__, :offered}) || %{}
+    Process.put({__MODULE__, :offered}, Map.put(offered, id, name))
   end
 
   # ── prose polish ──────────────────────────────────────────────────────────────
@@ -558,20 +701,25 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   defp generic_polish_system_prompt(step_count) do
     """
-    You are a professional food writer for a recipe social media platform (Instagram, Pinterest).
-    You receive a structurally complete but plainly-written draft recipe and must return a polished version.
+    You are a clear, honest recipe writer for a food platform. You receive a
+    structurally complete but plainly-written draft recipe and return a cleaner
+    version — one that reads like a real cook wrote it, not marketing copy.
 
     Rewrite ONLY these four fields: title, description, steps, hashtags.
     Every other field must be omitted from your response — do not echo ingredient IDs, quantities, or servings.
 
-    title — keep the dish recognizable, make it enticing (e.g. "Golden Saffron Rice Pilaf" not "Saffron Rice")
+    title — keep the dish recognizable and its real, traditional name; do not invent a
+    fancier one or bolt on decorative adjectives (keep "Saffron Rice Pilaf", not
+    "Golden Saffron Symphony").
 
-    description — 2-3 sentences of genuine culinary prose. Evoke aroma, texture, and the occasion it suits.
+    description — 2-3 plain, honest sentences: what the dish is, how it tastes, when
+    it's eaten. Sound like a real cook describing their food — NO purple prose, no
+    piled-up adjectives, none of "evoke/elevate/twist/symphony/a hug in a bowl".
     Do NOT include hashtags here; they go in the separate hashtags array.
 
     steps — keep EXACTLY #{step_count} steps in the same order.
     Each step must: state what to do, include timing ("cook for 3-4 minutes"), and one sensory doneness cue
-    ("until the onions are soft and starting to colour at the edges"). Weave technique tips in naturally.
+    ("until the onions are soft and starting to colour at the edges"). Plain and practical, not flowery.
 
     hashtags — 4-6 bare keywords without # prefix covering cuisine, main ingredient, dietary style, occasion.
 

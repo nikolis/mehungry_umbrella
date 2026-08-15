@@ -221,6 +221,11 @@ defmodule MehungryWeb.AiBotLive.Setups do
               />
             </div>
             <div>
+              <label class="block text-xs text-slate-400 mb-1">Cuisine</label>
+              <.input field={@form[:cuisine]} type="text" placeholder="e.g. Greek, Sicilian, Oaxacan — the single most important constraint" class={input_class()} />
+              <p class="text-[11px] text-slate-500 mt-1">Drives ingredient coherence and the cover-image style. Leave blank to derive it from the origin.</p>
+            </div>
+            <div>
               <label class="block text-xs text-slate-400 mb-1">Origin (free text)</label>
               <.input field={@form[:origin]} type="text" placeholder="e.g. Rethymno -> Crete -> Greece" class={input_class()} />
             </div>

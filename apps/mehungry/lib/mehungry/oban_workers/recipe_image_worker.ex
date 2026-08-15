@@ -26,7 +26,7 @@ defmodule Mehungry.RecipeImageWorker do
   end
 
   defp generate_and_store(recipe) do
-    case ImageGenerator.generate(recipe.title, recipe.description) do
+    case ImageGenerator.generate(recipe.title, recipe.description, recipe.cousine) do
       {:ok, binary} ->
         bucket = Application.get_env(:mehungry_web, :aws_bucket)
 

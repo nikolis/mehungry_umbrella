@@ -15,34 +15,54 @@ defmodule Mehungry.AI.ImageGenerator do
 
   @doc """
   Generates a food photo for the given recipe title and description.
+
+  `cuisine` (optional) drives the visual styling — tableware, surface, background,
+  and palette are derived from the cuisine so photos stop converging on the old
+  hardcoded warm/rustic "amber" look. Pass `nil` when the cuisine is unknown.
+
   Returns `{:ok, jpeg_binary}` or `{:error, reason}`.
   """
-  @spec generate(String.t(), String.t()) :: {:ok, binary()} | {:error, term()}
-  def generate(title, description) do
+  @spec generate(String.t(), String.t(), String.t() | nil) ::
+          {:ok, binary()} | {:error, term()}
+  def generate(title, description, cuisine \\ nil) do
     api_key = Application.get_env(:mehungry, :openai_api_key, "")
 
     if api_key == "" do
       {:error, "OPENAI_API_KEY is not configured"}
     else
-      prompt = build_prompt(title, description)
-      Logger.info("ImageGenerator: generating image for '#{title}'")
+      prompt = build_prompt(title, description, cuisine)
+      Logger.info("ImageGenerator: generating image for '#{title}'#{cuisine && " (#{cuisine})"}")
       request_image(api_key, prompt)
     end
   end
 
   # ── internals ─────────────────────────────────────────────────────────────────
 
-  defp build_prompt(title, description) do
+  defp build_prompt(title, description, cuisine) do
     clean_desc =
       description
       |> String.replace(~r/#\S+/, "")
       |> String.trim()
 
     "Professional food photography of #{title}. #{clean_desc}. " <>
-      "Plated beautifully on a rustic wooden or marble surface, natural side lighting, " <>
-      "shallow depth of field, garnished and styled. Warm appetizing tones. " <>
-      "No text overlays, no watermarks, photorealistic."
+      cuisine_setting(cuisine) <>
+      "Natural light, shallow depth of field, plated the way this dish is actually " <>
+      "served. No text overlays, no watermarks, photorealistic."
   end
+
+  # Derive the setting from the cuisine rather than hardcoding one look. The
+  # explicit "do not default to warm amber tones" is what breaks the old
+  # every-photo-looks-the-same problem.
+  defp cuisine_setting(cuisine) when is_binary(cuisine) and cuisine != "" do
+    "Styled authentically for #{cuisine} cuisine: use tableware, serving vessels, " <>
+      "surface, and background that genuinely belong to #{cuisine} food culture, with " <>
+      "a colour palette true to how this food really looks — do NOT default to warm " <>
+      "amber/golden tones. "
+  end
+
+  defp cuisine_setting(_), do:
+    "Plated simply and realistically on a surface that suits the dish; let the palette " <>
+      "follow the food itself rather than defaulting to warm amber/golden tones. "
 
   defp request_image(api_key, prompt) do
     body =

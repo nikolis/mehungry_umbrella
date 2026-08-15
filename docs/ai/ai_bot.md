@@ -167,7 +167,7 @@ Scoped to the **active config's bot user** for the current month.
 | `AI.Bot.{WeekConfig,DayConfig}` | Optional per-week/per-day theme + setup overrides |
 | `AI.Bot.RecipeTranslation` | Per-language title/description/steps; `status` `ai_draft`\|`verified` (default `verified`) |
 | `AI.Bot.SocialMediaPostLog` | Per-(platform,language) publish outcome `ok`\|`error`\|`skipped` |
-| `AI.Agents.RecipeAgent` | Tool-use generation loop (`search_ingredient`/`create_ingredient`/`submit_recipe`) + persona-voiced prose polish (`@writer_model` = sonnet) |
+| `AI.Agents.RecipeAgent` | Tool-use generation loop (`search_ingredient`/`create_ingredient`/`submit_recipe`) + persona-voiced prose polish (`@writer_model` = sonnet). `system_prompt/1` leads with the **cuisine** (`cuisine_block/1`), forces "commit to one real named dish first", and injects the `@culinary_rules` realism guardrails (see below) |
 | `DailyRecipeGenerationWorker` | Cron 2am UTC + manual generate; per-meal generation, avoid-guard, schedules publish jobs |
 | `RecipeOrderWorker` | Fulfils an order; same generation + avoid-guard, no publish scheduling |
 | `RecipePublishWorker` | Per-(meal,language) publish via `Social.Publisher`; idempotent through `SocialMediaPostLog` |
@@ -178,9 +178,35 @@ safety net: after generation it rejects+retries (≤3×) any recipe containing a
 condition-discouraged or seed-`avoid` ingredient **by ingredient_id**, not by
 trusting the prompt.
 
+**Cuisine-first realism** is the *soft*, prompt-level counterpart to the hard
+avoid-guard, and the primary lever for output that reads as human-authored:
+
+- **Cuisine leads the prompt.** `Bot.setup_cuisine/1` (explicit setup field, else
+  derived from `origin`) is stated first and loudest via `cuisine_block/1`; every
+  ingredient must be authentic to it, and **fusion is forbidden unless explicitly
+  requested**.
+- **Commit to a real dish first.** Step 1 forces the model to name one real,
+  traditional dish of the cuisine *before* listing ingredients — anchoring on the
+  model's own knowledge instead of an external recipe DB (see
+  [`ai_bot_personas.md` §Why not TheMealDB`](ai_bot_personas.md#why-not-themealdb)).
+- **`@culinary_rules`** enforce restraint: cuisine-appropriate pairings, one main
+  protein unless traditional, no gratuitous fruit/novelty, ~5–12 primary
+  ingredients, "if uncertain, omit." The old counterproductive "full flavour
+  profile" and purple-prose instructions were removed — **from both generation
+  and the final prose polish** (`generic_polish_system_prompt` was rewritten to a
+  plain-spoken cook voice; the persona path already spoke in-character).
+- **Cuisine-styled images.** The resolved cuisine is persisted to the recipe's
+  `cousine` column and drives `ImageGenerator.generate/3` (`cuisine_setting/1`),
+  replacing the hardcoded warm/rustic "amber" look every cover image used to share.
+
+Unlike the avoid-guard none of this is id-enforced; it applies on **every**
+generation (persona or not, daily or order) since both paths run
+`RecipeAgent.run/2`.
+
 ## Review — known issues
 
-Findings from an end-to-end review (2026-08-14). Ranked by severity.
+Findings from an end-to-end review (2026-08-14; open issues re-verified still
+present 2026-08-15). Ranked by severity.
 
 ### ✅ Fixed — publishing an ad-hoc *order* recipe crashed
 
@@ -199,38 +225,104 @@ otherwise; `maybe_mark_published/2` has a nil-config clause. Regression test:
 `recipe_publish_worker_test.exs` "publishes an ad-hoc order recipe that has no
 bot_config".
 
+### ✅ Fixed — ingredient-ID resolution put the wrong ingredients in the recipe
+
+**Symptom** (found eyeballing cuisine-first output, 2026-08-15): a generated
+**Cacio e Pepe** whose dish name, prose and quantities were perfect but whose
+ingredients resolved to *"DOMINO'S 14" Cheese Pizza"* (should be Pecorino) and
+*"Beef, ground, patty"* (should be black pepper) — despite the log showing it had
+just created "Pecorino Romano cheese" and "black pepper ground". Same class as an
+earlier run resolving "bay leaf" → "black tea". The dominant quality problem once
+dish selection and prose were good: recipes read authentically but the ingredient
+list could be garbage.
+
+**Root cause** (the original write-up misdiagnosed this as the tool loop
+"mis-tracking ids" — it does not). `AI.Agent` threads `tool_use_id` and JSON-encodes
+each result correctly, so the model *receives* the right ids. The defect was that
+`submit_recipe` validation (`validate_recipe`/`check_ingredient_unit`,
+`recipe_agent.ex`) was **existence-only**: it checked the `ingredient_id` exists and
+the unit is valid *for it*, with **no binding to what the model actually searched**.
+With ~100k rows almost any integer "exists", so a hallucinated or cross-wired id
+sailed through. The tell: `search/2` excludes `Branded` rows
+(`ingredient_search.ex:210`), so "DOMINO'S Pizza" / "Beef, ground, patty" could
+**never** have been returned by `search_ingredient` — proving the model supplied an
+id it was never handed, and nothing caught it.
+
+**Fix** (2026-08-15): two provenance gates in `submit_recipe`, both feeding the
+existing self-correction loop (prompt step 7):
+1. `submit_recipe`'s `recipe_ingredients` now carry a required **`name`** (the
+   ingredient the model *intends*).
+2. The agent records every id→name it hands back (`remember_offered/2`, kept in the
+   process dict alongside the smuggled result). `check_provenance/3` rejects any
+   `ingredient_id` **never offered this run** (catches hallucinated ids like the
+   Domino's case) and any id whose **name disagrees** with the offered candidate
+   (`name_matches?/2`, catches two offered ids swapped between ingredients). The
+   name check is deliberately lenient (substring / word-level jaro ≥ 0.8) so USDA
+   name variants ("pecorino" vs "Cheese, pecorino romano") don't cause resubmit
+   thrash. Regression test: `recipe_agent_provenance_test.exs`.
+
+This also hardens the id-based **avoid-guard**: a wrong id could previously let a
+discouraged ingredient slip in (or dodge the guard) under an unrelated id. Still
+*coupled* to the iteration-thrash item below (more redundant searches → more ids the
+model can cite wrongly), but the wrong id can no longer reach a saved recipe.
+
 ### 🟠 Medium
 
+**Specialty-cuisine iteration thrash → `:max_iterations_reached`.** Cuisine-first
+authenticity makes the agent chase DB-novel ingredients; for e.g. Japanese it fires
+near-duplicate `create_ingredient` calls for the *same* item (mirin → "mirin sweet
+rice wine" → "rice wine"; panko → "panko crumbs" → "bread crumbs"; dashi → "dashi
+kombu and bonito" → "fish stock"), exhausting the loop before `submit_recipe`.
+`max_iterations` was bumped **10 → 14** (`recipe_agent.ex:~124`), which lets normal
+cases (Italian) finish but **does not rescue the thrashy specialty case** — Japanese
+still failed at 14. The real fix is reducing the thrash (dedupe/limit
+create-attempts per logical ingredient), or a larger stopgap bump (18–20). Coupled
+to the (now fixed) id-resolution item above — fewer redundant searches also means
+fewer ids the model can cite wrongly.
+
+**Hashtags land inline in the description with an empty `hashtags` array.** Seen on
+both Katsudon and Cacio e Pepe generic-voice runs: the description ends with
+`#pasta #italian …` while `attrs["hashtags"]` is `nil`/empty. The polish step's
+hashtag separation (put them in the array, not the prose) isn't taking effect on the
+generic path. Either the polish JSON isn't being merged back, or the raw generation
+description (whose `hashtag_directive` inlines them) is what survives.
+
 **Auto-publish silently no-ops if approval is late.** `schedule_publish_jobs`
-(`daily_recipe_generation_worker.ex:246`) enqueues publish jobs with `scheduled_at`
-at *generation* time regardless of approval; at run time the worker gates on
-`status != "approved"` and returns `:ok` with no retry/reschedule
+(`daily_recipe_generation_worker.ex:199`, enqueue at `:209`) enqueues publish jobs
+with `scheduled_at` at *generation* time regardless of approval; at run time the
+worker gates on `status != "approved"` and returns `:ok` with no retry/reschedule
 (`recipe_publish_worker.ex:23-28`). If the admin approves *after* the scheduled
 time, the recipe never auto-publishes — it must be published manually. Consider
 re-enqueuing publish jobs on `approve_recipe`, or surfacing the window in the UI.
 
 **Translation "verify" is a no-op.** `RecipeTranslationWorker` writes
 `status: "ai_draft"` with a comment that a human verifies it in the hub
-(`recipe_translation_worker.ex:30`), but `RecipeTranslate.save_translation` upserts
-**without** `status` (`recipe_translate.ex:71`), so an existing `ai_draft` stays
+(`recipe_translation_worker.ex:32`), but `RecipeTranslate.save_translation` upserts
+**without** `status` (`recipe_translate.ex:71-77`), so an existing `ai_draft` stays
 `ai_draft` after a human edits it, and nothing consumes the distinction. Either set
 `status: "verified"` on manual save, or drop the field.
 
 ### 🟡 Low
 
-- **`dismiss_untracked_recipe` collides on the unique index** (`bot.ex:141`): it
-  hardcodes `meal_type: "lunch"` + `scheduled_date: today`, so dismissing a *second*
+- **Cuisine only reaches generation through a bound setup.** Theme-only
+  `AiBotConfig`s (no `RecipeSetup`) generate cuisine-less, and `derive_cuisine/1`
+  is a shallow ~15-country heuristic. Both are deliberate scope boundaries — see
+  [`ai_bot_personas.md` §Known limitations (cuisine)](ai_bot_personas.md#known-limitations-cuisine).
+- **`dismiss_untracked_recipe` collides on the unique index** (`bot.ex:161`): it
+  hardcodes `meal_type: "lunch"` (`:165`) + `scheduled_date: today`, so dismissing a *second*
   untracked recipe the same day violates
   `unique_constraint([:bot_config_id, :meal_type, :scheduled_date])` → UI shows
   "Could not dismiss recipe." Related: `import_single_recipe` can only place ≤5/day
   (one per meal slot) before erroring. A dedicated "dismissed" flag would be cleaner
   than reusing a rejected `AiBotRecipe` row.
-- **Language-casing mismatch** (`recipe_review.ex:91`): the publish-language fallback
+- **Language-casing mismatch** (`recipe_review.ex:100`): the publish-language fallback
   is `["en"]` (lowercase) while recipes are created as `"En"` and translations key on
   `lang.name`; the base-language publish target can mismatch.
-- **`maybe_mark_published` over-eager** (`recipe_publish_worker.ex:123`): when a meal
-  has no `publish_times`, `languages == []` and `all_languages_published?(_, [])` is
-  `true`, so one manual publish flips the recipe to `published`. Harmless but loose.
+- **`maybe_mark_published` over-eager on the config path** (`recipe_publish_worker.ex:137`):
+  when a meal has no `publish_times`, `languages == []` and `all_languages_published?(_, [])`
+  is `true`, so one manual publish flips the recipe to `published`. Harmless but loose.
+  The nil-config (order) clause (`:125`) was since hardened with a `languages != []`
+  guard; the config clause still lacks it.
 
 ### ✅ Solid
 
@@ -241,6 +333,6 @@ re-enqueuing publish jobs on `approve_recipe`, or surfacing the window in the UI
   retry rather than swallowing failures.
 - `publish_times` normalization (`ai_bot_config.ex:80`) coercing `"HH:MM"`→`"HH:MM:SS"`
   closes a whole class of silent scheduling failures from `<input type="time">`.
-- Pinterest stale-token vs. empty-list distinction (`social_accounts.ex:43`).
+- Pinterest stale-token vs. empty-list distinction (`social_accounts.ex:47`).
 - Condition setups carry benefit via encouraged/`avoid` ingredient lists rather than
   asking the model to "treat a disease".
