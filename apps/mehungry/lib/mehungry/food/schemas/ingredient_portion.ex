@@ -54,6 +54,29 @@ defmodule Mehungry.Food.IngredientPortion do
 
   def display_name(_), do: nil
 
+  # USDA portion labels that are technical artifacts rather than a serving a
+  # person would recognize: "RACC" is the Reference Amount Customarily Consumed
+  # (a regulatory figure), "Quantity not specified" is a bare placeholder. These
+  # are hidden from any user- or AI-facing portion list. Matched case-insensitively
+  # as whole labels; overridable via `config :mehungry, :excluded_portion_labels`.
+  @default_excluded_labels ["RACC", "Quantity not specified"]
+
+  def excluded_labels do
+    Application.get_env(:mehungry, :excluded_portion_labels, @default_excluded_labels)
+  end
+
+  @doc """
+  True when `label` is a real, human-meaningful portion label (not blank and not
+  in the static exclusion list). Use to filter portions before showing them to a
+  user or handing them to the recipe AI.
+  """
+  def meaningful_label?(label) when is_binary(label) do
+    norm = label |> String.trim() |> String.downcase()
+    norm != "" and norm not in Enum.map(excluded_labels(), &String.downcase/1)
+  end
+
+  def meaningful_label?(_), do: false
+
   defp validate_has_unit_or_description(changeset) do
     unit_id = get_field(changeset, :measurement_unit_id)
     description = get_field(changeset, :description)

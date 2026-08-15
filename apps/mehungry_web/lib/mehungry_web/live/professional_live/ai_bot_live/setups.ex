@@ -78,12 +78,18 @@ defmodule MehungryWeb.AiBotLive.Setups do
   end
 
   def handle_event("delete", %{"id" => id}, socket) do
-    id |> Bot.get_recipe_setup!() |> Bot.delete_recipe_setup()
+    socket =
+      case id |> Bot.get_recipe_setup!() |> Bot.delete_recipe_setup() do
+        {:ok, _setup} ->
+          socket
+          |> assign(:setups, Bot.list_recipe_setups())
+          |> put_flash(:info, "Setup deleted.")
 
-    {:noreply,
-     socket
-     |> assign(:setups, Bot.list_recipe_setups())
-     |> put_flash(:info, "Setup deleted.")}
+        {:error, _reason} ->
+          put_flash(socket, :error, "Could not delete this setup — it is still in use.")
+      end
+
+    {:noreply, socket}
   end
 
   def handle_event("add_ingredient", %{"name" => name, "role" => role}, socket)
