@@ -18,6 +18,14 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   @writer_model "claude-sonnet-4-6"
   @partial_indicators ~w(yolk white albumen powder dried dehydrated freeze extract concentrate)
 
+  # The unit vocabulary the agent picks from is the ingredient's `IngredientPortion`
+  # rows, not bare measurement units — each portion is a real, human-meaningful
+  # serving ("1 cup" = 240 g, "1 medium banana" = 118 g), including description-only
+  # portions that have no measurement unit at all. Grams stay available as a
+  # universal fallback under this reserved sentinel, so every ingredient always has
+  # at least one selectable option even when it has no portions of its own.
+  @grams_portion_id 0
+
   # Realism guardrails injected into every generation prompt. The overriding test
   # is: would this pass as something a real home cook of this cuisine actually
   # makes? Restraint beats novelty — these rules exist to suppress the invented,
@@ -194,10 +202,12 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
        or flavoured variants)
     4. If search_ingredient returns no results for an ingredient, call create_ingredient
        to add it, then use the IDs it returns
-    5. Draft the recipe using ONLY ingredient_id and measurement_unit_id values from
-       your tool results — never invent or guess numeric IDs. For each recipe
-       ingredient also include the `name` you searched for; its id is verified
-       against that name, so a mismatched or made-up id will be rejected
+    5. Draft the recipe using ONLY ingredient_id and ingredient_portion_id values from
+       your tool results — never invent or guess numeric IDs. Prefer a real portion
+       ("1 cup", "1 medium onion") over grams (portion_id 0) whenever the ingredient
+       offers one. For each recipe ingredient also include the `name` you searched
+       for; its id is verified against that name, so a mismatched or made-up id will
+       be rejected
     6. Call submit_recipe with the complete recipe to validate and save it
     7. If submit_recipe returns errors, fix ONLY the reported invalid IDs and resubmit
     #{ingredient_directive(brief)}
@@ -306,8 +316,10 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
         name: "search_ingredient",
         description:
           "Search the ingredient database by name. Returns up to 5 candidates with " <>
-            "their database ingredient_id and available measurement units (unit_id, name, " <>
-            "gram_weight). Call this for every ingredient before using it in the recipe.",
+            "their database ingredient_id and available portions (portion_id, unit, " <>
+            "gram_weight) — each portion is a real serving such as \"1 cup\" or \"1 " <>
+            "medium banana\". portion_id 0 always means grams by weight. Call this for " <>
+            "every ingredient before using it in the recipe.",
         input_schema: %{
           type: "object",
           properties: %{
@@ -325,7 +337,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
         description:
           "Add a new ingredient to the database when search_ingredient returns no results. " <>
             "Generates USDA-style nutritional data automatically. Returns the new " <>
-            "ingredient_id and measurement units.",
+            "ingredient_id and its portions (portion_id, unit, gram_weight).",
         input_schema: %{
           type: "object",
           properties: %{
@@ -341,7 +353,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
         name: "submit_recipe",
         description:
           "Validate and save the completed recipe. Call once all ingredient_ids and " <>
-            "measurement_unit_ids are resolved. Returns success or a list of errors to fix.",
+            "ingredient_portion_ids are resolved. Returns success or a list of errors to fix.",
         input_schema: %{
           type: "object",
           properties: %{
@@ -397,10 +409,16 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
                         "ingredient_id resolves to — it is checked against the search result."
                   },
                   ingredient_id: %{type: "integer"},
-                  measurement_unit_id: %{type: "integer"},
+                  ingredient_portion_id: %{
+                    type: "integer",
+                    description:
+                      "A portion_id returned for this ingredient by search_ingredient/" <>
+                        "create_ingredient. Use 0 for grams by weight. quantity is then " <>
+                        "counted in that portion (e.g. portion \"1 cup\" with quantity 2 = 2 cups)."
+                  },
                   quantity: %{type: "number"}
                 },
-                required: ["name", "ingredient_id", "measurement_unit_id", "quantity"]
+                required: ["name", "ingredient_id", "ingredient_portion_id", "quantity"]
               }
             }
           },
@@ -433,7 +451,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
           %{
             ingredient_id: ing.id,
             name: ing.name,
-            units: build_units(portions, gram_unit) |> Enum.take(3)
+            portions: build_portions(portions, gram_unit) |> Enum.take(4)
           }
         end)
       end
@@ -497,7 +515,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
               created: true,
               ingredient_id: ing.id,
               name: ing.name,
-              units: build_units(portions, gram_unit)
+              portions: build_portions(portions, gram_unit)
             }
 
           [] ->
@@ -516,11 +534,11 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   defp handle_tool("submit_recipe", recipe_input, %{gram_unit: gram_unit} = context) do
     offered = Process.get({__MODULE__, :offered}) || %{}
-    errors = validate_recipe(recipe_input, gram_unit && gram_unit.id, offered)
+    errors = validate_recipe(recipe_input, offered)
 
     if errors == [] do
       polished_input = polish_prose(recipe_input, Map.get(context, :brief))
-      attrs = normalize_attrs(polished_input)
+      attrs = normalize_attrs(polished_input, gram_unit && gram_unit.id)
       Process.put(__MODULE__, {:ok, attrs, []})
       Logger.info("RecipeAgent: recipe '#{recipe_input["title"]}' submitted successfully")
       %{success: true, message: "Recipe '#{recipe_input["title"]}' saved."}
@@ -536,33 +554,38 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   # ── validation ────────────────────────────────────────────────────────────────
 
-  defp validate_recipe(input, gram_unit_id, offered) do
+  defp validate_recipe(input, offered) do
     (input["recipe_ingredients"] || [])
     |> Enum.flat_map(fn ri ->
       ing_id = ri["ingredient_id"]
-      unit_id = ri["measurement_unit_id"]
+      portion_id = ri["ingredient_portion_id"]
       name = ri["name"]
 
       cond do
         is_nil(ing_id) ->
           ["A recipe_ingredient is missing ingredient_id"]
 
-        is_nil(unit_id) ->
-          ["ingredient_id #{ing_id} is missing measurement_unit_id"]
+        is_nil(portion_id) ->
+          ["ingredient_id #{ing_id} is missing ingredient_portion_id"]
 
         true ->
           # Provenance first: an id the model never received from a tool result
           # (a hallucinated or cross-wired id) is the dominant failure mode, and
           # it slips past a pure existence check because the table has ~100k rows.
           case check_provenance(ing_id, name, offered) do
-            [] -> check_ingredient_unit(ing_id, unit_id, gram_unit_id)
+            [] -> check_ingredient_portion(ing_id, portion_id)
             errors -> errors
           end
       end
     end)
   end
 
-  defp check_ingredient_unit(ing_id, unit_id, gram_unit_id) do
+  # A submitted portion must be either the grams sentinel (0) or a real
+  # `IngredientPortion` that belongs to this ingredient — mirroring the portions
+  # search_ingredient/create_ingredient handed the model.
+  defp check_ingredient_portion(_ing_id, @grams_portion_id), do: []
+
+  defp check_ingredient_portion(ing_id, portion_id) do
     case Food.get_ingredient(ing_id) do
       nil ->
         [
@@ -573,17 +596,15 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       _ing ->
         valid_ids =
           Food.get_measurement_unit_portions_for_ingredient(ing_id)
-          |> Enum.filter(& &1.measurement_unit)
-          |> Enum.map(& &1.measurement_unit_id)
+          |> Enum.map(& &1.id)
 
-        valid_ids = if gram_unit_id, do: [gram_unit_id | valid_ids], else: valid_ids
-
-        if unit_id in valid_ids do
+        if portion_id in valid_ids do
           []
         else
           [
-            "measurement_unit_id #{unit_id} is invalid for ingredient_id #{ing_id}. " <>
-              "Valid unit_ids: #{inspect(Enum.uniq(valid_ids))}"
+            "ingredient_portion_id #{portion_id} is invalid for ingredient_id #{ing_id}. " <>
+              "Valid portion_ids: #{inspect(Enum.uniq([@grams_portion_id | valid_ids]))} " <>
+              "(0 = grams)."
           ]
         end
     end
@@ -781,7 +802,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   # ── normalization ─────────────────────────────────────────────────────────────
 
-  defp normalize_attrs(data) do
+  defp normalize_attrs(data, gram_unit_id) do
     steps =
       (data["steps"] || [])
       |> Enum.with_index()
@@ -797,13 +818,20 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
     recipe_ingredients =
       (data["recipe_ingredients"] || [])
-      |> Enum.reject(&(is_nil(&1["ingredient_id"]) or is_nil(&1["measurement_unit_id"])))
+      |> Enum.reject(&(is_nil(&1["ingredient_id"]) or is_nil(&1["ingredient_portion_id"])))
       |> Enum.map(fn ri ->
-        %{
+        base = %{
           "ingredient_id" => ri["ingredient_id"],
-          "measurement_unit_id" => ri["measurement_unit_id"],
           "quantity" => ri["quantity"] || 1.0
         }
+
+        # The grams sentinel resolves to the gram measurement unit (portion-less,
+        # nutrition treats quantity as grams directly); every other portion_id is
+        # persisted as the authoritative `ingredient_portion_id`.
+        case ri["ingredient_portion_id"] do
+          @grams_portion_id -> Map.put(base, "measurement_unit_id", gram_unit_id)
+          portion_id -> Map.put(base, "ingredient_portion_id", portion_id)
+        end
       end)
 
     hashtag_str =
@@ -944,25 +972,23 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     end
   end
 
-  defp build_units(portions, gram_unit) when is_list(portions) do
-    units =
+  defp build_portions(portions, gram_unit) when is_list(portions) do
+    real =
       portions
-      |> Enum.filter(& &1.measurement_unit)
       |> Enum.map(fn p ->
         %{
-          unit_id: p.measurement_unit_id,
-          unit_name: p.measurement_unit.name,
+          portion_id: p.id,
+          unit: Mehungry.Food.IngredientPortion.display_name(p),
           gram_weight: p.gram_weight
         }
       end)
+      |> Enum.reject(&is_nil(&1.unit))
+      |> Enum.uniq_by(& &1.portion_id)
 
     if gram_unit do
-      Enum.uniq_by(
-        units ++ [%{unit_id: gram_unit.id, unit_name: "gram", gram_weight: 1.0}],
-        & &1.unit_id
-      )
+      real ++ [%{portion_id: @grams_portion_id, unit: "gram", gram_weight: 1.0}]
     else
-      units
+      real
     end
   end
 
