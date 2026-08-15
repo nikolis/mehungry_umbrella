@@ -71,6 +71,7 @@ defmodule MehungryWeb.MixProject do
       {:floki, ">= 0.30.0", only: :test},
       {:lazy_html, ">= 0.1.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.8"},
+      {:oban_web, "~> 2.12"},
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.5"},

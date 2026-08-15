@@ -217,6 +217,7 @@ defmodule MehungryWeb.Router do
   # you can use Plug.BasicAuth to set up some basic authentication
   # as long as you are also using SSL (which you should anyway).
   import Phoenix.LiveDashboard.Router
+  import Oban.Web.Router
 
   scope "/" do
     pipe_through [:admin_browser, :require_authenticated_user, :require_admin]
@@ -233,6 +234,10 @@ defmodule MehungryWeb.Router do
         timeline: MehungryWeb.QueryTimelinePage,
         local_ai_rate: MehungryWeb.LocalAiRatePage
       ]
+
+    # Oban Web — jobs UI (view / retry / cancel background jobs), admin-gated
+    # alongside LiveDashboard. See docs; reachable at /oban.
+    oban_dashboard "/oban"
   end
 
   if Mix.env() == :dev do
