@@ -32,6 +32,8 @@ defmodule Mehungry.Food.Recipe do
     # Populated at display time by MehungryWeb.RecipeFlags for opted-in users;
     # each entry is %{condition, compound, recommendation, severity}.
     field :condition_flags, {:array, :map}, virtual: true, default: []
+    # Populated by Recipes.search_recipes_for_admin/2 for the admin recipes tab.
+    field :ingredient_count, :integer, virtual: true
 
     has_many :user_recipes, Mehungry.Accounts.UserRecipe
     has_one :post, Mehungry.Posts.Post

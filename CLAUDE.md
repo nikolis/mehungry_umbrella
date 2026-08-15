@@ -186,7 +186,7 @@ All authenticated UI is built with **Phoenix LiveView**. Live sessions in `route
 
 Client hooks: `apps/mehungry_web/assets/js/hooks.js`. Navigation active-state handled by a JS `Proxy` intercepting URL changes (`navigation.js`).
 
-**Google Analytics (GA4)**: Consent Mode v2-gated `gtag.js` in `head.html.heex`, manual `page_view` tracking for LiveView SPA navigation, and a `MehungryWeb.GoogleAnalytics.track/3` seam for custom events — see **`docs/google_analytics.md`**.
+**Google Analytics (GA4)**: Consent Mode v2-gated `gtag.js` in `head.html.heex`, manual `page_view` tracking for LiveView SPA navigation, and a `MehungryWeb.GoogleAnalytics.track/3` seam for custom events — see **`docs/infrastructure/google_analytics.md`**.
 
 **Design system**: warm-charcoal/paprika/basil token set (`ink`, `paprika`, `basil`, `parchment` in `tailwind.config.js`) rolled out to `/profile` only so far — palette rationale, component rules, and the CSS-variable pattern for retheming shared components (e.g. `SelectComponent`) without breaking their other call sites are in **`docs/design_system.md`**.
 

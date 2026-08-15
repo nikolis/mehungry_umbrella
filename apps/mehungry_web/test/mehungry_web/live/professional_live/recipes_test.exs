@@ -66,6 +66,31 @@ defmodule MehungryWeb.ProfessionalLive.RecipesTest do
     assert_in_delta portion.gram_weight, 28.3495, 0.001
   end
 
+  test "searching lists a recipe and deleting it removes it with its references", %{
+    conn: conn,
+    recipe: recipe
+  } do
+    unit = measurement_unit_fixture(%{name: "cup"})
+    ingredient = ingredient_fixture()
+    ri = seed_ri(recipe, ingredient, unit)
+
+    {:ok, view, _html} = live(conn, ~p"/professional/recipes")
+
+    html =
+      view
+      |> form("#admin-recipe-search", %{"query" => recipe.title})
+      |> render_change()
+
+    assert html =~ recipe.title
+
+    view
+    |> element("button[phx-value-id='#{recipe.id}']", "Delete")
+    |> render_click()
+
+    refute Repo.get(Mehungry.Food.Recipe, recipe.id)
+    refute Repo.get(RecipeIngredient, ri.id)
+  end
+
   test "non-admin is redirected away" do
     conn = log_in_user(build_conn(), user_fixture(%{email: "notadmin@example.com"}))
 

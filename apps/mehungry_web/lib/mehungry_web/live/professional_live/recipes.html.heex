@@ -210,4 +210,56 @@
       </div>
     </div>
   </div>
+
+  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mt-6">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+      Delete any recipe
+    </h2>
+    <p class="text-slate-500 text-xs mb-3">
+      Deleting a recipe also removes all of its ingredients, comments, posts,
+      likes, ratings, meal-plan entries, basket items, hashtags, translations and
+      bot records. This cannot be undone.
+    </p>
+
+    <form id="admin-recipe-search" phx-change="search_recipes" phx-submit="search_recipes" class="mb-3">
+      <input
+        type="text"
+        name="query"
+        value={@search_query}
+        phx-debounce="300"
+        placeholder="Search recipes by title or id…"
+        autocomplete="off"
+        class="w-full rounded-lg bg-slate-900 border border-slate-700 text-white text-sm px-3 py-2 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+      />
+    </form>
+
+    <div id="search-recipes" phx-update="stream" class="divide-y divide-slate-700">
+      <div id="search-recipes-empty" class="only:block hidden text-slate-500 text-sm italic py-3">
+        No recipes match your search.
+      </div>
+      <div
+        :for={{dom_id, recipe} <- @streams.search_results}
+        id={dom_id}
+        class="flex items-center justify-between gap-3 py-2.5"
+      >
+        <div class="min-w-0">
+          <p class="text-white text-sm font-medium truncate">
+            {recipe.title || "(untitled)"}
+          </p>
+          <p class="text-slate-500 text-xs">
+            #{recipe.id} · {(recipe.user && recipe.user.email) || "no owner"} · {recipe.ingredient_count} ingredient(s)
+          </p>
+        </div>
+        <button
+          type="button"
+          phx-click="delete_recipe"
+          phx-value-id={recipe.id}
+          data-confirm={"Permanently delete “#{recipe.title || "(untitled)"}” (##{recipe.id}) and all its references? This cannot be undone."}
+          class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-700 hover:bg-red-600 text-white font-semibold text-xs transition-colors"
+        >
+          <.icon name="hero-trash" class="w-3.5 h-3.5" /> Delete
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

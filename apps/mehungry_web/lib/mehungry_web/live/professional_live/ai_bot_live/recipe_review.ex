@@ -4,6 +4,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
   alias Mehungry.{Languages, Food, Accounts}
   alias Mehungry.AI.Bot
   alias Mehungry.Food.Recipe
+  alias Mehungry.Food.RecipeIngredient
   alias Mehungry.Social.Pinterest
   alias Mehungry.ObanWorkers.{RecipeTranslationWorker, RecipePublishWorker}
 
@@ -27,12 +28,13 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
     languages = Languages.list_languages()
     translated_langs = Enum.map(translations, & &1.language_name)
 
-    changeset = Food.change_recipe(bot_recipe.recipe) |> struct!(action: :validate)
+    recipe = put_unit_selections(bot_recipe.recipe)
+    changeset = Food.change_recipe(recipe) |> struct!(action: :validate)
 
     {:noreply,
      socket
      |> assign(:bot_recipe, bot_recipe)
-     |> assign(:recipe, bot_recipe.recipe)
+     |> assign(:recipe, recipe)
      |> assign(:f, to_form(changeset))
      |> assign(:changeset, changeset)
      |> assign(:translations, translations)
@@ -309,12 +311,13 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
     case Food.update_recipe(socket.assigns.recipe, recipe_params) do
       {:ok, %Recipe{}} ->
         bot_recipe = Bot.get_bot_recipe!(socket.assigns.bot_recipe.id)
-        changeset = Food.change_recipe(bot_recipe.recipe) |> struct!(action: :validate)
+        recipe = put_unit_selections(bot_recipe.recipe)
+        changeset = Food.change_recipe(recipe) |> struct!(action: :validate)
 
         {:noreply,
          socket
          |> assign(:bot_recipe, bot_recipe)
-         |> assign(:recipe, bot_recipe.recipe)
+         |> assign(:recipe, recipe)
          |> assign(:f, to_form(changeset))
          |> assign(:changeset, changeset)
          |> assign(:editing, false)
@@ -363,6 +366,21 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
   end
 
   defp get_temp_id, do: :crypto.strong_rand_bytes(5) |> Base.url_encode64() |> binary_part(0, 5)
+
+  # Seeds each recipe ingredient's virtual `unit_selection` from its persisted
+  # unit/portion so the unit dropdown shows the saved portion when editing —
+  # mirrors CreateRecipeLive.put_unit_selections/1.
+  defp put_unit_selections(%Recipe{recipe_ingredients: ris} = recipe) when is_list(ris) do
+    %Recipe{
+      recipe
+      | recipe_ingredients:
+          Enum.map(ris, fn %RecipeIngredient{} = ri ->
+            %RecipeIngredient{ri | unit_selection: RecipeIngredient.unit_selection_value(ri)}
+          end)
+    }
+  end
+
+  defp put_unit_selections(recipe), do: recipe
 
   @impl true
   def render(assigns) do

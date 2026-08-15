@@ -439,6 +439,75 @@ defmodule Mehungry.HealthTest do
     end
   end
 
+  describe "DB-content localization (el)" do
+    setup do
+      {:ok, _} = Mehungry.Languages.create_language(%{name: "el"})
+      :ok
+    end
+
+    test "get_condition/2 overlays the el name + description, falling back per field" do
+      {:ok, condition} =
+        Health.create_condition(%{name: "Kidney Stones", description: "Mineral deposits."})
+
+      {:ok, _} =
+        %Mehungry.Health.ConditionTranslation{}
+        |> Mehungry.Health.ConditionTranslation.changeset(%{
+          condition_id: condition.id,
+          language_name: "el",
+          name: "Πέτρες στα Νεφρά"
+        })
+        |> Mehungry.Repo.insert()
+
+      # el overlays the translated name; description has no el row → base value kept.
+      localized = Health.get_condition(condition.id, "el")
+      assert localized.name == "Πέτρες στα Νεφρά"
+      assert localized.description == "Mineral deposits."
+
+      # nil / "en" return the base record untouched.
+      assert Health.get_condition(condition.id).name == "Kidney Stones"
+      assert Health.get_condition(condition.id, "en").name == "Kidney Stones"
+    end
+
+    test "list_conditions_for_presentation/1 localizes each listed condition" do
+      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones"})
+      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+      {:ok, _} = Health.add_recommendation(kidney.id, oxalate.id, %{recommendation: "avoid", source: "guideline"})
+
+      {:ok, _} =
+        %Mehungry.Health.ConditionTranslation{}
+        |> Mehungry.Health.ConditionTranslation.changeset(%{
+          condition_id: kidney.id,
+          language_name: "el",
+          name: "Πέτρες στα Νεφρά"
+        })
+        |> Mehungry.Repo.insert()
+
+      assert [%{name: "Πέτρες στα Νεφρά"}] = Health.list_conditions_for_presentation("el")
+    end
+
+    test "recommendations_for_condition/2 overlays the el compound name" do
+      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones"})
+      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+      {:ok, _} = Health.add_recommendation(kidney.id, oxalate.id, %{recommendation: "avoid", source: "guideline"})
+
+      {:ok, _} =
+        %Mehungry.Food.CompoundTranslation{}
+        |> Mehungry.Food.CompoundTranslation.changeset(%{
+          compound_id: oxalate.id,
+          language_name: "el",
+          name: "Οξαλικό"
+        })
+        |> Mehungry.Repo.insert()
+
+      assert [%{compound: %{name: "Οξαλικό"}}] =
+               Health.recommendations_for_condition(kidney.id, "el")
+
+      # Base language is untouched.
+      assert [%{compound: %{name: "Oxalate"}}] =
+               Health.recommendations_for_condition(kidney.id)
+    end
+  end
+
   # A recipe using `ingredient` (recipe_fixture builds its own ingredient, so we
   # create one directly to control the ingredient→species→compound chain).
   defp recipe_with_ingredient(ingredient) do

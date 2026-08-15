@@ -6,16 +6,8 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   alias Mehungry.Food.SpeciesCompounds
   alias Mehungry.Health
 
-  # Display order + copy for the recommendation groups.
+  # Display order for the recommendation groups (labels are gettext'd at render).
   @recommendation_order ["avoid", "limit", "caution", "monitor", "encourage"]
-
-  @recommendation_labels %{
-    "avoid" => "Avoid",
-    "limit" => "Limit",
-    "caution" => "Approach with caution",
-    "monitor" => "Monitor",
-    "encourage" => "Encourage"
-  }
 
   # ── Nutrition snapshot (mirrors SpeciesDetailLive.Index) ─────────────────────
   @top_nutrient_names [
@@ -36,27 +28,33 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    case Health.get_condition(id) do
+    language = socket.assigns[:current_language] || "en"
+
+    case Health.get_condition(id, language) do
       nil ->
-        {:ok, push_navigate(socket, to: "/conditions")}
+        {:ok, push_navigate(socket, to: ~p"/#{language}/conditions")}
 
       condition ->
         {:ok,
          socket
          |> assign(:condition, condition)
+         |> assign(:language, language)
          |> assign_new(:current_user, fn -> nil end)
          |> assign(:current_user_recipes, saved_recipe_ids(socket))
          |> assign_async([:recommendations, :species], fn ->
            {:ok,
             %{
-              recommendations: Health.recommendations_for_condition(condition.id),
-              species: Health.species_for_condition(condition.id)
+              recommendations: Health.recommendations_for_condition(condition.id, language),
+              species: Health.species_for_condition(condition.id, nil, language)
             }}
          end)
-         |> assign(:page_title, "#{condition.name} — Dietary Guidance")
+         |> assign(:page_title, gettext("%{name} — Dietary Guidance", name: condition.name))
          |> assign(
            :page_description,
-           "Dietary guidance for #{condition.name}: bioactive compounds to be mindful of and the food species that contain them."
+           gettext(
+             "Dietary guidance for %{name}: bioactive compounds to be mindful of and the food species that contain them.",
+             name: condition.name
+           )
          )}
     end
   end
@@ -65,7 +63,10 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   # of the species page (identity is available immediately, the rest streams in).
   @impl true
   def handle_params(%{"species_id" => species_id}, _uri, %{assigns: %{live_action: :show_food}} = socket) do
-    species = Food.get_species_with_ingredients!(species_id)
+    species =
+      species_id
+      |> Food.get_species_with_ingredients!()
+      |> localize_species_name(socket.assigns[:language])
 
     {:noreply,
      socket
@@ -207,5 +208,30 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
     end
   end
 
-  def recommendation_label(rec), do: Map.get(@recommendation_labels, rec, String.capitalize(rec))
+  def recommendation_label("avoid"), do: gettext("Avoid")
+  def recommendation_label("limit"), do: gettext("Limit")
+  def recommendation_label("caution"), do: gettext("Approach with caution")
+  def recommendation_label("monitor"), do: gettext("Monitor")
+  def recommendation_label("encourage"), do: gettext("Encourage")
+  def recommendation_label(rec), do: String.capitalize(rec)
+
+  # Gettext-translated label for a top-macro nutrient card (canonical English key
+  # from `@display_labels`); explicit clauses so `mix gettext.extract` sees them.
+  def nutrient_label("Calories"), do: gettext("Calories")
+  def nutrient_label("Protein"), do: gettext("Protein")
+  def nutrient_label("Fat"), do: gettext("Fat")
+  def nutrient_label("Carbs"), do: gettext("Carbs")
+  def nutrient_label("Fiber"), do: gettext("Fiber")
+  def nutrient_label(other), do: other
+
+  # Overlays the species' translated name for the modal title. Mirrors
+  # `SpeciesDetailLive.Index` — `nil`/`"en"` leaves the base English name.
+  defp localize_species_name(species, language) when language in [nil, "", "en"], do: species
+
+  defp localize_species_name(species, language) do
+    case Food.find_species_translation(language, species.id) do
+      [name | _] -> %{species | name: name}
+      [] -> species
+    end
+  end
 end

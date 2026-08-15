@@ -22,13 +22,20 @@ defmodule Mehungry.Health do
 
   alias Mehungry.Food.{
     Compound,
+    CompoundTranslation,
     FoundementalFood,
+    FoundementalFoodSpeciesTranslation,
     Recipe,
     RecipeIngredient,
     SpeciesCompoundRelationship
   }
 
-  alias Mehungry.Health.{Condition, CompoundRecommendation, ConditionIdentifier}
+  alias Mehungry.Health.{
+    Condition,
+    CompoundRecommendation,
+    ConditionIdentifier,
+    ConditionTranslation
+  }
 
   # ── Condition registry ────────────────────────────────────────────────────
 
@@ -67,14 +74,23 @@ defmodule Mehungry.Health do
 
   def get_condition!(id), do: Repo.get!(Condition, id)
 
-  @doc "Fetch a condition by id, or `nil` if it does not exist."
-  def get_condition(id), do: Repo.get(Condition, id)
+  @doc """
+  Fetch a condition by id, or `nil` if it does not exist. Pass a `language`
+  (ISO locale, e.g. `"el"`) to overlay its `condition_translations` name/description
+  (per-field fallback to the base record); `nil`/`"en"` returns the base record.
+  """
+  def get_condition(id, language \\ nil) do
+    case Repo.get(Condition, id) do
+      nil -> nil
+      condition -> localize_condition(condition, language)
+    end
+  end
 
   def get_condition_by_name(name), do: Repo.get_by(Condition, name: name)
 
   def list_conditions, do: Repo.all(from(c in Condition, order_by: [asc: c.name]))
 
-  def list_conditions_for_presentation do
+  def list_conditions_for_presentation(language \\ nil) do
     query =
       from c in Condition,
         as: :condition,
@@ -84,7 +100,9 @@ defmodule Mehungry.Health do
               where: cr.condition_id == parent_as(:condition).id
           )
 
-    Repo.all(query)
+    query
+    |> Repo.all()
+    |> localize_conditions(language)
   end
 
   def list_conditions_by_category(category) do
@@ -151,8 +169,11 @@ defmodule Mehungry.Health do
 
   def get_recommendation!(id), do: Repo.get!(CompoundRecommendation, id)
 
-  @doc "The recommendation rows for a condition, each with its `:compound` preloaded."
-  def recommendations_for_condition(condition_id) do
+  @doc """
+  The recommendation rows for a condition, each with its `:compound` preloaded.
+  Pass a `language` to overlay the compound's `compound_translations` name.
+  """
+  def recommendations_for_condition(condition_id, language \\ nil) do
     Repo.all(
       from(r in CompoundRecommendation,
         join: c in Compound,
@@ -162,6 +183,7 @@ defmodule Mehungry.Health do
         preload: [compound: c]
       )
     )
+    |> localize_recommendation_compounds(language)
   end
 
   @doc "The recommendation rows for a compound, each with its `:condition` preloaded."
@@ -211,7 +233,7 @@ defmodule Mehungry.Health do
   `%{species, compound, recommendation, severity, evidence_level}` so a caller can
   render "avoid Spinach (high Oxalate)".
   """
-  def species_for_condition(condition_id, recommendation \\ nil) do
+  def species_for_condition(condition_id, recommendation \\ nil, language \\ nil) do
     from(rec in CompoundRecommendation,
       join: scr in SpeciesCompoundRelationship,
       on: scr.compound_id == rec.compound_id,
@@ -230,6 +252,7 @@ defmodule Mehungry.Health do
     )
     |> maybe_filter_recommendation(recommendation)
     |> Repo.all()
+    |> localize_species_rows(language)
   end
 
   @doc """
@@ -336,6 +359,106 @@ defmodule Mehungry.Health do
   defp maybe_filter_recommendation(query, recommendation) do
     value = to_string(recommendation)
     from(rec in query, where: rec.recommendation == ^value)
+  end
+
+  # ── DB-content localization ───────────────────────────────────────────────
+  # Condition/compound/species names + descriptions carry per-language rows in
+  # their `*_translation` tables, keyed by the ISO locale (e.g. "el"). These
+  # helpers batch-load the translations (no N+1) and overlay them onto the base
+  # records, per-field falling back to the base value. A `nil`/`"en"` language is
+  # a no-op — English is the base record itself.
+
+  defp translatable_language?(language), do: language not in [nil, "", "en"]
+
+  defp localize_condition(condition, language) do
+    [condition] |> localize_conditions(language) |> hd()
+  end
+
+  defp localize_conditions(conditions, language) do
+    if translatable_language?(language) do
+      ids = Enum.map(conditions, & &1.id)
+
+      by_id =
+        from(t in ConditionTranslation,
+          where: t.condition_id in ^ids and t.language_name == ^language
+        )
+        |> Repo.all()
+        |> Map.new(&{&1.condition_id, &1})
+
+      Enum.map(conditions, fn c ->
+        case by_id[c.id] do
+          nil -> c
+          t -> %{c | name: t.name || c.name, description: t.description || c.description}
+        end
+      end)
+    else
+      conditions
+    end
+  end
+
+  defp localize_recommendation_compounds(rows, language) do
+    if translatable_language?(language) do
+      names = compound_translation_names(Enum.map(rows, & &1.compound.id), language)
+      Enum.map(rows, &%{&1 | compound: apply_compound_name(&1.compound, names)})
+    else
+      rows
+    end
+  end
+
+  defp localize_species_rows(rows, language) do
+    if translatable_language?(language) do
+      compound_names = compound_translation_names(Enum.map(rows, & &1.compound.id), language)
+      species_names = species_translation_names(Enum.map(rows, & &1.species.id), language)
+
+      Enum.map(rows, fn row ->
+        %{
+          row
+          | compound: apply_compound_name(row.compound, compound_names),
+            species: apply_species_name(row.species, species_names)
+        }
+      end)
+    else
+      rows
+    end
+  end
+
+  defp compound_translation_names([], _language), do: %{}
+
+  defp compound_translation_names(ids, language) do
+    from(t in CompoundTranslation,
+      where:
+        t.compound_id in ^ids and t.language_name == ^language and not is_nil(t.name),
+      select: {t.compound_id, t.name}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  defp species_translation_names([], _language), do: %{}
+
+  defp species_translation_names(ids, language) do
+    from(t in FoundementalFoodSpeciesTranslation,
+      where:
+        t.foundemental_species_id in ^ids and t.language_name == ^language and
+          not is_nil(t.name),
+      select: {t.foundemental_species_id, t.name}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  defp apply_compound_name(compound, names) do
+    case names[compound.id] do
+      nil -> compound
+      name -> %{compound | name: name}
+    end
+  end
+
+  defp apply_species_name(species, names) do
+    case names[species.id] do
+      nil -> species
+      name -> %{species | name: name}
+    end
   end
 
   @doc """

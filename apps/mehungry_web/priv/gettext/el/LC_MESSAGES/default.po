@@ -92,3 +92,229 @@ msgstr "Προσκλήσεις"
 #, elixir-autogen, elixir-format
 msgid "close"
 msgstr "κλείσιμο"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:121
+#, elixir-autogen, elixir-format
+msgid "%{count} food species contain a compound flagged for this condition."
+msgstr "%{count} είδη τροφίμων περιέχουν μια ένωση που έχει επισημανθεί για αυτή την πάθηση."
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:51
+#, elixir-autogen, elixir-format
+msgid "%{name} — Dietary Guidance"
+msgstr "%{name} — Διατροφική Καθοδήγηση"
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:213
+#, elixir-autogen, elixir-format
+msgid "Approach with caution"
+msgstr "Προσέγγιση με προσοχή"
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:211
+#, elixir-autogen, elixir-format
+msgid "Avoid"
+msgstr "Αποφυγή"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:290
+#, elixir-autogen, elixir-format
+msgid "Bioactive Compounds"
+msgstr "Βιοδραστικές Ενώσεις"
+
+#: lib/mehungry_web/live/health_live/index.ex:16
+#, elixir-autogen, elixir-format
+msgid "Browse health conditions and their dietary guidance — which bioactive compounds to avoid or limit, and the foods that contain them."
+msgstr "Περιηγηθείτε στις παθήσεις υγείας και τη διατροφική τους καθοδήγηση — ποιες βιοδραστικές ενώσεις να αποφεύγετε ή να περιορίζετε, και τα τρόφιμα που τις περιέχουν."
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:220
+#, elixir-autogen, elixir-format
+msgid "Calories"
+msgstr "Θερμίδες"
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:223
+#, elixir-autogen, elixir-format
+msgid "Carbs"
+msgstr "Υδατάνθρακες"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:5
+#, elixir-autogen, elixir-format
+msgid "Conditions"
+msgstr "Παθήσεις"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:298
+#, elixir-autogen, elixir-format
+msgid "Couldn't load compounds."
+msgstr "Δεν ήταν δυνατή η φόρτωση των ενώσεων."
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:111
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:176
+#, elixir-autogen, elixir-format
+msgid "Couldn't load foods for this condition."
+msgstr "Δεν ήταν δυνατή η φόρτωση των τροφίμων για αυτή την πάθηση."
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:269
+#, elixir-autogen, elixir-format
+msgid "Couldn't load nutrition."
+msgstr "Δεν ήταν δυνατή η φόρτωση των διατροφικών στοιχείων."
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:335
+#, elixir-autogen, elixir-format
+msgid "Couldn't load recipes."
+msgstr "Δεν ήταν δυνατή η φόρτωση των συνταγών."
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:41
+#, elixir-autogen, elixir-format
+msgid "Couldn't load recommendations."
+msgstr "Δεν ήταν δυνατή η φόρτωση των συστάσεων."
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:211
+#, elixir-autogen, elixir-format
+msgid "Details →"
+msgstr "Λεπτομέρειες →"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:26
+#, elixir-autogen, elixir-format
+msgid "Dietary Recommendations"
+msgstr "Διατροφικές Συστάσεις"
+
+#: lib/mehungry_web/live/health_live/index.html.heex:8
+#, elixir-autogen, elixir-format
+msgid "Dietary guidance by condition — which bioactive compounds to be mindful of, and the foods that contain them."
+msgstr "Διατροφική καθοδήγηση ανά πάθηση — ποιες βιοδραστικές ενώσεις να προσέχετε, και τα τρόφιμα που τις περιέχουν."
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:54
+#, elixir-autogen, elixir-format
+msgid "Dietary guidance for %{name}: bioactive compounds to be mindful of and the food species that contain them."
+msgstr "Διατροφική καθοδήγηση για %{name}: βιοδραστικές ενώσεις που πρέπει να προσέχετε και τα είδη τροφίμων που τις περιέχουν."
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:215
+#, elixir-autogen, elixir-format
+msgid "Encourage"
+msgstr "Ενθάρρυνση"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:158
+#, elixir-autogen, elixir-format
+msgid "Encouraged Foods"
+msgstr "Ενθαρρυνόμενα Τρόφιμα"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:69
+#, elixir-autogen, elixir-format
+msgid "Evidence: %{level}"
+msgstr "Τεκμηρίωση: %{level}"
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:222
+#, elixir-autogen, elixir-format
+msgid "Fat"
+msgstr "Λιπαρά"
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:224
+#, elixir-autogen, elixir-format
+msgid "Fiber"
+msgstr "Φυτικές ίνες"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:93
+#, elixir-autogen, elixir-format
+msgid "Foods to Be Mindful Of"
+msgstr "Τρόφιμα προς Προσοχή"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:184
+#, elixir-autogen, elixir-format
+msgid "Foods worth including — each contains a compound recommended for this condition."
+msgstr "Τρόφιμα που αξίζει να συμπεριλάβετε — καθένα περιέχει μια ένωση που συνιστάται για αυτή την πάθηση."
+
+#: lib/mehungry_web/live/health_live/index.html.heex:5
+#, elixir-autogen, elixir-format
+msgid "Health Conditions"
+msgstr "Παθήσεις Υγείας"
+
+#: lib/mehungry_web/live/health_live/index.ex:13
+#, elixir-autogen, elixir-format
+msgid "Health Conditions & Dietary Guidance"
+msgstr "Παθήσεις Υγείας & Διατροφική Καθοδήγηση"
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:212
+#, elixir-autogen, elixir-format
+msgid "Limit"
+msgstr "Περιορισμός"
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:214
+#, elixir-autogen, elixir-format
+msgid "Monitor"
+msgstr "Παρακολούθηση"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:300
+#, elixir-autogen, elixir-format
+msgid "No compounds linked to this food yet."
+msgstr "Δεν έχουν συνδεθεί ακόμη ενώσεις με αυτό το τρόφιμο."
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:180
+#, elixir-autogen, elixir-format
+msgid "No encouraged foods recorded for this condition yet."
+msgstr "Δεν έχουν καταγραφεί ακόμη ενθαρρυνόμενα τρόφιμα για αυτή την πάθηση."
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:115
+#, elixir-autogen, elixir-format
+msgid "No foods linked yet — recommendations reference compounds; food species appear once a compound is linked to a species."
+msgstr "Δεν έχουν συνδεθεί ακόμη τρόφιμα — οι συστάσεις αναφέρονται σε ενώσεις· τα είδη τροφίμων εμφανίζονται μόλις μια ένωση συνδεθεί με ένα είδος."
+
+#: lib/mehungry_web/live/health_live/index.html.heex:16
+#, elixir-autogen, elixir-format
+msgid "No health conditions have been added yet."
+msgstr "Δεν έχουν προστεθεί ακόμη παθήσεις υγείας."
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:271
+#, elixir-autogen, elixir-format
+msgid "No nutrition data for this food yet."
+msgstr "Δεν υπάρχουν ακόμη διατροφικά δεδομένα για αυτό το τρόφιμο."
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:337
+#, elixir-autogen, elixir-format
+msgid "No recipes found for this food yet."
+msgstr "Δεν βρέθηκαν ακόμη συνταγές για αυτό το τρόφιμο."
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:44
+#, elixir-autogen, elixir-format
+msgid "No recommendations recorded for this condition yet."
+msgstr "Δεν έχουν καταγραφεί ακόμη συστάσεις για αυτή την πάθηση."
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:261
+#, elixir-autogen, elixir-format
+msgid "Nutrition"
+msgstr "Διατροφή"
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:221
+#, elixir-autogen, elixir-format
+msgid "Protein"
+msgstr "Πρωτεΐνη"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:318
+#, elixir-autogen, elixir-format
+msgid "Sample Recipes"
+msgstr "Ενδεικτικές Συνταγές"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:391
+#, elixir-autogen, elixir-format
+msgid "Save recipe for later"
+msgstr "Αποθήκευση συνταγής για αργότερα"
+
+#: lib/mehungry_web/live/health_live/index.html.heex:20
+#, elixir-autogen, elixir-format
+msgid "Showing %{count} conditions"
+msgstr "Εμφάνιση %{count} παθήσεων"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:420
+#, elixir-autogen, elixir-format
+msgid "View full food page →"
+msgstr "Προβολή πλήρους σελίδας τροφίμου →"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:378
+#, elixir-autogen, elixir-format
+msgid "min"
+msgstr "λεπτά"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:261
+#, elixir-autogen, elixir-format
+msgid "per 100g"
+msgstr "ανά 100γρ"
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:204
+#, elixir-autogen, elixir-format
+msgid "via %{compound}"
+msgstr "μέσω %{compound}"
