@@ -19,9 +19,47 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
       |> assign(:recalc_run, NutrientRecalculationRuns.latest_run())
       |> assign(:portion_report, nil)
       |> assign(:portion_running, false)
+      |> assign(:search_query, "")
       |> load_stats()
+      |> load_search_results("")
 
     {:ok, socket}
+  end
+
+  @impl true
+  def handle_event("search_recipes", %{"query" => query}, socket) do
+    {:noreply,
+     socket
+     |> assign(:search_query, query)
+     |> load_search_results(query)}
+  end
+
+  @impl true
+  def handle_event("delete_recipe", %{"id" => id}, socket) do
+    id = String.to_integer(id)
+
+    Logger.info(
+      "[delete_recipe] recipe=#{id} requested by user " <>
+        "#{inspect(socket.assigns[:current_user] && socket.assigns.current_user.id)}"
+    )
+
+    socket =
+      case Food.delete_recipes_by_ids([id]) do
+        {:ok, count} when count > 0 ->
+          socket
+          |> put_flash(:info, "Deleted recipe ##{id} and all its references.")
+          |> load_stats()
+          |> load_search_results(socket.assigns.search_query)
+
+        {:ok, _} ->
+          put_flash(socket, :error, "Recipe ##{id} not found.")
+
+        {:error, reason} ->
+          Logger.error("[delete_recipe] recipe=#{id} failed: #{inspect(reason)}")
+          put_flash(socket, :error, "Deletion failed: #{inspect(reason)}")
+      end
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -156,5 +194,9 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
     |> assign(:total_count, Food.count_recipes())
     |> assign(:empty_count, length(empty_recipes))
     |> stream(:empty_recipes, empty_recipes, reset: true)
+  end
+
+  defp load_search_results(socket, query) do
+    stream(socket, :search_results, Food.search_recipes_for_admin(query), reset: true)
   end
 end

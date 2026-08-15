@@ -6,7 +6,7 @@
 
 ## Consent Mode v2
 
-`gtag.js` loads unconditionally on every page (`head.html.heex`), but consent state gates what it's allowed to do with it:
+`gtag.js` loads on most pages (`head.html.heex`), but consent state gates what it's allowed to do with it:
 
 ```js
 gtag('consent', 'default', { analytics_storage: '<granted|denied>' });
@@ -16,6 +16,15 @@ gtag('config', measurement_id, { send_page_view: false });
 `analytics_storage` is derived from `@conn.assigns[:cookie_consent]` (set by `MehungryWeb.Plugs.CookieConsent`): `:accepted` → `granted`, `:declined`/`:pending` → `denied`. When denied, gtag automatically downgrades every hit to an anonymous **cookieless ping** — no `_ga`/`_gid` cookie, no persistent client ID — which still feeds GA4's aggregate/modeled reporting. This is Google's built-in mechanism for "basic signal pre-consent, full per-user tracking post-consent"; no app code branches on consent state beyond this one flag. `ConsentController.accept/decline` does a full-page redirect, so the next `head.html.heex` render picks up the new state automatically.
 
 No `ad_storage`/`ad_user_data`/`ad_personalization` consent types are managed — this app has no ads/remarketing product attached.
+
+### Suppression (localhost + team accounts)
+
+`head.html.heex` computes a `ga_enabled` flag and omits the `gtag.js` script tags entirely when it's false, so no measurement hits are sent for that request. GA is suppressed when:
+
+- the request host is `localhost` or `127.0.0.1` (local dev), **or**
+- the signed-in `@conn.assigns[:current_user].email` is in the owner/team blocklist (`ga_blocked_emails` in `head.html.heex`).
+
+Because every listener in `app.js` (`phx:page-loading-stop` page views, `phx:ga_event` custom events) guards on `typeof gtag === "function"`, omitting the script cleanly no-ops all tracking — no other wiring changes.
 
 ## SPA page views
 

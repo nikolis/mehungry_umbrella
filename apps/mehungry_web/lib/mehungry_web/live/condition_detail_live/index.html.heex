@@ -1,7 +1,9 @@
 <div class="condition-detail-page min-h-screen bg-ink text-parchment pb-16">
   <div class="container max-w-3xl mx-auto px-4 py-8">
     <nav class="text-sm text-parchment-dim mb-6">
-      <a href="/conditions" class="hover:text-parchment transition-colors">Conditions</a>
+      <.link navigate={~p"/#{@locale}/conditions"} class="hover:text-parchment transition-colors">
+        {gettext("Conditions")}
+      </.link>
       <span class="mx-2">›</span>
       <span class="text-parchment">{@condition.name}</span>
     </nav>
@@ -21,7 +23,7 @@
     <%!-- ── Recommendations ─────────────────────────────────────────────── --%>
     <section class="mb-10">
       <h2 class="text-lg font-display font-medium text-parchment mb-4">
-        Dietary Recommendations
+        {gettext("Dietary Recommendations")}
       </h2>
 
       <%= cond do %>
@@ -36,10 +38,10 @@
             </div>
           </div>
         <% @recommendations.failed -> %>
-          <p class="text-parchment-dim text-sm">Couldn't load recommendations.</p>
+          <p class="text-parchment-dim text-sm">{gettext("Couldn't load recommendations.")}</p>
         <% @recommendations.ok? && length(@recommendations.result) == 0 -> %>
           <p class="text-parchment-dim text-sm">
-            No recommendations recorded for this condition yet.
+            {gettext("No recommendations recorded for this condition yet.")}
           </p>
         <% true -> %>
           <div class="space-y-6">
@@ -64,7 +66,9 @@
                       <div class="flex flex-wrap items-center gap-2 text-xs text-parchment-dim">
                         <%= if row.evidence_level do %>
                           <span class="px-2 py-0.5 rounded-full bg-ink-panel2">
-                            Evidence: {String.capitalize(row.evidence_level)}
+                            {gettext("Evidence: %{level}",
+                              level: String.capitalize(row.evidence_level)
+                            )}
                           </span>
                         <% end %>
                         <span class="px-2 py-0.5 rounded-full bg-ink-panel2">
@@ -85,7 +89,9 @@
 
     <%!-- ── Food species to be mindful of (derived via the shared compound) ── --%>
     <section class="mb-10">
-      <h2 class="text-lg font-display font-medium text-parchment mb-4">Foods to Be Mindful Of</h2>
+      <h2 class="text-lg font-display font-medium text-parchment mb-4">
+        {gettext("Foods to Be Mindful Of")}
+      </h2>
 
       <%= cond do %>
         <% @species.loading -> %>
@@ -101,17 +107,20 @@
             </div>
           </div>
         <% @species.failed -> %>
-          <p class="text-parchment-dim text-sm">Couldn't load foods for this condition.</p>
+          <p class="text-parchment-dim text-sm">
+            {gettext("Couldn't load foods for this condition.")}
+          </p>
         <% @species.ok? && length(mindful_species(@species.result)) == 0 -> %>
           <p class="text-parchment-dim text-sm">
-            No foods linked yet — recommendations reference compounds; food species appear once a compound is linked to a species.
+            {gettext(
+              "No foods linked yet — recommendations reference compounds; food species appear once a compound is linked to a species."
+            )}
           </p>
         <% true -> %>
           <p class="text-sm text-parchment-dim mb-4">
-            <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(
-              mindful_species(@species.result)
-            )}</span>
-            food species contain a compound flagged for this condition.
+            {gettext("%{count} food species contain a compound flagged for this condition.",
+              count: length(mindful_species(@species.result))
+            )}
           </p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <%= for row <- mindful_species(@species.result) do %>
@@ -145,7 +154,9 @@
 
     <%!-- ── Encouraged foods (good for this condition, via the shared compound) ── --%>
     <section class="mb-10">
-      <h2 class="text-lg font-display font-medium text-parchment mb-4">Encouraged Foods</h2>
+      <h2 class="text-lg font-display font-medium text-parchment mb-4">
+        {gettext("Encouraged Foods")}
+      </h2>
 
       <%= cond do %>
         <% @species.loading -> %>
@@ -161,14 +172,16 @@
             </div>
           </div>
         <% @species.failed -> %>
-          <p class="text-parchment-dim text-sm">Couldn't load foods for this condition.</p>
+          <p class="text-parchment-dim text-sm">
+            {gettext("Couldn't load foods for this condition.")}
+          </p>
         <% @species.ok? && length(encouraged_species(@species.result)) == 0 -> %>
           <p class="text-parchment-dim text-sm">
-            No encouraged foods recorded for this condition yet.
+            {gettext("No encouraged foods recorded for this condition yet.")}
           </p>
         <% true -> %>
           <p class="text-sm text-parchment-dim mb-4">
-            Foods worth including — each contains a compound recommended for this condition.
+            {gettext("Foods worth including — each contains a compound recommended for this condition.")}
           </p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <%= for row <- encouraged_species(@species.result) do %>
@@ -187,13 +200,15 @@
                   >
                     {row.species.scientific_name}
                   </p>
-                  <p class="text-xs text-parchment-dim mt-0.5">via {row.compound.name}</p>
+                  <p class="text-xs text-parchment-dim mt-0.5">
+                    {gettext("via %{compound}", compound: row.compound.name)}
+                  </p>
                 </div>
                 <.link
-                  patch={~p"/conditions/#{@condition.id}/food/#{row.species.id}"}
+                  patch={~p"/#{@locale}/conditions/#{@condition.id}/food/#{row.species.id}"}
                   class="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-basil/15 text-basil hover:bg-basil/25 transition-colors"
                 >
-                  Details →
+                  {gettext("Details →")}
                 </.link>
               </div>
             <% end %>
@@ -207,7 +222,7 @@
     :if={@live_action == :show_food && @modal_species}
     id="encouraged-food-modal"
     show
-    on_cancel={JS.patch(~p"/conditions/#{@condition.id}")}
+    on_cancel={JS.patch(~p"/#{@locale}/conditions/#{@condition.id}")}
   >
     <div class="space-y-6">
       <%!-- Identity --%>
@@ -243,7 +258,7 @@
       <%!-- Nutrition snapshot --%>
       <div>
         <h3 class="text-sm font-semibold text-parchment-dim uppercase tracking-wide mb-3">
-          Nutrition <span class="font-normal normal-case">per 100g</span>
+          {gettext("Nutrition")} <span class="font-normal normal-case">{gettext("per 100g")}</span>
         </h3>
         <%= cond do %>
           <% @modal_nutrients.loading -> %>
@@ -251,9 +266,9 @@
               <div :for={_ <- 1..5} class="m3-skeleton h-20 rounded-xl bg-ink-panel2" />
             </div>
           <% @modal_nutrients.failed -> %>
-            <p class="text-parchment-dim text-sm">Couldn't load nutrition.</p>
+            <p class="text-parchment-dim text-sm">{gettext("Couldn't load nutrition.")}</p>
           <% @modal_nutrients.ok? && length(@modal_nutrients.result) == 0 -> %>
-            <p class="text-parchment-dim text-sm">No nutrition data for this food yet.</p>
+            <p class="text-parchment-dim text-sm">{gettext("No nutrition data for this food yet.")}</p>
           <% true -> %>
             <div class="grid grid-cols-3 sm:grid-cols-5 gap-3">
               <%= for n <- @modal_nutrients.result do %>
@@ -262,7 +277,7 @@
                     {format_amount(n.amount)}
                   </div>
                   <div class="text-xs text-parchment-dim mt-0.5">{n.unit}</div>
-                  <div class="text-xs font-medium text-parchment-dim mt-1">{n.label}</div>
+                  <div class="text-xs font-medium text-parchment-dim mt-1">{nutrient_label(n.label)}</div>
                 </div>
               <% end %>
             </div>
@@ -272,7 +287,7 @@
       <%!-- Bioactive compounds --%>
       <div>
         <h3 class="text-sm font-semibold text-parchment-dim uppercase tracking-wide mb-3">
-          Bioactive Compounds
+          {gettext("Bioactive Compounds")}
         </h3>
         <%= cond do %>
           <% @modal_compounds.loading -> %>
@@ -280,9 +295,9 @@
               <div :for={_ <- 1..4} class="m3-skeleton h-8 w-24 rounded-xl bg-ink-panel2" />
             </div>
           <% @modal_compounds.failed -> %>
-            <p class="text-parchment-dim text-sm">Couldn't load compounds.</p>
+            <p class="text-parchment-dim text-sm">{gettext("Couldn't load compounds.")}</p>
           <% @modal_compounds.ok? && length(@modal_compounds.result) == 0 -> %>
-            <p class="text-parchment-dim text-sm">No compounds linked to this food yet.</p>
+            <p class="text-parchment-dim text-sm">{gettext("No compounds linked to this food yet.")}</p>
           <% true -> %>
             <div class="flex flex-wrap gap-2">
               <%= for rel <- @modal_compounds.result do %>
@@ -300,7 +315,7 @@
       <%!-- Sample recipes --%>
       <div>
         <h3 class="text-sm font-semibold text-parchment-dim uppercase tracking-wide mb-3">
-          Sample Recipes
+          {gettext("Sample Recipes")}
         </h3>
         <%= cond do %>
           <% @modal_recipes.loading -> %>
@@ -317,15 +332,15 @@
               </div>
             </div>
           <% @modal_recipes.failed -> %>
-            <p class="text-parchment-dim text-sm">Couldn't load recipes.</p>
+            <p class="text-parchment-dim text-sm">{gettext("Couldn't load recipes.")}</p>
           <% @modal_recipes.ok? && length(@modal_recipes.result) == 0 -> %>
-            <p class="text-parchment-dim text-sm">No recipes found for this food yet.</p>
+            <p class="text-parchment-dim text-sm">{gettext("No recipes found for this food yet.")}</p>
           <% true -> %>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <%= for recipe <- @modal_recipes.result do %>
                 <div class="relative">
                   <a
-                    href={"/browse/#{recipe.id}"}
+                    href={~p"/#{@locale}/browse/#{recipe.id}"}
                     class="group flex items-center gap-3 bg-ink-panel border border-ink-panel2 rounded-xl p-3 hover:border-paprika/50 hover:bg-ink-panel2/80 transition-colors"
                   >
                     <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-ink-panel2">
@@ -360,7 +375,7 @@
                       <%= if recipe.cooking_time_lower_limit do %>
                         <p class="text-xs text-parchment-dim mt-0.5">
                           <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{recipe.cooking_time_lower_limit}</span>
-                          min
+                          {gettext("min")}
                         </p>
                       <% end %>
                     </div>
@@ -373,7 +388,7 @@
                     phx-click="save_user_recipe"
                     phx-value-recipe_id={recipe.id}
                     type="button"
-                    aria-label="Save recipe for later"
+                    aria-label={gettext("Save recipe for later")}
                     class="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-ink/40 hover:bg-ink/70 transition backdrop-blur-sm"
                   >
                     <svg
@@ -399,10 +414,10 @@
       <%!-- Link to the full food page --%>
       <div class="pt-2">
         <a
-          href={"/foods/#{species_slug(@modal_species)}"}
+          href={~p"/#{@locale}/foods/#{species_slug(@modal_species)}"}
           class="inline-flex items-center gap-1 px-5 py-2.5 bg-paprika hover:bg-paprika-soft text-ink rounded-xl transition-colors text-sm font-bold"
         >
-          View full food page →
+          {gettext("View full food page →")}
         </a>
       </div>
     </div>

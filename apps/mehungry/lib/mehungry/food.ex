@@ -51,6 +51,9 @@ defmodule Mehungry.Food do
   defdelegate count_recipes_without_ingredients(), to: Recipes
   defdelegate list_recipes_without_ingredients(), to: Recipes
   defdelegate delete_recipes_without_ingredients(), to: Recipes
+  defdelegate delete_recipes_by_ids(recipe_ids), to: Recipes
+  defdelegate search_recipes_for_admin(term), to: Recipes
+  defdelegate search_recipes_for_admin(term, limit), to: Recipes
   defdelegate change_recipe(recipe, attrs \\ %{}), to: Recipes
   defdelegate change_step(step, attrs \\ %{}), to: Recipes
   defdelegate create_recipe(attrs \\ %{}), to: Recipes

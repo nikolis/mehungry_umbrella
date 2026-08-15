@@ -143,6 +143,48 @@ defmodule Mehungry.Food.Recipes do
   end
 
   @doc """
+  Searches recipes for the admin recipes tab. A blank `term` returns the most
+  recent recipes; otherwise matches `title` case-insensitively. Also accepts a
+  bare integer id. Preloads the owner and annotates each row with an
+  `ingredient_count` so the admin can see what a delete would take with it.
+  Capped at `limit` (default 50) rows.
+  """
+  def search_recipes_for_admin(term, limit \\ 50) when is_binary(term) do
+    term = String.trim(term)
+
+    base =
+      from(r in Recipe,
+        order_by: [desc: r.inserted_at],
+        limit: ^limit
+      )
+
+    query =
+      case {term, Integer.parse(term)} do
+        {"", _} ->
+          base
+
+        {_, {id, ""}} ->
+          from(r in base, where: r.id == ^id or ilike(r.title, ^"%#{term}%"))
+
+        _ ->
+          from(r in base, where: ilike(r.title, ^"%#{term}%"))
+      end
+
+    recipes = query |> Repo.all() |> Repo.preload(:user)
+
+    counts =
+      from(ri in Mehungry.Food.RecipeIngredient,
+        where: ri.recipe_id in ^Enum.map(recipes, & &1.id),
+        group_by: ri.recipe_id,
+        select: {ri.recipe_id, count(ri.id)}
+      )
+      |> Repo.all()
+      |> Map.new()
+
+    Enum.map(recipes, fn r -> Map.put(r, :ingredient_count, Map.get(counts, r.id, 0)) end)
+  end
+
+  @doc """
   Deletes every recipe that has zero linked ingredients along with all of its
   dependent rows, in a single transaction. Mirrors the cascade in
   `Ingredients.delete_ingredients_without_nutrients/0` so foreign-key

@@ -98,7 +98,7 @@ defmodule MehungryWeb.HealthLiveTest do
     end
 
     test "redirects to /conditions for an unknown id", %{conn: conn} do
-      assert {:error, {:live_redirect, %{to: "/conditions"}}} =
+      assert {:error, {:live_redirect, %{to: "/en/conditions"}}} =
                live(conn, ~p"/conditions/#{0}")
     end
 
@@ -145,7 +145,7 @@ defmodule MehungryWeb.HealthLiveTest do
       # The Details link patches to :show_food and opens the preview modal.
       html =
         view
-        |> element(~s{a[href="/conditions/#{condition.id}/food/#{kale_species.id}"]})
+        |> element(~s{a[href="/en/conditions/#{condition.id}/food/#{kale_species.id}"]})
         |> render_click()
 
       assert html =~ "encouraged-food-modal"

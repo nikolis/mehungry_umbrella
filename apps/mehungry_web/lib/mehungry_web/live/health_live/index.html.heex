@@ -1,29 +1,29 @@
 <div class="health-page min-h-screen bg-ink text-parchment pb-16">
   <div class="container max-w-4xl mx-auto px-4 py-8">
     <div class="mb-8">
-      <h1 class="text-3xl font-display font-medium text-parchment mb-2">Health Conditions</h1>
+      <h1 class="text-3xl font-display font-medium text-parchment mb-2">
+        {gettext("Health Conditions")}
+      </h1>
       <p class="text-parchment-dim">
-        Dietary guidance by condition — which bioactive compounds to be mindful of, and the foods that contain them.
+        {gettext(
+          "Dietary guidance by condition — which bioactive compounds to be mindful of, and the foods that contain them."
+        )}
       </p>
     </div>
 
     <%= if length(@conditions) == 0 do %>
       <div class="text-center py-16 text-parchment-dim">
-        <p>No health conditions have been added yet.</p>
+        <p>{gettext("No health conditions have been added yet.")}</p>
       </div>
     <% else %>
       <div class="text-sm text-parchment-dim mb-4">
-        Showing
-        <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{length(
-          @conditions
-        )}</span>
-        conditions
+        {gettext("Showing %{count} conditions", count: length(@conditions))}
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
         <%= for condition <- @conditions do %>
           <a
-            href={"/conditions/#{condition.id}"}
+            href={~p"/#{@locale}/conditions/#{condition.id}"}
             class="group block bg-ink-panel border border-ink-panel2 rounded-xl p-4 hover:border-paprika/50 hover:bg-ink-panel2/80 transition-colors"
           >
             <div class="flex items-start justify-between gap-2">
