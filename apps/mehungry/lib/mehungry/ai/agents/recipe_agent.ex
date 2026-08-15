@@ -982,7 +982,9 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
           gram_weight: p.gram_weight
         }
       end)
-      |> Enum.reject(&is_nil(&1.unit))
+      # Drop portions whose label is meaningless to a cook (e.g. USDA "RACC",
+      # "Quantity not specified") — see IngredientPortion.meaningful_label?/1.
+      |> Enum.filter(&Mehungry.Food.IngredientPortion.meaningful_label?(&1.unit))
       |> Enum.uniq_by(& &1.portion_id)
 
     if gram_unit do

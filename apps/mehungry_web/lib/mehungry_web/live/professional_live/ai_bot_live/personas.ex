@@ -65,12 +65,18 @@ defmodule MehungryWeb.AiBotLive.Personas do
   end
 
   def handle_event("delete", %{"id" => id}, socket) do
-    id |> Bot.get_persona!() |> Bot.delete_persona()
+    socket =
+      case id |> Bot.get_persona!() |> Bot.delete_persona() do
+        {:ok, _persona} ->
+          socket
+          |> assign(:personas, Bot.list_personas())
+          |> put_flash(:info, "Persona deleted.")
 
-    {:noreply,
-     socket
-     |> assign(:personas, Bot.list_personas())
-     |> put_flash(:info, "Persona deleted.")}
+        {:error, _reason} ->
+          put_flash(socket, :error, "Could not delete this persona — it is still in use.")
+      end
+
+    {:noreply, socket}
   end
 
   @impl true

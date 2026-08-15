@@ -351,7 +351,16 @@ defmodule Mehungry.AI.Bot do
     |> Repo.update()
   end
 
-  def delete_persona(%Persona{} = persona), do: Repo.delete(persona)
+  @doc """
+  Deletes a persona. Setups that reference it have their `persona_id` nilified
+  by the FK (`on_delete: :nilify_all`). Returns `{:error, :referenced}` instead
+  of raising if some other constraint still blocks the delete.
+  """
+  def delete_persona(%Persona{} = persona) do
+    Repo.delete(persona)
+  rescue
+    Ecto.ConstraintError -> {:error, :referenced}
+  end
 
   def change_persona(%Persona{} = persona, attrs \\ %{}) do
     Persona.changeset(persona, attrs)
@@ -401,7 +410,17 @@ defmodule Mehungry.AI.Bot do
     |> Repo.update()
   end
 
-  def delete_recipe_setup(%RecipeSetup{} = setup), do: Repo.delete(setup)
+  @doc """
+  Deletes a setup along with its dependent rows. Seed ingredients and any recipe
+  orders cascade (FK `on_delete: :delete_all`); configs/week/day rows that
+  reference it are nilified. Returns `{:error, :referenced}` instead of raising
+  if a constraint still blocks the delete.
+  """
+  def delete_recipe_setup(%RecipeSetup{} = setup) do
+    Repo.delete(setup)
+  rescue
+    Ecto.ConstraintError -> {:error, :referenced}
+  end
 
   def change_recipe_setup(%RecipeSetup{} = setup, attrs \\ %{}) do
     RecipeSetup.changeset(setup, attrs)
@@ -489,6 +508,18 @@ defmodule Mehungry.AI.Bot do
 
   def change_recipe_order(%RecipeOrder{} = order, attrs \\ %{}) do
     RecipeOrder.changeset(order, attrs)
+  end
+
+  @doc """
+  Deletes a recipe order. Generated `ai_bot_recipes` keep their rows — the FK
+  nilifies their `recipe_order_id` (`on_delete: :nilify_all`) so already-produced
+  recipes survive in the review queue. Returns `{:error, :referenced}` instead of
+  raising if a constraint still blocks the delete.
+  """
+  def delete_recipe_order(%RecipeOrder{} = order) do
+    Repo.delete(order)
+  rescue
+    Ecto.ConstraintError -> {:error, :referenced}
   end
 
   def increment_order_completed(%RecipeOrder{} = order) do

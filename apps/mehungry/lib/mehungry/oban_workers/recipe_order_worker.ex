@@ -72,7 +72,7 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
       meal seq:    #{Enum.join(meal_types, ", ")}
     """)
 
-    if setup && setup.condition_id && encouraged == [] and discouraged == [] do
+    if setup && setup.condition_id && encouraged == [] && discouraged == [] do
       Logger.warning(
         "[RecipeOrderWorker] Order ##{order.id}: setup '#{setup.name}' is linked to a " <>
           "condition but it yields no encouraged or discouraged ingredients (no compounds " <>
