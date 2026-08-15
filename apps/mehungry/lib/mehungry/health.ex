@@ -37,6 +37,8 @@ defmodule Mehungry.Health do
     ConditionTranslation
   }
 
+  alias Mehungry.Languages.Locale
+
   # ── Condition registry ────────────────────────────────────────────────────
 
   def create_condition(attrs) do
@@ -363,10 +365,13 @@ defmodule Mehungry.Health do
 
   # ── DB-content localization ───────────────────────────────────────────────
   # Condition/compound/species names + descriptions carry per-language rows in
-  # their `*_translation` tables, keyed by the ISO locale (e.g. "el"). These
-  # helpers batch-load the translations (no N+1) and overlay them onto the base
-  # records, per-field falling back to the base value. A `nil`/`"en"` language is
-  # a no-op — English is the base record itself.
+  # their `*_translation` tables. A locale maps to *several* `language_name` codes
+  # (`Locale.data_codes/1`: the canonical ISO code plus legacy aliases, e.g.
+  # `"el" => ["el", "Gr"]`) — species/ingredient rows in particular predate the
+  # ISO migration and are stored under `"Gr"`, so a query on `"el"` alone silently
+  # finds nothing. These helpers batch-load across *all* the locale's codes (no
+  # N+1), preferring the canonical ISO row when an entity has both, and overlay
+  # them onto the base records with per-field fallback. `nil`/`"en"` is a no-op.
 
   defp translatable_language?(language), do: language not in [nil, "", "en"]
 
@@ -376,14 +381,15 @@ defmodule Mehungry.Health do
 
   defp localize_conditions(conditions, language) do
     if translatable_language?(language) do
+      codes = Locale.data_codes(language)
       ids = Enum.map(conditions, & &1.id)
 
       by_id =
         from(t in ConditionTranslation,
-          where: t.condition_id in ^ids and t.language_name == ^language
+          where: t.condition_id in ^ids and t.language_name in ^codes
         )
         |> Repo.all()
-        |> Map.new(&{&1.condition_id, &1})
+        |> best_by_id(codes, & &1.condition_id)
 
       Enum.map(conditions, fn c ->
         case by_id[c.id] do
@@ -425,26 +431,47 @@ defmodule Mehungry.Health do
   defp compound_translation_names([], _language), do: %{}
 
   defp compound_translation_names(ids, language) do
+    codes = Locale.data_codes(language)
+
     from(t in CompoundTranslation,
-      where:
-        t.compound_id in ^ids and t.language_name == ^language and not is_nil(t.name),
-      select: {t.compound_id, t.name}
+      where: t.compound_id in ^ids and t.language_name in ^codes and not is_nil(t.name)
     )
     |> Repo.all()
-    |> Map.new()
+    |> best_by_id(codes, & &1.compound_id)
+    |> Map.new(fn {id, t} -> {id, t.name} end)
   end
 
   defp species_translation_names([], _language), do: %{}
 
   defp species_translation_names(ids, language) do
+    codes = Locale.data_codes(language)
+
     from(t in FoundementalFoodSpeciesTranslation,
       where:
-        t.foundemental_species_id in ^ids and t.language_name == ^language and
-          not is_nil(t.name),
-      select: {t.foundemental_species_id, t.name}
+        t.foundemental_species_id in ^ids and t.language_name in ^codes and not is_nil(t.name)
     )
     |> Repo.all()
-    |> Map.new()
+    |> best_by_id(codes, & &1.foundemental_species_id)
+    |> Map.new(fn {id, t} -> {id, t.name} end)
+  end
+
+  # Collapses translation rows to one per entity id, preferring the row whose
+  # `language_name` ranks earliest in `codes` (index 0 = canonical ISO code) when
+  # an entity carries both an ISO and a legacy-alias row.
+  defp best_by_id(rows, codes, id_fun) do
+    rank = codes |> Enum.with_index() |> Map.new()
+
+    rows
+    |> Enum.reduce(%{}, fn row, acc ->
+      id = id_fun.(row)
+      r = Map.get(rank, row.language_name, length(codes))
+
+      case acc do
+        %{^id => {best, _}} when best <= r -> acc
+        _ -> Map.put(acc, id, {r, row})
+      end
+    end)
+    |> Map.new(fn {id, {_r, row}} -> {id, row} end)
   end
 
   defp apply_compound_name(compound, names) do
