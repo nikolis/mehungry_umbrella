@@ -485,6 +485,43 @@ defmodule Mehungry.HealthTest do
       assert [%{name: "Πέτρες στα Νεφρά"}] = Health.list_conditions_for_presentation("el")
     end
 
+    test "species_for_condition/3 finds a legacy \"Gr\" species translation via the el locale" do
+      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones"})
+      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+      {:ok, _} = Health.add_recommendation(kidney.id, oxalate.id, %{recommendation: "avoid", source: "guideline"})
+
+      spinach = ingredient_fixture(%{name: "spinach"})
+
+      {:ok, species} =
+        Food.create_foundemental_species(%{
+          "name" => "Spinach",
+          "scientific_name" => "Spinacia oleracea"
+        })
+
+      {:ok, _} = Food.assign_foundemental_ingredient(species.id, spinach.id, "spinach")
+
+      {:ok, _} =
+        Food.upsert_species_relationship(%{
+          foundemental_species_id: species.id,
+          compound_id: oxalate.id,
+          relationship_type: "high_in",
+          source: "literature"
+        })
+
+      # Older species rows predate the ISO migration and live under legacy "Gr"
+      # (seeded by DataCase) — the "el" locale must still resolve them.
+      {:ok, _} =
+        %Mehungry.Food.FoundementalFoodSpeciesTranslation{}
+        |> Mehungry.Food.FoundementalFoodSpeciesTranslation.changeset(%{
+          foundemental_species_id: species.id,
+          language_name: "Gr",
+          name: "Σπανάκι"
+        })
+        |> Mehungry.Repo.insert()
+
+      assert [%{species: %{name: "Σπανάκι"}}] = Health.species_for_condition(kidney.id, nil, "el")
+    end
+
     test "recommendations_for_condition/2 overlays the el compound name" do
       {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones"})
       {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})

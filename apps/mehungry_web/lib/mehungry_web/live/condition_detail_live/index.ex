@@ -224,14 +224,23 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   def nutrient_label("Fiber"), do: gettext("Fiber")
   def nutrient_label(other), do: other
 
-  # Overlays the species' translated name for the modal title. Mirrors
-  # `SpeciesDetailLive.Index` — `nil`/`"en"` leaves the base English name.
+  # Overlays the species' translated name for the modal title. A locale maps to
+  # several `language_name` codes (ISO + legacy, e.g. "el"/"Gr"); species rows
+  # often predate the ISO migration and live under "Gr", so we try every code for
+  # the locale (canonical ISO first). `nil`/`"en"` leaves the base English name.
   defp localize_species_name(species, language) when language in [nil, "", "en"], do: species
 
   defp localize_species_name(species, language) do
-    case Food.find_species_translation(language, species.id) do
-      [name | _] -> %{species | name: name}
-      [] -> species
+    Mehungry.Languages.Locale.data_codes(language)
+    |> Enum.find_value(fn code ->
+      case Food.find_species_translation(code, species.id) do
+        [name | _] -> name
+        [] -> nil
+      end
+    end)
+    |> case do
+      nil -> species
+      name -> %{species | name: name}
     end
   end
 end
