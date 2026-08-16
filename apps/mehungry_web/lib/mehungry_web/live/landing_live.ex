@@ -24,9 +24,11 @@ defmodule MehungryWeb.LandingLive do
 
     {:ok,
      assign(socket,
-       page_title: "M3Hungry — Know What's On Your Plate",
+       page_title: gettext("M3Hungry — Know What's On Your Plate"),
        page_description:
-         "Track 168 nutrients per meal. Generate AI recipes backed by USDA FoodData Central. Plan your week. Share what you cook.",
+         gettext(
+           "Track 168 nutrients per meal. Generate AI recipes backed by USDA FoodData Central. Plan your week. Share what you cook."
+         ),
        recipe: recipe,
        recipes: recipes,
        child_ids: []
@@ -88,13 +90,16 @@ defmodule MehungryWeb.LandingLive do
 
           <div class="hidden items-center gap-8 text-sm md:flex">
             <a href="#features" class="text-parchment-dim transition-colors hover:text-parchment">
-              Features
+              {gettext("Features")}
             </a>
             <a href="#pricing" class="text-parchment-dim transition-colors hover:text-parchment">
-              Pricing
+              {gettext("Pricing")}
             </a>
-            <a href="/browse" class="text-parchment-dim transition-colors hover:text-parchment">
-              Browse Recipes
+            <a
+              href={"/#{@current_language}/browse"}
+              class="text-parchment-dim transition-colors hover:text-parchment"
+            >
+              {gettext("Browse Recipes")}
             </a>
           </div>
 
@@ -103,13 +108,13 @@ defmodule MehungryWeb.LandingLive do
               href="/login"
               class="hidden text-sm text-parchment-dim transition-colors hover:text-parchment sm:block"
             >
-              Sign in
+              {gettext("Sign in")}
             </a>
             <a
               href="/register"
               class="rounded-md border border-paprika/40 px-4 py-2 text-sm font-semibold text-paprika-soft transition-colors hover:border-paprika hover:text-parchment focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-paprika"
             >
-              Get started
+              {gettext("Get started")}
             </a>
           </div>
         </div>
@@ -126,7 +131,7 @@ defmodule MehungryWeb.LandingLive do
             <%!-- Eyebrow --%>
             <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-basil/20 bg-basil/10 px-3 py-1 text-xs font-medium text-basil">
               <span class="h-1.5 w-1.5 rounded-full bg-basil" aria-hidden="true"></span>
-              Backed by USDA FoodData Central
+              {gettext("Backed by USDA FoodData Central")}
             </div>
 
             <%!-- Headline --%>
@@ -134,12 +139,14 @@ defmodule MehungryWeb.LandingLive do
               id="hero-heading"
               class="mb-5 font-display text-5xl font-medium leading-[1.1] tracking-tight text-parchment sm:text-6xl md:text-7xl"
             >
-              Know what's on your plate. <em class="not-italic text-paprika-soft">Really.</em>
+              {gettext("Know what's on your plate.")}
+              <em class="not-italic text-paprika-soft">{gettext("Really.")}</em>
             </h1>
 
             <p class="mb-9 text-lg leading-relaxed text-parchment-dim sm:text-xl">
-              Track 168 nutrients per meal. Generate AI recipes backed by USDA science.
-              Plan your week. Share what you cook.
+              {gettext(
+                "Track 168 nutrients per meal. Generate AI recipes backed by USDA science. Plan your week. Share what you cook."
+              )}
             </p>
 
             <div class="flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -147,13 +154,13 @@ defmodule MehungryWeb.LandingLive do
                 href="/register"
                 class="w-full rounded-lg bg-paprika px-8 py-3 text-base font-bold text-ink shadow-lg shadow-black/30 transition-all hover:bg-paprika-soft sm:w-auto"
               >
-                Start for free
+                {gettext("Start for free")}
               </a>
               <a
-                href="/browse"
+                href={"/#{@current_language}/browse"}
                 class="w-full rounded-lg border border-ink-panel2 px-8 py-3 text-base font-medium text-parchment-dim transition-all hover:border-parchment-dim hover:text-parchment sm:w-auto"
               >
-                Browse recipes →
+                {gettext("Browse recipes →")}
               </a>
             </div>
 
@@ -178,7 +185,7 @@ defmodule MehungryWeb.LandingLive do
                   />
                 </svg>
                 <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">10,000+</span>
-                foods in the database
+                {gettext("foods in the database")}
               </span>
               <span class="flex items-center gap-1.5">
                 <svg
@@ -196,7 +203,7 @@ defmodule MehungryWeb.LandingLive do
                   />
                 </svg>
                 <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">168</span>
-                nutrients tracked per food
+                {gettext("nutrients tracked per food")}
               </span>
               <span class="flex items-center gap-1.5">
                 <svg
@@ -213,7 +220,7 @@ defmodule MehungryWeb.LandingLive do
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-                Free to start · No credit card
+                {gettext("Free to start · No credit card")}
               </span>
             </div>
           </div>
@@ -244,7 +251,7 @@ defmodule MehungryWeb.LandingLive do
                         id: "hero_meal"
                       }
                     }
-                    title="Lunch"
+                    title={gettext("Lunch")}
                     myself="hero"
                     id="hero_meal"
                   />
@@ -254,9 +261,9 @@ defmodule MehungryWeb.LandingLive do
               <%!-- Floating badge --%>
               <div class="absolute -right-2 -top-3 hidden rounded-xl border border-basil/30 bg-ink-panel px-3 py-2 shadow-lg sm:block">
                 <p class="text-xs font-bold text-basil [font-variant-numeric:tabular-nums]">
-                  168 nutrients
+                  {gettext("168 nutrients")}
                 </p>
-                <p class="text-xs text-parchment-dim">per serving, from USDA</p>
+                <p class="text-xs text-parchment-dim">{gettext("per serving, from USDA")}</p>
               </div>
             </div>
           <% end %>
@@ -273,25 +280,28 @@ defmodule MehungryWeb.LandingLive do
         <div class="mx-auto max-w-6xl px-4 sm:px-6">
           <div class="mb-14 text-center">
             <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-basil">
-              Nutrition depth
+              {gettext("Nutrition depth")}
             </p>
             <h2
               id="depth-heading"
               class="font-display text-4xl font-medium text-parchment sm:text-5xl"
             >
-              Not 4 nutrients.
+              {gettext("Not 4 nutrients.")}
               <span class="text-basil [font-variant-numeric:tabular-nums]">168.</span>
             </h2>
             <p class="mx-auto mt-4 max-w-xl text-parchment-dim">
-              Most trackers give you calories and macros. We give you the full picture — the same
-              data nutritionists and researchers actually use.
+              {gettext(
+                "Most trackers give you calories and macros. We give you the full picture — the same data nutritionists and researchers actually use."
+              )}
             </p>
           </div>
 
           <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
             <%!-- Other apps --%>
             <div class="rounded-2xl border border-ink-panel2 bg-black/20 p-6">
-              <p class="mb-4 text-sm font-medium text-parchment-dim">What most apps track</p>
+              <p class="mb-4 text-sm font-medium text-parchment-dim">
+                {gettext("What most apps track")}
+              </p>
               <div class="space-y-2">
                 <%= for {nutrient, unit} <- [
                 {"Calories", "kcal"},
@@ -305,14 +315,14 @@ defmodule MehungryWeb.LandingLive do
                   </div>
                 <% end %>
                 <div class="flex items-center justify-center py-4">
-                  <span class="text-sm text-parchment-dim/50">… and that's it</span>
+                  <span class="text-sm text-parchment-dim/50">{gettext("… and that's it")}</span>
                 </div>
               </div>
             </div>
 
             <%!-- M3Hungry — real USDA nutrient names --%>
             <div class="rounded-2xl border border-basil/20 bg-ink-panel p-6 ring-1 ring-basil/10">
-              <p class="mb-4 text-sm font-medium text-basil">What M3Hungry tracks</p>
+              <p class="mb-4 text-sm font-medium text-basil">{gettext("What M3Hungry tracks")}</p>
               <div class="space-y-1.5">
                 <%= for {nutrient, unit, highlight} <- [
                 {"Energy", "kcal", false},
@@ -353,7 +363,7 @@ defmodule MehungryWeb.LandingLive do
                 <div class="flex items-center justify-center rounded-lg border border-dashed border-basil/20 py-2.5">
                   <span class="text-sm font-medium text-basil">
                     + <span class="font-bold [font-variant-numeric:tabular-nums]">156</span>
-                    more nutrients tracked
+                    {gettext("more nutrients tracked")}
                   </span>
                 </div>
               </div>
@@ -368,18 +378,18 @@ defmodule MehungryWeb.LandingLive do
           <div class="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
             <div>
               <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-parchment-dim">
-                Meal planning
+                {gettext("Meal planning")}
               </p>
               <h2
                 id="meal-planning-heading"
                 class="mb-4 font-display text-4xl font-medium text-parchment"
               >
-                Your week, planned. Your nutrition, balanced.
+                {gettext("Your week, planned. Your nutrition, balanced.")}
               </h2>
               <p class="mb-6 text-parchment-dim">
-                Add any recipe to your meal calendar. See your daily nutrition at a glance across
-                every tracked nutrient. Generate your shopping list automatically from your weekly
-                plan.
+                {gettext(
+                  "Add any recipe to your meal calendar. See your daily nutrition at a glance across every tracked nutrient. Generate your shopping list automatically from your weekly plan."
+                )}
               </p>
               <ul class="space-y-3 text-sm text-parchment">
                 <li class="flex items-start gap-2.5">
@@ -397,7 +407,7 @@ defmodule MehungryWeb.LandingLive do
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Calendar view for breakfast, lunch, dinner, and snacks
+                  {gettext("Calendar view for breakfast, lunch, dinner, and snacks")}
                 </li>
                 <li class="flex items-start gap-2.5">
                   <svg
@@ -414,9 +424,9 @@ defmodule MehungryWeb.LandingLive do
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Daily nutrition totals across all
+                  {gettext("Daily nutrition totals across all")}
                   <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">168</span>
-                  tracked nutrients
+                  {gettext("tracked nutrients")}
                 </li>
                 <li class="flex items-start gap-2.5">
                   <svg
@@ -433,7 +443,7 @@ defmodule MehungryWeb.LandingLive do
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Import meal ingredients into your shopping basket with one tap
+                  {gettext("Import meal ingredients into your shopping basket with one tap")}
                 </li>
                 <li class="flex items-start gap-2.5">
                   <svg
@@ -450,14 +460,14 @@ defmodule MehungryWeb.LandingLive do
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Adjust portion sizes and serving counts per meal
+                  {gettext("Adjust portion sizes and serving counts per meal")}
                 </li>
               </ul>
               <a
                 href="/register"
                 class="mt-8 inline-flex items-center gap-1 text-sm font-semibold text-paprika-soft transition-colors hover:text-paprika"
               >
-                Plan your week →
+                {gettext("Plan your week →")}
               </a>
             </div>
 
@@ -481,7 +491,7 @@ defmodule MehungryWeb.LandingLive do
                       id: "plan_meal"
                     }
                   }
-                  title="Lunch"
+                  title={gettext("Lunch")}
                   myself="plan"
                   id="plan_meal"
                 />
@@ -507,7 +517,7 @@ defmodule MehungryWeb.LandingLive do
                 )}
               <% else %>
                 <p class="text-sm text-parchment-dim">
-                  Add meals to your calendar to see your daily nutrition overview
+                  {gettext("Add meals to your calendar to see your daily nutrition overview")}
                 </p>
               <% end %>
             </div>
@@ -520,14 +530,15 @@ defmodule MehungryWeb.LandingLive do
         <div class="mx-auto max-w-6xl px-4 sm:px-6">
           <div class="mb-12 text-center">
             <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-parchment-dim">
-              Discover &amp; share
+              {gettext("Discover & share")}
             </p>
             <h2 id="discover-heading" class="font-display text-4xl font-medium text-parchment">
-              Recipes with the nutrition already done.
+              {gettext("Recipes with the nutrition already done.")}
             </h2>
             <p class="mx-auto mt-4 max-w-xl text-parchment-dim">
-              Browse community recipes — each one built with real USDA ingredients, so the nutrition
-              facts are exact, not estimated. Save any recipe to your calendar in one click.
+              {gettext(
+                "Browse community recipes — each one built with real USDA ingredients, so the nutrition facts are exact, not estimated. Save any recipe to your calendar in one click."
+              )}
             </p>
           </div>
 
@@ -536,7 +547,7 @@ defmodule MehungryWeb.LandingLive do
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <%= for recipe <- Enum.take(@recipes, 3) do %>
                 <a
-                  href={"/browse/#{recipe.id}"}
+                  href={"/#{@current_language}/browse/#{recipe.id}"}
                   class="group overflow-hidden rounded-xl border border-ink-panel2 bg-ink-panel transition-all hover:border-basil/30 hover:shadow-lg hover:shadow-black/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika"
                 >
                   <%= if recipe.image_url do %>
@@ -572,14 +583,14 @@ defmodule MehungryWeb.LandingLive do
                     </h3>
                     <p class="mt-1 text-xs text-parchment-dim">
                       <%= if recipe.servings do %>
-                        {recipe.servings} servings<%= if recipe.cooking_time_lower_limit do %>
-                          &nbsp;· {recipe.cooking_time_lower_limit} min
+                        {recipe.servings} {gettext("servings")}<%= if recipe.cooking_time_lower_limit do %>
+                          &nbsp;· {recipe.cooking_time_lower_limit} {gettext("min")}
                         <% end %>
                       <% end %>
                     </p>
                     <div class="mt-2.5">
                       <span class="inline-block rounded-full border border-basil/20 bg-basil/10 px-2.5 py-0.5 text-xs text-basil">
-                        168 nutrients tracked
+                        {gettext("168 nutrients tracked")}
                       </span>
                     </div>
                   </div>
@@ -590,31 +601,31 @@ defmodule MehungryWeb.LandingLive do
 
           <div class="mt-8 text-center">
             <a
-              href="/browse"
+              href={"/#{@current_language}/browse"}
               class="rounded-lg border border-ink-panel2 px-6 py-2.5 text-sm font-medium text-parchment-dim transition-all hover:border-parchment-dim hover:text-parchment"
             >
-              Browse all recipes →
+              {gettext("Browse all recipes →")}
             </a>
           </div>
 
           <%!-- Social proof — real features, not fake stats --%>
           <div class="mt-14 grid grid-cols-1 gap-4 border-t border-ink-panel2 pt-10 sm:grid-cols-3">
             <div class="text-center">
-              <p class="text-sm font-medium text-parchment">Post your recipes</p>
+              <p class="text-sm font-medium text-parchment">{gettext("Post your recipes")}</p>
               <p class="mt-1 text-sm text-parchment-dim">
-                Share what you cook and tag it with food hashtags for others to discover
+                {gettext("Share what you cook and tag it with food hashtags for others to discover")}
               </p>
             </div>
             <div class="text-center">
-              <p class="text-sm font-medium text-parchment">Comment &amp; vote</p>
+              <p class="text-sm font-medium text-parchment">{gettext("Comment & vote")}</p>
               <p class="mt-1 text-sm text-parchment-dim">
-                Leave feedback, ask questions, and vote on the recipes you love
+                {gettext("Leave feedback, ask questions, and vote on the recipes you love")}
               </p>
             </div>
             <div class="text-center">
-              <p class="text-sm font-medium text-parchment">Follow creators</p>
+              <p class="text-sm font-medium text-parchment">{gettext("Follow creators")}</p>
               <p class="mt-1 text-sm text-parchment-dim">
-                Build a feed from the cooks whose nutrition philosophy matches yours
+                {gettext("Build a feed from the cooks whose nutrition philosophy matches yours")}
               </p>
             </div>
           </div>
@@ -636,50 +647,52 @@ defmodule MehungryWeb.LandingLive do
                     class="h-2 w-2 rounded-full bg-paprika animate-pulse"
                     aria-hidden="true"
                   ></span>
-                  <span class="text-xs text-parchment-dim">AI Recipe Assistant</span>
+                  <span class="text-xs text-parchment-dim">{gettext("AI Recipe Assistant")}</span>
                 </div>
 
                 <div class="mb-3 flex justify-end">
                   <div class="max-w-xs rounded-2xl rounded-tr-sm border border-paprika/20 bg-paprika/10 px-4 py-2.5 text-sm text-parchment">
-                    High-protein pasta under 600 kcal. Make it Mediterranean.
+                    {gettext("High-protein pasta under 600 kcal. Make it Mediterranean.")}
                   </div>
                 </div>
 
                 <div class="rounded-xl border border-ink-panel2 bg-ink-panel p-4">
-                  <p class="mb-1 text-sm font-semibold text-parchment">Mediterranean Chicken Orzo</p>
+                  <p class="mb-1 text-sm font-semibold text-parchment">
+                    {gettext("Mediterranean Chicken Orzo")}
+                  </p>
                   <p class="mb-3 text-xs text-parchment-dim">
-                    Generated using USDA-verified ingredients
+                    {gettext("Generated using USDA-verified ingredients")}
                   </p>
                   <div class="rounded-lg border border-basil/20 bg-basil/10 px-3 py-2.5">
                     <p class="text-xs font-medium text-basil-soft">
-                      Full 168-nutrient breakdown calculated from USDA data
+                      {gettext("Full 168-nutrient breakdown calculated from USDA data")}
                     </p>
                     <p class="mt-0.5 text-xs text-parchment-dim">
-                      Protein · Fatty acids · Vitamins · Minerals · Amino acids…
+                      {gettext("Protein · Fatty acids · Vitamins · Minerals · Amino acids…")}
                     </p>
                   </div>
                   <p class="mt-2 text-right text-xs text-basil">
-                    View full breakdown →
+                    {gettext("View full breakdown →")}
                   </p>
                 </div>
 
                 <p class="mt-3 text-center text-xs text-parchment-dim/60">
-                  Example output — your results will vary by request
+                  {gettext("Example output — your results will vary by request")}
                 </p>
               </div>
             </div>
 
             <div class="order-1 md:order-2">
               <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-parchment-dim">
-                AI-powered
+                {gettext("AI-powered")}
               </p>
               <h2 id="ai-heading" class="mb-4 font-display text-4xl font-medium text-parchment">
-                Tell it what you want to eat. It handles the rest.
+                {gettext("Tell it what you want to eat. It handles the rest.")}
               </h2>
               <p class="mb-6 text-parchment-dim">
-                Describe your meal — a dietary goal, a cuisine, what's in your fridge.
-                The AI generates a complete recipe with ingredients mapped directly to the USDA
-                database, so you get exact nutrition data, not estimates.
+                {gettext(
+                  "Describe your meal — a dietary goal, a cuisine, what's in your fridge. The AI generates a complete recipe with ingredients mapped directly to the USDA database, so you get exact nutrition data, not estimates."
+                )}
               </p>
               <ul class="space-y-3 text-sm text-parchment">
                 <li class="flex items-start gap-2.5">
@@ -697,7 +710,7 @@ defmodule MehungryWeb.LandingLive do
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Recipes generated to your calorie and macro targets
+                  {gettext("Recipes generated to your calorie and macro targets")}
                 </li>
                 <li class="flex items-start gap-2.5">
                   <svg
@@ -714,7 +727,7 @@ defmodule MehungryWeb.LandingLive do
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Every ingredient mapped to USDA FoodData Central
+                  {gettext("Every ingredient mapped to USDA FoodData Central")}
                 </li>
                 <li class="flex items-start gap-2.5">
                   <svg
@@ -731,7 +744,7 @@ defmodule MehungryWeb.LandingLive do
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Generate a full weekly meal plan in one request
+                  {gettext("Generate a full weekly meal plan in one request")}
                 </li>
                 <li class="flex items-start gap-2.5">
                   <svg
@@ -748,7 +761,7 @@ defmodule MehungryWeb.LandingLive do
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Save generated recipes directly to your calendar
+                  {gettext("Save generated recipes directly to your calendar")}
                 </li>
               </ul>
               <div class="mt-8 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -756,9 +769,11 @@ defmodule MehungryWeb.LandingLive do
                   href="/register"
                   class="inline-flex items-center gap-1 text-sm font-semibold text-paprika-soft transition-colors hover:text-paprika"
                 >
-                  Try the AI assistant →
+                  {gettext("Try the AI assistant →")}
                 </a>
-                <p class="text-xs text-parchment-dim">Mehungry Plus plan required · From €9.99/mo</p>
+                <p class="text-xs text-parchment-dim">
+                  {gettext("Mehungry Plus plan required · From €9.99/mo")}
+                </p>
               </div>
             </div>
           </div>
@@ -770,14 +785,15 @@ defmodule MehungryWeb.LandingLive do
         <div class="mx-auto max-w-6xl px-4 sm:px-6">
           <div class="mb-12 text-center">
             <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-basil">
-              Nutrition intelligence
+              {gettext("Nutrition intelligence")}
             </p>
             <h2 id="intelligence-heading" class="font-display text-4xl font-medium text-parchment">
-              Built for how nutrition actually works.
+              {gettext("Built for how nutrition actually works.")}
             </h2>
             <p class="mx-auto mt-4 max-w-xl text-parchment-dim">
-              Nutrients don't exist in isolation. M3Hungry tracks how nutrients interact with each
-              other — and adapts to the foods your body actually needs.
+              {gettext(
+                "Nutrients don't exist in isolation. M3Hungry tracks how nutrients interact with each other — and adapts to the foods your body actually needs."
+              )}
             </p>
           </div>
 
@@ -799,10 +815,13 @@ defmodule MehungryWeb.LandingLive do
                   />
                 </svg>
               </div>
-              <h3 class="mb-2 font-display font-medium text-parchment">Nutrient interactions</h3>
+              <h3 class="mb-2 font-display font-medium text-parchment">
+                {gettext("Nutrient interactions")}
+              </h3>
               <p class="text-sm text-parchment-dim">
-                Some nutrients enhance absorption; others inhibit it. Vitamin C improves iron uptake.
-                Vitamin D activates calcium metabolism. We surface these relationships per recipe.
+                {gettext(
+                  "Some nutrients enhance absorption; others inhibit it. Vitamin C improves iron uptake. Vitamin D activates calcium metabolism. We surface these relationships per recipe."
+                )}
               </p>
             </div>
 
@@ -823,11 +842,13 @@ defmodule MehungryWeb.LandingLive do
                   />
                 </svg>
               </div>
-              <h3 class="mb-2 font-display font-medium text-parchment">Dietary preferences</h3>
+              <h3 class="mb-2 font-display font-medium text-parchment">
+                {gettext("Dietary preferences")}
+              </h3>
               <p class="text-sm text-parchment-dim">
-                Set dietary restrictions — vegetarian, gluten-free, specific allergies.
-                Exclude ingredients or entire food categories from your experience.
-                Your feed and AI adapt accordingly.
+                {gettext(
+                  "Set dietary restrictions — vegetarian, gluten-free, specific allergies. Exclude ingredients or entire food categories from your experience. Your feed and AI adapt accordingly."
+                )}
               </p>
             </div>
 
@@ -848,11 +869,13 @@ defmodule MehungryWeb.LandingLive do
                   />
                 </svg>
               </div>
-              <h3 class="mb-2 font-display font-medium text-parchment">Survey-guided setup</h3>
+              <h3 class="mb-2 font-display font-medium text-parchment">
+                {gettext("Survey-guided setup")}
+              </h3>
               <p class="text-sm text-parchment-dim">
-                Complete a short dietary preferences survey when you join. Your food feed,
-                recipe recommendations, and AI outputs adapt to your actual lifestyle and goals
-                from the start.
+                {gettext(
+                  "Complete a short dietary preferences survey when you join. Your food feed, recipe recommendations, and AI outputs adapt to your actual lifestyle and goals from the start."
+                )}
               </p>
             </div>
           </div>
@@ -869,17 +892,18 @@ defmodule MehungryWeb.LandingLive do
             <div class="grid grid-cols-1 md:grid-cols-2">
               <div class="p-8 sm:p-10">
                 <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-basil/20 bg-basil/10 px-3 py-1 text-xs font-medium text-basil">
-                  Professional tier
+                  {gettext("Professional tier")}
                 </div>
                 <h2
                   id="nutritionist-heading"
                   class="mb-4 font-display text-3xl font-medium text-parchment"
                 >
-                  Built for nutritionists, not just individuals.
+                  {gettext("Built for nutritionists, not just individuals.")}
                 </h2>
                 <p class="mb-6 text-parchment-dim">
-                  Manage your client roster, assign meal plans, track progress, and schedule
-                  appointments — within the same platform your clients use to log their food.
+                  {gettext(
+                    "Manage your client roster, assign meal plans, track progress, and schedule appointments — within the same platform your clients use to log their food."
+                  )}
                 </p>
                 <ul class="space-y-2.5 text-sm text-parchment">
                   <li class="flex items-start gap-2">
@@ -897,7 +921,7 @@ defmodule MehungryWeb.LandingLive do
                         d="M5 13l4 4L19 7"
                       />
                     </svg>
-                    Client invitation and management system
+                    {gettext("Client invitation and management system")}
                   </li>
                   <li class="flex items-start gap-2">
                     <svg
@@ -914,7 +938,7 @@ defmodule MehungryWeb.LandingLive do
                         d="M5 13l4 4L19 7"
                       />
                     </svg>
-                    View and manage client meal calendars
+                    {gettext("View and manage client meal calendars")}
                   </li>
                   <li class="flex items-start gap-2">
                     <svg
@@ -931,7 +955,7 @@ defmodule MehungryWeb.LandingLive do
                         d="M5 13l4 4L19 7"
                       />
                     </svg>
-                    Appointment scheduling with calendar view
+                    {gettext("Appointment scheduling with calendar view")}
                   </li>
                   <li class="flex items-start gap-2">
                     <svg
@@ -949,16 +973,16 @@ defmodule MehungryWeb.LandingLive do
                       />
                     </svg>
                     <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">30</span>
-                    AI recipe generations +
+                    {gettext("AI recipe generations +")}
                     <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">10</span>
-                    meal plans per month
+                    {gettext("meal plans per month")}
                   </li>
                 </ul>
                 <a
                   href="/register"
                   class="mt-8 inline-flex items-center gap-1 rounded-lg border border-basil/40 px-6 py-2.5 text-sm font-semibold text-basil transition-colors hover:border-basil hover:text-basil-soft"
                 >
-                  Explore the professional tier →
+                  {gettext("Explore the professional tier →")}
                 </a>
               </div>
 
@@ -966,31 +990,31 @@ defmodule MehungryWeb.LandingLive do
               <div class="hidden items-center justify-center border-l border-ink-panel2 bg-ink-panel/30 p-8 md:flex">
                 <div class="w-full space-y-3" aria-hidden="true">
                   <div class="rounded-xl border border-ink-panel2 bg-ink-panel p-4">
-                    <p class="mb-2 text-xs text-parchment-dim">Your clients</p>
+                    <p class="mb-2 text-xs text-parchment-dim">{gettext("Your clients")}</p>
                     <div class="flex items-center justify-between">
                       <span class="text-2xl font-bold text-basil [font-variant-numeric:tabular-nums]">
                         —
                       </span>
-                      <span class="text-xs text-basil">Manage →</span>
+                      <span class="text-xs text-basil">{gettext("Manage →")}</span>
                     </div>
                   </div>
                   <div class="rounded-xl border border-ink-panel2 bg-ink-panel p-4">
-                    <p class="mb-2 text-xs text-parchment-dim">Upcoming appointments</p>
+                    <p class="mb-2 text-xs text-parchment-dim">{gettext("Upcoming appointments")}</p>
                     <div class="flex items-center justify-between">
                       <span class="text-2xl font-bold text-basil [font-variant-numeric:tabular-nums]">
                         —
                       </span>
-                      <span class="text-xs text-basil">Calendar →</span>
+                      <span class="text-xs text-basil">{gettext("Calendar →")}</span>
                     </div>
                   </div>
                   <div class="rounded-xl border border-ink-panel2 bg-ink-panel p-4">
-                    <p class="mb-2 text-xs text-parchment-dim">AI meal plans this month</p>
+                    <p class="mb-2 text-xs text-parchment-dim">{gettext("AI meal plans this month")}</p>
                     <div class="flex items-center gap-2">
                       <div class="h-2 flex-1 overflow-hidden rounded-full bg-ink-panel2">
                         <div class="h-full w-1/4 rounded-full bg-basil"></div>
                       </div>
                       <span class="text-xs text-parchment-dim [font-variant-numeric:tabular-nums]">
-                        0 / 10 used
+                        {gettext("0 / 10 used")}
                       </span>
                     </div>
                   </div>
@@ -1011,34 +1035,34 @@ defmodule MehungryWeb.LandingLive do
         <div class="mx-auto max-w-6xl px-4 sm:px-6">
           <div class="mb-12 text-center">
             <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-parchment-dim">
-              Pricing
+              {gettext("Pricing")}
             </p>
             <h2 id="pricing-heading" class="font-display text-4xl font-medium text-parchment">
-              Start free. Upgrade when you're ready.
+              {gettext("Start free. Upgrade when you're ready.")}
             </h2>
             <p class="mt-3 text-parchment-dim">
-              All plans include full nutrition tracking. AI features are the upgrade.
+              {gettext("All plans include full nutrition tracking. AI features are the upgrade.")}
             </p>
           </div>
 
           <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
             <%!-- Free --%>
             <div class="rounded-2xl border border-ink-panel2 bg-ink-panel p-6">
-              <h3 class="mb-1 text-base font-semibold text-parchment">Free</h3>
+              <h3 class="mb-1 text-base font-semibold text-parchment">{gettext("Free")}</h3>
               <div class="mb-1 flex items-baseline gap-1">
                 <span class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums]">
                   €0
                 </span>
-                <span class="text-sm text-parchment-dim">/month</span>
+                <span class="text-sm text-parchment-dim">{gettext("/month")}</span>
               </div>
-              <p class="mb-5 text-xs text-parchment-dim">No credit card required</p>
+              <p class="mb-5 text-xs text-parchment-dim">{gettext("No credit card required")}</p>
               <ul class="mb-6 space-y-2.5 text-sm">
                 <%= for text <- [
-                "Full nutrition tracking (168 nutrients)",
-                "Unlimited manual recipe creation",
-                "Meal calendar planning",
-                "Browse and share community recipes",
-                "Shopping basket"
+                gettext("Full nutrition tracking (168 nutrients)"),
+                gettext("Unlimited manual recipe creation"),
+                gettext("Meal calendar planning"),
+                gettext("Browse and share community recipes"),
+                gettext("Shopping basket")
               ] do %>
                   <li class="flex items-center gap-2 text-parchment">
                     <svg
@@ -1073,38 +1097,38 @@ defmodule MehungryWeb.LandingLive do
                       d="M6 18L18 6M6 6l12 12"
                     />
                   </svg>
-                  <span class="line-through">AI recipe generator</span>
+                  <span class="line-through">{gettext("AI recipe generator")}</span>
                 </li>
               </ul>
               <a
                 href="/register"
                 class="block w-full rounded-lg border border-ink-panel2 py-2 text-center text-sm font-medium text-parchment-dim transition-colors hover:border-parchment-dim hover:text-parchment focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika"
               >
-                Get started free
+                {gettext("Get started free")}
               </a>
             </div>
 
             <%!-- Plus — most popular --%>
             <div class="relative rounded-2xl border-2 border-paprika bg-ink-panel p-6 shadow-xl shadow-black/20">
               <div class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-paprika px-3 py-0.5 text-xs font-bold text-ink">
-                Most popular
+                {gettext("Most popular")}
               </div>
               <h3 class="mb-1 text-base font-semibold text-parchment">Mehungry Plus</h3>
               <div class="mb-1 flex items-baseline gap-1">
                 <span class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums]">
                   €9.99
                 </span>
-                <span class="text-sm text-parchment-dim">/month</span>
+                <span class="text-sm text-parchment-dim">{gettext("/month")}</span>
               </div>
               <p class="mb-5 text-xs text-parchment-dim">
-                or €99/yr — <span class="text-basil-soft">save 17%</span>
+                {gettext("or €99/yr —")} <span class="text-basil-soft">{gettext("save 17%")}</span>
               </p>
               <ul class="mb-6 space-y-2.5 text-sm">
                 <%= for text <- [
-                "Everything in Free",
-                "15 AI recipe generations / month",
-                "4 AI meal plan generations / month",
-                "Priority support"
+                gettext("Everything in Free"),
+                gettext("15 AI recipe generations / month"),
+                gettext("4 AI meal plan generations / month"),
+                gettext("Priority support")
               ] do %>
                   <li class="flex items-center gap-2 text-parchment">
                     <svg
@@ -1126,31 +1150,31 @@ defmodule MehungryWeb.LandingLive do
                 <% end %>
               </ul>
               <a
-                href="/upgrade"
+                href={"/#{@current_language}/upgrade"}
                 class="block w-full rounded-lg border border-paprika/60 py-2 text-center text-sm font-semibold text-paprika-soft transition-colors hover:border-paprika hover:text-parchment"
               >
-                Upgrade to Mehungry Plus
+                {gettext("Upgrade to Mehungry Plus")}
               </a>
             </div>
 
             <%!-- Pro / Nutritionist --%>
             <div class="rounded-2xl border border-ink-panel2 bg-ink-panel p-6">
               <h3 class="mb-1 text-base font-semibold text-parchment">Pro</h3>
-              <p class="mb-1 text-xs font-medium text-basil">For nutritionists</p>
+              <p class="mb-1 text-xs font-medium text-basil">{gettext("For nutritionists")}</p>
               <div class="mb-1 flex items-baseline gap-1">
                 <span class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums]">
                   €59
                 </span>
-                <span class="text-sm text-parchment-dim">/month</span>
+                <span class="text-sm text-parchment-dim">{gettext("/month")}</span>
               </div>
-              <p class="mb-5 text-xs text-parchment-dim">or €599/yr</p>
+              <p class="mb-5 text-xs text-parchment-dim">{gettext("or €599/yr")}</p>
               <ul class="mb-6 space-y-2.5 text-sm">
                 <%= for text <- [
-                "Everything in Mehungry Plus",
-                "30 AI recipe generations / month",
-                "10 AI meal plans / month",
-                "Full client management portal",
-                "Appointment calendar"
+                gettext("Everything in Mehungry Plus"),
+                gettext("30 AI recipe generations / month"),
+                gettext("10 AI meal plans / month"),
+                gettext("Full client management portal"),
+                gettext("Appointment calendar")
               ] do %>
                   <li class="flex items-center gap-2 text-parchment">
                     <svg
@@ -1172,16 +1196,16 @@ defmodule MehungryWeb.LandingLive do
                 <% end %>
               </ul>
               <a
-                href="/upgrade"
+                href={"/#{@current_language}/upgrade"}
                 class="block w-full rounded-lg border border-basil/40 py-2 text-center text-sm font-medium text-basil transition-colors hover:border-basil hover:text-basil-soft"
               >
-                Explore Pro
+                {gettext("Explore Pro")}
               </a>
             </div>
           </div>
 
           <p class="mt-6 text-center text-xs text-parchment-dim">
-            Payments processed securely by Stripe. Cancel any subscription anytime.
+            {gettext("Payments processed securely by Stripe. Cancel any subscription anytime.")}
           </p>
         </div>
       </section>
@@ -1190,17 +1214,18 @@ defmodule MehungryWeb.LandingLive do
       <section class="bg-gradient-to-b from-ink-panel to-ink py-24" aria-labelledby="cta-heading">
         <div class="mx-auto max-w-2xl px-4 text-center sm:px-6">
           <h2 id="cta-heading" class="mb-4 font-display text-4xl font-medium text-parchment">
-            Start tracking what actually matters.
+            {gettext("Start tracking what actually matters.")}
           </h2>
           <p class="mb-8 text-parchment-dim">
-            Join free. No credit card. Access the full nutrition database and start building
-            recipes today.
+            {gettext(
+              "Join free. No credit card. Access the full nutrition database and start building recipes today."
+            )}
           </p>
           <a
             href="/register"
             class="inline-block rounded-lg bg-paprika px-9 py-3.5 text-base font-bold text-ink shadow-lg shadow-black/30 transition-all hover:bg-paprika-soft"
           >
-            Create your free account →
+            {gettext("Create your free account →")}
           </a>
         </div>
       </section>
@@ -1211,17 +1236,31 @@ defmodule MehungryWeb.LandingLive do
           <div class="flex flex-col items-center justify-between gap-6 sm:flex-row">
             <div>
               <.get_logo id="footer-logo" class="mb-1 h-6 w-auto" show_tagline />
-              <p class="text-xs text-parchment-dim">Know what's on your plate.</p>
+              <p class="text-xs text-parchment-dim">{gettext("Know what's on your plate.")}</p>
             </div>
             <nav class="flex gap-8 text-sm text-parchment-dim" aria-label="Footer navigation">
-              <a href="/browse" class="transition-colors hover:text-parchment">Browse</a>
-              <a href="#pricing" class="transition-colors hover:text-parchment">Pricing</a>
-              <a href="/privacy_policy" class="transition-colors hover:text-parchment">Privacy</a>
-              <a href="/feedback" class="transition-colors hover:text-parchment">Feedback</a>
+              <a
+                href={"/#{@current_language}/browse"}
+                class="transition-colors hover:text-parchment"
+              >
+                {gettext("Browse")}
+              </a>
+              <a href="#pricing" class="transition-colors hover:text-parchment">
+                {gettext("Pricing")}
+              </a>
+              <a href="/privacy_policy" class="transition-colors hover:text-parchment">
+                {gettext("Privacy")}
+              </a>
+              <a
+                href={"/#{@current_language}/feedback"}
+                class="transition-colors hover:text-parchment"
+              >
+                {gettext("Feedback")}
+              </a>
             </nav>
           </div>
           <div class="mt-8 border-t border-ink-panel2 pt-6 text-center text-xs text-parchment-dim/60">
-            &copy; 2025 M3Hungry. Nutrition data from USDA FoodData Central.
+            {gettext("© 2025 M3Hungry. Nutrition data from USDA FoodData Central.")}
           </div>
         </div>
       </footer>

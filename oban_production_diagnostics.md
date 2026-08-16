@@ -351,12 +351,16 @@ Postgres-side "too many connections" error.
 SELECT state, count(*) FROM oban_jobs GROUP BY 1;
 ```
 
-Inside a running prod node (`bin/mehungry_umbrella remote`), confirm the BEAM
-picked up the scheduler flags:
+Inside a running prod node, confirm the BEAM picked up the scheduler flags:
 
 ```elixir
 :erlang.system_info(:schedulers_online)   #=> should equal the vCPU count (2)
 ```
+
+> ⚠️ **`bin/mehungry_umbrella remote` is currently broken in prod** — see
+> [§11.2](#112-remote-console-is-broken----and-how-to-get-in-anyway). Use
+> `eval` (or the [Oban Web UI](#111-oban-web-ui-at-oban), which needs no console)
+> until the release config is fixed.
 
 ---
 
@@ -661,7 +665,9 @@ should OOM persist after the resource bump:
 
 ### 10.7 Verify the VM actually took the flags
 
-From a running prod node (`bin/mehungry_umbrella remote`):
+From a running prod node (`bin/mehungry_umbrella remote` — **currently broken,
+see [§11.2](#112-remote-console-is-broken----and-how-to-get-in-anyway); use
+`eval` instead**):
 
 ```elixir
 :erlang.system_info(:schedulers_online)        #=> 2  (must equal the vCPU count)
@@ -674,3 +680,97 @@ From a running prod node (`bin/mehungry_umbrella remote`):
 If `schedulers_online` doesn't equal the vCPU count after deploy, the `ERL_AFLAGS`
 env var isn't reaching the VM (typo, or overridden) — fix that before chasing
 anything else, because every other scheduler symptom flows from it.
+
+---
+
+## 11. Inspecting Oban in prod — tools and known breakages
+
+Findings from an incident investigation on **2026-08-15**: the "AI-translate all
+missing" batch translations (`ProfessionalLive.TranslationsLive.Panel`) appeared
+dead in prod for Recipes and Food Species while working fine on localhost. Three
+things surfaced while chasing it — a new tool, a broken tool, and the actual
+cause.
+
+### 11.1 Oban Web UI at `/oban`
+
+There is now an **Oban Web** dashboard mounted at **`/oban`**, admin-gated by the
+same pipeline as `/dashboard` (`:admin_browser` → `:require_authenticated_user` →
+`:require_admin`, `mehungry_web/router.ex`). Deps: `oban_web` + `oban_met`
+(`apps/mehungry_web/mix.exs`); it attaches to the default `Oban` instance and
+self-serves its own assets (no esbuild wiring).
+
+This is now the **primary, console-free way to inspect the job queues in prod**:
+filter by queue/state/worker, see the backlog live, and **cancel or retry jobs
+straight from the browser** — which is how you clear a runaway backlog without SQL
+or a remote shell. Prefer this over the console for anything you can do from a UI.
+
+### 11.2 Remote console is broken — and how to get in anyway
+
+`bin/mehungry_umbrella remote` and `bin/mehungry_umbrella rpc` **both crash in
+prod** with:
+
+```
+bad scheduler forced wakeup interval -sbt
+```
+
+Root cause is a malformed line in **`rel/remote.vm.args.eex`**:
+
+```
+## Enable distributed signals
++sfwi -sbt db
+```
+
+`+sfwi` (scheduler forced wakeup interval) requires a **numeric** argument, but it
+is handed `-sbt` — two flags mashed onto one line with no value for `+sfwi`. This
+file drives *both* `remote` and `rpc` (but **not** `eval`, `start`, or the running
+node, which use the clean `rel/vm.args.eex`), so all interactive/RPC console
+access to prod is dead. Setting `ERL_AFLAGS=` does **not** help — the bad flag is
+baked into the release file, not the env var.
+
+Secondary bug in the same file: `-setcookie ${ERLANG_COOKIE}`, but the entrypoint
+exports **`RELEASE_COOKIE`**, not `ERLANG_COOKIE` — so even with the `+sfwi` line
+fixed, the remote shell would likely fail to authenticate to the running node.
+
+**Permanent fix (needs a deploy):** in `rel/remote.vm.args.eex`, split/repair the
+scheduler line (drop it, or give `+sfwi` a real interval and put `-sbt db` on its
+own line) and change the cookie reference to `${RELEASE_COOKIE}`.
+
+**Workaround until then — use `eval`, not `remote`/`rpc`.** `eval` boots a
+throwaway node with the clean `vm.args`, runs your code, and exits; it does *not*
+connect to the running node and does *not* process jobs, so it's safe and
+read-only if you only start the Repo:
+
+```sh
+/app/bin/mehungry_umbrella eval '
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = Mehungry.Repo.start_link()
+import Ecto.Query
+Mehungry.Repo.all(from j in "oban_jobs", group_by: [j.queue, j.state], select: {j.queue, j.state, count(j.id)}) |> IO.inspect(label: "by_queue")
+'
+```
+
+(Getting an ECS shell in the first place: `enableExecuteCommand` is already `True`
+on `mh-prod-service`, the task role's SSM agent runs, so all you need locally is
+the **Session Manager plugin** — then
+`aws ecs execute-command --cluster mehungry_cluster --task <id> --container mehungry_app --command "/bin/sh" --interactive --region eu-central-1`.)
+
+### 11.3 Batch translation "not working" = Oban backlog, not a code failure
+
+`ResourceTranslationWorker.enqueue_all/3` inserts jobs with **no `unique:`
+option**. Every click of "AI-translate all missing" re-enqueues a *fresh full
+batch of every missing id*. On the biggest resources (Recipes, Food Species) each
+click queues hundreds of jobs onto the single-slot **`ai_agents: 1`** queue
+(shared with recipe generation), each making a slow Anthropic call. A few repeat
+clicks bury the queue thousands deep: drafts trickle in so slowly it *looks*
+dead, and the backlog also starves `DailyRecipeGenerationWorker`. It works on
+localhost only because the local queue drains instantly.
+
+- **Confirm:** filter `/oban` to worker `ResourceTranslationWorker` (or the `eval`
+  query in §11.2 grouped by `resource`/`state`) — expect a large `available` /
+  `scheduled` count on `recipes` and `species`.
+- **Clear it:** select those jobs in `/oban` → Cancel (or
+  `DELETE FROM oban_jobs WHERE worker = 'Mehungry.ObanWorkers.ResourceTranslationWorker' AND state IN ('available','scheduled','retryable')`).
+- **Prevent recurrence (code fix, not yet applied):** add an Oban `unique` guard
+  to `ResourceTranslationWorker` so repeated clicks are idempotent, and/or move
+  bulk translation off `ai_agents` onto its own queue so it can't starve recipe
+  generation.
