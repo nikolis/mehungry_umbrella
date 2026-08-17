@@ -487,6 +487,13 @@ defmodule Mehungry.Food.NutrientCalculation do
     Enum.find(nutrients, fn nutrient -> nutrient.nutrient.name == target_name end)
   end
 
+  @doc """
+  Public accessor for the gram-family MeasurementUnit id set, so read paths
+  (e.g. the calendar's per-ingredient nutrient scaling) can resolve grams once
+  and reuse the set across many `calculate_gram_weight/5` calls.
+  """
+  def gram_unit_ids, do: load_gram_unit_ids()
+
   # Returns a MapSet of all MeasurementUnit IDs that represent grams.
   # Matches by name ("g", "gram", "grammar") or alternate_name ("g") to
   # handle units created by both the USDA importer and the mass backfill script.
