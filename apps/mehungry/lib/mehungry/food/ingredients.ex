@@ -22,14 +22,34 @@ defmodule Mehungry.Food.Ingredients do
 
   # Read-through cache for the heavy get_ingredient_details! preloads (all portions +
   # the full nutrient table per ingredient). This is near-immutable reference data;
-  # a per-put TTL keeps it fresh after edits without tracking every write path.
+  # a per-put TTL bounds staleness, and the write paths (update_ingredient,
+  # portion/nutrient inserts, delete) invalidate the entry so an edit is reflected
+  # immediately rather than lingering for up to the TTL.
   @cache_key_ns Mehungry.Food.Ingredients
   @cache_ttl :timer.hours(1)
+
+  # Drop the cached get_ingredient_details! entry for an ingredient after a write
+  # that changes its portions/nutrients/attributes.
+  defp invalidate_ingredient_details(ingredient_id) do
+    Cachex.del(:ingredient_details_cache, {@cache_key_ns, {:ingredient_details, ingredient_id}})
+    :ok
+  end
+
+  # For portion/nutrient inserts: invalidate the parent ingredient's cached details
+  # on success, passing the {:ok, _} / {:error, _} result through untouched.
+  defp tap_invalidate_details({:ok, %{ingredient_id: ingredient_id}} = result)
+       when not is_nil(ingredient_id) do
+    invalidate_ingredient_details(ingredient_id)
+    result
+  end
+
+  defp tap_invalidate_details(result), do: result
 
   def create_ingredient_portion(attrs) do
     %IngredientPortion{}
     |> IngredientPortion.changeset(attrs)
     |> Repo.insert()
+    |> tap_invalidate_details()
   end
 
   def broadcast_ingredient_work_item(file_url) do
@@ -42,6 +62,7 @@ defmodule Mehungry.Food.Ingredients do
     %IngredientNutrient{}
     |> IngredientNutrient.changeset(attrs)
     |> Repo.insert()
+    |> tap_invalidate_details()
   end
 
   def get_ingredient_by_name(name) do
@@ -137,7 +158,9 @@ defmodule Mehungry.Food.Ingredients do
   end
 
   def delete_ingredient(%Ingredient{} = ingredient) do
-    Repo.delete(ingredient)
+    result = Repo.delete(ingredient)
+    with {:ok, deleted} <- result, do: invalidate_ingredient_details(deleted.id)
+    result
   end
 
   def delete_ingredients_without_nutrients do
@@ -471,9 +494,16 @@ defmodule Mehungry.Food.Ingredients do
   end
 
   def update_ingredient(%Ingredient{} = ingredient, attrs \\ %{}) do
-    ingredient
-    |> Ingredient.changeset(attrs)
-    |> Repo.update()
+    result =
+      ingredient
+      |> Ingredient.changeset(attrs)
+      |> Repo.update()
+
+    with {:ok, updated} <- result do
+      invalidate_ingredient_details(updated.id)
+    end
+
+    result
   end
 
   def get_ingredient_by_slug(slug) do
