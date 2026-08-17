@@ -369,6 +369,10 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   defp load_and_format_user_meals(user_id) do
+    # Resolve the gram-unit id set once for the whole calendar (not per row) so
+    # each logged ingredient's nutrients scale by its chosen portion × quantity.
+    gram_ids = Mehungry.Food.NutrientCalculation.gram_unit_ids()
+
     History.list_history_user_meals_for_user(user_id)
     |> Enum.map(fn x ->
       %{
@@ -382,19 +386,12 @@ defmodule MehungryWeb.CalendarLive.Index do
             %{
               title: y.ingredient.name,
               portions: y.quantity,
-              measurement_unit: y.measurement_unit.name,
+              measurement_unit: Mehungry.Food.RecipeIngredient.unit_label(y),
               primary_size: 6,
               img_url: nil,
               recipe: %{
                 id: y.ingredient.id,
-                nutrients:
-                  Enum.map(y.ingredient.ingredient_nutrients, fn n ->
-                    %{
-                      amount: n.amount,
-                      name: n.nutrient.name,
-                      measurement_unit: %{name: n.nutrient.measurement_unit.name}
-                    }
-                  end),
+                nutrients: History.scaled_ingredient_nutrients(y, gram_ids),
                 primary_size: 5
               }
             }
