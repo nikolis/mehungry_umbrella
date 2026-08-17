@@ -46,13 +46,33 @@ defmodule Mehungry.Health do
   @cache_key_ns Mehungry.Health
   @cache_ttl :timer.hours(1)
 
+  # Curation is rare (admin-only) and every cached read (`get_condition/2`,
+  # `recommendations_for_condition/2`, `species_for_condition/3`) is keyed on a
+  # condition id fanned across language/recommendation variants, so any write to
+  # the condition/recommendation tables clears the whole cache rather than trying
+  # to enumerate those variants. Without this the read-through cache serves the
+  # pre-write snapshot for up to @cache_ttl.
+  defp bust_cache do
+    Cachex.clear(:health_cache)
+    :ok
+  end
+
   # ── Condition registry ────────────────────────────────────────────────────
 
   def create_condition(attrs) do
     %Condition{}
     |> Condition.changeset(attrs)
     |> Repo.insert()
+    |> tap_ok()
   end
+
+  # Bust the cache after a successful write; pass other results through untouched.
+  defp tap_ok({:ok, _} = result) do
+    bust_cache()
+    result
+  end
+
+  defp tap_ok(result), do: result
 
   @doc "A changeset for a condition — for admin forms."
   def change_condition(condition \\ %Condition{}, attrs \\ %{}) do
@@ -63,7 +83,7 @@ defmodule Mehungry.Health do
   def delete_condition(id) do
     case Repo.get(Condition, id) do
       nil -> {:error, :not_found}
-      condition -> Repo.delete(condition)
+      condition -> condition |> Repo.delete() |> tap_ok()
     end
   end
 
@@ -170,6 +190,7 @@ defmodule Mehungry.Health do
     %CompoundRecommendation{}
     |> CompoundRecommendation.changeset(attrs)
     |> Repo.insert()
+    |> tap_ok()
   end
 
   @doc """
@@ -184,10 +205,11 @@ defmodule Mehungry.Health do
       on_conflict: {:replace_all_except, [:id, :inserted_at]},
       conflict_target: [:condition_id, :compound_id, :source]
     )
+    |> tap_ok()
   end
 
   def delete_recommendation(%CompoundRecommendation{} = recommendation),
-    do: Repo.delete(recommendation)
+    do: recommendation |> Repo.delete() |> tap_ok()
 
   def get_recommendation!(id), do: Repo.get!(CompoundRecommendation, id)
 
