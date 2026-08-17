@@ -39,6 +39,13 @@ defmodule Mehungry.Health do
 
   alias Mehungry.Languages.Locale
 
+  # Read-through cache for the editorial, shared-safe condition-page reads. These
+  # rows are curated (at /professional/health) and vary only by entity id + language,
+  # so a shared cache is safe; a moderate TTL lets admin edits surface without
+  # having to bust every write path. Namespaced tuple keys mirror Recipes.get_recipe!/1.
+  @cache_key_ns Mehungry.Health
+  @cache_ttl :timer.hours(1)
+
   # ── Condition registry ────────────────────────────────────────────────────
 
   def create_condition(attrs) do
@@ -82,9 +89,22 @@ defmodule Mehungry.Health do
   (per-field fallback to the base record); `nil`/`"en"` returns the base record.
   """
   def get_condition(id, language \\ nil) do
-    case Repo.get(Condition, id) do
-      nil -> nil
-      condition -> localize_condition(condition, language)
+    key = {@cache_key_ns, {:condition, id, language}}
+
+    case Cachex.get(:health_cache, key) do
+      {:ok, nil} ->
+        case Repo.get(Condition, id) do
+          nil ->
+            nil
+
+          condition ->
+            localized = localize_condition(condition, language)
+            Cachex.put(:health_cache, key, localized, ttl: @cache_ttl)
+            localized
+        end
+
+      {:ok, cached} ->
+        cached
     end
   end
 
@@ -176,6 +196,20 @@ defmodule Mehungry.Health do
   Pass a `language` to overlay the compound's `compound_translations` name.
   """
   def recommendations_for_condition(condition_id, language \\ nil) do
+    key = {@cache_key_ns, {:recommendations, condition_id, language}}
+
+    case Cachex.get(:health_cache, key) do
+      {:ok, nil} ->
+        result = do_recommendations_for_condition(condition_id, language)
+        Cachex.put(:health_cache, key, result, ttl: @cache_ttl)
+        result
+
+      {:ok, cached} ->
+        cached
+    end
+  end
+
+  defp do_recommendations_for_condition(condition_id, language) do
     Repo.all(
       from(r in CompoundRecommendation,
         join: c in Compound,
@@ -236,6 +270,20 @@ defmodule Mehungry.Health do
   render "avoid Spinach (high Oxalate)".
   """
   def species_for_condition(condition_id, recommendation \\ nil, language \\ nil) do
+    key = {@cache_key_ns, {:species, condition_id, recommendation, language}}
+
+    case Cachex.get(:health_cache, key) do
+      {:ok, nil} ->
+        result = do_species_for_condition(condition_id, recommendation, language)
+        Cachex.put(:health_cache, key, result, ttl: @cache_ttl)
+        result
+
+      {:ok, cached} ->
+        cached
+    end
+  end
+
+  defp do_species_for_condition(condition_id, recommendation, language) do
     from(rec in CompoundRecommendation,
       join: scr in SpeciesCompoundRelationship,
       on: scr.compound_id == rec.compound_id,

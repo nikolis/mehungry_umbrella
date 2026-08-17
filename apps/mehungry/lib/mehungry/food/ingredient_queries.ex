@@ -73,6 +73,37 @@ defmodule Mehungry.Food.IngredientQueries do
     Repo.all(query)
   end
 
+  @doc """
+  Random recipes that use at least one ingredient from `include_ingredient_ids`
+  and none from `exclude_ingredient_ids`.
+
+  Used by the condition-detail page to surface meals built on the encouraged
+  foods while steering clear of any food flagged as mindful.
+  """
+  def list_random_recipes_including_excluding(include_ingredient_ids, exclude_ingredient_ids, limit \\ 10)
+
+  def list_random_recipes_including_excluding([], _exclude_ingredient_ids, _limit), do: []
+
+  def list_random_recipes_including_excluding(include_ingredient_ids, exclude_ingredient_ids, limit) do
+    exclude_recipe_ids =
+      from(ri in RecipeIngredient,
+        where: ri.ingredient_id in ^exclude_ingredient_ids,
+        select: ri.recipe_id
+      )
+
+    matching =
+      from(r in Recipe,
+        join: ri in RecipeIngredient,
+        on: ri.recipe_id == r.id,
+        where: ri.ingredient_id in ^include_ingredient_ids,
+        where: r.id not in subquery(exclude_recipe_ids),
+        distinct: true
+      )
+
+    from(r in subquery(matching), order_by: fragment("RANDOM()"), limit: ^limit)
+    |> Repo.all()
+  end
+
   def search_recipe(query_string, language_name \\ nil)
 
   def search_recipe("", language_name) do

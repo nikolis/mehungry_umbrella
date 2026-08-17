@@ -35,6 +35,14 @@ defmodule Mehungry.Application do
       %{id: :pubtator_cache, start: {Cachex, :start_link, [:pubtator_cache, [limit: 5000]]}},
       # Fixed-window rate limiting counters (registration throttle, Spoonacular gating)
       %{id: :rate_limit, start: {Cachex, :start_link, [:rate_limit, [limit: 100_000]]}},
+      # Read-through cache for the (editorial, shared-safe) condition-page reads in
+      # Mehungry.Health — species_for_condition/recommendations_for_condition/get_condition.
+      # Keyed by {condition, recommendation, language}; entries expire via per-put TTL.
+      %{id: :health_cache, start: {Cachex, :start_link, [:health_cache, [limit: 1000]]}},
+      # Read-through cache for the heavy get_ingredient_details! nutrient/portion preloads
+      # (near-immutable reference data); per-put TTL.
+      %{id: :ingredient_details_cache,
+        start: {Cachex, :start_link, [:ingredient_details_cache, [limit: 500]]}},
       Mehungry.Telemetry.MetricsBuffer,
       Mehungry.Telemetry.ErrorTracker,
       {Task.Supervisor, name: Mehungry.TaskSupervisor}

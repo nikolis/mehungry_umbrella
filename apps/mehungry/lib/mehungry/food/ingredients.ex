@@ -20,6 +20,12 @@ defmodule Mehungry.Food.Ingredients do
     RecipeIngredient
   }
 
+  # Read-through cache for the heavy get_ingredient_details! preloads (all portions +
+  # the full nutrient table per ingredient). This is near-immutable reference data;
+  # a per-put TTL keeps it fresh after edits without tracking every write path.
+  @cache_key_ns Mehungry.Food.Ingredients
+  @cache_ttl :timer.hours(1)
+
   def create_ingredient_portion(attrs) do
     %IngredientPortion{}
     |> IngredientPortion.changeset(attrs)
@@ -507,11 +513,23 @@ defmodule Mehungry.Food.Ingredients do
   def get_ingredient_details!(nil), do: nil
 
   def get_ingredient_details!(id) do
-    Repo.get!(Ingredient, id)
-    |> Repo.preload(
-      ingredient_portions: [:measurement_unit],
-      ingredient_nutrients: [nutrient: [:measurement_unit]]
-    )
+    key = {@cache_key_ns, {:ingredient_details, id}}
+
+    case Cachex.get(:ingredient_details_cache, key) do
+      {:ok, nil} ->
+        details =
+          Repo.get!(Ingredient, id)
+          |> Repo.preload(
+            ingredient_portions: [:measurement_unit],
+            ingredient_nutrients: [nutrient: [:measurement_unit]]
+          )
+
+        Cachex.put(:ingredient_details_cache, key, details, ttl: @cache_ttl)
+        details
+
+      {:ok, cached} ->
+        cached
+    end
   end
 
   def get_ingredient_with_category!(id) do
