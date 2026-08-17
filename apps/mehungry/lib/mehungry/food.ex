@@ -117,6 +117,13 @@ defmodule Mehungry.Food do
   defdelegate search_hashtag1(hashtag), to: IngredientQueries
   defdelegate search_recipes_by_ingredient(ingredient_name), to: IngredientQueries
   defdelegate list_sample_recipes_for_ingredient(ingredient_id, limit \\ 4), to: IngredientQueries
+
+  defdelegate list_random_recipes_including_excluding(
+                include_ingredient_ids,
+                exclude_ingredient_ids,
+                limit \\ 10
+              ),
+              to: IngredientQueries
   defdelegate search_recipe(query_string, language_name \\ nil), to: IngredientQueries
   defdelegate pagenate_query(query), to: IngredientQueries
   defdelegate count_search_results(query), to: IngredientQueries

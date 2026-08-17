@@ -87,6 +87,109 @@
       <% end %>
     </section>
 
+    <%!-- ── Diet suggestions (built on encouraged foods, free of mindful ones) ── --%>
+    <section class="mb-10">
+      <h2 class="text-lg font-display font-medium text-parchment mb-4">
+        {gettext("%{name} diet suggestions", name: @condition.name)}
+      </h2>
+
+      <%= cond do %>
+        <% @recommended_recipes.loading -> %>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" aria-hidden="true">
+            <div
+              :for={_ <- 1..4}
+              class="flex items-center gap-3 bg-ink-panel border border-ink-panel2 rounded-xl p-3"
+            >
+              <div class="m3-skeleton w-16 h-16 rounded-lg bg-ink-panel2 flex-shrink-0" />
+              <div class="flex-1 min-w-0 space-y-2">
+                <div class="m3-skeleton h-3.5 w-4/5 rounded bg-ink-panel2" />
+                <div class="m3-skeleton h-3 w-1/3 rounded bg-ink-panel2" />
+              </div>
+            </div>
+          </div>
+        <% @recommended_recipes.failed -> %>
+          <p class="text-parchment-dim text-sm">{gettext("Couldn't load recipes.")}</p>
+        <% @recommended_recipes.ok? && length(@recommended_recipes.result) == 0 -> %>
+          <p class="text-parchment-dim text-sm">
+            {gettext("No recipes yet that pair an encouraged food with none of the mindful ones.")}
+          </p>
+        <% true -> %>
+          <p class="text-sm text-parchment-dim mb-4">
+            {gettext("Recipes that include an encouraged food and none of the foods to be mindful of.")}
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <%= for recipe <- @recommended_recipes.result do %>
+              <div class="relative">
+                <a
+                  href={~p"/#{@locale}/browse/#{recipe.id}"}
+                  class="group flex items-center gap-3 bg-ink-panel border border-ink-panel2 rounded-xl p-3 hover:border-paprika/50 hover:bg-ink-panel2/80 transition-colors"
+                >
+                  <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-ink-panel2">
+                    <%= if recipe.image_url do %>
+                      <img
+                        src={recipe.image_url}
+                        alt={recipe.title}
+                        class="w-full h-full object-cover"
+                      />
+                    <% else %>
+                      <div class="w-full h-full flex items-center justify-center">
+                        <svg
+                          class="w-6 h-6 text-parchment-dim"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                    <% end %>
+                  </div>
+                  <div class="flex-1 min-w-0 pr-7">
+                    <p class="text-sm font-medium text-parchment group-hover:text-paprika-soft transition-colors truncate">
+                      {recipe.title}
+                    </p>
+                    <%= if recipe.cooking_time_lower_limit do %>
+                      <p class="text-xs text-parchment-dim mt-0.5">
+                        <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">{recipe.cooking_time_lower_limit}</span>
+                        {gettext("min")}
+                      </p>
+                    <% end %>
+                  </div>
+                </a>
+                <button
+                  :if={is_nil(@current_user) or recipe.user_id != @current_user.id}
+                  id={"save-recommended-recipe-#{recipe.id}"}
+                  phx-click="save_user_recipe"
+                  phx-value-recipe_id={recipe.id}
+                  type="button"
+                  aria-label={gettext("Save recipe for later")}
+                  class="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-ink/40 hover:bg-ink/70 transition backdrop-blur-sm"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill={if recipe.id in @current_user_recipes, do: "#eb4034", else: "none"}
+                    stroke="#eb4034"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            <% end %>
+          </div>
+      <% end %>
+    </section>
+
     <%!-- ── Food species to be mindful of (derived via the shared compound) ── --%>
     <section class="mb-10">
       <h2 class="text-lg font-display font-medium text-parchment mb-4">

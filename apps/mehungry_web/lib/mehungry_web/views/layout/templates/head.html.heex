@@ -7,6 +7,11 @@ page_description =
 
 recipe_jsonld = @conn.assigns[:recipe_jsonld]
 
+# Generic structured data: a list of schema.org node maps (e.g. BreadcrumbList,
+# MedicalWebPage) emitted together under a single @graph. Pages set it via a
+# `:structured_data` assign; other pages leave it nil and emit nothing.
+structured_data = @conn.assigns[:structured_data]
+
 # Resolve title, OG image, canonical URL from page_title assign
 {resolved_title, og_image, canonical_path} =
   cond do
@@ -23,6 +28,10 @@ recipe_jsonld = @conn.assigns[:recipe_jsonld]
     true ->
       {"M3Hungry — Discover & Analyze Recipes", nil, @conn.request_path}
   end
+
+# A page may override the canonical path (e.g. a modal/deep-link URL that should
+# point back at its base page to avoid duplicate content). Locale is applied below.
+canonical_path = @conn.assigns[:canonical_path] || canonical_path
 
 base_url = "https://www.m3hungry.com"
 
@@ -124,9 +133,16 @@ ga_enabled =
   <% end %>
 
   <!-- ─── JSON-LD structured data (Recipe rich results) ──────────────────── -->
+  <%!-- NOTE: use <%= raw(...) %> here, not {..} — HEEx does not evaluate curly
+       interpolation inside <script>/<style> tags (it renders as literal text). --%>
   <%= if recipe_jsonld do %>
     <script type="application/ld+json">
-      {Jason.encode!(recipe_jsonld)}
+      <%= raw(Jason.encode!(recipe_jsonld)) %>
+    </script>
+  <% end %>
+  <%= if structured_data do %>
+    <script type="application/ld+json">
+      <%= raw(Jason.encode!(%{"@context" => "https://schema.org", "@graph" => structured_data})) %>
     </script>
   <% end %>
 

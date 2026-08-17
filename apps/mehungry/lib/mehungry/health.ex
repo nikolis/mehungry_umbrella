@@ -39,13 +39,40 @@ defmodule Mehungry.Health do
 
   alias Mehungry.Languages.Locale
 
+  # Read-through cache for the editorial, shared-safe condition-page reads. These
+  # rows are curated (at /professional/health) and vary only by entity id + language,
+  # so a shared cache is safe; a moderate TTL lets admin edits surface without
+  # having to bust every write path. Namespaced tuple keys mirror Recipes.get_recipe!/1.
+  @cache_key_ns Mehungry.Health
+  @cache_ttl :timer.hours(1)
+
+  # Curation is rare (admin-only) and every cached read (`get_condition/2`,
+  # `recommendations_for_condition/2`, `species_for_condition/3`) is keyed on a
+  # condition id fanned across language/recommendation variants, so any write to
+  # the condition/recommendation tables clears the whole cache rather than trying
+  # to enumerate those variants. Without this the read-through cache serves the
+  # pre-write snapshot for up to @cache_ttl.
+  defp bust_cache do
+    Cachex.clear(:health_cache)
+    :ok
+  end
+
   # ── Condition registry ────────────────────────────────────────────────────
 
   def create_condition(attrs) do
     %Condition{}
     |> Condition.changeset(attrs)
     |> Repo.insert()
+    |> tap_ok()
   end
+
+  # Bust the cache after a successful write; pass other results through untouched.
+  defp tap_ok({:ok, _} = result) do
+    bust_cache()
+    result
+  end
+
+  defp tap_ok(result), do: result
 
   @doc "A changeset for a condition — for admin forms."
   def change_condition(condition \\ %Condition{}, attrs \\ %{}) do
@@ -56,7 +83,7 @@ defmodule Mehungry.Health do
   def delete_condition(id) do
     case Repo.get(Condition, id) do
       nil -> {:error, :not_found}
-      condition -> Repo.delete(condition)
+      condition -> condition |> Repo.delete() |> tap_ok()
     end
   end
 
@@ -82,9 +109,22 @@ defmodule Mehungry.Health do
   (per-field fallback to the base record); `nil`/`"en"` returns the base record.
   """
   def get_condition(id, language \\ nil) do
-    case Repo.get(Condition, id) do
-      nil -> nil
-      condition -> localize_condition(condition, language)
+    key = {@cache_key_ns, {:condition, id, language}}
+
+    case Cachex.get(:health_cache, key) do
+      {:ok, nil} ->
+        case Repo.get(Condition, id) do
+          nil ->
+            nil
+
+          condition ->
+            localized = localize_condition(condition, language)
+            Cachex.put(:health_cache, key, localized, ttl: @cache_ttl)
+            localized
+        end
+
+      {:ok, cached} ->
+        cached
     end
   end
 
@@ -150,6 +190,7 @@ defmodule Mehungry.Health do
     %CompoundRecommendation{}
     |> CompoundRecommendation.changeset(attrs)
     |> Repo.insert()
+    |> tap_ok()
   end
 
   @doc """
@@ -164,10 +205,11 @@ defmodule Mehungry.Health do
       on_conflict: {:replace_all_except, [:id, :inserted_at]},
       conflict_target: [:condition_id, :compound_id, :source]
     )
+    |> tap_ok()
   end
 
   def delete_recommendation(%CompoundRecommendation{} = recommendation),
-    do: Repo.delete(recommendation)
+    do: recommendation |> Repo.delete() |> tap_ok()
 
   def get_recommendation!(id), do: Repo.get!(CompoundRecommendation, id)
 
@@ -176,6 +218,20 @@ defmodule Mehungry.Health do
   Pass a `language` to overlay the compound's `compound_translations` name.
   """
   def recommendations_for_condition(condition_id, language \\ nil) do
+    key = {@cache_key_ns, {:recommendations, condition_id, language}}
+
+    case Cachex.get(:health_cache, key) do
+      {:ok, nil} ->
+        result = do_recommendations_for_condition(condition_id, language)
+        Cachex.put(:health_cache, key, result, ttl: @cache_ttl)
+        result
+
+      {:ok, cached} ->
+        cached
+    end
+  end
+
+  defp do_recommendations_for_condition(condition_id, language) do
     Repo.all(
       from(r in CompoundRecommendation,
         join: c in Compound,
@@ -236,6 +292,20 @@ defmodule Mehungry.Health do
   render "avoid Spinach (high Oxalate)".
   """
   def species_for_condition(condition_id, recommendation \\ nil, language \\ nil) do
+    key = {@cache_key_ns, {:species, condition_id, recommendation, language}}
+
+    case Cachex.get(:health_cache, key) do
+      {:ok, nil} ->
+        result = do_species_for_condition(condition_id, recommendation, language)
+        Cachex.put(:health_cache, key, result, ttl: @cache_ttl)
+        result
+
+      {:ok, cached} ->
+        cached
+    end
+  end
+
+  defp do_species_for_condition(condition_id, recommendation, language) do
     from(rec in CompoundRecommendation,
       join: scr in SpeciesCompoundRelationship,
       on: scr.compound_id == rec.compound_id,
