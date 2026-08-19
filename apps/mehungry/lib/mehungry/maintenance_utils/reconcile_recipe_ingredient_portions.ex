@@ -390,7 +390,12 @@ defmodule Mehungry.ReconcileRecipeIngredientPortions do
     |> where([ip], ip.ingredient_id == ^ingredient_id)
     |> where([ip], not is_nil(ip.gram_weight) and ip.gram_weight > 0.0)
     |> order_by([ip], asc: ip.id)
-    |> select([ip], %{gw: ip.gram_weight, amount: ip.amount, mu_id: ip.measurement_unit_id, desc: ip.description})
+    |> select([ip], %{
+      gw: ip.gram_weight,
+      amount: ip.amount,
+      mu_id: ip.measurement_unit_id,
+      desc: ip.description
+    })
     |> Repo.all()
     |> Enum.find_value(:none, fn p ->
       ml =

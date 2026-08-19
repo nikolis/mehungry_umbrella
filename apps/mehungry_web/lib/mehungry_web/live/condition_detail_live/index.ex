@@ -76,7 +76,11 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   # `:show_food` opens the encouraged-food preview modal; loads a condensed slice
   # of the species page (identity is available immediately, the rest streams in).
   @impl true
-  def handle_params(%{"species_id" => species_id}, _uri, %{assigns: %{live_action: :show_food}} = socket) do
+  def handle_params(
+        %{"species_id" => species_id},
+        _uri,
+        %{assigns: %{live_action: :show_food}} = socket
+      ) do
     species =
       species_id
       |> Food.get_species_with_ingredients!()
@@ -87,7 +91,10 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
      |> assign(:modal_species, species)
      # The food-modal URL is a slice of the condition page; canonicalize to the
      # base page so crawlers don't treat it as duplicate content.
-     |> assign(:canonical_path, ~p"/#{socket.assigns.language}/conditions/#{socket.assigns.condition.id}")
+     |> assign(
+       :canonical_path,
+       ~p"/#{socket.assigns.language}/conditions/#{socket.assigns.condition.id}"
+     )
      |> assign_async([:modal_nutrients, :modal_compounds, :modal_recipes], fn ->
        ingredients =
          species.foundemental_foods

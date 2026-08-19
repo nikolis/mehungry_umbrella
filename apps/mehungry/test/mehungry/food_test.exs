@@ -256,6 +256,115 @@ defmodule Mehungry.FoodTest do
       result = Food.search_hashtag("hashtag")
       assert length(result.recipe_hashtags) == 1
     end
+
+    test "hashtag parsing strips surrounding punctuation", %{user: user} do
+      recipe =
+        recipe_fixture(user, %{description: "great #vegan, and (#dinner) too!"})
+        |> Mehungry.Repo.preload(recipe_hashtags: :hashtag)
+
+      titles = recipe.recipe_hashtags |> Enum.map(& &1.hashtag.title)
+      # The description tags survive with punctuation stripped. (The recipe may
+      # also earn auto-added diet tags via ensure_recipe_hashtags, so assert the
+      # parsed tags are present rather than an exact set.)
+      assert "vegan" in titles
+      assert "dinner" in titles
+      refute Enum.any?(titles, &String.contains?(&1, [",", "(", ")", "!", " "]))
+    end
+
+    test "hashtag parsing dedupes repeats and splits across newlines", %{user: user} do
+      recipe =
+        recipe_fixture(user, %{description: "line one #vegan\n#vegan\n#dinner"})
+        |> Mehungry.Repo.preload(recipe_hashtags: :hashtag)
+
+      titles = recipe.recipe_hashtags |> Enum.map(& &1.hashtag.title)
+      # A repeated tag collapses to a single join row even though the classifier
+      # may also independently want "vegan".
+      assert Enum.count(titles, &(&1 == "vegan")) == 1
+      assert "dinner" in titles
+    end
+
+    test "search_hashtag1 returns every recipe sharing a #tag (Rule 1)", %{user: user} do
+      for _ <- 1..3 do
+        recipe_fixture(user, %{description: "shared tag #reunion here"})
+      end
+
+      recipe_fixture(user, %{description: "no tag here"})
+
+      {_query, {recipes, _cursor}} = Food.search_hashtag1("#reunion")
+      assert length(recipes) == 3
+    end
+
+    test "deleting a recipe keeps the Hashtag and other recipes' links (Rule 2)", %{user: user} do
+      recipes =
+        for _ <- 1..3 do
+          recipe_fixture(user, %{description: "keep me #persistent"})
+        end
+
+      assert Mehungry.Hashtag.get_hashtag_by_title("persistent")
+
+      [victim | _rest] = recipes
+      Food.delete_recipe(victim.id)
+
+      # The hashtag row itself survives (stale tags are fine to leave behind)...
+      assert Mehungry.Hashtag.get_hashtag_by_title("persistent")
+      # ...and the remaining 2 recipes are still found through it.
+      {_query, {remaining, _cursor}} = Food.search_hashtag1("#persistent")
+      assert length(remaining) == 2
+    end
+
+    test "non-Latin (Greek) hashtags round-trip through search", %{user: user} do
+      recipe_fixture(user, %{description: "παραδοσιακό #φαγητό today"})
+
+      {_query, {recipes, _cursor}} = Food.search_hashtag1("#φαγητό")
+      assert length(recipes) == 1
+    end
+
+    test "plant-only recipe is auto-tagged #vegan and #vegetarian (Rule 5)", %{user: user} do
+      # Default ingredient_fixture category ("category") is not animal-derived.
+      recipe = recipe_fixture(user, %{description: "simple salad"})
+      # Reload from DB: the fixture struct's recipe_hashtags assoc was loaded
+      # (empty) at insert, before ensure_recipe_hashtags attached the diet tags.
+      recipe = Food.get_recipe_no_caching!(recipe.id)
+
+      titles = recipe.recipe_hashtags |> Enum.map(& &1.hashtag.title)
+      assert "vegan" in titles
+      assert "vegetarian" in titles
+    end
+
+    test "recipe with a meat ingredient is not auto-tagged vegan/vegetarian (Rule 5)", %{
+      user: user
+    } do
+      mu = measurement_unit_fixture()
+
+      # Ensure a vegan-excluded animal category exists (the env is seeded with the
+      # USDA set, e.g. "Beef Products"), then use whatever id the classifier treats
+      # as vegan-excluded so this doesn't collide with the seeded name.
+      unless Food.get_category_by_name("Beef"),
+        do: Food.create_category(%{name: "Beef", description: "meat"})
+
+      beef_category_id = List.first(Food.diet_category_ids(:vegan))
+
+      beef =
+        ingredient_fixture(%{name: unique_ingredient()})
+        |> then(fn ing ->
+          {:ok, ing} = Food.update_ingredient(ing, %{category_id: beef_category_id})
+          ing
+        end)
+
+      recipe =
+        recipe_fixture(user, %{
+          description: "hearty stew",
+          recipe_ingredients: [
+            %{ingredient_id: beef.id, measurement_unit_id: mu.id, quantity: 5}
+          ]
+        })
+
+      recipe = Food.get_recipe_no_caching!(recipe.id)
+
+      titles = recipe.recipe_hashtags |> Enum.map(& &1.hashtag.title)
+      refute "vegan" in titles
+      refute "vegetarian" in titles
+    end
   end
 
   describe "User Meal Test" do

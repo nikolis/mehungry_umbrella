@@ -10,10 +10,12 @@ defmodule MehungryWeb.Application do
 
   def start(_type, _args) do
     children = [
-      # Start the Telemetry supervisor
-      # MehungryWeb.Telemetry,
+      # PromEx owns the Prometheus scrape path — start it before the Endpoint so
+      # its telemetry handlers are attached before the first request.
+      MehungryWeb.PromEx,
       # Manually Crated Presence Model
       MehungryWeb.Presence,
+      # LiveDashboard metric definitions + telemetry poller.
       MehungryWeb.Telemetry,
       # Start the Endpoint (http/https)
 

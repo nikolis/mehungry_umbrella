@@ -14,7 +14,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   alias Mehungry.Posts
   alias MehungryWeb.RecipeComponents
   alias MehungryWeb.RecipeFlags
-  alias MehungryWeb.ImageProcessing
 
   # Page size for the offset-paginated, condition-prioritized browse mode; kept
   # in step with the cursor paginator's `limit: 10` in `Food.list_recipes/3`.
@@ -46,7 +45,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
     {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
 
-    language = socket.assigns[:current_language] || (user_profile && user_profile.language_preference)
+    language =
+      socket.assigns[:current_language] || (user_profile && user_profile.language_preference)
 
     {query, {recipes, cursor_after}} =
       case query_str do
@@ -85,6 +85,11 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      |> assign(:show_search_settings, false)
      |> assign(:selected_condition_ids, MapSet.new())
      |> assign(:conditions_by_category, conditions_by_category())
+     # Diet "mode" derived from the user's saved profile category rules — when set,
+     # the default browse feed is filtered to #vegan/#vegetarian and a badge shows.
+     # `diet_mode_available` remembers it so the badge can be toggled off/on.
+     |> assign(:diet_mode_available, Accounts.diet_mode(user))
+     |> assign(:diet_mode, Accounts.diet_mode(user))
      |> assign_recipe_search()}
   end
 
@@ -140,6 +145,16 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   @impl true
   def handle_event("toggle_search_settings", _params, socket) do
     {:noreply, assign(socket, :show_search_settings, !socket.assigns.show_search_settings)}
+  end
+
+  # Turn the diet-mode filter off (see everything) or back on, then re-run the
+  # current search so the feed reflects it immediately.
+  @impl true
+  def handle_event("toggle_diet_mode", _params, socket) do
+    new_mode = if socket.assigns.diet_mode, do: nil, else: socket.assigns.diet_mode_available
+
+    socket = assign(socket, :diet_mode, new_mode)
+    {:noreply, handle_search(socket, socket.assigns.query_string)}
   end
 
   @impl true
@@ -206,7 +221,12 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         # page number so the computed "encouraged first" order is preserved.
         :offset ->
           recipes =
-            Food.list_recipes_page(Map.get(socket.assigns, :query), next_page, @per_page, language)
+            Food.list_recipes_page(
+              Map.get(socket.assigns, :query),
+              next_page,
+              @per_page,
+              language
+            )
 
           stream_recipes(socket, recipes)
 
@@ -370,7 +390,17 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           {query, :offset, {recipes, nil}}
 
         is_nil(query_str) ->
-          {query_str, :cursor, list_recipes(language)}
+          # Default browse feed. If the user is in a diet mode, filter it to that
+          # diet's hashtag; otherwise show everything. An explicit search (#/@/text/
+          # condition) above overrides diet mode — the user asked for something specific.
+          case socket.assigns[:diet_mode] do
+            mode when mode in [:vegan, :vegetarian] ->
+              {query, page} = Food.search_hashtag1("#" <> Atom.to_string(mode))
+              {query, :cursor, page}
+
+            _ ->
+              {query_str, :cursor, list_recipes(language)}
+          end
 
         true ->
           {query, page} = Food.search_recipe(query_str, language)
@@ -510,14 +540,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     query_str = ""
     language = get_user_language(socket)
 
-    {_query, {recipes, cursor_after}} =
-      case query_str do
-        nil ->
-          {query_str, list_recipes(language)}
-
-        qr ->
-          Food.search_recipe(qr, language)
-      end
+    {_query, {recipes, cursor_after}} = Food.search_recipe(query_str, language)
 
     socket
     |> assign(:nutrients, recipe.nutrients)
@@ -670,11 +693,11 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     base
   end
 
-  defp list_recipes(language \\ nil) do
+  defp list_recipes(language) do
     {result, cursor_after} = Food.list_recipes(nil, nil, language)
 
     result =
-      Enum.map(result, fn recipe ->
+      Enum.map(result, fn %Recipe{} = recipe ->
         %Recipe{recipe | recipe_image_remote: recipe.image_url}
       end)
 

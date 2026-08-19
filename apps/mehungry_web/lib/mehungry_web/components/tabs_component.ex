@@ -42,7 +42,7 @@ defmodule MehungryWeb.TabsComponent do
       id={@state}
       class={[
         "px-6 py-3 text-sm font-medium transition-all rounded-t-lg nav_button w-full h-full " <>
-          extra_class
+          @extra_class
       ]}
       phx-click={
         JS.remove_class("selected", to: ".nav_button")

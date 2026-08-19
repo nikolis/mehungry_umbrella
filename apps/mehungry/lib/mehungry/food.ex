@@ -55,9 +55,11 @@ defmodule Mehungry.Food do
   defdelegate search_recipes_for_admin(term), to: Recipes
   defdelegate search_recipes_for_admin(term, limit), to: Recipes
   defdelegate change_recipe(recipe, attrs \\ %{}), to: Recipes
+  defdelegate validation_changeset(recipe, attrs), to: Recipes
   defdelegate change_step(step, attrs \\ %{}), to: Recipes
   defdelegate create_recipe(attrs \\ %{}), to: Recipes
   defdelegate update_recipe(recipe_origin, attrs \\ %{}), to: Recipes
+  defdelegate ensure_recipe_hashtags(recipe_or_id), to: Recipes
   defdelegate create_post_from_recipe(recipe), to: Recipes
   defdelegate put_nutrient_info(changeset, attrs), to: Recipes
   defdelegate recipe_counts_by_user_id(), to: Recipes
@@ -124,6 +126,7 @@ defmodule Mehungry.Food do
                 limit \\ 10
               ),
               to: IngredientQueries
+
   defdelegate search_recipe(query_string, language_name \\ nil), to: IngredientQueries
   defdelegate pagenate_query(query), to: IngredientQueries
   defdelegate count_search_results(query), to: IngredientQueries
@@ -132,6 +135,7 @@ defmodule Mehungry.Food do
   defdelegate maybe_filter_by_data_types(query, data_types), to: IngredientQueries
   defdelegate list_distinct_food_classes(), to: IngredientQueries
   defdelegate list_distinct_data_types(), to: IngredientQueries
+
   defdelegate search_ingredient_search(search_term, classes \\ [], owner_id \\ nil),
     to: IngredientQueries
 
@@ -188,7 +192,10 @@ defmodule Mehungry.Food do
   defdelegate count_numeric_named_measurement_units(), to: Measurements
   defdelegate list_numeric_named_measurement_units(limit \\ 50), to: Measurements
   defdelegate reconcile_measurement_unit(unit, resolved_name), to: Measurements
-  defdelegate start_measurement_unit_reconciliation_run(), to: Measurements, as: :start_reconciliation_run
+
+  defdelegate start_measurement_unit_reconciliation_run(),
+    to: Measurements,
+    as: :start_reconciliation_run
 
   # ── Categories ─────────────────────────────────────────────────────────
 
@@ -202,6 +209,7 @@ defmodule Mehungry.Food do
   defdelegate search_category(term), to: Categories
   defdelegate list_food_restriction_types(), to: Categories
   defdelegate diet_category_ids(base_diet, flags \\ []), to: Categories
+  defdelegate diet_mode_for_category_rules(rules), to: Categories
 
   # ── Localization ───────────────────────────────────────────────────────
 

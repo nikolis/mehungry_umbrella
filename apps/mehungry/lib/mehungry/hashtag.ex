@@ -19,6 +19,12 @@ defmodule Mehungry.Hashtag do
     |> cast(attrs, [
       :title
     ])
+    |> validate_required([:title])
+    # The DB enforces a unique index on title (tags are deduped by text and
+    # reused across recipes). Reflect it here so the get-or-create path in
+    # `Recipes.ensure_recipe_hashtags/1` surfaces a changeset error on a race
+    # instead of a raw DB exception.
+    |> unique_constraint(:title)
   end
 
   def get_hashtag_by_title(title) do

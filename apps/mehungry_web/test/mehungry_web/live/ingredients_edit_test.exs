@@ -86,7 +86,13 @@ defmodule MehungryWeb.IngredientsEditTest do
       %{conn: conn, ingredient: ingredient} = ctx
       mg = measurement_unit_fixture(%{name: "milligram"})
       {:ok, nutrient} = Food.create_nutrient(%{name: "Iron", rank: 1, measurement_unit_id: mg.id})
-      {:ok, _in} = Food.create_ingredient_nutrient(%{ingredient_id: ingredient.id, nutrient_id: nutrient.id, amount: 5.5})
+
+      {:ok, _in} =
+        Food.create_ingredient_nutrient(%{
+          ingredient_id: ingredient.id,
+          nutrient_id: nutrient.id,
+          amount: 5.5
+        })
 
       {:ok, view, html} = live(conn, ~p"/professional/ingredients/#{ingredient.id}/edit")
       assert html =~ "value=\"5.5\""

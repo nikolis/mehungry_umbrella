@@ -77,8 +77,6 @@ defmodule Mehungry.Chemistry.Resolver do
   # ── resolution + sync ─────────────────────────────────────────────────────
 
   defp resolve_and_sync(seed, name, opts) do
-    refresh = Keyword.get(opts, :refresh, false)
-
     case anchor_cid(seed, name) do
       {:ok, cid} ->
         sync_or_return(anchored_compound(seed, cid), seed, name, cid, opts)

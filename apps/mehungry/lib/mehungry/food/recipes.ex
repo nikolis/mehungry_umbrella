@@ -8,7 +8,8 @@ defmodule Mehungry.Food.Recipes do
   require Logger
 
   alias Mehungry.Repo
-  alias Mehungry.Food.{Localization, Recipe, Step}
+  alias Mehungry.Hashtag
+  alias Mehungry.Food.{DietClassifier, Localization, Recipe, RecipeHashtag, Step}
 
   # The recipes cache predates this module: entries are keyed under
   # `Mehungry.Food` and RecipePutNutrientsWorker invalidates with that same
@@ -53,7 +54,7 @@ defmodule Mehungry.Food.Recipes do
               |> Repo.preload([
                 [recipe_ingredients: [:measurement_unit, :ingredient, :ingredient_portion]],
                 :user,
-                :recipe_hashtags
+                recipe_hashtags: [:hashtag]
               ])
 
             if(not is_nil(recipe)) do
@@ -281,7 +282,10 @@ defmodule Mehungry.Food.Recipes do
       |> Repo.all()
 
     comment_answer_ids =
-      from(ca in Mehungry.Posts.CommentAnswer, where: ca.comment_id in ^comment_ids, select: ca.id)
+      from(ca in Mehungry.Posts.CommentAnswer,
+        where: ca.comment_id in ^comment_ids,
+        select: ca.id
+      )
       |> Repo.all()
 
     post_ids =
@@ -426,6 +430,8 @@ defmodule Mehungry.Food.Recipes do
 
   def list_recipes(%Ecto.Query{} = query), do: list_recipes(query, nil)
 
+  def list_recipes(cursor_after), do: list_recipes(cursor_after, nil, nil)
+
   def list_recipes(%Ecto.Query{} = query, language_name) do
     %{entries: entries, metadata: metadata} =
       Repo.paginate(
@@ -438,8 +444,6 @@ defmodule Mehungry.Food.Recipes do
     results = Repo.preload(entries, [:user, :user_recipes])
     {Localization.localize_recipes(results, language_name), cursor_after}
   end
-
-  def list_recipes(cursor_after), do: list_recipes(cursor_after, nil, nil)
 
   def list_recipes(cursor_after, query), do: list_recipes(cursor_after, query, nil)
 
@@ -492,14 +496,29 @@ defmodule Mehungry.Food.Recipes do
     result
   end
 
+  @doc """
+  Builds a recipe changeset with the **full save-time validation** applied: the
+  schema `Recipe.changeset/2` plus the ingredient unit/portion check that
+  `create_recipe/1` and `update_recipe/2` enforce before writing.
+
+  The create-recipe form runs this on every `validate` so its "ready to save"
+  indicator reflects what saving actually requires — the portion check is
+  otherwise invisible until the user presses Save. DB-only constraints (e.g. the
+  unique title) still surface only at insert/update time.
+  """
+  def validation_changeset(recipe, attrs) do
+    recipe
+    |> Recipe.changeset(attrs)
+    |> validate_ingredient_units_in_changeset()
+  end
+
   def create_recipe(attrs \\ %{}) do
     recipe_hashtags = get_recipe_hashtags(attrs)
     attrs = Mehungry.Utils.put_map(attrs, :recipe_hashtags, recipe_hashtags)
 
     changeset =
-      %Recipe{}
-      |> Recipe.changeset(attrs)
-      |> validate_ingredient_units_in_changeset()
+      validation_changeset(%Recipe{}, attrs)
+      |> validate_title_unique()
 
     result =
       if changeset.valid? do
@@ -511,6 +530,11 @@ defmodule Mehungry.Food.Recipes do
 
     case result do
       {:ok, %Recipe{} = recipe} ->
+        # Reconcile hashtags on every create path (manual, AI, bot): reconnect
+        # the description's #tags and auto-attach #vegan/#vegetarian when the
+        # recipe qualifies. Additive and idempotent — see ensure_recipe_hashtags/1.
+        ensure_recipe_hashtags(recipe.id)
+
         %{recipe_id: recipe.id}
         |> Mehungry.RecipePutNutrientsWorker.new()
         |> Oban.insert()
@@ -536,9 +560,8 @@ defmodule Mehungry.Food.Recipes do
     attrs = Mehungry.Utils.put_map(attrs, :recipe_hashtags, recipe_hashtags)
 
     changeset =
-      recipe_origin
-      |> Recipe.changeset(attrs)
-      |> validate_ingredient_units_in_changeset()
+      validation_changeset(recipe_origin, attrs)
+      |> validate_title_unique()
 
     result =
       if changeset.valid? do
@@ -549,6 +572,10 @@ defmodule Mehungry.Food.Recipes do
 
     case result do
       {:ok, %Recipe{} = recipe} ->
+        # Reconcile hashtags after the update lands: reconnect description #tags
+        # and refresh #vegan/#vegetarian (additive) — see ensure_recipe_hashtags/1.
+        ensure_recipe_hashtags(recipe.id)
+
         %{
           recipe_id: recipe.id
         }
@@ -556,7 +583,10 @@ defmodule Mehungry.Food.Recipes do
         |> Oban.insert()
 
         Mehungry.ObanWorkers.RecipeEmbeddingWorker.enqueue(recipe.id)
-        Cachex.put(:recipes_cache, {@cache_key_ns, recipe.id}, recipe)
+        # Drop the cache entry rather than caching the just-updated struct: the
+        # reconcile above may have attached new hashtag rows not on `recipe`, so
+        # let the next read reload the full, current recipe.
+        Cachex.del(:recipes_cache, {@cache_key_ns, recipe.id})
 
         case Map.get(attrs, "image_url") do
           nil ->
@@ -620,6 +650,34 @@ defmodule Mehungry.Food.Recipes do
   # missing IngredientPortion.  Called in both create_recipe and update_recipe
   # so the user receives the error immediately rather than silently getting
   # wrong nutrition values later.
+  # Application-level uniqueness for a user's recipe titles. The DB `title_user_index`
+  # is not created (see the create_recipes migration), so the schema's
+  # `unique_constraint` never fires; this query-based check enforces it at save
+  # time with a friendly, field-level message. Excludes the recipe itself on update.
+  # (Small race window under concurrent submits — acceptable for this surface.)
+  defp validate_title_unique(changeset) do
+    user_id = Ecto.Changeset.get_field(changeset, :user_id)
+    title = Ecto.Changeset.get_field(changeset, :title)
+    current_id = Ecto.Changeset.get_field(changeset, :id)
+
+    if is_nil(user_id) or is_nil(title) or title == "" do
+      changeset
+    else
+      query = from(r in Recipe, where: r.user_id == ^user_id and r.title == ^title)
+      query = if current_id, do: from(r in query, where: r.id != ^current_id), else: query
+
+      if Repo.exists?(query) do
+        Ecto.Changeset.add_error(
+          changeset,
+          :title,
+          "you already have a recipe with this title"
+        )
+      else
+        changeset
+      end
+    end
+  end
+
   defp validate_ingredient_units_in_changeset(changeset) do
     ri_changesets = Ecto.Changeset.get_change(changeset, :recipe_ingredients) || []
 
@@ -685,27 +743,116 @@ defmodule Mehungry.Food.Recipes do
     end
   end
 
+  # Match a `#` followed by one or more letters/numbers/underscore/hyphen. This
+  # keeps surrounding punctuation (`#vegan,`, `(#dinner)`) and any whitespace from
+  # ending up in the tag title, and is Unicode-aware so non-Latin tags (Greek,
+  # etc.) survive. A bare `#` with no word chars matches nothing.
+  @hashtag_regex ~r/#([\p{L}\p{N}_-]+)/u
+
   defp get_hashtags_string(the_string) do
-    terms = String.split(the_string, " ")
-
-    hashtags =
-      Enum.filter(terms, fn x ->
-        case String.at(x, 0) == "#" do
-          true ->
-            true
-
-          false ->
-            false
-        end
-      end)
-
-    Enum.map(hashtags, fn x ->
-      title = String.slice(x, 1..-1//1)
-
+    @hashtag_regex
+    |> Regex.scan(the_string, capture: :all_but_first)
+    |> Enum.map(fn [title] -> title end)
+    |> Enum.uniq()
+    |> Enum.map(fn title ->
       case Mehungry.Hashtag.get_hashtag_by_title(title) do
         nil -> %{hashtag: %{title: title}}
         existing -> %{"hashtag_id" => existing.id}
       end
     end)
+  end
+
+  @doc """
+  Ensures a recipe is connected to every hashtag it should have. This is the one
+  shared reconciliation routine behind manual/AI/bot creation and the admin
+  reconciliation sweep, so those paths can never diverge.
+
+  It is **additive and idempotent**: it computes the desired title set as the
+  union of
+
+    * the `#tags` parsed out of the recipe's `description` (reconnect), and
+    * the diet tags `Mehungry.Food.DietClassifier` derives from the recipe's
+      ingredient categories (`#vegan`/`#vegetarian`),
+
+  then get-or-creates each desired `Hashtag` and inserts a `RecipeHashtag` join
+  row for any title not already linked. It never deletes join rows or hashtags —
+  stale tags are left to be reclaimed (deleting a recipe leaves its hashtags
+  alone). Returns `{:ok, added_count}`, or `{:error, :not_found}` if the recipe
+  is gone.
+
+  Accepts a `%Recipe{}` or an id.
+  """
+  def ensure_recipe_hashtags(%Recipe{id: id}), do: ensure_recipe_hashtags(id)
+
+  def ensure_recipe_hashtags(recipe_id) do
+    case Repo.get(Recipe, recipe_id) do
+      nil ->
+        {:error, :not_found}
+
+      recipe ->
+        recipe
+        |> Repo.preload(recipe_hashtags: [:hashtag], recipe_ingredients: [ingredient: :category])
+        |> reconcile_hashtags()
+    end
+  end
+
+  defp reconcile_hashtags(recipe) do
+    description_titles = parse_hashtag_titles(recipe.description)
+    diet_titles = DietClassifier.classify(recipe)
+    desired = Enum.uniq(description_titles ++ diet_titles)
+
+    existing =
+      recipe.recipe_hashtags
+      |> Enum.map(fn rh -> rh.hashtag && rh.hashtag.title end)
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+
+    added =
+      desired
+      |> Enum.reject(&MapSet.member?(existing, &1))
+      |> Enum.count(fn title -> link_hashtag(recipe.id, title) == :ok end)
+
+    {:ok, added}
+  end
+
+  # Bare titles parsed out of the description (no DB lookup), same regex/dedup as
+  # get_hashtags_string/1 but without the create-or-reuse mapping.
+  defp parse_hashtag_titles(nil), do: []
+
+  defp parse_hashtag_titles(description) do
+    @hashtag_regex
+    |> Regex.scan(description, capture: :all_but_first)
+    |> Enum.map(fn [title] -> title end)
+    |> Enum.uniq()
+  end
+
+  defp link_hashtag(recipe_id, title) do
+    hashtag = get_or_create_hashtag(title)
+
+    %RecipeHashtag{}
+    |> RecipeHashtag.changeset(%{"recipe_id" => recipe_id, "hashtag_id" => hashtag.id})
+    |> Repo.insert()
+    |> case do
+      {:ok, _} -> :ok
+      {:error, _changeset} -> :noop
+    end
+  end
+
+  defp get_or_create_hashtag(title) do
+    case Hashtag.get_hashtag_by_title(title) do
+      nil ->
+        %Hashtag{}
+        |> Hashtag.changeset(%{title: title})
+        |> Repo.insert()
+        |> case do
+          {:ok, hashtag} -> hashtag
+          # Lost a race to a concurrent insert — the unique(:title) constraint
+          # fired; re-read the row the other writer created.
+          {:error, _changeset} -> Hashtag.get_hashtag_by_title(title)
+        end
+
+      existing ->
+        existing
+    end
   end
 end

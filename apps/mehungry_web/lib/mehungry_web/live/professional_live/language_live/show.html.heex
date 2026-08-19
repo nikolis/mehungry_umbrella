@@ -5,11 +5,11 @@
 </div>
 
 <div class="mt-4 flex gap-2">
-  <.link patch={~p"/admin/languages/#{@language.name}/show/edit"}>
+  <.link patch={~p"/professional/languages/#{@language.name}/show/edit"}>
     Edit
   </.link>
 
-  <.link navigate={~p"/admin/languages"}>
+  <.link navigate={~p"/professional/languages"}>
     Back
   </.link>
 </div>
@@ -21,6 +21,6 @@
     title="Edit Language"
     action={:edit}
     language={@language}
-    patch={~p"/admin/languages/#{@language.name}"}
+    patch={~p"/professional/languages/#{@language.name}"}
   />
 </.modal>

@@ -115,7 +115,9 @@
           </p>
         <% true -> %>
           <p class="text-sm text-parchment-dim mb-4">
-            {gettext("Recipes that include an encouraged food and none of the foods to be mindful of.")}
+            {gettext(
+              "Recipes that include an encouraged food and none of the foods to be mindful of."
+            )}
           </p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <%= for recipe <- @recommended_recipes.result do %>
@@ -284,7 +286,9 @@
           </p>
         <% true -> %>
           <p class="text-sm text-parchment-dim mb-4">
-            {gettext("Foods worth including — each contains a compound recommended for this condition.")}
+            {gettext(
+              "Foods worth including — each contains a compound recommended for this condition."
+            )}
           </p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <%= for row <- encouraged_species(@species.result) do %>
@@ -361,7 +365,8 @@
       <%!-- Nutrition snapshot --%>
       <div>
         <h3 class="text-sm font-semibold text-parchment-dim uppercase tracking-wide mb-3">
-          {gettext("Nutrition")} <span class="font-normal normal-case">{gettext("per 100g")}</span>
+          {gettext("Nutrition")}
+          <span class="font-normal normal-case">{gettext("per 100g")}</span>
         </h3>
         <%= cond do %>
           <% @modal_nutrients.loading -> %>
@@ -371,7 +376,9 @@
           <% @modal_nutrients.failed -> %>
             <p class="text-parchment-dim text-sm">{gettext("Couldn't load nutrition.")}</p>
           <% @modal_nutrients.ok? && length(@modal_nutrients.result) == 0 -> %>
-            <p class="text-parchment-dim text-sm">{gettext("No nutrition data for this food yet.")}</p>
+            <p class="text-parchment-dim text-sm">
+              {gettext("No nutrition data for this food yet.")}
+            </p>
           <% true -> %>
             <div class="grid grid-cols-3 sm:grid-cols-5 gap-3">
               <%= for n <- @modal_nutrients.result do %>
@@ -380,7 +387,9 @@
                     {format_amount(n.amount)}
                   </div>
                   <div class="text-xs text-parchment-dim mt-0.5">{n.unit}</div>
-                  <div class="text-xs font-medium text-parchment-dim mt-1">{nutrient_label(n.label)}</div>
+                  <div class="text-xs font-medium text-parchment-dim mt-1">
+                    {nutrient_label(n.label)}
+                  </div>
                 </div>
               <% end %>
             </div>
@@ -400,7 +409,9 @@
           <% @modal_compounds.failed -> %>
             <p class="text-parchment-dim text-sm">{gettext("Couldn't load compounds.")}</p>
           <% @modal_compounds.ok? && length(@modal_compounds.result) == 0 -> %>
-            <p class="text-parchment-dim text-sm">{gettext("No compounds linked to this food yet.")}</p>
+            <p class="text-parchment-dim text-sm">
+              {gettext("No compounds linked to this food yet.")}
+            </p>
           <% true -> %>
             <div class="flex flex-wrap gap-2">
               <%= for rel <- @modal_compounds.result do %>
@@ -437,7 +448,9 @@
           <% @modal_recipes.failed -> %>
             <p class="text-parchment-dim text-sm">{gettext("Couldn't load recipes.")}</p>
           <% @modal_recipes.ok? && length(@modal_recipes.result) == 0 -> %>
-            <p class="text-parchment-dim text-sm">{gettext("No recipes found for this food yet.")}</p>
+            <p class="text-parchment-dim text-sm">
+              {gettext("No recipes found for this food yet.")}
+            </p>
           <% true -> %>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <%= for recipe <- @modal_recipes.result do %>

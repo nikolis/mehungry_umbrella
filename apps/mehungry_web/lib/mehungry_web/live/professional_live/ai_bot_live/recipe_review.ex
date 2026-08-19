@@ -125,8 +125,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
              instagram: instagram_connected,
              facebook: facebook_connected and not is_nil(get_in(fb_page_ids, [lang])),
              facebook_page_id: fb_page_id,
-             pinterest:
-               pinterest_connected and not is_nil(get_in(pt_board_ids, [lang])),
+             pinterest: pinterest_connected and not is_nil(get_in(pt_board_ids, [lang])),
              pinterest_board_id: pt_board_id
            }}
         end)
@@ -538,7 +537,9 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
                     <%= for ri <- @recipe.recipe_ingredients do %>
                       <li class="flex items-baseline gap-2 text-sm">
                         <span class="text-slate-400 text-xs tabular-nums w-8 text-right flex-shrink-0">{ri.quantity}</span>
-                        <span class="text-slate-500 text-xs flex-shrink-0">{Mehungry.Food.RecipeIngredient.unit_label(ri)}</span>
+                        <span class="text-slate-500 text-xs flex-shrink-0">{Mehungry.Food.RecipeIngredient.unit_label(
+                          ri
+                        )}</span>
                         <span class="text-slate-200">{ri.ingredient.name}</span>
                       </li>
                     <% end %>

@@ -146,7 +146,7 @@ defmodule Mehungry.Posts do
       reference: [
         :user,
         :user_recipes,
-        :recipe_hashtags,
+        [recipe_hashtags: [:hashtag]],
         recipe_ingredients: [:ingredient],
         comments: [:user]
       ]

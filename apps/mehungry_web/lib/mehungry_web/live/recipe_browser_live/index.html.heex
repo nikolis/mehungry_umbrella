@@ -20,6 +20,29 @@
         Discover Recipes
       </h1>
       <p class="text-parchment-dim mt-1">Explore recipes from our community</p>
+
+      <div :if={@diet_mode_available} class="mt-2">
+        <button
+          type="button"
+          phx-click="toggle_diet_mode"
+          title={
+            if @diet_mode,
+              do: "Showing only ##{@diet_mode} recipes — click to see everything",
+              else: "Click to filter to ##{@diet_mode_available} recipes"
+          }
+          class={[
+            "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold border transition",
+            if(@diet_mode,
+              do: "bg-basil/20 text-basil border-basil/40",
+              else: "bg-ink-panel text-parchment-dim border-ink-panel2 hover:text-parchment"
+            )
+          ]}
+        >
+          <span class={["w-2 h-2 rounded-full", if(@diet_mode, do: "bg-basil", else: "bg-parchment-dim")]}>
+          </span>
+          #{@diet_mode_available} mode {if @diet_mode, do: "on", else: "off"}
+        </button>
+      </div>
     </div>
 
     <!-- Search Bar -->
@@ -110,7 +133,9 @@
                   type="button"
                   phx-click="toggle_condition"
                   phx-value-id={condition.id}
-                  class={condition_pill_class(MapSet.member?(@selected_condition_ids, condition.id))}
+                  class={
+                    condition_pill_class(MapSet.member?(@selected_condition_ids, condition.id))
+                  }
                 >
                   {if MapSet.member?(@selected_condition_ids, condition.id), do: "✓ ", else: ""}{condition.name}
                 </button>

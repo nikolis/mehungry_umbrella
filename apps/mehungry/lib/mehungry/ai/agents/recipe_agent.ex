@@ -98,6 +98,12 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
           "[RecipeAgent] Run ended without submitting a recipe; retrying once with a firmer submit instruction"
         )
 
+        :telemetry.execute(
+          [:mehungry, :ai, :agent, :no_submit_retry],
+          %{count: 1},
+          %{agent: "recipe"}
+        )
+
         firm_prompt =
           user_prompt <>
             "\n\nIMPORTANT: You MUST finish by calling the submit_recipe tool with the " <>
@@ -114,12 +120,13 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     end
   end
 
-  # One agent pass. Returns the submitted `{:ok, attrs, unmatched}` (smuggled out
-  # of the submit_recipe handler via the process dictionary), `{:error, :no_submit}`
-  # when the loop ended without submitting, or the agent's own `{:error, reason}`.
+  # One agent pass. The submit_recipe handler writes its validated
+  # `{:ok, attrs, unmatched}` into the threaded accumulator's `:submitted` slot;
+  # `:offered` accumulates every id→name the model was handed this run. Returns
+  # the submitted tuple, `{:error, :no_submit}` when the loop ended without
+  # submitting, or the agent's own `{:error, reason}`.
   defp run_once(sys_prompt, user_prompt, context) do
-    Process.put(__MODULE__, nil)
-    Process.put({__MODULE__, :offered}, %{})
+    acc = Map.merge(context, %{offered: %{}, submitted: nil})
 
     result =
       Agent.run(
@@ -127,7 +134,8 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
         user_prompt,
         tool_defs(),
         &handle_tool/3,
-        context,
+        acc,
+        telemetry_metadata: %{agent: "recipe"},
         model: @model,
         max_tokens: 8192,
         # Authentic specialty cuisines (e.g. Japanese: mirin, panko, dashi, bonito…)
@@ -137,14 +145,9 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       )
 
     case result do
-      {:ok, _text} ->
-        case Process.get(__MODULE__) do
-          nil -> {:error, :no_submit}
-          saved -> saved
-        end
-
-      {:error, reason} ->
-        {:error, reason}
+      {:ok, _text, %{submitted: nil}} -> {:error, :no_submit}
+      {:ok, _text, %{submitted: saved}} -> saved
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -178,7 +181,10 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   defp blank_to_nil(nil), do: nil
   defp blank_to_nil(""), do: nil
-  defp blank_to_nil(str) when is_binary(str), do: String.trim(str) |> then(&if(&1 == "", do: nil, else: &1))
+
+  defp blank_to_nil(str) when is_binary(str),
+    do: String.trim(str) |> then(&if(&1 == "", do: nil, else: &1))
+
   defp blank_to_nil(other), do: other
 
   defp has_persona?(%{persona: p}) when not is_nil(p), do: true
@@ -430,7 +436,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   # ── tool handler ──────────────────────────────────────────────────────────────
 
-  defp handle_tool("search_ingredient", %{"name" => name}, %{gram_unit: gram_unit}) do
+  defp handle_tool("search_ingredient", %{"name" => name}, %{gram_unit: gram_unit} = acc) do
     top =
       Food.IngredientSearch.search(name)
       |> rerank_by_name(name)
@@ -456,19 +462,25 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
         end)
       end
 
-    Enum.each(candidates, &remember_offered(&1.ingredient_id, &1.name))
+    acc =
+      Enum.reduce(candidates, acc, fn c, acc ->
+        remember_offered(acc, c.ingredient_id, c.name)
+      end)
 
-    if candidates == [] do
-      %{
-        found: false,
-        message: "No matches for '#{name}'. Call create_ingredient to add it."
-      }
-    else
-      %{found: true, candidates: candidates}
-    end
+    result =
+      if candidates == [] do
+        %{
+          found: false,
+          message: "No matches for '#{name}'. Call create_ingredient to add it."
+        }
+      else
+        %{found: true, candidates: candidates}
+      end
+
+    {result, acc}
   end
 
-  defp handle_tool("create_ingredient", %{"name" => name}, %{gram_unit: gram_unit}) do
+  defp handle_tool("create_ingredient", %{"name" => name}, %{gram_unit: gram_unit} = acc) do
     Logger.info("RecipeAgent: creating missing ingredient '#{name}'")
 
     {json_result, data_source} =
@@ -505,51 +517,50 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
              |> filter_by_name_relevance(name)
              |> Enum.take(1) do
           [ing | _] ->
-            remember_offered(ing.id, ing.name)
-
             portions =
               Food.get_measurement_unit_portions_for_ingredients([ing.id])
               |> Map.get(ing.id, [])
 
-            %{
+            result = %{
               created: true,
               ingredient_id: ing.id,
               name: ing.name,
               portions: build_portions(portions, gram_unit)
             }
 
+            {result, remember_offered(acc, ing.id, ing.name)}
+
           [] ->
-            %{
-              created: false,
-              error:
-                "Ingredient '#{name}' was inserted but could not be re-found. " <>
-                  "Try a simpler, more generic name."
-            }
+            {%{
+               created: false,
+               error:
+                 "Ingredient '#{name}' was inserted but could not be re-found. " <>
+                   "Try a simpler, more generic name."
+             }, acc}
         end
 
       {:error, reason} ->
-        %{created: false, error: "Could not create ingredient: #{reason}"}
+        {%{created: false, error: "Could not create ingredient: #{reason}"}, acc}
     end
   end
 
-  defp handle_tool("submit_recipe", recipe_input, %{gram_unit: gram_unit} = context) do
-    offered = Process.get({__MODULE__, :offered}) || %{}
+  defp handle_tool("submit_recipe", recipe_input, %{gram_unit: gram_unit, offered: offered} = acc) do
     errors = validate_recipe(recipe_input, offered)
 
     if errors == [] do
-      polished_input = polish_prose(recipe_input, Map.get(context, :brief))
+      polished_input = polish_prose(recipe_input, Map.get(acc, :brief))
       attrs = normalize_attrs(polished_input, gram_unit && gram_unit.id)
-      Process.put(__MODULE__, {:ok, attrs, []})
       Logger.info("RecipeAgent: recipe '#{recipe_input["title"]}' submitted successfully")
-      %{success: true, message: "Recipe '#{recipe_input["title"]}' saved."}
+      {%{success: true, message: "Recipe '#{recipe_input["title"]}' saved."},
+       %{acc | submitted: {:ok, attrs, []}}}
     else
       Logger.warning("RecipeAgent: submit_recipe errors: #{inspect(errors)}")
-      %{success: false, errors: errors}
+      {%{success: false, errors: errors}, acc}
     end
   end
 
-  defp handle_tool(name, _input, _ctx) do
-    %{error: "Unknown tool: #{name}"}
+  defp handle_tool(name, _input, acc) do
+    {%{error: "Unknown tool: #{name}"}, acc}
   end
 
   # ── validation ────────────────────────────────────────────────────────────────
@@ -667,9 +678,9 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   # Records an id→name the agent has actually been shown, so submit_recipe can
   # verify every submitted ingredient_id came from a real tool result this run.
-  defp remember_offered(id, name) do
-    offered = Process.get({__MODULE__, :offered}) || %{}
-    Process.put({__MODULE__, :offered}, Map.put(offered, id, name))
+  # Threads through the accumulator's `:offered` map — no process-global state.
+  defp remember_offered(%{offered: offered} = acc, id, name) do
+    %{acc | offered: Map.put(offered, id, name)}
   end
 
   # ── prose polish ──────────────────────────────────────────────────────────────

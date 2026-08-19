@@ -13,7 +13,9 @@ defmodule MehungryWeb.FriendsLiveTest do
   test "mounts and shows the empty state", %{conn: conn} do
     {:ok, _live, html} = live(conn, "/friends")
     assert html =~ "Friends"
-    assert html =~ "You don&#39;t have any friends yet." or html =~ "You don't have any friends yet."
+
+    assert html =~ "You don&#39;t have any friends yet." or
+             html =~ "You don't have any friends yet."
   end
 
   test "sending a request by email creates a pending request", %{conn: conn, user: user} do

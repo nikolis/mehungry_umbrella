@@ -77,7 +77,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
     changeset =
       socket.assigns.recipe
-      |> Recipe.changeset(recipe_params)
+      |> Food.validation_changeset(recipe_params)
       |> struct!(action: :validate)
 
     if(socket.assigns.live_action == :index) do
@@ -181,12 +181,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     end
   end
 
-  # Per-user fixed-window limit on the paid Spoonacular API (search + import
-  # share one bucket) to prevent burning the shared key from free accounts.
-  defp spoonacular_rate_limit(user_id) do
-    Mehungry.RateLimit.hit("spoonacular:#{user_id}", 20, :timer.minutes(1))
-  end
-
   def handle_event("close_spoonacular_modal", _, socket) do
     {:noreply, assign(socket, show_spoonacular_modal: false)}
   end
@@ -215,7 +209,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   def handle_event("delete-image", _, socket) do
     # {:ok, recipe} = Food.update_recipe(socket.assigns.recipe, %{image_url: nil})
-    recipe = %Recipe{socket.assigns.recipe | image_url: nil}
+    %Recipe{} = current_recipe = socket.assigns.recipe
+    recipe = %Recipe{current_recipe | image_url: nil}
 
     {:noreply,
      socket
@@ -274,6 +269,12 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @impl Phoenix.LiveView
   def handle_event("cancel-upload", %{"ref" => ref}, socket) do
     {:noreply, cancel_upload(socket, :image, ref)}
+  end
+
+  # Per-user fixed-window limit on the paid Spoonacular API (search + import
+  # share one bucket) to prevent burning the shared key from free accounts.
+  defp spoonacular_rate_limit(user_id) do
+    Mehungry.RateLimit.hit("spoonacular:#{user_id}", 20, :timer.minutes(1))
   end
 
   defp handle_action(socket, params) do
@@ -376,7 +377,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     %Recipe{
       recipe
       | recipe_ingredients:
-          Enum.map(ris, fn ri ->
+          Enum.map(ris, fn %RecipeIngredient{} = ri ->
             %RecipeIngredient{ri | unit_selection: RecipeIngredient.unit_selection_value(ri)}
           end)
     }
@@ -699,7 +700,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          socket
          |> assign(:changeset, changeset)
          |> assign(:f, to_form(%{changeset | action: :update}))
-         |> put_flash(:error, "Please fix the highlighted fields before saving.")}
+         |> put_flash(:error, save_error_flash(changeset))}
     end
   end
 
@@ -750,7 +751,18 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          socket
          |> assign(:changeset, changeset)
          |> assign(:f, to_form(%{changeset | action: :insert}))
-         |> put_flash(:error, "Please fix the highlighted fields before saving.")}
+         |> put_flash(:error, save_error_flash(changeset))}
+    end
+  end
+
+  # Turns a rejected save changeset into a specific, user-facing flash naming the
+  # actual blockers (missing fields, unit/portion problems, duplicate title) —
+  # these errors are otherwise invisible in the form. Shares the same formatter
+  # as the Review & Save panel so the two never diverge.
+  defp save_error_flash(changeset) do
+    case MehungryWeb.RecipeFormComponent.save_error_messages(changeset) do
+      [] -> "Couldn't save the recipe — please review the form and try again."
+      msgs -> "Couldn't save: " <> Enum.join(msgs, " · ")
     end
   end
 

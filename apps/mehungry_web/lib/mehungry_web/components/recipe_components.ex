@@ -237,14 +237,30 @@ defmodule MehungryWeb.RecipeComponents do
   end
 
   def recipe_tags(assigns) do
+    assigns = assign(assigns, :tags, loaded_hashtags(assigns.recipe))
+
     ~H"""
-    <div class=" m-auto px-4 flex gap-2 my-2 flex-wrap">
-      <%= for tag <- @recipe.recipe_hashtags do %>
+    <div :if={@tags != []} class=" m-auto px-4 flex gap-2 my-2 flex-wrap">
+      <%= for tag <- @tags do %>
         <.recipe_tag hashtag={tag.hashtag} />
       <% end %>
     </div>
     """
   end
+
+  # Only the recipe_hashtags whose hashtag is actually loaded with a title —
+  # tolerates an un-preloaded assoc (%Ecto.Association.NotLoaded{}) or nil hashtag
+  # so callers on the cached recipe path can't crash the render.
+  defp loaded_hashtags(%{recipe_hashtags: recipe_hashtags}) when is_list(recipe_hashtags) do
+    Enum.filter(recipe_hashtags, fn rh ->
+      case rh.hashtag do
+        %{title: title} when is_binary(title) -> true
+        _ -> false
+      end
+    end)
+  end
+
+  defp loaded_hashtags(_), do: []
 
   def recipe_tag(%{hashtag: %{title: nil}} = assigns),
     do: ~H"""

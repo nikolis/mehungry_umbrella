@@ -127,25 +127,29 @@ All three share the design idea that matters most in this codebase:
 
 > **The database is the source of truth, and the agent must prove its output against it before anything is saved.** Each agent gets a `submit_*` tool that validates every ID against the real database. Invalid IDs come back as error messages; the model corrects itself and resubmits. The model is never trusted to produce valid foreign keys — LLMs happily invent plausible-looking numeric IDs.
 
-A second shared trick: the loop returns *text*, but the actual result is smuggled out via the process dictionary, set inside the `submit_*` handler. If the loop ends without the submit tool having fired, that's detected and treated as failure:
+A second shared mechanism: the loop returns *text*, but the actual result is threaded back through the **accumulator**. `Agent.run/6` takes an initial accumulator, the handler returns `{result, new_acc}`, and `run/6` returns `{:ok, text, final_acc}`. The `submit_*` handler writes its validated output into the accumulator's `:submitted` slot; if the loop ends with `:submitted` still `nil`, that's detected and treated as failure. (This replaced an earlier process-dictionary smuggle — see improvement #7 below, now done.)
 
 ```elixir
-# RecipeAgent.run/1
-Process.put(__MODULE__, nil)
+# RecipeAgent.run_once/3
+acc = Map.merge(context, %{offered: %{}, submitted: nil})
 
 result = Agent.run(system_prompt(), "Create a recipe from this description: #{description}",
-                   tool_defs(), &handle_tool/3, context,
-                   model: @model, max_tokens: 8192, max_iterations: 10)
+                   tool_defs(), &handle_tool/3, acc,
+                   telemetry_metadata: %{agent: "recipe"},
+                   model: @model, max_tokens: 8192, max_iterations: 14)
 
 case result do
-  {:ok, _text} ->
-    case Process.get(__MODULE__) do
-      nil -> {:error, "Agent completed without submitting a recipe"}
-      saved -> saved
-    end
-  # …
+  {:ok, _text, %{submitted: nil}} -> {:error, :no_submit}
+  {:ok, _text, %{submitted: saved}} -> saved
+  {:error, reason} -> {:error, reason}
 end
 ```
+
+The same accumulator carries **provenance** state: `:offered` records every
+id→name the search/create tools handed the model this run, so `submit_*` can
+reject any id the model never actually received. All three agents now do this —
+`RecipeAgent` for ingredient ids, `MealPlanAgent`/`NutritionistAgent` for
+recipe ids.
 
 ### 1. `RecipeAgent` — natural language → complete recipe
 
@@ -317,7 +321,9 @@ end
 
 ```elixir
 {created, skipped} = persist_plan(entries, user_id)
-Process.put(__MODULE__, {:ok, created, skipped})
+# result threaded back via the accumulator, not the process dictionary:
+{%{success: true, created: length(created), skipped: skipped, message: "…"},
+ %{acc | submitted: {:ok, created, skipped}}}
 ```
 
 Meal times are fixed by convention rather than asked of the model:
@@ -730,7 +736,7 @@ Found while checking this document against the code. Roughly ordered by expected
 
 6. **Force JSON via tool use instead of fence-stripping.** Every single-shot module does the regex fence-strip dance and treats a malformed shape as total failure. The Messages API can *force* a tool call (`tool_choice: %{type: "tool", name: …}`), which guarantees schema-valid JSON in `input` — no fences, no reprompting. `RecipeTranslator`, `IngredientTranslator`, and `polish_prose` are the natural first candidates. Short of that, extract the duplicated stripping/decoding into one helper (it currently exists in 5+ copies).
 
-7. **Process-dictionary result smuggling is fragile.** `Process.put(__MODULE__, …)` works because the handler runs in the caller's process, but it's invisible coupling — it breaks silently if the loop ever dispatches tools in a `Task`, and stale state would leak if `run/1` ever re-entered. Having `Agent.run` thread an accumulator (`handler.(name, input, ctx) -> {result, new_ctx}`) or return `{:ok, text, final_ctx}` would make the contract explicit.
+7. **~~Process-dictionary result smuggling is fragile.~~ ✅ Done.** `Agent.run/6` now threads an accumulator: the handler is `fn(name, input, acc) -> {result, new_acc}` and `run/6` returns `{:ok, text, final_acc}`. All three agents carry their `:submitted` result and `:offered` provenance set in the accumulator — no more `Process.put(__MODULE__, …)`. The plan agents also gained the same recipe-id provenance gate `RecipeAgent` had for ingredients (a test-covered `validate_plan`/`validate_entries` rejects any id not surfaced by search).
 
 8. **Idempotent persistence would allow retries.** `NutritionistAgentWorker` uses `max_attempts: 1` because a retry after a partial `submit_plan` would duplicate meals. A uniqueness guard on `(user_id, start_dt, title)` for agent-created meals (or an upsert in `persist_entries/2`) would make retries safe and recover today's lost-run failure mode. The same guard would harden `MealPlanAgent` against users double-clicking generate.
 
@@ -746,7 +752,7 @@ Found while checking this document against the code. Roughly ordered by expected
 
 ### Observability & product
 
-13. **Token usage is parsed and then dropped.** `AI.Client` extracts `usage.input_tokens/output_tokens` but nothing records them. Emitting a `:telemetry` event per request (feature label + tokens + model) would plug straight into the existing `MetricsBuffer`/dashboard infrastructure and answer "what does a recipe generation actually cost?" — which also tells you when the legacy fallbacks are safe to delete (instrument agent-success vs fallback rate the same way).
+13. **~~Token usage is parsed and then dropped.~~ ✅ Done.** `AI.Client` now emits `[:mehungry, :ai, :client, :request, :stop]` per request (`duration` + `input/output_tokens`, tagged by `model`/`status`), and `AI.Agent` emits run + per-tool telemetry tagged by `agent`. `MehungryWeb.PromEx.AiPlugin` aggregates them onto the Prometheus scrape (`mehungry_web_prom_ex_ai_*`), mirrored into LiveDashboard, with `grafana/ai_agents_dashboard.json` for panels — outcome/error rates, iteration-ceiling watch, no-submit retries, and token cost by model. See `docs/infrastructure/observability.md`. Remaining nuance: token cost is attributed by model, not per agent (the client can't see the caller) — thread `usage` back through the loop if per-agent cost matters.
 
 14. **User-facing generation has no progress feedback.** The nutritionist flow streams tool-by-tool progress over PubSub; the consumer create-recipe and meal-plan flows run a `Task.async` and show a static spinner for what can be 1–3 minutes. The `on_event` callback mechanism already exists in `NutritionistAgent` — lifting it into `RecipeAgent`/`MealPlanAgent` and broadcasting from the LiveView would reuse a proven pattern.
 

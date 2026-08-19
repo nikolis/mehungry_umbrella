@@ -57,7 +57,10 @@ defmodule MehungryWeb.ConditionDetailSeoTest do
 
     # A species id that doesn't exist would 500 on get!; use a real one.
     {:ok, species} =
-      Mehungry.Food.create_foundemental_species(%{name: "Cherry", scientific_name: "Prunus avium"})
+      Mehungry.Food.create_foundemental_species(%{
+        name: "Cherry",
+        scientific_name: "Prunus avium"
+      })
 
     html = conn |> get("/en/conditions/#{condition.id}/food/#{species.id}") |> html_response(200)
 

@@ -26,6 +26,10 @@ config :mehungry_web, MehungryWeb.Endpoint,
 
 config :mehungry, :sql_sandbox, true
 
+# Keep PromEx enabled in tests so GET /metrics exercises its real scrape path,
+# but skip the polled BEAM/Application startup delay for a deterministic scrape.
+config :mehungry_web, MehungryWeb.PromEx, manual_metrics_start_delay: :no_delay
+
 # Open Food Facts client is stubbed in tests — no network calls
 config :mehungry, :off_client, Mehungry.FoodData.OpenFoodFacts.ClientStub
 
@@ -73,6 +77,9 @@ config :logger, level: :warning
 
 # A dummy token so the local-AI REST API guard is exercisable in tests.
 config :mehungry, :local_ai_api_token, "test-local-ai-token"
+
+# A dummy token so the Prometheus /metrics guard is exercisable in tests.
+config :mehungry, :metrics_api_token, "test-metrics-token"
 
 # Never load the Bumblebee QA model in the test suite — extraction falls back to the
 # rule-based path (MehungryLocalAi.QA.available? is false).

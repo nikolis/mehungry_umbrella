@@ -87,6 +87,14 @@ break when internals move. New code may call sub-modules directly; when adding
 a public function to a sub-module, add a matching `defdelegate` to the facade.
 Architecture overview: **`docs/architecture.md`**.
 
+**Reference architectures** (`docs/reference_architecture/`) — reusable design
+patterns to follow when building new features of the same shape. Currently:
+**`oban_ui_connected_worker.md`** — the "kick off a large Oban job fan-out from a
+LiveView, then watch it finish live" pattern (durable per-unit tracking rows as
+source of truth, dedicated queue, two-tier PubSub broadcast + flush-timer
+coalescing, stream-based O(1) row patches), distilled from the S3 → USDA
+ingredient-seeding flow.
+
 **Cachex** runs three named caches started in `Mehungry.Application`:
 - `:recipes_cache` — LRU, limit 150
 - `:cache_user_tokens`
@@ -101,7 +109,7 @@ the `docs/ai/` folder.
 A custom Anthropic API layer — do not use raw HTTPoison calls for AI work:
 
 - `AI.Client` — shared HTTP client for the Anthropic Messages API. Handles auth, retries (exponential backoff on 529 rate-limit and timeouts), and response parsing. Default model: `claude-haiku-4-5-20251001`, default max_tokens: 2048.
-- `AI.Agent` — generic tool-use loop. Runs a conversation until `end_turn` or `max_iterations` (default 10). Accepts a `handler` function `fn(tool_name, input, context) -> result` and dispatches tool calls automatically.
+- `AI.Agent` — generic tool-use loop. Runs a conversation until `end_turn` or `max_iterations` (default 10). Accepts a `handler` function `fn(tool_name, input, acc) -> {result, new_acc}` — the `context` arg is a threaded **accumulator** (result fed back to the model, `new_acc` carried on), and `run/6` returns `{:ok, text, final_acc}` so handlers hand real state (validated output, provenance sets) back to the caller without a process dictionary. Emits `[:mehungry, :ai, :agent, :run|:tool, …]` telemetry (tagged per `agent`) aggregated by `MehungryWeb.PromEx.AiPlugin` — see `docs/infrastructure/observability.md`.
 - `AI.Agents.RecipeAgent`, `MealPlanAgent`, `NutritionistAgent` — domain-specific agents built on `AI.Agent`.
 - `AI.ImageGenerator`, `AI.IngredientTranslator`, `AI.RecipeTranslator`, `AI.MealPlanGenerator` — standalone AI utilities.
 
@@ -142,15 +150,18 @@ ai_agents:           1 concurrent  — recipe generation, translation, image gen
 mailers:             3 concurrent  — email
 imports:             1 concurrent  — literature crawl, PubTator annotation, candidate derivation
 seed_imports:        1 concurrent  — USDA S3 seed-file imports (SeedFileImportWorker) only
+hashtag_reconcile:   1 concurrent  — admin hashtag reconciliation sweep (HashtagReconciliationWorker), one job per recipe
 ```
 
-Total concurrency is capped at **11 job slots** so background jobs fit within the DB pool (`POOL_SIZE` 18 in prod) with headroom for web/LiveView/Presence — this closes the connection-pool starvation confirmed in prod (`queue_time` spiking to ~10s). See `oban_production_diagnostics.md`.
+Total concurrency is capped at **12 job slots** so background jobs fit within the DB pool (`POOL_SIZE` 18 in prod) with headroom for web/LiveView/Presence — this closes the connection-pool starvation confirmed in prod (`queue_time` spiking to ~10s). See `oban_production_diagnostics.md`.
+
+`HashtagReconciliationWorker` runs the admin-triggered "Reconcile hashtags" sweep from `/professional/recipes` (one durable `hashtag_reconciliations` row per recipe, live progress via PubSub — the Oban-UI-connected pattern). It calls `Food.ensure_recipe_hashtags/1`, the shared additive routine that also runs on every recipe create/update. See `docs/hashtags.md`.
 
 `SeedFileImportWorker` is deliberately on its own `seed_imports` queue so a bulk "Load ingredients" run over a full bucket can't starve behind the long-running, self-resuming science pipeline that shares `:imports`. `SeedFiles.reset/2` cancels in-flight jobs by that queue name.
 
 Full-text (PMC) + measurement extraction is **no longer a server-side Oban pipeline** — it moved to the non-deployed `apps/mehungry_local_ai` service, which posts full text + review-gated candidates back over `/api/local_ai/*`. `/professional/science` shows read-only status; review stays at `/professional/compound-candidates`. See `docs/ai/measurement_extraction.md`.
 
-Cron: `InstagramTokenRefreshWorker` at `30 1 * * *`, `DailyRecipeGenerationWorker` at `0 2 * * *`, `TelemetryPrunerWorker` at `0 3 * * *`, `PipelineWatchdogWorker` every 10 min (resumes any science-pipeline run whose single-threaded chain broke — see `Mehungry.Science.PipelineWatchdog` + `docs/science/scientific_pipeline.md`).
+Cron: `InstagramTokenRefreshWorker` at `30 1 * * *`, `DailyRecipeGenerationWorker` at `0 2 * * *`, `PipelineWatchdogWorker` every 10 min (resumes any science-pipeline run whose single-threaded chain broke — see `Mehungry.Science.PipelineWatchdog` + `docs/science/scientific_pipeline.md`).
 
 ### Instagram Integration (`Mehungry.Social.Instagram`)
 
@@ -158,7 +169,9 @@ Core-app context for the Instagram Graph API: `Social.Instagram.Token` (token ma
 
 ### Observability
 
-Full operator's manual: **`docs/observability.md`** (architecture, metric reference, diagnostic playbooks, limitations). Summary: telemetry events fan out to live LiveDashboard metrics (`MehungryWeb.Telemetry`), a persistent snapshot store (`Mehungry.Telemetry.MetricsBuffer` → `telemetry_snapshots`, 5-min aggregates, 30-day retention), a DIY error tracker (`Mehungry.Telemetry.ErrorTracker` → `error_events`, fingerprint-deduped), and warning logs (`[SlowQuery]` ≥500ms, `[SlowRequest]` ≥2s, `[ProcessWatchdog]` mailbox ≥1000). Everything is viewed at `/dashboard` (admin-gated via `config :mehungry, :admin_email` + `MehungryWeb.Plugs.RequireAdmin`), including custom pages Metrics History and Errors. Error tracking is deliberately in-app (no Sentry) and dashboard-only (no alerting). **Oban Web** (job queues UI — view/cancel/retry background jobs) is mounted at `/oban`, admin-gated like `/dashboard`. Prod Oban diagnostics, the broken `remote`/`rpc` console (use `eval`), and the batch-translation backlog are in `oban_production_diagnostics.md`.
+Overview: **`docs/infrastructure/observability.md`**. The bespoke DIY-observability layer (persistent `telemetry_snapshots` via `MetricsBuffer`, DIY `ErrorTracker` → `error_events`, `query_time_profiles`, custom LiveDashboard pages, process watchdog, custom VM/pool gauges) was **removed** — this is now a clean, standard baseline to build fresh on.
+
+What remains is stock Phoenix telemetry, split by surface. **LiveDashboard** at `/dashboard` (admin-gated via `config :mehungry, :admin_email` + `MehungryWeb.Plugs.RequireAdmin`) renders `MehungryWeb.Telemetry.metrics/0` (standard Phoenix/Ecto/Oban/VM metrics) as live charts. The **Prometheus scrape** is owned by **PromEx** (`MehungryWeb.PromEx`, a `use PromEx` module in the supervision tree with the standard Beam/Application/Phoenix/PhoenixLiveView/Ecto/Oban plugins; Grafana upload + PromEx's own HTTP server disabled): `GET /metrics` is token-guarded by `MehungryWeb.Plugs.RequireMetricsToken` / `:metrics_api_token`, served by `MehungryWeb.MetricsController` via `PromEx.get_metrics/1` (metric names are `mehungry_web_prom_ex_*`-prefixed). **BeamScope** (`/beam_scope` dashboard + token-guarded `/beam_scope/metrics` scrape) and **Oban Web** (`/oban`, job queues UI) are also mounted, admin-gated like `/dashboard`. Prod Oban diagnostics, the broken `remote`/`rpc` console (use `eval`), and the batch-translation backlog are in `oban_production_diagnostics.md`.
 
 ### Web Layer (`apps/mehungry_web/lib/mehungry_web/`)
 

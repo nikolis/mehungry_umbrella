@@ -98,6 +98,9 @@ These hold across every AI feature (elaborated in
 - [`measurement_extraction.md`](measurement_extraction.md) — the local QA extraction
   service and its `/api/local_ai/*` contract; [`measurement_extraction_review.md`](measurement_extraction_review.md)
   is the design review.
+- [`durable_review.md`](durable_review.md) — the durable "generate → hold for review
+  → act" pattern (Oban + `status` column), and why the Jido framework isn't needed
+  for it.
 
 > Adjacent but not "AI": the scientific knowledge pipeline (literature crawl,
 > PubTator, compound curation) is discovery/curation, not generation — see

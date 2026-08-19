@@ -86,4 +86,34 @@ defmodule Mehungry.Food.Categories do
     |> Enum.map(& &1.id)
     |> Enum.uniq()
   end
+
+  @doc """
+  The reverse of `diet_category_ids/2`: infers a user's diet "mode"
+  (`:vegan | :vegetarian | nil`) from the set of category ids they exclude
+  (their persisted `UserCategoryRule`s). Returns `:vegan` when the excluded set
+  covers every vegan-excluded category, else `:vegetarian` when it covers the
+  vegetarian set. Guards against an empty excluded vocabulary (unseeded
+  categories) so it never misclassifies everyone as vegan.
+
+  Accepts the rules (any structs/maps exposing `category_id`) or a list of ids.
+  """
+  def diet_mode_for_category_rules(rules) do
+    excluded =
+      rules
+      |> Enum.map(fn
+        %{category_id: id} -> id
+        id when is_integer(id) -> id
+      end)
+      |> Enum.reject(&is_nil/1)
+      |> MapSet.new()
+
+    vegan = MapSet.new(diet_category_ids(:vegan))
+    vegetarian = MapSet.new(diet_category_ids(:vegetarian))
+
+    cond do
+      MapSet.size(vegan) > 0 and MapSet.subset?(vegan, excluded) -> :vegan
+      MapSet.size(vegetarian) > 0 and MapSet.subset?(vegetarian, excluded) -> :vegetarian
+      true -> nil
+    end
+  end
 end

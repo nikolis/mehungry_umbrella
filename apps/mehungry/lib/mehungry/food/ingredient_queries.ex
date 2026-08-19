@@ -80,11 +80,19 @@ defmodule Mehungry.Food.IngredientQueries do
   Used by the condition-detail page to surface meals built on the encouraged
   foods while steering clear of any food flagged as mindful.
   """
-  def list_random_recipes_including_excluding(include_ingredient_ids, exclude_ingredient_ids, limit \\ 10)
+  def list_random_recipes_including_excluding(
+        include_ingredient_ids,
+        exclude_ingredient_ids,
+        limit \\ 10
+      )
 
   def list_random_recipes_including_excluding([], _exclude_ingredient_ids, _limit), do: []
 
-  def list_random_recipes_including_excluding(include_ingredient_ids, exclude_ingredient_ids, limit) do
+  def list_random_recipes_including_excluding(
+        include_ingredient_ids,
+        exclude_ingredient_ids,
+        limit
+      ) do
     exclude_recipe_ids =
       from(ri in RecipeIngredient,
         where: ri.ingredient_id in ^exclude_ingredient_ids,

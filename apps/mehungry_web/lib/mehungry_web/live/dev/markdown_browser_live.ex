@@ -52,7 +52,8 @@ if Mix.env() == :dev do
     end
 
     def handle_event("edit", _params, socket) do
-      {:noreply, assign(socket, editing: true, draft: socket.assigns.content || "", flash_msg: nil)}
+      {:noreply,
+       assign(socket, editing: true, draft: socket.assigns.content || "", flash_msg: nil)}
     end
 
     def handle_event("cancel", _params, socket) do
@@ -68,7 +69,11 @@ if Mix.env() == :dev do
         :ok ->
           {:noreply,
            socket
-           |> assign(content: content, editing: false, flash_msg: {:ok, "Saved #{socket.assigns.selected}"})
+           |> assign(
+             content: content,
+             editing: false,
+             flash_msg: {:ok, "Saved #{socket.assigns.selected}"}
+           )
            |> assign(:files, list_files())}
 
         {:error, reason} ->
@@ -259,7 +264,11 @@ if Mix.env() == :dev do
     defp render_markdown(nil), do: ""
 
     defp render_markdown(body) do
-      case Earmark.as_html(body, %Earmark.Options{gfm: true, breaks: false, code_class_prefix: "language-"}) do
+      case Earmark.as_html(body, %Earmark.Options{
+             gfm: true,
+             breaks: false,
+             code_class_prefix: "language-"
+           }) do
         {:ok, html, _warnings} -> Phoenix.HTML.raw(html)
         {:error, html, _errors} -> Phoenix.HTML.raw(html)
       end
@@ -268,9 +277,16 @@ if Mix.env() == :dev do
     defp load_file(socket, rel) do
       with {:ok, abs} <- safe_path(socket.assigns.root, rel),
            {:ok, content} <- File.read(abs) do
-        assign(socket, selected: rel, content: content, editing: false, draft: content, flash_msg: nil)
+        assign(socket,
+          selected: rel,
+          content: content,
+          editing: false,
+          draft: content,
+          flash_msg: nil
+        )
       else
-        {:error, reason} -> assign(socket, flash_msg: {:error, "Could not open file: #{inspect(reason)}"})
+        {:error, reason} ->
+          assign(socket, flash_msg: {:error, "Could not open file: #{inspect(reason)}"})
       end
     end
 

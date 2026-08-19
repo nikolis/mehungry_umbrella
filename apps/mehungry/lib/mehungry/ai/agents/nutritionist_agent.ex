@@ -30,39 +30,44 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
   """
   def run(professional_id, client_id, preferences, opts \\ []) do
     on_event = Keyword.get(opts, :on_event, fn _ -> :ok end)
-    Process.put(__MODULE__, nil)
 
-    ctx = %{
+    # `offered` accumulates every recipe_id search_recipes handed the model this
+    # run (provenance gate in submit_plan); `submitted` carries the outcome back
+    # to the caller — no process-global state.
+    acc = %{
       professional_id: professional_id,
       client_id: client_id,
-      start_date: Date.utc_today()
+      start_date: Date.utc_today(),
+      offered: MapSet.new(),
+      submitted: nil
     }
 
-    handler = fn name, input, ctx ->
+    handler = fn name, input, acc ->
       on_event.({:tool_call, name})
-      result = do_handle_tool(name, input, ctx)
+      {result, acc} = do_handle_tool(name, input, acc)
       on_event.({:tool_result, name, result})
-      result
+      {result, acc}
     end
 
     result =
       Agent.run(
-        system_prompt(preferences, ctx.start_date),
+        system_prompt(preferences, acc.start_date),
         "Draft a 7-day meal plan for this client. Preferences: #{preferences}",
         tool_defs(),
         handler,
-        ctx,
+        acc,
+        telemetry_metadata: %{agent: "nutritionist"},
         model: @model,
         max_tokens: 4096,
         max_iterations: 16
       )
 
     case result do
-      {:ok, summary} ->
-        case Process.get(__MODULE__) do
-          nil -> {:ok, summary}
-          {:plan_created, count} -> {:ok, "#{summary}\n\n✓ #{count} meal entries created."}
-        end
+      {:ok, summary, %{submitted: nil}} ->
+        {:ok, summary}
+
+      {:ok, summary, %{submitted: {:plan_created, count}}} ->
+        {:ok, "#{summary}\n\n✓ #{count} meal entries created."}
 
       error ->
         error
@@ -181,10 +186,11 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
 
   # ── tool handlers ─────────────────────────────────────────────────────────────
 
-  defp do_handle_tool("get_client_summary", _input, %{
-         client_id: client_id,
-         start_date: start_date
-       }) do
+  defp do_handle_tool(
+         "get_client_summary",
+         _input,
+         %{client_id: client_id, start_date: start_date} = acc
+       ) do
     client = Mehungry.Accounts.get_user!(client_id)
 
     lookback = Date.add(start_date, -@history_days)
@@ -202,16 +208,20 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
         Float.round(Enum.sum(scores) / length(scores), 1)
       end
 
-    %{
-      name: client.name || client.email,
-      email: client.email,
-      recent_meal_count: length(recent_meals),
-      rating_count: length(ratings),
-      avg_rating: avg_rating
-    }
+    {%{
+       name: client.name || client.email,
+       email: client.email,
+       recent_meal_count: length(recent_meals),
+       rating_count: length(ratings),
+       avg_rating: avg_rating
+     }, acc}
   end
 
-  defp do_handle_tool("get_recent_meals", _input, %{client_id: client_id, start_date: start_date}) do
+  defp do_handle_tool(
+         "get_recent_meals",
+         _input,
+         %{client_id: client_id, start_date: start_date} = acc
+       ) do
     lookback = Date.add(start_date, -@history_days)
     {:ok, lbdt} = NaiveDateTime.new(lookback, ~T[00:00:00])
     {:ok, end_dt} = NaiveDateTime.new(start_date, ~T[23:59:59])
@@ -228,10 +238,10 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
         end)
       end)
 
-    %{recent_meals: entries, count: length(entries)}
+    {%{recent_meals: entries, count: length(entries)}, acc}
   end
 
-  defp do_handle_tool("get_ratings", _input, %{client_id: client_id}) do
+  defp do_handle_tool("get_ratings", _input, %{client_id: client_id} = acc) do
     ratings = Professionals.list_ratings_for_client(client_id)
 
     entries =
@@ -244,10 +254,14 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
         }
       end)
 
-    %{ratings: entries, count: length(entries)}
+    {%{ratings: entries, count: length(entries)}, acc}
   end
 
-  defp do_handle_tool("search_recipes", %{"query" => query}, %{professional_id: professional_id}) do
+  defp do_handle_tool(
+         "search_recipes",
+         %{"query" => query},
+         %{professional_id: professional_id, offered: offered} = acc
+       ) do
     recipes =
       RecipeVectorSearch.search(query, user_id: professional_id, limit: 20)
       |> Enum.map(fn r ->
@@ -259,62 +273,72 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
         }
       end)
 
-    if recipes == [] do
-      %{found: false, message: "No recipes found for '#{query}'. Try a different query."}
-    else
-      %{found: true, count: length(recipes), recipes: recipes}
-    end
+    acc = %{acc | offered: Enum.reduce(recipes, offered, fn r, s -> MapSet.put(s, r.recipe_id) end)}
+
+    result =
+      if recipes == [] do
+        %{found: false, message: "No recipes found for '#{query}'. Try a different query."}
+      else
+        %{found: true, count: length(recipes), recipes: recipes}
+      end
+
+    {result, acc}
   end
 
-  defp do_handle_tool("submit_plan", %{"entries" => entries, "rationale" => rationale}, context) do
-    %{client_id: client_id, start_date: start_date, professional_id: professional_id} = context
+  defp do_handle_tool(
+         "submit_plan",
+         %{"entries" => entries, "rationale" => rationale},
+         %{offered: offered} = acc
+       ) do
+    %{client_id: client_id, start_date: start_date, professional_id: professional_id} = acc
 
     valid_ids =
       Food.list_user_recipes(professional_id)
       |> MapSet.new(& &1.id)
 
     end_date = Date.add(start_date, 6)
-    errors = validate_entries(entries, valid_ids, start_date, end_date)
+    errors = validate_entries(entries, offered, valid_ids, start_date, end_date)
 
     if errors == [] do
       {created, skipped} = persist_entries(entries, client_id)
-      Process.put(__MODULE__, {:plan_created, length(created)})
 
       Logger.info(
         "NutritionistAgent: plan created — #{length(created)} meals for client #{client_id}. #{rationale}"
       )
 
-      %{
-        success: true,
-        created: length(created),
-        skipped: skipped,
-        rationale: rationale,
-        message: "Plan created successfully."
-      }
+      {%{
+         success: true,
+         created: length(created),
+         skipped: skipped,
+         rationale: rationale,
+         message: "Plan created successfully."
+       }, %{acc | submitted: {:plan_created, length(created)}}}
     else
-      %{success: false, errors: errors}
+      {%{success: false, errors: errors}, acc}
     end
   end
 
-  defp do_handle_tool(name, _input, _ctx) do
-    %{error: "Unknown tool: #{name}"}
+  defp do_handle_tool(name, _input, acc) do
+    {%{error: "Unknown tool: #{name}"}, acc}
   end
 
   # ── plan validation ───────────────────────────────────────────────────────────
 
-  defp validate_entries(entries, valid_ids, start_date, end_date) do
+  @doc false
+  def validate_entries(entries, offered, valid_ids, start_date, end_date) do
     duplicate_errors =
       entries
       |> Enum.group_by(fn e -> {e["date"], e["slot"]} end)
       |> Enum.filter(fn {_, g} -> length(g) > 1 end)
       |> Enum.map(fn {{date, slot}, _} -> "Duplicate: #{date} #{slot}" end)
 
-    entry_errors = Enum.flat_map(entries, &validate_entry(&1, valid_ids, start_date, end_date))
+    entry_errors =
+      Enum.flat_map(entries, &validate_entry(&1, offered, valid_ids, start_date, end_date))
 
     duplicate_errors ++ entry_errors
   end
 
-  defp validate_entry(entry, valid_ids, start_date, end_date) do
+  defp validate_entry(entry, offered, valid_ids, start_date, end_date) do
     errors = []
 
     errors =
@@ -338,9 +362,18 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
     errors =
       case entry["recipe_id"] do
         id when is_integer(id) and id > 0 ->
-          if MapSet.member?(valid_ids, id),
-            do: errors,
-            else: ["recipe_id #{id} not in your catalog — use search_recipes" | errors]
+          cond do
+            # Provenance first: reject any id the model never got from search_recipes
+            # (hallucinated, or a real catalog recipe it never actually surfaced).
+            not MapSet.member?(offered, id) ->
+              ["recipe_id #{id} was not in your search results — use search_recipes" | errors]
+
+            not MapSet.member?(valid_ids, id) ->
+              ["recipe_id #{id} not in your catalog — use search_recipes" | errors]
+
+            true ->
+              errors
+          end
 
         _ ->
           ["Missing or invalid recipe_id" | errors]

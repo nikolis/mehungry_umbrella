@@ -28,12 +28,22 @@ defmodule MehungryWeb.TestAccountsController do
 
   def seed(conn, _params) do
     TestAccounts.seed()
-    json(conn, %{action: "seed", password: TestAccounts.password(), accounts: TestAccounts.status()})
+
+    json(conn, %{
+      action: "seed",
+      password: TestAccounts.password(),
+      accounts: TestAccounts.status()
+    })
   end
 
   def reset(conn, _params) do
     TestAccounts.reset()
-    json(conn, %{action: "reset", password: TestAccounts.password(), accounts: TestAccounts.status()})
+
+    json(conn, %{
+      action: "reset",
+      password: TestAccounts.password(),
+      accounts: TestAccounts.status()
+    })
   end
 
   defp authorize(conn, _opts) do

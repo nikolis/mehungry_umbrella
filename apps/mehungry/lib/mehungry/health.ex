@@ -655,7 +655,8 @@ defmodule Mehungry.Health do
   Returns the plain image-filtered `Recipe` query when `condition_ids` is empty.
   """
   def recipes_prioritized_for_conditions_query([]),
-    do: from(r in Recipe, where: not is_nil(r.image_url), order_by: [asc: r.inserted_at, asc: r.id])
+    do:
+      from(r in Recipe, where: not is_nil(r.image_url), order_by: [asc: r.inserted_at, asc: r.id])
 
   def recipes_prioritized_for_conditions_query(condition_ids) do
     encouraged_ids = encouraged_recipe_ids_query(condition_ids)

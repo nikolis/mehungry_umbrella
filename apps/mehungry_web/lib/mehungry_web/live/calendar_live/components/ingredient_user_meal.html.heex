@@ -14,7 +14,9 @@
         <.live_component
           module={MehungryWeb.SelectComponentDeep}
           form={@f}
-          item_function={fn term -> Mehungry.Food.IngredientSearch.search(term, [], @current_user_id) end}
+          item_function={
+            fn term -> Mehungry.Food.IngredientSearch.search(term, [], @current_user_id) end
+          }
           flags_function={
             fn ids -> MehungryWeb.RecipeFlags.flags_for_ingredient_ids(ids, @condition_ids) end
           }

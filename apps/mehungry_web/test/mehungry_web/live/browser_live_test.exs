@@ -171,6 +171,14 @@ defmodule MehungryWeb.BrowserLiveTest do
       assert html =~ "Nutrients"
     end
 
+    test "recipe detail renders clickable hashtag links (Rule 3)", %{conn: conn, user: user} do
+      complete_onboarding(user)
+      recipe = recipe_fixture(user, %{title: "Tagged Recipe", description: "yum #paprika"})
+      {:ok, _view, html} = live(conn, ~p"/browse/#{recipe.id}")
+      assert html =~ "/search/hashtag/paprika"
+      assert html =~ "#paprika"
+    end
+
     test "recipe detail sets the page title", %{conn: conn, user: user} do
       complete_onboarding(user)
       recipe = recipe_fixture(user, %{title: "Unique Browser Title Recipe"})
@@ -288,14 +296,16 @@ defmodule MehungryWeb.BrowserLiveTest do
 
     test "hashtag route shows only recipes with that hashtag", %{conn: conn, user: user} do
       complete_onboarding(user)
-      tagged = recipe_fixture(user, %{title: "Vegan Pasta", description: "desc"})
+      # Use a distinctive tag (not #vegan): the auto-tagger would tag both
+      # generic-ingredient fixtures as #vegan, so a bespoke tag isolates the
+      # association-filtering behaviour under test.
+      tagged = recipe_fixture(user, %{title: "Vegan Pasta", description: "yum #brunchspecial"})
       untagged = recipe_fixture(user, %{title: "Beef Stew", description: "desc"})
 
-      {:ok, _view, html} = live(conn, ~p"/search/hashtag/vegan")
+      {:ok, _view, html} = live(conn, ~p"/search/hashtag/brunchspecial")
 
-      # Filtering is by hashtag association — absence of untagged is what matters
+      assert html =~ tagged.title
       refute html =~ untagged.title
-      _ = tagged
     end
 
     test "ingredient route shows recipes that contain the ingredient", %{conn: conn, user: user} do
@@ -466,6 +476,80 @@ defmodule MehungryWeb.BrowserLiveTest do
       container = view |> element("#recipes_container") |> render()
       assert container =~ good.title
       assert container =~ "encourage (#{kidney.name})"
+    end
+  end
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Diet mode filtering
+  # ──────────────────────────────────────────────────────────────────────────
+
+  describe "diet mode" do
+    setup [:register_and_log_in_user]
+
+    # Ensures the excluded vocabulary exists (env is seeded with the USDA animal
+    # categories) and adds a UserCategoryRule for exactly the ids
+    # Food.diet_category_ids(:vegan) resolves, so Accounts.diet_mode/1 → :vegan.
+    # Returns those excluded category ids.
+    defp make_user_vegan(user) do
+      frt =
+        Mehungry.Repo.insert!(%Mehungry.Food.FoodRestrictionType{title: "avoid", alias: "avoid"})
+
+      for name <- ~w(Beef Poultry Dairy Pork Sausages Lamb Fish) do
+        Food.get_category_by_name(name) || Food.create_category(%{name: name, description: "x"})
+      end
+
+      vegan_ids = Food.diet_category_ids(:vegan)
+
+      for id <- vegan_ids do
+        Mehungry.Repo.insert!(%Mehungry.Accounts.UserCategoryRule{
+          user_id: user.id,
+          category_id: id,
+          food_restriction_type_id: frt.id
+        })
+      end
+
+      vegan_ids
+    end
+
+    defp beef_recipe(user, vegan_ids, title) do
+      mu = measurement_unit_fixture()
+      ingredient = ingredient_fixture(%{name: unique_ingredient()})
+      {:ok, ingredient} = Food.update_ingredient(ingredient, %{category_id: List.first(vegan_ids)})
+
+      recipe_fixture(user, %{
+        title: title,
+        recipe_ingredients: [
+          %{ingredient_id: ingredient.id, measurement_unit_id: mu.id, quantity: 5}
+        ]
+      })
+    end
+
+    test "vegan user sees the badge and only #vegan recipes on browse", %{conn: conn, user: user} do
+      complete_onboarding(user)
+      cats = make_user_vegan(user)
+
+      vegan = recipe_fixture(user, %{title: "Green Salad Browse"})
+      beef = beef_recipe(user, cats, "Beefy Browse")
+
+      {:ok, _view, html} = live(conn, ~p"/browse")
+
+      assert html =~ "vegan mode"
+      assert html =~ vegan.title
+      refute html =~ beef.title
+    end
+
+    test "toggling the badge off shows all recipes", %{conn: conn, user: user} do
+      complete_onboarding(user)
+      cats = make_user_vegan(user)
+
+      _vegan = recipe_fixture(user, %{title: "Green Salad Browse"})
+      beef = beef_recipe(user, cats, "Beefy Browse")
+
+      {:ok, view, html} = live(conn, ~p"/browse")
+      refute html =~ beef.title
+
+      html = view |> element("button[phx-click='toggle_diet_mode']") |> render_click()
+      assert html =~ beef.title
     end
   end
 

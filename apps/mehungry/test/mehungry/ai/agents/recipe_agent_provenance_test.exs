@@ -6,7 +6,7 @@ defmodule Mehungry.AI.Agents.RecipeAgentProvenanceTest do
   # These guard the 🔴 ingredient-ID resolution bug: submit_recipe must reject any
   # ingredient_id that was never returned by search_ingredient/create_ingredient
   # this run, or whose id disagrees with the name the model claims for it.
-  # `offered` mirrors what the agent accumulates in its process dictionary
+  # `offered` mirrors what the agent accumulates in its threaded accumulator
   # (id => the candidate name we handed back).
 
   describe "check_provenance/3" do

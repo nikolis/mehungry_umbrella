@@ -183,7 +183,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
         <%= if not @ai_running and is_nil(@ai_result) and is_nil(@ai_error) do %>
           <!-- Idle state: show form -->
-          <.form :let={f} for={%{}} phx-submit="ai_assist" class="flex gap-2">
+          <.form for={%{}} phx-submit="ai_assist" class="flex gap-2">
             <input
               type="text"
               name="preferences"

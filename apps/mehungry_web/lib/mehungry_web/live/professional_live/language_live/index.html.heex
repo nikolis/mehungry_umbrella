@@ -19,7 +19,7 @@
           <td class="p-2">{language.name}</td>
 
           <td class="p-2 flex gap-2">
-            <.link patch={~p"/admin/languages/#{language.name}/edit"}>
+            <.link patch={~p"/professional/languages/#{language.name}/edit"}>
               Edit
             </.link>
 
@@ -46,6 +46,6 @@
     title={@page_title}
     action={@live_action}
     language={@language}
-    patch={~p"/admin/languages"}
+    patch={~p"/professional/languages"}
   />
 </.modal>
