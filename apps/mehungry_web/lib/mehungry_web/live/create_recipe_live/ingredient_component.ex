@@ -135,6 +135,7 @@ defmodule MehungryWeb.IngredientComponent do
             select_function={fn x -> send(self(), {:select_id, x, @id}) end}
             id={"ingredient_search_component" <> Integer.to_string(@ingredient_form.index)}
           />
+          <.row_errors field={@ingredient_form[:ingredient_id]} />
         </div>
 
         <%!-- Quantity + Unit + delete: inline on mobile, columns on desktop --%>
@@ -142,6 +143,7 @@ defmodule MehungryWeb.IngredientComponent do
           <div class="w-24 shrink-0 md:col-span-2">
             <.field_label>Qty</.field_label>
             <.input field={@ingredient_form[:quantity]} type="number_subscript" placeholder="0" />
+            <.row_errors field={@ingredient_form[:quantity]} />
           </div>
           <div class="min-w-0 flex-1 md:col-span-3">
             <.field_label>Unit</.field_label>
@@ -152,6 +154,7 @@ defmodule MehungryWeb.IngredientComponent do
               id={"measurement_unit_search_componentasdf" <> Integer.to_string(@ingredient_form.index)}
               input_variable={:unit_selection}
             />
+            <.row_errors field={@ingredient_form[:measurement_unit_id]} />
           </div>
           <div class="md:col-span-1 md:flex md:justify-end">
             <button
@@ -165,6 +168,25 @@ defmodule MehungryWeb.IngredientComponent do
           </div>
         </div>
       </div>
+    </div>
+    """
+  end
+
+  # Inline validation errors for one control in an ingredient row. The row's
+  # ingredient/quantity/unit live in custom select + number widgets that render
+  # no errors of their own, so a required or unit/portion problem was previously
+  # invisible here — this surfaces it right under the offending field.
+  attr :field, Phoenix.HTML.FormField, required: true
+
+  defp row_errors(assigns) do
+    ~H"""
+    <div phx-feedback-for={@field.name}>
+      <p
+        :for={msg <- Enum.map(@field.errors, &MehungryWeb.CoreComponents.translate_error/1)}
+        class="mt-1 text-xs text-rose-400 phx-no-feedback:hidden"
+      >
+        {msg}
+      </p>
     </div>
     """
   end

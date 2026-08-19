@@ -28,10 +28,15 @@ defmodule MehungryWeb.HomeLive.Index do
     language =
       socket.assigns[:current_language] || (user_profile && user_profile.language_preference)
 
-    all_posts =
+    all_posts_all =
       Mehungry.Posts.list_posts(user)
       |> Enum.filter(fn x -> !is_nil(x) and !is_nil(x.reference) end)
       |> Posts.localize_for_language(language)
+
+    # Diet mode from the user's saved profile rules: when set, the feed is
+    # filtered to posts whose recipe carries the #vegan/#vegetarian tag.
+    diet_mode = Accounts.diet_mode(user)
+    all_posts = filter_by_diet(all_posts_all, diet_mode)
 
     current_user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
 
@@ -53,6 +58,9 @@ defmodule MehungryWeb.HomeLive.Index do
      socket
      |> assign(:user, user)
      |> assign(:all_posts, all_posts)
+     |> assign(:all_posts_all, all_posts_all)
+     |> assign(:diet_mode, diet_mode)
+     |> assign(:diet_mode_available, diet_mode)
      |> assign(:displayed_post_ids, MapSet.new(first_page, & &1.id))
      |> stream(:posts, first_page)
      |> assign(:page, 1)
@@ -89,6 +97,24 @@ defmodule MehungryWeb.HomeLive.Index do
   @impl true
   def handle_event("keep_browsing", _thing, socket) do
     {:noreply, assign(socket, :must_be_loged_in, nil)}
+  end
+
+  # Toggle the diet-mode filter on the feed, re-filter, and reset the stream to
+  # the first page of the (un)filtered posts.
+  def handle_event("toggle_diet_mode", _params, socket) do
+    new_mode = if socket.assigns.diet_mode, do: nil, else: socket.assigns.diet_mode_available
+    all_posts = filter_by_diet(socket.assigns.all_posts_all, new_mode)
+    first_page = Enum.take(all_posts, @per_page)
+    subscribe_to_posts(first_page)
+
+    {:noreply,
+     socket
+     |> assign(:diet_mode, new_mode)
+     |> assign(:all_posts, all_posts)
+     |> assign(:displayed_post_ids, MapSet.new(first_page, & &1.id))
+     |> stream(:posts, first_page, reset: true)
+     |> assign(:page, 1)
+     |> assign(:posts_exhausted, length(all_posts) <= @per_page)}
   end
 
   def handle_event("react", %{"type_" => type, "id" => post_id}, socket) do
@@ -243,4 +269,18 @@ defmodule MehungryWeb.HomeLive.Index do
 
     {:noreply, socket}
   end
+
+  # Keeps only posts whose referenced recipe carries the diet-mode hashtag.
+  defp filter_by_diet(posts, nil), do: posts
+
+  defp filter_by_diet(posts, mode) do
+    tag = Atom.to_string(mode)
+    Enum.filter(posts, fn post -> post.reference && recipe_has_tag?(post.reference, tag) end)
+  end
+
+  defp recipe_has_tag?(%{recipe_hashtags: recipe_hashtags}, tag) when is_list(recipe_hashtags) do
+    Enum.any?(recipe_hashtags, fn rh -> match?(%{title: ^tag}, rh.hashtag) end)
+  end
+
+  defp recipe_has_tag?(_recipe, _tag), do: false
 end

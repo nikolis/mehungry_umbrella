@@ -183,5 +183,77 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
 
       assert html =~ "is invalid"
     end
+
+    test "Review panel lists the real blockers instead of a generic message", %{conn: conn} do
+      {:ok, _index_live, html} = live(conn, Routes.create_recipe_index_path(conn, :index))
+
+      # The honest indicator: an incomplete form shows a specific checklist, not
+      # a false "ready to save".
+      assert html =~ "Before saving, please fix:"
+      assert html =~ "Title:"
+      refute html =~ "Everything looks good"
+    end
+
+    test "Failed save surfaces the specific reason in the flash", %{
+      conn: conn,
+      ingredient: ingredient,
+      measurement_unit: measurement_unit
+    } do
+      {:ok, index_live, _html} = live(conn, Routes.create_recipe_index_path(conn, :index))
+
+      ingredients = %{
+        0 => %{
+          ingredient_id: ingredient.id,
+          measurement_unit_id: measurement_unit.id,
+          quantity: 33
+        }
+      }
+
+      # A complete ingredient but a blank required title — the save is rejected
+      # and the flash must name the offending field, not a generic message.
+      params = Map.put(@create_params_recipe, :title, "")
+
+      html =
+        index_live
+        |> form(".the_form", recipe: params)
+        |> render_submit(%{recipe: %{"recipe_ingredients" => ingredients}})
+
+      assert html =~ "Couldn&#39;t save"
+      assert html =~ "Title"
+      refute html =~ "Please fix the highlighted fields before saving."
+    end
+
+    test "Duplicate title (per user) is rejected with a friendly message", %{
+      conn: conn,
+      ingredient: ingredient,
+      measurement_unit: measurement_unit,
+      user: user
+    } do
+      Mehungry.FoodFixtures.recipe_fixture(user, %{
+        title: "Dup Title",
+        recipe_ingredients: [
+          %{ingredient_id: ingredient.id, measurement_unit_id: measurement_unit.id, quantity: 10}
+        ]
+      })
+
+      {:ok, index_live, _html} = live(conn, Routes.create_recipe_index_path(conn, :index))
+
+      ingredients = %{
+        0 => %{
+          ingredient_id: ingredient.id,
+          measurement_unit_id: measurement_unit.id,
+          quantity: 33
+        }
+      }
+
+      params = Map.put(@create_params_recipe, :title, "Dup Title")
+
+      html =
+        index_live
+        |> form(".the_form", recipe: params)
+        |> render_submit(%{recipe: %{"recipe_ingredients" => ingredients}})
+
+      assert html =~ "you already have a recipe with this title"
+    end
   end
 end

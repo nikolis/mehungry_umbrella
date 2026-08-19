@@ -7,7 +7,15 @@ defmodule Mehungry.Accounts.Profiles do
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
-  alias Mehungry.Accounts.{User, UserConditionOptIn, UserContent, UserFollow, UserProfile}
+
+  alias Mehungry.Accounts.{
+    User,
+    UserCategoryRule,
+    UserConditionOptIn,
+    UserContent,
+    UserFollow,
+    UserProfile
+  }
 
   def list_user_profiles do
     Repo.all(UserProfile)
@@ -67,6 +75,21 @@ defmodule Mehungry.Accounts.Profiles do
 
   def delete_user_profile(%UserProfile{} = user_profile) do
     Repo.delete(user_profile)
+  end
+
+  @doc """
+  The diet "mode" a user has set on their profile — `:vegan | :vegetarian | nil`
+  — derived from their persisted `UserCategoryRule`s (the excluded categories the
+  diet preset wrote). Used to switch on `#vegan`/`#vegetarian` filtering on the
+  browse and home feeds. `nil` for guests / omnivores / no rules.
+  """
+  def diet_mode(nil), do: nil
+  def diet_mode(%User{id: user_id}), do: diet_mode(user_id)
+
+  def diet_mode(user_id) when is_integer(user_id) do
+    from(r in UserCategoryRule, where: r.user_id == ^user_id, select: r.category_id)
+    |> Repo.all()
+    |> Mehungry.Food.diet_mode_for_category_rules()
   end
 
   @doc """

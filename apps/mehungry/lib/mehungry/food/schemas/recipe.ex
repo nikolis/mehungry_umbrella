@@ -105,7 +105,10 @@ defmodule Mehungry.Food.Recipe do
       :language_name,
       :difficulty
     ])
-    |> unique_constraint(:title_user_constraint, name: :title_user_index)
+    |> unique_constraint(:title,
+      name: :title_user_index,
+      message: "you already have a recipe with this title"
+    )
     |> foreign_key_constraint(:language_name, name: :recipes_language_name_fkey)
     |> foreign_key_constraint(:language_id)
     |> foreign_key_constraint(:user_id)

@@ -752,7 +752,7 @@ Found while checking this document against the code. Roughly ordered by expected
 
 ### Observability & product
 
-13. **Token usage is parsed and then dropped.** `AI.Client` extracts `usage.input_tokens/output_tokens` but nothing records them. Emitting a `:telemetry` event per request (feature label + tokens + model) would plug straight into the existing `MetricsBuffer`/dashboard infrastructure and answer "what does a recipe generation actually cost?" — which also tells you when the legacy fallbacks are safe to delete (instrument agent-success vs fallback rate the same way).
+13. **~~Token usage is parsed and then dropped.~~ ✅ Done.** `AI.Client` now emits `[:mehungry, :ai, :client, :request, :stop]` per request (`duration` + `input/output_tokens`, tagged by `model`/`status`), and `AI.Agent` emits run + per-tool telemetry tagged by `agent`. `MehungryWeb.PromEx.AiPlugin` aggregates them onto the Prometheus scrape (`mehungry_web_prom_ex_ai_*`), mirrored into LiveDashboard, with `grafana/ai_agents_dashboard.json` for panels — outcome/error rates, iteration-ceiling watch, no-submit retries, and token cost by model. See `docs/infrastructure/observability.md`. Remaining nuance: token cost is attributed by model, not per agent (the client can't see the caller) — thread `usage` back through the loop if per-agent cost matters.
 
 14. **User-facing generation has no progress feedback.** The nutritionist flow streams tool-by-tool progress over PubSub; the consumer create-recipe and meal-plan flows run a `Task.async` and show a static spinner for what can be 1–3 minutes. The `on_event` callback mechanism already exists in `NutritionistAgent` — lifting it into `RecipeAgent`/`MealPlanAgent` and broadcasting from the LiveView would reuse a proven pattern.
 

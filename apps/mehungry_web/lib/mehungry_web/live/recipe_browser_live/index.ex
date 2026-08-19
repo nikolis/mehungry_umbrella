@@ -85,6 +85,11 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      |> assign(:show_search_settings, false)
      |> assign(:selected_condition_ids, MapSet.new())
      |> assign(:conditions_by_category, conditions_by_category())
+     # Diet "mode" derived from the user's saved profile category rules — when set,
+     # the default browse feed is filtered to #vegan/#vegetarian and a badge shows.
+     # `diet_mode_available` remembers it so the badge can be toggled off/on.
+     |> assign(:diet_mode_available, Accounts.diet_mode(user))
+     |> assign(:diet_mode, Accounts.diet_mode(user))
      |> assign_recipe_search()}
   end
 
@@ -140,6 +145,16 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   @impl true
   def handle_event("toggle_search_settings", _params, socket) do
     {:noreply, assign(socket, :show_search_settings, !socket.assigns.show_search_settings)}
+  end
+
+  # Turn the diet-mode filter off (see everything) or back on, then re-run the
+  # current search so the feed reflects it immediately.
+  @impl true
+  def handle_event("toggle_diet_mode", _params, socket) do
+    new_mode = if socket.assigns.diet_mode, do: nil, else: socket.assigns.diet_mode_available
+
+    socket = assign(socket, :diet_mode, new_mode)
+    {:noreply, handle_search(socket, socket.assigns.query_string)}
   end
 
   @impl true
@@ -375,7 +390,17 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
           {query, :offset, {recipes, nil}}
 
         is_nil(query_str) ->
-          {query_str, :cursor, list_recipes(language)}
+          # Default browse feed. If the user is in a diet mode, filter it to that
+          # diet's hashtag; otherwise show everything. An explicit search (#/@/text/
+          # condition) above overrides diet mode — the user asked for something specific.
+          case socket.assigns[:diet_mode] do
+            mode when mode in [:vegan, :vegetarian] ->
+              {query, page} = Food.search_hashtag1("#" <> Atom.to_string(mode))
+              {query, :cursor, page}
+
+            _ ->
+              {query_str, :cursor, list_recipes(language)}
+          end
 
         true ->
           {query, page} = Food.search_recipe(query_str, language)

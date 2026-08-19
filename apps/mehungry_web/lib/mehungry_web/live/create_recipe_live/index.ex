@@ -77,7 +77,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
     changeset =
       socket.assigns.recipe
-      |> Recipe.changeset(recipe_params)
+      |> Food.validation_changeset(recipe_params)
       |> struct!(action: :validate)
 
     if(socket.assigns.live_action == :index) do
@@ -700,7 +700,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          socket
          |> assign(:changeset, changeset)
          |> assign(:f, to_form(%{changeset | action: :update}))
-         |> put_flash(:error, "Please fix the highlighted fields before saving.")}
+         |> put_flash(:error, save_error_flash(changeset))}
     end
   end
 
@@ -751,7 +751,18 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          socket
          |> assign(:changeset, changeset)
          |> assign(:f, to_form(%{changeset | action: :insert}))
-         |> put_flash(:error, "Please fix the highlighted fields before saving.")}
+         |> put_flash(:error, save_error_flash(changeset))}
+    end
+  end
+
+  # Turns a rejected save changeset into a specific, user-facing flash naming the
+  # actual blockers (missing fields, unit/portion problems, duplicate title) —
+  # these errors are otherwise invisible in the form. Shares the same formatter
+  # as the Review & Save panel so the two never diverge.
+  defp save_error_flash(changeset) do
+    case MehungryWeb.RecipeFormComponent.save_error_messages(changeset) do
+      [] -> "Couldn't save the recipe — please review the form and try again."
+      msgs -> "Couldn't save: " <> Enum.join(msgs, " · ")
     end
   end
 

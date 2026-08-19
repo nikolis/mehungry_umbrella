@@ -87,6 +87,14 @@ break when internals move. New code may call sub-modules directly; when adding
 a public function to a sub-module, add a matching `defdelegate` to the facade.
 Architecture overview: **`docs/architecture.md`**.
 
+**Reference architectures** (`docs/reference_architecture/`) — reusable design
+patterns to follow when building new features of the same shape. Currently:
+**`oban_ui_connected_worker.md`** — the "kick off a large Oban job fan-out from a
+LiveView, then watch it finish live" pattern (durable per-unit tracking rows as
+source of truth, dedicated queue, two-tier PubSub broadcast + flush-timer
+coalescing, stream-based O(1) row patches), distilled from the S3 → USDA
+ingredient-seeding flow.
+
 **Cachex** runs three named caches started in `Mehungry.Application`:
 - `:recipes_cache` — LRU, limit 150
 - `:cache_user_tokens`
@@ -101,7 +109,7 @@ the `docs/ai/` folder.
 A custom Anthropic API layer — do not use raw HTTPoison calls for AI work:
 
 - `AI.Client` — shared HTTP client for the Anthropic Messages API. Handles auth, retries (exponential backoff on 529 rate-limit and timeouts), and response parsing. Default model: `claude-haiku-4-5-20251001`, default max_tokens: 2048.
-- `AI.Agent` — generic tool-use loop. Runs a conversation until `end_turn` or `max_iterations` (default 10). Accepts a `handler` function `fn(tool_name, input, context) -> result` and dispatches tool calls automatically.
+- `AI.Agent` — generic tool-use loop. Runs a conversation until `end_turn` or `max_iterations` (default 10). Accepts a `handler` function `fn(tool_name, input, acc) -> {result, new_acc}` — the `context` arg is a threaded **accumulator** (result fed back to the model, `new_acc` carried on), and `run/6` returns `{:ok, text, final_acc}` so handlers hand real state (validated output, provenance sets) back to the caller without a process dictionary. Emits `[:mehungry, :ai, :agent, :run|:tool, …]` telemetry (tagged per `agent`) aggregated by `MehungryWeb.PromEx.AiPlugin` — see `docs/infrastructure/observability.md`.
 - `AI.Agents.RecipeAgent`, `MealPlanAgent`, `NutritionistAgent` — domain-specific agents built on `AI.Agent`.
 - `AI.ImageGenerator`, `AI.IngredientTranslator`, `AI.RecipeTranslator`, `AI.MealPlanGenerator` — standalone AI utilities.
 
@@ -142,9 +150,12 @@ ai_agents:           1 concurrent  — recipe generation, translation, image gen
 mailers:             3 concurrent  — email
 imports:             1 concurrent  — literature crawl, PubTator annotation, candidate derivation
 seed_imports:        1 concurrent  — USDA S3 seed-file imports (SeedFileImportWorker) only
+hashtag_reconcile:   1 concurrent  — admin hashtag reconciliation sweep (HashtagReconciliationWorker), one job per recipe
 ```
 
-Total concurrency is capped at **11 job slots** so background jobs fit within the DB pool (`POOL_SIZE` 18 in prod) with headroom for web/LiveView/Presence — this closes the connection-pool starvation confirmed in prod (`queue_time` spiking to ~10s). See `oban_production_diagnostics.md`.
+Total concurrency is capped at **12 job slots** so background jobs fit within the DB pool (`POOL_SIZE` 18 in prod) with headroom for web/LiveView/Presence — this closes the connection-pool starvation confirmed in prod (`queue_time` spiking to ~10s). See `oban_production_diagnostics.md`.
+
+`HashtagReconciliationWorker` runs the admin-triggered "Reconcile hashtags" sweep from `/professional/recipes` (one durable `hashtag_reconciliations` row per recipe, live progress via PubSub — the Oban-UI-connected pattern). It calls `Food.ensure_recipe_hashtags/1`, the shared additive routine that also runs on every recipe create/update. See `docs/hashtags.md`.
 
 `SeedFileImportWorker` is deliberately on its own `seed_imports` queue so a bulk "Load ingredients" run over a full bucket can't starve behind the long-running, self-resuming science pipeline that shares `:imports`. `SeedFiles.reset/2` cancels in-flight jobs by that queue name.
 

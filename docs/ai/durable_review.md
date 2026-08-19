@@ -97,7 +97,102 @@ a question and then continue the same reasoning** (interactive co-pilot, multi-t
 approval *inside* one generation). We have no such flow today. If one appears,
 re-evaluate then — but weigh it against simply splitting the interaction into
 separate `AI.Agent.run/6` calls with a status-gated wait in between, which stays on
-the durable Oban+Ecto substrate this note describes.
+the durable Oban+Ecto substrate this note describes. The section below assesses
+that shape-(1) move in full.
+
+## Assessment: mid-tool-loop human-in-the-loop (shape 1)
+
+Would it produce better results, can we do it with current models, what would have
+to change, and what does it cost? Findings, grounded in our actual stack (Haiku-4.5
+agents, a Sonnet writer, the `AI.Agent` loop that already re-sends full history each
+turn).
+
+### Would it produce better results?
+
+Only in **one** of the three agents, and even there the gain is modest. The quality
+win of pausing mid-loop (vs. "generate full draft → human edits → regenerate") comes
+from preserving the model's *accumulated reasoning*. That matters when the reasoning
+is deep and multi-step; ours mostly isn't:
+
+- **RecipeAgent** — runs unattended (`DailyRecipeGenerationWorker`, 2am). No human is
+  present to ask. Zero benefit.
+- **MealPlanAgent** — user-facing, but shallow reasoning (search → assemble →
+  validate). The user can just regenerate; mid-loop buys little over draft-then-revise.
+- **NutritionistAgent** — **the real case.** A professional steering a draft as it is
+  built ("client hates fish, swap dinner day 3; keep the breakfasts") is genuinely
+  better mid-loop: full context preserved, wrong direction corrected early rather than
+  after 21 meals are assembled, and the human is already engaged live. A premium,
+  interactive co-pilot UX where preserved context earns its keep.
+
+**Conclusion:** worth it for the nutritionist co-pilot; not worth it for the other two.
+
+### Can we do it with current models?
+
+**Yes — no model change, no capability gap; it works on Haiku today.** The Anthropic
+Messages API is **stateless**: "pause to ask a human" is architecturally identical to
+a tool call whose result comes from a person instead of a function. The model does not
+stay alive between turns — **the conversation _is_ the state.** We serialize the
+message list, wait minutes/hours/days, then resume by appending the human's answer as
+a `tool_result` and calling the API again. The blocker was never the model; it is our
+architecture.
+
+### What would have to change?
+
+`AI.Agent.run/6` is synchronous, in-memory, and runs to completion. Shape (1) needs it
+to **suspend and resume across durable time**:
+
+1. **Serialize conversation state.** Today `messages` lives only in the Oban worker
+   process. Persist `{messages, system, tools, model, acc}` to a DB row (JSONB) when a
+   pause fires. *This is the actual work.*
+2. **An `ask_human` tool** that suspends the loop instead of dispatching — the loop
+   returns `{:suspended, state}` rather than continuing.
+3. **A resume entry point** — `Agent.resume(state, human_answer)` appends the answer as
+   a `tool_result` and re-enters the loop.
+4. **Durable storage + UI** — an `agent_sessions` table (`status: running |
+   awaiting_human | done`, serialized messages) plus a LiveView to show the pending
+   question and submit the answer, which enqueues the resume. Same shape as the
+   review-gate pattern above, but the paused state is a *whole conversation*, not just
+   an output row.
+5. **Staleness handling** — a recipe/ingredient the paused plan references may be
+   deleted before resume. Our existing provenance/validation gates absorb most of this.
+
+That is essentially a durable conversation-workflow engine on Oban + Ecto. **This is
+the one scenario where "buy instead of build" is real:** Anthropic **Managed Agents**
+is precisely this — server-hosted sessions that pause on a tool-confirmation /
+custom-tool-result and resume from a durable event stream. It would offload the
+serialize/resume plumbing, but it hosts the agent loop on Anthropic's side, colliding
+with our custom `AI.Client`/`AI.Agent`. Prefer building on Oban + Ecto for consistency;
+only revisit Managed Agents if the plumbing proves heavier than expected.
+
+### Cost implications
+
+**Token cost is negligible; the real costs are latency and engineering.**
+
+- **Why tokens grow:** the stateless API re-bills the *entire prior conversation* as
+  input on every resume. Our loop already does this per iteration (inherent to any
+  tool-use loop); human turns just add more full-context turns as the conversation grows.
+- **The numbers:** on **Haiku 4.5 ($1/M input, $5/M output)** a recipe/meal-plan run is
+  tens of thousands of cumulative input tokens + a few thousand output → **fractions of
+  a cent**. Adding 3–4 human interrupts is ~1.5–2× that → still fractions of a cent.
+  Upgrading the *interactive* co-pilot to **Sonnet 5 ($3/M in, $15/M out)** for better
+  judgment is ~3× per token — still a small absolute number.
+- **The caching trap:** cache reads cost ~0.1× and writes 1.25×, but the **default cache
+  TTL is 5 minutes**. A human usually answers *after* 5 minutes, so the cached prefix
+  expires before the resume → the resume pays **full-price cold input** again. Use the
+  **1-hour TTL** (2× write cost) to keep the system-prompt + tools + early-conversation
+  prefix warm across a reviewer's think-time. Over *days*, no caching helps and each
+  resume pays cold input — still cents on Haiku/Sonnet.
+- **What actually bites:** **latency and operational surface.** A 30-second background
+  job becomes a multi-minute-to-hours interactive session with durable state, a review
+  UI, and staleness edge cases. Engineering and UX cost, not API cost.
+
+### Recommendation
+
+Scope it to the **NutritionistAgent** as an interactive co-pilot, **build on Oban +
+Ecto** (extending the review-gate pattern above), and use the **1-hour cache TTL** on
+resumes. Do not retrofit it onto RecipeAgent (unattended) or MealPlanAgent (marginal).
+It is an architecture change, not a model upgrade — and on our token economics the cost
+is dominated by latency and engineering, not the API bill.
 
 ## Related
 

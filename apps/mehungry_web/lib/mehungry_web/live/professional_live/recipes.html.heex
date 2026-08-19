@@ -47,6 +47,16 @@
       >
         <.icon name="hero-trash" class="w-4 h-4" /> Delete recipes with zero ingredients
       </button>
+      <button
+        type="button"
+        phx-click="reconcile_hashtags"
+        disabled={@hashtag_running}
+        data-confirm="Reconcile hashtags for every recipe? This reconnects description #tags and re-attaches #vegan/#vegetarian. It only adds tags — nothing is deleted."
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-fuchsia-700 hover:bg-fuchsia-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <.icon name="hero-hashtag" class="w-4 h-4" />
+        {if @hashtag_running, do: "Reconciling…", else: "Reconcile hashtags"}
+      </button>
     </div>
   </div>
 
@@ -94,6 +104,59 @@
           Last error: {@recalc_run.error}
         </p>
       <% end %>
+    </div>
+  <% end %>
+
+  <%= if hashtag_total(@hashtag_counts) > 0 do %>
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Hashtag reconciliation
+          <span class={[
+            "ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+            if(@hashtag_running,
+              do: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+              else: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+            )
+          ]}>
+            {if @hashtag_running, do: "Running", else: "Idle"}
+          </span>
+        </p>
+        <div class="flex items-center gap-3">
+          <p class="text-sm font-semibold text-white">{hashtag_percent(@hashtag_counts)}%</p>
+          <button
+            type="button"
+            phx-click="reset_hashtag_reconciliation"
+            class="text-xs text-slate-400 hover:text-slate-200 underline"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden mb-3">
+        <div
+          class={[
+            "h-2 rounded-full transition-all duration-500",
+            if(@hashtag_running, do: "bg-amber-500", else: "bg-fuchsia-500")
+          ]}
+          style={"width: #{hashtag_percent(@hashtag_counts)}%"}
+        >
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-4 text-sm">
+        <span class="text-slate-400">Total
+        <span class="text-white font-semibold">{hashtag_total(@hashtag_counts)}</span></span>
+        <span class="text-slate-300">Pending
+        <span class="font-semibold">{Map.get(@hashtag_counts, "pending", 0)}</span></span>
+        <span class="text-blue-400">Processing
+        <span class="font-semibold">{Map.get(@hashtag_counts, "processing", 0)}</span></span>
+        <span class="text-green-400">Completed
+        <span class="font-semibold">{Map.get(@hashtag_counts, "completed", 0)}</span></span>
+        <span class="text-red-400">Failed
+        <span class="font-semibold">{Map.get(@hashtag_counts, "failed", 0)}</span></span>
+      </div>
     </div>
   <% end %>
 
