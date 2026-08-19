@@ -51,8 +51,8 @@ defmodule MehungryWeb.ProfessionalLive.ScienceReviewTest do
 
       assert html =~ "Discovered Studies"
       assert html =~ "Oxalate content of Spinacia oleracea"
-      assert html =~ "1</span> ingredients"
-      assert html =~ "1</span> mentions"
+      assert html =~ ~r{1</span>\s*ingredients}
+      assert html =~ ~r{1</span>\s*mentions}
 
       html = view |> element("button", "Details") |> render_click()
       assert html =~ "spinach"
@@ -79,7 +79,7 @@ defmodule MehungryWeb.ProfessionalLive.ScienceReviewTest do
 
       assert html =~ "Extracted Entities"
       assert html =~ "Oxalate content of Spinacia oleracea"
-      assert html =~ "1</span> chem"
+      assert html =~ ~r{1</span>\s*chem}
 
       html = view |> element("button", "Mentions") |> render_click()
       # chemical mention shows the compound it resolved to
