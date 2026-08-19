@@ -191,13 +191,13 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
   end
 
   # Enqueues a reconciliation job for every recipe not already completed, returning
-  # how many were enqueued.
+  # how many were enqueued. Batched (one row upsert + one Oban.insert_all) so a
+  # full-corpus resweep can't back up Oban's Postgres notifier with a per-recipe
+  # NOTIFY storm — see oban_production_diagnostics.md §12.
   defp enqueue_all_reconciliations do
     HashtagReconciliations.all_recipe_ids()
     |> HashtagReconciliations.pending_or_failed()
-    |> Enum.count(fn recipe_id ->
-      match?({:ok, _job}, HashtagReconciliationWorker.enqueue(recipe_id))
-    end)
+    |> HashtagReconciliationWorker.enqueue_all()
   end
 
   @impl true
