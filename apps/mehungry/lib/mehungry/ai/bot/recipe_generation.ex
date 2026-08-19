@@ -185,7 +185,14 @@ defmodule Mehungry.AI.Bot.RecipeGeneration do
                 "#{describe_ingredients(offending, names)}, retrying (#{attempts_left - 1} left)"
             )
 
-            do_generate_avoiding(description, avoid_ids, brief_opts, names, label, attempts_left - 1)
+            do_generate_avoiding(
+              description,
+              avoid_ids,
+              brief_opts,
+              names,
+              label,
+              attempts_left - 1
+            )
         end
 
       {:error, reason} ->

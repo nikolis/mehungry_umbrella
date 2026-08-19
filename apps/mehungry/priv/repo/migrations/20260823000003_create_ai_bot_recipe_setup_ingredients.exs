@@ -14,6 +14,10 @@ defmodule Mehungry.Repo.Migrations.CreateAiBotRecipeSetupIngredients do
     create index(:ai_bot_recipe_setup_ingredients, [:recipe_setup_id])
     create index(:ai_bot_recipe_setup_ingredients, [:ingredient_id])
 
-    create unique_index(:ai_bot_recipe_setup_ingredients, [:recipe_setup_id, :ingredient_id, :role])
+    create unique_index(:ai_bot_recipe_setup_ingredients, [
+             :recipe_setup_id,
+             :ingredient_id,
+             :role
+           ])
   end
 end

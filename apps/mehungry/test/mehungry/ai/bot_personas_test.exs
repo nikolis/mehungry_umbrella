@@ -60,9 +60,26 @@ defmodule Mehungry.AI.BotPersonasTest do
       basil = ingredient_fixture(%{name: "basil"})
       shrimp = ingredient_fixture(%{name: "shrimp"})
 
-      {:ok, _} = Bot.add_setup_ingredient(%{recipe_setup_id: setup.id, ingredient_id: oil.id, role: "primary"})
-      {:ok, _} = Bot.add_setup_ingredient(%{recipe_setup_id: setup.id, ingredient_id: basil.id, role: "garnish"})
-      {:ok, _} = Bot.add_setup_ingredient(%{recipe_setup_id: setup.id, ingredient_id: shrimp.id, role: "avoid"})
+      {:ok, _} =
+        Bot.add_setup_ingredient(%{
+          recipe_setup_id: setup.id,
+          ingredient_id: oil.id,
+          role: "primary"
+        })
+
+      {:ok, _} =
+        Bot.add_setup_ingredient(%{
+          recipe_setup_id: setup.id,
+          ingredient_id: basil.id,
+          role: "garnish"
+        })
+
+      {:ok, _} =
+        Bot.add_setup_ingredient(%{
+          recipe_setup_id: setup.id,
+          ingredient_id: shrimp.id,
+          role: "avoid"
+        })
 
       assert length(Bot.list_setup_ingredients(setup.id)) == 3
 
@@ -79,8 +96,19 @@ defmodule Mehungry.AI.BotPersonasTest do
       setup = setup_fixture()
       oil = ingredient_fixture(%{name: "olive oil"})
 
-      {:ok, _} = Bot.add_setup_ingredient(%{recipe_setup_id: setup.id, ingredient_id: oil.id, role: "primary"})
-      {:ok, _} = Bot.add_setup_ingredient(%{recipe_setup_id: setup.id, ingredient_id: oil.id, role: "primary"})
+      {:ok, _} =
+        Bot.add_setup_ingredient(%{
+          recipe_setup_id: setup.id,
+          ingredient_id: oil.id,
+          role: "primary"
+        })
+
+      {:ok, _} =
+        Bot.add_setup_ingredient(%{
+          recipe_setup_id: setup.id,
+          ingredient_id: oil.id,
+          role: "primary"
+        })
 
       assert length(Bot.list_setup_ingredients(setup.id)) == 1
     end
@@ -104,13 +132,23 @@ defmodule Mehungry.AI.BotPersonasTest do
 
       # week override (day 3 → week 1)
       {:ok, _} =
-        Bot.upsert_week_config(%{bot_config_id: config.id, week_number: 1, theme: "W", recipe_setup_id: week_setup.id})
+        Bot.upsert_week_config(%{
+          bot_config_id: config.id,
+          week_number: 1,
+          theme: "W",
+          recipe_setup_id: week_setup.id
+        })
 
       assert Bot.get_context_for_date(config, date).setup.id == week_setup.id
 
       # day override wins
       {:ok, _} =
-        Bot.upsert_day_config(%{bot_config_id: config.id, date: date, focus_hint: "F", recipe_setup_id: day_setup.id})
+        Bot.upsert_day_config(%{
+          bot_config_id: config.id,
+          date: date,
+          focus_hint: "F",
+          recipe_setup_id: day_setup.id
+        })
 
       assert Bot.get_context_for_date(config, date).setup.id == day_setup.id
     end
@@ -162,7 +200,8 @@ defmodule Mehungry.AI.BotPersonasTest do
 
   describe "populate_setup_ingredients_from_condition/1" do
     test "no-op without a condition" do
-      assert {:ok, 0} = Bot.populate_setup_ingredients_from_condition(%RecipeSetup{condition_id: nil})
+      assert {:ok, 0} =
+               Bot.populate_setup_ingredients_from_condition(%RecipeSetup{condition_id: nil})
     end
   end
 
@@ -171,7 +210,11 @@ defmodule Mehungry.AI.BotPersonasTest do
     user = user_fixture()
 
     assert {:error, changeset} =
-             Bot.create_recipe_order(%{recipe_setup_id: setup.id, bot_user_id: user.id, quantity: 0})
+             Bot.create_recipe_order(%{
+               recipe_setup_id: setup.id,
+               bot_user_id: user.id,
+               quantity: 0
+             })
 
     assert %{quantity: _} = errors_on(changeset)
   end

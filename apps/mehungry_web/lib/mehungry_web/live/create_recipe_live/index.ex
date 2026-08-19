@@ -181,12 +181,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     end
   end
 
-  # Per-user fixed-window limit on the paid Spoonacular API (search + import
-  # share one bucket) to prevent burning the shared key from free accounts.
-  defp spoonacular_rate_limit(user_id) do
-    Mehungry.RateLimit.hit("spoonacular:#{user_id}", 20, :timer.minutes(1))
-  end
-
   def handle_event("close_spoonacular_modal", _, socket) do
     {:noreply, assign(socket, show_spoonacular_modal: false)}
   end
@@ -215,7 +209,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   def handle_event("delete-image", _, socket) do
     # {:ok, recipe} = Food.update_recipe(socket.assigns.recipe, %{image_url: nil})
-    recipe = %Recipe{socket.assigns.recipe | image_url: nil}
+    %Recipe{} = current_recipe = socket.assigns.recipe
+    recipe = %Recipe{current_recipe | image_url: nil}
 
     {:noreply,
      socket
@@ -274,6 +269,12 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @impl Phoenix.LiveView
   def handle_event("cancel-upload", %{"ref" => ref}, socket) do
     {:noreply, cancel_upload(socket, :image, ref)}
+  end
+
+  # Per-user fixed-window limit on the paid Spoonacular API (search + import
+  # share one bucket) to prevent burning the shared key from free accounts.
+  defp spoonacular_rate_limit(user_id) do
+    Mehungry.RateLimit.hit("spoonacular:#{user_id}", 20, :timer.minutes(1))
   end
 
   defp handle_action(socket, params) do
@@ -376,7 +377,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     %Recipe{
       recipe
       | recipe_ingredients:
-          Enum.map(ris, fn ri ->
+          Enum.map(ris, fn %RecipeIngredient{} = ri ->
             %RecipeIngredient{ri | unit_selection: RecipeIngredient.unit_selection_value(ri)}
           end)
     }

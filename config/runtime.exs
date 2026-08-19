@@ -35,6 +35,13 @@ if token = System.get_env("LOCAL_AI_API_TOKEN") do
   config :mehungry_local_ai, api_token: token
 end
 
+# Shared-secret bearer token for the Prometheus scrape endpoint (GET /metrics), guarded
+# by RequireMetricsToken. Only override when the env var is set, so dev/test keep their
+# compile-time values (this file runs in every environment).
+if metrics_token = System.get_env("METRICS_API_TOKEN") do
+  config :mehungry, :metrics_api_token, metrics_token
+end
+
 config :mehungry_local_ai,
   server_base_url: System.get_env("LOCAL_AI_SERVER_URL", "http://localhost:4000")
 

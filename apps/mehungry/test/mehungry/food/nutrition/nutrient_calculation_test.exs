@@ -10,7 +10,15 @@ defmodule Mehungry.Food.NutrientCalculationTest do
   use Mehungry.DataCase, async: false
 
   alias Mehungry.Food.NutrientCalculation, as: NC
-  alias Mehungry.Food.{Ingredient, IngredientNutrient, IngredientPortion, MeasurementUnit, Nutrient}
+
+  alias Mehungry.Food.{
+    Ingredient,
+    IngredientNutrient,
+    IngredientPortion,
+    MeasurementUnit,
+    Nutrient
+  }
+
   alias Mehungry.FoodFixtures
 
   # ── struct builders ───────────────────────────────────────────────────────
@@ -118,7 +126,9 @@ defmodule Mehungry.Food.NutrientCalculationTest do
       [protein, sodium] =
         NC.build_nutrient_list(ing, 200.0)
         |> Enum.sort_by(& &1.name)
-        |> then(fn list -> [Enum.find(list, &(&1.name == "Protein")), Enum.find(list, &(&1.name == "Sodium"))] end)
+        |> then(fn list ->
+          [Enum.find(list, &(&1.name == "Protein")), Enum.find(list, &(&1.name == "Sodium"))]
+        end)
 
       assert protein.amount == 50.0
       assert protein.measurement_unit == "g"
@@ -228,6 +238,7 @@ defmodule Mehungry.Food.NutrientCalculationTest do
       names = Enum.map(result.structured_nutrients, & &1.name)
 
       assert "Energy" in names
+
       assert Enum.find_index(names, &(&1 == "Energy")) <
                Enum.find_index(names, &(&1 == "Protein"))
     end

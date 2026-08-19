@@ -67,7 +67,7 @@ defmodule MehungryWeb.SearchLive.Index do
 
   defp list_recipes do
     Food.list_recipes(nil)
-    |> Enum.map(fn recipe ->
+    |> Enum.map(fn %Recipe{} = recipe ->
       return = ImageProcessing.resize(recipe.image_url, 100, 100)
       %Recipe{recipe | recipe_image_remote: return}
     end)

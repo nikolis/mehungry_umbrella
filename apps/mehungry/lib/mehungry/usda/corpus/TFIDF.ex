@@ -4,7 +4,7 @@ defmodule USDA.Corpus.TFIDF do
 
   def get_exclusions() do
     high_tfidf = compute_tfidf_for_all_ingredients()
-    entropies = USDA.Corpus.Phrases.word_entropies() |> Enum.map(fn {x, y} -> x end)
+    entropies = USDA.Corpus.Phrases.word_entropies() |> Enum.map(fn {x, _y} -> x end)
     Enum.filter(high_tfidf, fn {x, _y} -> x in entropies end)
   end
 

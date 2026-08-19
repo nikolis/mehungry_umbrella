@@ -6,8 +6,6 @@ defmodule Mehungry.Application do
   use Application
 
   def start(_type, _args) do
-    Mehungry.Telemetry.ActionContext.attach()
-
     children = [
       # Start the Ecto repository
       Mehungry.Repo,
@@ -41,10 +39,10 @@ defmodule Mehungry.Application do
       %{id: :health_cache, start: {Cachex, :start_link, [:health_cache, [limit: 1000]]}},
       # Read-through cache for the heavy get_ingredient_details! nutrient/portion preloads
       # (near-immutable reference data); per-put TTL.
-      %{id: :ingredient_details_cache,
-        start: {Cachex, :start_link, [:ingredient_details_cache, [limit: 500]]}},
-      Mehungry.Telemetry.MetricsBuffer,
-      Mehungry.Telemetry.ErrorTracker,
+      %{
+        id: :ingredient_details_cache,
+        start: {Cachex, :start_link, [:ingredient_details_cache, [limit: 500]]}
+      },
       {Task.Supervisor, name: Mehungry.TaskSupervisor}
     ]
 

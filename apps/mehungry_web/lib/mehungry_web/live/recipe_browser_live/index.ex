@@ -14,7 +14,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   alias Mehungry.Posts
   alias MehungryWeb.RecipeComponents
   alias MehungryWeb.RecipeFlags
-  alias MehungryWeb.ImageProcessing
 
   # Page size for the offset-paginated, condition-prioritized browse mode; kept
   # in step with the cursor paginator's `limit: 10` in `Food.list_recipes/3`.
@@ -46,7 +45,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
     {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
 
-    language = socket.assigns[:current_language] || (user_profile && user_profile.language_preference)
+    language =
+      socket.assigns[:current_language] || (user_profile && user_profile.language_preference)
 
     {query, {recipes, cursor_after}} =
       case query_str do
@@ -206,7 +206,12 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         # page number so the computed "encouraged first" order is preserved.
         :offset ->
           recipes =
-            Food.list_recipes_page(Map.get(socket.assigns, :query), next_page, @per_page, language)
+            Food.list_recipes_page(
+              Map.get(socket.assigns, :query),
+              next_page,
+              @per_page,
+              language
+            )
 
           stream_recipes(socket, recipes)
 
@@ -510,14 +515,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     query_str = ""
     language = get_user_language(socket)
 
-    {_query, {recipes, cursor_after}} =
-      case query_str do
-        nil ->
-          {query_str, list_recipes(language)}
-
-        qr ->
-          Food.search_recipe(qr, language)
-      end
+    {_query, {recipes, cursor_after}} = Food.search_recipe(query_str, language)
 
     socket
     |> assign(:nutrients, recipe.nutrients)
@@ -670,11 +668,11 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     base
   end
 
-  defp list_recipes(language \\ nil) do
+  defp list_recipes(language) do
     {result, cursor_after} = Food.list_recipes(nil, nil, language)
 
     result =
-      Enum.map(result, fn recipe ->
+      Enum.map(result, fn %Recipe{} = recipe ->
         %Recipe{recipe | recipe_image_remote: recipe.image_url}
       end)
 

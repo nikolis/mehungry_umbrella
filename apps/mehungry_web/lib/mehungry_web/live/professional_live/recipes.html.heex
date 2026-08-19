@@ -80,10 +80,13 @@
       </div>
 
       <div class="flex flex-wrap gap-4 text-sm">
-        <span class="text-slate-400">Total <span class="text-white font-semibold">{@recalc_run.total}</span></span>
-        <span class="text-green-400">Done <span class="font-semibold">{@recalc_run.completed}</span></span>
+        <span class="text-slate-400">Total
+        <span class="text-white font-semibold">{@recalc_run.total}</span></span>
+        <span class="text-green-400">Done
+        <span class="font-semibold">{@recalc_run.completed}</span></span>
         <span class="text-red-400">Failed <span class="font-semibold">{@recalc_run.failed}</span></span>
-        <span class="text-blue-400">Remaining <span class="font-semibold">{recalc_remaining(@recalc_run)}</span></span>
+        <span class="text-blue-400">Remaining
+        <span class="font-semibold">{recalc_remaining(@recalc_run)}</span></span>
       </div>
 
       <%= if @recalc_run.failed > 0 and @recalc_run.error do %>
@@ -113,13 +116,16 @@
 
       <div class="flex flex-wrap gap-4 text-sm mb-2">
         <span class="text-slate-400">
-          Rows with a unit <span class="text-white font-semibold">{@portion_report.total_with_unit}</span>
+          Rows with a unit
+          <span class="text-white font-semibold">{@portion_report.total_with_unit}</span>
         </span>
         <span class="text-slate-400">
-          Already linked <span class="text-white font-semibold">{@portion_report.already_set}</span>
+          Already linked
+          <span class="text-white font-semibold">{@portion_report.already_set}</span>
         </span>
         <span class="text-slate-400">
-          Grams (skipped) <span class="text-white font-semibold">{@portion_report.gram_skipped}</span>
+          Grams (skipped)
+          <span class="text-white font-semibold">{@portion_report.gram_skipped}</span>
         </span>
         <span class="text-slate-400">
           Need work <span class="text-white font-semibold">{@portion_report.needs_work}</span>
@@ -131,7 +137,8 @@
           Named-linked <span class="font-semibold">{@portion_report.description_linked}</span>
         </span>
         <span class="text-blue-400">
-          Portions created <span class="font-semibold">{@portion_report.synthesized_portions}</span>
+          Portions created
+          <span class="font-semibold">{@portion_report.synthesized_portions}</span>
         </span>
         <span class="text-amber-400">
           Need review <span class="font-semibold">{length(@portion_report.unresolved)}</span>
@@ -152,7 +159,8 @@
               <div class="flex items-center justify-between gap-3">
                 <p class="text-white text-sm font-medium truncate">
                   {u.ingredient_name || "ingredient ##{u.ingredient_id}"}
-                  <span class="text-slate-400 font-normal">× {u.unit_name || "unit ##{u.measurement_unit_id}"}</span>
+                  <span class="text-slate-400 font-normal">× {u.unit_name ||
+                    "unit ##{u.measurement_unit_id}"}</span>
                 </p>
                 <span class="shrink-0 text-xs text-slate-400">
                   {u.row_count} row(s) · {length(u.recipe_ids)} recipe(s)
@@ -221,7 +229,12 @@
       bot records. This cannot be undone.
     </p>
 
-    <form id="admin-recipe-search" phx-change="search_recipes" phx-submit="search_recipes" class="mb-3">
+    <form
+      id="admin-recipe-search"
+      phx-change="search_recipes"
+      phx-submit="search_recipes"
+      class="mb-3"
+    >
       <input
         type="text"
         name="query"

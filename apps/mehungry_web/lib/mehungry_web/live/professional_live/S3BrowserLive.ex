@@ -584,7 +584,8 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
 
   @impl true
   def handle_async({:list, bucket_name, _prefix}, {:ok, {:ok, contents, seed_files}}, socket) do
-    {:noreply, apply_listing(socket, bucket_name, contents, seed_files, loading: false, error: nil)}
+    {:noreply,
+     apply_listing(socket, bucket_name, contents, seed_files, loading: false, error: nil)}
   end
 
   def handle_async({:list, _bucket, _prefix}, {:ok, {:error, error}}, socket) do
@@ -605,7 +606,11 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
         if(failed > 0, do: " (#{failed} failed to queue)", else: "")
 
     {:noreply,
-     apply_listing(socket, bucket_name, contents, seed_files, loading: false, info: info, error: nil)}
+     apply_listing(socket, bucket_name, contents, seed_files,
+       loading: false,
+       info: info,
+       error: nil
+     )}
   end
 
   def handle_async({:load_ingredients, _bucket, _prefix}, {:ok, {:error, error}}, socket) do
@@ -754,8 +759,7 @@ defmodule MehungryWeb.ProfessionalLive.S3BrowserLive do
     end
   end
 
-  defp display_prefix(nil), do: "/"
-  defp display_prefix(prefix), do: "/" <> prefix
+  defp display_prefix(prefix), do: "/" <> (prefix || "")
 
   defp format_size(size) when is_integer(size) do
     cond do

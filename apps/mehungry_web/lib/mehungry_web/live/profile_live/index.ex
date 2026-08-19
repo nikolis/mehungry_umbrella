@@ -56,7 +56,9 @@ defmodule MehungryWeb.ProfileLive.Index do
       {tab, :show}
       when tab in ["edit_profile", "connected_accounts", "my_ingredients", "friends_ingredients"] ->
         :created
-      {tab, _live_action} -> String.to_existing_atom(tab)
+
+      {tab, _live_action} ->
+        String.to_existing_atom(tab)
     end
   end
 
@@ -294,13 +296,20 @@ defmodule MehungryWeb.ProfileLive.Index do
 
     {message, new_status} =
       case Mehungry.Friends.send_friend_request(requester_id, String.to_integer(id)) do
-        {:ok, _} -> {{:info, "Friend request sent."}, :request_sent}
-        {:error, :already_friends} -> {{:info, "You are already friends."}, :friends}
+        {:ok, _} ->
+          {{:info, "Friend request sent."}, :request_sent}
+
+        {:error, :already_friends} ->
+          {{:info, "You are already friends."}, :friends}
+
         {:error, :already_requested} ->
           {{:info, "You already have a pending request to this user."}, :request_sent}
 
-        {:error, :self} -> {{:error, "You can't friend yourself."}, nil}
-        {:error, _} -> {{:error, "Could not send friend request."}, nil}
+        {:error, :self} ->
+          {{:error, "You can't friend yourself."}, nil}
+
+        {:error, _} ->
+          {{:error, "Could not send friend request."}, nil}
       end
 
     # Refresh the profile card's button in place so the outcome is visible

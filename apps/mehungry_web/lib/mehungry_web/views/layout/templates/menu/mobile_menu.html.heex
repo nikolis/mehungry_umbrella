@@ -1,9 +1,10 @@
 <% show_invitations =
   @current_user && !Mehungry.Subscriptions.nutritionist?(@current_user.id) &&
     Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id) > 0 %>
-<% friend_requests_count = (@current_user && Mehungry.Friends.count_pending_requests_for(@current_user.id)) || 0 %>
+<% friend_requests_count =
+  (@current_user && Mehungry.Friends.count_pending_requests_for(@current_user.id)) || 0 %>
 <% show_friend_requests = friend_requests_count > 0 %>
-<% menu_cols = 8 + (if show_invitations, do: 1, else: 0) + (if show_friend_requests, do: 1, else: 0) %>
+<% menu_cols = 8 + if(show_invitations, do: 1, else: 0) + if show_friend_requests, do: 1, else: 0 %>
 <nav
   class="nav_container_mobile fixed border-t border-ink-panel2 bg-ink-panel text-parchment-dim"
   id="nav_bar_mobile"

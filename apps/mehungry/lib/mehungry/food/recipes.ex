@@ -281,7 +281,10 @@ defmodule Mehungry.Food.Recipes do
       |> Repo.all()
 
     comment_answer_ids =
-      from(ca in Mehungry.Posts.CommentAnswer, where: ca.comment_id in ^comment_ids, select: ca.id)
+      from(ca in Mehungry.Posts.CommentAnswer,
+        where: ca.comment_id in ^comment_ids,
+        select: ca.id
+      )
       |> Repo.all()
 
     post_ids =
@@ -426,6 +429,8 @@ defmodule Mehungry.Food.Recipes do
 
   def list_recipes(%Ecto.Query{} = query), do: list_recipes(query, nil)
 
+  def list_recipes(cursor_after), do: list_recipes(cursor_after, nil, nil)
+
   def list_recipes(%Ecto.Query{} = query, language_name) do
     %{entries: entries, metadata: metadata} =
       Repo.paginate(
@@ -438,8 +443,6 @@ defmodule Mehungry.Food.Recipes do
     results = Repo.preload(entries, [:user, :user_recipes])
     {Localization.localize_recipes(results, language_name), cursor_after}
   end
-
-  def list_recipes(cursor_after), do: list_recipes(cursor_after, nil, nil)
 
   def list_recipes(cursor_after, query), do: list_recipes(cursor_after, query, nil)
 

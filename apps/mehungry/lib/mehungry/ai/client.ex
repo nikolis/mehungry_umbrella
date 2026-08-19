@@ -50,9 +50,41 @@ defmodule Mehungry.AI.Client do
   @spec request(params()) :: {:ok, response()} | {:error, term()}
   def request(params) do
     case Application.get_env(:mehungry, :anthropic_api_key, "") do
-      "" -> {:error, "ANTHROPIC_API_KEY is not configured"}
-      api_key -> do_request(api_key, params, 0)
+      "" ->
+        {:error, "ANTHROPIC_API_KEY is not configured"}
+
+      api_key ->
+        start = System.monotonic_time()
+        result = do_request(api_key, params, 0)
+        emit_telemetry(start, params, result)
+        result
     end
+  end
+
+  # Emits one `[:mehungry, :ai, :client, :request, :stop]` event per API call with
+  # latency + token usage, tagged by model and ok/error status. This is the
+  # cost/latency signal the Prometheus AI plugin aggregates. Wrapped so telemetry
+  # can never break a request.
+  defp emit_telemetry(start, params, result) do
+    usage =
+      case result do
+        {:ok, %{usage: usage}} -> usage
+        _ -> %{input_tokens: 0, output_tokens: 0}
+      end
+
+    status = if match?({:ok, _}, result), do: "ok", else: "error"
+
+    :telemetry.execute(
+      [:mehungry, :ai, :client, :request, :stop],
+      %{
+        duration: System.monotonic_time() - start,
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens
+      },
+      %{model: Map.get(params, :model, @default_model), status: status}
+    )
+  rescue
+    _ -> :ok
   end
 
   @doc """

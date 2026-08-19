@@ -116,8 +116,6 @@ config :mehungry, Oban,
        {"30 1 * * *", Mehungry.ObanWorkers.InstagramTokenRefreshWorker},
        # 2am UTC daily — generate recipes for the next day + schedule publish jobs
        {"0 2 * * *", Mehungry.ObanWorkers.DailyRecipeGenerationWorker},
-       # 3am UTC daily — prune telemetry snapshots older than 30 days
-       {"0 3 * * *", Mehungry.ObanWorkers.TelemetryPrunerWorker},
        # every 10 min — resume any pipeline run (crawl/annotation/derivation) whose chain broke
        {"*/10 * * * *", Mehungry.ObanWorkers.PipelineWatchdogWorker},
        # 4am UTC Mondays — sync food products from Open Food Facts delta exports
@@ -269,6 +267,34 @@ config :logger, :console,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# PromEx — Prometheus metrics collection (served at the token-guarded GET /metrics
+# via MehungryWeb.MetricsController). Grafana dashboard upload and the standalone
+# metrics HTTP server are disabled; we scrape through our own endpoint.
+grafana_config =
+  case System.get_env("GRAFANA_AUTH_TOKEN") do
+    nil ->
+      IO.inspect("UBSucessfull Grafana configuration")
+      :disabled
+
+    token ->
+      IO.inspect(token, label: "The grafna token")
+      [
+        host: "http://localhost:3000",
+        auth_token: token,
+        upload_dashboards_on_start: true,
+        folder_name: "MeHungry",
+        annotate_app_lifecycle: false
+      ]
+
+  end
+
+config :mehungry_web, MehungryWeb.PromEx,
+  disabled: false,
+  manual_metrics_start_delay: :no_delay,
+  drop_metrics_groups: [],
+  grafana: grafana_config,
+  metrics_server: :disabled
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

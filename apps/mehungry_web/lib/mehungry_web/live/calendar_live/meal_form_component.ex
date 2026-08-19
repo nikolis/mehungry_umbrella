@@ -304,7 +304,12 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
         # Notify the parent to reload meals + close the modal via push_patch,
         # instead of push_navigate — a full remount would reset the calendar's
         # client-side accordion (JS-toggled `copen`) state.
-        send(self(), {:meal_saved, %{return_to: socket.assigns.return_to, flash: "User Meal updated successfully"}})
+        send(
+          self(),
+          {:meal_saved,
+           %{return_to: socket.assigns.return_to, flash: "User Meal updated successfully"}}
+        )
+
         {:noreply, socket}
 
       {:error, %Ecto.Changeset{} = changeset} ->

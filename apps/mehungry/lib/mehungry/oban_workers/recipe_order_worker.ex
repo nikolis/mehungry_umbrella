@@ -60,7 +60,10 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
       MapSet.union(RecipeGeneration.setup_avoid_ids(setup), MapSet.new(discouraged, & &1.id))
 
     avoid_names =
-      Map.merge(RecipeGeneration.setup_avoid_names(setup), Map.new(discouraged, &{&1.id, &1.name}))
+      Map.merge(
+        RecipeGeneration.setup_avoid_names(setup),
+        Map.new(discouraged, &{&1.id, &1.name})
+      )
 
     Logger.debug("""
     [RecipeOrderWorker] Starting order ##{order.id} (#{order.quantity} recipe(s))
@@ -87,9 +90,20 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
         fn {meal_type, _idx} ->
           description =
             cuisine
-            |> with_cuisine(order_description(setup, meal_type, encouraged_names, discouraged_names))
+            |> with_cuisine(
+              order_description(setup, meal_type, encouraged_names, discouraged_names)
+            )
 
-          generate_one(order, bot_user, meal_type, description, brief_opts, avoid_ids, avoid_names, cuisine)
+          generate_one(
+            order,
+            bot_user,
+            meal_type,
+            description,
+            brief_opts,
+            avoid_ids,
+            avoid_names,
+            cuisine
+          )
         end,
         timeout: 180_000,
         on_timeout: :kill_task,
@@ -113,7 +127,16 @@ defmodule Mehungry.ObanWorkers.RecipeOrderWorker do
     :ok
   end
 
-  defp generate_one(order, bot_user, meal_type, description, brief_opts, avoid_ids, avoid_names, cuisine) do
+  defp generate_one(
+         order,
+         bot_user,
+         meal_type,
+         description,
+         brief_opts,
+         avoid_ids,
+         avoid_names,
+         cuisine
+       ) do
     result =
       RecipeGeneration.generate(description, avoid_ids, brief_opts,
         avoid_names: avoid_names,

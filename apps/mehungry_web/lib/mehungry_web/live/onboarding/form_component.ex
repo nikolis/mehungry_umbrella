@@ -80,8 +80,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
       <span
         :for={n <- 1..@total}
         class={"h-1.5 w-8 rounded-full transition-colors #{if n <= @step, do: "bg-primary-500", else: "bg-slate-600"}"}
-      >
-      </span>
+      ></span>
     </div>
     """
   end
@@ -312,7 +311,11 @@ defmodule MehungryWeb.Onboarding.FormComponent do
       |> maybe_put_calories(socket.assigns.daily_calorie_target)
 
     Accounts.update_user_profile(profile, attrs)
-    Accounts.set_condition_opt_ins(profile.id, MapSet.to_list(socket.assigns.selected_condition_ids))
+
+    Accounts.set_condition_opt_ins(
+      profile.id,
+      MapSet.to_list(socket.assigns.selected_condition_ids)
+    )
 
     notify_parent("profile-saved")
 

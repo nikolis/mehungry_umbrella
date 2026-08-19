@@ -110,7 +110,9 @@
                   type="button"
                   phx-click="toggle_condition"
                   phx-value-id={condition.id}
-                  class={condition_pill_class(MapSet.member?(@selected_condition_ids, condition.id))}
+                  class={
+                    condition_pill_class(MapSet.member?(@selected_condition_ids, condition.id))
+                  }
                 >
                   {if MapSet.member?(@selected_condition_ids, condition.id), do: "✓ ", else: ""}{condition.name}
                 </button>

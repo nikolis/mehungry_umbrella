@@ -204,6 +204,4 @@ defmodule Mehungry.Social.Facebook do
       true -> Float.round(amount, 3) |> to_string()
     end
   end
-
-  defp format_amount(amount), do: to_string(amount)
 end

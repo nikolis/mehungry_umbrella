@@ -287,7 +287,10 @@ defmodule Mehungry.NutrientUtilsTest do
     test "keeps the largest-amount label per bucket" do
       nutrients = %{
         "Carbohydrates" => %{"name" => "Carbohydrates", "amount" => 40.0},
-        "Carbohydrate, By Difference" => %{"name" => "Carbohydrate, By Difference", "amount" => 0.0},
+        "Carbohydrate, By Difference" => %{
+          "name" => "Carbohydrate, By Difference",
+          "amount" => 0.0
+        },
         "Protein" => %{"name" => "Protein", "amount" => 12.0}
       }
 

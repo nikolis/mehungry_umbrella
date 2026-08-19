@@ -37,7 +37,11 @@ defmodule MehungryWeb.AiBotLive.Orders do
   @impl true
   def handle_event("validate", %{"recipe_order" => params}, socket) do
     {:noreply,
-     assign(socket, :form, to_form(Bot.change_recipe_order(%RecipeOrder{}, params), action: :validate))}
+     assign(
+       socket,
+       :form,
+       to_form(Bot.change_recipe_order(%RecipeOrder{}, params), action: :validate)
+     )}
   end
 
   def handle_event("save", %{"recipe_order" => params}, socket) do
@@ -80,8 +84,10 @@ defmodule MehungryWeb.AiBotLive.Orders do
       <div>
         <h1 class="text-xl font-bold text-white">Recipe Orders</h1>
         <p class="text-sm text-slate-400 mt-0.5">
-          Generate a batch of recipes for a setup, on demand. Results appear in the
-          <.link navigate={~p"/professional/ai-bot/review"} class="text-primary-400 hover:underline">review queue</.link>.
+          Generate a batch of recipes for a setup, on demand. Results appear in the <.link
+            navigate={~p"/professional/ai-bot/review"}
+            class="text-primary-400 hover:underline"
+          >review queue</.link>.
         </p>
       </div>
       <.link
@@ -109,7 +115,10 @@ defmodule MehungryWeb.AiBotLive.Orders do
             </div>
             <div class="flex items-center gap-3">
               <div class="text-right">
-                <span class={["inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border", status_class(order.status)]}>
+                <span class={[
+                  "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border",
+                  status_class(order.status)
+                ]}>
                   {order.status}
                 </span>
                 <div class="text-[11px] text-slate-500 mt-1">
@@ -170,13 +179,24 @@ defmodule MehungryWeb.AiBotLive.Orders do
             </div>
             <div>
               <label class="block text-xs text-slate-400 mb-1">Language</label>
-              <.input field={@form[:language_name]} type="text" value={@form[:language_name].value || "En"} class={input_class()} />
+              <.input
+                field={@form[:language_name]}
+                type="text"
+                value={@form[:language_name].value || "En"}
+                class={input_class()}
+              />
             </div>
             <div class="flex items-center gap-2 pt-2">
-              <button type="submit" class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium">
+              <button
+                type="submit"
+                class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium"
+              >
                 Place order
               </button>
-              <.link patch={~p"/professional/ai-bot/orders"} class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm">
+              <.link
+                patch={~p"/professional/ai-bot/orders"}
+                class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm"
+              >
                 Cancel
               </.link>
             </div>

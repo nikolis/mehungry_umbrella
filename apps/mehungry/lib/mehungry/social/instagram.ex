@@ -9,8 +9,6 @@ defmodule Mehungry.Social.Instagram do
 
   import Ecto.Query, warn: false
 
-  require Logger
-
   alias Mehungry.Accounts
   alias Mehungry.Accounts.User
   alias Mehungry.Social.Instagram.{Caption, Token}

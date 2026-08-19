@@ -2,8 +2,6 @@ defmodule MehungryWeb.HomeLive.Index do
   use MehungryWeb, :live_view
   use MehungryWeb.Presence, :user_tracking
 
-  import MehungryWeb.RecipeComponents
-
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
 
   embed_templates("components/*")
@@ -26,7 +24,9 @@ defmodule MehungryWeb.HomeLive.Index do
       end
 
     {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
-    language = socket.assigns[:current_language] || (user_profile && user_profile.language_preference)
+
+    language =
+      socket.assigns[:current_language] || (user_profile && user_profile.language_preference)
 
     all_posts =
       Mehungry.Posts.list_posts(user)
@@ -109,41 +109,10 @@ defmodule MehungryWeb.HomeLive.Index do
     end
   end
 
-  defp get_recipe_description(assigns) do
-    terms = String.split(assigns.description || "", " ")
-
-    {_hashtags, other} =
-      Enum.split_with(terms, fn x -> String.starts_with?(x, "#") end)
-
-    text = Enum.join(other, " ")
-    truncated = if String.length(text) > 150, do: String.slice(text, 0, 150) <> "…", else: text
-
-    assigns = Map.put(assigns, :description, truncated)
-
-    ~H"""
-    <span class="flex gap-2 flex-wrap">
-      <div class="w-full break-words">{@description}</div>
-      <%= for tag <- @recipe.recipe_hashtags do %>
-        <.recipe_tag hashtag={tag.hashtag} />
-      <% end %>
-    </span>
-    """
-  end
-
   defp apply_action(socket, :index, _params) do
     maybe_track_user(%{}, socket)
 
     socket
-  end
-
-  defp get_user_language(socket) do
-    # URL locale (RestoreLocale) wins; profile preference is the fallback.
-    profile = Map.get(socket.assigns, :user_profile)
-    socket.assigns[:current_language] || (profile && profile.language_preference)
-  end
-
-  defp subscribe_to_posts(posts) do
-    Enum.each(posts, fn post -> Posts.subscribe_to_post(%{post_id: post.id}) end)
   end
 
   defp apply_action(socket, :share_social_media, %{"id" => id, "social_media" => social_media}) do
@@ -192,6 +161,16 @@ defmodule MehungryWeb.HomeLive.Index do
     else
       socket |> put_flash(:error, "Recipe not found") |> push_navigate(to: "/home")
     end
+  end
+
+  defp get_user_language(socket) do
+    # URL locale (RestoreLocale) wins; profile preference is the fallback.
+    profile = Map.get(socket.assigns, :user_profile)
+    socket.assigns[:current_language] || (profile && profile.language_preference)
+  end
+
+  defp subscribe_to_posts(posts) do
+    Enum.each(posts, fn post -> Posts.subscribe_to_post(%{post_id: post.id}) end)
   end
 
   @impl true

@@ -32,7 +32,7 @@ defmodule MehungryWeb.RecipeFormComponent do
     >
       <input type="hidden" name="recipe[_action]" value="" />
       <div
-        class="content_container grid md:grid-cols-2 gap-6 border border-ink-panel2 bg-ink-panel rounded-xl p-4 " 
+        class="content_container grid md:grid-cols-2 gap-6 border border-ink-panel2 bg-ink-panel rounded-xl p-4 "
         id="content-0"
       >
         <div class="flex flex-col gap-3">

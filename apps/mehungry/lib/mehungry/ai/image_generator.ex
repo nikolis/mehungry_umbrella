@@ -60,9 +60,10 @@ defmodule Mehungry.AI.ImageGenerator do
       "amber/golden tones. "
   end
 
-  defp cuisine_setting(_), do:
-    "Plated simply and realistically on a surface that suits the dish; let the palette " <>
-      "follow the food itself rather than defaulting to warm amber/golden tones. "
+  defp cuisine_setting(_),
+    do:
+      "Plated simply and realistically on a surface that suits the dish; let the palette " <>
+        "follow the food itself rather than defaulting to warm amber/golden tones. "
 
   defp request_image(api_key, prompt) do
     body =

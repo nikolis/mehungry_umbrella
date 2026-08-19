@@ -141,7 +141,7 @@ defmodule Mehungry.Food.Localization do
   def ingredient_language_for("el"), do: "Gr"
   def ingredient_language_for(_), do: nil
 
-  def translate_ingredients_to(recipe, language_name) do
+  def translate_ingredients_to(%Recipe{} = recipe, language_name) do
     query =
       from rec_ing in RecipeIngredient,
         where: rec_ing.recipe_id == ^recipe.id,
@@ -184,7 +184,8 @@ defmodule Mehungry.Food.Localization do
     case Repo.all(query) do
       [] ->
         Repo.preload(recipe, [
-          {:recipe_ingredients, [:measurement_unit, :ingredient_portion, {:ingredient, :category}]}
+          {:recipe_ingredients,
+           [:measurement_unit, :ingredient_portion, {:ingredient, :category}]}
         ])
 
       translated ->

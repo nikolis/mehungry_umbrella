@@ -154,4 +154,4 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipelineTest do
 
     assert {:error, {:redirect, %{to: "/home"}}} = live(conn, ~p"/professional/science")
   end
-  end
+end

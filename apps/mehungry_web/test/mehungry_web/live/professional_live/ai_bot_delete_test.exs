@@ -20,9 +20,7 @@ defmodule MehungryWeb.ProfessionalLive.AiBotDeleteTest do
 
   defp persona_fixture(attrs) do
     {:ok, persona} =
-      Bot.create_persona(
-        Enum.into(attrs, %{name: "Grandma", voice_prompt: "Speaks warmly."})
-      )
+      Bot.create_persona(Enum.into(attrs, %{name: "Grandma", voice_prompt: "Speaks warmly."}))
 
     persona
   end

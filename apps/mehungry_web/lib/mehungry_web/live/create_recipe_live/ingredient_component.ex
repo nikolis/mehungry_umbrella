@@ -177,5 +177,4 @@ defmodule MehungryWeb.IngredientComponent do
     </span>
     """
   end
-
 end

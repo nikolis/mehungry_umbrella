@@ -124,6 +124,7 @@ defmodule Mehungry.Food do
                 limit \\ 10
               ),
               to: IngredientQueries
+
   defdelegate search_recipe(query_string, language_name \\ nil), to: IngredientQueries
   defdelegate pagenate_query(query), to: IngredientQueries
   defdelegate count_search_results(query), to: IngredientQueries
@@ -132,6 +133,7 @@ defmodule Mehungry.Food do
   defdelegate maybe_filter_by_data_types(query, data_types), to: IngredientQueries
   defdelegate list_distinct_food_classes(), to: IngredientQueries
   defdelegate list_distinct_data_types(), to: IngredientQueries
+
   defdelegate search_ingredient_search(search_term, classes \\ [], owner_id \\ nil),
     to: IngredientQueries
 
@@ -188,7 +190,10 @@ defmodule Mehungry.Food do
   defdelegate count_numeric_named_measurement_units(), to: Measurements
   defdelegate list_numeric_named_measurement_units(limit \\ 50), to: Measurements
   defdelegate reconcile_measurement_unit(unit, resolved_name), to: Measurements
-  defdelegate start_measurement_unit_reconciliation_run(), to: Measurements, as: :start_reconciliation_run
+
+  defdelegate start_measurement_unit_reconciliation_run(),
+    to: Measurements,
+    as: :start_reconciliation_run
 
   # ── Categories ─────────────────────────────────────────────────────────
 

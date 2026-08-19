@@ -74,7 +74,10 @@ defmodule Mehungry.Food.MeasurementUnitReconciliationRuns do
   defp finalize(run_id) do
     case Repo.get(Run, run_id) do
       nil ->
-        Logger.debug("MeasurementUnitReconciliationRuns: run #{run_id} missing, skipping finalize")
+        Logger.debug(
+          "MeasurementUnitReconciliationRuns: run #{run_id} missing, skipping finalize"
+        )
+
         nil
 
       %Run{status: "processing"} = run ->

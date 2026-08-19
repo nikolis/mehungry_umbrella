@@ -59,8 +59,7 @@ defmodule MehungryWeb.LandingLive do
   defp recipes_with_nutrients_query(opts) do
     query =
       from(r in Mehungry.Food.Recipe,
-        where:
-          (is_nil(r.private) or not r.private) and fragment("? <> '{}'::jsonb", r.nutrients),
+        where: (is_nil(r.private) or not r.private) and fragment("? <> '{}'::jsonb", r.nutrients),
         order_by: fragment("RANDOM()"),
         limit: 3
       )
@@ -583,7 +582,8 @@ defmodule MehungryWeb.LandingLive do
                     </h3>
                     <p class="mt-1 text-xs text-parchment-dim">
                       <%= if recipe.servings do %>
-                        {recipe.servings} {gettext("servings")}<%= if recipe.cooking_time_lower_limit do %>
+                        {recipe.servings} {gettext("servings")}
+                        <%= if recipe.cooking_time_lower_limit do %>
                           &nbsp;· {recipe.cooking_time_lower_limit} {gettext("min")}
                         <% end %>
                       <% end %>
@@ -1008,7 +1008,9 @@ defmodule MehungryWeb.LandingLive do
                     </div>
                   </div>
                   <div class="rounded-xl border border-ink-panel2 bg-ink-panel p-4">
-                    <p class="mb-2 text-xs text-parchment-dim">{gettext("AI meal plans this month")}</p>
+                    <p class="mb-2 text-xs text-parchment-dim">
+                      {gettext("AI meal plans this month")}
+                    </p>
                     <div class="flex items-center gap-2">
                       <div class="h-2 flex-1 overflow-hidden rounded-full bg-ink-panel2">
                         <div class="h-full w-1/4 rounded-full bg-basil"></div>

@@ -202,7 +202,9 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
      )
      |> stream(
        :measurement_candidates,
-       Food.list_measurement_candidates(limit: @per_page, offset: 0), reset: true)
+       Food.list_measurement_candidates(limit: @per_page, offset: 0),
+       reset: true
+     )
      |> stream(:measurements, Food.list_recent_measurements(limit: @per_page), reset: true)}
   end
 

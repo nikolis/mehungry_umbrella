@@ -29,7 +29,12 @@ defmodule Mehungry.Food.NutrientMergerTest do
       atom_map = %{name: "Total Fat", amount: 5.0, children: [%{name: "Saturated Fat"}]}
 
       string_map = NM.to_string_keys(atom_map)
-      assert string_map == %{"name" => "Total Fat", "amount" => 5.0, "children" => [%{"name" => "Saturated Fat"}]}
+
+      assert string_map == %{
+               "name" => "Total Fat",
+               "amount" => 5.0,
+               "children" => [%{"name" => "Saturated Fat"}]
+             }
 
       back = NM.to_atom_keys(string_map)
       assert back[:name] == "Total Fat"

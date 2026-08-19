@@ -165,10 +165,16 @@ defmodule Mehungry.ObanWorkers.DailyRecipeGenerationWorker do
     cuisine = Bot.setup_cuisine(context.setup)
 
     discouraged_ids =
-      MapSet.union(MapSet.new(discouraged, & &1.id), RecipeGeneration.setup_avoid_ids(context.setup))
+      MapSet.union(
+        MapSet.new(discouraged, & &1.id),
+        RecipeGeneration.setup_avoid_ids(context.setup)
+      )
 
     description =
-      with_cuisine(cuisine, build_condition_description(config, context, meal_type, encouraged, discouraged))
+      with_cuisine(
+        cuisine,
+        build_condition_description(config, context, meal_type, encouraged, discouraged)
+      )
 
     Logger.info(
       "[DailyRecipeGenerationWorker] Generating #{meal_type} for #{target_date} (condition setup): #{description}"

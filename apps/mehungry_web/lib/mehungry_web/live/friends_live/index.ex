@@ -91,7 +91,10 @@ defmodule MehungryWeb.FriendsLive.Index do
   defp request_error_message(:user_not_found), do: "No user found with that email address."
   defp request_error_message(:self), do: "You can't send a friend request to yourself."
   defp request_error_message(:already_friends), do: "You are already friends with this user."
-  defp request_error_message(:already_requested), do: "You already have a pending request to this user."
+
+  defp request_error_message(:already_requested),
+    do: "You already have a pending request to this user."
+
   defp request_error_message(_), do: "Could not send request. Please try again."
 
   # ── View ───────────────────────────────────────────────────────────────────

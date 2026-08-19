@@ -294,8 +294,6 @@ defmodule Mehungry.FoodData.SpoonacularImporter do
   defp normalize_unit(""), do: "piece"
   defp normalize_unit(unit), do: unit |> String.trim() |> String.downcase()
 
-  defp strip_html(nil), do: ""
-
   defp strip_html(html) do
     html
     |> String.replace(~r/<[^>]+>/, "")

@@ -47,6 +47,10 @@
                     "name": "LOCAL_AI_API_TOKEN",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/local_ai_api_key-85FS2Q"
                 },
+                {
+                    "name": "METRICS_API_TOKEN",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/metrics_api_token-c9gkhq"
+                },
 
                 {
                     "name": "RELEASE_COOKIE",

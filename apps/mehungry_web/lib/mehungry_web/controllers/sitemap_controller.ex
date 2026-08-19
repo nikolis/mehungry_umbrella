@@ -70,7 +70,8 @@ defmodule MehungryWeb.SitemapController do
     Enum.map_join(locales, "\n", fn loc -> url_entry(alt_url(bare_path, loc), links, opts) end)
   end
 
-  defp alt_url(bare_path, locale), do: @base_url <> MehungryWeb.Locale.swap_path(bare_path, locale)
+  defp alt_url(bare_path, locale),
+    do: @base_url <> MehungryWeb.Locale.swap_path(bare_path, locale)
 
   defp url_entry(loc, alt_links, opts) do
     lastmod = if v = opts[:lastmod], do: "\n  <lastmod>#{v}</lastmod>", else: ""

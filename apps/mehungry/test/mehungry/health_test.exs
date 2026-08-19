@@ -471,7 +471,12 @@ defmodule Mehungry.HealthTest do
     test "list_conditions_for_presentation/1 localizes each listed condition" do
       {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones"})
       {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
-      {:ok, _} = Health.add_recommendation(kidney.id, oxalate.id, %{recommendation: "avoid", source: "guideline"})
+
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, oxalate.id, %{
+          recommendation: "avoid",
+          source: "guideline"
+        })
 
       {:ok, _} =
         %Mehungry.Health.ConditionTranslation{}
@@ -488,7 +493,12 @@ defmodule Mehungry.HealthTest do
     test "species_for_condition/3 finds a legacy \"Gr\" species translation via the el locale" do
       {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones"})
       {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
-      {:ok, _} = Health.add_recommendation(kidney.id, oxalate.id, %{recommendation: "avoid", source: "guideline"})
+
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, oxalate.id, %{
+          recommendation: "avoid",
+          source: "guideline"
+        })
 
       spinach = ingredient_fixture(%{name: "spinach"})
 
@@ -525,7 +535,12 @@ defmodule Mehungry.HealthTest do
     test "recommendations_for_condition/2 overlays the el compound name" do
       {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones"})
       {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
-      {:ok, _} = Health.add_recommendation(kidney.id, oxalate.id, %{recommendation: "avoid", source: "guideline"})
+
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, oxalate.id, %{
+          recommendation: "avoid",
+          source: "guideline"
+        })
 
       {:ok, _} =
         %Mehungry.Food.CompoundTranslation{}

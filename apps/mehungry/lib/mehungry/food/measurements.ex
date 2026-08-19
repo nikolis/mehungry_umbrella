@@ -34,8 +34,7 @@ defmodule Mehungry.Food.Measurements do
   # is a real unit iff it (case-insensitively) appears here. Used both to gate
   # unit *creation* in the USDA parser and to identify units to purge. Extend it
   # rather than loosening the check.
-  @real_unit_names MapSet.new(
-                     ~w(
+  @real_unit_names MapSet.new(~w(
                        g gram grams kg kilogram kilograms milligram milligrams mg
                        microgram micrograms mcg ng nanogram pg picogram
                        oz ounce ounces lb lbs pound pounds
@@ -53,8 +52,7 @@ defmodule Mehungry.Food.Measurements do
                        can cans container containers package packages packet packets
                        bottle bottles jar jars box boxes bag bags pouch pouches
                        carton cartons bowl bowls envelope envelopes
-                     ) ++ ["fl oz", "international unit", "specific gravity", "µg"]
-                   )
+                     ) ++ ["fl oz", "international unit", "specific gravity", "µg"])
 
   @doc """
   Whether `name` is a genuine, food-agnostic measurement unit (case-insensitive).

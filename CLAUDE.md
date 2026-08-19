@@ -150,7 +150,7 @@ Total concurrency is capped at **11 job slots** so background jobs fit within th
 
 Full-text (PMC) + measurement extraction is **no longer a server-side Oban pipeline** — it moved to the non-deployed `apps/mehungry_local_ai` service, which posts full text + review-gated candidates back over `/api/local_ai/*`. `/professional/science` shows read-only status; review stays at `/professional/compound-candidates`. See `docs/ai/measurement_extraction.md`.
 
-Cron: `InstagramTokenRefreshWorker` at `30 1 * * *`, `DailyRecipeGenerationWorker` at `0 2 * * *`, `TelemetryPrunerWorker` at `0 3 * * *`, `PipelineWatchdogWorker` every 10 min (resumes any science-pipeline run whose single-threaded chain broke — see `Mehungry.Science.PipelineWatchdog` + `docs/science/scientific_pipeline.md`).
+Cron: `InstagramTokenRefreshWorker` at `30 1 * * *`, `DailyRecipeGenerationWorker` at `0 2 * * *`, `PipelineWatchdogWorker` every 10 min (resumes any science-pipeline run whose single-threaded chain broke — see `Mehungry.Science.PipelineWatchdog` + `docs/science/scientific_pipeline.md`).
 
 ### Instagram Integration (`Mehungry.Social.Instagram`)
 
@@ -158,7 +158,9 @@ Core-app context for the Instagram Graph API: `Social.Instagram.Token` (token ma
 
 ### Observability
 
-Full operator's manual: **`docs/observability.md`** (architecture, metric reference, diagnostic playbooks, limitations). Summary: telemetry events fan out to live LiveDashboard metrics (`MehungryWeb.Telemetry`), a persistent snapshot store (`Mehungry.Telemetry.MetricsBuffer` → `telemetry_snapshots`, 5-min aggregates, 30-day retention), a DIY error tracker (`Mehungry.Telemetry.ErrorTracker` → `error_events`, fingerprint-deduped), and warning logs (`[SlowQuery]` ≥500ms, `[SlowRequest]` ≥2s, `[ProcessWatchdog]` mailbox ≥1000). Everything is viewed at `/dashboard` (admin-gated via `config :mehungry, :admin_email` + `MehungryWeb.Plugs.RequireAdmin`), including custom pages Metrics History and Errors. Error tracking is deliberately in-app (no Sentry) and dashboard-only (no alerting). **Oban Web** (job queues UI — view/cancel/retry background jobs) is mounted at `/oban`, admin-gated like `/dashboard`. Prod Oban diagnostics, the broken `remote`/`rpc` console (use `eval`), and the batch-translation backlog are in `oban_production_diagnostics.md`.
+Overview: **`docs/infrastructure/observability.md`**. The bespoke DIY-observability layer (persistent `telemetry_snapshots` via `MetricsBuffer`, DIY `ErrorTracker` → `error_events`, `query_time_profiles`, custom LiveDashboard pages, process watchdog, custom VM/pool gauges) was **removed** — this is now a clean, standard baseline to build fresh on.
+
+What remains is stock Phoenix telemetry, split by surface. **LiveDashboard** at `/dashboard` (admin-gated via `config :mehungry, :admin_email` + `MehungryWeb.Plugs.RequireAdmin`) renders `MehungryWeb.Telemetry.metrics/0` (standard Phoenix/Ecto/Oban/VM metrics) as live charts. The **Prometheus scrape** is owned by **PromEx** (`MehungryWeb.PromEx`, a `use PromEx` module in the supervision tree with the standard Beam/Application/Phoenix/PhoenixLiveView/Ecto/Oban plugins; Grafana upload + PromEx's own HTTP server disabled): `GET /metrics` is token-guarded by `MehungryWeb.Plugs.RequireMetricsToken` / `:metrics_api_token`, served by `MehungryWeb.MetricsController` via `PromEx.get_metrics/1` (metric names are `mehungry_web_prom_ex_*`-prefixed). **BeamScope** (`/beam_scope` dashboard + token-guarded `/beam_scope/metrics` scrape) and **Oban Web** (`/oban`, job queues UI) are also mounted, admin-gated like `/dashboard`. Prod Oban diagnostics, the broken `remote`/`rpc` console (use `eval`), and the batch-translation backlog are in `oban_production_diagnostics.md`.
 
 ### Web Layer (`apps/mehungry_web/lib/mehungry_web/`)
 
