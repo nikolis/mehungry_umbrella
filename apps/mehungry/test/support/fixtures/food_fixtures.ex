@@ -174,7 +174,9 @@ defmodule Mehungry.FoodFixtures do
 
     {:ok, recipe} =
       Enum.into(attrs, %{
-        title: "some title",
+        # Unique by default so a user can hold several fixture recipes — recipe
+        # titles are now unique per user (Recipes.validate_title_unique/1).
+        title: "some title #{System.unique_integer([:positive])}",
         user_id: user.id,
         author: "another author",
         cousine: "some cusine",

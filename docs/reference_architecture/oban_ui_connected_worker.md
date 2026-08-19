@@ -83,6 +83,71 @@ inside the DB connection pool with headroom for web/LiveView.
 > can neither starve nor be starved by unrelated background work. Size total
 > concurrency against the DB pool, not in isolation.
 
+### Batch the enqueue itself for large corpora
+
+The "row first, then job" shape above is written per-unit for clarity, but **fanning
+out a whole corpus one `Oban.insert` at a time is a load-bearing mistake at scale.**
+Two costs compound over N units:
+
+- **N × 2 DB round-trips** — a tracking-row upsert *and* a job insert per unit, all
+  sequential (the enqueue loop runs on one process inside `start_async`).
+- **N × `NOTIFY`** — Oban's `insert_trigger: true` fires a `NOTIFY` on **every**
+  `Oban.insert`. Those all funnel through Oban's **single** notifier connection. A
+  few-thousand-unit sweep in a tight loop can back that one connection up past the
+  producers'/plugins' 5 s `:listen`/`:leader?` timeout and **cascade the whole Oban
+  supervision tree down** — a real prod incident on 2026-08-19 (see
+  `oban_production_diagnostics.md` §12).
+
+So for a full-corpus fan-out, **batch both writes**:
+
+```elixir
+# 1. one INSERT ... ON CONFLICT for every tracking row, returning ids
+def upsert_pending_all(unit_ids) do
+  now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)   # match the schema's timestamp type
+  rows = Enum.map(unit_ids, &%{unit_id: &1, status: "pending", inserted_at: now, updated_at: now})
+
+  {_n, rows} =
+    Repo.insert_all(Tracking, rows,
+      on_conflict: {:replace, [:status, :updated_at]},
+      conflict_target: [:unit_id],
+      returning: [:id, :unit_id]
+    )
+  rows
+end
+
+# 2. one Oban.insert_all for every job (a single insert notification, not N)
+def enqueue_all(unit_ids) do
+  jobs = for %{id: id, unit_id: uid} <- upsert_pending_all(unit_ids),
+             do: new(%{tracking_id: id, unit_id: uid})
+
+  case Oban.insert_all(jobs) do
+    inserted when is_list(inserted) -> length(inserted)
+    _ -> 0
+  end
+end
+```
+
+Notes and trade-offs:
+
+- **Drop the per-row `pending` broadcast in the batch path.** It's only safe to drop
+  when the LiveView reflects the pending state another way — the canonical hashtag
+  case tracks **aggregate counts** refreshed on a flush timer, and `handle_async`
+  re-queries them once the enqueue returns, so N per-row "pending" pings would be
+  redundant. If your LiveView instead streams each row individually and needs the
+  pending row to appear before its first `processing` broadcast, either emit **one**
+  batch signal or re-list once after enqueue — don't restore the per-row loop.
+- **`Repo.insert_all` doesn't autogenerate timestamps and dumps against the schema's
+  declared type** — pass `inserted_at`/`updated_at` explicitly, as the *right* type
+  (`:naive_datetime` unless the schema says otherwise; a `DateTime` against a
+  `:naive_datetime` column raises `Ecto.ChangeError`).
+- **`Oban.insert_all` does not honour the worker's `unique` option** (only
+  `Oban.insert` does). Filter already-queued/already-done units out *before* the
+  batch (the `pending_or_failed` step below) rather than relying on Oban to dedupe.
+- **Notifier choice is the deeper fix.** Switching Oban to `Oban.Notifiers.PG`
+  (pub/sub over Erlang process groups, no DB socket) removes the NOTIFY-storm hazard
+  entirely; batching is still worth it for the round-trip savings. See
+  `oban_production_diagnostics.md` §12.
+
 ---
 
 ## 2) How progress is tracked & fault tolerance achieved
@@ -237,6 +302,11 @@ When you want this shape for a new feature, replicate these decisions:
 3. **Create the tracking row (`pending`) before enqueuing**; pass its id in the job args.
 4. **Idempotency at both layers**: DB `on_conflict` upsert + Oban `unique`. Filter out
    already-done work before fan-out.
+4b. **Batch the fan-out for large corpora**: one `Repo.insert_all` for the tracking
+   rows + one `Oban.insert_all` for the jobs, not a per-unit `Oban.insert` loop — the
+   loop's per-unit `NOTIFY` can wedge Oban's single notifier connection at scale (see
+   §"Batch the enqueue itself" and `oban_production_diagnostics.md` §12). Prefer
+   `Oban.Notifiers.PG` to remove that hazard at the root.
 5. **Do I/O behind a config seam** (`:seed_file_fetcher`-style) so the worker is testable
    without network; **presign/mint short-lived credentials inside the job**, not before
    it queues.

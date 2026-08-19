@@ -51,6 +51,48 @@ defmodule Mehungry.Food.HashtagReconciliations do
     reconciliation
   end
 
+  @doc """
+  Batch variant of `upsert_pending/1`: inserts (or resets to `pending`) tracking
+  rows for every id in `recipe_ids` in a single `INSERT ... ON CONFLICT`, and
+  returns the rows (with `:id` and `:recipe_id` loaded) so the caller can enqueue
+  one job per row carrying its id.
+
+  Unlike `upsert_pending/1` it deliberately does **not** broadcast per row: a
+  full sweep enqueues via `start_async`, whose completion refreshes the aggregate
+  counts once, and the per-recipe `processing`/terminal broadcasts then keep the
+  progress bar live. N redundant "pending" pings at the same coalescing flush
+  timer would buy nothing. Returns `[]` for an empty list.
+  """
+  def upsert_pending_all([]), do: []
+
+  def upsert_pending_all(recipe_ids) do
+    # `timestamps()` on this schema is :naive_datetime, which is what insert_all
+    # dumps against — a :utc_datetime here raises Ecto.ChangeError.
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    rows =
+      Enum.map(recipe_ids, fn recipe_id ->
+        %{
+          recipe_id: recipe_id,
+          status: "pending",
+          tags_added: nil,
+          error: nil,
+          completed_at: nil,
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    {_count, reconciliations} =
+      Repo.insert_all(HashtagReconciliation, rows,
+        on_conflict: {:replace, [:status, :tags_added, :error, :completed_at, :updated_at]},
+        conflict_target: [:recipe_id],
+        returning: [:id, :recipe_id]
+      )
+
+    reconciliations
+  end
+
   # Marks the row processing (durable audit trail) and emits only the lightweight
   # coalesce-friendly `{:hashtag_recon_processing, recipe_id}` signal.
   def mark_processing(id) do

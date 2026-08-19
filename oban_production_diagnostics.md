@@ -774,3 +774,108 @@ localhost only because the local queue drains instantly.
   to `ResourceTranslationWorker` so repeated clicks are idempotent, and/or move
   bulk translation off `ai_agents` onto its own queue so it can't starve recipe
   generation.
+
+---
+
+## 12. Notifier stall — the single Postgres LISTEN connection took the whole Oban tree down (2026-08-19)
+
+A **different** failure mode from §1–§4: not pool starvation, not slow queries.
+At **~15:21 UTC** on `mehungry_umbrella@172.31.15.65`, the Oban supervision tree
+crashed wholesale. The producer for `imports`, `Oban.Met.Reporter`,
+`Oban.Plugins.Pruner`, and `Oban.Plugins.Cron` all terminated within the same
+second, each with the identical shape:
+
+```
+** (stop) exited in: :gen_statem.call(#PID<0.4040.0>, {{:listen, #PID<…>, [:insert, :signal]}, …}, 5000)
+    ** (EXIT) time out
+```
+
+### Root cause: one connection, many dependents
+
+Every one of those crashes is a `:gen_statem.call` **to the same PID
+`#PID<0.4040.0>`**, timing out at 5000 ms. That PID is the default
+**`Oban.Notifiers.Postgres`** notifier — a *single* `Postgrex.SimpleConnection`
+holding one `LISTEN` connection, through which **every** producer and plugin
+registers its subscriptions (`{:listen, [:insert, :signal]}`) and checks
+leadership (`:leader?` → `{:listen, [:leader]}`). It is **not** one of the
+pooled connections (§9) — it is its own dedicated socket, and it is a
+single point of failure:
+
+- The producer/plugin calls into it have a **5 s** timeout.
+- If that one process is unresponsive for >5 s, **all** its dependents time out
+  and crash **together**, then the supervisor restarts them, they re-`:listen`
+  against a still-broken connection, and crash again — a restart storm until the
+  connection recovers.
+
+The tight single-second cluster of crashes (not a slow degradation) points to a
+**transient** trigger, of which three are plausible and none require user load:
+
+1. **A DB-connectivity blip** — RDS failover/reboot/maintenance, or a NAT/idle
+   reaper silently killing the long-lived LISTEN socket. A *half-open* socket is
+   worst: the notifier is stuck waiting on a dead connection while it reconnects
+   with backoff.
+2. **The DB itself paused** — on the burstable `db.t4g.micro` (§9.4),
+   CPU-credit / EBS-burst-balance exhaustion, autovacuum, a checkpoint stall, or
+   one long lock-holder makes even the notifier's trivial calls slow.
+3. **A self-inflicted `NOTIFY` burst** — `insert_trigger: true` fires a `NOTIFY`
+   through this one connection on **every job insert**. A bulk fan-out that
+   enqueues jobs one-at-a-time in a tight loop (see §12.2) pushes thousands of
+   NOTIFYs through the single socket and can back it up past the 5 s call
+   timeout.
+
+### 12.1 Fix: switch to the process-group notifier
+
+`config/config.exs` now sets **`notifier: Oban.Notifiers.PG`**. Pub/sub then runs
+over Erlang process groups (`:pg`) in-VM — there is **no dedicated DB socket** to
+freeze, nothing to reconnect, and `NOTIFY` bursts no longer flow through a single
+connection. This removes the entire failure class above. It also frees one DB
+backend back to the pool, marginally easing §1.
+
+- **Leadership is unaffected** — it uses `Oban.Peers.Database` (on the pool), not
+  the notifier.
+- **PG's one limitation** is that notifications are **cluster-local**, not
+  cross-node. This deployment is effectively single-node
+  (`swarm static_quorum_size: 1`, one ECS task per §9.5), so it's a non-issue.
+  Even multi-task, the only cost is slight dispatch latency — the 1 s
+  `stage_interval` poll still picks up jobs — not correctness. **If you ever run
+  multiple *clustered* nodes and want cross-node insert signalling, revisit this**
+  (either cluster the BEAM so `:pg` spans nodes, or weigh the Postgres notifier's
+  trade-offs again).
+
+### 12.2 Companion fix: batch the hashtag-reconciliation fan-out
+
+The most likely *self-inflicted* trigger (#3) was the "Reconcile hashtags" sweep
+at `/professional/recipes`. It fanned out **one recipe at a time**:
+`enqueue_all_reconciliations/0` looped over every pending/failed recipe id and
+called `HashtagReconciliationWorker.enqueue/1` per recipe — each doing a tracking
+-row upsert **plus a separate `Oban.insert`**, i.e. a `NOTIFY` per recipe. A
+full-corpus resweep of thousands of recipes = thousands of NOTIFYs through the
+one notifier socket in a tight loop.
+
+Now batched (`HashtagReconciliationWorker.enqueue_all/1`):
+
+- `HashtagReconciliations.upsert_pending_all/1` upserts **all** tracking rows in a
+  single `INSERT … ON CONFLICT` (`returning: [:id, :recipe_id]`), and
+- one **`Oban.insert_all/1`** inserts every job — **one** insert notification, not
+  N.
+
+The LiveView is unchanged and unaffected: it only tracks **aggregate counts**
+(re-queried on a coalesced flush timer), ignoring the per-row broadcast payload,
+so dropping the per-row "pending" broadcasts costs nothing — `handle_async` still
+refreshes counts once the batched enqueue returns. This is the batch-enqueue rule
+now folded into the reference architecture (`docs/reference_architecture/oban_ui_connected_worker.md`).
+
+> **Gotcha for the batch upsert:** `Repo.insert_all` dumps against the schema's
+> declared timestamp type. `hashtag_reconciliations` uses the default
+> `:naive_datetime`, so the `inserted_at`/`updated_at` you pass must be
+> `NaiveDateTime` — a `DateTime` raises `Ecto.ChangeError` at insert time.
+
+### 12.3 Still worth checking (not visible from the app)
+
+The notifier switch is **symptom-proof** — it stops this cascade regardless of
+which trigger fired. But if the real trigger was #1/#2 (a DB blip), the switch
+only *masks* an undersized DB. For the 15:21 event, check the RDS **CPU-credit /
+EBS-burst-balance** graphs and the **events log** for that minute (failover /
+reboot). On a `db.t4g.micro` (§9.4) credit exhaustion is a live possibility.
+
+This is a **config change → needs a deploy** to take effect.

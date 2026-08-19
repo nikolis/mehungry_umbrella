@@ -67,4 +67,31 @@ defmodule Mehungry.ObanWorkers.HashtagReconciliationWorker do
     |> new()
     |> Oban.insert()
   end
+
+  @doc """
+  Batch variant of `enqueue/1` for a full-corpus sweep. Upserts every tracking
+  row to `pending` in one statement, then inserts all jobs in a single
+  `Oban.insert_all`. Returns the number of jobs inserted.
+
+  This replaces a per-recipe `enqueue/1` loop that issued two DB round-trips and,
+  with Oban's `insert_trigger`, a `NOTIFY` **per recipe** through the single
+  Postgres notifier connection. A full resweep of thousands of recipes could back
+  that connection up past its 5s `:listen`/`:leader?` call timeout and cascade the
+  whole Oban supervision tree down (see `oban_production_diagnostics.md` §12).
+  `insert_all` collapses the fan-out to two statements and a single insert
+  notification. The `unique` guard still de-dupes against any jobs already queued.
+  """
+  def enqueue_all(recipe_ids) do
+    reconciliations = HashtagReconciliations.upsert_pending_all(recipe_ids)
+
+    jobs =
+      Enum.map(reconciliations, fn %{id: id, recipe_id: recipe_id} ->
+        new(%{reconciliation_id: id, recipe_id: recipe_id})
+      end)
+
+    case Oban.insert_all(jobs) do
+      inserted when is_list(inserted) -> length(inserted)
+      _ -> 0
+    end
+  end
 end
