@@ -13,11 +13,16 @@ defmodule Mehungry.Food.DietClassifierTest do
     ensure_category("Beef")
     ensure_category("Dairy")
 
-    vegan_excluded = Food.diet_category_ids(:vegan)
+    # A meat category is excluded by *both* diets, so it lives in the
+    # vegetarian-excluded set; Dairy is the vegan-only extra (vegan minus
+    # vegetarian). Picking `animal_category_id` from the vegetarian set (rather
+    # than `List.first(vegan_excluded)`, which can be Dairy) guarantees a true
+    # meat category regardless of which categories happen to be seeded.
+    meat_only = Food.diet_category_ids(:vegetarian)
     dairy_only = Food.diet_category_ids(:vegan) -- Food.diet_category_ids(:vegetarian)
 
     %{
-      animal_category_id: List.first(vegan_excluded),
+      animal_category_id: List.first(meat_only),
       dairy_category_id: List.first(dairy_only)
     }
   end
