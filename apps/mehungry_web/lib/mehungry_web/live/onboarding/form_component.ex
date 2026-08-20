@@ -306,6 +306,8 @@ defmodule MehungryWeb.Onboarding.FormComponent do
       %{
         onboarding_level: 1,
         language_preference: socket.assigns.selected_language,
+        diet: socket.assigns.base_diet,
+        lactose_intolerant: socket.assigns.lactose_intolerant,
         user_category_rules: category_rules
       }
       |> maybe_put_calories(socket.assigns.daily_calorie_target)
