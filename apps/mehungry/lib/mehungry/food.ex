@@ -30,6 +30,7 @@ defmodule Mehungry.Food do
     Enrichment,
     EvidenceAggregation,
     FoundementalFoods,
+    GlycemicIndex,
     IngredientQueries,
     Ingredients,
     Localization,
@@ -363,6 +364,51 @@ defmodule Mehungry.Food do
   defdelegate purge_blocklisted(), to: CompoundCandidates
   defdelegate count_relationships(), to: SpeciesCompounds
   defdelegate list_relationships_page(opts \\ []), to: SpeciesCompounds
+
+  # ── Glycemic Index (path-B: re-derived from primary literature) ─────────────
+  # Distinct `*_glycemic_*` names so they don't collide with the compound
+  # candidate pipeline's same-shaped `promote_candidate`/`reject_candidate`/etc.
+
+  defdelegate record_extracted_gi(study_id, findings, species_ids),
+    to: GlycemicIndex
+
+  defdelegate upsert_glycemic_candidate(attrs), to: GlycemicIndex, as: :upsert_candidate
+
+  defdelegate promote_glycemic_candidate(candidate_or_id),
+    to: GlycemicIndex,
+    as: :promote_candidate
+
+  defdelegate promote_glycemic_candidate(id, species_id),
+    to: GlycemicIndex,
+    as: :promote_candidate
+
+  defdelegate reject_glycemic_candidate(candidate_or_id), to: GlycemicIndex, as: :reject_candidate
+
+  defdelegate unpromote_glycemic_candidate(candidate_or_id),
+    to: GlycemicIndex,
+    as: :unpromote_candidate
+
+  defdelegate list_pending_glycemic_candidates(opts \\ []),
+    to: GlycemicIndex,
+    as: :list_pending_candidates
+
+  defdelegate list_promoted_glycemic_candidates(opts \\ []),
+    to: GlycemicIndex,
+    as: :list_promoted_candidates
+
+  defdelegate get_glycemic_candidate!(id), to: GlycemicIndex, as: :get_candidate!
+
+  defdelegate count_pending_glycemic_candidates(),
+    to: GlycemicIndex,
+    as: :count_pending_candidates
+
+  defdelegate count_promoted_glycemic_candidates(),
+    to: GlycemicIndex,
+    as: :count_promoted_candidates
+
+  defdelegate rederived_glycemic_by_species(opts \\ []),
+    to: GlycemicIndex,
+    as: :rederived_by_species
 
   # ── Foundemental foods ─────────────────────────────────────────────────────
 

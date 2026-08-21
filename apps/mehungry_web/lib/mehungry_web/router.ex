@@ -84,6 +84,7 @@ defmodule MehungryWeb.Router do
     get "/pending", PendingController, :index
     post "/full_text", FullTextController, :create
     post "/candidates", CandidatesController, :create
+    post "/gi_candidates", GiCandidatesController, :create
   end
 
   scope "/auth", MehungryWeb do
@@ -125,6 +126,8 @@ defmodule MehungryWeb.Router do
       live "/literature", ProfessionalLive.LiteratureRuns, :index
 
       live "/compound-candidates", ProfessionalLive.CompoundCandidates, :index
+
+      live "/glycemic-index", ProfessionalLive.GlycemicIndex, :index
 
       live "/health", ProfessionalLive.HealthConditions, :index
 

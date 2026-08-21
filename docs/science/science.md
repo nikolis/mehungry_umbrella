@@ -100,6 +100,7 @@ The invariants that keep the subsystem legible (elaborated in
 - [`compound_candidates.md`](compound_candidates.md) — the curation step that promotes evidence to facts.
 - [`health_recommendations.md`](health_recommendations.md) — the advice layer (conditions ↔ compounds).
 - [`pubtator_relations_recommendations.md`](pubtator_relations_recommendations.md) — literature relations → review-gated recommendations.
+- [`glycemic_index.md`](glycemic_index.md) — Glycemic Index re-derived from primary literature (path B; the 2021 International Tables aren't commercially licensable), fanned over species, review-gated. Licensing/provenance rationale: [`glycemic_index_licensing.md`](glycemic_index_licensing.md).
 
 > Adjacent but not "science": the local AI QA model that does full-text measurement
 > extraction is documented with the AI subsystem —

@@ -60,6 +60,12 @@ unset), pipeline `:local_ai_api`, `scope "/api/local_ai"`:
   + `Literature.record_pmc_attempt/1` (always).
 - `POST /candidates`→ `CandidatesController` — fan out over `Literature.species_ids_for_study/1`
   → `Food.upsert_measurement_candidate/1` (idempotent).
+- `POST /gi_candidates`→ `GiCandidatesController` — the **Glycemic Index** sibling
+  (path B): fans GI findings over the same `species_ids_for_study/1` into
+  `Food.record_extracted_gi/3` as review-gated `GlycemicIndexCandidate`s. `/pending`
+  carries an `extract_gi` flag (`Literature.gi_discovered?/1`) so `mix local_ai.extract`
+  runs `Extractor.gi_findings/1` over the **same** full text in one pass. See
+  `docs/science/glycemic_index_licensing.md`.
 
 Review is unchanged: `/professional/compound-candidates` → **Accept** materializes a
 `CompoundMeasurement` via `Food.record_measurement/1` against a representative curated

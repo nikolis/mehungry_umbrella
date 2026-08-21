@@ -43,10 +43,11 @@ defmodule Mix.Tasks.LocalAi.Extract do
 
     Mix.shell().info("local_ai.extract: processing up to #{limit} studies (QA available? #{MehungryLocalAi.QA.available?()})")
 
-    totals = loop(limit, offset, %{studies: 0, full_texts: 0, candidates: 0})
+    totals = loop(limit, offset, %{studies: 0, full_texts: 0, candidates: 0, gi_candidates: 0})
 
     Mix.shell().info(
-      "done: processed #{totals.studies} studies, stored #{totals.full_texts} full texts, posted #{totals.candidates} candidates"
+      "done: processed #{totals.studies} studies, stored #{totals.full_texts} full texts, " <>
+        "posted #{totals.candidates} measurement + #{totals.gi_candidates} GI candidates"
     )
   end
 
@@ -69,13 +70,15 @@ defmodule Mix.Tasks.LocalAi.Extract do
     end
   end
 
-  defp process_study(%{study_id: study_id, pmid: pmid, compounds: compounds}, totals) do
+  defp process_study(%{study_id: study_id, pmid: pmid, compounds: compounds} = study, totals) do
     case PMC.fetch(pmid) do
       {:ok, result} ->
         Client.post_full_text(Map.put(result, :study_id, study_id))
         totals = bump(totals, :studies)
         totals = if result.outcome == "open_access", do: bump(totals, :full_texts), else: totals
-        extract_and_post(result, study_id, compounds, totals)
+
+        totals = extract_and_post(result, study_id, compounds, totals)
+        gi_extract_and_post(result, study_id, study[:extract_gi] == true, totals)
 
       {:error, reason} ->
         Mix.shell().error("study #{study_id} (pmid #{pmid}) fetch failed: #{inspect(reason)} — skipping")
@@ -100,6 +103,25 @@ defmodule Mix.Tasks.LocalAi.Extract do
   end
 
   defp extract_and_post(_result, _study_id, _compounds, totals), do: totals
+
+  # GI extraction over the same full text, only for GI-discovered studies.
+  defp gi_extract_and_post(%{outcome: "open_access", body: body}, study_id, true, totals)
+       when is_binary(body) do
+    candidates =
+      body
+      |> Extractor.gi_findings()
+      |> Enum.map(&Map.put(&1, :study_id, study_id))
+
+    case Client.post_gi_candidates(candidates) do
+      {:ok, %{"written" => n}} -> bump(totals, :gi_candidates, n)
+      {:ok, _} -> bump(totals, :gi_candidates, length(candidates))
+      {:error, reason} ->
+        Mix.shell().error("study #{study_id} GI candidate post failed: #{inspect(reason)}")
+        totals
+    end
+  end
+
+  defp gi_extract_and_post(_result, _study_id, _extract_gi, totals), do: totals
 
   defp bump(totals, key, by \\ 1), do: Map.update!(totals, key, &(&1 + by))
 end

@@ -128,14 +128,14 @@ defmodule Mehungry.Literature.EntrezTest do
 
     assert {:ok, _} = Literature.import_species(species.id)
 
-    # One compound term + five generic keywords all return PMID 11111 → one study,
-    # but a StudyIngredient row per distinct term.
+    # One compound term + five generic keywords + one "glycemic index" term all return
+    # PMID 11111 → one study, but a StudyIngredient row per distinct term.
     assert Repo.aggregate(from(s in ScientificStudy, where: s.pmid == 11111), :count) == 1
 
     assert Repo.aggregate(
              from(l in StudyIngredient, where: l.ingredient_id == ^ingredient.id),
              :count
-           ) == 6
+           ) == 7
   end
 
   test "a generic keyword term links the ingredient but not a compound" do
