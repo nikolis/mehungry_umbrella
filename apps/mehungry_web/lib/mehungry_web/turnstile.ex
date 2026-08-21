@@ -14,7 +14,7 @@ defmodule MehungryWeb.Turnstile do
   @verify_url "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 
   @doc "The public site key for the widget, or nil when unconfigured."
-  def site_key, do: Application.get_env(:mehungry, :turnstile_site_key)
+  def site_key, do: normalize_key(Application.get_env(:mehungry, :turnstile_site_key))
 
   @doc "Whether Turnstile is enabled (a secret key is configured)."
   def enabled?, do: is_binary(secret_key()) and secret_key() != ""
@@ -57,5 +57,12 @@ defmodule MehungryWeb.Turnstile do
   defp maybe_put_remote_ip(form, nil), do: form
   defp maybe_put_remote_ip(form, ip), do: form ++ [remoteip: ip]
 
-  defp secret_key, do: Application.get_env(:mehungry, :turnstile_secret_key)
+  defp secret_key, do: normalize_key(Application.get_env(:mehungry, :turnstile_secret_key))
+
+  # Env vars are easy to paste with stray surrounding whitespace, and a leading
+  # space in the site key makes Cloudflare reject the widget outright ("Invalid
+  # input for parameter sitekey"), breaking every signup. Trim so copy-paste
+  # whitespace can't take down verification.
+  defp normalize_key(value) when is_binary(value), do: String.trim(value)
+  defp normalize_key(value), do: value
 end
