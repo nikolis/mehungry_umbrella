@@ -1,3 +1,0 @@
-<main id="main" style="min-height: 93vh;">
-	<%= @inner_content %>
-</main>

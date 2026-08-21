@@ -35,7 +35,19 @@ defmodule MehungryWeb.PromEx do
       # LiveView mount/handle_event/handle_params durations.
       Plugins.PhoenixLiveView,
       # Ecto query total/queue/decode times for the core repo.
-      {Plugins.Ecto, otp_app: :mehungry, repos: [Mehungry.Repo]},
+      #
+      # `otp_app: :mehungry` is required so the plugin can resolve the repo's
+      # config (it lives under the :mehungry app, not :mehungry_web). But
+      # `otp_app` ALSO drives the emitted metric-name prefix, which would give
+      # `mehungry_prom_ex_ecto_*` — whereas the bundled Grafana dashboard is
+      # rendered from THIS module's otp_app (:mehungry_web) and queries
+      # `mehungry_web_prom_ex_ecto_*`. Override the metric prefix so the emitted
+      # names line up with the dashboard (and every other plugin here); without
+      # this the Ecto dashboard shows no data.
+      {Plugins.Ecto,
+       otp_app: :mehungry,
+       repos: [Mehungry.Repo],
+       metric_prefix: PromEx.metric_prefix(:mehungry_web, :ecto)},
       # Oban job durations, queue times, and exception counts (default instance).
       {Plugins.Oban, oban_supervisors: [Oban]},
       # AI agent reliability + Anthropic API cost (custom — see AiPlugin).
