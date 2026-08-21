@@ -1,79 +1,75 @@
 <div
-  class="min-h-screen bg-slate-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
+  class="min-h-screen bg-ink flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
   style="min-height: 95vh;"
 >
-  <div class="max-w-md w-full space-y-8">
-    <div>
-      <img src="/images/logo2.svg" width="55px;" style="margin-left: auto; margin-right: auto;" />
+  <div class="max-w-md w-full space-y-6 bg-ink-panel border border-ink-panel2 rounded-2xl p-8">
+    <div class="w-fit h-fit m-auto">
+      <img style="width: 48px;" src="/images/logo2.svg" />
     </div>
-    <div class="text-center font-bold text-3xl">
-      Reset password
-      <p class="quote">Choose a new password for your account</p>
+    <div class="text-center">
+      <h1 class="font-display font-medium text-2xl text-parchment">Reset password</h1>
+      <p class="text-parchment-dim text-sm mt-1">Choose a new password for your account</p>
     </div>
 
     <.form
       :let={f}
       for={@changeset}
-      class="login_form"
+      class="space-y-4"
       action={Routes.user_reset_password_path(@conn, :update, @token)}
     >
       <%= if @changeset.action do %>
-        <div class="alert alert-danger">
+        <div class="rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm px-3 py-2">
           <p>Oops, something went wrong! Please check the errors below.</p>
         </div>
       <% end %>
 
-      <div class="input_group_container">
-        {label(f, :password, "New password")}
-        {password_input(f, :password, required: true, placeholder: "new password")}
+      <div>
+        {label(f, :password, "New password", class: "block text-sm text-parchment-dim mb-1")}
+        {password_input(f, :password,
+          required: true,
+          placeholder: "new password",
+          class:
+            "w-full rounded-lg bg-ink-panel2 border border-ink-panel2 text-parchment px-3 py-2.5 focus:border-paprika focus:outline-none"
+        )}
         {error_tag(f, :password)}
       </div>
 
-      <div class="input_group_container">
-        {label(f, :password_confirmation, "Confirm new password")}
+      <div>
+        {label(f, :password_confirmation, "Confirm new password",
+          class: "block text-sm text-parchment-dim mb-1"
+        )}
         {password_input(f, :password_confirmation,
           required: true,
-          placeholder: "confirm password"
+          placeholder: "confirm password",
+          class:
+            "w-full rounded-lg bg-ink-panel2 border border-ink-panel2 text-parchment px-3 py-2.5 focus:border-paprika focus:outline-none"
         )}
         {error_tag(f, :password_confirmation)}
       </div>
 
-      <div class="login_submit_button">
+      <div class="space-y-3 pt-2">
         {submit("Reset password",
-          style:
-            "color: white; border: 1px solid #77b255; height: 3rem; border-radius: 990px; font-size: calc(0.8rem + 0.35vw );",
-          class: "link_button"
+          class:
+            "w-full bg-paprika hover:bg-paprika-soft text-ink font-bold py-2.5 rounded-lg transition"
         )}
-        <span style="text-align: center"> OR </span>
+
+        <div class="flex items-center gap-3 text-parchment-dim text-xs">
+          <div class="flex-1 h-px bg-ink-panel2"></div>
+          OR
+          <div class="flex-1 h-px bg-ink-panel2"></div>
+        </div>
+
         <a
-          class="flex items-center rounded-full border-solid border-2"
-          style="height: 3rem; border-color: var(--clr-complementary-middle)"
           href={Routes.user_session_path(@conn, :new)}
+          class="flex items-center justify-center w-full py-2.5 rounded-lg border border-ink-panel2 text-parchment hover:border-parchment-dim transition text-sm font-medium"
         >
-          <div
-            class="w-full p-2 flex items-center gap-1 font-medium"
-            style="font-size: calc(0.7rem + 0.5vw );"
-          >
-            <img style="width: 40px;" src="/images/logo2.svg" />
-            <span class="w-full text-center" style="color: var(--clr-complementary-middle);">
-              Back to Login
-            </span>
-          </div>
+          Back to Login
         </a>
         <a
-          class="flex items-center rounded-full border-solid border-2"
-          style="height: 3rem; border-color: var(--clr-complementary-middle)"
           href={Routes.user_registration_path(@conn, :new)}
+          class="flex items-center justify-center w-full py-2.5 rounded-lg border border-ink-panel2 text-parchment hover:border-parchment-dim transition text-sm font-medium"
         >
-          <div
-            class="w-full p-2 flex items-center gap-1 font-medium"
-            style="font-size: calc(0.7rem + 0.5vw );"
-          >
-            <img style="width: 40px;" src="/images/logo2.svg" />
-            <span class="w-full text-center" style="color: var(--clr-complementary-middle);">
-              Register
-            </span>
-          </div>
+          Register
         </a>
       </div>
     </.form>
