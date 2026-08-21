@@ -486,10 +486,9 @@ defmodule MehungryWeb.BrowserLiveTest do
   describe "diet mode" do
     setup [:register_and_log_in_user]
 
-    # Ensures the excluded vocabulary exists (env is seeded with the USDA animal
-    # categories) and adds a UserCategoryRule for exactly the ids
-    # Food.diet_category_ids(:vegan) resolves, so Accounts.diet_mode/1 → :vegan.
-    # Returns those excluded category ids.
+    # Sets the profile's `diet` to "vegan" (the source of truth Accounts.diet_mode/1
+    # now reads) and seeds the excluded-category vocabulary + matching
+    # UserCategoryRules so meat recipes can be categorized. Returns the excluded ids.
     defp make_user_vegan(user) do
       frt =
         Mehungry.Repo.insert!(%Mehungry.Food.FoodRestrictionType{title: "avoid", alias: "avoid"})
@@ -507,6 +506,9 @@ defmodule MehungryWeb.BrowserLiveTest do
           food_restriction_type_id: frt.id
         })
       end
+
+      user_profile = Accounts.get_user_profile_by_user_id(user.id)
+      {:ok, _} = Accounts.update_user_profile(user_profile, %{diet: "vegan"})
 
       vegan_ids
     end

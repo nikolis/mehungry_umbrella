@@ -811,6 +811,19 @@ defmodule Mehungry.Literature do
     %{processed: processed, total: total}
   end
 
+  @doc """
+  Was this study discovered by the path-B Glycemic Index crawl term
+  (`scientific_name × "glycemic index"`)? Signals the local-AI service to also run GI
+  extraction over its full text. See `docs/science/glycemic_index_licensing.md`.
+  """
+  def gi_discovered?(study_id) do
+    Repo.exists?(
+      from(l in StudyIngredient,
+        where: l.study_id == ^study_id and ilike(l.search_term, "%glycemic index")
+      )
+    )
+  end
+
   @doc "Distinct `FoundementalFoodSpecies` ids a study is linked to (via its ingredients)."
   def species_ids_for_study(study_id) do
     Repo.all(

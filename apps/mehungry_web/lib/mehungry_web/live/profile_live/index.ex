@@ -280,6 +280,10 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> put_flash(:info, "Upadated successfully")}
   end
 
+  def handle_info({MehungryWeb.ProfileLive.Form, {:error, message}}, socket) do
+    {:noreply, put_flash(socket, :error, message)}
+  end
+
   def get_active(state, param) do
     if state == param do
       " bg-ink-panel text-paprika border-b-2 border-paprika "

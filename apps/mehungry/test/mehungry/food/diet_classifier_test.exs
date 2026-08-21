@@ -65,6 +65,20 @@ defmodule Mehungry.Food.DietClassifierTest do
              ["vegetarian"]
   end
 
+  test "every category a diet keyword matches is excluded, not just the first" do
+    # "Lamb" substring-matches several seeded meat categories; all are meat, so a
+    # recipe using an ingredient from any of them must not be tagged vegan/veg.
+    ensure_category("Lamb, Veal, and Game Products")
+    ensure_category("Lamb, goat, game")
+
+    for name <- ["Lamb, Veal, and Game Products", "Lamb, goat, game"] do
+      cid = Food.get_category_by_name(name).id
+
+      assert DietClassifier.classify(recipe_with_categories([plant_category_id(), cid])) == [],
+             "#{name} should count as meat"
+    end
+  end
+
   test "an ingredient with no category is not classified (conservative)" do
     recipe = recipe_with_categories([plant_category_id()])
     recipe = %{recipe | recipe_ingredients: recipe.recipe_ingredients ++ [%{ingredient: %{category_id: nil}}]}

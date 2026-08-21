@@ -2,8 +2,6 @@ defmodule MehungryWeb.ProfileLive.Form do
   use MehungryWeb, :live_component
   import MehungryWeb.CoreComponents
 
-  alias MehungryWeb.ProfileLive.FormCategoryComponent
-
   alias Mehungry.Accounts
   alias Mehungry.Food
   alias Mehungry.Health
@@ -37,18 +35,16 @@ defmodule MehungryWeb.ProfileLive.Form do
 
         <div class="mt-10 mb-4">
           <h3 class="text-center text-parchment font-display text-xl font-medium">
-            Dietary Restrictions
+            Diet
           </h3>
           <p class="text-center text-parchment-dim text-sm mt-1">
-            Foods to avoid, and how strongly you feel about them.
+            The diet you follow. Filters your Home and Browse feeds and tunes recipe suggestions.
           </p>
         </div>
 
         <div class="bg-ink-panel2 rounded-lg p-4 mb-4">
-          <p class="text-parchment-dim text-xs mb-3">
-            Quick start — pick a diet and apply it to generate your restrictions.
-          </p>
-          <div class="flex flex-wrap gap-2 mb-3">
+          <input type="hidden" name="user_profile[diet]" value={@base_diet} />
+          <div class="flex flex-wrap gap-2 mb-4">
             <button
               :for={{value, label} <- diet_options()}
               type="button"
@@ -57,52 +53,23 @@ defmodule MehungryWeb.ProfileLive.Form do
               phx-value-diet={value}
               class={chip_class(@base_diet == value)}
             >
-              {label}
+              {if @base_diet == value, do: "✓ ", else: ""}{label}
             </button>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              phx-target={@myself}
-              phx-click="toggle_flag"
-              phx-value-flag="lactose_intolerant"
-              class={chip_class(@lactose_intolerant)}
-            >
-              {if @lactose_intolerant, do: "✓ ", else: ""}Lactose intolerant
-            </button>
-            <div class="flex-1"></div>
-            <button
-              type="button"
-              phx-target={@myself}
-              phx-click="apply_diet_preset"
-              class="text-sm text-paprika-soft hover:text-paprika transition font-semibold"
-            >
-              Apply preset →
-            </button>
-          </div>
-        </div>
 
-        <div class="flex flex-col gap-2.5">
-          <.inputs_for :let={f_user_category_rule} field={@form[:user_category_rules]}>
-            <FormCategoryComponent.render
-              category_ids={@category_ids}
-              categories={@categories}
-              food_restrictions={@food_restrictions}
-              food_restriction_ids={@food_restriction_ids}
-              f={f_user_category_rule}
-              parent={@myself}
-            />
-          </.inputs_for>
-        </div>
-
-        <div class="flex justify-center mt-4">
+          <input
+            type="hidden"
+            name="user_profile[lactose_intolerant]"
+            value={to_string(@lactose_intolerant)}
+          />
           <button
             type="button"
             phx-target={@myself}
-            phx-click="add_category_rule"
-            class="flex items-center gap-1.5 text-sm text-paprika-soft hover:text-paprika transition font-semibold"
+            phx-click="toggle_flag"
+            phx-value-flag="lactose_intolerant"
+            class={chip_class(@lactose_intolerant)}
           >
-            <.icon name="hero-plus-circle" class="w-5 h-5" /> Add a rule
+            {if @lactose_intolerant, do: "✓ ", else: ""}Also lactose intolerant
           </button>
         </div>
 
@@ -189,8 +156,8 @@ defmodule MehungryWeb.ProfileLive.Form do
      |> assign(assigns)
      |> assign(:conditions_by_category, conditions_by_category)
      |> assign_new(:selected_condition_ids, fn -> selected_condition_ids end)
-     |> assign_new(:base_diet, fn -> "omnivore" end)
-     |> assign_new(:lactose_intolerant, fn -> false end)
+     |> assign_new(:base_diet, fn -> user_profile.diet || "omnivore" end)
+     |> assign_new(:lactose_intolerant, fn -> user_profile.lactose_intolerant || false end)
      |> assign_form(changeset)}
   end
 
@@ -205,7 +172,17 @@ defmodule MehungryWeb.ProfileLive.Form do
   end
 
   def handle_event("save", %{"user_profile" => user_profile_params}, socket) do
-    save_user_profile(socket, socket.assigns.action, user_profile_params)
+    # The diet chips are the single source of truth for dietary-restriction rules:
+    # regenerate the category rules from the selected diet on every save so the
+    # persisted `diet`, the rules that feed recipe grading, and the feed filter all
+    # stay in sync.
+    params =
+      user_profile_params
+      |> Map.put("diet", socket.assigns.base_diet)
+      |> Map.put("lactose_intolerant", socket.assigns.lactose_intolerant)
+      |> Map.put("user_category_rules", diet_category_rules(socket))
+
+    save_user_profile(socket, socket.assigns.action, params)
   end
 
   def handle_event("set_base_diet", %{"diet" => diet}, socket)
@@ -215,31 +192,6 @@ defmodule MehungryWeb.ProfileLive.Form do
 
   def handle_event("toggle_flag", %{"flag" => "lactose_intolerant"}, socket) do
     {:noreply, assign(socket, :lactose_intolerant, !socket.assigns.lactose_intolerant)}
-  end
-
-  def handle_event("apply_diet_preset", _params, socket) do
-    restriction = absolutely_not(socket.assigns.food_restrictions)
-    flags = if socket.assigns.lactose_intolerant, do: [:lactose_intolerant], else: []
-    user_id = socket.assigns.current_user.id
-
-    rules =
-      if restriction do
-        Food.diet_category_ids(String.to_existing_atom(socket.assigns.base_diet), flags)
-        |> Enum.map(fn category_id ->
-          %{category_id: category_id, food_restriction_type_id: restriction.id, user_id: user_id}
-        end)
-      else
-        []
-      end
-
-    socket =
-      update(socket, :form, fn %{source: changeset} ->
-        changeset
-        |> Ecto.Changeset.put_assoc(:user_category_rules, rules)
-        |> to_form()
-      end)
-
-    {:noreply, socket}
   end
 
   def handle_event("toggle_condition", %{"id" => id}, socket) do
@@ -252,47 +204,6 @@ defmodule MehungryWeb.ProfileLive.Form do
         else: MapSet.put(selected, id)
 
     {:noreply, assign(socket, :selected_condition_ids, selected)}
-  end
-
-  def handle_event("add_category_rule", _data, socket) do
-    socket =
-      update(socket, :form, fn %{source: changeset} ->
-        existing = Ecto.Changeset.get_assoc(changeset, :user_category_rules)
-
-        changeset =
-          Ecto.Changeset.put_assoc(
-            changeset,
-            :user_category_rules,
-            existing ++ [%{user_id: socket.assigns.current_user.id}]
-          )
-
-        to_form(changeset)
-      end)
-
-    {:noreply, socket}
-  end
-
-  def handle_event("delete_category_rule", %{"index" => index}, socket) do
-    index = String.to_integer(index)
-
-    socket =
-      update(socket, :form, fn %{source: changeset} ->
-        existing = Ecto.Changeset.get_assoc(changeset, :user_category_rules)
-        {to_delete, rest} = List.pop_at(existing, index)
-
-        user_category_rules =
-          if Ecto.Changeset.change(to_delete).data.id do
-            List.replace_at(existing, index, Ecto.Changeset.change(to_delete, delete: true))
-          else
-            rest
-          end
-
-        changeset
-        |> Ecto.Changeset.put_assoc(:user_category_rules, user_category_rules)
-        |> to_form()
-      end)
-
-    {:noreply, socket}
   end
 
   defp save_user_profile(socket, :index, user_profile_params) do
@@ -311,6 +222,7 @@ defmodule MehungryWeb.ProfileLive.Form do
          |> push_patch(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        notify_parent({:error, save_error_message()})
         {:noreply, assign_form(socket, changeset)}
     end
   end
@@ -331,7 +243,37 @@ defmodule MehungryWeb.ProfileLive.Form do
          |> push_patch(to: socket.assigns.patch)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
+        notify_parent({:error, save_error_message()})
         {:noreply, assign_form(socket, changeset)}
+    end
+  end
+
+  defp save_error_message do
+    "Couldn't save your profile. Please check the highlighted fields and try again."
+  end
+
+  # The category rules a diet excludes, as cast_assoc params. Passed as the full
+  # `user_category_rules` set on save so `on_replace: :delete` regenerates them:
+  # old rules drop, the selected diet's exclusions (all "Absolutely not") replace
+  # them. Omnivore yields `[]`, clearing all rules.
+  defp diet_category_rules(socket) do
+    restriction = absolutely_not(socket.assigns.food_restrictions)
+    flags = if socket.assigns.lactose_intolerant, do: [:lactose_intolerant], else: []
+    user_id = socket.assigns.current_user.id
+
+    if restriction do
+      socket.assigns.base_diet
+      |> String.to_existing_atom()
+      |> Food.diet_category_ids(flags)
+      |> Enum.map(fn category_id ->
+        %{
+          "category_id" => category_id,
+          "food_restriction_type_id" => restriction.id,
+          "user_id" => user_id
+        }
+      end)
+    else
+      []
     end
   end
 

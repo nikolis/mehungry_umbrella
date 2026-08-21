@@ -2,6 +2,7 @@ defmodule Mehungry.Accounts.UserNotifier do
   @moduledoc false
 
   import Swoosh.Email
+  require Logger
   alias Mehungry.Mailer
 
   defp logo_svg do
@@ -153,8 +154,20 @@ defmodule Mehungry.Accounts.UserNotifier do
       |> text_body(text)
       |> html_body(html)
 
-    with {:ok, _metadata} <- Mailer.deliver(email) do
-      {:ok, email}
+    case Mailer.deliver(email) do
+      {:ok, _metadata} ->
+        {:ok, email}
+
+      {:error, reason} ->
+        # Surface delivery failures (e.g. Amazon SES rejecting an unverified
+        # recipient while the account is still in the SES sandbox) instead of
+        # dropping them silently — otherwise "no email arrived" is undiagnosable.
+        Logger.error(
+          "[UserNotifier] failed to deliver #{inspect(subject)} to #{inspect(recipient)}: " <>
+            inspect(reason)
+        )
+
+        {:error, reason}
     end
   end
 

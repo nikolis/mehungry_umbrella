@@ -99,7 +99,7 @@ if config_env() == :prod do
 
   config :mehungry_web, MehungryWeb.Endpoint,
     secret_key_base: secret_key_base,
-    url: [scheme: "https", host: "www.mehungry.com", port: 443]
+    url: [scheme: "https", host: "www.m3hungry.com", port: 443]
 
   config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
     client_id: System.get_env("FACEBOOK_CLIENT_ID"),

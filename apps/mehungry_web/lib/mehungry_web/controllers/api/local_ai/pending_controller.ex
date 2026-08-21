@@ -29,7 +29,12 @@ defmodule MehungryWeb.Api.LocalAi.PendingController do
       |> Food.get_compounds_by_ids()
       |> Enum.map(fn c -> %{id: c.id, name: c.name, synonyms: c.synonyms || []} end)
 
-    %{study_id: study.id, pmid: study.pmid, compounds: compounds}
+    %{
+      study_id: study.id,
+      pmid: study.pmid,
+      compounds: compounds,
+      extract_gi: Literature.gi_discovered?(study.id)
+    }
   end
 
   defp parse_int(nil, default), do: default
