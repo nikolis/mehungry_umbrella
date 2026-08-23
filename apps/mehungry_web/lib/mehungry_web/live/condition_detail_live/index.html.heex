@@ -16,6 +16,11 @@
       <%= if @condition.description && @condition.description != "" do %>
         <p class="text-parchment-dim leading-relaxed">{@condition.description}</p>
       <% end %>
+      <%= if is_list(@condition.synonyms) && @condition.synonyms != [] do %>
+        <p class="text-xs text-parchment-dim/80 mt-2">
+          Also known as: {Enum.join(@condition.synonyms, ", ")}
+        </p>
+      <% end %>
     </div>
 
     <%!-- ── Recommendations ─────────────────────────────────────────────── --%>
@@ -85,7 +90,7 @@
 
     <%!-- ── Food species to be mindful of (derived via the shared compound) ── --%>
     <section class="mb-10">
-      <h2 class="text-lg font-display font-medium text-parchment mb-4">Foods to Be Mindful Of</h2>
+      <h2 class="text-lg font-display font-medium text-parchment mb-4">Foods to Avoid or Limit</h2>
 
       <%= cond do %>
         <% @species.loading -> %>
@@ -145,7 +150,7 @@
 
     <%!-- ── Encouraged foods (good for this condition, via the shared compound) ── --%>
     <section class="mb-10">
-      <h2 class="text-lg font-display font-medium text-parchment mb-4">Encouraged Foods</h2>
+      <h2 class="text-lg font-display font-medium text-parchment mb-4">Foods to Eat</h2>
 
       <%= cond do %>
         <% @species.loading -> %>

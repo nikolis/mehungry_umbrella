@@ -5,6 +5,7 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   alias Mehungry.Food
   alias Mehungry.Food.SpeciesCompounds
   alias Mehungry.Health
+  alias Phoenix.LiveView.AsyncResult
 
   # Display order + copy for the recommendation groups.
   @recommendation_order ["avoid", "limit", "caution", "monitor", "encourage"]
@@ -46,19 +47,52 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
          |> assign(:condition, condition)
          |> assign_new(:current_user, fn -> nil end)
          |> assign(:current_user_recipes, saved_recipe_ids(socket))
-         |> assign_async([:recommendations, :species], fn ->
-           {:ok,
-            %{
-              recommendations: Health.recommendations_for_condition(condition.id),
-              species: Health.species_for_condition(condition.id)
-            }}
-         end)
-         |> assign(:page_title, "#{condition.name} — Dietary Guidance")
-         |> assign(
-           :page_description,
-           "Dietary guidance for #{condition.name}: bioactive compounds to be mindful of and the food species that contain them."
-         )}
+         |> load_condition_data(condition)
+         |> assign(:page_title, seo_title(condition))
+         |> assign(:page_description, seo_description(condition))}
     end
+  end
+
+  # Live navigation loads the recommendations/species asynchronously so the UI
+  # paints instantly and streams the data in. But the disconnected ("dead")
+  # render — the HTML Googlebot indexes, since crawlers don't open the LiveView
+  # WebSocket — would then show only loading skeletons, hiding the page's entire
+  # substance from search. So on the dead render we load synchronously and hand
+  # the template a resolved `AsyncResult`, giving the crawler the real content.
+  defp load_condition_data(socket, condition) do
+    if connected?(socket) do
+      assign_async(socket, [:recommendations, :species], fn ->
+        {:ok,
+         %{
+           recommendations: Health.recommendations_for_condition(condition.id),
+           species: Health.species_for_condition(condition.id)
+         }}
+      end)
+    else
+      socket
+      |> assign(
+        :recommendations,
+        AsyncResult.ok(Health.recommendations_for_condition(condition.id))
+      )
+      |> assign(:species, AsyncResult.ok(Health.species_for_condition(condition.id)))
+    end
+  end
+
+  # ── SEO title/description ────────────────────────────────────────────────────
+  # Lead with the words people actually search ("<condition> diet", "foods to
+  # eat/avoid") rather than the scientific register the UI uses internally.
+  # `head.html.heex` appends " | M3Hungry" for plain-string titles.
+  defp seo_title(condition), do: "#{condition.name} Diet: Foods to Eat & Avoid"
+
+  defp seo_description(condition) do
+    also =
+      case condition.synonyms do
+        [_ | _] = syns -> " Also called #{Enum.join(Enum.take(syns, 3), ", ")}."
+        _ -> ""
+      end
+
+    "#{condition.name} diet guide: which foods to eat and which foods to avoid," <>
+      " with the nutrients and bioactive compounds behind each recommendation." <> also
   end
 
   # `:show_food` opens the encouraged-food preview modal; loads a condensed slice
