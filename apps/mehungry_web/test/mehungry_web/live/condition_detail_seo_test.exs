@@ -15,8 +15,8 @@ defmodule MehungryWeb.ConditionDetailSeoTest do
     assert html =~
              ~s(<link rel="canonical" href="https://www.m3hungry.com/en/conditions/#{condition.id}")
 
-    # --- title / description meta ---
-    assert html =~ "Kidney Stones — Dietary Guidance | M3Hungry"
+    # --- title / description meta (SEO-optimized, keyword-led wording) ---
+    assert html =~ "Kidney Stones Diet: Foods to Eat &amp; Avoid | M3Hungry"
 
     # --- JSON-LD parses as valid JSON with the expected @graph nodes ---
     graph = extract_jsonld_graph(html)
@@ -35,7 +35,7 @@ defmodule MehungryWeb.ConditionDetailSeoTest do
 
     # --- #1: main content is rendered synchronously (not skeletons) ---
     assert html =~ "Kidney Stones diet suggestions"
-    assert html =~ "Foods to Be Mindful Of"
+    assert html =~ "Foods to Avoid or Limit"
   end
 
   # Pull the @graph array out of the structured-data <script> tag. (Floki.text/1

@@ -90,7 +90,7 @@ defmodule MehungryWeb.HealthLiveTest do
       assert html =~ "Oxalate"
       # The recommendation references a compound; the Spinach species is derived
       # at read time (its scientific name shown too).
-      assert html =~ "Foods to Be Mindful Of"
+      assert html =~ "Foods to Avoid or Limit"
       assert html =~ "Spinach"
       assert html =~ "Spinacia oleracea"
 
@@ -138,8 +138,8 @@ defmodule MehungryWeb.HealthLiveTest do
       {:ok, view, _html} = live(conn, ~p"/conditions/#{condition.id}")
       html = render_async(view)
 
-      # Kale surfaces under its own "Encouraged Foods" section (not "Mindful Of").
-      assert html =~ "Encouraged Foods"
+      # Kale surfaces under its own "Foods to Eat" section (not "Avoid or Limit").
+      assert html =~ "Foods to Eat"
       assert html =~ "Kale"
 
       # The Details link patches to :show_food and opens the preview modal.
