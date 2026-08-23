@@ -204,16 +204,47 @@ Same idea as Open Graph but specifically for Twitter/X previews.
   "url": "https://www.m3hungry.com/browse/42",
   "image": "https://...",
   "description": "...",
+  "author": { "@type": "Person", "name": "Nikos" },
   "cookTime": "PT45M",
   "prepTime": "PT15M",
   "recipeYield": "4 servings",
+  "recipeCuisine": "Indian",
+  "recipeIngredient": [
+    "2 cup Basmati Rice",
+    "500 g Chicken Breast",
+    "1 tbsp Garam Masala"
+  ],
+  "keywords": "curry, indian, dinner",
   "recipeInstructions": [
-    { "@type": "HowToStep", "text": "Marinate the chicken overnight..." },
-    { "@type": "HowToStep", "text": "Cook on medium heat for 20 minutes..." }
+    { "@type": "HowToStep", "name": "Marinate", "text": "Marinate the chicken overnight..." },
+    { "@type": "HowToStep", "name": "Cook", "text": "Cook on medium heat for 20 minutes..." }
   ]
 }
 </script>
 ```
+
+**Which fields are emitted, and where the data comes from** (all built in `build_recipe_jsonld/1` and its `jsonld_*` helpers):
+
+| JSON-LD field | Source | Notes |
+|---|---|---|
+| `name` | `recipe.title` | |
+| `url` | `/browse/:id` | |
+| `image` | `recipe.image_url` | omitted if absent |
+| `description` | `recipe.description` | falls back to title |
+| `author` | `recipe.author`, else `recipe.user.name` | `jsonld_author/1`; omitted if both blank |
+| `cookTime` / `prepTime` | `cooking_time_lower_limit` / `preperation_time_lower_limit` | ISO-8601 `PTnM` |
+| `recipeYield` | `recipe.servings` | |
+| `recipeCuisine` | `recipe.cousine` | **note the misspelled schema column** |
+| `recipeIngredient` | `recipe.recipe_ingredients` | `jsonld_ingredient_line/1` → `"<qty> <unit> <name>"` using `RecipeIngredient.unit_label/1` + `Utils.remove_parenthesis/1`; whole-number floats print without `.0` |
+| `keywords` | `recipe.recipe_hashtags` → `hashtag.title` | comma-joined; **requires the `[recipe_hashtags: :hashtag]` preload in `Food.Recipes.get_recipe!/1`** |
+| `recipeInstructions[].text` | `step.description` (or `title`) | |
+| `recipeInstructions[].name` | `step.title` | per-step enhancement; omitted if step has no title |
+
+**Google Search Console "Enhance item appearance" warnings** — these are the non-critical warnings ("Βελτίωση εμφάνισης στοιχείων" in the Greek console) that recipes are *valid* but could be enriched. The table above closes: `author`, `recipeIngredient`, `recipeCuisine`, `keywords`, and per-step `name`. The following warnings are **deliberately left open** because the data doesn't exist and faking it violates Google's policy or misrepresents the page:
+
+- **`aggregateRating`** — there is no recipe rating/review feature yet (`MealPlanRating` is the nutritionist meal-plan feature, unrelated). Never emit fabricated or constant ratings — it risks a manual action. Add this only once real user ratings are collected and *displayed on the page*.
+- **`video`** and per-step **`image`/`video`** — no recipe video content exists.
+- **`recipeCategory`** — no dedicated meal-type field on the recipe; would have to be derived (e.g. from hashtags) and is low value, so it's skipped for now.
 
 **What it does**: JSON-LD is a machine-readable description of your page's content using a standard vocabulary ([schema.org](https://schema.org)). Google uses it to show **rich results** — enhanced search listings that look like this:
 
@@ -337,7 +368,7 @@ These items would have the biggest remaining impact:
 
 2. **Google Search Console** — set it up, verify ownership, submit the sitemap. This gives you actual impressions, clicks, average position, and CTR data — far more accurate than the referrer-based analytics we track in the app.
 
-3. **Recipe review schema** — if you add a rating/review feature, adding `aggregateRating` to the JSON-LD will show star ratings in Google results, which dramatically increases click-through rate.
+3. **Recipe review schema** — the remaining big JSON-LD gap is `aggregateRating` (see the Search Console warnings table above; the cheaper `author`/`recipeIngredient`/`recipeCuisine`/`keywords`/step-`name` enhancements are already emitted). If you add a rating/review feature, adding `aggregateRating` will show star ratings in Google results, which dramatically increases click-through rate — but only mark up ratings you actually collect and display on the page.
 
 4. **Internal linking** — make sure recipe pages link to related hashtag pages, and hashtag pages link to individual recipes. This helps Googlebot discover more content by following links rather than relying solely on the sitemap.
 

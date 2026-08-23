@@ -54,7 +54,7 @@ defmodule Mehungry.Food.Recipes do
               |> Repo.preload([
                 [recipe_ingredients: [:measurement_unit, :ingredient, :ingredient_portion]],
                 :user,
-                recipe_hashtags: [:hashtag]
+                [recipe_hashtags: :hashtag]
               ])
 
             if(not is_nil(recipe)) do
