@@ -333,6 +333,23 @@ Phoenix LiveView is unusual from an SEO perspective because it has two rendering
 
 **The `page_title` assign quirk**: Setting `assign(socket, :page_title, "...")` in LiveView changes the `<title>` tag for a new browser session, but after the WebSocket connects, subsequent `handle_params` calls that change `page_title` are **not reflected in the `<head>`** — the head was already sent. This is fine for SEO (each URL is requested fresh by Googlebot), but means the browser tab title doesn't update on client-side navigation without extra JavaScript.
 
+**⚠️ Critical: `assign_async` content is invisible to crawlers.** Because only the disconnected HTTP render is indexed, **any content loaded via `assign_async` (or `start_async` / `handle_async`) is *not* in the HTML Googlebot sees** — on the dead render those assigns are still in their `loading` state, so the template renders loading skeletons, and the real data only arrives after the WebSocket connects (which crawlers don't do). If the substantive, rankable content of a public page is behind `assign_async`, that page effectively looks empty to Google.
+
+The pattern to keep a page both snappy *and* indexable is to branch on `connected?/1` in `mount` — async for the live client, synchronous for the crawler — handing the template a resolved `Phoenix.LiveView.AsyncResult` so the render code is identical either way:
+
+```elixir
+defp load_data(socket, id) do
+  if connected?(socket) do
+    assign_async(socket, [:thing], fn -> {:ok, %{thing: expensive_load(id)}} end)
+  else
+    # dead render → real HTML for Googlebot
+    assign(socket, :thing, Phoenix.LiveView.AsyncResult.ok(expensive_load(id)))
+  end
+end
+```
+
+This is exactly the fix applied to both condition pages and the species detail page (below). **Audit any new public `assign_async` LiveView the same way** — if the async assign holds rankable content or internal links, it needs the `connected?/1` split.
+
 ---
 
 ## Food/ingredient pages (`/foods/:slug`)
@@ -345,7 +362,33 @@ Phoenix LiveView is unusual from an SEO perspective because it has two rendering
 - **hreflang**: not implemented anywhere in the app (recipe or food pages) because there are no language-specific URL paths — `current_language` is a runtime session assign, not part of the URL, so there's no second URL for `hreflang` to point at. Proper support would require a URL-structure change (e.g. `/en/...` vs `/el/...`) well beyond incremental SEO work. Revisit only if the app ever adopts language-prefixed routes.
 - Food pages **are** included in `sitemap.xml` (see below) since they're publicly indexable and not in the `noindex` prefix list.
 
+**Species detail (`/foods/:slug`, `SpeciesDetailLive.Index`) — `assign_async` audit:** unlike the condition page, this page's *core* content — the nutrition facts (top macros + full nutrient-by-family breakdown) — is rendered **synchronously** in `mount` via `assign_ingredient_view/2`, so it was always crawler-visible (the main SEO asset for "food X nutrition/calories" queries was never at risk). But three **secondary** sections — "Bioactive Compounds", "Health Conditions", and "Research" — were loaded via `assign_async` and therefore invisible to Googlebot: the page title advertised "Nutrition, Research & Compounds" while the indexed HTML had only the nutrition, and the "Health Conditions" section's **internal links to `/conditions/:id` pages** (which help that cluster rank) weren't in the crawled markup. Fixed with the same `connected?/1` split (`load_species_sidecars/2`): async for the live client, synchronous `AsyncResult.ok(...)` on the dead render.
+
 ---
+
+## Condition pages (`/conditions/:id`)
+
+`ConditionDetailLive.Index` (e.g. `/en/conditions/16` = Peptic Ulcer Disease) is a high-value SEO target: it matches informational health queries like "peptic ulcer diet", "foods to avoid", "what to eat when you have ulcers". Search Console showed it *ranking* for exactly those queries but at **position ~80** (page 8) with **0 clicks** — indexed and topically relevant, but far too low to earn traffic. Diagnosis and the fixes applied:
+
+### Fixed
+
+1. **Async content was hidden from Googlebot.** The recommendations and food species — the entire substance of the page — were loaded via `assign_async` in `mount`, so the crawler-indexed dead render showed only loading skeletons (see the `assign_async` caveat under "How Phoenix LiveView interacts with SEO" above). `mount` now branches on `connected?/1` via `load_condition_data/2`: async for the live client, synchronous `AsyncResult.ok(...)` for the dead render, so the crawler gets the real foods and compounds. **This was the dominant cause of the position-80 ranking** — the page looked nearly empty to Google.
+
+2. **Vocabulary alignment.** Title/description/headings spoke in scientific register; searchers don't. Changes:
+   - **Title** (`seo_title/1`): `"<condition> Diet: Foods to Eat & Avoid"` — leads with "diet"/"foods to eat"/"foods to avoid" (the actual queries) instead of "— Dietary Guidance".
+   - **Description** (`seo_description/1`): leads with "diet guide … foods to eat … foods to avoid", and appends the condition's `synonyms` ("Also called …") to catch synonym queries (stomach ulcer, gastric ulcer, …).
+   - **Section headings**: "Foods to Be Mindful Of" → **"Foods to Avoid or Limit"**; "Encouraged Foods" → **"Foods to Eat"**.
+   - **Synonyms** are now also rendered as visible body text under the `<h1>` (they were stored on `Health.Condition.synonyms` but never surfaced).
+
+### Still open (deliberately not done here — these are content/editorial work, not code)
+
+3. **YMYL depth + E-E-A-T is the real ranking ceiling.** Diet-for-a-medical-condition is "Your Money or Your Life" content, which Google holds to its highest quality bar and where it strongly favors authoritative sources (Mayo Clinic, Healthline). Even with #1 and #2, a compound/species data table will struggle against long-form articles because the page lacks: (a) editorial prose explaining *why* each food is recommended (the "is peanut butter good for ulcers?" intent needs a sentence, not a badge); (b) **visible citations** — the literature provenance already exists in the data model (`Literature.*`, `SpeciesCompoundRelationship` studies) and should be surfaced on the page; (c) an **author / medical reviewer** byline and a "last updated" date. This is the durable, multi-month play.
+
+4. **Per-recommendation rationale.** Add a short "why" to each recommendation row so the page answers the question-shaped queries ("is X good for ulcers", "popcorn and ulcers") directly.
+
+5. **Structured data.** Once real prose exists, add JSON-LD — `MedicalWebPage`, and/or `FAQPage` for the question-shaped queries. Don't add it before the content exists (Google flags structured data that doesn't match visible content).
+
+**Re-measure after deploy + recrawl (~2–4 weeks):** expect #1 to move position materially on its own (the crawler can finally see the page); wording tweaks (#2) compound on top. #3–5 are what move it from page 8 to page 2–3.
 
 ## Checklist: verifying the implementation
 

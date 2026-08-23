@@ -44,13 +44,8 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
         # (compounds, foods, recipes) rather than loading skeletons.
         species = Health.species_for_condition(condition.id, nil, language)
 
-        page_title = gettext("%{name} — Dietary Guidance", name: condition.name)
-
-        page_description =
-          gettext(
-            "Dietary guidance for %{name}: bioactive compounds to be mindful of and the food species that contain them.",
-            name: condition.name
-          )
+        page_title = seo_title(condition)
+        page_description = seo_description(condition)
 
         {:ok,
          socket
@@ -70,6 +65,33 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
            :structured_data,
            build_structured_data(condition, language, page_title, page_description)
          )}
+    end
+  end
+
+  # ── SEO title/description ────────────────────────────────────────────────────
+  # Lead with the words people actually search ("<condition> diet", "foods to
+  # eat/avoid") rather than the scientific register the UI uses internally, while
+  # staying localized. Computed synchronously in mount (not via assign_async) so
+  # the disconnected render a crawler indexes carries the real title/description.
+  # `head.html.heex` appends " | M3Hungry" for plain-string titles.
+  defp seo_title(condition) do
+    gettext("%{name} Diet: Foods to Eat & Avoid", name: condition.name)
+  end
+
+  defp seo_description(condition) do
+    base =
+      gettext(
+        "%{name} diet guide: which foods to eat and which foods to avoid, with the nutrients and bioactive compounds behind each recommendation.",
+        name: condition.name
+      )
+
+    case condition.synonyms do
+      [_ | _] = syns ->
+        base <>
+          " " <> gettext("Also called %{names}.", names: Enum.join(Enum.take(syns, 3), ", "))
+
+      _ ->
+        base
     end
   end
 
