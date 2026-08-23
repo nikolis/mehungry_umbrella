@@ -623,12 +623,51 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         base
       end
 
+    # author — recipe.author (free-text) falls back to the recipe owner's name.
+    base =
+      case jsonld_author(recipe) do
+        nil -> base
+        name -> Map.put(base, "author", %{"@type" => "Person", "name" => name})
+      end
+
+    # recipeCuisine — note the schema field is the misspelled `cousine`.
+    base =
+      if is_binary(recipe.cousine) and String.trim(recipe.cousine) != "" do
+        Map.put(base, "recipeCuisine", String.trim(recipe.cousine))
+      else
+        base
+      end
+
+    # recipeIngredient — one free-text line per ingredient ("2 cup Flour").
+    base =
+      case jsonld_ingredients(recipe) do
+        [] -> base
+        lines -> Map.put(base, "recipeIngredient", lines)
+      end
+
+    # keywords — comma-separated hashtag titles.
+    base =
+      case jsonld_keywords(recipe) do
+        nil -> base
+        keywords -> Map.put(base, "keywords", keywords)
+      end
+
     base =
       case recipe.steps do
         steps when is_list(steps) and steps != [] ->
           instructions =
             Enum.map(steps, fn step ->
-              %{"@type" => "HowToStep", "text" => step.description || step.title || ""}
+              step_jsonld = %{
+                "@type" => "HowToStep",
+                "text" => step.description || step.title || ""
+              }
+
+              # `name` is a per-step enhancement Google asks for; use the step title.
+              if is_binary(step.title) and String.trim(step.title) != "" do
+                Map.put(step_jsonld, "name", String.trim(step.title))
+              else
+                step_jsonld
+              end
             end)
 
           Map.put(base, "recipeInstructions", instructions)
@@ -638,6 +677,80 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       end
 
     base
+  end
+
+  defp jsonld_author(recipe) do
+    cond do
+      is_binary(recipe.author) and String.trim(recipe.author) != "" ->
+        String.trim(recipe.author)
+
+      match?(%{name: name} when is_binary(name), recipe.user) and
+          String.trim(recipe.user.name) != "" ->
+        String.trim(recipe.user.name)
+
+      true ->
+        nil
+    end
+  end
+
+  defp jsonld_ingredients(recipe) do
+    case recipe.recipe_ingredients do
+      ingredients when is_list(ingredients) ->
+        ingredients
+        |> Enum.map(&jsonld_ingredient_line/1)
+        |> Enum.reject(&is_nil/1)
+
+      _ ->
+        []
+    end
+  end
+
+  defp jsonld_ingredient_line(recipe_ingredient) do
+    name =
+      case recipe_ingredient.ingredient do
+        %{name: n} when is_binary(n) -> n |> Mehungry.Utils.remove_parenthesis() |> String.trim()
+        _ -> nil
+      end
+
+    if name && name != "" do
+      qty = jsonld_quantity(recipe_ingredient.quantity)
+      unit = Mehungry.Food.RecipeIngredient.unit_label(recipe_ingredient)
+
+      [qty, unit, name]
+      |> Enum.reject(&(&1 in [nil, ""]))
+      |> Enum.join(" ")
+    end
+  end
+
+  defp jsonld_quantity(nil), do: nil
+
+  defp jsonld_quantity(quantity) when is_float(quantity) do
+    if quantity == Float.round(quantity),
+      do: quantity |> trunc() |> Integer.to_string(),
+      else: Float.to_string(quantity)
+  end
+
+  defp jsonld_quantity(quantity), do: to_string(quantity)
+
+  defp jsonld_keywords(recipe) do
+    case recipe.recipe_hashtags do
+      hashtags when is_list(hashtags) ->
+        titles =
+          hashtags
+          |> Enum.map(fn
+            %{hashtag: %{title: t}} when is_binary(t) -> String.trim(t)
+            _ -> nil
+          end)
+          |> Enum.reject(&(&1 in [nil, ""]))
+
+        case titles do
+          [] -> nil
+          list -> Enum.join(list, ", ")
+        end
+
+      _ ->
+        nil
+    end
   end
 
   defp list_recipes(language \\ nil) do
