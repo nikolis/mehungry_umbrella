@@ -44,13 +44,8 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
         # (compounds, foods, recipes) rather than loading skeletons.
         species = Health.species_for_condition(condition.id, nil, language)
 
-        page_title = gettext("%{name} — Dietary Guidance", name: condition.name)
-
-        page_description =
-          gettext(
-            "Dietary guidance for %{name}: bioactive compounds to be mindful of and the food species that contain them.",
-            name: condition.name
-          )
+        page_title = seo_title(condition)
+        page_description = seo_description(condition)
 
         {:ok,
          socket
@@ -58,11 +53,6 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
          |> assign(:language, language)
          |> assign_new(:current_user, fn -> nil end)
          |> assign(:current_user_recipes, saved_recipe_ids(socket))
-<<<<<<< HEAD
-         |> load_condition_data(condition)
-         |> assign(:page_title, seo_title(condition))
-         |> assign(:page_description, seo_description(condition))}
-=======
          |> assign(
            :recommendations,
            AsyncResult.ok(Health.recommendations_for_condition(condition.id, language))
@@ -75,50 +65,34 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
            :structured_data,
            build_structured_data(condition, language, page_title, page_description)
          )}
->>>>>>> 308863b7a7eb59b0b856f5cac8c12a7d618dbebf
-    end
-  end
-
-  # Live navigation loads the recommendations/species asynchronously so the UI
-  # paints instantly and streams the data in. But the disconnected ("dead")
-  # render — the HTML Googlebot indexes, since crawlers don't open the LiveView
-  # WebSocket — would then show only loading skeletons, hiding the page's entire
-  # substance from search. So on the dead render we load synchronously and hand
-  # the template a resolved `AsyncResult`, giving the crawler the real content.
-  defp load_condition_data(socket, condition) do
-    if connected?(socket) do
-      assign_async(socket, [:recommendations, :species], fn ->
-        {:ok,
-         %{
-           recommendations: Health.recommendations_for_condition(condition.id),
-           species: Health.species_for_condition(condition.id)
-         }}
-      end)
-    else
-      socket
-      |> assign(
-        :recommendations,
-        AsyncResult.ok(Health.recommendations_for_condition(condition.id))
-      )
-      |> assign(:species, AsyncResult.ok(Health.species_for_condition(condition.id)))
     end
   end
 
   # ── SEO title/description ────────────────────────────────────────────────────
   # Lead with the words people actually search ("<condition> diet", "foods to
-  # eat/avoid") rather than the scientific register the UI uses internally.
+  # eat/avoid") rather than the scientific register the UI uses internally, while
+  # staying localized. Computed synchronously in mount (not via assign_async) so
+  # the disconnected render a crawler indexes carries the real title/description.
   # `head.html.heex` appends " | M3Hungry" for plain-string titles.
-  defp seo_title(condition), do: "#{condition.name} Diet: Foods to Eat & Avoid"
+  defp seo_title(condition) do
+    gettext("%{name} Diet: Foods to Eat & Avoid", name: condition.name)
+  end
 
   defp seo_description(condition) do
-    also =
-      case condition.synonyms do
-        [_ | _] = syns -> " Also called #{Enum.join(Enum.take(syns, 3), ", ")}."
-        _ -> ""
-      end
+    base =
+      gettext(
+        "%{name} diet guide: which foods to eat and which foods to avoid, with the nutrients and bioactive compounds behind each recommendation.",
+        name: condition.name
+      )
 
-    "#{condition.name} diet guide: which foods to eat and which foods to avoid," <>
-      " with the nutrients and bioactive compounds behind each recommendation." <> also
+    case condition.synonyms do
+      [_ | _] = syns ->
+        base <>
+          " " <> gettext("Also called %{names}.", names: Enum.join(Enum.take(syns, 3), ", "))
+
+      _ ->
+        base
+    end
   end
 
   # `:show_food` opens the encouraged-food preview modal; loads a condensed slice

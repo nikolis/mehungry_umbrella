@@ -20,7 +20,7 @@
       <% end %>
       <%= if is_list(@condition.synonyms) && @condition.synonyms != [] do %>
         <p class="text-xs text-parchment-dim/80 mt-2">
-          Also known as: {Enum.join(@condition.synonyms, ", ")}
+          {gettext("Also known as:")} {Enum.join(@condition.synonyms, ", ")}
         </p>
       <% end %>
     </div>
@@ -199,13 +199,9 @@
 
     <%!-- ── Food species to be mindful of (derived via the shared compound) ── --%>
     <section class="mb-10">
-<<<<<<< HEAD
-      <h2 class="text-lg font-display font-medium text-parchment mb-4">Foods to Avoid or Limit</h2>
-=======
       <h2 class="text-lg font-display font-medium text-parchment mb-4">
-        {gettext("Foods to Be Mindful Of")}
+        {gettext("Foods to Avoid or Limit")}
       </h2>
->>>>>>> 308863b7a7eb59b0b856f5cac8c12a7d618dbebf
 
       <%= cond do %>
         <% @species.loading -> %>
@@ -268,13 +264,9 @@
 
     <%!-- ── Encouraged foods (good for this condition, via the shared compound) ── --%>
     <section class="mb-10">
-<<<<<<< HEAD
-      <h2 class="text-lg font-display font-medium text-parchment mb-4">Foods to Eat</h2>
-=======
       <h2 class="text-lg font-display font-medium text-parchment mb-4">
-        {gettext("Encouraged Foods")}
+        {gettext("Foods to Eat")}
       </h2>
->>>>>>> 308863b7a7eb59b0b856f5cac8c12a7d618dbebf
 
       <%= cond do %>
         <% @species.loading -> %>
