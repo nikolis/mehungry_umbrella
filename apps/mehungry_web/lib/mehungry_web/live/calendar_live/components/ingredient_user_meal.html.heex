@@ -14,7 +14,9 @@
         <.live_component
           module={MehungryWeb.SelectComponentDeep}
           form={@f}
-          item_function={fn term -> Mehungry.Food.search_ingredient_alt(term, [], @current_user_id) end}
+          item_function={
+            fn term -> Mehungry.Food.IngredientSearch.search(term, [], @current_user_id) end
+          }
           flags_function={
             fn ids -> MehungryWeb.RecipeFlags.flags_for_ingredient_ids(ids, @condition_ids) end
           }
@@ -23,6 +25,11 @@
           label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
           placeholder="Select an ingredient..."
           modal_title="Search Ingredients"
+          select_function={
+            fn ingredient_id ->
+              send_update(@parent_component, ingredient_selected: {@f.index, ingredient_id})
+            end
+          }
           parent_id={"ingredient_form_#{@f.index}"}
           id={"ingredient_search_component" <> Integer.to_string(@f.index)}
         />
@@ -53,10 +60,10 @@
       <div>
         <.live_component
           module={MehungryWeb.SelectComponent}
-          items={Enum.map(@measurement_units, fn x -> {Integer.to_string(x.id), x.name} end)}
+          items={@unit_options}
           form={@f}
           id={"measurement_unit_search_component" <> Integer.to_string(@f.index)}
-          input_variable={:measurement_unit_id}
+          input_variable={:unit_selection}
         />
       </div>
     </div>

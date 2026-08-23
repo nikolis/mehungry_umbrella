@@ -30,7 +30,7 @@ defmodule MehungryWeb.CalendarLive.Components do
       recipes={assigns.recipes}
       mode={@mode}
       myself={@myself}
-      measurement_units={@measurement_units}
+      unit_options={@unit_options}
       current_user_id={assigns.current_user_id}
       condition_ids={assigns.condition_ids}
       parent_component={assigns.parent_component}

@@ -30,6 +30,7 @@ defmodule Mehungry.Food do
     Enrichment,
     EvidenceAggregation,
     FoundementalFoods,
+    GlycemicIndex,
     IngredientQueries,
     Ingredients,
     Localization,
@@ -51,10 +52,15 @@ defmodule Mehungry.Food do
   defdelegate count_recipes_without_ingredients(), to: Recipes
   defdelegate list_recipes_without_ingredients(), to: Recipes
   defdelegate delete_recipes_without_ingredients(), to: Recipes
+  defdelegate delete_recipes_by_ids(recipe_ids), to: Recipes
+  defdelegate search_recipes_for_admin(term), to: Recipes
+  defdelegate search_recipes_for_admin(term, limit), to: Recipes
   defdelegate change_recipe(recipe, attrs \\ %{}), to: Recipes
+  defdelegate validation_changeset(recipe, attrs), to: Recipes
   defdelegate change_step(step, attrs \\ %{}), to: Recipes
   defdelegate create_recipe(attrs \\ %{}), to: Recipes
   defdelegate update_recipe(recipe_origin, attrs \\ %{}), to: Recipes
+  defdelegate ensure_recipe_hashtags(recipe_or_id), to: Recipes
   defdelegate create_post_from_recipe(recipe), to: Recipes
   defdelegate put_nutrient_info(changeset, attrs), to: Recipes
   defdelegate recipe_counts_by_user_id(), to: Recipes
@@ -66,6 +72,7 @@ defmodule Mehungry.Food do
   defdelegate list_recipes(query_or_cursor), to: Recipes
   defdelegate list_recipes(query_or_cursor, language_or_query), to: Recipes
   defdelegate list_recipes(cursor_after, query, language_name), to: Recipes
+  defdelegate list_recipes_page(query, page, per_page, language_name \\ nil), to: Recipes
   defdelegate list_user_recipes(user_id), to: Recipes
   defdelegate list_user_recipes_for_selection(user_id), to: Recipes
 
@@ -113,6 +120,14 @@ defmodule Mehungry.Food do
   defdelegate search_hashtag1(hashtag), to: IngredientQueries
   defdelegate search_recipes_by_ingredient(ingredient_name), to: IngredientQueries
   defdelegate list_sample_recipes_for_ingredient(ingredient_id, limit \\ 4), to: IngredientQueries
+
+  defdelegate list_random_recipes_including_excluding(
+                include_ingredient_ids,
+                exclude_ingredient_ids,
+                limit \\ 10
+              ),
+              to: IngredientQueries
+
   defdelegate search_recipe(query_string, language_name \\ nil), to: IngredientQueries
   defdelegate pagenate_query(query), to: IngredientQueries
   defdelegate count_search_results(query), to: IngredientQueries
@@ -121,13 +136,11 @@ defmodule Mehungry.Food do
   defdelegate maybe_filter_by_data_types(query, data_types), to: IngredientQueries
   defdelegate list_distinct_food_classes(), to: IngredientQueries
   defdelegate list_distinct_data_types(), to: IngredientQueries
+
   defdelegate search_ingredient_search(search_term, classes \\ [], owner_id \\ nil),
     to: IngredientQueries
 
   defdelegate search_ingredient_alt_admin(search_term, classes \\ [], data_types \\ []),
-    to: IngredientQueries
-
-  defdelegate search_ingredient_alt(search_term, classes \\ [], owner_id \\ nil),
     to: IngredientQueries
 
   defdelegate search_ingredient_admin(search_term, classes \\ [], data_types \\ []),
@@ -143,8 +156,6 @@ defmodule Mehungry.Food do
 
   defdelegate search_ingredient(search_term, classes \\ []), to: IngredientQueries
   defdelegate search_ingredient_query(search_term, classes \\ []), to: IngredientQueries
-  defdelegate search_ingredient3(search_term), to: IngredientQueries
-  defdelegate search_ingredient2(search_term), to: IngredientQueries
 
   # ── Nutrients ──────────────────────────────────────────────────────────
 
@@ -182,7 +193,10 @@ defmodule Mehungry.Food do
   defdelegate count_numeric_named_measurement_units(), to: Measurements
   defdelegate list_numeric_named_measurement_units(limit \\ 50), to: Measurements
   defdelegate reconcile_measurement_unit(unit, resolved_name), to: Measurements
-  defdelegate start_measurement_unit_reconciliation_run(), to: Measurements, as: :start_reconciliation_run
+
+  defdelegate start_measurement_unit_reconciliation_run(),
+    to: Measurements,
+    as: :start_reconciliation_run
 
   # ── Categories ─────────────────────────────────────────────────────────
 
@@ -196,6 +210,7 @@ defmodule Mehungry.Food do
   defdelegate search_category(term), to: Categories
   defdelegate list_food_restriction_types(), to: Categories
   defdelegate diet_category_ids(base_diet, flags \\ []), to: Categories
+  defdelegate diet_mode_for_category_rules(rules), to: Categories
 
   # ── Localization ───────────────────────────────────────────────────────
 
@@ -349,6 +364,51 @@ defmodule Mehungry.Food do
   defdelegate purge_blocklisted(), to: CompoundCandidates
   defdelegate count_relationships(), to: SpeciesCompounds
   defdelegate list_relationships_page(opts \\ []), to: SpeciesCompounds
+
+  # ── Glycemic Index (path-B: re-derived from primary literature) ─────────────
+  # Distinct `*_glycemic_*` names so they don't collide with the compound
+  # candidate pipeline's same-shaped `promote_candidate`/`reject_candidate`/etc.
+
+  defdelegate record_extracted_gi(study_id, findings, species_ids),
+    to: GlycemicIndex
+
+  defdelegate upsert_glycemic_candidate(attrs), to: GlycemicIndex, as: :upsert_candidate
+
+  defdelegate promote_glycemic_candidate(candidate_or_id),
+    to: GlycemicIndex,
+    as: :promote_candidate
+
+  defdelegate promote_glycemic_candidate(id, species_id),
+    to: GlycemicIndex,
+    as: :promote_candidate
+
+  defdelegate reject_glycemic_candidate(candidate_or_id), to: GlycemicIndex, as: :reject_candidate
+
+  defdelegate unpromote_glycemic_candidate(candidate_or_id),
+    to: GlycemicIndex,
+    as: :unpromote_candidate
+
+  defdelegate list_pending_glycemic_candidates(opts \\ []),
+    to: GlycemicIndex,
+    as: :list_pending_candidates
+
+  defdelegate list_promoted_glycemic_candidates(opts \\ []),
+    to: GlycemicIndex,
+    as: :list_promoted_candidates
+
+  defdelegate get_glycemic_candidate!(id), to: GlycemicIndex, as: :get_candidate!
+
+  defdelegate count_pending_glycemic_candidates(),
+    to: GlycemicIndex,
+    as: :count_pending_candidates
+
+  defdelegate count_promoted_glycemic_candidates(),
+    to: GlycemicIndex,
+    as: :count_promoted_candidates
+
+  defdelegate rederived_glycemic_by_species(opts \\ []),
+    to: GlycemicIndex,
+    as: :rederived_by_species
 
   # ── Foundemental foods ─────────────────────────────────────────────────────
 

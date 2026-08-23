@@ -17,7 +17,8 @@
       <p class="text-xs font-semibold text-parchment-dim uppercase tracking-wider mb-2">
         Meal
       </p>
-      <% current_meal_type = if @form[:meal_type].value in [nil, ""], do: nil, else: @form[:meal_type].value %>
+      <% current_meal_type =
+        if @form[:meal_type].value in [nil, ""], do: nil, else: @form[:meal_type].value %>
       <div class="flex flex-wrap gap-1.5 mb-3">
         <%= for meal_type <- Mehungry.History.MealType.ordered() ++ [nil] do %>
           <% selected = current_meal_type == meal_type %>
@@ -112,7 +113,9 @@
                 mode={@mode}
                 current_user_id={@current_user.id}
                 condition_ids={@condition_ids}
-                measurement_units={@measurement_units}
+                unit_options={
+                  Map.get(@unit_options_by_index, f_ingredient_user_meal.index, @gram_options)
+                }
                 myself={@myself}
                 recipe_ids={@recipe_ids}
               />

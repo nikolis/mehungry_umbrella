@@ -22,7 +22,7 @@ defmodule Mehungry.Food.Localization do
   }
 
   alias Mehungry.AI.Bot.RecipeTranslation
-  alias Mehungry.Languages.Language
+  alias Mehungry.Languages.{Language, Locale}
 
   def apply_recipe_translation(recipe, nil), do: recipe
   def apply_recipe_translation(recipe, %RecipeTranslation{title: nil}), do: recipe
@@ -31,8 +31,32 @@ defmodule Mehungry.Food.Localization do
     %{
       recipe
       | title: translation.title || recipe.title,
-        description: translation.description || recipe.description
+        description: translation.description || recipe.description,
+        steps: apply_step_translations(recipe.steps, translation.steps)
     }
+  end
+
+  # Overlays translated step descriptions onto the recipe's embedded `Step`s,
+  # matched by `index` (the translator stores `[%{"index" => i, "description" =>
+  # d}]`). A step with no/blank translation keeps its base text; step titles are
+  # not translated. Handles both string- and atom-keyed maps.
+  defp apply_step_translations(steps, translated) when translated in [nil, []], do: steps
+
+  defp apply_step_translations(steps, translated) do
+    by_index =
+      Enum.reduce(translated, %{}, fn s, acc ->
+        idx = Map.get(s, "index", Map.get(s, :index))
+        desc = Map.get(s, "description", Map.get(s, :description))
+
+        if is_nil(idx) or desc in [nil, ""], do: acc, else: Map.put(acc, idx, desc)
+      end)
+
+    Enum.map(steps, fn step ->
+      case Map.get(by_index, step.index) do
+        nil -> step
+        desc -> %{step | description: desc}
+      end
+    end)
   end
 
   # Bulk-apply user-language translations to a list of recipes, sorting translated ones first.
@@ -63,11 +87,25 @@ defmodule Mehungry.Food.Localization do
   def load_recipe_translations_map([], _language_name), do: %{}
 
   def load_recipe_translations_map(recipe_ids, language_name) do
+    # A locale maps to several `language_name` codes (canonical ISO + legacy
+    # alias, e.g. "el" + "Gr"); match all of them and prefer the canonical row
+    # when a recipe carries both.
+    codes = Locale.data_codes(language_name)
+    rank = codes |> Enum.with_index() |> Map.new()
+
     from(rt in RecipeTranslation,
-      where: rt.recipe_id in ^recipe_ids and rt.language_name == ^language_name
+      where: rt.recipe_id in ^recipe_ids and rt.language_name in ^codes
     )
     |> Repo.all()
-    |> Map.new(fn rt -> {rt.recipe_id, rt} end)
+    |> Enum.reduce(%{}, fn rt, acc ->
+      r = Map.get(rank, rt.language_name, length(codes))
+
+      case Map.get(acc, rt.recipe_id) do
+        {best, _} when best <= r -> acc
+        _ -> Map.put(acc, rt.recipe_id, {r, rt})
+      end
+    end)
+    |> Map.new(fn {id, {_r, rt}} -> {id, rt} end)
   end
 
   def translate_recipe_if_needed(recipe) do
@@ -103,7 +141,7 @@ defmodule Mehungry.Food.Localization do
   def ingredient_language_for("el"), do: "Gr"
   def ingredient_language_for(_), do: nil
 
-  def translate_ingredients_to(recipe, language_name) do
+  def translate_ingredients_to(%Recipe{} = recipe, language_name) do
     query =
       from rec_ing in RecipeIngredient,
         where: rec_ing.recipe_id == ^recipe.id,
@@ -146,7 +184,8 @@ defmodule Mehungry.Food.Localization do
     case Repo.all(query) do
       [] ->
         Repo.preload(recipe, [
-          {:recipe_ingredients, [:measurement_unit, :ingredient_portion, {:ingredient, :category}]}
+          {:recipe_ingredients,
+           [:measurement_unit, :ingredient_portion, {:ingredient, :category}]}
         ])
 
       translated ->

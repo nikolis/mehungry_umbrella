@@ -159,7 +159,9 @@ defmodule MehungryWeb.ShoppingBasketLive.BasicFormComponent do
 
   # Free-text label for a recipe ingredient that uses a description-only portion
   # (no measurement unit), so the basket can still show e.g. "1 medium banana".
-  defp portion_description(%{measurement_unit_id: nil, ingredient_portion: %{description: d}}), do: d
+  defp portion_description(%{measurement_unit_id: nil, ingredient_portion: %{description: d}}),
+    do: d
+
   defp portion_description(_), do: nil
 
   def crete_ingredient_basket(user_meals) do

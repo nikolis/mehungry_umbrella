@@ -50,6 +50,7 @@ defmodule MehungryWeb.LayoutView do
 
   attr :current_user, :any
   attr :current_language, :string, default: "en"
+  attr :inner_content, :any, default: nil
 
   def get_menu(assigns) do
     ~H"""

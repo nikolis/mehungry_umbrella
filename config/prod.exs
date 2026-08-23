@@ -41,4 +41,4 @@ config :mehungry_web, MehungryWeb.Endpoint,
   # Canonical host. Keep this in sync with config/runtime.exs, which sets the
   # runtime scheme/port (https/443). Host must match so the session cookie is
   # scoped consistently (apex vs www would otherwise drop the session).
-  url: [host: "www.mehungry.com", port: 4000]
+  url: [host: "www.m3hungry.com", port: 4000]

@@ -10,7 +10,7 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
 
   Each stage reuses an existing enqueue fn, `*_progress/0`, a runs module
   (`topic/0` + `latest_run/0`), and a PubSub broadcast tuple; this LiveView is
-  pure web wiring over those seams. See `docs/scientific_pipeline.md`.
+  pure web wiring over those seams. See `docs/science/scientific_pipeline.md`.
   """
   use MehungryWeb, :live_view
 

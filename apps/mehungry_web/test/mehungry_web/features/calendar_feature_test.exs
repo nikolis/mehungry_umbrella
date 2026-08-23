@@ -1,5 +1,5 @@
 defmodule MehungryWeb.CalendarFeatureTest do
-  use MehungryWeb.FeatureCase, async: true
+  use MehungryWeb.FeatureCase, async: false
 
   alias MehungryWeb.Endpoint
   alias MehungryWeb.Router.Helpers, as: Routes

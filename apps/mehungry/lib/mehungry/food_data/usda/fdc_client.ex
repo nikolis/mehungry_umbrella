@@ -93,8 +93,7 @@ defmodule Mehungry.FoodData.Usda.FdcClient do
         {:ok, %{"foods" => foods}, meta} when is_list(foods) ->
           case Enum.find(foods, fn f -> to_string(f["ndbNumber"]) == ndb_number end) do
             %{"description" => desc} = food ->
-              {:ok,
-               %{name: desc, fdc_id: food["fdcId"], ndb_number: ndb_number}, meta}
+              {:ok, %{name: desc, fdc_id: food["fdcId"], ndb_number: ndb_number}, meta}
 
             _ ->
               {:error, :no_ndb_match}

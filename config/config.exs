@@ -51,7 +51,7 @@ config :swoosh, :api_client, false
 # USDA FoodData Central rate-management tunables. Consumed by the shared
 # `FoodData.Usda.FdcHttp` client and `ObanWorkers.IngredientReconciliationWorker`
 # to pace lookups and snooze the reconciliation job when the FDC quota runs low
-# or a 429 is returned. See docs/food.md / the worker moduledoc.
+# or a 429 is returned. See docs/food/food.md / the worker moduledoc.
 config :mehungry,
   # Delay (ms) between successive USDA lookups within a reconciliation batch.
   fdc_pace_ms: 250,
@@ -103,6 +103,16 @@ config :mehungry,
 
 config :mehungry, Oban,
   repo: Mehungry.Repo,
+  # Pub/sub over Erlang process groups instead of the default single-connection
+  # Postgres LISTEN/NOTIFY notifier. That dedicated notifier connection is a
+  # single point of failure: a transient RDS blip/failover, an idle-connection
+  # reap of its long-lived socket, or a burst of `insert_trigger` NOTIFYs from a
+  # bulk job fan-out can freeze it, and every producer/plugin registered through
+  # it then times out its 5s `:listen`/`:leader?` call and crashes together
+  # (Oban-subtree restart storm). PG removes that socket entirely; leadership is
+  # unaffected (Oban.Peers.Database, on the pool). Single-node deploy, so PG's
+  # cluster-local scope is a non-issue. See oban_production_diagnostics.md.
+  notifier: Oban.Notifiers.PG,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24},
     # Reap jobs left `executing` by a crash/OOM/node-kill back to `available` after
@@ -116,8 +126,6 @@ config :mehungry, Oban,
        {"30 1 * * *", Mehungry.ObanWorkers.InstagramTokenRefreshWorker},
        # 2am UTC daily — generate recipes for the next day + schedule publish jobs
        {"0 2 * * *", Mehungry.ObanWorkers.DailyRecipeGenerationWorker},
-       # 3am UTC daily — prune telemetry snapshots older than 30 days
-       {"0 3 * * *", Mehungry.ObanWorkers.TelemetryPrunerWorker},
        # every 10 min — resume any pipeline run (crawl/annotation/derivation) whose chain broke
        {"*/10 * * * *", Mehungry.ObanWorkers.PipelineWatchdogWorker},
        # 4am UTC Mondays — sync food products from Open Food Facts delta exports
@@ -125,7 +133,7 @@ config :mehungry, Oban,
      ]}
   ],
   queues: [
-    # Total concurrency is capped at 11 job slots so it fits within the DB pool
+    # Total concurrency is capped at 12 job slots so it fits within the DB pool
     # (POOL_SIZE 18) with headroom for web/LiveView/Presence checkouts. Sized to
     # close the connection-pool starvation confirmed in prod (queue_time spiking
     # to ~10s) — see oban_production_diagnostics.md.
@@ -137,7 +145,10 @@ config :mehungry, Oban,
     # ingredients" run can't starve behind the long-running, self-resuming
     # science pipeline (literature crawl / PubTator / candidate derivation) that
     # shares the `:imports` queue. Capped to bound DB write pressure.
-    seed_imports: 1
+    seed_imports: 1,
+    # Admin-triggered hashtag reconciliation sweep (one job per recipe). Its own
+    # slot so a full-corpus resweep can't starve behind other background work.
+    hashtag_reconcile: 1
   ]
 
 config :swarm,
@@ -269,6 +280,34 @@ config :logger, :console,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# PromEx — Prometheus metrics collection (served at the token-guarded GET /metrics
+# via MehungryWeb.MetricsController). Grafana dashboard upload and the standalone
+# metrics HTTP server are disabled; we scrape through our own endpoint.
+grafana_config =
+  case System.get_env("GRAFANA_AUTH_TOKEN") do
+    nil ->
+      IO.inspect("UBSucessfull Grafana configuration")
+      :disabled
+
+    token ->
+      IO.inspect(token, label: "The grafna token")
+      [
+        host: "http://localhost:3000",
+        auth_token: token,
+        upload_dashboards_on_start: true,
+        folder_name: "MeHungry",
+        annotate_app_lifecycle: false
+      ]
+
+  end
+
+config :mehungry_web, MehungryWeb.PromEx,
+  disabled: false,
+  manual_metrics_start_delay: :no_delay,
+  drop_metrics_groups: [],
+  grafana: grafana_config,
+  metrics_server: :disabled
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

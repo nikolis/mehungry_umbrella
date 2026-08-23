@@ -102,9 +102,12 @@
           </a>
           <div class="text-xs text-parchment-dim mt-0.5">
             PMID {study.pmid} ·
-            <span class="text-basil">{type_count(@type_counts, study.id, "chemical")}</span> chem ·
-            <span class="text-parchment">{type_count(@type_counts, study.id, "species")}</span> species ·
-            <span class="text-red-400">{type_count(@type_counts, study.id, "disease")}</span> disease
+            <span class="text-basil">{type_count(@type_counts, study.id, "chemical")}</span>
+            chem ·
+            <span class="text-parchment">{type_count(@type_counts, study.id, "species")}</span>
+            species ·
+            <span class="text-red-400">{type_count(@type_counts, study.id, "disease")}</span>
+            disease
           </div>
         </div>
 

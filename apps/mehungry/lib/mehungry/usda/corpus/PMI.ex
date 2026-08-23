@@ -1,5 +1,5 @@
 defmodule USDA.Corpus.PMI do
-  """
+  @moduledoc """
     Pointwise Mutual Information, a statistical measure used to evaluate how strongly two words or terms co-occur within a text collection. It compares their actual observed frequency of appearing together against what you would expect if they were completely independent.
   """
 

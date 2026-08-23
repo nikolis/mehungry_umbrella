@@ -5,6 +5,7 @@ defmodule MehungryWeb.Api.LocalAiTest do
 
   alias Mehungry.{Food, Literature, Repo}
   alias Mehungry.Food.CompoundMeasurementCandidate
+  alias Mehungry.Food.GlycemicIndexCandidate
 
   defp token, do: Application.get_env(:mehungry, :local_ai_api_token)
 
@@ -75,6 +76,68 @@ defmodule MehungryWeb.Api.LocalAiTest do
       assert payload["pmid"] == 12_345
       assert [%{"id" => cid, "name" => "L-Ascorbic Acid"}] = payload["compounds"]
       assert cid == vitc.id
+    end
+
+    test "flags extract_gi only for studies found by the GI crawl term", %{
+      conn: conn,
+      spinach: spinach,
+      study: vitc_study
+    } do
+      {:ok, gi_study} =
+        Literature.upsert_study(%{
+          pmid: 99_001,
+          title: "GI of spinach",
+          retrieved_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        })
+
+      {:ok, _} =
+        Literature.link_study_ingredient(%{
+          study_id: gi_study.id,
+          ingredient_id: spinach.id,
+          search_term: "Spinacia oleracea glycemic index"
+        })
+
+      body = conn |> auth() |> get(~p"/api/local_ai/pending?limit=10") |> json_response(200)
+      flags = Map.new(body["studies"], &{&1["study_id"], &1["extract_gi"]})
+
+      assert flags[gi_study.id] == true
+      # the vitamin-C study (found by the "ascorbic" term) is not GI-discovered
+      assert flags[vitc_study.id] == false
+    end
+  end
+
+  describe "POST /gi_candidates" do
+    test "fans a GI finding across the study's species as pending candidates", ctx do
+      %{conn: conn, study: study, species: species} = ctx
+
+      conn =
+        conn
+        |> auth()
+        |> post(~p"/api/local_ai/gi_candidates", %{
+          "candidates" => [
+            %{
+              "study_id" => study.id,
+              "gi_value" => 54.0,
+              "gi_sem" => 3.0,
+              "iso_method" => true,
+              "reference_food" => "glucose",
+              "sample_size" => 10,
+              "score" => 0.4,
+              "extraction_method" => "automated"
+            }
+          ]
+        })
+
+      assert json_response(conn, 200)["written"] == 1
+
+      assert [cand] = Repo.all(GlycemicIndexCandidate)
+      assert cand.foundemental_species_id == species.id
+      assert cand.study_id == study.id
+      assert cand.gi_value == 54.0
+      assert cand.gi_sem == 3.0
+      assert cand.iso_method
+      assert cand.status == "pending"
+      assert cand.enrichment_source_id
     end
   end
 

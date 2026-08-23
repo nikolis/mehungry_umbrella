@@ -105,7 +105,7 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
 
     view
     |> form("form[phx-submit=promote_recommendation]",
-      id: candidate.id,
+      candidate_id: candidate.id,
       recommendation: "avoid",
       severity: "high"
     )

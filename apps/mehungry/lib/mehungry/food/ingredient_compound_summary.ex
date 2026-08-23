@@ -6,7 +6,7 @@ defmodule Mehungry.Food.IngredientCompoundSummary do
 
   This is **not** an Ecto schema and is never persisted. It is produced on demand
   by `Mehungry.Food.EvidenceAggregation` from the immutable measurement rows and
-  never mutates them (see `docs/compound_measurements.md` §4).
+  never mutates them (see `docs/science/compound_measurements.md` §4).
 
   ## Fields
 

@@ -21,6 +21,77 @@ defmodule MehungryWeb.HomeLiveTest do
     recipe
   end
 
+  # Makes the user "vegan mode": sets the profile's `diet` to "vegan" (the source
+  # of truth Accounts.diet_mode/1 now reads), and also seeds the excluded-category
+  # vocabulary + matching UserCategoryRules so meat recipes can be categorized.
+  # Returns the excluded category ids.
+  defp make_user_vegan(user) do
+    frt =
+      Mehungry.Repo.insert!(%Mehungry.Food.FoodRestrictionType{title: "avoid", alias: "avoid"})
+
+    for name <- ~w(Beef Poultry Dairy Pork Sausages Lamb Fish) do
+      Food.get_category_by_name(name) || Food.create_category(%{name: name, description: "x"})
+    end
+
+    vegan_ids = Food.diet_category_ids(:vegan)
+
+    for id <- vegan_ids do
+      Mehungry.Repo.insert!(%Mehungry.Accounts.UserCategoryRule{
+        user_id: user.id,
+        category_id: id,
+        food_restriction_type_id: frt.id
+      })
+    end
+
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
+    {:ok, _} = Accounts.update_user_profile(user_profile, %{diet: "vegan"})
+
+    vegan_ids
+  end
+
+  defp recipe_with_meat_post(user, vegan_ids, title) do
+    mu = measurement_unit_fixture()
+    ingredient = ingredient_fixture(%{name: unique_ingredient()})
+    {:ok, ingredient} = Food.update_ingredient(ingredient, %{category_id: List.first(vegan_ids)})
+
+    create_recipe_with_post(user, %{
+      title: title,
+      recipe_ingredients: [%{ingredient_id: ingredient.id, measurement_unit_id: mu.id, quantity: 5}]
+    })
+  end
+
+  describe "diet mode filtering" do
+    setup [:register_and_log_in_user]
+
+    test "vegan user sees the badge and only #vegan posts", %{conn: conn, user: user} do
+      complete_onboarding(user)
+      cats = make_user_vegan(user)
+
+      vegan = create_recipe_with_post(user, %{title: "Green Salad"})
+      beef = recipe_with_meat_post(user, cats, "Beefy Feast")
+
+      {:ok, _view, html} = live(conn, ~p"/home")
+
+      assert html =~ "vegan mode"
+      assert html =~ "card-link-to-recipe-#{vegan.id}"
+      refute html =~ "card-link-to-recipe-#{beef.id}"
+    end
+
+    test "toggling diet mode off reveals all posts", %{conn: conn, user: user} do
+      complete_onboarding(user)
+      cats = make_user_vegan(user)
+
+      _vegan = create_recipe_with_post(user, %{title: "Green Salad"})
+      beef = recipe_with_meat_post(user, cats, "Beefy Feast")
+
+      {:ok, view, html} = live(conn, ~p"/home")
+      refute html =~ "card-link-to-recipe-#{beef.id}"
+
+      html = view |> element("button[phx-click='toggle_diet_mode']") |> render_click()
+      assert html =~ "card-link-to-recipe-#{beef.id}"
+    end
+  end
+
   # ──────────────────────────────────────────────────────────────────────────
   # Mounting / basic render
   # ──────────────────────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@ defmodule Mehungry.AI.Bot.RecipeSetup do
 
   schema "ai_bot_recipe_setups" do
     field :name, :string
+    field :cuisine, :string
     field :origin, :string
     field :story, :string
     field :diet_direction, :string
@@ -31,6 +32,7 @@ defmodule Mehungry.AI.Bot.RecipeSetup do
     setup
     |> cast(attrs, [
       :name,
+      :cuisine,
       :persona_id,
       :origin,
       :story,

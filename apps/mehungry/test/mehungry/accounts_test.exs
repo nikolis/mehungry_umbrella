@@ -645,7 +645,9 @@ defmodule Mehungry.AccountsTest do
       assert Accounts.list_opted_in_condition_ids(profile.id) == []
 
       :ok = Accounts.set_condition_opt_ins(profile.id, [c1.id, c2.id])
-      assert Enum.sort(Accounts.list_opted_in_condition_ids(profile.id)) == Enum.sort([c1.id, c2.id])
+
+      assert Enum.sort(Accounts.list_opted_in_condition_ids(profile.id)) ==
+               Enum.sort([c1.id, c2.id])
 
       # Replacing with a subset removes the dropped one; idempotent on re-set.
       :ok = Accounts.set_condition_opt_ins(profile.id, [c1.id])

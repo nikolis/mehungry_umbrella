@@ -219,6 +219,58 @@ defmodule Mehungry.HealthTest do
     end
   end
 
+  describe "ingredient_guidance_for_condition/1 — encouraged/discouraged de-overlap" do
+    test "an ingredient that is both encouraged and discouraged stays discouraged only" do
+      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones", category: "renal"})
+      {:ok, citrate} = Food.upsert_compound(%{name: "Citrate", compound_type: "other"})
+      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+
+      # Same condition: encourage Citrate, avoid Oxalate.
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, citrate.id, %{
+          recommendation: "encourage",
+          source: "guideline"
+        })
+
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, oxalate.id, %{
+          recommendation: "avoid",
+          source: "guideline"
+        })
+
+      # Spinach's species carries BOTH compounds → it is encouraged (citrate) AND
+      # discouraged (oxalate). Without de-overlap it would be seeded primary+avoid.
+      spinach = ingredient_fixture(%{name: "spinach"})
+      contested = species_fact(spinach, "Spinach", "Spinacia oleracea", oxalate)
+
+      {:ok, _} =
+        Food.upsert_species_relationship(%{
+          foundemental_species_id: contested.id,
+          compound_id: citrate.id,
+          relationship_type: "high_in",
+          source: "literature",
+          confidence: 0.9
+        })
+
+      # Lemon carries only Citrate → a clean encouraged ingredient.
+      lemon = ingredient_fixture(%{name: "lemon"})
+      species_fact(lemon, "Lemon", "Citrus limon", citrate)
+
+      %{encouraged: encouraged, discouraged: discouraged} =
+        Health.ingredient_guidance_for_condition(kidney.id)
+
+      encouraged_ids = Enum.map(encouraged, & &1.id)
+      discouraged_ids = Enum.map(discouraged, & &1.id)
+
+      # Contested ingredient is discouraged only, never encouraged.
+      assert spinach.id in discouraged_ids
+      refute spinach.id in encouraged_ids
+
+      # A non-contested encouraged ingredient still comes through.
+      assert lemon.id in encouraged_ids
+    end
+  end
+
   describe "flags_for_recipes/2 — recipe badges" do
     test "flags a recipe whose ingredient carries a compound recommended for an opted-in condition" do
       {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones", category: "renal"})
@@ -384,6 +436,127 @@ defmodule Mehungry.HealthTest do
         |> Enum.map(& &1.id)
 
       assert recipe.id in ids
+    end
+  end
+
+  describe "DB-content localization (el)" do
+    setup do
+      {:ok, _} = Mehungry.Languages.create_language(%{name: "el"})
+      :ok
+    end
+
+    test "get_condition/2 overlays the el name + description, falling back per field" do
+      {:ok, condition} =
+        Health.create_condition(%{name: "Kidney Stones", description: "Mineral deposits."})
+
+      {:ok, _} =
+        %Mehungry.Health.ConditionTranslation{}
+        |> Mehungry.Health.ConditionTranslation.changeset(%{
+          condition_id: condition.id,
+          language_name: "el",
+          name: "Πέτρες στα Νεφρά"
+        })
+        |> Mehungry.Repo.insert()
+
+      # el overlays the translated name; description has no el row → base value kept.
+      localized = Health.get_condition(condition.id, "el")
+      assert localized.name == "Πέτρες στα Νεφρά"
+      assert localized.description == "Mineral deposits."
+
+      # nil / "en" return the base record untouched.
+      assert Health.get_condition(condition.id).name == "Kidney Stones"
+      assert Health.get_condition(condition.id, "en").name == "Kidney Stones"
+    end
+
+    test "list_conditions_for_presentation/1 localizes each listed condition" do
+      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones"})
+      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, oxalate.id, %{
+          recommendation: "avoid",
+          source: "guideline"
+        })
+
+      {:ok, _} =
+        %Mehungry.Health.ConditionTranslation{}
+        |> Mehungry.Health.ConditionTranslation.changeset(%{
+          condition_id: kidney.id,
+          language_name: "el",
+          name: "Πέτρες στα Νεφρά"
+        })
+        |> Mehungry.Repo.insert()
+
+      assert [%{name: "Πέτρες στα Νεφρά"}] = Health.list_conditions_for_presentation("el")
+    end
+
+    test "species_for_condition/3 finds a legacy \"Gr\" species translation via the el locale" do
+      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones"})
+      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, oxalate.id, %{
+          recommendation: "avoid",
+          source: "guideline"
+        })
+
+      spinach = ingredient_fixture(%{name: "spinach"})
+
+      {:ok, species} =
+        Food.create_foundemental_species(%{
+          "name" => "Spinach",
+          "scientific_name" => "Spinacia oleracea"
+        })
+
+      {:ok, _} = Food.assign_foundemental_ingredient(species.id, spinach.id, "spinach")
+
+      {:ok, _} =
+        Food.upsert_species_relationship(%{
+          foundemental_species_id: species.id,
+          compound_id: oxalate.id,
+          relationship_type: "high_in",
+          source: "literature"
+        })
+
+      # Older species rows predate the ISO migration and live under legacy "Gr"
+      # (seeded by DataCase) — the "el" locale must still resolve them.
+      {:ok, _} =
+        %Mehungry.Food.FoundementalFoodSpeciesTranslation{}
+        |> Mehungry.Food.FoundementalFoodSpeciesTranslation.changeset(%{
+          foundemental_species_id: species.id,
+          language_name: "Gr",
+          name: "Σπανάκι"
+        })
+        |> Mehungry.Repo.insert()
+
+      assert [%{species: %{name: "Σπανάκι"}}] = Health.species_for_condition(kidney.id, nil, "el")
+    end
+
+    test "recommendations_for_condition/2 overlays the el compound name" do
+      {:ok, kidney} = Health.upsert_condition(%{name: "Kidney Stones"})
+      {:ok, oxalate} = Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+
+      {:ok, _} =
+        Health.add_recommendation(kidney.id, oxalate.id, %{
+          recommendation: "avoid",
+          source: "guideline"
+        })
+
+      {:ok, _} =
+        %Mehungry.Food.CompoundTranslation{}
+        |> Mehungry.Food.CompoundTranslation.changeset(%{
+          compound_id: oxalate.id,
+          language_name: "el",
+          name: "Οξαλικό"
+        })
+        |> Mehungry.Repo.insert()
+
+      assert [%{compound: %{name: "Οξαλικό"}}] =
+               Health.recommendations_for_condition(kidney.id, "el")
+
+      # Base language is untouched.
+      assert [%{compound: %{name: "Oxalate"}}] =
+               Health.recommendations_for_condition(kidney.id)
     end
   end
 

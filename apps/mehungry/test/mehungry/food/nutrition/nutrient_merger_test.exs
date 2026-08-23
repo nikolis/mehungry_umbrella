@@ -3,7 +3,7 @@ defmodule Mehungry.Food.NutrientMergerTest do
   Coverage for `Mehungry.Food.NutrientMerger` — the shared nutrient-name and
   key primitives (`normalize_nutrient_name/1`, `to_string_keys/1`,
   `to_atom_keys/1`) used by the stored-recipe display path. See
-  `docs/nutrition_calculation.md`.
+  `docs/food/nutrition_calculation.md`.
   """
   use ExUnit.Case, async: true
 
@@ -29,7 +29,12 @@ defmodule Mehungry.Food.NutrientMergerTest do
       atom_map = %{name: "Total Fat", amount: 5.0, children: [%{name: "Saturated Fat"}]}
 
       string_map = NM.to_string_keys(atom_map)
-      assert string_map == %{"name" => "Total Fat", "amount" => 5.0, "children" => [%{"name" => "Saturated Fat"}]}
+
+      assert string_map == %{
+               "name" => "Total Fat",
+               "amount" => 5.0,
+               "children" => [%{"name" => "Saturated Fat"}]
+             }
 
       back = NM.to_atom_keys(string_map)
       assert back[:name] == "Total Fat"

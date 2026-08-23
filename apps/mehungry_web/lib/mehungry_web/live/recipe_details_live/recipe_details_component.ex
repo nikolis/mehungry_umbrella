@@ -189,6 +189,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               </h1>
               <p class="text-parchment-dim mb-4">{@recipe.description}</p>
 
+              <.recipe_tags recipe={@recipe} />
+
               <!-- Recipe Stats -->
               <div class="flex flex-wrap gap-4 mb-6">
                 <div class="flex items-center gap-2">

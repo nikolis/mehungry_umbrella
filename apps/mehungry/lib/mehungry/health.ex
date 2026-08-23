@@ -8,7 +8,7 @@ defmodule Mehungry.Health do
   advice (e.g. *Kidney Stones: avoid Oxalate*, *IBS: limit FODMAP*).
 
   This is the **advice** layer that the "facts only" compound stack
-  (`docs/food_compounds.md` §4) deliberately defers to. Its hard rule: a condition
+  (`docs/science/food_compounds.md` §4) deliberately defers to. Its hard rule: a condition
   references a **compound**, never a species or ingredient. "Which foods should a
   kidney-stone patient avoid?" is answered by `species_for_condition/2` (the primary
   read), which **composes** this layer with `Food.SpeciesCompoundRelationship` at read
@@ -22,13 +22,40 @@ defmodule Mehungry.Health do
 
   alias Mehungry.Food.{
     Compound,
+    CompoundTranslation,
     FoundementalFood,
+    FoundementalFoodSpeciesTranslation,
     Recipe,
     RecipeIngredient,
     SpeciesCompoundRelationship
   }
 
-  alias Mehungry.Health.{Condition, CompoundRecommendation, ConditionIdentifier}
+  alias Mehungry.Health.{
+    Condition,
+    CompoundRecommendation,
+    ConditionIdentifier,
+    ConditionTranslation
+  }
+
+  alias Mehungry.Languages.Locale
+
+  # Read-through cache for the editorial, shared-safe condition-page reads. These
+  # rows are curated (at /professional/health) and vary only by entity id + language,
+  # so a shared cache is safe; a moderate TTL lets admin edits surface without
+  # having to bust every write path. Namespaced tuple keys mirror Recipes.get_recipe!/1.
+  @cache_key_ns Mehungry.Health
+  @cache_ttl :timer.hours(1)
+
+  # Curation is rare (admin-only) and every cached read (`get_condition/2`,
+  # `recommendations_for_condition/2`, `species_for_condition/3`) is keyed on a
+  # condition id fanned across language/recommendation variants, so any write to
+  # the condition/recommendation tables clears the whole cache rather than trying
+  # to enumerate those variants. Without this the read-through cache serves the
+  # pre-write snapshot for up to @cache_ttl.
+  defp bust_cache do
+    Cachex.clear(:health_cache)
+    :ok
+  end
 
   # ── Condition registry ────────────────────────────────────────────────────
 
@@ -36,7 +63,16 @@ defmodule Mehungry.Health do
     %Condition{}
     |> Condition.changeset(attrs)
     |> Repo.insert()
+    |> tap_ok()
   end
+
+  # Bust the cache after a successful write; pass other results through untouched.
+  defp tap_ok({:ok, _} = result) do
+    bust_cache()
+    result
+  end
+
+  defp tap_ok(result), do: result
 
   @doc "A changeset for a condition — for admin forms."
   def change_condition(condition \\ %Condition{}, attrs \\ %{}) do
@@ -47,7 +83,7 @@ defmodule Mehungry.Health do
   def delete_condition(id) do
     case Repo.get(Condition, id) do
       nil -> {:error, :not_found}
-      condition -> Repo.delete(condition)
+      condition -> condition |> Repo.delete() |> tap_ok()
     end
   end
 
@@ -67,14 +103,36 @@ defmodule Mehungry.Health do
 
   def get_condition!(id), do: Repo.get!(Condition, id)
 
-  @doc "Fetch a condition by id, or `nil` if it does not exist."
-  def get_condition(id), do: Repo.get(Condition, id)
+  @doc """
+  Fetch a condition by id, or `nil` if it does not exist. Pass a `language`
+  (ISO locale, e.g. `"el"`) to overlay its `condition_translations` name/description
+  (per-field fallback to the base record); `nil`/`"en"` returns the base record.
+  """
+  def get_condition(id, language \\ nil) do
+    key = {@cache_key_ns, {:condition, id, language}}
+
+    case Cachex.get(:health_cache, key) do
+      {:ok, nil} ->
+        case Repo.get(Condition, id) do
+          nil ->
+            nil
+
+          condition ->
+            localized = localize_condition(condition, language)
+            Cachex.put(:health_cache, key, localized, ttl: @cache_ttl)
+            localized
+        end
+
+      {:ok, cached} ->
+        cached
+    end
+  end
 
   def get_condition_by_name(name), do: Repo.get_by(Condition, name: name)
 
   def list_conditions, do: Repo.all(from(c in Condition, order_by: [asc: c.name]))
 
-  def list_conditions_for_presentation do
+  def list_conditions_for_presentation(language \\ nil) do
     query =
       from c in Condition,
         as: :condition,
@@ -84,7 +142,9 @@ defmodule Mehungry.Health do
               where: cr.condition_id == parent_as(:condition).id
           )
 
-    Repo.all(query)
+    query
+    |> Repo.all()
+    |> localize_conditions(language)
   end
 
   def list_conditions_by_category(category) do
@@ -130,6 +190,7 @@ defmodule Mehungry.Health do
     %CompoundRecommendation{}
     |> CompoundRecommendation.changeset(attrs)
     |> Repo.insert()
+    |> tap_ok()
   end
 
   @doc """
@@ -144,15 +205,33 @@ defmodule Mehungry.Health do
       on_conflict: {:replace_all_except, [:id, :inserted_at]},
       conflict_target: [:condition_id, :compound_id, :source]
     )
+    |> tap_ok()
   end
 
   def delete_recommendation(%CompoundRecommendation{} = recommendation),
-    do: Repo.delete(recommendation)
+    do: recommendation |> Repo.delete() |> tap_ok()
 
   def get_recommendation!(id), do: Repo.get!(CompoundRecommendation, id)
 
-  @doc "The recommendation rows for a condition, each with its `:compound` preloaded."
-  def recommendations_for_condition(condition_id) do
+  @doc """
+  The recommendation rows for a condition, each with its `:compound` preloaded.
+  Pass a `language` to overlay the compound's `compound_translations` name.
+  """
+  def recommendations_for_condition(condition_id, language \\ nil) do
+    key = {@cache_key_ns, {:recommendations, condition_id, language}}
+
+    case Cachex.get(:health_cache, key) do
+      {:ok, nil} ->
+        result = do_recommendations_for_condition(condition_id, language)
+        Cachex.put(:health_cache, key, result, ttl: @cache_ttl)
+        result
+
+      {:ok, cached} ->
+        cached
+    end
+  end
+
+  defp do_recommendations_for_condition(condition_id, language) do
     Repo.all(
       from(r in CompoundRecommendation,
         join: c in Compound,
@@ -162,6 +241,7 @@ defmodule Mehungry.Health do
         preload: [compound: c]
       )
     )
+    |> localize_recommendation_compounds(language)
   end
 
   @doc "The recommendation rows for a compound, each with its `:condition` preloaded."
@@ -211,7 +291,21 @@ defmodule Mehungry.Health do
   `%{species, compound, recommendation, severity, evidence_level}` so a caller can
   render "avoid Spinach (high Oxalate)".
   """
-  def species_for_condition(condition_id, recommendation \\ nil) do
+  def species_for_condition(condition_id, recommendation \\ nil, language \\ nil) do
+    key = {@cache_key_ns, {:species, condition_id, recommendation, language}}
+
+    case Cachex.get(:health_cache, key) do
+      {:ok, nil} ->
+        result = do_species_for_condition(condition_id, recommendation, language)
+        Cachex.put(:health_cache, key, result, ttl: @cache_ttl)
+        result
+
+      {:ok, cached} ->
+        cached
+    end
+  end
+
+  defp do_species_for_condition(condition_id, recommendation, language) do
     from(rec in CompoundRecommendation,
       join: scr in SpeciesCompoundRelationship,
       on: scr.compound_id == rec.compound_id,
@@ -230,6 +324,7 @@ defmodule Mehungry.Health do
     )
     |> maybe_filter_recommendation(recommendation)
     |> Repo.all()
+    |> localize_species_rows(language)
   end
 
   @doc """
@@ -308,17 +403,25 @@ defmodule Mehungry.Health do
   Returns `%{encouraged: [ingredient], discouraged: [ingredient]}`.
   """
   def ingredient_guidance_for_condition(condition_id) do
-    encouraged =
-      condition_id
-      |> ingredients_for_condition("encourage")
-      |> Enum.map(& &1.ingredient)
-      |> Enum.uniq_by(& &1.id)
-
     discouraged =
       @discouraged_recommendations
       |> Enum.flat_map(&ingredients_for_condition(condition_id, &1))
       |> Enum.map(& &1.ingredient)
       |> Enum.uniq_by(& &1.id)
+
+    discouraged_ids = MapSet.new(discouraged, & &1.id)
+
+    # An ingredient whose species carries both an "encourage" and an
+    # "avoid"/"limit"/"caution" compound would otherwise land in both lists and
+    # be seeded as primary AND avoid — a "build around X" / "never use X"
+    # contradiction that makes the avoid-guard reject every recipe. Keep such
+    # contested ingredients as discouraged only.
+    encouraged =
+      condition_id
+      |> ingredients_for_condition("encourage")
+      |> Enum.map(& &1.ingredient)
+      |> Enum.uniq_by(& &1.id)
+      |> Enum.reject(&MapSet.member?(discouraged_ids, &1.id))
 
     %{encouraged: encouraged, discouraged: discouraged}
   end
@@ -328,6 +431,131 @@ defmodule Mehungry.Health do
   defp maybe_filter_recommendation(query, recommendation) do
     value = to_string(recommendation)
     from(rec in query, where: rec.recommendation == ^value)
+  end
+
+  # ── DB-content localization ───────────────────────────────────────────────
+  # Condition/compound/species names + descriptions carry per-language rows in
+  # their `*_translation` tables. A locale maps to *several* `language_name` codes
+  # (`Locale.data_codes/1`: the canonical ISO code plus legacy aliases, e.g.
+  # `"el" => ["el", "Gr"]`) — species/ingredient rows in particular predate the
+  # ISO migration and are stored under `"Gr"`, so a query on `"el"` alone silently
+  # finds nothing. These helpers batch-load across *all* the locale's codes (no
+  # N+1), preferring the canonical ISO row when an entity has both, and overlay
+  # them onto the base records with per-field fallback. `nil`/`"en"` is a no-op.
+
+  defp translatable_language?(language), do: language not in [nil, "", "en"]
+
+  defp localize_condition(condition, language) do
+    [condition] |> localize_conditions(language) |> hd()
+  end
+
+  defp localize_conditions(conditions, language) do
+    if translatable_language?(language) do
+      codes = Locale.data_codes(language)
+      ids = Enum.map(conditions, & &1.id)
+
+      by_id =
+        from(t in ConditionTranslation,
+          where: t.condition_id in ^ids and t.language_name in ^codes
+        )
+        |> Repo.all()
+        |> best_by_id(codes, & &1.condition_id)
+
+      Enum.map(conditions, fn c ->
+        case by_id[c.id] do
+          nil -> c
+          t -> %{c | name: t.name || c.name, description: t.description || c.description}
+        end
+      end)
+    else
+      conditions
+    end
+  end
+
+  defp localize_recommendation_compounds(rows, language) do
+    if translatable_language?(language) do
+      names = compound_translation_names(Enum.map(rows, & &1.compound.id), language)
+      Enum.map(rows, &%{&1 | compound: apply_compound_name(&1.compound, names)})
+    else
+      rows
+    end
+  end
+
+  defp localize_species_rows(rows, language) do
+    if translatable_language?(language) do
+      compound_names = compound_translation_names(Enum.map(rows, & &1.compound.id), language)
+      species_names = species_translation_names(Enum.map(rows, & &1.species.id), language)
+
+      Enum.map(rows, fn row ->
+        %{
+          row
+          | compound: apply_compound_name(row.compound, compound_names),
+            species: apply_species_name(row.species, species_names)
+        }
+      end)
+    else
+      rows
+    end
+  end
+
+  defp compound_translation_names([], _language), do: %{}
+
+  defp compound_translation_names(ids, language) do
+    codes = Locale.data_codes(language)
+
+    from(t in CompoundTranslation,
+      where: t.compound_id in ^ids and t.language_name in ^codes and not is_nil(t.name)
+    )
+    |> Repo.all()
+    |> best_by_id(codes, & &1.compound_id)
+    |> Map.new(fn {id, t} -> {id, t.name} end)
+  end
+
+  defp species_translation_names([], _language), do: %{}
+
+  defp species_translation_names(ids, language) do
+    codes = Locale.data_codes(language)
+
+    from(t in FoundementalFoodSpeciesTranslation,
+      where:
+        t.foundemental_species_id in ^ids and t.language_name in ^codes and not is_nil(t.name)
+    )
+    |> Repo.all()
+    |> best_by_id(codes, & &1.foundemental_species_id)
+    |> Map.new(fn {id, t} -> {id, t.name} end)
+  end
+
+  # Collapses translation rows to one per entity id, preferring the row whose
+  # `language_name` ranks earliest in `codes` (index 0 = canonical ISO code) when
+  # an entity carries both an ISO and a legacy-alias row.
+  defp best_by_id(rows, codes, id_fun) do
+    rank = codes |> Enum.with_index() |> Map.new()
+
+    rows
+    |> Enum.reduce(%{}, fn row, acc ->
+      id = id_fun.(row)
+      r = Map.get(rank, row.language_name, length(codes))
+
+      case acc do
+        %{^id => {best, _}} when best <= r -> acc
+        _ -> Map.put(acc, id, {r, row})
+      end
+    end)
+    |> Map.new(fn {id, {_r, row}} -> {id, row} end)
+  end
+
+  defp apply_compound_name(compound, names) do
+    case names[compound.id] do
+      nil -> compound
+      name -> %{compound | name: name}
+    end
+  end
+
+  defp apply_species_name(species, names) do
+    case names[species.id] do
+      nil -> species
+      name -> %{species | name: name}
+    end
   end
 
   @doc """
@@ -401,24 +629,67 @@ defmodule Mehungry.Health do
   def recipes_for_conditions_query([]), do: from(r in Recipe, where: not is_nil(r.image_url))
 
   def recipes_for_conditions_query(condition_ids) do
+    encouraged_ids =
+      from(e in subquery(encouraged_recipe_ids_query(condition_ids)), select: e.recipe_id)
+
     from(r in Recipe,
       where: not is_nil(r.image_url),
+      where: r.id in subquery(encouraged_ids)
+    )
+  end
+
+  @doc """
+  Builds (but does not run) the browse `Recipe` query **prioritized** for the
+  given conditions: the full image-filtered catalog, ordered so recipes
+  encouraged for the conditions (via `recipes_for_conditions_query/1`'s chain)
+  sort to the top, then everything else, each group by `inserted_at`/`id`. This
+  is the "prioritize, don't restrict" ordering behind the browse condition
+  filter — nothing is hidden, encouraged recipes just lead.
+
+  Because the priority is a computed expression (not a plain column), the
+  resulting query is **offset-paginated** via `Food.list_recipes_page/4` rather
+  than the cursor paginator. It stays composable with the full-text search
+  (`Mehungry.Search.RecipeSearch.run/2`), which appends a rank `order_by` after
+  this one, so the priority stays primary and relevance breaks ties.
+
+  Returns the plain image-filtered `Recipe` query when `condition_ids` is empty.
+  """
+  def recipes_prioritized_for_conditions_query([]),
+    do:
+      from(r in Recipe, where: not is_nil(r.image_url), order_by: [asc: r.inserted_at, asc: r.id])
+
+  def recipes_prioritized_for_conditions_query(condition_ids) do
+    encouraged_ids = encouraged_recipe_ids_query(condition_ids)
+
+    from(r in Recipe,
+      left_join: e in subquery(encouraged_ids),
+      on: e.recipe_id == r.id,
+      where: not is_nil(r.image_url),
+      # `e.recipe_id IS NULL` is false (0) for encouraged recipes, true (1) for
+      # the rest → ascending puts encouraged first.
+      order_by: [asc: fragment("? IS NULL", e.recipe_id), asc: r.inserted_at, asc: r.id]
+    )
+  end
+
+  # Distinct recipe-id subquery for recipes whose ingredients carry a compound
+  # the given conditions recommend to "encourage". Shared by the "encouraged"
+  # (`recipes_for_conditions_query/1`) and "prioritized" browse queries so both
+  # agree on the same set; `distinct` keeps the prioritized query's left join
+  # from multiplying recipe rows.
+  defp encouraged_recipe_ids_query(condition_ids) do
+    from(ri in RecipeIngredient,
+      join: ff in FoundementalFood,
+      on: ff.ingredient_id == ri.ingredient_id,
+      join: scr in SpeciesCompoundRelationship,
+      on: scr.foundemental_species_id == ff.foundemental_species_id,
+      join: rec in CompoundRecommendation,
+      on: rec.compound_id == scr.compound_id,
       where:
-        r.id in subquery(
-          from(ri in RecipeIngredient,
-            join: ff in FoundementalFood,
-            on: ff.ingredient_id == ri.ingredient_id,
-            join: scr in SpeciesCompoundRelationship,
-            on: scr.foundemental_species_id == ff.foundemental_species_id,
-            join: rec in CompoundRecommendation,
-            on: rec.compound_id == scr.compound_id,
-            where:
-              rec.condition_id in ^condition_ids and
-                rec.recommendation == "encourage" and
-                scr.relationship_type != "absent",
-            select: ri.recipe_id
-          )
-        )
+        rec.condition_id in ^condition_ids and
+          rec.recommendation == "encourage" and
+          scr.relationship_type != "absent",
+      distinct: true,
+      select: %{recipe_id: ri.recipe_id}
     )
   end
 

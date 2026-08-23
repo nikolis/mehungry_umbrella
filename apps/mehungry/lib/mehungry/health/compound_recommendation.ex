@@ -4,7 +4,7 @@ defmodule Mehungry.Health.CompoundRecommendation do
   e.g. *Kidney Stones → avoid → Oxalate*, *IBS → limit → FODMAP*.
 
   This is the **advice** layer the "facts only" compound docs
-  (`docs/food_compounds.md` §4) deliberately defer to: `recommendation` and
+  (`docs/science/food_compounds.md` §4) deliberately defer to: `recommendation` and
   `severity` express guidance, which the `Food.*` fact layers never do. The hard
   rule — a recommendation references a **compound**, never an ingredient — keeps it
   decoupled from ingredient data; the food a patient should avoid is derived by

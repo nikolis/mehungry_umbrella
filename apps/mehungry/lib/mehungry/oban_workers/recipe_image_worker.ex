@@ -1,7 +1,8 @@
 defmodule Mehungry.RecipeImageWorker do
   @moduledoc """
-  Background job that generates a DALL-E 3 cover image for a recipe and stores
-  it in S3, then updates the recipe's image_url.
+  Background job that generates an AI cover image for a recipe (via
+  `Mehungry.AI.ImageGenerator`) and stores it in S3, then updates the recipe's
+  image_url.
 
   Triggered from Food.create_recipe/1 when no image_url is provided.
   """
@@ -26,7 +27,7 @@ defmodule Mehungry.RecipeImageWorker do
   end
 
   defp generate_and_store(recipe) do
-    case ImageGenerator.generate(recipe.title, recipe.description) do
+    case ImageGenerator.generate(recipe.title, recipe.description, cuisine: recipe.cousine) do
       {:ok, binary} ->
         bucket = Application.get_env(:mehungry_web, :aws_bucket)
 

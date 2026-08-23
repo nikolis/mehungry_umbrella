@@ -39,12 +39,6 @@
           class:
             "w-full rounded-lg bg-ink-panel2 border border-ink-panel2 text-parchment px-3 py-2.5 focus:border-paprika focus:outline-none"
         )}
-        <div class="text-right mt-1">
-          {link("Forgot your password?",
-            to: Routes.user_reset_password_path(@conn, :new),
-            class: "text-xs text-parchment-dim hover:text-parchment"
-          )}
-        </div>
         {error_tag(f, :password)}
       </div>
 

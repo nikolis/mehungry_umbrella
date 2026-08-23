@@ -20,7 +20,9 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
 
     configs = Bot.list_bot_configs()
     today = Date.utc_today()
-    default_config = Bot.get_active_config_for_month(today.month, today.year) || List.first(configs)
+
+    default_config =
+      Bot.get_active_config_for_month(today.month, today.year) || List.first(configs)
 
     {:ok,
      socket
@@ -64,7 +66,11 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
 
     if is_nil(config_id) do
       {:noreply,
-       put_flash(socket, :error, "Select a bot config to generate for — create one first if none exist.")}
+       put_flash(
+         socket,
+         :error,
+         "Select a bot config to generate for — create one first if none exist."
+       )}
     else
       job_args = %{target_date: target_date, bot_config_id: config_id}
 
@@ -384,7 +390,8 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
             </button>
             <%= if @selected_config_id do %>
               <p class="text-slate-600 text-xs mt-2">
-                Generating for <span class="text-slate-400">{config_label(@selected_config_id, @configs)}</span>
+                Generating for
+                <span class="text-slate-400">{config_label(@selected_config_id, @configs)}</span>
               </p>
             <% end %>
           <% else %>
@@ -525,7 +532,11 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
     name =
       case config.setup_type do
         "condition" ->
-          direction = if config.diet_direction not in [nil, ""], do: config.diet_direction, else: "Condition setup"
+          direction =
+            if config.diet_direction not in [nil, ""],
+              do: config.diet_direction,
+              else: "Condition setup"
+
           "#{direction} (condition)"
 
         _ ->

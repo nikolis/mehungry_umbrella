@@ -1,6 +1,6 @@
 defmodule Mehungry.AI.ImageGenerator do
   @moduledoc """
-  Generates recipe cover images using the OpenAI gpt-image-1 API.
+  Generates recipe cover images using the OpenAI gpt-image-2 API.
 
   Returns JPEG binary data ready to upload to S3.
   """
@@ -8,50 +8,122 @@ defmodule Mehungry.AI.ImageGenerator do
   require Logger
 
   @api_url "https://api.openai.com/v1/images/generations"
-  @model "gpt-image-1"
-  @size "1024x1024"
-  @quality "medium"
-  @timeout_ms 60_000
+  # gpt-image-2: quality-first successor to gpt-image-1 (which OpenAI retires on
+  # 2026-10-23). Same /images/generations contract — size WxH (divisible by 16),
+  # quality low|medium|high, output_format jpeg + output_compression, b64_json
+  # response — so this is a drop-in model swap.
+  @model "gpt-image-2"
+  # Landscape 3:2 — recipe covers render as landscape/aspect-video across the app,
+  # so a square image just gets cropped. Generating landscape keeps the framing
+  # the model composed and stops throwing away resolution.
+  @size "1536x1024"
+  @default_quality "medium"
+  @valid_qualities ~w(low medium high)
+  # JPEG at a fixed compression so we control output quality/size instead of
+  # silently relabeling the model's default PNG bytes as image/jpeg.
+  @output_format "jpeg"
+  @output_compression 90
+  @timeout_ms 90_000
 
   @doc """
   Generates a food photo for the given recipe title and description.
+
+  Options:
+
+    * `:cuisine` — drives the visual styling (tableware, surface, background,
+      palette) so photos stop converging on the old hardcoded warm/rustic
+      "amber" look. Omit or pass `nil` when the cuisine is unknown.
+    * `:quality` — `"low" | "medium" | "high"` (default `"medium"`). The caller
+      picks the tier; see `Mehungry.RecipeImageWorker`.
+
   Returns `{:ok, jpeg_binary}` or `{:error, reason}`.
   """
-  @spec generate(String.t(), String.t()) :: {:ok, binary()} | {:error, term()}
-  def generate(title, description) do
+  @spec generate(String.t(), String.t(), keyword()) ::
+          {:ok, binary()} | {:error, term()}
+  def generate(title, description, opts \\ []) do
     api_key = Application.get_env(:mehungry, :openai_api_key, "")
 
     if api_key == "" do
       {:error, "OPENAI_API_KEY is not configured"}
     else
-      prompt = build_prompt(title, description)
-      Logger.info("ImageGenerator: generating image for '#{title}'")
-      request_image(api_key, prompt)
+      cuisine = Keyword.get(opts, :cuisine)
+      quality = normalize_quality(Keyword.get(opts, :quality, @default_quality))
+
+      prompt = build_prompt(title, description, cuisine)
+
+      Logger.info(
+        "ImageGenerator: generating #{quality}-quality image for '#{title}'" <>
+          "#{cuisine && " (#{cuisine})"}"
+      )
+
+      request_image(api_key, prompt, quality)
     end
   end
 
   # ── internals ─────────────────────────────────────────────────────────────────
 
-  defp build_prompt(title, description) do
+  defp normalize_quality(quality) when quality in @valid_qualities, do: quality
+  defp normalize_quality(_), do: @default_quality
+
+  defp build_prompt(title, description, cuisine) do
     clean_desc =
       description
+      |> to_string()
       |> String.replace(~r/#\S+/, "")
       |> String.trim()
 
-    "Professional food photography of #{title}. #{clean_desc}. " <>
-      "Plated beautifully on a rustic wooden or marble surface, natural side lighting, " <>
-      "shallow depth of field, garnished and styled. Warm appetizing tones. " <>
-      "No text overlays, no watermarks, photorealistic."
+    # Goal: an image indistinguishable from a real photo a person took of the
+    # plate — NOT a glossy studio/editorial shoot (that over-styled look is the
+    # tell of an AI image). So we chase authentic realism, and we describe the
+    # finished plated dish, never a list of ingredients (naming ingredients makes
+    # the model scatter raw items across the frame).
+    "A candid, realistic photo of #{title}, a single finished dish plated and " <>
+      "ready to eat, as if a person snapped it at the table just before eating. " <>
+      "#{clean_desc}. " <>
+      "Depict exactly this one dish so it is immediately and unambiguously " <>
+      "recognisable as #{title} — commit to a single, definite interpretation of " <>
+      "the dish rather than a vague, generic, or hybrid plate. Keep the composition " <>
+      "clear: recognisable components at realistic scale and proportion, no merged, " <>
+      "morphed, or unidentifiable elements, one plate as the sole subject. " <>
+      "Looks like a genuine everyday photo, not a professional studio or magazine " <>
+      "shoot: natural imperfections, true-to-life colours and portion sizes, real " <>
+      "authentic tableware, honest home or restaurant table setting. " <>
+      cuisine_setting(cuisine) <>
+      "Shot handheld on a modern smartphone in soft natural ambient light from a " <>
+      "casual 45-degree angle, natural white balance. Frame tightly on the plated " <>
+      "dish so it fills most of the image and reads as the clear subject, keeping " <>
+      "any small, fiddly garnishes minimal. " <>
+      "Appetising but understated and believable — avoid the over-styled, glossy, " <>
+      "hyper-saturated, perfectly-symmetrical CGI look; no artificial perfection. " <>
+      "No scattered raw ingredients, no text overlays, no watermarks. " <>
+      "Photorealistic, indistinguishable from a real photograph."
   end
 
-  defp request_image(api_key, prompt) do
+  # Derive the setting from the cuisine rather than hardcoding one look. The
+  # explicit "do not default to warm amber tones" is what breaks the old
+  # every-photo-looks-the-same problem.
+  defp cuisine_setting(cuisine) when is_binary(cuisine) and cuisine != "" do
+    "Styled authentically for #{cuisine} cuisine: use tableware, serving vessels, " <>
+      "surface, and background that genuinely belong to #{cuisine} food culture, with " <>
+      "a colour palette true to how this food really looks — do NOT default to warm " <>
+      "amber/golden tones. "
+  end
+
+  defp cuisine_setting(_),
+    do:
+      "Plated simply and realistically on a surface that suits the dish; let the palette " <>
+        "follow the food itself rather than defaulting to warm amber/golden tones. "
+
+  defp request_image(api_key, prompt, quality) do
     body =
       Jason.encode!(%{
         model: @model,
         prompt: prompt,
         n: 1,
         size: @size,
-        quality: @quality
+        quality: quality,
+        output_format: @output_format,
+        output_compression: @output_compression
       })
 
     headers = [

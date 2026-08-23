@@ -156,6 +156,13 @@ defmodule Mehungry.Food.FoundementalFoods do
   end
 
   @doc "The ingredient ids curated onto a species (its `foundemental_foods`)."
+  def list_ingredient_ids_for_species(species_ids) when is_list(species_ids) do
+    FoundementalFood
+    |> where([f], f.foundemental_species_id in ^species_ids)
+    |> select([f], f.ingredient_id)
+    |> Repo.all()
+  end
+
   def list_ingredient_ids_for_species(species_id) do
     FoundementalFood
     |> where([f], f.foundemental_species_id == ^species_id)

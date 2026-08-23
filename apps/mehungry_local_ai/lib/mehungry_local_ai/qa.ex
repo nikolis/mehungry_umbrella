@@ -5,8 +5,11 @@ defmodule MehungryLocalAi.QA do
   span + a confidence score. A supervised `Nx.Serving` (Bumblebee + EXLA/CPU),
   registered under this module's name.
 
-  Unlike the old in-app serving, this one is **always started** — loading the model
-  is the whole point of the local service. It compiles with `compiler: EXLA` without
+  Loading the model is slow and memory-hungry, so it is **not started by default**:
+  booting the umbrella (dev server, tests) leaves the serving off. It comes up only
+  when explicitly asked for — either by `mix local_ai.extract` (which calls
+  `ensure_started/0`) or by setting `config :mehungry_local_ai, start_qa: true` so it
+  loads at boot on a dedicated GPU box. It compiles with `compiler: EXLA` without
   touching the global Nx default backend.
   """
 
@@ -25,11 +28,15 @@ defmodule MehungryLocalAi.QA do
   @doc "HuggingFace repo id of the loaded QA model."
   def model, do: @model
 
-  @doc "Whether the serving should be started (off in tests to skip the model download)."
-  def enabled?, do: Application.get_env(:mehungry_local_ai, :start_qa, true)
+  @doc """
+  Whether the serving should load automatically at app boot. Off by default so the
+  umbrella (and tests) never download/compile the model; set
+  `config :mehungry_local_ai, start_qa: true` to auto-load on a dedicated GPU box.
+  """
+  def enabled?, do: Application.get_env(:mehungry_local_ai, :start_qa, false)
 
   @doc "Whether the serving is actually loaded and callable right now."
-  def available?, do: enabled?() and is_pid(Process.whereis(__MODULE__))
+  def available?, do: is_pid(Process.whereis(__MODULE__))
 
   def child_spec(opts) do
     %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}, type: :supervisor}
@@ -37,18 +44,40 @@ defmodule MehungryLocalAi.QA do
 
   def start_link(_opts) do
     if enabled?() do
-      Logger.info("MehungryLocalAi.QA: starting Nx.Serving for #{@model} (EXLA/CPU)")
-
-      Nx.Serving.start_link(
-        serving: build_serving(),
-        name: __MODULE__,
-        batch_size: @batch_size,
-        batch_timeout: 100
-      )
+      do_start()
     else
-      Logger.info("MehungryLocalAi.QA: disabled (:start_qa=false) — rule-based extraction only")
+      Logger.info("MehungryLocalAi.QA: not started at boot (:start_qa=false) — call ensure_started/0 to load")
       :ignore
     end
+  end
+
+  @doc """
+  Load the serving on demand, regardless of the `:start_qa` boot gate. Idempotent —
+  returns `:ok` if it is already running. This is the "flag to start": `mix
+  local_ai.extract` calls it so the model loads only for an actual extraction run.
+  """
+  @spec ensure_started() :: :ok | {:error, term()}
+  def ensure_started do
+    if available?() do
+      :ok
+    else
+      case do_start() do
+        {:ok, _pid} -> :ok
+        {:error, {:already_started, _pid}} -> :ok
+        other -> other
+      end
+    end
+  end
+
+  defp do_start do
+    Logger.info("MehungryLocalAi.QA: starting Nx.Serving for #{@model} (EXLA/CPU)")
+
+    Nx.Serving.start_link(
+      serving: build_serving(),
+      name: __MODULE__,
+      batch_size: @batch_size,
+      batch_timeout: 100
+    )
   end
 
   @doc """

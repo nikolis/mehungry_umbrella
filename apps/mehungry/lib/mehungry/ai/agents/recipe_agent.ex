@@ -18,6 +18,47 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   @writer_model "claude-sonnet-4-6"
   @partial_indicators ~w(yolk white albumen powder dried dehydrated freeze extract concentrate)
 
+  # The unit vocabulary the agent picks from is the ingredient's `IngredientPortion`
+  # rows, not bare measurement units — each portion is a real, human-meaningful
+  # serving ("1 cup" = 240 g, "1 medium banana" = 118 g), including description-only
+  # portions that have no measurement unit at all. Grams stay available as a
+  # universal fallback under this reserved sentinel, so every ingredient always has
+  # at least one selectable option even when it has no portions of its own.
+  @grams_portion_id 0
+
+  # Realism guardrails injected into every generation prompt. The overriding test
+  # is: would this pass as something a real home cook of this cuisine actually
+  # makes? Restraint beats novelty — these rules exist to suppress the invented,
+  # "creative fusion" output an unconstrained model drifts toward.
+  @culinary_rules """
+  ## The one test that overrides everything
+
+  Would a real home cook of this cuisine recognize this as a genuine dish they
+  actually make? If not, it is wrong — no matter how "interesting" it sounds.
+  You are not inventing a novel dish; you are writing down a real, plausible,
+  edible one.
+
+  ## Culinary rules
+
+  - The cuisine is the top constraint. Every ingredient must belong to that
+    cuisine's real pantry and appear in dishes cooks from there actually make.
+  - Prefer familiar, traditional, widely recognizable combinations. Boring-but-real
+    beats clever-but-invented, every time.
+  - Every ingredient must earn its place with a clear culinary purpose. If you are
+    unsure whether an ingredient belongs, omit it.
+  - 5-12 primary ingredients is normal. Do not pad the list to seem sophisticated.
+  - One main protein, unless the dish traditionally combines several. Never combine
+    unrelated proteins.
+  - Fruit only when it is a genuine part of the dish for that cuisine — not as a
+    surprise "twist".
+  - FUSION IS FORBIDDEN unless the request explicitly asks for a named fusion
+    cuisine. Do not blend cuisines, and do not bolt one cuisine's signature
+    ingredient onto another's dish.
+  - Reject any justification that reduces to "adds complexity", "a unique flavor",
+    "an unexpected twist", or "elevates the dish". Those are the tells of invented
+    food. Cut it.
+  """
+
   @doc """
   Generates a recipe from a natural-language description.
 
@@ -34,32 +75,79 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   Returns {:ok, attrs_map, []} or {:error, reason}.
   """
   def run(description, opts \\ []) do
-    Process.put(__MODULE__, nil)
-
     brief = build_brief(opts)
     context = %{gram_unit: fetch_gram_unit(), brief: brief}
 
+    sys_prompt = system_prompt(brief)
+    user_prompt = "Create a recipe from this description: #{description}"
+
+    Logger.debug("""
+    [RecipeAgent] Prompt for this run:
+    ── SYSTEM ──────────────────────────────────────────────
+    #{sys_prompt}
+    ── USER ────────────────────────────────────────────────
+    #{user_prompt}
+    ────────────────────────────────────────────────────────
+    """)
+
+    case run_once(sys_prompt, user_prompt, context) do
+      {:error, :no_submit} ->
+        # A persona-heavy run can end in prose without ever calling submit_recipe.
+        # Retry once with a firmer, unmissable instruction before giving up.
+        Logger.warning(
+          "[RecipeAgent] Run ended without submitting a recipe; retrying once with a firmer submit instruction"
+        )
+
+        :telemetry.execute(
+          [:mehungry, :ai, :agent, :no_submit_retry],
+          %{count: 1},
+          %{agent: "recipe"}
+        )
+
+        firm_prompt =
+          user_prompt <>
+            "\n\nIMPORTANT: You MUST finish by calling the submit_recipe tool with the " <>
+            "complete recipe. Do NOT reply with prose or a description of the recipe — " <>
+            "the ONLY way to complete this task is to call submit_recipe."
+
+        case run_once(sys_prompt, firm_prompt, context) do
+          {:error, :no_submit} -> {:error, "Agent completed without submitting a recipe"}
+          other -> other
+        end
+
+      other ->
+        other
+    end
+  end
+
+  # One agent pass. The submit_recipe handler writes its validated
+  # `{:ok, attrs, unmatched}` into the threaded accumulator's `:submitted` slot;
+  # `:offered` accumulates every id→name the model was handed this run. Returns
+  # the submitted tuple, `{:error, :no_submit}` when the loop ended without
+  # submitting, or the agent's own `{:error, reason}`.
+  defp run_once(sys_prompt, user_prompt, context) do
+    acc = Map.merge(context, %{offered: %{}, submitted: nil})
+
     result =
       Agent.run(
-        system_prompt(brief),
-        "Create a recipe from this description: #{description}",
+        sys_prompt,
+        user_prompt,
         tool_defs(),
         &handle_tool/3,
-        context,
+        acc,
+        telemetry_metadata: %{agent: "recipe"},
         model: @model,
         max_tokens: 8192,
-        max_iterations: 10
+        # Authentic specialty cuisines (e.g. Japanese: mirin, panko, dashi, bonito…)
+        # trigger several create_ingredient calls before the recipe can be submitted;
+        # 10 iterations could be exhausted mid-resolution (:max_iterations_reached).
+        max_iterations: 14
       )
 
     case result do
-      {:ok, _text} ->
-        case Process.get(__MODULE__) do
-          nil -> {:error, "Agent completed without submitting a recipe"}
-          saved -> saved
-        end
-
-      {:error, reason} ->
-        {:error, reason}
+      {:ok, _text, %{submitted: nil}} -> {:error, :no_submit}
+      {:ok, _text, %{submitted: saved}} -> saved
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -76,6 +164,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       persona_name: persona && persona.name,
       voice_prompt: persona && persona.voice_prompt,
       uses_hashtags: (persona && persona.uses_hashtags) || false,
+      cuisine: blank_to_nil(Keyword.get(opts, :cuisine)),
       origin: blank_to_nil(Keyword.get(opts, :origin)),
       story: blank_to_nil(Keyword.get(opts, :story)),
       primary: seed_names(seed, "primary"),
@@ -92,7 +181,10 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   defp blank_to_nil(nil), do: nil
   defp blank_to_nil(""), do: nil
-  defp blank_to_nil(str) when is_binary(str), do: String.trim(str) |> then(&if(&1 == "", do: nil, else: &1))
+
+  defp blank_to_nil(str) when is_binary(str),
+    do: String.trim(str) |> then(&if(&1 == "", do: nil, else: &1))
+
   defp blank_to_nil(other), do: other
 
   defp has_persona?(%{persona: p}) when not is_nil(p), do: true
@@ -103,24 +195,35 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   defp system_prompt(brief) do
     """
     #{persona_block(brief)}
+    #{cuisine_block(brief)}
     To generate a recipe from the user's description, follow these steps IN ORDER:
 
-    1. Identify all ingredients the recipe needs — think about the full flavour profile:
-       aromatics, fats, acids, seasoning, and finishing touches
-    2. For EACH ingredient, call search_ingredient — inspect the returned candidates
+    1. First commit to ONE specific, real, traditional dish of the cuisine and name
+       it in the title (e.g. Greek → "Fasolada", Sicilian → "Pasta alla Norma",
+       Oaxacan → "Tlayuda"). Do not invent a novel dish or a "twist" on one.
+    2. List only the ingredients that dish genuinely contains — nothing added to seem
+       creative or sophisticated. Cross-check each against the cuisine's real pantry.
+    3. For EACH ingredient, call search_ingredient — inspect the returned candidates
        carefully and pick the best match (prefer whole/raw/plain forms over processed
        or flavoured variants)
-    3. If search_ingredient returns no results for an ingredient, call create_ingredient
+    4. If search_ingredient returns no results for an ingredient, call create_ingredient
        to add it, then use the IDs it returns
-    4. Draft the recipe using ONLY ingredient_id and measurement_unit_id values from
-       your tool results — never invent or guess numeric IDs
-    5. Call submit_recipe with the complete recipe to validate and save it
-    6. If submit_recipe returns errors, fix ONLY the reported invalid IDs and resubmit
+    5. Draft the recipe using ONLY ingredient_id and ingredient_portion_id values from
+       your tool results — never invent or guess numeric IDs. Prefer a real portion
+       ("1 cup", "1 medium onion") over grams (portion_id 0) whenever the ingredient
+       offers one. For each recipe ingredient also include the `name` you searched
+       for; its id is verified against that name, so a mismatched or made-up id will
+       be rejected
+    6. Call submit_recipe with the complete recipe to validate and save it
+    7. If submit_recipe returns errors, fix ONLY the reported invalid IDs and resubmit
     #{ingredient_directive(brief)}
+    #{@culinary_rules}
     ## Recipe writing standards
 
-    **Description:** Write 2-3 sentences of genuine culinary prose — evoke the aroma,
-    texture, and occasion. Do NOT include hashtags in the description field; put them
+    **Description:** Write 2-3 plain, honest sentences about the dish — what it is,
+    how it tastes, when it's eaten. Sound like a real cook describing their food, not
+    a food-blog headline: no purple prose, no piled-up adjectives, no "elevate/twist/
+    symphony of flavours". Do NOT include hashtags in the description field; put them
     in the separate `hashtags` array instead.
 
     **Steps:** Each step must:
@@ -156,6 +259,21 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       """
     end
   end
+
+  # The cuisine is the single most important constraint — it is stated first and
+  # loudest so every downstream choice (dish, ingredients, technique) descends from
+  # it. Empty string when no cuisine was supplied (the description then carries
+  # whatever direction it has).
+  defp cuisine_block(%{cuisine: cuisine}) when is_binary(cuisine) and cuisine != "" do
+    """
+    THE CUISINE IS: #{cuisine}. This is the top constraint and overrides everything
+    else. The dish, and every single ingredient, must be authentic to #{cuisine}
+    cooking. Do not drift toward other cuisines and do not fuse #{cuisine} with
+    anything else.
+    """
+  end
+
+  defp cuisine_block(_), do: ""
 
   # Steers ingredient selection from the setup's seed ingredients, and hard-bans
   # the avoid list. Empty string when there are no seed ingredients.
@@ -204,8 +322,10 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
         name: "search_ingredient",
         description:
           "Search the ingredient database by name. Returns up to 5 candidates with " <>
-            "their database ingredient_id and available measurement units (unit_id, name, " <>
-            "gram_weight). Call this for every ingredient before using it in the recipe.",
+            "their database ingredient_id and available portions (portion_id, unit, " <>
+            "gram_weight) — each portion is a real serving such as \"1 cup\" or \"1 " <>
+            "medium banana\". portion_id 0 always means grams by weight. Call this for " <>
+            "every ingredient before using it in the recipe.",
         input_schema: %{
           type: "object",
           properties: %{
@@ -223,7 +343,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
         description:
           "Add a new ingredient to the database when search_ingredient returns no results. " <>
             "Generates USDA-style nutritional data automatically. Returns the new " <>
-            "ingredient_id and measurement units.",
+            "ingredient_id and its portions (portion_id, unit, gram_weight).",
         input_schema: %{
           type: "object",
           properties: %{
@@ -239,7 +359,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
         name: "submit_recipe",
         description:
           "Validate and save the completed recipe. Call once all ingredient_ids and " <>
-            "measurement_unit_ids are resolved. Returns success or a list of errors to fix.",
+            "ingredient_portion_ids are resolved. Returns success or a list of errors to fix.",
         input_schema: %{
           type: "object",
           properties: %{
@@ -287,11 +407,24 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
               items: %{
                 type: "object",
                 properties: %{
+                  name: %{
+                    type: "string",
+                    description:
+                      "The ingredient name you searched for (e.g. 'Pecorino Romano', " <>
+                        "'black pepper'). Must describe the same ingredient the " <>
+                        "ingredient_id resolves to — it is checked against the search result."
+                  },
                   ingredient_id: %{type: "integer"},
-                  measurement_unit_id: %{type: "integer"},
+                  ingredient_portion_id: %{
+                    type: "integer",
+                    description:
+                      "A portion_id returned for this ingredient by search_ingredient/" <>
+                        "create_ingredient. Use 0 for grams by weight. quantity is then " <>
+                        "counted in that portion (e.g. portion \"1 cup\" with quantity 2 = 2 cups)."
+                  },
                   quantity: %{type: "number"}
                 },
-                required: ["ingredient_id", "measurement_unit_id", "quantity"]
+                required: ["name", "ingredient_id", "ingredient_portion_id", "quantity"]
               }
             }
           },
@@ -303,7 +436,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   # ── tool handler ──────────────────────────────────────────────────────────────
 
-  defp handle_tool("search_ingredient", %{"name" => name}, %{gram_unit: gram_unit}) do
+  defp handle_tool("search_ingredient", %{"name" => name}, %{gram_unit: gram_unit} = acc) do
     top =
       Food.IngredientSearch.search(name)
       |> rerank_by_name(name)
@@ -324,22 +457,30 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
           %{
             ingredient_id: ing.id,
             name: ing.name,
-            units: build_units(portions, gram_unit) |> Enum.take(3)
+            portions: build_portions(portions, gram_unit) |> Enum.take(4)
           }
         end)
       end
 
-    if candidates == [] do
-      %{
-        found: false,
-        message: "No matches for '#{name}'. Call create_ingredient to add it."
-      }
-    else
-      %{found: true, candidates: candidates}
-    end
+    acc =
+      Enum.reduce(candidates, acc, fn c, acc ->
+        remember_offered(acc, c.ingredient_id, c.name)
+      end)
+
+    result =
+      if candidates == [] do
+        %{
+          found: false,
+          message: "No matches for '#{name}'. Call create_ingredient to add it."
+        }
+      else
+        %{found: true, candidates: candidates}
+      end
+
+    {result, acc}
   end
 
-  defp handle_tool("create_ingredient", %{"name" => name}, %{gram_unit: gram_unit}) do
+  defp handle_tool("create_ingredient", %{"name" => name}, %{gram_unit: gram_unit} = acc) do
     Logger.info("RecipeAgent: creating missing ingredient '#{name}'")
 
     {json_result, data_source} =
@@ -380,68 +521,82 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
               Food.get_measurement_unit_portions_for_ingredients([ing.id])
               |> Map.get(ing.id, [])
 
-            %{
+            result = %{
               created: true,
               ingredient_id: ing.id,
               name: ing.name,
-              units: build_units(portions, gram_unit)
+              portions: build_portions(portions, gram_unit)
             }
 
+            {result, remember_offered(acc, ing.id, ing.name)}
+
           [] ->
-            %{
-              created: false,
-              error:
-                "Ingredient '#{name}' was inserted but could not be re-found. " <>
-                  "Try a simpler, more generic name."
-            }
+            {%{
+               created: false,
+               error:
+                 "Ingredient '#{name}' was inserted but could not be re-found. " <>
+                   "Try a simpler, more generic name."
+             }, acc}
         end
 
       {:error, reason} ->
-        %{created: false, error: "Could not create ingredient: #{reason}"}
+        {%{created: false, error: "Could not create ingredient: #{reason}"}, acc}
     end
   end
 
-  defp handle_tool("submit_recipe", recipe_input, %{gram_unit: gram_unit} = context) do
-    errors = validate_recipe(recipe_input, gram_unit && gram_unit.id)
+  defp handle_tool("submit_recipe", recipe_input, %{gram_unit: gram_unit, offered: offered} = acc) do
+    errors = validate_recipe(recipe_input, offered)
 
     if errors == [] do
-      polished_input = polish_prose(recipe_input, Map.get(context, :brief))
-      attrs = normalize_attrs(polished_input)
-      Process.put(__MODULE__, {:ok, attrs, []})
+      polished_input = polish_prose(recipe_input, Map.get(acc, :brief))
+      attrs = normalize_attrs(polished_input, gram_unit && gram_unit.id)
       Logger.info("RecipeAgent: recipe '#{recipe_input["title"]}' submitted successfully")
-      %{success: true, message: "Recipe '#{recipe_input["title"]}' saved."}
+      {%{success: true, message: "Recipe '#{recipe_input["title"]}' saved."},
+       %{acc | submitted: {:ok, attrs, []}}}
     else
       Logger.warning("RecipeAgent: submit_recipe errors: #{inspect(errors)}")
-      %{success: false, errors: errors}
+      {%{success: false, errors: errors}, acc}
     end
   end
 
-  defp handle_tool(name, _input, _ctx) do
-    %{error: "Unknown tool: #{name}"}
+  defp handle_tool(name, _input, acc) do
+    {%{error: "Unknown tool: #{name}"}, acc}
   end
 
   # ── validation ────────────────────────────────────────────────────────────────
 
-  defp validate_recipe(input, gram_unit_id) do
+  defp validate_recipe(input, offered) do
     (input["recipe_ingredients"] || [])
     |> Enum.flat_map(fn ri ->
       ing_id = ri["ingredient_id"]
-      unit_id = ri["measurement_unit_id"]
+      portion_id = ri["ingredient_portion_id"]
+      name = ri["name"]
 
       cond do
         is_nil(ing_id) ->
           ["A recipe_ingredient is missing ingredient_id"]
 
-        is_nil(unit_id) ->
-          ["ingredient_id #{ing_id} is missing measurement_unit_id"]
+        is_nil(portion_id) ->
+          ["ingredient_id #{ing_id} is missing ingredient_portion_id"]
 
         true ->
-          check_ingredient_unit(ing_id, unit_id, gram_unit_id)
+          # Provenance first: an id the model never received from a tool result
+          # (a hallucinated or cross-wired id) is the dominant failure mode, and
+          # it slips past a pure existence check because the table has ~100k rows.
+          case check_provenance(ing_id, name, offered) do
+            [] -> check_ingredient_portion(ing_id, portion_id)
+            errors -> errors
+          end
       end
     end)
   end
 
-  defp check_ingredient_unit(ing_id, unit_id, gram_unit_id) do
+  # A submitted portion must be either the grams sentinel (0) or a real
+  # `IngredientPortion` that belongs to this ingredient — mirroring the portions
+  # search_ingredient/create_ingredient handed the model.
+  defp check_ingredient_portion(_ing_id, @grams_portion_id), do: []
+
+  defp check_ingredient_portion(ing_id, portion_id) do
     case Food.get_ingredient(ing_id) do
       nil ->
         [
@@ -452,20 +607,80 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       _ing ->
         valid_ids =
           Food.get_measurement_unit_portions_for_ingredient(ing_id)
-          |> Enum.filter(& &1.measurement_unit)
-          |> Enum.map(& &1.measurement_unit_id)
+          |> Enum.map(& &1.id)
 
-        valid_ids = if gram_unit_id, do: [gram_unit_id | valid_ids], else: valid_ids
-
-        if unit_id in valid_ids do
+        if portion_id in valid_ids do
           []
         else
           [
-            "measurement_unit_id #{unit_id} is invalid for ingredient_id #{ing_id}. " <>
-              "Valid unit_ids: #{inspect(Enum.uniq(valid_ids))}"
+            "ingredient_portion_id #{portion_id} is invalid for ingredient_id #{ing_id}. " <>
+              "Valid portion_ids: #{inspect(Enum.uniq([@grams_portion_id | valid_ids]))} " <>
+              "(0 = grams)."
           ]
         end
     end
+  end
+
+  # ── provenance ────────────────────────────────────────────────────────────────
+
+  # Binds each submitted ingredient_id back to what the model was actually handed
+  # by search_ingredient/create_ingredient this run. The existence check above
+  # can't catch a hallucinated id that happens to point at a real row (e.g. a
+  # Branded "DOMINO'S Pizza" that search never returns) or two offered ids swapped
+  # between ingredients — this does, and feeds the self-correction loop a fix.
+  @doc false
+  def check_provenance(ing_id, name, offered) do
+    case Map.fetch(offered, ing_id) do
+      :error ->
+        [
+          "ingredient_id #{ing_id}#{named(name)} was never returned by search_ingredient " <>
+            "or create_ingredient. Only use ingredient_id values from your tool results — " <>
+            "search for this ingredient first, then use the id it returns."
+        ]
+
+      {:ok, offered_name} ->
+        if name_matches?(name, offered_name) do
+          []
+        else
+          [
+            "ingredient_id #{ing_id} is \"#{offered_name}\", not \"#{name}\". Use the " <>
+              "ingredient_id that search_ingredient returned for \"#{name}\"."
+          ]
+        end
+    end
+  end
+
+  defp named(name) when is_binary(name) and name != "", do: " (\"#{name}\")"
+  defp named(_), do: ""
+
+  # Lenient agreement between the name the model says it is submitting and the
+  # candidate name we returned for that id. Kept loose (substring either way, or
+  # a close word-level jaro) so legitimate variants ("pecorino" vs "Cheese,
+  # pecorino romano") don't cause resubmit thrash, while gross mismatches
+  # (pepper vs pecorino) are still rejected. A blank name can't be checked, so it
+  # passes the name gate — the id-provenance gate above still applies.
+  @doc false
+  def name_matches?(name, _offered) when not is_binary(name) or name == "", do: true
+
+  def name_matches?(submitted, offered_name) do
+    sub = String.downcase(submitted)
+    off = String.downcase(offered_name)
+
+    String.contains?(off, sub) or String.contains?(sub, off) or
+      Enum.any?(normalize_words(sub), fn sw ->
+        Enum.any?(normalize_words(off), &(String.jaro_distance(sw, &1) >= 0.8))
+      end)
+  end
+
+  defp normalize_words(text) do
+    text |> String.split(~r/[\s,]+/) |> Enum.reject(&(&1 == ""))
+  end
+
+  # Records an id→name the agent has actually been shown, so submit_recipe can
+  # verify every submitted ingredient_id came from a real tool result this run.
+  # Threads through the accumulator's `:offered` map — no process-global state.
+  defp remember_offered(%{offered: offered} = acc, id, name) do
+    %{acc | offered: Map.put(offered, id, name)}
   end
 
   # ── prose polish ──────────────────────────────────────────────────────────────
@@ -518,20 +733,25 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   defp generic_polish_system_prompt(step_count) do
     """
-    You are a professional food writer for a recipe social media platform (Instagram, Pinterest).
-    You receive a structurally complete but plainly-written draft recipe and must return a polished version.
+    You are a clear, honest recipe writer for a food platform. You receive a
+    structurally complete but plainly-written draft recipe and return a cleaner
+    version — one that reads like a real cook wrote it, not marketing copy.
 
     Rewrite ONLY these four fields: title, description, steps, hashtags.
     Every other field must be omitted from your response — do not echo ingredient IDs, quantities, or servings.
 
-    title — keep the dish recognizable, make it enticing (e.g. "Golden Saffron Rice Pilaf" not "Saffron Rice")
+    title — keep the dish recognizable and its real, traditional name; do not invent a
+    fancier one or bolt on decorative adjectives (keep "Saffron Rice Pilaf", not
+    "Golden Saffron Symphony").
 
-    description — 2-3 sentences of genuine culinary prose. Evoke aroma, texture, and the occasion it suits.
+    description — 2-3 plain, honest sentences: what the dish is, how it tastes, when
+    it's eaten. Sound like a real cook describing their food — NO purple prose, no
+    piled-up adjectives, none of "evoke/elevate/twist/symphony/a hug in a bowl".
     Do NOT include hashtags here; they go in the separate hashtags array.
 
     steps — keep EXACTLY #{step_count} steps in the same order.
     Each step must: state what to do, include timing ("cook for 3-4 minutes"), and one sensory doneness cue
-    ("until the onions are soft and starting to colour at the edges"). Weave technique tips in naturally.
+    ("until the onions are soft and starting to colour at the edges"). Plain and practical, not flowery.
 
     hashtags — 4-6 bare keywords without # prefix covering cuisine, main ingredient, dietary style, occasion.
 
@@ -593,7 +813,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   # ── normalization ─────────────────────────────────────────────────────────────
 
-  defp normalize_attrs(data) do
+  defp normalize_attrs(data, gram_unit_id) do
     steps =
       (data["steps"] || [])
       |> Enum.with_index()
@@ -609,13 +829,20 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
     recipe_ingredients =
       (data["recipe_ingredients"] || [])
-      |> Enum.reject(&(is_nil(&1["ingredient_id"]) or is_nil(&1["measurement_unit_id"])))
+      |> Enum.reject(&(is_nil(&1["ingredient_id"]) or is_nil(&1["ingredient_portion_id"])))
       |> Enum.map(fn ri ->
-        %{
+        base = %{
           "ingredient_id" => ri["ingredient_id"],
-          "measurement_unit_id" => ri["measurement_unit_id"],
           "quantity" => ri["quantity"] || 1.0
         }
+
+        # The grams sentinel resolves to the gram measurement unit (portion-less,
+        # nutrition treats quantity as grams directly); every other portion_id is
+        # persisted as the authoritative `ingredient_portion_id`.
+        case ri["ingredient_portion_id"] do
+          @grams_portion_id -> Map.put(base, "measurement_unit_id", gram_unit_id)
+          portion_id -> Map.put(base, "ingredient_portion_id", portion_id)
+        end
       end)
 
     hashtag_str =
@@ -756,25 +983,25 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     end
   end
 
-  defp build_units(portions, gram_unit) when is_list(portions) do
-    units =
+  defp build_portions(portions, gram_unit) when is_list(portions) do
+    real =
       portions
-      |> Enum.filter(& &1.measurement_unit)
       |> Enum.map(fn p ->
         %{
-          unit_id: p.measurement_unit_id,
-          unit_name: p.measurement_unit.name,
+          portion_id: p.id,
+          unit: Mehungry.Food.IngredientPortion.display_name(p),
           gram_weight: p.gram_weight
         }
       end)
+      # Drop portions whose label is meaningless to a cook (e.g. USDA "RACC",
+      # "Quantity not specified") — see IngredientPortion.meaningful_label?/1.
+      |> Enum.filter(&Mehungry.Food.IngredientPortion.meaningful_label?(&1.unit))
+      |> Enum.uniq_by(& &1.portion_id)
 
     if gram_unit do
-      Enum.uniq_by(
-        units ++ [%{unit_id: gram_unit.id, unit_name: "gram", gram_weight: 1.0}],
-        & &1.unit_id
-      )
+      real ++ [%{portion_id: @grams_portion_id, unit: "gram", gram_weight: 1.0}]
     else
-      units
+      real
     end
   end
 

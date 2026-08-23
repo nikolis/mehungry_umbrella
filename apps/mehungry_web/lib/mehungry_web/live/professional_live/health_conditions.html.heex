@@ -169,7 +169,7 @@
       </div>
 
       <form phx-submit="promote_recommendation" class="flex flex-wrap items-center gap-2">
-        <input type="hidden" name="id" value={cand.id} />
+        <input type="hidden" name="candidate_id" value={cand.id} />
         <select name="recommendation" class={select_class()}>
           <option
             :for={r <- recommendations()}

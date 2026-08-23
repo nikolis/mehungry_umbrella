@@ -140,7 +140,7 @@ defmodule Mehungry.Social.Publisher do
     end
   end
 
-  defp post_facebook(bot_user, recipe, config, language_name, opts \\ %{}) do
+  defp post_facebook(bot_user, recipe, config, language_name, opts) do
     if map_non_empty?(bot_user.facebook_token) do
       override_id = nonempty(opts["facebook_page_id"] || opts[:facebook_page_id])
 
@@ -178,7 +178,7 @@ defmodule Mehungry.Social.Publisher do
     end
   end
 
-  defp post_pinterest(bot_user, recipe, config, language_name, opts \\ %{}) do
+  defp post_pinterest(bot_user, recipe, config, language_name, opts) do
     if map_non_empty?(bot_user.pinterest_token) do
       board_id =
         nonempty(opts["pinterest_board_id"] || opts[:pinterest_board_id]) ||

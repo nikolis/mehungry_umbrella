@@ -15,8 +15,16 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     meals = Enum.filter(user_meals, fn x -> NaiveDateTime.to_date(x.start_dt) == day end)
 
     case meals do
-      [] -> nil
-      _ -> render_day_chart(%{meals: meals, total_nutrients: Nu.summarize_meals_nutrients(meals)}, day, current_date, calorie_target)
+      [] ->
+        nil
+
+      _ ->
+        render_day_chart(
+          %{meals: meals, total_nutrients: Nu.summarize_meals_nutrients(meals)},
+          day,
+          current_date,
+          calorie_target
+        )
     end
   end
 
@@ -25,7 +33,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   defp render_day_chart(nil, _day, _current_date, _calorie_target), do: nil
   defp render_day_chart(%{total_nutrients: nil}, _day, _current_date, _calorie_target), do: nil
 
-  defp render_day_chart(%{meals: meals, total_nutrients: total_nutrients}, day, current_date, calorie_target) do
+  defp render_day_chart(
+         %{meals: meals, total_nutrients: total_nutrients},
+         day,
+         current_date,
+         calorie_target
+       ) do
     total_nutrients
     |> summary_assigns(meals, "day-#{Date.to_string(day)}", calorie_target)
     # Folded by default like each meal-type section — tap the header (which shows
@@ -74,7 +87,12 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   # Renders from a summary precomputed in `update/2`.
   defp render_week_chart(nil, _first, _days, _calorie_target), do: nil
 
-  defp render_week_chart(%{meals: meals, total_nutrients: total_nutrients}, first, days, calorie_target) do
+  defp render_week_chart(
+         %{meals: meals, total_nutrients: total_nutrients},
+         first,
+         days,
+         calorie_target
+       ) do
     total_nutrients
     |> summary_assigns(meals, "week-#{Date.to_string(first)}", calorie_target)
     |> Map.merge(%{
@@ -89,7 +107,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   # Builds the shared assigns for a summary card from an already-aggregated
   # nutrient map. `id_key` disambiguates the chart/live_component DOM ids between
   # the daily and weekly cards.
-  defp summary_assigns(total_nutrients, meals, id_key, calorie_target \\ nil) do
+  defp summary_assigns(total_nutrients, meals, id_key, calorie_target) do
     nutrients_sorted = Mehungry.Food.RecipeUtils.sort_nutrients_from_db(total_nutrients)
 
     # Two separate pies: macros (grams) and micronutrients (mg/µg). They can't
@@ -117,7 +135,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   # Scalar badge metrics (counts + energy/macros) shared by the summary card
   # header and each day's accordion header. `total_nutrients` is the aggregated
   # `name => nutrient` map from `Nu.summarize_meals_nutrients/1`.
-  defp summary_metrics(total_nutrients, meals, calorie_target \\ nil) do
+  defp summary_metrics(total_nutrients, meals, calorie_target) do
     macros = Nu.macro_totals(total_nutrients)
     amount = fn bucket -> macros |> Map.get(bucket, %{}) |> Map.get("amount", 0) end
 
@@ -273,18 +291,23 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             fiber_g={@fiber_g}
           />
         </div>
-              <%= if @foldable do %>
-              <div class="w-full relative">
-          <svg
-            id={"summary-chevron-" <> @id_key}
-            class="w-6 h-6 ml-2 text-parchment-dim transition-transform duration-300 ease-out flex-shrink-0 absolute right-0 bottom-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-              </div>
+        <%= if @foldable do %>
+          <div class="w-full relative">
+            <svg
+              id={"summary-chevron-" <> @id_key}
+              class="w-6 h-6 ml-2 text-parchment-dim transition-transform duration-300 ease-out flex-shrink-0 absolute right-0 bottom-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </div>
         <% end %>
       </div>
       <div
@@ -528,7 +551,13 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
       case Nu.to_grams(amount, unit) do
         {:ok, grams} when grams > 0 ->
-          [%{category: clean_label(label), value: Float.round(grams, 6), display: "#{amount} #{unit}"}]
+          [
+            %{
+              category: clean_label(label),
+              value: Float.round(grams, 6),
+              display: "#{amount} #{unit}"
+            }
+          ]
 
         _ ->
           []
@@ -956,7 +985,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                   stroke-linejoin="round"
                   d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
                 />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                />
               </svg>
               View recipe
             </button>

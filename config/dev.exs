@@ -57,13 +57,13 @@ config :libcluster,
 
 config :mehungry_web, MehungryWeb.Endpoint,
   secret_key_base: "iH7KE2sUcWxfSctkWBtzxcSkJlSKZaVWP/hDKC8Hg3gCkGYZcXhIZLrEkzw/Ddq3",
-  # http: [port: 4000],
+  http: [port: 4000],
   http: [ip: {127, 0, 0, 1}, port: System.get_env("PORT", "4001")],
   debug_errors: true,
   code_reloader: true,
   check_origin: false,
   https: [
-    port: System.get_env("HTTPS_PORT", "4000"),
+    port: System.get_env("HTTPS_PORT", "4001"),
     cipher_suite: :strong,
     keyfile: "priv/cert/selfsigned_key.pem",
     certfile: "priv/cert/selfsigned.pem"
@@ -112,3 +112,7 @@ config :phoenix, :plug_init_mode, :runtime
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
 config :phoenix, :stacktrace_depth, 20
+
+# Dummy token so the Prometheus /metrics endpoint is scrapeable locally.
+# Override in prod via the METRICS_API_TOKEN env var (see runtime.exs).
+config :mehungry, :metrics_api_token, "dev-metrics-token"

@@ -40,3 +40,7 @@ secret_*.txt
 chromedriver-linux64/
 chromedriver-linux64.zip
 myenv/
+
+# Copyrighted source compilations kept only as internal reference/verification
+# oracles — must never be committed. See docs/science/glycemic_index_licensing.md.
+studies/

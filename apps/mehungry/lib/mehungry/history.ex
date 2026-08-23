@@ -6,6 +6,7 @@ defmodule Mehungry.History do
   import Ecto.Query, warn: false
   alias Mehungry.History.ConsumeRecipeUserMeal
   alias Mehungry.History
+  alias Mehungry.Food.NutrientCalculation
   alias Mehungry.Repo
 
   alias Mehungry.History.UserMeal
@@ -97,13 +98,48 @@ defmodule Mehungry.History do
       ],
       ingredient_user_meals: [
         :measurement_unit,
+        ingredient_portion: :measurement_unit,
         ingredient: [
           :category,
           :ingredient_translation,
+          :ingredient_portions,
           ingredient_nutrients: [nutrient: :measurement_unit]
         ]
       ]
     )
+  end
+
+  @doc """
+  Scaled nutrient list for a logged ingredient meal, in the display shape the
+  calendar's `NutrientUtils.summarize_meals_nutrients/1` and the nutrient tables
+  expect (`%{name:, amount:, measurement_unit: %{name:}}`).
+
+  Resolves the ingredient's total grams from the chosen portion/unit + quantity
+  (reusing the recipe nutrition engine) so a logged "2 medium banana" contributes
+  twice a banana's nutrients rather than a flat per-100g figure. Pass `gram_ids`
+  (from `NutrientCalculation.gram_unit_ids/0`) so the caller resolves the
+  gram-unit set once for a whole calendar instead of per row.
+
+  `ingredient_user_meal` must have `:ingredient` preloaded with
+  `:ingredient_portions` and `ingredient_nutrients: [nutrient: :measurement_unit]`.
+  """
+  def scaled_ingredient_nutrients(ingredient_user_meal, gram_ids) do
+    ingredient = ingredient_user_meal.ingredient
+
+    gram_weight =
+      NutrientCalculation.calculate_gram_weight(
+        ingredient,
+        ingredient_user_meal.measurement_unit_id,
+        ingredient_user_meal.ingredient_portion_id,
+        ingredient_user_meal.quantity,
+        gram_ids
+      )
+
+    ingredient
+    |> NutrientCalculation.build_nutrient_list(gram_weight)
+    |> Enum.map(fn n ->
+      %{name: n.name, amount: n.amount, measurement_unit: %{name: n.measurement_unit}}
+    end)
   end
 
   def list_history_user_meals_for_user(user_id, date) do

@@ -343,7 +343,7 @@ defmodule MehungryWeb.SelectComponent do
       <% end %>
 
       <!-- Search Input -->
-      <%= if Enum.empty?(@selected_items)  or @mode == :multi do %>
+      <%= if Enum.empty?(@selected_items) do %>
         <.input_search
           myself={@myself}
           form={@form}

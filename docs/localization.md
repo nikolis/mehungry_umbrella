@@ -137,7 +137,7 @@ example. The remaining ~60 templates follow the identical pattern (see "Remainin
 ## Database content
 
 Already localized before this work via per-record `*_translation` tables keyed on a
-string `language_name` FK (`Mehungry.Food.Localization`, `docs/food.md`). What changed:
+string `language_name` FK (`Mehungry.Food.Localization`, `docs/food/food.md`). What changed:
 content LiveViews now read the language from the **URL locale** (`@current_language`)
 rather than only the user's profile. Representative call sites:
 
