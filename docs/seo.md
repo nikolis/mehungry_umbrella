@@ -348,7 +348,7 @@ defp load_data(socket, id) do
 end
 ```
 
-This is exactly the fix applied to condition pages (below). **Audit other public `assign_async` LiveViews the same way** — the species detail page (`SpeciesDetailLive.Index`) uses the same async pattern this page was copied from and likely has the same gap.
+This is exactly the fix applied to both condition pages and the species detail page (below). **Audit any new public `assign_async` LiveView the same way** — if the async assign holds rankable content or internal links, it needs the `connected?/1` split.
 
 ---
 
@@ -361,6 +361,8 @@ This is exactly the fix applied to condition pages (below). **Audit other public
 - **No JSON-LD**: `schema.org/Recipe` doesn't fit a raw ingredient (no ingredient list or instructions — forcing it risks Google flagging misleading structured data). `NutritionInformation` isn't a standalone schema.org type; it's only valid nested inside a `Recipe`/`Diet` node. There's no clean schema.org type for a bare nutrition-facts page, so none is emitted. Plain title/description/semantic HTML (h1/h2 + tables) is the right amount of SEO investment here.
 - **hreflang**: not implemented anywhere in the app (recipe or food pages) because there are no language-specific URL paths — `current_language` is a runtime session assign, not part of the URL, so there's no second URL for `hreflang` to point at. Proper support would require a URL-structure change (e.g. `/en/...` vs `/el/...`) well beyond incremental SEO work. Revisit only if the app ever adopts language-prefixed routes.
 - Food pages **are** included in `sitemap.xml` (see below) since they're publicly indexable and not in the `noindex` prefix list.
+
+**Species detail (`/foods/:slug`, `SpeciesDetailLive.Index`) — `assign_async` audit:** unlike the condition page, this page's *core* content — the nutrition facts (top macros + full nutrient-by-family breakdown) — is rendered **synchronously** in `mount` via `assign_ingredient_view/2`, so it was always crawler-visible (the main SEO asset for "food X nutrition/calories" queries was never at risk). But three **secondary** sections — "Bioactive Compounds", "Health Conditions", and "Research" — were loaded via `assign_async` and therefore invisible to Googlebot: the page title advertised "Nutrition, Research & Compounds" while the indexed HTML had only the nutrition, and the "Health Conditions" section's **internal links to `/conditions/:id` pages** (which help that cluster rank) weren't in the crawled markup. Fixed with the same `connected?/1` split (`load_species_sidecars/2`): async for the live client, synchronous `AsyncResult.ok(...)` on the dead render.
 
 ---
 

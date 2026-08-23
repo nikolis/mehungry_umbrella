@@ -6,6 +6,7 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   alias Mehungry.Food.SpeciesCompounds
   alias Mehungry.Health
   alias Mehungry.Literature
+  alias Phoenix.LiveView.AsyncResult
 
   @top_nutrient_names [
     "Energy",
@@ -57,19 +58,44 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
          |> assign(:display_name, display_name)
          |> assign(:ingredients, ingredients)
          |> assign_ingredient_view(selected && selected.id)
-         |> assign_async([:compounds, :studies, :recommendations], fn ->
-           {:ok,
-            %{
-              compounds: SpeciesCompounds.list_species_relationships(species.id),
-              studies: Literature.list_studies_for_species(species.id),
-              recommendations: Health.recommendations_for_species(species.id)
-            }}
-         end)
+         |> load_species_sidecars(species)
          |> assign(:page_title, "#{display_name} — Nutrition, Research & Compounds")
          |> assign(
            :page_description,
            "#{display_name}: nutrition facts across its foods, the research behind it, and the bioactive compounds it carries."
          )}
+    end
+  end
+
+  # Compounds / studies / recommendations are secondary to the (synchronous)
+  # nutrition facts, so the live client loads them asynchronously for a fast
+  # paint. On the disconnected ("dead") render Googlebot indexes — it never
+  # opens the LiveView WebSocket — those async assigns would stay in their
+  # loading state and render as skeletons, hiding the "Compounds", "Health
+  # Conditions" (which carries the internal links to /conditions pages), and
+  # "Research" sections the page title advertises. So on the dead render we load
+  # them synchronously and hand the template a resolved `AsyncResult`.
+  defp load_species_sidecars(socket, species) do
+    if connected?(socket) do
+      assign_async(socket, [:compounds, :studies, :recommendations], fn ->
+        {:ok,
+         %{
+           compounds: SpeciesCompounds.list_species_relationships(species.id),
+           studies: Literature.list_studies_for_species(species.id),
+           recommendations: Health.recommendations_for_species(species.id)
+         }}
+      end)
+    else
+      socket
+      |> assign(
+        :compounds,
+        AsyncResult.ok(SpeciesCompounds.list_species_relationships(species.id))
+      )
+      |> assign(:studies, AsyncResult.ok(Literature.list_studies_for_species(species.id)))
+      |> assign(
+        :recommendations,
+        AsyncResult.ok(Health.recommendations_for_species(species.id))
+      )
     end
   end
 
