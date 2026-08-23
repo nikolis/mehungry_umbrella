@@ -98,11 +98,31 @@ defmodule Mehungry.AI.Bot do
     |> Repo.get!(id)
     |> Repo.preload([
       :bot_config,
+      :recipe_order,
       recipe: [
         recipe_ingredients: [:ingredient, :measurement_unit, :ingredient_portion],
         recipe_hashtags: []
       ]
     ])
+  end
+
+  @doc """
+  The bot user that owns a recipe's social posts: from its calendar `bot_config`,
+  or its ad-hoc `recipe_order` when there is no config (order recipes carry
+  `bot_config_id: nil`). Requires `:bot_config`/`:recipe_order` to be preloaded;
+  returns nil when neither is present.
+  """
+  def owner_bot_user_id(%AiBotRecipe{} = bot_recipe) do
+    case bot_recipe.bot_config do
+      %AiBotConfig{bot_user_id: id} when not is_nil(id) ->
+        id
+
+      _ ->
+        case bot_recipe.recipe_order do
+          %RecipeOrder{bot_user_id: id} when not is_nil(id) -> id
+          _ -> nil
+        end
+    end
   end
 
   def list_untracked_bot_recipes(bot_user_id) do
@@ -331,7 +351,16 @@ defmodule Mehungry.AI.Bot do
     |> Repo.update()
   end
 
-  def delete_persona(%Persona{} = persona), do: Repo.delete(persona)
+  @doc """
+  Deletes a persona. Setups that reference it have their `persona_id` nilified
+  by the FK (`on_delete: :nilify_all`). Returns `{:error, :referenced}` instead
+  of raising if some other constraint still blocks the delete.
+  """
+  def delete_persona(%Persona{} = persona) do
+    Repo.delete(persona)
+  rescue
+    Ecto.ConstraintError -> {:error, :referenced}
+  end
 
   def change_persona(%Persona{} = persona, attrs \\ %{}) do
     Persona.changeset(persona, attrs)
@@ -381,7 +410,17 @@ defmodule Mehungry.AI.Bot do
     |> Repo.update()
   end
 
-  def delete_recipe_setup(%RecipeSetup{} = setup), do: Repo.delete(setup)
+  @doc """
+  Deletes a setup along with its dependent rows. Seed ingredients and any recipe
+  orders cascade (FK `on_delete: :delete_all`); configs/week/day rows that
+  reference it are nilified. Returns `{:error, :referenced}` instead of raising
+  if a constraint still blocks the delete.
+  """
+  def delete_recipe_setup(%RecipeSetup{} = setup) do
+    Repo.delete(setup)
+  rescue
+    Ecto.ConstraintError -> {:error, :referenced}
+  end
 
   def change_recipe_setup(%RecipeSetup{} = setup, attrs \\ %{}) do
     RecipeSetup.changeset(setup, attrs)
@@ -471,6 +510,18 @@ defmodule Mehungry.AI.Bot do
     RecipeOrder.changeset(order, attrs)
   end
 
+  @doc """
+  Deletes a recipe order. Generated `ai_bot_recipes` keep their rows — the FK
+  nilifies their `recipe_order_id` (`on_delete: :nilify_all`) so already-produced
+  recipes survive in the review queue. Returns `{:error, :referenced}` instead of
+  raising if a constraint still blocks the delete.
+  """
+  def delete_recipe_order(%RecipeOrder{} = order) do
+    Repo.delete(order)
+  rescue
+    Ecto.ConstraintError -> {:error, :referenced}
+  end
+
   def increment_order_completed(%RecipeOrder{} = order) do
     {1, [count]} =
       RecipeOrder
@@ -497,11 +548,66 @@ defmodule Mehungry.AI.Bot do
       |> Map.new(fn {role, names} -> {role, Enum.reject(names, &is_nil/1)} end)
 
     [
+      cuisine: setup_cuisine(setup),
       persona: setup.persona,
       origin: setup.origin,
       story: setup.story,
       seed_ingredients: by_role
     ]
+  end
+
+  @doc """
+  The cuisine that should anchor generation for a setup: the explicit `cuisine`
+  field when set, otherwise a best-effort derivation from the free-text `origin`
+  (last place segment → demonym, e.g. "Rethymno -> Crete -> Greece" → "Greek").
+  Returns `nil` when neither yields anything.
+  """
+  def setup_cuisine(nil), do: nil
+
+  def setup_cuisine(%RecipeSetup{cuisine: c, origin: origin}) do
+    case c && String.trim(c) do
+      nil -> derive_cuisine(origin)
+      "" -> derive_cuisine(origin)
+      trimmed -> trimmed
+    end
+  end
+
+  # Very small heuristic: take the last "place" in an arrow/comma path and map a
+  # handful of common country names to their culinary demonym. Anything we don't
+  # recognize is returned verbatim so the origin still carries *some* signal.
+  # This is intentionally shallow — an admin who cares sets `cuisine` explicitly.
+  @country_to_cuisine %{
+    "greece" => "Greek",
+    "italy" => "Italian",
+    "france" => "French",
+    "spain" => "Spanish",
+    "mexico" => "Mexican",
+    "japan" => "Japanese",
+    "china" => "Chinese",
+    "india" => "Indian",
+    "thailand" => "Thai",
+    "turkey" => "Turkish",
+    "lebanon" => "Lebanese",
+    "morocco" => "Moroccan",
+    "vietnam" => "Vietnamese",
+    "korea" => "Korean",
+    "portugal" => "Portuguese"
+  }
+
+  def derive_cuisine(nil), do: nil
+
+  def derive_cuisine(origin) when is_binary(origin) do
+    last =
+      origin
+      |> String.split(~r/->|→|,|\//)
+      |> List.last()
+      |> to_string()
+      |> String.trim()
+
+    cond do
+      last == "" -> nil
+      true -> Map.get(@country_to_cuisine, String.downcase(last), last)
+    end
   end
 
   # ── Translations ─────────────────────────────────────────────────────────────

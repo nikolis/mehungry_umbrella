@@ -26,9 +26,14 @@ defmodule Mehungry.Food.Recipe do
     field :title, :string
     field :difficulty, :integer, default: 1
     field :nutrients, :map, default: %{}
+    # pgvector column created by 20260622000001_add_pgvector_and_recipe_embeddings.exs;
+    # written by RecipeEmbeddingWorker, read by Search.RecipeVectorSearch.
+    field :embedding, Pgvector.Ecto.Vector
     # Populated at display time by MehungryWeb.RecipeFlags for opted-in users;
     # each entry is %{condition, compound, recommendation, severity}.
     field :condition_flags, {:array, :map}, virtual: true, default: []
+    # Populated by Recipes.search_recipes_for_admin/2 for the admin recipes tab.
+    field :ingredient_count, :integer, virtual: true
 
     has_many :user_recipes, Mehungry.Accounts.UserRecipe
     has_one :post, Mehungry.Posts.Post
@@ -100,7 +105,10 @@ defmodule Mehungry.Food.Recipe do
       :language_name,
       :difficulty
     ])
-    |> unique_constraint(:title_user_constraint, name: :title_user_index)
+    |> unique_constraint(:title,
+      name: :title_user_index,
+      message: "you already have a recipe with this title"
+    )
     |> foreign_key_constraint(:language_name, name: :recipes_language_name_fkey)
     |> foreign_key_constraint(:language_id)
     |> foreign_key_constraint(:user_id)

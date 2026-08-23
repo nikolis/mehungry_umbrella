@@ -65,12 +65,18 @@ defmodule MehungryWeb.AiBotLive.Personas do
   end
 
   def handle_event("delete", %{"id" => id}, socket) do
-    id |> Bot.get_persona!() |> Bot.delete_persona()
+    socket =
+      case id |> Bot.get_persona!() |> Bot.delete_persona() do
+        {:ok, _persona} ->
+          socket
+          |> assign(:personas, Bot.list_personas())
+          |> put_flash(:info, "Persona deleted.")
 
-    {:noreply,
-     socket
-     |> assign(:personas, Bot.list_personas())
-     |> put_flash(:info, "Persona deleted.")}
+        {:error, _reason} ->
+          put_flash(socket, :error, "Could not delete this persona — it is still in use.")
+      end
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -81,7 +87,10 @@ defmodule MehungryWeb.AiBotLive.Personas do
         <h1 class="text-xl font-bold text-white">Personas</h1>
         <p class="text-sm text-slate-400 mt-0.5">
           Reusable authoring voices — grandma, tavern, dietologist… Bound to a place and
-          ingredients by a <.link navigate={~p"/professional/ai-bot/setups"} class="text-primary-400 hover:underline">Recipe Setup</.link>.
+          ingredients by a <.link
+            navigate={~p"/professional/ai-bot/setups"}
+            class="text-primary-400 hover:underline"
+          >Recipe Setup</.link>.
         </p>
       </div>
       <.link
@@ -149,11 +158,21 @@ defmodule MehungryWeb.AiBotLive.Personas do
           <.form for={@form} phx-change="validate" phx-submit="save" class="space-y-4">
             <div>
               <label class="block text-xs text-slate-400 mb-1">Name</label>
-              <.input field={@form[:name]} type="text" placeholder="e.g. Village Grandma" class={input_class()} />
+              <.input
+                field={@form[:name]}
+                type="text"
+                placeholder="e.g. Village Grandma"
+                class={input_class()}
+              />
             </div>
             <div>
               <label class="block text-xs text-slate-400 mb-1">Archetype (optional)</label>
-              <.input field={@form[:archetype]} type="text" placeholder="e.g. grandmother" class={input_class()} />
+              <.input
+                field={@form[:archetype]}
+                type="text"
+                placeholder="e.g. grandmother"
+                class={input_class()}
+              />
             </div>
             <div>
               <label class="block text-xs text-slate-400 mb-1">Short description (optional)</label>
@@ -175,7 +194,12 @@ defmodule MehungryWeb.AiBotLive.Personas do
             </div>
             <div>
               <label class="block text-xs text-slate-400 mb-1">Default origin (optional)</label>
-              <.input field={@form[:default_origin]} type="text" placeholder="e.g. a mountain village in Crete" class={input_class()} />
+              <.input
+                field={@form[:default_origin]}
+                type="text"
+                placeholder="e.g. a mountain village in Crete"
+                class={input_class()}
+              />
             </div>
             <label class="flex items-center gap-2 text-sm text-slate-300">
               <.input field={@form[:uses_hashtags]} type="checkbox" />
@@ -185,10 +209,16 @@ defmodule MehungryWeb.AiBotLive.Personas do
               <.input field={@form[:active]} type="checkbox" /> Active
             </label>
             <div class="flex items-center gap-2 pt-2">
-              <button type="submit" class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium">
+              <button
+                type="submit"
+                class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium"
+              >
                 Save
               </button>
-              <.link patch={~p"/professional/ai-bot/personas"} class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm">
+              <.link
+                patch={~p"/professional/ai-bot/personas"}
+                class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm"
+              >
                 Cancel
               </.link>
             </div>

@@ -14,7 +14,10 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   alias Mehungry.Posts
   alias MehungryWeb.RecipeComponents
   alias MehungryWeb.RecipeFlags
-  alias MehungryWeb.ImageProcessing
+
+  # Page size for the offset-paginated, condition-prioritized browse mode; kept
+  # in step with the cursor paginator's `limit: 10` in `Food.list_recipes/3`.
+  @per_page 10
 
   @impl true
   def mount(params, session, socket) do
@@ -42,7 +45,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
     {user_profile, user_follows, user_recipes} = Accounts.get_user_essentials(user)
 
-    language = socket.assigns[:current_language] || (user_profile && user_profile.language_preference)
+    language =
+      socket.assigns[:current_language] || (user_profile && user_profile.language_preference)
 
     {query, {recipes, cursor_after}} =
       case query_str do
@@ -74,12 +78,18 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      |> assign(:invocations, 0)
      |> assign(:counter, 1)
      |> assign(:query, query)
+     |> assign(:pagination_mode, :cursor)
      |> assign(sort_by: "recent")
      |> assign(:must_be_loged_in, nil)
      |> assign(:reply, nil)
      |> assign(:show_search_settings, false)
      |> assign(:selected_condition_ids, MapSet.new())
      |> assign(:conditions_by_category, conditions_by_category())
+     # Diet "mode" derived from the user's saved profile category rules — when set,
+     # the default browse feed is filtered to #vegan/#vegetarian and a badge shows.
+     # `diet_mode_available` remembers it so the badge can be toggled off/on.
+     |> assign(:diet_mode_available, Accounts.diet_mode(user))
+     |> assign(:diet_mode, Accounts.diet_mode(user))
      |> assign_recipe_search()}
   end
 
@@ -137,6 +147,16 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     {:noreply, assign(socket, :show_search_settings, !socket.assigns.show_search_settings)}
   end
 
+  # Turn the diet-mode filter off (see everything) or back on, then re-run the
+  # current search so the feed reflects it immediately.
+  @impl true
+  def handle_event("toggle_diet_mode", _params, socket) do
+    new_mode = if socket.assigns.diet_mode, do: nil, else: socket.assigns.diet_mode_available
+
+    socket = assign(socket, :diet_mode, new_mode)
+    {:noreply, handle_search(socket, socket.assigns.query_string)}
+  end
+
   @impl true
   def handle_event("toggle_condition", %{"id" => id}, socket) do
     id = String.to_integer(id)
@@ -192,20 +212,43 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   @impl true
   def handle_event("load-more", _, socket) do
-    cursor_after = Map.get(socket.assigns, :cursor_after)
+    language = get_user_language(socket)
+    next_page = socket.assigns.page + 1
 
-    {recipes, cursor_after} =
-      Food.list_recipes(
-        cursor_after,
-        Map.get(socket.assigns, :query, nil),
-        get_user_language(socket)
-      )
+    socket =
+      case Map.get(socket.assigns, :pagination_mode, :cursor) do
+        # Condition-prioritized browse: one ordered list, offset-paginated by
+        # page number so the computed "encouraged first" order is preserved.
+        :offset ->
+          recipes =
+            Food.list_recipes_page(
+              Map.get(socket.assigns, :query),
+              next_page,
+              @per_page,
+              language
+            )
 
-    {:noreply,
-     socket
-     |> assign(:cursor_after, cursor_after)
-     |> assign(:page, socket.assigns.page + 1)
-     |> stream_recipes(recipes)}
+          stream_recipes(socket, recipes)
+
+        # Default browse / search: keep the cursor paginator.
+        _ ->
+          case Map.get(socket.assigns, :cursor_after) do
+            nil ->
+              socket
+
+            cursor_after ->
+              {recipes, cursor_after} =
+                Food.list_recipes(cursor_after, Map.get(socket.assigns, :query), language)
+
+              socket
+              |> assign(:cursor_after, cursor_after)
+              |> stream_recipes(recipes)
+          end
+      end
+
+    # Always advance the page counter so the InfiniteScroll hook re-arms, even on
+    # a terminal (no-op) load — matching the previous always-increment behavior.
+    {:noreply, assign(socket, :page, next_page)}
   end
 
   @impl true
@@ -317,53 +360,61 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   defp handle_search(socket, query_str) do
     language = get_user_language(socket)
+    condition_ids = selected_condition_id_list(socket)
 
-    condition_ids =
-      socket.assigns
-      |> Map.get(:selected_condition_ids, MapSet.new())
-      |> MapSet.to_list()
-
-    {query, {recipes, cursor_after}} =
+    {query, pagination_mode, {recipes, cursor_after}} =
       cond do
         # Power-user prefixes keep their existing behavior (no condition filter).
         is_binary(query_str) and String.at(query_str, 0) == "#" ->
-          Food.search_hashtag1(query_str)
+          {query, page} = Food.search_hashtag1(query_str)
+          {query, :cursor, page}
 
         is_binary(query_str) and String.at(query_str, 0) == "@" ->
-          Food.search_recipes_by_ingredient(String.slice(query_str, 1..-1//1))
+          {query, page} = Food.search_recipes_by_ingredient(String.slice(query_str, 1..-1//1))
+          {query, :cursor, page}
 
         condition_ids != [] ->
-          base = Health.recipes_for_conditions_query(condition_ids)
+          # Prioritize (don't restrict): one continuous list with recipes
+          # encouraged for the selected conditions sorted to the top, then the
+          # rest. The priority is a computed order (not a cursor column), so this
+          # mode is offset-paginated by `:page` in `load-more`.
+          base = Health.recipes_prioritized_for_conditions_query(condition_ids)
 
-          composed =
+          query =
             case query_str do
               qr when is_binary(qr) and qr != "" -> RecipeSearch.run(base, qr)
               _ -> base
             end
 
-          {composed, Food.list_recipes(nil, composed, language)}
+          recipes = Food.list_recipes_page(query, 1, @per_page, language)
+          {query, :offset, {recipes, nil}}
 
         is_nil(query_str) ->
-          {query_str, list_recipes(language)}
+          # Default browse feed. If the user is in a diet mode, filter it to that
+          # diet's hashtag; otherwise show everything. An explicit search (#/@/text/
+          # condition) above overrides diet mode — the user asked for something specific.
+          case socket.assigns[:diet_mode] do
+            mode when mode in [:vegan, :vegetarian] ->
+              {query, page} = Food.search_hashtag1("#" <> Atom.to_string(mode))
+              {query, :cursor, page}
+
+            _ ->
+              {query_str, :cursor, list_recipes(language)}
+          end
 
         true ->
-          Food.search_recipe(query_str, language)
+          {query, page} = Food.search_recipe(query_str, language)
+          {query, :cursor, page}
       end
 
     socket
     |> assign(:cursor_after, cursor_after)
     |> assign(:query_string, query_str)
     |> assign(:query, query)
+    |> assign(:pagination_mode, pagination_mode)
     |> assign(:search_changeset, nil)
     |> stream_recipes(recipes, reset: true)
-    |> assign(
-      :not_empty,
-      if length(recipes) > 0 do
-        true
-      else
-        false
-      end
-    )
+    |> assign(:not_empty, length(recipes) > 0)
   end
 
   defp apply_action(socket, :index, %{"ingredient" => ingredient_name} = _params) do
@@ -489,14 +540,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     query_str = ""
     language = get_user_language(socket)
 
-    {_query, {recipes, cursor_after}} =
-      case query_str do
-        nil ->
-          {query_str, list_recipes(language)}
-
-        qr ->
-          Food.search_recipe(qr, language)
-      end
+    {_query, {recipes, cursor_after}} = Food.search_recipe(query_str, language)
 
     socket
     |> assign(:nutrients, recipe.nutrients)
@@ -540,10 +584,19 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   end
 
   # Streams recipes into the :recipes stream, first stamping health-condition
-  # badges for the viewing user's opted-in conditions (no-op when none).
+  # badges for the conditions the user selected in the search filter (no-op when
+  # none). Badges are driven by the active filter selection — not the user's
+  # profile — so a recipe only shows a condition badge for a condition the user
+  # is currently filtering by.
   defp stream_recipes(socket, recipes, opts \\ []) do
-    condition_ids = RecipeFlags.opted_in_condition_ids(socket.assigns[:current_user_profile])
+    condition_ids = selected_condition_id_list(socket)
     stream(socket, :recipes, RecipeFlags.enrich(recipes, condition_ids), opts)
+  end
+
+  defp selected_condition_id_list(socket) do
+    socket.assigns
+    |> Map.get(:selected_condition_ids, MapSet.new())
+    |> MapSet.to_list()
   end
 
   def assign_changeset(%{assigns: %{recipe_search_item: recipe_search_item}} = socket) do
@@ -679,7 +732,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     base
   end
 
-  defp jsonld_author(recipe) do
+ defp jsonld_author(recipe) do
     cond do
       is_binary(recipe.author) and String.trim(recipe.author) != "" ->
         String.trim(recipe.author)
@@ -757,7 +810,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     {result, cursor_after} = Food.list_recipes(nil, nil, language)
 
     result =
-      Enum.map(result, fn recipe ->
+      Enum.map(result, fn %Recipe{} = recipe ->
         %Recipe{recipe | recipe_image_remote: recipe.image_url}
       end)
 

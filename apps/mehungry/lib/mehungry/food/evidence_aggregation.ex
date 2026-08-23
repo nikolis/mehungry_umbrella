@@ -10,7 +10,7 @@ defmodule Mehungry.Food.EvidenceAggregation do
       #        mean: 750.0, min: 600.0, max: 900.0, study_count: 14,
       #        evidence_level: :strong, ...}}
 
-  This is the aggregation layer that `docs/compound_measurements.md` §7 defers. It
+  This is the aggregation layer that `docs/science/compound_measurements.md` §7 defers. It
   **only reads** the measurement rows and never mutates them; no aggregate is
   persisted (the summary is recomputed on demand).
 
@@ -21,7 +21,7 @@ defmodule Mehungry.Food.EvidenceAggregation do
   aggregates over the **modal unit** (the most frequently reported one) and reports
   `units_present` and `total_measurement_count`, so a caller can see when other
   units were present and excluded from the numeric summary. Unit normalization is a
-  deliberate follow-on (see `docs/evidence_aggregation.md`).
+  deliberate follow-on (see `docs/science/evidence_aggregation.md`).
 
   ## Statistics
 

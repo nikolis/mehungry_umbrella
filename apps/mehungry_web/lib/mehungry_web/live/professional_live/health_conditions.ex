@@ -88,7 +88,7 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   end
 
   @impl true
-  def handle_event("promote_recommendation", %{"id" => id} = params, socket) do
+  def handle_event("promote_recommendation", %{"candidate_id" => id} = params, socket) do
     attrs =
       params
       |> Map.take(["recommendation", "severity", "evidence_level"])

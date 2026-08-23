@@ -19,7 +19,7 @@ defmodule MehungryWeb.CoreComponents do
   alias Mehungry.Food
   alias Mehungry.Accounts
   alias Mehungry.Subscriptions
-  import MehungryWeb.Gettext
+  use Gettext, backend: MehungryWeb.Gettext
 
   def drop_down(assigns) do
     ~H"""

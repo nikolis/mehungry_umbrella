@@ -145,17 +145,25 @@ defmodule Mehungry.FriendsTest do
       {:ok, private} = Food.create_user_ingredient(a, user_ingredient_attrs("Snorfberry"))
 
       # Before friendship, B cannot see A's private ingredient.
-      refute private.id in ("Snorfberry" |> IngredientSearch.search([], b.id) |> Enum.map(& &1.id))
+      refute private.id in ("Snorfberry"
+                            |> IngredientSearch.search([], b.id)
+                            |> Enum.map(& &1.id))
 
       {:ok, req} = Friends.send_friend_request(a.id, b.id)
       {:ok, _} = Friends.accept_friend_request(req.id, b.id)
 
       # After friendship, it is visible in B's search and in B's friends list.
-      assert private.id in ("Snorfberry" |> IngredientSearch.search([], b.id) |> Enum.map(& &1.id))
+      assert private.id in ("Snorfberry"
+                            |> IngredientSearch.search([], b.id)
+                            |> Enum.map(& &1.id))
+
       assert private.id in (b |> Food.list_friends_ingredients() |> Enum.map(& &1.id))
 
       {:ok, _} = Friends.unfriend(a.id, b.id)
-      refute private.id in ("Snorfberry" |> IngredientSearch.search([], b.id) |> Enum.map(& &1.id))
+
+      refute private.id in ("Snorfberry"
+                            |> IngredientSearch.search([], b.id)
+                            |> Enum.map(& &1.id))
     end
   end
 end

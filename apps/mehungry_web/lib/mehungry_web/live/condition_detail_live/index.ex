@@ -5,17 +5,13 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   alias Mehungry.Food
   alias Mehungry.Food.SpeciesCompounds
   alias Mehungry.Health
+  alias Phoenix.LiveView.AsyncResult
 
-  # Display order + copy for the recommendation groups.
+  # Absolute origin for JSON-LD URLs (mirrors the canonical base in head.html.heex).
+  @base_url "https://www.m3hungry.com"
+
+  # Display order for the recommendation groups (labels are gettext'd at render).
   @recommendation_order ["avoid", "limit", "caution", "monitor", "encourage"]
-
-  @recommendation_labels %{
-    "avoid" => "Avoid",
-    "limit" => "Limit",
-    "caution" => "Approach with caution",
-    "monitor" => "Monitor",
-    "encourage" => "Encourage"
-  }
 
   # ── Nutrition snapshot (mirrors SpeciesDetailLive.Index) ─────────────────────
   @top_nutrient_names [
@@ -36,27 +32,43 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    case Health.get_condition(id) do
+    language = socket.assigns[:current_language] || "en"
+
+    case Health.get_condition(id, language) do
       nil ->
-        {:ok, push_navigate(socket, to: "/conditions")}
+        {:ok, push_navigate(socket, to: ~p"/#{language}/conditions")}
 
       condition ->
+        # Resolved synchronously (not via assign_async) so the disconnected HTTP
+        # render — the only HTML a crawler ever sees — contains the real content
+        # (compounds, foods, recipes) rather than loading skeletons.
+        species = Health.species_for_condition(condition.id, nil, language)
+
+        page_title = gettext("%{name} — Dietary Guidance", name: condition.name)
+
+        page_description =
+          gettext(
+            "Dietary guidance for %{name}: bioactive compounds to be mindful of and the food species that contain them.",
+            name: condition.name
+          )
+
         {:ok,
          socket
          |> assign(:condition, condition)
+         |> assign(:language, language)
          |> assign_new(:current_user, fn -> nil end)
          |> assign(:current_user_recipes, saved_recipe_ids(socket))
-         |> assign_async([:recommendations, :species], fn ->
-           {:ok,
-            %{
-              recommendations: Health.recommendations_for_condition(condition.id),
-              species: Health.species_for_condition(condition.id)
-            }}
-         end)
-         |> assign(:page_title, "#{condition.name} — Dietary Guidance")
          |> assign(
-           :page_description,
-           "Dietary guidance for #{condition.name}: bioactive compounds to be mindful of and the food species that contain them."
+           :recommendations,
+           AsyncResult.ok(Health.recommendations_for_condition(condition.id, language))
+         )
+         |> assign(:species, AsyncResult.ok(species))
+         |> assign(:recommended_recipes, AsyncResult.ok(recommended_recipes(species)))
+         |> assign(:page_title, page_title)
+         |> assign(:page_description, page_description)
+         |> assign(
+           :structured_data,
+           build_structured_data(condition, language, page_title, page_description)
          )}
     end
   end
@@ -64,12 +76,25 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   # `:show_food` opens the encouraged-food preview modal; loads a condensed slice
   # of the species page (identity is available immediately, the rest streams in).
   @impl true
-  def handle_params(%{"species_id" => species_id}, _uri, %{assigns: %{live_action: :show_food}} = socket) do
-    species = Food.get_species_with_ingredients!(species_id)
+  def handle_params(
+        %{"species_id" => species_id},
+        _uri,
+        %{assigns: %{live_action: :show_food}} = socket
+      ) do
+    species =
+      species_id
+      |> Food.get_species_with_ingredients!()
+      |> localize_species_name(socket.assigns[:language])
 
     {:noreply,
      socket
      |> assign(:modal_species, species)
+     # The food-modal URL is a slice of the condition page; canonicalize to the
+     # base page so crawlers don't treat it as duplicate content.
+     |> assign(
+       :canonical_path,
+       ~p"/#{socket.assigns.language}/conditions/#{socket.assigns.condition.id}"
+     )
      |> assign_async([:modal_nutrients, :modal_compounds, :modal_recipes], fn ->
        ingredients =
          species.foundemental_foods
@@ -143,11 +168,78 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   @doc "Flagged species minus the encouraged ones (avoid/limit/caution/monitor)."
   def mindful_species(rows), do: Enum.reject(rows, &(&1.recommendation == "encourage"))
 
-  @doc "Encouraged species, deduped (a species may be encouraged via >1 compound)."
+  @doc """
+  Encouraged species, deduped (a species may be encouraged via >1 compound).
+
+  A species that is also flagged as mindful (avoid/limit/caution/monitor via some
+  other compound) is excluded — the mindful guidance takes precedence.
+  """
   def encouraged_species(rows) do
+    mindful_ids =
+      rows
+      |> mindful_species()
+      |> MapSet.new(& &1.species.id)
+
     rows
     |> Enum.filter(&(&1.recommendation == "encourage"))
+    |> Enum.reject(&MapSet.member?(mindful_ids, &1.species.id))
     |> Enum.uniq_by(& &1.species.id)
+  end
+
+  # schema.org nodes for this page, emitted as a single @graph in the head:
+  #   • BreadcrumbList — mirrors the visible "Conditions › {name}" trail (breadcrumb
+  #     rich result).
+  #   • MedicalWebPage/MedicalCondition — semantic clarity that the page is dietary
+  #     guidance about a condition (no visible card; YMYL, so kept purely descriptive).
+  defp build_structured_data(condition, language, page_title, page_description) do
+    conditions_url = "#{@base_url}/#{language}/conditions"
+    condition_url = "#{conditions_url}/#{condition.id}"
+
+    [
+      %{
+        "@type" => "BreadcrumbList",
+        "itemListElement" => [
+          %{
+            "@type" => "ListItem",
+            "position" => 1,
+            "name" => gettext("Conditions"),
+            "item" => conditions_url
+          },
+          %{
+            "@type" => "ListItem",
+            "position" => 2,
+            "name" => condition.name,
+            "item" => condition_url
+          }
+        ]
+      },
+      %{
+        "@type" => "MedicalWebPage",
+        "name" => page_title,
+        "url" => condition_url,
+        "description" => page_description,
+        "about" => %{"@type" => "MedicalCondition", "name" => condition.name},
+        "audience" => %{"@type" => "MedicalAudience", "audienceType" => "Patient"}
+      }
+    ]
+  end
+
+  # Up to 10 random recipes that use at least one encouraged food and none of the
+  # mindful ones. Encouraged/mindful species are disjoint (see `encouraged_species/1`),
+  # so their ingredient sets don't overlap.
+  defp recommended_recipes(species_rows) do
+    encouraged_ids = encouraged_species(species_rows) |> Enum.map(& &1.species.id)
+    mindful_ids = mindful_species(species_rows) |> Enum.map(& &1.species.id)
+
+    case encouraged_ids do
+      [] ->
+        []
+
+      _ ->
+        include = Food.list_ingredient_ids_for_species(encouraged_ids)
+        exclude = Food.list_ingredient_ids_for_species(mindful_ids)
+        Food.list_random_recipes_including_excluding(include, exclude, 10)
+    end
   end
 
   # ── View helpers (mirror SpeciesDetailLive.Index) ────────────────────────────
@@ -207,5 +299,39 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
     end
   end
 
-  def recommendation_label(rec), do: Map.get(@recommendation_labels, rec, String.capitalize(rec))
+  def recommendation_label("avoid"), do: gettext("Avoid")
+  def recommendation_label("limit"), do: gettext("Limit")
+  def recommendation_label("caution"), do: gettext("Approach with caution")
+  def recommendation_label("monitor"), do: gettext("Monitor")
+  def recommendation_label("encourage"), do: gettext("Encourage")
+  def recommendation_label(rec), do: String.capitalize(rec)
+
+  # Gettext-translated label for a top-macro nutrient card (canonical English key
+  # from `@display_labels`); explicit clauses so `mix gettext.extract` sees them.
+  def nutrient_label("Calories"), do: gettext("Calories")
+  def nutrient_label("Protein"), do: gettext("Protein")
+  def nutrient_label("Fat"), do: gettext("Fat")
+  def nutrient_label("Carbs"), do: gettext("Carbs")
+  def nutrient_label("Fiber"), do: gettext("Fiber")
+  def nutrient_label(other), do: other
+
+  # Overlays the species' translated name for the modal title. A locale maps to
+  # several `language_name` codes (ISO + legacy, e.g. "el"/"Gr"); species rows
+  # often predate the ISO migration and live under "Gr", so we try every code for
+  # the locale (canonical ISO first). `nil`/`"en"` leaves the base English name.
+  defp localize_species_name(species, language) when language in [nil, "", "en"], do: species
+
+  defp localize_species_name(species, language) do
+    Mehungry.Languages.Locale.data_codes(language)
+    |> Enum.find_value(fn code ->
+      case Food.find_species_translation(code, species.id) do
+        [name | _] -> name
+        [] -> nil
+      end
+    end)
+    |> case do
+      nil -> species
+      name -> %{species | name: name}
+    end
+  end
 end

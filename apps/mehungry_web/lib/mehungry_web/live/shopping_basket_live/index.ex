@@ -149,11 +149,13 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       usda_fdc_id: nil
     }
 
-    case Inventory.add_item(socket.assigns.shopping_basket.id, item) do
+    %ShoppingBasket{} = shopping_basket = socket.assigns.shopping_basket
+
+    case Inventory.add_item(shopping_basket.id, item) do
       {:ok, item} ->
         basket = %ShoppingBasket{
-          socket.assigns.shopping_basket
-          | basket_items: socket.assigns.shopping_basket.basket_items ++ [item]
+          shopping_basket
+          | basket_items: shopping_basket.basket_items ++ [item]
         }
 
         {:noreply,
@@ -190,17 +192,19 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   def handle_event("toggle_basket", %{"id" => id}, socket) do
     id = String.to_integer(id)
 
+    %ShoppingBasket{} = current_basket = socket.assigns.shopping_basket
+
     item =
       Enum.find(
-        socket.assigns.shopping_basket.basket_ingredients ++
-          socket.assigns.shopping_basket.basket_items,
+        current_basket.basket_ingredients ++
+          current_basket.basket_items,
         fn x -> x.id == id end
       )
 
     shopping_basket =
       if(item.__struct__ == Mehungry.Inventory.BasketIngredient) do
         rest =
-          Enum.filter(socket.assigns.shopping_basket.basket_ingredients, fn x ->
+          Enum.filter(current_basket.basket_ingredients, fn x ->
             x.id != item.id
           end)
 
@@ -208,17 +212,17 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
         all_ingredients = rest ++ [ingredient]
 
         %ShoppingBasket{
-          socket.assigns.shopping_basket
+          current_basket
           | basket_ingredients: all_ingredients
         }
       else
         rest =
-          Enum.filter(socket.assigns.shopping_basket.basket_items, fn x -> x.id != item.id end)
+          Enum.filter(current_basket.basket_items, fn x -> x.id != item.id end)
 
         {:ok, basket_item} = Inventory.toggle_basket_ingredient(item)
 
         %ShoppingBasket{
-          socket.assigns.shopping_basket
+          current_basket
           | basket_items: rest ++ [basket_item]
         }
       end
@@ -262,7 +266,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       nil ->
         %ShoppingBasket{user_id: user.id, basket_ingredients: [], basket_items: []}
 
-      shopping_basket ->
+      %ShoppingBasket{} = shopping_basket ->
         %ShoppingBasket{
           shopping_basket
           | basket_ingredients:

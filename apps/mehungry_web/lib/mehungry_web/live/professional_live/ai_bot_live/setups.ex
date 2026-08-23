@@ -53,8 +53,10 @@ defmodule MehungryWeb.AiBotLive.Setups do
 
   @impl true
   def handle_event("validate", %{"recipe_setup" => params}, socket) do
-    data = (socket.assigns.setup || %RecipeSetup{})
-    {:noreply, assign(socket, :form, to_form(Bot.change_recipe_setup(data, params), action: :validate))}
+    data = socket.assigns.setup || %RecipeSetup{}
+
+    {:noreply,
+     assign(socket, :form, to_form(Bot.change_recipe_setup(data, params), action: :validate))}
   end
 
   def handle_event("save", %{"recipe_setup" => params}, socket) do
@@ -78,12 +80,18 @@ defmodule MehungryWeb.AiBotLive.Setups do
   end
 
   def handle_event("delete", %{"id" => id}, socket) do
-    id |> Bot.get_recipe_setup!() |> Bot.delete_recipe_setup()
+    socket =
+      case id |> Bot.get_recipe_setup!() |> Bot.delete_recipe_setup() do
+        {:ok, _setup} ->
+          socket
+          |> assign(:setups, Bot.list_recipe_setups())
+          |> put_flash(:info, "Setup deleted.")
 
-    {:noreply,
-     socket
-     |> assign(:setups, Bot.list_recipe_setups())
-     |> put_flash(:info, "Setup deleted.")}
+        {:error, _reason} ->
+          put_flash(socket, :error, "Could not delete this setup — it is still in use.")
+      end
+
+    {:noreply, socket}
   end
 
   def handle_event("add_ingredient", %{"name" => name, "role" => role}, socket)
@@ -124,10 +132,23 @@ defmodule MehungryWeb.AiBotLive.Setups do
   def handle_event("populate_from_condition", _params, socket) do
     {:ok, count} = Bot.populate_setup_ingredients_from_condition(socket.assigns.setup)
 
-    {:noreply,
-     socket
-     |> assign(:seed_ingredients, Bot.list_setup_ingredients(socket.assigns.setup.id))
-     |> put_flash(:info, "Added #{count} ingredient(s) from the condition.")}
+    socket =
+      assign(socket, :seed_ingredients, Bot.list_setup_ingredients(socket.assigns.setup.id))
+
+    socket =
+      if count == 0 do
+        put_flash(
+          socket,
+          :error,
+          "No ingredients derived from this condition — it has no encouraged/discouraged " <>
+            "compounds wired to curated species yet, so the condition will have no effect on " <>
+            "generation. Add seed ingredients manually or wire up the condition's compounds first."
+        )
+      else
+        put_flash(socket, :info, "Added #{count} ingredient(s) from the condition.")
+      end
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -138,7 +159,9 @@ defmodule MehungryWeb.AiBotLive.Setups do
         <h1 class="text-xl font-bold text-white">Recipe Setups</h1>
         <p class="text-sm text-slate-400 mt-0.5">
           A persona + place + ingredients + optional condition. Attach to a monthly config
-          or <.link navigate={~p"/professional/ai-bot/orders"} class="text-primary-400 hover:underline">order recipes</.link> against it.
+          or
+          <.link navigate={~p"/professional/ai-bot/orders"} class="text-primary-400 hover:underline">order recipes</.link>
+          against it.
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -196,7 +219,12 @@ defmodule MehungryWeb.AiBotLive.Setups do
           <.form for={@form} phx-change="validate" phx-submit="save" class="space-y-4">
             <div>
               <label class="block text-xs text-slate-400 mb-1">Name</label>
-              <.input field={@form[:name]} type="text" placeholder="e.g. Grandma from Rethymno" class={input_class()} />
+              <.input
+                field={@form[:name]}
+                type="text"
+                placeholder="e.g. Grandma from Rethymno"
+                class={input_class()}
+              />
             </div>
             <div>
               <label class="block text-xs text-slate-400 mb-1">Persona</label>
@@ -209,12 +237,35 @@ defmodule MehungryWeb.AiBotLive.Setups do
               />
             </div>
             <div>
+              <label class="block text-xs text-slate-400 mb-1">Cuisine</label>
+              <.input
+                field={@form[:cuisine]}
+                type="text"
+                placeholder="e.g. Greek, Sicilian, Oaxacan — the single most important constraint"
+                class={input_class()}
+              />
+              <p class="text-[11px] text-slate-500 mt-1">
+                Drives ingredient coherence and the cover-image style. Leave blank to derive it from the origin.
+              </p>
+            </div>
+            <div>
               <label class="block text-xs text-slate-400 mb-1">Origin (free text)</label>
-              <.input field={@form[:origin]} type="text" placeholder="e.g. Rethymno -> Crete -> Greece" class={input_class()} />
+              <.input
+                field={@form[:origin]}
+                type="text"
+                placeholder="e.g. Rethymno -> Crete -> Greece"
+                class={input_class()}
+              />
             </div>
             <div>
               <label class="block text-xs text-slate-400 mb-1">Story (optional)</label>
-              <.input field={@form[:story]} type="textarea" rows="3" placeholder="A short backstory this cook brings to the table…" class={input_class()} />
+              <.input
+                field={@form[:story]}
+                type="textarea"
+                rows="3"
+                placeholder="A short backstory this cook brings to the table…"
+                class={input_class()}
+              />
             </div>
             <div>
               <label class="block text-xs text-slate-400 mb-1">Health condition (optional)</label>
@@ -232,16 +283,27 @@ defmodule MehungryWeb.AiBotLive.Setups do
             </div>
             <div>
               <label class="block text-xs text-slate-400 mb-1">Diet direction (optional)</label>
-              <.input field={@form[:diet_direction]} type="text" placeholder="e.g. Mediterranean diet" class={input_class()} />
+              <.input
+                field={@form[:diet_direction]}
+                type="text"
+                placeholder="e.g. Mediterranean diet"
+                class={input_class()}
+              />
             </div>
             <label class="flex items-center gap-2 text-sm text-slate-300">
               <.input field={@form[:active]} type="checkbox" /> Active
             </label>
             <div class="flex items-center gap-2 pt-2">
-              <button type="submit" class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium">
+              <button
+                type="submit"
+                class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium"
+              >
                 Save
               </button>
-              <.link patch={~p"/professional/ai-bot/setups"} class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm">
+              <.link
+                patch={~p"/professional/ai-bot/setups"}
+                class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm"
+              >
                 Cancel
               </.link>
             </div>
@@ -263,7 +325,12 @@ defmodule MehungryWeb.AiBotLive.Setups do
           <.form for={@ingredient_form} phx-submit="add_ingredient" class="flex items-end gap-2 mb-4">
             <div class="flex-1">
               <label class="block text-xs text-slate-400 mb-1">Ingredient name</label>
-              <.input field={@ingredient_form[:name]} type="text" placeholder="e.g. olive oil" class={input_class()} />
+              <.input
+                field={@ingredient_form[:name]}
+                type="text"
+                placeholder="e.g. olive oil"
+                class={input_class()}
+              />
             </div>
             <div class="w-36">
               <label class="block text-xs text-slate-400 mb-1">Role</label>
@@ -274,7 +341,10 @@ defmodule MehungryWeb.AiBotLive.Setups do
                 class={input_class()}
               />
             </div>
-            <button type="submit" class="px-3 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium">
+            <button
+              type="submit"
+              class="px-3 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium"
+            >
               Add
             </button>
           </.form>
@@ -285,7 +355,10 @@ defmodule MehungryWeb.AiBotLive.Setups do
               class="flex items-center justify-between bg-slate-700/40 rounded-lg px-3 py-2"
             >
               <div class="flex items-center gap-2 text-sm text-white">
-                <span class={["inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border", role_class(si.role)]}>
+                <span class={[
+                  "inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border",
+                  role_class(si.role)
+                ]}>
                   {si.role}
                 </span>
                 {si.ingredient && si.ingredient.name}

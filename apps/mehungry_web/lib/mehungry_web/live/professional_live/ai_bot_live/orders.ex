@@ -37,7 +37,11 @@ defmodule MehungryWeb.AiBotLive.Orders do
   @impl true
   def handle_event("validate", %{"recipe_order" => params}, socket) do
     {:noreply,
-     assign(socket, :form, to_form(Bot.change_recipe_order(%RecipeOrder{}, params), action: :validate))}
+     assign(
+       socket,
+       :form,
+       to_form(Bot.change_recipe_order(%RecipeOrder{}, params), action: :validate)
+     )}
   end
 
   def handle_event("save", %{"recipe_order" => params}, socket) do
@@ -58,6 +62,21 @@ defmodule MehungryWeb.AiBotLive.Orders do
     end
   end
 
+  def handle_event("delete", %{"id" => id}, socket) do
+    socket =
+      case id |> Bot.get_recipe_order!() |> Bot.delete_recipe_order() do
+        {:ok, _order} ->
+          socket
+          |> assign(:orders, Bot.list_recipe_orders())
+          |> put_flash(:info, "Order deleted.")
+
+        {:error, _reason} ->
+          put_flash(socket, :error, "Could not delete this order.")
+      end
+
+    {:noreply, socket}
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -65,8 +84,10 @@ defmodule MehungryWeb.AiBotLive.Orders do
       <div>
         <h1 class="text-xl font-bold text-white">Recipe Orders</h1>
         <p class="text-sm text-slate-400 mt-0.5">
-          Generate a batch of recipes for a setup, on demand. Results appear in the
-          <.link navigate={~p"/professional/ai-bot/review"} class="text-primary-400 hover:underline">review queue</.link>.
+          Generate a batch of recipes for a setup, on demand. Results appear in the <.link
+            navigate={~p"/professional/ai-bot/review"}
+            class="text-primary-400 hover:underline"
+          >review queue</.link>.
         </p>
       </div>
       <.link
@@ -81,7 +102,7 @@ defmodule MehungryWeb.AiBotLive.Orders do
       <div class="flex-1 min-w-0 space-y-2">
         <div
           :for={order <- @orders}
-          class="bg-slate-800 border border-slate-700/60 rounded-xl p-4"
+          class="group bg-slate-800 border border-slate-700/60 rounded-xl p-4"
         >
           <div class="flex items-center justify-between">
             <div>
@@ -92,13 +113,26 @@ defmodule MehungryWeb.AiBotLive.Orders do
                 {order.quantity} × {order.meal_type || "mixed meals"} · {order.language_name}
               </div>
             </div>
-            <div class="text-right">
-              <span class={["inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border", status_class(order.status)]}>
-                {order.status}
-              </span>
-              <div class="text-[11px] text-slate-500 mt-1">
-                {order.completed_count}/{order.quantity} done
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <span class={[
+                  "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border",
+                  status_class(order.status)
+                ]}>
+                  {order.status}
+                </span>
+                <div class="text-[11px] text-slate-500 mt-1">
+                  {order.completed_count}/{order.quantity} done
+                </div>
               </div>
+              <button
+                phx-click="delete"
+                phx-value-id={order.id}
+                data-confirm="Delete this order? Already-generated recipes are kept in the review queue."
+                class="flex items-center gap-1 px-2 py-1 rounded-md text-slate-400 hover:text-red-400 hover:bg-red-500/10 text-xs opacity-0 group-hover:opacity-100 transition-all"
+              >
+                <.icon name="hero-trash" class="h-3.5 w-3.5" /> Delete
+              </button>
             </div>
           </div>
         </div>
@@ -145,13 +179,24 @@ defmodule MehungryWeb.AiBotLive.Orders do
             </div>
             <div>
               <label class="block text-xs text-slate-400 mb-1">Language</label>
-              <.input field={@form[:language_name]} type="text" value={@form[:language_name].value || "En"} class={input_class()} />
+              <.input
+                field={@form[:language_name]}
+                type="text"
+                value={@form[:language_name].value || "En"}
+                class={input_class()}
+              />
             </div>
             <div class="flex items-center gap-2 pt-2">
-              <button type="submit" class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium">
+              <button
+                type="submit"
+                class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium"
+              >
                 Place order
               </button>
-              <.link patch={~p"/professional/ai-bot/orders"} class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm">
+              <.link
+                patch={~p"/professional/ai-bot/orders"}
+                class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm"
+              >
                 Cancel
               </.link>
             </div>

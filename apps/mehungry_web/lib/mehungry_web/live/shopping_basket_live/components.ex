@@ -212,7 +212,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Components do
                 />
               </svg>
               <p class="text-parchment-dim">No items in this list</p>
-              <%= if !is_nil(@shopping_basket) and !is_nil(@shopping_basket.id) do %>
+              <%= if !is_nil(@shopping_basket.id) do %>
                 <button
                   class="mt-4 text-paprika-soft hover:text-paprika text-sm transition"
                   phx-click="open_add_item_modal"

@@ -37,8 +37,7 @@ defmodule Mehungry.Food.Ingredient do
     has_many :ingredient_portions, IngredientPortion, on_replace: :delete
     has_many :ingredient_nutrients, IngredientNutrient, on_replace: :delete
 
-    has_many :ingredient_translation, Mehungry.Food.IngredientTranslation,
-      on_replace: :delete
+    has_many :ingredient_translation, Mehungry.Food.IngredientTranslation, on_replace: :delete
 
     # Scientific enrichment sidecar (read-only here). These are intentionally NOT
     # added to `changeset/2`'s cast_assoc list — enrichment is written only via

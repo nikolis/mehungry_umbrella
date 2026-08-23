@@ -4,10 +4,45 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   import MehungryWeb.CoreComponents
 
   alias Mehungry.History.UserMeal
+  alias Mehungry.History.IngredientUserMeal
 
   alias Mehungry.Food
+  alias Mehungry.Food.IngredientPortion
   alias Mehungry.History
   alias MehungryWeb.CalendarLive.Components
+
+  # Sent (via `send_update/2` from the ingredient picker's `select_function`)
+  # when an ingredient row's ingredient changes: refresh just that row's unit
+  # dropdown to the newly chosen ingredient's portions. This also re-renders the
+  # row's `inputs_for` form, so we first stamp the picked `ingredient_id` into
+  # the parent changeset — otherwise the re-rendered ingredient picker would
+  # recompute its selected item from a changeset that hasn't caught up yet and
+  # blank the selection.
+  @impl true
+  def update(%{ingredient_selected: {index, ingredient_id}}, socket) do
+    options = unit_options(ingredient_id)
+
+    socket =
+      socket
+      |> assign(
+        :unit_options_by_index,
+        Map.put(socket.assigns.unit_options_by_index, index, options)
+      )
+      |> update(:form, fn %{source: changeset} ->
+        existing = Ecto.Changeset.get_assoc(changeset, :ingredient_user_meals)
+
+        updated =
+          List.update_at(existing, index, fn row_cs ->
+            Ecto.Changeset.put_change(row_cs, :ingredient_id, ingredient_id)
+          end)
+
+        changeset
+        |> Ecto.Changeset.put_assoc(:ingredient_user_meals, updated)
+        |> to_form()
+      end)
+
+    {:ok, socket}
+  end
 
   @impl true
   def update(%{id: id, title: title, dates: dates, current_user: user} = assigns, socket) do
@@ -24,14 +59,20 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
           struct(UserMeal)
 
         id ->
-          History.get_user_meal_raw!(user.id, id)
+          user.id
+          |> History.get_user_meal_raw!(id)
+          |> seed_ingredient_unit_selections()
       end
 
     recipes = Food.list_user_recipes_for_selection(assigns.current_user)
     incomplete_user_meals = list_recipe_incomplete_user_meals(assigns.current_user)
-    # Fetch the gram measurement units once here rather than per ingredient row on
-    # every render/validate (the old `get_measurement_units/2` ran this query N times).
-    measurement_units = Food.get_measurement_unit_by_name("gram")
+    # Ingredient rows now pick an ingredient *portion* ("1 cup", "1 medium")
+    # rather than only grams. Each row's dropdown is scoped to its ingredient's
+    # portions (built in `unit_options/1`); `gram_options` is the fallback for a
+    # row with no ingredient chosen yet, and `unit_options_by_index` caches the
+    # per-row option lists so we don't re-query on every render.
+    gram_options = gram_options()
+    unit_options_by_index = build_unit_options_by_index(base_user_meal)
 
     recipe_ids = Enum.map(recipes, fn x -> x.id end)
 
@@ -50,12 +91,63 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
       |> assign(:recipe_user_meal_ids, recipe_user_meal_ids)
       |> assign(:recipe_user_meals, incomplete_user_meals)
       |> assign(:recipes, recipes)
-      |> assign(:measurement_units, measurement_units)
+      |> assign(:gram_options, gram_options)
+      |> assign(:unit_options_by_index, unit_options_by_index)
       |> assign(:user_meal, base_user_meal)
       |> assign(:recipe_ids, recipe_ids)
       |> assign(:mode, initial_mode(id, base_user_meal))
 
     {:ok, init(socket, base_user_meal, default_attrs)}
+  end
+
+  # Seeds each persisted ingredient row's virtual `unit_selection` from its
+  # stored FKs so the unit dropdown shows the right option when editing.
+  defp seed_ingredient_unit_selections(%UserMeal{ingredient_user_meals: iums} = meal)
+       when is_list(iums) do
+    %{
+      meal
+      | ingredient_user_meals:
+          Enum.map(iums, fn ium ->
+            %{ium | unit_selection: IngredientUserMeal.unit_selection_value(ium)}
+          end)
+    }
+  end
+
+  defp seed_ingredient_unit_selections(meal), do: meal
+
+  # Precomputes the per-row unit dropdown options keyed by the row's `inputs_for`
+  # index (its position in the ingredient list). New meals have no persisted rows
+  # yet, so the map starts empty and rows fall back to `gram_options`.
+  defp build_unit_options_by_index(%UserMeal{ingredient_user_meals: iums}) when is_list(iums) do
+    iums
+    |> Enum.with_index()
+    |> Map.new(fn {ium, idx} -> {idx, unit_options(ium.ingredient_id)} end)
+  end
+
+  defp build_unit_options_by_index(_meal), do: %{}
+
+  # Builds the unit dropdown options for an ingredient, mirroring the recipe
+  # form's `IngredientComponent`: every portion becomes an option (values encode
+  # `measurement_unit_id`, or `-portion_id` for description-only portions), with
+  # "gram" always appended so a portion-less ingredient stays usable.
+  defp unit_options(nil), do: gram_options()
+
+  defp unit_options(ingredient_id) do
+    portion_options =
+      ingredient_id
+      |> Food.get_measurement_unit_portions_for_ingredient()
+      |> Enum.map(fn portion ->
+        value = if portion.measurement_unit_id, do: portion.measurement_unit_id, else: -portion.id
+        {Integer.to_string(value), IngredientPortion.display_name(portion) || "portion"}
+      end)
+
+    portion_options ++ gram_options()
+  end
+
+  defp gram_options do
+    Enum.map(Food.get_measurement_unit_by_name("gram"), fn mu ->
+      {Integer.to_string(mu.id), mu.name}
+    end)
   end
 
   # New meals open on the recipe tab; when editing, open on whichever tab has the
@@ -212,7 +304,12 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
         # Notify the parent to reload meals + close the modal via push_patch,
         # instead of push_navigate — a full remount would reset the calendar's
         # client-side accordion (JS-toggled `copen`) state.
-        send(self(), {:meal_saved, %{return_to: socket.assigns.return_to, flash: "User Meal updated successfully"}})
+        send(
+          self(),
+          {:meal_saved,
+           %{return_to: socket.assigns.return_to, flash: "User Meal updated successfully"}}
+        )
+
         {:noreply, socket}
 
       {:error, %Ecto.Changeset{} = changeset} ->

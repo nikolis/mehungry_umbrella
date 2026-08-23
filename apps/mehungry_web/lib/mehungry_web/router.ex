@@ -56,10 +56,26 @@ defmodule MehungryWeb.Router do
     plug MehungryWeb.Plugs.RequireLocalAiToken
   end
 
+  # Prometheus scrape endpoint (text exposition format), token-guarded.
+  pipeline :metrics do
+    plug MehungryWeb.Plugs.RequireMetricsToken
+  end
+
   scope "/api", MehungryWeb.Api do
     pipe_through :api
 
     post "/parser/parse", ParserController, :parse
+  end
+
+  scope "/", MehungryWeb do
+    pipe_through :metrics
+
+    get "/metrics", MetricsController, :index
+
+    # BeamScope's own Prometheus endpoint. Defined before the `/beam_scope`
+    # forward below so it takes precedence and is token-guarded (like /metrics)
+    # rather than sitting behind the session-based admin auth on that forward.
+    get "/beam_scope/metrics", MetricsController, :beam_scope
   end
 
   scope "/api/local_ai", MehungryWeb.Api.LocalAi do
@@ -68,7 +84,7 @@ defmodule MehungryWeb.Router do
     get "/pending", PendingController, :index
     post "/full_text", FullTextController, :create
     post "/candidates", CandidatesController, :create
-    get "/metrics", MetricsController, :index
+    post "/gi_candidates", GiCandidatesController, :create
   end
 
   scope "/auth", MehungryWeb do
@@ -111,6 +127,8 @@ defmodule MehungryWeb.Router do
 
       live "/compound-candidates", ProfessionalLive.CompoundCandidates, :index
 
+      live "/glycemic-index", ProfessionalLive.GlycemicIndex, :index
+
       live "/health", ProfessionalLive.HealthConditions, :index
 
       live "/usda-schema", ProfessionalLive.UsdaSchema, :index
@@ -152,7 +170,6 @@ defmodule MehungryWeb.Router do
       live "/ai-bot/orders", AiBotLive.Orders, :index
       live "/ai-bot/orders/new", AiBotLive.Orders, :new
 
-      live "/taxonomy/review", ProfessionalLive.TaxonomyReview, :index
       live "/ingredients/reconciliation", ProfessionalLive.IngredientReconciliation, :index
     end
   end
@@ -184,28 +201,28 @@ defmodule MehungryWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :default, on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.UserAuthLive] do
-      localized_live "/notifications/invitations", NutritionistLive.UserInvitations, :index
-      localized_live "/friends", FriendsLive.Index, :index
-      localized_live "/basket", ShoppingBasketLive.Index, :index
-      localized_live "/basket/import_items/:id", ShoppingBasketLive.Index, :import_items
+      localized_live("/notifications/invitations", NutritionistLive.UserInvitations, :index)
+      localized_live("/friends", FriendsLive.Index, :index)
+      localized_live("/basket", ShoppingBasketLive.Index, :index)
+      localized_live("/basket/import_items/:id", ShoppingBasketLive.Index, :import_items)
 
-      localized_live "/calendar", CalendarLive.Index, :index
-      localized_live "/calendar/ondate/:date", CalendarLive.Index, :particular
-      localized_live "/calendar/details/:date", CalendarLive.Index, :nutrition_details
-      localized_live "/calendar/recipe/:recipe_id", CalendarLive.Index, :show_recipe
+      localized_live("/calendar", CalendarLive.Index, :index)
+      localized_live("/calendar/ondate/:date", CalendarLive.Index, :particular)
+      localized_live("/calendar/details/:date", CalendarLive.Index, :nutrition_details)
+      localized_live("/calendar/recipe/:recipe_id", CalendarLive.Index, :show_recipe)
 
-      localized_live "/calendar/:start/:title", CalendarLive.Index, :new
+      localized_live("/calendar/:start/:title", CalendarLive.Index, :new)
 
-      localized_live "/calendar/:id", CalendarLive.Index, :edit
+      localized_live("/calendar/:id", CalendarLive.Index, :edit)
 
-      localized_live "/stepper", CreateRecipeLive.Show, :show
-      localized_live "/create_recipe", CreateRecipeLive.Index, :index
-      localized_live "/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit
+      localized_live("/stepper", CreateRecipeLive.Show, :show)
+      localized_live("/create_recipe", CreateRecipeLive.Index, :index)
+      localized_live("/create_recipe/:recipe_id", CreateRecipeLive.Index, :edit)
 
-      localized_live "/my_ingredients/new", MyIngredientLive.Form, :new
-      localized_live "/my_ingredients/:id/edit", MyIngredientLive.Form, :edit
+      localized_live("/my_ingredients/new", MyIngredientLive.Form, :new)
+      localized_live("/my_ingredients/:id/edit", MyIngredientLive.Form, :edit)
 
-      localized_live "/upgrade", UpgradeLive.Index, :index
+      localized_live("/upgrade", UpgradeLive.Index, :index)
     end
   end
 
@@ -217,6 +234,7 @@ defmodule MehungryWeb.Router do
   # you can use Plug.BasicAuth to set up some basic authentication
   # as long as you are also using SSL (which you should anyway).
   import Phoenix.LiveDashboard.Router
+  import Oban.Web.Router
 
   scope "/" do
     pipe_through [:admin_browser, :require_authenticated_user, :require_admin]
@@ -225,17 +243,30 @@ defmodule MehungryWeb.Router do
 
     live_dashboard "/dashboard",
       metrics: MehungryWeb.Telemetry,
-      ecto_repos: [Mehungry.Repo],
-      additional_pages: [
-        errors: MehungryWeb.ErrorsPage,
-        queries: MehungryWeb.QueryTimesPage,
-        endpoints: MehungryWeb.EndpointTimesPage,
-        timeline: MehungryWeb.QueryTimelinePage,
-        local_ai_rate: MehungryWeb.LocalAiRatePage
-      ]
+      ecto_repos: [Mehungry.Repo]
+
+    # Oban Web — jobs UI (view / retry / cancel background jobs), admin-gated
+    # alongside LiveDashboard. See docs; reachable at /oban.
+    oban_dashboard("/oban")
   end
 
   if Mix.env() == :dev do
+    pipeline :dev_browser do
+      plug :accepts, ["html"]
+      plug :fetch_session
+      plug :fetch_live_flash
+      plug :put_root_layout, {MehungryWeb.LayoutView, :dev_root}
+      plug :protect_from_forgery
+      plug :put_secure_browser_headers
+    end
+
+    scope "/dev", MehungryWeb do
+      pipe_through :dev_browser
+
+      # Dev-only Markdown browser / viewer / editor over the repo's docs.
+      live "/docs", Dev.MarkdownBrowserLive, :index
+    end
+
     forward "/dev/mailbox", Plug.Swoosh.MailboxPreview
   end
 
@@ -274,38 +305,38 @@ defmodule MehungryWeb.Router do
     live_session :default3,
       on_mount: MehungryWeb.RestoreLocale,
       layout: {MehungryWeb.LayoutView, :landing_live} do
-      localized_live "/welcome", LandingLive, :index
+      localized_live("/welcome", LandingLive, :index)
     end
 
     live_session :maybe, on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.MaybeUserAuthLive] do
       get "/", HomePageController, :home
 
-      localized_live "/home", HomeLive.Index, :index
-      localized_live "/home/:id", HomeLive.Index, :show_recipe
+      localized_live("/home", HomeLive.Index, :index)
+      localized_live("/home/:id", HomeLive.Index, :show_recipe)
 
-      localized_live "/browse", RecipeBrowserLive.Index, :index
-      localized_live "/browse/:id", RecipeBrowserLive.Index, :show_recipe
-      localized_live "/profile", ProfileLive.Index, :index
-      localized_live "/profile/edit", ProfileLive.Index, :edit
-      localized_live "/profile/:id", ProfileLive.Index, :show
-      localized_live "/profile/show_recipe/:recipe_id", ProfileLive.Index, :show_recipe
+      localized_live("/browse", RecipeBrowserLive.Index, :index)
+      localized_live("/browse/:id", RecipeBrowserLive.Index, :show_recipe)
+      localized_live("/profile", ProfileLive.Index, :index)
+      localized_live("/profile/edit", ProfileLive.Index, :edit)
+      localized_live("/profile/:id", ProfileLive.Index, :show)
+      localized_live("/profile/show_recipe/:recipe_id", ProfileLive.Index, :show_recipe)
 
-      localized_live "/show_recipe/:id", HomeLive.Index, :show_recipe
-      localized_live "/share_social_media/:id/:social_media", HomeLive.Index, :share_social_media
+      localized_live("/show_recipe/:id", HomeLive.Index, :show_recipe)
+      localized_live("/share_social_media/:id/:social_media", HomeLive.Index, :share_social_media)
 
-      localized_live "/search/", RecipeBrowserLive.Index, :index
-      localized_live "/search/hashtag/:hashtag", RecipeBrowserLive.Index, :index
-      localized_live "/search/ingredient/:ingredient", RecipeBrowserLive.Index, :index
-      localized_live "/search/:query", RecipeBrowserLive.Index, :index
+      localized_live("/search/", RecipeBrowserLive.Index, :index)
+      localized_live("/search/hashtag/:hashtag", RecipeBrowserLive.Index, :index)
+      localized_live("/search/ingredient/:ingredient", RecipeBrowserLive.Index, :index)
+      localized_live("/search/:query", RecipeBrowserLive.Index, :index)
 
-      localized_live "/foods", FoodsLive.Index, :index
-      localized_live "/foods/:slug", SpeciesDetailLive.Index, :index
+      localized_live("/foods", FoodsLive.Index, :index)
+      localized_live("/foods/:slug", SpeciesDetailLive.Index, :index)
 
-      localized_live "/conditions", HealthLive.Index, :index
-      localized_live "/conditions/:id", ConditionDetailLive.Index, :index
-      localized_live "/conditions/:id/food/:species_id", ConditionDetailLive.Index, :show_food
+      localized_live("/conditions", HealthLive.Index, :index)
+      localized_live("/conditions/:id", ConditionDetailLive.Index, :index)
+      localized_live("/conditions/:id/food/:species_id", ConditionDetailLive.Index, :show_food)
 
-      localized_live "/feedback", FeedbackLive, :index
+      localized_live("/feedback", FeedbackLive, :index)
     end
 
     get "/login", UserSessionController, :new

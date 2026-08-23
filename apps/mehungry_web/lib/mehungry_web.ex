@@ -24,7 +24,7 @@ defmodule MehungryWeb do
       use Phoenix.Controller, namespace: MehungryWeb
 
       import Plug.Conn
-      import MehungryWeb.Gettext
+      use Gettext, backend: MehungryWeb.Gettext
       alias MehungryWeb.Router.Helpers, as: Routes
     end
   end
@@ -80,7 +80,7 @@ defmodule MehungryWeb do
   def channel do
     quote do
       use Phoenix.Channel
-      import MehungryWeb.Gettext
+      use Gettext, backend: MehungryWeb.Gettext
     end
   end
 
@@ -131,7 +131,7 @@ defmodule MehungryWeb do
       import HeexIgnore
 
       import MehungryWeb.ErrorHelpers
-      import MehungryWeb.Gettext
+      use Gettext, backend: MehungryWeb.Gettext
       alias MehungryWeb.Router.Helpers, as: Routes
 
       # Routes generation with the ~p sigil

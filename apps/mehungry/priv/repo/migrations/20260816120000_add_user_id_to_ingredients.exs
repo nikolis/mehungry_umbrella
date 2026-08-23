@@ -25,7 +25,10 @@ defmodule Mehungry.Repo.Migrations.AddUserIdToIngredients do
   end
 
   def down do
-    drop_if_exists unique_index(:ingredients, [:user_id, :name], name: :ingredients_user_name_index)
+    drop_if_exists unique_index(:ingredients, [:user_id, :name],
+                     name: :ingredients_user_name_index
+                   )
+
     drop_if_exists unique_index(:ingredients, [:name], name: :ingredients_global_name_index)
 
     create unique_index(:ingredients, [:name])

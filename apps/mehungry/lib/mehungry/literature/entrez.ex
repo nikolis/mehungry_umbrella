@@ -42,6 +42,14 @@ defmodule Mehungry.Literature.Entrez do
   # also drives a StudyCompound link.
   @generic_keywords ~w(phytochemical polyphenol flavonoid antioxidant bioactive)
 
+  # Path-B Glycemic Index discovery: crawl each species for its GI feeding-trial
+  # studies (`scientific_name × "glycemic index"`), independent of the copyrighted
+  # International Tables. These terms carry no `compound_id` — the local-AI service
+  # extracts the GI value from the discovered papers (see
+  # docs/science/glycemic_index_licensing.md). Kept separate from @generic_keywords so
+  # GI discovery is easy to reason about and toggle.
+  @glycemic_keywords ["glycemic index"]
+
   @doc """
   Crawl Entrez for one food species and sync discovered studies.
 
@@ -116,8 +124,15 @@ defmodule Mehungry.Literature.Entrez do
             }
           end
 
-        (compound_terms ++ generic_terms)
+        (compound_terms ++ generic_terms ++ glycemic_terms(sci_name))
         |> Enum.uniq_by(& &1.term)
+    end
+  end
+
+  # GI discovery terms (compound-less) for a species' scientific name.
+  defp glycemic_terms(sci_name) do
+    for keyword <- @glycemic_keywords do
+      %{term: "#{sci_name} #{keyword}", compound_id: nil, scientific_name: sci_name}
     end
   end
 

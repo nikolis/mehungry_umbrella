@@ -7,6 +7,11 @@ page_description =
 
 recipe_jsonld = @conn.assigns[:recipe_jsonld]
 
+# Generic structured data: a list of schema.org node maps (e.g. BreadcrumbList,
+# MedicalWebPage) emitted together under a single @graph. Pages set it via a
+# `:structured_data` assign; other pages leave it nil and emit nothing.
+structured_data = @conn.assigns[:structured_data]
+
 # Resolve title, OG image, canonical URL from page_title assign
 {resolved_title, og_image, canonical_path} =
   cond do
@@ -23,6 +28,10 @@ recipe_jsonld = @conn.assigns[:recipe_jsonld]
     true ->
       {"M3Hungry — Discover & Analyze Recipes", nil, @conn.request_path}
   end
+
+# A page may override the canonical path (e.g. a modal/deep-link URL that should
+# point back at its base page to avoid duplicate content). Locale is applied below.
+canonical_path = @conn.assigns[:canonical_path] || canonical_path
 
 base_url = "https://www.m3hungry.com"
 
@@ -59,7 +68,24 @@ noindex_prefixes = [
 noindex = Enum.any?(noindex_prefixes, &String.starts_with?(@conn.request_path, &1))
 
 ga_measurement_id = Application.get_env(:mehungry_web, :ga_measurement_id, "G-JPGJG6GCSK")
-ga_consent_granted = @conn.assigns[:cookie_consent] == :accepted %>
+ga_consent_granted = @conn.assigns[:cookie_consent] == :accepted
+
+# Suppress GA entirely on localhost and for owner/team accounts (their traffic
+# would otherwise skew analytics). When gtag is not emitted, the page_view and
+# custom-event listeners in app.js no-op via their `typeof gtag === "function"`
+# guard — no other wiring needs to change.
+ga_blocked_emails = [
+  "nikolisgal@gmail.com",
+  "ariston.pap@gmail.com",
+  "efsouzou@gmail.com",
+  "3763921323750265@facebook.user",
+  "r3qviem@hotmail.com"
+]
+
+ga_current_email = @conn.assigns[:current_user] && @conn.assigns.current_user.email
+
+ga_enabled =
+  @conn.host not in ["localhost", "127.0.0.1"] and ga_current_email not in ga_blocked_emails %>
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -107,9 +133,16 @@ ga_consent_granted = @conn.assigns[:cookie_consent] == :accepted %>
   <% end %>
 
   <!-- ─── JSON-LD structured data (Recipe rich results) ──────────────────── -->
+  <%!-- NOTE: use <%= raw(...) %> here, not {..} — HEEx does not evaluate curly
+       interpolation inside <script>/<style> tags (it renders as literal text). --%>
   <%= if recipe_jsonld do %>
     <script type="application/ld+json">
-      {Jason.encode!(recipe_jsonld)}
+      <%= raw(Jason.encode!(recipe_jsonld)) %>
+    </script>
+  <% end %>
+  <%= if structured_data do %>
+    <script type="application/ld+json">
+      <%= raw(Jason.encode!(%{"@context" => "https://schema.org", "@graph" => structured_data})) %>
     </script>
   <% end %>
 
@@ -135,17 +168,19 @@ ga_consent_granted = @conn.assigns[:cookie_consent] == :accepted %>
   >
   </script>
 
-  <script async src={"https://www.googletagmanager.com/gtag/js?id=#{ga_measurement_id}"}>
-  </script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('consent', 'default', {
-      analytics_storage: '<%= if ga_consent_granted, do: "granted", else: "denied" %>'
-    });
-    gtag('js', new Date());
-    gtag('config', '<%= ga_measurement_id %>', { send_page_view: false });
-  </script>
+  <%= if ga_enabled do %>
+    <script async src={"https://www.googletagmanager.com/gtag/js?id=#{ga_measurement_id}"}>
+    </script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('consent', 'default', {
+        analytics_storage: '<%= if ga_consent_granted, do: "granted", else: "denied" %>'
+      });
+      gtag('js', new Date());
+      gtag('config', '<%= ga_measurement_id %>', { send_page_view: false });
+    </script>
+  <% end %>
 
   <link
     rel="stylesheet"

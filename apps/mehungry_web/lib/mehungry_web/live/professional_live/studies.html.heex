@@ -103,8 +103,10 @@
             {meta_line(study)}
             <span :if={meta_line(study) != ""}>·</span>
             PMID {study.pmid} ·
-            <span class="text-basil">{Map.get(@ing_counts, study.id, 0)}</span> ingredients ·
-            <span class="text-parchment">{Map.get(@mention_counts, study.id, 0)}</span> mentions
+            <span class="text-basil">{Map.get(@ing_counts, study.id, 0)}</span>
+            ingredients ·
+            <span class="text-parchment">{Map.get(@mention_counts, study.id, 0)}</span>
+            mentions
           </div>
         </div>
 

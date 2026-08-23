@@ -10,7 +10,7 @@ defmodule Mehungry.Repo.Migrations.CreateHealthRecommendations do
   # compound. "Which foods should a kidney-stone patient avoid?" is derived by
   # composing this layer with `ingredient_compound_relationships` at read time —
   # the schemas stay decoupled. This is the advice layer the "facts only"
-  # compound docs (docs/food_compounds.md §4) defer to.
+  # compound docs (docs/science/food_compounds.md §4) defer to.
   def up do
     # ── 1. Condition registry (shared reference entities) ────────────────────
     create table(:conditions) do

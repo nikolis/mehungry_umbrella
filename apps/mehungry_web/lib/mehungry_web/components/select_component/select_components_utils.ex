@@ -48,9 +48,6 @@ defmodule MehungryWeb.SelectComponentUtils do
       {nil, _form_params, selected_items, _} ->
         selected_items
 
-      {nil, _form_params, _, _} ->
-        []
-
       # get_items_from_params(form_params, assigns.items)
       {selected_items, _, _, _} ->
         selected_items =

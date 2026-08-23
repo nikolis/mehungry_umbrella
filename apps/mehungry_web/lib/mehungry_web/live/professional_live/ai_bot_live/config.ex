@@ -390,8 +390,10 @@ defmodule MehungryWeb.AiBotLive.Config do
                     />
                     <p class="text-[11px] text-slate-500 mt-1">
                       Gives every recipe this month a character voice, origin, and seed
-                      ingredients. Manage these under
-                      <.link navigate={~p"/professional/ai-bot/setups"} class="text-primary-400 hover:underline">Setups</.link>.
+                      ingredients. Manage these under <.link
+                        navigate={~p"/professional/ai-bot/setups"}
+                        class="text-primary-400 hover:underline"
+                      >Setups</.link>.
                       A week or day override below can swap it.
                     </p>
                   </div>

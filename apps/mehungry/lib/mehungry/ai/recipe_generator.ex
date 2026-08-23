@@ -114,7 +114,7 @@ defmodule Mehungry.AI.RecipeGenerator do
   end
 
   defp resolve_one(name, gram_unit) do
-    Food.search_ingredient_alt(name)
+    Food.IngredientSearch.search(name)
     |> rerank_by_name(name)
     |> filter_by_name_relevance(name)
     |> reject_partial_variants(name)

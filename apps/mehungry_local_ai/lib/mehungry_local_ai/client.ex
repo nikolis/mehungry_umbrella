@@ -15,7 +15,8 @@ defmodule MehungryLocalAi.Client do
 
   @doc """
   Fetch up to `limit` studies (from `offset`) that still need PMC fetch + extraction.
-  Returns `{:ok, %{studies: [%{study_id, pmid, compounds: [%{id, name, synonyms}]}], total: n}}`.
+  Returns `{:ok, %{studies: [%{study_id, pmid, compounds: [%{id, name, synonyms}],
+  extract_gi: bool}], total: n}}`.
   """
   def pending(limit, offset \\ 0) do
     params = URI.encode_query(limit: limit, offset: offset)
@@ -36,6 +37,13 @@ defmodule MehungryLocalAi.Client do
 
   def post_candidates(candidates) when is_list(candidates) do
     request(:post, "/api/local_ai/candidates", %{candidates: candidates})
+  end
+
+  @doc "Post a batch of GI finding maps (each with `study_id`): `[%{study_id, gi_value, ...}]`."
+  def post_gi_candidates([]), do: {:ok, %{"written" => 0}}
+
+  def post_gi_candidates(candidates) when is_list(candidates) do
+    request(:post, "/api/local_ai/gi_candidates", %{candidates: candidates})
   end
 
   # ── HTTP ────────────────────────────────────────────────────────────────────
@@ -80,7 +88,7 @@ defmodule MehungryLocalAi.Client do
         %{id: c["id"], name: c["name"], synonyms: c["synonyms"] || []}
       end)
 
-    %{study_id: sid, pmid: pmid, compounds: compounds}
+    %{study_id: sid, pmid: pmid, compounds: compounds, extract_gi: s["extract_gi"] || false}
   end
 
   defp base_url do

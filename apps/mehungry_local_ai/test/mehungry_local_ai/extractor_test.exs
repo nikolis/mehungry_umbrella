@@ -33,4 +33,50 @@ defmodule MehungryLocalAi.ExtractorTest do
   test "empty text yields no findings" do
     assert Extractor.findings("", @compounds) == []
   end
+
+  # ── GI findings (path B) ─────────────────────────────────────────────────
+
+  describe "gi_findings/1" do
+    test "extracts GI value + SEM with ISO method, reference food, and sample size" do
+      text =
+        "Methods consistent with ISO 26642:2010 were used in 10 healthy adults. " <>
+          "The glycemic index of the test food was 54 ± 3 relative to glucose."
+
+      assert [f] = Extractor.gi_findings(text)
+      assert f.gi_value == 54.0
+      assert f.gi_sem == 3.0
+      assert f.iso_method
+      assert f.reference_food == "glucose"
+      assert f.sample_size == 10
+      assert f.extraction_method == "automated"
+      assert f.raw_span =~ "glycemic index"
+    end
+
+    test "matches the 'GI value of N' short form" do
+      text = "In this study the GI value of 72 was observed for white bread."
+
+      assert [f] = Extractor.gi_findings(text)
+      assert f.gi_value == 72.0
+      refute f.iso_method
+    end
+
+    test "does not match the gastrointestinal sense of GI" do
+      text = "GI symptoms improved in 8 patients; GI tract motility was assessed."
+
+      assert Extractor.gi_findings(text) == []
+    end
+
+    test "ignores out-of-range numbers and dedupes repeats" do
+      text =
+        "The glycemic index was 54 in one arm. Elsewhere the glycemic index was 54 again. " <>
+          "A glycemic index of 900 is implausible."
+
+      assert [f] = Extractor.gi_findings(text)
+      assert f.gi_value == 54.0
+    end
+
+    test "empty text yields no GI findings" do
+      assert Extractor.gi_findings("") == []
+    end
+  end
 end

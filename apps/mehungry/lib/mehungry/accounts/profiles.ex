@@ -7,7 +7,14 @@ defmodule Mehungry.Accounts.Profiles do
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
-  alias Mehungry.Accounts.{User, UserConditionOptIn, UserContent, UserFollow, UserProfile}
+
+  alias Mehungry.Accounts.{
+    User,
+    UserConditionOptIn,
+    UserContent,
+    UserFollow,
+    UserProfile
+  }
 
   def list_user_profiles do
     Repo.all(UserProfile)
@@ -68,6 +75,26 @@ defmodule Mehungry.Accounts.Profiles do
   def delete_user_profile(%UserProfile{} = user_profile) do
     Repo.delete(user_profile)
   end
+
+  @doc """
+  The diet "mode" a user has set on their profile — `:vegan | :vegetarian | nil`
+  — read from the profile's persisted `diet` column. Used to switch on
+  `#vegan`/`#vegetarian` filtering on the browse and home feeds. `nil` for
+  guests, omnivores, and pescatarians (no `#pescatarian` recipe tag to filter on).
+  """
+  def diet_mode(nil), do: nil
+  def diet_mode(%User{id: user_id}), do: diet_mode(user_id)
+
+  def diet_mode(user_id) when is_integer(user_id) do
+    from(p in UserProfile, where: p.user_id == ^user_id, select: p.diet)
+    |> Repo.one()
+    |> diet_mode_for_diet()
+  end
+
+  @doc "Maps a profile `diet` value to the feed-filter mode (`:vegan | :vegetarian | nil`)."
+  def diet_mode_for_diet("vegan"), do: :vegan
+  def diet_mode_for_diet("vegetarian"), do: :vegetarian
+  def diet_mode_for_diet(_), do: nil
 
   @doc """
   The condition ids a profile has opted into (for health-condition badges).

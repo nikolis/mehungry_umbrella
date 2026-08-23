@@ -23,16 +23,27 @@ defmodule MehungryWeb.UserRegistrationController do
         register(conn, user_params)
 
       {:error, _reason} ->
+        # Re-render the form (preserving what was entered) instead of redirecting,
+        # so the user sees why the submission didn't go through.
+        changeset = Accounts.change_user_registration(%User{}, user_params)
+
         conn
         |> put_flash(:error, "Captcha verification failed. Please try again.")
-        |> redirect(to: Routes.user_registration_path(conn, :new))
+        |> render("new.html",
+          changeset: changeset,
+          turnstile_site_key: Turnstile.site_key(),
+          page_title: "Create Your Free Account"
+        )
     end
   end
 
   defp register(conn, user_params) do
     case Accounts.register_user(user_params) do
       {:ok, user} ->
-        {:ok, _} =
+        # Email delivery failures (e.g. SES throttling) must not crash the request
+        # after the account was already created — the user can trigger a resend by
+        # attempting to log in.
+        _ =
           Accounts.deliver_user_confirmation_instructions(
             user,
             &Routes.user_confirmation_url(conn, :edit, &1)

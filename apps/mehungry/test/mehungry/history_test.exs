@@ -127,9 +127,8 @@ defmodule MehungryApi.HistoryTest do
           recipe_user_meals: [recipe: [:recipe_ingredients, :recipe_hashtags]]
         )
 
-      recipes_r = Enum.map(user_meal.recipe_user_meals, fn x -> x.recipe end)
-      assert recipes_r == [recipe_0, recipe]
-      # assert user_meal.recipe_user_meals.recipe == recipe_0
+      recipe_ids = Enum.map(user_meal.recipe_user_meals, fn x -> x.recipe.id end)
+      assert recipe_ids == [recipe_0.id, recipe.id]
       assert NaiveDateTime.diff(user_meal.start_dt, ~U[2022-02-13 16:50:00Z]) == 0
       assert user_meal.title == "some title"
     end
@@ -162,8 +161,8 @@ defmodule MehungryApi.HistoryTest do
           recipe_user_meals: [recipe: [:recipe_ingredients, :recipe_hashtags]]
         )
 
-      recipes_r = Enum.map(user_meal.recipe_user_meals, fn x -> x.recipe end)
-      assert recipes_r == [recipe_0, recipe]
+      recipe_ids = Enum.map(user_meal.recipe_user_meals, fn x -> x.recipe.id end)
+      assert recipe_ids == [recipe_0.id, recipe.id]
 
       assert {:ok, %UserMeal{} = user_meal} = History.update_user_meal(user_meal, update_attrs)
       assert NaiveDateTime.diff(user_meal.start_dt, ~U[2022-02-14 16:50:00Z]) == 0

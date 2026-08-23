@@ -351,12 +351,16 @@ Postgres-side "too many connections" error.
 SELECT state, count(*) FROM oban_jobs GROUP BY 1;
 ```
 
-Inside a running prod node (`bin/mehungry_umbrella remote`), confirm the BEAM
-picked up the scheduler flags:
+Inside a running prod node, confirm the BEAM picked up the scheduler flags:
 
 ```elixir
 :erlang.system_info(:schedulers_online)   #=> should equal the vCPU count (2)
 ```
+
+> ⚠️ **`bin/mehungry_umbrella remote` is currently broken in prod** — see
+> [§11.2](#112-remote-console-is-broken----and-how-to-get-in-anyway). Use
+> `eval` (or the [Oban Web UI](#111-oban-web-ui-at-oban), which needs no console)
+> until the release config is fixed.
 
 ---
 
@@ -661,7 +665,9 @@ should OOM persist after the resource bump:
 
 ### 10.7 Verify the VM actually took the flags
 
-From a running prod node (`bin/mehungry_umbrella remote`):
+From a running prod node (`bin/mehungry_umbrella remote` — **currently broken,
+see [§11.2](#112-remote-console-is-broken----and-how-to-get-in-anyway); use
+`eval` instead**):
 
 ```elixir
 :erlang.system_info(:schedulers_online)        #=> 2  (must equal the vCPU count)
@@ -674,3 +680,202 @@ From a running prod node (`bin/mehungry_umbrella remote`):
 If `schedulers_online` doesn't equal the vCPU count after deploy, the `ERL_AFLAGS`
 env var isn't reaching the VM (typo, or overridden) — fix that before chasing
 anything else, because every other scheduler symptom flows from it.
+
+---
+
+## 11. Inspecting Oban in prod — tools and known breakages
+
+Findings from an incident investigation on **2026-08-15**: the "AI-translate all
+missing" batch translations (`ProfessionalLive.TranslationsLive.Panel`) appeared
+dead in prod for Recipes and Food Species while working fine on localhost. Three
+things surfaced while chasing it — a new tool, a broken tool, and the actual
+cause.
+
+### 11.1 Oban Web UI at `/oban`
+
+There is now an **Oban Web** dashboard mounted at **`/oban`**, admin-gated by the
+same pipeline as `/dashboard` (`:admin_browser` → `:require_authenticated_user` →
+`:require_admin`, `mehungry_web/router.ex`). Deps: `oban_web` + `oban_met`
+(`apps/mehungry_web/mix.exs`); it attaches to the default `Oban` instance and
+self-serves its own assets (no esbuild wiring).
+
+This is now the **primary, console-free way to inspect the job queues in prod**:
+filter by queue/state/worker, see the backlog live, and **cancel or retry jobs
+straight from the browser** — which is how you clear a runaway backlog without SQL
+or a remote shell. Prefer this over the console for anything you can do from a UI.
+
+### 11.2 Remote console is broken — and how to get in anyway
+
+`bin/mehungry_umbrella remote` and `bin/mehungry_umbrella rpc` **both crash in
+prod** with:
+
+```
+bad scheduler forced wakeup interval -sbt
+```
+
+Root cause is a malformed line in **`rel/remote.vm.args.eex`**:
+
+```
+## Enable distributed signals
++sfwi -sbt db
+```
+
+`+sfwi` (scheduler forced wakeup interval) requires a **numeric** argument, but it
+is handed `-sbt` — two flags mashed onto one line with no value for `+sfwi`. This
+file drives *both* `remote` and `rpc` (but **not** `eval`, `start`, or the running
+node, which use the clean `rel/vm.args.eex`), so all interactive/RPC console
+access to prod is dead. Setting `ERL_AFLAGS=` does **not** help — the bad flag is
+baked into the release file, not the env var.
+
+Secondary bug in the same file: `-setcookie ${ERLANG_COOKIE}`, but the entrypoint
+exports **`RELEASE_COOKIE`**, not `ERLANG_COOKIE` — so even with the `+sfwi` line
+fixed, the remote shell would likely fail to authenticate to the running node.
+
+**Permanent fix (needs a deploy):** in `rel/remote.vm.args.eex`, split/repair the
+scheduler line (drop it, or give `+sfwi` a real interval and put `-sbt db` on its
+own line) and change the cookie reference to `${RELEASE_COOKIE}`.
+
+**Workaround until then — use `eval`, not `remote`/`rpc`.** `eval` boots a
+throwaway node with the clean `vm.args`, runs your code, and exits; it does *not*
+connect to the running node and does *not* process jobs, so it's safe and
+read-only if you only start the Repo:
+
+```sh
+/app/bin/mehungry_umbrella eval '
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = Mehungry.Repo.start_link()
+import Ecto.Query
+Mehungry.Repo.all(from j in "oban_jobs", group_by: [j.queue, j.state], select: {j.queue, j.state, count(j.id)}) |> IO.inspect(label: "by_queue")
+'
+```
+
+(Getting an ECS shell in the first place: `enableExecuteCommand` is already `True`
+on `mh-prod-service`, the task role's SSM agent runs, so all you need locally is
+the **Session Manager plugin** — then
+`aws ecs execute-command --cluster mehungry_cluster --task <id> --container mehungry_app --command "/bin/sh" --interactive --region eu-central-1`.)
+
+### 11.3 Batch translation "not working" = Oban backlog, not a code failure
+
+`ResourceTranslationWorker.enqueue_all/3` inserts jobs with **no `unique:`
+option**. Every click of "AI-translate all missing" re-enqueues a *fresh full
+batch of every missing id*. On the biggest resources (Recipes, Food Species) each
+click queues hundreds of jobs onto the single-slot **`ai_agents: 1`** queue
+(shared with recipe generation), each making a slow Anthropic call. A few repeat
+clicks bury the queue thousands deep: drafts trickle in so slowly it *looks*
+dead, and the backlog also starves `DailyRecipeGenerationWorker`. It works on
+localhost only because the local queue drains instantly.
+
+- **Confirm:** filter `/oban` to worker `ResourceTranslationWorker` (or the `eval`
+  query in §11.2 grouped by `resource`/`state`) — expect a large `available` /
+  `scheduled` count on `recipes` and `species`.
+- **Clear it:** select those jobs in `/oban` → Cancel (or
+  `DELETE FROM oban_jobs WHERE worker = 'Mehungry.ObanWorkers.ResourceTranslationWorker' AND state IN ('available','scheduled','retryable')`).
+- **Prevent recurrence (code fix, not yet applied):** add an Oban `unique` guard
+  to `ResourceTranslationWorker` so repeated clicks are idempotent, and/or move
+  bulk translation off `ai_agents` onto its own queue so it can't starve recipe
+  generation.
+
+---
+
+## 12. Notifier stall — the single Postgres LISTEN connection took the whole Oban tree down (2026-08-19)
+
+A **different** failure mode from §1–§4: not pool starvation, not slow queries.
+At **~15:21 UTC** on `mehungry_umbrella@172.31.15.65`, the Oban supervision tree
+crashed wholesale. The producer for `imports`, `Oban.Met.Reporter`,
+`Oban.Plugins.Pruner`, and `Oban.Plugins.Cron` all terminated within the same
+second, each with the identical shape:
+
+```
+** (stop) exited in: :gen_statem.call(#PID<0.4040.0>, {{:listen, #PID<…>, [:insert, :signal]}, …}, 5000)
+    ** (EXIT) time out
+```
+
+### Root cause: one connection, many dependents
+
+Every one of those crashes is a `:gen_statem.call` **to the same PID
+`#PID<0.4040.0>`**, timing out at 5000 ms. That PID is the default
+**`Oban.Notifiers.Postgres`** notifier — a *single* `Postgrex.SimpleConnection`
+holding one `LISTEN` connection, through which **every** producer and plugin
+registers its subscriptions (`{:listen, [:insert, :signal]}`) and checks
+leadership (`:leader?` → `{:listen, [:leader]}`). It is **not** one of the
+pooled connections (§9) — it is its own dedicated socket, and it is a
+single point of failure:
+
+- The producer/plugin calls into it have a **5 s** timeout.
+- If that one process is unresponsive for >5 s, **all** its dependents time out
+  and crash **together**, then the supervisor restarts them, they re-`:listen`
+  against a still-broken connection, and crash again — a restart storm until the
+  connection recovers.
+
+The tight single-second cluster of crashes (not a slow degradation) points to a
+**transient** trigger, of which three are plausible and none require user load:
+
+1. **A DB-connectivity blip** — RDS failover/reboot/maintenance, or a NAT/idle
+   reaper silently killing the long-lived LISTEN socket. A *half-open* socket is
+   worst: the notifier is stuck waiting on a dead connection while it reconnects
+   with backoff.
+2. **The DB itself paused** — on the burstable `db.t4g.micro` (§9.4),
+   CPU-credit / EBS-burst-balance exhaustion, autovacuum, a checkpoint stall, or
+   one long lock-holder makes even the notifier's trivial calls slow.
+3. **A self-inflicted `NOTIFY` burst** — `insert_trigger: true` fires a `NOTIFY`
+   through this one connection on **every job insert**. A bulk fan-out that
+   enqueues jobs one-at-a-time in a tight loop (see §12.2) pushes thousands of
+   NOTIFYs through the single socket and can back it up past the 5 s call
+   timeout.
+
+### 12.1 Fix: switch to the process-group notifier
+
+`config/config.exs` now sets **`notifier: Oban.Notifiers.PG`**. Pub/sub then runs
+over Erlang process groups (`:pg`) in-VM — there is **no dedicated DB socket** to
+freeze, nothing to reconnect, and `NOTIFY` bursts no longer flow through a single
+connection. This removes the entire failure class above. It also frees one DB
+backend back to the pool, marginally easing §1.
+
+- **Leadership is unaffected** — it uses `Oban.Peers.Database` (on the pool), not
+  the notifier.
+- **PG's one limitation** is that notifications are **cluster-local**, not
+  cross-node. This deployment is effectively single-node
+  (`swarm static_quorum_size: 1`, one ECS task per §9.5), so it's a non-issue.
+  Even multi-task, the only cost is slight dispatch latency — the 1 s
+  `stage_interval` poll still picks up jobs — not correctness. **If you ever run
+  multiple *clustered* nodes and want cross-node insert signalling, revisit this**
+  (either cluster the BEAM so `:pg` spans nodes, or weigh the Postgres notifier's
+  trade-offs again).
+
+### 12.2 Companion fix: batch the hashtag-reconciliation fan-out
+
+The most likely *self-inflicted* trigger (#3) was the "Reconcile hashtags" sweep
+at `/professional/recipes`. It fanned out **one recipe at a time**:
+`enqueue_all_reconciliations/0` looped over every pending/failed recipe id and
+called `HashtagReconciliationWorker.enqueue/1` per recipe — each doing a tracking
+-row upsert **plus a separate `Oban.insert`**, i.e. a `NOTIFY` per recipe. A
+full-corpus resweep of thousands of recipes = thousands of NOTIFYs through the
+one notifier socket in a tight loop.
+
+Now batched (`HashtagReconciliationWorker.enqueue_all/1`):
+
+- `HashtagReconciliations.upsert_pending_all/1` upserts **all** tracking rows in a
+  single `INSERT … ON CONFLICT` (`returning: [:id, :recipe_id]`), and
+- one **`Oban.insert_all/1`** inserts every job — **one** insert notification, not
+  N.
+
+The LiveView is unchanged and unaffected: it only tracks **aggregate counts**
+(re-queried on a coalesced flush timer), ignoring the per-row broadcast payload,
+so dropping the per-row "pending" broadcasts costs nothing — `handle_async` still
+refreshes counts once the batched enqueue returns. This is the batch-enqueue rule
+now folded into the reference architecture (`docs/reference_architecture/oban_ui_connected_worker.md`).
+
+> **Gotcha for the batch upsert:** `Repo.insert_all` dumps against the schema's
+> declared timestamp type. `hashtag_reconciliations` uses the default
+> `:naive_datetime`, so the `inserted_at`/`updated_at` you pass must be
+> `NaiveDateTime` — a `DateTime` raises `Ecto.ChangeError` at insert time.
+
+### 12.3 Still worth checking (not visible from the app)
+
+The notifier switch is **symptom-proof** — it stops this cascade regardless of
+which trigger fired. But if the real trigger was #1/#2 (a DB blip), the switch
+only *masks* an undersized DB. For the 15:21 event, check the RDS **CPU-credit /
+EBS-burst-balance** graphs and the **events log** for that minute (failover /
+reboot). On a `db.t4g.micro` (§9.4) credit exhaustion is a live possibility.
+
+This is a **config change → needs a deploy** to take effect.

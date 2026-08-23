@@ -67,10 +67,14 @@
       </div>
 
       <div class="flex flex-wrap gap-4 text-sm">
-        <span class="text-slate-400">Total <span class="text-white font-semibold">{@reconcile_run.total}</span></span>
-        <span class="text-green-400">Renamed <span class="font-semibold">{@reconcile_run.completed}</span></span>
-        <span class="text-red-400">Failed <span class="font-semibold">{@reconcile_run.failed}</span></span>
-        <span class="text-blue-400">Remaining <span class="font-semibold">{reconcile_remaining(@reconcile_run)}</span></span>
+        <span class="text-slate-400">Total
+        <span class="text-white font-semibold">{@reconcile_run.total}</span></span>
+        <span class="text-green-400">Renamed
+        <span class="font-semibold">{@reconcile_run.completed}</span></span>
+        <span class="text-red-400">Failed
+        <span class="font-semibold">{@reconcile_run.failed}</span></span>
+        <span class="text-blue-400">Remaining
+        <span class="font-semibold">{reconcile_remaining(@reconcile_run)}</span></span>
       </div>
 
       <%= if @reconcile_run.failed > 0 and @reconcile_run.error do %>

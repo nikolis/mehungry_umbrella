@@ -19,8 +19,9 @@
     <%= for acc <- @test_accounts do %>
       <div class="text-sm">
         <code>{acc.email}</code>
-        &mdash; {if acc.exists, do: "exists", else: "missing"},
-        {if acc.confirmed, do: "confirmed", else: "unconfirmed"}
+        &mdash; {if acc.exists, do: "exists", else: "missing"}, {if acc.confirmed,
+          do: "confirmed",
+          else: "unconfirmed"}
       </div>
     <% end %>
   </div>

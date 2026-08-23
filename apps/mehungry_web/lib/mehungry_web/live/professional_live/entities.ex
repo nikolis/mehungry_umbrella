@@ -6,7 +6,7 @@ defmodule MehungryWeb.ProfessionalLive.Entities do
   expand each to its mentions (chemicals link to the resolved compound).
 
   Pure web wiring over `Mehungry.Literature` review reads + `Mehungry.Food`
-  compounds. See `docs/scientific_pipeline.md`.
+  compounds. See `docs/science/scientific_pipeline.md`.
   """
   use MehungryWeb, :live_view
 

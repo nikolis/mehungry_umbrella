@@ -31,6 +31,9 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:ai_generating, false)
      |> assign(:ai_task_ref, nil)
      |> assign(:ai_unmatched, [])
+     |> assign(:show_ai_ingredients_modal, false)
+     |> assign(:ai_pending_prompt, nil)
+     |> assign(:ai_existing_ingredients, [])
      |> assign(
        :ai_quota_exceeded,
        Mehungry.Subscriptions.check_quota(user.id, "recipe_generation") ==
@@ -74,7 +77,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
     changeset =
       socket.assigns.recipe
-      |> Recipe.changeset(recipe_params)
+      |> Food.validation_changeset(recipe_params)
       |> struct!(action: :validate)
 
     if(socket.assigns.live_action == :index) do
@@ -87,14 +90,17 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   def handle_event("ai_generate", %{"prompt" => prompt}, socket) when prompt != "" do
     case Mehungry.Subscriptions.check_quota(socket.assigns.user.id, "recipe_generation") do
       :ok ->
-        task = Task.async(fn -> Mehungry.AI.RecipeGenerator.run(prompt) end)
+        case existing_ingredient_names(socket) do
+          [] ->
+            start_ai_generation(socket, prompt)
 
-        {:noreply,
-         socket
-         |> assign(:ai_generating, true)
-         |> assign(:ai_task_ref, task.ref)
-         |> assign(:ai_unmatched, [])
-         |> assign(:ai_quota_exceeded, false)}
+          names ->
+            {:noreply,
+             socket
+             |> assign(:show_ai_ingredients_modal, true)
+             |> assign(:ai_pending_prompt, prompt)
+             |> assign(:ai_existing_ingredients, names)}
+        end
 
       {:error, :quota_exceeded} ->
         {:noreply, assign(socket, :ai_quota_exceeded, true)}
@@ -103,6 +109,29 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   def handle_event("ai_generate", _params, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("ai_generate_confirm", %{"keep" => keep}, socket) do
+    prompt = socket.assigns.ai_pending_prompt || ""
+    names = socket.assigns.ai_existing_ingredients
+
+    description =
+      if keep == "true" and names != [] do
+        prompt <>
+          "\n\nTry to use these ingredients I already have where they fit naturally: " <>
+          Enum.join(names, ", ") <> "."
+      else
+        prompt
+      end
+
+    start_ai_generation(socket, description)
+  end
+
+  def handle_event("ai_cancel_generate", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:show_ai_ingredients_modal, false)
+     |> assign(:ai_pending_prompt, nil)}
   end
 
   def handle_event("spoonacular_search", %{"query" => query}, socket) when query != "" do
@@ -152,12 +181,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     end
   end
 
-  # Per-user fixed-window limit on the paid Spoonacular API (search + import
-  # share one bucket) to prevent burning the shared key from free accounts.
-  defp spoonacular_rate_limit(user_id) do
-    Mehungry.RateLimit.hit("spoonacular:#{user_id}", 20, :timer.minutes(1))
-  end
-
   def handle_event("close_spoonacular_modal", _, socket) do
     {:noreply, assign(socket, show_spoonacular_modal: false)}
   end
@@ -186,7 +209,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   def handle_event("delete-image", _, socket) do
     # {:ok, recipe} = Food.update_recipe(socket.assigns.recipe, %{image_url: nil})
-    recipe = %Recipe{socket.assigns.recipe | image_url: nil}
+    %Recipe{} = current_recipe = socket.assigns.recipe
+    recipe = %Recipe{current_recipe | image_url: nil}
 
     {:noreply,
      socket
@@ -245,6 +269,12 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   @impl Phoenix.LiveView
   def handle_event("cancel-upload", %{"ref" => ref}, socket) do
     {:noreply, cancel_upload(socket, :image, ref)}
+  end
+
+  # Per-user fixed-window limit on the paid Spoonacular API (search + import
+  # share one bucket) to prevent burning the shared key from free accounts.
+  defp spoonacular_rate_limit(user_id) do
+    Mehungry.RateLimit.hit("spoonacular:#{user_id}", 20, :timer.minutes(1))
   end
 
   defp handle_action(socket, params) do
@@ -347,7 +377,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     %Recipe{
       recipe
       | recipe_ingredients:
-          Enum.map(ris, fn ri ->
+          Enum.map(ris, fn %RecipeIngredient{} = ri ->
             %RecipeIngredient{ri | unit_selection: RecipeIngredient.unit_selection_value(ri)}
           end)
     }
@@ -389,15 +419,51 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       socket.assigns.ai_task_ref == ref ->
         case result do
           {:ok, attrs, unmatched} ->
-            Mehungry.Subscriptions.record_usage(socket.assigns.user.id, "recipe_generation")
-            recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+            attrs =
+              attrs
+              |> Map.put("user_id", socket.assigns.user.id)
+              |> Map.put("language_name", "En")
 
-            {:noreply,
-             socket
-             |> assign(:ai_generating, false)
-             |> assign(:ai_task_ref, nil)
-             |> assign(:ai_unmatched, unmatched)
-             |> init(recipe, attrs)}
+            case Food.create_recipe(attrs) do
+              {:ok, recipe} ->
+                Mehungry.Subscriptions.record_usage(
+                  socket.assigns.user.id,
+                  "recipe_generation"
+                )
+
+                Logger.info(
+                  "Recipe created (AI): id=#{recipe.id} user_id=#{socket.assigns.user.id} title=#{inspect(recipe.title)}"
+                )
+
+                Cachex.put(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}, %{})
+
+                {:noreply,
+                 socket
+                 |> assign(:ai_generating, false)
+                 |> assign(:ai_task_ref, nil)
+                 |> push_navigate(to: ~p"/create_recipe/#{recipe.id}")}
+
+              {:error, %Ecto.Changeset{} = changeset} ->
+                # Safety net: the AI omitted a required field (e.g. cook time) or
+                # returned no valid ingredients. Fall back to loading the draft
+                # into the form so the generated content isn't lost.
+                Logger.warning(
+                  "Recipe creation failed (AI): user_id=#{socket.assigns.user.id} errors=#{inspect(changeset_error_map(changeset))}"
+                )
+
+                recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+
+                {:noreply,
+                 socket
+                 |> assign(:ai_generating, false)
+                 |> assign(:ai_task_ref, nil)
+                 |> assign(:ai_unmatched, unmatched)
+                 |> put_flash(
+                   :error,
+                   "Your recipe was generated but needs a couple of fixes before saving."
+                 )
+                 |> init(recipe, attrs)}
+            end
 
           {:error, reason} ->
             {:noreply,
@@ -615,14 +681,26 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     recipe_params = filter_empty_steps(recipe_params)
 
     case Food.update_recipe(socket.assigns.recipe, recipe_params) do
-      {:ok, %Recipe{} = _recipe} ->
+      {:ok, %Recipe{} = recipe} ->
+        Logger.info(
+          "Recipe updated: id=#{recipe.id} user_id=#{socket.assigns.current_user.id} title=#{inspect(recipe.title)}"
+        )
+
         {:noreply,
          socket
-         |> put_flash(:info, "Recipe created succesfully")
+         |> put_flash(:info, "Recipe updated succesfully")
          |> push_navigate(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, changeset: changeset)}
+        Logger.warning(
+          "Recipe update failed: recipe_id=#{socket.assigns.recipe.id} user_id=#{socket.assigns.current_user.id} errors=#{inspect(changeset_error_map(changeset))}"
+        )
+
+        {:noreply,
+         socket
+         |> assign(:changeset, changeset)
+         |> assign(:f, to_form(%{changeset | action: :update}))
+         |> put_flash(:error, save_error_flash(changeset))}
     end
   end
 
@@ -654,6 +732,10 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       {:ok, %Recipe{} = recipe} ->
         Cachex.put(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}, %{})
 
+        Logger.info(
+          "Recipe created: id=#{recipe.id} user_id=#{socket.assigns.current_user.id} title=#{inspect(recipe.title)}"
+        )
+
         {:noreply,
          socket
          |> MehungryWeb.GoogleAnalytics.track("create_recipe", %{recipe_id: recipe.id})
@@ -661,7 +743,26 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          |> push_navigate(to: "/profile")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, changeset: changeset)}
+        Logger.warning(
+          "Recipe creation failed: user_id=#{socket.assigns.current_user.id} errors=#{inspect(changeset_error_map(changeset))}"
+        )
+
+        {:noreply,
+         socket
+         |> assign(:changeset, changeset)
+         |> assign(:f, to_form(%{changeset | action: :insert}))
+         |> put_flash(:error, save_error_flash(changeset))}
+    end
+  end
+
+  # Turns a rejected save changeset into a specific, user-facing flash naming the
+  # actual blockers (missing fields, unit/portion problems, duplicate title) —
+  # these errors are otherwise invisible in the form. Shares the same formatter
+  # as the Review & Save panel so the two never diverge.
+  defp save_error_flash(changeset) do
+    case MehungryWeb.RecipeFormComponent.save_error_messages(changeset) do
+      [] -> "Couldn't save the recipe — please review the form and try again."
+      msgs -> "Couldn't save: " <> Enum.join(msgs, " · ")
     end
   end
 
@@ -676,8 +777,61 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     Map.put(recipe_params, "steps", filtered)
   end
 
+  # Launches the background generation task and enters the frozen state. Re-checks
+  # quota defensively so a stale modal can't slip past the limit.
+  defp start_ai_generation(socket, description) do
+    case Mehungry.Subscriptions.check_quota(socket.assigns.user.id, "recipe_generation") do
+      :ok ->
+        task = Task.async(fn -> Mehungry.AI.RecipeGenerator.run(description) end)
+
+        {:noreply,
+         socket
+         |> assign(:ai_generating, true)
+         |> assign(:ai_task_ref, task.ref)
+         |> assign(:show_ai_ingredients_modal, false)
+         |> assign(:ai_pending_prompt, nil)
+         |> assign(:ai_unmatched, [])
+         |> assign(:ai_quota_exceeded, false)}
+
+      {:error, :quota_exceeded} ->
+        {:noreply,
+         socket
+         |> assign(:show_ai_ingredients_modal, false)
+         |> assign(:ai_quota_exceeded, true)}
+    end
+  end
+
+  # Names of the ingredients the user has already added to the in-progress form,
+  # read from the changeset behind `@f`. Empty list when there are none (or no
+  # form yet), which is the signal to skip the confirmation modal.
+  defp existing_ingredient_names(socket) do
+    case socket.assigns[:f] do
+      %{source: %Ecto.Changeset{} = changeset} ->
+        changeset
+        |> Ecto.Changeset.get_assoc(:recipe_ingredients)
+        |> Enum.map(&Ecto.Changeset.get_field(&1, :ingredient_id))
+        |> Enum.reject(&is_nil/1)
+        |> Enum.map(&Food.get_ingredient/1)
+        |> Enum.reject(&is_nil/1)
+        |> Enum.map(& &1.name)
+        |> Enum.uniq()
+
+      _ ->
+        []
+    end
+  end
+
   defp list_ingredients do
     Food.list_ingredients()
+  end
+
+  # Flattens a changeset's errors into a plain map for readable log lines.
+  defp changeset_error_map(%Ecto.Changeset{} = changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+      Enum.reduce(opts, msg, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
   end
 
   defp get_temp_id, do: :crypto.strong_rand_bytes(5) |> Base.url_encode64() |> binary_part(0, 5)

@@ -4,6 +4,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
   alias Mehungry.{Languages, Food, Accounts}
   alias Mehungry.AI.Bot
   alias Mehungry.Food.Recipe
+  alias Mehungry.Food.RecipeIngredient
   alias Mehungry.Social.Pinterest
   alias Mehungry.ObanWorkers.{RecipeTranslationWorker, RecipePublishWorker}
 
@@ -27,12 +28,13 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
     languages = Languages.list_languages()
     translated_langs = Enum.map(translations, & &1.language_name)
 
-    changeset = Food.change_recipe(bot_recipe.recipe) |> struct!(action: :validate)
+    recipe = put_unit_selections(bot_recipe.recipe)
+    changeset = Food.change_recipe(recipe) |> struct!(action: :validate)
 
     {:noreply,
      socket
      |> assign(:bot_recipe, bot_recipe)
-     |> assign(:recipe, bot_recipe.recipe)
+     |> assign(:recipe, recipe)
      |> assign(:f, to_form(changeset))
      |> assign(:changeset, changeset)
      |> assign(:translations, translations)
@@ -76,8 +78,10 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
     if bot_recipe.status != "approved" do
       {:noreply, put_flash(socket, :error, "Recipe must be approved before publishing.")}
     else
+      # `config` is nil for ad-hoc order recipes (bot_config_id: nil); the owning
+      # bot user and per-language publish targets then come from the order.
       config = bot_recipe.bot_config
-      bot_user = Accounts.get_user!(config.bot_user_id)
+      bot_user = Accounts.get_user!(Bot.owner_bot_user_id(bot_recipe))
 
       # A board-fetch failure (stale token) disables Pinterest in the modal,
       # same as having no boards — reconnect happens on the social accounts page.
@@ -87,8 +91,16 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
           {:error, _} -> []
         end
 
-      lang_times = get_in(config.publish_times, [bot_recipe.meal_type]) || %{}
-      languages = if map_size(lang_times) > 0, do: Map.keys(lang_times), else: ["en"]
+      lang_times = (config && get_in(config.publish_times, [bot_recipe.meal_type])) || %{}
+      fb_page_ids = (config && config.facebook_page_ids) || %{}
+      pt_board_ids = (config && config.pinterest_board_ids) || %{}
+
+      languages =
+        cond do
+          map_size(lang_times) > 0 -> Map.keys(lang_times)
+          bot_recipe.recipe_order -> [bot_recipe.recipe_order.language_name]
+          true -> ["en"]
+        end
 
       facebook_pages =
         (bot_user.facebook_token || %{})
@@ -101,22 +113,19 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
       defaults =
         Map.new(languages, fn lang ->
           fb_page_id =
-            get_in(config.facebook_page_ids || %{}, [lang]) ||
+            get_in(fb_page_ids, [lang]) ||
               (List.first(facebook_pages) && List.first(facebook_pages).id)
 
           pt_board_id =
-            get_in(config.pinterest_board_ids || %{}, [lang]) ||
+            get_in(pt_board_ids, [lang]) ||
               (List.first(boards) && List.first(boards)["id"])
 
           {lang,
            %{
              instagram: instagram_connected,
-             facebook:
-               facebook_connected and not is_nil(get_in(config.facebook_page_ids || %{}, [lang])),
+             facebook: facebook_connected and not is_nil(get_in(fb_page_ids, [lang])),
              facebook_page_id: fb_page_id,
-             pinterest:
-               pinterest_connected and
-                 not is_nil(get_in(config.pinterest_board_ids || %{}, [lang])),
+             pinterest: pinterest_connected and not is_nil(get_in(pt_board_ids, [lang])),
              pinterest_board_id: pt_board_id
            }}
         end)
@@ -301,12 +310,13 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
     case Food.update_recipe(socket.assigns.recipe, recipe_params) do
       {:ok, %Recipe{}} ->
         bot_recipe = Bot.get_bot_recipe!(socket.assigns.bot_recipe.id)
-        changeset = Food.change_recipe(bot_recipe.recipe) |> struct!(action: :validate)
+        recipe = put_unit_selections(bot_recipe.recipe)
+        changeset = Food.change_recipe(recipe) |> struct!(action: :validate)
 
         {:noreply,
          socket
          |> assign(:bot_recipe, bot_recipe)
-         |> assign(:recipe, bot_recipe.recipe)
+         |> assign(:recipe, recipe)
          |> assign(:f, to_form(changeset))
          |> assign(:changeset, changeset)
          |> assign(:editing, false)
@@ -355,6 +365,21 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
   end
 
   defp get_temp_id, do: :crypto.strong_rand_bytes(5) |> Base.url_encode64() |> binary_part(0, 5)
+
+  # Seeds each recipe ingredient's virtual `unit_selection` from its persisted
+  # unit/portion so the unit dropdown shows the saved portion when editing —
+  # mirrors CreateRecipeLive.put_unit_selections/1.
+  defp put_unit_selections(%Recipe{recipe_ingredients: ris} = recipe) when is_list(ris) do
+    %Recipe{
+      recipe
+      | recipe_ingredients:
+          Enum.map(ris, fn %RecipeIngredient{} = ri ->
+            %RecipeIngredient{ri | unit_selection: RecipeIngredient.unit_selection_value(ri)}
+          end)
+    }
+  end
+
+  defp put_unit_selections(recipe), do: recipe
 
   @impl true
   def render(assigns) do
@@ -512,7 +537,9 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
                     <%= for ri <- @recipe.recipe_ingredients do %>
                       <li class="flex items-baseline gap-2 text-sm">
                         <span class="text-slate-400 text-xs tabular-nums w-8 text-right flex-shrink-0">{ri.quantity}</span>
-                        <span class="text-slate-500 text-xs flex-shrink-0">{Mehungry.Food.RecipeIngredient.unit_label(ri)}</span>
+                        <span class="text-slate-500 text-xs flex-shrink-0">{Mehungry.Food.RecipeIngredient.unit_label(
+                          ri
+                        )}</span>
                         <span class="text-slate-200">{ri.ingredient.name}</span>
                       </li>
                     <% end %>

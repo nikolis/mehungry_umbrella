@@ -118,6 +118,42 @@ defmodule Mehungry.ObanWorkers.RecipePublishWorkerTest do
     assert_received {:publish_recipe, %{"platforms" => ["instagram", "facebook", "pinterest"]}}
   end
 
+  test "publishes an ad-hoc order recipe that has no bot_config", %{user: user, recipe: recipe} do
+    {:ok, setup} = Bot.create_recipe_setup(%{name: "Grandma from Crete"})
+
+    {:ok, order} =
+      Bot.create_recipe_order(%{
+        recipe_setup_id: setup.id,
+        bot_user_id: user.id,
+        quantity: 1,
+        language_name: "En"
+      })
+
+    {:ok, order_recipe} =
+      Bot.create_bot_recipe(%{
+        recipe_id: recipe.id,
+        recipe_order_id: order.id,
+        meal_type: "dinner",
+        scheduled_date: ~D[2026-07-19],
+        status: "approved"
+      })
+
+    # An ok log for the order's language stands in for what the (stubbed)
+    # publisher would write, so maybe_mark_published can flip the status.
+    ok_log(order_recipe, "instagram")
+    stub_publisher(self(), %{instagram: :ok, facebook: :ok, pinterest: :ok})
+
+    assert :ok =
+             perform_job(RecipePublishWorker, %{
+               ai_bot_recipe_id: order_recipe.id,
+               language_name: "En",
+               force: true
+             })
+
+    assert_received {:publish_recipe, %{"platforms" => ["instagram", "facebook", "pinterest"]}}
+    assert Bot.get_bot_recipe!(order_recipe.id).status == "published"
+  end
+
   test "skips unapproved recipes without calling the publisher", %{
     recipe: recipe,
     config: config
