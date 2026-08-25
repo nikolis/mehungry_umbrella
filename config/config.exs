@@ -287,11 +287,9 @@ config :phoenix, :json_library, Jason
 grafana_config =
   case System.get_env("GRAFANA_AUTH_TOKEN") do
     nil ->
-      IO.inspect("UBSucessfull Grafana configuration")
       :disabled
 
     token ->
-      IO.inspect(token, label: "The grafna token")
       [
         host: "http://localhost:3000",
         auth_token: token,
