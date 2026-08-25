@@ -21,14 +21,15 @@
             {
               "name": "ALLOY_LOG_TOKEN",
               "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/logs_api_token-AN5l42"
-            },
+            }
+          ],
           "firelensConfiguration": {
             "type": "fluentbit",
-              "options": {
-                "enable-ecs-log-metadata": "true",
-                "config-file-type": "file",
-                "config-file-value": "/extra.conf"
-              }          
+            "options": {
+              "enable-ecs-log-metadata": "true",
+              "config-file-type": "file",
+              "config-file-value": "/extra.conf"
+            }
           },
           "logConfiguration": {
              "logDriver": "awslogs",
