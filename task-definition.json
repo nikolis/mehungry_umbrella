@@ -183,12 +183,7 @@
             "logConfiguration": {
                 "logDriver": "awsfirelens",
                 "options": {
-                    "awslogs-group": "/ecs/mehungry_app_deployment",
-                    "mode": "non-blocking",
-                    "awslogs-create-group": "true",
-                    "max-buffer-size": "25m",
-                    "awslogs-region": "eu-central-1",
-                    "awslogs-stream-prefix": "ecs"
+                    "Name": "null"
                 },
                 "secretOptions": []
             },
