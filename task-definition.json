@@ -12,6 +12,37 @@
     },
     "containerDefinitions": [
         {
+          "name": "log_router",
+          "image": "011528270584.dkr.ecr.eu-central-1.amazonaws.com/mehungry-fluent-bit:latest",
+          "cpu": 128,
+          "memoryReservation": 128,
+          "essential": true,
+          "secrets": [
+            {
+              "name": "ALLOY_LOG_TOKEN",
+              "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/logs_api_token-AN5l42"
+            },
+          "firelensConfiguration": {
+            "type": "fluentbit",
+              "options": {
+                "enable-ecs-log-metadata": "true",
+                "config-file-type": "file",
+                "config-file-value": "/extra.conf"
+              }          
+          },
+          "logConfiguration": {
+             "logDriver": "awslogs",
+             "options": {
+              "awslogs-group": "/ecs/mehungry_firelens",
+              "awslogs-region": "eu-central-1",
+              "awslogs-create-group": "true",
+              "awslogs-stream-prefix": "firelens",
+              "mode": "non-blocking",
+              "max-buffer-size": "25m"
+            }
+          }
+        },
+        {
             "name": "mehungry_app",
             "image": "011528270584.dkr.ecr.eu-central-1.amazonaws.com/mehungry_ecr:4e3bf58c1f8ea3052f8539eaad140ed77f337b6a",
             "cpu": 0,
@@ -149,7 +180,7 @@
             "volumesFrom": [],
             "ulimits": [],
             "logConfiguration": {
-                "logDriver": "awslogs",
+                "logDriver": "awsfirelens",
                 "options": {
                     "awslogs-group": "/ecs/mehungry_app_deployment",
                     "mode": "non-blocking",
