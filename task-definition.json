@@ -36,7 +36,6 @@
              "options": {
               "awslogs-group": "/ecs/mehungry_firelens",
               "awslogs-region": "eu-central-1",
-              "awslogs-create-group": "true",
               "awslogs-stream-prefix": "firelens",
               "mode": "non-blocking",
               "max-buffer-size": "25m"
