@@ -14,7 +14,13 @@ defmodule MehungryWeb.StepComponent do
           <.input required field={steps_form[:index]} type="hidden" value={steps_form.index} />
 
           <div class="col-span-5">
-            <.input required field={steps_form[:description]} type="textarea" class="w-full max-h-14" />
+            <.input
+              required
+              field={steps_form[:description]}
+              type="textarea"
+              placeholder={gettext("Describe this step…")}
+              class="w-full max-h-14"
+            />
           </div>
           <.input required field={steps_form[:temp_id]} type="hidden" />
           <button
@@ -34,7 +40,7 @@ defmodule MehungryWeb.StepComponent do
         value="add_step"
         class="inline-flex items-center gap-1.5 text-sm font-semibold text-paprika-soft hover:text-paprika transition-colors mt-3"
       >
-        + Add Step
+        + {gettext("Add Step")}
       </button>
     </div>
     """

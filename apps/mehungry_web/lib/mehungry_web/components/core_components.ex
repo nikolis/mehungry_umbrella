@@ -1440,7 +1440,7 @@ defmodule MehungryWeb.CoreComponents do
   https://codepen.io/t_afif/pen/gOjJpeq
   """
   def stepper(assigns) do
-    steps = ["Details", "Ingredients", "Steps", "Save"]
+    steps = [gettext("Details"), gettext("Ingredients"), gettext("Steps"), gettext("Save")]
     assigns = Map.put(assigns, :steps, steps)
 
     ~H"""
@@ -1486,6 +1486,8 @@ defmodule MehungryWeb.CoreComponents do
     <li
       id={@id}
       class={@class}
+      title={@step}
+      aria-label={@step}
       phx-click={
         JS.remove_class("active", to: ".stepper_step")
         |> JS.add_class("active", to: "#step#{@index}")

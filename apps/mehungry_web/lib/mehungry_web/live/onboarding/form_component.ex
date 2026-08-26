@@ -22,7 +22,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
     ~H"""
     <div>
       <.header>
-        <h3 class="p-6 pb-2">Welcome! Let's set up your preferences</h3>
+        <h3 class="p-6 pb-2">{gettext("Welcome! Let's set up your preferences")}</h3>
       </.header>
 
       <.step_indicator step={@step} total={@total_steps} />
@@ -46,7 +46,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
           phx-target={@myself}
           class="px-5 py-2 rounded-full text-sm font-semibold border-2 border-slate-600 text-slate-300 hover:border-slate-400 hover:text-white transition-colors"
         >
-          Back
+          {gettext("Back")}
         </button>
         <div class="flex-1"></div>
         <button
@@ -56,7 +56,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
           phx-target={@myself}
           class="px-6 py-2 rounded-full text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 transition-colors"
         >
-          Next
+          {gettext("Next")}
         </button>
         <button
           :if={@step == @total_steps}
@@ -64,10 +64,10 @@ defmodule MehungryWeb.Onboarding.FormComponent do
           id="onboarding_submit_button"
           phx-click="save"
           phx-target={@myself}
-          phx-disable-with="Saving..."
+          phx-disable-with={gettext("Saving...")}
           class="px-6 py-2 rounded-full text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 transition-colors"
         >
-          Finish
+          {gettext("Finish")}
         </button>
       </div>
     </div>
@@ -89,7 +89,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
   defp diet_step(assigns) do
     ~H"""
     <div>
-      <p class="text-sm font-semibold text-slate-300 mb-3">Choose your language</p>
+      <p class="text-sm font-semibold text-slate-300 mb-3">{gettext("Choose your language")}</p>
       <div class="flex justify-center gap-2 mb-6">
         <button
           :for={{code, label} <- [{"en", "EN — English"}, {"el", "ΕΛ — Ελληνικά"}]}
@@ -103,7 +103,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
         </button>
       </div>
 
-      <p class="text-sm font-semibold text-slate-300 mb-3">What best describes your diet?</p>
+      <p class="text-sm font-semibold text-slate-300 mb-3">{gettext("What best describes your diet?")}</p>
       <div class="flex flex-wrap justify-center gap-2 mb-6">
         <button
           :for={{value, label} <- diet_options()}
@@ -117,7 +117,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
         </button>
       </div>
 
-      <p class="text-sm font-semibold text-slate-300 mb-3">Anything else?</p>
+      <p class="text-sm font-semibold text-slate-300 mb-3">{gettext("Anything else?")}</p>
       <button
         type="button"
         phx-click="toggle_flag"
@@ -125,7 +125,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
         phx-target={@myself}
         class={pill_class(@lactose_intolerant)}
       >
-        {if @lactose_intolerant, do: "✓ ", else: ""}I am lactose intolerant
+        {if @lactose_intolerant, do: "✓ ", else: ""}{gettext("I am lactose intolerant")}
       </button>
     </div>
     """
@@ -135,9 +135,9 @@ defmodule MehungryWeb.Onboarding.FormComponent do
   defp calories_step(assigns) do
     ~H"""
     <div>
-      <p class="text-sm font-semibold text-slate-300 mb-1">Daily calorie target</p>
+      <p class="text-sm font-semibold text-slate-300 mb-1">{gettext("Daily calorie target")}</p>
       <p class="text-xs text-slate-400 mb-4">
-        Optional — set a kcal/day goal to track against your meal plans. You can change or clear this later.
+        {gettext("Optional — set a kcal/day goal to track against your meal plans. You can change or clear this later.")}
       </p>
       <form phx-change="set_calories" phx-target={@myself} class="flex justify-center">
         <input
@@ -146,7 +146,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
           value={@daily_calorie_target}
           min="1"
           max="19999"
-          placeholder="e.g. 2000"
+          placeholder={gettext("e.g. 2000")}
           class="w-40 text-center rounded-lg border-2 border-slate-600 bg-transparent text-white px-4 py-2 focus:border-primary-500 focus:outline-none"
         />
       </form>
@@ -158,13 +158,13 @@ defmodule MehungryWeb.Onboarding.FormComponent do
   defp health_step(assigns) do
     ~H"""
     <div>
-      <p class="text-sm font-semibold text-slate-300 mb-1">Health condition badges</p>
+      <p class="text-sm font-semibold text-slate-300 mb-1">{gettext("Health condition badges")}</p>
       <p class="text-xs text-slate-400 mb-4">
-        Optional — pick any conditions and we'll flag recipes on your feed that contain compounds relevant to them.
+        {gettext("Optional — pick any conditions and we'll flag recipes on your feed that contain compounds relevant to them.")}
       </p>
 
       <div :if={@conditions_by_category == []} class="text-sm text-slate-400">
-        No conditions available yet — you can set these later from your profile.
+        {gettext("No conditions available yet — you can set these later from your profile.")}
       </div>
 
       <div class="text-left max-h-72 overflow-y-auto space-y-4">
@@ -201,10 +201,10 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   defp diet_options do
     [
-      {"omnivore", "Omnivore"},
-      {"vegetarian", "Vegetarian"},
-      {"vegan", "Vegan"},
-      {"pescatarian", "Pescatarian"}
+      {"omnivore", gettext("Omnivore")},
+      {"vegetarian", gettext("Vegetarian")},
+      {"vegan", gettext("Vegan")},
+      {"pescatarian", gettext("Pescatarian")}
     ]
   end
 

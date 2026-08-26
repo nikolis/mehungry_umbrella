@@ -23,6 +23,11 @@ defmodule MehungryWeb.PromEx do
 
   alias PromEx.Plugins
 
+  # Emitted metric-name prefix for the Ecto plugin, e.g. "mehungry_web_prom_ex_ecto".
+  # Derived from the same PromEx.metric_prefix/2 the Ecto plugin is configured with,
+  # so the dashboard-var rewrite below can't drift from the emitted names.
+  @ecto_metric_prefix PromEx.metric_prefix(:mehungry_web, :ecto) |> Enum.join("_")
+
   @impl true
   def plugins do
     [
@@ -62,8 +67,37 @@ defmodule MehungryWeb.PromEx do
       {:prom_ex, "beam.json"},
       {:prom_ex, "phoenix.json"},
       {:prom_ex, "phoenix_live_view.json"},
-      {:prom_ex, "ecto.json"},
+      # The stock Ecto dashboard's `$repo` template variable is sourced from
+      # `<prefix>_repo_init_status_info` — Ecto's one-shot repo-init telemetry.
+      # In this umbrella that metric NEVER emits: `Mehungry.Repo` boots in the
+      # `:mehungry` app before `:mehungry_web`/PromEx attach their handlers, so
+      # the init event fires with nothing listening. With `$repo` empty, every
+      # panel filters on `repo=""` and shows no data. Rewrite the variable at
+      # upload time to source from the live query counter instead. See
+      # `docs/infrastructure/observability.md`.
+      {:prom_ex, "ecto.json", apply_function: &__MODULE__.fix_ecto_repo_var/1},
       {:prom_ex, "oban.json"}
     ]
+  end
+
+  @doc """
+  Repoints the Ecto dashboard's `$repo` template variable off the never-emitted
+  `_repo_init_status_info` metric onto the always-present query counter, so the
+  variable resolves and the panels render. Applied by PromEx to the decoded
+  dashboard before upload. Public because PromEx captures it by remote reference.
+  """
+  @spec fix_ecto_repo_var(map()) :: map()
+  def fix_ecto_repo_var(dashboard) do
+    query = "label_values(#{@ecto_metric_prefix}_repo_query_total_time_milliseconds_count, repo)"
+
+    update_in(dashboard, ["templating", "list"], fn vars ->
+      Enum.map(vars, fn
+        %{"name" => "repo"} = var ->
+          var |> Map.put("definition", query) |> Map.put("query", query)
+
+        var ->
+          var
+      end)
+    end)
   end
 end
