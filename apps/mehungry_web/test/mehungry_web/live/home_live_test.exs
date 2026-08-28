@@ -385,4 +385,40 @@ defmodule MehungryWeb.HomeLiveTest do
       refute html =~ "onboarding-modal"
     end
   end
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Optimistic interactions
+  # ──────────────────────────────────────────────────────────────────────────
+
+  describe "optimistic like" do
+    setup [:register_and_log_in_user]
+
+    # The like count span (and comment-count span) carry the `text-basil` class;
+    # after liking, a count of 1 must appear where none did before.
+    @count_one ~r/text-basil[^>]*>\s*1\s*</
+
+    test "clicking like bumps the count live without a reload", %{conn: conn, user: user} do
+      complete_onboarding(user)
+      author = user_fixture()
+      recipe = create_recipe_with_post(author, %{title: "Likeable Dish"})
+
+      {:ok, view, html} = live(conn, ~p"/home")
+      refute html =~ @count_one
+
+      html =
+        view
+        |> element("button[phx-click='save_user_recipe'][phx-value-recipe_id='#{recipe.id}']")
+        |> render_click()
+
+      assert html =~ @count_one
+
+      # Toggling again removes the like optimistically.
+      html =
+        view
+        |> element("button[phx-click='save_user_recipe'][phx-value-recipe_id='#{recipe.id}']")
+        |> render_click()
+
+      refute html =~ @count_one
+    end
+  end
 end

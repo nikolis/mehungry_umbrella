@@ -77,19 +77,30 @@ defmodule MehungryWeb.LiveHelpers do
           {:noreply, assign(socket, :must_be_loged_in, 1)}
         else
           {recipe_id, _ignore} = Integer.parse(recipe_id)
-          toggle_user_saved_recipe(socket, recipe_id)
 
-          user_recipes = Users.list_user_saved_recipe_ids(socket.assigns.current_user)
-          recipe = Food.get_recipe!(recipe_id)
-          socket = assign(socket, :user_recipes, user_recipes)
-          socket = assign(socket, :current_user_recipes, user_recipes)
+          # Optimistic update: flip state in-memory (no DB re-query) so the heart
+          # fill and like count move on the same round-trip, then persist.
+          current = socket.assigns.current_user_recipes
+          liked_now? = recipe_id not in current
+
+          new_recipes =
+            if liked_now?, do: [recipe_id | current], else: Enum.reject(current, &(&1 == recipe_id))
 
           socket =
-            if is_nil(Map.get(socket.assigns, :streams, nil)) do
-              socket
-            else
-              stream_insert(socket, :recipes, recipe)
-            end
+            socket
+            |> assign(:user_recipes, new_recipes)
+            |> assign(:current_user_recipes, new_recipes)
+            |> patch_posts_stream_like(recipe_id, liked_now?)
+
+          # Persist by the pre-computed intent — do NOT reuse toggle_user_saved_recipe/2
+          # here, since it re-reads current_user_recipes, which we just flipped.
+          user_id = socket.assigns.current_user.id
+
+          if liked_now? do
+            Users.save_user_recipe(user_id, recipe_id)
+          else
+            Users.remove_user_saved_recipe(user_id, recipe_id)
+          end
 
           {:noreply, socket}
         end
@@ -101,11 +112,88 @@ defmodule MehungryWeb.LiveHelpers do
           {:noreply, assign(socket, :must_be_loged_in, 1)}
         else
           {follow_id, _ignore} = Integer.parse(follow_id)
-          toggle_user_follow(socket, follow_id)
-          user_follows = Users.list_user_follows(socket.assigns.current_user)
-          user_follows = Enum.map(user_follows, fn x -> x.follow_id end)
-          socket = assign(socket, :current_user_follows, user_follows)
+
+          # Optimistic update: flip the follow set in-memory, re-stream every
+          # displayed card by this author so their Follow button flips, then persist.
+          current = socket.assigns.current_user_follows
+          following_now? = follow_id not in current
+
+          new_follows =
+            if following_now?, do: [follow_id | current], else: Enum.reject(current, &(&1 == follow_id))
+
+          socket =
+            socket
+            |> assign(:current_user_follows, new_follows)
+            |> restream_posts_by_author(follow_id)
+
+          # Persist by the pre-computed intent — toggle_user_follow/2 would re-read
+          # the current_user_follows we just flipped.
+          user_id = socket.assigns.current_user.id
+
+          if following_now? do
+            Users.save_user_follow(user_id, follow_id)
+          else
+            Users.remove_user_follow(user_id, follow_id)
+          end
+
           {:noreply, socket}
+        end
+      end
+
+      # Home-feed only: patch the streamed post for this recipe so the like count
+      # moves (only length/1 of reference.user_recipes is read on the card). No-op
+      # for LiveViews that don't render a :posts stream over an all_posts assign.
+      defp patch_posts_stream_like(socket, recipe_id, liked_now?) do
+        if match?(%{posts: _}, socket.assigns[:streams] || %{}) and
+             Map.has_key?(socket.assigns, :all_posts) do
+          found =
+            Enum.find(socket.assigns.all_posts, fn p ->
+              p.reference_id == recipe_id and post_displayed?(socket, p.id)
+            end)
+
+          case found do
+            nil ->
+              socket
+
+            post ->
+              recipes = post.reference.user_recipes || []
+
+              new_recipes =
+                if liked_now?, do: [%{} | recipes], else: Enum.drop(recipes, 1)
+
+              post = put_in(post.reference.user_recipes, new_recipes)
+
+              socket
+              |> assign(
+                :all_posts,
+                Enum.map(socket.assigns.all_posts, &if(&1.id == post.id, do: post, else: &1))
+              )
+              |> stream_insert(:posts, post)
+          end
+        else
+          socket
+        end
+      end
+
+      # Home-feed only: re-stream every displayed post authored by follow_id so
+      # their Follow buttons pick up the updated current_user_follows assign.
+      defp restream_posts_by_author(socket, follow_id) do
+        if match?(%{posts: _}, socket.assigns[:streams] || %{}) and
+             Map.has_key?(socket.assigns, :all_posts) do
+          socket.assigns.all_posts
+          |> Enum.filter(&(&1.user_id == follow_id and post_displayed?(socket, &1.id)))
+          |> Enum.reduce(socket, fn post, acc -> stream_insert(acc, :posts, post) end)
+        else
+          socket
+        end
+      end
+
+      # Only patch posts that are actually in the DOM. The home feed tracks this
+      # in :displayed_post_ids; without that assign, assume displayed.
+      defp post_displayed?(socket, post_id) do
+        case socket.assigns[:displayed_post_ids] do
+          nil -> true
+          ids -> MapSet.member?(ids, post_id)
         end
       end
 
