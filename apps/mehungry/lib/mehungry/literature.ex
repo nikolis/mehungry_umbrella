@@ -101,6 +101,39 @@ defmodule Mehungry.Literature do
 
   def get_study_by_pmid(pmid), do: Repo.get_by(ScientificStudy, pmid: pmid)
 
+  @doc """
+  Fetch a single paper by `pmid` and upsert it into the study registry, returning
+  the `ScientificStudy`. Returns the already-stored row when present (no network
+  call); otherwise pulls metadata via the Entrez `efetch` adapter. Used by
+  professional article authoring to cite an arbitrary PubMed paper, not only ones
+  the species crawl has discovered.
+  """
+  def fetch_and_upsert_study(pmid) when is_integer(pmid) do
+    case get_study_by_pmid(pmid) do
+      %ScientificStudy{} = study ->
+        {:ok, study}
+
+      nil ->
+        case Entrez.Client.efetch([pmid]) do
+          {:ok, [attrs | _], _raw} ->
+            upsert_study(Map.put(attrs, :retrieved_at, DateTime.truncate(DateTime.utc_now(), :second)))
+
+          {:ok, [], _raw} ->
+            {:error, :not_found}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+    end
+  end
+
+  def fetch_and_upsert_study(pmid) when is_binary(pmid) do
+    case Integer.parse(String.trim(pmid)) do
+      {int, ""} -> fetch_and_upsert_study(int)
+      _ -> {:error, :invalid_pmid}
+    end
+  end
+
   def list_studies, do: Repo.all(from(s in ScientificStudy, order_by: [desc: s.id]))
 
   # ── Study ↔ ingredient / compound links (idempotent) ──────────────────────

@@ -20,6 +20,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide Alpine x-cloak elements until Alpine initializes (prevents dropdown flash). */
+[x-cloak] {
+  display: none !important;
+}
+
 /* Dark theme tooltips - matches your #1E293B background */
 .vg-tooltip {
   background-color: #1E293B !important;

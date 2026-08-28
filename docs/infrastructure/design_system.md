@@ -10,14 +10,23 @@ including the social-media share flow), `/feedback`, `/upgrade`, `/welcome`
 layout's DOM structure were deliberately left alone per the original scope
 notes below (only their colors changed where they inherited from the shell).
 
+**Nutritionist surfaces are now migrated** (2026-08-27): the whole
+`/nutritionist/**` workspace (dashboard, profile editor, appointment calendar,
+clients, client detail, client meal-plan calendar, invitations, tutor
+invitations), the public `/nutritionists` directory + `/nutritionists/:slug`
+profile, and the `nutritionist_live.heex` shell + `nutritionist_sidebar` all
+use the `ink`/`paprika`/`basil`/`parchment` tokens. The nutritionist profile
+editor reuses the shared `.profile-form` CSS seam to retheme the core
+`<.input>`/`<textarea>` components; `basil` carries the section's teal identity
+(dashboard stat numbers, "current nutritionist" banner, accepted-appointment
+chips) while `paprika` is the single primary action per screen.
+
 **Not yet migrated (still old navy/slate/orange):** everything under
 `/professional/**` (admin tools — AI bot review, analytics, ingredients, S3
-browser, SEO, maintenance, etc.) and `/nutritionist/**` (dashboard, clients,
-appointments). These are internal/lower-visual-priority screens on separate
-layout templates (`admin_root.heex`/`admin_live.heex`,
-`nutritionist_live.heex`) and were explicitly deferred — see "Next candidates"
-below. This doc exists so the next pass picks up the same direction instead of
-drifting.
+browser, SEO, maintenance, etc.). These are internal/lower-visual-priority
+screens on separate layout templates (`admin_root.heex`/`admin_live.heex`) and
+were explicitly deferred — see "Next candidates" below. This doc exists so the
+next pass picks up the same direction instead of drifting.
 
 ## Why this direction
 
@@ -155,14 +164,14 @@ admin/nutritionist layouts (they're separate `admin_root.heex`/
 
 ## Next candidates
 
-1. **`/professional/**` and `/nutritionist/**`** — the only remaining
-   unmigrated surfaces, internal/admin-only. Biggest remaining
-   chunk (~8,500 lines). Lower visual priority since the audience is the app
-   owner and nutritionist subscribers, not general customers, but worth doing
-   for a consistent internal-tool experience. `Professional.IngredientLive`
-   and friends still use `SelectComponent`/`SelectComponentDeep` on the old
-   slate palette — safe to migrate independently of the customer app since
-   they're on separate layout templates.
+1. **`/professional/**`** — the only remaining unmigrated surface,
+   internal/admin-only (`/nutritionist/**` was migrated 2026-08-27). Lower
+   visual priority since the audience is the app owner, not general customers,
+   but worth doing for a consistent internal-tool experience.
+   `Professional.IngredientLive` and friends still use
+   `SelectComponent`/`SelectComponentDeep` on the old slate palette — safe to
+   migrate independently of the customer app since they're on a separate layout
+   template.
 2. Anything under `apps/mehungry_web/lib/mehungry_web/live/professional_live/ai_bot_live/`
    in particular touches `nutrition_accordion.ex`/`accordion_component.ex`
    (now on the new palette, since recipe detail uses it) — confirm the

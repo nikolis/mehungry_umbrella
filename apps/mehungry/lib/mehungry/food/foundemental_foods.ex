@@ -25,6 +25,27 @@ defmodule Mehungry.Food.FoundementalFoods do
   end
 
   @doc """
+  Search species by a free-text term matching `name`, `scientific_name`, or
+  `alternative_name` (case-insensitive substring), capped at `limit` (default 20).
+  Backs the article-reference species picker. A blank term returns `[]`.
+  """
+  def search_species(term, limit \\ 20)
+  def search_species(term, _limit) when term in [nil, ""], do: []
+
+  def search_species(term, limit) do
+    like = "%#{String.trim(term)}%"
+
+    Repo.all(
+      from s in FoundementalFoodSpecies,
+        where:
+          ilike(s.name, ^like) or ilike(s.scientific_name, ^like) or
+            ilike(s.alternative_name, ^like),
+        order_by: [asc: s.name, asc: s.variety],
+        limit: ^limit
+    )
+  end
+
+  @doc """
   Fetch a species by its URL slug (hyphens → spaces), matching on `name` first and
   falling back to a translated name. Preloads its curated foods (with ingredient) and
   its translations. Returns `nil` when nothing matches. Mirrors

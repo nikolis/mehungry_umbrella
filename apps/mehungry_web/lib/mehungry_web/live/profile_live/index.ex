@@ -12,6 +12,8 @@ defmodule MehungryWeb.ProfileLive.Index do
   alias MehungryWeb.ProfileLive.Show
   alias Mehungry.Food
   alias Mehungry.Posts
+  alias Mehungry.Professionals
+  alias Mehungry.Professionals.ProfessionalProfile
 
   @impl true
   def mount(_params, session, socket) do
@@ -80,43 +82,15 @@ defmodule MehungryWeb.ProfileLive.Index do
 
     user = Accounts.get_user!(id)
 
-    categories = Food.list_categories()
-    category_ids = Enum.map(categories, fn x -> x.id end)
-    food_restrictions = Food.list_food_restriction_types()
-    food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
+    case public_professional_for(user.id) do
+      %ProfessionalProfile{slug: slug} when is_binary(slug) ->
+        # Nutritionists have a canonical public page. The RedirectProProfile plug
+        # 301s direct hits/crawlers; this covers in-app client-side navigation.
+        push_navigate(socket, to: ~p"/nutritionists/#{slug}")
 
-    changeset = Accounts.change_user_profile(socket.assigns.current_user_profile, %{})
-
-    socket =
-      socket
-      |> assign(:categories, categories)
-      |> assign(:category_ids, category_ids)
-      |> assign(:food_restriction_ids, food_restriction_ids)
-      |> assign(:food_restrictions, food_restrictions)
-      |> assign(:id, "form-#{System.unique_integer()}")
-      |> assign(:form, to_form(changeset))
-
-    {user_saved_recipes, user_created_recipes, user_profile} =
-      case is_nil(user) do
-        true ->
-          {[], [], []}
-
-        false ->
-          {Users.list_user_saved_recipes(user), Users.list_user_created_recipes(user),
-           Accounts.get_user_profile_by_user_id(user.id)}
-      end
-
-    user_recipes = Enum.map(user_saved_recipes, fn x -> x.recipe_id end)
-
-    socket
-    |> assign(:page_title, "Profile")
-    |> assign(:user, user)
-    |> assign(:page_title, "Profile " <> user.email)
-    |> assign(:user_created_recipes, user_created_recipes)
-    |> assign(:user_saved_recipes, user_saved_recipes)
-    |> assign(:user_profile, user_profile)
-    |> assign(:user_recipes, user_recipes)
-    |> assign(:content_state, content_state_from_tab(params["tab"], :show))
+      _ ->
+        show_regular_profile(socket, user, params)
+    end
   end
 
   defp apply_action(socket, :show_recipe, %{"recipe_id" => id}) do
@@ -158,6 +132,52 @@ defmodule MehungryWeb.ProfileLive.Index do
     else
       do_apply_action_edit(socket)
     end
+  end
+
+  defp show_regular_profile(socket, user, params) do
+    categories = Food.list_categories()
+    category_ids = Enum.map(categories, fn x -> x.id end)
+    food_restrictions = Food.list_food_restriction_types()
+    food_restriction_ids = Enum.map(food_restrictions, fn x -> x.id end)
+
+    # Logged-out visitors have no current_user_profile; fall back to a blank one
+    # so viewing another user's profile (e.g. a public nutritionist) doesn't crash.
+    changeset =
+      Accounts.change_user_profile(
+        socket.assigns.current_user_profile || %Mehungry.Accounts.UserProfile{},
+        %{}
+      )
+
+    socket =
+      socket
+      |> assign(:categories, categories)
+      |> assign(:category_ids, category_ids)
+      |> assign(:food_restriction_ids, food_restriction_ids)
+      |> assign(:food_restrictions, food_restrictions)
+      |> assign(:id, "form-#{System.unique_integer()}")
+      |> assign(:form, to_form(changeset))
+
+    {user_saved_recipes, user_created_recipes, user_profile} =
+      case is_nil(user) do
+        true ->
+          {[], [], []}
+
+        false ->
+          {Users.list_user_saved_recipes(user), Users.list_user_created_recipes(user),
+           Accounts.get_user_profile_by_user_id(user.id)}
+      end
+
+    user_recipes = Enum.map(user_saved_recipes, fn x -> x.recipe_id end)
+
+    socket
+    |> assign(:page_title, "Profile")
+    |> assign(:user, user)
+    |> assign(:page_title, "Profile " <> user.email)
+    |> assign(:user_created_recipes, user_created_recipes)
+    |> assign(:user_saved_recipes, user_saved_recipes)
+    |> assign(:user_profile, user_profile)
+    |> assign(:user_recipes, user_recipes)
+    |> assign(:content_state, content_state_from_tab(params["tab"], :show))
   end
 
   defp do_apply_action_edit(socket) do
@@ -236,6 +256,15 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:user_saved_recipes, user_saved_recipes)
     |> assign(:user_ingredients, user_ingredients)
     |> assign(:friends_ingredients, friends_ingredients)
+  end
+
+  # A pro user has a canonical public page; used by apply_action(:show) to
+  # redirect /profile/:id → /nutritionists/:slug (see RedirectProProfile plug).
+  defp public_professional_for(user_id) do
+    case Professionals.get_professional_profile(user_id) do
+      %ProfessionalProfile{is_public: true} = profile -> profile
+      _ -> nil
+    end
   end
 
   defp load_created_recipes(user, condition_ids) do
@@ -694,4 +723,5 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   def get_profile_content(assigns), do: ~H""
+
 end

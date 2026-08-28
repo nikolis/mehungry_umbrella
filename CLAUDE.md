@@ -73,7 +73,7 @@ card. Other docs link there instead of re-describing schemas.
 | `Languages` | Multi-language translations for ingredients and units. App-wide localization (locale-prefixed URLs `/en/…`·`/el/…`, `MehungryWeb.Locale` + `SetLocale` plug + `RestoreLocale` on_mount, Gettext UI strings, hreflang/canonical) is in **`docs/localization.md`** |
 | `Meta` | Visit tracking |
 | `History` | User activity history |
-| `Professionals` | Nutritionist profiles, client invitations, assignments, appointments, meal plan ratings |
+| `Professionals` | Nutritionist profiles, client invitations, assignments, appointments, meal plan ratings, and public **scientific Articles** (draft→published, per-paragraph images + references to PubMed studies / food species / compounds / diseases; `/nutritionists/:slug/articles/:article_slug`). Public SEO-indexed profiles + directory (`/nutritionists`, `/nutritionists/:slug`) with weekly-availability booking (request → nutritionist accept → email + `.ics` invite) and Stripe Connect payout onboarding — see `docs/professionals/professional_profiles.md`, `docs/professionals/appointments_booking.md`, `docs/professionals/articles.md`, `docs/payments/nutritionist_payments_stripe_connect.md`, `docs/integrations/google_meet.md` |
 | `Subscriptions` | Subscription tiers, Stripe integration, AI feature quota enforcement — see `docs/subscriptions_billing.md` |
 | `AI.Bot` | Managed social media recipe pipeline — monthly configs, review queue, translations, post logs |
 | `Billing` | Stripe checkout sessions and webhook handling (`Billing.StripeHandler`) — see `docs/subscriptions_billing.md` |
@@ -147,7 +147,7 @@ Stripe events are handled via `POST /webhooks/stripe` → `StripeWebhookControll
 ```
 default:             5 concurrent  — ingredient translation, recipe publishing
 ai_agents:           1 concurrent  — recipe generation, translation, image generation, nutritionist agent
-mailers:             3 concurrent  — email
+mailers:             3 concurrent  — appointment emails/ICS (AppointmentMailerWorker)
 imports:             1 concurrent  — literature crawl, PubTator annotation, candidate derivation
 seed_imports:        1 concurrent  — USDA S3 seed-file imports (SeedFileImportWorker) only
 hashtag_reconcile:   1 concurrent  — admin hashtag reconciliation sweep (HashtagReconciliationWorker), one job per recipe

@@ -144,12 +144,18 @@ defmodule MehungryWeb.HomeLive.Index do
   defp apply_action(socket, :share_social_media, %{"id" => id, "social_media" => social_media}) do
     maybe_track_user(%{}, socket)
 
-    recipe = Food.get_recipe!(id, get_user_language(socket))
-    Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
+    if Mehungry.Social.platform_enabled?(social_media) do
+      recipe = Food.get_recipe!(id, get_user_language(socket))
+      Posts.subscribe_to_recipe(%{recipe_id: recipe.id})
 
-    socket
-    |> assign(:recipe, recipe)
-    |> assign(:social_media, social_media)
+      socket
+      |> assign(:recipe, recipe)
+      |> assign(:social_media, social_media)
+    else
+      socket
+      |> put_flash(:error, "Sharing to #{social_media} is currently unavailable.")
+      |> push_patch(to: ~p"/home")
+    end
   end
 
   defp apply_action(socket, :show_recipe, %{"id" => id}) do

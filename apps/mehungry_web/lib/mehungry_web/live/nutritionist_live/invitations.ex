@@ -70,52 +70,52 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
   def render(assigns) do
     ~H"""
     <div class="max-w-3xl mx-auto">
-      <h1 class="text-2xl font-bold text-white mb-6">Invitations</h1>
+      <h1 class="text-2xl font-display font-bold text-parchment mb-6">Invitations</h1>
 
       <!-- Invite form -->
-      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 mb-8">
-        <h2 class="text-white font-semibold mb-4">Invite a client</h2>
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 mb-8">
+        <h2 class="text-parchment font-display font-semibold mb-4">Invite a client</h2>
         <form phx-submit="invite_client" class="space-y-3">
           <div>
-            <label class="block text-sm text-slate-300 mb-1">Client email address</label>
+            <label class="block text-sm text-parchment-dim mb-1">Client email address</label>
             <input
               type="email"
               name="email"
               value={@invite_email}
               required
               placeholder="client@example.com"
-              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
+              class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
             />
           </div>
           <div>
-            <label class="block text-sm text-slate-300 mb-1">Personal message (optional)</label>
+            <label class="block text-sm text-parchment-dim mb-1">Personal message (optional)</label>
             <textarea
               name="message"
               rows="2"
               placeholder="Hi! I'd like to be your nutrition coach..."
-              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
+              class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
             >{@invite_message}</textarea>
           </div>
           <%= if @invite_error do %>
             <p class="text-red-400 text-sm">{@invite_error}</p>
           <% end %>
-          <button type="submit" class="btn btn-sm bg-teal-600 hover:bg-teal-500 text-white border-0">
+          <button type="submit" class="btn btn-sm bg-paprika hover:bg-paprika-soft text-ink border-0">
             Send Invitation
           </button>
         </form>
       </div>
 
       <!-- Sent invitations -->
-      <h2 class="text-white font-semibold mb-3">Sent Invitations</h2>
+      <h2 class="text-parchment font-display font-semibold mb-3">Sent Invitations</h2>
 
       <%= if Enum.empty?(@invitations) do %>
-        <p class="text-slate-400 text-sm">No invitations sent yet.</p>
+        <p class="text-parchment-dim text-sm">No invitations sent yet.</p>
       <% else %>
         <div class="space-y-3">
           <%= for inv <- @invitations do %>
-            <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
+            <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-4 flex items-center justify-between">
               <div>
-                <p class="text-white text-sm font-medium">
+                <p class="text-parchment text-sm font-medium">
                   {if inv.client && inv.client.name, do: inv.client.name, else: "Unknown"}
                 </p>
                 <div class="flex items-center gap-2 mt-1">
@@ -127,7 +127,7 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
                   ]}>
                     {String.capitalize(inv.status)}
                   </span>
-                  <span class="text-slate-500 text-xs">
+                  <span class="text-parchment-dim text-xs">
                     {Calendar.strftime(inv.inserted_at, "%b %d, %Y")}
                   </span>
                 </div>

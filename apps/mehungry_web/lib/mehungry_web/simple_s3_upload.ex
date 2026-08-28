@@ -95,6 +95,30 @@ defmodule MehungryWeb.SimpleS3Upload do
     }
   end
 
+  @doc """
+  Presign metadata for an arbitrary upload name with a custom key prefix and
+  max size — used by callers other than the recipe `:image` upload (e.g. the
+  nutritionist profile photo).
+  """
+  def meta_for(entry, max_file_size, prefix) do
+    key = "#{prefix}/#{entry.uuid}.#{ext(entry)}"
+
+    {:ok, fields} =
+      sign_form_upload(
+        key: key,
+        content_type: entry.client_type,
+        max_file_size: max_file_size,
+        expires_in: :timer.hours(1)
+      )
+
+    %{
+      uploader: "S3",
+      key: key,
+      url: "https://#{bucket()}.s3.eu-central-1.amazonaws.com",
+      fields: fields
+    }
+  end
+
   def bucket do
     Application.fetch_env!(:mehungry_web, :aws_bucket)
   end

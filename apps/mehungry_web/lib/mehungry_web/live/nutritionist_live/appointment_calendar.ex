@@ -3,10 +3,12 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
   alias Mehungry.Professionals
   alias Mehungry.Professionals.Appointment
+  alias Mehungry.ObanWorkers.AppointmentMailerWorker
 
   @impl true
   def mount(params, _session, socket) do
-    professional_id = socket.assigns.current_user.id
+    user = socket.assigns.current_user
+    professional_id = user.id
 
     today = Date.utc_today()
     month_start = %{today | day: 1}
@@ -19,6 +21,8 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       Professionals.list_appointments_for_professional(professional_id, start_dt, end_dt)
 
     clients = Professionals.list_clients(professional_id)
+    profile = Professionals.get_professional_profile(professional_id)
+    pending = Professionals.list_pending_requests(professional_id)
 
     preselected_client_id =
       case params do
@@ -30,6 +34,9 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       socket
       |> assign(:appointments, appointments)
       |> assign(:clients, clients)
+      |> assign(:pending_requests, pending)
+      |> assign(:professional_name, professional_name(profile, user))
+      |> assign(:public_url, public_url(profile))
       |> assign(:page_title, "Appointments")
       |> assign(:current_month, today)
       |> assign(:selected_date, today)
@@ -141,6 +148,54 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
   end
 
   @impl true
+  def handle_event("accept_appointment", %{"appointment_id" => id} = params, socket) do
+    appt = Professionals.get_appointment!(String.to_integer(id))
+    meeting_url = params["meeting_url"]
+    opts = if meeting_url && meeting_url != "", do: [meeting_url: meeting_url], else: []
+
+    case Professionals.accept_appointment(appt, opts) do
+      {:ok, updated} ->
+        AppointmentMailerWorker.enqueue("accepted", updated.id, %{
+          professional_name: socket.assigns.professional_name,
+          client_name: client_display(updated.client),
+          cta_url: socket.assigns.public_url
+        })
+
+        {:noreply,
+         socket
+         |> refresh()
+         |> put_flash(
+           :info,
+           "Appointment accepted — the client has been emailed a calendar invite."
+         )}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not accept the appointment.")}
+    end
+  end
+
+  @impl true
+  def handle_event("decline_appointment", %{"id" => id}, socket) do
+    appt = Professionals.get_appointment!(String.to_integer(id))
+
+    case Professionals.decline_appointment(appt) do
+      {:ok, declined} ->
+        AppointmentMailerWorker.enqueue("declined", declined.id, %{
+          professional_name: socket.assigns.professional_name,
+          cta_url: socket.assigns.public_url
+        })
+
+        {:noreply,
+         socket
+         |> refresh()
+         |> put_flash(:info, "Request declined — the client has been notified.")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not decline the request.")}
+    end
+  end
+
+  @impl true
   def handle_event("prev_month", _params, socket) do
     new_month = Date.add(socket.assigns.current_month, -28)
     {:noreply, socket |> assign(:current_month, new_month) |> load_month_appointments(new_month)}
@@ -175,6 +230,30 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     end_dt = NaiveDateTime.new!(month_end, ~T[23:59:59])
     Professionals.list_appointments_for_professional(professional_id, start_dt, end_dt)
   end
+
+  # Reload both the month grid and the pending-requests panel after a change.
+  defp refresh(socket) do
+    professional_id = socket.assigns.current_user.id
+
+    socket
+    |> assign(:appointments, reload_appointments(socket))
+    |> assign(:pending_requests, Professionals.list_pending_requests(professional_id))
+  end
+
+  defp client_display(%{name: name}) when is_binary(name) and name != "", do: name
+  defp client_display(%{email: email}), do: email
+  defp client_display(_), do: "Client"
+
+  defp professional_name(%{display_name: name}, _user) when is_binary(name) and name != "",
+    do: name
+
+  defp professional_name(_, %{name: name}) when is_binary(name) and name != "", do: name
+  defp professional_name(_, _), do: "Your nutritionist"
+
+  defp public_url(%{is_public: true, slug: slug}) when is_binary(slug),
+    do: url(~p"/nutritionists/#{slug}")
+
+  defp public_url(_), do: url(~p"/home")
 
   defp new_appointment_changeset(professional_id, client_id) do
     attrs =
@@ -243,28 +322,95 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
   defp initial_client_type(_), do: "internal"
 
+  defp appt_chip_class("requested"),
+    do: "bg-amber-600/50 border border-amber-500/40 text-amber-100 hover:bg-amber-500/60"
+
+  defp appt_chip_class("declined"),
+    do:
+      "bg-ink-panel2 border border-ink-panel2 text-parchment-dim line-through hover:bg-ink"
+
+  defp appt_chip_class("cancelled"),
+    do:
+      "bg-ink-panel2 border border-ink-panel2 text-parchment-dim line-through hover:bg-ink"
+
+  defp appt_chip_class(_accepted),
+    do: "bg-basil/20 border border-basil/40 text-basil hover:bg-basil/30"
+
   @impl true
   def render(assigns) do
     ~H"""
     <div class="max-w-5xl mx-auto">
-      <h1 class="text-2xl font-bold text-white mb-6">Appointment Calendar</h1>
+      <h1 class="text-2xl font-display font-bold text-parchment mb-6">Appointment Calendar</h1>
+
+      <!-- Pending requests -->
+      <%= if @pending_requests != [] do %>
+        <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-5 mb-6">
+          <h2 class="text-amber-200 font-semibold mb-3">
+            Pending requests ({length(@pending_requests)})
+          </h2>
+          <div class="space-y-3">
+            <%= for req <- @pending_requests do %>
+              <form
+                phx-submit="accept_appointment"
+                class="flex flex-col sm:flex-row sm:items-center gap-3 bg-ink-panel border border-ink-panel2 rounded-lg p-3"
+              >
+                <input type="hidden" name="appointment_id" value={req.id} />
+                <div class="flex-1 min-w-0">
+                  <p class="text-parchment text-sm font-medium truncate">
+                    {client_display(req.client)} · {req.title}
+                  </p>
+                  <p class="text-parchment-dim text-xs">
+                    {Calendar.strftime(req.scheduled_at, "%a %b %d, %Y %H:%M")}
+                    <%= if req.notes && req.notes != "" do %>
+                      · “{req.notes}”
+                    <% end %>
+                  </p>
+                </div>
+                <input
+                  type="url"
+                  name="meeting_url"
+                  placeholder="Video call link (optional)"
+                  class="bg-ink-panel2 border border-ink-panel2 rounded px-2 py-1.5 text-xs text-parchment sm:w-48 focus:outline-none focus:border-paprika"
+                />
+                <div class="flex gap-2">
+                  <button
+                    type="submit"
+                    class="px-3 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-xs font-medium"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    phx-click="decline_appointment"
+                    phx-value-id={req.id}
+                    data-confirm="Decline this request?"
+                    class="px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-red-700/60 text-parchment-dim hover:text-red-200 text-xs transition"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </form>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
 
       <!-- Month navigation -->
       <div class="flex items-center justify-between mb-4">
         <button
           phx-click="prev_month"
-          class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition"
+          class="text-parchment-dim hover:text-parchment p-2 rounded-lg hover:bg-ink-panel2 transition"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h2 class="text-white font-semibold text-lg">
+        <h2 class="text-parchment font-display font-semibold text-lg">
           {Calendar.strftime(@current_month, "%B %Y")}
         </h2>
         <button
           phx-click="next_month"
-          class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition"
+          class="text-parchment-dim hover:text-parchment p-2 rounded-lg hover:bg-ink-panel2 transition"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -273,15 +419,15 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       </div>
 
       <!-- Calendar grid -->
-      <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-        <div class="grid grid-cols-7 border-b border-slate-700">
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden">
+        <div class="grid grid-cols-7 border-b border-ink-panel2">
           <%= for day <- ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] do %>
-            <div class="py-2 text-center text-xs font-medium text-slate-400">{day}</div>
+            <div class="py-2 text-center text-xs font-medium text-parchment-dim">{day}</div>
           <% end %>
         </div>
 
         <%= for week <- calendar_days(@current_month) do %>
-          <div class="grid grid-cols-7 border-b border-slate-700 last:border-0">
+          <div class="grid grid-cols-7 border-b border-ink-panel2 last:border-0">
             <%= for day <- week do %>
               <% is_current_month = day.month == @current_month.month
 
@@ -291,24 +437,27 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                 end) %>
               <div
                 class={[
-                  "min-h-20 p-2 border-r border-slate-700 last:border-0 cursor-pointer hover:bg-slate-700/50 transition",
+                  "min-h-20 p-2 border-r border-ink-panel2 last:border-0 cursor-pointer hover:bg-ink-panel2/50 transition",
                   not is_current_month && "opacity-40",
-                  day == Date.utc_today() && "bg-teal-900/20"
+                  day == Date.utc_today() && "bg-basil/10"
                 ]}
                 phx-click="select_date"
                 phx-value-date={Date.to_iso8601(day)}
               >
                 <p class={[
                   "text-xs font-medium mb-1",
-                  day == Date.utc_today() && "text-teal-400",
-                  day != Date.utc_today() && is_current_month && "text-slate-300",
-                  not is_current_month && "text-slate-500"
+                  day == Date.utc_today() && "text-basil",
+                  day != Date.utc_today() && is_current_month && "text-parchment",
+                  not is_current_month && "text-parchment-dim"
                 ]}>
                   {day.day}
                 </p>
                 <%= for appt <- day_appointments do %>
                   <div
-                    class="text-xs bg-teal-700/60 border border-teal-600/40 rounded px-1.5 py-0.5 mb-0.5 truncate text-teal-200 cursor-pointer hover:bg-teal-600/60"
+                    class={[
+                      "text-xs rounded px-1.5 py-0.5 mb-0.5 truncate cursor-pointer",
+                      appt_chip_class(appt.status)
+                    ]}
                     phx-click="edit_appointment"
                     phx-value-id={appt.id}
                     phx-stop-propagation
@@ -325,13 +474,13 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       <!-- Appointment modal -->
       <%= if @show_modal do %>
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div class="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
+          <div class="bg-ink-panel border border-ink-panel2 rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
             <!-- Modal header (fixed) -->
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700 flex-shrink-0">
-              <h3 class="text-white font-semibold">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-ink-panel2 flex-shrink-0">
+              <h3 class="text-parchment font-display font-semibold">
                 {if @editing_appointment, do: "Edit Appointment", else: "New Appointment"}
               </h3>
-              <button phx-click="close_modal" class="text-slate-400 hover:text-white transition">
+              <button phx-click="close_modal" class="text-parchment-dim hover:text-parchment transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
@@ -354,20 +503,20 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
               <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                 <!-- Client selector (internal or external) -->
                 <div x-data={"{ clientType: '#{initial_client_type(@editing_appointment)}' }"}>
-                  <label class="block text-sm text-slate-300 mb-1">Client</label>
+                  <label class="block text-sm text-parchment-dim mb-1">Client</label>
 
                   <!-- Toggle -->
-                  <div class="flex gap-1 mb-2 p-0.5 bg-slate-900 rounded-lg w-fit">
+                  <div class="flex gap-1 mb-2 p-0.5 bg-ink rounded-lg w-fit">
                     <button
                       type="button"
                       x-on:click="clientType = 'internal'"
-                      x-bind:class="clientType === 'internal' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'"
+                      x-bind:class="clientType === 'internal' ? 'bg-paprika text-ink' : 'text-parchment-dim hover:text-parchment'"
                       class="px-3 py-1 rounded-md text-xs font-medium transition"
                     >M3Hungry Client</button>
                     <button
                       type="button"
                       x-on:click="clientType = 'external'"
-                      x-bind:class="clientType === 'external' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-slate-200'"
+                      x-bind:class="clientType === 'external' ? 'bg-paprika text-ink' : 'text-parchment-dim hover:text-parchment'"
                       class="px-3 py-1 rounded-md text-xs font-medium transition"
                     >External Client</button>
                   </div>
@@ -377,7 +526,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                     <select
                       name="appointment[client_id]"
                       x-bind:disabled="clientType !== 'internal'"
-                      class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
+                      class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                     >
                       <option value="">Select client...</option>
                       <%= for assignment <- @clients do %>
@@ -403,14 +552,14 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                       x-bind:disabled="clientType !== 'external'"
                       value={@editing_appointment && @editing_appointment.external_client_name}
                       placeholder="Client name (external)"
-                      class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
+                      class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                     />
                   </div>
                 </div>
 
                 <!-- Title -->
                 <div>
-                  <label class="block text-sm text-slate-300 mb-1">Title</label>
+                  <label class="block text-sm text-parchment-dim mb-1">Title</label>
                   <.input
                     field={f[:title]}
                     type="text"
@@ -421,23 +570,23 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
                 <!-- Date -->
                 <div>
-                  <label class="block text-sm text-slate-300 mb-1">Date</label>
+                  <label class="block text-sm text-parchment-dim mb-1">Date</label>
                   <input
                     type="date"
                     name="appointment[date]"
                     value={@form_date}
-                    class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
+                    class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                   />
                 </div>
 
                 <!-- From / Until time row -->
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-sm text-slate-300 mb-1">From</label>
+                    <label class="block text-sm text-parchment-dim mb-1">From</label>
                     <div class="flex gap-1">
                       <select
                         name="appointment[start_hour]"
-                        class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-2 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
+                        class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                       >
                         <%= for {label, h} <- hour_options() do %>
                           <option value={h} selected={h == @form_start_hour}>{label}</option>
@@ -445,7 +594,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                       </select>
                       <select
                         name="appointment[start_minute]"
-                        class="w-16 bg-slate-900 border border-slate-600 rounded-lg px-2 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
+                        class="w-16 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                       >
                         <%= for {label, m} <- minute_options() do %>
                           <option value={m} selected={m == @form_start_minute}>{label}</option>
@@ -454,11 +603,11 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                     </div>
                   </div>
                   <div>
-                    <label class="block text-sm text-slate-300 mb-1">Until</label>
+                    <label class="block text-sm text-parchment-dim mb-1">Until</label>
                     <div class="flex gap-1">
                       <select
                         name="appointment[end_hour]"
-                        class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-2 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
+                        class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                       >
                         <%= for {label, h} <- hour_options() do %>
                           <option value={h} selected={h == @form_end_hour}>{label}</option>
@@ -466,7 +615,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                       </select>
                       <select
                         name="appointment[end_minute]"
-                        class="w-16 bg-slate-900 border border-slate-600 rounded-lg px-2 py-2 text-white text-sm focus:outline-none focus:border-teal-500"
+                        class="w-16 bg-ink-panel2 border border-ink-panel2 rounded-lg px-2 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
                       >
                         <%= for {label, m} <- minute_options() do %>
                           <option value={m} selected={m == @form_end_minute}>{label}</option>
@@ -478,7 +627,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
                 <!-- Notes -->
                 <div>
-                  <label class="block text-sm text-slate-300 mb-1">Session notes (optional)</label>
+                  <label class="block text-sm text-parchment-dim mb-1">Session notes (optional)</label>
                   <.input
                     field={f[:notes]}
                     type="textarea"
@@ -490,10 +639,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
               </div>
 
               <!-- Fixed footer with buttons -->
-              <div class="px-6 py-4 border-t border-slate-700 flex-shrink-0 flex gap-3">
+              <div class="px-6 py-4 border-t border-ink-panel2 flex-shrink-0 flex gap-3">
                 <button
                   type="submit"
-                  class="flex-1 bg-teal-600 hover:bg-teal-500 text-white font-medium py-2 px-4 rounded-lg transition text-sm"
+                  class="flex-1 bg-paprika hover:bg-paprika-soft text-ink font-medium py-2 px-4 rounded-lg transition text-sm"
                 >
                   Save Appointment
                 </button>
@@ -511,7 +660,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                 <button
                   type="button"
                   phx-click="close_modal"
-                  class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm transition"
+                  class="px-4 py-2 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim text-sm transition"
                 >
                   Cancel
                 </button>

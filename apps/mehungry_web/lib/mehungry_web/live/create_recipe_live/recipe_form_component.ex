@@ -32,7 +32,7 @@ defmodule MehungryWeb.RecipeFormComponent do
   # The unit/portion check adds full-sentence errors on the :recipe_ingredients
   # key — show those verbatim; give the "no ingredients" case a friendly line;
   # everything else gets a short field label.
-  defp error_line(:recipe_ingredients, "can't be blank"), do: "Add at least one ingredient."
+  defp error_line(:recipe_ingredients, "can't be blank"), do: gettext("Add at least one ingredient.")
   defp error_line(:recipe_ingredients, msg), do: msg
   defp error_line(field, msg), do: "#{field_label(field)}: #{msg}"
 
@@ -42,20 +42,20 @@ defmodule MehungryWeb.RecipeFormComponent do
     end)
   end
 
-  defp field_label(:title), do: "Title"
-  defp field_label(:cooking_time_lower_limit), do: "Cooking time"
-  defp field_label(:preperation_time_lower_limit), do: "Prep time"
-  defp field_label(:language_name), do: "Language"
-  defp field_label(:ingredient_id), do: "Ingredient"
-  defp field_label(:quantity), do: "Quantity"
-  defp field_label(:measurement_unit_id), do: "Unit"
+  defp field_label(:title), do: gettext("Title")
+  defp field_label(:cooking_time_lower_limit), do: gettext("Cooking time")
+  defp field_label(:preperation_time_lower_limit), do: gettext("Prep time")
+  defp field_label(:language_name), do: gettext("Language")
+  defp field_label(:ingredient_id), do: gettext("Ingredient")
+  defp field_label(:quantity), do: gettext("Quantity")
+  defp field_label(:measurement_unit_id), do: gettext("Unit")
   defp field_label(field), do: field |> to_string() |> String.replace("_", " ") |> String.capitalize()
 
-  def error_to_string(:too_large), do: "Too large"
-  def error_to_string(:not_accepted), do: "You have selected an unacceptable file type"
-  def error_to_string(:too_many_files), do: "You have selected too many files"
-  def error_to_string(:external_client_failure), do: "Upload failed, please try again"
-  def error_to_string(_), do: "Something went wrong with the upload"
+  def error_to_string(:too_large), do: gettext("Too large")
+  def error_to_string(:not_accepted), do: gettext("You have selected an unacceptable file type")
+  def error_to_string(:too_many_files), do: gettext("You have selected too many files")
+  def error_to_string(:external_client_failure), do: gettext("Upload failed, please try again")
+  def error_to_string(_), do: gettext("Something went wrong with the upload")
 
   # The hidden `image_url` input submits "" (not nil) on every validate event,
   # and "" is truthy in Elixir. Treat blank as "no image" so the upload UI and
@@ -86,8 +86,15 @@ defmodule MehungryWeb.RecipeFormComponent do
         id="content-0"
       >
         <div class="flex flex-col gap-3">
-          <.input required field={@f[:title]} type="text" label="Title" class="max-h-12 " />
-          <.input required field={@f[:description]} type="text" label="Description" class="max-h-12" />
+          <.input required field={@f[:title]} type="text" label={gettext("Title")} class="max-h-12 " />
+          <.input
+            required
+            field={@f[:description]}
+            type="text"
+            label={gettext("Short description")}
+            placeholder={gettext("A one-line summary shown in recipe listings")}
+            class="max-h-12"
+          />
 
           <div class="grid grid-cols-2 gap-4">
             <.input
@@ -95,7 +102,7 @@ defmodule MehungryWeb.RecipeFormComponent do
               field={@f[:cooking_time_lower_limit]}
               type="number_subscript"
               subscript="mins"
-              label="Cooking time"
+              label={gettext("Cooking time")}
               class="sm:w-full max-h-12 min-w-20"
               style="flex-shrink: 2;"
             />
@@ -104,17 +111,18 @@ defmodule MehungryWeb.RecipeFormComponent do
               field={@f[:preperation_time_lower_limit]}
               type="number_subscript"
               subscript="mins"
-              label="Prep Time"
+              label={gettext("Prep Time")}
               class="sm:w-full max-h-12 "
             />
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <.input required field={@f[:servings]} type="text" label="Servings" class=" w-full" />
+            <.input required field={@f[:servings]} type="text" label={gettext("Servings")} class=" w-full" />
             <.input
               required
               field={@f[:difficulty]}
-              options={[Easy: "1", Medium: "2", Difficult: "3"]}
+              label={gettext("Difficulty")}
+              options={[{gettext("Easy"), "1"}, {gettext("Medium"), "2"}, {gettext("Difficult"), "3"}]}
               type="select"
             />
           </div>
@@ -156,7 +164,7 @@ defmodule MehungryWeb.RecipeFormComponent do
                 </svg>
 
                 <p class="text-parchment-dim text-sm group-hover:text-parchment">
-                  Click or drag to upload image
+                  {gettext("Click or drag to upload image")}
                 </p>
               </div>
               <.live_file_input upload={@uploads.image} class="h-full w-full" style="" />
@@ -204,7 +212,7 @@ defmodule MehungryWeb.RecipeFormComponent do
           class="overflowx-hidden relative content_container hidden md:block border border-ink-panel2 bg-ink-panel rounded-xl p-4"
           id="content-1"
         >
-          <h3 class="text-base font-display font-medium text-parchment mb-3">Ingredients</h3>
+          <h3 class="text-base font-display font-medium text-parchment mb-3">{gettext("Ingredients")}</h3>
           <div class="md:min-h-96 sm:max-h-65 overflow-x-hidden noscrollbar pt-4 step_ing_cont mb-14 pb-20 md:pb-0">
             <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
               <.live_component
@@ -226,7 +234,7 @@ defmodule MehungryWeb.RecipeFormComponent do
               type="button"
               class="inline-flex items-center gap-1.5 text-sm font-semibold text-paprika-soft hover:text-paprika transition-colors self-end mt-3"
             >
-              + Add
+              + {gettext("Add")}
             </button>
           </div>
         </div>
@@ -249,11 +257,11 @@ defmodule MehungryWeb.RecipeFormComponent do
                 />
               </svg>
               <h3 class="text-base font-semibold text-amber-300">
-                Unmatched Ingredients ({length(@spoonacular_unmatched)})
+                {gettext("Unmatched Ingredients")} ({length(@spoonacular_unmatched)})
               </h3>
             </div>
             <p class="text-parchment-dim text-xs mb-3">
-              Not found in the database — add them manually using the ingredients section.
+              {gettext("Not found in the database — add them manually using the ingredients section.")}
             </p>
             <div class="space-y-1.5 md:max-h-96 overflow-y-auto noscrollbar">
               <%= for item <- @spoonacular_unmatched do %>
@@ -267,9 +275,9 @@ defmodule MehungryWeb.RecipeFormComponent do
                       item.reason == :portion_not_found && "bg-yellow-900/50 text-yellow-300"
                     ]}>
                       {case item.reason do
-                        :ingredient_not_found -> "not in DB"
-                        :unit_not_found -> "unknown unit"
-                        :portion_not_found -> "no portion"
+                        :ingredient_not_found -> gettext("not in DB")
+                        :unit_not_found -> gettext("unknown unit")
+                        :portion_not_found -> gettext("no portion")
                         _ -> to_string(item.reason)
                       end}
                     </span>
@@ -285,7 +293,10 @@ defmodule MehungryWeb.RecipeFormComponent do
             id="content-2"
           >
             <div class="relative h-fit">
-              <h3 class="text-base font-display font-medium text-parchment mb-3">Steps</h3>
+              <h3 class="text-base font-display font-medium text-parchment mb-1">{gettext("Steps")}</h3>
+              <p class="text-parchment-dim text-xs mb-3">
+                {gettext("The cooking instructions, one step at a time.")}
+              </p>
               <div class="step_ing_cont md:min-h-96 md:max-h-96 overflow-x-hidden noscrollbar pt-4 sm:p-4 pb-20 md:pb-8">
                 <.live_component module={MehungryWeb.StepComponent} id="recipe_step" f={@f} />
               </div>
@@ -302,7 +313,10 @@ defmodule MehungryWeb.RecipeFormComponent do
             id="content-2"
           >
             <div class="relative h-fit">
-              <h3 class="text-base font-display font-medium text-parchment mb-3">Steps</h3>
+              <h3 class="text-base font-display font-medium text-parchment mb-1">{gettext("Steps")}</h3>
+              <p class="text-parchment-dim text-xs mb-3">
+                {gettext("The cooking instructions, one step at a time.")}
+              </p>
               <div class="step_ing_cont md:min-h-96 md:max-h-96 overflow-x-hidden noscrollbar pt-4 sm:p-4 pb-20 md:pb-8">
                 <.live_component module={MehungryWeb.StepComponent} id="recipe_step" f={@f} />
               </div>
@@ -314,12 +328,12 @@ defmodule MehungryWeb.RecipeFormComponent do
         id="content-3"
         class="content_container hidden md:block border border-ink-panel2 bg-ink-panel rounded-xl p-6"
       >
-        <h3 class="text-base font-display font-medium text-parchment mb-4">Review & Save</h3>
+        <h3 class="text-base font-display font-medium text-parchment mb-4">{gettext("Review & Save")}</h3>
         <%= if @f.source.valid? do %>
-          <p class="text-sm text-emerald-400 mb-6">Everything looks good — ready to save!</p>
+          <p class="text-sm text-emerald-400 mb-6">{gettext("Everything looks good — ready to save!")}</p>
         <% else %>
           <div class="mb-6">
-            <p class="text-sm text-parchment-dim mb-2">Before saving, please fix:</p>
+            <p class="text-sm text-parchment-dim mb-2">{gettext("Before saving, please fix:")}</p>
             <ul class="list-disc list-inside space-y-1">
               <%= for msg <- save_error_messages(@f.source) do %>
                 <li class="text-sm text-rose-400">{msg}</li>
@@ -334,13 +348,13 @@ defmodule MehungryWeb.RecipeFormComponent do
             phx-click="clear-form"
             class="px-5 py-2.5 border border-ink-panel2 text-parchment-dim rounded-lg font-medium hover:border-parchment-dim hover:text-parchment transition-colors"
           >
-            Reset
+            {gettext("Reset")}
           </button>
-          {submit("Save Recipe",
+          {submit(gettext("Save Recipe"),
             class:
               "px-6 py-2.5 bg-paprika hover:bg-paprika-soft text-ink rounded-lg font-bold transition-colors",
             type: "submit",
-            phx_disable_with: "Saving…",
+            phx_disable_with: gettext("Saving…"),
             id: "save_button"
           )}
         </div>

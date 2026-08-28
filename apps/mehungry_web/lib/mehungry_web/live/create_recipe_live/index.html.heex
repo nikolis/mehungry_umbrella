@@ -11,7 +11,7 @@
       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
     />
   </svg>
-  <p class="text-parchment text-sm">Generating your recipe…</p>
+  <p class="text-parchment text-sm">{gettext("Generating your recipe…")}</p>
 </div>
 <div class="create-recipe-page min-h-screen bg-ink text-parchment">
   <div class="container mx-auto px-4 py-4">
@@ -31,7 +31,7 @@
             d="M12 6v6m0 0v6m0-6h6m-6 0H6"
           />
         </svg>
-        Create New Recipe
+        {gettext("Create New Recipe")}
       </h1>
     </div>
     <.modal
@@ -83,7 +83,7 @@
                   d="M13 10V3L4 14h7v7l9-11h-7z"
                 />
               </svg>
-              Generate with AI
+              {gettext("Generate with AI")}
             </button>
           </div>
 
@@ -95,7 +95,7 @@
               <textarea
                 name="prompt"
                 rows="3"
-                placeholder="Describe your recipe… e.g. 'Creamy mushroom risotto for 4 people, medium difficulty'"
+                placeholder={gettext("Describe your recipe… e.g. 'Creamy mushroom risotto for 4 people, medium difficulty'")}
                 class="flex-1 bg-ink-panel2 text-parchment rounded-lg p-3 text-sm resize-none border border-ink-panel2 focus:border-paprika focus:outline-none"
               ></textarea>
               <button
@@ -122,28 +122,30 @@
                       >
                       </path>
                     </svg>
-                    Generating…
+                    {gettext("Generating…")}
                   </span>
                 <% else %>
-                  Generate
+                  {gettext("Generate")}
                 <% end %>
               </button>
             </form>
             <%= if @ai_unmatched != [] do %>
               <p class="text-yellow-400 text-xs mt-3">
-                Not found in database and skipped: {Enum.join(@ai_unmatched, ", ")}. Add these manually if needed.
+                {gettext("Not found in database and skipped: %{items}. Add these manually if needed.",
+                  items: Enum.join(@ai_unmatched, ", ")
+                )}
               </p>
             <% end %>
             <%= if @ai_quota_exceeded do %>
               <div class="mt-3 rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 flex items-center justify-between gap-3">
                 <p class="text-amber-300 text-xs">
-                  You've reached your AI recipe limit for this month.
+                  {gettext("You've reached your AI recipe limit for this month.")}
                 </p>
                 <.link
                   navigate={~p"/upgrade"}
                   class="flex-shrink-0 text-paprika-soft hover:text-paprika text-xs font-semibold transition-colors"
                 >
-                  Upgrade
+                  {gettext("Upgrade")}
                 </.link>
               </div>
             <% end %>
@@ -157,10 +159,12 @@
           on_cancel={JS.push("ai_cancel_generate")}
         >
           <h2 class="text-lg font-display font-medium text-parchment mb-1">
-            Use your ingredients?
+            {gettext("Use your ingredients?")}
           </h2>
           <p class="text-parchment-dim text-sm mb-4">
-            You've already added: {Enum.join(@ai_existing_ingredients, ", ")}. Should the AI build the recipe around them?
+            {gettext("You've already added: %{items}. Should the AI build the recipe around them?",
+              items: Enum.join(@ai_existing_ingredients, ", ")
+            )}
           </p>
           <div class="flex gap-3">
             <button
@@ -169,7 +173,7 @@
               phx-value-keep="true"
               class="px-5 py-2 rounded-lg bg-paprika text-parchment font-semibold text-sm hover:bg-paprika/90 transition-colors"
             >
-              Yes, use them
+              {gettext("Yes, use them")}
             </button>
             <button
               type="button"
@@ -177,7 +181,7 @@
               phx-value-keep="false"
               class="px-5 py-2 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim font-semibold text-sm transition-colors"
             >
-              No, start fresh
+              {gettext("No, start fresh")}
             </button>
           </div>
         </.modal>

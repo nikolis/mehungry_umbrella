@@ -103,7 +103,9 @@ defmodule MehungryWeb.SelectComponent do
       # ingredient's default unit and a portion's unit) both live at index 0 and
       # would otherwise collide. Keep this in sync with `data-reference-index` in
       # render/1 and the `Hooks.SelectComponent` listener name in hooks.js.
-      |> assign(:sc_id, assigns.id)
+      # Normalize to a binary — callers sometimes pass an integer id (e.g. a
+      # recipe id), and sc_id is used in string concatenation for the DOM ids.
+      |> assign(:sc_id, to_string(assigns.id))
 
     {:ok, socket}
   end

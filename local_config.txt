@@ -1,0 +1,10 @@
+
+The Session Manager plugin was installed successfully. Use the AWS CLI to start a session.
+
+
+Starting session with SessionId: ecs-execute-command-xnbanxjkhyfqncn6jatriy8dj8
+cat: conf/extra.conf: No such file or directory
+
+
+Exiting session with sessionId: ecs-execute-command-xnbanxjkhyfqncn6jatriy8dj8.
+

@@ -71,6 +71,67 @@ defmodule Mehungry.Billing.StripeHandler do
     end
   end
 
+  # ── Connect (nutritionist payouts — minimal onboarding slice) ─────────────────
+
+  @doc """
+  Create an Express connected account for a nutritionist so they can receive
+  payouts. Requests the `transfers` + `card_payments` capabilities. Returns
+  `{:ok, account_id}` or `{:error, reason}`.
+  """
+  def create_connect_account(email) do
+    params = %{
+      "type" => "express",
+      "email" => email,
+      "capabilities[transfers][requested]" => "true",
+      "capabilities[card_payments][requested]" => "true"
+    }
+
+    case post("/accounts", params) do
+      {:ok, %{"id" => account_id}} -> {:ok, account_id}
+      {:ok, body} -> {:error, "unexpected response: #{inspect(body)}"}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Create an onboarding Account Link the nutritionist visits to complete KYC.
+  `refresh_url` is used if the link expires; `return_url` when they finish.
+  Returns `{:ok, onboarding_url}`.
+  """
+  def create_account_link(account_id, refresh_url, return_url) do
+    params = %{
+      "account" => account_id,
+      "refresh_url" => refresh_url,
+      "return_url" => return_url,
+      "type" => "account_onboarding"
+    }
+
+    case post("/account_links", params) do
+      {:ok, %{"url" => url}} -> {:ok, url}
+      {:ok, body} -> {:error, "unexpected response: #{inspect(body)}"}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Fetch a connected account's onboarding/charge status. Returns
+  `{:ok, %{charges_enabled: bool, details_submitted: bool, payouts_enabled: bool}}`.
+  """
+  def get_connect_account(account_id) do
+    case get("/accounts/#{account_id}") do
+      {:ok, account} ->
+        {:ok,
+         %{
+           charges_enabled: account["charges_enabled"] == true,
+           details_submitted: account["details_submitted"] == true,
+           payouts_enabled: account["payouts_enabled"] == true
+         }}
+
+      error ->
+        error
+    end
+  end
+
   # ── Webhook ───────────────────────────────────────────────────────────────────
 
   @doc """
@@ -124,6 +185,19 @@ defmodule Mehungry.Billing.StripeHandler do
        }) do
     Subscriptions.cancel_subscription(sub["id"])
     Logger.info("Cancelled subscription #{sub["id"]}")
+    :ok
+  end
+
+  # A connected account changed — reflect whether the nutritionist can now be
+  # charged/paid onto so the UI can show "connected".
+  defp dispatch_event(%{"type" => "account.updated", "data" => %{"object" => account}}) do
+    account_id = account["id"]
+    charges_enabled = account["charges_enabled"] == true
+
+    if account_id do
+      Mehungry.Professionals.set_stripe_charges_enabled(account_id, charges_enabled)
+    end
+
     :ok
   end
 
@@ -213,6 +287,28 @@ defmodule Mehungry.Billing.StripeHandler do
 
         {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} ->
           Logger.warning("Stripe #{path} returned #{code}: #{resp_body}")
+          {:error, "Stripe error #{code}"}
+
+        {:error, %HTTPoison.Error{reason: reason}} ->
+          {:error, "HTTP error: #{inspect(reason)}"}
+      end
+    end
+  end
+
+  defp get(path) do
+    secret_key = config(:stripe_secret_key)
+
+    if secret_key == "" do
+      {:error, :stripe_not_configured}
+    else
+      headers = [{"Authorization", "Bearer #{secret_key}"}]
+
+      case HTTPoison.get(@stripe_api <> path, headers, recv_timeout: 15_000) do
+        {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} when code in 200..299 ->
+          Jason.decode(resp_body)
+
+        {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} ->
+          Logger.warning("Stripe GET #{path} returned #{code}: #{resp_body}")
           {:error, "Stripe error #{code}"}
 
         {:error, %HTTPoison.Error{reason: reason}} ->

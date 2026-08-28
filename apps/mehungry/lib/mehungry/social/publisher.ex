@@ -47,10 +47,15 @@ defmodule Mehungry.Social.Publisher do
     Map.new(results, fn {k, {result, _, _}} -> {k, result} end)
   end
 
-  defp post_platform(_platform, nil, fun), do: fun.()
-
-  defp post_platform(platform, allowed, fun) when is_list(allowed) do
-    if platform in allowed, do: fun.(), else: {:skipped, nil, nil}
+  # Globally-disabled platforms (Mehungry.Social) are never posted, regardless
+  # of the per-job `platforms` allow-list.
+  defp post_platform(platform, allowed, fun) do
+    cond do
+      not Mehungry.Social.platform_enabled?(platform) -> {:skipped, nil, nil}
+      is_nil(allowed) -> fun.()
+      platform in allowed -> fun.()
+      true -> {:skipped, nil, nil}
+    end
   end
 
   defp apply_translation(recipe, language_name) do

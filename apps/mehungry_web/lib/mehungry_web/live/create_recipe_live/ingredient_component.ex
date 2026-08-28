@@ -120,7 +120,7 @@ defmodule MehungryWeb.IngredientComponent do
       <div class="flex flex-col gap-3 md:grid md:grid-cols-12 md:gap-3 md:items-end">
         <%!-- Ingredient --%>
         <div class="min-w-0 md:col-span-6">
-          <.field_label>Ingredient</.field_label>
+          <.field_label>{gettext("Ingredient")}</.field_label>
           <.live_component
             module={MehungryWeb.SelectComponentDeep}
             form={@ingredient_form}
@@ -129,8 +129,8 @@ defmodule MehungryWeb.IngredientComponent do
             get_by_id_func={@ingredient_get_by_id_fn}
             input_variable="ingredient_id"
             label_function={@ingredient_label_fn}
-            placeholder="Select an ingredient…"
-            modal_title="Search Ingredients"
+            placeholder={gettext("Select an ingredient…")}
+            modal_title={gettext("Search Ingredients")}
             parent_id={@id}
             select_function={fn x -> send(self(), {:select_id, x, @id}) end}
             id={"ingredient_search_component" <> Integer.to_string(@ingredient_form.index)}
@@ -141,12 +141,12 @@ defmodule MehungryWeb.IngredientComponent do
         <%!-- Quantity + Unit + delete: inline on mobile, columns on desktop --%>
         <div class="flex items-end gap-3 md:contents">
           <div class="w-24 shrink-0 md:col-span-2">
-            <.field_label>Qty</.field_label>
+            <.field_label>{gettext("Qty")}</.field_label>
             <.input field={@ingredient_form[:quantity]} type="number_subscript" placeholder="0" />
             <.row_errors field={@ingredient_form[:quantity]} />
           </div>
           <div class="min-w-0 flex-1 md:col-span-3">
-            <.field_label>Unit</.field_label>
+            <.field_label>{gettext("Unit")}</.field_label>
             <.live_component
               module={MehungryWeb.SelectComponent}
               items={@unit_options}
@@ -160,7 +160,7 @@ defmodule MehungryWeb.IngredientComponent do
             <button
               name="recipe[_action]"
               value={"remove_ingredient:#{@ingredient_form.index}"}
-              aria-label="Remove ingredient"
+              aria-label={gettext("Remove ingredient")}
               class="shrink-0 h-10 w-10 grid place-items-center rounded-lg text-parchment-dim hover:text-red-400 hover:bg-ink-panel2 transition-colors"
             >
               <.icon name="hero-trash" class="h-5 w-5" />

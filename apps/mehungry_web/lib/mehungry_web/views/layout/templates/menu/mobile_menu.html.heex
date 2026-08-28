@@ -18,6 +18,8 @@
     <.link
       class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg  transition-colors"
       patch="/"
+      title={gettext("Home")}
+      aria-label={gettext("Home")}
     >
       {MehungryWeb.SvgComponents.logo_mark(%{id: "nav-mobile", class: "h-7 w-7 text-white"})}
     </.link>
@@ -26,6 +28,8 @@
     <.link
       patch={"/#{@current_language}/browse"}
       class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
+      title={gettext("Browse")}
+      aria-label={gettext("Browse")}
     >
       <.icon name="hero-book-open" class="h-7 w-7" />
     </.link>
@@ -33,6 +37,8 @@
     <a
       href={"/#{@current_language}/conditions"}
       class=" flex items-center   rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
+      title={gettext("Health")}
+      aria-label={gettext("Health")}
     >
       <.icon
         name="hero-heart"
@@ -44,6 +50,8 @@
     <.link
       patch={"/#{@current_language}/foods"}
       class="flex items-center justify-center p-3 nav_link_basic rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
+      title={gettext("Foods")}
+      aria-label={gettext("Foods")}
     >
       <svg
         class="h-7 w-7"
@@ -65,6 +73,8 @@
     <.link
       patch={"/#{@current_language}/create_recipe"}
       class="flex items-center justify-center p-3 nav_link_basic rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
+      title={gettext("Create Recipe")}
+      aria-label={gettext("Create Recipe")}
     >
       <.icon name="hero-plus-circle" class="h-7 w-7" />
     </.link>
@@ -73,6 +83,8 @@
     <.link
       patch={"/#{@current_language}/calendar"}
       class="flex items-center justify-center p-3 nav_link_basic text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors rounded-lg"
+      title={gettext("Calendar")}
+      aria-label={gettext("Calendar")}
     >
       <.icon name="hero-calendar" class="h-7 w-7" />
     </.link>
@@ -81,6 +93,8 @@
     <.link
       patch={"/#{@current_language}/basket"}
       class="flex items-center justify-center p-3 nav_link_basic text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors rounded-lg"
+      title={gettext("Basket")}
+      aria-label={gettext("Basket")}
     >
       <.icon name="hero-shopping-cart" class="h-7 w-7" />
     </.link>
@@ -90,6 +104,8 @@
       <a
         href={"/#{@current_language}/notifications/invitations"}
         class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
+        title={gettext("Tutor Invitations")}
+        aria-label={gettext("Tutor Invitations")}
       >
         <div class="relative">
           <.icon name="hero-bell" class="h-7 w-7" />
@@ -105,6 +121,8 @@
       <a
         href={"/#{@current_language}/friends"}
         class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
+        title={gettext("Friends")}
+        aria-label={gettext("Friends")}
       >
         <div class="relative">
           <.icon name="hero-users" class="h-7 w-7" />
@@ -119,6 +137,8 @@
     <a
       href={"/#{@current_language}/profile"}
       class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment transition-colors"
+      title={if @current_user, do: gettext("Profile"), else: gettext("Log in")}
+      aria-label={if @current_user, do: gettext("Profile"), else: gettext("Log in")}
     >
       <%= if @current_user do %>
         <img

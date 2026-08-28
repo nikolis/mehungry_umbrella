@@ -416,3 +416,24 @@ These items would have the biggest remaining impact:
 4. **Internal linking** — make sure recipe pages link to related hashtag pages, and hashtag pages link to individual recipes. This helps Googlebot discover more content by following links rather than relying solely on the sitemap.
 
 5. **Page speed** — Google's Core Web Vitals (loading speed, interactivity, layout stability) are a ranking factor. Use [PageSpeed Insights](https://pagespeed.web.dev) to check your scores.
+
+---
+
+## Worked example: nutritionist profiles (local SEO)
+
+`/nutritionists` (directory) and `/nutritionists/:slug` (profile) are public, localized pages
+built for **local intent** ("nutritionist Rethymno"). They follow the rules above:
+
+- Plain-string `:page_title` + `:page_description` + explicit `:canonical_path` (the request
+  path — the recipe `page_seo_data` map is *not* used because it hardcodes `/browse/:id`).
+- The profile body is loaded **synchronously** in `mount` (no `assign_async`), so the dead
+  render Googlebot indexes carries the real bio/city.
+- `:structured_data` emits **`LocalBusiness` + `Person`** JSON-LD (address / `areaServed` =
+  city, telephone, specialty) — the signal that drives local ranking. The directory emits
+  `ItemList`.
+- Sitemap includes `/nutritionists` + one localized entry per published profile; `robots.txt`
+  allows `/nutritionists` and disallows the private `/nutritionist/` workspace. **Do not** add
+  the singular `/nutritionist` to `noindex_prefixes` in `head.html.heex` — it would also match
+  the public plural `/nutritionists`.
+
+See `docs/professionals/professional_profiles.md`.
