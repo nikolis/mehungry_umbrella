@@ -19,6 +19,7 @@ defmodule MehungryWeb.Router do
     plug :fetch_path_info
     plug :fetch_current_user
     plug MehungryWeb.Plugs.SetLocale
+    plug MehungryWeb.Plugs.RedirectProProfile
   end
 
   pipeline :admin_browser do
@@ -186,6 +187,7 @@ defmodule MehungryWeb.Router do
       on_mount: MehungryWeb.NutritionistAuthLive,
       layout: {MehungryWeb.LayoutView, :nutritionist_live} do
       live "/", NutritionistLive.Dashboard, :index
+      live "/profile", NutritionistLive.ProfileEdit, :edit
       live "/invitations", NutritionistLive.Invitations, :index
       live "/clients", NutritionistLive.Clients, :index
       live "/clients/:id", NutritionistLive.ClientDetail, :show
@@ -194,6 +196,8 @@ defmodule MehungryWeb.Router do
       live "/clients/:id/calendar/:date", NutritionistLive.ClientCalendar, :particular
       live "/clients/:id/calendar/:date/:title", NutritionistLive.ClientCalendar, :new
       live "/appointments", NutritionistLive.AppointmentCalendar, :index
+      live "/articles", NutritionistLive.Articles, :index
+      live "/articles/:id/edit", NutritionistLive.ArticleEditor, :edit
     end
   end
 
@@ -331,6 +335,15 @@ defmodule MehungryWeb.Router do
 
       localized_live("/foods", FoodsLive.Index, :index)
       localized_live("/foods/:slug", SpeciesDetailLive.Index, :index)
+
+      localized_live("/nutritionists", PublicNutritionistLive.Index, :index)
+      localized_live("/nutritionists/:slug", PublicNutritionistLive.Show, :show)
+
+      localized_live(
+        "/nutritionists/:slug/articles/:article_slug",
+        PublicNutritionistLive.Article,
+        :show
+      )
 
       localized_live("/conditions", HealthLive.Index, :index)
       localized_live("/conditions/:id", ConditionDetailLive.Index, :index)

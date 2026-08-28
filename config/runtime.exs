@@ -64,6 +64,26 @@ pinterest_api_base =
 
 config :mehungry, pinterest_api_base: pinterest_api_base
 
+# Optional runtime override of the social-publishing kill switches
+# (see config.exs / Mehungry.Social). SOCIAL_PLATFORMS_DISABLED is a
+# comma-separated list of platforms to force off, e.g. "instagram,pinterest".
+# When unset, the compile-time defaults from config.exs apply.
+case System.get_env("SOCIAL_PLATFORMS_DISABLED") do
+  nil ->
+    :ok
+
+  csv ->
+    disabled =
+      csv
+      |> String.split(",", trim: true)
+      |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
+
+    config :mehungry, :social_platforms,
+      facebook: "facebook" not in disabled,
+      instagram: "instagram" not in disabled,
+      pinterest: "pinterest" not in disabled
+end
+
 # Open Food Facts (no API key; OFF requires an identifying User-Agent contact)
 config :mehungry,
   off_base_url: System.get_env("OFF_BASE_URL", "https://world.openfoodfacts.org"),

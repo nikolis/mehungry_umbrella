@@ -7,6 +7,8 @@ defmodule MehungryWeb.SitemapController do
   alias Mehungry.Hashtag
   alias Mehungry.Food.RecipeHashtag
   alias Mehungry.Food.FoundementalFoodSpecies
+  alias Mehungry.Professionals.ProfessionalProfile
+  alias Mehungry.Professionals.Article
 
   @base_url "https://www.m3hungry.com"
 
@@ -44,7 +46,27 @@ defmodule MehungryWeb.SitemapController do
         )
       )
 
-    xml = build_xml(recipes, hashtags, species)
+    nutritionists =
+      Repo.all(
+        from(p in ProfessionalProfile,
+          where: p.is_public == true and not is_nil(p.slug),
+          select: %{slug: p.slug, updated_at: p.updated_at},
+          order_by: [asc: p.slug]
+        )
+      )
+
+    articles =
+      Repo.all(
+        from(a in Article,
+          join: p in ProfessionalProfile,
+          on: p.id == a.professional_profile_id,
+          where: a.status == "published" and p.is_public == true and not is_nil(p.slug),
+          select: %{slug: a.slug, profile_slug: p.slug, updated_at: a.updated_at},
+          order_by: [desc: a.published_at]
+        )
+      )
+
+    xml = build_xml(recipes, hashtags, species, nutritionists, articles)
 
     conn
     |> put_resp_content_type("application/xml")
@@ -87,14 +109,26 @@ defmodule MehungryWeb.SitemapController do
       "\n</url>"
   end
 
-  defp build_xml(recipes, hashtags, species) do
+  defp build_xml(recipes, hashtags, species, nutritionists, articles) do
     today = Date.utc_today() |> to_string()
 
     static_urls = [
       localized_entries("/home", changefreq: "daily", priority: "1.0"),
       localized_entries("/browse", changefreq: "hourly", priority: "0.9"),
-      localized_entries("/foods", changefreq: "daily", priority: "0.7")
+      localized_entries("/foods", changefreq: "daily", priority: "0.7"),
+      localized_entries("/nutritionists", changefreq: "daily", priority: "0.7")
     ]
+
+    nutritionist_urls =
+      Enum.map(nutritionists, fn n ->
+        date = n.updated_at |> NaiveDateTime.to_date() |> to_string()
+
+        localized_entries("/nutritionists/#{n.slug}",
+          lastmod: date,
+          changefreq: "weekly",
+          priority: "0.6"
+        )
+      end)
 
     recipe_urls =
       Enum.map(recipes, fn r ->
@@ -130,7 +164,23 @@ defmodule MehungryWeb.SitemapController do
         )
       end)
 
-    all_urls = Enum.join(static_urls ++ recipe_urls ++ hashtag_urls ++ food_urls, "\n")
+    article_urls =
+      Enum.map(articles, fn a ->
+        date = a.updated_at |> NaiveDateTime.to_date() |> to_string()
+
+        localized_entries("/nutritionists/#{a.profile_slug}/articles/#{a.slug}",
+          lastmod: date,
+          changefreq: "monthly",
+          priority: "0.6"
+        )
+      end)
+
+    all_urls =
+      Enum.join(
+        static_urls ++
+          recipe_urls ++ hashtag_urls ++ food_urls ++ nutritionist_urls ++ article_urls,
+        "\n"
+      )
 
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" <>
       "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n" <>

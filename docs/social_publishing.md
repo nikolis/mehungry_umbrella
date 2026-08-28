@@ -1,5 +1,30 @@
 # Social media publishing
 
+## Disabling platforms
+
+`Mehungry.Social` holds global per-platform kill switches:
+
+```elixir
+config :mehungry, :social_platforms,
+  facebook: true,
+  instagram: false,
+  pinterest: false
+```
+
+A platform absent from the config defaults to **enabled**. `Mehungry.Social.platform_enabled?/1`
+is the single check used in three places:
+
+- `Social.Publisher.post_platform/3` — a disabled platform is `:skipped`, no post is
+  attempted (regardless of the per-job `platforms` allow-list).
+- The user-flow share entry points (`post_card.html.heex`, `core_components.ex`
+  share menus) are hidden with `:if`.
+- `HomeLive.Index` `:share_social_media` action refuses the route for a disabled
+  platform (guards against a direct URL).
+
+Instagram and Pinterest are **currently disabled** (platform-app issues). Flip the
+flag to re-enable, or override at runtime with `SOCIAL_PLATFORMS_DISABLED`
+(comma-separated, e.g. `instagram,pinterest`) — see `runtime.exs`.
+
 ## Seam
 
 `Mehungry.Social.PublisherBehaviour` defines `publish_recipe/5`.

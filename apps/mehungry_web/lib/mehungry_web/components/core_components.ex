@@ -102,6 +102,7 @@ defmodule MehungryWeb.CoreComponents do
         />
 
         <img
+          :if={Mehungry.Social.platform_enabled?("instagram")}
           src="/images/instagram-svgrepo-com.svg"
           width="full"
           href={MehungryWeb.Router.Helpers.auth_path(@socket, :request, "instagram")}
@@ -121,6 +122,7 @@ defmodule MehungryWeb.CoreComponents do
           />
         </.link>
         <.link
+          :if={Mehungry.Social.platform_enabled?("pinterest")}
           id={"link-to-recipe-pinterest-#{@user.id}"}
           class="block w-full overflow-hidden"
           style="width: 50px;"
@@ -176,6 +178,7 @@ defmodule MehungryWeb.CoreComponents do
         />
 
         <img
+          :if={Mehungry.Social.platform_enabled?("instagram")}
           src="/images/instagram-svgrepo-com.svg"
           width="full"
           class="m-auto h-7 w-10   text-white cursor-pointer bg-transparent overflow-hidden"
@@ -194,6 +197,7 @@ defmodule MehungryWeb.CoreComponents do
           />
         </.link>
         <.link
+          :if={Mehungry.Social.platform_enabled?("pinterest")}
           id={"link-to-recipe-pinterest-#{@post.reference_id}"}
           class="block w-full overflow-hidden"
           style="width: 50px;"

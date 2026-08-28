@@ -44,21 +44,32 @@
 }
 
 /* Profile page identity — scoped so it never leaks into shared components used elsewhere */
-.profile-form input:not([type="hidden"]),
-.profile-form textarea {
+/* Text-like inputs, textareas and selects share the dark field styling.
+   Checkboxes/radios are excluded so the @tailwindcss/forms checked fill
+   (painted via background-color) is not clobbered. */
+.profile-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+.profile-form textarea,
+.profile-form select {
   background-color: #2B2619;
   border-color: #3A3323;
   color: #F4EEDD;
 }
 
-.profile-form input:not([type="hidden"])::placeholder,
+.profile-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])::placeholder,
 .profile-form textarea::placeholder {
   color: #A9A08C;
 }
 
-.profile-form input:not([type="hidden"]):focus,
-.profile-form textarea:focus {
+.profile-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus,
+.profile-form textarea:focus,
+.profile-form select:focus {
   border-color: #E8622C;
+}
+
+/* Tint the checked fill (currentColor) paprika so the check is visible on the dark panel. */
+.profile-form input[type="checkbox"],
+.profile-form input[type="radio"] {
+  color: #E8622C;
 }
 
 .profile-form input + .placeholder,

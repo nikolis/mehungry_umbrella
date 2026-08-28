@@ -14,6 +14,16 @@ config :mehungry,
 
 config :mehungry, :admin_email, "nikolisgal@gmail.com"
 
+# Global social-publishing kill switches (see Mehungry.Social). Instagram and
+# Pinterest are disabled for now due to problems with the platform apps
+# themselves — no posts are attempted and their share entry points are hidden.
+# Flip a flag to `true` to re-enable. Can be overridden at runtime via
+# SOCIAL_PLATFORMS_DISABLED (see runtime.exs).
+config :mehungry, :social_platforms,
+  facebook: true,
+  instagram: false,
+  pinterest: false
+
 # Compile-time env marker for the /test-accounts routes. In dev/test the routes
 # are open; other envs additionally require a matching TEST_ACCOUNTS_TOKEN
 # (set in runtime.exs). See MehungryWeb.TestAccountsController.

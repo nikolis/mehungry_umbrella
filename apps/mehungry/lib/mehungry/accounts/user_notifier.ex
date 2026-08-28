@@ -245,4 +245,158 @@ defmodule Mehungry.Accounts.UserNotifier do
 
     deliver(user.email, "Update your Mehungry email", text, html)
   end
+
+  # ── Appointment notifications ────────────────────────────────────────────────
+
+  @doc """
+  Notify the nutritionist that a client requested an appointment.
+  `appointment` must have `:professional` and `:client` preloaded.
+  `cta_url` links to their appointments dashboard.
+  """
+  def deliver_appointment_requested(appointment, client_name, cta_url) do
+    prof = appointment.professional
+    when_str = format_dt(appointment.scheduled_at)
+
+    text = """
+    Hi,
+
+    #{client_name} requested an appointment with you on Mehungry.
+
+    When: #{when_str}
+    Notes: #{appointment.notes || "—"}
+
+    Review and accept it here: #{cta_url}
+    """
+
+    html =
+      html_layout(
+        "New appointment request",
+        "A client would like to meet",
+        "Hi #{prof.email},",
+        "#{client_name} requested an appointment for <strong>#{when_str}</strong>." <>
+          notes_fragment(appointment) <>
+          " Open your appointments to accept or decline — the client is notified only once you accept.",
+        "Review request",
+        cta_url,
+        "You're receiving this because you offer consultations on Mehungry."
+      )
+
+    deliver(prof.email, "New appointment request on Mehungry", text, html)
+  end
+
+  @doc """
+  Notify the client that the nutritionist accepted — attaches a calendar
+  invite (.ics). `appointment` must have `:professional` and `:client` preloaded.
+  """
+  def deliver_appointment_accepted(appointment, professional_name, cta_url) do
+    client = appointment.client
+    when_str = format_dt(appointment.scheduled_at)
+    meeting = appointment.meeting_url
+
+    ics =
+      Mehungry.Professionals.ICS.build(appointment,
+        attendee_email: client.email,
+        summary: "Consultation with #{professional_name}"
+      )
+
+    {cta_label, cta_target} =
+      if meeting && meeting != "",
+        do: {"Join the video call", meeting},
+        else: {"Open Mehungry", cta_url}
+
+    text = """
+    Hi #{client.email},
+
+    #{professional_name} accepted your appointment request.
+
+    When: #{when_str}
+    #{if meeting && meeting != "", do: "Video call: #{meeting}", else: ""}
+
+    A calendar invite is attached to this email.
+    """
+
+    html =
+      html_layout(
+        "Your appointment is confirmed",
+        "#{professional_name} accepted your request",
+        "Hi #{client.email},",
+        "Your appointment with <strong>#{professional_name}</strong> is confirmed for " <>
+          "<strong>#{when_str}</strong>." <>
+          if(meeting && meeting != "",
+            do: " A video call link is included below and in the attached calendar invite.",
+            else: " A calendar invite is attached to this email."
+          ),
+        cta_label,
+        cta_target,
+        "Add the attached invite to your calendar so you don't miss it."
+      )
+
+    deliver_with_ics(client.email, "Your Mehungry appointment is confirmed", text, html, ics)
+  end
+
+  @doc "Notify the client that the nutritionist declined the request."
+  def deliver_appointment_declined(appointment, professional_name, cta_url) do
+    client = appointment.client
+    when_str = format_dt(appointment.scheduled_at)
+
+    text = """
+    Hi #{client.email},
+
+    Unfortunately #{professional_name} can't take your appointment on #{when_str}.
+    You can pick another time here: #{cta_url}
+    """
+
+    html =
+      html_layout(
+        "Appointment not available",
+        "Let's find another time",
+        "Hi #{client.email},",
+        "Unfortunately <strong>#{professional_name}</strong> isn't able to meet on " <>
+          "<strong>#{when_str}</strong>. You can browse their availability and request another slot.",
+        "Pick another time",
+        cta_url,
+        "No charge was made for this request."
+      )
+
+    deliver(client.email, "Update on your Mehungry appointment", text, html)
+  end
+
+  defp notes_fragment(%{notes: notes}) when is_binary(notes) and notes != "",
+    do: " Their note: “#{notes}”."
+
+  defp notes_fragment(_), do: ""
+
+  defp format_dt(%NaiveDateTime{} = ndt) do
+    Calendar.strftime(ndt, "%A %-d %B %Y, %H:%M UTC")
+  end
+
+  defp deliver_with_ics(recipient, subject, text, html, ics_string) do
+    email =
+      new()
+      |> to(recipient)
+      |> from({"Mehungry", "noreply@m3hungry.com"})
+      |> subject(subject)
+      |> text_body(text)
+      |> html_body(html)
+      |> attachment(
+        Swoosh.Attachment.new({:data, ics_string},
+          filename: "appointment.ics",
+          content_type: "text/calendar",
+          type: :attachment
+        )
+      )
+
+    case Mailer.deliver(email) do
+      {:ok, _metadata} ->
+        {:ok, email}
+
+      {:error, reason} ->
+        Logger.error(
+          "[UserNotifier] failed to deliver #{inspect(subject)} to #{inspect(recipient)}: " <>
+            inspect(reason)
+        )
+
+        {:error, reason}
+    end
+  end
 end

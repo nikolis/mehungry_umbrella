@@ -414,12 +414,17 @@ defmodule MehungryWeb.RecipeComponents do
   defp recipe_condition_flags(_recipe), do: []
 
   def recipe_card(assigns) do
+    # Opt-in full live navigation (e.g. cross-LiveView to /browse/:id) instead of
+    # the default same-LiveView patch. Existing callers keep patch behavior.
+    assigns = assign_new(assigns, :navigate_details, fn -> false end)
+
     ~H"""
     <div id={"recipe-card-details-container-#{@id}-#{@recipe.id}"} class="py-2 relative">
       <.link
         phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
         id={"recipe-card-details-link-#{@id}-#{@recipe.id}"}
-        patch={@path_to_details}
+        navigate={if @navigate_details, do: @path_to_details}
+        patch={unless @navigate_details, do: @path_to_details}
       >
         <div class="bg-ink-panel rounded-xl overflow-hidden border border-ink-panel2 hover:border-paprika/50 transition-all duration-200 group-hover:transform group-hover:-translate-y-1 relative">
           <!-- Image Container -->

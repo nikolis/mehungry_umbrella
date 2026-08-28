@@ -136,7 +136,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="bg-slate-900 min-h-screen">
+    <div class="bg-ink min-h-screen">
       <.modal
         :if={@live_action in [:new, :edit]}
         on_cancel={JS.patch("/nutritionist/clients/#{@client_id}/calendar")}
@@ -157,8 +157,8 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
         </div>
       </.modal>
       <!-- Banner -->
-      <div class="bg-teal-900/40 border-b border-teal-700/40 px-4 py-2 flex items-center gap-3">
-        <a href={"/nutritionist/clients/#{@client_id}"} class="text-teal-400 hover:text-teal-300">
+      <div class="bg-basil/10 border-b border-basil/30 px-4 py-2 flex items-center gap-3">
+        <a href={"/nutritionist/clients/#{@client_id}"} class="text-basil hover:text-basil-soft">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -171,18 +171,18 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
         <%= if @client.profile_pic do %>
           <img src={@client.profile_pic} class="w-6 h-6 rounded-full object-cover" />
         <% else %>
-          <div class="w-6 h-6 rounded-full bg-teal-600 flex items-center justify-center text-white text-xs font-bold">
+          <div class="w-6 h-6 rounded-full bg-basil flex items-center justify-center text-ink text-xs font-bold">
             {String.first(@client.name || "?")}
           </div>
         <% end %>
-        <p class="text-teal-300 text-sm">
-          Editing <span class="font-medium text-white">{@client.name || @client.email}</span>'s meal plan
+        <p class="text-parchment-dim text-sm">
+          Editing <span class="font-medium text-parchment">{@client.name || @client.email}</span>'s meal plan
         </p>
       </div>
 
       <!-- Calendar widget (reuses same JS hooks) -->
       <div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
-      <div style="height: calc(100vh - 48px); overflow-y: auto;" class="bg-slate-900">
+      <div style="height: calc(100vh - 48px); overflow-y: auto;" class="bg-ink">
         <.live_component
           module={MehungryWeb.CalendarLive.Calendar.Widget}
           id={:new}

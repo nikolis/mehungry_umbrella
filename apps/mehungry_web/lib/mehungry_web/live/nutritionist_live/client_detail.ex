@@ -123,7 +123,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
     <div class="max-w-4xl mx-auto">
       <!-- Header -->
       <div class="flex items-center gap-4 mb-6">
-        <a href="/nutritionist/clients" class="text-slate-400 hover:text-white">
+        <a href="/nutritionist/clients" class="text-parchment-dim hover:text-parchment">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -136,24 +136,24 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         <%= if @client.profile_pic do %>
           <img src={@client.profile_pic} class="w-12 h-12 rounded-full object-cover" />
         <% else %>
-          <div class="w-12 h-12 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold">
+          <div class="w-12 h-12 rounded-full bg-basil flex items-center justify-center text-ink font-bold">
             {String.first(@client.name || "?")}
           </div>
         <% end %>
         <div>
-          <h1 class="text-xl font-bold text-white">{@client.name || @client.email}</h1>
-          <p class="text-slate-400 text-sm">{@client.email}</p>
+          <h1 class="text-xl font-display font-bold text-parchment">{@client.name || @client.email}</h1>
+          <p class="text-parchment-dim text-sm">{@client.email}</p>
         </div>
         <div class="ml-auto flex gap-2">
           <a
             href={"/nutritionist/clients/#{@client_id}/calendar"}
-            class="btn btn-sm bg-teal-600 hover:bg-teal-500 text-white border-0"
+            class="btn btn-sm bg-paprika hover:bg-paprika-soft text-ink border-0"
           >
             Edit Meal Plan
           </a>
           <a
             href={"/nutritionist/appointments?client_id=#{@client_id}"}
-            class="btn btn-sm bg-slate-700 hover:bg-slate-600 text-white border-0"
+            class="btn btn-sm bg-ink-panel2 hover:bg-ink text-parchment border border-ink-panel2"
           >
             Schedule Appointment
           </a>
@@ -161,10 +161,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       </div>
 
       <!-- AI Assist panel -->
-      <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 mb-6">
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
-            <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 text-basil" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -172,10 +172,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                 d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
               />
             </svg>
-            <h2 class="text-white font-semibold text-sm">AI Meal Plan Assistant</h2>
+            <h2 class="text-parchment font-semibold text-sm">AI Meal Plan Assistant</h2>
           </div>
           <%= if @ai_result || @ai_error do %>
-            <button phx-click="ai_dismiss" class="text-slate-500 hover:text-slate-300 text-xs">
+            <button phx-click="ai_dismiss" class="text-parchment-dim hover:text-parchment text-xs">
               Dismiss
             </button>
           <% end %>
@@ -189,11 +189,11 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
               name="preferences"
               value={@ai_preferences}
               placeholder="Dietary notes for this client, e.g. 'low-carb, avoid shellfish'"
-              class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-teal-500"
+              class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm placeholder-parchment-dim focus:outline-none focus:border-paprika"
             />
             <button
               type="submit"
-              class="bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition whitespace-nowrap"
+              class="bg-paprika hover:bg-paprika-soft text-ink text-sm font-medium px-4 py-2 rounded-lg transition whitespace-nowrap"
             >
               Draft 7-day Plan
             </button>
@@ -207,10 +207,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
               <div class="flex items-center gap-2">
                 <%= if idx == length(@ai_steps) - 1 and @ai_running do %>
                   <!-- Latest step: animated dot -->
-                  <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse shrink-0"></span>
+                  <span class="w-2 h-2 rounded-full bg-basil animate-pulse shrink-0"></span>
                 <% else %>
                   <svg
-                    class="w-3.5 h-3.5 text-teal-500 shrink-0"
+                    class="w-3.5 h-3.5 text-basil shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -226,8 +226,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                 <span class={[
                   "text-sm",
                   if(idx == length(@ai_steps) - 1 and @ai_running,
-                    do: "text-white",
-                    else: "text-slate-400"
+                    do: "text-parchment",
+                    else: "text-parchment-dim"
                   )
                 ]}>
                   {step}
@@ -239,19 +239,19 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
         <!-- Done: show result -->
         <%= if @ai_result do %>
-          <div class="mt-3 p-3 bg-teal-900/30 border border-teal-700/40 rounded-lg">
-            <p class="text-teal-300 text-sm whitespace-pre-wrap">{@ai_result}</p>
+          <div class="mt-3 p-3 bg-basil/10 border border-basil/30 rounded-lg">
+            <p class="text-basil text-sm whitespace-pre-wrap">{@ai_result}</p>
           </div>
           <div class="mt-3 flex gap-2">
             <a
               href={"/nutritionist/clients/#{@client_id}/calendar"}
-              class="text-sm bg-teal-600 hover:bg-teal-500 text-white px-3 py-1.5 rounded-lg transition"
+              class="text-sm bg-paprika hover:bg-paprika-soft text-ink px-3 py-1.5 rounded-lg transition"
             >
               View Plan →
             </a>
             <button
               phx-click="ai_dismiss"
-              class="text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg transition"
+              class="text-sm bg-ink-panel2 hover:bg-ink text-parchment-dim px-3 py-1.5 rounded-lg transition"
             >
               Draft Another
             </button>
@@ -265,7 +265,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
           </div>
           <button
             phx-click="ai_dismiss"
-            class="mt-2 text-sm text-slate-400 hover:text-slate-300"
+            class="mt-2 text-sm text-parchment-dim hover:text-parchment"
           >
             Try again
           </button>
@@ -274,22 +274,22 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Appointment history -->
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
-          <h2 class="text-white font-semibold mb-4">Appointment History</h2>
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
+          <h2 class="text-parchment font-display font-semibold mb-4">Appointment History</h2>
           <%= if Enum.empty?(@appointments) do %>
-            <p class="text-slate-500 text-sm">No appointments yet.</p>
+            <p class="text-parchment-dim text-sm">No appointments yet.</p>
           <% else %>
             <div class="space-y-3 max-h-64 overflow-y-auto">
               <%= for appt <- @appointments do %>
-                <div class="border-b border-slate-700 pb-3 last:border-0">
+                <div class="border-b border-ink-panel2 pb-3 last:border-0">
                   <div class="flex items-start justify-between">
-                    <p class="text-white text-sm font-medium">{appt.title}</p>
-                    <span class="text-slate-500 text-xs shrink-0 ml-2">
+                    <p class="text-parchment text-sm font-medium">{appt.title}</p>
+                    <span class="text-parchment-dim text-xs shrink-0 ml-2">
                       {Calendar.strftime(appt.scheduled_at, "%b %d, %Y")}
                     </span>
                   </div>
                   <%= if appt.notes do %>
-                    <p class="text-slate-400 text-xs mt-1">{appt.notes}</p>
+                    <p class="text-parchment-dim text-xs mt-1">{appt.notes}</p>
                   <% end %>
                 </div>
               <% end %>
@@ -298,21 +298,21 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         </div>
 
         <!-- Meal plan ratings -->
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5">
-          <h2 class="text-white font-semibold mb-4">Meal Plan Ratings</h2>
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
+          <h2 class="text-parchment font-display font-semibold mb-4">Meal Plan Ratings</h2>
           <%= if Enum.empty?(@ratings) do %>
-            <p class="text-slate-500 text-sm">No ratings submitted yet.</p>
+            <p class="text-parchment-dim text-sm">No ratings submitted yet.</p>
           <% else %>
             <div class="space-y-3 max-h-64 overflow-y-auto">
               <%= for rating <- @ratings do %>
-                <div class="border-b border-slate-700 pb-3 last:border-0">
+                <div class="border-b border-ink-panel2 pb-3 last:border-0">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                       <%= for i <- 1..5 do %>
                         <svg
                           class={[
                             "w-4 h-4",
-                            if(i <= rating.score, do: "text-yellow-400", else: "text-slate-600")
+                            if(i <= rating.score, do: "text-yellow-400", else: "text-ink-panel2")
                           ]}
                           fill="currentColor"
                           viewBox="0 0 20 20"
@@ -328,12 +328,12 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                         {String.capitalize(rating.rating_type)}
                       </span>
                     </div>
-                    <span class="text-slate-500 text-xs">
+                    <span class="text-parchment-dim text-xs">
                       {Calendar.strftime(rating.inserted_at, "%b %d")}
                     </span>
                   </div>
                   <%= if rating.comment do %>
-                    <p class="text-slate-400 text-xs mt-1 italic">"{rating.comment}"</p>
+                    <p class="text-parchment-dim text-xs mt-1 italic">"{rating.comment}"</p>
                   <% end %>
                 </div>
               <% end %>
@@ -344,16 +344,16 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
       <!-- Meal plans history -->
       <%= if not Enum.empty?(@meal_plans) do %>
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 mt-6">
-          <h2 class="text-white font-semibold mb-4">Meal Plan History</h2>
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mt-6">
+          <h2 class="text-parchment font-display font-semibold mb-4">Meal Plan History</h2>
           <div class="space-y-2">
             <%= for plan <- @meal_plans do %>
-              <div class="flex items-center justify-between py-2 border-b border-slate-700 last:border-0">
+              <div class="flex items-center justify-between py-2 border-b border-ink-panel2 last:border-0">
                 <div>
-                  <p class="text-white text-sm">{plan.title}</p>
-                  <p class="text-slate-500 text-xs">{plan.description}</p>
+                  <p class="text-parchment text-sm">{plan.title}</p>
+                  <p class="text-parchment-dim text-xs">{plan.description}</p>
                 </div>
-                <span class="text-slate-500 text-xs">
+                <span class="text-parchment-dim text-xs">
                   {Calendar.strftime(plan.inserted_at, "%b %d, %Y")}
                 </span>
               </div>

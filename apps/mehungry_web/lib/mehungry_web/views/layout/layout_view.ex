@@ -202,7 +202,7 @@ defmodule MehungryWeb.LayoutView do
     <!-- Mobile toggle -->
     <button
       id="nutritionist_menu_button"
-      class="md:hidden fixed bottom-4 right-4 z-50 w-12 h-12 flex items-center justify-center rounded-full bg-teal-600 hover:bg-teal-500 text-white transition shadow-lg"
+      class="md:hidden fixed bottom-4 right-4 z-50 w-12 h-12 flex items-center justify-center rounded-full bg-paprika hover:bg-paprika-soft text-ink transition shadow-lg"
       phx-click={
         JS.toggle_class("open", to: "#nav_bar_nutritionist")
         |> JS.toggle_class("hidden", to: "#nutritionist_backdrop")
@@ -231,14 +231,18 @@ defmodule MehungryWeb.LayoutView do
     <!-- Sidebar -->
     <nav
       id="nav_bar_nutritionist"
-      class="fixed top-0 left-0 h-full w-64 bg-slate-900 border-r border-slate-700/60 z-50 flex flex-col shadow-2xl transition-transform duration-300 -translate-x-full md:translate-x-0"
+      class="fixed top-0 left-0 h-full w-64 bg-ink-panel border-r border-ink-panel2 z-50 flex flex-col shadow-2xl transition-transform duration-300 -translate-x-full md:translate-x-0"
     >
-      <div class="flex items-center justify-between px-5 py-5 border-b border-slate-700/60">
-        <a href="/nutritionist" class="block w-32">
+      <div class="flex items-center justify-between px-5 py-5 border-b border-ink-panel2">
+        <a
+          href="/nutritionist"
+          class="block w-32"
+          style="--logo-text-color: #F4EEDD; --logo-tagline-color: transparent;"
+        >
           {SvgComponents.get_logo(%{id: "nutritionist-sidebar"})}
         </a>
         <button
-          class="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+          class="md:hidden p-1.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition"
           phx-click={
             JS.toggle_class("open", to: "#nav_bar_nutritionist")
             |> JS.toggle_class("hidden", to: "#nutritionist_backdrop")
@@ -256,11 +260,12 @@ defmodule MehungryWeb.LayoutView do
       </div>
 
       <div class="px-5 py-3">
-        <span class="text-xs font-semibold text-teal-400 uppercase tracking-wider">Nutritionist Panel</span>
+        <span class="text-xs font-semibold text-basil uppercase tracking-wider">Nutritionist Panel</span>
       </div>
 
       <div class="flex-1 px-3 space-y-1 overflow-y-auto">
         <.nutritionist_link href="/nutritionist" icon="hero-squares-2x2" label="Dashboard" />
+        <.nutritionist_link href="/nutritionist/profile" icon="hero-identification" label="My Profile" />
         <.nutritionist_link href="/nutritionist/clients" icon="hero-user-group" label="My Clients" />
         <.nutritionist_link href="/nutritionist/invitations" icon="hero-envelope" label="Invitations" />
         <.nutritionist_link
@@ -268,12 +273,17 @@ defmodule MehungryWeb.LayoutView do
           icon="hero-calendar-days"
           label="Appointments"
         />
+        <.nutritionist_link
+          href="/nutritionist/articles"
+          icon="hero-document-text"
+          label="Articles"
+        />
       </div>
 
-      <div class="px-5 py-4 border-t border-slate-700/60">
+      <div class="px-5 py-4 border-t border-ink-panel2">
         <a
           href="/home"
-          class="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition"
+          class="flex items-center gap-2 text-parchment-dim hover:text-parchment text-sm transition"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -298,12 +308,9 @@ defmodule MehungryWeb.LayoutView do
     ~H"""
     <a
       href={@href}
-      class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-sm font-medium group"
+      class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors text-sm font-medium"
     >
-      <.icon
-        name={@icon}
-        class="w-5 h-5 text-slate-400 group-hover:text-teal-400 transition flex-shrink-0"
-      />
+      <.icon name={@icon} class="w-5 h-5 flex-shrink-0" />
       {@label}
     </a>
     """
