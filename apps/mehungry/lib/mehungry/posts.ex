@@ -40,6 +40,10 @@ defmodule Mehungry.Posts do
   @feed_candidate_window 200
 
   def list_posts(nil) do
+    now = NaiveDateTime.utc_now()
+    ai_emails = ai_bot_emails()
+    penalty = ai_content_penalty()
+
     from(p in Post, order_by: [desc: p.inserted_at, desc: p.id], limit: @feed_candidate_window)
     |> Repo.all()
     |> Repo.preload([
@@ -51,10 +55,22 @@ defmodule Mehungry.Posts do
         recipe_hashtags: [:hashtag]
       ]
     ])
+    # Even the anonymous feed favors human content: rank by recency, minus the
+    # AI penalty for bot-authored posts (see list_posts/1 for %User{}).
+    |> Enum.map(fn x ->
+      recency_hours = NaiveDateTime.diff(now, x.inserted_at, :second) / 3600.0
+      recency_score = :math.exp(-recency_hours / 96.0) * 3.0
+      score = if ai_post?(x, ai_emails), do: recency_score - penalty, else: recency_score
+      {x, score}
+    end)
+    |> Enum.sort_by(fn {_x, score} -> score end, :desc)
+    |> Enum.map(fn {x, _score} -> x end)
   end
 
   def list_posts(%User{} = user) do
     now = NaiveDateTime.utc_now()
+    ai_emails = ai_bot_emails()
+    penalty = ai_content_penalty()
     user_pref_table = Users.calculate_user_pref_table(user)
     follow_ids = Users.list_user_follows(user) |> Enum.map(& &1.follow_id)
 
@@ -76,10 +92,22 @@ defmodule Mehungry.Posts do
       grading_score = Users.calculate_recipe_grading(x.reference, user_pref_table, follow_ids)
       recency_hours = NaiveDateTime.diff(now, x.inserted_at, :second) / 3600.0
       recency_score = :math.exp(-recency_hours / 96.0) * 3.0
-      {x, recency_score + grading_score}
+      base = recency_score + grading_score
+      score = if ai_post?(x, ai_emails), do: base - penalty, else: base
+      {x, score}
     end)
     |> Enum.sort_by(fn {_x, score} -> score end, :desc)
     |> Enum.map(fn {x, _score} -> x end)
+  end
+
+  defp ai_bot_emails, do: Application.get_env(:mehungry, :ai_bot_emails, [])
+  defp ai_content_penalty, do: Application.get_env(:mehungry, :ai_content_penalty, 3.0)
+
+  # A post is AI-generated when its author is one of the configured bot accounts.
+  # Both `post.user` and `post.reference.user` are preloaded in list_posts/1.
+  defp ai_post?(post, ai_emails) do
+    u = post.user
+    u != nil and (u.email in ai_emails or u.canonical_email in ai_emails)
   end
 
   # For each recipe, prefer the post whose language_name matches the user's language.

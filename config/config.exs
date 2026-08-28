@@ -14,6 +14,12 @@ config :mehungry,
 
 config :mehungry, :admin_email, "nikolisgal@gmail.com"
 
+# Feed ranking: AI recipes are authored by these bot accounts. Their posts are
+# penalized in Mehungry.Posts.list_posts/1 so human-created content out-ranks
+# freshly generated AI content. Tune :ai_content_penalty to taste.
+config :mehungry, :ai_bot_emails, ["nikolaos.galerakis@gmail.com", "nikolisgal@gmail.com"]
+config :mehungry, :ai_content_penalty, 3.0
+
 # Global social-publishing kill switches (see Mehungry.Social). Instagram and
 # Pinterest are disabled for now due to problems with the platform apps
 # themselves — no posts are attempted and their share entry points are hidden.
