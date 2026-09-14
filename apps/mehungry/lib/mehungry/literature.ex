@@ -116,7 +116,9 @@ defmodule Mehungry.Literature do
       nil ->
         case Entrez.Client.efetch([pmid]) do
           {:ok, [attrs | _], _raw} ->
-            upsert_study(Map.put(attrs, :retrieved_at, DateTime.truncate(DateTime.utc_now(), :second)))
+            upsert_study(
+              Map.put(attrs, :retrieved_at, DateTime.truncate(DateTime.utc_now(), :second))
+            )
 
           {:ok, [], _raw} ->
             {:error, :not_found}

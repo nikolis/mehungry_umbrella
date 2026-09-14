@@ -215,20 +215,20 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
       <div class="flex items-center gap-3 mb-5">
         <.link
           navigate={~p"/professional/ai-bot/review/#{@bot_recipe.id}"}
-          class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          class="p-1.5 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel transition-colors"
         >
           <.icon name="hero-arrow-left" class="h-5 w-5" />
         </.link>
         <div class="flex-1 flex items-center gap-2">
-          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-700 text-slate-300 text-xs font-semibold uppercase">EN</span>
-          <.icon name="hero-arrow-right" class="h-3.5 w-3.5 text-slate-500" />
-          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary-600/30 text-primary-300 text-xs font-semibold uppercase border border-primary-500/30">{@lang}</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-ink-panel2 text-parchment text-xs font-semibold uppercase">EN</span>
+          <.icon name="hero-arrow-right" class="h-3.5 w-3.5 text-parchment-dim" />
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-paprika/30 text-paprika-soft text-xs font-semibold uppercase border border-paprika/30">{@lang}</span>
           <h1 class="text-base font-semibold text-white ml-1 truncate">{@recipe.title}</h1>
         </div>
         <button
           phx-click="retranslate"
           disabled={@translating}
-          class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-300 hover:text-white text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-panel hover:bg-ink-panel2 border border-ink-panel2/60 text-parchment hover:text-white text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <%= if @translating do %>
             <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -252,25 +252,25 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
         <!-- Original (read-only) -->
         <div class="space-y-3">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Original</span>
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 text-[10px] font-bold">EN</span>
+            <span class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">Original</span>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-ink-panel2 text-parchment-dim text-[10px] font-bold">EN</span>
           </div>
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4">
             <div class="font-semibold text-white text-sm mb-2">{@recipe.title}</div>
-            <p class="text-slate-300 text-sm leading-relaxed">{@recipe.description}</p>
+            <p class="text-parchment text-sm leading-relaxed">{@recipe.description}</p>
           </div>
           <%= if @recipe.steps && @recipe.steps != [] do %>
-            <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
-              <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+            <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4">
+              <h3 class="text-xs font-semibold text-parchment-dim uppercase tracking-wider mb-3">
                 Steps
               </h3>
               <ol class="space-y-3">
                 <%= for {step, i} <- Enum.with_index(@recipe.steps) do %>
                   <li class="flex gap-3">
-                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-slate-700 text-slate-400 text-[10px] font-bold flex items-center justify-center mt-0.5">
+                    <span class="flex-shrink-0 w-5 h-5 rounded-full bg-ink-panel2 text-parchment-dim text-[10px] font-bold flex items-center justify-center mt-0.5">
                       {i + 1}
                     </span>
-                    <p class="text-sm text-slate-300 leading-relaxed">{step.description}</p>
+                    <p class="text-sm text-parchment leading-relaxed">{step.description}</p>
                   </li>
                 <% end %>
               </ol>
@@ -281,49 +281,49 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
         <!-- Translation form -->
         <div class="space-y-3">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Translation</span>
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-primary-600/30 text-primary-300 border border-primary-500/30 text-[10px] font-bold uppercase">{@lang}</span>
+            <span class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">Translation</span>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-paprika/30 text-paprika-soft border border-paprika/30 text-[10px] font-bold uppercase">{@lang}</span>
           </div>
           <.form for={@form} phx-change="validate" phx-submit="save_translation" class="space-y-3">
             <input type="hidden" name="recipe_translation[recipe_id]" value={@recipe.id} />
             <input type="hidden" name="recipe_translation[language_name]" value={@lang} />
 
-            <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4 space-y-3">
+            <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 space-y-3">
               <div>
-                <label class="block text-xs text-slate-500 mb-1">Title</label>
+                <label class="block text-xs text-parchment-dim mb-1">Title</label>
                 <.input
                   field={@form[:title]}
                   type="text"
-                  class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                  class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
                 />
               </div>
               <div>
-                <label class="block text-xs text-slate-500 mb-1">Description</label>
+                <label class="block text-xs text-parchment-dim mb-1">Description</label>
                 <textarea
                   name="recipe_translation[description]"
-                  class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-primary-500 focus:outline-none resize-none"
+                  class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none resize-none"
                   rows="5"
                 ><%= Phoenix.HTML.Form.input_value(@form, :description) %></textarea>
               </div>
             </div>
 
             <%= if @recipe.steps && @recipe.steps != [] do %>
-              <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
-                <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4">
+                <h3 class="text-xs font-semibold text-parchment-dim uppercase tracking-wider mb-3">
                   Steps
                 </h3>
                 <div class="space-y-3">
                   <%= for {step, i} <- Enum.with_index(@recipe.steps) do %>
                     <div>
-                      <label class="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-                        <span class="w-4 h-4 rounded-full bg-slate-700 text-slate-400 text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i +
+                      <label class="flex items-center gap-1.5 text-xs text-parchment-dim mb-1">
+                        <span class="w-4 h-4 rounded-full bg-ink-panel2 text-parchment-dim text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i +
                           1}</span>
                         Step {i + 1}
                       </label>
                       <textarea
                         name={"recipe_translation[steps][#{i}]"}
                         rows="3"
-                        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-primary-500 focus:outline-none resize-none"
+                        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none resize-none"
                         placeholder={step.description}
                       ><%= get_step_translation(@form, i) %></textarea>
                     </div>
@@ -332,10 +332,10 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
               </div>
             <% end %>
 
-            <div class="sticky bottom-0 bg-slate-900 pt-2 pb-1">
+            <div class="sticky bottom-0 bg-ink pt-2 pb-1">
               <button
                 type="submit"
-                class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+                class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors"
               >
                 <.icon name="hero-check" class="h-4 w-4" /> Save Translation
               </button>
@@ -347,40 +347,40 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
       <!-- Ingredients & Units translation -->
       <.form for={%{}} phx-submit="save_ingredient_translations" class="mt-6 space-y-4">
         <div class="flex items-center gap-2 mb-1">
-          <.icon name="hero-beaker" class="h-4 w-4 text-slate-500" />
-          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ingredients & Units</span>
+          <.icon name="hero-beaker" class="h-4 w-4 text-parchment-dim" />
+          <span class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">Ingredients & Units</span>
         </div>
 
         <!-- Ingredients -->
         <div class="grid grid-cols-2 gap-5">
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4">
             <div class="flex items-center gap-2 mb-3">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ingredient</span>
-              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 text-[10px] font-bold">EN</span>
+              <span class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">Ingredient</span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-ink-panel2 text-parchment-dim text-[10px] font-bold">EN</span>
             </div>
             <ul class="space-y-2">
               <%= for ri <- @recipe.recipe_ingredients do %>
-                <li class="flex items-center gap-2 text-sm py-1 border-b border-slate-700/40 last:border-0">
-                  <span class="text-slate-200 flex-1">{ri.ingredient.name}</span>
+                <li class="flex items-center gap-2 text-sm py-1 border-b border-ink-panel2/40 last:border-0">
+                  <span class="text-parchment flex-1">{ri.ingredient.name}</span>
                 </li>
               <% end %>
             </ul>
           </div>
 
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4">
             <div class="flex items-center gap-2 mb-3">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ingredient</span>
-              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-primary-600/30 text-primary-300 border border-primary-500/30 text-[10px] font-bold uppercase">{@lang}</span>
+              <span class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">Ingredient</span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-paprika/30 text-paprika-soft border border-paprika/30 text-[10px] font-bold uppercase">{@lang}</span>
             </div>
             <ul class="space-y-2">
               <%= for ri <- @recipe.recipe_ingredients do %>
-                <li class="py-1 border-b border-slate-700/40 last:border-0">
+                <li class="py-1 border-b border-ink-panel2/40 last:border-0">
                   <input
                     type="text"
                     name={"ingredient_translations[#{ri.ingredient_id}]"}
                     value={Map.get(@ing_translations, ri.ingredient_id, "")}
                     placeholder={ri.ingredient.name}
-                    class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none"
+                    class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-1.5 focus:border-paprika focus:outline-none"
                   />
                 </li>
               <% end %>
@@ -390,34 +390,34 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
 
         <!-- Units -->
         <div class="grid grid-cols-2 gap-5">
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4">
             <div class="flex items-center gap-2 mb-3">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Measurement Unit</span>
-              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 text-[10px] font-bold">EN</span>
+              <span class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">Measurement Unit</span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-ink-panel2 text-parchment-dim text-[10px] font-bold">EN</span>
             </div>
             <ul class="space-y-2">
               <%= for unit <- @unique_units do %>
-                <li class="flex items-center gap-2 text-sm py-1 border-b border-slate-700/40 last:border-0">
-                  <span class="text-slate-200 flex-1">{unit.name}</span>
+                <li class="flex items-center gap-2 text-sm py-1 border-b border-ink-panel2/40 last:border-0">
+                  <span class="text-parchment flex-1">{unit.name}</span>
                 </li>
               <% end %>
             </ul>
           </div>
 
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4">
             <div class="flex items-center gap-2 mb-3">
-              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Measurement Unit</span>
-              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-primary-600/30 text-primary-300 border border-primary-500/30 text-[10px] font-bold uppercase">{@lang}</span>
+              <span class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">Measurement Unit</span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-paprika/30 text-paprika-soft border border-paprika/30 text-[10px] font-bold uppercase">{@lang}</span>
             </div>
             <ul class="space-y-2">
               <%= for unit <- @unique_units do %>
-                <li class="py-1 border-b border-slate-700/40 last:border-0">
+                <li class="py-1 border-b border-ink-panel2/40 last:border-0">
                   <input
                     type="text"
                     name={"unit_translations[#{unit.id}]"}
                     value={Map.get(@unit_translations, unit.id, "")}
                     placeholder={unit.name}
-                    class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none"
+                    class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-1.5 focus:border-paprika focus:outline-none"
                   />
                 </li>
               <% end %>
@@ -427,7 +427,7 @@ defmodule MehungryWeb.AiBotLive.RecipeTranslate do
 
         <button
           type="submit"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+          class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors"
         >
           <.icon name="hero-check" class="h-4 w-4" /> Save Ingredient & Unit Translations
         </button>

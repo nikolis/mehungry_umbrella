@@ -210,7 +210,10 @@ defmodule Mehungry.Food.HashtagReconciliations do
   defp update_status(id, attrs, opts \\ []) do
     case Repo.get(HashtagReconciliation, id) do
       nil ->
-        Logger.info("[HashtagReconciliations] update_status skipped — row ##{id} no longer exists")
+        Logger.info(
+          "[HashtagReconciliations] update_status skipped — row ##{id} no longer exists"
+        )
+
         nil
 
       reconciliation ->

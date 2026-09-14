@@ -326,12 +326,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     do: "bg-amber-600/50 border border-amber-500/40 text-amber-100 hover:bg-amber-500/60"
 
   defp appt_chip_class("declined"),
-    do:
-      "bg-ink-panel2 border border-ink-panel2 text-parchment-dim line-through hover:bg-ink"
+    do: "bg-ink-panel2 border border-ink-panel2 text-parchment-dim line-through hover:bg-ink"
 
   defp appt_chip_class("cancelled"),
-    do:
-      "bg-ink-panel2 border border-ink-panel2 text-parchment-dim line-through hover:bg-ink"
+    do: "bg-ink-panel2 border border-ink-panel2 text-parchment-dim line-through hover:bg-ink"
 
   defp appt_chip_class(_accepted),
     do: "bg-basil/20 border border-basil/40 text-basil hover:bg-basil/30"
@@ -339,7 +337,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="max-w-5xl mx-auto">
+    <div class="profile-form max-w-5xl mx-auto">
       <h1 class="text-2xl font-display font-bold text-parchment mb-6">Appointment Calendar</h1>
 
       <!-- Pending requests -->
@@ -480,7 +478,10 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
               <h3 class="text-parchment font-display font-semibold">
                 {if @editing_appointment, do: "Edit Appointment", else: "New Appointment"}
               </h3>
-              <button phx-click="close_modal" class="text-parchment-dim hover:text-parchment transition">
+              <button
+                phx-click="close_modal"
+                class="text-parchment-dim hover:text-parchment transition"
+              >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"

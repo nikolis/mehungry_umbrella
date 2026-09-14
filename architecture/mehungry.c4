@@ -1,0 +1,13 @@
+specification {
+  element actor
+  element system
+  element component
+}
+
+model {
+  customer = actor 'Customer'
+  saas = system 'Our SaaS' {
+    component ui
+    component backend
+  }
+}

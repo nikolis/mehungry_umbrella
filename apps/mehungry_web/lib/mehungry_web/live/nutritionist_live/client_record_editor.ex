@@ -60,7 +60,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     |> assign(:client_changeset, Professionals.change_client_record(record))
     |> assign(:intake, intake)
     |> assign(:intake_changeset, Professionals.change_intake(intake))
-    |> assign(:notes, Professionals.list_consultation_notes(record.id))
+    |> assign(:notes, notes_newest_first(record.id))
     |> assign(:link_mode, if(record.user_id, do: :platform, else: :external))
     |> assign(:linked_user_id, record.user_id)
     |> assign(:assigned_clients, assigned_client_options(record.professional_id))
@@ -228,7 +228,13 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
   end
 
   defp reload_notes(socket) do
-    assign(socket, :notes, Professionals.list_consultation_notes(socket.assigns.record.id))
+    assign(socket, :notes, notes_newest_first(socket.assigns.record.id))
+  end
+
+  # The read-only record view keeps notes oldest-first (a chronological timeline);
+  # the editor shows newest first so a just-added (still blank) note lands on top.
+  defp notes_newest_first(client_id) do
+    client_id |> Professionals.list_consultation_notes() |> Enum.reverse()
   end
 
   # ── Event helpers ───────────────────────────────────────────────────────────────
@@ -270,7 +276,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
       |> assign(:modalities, ConsultationNote.modalities())
 
     ~H"""
-    <div class="max-w-4xl mx-auto pb-16">
+    <div class="profile-form max-w-4xl mx-auto pb-16">
       <.link
         navigate={~p"/nutritionist/records"}
         class="text-parchment-dim hover:text-parchment text-sm"
@@ -334,9 +340,9 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
           <.input field={f[:work_schedule]} type="text" />
         </.labeled>
 
-        <button type="submit" class="btn btn-sm bg-paprika hover:bg-paprika-soft text-ink border-0">
+        <.action variant={:primary} size={:sm} type="submit">
           {if @live_action == :new, do: "Create client", else: "Save details"}
-        </button>
+        </.action>
       </.form>
     </section>
     """
@@ -389,9 +395,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
                 placeholder="client@example.com"
                 class="flex-1 bg-ink-panel border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
               />
-              <button type="submit" class="btn btn-sm bg-ink-panel2 text-parchment border-0">
-                Look up
-              </button>
+              <.action variant={:secondary} size={:sm} type="submit">Look up</.action>
             </form>
           </.labeled>
 
@@ -409,11 +413,11 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
   end
 
   defp link_tab_class(active?) do
-    base = "text-xs px-3 py-1.5 rounded-lg border transition "
+    base = "text-xs px-3 py-1.5 rounded-lg border transition-colors "
 
     if active?,
-      do: base <> "bg-basil text-ink border-basil",
-      else: base <> "bg-ink-panel2 text-parchment-dim border-ink-panel2 hover:text-parchment"
+      do: base <> "bg-ink-panel2 text-parchment border-paprika-soft",
+      else: base <> "bg-transparent text-parchment-dim border-ink-panel2 hover:text-parchment"
   end
 
   # ── Intake ──────────────────────────────────────────────────────────────────────
@@ -491,12 +495,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         <% end %>
       </div>
 
-      <button
-        type="submit"
-        class="btn btn-sm bg-paprika hover:bg-paprika-soft text-ink border-0 mt-5"
-      >
-        Save intake
-      </button>
+      <.action variant={:primary} size={:sm} type="submit" class="mt-5">Save intake</.action>
     </.form>
     """
   end
@@ -524,13 +523,9 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         <h2 class="text-lg font-display font-bold text-parchment">
           Consultation notes ({length(@notes)})
         </h2>
-        <button
-          type="button"
-          phx-click="add_note"
-          class="btn btn-sm bg-basil hover:bg-basil/80 text-ink border-0"
-        >
-          + Add note
-        </button>
+        <.action variant={:secondary} size={:sm} type="button" phx-click="add_note">
+          Add note
+        </.action>
       </div>
 
       <%= if Enum.empty?(@notes) do %>
@@ -554,7 +549,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
       as={:note}
       id={"note-form-#{@note.id}"}
       phx-submit="save_note"
-      class="bg-ink-panel border border-ink-panel2 rounded-xl p-4"
+      class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4"
     >
       <input type="hidden" name="note[_id]" value={@note.id} />
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
@@ -580,18 +575,17 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         </.labeled>
       </div>
       <div class="flex gap-2 mt-3">
-        <button type="submit" class="btn btn-sm bg-paprika hover:bg-paprika-soft text-ink border-0">
-          Save note
-        </button>
-        <button
+        <.action variant={:primary} size={:sm} type="submit">Save note</.action>
+        <.action
+          variant={:danger}
+          size={:sm}
           type="button"
           phx-click="delete_note"
           phx-value-id={@note.id}
           data-confirm="Delete this note?"
-          class="btn btn-sm bg-ink-panel2 text-parchment-dim hover:text-red-400 border-0"
         >
           Delete
-        </button>
+        </.action>
       </div>
     </.form>
     """

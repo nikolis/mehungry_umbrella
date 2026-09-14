@@ -29,7 +29,7 @@ defmodule Mehungry.Food.DietClassifierTest do
 
   defp ensure_category(name) do
     Food.get_category_by_name(name) ||
-      (Food.create_category(%{name: name, description: "x"}) |> elem(1))
+      Food.create_category(%{name: name, description: "x"}) |> elem(1)
   end
 
   defp plant_category_id do
@@ -43,7 +43,9 @@ defmodule Mehungry.Food.DietClassifierTest do
   end
 
   defp recipe_with_categories(category_ids) do
-    %{recipe_ingredients: Enum.map(category_ids, fn cid -> %{ingredient: %{category_id: cid}} end)}
+    %{
+      recipe_ingredients: Enum.map(category_ids, fn cid -> %{ingredient: %{category_id: cid}} end)
+    }
   end
 
   test "a recipe with no animal categories is vegan and vegetarian" do
@@ -81,7 +83,12 @@ defmodule Mehungry.Food.DietClassifierTest do
 
   test "an ingredient with no category is not classified (conservative)" do
     recipe = recipe_with_categories([plant_category_id()])
-    recipe = %{recipe | recipe_ingredients: recipe.recipe_ingredients ++ [%{ingredient: %{category_id: nil}}]}
+
+    recipe = %{
+      recipe
+      | recipe_ingredients: recipe.recipe_ingredients ++ [%{ingredient: %{category_id: nil}}]
+    }
+
     assert DietClassifier.classify(recipe) == []
   end
 

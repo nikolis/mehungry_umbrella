@@ -1,19 +1,19 @@
-<div class="min-h-screen bg-slate-900">
+<div class="min-h-screen bg-ink">
   <div class="container mx-auto px-4 py-6 max-w-4xl space-y-6">
     <% display_name = @user.name || List.first(String.split(@user.email, "@")) %>
     <!-- Profile header -->
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
       <div class="flex items-start gap-4">
         <!-- Avatar -->
         <%= if @user.profile_pic && @user.profile_pic != "" do %>
           <img
             src={@user.profile_pic}
             alt={display_name}
-            class="w-16 h-16 rounded-full object-cover border border-slate-600 flex-shrink-0"
+            class="w-16 h-16 rounded-full object-cover border border-ink-panel2 flex-shrink-0"
           />
         <% else %>
-          <div class="w-16 h-16 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center flex-shrink-0">
-            <span class="text-xl font-bold text-slate-300">
+          <div class="w-16 h-16 rounded-full bg-ink-panel2 border border-ink-panel2 flex items-center justify-center flex-shrink-0">
+            <span class="text-xl font-bold text-parchment">
               {String.upcase(String.first(display_name) || "?")}
             </span>
           </div>
@@ -21,7 +21,7 @@
 
         <div class="flex-1 min-w-0">
           <h1 class="text-2xl font-bold text-white truncate">{display_name}</h1>
-          <p class="text-slate-400 text-sm truncate mt-0.5">{@user.email}</p>
+          <p class="text-parchment-dim text-sm truncate mt-0.5">{@user.email}</p>
 
           <!-- Badges -->
           <div class="flex items-center gap-2 flex-wrap mt-3">
@@ -40,12 +40,12 @@
                 {tier_label(@subscription.tier)}
               </span>
             <% else %>
-              <span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">
+              <span class="text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
                 Free
               </span>
             <% end %>
 
-            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
               {@subscription.status}
             </span>
           </div>
@@ -56,8 +56,8 @@
     <!-- Activity stats -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <.stat_card label="Recipes created" value={@stats.recipes_created} highlight="text-white" />
-      <.stat_card label="Recipes liked" value={@stats.recipes_liked} highlight="text-primary-400" />
-      <.stat_card label="Recipes saved" value={@stats.recipes_saved} highlight="text-primary-400" />
+      <.stat_card label="Recipes liked" value={@stats.recipes_liked} highlight="text-paprika-soft" />
+      <.stat_card label="Recipes saved" value={@stats.recipes_saved} highlight="text-paprika-soft" />
       <.stat_card label="Comments" value={@stats.comments} highlight="text-white" />
       <.stat_card label="Posts" value={@stats.posts} highlight="text-white" />
       <.stat_card label="Followers" value={@stats.followers} highlight="text-emerald-400" />
@@ -65,9 +65,9 @@
     </div>
 
     <!-- Details -->
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Details</h2>
-      <dl class="divide-y divide-slate-700">
+      <dl class="divide-y divide-ink-panel2">
         <.detail_row label="ID">#{@user.id}</.detail_row>
         <.detail_row label="Email">{@user.email}</.detail_row>
         <.detail_row label="Canonical email">{@user.canonical_email || "—"}</.detail_row>
@@ -89,7 +89,7 @@
     <div>
       <.link
         navigate={~p"/professional/users"}
-        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition text-sm font-semibold"
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-ink-panel border border-ink-panel2 text-parchment hover:text-white hover:bg-ink-panel2 transition text-sm font-semibold"
       >
         <.icon name="hero-arrow-left-solid" class="w-4 h-4" /> Back to users
       </.link>

@@ -313,7 +313,6 @@ grafana_config =
         folder_name: "MeHungry",
         annotate_app_lifecycle: false
       ]
-
   end
 
 config :mehungry_web, MehungryWeb.PromEx,

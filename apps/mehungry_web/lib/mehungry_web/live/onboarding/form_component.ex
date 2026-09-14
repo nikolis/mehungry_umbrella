@@ -103,7 +103,9 @@ defmodule MehungryWeb.Onboarding.FormComponent do
         </button>
       </div>
 
-      <p class="text-sm font-semibold text-slate-300 mb-3">{gettext("What best describes your diet?")}</p>
+      <p class="text-sm font-semibold text-slate-300 mb-3">
+        {gettext("What best describes your diet?")}
+      </p>
       <div class="flex flex-wrap justify-center gap-2 mb-6">
         <button
           :for={{value, label} <- diet_options()}
@@ -137,7 +139,9 @@ defmodule MehungryWeb.Onboarding.FormComponent do
     <div>
       <p class="text-sm font-semibold text-slate-300 mb-1">{gettext("Daily calorie target")}</p>
       <p class="text-xs text-slate-400 mb-4">
-        {gettext("Optional — set a kcal/day goal to track against your meal plans. You can change or clear this later.")}
+        {gettext(
+          "Optional — set a kcal/day goal to track against your meal plans. You can change or clear this later."
+        )}
       </p>
       <form phx-change="set_calories" phx-target={@myself} class="flex justify-center">
         <input
@@ -160,7 +164,9 @@ defmodule MehungryWeb.Onboarding.FormComponent do
     <div>
       <p class="text-sm font-semibold text-slate-300 mb-1">{gettext("Health condition badges")}</p>
       <p class="text-xs text-slate-400 mb-4">
-        {gettext("Optional — pick any conditions and we'll flag recipes on your feed that contain compounds relevant to them.")}
+        {gettext(
+          "Optional — pick any conditions and we'll flag recipes on your feed that contain compounds relevant to them."
+        )}
       </p>
 
       <div :if={@conditions_by_category == []} class="text-sm text-slate-400">

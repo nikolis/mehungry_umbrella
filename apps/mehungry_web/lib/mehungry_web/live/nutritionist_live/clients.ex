@@ -50,21 +50,24 @@ defmodule MehungryWeb.NutritionistLive.Clients do
   def render(assigns) do
     ~H"""
     <div class="max-w-4xl mx-auto">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-display font-bold text-parchment">My Clients</h1>
-        <a
-          href="/nutritionist/invitations"
-          class="btn btn-sm bg-paprika hover:bg-paprika-soft text-ink border-0"
-        >
-          + Invite Client
-        </a>
-      </div>
+      <.page_header title="My Clients">
+        <:actions>
+          <.action variant={:primary} size={:sm} navigate={~p"/nutritionist/invitations"}>
+            Invite client
+          </.action>
+        </:actions>
+      </.page_header>
 
       <%= if Enum.empty?(@clients) do %>
-        <div class="text-center py-16">
-          <p class="text-parchment-dim mb-4">No clients yet.</p>
-          <a href="/nutritionist/invitations" class="text-paprika hover:text-paprika-soft text-sm">Send your first invitation →</a>
-        </div>
+        <.panel_card class="text-center py-16">
+          <p class="text-parchment font-medium mb-1">No clients yet</p>
+          <p class="text-parchment-dim text-sm mb-5">
+            Invite someone to connect and start planning together.
+          </p>
+          <.action variant={:primary} size={:sm} navigate={~p"/nutritionist/invitations"}>
+            Send your first invitation
+          </.action>
+        </.panel_card>
       <% else %>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <%= for assignment <- @clients do %>

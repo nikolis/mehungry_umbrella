@@ -148,7 +148,13 @@ defmodule Mehungry.ProfessionalsTest do
       assert accepted.status == "accepted"
       assert accepted.meeting_url == "https://meet.example/x"
 
-      {:ok, appt2} = Professionals.request_appointment(professional.id, client.id, List.last(Professionals.available_slots(professional.id, today, Date.add(today, 7))))
+      {:ok, appt2} =
+        Professionals.request_appointment(
+          professional.id,
+          client.id,
+          List.last(Professionals.available_slots(professional.id, today, Date.add(today, 7)))
+        )
+
       assert {:ok, declined} = Professionals.decline_appointment(appt2)
       assert declined.status == "declined"
     end

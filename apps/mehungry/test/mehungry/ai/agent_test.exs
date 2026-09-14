@@ -53,7 +53,9 @@ defmodule Mehungry.AI.AgentTest do
     end
 
     assert {:ok, "finished", %{seen: [2, 1]}} =
-             Agent.run("sys", "go", [], handler, %{seen: []}, telemetry_metadata: %{agent: "test"})
+             Agent.run("sys", "go", [], handler, %{seen: []},
+               telemetry_metadata: %{agent: "test"}
+             )
   end
 
   test "a raising tool handler is caught, preserves acc, and reports error status" do

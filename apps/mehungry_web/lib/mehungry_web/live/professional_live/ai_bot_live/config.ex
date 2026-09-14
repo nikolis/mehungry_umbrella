@@ -221,30 +221,30 @@ defmodule MehungryWeb.AiBotLive.Config do
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-xl font-bold text-white">AI Bot</h1>
-        <p class="text-sm text-slate-400 mt-0.5">Manage monthly themes and publish schedules</p>
+        <p class="text-sm text-parchment-dim mt-0.5">Manage monthly themes and publish schedules</p>
       </div>
       <div class="flex items-center gap-2">
         <.link
           navigate={~p"/professional/ai-bot/review"}
-          class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 text-sm transition-colors"
+          class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel border border-ink-panel2/60 text-sm transition-colors"
         >
           <.icon name="hero-queue-list" class="h-4 w-4" /> Review Queue
         </.link>
         <.link
           navigate={~p"/professional/ai-bot/setups"}
-          class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 text-sm transition-colors"
+          class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel border border-ink-panel2/60 text-sm transition-colors"
         >
           <.icon name="hero-user-circle" class="h-4 w-4" /> Setups
         </.link>
         <.link
           navigate={~p"/professional/ai-bot/orders"}
-          class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 text-sm transition-colors"
+          class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel border border-ink-panel2/60 text-sm transition-colors"
         >
           <.icon name="hero-clipboard-document-list" class="h-4 w-4" /> Orders
         </.link>
         <.link
           navigate={~p"/professional/ai-bot/social"}
-          class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 text-sm transition-colors"
+          class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel border border-ink-panel2/60 text-sm transition-colors"
         >
           <.icon name="hero-share" class="h-4 w-4" /> Social Accounts
         </.link>
@@ -255,10 +255,10 @@ defmodule MehungryWeb.AiBotLive.Config do
       <!-- Configs list -->
       <div class="w-80 flex-shrink-0">
         <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Monthly Themes</span>
+          <span class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">Monthly Themes</span>
           <.link
             patch={~p"/professional/ai-bot/new"}
-            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-xs font-medium transition-colors"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-xs font-medium transition-colors"
           >
             <.icon name="hero-plus" class="h-3.5 w-3.5" /> New
           </.link>
@@ -267,12 +267,12 @@ defmodule MehungryWeb.AiBotLive.Config do
           <div
             :for={{id, config} <- @streams.configs}
             id={id}
-            class="bg-slate-800 border border-slate-700/60 rounded-xl p-4 hover:border-slate-600 transition-colors group"
+            class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 hover:border-ink-panel2 transition-colors group"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0 flex-1">
                 <div class="font-semibold text-white truncate text-sm">{config_title(config)}</div>
-                <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+                <div class="text-xs text-parchment-dim mt-0.5 flex items-center gap-1.5">
                   <span>{month_name(config.month)} {config.year}</span>
                   <span
                     :if={config.setup_type == "condition"}
@@ -287,7 +287,7 @@ defmodule MehungryWeb.AiBotLive.Config do
                   "inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border",
                   if(config.active,
                     do: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-                    else: "bg-slate-700/50 text-slate-500 border-slate-600/40"
+                    else: "bg-ink-panel2/50 text-parchment-dim border-ink-panel2/40"
                   )
                 ]}>
                   {if config.active, do: "Active", else: "Off"}
@@ -297,7 +297,7 @@ defmodule MehungryWeb.AiBotLive.Config do
             <div class="flex gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
               <.link
                 patch={~p"/professional/ai-bot/#{config.id}/edit"}
-                class="flex items-center gap-1 px-2 py-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 text-xs transition-colors"
+                class="flex items-center gap-1 px-2 py-1 rounded-md text-parchment-dim hover:text-white hover:bg-ink-panel2 text-xs transition-colors"
               >
                 <.icon name="hero-pencil-square" class="h-3.5 w-3.5" /> Edit
               </.link>
@@ -305,7 +305,7 @@ defmodule MehungryWeb.AiBotLive.Config do
                 phx-click="delete"
                 phx-value-id={config.id}
                 data-confirm="Delete this configuration?"
-                class="flex items-center gap-1 px-2 py-1 rounded-md text-slate-400 hover:text-red-400 hover:bg-red-500/10 text-xs transition-colors"
+                class="flex items-center gap-1 px-2 py-1 rounded-md text-parchment-dim hover:text-red-400 hover:bg-red-500/10 text-xs transition-colors"
               >
                 <.icon name="hero-trash" class="h-3.5 w-3.5" /> Delete
               </button>
@@ -317,7 +317,7 @@ defmodule MehungryWeb.AiBotLive.Config do
       <!-- Form panel -->
       <div class="flex-1 min-w-0">
         <%= if @form do %>
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-6">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-6">
             <h2 class="text-base font-semibold text-white mb-5">
               {if @live_action == :new, do: "New Configuration", else: "Edit Configuration"}
             </h2>
@@ -325,12 +325,12 @@ defmodule MehungryWeb.AiBotLive.Config do
               <% setup_type = to_string(@form[:setup_type].value || "theme") %>
               <!-- Basic info -->
               <div>
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                <p class="text-xs font-semibold text-parchment-dim uppercase tracking-wider mb-3">
                   Basic Info
                 </p>
                 <div class="space-y-3">
                   <div>
-                    <label class="block text-xs text-slate-400 mb-1">Setup Type</label>
+                    <label class="block text-xs text-parchment-dim mb-1">Setup Type</label>
                     <.input
                       field={@form[:setup_type]}
                       type="select"
@@ -338,61 +338,61 @@ defmodule MehungryWeb.AiBotLive.Config do
                         {"Month → Week → Day themes", "theme"},
                         {"Health condition", "condition"}
                       ]}
-                      class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                      class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
                     />
                   </div>
 
                   <div :if={setup_type == "theme"}>
-                    <label class="block text-xs text-slate-400 mb-1">Theme</label>
+                    <label class="block text-xs text-parchment-dim mb-1">Theme</label>
                     <.input
                       field={@form[:theme]}
                       type="text"
                       placeholder="e.g. Mediterranean Summer"
-                      class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                      class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
                     />
                   </div>
 
                   <div :if={setup_type == "condition"} class="space-y-3">
                     <div>
-                      <label class="block text-xs text-slate-400 mb-1">Health Condition</label>
+                      <label class="block text-xs text-parchment-dim mb-1">Health Condition</label>
                       <.input
                         field={@form[:condition_id]}
                         type="select"
                         prompt="Select a condition…"
                         options={Enum.map(@conditions, &{&1.name, &1.id})}
-                        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
                       />
-                      <p class="text-[11px] text-slate-500 mt-1">
+                      <p class="text-[11px] text-parchment-dim mt-1">
                         Only conditions that already have dietary recommendations are listed.
                         Recipes are built around its encouraged ingredients and never include
                         its discouraged ones.
                       </p>
                     </div>
                     <div>
-                      <label class="block text-xs text-slate-400 mb-1">Diet Direction</label>
+                      <label class="block text-xs text-parchment-dim mb-1">Diet Direction</label>
                       <.input
                         field={@form[:diet_direction]}
                         type="text"
                         placeholder="e.g. Mediterranean diet"
-                        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label class="block text-xs text-slate-400 mb-1">Persona / Setup (optional)</label>
+                    <label class="block text-xs text-parchment-dim mb-1">Persona / Setup (optional)</label>
                     <.input
                       field={@form[:recipe_setup_id]}
                       type="select"
                       prompt="No setup (generic voice)…"
                       options={Enum.map(@recipe_setups, &{&1.name, &1.id})}
-                      class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                      class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
                     />
-                    <p class="text-[11px] text-slate-500 mt-1">
+                    <p class="text-[11px] text-parchment-dim mt-1">
                       Gives every recipe this month a character voice, origin, and seed
                       ingredients. Manage these under <.link
                         navigate={~p"/professional/ai-bot/setups"}
-                        class="text-primary-400 hover:underline"
+                        class="text-paprika-soft hover:underline"
                       >Setups</.link>.
                       A week or day override below can swap it.
                     </p>
@@ -400,46 +400,46 @@ defmodule MehungryWeb.AiBotLive.Config do
 
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-xs text-slate-400 mb-1">Month</label>
+                      <label class="block text-xs text-parchment-dim mb-1">Month</label>
                       <.input
                         field={@form[:month]}
                         type="number"
                         min="1"
                         max="12"
-                        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label class="block text-xs text-slate-400 mb-1">Year</label>
+                      <label class="block text-xs text-parchment-dim mb-1">Year</label>
                       <.input
                         field={@form[:year]}
                         type="number"
                         min="2024"
-                        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div class="border-t border-slate-700/60 pt-5">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              <div class="border-t border-ink-panel2/60 pt-5">
+                <p class="text-xs font-semibold text-parchment-dim uppercase tracking-wider mb-3">
                   Bot Identity
                 </p>
                 <div class="space-y-3">
                   <div>
-                    <label class="block text-xs text-slate-400 mb-1">Bot User</label>
+                    <label class="block text-xs text-parchment-dim mb-1">Bot User</label>
                     <div class="flex gap-2">
                       <.input
                         field={@form[:bot_user_id]}
                         type="select"
                         options={Enum.map(@users, &{"#{&1.name || &1.email}", &1.id})}
-                        class="flex-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                        class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
                       />
                       <button
                         type="button"
                         phx-click="show_create_user_modal"
-                        class="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:text-white hover:border-slate-500 text-xs whitespace-nowrap transition-colors"
+                        class="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-ink-panel2 text-parchment hover:text-white hover:border-ink-panel2 text-xs whitespace-nowrap transition-colors"
                       >
                         <.icon name="hero-plus" class="h-3.5 w-3.5" /> New User
                       </button>
@@ -449,23 +449,23 @@ defmodule MehungryWeb.AiBotLive.Config do
                     <.input
                       field={@form[:active]}
                       type="checkbox"
-                      class="w-4 h-4 rounded border-slate-600 bg-slate-700 text-primary-500 focus:ring-primary-500"
+                      class="w-4 h-4 rounded border-ink-panel2 bg-ink-panel2 text-paprika focus:ring-paprika"
                     />
-                    <label class="text-sm text-slate-300">Active configuration</label>
+                    <label class="text-sm text-parchment">Active configuration</label>
                   </div>
                 </div>
               </div>
 
               <!-- Social accounts status (edit mode only) -->
               <%= if @bot_user_social do %>
-                <div class="border-t border-slate-700/60 pt-5">
+                <div class="border-t border-ink-panel2/60 pt-5">
                   <div class="flex items-center justify-between mb-3">
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <p class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">
                       Social Accounts
                     </p>
                     <.link
                       navigate={~p"/professional/ai-bot/social"}
-                      class="flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300 transition-colors"
+                      class="flex items-center gap-1 text-xs text-paprika-soft hover:text-paprika-soft transition-colors"
                     >
                       <.icon name="hero-arrow-top-right-on-square" class="h-3 w-3" /> Configure
                     </.link>
@@ -490,8 +490,8 @@ defmodule MehungryWeb.AiBotLive.Config do
               <% end %>
 
               <!-- Publish times grid -->
-              <div class="border-t border-slate-700/60 pt-5">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              <div class="border-t border-ink-panel2/60 pt-5">
+                <p class="text-xs font-semibold text-parchment-dim uppercase tracking-wider mb-3">
                   Publish Times (UTC)
                 </p>
                 <div class="overflow-x-auto">
@@ -501,10 +501,10 @@ defmodule MehungryWeb.AiBotLive.Config do
                       class="grid gap-2 mb-2"
                       style={"grid-template-columns: 140px repeat(#{length(@languages)}, minmax(120px, 1fr))"}
                     >
-                      <div class="text-xs text-slate-500 font-medium px-1">Meal</div>
+                      <div class="text-xs text-parchment-dim font-medium px-1">Meal</div>
                       <%= for lang <- @languages do %>
                         <div class="text-center">
-                          <span class="inline-block px-2 py-0.5 rounded-md bg-slate-700 text-slate-300 text-xs font-semibold uppercase">
+                          <span class="inline-block px-2 py-0.5 rounded-md bg-ink-panel2 text-parchment text-xs font-semibold uppercase">
                             {lang.name}
                           </span>
                         </div>
@@ -516,7 +516,7 @@ defmodule MehungryWeb.AiBotLive.Config do
                         class="grid gap-2 mb-2 items-center"
                         style={"grid-template-columns: 140px repeat(#{length(@languages)}, minmax(120px, 1fr))"}
                       >
-                        <div class="text-xs text-slate-300 font-medium px-1 capitalize">
+                        <div class="text-xs text-parchment font-medium px-1 capitalize">
                           {String.replace(meal, "_", " ")}
                         </div>
                         <%= for lang <- @languages do %>
@@ -528,7 +528,7 @@ defmodule MehungryWeb.AiBotLive.Config do
                                 get_in(@form[:publish_times].value || %{}, [meal, lang.name]) ||
                                   AiBotConfig.default_time_for(meal)
                               }
-                              class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-xs px-2 py-1.5 focus:border-primary-500 focus:outline-none"
+                              class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-xs px-2 py-1.5 focus:border-paprika focus:outline-none"
                             />
                           </div>
                         <% end %>
@@ -541,13 +541,13 @@ defmodule MehungryWeb.AiBotLive.Config do
               <div class="flex gap-2 pt-1">
                 <button
                   type="submit"
-                  class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+                  class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors"
                 >
                   <.icon name="hero-check" class="h-4 w-4" /> Save
                 </button>
                 <.link
                   patch={~p"/professional/ai-bot"}
-                  class="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 text-sm transition-colors"
+                  class="px-4 py-2 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel2 text-sm transition-colors"
                 >
                   Cancel
                 </.link>
@@ -556,11 +556,11 @@ defmodule MehungryWeb.AiBotLive.Config do
 
             <!-- Week Themes (edit mode only) -->
             <%= if @live_action == :edit do %>
-              <div class="border-t border-slate-700/60 pt-5 mt-5">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              <div class="border-t border-ink-panel2/60 pt-5 mt-5">
+                <p class="text-xs font-semibold text-parchment-dim uppercase tracking-wider mb-3">
                   Week Themes
                 </p>
-                <p class="text-xs text-slate-500 mb-4">
+                <p class="text-xs text-parchment-dim mb-4">
                   Sub-theme per week of the month (days 1–7 = week 1, 8–14 = week 2, etc.).
                   Leave a week blank to use only the monthly theme.
                 </p>
@@ -568,17 +568,17 @@ defmodule MehungryWeb.AiBotLive.Config do
                   <%= for week_num <- 1..6 do %>
                     <% existing = Enum.find(@week_configs, &(&1.week_number == week_num)) %>
                     <div class="flex items-center gap-3">
-                      <span class="w-16 text-xs font-semibold text-slate-400 flex-shrink-0">Week {week_num}</span>
+                      <span class="w-16 text-xs font-semibold text-parchment-dim flex-shrink-0">Week {week_num}</span>
                       <input
                         type="text"
                         name={"week_themes[#{week_num}]"}
                         value={(existing && existing.theme) || ""}
                         placeholder="e.g. Greek Diet Week"
-                        class="flex-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none placeholder-slate-500"
+                        class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-1.5 focus:border-paprika focus:outline-none placeholder-parchment-dim"
                       />
                       <select
                         name={"week_setups[#{week_num}]"}
-                        class="w-40 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs px-2 py-1.5 focus:border-primary-500 focus:outline-none flex-shrink-0"
+                        class="w-40 bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-xs px-2 py-1.5 focus:border-paprika focus:outline-none flex-shrink-0"
                       >
                         <option value="">Setup: month default</option>
                         <option
@@ -595,14 +595,14 @@ defmodule MehungryWeb.AiBotLive.Config do
                           class="h-4 w-4 text-emerald-400 flex-shrink-0"
                         />
                       <% else %>
-                        <.icon name="hero-minus-circle" class="h-4 w-4 text-slate-600 flex-shrink-0" />
+                        <.icon name="hero-minus-circle" class="h-4 w-4 text-parchment-dim flex-shrink-0" />
                       <% end %>
                     </div>
                   <% end %>
                   <div class="pt-2">
                     <button
                       type="submit"
-                      class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+                      class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors"
                     >
                       <.icon name="hero-check" class="h-4 w-4" /> Save Week Themes
                     </button>
@@ -611,38 +611,38 @@ defmodule MehungryWeb.AiBotLive.Config do
               </div>
 
               <!-- Day Overrides (edit mode only) -->
-              <div class="border-t border-slate-700/60 pt-5 mt-5">
-                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              <div class="border-t border-ink-panel2/60 pt-5 mt-5">
+                <p class="text-xs font-semibold text-parchment-dim uppercase tracking-wider mb-3">
                   Day Focus Overrides
                 </p>
-                <p class="text-xs text-slate-500 mb-4">
+                <p class="text-xs text-parchment-dim mb-4">
                   Set a specific generation focus for any day, e.g. "6 ingredients only", "no meat", "quick under 20 min".
                 </p>
 
                 <!-- Add new day override -->
                 <form phx-submit="save_day_config" class="flex items-end gap-2 mb-4">
                   <div class="flex-shrink-0">
-                    <label class="block text-xs text-slate-500 mb-1">Date</label>
+                    <label class="block text-xs text-parchment-dim mb-1">Date</label>
                     <input
                       type="date"
                       name="day_config[date]"
-                      class="bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none"
+                      class="bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-1.5 focus:border-paprika focus:outline-none"
                     />
                   </div>
                   <div class="flex-1">
-                    <label class="block text-xs text-slate-500 mb-1">Focus Hint</label>
+                    <label class="block text-xs text-parchment-dim mb-1">Focus Hint</label>
                     <input
                       type="text"
                       name="day_config[focus_hint]"
                       placeholder="e.g. 6 ingredients recipes"
-                      class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-1.5 focus:border-primary-500 focus:outline-none placeholder-slate-500"
+                      class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-1.5 focus:border-paprika focus:outline-none placeholder-parchment-dim"
                     />
                   </div>
                   <div class="flex-shrink-0">
-                    <label class="block text-xs text-slate-500 mb-1">Setup</label>
+                    <label class="block text-xs text-parchment-dim mb-1">Setup</label>
                     <select
                       name="day_config[recipe_setup_id]"
-                      class="w-40 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs px-2 py-1.5 focus:border-primary-500 focus:outline-none"
+                      class="w-40 bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-xs px-2 py-1.5 focus:border-paprika focus:outline-none"
                     >
                       <option value="">Month default</option>
                       <option :for={s <- @recipe_setups} value={s.id}>{s.name}</option>
@@ -650,7 +650,7 @@ defmodule MehungryWeb.AiBotLive.Config do
                   </div>
                   <button
                     type="submit"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors flex-shrink-0"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors flex-shrink-0"
                   >
                     <.icon name="hero-plus" class="h-4 w-4" /> Add
                   </button>
@@ -658,20 +658,20 @@ defmodule MehungryWeb.AiBotLive.Config do
 
                 <!-- Existing day overrides -->
                 <%= if @day_configs == [] do %>
-                  <p class="text-xs text-slate-600 italic">No day overrides set.</p>
+                  <p class="text-xs text-parchment-dim italic">No day overrides set.</p>
                 <% else %>
                   <div class="space-y-1.5">
                     <%= for dc <- @day_configs do %>
-                      <div class="flex items-center gap-3 bg-slate-700/40 rounded-lg px-3 py-2">
-                        <span class="text-xs font-semibold text-slate-400 w-24 flex-shrink-0">
+                      <div class="flex items-center gap-3 bg-ink-panel2/40 rounded-lg px-3 py-2">
+                        <span class="text-xs font-semibold text-parchment-dim w-24 flex-shrink-0">
                           {Calendar.strftime(dc.date, "%b %d, %Y")}
                         </span>
-                        <span class="text-sm text-slate-200 flex-1 truncate">{dc.focus_hint}</span>
+                        <span class="text-sm text-parchment flex-1 truncate">{dc.focus_hint}</span>
                         <button
                           phx-click="delete_day_config"
                           phx-value-id={dc.id}
                           data-confirm="Remove this day focus?"
-                          class="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+                          class="p-1 rounded text-parchment-dim hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
                         >
                           <.icon name="hero-x-mark" class="h-3.5 w-3.5" />
                         </button>
@@ -684,11 +684,11 @@ defmodule MehungryWeb.AiBotLive.Config do
           </div>
         <% else %>
           <div class="flex flex-col items-center justify-center h-64 text-center">
-            <div class="w-14 h-14 rounded-full bg-slate-800 border border-slate-700/60 flex items-center justify-center mb-4">
-              <.icon name="hero-cpu-chip" class="h-7 w-7 text-slate-500" />
+            <div class="w-14 h-14 rounded-full bg-ink-panel border border-ink-panel2/60 flex items-center justify-center mb-4">
+              <.icon name="hero-cpu-chip" class="h-7 w-7 text-parchment-dim" />
             </div>
-            <p class="text-slate-400 text-sm">Select a configuration to edit</p>
-            <p class="text-slate-600 text-xs mt-1">or create a new one with the button above</p>
+            <p class="text-parchment-dim text-sm">Select a configuration to edit</p>
+            <p class="text-parchment-dim text-xs mt-1">or create a new one with the button above</p>
           </div>
         <% end %>
       </div>
@@ -704,32 +704,32 @@ defmodule MehungryWeb.AiBotLive.Config do
       <h3 class="text-base font-semibold text-white mb-5">Create Bot User</h3>
       <form phx-submit="create_bot_user" class="space-y-4">
         <div>
-          <label class="block text-xs text-slate-400 mb-1">Name</label>
+          <label class="block text-xs text-parchment-dim mb-1">Name</label>
           <input
             type="text"
             name="user[name]"
             value="m3hungry ai"
-            class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+            class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
             required
           />
         </div>
         <div>
-          <label class="block text-xs text-slate-400 mb-1">Email</label>
+          <label class="block text-xs text-parchment-dim mb-1">Email</label>
           <input
             type="email"
             name="user[email]"
             placeholder="bot@m3hungry.com"
-            class="w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+            class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
             required
           />
         </div>
         <div x-data="{ pic: '' }">
-          <label class="block text-xs text-slate-400 mb-1">Profile Picture</label>
+          <label class="block text-xs text-parchment-dim mb-1">Profile Picture</label>
           <div class="flex gap-2 mb-2">
             <button
               type="button"
               @click="pic = '/images/logo2.svg'"
-              class="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 border border-slate-600 hover:border-primary-500/50 text-slate-300 hover:text-white text-xs font-medium transition-colors"
+              class="flex items-center gap-2 px-3 py-2 rounded-lg bg-ink-panel2 hover:bg-ink-panel2 border border-ink-panel2 hover:border-paprika/50 text-parchment hover:text-white text-xs font-medium transition-colors"
             >
               <img src="/images/logo2.svg" class="w-5 h-5 rounded" /> Use App Logo
             </button>
@@ -738,34 +738,34 @@ defmodule MehungryWeb.AiBotLive.Config do
             <img
               x-bind:src="pic"
               x-show="pic"
-              class="w-10 h-10 rounded-full object-cover border border-slate-600 flex-shrink-0"
+              class="w-10 h-10 rounded-full object-cover border border-ink-panel2 flex-shrink-0"
             />
             <div
-              class="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center flex-shrink-0"
+              class="w-10 h-10 rounded-full bg-ink-panel2 border border-ink-panel2 flex items-center justify-center flex-shrink-0"
               x-show="!pic"
             >
-              <.icon name="hero-user" class="h-5 w-5 text-slate-500" />
+              <.icon name="hero-user" class="h-5 w-5 text-parchment-dim" />
             </div>
             <input
               x-model="pic"
               type="text"
               name="user[profile_pic]"
               placeholder="https://... or use the button above"
-              class="flex-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+              class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
             />
           </div>
         </div>
         <div class="flex gap-2 pt-1">
           <button
             type="submit"
-            class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+            class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-user-plus" class="h-4 w-4" /> Create User
           </button>
           <button
             type="button"
             phx-click="hide_create_user_modal"
-            class="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 text-sm transition-colors"
+            class="px-4 py-2 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel2 text-sm transition-colors"
           >
             Cancel
           </button>
@@ -785,19 +785,19 @@ defmodule MehungryWeb.AiBotLive.Config do
       "rounded-lg px-3 py-2 border text-xs",
       if(@connected,
         do: "bg-emerald-500/10 border-emerald-500/25",
-        else: "bg-slate-700/40 border-slate-600/40"
+        else: "bg-ink-panel2/40 border-ink-panel2/40"
       )
     ]}>
       <div class="flex items-center gap-1.5 mb-0.5">
         <div class={[
           "w-1.5 h-1.5 rounded-full flex-shrink-0",
-          if(@connected, do: "bg-emerald-400", else: "bg-slate-600")
+          if(@connected, do: "bg-emerald-400", else: "bg-ink-panel2")
         ]}>
         </div>
-        <span class={if(@connected, do: "text-emerald-300 font-medium", else: "text-slate-500")}>{@label}</span>
+        <span class={if(@connected, do: "text-emerald-300 font-medium", else: "text-parchment-dim")}>{@label}</span>
       </div>
       <%= if @detail do %>
-        <p class="text-slate-500 truncate pl-3">{@detail}</p>
+        <p class="text-parchment-dim truncate pl-3">{@detail}</p>
       <% end %>
     </div>
     """

@@ -31,7 +31,10 @@ defmodule Mehungry.PostsRankingTest do
     setup do
       [bot_email | _] = Application.get_env(:mehungry, :ai_bot_emails)
       bot = user_fixture(%{email: bot_email})
-      human = user_fixture(%{email: "human_feed#{System.unique_integer([:positive])}@example.com"})
+
+      human =
+        user_fixture(%{email: "human_feed#{System.unique_integer([:positive])}@example.com"})
+
       now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
       # AI post is 2h old; human post is 2.5 days old.

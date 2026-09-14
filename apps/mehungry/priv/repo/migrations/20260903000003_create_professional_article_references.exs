@@ -27,7 +27,14 @@ defmodule Mehungry.Repo.Migrations.CreateProfessionalArticleReferences do
     # collides real duplicate (paragraph, entity) pairs.
     create unique_index(
              :professional_article_references,
-             [:paragraph_id, :reference_type, :study_id, :species_id, :compound_id, :condition_id],
+             [
+               :paragraph_id,
+               :reference_type,
+               :study_id,
+               :species_id,
+               :compound_id,
+               :condition_id
+             ],
              name: :professional_article_references_unique_target
            )
   end

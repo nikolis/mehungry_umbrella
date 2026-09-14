@@ -551,6 +551,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       polished_input = polish_prose(recipe_input, Map.get(acc, :brief))
       attrs = normalize_attrs(polished_input, gram_unit && gram_unit.id)
       Logger.info("RecipeAgent: recipe '#{recipe_input["title"]}' submitted successfully")
+
       {%{success: true, message: "Recipe '#{recipe_input["title"]}' saved."},
        %{acc | submitted: {:ok, attrs, []}}}
     else

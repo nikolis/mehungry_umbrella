@@ -124,50 +124,42 @@ defmodule MehungryWeb.NutritionistLive.Records do
   def render(assigns) do
     ~H"""
     <div class="max-w-4xl mx-auto">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-display font-bold text-parchment">Client Records</h1>
-        <div class="flex gap-2">
-          <.link
-            navigate={~p"/nutritionist/records/new"}
-            class="btn btn-sm bg-basil hover:bg-basil/80 text-ink border-0"
-          >
-            + New client
-          </.link>
-          <.link
-            patch={~p"/nutritionist/records/import"}
-            class="btn btn-sm bg-paprika hover:bg-paprika-soft text-ink border-0"
-          >
-            + Import CSV
-          </.link>
-        </div>
-      </div>
+      <.page_header title="Client Records">
+        <:actions>
+          <.action variant={:secondary} size={:sm} patch={~p"/nutritionist/records/import"}>
+            Import CSV
+          </.action>
+          <.action variant={:primary} size={:sm} navigate={~p"/nutritionist/records/new"}>
+            New client
+          </.action>
+        </:actions>
+      </.page_header>
 
       <%= if @live_action == :import do %>
         {import_panel(assigns)}
       <% end %>
 
       <%= if Enum.empty?(@records) do %>
-        <div class="text-center py-16">
-          <p class="text-parchment-dim mb-4">No client records yet.</p>
-          <.link
-            navigate={~p"/nutritionist/records/new"}
-            class="text-basil hover:text-basil/80 text-sm block mb-2"
-          >
-            Add a new client →
-          </.link>
-          <.link
-            patch={~p"/nutritionist/records/import"}
-            class="text-paprika hover:text-paprika-soft text-sm"
-          >
-            Import a dietary-history sheet →
-          </.link>
-        </div>
+        <.panel_card class="text-center py-16">
+          <p class="text-parchment font-medium mb-1">No client records yet</p>
+          <p class="text-parchment-dim text-sm mb-5">
+            Add a client by hand, or import an existing dietary-history sheet.
+          </p>
+          <div class="flex items-center justify-center gap-2">
+            <.action variant={:secondary} size={:sm} patch={~p"/nutritionist/records/import"}>
+              Import CSV
+            </.action>
+            <.action variant={:primary} size={:sm} navigate={~p"/nutritionist/records/new"}>
+              New client
+            </.action>
+          </div>
+        </.panel_card>
       <% else %>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <%= for record <- @records do %>
             <.link
               navigate={~p"/nutritionist/records/#{record.id}"}
-              class="block bg-ink-panel border border-ink-panel2 rounded-xl p-4 hover:border-paprika transition"
+              class="block bg-ink-panel border border-ink-panel2 rounded-2xl p-4 hover:border-paprika-soft transition-colors"
             >
               <p class="text-parchment font-medium">{record.full_name}</p>
               <p class="text-parchment-dim text-xs mt-1">
@@ -186,7 +178,7 @@ defmodule MehungryWeb.NutritionistLive.Records do
 
   defp import_panel(assigns) do
     ~H"""
-    <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
+    <.panel_card class="mb-6">
       <%= if @preview do %>
         <h2 class="text-lg font-display font-bold text-parchment mb-3">Preview import</h2>
         <dl class="grid grid-cols-2 gap-y-2 text-sm mb-4">
@@ -204,18 +196,12 @@ defmodule MehungryWeb.NutritionistLive.Records do
           </dd>
         </dl>
         <div class="flex gap-2">
-          <button
-            phx-click="confirm_import"
-            class="btn btn-sm bg-basil hover:bg-basil/80 text-ink border-0"
-          >
+          <.action variant={:primary} size={:sm} phx-click="confirm_import">
             Confirm &amp; import
-          </button>
-          <button
-            phx-click="cancel_import"
-            class="btn btn-sm bg-ink-panel2 text-parchment-dim border-0"
-          >
+          </.action>
+          <.action variant={:ghost} size={:sm} phx-click="cancel_import">
             Cancel
-          </button>
+          </.action>
         </div>
       <% else %>
         <h2 class="text-lg font-display font-bold text-parchment mb-3">Import dietary-history CSV</h2>
@@ -240,23 +226,14 @@ defmodule MehungryWeb.NutritionistLive.Records do
             <% end %>
           <% end %>
           <div class="flex gap-2">
-            <button
-              type="submit"
-              class="btn btn-sm bg-paprika hover:bg-paprika-soft text-ink border-0"
-            >
-              Preview
-            </button>
-            <button
-              type="button"
-              phx-click="cancel_import"
-              class="btn btn-sm bg-ink-panel2 text-parchment-dim border-0"
-            >
+            <.action variant={:primary} size={:sm} type="submit">Preview</.action>
+            <.action variant={:ghost} size={:sm} type="button" phx-click="cancel_import">
               Cancel
-            </button>
+            </.action>
           </div>
         </form>
       <% end %>
-    </div>
+    </.panel_card>
     """
   end
 

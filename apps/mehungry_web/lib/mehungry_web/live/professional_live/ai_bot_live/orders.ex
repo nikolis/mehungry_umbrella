@@ -83,16 +83,16 @@ defmodule MehungryWeb.AiBotLive.Orders do
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-xl font-bold text-white">Recipe Orders</h1>
-        <p class="text-sm text-slate-400 mt-0.5">
+        <p class="text-sm text-parchment-dim mt-0.5">
           Generate a batch of recipes for a setup, on demand. Results appear in the <.link
             navigate={~p"/professional/ai-bot/review"}
-            class="text-primary-400 hover:underline"
+            class="text-paprika-soft hover:underline"
           >review queue</.link>.
         </p>
       </div>
       <.link
         patch={~p"/professional/ai-bot/orders/new"}
-        class="flex items-center gap-1 px-3 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+        class="flex items-center gap-1 px-3 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors"
       >
         <.icon name="hero-plus" class="h-4 w-4" /> New Order
       </.link>
@@ -102,14 +102,14 @@ defmodule MehungryWeb.AiBotLive.Orders do
       <div class="flex-1 min-w-0 space-y-2">
         <div
           :for={order <- @orders}
-          class="group bg-slate-800 border border-slate-700/60 rounded-xl p-4"
+          class="group bg-ink-panel border border-ink-panel2/60 rounded-xl p-4"
         >
           <div class="flex items-center justify-between">
             <div>
               <div class="font-semibold text-white text-sm">
                 {order.recipe_setup && order.recipe_setup.name}
               </div>
-              <div class="text-xs text-slate-400 mt-0.5">
+              <div class="text-xs text-parchment-dim mt-0.5">
                 {order.quantity} × {order.meal_type || "mixed meals"} · {order.language_name}
               </div>
             </div>
@@ -121,7 +121,7 @@ defmodule MehungryWeb.AiBotLive.Orders do
                 ]}>
                   {order.status}
                 </span>
-                <div class="text-[11px] text-slate-500 mt-1">
+                <div class="text-[11px] text-parchment-dim mt-1">
                   {order.completed_count}/{order.quantity} done
                 </div>
               </div>
@@ -129,22 +129,22 @@ defmodule MehungryWeb.AiBotLive.Orders do
                 phx-click="delete"
                 phx-value-id={order.id}
                 data-confirm="Delete this order? Already-generated recipes are kept in the review queue."
-                class="flex items-center gap-1 px-2 py-1 rounded-md text-slate-400 hover:text-red-400 hover:bg-red-500/10 text-xs opacity-0 group-hover:opacity-100 transition-all"
+                class="flex items-center gap-1 px-2 py-1 rounded-md text-parchment-dim hover:text-red-400 hover:bg-red-500/10 text-xs opacity-0 group-hover:opacity-100 transition-all"
               >
                 <.icon name="hero-trash" class="h-3.5 w-3.5" /> Delete
               </button>
             </div>
           </div>
         </div>
-        <p :if={@orders == []} class="text-sm text-slate-500">No orders yet.</p>
+        <p :if={@orders == []} class="text-sm text-parchment-dim">No orders yet.</p>
       </div>
 
       <div :if={@form} class="w-96 flex-shrink-0">
-        <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-6">
+        <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-6">
           <h2 class="text-base font-semibold text-white mb-5">New Order</h2>
           <.form for={@form} phx-change="validate" phx-submit="save" class="space-y-4">
             <div>
-              <label class="block text-xs text-slate-400 mb-1">Setup</label>
+              <label class="block text-xs text-parchment-dim mb-1">Setup</label>
               <.input
                 field={@form[:recipe_setup_id]}
                 type="select"
@@ -154,7 +154,7 @@ defmodule MehungryWeb.AiBotLive.Orders do
               />
             </div>
             <div>
-              <label class="block text-xs text-slate-400 mb-1">Bot user (author)</label>
+              <label class="block text-xs text-parchment-dim mb-1">Bot user (author)</label>
               <.input
                 field={@form[:bot_user_id]}
                 type="select"
@@ -164,11 +164,11 @@ defmodule MehungryWeb.AiBotLive.Orders do
               />
             </div>
             <div>
-              <label class="block text-xs text-slate-400 mb-1">How many recipes</label>
+              <label class="block text-xs text-parchment-dim mb-1">How many recipes</label>
               <.input field={@form[:quantity]} type="number" min="1" max="50" class={input_class()} />
             </div>
             <div>
-              <label class="block text-xs text-slate-400 mb-1">Meal type</label>
+              <label class="block text-xs text-parchment-dim mb-1">Meal type</label>
               <.input
                 field={@form[:meal_type]}
                 type="select"
@@ -178,7 +178,7 @@ defmodule MehungryWeb.AiBotLive.Orders do
               />
             </div>
             <div>
-              <label class="block text-xs text-slate-400 mb-1">Language</label>
+              <label class="block text-xs text-parchment-dim mb-1">Language</label>
               <.input
                 field={@form[:language_name]}
                 type="text"
@@ -189,13 +189,13 @@ defmodule MehungryWeb.AiBotLive.Orders do
             <div class="flex items-center gap-2 pt-2">
               <button
                 type="submit"
-                class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium"
+                class="px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium"
               >
                 Place order
               </button>
               <.link
                 patch={~p"/professional/ai-bot/orders"}
-                class="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm"
+                class="px-4 py-2 rounded-lg text-parchment-dim hover:text-white text-sm"
               >
                 Cancel
               </.link>
@@ -212,9 +212,9 @@ defmodule MehungryWeb.AiBotLive.Orders do
   defp status_class("completed"), do: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
   defp status_class("generating"), do: "bg-amber-500/20 text-amber-300 border-amber-500/30"
   defp status_class("failed"), do: "bg-red-500/20 text-red-300 border-red-500/30"
-  defp status_class(_), do: "bg-slate-700/50 text-slate-400 border-slate-600/40"
+  defp status_class(_), do: "bg-ink-panel2/50 text-parchment-dim border-ink-panel2/40"
 
   defp input_class,
     do:
-      "w-full bg-slate-700 border border-slate-600 rounded-lg text-white text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+      "w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-white text-sm px-3 py-2 focus:border-paprika focus:outline-none"
 end

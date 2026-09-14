@@ -24,10 +24,11 @@ defmodule MehungryWeb.NutritionistLive.RecordsTest do
     %{conn: log_in_user(conn, nutritionist), nutritionist: nutritionist}
   end
 
-  test "empty roster invites the first import", %{conn: conn} do
+  test "empty roster offers new client and import", %{conn: conn} do
     {:ok, _view, html} = live(conn, "/nutritionist/records")
     assert html =~ "No client records yet"
-    assert html =~ "Import a dietary-history sheet"
+    assert html =~ "New client"
+    assert html =~ "Import CSV"
   end
 
   test "existing records are listed", %{conn: conn, nutritionist: nutritionist} do

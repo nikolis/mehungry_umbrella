@@ -141,7 +141,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
           </div>
         <% end %>
         <div>
-          <h1 class="text-xl font-display font-bold text-parchment">{@client.name || @client.email}</h1>
+          <h1 class="text-xl font-display font-bold text-parchment">
+            {@client.name || @client.email}
+          </h1>
           <p class="text-parchment-dim text-sm">{@client.email}</p>
         </div>
         <div class="ml-auto flex gap-2">

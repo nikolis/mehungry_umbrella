@@ -24,7 +24,9 @@ defmodule Mehungry.AI.Agents.PlanProvenanceTest do
     test "accepts a recipe_id that was searched and is in the catalog" do
       offered = MapSet.new([10])
       valid = MapSet.new([10, 11, 12])
-      assert MealPlanAgent.validate_plan([entry(10)], offered, valid, @start_date, @end_date) == []
+
+      assert MealPlanAgent.validate_plan([entry(10)], offered, valid, @start_date, @end_date) ==
+               []
     end
 
     test "rejects a real catalog recipe the model never surfaced via search" do
@@ -37,7 +39,15 @@ defmodule Mehungry.AI.Agents.PlanProvenanceTest do
     end
 
     test "rejects a hallucinated id absent from both offered and catalog" do
-      [error] = MealPlanAgent.validate_plan([entry(9999)], MapSet.new([10]), MapSet.new([10]), @start_date, @end_date)
+      [error] =
+        MealPlanAgent.validate_plan(
+          [entry(9999)],
+          MapSet.new([10]),
+          MapSet.new([10]),
+          @start_date,
+          @end_date
+        )
+
       assert error =~ "was not in your search results"
     end
 
@@ -55,13 +65,23 @@ defmodule Mehungry.AI.Agents.PlanProvenanceTest do
     test "accepts a searched, in-catalog recipe_id" do
       offered = MapSet.new([5])
       valid = MapSet.new([5, 6])
-      assert NutritionistAgent.validate_entries([entry(5)], offered, valid, @start_date, @end_date) == []
+
+      assert NutritionistAgent.validate_entries(
+               [entry(5)],
+               offered,
+               valid,
+               @start_date,
+               @end_date
+             ) == []
     end
 
     test "rejects a catalog recipe the model never searched" do
       offered = MapSet.new([5])
       valid = MapSet.new([5, 6])
-      [error] = NutritionistAgent.validate_entries([entry(6)], offered, valid, @start_date, @end_date)
+
+      [error] =
+        NutritionistAgent.validate_entries([entry(6)], offered, valid, @start_date, @end_date)
+
       assert error =~ "was not in your search results"
     end
   end

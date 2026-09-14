@@ -20,7 +20,7 @@
         phx-click="reconcile_portions"
         phx-value-dry_run="true"
         disabled={@portion_running}
-        class="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-700 hover:bg-slate-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-ink-panel2 hover:bg-ink-panel2 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <.icon name="hero-magnifying-glass" class="w-4 h-4" /> Assess portions
       </button>
@@ -61,9 +61,9 @@
   </div>
 
   <%= if @recalc_run do %>
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4 mb-6">
       <div class="flex items-center justify-between mb-2">
-        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">
           Nutrient recomputation
           <span class={[
             "ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
@@ -78,7 +78,7 @@
         <p class="text-sm font-semibold text-white">{recalc_percent(@recalc_run)}%</p>
       </div>
 
-      <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden mb-3">
+      <div class="w-full bg-ink-panel2 rounded-full h-2 overflow-hidden mb-3">
         <div
           class={[
             "h-2 rounded-full transition-all duration-500",
@@ -90,7 +90,7 @@
       </div>
 
       <div class="flex flex-wrap gap-4 text-sm">
-        <span class="text-slate-400">Total
+        <span class="text-parchment-dim">Total
         <span class="text-white font-semibold">{@recalc_run.total}</span></span>
         <span class="text-green-400">Done
         <span class="font-semibold">{@recalc_run.completed}</span></span>
@@ -108,9 +108,9 @@
   <% end %>
 
   <%= if hashtag_total(@hashtag_counts) > 0 do %>
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4 mb-6">
       <div class="flex items-center justify-between mb-2">
-        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">
           Hashtag reconciliation
           <span class={[
             "ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
@@ -127,14 +127,14 @@
           <button
             type="button"
             phx-click="reset_hashtag_reconciliation"
-            class="text-xs text-slate-400 hover:text-slate-200 underline"
+            class="text-xs text-parchment-dim hover:text-parchment underline"
           >
             Reset
           </button>
         </div>
       </div>
 
-      <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden mb-3">
+      <div class="w-full bg-ink-panel2 rounded-full h-2 overflow-hidden mb-3">
         <div
           class={[
             "h-2 rounded-full transition-all duration-500",
@@ -146,9 +146,9 @@
       </div>
 
       <div class="flex flex-wrap gap-4 text-sm">
-        <span class="text-slate-400">Total
+        <span class="text-parchment-dim">Total
         <span class="text-white font-semibold">{hashtag_total(@hashtag_counts)}</span></span>
-        <span class="text-slate-300">Pending
+        <span class="text-parchment">Pending
         <span class="font-semibold">{Map.get(@hashtag_counts, "pending", 0)}</span></span>
         <span class="text-blue-400">Processing
         <span class="font-semibold">{Map.get(@hashtag_counts, "processing", 0)}</span></span>
@@ -161,14 +161,14 @@
   <% end %>
 
   <%= if @portion_report do %>
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4 mb-6">
       <div class="flex items-center justify-between mb-3">
-        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">
           Ingredient portion reconciliation
           <span class={[
             "ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
             if(@portion_report.dry_run,
-              do: "bg-slate-500/20 text-slate-300 border-slate-500/30",
+              do: "bg-ink-panel2/20 text-parchment border-ink-panel2/30",
               else: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
             )
           ]}>
@@ -178,19 +178,19 @@
       </div>
 
       <div class="flex flex-wrap gap-4 text-sm mb-2">
-        <span class="text-slate-400">
+        <span class="text-parchment-dim">
           Rows with a unit
           <span class="text-white font-semibold">{@portion_report.total_with_unit}</span>
         </span>
-        <span class="text-slate-400">
+        <span class="text-parchment-dim">
           Already linked
           <span class="text-white font-semibold">{@portion_report.already_set}</span>
         </span>
-        <span class="text-slate-400">
+        <span class="text-parchment-dim">
           Grams (skipped)
           <span class="text-white font-semibold">{@portion_report.gram_skipped}</span>
         </span>
-        <span class="text-slate-400">
+        <span class="text-parchment-dim">
           Need work <span class="text-white font-semibold">{@portion_report.needs_work}</span>
         </span>
         <span class="text-green-400">
@@ -213,26 +213,26 @@
           ✅ Every non-gram recipe ingredient resolves to a portion.
         </p>
       <% else %>
-        <div class="mt-2 border-t border-slate-700 pt-3">
+        <div class="mt-2 border-t border-ink-panel2 pt-3">
           <p class="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-2">
             Pairs needing admin review
           </p>
-          <div class="divide-y divide-slate-700 max-h-80 overflow-y-auto">
+          <div class="divide-y divide-ink-panel2 max-h-80 overflow-y-auto">
             <div :for={u <- @portion_report.unresolved} class="py-2">
               <div class="flex items-center justify-between gap-3">
                 <p class="text-white text-sm font-medium truncate">
                   {u.ingredient_name || "ingredient ##{u.ingredient_id}"}
-                  <span class="text-slate-400 font-normal">× {u.unit_name ||
+                  <span class="text-parchment-dim font-normal">× {u.unit_name ||
                     "unit ##{u.measurement_unit_id}"}</span>
                 </p>
-                <span class="shrink-0 text-xs text-slate-400">
+                <span class="shrink-0 text-xs text-parchment-dim">
                   {u.row_count} row(s) · {length(u.recipe_ids)} recipe(s)
                 </span>
               </div>
               <p class="text-xs text-amber-300/80 mt-0.5">
                 {portion_reason_label(u.reason)}
               </p>
-              <p class="text-[11px] text-slate-500 mt-0.5 truncate">
+              <p class="text-[11px] text-parchment-dim mt-0.5 truncate">
                 recipes: {Enum.join(u.recipe_ids, ", ")}
               </p>
             </div>
@@ -243,26 +243,26 @@
   <% end %>
 
   <div class="grid grid-cols-2 gap-4 mb-6">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4">
+      <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
         Total recipes
       </p>
       <p class="text-3xl font-bold text-white">{@total_count}</p>
     </div>
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4">
+      <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
         With zero ingredients
       </p>
       <p class="text-3xl font-bold text-red-400">{@empty_count}</p>
     </div>
   </div>
 
-  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+  <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-3">
       Recipes with zero ingredients
     </h2>
-    <div id="empty-recipes" phx-update="stream" class="divide-y divide-slate-700">
-      <div id="empty-recipes-empty" class="only:block hidden text-slate-500 text-sm italic py-3">
+    <div id="empty-recipes" phx-update="stream" class="divide-y divide-ink-panel2">
+      <div id="empty-recipes-empty" class="only:block hidden text-parchment-dim text-sm italic py-3">
         No recipes with zero ingredients.
       </div>
       <div
@@ -274,7 +274,7 @@
           <p class="text-white text-sm font-medium truncate">
             {recipe.title || "(untitled)"}
           </p>
-          <p class="text-slate-500 text-xs">
+          <p class="text-parchment-dim text-xs">
             #{recipe.id} · {(recipe.user && recipe.user.email) || "no owner"}
           </p>
         </div>
@@ -282,11 +282,11 @@
     </div>
   </div>
 
-  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mt-6">
-    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+  <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4 mt-6">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-3">
       Delete any recipe
     </h2>
-    <p class="text-slate-500 text-xs mb-3">
+    <p class="text-parchment-dim text-xs mb-3">
       Deleting a recipe also removes all of its ingredients, comments, posts,
       likes, ratings, meal-plan entries, basket items, hashtags, translations and
       bot records. This cannot be undone.
@@ -305,12 +305,12 @@
         phx-debounce="300"
         placeholder="Search recipes by title or id…"
         autocomplete="off"
-        class="w-full rounded-lg bg-slate-900 border border-slate-700 text-white text-sm px-3 py-2 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+        class="w-full rounded-lg bg-ink border border-ink-panel2 text-white text-sm px-3 py-2 placeholder-parchment-dim focus:outline-none focus:border-indigo-500"
       />
     </form>
 
-    <div id="search-recipes" phx-update="stream" class="divide-y divide-slate-700">
-      <div id="search-recipes-empty" class="only:block hidden text-slate-500 text-sm italic py-3">
+    <div id="search-recipes" phx-update="stream" class="divide-y divide-ink-panel2">
+      <div id="search-recipes-empty" class="only:block hidden text-parchment-dim text-sm italic py-3">
         No recipes match your search.
       </div>
       <div
@@ -322,7 +322,7 @@
           <p class="text-white text-sm font-medium truncate">
             {recipe.title || "(untitled)"}
           </p>
-          <p class="text-slate-500 text-xs">
+          <p class="text-parchment-dim text-xs">
             #{recipe.id} · {(recipe.user && recipe.user.email) || "no owner"} · {recipe.ingredient_count} ingredient(s)
           </p>
         </div>

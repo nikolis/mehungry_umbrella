@@ -56,12 +56,9 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
         >
           ← Back to records
         </.link>
-        <.link
-          navigate={~p"/nutritionist/records/#{@record.id}/edit"}
-          class="btn btn-sm bg-paprika hover:bg-paprika-soft text-ink border-0"
-        >
+        <.action variant={:primary} size={:sm} navigate={~p"/nutritionist/records/#{@record.id}/edit"}>
           Edit
-        </.link>
+        </.action>
       </div>
 
       <div class="flex items-center gap-2 mt-2 mb-1">

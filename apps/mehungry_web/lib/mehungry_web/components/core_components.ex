@@ -828,6 +828,129 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   @doc """
+  A design-system action control for the warm `ink`/`paprika`/`basil` surfaces
+  (nutritionist panel, profile, and the rest of the customer app).
+
+  Encodes the two rules from `docs/infrastructure/design_system.md`: exactly one
+  `:primary` (solid paprika) action per screen; everything else is a quiet
+  `:secondary` (outline), `:ghost` (text), or `:danger` (muted red) control.
+  `basil` is reserved for data and is deliberately never a button color here.
+
+  Renders an `<a>` (via `<.link>`) when given `navigate`/`patch`/`href`, else a
+  `<button>` — so the same call site works for navigation and for `phx-click`.
+
+      <.action navigate={~p"/nutritionist/records/new"}>New client</.action>
+      <.action variant={:secondary} patch={~p"/nutritionist/records/import"}>Import CSV</.action>
+      <.action variant={:danger} phx-click="delete" data-confirm="Delete this?">Delete</.action>
+  """
+  attr :variant, :atom, default: :primary, values: [:primary, :secondary, :ghost, :danger]
+  attr :size, :atom, default: :md, values: [:sm, :md]
+  attr :navigate, :string, default: nil
+  attr :patch, :string, default: nil
+  attr :href, :string, default: nil
+  attr :class, :string, default: nil
+  attr :rest, :global, include: ~w(type disabled name value form)
+  slot :inner_block, required: true
+
+  def action(assigns) do
+    assigns =
+      assign(assigns, :computed_class, [
+        action_base(),
+        action_size(assigns.size),
+        action_variant(assigns.variant),
+        assigns.class
+      ])
+
+    ~H"""
+    <.link
+      :if={@navigate || @patch || @href}
+      navigate={@navigate}
+      patch={@patch}
+      href={@href}
+      class={@computed_class}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </.link>
+    <button
+      :if={is_nil(@navigate) and is_nil(@patch) and is_nil(@href)}
+      class={@computed_class}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </button>
+    """
+  end
+
+  defp action_base do
+    "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium " <>
+      "transition-colors disabled:opacity-50 disabled:pointer-events-none " <>
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-paprika-soft " <>
+      "focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+  end
+
+  defp action_size(:sm), do: "text-xs px-3 py-1.5"
+  defp action_size(_), do: "text-sm px-4 py-2"
+
+  defp action_variant(:primary), do: "bg-paprika text-ink hover:bg-paprika-soft"
+
+  defp action_variant(:secondary),
+    do: "border border-ink-panel2 text-parchment hover:border-paprika-soft bg-transparent"
+
+  defp action_variant(:ghost), do: "text-parchment-dim hover:text-parchment bg-transparent"
+  defp action_variant(:danger), do: "text-parchment-dim hover:text-red-400 bg-transparent"
+
+  @doc """
+  A page/section header: a `font-display` title (optional subtitle) on the left,
+  and an optional right-aligned actions slot. Keeps every panel screen's heading
+  and its one primary action laid out the same way.
+
+      <.page_header title="Client Records">
+        <:actions>
+          <.action variant={:secondary} patch={~p"/nutritionist/records/import"}>Import CSV</.action>
+          <.action navigate={~p"/nutritionist/records/new"}>New client</.action>
+        </:actions>
+      </.page_header>
+  """
+  attr :title, :string, required: true
+  attr :subtitle, :string, default: nil
+  attr :class, :string, default: nil
+  slot :actions
+
+  def page_header(assigns) do
+    ~H"""
+    <div class={["flex items-start justify-between gap-4 mb-6", @class]}>
+      <div>
+        <h1 class="text-2xl font-display font-bold text-parchment">{@title}</h1>
+        <p :if={@subtitle} class="text-parchment-dim text-sm mt-1">{@subtitle}</p>
+      </div>
+      <div :if={@actions != []} class="flex items-center gap-2 shrink-0">
+        {render_slot(@actions)}
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  A panel surface card — the standard bordered container for grouping related
+  content on the dark tokens (`bg-ink-panel border border-ink-panel2`).
+
+      <.panel_card>…</.panel_card>
+      <.panel_card class="mb-6">…</.panel_card>
+  """
+  attr :class, :string, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def panel_card(assigns) do
+    ~H"""
+    <div class={["bg-ink-panel border border-ink-panel2 rounded-2xl p-5", @class]} {@rest}>
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
   Renders an input with label and error messages.
 
   A `Phoenix.HTML.FormField` may be passed as argument,

@@ -723,5 +723,4 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   def get_profile_content(assigns), do: ~H""
-
 end

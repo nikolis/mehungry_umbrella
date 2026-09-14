@@ -56,7 +56,9 @@ defmodule MehungryWeb.HomeLiveTest do
 
     create_recipe_with_post(user, %{
       title: title,
-      recipe_ingredients: [%{ingredient_id: ingredient.id, measurement_unit_id: mu.id, quantity: 5}]
+      recipe_ingredients: [
+        %{ingredient_id: ingredient.id, measurement_unit_id: mu.id, quantity: 5}
+      ]
     })
   end
 

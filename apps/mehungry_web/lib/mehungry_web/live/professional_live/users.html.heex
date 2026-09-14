@@ -1,6 +1,6 @@
 <%= if @confirm_delete_user do %>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
       <div class="flex items-center gap-3 mb-4">
         <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
           <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -14,10 +14,10 @@
         </div>
         <div>
           <h3 class="text-white font-semibold">Delete User</h3>
-          <p class="text-slate-400 text-sm">This action cannot be undone.</p>
+          <p class="text-parchment-dim text-sm">This action cannot be undone.</p>
         </div>
       </div>
-      <p class="text-slate-300 text-sm mb-6">
+      <p class="text-parchment text-sm mb-6">
         Are you sure you want to permanently delete
         <span class="text-white font-medium">{@confirm_delete_user.email}</span>
         and all their data?
@@ -25,7 +25,7 @@
       <div class="flex gap-3">
         <button
           phx-click="cancel_delete"
-          class="flex-1 px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-sm font-medium transition"
+          class="flex-1 px-4 py-2 rounded-lg bg-ink-panel2 hover:bg-ink-panel2 text-parchment hover:text-white text-sm font-medium transition"
         >
           Cancel
         </button>
@@ -41,13 +41,13 @@
   </div>
 <% end %>
 
-<div class="min-h-screen bg-slate-900">
+<div class="min-h-screen bg-ink">
   <div class="container mx-auto px-4 py-6 max-w-2xl">
     <!-- Header -->
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-white flex items-center gap-3">
         <svg
-          class="w-7 h-7 text-primary-500 flex-shrink-0"
+          class="w-7 h-7 text-paprika flex-shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -62,7 +62,7 @@
         User Management
       </h1>
       <div class="flex gap-4 mt-2">
-        <span class="text-slate-400 text-sm">Showing {@shown_count} of {@total_count}</span>
+        <span class="text-parchment-dim text-sm">Showing {@shown_count} of {@total_count}</span>
         <span class="text-amber-400 text-sm">Pro: {@pro_count}</span>
       </div>
     </div>
@@ -70,15 +70,15 @@
     <!-- Filters -->
     <form
       phx-change="filter"
-      class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-5 flex flex-wrap items-end gap-3"
+      class="bg-ink-panel border border-ink-panel2 rounded-xl p-4 mb-5 flex flex-wrap items-end gap-3"
     >
       <div>
-        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
           Confirmation
         </label>
         <select
           name="confirmation"
-          class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="bg-ink-panel2 border border-ink-panel2 text-parchment text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-paprika"
         >
           <option value="all" selected={@filters["confirmation"] == "all"}>All</option>
           <option value="confirmed" selected={@filters["confirmation"] == "confirmed"}>
@@ -91,12 +91,12 @@
       </div>
 
       <div>
-        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
           Activity
         </label>
         <select
           name="activity"
-          class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="bg-ink-panel2 border border-ink-panel2 text-parchment text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-paprika"
         >
           <option value="all" selected={@filters["activity"] == "all"}>All</option>
           <option value="with_recipes" selected={@filters["activity"] == "with_recipes"}>
@@ -109,12 +109,12 @@
       </div>
 
       <div>
-        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
           Registered
         </label>
         <select
           name="registered"
-          class="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="bg-ink-panel2 border border-ink-panel2 text-parchment text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-paprika"
         >
           <option value="all" selected={@filters["registered"] == "all"}>All time</option>
           <option value="7d" selected={@filters["registered"] == "7d"}>Last 7 days</option>
@@ -124,7 +124,7 @@
       </div>
 
       <div class="flex-1 min-w-[12rem]">
-        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
           Search
         </label>
         <input
@@ -133,14 +133,14 @@
           value={@filters["q"]}
           placeholder="Email or name…"
           phx-debounce="300"
-          class="w-full bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="w-full bg-ink-panel2 border border-ink-panel2 text-parchment text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-paprika"
         />
       </div>
 
       <button
         type="button"
         phx-click="clear_filters"
-        class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-sm font-medium transition"
+        class="px-3 py-2 rounded-lg bg-ink-panel2 hover:bg-ink-panel2 text-parchment hover:text-white text-sm font-medium transition"
       >
         Clear
       </button>
@@ -149,7 +149,7 @@
     <!-- User Cards -->
     <div class="space-y-3">
       <%= for {_id, user} <- @streams.users do %>
-        <div class="bg-slate-800 rounded-xl border border-slate-700 hover:border-primary-500/50 transition p-4">
+        <div class="bg-ink-panel rounded-xl border border-ink-panel2 hover:border-paprika/50 transition p-4">
           <div class="flex items-start gap-3">
             <!-- Avatar -->
             <%= if user.profile_pic do %>
@@ -159,8 +159,8 @@
                 class="w-10 h-10 rounded-full object-cover flex-shrink-0"
               />
             <% else %>
-              <div class="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
-                <span class="text-primary-500 font-semibold">
+              <div class="w-10 h-10 rounded-full bg-paprika/20 flex items-center justify-center flex-shrink-0">
+                <span class="text-paprika font-semibold">
                   {String.at(user.email, 0) |> String.upcase()}
                 </span>
               </div>
@@ -179,7 +179,7 @@
                     Pro
                   </span>
                 <% else %>
-                  <span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400">
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
                     Free
                   </span>
                 <% end %>
@@ -195,14 +195,14 @@
               </div>
 
               <!-- Email -->
-              <p class="text-slate-400 text-sm truncate mt-0.5">{user.email}</p>
+              <p class="text-parchment-dim text-sm truncate mt-0.5">{user.email}</p>
 
               <!-- Meta row -->
-              <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 text-xs text-slate-500">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 text-xs text-parchment-dim">
                 <span>ID: #{user.id}</span>
                 <span>Joined: {Calendar.strftime(user.inserted_at, "%Y-%m-%d")}</span>
                 <% recipe_count = Map.get(@recipe_counts, user.id, 0) %>
-                <span class={if recipe_count == 0, do: "text-slate-600", else: "text-slate-400"}>
+                <span class={if recipe_count == 0, do: "text-parchment-dim", else: "text-parchment-dim"}>
                   Recipes: {recipe_count}
                 </span>
                 <%= if sub && sub.tier == "pro" && sub.period_end do %>
@@ -217,7 +217,7 @@
             <div class="flex items-center gap-2 flex-shrink-0">
               <a
                 href={"/professional/user/#{user.id}"}
-                class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition"
+                class="p-2 rounded-lg bg-ink-panel2 hover:bg-ink-panel2 text-parchment hover:text-white transition"
                 title="View Profile"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

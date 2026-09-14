@@ -39,7 +39,10 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
             <p class="text-parchment-dim text-sm mt-1">
               <%= if @profile.is_public do %>
                 Public ·
-                <a href={"/nutritionists/#{@profile.slug}"} class="text-paprika hover:text-paprika-soft">view page</a>
+                <a
+                  href={"/nutritionists/#{@profile.slug}"}
+                  class="text-paprika hover:text-paprika-soft"
+                >view page</a>
               <% else %>
                 Not published yet
               <% end %>
@@ -63,17 +66,29 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
           <p class="text-parchment-dim text-sm">Active Clients</p>
-          <p class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-1">{@client_count}</p>
-          <a href="/nutritionist/clients" class="text-paprika hover:text-paprika-soft text-xs mt-2 block">View all →</a>
+          <p class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-1">
+            {@client_count}
+          </p>
+          <a
+            href="/nutritionist/clients"
+            class="text-paprika hover:text-paprika-soft text-xs mt-2 block"
+          >View all →</a>
         </div>
         <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
           <p class="text-parchment-dim text-sm">Pending Invitations</p>
-          <p class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-1">{@pending_invitations_sent}</p>
-          <a href="/nutritionist/invitations" class="text-paprika hover:text-paprika-soft text-xs mt-2 block">Manage →</a>
+          <p class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-1">
+            {@pending_invitations_sent}
+          </p>
+          <a
+            href="/nutritionist/invitations"
+            class="text-paprika hover:text-paprika-soft text-xs mt-2 block"
+          >Manage →</a>
         </div>
         <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
           <p class="text-parchment-dim text-sm">Upcoming Appointments</p>
-          <p class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-1">{length(@upcoming_appointments)}</p>
+          <p class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-1">
+            {length(@upcoming_appointments)}
+          </p>
           <a
             href="/nutritionist/appointments"
             class="text-paprika hover:text-paprika-soft text-xs mt-2 block"
