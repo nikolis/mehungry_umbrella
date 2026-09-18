@@ -89,7 +89,13 @@ Hooks.RecipeDetailTimer = {
       phase
     })
   },
-  mounted() { this.reportTiming('mounted') },
+  mounted() {
+    // The recipe detail content is now in the DOM — data is present, so tell
+    // app.js to drop the instant loading skeleton. This is the deterministic
+    // hide signal (page-loading-stop and the safety timeout are backstops).
+    window.dispatchEvent(new CustomEvent('mehungry:recipe-loaded'))
+    this.reportTiming('mounted')
+  },
   updated() { this.reportTiming('updated') }
 }
 
