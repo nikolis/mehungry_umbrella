@@ -1,11 +1,12 @@
 # Nutritionist Public Profiles & Booking — Implementation Status
 
 **Branch:** `new_professional_nutritionist_features`
-**Last updated:** 2026-08-27
+**Last updated:** 2026-09-08
 
-Status snapshot of the "professional profile + public discovery + booking + payments/Meet"
-work. For the how-it-works reference see the sibling docs linked below; this file is the
-delivery record (what's done, what's stubbed, what's next).
+Status snapshot of the professional-nutritionist feature set: public discovery + booking +
+payments/Meet, scientific **Articles**, and **client records / dietary history**. For the
+how-it-works reference see the sibling docs linked below; this file is the delivery record (what's
+done, what's stubbed, what's next).
 
 ## Original requirements → status
 
@@ -18,11 +19,15 @@ delivery record (what's done, what's stubbed, what's next).
 | 5 | Calendar booking → nutritionist accepts → email + calendar invite | ✅ Done (weekly availability, `.ics` invite) |
 | 6 | Assess + document Stripe user→nutritionist payments | ✅ Doc + minimal build (Connect onboarding) |
 | 7 | Assess + document Google Meet integration | ✅ Doc + minimal build (manual link) |
+| 8 | Author public, evidence-based **scientific articles** | ✅ Done (per-paragraph images + PubMed/species/compound/disease refs, published SEO pages) |
+| 9 | Keep **client records / dietary history** (intake + consultation notes) | ✅ Done (CSV import **and** manual authoring; external or platform-user-linked) |
 
 ## Reference docs
 
 - `docs/professionals/professional_profiles.md` — profile schema, editor, public directory, SEO
 - `docs/professionals/appointments_booking.md` — availability, request→accept flow, ICS/email
+- `docs/professionals/articles.md` — article model, editor, public rendering + JSON-LD
+- `docs/professionals/client_records.md` — client file, CSV import + manual editor, associations
 - `docs/payments/nutritionist_payments_stripe_connect.md` — Stripe Connect assessment + minimal build
 - `docs/integrations/google_meet.md` — Google Meet assessment + minimal build
 - `docs/seo.md` — has a new "Worked example: nutritionist profiles (local SEO)" section
@@ -33,11 +38,15 @@ delivery record (what's done, what's stubbed, what's next).
 - `20260902000001_extend_professional_profiles.exs` — public/detail/contact/payment fields + `slug` (unique) + `is_public`; indexes on `slug`, `city`, `[is_public, city]`
 - `20260902000002_create_professional_availabilities.exs` — weekly recurring windows
 - `20260902000003_add_status_and_meeting_url_to_professional_appointments.exs` — `status` + `meeting_url`
+- `20260903000001..003` — `professional_articles`, `professional_article_paragraphs`, `professional_article_references`
+- `20260904000001..003` — `professional_clients`, `client_intakes`, `consultation_notes`
 
 **Schemas** (`apps/mehungry/lib/mehungry/professionals/`):
 - `professional_profile.ex` — `changeset/2` (editable copy + slug gen + publish gate), `stripe_changeset/2`, `slugify/1`
 - `professional_availability.ex` — new; `day_of_week` 0=Sun..6=Sat + start/end time
 - `appointment.ex` — added `status` (`requested|accepted|declined|cancelled`), `meeting_url`, `status_changeset/2`
+- `article.ex` / `article_paragraph.ex` / `article_reference.ex` — public scientific articles (draft→published, per-paragraph images + polymorphic-lite references)
+- `professional_client.ex` / `client_intake.ex` / `consultation_note.ex` — client file (PII + optional `user_id`), typed intake + JSONB `details`, per-visit notes; `dietary_history/{csv_parser,importer,fields}.ex`
 
 ## Backend
 
@@ -69,14 +78,26 @@ delivery record (what's done, what's stubbed, what's next).
 - **Infra**: routes in `router.ex`; sitemap adds `/nutritionists` + per-profile entries;
   `robots.txt` allows `/nutritionists`, disallows `/nutritionist/`; `SimpleS3Upload.meta_for/3`
   (prefix `profile_photos/`); "My Profile" sidebar link.
+- **Articles** (`live_session :nutritionist` + public `:maybe`): `ArticleEditor`
+  (`/nutritionist/articles/:id/edit`, incremental persistence) + public
+  `PublicNutritionistLive.Article` (`/nutritionists/:slug/articles/:article_slug`, dead-render body
+  + `Article` JSON-LD + numbered bibliography). See `docs/professionals/articles.md`.
+- **Client records** (`live_session :nutritionist`): `Records` (`/nutritionist/records`, roster +
+  CSV import), `ClientRecord` (read-only view), and `ClientRecordEditor`
+  (`/nutritionist/records/new` + `/records/:id/edit`) — manual authoring at full parity with
+  import, with external-vs-platform-user association. See `docs/professionals/client_records.md`.
 
-## Verification (done this session)
+## Verification
 
-- **Unit:** `apps/mehungry/test/mehungry/professionals_test.exs` — 8 tests pass (slug
+- **Unit:** `apps/mehungry/test/mehungry/professionals_test.exs` — profile/booking (slug
   uniqueness, publish gating, `available_slots` open-minus-booked, request rejects taken/out-of-window
-  slots, accept/decline transitions, public filtering by is_public+city).
-- **Full suite:** 289/292 pass. The 3 failures are pre-existing Wallaby browser feature tests
-  that need `chromedriver` (not installed) — unrelated to this work.
+  slots, accept/decline transitions, public filtering) + article CRUD/slug/reference-FK.
+- **Web:** `.../nutritionist_live/article_test.exs` (author → publish → public dead render + JSON-LD;
+  draft redirect) and `.../nutritionist_live/client_record_editor_test.exs` (external create → intake
+  typed/detail/recall → note → read-only render; platform-user link via dropdown; failed email lookup
+  flash; ownership redirect). Professionals + nutritionist_live suites green (17 tests).
+- **Full suite:** green except the pre-existing Wallaby browser feature tests that need
+  `chromedriver` (not installed) — unrelated to this work.
 - **Live app (curl against dev):** `/nutritionists` and `/nutritionists/:slug` return 200 with
   correct `<title>`, locale `canonical`, and valid `LocalBusiness`+`Person`+`PostalAddress`
   JSON-LD in the dead render; city filter works; 120 booking slots rendered; sitemap + robots
@@ -97,3 +118,8 @@ delivery record (what's done, what's stubbed, what's next).
 - **Timezone display** — appointments are UTC end-to-end; the profile `timezone` isn't yet
   applied to the public booking calendar.
 - **Availability editor** supports one window per day (the slot engine supports several).
+- **Articles v1** — single-language, plain paragraph body (no rich text / inline autolinking),
+  no comments/reactions (deliberate deferrals — see `docs/professionals/articles.md`).
+- **Client records** — the manual intake stores every questionnaire field it renders (empty keys
+  included); no BMI/BMR auto-calculation from anthropometrics yet, and no link back from a
+  `ProfessionalClient` to the booking/appointment timeline.

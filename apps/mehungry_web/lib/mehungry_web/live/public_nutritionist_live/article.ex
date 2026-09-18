@@ -99,8 +99,14 @@ defmodule MehungryWeb.PublicNutritionistLive.Article do
     %{list: unique, numbers: numbers}
   end
 
-  defp ref_key(%{reference_type: t, study_id: s, species_id: sp, compound_id: c, condition_id: co}),
-    do: {t, s, sp, c, co}
+  defp ref_key(%{
+         reference_type: t,
+         study_id: s,
+         species_id: sp,
+         compound_id: c,
+         condition_id: co
+       }),
+       do: {t, s, sp, c, co}
 
   defp ref_number(references, ref), do: Map.get(references.numbers, ref_key(ref))
 
@@ -162,7 +168,8 @@ defmodule MehungryWeb.PublicNutritionistLive.Article do
           {display_name(@profile)}
         </.link>
         <span :if={@article.published_at}>
-          · <time datetime={iso8601(@article.published_at)}>
+          ·
+          <time datetime={iso8601(@article.published_at)}>
             {Calendar.strftime(@article.published_at, "%B %-d, %Y")}
           </time>
         </span>
@@ -196,7 +203,11 @@ defmodule MehungryWeb.PublicNutritionistLive.Article do
       <section :if={@references.list != []} class="mt-12 border-t border-ink-panel2 pt-6">
         <h2 class="text-lg font-display font-semibold text-parchment mb-4">References</h2>
         <ol class="space-y-2 text-sm text-parchment-dim">
-          <li :for={ref <- @references.list} id={"ref-#{ref_number(@references, ref)}"} class="flex gap-2">
+          <li
+            :for={ref <- @references.list}
+            id={"ref-#{ref_number(@references, ref)}"}
+            class="flex gap-2"
+          >
             <span class="text-paprika">{ref_number(@references, ref)}.</span>
             <span>
               <%= if citation_url(ref) do %>

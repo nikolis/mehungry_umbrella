@@ -422,11 +422,11 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
               </div>
               <h3 class="text-lg font-display font-semibold text-parchment mb-1">Request sent!</h3>
               <p class="text-sm text-parchment-dim">
-                You asked to meet on
-                <span class="text-parchment font-medium">
+                You asked to meet on <span class="text-parchment font-medium">
                   {Calendar.strftime(@booked_slot, "%A %b %-d at %H:%M")}
-                </span>.
-                {display_name(@profile)} will confirm by email — nothing is charged or final until
+                </span>. {display_name(
+                  @profile
+                )} will confirm by email — nothing is charged or final until
                 they accept.
               </p>
               <div class="flex items-center justify-center gap-3 mt-6">
@@ -446,7 +446,6 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
                 </button>
               </div>
             </div>
-
           <% is_nil(@current_user) -> %>
             <h3 class="text-lg font-display font-semibold text-parchment mb-2">
               Request an appointment
@@ -460,7 +459,6 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
             >
               Log in to continue
             </.link>
-
           <% true -> %>
             <h3 class="text-lg font-display font-semibold text-parchment mb-1">
               Request an appointment

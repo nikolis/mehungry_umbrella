@@ -177,9 +177,7 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
   @impl true
   def handle_event("add_species_ref", %{"paragraph-id" => pid, "species-id" => sid}, socket) do
     add_ref(socket, pid, %{"reference_type" => "species", "species_id" => sid})
-    |> then(
-      &{:noreply, &1 |> assign(:species_results, []) |> assign(:species_paragraph_id, nil)}
-    )
+    |> then(&{:noreply, &1 |> assign(:species_results, []) |> assign(:species_paragraph_id, nil)})
   end
 
   @impl true
@@ -297,9 +295,12 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="max-w-3xl mx-auto pb-24">
+    <div class="profile-form max-w-3xl mx-auto pb-24">
       <div class="flex items-center justify-between mb-6">
-        <.link navigate={~p"/nutritionist/articles"} class="text-sm text-parchment-dim hover:text-parchment">
+        <.link
+          navigate={~p"/nutritionist/articles"}
+          class="text-sm text-parchment-dim hover:text-parchment"
+        >
           ← All articles
         </.link>
         <div class="flex items-center gap-3">

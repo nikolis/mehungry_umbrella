@@ -38,8 +38,10 @@
             )
           ]}
         >
-          <span class={["w-2 h-2 rounded-full", if(@diet_mode, do: "bg-basil", else: "bg-parchment-dim")]}>
-          </span>
+          <span class={[
+            "w-2 h-2 rounded-full",
+            if(@diet_mode, do: "bg-basil", else: "bg-parchment-dim")
+          ]}></span>
           #{@diet_mode_available} mode {if @diet_mode, do: "on", else: "off"}
         </button>
       </div>

@@ -218,7 +218,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
       <div class="flex items-center justify-between mb-4">
         <div>
           <h1 class="text-xl font-bold text-white">Review Queue</h1>
-          <p class="text-sm text-slate-400 mt-0.5">
+          <p class="text-sm text-parchment-dim mt-0.5">
             AI-generated recipes — review, approve, or reconsider
           </p>
         </div>
@@ -229,7 +229,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
               phx-change="select_config"
               disabled={@generating or @configs == []}
               title="Which bot config to generate for"
-              class="bg-slate-800 border border-slate-700/60 rounded-lg text-slate-200 text-sm px-2 py-1.5 focus:border-amber-500/50 focus:outline-none disabled:opacity-50 max-w-[16rem]"
+              class="bg-ink-panel border border-ink-panel2/60 rounded-lg text-parchment text-sm px-2 py-1.5 focus:border-amber-500/50 focus:outline-none disabled:opacity-50 max-w-[16rem]"
             >
               <%= if @configs == [] do %>
                 <option value="">No configs — create one</option>
@@ -248,7 +248,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
               phx-change="update_date"
               min={Date.to_iso8601(Date.utc_today())}
               disabled={@generating}
-              class="bg-slate-800 border border-slate-700/60 rounded-lg text-slate-200 text-sm px-2 py-1.5 focus:border-amber-500/50 focus:outline-none disabled:opacity-50"
+              class="bg-ink-panel border border-ink-panel2/60 rounded-lg text-parchment text-sm px-2 py-1.5 focus:border-amber-500/50 focus:outline-none disabled:opacity-50"
             />
             <button
               type="submit"
@@ -281,7 +281,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
           </form>
           <.link
             navigate={~p"/professional/ai-bot"}
-            class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 text-sm transition-colors"
+            class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel border border-ink-panel2/60 text-sm transition-colors"
           >
             <.icon name="hero-cog-6-tooth" class="h-4 w-4" /> Bot Config
           </.link>
@@ -289,7 +289,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
       </div>
 
       <!-- Status filter tabs -->
-      <div class="flex items-center gap-1 mb-5 bg-slate-800/60 rounded-xl p-1 w-fit">
+      <div class="flex items-center gap-1 mb-5 bg-ink-panel/60 rounded-xl p-1 w-fit">
         <%= for {label, status} <- @status_filters do %>
           <button
             phx-click="set_filter"
@@ -298,7 +298,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
               "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
               if(@status_filter == status,
                 do: filter_active_class(status),
-                else: "text-slate-400 hover:text-white hover:bg-slate-700"
+                else: "text-parchment-dim hover:text-white hover:bg-ink-panel2"
               )
             ]}
           >
@@ -322,13 +322,13 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
                 <%= if recipe.image_url do %>
                   <img src={recipe.image_url} class="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                 <% else %>
-                  <div class="w-10 h-10 rounded-lg bg-slate-700/60 flex-shrink-0 flex items-center justify-center">
-                    <.icon name="hero-photo" class="h-4 w-4 text-slate-500" />
+                  <div class="w-10 h-10 rounded-lg bg-ink-panel2/60 flex-shrink-0 flex items-center justify-center">
+                    <.icon name="hero-photo" class="h-4 w-4 text-parchment-dim" />
                   </div>
                 <% end %>
                 <div class="flex-1 min-w-0">
                   <div class="text-sm text-white font-medium truncate">{recipe.title}</div>
-                  <div class="text-xs text-slate-500 mt-0.5">
+                  <div class="text-xs text-parchment-dim mt-0.5">
                     Created {Calendar.strftime(NaiveDateTime.to_date(recipe.inserted_at), "%b %d, %Y")}
                   </div>
                 </div>
@@ -344,7 +344,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
                     phx-click="dismiss_one"
                     phx-value-id={recipe.id}
                     title="Dismiss — won't appear here again"
-                    class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-700 text-xs transition-colors"
+                    class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 text-xs transition-colors"
                   >
                     <.icon name="hero-x-mark" class="h-3 w-3" /> Dismiss
                   </button>
@@ -357,26 +357,26 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
 
       <%= if @total > 0 do %>
         <div class="flex items-center gap-3 mb-6">
-          <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-800 border border-slate-700/60 rounded-lg text-sm">
+          <div class="flex items-center gap-2 px-3 py-1.5 bg-ink-panel border border-ink-panel2/60 rounded-lg text-sm">
             <span class="text-white font-semibold">{@total}</span>
-            <span class="text-slate-400">recipes</span>
+            <span class="text-parchment-dim">recipes</span>
           </div>
-          <div class="flex items-center gap-2 px-3 py-1.5 bg-slate-800 border border-slate-700/60 rounded-lg text-sm">
-            <.icon name="hero-calendar-days" class="h-4 w-4 text-slate-400" />
+          <div class="flex items-center gap-2 px-3 py-1.5 bg-ink-panel border border-ink-panel2/60 rounded-lg text-sm">
+            <.icon name="hero-calendar-days" class="h-4 w-4 text-parchment-dim" />
             <span class="text-white font-semibold">{length(@grouped)}</span>
-            <span class="text-slate-400">dates</span>
+            <span class="text-parchment-dim">dates</span>
           </div>
         </div>
       <% end %>
 
       <%= if @grouped == [] do %>
         <div class="flex flex-col items-center justify-center py-24 text-center">
-          <div class="w-16 h-16 rounded-full bg-slate-800 border border-slate-700/60 flex items-center justify-center mb-4">
-            <.icon name="hero-inbox" class="h-8 w-8 text-slate-500" />
+          <div class="w-16 h-16 rounded-full bg-ink-panel border border-ink-panel2/60 flex items-center justify-center mb-4">
+            <.icon name="hero-inbox" class="h-8 w-8 text-parchment-dim" />
           </div>
-          <p class="text-slate-300 font-medium">No recipes in this category</p>
+          <p class="text-parchment font-medium">No recipes in this category</p>
           <%= if @status_filter == "pending_review" do %>
-            <p class="text-slate-500 text-sm mt-1 mb-6">
+            <p class="text-parchment-dim text-sm mt-1 mb-6">
               Generate new recipes to start filling the queue
             </p>
             <button
@@ -384,18 +384,18 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
               phx-value-bot_config_id={@selected_config_id}
               phx-value-target_date={@selected_date}
               disabled={@generating or is_nil(@selected_config_id)}
-              class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+              class="flex items-center gap-2 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors disabled:opacity-50"
             >
               <.icon name="hero-bolt" class="h-4 w-4" /> Generate Now
             </button>
             <%= if @selected_config_id do %>
-              <p class="text-slate-600 text-xs mt-2">
+              <p class="text-parchment-dim text-xs mt-2">
                 Generating for
-                <span class="text-slate-400">{config_label(@selected_config_id, @configs)}</span>
+                <span class="text-parchment-dim">{config_label(@selected_config_id, @configs)}</span>
               </p>
             <% end %>
           <% else %>
-            <p class="text-slate-500 text-sm mt-1">Switch to a different filter to see recipes</p>
+            <p class="text-parchment-dim text-sm mt-1">Switch to a different filter to see recipes</p>
           <% end %>
         </div>
       <% else %>
@@ -403,24 +403,24 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
           <%= for {date, recipes} <- @grouped do %>
             <div>
               <div class="flex items-center gap-3 mb-3">
-                <span class="text-xs font-semibold text-slate-500 uppercase tracking-widest">
+                <span class="text-xs font-semibold text-parchment-dim uppercase tracking-widest">
                   {Calendar.strftime(date, "%A, %B %d %Y")}
                 </span>
-                <div class="flex-1 border-t border-slate-700/40"></div>
-                <span class="text-xs text-slate-600">{length(recipes)} recipe{if length(recipes) != 1,
+                <div class="flex-1 border-t border-ink-panel2/40"></div>
+                <span class="text-xs text-parchment-dim">{length(recipes)} recipe{if length(recipes) != 1,
                   do: "s"}</span>
               </div>
               <div class="space-y-2">
                 <%= for recipe <- recipes do %>
-                  <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4 flex items-center gap-4 hover:border-slate-600 transition-colors">
+                  <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 flex items-center gap-4 hover:border-ink-panel2 transition-colors">
                     <%= if recipe.recipe.image_url do %>
                       <img
                         src={recipe.recipe.image_url}
                         class="w-14 h-14 rounded-lg object-cover flex-shrink-0"
                       />
                     <% else %>
-                      <div class="w-14 h-14 rounded-lg bg-slate-700/60 flex-shrink-0 flex items-center justify-center">
-                        <.icon name="hero-photo" class="h-6 w-6 text-slate-500" />
+                      <div class="w-14 h-14 rounded-lg bg-ink-panel2/60 flex-shrink-0 flex items-center justify-center">
+                        <.icon name="hero-photo" class="h-6 w-6 text-parchment-dim" />
                       </div>
                     <% end %>
                     <div class="flex-1 min-w-0">
@@ -445,7 +445,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
                     <div class="flex items-center gap-2 flex-shrink-0">
                       <.link
                         navigate={~p"/professional/ai-bot/review/#{recipe.id}"}
-                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-xs font-medium transition-colors"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-xs font-medium transition-colors"
                       >
                         <.icon name="hero-eye" class="h-3.5 w-3.5" /> Review
                       </.link>
@@ -455,7 +455,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
                             phx-click="approve"
                             phx-value-id={recipe.id}
                             title="Re-approve"
-                            class="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                            class="p-1.5 rounded-lg text-parchment-dim hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
                           >
                             <.icon name="hero-check-circle" class="h-4 w-4" />
                           </button>
@@ -466,7 +466,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
                             phx-value-id={recipe.id}
                             data-confirm="Reject this recipe?"
                             title="Reject"
-                            class="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            class="p-1.5 rounded-lg text-parchment-dim hover:text-red-400 hover:bg-red-500/10 transition-colors"
                           >
                             <.icon name="hero-x-mark" class="h-4 w-4" />
                           </button>
@@ -476,7 +476,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
                           phx-click="reject"
                           phx-value-id={recipe.id}
                           data-confirm="Reject this recipe?"
-                          class="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          class="p-1.5 rounded-lg text-parchment-dim hover:text-red-400 hover:bg-red-500/10 transition-colors"
                           title="Reject"
                         >
                           <.icon name="hero-x-mark" class="h-4 w-4" />
@@ -502,7 +502,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
   defp meal_badge_class("lunch"), do: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
   defp meal_badge_class("afternoon_snack"), do: "bg-rose-500/20 text-rose-400 border-rose-500/30"
   defp meal_badge_class("dinner"), do: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30"
-  defp meal_badge_class(_), do: "bg-slate-700/50 text-slate-400 border-slate-600/40"
+  defp meal_badge_class(_), do: "bg-ink-panel2/50 text-parchment-dim border-ink-panel2/40"
 
   defp status_badge_class("pending_review"),
     do: "bg-amber-500/20 text-amber-400 border-amber-500/30"
@@ -512,7 +512,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
 
   defp status_badge_class("rejected"), do: "bg-red-500/20 text-red-400 border-red-500/30"
   defp status_badge_class("published"), do: "bg-blue-500/20 text-blue-400 border-blue-500/30"
-  defp status_badge_class(_), do: "bg-slate-700/50 text-slate-400 border-slate-600/40"
+  defp status_badge_class(_), do: "bg-ink-panel2/50 text-parchment-dim border-ink-panel2/40"
 
   defp status_label("pending_review"), do: "Pending"
   defp status_label("approved"), do: "Approved"
@@ -524,7 +524,7 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
   defp filter_active_class("approved"), do: "bg-emerald-500/20 text-emerald-300"
   defp filter_active_class("rejected"), do: "bg-red-500/20 text-red-300"
   defp filter_active_class("published"), do: "bg-blue-500/20 text-blue-300"
-  defp filter_active_class(_), do: "bg-slate-700 text-white"
+  defp filter_active_class(_), do: "bg-ink-panel2 text-white"
 
   # Dropdown label: a readable name for the config plus its month/year, e.g.
   # "Kidney Stones (condition) · 8/2026" or "Mediterranean Summer · 8/2026".

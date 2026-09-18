@@ -84,7 +84,9 @@ defmodule MehungryWeb.LiveHelpers do
           liked_now? = recipe_id not in current
 
           new_recipes =
-            if liked_now?, do: [recipe_id | current], else: Enum.reject(current, &(&1 == recipe_id))
+            if liked_now?,
+              do: [recipe_id | current],
+              else: Enum.reject(current, &(&1 == recipe_id))
 
           socket =
             socket
@@ -119,7 +121,9 @@ defmodule MehungryWeb.LiveHelpers do
           following_now? = follow_id not in current
 
           new_follows =
-            if following_now?, do: [follow_id | current], else: Enum.reject(current, &(&1 == follow_id))
+            if following_now?,
+              do: [follow_id | current],
+              else: Enum.reject(current, &(&1 == follow_id))
 
           socket =
             socket

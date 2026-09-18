@@ -190,6 +190,11 @@ defmodule MehungryWeb.Router do
       live "/profile", NutritionistLive.ProfileEdit, :edit
       live "/invitations", NutritionistLive.Invitations, :index
       live "/clients", NutritionistLive.Clients, :index
+      live "/records", NutritionistLive.Records, :index
+      live "/records/import", NutritionistLive.Records, :import
+      live "/records/new", NutritionistLive.ClientRecordEditor, :new
+      live "/records/:id", NutritionistLive.ClientRecord, :show
+      live "/records/:id/edit", NutritionistLive.ClientRecordEditor, :edit
       live "/clients/:id", NutritionistLive.ClientDetail, :show
       live "/clients/:id/calendar", NutritionistLive.ClientCalendar, :index
       live "/clients/:id/calendar/edit/:meal_id", NutritionistLive.ClientCalendar, :edit

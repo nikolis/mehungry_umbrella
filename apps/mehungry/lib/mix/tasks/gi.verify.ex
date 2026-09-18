@@ -60,8 +60,14 @@ defmodule Mix.Tasks.Gi.Verify do
     shell.info("  rows:            #{total}")
     shell.info("  with GI value:   #{with_gi}  (#{pct(with_gi, total)}%)")
     shell.info("  with food name:  #{named}  (#{pct(named, total)}%)")
-    shell.info("  unpublished (UO): #{unpublished}  (#{pct(unpublished, total)}%) — un-re-derivable")
-    shell.info("  cited (re-derivable ceiling): #{total - unpublished}  (#{pct(total - unpublished, total)}%)")
+
+    shell.info(
+      "  unpublished (UO): #{unpublished}  (#{pct(unpublished, total)}%) — un-re-derivable"
+    )
+
+    shell.info(
+      "  cited (re-derivable ceiling): #{total - unpublished}  (#{pct(total - unpublished, total)}%)"
+    )
 
     shell.info("  categories: #{rows |> Enum.map(& &1.category) |> Enum.uniq() |> length()}")
 

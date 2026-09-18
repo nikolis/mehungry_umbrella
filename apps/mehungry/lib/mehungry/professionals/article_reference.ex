@@ -64,7 +64,8 @@ defmodule Mehungry.Professionals.ArticleReference do
     |> foreign_key_constraint(:species_id)
     |> foreign_key_constraint(:compound_id)
     |> foreign_key_constraint(:condition_id)
-    |> unique_constraint([:paragraph_id, :reference_type, :study_id, :species_id, :compound_id, :condition_id],
+    |> unique_constraint(
+      [:paragraph_id, :reference_type, :study_id, :species_id, :compound_id, :condition_id],
       name: :professional_article_references_unique_target
     )
   end

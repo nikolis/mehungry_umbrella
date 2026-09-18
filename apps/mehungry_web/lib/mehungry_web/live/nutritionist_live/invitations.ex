@@ -99,9 +99,7 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
           <%= if @invite_error do %>
             <p class="text-red-400 text-sm">{@invite_error}</p>
           <% end %>
-          <button type="submit" class="btn btn-sm bg-paprika hover:bg-paprika-soft text-ink border-0">
-            Send Invitation
-          </button>
+          <.action variant={:primary} size={:sm} type="submit">Send invitation</.action>
         </form>
       </div>
 

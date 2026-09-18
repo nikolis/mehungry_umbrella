@@ -101,7 +101,12 @@ defmodule Mehungry.AI.Agent do
       |> Map.put(:model, Keyword.get(opts, :model, "default"))
 
     start = System.monotonic_time()
-    :telemetry.execute([:mehungry, :ai, :agent, :run, :start], %{system_time: System.system_time()}, meta)
+
+    :telemetry.execute(
+      [:mehungry, :ai, :agent, :run, :start],
+      %{system_time: System.system_time()},
+      meta
+    )
 
     {result, iterations} = loop(messages, handler, context, request_base, 0, max_iter, meta)
 

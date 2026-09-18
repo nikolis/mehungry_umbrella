@@ -29,7 +29,7 @@
       <.link patch={~p"/professional/measurement_units/new"}>
         <button
           type="button"
-          class="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm transition-colors"
+          class="flex items-center gap-2 px-4 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-white font-semibold text-sm transition-colors"
         >
           <.icon name="hero-plus" class="w-4 h-4" /> New Measurement Unit
         </button>
@@ -38,9 +38,9 @@
   </div>
 
   <%= if @reconcile_run do %>
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4 mb-6">
       <div class="flex items-center justify-between mb-2">
-        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">
           NDB-number reconciliation
           <span class={[
             "ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
@@ -55,7 +55,7 @@
         <p class="text-sm font-semibold text-white">{reconcile_percent(@reconcile_run)}%</p>
       </div>
 
-      <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden mb-3">
+      <div class="w-full bg-ink-panel2 rounded-full h-2 overflow-hidden mb-3">
         <div
           class={[
             "h-2 rounded-full transition-all duration-500",
@@ -67,7 +67,7 @@
       </div>
 
       <div class="flex flex-wrap gap-4 text-sm">
-        <span class="text-slate-400">Total
+        <span class="text-parchment-dim">Total
         <span class="text-white font-semibold">{@reconcile_run.total}</span></span>
         <span class="text-green-400">Renamed
         <span class="font-semibold">{@reconcile_run.completed}</span></span>
@@ -86,7 +86,7 @@
   <% end %>
 
   <!-- Table header — hidden on mobile -->
-  <div class="hidden sm:grid sm:grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-700 mb-1">
+  <div class="hidden sm:grid sm:grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-parchment-dim border-b border-ink-panel2 mb-1">
     <div class="col-span-1">ID</div>
     <div class="col-span-4">Name</div>
     <div class="col-span-3">Alternate name</div>
@@ -97,18 +97,18 @@
   <div id="measurement_units_container" phx-update="stream" class="space-y-1">
     <%= for {dom_id, unit} <- @streams.measurement_units do %>
       <div class="relative group" id={dom_id}>
-        <div class="bg-slate-800/60 hover:bg-slate-800 border border-transparent hover:border-slate-700 rounded-xl px-4 py-3 transition-colors">
+        <div class="bg-ink-panel/60 hover:bg-ink-panel border border-transparent hover:border-ink-panel2 rounded-xl px-4 py-3 transition-colors">
           <!-- Mobile layout: stacked -->
           <div class="sm:hidden">
             <div class="flex items-start justify-between gap-2">
               <div>
-                <span class="text-slate-500 text-xs mr-1">#{unit.id}</span>
+                <span class="text-parchment-dim text-xs mr-1">#{unit.id}</span>
                 <span class="text-white font-medium">{unit.name}</span>
               </div>
               <div class="flex gap-3 shrink-0">
                 <.link
                   patch={~p"/professional/measurement_units/#{unit.id}/edit"}
-                  class="text-primary-400 hover:text-primary-300 text-xs font-semibold"
+                  class="text-paprika-soft hover:text-paprika-soft text-xs font-semibold"
                 >
                   Edit
                 </.link>
@@ -122,27 +122,27 @@
                 </.link>
               </div>
             </div>
-            <div class="mt-1 flex flex-wrap gap-2 text-xs text-slate-400">
+            <div class="mt-1 flex flex-wrap gap-2 text-xs text-parchment-dim">
               <span :if={unit.alternate_name}>{unit.alternate_name}</span>
               <span :if={unit.url} class="truncate">{unit.url}</span>
             </div>
           </div>
           <!-- Desktop layout: grid -->
           <div class="hidden sm:grid sm:grid-cols-12 gap-2 items-center">
-            <div class="col-span-1 text-slate-500 text-sm">#{unit.id}</div>
+            <div class="col-span-1 text-parchment-dim text-sm">#{unit.id}</div>
             <div class="col-span-4 text-white text-sm font-medium truncate">
               {unit.name}
             </div>
-            <div class="col-span-3 text-slate-400 text-sm truncate">
+            <div class="col-span-3 text-parchment-dim text-sm truncate">
               {unit.alternate_name}
             </div>
-            <div class="col-span-3 text-slate-400 text-sm truncate">
+            <div class="col-span-3 text-parchment-dim text-sm truncate">
               {unit.url}
             </div>
             <div class="col-span-1 flex justify-end gap-3">
               <.link
                 patch={~p"/professional/measurement_units/#{unit.id}/edit"}
-                class="opacity-0 group-hover:opacity-100 text-primary-400 hover:text-primary-300 text-xs font-semibold transition-opacity"
+                class="opacity-0 group-hover:opacity-100 text-paprika-soft hover:text-paprika-soft text-xs font-semibold transition-opacity"
               >
                 Edit
               </.link>

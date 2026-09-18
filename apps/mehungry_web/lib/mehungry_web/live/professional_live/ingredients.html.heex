@@ -30,7 +30,7 @@
       <.link patch="/professional/ingredients/new">
         <button
           type="button"
-          class="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white font-semibold text-sm transition-colors"
+          class="flex items-center gap-2 px-4 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-white font-semibold text-sm transition-colors"
         >
           <.icon name="hero-plus" class="w-4 h-4" /> New Ingredient
         </button>
@@ -39,16 +39,16 @@
   </div>
 
   <%!-- Translation coverage stats --%>
-  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-4">
-    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+  <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4 mb-4">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-3">
       Translation Coverage
     </h2>
     <div class="flex items-center gap-2 mb-1">
-      <span class="text-slate-400 text-sm w-24">Total</span>
+      <span class="text-parchment-dim text-sm w-24">Total</span>
       <span class="text-white font-semibold text-sm">{@translation_stats.total}</span>
     </div>
     <%= if @translation_stats.languages == [] do %>
-      <p class="text-slate-500 text-sm italic">No languages configured yet.</p>
+      <p class="text-parchment-dim text-sm italic">No languages configured yet.</p>
     <% else %>
       <%= for stat <- @translation_stats.languages do %>
         <% pct =
@@ -57,12 +57,12 @@
             else: 0 %>
         <div class="mt-2">
           <div class="flex items-center justify-between mb-1">
-            <span class="text-slate-300 text-sm font-medium uppercase">{stat.language}</span>
-            <span class="text-slate-400 text-xs">
+            <span class="text-parchment text-sm font-medium uppercase">{stat.language}</span>
+            <span class="text-parchment-dim text-xs">
               {stat.translated} / {stat.total} ({pct}%)
             </span>
           </div>
-          <div class="w-full bg-slate-700 rounded-full h-1.5">
+          <div class="w-full bg-ink-panel2 rounded-full h-1.5">
             <div
               class="bg-emerald-500 h-1.5 rounded-full transition-all"
               style={"width: #{pct}%"}
@@ -74,7 +74,7 @@
     <% end %>
   </div>
 
-  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 mb-6">
+  <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4 mb-6">
     <form id="ingredients-search-form" phx-change="search_change">
       <div class="flex flex-col sm:flex-row gap-3 flex-wrap">
         <div class="flex-1 min-w-0">
@@ -98,12 +98,12 @@
           />
         </div>
         <%!-- Search language toggle — overrides user profile preference for this page only --%>
-        <div class="flex items-center gap-1 bg-slate-700 rounded-lg p-0.5 self-center">
+        <div class="flex items-center gap-1 bg-ink-panel2 rounded-lg p-0.5 self-center">
           <button
             type="button"
             phx-click="set_search_language"
             phx-value-lang="en"
-            class={"px-3 py-1.5 rounded-md text-xs font-semibold transition-colors #{if @search_language == "en", do: "bg-slate-500 text-white", else: "text-slate-400 hover:text-white"}"}
+            class={"px-3 py-1.5 rounded-md text-xs font-semibold transition-colors #{if @search_language == "en", do: "bg-ink-panel2 text-white", else: "text-parchment-dim hover:text-white"}"}
           >
             EN
           </button>
@@ -111,7 +111,7 @@
             type="button"
             phx-click="set_search_language"
             phx-value-lang="el"
-            class={"px-3 py-1.5 rounded-md text-xs font-semibold transition-colors #{if @search_language == "el", do: "bg-primary-500 text-white", else: "text-slate-400 hover:text-white"}"}
+            class={"px-3 py-1.5 rounded-md text-xs font-semibold transition-colors #{if @search_language == "el", do: "bg-paprika text-white", else: "text-parchment-dim hover:text-white"}"}
           >
             ΕΛ
           </button>
@@ -139,14 +139,14 @@
   </div>
 
   <%= if @total_count do %>
-    <p class="text-sm text-slate-400 mb-2">
+    <p class="text-sm text-parchment-dim mb-2">
       <span class="text-white font-semibold">{@total_count}</span>
       {if @total_count == 1, do: "ingredient", else: "ingredients"} found
     </p>
   <% end %>
 
   <!-- Table header — hidden on mobile -->
-  <div class="hidden sm:grid sm:grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-700 mb-1">
+  <div class="hidden sm:grid sm:grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-parchment-dim border-b border-ink-panel2 mb-1">
     <div class="col-span-1">ID</div>
     <div class="col-span-5">Name</div>
     <div class="col-span-3">Class</div>
@@ -164,48 +164,48 @@
     <%= for {dom_id, ingredient} <- @streams.ingredients do %>
       <div class="relative group" id={dom_id}>
         <.link patch={"/professional/ingredients/" <> Integer.to_string(ingredient.id) <> "/show"}>
-          <div class="bg-slate-800/60 hover:bg-slate-800 border border-transparent hover:border-slate-700 rounded-xl px-4 py-3 transition-colors cursor-pointer">
+          <div class="bg-ink-panel/60 hover:bg-ink-panel border border-transparent hover:border-ink-panel2 rounded-xl px-4 py-3 transition-colors cursor-pointer">
             <!-- Mobile layout: stacked -->
             <div class="sm:hidden">
               <div class="flex items-start justify-between gap-2">
                 <div>
-                  <span class="text-slate-500 text-xs mr-1">#{ingredient.id}</span>
+                  <span class="text-parchment-dim text-xs mr-1">#{ingredient.id}</span>
                   <span class="text-white font-medium">{ingredient.name}</span>
                 </div>
                 <.link
                   patch={"/professional/ingredients/" <> Integer.to_string(ingredient.id) <> "/edit"}
-                  class="text-primary-400 hover:text-primary-300 text-xs font-semibold shrink-0"
+                  class="text-paprika-soft hover:text-paprika-soft text-xs font-semibold shrink-0"
                 >
                   Edit
                 </.link>
               </div>
               <div class="mt-1 flex flex-wrap gap-2">
-                <span class="text-xs text-slate-400 bg-slate-700 px-2 py-0.5 rounded-full">
+                <span class="text-xs text-parchment-dim bg-ink-panel2 px-2 py-0.5 rounded-full">
                   {ingredient.food_class}
                 </span>
-                <span class="text-xs text-slate-400">
+                <span class="text-xs text-parchment-dim">
                   {ingredient.category.name}
                 </span>
               </div>
             </div>
             <!-- Desktop layout: grid -->
             <div class="hidden sm:grid sm:grid-cols-12 gap-2 items-center">
-              <div class="col-span-1 text-slate-500 text-sm">#{ingredient.id}</div>
+              <div class="col-span-1 text-parchment-dim text-sm">#{ingredient.id}</div>
               <div class="col-span-5 text-white text-sm font-medium truncate">
                 {ingredient.name}
               </div>
               <div class="col-span-3">
-                <span class="text-xs text-slate-400 bg-slate-700 px-2 py-0.5 rounded-full">
+                <span class="text-xs text-parchment-dim bg-ink-panel2 px-2 py-0.5 rounded-full">
                   {ingredient.food_class}
                 </span>
               </div>
-              <div class="col-span-2 text-slate-400 text-sm truncate">
+              <div class="col-span-2 text-parchment-dim text-sm truncate">
                 {ingredient.category.name}
               </div>
               <div class="col-span-1 flex justify-end">
                 <.link
                   patch={"/professional/ingredients/" <> Integer.to_string(ingredient.id) <> "/edit"}
-                  class="opacity-0 group-hover:opacity-100 text-primary-400 hover:text-primary-300 text-xs font-semibold transition-opacity"
+                  class="opacity-0 group-hover:opacity-100 text-paprika-soft hover:text-paprika-soft text-xs font-semibold transition-opacity"
                 >
                   Edit
                 </.link>
@@ -218,34 +218,34 @@
                   ingredient.nutrient_data_source || ingredient.publication_date ||
                   (is_integer(ingredient.version) && ingredient.version > 0)
               }
-              class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500"
+              class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-parchment-dim"
             >
               <span :if={ingredient.data_type} class="inline-flex items-center gap-1">
-                <span class="text-slate-600 uppercase tracking-wide">Type</span>
-                <span class="text-slate-300">{ingredient.data_type}</span>
+                <span class="text-parchment-dim uppercase tracking-wide">Type</span>
+                <span class="text-parchment">{ingredient.data_type}</span>
               </span>
               <span :if={ingredient.fdc_id} class="inline-flex items-center gap-1">
-                <span class="text-slate-600 uppercase tracking-wide">FDC</span>
-                <span class="text-slate-300">{ingredient.fdc_id}</span>
+                <span class="text-parchment-dim uppercase tracking-wide">FDC</span>
+                <span class="text-parchment">{ingredient.fdc_id}</span>
               </span>
               <span :if={ingredient.ndb_number} class="inline-flex items-center gap-1">
-                <span class="text-slate-600 uppercase tracking-wide">NDB</span>
-                <span class="text-slate-300">{ingredient.ndb_number}</span>
+                <span class="text-parchment-dim uppercase tracking-wide">NDB</span>
+                <span class="text-parchment">{ingredient.ndb_number}</span>
               </span>
               <span :if={ingredient.nutrient_data_source} class="inline-flex items-center gap-1">
-                <span class="text-slate-600 uppercase tracking-wide">Source</span>
-                <span class="text-slate-300">{ingredient.nutrient_data_source}</span>
+                <span class="text-parchment-dim uppercase tracking-wide">Source</span>
+                <span class="text-parchment">{ingredient.nutrient_data_source}</span>
               </span>
               <span :if={ingredient.publication_date} class="inline-flex items-center gap-1">
-                <span class="text-slate-600 uppercase tracking-wide">Pub</span>
-                <span class="text-slate-300">{ingredient.publication_date}</span>
+                <span class="text-parchment-dim uppercase tracking-wide">Pub</span>
+                <span class="text-parchment">{ingredient.publication_date}</span>
               </span>
               <span
                 :if={is_integer(ingredient.version) && ingredient.version > 0}
                 class="inline-flex items-center gap-1"
               >
-                <span class="text-slate-600 uppercase tracking-wide">v</span>
-                <span class="text-slate-300">{ingredient.version}</span>
+                <span class="text-parchment-dim uppercase tracking-wide">v</span>
+                <span class="text-parchment">{ingredient.version}</span>
               </span>
             </div>
           </div>

@@ -254,14 +254,14 @@ defmodule MehungryWeb.ProfessionalLive.AnalyticsLive do
 
   # ---------- Render helpers ----------
 
-  def source_badge_class("search"), do: "bg-primary-500/20 text-primary-400 border-primary-500/30"
+  def source_badge_class("search"), do: "bg-paprika/20 text-paprika-soft border-paprika/30"
   def source_badge_class("social"), do: "bg-blue-500/20 text-blue-400 border-blue-500/30"
   def source_badge_class("referral"), do: "bg-purple-500/20 text-purple-400 border-purple-500/30"
 
   def source_badge_class("internal"),
     do: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
 
-  def source_badge_class(_), do: "bg-slate-700 text-slate-400 border-slate-600"
+  def source_badge_class(_), do: "bg-ink-panel2 text-parchment-dim border-ink-panel2"
 
   def source_label("search"), do: "Search"
   def source_label("social"), do: "Social"

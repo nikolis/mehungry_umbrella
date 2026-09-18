@@ -273,7 +273,10 @@ defmodule Mehungry.AI.Agents.NutritionistAgent do
         }
       end)
 
-    acc = %{acc | offered: Enum.reduce(recipes, offered, fn r, s -> MapSet.put(s, r.recipe_id) end)}
+    acc = %{
+      acc
+      | offered: Enum.reduce(recipes, offered, fn r, s -> MapSet.put(s, r.recipe_id) end)
+    }
 
     result =
       if recipes == [] do

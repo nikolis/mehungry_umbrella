@@ -63,24 +63,24 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
     <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-6">
       <div>
         <h1 class="text-2xl font-bold text-white">Maintenance</h1>
-        <p class="text-slate-400 text-sm mt-0.5">Admin operations and data repair tools</p>
+        <p class="text-parchment-dim text-sm mt-0.5">Admin operations and data repair tools</p>
       </div>
 
       <!-- Nutrient Recalculation -->
-      <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+      <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-6">
         <div class="flex items-start justify-between gap-4">
           <div>
             <h2 class="text-lg font-semibold text-white">Recalculate Recipe Nutrients</h2>
-            <p class="text-slate-400 text-sm mt-1 max-w-lg">
+            <p class="text-parchment-dim text-sm mt-1 max-w-lg">
               Re-runs the nutrient calculation pipeline for every recipe in the database.
               Each recipe is enqueued as an Oban job and processed in the background.
               Use this after fixing a calculation bug (e.g. the energy deduplication fix)
               to backfill correct values for existing recipes.
             </p>
-            <div class="mt-3 flex items-center gap-3 text-sm text-slate-400">
+            <div class="mt-3 flex items-center gap-3 text-sm text-parchment-dim">
               <span class="inline-flex items-center gap-1.5">
                 <svg
-                  class="w-4 h-4 text-primary-500"
+                  class="w-4 h-4 text-paprika"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -116,8 +116,8 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
             class={[
               "flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition",
               if(@running,
-                do: "bg-slate-700 text-slate-400 cursor-not-allowed",
-                else: "bg-primary-500 hover:bg-primary-600 text-white"
+                do: "bg-ink-panel2 text-parchment-dim cursor-not-allowed",
+                else: "bg-paprika hover:bg-paprika-soft text-white"
               )
             ]}
             disabled={@running}
@@ -149,20 +149,20 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
       </div>
 
       <!-- Ingredient Interaction Backfill -->
-      <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+      <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-6">
         <div class="flex items-start justify-between gap-4">
           <div>
             <h2 class="text-lg font-semibold text-white">Backfill Ingredient Interactions</h2>
-            <p class="text-slate-400 text-sm mt-1 max-w-lg">
+            <p class="text-parchment-dim text-sm mt-1 max-w-lg">
               Re-computes stored nutrient interaction badges for every recipe.
               Interactions are derived from the recipe's existing nutrient data — no ingredient
               DB queries are needed. Use this after updating interaction rules or after running
               a nutrient recalculation to propagate fresh results.
             </p>
-            <div class="mt-3 flex items-center gap-3 text-sm text-slate-400">
+            <div class="mt-3 flex items-center gap-3 text-sm text-parchment-dim">
               <span class="inline-flex items-center gap-1.5">
                 <svg
-                  class="w-4 h-4 text-primary-500"
+                  class="w-4 h-4 text-paprika"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -198,8 +198,8 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
             class={[
               "flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition",
               if(@interactions_running,
-                do: "bg-slate-700 text-slate-400 cursor-not-allowed",
-                else: "bg-primary-500 hover:bg-primary-600 text-white"
+                do: "bg-ink-panel2 text-parchment-dim cursor-not-allowed",
+                else: "bg-paprika hover:bg-paprika-soft text-white"
               )
             ]}
             disabled={@interactions_running}
@@ -231,20 +231,20 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
       </div>
 
       <!-- Recipe Embedding Backfill -->
-      <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+      <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-6">
         <div class="flex items-start justify-between gap-4">
           <div>
             <h2 class="text-lg font-semibold text-white">Backfill Recipe Embeddings</h2>
-            <p class="text-slate-400 text-sm mt-1 max-w-lg">
+            <p class="text-parchment-dim text-sm mt-1 max-w-lg">
               Generates semantic vector embeddings for all recipes that don't have one yet.
               Embeddings power the AI agents' semantic recipe search — required for
               nutritionist and user meal plan generation to work well.
               Each recipe is processed as a background Oban job via OpenAI.
             </p>
-            <div class="mt-3 flex items-center gap-3 text-sm text-slate-400">
+            <div class="mt-3 flex items-center gap-3 text-sm text-parchment-dim">
               <span class="inline-flex items-center gap-1.5">
                 <svg
-                  class="w-4 h-4 text-primary-500"
+                  class="w-4 h-4 text-paprika"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -306,8 +306,8 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
             class={[
               "flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition",
               if(@embeddings_running || @embeddings_missing == 0,
-                do: "bg-slate-700 text-slate-400 cursor-not-allowed",
-                else: "bg-primary-500 hover:bg-primary-600 text-white"
+                do: "bg-ink-panel2 text-parchment-dim cursor-not-allowed",
+                else: "bg-paprika hover:bg-paprika-soft text-white"
               )
             ]}
             disabled={@embeddings_running || @embeddings_missing == 0}

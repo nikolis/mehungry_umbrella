@@ -200,7 +200,11 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
     {result, acc}
   end
 
-  defp handle_tool("search_catalog", %{"query" => query}, %{user_id: user_id, offered: offered} = acc) do
+  defp handle_tool(
+         "search_catalog",
+         %{"query" => query},
+         %{user_id: user_id, offered: offered} = acc
+       ) do
     recipes =
       RecipeVectorSearch.search(query, user_id: user_id, limit: 20)
       |> Enum.map(fn r ->

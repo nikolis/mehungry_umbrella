@@ -23,9 +23,9 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Index do
     <div class="max-w-5xl mx-auto">
       <div class="mb-6">
         <h1 class="text-xl font-semibold text-white flex items-center gap-2">
-          <.icon name="hero-language" class="h-6 w-6 text-primary-400" /> Translation Coverage
+          <.icon name="hero-language" class="h-6 w-6 text-paprika-soft" /> Translation Coverage
         </h1>
-        <p class="text-sm text-slate-400 mt-1">
+        <p class="text-sm text-parchment-dim mt-1">
           Every DB resource shown to users, and how much of it is translated per language.
           AI drafts the translation; a human verifies it.
         </p>
@@ -33,15 +33,15 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Index do
 
       <div class="space-y-3">
         <%= for {label, rows} <- Enum.group_by(@rows, & &1.label) |> Enum.sort_by(fn {_l, [r | _]} -> r.pct end) do %>
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4">
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-2">
                 <span class="font-semibold text-white text-sm">{label}</span>
-                <span class="text-xs text-slate-500">{hd(rows).total} items</span>
+                <span class="text-xs text-parchment-dim">{hd(rows).total} items</span>
               </div>
               <.link
                 navigate={~p"/professional/translations/#{hd(rows).key}"}
-                class="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+                class="text-xs text-paprika-soft hover:text-paprika-soft flex items-center gap-1"
               >
                 Open panel <.icon name="hero-arrow-right" class="h-3.5 w-3.5" />
               </.link>
@@ -50,7 +50,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Index do
             <div class="space-y-2">
               <%= for row <- Enum.sort_by(rows, & &1.language) do %>
                 <div class="flex items-center gap-3">
-                  <span class="inline-flex items-center justify-center w-9 px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px] font-bold uppercase">
+                  <span class="inline-flex items-center justify-center w-9 px-1.5 py-0.5 rounded bg-ink-panel2 text-parchment text-[10px] font-bold uppercase">
                     {row.language}
                   </span>
                   <div class="flex-1">
@@ -76,7 +76,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Index do
 
     ~H"""
     <div
-      class="flex h-2.5 w-full rounded-full overflow-hidden bg-slate-700"
+      class="flex h-2.5 w-full rounded-full overflow-hidden bg-ink-panel2"
       title={"verified #{@row.verified} · draft #{@row.ai_draft} · missing #{@row.missing}"}
     >
       <div class="bg-emerald-500 h-full" style={"width: #{pct(@row.verified, @total)}%"}></div>

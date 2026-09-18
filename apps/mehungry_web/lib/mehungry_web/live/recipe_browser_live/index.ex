@@ -732,7 +732,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     base
   end
 
- defp jsonld_author(recipe) do
+  defp jsonld_author(recipe) do
     cond do
       is_binary(recipe.author) and String.trim(recipe.author) != "" ->
         String.trim(recipe.author)

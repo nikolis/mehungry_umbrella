@@ -180,7 +180,7 @@ defmodule MehungryWeb.ProfessionalLive.SeoLive do
 
   def trend_color(pct) when pct > 0, do: "text-emerald-400"
   def trend_color(pct) when pct < 0, do: "text-red-400"
-  def trend_color(_), do: "text-slate-400"
+  def trend_color(_), do: "text-parchment-dim"
 
   def trend_arrow(pct) when pct > 0, do: "↑"
   def trend_arrow(pct) when pct < 0, do: "↓"
@@ -192,11 +192,11 @@ defmodule MehungryWeb.ProfessionalLive.SeoLive do
   def engine_dot_color("Yahoo"), do: "bg-purple-400"
   def engine_dot_color("Ecosia"), do: "bg-green-400"
   def engine_dot_color("Brave"), do: "bg-orange-500"
-  def engine_dot_color(_), do: "bg-slate-500"
+  def engine_dot_color(_), do: "bg-ink-panel2"
 
   def crawler_dot_color("Googlebot"), do: "text-blue-400"
   def crawler_dot_color("Bingbot"), do: "text-teal-400"
-  def crawler_dot_color(_), do: "text-slate-400"
+  def crawler_dot_color(_), do: "text-parchment-dim"
 
   def short_path(nil), do: "Home"
   def short_path(""), do: "Home"

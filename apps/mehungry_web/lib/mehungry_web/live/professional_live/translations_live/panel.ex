@@ -268,26 +268,26 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
         <button
           phx-click="ai_all"
           data-confirm={"Queue AI translation for all #{@counts.missing} missing #{@descriptor.label}? Each becomes an unverified draft."}
-          class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors disabled:opacity-40"
+          class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors disabled:opacity-40"
           disabled={@counts.missing == 0}
         >
           <.icon name="hero-cpu-chip" class="h-4 w-4" /> AI-translate all missing
         </button>
       </div>
 
-      <div class="bg-slate-800 border border-slate-700/60 rounded-xl divide-y divide-slate-700/50">
+      <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl divide-y divide-ink-panel2/50">
         <%= if @items == [] do %>
-          <div class="p-6 text-center text-sm text-slate-500">Nothing here.</div>
+          <div class="p-6 text-center text-sm text-parchment-dim">Nothing here.</div>
         <% end %>
         <%= for item <- @items do %>
           <div class="flex items-center gap-3 px-4 py-2.5">
             <.status_dot status={status_of(item.translation)} />
             <div class="flex-1 min-w-0">
-              <div class="text-sm text-slate-200 truncate">
+              <div class="text-sm text-parchment truncate">
                 {Map.get(item.base, @descriptor.name_field)}
               </div>
               <%= if item.translation && translation_preview(@descriptor, item.translation) do %>
-                <div class="text-xs text-slate-400 truncate">
+                <div class="text-xs text-parchment-dim truncate">
                   → {translation_preview(@descriptor, item.translation)}
                 </div>
               <% end %>
@@ -295,7 +295,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
             <div class="flex items-center gap-1.5">
               <.link
                 navigate={~p"/professional/translations/#{@descriptor.key}/#{item.base.id}"}
-                class="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs transition-colors"
+                class="px-2.5 py-1.5 rounded-lg bg-ink-panel2 hover:bg-ink-panel2 text-parchment text-xs transition-colors"
               >
                 Edit
               </.link>
@@ -331,16 +331,16 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
       <div class="flex items-center gap-3 mb-5">
         <.link
           navigate={~p"/professional/translations/#{@descriptor.key}"}
-          class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          class="p-1.5 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel transition-colors"
         >
           <.icon name="hero-arrow-left" class="h-5 w-5" />
         </.link>
         <div class="flex-1 flex items-center gap-2">
-          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-700 text-slate-300 text-xs font-semibold uppercase">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-ink-panel2 text-parchment text-xs font-semibold uppercase">
             {Locale.source()}
           </span>
-          <.icon name="hero-arrow-right" class="h-3.5 w-3.5 text-slate-500" />
-          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-primary-600/30 text-primary-300 text-xs font-semibold uppercase border border-primary-500/30">
+          <.icon name="hero-arrow-right" class="h-3.5 w-3.5 text-parchment-dim" />
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-paprika/30 text-paprika-soft text-xs font-semibold uppercase border border-paprika/30">
             {@locale}
           </span>
           <h1 class="text-base font-semibold text-white ml-1 truncate">
@@ -351,7 +351,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
         <button
           phx-click="ai_translate"
           disabled={@translating}
-          class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-300 hover:text-white text-sm transition-colors disabled:opacity-50"
+          class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-panel hover:bg-ink-panel2 border border-ink-panel2/60 text-parchment hover:text-white text-sm transition-colors disabled:opacity-50"
         >
           <%= if @translating do %>
             <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -378,14 +378,14 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
 
       <form phx-submit="save" class="grid grid-cols-2 gap-5">
         <div class="space-y-3">
-          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <div class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">
             Original ({Locale.source()})
           </div>
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4 space-y-3">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 space-y-3">
             <%= for field <- @descriptor.fields do %>
               <div>
-                <label class="block text-xs text-slate-500 mb-1">{field_label(field)}</label>
-                <div class="text-sm text-slate-200 whitespace-pre-wrap">
+                <label class="block text-xs text-parchment-dim mb-1">{field_label(field)}</label>
+                <div class="text-sm text-parchment whitespace-pre-wrap">
                   {Map.get(@base, field) || "—"}
                 </div>
               </div>
@@ -394,17 +394,17 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
         </div>
 
         <div class="space-y-3">
-          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <div class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">
             Translation ({@locale})
           </div>
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4 space-y-3">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 space-y-3">
             <%= for field <- @descriptor.fields do %>
               <div>
-                <label class="block text-xs text-slate-500 mb-1">{field_label(field)}</label>
+                <label class="block text-xs text-parchment-dim mb-1">{field_label(field)}</label>
                 <textarea
                   name={"fields[#{field}]"}
                   rows={textarea_rows(field)}
-                  class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-primary-500 focus:outline-none resize-none"
+                  class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none resize-none"
                 ><%= Map.get(@draft, field) %></textarea>
               </div>
             <% end %>
@@ -428,13 +428,13 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
     <div class="flex items-center gap-3 mb-5">
       <.link
         navigate={~p"/professional/translations"}
-        class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+        class="p-1.5 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel transition-colors"
       >
         <.icon name="hero-arrow-left" class="h-5 w-5" />
       </.link>
       <h1 class="text-lg font-semibold text-white flex items-center gap-2">
         {@descriptor.label}
-        <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-primary-600/30 text-primary-300 border border-primary-500/30 text-[10px] font-bold uppercase">
+        <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-paprika/30 text-paprika-soft border border-paprika/30 text-[10px] font-bold uppercase">
           {@locale}
         </span>
       </h1>
@@ -454,11 +454,11 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
       phx-value-filter={@value}
       class={[
         "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-        @filter == @value && "bg-slate-700 text-white",
-        @filter != @value && "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+        @filter == @value && "bg-ink-panel2 text-white",
+        @filter != @value && "text-parchment-dim hover:text-parchment hover:bg-ink-panel"
       ]}
     >
-      {@label}<span :if={@count} class="ml-1 text-slate-500">{@count}</span>
+      {@label}<span :if={@count} class="ml-1 text-parchment-dim">{@count}</span>
     </button>
     """
   end
@@ -472,7 +472,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
         "inline-block w-2 h-2 rounded-full flex-shrink-0",
         @status == :verified && "bg-emerald-500",
         @status == :ai_draft && "bg-amber-400",
-        @status == :missing && "bg-slate-600"
+        @status == :missing && "bg-ink-panel2"
       ]}
       title={to_string(@status)}
     />
@@ -490,15 +490,15 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
       <.link
         :if={@page > 1}
         patch={~p"/professional/translations/#{@key}?filter=#{@filter}&page=#{@page - 1}"}
-        class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs"
+        class="px-3 py-1.5 rounded-lg bg-ink-panel hover:bg-ink-panel2 text-parchment text-xs"
       >
         ← Prev
       </.link>
-      <span class="text-xs text-slate-500">Page {@page}</span>
+      <span class="text-xs text-parchment-dim">Page {@page}</span>
       <.link
         :if={not @last?}
         patch={~p"/professional/translations/#{@key}?filter=#{@filter}&page=#{@page + 1}"}
-        class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs ml-auto"
+        class="px-3 py-1.5 rounded-lg bg-ink-panel hover:bg-ink-panel2 text-parchment text-xs ml-auto"
       >
         Next →
       </.link>

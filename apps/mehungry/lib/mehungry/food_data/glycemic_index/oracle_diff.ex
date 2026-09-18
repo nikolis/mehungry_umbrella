@@ -46,7 +46,9 @@ defmodule Mehungry.FoodData.GlycemicIndex.OracleDiff do
     diverge = for r <- results, r.bucket == :diverge, do: r
     uncovered = for r <- results, r.bucket == :uncovered, do: r
 
-    matched_norms = for r <- results, r.bucket != :uncovered, into: MapSet.new(), do: r.species_norm
+    matched_norms =
+      for r <- results, r.bucket != :uncovered, into: MapSet.new(), do: r.species_norm
+
     orphans = for s <- species, not MapSet.member?(matched_norms, s.norm), do: s.name
 
     covered = length(agree) + length(diverge)

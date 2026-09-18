@@ -516,7 +516,9 @@ defmodule MehungryWeb.BrowserLiveTest do
     defp beef_recipe(user, vegan_ids, title) do
       mu = measurement_unit_fixture()
       ingredient = ingredient_fixture(%{name: unique_ingredient()})
-      {:ok, ingredient} = Food.update_ingredient(ingredient, %{category_id: List.first(vegan_ids)})
+
+      {:ok, ingredient} =
+        Food.update_ingredient(ingredient, %{category_id: List.first(vegan_ids)})
 
       recipe_fixture(user, %{
         title: title,

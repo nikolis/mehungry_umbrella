@@ -114,13 +114,13 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
       <div class="flex items-center gap-3 mb-6">
         <.link
           navigate={~p"/professional/ai-bot"}
-          class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          class="p-1.5 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel transition-colors"
         >
           <.icon name="hero-arrow-left" class="h-5 w-5" />
         </.link>
         <div>
           <h1 class="text-xl font-bold text-white">Bot Social Accounts</h1>
-          <p class="text-sm text-slate-400 mt-0.5">
+          <p class="text-sm text-parchment-dim mt-0.5">
             Connection status and per-language publish targets
           </p>
         </div>
@@ -134,10 +134,10 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
           >Create one</.link>.
         </div>
       <% else %>
-        <div class="mb-5 bg-slate-800 border border-slate-700/60 rounded-xl px-4 py-3 text-sm text-slate-300">
+        <div class="mb-5 bg-ink-panel border border-ink-panel2/60 rounded-xl px-4 py-3 text-sm text-parchment">
           Configuring accounts for bot user:
           <strong class="text-white">{@bot_user.name || @bot_user.email}</strong>
-          <span class="text-slate-500 ml-1">({@config.theme} · {month_name(@config.month)} {@config.year})</span>
+          <span class="text-parchment-dim ml-1">({@config.theme} · {month_name(@config.month)} {@config.year})</span>
         </div>
 
         <!-- Connection status cards -->
@@ -173,20 +173,20 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
         <!-- Facebook per-language page selector -->
         <%= if map_non_empty?(@bot_user.facebook_token) do %>
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-5 mb-5">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-5 mb-5">
             <h2 class="text-sm font-semibold text-white mb-1">Facebook — Page per Language</h2>
-            <p class="text-xs text-slate-500 mb-4">
+            <p class="text-xs text-parchment-dim mb-4">
               Choose which Facebook page to post to for each language. Leave blank to skip that language.
             </p>
             <form phx-submit="save_facebook_pages" class="space-y-3">
               <%= for lang <- @languages do %>
                 <div class="flex items-center gap-3">
-                  <span class="w-10 text-xs font-semibold text-slate-400 uppercase flex-shrink-0">
+                  <span class="w-10 text-xs font-semibold text-parchment-dim uppercase flex-shrink-0">
                     {lang.name}
                   </span>
                   <select
                     name={"facebook_pages[#{lang.name}]"}
-                    class="flex-1 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                    class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none"
                   >
                     <option value="">— not set —</option>
                     <%= for {page_name, page} <- @bot_user.facebook_token do %>
@@ -201,14 +201,14 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
                   <%= if get_in(@config.facebook_page_ids || %{}, [lang.name]) do %>
                     <.icon name="hero-check-circle" class="h-4 w-4 text-emerald-400 flex-shrink-0" />
                   <% else %>
-                    <.icon name="hero-minus-circle" class="h-4 w-4 text-slate-600 flex-shrink-0" />
+                    <.icon name="hero-minus-circle" class="h-4 w-4 text-parchment-dim flex-shrink-0" />
                   <% end %>
                 </div>
               <% end %>
               <div class="pt-2">
                 <button
                   type="submit"
-                  class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+                  class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors"
                 >
                   <.icon name="hero-check" class="h-4 w-4" /> Save Facebook Pages
                 </button>
@@ -219,7 +219,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
         <!-- Pinterest per-language board selector -->
         <%= if map_non_empty?(@bot_user.pinterest_token) and @pinterest_boards_error do %>
-          <div class="bg-slate-800 border border-amber-700/60 rounded-xl p-5 mb-5">
+          <div class="bg-ink-panel border border-amber-700/60 rounded-xl p-5 mb-5">
             <h2 class="text-sm font-semibold text-white mb-1">Pinterest — Boards</h2>
             <p class="text-xs text-amber-400 mb-4">
               Could not load boards from Pinterest — the token is likely expired or invalid.
@@ -227,7 +227,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
             </p>
             <.link
               href={~p"/auth/bot/target/#{@bot_user.id}/pinterest"}
-              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors"
             >
               Reconnect Pinterest
             </.link>
@@ -236,9 +236,9 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
         <%= if map_non_empty?(@bot_user.pinterest_token) and is_nil(@pinterest_boards_error) and
               @pinterest_boards == [] do %>
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-5 mb-5">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-5 mb-5">
             <h2 class="text-sm font-semibold text-white mb-1">Pinterest — Boards</h2>
-            <p class="text-xs text-slate-500 mb-4">
+            <p class="text-xs text-parchment-dim mb-4">
               No boards on this account yet. Create one to configure per-language pinning.
             </p>
             <.create_board_form />
@@ -246,20 +246,20 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
         <% end %>
 
         <%= if map_non_empty?(@bot_user.pinterest_token) and @pinterest_boards != [] do %>
-          <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-5 mb-5">
+          <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-5 mb-5">
             <h2 class="text-sm font-semibold text-white mb-1">Pinterest — Board per Language</h2>
-            <p class="text-xs text-slate-500 mb-4">
+            <p class="text-xs text-parchment-dim mb-4">
               Choose which Pinterest board to pin to for each language. Leave blank to skip that language.
             </p>
             <form phx-submit="save_pinterest_boards" class="space-y-3">
               <%= for lang <- @languages do %>
                 <div class="flex items-center gap-3">
-                  <span class="w-10 text-xs font-semibold text-slate-400 uppercase flex-shrink-0">
+                  <span class="w-10 text-xs font-semibold text-parchment-dim uppercase flex-shrink-0">
                     {lang.name}
                   </span>
                   <select
                     name={"pinterest_boards[#{lang.name}]"}
-                    class="flex-1 bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+                    class="flex-1 bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none"
                   >
                     <option value="">— not set —</option>
                     <%= for board <- @pinterest_boards do %>
@@ -276,23 +276,23 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
                   <%= if get_in(@config.pinterest_board_ids || %{}, [lang.name]) do %>
                     <.icon name="hero-check-circle" class="h-4 w-4 text-emerald-400 flex-shrink-0" />
                   <% else %>
-                    <.icon name="hero-minus-circle" class="h-4 w-4 text-slate-600 flex-shrink-0" />
+                    <.icon name="hero-minus-circle" class="h-4 w-4 text-parchment-dim flex-shrink-0" />
                   <% end %>
                 </div>
               <% end %>
               <div class="pt-2">
                 <button
                   type="submit"
-                  class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+                  class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors"
                 >
                   <.icon name="hero-check" class="h-4 w-4" /> Save Pinterest Boards
                 </button>
               </div>
             </form>
-            <div class="mt-4 pt-4 border-t border-slate-700/60">
+            <div class="mt-4 pt-4 border-t border-ink-panel2/60">
               <button
                 phx-click="toggle_create_board"
-                class="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+                class="flex items-center gap-1.5 text-sm text-parchment-dim hover:text-white transition-colors"
               >
                 <.icon name="hero-plus" class="h-4 w-4" /> New board
               </button>
@@ -307,7 +307,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
         <!-- Pinterest not connected notice -->
         <%= if not map_non_empty?(@bot_user.pinterest_token) do %>
-          <div class="bg-slate-800/50 border border-slate-700/40 rounded-xl p-5 mb-5 text-slate-500 text-sm">
+          <div class="bg-ink-panel/50 border border-ink-panel2/40 rounded-xl p-5 mb-5 text-parchment-dim text-sm">
             Connect Pinterest to configure per-language boards.
           </div>
         <% end %>
@@ -324,7 +324,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
   defp platform_card(assigns) do
     ~H"""
-    <div class="bg-slate-800 border border-slate-700/60 rounded-xl p-4">
+    <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4">
       <div class="flex items-center gap-2 mb-3">
         <span class="text-xl">{@icon}</span>
         <h3 class="font-semibold text-white text-sm">{@name}</h3>
@@ -332,18 +332,18 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
           "ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
           if(@connected,
             do: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-            else: "bg-slate-700/50 text-slate-500 border-slate-600/40"
+            else: "bg-ink-panel2/50 text-parchment-dim border-ink-panel2/40"
           )
         ]}>
           {if @connected, do: "Connected", else: "Not connected"}
         </span>
       </div>
       <%= if @detail do %>
-        <p class="text-xs text-slate-400 mb-3">{@detail}</p>
+        <p class="text-xs text-parchment-dim mb-3">{@detail}</p>
       <% end %>
       <a
         href={@connect_url}
-        class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-600 text-slate-300 hover:text-white hover:border-slate-500 text-xs font-medium transition-colors w-full"
+        class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-panel2 text-parchment hover:text-white hover:border-ink-panel2 text-xs font-medium transition-colors w-full"
       >
         {if @connected, do: "Reconnect", else: "Connect"}
       </a>
@@ -360,25 +360,25 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
         required
         maxlength="180"
         placeholder="Board name"
-        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 placeholder-slate-500 focus:border-primary-500 focus:outline-none"
+        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 placeholder-parchment-dim focus:border-paprika focus:outline-none"
       />
       <textarea
         name="board[description]"
         rows="2"
         maxlength="500"
         placeholder="Description (optional)"
-        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 placeholder-slate-500 focus:border-primary-500 focus:outline-none"
+        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 placeholder-parchment-dim focus:border-paprika focus:outline-none"
       ></textarea>
       <select
         name="board[privacy]"
-        class="w-full bg-slate-700 border border-slate-600 rounded-lg text-slate-200 text-sm px-3 py-2 focus:border-primary-500 focus:outline-none"
+        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none"
       >
         <option value="PUBLIC">Public</option>
         <option value="SECRET">Secret</option>
       </select>
       <button
         type="submit"
-        class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-colors"
+        class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors"
       >
         <.icon name="hero-plus" class="h-4 w-4" /> Create Board
       </button>

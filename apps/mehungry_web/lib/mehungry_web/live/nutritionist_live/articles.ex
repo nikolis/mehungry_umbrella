@@ -65,15 +65,13 @@ defmodule MehungryWeb.NutritionistLive.Articles do
   def render(assigns) do
     ~H"""
     <div class="max-w-4xl mx-auto pb-16">
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-display font-bold text-parchment">My Articles</h1>
-        <button
-          phx-click="new_article"
-          class="px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-semibold text-sm transition"
-        >
-          + New article
-        </button>
-      </div>
+      <.page_header title="My Articles">
+        <:actions>
+          <.action :if={@profile} variant={:primary} size={:sm} phx-click="new_article">
+            New article
+          </.action>
+        </:actions>
+      </.page_header>
 
       <p :if={@profile == nil} class="text-parchment-dim">
         You need a professional profile first.

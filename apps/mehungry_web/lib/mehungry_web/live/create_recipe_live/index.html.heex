@@ -95,7 +95,11 @@
               <textarea
                 name="prompt"
                 rows="3"
-                placeholder={gettext("Describe your recipe… e.g. 'Creamy mushroom risotto for 4 people, medium difficulty'")}
+                placeholder={
+                  gettext(
+                    "Describe your recipe… e.g. 'Creamy mushroom risotto for 4 people, medium difficulty'"
+                  )
+                }
                 class="flex-1 bg-ink-panel2 text-parchment rounded-lg p-3 text-sm resize-none border border-ink-panel2 focus:border-paprika focus:outline-none"
               ></textarea>
               <button
@@ -131,7 +135,8 @@
             </form>
             <%= if @ai_unmatched != [] do %>
               <p class="text-yellow-400 text-xs mt-3">
-                {gettext("Not found in database and skipped: %{items}. Add these manually if needed.",
+                {gettext(
+                  "Not found in database and skipped: %{items}. Add these manually if needed.",
                   items: Enum.join(@ai_unmatched, ", ")
                 )}
               </p>
@@ -162,7 +167,8 @@
             {gettext("Use your ingredients?")}
           </h2>
           <p class="text-parchment-dim text-sm mb-4">
-            {gettext("You've already added: %{items}. Should the AI build the recipe around them?",
+            {gettext(
+              "You've already added: %{items}. Should the AI build the recipe around them?",
               items: Enum.join(@ai_existing_ingredients, ", ")
             )}
           </p>

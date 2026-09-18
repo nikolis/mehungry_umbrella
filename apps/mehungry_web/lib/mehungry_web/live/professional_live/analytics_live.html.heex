@@ -3,10 +3,10 @@
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-white">Traffic Analytics</h1>
-      <p class="text-slate-400 text-sm mt-0.5">
+      <p class="text-parchment-dim text-sm mt-0.5">
         Visitor sources, page performance, and real-time activity
       </p>
-      <p class="text-slate-600 text-xs mt-1">
+      <p class="text-parchment-dim text-xs mt-1">
         Server-side, cookie-consented views in {Mehungry.Meta.reporting_timezone()} time. Roughly
         comparable to Google Analytics but not identical (GA also counts pre-consent and non-LiveView page loads).
       </p>
@@ -19,42 +19,42 @@
 
   <!-- Stats cards -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4">
+      <div class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
         Views today
       </div>
       <div class="text-3xl font-bold text-white">{@today_total}</div>
-      <div class="text-xs text-slate-500 mt-1">{@today_users} users · {@today_unique} IPs</div>
+      <div class="text-xs text-parchment-dim mt-1">{@today_users} users · {@today_unique} IPs</div>
     </div>
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4">
+      <div class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
         All-time views
       </div>
       <div class="text-3xl font-bold text-white">{@all_total}</div>
-      <div class="text-xs text-slate-500 mt-1">{@all_users} users · {@all_unique} IPs</div>
+      <div class="text-xs text-parchment-dim mt-1">{@all_users} users · {@all_unique} IPs</div>
     </div>
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4">
+      <div class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
         Online now
       </div>
       <div class="text-3xl font-bold text-emerald-400">{@online_count}</div>
-      <div class="text-xs text-slate-500 mt-1">active sessions</div>
+      <div class="text-xs text-parchment-dim mt-1">active sessions</div>
     </div>
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4">
+      <div class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
         From search (30d)
       </div>
-      <div class="text-3xl font-bold text-primary-400">
+      <div class="text-3xl font-bold text-paprika-soft">
         {Enum.find_value(@traffic_sources, 0, fn s -> if s.source == "search", do: s.count end)}
       </div>
-      <div class="text-xs text-slate-500 mt-1">organic visits</div>
+      <div class="text-xs text-parchment-dim mt-1">organic visits</div>
     </div>
   </div>
 
   <!-- Charts row -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     <!-- Daily visits chart -->
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Visits — last 14 days</h2>
       <div
         id="daily-chart-wrapper"
@@ -75,10 +75,10 @@
     </div>
 
     <!-- Traffic sources chart -->
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Traffic sources — last 30 days</h2>
       <%= if @traffic_sources == [] do %>
-        <p class="text-slate-500 text-sm mt-8 text-center">
+        <p class="text-parchment-dim text-sm mt-8 text-center">
           No data yet — referrer capture is active for new visits.
         </p>
       <% else %>
@@ -113,22 +113,22 @@
   <!-- Top pages + Recent visits -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     <!-- Top pages -->
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Top pages (all time)</h2>
       <%= if @top_pages == [] do %>
-        <p class="text-slate-500 text-sm">No page data yet.</p>
+        <p class="text-parchment-dim text-sm">No page data yet.</p>
       <% else %>
         <div class="space-y-2">
           <%= for {page, index} <- Enum.with_index(@top_pages) do %>
             <div class="flex items-center gap-3">
-              <span class="text-xs text-slate-600 w-4 shrink-0">{index + 1}</span>
+              <span class="text-xs text-parchment-dim w-4 shrink-0">{index + 1}</span>
               <div class="flex-1 min-w-0">
-                <div class="text-sm text-slate-300 truncate font-mono">
+                <div class="text-sm text-parchment truncate font-mono">
                   {short_path(page.path)}
                 </div>
-                <div class="mt-0.5 h-1.5 rounded-full bg-slate-700 overflow-hidden">
+                <div class="mt-0.5 h-1.5 rounded-full bg-ink-panel2 overflow-hidden">
                   <div
-                    class="h-full rounded-full bg-primary-500/70"
+                    class="h-full rounded-full bg-paprika/70"
                     style={"width: #{trunc(page.count / (hd(@top_pages).count) * 100)}%"}
                   >
                   </div>
@@ -142,24 +142,24 @@
     </div>
 
     <!-- Recent visits -->
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
       <h2 class="text-sm font-semibold text-white mb-4">Recent visits</h2>
       <div class="space-y-1 overflow-y-auto max-h-80">
         <%= for visit <- @recent_visits do %>
-          <div class="flex items-center gap-2 py-1.5 border-b border-slate-700/50 last:border-0">
+          <div class="flex items-center gap-2 py-1.5 border-b border-ink-panel2/50 last:border-0">
             <div class={"text-xs px-2 py-0.5 rounded-full border shrink-0 " <> source_badge_class(visit_source(visit))}>
               {source_label(visit_source(visit))}
             </div>
-            <span class="text-slate-400 text-xs font-mono shrink-0">
+            <span class="text-parchment-dim text-xs font-mono shrink-0">
               {visit.ip_address}
               <%= if c = get_in(visit.details || %{}, ["country"]) do %>
-                <span class="text-slate-600 font-sans">({c})</span>
+                <span class="text-parchment-dim font-sans">({c})</span>
               <% end %>
             </span>
-            <span class="text-slate-300 text-xs truncate flex-1">
+            <span class="text-parchment text-xs truncate flex-1">
               {short_path(get_in(visit.details || %{}, ["path"]))}
             </span>
-            <span class="text-slate-600 text-xs shrink-0">{format_dt(visit.inserted_at)}</span>
+            <span class="text-parchment-dim text-xs shrink-0">{format_dt(visit.inserted_at)}</span>
           </div>
         <% end %>
       </div>
@@ -167,17 +167,17 @@
   </div>
 
   <!-- Sessions -->
-  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+  <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h2 class="text-sm font-semibold text-white">Sessions — last 7 days</h2>
-        <p class="text-xs text-slate-500 mt-0.5">30-min inactivity = new session</p>
+        <p class="text-xs text-parchment-dim mt-0.5">30-min inactivity = new session</p>
       </div>
-      <span class="text-xs text-slate-500">{length(@sessions)} sessions</span>
+      <span class="text-xs text-parchment-dim">{length(@sessions)} sessions</span>
     </div>
 
     <%= if @sessions == [] do %>
-      <p class="text-slate-500 text-sm text-center py-6">No sessions recorded yet.</p>
+      <p class="text-parchment-dim text-sm text-center py-6">No sessions recorded yet.</p>
     <% else %>
       <% session = Enum.at(@sessions, @selected_session_idx) %>
 
@@ -185,7 +185,7 @@
       <form id="analytics-session-select-form" phx-change="select_session">
         <select
           name="idx"
-          class="w-full bg-slate-700 border border-slate-600 text-slate-200 text-xs rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          class="w-full bg-ink-panel2 border border-ink-panel2 text-parchment text-xs rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-1 focus:ring-paprika"
         >
           <%= for {s, i} <- Enum.with_index(@sessions) do %>
             <option value={i} selected={i == @selected_session_idx}>
@@ -198,9 +198,9 @@
 
       <!-- Detail panel for the selected session only -->
       <%= if session do %>
-        <div class="rounded-xl border border-slate-700 bg-slate-900/30 p-4">
+        <div class="rounded-xl border border-ink-panel2 bg-ink/30 p-4">
           <!-- Identity + stats bar -->
-          <div class="flex flex-wrap items-center gap-3 mb-3 pb-3 border-b border-slate-700/60">
+          <div class="flex flex-wrap items-center gap-3 mb-3 pb-3 border-b border-ink-panel2/60">
             <%= if session.user_email do %>
               <div class="flex items-center gap-1.5">
                 <.icon name="hero-user-circle" class="w-4 h-4 text-emerald-400" />
@@ -208,12 +208,12 @@
               </div>
             <% else %>
               <div class="flex items-center gap-1.5">
-                <.icon name="hero-user" class="w-4 h-4 text-slate-500" />
-                <span class="text-slate-400 text-sm">Anonymous</span>
-                <span class="text-slate-500 text-xs font-mono">{session.ip_address}</span>
+                <.icon name="hero-user" class="w-4 h-4 text-parchment-dim" />
+                <span class="text-parchment-dim text-sm">Anonymous</span>
+                <span class="text-parchment-dim text-xs font-mono">{session.ip_address}</span>
               </div>
             <% end %>
-            <div class="flex items-center gap-3 ml-auto text-xs text-slate-500">
+            <div class="flex items-center gap-3 ml-auto text-xs text-parchment-dim">
               <span>{session.page_count} pages</span>
               <span>{session_duration(session)}</span>
               <%= if session.referrer != "" do %>
@@ -223,7 +223,7 @@
               <% end %>
               <%= if session.visitor_id do %>
                 <span
-                  class="font-mono text-slate-600 bg-slate-700/50 px-1.5 py-0.5 rounded text-xs"
+                  class="font-mono text-parchment-dim bg-ink-panel2/50 px-1.5 py-0.5 rounded text-xs"
                   title={"Full visitor_id: #{session.visitor_id}"}
                 >
                   visitor·{String.slice(session.visitor_id, 0, 8)}
@@ -236,16 +236,16 @@
           <div class="flex flex-wrap items-center gap-1">
             <%= for {page, pi} <- Enum.with_index(session.pages) do %>
               <%= if pi > 0 do %>
-                <.icon name="hero-arrow-right" class="w-3 h-3 text-slate-700 shrink-0" />
+                <.icon name="hero-arrow-right" class="w-3 h-3 text-parchment-dim shrink-0" />
               <% end %>
               <div class="flex flex-col items-center gap-0.5">
-                <div class="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-slate-700/70 text-slate-300 font-mono">
+                <div class="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-ink-panel2/70 text-parchment font-mono">
                   <span>{short_path(page.path)}</span>
-                  <span class="text-slate-600">{format_dt(page.at)}</span>
+                  <span class="text-parchment-dim">{format_dt(page.at)}</span>
                 </div>
                 <div class="flex gap-2">
                   <%= if t = format_page_time(page.time_sec) do %>
-                    <span class="text-xs text-slate-600 font-sans" title="time on page">{t}</span>
+                    <span class="text-xs text-parchment-dim font-sans" title="time on page">{t}</span>
                   <% end %>
                   <%= if page.ttfb_ms do %>
                     <span
@@ -278,7 +278,7 @@
           </div>
 
           <%= if session.referrer != "" do %>
-            <p class="text-xs text-slate-600 mt-2 truncate" title={session.referrer}>
+            <p class="text-xs text-parchment-dim mt-2 truncate" title={session.referrer}>
               Came from: {session.referrer}
             </p>
           <% end %>
@@ -288,14 +288,14 @@
   </div>
 
   <!-- Referrer detail table -->
-  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5">
+  <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5">
     <!-- Header + clear button -->
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-sm font-semibold text-white">Referrer detail — recent visits</h2>
       <%= if @filter_category || @filter_source do %>
         <button
           phx-click="clear_visit_filter"
-          class="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+          class="text-xs text-parchment-dim hover:text-white flex items-center gap-1 transition-colors"
         >
           <.icon name="hero-x-mark" class="w-3 h-3" /> Clear filter
         </button>
@@ -304,7 +304,7 @@
 
     <!-- Category filter chips -->
     <div class="flex flex-wrap items-center gap-2 mb-2">
-      <span class="text-xs text-slate-500 shrink-0">Category</span>
+      <span class="text-xs text-parchment-dim shrink-0">Category</span>
       <%= for cat <- ["direct", "search", "social", "referral", "internal"] do %>
         <button
           phx-click="set_filter_category"
@@ -313,7 +313,7 @@
             "text-xs px-2.5 py-1 rounded-full border transition-colors " <>
               if(@filter_category == cat,
                 do: source_badge_class(cat),
-                else: "border-slate-600 text-slate-400 hover:border-slate-400 hover:text-slate-300"
+                else: "border-ink-panel2 text-parchment-dim hover:border-ink-panel2 hover:text-parchment"
               )
           }
         >
@@ -325,7 +325,7 @@
     <!-- Source filter chips (only shown when sources exist) -->
     <%= if @available_sources != [] do %>
       <div class="flex flex-wrap items-center gap-2 mb-4">
-        <span class="text-xs text-slate-500 shrink-0">Source</span>
+        <span class="text-xs text-parchment-dim shrink-0">Source</span>
         <%= for src <- @available_sources do %>
           <button
             phx-click="set_filter_source"
@@ -333,8 +333,8 @@
             class={
               "text-xs px-2.5 py-1 rounded-full border transition-colors " <>
                 if(@filter_source == src,
-                  do: "bg-slate-600 border-slate-400 text-white",
-                  else: "border-slate-600 text-slate-400 hover:border-slate-400 hover:text-slate-300"
+                  do: "bg-ink-panel2 border-ink-panel2 text-white",
+                  else: "border-ink-panel2 text-parchment-dim hover:border-ink-panel2 hover:text-parchment"
                 )
             }
           >
@@ -348,55 +348,55 @@
     <div class="overflow-x-auto -mx-2">
       <table class="min-w-full text-sm">
         <thead>
-          <tr class="border-b border-slate-700">
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <tr class="border-b border-ink-panel2">
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-parchment-dim">
               Time
             </th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-parchment-dim">
               IP
             </th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-parchment-dim">
               Page
             </th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-parchment-dim">
               Category
             </th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-parchment-dim">
               Source
             </th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-parchment-dim">
               Referrer domain
             </th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-parchment-dim">
               Full referrer
             </th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-parchment-dim">
               Browser
             </th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-parchment-dim">
               OS
             </th>
-            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-parchment-dim">
               Device
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-700/50">
+        <tbody class="divide-y divide-ink-panel2/50">
           <%= for visit <- @filtered_visits do %>
             <% agent = get_in(visit.details || %{}, ["agent"])
             referrer = get_in(visit.details || %{}, ["referrer"])
             device = detect_device(agent) %>
-            <tr class="hover:bg-slate-700/20 transition-colors">
-              <td class="px-3 py-2 text-slate-500 text-xs whitespace-nowrap">
+            <tr class="hover:bg-ink-panel2/20 transition-colors">
+              <td class="px-3 py-2 text-parchment-dim text-xs whitespace-nowrap">
                 {format_dt(visit.inserted_at)}
               </td>
-              <td class="px-3 py-2 text-slate-300 font-mono text-xs whitespace-nowrap">
+              <td class="px-3 py-2 text-parchment font-mono text-xs whitespace-nowrap">
                 {visit.ip_address}
                 <%= if country = get_in(visit.details || %{}, ["country"]) do %>
-                  <span class="text-slate-500 font-sans font-normal ml-1">({country})</span>
+                  <span class="text-parchment-dim font-sans font-normal ml-1">({country})</span>
                 <% end %>
               </td>
-              <td class="px-3 py-2 text-slate-300 text-xs max-w-[140px] truncate">
+              <td class="px-3 py-2 text-parchment text-xs max-w-[140px] truncate">
                 {short_path(get_in(visit.details || %{}, ["path"]))}
               </td>
               <td class="px-3 py-2 whitespace-nowrap">
@@ -404,13 +404,13 @@
                   {source_label(visit_source(visit))}
                 </span>
               </td>
-              <td class="px-3 py-2 text-slate-300 text-xs font-medium whitespace-nowrap">
+              <td class="px-3 py-2 text-parchment text-xs font-medium whitespace-nowrap">
                 {specific_source(referrer)}
               </td>
-              <td class="px-3 py-2 text-slate-400 text-xs whitespace-nowrap">
+              <td class="px-3 py-2 text-parchment-dim text-xs whitespace-nowrap">
                 {referrer_domain(referrer)}
               </td>
-              <td class="px-3 py-2 text-slate-500 text-xs max-w-[200px]">
+              <td class="px-3 py-2 text-parchment-dim text-xs max-w-[200px]">
                 <span
                   class="block truncate"
                   title={if referrer in [nil, ""], do: "—", else: referrer}
@@ -418,14 +418,14 @@
                   {if referrer in [nil, ""], do: "—", else: referrer}
                 </span>
               </td>
-              <td class="px-3 py-2 text-slate-400 text-xs whitespace-nowrap">
+              <td class="px-3 py-2 text-parchment-dim text-xs whitespace-nowrap">
                 {short_agent(agent)}
               </td>
-              <td class="px-3 py-2 text-slate-400 text-xs whitespace-nowrap">
+              <td class="px-3 py-2 text-parchment-dim text-xs whitespace-nowrap">
                 {detect_os(agent)}
               </td>
               <td class="px-3 py-2">
-                <div class="flex items-center gap-1 text-slate-400">
+                <div class="flex items-center gap-1 text-parchment-dim">
                   <.icon name={device_icon(device)} class="w-3.5 h-3.5" />
                   <span class="text-xs capitalize">{device}</span>
                 </div>
@@ -438,7 +438,7 @@
 
     <!-- Empty state -->
     <%= if @filtered_visits == [] and @visits_exhausted do %>
-      <p class="text-slate-500 text-sm text-center py-6">No visits match the selected filter.</p>
+      <p class="text-parchment-dim text-sm text-center py-6">No visits match the selected filter.</p>
     <% end %>
 
     <!-- Infinite scroll sentinel — only when there are rows and more pages exist -->
@@ -448,11 +448,11 @@
         phx-hook="VisitScroll"
         class="h-6 flex items-center justify-center mt-2"
       >
-        <span class="text-xs text-slate-600">Loading more…</span>
+        <span class="text-xs text-parchment-dim">Loading more…</span>
       </div>
     <% end %>
     <%= if @filtered_visits != [] and @visits_exhausted do %>
-      <p class="text-xs text-slate-700 text-center pt-3">
+      <p class="text-xs text-parchment-dim text-center pt-3">
         All visits loaded ({length(@filtered_visits)})
       </p>
     <% end %>

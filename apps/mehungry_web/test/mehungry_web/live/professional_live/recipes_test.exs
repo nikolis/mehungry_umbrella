@@ -7,7 +7,14 @@ defmodule MehungryWeb.ProfessionalLive.RecipesTest do
   import Mehungry.AccountsFixtures
 
   alias Mehungry.Repo
-  alias Mehungry.Food.{HashtagReconciliation, HashtagReconciliations, IngredientPortion, RecipeIngredient}
+
+  alias Mehungry.Food.{
+    HashtagReconciliation,
+    HashtagReconciliations,
+    IngredientPortion,
+    RecipeIngredient
+  }
+
   alias Mehungry.ObanWorkers.HashtagReconciliationWorker
 
   @admin_email Application.compile_env(:mehungry, :admin_email)

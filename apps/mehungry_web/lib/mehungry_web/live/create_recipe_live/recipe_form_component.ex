@@ -32,7 +32,9 @@ defmodule MehungryWeb.RecipeFormComponent do
   # The unit/portion check adds full-sentence errors on the :recipe_ingredients
   # key — show those verbatim; give the "no ingredients" case a friendly line;
   # everything else gets a short field label.
-  defp error_line(:recipe_ingredients, "can't be blank"), do: gettext("Add at least one ingredient.")
+  defp error_line(:recipe_ingredients, "can't be blank"),
+    do: gettext("Add at least one ingredient.")
+
   defp error_line(:recipe_ingredients, msg), do: msg
   defp error_line(field, msg), do: "#{field_label(field)}: #{msg}"
 
@@ -49,7 +51,9 @@ defmodule MehungryWeb.RecipeFormComponent do
   defp field_label(:ingredient_id), do: gettext("Ingredient")
   defp field_label(:quantity), do: gettext("Quantity")
   defp field_label(:measurement_unit_id), do: gettext("Unit")
-  defp field_label(field), do: field |> to_string() |> String.replace("_", " ") |> String.capitalize()
+
+  defp field_label(field),
+    do: field |> to_string() |> String.replace("_", " ") |> String.capitalize()
 
   def error_to_string(:too_large), do: gettext("Too large")
   def error_to_string(:not_accepted), do: gettext("You have selected an unacceptable file type")
@@ -117,7 +121,13 @@ defmodule MehungryWeb.RecipeFormComponent do
           </div>
 
           <div class="grid grid-cols-2 gap-4">
-            <.input required field={@f[:servings]} type="text" label={gettext("Servings")} class=" w-full" />
+            <.input
+              required
+              field={@f[:servings]}
+              type="text"
+              label={gettext("Servings")}
+              class=" w-full"
+            />
             <.input
               required
               field={@f[:difficulty]}
@@ -212,7 +222,9 @@ defmodule MehungryWeb.RecipeFormComponent do
           class="overflowx-hidden relative content_container hidden md:block border border-ink-panel2 bg-ink-panel rounded-xl p-4"
           id="content-1"
         >
-          <h3 class="text-base font-display font-medium text-parchment mb-3">{gettext("Ingredients")}</h3>
+          <h3 class="text-base font-display font-medium text-parchment mb-3">
+            {gettext("Ingredients")}
+          </h3>
           <div class="md:min-h-96 sm:max-h-65 overflow-x-hidden noscrollbar pt-4 step_ing_cont mb-14 pb-20 md:pb-0">
             <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
               <.live_component
@@ -293,7 +305,9 @@ defmodule MehungryWeb.RecipeFormComponent do
             id="content-2"
           >
             <div class="relative h-fit">
-              <h3 class="text-base font-display font-medium text-parchment mb-1">{gettext("Steps")}</h3>
+              <h3 class="text-base font-display font-medium text-parchment mb-1">
+                {gettext("Steps")}
+              </h3>
               <p class="text-parchment-dim text-xs mb-3">
                 {gettext("The cooking instructions, one step at a time.")}
               </p>
@@ -313,7 +327,9 @@ defmodule MehungryWeb.RecipeFormComponent do
             id="content-2"
           >
             <div class="relative h-fit">
-              <h3 class="text-base font-display font-medium text-parchment mb-1">{gettext("Steps")}</h3>
+              <h3 class="text-base font-display font-medium text-parchment mb-1">
+                {gettext("Steps")}
+              </h3>
               <p class="text-parchment-dim text-xs mb-3">
                 {gettext("The cooking instructions, one step at a time.")}
               </p>
@@ -328,9 +344,13 @@ defmodule MehungryWeb.RecipeFormComponent do
         id="content-3"
         class="content_container hidden md:block border border-ink-panel2 bg-ink-panel rounded-xl p-6"
       >
-        <h3 class="text-base font-display font-medium text-parchment mb-4">{gettext("Review & Save")}</h3>
+        <h3 class="text-base font-display font-medium text-parchment mb-4">
+          {gettext("Review & Save")}
+        </h3>
         <%= if @f.source.valid? do %>
-          <p class="text-sm text-emerald-400 mb-6">{gettext("Everything looks good — ready to save!")}</p>
+          <p class="text-sm text-emerald-400 mb-6">
+            {gettext("Everything looks good — ready to save!")}
+          </p>
         <% else %>
           <div class="mb-6">
             <p class="text-sm text-parchment-dim mb-2">{gettext("Before saving, please fix:")}</p>

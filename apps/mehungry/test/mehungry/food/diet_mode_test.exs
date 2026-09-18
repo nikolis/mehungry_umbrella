@@ -16,7 +16,7 @@ defmodule Mehungry.Food.DietModeTest do
 
   defp ensure_category(name) do
     Food.get_category_by_name(name) ||
-      (Food.create_category(%{name: name, description: "x"}) |> elem(1))
+      Food.create_category(%{name: name, description: "x"}) |> elem(1)
   end
 
   test "excluding every vegan-excluded category yields :vegan", %{vegan: vegan} do
@@ -24,7 +24,9 @@ defmodule Mehungry.Food.DietModeTest do
     assert Food.diet_mode_for_category_rules(rules) == :vegan
   end
 
-  test "excluding the vegetarian set (dairy allowed) yields :vegetarian", %{vegetarian: vegetarian} do
+  test "excluding the vegetarian set (dairy allowed) yields :vegetarian", %{
+    vegetarian: vegetarian
+  } do
     rules = Enum.map(vegetarian, fn id -> %{category_id: id} end)
     assert Food.diet_mode_for_category_rules(rules) == :vegetarian
   end

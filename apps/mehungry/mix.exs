@@ -66,7 +66,8 @@ defmodule Mehungry.MixProject do
       {:httpoison, "~> 2.2"},
       {:jason, "~> 1.2"},
       {:cachex, "~> 3.4"},
-      {:pgvector, "~> 0.3"}
+      {:pgvector, "~> 0.3"},
+      {:nimble_csv, "~> 1.2"}
       # The heavy Bumblebee/EXLA/Nx stack lives in apps/mehungry_local_ai (a
       # non-deployed, local-only measurement-extraction service) — deliberately
       # absent here so the production release stays lean.

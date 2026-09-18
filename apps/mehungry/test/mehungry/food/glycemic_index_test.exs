@@ -35,8 +35,15 @@ defmodule Mehungry.Food.GlycemicIndexTest do
     test "is idempotent on (study, species, value); refreshes extraction fields", ctx do
       s1 = species_with_ingredients("Banana", 1)
 
-      assert 1 == Food.record_extracted_gi(ctx.study.id, [%{gi_value: 51.0, iso_method: false}], [s1.id])
-      assert 1 == Food.record_extracted_gi(ctx.study.id, [%{gi_value: 51.0, iso_method: true}], [s1.id])
+      assert 1 ==
+               Food.record_extracted_gi(ctx.study.id, [%{gi_value: 51.0, iso_method: false}], [
+                 s1.id
+               ])
+
+      assert 1 ==
+               Food.record_extracted_gi(ctx.study.id, [%{gi_value: 51.0, iso_method: true}], [
+                 s1.id
+               ])
 
       assert [cand] = Repo.all(GlycemicIndexCandidate)
       assert cand.iso_method
@@ -121,8 +128,14 @@ defmodule Mehungry.Food.GlycemicIndexTest do
   test "pending list orders ISO-method + higher score first", ctx do
     a = species_with_ingredients("A", 1)
     b = species_with_ingredients("B", 1)
-    Food.record_extracted_gi(ctx.study.id, [%{gi_value: 10.0, iso_method: false, score: 0.9}], [a.id])
-    Food.record_extracted_gi(ctx.study.id, [%{gi_value: 20.0, iso_method: true, score: 0.1}], [b.id])
+
+    Food.record_extracted_gi(ctx.study.id, [%{gi_value: 10.0, iso_method: false, score: 0.9}], [
+      a.id
+    ])
+
+    Food.record_extracted_gi(ctx.study.id, [%{gi_value: 20.0, iso_method: true, score: 0.1}], [
+      b.id
+    ])
 
     assert [first, _second] = Food.list_pending_glycemic_candidates()
     assert first.iso_method

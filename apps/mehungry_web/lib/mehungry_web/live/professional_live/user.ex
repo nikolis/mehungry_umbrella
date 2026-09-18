@@ -42,8 +42,8 @@ defmodule MehungryWeb.ProfessionalLive.User do
 
   defp stat_card(assigns) do
     ~H"""
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4">
-      <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4">
+      <div class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
         {@label}
       </div>
       <div class={["text-3xl font-bold", @highlight]}>{@value || 0}</div>
@@ -57,8 +57,8 @@ defmodule MehungryWeb.ProfessionalLive.User do
   defp detail_row(assigns) do
     ~H"""
     <div class="flex justify-between gap-4 py-2.5">
-      <dt class="text-sm text-slate-500">{@label}</dt>
-      <dd class="text-sm text-slate-200 text-right break-all">{render_slot(@inner_block)}</dd>
+      <dt class="text-sm text-parchment-dim">{@label}</dt>
+      <dd class="text-sm text-parchment text-right break-all">{render_slot(@inner_block)}</dd>
     </div>
     """
   end

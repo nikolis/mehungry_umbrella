@@ -12,8 +12,13 @@ defmodule Mehungry.Professionals do
     MealPlanRating,
     Article,
     ArticleParagraph,
-    ArticleReference
+    ArticleReference,
+    ProfessionalClient,
+    ClientIntake,
+    ConsultationNote
   }
+
+  alias Mehungry.Professionals.DietaryHistory
 
   # ── Professional Profile ───────────────────────────────────────────────────────
 
@@ -746,5 +751,113 @@ defmodule Mehungry.Professionals do
         where: r.paragraph_id == ^paragraph_id,
         preload: [:study, :species, :compound, :condition]
     )
+  end
+
+  # ── Client records (ProfessionalClient) ─────────────────────────────────────────
+
+  @doc "Lists a professional's client records, most recently created first."
+  def list_client_records(professional_id) do
+    Repo.all(
+      from c in ProfessionalClient,
+        where: c.professional_id == ^professional_id,
+        order_by: [desc: c.inserted_at]
+    )
+  end
+
+  @doc "Fetches one client record, scoped to the owning professional. Raises if not found."
+  def get_client_record!(professional_id, id) do
+    Repo.get_by!(ProfessionalClient, id: id, professional_id: professional_id)
+  end
+
+  def create_client_record(attrs) do
+    %ProfessionalClient{}
+    |> ProfessionalClient.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_client_record(%ProfessionalClient{} = client, attrs) do
+    client
+    |> ProfessionalClient.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def delete_client_record(%ProfessionalClient{} = client), do: Repo.delete(client)
+
+  def change_client_record(%ProfessionalClient{} = client, attrs \\ %{}) do
+    ProfessionalClient.changeset(client, attrs)
+  end
+
+  # ── Client intakes ──────────────────────────────────────────────────────────────
+
+  @doc "The most recent intake for a client, or nil."
+  def get_latest_intake(professional_client_id) do
+    Repo.one(
+      from i in ClientIntake,
+        where: i.professional_client_id == ^professional_client_id,
+        order_by: [desc_nulls_last: i.assessed_on, desc: i.inserted_at],
+        limit: 1
+    )
+  end
+
+  def list_intakes(professional_client_id) do
+    Repo.all(
+      from i in ClientIntake,
+        where: i.professional_client_id == ^professional_client_id,
+        order_by: [desc_nulls_last: i.assessed_on, desc: i.inserted_at]
+    )
+  end
+
+  def create_intake(attrs) do
+    %ClientIntake{}
+    |> ClientIntake.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_intake(%ClientIntake{} = intake, attrs) do
+    intake
+    |> ClientIntake.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def change_intake(%ClientIntake{} = intake, attrs \\ %{}) do
+    ClientIntake.changeset(intake, attrs)
+  end
+
+  # ── Consultation notes ──────────────────────────────────────────────────────────
+
+  @doc "Lists a client's consultation notes, oldest visit first (chronological timeline)."
+  def list_consultation_notes(professional_client_id) do
+    Repo.all(
+      from n in ConsultationNote,
+        where: n.professional_client_id == ^professional_client_id,
+        order_by: [asc_nulls_last: n.visit_date, asc: n.visit_number, asc: n.inserted_at]
+    )
+  end
+
+  def create_consultation_note(attrs) do
+    %ConsultationNote{}
+    |> ConsultationNote.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_consultation_note(%ConsultationNote{} = note, attrs) do
+    note
+    |> ConsultationNote.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def delete_consultation_note(%ConsultationNote{} = note), do: Repo.delete(note)
+
+  def change_consultation_note(%ConsultationNote{} = note, attrs \\ %{}) do
+    ConsultationNote.changeset(note, attrs)
+  end
+
+  @doc """
+  Imports a dietary-history CSV export (Google Sheets format) into a new client
+  record with its intake and consultation notes, all owned by `professional_id`.
+  Delegates to `DietaryHistory.Importer`.
+  """
+  def import_dietary_history(professional_id, csv_content) do
+    DietaryHistory.Importer.import_csv(professional_id, csv_content)
   end
 end
