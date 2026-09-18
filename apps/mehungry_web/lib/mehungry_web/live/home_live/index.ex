@@ -54,6 +54,15 @@ defmodule MehungryWeb.HomeLive.Index do
     # subscription per post in the candidate window.
     subscribe_to_posts(first_page)
 
+    # Warm the recipe cache for the visible feed in the background so that when
+    # the user clicks a card, `apply_action(:show_recipe)` hits `:recipes_cache`
+    # instead of paying the cold DB read + preloads. Connected mount only (the
+    # static render shouldn't spawn work), off the LiveView process so it never
+    # blocks rendering or the user's own click event.
+    if connected?(socket) do
+      prefetch_recipe_cache(first_page)
+    end
+
     {:ok,
      socket
      |> assign(:user, user)
@@ -203,6 +212,23 @@ defmodule MehungryWeb.HomeLive.Index do
 
   defp subscribe_to_posts(posts) do
     Enum.each(posts, fn post -> Posts.subscribe_to_post(%{post_id: post.id}) end)
+  end
+
+  # Fire-and-forget warm of `:recipes_cache` for the recipes referenced by the
+  # given posts. `Food.get_recipe!/1` populates the cache as a side effect, so
+  # a later click resolves from cache. Runs under the app Task supervisor and is
+  # deliberately unlinked from the LiveView — a failed prefetch must never take
+  # the feed down, and slow DB reads must not block the socket.
+  defp prefetch_recipe_cache(posts) do
+    recipe_ids =
+      posts
+      |> Enum.map(& &1.reference_id)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    Task.Supervisor.start_child(Mehungry.TaskSupervisor, fn ->
+      Enum.each(recipe_ids, fn id -> Food.get_recipe!(id) end)
+    end)
   end
 
   @impl true

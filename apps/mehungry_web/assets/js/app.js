@@ -40,11 +40,52 @@ window.addEventListener("phx:ga_event", ({detail}) => {
   }
 })
 
+// Instant recipe-loading skeleton (shown the moment a feed card is clicked) so
+// the user gets feedback while the server loads the recipe. Show/hide is
+// centralized here so hiding can be triggered from several independent signals —
+// the skeleton must NEVER get stuck on screen:
+//   1. the real recipe modal mounting ("mehungry:recipe-loaded" from the
+//      RecipeDetailTimer hook) — the deterministic "data is present" moment;
+//   2. any navigation/patch settling (phx:page-loading-stop) — covers the
+//      recipe-not-found redirect where the modal never mounts;
+//   3. an absolute safety timeout — a backstop in case a click shows the
+//      skeleton but no navigation follows (e.g. a no-op patch), which is what
+//      caused it to hang permanently before.
+let _recipeSkeletonTimeout = null
+
+function hideRecipeSkeleton() {
+  if (_recipeSkeletonTimeout) {
+    clearTimeout(_recipeSkeletonTimeout)
+    _recipeSkeletonTimeout = null
+  }
+  const el = document.getElementById("recipe-loading-skeleton")
+  if (el) {
+    // JS.show sets an inline display style; inline wins over the `hidden`
+    // class, so clear it explicitly as well as re-adding the class.
+    el.style.display = "none"
+    el.classList.add("hidden")
+  }
+}
+
+function showRecipeSkeleton() {
+  const el = document.getElementById("recipe-loading-skeleton")
+  if (!el) return
+  el.classList.remove("hidden")
+  el.style.display = ""
+  if (_recipeSkeletonTimeout) clearTimeout(_recipeSkeletonTimeout)
+  _recipeSkeletonTimeout = setTimeout(hideRecipeSkeleton, 12000)
+}
+
+window.addEventListener("mehungry:recipe-open", showRecipeSkeleton)
+window.addEventListener("mehungry:recipe-loaded", hideRecipeSkeleton)
+
 // GA's automatic page_view only fires once, on the very first script load —
 // this app is a LiveView SPA, so subsequent in-app navigation needs a manual
 // page_view per navigation. `send_page_view: false` is set in head.html.heex
 // so this is the only page_view source (initial load included).
 window.addEventListener("phx:page-loading-stop", (e) => {
+  hideRecipeSkeleton()
+
   if (typeof gtag === "function" && (!e.detail || e.detail.kind !== "error")) {
     gtag('event', 'page_view', {
       page_location: window.location.href,

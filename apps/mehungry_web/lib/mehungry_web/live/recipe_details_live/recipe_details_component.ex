@@ -8,6 +8,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   alias Mehungry.{Posts, Users, Food, Accounts}
   alias Mehungry.Social.Facebook
   alias MehungryWeb.RecipeFlags
+  alias Phoenix.LiveView.AsyncResult
 
   embed_templates("components/*")
   @color_fill "#00A0D0"
@@ -339,12 +340,23 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               ingredient_flags={@ingredient_flags}
             />
           </div>
-          <%= if @interactions != [] do %>
-            <div class="mt-20">
-              <h2 class="text-lg font-display font-medium text-parchment mb-4">Nutrition Insights</h2>
-              <.nutrient_interaction_panel interactions={@interactions} />
-            </div>
-          <% end %>
+          <.async_result :let={interactions} assign={@interactions}>
+            <:loading>
+              <div class="mt-20 animate-pulse">
+                <div class="h-6 w-40 rounded bg-ink-panel2 mb-4"></div>
+                <div class="h-16 rounded-xl bg-ink-panel2"></div>
+              </div>
+            </:loading>
+            <:failed :let={_reason}></:failed>
+            <%= if interactions != [] do %>
+              <div class="mt-20">
+                <h2 class="text-lg font-display font-medium text-parchment mb-4">
+                  Nutrition Insights
+                </h2>
+                <.nutrient_interaction_panel interactions={interactions} />
+              </div>
+            <% end %>
+          </.async_result>
 
           <div
             class="mt-20 bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden"
@@ -354,7 +366,13 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               class="w-full flex justify-between items-center p-4 hover:bg-black/20 transition relative"
               phx-click={JS.toggle_class("h-0 overflow-hidden mt-6", to: ".comment")}
             >
-              <h3 class="text-parchment font-semibold">{"Comments (#{length(@recipe_comments)})"}</h3>
+              <h3 class="text-parchment font-semibold">
+                <.async_result :let={comments} assign={@recipe_comments}>
+                  <:loading>Comments</:loading>
+                  <:failed :let={_reason}>Comments</:failed>
+                  {"Comments (#{length(comments)})"}
+                </.async_result>
+              </h3>
 
               <svg
                 class={[
@@ -383,25 +401,35 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                   comment={@comment}
                 />
               <% end %>
-              <%= if Enum.empty?(@recipe_comments) do %>
-                <div class="text-center py-8 text-parchment-dim">
-                  No comments yet. Be the first to comment!
-                </div>
-              <% else %>
-                <div class="mt-2">
-                  <%= for comment <- @recipe_comments do %>
-                    <.comment
-                      comment={comment}
-                      user={comment.user}
-                      current_user={@current_user}
-                      live_action={@live_action}
-                      page_title={@page_title}
-                      myself={@myself}
-                      reply={@reply}
-                    />
-                  <% end %>
-                </div>
-              <% end %>
+              <.async_result :let={comments} assign={@recipe_comments}>
+                <:loading>
+                  <div class="text-center py-8 text-parchment-dim">Loading comments…</div>
+                </:loading>
+                <:failed :let={_reason}>
+                  <div class="text-center py-8 text-parchment-dim">
+                    Couldn't load comments.
+                  </div>
+                </:failed>
+                <%= if Enum.empty?(comments) do %>
+                  <div class="text-center py-8 text-parchment-dim">
+                    No comments yet. Be the first to comment!
+                  </div>
+                <% else %>
+                  <div class="mt-2">
+                    <%= for comment <- comments do %>
+                      <.comment
+                        comment={comment}
+                        user={comment.user}
+                        current_user={@current_user}
+                        live_action={@live_action}
+                        page_title={@page_title}
+                        myself={@myself}
+                        reply={@reply}
+                      />
+                    <% end %>
+                  </div>
+                <% end %>
+              </.async_result>
             </div>
           </div>
         </div>
@@ -462,8 +490,15 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   @impl true
   def update(%{recipe_comments: recipe_comments} = _assigns, socket) do
-    socket = assign(socket, :recipe_comments, recipe_comments)
-    {:ok, socket}
+    # Live comment updates arrive as a plain list; fold it into the AsyncResult
+    # the template renders so a new/edited comment shows without a re-fetch.
+    async =
+      case socket.assigns[:recipe_comments] do
+        %AsyncResult{} = ar -> AsyncResult.ok(ar, recipe_comments)
+        _ -> AsyncResult.ok(recipe_comments)
+      end
+
+    {:ok, assign(socket, :recipe_comments, async)}
   end
 
   @impl true
@@ -477,9 +512,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
         assigns.user_follows
       end
 
-    comments = Food.get_recipe_comments(assigns.recipe.id)
     reply = Map.get(assigns, :reply, nil)
-    interactions = Food.get_interactions_for_recipe(assigns.recipe)
 
     ingredient_ids =
       assigns.recipe.recipe_ingredients
@@ -509,10 +542,8 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign(:recipe, recipe)
       |> assign(:reply, reply)
       |> assign(:user_follows, user_follows)
-      |> assign(:recipe_comments, comments)
       |> assign(:ingredient_display_names, display_names)
       |> assign(:ingredient_flags, ingredient_flags)
-      |> assign(:interactions, interactions)
       |> assign(:server_ms, server_ms)
       |> assign(
         :comment,
@@ -520,7 +551,31 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           %Comment{user_id: assigns.current_user.id, recipe_id: assigns.recipe.id}
         end)
       )
+      |> maybe_load_recipe_async(recipe, ingredient_ids)
 
     {:ok, socket}
+  end
+
+  # Comments and nutrient interactions are below the fold (comments even start
+  # collapsed), so they load asynchronously: the modal paints immediately with
+  # the recipe, ingredients and flags, then these fill in. Guarded to load once
+  # per recipe so a routine parent re-render doesn't reset them to a spinner or
+  # re-run the queries. The live comment-update path (send_update with
+  # `%{recipe_comments: ...}`) refreshes the list without going through here.
+  defp maybe_load_recipe_async(socket, recipe, ingredient_ids) do
+    if socket.assigns[:async_recipe_id] == recipe.id do
+      socket
+    else
+      recipe_id = recipe.id
+
+      socket
+      |> assign(:async_recipe_id, recipe_id)
+      |> assign_async(:recipe_comments, fn ->
+        {:ok, %{recipe_comments: Food.get_recipe_comments(recipe_id)}}
+      end)
+      |> assign_async(:interactions, fn ->
+        {:ok, %{interactions: Food.get_interactions_for_ingredients(ingredient_ids)}}
+      end)
+    end
   end
 end

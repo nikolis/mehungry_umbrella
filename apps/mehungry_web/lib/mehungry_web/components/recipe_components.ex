@@ -13,6 +13,20 @@ defmodule MehungryWeb.RecipeComponents do
   import MehungryWeb.CoreComponents
   import MehungryWeb.TabsComponent
 
+  # Same reveal as CoreComponents.show_modal/2 but with no entrance transition —
+  # the modal appears in a single frame. Used when a client-side loading
+  # skeleton was already on screen (the home feed): replaying the 300ms
+  # fade+scale would read as the modal "re-rendering" once the data lands, so we
+  # swap the skeleton for the finished modal in place instead.
+  def show_modal_instant(js \\ %JS{}, id) when is_binary(id) do
+    js
+    |> JS.show(to: "##{id}")
+    |> JS.show(to: "##{id}-bg")
+    |> JS.show(to: "##{id}-container")
+    |> JS.add_class("overflow-hidden", to: "body")
+    |> JS.focus_first(to: "##{id}-content")
+  end
+
   def get_color(treaty) do
     case treaty do
       true ->
@@ -42,6 +56,7 @@ defmodule MehungryWeb.RecipeComponents do
   """
   attr :id, :string, required: true
   attr :show, :boolean, default: false
+  attr :animate, :boolean, default: true
   attr :on_cancel, JS, default: %JS{}
   slot :inner_block, required: true
 
@@ -49,7 +64,7 @@ defmodule MehungryWeb.RecipeComponents do
     ~H"""
     <div
       id={@id}
-      phx-mounted={@show && show_modal(@id)}
+      phx-mounted={@show && if(@animate, do: show_modal(@id), else: show_modal_instant(@id))}
       phx-remove={hide_modal(@id)}
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="relative z-50 hidden max-w-1/2 "
