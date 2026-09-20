@@ -203,6 +203,10 @@ defmodule MehungryWeb.Router do
       live "/appointments", NutritionistLive.AppointmentCalendar, :index
       live "/articles", NutritionistLive.Articles, :index
       live "/articles/:id/edit", NutritionistLive.ArticleEditor, :edit
+
+      live "/blueprints", MealBlueprintLive.Index, :index
+      live "/blueprints/new", MealBlueprintLive.Index, :new
+      live "/blueprints/:id/edit", MealBlueprintLive.Editor, :edit
     end
   end
 
@@ -341,6 +345,8 @@ defmodule MehungryWeb.Router do
       localized_live("/foods", FoodsLive.Index, :index)
       localized_live("/foods/:slug", SpeciesDetailLive.Index, :index)
 
+      localized_live("/blueprints/:slug", BlueprintLive.Show, :show)
+
       localized_live("/nutritionists", PublicNutritionistLive.Index, :index)
       localized_live("/nutritionists/:slug", PublicNutritionistLive.Show, :show)
 
@@ -376,6 +382,11 @@ defmodule MehungryWeb.Router do
     post "/register", UserRegistrationController, :create
     get "/users/register", UserRegistrationController, :new
     post "/users/register", UserRegistrationController, :create
+
+    # Claim a login-less account created by a professional on the client's behalf.
+    get "/claim/:token", UserClaimController, :edit
+    post "/claim/:token", UserClaimController, :update
+    get "/claim/:token/oauth/:provider", UserClaimController, :oauth_request
   end
 
   scope "/", MehungryWeb do

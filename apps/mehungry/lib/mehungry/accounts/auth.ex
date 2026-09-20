@@ -44,6 +44,138 @@ defmodule Mehungry.Accounts.Auth do
     User.registration_changeset(user, attrs, hash_password: false)
   end
 
+  ## Managed (professional-created) accounts
+
+  @doc """
+  Creates a login-less "managed" client account on behalf of a professional.
+
+  The account is pre-confirmed and has no password; the caller-supplied `attrs`
+  should carry the display `name` (the alias) and the `managed_by_professional_id`.
+  A synthetic, unique placeholder email is generated so the uniqueness invariants
+  hold until the client claims the account.
+  """
+  def create_managed_client(attrs) do
+    attrs = Map.put_new(attrs, :email, placeholder_email())
+
+    result =
+      %User{}
+      |> User.managed_client_changeset(attrs)
+      |> Repo.insert()
+
+    case result do
+      {:ok, user} ->
+        Profiles.create_user_profile_if_needed(user)
+        {:ok, user}
+
+      _ ->
+        result
+    end
+  end
+
+  defp placeholder_email do
+    random = :crypto.strong_rand_bytes(16) |> Base.url_encode64(padding: false)
+    "managed-#{random}@clients.m3hungry.invalid"
+  end
+
+  @doc """
+  Returns whether `user` is a managed account that has not yet been claimed
+  (created by a professional, still without its own credentials).
+  """
+  def managed_unclaimed?(%User{managed_by_professional_id: pid, hashed_password: hp}),
+    do: not is_nil(pid) and is_nil(hp)
+
+  def managed_unclaimed?(_), do: false
+
+  @doc """
+  Builds and stores a claim token for a managed account, returning the encoded
+  token to be embedded in a shareable claim URL. Any prior claim token for the
+  user is revoked so only the latest link is valid.
+  """
+  def build_managed_client_claim_token(%User{} = user) do
+    Repo.delete_all(UserToken.user_and_contexts_query(user, ["claim"]))
+    {encoded_token, user_token} = UserToken.build_email_token(user, "claim")
+    Repo.insert!(user_token)
+    encoded_token
+  end
+
+  @doc """
+  Returns the managed, unclaimed user for a valid claim token, or `nil`.
+  """
+  def get_managed_user_by_claim_token(token) do
+    with {:ok, query} <- UserToken.verify_email_token_query(token, "claim"),
+         %User{} = user <- Repo.one(query),
+         true <- managed_unclaimed?(user) do
+      user
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for a client claiming a managed account.
+  """
+  def change_user_claim(%User{} = user, attrs \\ %{}) do
+    User.claim_changeset(user, attrs, hash_password: false)
+  end
+
+  @doc """
+  Claims a managed account with the given token: sets the client's real email and
+  password, clears the managed flag, and revokes the claim token. All of the
+  account's existing data (assignment, calendar, meal plans) is preserved because
+  it is the same user row.
+  """
+  def claim_managed_account(token, attrs) do
+    case get_managed_user_by_claim_token(token) do
+      nil ->
+        :error
+
+      user ->
+        result =
+          Ecto.Multi.new()
+          |> Ecto.Multi.update(:user, User.claim_changeset(user, attrs))
+          |> Ecto.Multi.delete_all(
+            :tokens,
+            UserToken.user_and_contexts_query(user, ["claim", "confirm"])
+          )
+          |> Repo.transaction()
+
+        case result do
+          {:ok, %{user: user}} -> {:ok, user}
+          {:error, :user, changeset, _} -> {:error, changeset}
+        end
+    end
+  end
+
+  @doc """
+  Claims a managed account with the given token using a third-party identity.
+
+  `oauth_attrs` is the provider profile (`:email`, `:name`, `:profile_pic`). The
+  account keeps its data and becomes an ordinary confirmed OAuth account with no
+  password. Returns `{:error, :email_taken}` if the provider email already
+  belongs to another account.
+  """
+  def claim_managed_account_with_oauth(token, oauth_attrs) do
+    case get_managed_user_by_claim_token(token) do
+      nil ->
+        :error
+
+      user ->
+        result =
+          Ecto.Multi.new()
+          |> Ecto.Multi.update(:user, User.claim_oauth_changeset(user, oauth_attrs))
+          |> Ecto.Multi.delete_all(
+            :tokens,
+            UserToken.user_and_contexts_query(user, ["claim", "confirm"])
+          )
+          |> Repo.transaction()
+
+        case result do
+          {:ok, %{user: user}} -> {:ok, user}
+          {:error, :user, _changeset, _} -> {:error, :email_taken}
+        end
+    end
+  end
+
   @doc """
   Returns an `%Ecto.Changeset{}` for changing the user email.
   """

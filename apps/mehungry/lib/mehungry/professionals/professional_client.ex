@@ -2,10 +2,10 @@ defmodule Mehungry.Professionals.ProfessionalClient do
   @moduledoc """
   A nutritionist-owned client file ("patient record").
 
-  Unlike `TutorClientAssignment` (which links a professional to a registered
-  platform `User`), a `ProfessionalClient` is an off-platform person the
-  nutritionist keeps a dietary history for — holding their PII directly and
-  optionally linking to a platform account via `user_id`.
+  Like `TutorClientAssignment`, a `ProfessionalClient` is always anchored to a
+  registered platform `User` (`user_id`) — a record is **never headless**. On
+  top of that association it holds the client's dietary-history PII directly
+  (name, contact, anthropometrics, consultation notes).
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -43,7 +43,7 @@ defmodule Mehungry.Professionals.ProfessionalClient do
       :postal_code,
       :work_schedule
     ])
-    |> validate_required([:professional_id, :full_name])
+    |> validate_required([:professional_id, :user_id, :full_name])
     |> foreign_key_constraint(:professional_id)
     |> foreign_key_constraint(:user_id)
   end

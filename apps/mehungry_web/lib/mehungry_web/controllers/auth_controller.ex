@@ -84,38 +84,86 @@ defmodule MehungryWeb.AuthController do
       |> put_flash(:info, "Facebook account connected successfully.")
       |> redirect(to: redirect_path)
     else
-      case Accounts.find_or_create(auth) do
-        {:ok, user} ->
-          token = auth.extra.raw_info.token.access_token
+      case get_session(conn, "claim_token") do
+        nil ->
+          case Accounts.find_or_create(auth) do
+            {:ok, user} ->
+              token = auth.extra.raw_info.token.access_token
 
-          Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
-            Accounts.put_user_token(user, token, "facebook")
-            Mehungry.Social.Facebook.get_user_pages(user, token, auth.extra.raw_info.user["id"])
+              Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
+                Accounts.put_user_token(user, token, "facebook")
+                Mehungry.Social.Facebook.get_user_pages(user, token, auth.extra.raw_info.user["id"])
+              end)
+
+              conn
+              |> UserAuth.log_in_user(user, %{})
+              |> put_flash(:info, "Successfully logged in with Facebook.")
+              |> redirect(to: "/profile")
+
+            {:error, reason} ->
+              conn
+              |> put_flash(:error, reason)
+              |> redirect(to: "/")
+          end
+
+        claim_token ->
+          fb_token = auth.extra.raw_info.token.access_token
+
+          claim_via_oauth(conn, claim_token, auth, fn user ->
+            Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
+              Accounts.put_user_token(user, fb_token, "facebook")
+            end)
           end)
-
-          conn
-          |> UserAuth.log_in_user(user, %{})
-          |> put_flash(:info, "Successfully logged in with Facebook.")
-          |> redirect(to: "/profile")
-
-        {:error, reason} ->
-          conn
-          |> put_flash(:error, reason)
-          |> redirect(to: "/")
       end
     end
   end
 
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, _params) do
-    case Accounts.find_or_create(auth) do
+    case get_session(conn, "claim_token") do
+      nil ->
+        case Accounts.find_or_create(auth) do
+          {:ok, user} ->
+            conn
+            |> UserAuth.log_in_user(user, %{})
+            |> put_flash(:info, "Successfully authenticated.")
+
+          {:error, reason} ->
+            conn
+            |> put_flash(:error, reason)
+            |> redirect(to: "/")
+        end
+
+      claim_token ->
+        claim_via_oauth(conn, claim_token, auth)
+    end
+  end
+
+  # Claim a professional-created managed account with the provider identity,
+  # then log in. `after_claim` runs any provider-specific side effects (e.g.
+  # storing a Facebook token) on success.
+  defp claim_via_oauth(conn, token, auth, after_claim \\ fn _user -> :ok end) do
+    conn = delete_session(conn, "claim_token")
+
+    case Accounts.claim_managed_account_with_oauth(token, Accounts.oauth_profile(auth)) do
       {:ok, user} ->
+        after_claim.(user)
+
         conn
         |> UserAuth.log_in_user(user, %{})
-        |> put_flash(:info, "Successfully authenticated.")
+        |> put_flash(:info, "Welcome! Your account is ready.")
+        |> redirect(to: "/profile")
 
-      {:error, reason} ->
+      {:error, :email_taken} ->
         conn
-        |> put_flash(:error, reason)
+        |> put_flash(
+          :error,
+          "An account with that email already exists. Please log in with it instead."
+        )
+        |> redirect(to: "/users/log_in")
+
+      :error ->
+        conn
+        |> put_flash(:error, "This claim link is invalid or has expired.")
         |> redirect(to: "/")
     end
   end

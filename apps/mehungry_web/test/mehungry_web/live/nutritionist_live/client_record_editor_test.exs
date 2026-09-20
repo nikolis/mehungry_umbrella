@@ -1,9 +1,10 @@
 defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
   @moduledoc """
-  Smoke tests for the manual client-record authoring UI: creating an external
-  client, filling the typed + questionnaire + 24h-recall intake and a consultation
-  note (and seeing them on the read-only record page), linking an m3hungry platform
-  user, a failed email lookup, and the ownership redirect.
+  Smoke tests for the manual client-record authoring UI: creating a client
+  linked to a required m3hungry platform user, filling the typed + questionnaire
+  + 24h-recall intake and a consultation note (and seeing them on the read-only
+  record page), the linked-user requirement, a failed email lookup, and the
+  ownership redirect.
   """
   use MehungryWeb.ConnCase
 
@@ -18,20 +19,28 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
     %{conn: log_in_user(conn, nutritionist), user: nutritionist}
   end
 
-  test "creates an external client, fills intake + a note, read-only page renders them",
+  test "creates a client linked to an m3hungry user, fills intake + a note, read-only page renders them",
        %{conn: conn, user: user} do
+    client_user = Mehungry.AccountsFixtures.user_fixture()
+    client_user = Repo.update!(Ecto.Changeset.change(client_user, name: "John Client"))
+    Repo.insert!(%TutorClientAssignment{professional_id: user.id, client_id: client_user.id})
+
     {:ok, view, _html} = live(conn, "/nutritionist/records/new")
+
+    view
+    |> element("form[phx-change='pick_assigned']")
+    |> render_change(%{"user_id" => to_string(client_user.id)})
 
     result =
       view
-      |> form("form[phx-submit='save_client']", client: %{full_name: "John External"})
+      |> form("form[phx-submit='save_client']", client: %{full_name: "John Client"})
       |> render_submit()
 
     {:ok, edit_view, _html} = follow_redirect(result, conn)
 
     [record] = Professionals.list_client_records(user.id)
-    assert record.full_name == "John External"
-    assert is_nil(record.user_id)
+    assert record.full_name == "John Client"
+    assert record.user_id == client_user.id
 
     # Intake: a typed field, a questionnaire detail key, and a recall key.
     edit_view
@@ -72,7 +81,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
     assert html =~ "Weight loss"
     assert html =~ "Oats"
     assert html =~ "First visit."
-    assert html =~ "External"
+    assert html =~ "John Client"
   end
 
   test "links an m3hungry platform client from the assigned-clients dropdown",
@@ -83,8 +92,6 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
     Repo.insert!(%TutorClientAssignment{professional_id: user.id, client_id: client_user.id})
 
     {:ok, view, _html} = live(conn, "/nutritionist/records/new")
-
-    view |> element("button[phx-value-mode='platform']") |> render_click()
 
     view
     |> element("form[phx-change='pick_assigned']")
@@ -98,10 +105,20 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
     assert record.full_name == "Platform Client"
   end
 
-  test "an email lookup with no matching account flashes an error", %{conn: conn} do
+  test "saving without a linked m3hungry user is refused", %{conn: conn, user: user} do
     {:ok, view, _html} = live(conn, "/nutritionist/records/new")
 
-    view |> element("button[phx-value-mode='platform']") |> render_click()
+    html =
+      view
+      |> form("form[phx-submit='save_client']", client: %{full_name: "No Account"})
+      |> render_submit()
+
+    assert html =~ "records can&#39;t be headless" or html =~ "records can't be headless"
+    assert Professionals.list_client_records(user.id) == []
+  end
+
+  test "an email lookup with no matching account flashes an error", %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/nutritionist/records/new")
 
     html =
       view
@@ -115,7 +132,11 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
     other = Mehungry.AccountsFixtures.user_fixture()
 
     {:ok, record} =
-      Professionals.create_client_record(%{professional_id: other.id, full_name: "Not Yours"})
+      Professionals.create_client_record(%{
+        professional_id: other.id,
+        user_id: other.id,
+        full_name: "Not Yours"
+      })
 
     assert {:error, {:live_redirect, %{to: "/nutritionist/records"}}} =
              live(conn, "/nutritionist/records/#{record.id}/edit")

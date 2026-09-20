@@ -3,9 +3,10 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
   Manual authoring UI for a `ProfessionalClient` dietary-history record — the
   by-hand counterpart to the CSV import in `NutritionistLive.Records`.
 
-  `:new` collects the client's identity and its association (external person, or
-  an m3hungry platform user picked from the nutritionist's assigned clients / by
-  email), then navigates into `:edit`, which persists incrementally (mirroring
+  `:new` collects the client's identity and its **required** association to an
+  m3hungry platform user (picked from the nutritionist's assigned clients or by
+  email — a record is never headless), then navigates into `:edit`, which
+  persists incrementally (mirroring
   `ArticleEditor`): the client details form, a single `ClientIntake` (typed
   anthropometrics + the free-form questionnaire/24h-recall `details` map), and a
   repeatable list of `ConsultationNote`s.
@@ -43,7 +44,6 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
      |> assign(:page_title, "New client")
      |> assign(:record, client)
      |> assign(:client_changeset, Professionals.change_client_record(client))
-     |> assign(:link_mode, :external)
      |> assign(:linked_user_id, nil)
      |> assign(:assigned_clients, assigned_client_options(professional_id))
      |> assign(:email_lookup, "")}
@@ -61,7 +61,6 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     |> assign(:intake, intake)
     |> assign(:intake_changeset, Professionals.change_intake(intake))
     |> assign(:notes, notes_newest_first(record.id))
-    |> assign(:link_mode, if(record.user_id, do: :platform, else: :external))
     |> assign(:linked_user_id, record.user_id)
     |> assign(:assigned_clients, assigned_client_options(record.professional_id))
     |> assign(:email_lookup, "")
@@ -84,20 +83,9 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     end)
   end
 
-  # ── Association (external vs. m3hungry user) ────────────────────────────────────
+  # ── Association (required m3hungry user) ────────────────────────────────────────
 
   @impl true
-  def handle_event("set_link_mode", %{"mode" => "external"}, socket) do
-    {:noreply,
-     socket
-     |> assign(:link_mode, :external)
-     |> assign(:linked_user_id, nil)}
-  end
-
-  def handle_event("set_link_mode", %{"mode" => "platform"}, socket) do
-    {:noreply, assign(socket, :link_mode, :platform)}
-  end
-
   def handle_event("pick_assigned", %{"user_id" => ""}, socket) do
     {:noreply, assign(socket, :linked_user_id, nil)}
   end
@@ -140,36 +128,16 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
   end
 
   def handle_event("save_client", %{"client" => params}, socket) do
-    attrs =
-      params
-      |> Map.put("professional_id", socket.assigns.current_user.id)
-      |> Map.put("user_id", user_id_for_save(socket))
-
-    case socket.assigns.record do
-      %ProfessionalClient{id: nil} ->
-        case Professionals.create_client_record(attrs) do
-          {:ok, record} ->
-            {:noreply,
-             socket
-             |> put_flash(:info, "Client created.")
-             |> push_navigate(to: ~p"/nutritionist/records/#{record.id}/edit")}
-
-          {:error, changeset} ->
-            {:noreply, assign(socket, :client_changeset, Map.put(changeset, :action, :insert))}
-        end
-
-      record ->
-        case Professionals.update_client_record(record, attrs) do
-          {:ok, record} ->
-            {:noreply,
-             socket
-             |> assign(:record, record)
-             |> assign(:client_changeset, Professionals.change_client_record(record))
-             |> put_flash(:info, "Client saved.")}
-
-          {:error, changeset} ->
-            {:noreply, assign(socket, :client_changeset, changeset)}
-        end
+    # A record is never headless: refuse to save until a platform user is linked.
+    if is_nil(user_id_for_save(socket)) do
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         "Select the m3hungry client this record belongs to — records can't be headless."
+       )}
+    else
+      save_client(params, socket)
     end
   end
 
@@ -259,10 +227,39 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     |> put_flash(:info, "Linked to #{user.name || user.email}.")
   end
 
-  defp user_id_for_save(socket) do
-    case socket.assigns.link_mode do
-      :platform -> socket.assigns.linked_user_id
-      :external -> nil
+  defp user_id_for_save(socket), do: socket.assigns.linked_user_id
+
+  defp save_client(params, socket) do
+    attrs =
+      params
+      |> Map.put("professional_id", socket.assigns.current_user.id)
+      |> Map.put("user_id", user_id_for_save(socket))
+
+    case socket.assigns.record do
+      %ProfessionalClient{id: nil} ->
+        case Professionals.create_client_record(attrs) do
+          {:ok, record} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, "Client created.")
+             |> push_navigate(to: ~p"/nutritionist/records/#{record.id}/edit")}
+
+          {:error, changeset} ->
+            {:noreply, assign(socket, :client_changeset, Map.put(changeset, :action, :insert))}
+        end
+
+      record ->
+        case Professionals.update_client_record(record, attrs) do
+          {:ok, record} ->
+            {:noreply,
+             socket
+             |> assign(:record, record)
+             |> assign(:client_changeset, Professionals.change_client_record(record))
+             |> put_flash(:info, "Client saved.")}
+
+          {:error, changeset} ->
+            {:noreply, assign(socket, :client_changeset, changeset)}
+        end
     end
   end
 
@@ -351,73 +348,46 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
   defp association_control(assigns) do
     ~H"""
     <div class="bg-ink rounded-lg p-3 mb-2">
-      <div class="flex gap-2 mb-3">
-        <button
-          type="button"
-          phx-click="set_link_mode"
-          phx-value-mode="external"
-          class={link_tab_class(@link_mode == :external)}
-        >
-          External person
-        </button>
-        <button
-          type="button"
-          phx-click="set_link_mode"
-          phx-value-mode="platform"
-          class={link_tab_class(@link_mode == :platform)}
-        >
-          m3hungry client
-        </button>
+      <h3 class="text-sm font-semibold text-parchment mb-3">m3hungry client (required)</h3>
+
+      <div class="space-y-3">
+        <.labeled label="Pick from your clients">
+          <form id="pick-assigned-form" phx-change="pick_assigned">
+            <select
+              name="user_id"
+              class="w-full bg-ink-panel border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
+            >
+              <option value="">— select a client —</option>
+              <%= for {label, id} <- @assigned_clients do %>
+                <option value={id} selected={@linked_user_id == id}>{label}</option>
+              <% end %>
+            </select>
+          </form>
+        </.labeled>
+
+        <.labeled label="…or look up by account email">
+          <form id="lookup-email-form" phx-submit="lookup_email" class="flex gap-2">
+            <input
+              type="text"
+              name="email"
+              value={@email_lookup}
+              placeholder="client@example.com"
+              class="flex-1 bg-ink-panel border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
+            />
+            <.action variant={:secondary} size={:sm} type="submit">Look up</.action>
+          </form>
+        </.labeled>
+
+        <p class="text-xs text-parchment-dim">
+          <%= if @linked_user_id do %>
+            Linked to m3hungry account {@linked_user_id}. Name &amp; email were prefilled — edit below if needed.
+          <% else %>
+            A record can't be headless — select or look up the registered client it belongs to, then save.
+          <% end %>
+        </p>
       </div>
-
-      <%= if @link_mode == :platform do %>
-        <div class="space-y-3">
-          <.labeled label="Pick from your clients">
-            <form id="pick-assigned-form" phx-change="pick_assigned">
-              <select
-                name="user_id"
-                class="w-full bg-ink-panel border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
-              >
-                <option value="">— select a client —</option>
-                <%= for {label, id} <- @assigned_clients do %>
-                  <option value={id} selected={@linked_user_id == id}>{label}</option>
-                <% end %>
-              </select>
-            </form>
-          </.labeled>
-
-          <.labeled label="…or look up by account email">
-            <form id="lookup-email-form" phx-submit="lookup_email" class="flex gap-2">
-              <input
-                type="text"
-                name="email"
-                value={@email_lookup}
-                placeholder="client@example.com"
-                class="flex-1 bg-ink-panel border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
-              />
-              <.action variant={:secondary} size={:sm} type="submit">Look up</.action>
-            </form>
-          </.labeled>
-
-          <p class="text-xs text-parchment-dim">
-            <%= if @linked_user_id do %>
-              Linked to m3hungry account {@linked_user_id}. Name &amp; email were prefilled — edit below if needed.
-            <% else %>
-              Select or look up a registered client, then save.
-            <% end %>
-          </p>
-        </div>
-      <% end %>
     </div>
     """
-  end
-
-  defp link_tab_class(active?) do
-    base = "text-xs px-3 py-1.5 rounded-lg border transition-colors "
-
-    if active?,
-      do: base <> "bg-ink-panel2 text-parchment border-paprika-soft",
-      else: base <> "bg-transparent text-parchment-dim border-ink-panel2 hover:text-parchment"
   end
 
   # ── Intake ──────────────────────────────────────────────────────────────────────

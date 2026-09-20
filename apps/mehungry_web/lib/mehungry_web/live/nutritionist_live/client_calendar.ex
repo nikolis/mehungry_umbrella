@@ -53,28 +53,57 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
   end
 
   defp apply_action(socket, :new, %{"date" => start_date, "title" => title}) do
-    socket
-    |> assign(:page_title, "Create Meal")
-    |> assign(:user_meal, struct(UserMeal))
-    |> assign(:title, title)
-    |> assign(:dates, %{start: start_date})
+    if past_date?(start_date) do
+      deny_past_date(socket)
+    else
+      socket
+      |> assign(:page_title, "Create Meal")
+      |> assign(:user_meal, struct(UserMeal))
+      |> assign(:title, title)
+      |> assign(:dates, %{start: start_date})
+    end
   end
 
   defp apply_action(socket, :edit, %{"meal_id" => meal_id}) do
     user_meal = History.get_user_meal!(meal_id)
 
-    # Guard: nutritionists may only edit meals belonging to their assigned client.
-    if user_meal.user_id == socket.assigns.client_id do
-      socket
-      |> assign(:page_title, "Edit Meal")
-      |> assign(:user_meal, user_meal)
-      |> assign(:title, user_meal.title)
-      |> assign(:dates, %{start: user_meal.start_dt, end: user_meal.end_dt})
-    else
-      socket
-      |> put_flash(:error, "Not authorized.")
-      |> push_patch(to: "/nutritionist/clients/#{socket.assigns.client_id}/calendar")
+    cond do
+      # Guard: nutritionists may only edit meals belonging to their assigned client.
+      user_meal.user_id != socket.assigns.client_id ->
+        socket
+        |> put_flash(:error, "Not authorized.")
+        |> push_patch(to: "/nutritionist/clients/#{socket.assigns.client_id}/calendar")
+
+      past_date?(user_meal.start_dt) ->
+        deny_past_date(socket)
+
+      true ->
+        socket
+        |> assign(:page_title, "Edit Meal")
+        |> assign(:user_meal, user_meal)
+        |> assign(:title, user_meal.title)
+        |> assign(:dates, %{start: user_meal.start_dt, end: user_meal.end_dt})
     end
+  end
+
+  # Meals can only be assigned or edited from today forward; past dates are
+  # read-only. Both the widget's add/edit affordances route through the `:new`
+  # and `:edit` actions, so guarding here covers every entry point (including
+  # direct URL navigation).
+  defp past_date?(%NaiveDateTime{} = dt),
+    do: Date.compare(NaiveDateTime.to_date(dt), Date.utc_today()) == :lt
+
+  defp past_date?(date) when is_binary(date) do
+    case Date.from_iso8601(date) do
+      {:ok, d} -> Date.compare(d, Date.utc_today()) == :lt
+      _ -> false
+    end
+  end
+
+  defp deny_past_date(socket) do
+    socket
+    |> put_flash(:error, "You can't assign meals on a past date — pick today or a future day.")
+    |> push_patch(to: "/nutritionist/clients/#{socket.assigns.client_id}/calendar")
   end
 
   @impl true

@@ -37,7 +37,10 @@
     </div>
 
     <div
-      class="bg-ink-panel border border-ink-panel2 rounded-xl p-4 mb-3 hidden"
+      class={[
+        "bg-ink-panel border border-ink-panel2 rounded-xl p-4 mb-3",
+        !@preselected_blueprint_id && "hidden"
+      ]}
       id="ai-plan-panel"
     >
       <h3 class="font-display font-medium text-parchment text-sm mb-3 flex items-center gap-2">
@@ -57,12 +60,33 @@
         Generate this week's meal plan
       </h3>
       <form phx-submit="ai_plan_week" class="flex flex-col sm:flex-row gap-3">
-        <textarea
-          name="prompt"
-          rows="2"
-          placeholder="Describe your preferences… e.g. 'Healthy week for 2, high protein, no shellfish'"
-          class="flex-1 bg-ink text-parchment rounded-lg p-3 text-sm resize-none border border-ink-panel2 focus:border-paprika focus:outline-none"
-        ></textarea>
+        <div class="flex-1 flex flex-col gap-2">
+          <textarea
+            name="prompt"
+            rows="2"
+            placeholder="Describe your preferences… e.g. 'Healthy week for 2, high protein, no shellfish'"
+            class="flex-1 bg-ink text-parchment rounded-lg p-3 text-sm resize-none border border-ink-panel2 focus:border-paprika focus:outline-none"
+          ></textarea>
+          <div :if={@blueprints != []} class="flex items-center gap-2">
+            <label class="text-parchment-dim text-xs whitespace-nowrap">Follow blueprint:</label>
+            <select
+              name="blueprint_id"
+              class="flex-1 bg-ink text-parchment rounded-lg px-2 py-1.5 text-xs border border-ink-panel2 focus:border-paprika focus:outline-none"
+            >
+              <option value="">None</option>
+              <option
+                :for={bp <- @blueprints}
+                value={bp.id}
+                selected={to_string(bp.id) == @preselected_blueprint_id}
+              >
+                {bp.name}
+              </option>
+            </select>
+            <.link navigate={~p"/browse"} class="text-paprika-soft text-xs hover:text-paprika">
+              Browse
+            </.link>
+          </div>
+        </div>
         <button
           type="submit"
           disabled={@ai_plan_generating}

@@ -1,47 +1,159 @@
 defmodule Mehungry.AI.MealPlanGenerator do
   @moduledoc """
-  Generates a 7-day meal plan by asking the AI to assign meals from the user's
-  actual recipe library, then creates the resulting UserMeal records directly.
+  Generates a 7-day meal plan by asking the AI to assign meals (recipes and
+  whole-food ingredients) from the user's library.
+
+  Generation and persistence are separated:
+    * `generate_entries/5` returns normalized, calendar-independent plan entries
+      (see `MealPlanAgent.normalize_entry/2`) — used both by the calendar and by
+      independent meal-blueprint plans.
+    * `run/5` is the calendar convenience: generate, then create the `UserMeal`
+      records directly, returning `{:ok, created, skipped}`.
+    * `persist_entries_to_calendar/3` materializes entries onto calendar dates.
   """
 
   require Logger
   alias Mehungry.History
+  alias Mehungry.History.MealType
 
   @model "claude-haiku-4-5-20251001"
   @max_recipes 80
 
   @doc """
-  Full pipeline. Returns {:ok, [%UserMeal{}], count} or {:error, reason}.
-  recipes: preloaded list already available in the LiveView assigns.
-
-  Delegates to MealPlanAgent (history-aware tool-use loop). Falls back to
-  the legacy single-shot pipeline if the agent returns an error.
+  Calendar pipeline. Generates a plan and creates the `UserMeal` records on the
+  calendar starting at `start_date`. Returns `{:ok, [%UserMeal{}], skipped}` or
+  `{:error, reason}`.
   """
-  def run(preferences, recipes, start_date, user_id) do
-    case Mehungry.AI.Agents.MealPlanAgent.run(preferences, recipes, start_date, user_id) do
-      {:ok, meals, skipped} ->
-        {:ok, meals, skipped}
+  def run(preferences, recipes, start_date, user_id, blueprint \\ nil) do
+    case generate_entries(preferences, recipes, start_date, user_id, blueprint) do
+      {:ok, entries} -> persist_entries_to_calendar(entries, user_id, start_date)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Produces normalized, calendar-independent plan entries. Delegates to
+  `MealPlanAgent` (history-aware tool-use loop), falling back to the legacy
+  single-shot pipeline if the agent errors. Returns `{:ok, entries}` or
+  `{:error, reason}`.
+
+  `blueprint` is an optional `%Mehungry.MealBlueprints.Blueprint{}` (or nil); its
+  targets reach the planner through `preferences`.
+  """
+  def generate_entries(preferences, recipes, start_date, user_id, blueprint \\ nil) do
+    case Mehungry.AI.Agents.MealPlanAgent.run(
+           preferences,
+           recipes,
+           start_date,
+           user_id,
+           blueprint
+         ) do
+      {:ok, entries} ->
+        {:ok, entries}
 
       {:error, reason} ->
         Logger.warning(
           "MealPlanAgent failed (#{inspect(reason)}), falling back to legacy pipeline"
         )
 
-        run_legacy(preferences, recipes, start_date, user_id)
+        generate_legacy_entries(preferences, recipes, start_date)
     end
   end
 
-  defp run_legacy(preferences, recipes, start_date, user_id) do
+  @doc """
+  Creates `UserMeal` calendar records from normalized `entries`, laying `day_index`
+  1..7 onto `start_date`..`start_date+6`. Returns `{:ok, created, skipped}`.
+  """
+  def persist_entries_to_calendar(entries, user_id, start_date) do
+    results = Enum.map(entries, &create_calendar_meal(&1, user_id, start_date))
+
+    created = for {:ok, meal} <- results, do: meal
+    skipped = Enum.count(results, &match?({:error, _}, &1))
+
+    {:ok, created, skipped}
+  end
+
+  defp create_calendar_meal(entry, user_id, start_date) do
+    date = Date.add(start_date, entry.day_index - 1)
+    dt = NaiveDateTime.new!(date, MealType.slot_time(entry.meal_type))
+
+    %{
+      title: MealType.label(entry.meal_type),
+      meal_type: entry.meal_type,
+      start_dt: dt,
+      user_id: user_id
+    }
+    |> Map.merge(item_attrs(entry))
+    |> History.create_user_meal()
+  end
+
+  # Recipe entry → recipe_user_meals (consume_portions: 1 so the calendar's
+  # nutrient summary, which scales by consume_portions / servings, shows real
+  # numbers). Ingredient entry → ingredient_user_meals with the resolved unit FKs.
+  defp item_attrs(%{recipe_id: recipe_id} = entry) when is_integer(recipe_id) do
+    %{
+      recipe_user_meals: [
+        %{
+          recipe_id: recipe_id,
+          cooking_portions: entry.cooking_portions || 2,
+          consume_portions: 1,
+          cooking: true
+        }
+      ]
+    }
+  end
+
+  defp item_attrs(%{ingredient_id: ingredient_id} = entry) when is_integer(ingredient_id) do
+    %{
+      ingredient_user_meals: [
+        %{
+          ingredient_id: ingredient_id,
+          quantity: entry.quantity || 1.0,
+          measurement_unit_id: entry.measurement_unit_id,
+          ingredient_portion_id: entry.ingredient_portion_id
+        }
+      ]
+    }
+  end
+
+  # Legacy single-shot pipeline: returns recipe-only normalized entries.
+  defp generate_legacy_entries(preferences, recipes, start_date) do
     catalog = build_catalog(recipes)
 
     if catalog == [] do
       {:error, "No recipes found. Create some recipes first."}
     else
-      with {:ok, plan} <- generate_plan(preferences, catalog, start_date),
-           {:ok, created, skipped} <- create_user_meals(plan, user_id) do
-        {:ok, created, skipped}
+      with {:ok, plan} <- generate_plan(preferences, catalog, start_date) do
+        {:ok, normalize_legacy_entries(plan, start_date)}
       end
     end
+  end
+
+  defp normalize_legacy_entries(plan, start_date) do
+    plan
+    |> Enum.filter(fn e ->
+      is_binary(e["date"]) and is_binary(e["slot"]) and is_integer(e["recipe_id"])
+    end)
+    |> Enum.flat_map(fn e ->
+      case Date.from_iso8601(e["date"]) do
+        {:ok, date} ->
+          [
+            %{
+              day_index: Date.diff(date, start_date) + 1,
+              meal_type: MealType.from_slot(e["slot"]),
+              recipe_id: e["recipe_id"],
+              cooking_portions: e["cooking_portions"] || 2,
+              ingredient_id: nil,
+              quantity: nil,
+              measurement_unit_id: nil,
+              ingredient_portion_id: nil
+            }
+          ]
+
+        _ ->
+          []
+      end
+    end)
   end
 
   # --- Catalog ---
@@ -113,73 +225,6 @@ defmodule Mehungry.AI.MealPlanGenerator do
     - Only use Breakfast, Lunch, or Dinner as slot values
     """
   end
-
-  # --- Phase 2: create UserMeal records ---
-
-  defp create_user_meals(plan, user_id) do
-    results =
-      plan
-      |> Enum.filter(fn entry ->
-        is_binary(entry["date"]) and
-          is_binary(entry["slot"]) and
-          is_integer(entry["recipe_id"])
-      end)
-      |> Enum.map(fn entry -> attempt_create(entry, user_id) end)
-
-    created =
-      Enum.flat_map(results, fn
-        {:ok, meal} -> [meal]
-        _ -> []
-      end)
-
-    skipped =
-      Enum.count(results, fn
-        {:error, _} -> true
-        _ -> false
-      end)
-
-    {:ok, created, skipped}
-  end
-
-  defp attempt_create(entry, user_id) do
-    case build_datetime(entry["date"], entry["slot"]) do
-      {:ok, dt} ->
-        attrs = %{
-          title: entry["slot"],
-          meal_type: Mehungry.History.MealType.from_slot(entry["slot"]),
-          start_dt: dt,
-          user_id: user_id,
-          recipe_user_meals: [
-            %{
-              recipe_id: entry["recipe_id"],
-              cooking_portions: entry["cooking_portions"] || 2,
-              consume_portions: 0,
-              cooking: true
-            }
-          ]
-        }
-
-        History.create_user_meal(attrs)
-
-      :error ->
-        Logger.warning("MealPlanGenerator: invalid date #{inspect(entry["date"])}")
-        {:error, :invalid_date}
-    end
-  end
-
-  defp build_datetime(date_str, slot) do
-    with {:ok, date} <- Date.from_iso8601(date_str),
-         {:ok, dt} <- NaiveDateTime.new(date, slot_time(slot)) do
-      {:ok, dt}
-    else
-      _ -> :error
-    end
-  end
-
-  defp slot_time("Breakfast"), do: ~T[08:00:00]
-  defp slot_time("Lunch"), do: ~T[13:00:00]
-  defp slot_time("Dinner"), do: ~T[19:00:00]
-  defp slot_time(_), do: ~T[12:00:00]
 
   # --- HTTP ---
 

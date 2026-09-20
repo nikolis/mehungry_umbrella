@@ -6,20 +6,34 @@ defmodule MehungryWeb.NutritionistLive.Records do
   """
   use MehungryWeb, :live_view
 
-  alias Mehungry.Professionals
+  alias Mehungry.{Accounts, Professionals}
   alias Mehungry.Professionals.DietaryHistory.{CsvParser, Importer}
 
   @impl true
   def mount(_params, _session, socket) do
+    professional_id = socket.assigns.current_user.id
+
     socket =
       socket
-      |> assign(:records, Professionals.list_client_records(socket.assigns.current_user.id))
+      |> assign(:records, Professionals.list_client_records(professional_id))
       |> assign(:preview, nil)
       |> assign(:csv_content, nil)
-      |> assign(:import_name, "")
+      |> assign(:linked_user_id, nil)
+      |> assign(:linked_user_label, nil)
+      |> assign(:assigned_clients, assigned_client_options(professional_id))
       |> allow_upload(:csv, accept: ~w(.csv), max_entries: 1, max_file_size: 5_000_000)
 
     {:ok, socket}
+  end
+
+  # options for the client <select>: {label, platform user id}
+  defp assigned_client_options(professional_id) do
+    professional_id
+    |> Professionals.list_clients()
+    |> Enum.map(fn assignment ->
+      client = assignment.client
+      {client.name || client.email, client.id}
+    end)
   end
 
   @impl true
@@ -29,12 +43,13 @@ defmodule MehungryWeb.NutritionistLive.Records do
 
   # ── Events ──────────────────────────────────────────────────────────────────────
 
+  # phx-change hook the upload form needs; nothing to persist here.
   @impl true
-  def handle_event("validate", %{"name" => name}, socket) do
-    {:noreply, assign(socket, :import_name, name)}
+  def handle_event("validate", _params, socket) do
+    {:noreply, socket}
   end
 
-  def handle_event("preview", %{"name" => name}, socket) do
+  def handle_event("preview", _params, socket) do
     case read_upload(socket) do
       {:ok, content} ->
         case CsvParser.parse(content) do
@@ -42,8 +57,7 @@ defmodule MehungryWeb.NutritionistLive.Records do
             {:noreply,
              socket
              |> assign(:csv_content, content)
-             |> assign(:import_name, name)
-             |> assign(:preview, summarize(parsed, name))}
+             |> assign(:preview, summarize(parsed, socket.assigns.linked_user_label))}
 
           {:error, reason} ->
             {:noreply, put_flash(socket, :error, "Could not parse CSV: #{inspect(reason)}")}
@@ -59,28 +73,77 @@ defmodule MehungryWeb.NutritionistLive.Records do
      socket
      |> assign(:preview, nil)
      |> assign(:csv_content, nil)
+     |> assign(:linked_user_id, nil)
+     |> assign(:linked_user_label, nil)
      |> push_patch(to: ~p"/nutritionist/records")}
+  end
+
+  def handle_event("pick_client", %{"user_id" => ""}, socket) do
+    {:noreply, socket |> assign(:linked_user_id, nil) |> assign(:linked_user_label, nil)}
+  end
+
+  def handle_event("pick_client", %{"user_id" => user_id}, socket) do
+    case safe_get_user(user_id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "That client could not be found.")}
+
+      user ->
+        {:noreply, link_user(socket, user)}
+    end
   end
 
   def handle_event("confirm_import", _params, socket) do
     professional_id = socket.assigns.current_user.id
 
-    opts =
-      if socket.assigns.import_name != "", do: [full_name: socket.assigns.import_name], else: []
-
-    case Importer.import_csv(professional_id, socket.assigns.csv_content, opts) do
-      {:ok, %{client: client, notes_count: n}} ->
+    case socket.assigns.linked_user_id do
+      nil ->
         {:noreply,
-         socket
-         |> put_flash(:info, "Imported #{client.full_name} with #{n} consultation notes.")
-         |> push_navigate(to: ~p"/nutritionist/records/#{client.id}")}
+         put_flash(
+           socket,
+           :error,
+           "Select the m3hungry client this record belongs to before importing."
+         )}
 
-      {:error, step, reason, _changes} ->
-        {:noreply, put_flash(socket, :error, "Import failed at #{step}: #{inspect(reason)}")}
+      user_id ->
+        # Sheet name wins; the linked account's name is the fallback when it's blank.
+        opts =
+          [user_id: user_id] ++
+            if(socket.assigns.linked_user_label,
+              do: [full_name: socket.assigns.linked_user_label],
+              else: []
+            )
 
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
+        case Importer.import_csv(professional_id, socket.assigns.csv_content, opts) do
+          {:ok, %{client: client, notes_count: n}} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, "Imported #{client.full_name} with #{n} consultation notes.")
+             |> push_navigate(to: ~p"/nutritionist/records/#{client.id}")}
+
+          {:error, step, reason, _changes} ->
+            {:noreply, put_flash(socket, :error, "Import failed at #{step}: #{inspect(reason)}")}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "Import failed: #{inspect(reason)}")}
+        end
     end
+  end
+
+  defp safe_get_user(id) do
+    Accounts.get_user!(id)
+  rescue
+    Ecto.NoResultsError -> nil
+    Ecto.Query.CastError -> nil
+  end
+
+  # Anchor the record to the picked platform user.
+  defp link_user(socket, user) do
+    label = user.name || user.email
+
+    socket
+    |> assign(:linked_user_id, user.id)
+    |> assign(:linked_user_label, label)
+    |> put_flash(:info, "Linked to #{label}.")
   end
 
   defp read_upload(socket) do
@@ -182,6 +245,8 @@ defmodule MehungryWeb.NutritionistLive.Records do
       <%= if @preview do %>
         <h2 class="text-lg font-display font-bold text-parchment mb-3">Preview import</h2>
         <dl class="grid grid-cols-2 gap-y-2 text-sm mb-4">
+          <dt class="text-parchment-dim">Client account</dt>
+          <dd class="text-parchment">{@linked_user_label || "— not selected —"}</dd>
           <dt class="text-parchment-dim">Client</dt>
           <dd class="text-parchment">{@preview.full_name}</dd>
           <dt class="text-parchment-dim">Consultation notes</dt>
@@ -195,8 +260,22 @@ defmodule MehungryWeb.NutritionistLive.Records do
             {fmt_date(@preview.first_visit)} – {fmt_date(@preview.last_visit)}
           </dd>
         </dl>
+
+        {client_select(assigns)}
+
+        <%= if is_nil(@linked_user_id) do %>
+          <p class="text-red-400 text-xs mb-3">
+            Select the m3hungry client this record belongs to — records can't be headless.
+          </p>
+        <% end %>
+
         <div class="flex gap-2">
-          <.action variant={:primary} size={:sm} phx-click="confirm_import">
+          <.action
+            variant={:primary}
+            size={:sm}
+            phx-click="confirm_import"
+            disabled={is_nil(@linked_user_id)}
+          >
             Confirm &amp; import
           </.action>
           <.action variant={:ghost} size={:sm} phx-click="cancel_import">
@@ -205,22 +284,24 @@ defmodule MehungryWeb.NutritionistLive.Records do
         </div>
       <% else %>
         <h2 class="text-lg font-display font-bold text-parchment mb-3">Import dietary-history CSV</h2>
-        <form id="csv-import-form" phx-change="validate" phx-submit="preview">
-          <div class="mb-3">
-            <label class="block text-xs text-parchment-dim mb-1">Client name (optional — used if the sheet has none)</label>
-            <input
-              type="text"
-              name="name"
-              value={@import_name}
-              class="w-full bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
-              placeholder="e.g. Maria K."
-            />
-          </div>
+
+        {client_select(assigns)}
+
+        <form id="csv-import-form" phx-change="validate" phx-submit="preview" class="mt-4">
           <div class="mb-3" phx-drop-target={@uploads.csv.ref}>
-            <.live_file_input upload={@uploads.csv} class="text-sm text-parchment-dim" />
+            <label
+              for={@uploads.csv.ref}
+              class="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-ink-panel2 rounded-xl px-4 py-8 text-center cursor-pointer hover:border-paprika-soft transition-colors"
+            >
+              <span class="text-parchment text-sm font-medium">
+                Drag &amp; drop a CSV file here
+              </span>
+              <span class="text-parchment-dim text-xs">or click to browse your files</span>
+              <.live_file_input upload={@uploads.csv} class="sr-only" />
+            </label>
           </div>
           <%= for entry <- @uploads.csv.entries do %>
-            <p class="text-parchment-dim text-xs mb-2">{entry.client_name}</p>
+            <p class="text-parchment text-xs mb-2">Selected: {entry.client_name}</p>
             <%= for err <- upload_errors(@uploads.csv, entry) do %>
               <p class="text-red-400 text-xs">{error_to_string(err)}</p>
             <% end %>
@@ -234,6 +315,36 @@ defmodule MehungryWeb.NutritionistLive.Records do
         </form>
       <% end %>
     </.panel_card>
+    """
+  end
+
+  # Required client-account picker — a record is never headless.
+  defp client_select(assigns) do
+    ~H"""
+    <div class="bg-ink rounded-lg p-3">
+      <label class="block text-xs text-parchment-dim mb-1">
+        m3hungry client (required)
+      </label>
+      <form id="pick-client-form" phx-change="pick_client">
+        <select
+          name="user_id"
+          class="w-full bg-ink-panel border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
+        >
+          <option value="">— select a client —</option>
+          <%= for {label, id} <- @assigned_clients do %>
+            <option value={id} selected={@linked_user_id == id}>{label}</option>
+          <% end %>
+        </select>
+      </form>
+
+      <p class="text-xs text-parchment-dim mt-2">
+        <%= if @linked_user_id do %>
+          Linked to {@linked_user_label}.
+        <% else %>
+          Pick the registered client this dietary history belongs to.
+        <% end %>
+      </p>
+    </div>
     """
   end
 

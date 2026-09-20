@@ -69,6 +69,28 @@ defmodule MehungryWeb.ProfessionalLive.Users do
   end
 
   @impl true
+  def handle_event("grant_nutritionist", %{"id" => id}, socket) do
+    user_id = String.to_integer(id)
+    {:ok, sub} = Subscriptions.grant_nutritionist(user_id)
+
+    {:noreply,
+     socket
+     |> update_subscription(user_id, sub)
+     |> put_flash(:info, "Nutritionist tier granted.")}
+  end
+
+  @impl true
+  def handle_event("revoke_nutritionist", %{"id" => id}, socket) do
+    user_id = String.to_integer(id)
+    {:ok, sub} = Subscriptions.revoke_subscription(user_id)
+
+    {:noreply,
+     socket
+     |> update_subscription(user_id, sub)
+     |> put_flash(:info, "Nutritionist tier revoked.")}
+  end
+
+  @impl true
   def handle_event("reset", %{"value" => ""}, socket) do
     {:noreply, stream(socket, :users, [], reset: true)}
   end
@@ -99,6 +121,18 @@ defmodule MehungryWeb.ProfessionalLive.Users do
   @impl true
   def handle_info({MehungryWeb.UserLive.FormComponent, {:saved, user}}, socket) do
     {:noreply, stream_insert(socket, :users, user)}
+  end
+
+  defp update_subscription(socket, user_id, sub) do
+    subscriptions = Map.put(socket.assigns.subscriptions, user_id, sub)
+
+    pro_count =
+      Enum.count(subscriptions, fn {_id, s} -> s.tier in ["m3hungry_plus", "pro"] end)
+
+    socket
+    |> assign(:subscriptions, subscriptions)
+    |> assign(:pro_count, pro_count)
+    |> stream_insert(:users, Accounts.get_user!(user_id))
   end
 
   defp load_users(socket) do

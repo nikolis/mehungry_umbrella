@@ -11,9 +11,9 @@ and articles are documented separately in the sibling docs.
 A `ProfessionalClient` is **not** the same as a `TutorClientAssignment`. The assignment
 (`docs/professionals/professional_profiles.md`, the "My Clients" flow) links a nutritionist to a
 registered platform `User` via invitation. A `ProfessionalClient` is a nutritionist-owned file
-that **holds the client's PII directly** and can exist for a purely off-platform person. It
-**optionally links to a platform account** via `user_id`, so a record is always associated with a
-client — whether that client is an m3hungry user or an external person.
+that **holds the client's PII directly** on top of that link. It **always references a platform
+`User`** via `user_id` (**required** — a record is *never headless*); the PII columns carry the
+dietary-history detail the bare `User` doesn't.
 
 ## Data model (`apps/mehungry/lib/mehungry/professionals/`)
 
@@ -21,7 +21,10 @@ Three schemas, owned by the flat `Professionals` context (migrations `2026090400
 
 ### `ProfessionalClient` — table `professional_clients`
 - `belongs_to :professional, User` (required, the owning nutritionist) and
-  `belongs_to :user, User` (**optional** — the linked m3hungry account, or nil for external).
+  `belongs_to :user, User` (**required** — the linked m3hungry account; a record is never
+  headless. FK `on_delete: :delete_all` — deleting the user removes the record. Enforced by
+  `validate_required` + a `NOT NULL` column, migration `20260920000004`, which also deleted any
+  pre-existing headless rows).
 - PII: `full_name` (required), `date_of_birth`, `email`, `phone`, `address`, `postal_code`,
   `work_schedule`.
 - `has_many :intakes`, `has_many :consultation_notes`.
@@ -59,8 +62,12 @@ A clinical progress note for a visit (distinct from `Appointment`; may optionall
 
 `DietaryHistory.CsvParser` (pure) parses a "ΔΙΑΤΡΟΦΟΛΟΓΙΚΟ ΙΣΤΟΡΙΚΟ" Google-Sheet export (Greek
 labels, EU comma-decimals, Greek dates) into `%{client, intake, consultation_notes}`;
-`DietaryHistory.Importer` writes it as a new record + intake + notes in one transaction. UI:
-`/nutritionist/records/import` (`NutritionistLive.Records`, upload → preview → confirm).
+`DietaryHistory.Importer` writes it as a new record + intake + notes in one transaction. Because a
+record is never headless, `Importer.import_csv/3` **requires** a `:user_id` opt (returns
+`{:error, :user_required}` otherwise). UI: `/nutritionist/records/import` (`NutritionistLive.Records`,
+**pick the m3hungry client** → upload → preview → confirm); the client is chosen from the
+nutritionist's assigned clients (`list_clients/1`) and its account name is the fallback when the
+sheet's identity row is blank.
 
 ## Manual authoring — onboarding a fresh client
 
@@ -69,12 +76,12 @@ labels, EU comma-decimals, Greek dates) into `%{client, intake, consultation_not
 (incremental persistence, raw changesets in assigns, `<.input>` + local `<.labeled>`,
 `validate`/`save` events). Reached from a **+ New client** button on the records roster.
 
-- **`:new`** — the **client-details** form plus an **association control** (a mode toggle):
-  - *External person* — fill PII; `user_id` stays nil.
-  - *m3hungry client* — pick from the nutritionist's assigned clients (`list_clients/1`) **or**
-    look up any registered user by account email (`Accounts.get_user_by_email/1`). Resolving
-    either sets `user_id` and prefills `full_name`/`email` from the `User`.
-  - On save: `create_client_record/1` (with `professional_id`), then navigate into `:edit`.
+- **`:new`** — the **client-details** form plus a **required association control**: pick the
+  linked m3hungry `User` from the nutritionist's assigned clients (`list_clients/1`) **or** look up
+  any registered user by account email (`Accounts.get_user_by_email/1`). Resolving either sets
+  `user_id` and prefills `full_name`/`email` from the `User`. Saving without a linked user is
+  refused (a record is never headless).
+  - On save: `create_client_record/1` (with `professional_id` + `user_id`), then navigate into `:edit`.
 - **`:edit`** — three stacked sections: the client-details form again (attach/detach a platform
   user anytime); one **intake** form (typed anthropometrics via `<.input>`; questionnaire + 24h
   recall as plain `intake[details][…]` inputs so the `details` map casts as-is — create if absent,
@@ -86,6 +93,20 @@ Ownership is enforced on mount via `get_client_record!(current_user.id, id)` in 
 (`NutritionistLive.ClientRecord`, `/nutritionist/records/:id`) has an **Edit** link and an
 `m3hungry client` / `External` badge driven by `user_id`.
 
+## User Overview integration — visits accordion
+
+The per-client **User Overview** (`NutritionistLive.ClientDetail`, `/nutritionist/clients/:id`,
+keyed on the platform **`User` id**, reached via **Overview** on the clients roster) surfaces the
+client's dietary-history record inline. `get_client_record_by_user/2` resolves the
+`ProfessionalClient` for `(professional_id, user_id)` (most recent if several); its consultation
+notes render as a **"Client Record — Visits"** accordion inside a scrollable
+(`max-h-96 overflow-y-auto`) container — each row shows only basic info (visit number, date,
+modality, weight) with the full body/todo revealed on expand via client-side `JS.toggle` +
+chevron `JS.toggle_class("rotate-180")` (no server round-trip). A **View full dietary history**
+link deep-links to `/nutritionist/records/:id`. A **+ New visit** button opens a `<.modal>` form
+(`save_visit`) that **lazily creates** the `ProfessionalClient` (from the client `User`'s
+name/email) on the first visit if none exists, then `create_consultation_note/1`.
+
 ## Files
 
 **Core (`apps/mehungry`)**
@@ -96,7 +117,8 @@ Ownership is enforced on mount via `get_client_record!(current_user.id, id)` in 
 - `priv/repo/migrations/20260904000001_*`, `..002_*`, `..003_*`
 
 **Web (`apps/mehungry_web`)**
-- `lib/mehungry_web/live/nutritionist_live/{records,client_record,client_record_editor}.ex`
+- `lib/mehungry_web/live/nutritionist_live/{records,client_record,client_record_editor,client_detail}.ex`
+  (`client_detail` = the User Overview, which also embeds the visits accordion + new-visit modal)
 - `lib/mehungry_web/router.ex`
 
 **Tests**

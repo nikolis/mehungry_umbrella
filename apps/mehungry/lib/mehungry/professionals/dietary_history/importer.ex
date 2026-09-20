@@ -19,6 +19,9 @@ defmodule Mehungry.Professionals.DietaryHistory.Importer do
   Imports CSV content under `professional_id`.
 
   Options:
+    * `:user_id` — **required**. The platform `User` this record belongs to; a
+      client record is never headless. A blank/nil value returns
+      `{:error, :user_required}` before any write.
     * `:full_name` — overrides/falls back for the client name when the sheet's
       ΟΝΟΜΑΤΕΠΩΝΥΜΟ row is blank.
 
@@ -26,8 +29,17 @@ defmodule Mehungry.Professionals.DietaryHistory.Importer do
   `{:error, step, changeset_or_reason, changes_so_far}` / `{:error, reason}`.
   """
   def import_csv(professional_id, content, opts \\ []) when is_binary(content) do
-    with {:ok, parsed} <- CsvParser.parse(content) do
+    with :ok <- require_user(opts),
+         {:ok, parsed} <- CsvParser.parse(content) do
       insert_all(professional_id, parsed, opts)
+    end
+  end
+
+  defp require_user(opts) do
+    case opts[:user_id] do
+      nil -> {:error, :user_required}
+      "" -> {:error, :user_required}
+      _ -> :ok
     end
   end
 
@@ -43,6 +55,7 @@ defmodule Mehungry.Professionals.DietaryHistory.Importer do
     client_attrs =
       parsed.client
       |> Map.put(:professional_id, professional_id)
+      |> Map.put(:user_id, opts[:user_id])
       |> Map.put_new(:full_name, nil)
       |> ensure_name(opts)
 

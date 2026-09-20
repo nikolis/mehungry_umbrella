@@ -2,6 +2,7 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
   use MehungryWeb, :live_view
 
   alias Mehungry.Professionals
+  alias Mehungry.MealBlueprints
 
   @impl true
   def mount(_params, _session, socket) do
@@ -9,6 +10,7 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
     profile = Professionals.get_professional_profile(user.id)
     client_count = Professionals.count_clients(user.id)
     upcoming = Professionals.list_upcoming_appointments(user.id, 5)
+    blueprint_count = length(MealBlueprints.list_blueprints_for_user(user.id))
 
     pending_sent =
       length(Enum.filter(Professionals.list_sent_invitations(user.id), &(&1.status == "pending")))
@@ -19,6 +21,7 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
       |> assign(:client_count, client_count)
       |> assign(:upcoming_appointments, upcoming)
       |> assign(:pending_invitations_sent, pending_sent)
+      |> assign(:blueprint_count, blueprint_count)
       |> assign(:page_title, "Nutritionist Dashboard")
 
     {:ok, socket}
@@ -93,6 +96,16 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
             href="/nutritionist/appointments"
             class="text-paprika hover:text-paprika-soft text-xs mt-2 block"
           >Calendar →</a>
+        </div>
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5">
+          <p class="text-parchment-dim text-sm">Meal Blueprints</p>
+          <p class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums] mt-1">
+            {@blueprint_count}
+          </p>
+          <a
+            href="/nutritionist/blueprints"
+            class="text-paprika hover:text-paprika-soft text-xs mt-2 block"
+          >Author & share →</a>
         </div>
       </div>
 

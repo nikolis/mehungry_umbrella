@@ -16,8 +16,13 @@ defmodule Mehungry.Accounts.User do
     field :facebook_token, :map, default: %{}
     field :pinterest_token, :map, default: %{}
 
+    # Set when a professional created this login-less "managed" client account on
+    # the client's behalf. Cleared once the client claims it and sets credentials.
+    belongs_to :managed_by_professional, Mehungry.Accounts.User
+
     has_one :recipes, Mehungry.Food.Recipe
     has_one :user_profile, Mehungry.Accounts.UserProfile
+    has_one :professional_profile, Mehungry.Professionals.ProfessionalProfile
 
     timestamps()
   end
@@ -53,6 +58,53 @@ defmodule Mehungry.Accounts.User do
     |> cast(attrs, [:email, :profile_pic, :name])
     |> validate_email()
     |> put_change(:confirmed_at, now)
+  end
+
+  @doc """
+  Changeset for a login-less "managed" client account created by a professional
+  on the client's behalf. The account is pre-confirmed and has no password — it
+  cannot be logged into until the client claims it (see `claim_changeset/3`).
+
+  A synthetic, unique placeholder `email` must be provided by the caller so the
+  uniqueness invariants hold; the real email is set later at claim time.
+  """
+  def managed_client_changeset(user, attrs, _opts \\ []) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    user
+    |> cast(attrs, [:email, :name, :managed_by_professional_id])
+    |> validate_required([:managed_by_professional_id])
+    |> validate_email()
+    |> put_change(:confirmed_at, now)
+  end
+
+  @doc """
+  Changeset for a new registrant claiming a `managed` account: sets a real email
+  and password, and clears the `managed_by_professional_id` flag so the account
+  becomes an ordinary self-owned account while keeping all of its existing data.
+  """
+  def claim_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:email, :password])
+    |> validate_email()
+    |> validate_password(opts)
+    |> put_change(:managed_by_professional_id, nil)
+  end
+
+  @doc """
+  Changeset for claiming a `managed` account via a third-party (Google/Facebook)
+  identity: sets the provider-supplied email, name and picture, pre-confirms the
+  account, and clears `managed_by_professional_id`. No password is set — the
+  account is thereafter an ordinary OAuth account.
+  """
+  def claim_oauth_changeset(user, attrs) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    user
+    |> cast(attrs, [:email, :profile_pic, :name])
+    |> validate_email()
+    |> put_change(:confirmed_at, now)
+    |> put_change(:managed_by_professional_id, nil)
   end
 
   def tokens_changeset(user, attrs, _opts \\ []) do

@@ -371,9 +371,30 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           <div class="relative flex items-center px-3 py-3 sm:px-4">
             <.button_add_meal current_date={@current_date} myself={@myself} />
 
-            <div class="flex px-3 py-2 gap-3 bg-ink-panel justify-center border border-ink-panel2 rounded-full mx-auto w-fit shadow-lg">
+            <div class="flex items-center px-3 py-2 gap-2 sm:gap-3 bg-ink-panel justify-center border border-ink-panel2 rounded-full mx-auto w-fit shadow-lg">
               <button
                 type="button"
+                title="Previous week"
+                aria-label="Previous week"
+                class="w-fit text-parchment-dim hover:text-parchment transition-colors"
+                phx-target={@myself}
+                phx-click="prev-week"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="2.5"
+                  stroke="currentColor"
+                  class="size-5"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5 11.25 12l7.5-7.5m-6 15L5.25 12l7.5-7.5" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                title="Previous day"
+                aria-label="Previous day"
                 class="w-fit text-parchment-dim hover:text-parchment transition-colors"
                 phx-target={@myself}
                 phx-click="prev-day"
@@ -398,6 +419,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
               <button
                 type="button"
+                title="Next day"
+                aria-label="Next day"
                 class="w-fit text-end text-parchment-dim hover:text-parchment transition-colors font-medium"
                 phx-target={@myself}
                 phx-click="next-day"
@@ -411,6 +434,25 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                   class="size-5"
                 >
                   <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                title="Next week"
+                aria-label="Next week"
+                class="w-fit text-end text-parchment-dim hover:text-parchment transition-colors font-medium"
+                phx-target={@myself}
+                phx-click="next-week"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="2.5"
+                  stroke="currentColor"
+                  class="size-5"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5" />
                 </svg>
               </button>
             </div>
@@ -660,33 +702,57 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   def handle_event("prev-day", _, socket) do
     new_date = Date.add(socket.assigns.current_date, -1)
 
-    {first, last, rows} = get_full_week(new_date)
-
-    assigns = [
-      current_date: new_date,
-      week_rows: rows,
-      last: last,
-      first: first
-    ]
-
     send(self(), {:particular_date, %{"date" => new_date}})
-    {:noreply, assign(socket, assigns)}
+    {:noreply, assign_week(socket, new_date)}
   end
 
   def handle_event("next-day", _, socket) do
     new_date = Date.add(socket.assigns.current_date, 1)
 
-    {first, last, rows} = get_full_week(new_date)
+    {first, _last, _rows} = get_full_week(new_date)
 
-    assigns = [
+    send(self(), {:particular_date, %{"date" => first}})
+    {:noreply, assign_week(socket, new_date)}
+  end
+
+  # Week navigation jumps a full 7 days and lands on the first day of the target
+  # week, so the visible grid re-anchors cleanly on the new week. Both parents
+  # (consumer `CalendarLive.Index` + nutritionist `ClientCalendar`) handle the
+  # `:particular_date` message the same way.
+  def handle_event("prev-week", _, socket) do
+    {first, _last, _rows} = get_full_week(Date.add(socket.assigns.current_date, -7))
+
+    send(self(), {:particular_date, %{"date" => first}})
+    {:noreply, assign_week(socket, first)}
+  end
+
+  def handle_event("next-week", _, socket) do
+    {first, _last, _rows} = get_full_week(Date.add(socket.assigns.current_date, 7))
+
+    send(self(), {:particular_date, %{"date" => first}})
+    {:noreply, assign_week(socket, first)}
+  end
+
+  # Recomputes the week grid *and* the per-day/week nutrient summaries together
+  # so `week_rows` and `day_summaries` never disagree. Crossing into a new week
+  # used to leave `day_summaries` keyed to the old week's days, so the immediate
+  # re-render (before the `:particular_date` push_patch reloads meals) hit a nil
+  # summary and crashed with BadMapError. The push_patch that follows reloads the
+  # new week's meals and re-runs `update/2` with the correct data.
+  defp assign_week(socket, new_date) do
+    {first, last, rows} = get_full_week(new_date)
+    days_in_week = Date.diff(last, first) + 1
+    user_meals = socket.assigns.user_meals
+
+    assign(socket,
       current_date: new_date,
       week_rows: rows,
       last: last,
-      first: first
-    ]
-
-    send(self(), {:particular_date, %{"date" => first}})
-    {:noreply, assign(socket, assigns)}
+      first: first,
+      days_in_week: days_in_week,
+      day_summaries: build_day_summaries(user_meals, first, last),
+      week_summary: build_week_summary(user_meals, first, last, days_in_week)
+    )
   end
 
   def handle_event("pick-date", %{"date" => date}, socket) do

@@ -321,6 +321,38 @@ defmodule Mehungry.History do
   end
 
   @doc """
+  Deletes every one of `user_id`'s `UserMeal`s whose `start_dt` falls on any day
+  in the inclusive `start_date..end_date` span (used to clear a week before a
+  meal-plan import overwrites it). Child `recipe_user_meals`/`ingredient_user_meals`
+  cascade at the DB level; `consume_recipe_user_meals` have no FK cascade, so they
+  are removed first inside the same transaction. Returns the number of meals deleted.
+  """
+  def delete_user_meals_in_date_range(user_id, %Date{} = start_date, %Date{} = end_date) do
+    range_start = NaiveDateTime.new!(start_date, ~T[00:00:00])
+    range_end = NaiveDateTime.new!(end_date, ~T[23:59:59])
+
+    ids_query =
+      from m in UserMeal,
+        where:
+          m.user_id == ^user_id and m.start_dt >= ^range_start and
+            m.start_dt <= ^range_end,
+        select: m.id
+
+    {:ok, count} =
+      Repo.transaction(fn ->
+        ids = Repo.all(ids_query)
+
+        from(c in ConsumeRecipeUserMeal, where: c.user_meal_id in ^ids)
+        |> Repo.delete_all()
+
+        {deleted, _} = from(m in UserMeal, where: m.id in ^ids) |> Repo.delete_all()
+        deleted
+      end)
+
+    count
+  end
+
+  @doc """
   Returns an `%Ecto.Changeset{}` for tracking user_meal changes.
 
   ## Examples

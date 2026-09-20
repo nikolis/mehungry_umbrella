@@ -53,6 +53,8 @@ defmodule MehungryWeb.CalendarLive.Index do
         Mehungry.Subscriptions.check_quota(user.id, "meal_plan") == {:error, :quota_exceeded}
       )
       |> assign(:has_nutritionist, not is_nil(Professionals.get_assignment_for_client(user.id)))
+      |> assign(:blueprints, load_calendar_blueprints(user.id))
+      |> assign(:preselected_blueprint_id, nil)
       |> assign(:week_rating, nil)
       # Assigns the recipe-details modal (RecipeDetailsComponent via the shared
       # LiveHelpers hook) reads for save/follow toggles.
@@ -65,9 +67,9 @@ defmodule MehungryWeb.CalendarLive.Index do
     }
   end
 
-  defp apply_action(socket, :index, _params) do
+  defp apply_action(socket, :index, params) do
     maybe_track_user(%{}, socket)
-    socket
+    maybe_preselect_blueprint(socket, params["blueprint_id"])
   end
 
   defp apply_action(socket, :particular, %{"date" => date} = _params) do
@@ -252,17 +254,21 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   @impl true
-  def handle_event("ai_plan_week", %{"prompt" => prompt}, socket) when prompt != "" do
+  def handle_event("ai_plan_week", %{"prompt" => prompt} = params, socket) when prompt != "" do
     user = socket.assigns.user
 
     case Mehungry.Subscriptions.check_quota(user.id, "meal_plan") do
       :ok ->
         recipes = socket.assigns.recipes
         start_date = Date.utc_today()
+        # Optional blueprint to constrain generation. Loaded (owner-scoped) and
+        # threaded through now; the generator treats it as an inert hint until
+        # blueprint-aware planning lands.
+        blueprint = load_selected_blueprint(user.id, params["blueprint_id"])
 
         task =
           Task.async(fn ->
-            Mehungry.AI.MealPlanGenerator.run(prompt, recipes, start_date, user.id)
+            Mehungry.AI.MealPlanGenerator.run(prompt, recipes, start_date, user.id, blueprint)
           end)
 
         {:noreply,
@@ -366,6 +372,51 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   defp list_recipes(user) do
     Food.list_user_recipes_for_selection(user)
+  end
+
+  # A "Use this blueprint" arrival from a public preview (`?blueprint_id=`):
+  # preselect it in the AI-plan dropdown (adding it to the list if the user
+  # doesn't own/save it) so the panel opens ready to generate.
+  defp maybe_preselect_blueprint(socket, id) when id in [nil, ""], do: socket
+
+  defp maybe_preselect_blueprint(socket, id) do
+    user = socket.assigns.user
+
+    case load_selected_blueprint(user.id, id) do
+      nil ->
+        socket
+
+      blueprint ->
+        blueprints = socket.assigns.blueprints
+
+        blueprints =
+          if Enum.any?(blueprints, &(&1.id == blueprint.id)),
+            do: blueprints,
+            else: [blueprint | blueprints]
+
+        socket
+        |> assign(:blueprints, blueprints)
+        |> assign(:preselected_blueprint_id, to_string(blueprint.id))
+    end
+  end
+
+  # The blueprints offered in the AI-plan dropdown: the user's own (nutritionists)
+  # plus any public blueprints they've saved to their profile, deduped by id.
+  defp load_calendar_blueprints(user_id) do
+    owned = Mehungry.MealBlueprints.list_blueprints_for_user(user_id)
+    saved = Mehungry.MealBlueprints.list_saved_blueprints_for_user(user_id)
+
+    (owned ++ saved) |> Enum.uniq_by(& &1.id)
+  end
+
+  # Lookup of the blueprint chosen in the AI-plan dropdown — one the user owns,
+  # has saved, or that is public; nil when "None" (or an unknown/forbidden id).
+  defp load_selected_blueprint(_user_id, id) when id in [nil, ""], do: nil
+
+  defp load_selected_blueprint(user_id, id) do
+    Mehungry.MealBlueprints.get_blueprint_for_generation(user_id, id)
+  rescue
+    Ecto.NoResultsError -> nil
   end
 
   defp load_and_format_user_meals(user_id) do

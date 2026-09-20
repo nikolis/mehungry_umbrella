@@ -149,6 +149,18 @@
         </.link>
         <%= if @live_action in [:index] do %>
           <.link
+            patch={tab_path(assigns, "saved_blueprints")}
+            class={[
+              "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
+                get_active(@content_state, :saved_blueprints)
+            ]}
+          >
+            <div class="flex items-center gap-2">
+              <.icon name="hero-clipboard-document-list" class="w-5 h-5 flex-shrink-0" />
+              <span class="hidden sm:inline">Blueprints ({length(@user_saved_blueprints)})</span>
+            </div>
+          </.link>
+          <.link
             patch={tab_path(assigns, "my_ingredients")}
             class={[
               "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
@@ -254,6 +266,7 @@
         user_saved_recipes={@user_saved_recipes}
         user_ingredients={@user_ingredients}
         friends_ingredients={@friends_ingredients}
+        user_saved_blueprints={@user_saved_blueprints}
         live_action={@live_action}
         user_recipes={@user_recipes}
         current_user_recipes={@current_user_recipes}

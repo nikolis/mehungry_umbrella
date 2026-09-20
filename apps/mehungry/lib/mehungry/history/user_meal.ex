@@ -16,6 +16,9 @@ defmodule Mehungry.History.UserMeal do
     field :title, :string
     field :meal_type, :string
     field :user_id, :id
+    # Set when this meal was produced by a meal-blueprint generation run, so the
+    # blueprint library can group its generated plans (see MealBlueprints.BlueprintPlan).
+    field :blueprint_plan_id, :id
 
     has_many :recipe_user_meals, RecipeUserMeal, on_replace: :delete, on_delete: :nothing
     has_many :ingredient_user_meals, IngredientUserMeal, on_replace: :delete, on_delete: :nothing
@@ -30,7 +33,14 @@ defmodule Mehungry.History.UserMeal do
   @doc false
   def changeset(user_meal, attrs) do
     user_meal
-    |> cast(normalize_meal_type(attrs), [:title, :meal_type, :start_dt, :end_dt, :user_id])
+    |> cast(normalize_meal_type(attrs), [
+      :title,
+      :meal_type,
+      :start_dt,
+      :end_dt,
+      :user_id,
+      :blueprint_plan_id
+    ])
     |> cast_assoc(:recipe_user_meals, with: &RecipeUserMeal.changeset/2, required: false)
     |> cast_assoc(:ingredient_user_meals, with: &IngredientUserMeal.changeset/2, required: false)
     |> cast_assoc(:consume_recipe_user_meals,
