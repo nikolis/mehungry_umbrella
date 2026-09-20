@@ -292,6 +292,59 @@ defmodule Mehungry.Professionals do
     end
   end
 
+  @doc """
+  Creates a login-less "managed" client account for a professional from just an
+  alias, assigns it to them, and returns a claim token.
+
+  The account is a real, pre-confirmed `User` (so it has a calendar and can hold
+  meal plans) but has no password and cannot be logged into until the client
+  claims it via the returned token. Returns `{:ok, %{user: user, claim_token: token}}`.
+  """
+  def create_managed_client(professional_id, alias_name) do
+    result =
+      Repo.transaction(fn ->
+        with {:ok, user} <-
+               Accounts.create_managed_client(%{
+                 name: alias_name,
+                 managed_by_professional_id: professional_id
+               }),
+             {:ok, _assignment} <-
+               %TutorClientAssignment{}
+               |> TutorClientAssignment.changeset(%{
+                 professional_id: professional_id,
+                 client_id: user.id
+               })
+               |> Repo.insert() do
+          user
+        else
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
+
+    case result do
+      {:ok, user} ->
+        {:ok, %{user: user, claim_token: Accounts.build_managed_client_claim_token(user)}}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  @doc """
+  Regenerates (and returns) a fresh claim token for an existing managed client
+  owned by `professional_id`. Returns `{:error, :not_found}` if the user is not
+  an unclaimed managed client assigned to this professional.
+  """
+  def regenerate_claim_token(professional_id, client_id) do
+    with %TutorClientAssignment{} <- get_assignment(professional_id, client_id),
+         user <- Accounts.get_user!(client_id),
+         true <- Accounts.managed_unclaimed?(user) do
+      {:ok, Accounts.build_managed_client_claim_token(user)}
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
   # ── Appointments ───────────────────────────────────────────────────────────────
 
   def list_appointments_for_professional(professional_id, start_dt, end_dt) do
@@ -769,6 +822,19 @@ defmodule Mehungry.Professionals do
     Repo.get_by!(ProfessionalClient, id: id, professional_id: professional_id)
   end
 
+  @doc """
+  The professional's client record for a given platform user, or nil. Returns the
+  most recently created one if several exist (e.g. repeated CSV imports).
+  """
+  def get_client_record_by_user(professional_id, user_id) do
+    Repo.one(
+      from c in ProfessionalClient,
+        where: c.professional_id == ^professional_id and c.user_id == ^user_id,
+        order_by: [desc: c.inserted_at],
+        limit: 1
+    )
+  end
+
   def create_client_record(attrs) do
     %ProfessionalClient{}
     |> ProfessionalClient.changeset(attrs)
@@ -855,9 +921,11 @@ defmodule Mehungry.Professionals do
   @doc """
   Imports a dietary-history CSV export (Google Sheets format) into a new client
   record with its intake and consultation notes, all owned by `professional_id`.
-  Delegates to `DietaryHistory.Importer`.
+
+  `opts` must include a `:user_id` — a record is never headless (see
+  `DietaryHistory.Importer.import_csv/3`). Delegates to `DietaryHistory.Importer`.
   """
-  def import_dietary_history(professional_id, csv_content) do
-    DietaryHistory.Importer.import_csv(professional_id, csv_content)
+  def import_dietary_history(professional_id, csv_content, opts \\ []) do
+    DietaryHistory.Importer.import_csv(professional_id, csv_content, opts)
   end
 end

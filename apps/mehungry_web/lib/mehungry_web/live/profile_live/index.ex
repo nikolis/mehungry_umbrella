@@ -6,9 +6,11 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   alias MehungryWeb.RecipeComponents
   alias MehungryWeb.RecipeFlags
+  import MehungryWeb.BlueprintComponents
 
   alias Mehungry.Accounts
   alias Mehungry.Users
+  alias Mehungry.MealBlueprints
   alias MehungryWeb.ProfileLive.Show
   alias Mehungry.Food
   alias Mehungry.Posts
@@ -37,6 +39,7 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:user_recipes, [])
      |> assign(:user_ingredients, [])
      |> assign(:friends_ingredients, [])
+     |> assign(:user_saved_blueprints, [])
      |> assign(:current_user, current_user)
      |> assign(:user, nil)
      |> assign(:must_be_loged_in, nil)
@@ -51,12 +54,18 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  @profile_tabs ~w(created saved my_ingredients friends_ingredients edit_profile connected_accounts)
+  @profile_tabs ~w(created saved saved_blueprints my_ingredients friends_ingredients edit_profile connected_accounts)
 
   defp content_state_from_tab(tab, live_action) when tab in @profile_tabs do
     case {tab, live_action} do
       {tab, :show}
-      when tab in ["edit_profile", "connected_accounts", "my_ingredients", "friends_ingredients"] ->
+      when tab in [
+             "edit_profile",
+             "connected_accounts",
+             "my_ingredients",
+             "friends_ingredients",
+             "saved_blueprints"
+           ] ->
         :created
 
       {tab, _live_action} ->
@@ -250,12 +259,19 @@ defmodule MehungryWeb.ProfileLive.Index do
           {[], []}
       end
 
+    user_saved_blueprints =
+      case {content_state, is_nil(current_user)} do
+        {:saved_blueprints, false} -> MealBlueprints.list_saved_blueprints_for_user(current_user.id)
+        _ -> []
+      end
+
     socket
     |> assign(:page_title, "Profile")
     |> assign(:user_created_recipes, user_created_recipes)
     |> assign(:user_saved_recipes, user_saved_recipes)
     |> assign(:user_ingredients, user_ingredients)
     |> assign(:friends_ingredients, friends_ingredients)
+    |> assign(:user_saved_blueprints, user_saved_blueprints)
   end
 
   # A pro user has a canonical public page; used by apply_action(:show) to
@@ -374,6 +390,14 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply, assign(socket, :must_be_loged_in, nil)}
   end
 
+  def handle_event("unsave-blueprint", %{"id" => id}, socket) do
+    user = socket.assigns.current_user
+    MealBlueprints.remove_saved_blueprint_for_user(user.id, String.to_integer(id))
+
+    {:noreply,
+     assign(socket, :user_saved_blueprints, MealBlueprints.list_saved_blueprints_for_user(user.id))}
+  end
+
   def handle_event("unsave-recipe", %{"id" => id}, socket) do
     Users.remove_user_saved_recipe(socket.assigns.current_user.id, String.to_integer(id))
     user_saved_recipes = Users.list_user_saved_recipes(socket.assigns.current_user)
@@ -446,6 +470,32 @@ defmodule MehungryWeb.ProfileLive.Index do
           id={"recipe" <> Integer.to_string(user_recipe.recipe.id)}
         />
       <% end %>
+    </div>
+    """
+  end
+
+  def get_profile_content(%{content_state: :saved_blueprints} = assigns) do
+    ~H"""
+    <div class="pb-20 w-full px-4">
+      <div :if={@user_saved_blueprints == []} class="text-center text-parchment-dim py-16">
+        You haven't saved any blueprints yet. Browse blueprints and tap Save.
+        <div class="mt-3">
+          <.link navigate={~p"/browse"} class="text-basil hover:underline">Browse blueprints →</.link>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div :for={bp <- @user_saved_blueprints} class="relative">
+          <.blueprint_card blueprint={bp} />
+          <button
+            phx-click="unsave-blueprint"
+            phx-value-id={bp.id}
+            data-confirm="Remove this blueprint from your saved list?"
+            class="absolute top-2 right-2 px-2 py-1 rounded-lg text-xs bg-ink/70 text-parchment-dim hover:text-paprika transition"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
     </div>
     """
   end

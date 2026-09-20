@@ -62,6 +62,31 @@ defmodule Mehungry.Subscriptions do
     })
   end
 
+  @doc """
+  Grants a user the nutritionist ("pro") tier manually, without Stripe billing.
+
+  Used by admins to comp nutritionist access from the user management page.
+  Leaves the Stripe fields untouched so an admin grant is distinguishable from a
+  paid subscription (no `stripe_subscription_id`).
+  """
+  def grant_nutritionist(user_id) do
+    upsert_subscription(user_id, %{
+      tier: "pro",
+      status: "active",
+      period_start: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+    })
+  end
+
+  @doc """
+  Revokes a user's subscription, dropping them back to the free tier.
+
+  For admin-granted (comped) access this is a clean removal; for a Stripe-billed
+  subscription the billing side should be canceled in Stripe separately.
+  """
+  def revoke_subscription(user_id) do
+    upsert_subscription(user_id, %{tier: "free", status: "canceled"})
+  end
+
   def cancel_subscription(stripe_subscription_id) do
     case Repo.get_by(UserSubscription, stripe_subscription_id: stripe_subscription_id) do
       nil ->

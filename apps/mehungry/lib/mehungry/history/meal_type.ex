@@ -29,11 +29,25 @@ defmodule Mehungry.History.MealType do
   def label(_other), do: "Unsorted"
 
   @doc """
-  Maps an AI meal-plan slot string ("Breakfast"/"Lunch"/"Dinner") to a
-  canonical value; anything else → `nil` (unsorted).
+  Maps an AI meal-plan slot string (the labels emitted by `label/1`, e.g.
+  "Breakfast", "Morning Snack", "Dinner") to a canonical value; anything else →
+  `nil` (unsorted).
   """
   def from_slot("Breakfast"), do: "breakfast"
+  def from_slot("Morning Snack"), do: "morning_snack"
   def from_slot("Lunch"), do: "lunch"
+  def from_slot("Afternoon Snack"), do: "afternoon_snack"
   def from_slot("Dinner"), do: "dinner"
   def from_slot(_other), do: nil
+
+  @doc """
+  Default time-of-day for a canonical meal-type value, used when materializing a
+  planned meal onto a calendar date. Unknown/nil → noon.
+  """
+  def slot_time("breakfast"), do: ~T[08:00:00]
+  def slot_time("morning_snack"), do: ~T[10:30:00]
+  def slot_time("lunch"), do: ~T[13:00:00]
+  def slot_time("afternoon_snack"), do: ~T[16:30:00]
+  def slot_time("dinner"), do: ~T[19:00:00]
+  def slot_time(_other), do: ~T[12:00:00]
 end

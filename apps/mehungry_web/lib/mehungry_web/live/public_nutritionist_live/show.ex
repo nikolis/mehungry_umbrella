@@ -13,10 +13,13 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
   # elsewhere via the RecipeDetailsComponent.
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
 
+  alias Mehungry.MealBlueprints
   alias Mehungry.Professionals
   alias Mehungry.ObanWorkers.AppointmentMailerWorker
   alias Mehungry.Users
   alias MehungryWeb.RecipeComponents
+
+  import MehungryWeb.BlueprintComponents, only: [blueprint_card: 1]
 
   @booking_window_days 30
 
@@ -36,6 +39,7 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
          |> assign(:must_be_loged_in, nil)
          |> assign(:created_recipes, Users.list_user_created_recipes(profile.user))
          |> assign(:articles, Professionals.list_published_articles_for_profile(profile.id))
+         |> assign(:blueprints, MealBlueprints.list_public_blueprints_for_user(profile.user_id))
          |> assign_viewer_recipe_state()
          |> reset_booking_state()
          |> load_slots()
@@ -354,6 +358,16 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
             </a>
           </li>
         </ul>
+      </section>
+
+      <!-- Meal blueprints published by this nutritionist -->
+      <section :if={@blueprints != []} class="mt-12">
+        <h2 class="text-2xl font-display font-bold text-parchment mb-6">
+          Meal blueprints by {display_name(@profile)}
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <.blueprint_card :for={bp <- @blueprints} blueprint={bp} />
+        </div>
       </section>
 
       <!-- Recipes created by this nutritionist -->

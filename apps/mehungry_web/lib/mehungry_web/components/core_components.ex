@@ -1118,7 +1118,7 @@ defmodule MehungryWeb.CoreComponents do
         class={
           [Map.get(assigns.rest, :class, "")] ++
             [
-              "w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500"
+              "w-full px-3 py-2 bg-ink border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500"
             ]
         }
         {@rest}
@@ -1233,7 +1233,7 @@ defmodule MehungryWeb.CoreComponents do
         class={
           [Map.get(assigns.rest, :class, "")] ++
             [
-              "w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none  ",
+              "w-full px-4 py-2 bg-ink border border-slate-600 rounded-lg text-white focus:outline-none  ",
               "phx-no-feedback:transparent phx-no-feedback:focus:border-complementarym text-sm sm:text-base p-1 sm:p-4",
               @errors == [] && "",
               @errors != [] && " ring-rose-400  focus:ring-rose-400 bg-rose-300"
@@ -1295,7 +1295,7 @@ defmodule MehungryWeb.CoreComponents do
       <select
         id={@id}
         name={@name}
-        class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500"
+        class="w-full px-3 py-2 bg-ink border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-primary-500"
         ,
         multiple={@multiple}
         {@rest}
@@ -1347,7 +1347,7 @@ defmodule MehungryWeb.CoreComponents do
         class={
           [Map.get(assigns.rest, :class, "")] ++
             [
-              "w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none ",
+              "w-full px-4 py-2 bg-ink border border-slate-600 rounded-lg text-white focus:outline-none ",
               "phx-no-feedback:transparent phx-no-feedback:focus:border-primary-500",
               @errors == [] && "",
               @errors != [] && " ring-rose-400  focus:ring-rose-400"

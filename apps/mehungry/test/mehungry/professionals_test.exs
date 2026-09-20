@@ -257,4 +257,114 @@ defmodule Mehungry.ProfessionalsTest do
       assert %{study_id: _} = errors_on(changeset)
     end
   end
+
+  describe "managed clients" do
+    alias Mehungry.Accounts
+
+    test "creates a login-less, assigned, unclaimed client from an alias" do
+      pro = user_fixture()
+
+      {:ok, %{user: client, claim_token: token}} =
+        Professionals.create_managed_client(pro.id, "Maria K.")
+
+      assert client.name == "Maria K."
+      assert client.confirmed_at
+      assert is_nil(client.hashed_password)
+      assert client.managed_by_professional_id == pro.id
+      assert Accounts.managed_unclaimed?(client)
+      assert is_binary(token)
+
+      # Appears in the professional's client list.
+      assert [assignment] = Professionals.list_clients(pro.id)
+      assert assignment.client_id == client.id
+    end
+
+    test "a valid claim token resolves to the managed user; junk does not" do
+      pro = user_fixture()
+      {:ok, %{user: client, claim_token: token}} =
+        Professionals.create_managed_client(pro.id, "Maria K.")
+
+      assert %{id: id} = Accounts.get_managed_user_by_claim_token(token)
+      assert id == client.id
+      assert is_nil(Accounts.get_managed_user_by_claim_token("not-a-real-token"))
+    end
+
+    test "claiming sets credentials, clears the managed flag, keeps the row and assignment" do
+      pro = user_fixture()
+      {:ok, %{user: client, claim_token: token}} =
+        Professionals.create_managed_client(pro.id, "Maria K.")
+
+      email = unique_user_email()
+
+      {:ok, claimed} =
+        Accounts.claim_managed_account(token, %{
+          "email" => email,
+          "password" => "super-secret-passphrase"
+        })
+
+      assert claimed.id == client.id
+      assert claimed.email == email
+      assert is_nil(claimed.managed_by_professional_id)
+      refute Accounts.managed_unclaimed?(claimed)
+      assert Accounts.get_user_by_email_and_password(email, "super-secret-passphrase").id == client.id
+
+      # Assignment survives the claim.
+      assert [assignment] = Professionals.list_clients(pro.id)
+      assert assignment.client_id == client.id
+
+      # Token is single-use.
+      assert :error = Accounts.claim_managed_account(token, %{"email" => unique_user_email(), "password" => "another-passphrase-1"})
+    end
+
+    test "claiming via OAuth sets the provider identity, no password, keeps the row" do
+      pro = user_fixture()
+      {:ok, %{user: client, claim_token: token}} =
+        Professionals.create_managed_client(pro.id, "Maria K.")
+
+      email = unique_user_email()
+
+      {:ok, claimed} =
+        Accounts.claim_managed_account_with_oauth(token, %{
+          email: email,
+          name: "Maria Karidi",
+          profile_pic: "https://example.com/pic.jpg"
+        })
+
+      assert claimed.id == client.id
+      assert claimed.email == email
+      assert claimed.name == "Maria Karidi"
+      assert claimed.confirmed_at
+      assert is_nil(claimed.hashed_password)
+      assert is_nil(claimed.managed_by_professional_id)
+      refute Accounts.managed_unclaimed?(claimed)
+
+      assert [assignment] = Professionals.list_clients(pro.id)
+      assert assignment.client_id == client.id
+
+      # Token is single-use.
+      assert :error =
+               Accounts.claim_managed_account_with_oauth(token, %{email: unique_user_email()})
+    end
+
+    test "OAuth claim reports :email_taken when the provider email is in use" do
+      pro = user_fixture()
+      existing = user_fixture()
+      {:ok, %{claim_token: token}} = Professionals.create_managed_client(pro.id, "Maria K.")
+
+      assert {:error, :email_taken} =
+               Accounts.claim_managed_account_with_oauth(token, %{email: existing.email})
+    end
+
+    test "regenerating a claim token invalidates the previous one" do
+      pro = user_fixture()
+      {:ok, %{user: client, claim_token: first}} =
+        Professionals.create_managed_client(pro.id, "Maria K.")
+
+      {:ok, second} = Professionals.regenerate_claim_token(pro.id, client.id)
+
+      assert is_nil(Accounts.get_managed_user_by_claim_token(first))
+      assert %{id: id} = Accounts.get_managed_user_by_claim_token(second)
+      assert id == client.id
+    end
+  end
 end

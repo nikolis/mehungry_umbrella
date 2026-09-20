@@ -32,6 +32,13 @@ defmodule Mehungry.Accounts do
   defdelegate get_user_by_email_and_password(email, password), to: Auth
   defdelegate register_user(attrs), to: Auth
   defdelegate change_user_registration(user, attrs \\ %{}), to: Auth
+  defdelegate create_managed_client(attrs), to: Auth
+  defdelegate managed_unclaimed?(user), to: Auth
+  defdelegate build_managed_client_claim_token(user), to: Auth
+  defdelegate get_managed_user_by_claim_token(token), to: Auth
+  defdelegate change_user_claim(user, attrs \\ %{}), to: Auth
+  defdelegate claim_managed_account(token, attrs), to: Auth
+  defdelegate claim_managed_account_with_oauth(token, oauth_attrs), to: Auth
   defdelegate change_user_email(user, attrs \\ %{}), to: Auth
   defdelegate apply_user_email(user, password, attrs), to: Auth
   defdelegate update_user_email(user, token), to: Auth
@@ -60,6 +67,7 @@ defmodule Mehungry.Accounts do
   defdelegate register_3rd_party_user(attrs), to: OAuth
   defdelegate verify_3rd_party_user_changes(auth, user), to: OAuth
   defdelegate find_or_create(auth), to: OAuth
+  defdelegate oauth_profile(auth), to: OAuth
   defdelegate maybe_confirm_user(user), to: OAuth
 
   # ── Profiles ───────────────────────────────────────────────────────────

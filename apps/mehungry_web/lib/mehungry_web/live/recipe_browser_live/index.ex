@@ -12,8 +12,10 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   alias Mehungry.Accounts
   alias Mehungry.Users
   alias Mehungry.Posts
+  alias Mehungry.MealBlueprints
   alias MehungryWeb.RecipeComponents
   alias MehungryWeb.RecipeFlags
+  import MehungryWeb.BlueprintComponents
 
   # Page size for the offset-paginated, condition-prioritized browse mode; kept
   # in step with the cursor paginator's `limit: 10` in `Food.list_recipes/3`.
@@ -90,6 +92,14 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      # `diet_mode_available` remembers it so the badge can be toggled off/on.
      |> assign(:diet_mode_available, Accounts.diet_mode(user))
      |> assign(:diet_mode, Accounts.diet_mode(user))
+     # Browse switches between recipes and public meal-plan blueprints.
+     |> assign(:browse_mode, :recipes)
+     |> assign(:blueprint_query, "")
+     |> assign(:blueprints, [])
+     # Blueprints are loaded lazily the first time the user opens that tab, then
+     # kept in assigns so flipping between tabs is a pure presentation switch —
+     # no re-query of the DB. An explicit blueprint search still refreshes them.
+     |> assign(:blueprints_loaded, false)
      |> assign_recipe_search()}
   end
 
@@ -105,6 +115,41 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   end
 
   ######################################################################## EVENTS #################################################################################
+  @impl true
+  def handle_event("set_browse_mode", %{"mode" => "blueprints"}, socket) do
+    # Only hit the DB the first time; after that, toggling tabs just re-shows the
+    # blueprints already in assigns.
+    socket =
+      if socket.assigns.blueprints_loaded do
+        socket
+      else
+        blueprints =
+          MealBlueprints.search_public_blueprints(socket.assigns.blueprint_query, limit: 60)
+
+        socket
+        |> assign(:blueprints, blueprints)
+        |> assign(:blueprints_loaded, true)
+      end
+
+    {:noreply, assign(socket, :browse_mode, :blueprints)}
+  end
+
+  @impl true
+  def handle_event("set_browse_mode", %{"mode" => _}, socket) do
+    {:noreply, assign(socket, :browse_mode, :recipes)}
+  end
+
+  @impl true
+  def handle_event("search_blueprints", %{"query" => query}, socket) do
+    blueprints = MealBlueprints.search_public_blueprints(query, limit: 60)
+
+    {:noreply,
+     socket
+     |> assign(:blueprint_query, query)
+     |> assign(:blueprints, blueprints)
+     |> assign(:blueprints_loaded, true)}
+  end
+
   @impl true
   def handle_event("review", %{"id" => id, "points" => points}, socket) do
     # %{"user_id" => [{recipe_id, grade}]}

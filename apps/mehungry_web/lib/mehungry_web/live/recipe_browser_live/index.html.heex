@@ -47,10 +47,42 @@
       </div>
     </div>
 
+    <!-- Recipes ↔ Blueprints switch -->
+    <div class="inline-flex items-center gap-1 p-1 rounded-full bg-ink-panel border border-ink-panel2 mt-3 mb-1">
+      <button
+        type="button"
+        phx-click="set_browse_mode"
+        phx-value-mode="recipes"
+        class={[
+          "px-4 py-1.5 rounded-full text-sm font-semibold transition",
+          if(@browse_mode == :recipes,
+            do: "bg-paprika text-ink",
+            else: "text-parchment-dim hover:text-parchment"
+          )
+        ]}
+      >
+        Recipes
+      </button>
+      <button
+        type="button"
+        phx-click="set_browse_mode"
+        phx-value-mode="blueprints"
+        class={[
+          "px-4 py-1.5 rounded-full text-sm font-semibold transition",
+          if(@browse_mode == :blueprints,
+            do: "bg-basil text-ink",
+            else: "text-parchment-dim hover:text-parchment"
+          )
+        ]}
+      >
+        Meal Blueprints
+      </button>
+    </div>
+
     <!-- Search Bar -->
-    <div class="">
+    <div :if={@browse_mode == :recipes} class="">
       <!-- Sort Options -->
-      <!-- Sort Options 
+      <!-- Sort Options
       <div class="flex gap-2 mt-4">
         <button
           phx-click="sort_by"
@@ -88,7 +120,7 @@
       </div>
     -->
     </div>
-    <div class="search_comp_cont">
+    <div :if={@browse_mode == :recipes} class="search_comp_cont">
       <.live_component
         module={MehungryWeb.SearchLive.Index}
         id={5}
@@ -193,8 +225,34 @@
         />
       </.modal>
     <% end %>
-    <%= if @not_empty do %>
-      <div class="">
+    <!-- Blueprint browsing -->
+    <div :if={@browse_mode == :blueprints} class="mt-3">
+      <form id="blueprint-search-form" phx-submit="search_blueprints" phx-change="search_blueprints" class="mb-5">
+        <input
+          type="text"
+          name="query"
+          value={@blueprint_query}
+          placeholder="Search blueprints by title…"
+          phx-debounce="300"
+          class="w-full bg-ink-panel text-parchment rounded-xl px-4 py-3 text-sm border border-ink-panel2 focus:border-basil focus:outline-none"
+        />
+      </form>
+
+      <div :if={@blueprints == []} class="text-center text-parchment-dim py-16">
+        No public blueprints found.
+      </div>
+
+      <div class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <.blueprint_card :for={bp <- @blueprints} blueprint={bp} />
+      </div>
+    </div>
+
+    <!-- The recipes stream container must stay mounted across tab switches:
+         a `phx-update="stream"` container only receives its items once, so
+         removing it from the DOM (via :if) and re-adding it leaves it empty.
+         We hide it with CSS instead when Blueprints is active. -->
+    <div class={[@browse_mode != :recipes && "hidden"]}>
+      <div :if={@not_empty} class="">
         <div
           class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 "
           id="recipes_container"
@@ -218,13 +276,12 @@
           <input type="hidden" id="page_is_dirty" name="page_is_dirty" value="0" />
         </form>
       </div>
-    <% else %>
-      <div style="height: 20vh">
+      <div :if={!@not_empty} style="height: 20vh">
         <h3 class="text-center p-10 font-display text-parchment-dim">
           We were not able to find a recipe according to your search
         </h3>
       </div>
-    <% end %>
+    </div>
     <MehungryWeb.RecipeComponents.recipe_modal
       :if={@live_action in [:show_recipe]}
       on_cancel={JS.patch(@return_to)}

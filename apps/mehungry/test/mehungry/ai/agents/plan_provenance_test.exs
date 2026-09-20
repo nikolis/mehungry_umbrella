@@ -61,6 +61,81 @@ defmodule Mehungry.AI.Agents.PlanProvenanceTest do
     end
   end
 
+  describe "MealPlanAgent.validate_plan/7 — ingredients + snack slots" do
+    defp ingredient_entry(ingredient_id, opts \\ []) do
+      %{
+        "date" => Keyword.get(opts, :date, "2026-08-20"),
+        "slot" => Keyword.get(opts, :slot, "Morning Snack"),
+        "ingredient_id" => ingredient_id,
+        "quantity" => Keyword.get(opts, :quantity, 1),
+        "unit_selection" => Keyword.get(opts, :unit_selection, 5)
+      }
+    end
+
+    defp validate(entries, opts) do
+      MealPlanAgent.validate_plan(
+        entries,
+        Keyword.get(opts, :offered_recipes, MapSet.new()),
+        Keyword.get(opts, :valid_recipes, MapSet.new()),
+        Keyword.get(opts, :offered_ingredients, MapSet.new()),
+        Keyword.get(opts, :valid_ingredients, MapSet.new()),
+        @start_date,
+        @end_date
+      )
+    end
+
+    test "accepts a searched ingredient entry in a snack slot" do
+      assert validate([ingredient_entry(42)],
+               offered_ingredients: MapSet.new([42]),
+               valid_ingredients: MapSet.new([42])
+             ) == []
+    end
+
+    test "rejects an ingredient_id the model never surfaced via search" do
+      [error] =
+        validate([ingredient_entry(99)],
+          offered_ingredients: MapSet.new([42]),
+          valid_ingredients: MapSet.new([42])
+        )
+
+      assert error =~ "was not in your search results"
+      assert error =~ "99"
+    end
+
+    test "rejects an ingredient entry with a non-positive quantity" do
+      errors =
+        validate([ingredient_entry(42, quantity: 0)],
+          offered_ingredients: MapSet.new([42]),
+          valid_ingredients: MapSet.new([42])
+        )
+
+      assert Enum.any?(errors, &(&1 =~ "positive quantity"))
+    end
+
+    test "rejects an entry with both a recipe_id and an ingredient_id" do
+      entry = Map.put(ingredient_entry(42), "recipe_id", 10)
+
+      [error] =
+        validate([entry],
+          offered_recipes: MapSet.new([10]),
+          valid_recipes: MapSet.new([10]),
+          offered_ingredients: MapSet.new([42]),
+          valid_ingredients: MapSet.new([42])
+        )
+
+      assert error =~ "exactly one"
+    end
+
+    test "accepts the two new snack slots as valid slot values" do
+      for slot <- ["Morning Snack", "Afternoon Snack"] do
+        assert validate([ingredient_entry(42, slot: slot)],
+                 offered_ingredients: MapSet.new([42]),
+                 valid_ingredients: MapSet.new([42])
+               ) == []
+      end
+    end
+  end
+
   describe "NutritionistAgent.validate_entries/5" do
     test "accepts a searched, in-catalog recipe_id" do
       offered = MapSet.new([5])

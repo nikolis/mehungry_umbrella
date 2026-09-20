@@ -272,6 +272,11 @@ defmodule MehungryWeb.LayoutView do
         />
         <.nutritionist_link href="/nutritionist/clients" icon="hero-user-group" label="My Clients" />
         <.nutritionist_link href="/nutritionist/records" icon="hero-folder" label="Client Records" />
+        <.nutritionist_link
+          href="/nutritionist/blueprints"
+          icon="hero-clipboard-document-list"
+          label="Blueprints"
+        />
         <.nutritionist_link href="/nutritionist/invitations" icon="hero-envelope" label="Invitations" />
         <.nutritionist_link
           href="/nutritionist/appointments"

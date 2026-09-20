@@ -105,6 +105,12 @@ defmodule Mehungry.Accounts.OAuth do
     end
   end
 
+  @doc """
+  Extracts the provider profile (`%{name, email, profile_pic, provider}`) from an
+  Ueberauth `%Auth{}`, used when claiming a managed account via OAuth.
+  """
+  def oauth_profile(%Auth{} = auth), do: basic_info(auth)
+
   def find_or_create(%Auth{} = auth) do
     email = email_from_auth(auth) || fallback_email_from_auth(auth)
 
