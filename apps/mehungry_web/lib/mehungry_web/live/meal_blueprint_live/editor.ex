@@ -27,20 +27,6 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
   alias Mehungry.MealBlueprints
   alias Mehungry.History.MealType
 
-  # Compound "family" options (the compound_type vocabulary) shown alongside the
-  # specific compound rows, so a user can target e.g. "Polyphenols" broadly.
-  @compound_family_labels %{
-    "oxalate" => "Oxalates",
-    "lectin" => "Lectins",
-    "phytate" => "Phytates",
-    "histamine" => "Histamine",
-    "polyphenol" => "Polyphenols",
-    "fodmap" => "FODMAPs",
-    "purine" => "Purines",
-    "salicylate" => "Salicylates",
-    "other" => "Other compounds"
-  }
-
   # ── render ────────────────────────────────────────────────────────────────
 
   @impl true
@@ -50,7 +36,10 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
       <div class="container max-w-3xl mx-auto px-4 py-8">
         <div class="flex items-center justify-between mb-6">
           <div class="min-w-0">
-            <.link navigate={~p"/nutritionist/blueprints"} class="text-parchment-dim text-sm hover:text-parchment">
+            <.link
+              navigate={~p"/nutritionist/blueprints"}
+              class="text-parchment-dim text-sm hover:text-parchment"
+            >
               ← Blueprints
             </.link>
             <h1 class="text-2xl font-display font-medium text-parchment truncate">
@@ -74,9 +63,15 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
                   Public — browsable & shareable
                 </option>
               </select>
-              <p :if={@blueprint.visibility == "public" && @blueprint.slug} class="text-parchment-dim text-xs mt-1">
+              <p
+                :if={@blueprint.visibility == "public" && @blueprint.slug}
+                class="text-parchment-dim text-xs mt-1"
+              >
                 Public page:
-                <.link navigate={~p"/blueprints/#{@blueprint.slug}"} class="text-basil hover:underline">
+                <.link
+                  navigate={~p"/blueprints/#{@blueprint.slug}"}
+                  class="text-basil hover:underline"
+                >
                   /blueprints/{@blueprint.slug}
                 </.link>
               </p>
@@ -229,7 +224,8 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
                       "text-xs mt-1",
                       if(macro_total(mf) == 100, do: "text-parchment-dim", else: "text-paprika")
                     ]}>
-                      Total: {macro_total(mf)}% <span :if={macro_total(mf) != 100}>(must be 100%)</span>
+                      Total: {macro_total(mf)}%
+                      <span :if={macro_total(mf) != 100}>(must be 100%)</span>
                     </p>
 
                     <div class="mt-2">
@@ -411,7 +407,7 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
   end
 
   defp compound_items do
-    families = Enum.map(@compound_family_labels, fn {_type, label} -> {label, label} end)
+    families = Enum.map(Food.Compounds.family_labels(), fn {_type, label} -> {label, label} end)
     specific = Enum.map(Food.list_compounds(), &{&1.name, &1.name})
 
     (families ++ specific)

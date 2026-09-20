@@ -184,9 +184,10 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
                 </div>
                 <div class="space-y-3">
                   <div :for={{day_index, meals} <- group_by_day_index(plan.meals)}>
-                    <div class="text-parchment-dim text-xs font-semibold uppercase tracking-wide mb-1.5">
-                      Day {day_index}
-                    </div>
+                    <.day_header
+                      day_index={day_index}
+                      report={day_report(@compat, plan.id, day_index)}
+                    />
                     <div class="space-y-1.5">
                       <div :for={m <- meals} class="flex items-center gap-2 group">
                         <span class="text-parchment-dim text-[11px] w-24 shrink-0">
@@ -195,6 +196,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
                         <div class="min-w-0 flex-1">
                           <.recipe_line m={m} />
                           <.ingredient_line m={m} />
+                          <.meal_badges report={meal_report(@compat, plan.id, m.id)} />
                         </div>
                         <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
                           <button
@@ -279,66 +281,12 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
         show
         on_cancel={JS.push("close_meal_edit")}
       >
-        <h2 class="text-lg font-display font-medium text-parchment mb-1">Edit meal</h2>
-        <p class="text-parchment-dim text-sm mb-4">
-          Day {@editing_plan_meal.day_index} · {MealType.label(@editing_plan_meal.meal_type)}
-        </p>
-
-        <%!-- Adjust the current item's portions/quantity --%>
-        <form phx-submit="save_meal_fields" class="mb-5">
-          <div :if={@editing_plan_meal.recipe_id} class="flex items-end gap-2">
-            <div class="flex-1">
-              <label class="block text-sm text-parchment-dim mb-1">Cooking portions</label>
-              <input
-                type="number"
-                name="meal[cooking_portions]"
-                value={@editing_plan_meal.cooking_portions || 2}
-                min="1"
-                class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
-              />
-            </div>
-            <.button type="primary">Save</.button>
-          </div>
-          <div :if={!@editing_plan_meal.recipe_id} class="flex items-end gap-2">
-            <div class="flex-1">
-              <label class="block text-sm text-parchment-dim mb-1">Quantity</label>
-              <input
-                type="number"
-                step="any"
-                name="meal[quantity]"
-                value={@editing_plan_meal.quantity || 1.0}
-                min="0"
-                class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
-              />
-            </div>
-            <.button type="primary">Save</.button>
-          </div>
-        </form>
-
-        <%!-- Swap the slot to a different recipe --%>
-        <div class="border-t border-ink-panel2 pt-4">
-          <label class="block text-sm text-parchment-dim mb-1">Swap for a recipe</label>
-          <form id="meal-search-form" phx-change="meal_search" phx-submit="meal_search">
-            <input
-              type="text"
-              name="query"
-              placeholder="Search recipes…"
-              phx-debounce="300"
-              class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
-            />
-          </form>
-          <div :if={@meal_search_results != []} class="mt-2 space-y-1 max-h-56 overflow-y-auto">
-            <button
-              :for={r <- @meal_search_results}
-              type="button"
-              phx-click="swap_meal_recipe"
-              phx-value-recipe_id={r.id}
-              class="w-full text-left px-3 py-2 rounded-lg text-sm text-parchment hover:bg-ink-panel2 transition"
-            >
-              {r.title}
-            </button>
-          </div>
-        </div>
+        <.live_component
+          module={MehungryWeb.MealBlueprintLive.PlanMealFormComponent}
+          id={"plan-meal-form-#{@editing_plan_meal.id}"}
+          plan_meal={@editing_plan_meal}
+          current_user={@user}
+        />
       </.modal>
     </div>
     """
@@ -359,6 +307,143 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
   end
 
   defp plan_status_badge(assigns), do: ~H""
+
+  # ── compatibility indicators ────────────────────────────────────────────────
+
+  # Day heading + whole-day blueprint indicators: calorie over/under target,
+  # a violation count, and any required compound/nutrient no meal covers today.
+  attr :day_index, :any, required: true
+  attr :report, :any, default: nil
+
+  defp day_header(assigns) do
+    ~H"""
+    <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+      <span class="text-parchment-dim text-xs font-semibold uppercase tracking-wide">
+        Day {@day_index}
+      </span>
+      <.calorie_badge :if={@report} report={@report} />
+      <span
+        :if={@report && @report.violation_count > 0}
+        class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-paprika/20 text-paprika"
+        title={"#{@report.violation_count} blueprint violation(s) among today's meals"}
+      >
+        ⚠ {@report.violation_count}
+      </span>
+      <span
+        :for={miss <- missing_required(@report)}
+        class="text-[10px] px-1.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim normal-case"
+        title={"Blueprint requires #{miss}, but no meal today includes it"}
+      >
+        missing: {miss}
+      </span>
+    </div>
+    """
+  end
+
+  defp missing_required(%{missing_required: list}) when is_list(list), do: list
+  defp missing_required(_), do: []
+
+  # Day energy vs the blueprint's calorie aim, hidden when the day has no target.
+  attr :report, :map, required: true
+
+  defp calorie_badge(%{report: %{calorie_status: :no_target}} = assigns), do: ~H""
+
+  defp calorie_badge(assigns) do
+    ~H"""
+    <span
+      class={[
+        "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full [font-variant-numeric:tabular-nums]",
+        calorie_badge_class(@report.calorie_status)
+      ]}
+      title={calorie_tooltip(@report)}
+    >
+      {@report.calorie_total} / {@report.calorie_target} kcal
+      <span :if={@report.calorie_status != :ok}>{calorie_delta_label(@report.calorie_delta)}</span>
+    </span>
+    """
+  end
+
+  defp calorie_badge_class(:over), do: "bg-paprika/20 text-paprika"
+  defp calorie_badge_class(:under), do: "bg-amber-500/20 text-amber-400"
+  defp calorie_badge_class(:ok), do: "bg-basil/20 text-basil"
+  defp calorie_badge_class(_), do: "bg-ink-panel2 text-parchment-dim"
+
+  defp calorie_delta_label(delta) when is_integer(delta) and delta > 0, do: "· +#{delta}"
+  defp calorie_delta_label(delta) when is_integer(delta), do: "· #{delta}"
+  defp calorie_delta_label(_), do: ""
+
+  defp calorie_tooltip(%{calorie_status: :over, calorie_delta: d}),
+    do: "#{d} kcal over the day's calorie target"
+
+  defp calorie_tooltip(%{calorie_status: :under, calorie_delta: d}),
+    do: "#{abs(d)} kcal under the day's calorie target"
+
+  defp calorie_tooltip(_), do: "On the day's calorie target"
+
+  # Per-meal badges: red for an avoided compound/nutrient present, green for a
+  # required one. Hover (native title) explains each.
+  attr :report, :any, default: nil
+
+  defp meal_badges(%{report: nil} = assigns), do: ~H""
+  defp meal_badges(%{report: %{violations: [], matches: []}} = assigns), do: ~H""
+
+  defp meal_badges(assigns) do
+    ~H"""
+    <div class="flex flex-wrap gap-1 mt-1">
+      <.compat_badge :for={e <- @report.violations} entry={e} />
+      <.compat_badge :for={e <- @report.matches} entry={e} />
+    </div>
+    """
+  end
+
+  attr :entry, :map, required: true
+
+  defp compat_badge(assigns) do
+    ~H"""
+    <span
+      class={[
+        "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full cursor-help normal-case",
+        badge_class(@entry.direction)
+      ]}
+      title={badge_tooltip(@entry)}
+    >
+      {badge_icon(@entry.direction)} {@entry.name}
+    </span>
+    """
+  end
+
+  defp badge_class(:avoid), do: "bg-paprika/20 text-paprika border border-paprika/40"
+  defp badge_class(:required), do: "bg-basil/20 text-basil border border-basil/40"
+
+  defp badge_icon(:avoid), do: "⚠"
+  defp badge_icon(:required), do: "✓"
+
+  defp badge_tooltip(%{direction: :avoid, via: :family, name: name}),
+    do: "Contains #{name} — a compound family this blueprint says to avoid"
+
+  defp badge_tooltip(%{direction: :required, via: :family, name: name}),
+    do: "Includes #{name} — a compound family this blueprint requires"
+
+  defp badge_tooltip(%{direction: :avoid, kind: :compound, name: name}),
+    do: "Contains #{name}, which this blueprint says to avoid"
+
+  defp badge_tooltip(%{direction: :avoid, kind: :nutrient, name: name}),
+    do: "High in #{name}, which this blueprint says to avoid"
+
+  defp badge_tooltip(%{direction: :required, kind: :compound, name: name}),
+    do: "Includes #{name}, which this blueprint requires"
+
+  defp badge_tooltip(%{direction: :required, kind: :nutrient, name: name}),
+    do: "Provides #{name}, which this blueprint requires"
+
+  # Compatibility lookups into the @compat map (keyed by plan id).
+  defp day_report(compat, plan_id, day_index) do
+    compat |> Map.get(plan_id, %{}) |> Map.get(:days, %{}) |> Map.get(day_index)
+  end
+
+  defp meal_report(compat, plan_id, meal_id) do
+    compat |> Map.get(plan_id, %{}) |> Map.get(:meals, %{}) |> Map.get(meal_id)
+  end
 
   # Groups a plan's meals by their relative day (1..7) for accordion display.
   defp group_by_day_index(meals) do
@@ -456,12 +541,12 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
      |> assign(:plans_by_blueprint, load_plans(user.id, blueprints))
      |> assign(:clients, load_client_targets(user.id))
      |> assign(:expanded_plans, MapSet.new())
+     |> assign(:compat, %{})
      |> assign(:generating_ids, MapSet.new())
      |> assign(:gen_tasks, %{})
      |> assign(:import_plan_id, nil)
      |> assign(:import_form, nil)
-     |> assign(:editing_plan_meal, nil)
-     |> assign(:meal_search_results, [])}
+     |> assign(:editing_plan_meal, nil)}
   end
 
   @impl true
@@ -479,9 +564,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
     if name == "" do
       {:noreply, put_flash(socket, :error, "Please enter a name.")}
     else
-      case MealBlueprints.create_blueprint(
-             MealBlueprints.default_blueprint_attrs(user.id, name)
-           ) do
+      case MealBlueprints.create_blueprint(MealBlueprints.default_blueprint_attrs(user.id, name)) do
         {:ok, blueprint} ->
           {:noreply, push_navigate(socket, to: ~p"/nutritionist/blueprints/#{blueprint.id}/edit")}
 
@@ -520,7 +603,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
         MapSet.put(socket.assigns.expanded_plans, id)
       end
 
-    {:noreply, assign(socket, :expanded_plans, expanded)}
+    {:noreply, socket |> assign(:expanded_plans, expanded) |> refresh_compat()}
   end
 
   @impl true
@@ -534,7 +617,11 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
 
       Subscriptions.check_quota(user.id, "meal_plan") == {:error, :quota_exceeded} ->
         {:noreply,
-         put_flash(socket, :error, "You've reached your meal-plan generation limit for this month.")}
+         put_flash(
+           socket,
+           :error,
+           "You've reached your meal-plan generation limit for this month."
+         )}
 
       true ->
         start_generation(socket, blueprint_id)
@@ -617,67 +704,12 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
   @impl true
   def handle_event("edit_plan_meal", %{"id" => id}, socket) do
     meal = MealBlueprints.get_plan_meal!(socket.assigns.user.id, String.to_integer(id))
-
-    {:noreply,
-     socket
-     |> assign(:editing_plan_meal, meal)
-     |> assign(:meal_search_results, [])}
+    {:noreply, assign(socket, :editing_plan_meal, meal)}
   end
 
   @impl true
   def handle_event("close_meal_edit", _params, socket) do
-    {:noreply, socket |> assign(:editing_plan_meal, nil) |> assign(:meal_search_results, [])}
-  end
-
-  @impl true
-  def handle_event("meal_search", %{"query" => query}, socket) do
-    results =
-      case String.trim(query) do
-        "" -> []
-        q -> Mehungry.Search.RecipeVectorSearch.search(q, limit: 10)
-      end
-
-    {:noreply, assign(socket, :meal_search_results, results)}
-  end
-
-  @impl true
-  def handle_event("swap_meal_recipe", %{"recipe_id" => recipe_id}, socket) do
-    meal = socket.assigns.editing_plan_meal
-
-    {:ok, _} =
-      MealBlueprints.update_plan_meal(meal, %{
-        recipe_id: String.to_integer(recipe_id),
-        cooking_portions: meal.cooking_portions || 2,
-        ingredient_id: nil,
-        quantity: nil,
-        measurement_unit_id: nil,
-        ingredient_portion_id: nil
-      })
-
-    {:noreply,
-     socket
-     |> assign(:editing_plan_meal, nil)
-     |> assign(:meal_search_results, [])
-     |> put_flash(:info, "Meal updated.")
-     |> reload_blueprints()}
-  end
-
-  @impl true
-  def handle_event("save_meal_fields", %{"meal" => params}, socket) do
-    meal = socket.assigns.editing_plan_meal
-    attrs = meal_field_attrs(meal, params)
-
-    case MealBlueprints.update_plan_meal(meal, attrs) do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> assign(:editing_plan_meal, nil)
-         |> put_flash(:info, "Meal updated.")
-         |> reload_blueprints()}
-
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not update the meal.")}
-    end
+    {:noreply, assign(socket, :editing_plan_meal, nil)}
   end
 
   @impl true
@@ -686,33 +718,6 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
     {:ok, _} = MealBlueprints.delete_plan_meal(meal)
 
     {:noreply, socket |> put_flash(:info, "Meal removed.") |> reload_blueprints()}
-  end
-
-  # A recipe meal edits its cooking portions; an ingredient meal edits quantity.
-  defp meal_field_attrs(%{recipe_id: rid}, params) when not is_nil(rid) do
-    %{cooking_portions: parse_int(params["cooking_portions"]) || 2}
-  end
-
-  defp meal_field_attrs(_meal, params) do
-    %{quantity: parse_float(params["quantity"]) || 1.0}
-  end
-
-  defp parse_int(nil), do: nil
-
-  defp parse_int(v) do
-    case Integer.parse(to_string(v)) do
-      {n, _} -> n
-      :error -> nil
-    end
-  end
-
-  defp parse_float(nil), do: nil
-
-  defp parse_float(v) do
-    case Float.parse(to_string(v)) do
-      {n, _} -> n
-      :error -> nil
-    end
   end
 
   defp start_generation(socket, blueprint_id) do
@@ -749,6 +754,23 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
      |> assign(:gen_tasks, Map.put(socket.assigns.gen_tasks, task.ref, {blueprint_id, plan.id}))
      |> assign(:expanded_plans, MapSet.put(socket.assigns.expanded_plans, plan.id))
      |> reload_blueprints()}
+  end
+
+  # ── plan-meal edit form (PlanMealFormComponent) ─────────────────────────────────
+
+  @impl true
+  def handle_info({:plan_meal_saved, %{flash: flash}}, socket) do
+    # Reload closes the modal and re-runs refresh_compat, so the day badges update.
+    {:noreply,
+     socket
+     |> assign(:editing_plan_meal, nil)
+     |> put_flash(:info, flash)
+     |> reload_blueprints()}
+  end
+
+  @impl true
+  def handle_info({:plan_meal_edit_cancelled}, socket) do
+    {:noreply, assign(socket, :editing_plan_meal, nil)}
   end
 
   # ── async generation result ────────────────────────────────────────────────────
@@ -821,6 +843,36 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
     socket
     |> assign(:blueprints, blueprints)
     |> assign(:plans_by_blueprint, load_plans(user.id, blueprints))
+    |> refresh_compat()
+  end
+
+  # Recomputes the blueprint-compatibility report for every currently-expanded,
+  # completed plan (cheap: usually one open at a time). Keyed by plan id so the
+  # render can look up each day/meal's badges. Runs after any edit that changes a
+  # plan's meals, so indicators stay live.
+  defp refresh_compat(socket) do
+    user = socket.assigns.user
+    plans_by_bp = socket.assigns.plans_by_blueprint
+    expanded = socket.assigns.expanded_plans
+
+    compat =
+      for {bp_id, plans} <- plans_by_bp,
+          plan <- plans,
+          MapSet.member?(expanded, plan.id),
+          plan.status == "completed",
+          report = safe_compat(user.id, bp_id, plan.id),
+          not is_nil(report),
+          into: %{} do
+        {plan.id, report}
+      end
+
+    assign(socket, :compat, compat)
+  end
+
+  defp safe_compat(user_id, blueprint_id, plan_id) do
+    MealBlueprints.plan_compatibility(user_id, blueprint_id, plan_id)
+  rescue
+    _ -> nil
   end
 
   defp load_plans(user_id, blueprints) do
@@ -889,7 +941,8 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
   end
 
   defp import_message(created, skipped, deleted, target, user) do
-    whose = if target.id == user.id, do: "your calendar", else: "#{client_label(target)}'s calendar"
+    whose =
+      if target.id == user.id, do: "your calendar", else: "#{client_label(target)}'s calendar"
 
     [
       "Added #{created} meals to #{whose}",

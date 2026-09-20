@@ -104,6 +104,40 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
     assert Mehungry.History.list_history_user_meals_for_user(user.id) == []
   end
 
+  test "editing a plan meal opens the calendar-style form and saving updates it", %{
+    conn: conn,
+    user: user
+  } do
+    bp = seed_blueprint(user, "Editable week")
+    %{plan: plan} = seed_plan(user, bp)
+
+    meal = plan.id |> MealBlueprints.list_plan_meals() |> Enum.find(&(&1.recipe_id != nil))
+
+    {:ok, live, _html} = live(conn, ~p"/nutritionist/blueprints")
+
+    live
+    |> element("button[phx-click='toggle_plan'][phx-value-id='#{plan.id}']")
+    |> render_click()
+
+    html =
+      live
+      |> element("button[phx-click='edit_plan_meal'][phx-value-id='#{meal.id}']")
+      |> render_click()
+
+    # Calendar-style form: Recipe/Ingredient toggle present, no meal-type picker.
+    assert html =~ "Edit meal"
+    assert has_element?(live, "button[phx-click='set_mode'][phx-value-mode='ingredient']")
+    refute has_element?(live, "button[phx-click='set_meal_type']")
+
+    render_submit(element(live, "#edit-meal-modal form"), %{
+      "plan_meal" => %{"cooking_portions" => "5"}
+    })
+
+    updated = MealBlueprints.get_plan_meal!(user.id, meal.id)
+    assert updated.cooking_portions == 5
+    assert updated.recipe_id == meal.recipe_id
+  end
+
   test "importing a plan creates calendar meals from the chosen date", %{conn: conn, user: user} do
     bp = seed_blueprint(user, "Snacky week")
     %{plan: plan} = seed_plan(user, bp)
@@ -111,7 +145,9 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
     {:ok, live, _html} = live(conn, ~p"/nutritionist/blueprints")
 
     # Open the import modal, then submit a start date.
-    live |> element("button[phx-click='open_import'][phx-value-id='#{plan.id}']") |> render_click()
+    live
+    |> element("button[phx-click='open_import'][phx-value-id='#{plan.id}']")
+    |> render_click()
 
     render_submit(element(live, "#import-plan-modal form"), %{
       "import" => %{"start_date" => "2026-10-05"}
@@ -144,7 +180,9 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
 
     {:ok, live, _html} = live(conn, ~p"/nutritionist/blueprints")
 
-    live |> element("button[phx-click='open_import'][phx-value-id='#{plan.id}']") |> render_click()
+    live
+    |> element("button[phx-click='open_import'][phx-value-id='#{plan.id}']")
+    |> render_click()
 
     # The import modal offers the client as a target.
     assert has_element?(live, "#import-plan-modal select[name='import[target_user_id]']")

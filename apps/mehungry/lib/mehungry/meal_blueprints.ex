@@ -14,6 +14,7 @@ defmodule Mehungry.MealBlueprints do
   alias Mehungry.MealBlueprints.Blueprint
   alias Mehungry.MealBlueprints.BlueprintPlan
   alias Mehungry.MealBlueprints.BlueprintPlanMeal
+  alias Mehungry.MealBlueprints.PlanCompatibility
   alias Mehungry.MealBlueprints.UserBlueprint
 
   @doc "Lists a user's blueprints, most recent first (lightweight — no deep preload)."
@@ -414,6 +415,34 @@ defmodule Mehungry.MealBlueprints do
   end
 
   @doc """
+  Like `list_plan_meals/1` but with the deeper preload the compatibility analyzer
+  needs — each recipe's `recipe_ingredients` (with their ingredient) so a meal's
+  bioactive compounds can be resolved. Kept separate so the accordion's display
+  query stays lightweight.
+  """
+  def list_plan_meals_with_ingredients(plan_id) do
+    order = MealType.values() |> Enum.with_index() |> Map.new()
+
+    Repo.all(
+      from m in BlueprintPlanMeal,
+        where: m.blueprint_plan_id == ^plan_id,
+        preload: [:ingredient, recipe: [recipe_ingredients: :ingredient]]
+    )
+    |> Enum.sort_by(fn m -> {m.day_index, Map.get(order, m.meal_type, 99)} end)
+  end
+
+  @doc """
+  Analyzes a generated plan against its blueprint's targets, returning the
+  per-meal / per-day compatibility report (see
+  `Mehungry.MealBlueprints.PlanCompatibility`). `user_id`-scoped: the blueprint is
+  loaded through `get_blueprint!/2`.
+  """
+  def plan_compatibility(user_id, blueprint_id, plan_id) do
+    blueprint = get_blueprint!(user_id, blueprint_id)
+    PlanCompatibility.analyze(blueprint, list_plan_meals_with_ingredients(plan_id))
+  end
+
+  @doc """
   Owner-scoped fetch of a single plan meal (joined through its plan's `user_id`),
   recipe/ingredient/unit preloaded. Raises if it belongs to another user.
   """
@@ -424,6 +453,11 @@ defmodule Mehungry.MealBlueprints do
         where: m.id == ^plan_meal_id and p.user_id == ^user_id,
         preload: [:recipe, :ingredient, :measurement_unit, :ingredient_portion]
     )
+  end
+
+  @doc "Builds a `BlueprintPlanMeal` changeset (for the plan-meal edit form)."
+  def change_plan_meal(%BlueprintPlanMeal{} = plan_meal, attrs \\ %{}) do
+    BlueprintPlanMeal.changeset(plan_meal, attrs)
   end
 
   @doc """

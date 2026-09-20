@@ -23,6 +23,41 @@ defmodule Mehungry.Food.Compounds do
     IngredientCompoundRelationship
   }
 
+  # ── Compound families ─────────────────────────────────────────────────────
+
+  # The `compound_type` vocabulary mapped to display labels, so a broad family
+  # (e.g. "Polyphenols") can be targeted alongside specific compounds. Shared by
+  # the blueprint compound picker and the plan-compatibility analyzer so the two
+  # never drift on which tags are families.
+  @compound_family_labels %{
+    "oxalate" => "Oxalates",
+    "lectin" => "Lectins",
+    "phytate" => "Phytates",
+    "histamine" => "Histamine",
+    "polyphenol" => "Polyphenols",
+    "fodmap" => "FODMAPs",
+    "purine" => "Purines",
+    "salicylate" => "Salicylates",
+    "other" => "Other compounds"
+  }
+
+  @doc "The `compound_type` → display-label map for compound families."
+  def family_labels, do: @compound_family_labels
+
+  @doc """
+  The `compound_type` for a family display label (the reverse of `family_labels/0`),
+  or `nil` if `label` is not a known family. Case-insensitive.
+  """
+  def type_for_family_label(label) when is_binary(label) do
+    down = String.downcase(label)
+
+    Enum.find_value(@compound_family_labels, fn {type, lbl} ->
+      if String.downcase(lbl) == down, do: type
+    end)
+  end
+
+  def type_for_family_label(_), do: nil
+
   # ── Compound registry ────────────────────────────────────────────────────
 
   def create_compound(attrs) do
