@@ -312,8 +312,8 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
 
   # Day heading + whole-day blueprint indicators: calorie over/under target,
   # a violation count, and any required compound/nutrient no meal covers today.
-  attr :day_index, :any, required: true
-  attr :report, :any, default: nil
+  attr(:day_index, :any, required: true)
+  attr(:report, :any, default: nil)
 
   defp day_header(assigns) do
     ~H"""
@@ -344,7 +344,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
   defp missing_required(_), do: []
 
   # Day energy vs the blueprint's calorie aim, hidden when the day has no target.
-  attr :report, :map, required: true
+  attr(:report, :map, required: true)
 
   defp calorie_badge(%{report: %{calorie_status: :no_target}} = assigns), do: ~H""
 
@@ -382,7 +382,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
 
   # Per-meal badges: red for an avoided compound/nutrient present, green for a
   # required one. Hover (native title) explains each.
-  attr :report, :any, default: nil
+  attr(:report, :any, default: nil)
 
   defp meal_badges(%{report: nil} = assigns), do: ~H""
   defp meal_badges(%{report: %{violations: [], matches: []}} = assigns), do: ~H""
@@ -396,7 +396,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
     """
   end
 
-  attr :entry, :map, required: true
+  attr(:entry, :map, required: true)
 
   defp compat_badge(assigns) do
     ~H"""
@@ -853,6 +853,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
   defp refresh_compat(socket) do
     user = socket.assigns.user
     plans_by_bp = socket.assigns.plans_by_blueprint
+
     expanded = socket.assigns.expanded_plans
 
     compat =

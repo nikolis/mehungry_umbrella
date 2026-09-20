@@ -74,15 +74,26 @@ defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
         <div :if={@mode == "recipe"} class="space-y-3">
           <div>
             <label class="block text-sm text-parchment-dim mb-1">Recipe</label>
-            <.live_component
-              module={MehungryWeb.SelectComponent}
-              form={@form}
-              items={Enum.map(@recipes, fn r -> {Integer.to_string(r.id), r.title} end)}
-              input_variable={:recipe_id}
-              id="plan-meal-recipe-select"
+            <div style={sc_theme()}>
+              <.live_component
+                module={MehungryWeb.SelectComponent}
+                form={@form}
+                items={Enum.map(@recipes, fn r -> {Integer.to_string(r.id), r.title} end)}
+                input_variable={:recipe_id}
+                id="plan-meal-recipe-select"
+              />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm text-parchment-dim mb-1">Cooking portions</label>
+            <input
+              type="number"
+              min="1"
+              name={@form[:cooking_portions].name}
+              value={@form[:cooking_portions].value}
+              class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
             />
           </div>
-          <.input field={@form[:cooking_portions]} type="number" min="1" label="Cooking portions" />
         </div>
 
         <div :if={@mode == "ingredient"} class="space-y-3">
@@ -105,16 +116,28 @@ defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
             />
           </div>
           <div class="grid grid-cols-2 gap-3">
-            <.input field={@form[:quantity]} type="number" step="any" min="0" label="Quantity" />
+            <div>
+              <label class="block text-sm text-parchment-dim mb-1">Quantity</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                name={@form[:quantity].name}
+                value={@form[:quantity].value}
+                class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
+              />
+            </div>
             <div>
               <label class="block text-sm text-parchment-dim mb-1">Unit</label>
-              <.live_component
-                module={MehungryWeb.SelectComponent}
-                items={@unit_options}
-                form={@form}
-                input_variable={:unit_selection}
-                id="plan-meal-unit-select"
-              />
+              <div style={sc_theme()}>
+                <.live_component
+                  module={MehungryWeb.SelectComponent}
+                  items={@unit_options}
+                  form={@form}
+                  input_variable={:unit_selection}
+                  id="plan-meal-unit-select"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -207,6 +230,15 @@ defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
   end
 
   # ── helpers ─────────────────────────────────────────────────────────────────
+
+  # Retheme the shared `SelectComponent` off its slate defaults onto the app's
+  # ink/parchment palette via its documented `--sc-*` CSS variables, scoped to
+  # this call site so other usages are untouched. Values mirror the `ink` tokens
+  # in tailwind.config.js (ink #17140F, panel #211D16, panel2 #2B2619).
+  defp sc_theme do
+    "--sc-bg:#17140F;--sc-border:#2B2619;--sc-dropdown-bg:#211D16;" <>
+      "--sc-option-bg:#211D16;--sc-option-selected:#2B2619;--sc-option-hover:#2B2619;"
+  end
 
   # Keeps exactly one side of the recipe/ingredient XOR, nulling the other so a
   # type switch clears stale data (and passes the schema's XOR validation).

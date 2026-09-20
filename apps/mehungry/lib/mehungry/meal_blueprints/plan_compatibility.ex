@@ -124,24 +124,26 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
   # Canonical species-layer facts: ingredient → species → (non-absent) compound.
   defp species_compound_rows(ingredient_ids) do
     Repo.all(
-      from ff in FoundementalFood,
+      from(ff in FoundementalFood,
         join: scr in SpeciesCompoundRelationship,
         on: scr.foundemental_species_id == ff.foundemental_species_id,
         join: c in Compound,
         on: c.id == scr.compound_id,
         where: ff.ingredient_id in ^ingredient_ids and scr.relationship_type != "absent",
         select: {ff.ingredient_id, c.name, c.compound_type}
+      )
     )
   end
 
   # Direct ingredient-level facts (union with the species layer for coverage).
   defp ingredient_compound_rows(ingredient_ids) do
     Repo.all(
-      from r in IngredientCompoundRelationship,
+      from(r in IngredientCompoundRelationship,
         join: c in Compound,
         on: c.id == r.compound_id,
         where: r.ingredient_id in ^ingredient_ids and r.relationship_type != "absent",
         select: {r.ingredient_id, c.name, c.compound_type}
+      )
     )
   end
 
@@ -296,12 +298,80 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
 
   # ── calories ──────────────────────────────────────────────────────────────────
 
-  defp day_calories(meals), do: Enum.reduce(meals, 0.0, &(meal_calories(&1) + &2))
+  defp day_calories(meals) do
+    Enum.reduce(meals, 0.0, fn x, y ->
+      meal_calories(x) + y
+      # &(meal_calories(&1) + &2))
+    end)
+  end
 
   # One consumed portion ≈ one recipe serving — matches the plan→calendar import,
   # which sets consume_portions: 1. Ingredient meals are omitted (no stored energy).
   defp meal_calories(%{recipe_id: rid, recipe: %{} = recipe}) when not is_nil(rid) do
     recipe_energy(recipe) / recipe_servings(recipe)
+  end
+
+  # One consumed portion ≈ one recipe serving — matches the plan→calendar import,
+  # which sets consume_portions: 1. Ingredient meals are omitted (no stored energy).
+  defp meal_calories(%{
+         ingredient_id: i_id,
+         ingredient: %{} = ingredient,
+         quantity: quantity,
+         measurement_unit_id: measurement_unit_id
+       })
+       when not is_nil(i_id) and not is_nil(ingredient) do
+    ingredient =
+      Mehungry.Repo.preload(
+        ingredient,
+        [
+          :ingredient_portions,
+          ingredient_nutrients: [:nutrient]
+        ]
+      )
+
+    nutrients =
+      Enum.map(ingredient.ingredient_nutrients, fn
+        x ->
+          {x.amount, x.nutrient}
+      end)
+
+    # TODO Need optimization n+1 problemhere
+    energy =
+      Enum.filter(nutrients, fn {y, x} ->
+        x.name == "Energy (Atwater Specific Factors)"
+      end)
+
+    energy =
+      case Enum.empty?(energy) do
+        true ->
+          Enum.filter(nutrients, fn {y, x} ->
+            String.contains?(x.name, "Energy")
+          end)
+          |> List.first()
+
+        false ->
+          List.first(energy)
+      end
+
+    if(is_nil(energy)) do
+      0.0
+    else
+      total_energy = elem(energy, 0)
+      nutrient_en = elem(energy, 1)
+      nutrient_en = Mehungry.Repo.preload(nutrient_en, :measurement_unit)
+
+      total_energy =
+        case nutrient_en.measurement_unit.name == "kilocalorie" or
+               nutrient_en.measurement_unit.name == "kcal" do
+          true ->
+            total_energy
+
+          false ->
+            total_energy / 4.184
+        end
+
+      to_number(total_energy / 100 * quantity)
+    end
   end
 
   defp meal_calories(_), do: 0.0
