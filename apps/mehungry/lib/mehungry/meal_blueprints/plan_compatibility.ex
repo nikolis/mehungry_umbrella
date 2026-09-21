@@ -301,7 +301,6 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
   defp day_calories(meals) do
     Enum.reduce(meals, 0.0, fn x, y ->
       meal_calories(x) + y
-      # &(meal_calories(&1) + &2))
     end)
   end
 

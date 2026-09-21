@@ -261,8 +261,11 @@ defmodule MehungryWeb.ProfileLive.Index do
 
     user_saved_blueprints =
       case {content_state, is_nil(current_user)} do
-        {:saved_blueprints, false} -> MealBlueprints.list_saved_blueprints_for_user(current_user.id)
-        _ -> []
+        {:saved_blueprints, false} ->
+          MealBlueprints.list_saved_blueprints_for_user(current_user.id)
+
+        _ ->
+          []
       end
 
     socket
@@ -395,7 +398,11 @@ defmodule MehungryWeb.ProfileLive.Index do
     MealBlueprints.remove_saved_blueprint_for_user(user.id, String.to_integer(id))
 
     {:noreply,
-     assign(socket, :user_saved_blueprints, MealBlueprints.list_saved_blueprints_for_user(user.id))}
+     assign(
+       socket,
+       :user_saved_blueprints,
+       MealBlueprints.list_saved_blueprints_for_user(user.id)
+     )}
   end
 
   def handle_event("unsave-recipe", %{"id" => id}, socket) do

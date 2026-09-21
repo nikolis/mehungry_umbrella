@@ -77,7 +77,8 @@ defmodule MehungryWeb.NutritionistLive.Clients do
              |> put_flash(:info, "Client created. Share the claim link below so they can log in.")}
 
           {:error, _changeset} ->
-            {:noreply, put_flash(socket, :error, "Could not create the client. Please try again.")}
+            {:noreply,
+             put_flash(socket, :error, "Could not create the client. Please try again.")}
         end
     end
   end

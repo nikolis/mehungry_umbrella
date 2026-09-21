@@ -127,7 +127,9 @@ defmodule MehungryWeb.AiBotLive.Personas do
               <div :if={persona.description} class="text-xs text-parchment-dim mt-0.5">
                 {persona.description}
               </div>
-              <div class="text-[11px] text-parchment-dim mt-1 line-clamp-2">{persona.voice_prompt}</div>
+              <div class="text-[11px] text-parchment-dim mt-1 line-clamp-2">
+                {persona.voice_prompt}
+              </div>
             </div>
           </div>
           <div class="flex gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">

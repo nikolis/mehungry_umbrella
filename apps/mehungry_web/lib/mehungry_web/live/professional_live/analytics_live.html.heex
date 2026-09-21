@@ -24,7 +24,9 @@
         Views today
       </div>
       <div class="text-3xl font-bold text-white">{@today_total}</div>
-      <div class="text-xs text-parchment-dim mt-1">{@today_users} users · {@today_unique} IPs</div>
+      <div class="text-xs text-parchment-dim mt-1">
+        {@today_users} users · {@today_unique} IPs
+      </div>
     </div>
     <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4">
       <div class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
@@ -438,7 +440,9 @@
 
     <!-- Empty state -->
     <%= if @filtered_visits == [] and @visits_exhausted do %>
-      <p class="text-parchment-dim text-sm text-center py-6">No visits match the selected filter.</p>
+      <p class="text-parchment-dim text-sm text-center py-6">
+        No visits match the selected filter.
+      </p>
     <% end %>
 
     <!-- Infinite scroll sentinel — only when there are rows and more pages exist -->

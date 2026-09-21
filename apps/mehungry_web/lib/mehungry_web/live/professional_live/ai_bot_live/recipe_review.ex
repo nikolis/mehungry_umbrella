@@ -882,7 +882,8 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
   defp status_banner_class("published"),
     do: "bg-blue-500/15 text-blue-300 border border-blue-500/25"
 
-  defp status_banner_class(_), do: "bg-ink-panel2/40 text-parchment-dim border border-ink-panel2/40"
+  defp status_banner_class(_),
+    do: "bg-ink-panel2/40 text-parchment-dim border border-ink-panel2/40"
 
   defp status_icon("pending_review"), do: "hero-clock"
   defp status_icon("approved"), do: "hero-check-circle"

@@ -90,7 +90,10 @@ defmodule Mehungry.MealBlueprintsTest do
         end)
 
       assert {:ok, bp} = MealBlueprints.create_blueprint(attrs)
-      first_meal = MealBlueprints.get_blueprint!(user.id, bp.id).days |> hd() |> Map.fetch!(:meals) |> hd()
+
+      first_meal =
+        MealBlueprints.get_blueprint!(user.id, bp.id).days |> hd() |> Map.fetch!(:meals) |> hd()
+
       assert {first_meal.protein_pct, first_meal.carbs_pct, first_meal.fats_pct} == {40, 35, 25}
     end
 
@@ -451,8 +454,11 @@ defmodule Mehungry.MealBlueprintsTest do
 
       {:ok, _plan} = MealBlueprints.store_plan_meals(plan, [recipe_entry(recipe)])
 
-      assert {:ok, 1, 0, 0} = MealBlueprints.import_plan_to_calendar(user.id, plan, ~D[2026-10-05])
-      assert {:ok, 1, 0, 0} = MealBlueprints.import_plan_to_calendar(user.id, plan, ~D[2026-10-12])
+      assert {:ok, 1, 0, 0} =
+               MealBlueprints.import_plan_to_calendar(user.id, plan, ~D[2026-10-05])
+
+      assert {:ok, 1, 0, 0} =
+               MealBlueprints.import_plan_to_calendar(user.id, plan, ~D[2026-10-12])
 
       assert length(Mehungry.History.list_history_user_meals_for_user(user.id)) == 2
     end
@@ -571,8 +577,15 @@ defmodule Mehungry.MealBlueprintsTest do
       {:ok, a} = create_default(user, "Same Name")
       {:ok, b} = create_default(user, "Same Name")
 
-      {:ok, a} = MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, a.id), %{visibility: "public"})
-      {:ok, b} = MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, b.id), %{visibility: "public"})
+      {:ok, a} =
+        MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, a.id), %{
+          visibility: "public"
+        })
+
+      {:ok, b} =
+        MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, b.id), %{
+          visibility: "public"
+        })
 
       assert a.slug != b.slug
     end
@@ -594,7 +607,12 @@ defmodule Mehungry.MealBlueprintsTest do
   describe "public reads" do
     defp make_public(user, name) do
       {:ok, bp} = create_default(user, name)
-      {:ok, public} = MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, bp.id), %{visibility: "public"})
+
+      {:ok, public} =
+        MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, bp.id), %{
+          visibility: "public"
+        })
+
       public
     end
 
@@ -611,7 +629,10 @@ defmodule Mehungry.MealBlueprintsTest do
       user = user_fixture()
       {:ok, bp} = create_default(user, "Private One")
       # force a slug without publishing
-      {:ok, _} = MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, bp.id), %{description: "x"})
+      {:ok, _} =
+        MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, bp.id), %{
+          description: "x"
+        })
 
       assert_raise Ecto.NoResultsError, fn ->
         MealBlueprints.get_public_blueprint_by_slug!("does-not-exist")
@@ -693,7 +714,9 @@ defmodule Mehungry.MealBlueprintsTest do
       {:ok, _} = MealBlueprints.store_plan_meals(plan, [recipe_entry(recipe)])
       [meal] = MealBlueprints.list_plan_meals(plan.id)
 
-      {:ok, updated} = MealBlueprints.update_plan_meal(meal, %{recipe_id: other.id, cooking_portions: 3})
+      {:ok, updated} =
+        MealBlueprints.update_plan_meal(meal, %{recipe_id: other.id, cooking_portions: 3})
+
       assert updated.recipe_id == other.id
       assert updated.cooking_portions == 3
     end

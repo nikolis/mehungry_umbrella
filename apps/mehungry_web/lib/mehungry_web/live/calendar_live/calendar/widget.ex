@@ -388,7 +388,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                   stroke="currentColor"
                   class="size-5"
                 >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5 11.25 12l7.5-7.5m-6 15L5.25 12l7.5-7.5" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M18.75 19.5 11.25 12l7.5-7.5m-6 15L5.25 12l7.5-7.5"
+                  />
                 </svg>
               </button>
               <button
@@ -452,7 +456,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                   stroke="currentColor"
                   class="size-5"
                 >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5"
+                  />
                 </svg>
               </button>
             </div>

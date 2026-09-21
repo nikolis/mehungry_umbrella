@@ -15,7 +15,10 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
 
   setup %{conn: conn} do
     nutritionist = Mehungry.AccountsFixtures.user_fixture()
-    {:ok, _} = Subscriptions.upsert_subscription(nutritionist.id, %{tier: "pro", status: "active"})
+
+    {:ok, _} =
+      Subscriptions.upsert_subscription(nutritionist.id, %{tier: "pro", status: "active"})
+
     %{conn: log_in_user(conn, nutritionist), user: nutritionist}
   end
 

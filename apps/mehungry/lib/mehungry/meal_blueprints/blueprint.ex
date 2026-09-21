@@ -11,33 +11,36 @@ defmodule Mehungry.MealBlueprints.Blueprint do
   alias Mehungry.MealBlueprints.BlueprintDay
 
   schema "meal_blueprints" do
-    field :name, :string
-    field :description, :string
+    field(:name, :string)
+    field(:description, :string)
     # "private" (owner-only) or "public" (browsable + shareable by slug).
-    field :visibility, :string, default: "private"
+    field(:visibility, :string, default: "private")
     # URL slug for the public preview page; generated once from the name.
-    field :slug, :string
+    field(:slug, :string)
     # Blueprint-level "general" targets (apply across every day): nutrient +
     # bioactive-compound names sourced from the DB via the picker (required +
     # avoid), plus free-text preferred foods.
-    field :required_nutrients, {:array, :string}, default: []
-    field :avoid_nutrients, {:array, :string}, default: []
-    field :required_compounds, {:array, :string}, default: []
-    field :avoid_compounds, {:array, :string}, default: []
-    field :preferred_foods, {:array, :string}, default: []
+    field(:required_nutrients, {:array, :string}, default: [])
+    field(:avoid_nutrients, {:array, :string}, default: [])
+    field(:required_compounds, {:array, :string}, default: [])
+    field(:avoid_compounds, {:array, :string}, default: [])
+    field(:preferred_foods, {:array, :string}, default: [])
 
     # Populated by list queries for card display; not persisted.
-    field :plans_count, :integer, virtual: true
+    field(:plans_count, :integer, virtual: true)
 
-    belongs_to :user, Mehungry.Accounts.User
+    belongs_to(:user, Mehungry.Accounts.User)
     # Optional disease scoping the whole blueprint (e.g. "Ulcerative Colitis");
     # applies across all days/meals and seeds the compound suggestions above.
-    belongs_to :condition, Mehungry.Health.Condition
+    belongs_to(:condition, Mehungry.Health.Condition)
 
-    has_many :days, BlueprintDay,
+    has_many(:plans, Mehungry.MealBlueprints.BlueprintPlan)
+
+    has_many(:days, BlueprintDay,
       foreign_key: :blueprint_id,
       preload_order: [asc: :day_index],
       on_replace: :delete
+    )
 
     timestamps()
   end

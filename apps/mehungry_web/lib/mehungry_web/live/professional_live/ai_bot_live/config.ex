@@ -595,7 +595,10 @@ defmodule MehungryWeb.AiBotLive.Config do
                           class="h-4 w-4 text-emerald-400 flex-shrink-0"
                         />
                       <% else %>
-                        <.icon name="hero-minus-circle" class="h-4 w-4 text-parchment-dim flex-shrink-0" />
+                        <.icon
+                          name="hero-minus-circle"
+                          class="h-4 w-4 text-parchment-dim flex-shrink-0"
+                        />
                       <% end %>
                     </div>
                   <% end %>

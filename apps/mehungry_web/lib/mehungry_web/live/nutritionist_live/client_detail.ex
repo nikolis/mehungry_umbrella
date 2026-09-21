@@ -507,11 +507,19 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
                 <!-- Body: full notes, hidden until expand -->
-                <div id={"visit-body-#{visit.id}"} class="hidden px-3 pb-3 pt-1 border-t border-ink-panel2">
+                <div
+                  id={"visit-body-#{visit.id}"}
+                  class="hidden px-3 pb-3 pt-1 border-t border-ink-panel2"
+                >
                   <%= if visit.body do %>
                     <p class="text-parchment text-sm whitespace-pre-line mt-2">{visit.body}</p>
                   <% else %>
