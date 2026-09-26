@@ -229,6 +229,34 @@ defmodule Mehungry.MealBlueprints do
     |> Map.new(fn {k, names} -> {k, Enum.uniq(names)} end)
   end
 
+  @doc """
+  The **nutrient names** a condition recommends, bucketed by direction (via
+  `Health.NutrientRecommendation`) — the nutrient sibling of
+  `recommended_compounds_for_condition/1`, used to auto-suggest the blueprint's
+  `required_nutrients`/`avoid_nutrients` when a disease is selected. `encourage` →
+  `:required`; `avoid`/`limit`/`caution` → `:avoid`; `monitor` ignored. Returns
+  `%{required: [], avoid: []}` for a nil id.
+  """
+  def recommended_nutrients_for_condition(nil), do: %{required: [], avoid: []}
+
+  def recommended_nutrients_for_condition(condition_id) do
+    condition_id
+    |> Mehungry.Health.nutrient_recommendations_for_condition()
+    |> Enum.reduce(%{required: [], avoid: []}, fn rec, acc ->
+      case rec.recommendation do
+        "encourage" ->
+          Map.update!(acc, :required, &(&1 ++ [rec.nutrient_name]))
+
+        d when d in ["avoid", "limit", "caution"] ->
+          Map.update!(acc, :avoid, &(&1 ++ [rec.nutrient_name]))
+
+        _ ->
+          acc
+      end
+    end)
+    |> Map.new(fn {k, names} -> {k, Enum.uniq(names)} end)
+  end
+
   @doc "Builds a `Blueprint` changeset."
   def change_blueprint(%Blueprint{} = blueprint, attrs \\ %{}) do
     Blueprint.changeset(blueprint, attrs)
@@ -396,7 +424,7 @@ defmodule Mehungry.MealBlueprints do
 
   @doc "Updates a generation-run row (status, meals_count, error)."
   def update_plan(%BlueprintPlan{} = plan, attrs) do
-    Ecto.transact(fn repo ->
+    Mehungry.Repo.transact(fn repo ->
       changeset =
         plan
         |> BlueprintPlan.changeset(attrs)
@@ -446,14 +474,14 @@ defmodule Mehungry.MealBlueprints do
     Enum.map(plans, fn plan -> %{plan | meals: list_plan_meals(plan.id)} end)
   end
 
-  @doc "A plan's `BlueprintPlanMeal` rows, recipes/ingredients loaded, day+slot ordered."
+  @doc "A plan's `BlueprintPlanMeal` rows, recipe + ingredient children loaded, day+slot ordered."
   def list_plan_meals(plan_id) do
     order = MealType.values() |> Enum.with_index() |> Map.new()
 
     Repo.all(
       from(m in BlueprintPlanMeal,
         where: m.blueprint_plan_id == ^plan_id,
-        preload: [:recipe, :ingredient, :measurement_unit, :ingredient_portion]
+        preload: [:recipe, ingredients: [:ingredient, :measurement_unit, :ingredient_portion]]
       )
     )
     |> Enum.sort_by(fn m -> {m.day_index, Map.get(order, m.meal_type, 99)} end)
@@ -471,7 +499,7 @@ defmodule Mehungry.MealBlueprints do
     Repo.all(
       from(m in BlueprintPlanMeal,
         where: m.blueprint_plan_id == ^plan_id,
-        preload: [:ingredient, recipe: [recipe_ingredients: :ingredient]]
+        preload: [ingredients: :ingredient, recipe: [recipe_ingredients: :ingredient]]
       )
     )
     |> Enum.sort_by(fn m -> {m.day_index, Map.get(order, m.meal_type, 99)} end)
@@ -497,7 +525,7 @@ defmodule Mehungry.MealBlueprints do
       from(m in BlueprintPlanMeal,
         join: p in assoc(m, :blueprint_plan),
         where: m.id == ^plan_meal_id and p.user_id == ^user_id,
-        preload: [:recipe, :ingredient, :measurement_unit, :ingredient_portion]
+        preload: [:recipe, ingredients: [:ingredient, :measurement_unit, :ingredient_portion]]
       )
     )
   end
@@ -558,6 +586,9 @@ defmodule Mehungry.MealBlueprints do
     update_plan(plan, %{status: "completed", meals_count: length(entries)})
   end
 
+  # A generation entry is a recipe **or** a single ingredient; the ingredient is
+  # stored as one `BlueprintPlanMealIngredient` child (a meal can later be edited
+  # to hold a recipe plus several ingredients).
   defp plan_meal_attrs(entry, plan_id) do
     %{
       blueprint_plan_id: plan_id,
@@ -565,12 +596,24 @@ defmodule Mehungry.MealBlueprints do
       meal_type: entry.meal_type,
       recipe_id: entry.recipe_id,
       cooking_portions: entry.cooking_portions,
-      ingredient_id: entry.ingredient_id,
-      quantity: entry.quantity,
-      measurement_unit_id: entry.measurement_unit_id,
-      ingredient_portion_id: entry.ingredient_portion_id
+      ingredients: entry_ingredients(entry)
     }
   end
+
+  defp entry_ingredients(%{ingredient_id: nil}), do: []
+
+  defp entry_ingredients(%{ingredient_id: ingredient_id} = entry) do
+    [
+      %{
+        ingredient_id: ingredient_id,
+        quantity: entry.quantity,
+        measurement_unit_id: entry.measurement_unit_id,
+        ingredient_portion_id: entry.ingredient_portion_id
+      }
+    ]
+  end
+
+  defp entry_ingredients(_entry), do: []
 
   @doc "True once a plan has been imported to the calendar at least once."
   def plan_imported?(%BlueprintPlan{imported_at: imported_at}), do: not is_nil(imported_at)
@@ -614,11 +657,12 @@ defmodule Mehungry.MealBlueprints do
       user_id: user_id,
       blueprint_plan_id: plan_id
     }
-    |> Map.merge(import_item_attrs(m))
+    |> Map.merge(import_recipe_attrs(m))
+    |> Map.merge(import_ingredient_attrs(m))
     |> Mehungry.History.create_user_meal()
   end
 
-  defp import_item_attrs(%BlueprintPlanMeal{recipe_id: recipe_id} = m)
+  defp import_recipe_attrs(%BlueprintPlanMeal{recipe_id: recipe_id} = m)
        when not is_nil(recipe_id) do
     %{
       recipe_user_meals: [
@@ -632,19 +676,24 @@ defmodule Mehungry.MealBlueprints do
     }
   end
 
-  defp import_item_attrs(%BlueprintPlanMeal{ingredient_id: ingredient_id} = m)
-       when not is_nil(ingredient_id) do
+  defp import_recipe_attrs(_m), do: %{}
+
+  defp import_ingredient_attrs(%BlueprintPlanMeal{ingredients: ingredients})
+       when is_list(ingredients) and ingredients != [] do
     %{
-      ingredient_user_meals: [
-        %{
-          ingredient_id: ingredient_id,
-          quantity: m.quantity || 1.0,
-          measurement_unit_id: m.measurement_unit_id,
-          ingredient_portion_id: m.ingredient_portion_id
-        }
-      ]
+      ingredient_user_meals:
+        Enum.map(ingredients, fn ing ->
+          %{
+            ingredient_id: ing.ingredient_id,
+            quantity: ing.quantity || 1.0,
+            measurement_unit_id: ing.measurement_unit_id,
+            ingredient_portion_id: ing.ingredient_portion_id
+          }
+        end)
     }
   end
+
+  defp import_ingredient_attrs(_m), do: %{}
 
   # ── internal ────────────────────────────────────────────────────────────────
 

@@ -45,6 +45,16 @@ end
 config :mehungry_local_ai,
   server_base_url: System.get_env("LOCAL_AI_SERVER_URL", "http://localhost:4000")
 
+# Base URL of the mehungry_extractor batch-PMID analysis service (POST /analyze).
+config :mehungry, :extractor_base_url,
+  System.get_env("EXTRACTOR_BASE_URL", "http://127.0.0.1:8000")
+
+# HTTP receive/connect timeout (ms) for /analyze — a large uncached batch fetches
+# every PMID from PubMed/PMC and can take many minutes.
+if ms = System.get_env("EXTRACTOR_TIMEOUT_MS") do
+  config :mehungry, :extractor_timeout_ms, String.to_integer(ms)
+end
+
 # Optional shared secret that unlocks the /test-accounts routes outside of
 # dev/test. When unset, those routes 404 in staging/prod.
 if token = System.get_env("TEST_ACCOUNTS_TOKEN") do

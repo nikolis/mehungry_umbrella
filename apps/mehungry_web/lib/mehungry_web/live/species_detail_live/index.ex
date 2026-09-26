@@ -57,6 +57,7 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
          |> assign(:species, species)
          |> assign(:display_name, display_name)
          |> assign(:ingredients, ingredients)
+         |> assign(:evidence_modal, nil)
          |> assign_ingredient_view(selected && selected.id)
          |> load_species_sidecars(species)
          |> assign(:page_title, "#{display_name} — Nutrition, Research & Compounds")
@@ -102,6 +103,21 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   @impl true
   def handle_event("select_ingredient", %{"id" => id}, socket) do
     {:noreply, assign_ingredient_view(socket, parse_id(id))}
+  end
+
+  # The supporting-research modal for one species↔compound fact. Studies are
+  # deliberately fetched here — on click — rather than preloaded with the
+  # compound list, so the initial page paint carries no PubMed provenance rows.
+  @impl true
+  def handle_event("show_evidence", %{"rel-id" => rel_id, "compound" => name}, socket) do
+    studies = SpeciesCompounds.list_relationship_studies(parse_id(rel_id))
+
+    {:noreply, assign(socket, :evidence_modal, %{compound: name, studies: studies})}
+  end
+
+  @impl true
+  def handle_event("close_evidence", _params, socket) do
+    {:noreply, assign(socket, :evidence_modal, nil)}
   end
 
   # The ingredient `{id, name}` options + the selected ingredient's nutrient view.
@@ -214,4 +230,32 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   def encourage?(recommendation) do
     to_string(recommendation) in ~w(encourage increase prefer include)
   end
+
+  @recommendation_order ["avoid", "limit", "caution", "monitor", "encourage"]
+
+  @doc "Groups recommendation rows by their `recommendation` value, ordered for display."
+  def grouped_recommendations(recommendations) do
+    recommendations
+    |> Enum.group_by(& &1.recommendation)
+    |> Enum.sort_by(fn {rec, _} -> group_order(rec) end)
+  end
+
+  defp group_order(rec) do
+    case Enum.find_index(@recommendation_order, &(&1 == rec)) do
+      nil -> length(@recommendation_order)
+      idx -> idx
+    end
+  end
+
+  @doc "Human label for a recommendation type."
+  def recommendation_label("avoid"), do: gettext("Avoid")
+  def recommendation_label("limit"), do: gettext("Limit")
+  def recommendation_label("caution"), do: gettext("Approach with caution")
+  def recommendation_label("monitor"), do: gettext("Monitor")
+  def recommendation_label("encourage"), do: gettext("Encourage")
+  def recommendation_label(rec), do: String.capitalize(rec)
+
+  @doc "Display label for a reference study — its title, or a PMID fallback."
+  def study_label(%{title: title}) when is_binary(title) and title != "", do: title
+  def study_label(%{pmid: pmid}), do: "PMID #{pmid}"
 end

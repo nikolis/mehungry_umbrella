@@ -21,6 +21,7 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
   alias Mehungry.Literature
   alias Mehungry.Literature.AnnotationRuns
   alias Mehungry.Literature.CrawlRuns
+  alias Mehungry.Literature.ConditionCrawlRuns
   alias Mehungry.Science.PipelineReset
 
   @per_page 25
@@ -29,6 +30,7 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
   def mount(_params, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Mehungry.PubSub, CrawlRuns.topic())
+      Phoenix.PubSub.subscribe(Mehungry.PubSub, ConditionCrawlRuns.topic())
       Phoenix.PubSub.subscribe(Mehungry.PubSub, AnnotationRuns.topic())
       Phoenix.PubSub.subscribe(Mehungry.PubSub, CandidateDerivationRuns.topic())
       Phoenix.PubSub.subscribe(Mehungry.PubSub, RecommendationDerivationRuns.topic())
@@ -43,6 +45,8 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
       |> assign(:page, 1)
       |> assign(:crawl_run, CrawlRuns.latest_run())
       |> assign(:crawl_progress, normalize(Literature.crawl_progress()))
+      |> assign(:condition_crawl_run, ConditionCrawlRuns.latest_run())
+      |> assign(:condition_crawl_progress, normalize(Literature.condition_crawl_progress()))
       |> assign(:annotation_run, AnnotationRuns.latest_run())
       |> assign(:annotation_progress, normalize(Literature.annotation_progress()))
       |> assign(:derivation_run, derivation_run)
@@ -75,6 +79,16 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
      socket
      |> assign(:crawl_run, run)
      |> put_flash(:info, "Crawl started — progress updates live below")}
+  end
+
+  @impl true
+  def handle_event("run_condition_crawl", _params, socket) do
+    {:ok, run} = Literature.enqueue_condition_crawl()
+
+    {:noreply,
+     socket
+     |> assign(:condition_crawl_run, run)
+     |> put_flash(:info, "Condition crawl started — progress updates live below")}
   end
 
   @impl true
@@ -224,6 +238,14 @@ defmodule MehungryWeb.ProfessionalLive.SciencePipeline do
      socket
      |> assign(:crawl_run, run)
      |> assign(:crawl_progress, %{processed: run.processed || 0, total: run.total || 0})}
+  end
+
+  @impl true
+  def handle_info({:condition_crawl_run, run}, socket) do
+    {:noreply,
+     socket
+     |> assign(:condition_crawl_run, run)
+     |> assign(:condition_crawl_progress, %{processed: run.processed || 0, total: run.total || 0})}
   end
 
   @impl true

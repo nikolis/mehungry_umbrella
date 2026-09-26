@@ -20,7 +20,8 @@ defmodule MehungryWeb.HealthLiveTest do
         recommendation: "avoid",
         severity: "high",
         evidence_level: "strong",
-        source: "guideline"
+        source: "guideline",
+        source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
       })
 
     # Species-facts layer: Spinach species high_in Oxalate, with spinach curated onto
@@ -114,7 +115,8 @@ defmodule MehungryWeb.HealthLiveTest do
           recommendation: "encourage",
           severity: "low",
           evidence_level: "moderate",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       kale = ingredient_fixture(%{name: "kale"})
@@ -175,7 +177,8 @@ defmodule MehungryWeb.HealthLiveTest do
           recommendation: "encourage",
           severity: "low",
           evidence_level: "moderate",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       kale = ingredient_fixture(%{name: "kale"})

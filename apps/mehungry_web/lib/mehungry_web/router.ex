@@ -86,6 +86,10 @@ defmodule MehungryWeb.Router do
     post "/full_text", FullTextController, :create
     post "/candidates", CandidatesController, :create
     post "/gi_candidates", GiCandidatesController, :create
+
+    # Reverse (condition-seeded) phase-aware recommendation extraction.
+    get "/condition_pending", ConditionPendingController, :index
+    post "/condition_recommendation_candidates", ConditionRecCandidatesController, :create
   end
 
   scope "/auth", MehungryWeb do

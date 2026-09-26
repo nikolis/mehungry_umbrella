@@ -40,7 +40,9 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
         compound_id: oxalate.id,
         recommendation: "avoid",
         severity: "high",
-        source: "guideline"
+        source: "guideline",
+        reference_label: "Clinical guideline",
+        reference_url: "https://example.org"
       }
     )
     |> render_submit()
@@ -62,7 +64,8 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
     {:ok, _} =
       Health.add_recommendation(%{name: "Gout", category: "metabolic"}, oxalate.id, %{
         recommendation: "limit",
-        source: "guideline"
+        source: "guideline",
+        source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
       })
 
     gout = Health.get_condition_by_name("Gout")
@@ -117,6 +120,53 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
     assert rec.compound_id == oxalate.id
     # Promoted candidate leaves the review queue.
     assert RecommendationCandidates.list_pending_candidates() == []
+  end
+
+  test "searches papers for a condition, then analyzes selected PMIDs into a modal", %{
+    conn: conn
+  } do
+    {:ok, condition} = Health.create_condition(%{name: "Crohn's Disease"})
+    {:ok, study} = Literature.upsert_study(%{pmid: 990_123, title: "Fiber and remission"})
+
+    {:ok, _} =
+      Literature.link_study_condition(%{
+        study_id: study.id,
+        condition_id: condition.id,
+        search_term: "Crohn's Disease fiber"
+      })
+
+    # Stub NCBI Entrez so the crawl finds nothing new; the panel still reveals the
+    # already-associated study.
+    Application.put_env(:mehungry, :entrez_http_adapter, fn _url, _headers, _opts ->
+      {:ok, %{status_code: 200, body: Jason.encode!(%{"esearchresult" => %{"count" => "0", "idlist" => []}}), headers: []}}
+    end)
+
+    Cachex.clear(:entrez_cache)
+    on_exit(fn -> Application.delete_env(:mehungry, :entrez_http_adapter) end)
+
+    {:ok, view, html} = live(conn, ~p"/professional/health")
+
+    # Associated papers show permanently underneath the condition, on initial load
+    # — not only after a crawl completes.
+    assert html =~ "990123"
+    assert html =~ "Fiber and remission"
+
+    view
+    |> element("button[phx-click=search_condition_papers][phx-value-id='#{condition.id}']")
+    |> render_click()
+
+    html = render_async(view)
+    assert html =~ "990123"
+    assert html =~ "Fiber and remission"
+
+    # Analyze the study via the stubbed extractor client → conclusions in the modal.
+    view
+    |> form("form[phx-submit=analyze_condition]")
+    |> render_submit(%{"pmids" => ["990123"]})
+
+    html = render_async(view)
+    assert html =~ "Batch analysis"
+    assert html =~ "Dietary fiber"
   end
 
   test "non-admin is redirected away" do

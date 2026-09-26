@@ -1,16 +1,18 @@
 defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
   @moduledoc """
-  Calendar-style editor for a single `BlueprintPlanMeal`. Mirrors the calendar's
-  `MehungryWeb.CalendarLive.MealFormComponent` UX — a Recipe/Ingredient toggle, a
-  recipe picker (+ cooking portions), or an ingredient picker (+ quantity + unit
-  dropdown) — but for the flat single-item plan-meal model, and **without** the
-  meal-type (slot) picker since a plan meal's slot is fixed.
+  Editor for a single `BlueprintPlanMeal`. A meal can hold a recipe **and/or**
+  any number of whole-food ingredients (mirrors the calendar's `History.UserMeal`).
 
-  Reuses the shared `SelectComponent` (recipe + unit) and `SelectComponentDeep`
-  (ingredient search) widgets and the `unit_selection` decode on `BlueprintPlanMeal`.
-  On save it calls `MealBlueprints.update_plan_meal/2` and notifies the parent
-  LiveView with `{:plan_meal_saved, ...}` so it can reload the plan (which recomputes
-  the day compatibility badges) and close the modal.
+  * **Recipe** — an optional recipe picker (`SelectComponent`) + cooking portions.
+  * **Ingredients** — a repeatable list of ingredient rows (each with a quantity
+    and a unit `<select>`), plus one "Add ingredient" search picker
+    (`SelectComponentDeep`) that appends a new row. Rows live in socket state
+    (`@ingredient_rows`) — the source of truth on submit — since per-row live
+    pickers would collide on a shared form field.
+
+  On save it calls `MealBlueprints.update_plan_meal/2` (which replaces the meal's
+  ingredient children and recomputes compatibility) and notifies the parent
+  LiveView with `{:plan_meal_saved, ...}` so it can reload the plan and close.
   """
   use MehungryWeb, :live_component
 
@@ -18,7 +20,7 @@ defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
   alias Mehungry.Food.IngredientPortion
   alias Mehungry.History.MealType
   alias Mehungry.MealBlueprints
-  alias Mehungry.MealBlueprints.BlueprintPlanMeal
+  alias Mehungry.MealBlueprints.BlueprintPlanMealIngredient
 
   # ── render ──────────────────────────────────────────────────────────────────
 
@@ -31,39 +33,6 @@ defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
         Day {@plan_meal.day_index} · {MealType.label(@plan_meal.meal_type)}
       </p>
 
-      <div class="flex bg-ink-panel2 rounded-xl p-1 mb-4">
-        <button
-          type="button"
-          phx-click="set_mode"
-          phx-value-mode="recipe"
-          phx-target={@myself}
-          class={[
-            "flex-1 py-2 text-sm font-medium rounded-lg transition-all",
-            if(@mode == "recipe",
-              do: "bg-paprika text-ink shadow",
-              else: "text-parchment-dim hover:text-parchment"
-            )
-          ]}
-        >
-          Recipe
-        </button>
-        <button
-          type="button"
-          phx-click="set_mode"
-          phx-value-mode="ingredient"
-          phx-target={@myself}
-          class={[
-            "flex-1 py-2 text-sm font-medium rounded-lg transition-all",
-            if(@mode == "ingredient",
-              do: "bg-paprika text-ink shadow",
-              else: "text-parchment-dim hover:text-parchment"
-            )
-          ]}
-        >
-          Ingredient
-        </button>
-      </div>
-
       <.form
         for={@form}
         id={"plan-meal-form-#{@plan_meal.id}"}
@@ -71,73 +40,98 @@ defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
         phx-submit="submit"
         phx-target={@myself}
       >
-        <div :if={@mode == "recipe"} class="space-y-3">
-          <div>
-            <label class="block text-sm text-parchment-dim mb-1">Recipe</label>
-            <div style={sc_theme()}>
-              <.live_component
-                module={MehungryWeb.SelectComponent}
-                form={@form}
-                items={Enum.map(@recipes, fn r -> {Integer.to_string(r.id), r.title} end)}
-                input_variable={:recipe_id}
-                id="plan-meal-recipe-select"
-              />
-            </div>
-          </div>
-          <div>
-            <label class="block text-sm text-parchment-dim mb-1">Cooking portions</label>
-            <input
-              type="number"
-              min="1"
-              name={@form[:cooking_portions].name}
-              value={@form[:cooking_portions].value}
-              class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
-            />
-          </div>
-        </div>
-
-        <div :if={@mode == "ingredient"} class="space-y-3">
-          <div>
-            <label class="block text-sm text-parchment-dim mb-1">Ingredient</label>
-            <.live_component
-              module={MehungryWeb.SelectComponentDeep}
-              form={@form}
-              item_function={fn term -> Food.IngredientSearch.search(term, [], @current_user.id) end}
-              get_by_id_func={&Food.get_ingredient!/1}
-              input_variable="ingredient_id"
-              label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
-              placeholder="Select an ingredient..."
-              modal_title="Search Ingredients"
-              select_function={
-                fn ingredient_id -> send_update(@myself, ingredient_selected: ingredient_id) end
-              }
-              parent_id="plan_meal_ingredient_form"
-              id="plan-meal-ingredient-select"
-            />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-3">
+          <div class="rounded-xl border border-ink-panel2 p-3 space-y-3">
+            <h3 class="text-sm font-semibold text-parchment">Recipe <span class="text-parchment-dim font-normal">(optional)</span></h3>
             <div>
-              <label class="block text-sm text-parchment-dim mb-1">Quantity</label>
-              <input
-                type="number"
-                step="any"
-                min="0"
-                name={@form[:quantity].name}
-                value={@form[:quantity].value}
-                class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
-              />
-            </div>
-            <div>
-              <label class="block text-sm text-parchment-dim mb-1">Unit</label>
               <div style={sc_theme()}>
                 <.live_component
                   module={MehungryWeb.SelectComponent}
-                  items={@unit_options}
                   form={@form}
-                  input_variable={:unit_selection}
-                  id="plan-meal-unit-select"
+                  items={Enum.map(@recipes, fn r -> {Integer.to_string(r.id), r.title} end)}
+                  input_variable={:recipe_id}
+                  id="plan-meal-recipe-select"
                 />
               </div>
+            </div>
+            <div>
+              <label class="block text-sm text-parchment-dim mb-1">Cooking portions</label>
+              <input
+                type="number"
+                min="1"
+                name={@form[:cooking_portions].name}
+                value={@form[:cooking_portions].value}
+                class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
+              />
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-ink-panel2 p-3 space-y-3">
+            <h3 class="text-sm font-semibold text-parchment">Ingredients</h3>
+
+            <p :if={@ingredient_rows == []} class="text-parchment-dim text-xs">
+              No ingredients yet — search below to add one.
+            </p>
+
+            <div :for={row <- @ingredient_rows} class="flex items-end gap-2">
+              <div class="flex-1 min-w-0">
+                <span class="text-sm text-parchment truncate block">{row.ingredient_name}</span>
+              </div>
+              <div class="w-20">
+                <label class="block text-[11px] text-parchment-dim mb-0.5">Qty</label>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  name={"ing[#{row.key}][quantity]"}
+                  value={row.quantity}
+                  class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-2 py-1.5"
+                />
+              </div>
+              <div class="w-32">
+                <label class="block text-[11px] text-parchment-dim mb-0.5">Unit</label>
+                <select
+                  name={"ing[#{row.key}][unit_selection]"}
+                  class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-2 py-1.5"
+                >
+                  <option
+                    :for={{value, label} <- row.unit_options}
+                    value={value}
+                    selected={to_string(row.unit_selection) == value}
+                  >
+                    {label}
+                  </option>
+                </select>
+              </div>
+              <button
+                type="button"
+                phx-click="remove_ingredient"
+                phx-value-key={row.key}
+                phx-target={@myself}
+                class="mb-1.5 px-2 py-1 rounded text-parchment-dim hover:text-paprika transition"
+                title="Remove ingredient"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div>
+              <label class="block text-sm text-parchment-dim mb-1">Add ingredient</label>
+              <.live_component
+                module={MehungryWeb.SelectComponentDeep}
+                form={@add_form}
+                item_function={fn term -> Food.IngredientSearch.search(term, [], @current_user.id) end}
+                get_by_id_func={&Food.get_ingredient!/1}
+                input_variable="ingredient_id"
+                label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
+                placeholder="Search an ingredient to add..."
+                modal_title="Search Ingredients"
+                select_function={
+                  fn ingredient_id -> send_update(@myself, add_ingredient: ingredient_id) end
+                }
+                parent_id="plan_meal_add_ingredient"
+                id={"plan-meal-add-ingredient-#{@picker_nonce}"}
+              />
             </div>
           </div>
         </div>
@@ -160,43 +154,41 @@ defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
 
   # ── update ──────────────────────────────────────────────────────────────────
 
-  # Sent from the ingredient picker when its ingredient changes: refresh the unit
-  # dropdown to the new ingredient's portions and stamp the id into the changeset
-  # (before the picker re-renders and recomputes its selection).
+  # Sent from the "Add ingredient" picker: append a fresh row (seeded with the
+  # ingredient's unit options + a gram default) and remount the picker clean.
   @impl true
-  def update(%{ingredient_selected: ingredient_id}, socket) do
-    socket =
-      socket
-      |> assign(:unit_options, unit_options(ingredient_id))
-      |> update(:form, fn %{source: changeset} ->
-        changeset
-        |> Ecto.Changeset.put_change(:ingredient_id, ingredient_id)
-        |> to_form(as: :plan_meal)
-      end)
+  def update(%{add_ingredient: ingredient_id}, socket) do
+    ingredient = Food.get_ingredient!(ingredient_id)
+    options = unit_options(ingredient_id)
 
-    {:ok, socket}
+    row = %{
+      key: Integer.to_string(System.unique_integer([:positive])),
+      ingredient_id: ingredient_id,
+      ingredient_name: ingredient.name,
+      quantity: 1.0,
+      unit_selection: default_unit_selection(options),
+      unit_options: options
+    }
+
+    {:ok,
+     socket
+     |> update(:ingredient_rows, &(&1 ++ [row]))
+     |> update(:picker_nonce, &(&1 + 1))}
   end
 
   @impl true
   def update(%{plan_meal: plan_meal} = assigns, socket) do
-    seeded = %{plan_meal | unit_selection: BlueprintPlanMeal.unit_selection_value(plan_meal)}
-
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:plan_meal, seeded)
-     |> assign(:mode, if(plan_meal.recipe_id, do: "recipe", else: "ingredient"))
      |> assign(:recipes, Food.list_user_recipes_for_selection(assigns.current_user))
-     |> assign(:unit_options, unit_options(plan_meal.ingredient_id))
-     |> assign(:form, to_form(MealBlueprints.change_plan_meal(seeded), as: :plan_meal))}
+     |> assign(:ingredient_rows, seed_rows(plan_meal))
+     |> assign(:picker_nonce, 0)
+     |> assign(:add_form, new_add_form())
+     |> assign(:form, to_form(MealBlueprints.change_plan_meal(plan_meal), as: :plan_meal))}
   end
 
   # ── events ──────────────────────────────────────────────────────────────────
-
-  @impl true
-  def handle_event("set_mode", %{"mode" => mode}, socket) do
-    {:noreply, assign(socket, :mode, mode)}
-  end
 
   @impl true
   def handle_event("cancel", _params, socket) do
@@ -205,31 +197,107 @@ defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
   end
 
   @impl true
-  def handle_event("validate", %{"plan_meal" => params}, socket) do
-    changeset =
-      socket.assigns.plan_meal
-      |> BlueprintPlanMeal.changeset(mode_attrs(socket.assigns.mode, params))
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, :form, to_form(changeset, as: :plan_meal))}
+  def handle_event("remove_ingredient", %{"key" => key}, socket) do
+    {:noreply, update(socket, :ingredient_rows, &Enum.reject(&1, fn r -> r.key == key end))}
   end
 
   @impl true
-  def handle_event("submit", %{"plan_meal" => params}, socket) do
-    case MealBlueprints.update_plan_meal(
-           socket.assigns.plan_meal,
-           mode_attrs(socket.assigns.mode, params)
-         ) do
+  def handle_event("validate", params, socket) do
+    rows = merge_row_params(socket.assigns.ingredient_rows, Map.get(params, "ing", %{}))
+
+    changeset =
+      MealBlueprints.change_plan_meal(
+        socket.assigns.plan_meal,
+        recipe_params(Map.get(params, "plan_meal", %{}))
+      )
+
+    {:noreply,
+     socket
+     |> assign(:ingredient_rows, rows)
+     |> assign(:form, to_form(changeset, as: :plan_meal))}
+  end
+
+  @impl true
+  def handle_event("submit", params, socket) do
+    rows = merge_row_params(socket.assigns.ingredient_rows, Map.get(params, "ing", %{}))
+    plan_params = Map.get(params, "plan_meal", %{})
+
+    attrs =
+      recipe_params(plan_params)
+      |> Map.put("ingredients", Enum.map(rows, &row_to_attrs/1))
+
+    case MealBlueprints.update_plan_meal(socket.assigns.plan_meal, attrs) do
       {:ok, _} ->
         send(self(), {:plan_meal_saved, %{flash: "Meal updated."}})
         {:noreply, socket}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :form, to_form(changeset, as: :plan_meal))}
+        {:noreply,
+         socket
+         |> assign(:ingredient_rows, rows)
+         |> assign(:form, to_form(changeset, as: :plan_meal))}
     end
   end
 
   # ── helpers ─────────────────────────────────────────────────────────────────
+
+  # Seeds the editable ingredient rows from a persisted meal's children.
+  defp seed_rows(%{ingredients: ingredients}) when is_list(ingredients) do
+    Enum.map(ingredients, fn ing ->
+      %{
+        key: Integer.to_string(ing.id),
+        ingredient_id: ing.ingredient_id,
+        ingredient_name: ing.ingredient && ing.ingredient.name,
+        quantity: ing.quantity,
+        unit_selection: BlueprintPlanMealIngredient.unit_selection_value(ing),
+        unit_options: unit_options(ing.ingredient_id)
+      }
+    end)
+  end
+
+  defp seed_rows(_), do: []
+
+  defp new_add_form do
+    to_form(BlueprintPlanMealIngredient.changeset(%BlueprintPlanMealIngredient{}, %{}),
+      as: :add_ingredient
+    )
+  end
+
+  defp recipe_params(plan_params) do
+    %{
+      "recipe_id" => blank_to_nil(Map.get(plan_params, "recipe_id")),
+      "cooking_portions" => Map.get(plan_params, "cooking_portions")
+    }
+  end
+
+  defp blank_to_nil(v) when v in ["", nil], do: nil
+  defp blank_to_nil(v), do: v
+
+  # Fold the submitted per-row quantity/unit params back into the socket rows so
+  # edits survive add/remove re-renders (rows are the source of truth).
+  defp merge_row_params(rows, ing_params) do
+    Enum.map(rows, fn row ->
+      case Map.get(ing_params, row.key) do
+        %{} = p ->
+          %{
+            row
+            | quantity: Map.get(p, "quantity", row.quantity),
+              unit_selection: Map.get(p, "unit_selection", row.unit_selection)
+          }
+
+        _ ->
+          row
+      end
+    end)
+  end
+
+  defp row_to_attrs(row) do
+    %{
+      "ingredient_id" => row.ingredient_id,
+      "quantity" => row.quantity,
+      "unit_selection" => row.unit_selection
+    }
+  end
 
   # Retheme the shared `SelectComponent` off its slate defaults onto the app's
   # ink/parchment palette via its documented `--sc-*` CSS variables, scoped to
@@ -238,30 +306,6 @@ defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
   defp sc_theme do
     "--sc-bg:#17140F;--sc-border:#2B2619;--sc-dropdown-bg:#211D16;" <>
       "--sc-option-bg:#211D16;--sc-option-selected:#2B2619;--sc-option-hover:#2B2619;"
-  end
-
-  # Keeps exactly one side of the recipe/ingredient XOR, nulling the other so a
-  # type switch clears stale data (and passes the schema's XOR validation).
-  defp mode_attrs("recipe", params) do
-    %{
-      "recipe_id" => params["recipe_id"],
-      "cooking_portions" => params["cooking_portions"],
-      "ingredient_id" => nil,
-      "quantity" => nil,
-      "unit_selection" => nil,
-      "measurement_unit_id" => nil,
-      "ingredient_portion_id" => nil
-    }
-  end
-
-  defp mode_attrs("ingredient", params) do
-    %{
-      "ingredient_id" => params["ingredient_id"],
-      "quantity" => params["quantity"],
-      "unit_selection" => params["unit_selection"],
-      "recipe_id" => nil,
-      "cooking_portions" => nil
-    }
   end
 
   # Unit dropdown options for an ingredient: each portion (encoded as
@@ -285,5 +329,13 @@ defmodule MehungryWeb.MealBlueprintLive.PlanMealFormComponent do
     Enum.map(Food.get_measurement_unit_by_name("gram"), fn mu ->
       {Integer.to_string(mu.id), mu.name}
     end)
+  end
+
+  # Default a new row to grams (the last option) when available.
+  defp default_unit_selection(options) do
+    case List.last(options) do
+      {value, _label} -> String.to_integer(value)
+      _ -> nil
+    end
   end
 end

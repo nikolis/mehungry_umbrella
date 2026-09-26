@@ -30,15 +30,19 @@ defmodule Mehungry.Literature do
     ScientificStudy,
     StudyIngredient,
     StudyCompound,
+    StudyCondition,
     StudyEntityMention,
     StudyEntityRelation,
     StudyFullText,
     PmcFetchAttempt,
     CrawlAttempt,
+    ConditionCrawlAttempt,
     AnnotationAttempt,
     Entrez,
     PubTator
   }
+
+  alias Mehungry.Health.{Condition, ConditionState}
 
   alias Mehungry.Literature.Entrez.RawResponse
   alias Mehungry.Literature.PubTator.RawResponse, as: PubTatorRawResponse
@@ -53,6 +57,15 @@ defmodule Mehungry.Literature do
   @doc "The search terms (scientific name × compounds ∪ keywords) for a species."
   defdelegate search_terms_for_species(species_id), to: Entrez
 
+  @doc """
+  Crawl NCBI Entrez for one health condition (reverse crawl) and sync discovered
+  studies. See `Mehungry.Literature.Entrez.crawl_condition/2`.
+  """
+  defdelegate crawl_condition(condition_id, opts \\ []), to: Entrez
+
+  @doc "The search terms (name × dietary/phase keywords) for a condition."
+  defdelegate search_terms_for_condition(condition_id), to: Entrez
+
   @doc "Opens a tracked run and enqueues the first crawl batch."
   def enqueue_crawl do
     run = Mehungry.Literature.CrawlRuns.start_run()
@@ -60,6 +73,18 @@ defmodule Mehungry.Literature do
     {:ok, _job} =
       %{"run_id" => run.id}
       |> Mehungry.ObanWorkers.LiteratureCrawlWorker.new()
+      |> Oban.insert()
+
+    {:ok, run}
+  end
+
+  @doc "Opens a tracked condition-crawl run and enqueues the first batch."
+  def enqueue_condition_crawl do
+    run = Mehungry.Literature.ConditionCrawlRuns.start_run()
+
+    {:ok, _job} =
+      %{"run_id" => run.id}
+      |> Mehungry.ObanWorkers.ConditionCrawlWorker.new()
       |> Oban.insert()
 
     {:ok, run}
@@ -155,6 +180,16 @@ defmodule Mehungry.Literature do
     |> Repo.insert(on_conflict: :nothing, conflict_target: [:study_id, :compound_id])
   end
 
+  @doc "Link a study to a condition (reverse crawl), deduped on `(study, condition, term)`."
+  def link_study_condition(attrs) do
+    %StudyCondition{}
+    |> StudyCondition.changeset(attrs)
+    |> Repo.insert(
+      on_conflict: :nothing,
+      conflict_target: [:study_id, :condition_id, :search_term]
+    )
+  end
+
   # ── Raw response cache (append-only) ──────────────────────────────────────
 
   @doc "Persist a raw Entrez payload. Append-only — never overwritten."
@@ -211,6 +246,79 @@ defmodule Mehungry.Literature do
         select: a.last_crawled_at
       )
     )
+  end
+
+  # ── Condition-crawl ledger (reverse crawl) ────────────────────────────────
+
+  def record_condition_crawl_attempt(attrs) do
+    %ConditionCrawlAttempt{}
+    |> ConditionCrawlAttempt.changeset(attrs)
+    |> Repo.insert(
+      on_conflict: {:replace_all_except, [:id, :inserted_at]},
+      conflict_target: [:condition_id, :search_term]
+    )
+  end
+
+  @doc "Has `(condition, search_term)` already been crawled?"
+  def condition_crawl_attempted?(condition_id, search_term) do
+    Repo.exists?(
+      from(a in ConditionCrawlAttempt,
+        where: a.condition_id == ^condition_id and a.search_term == ^search_term
+      )
+    )
+  end
+
+  @doc "The last time `(condition, search_term)` was crawled, or `nil` — the incremental watermark."
+  def condition_last_crawled_at(condition_id, search_term) do
+    Repo.one(
+      from(a in ConditionCrawlAttempt,
+        where: a.condition_id == ^condition_id and a.search_term == ^search_term,
+        select: a.last_crawled_at
+      )
+    )
+  end
+
+  @doc """
+  A batch of **phase-sensitive** conditions (those with ≥1 `condition_state`) that have
+  no crawl attempt yet, newest first. Scoping the reverse crawl to state-bearing
+  conditions keeps NCBI volume focused on exactly where phase-aware advice matters;
+  add states to a condition to include it.
+  """
+  def list_uncrawled_conditions(limit) do
+    Repo.all(
+      from(c in Condition,
+        join: st in ConditionState,
+        on: st.condition_id == c.id,
+        left_join: a in ConditionCrawlAttempt,
+        on: a.condition_id == c.id,
+        where: is_nil(a.id),
+        distinct: c.id,
+        order_by: [desc: c.id],
+        limit: ^limit,
+        select: c
+      )
+    )
+  end
+
+  @doc "Reverse-crawl coverage: state-bearing conditions crawled, out of the total."
+  def condition_crawl_progress do
+    total =
+      from(c in Condition,
+        join: st in ConditionState,
+        on: st.condition_id == c.id,
+        select: count(c.id, :distinct)
+      )
+      |> Repo.one()
+
+    processed =
+      from(a in ConditionCrawlAttempt,
+        join: st in ConditionState,
+        on: st.condition_id == a.condition_id,
+        select: count(a.condition_id, :distinct)
+      )
+      |> Repo.one()
+
+    %{processed: processed, total: total}
   end
 
   # ── Batch selection + progress ────────────────────────────────────────────
@@ -298,6 +406,43 @@ defmodule Mehungry.Literature do
     )
     |> Enum.map(& &1.study)
     |> Enum.uniq_by(& &1.id)
+  end
+
+  @doc """
+  All studies discovered *about* a condition by the reverse crawl, newest first
+  (deduped) — powers the "Research on this condition" presentation.
+  """
+  def list_studies_for_condition(condition_id) do
+    Repo.all(
+      from(l in StudyCondition,
+        join: s in ScientificStudy,
+        on: s.id == l.study_id,
+        where: l.condition_id == ^condition_id,
+        order_by: [desc: s.id],
+        preload: [study: s]
+      )
+    )
+    |> Enum.map(& &1.study)
+    |> Enum.uniq_by(& &1.id)
+  end
+
+  @doc """
+  Studies grouped by condition for a set of `condition_ids` — one grouped query
+  instead of N per-condition calls. Returns `%{condition_id => [%ScientificStudy{}]}`
+  (newest first, deduped); conditions with no linked studies are simply absent.
+  """
+  def studies_by_condition(condition_ids) do
+    Repo.all(
+      from(l in StudyCondition,
+        join: s in ScientificStudy,
+        on: s.id == l.study_id,
+        where: l.condition_id in ^condition_ids,
+        order_by: [desc: s.id],
+        select: {l.condition_id, s}
+      )
+    )
+    |> Enum.group_by(fn {cid, _s} -> cid end, fn {_cid, s} -> s end)
+    |> Map.new(fn {cid, studies} -> {cid, Enum.uniq_by(studies, & &1.id)} end)
   end
 
   @doc "All ingredients a study was discovered for."

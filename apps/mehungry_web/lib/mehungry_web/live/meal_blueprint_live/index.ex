@@ -195,7 +195,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
                         </span>
                         <div class="min-w-0 flex-1">
                           <.recipe_line m={m} />
-                          <.ingredient_line m={m} />
+                          <.ingredient_lines m={m} />
                           <.meal_badges report={meal_report(@compat, plan.id, m.id)} />
                         </div>
                         <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
@@ -486,24 +486,29 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
 
   defp recipe_line(assigns), do: ~H""
 
-  # A compact ingredient row: name on the left, quantity + unit on the right.
-  defp ingredient_line(%{m: %{ingredient: ingredient}} = assigns) when not is_nil(ingredient) do
+  # Compact ingredient rows (a meal may hold several): name on the left, quantity
+  # + unit on the right.
+  defp ingredient_lines(%{m: %{ingredients: ingredients}} = assigns)
+       when is_list(ingredients) and ingredients != [] do
     ~H"""
-    <div class="flex items-center justify-between gap-2 py-0.5 pl-1">
+    <div
+      :for={ing <- @m.ingredients}
+      class="flex items-center justify-between gap-2 py-0.5 pl-1"
+    >
       <div class="flex items-center gap-2 min-w-0">
         <span class="w-9 h-9 rounded-md bg-basil/15 text-basil flex items-center justify-center text-xs shrink-0">
           🥗
         </span>
-        <span class="text-sm text-parchment truncate">{@m.ingredient.name}</span>
+        <span class="text-sm text-parchment truncate">{ing.ingredient.name}</span>
       </div>
       <span class="text-parchment-dim text-xs shrink-0 [font-variant-numeric:tabular-nums]">
-        {format_quantity(@m.quantity)} {Mehungry.Food.RecipeIngredient.unit_label(@m)}
+        {format_quantity(ing.quantity)} {Mehungry.Food.RecipeIngredient.unit_label(ing)}
       </span>
     </div>
     """
   end
 
-  defp ingredient_line(assigns), do: ~H""
+  defp ingredient_lines(assigns), do: ~H""
 
   # Muted "2 servings · Easy · 25 min" line, dropping any parts that are missing.
   defp recipe_info(recipe) do

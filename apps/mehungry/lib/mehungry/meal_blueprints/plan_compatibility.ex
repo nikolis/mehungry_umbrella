@@ -42,7 +42,7 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
       }
 
   Requires `plan_meals` preloaded with `recipe: [recipe_ingredients: :ingredient]`
-  and `:ingredient`, and `blueprint` with `days` (for calorie targets) plus its
+  and `ingredients: :ingredient`, and `blueprint` with `days` (for calorie targets) plus its
   compound/nutrient arrays — see `MealBlueprints.plan_compatibility/2`.
   """
   import Ecto.Query, warn: false
@@ -147,13 +147,22 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
     )
   end
 
-  defp meal_ingredient_ids(%{recipe_id: rid, recipe: %{recipe_ingredients: ris}})
-       when not is_nil(rid) and is_list(ris) do
-    Enum.map(ris, & &1.ingredient_id)
+  # A meal's ingredient ids = its recipe's ingredients ∪ its direct ingredient
+  # children (a meal may have both).
+  defp meal_ingredient_ids(meal) do
+    Enum.uniq(recipe_ingredient_ids(meal) ++ child_ingredient_ids(meal))
   end
 
-  defp meal_ingredient_ids(%{ingredient_id: iid}) when not is_nil(iid), do: [iid]
-  defp meal_ingredient_ids(_), do: []
+  defp recipe_ingredient_ids(%{recipe_id: rid, recipe: %{recipe_ingredients: ris}})
+       when not is_nil(rid) and is_list(ris),
+       do: Enum.map(ris, & &1.ingredient_id)
+
+  defp recipe_ingredient_ids(_), do: []
+
+  defp child_ingredient_ids(%{ingredients: ingredients}) when is_list(ingredients),
+    do: Enum.map(ingredients, & &1.ingredient_id)
+
+  defp child_ingredient_ids(_), do: []
 
   # ── per-meal report ───────────────────────────────────────────────────────────
 
@@ -304,19 +313,25 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
     end)
   end
 
-  # One consumed portion ≈ one recipe serving — matches the plan→calendar import,
-  # which sets consume_portions: 1. Ingredient meals are omitted (no stored energy).
-  defp meal_calories(%{recipe_id: rid, recipe: %{} = recipe}) when not is_nil(rid) do
-    recipe_energy(recipe) / recipe_servings(recipe)
-  end
+  # A meal's energy = its recipe (one consumed portion ≈ one serving, matching the
+  # plan→calendar import which sets consume_portions: 1) plus each of its
+  # ingredient children.
+  defp meal_calories(meal), do: recipe_calories(meal) + ingredients_calories(meal)
 
-  # One consumed portion ≈ one recipe serving — matches the plan→calendar import,
-  # which sets consume_portions: 1. Ingredient meals are omitted (no stored energy).
-  defp meal_calories(%{
+  defp recipe_calories(%{recipe_id: rid, recipe: %{} = recipe}) when not is_nil(rid),
+    do: recipe_energy(recipe) / recipe_servings(recipe)
+
+  defp recipe_calories(_), do: 0.0
+
+  defp ingredients_calories(%{ingredients: ingredients}) when is_list(ingredients),
+    do: Enum.reduce(ingredients, 0.0, fn ing, acc -> acc + ingredient_calories(ing) end)
+
+  defp ingredients_calories(_), do: 0.0
+
+  defp ingredient_calories(%{
          ingredient_id: i_id,
          ingredient: %{} = ingredient,
-         quantity: quantity,
-         measurement_unit_id: measurement_unit_id
+         quantity: quantity
        })
        when not is_nil(i_id) and not is_nil(ingredient) do
     ingredient =
@@ -373,7 +388,7 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
     end
   end
 
-  defp meal_calories(_), do: 0.0
+  defp ingredient_calories(_), do: 0.0
 
   defp recipe_energy(%{nutrients: nutrients}) when is_map(nutrients) do
     energy = Map.get(nutrients, "Energy") || Map.get(nutrients, :Energy)

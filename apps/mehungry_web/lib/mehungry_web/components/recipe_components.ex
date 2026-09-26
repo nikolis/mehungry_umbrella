@@ -402,10 +402,10 @@ defmodule MehungryWeb.RecipeComponents do
           "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border",
           recommendation_badge_class(flag.recommendation)
         ]}
-        title={"#{flag.compound.name} — #{flag.recommendation} for #{flag.condition.name}"}
+        title={"#{flag_label(flag)} — #{flag.recommendation} for #{flag.condition.name}"}
       >
         <.icon name="hero-exclamation-triangle-mini" class="w-3 h-3" />
-        {flag.compound.name} · {flag.recommendation} ({flag.condition.name})
+        {flag_label(flag)} · {flag.recommendation} ({flag.condition.name})
       </span>
       <span
         :if={@overflow > 0}
@@ -422,6 +422,11 @@ defmodule MehungryWeb.RecipeComponents do
 
   defp recommendation_badge_class(_recommendation),
     do: "bg-paprika/15 border-paprika/40 text-paprika"
+
+  # The badge's driver label: a nutrient flag carries a `:label` (nutrient name),
+  # a compound flag carries a `:compound` struct. Both share condition/recommendation.
+  defp flag_label(%{label: label}) when is_binary(label), do: label
+  defp flag_label(%{compound: %{name: name}}), do: name
 
   # Safely reads the recipe's virtual :condition_flags (populated by
   # MehungryWeb.RecipeFlags); tolerates plain maps / missing field.

@@ -51,6 +51,18 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
         <.form for={@form} id="blueprint-form" phx-change="validate" phx-submit="save">
           <div class="bg-ink-panel rounded-xl border border-ink-panel2 p-4 mb-4 space-y-4">
             <div>
+              <label class="block text-sm text-parchment-dim mb-1">Name</label>
+              <input
+                type="text"
+                name={@form[:name].name}
+                value={@form[:name].value}
+                placeholder="Blueprint name"
+                class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
+              />
+              <p :for={msg <- name_errors(@form)} class="text-paprika text-xs mt-1">{msg}</p>
+            </div>
+
+            <div>
               <label class="block text-sm text-parchment-dim mb-1">Visibility</label>
               <select
                 name="blueprint[visibility]"
@@ -341,6 +353,15 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
   defp chip_class(:avoid), do: "bg-paprika/20 text-paprika border border-paprika/40"
   defp chip_class(_), do: "bg-ink-panel2 text-parchment"
 
+  # Translated validation messages for the name field (shown after a validate).
+  defp name_errors(form) do
+    Enum.map(form[:name].errors, fn {msg, opts} ->
+      Enum.reduce(opts, msg, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
+  end
+
   defp day_index(df), do: df[:day_index].value
 
   # Live sum of a meal's three macro percentages (for the "Total: X%" hint).
@@ -543,21 +564,26 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
   end
 
   # When the disease selection changes to a real condition, union its recommended
-  # compounds into the blueprint — encouraged ones into required_compounds,
-  # discouraged ones into avoid_compounds (editable afterwards).
+  # compounds AND nutrients into the blueprint — encouraged ones into the
+  # required_* lists, discouraged ones into the avoid_* lists (editable afterwards).
   defp maybe_suggest_compounds(changeset, new_id, prev_id)
        when is_integer(new_id) and new_id != prev_id do
-    case MealBlueprints.recommended_compounds_for_condition(new_id) do
-      %{required: [], avoid: []} ->
+    compounds = MealBlueprints.recommended_compounds_for_condition(new_id)
+    nutrients = MealBlueprints.recommended_nutrients_for_condition(new_id)
+
+    case {compounds, nutrients} do
+      {%{required: [], avoid: []}, %{required: [], avoid: []}} ->
         changeset
 
-      %{required: required, avoid: avoid} ->
+      {%{required: c_req, avoid: c_avoid}, %{required: n_req, avoid: n_avoid}} ->
         data = Ecto.Changeset.apply_changes(changeset)
 
         MealBlueprints.change_blueprint(%{
           data
-          | required_compounds: Enum.uniq(tag_list(data.required_compounds) ++ required),
-            avoid_compounds: Enum.uniq(tag_list(data.avoid_compounds) ++ avoid)
+          | required_compounds: Enum.uniq(tag_list(data.required_compounds) ++ c_req),
+            avoid_compounds: Enum.uniq(tag_list(data.avoid_compounds) ++ c_avoid),
+            required_nutrients: Enum.uniq(tag_list(data.required_nutrients) ++ n_req),
+            avoid_nutrients: Enum.uniq(tag_list(data.avoid_nutrients) ++ n_avoid)
         })
     end
   end

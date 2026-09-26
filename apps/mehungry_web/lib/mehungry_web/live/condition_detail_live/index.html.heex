@@ -25,11 +25,144 @@
       <% end %>
     </div>
 
+    <%!-- ── Phase-aware guidance (Active Flare vs Remission …) ───────────── --%>
+    <%= if @states != [] do %>
+      <section class="mb-10">
+        <div class="rounded-xl border border-paprika/30 bg-ink-panel p-4">
+          <h2 class="text-lg font-display font-medium text-parchment mb-1">
+            {gettext("Advice by disease phase")}
+          </h2>
+          <p class="text-xs text-parchment-dim mb-3 leading-relaxed">
+            {gettext(
+              "Dietary advice for this condition depends on its phase — guidance during an active flare can differ sharply from remission. Pick a phase to see phase-specific guidance."
+            )}
+          </p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <button
+              type="button"
+              phx-click="select_state"
+              phx-value-state="general"
+              class={[
+                "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+                if(is_nil(@selected_state),
+                  do: "bg-paprika text-ink border-paprika",
+                  else: "border-ink-panel2 text-parchment-dim hover:text-parchment"
+                )
+              ]}
+            >
+              {gettext("General")}
+            </button>
+            <button
+              :for={s <- @states}
+              type="button"
+              phx-click="select_state"
+              phx-value-state={s.slug}
+              class={[
+                "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+                if(@selected_state && @selected_state.id == s.id,
+                  do: "bg-paprika text-ink border-paprika",
+                  else: "border-ink-panel2 text-parchment-dim hover:text-parchment"
+                )
+              ]}
+            >
+              {s.name}
+            </button>
+          </div>
+
+          <%= if @selected_state && @selected_state.description do %>
+            <p class="text-xs text-parchment-dim mb-4 italic">{@selected_state.description}</p>
+          <% end %>
+
+          <%= if @state_recommendations == [] do %>
+            <p class="text-parchment-dim text-sm">
+              {gettext("No phase-specific guidance recorded for this selection yet.")}
+            </p>
+          <% else %>
+            <div class="space-y-6">
+              <%= for {rec, rows} <- grouped_state_recommendations(@state_recommendations) do %>
+                <div>
+                  <h3 class="text-sm font-semibold text-paprika-soft uppercase tracking-wide mb-3">
+                    {String.capitalize(rec)}
+                  </h3>
+                  <ul class="space-y-2">
+                    <li :for={row <- rows} class="rounded-lg border border-ink-panel2 bg-ink p-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-parchment font-medium">{state_rec_target(row)}</span>
+                        <%= if row.severity do %>
+                          <span class="text-xs text-parchment-dim">{row.severity}</span>
+                        <% end %>
+                      </div>
+                      <%= if row.notes && row.notes != "" do %>
+                        <p class="text-xs text-parchment-dim mt-1">{row.notes}</p>
+                      <% end %>
+                      <%= if row.studies != [] do %>
+                        <div class="mt-1 flex flex-wrap gap-2">
+                          <a
+                            :for={s <- row.studies}
+                            href={"https://pubmed.ncbi.nlm.nih.gov/#{s.pmid}"}
+                            target="_blank"
+                            rel="noopener"
+                            class="text-[11px] text-basil hover:underline"
+                          >
+                            PMID {s.pmid}
+                          </a>
+                        </div>
+                      <% end %>
+                    </li>
+                  </ul>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+
+    <%!-- ── Research on this condition (reverse-crawl studies) ──────────── --%>
+    <%= if @condition_studies != [] do %>
+      <section class="mb-10">
+        <h2 class="text-lg font-display font-medium text-parchment mb-2">
+          {gettext("Research on this condition")}
+        </h2>
+        <p class="text-xs text-parchment-dim mb-4 leading-relaxed">
+          {gettext(
+            "Studies discovered about this condition from PubMed. Discovery only — inclusion is not endorsement."
+          )}
+        </p>
+        <ul class="space-y-2">
+          <li
+            :for={s <- @condition_studies}
+            class="rounded-lg border border-ink-panel2 bg-ink-panel p-3"
+          >
+            <a
+              href={"https://pubmed.ncbi.nlm.nih.gov/#{s.pmid}"}
+              target="_blank"
+              rel="noopener"
+              class="text-sm text-parchment hover:text-basil"
+            >
+              {s.title || "PMID #{s.pmid}"}
+            </a>
+            <div class="text-[11px] text-parchment-dim mt-0.5">
+              <%= if s.journal do %>
+                {s.journal} ·
+              <% end %>
+              PMID {s.pmid}
+            </div>
+          </li>
+        </ul>
+      </section>
+    <% end %>
+
     <%!-- ── Recommendations ─────────────────────────────────────────────── --%>
     <section class="mb-10">
-      <h2 class="text-lg font-display font-medium text-parchment mb-4">
+      <h2 class="text-lg font-display font-medium text-parchment mb-2">
         {gettext("Dietary Recommendations")}
       </h2>
+      <p class="text-xs text-parchment-dim mb-4 leading-relaxed">
+        {gettext(
+          "Informational only — not medical advice. Each recommendation links the research it is based on so you can read the source and decide with your clinician."
+        )}
+      </p>
 
       <%= cond do %>
         <% @recommendations.loading -> %>
@@ -83,6 +216,67 @@
                       <%= if row.notes && row.notes != "" do %>
                         <p class="text-xs text-parchment-dim mt-2 leading-relaxed">{row.notes}</p>
                       <% end %>
+                      <%!-- Sources: frozen PubMed provenance, else structured reference --%>
+                      <%= cond do %>
+                        <% row.studies != [] -> %>
+                          <%!-- Collapsed to a small toggle while browsing; per-card
+                                Alpine state + grid-rows 0fr→1fr transition (mirrors
+                                the "Foods to Avoid or Limit" source lists). --%>
+                          <div class="mt-3 pt-2 border-t border-ink-panel2" x-data="{ open: false }">
+                            <button
+                              type="button"
+                              @click="open = !open"
+                              class="cursor-pointer inline-flex items-center gap-1 text-[11px] text-parchment-dim hover:text-parchment transition-colors"
+                            >
+                              <svg
+                                class="w-3 h-3 transition-transform duration-200"
+                                x-bind:class="open && 'rotate-90'"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                viewBox="0 0 24 24"
+                              >
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                              </svg>
+                              {gettext("Sources (%{count})", count: length(row.studies))}
+                            </button>
+                            <div
+                              class="grid transition-all duration-200 ease-out"
+                              style="grid-template-rows: 0fr"
+                              x-bind:style="open ? 'grid-template-rows: 1fr' : 'grid-template-rows: 0fr'"
+                            >
+                              <div class="overflow-hidden">
+                                <ul class="space-y-1 mt-2 pl-4">
+                                  <li :for={study <- row.studies} class="text-xs leading-snug">
+                                    <a
+                                      href={pubmed_url(study.pmid)}
+                                      target="_blank"
+                                      rel="noopener nofollow"
+                                      class="text-basil hover:underline"
+                                    >
+                                      {study_label(study)}
+                                    </a>
+                                  </li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        <% is_map(row.source_reference) && reference_href(row.source_reference) -> %>
+                          <div class="mt-3 pt-2 border-t border-ink-panel2">
+                            <p class="text-[11px] font-semibold text-parchment-dim uppercase tracking-wide mb-1">
+                              {gettext("Source")}
+                            </p>
+                            <a
+                              href={reference_href(row.source_reference)}
+                              target="_blank"
+                              rel="noopener nofollow"
+                              class="text-xs text-basil hover:underline leading-snug"
+                            >
+                              {reference_label(row.source_reference)}
+                            </a>
+                          </div>
+                        <% true -> %>
+                        <% end %>
                     </div>
                   <% end %>
                 </div>
@@ -232,10 +426,10 @@
               count: length(mindful_species(@species.result))
             )}
           </p>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
             <%= for row <- mindful_species(@species.result) do %>
-              <div class="flex items-center justify-between gap-3 bg-ink-panel border border-ink-panel2 rounded-xl p-3">
-                <div class="flex-1 min-w-0">
+              <div class="flex flex-col gap-2 bg-ink-panel border border-ink-panel2 rounded-xl p-3">
+                <div class="min-w-0">
                   <p class="text-sm font-medium text-parchment truncate">
                     {row.species.name}
                     <span
@@ -256,6 +450,52 @@
                     <% end %>
                   </p>
                 </div>
+                <%!-- Studies backing the containment fact (e.g. "Alfalfa contains
+                      Reactive Oxygen Species") — collapsed to a small toggle while
+                      browsing. Each card has its own Alpine state, so expanding one
+                      never resizes its neighbour; the grid-rows 0fr→1fr transition
+                      animates the open/close. --%>
+                <%= if row.fact_citations != [] do %>
+                  <div x-data="{ open: false }">
+                    <button
+                      type="button"
+                      @click="open = !open"
+                      class="cursor-pointer inline-flex items-center gap-1 text-[11px] text-parchment-dim hover:text-parchment transition-colors"
+                    >
+                      <svg
+                        class="w-3 h-3 transition-transform duration-200"
+                        x-bind:class="open && 'rotate-90'"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                      {gettext("Sources (%{count})", count: length(row.fact_citations))}
+                    </button>
+                    <div
+                      class="grid transition-all duration-200 ease-out"
+                      style="grid-template-rows: 0fr"
+                      x-bind:style="open ? 'grid-template-rows: 1fr' : 'grid-template-rows: 0fr'"
+                    >
+                      <div class="overflow-hidden">
+                        <ul class="space-y-1 mt-2 pl-4">
+                          <li :for={study <- row.fact_citations} class="text-xs leading-snug">
+                            <a
+                              href={pubmed_url(study.pmid)}
+                              target="_blank"
+                              rel="noopener nofollow"
+                              class="text-basil hover:underline"
+                            >
+                              {study_label(study)}
+                            </a>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
               </div>
             <% end %>
           </div>

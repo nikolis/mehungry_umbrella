@@ -832,17 +832,62 @@ IO.puts("Seeded health conditions: #{inserted} new, #{total} total.")
 # Idempotent: upserts the referenced compound, then find-or-creates the condition
 # and links it via a guideline recommendation. Conditions link to COMPOUNDS only;
 # the implicated food species resolve at read time (Health.species_for_condition/2).
+# Each guideline recommendation carries a structured `source_reference` so a
+# non-PubMed conclusion still cites a real, clickable source (the CompoundRecommendation
+# citation invariant — see docs/science/scientific_pipeline.md).
 health_seeds = [
   {"Kidney Stones", "renal", "Oxalate", "oxalate",
-   %{recommendation: "avoid", severity: "high", evidence_level: "strong"}},
+   %{
+     recommendation: "avoid",
+     severity: "high",
+     evidence_level: "strong",
+     source_reference: %{
+       "label" => "National Kidney Foundation — Oxalate & kidney stones",
+       "url" => "https://www.kidney.org/atoz/content/what-you-should-know-about-oxalate"
+     }
+   }},
   {"Gout", "metabolic", "Purine", "purine",
-   %{recommendation: "limit", severity: "moderate", evidence_level: "strong"}},
+   %{
+     recommendation: "limit",
+     severity: "moderate",
+     evidence_level: "strong",
+     source_reference: %{
+       "label" => "American College of Rheumatology — Gout management guideline",
+       "url" => "https://rheumatology.org/patients/gout"
+     }
+   }},
   {"IBS", "gastrointestinal", "FODMAP", "fodmap",
-   %{recommendation: "limit", severity: "moderate", evidence_level: "moderate"}},
+   %{
+     recommendation: "limit",
+     severity: "moderate",
+     evidence_level: "moderate",
+     source_reference: %{
+       "label" => "Monash University — Low FODMAP diet for IBS",
+       "url" => "https://www.monashfodmap.com/"
+     }
+   }},
   {"Histamine Intolerance", "immune", "Histamine", "histamine",
-   %{recommendation: "avoid", severity: "high", evidence_level: "moderate"}},
+   %{
+     recommendation: "avoid",
+     severity: "high",
+     evidence_level: "moderate",
+     source_reference: %{
+       "label" => "Maintz & Novak (2007) — Histamine and histamine intolerance",
+       "url" => "https://pubmed.ncbi.nlm.nih.gov/17490952/",
+       "pmid" => 17_490_952
+     }
+   }},
   {"Salicylate Sensitivity", "immune", "Salicylate", "salicylate",
-   %{recommendation: "avoid", severity: "moderate", evidence_level: "limited"}}
+   %{
+     recommendation: "avoid",
+     severity: "moderate",
+     evidence_level: "limited",
+     source_reference: %{
+       "label" => "Baenkler (2008) — Salicylate intolerance",
+       "url" => "https://pubmed.ncbi.nlm.nih.gov/18631502/",
+       "pmid" => 18_631_502
+     }
+   }}
 ]
 
 for {condition_name, category, compound_name, compound_type, rec} <- health_seeds do
@@ -858,6 +903,114 @@ for {condition_name, category, compound_name, compound_type, rec} <- health_seed
 end
 
 IO.puts("Seeded #{length(health_seeds)} health conditions with compound recommendations.")
+
+# ── Anti-Inflammatory: a generic dietary-pattern indication ──────────────────
+# Presents like a condition everywhere a condition is selectable. Backed by BOTH
+# engines: compound recommendations (encourage polyphenols/flavonoids) so it shows
+# in the compound-gated pickers, and nutrient recommendations (the Mehungry.Health
+# nutrient layer) which resolve to real foods via the populated USDA
+# ingredient_nutrients table. Idempotent (upserts on natural keys).
+{:ok, anti_inflammatory} =
+  Mehungry.Health.upsert_condition(%{
+    name: "Anti-Inflammatory",
+    category: "dietary_pattern",
+    description:
+      "A generic anti-inflammatory eating pattern: favour foods rich in omega-3, " <>
+        "fibre, polyphenols and monounsaturated fat; limit saturated fat, added sugar " <>
+        "and sodium."
+  })
+
+# Compound side — encourage anti-inflammatory bioactive families.
+anti_inflammatory_compounds = [
+  {"Polyphenols", "polyphenol",
+   %{
+     "label" => "Harvard T.H. Chan School of Public Health — Foods that fight inflammation",
+     "url" => "https://www.health.harvard.edu/staying-healthy/foods-that-fight-inflammation"
+   }},
+  {"Flavonoids", "polyphenol",
+   %{
+     "label" => "Maleki et al. (2019) — Anti-inflammatory effects of flavonoids",
+     "url" => "https://pubmed.ncbi.nlm.nih.gov/30670267/",
+     "pmid" => 30_670_267
+   }}
+]
+
+for {compound_name, compound_type, reference} <- anti_inflammatory_compounds do
+  {:ok, compound} =
+    Mehungry.Food.upsert_compound(%{name: compound_name, compound_type: compound_type})
+
+  {:ok, _} =
+    Mehungry.Health.add_recommendation(anti_inflammatory.id, compound.id, %{
+      recommendation: "encourage",
+      severity: "moderate",
+      evidence_level: "moderate",
+      source: "guideline",
+      source_reference: reference
+    })
+end
+
+# Nutrient side — encourage/limit nutrients. `nutrient_name` must match a
+# Mehungry.Health.NutrientTargets label so it resolves to foods.
+anti_inflammatory_nutrients = [
+  {"Omega-3", "encourage", "strong",
+   %{
+     "label" => "AHA — Fish and Omega-3 Fatty Acids",
+     "url" =>
+       "https://www.heart.org/en/healthy-living/healthy-eating/eat-smart/fats/fish-and-omega-3-fatty-acids"
+   }},
+  {"Fiber", "encourage", "moderate",
+   %{
+     "label" => "Harvard T.H. Chan — Fiber and inflammation",
+     "url" => "https://nutritionsource.hsph.harvard.edu/carbohydrates/fiber/"
+   }},
+  {"Monounsaturated Fat", "encourage", "moderate",
+   %{
+     "label" => "EFSA — Scientific opinion on dietary reference values for fats",
+     "url" => "https://www.efsa.europa.eu/en/efsajournal/pub/1461"
+   }},
+  {"Vitamin C", "encourage", "limited",
+   %{
+     "label" => "NIH Office of Dietary Supplements — Vitamin C",
+     "url" => "https://ods.od.nih.gov/factsheets/VitaminC-HealthProfessional/"
+   }},
+  {"Vitamin E", "encourage", "limited",
+   %{
+     "label" => "NIH Office of Dietary Supplements — Vitamin E",
+     "url" => "https://ods.od.nih.gov/factsheets/VitaminE-HealthProfessional/"
+   }},
+  {"Saturated Fat", "limit", "moderate",
+   %{
+     "label" => "AHA — Saturated Fat",
+     "url" => "https://www.heart.org/en/healthy-living/healthy-eating/eat-smart/fats/saturated-fats"
+   }},
+  {"Added Sugar", "limit", "moderate",
+   %{
+     "label" => "AHA — Added Sugars",
+     "url" => "https://www.heart.org/en/healthy-living/healthy-eating/eat-smart/sugar/added-sugars"
+   }},
+  {"Sodium", "limit", "limited",
+   %{
+     "label" => "AHA — How much sodium should I eat per day?",
+     "url" =>
+       "https://www.heart.org/en/healthy-living/healthy-eating/eat-smart/sodium/how-much-sodium-should-i-eat-per-day"
+   }}
+]
+
+for {nutrient_name, recommendation, evidence_level, reference} <- anti_inflammatory_nutrients do
+  {:ok, _} =
+    Mehungry.Health.add_nutrient_recommendation(anti_inflammatory.id, nutrient_name, %{
+      recommendation: recommendation,
+      severity: "moderate",
+      evidence_level: evidence_level,
+      source: "guideline",
+      source_reference: reference
+    })
+end
+
+IO.puts(
+  "Seeded Anti-Inflammatory indication: #{length(anti_inflammatory_compounds)} compound + " <>
+    "#{length(anti_inflammatory_nutrients)} nutrient recommendations."
+)
 
 # ── AI-bot personas (authoring voices) ───────────────────────────────────────
 # Idempotent: find-or-create by name. Personas are the reusable voice; a

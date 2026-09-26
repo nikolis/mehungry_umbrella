@@ -25,6 +25,7 @@ defmodule Mehungry.Health.RecommendationCandidates do
 
   alias Mehungry.Health.CompoundRecommendationCandidate, as: Candidate
   alias Mehungry.Health.CompoundRecommendationCandidateStudy, as: CandidateStudy
+  alias Mehungry.Health.CompoundRecommendationStudy
 
   # Relation-study count at which the strength component saturates to 1.0. Lower
   # than the co-occurrence saturation — extracted relations are rarer than mentions.
@@ -193,6 +194,8 @@ defmodule Mehungry.Health.RecommendationCandidates do
         notes: promotion_note(candidate)
       })
 
+    freeze_recommendation_studies(recommendation_row.id, candidate.id)
+
     candidate
     |> Candidate.changeset(%{
       status: "promoted",
@@ -202,6 +205,35 @@ defmodule Mehungry.Health.RecommendationCandidates do
   end
 
   def promote_candidate(id, attrs), do: promote_candidate(get_candidate!(id), attrs)
+
+  # Copy the candidate's reference studies onto the recommendation as frozen
+  # provenance. `on_conflict: :nothing` makes this idempotent across re-promotes and
+  # unions in any newly-cited study; re-derivation never touches this table, so the
+  # set reflects exactly what the human validated.
+  defp freeze_recommendation_studies(recommendation_id, candidate_id) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    study_ids =
+      Repo.all(
+        from(cs in CandidateStudy, where: cs.candidate_id == ^candidate_id, select: cs.study_id)
+      )
+
+    entries =
+      Enum.map(study_ids, fn study_id ->
+        %{
+          recommendation_id: recommendation_id,
+          study_id: study_id,
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    if entries != [] do
+      Repo.insert_all(CompoundRecommendationStudy, entries, on_conflict: :nothing)
+    end
+
+    :ok
+  end
 
   # "neutral"/nil suggestion has no valid CompoundRecommendation value — fall back to
   # the most conservative one so a promote without an explicit choice is still safe.

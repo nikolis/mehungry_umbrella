@@ -260,6 +260,20 @@ shared compound. Details: [`health_recommendations.md`](health_recommendations.m
 - **Progress.** `*_progress/0` returns `%{processed, total}`; every run also
   broadcasts on `Mehungry.PubSub` (`"literature_crawl_runs"`,
   `"pubtator_annotation_runs"`, `"candidate_derivation_runs"`) for the live bars.
+- **Frozen result provenance (PubMed link survives to the user).** A candidate's
+  reference-study links (`*_candidate_studies`) are *refreshed* (delete + reinsert) on
+  every re-derivation, so they can't be the citation shown to a user. At **promotion**,
+  the candidate's studies are **copied once** onto the result row — `Food.CompoundCandidates.promote_candidate`
+  → `species_compound_relationship_studies`, `Health.RecommendationCandidates.promote_candidate`
+  → `compound_recommendation_studies` — and re-derivation never touches those tables, so
+  the fact/recommendation keeps citing exactly the papers the human validated. The read
+  path (`Health.recommendations_for_condition/2`, `species_for_condition/2`) preloads
+  these as `:studies` (rec) and `:fact_citations`/`:recommendation_citations` (species
+  rows), and the public condition page links each conclusion to
+  `pubmed.ncbi.nlm.nih.gov/<pmid>`. Advice with no PubMed study (`source: manual|guideline`)
+  must instead carry a structured `CompoundRecommendation.source_reference`
+  (`%{label,url,doi,pmid}`) — enforced in the changeset — so **every** user-facing
+  conclusion cites a real source.
 
 ### Stuck-run recovery — why runs wedge, and how they self-heal
 

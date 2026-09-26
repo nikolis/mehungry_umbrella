@@ -136,6 +136,140 @@ defmodule Mehungry.Literature.Entrez do
     end
   end
 
+  # ── Reverse (condition-seeded) crawl ───────────────────────────────────────
+  # Discovers studies *about a condition* (name × dietary/phase terms), links each to
+  # the condition via `study_conditions` for the "Research on this condition"
+  # presentation and to feed the phase-aware extraction pipeline. Reuses the same
+  # cached esearch/efetch + rate-limit layer as the species crawl.
+
+  # Dietary/phase keywords crossed with a condition's name. "flare"/"remission"/
+  # "exacerbation" bias discovery toward the phase-dependent literature the extractor
+  # needs; the rest surface general dietary studies.
+  @dietary_phase_keywords ~w(diet dietary nutrition food fiber FODMAP remission flare exacerbation)
+
+  @doc """
+  Crawl Entrez for one health **condition** and sync discovered studies, linking each
+  to the condition (`study_conditions`). Same contract as `crawl_species/2`:
+  `{:ok, studies_found}` (always advances, attempts ledgered) or `{:error, reason}`
+  for a transient failure the worker should retry.
+  """
+  @spec crawl_condition(integer(), keyword()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def crawl_condition(condition_id, opts \\ []) do
+    refresh = Keyword.get(opts, :refresh, false)
+
+    case search_terms_for_condition(condition_id) do
+      [] ->
+        record_condition_attempt(condition_id, "(no name)", "no_results", 0)
+        {:ok, 0}
+
+      terms ->
+        Enum.reduce_while(terms, {:ok, 0}, fn term, {:ok, acc} ->
+          cond do
+            not refresh and Literature.condition_crawl_attempted?(condition_id, term.term) ->
+              {:cont, {:ok, acc}}
+
+            true ->
+              case crawl_condition_term(condition_id, term, refresh) do
+                {:ok, n} -> {:cont, {:ok, acc + n}}
+                {:error, reason} -> {:halt, {:error, reason}}
+              end
+          end
+        end)
+    end
+  end
+
+  @doc """
+  The search terms for a condition: `name × dietary/phase keywords`. Each term carries
+  the `condition_id` it links to. Returns `[]` when the condition doesn't exist.
+  """
+  def search_terms_for_condition(condition_id) do
+    case Mehungry.Health.get_condition(condition_id) do
+      nil ->
+        []
+
+      condition ->
+        for keyword <- @dietary_phase_keywords do
+          %{term: "#{condition.name} #{keyword}", condition_id: condition_id}
+        end
+        |> Enum.uniq_by(& &1.term)
+    end
+  end
+
+  defp crawl_condition_term(condition_id, %{term: term}, refresh) do
+    search_opts = if refresh, do: condition_mindate_opts(condition_id, term), else: []
+
+    case search(term, refresh, search_opts) do
+      {:ok, []} ->
+        record_condition_attempt(condition_id, term, "no_results", 0)
+        {:ok, 0}
+
+      {:ok, pmids} ->
+        fetch_and_link_condition(condition_id, term, pmids)
+
+      {:error, {:rate_limited, _} = reason} ->
+        {:error, reason}
+
+      {:error, {:network, _} = reason} ->
+        {:error, reason}
+
+      {:error, :not_found} ->
+        record_condition_attempt(condition_id, term, "no_results", 0)
+        {:ok, 0}
+
+      {:error, reason} ->
+        Logger.warning("Entrez: condition esearch failed for #{inspect(term)} — #{inspect(reason)}")
+        record_condition_attempt(condition_id, term, "error", 0)
+        {:ok, 0}
+    end
+  end
+
+  defp fetch_and_link_condition(condition_id, term, pmids) do
+    case fetch_studies(pmids) do
+      {:ok, studies} ->
+        Enum.each(studies, fn attrs ->
+          {:ok, study} = Literature.upsert_study(Map.put(attrs, :retrieved_at, now()))
+
+          Literature.link_study_condition(%{
+            study_id: study.id,
+            condition_id: condition_id,
+            search_term: term,
+            source: "pubmed"
+          })
+        end)
+
+        record_condition_attempt(condition_id, term, "matched", length(studies))
+        {:ok, length(studies)}
+
+      {:error, {:rate_limited, _} = reason} ->
+        {:error, reason}
+
+      {:error, {:network, _} = reason} ->
+        {:error, reason}
+
+      {:error, reason} ->
+        Logger.warning("Entrez: condition efetch failed for #{inspect(term)} — #{inspect(reason)}")
+        record_condition_attempt(condition_id, term, "error", 0)
+        {:ok, 0}
+    end
+  end
+
+  defp condition_mindate_opts(condition_id, term) do
+    case Literature.condition_last_crawled_at(condition_id, term) do
+      %DateTime{} = dt -> [mindate: Calendar.strftime(dt, "%Y/%m/%d")]
+      _ -> []
+    end
+  end
+
+  defp record_condition_attempt(condition_id, term, outcome, studies_found) do
+    Literature.record_condition_crawl_attempt(%{
+      condition_id: condition_id,
+      search_term: term,
+      outcome: outcome,
+      studies_found: studies_found,
+      last_crawled_at: now()
+    })
+  end
+
   # ── per-term crawl ─────────────────────────────────────────────────────────
 
   defp crawl_term(species_id, ingredient_ids, %{term: term} = spec, refresh) do

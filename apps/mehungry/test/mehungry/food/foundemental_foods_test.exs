@@ -122,7 +122,8 @@ defmodule Mehungry.Food.FoundementalFoodsTest do
           recommendation: "avoid",
           severity: "high",
           evidence_level: "strong",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       assert [rec] = Health.recommendations_for_species(species.id)

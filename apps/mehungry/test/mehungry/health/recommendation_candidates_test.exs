@@ -81,6 +81,40 @@ defmodule Mehungry.Health.RecommendationCandidatesTest do
     assert RC.list_pending_candidates() == []
   end
 
+  test "promotion freezes the candidate's studies onto the recommendation; re-derivation leaves them",
+       ctx do
+    relation!(ctx, "Positive_Correlation", "9")
+    {:ok, %{candidate: cand}} = RC.derive_candidate(ctx.condition.id, ctx.compound.id)
+
+    {:ok, _} = RC.promote_candidate(cand.id, %{recommendation: "avoid", severity: "moderate"})
+
+    [rec] = Health.recommendations_for_condition(ctx.condition.id)
+    assert Enum.map(rec.studies, & &1.pmid) == [ctx.study.pmid]
+
+    # Re-derivation rewrites the candidate's studies but must not touch the frozen
+    # recommendation citation.
+    {:ok, _} = RC.derive_candidate(ctx.condition.id, ctx.compound.id)
+    [rec2] = Health.recommendations_for_condition(ctx.condition.id)
+    assert Enum.map(rec2.studies, & &1.pmid) == [ctx.study.pmid]
+  end
+
+  test "a manual recommendation must carry a structured source_reference", ctx do
+    assert {:error, changeset} =
+             Health.add_recommendation(ctx.condition.id, ctx.compound.id, %{
+               recommendation: "avoid",
+               source: "manual"
+             })
+
+    assert %{source_reference: [_ | _]} = errors_on(changeset)
+
+    assert {:ok, _} =
+             Health.add_recommendation(ctx.condition.id, ctx.compound.id, %{
+               recommendation: "avoid",
+               source: "manual",
+               source_reference: %{"label" => "NIH", "url" => "https://example.org"}
+             })
+  end
+
   test "Literature.persist_study_relations resolves both endpoints from identifiers", ctx do
     {:ok, _} =
       Compounds.upsert_compound_identifier(%{

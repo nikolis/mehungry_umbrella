@@ -30,6 +30,8 @@ defmodule Mehungry.Health.Condition do
     field :description, :string
 
     has_many :compound_recommendations, CompoundRecommendation
+    # Disease states / phases (e.g. Active Flare vs Remission); most conditions have none.
+    has_many :states, Mehungry.Health.ConditionState
     # Cross-database identity (mesh/icd…), written only via Mehungry.Health.
     has_many :identifiers, ConditionIdentifier
     # Per-language name/description translations.

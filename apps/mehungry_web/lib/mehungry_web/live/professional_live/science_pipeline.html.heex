@@ -84,6 +84,64 @@
     <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
       <div class="flex flex-wrap items-center gap-2">
         <span class="flex h-6 w-6 items-center justify-center rounded-full bg-ink-panel2 text-parchment text-xs font-semibold">
+          1b
+        </span>
+        <h2 class="text-lg font-medium text-parchment mr-2">
+          Condition crawl (reverse — disease → literature)
+        </h2>
+
+        <button
+          type="button"
+          phx-click="run_condition_crawl"
+          disabled={running?(@condition_crawl_run)}
+          data-confirm="Crawl PubMed for every phase-sensitive condition (those with disease states)? This calls the NCBI API and can be long-running."
+          class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {if running?(@condition_crawl_run), do: "Crawling…", else: "Run condition crawl"}
+        </button>
+
+        <.link
+          navigate={~p"/professional/health"}
+          class="text-sm text-basil hover:underline ml-auto"
+        >
+          Review candidates →
+        </.link>
+      </div>
+
+      <p class="text-parchment-dim text-xs">
+        Discovers studies <em>about</em> each phase-sensitive condition (name ×
+        dietary/phase terms), linking each paper to the condition. Feeds the offline
+        Python extractor, which posts phase-aware recommendation candidates back for
+        review at /professional/health.
+      </p>
+
+      <div>
+        <div class="flex items-center justify-between text-xs text-parchment-dim mb-1">
+          <span>
+            Processed: {@condition_crawl_progress.processed} / {@condition_crawl_progress.total} ({percent(
+              @condition_crawl_progress
+            )}%)
+          </span>
+          <span
+            class={"font-medium #{run_class(@condition_crawl_run)}"}
+            title={run_error(@condition_crawl_run)}
+          >
+            {run_label(@condition_crawl_run)}
+          </span>
+        </div>
+        <div class="h-2 w-full rounded bg-ink-panel2 overflow-hidden">
+          <div
+            class="h-full bg-basil rounded"
+            style={"width: #{percent(@condition_crawl_progress)}%"}
+          >
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-ink-panel2 text-parchment text-xs font-semibold">
           2
         </span>
         <h2 class="text-lg font-medium text-parchment mr-2">Entity annotation (PubTator3)</h2>

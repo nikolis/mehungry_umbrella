@@ -38,6 +38,57 @@ defmodule MehungryWeb.ConditionDetailSeoTest do
     assert html =~ "Foods to Avoid or Limit"
   end
 
+  test "recommendation cards link back to the PubMed source paper + carry a disclaimer", %{
+    conn: conn
+  } do
+    {:ok, condition} = Health.create_condition(%{name: "Kidney Stones"})
+    {:ok, compound} = Mehungry.Food.upsert_compound(%{name: "Oxalate", compound_type: "oxalate"})
+
+    {:ok, study} =
+      Mehungry.Literature.upsert_study(%{pmid: 424_242, title: "Oxalate and stone formation"})
+
+    {:ok, rec} =
+      Health.add_recommendation(condition.id, compound.id, %{
+        recommendation: "avoid",
+        severity: "high",
+        source: "literature"
+      })
+
+    {:ok, _} =
+      %Mehungry.Health.CompoundRecommendationStudy{}
+      |> Mehungry.Health.CompoundRecommendationStudy.changeset(%{
+        recommendation_id: rec.id,
+        study_id: study.id
+      })
+      |> Mehungry.Repo.insert()
+
+    html = conn |> get("/en/conditions/#{condition.id}") |> html_response(200)
+
+    assert html =~ "https://pubmed.ncbi.nlm.nih.gov/424242/"
+    assert html =~ "Oxalate and stone formation"
+    assert html =~ "not medical advice"
+  end
+
+  test "guideline recommendations render their structured source reference", %{conn: conn} do
+    {:ok, condition} = Health.create_condition(%{name: "Gout"})
+    {:ok, compound} = Mehungry.Food.upsert_compound(%{name: "Purine", compound_type: "purine"})
+
+    {:ok, _} =
+      Health.add_recommendation(condition.id, compound.id, %{
+        recommendation: "limit",
+        source: "guideline",
+        source_reference: %{
+          "label" => "ACR gout guideline",
+          "url" => "https://rheumatology.org/gout"
+        }
+      })
+
+    html = conn |> get("/en/conditions/#{condition.id}") |> html_response(200)
+
+    assert html =~ "https://rheumatology.org/gout"
+    assert html =~ "ACR gout guideline"
+  end
+
   # Pull the @graph array out of the structured-data <script> tag. (Floki.text/1
   # drops <script> content, so read the node's raw child string directly.)
   defp extract_jsonld_graph(html) do

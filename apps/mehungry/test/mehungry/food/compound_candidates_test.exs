@@ -72,6 +72,41 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
 
   defp species_rels(species_id), do: SpeciesCompounds.list_species_relationships(species_id)
 
+  # Stub the plausibility judge (config seam) to return a fixed result.
+  defp stub_verdict(result) do
+    Application.put_env(:mehungry, :compound_plausibility_stub, fn _species, _compound, _studies ->
+      result
+    end)
+  end
+
+  # 5 co-occurrence studies → literature 1.0 → score 1.0 ≥ threshold, so the
+  # plausibility gate is the only thing between the candidate and a fact.
+  defp strong_cooccurrence(ctx) do
+    for _ <- 1..5, do: cooccur(ctx.spinach, ctx.oxalate)
+  end
+
+  # A pre-gate promoted literature fact: promoted with the gate bypassed, so its
+  # backing candidate has no plausibility_verdict — exactly what the audit targets.
+  defp ungated_fact(ctx) do
+    strong_cooccurrence(ctx)
+
+    {:ok, %{candidate: cand, promoted: true}} =
+      CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id, skip_plausibility: true)
+
+    assert is_nil(cand.plausibility_verdict)
+    cand
+  end
+
+  defp relationship_study_pmids(rel_id) do
+    from(rs in Mehungry.Food.SpeciesCompoundRelationshipStudy,
+      join: s in Mehungry.Literature.ScientificStudy,
+      on: s.id == rs.study_id,
+      where: rs.relationship_id == ^rel_id,
+      select: s.pmid
+    )
+    |> Repo.all()
+  end
+
   describe "species co-occurrence evidence" do
     test "counts distinct studies mentioning the compound in the species' papers", ctx do
       for _ <- 1..3, do: cooccur(ctx.spinach, ctx.oxalate)
@@ -279,13 +314,14 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
     end
   end
 
-  describe "non-dietary blocklist" do
-    test "excludes blocklisted compounds from evidence pairs", %{
+  describe "non-dietary compounds (dietary_relevance attribute)" do
+    test "excludes non_dietary compounds from evidence pairs", %{
       spinach: spinach,
       oxalate: oxalate,
       species: species
     } do
       {:ok, dpph} = Food.upsert_compound(%{name: "DPPH", compound_type: "other"})
+      {:ok, _} = Food.set_dietary_relevance(dpph.id, "non_dietary")
       cooccur(spinach, oxalate)
       cooccur(spinach, dpph)
 
@@ -294,10 +330,21 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
       refute {species.id, dpph.id} in pairs
     end
 
-    test "purge_blocklisted deletes species facts + candidates for blocklisted compounds", %{
+    test "a merely `pending` (unreviewed) compound is NOT excluded", %{
+      spinach: spinach,
+      species: species
+    } do
+      {:ok, novel} = Food.upsert_compound(%{name: "Novelchem", compound_type: "other"})
+      cooccur(spinach, novel)
+
+      assert {species.id, novel.id} in CompoundCandidates.evidence_pairs()
+    end
+
+    test "purge_non_dietary deletes species facts + candidates for non_dietary compounds", %{
       species: species
     } do
       {:ok, dpph} = Food.upsert_compound(%{name: "DPPH", compound_type: "other"})
+      {:ok, _} = Food.set_dietary_relevance(dpph.id, "non_dietary")
       {:ok, cand} = CompoundCandidates.import_manual_candidate(species.id, dpph.id, %{})
       {:ok, _} = CompoundCandidates.promote_candidate(cand.id)
 
@@ -306,13 +353,166 @@ defmodule Mehungry.Food.CompoundCandidatesTest do
                :count
              ) == 1
 
-      assert {rels, cands} = CompoundCandidates.purge_blocklisted()
+      assert {rels, cands} = CompoundCandidates.purge_non_dietary()
       assert rels >= 1 and cands >= 1
 
       assert Repo.aggregate(
                from(r in SpeciesCompoundRelationship, where: r.compound_id == ^dpph.id),
                :count
              ) == 0
+    end
+  end
+
+  describe "plausibility gate on auto-promotion" do
+    setup do
+      on_exit(fn -> Application.delete_env(:mehungry, :compound_plausibility_stub) end)
+      :ok
+    end
+
+    test ":plausible verdict promotes and writes the fact", ctx do
+      strong_cooccurrence(ctx)
+      stub_verdict({:ok, %{verdict: :plausible, reason: "real phytochemical"}})
+
+      {:ok, %{candidate: cand, promoted: true}} =
+        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+
+      assert cand.status == "promoted"
+      assert cand.plausibility_verdict == "plausible"
+
+      assert Repo.get_by(SpeciesCompoundRelationship,
+               foundemental_species_id: ctx.species.id,
+               compound_id: ctx.oxalate.id
+             )
+    end
+
+    test ":implausible verdict holds the candidate pending and writes no fact", ctx do
+      strong_cooccurrence(ctx)
+      stub_verdict({:ok, %{verdict: :implausible, reason: "extraction solvent"}})
+
+      {:ok, %{candidate: cand, promoted: false}} =
+        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+
+      assert cand.status == "pending"
+      assert cand.plausibility_verdict == "implausible"
+      assert cand.plausibility_reason == "extraction solvent"
+
+      refute Repo.get_by(SpeciesCompoundRelationship,
+               foundemental_species_id: ctx.species.id,
+               compound_id: ctx.oxalate.id
+             )
+    end
+
+    test "a judge error is fail-safe: holds pending, does not cache a verdict", ctx do
+      strong_cooccurrence(ctx)
+      stub_verdict({:error, :unavailable})
+
+      {:ok, %{candidate: cand, promoted: false}} =
+        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+
+      assert cand.status == "pending"
+      assert is_nil(cand.plausibility_verdict)
+    end
+
+    test "a compound curated `dietary` skips the LLM and promotes", ctx do
+      strong_cooccurrence(ctx)
+      {:ok, _} = Food.set_dietary_relevance(ctx.oxalate.id, "dietary")
+
+      # Stub would fail the gate if called — proving the fast-path skips it.
+      stub_verdict({:ok, %{verdict: :implausible, reason: "should not be consulted"}})
+
+      {:ok, %{candidate: cand, promoted: true}} =
+        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+
+      assert cand.status == "promoted"
+      assert is_nil(cand.plausibility_verdict)
+    end
+
+    test "a cached verdict is reused on re-derivation (no second judge call)", ctx do
+      strong_cooccurrence(ctx)
+      stub_verdict({:ok, %{verdict: :implausible, reason: "solvent"}})
+
+      {:ok, %{promoted: false}} =
+        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+
+      # If the judge were called again it would crash the test (nil fun would raise);
+      # instead the cached "implausible" must hold the candidate without consulting it.
+      Application.put_env(:mehungry, :compound_plausibility_stub, fn _, _, _ ->
+        raise "judge must not be called when a verdict is cached"
+      end)
+
+      {:ok, %{candidate: cand, promoted: false}} =
+        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+
+      assert cand.plausibility_verdict == "implausible"
+    end
+  end
+
+  describe "audit of already-promoted facts" do
+    setup do
+      on_exit(fn -> Application.delete_env(:mehungry, :compound_plausibility_stub) end)
+      :ok
+    end
+
+    test "an implausible verdict flags the fact but never deletes it", ctx do
+      cand = ungated_fact(ctx)
+      stub_verdict({:ok, %{verdict: :implausible, reason: "extraction solvent"}})
+
+      assert {1, 1} = CompoundCandidates.audit_promoted_facts_batch(10)
+
+      flagged = CompoundCandidates.list_flagged_facts()
+      assert Enum.map(flagged, & &1.id) == [cand.id]
+      assert hd(flagged).plausibility_reason == "extraction solvent"
+
+      # The fact itself is untouched — audit only flags.
+      assert Repo.get(SpeciesCompoundRelationship, cand.promoted_relationship_id)
+    end
+
+    test "a plausible verdict clears the audit and leaves nothing flagged", ctx do
+      ungated_fact(ctx)
+      stub_verdict({:ok, %{verdict: :plausible, reason: "real phytochemical"}})
+
+      assert {1, 0} = CompoundCandidates.audit_promoted_facts_batch(10)
+      assert CompoundCandidates.list_flagged_facts() == []
+      assert CompoundCandidates.count_promoted_facts_to_audit() == 0
+    end
+
+    test "a judge error leaves the fact un-audited (retryable), not flagged", ctx do
+      ungated_fact(ctx)
+      stub_verdict({:error, :unavailable})
+
+      assert {0, 0} = CompoundCandidates.audit_promoted_facts_batch(10)
+      assert CompoundCandidates.count_promoted_facts_to_audit() == 1
+      assert CompoundCandidates.list_flagged_facts() == []
+    end
+
+    test "a `dietary`-curated compound's fact is not audited", ctx do
+      ungated_fact(ctx)
+      {:ok, _} = Food.set_dietary_relevance(ctx.oxalate.id, "dietary")
+
+      assert CompoundCandidates.count_promoted_facts_to_audit() == 0
+      assert {0, 0} = CompoundCandidates.audit_promoted_facts_batch(10)
+    end
+  end
+
+  describe "frozen result provenance" do
+    test "promotion copies the candidate's studies onto the fact and freezes them", ctx do
+      s1 = cooccur(ctx.spinach, ctx.oxalate)
+      s2 = cooccur(ctx.spinach, ctx.oxalate)
+
+      {:ok, %{candidate: candidate, promoted: false}} =
+        CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+
+      {:ok, promoted} = CompoundCandidates.promote_candidate(candidate)
+      rel_id = promoted.promoted_relationship_id
+
+      assert Enum.sort(relationship_study_pmids(rel_id)) == Enum.sort([s1.pmid, s2.pmid])
+
+      # A later co-occurrence rewrites the CANDIDATE's studies (delete+insert), but the
+      # fact's frozen citation set must not move.
+      _s3 = cooccur(ctx.spinach, ctx.oxalate)
+      {:ok, _} = CompoundCandidates.derive_candidate(ctx.species.id, ctx.oxalate.id)
+
+      assert Enum.sort(relationship_study_pmids(rel_id)) == Enum.sort([s1.pmid, s2.pmid])
     end
   end
 

@@ -25,6 +25,8 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
       |> assign(:compounds, Food.list_compounds())
       |> assign(:measurable, Food.list_curated_ingredients())
       |> assign(:mcand_count, Food.count_pending_measurement_candidates())
+      |> assign(:audit_pending, Food.count_promoted_facts_to_audit())
+      |> assign(:flagged, Food.list_flagged_facts())
       |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0))
       |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0))
       |> stream(
@@ -61,6 +63,73 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
   end
 
   @impl true
+  def handle_event("mark_non_dietary", %{"id" => id, "compound-id" => compound_id}, socket) do
+    {:ok, _} = Food.set_dietary_relevance(String.to_integer(compound_id), "non_dietary")
+    {rels, _cands} = Food.purge_non_dietary()
+
+    {:noreply,
+     socket
+     |> put_flash(
+       :info,
+       "Marked compound non-dietary — excluded everywhere; purged #{rels} fact#{if rels == 1, do: "", else: "s"}."
+     )
+     |> assign(:rel_page, 1)
+     |> assign(:rel_count, Food.count_relationships())
+     |> stream_delete_by_dom_id(:candidates, "candidates-#{id}")
+     |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0),
+       reset: true
+     )}
+  end
+
+  # ── Audit of already-promoted facts ────────────────────────────────────────
+
+  @impl true
+  def handle_event("audit_facts", _params, socket) do
+    {:ok, _job} = Food.enqueue_fact_audit()
+
+    {:noreply,
+     put_flash(
+       socket,
+       :info,
+       "Auditing promoted literature facts — implausible ones appear under “Flagged facts” after Refresh."
+     )}
+  end
+
+  @impl true
+  def handle_event("flagged_undo", %{"rel-id" => rel_id, "id" => cand_id}, socket) do
+    {:ok, _} = Food.unpromote_relationship(String.to_integer(rel_id))
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Removed the flagged fact.")
+     |> assign(:rel_count, Food.count_relationships())
+     |> assign(:flagged, drop_flagged(socket.assigns.flagged, cand_id))
+     |> assign(:rel_page, 1)
+     |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0),
+       reset: true
+     )}
+  end
+
+  @impl true
+  def handle_event("flagged_non_dietary", %{"compound-id" => compound_id, "id" => cand_id}, socket) do
+    {:ok, _} = Food.set_dietary_relevance(String.to_integer(compound_id), "non_dietary")
+    {rels, _cands} = Food.purge_non_dietary()
+
+    {:noreply,
+     socket
+     |> put_flash(
+       :info,
+       "Marked compound non-dietary — excluded everywhere; purged #{rels} fact#{if rels == 1, do: "", else: "s"}."
+     )
+     |> assign(:rel_count, Food.count_relationships())
+     |> assign(:flagged, Food.list_flagged_facts())
+     |> assign(:rel_page, 1)
+     |> stream(:relationships, Food.list_relationships_page(limit: @per_page, offset: 0),
+       reset: true
+     )}
+  end
+
+  @impl true
   def handle_event("load-more", _params, socket) do
     page = socket.assigns.page + 1
     offset = (page - 1) * @per_page
@@ -85,13 +154,13 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
 
   @impl true
   def handle_event("purge", _params, socket) do
-    {rels, _cands} = Food.purge_blocklisted()
+    {rels, _cands} = Food.purge_non_dietary()
 
     {:noreply,
      socket
      |> put_flash(
        :info,
-       "Purged #{rels} non-dietary fact#{if rels == 1, do: "", else: "s"} (blocklist)"
+       "Purged #{rels} non-dietary fact#{if rels == 1, do: "", else: "s"}"
      )
      |> assign(:rel_page, 1)
      |> assign(:rel_count, Food.count_relationships())
@@ -194,6 +263,8 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
      |> assign(:run, run)
      |> assign(:progress, progress_for(run))
      |> assign(:mcand_count, Food.count_pending_measurement_candidates())
+     |> assign(:audit_pending, Food.count_promoted_facts_to_audit())
+     |> assign(:flagged, Food.list_flagged_facts())
      |> stream(:candidates, Food.list_pending_candidates(limit: @per_page, offset: 0),
        reset: true
      )
@@ -221,6 +292,11 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
   # ── View helpers ───────────────────────────────────────────────────────
 
   defp non_dietary_names, do: Food.non_dietary_compound_names()
+
+  defp drop_flagged(flagged, id) do
+    id = to_string(id)
+    Enum.reject(flagged, &(to_string(&1.id) == id))
+  end
 
   @extraction_methods ~w(manual automated pdf)
   defp extraction_methods, do: @extraction_methods
@@ -318,4 +394,8 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidates do
   defp level_class("moderate"), do: "text-parchment"
   defp level_class("limited"), do: "text-parchment-dim"
   defp level_class(_), do: "text-parchment-dim"
+
+  defp plausibility_class("plausible"), do: "text-basil"
+  defp plausibility_class("implausible"), do: "text-red-300"
+  defp plausibility_class(_), do: "text-parchment-dim"
 end

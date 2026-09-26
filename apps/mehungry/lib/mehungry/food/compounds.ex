@@ -166,6 +166,30 @@ defmodule Mehungry.Food.Compounds do
     )
   end
 
+  # ── Dietary relevance (the curatable non-dietary gate) ─────────────────────
+
+  @doc """
+  Set a compound's `dietary_relevance` (`dietary | non_dietary | pending`) — the
+  curated override that governs whether it may become a dietary fact. Marking a
+  compound `non_dietary` is the scalable successor of the exact-name blocklist;
+  callers typically follow with `CompoundCandidates.purge_non_dietary/0`.
+  """
+  def set_dietary_relevance(compound_id, relevance) do
+    Repo.get!(Compound, compound_id)
+    |> Compound.changeset(%{dietary_relevance: relevance})
+    |> Repo.update()
+  end
+
+  @doc "Compounds with the given `dietary_relevance`, alphabetical."
+  def list_compounds_by_relevance(relevance) do
+    Repo.all(
+      from(c in Compound,
+        where: c.dietary_relevance == ^relevance,
+        order_by: [asc: c.name]
+      )
+    )
+  end
+
   # ── Ingredient ↔ compound relationships (scientific facts) ────────────────
 
   def link_compound(attrs) do
