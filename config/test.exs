@@ -87,6 +87,9 @@ config :mehungry, :local_ai_api_token, "test-local-ai-token"
 # A dummy token so the Prometheus /metrics guard is exercisable in tests.
 config :mehungry, :metrics_api_token, "test-metrics-token"
 
+# A dummy token so the public system-integration API guard is exercisable in tests.
+config :mehungry, :public_api_token, "test-public-api-token"
+
 # Never load the Bumblebee QA model in the test suite — extraction falls back to the
 # rule-based path (MehungryLocalAi.QA.available? is false).
 config :mehungry_local_ai, start_qa: false

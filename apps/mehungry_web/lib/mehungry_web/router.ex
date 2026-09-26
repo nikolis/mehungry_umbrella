@@ -62,10 +62,34 @@ defmodule MehungryWeb.Router do
     plug MehungryWeb.Plugs.RequireMetricsToken
   end
 
+  # Shared-secret REST API for external system integrations.
+  pipeline :public_api do
+    plug :accepts, ["json"]
+    plug MehungryWeb.Plugs.RequirePublicApiToken
+  end
+
+  # Public (unauthenticated) OpenAPI spec + Swagger UI for the public API.
+  pipeline :api_docs do
+    plug :accepts, ["html", "json"]
+  end
+
   scope "/api", MehungryWeb.Api do
     pipe_through :api
 
     post "/parser/parse", ParserController, :parse
+  end
+
+  scope "/api/docs", MehungryWeb.Api do
+    pipe_through :api_docs
+
+    get "/", DocsController, :ui
+    get "/openapi.json", DocsController, :openapi
+  end
+
+  scope "/api", MehungryWeb.Api do
+    pipe_through :public_api
+
+    get "/foundemental_foods", FoundementalFoodController, :index
   end
 
   scope "/", MehungryWeb do

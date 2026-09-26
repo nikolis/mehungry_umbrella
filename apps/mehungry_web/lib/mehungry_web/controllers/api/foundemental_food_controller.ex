@@ -4,9 +4,11 @@ defmodule MehungryWeb.Api.FoundementalFoodController do
   stored data for each entry.
 
       GET /api/foundemental_foods
+      Authorization: Bearer <PUBLIC_API_TOKEN>
 
-  Returns `{"data": [%{id, name, variety, alternative_name, scientific_name,
-  family, inserted_at, updated_at}, …]}`, name-ordered.
+  Token-guarded by `MehungryWeb.Plugs.RequirePublicApiToken`. Returns
+  `{"data": [%{id, name, variety, alternative_name, scientific_name, family,
+  inserted_at, updated_at}, …]}`, name-ordered.
   """
   use MehungryWeb, :controller
 

@@ -116,3 +116,7 @@ config :phoenix, :stacktrace_depth, 20
 # Dummy token so the Prometheus /metrics endpoint is scrapeable locally.
 # Override in prod via the METRICS_API_TOKEN env var (see runtime.exs).
 config :mehungry, :metrics_api_token, "dev-metrics-token"
+
+# Dummy token for the public system-integration API in dev.
+# Override in prod via the PUBLIC_API_TOKEN env var (see runtime.exs).
+config :mehungry, :public_api_token, "dev-public-api-token"
