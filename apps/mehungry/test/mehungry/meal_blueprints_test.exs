@@ -90,7 +90,10 @@ defmodule Mehungry.MealBlueprintsTest do
         end)
 
       assert {:ok, bp} = MealBlueprints.create_blueprint(attrs)
-      first_meal = MealBlueprints.get_blueprint!(user.id, bp.id).days |> hd() |> Map.fetch!(:meals) |> hd()
+
+      first_meal =
+        MealBlueprints.get_blueprint!(user.id, bp.id).days |> hd() |> Map.fetch!(:meals) |> hd()
+
       assert {first_meal.protein_pct, first_meal.carbs_pct, first_meal.fats_pct} == {40, 35, 25}
     end
 
@@ -150,13 +153,15 @@ defmodule Mehungry.MealBlueprintsTest do
       {:ok, _} =
         Mehungry.Health.add_recommendation(condition.id, good.id, %{
           recommendation: "encourage",
-          source: "manual"
+          source: "manual",
+          source_reference: %{"label" => "Clinical note", "url" => "https://example.org"}
         })
 
       {:ok, _} =
         Mehungry.Health.add_recommendation(condition.id, bad.id, %{
           recommendation: "avoid",
-          source: "manual"
+          source: "manual",
+          source_reference: %{"label" => "Clinical note", "url" => "https://example.org"}
         })
 
       assert %{required: ["Curcumin"], avoid: ["Fructan"]} =
@@ -164,6 +169,32 @@ defmodule Mehungry.MealBlueprintsTest do
 
       assert %{required: [], avoid: []} =
                MealBlueprints.recommended_compounds_for_condition(nil)
+    end
+
+    test "recommended_nutrients_for_condition buckets by recommendation direction" do
+      {:ok, condition} = Mehungry.Health.create_condition(%{name: "Anti-Inflammatory"})
+
+      ref = %{"label" => "Guideline", "url" => "https://example.org"}
+
+      {:ok, _} =
+        Mehungry.Health.add_nutrient_recommendation(condition.id, "Omega-3", %{
+          recommendation: "encourage",
+          source: "guideline",
+          source_reference: ref
+        })
+
+      {:ok, _} =
+        Mehungry.Health.add_nutrient_recommendation(condition.id, "Saturated Fat", %{
+          recommendation: "limit",
+          source: "guideline",
+          source_reference: ref
+        })
+
+      assert %{required: ["Omega-3"], avoid: ["Saturated Fat"]} =
+               MealBlueprints.recommended_nutrients_for_condition(condition.id)
+
+      assert %{required: [], avoid: []} =
+               MealBlueprints.recommended_nutrients_for_condition(nil)
     end
 
     test "stores an optional blueprint-level condition" do
@@ -408,11 +439,13 @@ defmodule Mehungry.MealBlueprintsTest do
 
       meals = MealBlueprints.list_plan_meals(plan.id)
       recipe_row = Enum.find(meals, &(&1.recipe_id == recipe.id))
-      ingredient_row = Enum.find(meals, &(&1.ingredient_id == ingredient.id))
+      ingredient_row = Enum.find(meals, &(&1.recipe_id == nil))
+      [child] = ingredient_row.ingredients
 
       assert recipe_row.recipe.title == recipe.title
-      assert ingredient_row.ingredient.name == "Almonds"
-      assert ingredient_row.measurement_unit.id == mu.id
+      assert child.ingredient.id == ingredient.id
+      assert child.ingredient.name == "Almonds"
+      assert child.measurement_unit.id == mu.id
     end
 
     test "import_plan_to_calendar/3 creates calendar meals tagged to the plan and marks imported" do
@@ -451,8 +484,11 @@ defmodule Mehungry.MealBlueprintsTest do
 
       {:ok, _plan} = MealBlueprints.store_plan_meals(plan, [recipe_entry(recipe)])
 
-      assert {:ok, 1, 0, 0} = MealBlueprints.import_plan_to_calendar(user.id, plan, ~D[2026-10-05])
-      assert {:ok, 1, 0, 0} = MealBlueprints.import_plan_to_calendar(user.id, plan, ~D[2026-10-12])
+      assert {:ok, 1, 0, 0} =
+               MealBlueprints.import_plan_to_calendar(user.id, plan, ~D[2026-10-05])
+
+      assert {:ok, 1, 0, 0} =
+               MealBlueprints.import_plan_to_calendar(user.id, plan, ~D[2026-10-12])
 
       assert length(Mehungry.History.list_history_user_meals_for_user(user.id)) == 2
     end
@@ -571,8 +607,15 @@ defmodule Mehungry.MealBlueprintsTest do
       {:ok, a} = create_default(user, "Same Name")
       {:ok, b} = create_default(user, "Same Name")
 
-      {:ok, a} = MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, a.id), %{visibility: "public"})
-      {:ok, b} = MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, b.id), %{visibility: "public"})
+      {:ok, a} =
+        MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, a.id), %{
+          visibility: "public"
+        })
+
+      {:ok, b} =
+        MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, b.id), %{
+          visibility: "public"
+        })
 
       assert a.slug != b.slug
     end
@@ -594,7 +637,12 @@ defmodule Mehungry.MealBlueprintsTest do
   describe "public reads" do
     defp make_public(user, name) do
       {:ok, bp} = create_default(user, name)
-      {:ok, public} = MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, bp.id), %{visibility: "public"})
+
+      {:ok, public} =
+        MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, bp.id), %{
+          visibility: "public"
+        })
+
       public
     end
 
@@ -611,7 +659,10 @@ defmodule Mehungry.MealBlueprintsTest do
       user = user_fixture()
       {:ok, bp} = create_default(user, "Private One")
       # force a slug without publishing
-      {:ok, _} = MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, bp.id), %{description: "x"})
+      {:ok, _} =
+        MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(user.id, bp.id), %{
+          description: "x"
+        })
 
       assert_raise Ecto.NoResultsError, fn ->
         MealBlueprints.get_public_blueprint_by_slug!("does-not-exist")
@@ -693,9 +744,38 @@ defmodule Mehungry.MealBlueprintsTest do
       {:ok, _} = MealBlueprints.store_plan_meals(plan, [recipe_entry(recipe)])
       [meal] = MealBlueprints.list_plan_meals(plan.id)
 
-      {:ok, updated} = MealBlueprints.update_plan_meal(meal, %{recipe_id: other.id, cooking_portions: 3})
+      {:ok, {updated, _plan}} =
+        MealBlueprints.update_plan_meal(meal, %{recipe_id: other.id, cooking_portions: 3})
+
       assert updated.recipe_id == other.id
       assert updated.cooking_portions == 3
+    end
+
+    test "update_plan_meal/2 gives a meal several ingredients (recipe kept)" do
+      user = user_fixture()
+      {:ok, bp} = create_default(user)
+      {:ok, plan} = MealBlueprints.create_plan(plan_attrs(user, bp))
+      recipe = recipe_fixture(user)
+      mu = measurement_unit_fixture()
+      rice = ingredient_fixture(%{name: "Brown rice"})
+      yogurt = ingredient_fixture(%{name: "Yogurt"})
+
+      {:ok, _} = MealBlueprints.store_plan_meals(plan, [recipe_entry(recipe)])
+      [meal] = MealBlueprints.list_plan_meals(plan.id)
+
+      {:ok, _} =
+        MealBlueprints.update_plan_meal(meal, %{
+          recipe_id: recipe.id,
+          ingredients: [
+            %{ingredient_id: rice.id, quantity: 80.0, measurement_unit_id: mu.id},
+            %{ingredient_id: yogurt.id, quantity: 150.0, measurement_unit_id: mu.id}
+          ]
+        })
+
+      reloaded = MealBlueprints.get_plan_meal!(user.id, meal.id)
+      assert reloaded.recipe_id == recipe.id
+      names = reloaded.ingredients |> Enum.map(& &1.ingredient.name) |> Enum.sort()
+      assert names == ["Brown rice", "Yogurt"]
     end
 
     test "get_plan_meal!/2 is owner-scoped" do

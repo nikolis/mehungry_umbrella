@@ -32,13 +32,14 @@ defmodule Mehungry.Science.RunReconciler do
   require Logger
 
   alias Mehungry.Repo
-  alias Mehungry.Literature.{AnnotationRuns, CrawlRuns}
+  alias Mehungry.Literature.{AnnotationRuns, CrawlRuns, ConditionCrawlRuns}
   alias Mehungry.Food.CandidateDerivationRuns
   alias Mehungry.Health.RecommendationDerivationRuns
 
   # {run table, Oban worker (as stored — no "Elixir." prefix), run module with mark_failed/2}
   @stages [
     {"literature_crawl_runs", "Mehungry.ObanWorkers.LiteratureCrawlWorker", CrawlRuns},
+    {"condition_crawl_runs", "Mehungry.ObanWorkers.ConditionCrawlWorker", ConditionCrawlRuns},
     {"pubtator_annotation_runs", "Mehungry.ObanWorkers.PubTatorAnnotationWorker", AnnotationRuns},
     {"candidate_derivation_runs", "Mehungry.ObanWorkers.CompoundCandidateDerivationWorker",
      CandidateDerivationRuns},

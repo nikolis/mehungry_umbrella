@@ -12,7 +12,7 @@ defmodule Mehungry.Food.SpeciesCompoundRelationship do
 
   import Ecto.Changeset
 
-  alias Mehungry.Food.{Compound, FoundementalFoodSpecies}
+  alias Mehungry.Food.{Compound, FoundementalFoodSpecies, SpeciesCompoundRelationshipStudy}
 
   @relationship_types ~w(contains high_in low_in trace absent)
   @sources ~w(manual ai literature external_db)
@@ -25,6 +25,12 @@ defmodule Mehungry.Food.SpeciesCompoundRelationship do
 
     belongs_to :species, FoundementalFoodSpecies, foreign_key: :foundemental_species_id
     belongs_to :compound, Compound
+
+    # Frozen PubMed provenance, populated once at promotion (never by re-derivation).
+    has_many :relationship_studies, SpeciesCompoundRelationshipStudy,
+      foreign_key: :relationship_id
+
+    has_many :studies, through: [:relationship_studies, :study]
 
     timestamps()
   end

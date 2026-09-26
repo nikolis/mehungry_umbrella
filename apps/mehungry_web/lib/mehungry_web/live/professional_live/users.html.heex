@@ -202,7 +202,9 @@
                 <span>ID: #{user.id}</span>
                 <span>Joined: {Calendar.strftime(user.inserted_at, "%Y-%m-%d")}</span>
                 <% recipe_count = Map.get(@recipe_counts, user.id, 0) %>
-                <span class={if recipe_count == 0, do: "text-parchment-dim", else: "text-parchment-dim"}>
+                <span class={
+                  if recipe_count == 0, do: "text-parchment-dim", else: "text-parchment-dim"
+                }>
                   Recipes: {recipe_count}
                 </span>
                 <%= if sub && sub.tier == "pro" && sub.period_end do %>

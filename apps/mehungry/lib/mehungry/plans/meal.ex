@@ -8,11 +8,12 @@ defmodule Mehungry.Plans.Meal do
   import Ecto.Changeset
 
   schema "meals" do
-    field :meal_note, :string
-    field :meal_title, :string
+    field(:meal_note, :string)
+    field(:meal_title, :string)
 
-    belongs_to :recipe, Recipe
-    belongs_to :daily_meal_plan, DailyMealPlan
+    belongs_to(:recipe, Recipe)
+    belongs_to(:daily_meal_plan, DailyMealPlan)
+
     timestamps()
   end
 

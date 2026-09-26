@@ -92,7 +92,12 @@ defmodule MehungryWeb.AuthController do
 
               Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
                 Accounts.put_user_token(user, token, "facebook")
-                Mehungry.Social.Facebook.get_user_pages(user, token, auth.extra.raw_info.user["id"])
+
+                Mehungry.Social.Facebook.get_user_pages(
+                  user,
+                  token,
+                  auth.extra.raw_info.user["id"]
+                )
               end)
 
               conn

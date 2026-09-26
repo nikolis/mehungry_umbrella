@@ -12,7 +12,13 @@ defmodule Mehungry.Food.SpeciesCompounds do
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
-  alias Mehungry.Food.{Compound, SpeciesCompoundRelationship}
+  alias Mehungry.Food.{
+    Compound,
+    SpeciesCompoundRelationship,
+    SpeciesCompoundRelationshipStudy
+  }
+
+  alias Mehungry.Literature.ScientificStudy
 
   @doc "Find-or-refresh a curated species↔compound fact on its natural key."
   def upsert_species_relationship(attrs) do
@@ -60,6 +66,29 @@ defmodule Mehungry.Food.SpeciesCompounds do
     |> Enum.sort_by(& &1.name)
   end
 
+  @doc """
+  Distinct dietary-relevant compounds linked to at least one species by a
+  non-`absent` relationship — the compounds worth offering as a facet on the
+  `/foods` filter (filtering by a compound no species carries would only ever yield
+  nothing). Name-ordered.
+  """
+  def list_linked_compounds do
+    Repo.all(
+      from(c in Compound,
+        as: :compound,
+        where:
+          c.dietary_relevance != "non_dietary" and
+            exists(
+              from(r in SpeciesCompoundRelationship,
+                where:
+                  r.compound_id == parent_as(:compound).id and r.relationship_type != "absent"
+              )
+            ),
+        order_by: [asc: c.name]
+      )
+    )
+  end
+
   @doc "All species linked to a compound (via the relationship rows)."
   def list_species_for_compound(compound_id) do
     Repo.all(
@@ -78,6 +107,23 @@ defmodule Mehungry.Food.SpeciesCompounds do
         where: r.foundemental_species_id == ^species_id,
         order_by: [asc: r.id],
         preload: [:compound]
+      )
+    )
+  end
+
+  @doc """
+  The reference studies (PubMed papers) cited by a single species↔compound
+  relationship, id-ascending. Loaded on demand (e.g. when the evidence modal is
+  opened) so the species page's initial paint carries no study rows.
+  """
+  def list_relationship_studies(relationship_id) do
+    Repo.all(
+      from(rs in SpeciesCompoundRelationshipStudy,
+        join: s in ScientificStudy,
+        on: s.id == rs.study_id,
+        where: rs.relationship_id == ^relationship_id,
+        order_by: [asc: s.id],
+        select: s
       )
     )
   end

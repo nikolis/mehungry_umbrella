@@ -21,6 +21,11 @@ defmodule Mehungry.Food.Compound do
   alias Mehungry.Food.{CompoundIdentifier, IngredientCompoundRelationship}
 
   @compound_types ~w(oxalate lectin phytate histamine polyphenol fodmap purine salicylate other)
+  # Curatable gate for whether a compound may ever become a dietary fact. `pending`
+  # (default) is allowed but unreviewed; `non_dietary` is excluded everywhere
+  # (candidate derivation + health advice); `dietary` is an admin-confirmed
+  # constituent that skips the LLM plausibility gate.
+  @dietary_relevance_values ~w(dietary non_dietary pending)
 
   @type t :: %__MODULE__{}
 
@@ -32,6 +37,7 @@ defmodule Mehungry.Food.Compound do
     # iupac_name…). Not identifiers — those are rows in compound_identifiers.
     field :properties, :map, default: %{}
     field :description, :string
+    field :dietary_relevance, :string, default: "pending"
 
     has_many :identifiers, CompoundIdentifier
     has_many :ingredient_compound_relationships, IngredientCompoundRelationship
@@ -52,10 +58,12 @@ defmodule Mehungry.Food.Compound do
       :compound_type,
       :synonyms,
       :properties,
-      :description
+      :description,
+      :dietary_relevance
     ])
     |> validate_required([:name, :compound_type])
     |> validate_inclusion(:compound_type, @compound_types)
+    |> validate_inclusion(:dietary_relevance, @dietary_relevance_values)
     |> unique_constraint(:name)
   end
 end

@@ -303,7 +303,10 @@ defmodule Mehungry.Food do
   defdelegate upsert_compound_identifier(attrs), to: Compounds
   defdelegate list_compound_identifiers(compound_id), to: Compounds
   defdelegate list_compounds(), to: Compounds
+  defdelegate family_labels(), to: Compounds
   defdelegate list_compounds_by_type(compound_type), to: Compounds
+  defdelegate set_dietary_relevance(compound_id, relevance), to: Compounds
+  defdelegate list_compounds_by_relevance(relevance), to: Compounds
   defdelegate link_compound(attrs), to: Compounds
   defdelegate upsert_compound_relationship(attrs), to: Compounds
   defdelegate delete_compound_relationship(relationship), to: Compounds
@@ -319,6 +322,7 @@ defmodule Mehungry.Food do
   defdelegate list_compounds_for_species(species_id), to: SpeciesCompounds
   defdelegate list_positive_compounds_for_species(species_id), to: SpeciesCompounds
   defdelegate list_species_for_compound(compound_id), to: SpeciesCompounds
+  defdelegate list_linked_compounds(), to: SpeciesCompounds
 
   # ── Compound measurements (immutable quantitative facts) ───────────────────
 
@@ -361,7 +365,12 @@ defmodule Mehungry.Food do
   defdelegate get_candidate!(id), to: CompoundCandidates
   defdelegate candidate_derivation_progress(), to: CompoundCandidates
   defdelegate non_dietary_compound_names(), to: CompoundCandidates
+  defdelegate purge_non_dietary(), to: CompoundCandidates
   defdelegate purge_blocklisted(), to: CompoundCandidates
+  defdelegate enqueue_fact_audit(), to: CompoundCandidates
+  defdelegate audit_promoted_facts_batch(limit), to: CompoundCandidates
+  defdelegate count_promoted_facts_to_audit(), to: CompoundCandidates
+  defdelegate list_flagged_facts(opts \\ []), to: CompoundCandidates
   defdelegate count_relationships(), to: SpeciesCompounds
   defdelegate list_relationships_page(opts \\ []), to: SpeciesCompounds
 
@@ -449,4 +458,6 @@ defmodule Mehungry.Food do
 
   defdelegate list_species_paginated_translated(language_name, cursor_after \\ nil),
     to: FoundementalFoods
+
+  defdelegate filter_species(opts), to: FoundementalFoods
 end

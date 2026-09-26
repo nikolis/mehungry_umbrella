@@ -22,7 +22,8 @@ defmodule MehungryWeb.BrowserLiveTest do
     {:ok, _} =
       Health.add_recommendation(kidney.id, citrate.id, %{
         recommendation: "encourage",
-        source: "guideline"
+        source: "guideline",
+        source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
       })
 
     lemon = ingredient_fixture(%{name: "lemon_xyz"})
@@ -443,7 +444,8 @@ defmodule MehungryWeb.BrowserLiveTest do
       {:ok, _} =
         Health.add_recommendation(diabetes.id, fiber.id, %{
           recommendation: "encourage",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       {:ok, view, _html} = live(conn, ~p"/browse")

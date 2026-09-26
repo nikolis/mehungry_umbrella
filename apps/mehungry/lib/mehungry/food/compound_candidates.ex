@@ -18,17 +18,22 @@ defmodule Mehungry.Food.CompoundCandidates do
 
   import Ecto.Query, warn: false
 
+  require Logger
+
   alias Mehungry.Repo
   alias Mehungry.Literature
 
   alias Mehungry.Food.Compound
   alias Mehungry.Food.CompoundMeasurement
+  alias Mehungry.Food.CompoundPlausibility
   alias Mehungry.Food.EvidenceAggregation
   alias Mehungry.Food.FoundementalFood
+  alias Mehungry.Food.FoundementalFoodSpecies
   alias Mehungry.Food.SpeciesCompounds
   alias Mehungry.Food.SpeciesCompoundCandidate, as: Candidate
   alias Mehungry.Food.SpeciesCompoundCandidateStudy
   alias Mehungry.Food.SpeciesCompoundRelationship
+  alias Mehungry.Food.SpeciesCompoundRelationshipStudy
 
   # Co-occurrence studies at which the literature component saturates to 1.0.
   @cooccurrence_saturation 5
@@ -215,15 +220,189 @@ defmodule Mehungry.Food.CompoundCandidates do
   defp maybe_auto_promote(%Candidate{status: "pending", evidence_score: score} = candidate, opts) do
     threshold = Keyword.get(opts, :threshold, promotion_threshold())
 
-    if is_number(score) and score >= threshold do
-      {:ok, promoted} = do_promote(candidate, "literature")
-      {:ok, %{candidate: promoted, promoted: true}}
-    else
-      {:ok, %{candidate: candidate, promoted: false}}
+    cond do
+      not (is_number(score) and score >= threshold) ->
+        {:ok, %{candidate: candidate, promoted: false}}
+
+      true ->
+        case plausibility_gate(candidate, opts) do
+          {:promote, candidate} ->
+            {:ok, promoted} = do_promote(candidate, "literature")
+            {:ok, %{candidate: promoted, promoted: true}}
+
+          {:hold, candidate} ->
+            {:ok, %{candidate: candidate, promoted: false}}
+        end
     end
   end
 
   defp maybe_auto_promote(candidate, _opts), do: {:ok, %{candidate: candidate, promoted: false}}
+
+  # ── Plausibility gate (the automated "reality check" on auto-promotion) ─────
+
+  # Decide whether a ≥-threshold candidate may auto-promote into a curated fact:
+  #   * compound curated `dietary`     → trusted, skip the LLM and promote;
+  #   * compound curated `non_dietary` → never promote (defensive; also excluded
+  #     from `evidence_pairs/0` upstream);
+  #   * otherwise run the LLM judge ONCE (verdict cached on the candidate) — only a
+  #     `:plausible` verdict promotes. `:implausible` / `:uncertain` / any judge
+  #     error / no API key are fail-safe: hold the candidate `pending` for review.
+  # Never raises: the judge is wrapped so an AI fault can't bubble into the
+  # derivation worker and poison-pill the single-threaded `:imports` chain.
+  defp plausibility_gate(candidate, opts) do
+    if Keyword.get(opts, :skip_plausibility, false) do
+      {:promote, candidate}
+    else
+      do_plausibility_gate(candidate, Repo.get(Compound, candidate.compound_id), opts)
+    end
+  end
+
+  defp do_plausibility_gate(candidate, %Compound{dietary_relevance: "dietary"}, _opts),
+    do: {:promote, candidate}
+
+  defp do_plausibility_gate(candidate, %Compound{dietary_relevance: "non_dietary"}, _opts),
+    do: {:hold, candidate}
+
+  defp do_plausibility_gate(candidate, nil, _opts), do: {:hold, candidate}
+
+  # Already judged — reuse the cached verdict instead of re-calling the model.
+  defp do_plausibility_gate(%Candidate{plausibility_verdict: "plausible"} = candidate, _c, _opts),
+    do: {:promote, candidate}
+
+  defp do_plausibility_gate(%Candidate{plausibility_verdict: v} = candidate, _c, _opts)
+       when v in ["implausible", "uncertain"],
+       do: {:hold, candidate}
+
+  defp do_plausibility_gate(candidate, compound, _opts) do
+    species = Repo.get(FoundementalFoodSpecies, candidate.foundemental_species_id)
+    studies = Repo.preload(candidate, :studies).studies
+
+    case run_judge(species, compound, studies) do
+      {:ok, %{verdict: verdict, reason: reason}} ->
+        {:ok, candidate} = store_plausibility(candidate, verdict, reason)
+        if verdict == :plausible, do: {:promote, candidate}, else: {:hold, candidate}
+
+      {:error, _reason} ->
+        # Fail-safe: don't cache, hold for review; a later derive can retry the judge.
+        {:hold, candidate}
+    end
+  end
+
+  defp run_judge(species, compound, studies) do
+    judge = Application.get_env(:mehungry, :compound_plausibility_judge, CompoundPlausibility)
+    judge.judge(species, compound, studies)
+  rescue
+    e ->
+      Logger.warning("compound plausibility judge crashed: #{inspect(e)}")
+      {:error, :judge_crashed}
+  catch
+    kind, reason ->
+      Logger.warning("compound plausibility judge threw: #{inspect({kind, reason})}")
+      {:error, :judge_threw}
+  end
+
+  defp store_plausibility(candidate, verdict, reason) do
+    candidate
+    |> Candidate.changeset(%{
+      plausibility_verdict: to_string(verdict),
+      plausibility_reason: reason,
+      plausibility_checked_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+    })
+    |> Repo.update()
+  end
+
+  # ── Audit of already-promoted literature facts ──────────────────────────────
+  #
+  # The plausibility gate only guards *new* auto-promotions; facts promoted before
+  # the gate existed were never judged. This audit re-runs the same judge over those
+  # facts and, for implausible ones, records the verdict on the backing candidate so
+  # they surface in the "Flagged facts" review list. It only FLAGS — never deletes; a
+  # human decides via Undo or "Non-dietary".
+
+  # Promoted `literature` candidates on `pending`-relevance compounds the judge has
+  # never seen (`plausibility_verdict` is nil) — the pre-gate facts still to audit.
+  defp facts_to_audit_query do
+    from(c in Candidate,
+      join: rel in SpeciesCompoundRelationship,
+      on: rel.id == c.promoted_relationship_id,
+      join: cmp in Compound,
+      on: cmp.id == c.compound_id,
+      where: c.status == "promoted" and is_nil(c.plausibility_verdict),
+      where: rel.source == "literature" and cmp.dietary_relevance == "pending"
+    )
+  end
+
+  @doc "How many promoted literature facts still need a plausibility audit."
+  def count_promoted_facts_to_audit,
+    do: Repo.aggregate(facts_to_audit_query(), :count, :id)
+
+  @doc "A batch of un-audited promoted literature facts (with assocs), newest first."
+  def list_promoted_facts_to_audit(limit) do
+    Repo.all(
+      from(c in facts_to_audit_query(),
+        order_by: [desc: c.id],
+        limit: ^limit,
+        preload: [:species, :compound, :studies]
+      )
+    )
+  end
+
+  @doc """
+  Re-judge one promoted fact's `(species, compound)` and store the verdict on its
+  candidate. Never promotes/deletes — audit only records the verdict. Returns
+  `{:ok, verdict}` or `{:error, reason}` (judge unavailable: leaves it un-audited).
+  """
+  def audit_promoted_fact(%Candidate{} = candidate) do
+    candidate = Repo.preload(candidate, [:species, :compound, :studies])
+
+    case run_judge(candidate.species, candidate.compound, candidate.studies) do
+      {:ok, %{verdict: verdict, reason: reason}} ->
+        {:ok, _} = store_plausibility(candidate, verdict, reason)
+        {:ok, verdict}
+
+      {:error, _} = err ->
+        err
+    end
+  end
+
+  @doc """
+  Audit up to `limit` un-audited promoted literature facts. Returns
+  `{audited, flagged}` — `audited` counts those that got a verdict this pass (judge
+  errors are skipped for a later pass), `flagged` those judged `implausible`.
+  """
+  def audit_promoted_facts_batch(limit) do
+    list_promoted_facts_to_audit(limit)
+    |> Enum.reduce({0, 0}, fn candidate, {audited, flagged} ->
+      case audit_promoted_fact(candidate) do
+        {:ok, :implausible} -> {audited + 1, flagged + 1}
+        {:ok, _} -> {audited + 1, flagged}
+        {:error, _} -> {audited, flagged}
+      end
+    end)
+  end
+
+  @doc "Promoted facts the audit judged `implausible` — the review queue for existing facts."
+  def list_flagged_facts(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 50)
+
+    Repo.all(
+      from(c in Candidate,
+        join: rel in SpeciesCompoundRelationship,
+        on: rel.id == c.promoted_relationship_id,
+        where: c.status == "promoted" and c.plausibility_verdict == "implausible",
+        order_by: [desc: c.id],
+        limit: ^limit,
+        preload: [:species, :compound]
+      )
+    )
+  end
+
+  @doc "Enqueue the fact-audit worker to re-judge un-audited promoted literature facts."
+  def enqueue_fact_audit do
+    %{}
+    |> Mehungry.ObanWorkers.CompoundFactAuditWorker.new()
+    |> Oban.insert()
+  end
 
   # ── Promotion / review ────────────────────────────────────────────────────
 
@@ -248,9 +427,37 @@ defmodule Mehungry.Food.CompoundCandidates do
         notes: promotion_note(candidate)
       })
 
+    freeze_relationship_studies(relationship.id, candidate.id)
+
     candidate
     |> Candidate.changeset(%{status: "promoted", promoted_relationship_id: relationship.id})
     |> Repo.update()
+  end
+
+  # Copy the candidate's co-occurrence reference studies onto the curated fact as
+  # frozen provenance. Idempotent (`on_conflict: :nothing`); never rewritten by
+  # re-derivation, so the fact keeps citing the papers it was promoted from.
+  defp freeze_relationship_studies(relationship_id, candidate_id) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    study_ids =
+      Repo.all(
+        from(cs in SpeciesCompoundCandidateStudy,
+          where: cs.candidate_id == ^candidate_id,
+          select: cs.study_id
+        )
+      )
+
+    entries =
+      Enum.map(study_ids, fn study_id ->
+        %{relationship_id: relationship_id, study_id: study_id, inserted_at: now, updated_at: now}
+      end)
+
+    if entries != [] do
+      Repo.insert_all(SpeciesCompoundRelationshipStudy, entries, on_conflict: :nothing)
+    end
+
+    :ok
   end
 
   # Manual-origin candidates promote as a manual fact; derived ones as literature.
@@ -316,34 +523,30 @@ defmodule Mehungry.Food.CompoundCandidates do
     )
   end
 
-  # ── Non-dietary compound blocklist ──────────────────────────────────────────
+  # ── Non-dietary compounds (the curatable dietary-relevance gate) ─────────────
 
-  # Assay reagents / non-food chemicals PubTator extracts as "chemicals" that must
-  # never become dietary facts. Overridable via `config :mehungry, :non_dietary_compounds`.
+  # Seed list of assay reagents / solvents / non-specific class terms PubTator
+  # extracts as "chemicals" that must never become dietary facts. This is only the
+  # migration/backfill seed — the source of truth is now each compound's
+  # `dietary_relevance` attribute. Overridable via `config :mehungry, :non_dietary_compounds`.
   @default_non_dietary ~w(DPPH ABTS TPTZ Trolox FRAP ORAC)
 
-  @doc "Names of assay reagents / non-food chemicals that must never become dietary facts."
+  @doc "Seed names of non-dietary compounds (backfill source for `dietary_relevance`)."
   def non_dietary_compound_names do
     Application.get_env(:mehungry, :non_dietary_compounds, @default_non_dietary)
   end
 
-  @doc "Compound ids whose name matches the non-dietary blocklist (case-insensitive)."
+  @doc "Compound ids flagged `non_dietary` — the curated exclusion set."
   def blocklisted_compound_ids do
-    case Enum.map(non_dietary_compound_names(), &String.downcase/1) do
-      [] ->
-        []
-
-      names ->
-        Repo.all(from(c in Compound, where: fragment("lower(?)", c.name) in ^names, select: c.id))
-    end
+    Repo.all(from(c in Compound, where: c.dietary_relevance == "non_dietary", select: c.id))
   end
 
   @doc """
-  Remove any candidates and curated relationships for blocklisted compounds. Runs at
-  the start of each derivation so a newly-blocklisted reagent (e.g. DPPH) is purged.
+  Remove any candidates and curated relationships for `non_dietary` compounds. Runs at
+  the start of each derivation so a newly-flagged compound (e.g. Ethanol) is purged.
   Returns `{relationships_deleted, candidates_deleted}`.
   """
-  def purge_blocklisted do
+  def purge_non_dietary do
     case blocklisted_compound_ids() do
       [] ->
         {0, 0}
@@ -356,6 +559,9 @@ defmodule Mehungry.Food.CompoundCandidates do
         {rels, cands}
     end
   end
+
+  @doc "Deprecated alias for `purge_non_dietary/0`."
+  def purge_blocklisted, do: purge_non_dietary()
 
   # ── Config ────────────────────────────────────────────────────────────────
 
@@ -418,8 +624,8 @@ defmodule Mehungry.Food.CompoundCandidates do
 
   @doc "Open a tracked derivation run and enqueue the first batch. Returns `{:ok, run}`."
   def enqueue_candidate_derivation do
-    # Clear out any facts/candidates for newly-blocklisted reagents before deriving.
-    purge_blocklisted()
+    # Clear out any facts/candidates for newly-flagged non-dietary compounds first.
+    purge_non_dietary()
     run = Mehungry.Food.CandidateDerivationRuns.start_run()
 
     {:ok, _job} =

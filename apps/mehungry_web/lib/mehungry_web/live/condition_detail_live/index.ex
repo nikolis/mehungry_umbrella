@@ -44,6 +44,21 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
         # (compounds, foods, recipes) rather than loading skeletons.
         species = Health.species_for_condition(condition.id, nil, language)
 
+        # Phase-aware layer (decoupled): a condition's disease states, the default
+        # phase, its phase-specific advice, and the studies discovered about it.
+        states = Health.list_states_for_condition(condition.id)
+        default_state = Enum.find(states, & &1.is_default)
+
+        state_recommendations =
+          Health.state_recommendations_for_condition(
+            condition.id,
+            default_state && default_state.id,
+            language
+          )
+
+        condition_studies =
+          condition.id |> Mehungry.Literature.list_studies_for_condition() |> Enum.take(30)
+
         page_title = seo_title(condition)
         page_description = seo_description(condition)
 
@@ -59,6 +74,10 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
          )
          |> assign(:species, AsyncResult.ok(species))
          |> assign(:recommended_recipes, AsyncResult.ok(recommended_recipes(species)))
+         |> assign(:states, states)
+         |> assign(:selected_state, default_state)
+         |> assign(:state_recommendations, state_recommendations)
+         |> assign(:condition_studies, condition_studies)
          |> assign(:page_title, page_title)
          |> assign(:page_description, page_description)
          |> assign(
@@ -67,6 +86,20 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
          )}
     end
   end
+
+  # Group phase-aware recommendations by direction, in the canonical display order —
+  # mirrors grouped_recommendations/1 for the general layer.
+  defp grouped_state_recommendations(recommendations) do
+    recommendations
+    |> Enum.group_by(& &1.recommendation)
+    |> Enum.sort_by(fn {rec, _} -> Enum.find_index(@recommendation_order, &(&1 == rec)) || 99 end)
+  end
+
+  # A human label for a phase-aware recommendation's target (compound / nutrient / pattern).
+  defp state_rec_target(%{compound: %{name: name}}) when is_binary(name), do: name
+  defp state_rec_target(%{nutrient_name: name}) when is_binary(name) and name != "", do: name
+  defp state_rec_target(%{raw_food_term: term}) when is_binary(term) and term != "", do: term
+  defp state_rec_target(_), do: "—"
 
   # ── SEO title/description ────────────────────────────────────────────────────
   # Lead with the words people actually search ("<condition> diet", "foods to
@@ -156,6 +189,25 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
         {:noreply,
          assign(socket, :current_user_recipes, UserContent.list_user_saved_recipe_ids(user))}
     end
+  end
+
+  # Switch the phase whose phase-specific guidance is shown (decoupled state layer).
+  def handle_event("select_state", %{"state" => slug}, socket) do
+    condition = socket.assigns.condition
+    language = socket.assigns.language
+
+    selected =
+      if slug in [nil, "", "general"],
+        do: nil,
+        else: Enum.find(socket.assigns.states, &(&1.slug == slug))
+
+    recs =
+      Health.state_recommendations_for_condition(condition.id, selected && selected.id, language)
+
+    {:noreply,
+     socket
+     |> assign(:selected_state, selected)
+     |> assign(:state_recommendations, recs)}
   end
 
   # Saved-recipe ids for the current user (empty for guests).
@@ -320,6 +372,27 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
       idx -> idx
     end
   end
+
+  @doc "Canonical PubMed URL for a study's PMID."
+  def pubmed_url(pmid), do: "https://pubmed.ncbi.nlm.nih.gov/#{pmid}/"
+
+  @doc "Display label for a reference study — its title, or a PMID fallback."
+  def study_label(%{title: title}) when is_binary(title) and title != "", do: title
+  def study_label(%{pmid: pmid}), do: "PMID #{pmid}"
+
+  @doc """
+  The clickable href for a structured `source_reference` (manual/guideline citation):
+  its explicit `url`, else a PubMed link if it carries a `pmid`, else `nil`.
+  """
+  def reference_href(%{"url" => url}) when is_binary(url) and url != "", do: url
+  def reference_href(%{"pmid" => pmid}) when not is_nil(pmid), do: pubmed_url(pmid)
+  def reference_href(_), do: nil
+
+  @doc "Display label for a structured `source_reference`."
+  def reference_label(%{"label" => label}) when is_binary(label) and label != "", do: label
+  def reference_label(%{"url" => url}) when is_binary(url) and url != "", do: url
+  def reference_label(%{"pmid" => pmid}) when not is_nil(pmid), do: "PMID #{pmid}"
+  def reference_label(_), do: gettext("Source")
 
   def recommendation_label("avoid"), do: gettext("Avoid")
   def recommendation_label("limit"), do: gettext("Limit")

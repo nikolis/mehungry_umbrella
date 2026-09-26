@@ -59,7 +59,8 @@ defmodule Mehungry.HealthTest do
           recommendation: "avoid",
           severity: "high",
           evidence_level: "strong",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       assert rec.recommendation == "avoid"
@@ -124,7 +125,8 @@ defmodule Mehungry.HealthTest do
         Health.add_recommendation(kidney.id, oxalate.id, %{
           recommendation: "avoid",
           severity: "moderate",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       # same source → idempotent correction (severity replaced, still one row)
@@ -132,7 +134,8 @@ defmodule Mehungry.HealthTest do
         Health.add_recommendation(kidney.id, oxalate.id, %{
           recommendation: "avoid",
           severity: "high",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       # different source → distinct row
@@ -179,7 +182,8 @@ defmodule Mehungry.HealthTest do
           recommendation: "avoid",
           severity: "high",
           evidence_level: "strong",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       # Species-facts layer: Spinach species high_in Oxalate (with a curated ingredient).
@@ -206,7 +210,8 @@ defmodule Mehungry.HealthTest do
       {:ok, _} =
         Health.add_recommendation(cond.id, purine.id, %{
           recommendation: "limit",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       liver = ingredient_fixture(%{name: "liver"})
@@ -229,13 +234,15 @@ defmodule Mehungry.HealthTest do
       {:ok, _} =
         Health.add_recommendation(kidney.id, citrate.id, %{
           recommendation: "encourage",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       {:ok, _} =
         Health.add_recommendation(kidney.id, oxalate.id, %{
           recommendation: "avoid",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       # Spinach's species carries BOTH compounds → it is encouraged (citrate) AND
@@ -280,7 +287,8 @@ defmodule Mehungry.HealthTest do
         Health.add_recommendation(kidney.id, oxalate.id, %{
           recommendation: "avoid",
           severity: "high",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       spinach = ingredient_fixture(%{name: "spinach"})
@@ -307,7 +315,8 @@ defmodule Mehungry.HealthTest do
       {:ok, _} =
         Health.add_recommendation(kidney.id, oxalate.id, %{
           recommendation: "avoid",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       spinach = ingredient_fixture(%{name: "spinach"})
@@ -330,7 +339,8 @@ defmodule Mehungry.HealthTest do
         Health.add_recommendation(kidney.id, oxalate.id, %{
           recommendation: "avoid",
           severity: "high",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       spinach = ingredient_fixture(%{name: "spinach"})
@@ -356,7 +366,8 @@ defmodule Mehungry.HealthTest do
       {:ok, _} =
         Health.add_recommendation(kidney.id, oxalate.id, %{
           recommendation: "avoid",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       spinach = ingredient_fixture(%{name: "spinach"})
@@ -381,13 +392,15 @@ defmodule Mehungry.HealthTest do
       {:ok, _} =
         Health.add_recommendation(kidney.id, citrate.id, %{
           recommendation: "encourage",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       {:ok, _} =
         Health.add_recommendation(kidney.id, oxalate.id, %{
           recommendation: "avoid",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       lemon = ingredient_fixture(%{name: "lemon"})
@@ -415,7 +428,8 @@ defmodule Mehungry.HealthTest do
       {:ok, _} =
         Health.add_recommendation(gout.id, purine.id, %{
           recommendation: "avoid",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       liver = ingredient_fixture(%{name: "liver"})
@@ -475,7 +489,8 @@ defmodule Mehungry.HealthTest do
       {:ok, _} =
         Health.add_recommendation(kidney.id, oxalate.id, %{
           recommendation: "avoid",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       {:ok, _} =
@@ -497,7 +512,8 @@ defmodule Mehungry.HealthTest do
       {:ok, _} =
         Health.add_recommendation(kidney.id, oxalate.id, %{
           recommendation: "avoid",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       spinach = ingredient_fixture(%{name: "spinach"})
@@ -539,7 +555,8 @@ defmodule Mehungry.HealthTest do
       {:ok, _} =
         Health.add_recommendation(kidney.id, oxalate.id, %{
           recommendation: "avoid",
-          source: "guideline"
+          source: "guideline",
+          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
         })
 
       {:ok, _} =

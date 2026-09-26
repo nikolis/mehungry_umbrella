@@ -19,7 +19,7 @@ defmodule Mehungry.MealBlueprints do
 
   @doc "Lists a user's blueprints, most recent first (lightweight — no deep preload)."
   def list_blueprints_for_user(user_id) do
-    Repo.all(from b in Blueprint, where: b.user_id == ^user_id, order_by: [desc: b.inserted_at])
+    Repo.all(from(b in Blueprint, where: b.user_id == ^user_id, order_by: [desc: b.inserted_at]))
   end
 
   @doc """
@@ -106,9 +106,10 @@ defmodule Mehungry.MealBlueprints do
   def list_public_plans_for_blueprint(blueprint_id) do
     plans =
       Repo.all(
-        from p in BlueprintPlan,
+        from(p in BlueprintPlan,
           where: p.blueprint_id == ^blueprint_id and p.status == "completed",
           order_by: [desc: p.inserted_at]
+        )
       )
 
     Enum.map(plans, fn plan -> %{plan | meals: list_plan_meals(plan.id)} end)
@@ -145,10 +146,11 @@ defmodule Mehungry.MealBlueprints do
 
     counts =
       Repo.all(
-        from p in BlueprintPlan,
+        from(p in BlueprintPlan,
           where: p.blueprint_id in ^ids and p.status == "completed",
           group_by: p.blueprint_id,
           select: {p.blueprint_id, count(p.id)}
+        )
       )
       |> Map.new()
 
@@ -175,11 +177,12 @@ defmodule Mehungry.MealBlueprints do
   @doc "A user's saved blueprints, newest-saved first, condition/owner + `plans_count` loaded."
   def list_saved_blueprints_for_user(user_id) do
     Repo.all(
-      from ub in UserBlueprint,
+      from(ub in UserBlueprint,
         where: ub.user_id == ^user_id,
         order_by: [desc: ub.inserted_at],
         join: b in assoc(ub, :blueprint),
         select: b
+      )
     )
     |> Repo.preload([:condition, user: :professional_profile])
     |> put_plans_count()
@@ -187,14 +190,15 @@ defmodule Mehungry.MealBlueprints do
 
   @doc "The blueprint ids a user has saved."
   def list_saved_blueprint_ids_for_user(user_id) do
-    Repo.all(from ub in UserBlueprint, where: ub.user_id == ^user_id, select: ub.blueprint_id)
+    Repo.all(from(ub in UserBlueprint, where: ub.user_id == ^user_id, select: ub.blueprint_id))
   end
 
   @doc "True if `user_id` has saved `blueprint_id`."
   def blueprint_saved?(user_id, blueprint_id) do
     Repo.exists?(
-      from ub in UserBlueprint,
+      from(ub in UserBlueprint,
         where: ub.user_id == ^user_id and ub.blueprint_id == ^blueprint_id
+      )
     )
   end
 
@@ -225,6 +229,34 @@ defmodule Mehungry.MealBlueprints do
     |> Map.new(fn {k, names} -> {k, Enum.uniq(names)} end)
   end
 
+  @doc """
+  The **nutrient names** a condition recommends, bucketed by direction (via
+  `Health.NutrientRecommendation`) — the nutrient sibling of
+  `recommended_compounds_for_condition/1`, used to auto-suggest the blueprint's
+  `required_nutrients`/`avoid_nutrients` when a disease is selected. `encourage` →
+  `:required`; `avoid`/`limit`/`caution` → `:avoid`; `monitor` ignored. Returns
+  `%{required: [], avoid: []}` for a nil id.
+  """
+  def recommended_nutrients_for_condition(nil), do: %{required: [], avoid: []}
+
+  def recommended_nutrients_for_condition(condition_id) do
+    condition_id
+    |> Mehungry.Health.nutrient_recommendations_for_condition()
+    |> Enum.reduce(%{required: [], avoid: []}, fn rec, acc ->
+      case rec.recommendation do
+        "encourage" ->
+          Map.update!(acc, :required, &(&1 ++ [rec.nutrient_name]))
+
+        d when d in ["avoid", "limit", "caution"] ->
+          Map.update!(acc, :avoid, &(&1 ++ [rec.nutrient_name]))
+
+        _ ->
+          acc
+      end
+    end)
+    |> Map.new(fn {k, names} -> {k, Enum.uniq(names)} end)
+  end
+
   @doc "Builds a `Blueprint` changeset."
   def change_blueprint(%Blueprint{} = blueprint, attrs \\ %{}) do
     Blueprint.changeset(blueprint, attrs)
@@ -239,9 +271,29 @@ defmodule Mehungry.MealBlueprints do
 
   @doc "Updates a blueprint (nested days/meals cast through the changeset)."
   def update_blueprint(%Blueprint{} = blueprint, attrs) do
-    blueprint
-    |> Blueprint.changeset(attrs)
-    |> Repo.update()
+    Mehungry.Repo.transact(fn repo ->
+      changeset =
+        blueprint
+        |> Blueprint.changeset(attrs)
+
+      case Repo.update(changeset) do
+        {:ok, blueprint} ->
+          blueprint = Repo.preload(blueprint, :plans)
+
+          Enum.each(blueprint.plans, fn plan ->
+            compatibility = plan_compatibility(plan.user_id, blueprint.id, plan.id)
+
+            plan
+            |> BlueprintPlan.changeset(%{compatibility: compatibility})
+            |> Repo.update()
+          end)
+
+          {:ok, blueprint}
+
+        {:error, error} ->
+          {:error, error}
+      end
+    end)
   end
 
   @doc "Deletes a blueprint; child days/meals cascade at the DB level."
@@ -372,9 +424,23 @@ defmodule Mehungry.MealBlueprints do
 
   @doc "Updates a generation-run row (status, meals_count, error)."
   def update_plan(%BlueprintPlan{} = plan, attrs) do
-    plan
-    |> BlueprintPlan.changeset(attrs)
-    |> Repo.update()
+    Mehungry.Repo.transact(fn repo ->
+      changeset =
+        plan
+        |> BlueprintPlan.changeset(attrs)
+
+      case Repo.update(changeset) do
+        {:ok, plan} ->
+          compatibility = plan_compatibility(plan.user_id, plan.blueprint_id, plan.id)
+
+          plan
+          |> BlueprintPlan.changeset(%{compatibility: compatibility})
+          |> Repo.update()
+
+        {:error, error} ->
+          {:error, error}
+      end
+    end)
   end
 
   @doc "Deletes a generation-run row; its calendar meals stay (FK nilifies)."
@@ -383,6 +449,11 @@ defmodule Mehungry.MealBlueprints do
   @doc "Owner-scoped fetch of a generation run."
   def get_plan!(user_id, id) do
     Repo.get_by!(BlueprintPlan, id: id, user_id: user_id)
+  end
+
+  @doc "Owner-scoped fetch of a generation run."
+  def get_plan!(id) do
+    Repo.get_by!(BlueprintPlan, id: id)
   end
 
   @doc """
@@ -394,22 +465,24 @@ defmodule Mehungry.MealBlueprints do
   def list_plans_for_blueprint(user_id, blueprint_id) do
     plans =
       Repo.all(
-        from p in BlueprintPlan,
+        from(p in BlueprintPlan,
           where: p.user_id == ^user_id and p.blueprint_id == ^blueprint_id,
           order_by: [desc: p.inserted_at]
+        )
       )
 
     Enum.map(plans, fn plan -> %{plan | meals: list_plan_meals(plan.id)} end)
   end
 
-  @doc "A plan's `BlueprintPlanMeal` rows, recipes/ingredients loaded, day+slot ordered."
+  @doc "A plan's `BlueprintPlanMeal` rows, recipe + ingredient children loaded, day+slot ordered."
   def list_plan_meals(plan_id) do
     order = MealType.values() |> Enum.with_index() |> Map.new()
 
     Repo.all(
-      from m in BlueprintPlanMeal,
+      from(m in BlueprintPlanMeal,
         where: m.blueprint_plan_id == ^plan_id,
-        preload: [:recipe, :ingredient, :measurement_unit, :ingredient_portion]
+        preload: [:recipe, ingredients: [:ingredient, :measurement_unit, :ingredient_portion]]
+      )
     )
     |> Enum.sort_by(fn m -> {m.day_index, Map.get(order, m.meal_type, 99)} end)
   end
@@ -424,9 +497,10 @@ defmodule Mehungry.MealBlueprints do
     order = MealType.values() |> Enum.with_index() |> Map.new()
 
     Repo.all(
-      from m in BlueprintPlanMeal,
+      from(m in BlueprintPlanMeal,
         where: m.blueprint_plan_id == ^plan_id,
-        preload: [:ingredient, recipe: [recipe_ingredients: :ingredient]]
+        preload: [ingredients: :ingredient, recipe: [recipe_ingredients: :ingredient]]
+      )
     )
     |> Enum.sort_by(fn m -> {m.day_index, Map.get(order, m.meal_type, 99)} end)
   end
@@ -448,10 +522,11 @@ defmodule Mehungry.MealBlueprints do
   """
   def get_plan_meal!(user_id, plan_meal_id) do
     Repo.one!(
-      from m in BlueprintPlanMeal,
+      from(m in BlueprintPlanMeal,
         join: p in assoc(m, :blueprint_plan),
         where: m.id == ^plan_meal_id and p.user_id == ^user_id,
-        preload: [:recipe, :ingredient, :measurement_unit, :ingredient_portion]
+        preload: [:recipe, ingredients: [:ingredient, :measurement_unit, :ingredient_portion]]
+      )
     )
   end
 
@@ -467,9 +542,30 @@ defmodule Mehungry.MealBlueprints do
   passing `nil`.
   """
   def update_plan_meal(%BlueprintPlanMeal{} = plan_meal, attrs) do
-    plan_meal
-    |> BlueprintPlanMeal.changeset(attrs)
-    |> Repo.update()
+    Mehungry.Repo.transact(fn repo ->
+      result =
+        plan_meal
+        |> BlueprintPlanMeal.changeset(attrs)
+        |> Repo.update()
+
+      case result do
+        {:ok, meal} ->
+          plan = Mehungry.MealBlueprints.get_plan!(meal.blueprint_plan_id)
+
+          # {:ok, plan} = Repo.update(changeset)
+          compatibility = plan_compatibility(plan.user_id, plan.blueprint_id, plan.id)
+
+          {:ok, plan} =
+            plan
+            |> BlueprintPlan.changeset(%{compatibility: compatibility})
+            |> Repo.update()
+
+          {:ok, {meal, plan}}
+
+        {:error, err} ->
+          {:error, err}
+      end
+    end)
   end
 
   @doc "Deletes a single plan meal (removes that slot from the generated plan)."
@@ -490,6 +586,9 @@ defmodule Mehungry.MealBlueprints do
     update_plan(plan, %{status: "completed", meals_count: length(entries)})
   end
 
+  # A generation entry is a recipe **or** a single ingredient; the ingredient is
+  # stored as one `BlueprintPlanMealIngredient` child (a meal can later be edited
+  # to hold a recipe plus several ingredients).
   defp plan_meal_attrs(entry, plan_id) do
     %{
       blueprint_plan_id: plan_id,
@@ -497,12 +596,24 @@ defmodule Mehungry.MealBlueprints do
       meal_type: entry.meal_type,
       recipe_id: entry.recipe_id,
       cooking_portions: entry.cooking_portions,
-      ingredient_id: entry.ingredient_id,
-      quantity: entry.quantity,
-      measurement_unit_id: entry.measurement_unit_id,
-      ingredient_portion_id: entry.ingredient_portion_id
+      ingredients: entry_ingredients(entry)
     }
   end
+
+  defp entry_ingredients(%{ingredient_id: nil}), do: []
+
+  defp entry_ingredients(%{ingredient_id: ingredient_id} = entry) do
+    [
+      %{
+        ingredient_id: ingredient_id,
+        quantity: entry.quantity,
+        measurement_unit_id: entry.measurement_unit_id,
+        ingredient_portion_id: entry.ingredient_portion_id
+      }
+    ]
+  end
+
+  defp entry_ingredients(_entry), do: []
 
   @doc "True once a plan has been imported to the calendar at least once."
   def plan_imported?(%BlueprintPlan{imported_at: imported_at}), do: not is_nil(imported_at)
@@ -546,11 +657,12 @@ defmodule Mehungry.MealBlueprints do
       user_id: user_id,
       blueprint_plan_id: plan_id
     }
-    |> Map.merge(import_item_attrs(m))
+    |> Map.merge(import_recipe_attrs(m))
+    |> Map.merge(import_ingredient_attrs(m))
     |> Mehungry.History.create_user_meal()
   end
 
-  defp import_item_attrs(%BlueprintPlanMeal{recipe_id: recipe_id} = m)
+  defp import_recipe_attrs(%BlueprintPlanMeal{recipe_id: recipe_id} = m)
        when not is_nil(recipe_id) do
     %{
       recipe_user_meals: [
@@ -564,19 +676,24 @@ defmodule Mehungry.MealBlueprints do
     }
   end
 
-  defp import_item_attrs(%BlueprintPlanMeal{ingredient_id: ingredient_id} = m)
-       when not is_nil(ingredient_id) do
+  defp import_recipe_attrs(_m), do: %{}
+
+  defp import_ingredient_attrs(%BlueprintPlanMeal{ingredients: ingredients})
+       when is_list(ingredients) and ingredients != [] do
     %{
-      ingredient_user_meals: [
-        %{
-          ingredient_id: ingredient_id,
-          quantity: m.quantity || 1.0,
-          measurement_unit_id: m.measurement_unit_id,
-          ingredient_portion_id: m.ingredient_portion_id
-        }
-      ]
+      ingredient_user_meals:
+        Enum.map(ingredients, fn ing ->
+          %{
+            ingredient_id: ing.ingredient_id,
+            quantity: ing.quantity || 1.0,
+            measurement_unit_id: ing.measurement_unit_id,
+            ingredient_portion_id: ing.ingredient_portion_id
+          }
+        end)
     }
   end
+
+  defp import_ingredient_attrs(_m), do: %{}
 
   # ── internal ────────────────────────────────────────────────────────────────
 

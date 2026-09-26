@@ -139,8 +139,9 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     assert Food.get_candidate!(candidate.id).status == "rejected"
   end
 
-  test "Purge non-dietary deletes blocklisted facts", %{conn: conn, species: species} do
+  test "Purge non-dietary deletes non_dietary facts", %{conn: conn, species: species} do
     {:ok, dpph} = Food.upsert_compound(%{name: "DPPH", compound_type: "other"})
+    {:ok, _} = Food.set_dietary_relevance(dpph.id, "non_dietary")
     {:ok, cand} = Food.import_manual_candidate(species.id, dpph.id, %{})
     {:ok, _} = Food.promote_candidate(cand.id)
 
@@ -151,6 +152,37 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
              SpeciesCompounds.list_species_relationships(species.id),
              &(&1.compound_id == dpph.id)
            ) == []
+  end
+
+  test "Mark non-dietary flags the compound, purges its facts, and drops the row", %{
+    conn: conn,
+    candidate: candidate,
+    species: species,
+    oxalate: oxalate
+  } do
+    # A pre-existing fact for the same compound (via another promoted candidate) so
+    # we can prove the purge removes facts too.
+    {:ok, other} = SpeciesCompounds.upsert_species_relationship(%{
+      foundemental_species_id: species.id,
+      compound_id: oxalate.id,
+      relationship_type: "high_in",
+      source: "manual",
+      confidence: 0.9
+    })
+
+    assert other
+
+    {:ok, view, _html} = live(conn, ~p"/professional/compound-candidates")
+
+    view
+    |> element("button[phx-click='mark_non_dietary'][phx-value-id='#{candidate.id}']")
+    |> render_click()
+
+    assert Food.get_compound!(oxalate.id).dietary_relevance == "non_dietary"
+    # The fact for the now-non-dietary compound is purged...
+    assert SpeciesCompounds.list_species_relationships(species.id) == []
+    # ...and the pending candidate for it is gone from the queue.
+    assert Food.list_pending_candidates() == []
   end
 
   test "Add measurement records it and re-scores the species candidate", %{
@@ -222,5 +254,69 @@ defmodule MehungryWeb.ProfessionalLive.CompoundCandidatesTest do
     assert [m] = Food.list_measurements_for_ingredient(spinach.id)
     assert m.value == 750.0
     assert m.compound_id == oxalate.id
+  end
+
+  describe "audit of promoted facts" do
+    setup do
+      on_exit(fn -> Application.delete_env(:mehungry, :compound_plausibility_stub) end)
+      :ok
+    end
+
+    test "Audit facts enqueues the audit worker", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/professional/compound-candidates")
+      view |> element("button", "Audit facts") |> render_click()
+      assert_enqueued(worker: Mehungry.ObanWorkers.CompoundFactAuditWorker)
+    end
+
+    test "a flagged fact renders with its reason and can be marked non-dietary", %{
+      conn: conn,
+      species: species,
+      oxalate: oxalate,
+      spinach: spinach
+    } do
+      # Pre-gate promoted literature fact, then audited as implausible.
+      for _ <- 1..5 do
+        pmid = System.unique_integer([:positive])
+        {:ok, study} = Mehungry.Literature.upsert_study(%{pmid: pmid, title: "s#{pmid}"})
+
+        {:ok, _} =
+          Mehungry.Literature.link_study_ingredient(%{
+            study_id: study.id,
+            ingredient_id: spinach.id,
+            search_term: "t-#{pmid}"
+          })
+
+        {:ok, _} =
+          Mehungry.Literature.upsert_entity_mention(%{
+            study_id: study.id,
+            entity_type: "chemical",
+            normalized_identifier: "mesh:D#{pmid}",
+            text_span: "oxalic acid",
+            offset: 1,
+            compound_id: oxalate.id
+          })
+      end
+
+      {:ok, %{promoted: true}} =
+        CompoundCandidates.derive_candidate(species.id, oxalate.id, skip_plausibility: true)
+
+      Application.put_env(:mehungry, :compound_plausibility_stub, fn _s, _c, _st ->
+        {:ok, %{verdict: :implausible, reason: "co-occurrence, not containment"}}
+      end)
+
+      {1, 1} = CompoundCandidates.audit_promoted_facts_batch(10)
+      [flagged] = CompoundCandidates.list_flagged_facts()
+
+      {:ok, view, html} = live(conn, ~p"/professional/compound-candidates")
+      assert html =~ "Flagged facts"
+      assert html =~ "co-occurrence, not containment"
+
+      view
+      |> element("button[phx-click='flagged_non_dietary'][phx-value-id='#{flagged.id}']")
+      |> render_click()
+
+      assert Food.get_compound!(oxalate.id).dietary_relevance == "non_dietary"
+      assert SpeciesCompounds.list_species_relationships(species.id) == []
+    end
   end
 end

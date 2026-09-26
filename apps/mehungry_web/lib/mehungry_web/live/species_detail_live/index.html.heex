@@ -132,9 +132,16 @@
             <%= for rel <- @compounds.result do %>
               <span class="inline-flex items-center gap-2 bg-ink-panel border border-ink-panel2 rounded-xl px-3 py-1.5 text-sm">
                 <span class="text-parchment">{rel.compound.name}</span>
-                <span class="text-xs text-parchment-dim">{relationship_label(
-                  rel.relationship_type
-                )}</span>
+                <button
+                  type="button"
+                  phx-click="show_evidence"
+                  phx-value-rel-id={rel.id}
+                  phx-value-compound={rel.compound.name}
+                  title="View the research supporting this"
+                  class="text-xs text-parchment-dim underline decoration-dotted underline-offset-2 hover:text-paprika-soft transition-colors cursor-pointer"
+                >
+                  {relationship_label(rel.relationship_type)}
+                </button>
               </span>
             <% end %>
           </div>
@@ -142,12 +149,25 @@
     </section>
 
     <%!-- ── Health conditions (advice via the compounds) ────────────────── --%>
+    <%!-- Mirrors the "Dietary Recommendations" presentation on the condition
+          page: grouped by recommendation type, one card per implicated condition
+          with its severity/evidence pills and collapsible research sources. --%>
     <section class="mb-10">
-      <h2 class="text-lg font-display font-medium text-parchment mb-4">Health Conditions</h2>
+      <h2 class="text-lg font-display font-medium text-parchment mb-2">Health Conditions</h2>
+      <p class="text-xs text-parchment-dim mb-4 leading-relaxed">
+        Informational only — not medical advice. Each recommendation links the research it is
+        based on so you can read the source and decide with your clinician.
+      </p>
       <%= cond do %>
         <% @recommendations.loading -> %>
-          <div class="space-y-2" aria-hidden="true">
-            <div :for={_ <- 1..2} class="m3-skeleton h-12 w-full rounded-xl bg-ink-panel2" />
+          <div class="space-y-3" aria-hidden="true">
+            <div
+              :for={_ <- 1..3}
+              class="rounded-xl border border-ink-panel2 bg-ink-panel p-4 space-y-2"
+            >
+              <div class="m3-skeleton h-3.5 w-2/5 rounded bg-ink-panel2" />
+              <div class="m3-skeleton h-3 w-3/5 rounded bg-ink-panel2" />
+            </div>
           </div>
         <% @recommendations.failed -> %>
           <p class="text-parchment-dim text-sm">Couldn't load health conditions.</p>
@@ -156,28 +176,96 @@
             No condition-specific dietary advice for this species yet.
           </p>
         <% true -> %>
-          <div class="space-y-2">
-            <%= for rec <- @recommendations.result do %>
-              <div class="flex flex-wrap items-center gap-2 bg-ink-panel border border-ink-panel2 rounded-xl px-4 py-3">
-                <span class={[
-                  "inline-block px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide",
-                  if(encourage?(rec.recommendation),
-                    do: "bg-basil/20 text-basil",
-                    else: "bg-paprika/20 text-paprika-soft"
-                  )
+          <div class="space-y-6">
+            <%= for {rec, rows} <- grouped_recommendations(@recommendations.result) do %>
+              <div>
+                <h3 class={[
+                  "text-sm font-semibold uppercase tracking-wide mb-3",
+                  if(encourage?(rec), do: "text-basil", else: "text-paprika-soft")
                 ]}>
-                  {rec.recommendation}
-                </span>
-                <span class="text-sm text-parchment font-medium">{rec.condition.name}</span>
-                <span class="text-xs text-parchment-dim">
-                  via {rec.compound.name}
-                  <%= if rec.severity && rec.severity != "" do %>
-                    · {rec.severity}
+                  {recommendation_label(rec)}
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <%= for row <- rows do %>
+                    <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-4">
+                      <div class="flex items-start justify-between gap-2 mb-2">
+                        <a
+                          href={~p"/#{@locale}/conditions/#{row.condition.id}"}
+                          class="text-sm font-semibold text-parchment hover:text-paprika-soft leading-snug transition-colors"
+                        >
+                          {row.condition.name}
+                        </a>
+                        <%= if row.severity && row.severity != "" do %>
+                          <span class="text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim whitespace-nowrap">
+                            {String.capitalize(row.severity)}
+                          </span>
+                        <% end %>
+                      </div>
+                      <div class="flex flex-wrap items-center gap-2 text-xs text-parchment-dim">
+                        <span class="px-2 py-0.5 rounded-full bg-ink-panel2">
+                          via {row.compound.name}
+                        </span>
+                        <%= if row.evidence_level && row.evidence_level != "" do %>
+                          <span class="px-2 py-0.5 rounded-full bg-ink-panel2">
+                            Evidence: {String.capitalize(row.evidence_level)}
+                          </span>
+                        <% end %>
+                        <%= if row.source && row.source != "" do %>
+                          <span class="px-2 py-0.5 rounded-full bg-ink-panel2">
+                            {String.capitalize(row.source)}
+                          </span>
+                        <% end %>
+                      </div>
+                      <%!-- Sources: frozen PubMed provenance the recommendation
+                            cites, collapsed to a small toggle while browsing
+                            (mirrors the condition page's source lists). --%>
+                      <%= if row.recommendation_citations != [] do %>
+                        <div class="mt-3 pt-2 border-t border-ink-panel2" x-data="{ open: false }">
+                          <button
+                            type="button"
+                            @click="open = !open"
+                            class="cursor-pointer inline-flex items-center gap-1 text-[11px] text-parchment-dim hover:text-parchment transition-colors"
+                          >
+                            <svg
+                              class="w-3 h-3 transition-transform duration-200"
+                              x-bind:class="open && 'rotate-90'"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                            >
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                            Sources ({length(row.recommendation_citations)})
+                          </button>
+                          <div
+                            class="grid transition-all duration-200 ease-out"
+                            style="grid-template-rows: 0fr"
+                            x-bind:style="open ? 'grid-template-rows: 1fr' : 'grid-template-rows: 0fr'"
+                          >
+                            <div class="overflow-hidden">
+                              <ul class="space-y-1 mt-2 pl-4">
+                                <li
+                                  :for={study <- row.recommendation_citations}
+                                  class="text-xs leading-snug"
+                                >
+                                  <a
+                                    href={pubmed_url(study)}
+                                    target="_blank"
+                                    rel="noopener nofollow"
+                                    class="text-basil hover:underline"
+                                  >
+                                    {study_label(study)}
+                                  </a>
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      <% end %>
+                    </div>
                   <% end %>
-                  <%= if rec.evidence_level && rec.evidence_level != "" do %>
-                    · evidence: {rec.evidence_level}
-                  <% end %>
-                </span>
+                </div>
               </div>
             <% end %>
           </div>
@@ -234,4 +322,57 @@
       <% end %>
     </section>
   </div>
+
+  <%!-- ── Supporting-research modal (studies loaded lazily on open) ────────── --%>
+  <.modal
+    :if={@evidence_modal}
+    id="compound-evidence-modal"
+    show
+    on_cancel={JS.push("close_evidence")}
+  >
+    <div class="space-y-4">
+      <div>
+        <h2
+          id="compound-evidence-modal-title"
+          class="text-xl font-display font-medium text-parchment"
+        >
+          {@display_name} · {@evidence_modal.compound}
+        </h2>
+        <p class="text-sm text-parchment-dim mt-1">
+          Research supporting this compound link.
+        </p>
+      </div>
+
+      <%= if @evidence_modal.studies == [] do %>
+        <p class="text-parchment-dim text-sm">
+          No PubMed papers are on file for this link yet.
+        </p>
+      <% else %>
+        <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-1 m3-scrollbar">
+          <a
+            :for={study <- @evidence_modal.studies}
+            href={pubmed_url(study)}
+            target="_blank"
+            rel="noopener"
+            class="group block bg-ink-panel2 border border-ink-panel2 rounded-xl p-4 hover:border-paprika/50 transition-colors"
+          >
+            <p class="text-sm font-medium text-parchment group-hover:text-paprika-soft transition-colors leading-snug">
+              {study.title || "Untitled study"}
+            </p>
+            <p class="text-xs text-parchment-dim mt-1">
+              <%= if study.journal && study.journal != "" do %>
+                {study.journal}
+              <% end %>
+              <%= if study.publication_date && study.publication_date != "" do %>
+                · {study.publication_date}
+              <% end %>
+              <%= if study.pmid do %>
+                · PMID {study.pmid}
+              <% end %>
+            </p>
+          </a>
+        </div>
+      <% end %>
+    </div>
+  </.modal>
 </div>

@@ -178,7 +178,8 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
           properties: %{
             query: %{
               type: "string",
-              description: "Ingredient name to search for, e.g. 'apple', 'almonds', 'feta cheese', 'greek yogurt'"
+              description:
+                "Ingredient name to search for, e.g. 'apple', 'almonds', 'feta cheese', 'greek yogurt'"
             }
           },
           required: ["query"]
@@ -214,7 +215,10 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
                     description:
                       "Ingredient entry: a unit_selection value from search_ingredients"
                   },
-                  quantity: %{type: "number", description: "Ingredient entry: amount in the chosen unit"}
+                  quantity: %{
+                    type: "number",
+                    description: "Ingredient entry: amount in the chosen unit"
+                  }
                 },
                 required: ["date", "slot"]
               }
@@ -317,7 +321,12 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   end
 
   defp handle_tool("submit_plan", %{"entries" => entries} = input, acc) do
-    %{user_id: user_id, start_date: start_date, offered: offered, offered_ingredients: offered_ing} =
+    %{
+      user_id: user_id,
+      start_date: start_date,
+      offered: offered,
+      offered_ingredients: offered_ing
+    } =
       acc
 
     valid_recipes = Food.list_user_recipes(user_id) |> MapSet.new(& &1.id)
@@ -341,9 +350,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
       normalized = normalize_entries(entries, start_date)
       rationale = Map.get(input, "rationale", "")
 
-      Logger.info(
-        "MealPlanAgent: plan submitted — #{length(normalized)} entries. #{rationale}"
-      )
+      Logger.info("MealPlanAgent: plan submitted — #{length(normalized)} entries. #{rationale}")
 
       {%{
          success: true,
@@ -474,7 +481,13 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   end
 
   # Exactly one of recipe_id / ingredient_id, then per-kind provenance checks.
-  defp validate_item(entry, offered_recipes, valid_recipes, offered_ingredients, valid_ingredients) do
+  defp validate_item(
+         entry,
+         offered_recipes,
+         valid_recipes,
+         offered_ingredients,
+         valid_ingredients
+       ) do
     recipe_id = entry["recipe_id"]
     ingredient_id = entry["ingredient_id"]
 

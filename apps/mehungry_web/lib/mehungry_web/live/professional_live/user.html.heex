@@ -56,8 +56,16 @@
     <!-- Activity stats -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <.stat_card label="Recipes created" value={@stats.recipes_created} highlight="text-white" />
-      <.stat_card label="Recipes liked" value={@stats.recipes_liked} highlight="text-paprika-soft" />
-      <.stat_card label="Recipes saved" value={@stats.recipes_saved} highlight="text-paprika-soft" />
+      <.stat_card
+        label="Recipes liked"
+        value={@stats.recipes_liked}
+        highlight="text-paprika-soft"
+      />
+      <.stat_card
+        label="Recipes saved"
+        value={@stats.recipes_saved}
+        highlight="text-paprika-soft"
+      />
       <.stat_card label="Comments" value={@stats.comments} highlight="text-white" />
       <.stat_card label="Posts" value={@stats.posts} highlight="text-white" />
       <.stat_card label="Followers" value={@stats.followers} highlight="text-emerald-400" />

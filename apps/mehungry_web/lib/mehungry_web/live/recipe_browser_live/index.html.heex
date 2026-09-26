@@ -227,7 +227,12 @@
     <% end %>
     <!-- Blueprint browsing -->
     <div :if={@browse_mode == :blueprints} class="mt-3">
-      <form id="blueprint-search-form" phx-submit="search_blueprints" phx-change="search_blueprints" class="mb-5">
+      <form
+        id="blueprint-search-form"
+        phx-submit="search_blueprints"
+        phx-change="search_blueprints"
+        class="mb-5"
+      >
         <input
           type="text"
           name="query"

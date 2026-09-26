@@ -25,6 +25,7 @@ defmodule Mehungry.Food.SpeciesCompoundCandidate do
   @statuses ~w(pending promoted rejected)
   @evidence_levels ~w(strong moderate limited insufficient)
   @sources ~w(pubtator measurement manual)
+  @plausibility_verdicts ~w(plausible implausible uncertain)
 
   schema "species_compound_candidates" do
     field :relationship_type, :string, default: "contains"
@@ -36,6 +37,12 @@ defmodule Mehungry.Food.SpeciesCompoundCandidate do
     field :sources, {:array, :string}, default: []
     field :evidence, :map, default: %{}
     field :notes, :string
+
+    # LLM plausibility-gate verdict, cached so re-derivation reuses it (nil = not
+    # yet judged). Governs whether a ≥-threshold candidate may auto-promote.
+    field :plausibility_verdict, :string
+    field :plausibility_reason, :string
+    field :plausibility_checked_at, :naive_datetime
 
     belongs_to :species, FoundementalFoodSpecies, foreign_key: :foundemental_species_id
     belongs_to :compound, Compound
@@ -49,7 +56,8 @@ defmodule Mehungry.Food.SpeciesCompoundCandidate do
 
   @castable ~w(foundemental_species_id compound_id relationship_type status evidence_score
                evidence_level study_count measurement_study_count sources evidence
-               notes promoted_relationship_id)a
+               notes promoted_relationship_id plausibility_verdict plausibility_reason
+               plausibility_checked_at)a
 
   def changeset(candidate, attrs) do
     candidate
@@ -58,6 +66,7 @@ defmodule Mehungry.Food.SpeciesCompoundCandidate do
     |> validate_inclusion(:relationship_type, @relationship_types)
     |> validate_inclusion(:status, @statuses)
     |> validate_inclusion(:evidence_level, @evidence_levels)
+    |> validate_inclusion(:plausibility_verdict, @plausibility_verdicts)
     |> validate_subset(:sources, @sources)
     |> foreign_key_constraint(:foundemental_species_id)
     |> foreign_key_constraint(:compound_id)

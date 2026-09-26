@@ -48,10 +48,16 @@ defmodule MehungryWeb.BlueprintLive.Show do
 
         if socket.assigns.saved? do
           MealBlueprints.remove_saved_blueprint_for_user(user.id, bp.id)
-          {:noreply, socket |> assign(:saved?, false) |> put_flash(:info, "Removed from your saved blueprints.")}
+
+          {:noreply,
+           socket
+           |> assign(:saved?, false)
+           |> put_flash(:info, "Removed from your saved blueprints.")}
         else
           MealBlueprints.save_blueprint_for_user(user.id, bp.id)
-          {:noreply, socket |> assign(:saved?, true) |> put_flash(:info, "Saved to your profile.")}
+
+          {:noreply,
+           socket |> assign(:saved?, true) |> put_flash(:info, "Saved to your profile.")}
         end
     end
   end
@@ -80,13 +86,24 @@ defmodule MehungryWeb.BlueprintLive.Show do
             <span class="text-[11px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
               7 days · 5 meals/day
             </span>
-            <span :if={author_line(@blueprint)} class="text-[11px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
+            <span
+              :if={author_line(@blueprint)}
+              class="text-[11px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim"
+            >
               by {author_line(@blueprint)}
             </span>
           </div>
 
-          <.tag_row label="Prefer" tags={@blueprint.required_nutrients ++ @blueprint.required_compounds} tone={:basil} />
-          <.tag_row label="Avoid" tags={@blueprint.avoid_nutrients ++ @blueprint.avoid_compounds} tone={:paprika} />
+          <.tag_row
+            label="Prefer"
+            tags={@blueprint.required_nutrients ++ @blueprint.required_compounds}
+            tone={:basil}
+          />
+          <.tag_row
+            label="Avoid"
+            tags={@blueprint.avoid_nutrients ++ @blueprint.avoid_compounds}
+            tone={:paprika}
+          />
           <.tag_row label="Preferred foods" tags={@blueprint.preferred_foods} tone={:muted} />
 
           <!-- Actions -->

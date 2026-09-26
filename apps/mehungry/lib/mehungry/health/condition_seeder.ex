@@ -4,10 +4,12 @@ defmodule Mehungry.Health.ConditionSeeder do
 
   Loads the bundled catalogue at
   `priv/repo/seeds/data/health_conditions.json` (one object per condition:
-  `main_name`, `synonyms`, `category`, `subcategory`, `description`) and upserts
-  each row keyed on the unique `name`. Safe to run repeatedly — an existing
-  condition has its mutable fields refreshed (`on_conflict: :replace`), so
-  re-seeding picks up catalogue edits without creating duplicates.
+  `main_name`, `synonyms`, `category`, `subcategory`, `description`, and an optional
+  `states` array of disease phases) and upserts each row keyed on the unique `name`.
+  Safe to run repeatedly — an existing condition has its mutable fields refreshed
+  (`on_conflict: :replace`), so re-seeding picks up catalogue edits without creating
+  duplicates. A condition's `states` (e.g. Ulcerative Colitis → Active Flare /
+  Remission) are upserted on `(condition_id, slug)`.
 
   This seeds *conditions only* (the reference registry). It asserts no
   `CompoundRecommendation` advice — those stay curated (seeds.exs / the admin
@@ -21,7 +23,7 @@ defmodule Mehungry.Health.ConditionSeeder do
   import Ecto.Query, only: [from: 2]
 
   alias Mehungry.Repo
-  alias Mehungry.Health.Condition
+  alias Mehungry.Health.{Condition, ConditionState}
 
   @relative_path "repo/seeds/data/health_conditions.json"
 
@@ -65,7 +67,35 @@ defmodule Mehungry.Health.ConditionSeeder do
       conflict_target: :name,
       returning: false
     )
+
+    upsert_states(row)
   end
+
+  # Upsert the condition's disease-state phases (if any), keyed on `(condition_id, slug)`.
+  # The condition insert above uses `returning: false`, so re-fetch it by its unique name.
+  defp upsert_states(%{"main_name" => name, "states" => states})
+       when is_list(states) and states != [] do
+    condition = Repo.one!(from(c in Condition, where: c.name == ^name))
+
+    Enum.each(states, fn s ->
+      %ConditionState{}
+      |> ConditionState.changeset(%{
+        condition_id: condition.id,
+        name: s["name"],
+        slug: s["slug"],
+        is_default: s["is_default"] || false,
+        position: s["position"] || 0,
+        description: s["description"]
+      })
+      |> Repo.insert(
+        on_conflict: {:replace, [:name, :is_default, :position, :description, :updated_at]},
+        conflict_target: [:condition_id, :slug],
+        returning: false
+      )
+    end)
+  end
+
+  defp upsert_states(_row), do: :ok
 
   @doc "Count of conditions currently in the registry — a quick post-seed check."
   def count, do: Repo.one(from(c in Condition, select: count(c.id)))

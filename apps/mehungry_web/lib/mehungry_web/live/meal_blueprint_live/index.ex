@@ -195,7 +195,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
                         </span>
                         <div class="min-w-0 flex-1">
                           <.recipe_line m={m} />
-                          <.ingredient_line m={m} />
+                          <.ingredient_lines m={m} />
                           <.meal_badges report={meal_report(@compat, plan.id, m.id)} />
                         </div>
                         <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
@@ -323,7 +323,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
       </span>
       <.calorie_badge :if={@report} report={@report} />
       <span
-        :if={@report && @report.violation_count > 0}
+        :if={@report && @report["violation_count"] > 0}
         class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-paprika/20 text-paprika"
         title={"#{@report.violation_count} blueprint violation(s) among today's meals"}
       >
@@ -340,39 +340,39 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
     """
   end
 
-  defp missing_required(%{missing_required: list}) when is_list(list), do: list
+  defp missing_required(%{"missing_required" => list}) when is_list(list), do: list
   defp missing_required(_), do: []
 
   # Day energy vs the blueprint's calorie aim, hidden when the day has no target.
   attr(:report, :map, required: true)
 
-  defp calorie_badge(%{report: %{calorie_status: :no_target}} = assigns), do: ~H""
+  defp calorie_badge(%{report: %{"calorie_status" => "no_target"}} = assigns), do: ~H""
 
   defp calorie_badge(assigns) do
     ~H"""
     <span
       class={[
         "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full [font-variant-numeric:tabular-nums]",
-        calorie_badge_class(@report.calorie_status)
+        calorie_badge_class(@report["calorie_status"])
       ]}
       title={calorie_tooltip(@report)}
     >
-      {@report.calorie_total} / {@report.calorie_target} kcal
-      <span :if={@report.calorie_status != :ok}>{calorie_delta_label(@report.calorie_delta)}</span>
+      {@report["calorie_total"]} / {@report["calorie_target"]} kcal
+      <span :if={@report["calorie_status"] != "ok"}>{calorie_delta_label(@report["calorie_delta"])}</span>
     </span>
     """
   end
 
-  defp calorie_badge_class(:over), do: "bg-paprika/20 text-paprika"
-  defp calorie_badge_class(:under), do: "bg-amber-500/20 text-amber-400"
-  defp calorie_badge_class(:ok), do: "bg-basil/20 text-basil"
+  defp calorie_badge_class("over"), do: "bg-paprika/20 text-paprika"
+  defp calorie_badge_class("under"), do: "bg-amber-500/20 text-amber-400"
+  defp calorie_badge_class("ok"), do: "bg-basil/20 text-basil"
   defp calorie_badge_class(_), do: "bg-ink-panel2 text-parchment-dim"
 
   defp calorie_delta_label(delta) when is_integer(delta) and delta > 0, do: "· +#{delta}"
   defp calorie_delta_label(delta) when is_integer(delta), do: "· #{delta}"
   defp calorie_delta_label(_), do: ""
 
-  defp calorie_tooltip(%{calorie_status: :over, calorie_delta: d}),
+  defp calorie_tooltip(%{"calorie_status" => :over, "calorie_delta" => d}),
     do: "#{d} kcal over the day's calorie target"
 
   defp calorie_tooltip(%{calorie_status: :under, calorie_delta: d}),
@@ -385,7 +385,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
   attr(:report, :any, default: nil)
 
   defp meal_badges(%{report: nil} = assigns), do: ~H""
-  defp meal_badges(%{report: %{violations: [], matches: []}} = assigns), do: ~H""
+  defp meal_badges(%{report: %{"violations" => [], "matches" => []}} = assigns), do: ~H""
 
   defp meal_badges(assigns) do
     ~H"""
@@ -438,11 +438,17 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
 
   # Compatibility lookups into the @compat map (keyed by plan id).
   defp day_report(compat, plan_id, day_index) do
-    compat |> Map.get(plan_id, %{}) |> Map.get(:days, %{}) |> Map.get(day_index)
+    compat
+    |> Map.get(plan_id, %{})
+    |> Map.get("days", %{})
+    |> Map.get(Integer.to_string(day_index))
   end
 
   defp meal_report(compat, plan_id, meal_id) do
-    compat |> Map.get(plan_id, %{}) |> Map.get(:meals, %{}) |> Map.get(meal_id)
+    compat
+    |> Map.get(plan_id, %{})
+    |> Map.get("meals", %{})
+    |> Map.get(Integer.to_string(meal_id))
   end
 
   # Groups a plan's meals by their relative day (1..7) for accordion display.
@@ -480,24 +486,29 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
 
   defp recipe_line(assigns), do: ~H""
 
-  # A compact ingredient row: name on the left, quantity + unit on the right.
-  defp ingredient_line(%{m: %{ingredient: ingredient}} = assigns) when not is_nil(ingredient) do
+  # Compact ingredient rows (a meal may hold several): name on the left, quantity
+  # + unit on the right.
+  defp ingredient_lines(%{m: %{ingredients: ingredients}} = assigns)
+       when is_list(ingredients) and ingredients != [] do
     ~H"""
-    <div class="flex items-center justify-between gap-2 py-0.5 pl-1">
+    <div
+      :for={ing <- @m.ingredients}
+      class="flex items-center justify-between gap-2 py-0.5 pl-1"
+    >
       <div class="flex items-center gap-2 min-w-0">
         <span class="w-9 h-9 rounded-md bg-basil/15 text-basil flex items-center justify-center text-xs shrink-0">
           🥗
         </span>
-        <span class="text-sm text-parchment truncate">{@m.ingredient.name}</span>
+        <span class="text-sm text-parchment truncate">{ing.ingredient.name}</span>
       </div>
       <span class="text-parchment-dim text-xs shrink-0 [font-variant-numeric:tabular-nums]">
-        {format_quantity(@m.quantity)} {Mehungry.Food.RecipeIngredient.unit_label(@m)}
+        {format_quantity(ing.quantity)} {Mehungry.Food.RecipeIngredient.unit_label(ing)}
       </span>
     </div>
     """
   end
 
-  defp ingredient_line(assigns), do: ~H""
+  defp ingredient_lines(assigns), do: ~H""
 
   # Muted "2 servings · Easy · 25 min" line, dropping any parts that are missing.
   defp recipe_info(recipe) do
@@ -871,7 +882,8 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
   end
 
   defp safe_compat(user_id, blueprint_id, plan_id) do
-    MealBlueprints.plan_compatibility(user_id, blueprint_id, plan_id)
+    plan = MealBlueprints.get_plan!(user_id, plan_id)
+    plan.compatibility
   rescue
     _ -> nil
   end

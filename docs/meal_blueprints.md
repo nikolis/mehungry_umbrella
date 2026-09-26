@@ -38,7 +38,14 @@ returns *normalized, calendar-independent entries* (`MealPlanAgent.normalize_ent
 — relative `day_index` 1..7, canonical `meal_type`, and a recipe **or** ingredient
 with unit resolved to FKs). The LiveView stores them via
 `MealBlueprints.store_plan_meals/2` as **`BlueprintPlanMeal`** rows
-(`meal_blueprint_plan_meals`) hanging off a **`BlueprintPlan`**
+(`meal_blueprint_plan_meals`). A meal can hold a recipe (`recipe_id` +
+`cooking_portions`) **and/or** any number of whole-food ingredients — the
+ingredients live in a child table **`BlueprintPlanMealIngredient`**
+(`meal_blueprint_plan_meal_ingredients`: `ingredient_id`, `quantity`, resolved
+unit FKs) via `has_many :ingredients` (`on_replace: :delete`), mirroring the
+calendar's `History.UserMeal` → `IngredientUserMeal`. Generation seeds one
+ingredient child per ingredient slot; the nutritionist can then add more by hand.
+These rows hang off a **`BlueprintPlan`**
 (`meal_blueprint_plans`: `name`, `start_date`, `status`
 `generating→completed|failed`, `meals_count`, `error`, `imported_at`,
 `blueprint_id` cascade FK, `user_id`). Nothing touches the calendar at this
@@ -217,9 +224,14 @@ The public preview route is in the `:maybe` (anonymous-OK) session, via `localiz
   Duplicate / Delete) with a visibility badge and a "View public" link when
   public; `:new` opens a name-only `core_components` modal that seeds the 7×5
   skeleton and jumps to the editor. Each generated plan's meals can be **edited
-  in place**: an *Edit* modal swaps the slot to a searched recipe
-  (`Search.RecipeVectorSearch.search/2`) or adjusts cooking-portions/quantity,
-  and *✕* removes the slot (`update_plan_meal/2` / `delete_plan_meal/1`).
+  in place** (`MealBlueprintLive.PlanMealFormComponent`): the *Edit* modal has an
+  optional recipe picker (+ cooking portions) **and** an ingredients section — a
+  repeatable list of ingredient rows (each with a quantity + unit `<select>`)
+  plus one "Add ingredient" `SelectComponentDeep` search that appends a row. A
+  meal can therefore mix a recipe with several ingredients. Rows are held in
+  socket state (per-row live pickers would collide on a shared form field) and
+  written on save via `update_plan_meal/2` (`cast_assoc` replaces the ingredient
+  children); *✕* removes the whole slot (`delete_plan_meal/1`).
 - **`BlueprintLive.Show`** (public) — synchronous render of a public blueprint
   (targets + attached sample plans) with OG/SEO assigns (`page_title`,
   `page_description`, `canonical_path`), a Facebook share-dialog link, copy-link,

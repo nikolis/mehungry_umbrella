@@ -111,9 +111,39 @@ stored in `evidence` so the rating is auditable.
 
 - **Auto**: after deriving, a `pending` candidate scoring ≥
   `candidate_promotion_threshold` (config, default **0.75**) is promoted immediately —
-  mirrors `TaxonomyClassificationWorker`'s auto-confirm, nil-guarded.
+  mirrors `TaxonomyClassificationWorker`'s auto-confirm, nil-guarded — **but only after
+  it clears the two credibility filters below**.
 - **Review**: everything else waits in `list_pending_candidates/1` (strongest first).
   An admin **Promotes** or **Rejects** it at `/professional/compound-candidates`.
+
+### Why the filters — document co-occurrence ≠ containment
+
+The literature signal is document-level co-occurrence (`species_cooccurrence_study_count/2`):
+a resolved chemical mentioned *anywhere in a paper* linked to the species. That is a weak
+proxy for "the food contains it" — 4 such studies score exactly 0.80 and, unfiltered,
+auto-promoted false positives like *Acerola contains Ethanol* (extraction solvent),
+*Apricot contains reactive oxygen species* (the scavenged target), *Alfalfa contains heavy
+metal* (contamination). Two filters gate auto-promotion (manual admin promotion bypasses
+both — a human decision):
+
+1. **Curatable `dietary_relevance` on `Compound`** (`dietary | non_dietary | pending`,
+   default `pending`) — the scalable successor of the exact-name blocklist. `non_dietary`
+   compounds (solvents, contaminants, assay reagents, non-specific class terms) are
+   excluded from `evidence_pairs/0`, purged on each derive (`purge_non_dietary/0`), and
+   filtered out of `Health` advice reads. Set via `Food.set_dietary_relevance/2`, or the
+   one-click **"Non-dietary"** button on a candidate row.
+2. **LLM plausibility gate** (`Food.CompoundPlausibility`, behind the
+   `:compound_plausibility_judge` seam) — the automated "reality check". For a ≥-threshold
+   candidate whose compound is not already curated `dietary`, a cheap Haiku call judges
+   whether the compound is plausibly an *intrinsic dietary constituent* of the species
+   (vs. a solvent / contaminant / reagent / measured target), fed the co-occurring study
+   titles/abstracts. Only `:plausible` promotes; `:implausible`/`:uncertain`/any judge
+   error/no API key **hold the candidate `pending`** (fail-safe — never silently
+   rejected). The verdict + reason are cached on the candidate
+   (`plausibility_verdict`/`plausibility_reason`, reused on re-derivation) and shown in
+   the review queue. The judge is wrapped so an AI fault can **never** bubble into the
+   derivation worker and poison-pill the `:imports` chain. A compound curated `dietary`
+   skips the LLM (trusted fast-path).
 
 Promotion writes the curated fact via `Food.SpeciesCompounds.upsert_species_relationship/1`
 (`source: "literature"` for derived, `"manual"` for manual-origin, `confidence =
@@ -121,18 +151,44 @@ evidence_score`) and flips the candidate to `promoted`, linking `promoted_relati
 Idempotent. Re-derivation **never** touches a `promoted`/`rejected` status — only the
 evidence fields refresh.
 
+Promotion also **freezes the fact's PubMed provenance**: it copies the candidate's
+reference studies into `species_compound_relationship_studies` (`relationship_id` →
+`study_id`), the mirror of `species_compound_candidate_studies` but **written once and
+never refreshed** — so the curated fact keeps citing exactly the papers it was promoted
+from, even as re-derivation rewrites the candidate's study set. Exposed as the
+relationship's `:studies` `has_many :through`. (The advice-layer analogue is
+`compound_recommendation_studies` — see `health_recommendations.md` §2.)
+
 Config:
 
 | Key | Default | Purpose |
 |---|---|---|
-| `:candidate_promotion_threshold` | `0.75` | Score at/above which a candidate auto-promotes. |
-| `:non_dietary_compounds` | `DPPH ABTS TPTZ Trolox FRAP ORAC BHT BHA` | Assay-reagent / non-food chemical names PubTator extracts but that must never become dietary facts — excluded from `evidence_pairs/0` and purged (candidates + relationships) at the start of each derivation (`purge_blocklisted/0`). |
+| `:candidate_promotion_threshold` | `0.75` | Score at/above which a candidate is *eligible* to auto-promote (still subject to the two filters). |
+| `:non_dietary_compounds` | `DPPH ABTS … Ethanol "Reactive Oxygen Species" "Heavy Metal" …` | **Seed list only** for the one-time migration backfill of `Compound.dietary_relevance = "non_dietary"`. The runtime source of truth is now the per-compound attribute, not this list. |
+| `:compound_plausibility_judge` | `Food.CompoundPlausibility` | The LLM reality-check module; stubbed in tests (`config/test.exs` → `CompoundPlausibilityStub`, default `:plausible`). |
 
 **Reviewing/correcting the curated output.** `/professional/compound-candidates` shows, below the
 pending queue, a **Curated facts** list of the promoted `SpeciesCompoundRelationship` rows with an
 **Undo** action (`unpromote_relationship/1` — deletes the fact and marks its candidate `rejected` so
-re-derivation won't re-promote it) and a **Purge non-dietary** button. Reached from the Science
-Pipeline's derivation stage via "Review candidates & facts →".
+re-derivation won't re-promote it) and a **Purge non-dietary** button. Each pending candidate row
+shows the plausibility verdict/reason and a **"Non-dietary"** button that flags the compound and
+purges its facts globally. Reached from the Science Pipeline's derivation stage via
+"Review candidates & facts →".
+
+### Auditing already-promoted facts
+
+The gate only guards *new* auto-promotions; facts promoted before the gate existed were
+never judged. The **"Audit facts"** button (`enqueue_fact_audit/0` →
+`CompoundFactAuditWorker`, `:imports`) re-runs the same judge over every promoted
+`literature` fact on a `pending`-relevance compound whose backing candidate has no
+`plausibility_verdict`. The worker self-re-enqueues in small batches (LLM calls) and
+terminates on a tick that makes no progress — either nothing is left, or the judge is
+unavailable and every call errored, in which case un-audited facts simply remain for a
+later re-run (a transient AI outage can't wedge it). Implausible facts are recorded as
+`implausible` on the candidate and surface in a **"Flagged facts — needs review"** list at
+the top of `/professional/compound-candidates`, each with the reason and **Undo** /
+**Non-dietary** actions. The audit **only flags — it never deletes a fact** (a human
+decides), the mirror of the gate's "never silently reject".
 
 ---
 
@@ -170,11 +226,13 @@ as a search term.)
 
 | Module | File | Role |
 |---|---|---|
-| `Food.CompoundCandidates` | `food/compound_candidates.ex` | Derivation, scoring, promotion/review, queries. |
+| `Food.CompoundCandidates` | `food/compound_candidates.ex` | Derivation, scoring, promotion/review (incl. the plausibility gate), queries. |
+| `Food.CompoundPlausibility` | `food/compound_plausibility.ex` | The LLM reality-check judge (behind `CompoundPlausibilityBehaviour`). |
 | `Food.IngredientCompoundCandidate` | `food/schemas/ingredient_compound_candidate.ex` | Staged-proposal schema. |
 | `Food.CandidateDerivationRuns` | `food/candidate_derivation_runs.ex` | Run lifecycle + PubSub progress. |
 | `Food.CandidateDerivationRun` | `food/schemas/candidate_derivation_run.ex` | Run schema. |
 | `ObanWorkers.CompoundCandidateDerivationWorker` | `oban_workers/compound_candidate_derivation_worker.ex` | Batch-chain derivation worker. |
+| `ObanWorkers.CompoundFactAuditWorker` | `oban_workers/compound_fact_audit_worker.ex` | Batch-chain re-audit of already-promoted literature facts (flags implausible ones). |
 | `Literature.compound_ingredient_cooccurrences/0` · `cooccurrence_study_count/2` | `literature.ex` | The co-occurrence evidence join. |
 | `MehungryWeb.ProfessionalLive.CompoundCandidates` | `mehungry_web/.../professional_live/compound_candidates.ex` | Admin derive + review UI. |
 

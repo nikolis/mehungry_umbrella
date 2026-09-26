@@ -59,6 +59,7 @@ defmodule Mehungry.Science.PipelineWatchdog do
   # {run table, self-re-enqueueing stage worker}. Same stage set as RunReconciler.
   @stages [
     {"literature_crawl_runs", Mehungry.ObanWorkers.LiteratureCrawlWorker},
+    {"condition_crawl_runs", Mehungry.ObanWorkers.ConditionCrawlWorker},
     {"pubtator_annotation_runs", Mehungry.ObanWorkers.PubTatorAnnotationWorker},
     {"candidate_derivation_runs", Mehungry.ObanWorkers.CompoundCandidateDerivationWorker},
     {"recommendation_derivation_runs",

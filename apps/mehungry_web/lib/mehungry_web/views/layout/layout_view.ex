@@ -179,7 +179,10 @@ defmodule MehungryWeb.LayoutView do
 
       <!-- Footer -->
       <div class="px-5 py-4 border-t border-ink-panel2/60">
-        <a href="/" class="flex items-center gap-2 text-parchment-dim hover:text-white text-sm transition">
+        <a
+          href="/"
+          class="flex items-center gap-2 text-parchment-dim hover:text-white text-sm transition"
+        >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"

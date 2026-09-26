@@ -281,6 +281,7 @@ defmodule Mehungry.ProfessionalsTest do
 
     test "a valid claim token resolves to the managed user; junk does not" do
       pro = user_fixture()
+
       {:ok, %{user: client, claim_token: token}} =
         Professionals.create_managed_client(pro.id, "Maria K.")
 
@@ -291,6 +292,7 @@ defmodule Mehungry.ProfessionalsTest do
 
     test "claiming sets credentials, clears the managed flag, keeps the row and assignment" do
       pro = user_fixture()
+
       {:ok, %{user: client, claim_token: token}} =
         Professionals.create_managed_client(pro.id, "Maria K.")
 
@@ -306,18 +308,25 @@ defmodule Mehungry.ProfessionalsTest do
       assert claimed.email == email
       assert is_nil(claimed.managed_by_professional_id)
       refute Accounts.managed_unclaimed?(claimed)
-      assert Accounts.get_user_by_email_and_password(email, "super-secret-passphrase").id == client.id
+
+      assert Accounts.get_user_by_email_and_password(email, "super-secret-passphrase").id ==
+               client.id
 
       # Assignment survives the claim.
       assert [assignment] = Professionals.list_clients(pro.id)
       assert assignment.client_id == client.id
 
       # Token is single-use.
-      assert :error = Accounts.claim_managed_account(token, %{"email" => unique_user_email(), "password" => "another-passphrase-1"})
+      assert :error =
+               Accounts.claim_managed_account(token, %{
+                 "email" => unique_user_email(),
+                 "password" => "another-passphrase-1"
+               })
     end
 
     test "claiming via OAuth sets the provider identity, no password, keeps the row" do
       pro = user_fixture()
+
       {:ok, %{user: client, claim_token: token}} =
         Professionals.create_managed_client(pro.id, "Maria K.")
 
@@ -357,6 +366,7 @@ defmodule Mehungry.ProfessionalsTest do
 
     test "regenerating a claim token invalidates the previous one" do
       pro = user_fixture()
+
       {:ok, %{user: client, claim_token: first}} =
         Professionals.create_managed_client(pro.id, "Maria K.")
 

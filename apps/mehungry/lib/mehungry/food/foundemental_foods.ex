@@ -14,7 +14,8 @@ defmodule Mehungry.Food.FoundementalFoods do
   alias Mehungry.Food.{
     FoundementalFood,
     FoundementalFoodSpecies,
-    FoundementalFoodSpeciesTranslation
+    FoundementalFoodSpeciesTranslation,
+    SpeciesCompoundRelationship
   }
 
   # ── Species ────────────────────────────────────────────────────────────────
@@ -113,6 +114,76 @@ defmodule Mehungry.Food.FoundementalFoods do
     from(s in FoundementalFoodSpecies, where: s.id in subquery(translated_ids))
     |> paginate_species(cursor_after)
   end
+
+  @doc """
+  Species matching the faceted filters on `/foods`. Each facet is applied as an
+  AND constraint; within a facet the ids are OR-ed (a species need only carry one).
+  `opts`:
+
+    * `:condition_compound_ids` — species must carry (non-`absent`) a compound in
+      this list (the compounds a selected condition recommends to "encourage").
+    * `:condition_species_ids` — species ids the condition implicates **via
+      nutrients** (high in an encouraged nutrient). OR-ed with
+      `:condition_compound_ids` inside the single "condition" facet, since a food is
+      encouraged if it satisfies *either* the compound or the nutrient engine.
+    * `:compound_ids` — species must carry a compound in this list.
+    * `:query` — accent-insensitive substring on `name`/`alternative_name`.
+
+  Empty/omitted facets are skipped. Returns species with `:translations` preloaded,
+  name-ordered, capped at `:limit` (default 200).
+  """
+  def filter_species(opts \\ []) do
+    condition_compound_ids = Keyword.get(opts, :condition_compound_ids, [])
+    condition_species_ids = Keyword.get(opts, :condition_species_ids, [])
+    compound_ids = Keyword.get(opts, :compound_ids, [])
+    query_str = Keyword.get(opts, :query, "")
+    limit = Keyword.get(opts, :limit, 200)
+
+    from(s in FoundementalFoodSpecies, order_by: [asc: s.name, asc: s.variety], limit: ^limit)
+    |> filter_species_by_condition(condition_compound_ids, condition_species_ids)
+    |> filter_species_by_compounds(compound_ids)
+    |> filter_species_by_name(query_str)
+    |> Repo.all()
+    |> Repo.preload([:translations])
+  end
+
+  # The condition facet: a species matches if it carries a non-`absent` encouraged
+  # compound OR its id is in the nutrient-derived set. Both empty → no constraint.
+  defp filter_species_by_condition(query, [], []), do: query
+
+  defp filter_species_by_condition(query, compound_ids, species_ids) do
+    compound_species =
+      from(r in SpeciesCompoundRelationship,
+        where: r.compound_id in ^compound_ids and r.relationship_type != "absent",
+        select: r.foundemental_species_id
+      )
+
+    from(s in query, where: s.id in subquery(compound_species) or s.id in ^species_ids)
+  end
+
+  defp filter_species_by_compounds(query, []), do: query
+
+  defp filter_species_by_compounds(query, compound_ids) do
+    species_ids =
+      from(r in SpeciesCompoundRelationship,
+        where: r.compound_id in ^compound_ids and r.relationship_type != "absent",
+        select: r.foundemental_species_id
+      )
+
+    from(s in query, where: s.id in subquery(species_ids))
+  end
+
+  defp filter_species_by_name(query, term) when is_binary(term) and term != "" do
+    like = "%#{String.trim(term)}%"
+
+    from(s in query,
+      where:
+        fragment("unaccent(?) ILIKE unaccent(?)", s.name, ^like) or
+          fragment("unaccent(?) ILIKE unaccent(?)", s.alternative_name, ^like)
+    )
+  end
+
+  defp filter_species_by_name(query, _term), do: query
 
   defp paginate_species(query, cursor_after) do
     paginate_opts =

@@ -42,8 +42,26 @@ if metrics_token = System.get_env("METRICS_API_TOKEN") do
   config :mehungry, :metrics_api_token, metrics_token
 end
 
+# Shared-secret bearer token for the public system-integration REST API
+# (e.g. GET /api/foundemental_foods), guarded by RequirePublicApiToken. Only
+# override when the env var is set, so dev/test keep their compile-time values
+# (this file runs in every environment).
+if public_api_token = System.get_env("PUBLIC_API_TOKEN") do
+  config :mehungry, :public_api_token, public_api_token
+end
+
 config :mehungry_local_ai,
   server_base_url: System.get_env("LOCAL_AI_SERVER_URL", "http://localhost:4000")
+
+# Base URL of the mehungry_extractor batch-PMID analysis service (POST /analyze).
+config :mehungry, :extractor_base_url,
+  System.get_env("EXTRACTOR_BASE_URL", "http://127.0.0.1:8000")
+
+# HTTP receive/connect timeout (ms) for /analyze — a large uncached batch fetches
+# every PMID from PubMed/PMC and can take many minutes.
+if ms = System.get_env("EXTRACTOR_TIMEOUT_MS") do
+  config :mehungry, :extractor_timeout_ms, String.to_integer(ms)
+end
 
 # Optional shared secret that unlocks the /test-accounts routes outside of
 # dev/test. When unset, those routes 404 in staging/prod.

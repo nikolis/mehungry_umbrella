@@ -13,23 +13,23 @@ defmodule Mehungry.MealBlueprints.BlueprintPlan do
   @statuses ~w(generating completed failed)
 
   schema "meal_blueprint_plans" do
-    field :name, :string
-    field :start_date, :date
+    field(:name, :string)
+    field(:start_date, :date)
     # generating → completed | failed
-    field :status, :string, default: "generating"
-    field :meals_count, :integer, default: 0
-    field :error, :string
+    field(:status, :string, default: "generating")
+    field(:meals_count, :integer, default: 0)
+    field(:error, :string)
     # Set the first time the plan is imported to the calendar (nil = never).
-    field :imported_at, :naive_datetime
-
+    field(:imported_at, :naive_datetime)
+    field(:compatibility, :map)
     # Populated by `MealBlueprints.list_plans_for_blueprint/2` for accordion
     # display — the plan's `BlueprintPlanMeal` rows (recipes/ingredients loaded).
-    field :meals, {:array, :map}, virtual: true, default: []
+    field(:meals, {:array, :map}, virtual: true, default: [])
 
-    belongs_to :blueprint, Mehungry.MealBlueprints.Blueprint
-    belongs_to :user, Mehungry.Accounts.User
+    belongs_to(:blueprint, Mehungry.MealBlueprints.Blueprint)
+    belongs_to(:user, Mehungry.Accounts.User)
 
-    has_many :plan_meals, Mehungry.MealBlueprints.BlueprintPlanMeal, on_delete: :delete_all
+    has_many(:plan_meals, Mehungry.MealBlueprints.BlueprintPlanMeal, on_delete: :delete_all)
 
     timestamps()
   end
@@ -40,6 +40,7 @@ defmodule Mehungry.MealBlueprints.BlueprintPlan do
     |> cast(attrs, [
       :name,
       :start_date,
+      :compatibility,
       :status,
       :meals_count,
       :error,

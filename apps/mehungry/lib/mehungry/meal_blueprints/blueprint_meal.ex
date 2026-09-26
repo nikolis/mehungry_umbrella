@@ -76,12 +76,17 @@ defmodule Mehungry.MealBlueprints.BlueprintMeal do
 
   # The three macro percentages must add up to exactly 100.
   defp validate_macro_total(changeset) do
-    total = Enum.reduce(@macro_fields, 0, fn field, sum -> sum + (get_field(changeset, field) || 0) end)
+    total =
+      Enum.reduce(@macro_fields, 0, fn field, sum -> sum + (get_field(changeset, field) || 0) end)
 
     if total == 100 do
       changeset
     else
-      add_error(changeset, :protein_pct, "protein + carbs + fats must total 100%%, got #{total}%%")
+      add_error(
+        changeset,
+        :protein_pct,
+        "protein + carbs + fats must total 100%%, got #{total}%%"
+      )
     end
   end
 end

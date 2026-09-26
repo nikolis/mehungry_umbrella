@@ -284,6 +284,15 @@
               class="text-basil hover:underline mr-1"
             >{study.pmid}</a>
           </div>
+          <div
+            :if={candidate.plausibility_verdict}
+            class={"text-xs mt-0.5 #{plausibility_class(candidate.plausibility_verdict)}"}
+          >
+            reality check: <span class="font-medium">{candidate.plausibility_verdict}</span>
+            <span :if={candidate.plausibility_reason && candidate.plausibility_reason != ""} class="text-parchment-dim">
+              — {candidate.plausibility_reason}
+            </span>
+          </div>
         </div>
 
         <div class="flex items-center gap-2">
@@ -304,6 +313,16 @@
           >
             Reject
           </button>
+          <button
+            type="button"
+            phx-click="mark_non_dietary"
+            phx-value-id={candidate.id}
+            phx-value-compound-id={candidate.compound.id}
+            data-confirm={"Mark #{candidate.compound.name} as non-dietary? It will be excluded everywhere (facts + advice) and its existing facts purged. Use for solvents, contaminants, assay reagents, and non-specific class terms."}
+            class="px-3 py-1.5 rounded border border-red-500/50 text-red-300 text-sm font-medium hover:opacity-90"
+          >
+            Non-dietary
+          </button>
         </div>
       </div>
     </div>
@@ -313,14 +332,86 @@
     </p>
   </section>
 
+  <section :if={@flagged != [] or @audit_pending > 0} class="mb-8">
+    <div class="flex flex-wrap items-center gap-2 mb-2">
+      <h2 class="text-lg font-medium text-parchment">Flagged facts — needs review</h2>
+      <span :if={@audit_pending > 0} class="text-xs text-parchment-dim">
+        {@audit_pending} literature fact{if @audit_pending == 1, do: "", else: "s"} awaiting audit
+      </span>
+    </div>
+    <p class="text-parchment-dim text-sm mb-3">
+      Already-promoted facts the plausibility audit judged implausible (document co-occurrence isn't
+      containment). <span class="font-medium">Undo</span>
+      removes the fact; <span class="font-medium">Non-dietary</span>
+      excludes the compound everywhere.
+    </p>
+
+    <div :if={@flagged != []} class="divide-y divide-ink-panel2">
+      <div
+        :for={f <- @flagged}
+        class="py-3 flex flex-wrap items-center gap-3 justify-between"
+      >
+        <div class="min-w-0 flex-1">
+          <div class="text-parchment font-medium truncate">
+            {f.species.name} <span class="text-parchment-dim">contains</span> {f.compound.name}
+          </div>
+          <div class="text-xs text-red-300">
+            reality check: <span class="font-medium">implausible</span>
+            <span
+              :if={f.plausibility_reason && f.plausibility_reason != ""}
+              class="text-parchment-dim"
+            >
+              — {f.plausibility_reason}
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            phx-click="flagged_undo"
+            phx-value-id={f.id}
+            phx-value-rel-id={f.promoted_relationship_id}
+            data-confirm="Delete this curated fact and reject its candidate?"
+            class="px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90"
+          >
+            Undo
+          </button>
+          <button
+            type="button"
+            phx-click="flagged_non_dietary"
+            phx-value-id={f.id}
+            phx-value-compound-id={f.compound.id}
+            data-confirm={"Mark #{f.compound.name} non-dietary and purge its facts everywhere?"}
+            class="px-3 py-1.5 rounded border border-red-500/50 text-red-300 text-sm font-medium hover:opacity-90"
+          >
+            Non-dietary
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <p :if={@flagged == []} class="text-parchment-dim text-sm">
+      Audit running — flagged facts appear here after you Refresh.
+    </p>
+  </section>
+
   <section>
     <div class="flex flex-wrap items-center gap-2 mb-2">
       <h2 class="text-lg font-medium text-parchment">Curated facts ({@rel_count})</h2>
       <button
         type="button"
+        phx-click="audit_facts"
+        data-confirm="Re-check every promoted literature fact with the plausibility gate? Implausible ones will be flagged for review above (nothing is deleted)."
+        class="ml-auto px-3 py-1.5 rounded border border-ink-panel2 text-parchment text-sm font-medium hover:opacity-90"
+      >
+        Audit facts
+      </button>
+      <button
+        type="button"
         phx-click="purge"
         data-confirm={"Delete all curated facts for non-dietary compounds (#{Enum.join(non_dietary_names(), ", ")})? They are assay reagents, not foods."}
-        class="ml-auto px-3 py-1.5 rounded border border-red-400/40 text-red-400 text-sm font-medium hover:opacity-90"
+        class="px-3 py-1.5 rounded border border-red-400/40 text-red-400 text-sm font-medium hover:opacity-90"
       >
         Purge non-dietary
       </button>

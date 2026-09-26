@@ -24,7 +24,11 @@ defmodule MehungryWeb.NutritionistLive.RecordsTest do
 
     client_user = Mehungry.AccountsFixtures.user_fixture()
     client_user = Repo.update!(Ecto.Changeset.change(client_user, name: "Platform Client"))
-    Repo.insert!(%TutorClientAssignment{professional_id: nutritionist.id, client_id: client_user.id})
+
+    Repo.insert!(%TutorClientAssignment{
+      professional_id: nutritionist.id,
+      client_id: client_user.id
+    })
 
     %{
       conn: log_in_user(conn, nutritionist),
@@ -95,7 +99,10 @@ defmodule MehungryWeb.NutritionistLive.RecordsTest do
     assert length(Professionals.list_consultation_notes(record.id)) == 15
   end
 
-  test "confirm import without a selected client is refused", %{conn: conn, nutritionist: nutritionist} do
+  test "confirm import without a selected client is refused", %{
+    conn: conn,
+    nutritionist: nutritionist
+  } do
     {:ok, view, _html} = live(conn, "/nutritionist/records/import")
 
     upload =

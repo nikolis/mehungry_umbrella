@@ -124,9 +124,9 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
       |> element("button[phx-click='edit_plan_meal'][phx-value-id='#{meal.id}']")
       |> render_click()
 
-    # Calendar-style form: Recipe/Ingredient toggle present, no meal-type picker.
+    # Calendar-style form: recipe + ingredients sections, no meal-type picker.
     assert html =~ "Edit meal"
-    assert has_element?(live, "button[phx-click='set_mode'][phx-value-mode='ingredient']")
+    assert html =~ "Add ingredient"
     refute has_element?(live, "button[phx-click='set_meal_type']")
 
     render_submit(element(live, "#edit-meal-modal form"), %{
@@ -136,6 +136,41 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
     updated = MealBlueprints.get_plan_meal!(user.id, meal.id)
     assert updated.cooking_portions == 5
     assert updated.recipe_id == meal.recipe_id
+  end
+
+  test "editing an ingredient meal persists a changed ingredient quantity", %{
+    conn: conn,
+    user: user
+  } do
+    bp = seed_blueprint(user, "Snacky week")
+    %{plan: plan} = seed_plan(user, bp)
+
+    meal = plan.id |> MealBlueprints.list_plan_meals() |> Enum.find(&(&1.recipe_id == nil))
+    [child] = meal.ingredients
+
+    {:ok, live, _html} = live(conn, ~p"/nutritionist/blueprints")
+
+    live
+    |> element("button[phx-click='toggle_plan'][phx-value-id='#{plan.id}']")
+    |> render_click()
+
+    live
+    |> element("button[phx-click='edit_plan_meal'][phx-value-id='#{meal.id}']")
+    |> render_click()
+
+    render_submit(element(live, "#edit-meal-modal form"), %{
+      "ing" => %{
+        to_string(child.id) => %{
+          "quantity" => "45",
+          "unit_selection" => to_string(child.measurement_unit_id)
+        }
+      }
+    })
+
+    updated = MealBlueprints.get_plan_meal!(user.id, meal.id)
+    [updated_child] = updated.ingredients
+    assert updated_child.quantity == 45.0
+    assert updated_child.ingredient_id == child.ingredient_id
   end
 
   test "importing a plan creates calendar meals from the chosen date", %{conn: conn, user: user} do
@@ -277,13 +312,15 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
     {:ok, _} =
       Mehungry.Health.add_recommendation(condition.id, good.id, %{
         recommendation: "encourage",
-        source: "manual"
+        source: "manual",
+        source_reference: %{"label" => "Clinical note", "url" => "https://example.org"}
       })
 
     {:ok, _} =
       Mehungry.Health.add_recommendation(condition.id, bad.id, %{
         recommendation: "avoid",
-        source: "manual"
+        source: "manual",
+        source_reference: %{"label" => "Clinical note", "url" => "https://example.org"}
       })
 
     {:ok, live, _html} = live(conn, ~p"/nutritionist/blueprints/#{bp.id}/edit")

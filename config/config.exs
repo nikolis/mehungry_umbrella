@@ -39,6 +39,10 @@ config :mehungry_web, :test_accounts_env, config_env()
 # uses to reach the local-AI REST API. Overridden in runtime.exs from env vars.
 config :mehungry_local_ai, server_base_url: "http://localhost:4000"
 
+# Base URL of the mehungry_extractor batch-PMID analysis service (POST /analyze).
+# Overridden in runtime.exs from the EXTRACTOR_BASE_URL env var.
+config :mehungry, :extractor_base_url, "http://127.0.0.1:8000"
+
 # Reference FDC dataset JSON files the /professional/usda-schema view derives
 # its schema catalog from (Mehungry.FoodData.Usda.SchemaMatcher). A path or list
 # of paths; when none is readable the catalog falls back to the ingredient
@@ -114,7 +118,22 @@ config :mehungry,
     "PS",
     "Gln-Glu",
     "sugar-acid",
-    "oil"
+    "oil",
+    # solvents / process artifacts (appear in extraction & fermentation contexts,
+    # not as intrinsic constituents)
+    "Ethanol",
+    "Methanol",
+    "Acetone",
+    "Chloroform",
+    # non-specific class terms / measured targets, never a discrete dietary compound
+    "Reactive Oxygen Species",
+    "reactive oxygen species",
+    "ROS",
+    "Free Radicals",
+    "Free Radical",
+    "Heavy Metals",
+    "Heavy Metal",
+    "Reactive Nitrogen Species"
   ]
 
 config :mehungry, Oban,

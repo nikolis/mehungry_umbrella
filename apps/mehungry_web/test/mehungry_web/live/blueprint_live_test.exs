@@ -13,7 +13,9 @@ defmodule MehungryWeb.BlueprintLiveTest do
   defp public_blueprint(name \\ "Mediterranean Reset") do
     owner = Mehungry.AccountsFixtures.user_fixture(%{name: "Dr. Nutri"})
     {:ok, _} = Subscriptions.upsert_subscription(owner.id, %{tier: "pro", status: "active"})
-    {:ok, bp} = MealBlueprints.create_blueprint(MealBlueprints.default_blueprint_attrs(owner.id, name))
+
+    {:ok, bp} =
+      MealBlueprints.create_blueprint(MealBlueprints.default_blueprint_attrs(owner.id, name))
 
     {:ok, public} =
       MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(owner.id, bp.id), %{
@@ -42,9 +44,17 @@ defmodule MehungryWeb.BlueprintLiveTest do
 
     test "a private blueprint 404s", %{conn: conn} do
       owner = Mehungry.AccountsFixtures.user_fixture()
-      {:ok, bp} = MealBlueprints.create_blueprint(MealBlueprints.default_blueprint_attrs(owner.id, "Secret"))
+
+      {:ok, bp} =
+        MealBlueprints.create_blueprint(
+          MealBlueprints.default_blueprint_attrs(owner.id, "Secret")
+        )
+
       # give it a slug without publishing
-      {:ok, bp} = MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(owner.id, bp.id), %{description: "x"})
+      {:ok, bp} =
+        MealBlueprints.update_blueprint(MealBlueprints.get_blueprint!(owner.id, bp.id), %{
+          description: "x"
+        })
 
       assert_raise Ecto.NoResultsError, fn ->
         get(conn, ~p"/blueprints/#{bp.slug || "missing"}")
@@ -73,7 +83,11 @@ defmodule MehungryWeb.BlueprintLiveTest do
       assert html =~ "Keto Kickstart"
 
       # Title search filters.
-      html = render_submit(element(live, "form[phx-submit='search_blueprints']"), %{"query" => "nomatch"})
+      html =
+        render_submit(element(live, "form[phx-submit='search_blueprints']"), %{
+          "query" => "nomatch"
+        })
+
       refute html =~ "Keto Kickstart"
     end
   end

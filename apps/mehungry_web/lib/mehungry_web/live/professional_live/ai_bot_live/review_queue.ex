@@ -407,8 +407,9 @@ defmodule MehungryWeb.AiBotLive.ReviewQueue do
                   {Calendar.strftime(date, "%A, %B %d %Y")}
                 </span>
                 <div class="flex-1 border-t border-ink-panel2/40"></div>
-                <span class="text-xs text-parchment-dim">{length(recipes)} recipe{if length(recipes) != 1,
-                  do: "s"}</span>
+                <span class="text-xs text-parchment-dim">{length(recipes)} recipe{if length(recipes) !=
+                                                                                       1,
+                                                                                     do: "s"}</span>
               </div>
               <div class="space-y-2">
                 <%= for recipe <- recipes do %>
