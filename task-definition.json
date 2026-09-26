@@ -82,6 +82,10 @@
                     "name": "METRICS_API_TOKEN",
                     "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/metrics_api_token-c9gkhq"
                 },
+                {
+                    "name": "PUBLIC_API_TOKEN",
+                    "valueFrom": "arn:aws:secretsmanager:eu-central-1:011528270584:secret:mehungry/prod/public_api_token-A0Kt4L"
+                },
 
                 {
                     "name": "RELEASE_COOKIE",
