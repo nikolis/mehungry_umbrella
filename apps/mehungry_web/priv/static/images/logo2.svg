@@ -1,15 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="warmOrange" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#F97316" />
-      <stop offset="50%" stop-color="#EA580C" />
-      <stop offset="100%" stop-color="#C2410C" />
-    </linearGradient>
-  </defs>
-  
-  <polygon points="10,28 32,10 54,28 54,50 32,64 10,50" fill="#7C2D12" />
-  <polygon points="32,10 54,28 54,50 32,64" fill="url(#warmOrange)" stroke="#F97316" stroke-width="1" />
-  <polygon points="10,28 32,10 32,64 10,50" fill="#C2410C" stroke="#F97316" stroke-width="1" />
-  <polygon points="32,10 54,28 32,40 10,28" fill="#FBBF24" stroke="#FDE68A" stroke-width="1" />
-  <text x="32" y="48" font-family="'Inter', sans-serif" font-size="21" font-weight="800" fill="#0F172A" text-anchor="middle">M3</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>M3hungry logo mark — dark surfaces (transparent, lightened teal)</title>
+
+  <!-- Atomic orbit system (lightened basil-soft for contrast on ink) -->
+  <g fill="none" stroke="#8FDDCE" stroke-width="26" stroke-linecap="round">
+    <ellipse cx="512" cy="430" rx="275" ry="108" transform="rotate(18 512 430)"/>
+    <ellipse cx="512" cy="430" rx="275" ry="108" transform="rotate(-18 512 430)"/>
+  </g>
+
+  <!-- Orbit nodes -->
+  <circle cx="307" cy="366" r="31" fill="#8FDDCE"/>
+  <circle cx="674" cy="532" r="31" fill="#8FDDCE"/>
+
+  <!-- Leaf node -->
+  <path d="M706 267 C741 226 787 218 824 224 C828 266 816 309 783 337 C753 362 719 357 696 346 C700 318 708 291 706 267Z" fill="#8FDDCE"/>
+  <path d="M714 340 C737 306 760 276 796 244" fill="none" stroke="#17140F" stroke-width="12" stroke-linecap="round" opacity="0.35"/>
+
+  <!-- Bowl -->
+  <path d="M244 584 C315 616 709 616 780 584 L760 752 C746 850 646 922 512 922 C378 922 278 850 264 752 Z" fill="#E8622C"/>
+  <path d="M244 584 C299 551 725 551 780 584 C724 623 300 623 244 584Z" fill="#E8622C"/>
+  <path d="M275 584 C344 605 680 605 749 584 C678 566 346 566 275 584Z" fill="#F0906B"/>
+  <path d="M467 913 C481 931 543 931 557 913 C552 902 472 902 467 913Z" fill="#E8622C"/>
 </svg>
