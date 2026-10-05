@@ -66,7 +66,8 @@ modal; `import_plan_to_calendar/3` lays `day_index` 1..7 onto
 meals get **`consume_portions: 1`** (not `0`) so the calendar's nutrient summary
 — which scales by `consume_portions / servings`
 (`NutrientUtils.summarize_meals_nutrients/1`) — shows real numbers; ingredient
-meals get live-computed nutrition (`History.scaled_ingredient_nutrients/2`).
+meals get live-computed nutrition as the same structured tree a recipe has
+(`History.scaled_ingredient_nutrient_tree/2`).
 **Re-import is allowed** (a `data-confirm` warns when re-importing an already
 imported plan); `imported_at` flags the plan and shows an "imported" badge.
 
@@ -92,7 +93,9 @@ three levels of increasing specificity:
   (e.g. *"Ulcerative Colitis Weekly blueprint"*) **plus the "general" targets that
   apply across every day**: **required** and **avoid** lists for both nutrients
   and bioactive compounds (all chosen from the actual database via a searchable
-  chip picker, persisted as name arrays), and free-text preferred foods.
+  chip picker, persisted as name arrays), and free-text **preferred foods** and
+  **avoid foods** (the latter is the defining lever for avoidance diets like
+  Low-FODMAP, and is **enforced during generation** — see *AI planner seam*).
 - **Day** (7 of them) — just an optional total calorie aim + the 5 meal rows.
 - **Meal** (the 5 calendar slots per day) — the "specific" targets: a macro
   **percentage split** (protein / carbs / fats, always totalling 100 %; default
@@ -114,7 +117,7 @@ with the modern `belongs_to :user`.
 
 | Schema (table) | Key fields |
 |---|---|
-| `Blueprint` (`meal_blueprints`) | `name`, `description`, `belongs_to :user`, `belongs_to :condition` (optional disease, `Health.Condition`), `required_nutrients` / `avoid_nutrients` / `required_compounds` / `avoid_compounds` / `preferred_foods` (all `{:array,:string}`), `has_many :days` |
+| `Blueprint` (`meal_blueprints`) | `name`, `description`, `belongs_to :user`, `belongs_to :condition` (optional disease, `Health.Condition`), `required_nutrients` / `avoid_nutrients` / `required_compounds` / `avoid_compounds` / `preferred_foods` / `avoid_foods` (all `{:array,:string}`), `has_many :days` |
 | `BlueprintDay` (`meal_blueprint_days`) | `day_index` (1..7), `total_calorie_target` (int, optional), `has_many :meals` |
 | `BlueprintMeal` (`meal_blueprint_meals`) | `meal_type` (one of `History.MealType.values/0`), `protein_pct`, `carbs_pct`, `fats_pct` (integers, must total 100; default 30/40/30 via `BlueprintMeal.default_split/0`), `note` |
 
@@ -202,6 +205,47 @@ attrs  = Mehungry.MealBlueprints.Presets.attrs_for(preset, user_id)   # create_b
 Presets carry no `user_id`; they are **instantiated per user** (a starter the
 user then tweaks). A test inserts all 36 to guarantee they are valid/insertable
 in production.
+
+## Diet patterns — named-diet starter blueprints
+
+`Mehungry.MealBlueprints.DietPatterns`
+(`apps/mehungry/lib/mehungry/meal_blueprints/diet_patterns.ex`) — the
+*named-eating-pattern* sibling of `Presets` (same `all/0` · `get/1` · `attrs_for/2`
+· `create_for_user/2` shape). Two patterns today:
+
+- **Mediterranean Diet** — an *encourage* pattern (like the shipped
+  "Anti-Inflammatory" indication): `required_compounds` Polyphenols/Flavonoids,
+  `required_nutrients` Omega-3/Fiber/Monounsaturated Fat, `avoid_nutrients`
+  Saturated Fat/Added Sugar/Sodium, olive-oil-forward preferred foods, macro split
+  20/45/35. No `avoid_foods`.
+- **Low-FODMAP Diet** — an *avoidance* pattern driven by `avoid_foods` (onion,
+  garlic, wheat, rye, apple, pear, honey, legumes, milk…) plus the FODMAP compound
+  in `avoid_compounds`; low-FODMAP staples as preferred foods; macro split 25/45/30.
+
+`DietPatterns` is the **single source of truth for both halves** of a pattern:
+the per-user blueprint *and* its shared `dietary_pattern` `Health.Condition`
+(name + description + compound/nutrient recommendations). The blueprint's
+compound/nutrient tag arrays are **derived** from the condition spec (encourage →
+required, limit/avoid → avoid) so direction stays consistent.
+
+**Seeded by button, not only by seeds.** `DietPatterns.ensure_conditions/0`
+idempotently upserts every pattern's condition + recommendations; it is called
+from `priv/repo/seeds.exs` **and** from two UI buttons, so you never have to run
+seeds to get them:
+
+- **Admin** `/professional/health` → **"Seed diet patterns"** (next to the
+  existing "Seed registry") → `ensure_conditions/0` (shared reference data).
+- **Nutritionist** `/nutritionist/blueprints` → **"+ Starter diet patterns"** →
+  `ensure_conditions/0` then `create_missing_for_user/1`, which instantiates every
+  pattern the user doesn't already own (matched by name, safe to click twice).
+
+`attrs_for/2` resolves the `condition_id` **by name** via
+`Health.get_condition_by_name/1` so the editor's condition→compound/nutrient
+auto-suggest lights up — and degrades to an unlinked blueprint when the condition
+isn't seeded. Everything is driven off `all/0`, so **adding a new pattern to
+`DietPatterns` surfaces it in both buttons and seeds automatically**. Tested in
+`diet_patterns_test.exs` (incl. `ensure_conditions`/`create_missing_for_user`
+idempotency) and the two LiveView tests.
 
 ## Web layer
 
@@ -293,12 +337,24 @@ blueprint") preselects the blueprint and opens the panel. The selection threads 
 `Mehungry.AI.MealPlanGenerator.run/5` → `Mehungry.AI.Agents.MealPlanAgent.run/5`.
 The blueprint is resolved with `get_blueprint_for_generation/2` (owned **or**
 saved **or** public) and its targets reach the planner as the free-text brief
-from `blueprint_preferences/1`. The agent already plans all **5** slots × 7 days
-and supports recipe-or-ingredient slots.
+from `blueprint_preferences/1` (which now also emits an `Avoid foods: …` line).
+The agent already plans all **5** slots × 7 days and supports recipe-or-ingredient
+slots.
 
-> Still open (not blocking this feature): threading the *structured*
-> `to_targets_map/1` (per-day calorie + macro split) and resolving compound names
-> against `Food.Compounds` into the agent, rather than only the free-text brief.
+**Avoid-foods enforcement (structured, not just brief).** `MealPlanAgent.run/5`
+threads the `%Blueprint{}` through, derives a downcased `avoid_terms` set from
+`avoid_foods`, and **filters any recipe/ingredient whose name contains an avoid
+term out of the `search_catalog`/`search_ingredients` results** before the ids
+enter the provenance set — so a filtered-out food can never be submitted (the
+existing `validate_plan` provenance gate rejects any non-offered id). The system
+prompt also carries an explicit `NEVER include …` rule. This is what makes the
+Low-FODMAP pattern real: onion/garlic/wheat are excluded from generation, not
+merely discouraged. (`avoid_terms/1` + `reject_avoided/3` are `@doc false` but
+unit-tested in `plan_provenance_test.exs`.)
+
+> Still open (not blocking): threading the *structured* `to_targets_map/1`
+> (per-day calorie + macro split) and resolving compound names against
+> `Food.Compounds` into the agent, rather than only the free-text brief.
 
 ## Quota
 

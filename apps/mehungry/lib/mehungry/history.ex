@@ -110,9 +110,12 @@ defmodule Mehungry.History do
   end
 
   @doc """
-  Scaled nutrient list for a logged ingredient meal, in the display shape the
-  calendar's `NutrientUtils.summarize_meals_nutrients/1` and the nutrient tables
-  expect (`%{name:, amount:, measurement_unit: %{name:}}`).
+  The hierarchical nutrient map for a logged ingredient meal, in the **same**
+  structured shape as a recipe's `recipe.nutrients` (via
+  `NutrientCalculation.ingredient_nutrient_tree/2`). Treating a directly-logged
+  ingredient as a one-ingredient recipe keeps the calendar's daily summary
+  (`NutrientUtils.summarize_meals_nutrients/1`) and cards consistent between the
+  two meal kinds.
 
   Resolves the ingredient's total grams from the chosen portion/unit + quantity
   (reusing the recipe nutrition engine) so a logged "2 medium banana" contributes
@@ -123,7 +126,7 @@ defmodule Mehungry.History do
   `ingredient_user_meal` must have `:ingredient` preloaded with
   `:ingredient_portions` and `ingredient_nutrients: [nutrient: :measurement_unit]`.
   """
-  def scaled_ingredient_nutrients(ingredient_user_meal, gram_ids) do
+  def scaled_ingredient_nutrient_tree(ingredient_user_meal, gram_ids) do
     ingredient = ingredient_user_meal.ingredient
 
     gram_weight =
@@ -135,11 +138,7 @@ defmodule Mehungry.History do
         gram_ids
       )
 
-    ingredient
-    |> NutrientCalculation.build_nutrient_list(gram_weight)
-    |> Enum.map(fn n ->
-      %{name: n.name, amount: n.amount, measurement_unit: %{name: n.measurement_unit}}
-    end)
+    NutrientCalculation.ingredient_nutrient_tree(ingredient, gram_weight)
   end
 
   def list_history_user_meals_for_user(user_id, date) do
@@ -181,6 +180,51 @@ defmodule Mehungry.History do
             :ingredient_portion,
             ingredient: [:category, :ingredient_translation]
           ]
+        ]
+      ]
+    )
+  end
+
+  @doc """
+  A user's `UserMeal`s whose `start_dt` falls on any day in the inclusive
+  `start_date..end_date` span, preloaded deeply enough for blueprint
+  compatibility analysis: each recipe's `recipe_ingredients` (with `ingredient`,
+  for compound resolution) plus each logged ingredient's `ingredient` (with
+  `ingredient_portions` + `ingredient_nutrients: [nutrient: :measurement_unit]`,
+  which `MealBlueprints.PlanCompatibility` reads to compute calories).
+
+  Used by `Mehungry.MealBlueprints.calendar_progress/3` to measure a calendar
+  week against a blueprint's targets.
+  """
+  def list_user_meals_in_range(user_id, %Date{} = start_date, %Date{} = end_date) do
+    range_start = NaiveDateTime.new!(start_date, ~T[00:00:00])
+    range_end = NaiveDateTime.new!(end_date, ~T[23:59:59])
+
+    query =
+      from meal in UserMeal,
+        where:
+          meal.user_id == ^user_id and meal.start_dt >= ^range_start and
+            meal.start_dt <= ^range_end
+
+    Repo.all(query)
+    |> Repo.preload(
+      recipe_user_meals: [
+        recipe: [
+          recipe_ingredients: [
+            :measurement_unit,
+            :ingredient_portion,
+            ingredient: [:category, :ingredient_translation]
+          ]
+        ]
+      ],
+      ingredient_user_meals: [
+        :measurement_unit,
+        ingredient_portion: :measurement_unit,
+        ingredient: [
+          :category,
+          :ingredient_translation,
+          :ingredient_portions,
+          ingredient_nutrients: [nutrient: :measurement_unit]
         ]
       ]
     )

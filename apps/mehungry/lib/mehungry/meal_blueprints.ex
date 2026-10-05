@@ -100,6 +100,21 @@ defmodule Mehungry.MealBlueprints do
   def search_public_blueprints(_term, opts), do: list_public_blueprints(opts)
 
   @doc """
+  Maps every **public** blueprint's normalized name (trimmed, down-cased) to its
+  slug. Used to linkify a dietary-pattern recommendation — e.g. an "encourage:
+  Mediterranean diet" row on a condition page — to its public blueprint preview,
+  matching case-insensitively on the displayed title. Returns
+  `%{normalized_name => slug}`.
+  """
+  def public_blueprint_name_index do
+    Blueprint
+    |> where([b], b.visibility == "public")
+    |> select([b], {fragment("lower(btrim(?))", b.name), b.slug})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   The completed generation runs attached to a **public** blueprint (for the
   preview page), each with its plan meals preloaded — not owner-scoped.
   """
@@ -315,9 +330,14 @@ defmodule Mehungry.MealBlueprints do
       description: source.description,
       required_nutrients: source.required_nutrients,
       avoid_nutrients: source.avoid_nutrients,
+      required_nutrient_pcts: source.required_nutrient_pcts,
+      avoid_nutrient_pcts: source.avoid_nutrient_pcts,
+      required_nutrient_modes: source.required_nutrient_modes,
+      avoid_nutrient_modes: source.avoid_nutrient_modes,
       required_compounds: source.required_compounds,
       avoid_compounds: source.avoid_compounds,
       preferred_foods: source.preferred_foods,
+      avoid_foods: source.avoid_foods,
       days: Enum.map(source.days, &day_to_attrs/1)
     }
 
@@ -338,6 +358,7 @@ defmodule Mehungry.MealBlueprints do
       required_compounds: [],
       avoid_compounds: [],
       preferred_foods: [],
+      avoid_foods: [],
       days:
         for day_index <- 1..7 do
           %{
@@ -364,9 +385,14 @@ defmodule Mehungry.MealBlueprints do
       condition: condition_name(blueprint),
       required_nutrients: blueprint.required_nutrients,
       avoid_nutrients: blueprint.avoid_nutrients,
+      required_nutrient_pcts: blueprint.required_nutrient_pcts,
+      avoid_nutrient_pcts: blueprint.avoid_nutrient_pcts,
+      required_nutrient_modes: blueprint.required_nutrient_modes,
+      avoid_nutrient_modes: blueprint.avoid_nutrient_modes,
       required_compounds: blueprint.required_compounds,
       avoid_compounds: blueprint.avoid_compounds,
       preferred_foods: blueprint.preferred_foods,
+      avoid_foods: blueprint.avoid_foods,
       days:
         Enum.map(blueprint.days, fn day ->
           %{
@@ -405,7 +431,8 @@ defmodule Mehungry.MealBlueprints do
       tag_line("Avoid nutrients", blueprint.avoid_nutrients),
       tag_line("Prefer bioactive compounds", blueprint.required_compounds),
       tag_line("Avoid bioactive compounds", blueprint.avoid_compounds),
-      tag_line("Preferred foods", blueprint.preferred_foods)
+      tag_line("Preferred foods", blueprint.preferred_foods),
+      tag_line("Avoid foods", blueprint.avoid_foods)
     ]
     |> Enum.reject(&(is_nil(&1) or &1 == ""))
     |> Enum.join(" ")
@@ -499,7 +526,17 @@ defmodule Mehungry.MealBlueprints do
     Repo.all(
       from(m in BlueprintPlanMeal,
         where: m.blueprint_plan_id == ^plan_id,
-        preload: [ingredients: :ingredient, recipe: [recipe_ingredients: :ingredient]]
+        preload: [
+          # ingredient nutrients/portions let PlanCompatibility build whole-food
+          # ingredient meals' nutrient trees the same way recipes do.
+          ingredients: [
+            ingredient: [
+              :ingredient_portions,
+              ingredient_nutrients: [nutrient: :measurement_unit]
+            ]
+          ],
+          recipe: [recipe_ingredients: :ingredient]
+        ]
       )
     )
     |> Enum.sort_by(fn m -> {m.day_index, Map.get(order, m.meal_type, 99)} end)
@@ -514,6 +551,303 @@ defmodule Mehungry.MealBlueprints do
   def plan_compatibility(user_id, blueprint_id, plan_id) do
     blueprint = get_blueprint!(user_id, blueprint_id)
     PlanCompatibility.analyze(blueprint, list_plan_meals_with_ingredients(plan_id))
+  end
+
+  @doc """
+  Measures a user's **calendar** week against a `blueprint`'s targets, reusing
+  `PlanCompatibility.analyze/2` against the real `History.UserMeal`s in
+  `week_start..week_start + 6` (adapted to the analyzer's plan-meal shape). This
+  powers the live "how your week measures up" panel on the calendar when a user
+  arrives via "Use this blueprint". Returns a week-rollup:
+
+      %{
+        week_start: Date.t(),
+        week_end: Date.t(),
+        days: %{day_index => day_report},                 # per-day breakdown
+        days_progress: %{day_index => %{required: [...], avoid: [...]}}, # per-day chips
+        required: [%{name: String.t(), met: boolean}],    # week-level goal coverage
+        violations: [%{kind:, name:, direction: :avoid}], # deduped avoid hits
+        calorie_days_on_target: non_neg_integer,
+        calorie_days_with_target: non_neg_integer
+      }
+
+  `days`/`required`/`violations` carry the analyzer's native atom keys/values
+  (not the string-keyed JSON form the nutritionist library reads back from a
+  stored `BlueprintPlan.compatibility`).
+
+  Energy counts one serving per logged recipe (matching `PlanCompatibility`'s
+  `recipe_calories/1` and the plan→calendar import's `consume_portions: 1`); it
+  does not yet scale by `RecipeUserMeal.consume_portions`.
+  """
+  def calendar_progress(user_id, %Blueprint{} = blueprint, %Date{} = week_start) do
+    week_end = Date.add(week_start, 6)
+
+    plan_meals =
+      user_id
+      |> Mehungry.History.list_user_meals_in_range(week_start, week_end)
+      |> user_meals_to_plan_meals(week_start)
+
+    report = PlanCompatibility.analyze(blueprint, plan_meals)
+    units = nutrient_unit_labels(blueprint)
+    avoid = avoid_coverage(blueprint, report, units)
+
+    %{
+      week_start: week_start,
+      week_end: week_end,
+      days: report.days,
+      days_progress: day_progress(blueprint, report, units, plan_meals),
+      required: required_coverage(blueprint, report, units),
+      avoid: avoid,
+      violations: Enum.filter(avoid, & &1.flagged),
+      calorie_days_on_target: count_days(report, &(&1.calorie_status == :ok)),
+      calorie_days_with_target: count_days(report, &(&1.calorie_status != :no_target))
+    }
+  end
+
+  # Per-day goal/avoid coverage keyed by `day_index` (1..7). Each day's chips
+  # should carry *that day's* measures, not the week's — so we re-run the same
+  # `required_coverage`/`avoid_coverage` against a report scoped to one day's
+  # meals and its own `overall` slice. Covers every blueprint day (empty days
+  # included → all goals read unmet).
+  defp day_progress(blueprint, report, units, plan_meals) do
+    meal_ids_by_day = Enum.group_by(plan_meals, & &1.day_index, & &1.id)
+    overall_by_day = Map.new(report.overall.days, &{&1.day_index, &1})
+
+    Map.new(report.days, fn {day_index, _day_report} ->
+      scoped = %{
+        meals: Map.take(report.meals, Map.get(meal_ids_by_day, day_index, [])),
+        overall: scoped_overall(Map.get(overall_by_day, day_index))
+      }
+
+      {day_index,
+       %{
+         required: required_coverage(blueprint, scoped, units),
+         avoid: avoid_coverage(blueprint, scoped, units)
+       }}
+    end)
+  end
+
+  # A single day's `overall` slice in the shape the coverage helpers read
+  # (`overall_nutrient_pct/amount/day_amounts`). `days` holds just this day so
+  # amount-mode per-day checks evaluate against it alone.
+  defp scoped_overall(nil), do: %{nutrient_grams: %{}, total_kcal: 0, days: []}
+
+  defp scoped_overall(day),
+    do: %{nutrient_grams: day.nutrient_grams, total_kcal: day.total_kcal, days: [day]}
+
+  # Flattens a week of `UserMeal`s into the plain-map "plan meal" shape
+  # `PlanCompatibility.analyze/2` reads. A `UserMeal` may carry several recipes
+  # and several logged ingredients, so each recipe becomes its own pseudo-meal and
+  # the ingredients collapse into one; all share the meal's relative `day_index`
+  # (1..7 from `week_start`). Synthetic sequential `:id`s satisfy the analyzer's
+  # per-meal keying.
+  defp user_meals_to_plan_meals(user_meals, week_start) do
+    user_meals
+    |> Enum.flat_map(&expand_user_meal(&1, week_start))
+    |> Enum.with_index(1)
+    |> Enum.map(fn {meal, idx} -> Map.put(meal, :id, idx) end)
+  end
+
+  defp expand_user_meal(meal, week_start) do
+    day_index = Date.diff(NaiveDateTime.to_date(meal.start_dt), week_start) + 1
+
+    if day_index in 1..7 do
+      recipe_meals =
+        Enum.map(meal.recipe_user_meals, fn rum ->
+          %{
+            day_index: day_index,
+            meal_type: meal.meal_type,
+            recipe_id: rum.recipe_id,
+            recipe: rum.recipe,
+            ingredients: []
+          }
+        end)
+
+      ingredient_meals =
+        case meal.ingredient_user_meals do
+          [] ->
+            []
+
+          iums ->
+            [
+              %{
+                day_index: day_index,
+                meal_type: meal.meal_type,
+                recipe_id: nil,
+                recipe: nil,
+                ingredients: Enum.map(iums, &ium_to_ingredient/1)
+              }
+            ]
+        end
+
+      recipe_meals ++ ingredient_meals
+    else
+      []
+    end
+  end
+
+  defp ium_to_ingredient(ium) do
+    %{
+      ingredient_id: ium.ingredient_id,
+      ingredient: ium.ingredient,
+      quantity: ium.quantity,
+      measurement_unit_id: ium.measurement_unit_id,
+      ingredient_portion_id: ium.ingredient_portion_id
+    }
+  end
+
+  # Week-level required coverage. Compounds are presence-based (a required token is
+  # "met" if it surfaces as a match in any meal's report — family matches carry the
+  # family label, which equals the token). Nutrients are `met` when they clear their
+  # threshold and carry mode-specific `pct`/`amount` + `target` (+ `unit`) for
+  # display.
+  defp required_coverage(blueprint, report, units) do
+    met_compounds =
+      report.meals
+      |> Map.values()
+      |> Enum.flat_map(& &1.matches)
+      |> Enum.filter(&(&1.kind == :compound))
+      |> MapSet.new(&String.downcase(&1.name))
+
+    compound_coverage =
+      (blueprint.required_compounds || [])
+      |> Enum.map(fn token ->
+        %{name: token, met: MapSet.member?(met_compounds, String.downcase(token))}
+      end)
+
+    nutrient_coverage =
+      Enum.map(blueprint.required_nutrients || [], fn name ->
+        nutrient_week_entry(:required, name, blueprint, report, units)
+      end)
+
+    Enum.uniq_by(compound_coverage ++ nutrient_coverage, & &1.name)
+  end
+
+  # Week-level avoid coverage: every avoid item listed with its status, mirroring
+  # `required_coverage` (so the panel always shows what to watch, not only what is
+  # currently breached). Compounds are `flagged` when present in any meal; nutrients
+  # are `flagged` when they cross their threshold and carry mode-specific display
+  # fields. Entries carry `direction: :avoid` so `violations` can be derived.
+  defp avoid_coverage(blueprint, report, units) do
+    flagged_compounds =
+      report.meals
+      |> Map.values()
+      |> Enum.flat_map(& &1.violations)
+      |> Enum.filter(&(&1.kind == :compound))
+      |> MapSet.new(&String.downcase(&1.name))
+
+    compound_coverage =
+      (blueprint.avoid_compounds || [])
+      |> Enum.map(fn token ->
+        %{
+          name: token,
+          direction: :avoid,
+          flagged: MapSet.member?(flagged_compounds, String.downcase(token))
+        }
+      end)
+
+    nutrient_coverage =
+      Enum.map(blueprint.avoid_nutrients || [], fn name ->
+        nutrient_week_entry(:avoid, name, blueprint, report, units)
+      end)
+
+    Enum.uniq_by(compound_coverage ++ nutrient_coverage, & &1.name)
+  end
+
+  # Resolves one nutrient's week-level status for the given direction. pct mode uses
+  # the week caloric share (scale-invariant); amount mode evaluates the per-day
+  # totals (required = every day-with-meals clears the floor; avoid = any day
+  # exceeds the ceiling) and reports the min (required) / max (avoid) day total.
+  defp nutrient_week_entry(direction, name, blueprint, report, units) do
+    %{mode: mode, value: value} =
+      PlanCompatibility.nutrient_target(
+        nutrient_value_map(blueprint, direction),
+        nutrient_mode_map(blueprint, direction),
+        name
+      )
+
+    {measured, crossed} =
+      case mode do
+        :pct ->
+          pct = PlanCompatibility.overall_nutrient_pct(name, report.overall)
+          # Keep one decimal for the *display* so the shown measure never rounds
+          # up to look like it meets the target while the (precise) crossing check
+          # below says it does not — e.g. a true 1.51% must not read "2% / ≥2%".
+          {Float.round(pct, 1), PlanCompatibility.nutrient_threshold_crossed?(direction, pct, value)}
+
+        :amount ->
+          amounts = PlanCompatibility.overall_nutrient_day_amounts(name, report.overall)
+          amount_week_status(direction, amounts, value)
+      end
+
+    base =
+      case mode do
+        :pct ->
+          %{
+            name: name,
+            mode: :pct,
+            pct: measured,
+            target: value,
+            # The current absolute quantity shown next to the % (e.g. "(0.4 g)").
+            amount: PlanCompatibility.overall_nutrient_amount(name, report.overall),
+            unit: Map.get(units, name)
+          }
+
+        :amount ->
+          %{
+            name: name,
+            mode: :amount,
+            amount: measured,
+            target: value,
+            unit: Map.get(units, name),
+            # The complementary caloric share, shown next to the amount ("(6%)");
+            # 0 for non-energy nutrients (minerals), where it is hidden.
+            pct: round(PlanCompatibility.overall_nutrient_pct(name, report.overall))
+          }
+      end
+
+    status_key(direction, base, crossed)
+  end
+
+  # required → floor across every day with meals; avoid → ceiling on any day.
+  defp amount_week_status(_direction, [], _value), do: {0, false}
+
+  defp amount_week_status(:required, amounts, value),
+    do: {round(Enum.min(amounts)), Enum.all?(amounts, &(&1 >= value))}
+
+  defp amount_week_status(:avoid, amounts, value),
+    do: {round(Enum.max(amounts)), Enum.any?(amounts, &(&1 > value))}
+
+  defp status_key(:required, base, crossed), do: Map.put(base, :met, crossed)
+
+  defp status_key(:avoid, base, crossed),
+    do: base |> Map.put(:flagged, crossed) |> Map.put(:direction, :avoid)
+
+  defp nutrient_value_map(blueprint, :required), do: blueprint.required_nutrient_pcts
+  defp nutrient_value_map(blueprint, :avoid), do: blueprint.avoid_nutrient_pcts
+  defp nutrient_mode_map(blueprint, :required), do: blueprint.required_nutrient_modes
+  defp nutrient_mode_map(blueprint, :avoid), do: blueprint.avoid_nutrient_modes
+
+  # Short unit label (e.g. "mg") for every nutrient the blueprint references, for
+  # amount-mode display. One query; ambiguous name→unit picks the first.
+  defp nutrient_unit_labels(blueprint) do
+    names =
+      ((blueprint.required_nutrients || []) ++ (blueprint.avoid_nutrients || []))
+      |> Enum.uniq()
+
+    direct = Mehungry.Food.nutrient_unit_labels(names)
+
+    # Blueprint goals use canonical labels ("Fiber", "Omega-3") that rarely match
+    # a raw USDA `Nutrient.name` verbatim; fill any misses via normalized lookup
+    # so amount-mode chips read "≥25 g" rather than a bare "≥25".
+    case Enum.reject(names, &Map.has_key?(direct, &1)) do
+      [] -> direct
+      missing -> Map.merge(Mehungry.Food.nutrient_unit_labels_normalized(missing), direct)
+    end
+  end
+
+  defp count_days(report, pred) do
+    report.days |> Map.values() |> Enum.count(pred)
   end
 
   @doc """

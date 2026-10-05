@@ -163,6 +163,8 @@ defmodule Mehungry.Food do
   defdelegate get_nutrient(name, measurement_unit_id), to: Nutrients
   defdelegate create_nutrient(attrs), to: Nutrients
   defdelegate list_nutrients(), to: Nutrients
+  defdelegate nutrient_unit_labels(names), to: Nutrients
+  defdelegate nutrient_unit_labels_normalized(labels), to: Nutrients
   defdelegate list_key_nutrients(), to: Nutrients
   defdelegate enqueue_nutrient_recalculation_for_all(), to: Nutrients
   defdelegate get_interactions_for_ingredients(ingredient_ids), to: Nutrients

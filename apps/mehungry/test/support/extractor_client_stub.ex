@@ -26,21 +26,46 @@ defmodule Mehungry.Extractor.ClientStub do
       "included_pmids" => pmids,
       "papers" =>
         Enum.map(pmids, fn pmid ->
-          %{"pmid" => pmid, "status" => "included", "title" => "Stub paper #{pmid}"}
+          %{
+            "pmid" => pmid,
+            "status" => "included",
+            "title" => "Stub paper #{pmid}",
+            "source_type" => "open_access"
+          }
         end),
       "topic" => %{"core_concepts" => []},
       "outliers" => [],
-      "conclusions" => [
-        %{
-          "subject_name" => "Dietary fiber",
-          "predicate" => "improves",
-          "object_name" => "Remission",
-          "direction" => "supported",
-          "paper_count" => length(pmids),
-          "evidence" => [%{"quoted_text" => "Fiber intake was associated with remission."}]
-        }
-      ],
-      "facts" => %{},
+      "paper_claims" =>
+        Enum.map(pmids, fn pmid ->
+          %{
+            "pmid" => pmid,
+            "document_id" => "doc-#{pmid}",
+            "paper_title" => "Stub paper #{pmid}",
+            "paper_url" => "https://pubmed.ncbi.nlm.nih.gov/#{pmid}/",
+            "claims_list" => [
+              %{
+                "claim_id" => "claim-#{pmid}",
+                "parent_claim_id" => nil,
+                "subject_concept_id" => "C-fiber",
+                "subject_name" => "Dietary fiber",
+                "subject_label" => "Dietary fiber",
+                "subject_modifiers" => [],
+                "object_concept_id" => "C-remission",
+                "object_name" => "Remission",
+                "object_label" => "Remission",
+                "object_modifiers" => [],
+                "predicate" => "improves",
+                "polarity" => "positive",
+                "certainty" => "asserted",
+                "context" => nil,
+                "qualifiers" => [],
+                "evidence" => [
+                  %{"quoted_text" => "Fiber intake was associated with remission."}
+                ]
+              }
+            ]
+          }
+        end),
       "warnings" => []
     }
   end

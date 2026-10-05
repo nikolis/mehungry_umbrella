@@ -252,7 +252,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
               img_url: nil,
               recipe: %{
                 id: y.ingredient.id,
-                nutrients: History.scaled_ingredient_nutrients(y, gram_ids),
+                nutrients: History.scaled_ingredient_nutrient_tree(y, gram_ids),
                 primary_size: 5
               }
             }

@@ -32,6 +32,24 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
     assert html =~ "Cutting week"
   end
 
+  test "the 'Starter diet patterns' button instantiates the diet-pattern blueprints", %{
+    conn: conn,
+    user: user
+  } do
+    {:ok, live, _html} = live(conn, ~p"/nutritionist/blueprints")
+
+    assert has_element?(live, "button[phx-click='add_diet_patterns']")
+    render_click(live, "add_diet_patterns")
+
+    names = user.id |> MealBlueprints.list_blueprints_for_user() |> Enum.map(& &1.name)
+    assert "Mediterranean Diet" in names
+    assert "Low-FODMAP Diet" in names
+
+    # Idempotent: clicking again adds nothing.
+    render_click(live, "add_diet_patterns")
+    assert length(MealBlueprints.list_blueprints_for_user(user.id)) == 2
+  end
+
   test "index shows a Generate button per blueprint", %{conn: conn, user: user} do
     bp = seed_blueprint(user, "Cutting week")
 
@@ -275,6 +293,7 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
       end)
       |> Map.merge(%{
         "preferred_foods" => "nuts, dairy",
+        "avoid_foods" => "onion, garlic",
         "required_nutrients" => ["", "Vitamin C", "Vitamin B12"],
         "avoid_nutrients" => ["", "Sodium"],
         "required_compounds" => ["", "Polyphenols"],
@@ -291,6 +310,7 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
 
     assert breakfast.protein_pct == 25
     assert reloaded.preferred_foods == ["nuts", "dairy"]
+    assert reloaded.avoid_foods == ["onion", "garlic"]
     assert reloaded.required_nutrients == ["Vitamin C", "Vitamin B12"]
     assert reloaded.avoid_nutrients == ["Sodium"]
     assert reloaded.required_compounds == ["Polyphenols"]

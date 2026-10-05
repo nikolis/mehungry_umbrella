@@ -54,8 +54,15 @@ config :mehungry_local_ai,
   server_base_url: System.get_env("LOCAL_AI_SERVER_URL", "http://localhost:4000")
 
 # Base URL of the mehungry_extractor batch-PMID analysis service (POST /analyze).
+# A saved UI setting (Extractor.Settings) overrides this at runtime; this is the
+# fallback used until one is saved.
 config :mehungry, :extractor_base_url,
   System.get_env("EXTRACTOR_BASE_URL", "http://127.0.0.1:8000")
+
+# Optional bearer token for /analyze (fallback until a UI setting is saved).
+if token = System.get_env("EXTRACTOR_AUTH_TOKEN") do
+  config :mehungry, :extractor_auth_token, token
+end
 
 # HTTP receive/connect timeout (ms) for /analyze — a large uncached batch fetches
 # every PMID from PubMed/PMC and can take many minutes.

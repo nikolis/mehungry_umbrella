@@ -19,6 +19,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
   alias Mehungry.Food
   alias Mehungry.History.MealType
   alias Mehungry.MealBlueprints
+  alias Mehungry.MealBlueprints.DietPatterns
   alias Mehungry.Professionals
   alias Mehungry.Subscriptions
 
@@ -34,12 +35,22 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
               Reusable 7-day nutritional targets you can plan against.
             </p>
           </div>
-          <.link
-            patch={~p"/nutritionist/blueprints/new"}
-            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-bold transition"
-          >
-            + New blueprint
-          </.link>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              phx-click="add_diet_patterns"
+              data-confirm="Add the starter diet-pattern blueprints (Mediterranean, Low-FODMAP) you don't already have?"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-ink-panel2 text-parchment hover:bg-ink-panel transition"
+            >
+              + Starter diet patterns
+            </button>
+            <.link
+              patch={~p"/nutritionist/blueprints/new"}
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink font-bold transition"
+            >
+              + New blueprint
+            </.link>
+          </div>
         </div>
 
         <div :if={@blueprints == []} class="text-center text-parchment-dim py-20">
@@ -583,6 +594,22 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
           {:noreply, put_flash(socket, :error, "Could not create blueprint.")}
       end
     end
+  end
+
+  @impl true
+  def handle_event("add_diet_patterns", _params, socket) do
+    user = socket.assigns.user
+    # Instantiate any diet-pattern blueprint the user doesn't already own (safe to
+    # click repeatedly). The blueprints are self-contained — no backing condition.
+    {:ok, created} = DietPatterns.create_missing_for_user(user.id)
+
+    flash =
+      case created do
+        0 -> "You already have all the starter diet patterns."
+        n -> "Added #{n} starter diet-pattern blueprint#{if n == 1, do: "", else: "s"}."
+      end
+
+    {:noreply, socket |> put_flash(:info, flash) |> reload_blueprints()}
   end
 
   @impl true

@@ -10,13 +10,13 @@ defmodule MehungryWeb.UpgradeLive.Index do
   @monthly_price_display "€9.99"
   @yearly_price_display "€99"
 
-  @nutritionist_monthly_price_display "€59.00"
-  @nutritionist_yearly_price_display "€599"
+  @nutritionist_monthly_price_display "€29.90"
+  @nutritionist_yearly_price_display "€290"
 
   @monthly_price_value 9.99
   @yearly_price_value 99
-  @nutritionist_monthly_price_value 59.00
-  @nutritionist_yearly_price_value 599
+  @nutritionist_monthly_price_value 29.90
+  @nutritionist_yearly_price_value 290
 
   @impl true
   def mount(_params, session, socket) do

@@ -913,8 +913,8 @@ msgstr "θρεπτικά συστατικά ανά τρόφιμο"
 
 #: lib/mehungry_web/live/landing_live.ex:1172
 #, elixir-autogen, elixir-format
-msgid "or €599/yr"
-msgstr "ή 599€/έτος"
+msgid "or €290/yr"
+msgstr "ή 290€/έτος"
 
 #: lib/mehungry_web/live/landing_live.ex:1126
 #, elixir-autogen, elixir-format

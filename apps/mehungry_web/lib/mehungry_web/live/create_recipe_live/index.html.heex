@@ -3,14 +3,7 @@
   :if={@ai_generating}
   class="fixed inset-0 z-[60] bg-ink/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
 >
-  <svg class="animate-spin h-8 w-8 text-paprika" fill="none" viewBox="0 0 24 24">
-    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-    <path
-      class="opacity-75"
-      fill="currentColor"
-      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-    />
-  </svg>
+  <MehungryWeb.SvgComponents.get_loading class="w-20 h-20" />
   <p class="text-parchment text-sm">{gettext("Generating your recipe…")}</p>
 </div>
 <div class="create-recipe-page min-h-screen bg-ink text-parchment">
@@ -109,23 +102,7 @@
               >
                 <%= if @ai_generating do %>
                   <span class="flex items-center gap-2">
-                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                      >
-                      </circle>
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      >
-                      </path>
-                    </svg>
+                    <MehungryWeb.SvgComponents.get_loading compact class="w-4 h-4" />
                     {gettext("Generating…")}
                   </span>
                 <% else %>
@@ -227,21 +204,7 @@
               >
                 <%= if @spoonacular_search_loading do %>
                   <span class="flex items-center gap-2">
-                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                      />
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
+                    <MehungryWeb.SvgComponents.get_loading compact class="w-4 h-4" />
                     Searching…
                   </span>
                 <% else %>
@@ -251,21 +214,7 @@
             </form>
             <%= if @spoonacular_fetch_loading do %>
               <p class="text-parchment-dim text-sm mt-3 animate-pulse flex items-center gap-2">
-                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  />
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
+                <MehungryWeb.SvgComponents.get_loading compact class="w-4 h-4" />
                 Importing recipe into form…
               </p>
             <% end %>

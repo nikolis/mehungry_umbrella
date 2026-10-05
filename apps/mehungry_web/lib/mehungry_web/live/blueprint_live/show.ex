@@ -67,6 +67,19 @@ defmodule MehungryWeb.BlueprintLive.Show do
     ~H"""
     <div class="min-h-screen bg-ink text-parchment pb-16">
       <div class="container max-w-3xl mx-auto px-4 py-8">
+        <!-- Back: live navigation to the previous page (LiveView handles the
+             popstate as a live redirect when it is in-app). -->
+        <button
+          type="button"
+          x-data
+          x-on:click="history.back()"
+          class="inline-flex items-center gap-1.5 mb-4 text-sm text-parchment-dim hover:text-parchment transition"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
         <!-- Header -->
         <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-6 mb-6">
           <h1 class="text-2xl md:text-3xl font-display font-medium text-parchment">

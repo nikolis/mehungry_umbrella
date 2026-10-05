@@ -53,33 +53,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     |> summary_card()
   end
 
-  # Renders one meal-type section's summary card from an already-aggregated
-  # per-type summary (`%{meal_type, label, meals, total_nutrients}`). The
-  # `id_key` is suffixed with the type slug so its charts/DOM ids never collide
-  # with the overall daily/weekly cards. Meals in the unsorted bucket carry a
-  # nil meal_type, so fall back to the "unsorted" slug for a stable key.
-  defp render_meal_type_chart(%{total_nutrients: nil}, _day, _calorie_target), do: nil
-
-  defp render_meal_type_chart(
-         %{meal_type: meal_type, label: label, meals: meals, total_nutrients: total_nutrients},
-         day,
-         calorie_target
-       ) do
-    type_slug = meal_type || "unsorted"
-
-    total_nutrients
-    |> summary_assigns(meals, "day-#{Date.to_string(day)}-#{type_slug}", calorie_target)
-    |> Map.merge(%{
-      title: "#{label} Summary",
-      subtitle: nil,
-      foldable: false,
-      # The badges already show on the section's accordion header, so keep the
-      # inner nutrition card to just the facts table + charts.
-      show_tags: false
-    })
-    |> summary_card()
-  end
-
   # Weekly summary rendered once, below the day accordions. Shows the *daily
   # average* consumption over the week: the week's total nutrients divided by the
   # number of days in the range, then run through the same summary card as the
@@ -248,6 +221,41 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       <.summary_tags {@metrics} />
     </div>
     """
+  end
+
+  # The followed blueprint's Goals/Avoid targets, shown in the day header in place
+  # of the day's nutrient totals. Fed by the week's `calendar_progress` so each
+  # chip carries its current measure (caloric % or an absolute amount in the
+  # nutrient's unit); compounds show presence only. Preferred foods are shown
+  # separately in the "How your week measures up" panel, not here.
+  def blueprint_goals_tags(assigns) do
+    ~H"""
+    <div class="ml-auto flex flex-wrap gap-2 items-center justify-start">
+      <span :if={@progress.required != []} class="text-parchment-dim text-xs">Goals:</span>
+      <MehungryWeb.BlueprintComponents.goal_chips entries={@progress.required} />
+      <span :if={@progress.avoid != []} class="text-parchment-dim text-xs ml-1">Avoid:</span>
+      <MehungryWeb.BlueprintComponents.avoid_chips entries={@progress.avoid} />
+      <span
+        :if={@progress.required == [] and @progress.avoid == []}
+        class="text-parchment-dim/70 text-xs italic"
+      >
+        No goals or avoidances set
+      </span>
+    </div>
+    """
+  end
+
+  # The goal/avoid coverage for one calendar `day`, pulled from the week's
+  # `calendar_progress` by that day's index (1..7 from `week_start`). Each day
+  # shows *its own* measures; falls back to the week-level coverage if a day's
+  # breakdown is missing (older progress maps without `:days_progress`).
+  defp day_progress(progress, day) do
+    day_index = Date.diff(day, progress.week_start) + 1
+
+    case progress[:days_progress] && Map.get(progress.days_progress, day_index) do
+      %{required: _, avoid: _} = dp -> dp
+      _ -> %{required: progress.required, avoid: progress.avoid}
+    end
   end
 
   def summary_card(assigns) do
@@ -476,6 +484,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             myself={@myself}
             current_language={@current_language}
             calorie_target={@calorie_target}
+            active_blueprint={@active_blueprint}
+            blueprint_progress={@blueprint_progress}
           />
         </div>
         """
@@ -513,6 +523,13 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     day_summaries = build_day_summaries(assigns.user_meals, first, last)
     week_summary = build_week_summary(assigns.user_meals, first, last, days_in_week)
 
+    # Optional: when the user is following a blueprint, the parent calendar passes
+    # it in (plus the week's precomputed `calendar_progress`) so the day header can
+    # surface its Goals/Avoid targets — each with its current measure — instead of
+    # the day's nutrient totals. Absent (nil) on the nutritionist client calendar.
+    active_blueprint = Map.get(assigns, :active_blueprint)
+    blueprint_progress = Map.get(assigns, :blueprint_progress)
+
     assigns = [
       current_date: current_date,
       selected_date: nil,
@@ -525,6 +542,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       device_width: assigns.device_width,
       current_language: language,
       calorie_target: calorie_target,
+      active_blueprint: active_blueprint,
+      blueprint_progress: blueprint_progress,
       day_summaries: day_summaries,
       week_summary: week_summary,
       days_in_week: days_in_week
@@ -592,7 +611,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   defp build_slices(nutrients_sorted, keep?) do
     nutrients_sorted
     |> Enum.reject(fn {{label, _}, _} ->
-      String.contains?(label, "Energy") or String.contains?(label, "Vitamins")
+      String.contains?(label, "Energy") or String.contains?(label, "Vitamins") or
+        String.contains?(label, "Water")
     end)
     |> Enum.filter(fn {{label, _}, _} -> keep?.(label) end)
     |> Enum.flat_map(fn {{label, nutrient}, _} ->
@@ -797,9 +817,18 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           class="bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden day_of_week"
           id={"dat_" <> Date.to_string(day)}
         >
-          <div class="flex flex-wrap items-center gap-2 px-3 py-3 sm:px-4 bg-black/20 border-b border-ink-panel2">
+          <div
+            class="flex flex-wrap items-center gap-2 px-3 py-3 sm:px-4 bg-black/20 border-b border-ink-panel2 cursor-pointer select-none"
+            phx-click={
+              Phoenix.LiveView.JS.toggle_class("copen", to: "#dat_" <> Date.to_string(day))
+              |> Phoenix.LiveView.JS.toggle_class("copen", to: "#widget" <> Date.to_string(day))
+            }
+          >
+            <%!-- Raised above the header's expand/collapse click target (and given
+                  its own phx-click, which LiveView routes to the nearest binding)
+                  so tapping the day name still opens the add-meal modal. --%>
             <span
-              class="flex items-center gap-2 text-parchment font-semibold text-sm sm:text-base cursor-pointer hover:text-parchment-dim transition-colors"
+              class="relative z-10 flex items-center gap-2 text-parchment font-semibold text-sm sm:text-base cursor-pointer hover:text-parchment-dim transition-colors"
               phx-target={@myself}
               phx-click="pick-date"
               phx-value-date={Calendar.strftime(day, "%Y-%m-%d")}
@@ -823,18 +852,19 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             <span class="text-parchment-dim text-xs sm:text-sm">
               {Calendar.strftime(day, "%d")} {month_short(day, assigns[:current_language] || "en")}
             </span>
+            <%!-- Following a blueprint swaps the day's nutrient totals for the
+                  blueprint's Goals/Avoid targets (each with its current measure);
+                  otherwise the current day shows its consumed-nutrient badges. --%>
+            <.blueprint_goals_tags
+              :if={@active_blueprint && @blueprint_progress}
+              progress={day_progress(@blueprint_progress, day)}
+            />
             <.day_header_tags
-              :if={day == @current_date}
+              :if={is_nil(@active_blueprint) and day == @current_date}
               summary={@day_summaries[day]}
               calorie_target={@calorie_target}
             />
-            <span
-              class="ml-auto text-parchment-dim hover:text-parchment transition-colors cursor-pointer p-1"
-              phx-click={
-                Phoenix.LiveView.JS.toggle_class("copen", to: "#dat_" <> Date.to_string(day))
-                |> Phoenix.LiveView.JS.toggle_class("copen", to: "#widget" <> Date.to_string(day))
-              }
-            >
+            <span class="ml-auto text-parchment-dim p-1">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -885,7 +915,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                 <%= for group <- @day_summaries[day].type_summaries do %>
                   <% type_slug = group.meal_type || "unsorted" %>
                   <% section_key = "meal-type-#{Date.to_string(day)}-#{type_slug}" %>
-                  <% metrics = summary_metrics(group.total_nutrients, group.meals, @calorie_target) %>
                   <%!-- Each meal type is its own accordion: the header button shows the
                         label + summary badges; the cards and nutrition breakdown live in a
                         body that stays hidden until the header is tapped. --%>
@@ -912,7 +941,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                         {group.label}
                       </span>
                       <div class="flex flex-wrap gap-2 items-center ml-auto">
-                        <.summary_tags {metrics} />
                         <svg
                           id={section_key <> "-chevron"}
                           class="w-5 h-5 text-parchment-dim transition-transform duration-300 ease-out flex-shrink-0"
@@ -963,8 +991,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                             consume_portions={nil}
                             recipe={
                               %{
-                                nutrients:
-                                  Mehungry.Food.RecipeUtils.reform_nutrients(re_u_m.recipe.nutrients),
+                                nutrients: re_u_m.recipe.nutrients,
                                 primary_size: re_u_m.primary_size,
                                 servings: re_u_m.portions,
                                 id: "#{re_u_m.recipe.id}-#{meal.id}"
@@ -973,7 +1000,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                           />
                         <% end %>
                       <% end %>
-                      {render_meal_type_chart(group, day, @calorie_target)}
                     </div>
                   </section>
                 <% end %>

@@ -10,6 +10,9 @@ defmodule Mehungry.Accounts.UserProfile do
     field :daily_calorie_target, :integer
     field :diet, :string, default: "omnivore"
     field :lactose_intolerant, :boolean, default: false
+    # The meal blueprint the user is currently following on their calendar
+    # (persists the selection across sessions until they switch or stop).
+    field :followed_blueprint_id, :id
 
     belongs_to :user, Mehungry.Accounts.User
 
@@ -31,7 +34,8 @@ defmodule Mehungry.Accounts.UserProfile do
       :language_preference,
       :daily_calorie_target,
       :diet,
-      :lactose_intolerant
+      :lactose_intolerant,
+      :followed_blueprint_id
     ])
     |> validate_required([:user_id])
     |> validate_number(:daily_calorie_target, greater_than: 0, less_than: 20_000)

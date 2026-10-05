@@ -129,6 +129,7 @@ defmodule Mehungry.MealBlueprints.Presets do
       :required_compounds,
       :avoid_compounds,
       :preferred_foods,
+      :avoid_foods,
       :days
     ])
     |> Map.put(:user_id, user_id)

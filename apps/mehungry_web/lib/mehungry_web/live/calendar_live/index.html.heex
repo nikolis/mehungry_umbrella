@@ -94,23 +94,7 @@
         >
           <%= if @ai_plan_generating do %>
             <span class="flex items-center gap-2">
-              <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                >
-                </circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                >
-                </path>
-              </svg>
+              <MehungryWeb.SvgComponents.get_loading compact class="w-4 h-4" />
               Planning…
             </span>
           <% else %>
@@ -150,6 +134,12 @@
         </div>
       <% end %>
     </div>
+
+    <MehungryWeb.BlueprintComponents.blueprint_progress
+      :if={@active_blueprint && @blueprint_progress}
+      blueprint={@active_blueprint}
+      progress={@blueprint_progress}
+    />
   </div>
 
   <!-- Meal plan rating widget (shown when user has a nutritionist) -->
@@ -299,5 +289,7 @@
     calorie_target={@calorie_target}
     device_width={@device_width}
     current_language={@current_language}
+    active_blueprint={@active_blueprint}
+    blueprint_progress={@blueprint_progress}
   />
 </div>

@@ -181,13 +181,18 @@ recipe's nutrients from `recipe_ingredients` on every read (`get_nutrients/1`,
 migration (the `nutrients` columns are populated by `RecipePutNutrientsWorker` /
 `start_full_recalculation_run/0`, not by app code called from a migration).
 
-What remains are the **two view-only helpers** the calendar still uses on an
+What remains is the **view-only helper** the calendar still uses on an
 *already-computed* `recipe.nutrients` map:
 - `RecipeUtils.sort_nutrients_from_db/1` — calendar widget `:93`; floats headline
   nutrients to the top of a `{name, nutrient}` list and indexes it.
-- `RecipeUtils.reform_nutrients/1` — calendar widget `:864`; re-keys a stored
-  ingredient recipe's `nutrients` map (string keys, unit struct → unit name) for a
-  meal card.
+
+A directly-logged ingredient is turned into the **same** structured
+`recipe.nutrients` tree a recipe has via `NutrientCalculation.ingredient_nutrient_tree/2`
+(and `nutrient_tree/1` for the multi-ingredient case) — so the calendar daily
+summary (`NutrientUtils.summarize_meals_nutrients/1`) and the blueprint
+goals/avoids engine (`MealBlueprints.PlanCompatibility`) treat a logged food
+identically to the same food inside a recipe. `reform_nutrients/1` (the old flat
+re-key) was removed.
 
 ---
 
@@ -254,7 +259,7 @@ NutrientUtils.summarize_meals_nutrients                  (calendar aggregation)
 | `NutrientCalculationTest` | `test/mehungry/food/nutrition/nutrient_calculation_test.exs` | `calculate_gram_weight/5` (gram unit, portion-by-id, portion-by-unit, `amount` divisor, nil amount, string quantity, missing-portion → 0 g), `build_nutrient_list/2` scaling + unit fallback, `filter_energy_duplicates/1` (Atwater Specific/General/kcal precedence), `calculate_nutrition_for_recipe/1` aggregation + priority sort, `calculate_total_calories/1`, `sort_nutrients_by_priority/1`, `safe_to_float/1`, `safe_nutrient_amount/1`, `get_value/2`, `calculate_recipe_nutrition_value/1` guards, and DB-backed `validate_ingredient_units/1` |
 | `NutrientUtilsTest` | `test/mehungry/nutrient_utils_test.exs` | `to_grams/2`, `macronutrient?/1`, `consumed_fraction/1`, `scale_nutrient_map/2`, `summarize_meals_nutrients/1` (portion scaling, recipe+ingredient merge, synonym normalization, empty), `normalize_nutrient_name/1`, `merge_nutrients_with_normalization/1`, `macro_bucket/1`, `macro_totals/1`, `sort_nutrients_for_display/1`, `macro_buckets/0` |
 | `NutrientMergerTest` | `test/mehungry/food/nutrition/nutrient_merger_test.exs` | `normalize_nutrient_name/1`, `to_string_keys/1` ↔ `to_atom_keys/1` |
-| `RecipeUtilsTest` | `test/mehungry/food/recipe_utils_test.exs` | the two surviving helpers: `sort_nutrients_from_db/1`, `reform_nutrients/1` |
+| `RecipeUtilsTest` | `test/mehungry/food/recipe_utils_test.exs` | the surviving helper: `sort_nutrients_from_db/1` |
 | `NutrientTest` | `test/mehungry/nutrient_test.exs` | end-to-end `calculate_recipe_nutrition_value/1` over seeded USDA data |
 
 Run them all:

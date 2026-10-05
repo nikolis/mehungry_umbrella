@@ -244,6 +244,44 @@ defmodule Mehungry.Food.NutrientCalculationTest do
     end
   end
 
+  describe "ingredient_nutrient_tree/2" do
+    test "builds the same hierarchical, string-keyed tree a one-ingredient recipe would" do
+      ing = %Ingredient{
+        ingredient_nutrients: [
+          ing_nutrient("Energy", 200.0, "kcal", number: "208"),
+          ing_nutrient("Total lipid (fat)", 10.0, "g", number: "204"),
+          ing_nutrient("PUFA 20:5 n-3 (EPA)", 1.0, "g", number: "629"),
+          ing_nutrient("Iron, Fe", 4.0, "mg", number: "303")
+        ]
+      }
+
+      # The tree is identical to feeding the same scaled nutrients through the
+      # recipe engine and persisting them the way Recipes.put_nutrient_info/2
+      # does (name-keyed map, string keys, as the jsonb column reads back).
+      expected =
+        [%{nutrients: NC.build_nutrient_list(ing, 100.0)}]
+        |> NC.calculate_nutrition_for_recipe()
+        |> Map.get(:structured_nutrients)
+        |> Enum.reduce(%{}, fn node, acc -> Map.put(acc, node.name, node) end)
+        |> Mehungry.Food.NutrientMerger.to_string_keys()
+
+      tree = NC.ingredient_nutrient_tree(ing, 100.0)
+      assert tree == expected
+
+      # And it is a structured hierarchy (string keys, nested fat + minerals),
+      # not a flat list of raw USDA names.
+      assert is_map(tree) and not is_list(tree)
+      assert %{"name" => "Total Fat", "children" => fat_children} = tree["Total Fat"]
+      assert Enum.any?(fat_children, &String.contains?(&1["name"], "Polyunsaturated"))
+      assert %{"children" => mineral_children} = tree["Minerals"]
+      assert Enum.any?(mineral_children, &(&1["name"] == "Iron"))
+    end
+
+    test "returns an empty map for an ingredient with no nutrients" do
+      assert NC.ingredient_nutrient_tree(%Ingredient{ingredient_nutrients: []}, 100.0) == %{}
+    end
+  end
+
   describe "calculate_total_calories/1" do
     test "returns the Energy amount rounded to a whole number" do
       assert NC.calculate_total_calories([%{name: "Energy", amount: 249.6}]) == 250.0

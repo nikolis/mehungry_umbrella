@@ -1165,11 +1165,11 @@ defmodule MehungryWeb.LandingLive do
               <p class="mb-1 text-xs font-medium text-basil">{gettext("For nutritionists")}</p>
               <div class="mb-1 flex items-baseline gap-1">
                 <span class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums]">
-                  €59
+                  €29.90
                 </span>
                 <span class="text-sm text-parchment-dim">{gettext("/month")}</span>
               </div>
-              <p class="mb-5 text-xs text-parchment-dim">{gettext("or €599/yr")}</p>
+              <p class="mb-5 text-xs text-parchment-dim">{gettext("or €290/yr")}</p>
               <ul class="mb-6 space-y-2.5 text-sm">
                 <%= for text <- [
                 gettext("Everything in Mehungry Plus"),

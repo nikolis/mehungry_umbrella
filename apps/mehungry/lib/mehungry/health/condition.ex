@@ -29,6 +29,12 @@ defmodule Mehungry.Health.Condition do
     field :subcategory, :string
     field :description, :string
 
+    # Optional broader condition this is a subtype of (e.g. Ulcerative Colitis →
+    # Inflammatory Bowel Disease). The parent's general suggestions are surfaced
+    # under the child, labelled.
+    belongs_to :parent, __MODULE__, foreign_key: :parent_condition_id
+    has_many :children, __MODULE__, foreign_key: :parent_condition_id
+
     has_many :compound_recommendations, CompoundRecommendation
     # Disease states / phases (e.g. Active Flare vs Remission); most conditions have none.
     has_many :states, Mehungry.Health.ConditionState
@@ -42,8 +48,9 @@ defmodule Mehungry.Health.Condition do
 
   def changeset(condition, attrs) do
     condition
-    |> cast(attrs, [:name, :synonyms, :category, :subcategory, :description])
+    |> cast(attrs, [:name, :synonyms, :category, :subcategory, :description, :parent_condition_id])
     |> validate_required([:name])
     |> unique_constraint(:name)
+    |> foreign_key_constraint(:parent_condition_id)
   end
 end

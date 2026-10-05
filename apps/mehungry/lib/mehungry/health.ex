@@ -38,8 +38,10 @@ defmodule Mehungry.Health do
     ConditionStateRecommendation,
     ConditionStateRecommendationStudy,
     CompoundRecommendation,
+    CompoundRecommendationCandidate,
     CompoundRecommendationStudy,
     ConditionIdentifier,
+    ConditionRecommendationCandidate,
     ConditionTranslation,
     NutrientRecommendation,
     NutrientTargets
@@ -228,9 +230,10 @@ defmodule Mehungry.Health do
   # blueprint) until the "combine" step. `condition_state_id = nil` is general.
 
   @doc """
-  Phase-aware recommendations for a condition. With `state_id`, returns the rows for
-  that state **plus** the general (`nil`) rows (general advice applies across phases);
-  with `nil`, only the general rows. `:compound`, `:condition_state` and frozen
+  Phase-aware recommendations for a condition. With `state_id`, returns **only** the
+  rows explicitly matched to that phase (`condition_state_id == state_id`); with `nil`,
+  only the general (phase-less) rows. General advice is surfaced under the General tab
+  only — it is not merged into every phase. `:compound`, `:condition_state` and frozen
   `:studies` preloaded. Cached (state is part of the key).
   """
   def state_recommendations_for_condition(condition_id, state_id \\ nil, language \\ nil) do
@@ -240,7 +243,7 @@ defmodule Mehungry.Health do
       {:ok, nil} ->
         rows =
           Repo.all(state_recommendations_query(condition_id, state_id))
-          |> Repo.preload([:compound, :condition_state, :studies])
+          |> Repo.preload([:compound, :species, :blueprint, :condition_state, :studies])
           |> localize_state_recommendations(language)
 
         Cachex.put(:health_cache, key, rows, ttl: @cache_ttl)
@@ -251,18 +254,27 @@ defmodule Mehungry.Health do
     end
   end
 
+  # The General tab surfaces phase-less compound / nutrient / free-text advice. A
+  # **general** (phase-less) row that resolved to a food species or a meal blueprint is
+  # surfaced instead as a food card / plan card (`species_for_condition/3`,
+  # `blueprints_for_condition/2`), so those are excluded here to avoid showing the same
+  # advice twice.
   defp state_recommendations_query(condition_id, nil) do
     from(r in ConditionStateRecommendation,
-      where: r.condition_id == ^condition_id and is_nil(r.condition_state_id),
+      where:
+        r.condition_id == ^condition_id and is_nil(r.condition_state_id) and
+          is_nil(r.species_id) and is_nil(r.blueprint_id),
       order_by: [asc: r.recommendation, asc: r.id]
     )
   end
 
+  # A phase tab shows **only** the rows explicitly matched to that phase at
+  # verify/publish time (`condition_state_id == state_id`). General (phase-less) advice
+  # — whether a claim never carried a disease state or named one this condition doesn't
+  # have — belongs under the General tab only, so it is NOT merged in here.
   defp state_recommendations_query(condition_id, state_id) do
     from(r in ConditionStateRecommendation,
-      where:
-        r.condition_id == ^condition_id and
-          (r.condition_state_id == ^state_id or is_nil(r.condition_state_id)),
+      where: r.condition_id == ^condition_id and r.condition_state_id == ^state_id,
       order_by: [asc: r.recommendation, asc: r.id]
     )
   end
@@ -278,7 +290,7 @@ defmodule Mehungry.Health do
       from(r in ConditionStateRecommendation,
         where: r.condition_id == ^condition_id,
         order_by: [asc: r.condition_state_id, asc: r.recommendation, asc: r.id],
-        preload: [:compound, :condition_state, :studies]
+        preload: [:compound, :species, :blueprint, :condition_state, :studies]
       )
     )
   end
@@ -327,6 +339,8 @@ defmodule Mehungry.Health do
     target =
       cond do
         m["compound_id"] -> "c#{m["compound_id"]}"
+        m["species_id"] -> "s#{m["species_id"]}"
+        m["blueprint_id"] -> "b#{m["blueprint_id"]}"
         present_str(m["nutrient_name"]) -> "n#{norm_str(m["nutrient_name"])}"
         true -> "r#{norm_str(m["raw_food_term"])}"
       end
@@ -392,6 +406,45 @@ defmodule Mehungry.Health do
 
   def delete_recommendation(%CompoundRecommendation{} = recommendation),
     do: recommendation |> Repo.delete() |> tap_ok()
+
+  @doc """
+  **Destructive full reset of the advice layer.** Deletes *every* row (across all
+  conditions) from both the review-queue **candidate** tables and the promoted
+  **recommendation** tables, so the advice layer can be rebuilt from scratch. Each
+  table's study-provenance join rows cascade away with their parent.
+
+  Deleted: `compound_recommendation_candidates`, `condition_recommendation_candidates`
+  (candidates) and `compound_recommendations`, `nutrient_recommendations`,
+  `condition_state_recommendations` (promoted advice). Runs in one transaction;
+  returns `{:ok, %{candidates: n, recommendations: n}}` with the total rows removed.
+
+  Conditions, compounds and the underlying studies are left untouched.
+  """
+  def clear_all_recommendations_and_candidates do
+    result =
+      Repo.transaction(fn ->
+        candidates =
+          delete_count(CompoundRecommendationCandidate) +
+            delete_count(ConditionRecommendationCandidate)
+
+        recommendations =
+          delete_count(CompoundRecommendation) +
+            delete_count(NutrientRecommendation) +
+            delete_count(ConditionStateRecommendation)
+
+        %{candidates: candidates, recommendations: recommendations}
+      end)
+
+    # Bust the read-through cache so condition pages stop serving the pre-delete
+    # snapshot (mirrors `tap_ok/1` on the single-row writes).
+    with {:ok, _} <- result, do: bust_cache()
+    result
+  end
+
+  defp delete_count(schema) do
+    {count, _} = Repo.delete_all(schema)
+    count
+  end
 
   def get_recommendation!(id), do: Repo.get!(CompoundRecommendation, id)
 
@@ -494,32 +547,108 @@ defmodule Mehungry.Health do
   end
 
   defp do_species_for_condition(condition_id, recommendation, language) do
-    from(rec in CompoundRecommendation,
-      join: scr in SpeciesCompoundRelationship,
-      on: scr.compound_id == rec.compound_id,
-      join: cmp in Compound,
-      on: cmp.id == rec.compound_id,
-      join: sp in assoc(scr, :species),
-      where: rec.condition_id == ^condition_id,
-      # Defense-in-depth: a compound curated `non_dietary` (assay reagent, solvent,
-      # contaminant, non-specific class) must never drive advice, even if a stray
-      # fact/recommendation exists for it.
-      where: cmp.dietary_relevance != "non_dietary",
-      order_by: [asc: sp.name, asc: cmp.name],
-      select: %{
-        species: sp,
-        compound: cmp,
+    compound_rows =
+      from(rec in CompoundRecommendation,
+        join: scr in SpeciesCompoundRelationship,
+        on: scr.compound_id == rec.compound_id,
+        join: cmp in Compound,
+        on: cmp.id == rec.compound_id,
+        join: sp in assoc(scr, :species),
+        where: rec.condition_id == ^condition_id,
+        # Defense-in-depth: a compound curated `non_dietary` (assay reagent, solvent,
+        # contaminant, non-specific class) must never drive advice, even if a stray
+        # fact/recommendation exists for it.
+        where: cmp.dietary_relevance != "non_dietary",
+        order_by: [asc: sp.name, asc: cmp.name],
+        select: %{
+          species: sp,
+          compound: cmp,
+          recommendation: rec.recommendation,
+          severity: rec.severity,
+          evidence_level: rec.evidence_level,
+          recommendation_id: rec.id,
+          relationship_id: scr.id
+        }
+      )
+      |> maybe_filter_recommendation(recommendation)
+      |> Repo.all()
+      |> attach_species_citations()
+
+    (compound_rows ++ direct_species_rows(condition_id, recommendation))
+    |> Enum.sort_by(& &1.species.name)
+    |> localize_species_rows(language)
+  end
+
+  # Species a suggestion resolved to **directly** (matched by name/scientific name),
+  # stored as general (all-phase) `ConditionStateRecommendation` rows with a
+  # `species_id` and no backing compound. Shaped like the compound-derived rows so
+  # they render as the same food cards; their backing studies fill the `fact_citations`
+  # slot (there is no containment fact to cite).
+  defp direct_species_rows(condition_id, recommendation) do
+    from(rec in ConditionStateRecommendation,
+      join: sp in assoc(rec, :species),
+      where:
+        rec.condition_id == ^condition_id and is_nil(rec.condition_state_id) and
+          not is_nil(rec.species_id),
+      order_by: [asc: sp.name],
+      preload: [:species, :studies]
+    )
+    |> maybe_filter_recommendation(recommendation)
+    |> Repo.all()
+    |> Enum.map(fn rec ->
+      %{
+        species: rec.species,
+        compound: nil,
         recommendation: rec.recommendation,
         severity: rec.severity,
         evidence_level: rec.evidence_level,
         recommendation_id: rec.id,
-        relationship_id: scr.id
+        relationship_id: nil,
+        recommendation_citations: rec.studies,
+        fact_citations: rec.studies
       }
-    )
-    |> maybe_filter_recommendation(recommendation)
-    |> Repo.all()
-    |> attach_species_citations()
-    |> localize_species_rows(language)
+    end)
+  end
+
+  @doc """
+  Public meal blueprints a suggestion resolved to **directly** (matched by name),
+  stored as general (all-phase) `ConditionStateRecommendation` rows with a
+  `blueprint_id`. Returns maps of `%{blueprint, recommendation, severity,
+  evidence_level, studies}`, newest blueprint first, so the condition page can render
+  a "Suggested meal plans" card linking to the public preview. Cached with the other
+  editorial condition reads.
+  """
+  def blueprints_for_condition(condition_id, language \\ nil) do
+    key = {@cache_key_ns, {:blueprints, condition_id, language}}
+
+    case Cachex.get(:health_cache, key) do
+      {:ok, nil} ->
+        rows =
+          from(rec in ConditionStateRecommendation,
+            join: bp in assoc(rec, :blueprint),
+            where:
+              rec.condition_id == ^condition_id and is_nil(rec.condition_state_id) and
+                not is_nil(rec.blueprint_id) and bp.visibility == "public",
+            order_by: [desc: bp.id],
+            preload: [:blueprint, :studies]
+          )
+          |> Repo.all()
+          |> Enum.map(fn rec ->
+            %{
+              blueprint: rec.blueprint,
+              recommendation: rec.recommendation,
+              severity: rec.severity,
+              evidence_level: rec.evidence_level,
+              studies: rec.studies
+            }
+          end)
+
+        Cachex.put(:health_cache, key, rows, ttl: @cache_ttl)
+        rows
+
+      {:ok, cached} ->
+        cached
+    end
   end
 
   # Attach frozen PubMed provenance to each species advice row — the full "why this
@@ -920,7 +1049,12 @@ defmodule Mehungry.Health do
 
   defp localize_species_rows(rows, language) do
     if translatable_language?(language) do
-      compound_names = compound_translation_names(Enum.map(rows, & &1.compound.id), language)
+      # Direct-species rows carry no compound, so skip nil compounds when batching
+      # translation lookups.
+      compound_ids =
+        rows |> Enum.map(& &1.compound) |> Enum.reject(&is_nil/1) |> Enum.map(& &1.id)
+
+      compound_names = compound_translation_names(compound_ids, language)
       species_names = species_translation_names(Enum.map(rows, & &1.species.id), language)
 
       Enum.map(rows, fn row ->
@@ -980,6 +1114,8 @@ defmodule Mehungry.Health do
     end)
     |> Map.new(fn {id, {_r, row}} -> {id, row} end)
   end
+
+  defp apply_compound_name(nil, _names), do: nil
 
   defp apply_compound_name(compound, names) do
     case names[compound.id] do

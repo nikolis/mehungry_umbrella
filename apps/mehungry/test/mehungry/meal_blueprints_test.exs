@@ -130,7 +130,8 @@ defmodule Mehungry.MealBlueprintsTest do
           required_nutrients: ["Vitamin C", "Vitamin C", "  "],
           avoid_nutrients: [" Sodium "],
           required_compounds: [" Polyphenols "],
-          avoid_compounds: ["Oxalate", ""]
+          avoid_compounds: ["Oxalate", ""],
+          avoid_foods: [" onion ", "garlic", "onion", ""]
         })
 
       assert {:ok, bp} = MealBlueprints.create_blueprint(attrs)
@@ -140,6 +141,60 @@ defmodule Mehungry.MealBlueprintsTest do
       assert loaded.avoid_nutrients == ["Sodium"]
       assert loaded.required_compounds == ["Polyphenols"]
       assert loaded.avoid_compounds == ["Oxalate"]
+      assert loaded.avoid_foods == ["onion", "garlic"]
+    end
+
+    test "coerces, range-validates and prunes per-nutrient pct maps" do
+      user = user_fixture()
+
+      attrs =
+        MealBlueprints.default_blueprint_attrs(user.id, "Pcts")
+        |> Map.merge(%{
+          required_nutrients: ["Protein", "Fiber"],
+          # "Carbs" has no name entry → pruned; string value coerced to int.
+          required_nutrient_pcts: %{"Protein" => "30", "Fiber" => 5, "Carbs" => 40},
+          avoid_nutrients: ["Sugars"],
+          avoid_nutrient_pcts: %{"Sugars" => 10}
+        })
+
+      assert {:ok, bp} = MealBlueprints.create_blueprint(attrs)
+      loaded = MealBlueprints.get_blueprint!(user.id, bp.id)
+
+      assert loaded.required_nutrient_pcts == %{"Protein" => 30, "Fiber" => 5}
+      assert loaded.avoid_nutrient_pcts == %{"Sugars" => 10}
+    end
+
+    test "rejects out-of-range nutrient percentages (pct mode)" do
+      user = user_fixture()
+
+      attrs =
+        MealBlueprints.default_blueprint_attrs(user.id, "Bad pct")
+        |> Map.merge(%{
+          required_nutrients: ["Protein"],
+          required_nutrient_pcts: %{"Protein" => 150}
+        })
+
+      assert {:error, changeset} = MealBlueprints.create_blueprint(attrs)
+      assert %{required_nutrient_pcts: _} = errors_on(changeset)
+    end
+
+    test "allows amount-mode thresholds above 100 and prunes stale modes" do
+      user = user_fixture()
+
+      attrs =
+        MealBlueprints.default_blueprint_attrs(user.id, "Sodium cap")
+        |> Map.merge(%{
+          avoid_nutrients: ["Sodium"],
+          avoid_nutrient_pcts: %{"Sodium" => "2300"},
+          # "Potassium" isn't listed → its mode is pruned.
+          avoid_nutrient_modes: %{"Sodium" => "amount", "Potassium" => "amount"}
+        })
+
+      assert {:ok, bp} = MealBlueprints.create_blueprint(attrs)
+      loaded = MealBlueprints.get_blueprint!(user.id, bp.id)
+
+      assert loaded.avoid_nutrient_pcts == %{"Sodium" => 2300}
+      assert loaded.avoid_nutrient_modes == %{"Sodium" => "amount"}
     end
 
     test "recommended_compounds_for_condition buckets by recommendation direction" do
@@ -280,11 +335,15 @@ defmodule Mehungry.MealBlueprintsTest do
     test "deep-copies with new ids and a 'Copy of' name" do
       user = user_fixture()
       {:ok, bp} = create_default(user, "Maintenance")
+
+      # Set an avoid-foods list so the deep copy's carry-over is exercised.
+      {:ok, _} = MealBlueprints.update_blueprint(bp, %{avoid_foods: ["onion", "garlic"]})
       source = MealBlueprints.get_blueprint!(user.id, bp.id)
 
       assert {:ok, copy} = MealBlueprints.duplicate_blueprint(source)
       assert copy.id != source.id
       assert copy.name == "Copy of Maintenance"
+      assert copy.avoid_foods == ["onion", "garlic"]
 
       loaded_copy = MealBlueprints.get_blueprint!(user.id, copy.id)
       assert length(loaded_copy.days) == 7
@@ -575,12 +634,14 @@ defmodule Mehungry.MealBlueprintsTest do
           MealBlueprints.default_blueprint_attrs(user.id, "Cutting week")
           |> Map.put(:required_nutrients, ["Protein"])
           |> Map.put(:preferred_foods, ["salmon"])
+          |> Map.put(:avoid_foods, ["onion", "garlic"])
         )
 
       prefs = MealBlueprints.blueprint_preferences(bp)
       assert prefs =~ "Cutting week"
       assert prefs =~ "Protein"
       assert prefs =~ "salmon"
+      assert prefs =~ "Avoid foods: onion, garlic."
     end
   end
 

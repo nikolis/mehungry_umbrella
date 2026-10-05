@@ -79,6 +79,293 @@ defmodule MehungryWeb.BlueprintComponents do
   end
 
   @doc """
+  "How your week measures up" panel — a read-only summary of how a user's actual
+  calendar week satisfies a followed blueprint's goals, plus a per-day breakdown.
+  Fed by `Mehungry.MealBlueprints.calendar_progress/3` (atom-keyed day reports).
+
+  Emits a `stop_following_blueprint` event (handled by the parent calendar
+  LiveView) to dismiss the panel.
+  """
+  attr :blueprint, :map, required: true
+  attr :progress, :map, required: true
+
+  def blueprint_progress(assigns) do
+    ~H"""
+    <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-4 mb-3">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div class="min-w-0">
+          <h3 class="font-display font-medium text-parchment text-sm flex items-center gap-2">
+            <svg
+              class="w-4 h-4 text-basil shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            How your week measures up
+          </h3>
+          <p class="text-parchment-dim text-xs mt-1 truncate">
+            Following <span class="text-parchment">{@blueprint.name}</span>
+            · {week_range_label(@progress)}
+          </p>
+        </div>
+        <button
+          type="button"
+          phx-click="stop_following_blueprint"
+          class="shrink-0 text-parchment-dim hover:text-parchment text-xs px-2 py-1 rounded-lg hover:bg-ink-panel2 transition"
+        >
+          Stop following
+        </button>
+      </div>
+
+      <%!-- Week summary. Goals/Avoid chips live on each day's header now, so the
+            week panel keeps only preferred foods + the calorie rollup. --%>
+      <div class="space-y-2">
+        <div
+          :if={(@blueprint.preferred_foods || []) != []}
+          class="flex flex-wrap items-center gap-1.5"
+        >
+          <span class="text-parchment-dim text-xs mr-1">Preferred foods:</span>
+          <span
+            :for={food <- @blueprint.preferred_foods}
+            class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full normal-case bg-basil/15 text-basil border border-basil/30"
+          >
+            {food}
+          </span>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <span class="text-parchment-dim text-xs mr-1">Calories:</span>
+          <span :if={@progress.calorie_days_with_target > 0} class="text-xs text-parchment">
+            {@progress.calorie_days_on_target}/{@progress.calorie_days_with_target} days on target
+          </span>
+          <span :if={@progress.calorie_days_with_target == 0} class="text-xs text-parchment-dim">
+            No calorie targets set
+          </span>
+        </div>
+      </div>
+
+      <%!-- Per-day breakdown --%>
+      <div class="mt-3 pt-3 border-t border-ink-panel2 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        <div :for={i <- 1..7} class="flex items-center gap-2 text-xs">
+          <span class="text-parchment-dim w-28 shrink-0 normal-case">
+            Day {i} · {day_label(@progress, i)}
+          </span>
+          <.day_calorie_badge report={day_report(@progress, i)} />
+          <span
+            :if={day_violations(@progress, i) > 0}
+            class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-paprika/20 text-paprika"
+            title={"#{day_violations(@progress, i)} avoid-list item(s) among this day's meals"}
+          >
+            ⚠ {day_violations(@progress, i)}
+          </span>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Required-goal chips (compounds + nutrients) with their current measure — a
+  caloric percentage or an absolute amount in the nutrient's unit — baked into
+  the label. Shared by the week panel and the calendar day header.
+  """
+  attr :entries, :list, required: true
+
+  def goal_chips(assigns) do
+    ~H"""
+    <span
+      :for={req <- @entries}
+      class={[
+        "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full normal-case",
+        if(req.met,
+          do: "bg-basil/20 text-basil border border-basil/40",
+          else: "bg-ink-panel2 text-parchment-dim border border-ink-panel2"
+        )
+      ]}
+      title={required_title(req)}
+    >
+      {if req.met, do: "✓", else: "○"} {req.name}{pct_suffix(req)}
+    </span>
+    """
+  end
+
+  @doc """
+  Avoid chips (compounds + nutrients) with their current measure vs the ceiling.
+  Shared by the week panel and the calendar day header.
+  """
+  attr :entries, :list, required: true
+
+  def avoid_chips(assigns) do
+    ~H"""
+    <span
+      :for={a <- @entries}
+      class={[
+        "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full normal-case",
+        if(a.flagged,
+          do: "bg-paprika/20 text-paprika border border-paprika/40",
+          else: "bg-basil/20 text-basil border border-basil/40"
+        )
+      ]}
+      title={avoid_title(a)}
+    >
+      {if a.flagged, do: "⚠", else: "✓"} {a.name}{avoid_pct_suffix(a)}
+    </span>
+    """
+  end
+
+  attr :report, :any, default: nil
+
+  defp day_calorie_badge(%{report: report} = assigns)
+       when is_nil(report) or is_map_key(report, :calorie_status) == false do
+    ~H""
+  end
+
+  defp day_calorie_badge(%{report: %{calorie_status: :no_target}} = assigns), do: ~H""
+
+  defp day_calorie_badge(assigns) do
+    ~H"""
+    <span
+      class={[
+        "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full [font-variant-numeric:tabular-nums]",
+        calorie_badge_class(@report.calorie_status)
+      ]}
+    >
+      {@report.calorie_total} / {@report.calorie_target} kcal
+      <span :if={@report.calorie_status != :ok}>{calorie_delta_label(@report.calorie_delta)}</span>
+    </span>
+    """
+  end
+
+  defp calorie_badge_class(:over), do: "bg-paprika/20 text-paprika"
+  defp calorie_badge_class(:under), do: "bg-amber-500/20 text-amber-400"
+  defp calorie_badge_class(:ok), do: "bg-basil/20 text-basil"
+  defp calorie_badge_class(_), do: "bg-ink-panel2 text-parchment-dim"
+
+  defp calorie_delta_label(delta) when is_integer(delta) and delta > 0, do: "· +#{delta}"
+  defp calorie_delta_label(delta) when is_integer(delta), do: "· #{delta}"
+  defp calorie_delta_label(_), do: ""
+
+  # Nutrient coverage/violation entries carry a threshold (`:mode`); compound
+  # entries do not. pct mode renders "32% / ≥30%"; amount mode "1800 / ≤2300 mg".
+  defp has_threshold?(entry), do: is_map(entry) and Map.has_key?(entry, :mode)
+
+  # The measured value for an entry ("32%" in pct mode; the bare number in amount
+  # mode — the unit rides on the target label, e.g. "1800 / ≤2300 mg").
+  defp measured_label(%{mode: :amount, amount: amount}), do: fmt_amount(amount)
+  defp measured_label(%{mode: :pct, pct: pct}), do: "#{fmt_amount(pct)}%"
+
+  # The threshold with its comparator and unit ("≥30%" or "≤2300 mg").
+  defp target_label(%{mode: :amount, target: target, unit: unit}, cmp),
+    do: "#{cmp}#{fmt_amount(target)} #{unit || ""}" |> String.trim()
+
+  defp target_label(%{mode: :pct, target: target}, cmp), do: "#{cmp}#{target}%"
+
+  # Each chip shows the complementary current value in parentheses: pct-mode shows
+  # the absolute quantity ("(0.4 g)"); amount-mode shows the caloric share ("(6%)"),
+  # hidden for non-energy nutrients where it is 0.
+  defp current_paren(%{mode: :pct} = entry) do
+    amount = fmt_amount(Map.get(entry, :amount, 0))
+    unit = Map.get(entry, :unit)
+
+    cond do
+      amount == "0" -> ""
+      unit in [nil, ""] -> " (#{amount})"
+      true -> " (#{amount} #{unit})"
+    end
+  end
+
+  defp current_paren(%{mode: :amount} = entry) do
+    case Map.get(entry, :pct, 0) do
+      pct when is_number(pct) and pct > 0 -> " (#{pct}%)"
+      _ -> ""
+    end
+  end
+
+  defp current_paren(_entry), do: ""
+
+  defp pct_suffix(entry) do
+    if has_threshold?(entry),
+      do: " #{measured_label(entry)} / #{target_label(entry, "≥")}#{current_paren(entry)}",
+      else: ""
+  end
+
+  defp avoid_pct_suffix(entry) do
+    if has_threshold?(entry),
+      do: " #{measured_label(entry)} / #{target_label(entry, "≤")}#{current_paren(entry)}",
+      else: ""
+  end
+
+  # Compact number: drop the decimal for whole values ("1800"), else one place
+  # ("0.4").
+  defp fmt_amount(n) when is_number(n) do
+    rounded = Float.round(n * 1.0, 1)
+
+    if rounded == Float.round(rounded, 0),
+      do: Integer.to_string(trunc(rounded)),
+      else: :erlang.float_to_binary(rounded, decimals: 1)
+  end
+
+  defp fmt_amount(_), do: "0"
+
+  defp required_title(req) do
+    cond do
+      has_threshold?(req) and req.met ->
+        "#{req.name}: #{measured_label(req)} this week (target #{target_label(req, "≥")})"
+
+      has_threshold?(req) ->
+        "#{req.name}: #{measured_label(req)} this week, below the #{target_label(req, "≥")} target"
+
+      req.met ->
+        "#{req.name} is covered by a meal this week"
+
+      true ->
+        "No meal this week includes #{req.name}"
+    end
+  end
+
+  defp avoid_title(a) do
+    cond do
+      has_threshold?(a) and a.flagged ->
+        "#{a.name}: #{measured_label(a)} this week, over the #{target_label(a, "≤")} limit"
+
+      has_threshold?(a) ->
+        "#{a.name}: #{measured_label(a)} this week, within the #{target_label(a, "≤")} limit"
+
+      a.flagged ->
+        "This week's meals include #{a.name}, which the blueprint says to avoid"
+
+      true ->
+        "No meal this week includes #{a.name}"
+    end
+  end
+
+  defp day_report(progress, day_index), do: Map.get(progress.days, day_index)
+
+  defp day_violations(progress, day_index) do
+    case day_report(progress, day_index) do
+      %{violation_count: count} -> count
+      _ -> 0
+    end
+  end
+
+  defp day_label(progress, day_index) do
+    progress.week_start
+    |> Date.add(day_index - 1)
+    |> Calendar.strftime("%a %-d")
+  end
+
+  defp week_range_label(progress) do
+    "#{Calendar.strftime(progress.week_start, "%b %-d")} – #{Calendar.strftime(progress.week_end, "%b %-d")}"
+  end
+
+  @doc """
   Renders a generated plan's meals grouped by relative day (1..7). Expects each
   meal to have `:recipe` and `:ingredient` preloaded.
   """

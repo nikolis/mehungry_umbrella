@@ -50,7 +50,11 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
 
   Returns {:ok, [%UserMeal{}], skipped_count} or {:error, reason}.
   """
-  def run(preferences, _recipes, start_date, user_id, _blueprint \\ nil) do
+  def run(preferences, _recipes, start_date, user_id, blueprint \\ nil) do
+    # Avoid-foods enforcement (e.g. Low-FODMAP): downcased terms the search tools
+    # filter out and the prompt forbids. Empty when there's no blueprint / list.
+    avoid_terms = avoid_terms(blueprint)
+
     # `offered`/`offered_ingredients` accumulate every id the search tools handed
     # the model this run; submit_plan rejects any id it never surfaced
     # (provenance). The validated result lands in `submitted` — no process-global
@@ -58,6 +62,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
     acc = %{
       user_id: user_id,
       start_date: start_date,
+      avoid_terms: avoid_terms,
       offered: MapSet.new(),
       offered_ingredients: MapSet.new(),
       submitted: nil
@@ -65,7 +70,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
 
     result =
       Agent.run(
-        system_prompt(preferences, start_date),
+        system_prompt(preferences, start_date, avoid_terms),
         initial_message(preferences, start_date),
         tool_defs(),
         &handle_tool/3,
@@ -85,7 +90,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
 
   # ── system prompt ─────────────────────────────────────────────────────────────
 
-  defp system_prompt(preferences, start_date) do
+  defp system_prompt(preferences, start_date, avoid_terms \\ []) do
     end_date = Date.add(start_date, 6)
 
     """
@@ -94,7 +99,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
     Plan period: #{Date.to_string(start_date)} to #{Date.to_string(end_date)} (inclusive).
     Meal slots each day: Breakfast, Morning Snack, Lunch, Afternoon Snack, Dinner (35 total entries).
     User preferences: #{preferences}
-
+    #{avoid_block(avoid_terms)}
     WORKFLOW:
     1. Call get_recent_meals to see what the user has eaten lately — avoid heavy repetition
     2. Call search_catalog to find recipes suitable for each main slot:
@@ -271,13 +276,14 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   defp handle_tool(
          "search_catalog",
          %{"query" => query},
-         %{user_id: user_id, offered: offered} = acc
+         %{user_id: user_id, offered: offered, avoid_terms: avoid_terms} = acc
        ) do
     recipes =
       RecipeVectorSearch.search(query, user_id: user_id, limit: 20)
       |> Enum.map(fn r ->
         %{id: r.id, title: r.title, difficulty: r.difficulty || 1, servings: r.servings || 2}
       end)
+      |> reject_avoided(avoid_terms, & &1.title)
 
     acc = %{acc | offered: Enum.reduce(recipes, offered, fn r, s -> MapSet.put(s, r.id) end)}
 
@@ -294,7 +300,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   defp handle_tool(
          "search_ingredients",
          %{"query" => query},
-         %{user_id: user_id, offered_ingredients: offered} = acc
+         %{user_id: user_id, offered_ingredients: offered, avoid_terms: avoid_terms} = acc
        ) do
     ingredients =
       query
@@ -303,6 +309,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
       |> Enum.map(fn i ->
         %{ingredient_id: i.id, name: i.name, units: ingredient_units(i.id)}
       end)
+      |> reject_avoided(avoid_terms, & &1.name)
 
     acc = %{
       acc
@@ -386,6 +393,39 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   defp gram_units do
     Food.get_measurement_unit_by_name("gram")
     |> Enum.map(fn mu -> %{unit_selection: mu.id, label: mu.name} end)
+  end
+
+  # ── avoid-foods enforcement ─────────────────────────────────────────────────────
+
+  @doc false
+  # Downcased, non-blank avoid terms from a blueprint's `avoid_foods` (nil-safe).
+  def avoid_terms(%{avoid_foods: foods}) when is_list(foods) do
+    foods
+    |> Enum.map(&String.downcase(String.trim(&1)))
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  def avoid_terms(_), do: []
+
+  @doc false
+  # Drop any result whose name contains an avoid term (case-insensitive
+  # substring) — a filtered-out id never enters the provenance set, so the model
+  # cannot submit it even if it guesses the id.
+  def reject_avoided(results, [], _name_fun), do: results
+
+  def reject_avoided(results, terms, name_fun) do
+    Enum.reject(results, fn result ->
+      name = result |> name_fun.() |> to_string() |> String.downcase()
+      Enum.any?(terms, &String.contains?(name, &1))
+    end)
+  end
+
+  defp avoid_block([]), do: ""
+
+  defp avoid_block(terms) do
+    "\nSTRICT RULE — NEVER include these foods, or any dish containing them: " <>
+      Enum.join(terms, ", ") <> ".\n"
   end
 
   # ── plan validation ───────────────────────────────────────────────────────────

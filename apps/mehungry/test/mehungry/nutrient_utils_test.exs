@@ -152,14 +152,12 @@ defmodule Mehungry.NutrientUtilsTest do
           ],
           ingredient_user_meals: [
             %{
+              # Logged ingredients now carry the same structured, pre-scaled
+              # nutrient tree a recipe does (see scaled_ingredient_nutrient_tree/2).
               recipe: %{
-                nutrients: [
-                  %{
-                    name: "Protein",
-                    amount: 5.0,
-                    measurement_unit: %{name: "g"}
-                  }
-                ]
+                nutrients: %{
+                  "Protein" => %{"name" => "Protein", "amount" => 5.0, "measurement_unit" => "g"}
+                }
               }
             }
           ]
@@ -202,6 +200,53 @@ defmodule Mehungry.NutrientUtilsTest do
 
     test "returns an empty map for empty meals" do
       assert Nu.summarize_meals_nutrients([]) == %{}
+    end
+
+    test "preserves the individual fatty-acid breakdown when merging fat trees across meals" do
+      fat_tree = fn poly, epa ->
+        %{
+          "Total Fat" => %{
+            "name" => "Total Fat",
+            "amount" => 20.0,
+            "measurement_unit" => "g",
+            "children" => [
+              %{
+                "name" => "Polyunsaturated Fat",
+                "amount" => poly,
+                "measurement_unit" => "g",
+                "children" => [
+                  %{"name" => "PUFA 20:5 n-3 (EPA)", "amount" => epa, "measurement_unit" => "g"}
+                ]
+              }
+            ]
+          }
+        }
+      end
+
+      meals =
+        for {poly, epa} <- [{5.0, 1.0}, {3.0, 0.5}] do
+          %{
+            recipe_user_meals: [
+              %{consume_portions: 1, servings: 1, recipe_nutrients: fat_tree.(poly, epa)}
+            ],
+            ingredient_user_meals: []
+          }
+        end
+
+      summary = Nu.summarize_meals_nutrients(meals)
+
+      total_fat = summary["Total Fat"]
+      assert_in_delta total_fat["amount"], 40.0, 1.0e-9
+
+      [poly] = total_fat["children"]
+      assert poly["name"] == "Polyunsaturated Fat"
+      assert_in_delta poly["amount"], 8.0, 1.0e-9
+
+      # The individual n-3 acid survives the merge (summed) rather than being
+      # collapsed away — so Omega-3 stays visible in the daily summary.
+      [epa] = poly["children"]
+      assert epa["name"] == "PUFA 20:5 n-3 (EPA)"
+      assert_in_delta epa["amount"], 1.5, 1.0e-9
     end
   end
 

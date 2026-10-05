@@ -65,6 +65,17 @@ defmodule Mehungry.Accounts.Profiles do
     |> Repo.update()
   end
 
+  @doc """
+  Persists (or clears, with `nil`) the meal blueprint the user is following on
+  their calendar. A targeted single-column update (`Ecto.Changeset.change/2`) so
+  it doesn't re-run the full profile validations/assoc casts.
+  """
+  def set_followed_blueprint(%UserProfile{} = profile, blueprint_id) do
+    profile
+    |> Ecto.Changeset.change(followed_blueprint_id: blueprint_id)
+    |> Repo.update()
+  end
+
   def get_user_language(user_id) do
     case get_user_profile_by_user_id(user_id) do
       nil -> "en"

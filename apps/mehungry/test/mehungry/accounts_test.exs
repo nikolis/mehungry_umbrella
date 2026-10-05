@@ -6,6 +6,27 @@ defmodule Mehungry.AccountsTest do
   import Mehungry.AccountsFixtures
   alias Mehungry.Accounts.{User, UserToken}
 
+  describe "set_followed_blueprint/2" do
+    test "persists and clears the calendar's followed blueprint on the profile" do
+      user = user_fixture()
+      profile = Accounts.get_user_profile_by_user_id(user.id)
+
+      {:ok, blueprint} =
+        user.id
+        |> Mehungry.MealBlueprints.default_blueprint_attrs("Test blueprint")
+        |> Mehungry.MealBlueprints.create_blueprint()
+
+      {:ok, updated} = Accounts.set_followed_blueprint(profile, blueprint.id)
+      assert updated.followed_blueprint_id == blueprint.id
+      # Survives a fresh read (persisted, not just in-struct).
+      assert Accounts.get_user_profile_by_user_id(user.id).followed_blueprint_id == blueprint.id
+
+      {:ok, cleared} = Accounts.set_followed_blueprint(updated, nil)
+      assert cleared.followed_blueprint_id == nil
+      assert Accounts.get_user_profile_by_user_id(user.id).followed_blueprint_id == nil
+    end
+  end
+
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email("unknown@example.com")

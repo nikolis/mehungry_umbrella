@@ -30,6 +30,12 @@ defmodule MehungryWeb.CalendarLive.Index do
 
     user_meals = load_and_format_user_meals(user.id)
     recipes = list_recipes(user)
+
+    # The blueprint the user was following persists on their profile, so the
+    # calendar re-opens "following" it until they switch or stop.
+    followed_blueprint = load_selected_blueprint(user.id, profile && profile.followed_blueprint_id)
+    blueprints = load_calendar_blueprints(user.id) |> prepend_blueprint(followed_blueprint)
+
     socket = assign_device_kind(socket)
     socket = push_event(socket, "create_meals", %{meals: user_meals})
 
@@ -53,8 +59,11 @@ defmodule MehungryWeb.CalendarLive.Index do
         Mehungry.Subscriptions.check_quota(user.id, "meal_plan") == {:error, :quota_exceeded}
       )
       |> assign(:has_nutritionist, not is_nil(Professionals.get_assignment_for_client(user.id)))
-      |> assign(:blueprints, load_calendar_blueprints(user.id))
-      |> assign(:preselected_blueprint_id, nil)
+      |> assign(:user_profile, profile)
+      |> assign(:blueprints, blueprints)
+      |> assign(:preselected_blueprint_id, followed_blueprint && to_string(followed_blueprint.id))
+      |> assign(:active_blueprint, followed_blueprint)
+      |> assign(:blueprint_progress, nil)
       |> assign(:week_rating, nil)
       # Assigns the recipe-details modal (RecipeDetailsComponent via the shared
       # LiveHelpers hook) reads for save/follow toggles.
@@ -69,7 +78,10 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   defp apply_action(socket, :index, params) do
     maybe_track_user(%{}, socket)
-    maybe_preselect_blueprint(socket, params["blueprint_id"])
+
+    socket
+    |> maybe_preselect_blueprint(params["blueprint_id"])
+    |> assign_blueprint_progress()
   end
 
   defp apply_action(socket, :particular, %{"date" => date} = _params) do
@@ -80,6 +92,7 @@ defmodule MehungryWeb.CalendarLive.Index do
     socket
     |> assign(:detail_return_to, ~p"/calendar/ondate/#{date}")
     |> assign(:particular_date, date)
+    |> assign_blueprint_progress()
   end
 
   defp apply_action(socket, :nutrition_details, %{"date" => date} = _params) do
@@ -190,6 +203,7 @@ defmodule MehungryWeb.CalendarLive.Index do
            |> assign(:ai_plan_task_ref, nil)
            |> assign(:ai_plan_result, result_msg)
            |> assign(:user_meals, user_meals)
+           |> assign_blueprint_progress()
            |> push_event("create_meals", %{meals: user_meals})}
 
         {:error, reason} ->
@@ -224,6 +238,7 @@ defmodule MehungryWeb.CalendarLive.Index do
     socket =
       socket
       |> assign(:user_meals, user_meals)
+      |> assign_blueprint_progress()
       |> push_event("create_meals", %{meals: user_meals})
 
     socket = if flash, do: put_flash(socket, :info, flash), else: socket
@@ -288,6 +303,17 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   @impl true
+  def handle_event("stop_following_blueprint", _params, socket) do
+    {:noreply,
+     socket
+     |> persist_followed_blueprint(nil)
+     |> assign(:active_blueprint, nil)
+     |> assign(:blueprint_progress, nil)
+     |> assign(:preselected_blueprint_id, nil)
+     |> push_patch(to: ~p"/calendar", replace: true)}
+  end
+
+  @impl true
   def handle_event("toggle_basket", %{"view" => view}, socket) do
     socket =
       case view do
@@ -314,6 +340,7 @@ defmodule MehungryWeb.CalendarLive.Index do
         {:noreply,
          socket
          |> assign(:user_meals, user_meals)
+         |> assign_blueprint_progress()
          |> push_event("create_meals", %{meals: user_meals})
          |> put_flash(:info, "User Meal Deleted")
          |> push_patch(to: ~p"/calendar", replace: true)}
@@ -387,16 +414,78 @@ defmodule MehungryWeb.CalendarLive.Index do
         socket
 
       blueprint ->
-        blueprints = socket.assigns.blueprints
-
-        blueprints =
-          if Enum.any?(blueprints, &(&1.id == blueprint.id)),
-            do: blueprints,
-            else: [blueprint | blueprints]
-
         socket
-        |> assign(:blueprints, blueprints)
+        |> persist_followed_blueprint(blueprint.id)
+        |> assign(:blueprints, prepend_blueprint(socket.assigns.blueprints, blueprint))
         |> assign(:preselected_blueprint_id, to_string(blueprint.id))
+        |> assign(:active_blueprint, blueprint)
+    end
+  end
+
+  # Prepends `blueprint` to the calendar's blueprint list when not already present
+  # (nil is a no-op), so a followed/selected blueprint the user doesn't own is
+  # still selectable in the panel.
+  defp prepend_blueprint(blueprints, nil), do: blueprints
+
+  defp prepend_blueprint(blueprints, blueprint) do
+    if Enum.any?(blueprints, &(&1.id == blueprint.id)),
+      do: blueprints,
+      else: [blueprint | blueprints]
+  end
+
+  # Persists (or clears, with `nil`) the followed blueprint on the user's profile
+  # so the selection survives reloads, keeping the in-socket profile fresh.
+  # No-op when the user has no profile row yet.
+  defp persist_followed_blueprint(socket, blueprint_id) do
+    case socket.assigns[:user_profile] do
+      nil ->
+        socket
+
+      profile ->
+        case Accounts.set_followed_blueprint(profile, blueprint_id) do
+          {:ok, updated} -> assign(socket, :user_profile, updated)
+          {:error, _} -> socket
+        end
+    end
+  end
+
+  # Computes the blueprint-vs-calendar progress for the week currently in view,
+  # but only when the user is "following" a blueprint (arrived via "Use this
+  # blueprint"). Fully inert — no DB work — otherwise. The visible week is the
+  # one anchored by `@particular_date` (nil ⇒ today), matching the calendar
+  # Widget's `Date.beginning_of_week/1` framing.
+  defp assign_blueprint_progress(socket) do
+    case socket.assigns[:active_blueprint] do
+      nil ->
+        assign(socket, :blueprint_progress, nil)
+
+      blueprint ->
+        week_start = Date.beginning_of_week(current_calendar_date(socket))
+
+        progress =
+          Mehungry.MealBlueprints.calendar_progress(
+            socket.assigns.user.id,
+            blueprint,
+            week_start
+          )
+
+        assign(socket, :blueprint_progress, progress)
+    end
+  end
+
+  defp current_calendar_date(socket) do
+    case socket.assigns[:particular_date] do
+      date when is_binary(date) ->
+        case Date.from_iso8601(date) do
+          {:ok, d} -> d
+          _ -> Date.utc_today()
+        end
+
+      %Date{} = d ->
+        d
+
+      _ ->
+        Date.utc_today()
     end
   end
 
@@ -442,7 +531,7 @@ defmodule MehungryWeb.CalendarLive.Index do
               img_url: nil,
               recipe: %{
                 id: y.ingredient.id,
-                nutrients: History.scaled_ingredient_nutrients(y, gram_ids),
+                nutrients: History.scaled_ingredient_nutrient_tree(y, gram_ids),
                 primary_size: 5
               }
             }

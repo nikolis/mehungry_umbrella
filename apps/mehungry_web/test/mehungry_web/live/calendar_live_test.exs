@@ -7,6 +7,7 @@ defmodule MehungryWeb.CalendarLiveTest do
   import Phoenix.LiveViewTest
 
   alias Mehungry.History
+  alias Mehungry.MealBlueprints
 
   describe "Caledar Operations Test" do
     setup [:register_and_log_in_user]
@@ -104,10 +105,15 @@ defmodule MehungryWeb.CalendarLiveTest do
         |> put_connect_params(%{"viewport" => %{"width" => 1200}})
         |> live(~p"/calendar")
 
-      # Per-type section headers + their own summary cards, ordered with unsorted last.
-      assert html =~ "Breakfast Summary"
-      assert html =~ "Dinner Summary"
-      assert html =~ "Unsorted Summary"
+      # Per-type section headers, ordered with unsorted last. Each section is a
+      # bare collapsible label (no per-type badges or summary card) — the
+      # nutrition roll-up lives only in the combined Daily Summary below.
+      assert html =~ "Breakfast"
+      assert html =~ "Dinner"
+      assert html =~ "Unsorted"
+      refute html =~ "Breakfast Summary"
+      refute html =~ "Dinner Summary"
+      refute html =~ "Unsorted Summary"
       # The combined day roll-up is still present below the sections.
       assert html =~ "Daily Summary"
 
@@ -146,6 +152,51 @@ defmodule MehungryWeb.CalendarLiveTest do
         |> render_click()
 
       refute html =~ ~s(id="user_meal_meal_type" value="breakfast")
+    end
+
+    test "arriving via 'Use this blueprint' shows the blueprint progress panel",
+         %{conn: conn, user: user} do
+      {:ok, bp} =
+        MealBlueprints.create_blueprint(
+          user.id
+          |> MealBlueprints.default_blueprint_attrs("My week")
+          |> Map.merge(%{
+            visibility: "public",
+            required_compounds: ["Flavonoid"],
+            required_nutrients: ["Protein"],
+            preferred_foods: ["Olive oil"]
+          })
+        )
+
+      {:ok, index_live, html} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar?#{[blueprint_id: bp.id]}")
+
+      assert html =~ "How your week measures up"
+      assert html =~ "My week"
+      # A required compound with no covering meal renders as an unmet goal.
+      assert html =~ "Flavonoid"
+
+      # Following a blueprint swaps the day header's nutrient totals for the
+      # blueprint's Goals/Avoid targets, each nutrient chip carrying its current
+      # measure vs. the threshold (here the default ≥10% caloric share).
+      assert html =~ "Goals:"
+      assert html =~ "≥10%"
+      refute html =~ "g protein"
+
+      # Preferred foods live in their own section of the "measures up" panel,
+      # not in the per-day Goals chips.
+      assert html =~ "Preferred foods:"
+      assert html =~ "Olive oil"
+
+      # Dismissing stops following and returns to the plain calendar.
+      html =
+        index_live
+        |> element("button", "Stop following")
+        |> render_click()
+
+      refute html =~ "How your week measures up"
     end
 
     test "another user cannot open a foreign meal for editing", %{conn: conn} do

@@ -290,12 +290,12 @@ defmodule Mehungry.NutrientUtils do
   end
 
   defp merge_nutrient(n1, n2) do
-    # Ensure both have the same canonical name
-    canonical_name = normalize_nutrient_name(n1["name"])
-
     base = %{
-      "name" => canonical_name,
-      "measurement_unit" => n1["measurement_unit"],
+      # Keep the stored name (already canonical at the top level; raw USDA
+      # fatty-acid notation at the leaves) so the merged tree renders identically
+      # to a recipe — e.g. FattyAcidMatcher still resolves "PUFA 20:5 n-3 (EPA)".
+      "name" => n1["name"] || n2["name"],
+      "measurement_unit" => n1["measurement_unit"] || n2["measurement_unit"],
       "amount" => (n1["amount"] || 0) + (n2["amount"] || 0)
     }
 
@@ -304,27 +304,18 @@ defmodule Mehungry.NutrientUtils do
         base
 
       {c1, c2} ->
-        children =
-          (c1 || [])
-          |> Enum.concat(c2 || [])
-          |> merge_children()
-
-        Map.put(base, "children", children)
+        Map.put(base, "children", merge_children((c1 || []) ++ (c2 || [])))
     end
   end
 
+  # Recursively merges children at any depth so the full hierarchy survives
+  # (Total Fat → Saturated/.../Polyunsaturated Fat → the individual fatty acids).
+  # Equivalent nodes across meals are grouped by canonical name and merged with
+  # `merge_nutrient/2`; a node that appears once is kept verbatim (children and all).
   defp merge_children(children) do
     children
     |> Enum.group_by(&normalize_nutrient_name(&1["name"]))
-    |> Enum.map(fn {canonical_name, group} ->
-      Enum.reduce(group, fn child, acc ->
-        %{
-          "name" => canonical_name,
-          "measurement_unit" => child["measurement_unit"],
-          "amount" => (acc["amount"] || 0) + (child["amount"] || 0)
-        }
-      end)
-    end)
+    |> Enum.map(fn {_canonical_name, group} -> Enum.reduce(group, &merge_nutrient/2) end)
   end
 
   @doc """
@@ -554,7 +545,15 @@ defmodule Mehungry.NutrientUtils do
   defp scale_amount(nutrient, _factor), do: nutrient
 
   @doc """
-  Your original summarize_meals_nutrients but using the enhanced merger
+  Aggregates a list of user meals into one `name => nutrient` map, merging recipe
+  meals and directly-logged ingredient meals uniformly.
+
+  Both meal kinds contribute the same **structured** nutrient tree: recipe meals
+  carry the recipe's stored `recipe_nutrients` (scaled to the consumed fraction),
+  and ingredient meals carry the tree from
+  `History.scaled_ingredient_nutrient_tree/2` — already scaled to the logged
+  quantity, so a directly-logged ingredient merges identically to the same
+  ingredient inside a recipe.
   """
   def summarize_meals_nutrients(user_meals) do
     result =
@@ -568,26 +567,14 @@ defmodule Mehungry.NutrientUtils do
             |> Map.get(:recipe_nutrients, %{})
             |> scale_nutrient_map(consumed_fraction(recipe_user_meal))
           end)
-          |> Enum.filter(&(&1 != %{}))
 
         ingredient_nutrients =
           item
           |> Map.get(:ingredient_user_meals, [])
-          |> Enum.flat_map(fn ing ->
-            Map.get(ing, :recipe, %{})
-            |> Map.get(:nutrients, [])
-            |> Enum.map(fn n ->
-              %{
-                n.name => %{
-                  "amount" => n.amount,
-                  "measurement_unit" => n.measurement_unit.name,
-                  "name" => n.name
-                }
-              }
-            end)
-          end)
+          |> Enum.map(fn ing -> ing |> Map.get(:recipe, %{}) |> Map.get(:nutrients, %{}) end)
 
-        recipe_nutrients ++ ingredient_nutrients
+        (recipe_nutrients ++ ingredient_nutrients)
+        |> Enum.filter(&(is_map(&1) and &1 != %{}))
       end)
 
     # Use enhanced merger with normalization

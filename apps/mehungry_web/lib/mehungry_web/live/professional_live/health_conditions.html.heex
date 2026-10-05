@@ -9,15 +9,89 @@
         shown on <code class="text-parchment">/conditions/:id</code>.
       </p>
     </div>
-    <button
-      type="button"
-      phx-click="seed_conditions"
-      data-confirm="Bulk-load the bundled condition catalogue? Idempotent — existing conditions are refreshed, not duplicated."
-      class="shrink-0 rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 hover:bg-ink-panel"
-    >
-      Seed registry
-    </button>
+    <div class="shrink-0 flex gap-2">
+      <button
+        type="button"
+        phx-click="seed_conditions"
+        data-confirm="Bulk-load the bundled condition catalogue? Idempotent — existing conditions are refreshed, not duplicated."
+        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 hover:bg-ink-panel"
+      >
+        Seed registry
+      </button>
+      <button
+        type="button"
+        phx-click="seed_diet_patterns"
+        data-confirm="Add the starter diet-pattern blueprints (Mediterranean, Low-FODMAP) to your account? Idempotent — patterns you already own are skipped."
+        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 hover:bg-ink-panel"
+      >
+        Seed diet patterns
+      </button>
+      <button
+        type="button"
+        phx-click="clear_all_recommendations"
+        data-confirm="Delete ALL recommendation candidates AND promoted recommendations (compound + nutrient + phase-aware) for EVERY condition? This cannot be undone. Conditions and compounds are kept."
+        class="rounded border border-paprika/50 bg-paprika/10 text-paprika text-sm px-3 py-1.5 hover:bg-paprika/20"
+      >
+        Clear all suggestions
+      </button>
+    </div>
   </div>
+
+  <%!-- ── Analyzer service connection ────────────────────────────────── --%>
+  <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4" x-data="{ open: false }">
+    <div class="flex items-center justify-between gap-2">
+      <h2 class="text-lg font-medium text-parchment">Analyzer service</h2>
+      <button
+        type="button"
+        @click="open = !open"
+        class="text-xs rounded border border-ink-panel2 bg-ink-panel2 text-parchment px-2 py-1 hover:bg-ink-panel"
+      >
+        <span x-text="open ? 'Hide' : 'Configure'"></span>
+      </button>
+    </div>
+    <p class="text-parchment-dim text-sm">
+      Where <span class="font-medium">“Analyze selected”</span>
+      sends papers (the <code class="text-parchment">mehungry_extractor</code>
+      <code class="text-parchment">POST /analyze</code>
+      service). Currently using <code class="text-parchment">{@extractor_base_url}</code><span :if={
+        @extractor_auth_token
+      }> · auth token set</span>.
+    </p>
+
+    <form
+      x-show="open"
+      x-cloak
+      phx-submit="save_extractor_settings"
+      class="grid grid-cols-1 sm:grid-cols-2 gap-3"
+    >
+      <label class="text-xs text-parchment-dim sm:col-span-2 -mb-1">Service URL</label>
+      <input
+        type="url"
+        name="settings[base_url]"
+        value={@extractor_base_url}
+        required
+        placeholder="http://127.0.0.1:8000"
+        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 placeholder:text-parchment-dim sm:col-span-2"
+      />
+      <label class="text-xs text-parchment-dim sm:col-span-2 -mb-1">
+        Auth token (optional) — sent as <code class="text-parchment">Authorization: Bearer …</code>; leave blank for none
+      </label>
+      <input
+        type="password"
+        name="settings[auth_token]"
+        value={@extractor_auth_token}
+        autocomplete="off"
+        placeholder="Bearer token (optional)"
+        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 placeholder:text-parchment-dim sm:col-span-2"
+      />
+      <button
+        type="submit"
+        class="justify-self-start px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
+      >
+        Save analyzer settings
+      </button>
+    </form>
+  </section>
 
   <%!-- ── Add condition ──────────────────────────────────────────────── --%>
   <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
@@ -48,6 +122,16 @@
         rows="2"
         class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 placeholder:text-parchment-dim sm:col-span-2"
       ></textarea>
+      <label class="text-xs text-parchment-dim sm:col-span-2 -mb-1">
+        Parent condition (optional) — a subtype inherits its parent's general suggestions
+      </label>
+      <select
+        name="condition[parent_condition_id]"
+        class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-sm px-3 py-1.5 sm:col-span-2"
+      >
+        <option value="">No parent (top-level condition)</option>
+        <option :for={c <- @conditions} value={c.id}>{c.name}</option>
+      </select>
       <button
         type="submit"
         class="justify-self-start px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90"
@@ -397,6 +481,11 @@
       No conditions yet.
     </p>
 
+    <%!-- Shared options for the per-paper "Re-assign to…" search-selects below. --%>
+    <datalist id="conditions-datalist">
+      <option :for={c <- @conditions} value={c.name}></option>
+    </datalist>
+
     <div
       :for={condition <- @conditions}
       class="rounded-lg border border-ink-panel2 bg-ink-panel p-4 space-y-2"
@@ -504,7 +593,9 @@
           >
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
           </svg>
-          Papers ({length(@condition_studies[condition.id])})
+          Papers ({length(@condition_studies[condition.id])}<span :if={
+              analyzed_count(@condition_studies[condition.id], @analyzed_study_ids) > 0
+            }> · {analyzed_count(@condition_studies[condition.id], @analyzed_study_ids)} analyzed</span>)
         </button>
 
         <div
@@ -520,21 +611,24 @@
               No papers found yet — try searching again later.
             </p>
 
-            <form
-              :if={@condition_studies[condition.id] != []}
-              phx-submit="analyze_condition"
-              class="mt-2 space-y-1"
-            >
+            <%!-- The analyze form is kept self-contained (empty) so each paper row
+                 can carry its own re-assign form as a sibling — nesting forms is
+                 invalid HTML. The checkboxes and the Analyze button live in the
+                 rows below and bind to it via the HTML `form=` attribute. --%>
+            <div :if={@condition_studies[condition.id] != []} class="mt-2 space-y-1">
+              <form id={"analyze-#{condition.id}"} phx-submit="analyze_condition"></form>
+
               <div class="flex items-center gap-3 mb-1">
                 <button
                   type="button"
-                  @click="$el.closest('form').querySelectorAll('.condition-pmid').forEach(c => c.checked = true)"
+                  @click={"document.querySelectorAll('.cond-pmid-#{condition.id}').forEach(c => c.checked = true)"}
                   class="text-[11px] text-basil hover:underline"
                 >
                   Select all
                 </button>
                 <button
                   type="submit"
+                  form={"analyze-#{condition.id}"}
                   disabled={@analyzing}
                   class="px-3 py-1.5 rounded bg-basil text-ink text-xs font-medium hover:opacity-90 disabled:opacity-60"
                 >
@@ -542,35 +636,294 @@
                 </button>
                 <button
                   type="button"
-                  @click="$el.closest('form').querySelectorAll('.condition-pmid').forEach(c => c.checked = false)"
+                  @click={"document.querySelectorAll('.cond-pmid-#{condition.id}').forEach(c => c.checked = false)"}
                   class="text-[11px] text-parchment-dim hover:underline"
                 >
                   Clear
                 </button>
               </div>
-              <label
+              <%!-- Non-open-access papers (flagged unusable by a prior analysis)
+                   are hidden from the list — they can't be (re)selected. --%>
+              <div
                 :for={study <- @condition_studies[condition.id]}
-                class="flex items-start gap-2 text-xs text-parchment-dim py-0.5"
+                :if={not MapSet.member?(@unusable_study_ids, study.id)}
+                class="flex flex-wrap items-start justify-between gap-2 py-0.5"
               >
-                <input
-                  type="checkbox"
-                  name="pmids[]"
-                  value={study.pmid}
-                  class="condition-pmid mt-0.5 accent-basil"
-                />
-                <span class="min-w-0">
-                  <a
-                    href={"https://pubmed.ncbi.nlm.nih.gov/#{study.pmid}/"}
-                    target="_blank"
-                    rel="noopener"
-                    class="text-basil hover:underline"
-                  >{study.pmid}</a>
-                  <span class="text-parchment">{study.title}</span>
-                </span>
-              </label>
+                <label class="flex items-start gap-2 text-xs text-parchment-dim min-w-0 flex-1">
+                  <input
+                    type="checkbox"
+                    name="pmids[]"
+                    value={study.pmid}
+                    form={"analyze-#{condition.id}"}
+                    class={"cond-pmid-#{condition.id} mt-0.5 accent-basil"}
+                  />
+                  <span class="min-w-0">
+                    <a
+                      href={"https://pubmed.ncbi.nlm.nih.gov/#{study.pmid}/"}
+                      target="_blank"
+                      rel="noopener"
+                      class="text-basil hover:underline"
+                    >{study.pmid}</a>
+                    <span
+                      :if={MapSet.member?(@analyzed_study_ids, study.id)}
+                      class="text-[10px] text-basil"
+                      title="This paper has a stored extractor analysis"
+                    >✓ analyzed</span>
+                    <span class="text-parchment">{study.title}</span>
+                  </span>
+                </label>
+
+                <%!-- Re-assign this paper to a better-fitting condition. "Move + flag":
+                     it is linked to the target, removed from here, and flagged so a
+                     re-crawl of this condition never re-grabs it. --%>
+                <form
+                  id={"reassign-#{condition.id}-#{study.id}"}
+                  phx-submit="reassign_study"
+                  class="flex items-center gap-1 shrink-0"
+                >
+                  <input type="hidden" name="study_id" value={study.id} />
+                  <input type="hidden" name="from_condition_id" value={condition.id} />
+                  <input
+                    type="text"
+                    name="target"
+                    list="conditions-datalist"
+                    required
+                    placeholder="Re-assign to…"
+                    title="Type or pick a condition this paper fits better"
+                    class="rounded border border-ink-panel2 bg-ink-panel2 text-parchment text-[11px] px-2 py-0.5 w-40 placeholder:text-parchment-dim"
+                  />
+                  <button
+                    type="submit"
+                    class="text-[11px] rounded border border-ink-panel2 bg-ink-panel2 text-parchment px-2 py-0.5 hover:bg-ink-panel"
+                  >
+                    Move
+                  </button>
+                </form>
+              </div>
 
               <p class="text-[11px] text-parchment-dim pt-1">Select 1–200 papers.</p>
-            </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <%!-- ── Claims & suggestions (folded, expandable two-tab block) ──── --%>
+      <%!-- Tab 1 "Claims": the extractor /analyze response, per paper — each claim
+           gets a state dropdown (Food related / General science / Wrong / Ignore).
+           Tab 2 "Suggestions": the claims marked "Food related" formulated into
+           food-for-condition suggestions (via ClaimRules). Non-destructive. --%>
+      <div
+        :if={Map.has_key?(@condition_studies, condition.id)}
+        class="mt-2 pt-2 border-t border-ink-panel2"
+      >
+        <button
+          type="button"
+          phx-click="toggle_condition_detail"
+          phx-value-id={condition.id}
+          class="cursor-pointer inline-flex items-center gap-1 text-[11px] text-basil hover:underline"
+        >
+          <svg
+            class={[
+              "w-3 h-3 transition-transform duration-200",
+              MapSet.member?(@expanded_conditions, condition.id) && "rotate-90"
+            ]}
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          Claims &amp; suggestions
+        </button>
+
+        <div :if={MapSet.member?(@expanded_conditions, condition.id)} class="mt-2">
+          <%!-- Tab bar --%>
+          <div class="flex items-center gap-1 border-b border-ink-panel2 mb-2">
+            <button
+              type="button"
+              phx-click="switch_condition_tab"
+              phx-value-id={condition.id}
+              phx-value-tab="claims"
+              class={tab_class((@condition_tab[condition.id] || "claims") == "claims")}
+            >
+              Claims ({claims_total(@condition_analyses[condition.id])})
+            </button>
+            <button
+              type="button"
+              phx-click="switch_condition_tab"
+              phx-value-id={condition.id}
+              phx-value-tab="suggestions"
+              class={tab_class(@condition_tab[condition.id] == "suggestions")}
+            >
+              Suggestions ({length(food_related_rules(@condition_rules[condition.id]))})
+            </button>
+          </div>
+
+          <%!-- ── Tab 1: per-paper claims with a state dropdown ──── --%>
+          <div
+            :if={(@condition_tab[condition.id] || "claims") == "claims"}
+            class="space-y-3"
+          >
+            <p
+              :if={(@condition_analyses[condition.id] || []) == []}
+              class="text-xs text-parchment-dim"
+            >
+              No analyzed papers yet — select papers above and click “Analyze selected”.
+            </p>
+
+            <div
+              :for={analysis <- ordered_analyses(@condition_analyses[condition.id])}
+              class="text-xs"
+            >
+              <div class="flex flex-wrap items-center gap-2">
+                <a
+                  :if={analysis.study}
+                  href={"https://pubmed.ncbi.nlm.nih.gov/#{analysis.study.pmid}/"}
+                  target="_blank"
+                  rel="noopener"
+                  class="text-basil hover:underline"
+                >{analysis.study.pmid}</a>
+                <span class="text-parchment">{analysis.paper_title}</span>
+                <span
+                  :if={analysis.study_design && analysis.study_design != "unknown"}
+                  class="text-[10px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim"
+                >
+                  {analysis.study_design}
+                </span>
+                <span :if={analysis.publication_year} class="text-parchment-dim">
+                  · {analysis.publication_year}
+                </span>
+                <span :if={analysis.sample_size} class="text-parchment-dim">
+                  · n={analysis.sample_size}
+                </span>
+                <span class="text-parchment-dim">· {length(analysis.claims || [])} claim(s)</span>
+              </div>
+
+              <form
+                :for={claim <- analysis.claims || []}
+                phx-change="set_claim_position"
+                class={[
+                  "mt-1 flex items-start gap-2 pl-2 border-l-2 border-ink-panel2",
+                  claim["position"] in ["wrong", "ignore"] && "opacity-50"
+                ]}
+              >
+                <input type="hidden" name="study" value={analysis.study_id} />
+                <input type="hidden" name="claim" value={claim["claim_id"]} />
+                <input type="hidden" name="condition" value={condition.id} />
+
+                <div class="min-w-0 flex-1 space-y-0.5">
+                  <div
+                    :if={disease_state(claim)}
+                    class="text-[10px] inline-block px-2 py-0.5 rounded-full bg-paprika/20 text-paprika-soft"
+                  >
+                    disease state: {disease_state(claim)}
+                  </div>
+                  <div class="text-parchment">
+                    <span class="font-medium">
+                      {claim["subject_label"] || claim["subject_name"] || claim["subject_text"]}
+                    </span>
+                    <span class="text-parchment-dim">— {claim["predicate"]} —</span>
+                    <span class="font-medium">
+                      {claim["object_label"] || claim["object_name"] || claim["object_text"]}
+                    </span>
+                    <span class={["ml-1", polarity_class(claim["polarity"])]}>
+                      {claim["polarity"]} · {claim["certainty"] || "asserted"}
+                    </span>
+                  </div>
+                  <p :if={first_quote(claim)} class="text-parchment-dim/80 italic">
+                    “{first_quote(claim)}”
+                  </p>
+                </div>
+
+                <select
+                  name="position"
+                  title="State — only “Food related” feeds the Suggestions tab"
+                  class={[select_class(), "shrink-0 text-[11px] py-0.5"]}
+                >
+                  <option
+                    :for={{value, label} <- position_options()}
+                    value={value}
+                    selected={(claim["position"] || "") == value}
+                  >
+                    {label}
+                  </option>
+                </select>
+              </form>
+            </div>
+          </div>
+
+          <%!-- ── Tab 2: food_related claims → suggestions ──── --%>
+          <div
+            :if={@condition_tab[condition.id] == "suggestions"}
+            class="space-y-1"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <p class="text-[11px] text-parchment-dim">
+                Formulated from claims marked
+                <span class="text-basil font-medium">Food related</span>
+                in the Claims tab. <span class="text-parchment">Verify</span>
+                one to publish it as a recommendation on the public condition page.
+              </p>
+              <button
+                type="button"
+                phx-click="refresh_suggestions"
+                phx-value-id={condition.id}
+                title="Re-evaluate suggestions from the latest claims & curation"
+                class="shrink-0 inline-flex items-center gap-1 text-[11px] text-basil hover:underline"
+              >
+                <svg
+                  class="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M4 4v5h5M20 20v-5h-5M5 9a7 7 0 0111.9-2.5L20 9M19 15a7 7 0 01-11.9 2.5L4 15"
+                  />
+                </svg>
+                Refresh
+              </button>
+            </div>
+
+            <p
+              :if={food_related_rules(@condition_rules[condition.id]) == []}
+              class="text-xs text-parchment-dim"
+            >
+              No suggestions yet — mark one or more claims “Food related” in the Claims tab.
+            </p>
+
+            <.suggestion_row
+              :for={rule <- food_related_rules(@condition_rules[condition.id])}
+              rule={rule}
+              condition_id={condition.id}
+            />
+
+            <%!-- Inherited from the parent condition (e.g. IBD → UC): general
+                 evidence, clearly labelled and visually set apart. --%>
+            <div
+              :if={@condition_parent_rules[condition.id]}
+              class="mt-3 pt-3 border-t border-paprika/30"
+            >
+              <p class="text-[11px] text-paprika-soft">
+                Inherited from
+                <span class="font-medium">{@condition_parent_rules[condition.id].name}</span>
+                — general evidence; review before applying to {condition.name}.
+              </p>
+              <p
+                :if={food_related_rules(@condition_parent_rules[condition.id].rules) == []}
+                class="text-xs text-parchment-dim"
+              >
+                No inherited suggestions yet.
+              </p>
+              <.suggestion_row
+                :for={rule <- food_related_rules(@condition_parent_rules[condition.id].rules)}
+                rule={rule}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -591,28 +944,176 @@
         </p>
       </div>
 
+      <%!-- Per-paper claims extracted by the engine (the normalized concept layer;
+           each traces back to a verbatim source span). Replaces the old cross-paper
+           "conclusions" rollup. --%>
       <div>
         <h4 class="text-sm font-medium text-parchment mb-1">
-          Conclusions ({length(@analysis["conclusions"] || [])})
+          Claims ({claim_count(@analysis)} across {length(
+            @analysis["paper_claims"] || []
+          )} paper(s))
         </h4>
-        <p :if={(@analysis["conclusions"] || []) == []} class="text-xs text-parchment-dim">
-          No cross-paper conclusions — the papers may not share a topic core.
+        <p
+          :if={claim_count(@analysis) == 0}
+          class="text-xs text-parchment-dim"
+        >
+          No claims extracted — the papers may be abstract-only or outside the
+          engine's nutrition vocabulary.
         </p>
         <div
-          :for={c <- @analysis["conclusions"] || []}
+          :for={pc <- @analysis["paper_claims"] || []}
           class="py-2 border-t border-ink-panel2 text-sm"
         >
-          <div class="text-parchment">
-            <span class="font-medium">{c["subject_name"]}</span>
-            <span class="text-parchment-dim">— {c["predicate"]} —</span>
-            <span class="font-medium">{c["object_name"]}</span>
-            <span class="text-xs ml-1 px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
-              {c["direction"]} · {c["paper_count"]} paper(s)
+          <div class="text-xs">
+            <a
+              href={pc["paper_url"] || "https://pubmed.ncbi.nlm.nih.gov/#{pc["pmid"]}/"}
+              target="_blank"
+              rel="noopener"
+              class="text-basil hover:underline"
+            >{pc["pmid"]}</a>
+            <span class="text-parchment">{pc["paper_title"]}</span>
+          </div>
+          <p
+            :if={(pc["claims_list"] || []) == []}
+            class="text-xs text-parchment-dim/80 mt-1"
+          >
+            No claims in this paper.
+          </p>
+          <div
+            :for={claim <- pc["claims_list"] || []}
+            class="mt-2 pl-2 border-l-2 border-ink-panel2"
+          >
+            <%!-- Verbatim from the extractor REST API (see mehungry_extractor/docs/api.md) --%>
+            <p class="text-[9px] uppercase tracking-wide text-parchment-dim/70 mb-0.5">
+              From extractor
+            </p>
+            <div class="text-parchment">
+              <%!-- `*_label` folds any restrictive modifiers back into the head
+                   (e.g. "Dysbiosis of gut microbiome"); fall back to the bare
+                   canonical name, then the raw surface text. --%>
+              <span class="font-medium">
+                {claim["subject_label"] || claim["subject_name"] || claim["subject_text"]}
+              </span>
+              <span class="text-parchment-dim">— {claim["predicate"]} —</span>
+              <span class="font-medium">
+                {claim["object_label"] || claim["object_name"] || claim["object_text"]}
+              </span>
+              <span class={[
+                "text-xs ml-1 px-2 py-0.5 rounded-full bg-ink-panel2",
+                polarity_class(claim["polarity"])
+              ]}>
+                {claim["polarity"]} · {claim["certainty"]}
+              </span>
+            </div>
+            <div
+              :if={(claim["qualifiers"] || []) != []}
+              class="text-xs text-parchment-dim mt-0.5 flex flex-wrap gap-1.5"
+            >
+              <span
+                :for={q <- claim["qualifiers"]}
+                class="px-2 py-0.5 rounded-full bg-ink-panel2"
+              >
+                {q["qualifier_type"]}: {q["value_text"]}
+              </span>
+            </div>
+            <p :if={first_quote(claim)} class="text-xs text-parchment-dim/80 italic mt-1">
+              “{first_quote(claim)}”
+            </p>
+
+            <%!-- ── Added by m3hungry (derived from the claim above) ──── --%>
+            <%!-- Visually separated so it's clear this is our interpretation, not
+                 extractor output: the suggested direction and how the dietary
+                 endpoint resolved to a foods-mapping registry entry. --%>
+            <div
+              :if={claim["__derived__"]}
+              class="mt-1.5 rounded border border-dashed border-basil/40 bg-basil/5 px-2 py-1"
+            >
+              <p class="text-[9px] uppercase tracking-wide text-basil/80 mb-0.5">
+                Added by m3hungry
+              </p>
+              <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                <span class="text-parchment-dim">suggests</span>
+                <span class={"font-medium #{direction_class(claim["__derived__"].direction)}"}>
+                  {claim["__derived__"].direction}
+                </span>
+                <span class="text-parchment-dim">·</span>
+                <span class="text-parchment-dim">{registry_match_label(claim["__derived__"])}</span>
+                <span
+                  :if={not claim["__derived__"].used_in_rules?}
+                  class="text-[10px] text-parchment-dim border border-ink-panel2 rounded px-1"
+                  title="Dropped by the rule filter (hedged, or missing an endpoint)"
+                >
+                  not used in rules
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <%!-- Detected shared topic core the claims were scored against. --%>
+      <div :if={(get_in(@analysis, ["topic", "core_concepts"]) || []) != []}>
+        <h4 class="text-sm font-medium text-parchment mb-1">
+          Topic core ({length(@analysis["topic"]["core_concepts"])})
+        </h4>
+        <div class="flex flex-wrap gap-1.5">
+          <span
+            :for={concept <- @analysis["topic"]["core_concepts"]}
+            class="text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim"
+          >
+            {concept["name"]} · {concept["paper_count"]}
+          </span>
+        </div>
+      </div>
+
+      <%!-- Every requested paper: status, metadata, and per-paper errors. --%>
+      <div :if={(@analysis["papers"] || []) != []}>
+        <h4 class="text-sm font-medium text-parchment mb-1">
+          Papers ({length(@analysis["papers"])})
+        </h4>
+        <div
+          :for={p <- @analysis["papers"] || []}
+          class="py-2 border-t border-ink-panel2 text-sm"
+        >
+          <div class="flex items-start gap-2">
+            <span class={[
+              "text-xs px-2 py-0.5 rounded-full bg-ink-panel2 shrink-0",
+              paper_status_class(p["status"])
+            ]}>
+              {p["status"]}
+            </span>
+            <%!-- A non-open-access paper is unusable for now; it's flagged here and
+                 then hidden from this condition's selection list going forward. --%>
+            <span
+              :if={not usable_source?(p["source_type"])}
+              class="text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-paprika shrink-0"
+              title="Not open access — unusable for now; hidden from the paper list going forward"
+            >
+              unusable · not open access
+            </span>
+            <span class="min-w-0">
+              <a
+                href={"https://pubmed.ncbi.nlm.nih.gov/#{p["pmid"]}/"}
+                target="_blank"
+                rel="noopener"
+                class="text-basil hover:underline"
+              >{p["pmid"]}</a>
+              <span class="text-parchment">{p["title"]}</span>
             </span>
           </div>
-          <p :if={first_quote(c)} class="text-xs text-parchment-dim/80 italic mt-1">
-            “{first_quote(c)}”
-          </p>
+          <div class="text-xs text-parchment-dim mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 pl-1">
+            <span :if={p["publication_year"]}>{p["publication_year"]}</span>
+            <span :if={p["source_type"]}>{p["source_type"]}</span>
+            <span :if={p["study_design"] && p["study_design"] != "unknown"}>
+              {p["study_design"]}
+            </span>
+            <span :if={p["sample_size"]}>n={p["sample_size"]}</span>
+            <span :if={p["n_claims"]}>{p["n_claims"]} claim(s)</span>
+            <span :if={is_number(p["cohesion_score"])}>
+              cohesion {Float.round(p["cohesion_score"] * 1.0, 2)}
+            </span>
+          </div>
+          <p :if={p["error"]} class="text-xs text-paprika mt-0.5 pl-1">{p["error"]}</p>
         </div>
       </div>
 
@@ -621,7 +1122,8 @@
           Outliers ({length(@analysis["outliers"])})
         </h4>
         <div :for={o <- @analysis["outliers"]} class="text-xs text-parchment-dim">
-          {o["pmid"]} — {o["reason"]}
+          {o["pmid"]} — {o["reason"]}<span :if={is_number(o["cohesion_score"])}>
+            (cohesion {Float.round(o["cohesion_score"] * 1.0, 2)})</span>
         </div>
       </div>
 

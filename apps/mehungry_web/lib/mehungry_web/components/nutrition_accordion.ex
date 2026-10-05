@@ -2,6 +2,8 @@ defmodule MehungryWeb.NutritionAccordion do
   use Phoenix.Component
   import MehungryWeb.AccordionComponent
 
+  alias Mehungry.Food.Nutrition.FattyAcidMatcher
+
   # Helper to safely get values for sorting
   defp get_value(map, key) when is_tuple(map) and tuple_size(map) == 2 do
     {_, inner_map} = map
@@ -57,6 +59,7 @@ defmodule MehungryWeb.NutritionAccordion do
 
         {priority, name}
       end)
+      |> resolve_fatty_acid_names()
 
     assigns = assign(assigns, nutrient_list: nutrient_list)
 
@@ -79,5 +82,48 @@ defmodule MehungryWeb.NutritionAccordion do
       </div>
     </div>
     """
+  end
+
+  # Resolve fatty-acid notation to common names live, at render time, so the
+  # stored hierarchy keeps the raw USDA notation (e.g. "MUFA 16:1") and matcher
+  # improvements apply to already-saved recipes without recalculation. Walks the
+  # whole nutrient tree; non-fatty-acid nodes are left untouched.
+  defp resolve_fatty_acid_names(nodes) when is_list(nodes) do
+    Enum.map(nodes, &resolve_fatty_acid_names/1)
+  end
+
+  defp resolve_fatty_acid_names(node) when is_map(node) do
+    # Prefer the raw notation preserved in `original_name`; fall back to `name`
+    # (which may already be a baked display string from older data — the matcher
+    # still extracts the lipid number from it).
+    raw = get_value(node, :original_name) || get_value(node, :name)
+
+    node =
+      if is_binary(raw) and FattyAcidMatcher.fatty_acid?(raw) do
+        put_name(node, FattyAcidMatcher.display_name(raw))
+      else
+        node
+      end
+
+    case get_value(node, :children) do
+      children when is_list(children) and children != [] ->
+        put_children(node, Enum.map(children, &resolve_fatty_acid_names/1))
+
+      _ ->
+        node
+    end
+  end
+
+  defp resolve_fatty_acid_names(other), do: other
+
+  # Write back to whichever key representation the (JSON-decoded) node uses.
+  defp put_name(node, value) do
+    if Map.has_key?(node, "name"), do: Map.put(node, "name", value), else: Map.put(node, :name, value)
+  end
+
+  defp put_children(node, value) do
+    if Map.has_key?(node, "children"),
+      do: Map.put(node, "children", value),
+      else: Map.put(node, :children, value)
   end
 end

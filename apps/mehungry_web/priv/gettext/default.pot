@@ -913,7 +913,7 @@ msgstr ""
 
 #: lib/mehungry_web/live/landing_live.ex:1172
 #, elixir-autogen, elixir-format
-msgid "or €599/yr"
+msgid "or €290/yr"
 msgstr ""
 
 #: lib/mehungry_web/live/landing_live.ex:1126

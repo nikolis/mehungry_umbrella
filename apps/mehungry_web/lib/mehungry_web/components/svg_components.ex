@@ -282,21 +282,153 @@ defmodule MehungryWeb.SvgComponents do
   end
 
   @doc """
-  Branded loading spinner: three dots in the primary, secondary, and accent
-  brand colors orbiting in sequence, echoing the logo's layered color trio.
+  Branded loading spinner: the M3hungry atomic-orbit logo, animated — the two
+  orbit nodes and the leaf continuously travel around the tilted rings (pure
+  SMIL `animateMotion`, matching `priv/static/images/logo2_loading.svg`).
+
+  * `class` — sizing/positioning classes for the wrapper (default `w-16 h-16 mx-auto`).
+  * `compact` — when `true`, renders just the spinning orbit rings + nodes
+    (no bowl or leaf) in `currentColor`, for small in-button contexts where the
+    full bowl would be illegible.
+
+  Safe to call either as a component (`<SvgComponents.get_loading />`) or as a
+  bare function (`get_loading(assigns)`); defaults are filled via `assign_new`.
   """
+  attr :class, :string, default: "w-16 h-16 mx-auto"
+  attr :compact, :boolean, default: false
+
   def get_loading(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:class, fn -> "w-16 h-16 mx-auto" end)
+      |> assign_new(:compact, fn -> false end)
+
     ~H"""
-    <div class="flex items-center justify-center w-16 h-16 mx-auto" role="status">
-      <svg viewBox="0 0 100 100" class="w-full h-full" aria-hidden="true">
-        <g class="m3-loader-dot m3-loader-dot--1 text-primary-500">
-          <circle cx="50" cy="12" r="7" fill="currentColor" />
+    <div class={["flex items-center justify-center", @class]} role="status">
+      <!-- Full mark: teal orbit + leaf orbiting, static orange bowl -->
+      <svg
+        :if={!@compact}
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 1024 1024"
+        class="w-full h-full"
+        aria-hidden="true"
+      >
+        <g transform="rotate(18 512 430)">
+          <ellipse
+            cx="512"
+            cy="430"
+            rx="275"
+            ry="108"
+            fill="none"
+            stroke="var(--logo-mark-accent, #45C4AE)"
+            stroke-width="26"
+            stroke-linecap="round"
+          />
+          <circle r="31" fill="var(--logo-mark-accent, #45C4AE)">
+            <animateMotion
+              dur="3s"
+              repeatCount="indefinite"
+              path="M 237,430 a 275,108 0 1,1 550,0 a 275,108 0 1,1 -550,0"
+            />
+          </circle>
+          <g>
+            <animateMotion
+              dur="3s"
+              begin="-1.5s"
+              repeatCount="indefinite"
+              path="M 237,430 a 275,108 0 1,1 550,0 a 275,108 0 1,1 -550,0"
+            />
+            <g transform="scale(0.72)">
+              <path
+                d="M-54 -23 C-19 -64 27 -72 64 -66 C68 -24 56 19 23 47 C-7 72 -41 67 -64 56 C-60 28 -52 1 -54 -23Z"
+                fill="var(--logo-mark-accent, #45C4AE)"
+              />
+              <path
+                d="M-46 50 C-23 16 0 -14 36 -46"
+                fill="none"
+                stroke="#17140F"
+                stroke-width="12"
+                stroke-linecap="round"
+                opacity="0.35"
+              />
+            </g>
+          </g>
         </g>
-        <g class="m3-loader-dot m3-loader-dot--2 text-secondary-500">
-          <circle cx="50" cy="12" r="7" fill="currentColor" />
+        <g transform="rotate(-18 512 430)">
+          <ellipse
+            cx="512"
+            cy="430"
+            rx="275"
+            ry="108"
+            fill="none"
+            stroke="var(--logo-mark-accent, #45C4AE)"
+            stroke-width="26"
+            stroke-linecap="round"
+          />
+          <circle r="31" fill="var(--logo-mark-accent, #45C4AE)">
+            <animateMotion
+              dur="3s"
+              begin="-0.75s"
+              repeatCount="indefinite"
+              path="M 237,430 a 275,108 0 1,1 550,0 a 275,108 0 1,1 -550,0"
+            />
+          </circle>
         </g>
-        <g class="m3-loader-dot m3-loader-dot--3 text-accent-500">
-          <circle cx="50" cy="12" r="7" fill="currentColor" />
+        <path
+          d="M244 584 C315 616 709 616 780 584 L760 752 C746 850 646 922 512 922 C378 922 278 850 264 752 Z"
+          fill="#E8622C"
+        />
+        <path d="M244 584 C299 551 725 551 780 584 C724 623 300 623 244 584Z" fill="#E8622C" />
+        <path d="M275 584 C344 605 680 605 749 584 C678 566 346 566 275 584Z" fill="#F0906B" />
+        <path d="M467 913 C481 931 543 931 557 913 C552 902 472 902 467 913Z" fill="#E8622C" />
+      </svg>
+
+      <!-- Compact mark: orbit rings + nodes only, inherits currentColor -->
+      <svg
+        :if={@compact}
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="190 108 644 644"
+        class="w-full h-full"
+        aria-hidden="true"
+      >
+        <g transform="rotate(18 512 430)">
+          <ellipse
+            cx="512"
+            cy="430"
+            rx="275"
+            ry="108"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="34"
+            stroke-linecap="round"
+          />
+          <circle r="38" fill="currentColor">
+            <animateMotion
+              dur="3s"
+              repeatCount="indefinite"
+              path="M 237,430 a 275,108 0 1,1 550,0 a 275,108 0 1,1 -550,0"
+            />
+          </circle>
+        </g>
+        <g transform="rotate(-18 512 430)">
+          <ellipse
+            cx="512"
+            cy="430"
+            rx="275"
+            ry="108"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="34"
+            stroke-linecap="round"
+          />
+          <circle r="38" fill="currentColor">
+            <animateMotion
+              dur="3s"
+              begin="-0.75s"
+              repeatCount="indefinite"
+              path="M 237,430 a 275,108 0 1,1 550,0 a 275,108 0 1,1 -550,0"
+            />
+          </circle>
         </g>
       </svg>
       <span class="sr-only">Loading…</span>

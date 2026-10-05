@@ -1,10 +1,14 @@
 defmodule MehungryWeb.ConditionDetailLive.Index do
   use MehungryWeb, :live_view
 
+  import MehungryWeb.BlueprintComponents
+
   alias Mehungry.Accounts.UserContent
   alias Mehungry.Food
   alias Mehungry.Food.SpeciesCompounds
   alias Mehungry.Health
+  alias Mehungry.History.MealType
+  alias Mehungry.MealBlueprints
   alias Phoenix.LiveView.AsyncResult
 
   # Absolute origin for JSON-LD URLs (mirrors the canonical base in head.html.heex).
@@ -56,11 +60,28 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
             language
           )
 
+        # Free-text dietary notes verified from the literature that resolved to no
+        # registry entity (so they drive no food mapping). They live as general
+        # (all-phase) `raw_food_term` rows; when the condition has disease states
+        # they already surface under the phase selector's "General" tab, so we only
+        # break them out into their own text-only block when there is no phase layer.
+        general_notes =
+          if states == [],
+            do: Enum.filter(state_recommendations, &(&1.raw_food_term not in [nil, ""])),
+            else: []
+
         condition_studies =
           condition.id |> Mehungry.Literature.list_studies_for_condition() |> Enum.take(30)
 
         page_title = seo_title(condition)
         page_description = seo_description(condition)
+
+        recommendations = Health.recommendations_for_condition(condition.id, language)
+
+        # Public blueprints keyed by normalized name, so any encouraged recommendation
+        # title that matches a blueprint (e.g. "Mediterranean diet") — whether it comes
+        # from the compound, phase, or free-text layer — linkifies to its preview modal.
+        blueprint_links = MealBlueprints.public_blueprint_name_index()
 
         {:ok,
          socket
@@ -68,15 +89,17 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
          |> assign(:language, language)
          |> assign_new(:current_user, fn -> nil end)
          |> assign(:current_user_recipes, saved_recipe_ids(socket))
-         |> assign(
-           :recommendations,
-           AsyncResult.ok(Health.recommendations_for_condition(condition.id, language))
-         )
+         |> assign(:recommendations, AsyncResult.ok(recommendations))
+         |> assign(:blueprint_links, blueprint_links)
+         |> assign(:modal_blueprint, nil)
+         |> assign(:modal_blueprint_plans, [])
          |> assign(:species, AsyncResult.ok(species))
          |> assign(:recommended_recipes, AsyncResult.ok(recommended_recipes(species)))
          |> assign(:states, states)
          |> assign(:selected_state, default_state)
          |> assign(:state_recommendations, state_recommendations)
+         |> assign(:general_notes, general_notes)
+         |> assign(:suggested_blueprints, Health.blueprints_for_condition(condition.id, language))
          |> assign(:condition_studies, condition_studies)
          |> assign(:page_title, page_title)
          |> assign(:page_description, page_description)
@@ -87,6 +110,213 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
     end
   end
 
+  @doc """
+  A compact "not medical advice" disclaimer badge, meant to sit in the upper-right
+  corner of the advice frame. The short label carries the YMYL disclaimer; the
+  longer "links the research…" note rides along as a hover tooltip.
+  """
+  def disclaimer_badge(assigns) do
+    ~H"""
+    <span
+      class="inline-flex items-center gap-1 flex-shrink-0 rounded-full border border-paprika/40 bg-paprika/10 text-paprika-soft text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1"
+      title={
+        gettext(
+          "Each recommendation links the research it is based on so you can read the source and decide with your clinician."
+        )
+      }
+    >
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      {gettext("Informational only — not medical advice")}
+    </span>
+    """
+  end
+
+  @doc """
+  The general (phase-less) compound/nutrient dietary recommendations, rendered as
+  grouped cards. Used both standalone (conditions with no disease phases) and nested
+  under the phase panel's "General" tab (conditions that have phases) — advice
+  without a state belongs to General.
+  """
+  attr :recommendations, :any, required: true
+  attr :blueprint_links, :map, default: %{}
+
+  def dietary_recommendations(assigns) do
+    ~H"""
+    <%= cond do %>
+      <% @recommendations.loading -> %>
+        <div class="space-y-3" aria-hidden="true">
+          <div
+            :for={_ <- 1..3}
+            class="rounded-xl border border-ink-panel2 bg-ink-panel p-4 space-y-2"
+          >
+            <div class="m3-skeleton h-3.5 w-2/5 rounded bg-ink-panel2" />
+            <div class="m3-skeleton h-3 w-3/5 rounded bg-ink-panel2" />
+          </div>
+        </div>
+      <% @recommendations.failed -> %>
+        <p class="text-parchment-dim text-sm">{gettext("Couldn't load recommendations.")}</p>
+      <% @recommendations.ok? && length(@recommendations.result) == 0 -> %>
+        <p class="text-parchment-dim text-sm">
+          {gettext("No recommendations recorded for this condition yet.")}
+        </p>
+      <% true -> %>
+        <div class="space-y-6">
+          <%= for {rec, rows} <- grouped_recommendations(@recommendations.result) do %>
+            <div>
+              <h3 class="text-sm font-semibold text-paprika-soft uppercase tracking-wide mb-3">
+                {recommendation_label(rec)}
+              </h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <%= for row <- rows do %>
+                  <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-4">
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                      <% bp_slug =
+                        rec == "encourage" && blueprint_slug(@blueprint_links, row.compound.name) %>
+                      <button
+                        :if={bp_slug}
+                        type="button"
+                        phx-click="open_blueprint"
+                        phx-value-slug={bp_slug}
+                        class="text-left text-sm font-semibold text-basil hover:underline leading-snug cursor-pointer"
+                      >
+                        {row.compound.name}
+                      </button>
+                      <span
+                        :if={!bp_slug}
+                        class="text-sm font-semibold text-parchment leading-snug"
+                      >
+                        {row.compound.name}
+                      </span>
+                      <%= if row.severity do %>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim whitespace-nowrap">
+                          {String.capitalize(row.severity)}
+                        </span>
+                      <% end %>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-parchment-dim">
+                      <%= if row.evidence_level do %>
+                        <span class="px-2 py-0.5 rounded-full bg-ink-panel2">
+                          {gettext("Evidence: %{level}",
+                            level: String.capitalize(row.evidence_level)
+                          )}
+                        </span>
+                      <% end %>
+                      <span class="px-2 py-0.5 rounded-full bg-ink-panel2">
+                        {String.capitalize(row.source)}
+                      </span>
+                    </div>
+                    <%= if row.notes && row.notes != "" do %>
+                      <p class="text-xs text-parchment-dim mt-2 leading-relaxed">{row.notes}</p>
+                    <% end %>
+                    <%!-- Sources: frozen PubMed provenance, else structured reference --%>
+                    <%= cond do %>
+                      <% row.studies != [] -> %>
+                        <%!-- Collapsed to a small toggle while browsing; per-card
+                              Alpine state + grid-rows 0fr→1fr transition (mirrors
+                              the "Foods to Avoid or Limit" source lists). --%>
+                        <div class="mt-3 pt-2 border-t border-ink-panel2" x-data="{ open: false }">
+                          <button
+                            type="button"
+                            @click="open = !open"
+                            class="cursor-pointer inline-flex items-center gap-1 text-[11px] text-parchment-dim hover:text-parchment transition-colors"
+                          >
+                            <svg
+                              class="w-3 h-3 transition-transform duration-200"
+                              x-bind:class="open && 'rotate-90'"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                            >
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                            {gettext("Sources (%{count})", count: length(row.studies))}
+                          </button>
+                          <div
+                            class="grid transition-all duration-200 ease-out"
+                            style="grid-template-rows: 0fr"
+                            x-bind:style="open ? 'grid-template-rows: 1fr' : 'grid-template-rows: 0fr'"
+                          >
+                            <div class="overflow-hidden">
+                              <ul class="space-y-1 mt-2 pl-4">
+                                <li :for={study <- row.studies} class="text-xs leading-snug">
+                                  <a
+                                    href={pubmed_url(study.pmid)}
+                                    target="_blank"
+                                    rel="noopener nofollow"
+                                    class="text-basil hover:underline"
+                                  >
+                                    {study_label(study)}
+                                  </a>
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      <% is_map(row.source_reference) && reference_href(row.source_reference) -> %>
+                        <div class="mt-3 pt-2 border-t border-ink-panel2">
+                          <p class="text-[11px] font-semibold text-parchment-dim uppercase tracking-wide mb-1">
+                            {gettext("Source")}
+                          </p>
+                          <a
+                            href={reference_href(row.source_reference)}
+                            target="_blank"
+                            rel="noopener nofollow"
+                            class="text-xs text-basil hover:underline leading-snug"
+                          >
+                            {reference_label(row.source_reference)}
+                          </a>
+                        </div>
+                      <% true -> %>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+    <% end %>
+    """
+  end
+
+  @doc """
+  A labelled row of blueprint target chips (Prefer / Avoid / Preferred foods) in
+  the blueprint preview modal — mirrors the public preview page's `tag_row/1`.
+  Renders nothing when there are no tags.
+  """
+  attr :label, :string, required: true
+  attr :tags, :list, required: true
+  attr :tone, :atom, required: true
+
+  def blueprint_tag_row(%{tags: []} = assigns), do: ~H""
+
+  def blueprint_tag_row(assigns) do
+    ~H"""
+    <div class="flex flex-wrap items-center gap-1.5 mt-3">
+      <span class="text-parchment-dim text-xs">{@label}:</span>
+      <span
+        :for={tag <- @tags}
+        class={[
+          "text-[11px] px-2 py-0.5 rounded-full",
+          case @tone do
+            :basil -> "bg-basil/15 text-basil"
+            :paprika -> "bg-paprika/15 text-paprika-soft"
+            _ -> "bg-ink-panel2 text-parchment-dim"
+          end
+        ]}
+      >
+        {tag}
+      </span>
+    </div>
+    """
+  end
+
   # Group phase-aware recommendations by direction, in the canonical display order —
   # mirrors grouped_recommendations/1 for the general layer.
   defp grouped_state_recommendations(recommendations) do
@@ -95,11 +325,45 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
     |> Enum.sort_by(fn {rec, _} -> Enum.find_index(@recommendation_order, &(&1 == rec)) || 99 end)
   end
 
-  # A human label for a phase-aware recommendation's target (compound / nutrient / pattern).
+  # A human label for a phase-aware recommendation's target
+  # (compound / species / blueprint / nutrient / free-text pattern).
   defp state_rec_target(%{compound: %{name: name}}) when is_binary(name), do: name
+  defp state_rec_target(%{species: %{name: name}}) when is_binary(name), do: name
+  defp state_rec_target(%{blueprint: %{name: name}}) when is_binary(name), do: name
   defp state_rec_target(%{nutrient_name: name}) when is_binary(name) and name != "", do: name
   defp state_rec_target(%{raw_food_term: term}) when is_binary(term) and term != "", do: term
   defp state_rec_target(_), do: "—"
+
+  @doc """
+  Renders a phase/free-text recommendation target name. When `linkable` (the row
+  is "encourage") and the name matches a public blueprint, it becomes a button
+  that opens the blueprint preview modal; otherwise it is plain text.
+  """
+  attr :name, :string, required: true
+  attr :linkable, :boolean, default: false
+  attr :blueprint_links, :map, default: %{}
+
+  def rec_target_name(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :slug,
+        assigns.linkable && blueprint_slug(assigns.blueprint_links, assigns.name)
+      )
+
+    ~H"""
+    <button
+      :if={@slug}
+      type="button"
+      phx-click="open_blueprint"
+      phx-value-slug={@slug}
+      class="text-left font-medium text-basil hover:underline cursor-pointer"
+    >
+      {@name}
+    </button>
+    <span :if={!@slug} class="text-parchment font-medium">{@name}</span>
+    """
+  end
 
   # ── SEO title/description ────────────────────────────────────────────────────
   # Lead with the words people actually search ("<condition> diet", "foods to
@@ -208,6 +472,23 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
      socket
      |> assign(:selected_state, selected)
      |> assign(:state_recommendations, recs)}
+  end
+
+  # Open the blueprint-preview modal for a dietary-pattern recommendation whose
+  # name matched a public blueprint (e.g. "Mediterranean diet"). Loads the same
+  # day/meal tree + sample plans the public preview page renders.
+  def handle_event("open_blueprint", %{"slug" => slug}, socket) do
+    blueprint = MealBlueprints.get_public_blueprint_by_slug!(slug)
+    plans = MealBlueprints.list_public_plans_for_blueprint(blueprint.id)
+
+    {:noreply,
+     socket
+     |> assign(:modal_blueprint, blueprint)
+     |> assign(:modal_blueprint_plans, plans)}
+  end
+
+  def handle_event("close_blueprint", _params, socket) do
+    {:noreply, assign(socket, :modal_blueprint, nil)}
   end
 
   # Saved-recipe ids for the current user (empty for guests).
@@ -393,6 +674,16 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   def reference_label(%{"url" => url}) when is_binary(url) and url != "", do: url
   def reference_label(%{"pmid" => pmid}) when not is_nil(pmid), do: "PMID #{pmid}"
   def reference_label(_), do: gettext("Source")
+
+  @doc """
+  The slug of a public blueprint whose name matches `name` (from the
+  `@blueprint_links` lookup), or `nil`. Used to linkify a dietary-pattern
+  recommendation title to its preview modal.
+  """
+  def blueprint_slug(links, name) when is_map(links) and is_binary(name),
+    do: Map.get(links, name |> String.trim() |> String.downcase())
+
+  def blueprint_slug(_links, _name), do: nil
 
   def recommendation_label("avoid"), do: gettext("Avoid")
   def recommendation_label("limit"), do: gettext("Limit")

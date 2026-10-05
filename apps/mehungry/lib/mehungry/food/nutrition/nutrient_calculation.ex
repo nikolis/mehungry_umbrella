@@ -304,6 +304,40 @@ defmodule Mehungry.Food.NutrientCalculation do
   end
 
   @doc """
+  Builds the hierarchical, string-keyed nutrient map for a single logged
+  ingredient weighing `gram_weight` grams — the **same** structure
+  `calculate_nutrition_for_recipe/1` produces for a recipe (normalized names +
+  the fat/carb/vitamin/mineral hierarchy), so a directly-logged ingredient is
+  nutritionally indistinguishable from a one-ingredient recipe wherever a
+  `recipe.nutrients` map is consumed (calendar cards, the daily-summary merge in
+  `NutrientUtils.summarize_meals_nutrients/1`).
+
+  Returns `%{}` when the ingredient has no nutrients. `ingredient` must have
+  `ingredient_nutrients: [nutrient: :measurement_unit]` preloaded.
+  """
+  def ingredient_nutrient_tree(ingredient, gram_weight) do
+    nutrient_tree([build_nutrient_list(ingredient, gram_weight)])
+  end
+
+  @doc """
+  Builds the hierarchical, string-keyed nutrient map from one or more already
+  scaled nutrient lists (each the `build_nutrient_list/2` output of one
+  ingredient) — i.e. a recipe assembled from those ingredients. Returns `%{}`
+  when the lists hold no nutrients.
+  """
+  def nutrient_tree(nutrient_lists) when is_list(nutrient_lists) do
+    nutrient_lists
+    |> Enum.map(&%{nutrients: &1})
+    |> calculate_nutrition_for_recipe()
+    |> Map.get(:structured_nutrients)
+    # Collapse the priority-sorted node list into a `name => node` map and
+    # string-key it — the exact shape `Recipes.put_nutrient_info/2` persists to
+    # the `nutrients` jsonb column and every consumer reads back.
+    |> Enum.reduce(%{}, fn node, acc -> Map.put(acc, node.name, node) end)
+    |> Mehungry.Food.NutrientMerger.to_string_keys()
+  end
+
+  @doc """
   Removes duplicate energy entries for a single ingredient's nutrient list.
 
   USDA data includes multiple energy entries per ingredient:

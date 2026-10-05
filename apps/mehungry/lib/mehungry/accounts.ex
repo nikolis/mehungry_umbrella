@@ -78,6 +78,7 @@ defmodule Mehungry.Accounts do
   defdelegate create_user_profile(attrs \\ %{}), to: Profiles
   defdelegate update_user_profile(user_profile, attrs), to: Profiles
   defdelegate update_user_language(profile, lang), to: Profiles
+  defdelegate set_followed_blueprint(profile, blueprint_id), to: Profiles
   defdelegate get_user_language(user_id), to: Profiles
   defdelegate delete_user_profile(user_profile), to: Profiles
   defdelegate change_user_profile(user_profile, attrs \\ %{}), to: Profiles
