@@ -129,8 +129,8 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
     flash =
       case created do
-        0 -> "You already have all the starter diet-pattern blueprints (Mediterranean, Low-FODMAP)."
-        n -> "Added #{n} starter diet-pattern blueprint#{if n == 1, do: "", else: "s"} (Mediterranean, Low-FODMAP)."
+        0 -> "You already have all the starter diet-pattern blueprints."
+        n -> "Added #{n} starter diet-pattern blueprint#{if n == 1, do: "", else: "s"}."
       end
 
     {:noreply,

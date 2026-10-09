@@ -365,4 +365,50 @@ defmodule Mehungry.NutrientUtilsTest do
       assert Nu.macro_buckets() == [:protein, :fat, :carbs, :sugars, :fiber]
     end
   end
+
+  describe "per_100g_to_tree/2" do
+    test "scales canonical map per-100g nutrients by grams/100" do
+      per_100g = %{
+        "Energy" => %{"unit" => "kcal", "amount" => 250},
+        "Protein" => %{"unit" => "g", "amount" => 12}
+      }
+
+      tree = Nu.per_100g_to_tree(per_100g, 250)
+
+      assert %{"name" => "Energy", "measurement_unit" => "kcal", "amount" => 625.0} =
+               tree["Energy"]
+
+      assert %{"amount" => 30.0} = tree["Protein"]
+    end
+
+    test "accepts the list form the client sends" do
+      list = [
+        %{"name" => "Energy", "unit" => "kcal", "amount" => 100},
+        %{"name" => "Protein", "unit" => "g", "amount" => 10}
+      ]
+
+      tree = Nu.per_100g_to_tree(list, 300)
+
+      assert %{"amount" => 300.0} = tree["Energy"]
+      assert %{"amount" => 30.0} = tree["Protein"]
+    end
+
+    test "drops entries with a non-numeric amount or blank name" do
+      per_100g = %{
+        "Energy" => %{"unit" => "kcal", "amount" => 100},
+        "Bad" => %{"unit" => "g", "amount" => nil},
+        "" => %{"unit" => "g", "amount" => 5}
+      }
+
+      tree = Nu.per_100g_to_tree(per_100g, 100)
+
+      assert Map.keys(tree) == ["Energy"]
+    end
+
+    test "returns an empty map for empty/invalid input" do
+      assert Nu.per_100g_to_tree(%{}, 100) == %{}
+      assert Nu.per_100g_to_tree(nil, 100) == %{}
+      assert Nu.per_100g_to_tree(%{"Energy" => %{"amount" => 1}}, nil) == %{}
+    end
+  end
 end

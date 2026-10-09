@@ -4,8 +4,6 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
 
   alias Mehungry.Food
   alias Mehungry.Food.SpeciesCompounds
-  alias Mehungry.Health
-  alias Mehungry.Literature
   alias Phoenix.LiveView.AsyncResult
 
   @top_nutrient_names [
@@ -68,34 +66,23 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
     end
   end
 
-  # Compounds / studies / recommendations are secondary to the (synchronous)
-  # nutrition facts, so the live client loads them asynchronously for a fast
-  # paint. On the disconnected ("dead") render Googlebot indexes — it never
-  # opens the LiveView WebSocket — those async assigns would stay in their
-  # loading state and render as skeletons, hiding the "Compounds", "Health
-  # Conditions" (which carries the internal links to /conditions pages), and
-  # "Research" sections the page title advertises. So on the dead render we load
-  # them synchronously and hand the template a resolved `AsyncResult`.
+  # Compounds are secondary to the (synchronous) nutrition facts, so the live
+  # client loads them asynchronously for a fast paint. On the disconnected
+  # ("dead") render Googlebot indexes — it never opens the LiveView WebSocket —
+  # that async assign would stay in its loading state and render as skeletons,
+  # hiding the "Compounds" section the page title advertises. So on the dead
+  # render we load it synchronously and hand the template a resolved
+  # `AsyncResult`.
   defp load_species_sidecars(socket, species) do
     if connected?(socket) do
-      assign_async(socket, [:compounds, :studies, :recommendations], fn ->
-        {:ok,
-         %{
-           compounds: SpeciesCompounds.list_species_relationships(species.id),
-           studies: Literature.list_studies_for_species(species.id),
-           recommendations: Health.recommendations_for_species(species.id)
-         }}
+      assign_async(socket, [:compounds], fn ->
+        {:ok, %{compounds: SpeciesCompounds.list_species_relationships(species.id)}}
       end)
     else
-      socket
-      |> assign(
+      assign(
+        socket,
         :compounds,
         AsyncResult.ok(SpeciesCompounds.list_species_relationships(species.id))
-      )
-      |> assign(:studies, AsyncResult.ok(Literature.list_studies_for_species(species.id)))
-      |> assign(
-        :recommendations,
-        AsyncResult.ok(Health.recommendations_for_species(species.id))
       )
     end
   end
@@ -225,37 +212,4 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   def relationship_label("trace"), do: "Trace"
   def relationship_label("absent"), do: "Absent"
   def relationship_label(other), do: Phoenix.Naming.humanize(other || "")
-
-  @doc "Is this recommendation an encouraging one (vs avoid/limit)?"
-  def encourage?(recommendation) do
-    to_string(recommendation) in ~w(encourage increase prefer include)
-  end
-
-  @recommendation_order ["avoid", "limit", "caution", "monitor", "encourage"]
-
-  @doc "Groups recommendation rows by their `recommendation` value, ordered for display."
-  def grouped_recommendations(recommendations) do
-    recommendations
-    |> Enum.group_by(& &1.recommendation)
-    |> Enum.sort_by(fn {rec, _} -> group_order(rec) end)
-  end
-
-  defp group_order(rec) do
-    case Enum.find_index(@recommendation_order, &(&1 == rec)) do
-      nil -> length(@recommendation_order)
-      idx -> idx
-    end
-  end
-
-  @doc "Human label for a recommendation type."
-  def recommendation_label("avoid"), do: gettext("Avoid")
-  def recommendation_label("limit"), do: gettext("Limit")
-  def recommendation_label("caution"), do: gettext("Approach with caution")
-  def recommendation_label("monitor"), do: gettext("Monitor")
-  def recommendation_label("encourage"), do: gettext("Encourage")
-  def recommendation_label(rec), do: String.capitalize(rec)
-
-  @doc "Display label for a reference study — its title, or a PMID fallback."
-  def study_label(%{title: title}) when is_binary(title) and title != "", do: title
-  def study_label(%{pmid: pmid}), do: "PMID #{pmid}"
 end

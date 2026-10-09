@@ -5,6 +5,7 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
   import Mehungry.AccountsFixtures
 
   alias Mehungry.{Food, Health, Literature, MealBlueprints}
+  alias Mehungry.MealBlueprints.DietPatterns
   alias Mehungry.Health.RecommendationCandidates
 
   @admin_email Application.compile_env(:mehungry, :admin_email)
@@ -76,7 +77,9 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
     names =
       user.id |> MealBlueprints.list_blueprints_for_user() |> Enum.map(& &1.name) |> Enum.sort()
 
-    assert names == ["Low-FODMAP Diet", "Mediterranean Diet"]
+    assert names == Enum.sort(Enum.map(DietPatterns.all(), & &1.name))
+    assert "Mediterranean Diet" in names
+    assert "Ketogenic Diet" in names
 
     # They are blueprints only — no backing dietary_pattern condition is created.
     refute Health.get_condition_by_name("Mediterranean Diet")

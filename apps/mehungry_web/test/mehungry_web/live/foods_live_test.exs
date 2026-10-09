@@ -174,16 +174,14 @@ defmodule MehungryWeb.FoodsLiveTest do
   end
 
   describe "/foods/:slug (species detail)" do
-    test "renders the species with its compounds, conditions and research", %{conn: conn} do
+    test "renders the species with its compounds", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/foods/Spinach")
 
-      # Async sections (compounds / conditions / studies) resolve after mount.
+      # The compounds section resolves asynchronously after mount.
       html = render_async(view)
 
       assert html =~ "Spinach"
       assert html =~ "Oxalate"
-      assert html =~ "Kidney Stones"
-      assert html =~ "Spinach oxalate content"
     end
 
     test "redirects unknown species back to /foods", %{conn: conn} do

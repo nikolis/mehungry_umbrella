@@ -193,6 +193,55 @@ defmodule Mehungry.Food.Nutrition.FattyAcidMatcher do
   def fatty_acid?(name) when is_binary(name), do: parse_lipid_number(name) != nil
   def fatty_acid?(_), do: false
 
+  @doc """
+  Resolves fatty-acid node names to their canonical `display_name/1` across a
+  nutrient tree, recursing through `children`; non-fatty-acid nodes are returned
+  untouched. Accepts a single node map or a list of nodes.
+
+  Nodes may be string- or atom-keyed (stored JSON nutrient maps use string keys;
+  in-memory shapes may use atoms), and a raw `original_name` is preferred over a
+  possibly-baked `name`. The raw USDA lipid notation (e.g. "MUFA 16:1") stays in
+  storage; callers resolve it at read time so matcher improvements reach
+  already-saved data without recalculation. Shared by the nutrition accordion
+  (web) and the mobile recipe JSON so both render identical common names.
+
+  A `name => node` map (a recipe's top-level `nutrients`) is resolved by mapping
+  this over the values while preserving the keys — the fatty acids live in the
+  nested `children`, never as top-level keys.
+  """
+  def resolve_names(nodes) when is_list(nodes), do: Enum.map(nodes, &resolve_names/1)
+
+  def resolve_names(node) when is_map(node) and not is_struct(node) do
+    raw = node_get(node, "original_name") || node_get(node, "name")
+
+    node =
+      if is_binary(raw) and fatty_acid?(raw) do
+        node_put(node, "name", display_name(raw))
+      else
+        node
+      end
+
+    case node_get(node, "children") do
+      children when is_list(children) and children != [] ->
+        node_put(node, "children", Enum.map(children, &resolve_names/1))
+
+      _ ->
+        node
+    end
+  end
+
+  def resolve_names(other), do: other
+
+  # Read/write a node key tolerant of string- or atom-keyed maps, writing back to
+  # whichever representation the node already uses.
+  defp node_get(node, key), do: Map.get(node, key) || Map.get(node, String.to_atom(key))
+
+  defp node_put(node, key, value) do
+    if Map.has_key?(node, key),
+      do: Map.put(node, key, value),
+      else: Map.put(node, String.to_atom(key), value)
+  end
+
   # ---------------------------------------------------------------------------
   # Parsing
   # ---------------------------------------------------------------------------

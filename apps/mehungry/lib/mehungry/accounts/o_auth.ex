@@ -129,6 +129,24 @@ defmodule Mehungry.Accounts.OAuth do
   end
 
   @doc """
+  Map-based variant of `find_or_create/1` for the mobile API, where the client
+  performs the native OAuth flow and the server has already verified the
+  provider token into a normalized profile map
+  (`%{name, email, profile_pic, provider}` — the same shape `oauth_profile/1`
+  returns). Looks the user up by canonical email, auto-confirming an existing
+  account, else registers a new third-party user. Returns `{:ok, user}` or
+  `{:error, changeset | :invalid_profile}`.
+  """
+  def find_or_create_from_profile(%{email: email} = profile) when is_binary(email) do
+    case Admin.get_user_by_canonical_email(email) do
+      nil -> register_3rd_party_user(profile)
+      user -> {:ok, maybe_confirm_user(user)}
+    end
+  end
+
+  def find_or_create_from_profile(_), do: {:error, :invalid_profile}
+
+  @doc """
   Confirms a user's email if it is not already confirmed.
 
   Google/Facebook have already verified the address, so an existing account that

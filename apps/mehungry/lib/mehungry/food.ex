@@ -177,6 +177,9 @@ defmodule Mehungry.Food do
   defdelegate get_measurement_unit_portions_for_ingredient(ingredient_id), to: Measurements
   defdelegate get_measurement_unit_portions_for_ingredients(ingredient_ids), to: Measurements
   defdelegate get_measurement_unit_by_name(name), to: Measurements
+  defdelegate ingredient_unit_options(ingredient_id), to: Measurements
+  defdelegate build_unit_options(portions), to: Measurements
+  defdelegate gram_unit_options(), to: Measurements
   defdelegate create_measurement_unit(attrs), to: Measurements
   defdelegate create_measurement_unit(attrs, opts), to: Measurements
   defdelegate update_measurement_unit(measurement_unit, attrs \\ %{}), to: Measurements

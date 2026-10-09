@@ -999,6 +999,25 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                             }
                           />
                         <% end %>
+                        <%= for ff_m <- Map.get(meal, :free_food_user_meals, []) do %>
+                          <.card_meal
+                            card_meal_text="text-parchment"
+                            myself={@myself}
+                            actual_meal={meal}
+                            img_url={ff_m.img_url}
+                            title={ff_m.title}
+                            cooking_portions={"#{round(ff_m.grams)} g"}
+                            consume_portions={nil}
+                            recipe={
+                              %{
+                                nutrients: ff_m.recipe.nutrients,
+                                primary_size: ff_m.primary_size,
+                                servings: nil,
+                                id: "freefood-#{ff_m.id}-#{meal.id}"
+                              }
+                            }
+                          />
+                        <% end %>
                       <% end %>
                     </div>
                   </section>

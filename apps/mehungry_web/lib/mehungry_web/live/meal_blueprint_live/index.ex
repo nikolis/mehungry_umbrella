@@ -39,7 +39,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
             <button
               type="button"
               phx-click="add_diet_patterns"
-              data-confirm="Add the starter diet-pattern blueprints (Mediterranean, Low-FODMAP) you don't already have?"
+              data-confirm="Add the starter diet-pattern blueprints you don't already have?"
               class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-ink-panel2 text-parchment hover:bg-ink-panel transition"
             >
               + Starter diet patterns

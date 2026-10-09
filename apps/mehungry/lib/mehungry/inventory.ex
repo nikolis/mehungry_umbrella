@@ -145,23 +145,114 @@ defmodule Mehungry.Inventory do
     end
   end
 
+  @doc """
+  Adds all of a recipe's ingredients to a basket as `basket_items`, scaling
+  quantities by `servings_scale`. Reads the recipe's `recipe_ingredients`
+  (the current schema). Returns `{:ok, count}`.
+  """
   def add_items_from_recipe(basket_id, recipe, servings_scale \\ 1) do
     basket = get_shopping_basket!(basket_id)
+    recipe = Repo.preload(recipe, recipe_ingredients: [:ingredient, :measurement_unit])
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
     items =
-      Enum.map(recipe.ingredients, fn ingredient ->
+      Enum.map(recipe.recipe_ingredients, fn ri ->
         %{
-          list_id: basket.id,
-          name: ingredient.name,
-          quantity: ingredient.quantity * servings_scale,
-          unit: ingredient.unit,
-          nutrition_data: ingredient.nutrition,
+          name: item_name(ri),
+          quantity: (ri.quantity || 1) * servings_scale,
+          measurement_unit_id: ri.measurement_unit_id,
+          shopping_basket_id: basket.id,
           recipe_id: recipe.id,
-          checked: false
+          in_storage: false,
+          inserted_at: now,
+          updated_at: now
         }
       end)
 
-    Repo.insert_all(BasketItem, items)
+    {count, _} = Repo.insert_all(BasketItem, items)
+    {:ok, count}
+  end
+
+  defp item_name(recipe_ingredient) do
+    recipe_ingredient.ingredient_allias ||
+      (recipe_ingredient.ingredient && recipe_ingredient.ingredient.name) || "ingredient"
+  end
+
+  @doc """
+  Returns the user's active basket (most recent), creating an empty "Groceries"
+  basket when the user has none. There is no per-row "active" flag — the mobile
+  API treats the latest basket as active.
+  """
+  def get_or_create_basket_for_user(user_id) do
+    basket =
+      from(s in ShoppingBasket, where: s.user_id == ^user_id, order_by: [desc: s.id], limit: 1)
+      |> Repo.one()
+
+    case basket do
+      %ShoppingBasket{} = b ->
+        get_shopping_basket!(b.id)
+
+      nil ->
+        {:ok, created} = create_shopping_basket(%{"user_id" => user_id, "title" => "Groceries"})
+        get_shopping_basket!(created.id)
+    end
+  end
+
+  @doc "Gets a basket item (with its measurement unit)."
+  def get_basket_item!(id), do: Repo.get!(BasketItem, id) |> Repo.preload(:measurement_unit)
+
+  @doc "Updates a basket item (quantity / in_storage / name …)."
+  def update_basket_item(%BasketItem{} = item, attrs) do
+    item
+    |> BasketItem.changeset(attrs)
+    |> Repo.update()
+    |> case do
+      {:ok, item} -> {:ok, Repo.preload(item, :measurement_unit)}
+      other -> other
+    end
+  end
+
+  @doc "Deletes a basket item."
+  def delete_basket_item(%BasketItem{} = item), do: Repo.delete(item)
+
+  @doc """
+  Adds a planned meal's items to a basket: every recipe in the meal contributes
+  its ingredients (scaled by consume portions), plus the meal's direct
+  ingredients. Returns `{:ok, count}`.
+  """
+  def add_items_from_meal(basket_id, %Mehungry.History.UserMeal{} = meal) do
+    meal =
+      Mehungry.Repo.preload(meal,
+        recipe_user_meals: [recipe: [recipe_ingredients: [:ingredient, :measurement_unit]]],
+        ingredient_user_meals: [:ingredient, :measurement_unit]
+      )
+
+    recipe_added =
+      meal.recipe_user_meals
+      |> Enum.map(fn rum ->
+        {:ok, n} = add_items_from_recipe(basket_id, rum.recipe, rum.consume_portions || 1)
+        n
+      end)
+      |> Enum.sum()
+
+    basket = get_shopping_basket!(basket_id)
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    ingredient_items =
+      Enum.map(meal.ingredient_user_meals, fn ium ->
+        %{
+          name: (ium.ingredient && ium.ingredient.name) || "ingredient",
+          quantity: ium.quantity || 1,
+          measurement_unit_id: ium.measurement_unit_id,
+          shopping_basket_id: basket.id,
+          in_storage: false,
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    {ing_count, _} = Repo.insert_all(BasketItem, ingredient_items)
+    {:ok, recipe_added + ing_count}
   end
 
   def create_shopping_basket(attrs \\ %{}) do

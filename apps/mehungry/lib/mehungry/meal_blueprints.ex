@@ -50,6 +50,32 @@ defmodule Mehungry.MealBlueprints do
   end
 
   @doc """
+  Fetches a blueprint by slug for **matching** (REST `?blueprint_slug=`): a public
+  blueprint, or — when `user_id` is given — one that user owns (so a nutritionist
+  can match foods against their own private blueprint). Loads only `:condition`
+  plus the struct's target arrays (matching reads no day tree). Returns `nil` for
+  an unknown/forbidden slug so the enrichment degrades silently.
+  """
+  def get_blueprint_by_slug(slug, user_id \\ nil)
+
+  def get_blueprint_by_slug(slug, nil) when is_binary(slug) do
+    Blueprint
+    |> where([b], b.slug == ^slug and b.visibility == "public")
+    |> Repo.one()
+    |> maybe_preload_condition()
+  end
+
+  def get_blueprint_by_slug(slug, user_id) when is_binary(slug) do
+    Blueprint
+    |> where([b], b.slug == ^slug and (b.visibility == "public" or b.user_id == ^user_id))
+    |> Repo.one()
+    |> maybe_preload_condition()
+  end
+
+  defp maybe_preload_condition(nil), do: nil
+  defp maybe_preload_condition(%Blueprint{} = blueprint), do: Repo.preload(blueprint, :condition)
+
+  @doc """
   Lists public blueprints newest-first for the browse grid, condition/owner
   preloaded and `plans_count` populated. Options: `:limit`, `:offset`.
   """
@@ -552,6 +578,24 @@ defmodule Mehungry.MealBlueprints do
     blueprint = get_blueprint!(user_id, blueprint_id)
     PlanCompatibility.analyze(blueprint, list_plan_meals_with_ingredients(plan_id))
   end
+
+  @doc """
+  Matches `recipes` against a `blueprint`'s compound + nutrient targets, returning
+  `%{recipe_id => %{matches: [entry], violations: [entry]}}`. Each recipe is scored
+  as a one-serving meal via `PlanCompatibility.match_recipes/2` (same compound
+  resolution and nutrient caloric-share math as `plan_compatibility/3`). Powers the
+  mobile REST `blueprint_match` enrichment on recipe detail / feed / search.
+  """
+  defdelegate match_recipes(blueprint, recipes), to: PlanCompatibility
+
+  @doc """
+  Matches `ingredients` against a `blueprint`'s targets, returning
+  `%{ingredient_id => %{matches: [entry], violations: [entry]}}`. Compounds resolve
+  like recipes/plans; nutrients use the per-100g `Health.NutrientTargets`
+  classification (an ingredient has no serving). See
+  `PlanCompatibility.match_ingredients/2`.
+  """
+  defdelegate match_ingredients(blueprint, ingredients), to: PlanCompatibility
 
   @doc """
   Measures a user's **calendar** week against a `blueprint`'s targets, reusing

@@ -1,0 +1,43 @@
+# Fly.io configuration for the Mehungry Phoenix umbrella release.
+# App is created with `fly apps create m3hungry`; deploy with `fly deploy`.
+app = "m3hungry"
+primary_region = "lhr"  # London — closest available region to the Supabase DB (eu-west-1, Ireland)
+
+[build]
+  dockerfile = "Dockerfile"
+
+# Run DB migrations on every deploy, in a one-off machine, before the new
+# release goes live. Uses the umbrella release's eval + the existing
+# MehungryWeb.Release.migrate/0 task (which runs with a tiny 2-connection pool).
+[deploy]
+  release_command = "/app/bin/mehungry_umbrella eval MehungryWeb.Release.migrate"
+  # Supabase's session pooler caps total clients at 15 on this plan. "immediate"
+  # stops the old machine before starting the new one, so we never briefly run
+  # 2 * POOL_SIZE connections. Switch back to the default rolling strategy (and
+  # re-enable HA) once the pooler Pool Size is raised in the Supabase dashboard.
+  strategy = "immediate"
+
+[env]
+  # Keep the scheduler flags used on ECS (tuned for a 2-vCPU shared box).
+  ERL_AFLAGS = "+S 2:2 +sbwt none +sbwtdcpu none +sbwtdio none"
+  # One machine * POOL_SIZE must stay under the Supabase pooler's 15-client cap,
+  # with headroom for the migrator (pool 2) and the odd admin psql session.
+  POOL_SIZE = "10"
+  AWS_ASSETS_BUCKET_NAME = "mehungry-main-bucket"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  # Keep one machine always up (it's a user-facing social app, not a toy).
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 200
+    hard_limit = 250
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

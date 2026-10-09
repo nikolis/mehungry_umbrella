@@ -67,6 +67,7 @@ defmodule Mehungry.Accounts do
   defdelegate register_3rd_party_user(attrs), to: OAuth
   defdelegate verify_3rd_party_user_changes(auth, user), to: OAuth
   defdelegate find_or_create(auth), to: OAuth
+  defdelegate find_or_create_from_profile(profile), to: OAuth
   defdelegate oauth_profile(auth), to: OAuth
   defdelegate maybe_confirm_user(user), to: OAuth
 

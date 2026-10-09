@@ -22,6 +22,79 @@ defmodule Mehungry.Posts do
       [%Post{}, ...]
 
   """
+  @doc """
+  Preloads the vote associations a feed card needs (`:upvotes`/`:downvotes` on
+  each post) for a *page* of posts, so the mobile feed can report
+  `likes_count`/`liked_by_me` without a per-card query. Comments are already
+  preloaded on `post.reference` by `list_posts/1`.
+  """
+  def preload_engagement(posts), do: Repo.preload(posts, [:upvotes, :downvotes])
+
+  @doc """
+  Engagement summary for a single recipe (mobile recipe-detail view):
+  `%{likes_count, comments_count, liked_by_me}`. Comments hang off the recipe;
+  votes hang off the recipe's post(s). `user_id` may be `nil` (logged-out).
+  """
+  def get_recipe_engagement(recipe_id, user_id \\ nil) do
+    post_ids = Repo.all(from(p in Post, where: p.reference_id == ^recipe_id, select: p.id))
+
+    comments_count =
+      Repo.aggregate(from(c in Mehungry.Posts.Comment, where: c.recipe_id == ^recipe_id), :count)
+
+    likes_count =
+      if post_ids == [] do
+        0
+      else
+        Repo.aggregate(
+          from(u in Mehungry.Posts.PostUpvote, where: u.post_id in ^post_ids),
+          :count
+        )
+      end
+
+    liked_by_me =
+      is_integer(user_id) and post_ids != [] and
+        Repo.exists?(
+          from(u in Mehungry.Posts.PostUpvote,
+            where: u.post_id in ^post_ids and u.user_id == ^user_id
+          )
+        )
+
+    %{likes_count: likes_count, comments_count: comments_count, liked_by_me: liked_by_me}
+  end
+
+  @doc """
+  Likes a recipe for the mobile API (`POST /recipes/:id/like`). Ensures a single
+  upvote on the recipe's primary post exists (idempotent — unlike the toggling
+  `upvote_post/2`). Returns `{:ok, engagement}` or `{:error, :not_found}` when
+  the recipe has no post yet.
+  """
+  def like_recipe(recipe_id, user_id) do
+    case primary_post_for_recipe(recipe_id) do
+      %Post{} = post ->
+        if get_upvote_from(user_id, post.id) == [], do: upvote_post(post.id, user_id)
+        {:ok, get_recipe_engagement(recipe_id, user_id)}
+
+      nil ->
+        {:error, :not_found}
+    end
+  end
+
+  @doc "Unlikes a recipe (`DELETE /recipes/:id/like`)."
+  def unlike_recipe(recipe_id, user_id) do
+    case primary_post_for_recipe(recipe_id) do
+      %Post{} = post ->
+        delete_upvotes(user_id, post.id)
+        {:ok, get_recipe_engagement(recipe_id, user_id)}
+
+      nil ->
+        {:error, :not_found}
+    end
+  end
+
+  defp primary_post_for_recipe(recipe_id) do
+    Repo.one(from(p in Post, where: p.reference_id == ^recipe_id, order_by: [asc: p.id], limit: 1))
+  end
+
   def count_user_posts(nil), do: nil
 
   def count_user_posts(user_id) do

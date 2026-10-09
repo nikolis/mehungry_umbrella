@@ -573,7 +573,15 @@ defmodule Mehungry.NutrientUtils do
           |> Map.get(:ingredient_user_meals, [])
           |> Enum.map(fn ing -> ing |> Map.get(:recipe, %{}) |> Map.get(:nutrients, %{}) end)
 
-        (recipe_nutrients ++ ingredient_nutrients)
+        # Arbitrary "free food" entries carry an already-scaled tree under the same
+        # synthetic `recipe.nutrients` key as logged ingredients, so they merge
+        # identically (see History.scaled_free_food_nutrient_tree/1).
+        free_food_nutrients =
+          item
+          |> Map.get(:free_food_user_meals, [])
+          |> Enum.map(fn ff -> ff |> Map.get(:recipe, %{}) |> Map.get(:nutrients, %{}) end)
+
+        (recipe_nutrients ++ ingredient_nutrients ++ free_food_nutrients)
         |> Enum.filter(&(is_map(&1) and &1 != %{}))
       end)
 
@@ -584,4 +592,60 @@ defmodule Mehungry.NutrientUtils do
     sort_nutrients_for_display(merged)
     |> Enum.into(%{})
   end
+
+  @doc """
+  Scales a free-food entry's client-supplied **per-100g** nutrients to the amount
+  logged (`grams`), returning the canonical `name => node` map that
+  `summarize_meals_nutrients/1` merges — the per-100g analogue of a recipe's
+  stored `nutrients` (factor = `grams / 100`).
+
+  Accepts the stored map form `%{"<name>" => %{"unit" => u, "amount" => a}}` and
+  also tolerates a list of `%{"name","unit","amount"}`. Entries with a non-numeric
+  amount or a blank name are dropped. Returns `%{}` for empty/invalid input.
+  """
+  def per_100g_to_tree(nutrients, grams) when is_map(nutrients) and is_number(grams) do
+    factor = grams / 100.0
+
+    Enum.reduce(nutrients, %{}, fn {name, entry}, acc ->
+      name = to_string(name)
+
+      case per_100g_node(name, entry, factor) do
+        nil -> acc
+        node -> Map.put(acc, name, node)
+      end
+    end)
+  end
+
+  def per_100g_to_tree(nutrients, grams) when is_list(nutrients) and is_number(grams) do
+    nutrients
+    |> Enum.reduce(%{}, fn entry, acc ->
+      name = entry["name"] || entry[:name]
+
+      if is_binary(name) and name != "" do
+        Map.put(acc, name, %{
+          "unit" => entry["unit"] || entry[:unit],
+          "amount" => entry["amount"] || entry[:amount]
+        })
+      else
+        acc
+      end
+    end)
+    |> per_100g_to_tree(grams)
+  end
+
+  def per_100g_to_tree(_nutrients, _grams), do: %{}
+
+  defp per_100g_node(name, entry, factor)
+       when is_binary(name) and name != "" and is_map(entry) do
+    amount = entry["amount"] || entry[:amount]
+
+    unit =
+      entry["unit"] || entry[:unit] || entry["measurement_unit"] || entry[:measurement_unit]
+
+    if is_number(amount) do
+      %{"name" => name, "measurement_unit" => unit, "amount" => amount * factor}
+    end
+  end
+
+  defp per_100g_node(_name, _entry, _factor), do: nil
 end

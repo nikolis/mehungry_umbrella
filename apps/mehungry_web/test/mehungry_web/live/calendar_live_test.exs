@@ -44,6 +44,41 @@ defmodule MehungryWeb.CalendarLiveTest do
       assert html =~ "protein"
     end
 
+    test "an arbitrary free-food meal renders its card and counts in the day total",
+         %{conn: conn, user: user} do
+      now = NaiveDateTime.utc_now()
+
+      {:ok, _user_meal} =
+        History.create_user_meal(%{
+          start_dt: now,
+          end_dt: now,
+          user_id: user.id,
+          title: "Grabbed lunch",
+          meal_type: "lunch",
+          free_food_user_meals: [
+            %{
+              name: "Street Gyros",
+              grams: 300.0,
+              nutrients_per_100g: %{
+                "Energy" => %{"unit" => "kcal", "amount" => 250},
+                "Protein" => %{"unit" => "g", "amount" => 12}
+              }
+            }
+          ]
+        })
+
+      {:ok, _index_live, html} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar")
+
+      # The free-food card renders (name + grams) and the day roll-up is present,
+      # which means the entry flowed through the shared summariser.
+      assert html =~ "Street Gyros"
+      assert html =~ "300 g"
+      assert html =~ "Daily Summary"
+    end
+
     test "View recipe button opens the recipe details modal", %{conn: conn, user: user} do
       recipe = recipe_fixture(user)
       now = NaiveDateTime.utc_now()

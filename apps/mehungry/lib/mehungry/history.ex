@@ -105,7 +105,8 @@ defmodule Mehungry.History do
           :ingredient_portions,
           ingredient_nutrients: [nutrient: :measurement_unit]
         ]
-      ]
+      ],
+      free_food_user_meals: []
     )
   end
 
@@ -141,12 +142,108 @@ defmodule Mehungry.History do
     NutrientCalculation.ingredient_nutrient_tree(ingredient, gram_weight)
   end
 
+  @doc """
+  The nutrient map for an arbitrary "free food" entry, in the **same** shape as a
+  recipe's/ingredient's tree so the daily summary merges all three kinds
+  uniformly. The food's client-supplied per-100g nutrients are scaled by its
+  resolved `grams` (`NutrientUtils.per_100g_to_tree/2`, factor = grams / 100).
+  """
+  def scaled_free_food_nutrient_tree(free_food_user_meal) do
+    Mehungry.NutrientUtils.per_100g_to_tree(
+      free_food_user_meal.nutrients_per_100g,
+      free_food_user_meal.grams
+    )
+  end
+
+  @doc """
+  The **single, shared** calendar view-model: shapes raw `UserMeal`s (preloaded
+  via `list_history_user_meals_for_user/1,2,3`) into the display + nutrient form
+  the calendar consumes. Recipe meals carry the recipe's stored `nutrients` map
+  (scaled to the consumed fraction inside `NutrientUtils.summarize_meals_nutrients/1`);
+  directly-logged ingredient meals carry the scaled nutrient tree as `recipe.nutrients`
+  so the summariser merges both kinds uniformly.
+
+  Reused verbatim by the consumer calendar (`CalendarLive.Index`), the
+  nutritionist client calendar (`NutritionistLive.ClientCalendar`) and the mobile
+  REST daily-nutrition endpoint (`Api.V1.MealController.nutrition`) — keep it the
+  one source of truth rather than re-deriving the shape per surface.
+  """
+  def format_user_meals(meals) when is_list(meals) do
+    gram_ids = NutrientCalculation.gram_unit_ids()
+    Enum.map(meals, &format_user_meal(&1, gram_ids))
+  end
+
+  defp format_user_meal(meal, gram_ids) do
+    %{
+      id: meal.id,
+      start_dt: meal.start_dt,
+      end: meal.end_dt,
+      title: meal.title,
+      meal_type: meal.meal_type,
+      ingredient_user_meals:
+        Enum.map(meal.ingredient_user_meals, fn y ->
+          %{
+            title: y.ingredient.name,
+            portions: y.quantity,
+            measurement_unit: Mehungry.Food.RecipeIngredient.unit_label(y),
+            primary_size: 6,
+            img_url: nil,
+            recipe: %{
+              id: y.ingredient.id,
+              nutrients: scaled_ingredient_nutrient_tree(y, gram_ids),
+              primary_size: 5
+            }
+          }
+        end),
+      recipe_user_meals:
+        Enum.map(meal.recipe_user_meals, fn y ->
+          %{
+            title: y.recipe.title,
+            consume_portions: y.consume_portions,
+            cooking_portions: y.cooking_portions,
+            servings: y.recipe.servings,
+            recipe_nutrients: y.recipe.nutrients,
+            img_url: y.recipe.image_url,
+            primary_size: y.recipe.primary_nutrients_size,
+            recipe_id: y.recipe.id
+          }
+        end),
+      free_food_user_meals:
+        Enum.map(free_food_user_meals(meal), fn y ->
+          %{
+            id: y.id,
+            title: y.name,
+            grams: y.grams,
+            portion_name: y.portion_name,
+            portion_grams: y.portion_grams,
+            portions: y.portions,
+            primary_size: 6,
+            img_url: nil,
+            recipe: %{
+              id: y.id,
+              nutrients: scaled_free_food_nutrient_tree(y),
+              primary_size: 5
+            }
+          }
+        end)
+    }
+  end
+
+  # `free_food_user_meals` was added after the calendar shipped; tolerate meals
+  # whose association isn't loaded (older preload paths) by treating them as none.
+  defp free_food_user_meals(%{free_food_user_meals: %Ecto.Association.NotLoaded{}}), do: []
+  defp free_food_user_meals(%{free_food_user_meals: ffms}) when is_list(ffms), do: ffms
+  defp free_food_user_meals(_), do: []
+
   def list_history_user_meals_for_user(user_id, date) do
-    {:ok, date} = NaiveDateTime.from_iso8601(date <> " 00:00:00")
+    {:ok, day_start} = NaiveDateTime.from_iso8601(date <> " 00:00:00")
+    day_end = NaiveDateTime.add(day_start, 1, :day)
 
     query =
       from meal in UserMeal,
-        where: meal.user_id == ^user_id and meal.start_dt == ^date
+        where:
+          meal.user_id == ^user_id and meal.start_dt >= ^day_start and
+            meal.start_dt < ^day_end
 
     Repo.all(query)
     |> Repo.preload(
@@ -158,7 +255,18 @@ defmodule Mehungry.History do
             ingredient: [:category, :ingredient_translation]
           ]
         ]
-      ]
+      ],
+      ingredient_user_meals: [
+        :measurement_unit,
+        ingredient_portion: :measurement_unit,
+        ingredient: [
+          :category,
+          :ingredient_translation,
+          :ingredient_portions,
+          ingredient_nutrients: [nutrient: :measurement_unit]
+        ]
+      ],
+      free_food_user_meals: []
     )
   end
 
@@ -226,7 +334,8 @@ defmodule Mehungry.History do
           :ingredient_portions,
           ingredient_nutrients: [nutrient: :measurement_unit]
         ]
-      ]
+      ],
+      free_food_user_meals: []
     )
   end
 

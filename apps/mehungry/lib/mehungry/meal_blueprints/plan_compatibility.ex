@@ -63,9 +63,11 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
 
   alias Mehungry.Repo
   alias Mehungry.Food.Compounds
+  alias Mehungry.Food.IngredientNutrient
   alias Mehungry.Food.Nutrition.FattyAcidMatcher
   alias Mehungry.Food.NutrientCalculation
   alias Mehungry.Food.NutrientNameNormalizer
+  alias Mehungry.Health.NutrientTargets
   alias Mehungry.MealBlueprints.Blueprint
 
   # Blueprint fatty-acid *family* labels. Recipes store the individual acids by
@@ -114,6 +116,205 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
         ),
       overall: build_overall(plan_meals, amounts_by_meal)
     }
+  end
+
+  # ── entity matching (recipes / ingredients vs a blueprint's targets) ──────────
+
+  @doc """
+  Matches a list of **recipes** against `blueprint`'s compound + nutrient targets,
+  returning `%{recipe_id => %{matches: [entry], violations: [entry]}}` (see the
+  moduledoc `entry` shape). This is the single-entity analogue of `analyze/2`: a
+  recipe is treated as a one-serving meal, so it reuses the exact same compound
+  resolution and nutrient caloric-share math — no duplicated calculation (the
+  REST layer must reuse this, never re-derive it).
+
+  Unlike `analyze/2` the compound side is resolved **by recipe id in two batched
+  queries** rather than from preloaded `recipe_ingredients`, so callers can pass
+  the lightweight recipe rows a feed/search list already has (only `id`,
+  `servings`, and the stored `nutrients` map are read). A recipe with no stored
+  `nutrients` simply contributes no nutrient entries.
+  """
+  def match_recipes(_blueprint, []), do: %{}
+
+  def match_recipes(blueprint, recipes) do
+    targets = normalize_targets(blueprint)
+    labels = target_labels(targets)
+    gram_ids = NutrientCalculation.gram_unit_ids()
+    compounds_by_recipe = resolve_recipe_compounds(Enum.map(recipes, & &1.id))
+
+    Map.new(recipes, fn recipe ->
+      meal = %{id: recipe.id, recipe_id: recipe.id, recipe: recipe, ingredients: []}
+      nutrient_grams = meal_label_amounts(meal, labels, gram_ids)
+      meal_kcal = meal_calories(meal)
+      comps = Map.get(compounds_by_recipe, recipe.id, [])
+
+      violations =
+        compound_entries(comps, targets.avoid_compound, :avoid) ++
+          nutrient_entries(nutrient_grams, meal_kcal, targets.avoid_nutrient, :avoid)
+
+      matches =
+        compound_entries(comps, targets.required_compound, :required) ++
+          nutrient_entries(nutrient_grams, meal_kcal, targets.required_nutrient, :required)
+
+      {recipe.id, %{violations: dedupe_entries(violations), matches: dedupe_entries(matches)}}
+    end)
+  end
+
+  @doc """
+  Matches a list of **ingredients** against `blueprint`'s targets, returning
+  `%{ingredient_id => %{matches: [entry], violations: [entry]}}`.
+
+  An ingredient carries no serving/quantity, so its nutrient side cannot use the
+  caloric-share math `match_recipes/2` uses. Instead it reuses the `Health`
+  per-100g classification (`NutrientTargets` thresholds): an ingredient whose
+  per-100g value for a target nutrient crosses the "high in" threshold matches a
+  `required` nutrient (good source) or violates an `avoid` one. Compound matching
+  is identical to recipes/plans (species-layer ∪ direct ingredient facts). Blueprint
+  nutrient names with no known per-100g threshold contribute no ingredient entries.
+  """
+  def match_ingredients(_blueprint, []), do: %{}
+
+  def match_ingredients(blueprint, ingredients) do
+    targets = normalize_targets(blueprint)
+    ingredient_ids = Enum.map(ingredients, & &1.id)
+    compounds_by_ingredient = resolve_compounds_for_ids(ingredient_ids)
+    nutrient_entries_by_ingredient = ingredient_nutrient_entries(ingredient_ids, targets)
+
+    Map.new(ingredients, fn ingredient ->
+      comps = Map.get(compounds_by_ingredient, ingredient.id, [])
+      {n_matches, n_violations} = Map.get(nutrient_entries_by_ingredient, ingredient.id, {[], []})
+
+      violations = compound_entries(comps, targets.avoid_compound, :avoid) ++ n_violations
+      matches = compound_entries(comps, targets.required_compound, :required) ++ n_matches
+
+      {ingredient.id, %{violations: dedupe_entries(violations), matches: dedupe_entries(matches)}}
+    end)
+  end
+
+  # Ingredient-id-keyed compound resolution (species layer ∪ direct facts), shared
+  # with `resolve_compounds/1` via the same batched row queries.
+  defp resolve_compounds_for_ids([]), do: %{}
+
+  defp resolve_compounds_for_ids(ingredient_ids) do
+    (species_compound_rows(ingredient_ids) ++ ingredient_compound_rows(ingredient_ids))
+    |> Enum.group_by(
+      fn {ing_id, _name, _type} -> ing_id end,
+      fn {_ing_id, name, type} -> %{name: name, type: type} end
+    )
+    |> Map.new(fn {ing_id, comps} -> {ing_id, Enum.uniq_by(comps, & &1.name)} end)
+  end
+
+  # Recipe-id-keyed compound resolution: the same species/ingredient facts as
+  # `resolve_compounds/1`, but joined through `recipe_ingredients` so a feed/search
+  # recipe row needs no preload. Two batched queries regardless of recipe count.
+  defp resolve_recipe_compounds([]), do: %{}
+
+  defp resolve_recipe_compounds(recipe_ids) do
+    (recipe_species_compound_rows(recipe_ids) ++ recipe_ingredient_compound_rows(recipe_ids))
+    |> Enum.group_by(
+      fn {rid, _name, _type} -> rid end,
+      fn {_rid, name, type} -> %{name: name, type: type} end
+    )
+    |> Map.new(fn {rid, comps} -> {rid, Enum.uniq_by(comps, & &1.name)} end)
+  end
+
+  defp recipe_species_compound_rows(recipe_ids) do
+    Repo.all(
+      from(ri in Mehungry.Food.RecipeIngredient,
+        join: ff in FoundementalFood,
+        on: ff.ingredient_id == ri.ingredient_id,
+        join: scr in SpeciesCompoundRelationship,
+        on: scr.foundemental_species_id == ff.foundemental_species_id,
+        join: c in Compound,
+        on: c.id == scr.compound_id,
+        where: ri.recipe_id in ^recipe_ids and scr.relationship_type != "absent",
+        select: {ri.recipe_id, c.name, c.compound_type}
+      )
+    )
+  end
+
+  defp recipe_ingredient_compound_rows(recipe_ids) do
+    Repo.all(
+      from(ri in Mehungry.Food.RecipeIngredient,
+        join: r in IngredientCompoundRelationship,
+        on: r.ingredient_id == ri.ingredient_id,
+        join: c in Compound,
+        on: c.id == r.compound_id,
+        where: ri.recipe_id in ^recipe_ids and r.relationship_type != "absent",
+        select: {ri.recipe_id, c.name, c.compound_type}
+      )
+    )
+  end
+
+  # Per-ingredient nutrient match/violation entries from the per-100g USDA values.
+  # Reuses the `Health.NutrientTargets` label→nutrient-ids + "high in" threshold
+  # map: a required label crossed → a match, an avoid label crossed → a violation.
+  # Returns `%{ingredient_id => {matches, violations}}`.
+  defp ingredient_nutrient_entries([], _targets), do: %{}
+
+  defp ingredient_nutrient_entries(ingredient_ids, targets) do
+    label_dirs = nutrient_label_directions(targets)
+    resolved = NutrientTargets.resolve_labels(Map.keys(label_dirs))
+
+    specs =
+      Enum.flat_map(resolved, fn {label, {ids, threshold}} ->
+        [%{label: label, direction: label_dirs[label], ids: MapSet.new(ids), threshold: threshold}]
+      end)
+
+    case specs do
+      [] ->
+        %{}
+
+      specs ->
+        nutrient_ids = specs |> Enum.flat_map(&MapSet.to_list(&1.ids)) |> Enum.uniq()
+
+        Repo.all(
+          from(inx in IngredientNutrient,
+            where: inx.ingredient_id in ^ingredient_ids and inx.nutrient_id in ^nutrient_ids,
+            select: {inx.ingredient_id, inx.nutrient_id, inx.amount}
+          )
+        )
+        |> Enum.group_by(fn {iid, _, _} -> iid end, fn {_, nid, amt} -> {nid, to_number(amt)} end)
+        |> Map.new(fn {iid, amounts} -> {iid, ingredient_nutrient_split(amounts, specs)} end)
+    end
+  end
+
+  # required/avoid blueprint nutrient labels → their direction (required wins a tie).
+  defp nutrient_label_directions(targets) do
+    avoid = Map.new(targets.avoid_nutrient, &{&1.name, :avoid})
+    required = Map.new(targets.required_nutrient, &{&1.name, :required})
+    Map.merge(avoid, required)
+  end
+
+  # Split one ingredient's `{nutrient_id, per_100g}` pairs into {matches, violations}
+  # entries over the resolved specs it crosses (highest crossing amount per spec).
+  defp ingredient_nutrient_split(amounts, specs) do
+    specs
+    |> Enum.flat_map(fn spec ->
+      crossed =
+        amounts
+        |> Enum.filter(fn {nid, amt} -> MapSet.member?(spec.ids, nid) and amt >= spec.threshold end)
+        |> Enum.map(&elem(&1, 1))
+
+      case crossed do
+        [] ->
+          []
+
+        amts ->
+          [
+            %{
+              kind: :nutrient,
+              name: spec.label,
+              direction: spec.direction,
+              via: :direct,
+              mode: :per_100g,
+              per_100g: Enum.max(amts),
+              threshold: spec.threshold
+            }
+          ]
+      end
+    end)
+    |> Enum.split_with(&(&1.direction == :required))
   end
 
   # Every nutrient label the blueprint references (required ∪ avoid). The recipe

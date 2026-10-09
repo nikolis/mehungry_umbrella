@@ -338,7 +338,7 @@ defmodule Mehungry.MealBlueprints.CalendarProgressTest do
       # Day 1 clears the 20% protein floor; day 2 (no meals) reads 0%, unmet.
       assert [%{name: "Protein", met: true, pct: d1_pct}] = progress.days_progress[1].required
       assert d1_pct >= 22 and d1_pct <= 24
-      assert [%{name: "Protein", met: false, pct: 0}] = progress.days_progress[2].required
+      assert [%{name: "Protein", met: false, pct: +0.0}] = progress.days_progress[2].required
     end
 
     test "ignores meals outside the measured week" do

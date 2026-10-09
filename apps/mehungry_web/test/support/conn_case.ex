@@ -80,4 +80,29 @@ defmodule MehungryWeb.ConnCase do
   end
 
   defp confirm_user_for_test(user), do: user
+
+  @doc """
+  Setup helper that registers a user and authenticates `conn` for the mobile
+  `/api/v1` surface with a bearer token.
+
+      setup :register_and_log_in_api_user
+
+  Stores an updated connection (with the `Authorization: Bearer` header + JSON
+  accept) and the registered user in the test context.
+  """
+  def register_and_log_in_api_user(%{conn: conn}) do
+    user = Mehungry.AccountsFixtures.user_fixture() |> confirm_user_for_test()
+    %{conn: put_api_token(conn, user), user: user}
+  end
+
+  @doc """
+  Puts a valid mobile bearer token for `user` (and a JSON accept header) on `conn`.
+  """
+  def put_api_token(conn, user) do
+    token = MehungryWeb.Api.Auth.mint(user)
+
+    conn
+    |> Plug.Conn.put_req_header("authorization", "Bearer " <> token)
+    |> Plug.Conn.put_req_header("accept", "application/json")
+  end
 end

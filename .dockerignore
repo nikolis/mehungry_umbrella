@@ -1,0 +1,39 @@
+# Keep the Fly/Docker build context small. The Dockerfile fetches deps, runs
+# npm ci, and builds assets inside the image, so none of the build artifacts,
+# editor caches, or VCS history below are needed — and this repo is pushed over
+# a slow uplink, so a lean context is what lets the remote-builder upload finish.
+
+# VCS + agent/editor state
+.git
+.gitignore
+.claude
+.vscode
+.vscode-shared
+
+# Elixir/Mix build artifacts (root AND nested per-app, incl. vendored evision)
+_build
+deps
+**/.elixir_ls
+**/_build
+**/deps
+
+# JS deps (rebuilt by `npm ci` in the image)
+**/node_modules
+
+# Crash/dump/temp/coverage/doc artifacts
+erl_crash.dump
+*.dump
+tmp
+**/tmp
+cover
+**/cover
+doc
+docs
+.fly
+
+# Local-only GPU service (Bumblebee/EXLA) — the Dockerfile deletes it anyway.
+apps/mehungry_local_ai
+
+# Local env / secrets that must never enter the image.
+.env
+*.env

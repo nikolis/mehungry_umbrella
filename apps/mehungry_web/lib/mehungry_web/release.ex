@@ -9,7 +9,15 @@ defmodule MehungryWeb.Release do
     load_app()
 
     for repo <- repos() do
-      {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, all: true))
+      # Use a tiny pool: migrations run during deploy while the live machine
+      # still holds its own pool, and the Supabase session pooler caps total
+      # clients (15 on the current plan). A migrator only needs one connection.
+      {:ok, _, _} =
+        Ecto.Migrator.with_repo(
+          repo,
+          &Ecto.Migrator.run(&1, :up, all: true),
+          pool_size: 2
+        )
     end
   end
 

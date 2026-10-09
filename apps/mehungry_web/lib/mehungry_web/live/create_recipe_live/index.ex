@@ -9,7 +9,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
 
   alias Mehungry.Food.Recipe
   alias Mehungry.Accounts
-  alias MehungryWeb.SimpleS3Upload
 
   @impl true
   def mount(_params, session, socket) do
@@ -405,7 +404,13 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   defp presign_upload(entry, %{assigns: %{uploads: uploads}} = socket) do
-    meta = SimpleS3Upload.meta(entry, uploads)
+    meta =
+      MehungryWeb.Uploads.meta(
+        entry,
+        MehungryWeb.Uploads.recipe_image_key(entry),
+        uploads.image.max_file_size
+      )
+
     {:ok, meta, socket}
   end
 
@@ -661,9 +666,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       consume_uploaded_entries(
         socket,
         :image,
-        fn %{url: url, key: key}, _entry ->
-          dest = url <> "/" <> key
-          {:ok, dest}
+        fn %{public_url: public_url}, _entry ->
+          {:ok, public_url}
         end
       )
 
@@ -709,9 +713,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       consume_uploaded_entries(
         socket,
         :image,
-        fn %{url: url, key: key}, _entry ->
-          dest = url <> "/" <> key
-          {:ok, dest}
+        fn %{public_url: public_url}, _entry ->
+          {:ok, public_url}
         end
       )
 

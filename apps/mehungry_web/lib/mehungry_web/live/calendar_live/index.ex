@@ -509,48 +509,8 @@ defmodule MehungryWeb.CalendarLive.Index do
   end
 
   defp load_and_format_user_meals(user_id) do
-    # Resolve the gram-unit id set once for the whole calendar (not per row) so
-    # each logged ingredient's nutrients scale by its chosen portion × quantity.
-    gram_ids = Mehungry.Food.NutrientCalculation.gram_unit_ids()
-
     History.list_history_user_meals_for_user(user_id)
-    |> Enum.map(fn x ->
-      %{
-        id: x.id,
-        start_dt: x.start_dt,
-        end: x.end_dt,
-        title: x.title,
-        meal_type: x.meal_type,
-        ingredient_user_meals:
-          Enum.map(x.ingredient_user_meals, fn y ->
-            %{
-              title: y.ingredient.name,
-              portions: y.quantity,
-              measurement_unit: Mehungry.Food.RecipeIngredient.unit_label(y),
-              primary_size: 6,
-              img_url: nil,
-              recipe: %{
-                id: y.ingredient.id,
-                nutrients: History.scaled_ingredient_nutrient_tree(y, gram_ids),
-                primary_size: 5
-              }
-            }
-          end),
-        recipe_user_meals:
-          Enum.map(x.recipe_user_meals, fn y ->
-            %{
-              title: y.recipe.title,
-              consume_portions: y.consume_portions,
-              cooking_portions: y.cooking_portions,
-              servings: y.recipe.servings,
-              recipe_nutrients: y.recipe.nutrients,
-              img_url: y.recipe.image_url,
-              primary_size: y.recipe.primary_nutrients_size,
-              recipe_id: y.recipe.id
-            }
-          end)
-      }
-    end)
+    |> History.format_user_meals()
   end
 
   defp build_result_message(created, 0),

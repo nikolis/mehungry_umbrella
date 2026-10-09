@@ -44,10 +44,14 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
     names = user.id |> MealBlueprints.list_blueprints_for_user() |> Enum.map(& &1.name)
     assert "Mediterranean Diet" in names
     assert "Low-FODMAP Diet" in names
+    assert "Ketogenic Diet" in names
+
+    pattern_count = length(MealBlueprints.DietPatterns.all())
+    assert length(names) == pattern_count
 
     # Idempotent: clicking again adds nothing.
     render_click(live, "add_diet_patterns")
-    assert length(MealBlueprints.list_blueprints_for_user(user.id)) == 2
+    assert length(MealBlueprints.list_blueprints_for_user(user.id)) == pattern_count
   end
 
   test "index shows a Generate button per blueprint", %{conn: conn, user: user} do

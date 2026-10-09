@@ -15,9 +15,7 @@ defmodule Mehungry.RecipeCreationWorker do
     posts = Repo.all(from p in Post, where: p.reference_id == ^recipe_id)
 
     if !is_nil(origin_url) and origin_url != new_url do
-      file_name = List.last(String.split(origin_url, "/"))
-
-      Mehungry.S3.delete_object("test-bucket-local-mehungry", file_name, region: "eu-central-1")
+      Mehungry.Storage.delete_by_url(origin_url)
 
       posts
       |> Enum.each(fn x ->

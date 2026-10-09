@@ -7,6 +7,10 @@ defmodule MehungryWeb.ProfessionalLive.GlycemicIndexTest do
 
   alias Mehungry.{Food, Literature}
 
+  # The feature is fully implemented but its admin route (router.ex) is
+  # intentionally commented out during the path-B pivot. Skip until re-enabled.
+  @moduletag :skip
+
   @admin_email Application.compile_env(:mehungry, :admin_email)
 
   setup %{conn: conn} do

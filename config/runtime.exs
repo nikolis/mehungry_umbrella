@@ -127,12 +127,25 @@ config :ex_aws,
   secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY"),
   region: "eu-central-1"
 
+# Object storage backend. STORAGE_BACKEND=supabase flips the whole app over to
+# Supabase Storage; anything else (or unset) keeps the legacy AWS S3 path. The
+# Supabase service_role key is a server-only secret — never exposed to clients.
+config :mehungry, :storage,
+  backend: String.to_atom(System.get_env("STORAGE_BACKEND", "s3")),
+  supabase_url: System.get_env("SUPABASE_URL"),
+  service_role_key: System.get_env("SUPABASE_SERVICE_ROLE_KEY"),
+  bucket: System.get_env("SUPABASE_STORAGE_BUCKET", "media")
+
 if config_env() == :prod do
   config :mehungry, Mehungry.Mailer,
-    adapter: Swoosh.Adapters.AmazonSES,
-    region: System.get_env("AWS_SES_REGION", "eu-central-1"),
-    access_key: System.fetch_env!("AWS_ACCESS_KEY_ID"),
-    secret: System.fetch_env!("AWS_SECRET_ACCESS_KEY")
+    adapter: Swoosh.Adapters.Mailgun,
+    api_key: System.fetch_env!("MAILGUN_API_KEY"),
+    # The Mailgun sending domain (the one verified in the dashboard). Defaults to
+    # the app's canonical domain so the hardcoded noreply@m3hungry.com sender works.
+    domain: System.get_env("MAILGUN_DOMAIN", "m3hungry.com"),
+    # Region endpoint — EU is the default here (the Mailgun domain is in the EU
+    # region). Set MAILGUN_BASE_URL=https://api.mailgun.net/v3 if it's a US domain.
+    base_url: System.get_env("MAILGUN_BASE_URL", "https://api.eu.mailgun.net/v3")
 
   config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 end

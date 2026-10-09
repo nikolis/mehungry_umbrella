@@ -101,6 +101,68 @@ defmodule Mehungry.Food.Measurements do
     |> Repo.all()
   end
 
+  @doc """
+  The unit/portion options to offer for logging an ingredient — the single
+  source of truth behind both the calendar meal form's unit dropdown and the
+  `/api/v1/ingredients/search?source=local` response, so the mobile client
+  builds `IngredientUserMeal`s exactly the way the LiveView does.
+
+  Each option is a map:
+
+      %{unit_selection: integer, measurement_unit_id: id | nil,
+        ingredient_portion_id: id | nil, label: string}
+
+  `unit_selection` is the signed picker encoding shared with `RecipeIngredient`
+  / `IngredientUserMeal`: **positive** → a real `measurement_unit_id`
+  (grams or a unit-bearing portion), **negative** → `-ingredient_portion_id`
+  for a description-only portion (e.g. "1 medium banana"). "gram" is always
+  appended so a portion-less ingredient stays usable.
+  """
+  def ingredient_unit_options(nil), do: gram_unit_options()
+
+  def ingredient_unit_options(ingredient_id) do
+    ingredient_id
+    |> get_measurement_unit_portions_for_ingredient()
+    |> build_unit_options()
+  end
+
+  @doc """
+  `ingredient_unit_options/1` for an already-loaded list of portions (lets
+  callers batch the portion query across many ingredients, then build each
+  ingredient's options without re-querying).
+  """
+  def build_unit_options(portions) when is_list(portions) do
+    Enum.map(portions, &portion_unit_option/1) ++ gram_unit_options()
+  end
+
+  @doc "The grams-family unit option(s), in `ingredient_unit_options/1` shape."
+  def gram_unit_options do
+    Enum.map(get_measurement_unit_by_name("gram"), fn mu ->
+      %{unit_selection: mu.id, measurement_unit_id: mu.id, ingredient_portion_id: nil, label: mu.name}
+    end)
+  end
+
+  # A portion with a real measurement unit encodes as the positive unit id; a
+  # description-only portion (no unit) encodes as `-portion_id`.
+  defp portion_unit_option(%IngredientPortion{measurement_unit_id: mu_id} = portion)
+       when not is_nil(mu_id) do
+    %{
+      unit_selection: mu_id,
+      measurement_unit_id: mu_id,
+      ingredient_portion_id: nil,
+      label: IngredientPortion.display_name(portion) || "portion"
+    }
+  end
+
+  defp portion_unit_option(%IngredientPortion{} = portion) do
+    %{
+      unit_selection: -portion.id,
+      measurement_unit_id: nil,
+      ingredient_portion_id: portion.id,
+      label: IngredientPortion.display_name(portion) || "portion"
+    }
+  end
+
   def create_measurement_unit(attrs, opts \\ []) do
     %MeasurementUnit{}
     |> MeasurementUnit.changeset(attrs)

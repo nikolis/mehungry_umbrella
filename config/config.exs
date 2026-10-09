@@ -234,6 +234,17 @@ config :ex_aws,
   secret_access_key: nil,
   region: "eu-central-1"
 
+# Object storage. `backend` selects which `Mehungry.Storage` implementation is
+# used app-wide: `:s3` (legacy AWS, via `Mehungry.S3`) or `:supabase` (Supabase
+# Storage REST). Defaults to `:s3` so deploying the storage code is a no-op until
+# STORAGE_BACKEND is flipped at runtime (see config/runtime.exs). Supabase values
+# are nil here and filled from env at runtime.
+config :mehungry, :storage,
+  backend: :s3,
+  supabase_url: nil,
+  service_role_key: nil,
+  bucket: "media"
+
 config :ueberauth, Ueberauth,
   providers: [
     facebook:

@@ -9,7 +9,6 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
   alias Mehungry.Professionals
   alias Mehungry.Professionals.ProfessionalProfile
   alias Mehungry.Billing.StripeHandler
-  alias MehungryWeb.SimpleS3Upload
 
   # Rendered order (Mon → Sun) mapped to stored day_of_week (0 = Sunday).
   @weekdays [
@@ -156,8 +155,8 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
     do: Map.put(params, "user_id", socket.assigns.current_user.id)
 
   defp maybe_put_photo(attrs, socket) do
-    case consume_uploaded_entries(socket, :photo, fn %{url: url, key: key}, _entry ->
-           {:ok, url <> "/" <> key}
+    case consume_uploaded_entries(socket, :photo, fn %{public_url: public_url}, _entry ->
+           {:ok, public_url}
          end) do
       [photo_url | _] -> Map.put(attrs, "photo_url", photo_url)
       [] -> attrs
@@ -165,7 +164,8 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
   end
 
   defp presign_upload(entry, socket) do
-    {:ok, SimpleS3Upload.meta_for(entry, 5_000_000, "profile_photos"), socket}
+    key = MehungryWeb.Uploads.key_for("profile_photos", entry)
+    {:ok, MehungryWeb.Uploads.meta(entry, key, 5_000_000), socket}
   end
 
   defp profile_saved_flash(%{is_public: true, slug: slug}) when is_binary(slug),

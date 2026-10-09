@@ -106,11 +106,7 @@ defmodule Mehungry.Food.Recipes do
       Repo.delete(rec_in)
     end)
 
-    if !is_nil(recipe.image_url) and not String.starts_with?(recipe.image_url, "http") do
-      file_name = List.last(String.split(recipe.image_url))
-
-      Mehungry.S3.delete_object("test-bucket-local-mehungry", file_name, region: "eu-central-1")
-    end
+    Mehungry.Storage.delete_by_url(recipe.image_url)
 
     Repo.delete(recipe)
   end

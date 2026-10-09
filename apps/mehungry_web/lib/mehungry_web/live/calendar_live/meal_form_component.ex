@@ -7,7 +7,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   alias Mehungry.History.IngredientUserMeal
 
   alias Mehungry.Food
-  alias Mehungry.Food.IngredientPortion
   alias Mehungry.History
   alias MehungryWeb.CalendarLive.Components
 
@@ -126,27 +125,24 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
 
   defp build_unit_options_by_index(_meal), do: %{}
 
-  # Builds the unit dropdown options for an ingredient, mirroring the recipe
-  # form's `IngredientComponent`: every portion becomes an option (values encode
-  # `measurement_unit_id`, or `-portion_id` for description-only portions), with
-  # "gram" always appended so a portion-less ingredient stays usable.
-  defp unit_options(nil), do: gram_options()
-
+  # The unit dropdown options for an ingredient. The option list itself is built
+  # in the core `Food` context (`Food.ingredient_unit_options/1`) so this form
+  # and the `/api/v1/ingredients/search?source=local` endpoint stay in lockstep;
+  # here we only project each option onto the `{value_string, label}` tuple the
+  # `SelectComponent` expects, where the value is the signed `unit_selection`.
   defp unit_options(ingredient_id) do
-    portion_options =
-      ingredient_id
-      |> Food.get_measurement_unit_portions_for_ingredient()
-      |> Enum.map(fn portion ->
-        value = if portion.measurement_unit_id, do: portion.measurement_unit_id, else: -portion.id
-        {Integer.to_string(value), IngredientPortion.display_name(portion) || "portion"}
-      end)
-
-    portion_options ++ gram_options()
+    ingredient_id
+    |> Food.ingredient_unit_options()
+    |> to_select_options()
   end
 
   defp gram_options do
-    Enum.map(Food.get_measurement_unit_by_name("gram"), fn mu ->
-      {Integer.to_string(mu.id), mu.name}
+    Food.gram_unit_options() |> to_select_options()
+  end
+
+  defp to_select_options(options) do
+    Enum.map(options, fn %{unit_selection: value, label: label} ->
+      {Integer.to_string(value), label}
     end)
   end
 

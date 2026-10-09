@@ -79,7 +79,7 @@ card. Other docs link there instead of re-describing schemas.
 | `Billing` | Stripe checkout sessions and webhook handling (`Billing.StripeHandler`) — see `docs/subscriptions_billing.md` |
 | `Social` | Social platform layer (`social/`): `Social.Publisher` fan-out (behind `Social.PublisherBehaviour`), `Social.{Facebook, Pinterest}` HTTP clients, and the `Social.Instagram` context — see `docs/social_publishing.md` |
 | `FoodData` | External food-data sources (`food_data/`): `FoodData.Usda.{SearchClient, FdcClient, FoodParser, SeedFileParser}`, `FoodData.OpenFoodFacts.*`, `FoodData.SpoonacularImporter` |
-| `S3` | The single ExAws S3 wrapper (`s3.ex`) — use it instead of inline `ExAws.S3` calls |
+| `Storage` | Backend-switchable object-storage facade (`storage.ex`) for all image/media — `:s3` (legacy `Mehungry.S3`/ExAws) or `:supabase` (Supabase Storage REST), chosen by `STORAGE_BACKEND`. **Use `Mehungry.Storage`, never raw `ExAws.S3`.** See `docs/infrastructure/object_storage.md`. (`Mehungry.S3` remains the low-level ExAws wrapper, used directly only by the USDA seed-file import tooling) |
 
 **Facade convention:** `Mehungry.Food`, `Mehungry.Accounts`, and
 `Mehungry.Users` are permanent defdelegate facades — public functions never
@@ -189,6 +189,10 @@ All authenticated UI is built with **Phoenix LiveView**. Live sessions in `route
 
 **Presence** (`MehungryWeb.Presence`) tracks active users and records visits. Live views opt in with `use MehungryWeb.Presence, :user_tracking`.
 
+**Mobile REST API (`/api/v1`, `MehungryWeb.Api.V1.*`)** — the JSON surface for the React Native client (routes in `router.ex`, serializers in `controllers/api/v1/*_json.ex`). **Whenever you add, remove, or change the shape of any `/api/v1` request/response — a route, a controller action, or a `*_json.ex` serializer field — you MUST update `docs/new_dec_specs/mobile_api_spec.md` in the same change** so the spec and the implementation never drift. The spec is the contract the mobile client is built against.
+
+**REST ↔ LiveView parity (reuse, never duplicate):** Almost every REST concept already exists as a LiveView concept — the web app shipped first, so the calendar, basket, feed, recipe, nutrition, etc. are all implemented for LiveView already. When building a `/api/v1` endpoint, **find the equivalent LiveView and reuse the exact same domain function it calls** (push the shared logic down into the core `apps/mehungry` context if it still lives in a LiveView module, then call it from both). Do **not** re-derive or copy a transform/calculation into the controller — divergent copies silently drift and produce wrong results (e.g. a daily-nutrition total that no longer matches the calendar). The REST layer should only translate HTTP ⇄ domain calls + serialize; the computation itself must be the one shared function. Only duplicate when reuse is genuinely impossible, and say why.
+
 ### Frontend
 
 - **Tailwind CSS** + **DaisyUI** for styling
@@ -241,7 +245,8 @@ Required at runtime:
 - `SECRET_KEY_BASE`
 - `ANTHROPIC_API_KEY` — for all AI features
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRO_PRICE_ID`, `STRIPE_PRO_YEARLY_PRICE_ID` (consumer `m3hungry_plus` tier), `STRIPE_NUTRITIONIST_PRICE_ID`, `STRIPE_NUTRITIONIST_YEARLY_PRICE_ID` (nutritionist `pro` tier)
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ASSETS_BUCKET_NAME`
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ASSETS_BUCKET_NAME` (legacy S3 image storage + USDA seed-file bucket)
+- `STORAGE_BACKEND` (`s3` default | `supabase`), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` — object-storage backend for images/media via the `Mehungry.Storage` facade; see **`docs/infrastructure/object_storage.md`**
 - `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `INSTAGRAM_CLIENT_ID`, `INSTAGRAM_CLIENT_SECRET`
