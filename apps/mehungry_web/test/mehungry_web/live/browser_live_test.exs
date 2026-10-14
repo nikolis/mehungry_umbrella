@@ -5,7 +5,7 @@ defmodule MehungryWeb.BrowserLiveTest do
 
   import Mehungry.{FoodFixtures, AccountsFixtures}
   import Phoenix.LiveViewTest
-  alias Mehungry.{Accounts, Food, Health, Users}
+  alias Mehungry.{Accounts, Food, Users}
 
   defp complete_onboarding(user) do
     profile = Accounts.get_user_profile_by_user_id(user.id)
@@ -15,44 +15,6 @@ defmodule MehungryWeb.BrowserLiveTest do
 
   # Wires a condition → encourage → compound advice row down to a recipe through
   # the ingredient → species → compound chain, returning {condition, recipe}.
-  defp seed_encouraged_recipe(user) do
-    {:ok, kidney} = Health.create_condition(%{name: "Kidney Stones", category: "renal"})
-    {:ok, citrate} = Food.upsert_compound(%{name: "Citrate", compound_type: "other"})
-
-    {:ok, _} =
-      Health.add_recommendation(kidney.id, citrate.id, %{
-        recommendation: "encourage",
-        source: "guideline",
-        source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
-      })
-
-    lemon = ingredient_fixture(%{name: "lemon_xyz"})
-
-    {:ok, species} =
-      Food.create_foundemental_species(%{"name" => "Lemon", "scientific_name" => "Citrus limon"})
-
-    {:ok, _} = Food.assign_foundemental_ingredient(species.id, lemon.id, "lemon_xyz")
-
-    {:ok, _} =
-      Food.upsert_species_relationship(%{
-        foundemental_species_id: species.id,
-        compound_id: citrate.id,
-        relationship_type: "high_in",
-        source: "literature",
-        confidence: 0.9
-      })
-
-    mu = measurement_unit_fixture()
-
-    good =
-      recipe_fixture(user, %{
-        title: "Lemon Citrate Bowl",
-        recipe_ingredients: [%{ingredient_id: lemon.id, measurement_unit_id: mu.id, quantity: 1}]
-      })
-
-    {kidney, good}
-  end
-
   # ──────────────────────────────────────────────────────────────────────────
   # Mount / basic render
   # ──────────────────────────────────────────────────────────────────────────
@@ -338,148 +300,6 @@ defmodule MehungryWeb.BrowserLiveTest do
   # ──────────────────────────────────────────────────────────────────────────
   # Extended search settings — filter by health condition
   # ──────────────────────────────────────────────────────────────────────────
-
-  describe "condition filter" do
-    setup [:register_and_log_in_user]
-
-    test "toggling the settings button expands the panel", %{conn: conn, user: user} do
-      complete_onboarding(user)
-      {kidney, _good} = seed_encouraged_recipe(user)
-
-      {:ok, view, _html} = live(conn, ~p"/browse")
-      html = render_hook(view, "toggle_search_settings", %{})
-
-      assert html =~ "Filter by health condition"
-      assert html =~ kidney.name
-      # Panel is expanded (open-state classes present).
-      assert html =~ "opacity-100"
-    end
-
-    test "the query underlying the filter returns only encouraged recipes", %{
-      conn: _conn,
-      user: user
-    } do
-      {kidney, good} = seed_encouraged_recipe(user)
-      bad = recipe_fixture(user, %{title: "Unrelated Beef Stew"})
-
-      query_ids =
-        [kidney.id]
-        |> Health.recipes_for_conditions_query()
-        |> Mehungry.Repo.all()
-        |> Enum.map(& &1.id)
-
-      assert good.id in query_ids
-      refute bad.id in query_ids
-    end
-
-    test "the prioritized query sorts encouraged recipes ahead of the rest", %{
-      conn: _conn,
-      user: user
-    } do
-      # `other` is created *first* (older + lower id), so without prioritization
-      # it would sort ahead of `good`; the prioritized ordering must still float
-      # the encouraged recipe to the top.
-      other = recipe_fixture(user, %{title: "Unrelated Beef Stew"})
-      {kidney, good} = seed_encouraged_recipe(user)
-
-      ordered =
-        [kidney.id]
-        |> Health.recipes_prioritized_for_conditions_query()
-        |> Food.list_recipes_page(1, 10)
-        |> Enum.map(& &1.id)
-
-      # Nothing is hidden — both recipes are present…
-      assert good.id in ordered
-      assert other.id in ordered
-      # …but the encouraged recipe leads.
-      assert Enum.find_index(ordered, &(&1 == good.id)) <
-               Enum.find_index(ordered, &(&1 == other.id))
-    end
-
-    test "applying a matching condition keeps the encouraged recipe", %{conn: conn, user: user} do
-      complete_onboarding(user)
-      {kidney, good} = seed_encouraged_recipe(user)
-
-      {:ok, view, _html} = live(conn, ~p"/browse")
-
-      render_hook(view, "toggle_condition", %{"id" => to_string(kidney.id)})
-      render_hook(view, "apply_condition_filter", %{})
-
-      assert view |> element("#recipes_container") |> render() =~ good.title
-    end
-
-    test "applying a filter keeps the whole catalog visible (prioritized, not restricted)", %{
-      conn: conn,
-      user: user
-    } do
-      complete_onboarding(user)
-      {kidney, good} = seed_encouraged_recipe(user)
-      other = recipe_fixture(user, %{title: "Unrelated Beef Stew"})
-
-      {:ok, view, _html} = live(conn, ~p"/browse")
-
-      render_hook(view, "toggle_condition", %{"id" => to_string(kidney.id)})
-      render_hook(view, "apply_condition_filter", %{})
-
-      # One continuous, prioritized list: both the encouraged recipe and the rest
-      # are present (the encouraged one leads — see the query-level ordering test).
-      container = view |> element("#recipes_container") |> render()
-      assert container =~ good.title
-      assert container =~ other.title
-    end
-
-    test "applying a condition with no encouraged recipes still shows the rest", %{
-      conn: conn,
-      user: user
-    } do
-      complete_onboarding(user)
-      # Encouraged recipe exists for kidney, but we filter by a *different*
-      # condition no recipe is encouraged for. Prioritization keeps all recipes
-      # visible — the list is not emptied.
-      {_kidney, good} = seed_encouraged_recipe(user)
-
-      {:ok, diabetes} = Health.create_condition(%{name: "Diabetes", category: "endocrine"})
-      {:ok, fiber} = Food.upsert_compound(%{name: "Fiber", compound_type: "other"})
-
-      {:ok, _} =
-        Health.add_recommendation(diabetes.id, fiber.id, %{
-          recommendation: "encourage",
-          source: "guideline",
-          source_reference: %{"label" => "Clinical guideline", "url" => "https://example.org"}
-        })
-
-      {:ok, view, _html} = live(conn, ~p"/browse")
-      assert render(view) =~ good.title
-
-      render_hook(view, "toggle_condition", %{"id" => to_string(diabetes.id)})
-      html = render_hook(view, "apply_condition_filter", %{})
-
-      refute html =~ "We were not able to find a recipe"
-      assert html =~ good.title
-    end
-
-    test "condition badges appear only once the matching filter is applied", %{
-      conn: conn,
-      user: user
-    } do
-      complete_onboarding(user)
-      {kidney, good} = seed_encouraged_recipe(user)
-
-      {:ok, view, _html} = live(conn, ~p"/browse")
-
-      # No filter selected → the card carries no condition badge. (The badge is
-      # the only place the condition name appears inside the recipe list.)
-      refute view |> element("#recipes_container") |> render() =~ "(#{kidney.name})"
-
-      # Selecting and applying the condition stamps the badge onto the card.
-      render_hook(view, "toggle_condition", %{"id" => to_string(kidney.id)})
-      render_hook(view, "apply_condition_filter", %{})
-
-      container = view |> element("#recipes_container") |> render()
-      assert container =~ good.title
-      assert container =~ "encourage (#{kidney.name})"
-    end
-  end
 
   # ──────────────────────────────────────────────────────────────────────────
   # Diet mode filtering

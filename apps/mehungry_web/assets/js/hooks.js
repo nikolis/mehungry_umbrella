@@ -932,4 +932,52 @@ Hooks.AccordionHook = {
 
 
 
+// Renders a Cloudflare Turnstile widget inside a LiveView-managed form.
+// Loads the Turnstile api.js once, then explicitly renders the widget so it
+// survives LiveView DOM patching (the auto `.cf-turnstile` render does not).
+// The widget injects a hidden `cf-turnstile-response` input into the form, so
+// its token is included in the `phx-submit` params.
+Hooks.Turnstile = {
+  mounted() {
+    this.renderWidget()
+  },
+  renderWidget() {
+    const sitekey = this.el.dataset.sitekey
+    if (!sitekey) return
+
+    const doRender = () => {
+      if (window.turnstile && this.el && !this.el.dataset.rendered) {
+        this.widgetId = window.turnstile.render(this.el, { sitekey })
+        this.el.dataset.rendered = "true"
+      }
+    }
+
+    if (window.turnstile) {
+      doRender()
+    } else if (!document.getElementById("cf-turnstile-script")) {
+      const script = document.createElement("script")
+      script.id = "cf-turnstile-script"
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+      script.async = true
+      script.defer = true
+      script.onload = doRender
+      document.head.appendChild(script)
+    } else {
+      // Script tag exists but turnstile not ready yet — poll briefly.
+      const t = setInterval(() => {
+        if (window.turnstile) {
+          clearInterval(t)
+          doRender()
+        }
+      }, 100)
+      setTimeout(() => clearInterval(t), 5000)
+    }
+  },
+  destroyed() {
+    if (this.widgetId && window.turnstile) {
+      try { window.turnstile.remove(this.widgetId) } catch (_e) {}
+    }
+  }
+}
+
 export {Hooks}

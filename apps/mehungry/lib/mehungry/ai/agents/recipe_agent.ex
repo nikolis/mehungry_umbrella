@@ -79,7 +79,13 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     context = %{gram_unit: fetch_gram_unit(), brief: brief}
 
     sys_prompt = system_prompt(brief)
-    user_prompt = "Create a recipe from this description: #{description}"
+
+    user_prompt =
+      if brief.import_source do
+        import_user_prompt(brief.import_source)
+      else
+        "Create a recipe from this description: #{description}"
+      end
 
     Logger.debug("""
     [RecipeAgent] Prompt for this run:
@@ -170,7 +176,10 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       primary: seed_names(seed, "primary"),
       spice: seed_names(seed, "spice"),
       garnish: seed_names(seed, "garnish"),
-      avoid: seed_names(seed, "avoid")
+      avoid: seed_names(seed, "avoid"),
+      # When set, the run reproduces a specific source recipe (URL import) rather
+      # than inventing a dish — see import_system_prompt/1 and import_user_prompt/1.
+      import_source: Keyword.get(opts, :import_source)
     }
   end
 
@@ -191,6 +200,9 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   defp has_persona?(_), do: false
 
   # ── system prompt ─────────────────────────────────────────────────────────────
+
+  defp system_prompt(%{import_source: source} = brief) when not is_nil(source),
+    do: import_system_prompt(brief)
 
   defp system_prompt(brief) do
     """
@@ -235,6 +247,108 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       the mushrooms will steam instead of brown")
     #{hashtag_directive(brief)}
     submit_recipe is the ONLY way to finish — always call it when the recipe is ready.
+    """
+  end
+
+  # ── import mode (URL import) ────────────────────────────────────────────────
+  #
+  # Reproduces a specific existing recipe instead of inventing a dish. The tool
+  # workflow (search → create → submit → fix) is identical to generic generation;
+  # only the framing changes: faithful ingredients, reworded steps, fresh prose.
+  defp import_system_prompt(_brief) do
+    """
+    You are an expert recipe editor. You are given an existing recipe that was
+    imported from a web page. Your job is to reproduce it in this app's database —
+    NOT to invent a new dish, and NOT to "improve" or restyle it.
+
+    Follow these steps IN ORDER:
+
+    1. Reproduce the ingredient list as EXACTLY as possible: the same ingredients,
+       in the same quantities as the source. Do not add ingredients, drop
+       ingredients, or substitute "better" ones. If the source lists it, keep it;
+       if it doesn't, don't invent it.
+    2. For EACH ingredient, call search_ingredient and pick the best matching
+       database candidate (prefer whole/raw/plain forms over processed or flavoured
+       variants unless the source specifically calls for the processed form).
+    3. If search_ingredient returns no results for an ingredient, call
+       create_ingredient to add it, then use the IDs it returns.
+    4. Convert each source quantity to one of the ingredient's returned portions.
+       Prefer a real portion ("1 cup", "1 medium onion") that matches the source's
+       unit; fall back to grams (portion_id 0) when nothing fits. Use ONLY
+       ingredient_id and ingredient_portion_id values from your tool results — never
+       invent or guess numeric IDs. Include the `name` you searched for with each
+       recipe ingredient; its id is verified against that name.
+    5. Call submit_recipe with the complete recipe to validate and save it.
+    6. If submit_recipe returns errors, fix ONLY the reported invalid IDs and resubmit.
+
+    ## Copyright — this part is mandatory
+
+    - STEPS: keep the same method, order, timings, and temperatures as the source,
+      but REWRITE every step in your own words. Do NOT copy sentences verbatim from
+      the source instructions. Paraphrase thoroughly while preserving the technique.
+    - TITLE: write a NEW, original title for the dish. Do not reuse the source's
+      title verbatim.
+    - DESCRIPTION: write a NEW description in your own words. Do not copy the
+      source's description text.
+
+    ## Recipe writing standards
+
+    **Description:** 2-3 plain, honest sentences about the dish — what it is, how it
+    tastes, when it's eaten. No purple prose, no piled-up adjectives. Do NOT include
+    hashtags in the description field; put them in the separate `hashtags` array.
+
+    **Steps:** Each step states what to do and roughly how long it takes, with a
+    sensory doneness cue where the source implies one. Natural paragraphs, not
+    one-line skeletons. Preserve the source's number of steps and their order.
+
+    **Hashtags:** 4-6 short topic keywords as bare strings without the # symbol.
+
+    submit_recipe is the ONLY way to finish — always call it when the recipe is ready.
+    """
+  end
+
+  # Formats the extracted source recipe into the user turn. Structured sources
+  # (schema.org JSON-LD) give us clean ingredient + instruction lists; raw sources
+  # hand the model the stripped page text to extract the single recipe from.
+  defp import_user_prompt(%{mode: :structured} = source) do
+    ingredients =
+      case source[:ingredients] || [] do
+        [] -> "(none listed — infer from the instructions)"
+        list -> Enum.map_join(list, "\n", &"- #{&1}")
+      end
+
+    instructions =
+      source[:instructions]
+      |> List.wrap()
+      |> Enum.with_index(1)
+      |> Enum.map_join("\n", fn {step, i} -> "#{i}. #{step}" end)
+
+    """
+    Reproduce this imported recipe. Keep the ingredients and quantities faithful,
+    reword the steps, and write a fresh title and description.
+
+    SOURCE TITLE: #{source[:title] || "(untitled)"}
+    SOURCE URL: #{source[:source_url]}
+
+    SOURCE INGREDIENTS:
+    #{ingredients}
+
+    SOURCE INSTRUCTIONS:
+    #{if instructions == "", do: "(none provided)", else: instructions}
+    """
+  end
+
+  defp import_user_prompt(%{mode: :raw} = source) do
+    """
+    The following is the text of a web page that contains a single recipe. Extract
+    that recipe, then reproduce it: keep its ingredients and quantities faithful,
+    reword the steps in your own words, and write a fresh title and description.
+    Ignore navigation, ads, comments, and any unrelated text on the page.
+
+    SOURCE URL: #{source[:source_url]}
+
+    PAGE TEXT:
+    #{source[:raw_text]}
     """
   end
 

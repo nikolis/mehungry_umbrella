@@ -6,7 +6,6 @@ defmodule MehungryWeb.Api.V1.ProfileController do
 
   alias Mehungry.Accounts
   alias Mehungry.Accounts.UserContent
-  alias Mehungry.Health
   alias Mehungry.Subscriptions
   alias MehungryWeb.Api.V1.UserJSON
 
@@ -117,8 +116,7 @@ defmodule MehungryWeb.Api.V1.ProfileController do
       profile: profile,
       tier: Subscriptions.get_subscription(user.id).tier,
       quota: quota_snapshot(user.id),
-      counts: counts_for(user),
-      condition_opt_ins: opted_in_conditions(profile)
+      counts: counts_for(user)
     }
   end
 
@@ -140,14 +138,6 @@ defmodule MehungryWeb.Api.V1.ProfileController do
     }
   end
 
-  defp opted_in_conditions(nil), do: []
-
-  defp opted_in_conditions(profile) do
-    profile.id
-    |> Accounts.list_opted_in_condition_ids()
-    |> Enum.map(&Health.get_condition/1)
-    |> Enum.reject(&is_nil/1)
-  end
 
   defp profile_attrs(params) do
     Map.take(params, ["alias", "intro", "daily_calorie_target"])

@@ -146,6 +146,7 @@ defmodule MehungryWeb.Api.DocsController do
       "/api/v1/subscription" => op("get", "mobile", "Subscription info + plans + quota", secured),
       "/api/v1/subscription/checkout" => op("post", "mobile", "Stripe checkout URL", secured),
       "/api/v1/me/invitations" => op("get", "mobile", "Pending nutritionist invitations", secured),
+      "/api/v1/feedback" => op("post", "mobile", "Submit app feedback (optional auth)", public),
       "/api/v1/nutritionist/clients" => op("get", "mobile", "List a nutritionist's clients (pro tier)", secured)
     }
   end

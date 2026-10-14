@@ -7,15 +7,14 @@ defmodule MehungryWeb.Api.V1.UserJSON do
   The `GET /me` payload: user + profile + tier + quota + counts + opt-ins.
 
   Takes a map assembled by the controller:
-  `%{user:, profile:, tier:, quota:, counts:, condition_opt_ins:}`.
+  `%{user:, profile:, tier:, quota:, counts:}`.
   """
   def me(%{
         user: user,
         profile: profile,
         tier: tier,
         quota: quota,
-        counts: counts,
-        condition_opt_ins: opt_ins
+        counts: counts
       }) do
     data(%{
       id: user.id,
@@ -28,8 +27,7 @@ defmodule MehungryWeb.Api.V1.UserJSON do
       onboarding_level: (profile && profile.onboarding_level) || 0,
       tier: tier,
       quota: quota,
-      counts: counts,
-      condition_opt_ins: Enum.map(opt_ins, &%{condition_id: &1.id, name: &1.name})
+      counts: counts
     })
   end
 

@@ -12,9 +12,9 @@ defmodule Mehungry.Subscriptions do
   alias Mehungry.Subscriptions.{UserSubscription, AiUsage}
 
   @monthly_limits %{
-    "free" => %{"recipe_generation" => 0, "meal_plan" => 0},
-    "m3hungry_plus" => %{"recipe_generation" => 15, "meal_plan" => 4},
-    "pro" => %{"recipe_generation" => 30, "meal_plan" => 10}
+    "free" => %{"recipe_generation" => 0, "meal_plan" => 0, "graphic_generation" => 0},
+    "m3hungry_plus" => %{"recipe_generation" => 15, "meal_plan" => 4, "graphic_generation" => 10},
+    "pro" => %{"recipe_generation" => 30, "meal_plan" => 10, "graphic_generation" => 30}
   }
 
   # ── Subscription ──────────────────────────────────────────────────────────────

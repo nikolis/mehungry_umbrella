@@ -13,7 +13,6 @@ defmodule MehungryWeb.CalendarLive.Index do
   alias Mehungry.Repo
   alias Mehungry.Food
   alias Mehungry.Users
-  alias MehungryWeb.RecipeFlags
 
   # https://gist.github.com/cblavier/0e227de6fd1dfa00814b88642cdcb2a9
   # def render(assigns) do
@@ -25,7 +24,6 @@ defmodule MehungryWeb.CalendarLive.Index do
     user = Accounts.get_user_by_session_token(session["user_token"])
 
     profile = Accounts.get_user_profile_by_user_id(user.id)
-    condition_ids = RecipeFlags.opted_in_condition_ids(profile)
     calorie_target = profile && profile.daily_calorie_target
 
     user_meals = load_and_format_user_meals(user.id)
@@ -43,7 +41,6 @@ defmodule MehungryWeb.CalendarLive.Index do
       :ok,
       socket
       |> assign(:user, user)
-      |> assign(:condition_ids, condition_ids)
       |> assign(:calorie_target, calorie_target)
       |> assign(:calendar_view, "week_view")
       |> assign(:particular_date, nil)

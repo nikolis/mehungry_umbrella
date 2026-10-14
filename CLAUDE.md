@@ -8,7 +8,7 @@ Mehungry is a food/recipe social platform built as a **Phoenix Umbrella** applic
 - `apps/mehungry` — core domain layer (Ecto schemas, contexts, business logic)
 - `apps/mehungry_web` — Phoenix web layer (LiveViews, controllers, components)
 
-Deployed via Docker → GitHub Actions → AWS ECR → AWS ECS, with PostgreSQL on AWS RDS (v14).
+Deployed on Fly.io (Docker image → Phoenix release). Canonical host is `www.m3hungry.com`.
 
 ## Development Commands
 
@@ -72,6 +72,7 @@ card. Other docs link there instead of re-describing schemas.
 | `Survey` | User dietary preference surveys |
 | `Languages` | Multi-language translations for ingredients and units. App-wide localization (locale-prefixed URLs `/en/…`·`/el/…`, `MehungryWeb.Locale` + `SetLocale` plug + `RestoreLocale` on_mount, Gettext UI strings, hreflang/canonical) is in **`docs/localization.md`** |
 | `Meta` | Visit tracking |
+| `BetaSignups` | Android closed-testing tester list. Public shareable signup page at `/trial` (`MehungryWeb.TrialLive.Index`, landing layout, Turnstile-guarded) stores emails in `beta_signups` (canonical-email dedupe + per-row `unsubscribe_token` + a `platforms` array — Android/iOS/Web — the tester picks on signup, defaulting to all); signup sends a branded welcome email (`Accounts.deliver_trial_welcome/2`). Self-service removal via an on-page box **or** the one-click token link `/trial/unsubscribe/:token`. Admins view/delete the list and bulk-load it into the invite sender at `/professional/android-beta` (`AndroidBetaLive`), which sends the opt-in invite (`Accounts.deliver_android_beta_invite/2`) to typed recipients or the `:android_beta` Google Group (`ANDROID_BETA_OPT_IN_URL`/`ANDROID_BETA_GROUP_EMAIL`). **Per-version send tracking**: each delivered invite records a `beta_invite_sends` row keyed on `(canonical_email, version)` (idempotent per build; `BetaSignups.record_send/3`); the admin sets the "Version being sent" (`ANDROID_BETA_CURRENT_VERSION` default), the tester list shows each tester's received versions + platform badges, and the bulk-load buttons (**"Load Android testers"**, **"Load testers missing <version>"** via `BetaSignups.signups_missing_version/2`) are scoped to Android-interested testers so iOS/Web-only signups aren't emailed the Android invite |
 | `History` | User activity history |
 | `Professionals` | Nutritionist profiles, client invitations, assignments, appointments, meal plan ratings, and public **scientific Articles** (draft→published, per-paragraph images + references to PubMed studies / food species / compounds / diseases; `/nutritionists/:slug/articles/:article_slug`). Public SEO-indexed profiles + directory (`/nutritionists`, `/nutritionists/:slug`) with weekly-availability booking (request → nutritionist accept → email + `.ics` invite) and Stripe Connect payout onboarding. Also **client records / dietary history** (`ProfessionalClient` + `ClientIntake` + `ConsultationNote`) — a nutritionist-owned "patient file" holding PII directly, **always linked to a platform `User` (`user_id` required — never headless)**; created by CSV import (`DietaryHistory.{CsvParser,Importer}`, which requires a `:user_id`) **or** by hand in `ClientRecordEditor` at `/nutritionist/records` — see `docs/professionals/professional_profiles.md`, `docs/professionals/appointments_booking.md`, `docs/professionals/articles.md`, `docs/professionals/client_records.md`, `docs/payments/nutritionist_payments_stripe_connect.md`, `docs/integrations/google_meet.md` |
 | `Subscriptions` | Subscription tiers, Stripe integration, AI feature quota enforcement — see `docs/subscriptions_billing.md` |
@@ -79,7 +80,7 @@ card. Other docs link there instead of re-describing schemas.
 | `Billing` | Stripe checkout sessions and webhook handling (`Billing.StripeHandler`) — see `docs/subscriptions_billing.md` |
 | `Social` | Social platform layer (`social/`): `Social.Publisher` fan-out (behind `Social.PublisherBehaviour`), `Social.{Facebook, Pinterest}` HTTP clients, and the `Social.Instagram` context — see `docs/social_publishing.md` |
 | `FoodData` | External food-data sources (`food_data/`): `FoodData.Usda.{SearchClient, FdcClient, FoodParser, SeedFileParser}`, `FoodData.OpenFoodFacts.*`, `FoodData.SpoonacularImporter` |
-| `Storage` | Backend-switchable object-storage facade (`storage.ex`) for all image/media — `:s3` (legacy `Mehungry.S3`/ExAws) or `:supabase` (Supabase Storage REST), chosen by `STORAGE_BACKEND`. **Use `Mehungry.Storage`, never raw `ExAws.S3`.** See `docs/infrastructure/object_storage.md`. (`Mehungry.S3` remains the low-level ExAws wrapper, used directly only by the USDA seed-file import tooling) |
+| `Storage` | Object-storage facade (`storage.ex`) for all image/media, backed by **Supabase Storage** (REST). **Use `Mehungry.Storage` for all image/media.** See `docs/infrastructure/object_storage.md`. (`Mehungry.S3` survives only as the low-level wrapper for the USDA seed-file *import source* — a separate data bucket, not app object storage) |
 
 **Facade convention:** `Mehungry.Food`, `Mehungry.Accounts`, and
 `Mehungry.Users` are permanent defdelegate facades — public functions never
@@ -112,6 +113,7 @@ A custom Anthropic API layer — do not use raw HTTPoison calls for AI work:
 - `AI.Agent` — generic tool-use loop. Runs a conversation until `end_turn` or `max_iterations` (default 10). Accepts a `handler` function `fn(tool_name, input, acc) -> {result, new_acc}` — the `context` arg is a threaded **accumulator** (result fed back to the model, `new_acc` carried on), and `run/6` returns `{:ok, text, final_acc}` so handlers hand real state (validated output, provenance sets) back to the caller without a process dictionary. Emits `[:mehungry, :ai, :agent, :run|:tool, …]` telemetry (tagged per `agent`) aggregated by `MehungryWeb.PromEx.AiPlugin` — see `docs/infrastructure/observability.md`.
 - `AI.Agents.RecipeAgent`, `MealPlanAgent`, `NutritionistAgent` — domain-specific agents built on `AI.Agent`.
 - `AI.ImageGenerator`, `AI.IngredientTranslator`, `AI.RecipeTranslator`, `AI.MealPlanGenerator` — standalone AI utilities.
+- `AI.RecipeInsight` + `AI.InsightCaptioner` — the **recipe insight social-graphic** feature: compose a shareable card from a recipe's real photo + a *deterministic* macro-donut/badge overlay (truthful data, drawn with `:image`/vix by the web-side `MehungryWeb.InsightGraphic`), where AI only selects the standout characteristic + writes the headline/caption. Orchestrated by `MehungryWeb.RecipeSocialGraphicWorker` (`:ai_agents` queue) → `Mehungry.Storage` → `Food.RecipeSocialGraphic`. Quota key `"graphic_generation"`. Admin action on `/professional/recipes`, per-user button on `RecipeDetailsComponent`. See `docs/ai/recipe_insight_graphics.md`.
 
 **Bumblebee/EXLA is gone from the deployed apps.** The local extractive-QA model for measurement extraction now lives in a separate, **non-deployed** umbrella app, `apps/mehungry_local_ai` (`MehungryLocalAi.{QA, PMC, Extractor, Client}` + `mix local_ai.extract`), which runs on a GPU box and talks to the server only over the token-guarded `/api/local_ai/*` REST API — it does PMC fetch + parse + QA extraction locally and posts full text + candidates back. It's excluded from the release and the Docker build, so `nx`/`exla`/`bumblebee`/`xla` are never fetched or compiled in production. See `docs/ai/measurement_extraction.md`. (`AI.EmbeddingServer` was dead code and was removed; the surviving recipe-embedding path uses the OpenAI API + pgvector, no Nx.)
 
@@ -245,8 +247,8 @@ Required at runtime:
 - `SECRET_KEY_BASE`
 - `ANTHROPIC_API_KEY` — for all AI features
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRO_PRICE_ID`, `STRIPE_PRO_YEARLY_PRICE_ID` (consumer `m3hungry_plus` tier), `STRIPE_NUTRITIONIST_PRICE_ID`, `STRIPE_NUTRITIONIST_YEARLY_PRICE_ID` (nutritionist `pro` tier)
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ASSETS_BUCKET_NAME` (legacy S3 image storage + USDA seed-file bucket)
-- `STORAGE_BACKEND` (`s3` default | `supabase`), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` — object-storage backend for images/media via the `Mehungry.Storage` facade; see **`docs/infrastructure/object_storage.md`**
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` — object storage for all images/media via the `Mehungry.Storage` facade; see **`docs/infrastructure/object_storage.md`**
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ASSETS_BUCKET_NAME` — **only** for the USDA seed-file *import source* bucket (`Mehungry.S3`), not app object storage
 - `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `INSTAGRAM_CLIENT_ID`, `INSTAGRAM_CLIENT_SECRET`
@@ -257,7 +259,5 @@ Required at runtime:
 
 ## Deployment Notes
 
-- PostgreSQL version 14 is required; newer versions may not work with the current ECS setup.
-- The migrator app (`migrator/`) runs DB migrations as a separate ECS task.
-- Task definitions are in `task-definition.json` and `migrator-task-definition.json`.
-- AWS region: `eu-central-1`.
+- Production runs on Fly.io; the canonical host is `www.m3hungry.com` (the apex `m3hungry.com` has no TLS cert — point clients at `www`).
+- The migrator app (`migrator/`) runs DB migrations as a separate step.

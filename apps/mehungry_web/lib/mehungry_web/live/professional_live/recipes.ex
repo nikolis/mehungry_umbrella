@@ -9,6 +9,7 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
   alias Mehungry.Food.HashtagReconciliations
   alias Mehungry.ObanWorkers.HashtagReconciliationWorker
   alias Mehungry.ReconcileRecipeIngredientPortions
+  alias MehungryWeb.RecipeSocialGraphicWorker
 
   # Coalesce window for the high-frequency hashtag-reconciliation broadcasts: we
   # re-query the aggregate counts at most once per window rather than per job.
@@ -30,6 +31,9 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
       |> assign(:hashtag_running, false)
       |> assign(:hashtag_counts, HashtagReconciliations.counts())
       |> assign(:hashtag_flush_scheduled, false)
+      |> assign(:graphic_running_id, nil)
+      |> assign(:graphic_result, nil)
+      |> assign(:graphic_error, nil)
       |> load_stats()
       |> load_search_results("")
 
@@ -42,6 +46,26 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
      socket
      |> assign(:search_query, query)
      |> load_search_results(query)}
+  end
+
+  @impl true
+  def handle_event("generate_graphic", %{"id" => id}, socket) do
+    recipe_id = String.to_integer(id)
+    user_id = socket.assigns[:current_user] && socket.assigns.current_user.id
+
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Mehungry.PubSub, RecipeSocialGraphicWorker.topic(recipe_id))
+    end
+
+    %{recipe_id: recipe_id, user_id: user_id}
+    |> RecipeSocialGraphicWorker.new()
+    |> Oban.insert()
+
+    {:noreply,
+     socket
+     |> assign(:graphic_running_id, recipe_id)
+     |> assign(:graphic_result, nil)
+     |> assign(:graphic_error, nil)}
   end
 
   @impl true
@@ -240,6 +264,24 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
   @impl true
   def handle_info({:nutrient_recalculation_run, run}, socket) do
     {:noreply, assign(socket, :recalc_run, run)}
+  end
+
+  # Insight social-graphic generation result (async worker).
+  @impl true
+  def handle_info({:recipe_social_graphic, _recipe_id, {:ok, graphic}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:graphic_running_id, nil)
+     |> assign(:graphic_result, graphic)
+     |> assign(:graphic_error, nil)}
+  end
+
+  @impl true
+  def handle_info({:recipe_social_graphic, _recipe_id, {:error, reason}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:graphic_running_id, nil)
+     |> assign(:graphic_error, inspect(reason))}
   end
 
   # High-frequency per-recipe reconciliation broadcasts (full-row terminal and

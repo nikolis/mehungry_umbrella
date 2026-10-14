@@ -1253,6 +1253,15 @@ defmodule MehungryWeb.LandingLive do
               <a href="/privacy_policy" class="transition-colors hover:text-parchment">
                 {gettext("Privacy")}
               </a>
+              <a href="/terms" class="transition-colors hover:text-parchment">
+                {gettext("Terms")}
+              </a>
+              <a href="/cookies" class="transition-colors hover:text-parchment">
+                {gettext("Cookies")}
+              </a>
+              <a href="/legal" class="transition-colors hover:text-parchment">
+                {gettext("Legal Notice")}
+              </a>
               <a
                 href={"/#{@current_language}/feedback"}
                 class="transition-colors hover:text-parchment"

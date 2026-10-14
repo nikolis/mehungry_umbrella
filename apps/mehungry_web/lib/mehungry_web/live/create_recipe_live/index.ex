@@ -110,6 +110,29 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, socket}
   end
 
+  def handle_event("ai_import_url", %{"url" => url}, socket) do
+    url = String.trim(url)
+
+    cond do
+      url == "" ->
+        {:noreply, socket}
+
+      not valid_http_url?(url) ->
+        {:noreply,
+         put_flash(socket, :error, gettext("Please enter a valid http(s) recipe link."))}
+
+      true ->
+        case Mehungry.Subscriptions.check_quota(socket.assigns.user.id, "recipe_generation") do
+          :ok -> start_ai_url_import(socket, url)
+          {:error, :quota_exceeded} -> {:noreply, assign(socket, :ai_quota_exceeded, true)}
+        end
+    end
+  end
+
+  def handle_event("ai_import_url", _params, socket) do
+    {:noreply, socket}
+  end
+
   def handle_event("ai_generate_confirm", %{"keep" => keep}, socket) do
     prompt = socket.assigns.ai_pending_prompt || ""
     names = socket.assigns.ai_existing_ingredients
@@ -801,6 +824,40 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          socket
          |> assign(:show_ai_ingredients_modal, false)
          |> assign(:ai_quota_exceeded, true)}
+    end
+  end
+
+  # Fetches + reproduces a recipe from a URL on a background task. Reuses the same
+  # `:ai_task_ref`/`:ai_generating` plumbing as text generation, so the existing
+  # `handle_info` success path (persist, record_usage, navigate, changeset fallback)
+  # handles the `{:ok, attrs, unmatched}` result with no extra code.
+  defp start_ai_url_import(socket, url) do
+    case Mehungry.Subscriptions.check_quota(socket.assigns.user.id, "recipe_generation") do
+      :ok ->
+        task = Task.async(fn -> Mehungry.AI.RecipeUrlImport.run(url) end)
+
+        {:noreply,
+         socket
+         |> assign(:ai_generating, true)
+         |> assign(:ai_task_ref, task.ref)
+         |> assign(:show_ai_ingredients_modal, false)
+         |> assign(:ai_pending_prompt, nil)
+         |> assign(:ai_unmatched, [])
+         |> assign(:ai_quota_exceeded, false)}
+
+      {:error, :quota_exceeded} ->
+        {:noreply, assign(socket, :ai_quota_exceeded, true)}
+    end
+  end
+
+  defp valid_http_url?(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host}
+      when scheme in ["http", "https"] and is_binary(host) and host != "" ->
+        true
+
+      _ ->
+        false
     end
   end
 

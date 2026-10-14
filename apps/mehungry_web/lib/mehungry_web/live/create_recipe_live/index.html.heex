@@ -110,6 +110,44 @@
                 <% end %>
               </button>
             </form>
+
+            <div class="flex items-center gap-3 my-3">
+              <div class="flex-1 h-px bg-ink-panel2"></div>
+              <span class="text-xs text-parchment-dim uppercase tracking-wide">
+                {gettext("or import from a link")}
+              </span>
+              <div class="flex-1 h-px bg-ink-panel2"></div>
+            </div>
+
+            <form phx-submit="ai_import_url" class="flex flex-col sm:flex-row gap-3">
+              <input
+                name="url"
+                type="url"
+                inputmode="url"
+                placeholder={gettext("Paste a recipe link, e.g. https://…")}
+                class="flex-1 bg-ink-panel2 text-parchment rounded-lg px-4 py-2.5 text-sm border border-ink-panel2 focus:border-paprika focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={@ai_generating}
+                class="px-5 py-2.5 border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold text-sm self-end sm:self-auto transition"
+              >
+                <%= if @ai_generating do %>
+                  <span class="flex items-center gap-2">
+                    <MehungryWeb.SvgComponents.get_loading compact class="w-4 h-4" />
+                    {gettext("Importing…")}
+                  </span>
+                <% else %>
+                  {gettext("Import")}
+                <% end %>
+              </button>
+            </form>
+            <p class="text-parchment-dim text-xs mt-2">
+              {gettext(
+                "We copy the ingredients, rewrite the steps in our own words, and give it a fresh title and description."
+              )}
+            </p>
+
             <%= if @ai_unmatched != [] do %>
               <p class="text-yellow-400 text-xs mt-3">
                 {gettext(

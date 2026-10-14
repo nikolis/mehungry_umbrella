@@ -180,11 +180,6 @@ defmodule MehungryWeb.RecipeComponents do
       ) do
     ~H"""
     <div class="">
-      <.condition_flag_badges
-        flags={recipe_condition_flags(@recipe)}
-        limit={nil}
-        class="px-4 mb-2"
-      />
       <div style="height: 280px;">
         <.render_tabs
           id="live_comp_tabs_rec"
@@ -206,7 +201,6 @@ defmodule MehungryWeb.RecipeComponents do
     <div class=" my-4 ">
       <div class="px-4">
         <div class="bg-ink-panel border border-ink-panel2 divide-y custom-scrollbar divide-ink-panel2 overflow-auto max-h-72">
-          <% ingredient_flags = Map.get(assigns, :ingredient_flags, %{}) %>
           <%= for ingredient <- @recipe_ingredients do %>
             <% display_names = Map.get(assigns, :ingredient_display_names, %{}) %>
             <% name =
@@ -215,11 +209,6 @@ defmodule MehungryWeb.RecipeComponents do
             <div class="flex justify-between items-center p-4 hover:bg-black/20 transition">
               <span class="text-parchment">
                 {name}
-                <.condition_flag_badges
-                  flags={Map.get(ingredient_flags, ingredient.ingredient_id, [])}
-                  limit={2}
-                  class="mt-1"
-                />
               </span>
               <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
                 {ingredient.quantity} {Mehungry.Food.RecipeIngredient.unit_label(ingredient)}
@@ -376,63 +365,6 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  @doc """
-  A compact row of health-condition badges for a recipe. `flags` is the list
-  returned by `Mehungry.Health.flags_for_recipe/2`
-  (`%{condition, compound, recommendation, severity}`). Renders nothing when
-  empty, so non-opted-in users are unaffected. `limit` caps how many chips show
-  before a "+N" overflow (use `nil` on the detail view to show them all).
-  """
-  attr :flags, :list, default: []
-  attr :limit, :any, default: 3
-  attr :class, :string, default: ""
-
-  def condition_flag_badges(%{flags: []} = assigns), do: ~H""
-
-  def condition_flag_badges(assigns) do
-    shown = if assigns.limit, do: Enum.take(assigns.flags, assigns.limit), else: assigns.flags
-    overflow = length(assigns.flags) - length(shown)
-    assigns = assign(assigns, shown: shown, overflow: overflow)
-
-    ~H"""
-    <div class={["flex flex-wrap gap-1", @class]}>
-      <span
-        :for={flag <- @shown}
-        class={[
-          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border",
-          recommendation_badge_class(flag.recommendation)
-        ]}
-        title={"#{flag_label(flag)} — #{flag.recommendation} for #{flag.condition.name}"}
-      >
-        <.icon name="hero-exclamation-triangle-mini" class="w-3 h-3" />
-        {flag_label(flag)} · {flag.recommendation} ({flag.condition.name})
-      </span>
-      <span
-        :if={@overflow > 0}
-        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border border-ink-panel2 text-parchment-dim"
-      >
-        +{@overflow}
-      </span>
-    </div>
-    """
-  end
-
-  defp recommendation_badge_class(recommendation) when recommendation in ["encourage", "monitor"],
-    do: "bg-basil/15 border-basil/40 text-basil"
-
-  defp recommendation_badge_class(_recommendation),
-    do: "bg-paprika/15 border-paprika/40 text-paprika"
-
-  # The badge's driver label: a nutrient flag carries a `:label` (nutrient name),
-  # a compound flag carries a `:compound` struct. Both share condition/recommendation.
-  defp flag_label(%{label: label}) when is_binary(label), do: label
-  defp flag_label(%{compound: %{name: name}}), do: name
-
-  # Safely reads the recipe's virtual :condition_flags (populated by
-  # MehungryWeb.RecipeFlags); tolerates plain maps / missing field.
-  defp recipe_condition_flags(%{condition_flags: flags}) when is_list(flags), do: flags
-  defp recipe_condition_flags(_recipe), do: []
-
   def recipe_card(assigns) do
     # Opt-in full live navigation (e.g. cross-LiveView to /browse/:id) instead of
     # the default same-LiveView patch. Existing callers keep patch behavior.
@@ -481,8 +413,6 @@ defmodule MehungryWeb.RecipeComponents do
             <p class="text-parchment-dim text-sm mt-1 line-clamp-2">
               {@recipe.description || "No description available"}
             </p>
-
-            <.condition_flag_badges flags={recipe_condition_flags(@recipe)} class="mt-2" />
 
             <!-- Recipe Stats -->
             <div class="flex items-center justify-between mt-4 pt-3 border-t border-ink-panel2">

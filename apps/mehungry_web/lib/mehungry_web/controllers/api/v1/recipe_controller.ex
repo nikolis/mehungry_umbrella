@@ -12,7 +12,6 @@ defmodule MehungryWeb.Api.V1.RecipeController do
   alias Mehungry.Users
   alias MehungryWeb.Api.V1.BlueprintMatch
   alias MehungryWeb.Api.V1.RecipeJSON
-  alias MehungryWeb.RecipeFlags
 
   action_fallback MehungryWeb.Api.V1.FallbackController
 
@@ -21,7 +20,6 @@ defmodule MehungryWeb.Api.V1.RecipeController do
 
     with {:ok, recipe} <- fetch_recipe(id),
          :ok <- authorize_view(recipe, user) do
-      recipe = RecipeFlags.enrich_one(recipe, opted_in_ids(user))
       engagement = Posts.get_recipe_engagement(recipe.id, user && user.id)
       match = blueprint_match(conn, params, recipe)
       json(conn, RecipeJSON.detail(recipe, engagement, viewer_ctx(user), match))
@@ -128,12 +126,6 @@ defmodule MehungryWeb.Api.V1.RecipeController do
     blueprint = BlueprintMatch.blueprint(conn, params)
     reports = BlueprintMatch.recipe_reports(blueprint, [recipe])
     BlueprintMatch.block(blueprint, reports, recipe.id)
-  end
-
-  defp opted_in_ids(nil), do: []
-
-  defp opted_in_ids(user) do
-    user.id |> Accounts.get_user_profile_by_user_id() |> RecipeFlags.opted_in_condition_ids()
   end
 
   defp viewer_ctx(nil), do: %{saved_recipe_ids: [], follow_ids: []}

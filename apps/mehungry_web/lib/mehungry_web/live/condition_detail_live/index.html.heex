@@ -1,7 +1,7 @@
 <div class="condition-detail-page min-h-screen bg-ink text-parchment pb-16">
   <div class="container max-w-3xl mx-auto px-4 py-8">
     <nav class="text-sm text-parchment-dim mb-6">
-      <.link navigate={~p"/#{@locale}/conditions"} class="hover:text-parchment transition-colors">
+      <.link navigate={@base} class="hover:text-parchment transition-colors">
         {gettext("Conditions")}
       </.link>
       <span class="mx-2">›</span>
@@ -532,7 +532,7 @@
                   </p>
                 </div>
                 <.link
-                  patch={~p"/#{@locale}/conditions/#{@condition.id}/food/#{row.species.id}"}
+                  patch={"#{@base}/#{@condition.id}/food/#{row.species.id}"}
                   class="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-basil/15 text-basil hover:bg-basil/25 transition-colors"
                 >
                   {gettext("Details →")}
@@ -582,7 +582,7 @@
     :if={@live_action == :show_food && @modal_species}
     id="encouraged-food-modal"
     show
-    on_cancel={JS.patch(~p"/#{@locale}/conditions/#{@condition.id}")}
+    on_cancel={JS.patch("#{@base}/#{@condition.id}")}
   >
     <div class="space-y-6">
       <%!-- Identity --%>

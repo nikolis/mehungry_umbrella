@@ -1,8 +1,7 @@
 defmodule MehungryWeb.Api.V1.SpeciesController do
   @moduledoc """
   Foods (species) tab (spec §8). Index + detail over `FoundementalFoodSpecies`,
-  enriched with bioactive-compound evidence (`Food.summarize_species/2`) and the
-  conditions each implicated compound drives.
+  enriched with bioactive-compound evidence (`Food.summarize_species/2`).
   """
   use MehungryWeb, :controller
 
@@ -11,7 +10,6 @@ defmodule MehungryWeb.Api.V1.SpeciesController do
   alias Mehungry.Food
   alias Mehungry.Food.EvidenceAggregation
   alias Mehungry.Food.SpeciesCompounds
-  alias Mehungry.Health
   alias MehungryWeb.Api.Pagination
   alias MehungryWeb.Api.V1.FoodJSON
 
@@ -36,9 +34,8 @@ defmodule MehungryWeb.Api.V1.SpeciesController do
 
       species ->
         compounds = compound_evidence(species.id)
-        conditions = related_conditions(compounds)
         ingredients = species_ingredients(species.id)
-        json(conn, FoodJSON.species_detail(species, compounds, conditions, ingredients))
+        json(conn, FoodJSON.species_detail(species, compounds, ingredients))
     end
   end
 
@@ -47,18 +44,6 @@ defmodule MehungryWeb.Api.V1.SpeciesController do
     |> SpeciesCompounds.list_species_relationships()
     |> Enum.map(fn rel ->
       %{compound: rel.compound, summary: EvidenceAggregation.summarize_species(species_id, rel.compound_id)}
-    end)
-  end
-
-  # Conditions implicated through the species' compounds (compound → recommendations).
-  defp related_conditions(compounds) do
-    compounds
-    |> Enum.flat_map(fn %{compound: compound} ->
-      Health.recommendations_for_compound(compound.id)
-    end)
-    |> Enum.uniq_by(& &1.condition_id)
-    |> Enum.map(fn rec ->
-      %{condition: rec.condition, recommendation: rec.recommendation, severity: rec.severity}
     end)
   end
 

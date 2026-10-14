@@ -5,6 +5,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
   use MehungryWeb, :live_component
 
   alias Mehungry.Accounts
+  alias Mehungry.Food
   alias Mehungry.Social.Facebook
   alias Mehungry.Social.Pinterest
   alias MehungryWeb.SvgComponents
@@ -80,7 +81,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
       pages = String.split(pages_str, ",", trim: true)
       pages = Enum.map(pages, fn x -> Map.get(socket.assigns.user.facebook_token, x, nil) end)
 
-      recipe = socket.assigns.recipe
+      recipe = Food.recipe_with_share_image(socket.assigns.recipe)
       user = Accounts.get_user!(socket.assigns.user.id)
 
       pages =
@@ -148,7 +149,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
 
       Task.start(fn ->
         user = Accounts.get_user!(socket.assigns.user.id)
-        recipe = socket.assigns.recipe
+        recipe = Food.recipe_with_share_image(socket.assigns.recipe)
 
         result =
           case Pinterest.create_pin(user, recipe, board_id) do
@@ -171,7 +172,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
     parent = self()
 
     Task.start(fn ->
-      recipe = socket.assigns.recipe
+      recipe = Food.recipe_with_share_image(socket.assigns.recipe)
       user = Accounts.get_user!(socket.assigns.user.id)
 
       result =

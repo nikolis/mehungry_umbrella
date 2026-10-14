@@ -9,7 +9,14 @@ defmodule Mehungry.Food.Recipes do
 
   alias Mehungry.Repo
   alias Mehungry.Hashtag
-  alias Mehungry.Food.{DietClassifier, Localization, Recipe, RecipeHashtag, Step}
+  alias Mehungry.Food.{
+    DietClassifier,
+    Localization,
+    Recipe,
+    RecipeHashtag,
+    RecipeSocialGraphic,
+    Step
+  }
 
   # The recipes cache predates this module: entries are keyed under
   # `Mehungry.Food` and RecipePutNutrientsWorker invalidates with that same
@@ -849,6 +856,42 @@ defmodule Mehungry.Food.Recipes do
 
       existing ->
         existing
+    end
+  end
+
+  # ── Recipe social graphics (insight share cards) ───────────────────────────
+
+  @doc "Persist a generated insight graphic row for a recipe."
+  def create_recipe_social_graphic(attrs) do
+    %RecipeSocialGraphic{}
+    |> RecipeSocialGraphic.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc "The most recently generated insight graphic for a recipe, or `nil`."
+  def latest_recipe_social_graphic(recipe_id) do
+    Repo.one(
+      from(g in RecipeSocialGraphic,
+        where: g.recipe_id == ^recipe_id,
+        order_by: [desc: g.id],
+        limit: 1
+      )
+    )
+  end
+
+  @doc """
+  Returns the recipe with its `image_url` swapped to the newest generated insight
+  social-graphic when one exists — so social-media posts surface the branded,
+  macro/compound-annotated graphic instead of the plain cover photo. Returns the
+  recipe unchanged when it has no generated graphic.
+  """
+  def recipe_with_share_image(%Recipe{} = recipe) do
+    case latest_recipe_social_graphic(recipe.id) do
+      %RecipeSocialGraphic{image_url: url} when is_binary(url) and url != "" ->
+        %{recipe | image_url: url}
+
+      _ ->
+        recipe
     end
   end
 end

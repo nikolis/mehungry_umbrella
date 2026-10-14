@@ -33,8 +33,7 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
       liked_by_me: liked_by_me?(post, ctx),
       saved_by_me: saved?(recipe, ctx),
       following_author: following?(author, ctx),
-      inserted_at: utc(recipe.inserted_at),
-      condition_flags: condition_flags(recipe)
+      inserted_at: utc(recipe.inserted_at)
     }
     |> maybe_blueprint_match(blueprint_match)
   end
@@ -64,7 +63,6 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
       steps: Enum.map(recipe.steps || [], &step/1),
       nutrients: nutrients(recipe.nutrients),
       primary_nutrients_size: recipe.primary_nutrients_size,
-      condition_flags: condition_flags(recipe),
       likes_count: engagement.likes_count,
       comments_count: engagement.comments_count,
       liked_by_me: engagement.liked_by_me,
@@ -151,9 +149,6 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
         []
     end
   end
-
-  defp condition_flags(%{condition_flags: flags}) when is_list(flags), do: flags
-  defp condition_flags(_), do: []
 
   defp maybe_blueprint_match(map, nil), do: map
   defp maybe_blueprint_match(map, block), do: Map.put(map, :blueprint_match, block)

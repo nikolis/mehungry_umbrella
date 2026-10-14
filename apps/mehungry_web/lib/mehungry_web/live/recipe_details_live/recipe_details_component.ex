@@ -5,9 +5,9 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   import MehungryWeb.RecipeComponents
 
   alias Mehungry.Posts.Comment
-  alias Mehungry.{Posts, Users, Food, Accounts}
+  alias Mehungry.{Posts, Users, Food, Accounts, Subscriptions}
   alias Mehungry.Social.Facebook
-  alias MehungryWeb.RecipeFlags
+  alias MehungryWeb.InsightGraphicGenerator
   alias Phoenix.LiveView.AsyncResult
 
   embed_templates("components/*")
@@ -24,8 +24,65 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   end
 
   @impl true
+  def handle_event("generate_graphic", _params, socket) do
+    recipe = socket.assigns.recipe
+    user = socket.assigns.current_user
+
+    cond do
+      is_nil(user) ->
+        {:noreply, assign(socket, :must_be_loged_in, 1)}
+
+      Subscriptions.check_quota(user.id, "graphic_generation") == {:error, :quota_exceeded} ->
+        {:noreply,
+         assign(
+           socket,
+           :graphic_error,
+           "You've used all your graphic generations this month. Upgrade for more."
+         )}
+
+      true ->
+        recipe_id = recipe.id
+        user_id = user.id
+
+        {:noreply,
+         socket
+         |> assign(:graphic_running, true)
+         |> assign(:graphic_result, nil)
+         |> assign(:graphic_error, nil)
+         |> start_async(:insight_graphic, fn ->
+           InsightGraphicGenerator.generate(recipe_id, user_id)
+         end)}
+    end
+  end
+
+  @impl true
+  def handle_async(:insight_graphic, {:ok, {:ok, graphic}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:graphic_running, false)
+     |> assign(:graphic_result, graphic)
+     |> assign(:graphic_error, nil)}
+  end
+
+  @impl true
+  def handle_async(:insight_graphic, {:ok, {:error, _reason}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:graphic_running, false)
+     |> assign(:graphic_error, "Graphic generation failed. Please try again.")}
+  end
+
+  @impl true
+  def handle_async(:insight_graphic, {:exit, _reason}, socket) do
+    {:noreply,
+     socket
+     |> assign(:graphic_running, false)
+     |> assign(:graphic_error, "Graphic generation failed. Please try again.")}
+  end
+
+  @impl true
   def handle_event("post-on-facebook", %{"recipe_id" => recipe_id, "user_id" => user_id}, socket) do
-    recipe = Food.get_recipe!(recipe_id)
+    recipe = recipe_id |> Food.get_recipe!() |> Food.recipe_with_share_image()
     user = Accounts.get_user!(user_id)
 
     Facebook.post_recipe_container(user, recipe, %{})
@@ -39,7 +96,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   @impl true
   def handle_event("post-on-instagram", %{"recipe_id" => recipe_id, "user_id" => user_id}, socket) do
-    recipe = Food.get_recipe!(recipe_id)
+    recipe = recipe_id |> Food.get_recipe!() |> Food.recipe_with_share_image()
     user = Accounts.get_user!(user_id)
     Mehungry.Social.Instagram.post_recipe(user, recipe)
 
@@ -182,6 +239,45 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                 id={@id <> "like_container"}
                 myself={@myself}
               />
+              <%= if @recipe.image_url do %>
+                <button
+                  type="button"
+                  phx-click="generate_graphic"
+                  phx-target={@myself}
+                  disabled={@graphic_running}
+                  class="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-paprika/90 hover:bg-paprika disabled:opacity-60 text-white font-semibold text-xs shadow-lg backdrop-blur transition-colors"
+                >
+                  <.icon
+                    name={if @graphic_running, do: "hero-arrow-path", else: "hero-sparkles"}
+                    class={"w-4 h-4 #{if @graphic_running, do: "animate-spin"}"}
+                  />
+                  {if @graphic_running, do: "Creating graphic…", else: "Shareable graphic"}
+                </button>
+              <% end %>
+            </div>
+
+            <div :if={@graphic_error} class="mx-6 mt-4 rounded-lg bg-red-900/40 border border-red-700 text-red-200 text-xs px-3 py-2">
+              {@graphic_error}
+            </div>
+
+            <div :if={@graphic_result} class="mx-6 mt-4 rounded-xl bg-ink border border-ink-panel2 p-3 flex gap-3">
+              <img
+                src={@graphic_result.image_url}
+                alt="Shareable insight graphic"
+                class="w-28 h-28 rounded-lg object-cover shrink-0"
+              />
+              <div class="min-w-0 flex flex-col">
+                <p class="text-parchment text-sm font-semibold">{@graphic_result.headline}</p>
+                <p class="text-parchment-dim text-xs mt-1 line-clamp-3">{@graphic_result.caption}</p>
+                <a
+                  href={@graphic_result.image_url}
+                  target="_blank"
+                  rel="noopener"
+                  class="mt-auto inline-flex items-center gap-1.5 text-paprika hover:text-paprika-soft text-xs font-semibold"
+                >
+                  <.icon name="hero-arrow-down-tray" class="w-3.5 h-3.5" /> Download to share
+                </a>
+              </div>
             </div>
             <!-- Content -->
             <div class="p-6">
@@ -337,7 +433,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               nutrients={@recipe.nutrients}
               primary_size={@recipe.primary_nutrients_size}
               ingredient_display_names={@ingredient_display_names}
-              ingredient_flags={@ingredient_flags}
             />
           </div>
           <.async_result :let={interactions} assign={@interactions}>
@@ -529,29 +624,26 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     display_names =
       Food.ingredient_display_names(ingredient_ids, user_language)
 
-    condition_ids = RecipeFlags.opted_in_condition_ids(profile)
-    ingredient_flags = RecipeFlags.flags_for_ingredient_ids(ingredient_ids, condition_ids)
-
-    recipe = RecipeFlags.enrich_one(assigns.recipe, condition_ids)
-
     server_ms = System.monotonic_time(:millisecond) - t0
 
     socket =
       socket
       |> assign(assigns)
-      |> assign(:recipe, recipe)
+      |> assign(:recipe, assigns.recipe)
       |> assign(:reply, reply)
       |> assign(:user_follows, user_follows)
       |> assign(:ingredient_display_names, display_names)
-      |> assign(:ingredient_flags, ingredient_flags)
       |> assign(:server_ms, server_ms)
+      |> assign_new(:graphic_running, fn -> false end)
+      |> assign_new(:graphic_result, fn -> nil end)
+      |> assign_new(:graphic_error, fn -> nil end)
       |> assign(
         :comment,
         get_when_first_exists(assigns.current_user, fn ->
           %Comment{user_id: assigns.current_user.id, recipe_id: assigns.recipe.id}
         end)
       )
-      |> maybe_load_recipe_async(recipe, ingredient_ids)
+      |> maybe_load_recipe_async(assigns.recipe, ingredient_ids)
 
     {:ok, socket}
   end

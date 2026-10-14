@@ -153,6 +153,11 @@ defmodule MehungryWeb.LayoutView do
         />
         <.admin_link href="/professional/ai-bot" icon="hero-cpu-chip" label="AI Bot" />
         <.admin_link
+          href="/professional/android-beta"
+          icon="hero-device-phone-mobile"
+          label="Android Beta"
+        />
+        <.admin_link
           href="/professional/taxonomy/review"
           icon="hero-rectangle-stack"
           label="Taxonomy"
@@ -275,6 +280,7 @@ defmodule MehungryWeb.LayoutView do
         />
         <.nutritionist_link href="/nutritionist/clients" icon="hero-user-group" label="My Clients" />
         <.nutritionist_link href="/nutritionist/records" icon="hero-folder" label="Client Records" />
+        <.nutritionist_link href="/nutritionist/conditions" icon="hero-heart" label="Health" />
         <.nutritionist_link
           href="/nutritionist/blueprints"
           icon="hero-clipboard-document-list"

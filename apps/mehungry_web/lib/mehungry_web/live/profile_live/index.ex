@@ -5,7 +5,6 @@ defmodule MehungryWeb.ProfileLive.Index do
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
 
   alias MehungryWeb.RecipeComponents
-  alias MehungryWeb.RecipeFlags
   import MehungryWeb.BlueprintComponents
 
   alias Mehungry.Accounts
@@ -231,7 +230,6 @@ defmodule MehungryWeb.ProfileLive.Index do
       |> assign(:form, to_form(changeset))
       |> assign(:id, "form-#{System.unique_integer()}")
 
-    condition_ids = RecipeFlags.opted_in_condition_ids(socket.assigns.current_user_profile)
     current_user = socket.assigns.current_user
 
     # Only the active tab's recipe list is rendered, so load just that one. The
@@ -239,8 +237,8 @@ defmodule MehungryWeb.ProfileLive.Index do
     {user_saved_recipes, user_created_recipes} =
       case {content_state, is_nil(current_user)} do
         {_content_state, true} -> {[], []}
-        {:created, false} -> {[], load_created_recipes(current_user, condition_ids)}
-        {:saved, false} -> {load_saved_recipes(current_user, condition_ids), []}
+        {:created, false} -> {[], load_created_recipes(current_user)}
+        {:saved, false} -> {load_saved_recipes(current_user), []}
         {_content_state, false} -> {[], []}
       end
 
@@ -286,26 +284,12 @@ defmodule MehungryWeb.ProfileLive.Index do
     end
   end
 
-  defp load_created_recipes(user, condition_ids) do
-    user
-    |> Users.list_user_created_recipes()
-    |> RecipeFlags.enrich(condition_ids)
+  defp load_created_recipes(user) do
+    Users.list_user_created_recipes(user)
   end
 
-  defp load_saved_recipes(user, condition_ids) do
-    saved = Users.list_user_saved_recipes(user)
-
-    # Batch-enrich the saved recipes in one query instead of calling enrich_one
-    # per UserRecipe (which fired a flags_for_recipe query each).
-    enriched_by_id =
-      saved
-      |> Enum.map(& &1.recipe)
-      |> RecipeFlags.enrich(condition_ids)
-      |> Map.new(fn recipe -> {recipe.id, recipe} end)
-
-    Enum.map(saved, fn ur ->
-      %{ur | recipe: Map.get(enriched_by_id, ur.recipe.id, ur.recipe)}
-    end)
+  defp load_saved_recipes(user) do
+    Users.list_user_saved_recipes(user)
   end
 
   @impl true

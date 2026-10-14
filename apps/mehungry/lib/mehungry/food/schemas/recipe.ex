@@ -29,9 +29,6 @@ defmodule Mehungry.Food.Recipe do
     # pgvector column created by 20260622000001_add_pgvector_and_recipe_embeddings.exs;
     # written by RecipeEmbeddingWorker, read by Search.RecipeVectorSearch.
     field :embedding, Pgvector.Ecto.Vector
-    # Populated at display time by MehungryWeb.RecipeFlags for opted-in users;
-    # each entry is %{condition, compound, recommendation, severity}.
-    field :condition_flags, {:array, :map}, virtual: true, default: []
     # Populated by Recipes.search_recipes_for_admin/2 for the admin recipes tab.
     field :ingredient_count, :integer, virtual: true
 

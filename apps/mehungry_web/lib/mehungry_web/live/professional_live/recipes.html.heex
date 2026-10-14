@@ -295,6 +295,33 @@
       bot records. This cannot be undone.
     </p>
 
+    <div :if={@graphic_error} class="mb-3 rounded-lg bg-red-900/40 border border-red-700 text-red-200 text-xs px-3 py-2">
+      Graphic generation failed: {@graphic_error}
+    </div>
+
+    <div
+      :if={@graphic_result}
+      class="mb-4 rounded-xl bg-ink border border-ink-panel2 p-3 flex gap-3"
+    >
+      <img
+        src={@graphic_result.image_url}
+        alt="Generated insight graphic"
+        class="w-32 h-32 rounded-lg object-cover shrink-0"
+      />
+      <div class="min-w-0 flex flex-col">
+        <p class="text-white text-sm font-semibold">{@graphic_result.headline}</p>
+        <p class="text-parchment-dim text-xs mt-1 line-clamp-3">{@graphic_result.caption}</p>
+        <a
+          href={@graphic_result.image_url}
+          target="_blank"
+          rel="noopener"
+          class="mt-auto inline-flex items-center gap-1.5 text-paprika hover:text-paprika-soft text-xs font-semibold"
+        >
+          <.icon name="hero-arrow-down-tray" class="w-3.5 h-3.5" /> Open / download
+        </a>
+      </div>
+    </div>
+
     <form
       id="admin-recipe-search"
       phx-change="search_recipes"
@@ -332,15 +359,30 @@
             #{recipe.id} · {(recipe.user && recipe.user.email) || "no owner"} · {recipe.ingredient_count} ingredient(s)
           </p>
         </div>
-        <button
-          type="button"
-          phx-click="delete_recipe"
-          phx-value-id={recipe.id}
-          data-confirm={"Permanently delete “#{recipe.title || "(untitled)"}” (##{recipe.id}) and all its references? This cannot be undone."}
-          class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-700 hover:bg-red-600 text-white font-semibold text-xs transition-colors"
-        >
-          <.icon name="hero-trash" class="w-3.5 h-3.5" /> Delete
-        </button>
+        <div class="shrink-0 flex items-center gap-2">
+          <button
+            type="button"
+            phx-click="generate_graphic"
+            phx-value-id={recipe.id}
+            disabled={@graphic_running_id == recipe.id}
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-paprika hover:bg-paprika-soft disabled:opacity-50 text-white font-semibold text-xs transition-colors"
+          >
+            <.icon
+              name={if @graphic_running_id == recipe.id, do: "hero-arrow-path", else: "hero-photo"}
+              class={"w-3.5 h-3.5 #{if @graphic_running_id == recipe.id, do: "animate-spin"}"}
+            />
+            {if @graphic_running_id == recipe.id, do: "Generating…", else: "Make graphic"}
+          </button>
+          <button
+            type="button"
+            phx-click="delete_recipe"
+            phx-value-id={recipe.id}
+            data-confirm={"Permanently delete “#{recipe.title || "(untitled)"}” (##{recipe.id}) and all its references? This cannot be undone."}
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-700 hover:bg-red-600 text-white font-semibold text-xs transition-colors"
+          >
+            <.icon name="hero-trash" class="w-3.5 h-3.5" /> Delete
+          </button>
+        </div>
       </div>
     </div>
   </div>

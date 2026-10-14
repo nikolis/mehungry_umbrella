@@ -62,6 +62,9 @@ defmodule Mehungry.Food do
   defdelegate update_recipe(recipe_origin, attrs \\ %{}), to: Recipes
   defdelegate ensure_recipe_hashtags(recipe_or_id), to: Recipes
   defdelegate create_post_from_recipe(recipe), to: Recipes
+  defdelegate create_recipe_social_graphic(attrs), to: Recipes
+  defdelegate latest_recipe_social_graphic(recipe_id), to: Recipes
+  defdelegate recipe_with_share_image(recipe), to: Recipes
   defdelegate put_nutrient_info(changeset, attrs), to: Recipes
   defdelegate recipe_counts_by_user_id(), to: Recipes
   defdelegate count_user_created_recipes(user_id), to: Recipes
@@ -318,6 +321,7 @@ defmodule Mehungry.Food do
   defdelegate list_compounds_for_ingredient(ingredient_id), to: Compounds
   defdelegate list_positive_compounds_for_ingredient(ingredient_id), to: Compounds
   defdelegate list_ingredients_for_compound(compound_id), to: Compounds
+  defdelegate compounds_for_recipe(recipe_id), to: Compounds
   defdelegate list_compound_relationships(ingredient_id), to: Compounds
   defdelegate add_compound_to_ingredient(ingredient_id, compound_attrs, rel_attrs), to: Compounds
 

@@ -2,14 +2,13 @@ defmodule MehungryWeb.Api.V1.PreferencesController do
   @moduledoc """
   Onboarding & dietary preferences (spec §7): the static wizard vocabulary plus
   the current user's selections. Backed by `UserProfile.diet` /
-  `lactose_intolerant` and `UserConditionOptIn` (via `Accounts.Profiles`).
+  `lactose_intolerant` (via `Accounts.Profiles`).
   """
   use MehungryWeb, :controller
 
   import MehungryWeb.Api.V1.JSON.Helpers
 
   alias Mehungry.Accounts
-  alias Mehungry.Health
 
   action_fallback MehungryWeb.Api.V1.FallbackController
 
@@ -29,8 +28,7 @@ defmodule MehungryWeb.Api.V1.PreferencesController do
       data(%{
         languages: @languages,
         diets: @diets,
-        intolerances: @intolerances,
-        conditions: Enum.map(Health.list_conditions(), &condition_option/1)
+        intolerances: @intolerances
       })
     )
   end
@@ -41,12 +39,11 @@ defmodule MehungryWeb.Api.V1.PreferencesController do
     json(conn, data(preferences_map(profile)))
   end
 
-  @doc "PUT /api/v1/me/preferences — update diet/intolerances/conditions/language."
+  @doc "PUT /api/v1/me/preferences — update diet/intolerances/language."
   def update(conn, params) do
     profile = profile!(conn)
 
-    with {:ok, profile} <- Accounts.update_user_profile(profile, profile_attrs(params)),
-         :ok <- maybe_set_conditions(profile, params["condition_opt_ins"]) do
+    with {:ok, profile} <- Accounts.update_user_profile(profile, profile_attrs(params)) do
       json(conn, data(preferences_map(Accounts.get_user_profile_by_user_id(profile.user_id))))
     end
   end
@@ -60,7 +57,6 @@ defmodule MehungryWeb.Api.V1.PreferencesController do
       language: profile.language_preference,
       diet: profile.diet,
       intolerances: if(profile.lactose_intolerant, do: ["lactose"], else: []),
-      condition_opt_ins: Accounts.list_opted_in_condition_ids(profile.id),
       onboarding_level: profile.onboarding_level
     }
   end
@@ -85,14 +81,4 @@ defmodule MehungryWeb.Api.V1.PreferencesController do
   end
 
   defp maybe_put_intolerances(attrs, _params), do: attrs
-
-  defp maybe_set_conditions(_profile, nil), do: :ok
-
-  defp maybe_set_conditions(profile, ids) when is_list(ids) do
-    Accounts.set_condition_opt_ins(profile.id, ids)
-  end
-
-  defp condition_option(condition) do
-    %{id: condition.id, name: condition.name, category: condition.category}
-  end
 end

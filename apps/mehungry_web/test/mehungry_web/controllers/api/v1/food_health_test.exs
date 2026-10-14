@@ -12,11 +12,6 @@ defmodule MehungryWeb.Api.V1.FoodHealthTest do
     species
   end
 
-  defp condition_fixture(name) do
-    {:ok, condition} = Mehungry.Health.create_condition(%{name: name, category: "renal"})
-    condition
-  end
-
   describe "species" do
     test "GET /api/v1/species lists species with meta.total", %{conn: conn} do
       species_fixture("Spinach #{System.unique_integer([:positive])}")
@@ -36,36 +31,12 @@ defmodule MehungryWeb.Api.V1.FoodHealthTest do
       assert %{"data" => detail} = json_response(conn, 200)
       assert detail["name"] == name
       assert Map.has_key?(detail, "compounds")
-      assert Map.has_key?(detail, "related_conditions")
       assert Map.has_key?(detail, "ingredients")
+      refute Map.has_key?(detail, "related_conditions")
     end
 
     test "GET /api/v1/species/:slug 404 for unknown", %{conn: conn} do
       assert conn |> get(~p"/api/v1/species/no-such-species-xyz") |> json_response(404)
-    end
-  end
-
-  describe "conditions" do
-    test "GET /api/v1/conditions lists conditions", %{conn: conn} do
-      condition_fixture("Kidney Stones #{System.unique_integer([:positive])}")
-      conn = get(conn, ~p"/api/v1/conditions")
-      assert %{"data" => data} = json_response(conn, 200)
-      assert is_list(data)
-      assert length(data) >= 1
-    end
-
-    test "GET /api/v1/conditions/:id returns detail", %{conn: conn} do
-      condition = condition_fixture("IBS #{System.unique_integer([:positive])}")
-      conn = get(conn, ~p"/api/v1/conditions/#{condition.id}")
-
-      assert %{"data" => detail} = json_response(conn, 200)
-      assert detail["id"] == condition.id
-      assert Map.has_key?(detail, "compound_recommendations")
-      assert Map.has_key?(detail, "species")
-    end
-
-    test "GET /api/v1/conditions/:id 404 for unknown", %{conn: conn} do
-      assert conn |> get(~p"/api/v1/conditions/99999999") |> json_response(404)
     end
   end
 

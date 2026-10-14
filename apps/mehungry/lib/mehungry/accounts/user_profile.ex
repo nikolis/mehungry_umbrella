@@ -18,7 +18,6 @@ defmodule Mehungry.Accounts.UserProfile do
 
     has_many :user_category_rules, Mehungry.Accounts.UserCategoryRule, on_replace: :delete
     has_many :user_ingredient_rules, Mehungry.Accounts.UserIngredientRule
-    has_many :user_condition_opt_ins, Mehungry.Accounts.UserConditionOptIn
 
     timestamps()
   end

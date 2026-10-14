@@ -15,7 +15,15 @@ defmodule Mehungry.Accounts do
     * `Mehungry.Accounts.Grading` — personalized recipe grading
   """
 
-  alias Mehungry.Accounts.{Admin, Auth, OAuth, Profiles, Rules}
+  alias Mehungry.Accounts.{Admin, Auth, OAuth, Profiles, Rules, UserNotifier}
+
+  # ── Android beta opt-in invite ─────────────────────────────────────────
+  defdelegate deliver_android_beta_invite(recipient, opts \\ []), to: UserNotifier
+  defdelegate android_beta_email_html(opts \\ []), to: UserNotifier
+  defdelegate android_beta_opt_in_url(), to: UserNotifier
+  defdelegate android_beta_group_email(), to: UserNotifier
+  defdelegate android_beta_current_version(), to: UserNotifier
+  defdelegate deliver_trial_welcome(recipient, unsubscribe_url), to: UserNotifier
 
   # ── Admin / lookups ────────────────────────────────────────────────────
 
@@ -83,10 +91,8 @@ defmodule Mehungry.Accounts do
   defdelegate get_user_language(user_id), to: Profiles
   defdelegate delete_user_profile(user_profile), to: Profiles
   defdelegate change_user_profile(user_profile, attrs \\ %{}), to: Profiles
-  defdelegate list_opted_in_condition_ids(user_profile_id), to: Profiles
   defdelegate diet_mode(user_or_id), to: Profiles
   defdelegate diet_mode_for_diet(diet), to: Profiles
-  defdelegate set_condition_opt_ins(user_profile_id, condition_ids), to: Profiles
   defdelegate get_user_essentials(user), to: Profiles
   defdelegate count_user_following(user_id), to: Profiles
   defdelegate count_user_followers(user_id), to: Profiles

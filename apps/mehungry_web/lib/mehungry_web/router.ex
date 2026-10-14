@@ -132,12 +132,11 @@ defmodule MehungryWeb.Router do
     get("/search", SearchController, :index)
     get("/species", SpeciesController, :index)
     get("/species/:slug", SpeciesController, :show)
-    get("/conditions", ConditionController, :index)
-    get("/conditions/:id", ConditionController, :show)
-    get("/conditions/:id/species/:species_id", ConditionController, :species)
 
     get("/blueprints", BlueprintController, :index)
     get("/blueprints/:slug", BlueprintController, :show)
+
+    post("/feedback", FeedbackController, :create)
   end
 
   # Authenticated (🔒) endpoints — valid bearer token required.
@@ -309,6 +308,8 @@ defmodule MehungryWeb.Router do
 
       live("/feedback", ProfessionalLive.FeedbackLive, :index)
 
+      live("/android-beta", ProfessionalLive.AndroidBetaLive, :index)
+
       live("/ai-bot", AiBotLive.Config, :index)
       live("/ai-bot/new", AiBotLive.Config, :new)
       live("/ai-bot/:id/edit", AiBotLive.Config, :edit)
@@ -362,6 +363,19 @@ defmodule MehungryWeb.Router do
       live("/blueprints", MealBlueprintLive.Index, :index)
       live("/blueprints/new", MealBlueprintLive.Index, :new)
       live("/blueprints/:id/edit", MealBlueprintLive.Editor, :edit)
+    end
+
+    # Health-conditions workflow, reusing the public HealthLive / ConditionDetailLive
+    # modules but mounted inside the nutritionist panel (its layout + chrome). The
+    # injected `nav_section` session flag tells those LiveViews to keep all internal
+    # navigation under `/nutritionist/conditions` instead of the public `/:locale/conditions`.
+    live_session :nutritionist_conditions,
+      on_mount: MehungryWeb.NutritionistAuthLive,
+      layout: {MehungryWeb.LayoutView, :nutritionist_live},
+      session: %{"nav_section" => "nutritionist"} do
+      live("/conditions", HealthLive.Index, :index)
+      live("/conditions/:id", ConditionDetailLive.Index, :index)
+      live("/conditions/:id/food/:species_id", ConditionDetailLive.Index, :show_food)
     end
   end
 
@@ -466,6 +480,13 @@ defmodule MehungryWeb.Router do
     post("/cookie-consent/decline", ConsentController, :decline)
     # /cookies route goes to CookiesPolicyController, created in Task 4
     get("/cookies", CookiesPolicyController, :index)
+    get("/terms", TermsController, :index)
+    get("/legal", LegalNoticeController, :index)
+
+    # One-click unsubscribe from the beta-tester list (link in welcome/invite
+    # emails). A plain GET controller so it works without JS and runs exactly
+    # once (a LiveView mount would run on both the HTTP and WS passes).
+    get("/trial/unsubscribe/:token", TrialController, :unsubscribe)
   end
 
   scope "/", MehungryWeb do
@@ -475,6 +496,7 @@ defmodule MehungryWeb.Router do
       on_mount: MehungryWeb.RestoreLocale,
       layout: {MehungryWeb.LayoutView, :landing_live} do
       localized_live("/welcome", LandingLive, :index)
+      localized_live("/trial", TrialLive.Index, :index)
     end
 
     live_session :maybe, on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.MaybeUserAuthLive] do
@@ -511,10 +533,6 @@ defmodule MehungryWeb.Router do
         PublicNutritionistLive.Article,
         :show
       )
-
-      localized_live("/conditions", HealthLive.Index, :index)
-      localized_live("/conditions/:id", ConditionDetailLive.Index, :index)
-      localized_live("/conditions/:id/food/:species_id", ConditionDetailLive.Index, :show_food)
 
       localized_live("/feedback", FeedbackLive, :index)
     end

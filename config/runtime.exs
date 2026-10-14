@@ -127,14 +127,29 @@ config :ex_aws,
   secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY"),
   region: "eu-central-1"
 
-# Object storage backend. STORAGE_BACKEND=supabase flips the whole app over to
-# Supabase Storage; anything else (or unset) keeps the legacy AWS S3 path. The
+# Object storage backend. Supabase Storage is the default (and the only backend
+# used in production); STORAGE_BACKEND=s3 selects the legacy AWS S3 path. The
 # Supabase service_role key is a server-only secret — never exposed to clients.
 config :mehungry, :storage,
-  backend: String.to_atom(System.get_env("STORAGE_BACKEND", "s3")),
+  backend: String.to_atom(System.get_env("STORAGE_BACKEND", "supabase")),
   supabase_url: System.get_env("SUPABASE_URL"),
   service_role_key: System.get_env("SUPABASE_SERVICE_ROLE_KEY"),
   bucket: System.get_env("SUPABASE_STORAGE_BUCKET", "media")
+
+# Android closed-testing opt-in invite (admin panel). Falls back to the
+# config.exs defaults when the env vars are unset.
+config :mehungry, :android_beta,
+  opt_in_url:
+    System.get_env(
+      "ANDROID_BETA_OPT_IN_URL",
+      "https://play.google.com/apps/testing/com.mehungry.app"
+    ),
+  group_email:
+    System.get_env(
+      "ANDROID_BETA_GROUP_EMAIL",
+      "mehungry-android-testers@googlegroups.com"
+    ),
+  current_version: System.get_env("ANDROID_BETA_CURRENT_VERSION", "1.0.0")
 
 if config_env() == :prod do
   config :mehungry, Mehungry.Mailer,

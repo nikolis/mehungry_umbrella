@@ -35,12 +35,13 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   }
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id}, session, socket) do
     language = socket.assigns[:current_language] || "en"
+    base = conditions_base(session, language)
 
     case Health.get_condition(id, language) do
       nil ->
-        {:ok, push_navigate(socket, to: ~p"/#{language}/conditions")}
+        {:ok, push_navigate(socket, to: base)}
 
       condition ->
         # Resolved synchronously (not via assign_async) so the disconnected HTTP
@@ -87,6 +88,8 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
          socket
          |> assign(:condition, condition)
          |> assign(:language, language)
+         |> assign(:base, base)
+         |> assign_new(:locale, fn -> language end)
          |> assign_new(:current_user, fn -> nil end)
          |> assign(:current_user_recipes, saved_recipe_ids(socket))
          |> assign(:recommendations, AsyncResult.ok(recommendations))
@@ -412,7 +415,7 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
      # base page so crawlers don't treat it as duplicate content.
      |> assign(
        :canonical_path,
-       ~p"/#{socket.assigns.language}/conditions/#{socket.assigns.condition.id}"
+       "#{socket.assigns.base}/#{socket.assigns.condition.id}"
      )
      |> assign_async([:modal_nutrients, :modal_compounds, :modal_recipes], fn ->
        ingredients =
@@ -691,6 +694,14 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
   def recommendation_label("monitor"), do: gettext("Monitor")
   def recommendation_label("encourage"), do: gettext("Encourage")
   def recommendation_label(rec), do: String.capitalize(rec)
+
+  # Base path for condition links. Under the nutritionist panel the whole workflow
+  # stays within `/nutritionist/conditions`; on the public site it is the
+  # locale-prefixed `/:locale/conditions`.
+  defp conditions_base(%{"nav_section" => "nutritionist"}, _language),
+    do: "/nutritionist/conditions"
+
+  defp conditions_base(_session, language), do: "/#{language}/conditions"
 
   # Gettext-translated label for a top-macro nutrient card (canonical English key
   # from `@display_labels`); explicit clauses so `mix gettext.extract` sees them.

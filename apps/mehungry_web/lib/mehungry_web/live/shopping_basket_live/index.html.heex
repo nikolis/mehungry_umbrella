@@ -82,7 +82,6 @@
           <.render_basket_items
             shopping_basket={@shopping_basket}
             current_language={@current_language}
-            condition_ids={@condition_ids}
           />
         <% end %>
         <%= if length(@shopping_basket.basket_ingredients) < 1 do %>
@@ -233,11 +232,6 @@
                 <% end %>
                 -->
                 <%= if @custom_results != [] do %>
-                  <% custom_result_flags =
-                    MehungryWeb.RecipeFlags.flags_for_ingredient_ids(
-                      Enum.map(@custom_results, & &1.id),
-                      @condition_ids
-                    ) %>
                   <div class="mt-3 space-y-2">
                     <p class="text-parchment-dim text-xs uppercase tracking-wide">
                       Your ingredients
@@ -251,11 +245,6 @@
                         <div>
                           <div class="text-parchment font-medium">{ingredient.name}</div>
                           <div class="text-paprika text-xs">Custom</div>
-                          <MehungryWeb.RecipeComponents.condition_flag_badges
-                            flags={Map.get(custom_result_flags, ingredient.id, [])}
-                            limit={2}
-                            class="mt-1"
-                          />
                         </div>
                         <svg
                           class="w-5 h-5 text-parchment-dim"

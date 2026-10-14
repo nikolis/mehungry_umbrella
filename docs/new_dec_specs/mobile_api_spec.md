@@ -60,12 +60,12 @@ drives the client. A later cursor upgrade (`?before=<id>`) is noted per-endpoint
 | Social (like/comment/follow) | `Api.V1.EngagementController`, `FollowController` | `Posts`, `Accounts.Rules`/`UserContent` |
 | Search | `Api.V1.SearchController` | `Search`, `Food.IngredientQueries` |
 | Foods / species | `Api.V1.SpeciesController` | `Food` (`FoundementalFoodSpecies`), `Food.EvidenceAggregation` |
-| Conditions | `Api.V1.ConditionController` | `Health` |
 | Calendar / meals | `Api.V1.MealController` | `History` |
 | Basket | `Api.V1.BasketController` | `Inventory` |
 | Profile / preferences | `Api.V1.ProfileController`, `PreferencesController` | `Accounts.Profiles`, `Survey` |
 | Subscriptions | `Api.V1.SubscriptionController` | `Subscriptions`, `Billing` |
 | Notifications / invitations | `Api.V1.InvitationController` | `Professionals` |
+| Feedback | `Api.V1.FeedbackController` | `Feedback` |
 | Nutritionist (phase 2) | `Api.V1.Nutritionist.*` | `Professionals`, `History` |
 
 Add a new pipeline + scope in `router.ex`:
@@ -86,8 +86,6 @@ scope "/api/v1", MehungryWeb.Api.V1 do
   get  "/search", SearchController, :index
   get  "/species", SpeciesController, :index
   get  "/species/:slug", SpeciesController, :show
-  get  "/conditions", ConditionController, :index
-  get  "/conditions/:id", ConditionController, :show
 end
 
 scope "/api/v1", MehungryWeb.Api.V1 do
@@ -151,8 +149,7 @@ and gating UI).
   "onboarding_level": 3,
   "tier": "free",
   "quota": { "recipe_generations": {"used": 0, "limit": 0}, "meal_plans": {"used": 0, "limit": 0} },
-  "counts": { "posted_recipes": 0, "followers": 0, "following": 0 },
-  "condition_opt_ins": [ {"condition_id": 3, "name": "Kidney Stones"} ]
+  "counts": { "posted_recipes": 0, "followers": 0, "following": 0 }
 } }
 ```
 
@@ -166,7 +163,7 @@ web view): `POST /users/reset_password`, `GET/POST /users/confirm`.
 ### `GET /api/v1/feed` 🔓
 The Home tab. Recipe cards from the community (`Food.Recipes.list_feed/…` +
 `Posts`), newest first, infinite scroll. Logged-in requests personalize (follow
-state, `condition_flags` for opted-in users).
+state).
 ```json
 { "data": [ {
   "id": 149,
@@ -180,8 +177,7 @@ state, `condition_flags` for opted-in users).
   "prep_time": {"lower": 20, "upper": 20}, "cook_time": {"lower": 40, "upper": 40},
   "likes_count": 0, "comments_count": 0,
   "liked_by_me": false, "following_author": false,
-  "inserted_at": "2026-07-10T09:00:00Z",
-  "condition_flags": []
+  "inserted_at": "2026-07-10T09:00:00Z"
 } ],
   "meta": { "page": 1, "page_size": 10, "has_more": true } }
 ```
@@ -189,7 +185,7 @@ Query: `?page`, `?page_size`, future `?before=<recipe_id>` cursor.
 
 ### `GET /api/v1/recipes/:id` 🔓
 Full recipe detail (image, timing, servings, ingredients grouped, steps,
-nutrients, hashtags, condition flags, engagement). Mirrors the recipe modal.
+nutrients, hashtags, engagement). Mirrors the recipe modal.
 ```json
 { "data": {
   "id": 149, "title": "…", "description": "…", "author": { … },
@@ -212,7 +208,6 @@ nutrients, hashtags, condition flags, engagement). Mirrors the recipe modal.
   },
   "primary_nutrients_size": 8,
   "ingredient_interactions": [],
-  "condition_flags": [ {"condition":"Kidney Stones","compound":"Oxalate","recommendation":"avoid","severity":"high"} ],
   "likes_count": 0, "comments_count": 0, "liked_by_me": false,
   "saved_by_me": false, "following_author": false
 } }
@@ -359,8 +354,10 @@ currently toggles.)
 
 ## 7. Onboarding & dietary preferences (Survey)
 
-Drives the 3-step onboarding wizard (language → diet → conditions/intolerances)
-and the diet picker. Backed by `Survey` + `Accounts.Rules`/`UserConditionOptIn`.
+Drives the onboarding wizard (language → diet → intolerances) and the diet
+picker. Backed by `Survey` + `Accounts.Rules`. Health-condition selection is
+**not** part of the consumer app — condition/dietary guidance is available only
+to nutritionists and admins (see §8).
 
 ### `GET /api/v1/preferences/options` 🔓
 Static vocabulary for the wizard.
@@ -376,13 +373,18 @@ Static vocabulary for the wizard.
 ### `PUT /api/v1/me/preferences` 🔒
 ```json
 { "language": "en", "diet": "omnivore", "intolerances": ["lactose"],
-  "condition_opt_ins": [3], "onboarding_level": 3 }
+  "onboarding_level": 3 }
 ```
-Setting `condition_opt_ins` enables the per-recipe `condition_flags` (badges).
 
 ---
 
-## 8. Foods (species) & Health conditions
+## 8. Foods (species)
+
+> **Health-condition endpoints were removed from the consumer API.** The
+> condition→food dietary-guidance surfaces (`/conditions*`, `related_conditions`
+> on species, `condition_flags` on recipes, and the end-user condition opt-in)
+> no longer exist — that functionality is gated to the nutritionist and admin
+> web surfaces only. See `docs/legal/legal_review_2026-10.md`.
 
 ### `GET /api/v1/species` 🔓 `?q=apple&page=`
 Foods tab list. Each row: name, family/variety tag, slug.
@@ -393,33 +395,16 @@ Foods tab list. Each row: name, family/variety tag, slug.
 ```
 ### `GET /api/v1/species/:slug` 🔓
 Species detail: description, nutrition facts, bioactive compounds (evidence
-summaries via `Food.EvidenceAggregation`), related conditions, ingredients.
+summaries via `Food.EvidenceAggregation`), ingredients.
 ```json
 { "data": {
   "id": 12, "name": "Spinach", "slug": "spinach", "scientific_name": "Spinacia oleracea",
   "family": "Amaranthaceae", "variety": null,
   "compounds": [ { "name": "Oxalate", "mean": 750.0, "unit": "mg/100g",
     "range": [600,900], "variance": 12.3, "evidence_score": 0.82, "study_count": 5 } ],
-  "related_conditions": [ {"id":3,"name":"Kidney Stones","recommendation":"avoid","severity":"high"} ],
   "ingredients": [ {"id":412,"name":"Spinach, raw"} ]
 } }
 ```
-
-### `GET /api/v1/conditions` 🔓
-Conditions tab. `{ "data": [ {"id":3,"name":"Kidney Stones","category":"renal","slug":"kidney-stones"}, … ] }`
-
-### `GET /api/v1/conditions/:id` 🔓
-Condition detail: dietary guidance, implicated compounds, and the foods/species
-to be mindful of (`Health.species_for_condition/2`).
-```json
-{ "data": {
-  "id": 3, "name": "Kidney Stones", "category": "renal",
-  "compound_recommendations": [ {"compound":"Oxalate","recommendation":"avoid","severity":"high","evidence_level":"moderate","source":"curated"} ],
-  "species": [ {"id":12,"name":"Spinach","slug":"spinach","reason_compound":"Oxalate"} ]
-} }
-```
-### `GET /api/v1/conditions/:id/species/:species_id` 🔓 — the drill-in "food for
-condition" page (`/conditions/:id/food/:species_id`).
 
 ---
 
@@ -627,6 +612,40 @@ later consideration — out of scope for MVP.)
 
 ---
 
+## 17. Feedback
+
+The mobile mirror of the `/feedback` LiveView (`MehungryWeb.FeedbackLive`).
+Backed by the `Feedback` context; reuses `Feedback.create_feedback/1` (the exact
+function the LiveView calls) so validation lives in one place.
+
+### `POST /api/v1/feedback` 🔓
+Public with optional auth. When a bearer token is sent the feedback is attributed
+to the caller (`user_id` + the account email is used, overriding any `email` in
+the body — same as the LiveView). Anonymous callers may include an optional
+`email` for a reply.
+
+Request:
+```json
+{ "message": "Love the app — a dark mode would be great.", "email": "you@example.com" }
+```
+- `message` **required**, 10–2000 chars.
+- `email` optional (ignored/overridden when authenticated); must look like an email.
+
+Response `201`:
+```json
+{ "data": {
+  "id": 42,
+  "message": "Love the app — a dark mode would be great.",
+  "email": "you@example.com",
+  "user_id": null,
+  "submitted_at": "2026-10-12T14:30:00Z"
+} }
+```
+Validation failures return `422` with the standard `errors.fields` envelope
+(e.g. `{ "errors": { "detail": "Validation failed", "fields": { "message": ["should be at least 10 character(s)"] } } }`).
+
+---
+
 ## 13. Phoenix Channels (real-time)
 
 Reuse the existing `MehungryWeb.UserSocket` (currently a no-op scaffold). Add
@@ -751,8 +770,6 @@ GET/PUT /api/v1/me/preferences
 GET    /api/v1/search
 GET    /api/v1/ingredients/search
 GET    /api/v1/species                 GET /api/v1/species/:slug
-GET    /api/v1/conditions              GET /api/v1/conditions/:id
-GET    /api/v1/conditions/:id/species/:species_id
 GET    /api/v1/meals                   GET /api/v1/meals/day/:date
 POST   /api/v1/meals                   PUT/DELETE /api/v1/meals/:id
 POST   /api/v1/meals/:id/consume
@@ -765,6 +782,7 @@ POST   /api/v1/basket/import/meal/:meal_id
 POST   /api/v1/uploads/presign         POST /api/v1/uploads
 GET    /api/v1/subscription
 POST   /api/v1/subscription/checkout   POST /api/v1/subscription/portal
+POST   /api/v1/feedback
 
 CHANNELS (wss://host/socket, params: {token})
   feed:lobby        recipe:<id>        user:<user_id>
