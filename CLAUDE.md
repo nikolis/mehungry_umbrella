@@ -163,7 +163,7 @@ Total concurrency is capped at **12 job slots** so background jobs fit within th
 
 Full-text (PMC) + measurement extraction is **no longer a server-side Oban pipeline** — it moved to the non-deployed `apps/mehungry_local_ai` service, which posts full text + review-gated candidates back over `/api/local_ai/*`. `/professional/science` shows read-only status; review stays at `/professional/compound-candidates`. See `docs/ai/measurement_extraction.md`.
 
-Cron: `InstagramTokenRefreshWorker` at `30 1 * * *`, `DailyRecipeGenerationWorker` at `0 2 * * *`, `PipelineWatchdogWorker` every 10 min (resumes any science-pipeline run whose single-threaded chain broke — see `Mehungry.Science.PipelineWatchdog` + `docs/science/scientific_pipeline.md`).
+Cron: `InstagramTokenRefreshWorker` at `30 1 * * *`, `PinterestTokenRefreshWorker` at `45 1 * * *` (refreshes Pinterest access tokens from the stored refresh token; the Pinterest client also refresh-retries once on a 401), `DailyRecipeGenerationWorker` at `0 2 * * *`, `PipelineWatchdogWorker` every 10 min (resumes any science-pipeline run whose single-threaded chain broke — see `Mehungry.Science.PipelineWatchdog` + `docs/science/scientific_pipeline.md`).
 
 ### Instagram Integration (`Mehungry.Social.Instagram`)
 

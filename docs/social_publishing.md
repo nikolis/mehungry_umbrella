@@ -46,7 +46,7 @@ Application.get_env(:mehungry, :social_media_publisher, Mehungry.Social.Publishe
 |---|---|---|
 | `Mehungry.Social.Instagram` (+ `Instagram.Client` behind `Instagram.ClientBehaviour`) | HTTPoison | Long-lived token lifecycle in `Instagram.Token`; captions capped at 2200 chars by `Instagram.Caption`; stubbed in tests via `:instagram_client` |
 | `Mehungry.Social.Facebook` | HTTPoison | Page posts via stored page tokens on `facebook_token`; returns `{:ok, body} \| {:error, {:http_error \| :transport_error, ...}}` |
-| `Mehungry.Social.Pinterest` | HTTPoison | Host comes from `:pinterest_api_base`, set in `runtime.exs` from `PINTEREST_ENV` (`live` → real API, anything else/unset → sandbox). Tokens are not interchangeable between environments — reconnect accounts after switching; the ueberauth strategy and token exchange read the same key. Builds pin links via the `:endpoint_module` runtime seam |
+| `Mehungry.Social.Pinterest` (+ token lifecycle in `Pinterest.Token`) | HTTPoison (stubbed in tests via `:pinterest_http_client`) | Host comes from `:pinterest_api_base`, set in `runtime.exs` from `PINTEREST_ENV` (`live` → real API, anything else/unset → sandbox). Tokens are not interchangeable between environments — reconnect accounts after switching; the ueberauth strategy and token exchange read the same key. Access tokens (~30 days) are auto-refreshed from the stored refresh token (see below). Builds pin links via the `:endpoint_module` runtime seam |
 
 OAuth strategies for connecting accounts stay in the web app
 (`mehungry_web/ueberauth/strategy/{facebook,instagram,pinterest}/`), wired in
@@ -71,6 +71,17 @@ The user-flow components duplicate parts of the platform dispatch. Unifying
 them onto the publisher would change user-facing behavior (feedback shapes,
 no post logs), so it was deferred — known future work.
 
-Daily token refresh: `InstagramTokenRefreshWorker` (cron 01:30 UTC) refreshes
-long-lived Instagram tokens; invalid tokens are marked stale and surface as
-"reconnect" in `/professional/ai-bot/social`.
+Daily token refresh:
+- `InstagramTokenRefreshWorker` (cron 01:30 UTC) refreshes long-lived Instagram
+  tokens.
+- `PinterestTokenRefreshWorker` (cron 01:45 UTC) refreshes Pinterest access
+  tokens (~30-day lifetime) from the stored refresh token before they expire.
+  In addition, the authed Pinterest API calls (`get_boards`/`create_board`/
+  `create_pin`) refresh-and-retry once on a `401`, so a token that lapses
+  between cron runs recovers transparently.
+
+In both cases invalid tokens (4xx on refresh) are marked stale and surface as
+"reconnect" in `/professional/ai-bot/social` and the user's connected-accounts
+settings. The OAuth callback (`AuthController`) redirects a connect attempt with
+no logged-in user to the login page instead of raising, so a dropped session no
+longer reads as a failed connect.

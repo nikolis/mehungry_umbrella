@@ -168,6 +168,8 @@ config :mehungry, Oban,
      crontab: [
        # 1:30am UTC daily — refresh Instagram long-lived tokens before the 2am run
        {"30 1 * * *", Mehungry.ObanWorkers.InstagramTokenRefreshWorker},
+       # 1:45am UTC daily — refresh Pinterest access tokens before the 2am run
+       {"45 1 * * *", Mehungry.ObanWorkers.PinterestTokenRefreshWorker},
        # 2am UTC daily — generate recipes for the next day + schedule publish jobs
        {"0 2 * * *", Mehungry.ObanWorkers.DailyRecipeGenerationWorker},
        # every 10 min — resume any pipeline run (crawl/annotation/derivation) whose chain broke

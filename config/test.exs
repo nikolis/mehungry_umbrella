@@ -54,6 +54,10 @@ config :mehungry, :pubtator_rate_limit, 1_000_000
 config :mehungry, :instagram_client, Mehungry.Social.Instagram.ClientStub
 config :mehungry, :social_media_publisher, Mehungry.Social.PublisherStub
 
+# Pinterest v5 HTTP client is stubbed in tests — no network calls. Tests control
+# responses per request via the `:pinterest_http_stub` app config key.
+config :mehungry, :pinterest_http_client, Mehungry.Social.PinterestHttpStub
+
 # Taxonomy classifier is stubbed in tests — no AI/API calls
 config :mehungry, :taxonomy_classifier, Mehungry.AI.TaxonomyClassifierStub
 

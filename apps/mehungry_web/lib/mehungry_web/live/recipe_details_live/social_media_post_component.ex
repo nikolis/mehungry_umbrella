@@ -8,6 +8,7 @@ defmodule MehungryWeb.SocialMediaPostComponent do
   alias Mehungry.Food
   alias Mehungry.Social.Facebook
   alias Mehungry.Social.Pinterest
+  alias MehungryWeb.PinterestComponents
   alias MehungryWeb.SvgComponents
 
   import MehungryWeb.CoreComponents
@@ -25,27 +26,43 @@ defmodule MehungryWeb.SocialMediaPostComponent do
   def update(assigns, socket) do
     changeset = FacebookPost.change_facebook_post(%FacebookPost{}, %{})
 
-    {pinterest_boards, pinterest_boards_error} =
-      if Map.get(assigns, :social_media) == "pinterest" do
-        user = Map.get(assigns, :user)
-        if user, do: fetch_boards(user), else: {[], nil}
-      else
-        {[], nil}
-      end
-
     socket =
       socket
       |> assign(assigns)
       |> assign(:changeset, changeset)
       |> assign(:post, %FacebookPost{})
       |> assign(:state, Map.get(assigns, :state, :normal))
-      |> assign(:pinterest_boards, pinterest_boards)
-      |> assign(:pinterest_boards_error, pinterest_boards_error)
-      |> assign(:pinterest_board_id, nil)
-      |> assign(:show_create_board, false)
-      |> assign(:create_board_error, nil)
+      |> maybe_load_pinterest_boards()
 
     {:ok, socket}
+  end
+
+  # Fetch the board list once per component instance. Re-renders (e.g. when the
+  # parent sends a post result) must not re-fetch and reset the selection — that
+  # would discard a board the user just created while Pinterest's list is still
+  # eventually-consistent.
+  defp maybe_load_pinterest_boards(socket) do
+    cond do
+      socket.assigns[:social_media] != "pinterest" ->
+        socket
+
+      Map.has_key?(socket.assigns, :pinterest_boards) ->
+        socket
+
+      true ->
+        {boards, boards_error} =
+          case socket.assigns[:user] do
+            nil -> {[], nil}
+            user -> fetch_boards(user)
+          end
+
+        socket
+        |> assign(:pinterest_boards, boards)
+        |> assign(:pinterest_boards_error, boards_error)
+        |> assign(:pinterest_board_id, nil)
+        |> assign(:show_create_board, false)
+        |> assign(:create_board_error, nil)
+    end
   end
 
   # Distinguishes an API/auth failure (surface "reconnect") from a genuinely
@@ -123,12 +140,15 @@ defmodule MehungryWeb.SocialMediaPostComponent do
 
     case Pinterest.create_board(user, board_params) do
       {:ok, board} ->
-        {boards, boards_error} = fetch_boards(user)
+        # Use the board Pinterest just returned instead of re-fetching the
+        # (eventually-consistent) list, which often omits it for a short window.
+        # Prepend + auto-select so the user can pin immediately.
+        boards = prepend_board(socket.assigns.pinterest_boards, board)
 
         {:noreply,
          socket
          |> assign(:pinterest_boards, boards)
-         |> assign(:pinterest_boards_error, boards_error)
+         |> assign(:pinterest_boards_error, nil)
          |> assign(:pinterest_board_id, board["id"])
          |> assign(:show_create_board, false)
          |> assign(:create_board_error, nil)}
@@ -296,30 +316,23 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                           No Pinterest boards found. Create your first board below.
                         </p>
                       </div>
-                      <.create_board_form myself={@myself} error={@create_board_error} />
+                      <PinterestComponents.board_form target={@myself} error={@create_board_error} />
                     </div>
                   <% else %>
                     <div class="space-y-3">
-                      <p class="text-sm text-parchment-dim">
-                        Pinning <span class="font-semibold text-parchment">{@recipe.title}</span>
-                        — choose a board:
-                      </p>
-                      <div class="grid gap-2 max-h-48 overflow-y-auto pr-1">
+                      <p class="text-sm text-parchment-dim">Choose a board:</p>
+                      <div class="grid gap-2 max-h-56 overflow-y-auto pr-1">
                         <%= for board <- @pinterest_boards do %>
                           <button
                             phx-click="select_pinterest_board"
                             phx-value-board_id={board["id"]}
                             phx-target={@myself}
-                            class={[
-                              "w-full text-left px-4 py-3 rounded-lg border text-sm transition",
-                              if(@pinterest_board_id == board["id"],
-                                do: "bg-paprika/20 border-paprika text-parchment",
-                                else:
-                                  "border-ink-panel2 bg-black/20 text-parchment-dim hover:border-parchment-dim"
-                              )
-                            ]}
+                            class="w-full text-left focus:outline-none"
                           >
-                            {board["name"]}
+                            <PinterestComponents.board_card
+                              board={board}
+                              selected={@pinterest_board_id == board["id"]}
+                            />
                           </button>
                         <% end %>
                       </div>
@@ -331,9 +344,30 @@ defmodule MehungryWeb.SocialMediaPostComponent do
                         <.icon name="hero-plus" class="h-4 w-4" /> New board
                       </button>
                       <%= if @show_create_board do %>
-                        <.create_board_form myself={@myself} error={@create_board_error} />
+                        <PinterestComponents.board_form target={@myself} error={@create_board_error} />
                       <% end %>
-                      <div class="flex justify-end pt-2">
+
+                      <%= if selected_board = Enum.find(@pinterest_boards, &(&1["id"] == @pinterest_board_id)) do %>
+                        <div class="flex items-center gap-3 p-3 rounded-xl border border-ink-panel2 bg-black/20">
+                          <img
+                            :if={@recipe.image_url}
+                            src={@recipe.image_url}
+                            alt=""
+                            class="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                          />
+                          <div class="min-w-0">
+                            <p class="text-[11px] uppercase tracking-wide text-parchment-dim mb-0.5">
+                              Pin preview
+                            </p>
+                            <p class="text-sm font-semibold text-parchment truncate">{@recipe.title}</p>
+                            <p class="text-xs text-parchment-dim truncate">
+                              to <span class="text-paprika-soft">{selected_board["name"]}</span>
+                            </p>
+                          </div>
+                        </div>
+                      <% end %>
+
+                      <div class="flex justify-end pt-1">
                         <button
                           phx-click="post_pinterest"
                           phx-target={@myself}
@@ -454,52 +488,8 @@ defmodule MehungryWeb.SocialMediaPostComponent do
     end
   end
 
-  attr :myself, :any, required: true
-  attr :error, :string, default: nil
-
-  defp create_board_form(assigns) do
-    ~H"""
-    <form
-      phx-submit="create_pinterest_board"
-      phx-target={@myself}
-      class="space-y-3 p-4 rounded-lg bg-black/20 border border-ink-panel2"
-    >
-      <p class="text-sm font-semibold text-parchment">Create a new board</p>
-      <input
-        type="text"
-        name="board[name]"
-        required
-        maxlength="180"
-        placeholder="Board name"
-        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 placeholder-parchment-dim focus:border-paprika focus:outline-none"
-      />
-      <textarea
-        name="board[description]"
-        rows="2"
-        maxlength="500"
-        placeholder="Description (optional)"
-        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 placeholder-parchment-dim focus:border-paprika focus:outline-none"
-      ></textarea>
-      <select
-        name="board[privacy]"
-        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none"
-      >
-        <option value="PUBLIC">Public</option>
-        <option value="SECRET">Secret</option>
-      </select>
-      <%= if @error do %>
-        <p class="text-xs text-red-400">{@error}</p>
-      <% end %>
-      <div class="flex justify-end">
-        <button
-          type="submit"
-          class="flex items-center gap-2 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-sm font-bold transition-colors"
-        >
-          <.icon name="hero-plus" class="h-4 w-4" /> Create Board
-        </button>
-      </div>
-    </form>
-    """
+  defp prepend_board(boards, board) do
+    [board | Enum.reject(boards, &(&1["id"] == board["id"]))]
   end
 
   defp notify_parent(self, msg) do
