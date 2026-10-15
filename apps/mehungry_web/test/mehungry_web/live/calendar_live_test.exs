@@ -44,6 +44,50 @@ defmodule MehungryWeb.CalendarLiveTest do
       assert html =~ "protein"
     end
 
+    test "navigating to another week loads that week's meals from the DB", %{
+      conn: conn,
+      user: user
+    } do
+      near = recipe_fixture(user, %{title: "Near Week Dish"})
+      far = recipe_fixture(user, %{title: "Far Week Dish"})
+
+      now = NaiveDateTime.utc_now()
+      far_dt = ~N[2026-07-15 12:00:00]
+
+      {:ok, _} =
+        History.create_user_meal(%{
+          start_dt: now,
+          end_dt: now,
+          user_id: user.id,
+          title: "Near",
+          recipe_user_meals: [%{recipe_id: near.id, consume_portions: 1, cooking_portions: 1}]
+        })
+
+      {:ok, _} =
+        History.create_user_meal(%{
+          start_dt: far_dt,
+          end_dt: far_dt,
+          user_id: user.id,
+          title: "Far",
+          recipe_user_meals: [%{recipe_id: far.id, consume_portions: 1, cooking_portions: 1}]
+        })
+
+      {:ok, view, html} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar")
+
+      # Only the current week is loaded on mount.
+      assert html =~ "Near Week Dish"
+      refute html =~ "Far Week Dish"
+
+      # Week navigation patches to /calendar/ondate/:date, which must reload that
+      # week's meals (they were never loaded on mount).
+      patched = render_patch(view, ~p"/calendar/ondate/2026-07-15")
+      assert patched =~ "Far Week Dish"
+      refute patched =~ "Near Week Dish"
+    end
+
     test "an arbitrary free-food meal renders its card and counts in the day total",
          %{conn: conn, user: user} do
       now = NaiveDateTime.utc_now()

@@ -20,7 +20,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
 
       _assignment ->
         client = Accounts.get_user!(client_id)
-        user_meals = load_and_format_user_meals(client_id)
+        user_meals = load_and_format_user_meals(client_id, Date.utc_today())
         recipes = Food.list_user_recipes_for_selection(nil)
 
         socket = assign_device_kind(socket)
@@ -47,9 +47,16 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
   defp apply_action(socket, :index, _params), do: socket
 
   defp apply_action(socket, :particular, %{"date" => date}) do
+    # Week navigation patches here with no reload of its own, so load the
+    # newly-viewed week's meals (the calendar only ever shows one week).
+    socket = assign(socket, :particular_date, date)
+
     socket
     |> push_event("go_to_date", %{date: date})
-    |> assign(:particular_date, date)
+    |> assign(
+      :user_meals,
+      load_and_format_user_meals(socket.assigns.client_id, current_calendar_date(socket))
+    )
   end
 
   defp apply_action(socket, :new, %{"date" => start_date, "title" => title}) do
@@ -129,7 +136,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
 
       if meal.user_id == client_id do
         History.delete_user_meal(meal)
-        user_meals = load_and_format_user_meals(client_id)
+        user_meals = load_and_format_user_meals(client_id, current_calendar_date(socket))
 
         {:noreply,
          socket
@@ -229,8 +236,29 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
     """
   end
 
-  defp load_and_format_user_meals(user_id) do
-    History.list_history_user_meals_for_user(user_id)
+  # Loads only the meals for the week the given date falls in, rather than the
+  # client's entire history (the calendar only ever shows one week).
+  defp load_and_format_user_meals(user_id, %Date{} = date) do
+    first = Date.beginning_of_week(date)
+    last = Date.add(first, 6)
+
+    History.list_calendar_user_meals(user_id, first, last)
     |> History.format_user_meals()
+  end
+
+  defp current_calendar_date(socket) do
+    case socket.assigns[:particular_date] do
+      date when is_binary(date) ->
+        case Date.from_iso8601(date) do
+          {:ok, d} -> d
+          _ -> Date.utc_today()
+        end
+
+      %Date{} = d ->
+        d
+
+      _ ->
+        Date.utc_today()
+    end
   end
 end

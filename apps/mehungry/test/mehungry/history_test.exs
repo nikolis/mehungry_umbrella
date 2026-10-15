@@ -266,4 +266,129 @@ defmodule MehungryApi.HistoryTest do
                })
     end
   end
+
+  describe "calendar loading + denormalized ingredient nutrients" do
+    import Mehungry.HistoryFixtures
+
+    alias Mehungry.Food.{Ingredient, IngredientNutrient, MeasurementUnit, Nutrient}
+    alias Mehungry.History.IngredientUserMeal
+    alias Mehungry.Repo
+
+    setup do
+      %{user: AccountsFixtures.user_fixture()}
+    end
+
+    test "list_calendar_user_meals/3 returns only meals within the week range", %{user: user} do
+      recipe = FoodFixtures.recipe_fixture(user)
+      rums = [%{recipe_id: recipe.id, consume_portions: 1, cooking_portions: 1}]
+
+      in_week =
+        user_meal_fixture(%{
+          user_id: user.id,
+          start_dt: ~N[2026-03-04 12:00:00],
+          recipe_user_meals: rums
+        })
+
+      _before_week =
+        user_meal_fixture(%{
+          user_id: user.id,
+          start_dt: ~N[2026-02-24 12:00:00],
+          recipe_user_meals: rums
+        })
+
+      _after_week =
+        user_meal_fixture(%{
+          user_id: user.id,
+          start_dt: ~N[2026-03-20 12:00:00],
+          recipe_user_meals: rums
+        })
+
+      result = History.list_calendar_user_meals(user.id, ~D[2026-03-02], ~D[2026-03-08])
+
+      assert Enum.map(result, & &1.id) == [in_week.id]
+    end
+
+    test "create_user_meal stores the ingredient nutrient tree; format reads it back", %{
+      user: user
+    } do
+      {ingredient, gram} = ingredient_with_nutrient()
+
+      {:ok, meal} =
+        History.create_user_meal(%{
+          user_id: user.id,
+          title: "Logged iron",
+          start_dt: ~N[2026-03-04 12:00:00],
+          ingredient_user_meals: [
+            %{ingredient_id: ingredient.id, measurement_unit_id: gram.id, quantity: 100.0}
+          ]
+        })
+
+      [ium] = Repo.all(from i in IngredientUserMeal, where: i.user_meal_id == ^meal.id)
+
+      # The hook persisted the hierarchical tree at write time (not NotLoaded, not empty).
+      assert is_map(ium.nutrients) and map_size(ium.nutrients) > 0
+
+      # The calendar read path surfaces the stored map verbatim (no recomputation).
+      [formatted] =
+        History.list_calendar_user_meals(user.id, ~D[2026-03-02], ~D[2026-03-08])
+        |> History.format_user_meals()
+
+      assert [%{recipe: %{nutrients: nutrients}}] = formatted.ingredient_user_meals
+      assert nutrients == ium.nutrients
+    end
+
+    test "IngredientUserMealPutNutrientsWorker backfills an emptied nutrients column", %{
+      user: user
+    } do
+      {ingredient, gram} = ingredient_with_nutrient()
+
+      {:ok, meal} =
+        History.create_user_meal(%{
+          user_id: user.id,
+          title: "Legacy row",
+          start_dt: ~N[2026-03-04 12:00:00],
+          ingredient_user_meals: [
+            %{ingredient_id: ingredient.id, measurement_unit_id: gram.id, quantity: 100.0}
+          ]
+        })
+
+      [ium] = Repo.all(from i in IngredientUserMeal, where: i.user_meal_id == ^meal.id)
+      stored = ium.nutrients
+
+      # Simulate a row that predates the write-time hook.
+      ium |> Ecto.Changeset.change(nutrients: %{}) |> Repo.update!()
+
+      assert {:ok, _} =
+               Mehungry.IngredientUserMealPutNutrientsWorker.perform(%Oban.Job{
+                 args: %{"ingredient_user_meal_id" => ium.id}
+               })
+
+      assert Repo.get!(IngredientUserMeal, ium.id).nutrients == stored
+    end
+
+    # Persists an ingredient carrying one real `IngredientNutrient` (Iron) plus the
+    # "gram" unit `gram_unit_ids/0` recognises, so a logged 100 g quantity resolves
+    # to a non-empty nutrient tree through the real nutrition engine.
+    defp ingredient_with_nutrient do
+      gram = FoodFixtures.measurement_unit_fixture()
+      mg = Repo.insert!(%MeasurementUnit{name: "mg_#{System.unique_integer([:positive])}"})
+
+      nutrient =
+        Repo.insert!(%Nutrient{
+          name: "Iron, Fe",
+          number: "303",
+          measurement_unit_id: mg.id
+        })
+
+      ingredient = FoodFixtures.ingredient_fixture()
+
+      Repo.insert!(%IngredientNutrient{
+        ingredient_id: ingredient.id,
+        nutrient_id: nutrient.id,
+        amount: 18.0
+      })
+
+      {Repo.get!(Ingredient, ingredient.id), gram}
+    end
+  end
 end

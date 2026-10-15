@@ -4,8 +4,10 @@ defmodule Mehungry.History do
   """
 
   import Ecto.Query, warn: false
+  require Logger
   alias Mehungry.History.ConsumeRecipeUserMeal
   alias Mehungry.History
+  alias Mehungry.History.IngredientUserMeal
   alias Mehungry.Food.NutrientCalculation
   alias Mehungry.Repo
 
@@ -86,26 +88,47 @@ defmodule Mehungry.History do
         where: meal.user_id == ^user_id
 
     Repo.all(query)
-    |> Repo.preload(
-      recipe_user_meals: [
-        recipe: [
-          recipe_ingredients: [
-            :measurement_unit,
-            :ingredient_portion,
-            ingredient: [:category, :ingredient_translation]
-          ]
-        ]
-      ],
-      ingredient_user_meals: [
-        :measurement_unit,
-        ingredient_portion: :measurement_unit,
-        ingredient: [
-          :category,
-          :ingredient_translation,
-          :ingredient_portions,
-          ingredient_nutrients: [nutrient: :measurement_unit]
-        ]
-      ],
+    |> preload_calendar_meals()
+  end
+
+  @doc """
+  The calendar's loader: a user's `UserMeal`s whose `start_dt` falls in the
+  inclusive `start_date..end_date` span (one visible week), preloaded only as
+  deeply as `format_user_meals/1` needs to render the grid. Recipe cards read the
+  stored `recipe.nutrients` jsonb (so `recipe_ingredients` is not loaded), and
+  ingredient cards read the stored `ingredient_user_meals.nutrients` jsonb (so the
+  deep `ingredient_nutrients`/`ingredient_portions` tree is not loaded).
+
+  Replaces the unbounded `list_history_user_meals_for_user/1` on the calendar
+  surfaces — the calendar only ever shows one week, so loading the user's entire
+  history on every mount/mutation was the dominant source of slowness.
+
+  Distinct from `list_user_meals_in_range/3`, which keeps the heavy preloads its
+  blueprint-compatibility consumer needs.
+  """
+  def list_calendar_user_meals(user_id, %Date{} = start_date, %Date{} = end_date) do
+    range_start = NaiveDateTime.new!(start_date, ~T[00:00:00])
+    range_end = NaiveDateTime.new!(end_date, ~T[23:59:59])
+
+    query =
+      from meal in UserMeal,
+        where:
+          meal.user_id == ^user_id and meal.start_dt >= ^range_start and
+            meal.start_dt <= ^range_end
+
+    Repo.all(query)
+    |> preload_calendar_meals()
+  end
+
+  # The light preload set the calendar surfaces need: recipe cards read the stored
+  # `recipe.nutrients` jsonb (no `recipe_ingredients`), ingredient cards read the
+  # stored `ingredient_user_meals.nutrients` jsonb (no deep `ingredient_nutrients`
+  # tree) plus the name/unit for display. Shared by `list_calendar_user_meals/3`
+  # and the single-arg / single-day `list_history_user_meals_for_user` loaders.
+  defp preload_calendar_meals(meals) do
+    Repo.preload(meals,
+      recipe_user_meals: [:recipe],
+      ingredient_user_meals: [:measurement_unit, :ingredient_portion, :ingredient],
       free_food_user_meals: []
     )
   end
@@ -169,11 +192,10 @@ defmodule Mehungry.History do
   one source of truth rather than re-deriving the shape per surface.
   """
   def format_user_meals(meals) when is_list(meals) do
-    gram_ids = NutrientCalculation.gram_unit_ids()
-    Enum.map(meals, &format_user_meal(&1, gram_ids))
+    Enum.map(meals, &format_user_meal/1)
   end
 
-  defp format_user_meal(meal, gram_ids) do
+  defp format_user_meal(meal) do
     %{
       id: meal.id,
       start_dt: meal.start_dt,
@@ -190,7 +212,11 @@ defmodule Mehungry.History do
             img_url: nil,
             recipe: %{
               id: y.ingredient.id,
-              nutrients: scaled_ingredient_nutrient_tree(y, gram_ids),
+              # Read the denormalized tree stored at write time (see
+              # `put_ingredient_user_meal_nutrients/1`). Empty until the row is
+              # written/backfilled — never recompute here (the deep nutrient
+              # preload is no longer loaded on the calendar surface).
+              nutrients: y.nutrients || %{},
               primary_size: 5
             }
           }
@@ -246,28 +272,7 @@ defmodule Mehungry.History do
             meal.start_dt < ^day_end
 
     Repo.all(query)
-    |> Repo.preload(
-      recipe_user_meals: [
-        recipe: [
-          recipe_ingredients: [
-            :measurement_unit,
-            :ingredient_portion,
-            ingredient: [:category, :ingredient_translation]
-          ]
-        ]
-      ],
-      ingredient_user_meals: [
-        :measurement_unit,
-        ingredient_portion: :measurement_unit,
-        ingredient: [
-          :category,
-          :ingredient_translation,
-          :ingredient_portions,
-          ingredient_nutrients: [nutrient: :measurement_unit]
-        ]
-      ],
-      free_food_user_meals: []
-    )
+    |> preload_calendar_meals()
   end
 
   def list_history_user_meals_for_user(user_id, start_dt, end_dt) do
@@ -437,6 +442,7 @@ defmodule Mehungry.History do
     %UserMeal{}
     |> UserMeal.changeset(attrs)
     |> Repo.insert()
+    |> maybe_put_ingredient_nutrients()
   end
 
   @doc """
@@ -455,6 +461,71 @@ defmodule Mehungry.History do
     user_meal
     |> UserMeal.changeset(attrs)
     |> Repo.update()
+    |> maybe_put_ingredient_nutrients()
+  end
+
+  # After a successful meal write, (re)compute and persist the denormalized
+  # nutrient tree on each of its `ingredient_user_meals` so the calendar reads a
+  # stored map instead of rebuilding it per ingredient on every load. Synchronous
+  # (a single ingredient's tree is cheap and the calendar reloads immediately
+  # after save) and best-effort — a computation failure must never fail the user's
+  # save; the next edit or `start_ingredient_nutrient_backfill/0` repairs it.
+  defp maybe_put_ingredient_nutrients({:ok, %UserMeal{} = meal}) do
+    try do
+      put_ingredient_user_meal_nutrients(meal.id)
+    rescue
+      e -> Logger.warning("Failed to store ingredient-meal nutrients for meal #{meal.id}: #{inspect(e)}")
+    end
+
+    {:ok, meal}
+  end
+
+  defp maybe_put_ingredient_nutrients(other), do: other
+
+  @doc """
+  Computes and persists the denormalized `nutrients` tree on every
+  `IngredientUserMeal` of the given user meal (or a single `IngredientUserMeal`
+  id). Loads the heavy `ingredient` preload (the only place it is still needed)
+  and reuses `scaled_ingredient_nutrient_tree/2` so the stored map is byte-for-byte
+  what the old read-time path produced.
+  """
+  def put_ingredient_user_meal_nutrients(user_meal_id) do
+    gram_ids = NutrientCalculation.gram_unit_ids()
+
+    from(ium in IngredientUserMeal, where: ium.user_meal_id == ^user_meal_id)
+    |> Repo.all()
+    |> Repo.preload(
+      ingredient: [:ingredient_portions, ingredient_nutrients: [nutrient: :measurement_unit]]
+    )
+    |> Enum.each(fn ium ->
+      tree = scaled_ingredient_nutrient_tree(ium, gram_ids)
+
+      ium
+      |> Ecto.Changeset.change(nutrients: tree)
+      |> Repo.update()
+    end)
+
+    :ok
+  end
+
+  @doc """
+  Enqueues one `IngredientUserMealPutNutrientsWorker` per existing
+  `IngredientUserMeal` to backfill the denormalized `nutrients` column (for rows
+  that predate the write-time hook). Mirrors
+  `Food.Nutrients.enqueue_nutrient_recalculation_for_all/0`. Returns the number of
+  jobs enqueued. Run this (and let the `:default` queue drain) before switching the
+  calendar read path to the stored column.
+  """
+  def start_ingredient_nutrient_backfill do
+    ids = Repo.all(from ium in IngredientUserMeal, select: ium.id)
+
+    Enum.each(ids, fn id ->
+      %{ingredient_user_meal_id: id}
+      |> Mehungry.IngredientUserMealPutNutrientsWorker.new()
+      |> Oban.insert()
+    end)
+
+    length(ids)
   end
 
   @doc """

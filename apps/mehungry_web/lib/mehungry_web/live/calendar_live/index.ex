@@ -26,7 +26,7 @@ defmodule MehungryWeb.CalendarLive.Index do
     profile = Accounts.get_user_profile_by_user_id(user.id)
     calorie_target = profile && profile.daily_calorie_target
 
-    user_meals = load_and_format_user_meals(user.id)
+    user_meals = load_and_format_user_meals(user.id, Date.utc_today())
     recipes = list_recipes(user)
 
     # The blueprint the user was following persists on their profile, so the
@@ -76,8 +76,12 @@ defmodule MehungryWeb.CalendarLive.Index do
   defp apply_action(socket, :index, params) do
     maybe_track_user(%{}, socket)
 
+    # `:index` does not reset `@particular_date`, so `current_calendar_date/1`
+    # keeps the viewed week when patching back to `/calendar` (close-modal,
+    # delete, stop-following) rather than snapping to today.
     socket
     |> maybe_preselect_blueprint(params["blueprint_id"])
+    |> reload_week_meals()
     |> assign_blueprint_progress()
   end
 
@@ -86,9 +90,12 @@ defmodule MehungryWeb.CalendarLive.Index do
 
     socket = push_event(socket, "go_to_date", %{date: date})
 
+    # Week navigation reaches here via a `push_patch` with no DB reload of its
+    # own, so load the newly-viewed week's meals here.
     socket
     |> assign(:detail_return_to, ~p"/calendar/ondate/#{date}")
     |> assign(:particular_date, date)
+    |> reload_week_meals()
     |> assign_blueprint_progress()
   end
 
@@ -191,7 +198,9 @@ defmodule MehungryWeb.CalendarLive.Index do
       case result do
         {:ok, created, skipped} ->
           Mehungry.Subscriptions.record_usage(socket.assigns.user.id, "meal_plan")
-          user_meals = load_and_format_user_meals(socket.assigns.user.id)
+
+          user_meals =
+            load_and_format_user_meals(socket.assigns.user.id, current_calendar_date(socket))
           result_msg = build_result_message(length(created), skipped)
 
           {:noreply,
@@ -230,7 +239,8 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   @impl true
   def handle_info({:meal_saved, %{return_to: return_to, flash: flash}}, socket) do
-    user_meals = load_and_format_user_meals(socket.assigns.user.id)
+    user_meals =
+      load_and_format_user_meals(socket.assigns.user.id, current_calendar_date(socket))
 
     socket =
       socket
@@ -332,7 +342,8 @@ defmodule MehungryWeb.CalendarLive.Index do
       {:ok, _} ->
         # Patch back rather than push_navigate so the calendar's client-side
         # accordion (JS-toggled `copen`) state survives the delete.
-        user_meals = load_and_format_user_meals(socket.assigns.user.id)
+        user_meals =
+          load_and_format_user_meals(socket.assigns.user.id, current_calendar_date(socket))
 
         {:noreply,
          socket
@@ -505,9 +516,27 @@ defmodule MehungryWeb.CalendarLive.Index do
     Ecto.NoResultsError -> nil
   end
 
-  defp load_and_format_user_meals(user_id) do
-    History.list_history_user_meals_for_user(user_id)
+  # Reloads `@user_meals` for the currently-viewed week (anchored by
+  # `@particular_date`, defaulting to today).
+  defp reload_week_meals(socket) do
+    meals = load_and_format_user_meals(socket.assigns.user.id, current_calendar_date(socket))
+    assign(socket, :user_meals, meals)
+  end
+
+  # Loads only the meals for the week the given date falls in (the calendar never
+  # shows more than one week at a time), rather than the user's entire history.
+  defp load_and_format_user_meals(user_id, %Date{} = date) do
+    {first, last} = week_bounds(date)
+
+    History.list_calendar_user_meals(user_id, first, last)
     |> History.format_user_meals()
+  end
+
+  # The Monday-anchored 7-day span the Widget renders (matches its `get_full_week`
+  # and `assign_blueprint_progress`, all using `Date.beginning_of_week/1`).
+  defp week_bounds(%Date{} = date) do
+    first = Date.beginning_of_week(date)
+    {first, Date.add(first, 6)}
   end
 
   defp build_result_message(created, 0),
