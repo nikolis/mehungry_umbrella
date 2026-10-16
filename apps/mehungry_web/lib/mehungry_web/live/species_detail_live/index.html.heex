@@ -79,36 +79,21 @@
       <% end %>
     </section>
 
-    <%= if length(@nutrients_by_family) > 0 do %>
+    <%= if map_size(@nutrient_tree) > 0 do %>
       <section class="mb-10">
         <h2 class="text-lg font-display font-medium text-parchment mb-4">
           Full Nutrition Breakdown
           <span class="text-parchment-dim font-normal text-sm ml-2">per 100g</span>
         </h2>
-        <%!-- ~15 rows tall, then scroll; zero-valued nutrients are filtered out. --%>
-        <div class="space-y-6 max-h-[540px] overflow-y-auto pr-1 m3-scrollbar">
-          <%= for {family, nutrients} <- @nutrients_by_family do %>
-            <div class="bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden">
-              <div class="px-4 py-2 bg-ink-panel2/50 border-b border-ink-panel2">
-                <h3 class="text-sm font-semibold text-parchment-dim uppercase tracking-wide">
-                  {family}
-                </h3>
-              </div>
-              <table class="w-full">
-                <tbody>
-                  <%= for {n, idx} <- Enum.with_index(nutrients) do %>
-                    <tr class={if rem(idx, 2) == 0, do: "bg-ink-panel", else: "bg-ink-panel/50"}>
-                      <td class="px-4 py-2 text-sm text-parchment-dim">{n.nutrient.name}</td>
-                      <td class="px-4 py-2 text-sm text-basil text-right font-bold [font-variant-numeric:tabular-nums]">
-                        {format_amount(n.amount)}
-                        <span class="text-parchment-dim font-normal">{nutrient_unit(n)}</span>
-                      </td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
-          <% end %>
+        <%= if @composition_summary do %>
+          <p class="text-parchment-dim leading-relaxed mb-4">{@composition_summary}</p>
+        <% end %>
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden">
+          <MehungryWeb.NutritionAccordion.nutrition_accordion
+            nutrients={@nutrient_tree}
+            max_height="600px"
+            show_title={false}
+          />
         </div>
       </section>
     <% end %>
