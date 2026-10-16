@@ -134,7 +134,7 @@ defmodule MehungryWeb.InsightGraphic do
     <g>
       <rect x="44" y="44" width="362" height="92" rx="46" fill="#{@ink}" fill-opacity="0.44"/>
       <rect x="44" y="44" width="362" height="92" rx="46" fill="none" stroke="#{@parchment}" stroke-opacity="0.18" stroke-width="1.5"/>
-      <g transform="translate(#{tx},#{ty}) scale(#{ff(scale)})">#{@logo_mark}</g>
+      <g transform="translate(#{tx},#{ty}) scale(#{ff_scale(scale)})">#{@logo_mark}</g>
       <text x="#{tx + tile + 20}" y="104" font-family="#{@font}" font-size="46" font-weight="800" letter-spacing="0.4" fill="#{@parchment}">m<tspan fill="#{@paprika}">3</tspan>hungry</text>
     </g>
     """
@@ -260,6 +260,11 @@ defmodule MehungryWeb.InsightGraphic do
   defp fmt_g(_), do: 0
 
   defp ff(n), do: :erlang.float_to_binary(n * 1.0, decimals: 1)
+
+  # The logo scale is a sub-1 ratio (tile/1024 ≈ 0.072); ff/1's 1-decimal rounding
+  # would collapse it to 0.1 and render the logo tile ~40% too large (102px vs
+  # 74px), overlapping the wordmark. Format the scale with enough precision.
+  defp ff_scale(n), do: :erlang.float_to_binary(n * 1.0, decimals: 4)
 
   # Wrap a headline to at most two lines near `max` chars, breaking on a space.
   defp wrap_two(text, max) do
