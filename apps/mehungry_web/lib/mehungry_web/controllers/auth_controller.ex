@@ -97,7 +97,7 @@ defmodule MehungryWeb.AuthController do
       case get_session(conn, "claim_token") do
         nil ->
           case Accounts.find_or_create(auth) do
-            {:ok, user} ->
+            {:ok, user, status} ->
               token = auth.extra.raw_info.token.access_token
 
               Task.Supervisor.start_child(MehungryWeb.TaskSupervisor, fn ->
@@ -111,7 +111,10 @@ defmodule MehungryWeb.AuthController do
               end)
 
               conn
+              # renew_session in log_in_user wipes the session, so the sign_up
+              # GA flash must be set *after* it (same as the :info flash below).
               |> UserAuth.log_in_user(user, %{})
+              |> maybe_track_signup(status, :facebook)
               |> put_flash(:info, "Successfully logged in with Facebook.")
               |> redirect(to: "/profile")
 
@@ -137,9 +140,10 @@ defmodule MehungryWeb.AuthController do
     case get_session(conn, "claim_token") do
       nil ->
         case Accounts.find_or_create(auth) do
-          {:ok, user} ->
+          {:ok, user, status} ->
             conn
             |> UserAuth.log_in_user(user, %{})
+            |> maybe_track_signup(status, auth.provider)
             |> put_flash(:info, "Successfully authenticated.")
 
           {:error, reason} ->
@@ -152,6 +156,20 @@ defmodule MehungryWeb.AuthController do
         claim_via_oauth(conn, claim_token, auth)
     end
   end
+
+  # Fire the GA4 `sign_up` key event for OAuth, but only for a genuinely new
+  # account (`:created`) — a returning Facebook/Google login must not count as a
+  # signup. Uses the controller flash seam (see docs/infrastructure/google_analytics.md);
+  # must be piped after `log_in_user` since that renews (clears) the session.
+  defp maybe_track_signup(conn, :created, provider) do
+    put_flash(
+      conn,
+      :ga_event,
+      Jason.encode!(%{name: "sign_up", params: %{method: to_string(provider)}})
+    )
+  end
+
+  defp maybe_track_signup(conn, _status, _provider), do: conn
 
   # Claim a professional-created managed account with the provider identity,
   # then log in. `after_claim` runs any provider-specific side effects (e.g.

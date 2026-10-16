@@ -111,6 +111,13 @@ defmodule Mehungry.Accounts.OAuth do
   """
   def oauth_profile(%Auth{} = auth), do: basic_info(auth)
 
+  @doc """
+  Looks up the user behind an OAuth `%Auth{}` by canonical email, else registers
+  a new third-party user. Returns `{:ok, user, :existing | :created}` so callers
+  can distinguish a returning login from a genuine signup (the web auth flow
+  fires the `sign_up` GA event only on `:created`); `{:error, changeset}` on
+  registration failure.
+  """
   def find_or_create(%Auth{} = auth) do
     email = email_from_auth(auth) || fallback_email_from_auth(auth)
 
@@ -122,9 +129,12 @@ defmodule Mehungry.Accounts.OAuth do
         |> verify_3rd_party_user_changes(user)
         |> maybe_confirm_user()
 
-      {:ok, user}
+      {:ok, user, :existing}
     else
-      register_3rd_party_user(basic_info(auth))
+      case register_3rd_party_user(basic_info(auth)) do
+        {:ok, user} -> {:ok, user, :created}
+        other -> other
+      end
     end
   end
 

@@ -324,7 +324,11 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
           {:ok, _user_meal} ->
             # See :edit above — patch back rather than remount to preserve accordion state.
             send(self(), {:meal_saved, %{return_to: socket.assigns.return_to, flash: nil}})
-            {:noreply, socket}
+
+            {:noreply,
+             MehungryWeb.GoogleAnalytics.track(socket, "add_to_meal_plan", %{
+               meal_type: user_meal_params["meal_type"]
+             })}
 
           {:error, %Ecto.Changeset{} = changeset} ->
             {:noreply, assign(socket, changeset: changeset)}
