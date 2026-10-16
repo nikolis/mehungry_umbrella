@@ -270,7 +270,10 @@ defmodule Mehungry.Meta do
   end
 
   defp fetch_country(ip) do
-    url = "http://ip-api.com/json/#{ip}?fields=country,countryCode"
+    # Must request `status` — the success pattern below matches on it. Omitting
+    # it makes ip-api return only {country, countryCode}, the match fails, and
+    # every lookup falls through to nil (why country enrichment never wrote).
+    url = "http://ip-api.com/json/#{ip}?fields=status,message,country,countryCode"
 
     case HTTPoison.get(url, [], recv_timeout: 3_000) do
       {:ok, %{status_code: 200, body: body}} ->
