@@ -7,8 +7,17 @@ defmodule Mehungry.Social.PinterestTest do
   alias Mehungry.Social.Pinterest
   alias Mehungry.Social.Pinterest.Token
 
+  defmodule EndpointStub do
+    def url, do: "https://test.m3hungry.com"
+  end
+
   setup do
-    on_exit(fn -> Application.delete_env(:mehungry, :pinterest_http_stub) end)
+    on_exit(fn ->
+      Application.delete_env(:mehungry, :pinterest_http_stub)
+      Application.delete_env(:mehungry, :endpoint_module)
+    end)
+
+    Application.put_env(:mehungry, :endpoint_module, EndpointStub)
     %{user: user_fixture()}
   end
 
@@ -110,6 +119,89 @@ defmodule Mehungry.Social.PinterestTest do
 
     test "not_connected when no token", %{user: user} do
       assert {:error, :not_connected} = Pinterest.get_boards(user)
+    end
+  end
+
+  describe "create_pin/3 body" do
+    test "includes ingredients, steps, image and hashtags in the pin", %{user: user} do
+      user = set_token(user, %{"access_token" => "tok", "refresh_token" => "r"})
+      test_pid = self()
+
+      recipe = %Mehungry.Food.Recipe{
+        id: 42,
+        title: "Lemon Pasta",
+        description: "Bright and zesty.",
+        cooking_time_lower_limit: 20,
+        image_url: "https://img.example/lemon.jpg",
+        recipe_ingredients: [
+          %Mehungry.Food.RecipeIngredient{
+            quantity: 200,
+            measurement_unit: %{name: "g"},
+            ingredient: %{name: "Spaghetti"}
+          },
+          %Mehungry.Food.RecipeIngredient{
+            quantity: 1,
+            measurement_unit: %{name: "piece"},
+            ingredient: %{name: "Lemon"}
+          }
+        ],
+        steps: [
+          %Mehungry.Food.Step{index: 0, title: "Boil", description: "Boil the pasta."},
+          %Mehungry.Food.Step{index: 1, description: "Toss with lemon."}
+        ],
+        recipe_hashtags: [
+          %Mehungry.Food.RecipeHashtag{hashtag: %{title: "pasta night"}}
+        ]
+      }
+
+      Application.put_env(:mehungry, :pinterest_http_stub,
+        post: fn _url, body, _headers ->
+          send(test_pid, {:pin_body, Jason.decode!(body)})
+          ok_json(201, %{"id" => "pin_1"})
+        end
+      )
+
+      assert {:ok, %{"id" => "pin_1"}} = Pinterest.create_pin(user, recipe, "board_1")
+
+      assert_received {:pin_body, pin}
+      assert pin["title"] == "Lemon Pasta"
+      assert pin["media_source"]["url"] == "https://img.example/lemon.jpg"
+
+      description = pin["description"]
+      assert description =~ "Ingredients"
+      assert description =~ "200 g Spaghetti"
+      assert description =~ "1 piece Lemon"
+      assert description =~ "Instructions"
+      assert description =~ "Boil the pasta."
+      assert description =~ "Toss with lemon."
+      assert description =~ "#pastanight"
+      assert description =~ "#mehungry"
+    end
+
+    test "falls back to the brand hashtag when hashtags are not loaded", %{user: user} do
+      user = set_token(user, %{"access_token" => "tok", "refresh_token" => "r"})
+      test_pid = self()
+
+      recipe = %Mehungry.Food.Recipe{
+        id: 7,
+        title: "Plain",
+        description: "Simple.",
+        image_url: "https://img.example/x.jpg",
+        recipe_ingredients: %Ecto.Association.NotLoaded{},
+        recipe_hashtags: %Ecto.Association.NotLoaded{},
+        steps: []
+      }
+
+      Application.put_env(:mehungry, :pinterest_http_stub,
+        post: fn _url, body, _headers ->
+          send(test_pid, {:pin_body, Jason.decode!(body)})
+          ok_json(201, %{"id" => "pin_2"})
+        end
+      )
+
+      assert {:ok, _} = Pinterest.create_pin(user, recipe, "board_1")
+      assert_received {:pin_body, pin}
+      assert pin["description"] =~ "#mehungry"
     end
   end
 

@@ -312,10 +312,14 @@ defmodule Mehungry.Social.Pinterest do
   defp maybe_put_description(body, ""), do: body
   defp maybe_put_description(body, description), do: Map.put(body, "description", description)
 
+  # Pinterest v5 pin limits: title ≤ 100 chars, description ≤ 800 chars.
+  @title_max 100
+  @description_max 800
+
   defp build_pin_body(%Recipe{} = recipe, board_id) do
     pin = %{
       board_id: board_id,
-      title: recipe.title,
+      title: String.slice(recipe.title || "", 0, @title_max),
       description: build_description(recipe),
       link: endpoint_module().url() <> "/browse/#{recipe.id}",
       media_source: %{
@@ -330,16 +334,107 @@ defmodule Mehungry.Social.Pinterest do
     end
   end
 
+  # Build a rich pin description with the recipe's ingredients and steps (like the
+  # Instagram/Facebook captions), followed by the hashtags. Pinterest caps the
+  # description at 800 chars, so whole sections are dropped (instructions first,
+  # then ingredients) before the body is hard-truncated — the header and hashtags
+  # are always kept.
   defp build_description(%Recipe{} = recipe) do
-    base = recipe.description || recipe.title
+    hashtags = hashtags_line(recipe)
+    suffix = if hashtags == "", do: "", else: "\n\n" <> hashtags
 
-    cooking_time =
-      case recipe.cooking_time_lower_limit do
-        nil -> ""
-        t -> " · #{t} min"
-      end
+    sections =
+      [header(recipe), ingredients_section(recipe), instructions_section(recipe)]
+      |> Enum.reject(&(&1 == ""))
 
-    String.slice(base <> cooking_time <> " #mehungry", 0, 500)
+    fit(sections, suffix)
+  end
+
+  defp header(%Recipe{} = recipe) do
+    base = recipe.description || recipe.title || ""
+
+    case recipe.cooking_time_lower_limit do
+      nil -> base
+      t -> String.trim("#{base} · #{t} min")
+    end
+  end
+
+  defp ingredients_section(%Recipe{recipe_ingredients: items}) when is_list(items) do
+    lines =
+      items
+      |> Enum.reject(&match?(%Ecto.Association.NotLoaded{}, &1.ingredient))
+      |> Enum.map(fn ri ->
+        [
+          Mehungry.Social.Instagram.Caption.format_number(ri.quantity),
+          Mehungry.Food.RecipeIngredient.unit_label(ri),
+          ri.ingredient.name
+        ]
+        |> Enum.reject(&(&1 in [nil, ""]))
+        |> Enum.join(" ")
+      end)
+
+    section("Ingredients", lines)
+  end
+
+  defp ingredients_section(_), do: ""
+
+  defp instructions_section(%Recipe{steps: steps}) when is_list(steps) do
+    lines =
+      Enum.map(steps, fn step ->
+        [Map.get(step, :title), Map.get(step, :description)]
+        |> Enum.reject(&(&1 in [nil, ""]))
+        |> Enum.join("\n")
+      end)
+      |> Enum.reject(&(&1 == ""))
+
+    section("Instructions", lines)
+  end
+
+  defp instructions_section(_), do: ""
+
+  defp section(_title, []), do: ""
+  defp section(title, lines), do: title <> "\n" <> Enum.join(lines, "\n")
+
+  # Hashtags: the recipe's own hashtags (when loaded) plus the brand tag.
+  defp hashtags_line(%Recipe{recipe_hashtags: hashtags}) when is_list(hashtags) do
+    tags =
+      hashtags
+      |> Enum.map(fn rh ->
+        case rh.hashtag do
+          %{title: title} when is_binary(title) and title != "" -> "#" <> format_hashtag(title)
+          _ -> nil
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
+
+    (tags ++ ["#mehungry"]) |> Enum.uniq() |> Enum.join(" ")
+  end
+
+  defp hashtags_line(_), do: "#mehungry"
+
+  defp format_hashtag(title) do
+    title
+    |> String.trim_leading("#")
+    |> String.replace(~r/\s+/, "")
+  end
+
+  # Drop trailing sections (instructions, then ingredients) until the pin fits;
+  # never drop the header before hard-truncating. The hashtag suffix is always kept.
+  defp fit(sections, suffix) do
+    body = Enum.join(sections, "\n\n")
+    description = body <> suffix
+
+    cond do
+      String.length(description) <= @description_max ->
+        description
+
+      length(sections) > 1 ->
+        fit(List.delete_at(sections, -1), suffix)
+
+      true ->
+        budget = max(@description_max - String.length(suffix) - 1, 0)
+        String.slice(body, 0, budget) <> "…" <> suffix
+    end
   end
 
   # Pinterest v5 token endpoint requires HTTP Basic auth
