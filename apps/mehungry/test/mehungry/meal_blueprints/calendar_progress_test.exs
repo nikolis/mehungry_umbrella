@@ -92,8 +92,9 @@ defmodule Mehungry.MealBlueprints.CalendarProgressTest do
     MealBlueprints.get_blueprint!(user.id, bp.id)
   end
 
-  # Logs `recipe` on the user's calendar on `date` as a `meal_type` meal.
-  defp log_recipe_meal(user, recipe, date, meal_type) do
+  # Logs `recipe` on the user's calendar on `date` as a `meal_type` meal,
+  # recording `consume_portions` servings eaten (default 1).
+  defp log_recipe_meal(user, recipe, date, meal_type, consume_portions \\ 1) do
     {:ok, meal} =
       History.create_user_meal(%{
         title: MealType.label(meal_type),
@@ -101,7 +102,12 @@ defmodule Mehungry.MealBlueprints.CalendarProgressTest do
         start_dt: NaiveDateTime.new!(date, ~T[08:00:00]),
         user_id: user.id,
         recipe_user_meals: [
-          %{recipe_id: recipe.id, cooking_portions: 2, consume_portions: 1, cooking: true}
+          %{
+            recipe_id: recipe.id,
+            cooking_portions: 2,
+            consume_portions: consume_portions,
+            cooking: true
+          }
         ]
       })
 
@@ -339,6 +345,54 @@ defmodule Mehungry.MealBlueprints.CalendarProgressTest do
       assert [%{name: "Protein", met: true, pct: d1_pct}] = progress.days_progress[1].required
       assert d1_pct >= 22 and d1_pct <= 24
       assert [%{name: "Protein", met: false, pct: +0.0}] = progress.days_progress[2].required
+    end
+
+    test "scales a logged recipe by consume_portions (energy + amount nutrients)" do
+      user = user_fixture()
+      ing = ingredient_fixture()
+      mu = measurement_unit_fixture()
+
+      # 700 kcal + 900 mg sodium per serving (1 serving recipe).
+      recipe =
+        recipe_fixture(user, %{
+          servings: 1,
+          recipe_ingredients: [%{ingredient_id: ing.id, measurement_unit_id: mu.id, quantity: 5}]
+        })
+
+      {:ok, recipe} =
+        recipe
+        |> Ecto.Changeset.change(
+          nutrients: %{
+            "Energy" => %{"name" => "Energy", "amount" => 700.0},
+            "Sodium" => %{"name" => "Sodium", "amount" => 900.0}
+          }
+        )
+        |> Repo.update()
+
+      bp =
+        blueprint_with(
+          user,
+          %{
+            avoid_nutrients: ["Sodium"],
+            avoid_nutrient_pcts: %{"Sodium" => 1500},
+            avoid_nutrient_modes: %{"Sodium" => "amount"}
+          },
+          # day-1 calorie target = one serving; two servings must read :over.
+          700
+        )
+
+      week_start = Date.beginning_of_week(Date.utc_today())
+      # Two servings eaten → 1400 kcal, 1800 mg sodium (not one serving's 700/900).
+      log_recipe_meal(user, recipe, week_start, "breakfast", 2)
+
+      progress = MealBlueprints.calendar_progress(user.id, bp, week_start)
+
+      # Energy scaled by consume_portions: 1400 kcal vs a 700 target → over.
+      assert progress.days[1].calorie_total == 1400
+      assert progress.days[1].calorie_status == :over
+      # Sodium scaled too: 1800 mg/day crosses the 1500 mg cap (900 mg would not).
+      assert [%{name: "Sodium", mode: :amount, amount: 1800, target: 1500, flagged: true}] =
+               progress.avoid
     end
 
     test "ignores meals outside the measured week" do

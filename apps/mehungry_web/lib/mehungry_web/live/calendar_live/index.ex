@@ -282,7 +282,13 @@ defmodule MehungryWeb.CalendarLive.Index do
     case Mehungry.Subscriptions.check_quota(user.id, "meal_plan") do
       :ok ->
         recipes = socket.assigns.recipes
-        start_date = Date.utc_today()
+        # Anchor the generated 7-day plan to the Monday of the week currently in
+        # view — the same framing the calendar grid (Widget `beginning_of_week`)
+        # and the blueprint-progress panel (`assign_blueprint_progress`) use. Laying
+        # the plan from `Date.utc_today()` instead straddled two display weeks when
+        # generating mid-week, so the just-generated plan filled only part of the
+        # visible grid and the progress panel read half-empty.
+        start_date = Date.beginning_of_week(current_calendar_date(socket))
         # Optional blueprint to constrain generation. Loaded (owner-scoped) and
         # threaded through now; the generator treats it as an inert hint until
         # blueprint-aware planning lands.

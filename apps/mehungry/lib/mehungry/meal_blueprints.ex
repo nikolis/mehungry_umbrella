@@ -619,9 +619,11 @@ defmodule Mehungry.MealBlueprints do
   (not the string-keyed JSON form the nutritionist library reads back from a
   stored `BlueprintPlan.compatibility`).
 
-  Energy counts one serving per logged recipe (matching `PlanCompatibility`'s
-  `recipe_calories/1` and the plan→calendar import's `consume_portions: 1`); it
-  does not yet scale by `RecipeUserMeal.consume_portions`.
+  Each logged recipe's energy and nutrients are scaled by its
+  `RecipeUserMeal.consume_portions / recipe.servings` (threaded through as the
+  pseudo-meal's `consume_portions`), so the week panel matches the calendar's own
+  daily nutrition total (`NutrientUtils.consumed_fraction/1`) rather than assuming
+  one serving per meal.
   """
   def calendar_progress(user_id, %Blueprint{} = blueprint, %Date{} = week_start) do
     week_end = Date.add(week_start, 6)
@@ -703,6 +705,10 @@ defmodule Mehungry.MealBlueprints do
             meal_type: meal.meal_type,
             recipe_id: rum.recipe_id,
             recipe: rum.recipe,
+            # Thread the logged servings so PlanCompatibility scales this recipe
+            # by consume_portions / servings — exactly as the calendar's own
+            # daily total does (see `NutrientUtils.consumed_fraction/1`).
+            consume_portions: rum.consume_portions,
             ingredients: []
           }
         end)

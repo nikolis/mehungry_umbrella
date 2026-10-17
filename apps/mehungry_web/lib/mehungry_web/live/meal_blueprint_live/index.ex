@@ -269,7 +269,10 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
         <h2 class="text-lg font-display font-medium text-parchment mb-2">Import to calendar</h2>
         <p class="text-parchment-dim text-sm mb-4">
           Choose the start date — the plan's 7 days will be laid out from there.
-          Any meals already on the selected calendar that week will be replaced.
+          <span class="text-paprika-soft">
+            Every meal already logged on the selected calendar during that week
+            (including meals entered by hand) will be permanently deleted and replaced.
+          </span>
         </p>
         <.simple_form for={@import_form} phx-submit="import_plan">
           <.input
@@ -281,7 +284,12 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
           />
           <.input field={@import_form[:start_date]} type="date" label="Start date" />
           <:actions>
-            <.button type="primary">Add to calendar</.button>
+            <.button
+              type="primary"
+              data-confirm="This replaces that whole week on the selected calendar — any meals already logged there will be deleted. Continue?"
+            >
+              Add to calendar
+            </.button>
           </:actions>
         </.simple_form>
       </.modal>
@@ -741,8 +749,10 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
 
   @impl true
   def handle_event("edit_plan_meal", %{"id" => id}, socket) do
-    meal = MealBlueprints.get_plan_meal!(socket.assigns.user.id, String.to_integer(id))
-    {:noreply, assign(socket, :editing_plan_meal, meal)}
+    case safe_get_plan_meal(socket.assigns.user.id, String.to_integer(id)) do
+      %_{} = meal -> {:noreply, assign(socket, :editing_plan_meal, meal)}
+      nil -> {:noreply, put_flash(socket, :error, "Meal not found.")}
+    end
   end
 
   @impl true
@@ -752,10 +762,14 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
 
   @impl true
   def handle_event("delete_plan_meal", %{"id" => id}, socket) do
-    meal = MealBlueprints.get_plan_meal!(socket.assigns.user.id, String.to_integer(id))
-    {:ok, _} = MealBlueprints.delete_plan_meal(meal)
+    case safe_get_plan_meal(socket.assigns.user.id, String.to_integer(id)) do
+      %_{} = meal ->
+        {:ok, _} = MealBlueprints.delete_plan_meal(meal)
+        {:noreply, socket |> put_flash(:info, "Meal removed.") |> reload_blueprints()}
 
-    {:noreply, socket |> put_flash(:info, "Meal removed.") |> reload_blueprints()}
+      nil ->
+        {:noreply, put_flash(socket, :error, "Meal not found.")}
+    end
   end
 
   defp start_generation(socket, blueprint_id) do
@@ -923,6 +937,12 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
 
   defp safe_get_plan(user_id, plan_id) do
     MealBlueprints.get_plan!(user_id, plan_id)
+  rescue
+    Ecto.NoResultsError -> nil
+  end
+
+  defp safe_get_plan_meal(user_id, plan_meal_id) do
+    MealBlueprints.get_plan_meal!(user_id, plan_meal_id)
   rescue
     Ecto.NoResultsError -> nil
   end

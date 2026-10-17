@@ -99,9 +99,19 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
     amounts_by_meal =
       Map.new(plan_meals, fn meal -> {meal.id, meal_label_amounts(meal, labels, gram_ids)} end)
 
+    # Likewise resolve each meal's calories exactly once here, where `gram_ids`
+    # is in scope — the per-meal/day/overall passes all read this map. (Doing it
+    # lazily inside the day/overall passes re-derived each ingredient meal's
+    # energy several times and, for whole-food ingredient meals, issued a
+    # per-ingredient `Repo.preload` each time — an N+1 on the hot calendar path.)
+    kcal_by_meal =
+      Map.new(plan_meals, fn meal -> {meal.id, meal_calories(meal, gram_ids)} end)
+
     meal_reports =
       Map.new(plan_meals, fn meal ->
-        {meal.id, meal_report(meal, targets, amounts_by_meal[meal.id], compounds_by_ingredient)}
+        {meal.id,
+         meal_report(meal, targets, amounts_by_meal[meal.id], kcal_by_meal[meal.id],
+           compounds_by_ingredient)}
       end)
 
     %{
@@ -112,9 +122,10 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
           plan_meals,
           targets,
           amounts_by_meal,
+          kcal_by_meal,
           compounds_by_ingredient
         ),
-      overall: build_overall(plan_meals, amounts_by_meal)
+      overall: build_overall(plan_meals, amounts_by_meal, kcal_by_meal)
     }
   end
 
@@ -145,7 +156,7 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
     Map.new(recipes, fn recipe ->
       meal = %{id: recipe.id, recipe_id: recipe.id, recipe: recipe, ingredients: []}
       nutrient_grams = meal_label_amounts(meal, labels, gram_ids)
-      meal_kcal = meal_calories(meal)
+      meal_kcal = meal_calories(meal, gram_ids)
       comps = Map.get(compounds_by_recipe, recipe.id, [])
 
       violations =
@@ -453,9 +464,8 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
 
   # ── per-meal report ───────────────────────────────────────────────────────────
 
-  defp meal_report(meal, targets, nutrient_grams, compounds_by_ingredient) do
+  defp meal_report(meal, targets, nutrient_grams, meal_kcal, compounds_by_ingredient) do
     comps = meal_compounds(meal, compounds_by_ingredient)
-    meal_kcal = meal_calories(meal)
 
     violations =
       compound_entries(comps, targets.avoid_compound, :avoid) ++
@@ -616,20 +626,23 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
   # ── nutrient amounts (recipe nutrient tree) ───────────────────────────────────
 
   # Resolves a meal's nutrient tree into a `label => grams` map over the
-  # blueprint's target `labels`. A recipe meal uses its stored tree scaled to one
-  # serving (matching the per-serving calorie denominator, `recipe_calories/1`);
-  # a whole-food ingredient meal builds the *same* tree shape from its logged
-  # ingredients via the recipe engine, already scaled to the logged quantity — so
-  # a directly-logged food counts toward goals exactly like the same food inside
-  # a recipe.
+  # blueprint's target `labels`. A recipe meal uses its stored tree scaled by the
+  # servings consumed (`recipe_portions/1 / servings`, the same factor
+  # `recipe_calories/1` applies to energy); a whole-food ingredient meal builds
+  # the *same* tree shape from its logged ingredients via the recipe engine,
+  # already scaled to the logged quantity — so a directly-logged food counts
+  # toward goals exactly like the same food inside a recipe.
   defp meal_label_amounts(meal, labels, gram_ids) do
     {nodes, scale} = meal_nutrient_nodes(meal, gram_ids)
     Map.new(labels, fn label -> {label, sum_label_in_tree(nodes, label) * scale} end)
   end
 
-  defp meal_nutrient_nodes(%{recipe_id: rid, recipe: %{nutrients: nutrients} = recipe}, _gram_ids)
+  defp meal_nutrient_nodes(
+         %{recipe_id: rid, recipe: %{nutrients: nutrients} = recipe} = meal,
+         _gram_ids
+       )
        when not is_nil(rid) and is_map(nutrients),
-       do: {Map.values(nutrients), 1 / recipe_servings(recipe)}
+       do: {Map.values(nutrients), recipe_portions(meal) / recipe_servings(recipe)}
 
   defp meal_nutrient_nodes(%{ingredients: [_ | _] = ingredients}, gram_ids) do
     nutrient_lists =
@@ -723,7 +736,7 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
 
   # Week/plan-wide nutrient amounts (label keys) + total kcal for pct-mode checks,
   # plus a per-day breakdown (days with meals only) for amount-mode checks.
-  defp build_overall(plan_meals, amounts_by_meal) do
+  defp build_overall(plan_meals, amounts_by_meal, kcal_by_meal) do
     grams =
       plan_meals
       |> Enum.map(&amounts_by_meal[&1.id])
@@ -736,34 +749,41 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
         %{
           day_index: day_index,
           nutrient_grams: meals |> Enum.map(&amounts_by_meal[&1.id]) |> merge_grams(),
-          total_kcal: day_calories(meals)
+          total_kcal: day_calories(meals, kcal_by_meal)
         }
       end)
 
-    %{nutrient_grams: grams, total_kcal: day_calories(plan_meals), days: days}
+    %{nutrient_grams: grams, total_kcal: day_calories(plan_meals, kcal_by_meal), days: days}
   end
 
   # ── per-day report ────────────────────────────────────────────────────────────
 
-  defp build_day_reports(blueprint, plan_meals, targets, amounts_by_meal, compounds_by_ingredient) do
+  defp build_day_reports(
+         blueprint,
+         plan_meals,
+         targets,
+         amounts_by_meal,
+         kcal_by_meal,
+         compounds_by_ingredient
+       ) do
     meals_by_day = Enum.group_by(plan_meals, & &1.day_index)
 
     Map.new(blueprint.days, fn day ->
       meals = Map.get(meals_by_day, day.day_index, [])
 
       {day.day_index,
-       report_for_day(day, meals, targets, amounts_by_meal, compounds_by_ingredient)}
+       report_for_day(day, meals, targets, amounts_by_meal, kcal_by_meal, compounds_by_ingredient)}
     end)
   end
 
-  defp report_for_day(day, meals, targets, amounts_by_meal, compounds_by_ingredient) do
+  defp report_for_day(day, meals, targets, amounts_by_meal, kcal_by_meal, compounds_by_ingredient) do
     day_comps =
       meals
       |> Enum.flat_map(&meal_compounds(&1, compounds_by_ingredient))
       |> Enum.uniq_by(& &1.name)
 
     day_nutrient_grams = meals |> Enum.map(&amounts_by_meal[&1.id]) |> merge_grams()
-    day_kcal = day_calories(meals)
+    day_kcal = day_calories(meals, kcal_by_meal)
 
     violations =
       compound_entries(day_comps, targets.avoid_compound, :avoid) ++
@@ -815,88 +835,75 @@ defmodule Mehungry.MealBlueprints.PlanCompatibility do
 
   # ── calories ──────────────────────────────────────────────────────────────────
 
-  defp day_calories(meals) do
-    Enum.reduce(meals, 0.0, fn x, y ->
-      meal_calories(x) + y
-    end)
+  defp day_calories(meals, kcal_by_meal) do
+    Enum.reduce(meals, 0.0, fn meal, acc -> Map.get(kcal_by_meal, meal.id, 0.0) + acc end)
   end
 
-  # A meal's energy = its recipe (one consumed portion ≈ one serving, matching the
-  # plan→calendar import which sets consume_portions: 1) plus each of its
-  # ingredient children.
-  defp meal_calories(meal), do: recipe_calories(meal) + ingredients_calories(meal)
+  # A meal's energy = its recipe (scaled to the servings actually consumed — see
+  # `recipe_portions/1`) plus each of its ingredient children.
+  defp meal_calories(meal, gram_ids),
+    do: recipe_calories(meal) + ingredients_calories(meal, gram_ids)
 
-  defp recipe_calories(%{recipe_id: rid, recipe: %{} = recipe}) when not is_nil(rid),
-    do: recipe_energy(recipe) / recipe_servings(recipe)
+  defp recipe_calories(%{recipe_id: rid, recipe: %{} = recipe} = meal) when not is_nil(rid),
+    do: recipe_energy(recipe) * recipe_portions(meal) / recipe_servings(recipe)
 
   defp recipe_calories(_), do: 0.0
 
-  defp ingredients_calories(%{ingredients: ingredients}) when is_list(ingredients),
-    do: Enum.reduce(ingredients, 0.0, fn ing, acc -> acc + ingredient_calories(ing) end)
+  # How many of a recipe's servings this meal consumes, the scale both its energy
+  # and its nutrient tree are multiplied by. A plan (`BlueprintPlanMeal`) meal
+  # carries no `consume_portions` → one serving (matching the plan→calendar
+  # import's `consume_portions: 1`); a real calendar meal threads its logged
+  # `consume_portions` so the week panel scales exactly like the calendar's own
+  # daily total (`NutrientUtils.consumed_fraction/1`).
+  defp recipe_portions(%{consume_portions: c}) when is_number(c) and c >= 0, do: c
+  defp recipe_portions(_), do: 1
 
-  defp ingredients_calories(_), do: 0.0
+  defp ingredients_calories(%{ingredients: ingredients}, gram_ids) when is_list(ingredients),
+    do: Enum.reduce(ingredients, 0.0, fn ing, acc -> acc + ingredient_calories(ing, gram_ids) end)
 
-  defp ingredient_calories(%{
-         ingredient_id: i_id,
-         ingredient: %{} = ingredient,
-         quantity: quantity
-       })
-       when not is_nil(i_id) and not is_nil(ingredient) do
-    ingredient =
-      Mehungry.Repo.preload(
-        ingredient,
-        [
-          :ingredient_portions,
-          ingredient_nutrients: [:nutrient]
-        ]
-      )
+  defp ingredients_calories(_, _gram_ids), do: 0.0
 
-    nutrients =
-      Enum.map(ingredient.ingredient_nutrients, fn
-        x ->
-          {x.amount, x.nutrient}
-      end)
+  # One logged ingredient's calories, resolved through the **same** recipe nutrition
+  # engine the nutrient-grams pass uses (`ingredient_scaled_nutrients/2`): weigh it
+  # by its chosen portion/unit × quantity, scale its per-100g nutrients, and read
+  # the deduped Energy entry. This keeps energy and nutrient scaling consistent for
+  # non-gram units (a "2 medium banana" weighs its two bananas, not "2 g"), and
+  # reads only the preloaded assocs — no per-ingredient `Repo.preload`. Degrades to
+  # 0 when the nutrient/portion data isn't loaded, matching the grams pass.
+  defp ingredient_calories(%{ingredient: %{} = ingredient} = ing, gram_ids) do
+    if ingredient_nutrients_loaded?(ingredient) do
+      gram_weight =
+        NutrientCalculation.calculate_gram_weight(
+          ingredient,
+          Map.get(ing, :measurement_unit_id),
+          Map.get(ing, :ingredient_portion_id),
+          Map.get(ing, :quantity),
+          gram_ids
+        )
 
-    # TODO Need optimization n+1 problemhere
-    energy =
-      Enum.filter(nutrients, fn {y, x} ->
-        x.name == "Energy (Atwater Specific Factors)"
-      end)
-
-    energy =
-      case Enum.empty?(energy) do
-        true ->
-          Enum.filter(nutrients, fn {y, x} ->
-            String.contains?(x.name, "Energy")
-          end)
-          |> List.first()
-
-        false ->
-          List.first(energy)
-      end
-
-    if(is_nil(energy)) do
-      0.0
+      ingredient
+      |> NutrientCalculation.build_nutrient_list(gram_weight)
+      |> energy_kcal_from_list()
     else
-      total_energy = elem(energy, 0)
-      nutrient_en = elem(energy, 1)
-      nutrient_en = Mehungry.Repo.preload(nutrient_en, :measurement_unit)
-
-      total_energy =
-        case nutrient_en.measurement_unit.name == "kilocalorie" or
-               nutrient_en.measurement_unit.name == "kcal" do
-          true ->
-            total_energy
-
-          false ->
-            total_energy / 4.184
-        end
-
-      to_number(total_energy / 100 * quantity)
+      0.0
     end
   end
 
-  defp ingredient_calories(_), do: 0.0
+  defp ingredient_calories(_ing, _gram_ids), do: 0.0
+
+  # The scaled Energy kcal from a `build_nutrient_list/2` output: pick the single
+  # (already deduped) Energy node and convert kJ → kcal when its unit is not kcal.
+  defp energy_kcal_from_list(nutrient_list) do
+    case Enum.find(nutrient_list, &String.contains?(&1.name, "Energy")) do
+      nil ->
+        0.0
+
+      %{amount: amount, measurement_unit: unit} ->
+        if unit in ["kilocalorie", "kcal"],
+          do: to_number(amount),
+          else: to_number(amount) / 4.184
+    end
+  end
 
   defp recipe_energy(%{nutrients: nutrients}) when is_map(nutrients) do
     energy = Map.get(nutrients, "Energy") || Map.get(nutrients, :Energy)
