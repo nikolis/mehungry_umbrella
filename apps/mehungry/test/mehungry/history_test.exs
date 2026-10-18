@@ -53,6 +53,28 @@ defmodule MehungryApi.HistoryTest do
       assert result22 == []
     end
 
+    test "delete_user_meals_in_date_range/3 clears only the viewed week", %{user: user} do
+      recipe = FoodFixtures.recipe_fixture(user)
+      recipe_user_meals = [%{recipe_id: recipe.id, consume_portions: 2, cooking_portions: 6}]
+
+      # Two meals inside the week of 2026-10-12..2026-10-18, one the week before.
+      for dt <- [~U[2026-10-13 12:00:00Z], ~U[2026-10-17 19:00:00Z]] do
+        user_meal_fixture(%{user_id: user.id, start_dt: dt, recipe_user_meals: recipe_user_meals})
+      end
+
+      prev_week =
+        user_meal_fixture(%{
+          user_id: user.id,
+          start_dt: ~U[2026-10-06 12:00:00Z],
+          recipe_user_meals: recipe_user_meals
+        })
+
+      assert History.delete_user_meals_in_date_range(user.id, ~D[2026-10-12], ~D[2026-10-18]) == 2
+
+      remaining = History.list_history_user_meals_for_user(user.id)
+      assert Enum.map(remaining, & &1.id) == [prev_week.id]
+    end
+
     test "list_history_user_meals/0 returns all history_user_meals", %{user: user} do
       recipe = FoodFixtures.recipe_fixture(user)
 

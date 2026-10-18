@@ -516,6 +516,28 @@ defmodule MehungryWeb.CalendarLive.Index do
     end
   end
 
+  # "Clear week" — wipe every meal in the week currently in view (the same
+  # Monday–Sunday span the grid shows, via `week_bounds/1`). Guarded by a
+  # confirm dialog on the button; refreshes the view the same way a single
+  # delete does so the emptied week shows immediately.
+  @impl true
+  def handle_event("clear_week_meals", _params, socket) do
+    user_id = socket.assigns.user.id
+    {first, last} = week_bounds(current_calendar_date(socket))
+    count = History.delete_user_meals_in_date_range(user_id, first, last)
+
+    user_meals =
+      load_and_format_user_meals(user_id, current_calendar_date(socket), current_language(socket))
+
+    {:noreply,
+     socket
+     |> assign(:user_meals, user_meals)
+     |> assign_blueprint_progress()
+     |> push_event("create_meals", %{meals: user_meals})
+     |> put_flash(:info, "Cleared #{count} #{ngettext("meal", "meals", count)} from this week")
+     |> push_patch(to: ~p"/calendar", replace: true)}
+  end
+
   # "Log again today" — clone an existing meal (with all its items) onto today.
   # Reloads the viewed week so the copy shows immediately when today is in view;
   # otherwise the flash confirms it landed on today.
