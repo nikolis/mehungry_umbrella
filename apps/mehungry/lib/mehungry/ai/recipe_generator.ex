@@ -23,19 +23,23 @@ defmodule Mehungry.AI.RecipeGenerator do
 
   Delegates to RecipeAgent (tool-use loop). Falls back to the legacy
   hardcoded pipeline if the agent returns an error.
+
+  `language` is the viewer's content locale ("el" generates Greek prose, anything
+  else generates English — see `RecipeAgent`); it is threaded into both the agent
+  and the legacy fallback so a Greek-locale request never silently yields English.
   """
-  def run(description) do
-    case Mehungry.AI.Agents.RecipeAgent.run(description) do
+  def run(description, language \\ nil) do
+    case Mehungry.AI.Agents.RecipeAgent.run(description, language: language) do
       {:ok, attrs, unmatched} ->
         {:ok, attrs, unmatched}
 
       {:error, reason} ->
         Logger.warning("RecipeAgent failed (#{inspect(reason)}), falling back to legacy pipeline")
-        run_legacy(description)
+        run_legacy(description, language)
     end
   end
 
-  defp run_legacy(description) do
+  defp run_legacy(description, language) do
     with {:ok, names} <- extract_ingredient_names(description),
          _ = Logger.info("Phase 1 extracted: #{inspect(names)}"),
          {resolved, unmatched} <- resolve_ingredients(names),
@@ -44,7 +48,7 @@ defmodule Mehungry.AI.RecipeGenerator do
              "Phase 2 resolved: #{inspect(Enum.map(resolved, & &1.searched_name))}, unmatched: #{inspect(unmatched)}"
            ),
          {resolved, still_unmatched} <- create_missing_ingredients(resolved, unmatched),
-         {:ok, attrs} <- generate_recipe(description, resolved) do
+         {:ok, attrs} <- generate_recipe(description, resolved, language) do
       {:ok, validate_ingredients(attrs, resolved), still_unmatched}
     end
   end
@@ -347,11 +351,11 @@ defmodule Mehungry.AI.RecipeGenerator do
 
   # --- Phase 3 ---
 
-  defp generate_recipe(description, resolved_context) do
+  defp generate_recipe(description, resolved_context, language) do
     system = """
     You are an expert chef and recipe writer with deep knowledge of global cuisines,
     culinary technique, and flavour balance. Generate complete recipes as valid JSON.
-
+    #{legacy_language_directive(language)}
     CONSTRAINTS:
     - Use ONLY the ingredient_id and measurement_unit_id values listed in "Available Ingredients". Do NOT invent IDs.
     - For each searched ingredient, pick the DB candidate whose name most closely matches the plain ingredient (e.g. prefer "Garlic, raw" over "Garlic salt" when the recipe calls for garlic).
@@ -385,6 +389,16 @@ defmodule Mehungry.AI.RecipeGenerator do
         error
     end
   end
+
+  # Legacy fallback mirror of RecipeAgent.language_block/1: localize the prose,
+  # keep ingredient handling English (the legacy path already resolved IDs above,
+  # so there's no search step to protect — only the output needs steering).
+  defp legacy_language_directive("el") do
+    "\n    OUTPUT LANGUAGE: Write the title, description, steps, and hashtags in " <>
+      "Greek (Ελληνικά) — natural, fluent Greek, not a literal translation.\n"
+  end
+
+  defp legacy_language_directive(_), do: ""
 
   defp build_generation_prompt(description, resolved_context) do
     ingredients_text =

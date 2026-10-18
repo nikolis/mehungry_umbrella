@@ -447,10 +447,12 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       socket.assigns.ai_task_ref == ref ->
         case result do
           {:ok, attrs, unmatched} ->
+            language_name = recipe_language_name(socket.assigns[:current_language])
+
             attrs =
               attrs
               |> Map.put("user_id", socket.assigns.user.id)
-              |> Map.put("language_name", "En")
+              |> Map.put("language_name", language_name)
 
             case Food.create_recipe(attrs) do
               {:ok, recipe} ->
@@ -479,7 +481,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
                   "Recipe creation failed (AI): user_id=#{socket.assigns.user.id} errors=#{inspect(changeset_error_map(changeset))}"
                 )
 
-                recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: "En"}
+                recipe = %Recipe{steps: [], recipe_ingredients: [], language_name: language_name}
 
                 {:noreply,
                  socket
@@ -803,12 +805,20 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     Map.put(recipe_params, "steps", filtered)
   end
 
+  # Maps the viewer's content locale ("en"/"el"/nil) to the `languages.name` FK the
+  # recipe row carries. The table holds legacy names "En"/"Gr" (not ISO codes), so
+  # a Greek-locale generation must be tagged "Gr" — tagging the Greek prose "En"
+  # would mislabel it for localization/display. Defaults to English.
+  defp recipe_language_name("el"), do: "Gr"
+  defp recipe_language_name(_), do: "En"
+
   # Launches the background generation task and enters the frozen state. Re-checks
   # quota defensively so a stale modal can't slip past the limit.
   defp start_ai_generation(socket, description) do
     case Mehungry.Subscriptions.check_quota(socket.assigns.user.id, "recipe_generation") do
       :ok ->
-        task = Task.async(fn -> Mehungry.AI.RecipeGenerator.run(description) end)
+        language = socket.assigns[:current_language]
+        task = Task.async(fn -> Mehungry.AI.RecipeGenerator.run(description, language) end)
 
         {:noreply,
          socket
