@@ -319,6 +319,21 @@ defmodule Mehungry.FoodTest do
       refute Food.get_recipe_no_caching!(recipe.id)
     end
 
+    test "delete_user_recipe/2 deletes a recipe referenced by a like and a meal", %{user: user} do
+      recipe = recipe_fixture(user)
+      # Blocking refs (FK on_delete: :nothing) that previously made the recipe
+      # undeletable: a like and a calendar/meal-plan meal entry.
+      {:ok, _} = Food.like_recipe(user.id, recipe.id)
+
+      Mehungry.Repo.insert!(%Mehungry.Plans.Meal{
+        recipe_id: recipe.id,
+        meal_title: "Lunch"
+      })
+
+      assert {:ok, _} = Food.delete_user_recipe(user, recipe.id)
+      refute Food.get_recipe_no_caching!(recipe.id)
+    end
+
     test "delete_user_recipe/2 refuses a recipe owned by someone else", %{user: user} do
       other = user_fixture()
       recipe = recipe_fixture(other)

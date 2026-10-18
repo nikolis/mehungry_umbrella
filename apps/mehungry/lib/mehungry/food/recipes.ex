@@ -125,14 +125,41 @@ defmodule Mehungry.Food.Recipes do
 
   defp delete_recipe_record(%Recipe{} = recipe) do
     recipe = Repo.preload(recipe, [:recipe_ingredients])
+    id = recipe.id
 
-    Enum.each(recipe.recipe_ingredients, fn rec_in ->
-      Repo.delete(rec_in)
-    end)
+    result =
+      Repo.transaction(fn ->
+        # Tables whose FK to recipes is on_delete: :nothing/:restrict (unlike the
+        # cascading ones) — a recipe referenced by any of them raises
+        # Ecto.ConstraintError on Repo.delete and is left undeletable (the
+        # symptom: recipes that have been added to a calendar/meal plan, liked,
+        # rated, or annotated won't delete). They all die with the recipe, so
+        # clear them first.
+        Repo.delete_all(from(r in "ratings", where: r.recipe_id == ^id))
+        Repo.delete_all(from(r in "likes", where: r.recipe_id == ^id))
+        Repo.delete_all(from(r in "meals", where: r.recipe_id == ^id))
+        Repo.delete_all(from(r in "annotations", where: r.recipe_id == ^id))
+        Repo.delete_all(from(r in "ai_bot_recipes", where: r.recipe_id == ^id))
 
-    Mehungry.Storage.delete_by_url(recipe.image_url)
+        # Basket items are a user's shopping-list entries, not part of the
+        # recipe: keep the item, just drop the now-dangling recipe provenance.
+        Repo.update_all(
+          from(b in "basket_items", where: b.recipe_id == ^id),
+          set: [recipe_id: nil]
+        )
 
-    Repo.delete(recipe)
+        Enum.each(recipe.recipe_ingredients, &Repo.delete!/1)
+
+        Repo.delete!(recipe)
+      end)
+
+    # Object-storage delete is network I/O — do it after the DB transaction
+    # commits so we don't hold a connection open across the HTTP call.
+    with {:ok, _} <- result do
+      Mehungry.Storage.delete_by_url(recipe.image_url)
+    end
+
+    result
   end
 
   @doc """
