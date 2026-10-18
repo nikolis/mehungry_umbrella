@@ -482,6 +482,108 @@ defmodule Mehungry.NutrientUtils do
   """
   def macro_buckets, do: @macro_buckets
 
+  @doc """
+  Macro + energy summary from an aggregated `name => nutrient` map (the output of
+  `summarize_meals_nutrients/1`): `%{energy_kcal, protein_g, fat_g, carbs_g,
+  sugars_g, fiber_g, sodium_mg, saturated_fat_g}`.
+
+  This is the single source of truth for the macro numbers shown on the
+  calendar's day/week headers (`CalendarLive.Calendar.Widget.summary_metrics/3`)
+  and the shareable weekly-plan card (`MehungryWeb.WeeklyPlanGraphic`), so the two
+  can never drift. Macro grams are the representative bucket nutrient's raw
+  `amount` (USDA stores these in grams, so no unit conversion); energy is pulled
+  out separately by canonical name since it isn't a macro bucket.
+
+  `sodium_mg` and `saturated_fat_g` are the two extra "conditions people track"
+  numbers; unlike the macro buckets they aren't top-level keys — `Saturated Fat`
+  is nested under `Total Fat` and `Sodium` under the `Minerals` umbrella — so
+  they're pulled via `find_nutrient/2`, which walks the tree's `children`. Both
+  are 0 when absent. Non-numeric values fall back to `0.0`.
+  """
+  def macro_summary(total_nutrients) do
+    macros = macro_totals(total_nutrients)
+
+    amount = fn bucket ->
+      macros |> Map.get(bucket, %{}) |> Map.get("amount", 0) |> macro_scalar() |> Float.round(1)
+    end
+
+    %{
+      energy_kcal: total_nutrients |> energy_scalar() |> round(),
+      protein_g: amount.(:protein),
+      fat_g: amount.(:fat),
+      carbs_g: amount.(:carbs),
+      sugars_g: amount.(:sugars),
+      fiber_g: amount.(:fiber),
+      sodium_mg: nutrient_grams(total_nutrients, "Sodium") |> Kernel.*(1000) |> round(),
+      saturated_fat_g: nutrient_grams(total_nutrients, "Saturated Fat") |> Float.round(1)
+    }
+  end
+
+  defp macro_scalar(n) when is_number(n), do: n * 1.0
+  defp macro_scalar(_), do: 0.0
+
+  # Energy isn't a macro bucket, so pull it out by canonical name.
+  defp energy_scalar(total_nutrients) do
+    case Enum.find(total_nutrients, fn {label, _} -> String.contains?(label, "Energy") end) do
+      {_label, %{"amount" => a}} when is_number(a) -> a * 1.0
+      _ -> 0.0
+    end
+  end
+
+  # The gram-converted amount of `canonical_name` found anywhere in the tree, or
+  # `0.0` when absent/unconvertible. Used for sub-tree nutrients (sodium, sat fat)
+  # that aren't top-level keys.
+  defp nutrient_grams(total_nutrients, canonical_name) do
+    case find_nutrient(total_nutrients, canonical_name) do
+      %{"amount" => amount, "measurement_unit" => unit} ->
+        case to_grams(amount, unit || "") do
+          {:ok, g} -> g
+          :error -> 0.0
+        end
+
+      _ ->
+        0.0
+    end
+  end
+
+  @doc """
+  Finds the first node whose name normalizes to `canonical_name` anywhere in an
+  aggregated nutrient tree — the top-level `name => node` map **and** nested
+  `"children"` — returning the node map or `nil`.
+
+  Needed because the hierarchy (`NutrientHierarchyBuilder`) nests subtype
+  nutrients: `Saturated Fat` lives under `Total Fat`, `Sodium` under the
+  `Minerals` umbrella, so they can't be read as top-level keys like the macros.
+  """
+  def find_nutrient(nutrients, canonical_name) when is_map(nutrients) do
+    nutrients |> Map.values() |> find_nutrient_in_nodes(canonical_name)
+  end
+
+  def find_nutrient(_nutrients, _canonical_name), do: nil
+
+  defp find_nutrient_in_nodes(nodes, canonical_name) when is_list(nodes) do
+    Enum.find_value(nodes, fn node ->
+      cond do
+        not is_map(node) -> nil
+        nutrient_name_matches?(node["name"], canonical_name) -> node
+        true -> find_nutrient_in_nodes(node["children"] || [], canonical_name)
+      end
+    end)
+  end
+
+  defp find_nutrient_in_nodes(_nodes, _canonical_name), do: nil
+
+  # A node matches `canonical_name` when it normalizes to it (collapses variants
+  # like "Fatty Acids, Total Saturated" → "Saturated Fat") or its raw stored name
+  # begins with it — leaf/child nodes keep raw USDA names ("Sodium, Na") that the
+  # canonical mapping doesn't cover.
+  defp nutrient_name_matches?(name, canonical_name) when is_binary(name) do
+    normalize_nutrient_name(name) == canonical_name or
+      String.starts_with?(String.downcase(name), String.downcase(canonical_name))
+  end
+
+  defp nutrient_name_matches?(_name, _canonical_name), do: false
+
   defp macro_amount(%{"amount" => a}) when is_number(a), do: a * 1.0
   defp macro_amount(_), do: 0.0
 

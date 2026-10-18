@@ -40,21 +40,21 @@ defmodule MehungryWeb.UserRegistrationController do
   defp register(conn, user_params) do
     case Accounts.register_user(user_params) do
       {:ok, user} ->
-        # Email delivery failures (e.g. SES throttling) must not crash the request
-        # after the account was already created — the user can trigger a resend by
-        # attempting to log in.
-        _ =
+        # Send the confirmation email in the visitor's locale (our audience is
+        # overwhelmingly Greek). A delivery failure must not crash the request
+        # after the account already exists — but it must not be silently
+        # swallowed either: if Mailgun rejects it, tell the user so they can
+        # resend, rather than sending them to wait for an email that never comes.
+        delivery =
           Accounts.deliver_user_confirmation_instructions(
             user,
-            &Routes.user_confirmation_url(conn, :edit, &1)
+            &Routes.user_confirmation_url(conn, :edit, &1),
+            MehungryWeb.Locale.detect(conn)
           )
 
         conn
         |> put_flash(:ga_event, Jason.encode!(%{name: "sign_up", params: %{method: "email"}}))
-        |> put_flash(
-          :info,
-          "Account created! Please check your email to confirm your account before logging in."
-        )
+        |> confirmation_flash(delivery)
         |> redirect(to: Routes.user_session_path(conn, :new))
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -64,6 +64,26 @@ defmodule MehungryWeb.UserRegistrationController do
           page_title: "Create Your Free Account"
         )
     end
+  end
+
+  # Flash message depends on whether the confirmation email actually went out.
+  # On failure we point the user at the login page, which resends the link on
+  # the next sign-in attempt (and now shows a "resend" link).
+  defp confirmation_flash(conn, {:ok, _email}) do
+    put_flash(
+      conn,
+      :info,
+      "Account created! Please check your email to confirm your account before logging in."
+    )
+  end
+
+  defp confirmation_flash(conn, _error) do
+    put_flash(
+      conn,
+      :error,
+      "Account created, but we couldn't send the confirmation email just now. " <>
+        "Try logging in to resend the confirmation link."
+    )
   end
 
   # Behind the ALB, conn.remote_ip is the load balancer, so prefer the first hop

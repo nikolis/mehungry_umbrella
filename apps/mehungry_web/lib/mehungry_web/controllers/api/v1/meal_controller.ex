@@ -13,6 +13,7 @@ defmodule MehungryWeb.Api.V1.MealController do
   alias Mehungry.NutrientUtils
   alias Mehungry.Subscriptions
   alias MehungryWeb.Api.MealPlanWorker
+  alias MehungryWeb.Api.V1.Locale
   alias MehungryWeb.Api.V1.MealJSON
 
   action_fallback MehungryWeb.Api.V1.FallbackController
@@ -59,11 +60,14 @@ defmodule MehungryWeb.Api.V1.MealController do
     end
   end
 
-  def nutrition(conn, %{"date" => date}) do
+  def nutrition(conn, %{"date" => date} = params) do
     summary =
       History.list_history_user_meals_for_user(uid(conn), date)
       |> History.format_user_meals()
       |> NutrientUtils.summarize_meals_nutrients()
+      # Localize the nutrient names to the request locale — the same labels the
+      # web calendar's daily breakdown shows (spec §Language).
+      |> localize_nutrients(Locale.resolve(conn, params))
 
     json(conn, data(%{date: date, nutrition: summary}))
   end

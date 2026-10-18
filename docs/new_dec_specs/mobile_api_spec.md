@@ -250,7 +250,16 @@ Fatty-acid leaves are **resolved to canonical common names at read time** (via
 uses): storage keeps the raw USDA lipid notation (`"MUFA 16:1 c"`,
 `"PUFA 20:5 n-3 (EPA)"`) but the response's `name` is the common form
 (`"Palmitoleic acid (C16:1, Omega-7)"`, `"Eicosapentaenoic acid (EPA) (C20:5,
-Omega-3)"`). Non-fatty-acid nutrient names are returned as stored.
+Omega-3)"`).
+
+**Localization.** Non-fatty-acid nutrient names are **localized to the request
+locale** (§Language) — both the map **keys** and each node's `name` (recursively)
+— using the same vocabulary the web nutrition UI uses (`MehungryWeb.NutrientLabels`).
+For `el` the tree is keyed/labelled in Greek (`"Ενέργεια"`, `"Ολικά λιπαρά"`,
+`"Βιταμίνες"`, `"Βιταμίνη C"`, …); for `en` (the default) they are returned as
+stored. Individual fatty-acid common names are **left in English** in every locale.
+A name with no known translation falls back to its English display name. The same
+localization applies to the daily-nutrition map (§9 `GET /meals/day/:date/nutrition`).
 
 ### `POST /api/v1/recipes` 🔒
 Create a recipe (the "+" / Create Recipe stepper). Multi-step in the UI but a
@@ -405,6 +414,10 @@ summaries via `Food.EvidenceAggregation`), ingredients.
   "ingredients": [ {"id":412,"name":"Spinach, raw"} ]
 } }
 ```
+Each compound's `name` is **localized to the request locale** (§Language) from the
+curated `compound_translations` (same data the web species page's Bioactive
+Compounds section uses), with the English compound name as fallback when no
+translation exists.
 
 ---
 
@@ -571,6 +584,12 @@ One active basket per user with items (from recipes or manual). Backed by
      positive = `measurement_unit_id`, negative = `-ingredient_portion_id`; "gram"
      is always present as a fallback. `source=local` rows also accept the optional
      `?blueprint_slug=` match enrichment (see §4 Blueprint matching).
+
+     **Localization** (§Language): when the resolved locale is `el`, the local search
+     runs against **translated** ingredient names (`Food.IngredientSearch.search_in_language`)
+     and each row's `name` is the Greek name — exactly like the calendar meal-form
+     picker. For `en` it searches/returns the English base names. (The USDA default
+     mode is unaffected — it is a create source, always English USDA descriptions.)
 
 ---
 

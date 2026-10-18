@@ -10,16 +10,15 @@
 
   <div class="bg-black/20 border border-ink-panel2 rounded-xl p-3 space-y-3">
     <div class="flex items-start gap-2">
+      <% search_fns = MehungryWeb.IngredientSearchFns.search_fns(@current_language, @current_user_id) %>
       <div class="flex-1 min-w-0">
         <.live_component
           module={MehungryWeb.SelectComponentDeep}
           form={@f}
-          item_function={
-            fn term -> Mehungry.Food.IngredientSearch.search(term, [], @current_user_id) end
-          }
-          get_by_id_func={&Mehungry.Food.get_ingredient!/1}
+          item_function={search_fns.item_fn}
+          get_by_id_func={search_fns.get_by_id_fn}
           input_variable="ingredient_id"
-          label_function={fn item -> Mehungry.Utils.remove_parenthesis(item.name) end}
+          label_function={search_fns.label_fn}
           placeholder="Select an ingredient..."
           modal_title="Search Ingredients"
           select_function={

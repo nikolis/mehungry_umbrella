@@ -557,6 +557,7 @@ defmodule MehungryWeb.AiBotLive.RecipeReview do
                     title="Nutrition Facts"
                     max_height="600px"
                     show_title={false}
+                    locale="en"
                   />
                 </div>
               <% end %>

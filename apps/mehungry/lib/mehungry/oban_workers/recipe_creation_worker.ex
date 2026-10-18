@@ -23,11 +23,9 @@ defmodule Mehungry.RecipeCreationWorker do
       end)
     end
 
-    if length(posts) == 0 do
-      recipe = Mehungry.Food.get_recipe!(recipe_id)
-      _create_post = Mehungry.Posts.create_post(recipe)
-    end
-
+    # Post backfill (creating a post for a recipe that never got one) is handled
+    # idempotently by RecipePutNutrientsWorker, which runs on every update. This
+    # worker only keeps existing posts' media in sync with the recipe's image.
     :ok
   end
 end

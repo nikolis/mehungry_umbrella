@@ -15,7 +15,8 @@ defmodule Mehungry.Food.Recipes do
     Recipe,
     RecipeHashtag,
     RecipeSocialGraphic,
-    Step
+    Step,
+    WeeklyPlanGraphic
   }
 
   # The recipes cache predates this module: entries are keyed under
@@ -866,6 +867,27 @@ defmodule Mehungry.Food.Recipes do
     %RecipeSocialGraphic{}
     |> RecipeSocialGraphic.changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc "Persist a generated shareable weekly-plan card row for a user."
+  def create_weekly_plan_graphic(attrs) do
+    %WeeklyPlanGraphic{}
+    |> WeeklyPlanGraphic.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  The most recently generated weekly-plan card for a user's week, or `nil`. Lets
+  the share UI show the existing card instead of forcing a regenerate.
+  """
+  def latest_weekly_plan_graphic(user_id, %Date{} = week_start) do
+    Repo.one(
+      from(g in WeeklyPlanGraphic,
+        where: g.user_id == ^user_id and g.week_start == ^week_start,
+        order_by: [desc: g.id],
+        limit: 1
+      )
+    )
   end
 
   @doc "The most recently generated insight graphic for a recipe, or `nil`."

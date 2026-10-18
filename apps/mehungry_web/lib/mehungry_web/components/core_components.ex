@@ -839,8 +839,8 @@ defmodule MehungryWeb.CoreComponents do
   Renders an `<a>` (via `<.link>`) when given `navigate`/`patch`/`href`, else a
   `<button>` — so the same call site works for navigation and for `phx-click`.
 
-      <.action navigate={~p"/nutritionist/records/new"}>New client</.action>
-      <.action variant={:secondary} patch={~p"/nutritionist/records/import"}>Import CSV</.action>
+      <.action navigate={~p"/nutritionist/clients"}>My clients</.action>
+      <.action variant={:secondary} patch={~p"/nutritionist/clients/import"}>Import CSV</.action>
       <.action variant={:danger} phx-click="delete" data-confirm="Delete this?">Delete</.action>
   """
   attr :variant, :atom, default: :primary, values: [:primary, :secondary, :ghost, :danger]
@@ -905,10 +905,10 @@ defmodule MehungryWeb.CoreComponents do
   and an optional right-aligned actions slot. Keeps every panel screen's heading
   and its one primary action laid out the same way.
 
-      <.page_header title="Client Records">
+      <.page_header title="My Clients">
         <:actions>
-          <.action variant={:secondary} patch={~p"/nutritionist/records/import"}>Import CSV</.action>
-          <.action navigate={~p"/nutritionist/records/new"}>New client</.action>
+          <.action variant={:secondary} patch={~p"/nutritionist/clients/import"}>Import CSV</.action>
+          <.action navigate={~p"/nutritionist/invitations"}>Invite client</.action>
         </:actions>
       </.page_header>
   """
@@ -1799,5 +1799,59 @@ defmodule MehungryWeb.CoreComponents do
   """
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
+
+  @doc """
+  A flat client↔nutritionist message thread: a scrollable bubble list (own
+  messages aligned right/paprika, the other party's left/panel) plus a compose
+  form. The host LiveView owns the data and handles `send_message` (body in the
+  `"body"` param); `current_user_id` decides bubble alignment.
+
+      <.message_thread messages={@messages} current_user_id={@current_user.id} body={@message_body} />
+  """
+  attr :messages, :list, required: true
+  attr :current_user_id, :integer, required: true
+  attr :body, :string, default: ""
+  attr :placeholder, :string, default: "Write a message…"
+  attr :height_class, :string, default: "max-h-96"
+
+  def message_thread(assigns) do
+    ~H"""
+    <div>
+      <div class={["overflow-y-auto pr-1 space-y-2", @height_class]}>
+        <%= if Enum.empty?(@messages) do %>
+          <p class="text-parchment-dim text-sm py-6 text-center">No messages yet. Say hello 👋</p>
+        <% else %>
+          <%= for message <- @messages do %>
+            <% mine = message.sender_user_id == @current_user_id %>
+            <div class={["flex", mine && "justify-end"]}>
+              <div class={[
+                "max-w-[80%] rounded-2xl px-3 py-2",
+                if(mine, do: "bg-paprika text-ink", else: "bg-ink-panel2 text-parchment")
+              ]}>
+                <p class="text-sm whitespace-pre-line break-words">{message.body}</p>
+                <p class={[
+                  "text-[10px] mt-1",
+                  if(mine, do: "text-ink/70", else: "text-parchment-dim")
+                ]}>
+                  {Calendar.strftime(message.inserted_at, "%b %d, %H:%M")}
+                </p>
+              </div>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+
+      <form phx-submit="send_message" class="mt-3 flex items-end gap-2">
+        <textarea
+          name="body"
+          rows="2"
+          placeholder={@placeholder}
+          class="flex-1 bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm placeholder-parchment-dim focus:outline-none focus:border-paprika"
+        >{@body}</textarea>
+        <.action variant={:primary} size={:sm} type="submit">Send</.action>
+      </form>
+    </div>
+    """
   end
 end

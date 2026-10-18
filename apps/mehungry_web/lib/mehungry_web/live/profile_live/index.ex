@@ -5,11 +5,10 @@ defmodule MehungryWeb.ProfileLive.Index do
   use MehungryWeb.LiveHelpers, :hook_for_update_recipe_details_component
 
   alias MehungryWeb.RecipeComponents
-  import MehungryWeb.BlueprintComponents
 
   alias Mehungry.Accounts
   alias Mehungry.Users
-  alias Mehungry.MealBlueprints
+  alias Mehungry.PublishedPlans
   alias MehungryWeb.ProfileLive.Show
   alias Mehungry.Food
   alias Mehungry.Posts
@@ -38,7 +37,7 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:user_recipes, [])
      |> assign(:user_ingredients, [])
      |> assign(:friends_ingredients, [])
-     |> assign(:user_saved_blueprints, [])
+     |> assign(:user_meal_plans, [])
      |> assign(:current_user, current_user)
      |> assign(:user, nil)
      |> assign(:must_be_loged_in, nil)
@@ -53,7 +52,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  @profile_tabs ~w(created saved saved_blueprints my_ingredients friends_ingredients edit_profile connected_accounts)
+  @profile_tabs ~w(created saved meal_plans ingredients edit_profile connected_accounts)
 
   defp content_state_from_tab(tab, live_action) when tab in @profile_tabs do
     case {tab, live_action} do
@@ -61,9 +60,8 @@ defmodule MehungryWeb.ProfileLive.Index do
       when tab in [
              "edit_profile",
              "connected_accounts",
-             "my_ingredients",
-             "friends_ingredients",
-             "saved_blueprints"
+             "ingredients",
+             "meal_plans"
            ] ->
         :created
 
@@ -185,6 +183,10 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:user_saved_recipes, user_saved_recipes)
     |> assign(:user_profile, user_profile)
     |> assign(:user_recipes, user_recipes)
+    # Both lists are fully loaded for a public profile, so count from them.
+    |> assign(:created_count, length(user_created_recipes))
+    |> assign(:saved_count, length(user_saved_recipes))
+    |> assign(:meal_plans_count, 0)
     |> assign(:content_state, content_state_from_tab(params["tab"], :show))
   end
 
@@ -242,37 +244,40 @@ defmodule MehungryWeb.ProfileLive.Index do
         {_content_state, false} -> {[], []}
       end
 
-    # Ingredient lists are only rendered by the two ingredient tabs — skip the
-    # queries entirely on the default created/saved tabs. mount/3 seeds both to
-    # [], so the non-active tab's assign stays empty here.
+    # Ingredient lists are only rendered by the merged "ingredients" tab — skip
+    # the queries entirely on the other tabs. mount/3 seeds both to [], so they
+    # stay empty here when another tab is active.
     {user_ingredients, friends_ingredients} =
       case content_state do
-        :my_ingredients ->
-          {Food.list_user_ingredients(socket.assigns.current_user), []}
-
-        :friends_ingredients ->
-          {[], Food.list_friends_ingredients(socket.assigns.current_user)}
+        :ingredients ->
+          {Food.list_user_ingredients(socket.assigns.current_user),
+           Food.list_friends_ingredients(socket.assigns.current_user)}
 
         _ ->
           {[], []}
       end
 
-    user_saved_blueprints =
+    user_meal_plans =
       case {content_state, is_nil(current_user)} do
-        {:saved_blueprints, false} ->
-          MealBlueprints.list_saved_blueprints_for_user(current_user.id)
+        {:meal_plans, false} ->
+          PublishedPlans.list_plans_for_user(current_user.id)
 
         _ ->
           []
       end
 
+    # Tab badges must show real totals even for tabs whose lists aren't loaded
+    # (only the active tab's list is fetched above). Cheap COUNT queries, always.
     socket
     |> assign(:page_title, "Profile")
     |> assign(:user_created_recipes, user_created_recipes)
     |> assign(:user_saved_recipes, user_saved_recipes)
     |> assign(:user_ingredients, user_ingredients)
     |> assign(:friends_ingredients, friends_ingredients)
-    |> assign(:user_saved_blueprints, user_saved_blueprints)
+    |> assign(:user_meal_plans, user_meal_plans)
+    |> assign(:created_count, Food.count_user_created_recipes(current_user.id) || 0)
+    |> assign(:saved_count, Accounts.count_user_saved_recipes(current_user.id) || 0)
+    |> assign(:meal_plans_count, PublishedPlans.count_plans_for_user(current_user.id))
   end
 
   # A pro user has a canonical public page; used by apply_action(:show) to
@@ -327,6 +332,26 @@ defmodule MehungryWeb.ProfileLive.Index do
   def tab_path(%{live_action: :show, user: user}, tab), do: ~p"/profile/#{user.id}?#{[tab: tab]}"
   def tab_path(%{live_action: :index}, tab), do: ~p"/profile?#{[tab: tab]}"
 
+  # Heading for a "manage account" panel shown in place of the content tab bar.
+  def panel_title(:edit_profile), do: "Edit profile"
+  def panel_title(:connected_accounts), do: "Connections"
+  def panel_title(:ingredients), do: "My ingredients"
+  def panel_title(_), do: "Your recipes"
+
+  # A compact daily-average macro line for a published plan card, e.g.
+  # "1800 kcal · 90 g protein". nil (chip hidden) when the snapshot has no energy.
+  defp macro_label(macros) when is_map(macros) do
+    kcal = macros["energy_kcal"] || 0
+    protein = round(macros["protein_g"] || 0)
+
+    if kcal > 0, do: "#{round(kcal)} kcal · #{protein} g protein", else: nil
+  end
+
+  defp macro_label(_), do: nil
+
+  defp plural(1, word), do: word
+  defp plural(_, word), do: word <> "s"
+
   def handle_event("add_friend", %{"id" => id}, socket) do
     requester_id = socket.assigns.current_user.id
 
@@ -377,16 +402,16 @@ defmodule MehungryWeb.ProfileLive.Index do
     {:noreply, assign(socket, :must_be_loged_in, nil)}
   end
 
-  def handle_event("unsave-blueprint", %{"id" => id}, socket) do
+  def handle_event("delete-meal-plan", %{"id" => id}, socket) do
     user = socket.assigns.current_user
-    MealBlueprints.remove_saved_blueprint_for_user(user.id, String.to_integer(id))
+    # Owner-scoped fetch so a forged id can't unpublish someone else's plan.
+    plan = PublishedPlans.get_user_plan!(user.id, String.to_integer(id))
+    {:ok, _} = PublishedPlans.delete_plan(plan)
 
     {:noreply,
-     assign(
-       socket,
-       :user_saved_blueprints,
-       MealBlueprints.list_saved_blueprints_for_user(user.id)
-     )}
+     socket
+     |> assign(:user_meal_plans, PublishedPlans.list_plans_for_user(user.id))
+     |> put_flash(:info, "Meal plan removed")}
   end
 
   def handle_event("unsave-recipe", %{"id" => id}, socket) do
@@ -465,23 +490,60 @@ defmodule MehungryWeb.ProfileLive.Index do
     """
   end
 
-  def get_profile_content(%{content_state: :saved_blueprints} = assigns) do
+  def get_profile_content(%{content_state: :meal_plans} = assigns) do
     ~H"""
     <div class="pb-20 w-full px-4">
-      <div :if={@user_saved_blueprints == []} class="text-center text-parchment-dim py-16">
-        You haven't saved any blueprints yet. Browse blueprints and tap Save.
+      <div :if={@user_meal_plans == []} class="text-center text-parchment-dim py-16">
+        You haven't posted any meal plans yet. Plan a week on your calendar, then
+        tap "Post this week" to share it.
         <div class="mt-3">
-          <.link navigate={~p"/browse"} class="text-basil hover:underline">Browse blueprints →</.link>
+          <.link navigate={~p"/calendar"} class="text-basil hover:underline">Go to calendar →</.link>
         </div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div :for={bp <- @user_saved_blueprints} class="relative">
-          <.blueprint_card blueprint={bp} />
+        <div
+          :for={plan <- @user_meal_plans}
+          class="group relative flex flex-col bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden hover:border-basil/50 transition"
+        >
+          <.link navigate={~p"/meal-plans/#{plan.slug}?#{[from: "profile"]}"} class="block p-4 flex-1">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0 flex-1">
+                <div class="font-semibold text-parchment truncate group-hover:text-basil transition">
+                  {plan.title}
+                </div>
+                <div class="text-parchment-dim text-sm mt-0.5">
+                  Week of {Calendar.strftime(plan.week_start, "%b %-d, %Y")}
+                </div>
+              </div>
+              <span class={[
+                "text-[11px] px-2 py-0.5 rounded-full shrink-0",
+                if(plan.visibility == "public",
+                  do: "bg-basil/15 text-basil",
+                  else: "bg-ink-panel2 text-parchment-dim"
+                )
+              ]}>
+                {if plan.visibility == "public", do: "Public", else: "Private"}
+              </span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5 mt-3">
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
+                {plan.recipe_count} {plural(plan.recipe_count, "recipe")}
+              </span>
+              <span
+                :if={macro_label(plan.macros)}
+                class="text-[11px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim"
+              >
+                {macro_label(plan.macros)}
+              </span>
+            </div>
+          </.link>
+
           <button
-            phx-click="unsave-blueprint"
-            phx-value-id={bp.id}
-            data-confirm="Remove this blueprint from your saved list?"
-            class="absolute top-2 right-2 px-2 py-1 rounded-lg text-xs bg-ink/70 text-parchment-dim hover:text-paprika transition"
+            phx-click="delete-meal-plan"
+            phx-value-id={plan.id}
+            data-confirm="Remove this meal plan? This unpublishes its public page."
+            class="absolute top-2 right-2 px-2 py-1 rounded-lg text-xs bg-ink/70 text-parchment-dim hover:text-paprika transition opacity-0 group-hover:opacity-100 focus:opacity-100"
           >
             Remove
           </button>
@@ -491,7 +553,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     """
   end
 
-  def get_profile_content(%{content_state: :my_ingredients} = assigns) do
+  def get_profile_content(%{content_state: :ingredients} = assigns) do
     ~H"""
     <div class="pb-20 w-full max-w-3xl mx-auto px-4">
       <div class="flex items-center justify-between mb-4">
@@ -541,36 +603,32 @@ defmodule MehungryWeb.ProfileLive.Index do
           </div>
         </div>
       <% end %>
-    </div>
-    """
-  end
 
-  def get_profile_content(%{content_state: :friends_ingredients} = assigns) do
-    ~H"""
-    <div class="pb-20 w-full max-w-3xl mx-auto px-4">
-      <h3 class="text-lg font-display font-medium text-parchment mb-4">Friends' Ingredients</h3>
+      <div class="mt-10 pt-6 border-t border-ink-panel2">
+        <h3 class="text-lg font-display font-medium text-parchment mb-4">Friends' Ingredients</h3>
 
-      <%= if @friends_ingredients == [] do %>
-        <div class="text-parchment-dim text-sm border border-ink-panel2 bg-ink-panel rounded-xl p-6 text-center">
-          None yet. Ingredients your friends create are shared with you here and
-          become available in your recipes, meal plans, and shopping basket.
-        </div>
-      <% else %>
-        <div class="space-y-3">
-          <div
-            :for={ingredient <- @friends_ingredients}
-            class="flex items-center justify-between border border-ink-panel2 bg-ink-panel rounded-xl p-4"
-          >
-            <div class="min-w-0">
-              <div class="text-parchment font-medium truncate">{ingredient.name}</div>
-              <div class="text-parchment-dim text-xs">
-                {length(ingredient.ingredient_nutrients)} nutrients · shared by {ingredient.user &&
-                  (ingredient.user.name || ingredient.user.email)}
+        <%= if @friends_ingredients == [] do %>
+          <div class="text-parchment-dim text-sm border border-ink-panel2 bg-ink-panel rounded-xl p-6 text-center">
+            None yet. Ingredients your friends create are shared with you here and
+            become available in your recipes, meal plans, and shopping basket.
+          </div>
+        <% else %>
+          <div class="space-y-3">
+            <div
+              :for={ingredient <- @friends_ingredients}
+              class="flex items-center justify-between border border-ink-panel2 bg-ink-panel rounded-xl p-4"
+            >
+              <div class="min-w-0">
+                <div class="text-parchment font-medium truncate">{ingredient.name}</div>
+                <div class="text-parchment-dim text-xs">
+                  {length(ingredient.ingredient_nutrients)} nutrients · shared by {ingredient.user &&
+                    (ingredient.user.name || ingredient.user.email)}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      <% end %>
+        <% end %>
+      </div>
     </div>
     """
   end
@@ -583,7 +641,7 @@ defmodule MehungryWeb.ProfileLive.Index do
       category_ids={@category_ids}
       food_restriction_ids={@food_restriction_ids}
       food_restrictions={@food_restrictions}
-      id="hero"
+      id="profile_edit_form"
       user_profile={@current_user_profile}
       live_action={@live_action}
       current_user={@current_user}

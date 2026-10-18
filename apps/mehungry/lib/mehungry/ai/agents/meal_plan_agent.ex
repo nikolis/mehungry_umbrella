@@ -421,6 +421,21 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
     end)
   end
 
+  @doc false
+  # The avoid terms (case-insensitive substring) that appear in any of `names` —
+  # the detection counterpart of `reject_avoided/3`, used to flag (not drop) a
+  # logged meal whose food names contain a term. Returns the matched terms,
+  # deduped; `[]` when nothing matches or there are no terms.
+  def matched_avoid_terms(_names, []), do: []
+
+  def matched_avoid_terms(names, terms) do
+    downcased = Enum.map(names, &(&1 |> to_string() |> String.downcase()))
+
+    Enum.filter(terms, fn term ->
+      Enum.any?(downcased, &String.contains?(&1, term))
+    end)
+  end
+
   defp avoid_block([]), do: ""
 
   defp avoid_block(terms) do

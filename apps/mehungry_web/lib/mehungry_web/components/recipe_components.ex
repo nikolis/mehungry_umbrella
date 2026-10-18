@@ -9,6 +9,7 @@ defmodule MehungryWeb.RecipeComponents do
     router: MehungryWeb.Router
 
   use Phoenix.Component
+  use Gettext, backend: MehungryWeb.Gettext
   alias Phoenix.LiveView.JS
   import MehungryWeb.CoreComponents
   import MehungryWeb.TabsComponent
@@ -188,6 +189,7 @@ defmodule MehungryWeb.RecipeComponents do
           recipe={@recipe}
           nutrients={@nutrients}
           primary_size={@primary_size}
+          locale={Map.get(assigns, :locale, "en")}
           ingredient_display_names={Map.get(assigns, :ingredient_display_names, %{})}
           ingredient_flags={Map.get(assigns, :ingredient_flags, %{})}
         />
@@ -704,12 +706,15 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_nutrients(%Mehungry.Food.Recipe{} = recipe) do
+  def recipe_nutrients(recipe, locale \\ "en")
+
+  def recipe_nutrients(%Mehungry.Food.Recipe{} = recipe, locale) do
     assigns = %{
       id: recipe.id,
       nutrients: recipe.nutrients,
       primary_size: recipe.primary_nutrients_size || 3,
       servings: recipe.servings || 1,
+      locale: locale,
       class: ""
     }
 
@@ -717,23 +722,28 @@ defmodule MehungryWeb.RecipeComponents do
     <div class="my-4 bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden">
       <MehungryWeb.NutritionAccordion.nutrition_accordion
         nutrients={@nutrients}
-        title="Nutrition Facts"
+        title={gettext("Nutrition Facts")}
         max_height="600px"
         show_title={true}
+        locale={@locale}
+        accordion_id={"nutrition-#{@id}"}
       />
     </div>
     """
   end
 
   @doc """
-  Renders an accordion for recipe nutrients - with visual indicators for clickable items
+  Renders an accordion for recipe nutrients - with visual indicators for clickable items.
+  Accepts an assigns map; `:locale` localizes the nutrient names, falling back to
+  the `locale` argument (default "en") when the map carries none.
   """
-  def recipe_nutrients(assigns) do
+  def recipe_nutrients(assigns, locale) do
     assigns = %{
       id: assigns[:id],
       nutrients: assigns[:nutrients],
       primary_size: assigns[:primary_size] || 3,
       servings: assigns[:servings] || 1,
+      locale: assigns[:locale] || locale,
       class: assigns[:class] || ""
     }
 
@@ -741,9 +751,11 @@ defmodule MehungryWeb.RecipeComponents do
     <div class="my-4 bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden">
       <MehungryWeb.NutritionAccordion.nutrition_accordion
         nutrients={@nutrients}
-        title="Nutrition Facts"
+        title={gettext("Nutrition Facts")}
         max_height="600px"
         show_title={true}
+        locale={@locale}
+        accordion_id={"nutrition-#{@id}"}
       />
     </div>
     """

@@ -50,6 +50,20 @@ defmodule MehungryWeb.Api.V1.IngredientMealTest do
              end)
     end
 
+    test "?lang=el searches and labels translated ingredient names", %{conn: conn} do
+      Mehungry.Languages.ensure_language("el")
+      ingredient = FoodFixtures.ingredient_fixture(%{name: "Banana parity el"})
+      {:ok, _} = Food.Localization.upsert_ingredient_translation(ingredient.id, "el", "Μπανάνα τεστ")
+
+      resp =
+        conn
+        |> get(~p"/api/v1/ingredients/search?q=Μπανάνα&source=local&lang=el")
+        |> json_response(200)
+
+      assert %{"data" => hits} = resp
+      assert Enum.any?(hits, &(&1["id"] == ingredient.id and &1["name"] == "Μπανάνα τεστ"))
+    end
+
     test "default (no source) still routes to the USDA branch, not local", %{conn: conn} do
       _ingredient = FoodFixtures.ingredient_fixture(%{name: "Onion parity"})
 

@@ -84,7 +84,7 @@ defmodule MehungryWeb.PrivacyPolicyLive do
             {"Content you create", "Recipes, comments, votes, posts, meal plans, shopping baskets, images and media you upload."},
             {"Nutritionist client records", "If you are (or are a client of) a nutritionist: intake data such as height, weight, BMI/BMR/TDEE, goals, free-text notes and consultation notes."},
             {"Payment data", "Subscription tier and billing status. Card details are handled directly by Stripe — we do not store full card numbers."},
-            {"Usage & device data", "Pages visited, referrer, approximate interaction history, IP address, browser/device type and page-load timing (for analytics and security)."}
+            {"Usage & device data", "If you accept analytics cookies, Google Analytics processes usage data (pages visited, referrer, approximate location, device/browser type). We ourselves keep only an anonymous daily session counter that stores no IP, cookie or identifier."}
           ]} />
         </.section>
 
@@ -160,7 +160,7 @@ defmodule MehungryWeb.PrivacyPolicyLive do
         <.section id="retention" title="7. How long we keep data">
           <ul class="list-disc space-y-2 pl-5">
             <li>Account and content data: for as long as your account is active.</li>
-            <li>Analytics visit records: a limited period (currently up to 90 days) then deleted.</li>
+            <li>Analytics: handled by Google Analytics under its own retention; we keep only an anonymous, non-identifying daily session counter.</li>
             <li>Billing and tax records: as required by applicable accounting/tax law.</li>
             <li>
               When you delete your account, we delete or anonymise the personal data associated with

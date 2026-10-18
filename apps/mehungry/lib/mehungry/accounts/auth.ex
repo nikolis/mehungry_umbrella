@@ -292,14 +292,19 @@ defmodule Mehungry.Accounts.Auth do
   @doc """
   Delivers the confirmation email instructions to the given user.
   """
-  def deliver_user_confirmation_instructions(%User{} = user, confirmation_url_fun)
+  def deliver_user_confirmation_instructions(%User{} = user, confirmation_url_fun, locale \\ "en")
       when is_function(confirmation_url_fun, 1) do
     if user.confirmed_at do
       {:error, :already_confirmed}
     else
       {encoded_token, user_token} = UserToken.build_email_token(user, "confirm")
       Repo.insert!(user_token)
-      UserNotifier.deliver_confirmation_instructions(user, confirmation_url_fun.(encoded_token))
+
+      UserNotifier.deliver_confirmation_instructions(
+        user,
+        confirmation_url_fun.(encoded_token),
+        locale
+      )
     end
   end
 

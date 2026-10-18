@@ -60,6 +60,8 @@ defmodule Mehungry.Accounts do
   defdelegate get_user_by_session_token(token), to: Auth
   defdelegate delete_session_token(token), to: Auth
   defdelegate deliver_user_confirmation_instructions(user, confirmation_url_fun), to: Auth
+
+  defdelegate deliver_user_confirmation_instructions(user, confirmation_url_fun, locale), to: Auth
   defdelegate confirm_user(token), to: Auth
   defdelegate confirm_user_multi(user), to: Auth
   defdelegate deliver_user_reset_password_instructions(user, reset_password_url_fun), to: Auth
@@ -88,6 +90,8 @@ defmodule Mehungry.Accounts do
   defdelegate update_user_profile(user_profile, attrs), to: Profiles
   defdelegate update_user_language(profile, lang), to: Profiles
   defdelegate set_followed_blueprint(profile, blueprint_id), to: Profiles
+  defdelegate set_avoid_foods(profile, foods), to: Profiles
+  defdelegate clean_food_list(foods), to: Profiles
   defdelegate get_user_language(user_id), to: Profiles
   defdelegate delete_user_profile(user_profile), to: Profiles
   defdelegate change_user_profile(user_profile, attrs \\ %{}), to: Profiles

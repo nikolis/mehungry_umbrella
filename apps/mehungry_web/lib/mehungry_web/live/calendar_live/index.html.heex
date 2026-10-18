@@ -1,10 +1,47 @@
-<div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
 <div
   style="height: 100%; overflow-y: auto;"
   class="calendar-page bg-ink text-parchment"
 >
   <div class="px-3 sm:px-4 pt-3">
-    <div class="flex justify-end mb-2">
+    <div class="flex justify-end gap-2 mb-2">
+      <button
+        type="button"
+        id="share-week-open"
+        phx-click={show_modal("share_week_modal")}
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-paprika/40 text-xs font-medium transition-colors"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+          />
+        </svg>
+        {gettext("Share this week")}
+      </button>
+      <button
+        type="button"
+        id="avoid-foods-open"
+        phx-click={show_modal("avoid_foods_modal")}
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-amber-400/50 text-xs font-medium transition-colors"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+          />
+        </svg>
+        {gettext("Foods I avoid")}
+        <span
+          :if={@avoid_foods != []}
+          class="ml-0.5 inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-amber-500/20 text-amber-300 text-[0.65rem] font-bold"
+        >
+          {length(@avoid_foods)}
+        </span>
+      </button>
       <button
         type="button"
         id="ai-plan-toggle"
@@ -145,6 +182,20 @@
   <!-- Meal plan rating widget (shown when user has a nutritionist) -->
   <%= if assigns[:has_nutritionist] do %>
     <div class="px-3 sm:px-4 pt-2 pb-1">
+      <.link
+        navigate={~p"/messages"}
+        class="inline-flex items-center gap-1.5 mb-2 text-paprika-soft text-xs font-medium hover:text-paprika transition"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          />
+        </svg>
+        Message your nutritionist →
+      </.link>
       <div
         class="bg-ink-panel border border-ink-panel2 rounded-xl p-4"
         x-data="{showRating: false}"
@@ -236,6 +287,7 @@
         recipes={@recipes}
         dates={@dates}
         current_user={@current_user}
+        current_language={@current_language}
         return_to={@detail_return_to || ~p"/calendar"}
       />
     </div>
@@ -278,10 +330,171 @@
     </div>
   </MehungryWeb.RecipeComponents.recipe_modal>
 
+  <.modal id="share_week_modal" show={false} on_cancel={JS.push("reset_share")}>
+    <div class="w-full">
+      <h3 class="font-display font-medium text-parchment text-lg mb-1 flex items-center gap-2">
+        <svg class="w-5 h-5 text-paprika" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+          />
+        </svg>
+        {gettext("Share this week")}
+      </h3>
+
+      <%= cond do %>
+        <% @share_generating -> %>
+          <div class="flex flex-col items-center gap-3 py-10">
+            <svg
+              class="animate-spin w-8 h-8 text-paprika"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <p class="text-parchment-dim text-sm">{gettext("Creating your card…")}</p>
+          </div>
+
+        <% @share_graphic && !@share_regenerate -> %>
+          <p class="text-parchment-dim/70 text-xs mb-3">
+            {gettext("Your saved card for this week.")}
+          </p>
+          <img
+            src={@share_graphic.image_url}
+            alt={gettext("Weekly plan card")}
+            class="w-full max-w-sm mx-auto rounded-xl border border-ink-panel2 mb-4"
+          />
+          <div class="flex flex-wrap gap-2 justify-center">
+            <a
+              href={@share_graphic.image_url}
+              target="_blank"
+              rel="noopener"
+              download
+              class="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-basil/40 text-sm font-medium transition-colors"
+            >
+              {gettext("Download")}
+            </a>
+            <button
+              id="share-week-native"
+              phx-hook="WebShare"
+              data-url={@share_graphic.image_url}
+              data-title={gettext("My weekly meal plan")}
+              class="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-basil/40 text-sm font-medium transition-colors"
+            >
+              <span>{gettext("Share")}</span>
+            </button>
+            <button
+              :if={!@share_posted}
+              type="button"
+              phx-click="post_week_plan"
+              class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-sm font-bold transition-colors"
+            >
+              {gettext("Post to m3hungry")}
+            </button>
+          </div>
+          <p :if={@share_posted} class="text-center text-basil text-sm mt-4">
+            {gettext("Posted!")}
+            <.link navigate={~p"/home"} class="underline hover:text-basil/80">
+              {gettext("View in feed")}
+            </.link>
+          </p>
+          <div class="mt-5 pt-4 border-t border-ink-panel2 text-center">
+            <button
+              type="button"
+              phx-click="start_regenerate"
+              class="inline-flex items-center gap-1.5 text-parchment-dim hover:text-parchment text-sm font-medium transition-colors"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              {gettext("Re-generate from the latest plan")}
+            </button>
+          </div>
+
+        <% true -> %>
+          <form phx-submit="generate_week_card" class="space-y-4">
+            <div>
+              <label class="block text-parchment-dim text-xs uppercase tracking-wide mb-1">
+                {gettext("Goal label (optional)")}
+              </label>
+              <input
+                type="text"
+                name="goal_label"
+                maxlength="28"
+                value={@share_graphic && @share_graphic.goal_label}
+                placeholder={gettext("e.g. Anti-inflammatory")}
+                class="w-full bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
+              />
+            </div>
+            <p class="text-parchment-dim/70 text-xs leading-relaxed">
+              {gettext(
+                "This shares your meal titles and weekly nutrition totals publicly. Your day notes and shopping basket stay private."
+              )}
+            </p>
+            <button
+              type="submit"
+              class="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-sm font-bold transition-colors"
+            >
+              <%= if @share_graphic do %>
+                {gettext("Replace saved card")}
+              <% else %>
+                {gettext("Create shareable card")}
+              <% end %>
+            </button>
+          </form>
+      <% end %>
+    </div>
+  </.modal>
+
+  <.modal id="avoid_foods_modal" show={false} on_cancel={%JS{}}>
+    <div class="w-full">
+      <h3 class="font-display font-medium text-parchment text-lg mb-1 flex items-center gap-2">
+        <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636"
+          />
+        </svg>
+        {gettext("Foods I avoid")}
+      </h3>
+      <p class="text-parchment-dim/70 text-xs leading-relaxed mb-4">
+        {gettext(
+          "List foods you'd rather not eat — one per line. Any meal on your calendar containing one gets flagged. This list is private to you."
+        )}
+      </p>
+      <form phx-submit="save_avoid_foods" class="space-y-4">
+        <textarea
+          name="foods"
+          rows="6"
+          placeholder={gettext("e.g.\nonion\ngarlic\nshellfish")}
+          class="w-full bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-amber-400 resize-none"
+        ><%= Enum.join(@avoid_foods, "\n") %></textarea>
+        <button
+          type="submit"
+          phx-click={hide_modal("avoid_foods_modal")}
+          class="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-ink text-sm font-bold transition-colors"
+        >
+          {gettext("Save avoid list")}
+        </button>
+      </form>
+    </div>
+  </.modal>
+
   <.live_component
     module={MehungryWeb.CalendarLive.Calendar.Widget}
     id={:new}
     user_meals={@user_meals}
+    day_notes={@day_notes}
     particular_date={@particular_date}
     calendar_view={@calendar_view}
     user={@current_user}
@@ -290,5 +503,6 @@
     current_language={@current_language}
     active_blueprint={@active_blueprint}
     blueprint_progress={@blueprint_progress}
+    avoid_terms={@avoid_terms}
   />
 </div>

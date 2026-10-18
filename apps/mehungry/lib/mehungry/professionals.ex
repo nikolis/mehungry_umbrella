@@ -15,7 +15,8 @@ defmodule Mehungry.Professionals do
     ArticleReference,
     ProfessionalClient,
     ClientIntake,
-    ConsultationNote
+    ConsultationNote,
+    AssignmentMessage
   }
 
   alias Mehungry.Professionals.DietaryHistory
@@ -292,6 +293,97 @@ defmodule Mehungry.Professionals do
     end
   end
 
+  # ── Client ↔ Nutritionist messages ──────────────────────────────────────────────
+  #
+  # One running conversation per (professional, client) pair. Either party posts;
+  # a message is unread for its recipient (the party who is not the sender) while
+  # `read_at` is nil. Live updates ride the shared `Mehungry.PubSub` on a
+  # per-user topic (mirrors the posts/agent conventions).
+
+  @doc "Subscribe a LiveView to the viewer's message stream (both their threads as client and as professional)."
+  def subscribe_to_messages(user_id) do
+    Phoenix.PubSub.subscribe(Mehungry.PubSub, message_topic(user_id))
+  end
+
+  defp message_topic(user_id), do: "assignment_messages:#{user_id}"
+
+  @doc "All messages in one thread, oldest first."
+  def list_messages(professional_id, client_id) do
+    Repo.all(
+      from m in AssignmentMessage,
+        where: m.professional_id == ^professional_id and m.client_id == ^client_id,
+        order_by: [asc: m.inserted_at, asc: m.id]
+    )
+  end
+
+  @doc "Post a message and broadcast it to both parties' topics."
+  def send_message(professional_id, client_id, sender_user_id, body) do
+    attrs = %{
+      professional_id: professional_id,
+      client_id: client_id,
+      sender_user_id: sender_user_id,
+      body: body
+    }
+
+    case %AssignmentMessage{} |> AssignmentMessage.changeset(attrs) |> Repo.insert() do
+      {:ok, message} ->
+        Phoenix.PubSub.broadcast(
+          Mehungry.PubSub,
+          message_topic(professional_id),
+          {:assignment_message, message}
+        )
+
+        Phoenix.PubSub.broadcast(
+          Mehungry.PubSub,
+          message_topic(client_id),
+          {:assignment_message, message}
+        )
+
+        {:ok, message}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  @doc "Mark every message in the thread that the reader received (did not send) as read. Returns the count updated."
+  def mark_thread_read(professional_id, client_id, reader_user_id) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    {count, _} =
+      Repo.update_all(
+        from(m in AssignmentMessage,
+          where: m.professional_id == ^professional_id and m.client_id == ^client_id,
+          where: m.sender_user_id != ^reader_user_id and is_nil(m.read_at)
+        ),
+        set: [read_at: now]
+      )
+
+    count
+  end
+
+  @doc "Total unread messages addressed to this user across all their threads (as client or as professional)."
+  def count_unread_messages_for(user_id) do
+    Repo.one(
+      from m in AssignmentMessage,
+        where: m.sender_user_id != ^user_id and is_nil(m.read_at),
+        where: m.client_id == ^user_id or m.professional_id == ^user_id,
+        select: count(m.id)
+    )
+  end
+
+  @doc "Per-client unread counts for a professional's roster — `%{client_id => count}`."
+  def unread_counts_by_client(professional_id) do
+    Repo.all(
+      from m in AssignmentMessage,
+        where: m.professional_id == ^professional_id,
+        where: m.sender_user_id != ^professional_id and is_nil(m.read_at),
+        group_by: m.client_id,
+        select: {m.client_id, count(m.id)}
+    )
+    |> Map.new()
+  end
+
   @doc """
   Creates a login-less "managed" client account for a professional from just an
   alias, assigns it to them, and returns a claim token.
@@ -368,6 +460,20 @@ defmodule Mehungry.Professionals do
     )
   end
 
+  @doc """
+  Appointments between a specific professional and client, scoped so a
+  nutritionist only ever sees the appointments they hold with that client (not
+  any the client had with a previous nutritionist).
+  """
+  def list_appointments_for_professional_client(professional_id, client_id) do
+    Repo.all(
+      from a in Appointment,
+        where: a.professional_id == ^professional_id and a.client_id == ^client_id,
+        order_by: [desc: a.scheduled_at],
+        preload: [professional: :user_profile]
+    )
+  end
+
   def list_upcoming_appointments(professional_id, limit \\ 5) do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
@@ -391,6 +497,16 @@ defmodule Mehungry.Professionals do
   end
 
   def get_appointment!(id), do: Repo.get!(Appointment, id)
+
+  @doc """
+  Fetch an appointment by id, scoped to its owning professional. Returns `nil`
+  when the appointment does not exist or belongs to a different professional —
+  so callers can reject cross-tenant mutations instead of acting on another
+  nutritionist's rows.
+  """
+  def get_appointment_for_professional(professional_id, id) do
+    Repo.get_by(Appointment, id: id, professional_id: professional_id)
+  end
 
   def create_appointment(attrs) do
     %Appointment{}
@@ -528,7 +644,7 @@ defmodule Mehungry.Professionals do
     ends_at = NaiveDateTime.add(scheduled_at, slot_minutes * 60, :second)
 
     if slot_open?(professional_id, scheduled_at) do
-      create_appointment(%{
+      %{
         professional_id: professional_id,
         client_id: client_id,
         scheduled_at: scheduled_at,
@@ -536,7 +652,19 @@ defmodule Mehungry.Professionals do
         title: opts[:title] || "Consultation",
         notes: opts[:notes],
         status: "requested"
-      })
+      }
+      |> create_appointment()
+      |> case do
+        # The partial unique index is the final arbiter against a concurrent
+        # request that also passed `slot_open?` — surface it as slot_unavailable.
+        {:error, %Ecto.Changeset{errors: errors} = changeset} ->
+          if Keyword.has_key?(errors, :scheduled_at),
+            do: {:error, :slot_unavailable},
+            else: {:error, changeset}
+
+        ok ->
+          ok
+      end
     else
       {:error, :slot_unavailable}
     end
@@ -835,6 +963,21 @@ defmodule Mehungry.Professionals do
     )
   end
 
+  @doc """
+  Maps every platform user the professional has a client record for to that
+  record — `%{user_id => %ProfessionalClient{}}`. Most recently created wins on
+  duplicates (e.g. repeated CSV imports), matching `get_client_record_by_user/2`.
+  Batched so a client roster can show per-client file status without N+1 queries.
+  """
+  def records_by_user_id(professional_id) do
+    from(c in ProfessionalClient,
+      where: c.professional_id == ^professional_id,
+      order_by: [desc: c.inserted_at, desc: c.id]
+    )
+    |> Repo.all()
+    |> Enum.reduce(%{}, fn record, acc -> Map.put_new(acc, record.user_id, record) end)
+  end
+
   def create_client_record(attrs) do
     %ProfessionalClient{}
     |> ProfessionalClient.changeset(attrs)
@@ -896,8 +1039,32 @@ defmodule Mehungry.Professionals do
     Repo.all(
       from n in ConsultationNote,
         where: n.professional_client_id == ^professional_client_id,
-        order_by: [asc_nulls_last: n.visit_date, asc: n.visit_number, asc: n.inserted_at]
+        order_by: [asc_nulls_last: n.visit_date, asc: n.visit_number, asc: n.inserted_at],
+        preload: [:appointment]
     )
+  end
+
+  @doc """
+  A client's dated weight points, merged from both sources — each `ClientIntake`
+  (`assessed_on`) and each `ConsultationNote` (`visit_date`) that carries a
+  `weight_kg`. Rows missing a weight or a date are dropped. Returns
+  `[%{date: ~D[...], weight_kg: float, source: :intake | :visit}, ...]` sorted
+  ascending by date, suitable for plotting a weight trend.
+  """
+  def weight_history(professional_client_id) do
+    intakes =
+      professional_client_id
+      |> list_intakes()
+      |> Enum.filter(&(&1.weight_kg && &1.assessed_on))
+      |> Enum.map(&%{date: &1.assessed_on, weight_kg: &1.weight_kg, source: :intake})
+
+    visits =
+      professional_client_id
+      |> list_consultation_notes()
+      |> Enum.filter(&(&1.weight_kg && &1.visit_date))
+      |> Enum.map(&%{date: &1.visit_date, weight_kg: &1.weight_kg, source: :visit})
+
+    Enum.sort_by(intakes ++ visits, & &1.date, Date)
   end
 
   def create_consultation_note(attrs) do

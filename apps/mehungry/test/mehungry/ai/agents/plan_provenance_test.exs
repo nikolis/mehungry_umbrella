@@ -163,6 +163,21 @@ defmodule Mehungry.AI.Agents.PlanProvenanceTest do
       results = [%{id: 1, name: "Onion"}]
       assert MealPlanAgent.reject_avoided(results, [], & &1.name) == results
     end
+
+    test "matched_avoid_terms returns the terms appearing in any name" do
+      names = ["Red Onion Salad", "Grilled Chicken"]
+      assert MealPlanAgent.matched_avoid_terms(names, ["onion", "garlic"]) == ["onion"]
+    end
+
+    test "matched_avoid_terms dedups terms matched across names and is case-insensitive" do
+      names = ["ONION soup", "caramelized onion"]
+      assert MealPlanAgent.matched_avoid_terms(names, ["onion"]) == ["onion"]
+    end
+
+    test "matched_avoid_terms is empty with no terms or no match" do
+      assert MealPlanAgent.matched_avoid_terms(["Carrot"], []) == []
+      assert MealPlanAgent.matched_avoid_terms(["Carrot"], ["onion"]) == []
+    end
   end
 
   describe "NutritionistAgent.validate_entries/5" do

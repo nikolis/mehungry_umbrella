@@ -122,5 +122,13 @@ defmodule MehungryWeb.Api.V1.NutritionistController do
 
   defp uid(conn), do: conn.assigns.current_user.id
   defp to_int(v) when is_integer(v), do: v
-  defp to_int(v) when is_binary(v), do: String.to_integer(v)
+
+  defp to_int(v) when is_binary(v) do
+    case Integer.parse(v) do
+      {i, ""} -> i
+      _ -> nil
+    end
+  end
+
+  defp to_int(_), do: nil
 end

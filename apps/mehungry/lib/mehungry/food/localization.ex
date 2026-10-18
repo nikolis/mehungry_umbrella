@@ -12,6 +12,7 @@ defmodule Mehungry.Food.Localization do
   alias Mehungry.Food.{
     Category,
     CategoryTranslation,
+    CompoundTranslation,
     Ingredient,
     IngredientPortion,
     IngredientTranslation,
@@ -205,6 +206,25 @@ defmodule Mehungry.Food.Localization do
 
   def ingredient_display_names(_ingredient_ids, _language), do: %{}
 
+  @doc """
+  Like `ingredient_display_names/2` but keyed on the ingredient's base `name`
+  instead of its id — for surfaces that only carry names (e.g. a published plan's
+  grocery list). Returns `%{base_name => translated_name}` for the given
+  `language_name`; empty for English (base names are already English).
+  """
+  def ingredient_display_names_by_name(names, language_name)
+      when is_list(names) and names != [] and language_name not in [nil, "en", "En"] do
+    from(t in IngredientTranslation,
+      join: i in assoc(t, :ingredient),
+      where: t.language_name == ^language_name and i.name in ^names,
+      select: {i.name, t.name}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  def ingredient_display_names_by_name(_names, _language), do: %{}
+
   def get_unit_translations_map(unit_ids, language_name)
       when language_name not in [nil, "en", "En"] do
     from(t in MeasurementUnitTranslation,
@@ -288,4 +308,35 @@ defmodule Mehungry.Food.Localization do
 
     Repo.all(query)
   end
+
+  @doc """
+  `%{compound_id => translated_name}` for the given compound ids and `locale`.
+
+  Compound translations live in `compound_translations` (curated/AI-drafted at
+  `/professional/translations`). Rows may be keyed by the ISO code or a legacy
+  alias (`Locale.data_codes/1`); the ISO row wins when both exist. Returns `%{}`
+  for the source locale so callers no-op cleanly.
+  """
+  def compound_display_names(compound_ids, locale)
+      when is_list(compound_ids) and locale not in [nil, "en", "En"] do
+    codes = Locale.data_codes(locale)
+    iso = Locale.write_code(locale)
+
+    from(t in CompoundTranslation,
+      where: t.language_name in ^codes and t.compound_id in ^compound_ids,
+      select: {t.compound_id, t.language_name, t.name}
+    )
+    |> Repo.all()
+    |> Enum.reduce(%{}, fn {cid, lang, name}, acc ->
+      cond do
+        not Map.has_key?(acc, cid) -> Map.put(acc, cid, {lang, name})
+        # ISO row overrides a previously-seen legacy row.
+        lang == iso -> Map.put(acc, cid, {lang, name})
+        true -> acc
+      end
+    end)
+    |> Map.new(fn {cid, {_lang, name}} -> {cid, name} end)
+  end
+
+  def compound_display_names(_compound_ids, _locale), do: %{}
 end

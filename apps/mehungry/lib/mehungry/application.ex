@@ -19,7 +19,6 @@ defmodule Mehungry.Application do
       # {Cachex, [:recipe_cache, [limit: 300]], id: :recipes_cache_worker}  # with custom options
       %{id: :recipes_cache, start: {Cachex, :start_link, [:recipes_cache, [limit: 150]]}},
       %{id: :cache_user_tokens, start: {Cachex, :start_link, [:cache_user_tokens]}},
-      %{id: :geo_cache, start: {Cachex, :start_link, [:geo_cache, [limit: 5000]]}},
       # Negative cache for Open Food Facts barcode lookups (respects OFF's 100 req/min limit)
       %{id: :off_lookup_cache, start: {Cachex, :start_link, [:off_lookup_cache, [limit: 1000]]}},
       # Hot name->CID cache for the PubChem importer; the durable cache is the
@@ -43,7 +42,8 @@ defmodule Mehungry.Application do
         id: :ingredient_details_cache,
         start: {Cachex, :start_link, [:ingredient_details_cache, [limit: 500]]}
       },
-      {Task.Supervisor, name: Mehungry.TaskSupervisor}
+      {Task.Supervisor, name: Mehungry.TaskSupervisor},
+      Mehungry.Meta.SessionAggregator
     ]
 
     case Supervisor.start_link(children, strategy: :one_for_one, name: Mehungry.Supervisor) do

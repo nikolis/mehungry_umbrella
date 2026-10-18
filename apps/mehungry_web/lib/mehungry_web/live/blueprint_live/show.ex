@@ -213,6 +213,21 @@ defmodule MehungryWeb.BlueprintLive.Show do
             </div>
           </div>
         </details>
+        <!-- Referral footer: every shared blueprint links back to the site. -->
+        <div class="mt-10 pt-6 border-t border-ink-panel2 text-center">
+          <.link
+            navigate={~p"/"}
+            class="inline-flex items-center gap-1.5 text-sm text-parchment-dim hover:text-parchment transition"
+          >
+            Made with
+            <span class="font-display font-medium text-parchment">
+              m3<span class="text-paprika-soft">hungry</span>.com
+            </span>
+          </.link>
+          <p class="text-xs text-parchment-dim mt-1">
+            Build and share your own weekly meal plans, free.
+          </p>
+        </div>
       </div>
     </div>
     """

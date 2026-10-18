@@ -45,10 +45,13 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     # the day's totals) to reveal the Nutrition Facts + charts. On the current day
     # the totals also sit on the day's accordion header, so drop the redundant row.
     |> Map.merge(%{
-      title: "Daily Summary",
+      title: gettext("Daily Summary"),
       subtitle: nil,
       foldable: true,
-      show_tags: day != current_date
+      show_tags: day != current_date,
+      # Day view defaults to the macro donut only; the micronutrient pie is
+      # revealed on demand to cut visual noise.
+      micro_hidden: true
     })
     |> summary_card()
   end
@@ -69,10 +72,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     total_nutrients
     |> summary_assigns(meals, "week-#{Date.to_string(first)}", calorie_target)
     |> Map.merge(%{
-      title: "Weekly Summary",
-      subtitle: "Daily average over #{days} days",
+      title: gettext("Weekly Summary"),
+      subtitle: gettext("Daily average over %{days} days", days: days),
       foldable: true,
-      show_tags: true
+      show_tags: true,
+      micro_hidden: false
     })
     |> summary_card()
   end
@@ -109,9 +113,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   # header and each day's accordion header. `total_nutrients` is the aggregated
   # `name => nutrient` map from `Nu.summarize_meals_nutrients/1`.
   defp summary_metrics(total_nutrients, meals, calorie_target) do
-    macros = Nu.macro_totals(total_nutrients)
-    amount = fn bucket -> macros |> Map.get(bucket, %{}) |> Map.get("amount", 0) end
-
     total_items =
       Enum.sum(
         Enum.map(meals, fn m ->
@@ -119,25 +120,14 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         end)
       )
 
-    %{
+    # Macro/energy numbers come from the shared `Nu.macro_summary/1` so the header
+    # badges and the shareable weekly-plan card never disagree.
+    Nu.macro_summary(total_nutrients)
+    |> Map.merge(%{
       meal_count: length(meals),
       total_items: total_items,
-      energy_kcal: energy_amount(total_nutrients) |> round(),
-      calorie_target: calorie_target,
-      protein_g: amount.(:protein) |> to_number() |> Float.round(1),
-      fat_g: amount.(:fat) |> to_number() |> Float.round(1),
-      carbs_g: amount.(:carbs) |> to_number() |> Float.round(1),
-      sugars_g: amount.(:sugars) |> to_number() |> Float.round(1),
-      fiber_g: amount.(:fiber) |> to_number() |> Float.round(1)
-    }
-  end
-
-  # Energy isn't a macro bucket, so pull it out separately by canonical name.
-  defp energy_amount(total_nutrients) do
-    case Enum.find(total_nutrients, fn {label, _} -> String.contains?(label, "Energy") end) do
-      {_label, %{"amount" => a}} when is_number(a) -> a * 1.0
-      _ -> 0.0
-    end
+      calorie_target: calorie_target
+    })
   end
 
   defp to_number(n) when is_number(n), do: n * 1.0
@@ -169,9 +159,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     ~H"""
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
       <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@meal_count}</span>
-      meal{if @meal_count != 1, do: "s"} ·
+      {ngettext("meal", "meals", @meal_count)} ·
       <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@total_items}</span>
-      item{if @total_items != 1, do: "s"}
+      {ngettext("item", "items", @total_items)}
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 font-bold [font-variant-numeric:tabular-nums] text-xs">
       <%= if @calorie_target do %>
@@ -182,19 +172,38 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       <% end %>
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@protein_g}</span>g protein
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@protein_g}</span>g {gettext("protein")}
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fat_g}</span>g fat
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fat_g}</span>g {gettext("fat")}
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@carbs_g}</span>g carbs
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@carbs_g}</span>g {gettext("carbs")}
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@sugars_g}</span>g sugars
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@sugars_g}</span>g {gettext("sugars")}
     </span>
     <span class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">
-      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fiber_g}</span>g fiber
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@fiber_g}</span>g {gettext("fiber")}
+    </span>
+    <%!-- Sodium + saturated fat matter for the conditions people track (BP, heart,
+          kidney). They're hidden when 0 — many logged recipes simply lack the data,
+          and a real-looking "0mg" would misrepresent "not recorded". --%>
+    <span
+      :if={@sodium_mg > 0}
+      class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs"
+    >
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@sodium_mg}</span>mg {gettext(
+        "sodium"
+      )}
+    </span>
+    <span
+      :if={@saturated_fat_g > 0}
+      class="px-2.5 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs"
+    >
+      <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">{@saturated_fat_g}</span>g {gettext(
+        "sat. fat"
+      )}
     </span>
     """
   end
@@ -259,6 +268,11 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   end
 
   def summary_card(assigns) do
+    # Invoked by hand with a plain map (see render_day_chart/render_week_chart),
+    # not a socket/assigns, so default the key with Map.put_new — assign_new/3
+    # requires change-tracking metadata a plain map doesn't carry.
+    assigns = Map.put_new(assigns, :micro_hidden, false)
+
     ~H"""
     <div class="mt-2 rounded-xl border border-ink-panel2 overflow-hidden bg-ink-panel">
       <div
@@ -297,6 +311,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             carbs_g={@carbs_g}
             sugars_g={@sugars_g}
             fiber_g={@fiber_g}
+            sodium_mg={@sodium_mg}
+            saturated_fat_g={@saturated_fat_g}
           />
         </div>
         <%= if @foldable do %>
@@ -326,15 +342,15 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
           class="flex-1 sm:border-r border-b sm:border-b-0 border-ink-panel2 overflow-y-auto"
           style="max-height: 400px;"
         >
-          {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe)}
+          {MehungryWeb.RecipeComponents.recipe_nutrients(@recipe, assigns[:current_language] || "en")}
         </div>
         <div class="flex-1 flex flex-col sm:flex-row items-stretch justify-center gap-2 p-4 sm:p-6">
-          <div class="flex-1 flex flex-col items-center">
+          <div class="flex-1 flex flex-col items-center justify-center">
             <span class="font-display font-medium text-parchment-dim text-xs uppercase tracking-wide mb-1">
-              Macros
+              {gettext("Macros")}
             </span>
             <%= if @macro_data == [] do %>
-              <p class="text-parchment-dim/70 text-xs italic my-auto">No macro data</p>
+              <p class="text-parchment-dim/70 text-xs italic my-auto">{gettext("No macro data")}</p>
             <% else %>
               <.live_component
                 module={MehungryWeb.CalendarLive.Calendar.PieChart}
@@ -344,22 +360,38 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                 size="20rem"
               />
             <% end %>
+            <button
+              :if={@micro_hidden and @micro_data != []}
+              type="button"
+              class="mt-3 text-xs text-basil hover:underline"
+              phx-click={
+                Phoenix.LiveView.JS.toggle(to: "#micro-col-" <> @id_key)
+                |> Phoenix.LiveView.JS.toggle(to: "#micro-show-" <> @id_key)
+                |> Phoenix.LiveView.JS.toggle(to: "#micro-hide-" <> @id_key)
+              }
+            >
+              <span id={"micro-show-" <> @id_key}>{gettext("Show micronutrients")}</span>
+              <span id={"micro-hide-" <> @id_key} class="hidden">{gettext("Hide micronutrients")}</span>
+            </button>
           </div>
-          <div class="flex-1 flex flex-col items-center">
+          <%!-- Only render the micronutrient column when there is micro data —
+                an empty second column strands the macro pie off-centre in half
+                the width. With no micros the macro pie centres in the full area. --%>
+          <div
+            :if={@micro_data != []}
+            id={"micro-col-" <> @id_key}
+            class={["flex-1 flex flex-col items-center justify-center", @micro_hidden && "hidden"]}
+          >
             <span class="font-display font-medium text-parchment-dim text-xs uppercase tracking-wide mb-1">
-              Micronutrients
+              {gettext("Micronutrients")}
             </span>
-            <%= if @micro_data == [] do %>
-              <p class="text-parchment-dim/70 text-xs italic my-auto">No micronutrient data</p>
-            <% else %>
-              <.live_component
-                module={MehungryWeb.CalendarLive.Calendar.PieChart}
-                id={"micro-chart-" <> @id_key}
-                data={@micro_data}
-                origin_id={"micro-chart-" <> @id_key}
-                size="20rem"
-              />
-            <% end %>
+            <.live_component
+              module={MehungryWeb.CalendarLive.Calendar.PieChart}
+              id={"micro-chart-" <> @id_key}
+              data={@micro_data}
+              origin_id={"micro-chart-" <> @id_key}
+              size="20rem"
+            />
           </div>
         </div>
       </div>
@@ -486,6 +518,8 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             calorie_target={@calorie_target}
             active_blueprint={@active_blueprint}
             blueprint_progress={@blueprint_progress}
+            day_notes={@day_notes}
+            avoid_terms={@avoid_terms}
           />
         </div>
         """
@@ -520,7 +554,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     # the render functions, which used to re-summarize on every LiveView update
     # (and re-summarize the current day twice — for its header tags and chart).
     days_in_week = Date.diff(last, first) + 1
-    day_summaries = build_day_summaries(assigns.user_meals, first, last)
+    day_summaries = build_day_summaries(assigns.user_meals, first, last, language)
     week_summary = build_week_summary(assigns.user_meals, first, last, days_in_week)
 
     # Optional: when the user is following a blueprint, the parent calendar passes
@@ -529,6 +563,16 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     # the day's nutrient totals. Absent (nil) on the nutritionist client calendar.
     active_blueprint = Map.get(assigns, :active_blueprint)
     blueprint_progress = Map.get(assigns, :blueprint_progress)
+
+    # Per-day private journal notes (`%{Date => body}`). Only the user's own
+    # calendar passes this; it's nil on the nutritionist client calendar, which
+    # switches the note UI off entirely (nothing to render, nowhere to save).
+    day_notes = Map.get(assigns, :day_notes)
+
+    # Normalized personal "foods I avoid" terms (from the user's profile). Each
+    # meal card checks its own title against these to flag an avoided food.
+    # Absent (nil → []) on the nutritionist client calendar.
+    avoid_terms = Map.get(assigns, :avoid_terms, [])
 
     assigns = [
       current_date: current_date,
@@ -546,7 +590,9 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       blueprint_progress: blueprint_progress,
       day_summaries: day_summaries,
       week_summary: week_summary,
-      days_in_week: days_in_week
+      days_in_week: days_in_week,
+      day_notes: day_notes,
+      avoid_terms: avoid_terms
     ]
 
     {:ok,
@@ -593,7 +639,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
       if is_number(grams_value) and grams_value > 0 do
         [
           %{
-            category: @macro_slice_labels[bucket],
+            category: MehungryWeb.NutrientLabels.translate_name(@macro_slice_labels[bucket]),
             value: Float.round(grams_value, 6),
             display: "#{Float.round(grams_value, 1)} g"
           }
@@ -648,7 +694,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   # meals; `type_summaries` is the ordered per-meal-type breakdown (see
   # `build_meal_type_summaries/1`). Aggregating here (once per update) keeps the
   # render functions from re-summarizing on every LiveView update.
-  defp build_day_summaries(user_meals, first, last) do
+  defp build_day_summaries(user_meals, first, last, language) do
     Map.new(Date.range(first, last), fn day ->
       meals = Enum.filter(user_meals, fn m -> NaiveDateTime.to_date(m.start_dt) == day end)
 
@@ -662,7 +708,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
        %{
          meals: meals,
          total_nutrients: total_nutrients,
-         type_summaries: build_meal_type_summaries(meals)
+         type_summaries: build_meal_type_summaries(meals, language)
        }}
     end)
   end
@@ -672,7 +718,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   # last). Empty groups are dropped so only populated meal-type sections render.
   # Uses `Map.get/2` defensively since synthetic meals (LandingLive) may omit the
   # key — those paths don't call this, but it keeps grouping total.
-  defp build_meal_type_summaries(meals) do
+  defp build_meal_type_summaries(meals, language) do
     by_type = Enum.group_by(meals, fn m -> Map.get(m, :meal_type) end)
 
     for meal_type <- MealType.ordered() ++ [nil],
@@ -680,7 +726,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
         group not in [nil, []] do
       %{
         meal_type: meal_type,
-        label: MealType.label(meal_type),
+        label: MehungryWeb.MealTypeLabels.label(meal_type, language),
         meals: group,
         total_nutrients: Nu.summarize_meals_nutrients(group)
       }
@@ -726,6 +772,29 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
 
   ## ------------------------------------ Event Handlers  ---------------------------------------------------------------
 
+  # Recomputes the week grid *and* the per-day/week nutrient summaries together
+  # so `week_rows` and `day_summaries` never disagree. Crossing into a new week
+  # used to leave `day_summaries` keyed to the old week's days, so the immediate
+  # re-render (before the `:particular_date` push_patch reloads meals) hit a nil
+  # summary and crashed with BadMapError. The push_patch that follows reloads the
+  # new week's meals and re-runs `update/2` with the correct data.
+  defp assign_week(socket, new_date) do
+    {first, last, rows} = get_full_week(new_date)
+    days_in_week = Date.diff(last, first) + 1
+    user_meals = socket.assigns.user_meals
+    language = Map.get(socket.assigns, :current_language, "en")
+
+    assign(socket,
+      current_date: new_date,
+      week_rows: rows,
+      last: last,
+      first: first,
+      days_in_week: days_in_week,
+      day_summaries: build_day_summaries(user_meals, first, last, language),
+      week_summary: build_week_summary(user_meals, first, last, days_in_week)
+    )
+  end
+
   @impl true
   def handle_event("prev-day", _, socket) do
     new_date = Date.add(socket.assigns.current_date, -1)
@@ -761,28 +830,6 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     {:noreply, assign_week(socket, first)}
   end
 
-  # Recomputes the week grid *and* the per-day/week nutrient summaries together
-  # so `week_rows` and `day_summaries` never disagree. Crossing into a new week
-  # used to leave `day_summaries` keyed to the old week's days, so the immediate
-  # re-render (before the `:particular_date` push_patch reloads meals) hit a nil
-  # summary and crashed with BadMapError. The push_patch that follows reloads the
-  # new week's meals and re-runs `update/2` with the correct data.
-  defp assign_week(socket, new_date) do
-    {first, last, rows} = get_full_week(new_date)
-    days_in_week = Date.diff(last, first) + 1
-    user_meals = socket.assigns.user_meals
-
-    assign(socket,
-      current_date: new_date,
-      week_rows: rows,
-      last: last,
-      first: first,
-      days_in_week: days_in_week,
-      day_summaries: build_day_summaries(user_meals, first, last),
-      week_summary: build_week_summary(user_meals, first, last, days_in_week)
-    )
-  end
-
   def handle_event("pick-date", %{"date" => date}, socket) do
     current_date = date
     send(self(), {:initial_modal, %{"date" => current_date, "title" => "r"}})
@@ -806,6 +853,47 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
   end
 
   ## ------------------------------------ UI Elements ---------------------------------------------------------------
+  # A private, condition-agnostic journal line for one day (symptoms / how I
+  # felt / energy). No `phx-target`, so the submit routes to the parent calendar
+  # LiveView (`save_day_note`); a blank body clears the note. Pre-filled with the
+  # existing note. Keyed `id` per day so LiveView patches the right textarea.
+  attr :day, :any, required: true
+  attr :body, :string, default: nil
+
+  def day_note_form(assigns) do
+    ~H"""
+    <form
+      id={"day-note-form-" <> Date.to_string(@day)}
+      phx-submit="save_day_note"
+      class="px-3 sm:px-4 pb-3 pt-1"
+    >
+      <input type="hidden" name="date" value={Calendar.strftime(@day, "%Y-%m-%d")} />
+      <label class="block text-parchment-dim/70 text-[11px] uppercase tracking-wide mb-1">
+        {gettext("Day note")}
+        <span class="normal-case tracking-normal text-parchment-dim/50">
+          · {gettext("private — how you felt today")}
+        </span>
+      </label>
+      <div class="flex items-start gap-2">
+        <textarea
+          id={"day-note-" <> Date.to_string(@day)}
+          name="body"
+          rows="1"
+          placeholder={gettext("e.g. felt bloated after lunch, good energy…")}
+          class="flex-1 bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-xs resize-y focus:outline-none focus:border-paprika min-h-[2.25rem]"
+        >{@body}</textarea>
+        <button
+          type="submit"
+          class="shrink-0 px-3 py-2 rounded-lg border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-parchment-dim text-xs font-medium transition"
+          phx-disable-with="…"
+        >
+          {gettext("Save")}
+        </button>
+      </div>
+    </form>
+    """
+  end
+
   def table_week_calendar(assigns) do
     ~H"""
     <div
@@ -963,6 +1051,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                           <.card_meal
                             card_meal_text="text-parchment"
                             actual_meal={meal}
+                            avoid_terms={@avoid_terms}
                             img_url={re_u_m.img_url}
                             title={re_u_m.title}
                             nutrients={re_u_m.recipe_nutrients}
@@ -985,6 +1074,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                             card_meal_text="text-parchment"
                             myself={@myself}
                             actual_meal={meal}
+                            avoid_terms={@avoid_terms}
                             img_url={re_u_m.img_url}
                             title={re_u_m.title}
                             cooking_portions={re_u_m.portions}
@@ -1004,6 +1094,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                             card_meal_text="text-parchment"
                             myself={@myself}
                             actual_meal={meal}
+                            avoid_terms={@avoid_terms}
                             img_url={ff_m.img_url}
                             title={ff_m.title}
                             cooking_portions={"#{round(ff_m.grams)} g"}
@@ -1025,6 +1116,7 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
                 {render_day_chart(@day_summaries[day], day, @current_date, @calorie_target)}
               </div>
             <% end %>
+            <.day_note_form :if={@day_notes} day={day} body={Map.get(@day_notes, day)} />
           </div>
         </div>
       </div>
@@ -1041,8 +1133,22 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
     # cards); it gates the "View recipe" button that opens the details modal.
     assigns = assign_new(assigns, :recipe_id, fn -> nil end)
 
+    # The user's personal avoid terms this food's title matches (reusing the
+    # meal-plan enforcement engine's substring match). Empty list = not flagged;
+    # defaulted so landing/demo cards that don't pass the assign render clean.
+    assigns =
+      assign_new(assigns, :avoided, fn ->
+        Mehungry.AI.Agents.MealPlanAgent.matched_avoid_terms(
+          [assigns.title],
+          Map.get(assigns, :avoid_terms, [])
+        )
+      end)
+
     ~H"""
-    <div class="bg-black/20 border border-ink-panel2 rounded-xl p-3 sm:p-4 hover:bg-black/30 transition-colors">
+    <div class={[
+      "bg-black/20 border rounded-xl p-3 sm:p-4 hover:bg-black/30 transition-colors",
+      if(@avoided == [], do: "border-ink-panel2", else: "border-amber-500/50")
+    ]}>
       <div class="flex gap-4 items-center">
         <div class="relative flex-shrink-0 h-20 w-20 sm:h-24 sm:w-24 rounded-xl overflow-hidden">
           <%= if is_nil(@img_url) do %>
@@ -1061,12 +1167,51 @@ defmodule MehungryWeb.CalendarLive.Calendar.Widget do
             >
               {SvgComponents.get_edit_icon(assigns)}
             </button>
+            <button
+              class="absolute right-1 top-9 bg-ink/80 hover:bg-ink-panel2 text-parchment p-1 rounded-full transition-colors"
+              type="button"
+              title={gettext("Log this again today")}
+              aria-label={gettext("Log this again today")}
+              phx-click="copy_meal_to_today"
+              phx-value-id={@actual_meal.id}
+              data-confirm={gettext("Copy this meal to today?")}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+                class="size-3.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m11.25 5.5H16.5a1.125 1.125 0 0 1-1.125-1.125v-3.5"
+                />
+              </svg>
+            </button>
           <% end %>
         </div>
         <div class="flex-1 min-w-0">
-          <h3 class={"font-display font-medium text-base leading-snug mb-3 " <> @card_meal_text}>
+          <h3 class={"font-display font-medium text-base leading-snug mb-1 " <> @card_meal_text}>
             {@title}
           </h3>
+          <div
+            :if={@avoided != []}
+            class="inline-flex items-center gap-1 mb-2 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 text-[0.7rem] font-semibold"
+            title={gettext("On your avoid list: %{terms}", terms: Enum.join(@avoided, ", "))}
+          >
+            <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            {gettext("On your avoid list")}
+          </div>
           <div class="flex items-stretch gap-4">
             <div>
               <div class="text-basil font-bold [font-variant-numeric:tabular-nums] text-sm">

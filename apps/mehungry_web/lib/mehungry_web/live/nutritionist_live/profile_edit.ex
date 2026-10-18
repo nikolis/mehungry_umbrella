@@ -367,7 +367,13 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
           <h2 class="text-lg font-display font-semibold text-parchment">Payments (optional)</h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <.labeled label="Consultation fee (EUR)">
-              <.input field={f[:consultation_fee_cents]} type="number" min="0" class="w-full" />
+              <.input
+                field={f[:consultation_fee_eur]}
+                type="number"
+                min="0"
+                step="0.01"
+                class="w-full"
+              />
             </.labeled>
           </div>
           <div class="flex items-center gap-3">

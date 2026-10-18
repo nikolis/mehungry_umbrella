@@ -1,10 +1,10 @@
 defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
   @moduledoc """
-  Smoke tests for the manual client-record authoring UI: creating a client
-  linked to a required m3hungry platform user, filling the typed + questionnaire
-  + 24h-recall intake and a consultation note (and seeing them on the read-only
-  record page), the linked-user requirement, a failed email lookup, and the
-  ownership redirect.
+  Smoke tests for the full dietary-history editor (`:edit` only — the record is
+  created from the client, so there is no user picker here): filling the typed +
+  questionnaire + 24h-recall intake and a consultation note (and seeing them on
+  the read-only record page), the live BMI/BMR/TDEE recompute, and the ownership
+  redirect.
   """
   use MehungryWeb.ConnCase
 
@@ -22,28 +22,26 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
     %{conn: log_in_user(conn, nutritionist), user: nutritionist}
   end
 
-  test "creates a client linked to an m3hungry user, fills intake + a note, read-only page renders them",
-       %{conn: conn, user: user} do
+  # A record is always reached from an assigned client; build that setup directly.
+  defp record_for(professional, name) do
     client_user = Mehungry.AccountsFixtures.user_fixture()
-    client_user = Repo.update!(Ecto.Changeset.change(client_user, name: "John Client"))
-    Repo.insert!(%TutorClientAssignment{professional_id: user.id, client_id: client_user.id})
+    client_user = Repo.update!(Ecto.Changeset.change(client_user, name: name))
+    Repo.insert!(%TutorClientAssignment{professional_id: professional.id, client_id: client_user.id})
 
-    {:ok, view, _html} = live(conn, "/nutritionist/records/new")
+    {:ok, record} =
+      Professionals.create_client_record(%{
+        professional_id: professional.id,
+        user_id: client_user.id,
+        full_name: name
+      })
 
-    view
-    |> element("form[phx-change='pick_assigned']")
-    |> render_change(%{"user_id" => to_string(client_user.id)})
+    {record, client_user}
+  end
 
-    result =
-      view
-      |> form("form[phx-submit='save_client']", client: %{full_name: "John Client"})
-      |> render_submit()
+  test "fills intake + a note; read-only page renders them", %{conn: conn, user: user} do
+    {record, _client_user} = record_for(user, "John Client")
 
-    {:ok, edit_view, _html} = follow_redirect(result, conn)
-
-    [record] = Professionals.list_client_records(user.id)
-    assert record.full_name == "John Client"
-    assert record.user_id == client_user.id
+    {:ok, edit_view, _html} = live(conn, "/nutritionist/records/#{record.id}/edit")
 
     # Intake: a typed field, a questionnaire detail key, and a recall key.
     edit_view
@@ -87,48 +85,56 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
     assert html =~ "John Client"
   end
 
-  test "links an m3hungry platform client from the assigned-clients dropdown",
+  test "editing the client details saves the PII fields", %{conn: conn, user: user} do
+    {record, _client_user} = record_for(user, "Edit Me")
+
+    {:ok, edit_view, _html} = live(conn, "/nutritionist/records/#{record.id}/edit")
+
+    edit_view
+    |> form("form[phx-submit='save_client']", client: %{full_name: "Edited Name", phone: "555-1234"})
+    |> render_submit()
+
+    updated = Professionals.get_client_record!(user.id, record.id)
+    assert updated.full_name == "Edited Name"
+    assert updated.phone == "555-1234"
+    # The required association is untouched by a details edit.
+    assert updated.user_id == record.user_id
+  end
+
+  test "validate_intake recomputes BMI/BMR/TDEE when a source field changes, respects an override",
        %{conn: conn, user: user} do
-    client_user = Mehungry.AccountsFixtures.user_fixture()
-    client_user = Repo.update!(Ecto.Changeset.change(client_user, name: "Platform Client"))
+    {record, _client_user} = record_for(user, "Calc Client")
 
-    Repo.insert!(%TutorClientAssignment{professional_id: user.id, client_id: client_user.id})
+    {:ok, edit_view, _html} = live(conn, "/nutritionist/records/#{record.id}/edit")
 
-    {:ok, view, _html} = live(conn, "/nutritionist/records/new")
+    sources = %{
+      "height_m" => "1.70",
+      "weight_kg" => "72",
+      "sex" => "female",
+      "age" => "34",
+      "activity_level" => "moderate"
+    }
 
-    view
-    |> element("form[phx-change='pick_assigned']")
-    |> render_change(%{"user_id" => to_string(client_user.id)})
-
-    result = view |> form("form[phx-submit='save_client']") |> render_submit()
-    {:ok, _edit_view, _html} = follow_redirect(result, conn)
-
-    [record] = Professionals.list_client_records(user.id)
-    assert record.user_id == client_user.id
-    assert record.full_name == "Platform Client"
-  end
-
-  test "saving without a linked m3hungry user is refused", %{conn: conn, user: user} do
-    {:ok, view, _html} = live(conn, "/nutritionist/records/new")
-
+    # A *source* edit → outputs recompute and show in the form.
     html =
-      view
-      |> form("form[phx-submit='save_client']", client: %{full_name: "No Account"})
-      |> render_submit()
+      render_hook(edit_view, "validate_intake", %{
+        "_target" => ["intake", "weight_kg"],
+        "intake" => sources
+      })
 
-    assert html =~ "records can&#39;t be headless" or html =~ "records can't be headless"
-    assert Professionals.list_client_records(user.id) == []
-  end
+    assert html =~ ~s(value="24.9")
+    assert html =~ ~s(value="1452")
+    assert html =~ ~s(value="#{round(1452 * 1.55)}")
 
-  test "an email lookup with no matching account flashes an error", %{conn: conn} do
-    {:ok, view, _html} = live(conn, "/nutritionist/records/new")
-
+    # An *output* edit (BMR typed) → the typed value is kept, not overwritten.
     html =
-      view
-      |> form("form[phx-submit='lookup_email']", %{email: "nobody@example.com"})
-      |> render_submit()
+      render_hook(edit_view, "validate_intake", %{
+        "_target" => ["intake", "bmr_kcal"],
+        "intake" => Map.put(sources, "bmr_kcal", "1600")
+      })
 
-    assert html =~ "No m3hungry account found"
+    assert html =~ ~s(value="1600")
+    refute html =~ ~s(value="1452")
   end
 
   test "editing another professional's record redirects away", %{conn: conn} do
@@ -141,7 +147,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
         full_name: "Not Yours"
       })
 
-    assert {:error, {:live_redirect, %{to: "/nutritionist/records"}}} =
+    assert {:error, {:live_redirect, %{to: "/nutritionist/clients"}}} =
              live(conn, "/nutritionist/records/#{record.id}/edit")
   end
 end

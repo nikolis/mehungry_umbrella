@@ -391,4 +391,126 @@ defmodule MehungryApi.HistoryTest do
       {Repo.get!(Ingredient, ingredient.id), gram}
     end
   end
+
+  describe "duplicate_user_meal/3" do
+    import Mehungry.HistoryFixtures
+
+    setup do
+      %{user: AccountsFixtures.user_fixture()}
+    end
+
+    test "clones a recipe meal onto the target date, keeping meal_type/title", %{user: user} do
+      recipe = FoodFixtures.recipe_fixture(user, %{name: "repeat dish"})
+
+      source =
+        user_meal_fixture(%{
+          user_id: user.id,
+          title: "Oatmeal",
+          meal_type: "breakfast",
+          start_dt: ~N[2026-10-12 08:00:00],
+          end_dt: ~N[2026-10-12 08:30:00],
+          recipe_user_meals: [%{recipe_id: recipe.id, consume_portions: 2, cooking_portions: 4}]
+        })
+
+      target = ~D[2026-10-18]
+      assert {:ok, copy} = History.duplicate_user_meal(user.id, source.id, target)
+
+      refute copy.id == source.id
+      assert copy.title == "Oatmeal"
+      assert copy.meal_type == "breakfast"
+      assert NaiveDateTime.to_date(copy.start_dt) == target
+      # Time-of-day is preserved.
+      assert NaiveDateTime.to_time(copy.start_dt) == ~T[08:00:00]
+
+      copy = Repo.preload(copy, :recipe_user_meals)
+      assert [child] = copy.recipe_user_meals
+      assert child.recipe_id == recipe.id
+      assert child.consume_portions == 2
+      assert child.cooking_portions == 4
+    end
+
+    test "raises for a meal that isn't the user's", %{user: user} do
+      other = AccountsFixtures.user_fixture()
+      recipe = FoodFixtures.recipe_fixture(other, %{name: "not mine"})
+
+      source =
+        user_meal_fixture(%{
+          user_id: other.id,
+          recipe_user_meals: [%{recipe_id: recipe.id, consume_portions: 1, cooking_portions: 1}]
+        })
+
+      assert_raise Ecto.NoResultsError, fn ->
+        History.duplicate_user_meal(user.id, source.id, ~D[2026-10-18])
+      end
+    end
+  end
+
+  describe "day notes" do
+    alias Mehungry.History.DayNote
+
+    setup do
+      %{user: AccountsFixtures.user_fixture()}
+    end
+
+    test "get_day_note/2 returns nil when none exists", %{user: user} do
+      assert History.get_day_note(user.id, ~D[2026-10-18]) == nil
+    end
+
+    test "upsert_day_note/3 creates, then updates in place", %{user: user} do
+      date = ~D[2026-10-18]
+
+      assert {:ok, %DayNote{} = note} = History.upsert_day_note(user.id, date, "felt bloated")
+      assert note.body == "felt bloated"
+      assert History.get_day_note(user.id, date).body == "felt bloated"
+
+      assert {:ok, %DayNote{} = updated} = History.upsert_day_note(user.id, date, "good energy")
+      assert updated.id == note.id
+      assert updated.body == "good energy"
+    end
+
+    test "upsert_day_note/3 trims the body", %{user: user} do
+      assert {:ok, note} = History.upsert_day_note(user.id, ~D[2026-10-18], "  spaced  ")
+      assert note.body == "spaced"
+    end
+
+    test "upsert_day_note/3 with a blank body deletes an existing note (and is a no-op otherwise)",
+         %{user: user} do
+      date = ~D[2026-10-18]
+
+      # No-op when none exists.
+      assert {:ok, nil} = History.upsert_day_note(user.id, date, "   ")
+      assert {:ok, nil} = History.upsert_day_note(user.id, date, nil)
+
+      {:ok, _} = History.upsert_day_note(user.id, date, "something")
+      assert {:ok, nil} = History.upsert_day_note(user.id, date, "")
+      assert History.get_day_note(user.id, date) == nil
+    end
+
+    test "list_day_notes/3 returns a date=>body map scoped to the week and user", %{user: user} do
+      other = AccountsFixtures.user_fixture()
+
+      {:ok, _} = History.upsert_day_note(user.id, ~D[2026-10-12], "monday")
+      {:ok, _} = History.upsert_day_note(user.id, ~D[2026-10-15], "thursday")
+      # Outside the week window.
+      {:ok, _} = History.upsert_day_note(user.id, ~D[2026-10-20], "next week")
+      # Another user, same week.
+      {:ok, _} = History.upsert_day_note(other.id, ~D[2026-10-13], "not mine")
+
+      notes = History.list_day_notes(user.id, ~D[2026-10-12], ~D[2026-10-18])
+
+      assert notes == %{~D[2026-10-12] => "monday", ~D[2026-10-15] => "thursday"}
+    end
+
+    test "one note per user per day (unique)", %{user: user} do
+      date = ~D[2026-10-18]
+      {:ok, _} = History.upsert_day_note(user.id, date, "first")
+
+      assert {:error, changeset} =
+               %DayNote{}
+               |> DayNote.changeset(%{user_id: user.id, date: date, body: "dup"})
+               |> Repo.insert()
+
+      assert %{user_id: _} = errors_on(changeset)
+    end
+  end
 end

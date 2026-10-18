@@ -9,6 +9,7 @@ defmodule MehungryWeb.SitemapController do
   alias Mehungry.Food.FoundementalFoodSpecies
   alias Mehungry.Professionals.ProfessionalProfile
   alias Mehungry.Professionals.Article
+  alias Mehungry.PublishedPlans
 
   @base_url "https://www.m3hungry.com"
 
@@ -66,7 +67,9 @@ defmodule MehungryWeb.SitemapController do
         )
       )
 
-    xml = build_xml(recipes, hashtags, species, nutritionists, articles)
+    published_plans = PublishedPlans.list_public_plans()
+
+    xml = build_xml(recipes, hashtags, species, nutritionists, articles, published_plans)
 
     conn
     |> put_resp_content_type("application/xml")
@@ -109,7 +112,7 @@ defmodule MehungryWeb.SitemapController do
       "\n</url>"
   end
 
-  defp build_xml(recipes, hashtags, species, nutritionists, articles) do
+  defp build_xml(recipes, hashtags, species, nutritionists, articles, published_plans) do
     today = Date.utc_today() |> to_string()
 
     static_urls = [
@@ -175,10 +178,22 @@ defmodule MehungryWeb.SitemapController do
         )
       end)
 
+    plan_urls =
+      Enum.map(published_plans, fn p ->
+        date = p.updated_at |> NaiveDateTime.to_date() |> to_string()
+
+        localized_entries("/meal-plans/#{p.slug}",
+          lastmod: date,
+          changefreq: "monthly",
+          priority: "0.7"
+        )
+      end)
+
     all_urls =
       Enum.join(
         static_urls ++
-          recipe_urls ++ hashtag_urls ++ food_urls ++ nutritionist_urls ++ article_urls,
+          recipe_urls ++
+          hashtag_urls ++ food_urls ++ nutritionist_urls ++ article_urls ++ plan_urls,
         "\n"
       )
 

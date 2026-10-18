@@ -96,7 +96,6 @@ defmodule MehungryWeb.RecipeFormComponent do
             field={@f[:description]}
             type="text"
             label={gettext("Short description")}
-            placeholder={gettext("A one-line summary shown in recipe listings")}
             class="max-h-12"
           />
 
@@ -131,7 +130,6 @@ defmodule MehungryWeb.RecipeFormComponent do
             <.input
               required
               field={@f[:difficulty]}
-              label={gettext("Difficulty")}
               options={[{gettext("Easy"), "1"}, {gettext("Medium"), "2"}, {gettext("Difficult"), "3"}]}
               type="select"
             />

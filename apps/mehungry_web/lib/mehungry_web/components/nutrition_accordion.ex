@@ -1,5 +1,6 @@
 defmodule MehungryWeb.NutritionAccordion do
   use Phoenix.Component
+  use Gettext, backend: MehungryWeb.Gettext
   import MehungryWeb.AccordionComponent
 
   alias Mehungry.Food.Nutrition.FattyAcidMatcher
@@ -30,6 +31,12 @@ defmodule MehungryWeb.NutritionAccordion do
   attr :title, :string, default: "Nutrition Facts"
   attr :max_height, :string, default: "500px"
   attr :show_title, :boolean, default: true
+  attr :locale, :string, default: "en"
+  # Must be unique per rendered accordion on the page: the accordion is a
+  # pure-CSS checkbox hack, so `<label for={id}>` toggles the *first* matching id
+  # in the DOM. Sharing one id across several accordions (e.g. a nutrition facts
+  # card per day on the calendar) makes every card toggle the first one's rows.
+  attr :accordion_id, :string, default: "nutrition-accordion"
 
   def nutrition_accordion(assigns) do
     # Convert map to sorted list with custom priority
@@ -60,6 +67,9 @@ defmodule MehungryWeb.NutritionAccordion do
         {priority, name}
       end)
       |> FattyAcidMatcher.resolve_names()
+      # Localize display names last, so fatty-acid nodes are keyed on their final
+      # English display string (resolve_names overwrites raw "MUFA 16:1" names).
+      |> MehungryWeb.NutrientLabels.translate_names(assigns.locale)
 
     assigns = assign(assigns, nutrient_list: nutrient_list)
 
@@ -73,10 +83,10 @@ defmodule MehungryWeb.NutritionAccordion do
         <div class="  overflow-x-hidden  ">
           <%= if Enum.empty?(@nutrient_list) do %>
             <div class="text-center  text-parchment-dim text-sm">
-              No nutrition data available
+              {gettext("No nutrition data available")}
             </div>
           <% else %>
-            <.accordion items={@nutrient_list} accordion_id="nutrition-accordion" />
+            <.accordion items={@nutrient_list} accordion_id={@accordion_id} />
           <% end %>
         </div>
       </div>

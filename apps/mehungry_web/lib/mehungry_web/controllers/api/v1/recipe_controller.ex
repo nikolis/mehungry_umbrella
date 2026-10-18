@@ -11,6 +11,7 @@ defmodule MehungryWeb.Api.V1.RecipeController do
   alias Mehungry.Posts
   alias Mehungry.Users
   alias MehungryWeb.Api.V1.BlueprintMatch
+  alias MehungryWeb.Api.V1.Locale
   alias MehungryWeb.Api.V1.RecipeJSON
 
   action_fallback MehungryWeb.Api.V1.FallbackController
@@ -22,7 +23,7 @@ defmodule MehungryWeb.Api.V1.RecipeController do
          :ok <- authorize_view(recipe, user) do
       engagement = Posts.get_recipe_engagement(recipe.id, user && user.id)
       match = blueprint_match(conn, params, recipe)
-      json(conn, RecipeJSON.detail(recipe, engagement, viewer_ctx(user), match))
+      json(conn, RecipeJSON.detail(recipe, engagement, viewer_ctx(user, conn, params), match))
     end
   end
 
@@ -35,7 +36,7 @@ defmodule MehungryWeb.Api.V1.RecipeController do
 
       conn
       |> put_status(:created)
-      |> json(RecipeJSON.detail(recipe, Posts.get_recipe_engagement(id, user.id), viewer_ctx(user)))
+      |> json(RecipeJSON.detail(recipe, Posts.get_recipe_engagement(id, user.id), viewer_ctx(user, conn, params)))
     end
   end
 
@@ -45,7 +46,7 @@ defmodule MehungryWeb.Api.V1.RecipeController do
     with {:ok, recipe} <- fetch_recipe(id),
          :ok <- authorize_owner(recipe, user),
          {:ok, recipe} <- Food.update_recipe(recipe, update_attrs(params)) do
-      json(conn, RecipeJSON.detail(Food.get_recipe!(recipe.id), Posts.get_recipe_engagement(recipe.id, user.id), viewer_ctx(user)))
+      json(conn, RecipeJSON.detail(Food.get_recipe!(recipe.id), Posts.get_recipe_engagement(recipe.id, user.id), viewer_ctx(user, conn, params)))
     end
   end
 
@@ -128,9 +129,15 @@ defmodule MehungryWeb.Api.V1.RecipeController do
     BlueprintMatch.block(blueprint, reports, recipe.id)
   end
 
-  defp viewer_ctx(nil), do: %{saved_recipe_ids: [], follow_ids: []}
+  # `:locale` is threaded into the ctx so `RecipeJSON.detail/4` can localize the
+  # nutrient display names (spec §Language) — same labels as the web accordion.
+  defp viewer_ctx(user, conn, params) do
+    user |> base_ctx() |> Map.put(:locale, Locale.resolve(conn, params))
+  end
 
-  defp viewer_ctx(user) do
+  defp base_ctx(nil), do: %{saved_recipe_ids: [], follow_ids: []}
+
+  defp base_ctx(user) do
     %{
       saved_recipe_ids: UserContent.list_user_saved_recipe_ids(user),
       follow_ids: Users.list_user_follows(user) |> Enum.map(& &1.follow_id)

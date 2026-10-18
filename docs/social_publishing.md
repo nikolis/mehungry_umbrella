@@ -85,3 +85,29 @@ In both cases invalid tokens (4xx on refresh) are marked stale and surface as
 settings. The OAuth callback (`AuthController`) redirects a connect attempt with
 no logged-in user to the login page instead of raising, so a dropped session no
 longer reads as a failed connect.
+
+## Copy-ready meal-plan posts (external platforms)
+
+The public published-plan page `/meal-plans/:slug`
+(`MehungryWeb.MealPlanLive.Show`) offers two **copy-ready** social posts so a
+user can share their week on platforms we don't publish to directly (Instagram,
+Pinterest, X/Threads, Facebook, WhatsApp). This is manual copy/paste + native
+share — not the `Social.Publisher` fan-out above.
+
+Both strings are built by the pure, testable `MehungryWeb.MealPlanShareText`
+(`image_caption/2` + `text_post/2`) from the immutable plan snapshot — no DB, no
+IO, so they also render in the synchronous (crawler) page render. The macro
+numbers are formatted exactly like the page's `<.macro_tile>` grid (ultimately
+`Mehungry.NutrientUtils.macro_summary/1`), so the caption can never drift from
+the page.
+
+- **Image + caption** (shown only when `plan.og_image_url` exists): a short
+  caption paired with a "Download image" link to the PNG card. For
+  Instagram/Pinterest/Facebook.
+- **Text post**: a longer, image-free, day-by-day post. Copied via the `Copy`
+  JS hook, or pushed to the native share sheet via the `WebShare` hook (extended
+  with a `data-text` body) for X/Threads/WhatsApp.
+
+Both carry the plan URL + hashtags (a goal-derived tag is added when the plan
+has a `goal_label`), and render in the viewer's locale (Greek weekday labels via
+`CalendarLive.Calendar.Locale.day_name/2`).

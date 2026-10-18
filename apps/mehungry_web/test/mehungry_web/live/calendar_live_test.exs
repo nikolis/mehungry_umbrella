@@ -9,6 +9,159 @@ defmodule MehungryWeb.CalendarLiveTest do
   alias Mehungry.History
   alias Mehungry.MealBlueprints
 
+  describe "Day notes" do
+    setup [:register_and_log_in_user]
+
+    test "saving a day note persists it and it re-renders on reload", %{conn: conn, user: user} do
+      date = Date.utc_today()
+      iso = Date.to_iso8601(date)
+
+      {:ok, view, html} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar")
+
+      # The private day-note field is present for the user's own calendar.
+      assert html =~ "Day note"
+
+      view
+      |> form("#day-note-form-#{iso}", %{"body" => "felt bloated after lunch"})
+      |> render_submit()
+
+      assert History.get_day_note(user.id, date).body == "felt bloated after lunch"
+
+      # Reloading the calendar pre-fills the saved note.
+      {:ok, _view2, html2} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar")
+
+      assert html2 =~ "felt bloated after lunch"
+    end
+
+    test "clearing a day note deletes it", %{conn: conn, user: user} do
+      date = Date.utc_today()
+      iso = Date.to_iso8601(date)
+      {:ok, _} = History.upsert_day_note(user.id, date, "temporary")
+
+      {:ok, view, _html} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar")
+
+      view
+      |> form("#day-note-form-#{iso}", %{"body" => ""})
+      |> render_submit()
+
+      assert History.get_day_note(user.id, date) == nil
+    end
+  end
+
+  describe "Copy meal to today" do
+    setup [:register_and_log_in_user]
+
+    test "duplicates a past meal onto today and it appears in the grid", %{
+      conn: conn,
+      user: user
+    } do
+      recipe = recipe_fixture(user, %{title: "Repeat Breakfast"})
+      today = Date.utc_today()
+      past = Date.add(today, -3)
+
+      {:ok, _} =
+        History.create_user_meal(%{
+          start_dt: NaiveDateTime.new!(past, ~T[08:00:00]),
+          end_dt: NaiveDateTime.new!(past, ~T[08:30:00]),
+          user_id: user.id,
+          title: "Repeat Breakfast",
+          meal_type: "breakfast",
+          recipe_user_meals: [%{recipe_id: recipe.id, consume_portions: 1, cooking_portions: 1}]
+        })
+
+      {:ok, view, _html} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar/ondate/#{Date.to_iso8601(past)}")
+
+      before = History.list_calendar_user_meals(user.id, today, today) |> length()
+
+      view
+      |> element(~s|button[phx-click="copy_meal_to_today"]|)
+      |> render_click()
+
+      after_count = History.list_calendar_user_meals(user.id, today, today) |> length()
+      assert after_count == before + 1
+    end
+  end
+
+  describe "Foods I avoid" do
+    setup [:register_and_log_in_user]
+
+    test "flags a logged meal whose food name is on the avoid list", %{conn: conn, user: user} do
+      recipe = recipe_fixture(user, %{title: "Onion Soup"})
+      now = NaiveDateTime.utc_now()
+
+      {:ok, _} =
+        History.create_user_meal(%{
+          start_dt: now,
+          end_dt: now,
+          user_id: user.id,
+          title: "Lunch",
+          recipe_user_meals: [%{recipe_id: recipe.id, consume_portions: 1, cooking_portions: 1}]
+        })
+
+      profile = Mehungry.Accounts.get_user_profile_by_user_id(user.id)
+      {:ok, _} = Mehungry.Accounts.set_avoid_foods(profile, ["onion"])
+
+      {:ok, _view, html} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar")
+
+      assert html =~ "On your avoid list"
+    end
+
+    test "a meal with no avoided food is not flagged", %{conn: conn, user: user} do
+      recipe = recipe_fixture(user, %{title: "Tomato Salad"})
+      now = NaiveDateTime.utc_now()
+
+      {:ok, _} =
+        History.create_user_meal(%{
+          start_dt: now,
+          end_dt: now,
+          user_id: user.id,
+          title: "Lunch",
+          recipe_user_meals: [%{recipe_id: recipe.id, consume_portions: 1, cooking_portions: 1}]
+        })
+
+      profile = Mehungry.Accounts.get_user_profile_by_user_id(user.id)
+      {:ok, _} = Mehungry.Accounts.set_avoid_foods(profile, ["onion"])
+
+      {:ok, _view, html} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar")
+
+      refute html =~ "On your avoid list"
+    end
+
+    test "saving the avoid list from the calendar persists it", %{conn: conn, user: user} do
+      {:ok, view, _html} =
+        conn
+        |> put_connect_params(%{"viewport" => %{"width" => 1200}})
+        |> live(~p"/calendar")
+
+      view
+      |> form(~s|form[phx-submit="save_avoid_foods"]|, %{"foods" => "onion\ngarlic"})
+      |> render_submit()
+
+      assert Mehungry.Accounts.get_user_profile_by_user_id(user.id).avoid_foods == [
+               "onion",
+               "garlic"
+             ]
+    end
+  end
+
   describe "Caledar Operations Test" do
     setup [:register_and_log_in_user]
 

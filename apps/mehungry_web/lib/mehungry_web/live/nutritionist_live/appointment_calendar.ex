@@ -81,21 +81,26 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
   @impl true
   def handle_event("edit_appointment", %{"id" => id}, socket) do
-    appt = Professionals.get_appointment!(String.to_integer(id))
-    changeset = Professionals.change_appointment(appt)
+    case fetch_owned(socket, id) do
+      nil ->
+        {:noreply, appointment_not_found(socket)}
 
-    {form_date, start_h, start_m, end_h, end_m} = decompose_appointment(appt)
+      appt ->
+        changeset = Professionals.change_appointment(appt)
 
-    {:noreply,
-     socket
-     |> assign(:show_modal, true)
-     |> assign(:editing_appointment, appt)
-     |> assign(:appointment_changeset, changeset)
-     |> assign(:form_date, form_date)
-     |> assign(:form_start_hour, start_h)
-     |> assign(:form_start_minute, start_m)
-     |> assign(:form_end_hour, end_h)
-     |> assign(:form_end_minute, end_m)}
+        {form_date, start_h, start_m, end_h, end_m} = decompose_appointment(appt)
+
+        {:noreply,
+         socket
+         |> assign(:show_modal, true)
+         |> assign(:editing_appointment, appt)
+         |> assign(:appointment_changeset, changeset)
+         |> assign(:form_date, form_date)
+         |> assign(:form_start_hour, start_h)
+         |> assign(:form_start_minute, start_m)
+         |> assign(:form_end_hour, end_h)
+         |> assign(:form_end_minute, end_m)}
+    end
   end
 
   @impl true
@@ -112,86 +117,85 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       |> Map.put("professional_id", professional_id)
       |> build_datetimes()
 
-    result =
-      case socket.assigns.editing_appointment do
-        nil -> Professionals.create_appointment(attrs)
-        appt -> Professionals.update_appointment(appt, attrs)
-      end
+    if manual_client_allowed?(socket, attrs) do
+      persist_appointment(socket, attrs)
+    else
+      {:noreply, put_flash(socket, :error, "Select one of your own clients.")}
+    end
+  end
 
-    case result do
-      {:ok, _appointment} ->
+  @impl true
+  def handle_event("delete_appointment", %{"id" => id}, socket) do
+    case fetch_owned(socket, id) do
+      nil ->
+        {:noreply, appointment_not_found(socket)}
+
+      appt ->
+        Professionals.delete_appointment(appt)
         appointments = reload_appointments(socket)
 
         {:noreply,
          socket
          |> assign(:appointments, appointments)
          |> assign(:show_modal, false)
-         |> assign(:editing_appointment, nil)
-         |> put_flash(:info, "Appointment saved.")}
-
-      {:error, changeset} ->
-        {:noreply, assign(socket, :appointment_changeset, changeset)}
+         |> put_flash(:info, "Appointment deleted.")}
     end
   end
 
   @impl true
-  def handle_event("delete_appointment", %{"id" => id}, socket) do
-    appt = Professionals.get_appointment!(String.to_integer(id))
-    Professionals.delete_appointment(appt)
-    appointments = reload_appointments(socket)
-
-    {:noreply,
-     socket
-     |> assign(:appointments, appointments)
-     |> assign(:show_modal, false)
-     |> put_flash(:info, "Appointment deleted.")}
-  end
-
-  @impl true
   def handle_event("accept_appointment", %{"appointment_id" => id} = params, socket) do
-    appt = Professionals.get_appointment!(String.to_integer(id))
-    meeting_url = params["meeting_url"]
-    opts = if meeting_url && meeting_url != "", do: [meeting_url: meeting_url], else: []
+    case fetch_owned(socket, id) do
+      nil ->
+        {:noreply, appointment_not_found(socket)}
 
-    case Professionals.accept_appointment(appt, opts) do
-      {:ok, updated} ->
-        AppointmentMailerWorker.enqueue("accepted", updated.id, %{
-          professional_name: socket.assigns.professional_name,
-          client_name: client_display(updated.client),
-          cta_url: socket.assigns.public_url
-        })
+      appt ->
+        meeting_url = params["meeting_url"]
+        opts = if meeting_url && meeting_url != "", do: [meeting_url: meeting_url], else: []
 
-        {:noreply,
-         socket
-         |> refresh()
-         |> put_flash(
-           :info,
-           "Appointment accepted — the client has been emailed a calendar invite."
-         )}
+        case Professionals.accept_appointment(appt, opts) do
+          {:ok, updated} ->
+            AppointmentMailerWorker.enqueue("accepted", updated.id, %{
+              professional_name: socket.assigns.professional_name,
+              client_name: client_display(updated.client),
+              cta_url: socket.assigns.public_url
+            })
 
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Could not accept the appointment.")}
+            {:noreply,
+             socket
+             |> refresh()
+             |> put_flash(
+               :info,
+               "Appointment accepted — the client has been emailed a calendar invite."
+             )}
+
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "Could not accept the appointment.")}
+        end
     end
   end
 
   @impl true
   def handle_event("decline_appointment", %{"id" => id}, socket) do
-    appt = Professionals.get_appointment!(String.to_integer(id))
+    case fetch_owned(socket, id) do
+      nil ->
+        {:noreply, appointment_not_found(socket)}
 
-    case Professionals.decline_appointment(appt) do
-      {:ok, declined} ->
-        AppointmentMailerWorker.enqueue("declined", declined.id, %{
-          professional_name: socket.assigns.professional_name,
-          cta_url: socket.assigns.public_url
-        })
+      appt ->
+        case Professionals.decline_appointment(appt) do
+          {:ok, declined} ->
+            AppointmentMailerWorker.enqueue("declined", declined.id, %{
+              professional_name: socket.assigns.professional_name,
+              cta_url: socket.assigns.public_url
+            })
 
-        {:noreply,
-         socket
-         |> refresh()
-         |> put_flash(:info, "Request declined — the client has been notified.")}
+            {:noreply,
+             socket
+             |> refresh()
+             |> put_flash(:info, "Request declined — the client has been notified.")}
 
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Could not decline the request.")}
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "Could not decline the request.")}
+        end
     end
   end
 
@@ -238,6 +242,65 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     socket
     |> assign(:appointments, reload_appointments(socket))
     |> assign(:pending_requests, Professionals.list_pending_requests(professional_id))
+  end
+
+  # Fetch an appointment by a client-supplied id, scoped to the current
+  # professional. Returns nil for junk ids or appointments owned by someone else
+  # so a nutritionist can never mutate another nutritionist's appointments.
+  defp fetch_owned(socket, id) do
+    case Integer.parse(to_string(id)) do
+      {int, ""} ->
+        Professionals.get_appointment_for_professional(socket.assigns.current_user.id, int)
+
+      _ ->
+        nil
+    end
+  end
+
+  defp appointment_not_found(socket) do
+    socket
+    |> assign(:show_modal, false)
+    |> assign(:editing_appointment, nil)
+    |> put_flash(:error, "Appointment not found.")
+  end
+
+  defp persist_appointment(socket, attrs) do
+    result =
+      case socket.assigns.editing_appointment do
+        nil -> Professionals.create_appointment(attrs)
+        appt -> Professionals.update_appointment(appt, attrs)
+      end
+
+    case result do
+      {:ok, _appointment} ->
+        appointments = reload_appointments(socket)
+
+        {:noreply,
+         socket
+         |> assign(:appointments, appointments)
+         |> assign(:show_modal, false)
+         |> assign(:editing_appointment, nil)
+         |> put_flash(:info, "Appointment saved.")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :appointment_changeset, changeset)}
+    end
+  end
+
+  # A manually-created/edited appointment may use an external client name (no
+  # client_id) or one of the professional's *own* assigned clients — never an
+  # arbitrary platform user id a crafted form submit could inject.
+  defp manual_client_allowed?(socket, attrs) do
+    case attrs["client_id"] do
+      blank when blank in [nil, ""] ->
+        true
+
+      id ->
+        case Integer.parse(to_string(id)) do
+          {cid, ""} -> Enum.any?(socket.assigns.clients, &(&1.client_id == cid))
+          _ -> false
+        end
+    end
   end
 
   defp client_display(%{name: name}) when is_binary(name) and name != "", do: name

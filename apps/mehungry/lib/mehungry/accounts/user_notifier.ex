@@ -28,10 +28,10 @@ defmodule Mehungry.Accounts.UserNotifier do
     """
   end
 
-  defp html_layout(title, subtitle, greeting, body, cta_label, cta_url, footer_note) do
+  defp html_layout(title, subtitle, greeting, body, cta_label, cta_url, footer_note, lang \\ "en") do
     """
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="#{lang}">
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -147,9 +147,10 @@ defmodule Mehungry.Accounts.UserNotifier do
         {:ok, email}
 
       {:error, reason} ->
-        # Surface delivery failures (e.g. Amazon SES rejecting an unverified
-        # recipient while the account is still in the SES sandbox) instead of
-        # dropping them silently — otherwise "no email arrived" is undiagnosable.
+        # Surface delivery failures (e.g. Mailgun rejecting a recipient or the
+        # sending domain not being verified) instead of dropping them silently —
+        # otherwise "no email arrived" is undiagnosable. Callers decide whether
+        # to tell the user; this always logs the reason.
         Logger.error(
           "[UserNotifier] failed to deliver #{inspect(subject)} to #{inspect(recipient)}: " <>
             inspect(reason)
@@ -159,7 +160,40 @@ defmodule Mehungry.Accounts.UserNotifier do
     end
   end
 
-  def deliver_confirmation_instructions(user, url) do
+  @doc """
+  Send the account-confirmation email. `locale` ("en"/"el") selects the
+  language — our audience is overwhelmingly Greek, so an English-only email was
+  a likely cause of signups never confirming.
+  """
+  def deliver_confirmation_instructions(user, url, locale \\ "en")
+
+  def deliver_confirmation_instructions(user, url, "el") do
+    text = """
+    Γεια σας #{user.email},
+
+    Καλώς ήρθατε στο Mehungry! Επιβεβαιώστε τον λογαριασμό σας επισκεπτόμενοι τον παρακάτω σύνδεσμο:
+
+    #{url}
+
+    Ο σύνδεσμος λήγει σε 7 ημέρες. Αν δεν δημιουργήσατε λογαριασμό, μπορείτε να αγνοήσετε αυτό το email.
+    """
+
+    html =
+      html_layout(
+        "Επιβεβαιώστε τον λογαριασμό σας",
+        "Ένα κλικ πριν εξερευνήσετε περισσότερα",
+        "Γεια σας #{user.email},",
+        "Καλώς ήρθατε στο Mehungry! Επιβεβαιώστε τον λογαριασμό σας πατώντας το κουμπί παρακάτω. Ο σύνδεσμος λήγει σε 7 ημέρες.",
+        "Επιβεβαίωση λογαριασμού",
+        url,
+        "Αν δεν δημιουργήσατε λογαριασμό, μπορείτε να αγνοήσετε αυτό το email με ασφάλεια.",
+        "el"
+      )
+
+    deliver(user.email, "Επιβεβαιώστε τον λογαριασμό σας στο Mehungry", text, html)
+  end
+
+  def deliver_confirmation_instructions(user, url, _locale) do
     text = """
     Hi #{user.email},
 
@@ -167,7 +201,7 @@ defmodule Mehungry.Accounts.UserNotifier do
 
     #{url}
 
-    This link expires in 24 hours. If you didn't create an account, you can ignore this email.
+    This link expires in 7 days. If you didn't create an account, you can ignore this email.
     """
 
     html =
@@ -175,7 +209,7 @@ defmodule Mehungry.Accounts.UserNotifier do
         "Confirm your account",
         "One click away from exploring more",
         "Hi #{user.email},",
-        "Welcome to Mehungry! Please confirm your account by clicking the button below. This link expires in 24 hours.",
+        "Welcome to Mehungry! Please confirm your account by clicking the button below. This link expires in 7 days.",
         "Confirm my account",
         url,
         "If you didn't create an account, you can safely ignore this email."

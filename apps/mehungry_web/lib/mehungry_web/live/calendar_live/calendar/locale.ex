@@ -49,6 +49,24 @@ defmodule MehungryWeb.CalendarLive.Calendar.Locale do
     Calendar.strftime(date, "%A")
   end
 
+  @days_short_el %{
+    1 => "Δευ",
+    2 => "Τρι",
+    3 => "Τετ",
+    4 => "Πεμ",
+    5 => "Παρ",
+    6 => "Σαβ",
+    7 => "Κυρ"
+  }
+
+  def day_short(%Date{} = date, "el") do
+    Map.fetch!(@days_short_el, Date.day_of_week(date))
+  end
+
+  def day_short(%Date{} = date, _lang) do
+    Calendar.strftime(date, "%a")
+  end
+
   def month_name(%Date{} = date, "el") do
     Map.fetch!(@months_el, date.month)
   end

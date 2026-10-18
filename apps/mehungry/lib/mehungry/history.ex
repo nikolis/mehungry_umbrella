@@ -9,6 +9,7 @@ defmodule Mehungry.History do
   alias Mehungry.History
   alias Mehungry.History.IngredientUserMeal
   alias Mehungry.Food.NutrientCalculation
+  alias Mehungry.Food.Localization
   alias Mehungry.Repo
 
   alias Mehungry.History.UserMeal
@@ -191,11 +192,54 @@ defmodule Mehungry.History do
   REST daily-nutrition endpoint (`Api.V1.MealController.nutrition`) — keep it the
   one source of truth rather than re-deriving the shape per surface.
   """
-  def format_user_meals(meals) when is_list(meals) do
-    Enum.map(meals, &format_user_meal/1)
+  def format_user_meals(meals, locale \\ nil) when is_list(meals) do
+    ctx = translation_context(meals, locale)
+    Enum.map(meals, &format_user_meal(&1, ctx))
   end
 
-  defp format_user_meal(meal) do
+  # Batched translation lookups for the whole meal set — ingredient display
+  # names, measurement-unit labels, and recipe titles — so localizing the
+  # view-model costs three queries, not N+1. A no-op (empty maps) for the source
+  # locale, keeping the English path exactly as before.
+  defp translation_context(_meals, locale) when locale in [nil, "en", "En"],
+    do: %{ingredients: %{}, units: %{}, recipes: %{}}
+
+  defp translation_context(meals, locale) do
+    # A locale maps to several translation codes (canonical ISO + legacy alias,
+    # e.g. "el" + "Gr"); ingredient/unit rows are stored under the ISO code today
+    # but legacy "Gr" rows may still exist, so read both (ISO wins on conflict) —
+    # the same resolution `load_recipe_translations_map/2` does for recipes.
+    codes = Mehungry.Languages.Locale.data_codes(locale)
+
+    ingredient_ids = Enum.uniq(for m <- meals, ium <- m.ingredient_user_meals, do: ium.ingredient_id)
+
+    unit_ids =
+      Enum.uniq(
+        for m <- meals,
+            ium <- m.ingredient_user_meals,
+            not is_nil(ium.measurement_unit_id),
+            do: ium.measurement_unit_id
+      )
+
+    recipe_ids = Enum.uniq(for m <- meals, rum <- m.recipe_user_meals, do: rum.recipe_id)
+
+    %{
+      ingredients:
+        merge_by_codes(codes, &Localization.ingredient_display_names(ingredient_ids, &1)),
+      units: merge_by_codes(codes, &Localization.get_unit_translations_map(unit_ids, &1)),
+      recipes: Localization.load_recipe_translations_map(recipe_ids, locale)
+    }
+  end
+
+  # Merges a per-code translation map across a locale's codes, with the canonical
+  # (first/ISO) code winning on conflict.
+  defp merge_by_codes(codes, fun) do
+    codes
+    |> Enum.reverse()
+    |> Enum.reduce(%{}, fn code, acc -> Map.merge(acc, fun.(code)) end)
+  end
+
+  defp format_user_meal(meal, ctx) do
     %{
       id: meal.id,
       start_dt: meal.start_dt,
@@ -205,9 +249,9 @@ defmodule Mehungry.History do
       ingredient_user_meals:
         Enum.map(meal.ingredient_user_meals, fn y ->
           %{
-            title: y.ingredient.name,
+            title: Map.get(ctx.ingredients, y.ingredient_id) || y.ingredient.name,
             portions: y.quantity,
-            measurement_unit: Mehungry.Food.RecipeIngredient.unit_label(y),
+            measurement_unit: localized_unit_label(y, ctx.units),
             primary_size: 6,
             img_url: nil,
             recipe: %{
@@ -224,7 +268,7 @@ defmodule Mehungry.History do
       recipe_user_meals:
         Enum.map(meal.recipe_user_meals, fn y ->
           %{
-            title: y.recipe.title,
+            title: localized_recipe_title(y.recipe, Map.get(ctx.recipes, y.recipe.id)),
             consume_portions: y.consume_portions,
             cooking_portions: y.cooking_portions,
             servings: y.recipe.servings,
@@ -254,6 +298,24 @@ defmodule Mehungry.History do
         end)
     }
   end
+
+  # The localized measurement-unit label for a logged ingredient, falling back to
+  # the English `RecipeIngredient.unit_label/1` (which also handles description-only
+  # portions) when no translation exists for the unit.
+  defp localized_unit_label(ingredient_user_meal, unit_map) do
+    case Map.get(unit_map, ingredient_user_meal.measurement_unit_id) do
+      name when is_binary(name) and name != "" -> name
+      _ -> Mehungry.Food.RecipeIngredient.unit_label(ingredient_user_meal)
+    end
+  end
+
+  # The translated recipe title when a translation with a non-blank title exists,
+  # otherwise the recipe's own (source-language) title.
+  defp localized_recipe_title(_recipe, %Mehungry.AI.Bot.RecipeTranslation{title: title})
+       when is_binary(title) and title != "",
+       do: title
+
+  defp localized_recipe_title(recipe, _translation), do: recipe.title
 
   # `free_food_user_meals` was added after the calendar shipped; tolerate meals
   # whose association isn't loaded (older preload paths) by treating them as none.
@@ -446,6 +508,66 @@ defmodule Mehungry.History do
   end
 
   @doc """
+  Clones an existing meal (owned by `user_id`) onto `target_date`, copying its
+  recipe / ingredient / free-food children verbatim and keeping the same
+  `meal_type`, `title`, and time-of-day. The "log again" shortcut for repetitive
+  eaters — re-logging a meal is one tap instead of rebuilding it by hand.
+
+  Returns `{:ok, %UserMeal{}}` or `{:error, changeset}`; raises
+  `Ecto.NoResultsError` if the meal isn't the user's.
+  """
+  def duplicate_user_meal(user_id, meal_id, %Date{} = target_date) do
+    source =
+      from(m in UserMeal, where: m.id == ^meal_id and m.user_id == ^user_id)
+      |> Repo.one!()
+      |> Repo.preload([:recipe_user_meals, :ingredient_user_meals, :free_food_user_meals])
+
+    create_user_meal(%{
+      user_id: user_id,
+      title: source.title,
+      meal_type: source.meal_type,
+      start_dt: move_to_date(source.start_dt, target_date),
+      end_dt: move_to_date(source.end_dt, target_date),
+      recipe_user_meals:
+        Enum.map(source.recipe_user_meals, fn r ->
+          %{
+            recipe_id: r.recipe_id,
+            cooking: r.cooking,
+            cooking_portions: r.cooking_portions,
+            consume_portions: r.consume_portions
+          }
+        end),
+      ingredient_user_meals:
+        Enum.map(source.ingredient_user_meals, fn i ->
+          %{
+            ingredient_id: i.ingredient_id,
+            quantity: i.quantity,
+            measurement_unit_id: i.measurement_unit_id,
+            ingredient_portion_id: i.ingredient_portion_id
+          }
+        end),
+      free_food_user_meals:
+        Enum.map(source.free_food_user_meals, fn f ->
+          %{
+            name: f.name,
+            grams: f.grams,
+            nutrients_per_100g: f.nutrients_per_100g,
+            portion_name: f.portion_name,
+            portion_grams: f.portion_grams,
+            portions: f.portions
+          }
+        end)
+    })
+  end
+
+  # Moves a naive datetime onto `date`, preserving its time-of-day; a nil source
+  # datetime lands at noon so the cloned meal still sorts into the target day.
+  defp move_to_date(%NaiveDateTime{} = dt, %Date{} = date),
+    do: NaiveDateTime.new!(date, NaiveDateTime.to_time(dt))
+
+  defp move_to_date(_nil, %Date{} = date), do: NaiveDateTime.new!(date, ~T[12:00:00])
+
+  @doc """
   Updates a user_meal.
 
   ## Examples
@@ -588,4 +710,58 @@ defmodule Mehungry.History do
   def change_user_meal(%UserMeal{} = user_meal, attrs \\ %{}) do
     UserMeal.changeset(user_meal, attrs)
   end
+
+  ## ----------------------------------- Day notes ------------------------------------------
+
+  alias Mehungry.History.DayNote
+
+  @doc """
+  The user's note for a single day, or `nil` when none exists.
+  """
+  def get_day_note(user_id, %Date{} = date) do
+    Repo.get_by(DayNote, user_id: user_id, date: date)
+  end
+
+  @doc """
+  All of a user's day notes in `[first, last]` as a `%{Date => body}` map, so the
+  calendar can load a whole week's notes in one query (no N+1 over the 7 days).
+  """
+  def list_day_notes(user_id, %Date{} = first, %Date{} = last) do
+    DayNote
+    |> where([n], n.user_id == ^user_id and n.date >= ^first and n.date <= ^last)
+    |> Repo.all()
+    |> Map.new(fn n -> {n.date, n.body} end)
+  end
+
+  @doc """
+  Upserts the note for `(user_id, date)`. A blank/nil body deletes the row rather
+  than storing an empty note, so clearing a note tidies up after itself. Returns
+  `{:ok, %DayNote{}}`, `{:ok, nil}` (deleted/no-op), or `{:error, changeset}`.
+  """
+  def upsert_day_note(user_id, %Date{} = date, body) do
+    existing = get_day_note(user_id, date)
+
+    case {existing, blank?(body)} do
+      {nil, true} ->
+        {:ok, nil}
+
+      {%DayNote{} = note, true} ->
+        {:ok, _} = Repo.delete(note)
+        {:ok, nil}
+
+      {nil, false} ->
+        %DayNote{}
+        |> DayNote.changeset(%{user_id: user_id, date: date, body: body})
+        |> Repo.insert()
+
+      {%DayNote{} = note, false} ->
+        note
+        |> DayNote.changeset(%{body: body})
+        |> Repo.update()
+    end
+  end
+
+  defp blank?(nil), do: true
+  defp blank?(body) when is_binary(body), do: String.trim(body) == ""
+  defp blank?(_), do: false
 end

@@ -138,6 +138,52 @@ defmodule MehungryWeb.HomeLiveTest do
   end
 
   # ──────────────────────────────────────────────────────────────────────────
+  # Weekly-plan posts (reference-less WEEKLY_PLAN cards)
+  # ──────────────────────────────────────────────────────────────────────────
+
+  defp weekly_plan_post(user) do
+    {:ok, graphic} =
+      Food.create_weekly_plan_graphic(%{
+        user_id: user.id,
+        week_start: ~D[2026-10-05],
+        locale: "en",
+        goal_label: "Anti-inflammatory",
+        image_url: "https://example.com/weekly-card.png",
+        macros: %{"energy_kcal" => 1900},
+        caption: "A planned week · ~1900 kcal/day · 112 g protein avg"
+      })
+
+    {:ok, post} = Posts.create_weekly_plan_post(graphic, "My week · 5 Oct – 11 Oct")
+    post
+  end
+
+  describe "weekly-plan feed card" do
+    setup [:register_and_log_in_user]
+
+    test "renders a WEEKLY_PLAN post without dereferencing a recipe", %{conn: conn, user: user} do
+      complete_onboarding(user)
+      _post = weekly_plan_post(user)
+
+      {:ok, _view, html} = live(conn, ~p"/home")
+
+      assert html =~ "shared a weekly plan"
+      assert html =~ "https://example.com/weekly-card.png"
+      assert html =~ "112 g protein avg"
+    end
+
+    test "liking a weekly-plan post via react does not crash", %{conn: conn, user: user} do
+      complete_onboarding(user)
+      post = weekly_plan_post(user)
+
+      {:ok, view, _html} = live(conn, ~p"/home")
+
+      html = render_hook(view, "react", %{"type_" => "upvote", "id" => to_string(post.id)})
+      assert html =~ "Recipe Feed"
+      assert Posts.get_upvote_from(user.id, post.id) != []
+    end
+  end
+
+  # ──────────────────────────────────────────────────────────────────────────
   # Pagination
   # ──────────────────────────────────────────────────────────────────────────
 

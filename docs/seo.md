@@ -296,28 +296,41 @@ Browser requests /search/pasta
 
 ---
 
-## Monitoring SEO in the admin panel
+## Monitoring SEO
 
-The `/professional/seo` dashboard (built in `seo_live.ex`) shows:
+> ⚠️ **There is no longer an in-app SEO dashboard.** The old `/professional/seo`
+> page (`seo_live.ex`) and the `presence.ex` referrer-capture it read from were
+> **removed** together with the rest of the GA4-duplicating server-side analytics
+> (the `visits` table and its dashboards — see `docs/app_status.md` and the
+> *Analytics removal* memory). Don't go looking for them. SEO is now monitored
+> entirely with the two tools built for it:
 
-| Section | What it tells you |
-|---------|-------------------|
-| **Organic traffic trend** | How many visitors are arriving from search engines per day |
-| **Search engine breakdown** | Which search engines (Google, Bing, DuckDuckGo) send traffic |
-| **Organic landing pages** | Which of your pages rank in search results |
-| **Crawler activity** | When Googlebot last crawled your site and which pages it visited |
-| **Search queries detected** | What search terms people used (rarely available due to Google's HTTPS privacy policy) |
+### 1. Google Search Console (the source of truth for organic)
 
-**Important caveat**: The SEO dashboard only shows data for visits that happened **after** the referrer capture was added to `presence.ex`. Older visit records have no `referrer` field and will all appear as "direct." The data will build up over time.
+This is where you see what no referrer log can tell you: **impressions, clicks,
+average position, CTR, and the actual search queries** (queries are visible in
+GSC even though they're stripped from the HTTP `Referer` — Google only exposes
+them here).
 
-**The referrer capture works like this**:
-1. When a visitor arrives from Google and opens a page, their browser sends an HTTP `Referer` header with the Google URL
-2. Phoenix LiveView receives this via `get_connect_params(socket)["_live_referer"]` during the WebSocket handshake
-3. It's stored in the `visits` table as `details["referrer"]`
-4. The SEO dashboard classifies it as "search" if the domain matches a known search engine
+- Add/verify the `m3hungry.com` property, then **Sitemaps → submit
+  `https://www.m3hungry.com/sitemap.xml`** (see §2 above).
+- Watch **Performance** for impressions/clicks per query and per page, and
+  **Pages** (Index coverage) for what's indexed vs. excluded and why.
+- The leading indicator worth checking weekly is **impressions on the `/foods`,
+  `/conditions`, and recipe pages** — the first sign organic is starting
+  (currently zero; this is the #1 compounding unlock per `docs/growth_plan.md`).
+- Use the **URL Inspection** tool + **Rich Results Test** to confirm a specific
+  page's indexed HTML and JSON-LD are what you expect (the dead-render gotcha in
+  "How Phoenix LiveView interacts with SEO" above makes this worth doing for any
+  new public LiveView).
 
-**Why we can't see Google's search queries**:
-In the early days of the web, Google's referrer URL looked like `https://www.google.com/search?q=chicken+recipe`, so websites could see what people searched. In 2011, Google switched to HTTPS and stopped including the query parameter. Now you get `https://www.google.com/` as the referrer — you know traffic came from Google, but not the search term. The only way to see actual queries is via Google Search Console.
+### 2. GA4 (organic as a traffic channel)
+
+GA4 → **Acquisition → Traffic acquisition** breaks sessions down by channel
+(Direct / Organic Search / Organic Social / Referral), so you can see organic
+search as a share of total traffic. Note GA4 is **consent-gated** (it only counts
+visitors who accepted the cookie banner) and is **not queryable from the
+codebase** — pull it by hand from the GA4 UI. See `docs/app_status.md §5.3`.
 
 ---
 
@@ -396,6 +409,75 @@ SEO on the species page:
 
 **Re-measure after deploy + recrawl (~2–4 weeks):** expect #1 to move position materially on its own (the crawler can finally see the page); wording tweaks (#2) compound on top. #3–5 are what move it from page 8 to page 2–3.
 
+## Meal plan pages (`/meal-plans/:slug`)
+
+`MehungryWeb.MealPlanLive.Show` is the **SEO + sharing surface for meal planning**.
+The personal calendar (`/calendar`) is private, `noindex`, Disallowed in
+`robots.txt`, and WebSocket-driven — it can never rank. So instead a user
+**publishes a chosen week** as an immutable public snapshot
+(`Mehungry.PublishedPlans` → `published_meal_plans`) served at a crawlable
+`/meal-plans/:slug`. This targets the high-volume "7-day meal plan" / "weekly
+meal plan" / "μεσογειακό εβδομαδιαίο πρόγραμμα" query space with content no
+recipe-blog listicle can match on nutrition accuracy.
+
+- **`PublishedPlans.publish_week(user, week_start, opts)` is self-contained** — it
+  re-derives the week from the DB (`History.list_calendar_user_meals/3` +
+  `History.format_user_meals/1`), so no LiveView socket state is needed. Macro
+  numbers come from the **same** `NutrientUtils.summarize_meals_nutrients/1` +
+  `macro_summary/1` the calendar uses (parity rule), so the page matches the
+  calendar to the gram. The snapshot (days + macros + grocery + prose) is stored
+  immutably, so the public URL never churns when the author edits their calendar
+  and leaks no live PII.
+- **Rendered synchronously** (no `assign_async`) — the dead render Googlebot
+  indexes already carries the full 7-day plan, so there is no `connected?/1` split
+  to maintain (see the `assign_async` caveat above). Each recipe row is an
+  `<a href="/browse/:id">` — the internal-linking unlock (§"What to do next" #4),
+  35 links per plan into the recipe cluster.
+- **SEO assigns**: plain-string `:page_title` (= plan title) + `:page_description`
+  (the prose summary) + `:canonical_path` (`/meal-plans/:slug`, locale swapped in
+  generically) + `:og_image` (reuses the generated weekly **share card** when the
+  publish flow passes one). `:og_image` is a new **generic** override in
+  `head.html.heex` (mirrors the existing `:canonical_path` override) so any
+  plain-string page can set a custom OG image without the recipe `page_seo_data`
+  map (which hardcodes a `/browse/:id` canonical).
+- **JSON-LD** (`:structured_data`): a `BreadcrumbList` (Home › Meal Plans › title)
+  + an `ItemList` of the plan's recipes (each `url` → `/browse/:id`). There is **no
+  schema.org `MealPlan` type and no meal-plan rich result** — the win is ranking +
+  CTR + internal links, not a SERP card. We deliberately do **not** fabricate
+  `aggregateRating` (same policy trap as recipes).
+- **Sitemap + robots**: public plans are emitted in `sitemap.xml`
+  (`PublishedPlans.list_public_plans/0`, localized entries) and `/meal-plans` is
+  `Allow`ed in `robots.txt`. `/meal-plans` is **not** in `head.html.heex`'s
+  `noindex_prefixes`.
+
+**Publish trigger + feed integration.** Publishing is wired to the calendar's
+weekly share flow: when a user posts their week to the feed
+(`calendar_live/index.ex` `post_week_plan`), it calls `publish_week/3` (passing
+the generated share card as `:og_image_url`) and links the resulting
+`WEEKLY_PLAN` feed post to the plan via `posts.published_meal_plan_id`. The feed
+card (`home_live/components/post_card.html.heex`) then opens
+`/meal-plans/:slug` — the full day-by-day details page — instead of the raw card
+image, and the details page shows a **"Shared by &lt;name&gt;"** byline linking to
+the author's `/profile/:id`. Older posts with no linked plan fall back to the
+image.
+
+**One plan + one post per `(user, week_start)`.** Re-posting a week the user has
+already published **replaces** rather than duplicates: `publish_week/3` upserts
+the `PublishedMealPlan` in place (keeping the same `slug`, so the public URL and
+shared links stay stable while the snapshot refreshes), and
+`create_weekly_plan_post/3` deletes the prior `WEEKLY_PLAN` post for that plan
+before inserting the fresh one — so the feed never shows two cards for the same
+dates. Publishing a *different* week makes a separate plan as expected.
+
+**Card image + one-click "Add to my calendar".** The details page shows the
+generated PNG share card (`og_image_url`) as a hero image, and the snapshot
+stores each item's FK ids (recipe / ingredient / unit) so a logged-in visitor
+can **re-create the whole week on their own calendar** with one button
+(`use_plan` → `PublishedPlans.import_to_calendar/3`, laying day-index 0..6 onto
+the Monday of the current week, non-destructively; mirrors
+`MealBlueprints.import_plan_to_calendar/3`). Anonymous visitors get a log-in CTA.
+Free-food slots (and any pre-FK-snapshot plans) are shown but skipped on import.
+
 ## Checklist: verifying the implementation
 
 After deploying, confirm these work:
@@ -413,9 +495,17 @@ After deploying, confirm these work:
 
 These items would have the biggest remaining impact:
 
-1. **Create a default OG image** at `/images/og-default.png` (1200×630px). This is shown when sharing pages that don't have a recipe image (browse, home, etc.).
+1. ~~**Create a default OG image** at `/images/og-default.png` (1200×630px).~~
+   **Done** — a brand-lockup card (parchment ground, logo mark, "m3hungry"
+   wordmark, tagline) lives at `apps/mehungry_web/priv/static/images/og-default.png`,
+   with its editable source alongside it as `og-default.svg`. It's the fallback
+   `og:image`/`twitter:image` for every page without a recipe image (home,
+   `/foods`, `/conditions`, `/blueprints/:slug`, `/nutritionists`). To re-render
+   after editing the SVG: `vips copy og-default.svg og-default.png` (libvips uses
+   librsvg, which renders fonts correctly — ImageMagick's built-in SVG renderer
+   does **not**, so don't use `convert` for this).
 
-2. **Google Search Console** — set it up, verify ownership, submit the sitemap. This gives you actual impressions, clicks, average position, and CTR data — far more accurate than the referrer-based analytics we track in the app.
+2. **Google Search Console** — set it up, verify ownership, submit the sitemap. This gives you actual impressions, clicks, average position, and CTR data. See "Monitoring SEO" above — GSC is now the source of truth for organic (there is no in-app SEO dashboard anymore).
 
 3. **Recipe review schema** — the remaining big JSON-LD gap is `aggregateRating` (see the Search Console warnings table above; the cheaper `author`/`recipeIngredient`/`recipeCuisine`/`keywords`/step-`name` enhancements are already emitted). If you add a rating/review feature, adding `aggregateRating` will show star ratings in Google results, which dramatically increases click-through rate — but only mark up ratings you actually collect and display on the page.
 

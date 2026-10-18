@@ -7,6 +7,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
   use MehungryWeb, :live_view
 
   alias Mehungry.Professionals
+  alias Mehungry.Professionals.Anthropometrics
   alias Mehungry.Professionals.DietaryHistory.Fields
 
   @impl true
@@ -18,7 +19,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
         {:ok,
          socket
          |> put_flash(:error, "Record not found.")
-         |> push_navigate(to: ~p"/nutritionist/records")}
+         |> push_navigate(to: ~p"/nutritionist/clients")}
 
       record ->
         client_id = record.id
@@ -51,10 +52,10 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
     <div class="max-w-4xl mx-auto">
       <div class="flex items-center justify-between">
         <.link
-          navigate={~p"/nutritionist/records"}
+          navigate={~p"/nutritionist/clients"}
           class="text-parchment-dim hover:text-parchment text-sm"
         >
-          ← Back to records
+          ← Back to clients
         </.link>
         <.action variant={:primary} size={:sm} navigate={~p"/nutritionist/records/#{@record.id}/edit"}>
           Edit
@@ -63,11 +64,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
 
       <div class="flex items-center gap-2 mt-2 mb-1">
         <h1 class="text-2xl font-display font-bold text-parchment">{@record.full_name}</h1>
-        <%= if @record.user_id do %>
-          <span class="px-2 py-0.5 rounded-full bg-basil/20 text-basil text-xs">m3hungry client</span>
-        <% else %>
-          <span class="px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim text-xs">External</span>
-        <% end %>
+        <span class="px-2 py-0.5 rounded-full bg-basil/20 text-basil text-xs">m3hungry client</span>
       </div>
       <p class="text-parchment-dim text-sm mb-6">
         {[@record.email, @record.phone, @record.address]
@@ -87,6 +84,9 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
           </h2>
 
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <.metric label="Sex" value={Anthropometrics.sex_label(@intake.sex)} unit="" />
+            <.metric label="Age" value={@intake.age} unit="yrs" />
+            <.metric label="Activity" value={Anthropometrics.activity_label(@intake.activity_level)} unit="" />
             <.metric label="Height" value={@intake.height_m} unit="m" />
             <.metric label="Weight" value={@intake.weight_kg} unit="kg" />
             <.metric label="BMI" value={@intake.bmi} unit="" />

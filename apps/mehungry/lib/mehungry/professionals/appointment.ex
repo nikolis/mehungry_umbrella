@@ -39,6 +39,10 @@ defmodule Mehungry.Professionals.Appointment do
     |> validate_client_present()
     |> foreign_key_constraint(:professional_id)
     |> foreign_key_constraint(:client_id)
+    |> unique_constraint(:scheduled_at,
+      name: :professional_appointments_active_slot_unique,
+      message: "is no longer available"
+    )
   end
 
   @doc "Changeset for a status transition (accept/decline/cancel), optionally attaching a meeting URL."

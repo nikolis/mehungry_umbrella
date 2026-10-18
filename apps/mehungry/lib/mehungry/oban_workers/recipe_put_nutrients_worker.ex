@@ -61,7 +61,15 @@ defmodule Mehungry.RecipePutNutrientsWorker do
 
         changeset = Food.change_recipe(recipe)
 
-        _create_post = Mehungry.Posts.create_post(recipe)
+        # Backfill a post for recipes that don't have one yet. This worker runs
+        # on every create *and* update, so a recipe created without an image
+        # (whose post couldn't be made then — a post requires md_media_url from
+        # image_url) gets its post the first time an image is present at update
+        # time. Guarding on post_exists_for?/2 keeps this idempotent so repeated
+        # updates don't insert duplicate posts.
+        unless Mehungry.Posts.post_exists_for?(recipe.id, nil) do
+          Mehungry.Posts.create_post(recipe)
+        end
 
         Cachex.del(:recipes_cache, {Mehungry.Food, recipe_id})
 

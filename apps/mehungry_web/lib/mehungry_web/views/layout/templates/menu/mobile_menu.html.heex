@@ -1,17 +1,23 @@
 <% show_invitations =
   @current_user && !Mehungry.Subscriptions.nutritionist?(@current_user.id) &&
     Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id) > 0 %>
+<% unread_messages =
+  (@current_user && !Mehungry.Subscriptions.nutritionist?(@current_user.id) &&
+     Mehungry.Professionals.count_unread_messages_for(@current_user.id)) || 0 %>
+<% show_messages = unread_messages > 0 %>
 <% friend_requests_count =
   (@current_user && Mehungry.Friends.count_pending_requests_for(@current_user.id)) || 0 %>
 <% show_friend_requests = friend_requests_count > 0 %>
-<% menu_cols = 8 + if(show_invitations, do: 1, else: 0) + if show_friend_requests, do: 1, else: 0 %>
+<% menu_cols =
+  8 + if(show_invitations, do: 1, else: 0) + if(show_messages, do: 1, else: 0) +
+    if show_friend_requests, do: 1, else: 0 %>
 <nav
   class="nav_container_mobile fixed border-t border-ink-panel2 bg-ink-panel text-parchment-dim"
   id="nav_bar_mobile"
   phx-update="ignore"
 >
   <div
-    class={"grid #{%{8 => "grid-cols-8", 9 => "grid-cols-9", 10 => "grid-cols-10"}[menu_cols]} bg-inherit"}
+    class={"grid #{%{8 => "grid-cols-8", 9 => "grid-cols-9", 10 => "grid-cols-10", 11 => "grid-cols-11"}[menu_cols]} bg-inherit"}
     style="overflow: hidden; max-height: 64px;"
   >
     <!-- Logo -->
@@ -99,6 +105,23 @@
           <.icon name="hero-bell" class="h-7 w-7" />
           <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
             {Mehungry.Professionals.count_pending_invitations_for_client(@current_user.id)}
+          </span>
+        </div>
+      </a>
+    <% end %>
+
+    <!-- Messages with your nutritionist -->
+    <%= if show_messages do %>
+      <a
+        href={"/#{@current_language}/messages"}
+        class="flex items-center justify-center p-3 nav_link_basic hover:text-parchment hover:bg-ink-panel2 rounded-lg transition-colors"
+        title={gettext("Messages")}
+        aria-label={gettext("Messages")}
+      >
+        <div class="relative">
+          <.icon name="hero-chat-bubble-left-right" class="h-7 w-7" />
+          <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
+            {unread_messages}
           </span>
         </div>
       </a>

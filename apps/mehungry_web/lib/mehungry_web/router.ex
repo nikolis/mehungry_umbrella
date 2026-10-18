@@ -10,7 +10,6 @@ defmodule MehungryWeb.Router do
     plug(:accepts, ["html"])
     plug(:fetch_session)
     plug(MehungryWeb.Plugs.CookieConsent)
-    plug(MehungryWeb.VisitorPlug)
     plug(Plug.CSRFProtection)
     plug(:fetch_live_flash)
     plug(:put_root_layout, {MehungryWeb.LayoutView, :root})
@@ -26,7 +25,6 @@ defmodule MehungryWeb.Router do
     plug(:accepts, ["html"])
     plug(:fetch_session)
     plug(MehungryWeb.Plugs.CookieConsent)
-    plug(MehungryWeb.VisitorPlug)
     plug(:fetch_live_flash)
     plug(:put_root_layout, {MehungryWeb.LayoutView, :admin_root})
     plug(:protect_from_forgery)
@@ -256,7 +254,7 @@ defmodule MehungryWeb.Router do
     pipe_through([:admin_browser, :require_authenticated_user])
 
     live_session :default2,
-      on_mount: MehungryWeb.AdminAuthLive,
+      on_mount: [MehungryWeb.AdminAuthLive, MehungryWeb.SessionMetrics],
       layout: {MehungryWeb.LayoutView, :admin_live} do
       live("/users", ProfessionalLive.Users, :index)
       live("/user/:id", ProfessionalLive.User, :show)
@@ -300,11 +298,7 @@ defmodule MehungryWeb.Router do
       live("/translations/:resource/:id", ProfessionalLive.TranslationsLive.Panel, :show)
 
       live("/analytics", ProfessionalLive.AnalyticsLive, :index)
-      live("/seo", ProfessionalLive.SeoLive, :index)
       live("/maintenance", ProfessionalLive.MaintenanceLive, :index)
-
-      live("/visits", VisitLive.Index, :index)
-      live("/visits/:ip_address", VisitLive.Show, :show)
 
       live("/feedback", ProfessionalLive.FeedbackLive, :index)
 
@@ -340,15 +334,15 @@ defmodule MehungryWeb.Router do
     pipe_through([:browser, :require_authenticated_user])
 
     live_session :nutritionist,
-      on_mount: MehungryWeb.NutritionistAuthLive,
+      on_mount: [MehungryWeb.NutritionistAuthLive, MehungryWeb.SessionMetrics],
       layout: {MehungryWeb.LayoutView, :nutritionist_live} do
       live("/", NutritionistLive.Dashboard, :index)
       live("/profile", NutritionistLive.ProfileEdit, :edit)
       live("/invitations", NutritionistLive.Invitations, :index)
       live("/clients", NutritionistLive.Clients, :index)
-      live("/records", NutritionistLive.Records, :index)
-      live("/records/import", NutritionistLive.Records, :import)
-      live("/records/new", NutritionistLive.ClientRecordEditor, :new)
+      live("/clients/import", NutritionistLive.Clients, :import)
+      # Legacy roster path — the Records page folded into Clients; redirect bookmarks.
+      live("/records", NutritionistLive.Clients, :legacy_redirect)
       live("/records/:id", NutritionistLive.ClientRecord, :show)
       live("/records/:id/edit", NutritionistLive.ClientRecordEditor, :edit)
       live("/clients/:id", NutritionistLive.ClientDetail, :show)
@@ -370,7 +364,7 @@ defmodule MehungryWeb.Router do
     # injected `nav_section` session flag tells those LiveViews to keep all internal
     # navigation under `/nutritionist/conditions` instead of the public `/:locale/conditions`.
     live_session :nutritionist_conditions,
-      on_mount: MehungryWeb.NutritionistAuthLive,
+      on_mount: [MehungryWeb.NutritionistAuthLive, MehungryWeb.SessionMetrics],
       layout: {MehungryWeb.LayoutView, :nutritionist_live},
       session: %{"nav_section" => "nutritionist"} do
       live("/conditions", HealthLive.Index, :index)
@@ -382,8 +376,10 @@ defmodule MehungryWeb.Router do
   scope "/", MehungryWeb do
     pipe_through([:browser, :require_authenticated_user])
 
-    live_session :default, on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.UserAuthLive] do
+    live_session :default,
+      on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.UserAuthLive, MehungryWeb.SessionMetrics] do
       localized_live("/notifications/invitations", NutritionistLive.UserInvitations, :index)
+      localized_live("/messages", MessagesLive.Index, :index)
       localized_live("/friends", FriendsLive.Index, :index)
       localized_live("/basket", ShoppingBasketLive.Index, :index)
       localized_live("/basket/import_items/:id", ShoppingBasketLive.Index, :import_items)
@@ -493,13 +489,14 @@ defmodule MehungryWeb.Router do
     pipe_through([:browser, :maybe_require_authenticated_user])
 
     live_session :default3,
-      on_mount: MehungryWeb.RestoreLocale,
+      on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.SessionMetrics],
       layout: {MehungryWeb.LayoutView, :landing_live} do
       localized_live("/welcome", LandingLive, :index)
       localized_live("/trial", TrialLive.Index, :index)
     end
 
-    live_session :maybe, on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.MaybeUserAuthLive] do
+    live_session :maybe,
+      on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.MaybeUserAuthLive, MehungryWeb.SessionMetrics] do
       get("/", HomePageController, :home)
 
       localized_live("/home", HomeLive.Index, :index)
@@ -524,6 +521,8 @@ defmodule MehungryWeb.Router do
       localized_live("/foods/:slug", SpeciesDetailLive.Index, :index)
 
       localized_live("/blueprints/:slug", BlueprintLive.Show, :show)
+
+      localized_live("/meal-plans/:slug", MealPlanLive.Show, :show)
 
       localized_live("/nutritionists", PublicNutritionistLive.Index, :index)
       localized_live("/nutritionists/:slug", PublicNutritionistLive.Show, :show)

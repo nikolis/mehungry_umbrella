@@ -17,11 +17,13 @@ defmodule MehungryWeb.UserSessionController do
         render(conn, "new.html", error_message: "Invalid email or password")
 
       %{confirmed_at: nil} = user ->
-        {:ok, _} =
-          Accounts.deliver_user_confirmation_instructions(
-            user,
-            &Routes.user_confirmation_url(conn, :edit, &1)
-          )
+        # Resend the confirmation link in the visitor's locale. Don't pattern-match
+        # {:ok, _} — a Mailgun failure here must not 500 the login page.
+        Accounts.deliver_user_confirmation_instructions(
+          user,
+          &Routes.user_confirmation_url(conn, :edit, &1),
+          MehungryWeb.Locale.detect(conn)
+        )
 
         conn
         |> put_flash(

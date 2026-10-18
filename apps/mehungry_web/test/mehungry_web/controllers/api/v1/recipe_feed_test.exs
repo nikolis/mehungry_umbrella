@@ -90,6 +90,20 @@ defmodule MehungryWeb.Api.V1.RecipeFeedTest do
       assert Map.has_key?(detail, "likes_count")
     end
 
+    test "localizes nutrient display names with ?lang=el", %{conn: conn} do
+      recipe =
+        FoodFixtures.recipe_fixture(author(), %{
+          nutrients: %{"Energy" => %{"name" => "Energy", "amount" => 50.0, "unit" => "kcal"}}
+        })
+
+      en = get(conn, ~p"/api/v1/recipes/#{recipe.id}") |> json_response(200)
+      assert Map.has_key?(en["data"]["nutrients"], "Energy")
+
+      el = get(conn, ~p"/api/v1/recipes/#{recipe.id}?lang=el") |> json_response(200)
+      assert Map.has_key?(el["data"]["nutrients"], "Ενέργεια")
+      refute Map.has_key?(el["data"]["nutrients"], "Energy")
+    end
+
     test "404 for a missing recipe", %{conn: conn} do
       conn = get(conn, ~p"/api/v1/recipes/99999999")
       assert json_response(conn, 404)

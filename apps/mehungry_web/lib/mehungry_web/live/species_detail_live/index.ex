@@ -95,17 +95,32 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   # render we load it synchronously and hand the template a resolved
   # `AsyncResult`.
   defp load_species_sidecars(socket, species) do
+    language = socket.assigns[:current_language] || "en"
+
     if connected?(socket) do
       assign_async(socket, [:compounds], fn ->
-        {:ok, %{compounds: SpeciesCompounds.list_species_relationships(species.id)}}
+        rels = SpeciesCompounds.list_species_relationships(species.id)
+        {:ok, %{compounds: localize_compounds(rels, language)}}
       end)
     else
-      assign(
-        socket,
-        :compounds,
-        AsyncResult.ok(SpeciesCompounds.list_species_relationships(species.id))
-      )
+      rels = SpeciesCompounds.list_species_relationships(species.id)
+      assign(socket, :compounds, AsyncResult.ok(localize_compounds(rels, language)))
     end
+  end
+
+  # Overlay each compound's translated name for the current locale (from the
+  # curated `compound_translations`), so the chips — and the evidence-modal title,
+  # which reads `rel.compound.name` through `phx-value-compound` — render Greek.
+  # Falls back to the English compound name when no translation exists.
+  defp localize_compounds(rels, language) do
+    names = Food.compound_display_names(Enum.map(rels, & &1.compound.id), language)
+
+    Enum.map(rels, fn rel ->
+      case Map.get(names, rel.compound.id) do
+        nil -> rel
+        translated -> %{rel | compound: %{rel.compound | name: translated}}
+      end
+    end)
   end
 
   @impl true
@@ -441,10 +456,10 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   def pubmed_url(_), do: nil
 
   @doc "Human label for a species↔compound relationship type."
-  def relationship_label("contains"), do: "Contains"
-  def relationship_label("high_in"), do: "High in"
-  def relationship_label("low_in"), do: "Low in"
-  def relationship_label("trace"), do: "Trace"
-  def relationship_label("absent"), do: "Absent"
+  def relationship_label("contains"), do: gettext("Contains")
+  def relationship_label("high_in"), do: gettext("High in")
+  def relationship_label("low_in"), do: gettext("Low in")
+  def relationship_label("trace"), do: gettext("Trace")
+  def relationship_label("absent"), do: gettext("Absent")
   def relationship_label(other), do: Phoenix.Naming.humanize(other || "")
 end

@@ -30,7 +30,11 @@ defmodule MehungryWeb.HomeLive.Index do
 
     all_posts_all =
       Mehungry.Posts.list_posts(user)
-      |> Enum.filter(fn x -> !is_nil(x) and !is_nil(x.reference) end)
+      # Keep recipe posts (which must have a recipe reference) and reference-less
+      # weekly-plan cards; drop only broken rows.
+      |> Enum.filter(fn x ->
+        !is_nil(x) and (x.type_ == "WEEKLY_PLAN" or !is_nil(x.reference))
+      end)
       |> Posts.localize_for_language(language)
 
     # Diet mode from the user's saved profile rules: when set, the feed is
@@ -307,7 +311,11 @@ defmodule MehungryWeb.HomeLive.Index do
 
   defp filter_by_diet(posts, mode) do
     tag = Atom.to_string(mode)
-    Enum.filter(posts, fn post -> post.reference && recipe_has_tag?(post.reference, tag) end)
+    # Weekly-plan cards aren't recipes, so diet-mode can't classify them — always
+    # keep them in the feed.
+    Enum.filter(posts, fn post ->
+      post.type_ == "WEEKLY_PLAN" or (post.reference && recipe_has_tag?(post.reference, tag))
+    end)
   end
 
   defp recipe_has_tag?(%{recipe_hashtags: recipe_hashtags}, tag) when is_list(recipe_hashtags) do

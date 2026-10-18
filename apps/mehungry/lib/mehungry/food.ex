@@ -64,6 +64,8 @@ defmodule Mehungry.Food do
   defdelegate create_post_from_recipe(recipe), to: Recipes
   defdelegate create_recipe_social_graphic(attrs), to: Recipes
   defdelegate latest_recipe_social_graphic(recipe_id), to: Recipes
+  defdelegate create_weekly_plan_graphic(attrs), to: Recipes
+  defdelegate latest_weekly_plan_graphic(user_id, week_start), to: Recipes
   defdelegate recipe_with_share_image(recipe), to: Recipes
   defdelegate put_nutrient_info(changeset, attrs), to: Recipes
   defdelegate recipe_counts_by_user_id(), to: Recipes
@@ -227,6 +229,8 @@ defmodule Mehungry.Food do
   defdelegate load_recipe_translations_map(recipe_ids, language_name), to: Localization
   defdelegate translate_recipe_if_needed(recipe), to: Localization
   defdelegate ingredient_display_names(ingredient_ids, language_name), to: Localization
+  defdelegate ingredient_display_names_by_name(names, language_name), to: Localization
+  defdelegate compound_display_names(compound_ids, language_name), to: Localization
   defdelegate get_unit_translations_map(unit_ids, language_name), to: Localization
 
   defdelegate upsert_ingredient_translation(ingredient_id, language_name, name),

@@ -703,14 +703,9 @@ defmodule MehungryWeb.ConditionDetailLive.Index do
 
   defp conditions_base(_session, language), do: "/#{language}/conditions"
 
-  # Gettext-translated label for a top-macro nutrient card (canonical English key
-  # from `@display_labels`); explicit clauses so `mix gettext.extract` sees them.
-  def nutrient_label("Calories"), do: gettext("Calories")
-  def nutrient_label("Protein"), do: gettext("Protein")
-  def nutrient_label("Fat"), do: gettext("Fat")
-  def nutrient_label("Carbs"), do: gettext("Carbs")
-  def nutrient_label("Fiber"), do: gettext("Fiber")
-  def nutrient_label(other), do: other
+  # Localized label for a top-macro nutrient card. The vocabulary lives in the
+  # shared `MehungryWeb.NutrientLabels` (same source the nutrition accordion uses).
+  def nutrient_label(label), do: MehungryWeb.NutrientLabels.translate_name(label)
 
   # Overlays the species' translated name for the modal title. A locale maps to
   # several `language_name` codes (ISO + legacy, e.g. "el"/"Gr"); species rows

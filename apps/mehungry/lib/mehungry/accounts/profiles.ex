@@ -75,6 +75,31 @@ defmodule Mehungry.Accounts.Profiles do
     |> Repo.update()
   end
 
+  @doc """
+  Persists the user's personal "foods I avoid" list. Accepts a list of strings
+  (or a newline/comma-separated string), trims blanks and dedups before saving.
+  A targeted single-column update so it skips the full profile validations.
+  """
+  def set_avoid_foods(%UserProfile{} = profile, foods) do
+    profile
+    |> Ecto.Changeset.change(avoid_foods: clean_food_list(foods))
+    |> Repo.update()
+  end
+
+  @doc "Normalizes a raw avoid-foods value into a trimmed, de-duplicated list."
+  def clean_food_list(foods) when is_binary(foods) do
+    foods |> String.split(~r/[\n,]/) |> clean_food_list()
+  end
+
+  def clean_food_list(foods) when is_list(foods) do
+    foods
+    |> Enum.map(&(&1 |> to_string() |> String.trim()))
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  def clean_food_list(_), do: []
+
   def get_user_language(user_id) do
     case get_user_profile_by_user_id(user_id) do
       nil -> "en"

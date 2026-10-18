@@ -202,8 +202,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     <div
       id="recipe_presentation_modal"
       phx-hook="RecipeDetailTimer"
-      data-server-ms={@server_ms}
-      data-recipe-id={@recipe.id}
       class="recipe-details-page min-h-screen bg-ink text-parchment pb-10"
     >
       <div class=" mx-auto px-4 py-8 max-w-4xl">
@@ -432,6 +430,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               current_user={@current_user}
               nutrients={@recipe.nutrients}
               primary_size={@recipe.primary_nutrients_size}
+              locale={Gettext.get_locale(MehungryWeb.Gettext)}
               ingredient_display_names={@ingredient_display_names}
             />
           </div>
@@ -598,8 +597,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   @impl true
   def update(assigns, socket) do
-    t0 = System.monotonic_time(:millisecond)
-
     user_follows =
       if(is_nil(Map.get(assigns, :user_follows))) do
         []
@@ -624,8 +621,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     display_names =
       Food.ingredient_display_names(ingredient_ids, user_language)
 
-    server_ms = System.monotonic_time(:millisecond) - t0
-
     socket =
       socket
       |> assign(assigns)
@@ -633,7 +628,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign(:reply, reply)
       |> assign(:user_follows, user_follows)
       |> assign(:ingredient_display_names, display_names)
-      |> assign(:server_ms, server_ms)
       |> assign_new(:graphic_running, fn -> false end)
       |> assign_new(:graphic_result, fn -> nil end)
       |> assign_new(:graphic_error, fn -> nil end)

@@ -34,4 +34,21 @@ defmodule MehungryWeb.Api.V1.JSON.Helpers do
   def utc(nil), do: nil
   def utc(%NaiveDateTime{} = dt), do: NaiveDateTime.to_iso8601(dt) <> "Z"
   def utc(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
+
+  @doc """
+  Localize a stored `name => node` nutrient map for `locale` — the one place the
+  REST nutrient surfaces (recipe detail, daily meal nutrition) share. Resolves
+  fatty-acid leaves to their common names (same as the web accordion) and then
+  translates the display names via `MehungryWeb.NutrientLabels`. No-op for the
+  source locale; `nil`/empty in → `%{}`.
+  """
+  def localize_nutrients(nil, _locale), do: %{}
+
+  def localize_nutrients(map, locale) when is_map(map) do
+    map
+    |> Map.new(fn {name, node} ->
+      {name, Mehungry.Food.Nutrition.FattyAcidMatcher.resolve_names(node)}
+    end)
+    |> MehungryWeb.NutrientLabels.translate_tree(locale)
+  end
 end

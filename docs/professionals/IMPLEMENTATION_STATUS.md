@@ -121,5 +121,16 @@ done, what's stubbed, what's next).
 - **Articles v1** — single-language, plain paragraph body (no rich text / inline autolinking),
   no comments/reactions (deliberate deferrals — see `docs/professionals/articles.md`).
 - **Client records** — the manual intake stores every questionnaire field it renders (empty keys
-  included); no BMI/BMR auto-calculation from anthropometrics yet, and no link back from a
-  `ProfessionalClient` to the booking/appointment timeline.
+  included).
+  (BMI/BMR/TDEE are now auto-calculated from anthropometrics via
+  `Mehungry.Professionals.Anthropometrics` — see `client_records.md`.)
+  A visit (`ConsultationNote`) can now be **stamped to an appointment**: the new-visit form on
+  `ClientDetail` (`/nutritionist/clients/:id`) offers a "Linked appointment" select scoped to that
+  client's appointments (prefilling the visit date on pick), the visit shows its linked appointment,
+  and the Appointment History panel badges appointments that already have a note — the
+  `ConsultationNote.appointment_id` FK wired up both ways.
+  `ClientDetail` also has an **"Assign a saved plan"** panel: a client-first entry point that lays
+  any of the nutritionist's completed `BlueprintPlan`s onto *this* client's calendar via the shared
+  `MealBlueprints.import_plan_to_calendar/3` path (plan scoped by owner via `get_plan!/2`), with a
+  start-date picker and the same destructive-replace confirm as the blueprint page's target-user
+  import.

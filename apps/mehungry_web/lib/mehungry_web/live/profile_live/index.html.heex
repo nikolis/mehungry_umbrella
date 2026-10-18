@@ -1,4 +1,3 @@
-<div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
 <div class="profile-page min-h-screen bg-ink text-parchment">
   <%= if !is_nil(@must_be_loged_in) do %>
     <.modal
@@ -36,6 +35,7 @@
             id="hero"
             user_profile={@current_user_profile}
             live_action={@live_action}
+            content_state={@content_state}
             page_title={@page_title}
             user={@current_user}
             current_user={@current_user}
@@ -99,166 +99,78 @@
   </div>
 
   <%= if @live_action in [:index, :show] do %>
-    <div class="border-b border-ink-panel2 mb-6 pb-10">
-      <div class="flex justify-center overflow-x-auto">
-        <.link
-          id="tab_button_profile_saved_recipes"
-          patch={tab_path(assigns, "saved")}
-          class={
-                "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <> get_active(@content_state, :saved)}
-        >
-          <div class="flex items-center gap-2">
-            <svg
-              class="w-5 h-5 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+    <div class="mb-6">
+      <%= if @content_state in [:created, :saved, :meal_plans] do %>
+        <div class="border-b border-ink-panel2 mb-6">
+          <div class="flex justify-center gap-1 overflow-x-auto">
+            <.link
+              id="tab_button_profile_saved_recipes"
+              patch={tab_path(assigns, "saved")}
+              class={
+                "flex-shrink-0 inline-flex items-center gap-2 rounded-t-lg px-4 py-3 text-sm font-medium transition-colors motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika" <>
+                  get_active(@content_state, :saved)}
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-              />
-            </svg>
-            <span class="hidden sm:inline">Saved ({length(@user_saved_recipes)})</span>
-          </div>
-        </.link>
-        <.link
-          patch={tab_path(assigns, "created")}
-          class={
-                "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <> get_active(@content_state, :created )
-              }
-        >
-          <div class="flex items-center gap-2">
-            <svg
-              class="w-5 h-5 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+              <svg class="hidden sm:block w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                />
+              </svg>
+              <span>Saved</span>
+              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">
+                {@saved_count}
+              </span>
+            </.link>
+            <.link
+              patch={tab_path(assigns, "created")}
+              class={
+                "flex-shrink-0 inline-flex items-center gap-2 rounded-t-lg px-4 py-3 text-sm font-medium transition-colors motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika" <>
+                  get_active(@content_state, :created)}
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 19.2674V7.84496C19 5.64147 17.4253 3.74489 15.2391 3.31522C13.1006 2.89493 10.8994 2.89493 8.76089 3.31522C6.57467 3.74489 5 5.64147 5 7.84496V19.2674C5 20.6038 6.46752 21.4355 7.63416 20.7604L10.8211 18.9159C11.5492 18.4945 12.4508 18.4945 13.1789 18.9159L16.3658 20.7604C17.5325 21.4355 19 20.6038 19 19.2674z"
-              />
-            </svg>
-            <span class="hidden sm:inline">Created ({length(@user_created_recipes)})</span>
+              <svg class="hidden sm:block w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 19.2674V7.84496C19 5.64147 17.4253 3.74489 15.2391 3.31522C13.1006 2.89493 10.8994 2.89493 8.76089 3.31522C6.57467 3.74489 5 5.64147 5 7.84496V19.2674C5 20.6038 6.46752 21.4355 7.63416 20.7604L10.8211 18.9159C11.5492 18.4945 12.4508 18.4945 13.1789 18.9159L16.3658 20.7604C17.5325 21.4355 19 20.6038 19 19.2674z"
+                />
+              </svg>
+              <span>Created</span>
+              <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">
+                {@created_count}
+              </span>
+            </.link>
+            <%= if @live_action in [:index] do %>
+              <.link
+                patch={tab_path(assigns, "meal_plans")}
+                class={
+                  "flex-shrink-0 inline-flex items-center gap-2 rounded-t-lg px-4 py-3 text-sm font-medium transition-colors motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-paprika" <>
+                    get_active(@content_state, :meal_plans)}
+              >
+                <.icon name="hero-calendar-days" class="hidden sm:block w-5 h-5 flex-shrink-0" />
+                <span>Meal Plans</span>
+                <span class="text-basil font-bold [font-variant-numeric:tabular-nums]">
+                  {@meal_plans_count}
+                </span>
+              </.link>
+            <% end %>
           </div>
-        </.link>
-        <%= if @live_action in [:index] do %>
+        </div>
+      <% else %>
+        <div class="flex items-center gap-3 border-b border-ink-panel2 pb-3 mb-6">
           <.link
-            patch={tab_path(assigns, "saved_blueprints")}
-            class={[
-              "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
-                get_active(@content_state, :saved_blueprints)
-            ]}
+            patch={tab_path(assigns, "created")}
+            class="inline-flex items-center gap-1.5 text-sm text-parchment-dim hover:text-parchment transition-colors motion-reduce:transition-none"
           >
-            <div class="flex items-center gap-2">
-              <.icon name="hero-clipboard-document-list" class="w-5 h-5 flex-shrink-0" />
-              <span class="hidden sm:inline">Blueprints ({length(@user_saved_blueprints)})</span>
-            </div>
+            <.icon name="hero-arrow-left" class="w-4 h-4 flex-none" /> Your recipes
           </.link>
-          <.link
-            patch={tab_path(assigns, "my_ingredients")}
-            class={[
-              "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
-                get_active(@content_state, :my_ingredients)
-            ]}
-          >
-            <div class="flex items-center gap-2">
-              <svg
-                class="w-5 h-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 3v18m0-18c-1.657 0-3 1.79-3 4s1.343 4 3 4m0-8c1.657 0 3 1.79 3 4s-1.343 4-3 4m-6 6h12"
-                />
-              </svg>
-              <span class="hidden sm:inline">My Ingredients ({length(@user_ingredients)})</span>
-            </div>
-          </.link>
-          <.link
-            patch={tab_path(assigns, "friends_ingredients")}
-            class={[
-              "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
-                get_active(@content_state, :friends_ingredients)
-            ]}
-          >
-            <div class="flex items-center gap-2">
-              <svg
-                class="w-5 h-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6-4a3 3 0 11-3-3"
-                />
-              </svg>
-              <span class="hidden sm:inline">Friends' Ingredients ({length(@friends_ingredients)})</span>
-            </div>
-          </.link>
-          <.link
-            patch={tab_path(assigns, "edit_profile")}
-            class={[
-              "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
-                get_active(@content_state, :edit_profile)
-            ]}
-          >
-            <div class="flex items-center gap-2">
-              <svg
-                class="w-5 h-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                />
-              </svg>
-              <span class="hidden sm:inline">Edit Profile</span>
-            </div>
-          </.link>
-          <.link
-            patch={tab_path(assigns, "connected_accounts")}
-            class={[
-              "flex-shrink-0 px-3 py-3 sm:px-6 text-sm font-medium transition-all duration-200 rounded-t-lg" <>
-                get_active(@content_state, :connected_accounts)
-            ]}
-          >
-            <div class="flex items-center gap-2">
-              <svg
-                class="w-5 h-5 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                />
-              </svg>
-              <span class="hidden sm:inline">Connections</span>
-            </div>
-          </.link>
-        <% end %>
-      </div>
-      <div class="line"></div>
+          <span class="font-display text-lg font-medium text-parchment">
+            {panel_title(@content_state)}
+          </span>
+        </div>
+      <% end %>
 
       <.get_profile_content
         content_state={@content_state}
@@ -266,7 +178,7 @@
         user_saved_recipes={@user_saved_recipes}
         user_ingredients={@user_ingredients}
         friends_ingredients={@friends_ingredients}
-        user_saved_blueprints={@user_saved_blueprints}
+        user_meal_plans={@user_meal_plans}
         live_action={@live_action}
         user_recipes={@user_recipes}
         current_user_recipes={@current_user_recipes}

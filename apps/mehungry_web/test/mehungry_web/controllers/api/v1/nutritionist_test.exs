@@ -34,5 +34,10 @@ defmodule MehungryWeb.Api.V1.NutritionistTest do
       conn = post(conn, ~p"/api/v1/nutritionist/invitations", %{"email" => "nobody@nowhere.test"})
       assert json_response(conn, 422)
     end
+
+    test "a non-numeric client id is a clean 404, not a 500", %{conn: conn, user: user} do
+      {:ok, _} = Mehungry.Subscriptions.upsert_subscription(user.id, %{tier: "pro"})
+      assert conn |> get(~p"/api/v1/nutritionist/clients/abc") |> json_response(404)
+    end
   end
 end

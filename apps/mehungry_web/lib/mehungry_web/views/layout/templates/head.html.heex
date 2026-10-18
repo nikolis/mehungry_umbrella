@@ -33,6 +33,12 @@ structured_data = @conn.assigns[:structured_data]
 # point back at its base page to avoid duplicate content). Locale is applied below.
 canonical_path = @conn.assigns[:canonical_path] || canonical_path
 
+# A page may also supply a custom OG/Twitter image without using the recipe
+# `page_seo_data` map (which hardcodes a `/browse/:id` canonical) — e.g. the
+# meal-plan page reuses the generated weekly share card. Falls back to whatever
+# the title-map form resolved (nil for plain-string pages → default OG image).
+og_image = @conn.assigns[:og_image] || og_image
+
 base_url = "https://www.m3hungry.com"
 
 # Locale-aware canonical + hreflang alternates. `@locale` is only assigned on

@@ -217,7 +217,6 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
       </div>
 
       <!-- Calendar widget (reuses same JS hooks) -->
-      <div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
       <div style="height: calc(100vh - 48px); overflow-y: auto;" class="bg-ink">
         <.live_component
           module={MehungryWeb.CalendarLive.Calendar.Widget}

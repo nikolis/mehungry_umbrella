@@ -1,7 +1,8 @@
-defmodule MehungryWeb.NutritionistLive.RecordsTest do
+defmodule MehungryWeb.NutritionistLive.ClientsTest do
   @moduledoc """
-  Smoke tests for the client-records roster and the dietary-history CSV import
-  flow (upload → preview → confirm).
+  Smoke tests for the unified client roster (`/nutritionist/clients`): per-client
+  dietary-history file status, the folded-in CSV import flow, and the legacy
+  `/nutritionist/records` redirect.
   """
   use MehungryWeb.ConnCase
 
@@ -37,27 +38,48 @@ defmodule MehungryWeb.NutritionistLive.RecordsTest do
     }
   end
 
-  test "empty roster offers new client and import", %{conn: conn} do
-    {:ok, _view, html} = live(conn, "/nutritionist/records")
-    assert html =~ "No client records yet"
-    assert html =~ "New client"
+  test "roster lists the client with onboarding + import actions", %{conn: conn} do
+    {:ok, _view, html} = live(conn, "/nutritionist/clients")
+    assert html =~ "Platform Client"
+    assert html =~ "Create client"
+    assert html =~ "Invite client"
     assert html =~ "Import CSV"
   end
 
-  test "existing records are listed", %{
+  test "roster shows 'Start file' until a record exists, then links to it", %{
     conn: conn,
     nutritionist: nutritionist,
     client_user: client_user
   } do
+    {:ok, _view, html} = live(conn, "/nutritionist/clients")
+    assert html =~ "Start file"
+
     {:ok, %{client: client}} =
       Importer.import_csv(nutritionist.id, File.read!(@fixture),
         user_id: client_user.id,
         full_name: "Maria K."
       )
 
-    {:ok, _view, html} = live(conn, "/nutritionist/records")
-    assert html =~ "Maria K."
+    {:ok, _view, html} = live(conn, "/nutritionist/clients")
+    assert html =~ "Dietary history"
     assert html =~ "/nutritionist/records/#{client.id}"
+  end
+
+  test "roster badges a client who has unread messages", %{
+    conn: conn,
+    nutritionist: nutritionist,
+    client_user: client_user
+  } do
+    {:ok, _} =
+      Professionals.send_message(nutritionist.id, client_user.id, client_user.id, "unread!")
+
+    {:ok, _view, html} = live(conn, "/nutritionist/clients")
+    assert html =~ "Unread messages"
+  end
+
+  test "legacy /nutritionist/records redirects to /nutritionist/clients", %{conn: conn} do
+    assert {:error, {:live_redirect, %{to: "/nutritionist/clients"}}} =
+             live(conn, "/nutritionist/records")
   end
 
   test "import flow: pick client → upload → preview → confirm creates a linked record", %{
@@ -65,7 +87,7 @@ defmodule MehungryWeb.NutritionistLive.RecordsTest do
     nutritionist: nutritionist,
     client_user: client_user
   } do
-    {:ok, view, _html} = live(conn, "/nutritionist/records/import")
+    {:ok, view, _html} = live(conn, "/nutritionist/clients/import")
 
     # A record can't be headless — pick the m3hungry client first.
     view
@@ -99,11 +121,21 @@ defmodule MehungryWeb.NutritionistLive.RecordsTest do
     assert length(Professionals.list_consultation_notes(record.id)) == 15
   end
 
+  test "import deep-link preselects the client via ?client_id=", %{
+    conn: conn,
+    client_user: client_user
+  } do
+    {:ok, _view, html} =
+      live(conn, "/nutritionist/clients/import?client_id=#{client_user.id}")
+
+    assert html =~ "Linked to Platform Client"
+  end
+
   test "confirm import without a selected client is refused", %{
     conn: conn,
     nutritionist: nutritionist
   } do
-    {:ok, view, _html} = live(conn, "/nutritionist/records/import")
+    {:ok, view, _html} = live(conn, "/nutritionist/clients/import")
 
     upload =
       file_input(view, "#csv-import-form", :csv, [

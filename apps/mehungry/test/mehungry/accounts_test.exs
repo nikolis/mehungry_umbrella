@@ -27,6 +27,35 @@ defmodule Mehungry.AccountsTest do
     end
   end
 
+  describe "set_avoid_foods/2" do
+    test "cleans and persists the personal avoid list" do
+      user = user_fixture()
+      profile = Accounts.get_user_profile_by_user_id(user.id)
+
+      {:ok, updated} = Accounts.set_avoid_foods(profile, [" Onion ", "garlic", "Onion", ""])
+      assert updated.avoid_foods == ["Onion", "garlic"]
+      # Survives a fresh read.
+      assert Accounts.get_user_profile_by_user_id(user.id).avoid_foods == ["Onion", "garlic"]
+    end
+
+    test "accepts a newline/comma-separated string" do
+      user = user_fixture()
+      profile = Accounts.get_user_profile_by_user_id(user.id)
+
+      {:ok, updated} = Accounts.set_avoid_foods(profile, "onion\ngarlic, shellfish\n")
+      assert updated.avoid_foods == ["onion", "garlic", "shellfish"]
+    end
+
+    test "clearing the list stores an empty array" do
+      user = user_fixture()
+      profile = Accounts.get_user_profile_by_user_id(user.id)
+
+      {:ok, _} = Accounts.set_avoid_foods(profile, ["onion"])
+      {:ok, cleared} = Accounts.set_avoid_foods(profile, "")
+      assert cleared.avoid_foods == []
+    end
+  end
+
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email("unknown@example.com")

@@ -67,6 +67,33 @@ defmodule MehungryWeb.Api.V1.MealTest do
     assert %{"Energy" => %{"amount" => 100.0}} = nutrition
   end
 
+  test "day nutrition localizes nutrient names to the request locale", %{conn: conn, user: user} do
+    recipe =
+      FoodFixtures.recipe_fixture(user, %{
+        servings: 1,
+        nutrients: %{"Energy" => %{"name" => "Energy", "amount" => 200.0, "unit" => "kcal"}}
+      })
+
+    body = %{
+      "date" => "2026-08-12",
+      "meal_type" => "dinner",
+      "recipe_user_meals" => [%{"recipe_id" => recipe.id, "servings" => 1}]
+    }
+
+    assert conn |> post(~p"/api/v1/meals", body) |> json_response(201)
+
+    # English (default): canonical English key.
+    assert %{"data" => %{"nutrition" => %{"Energy" => _}}} =
+             conn |> get(~p"/api/v1/meals/day/2026-08-12/nutrition") |> json_response(200)
+
+    # ?lang=el: the key and node name are the Greek display label.
+    assert %{"data" => %{"nutrition" => el_nutrition}} =
+             conn |> get(~p"/api/v1/meals/day/2026-08-12/nutrition?lang=el") |> json_response(200)
+
+    assert %{"Ενέργεια" => %{"name" => "Ενέργεια"}} = el_nutrition
+    refute Map.has_key?(el_nutrition, "Energy")
+  end
+
   describe "free food (arbitrary) entries" do
     @per_100g [
       %{"name" => "Energy", "unit" => "kcal", "amount" => 250},

@@ -11,6 +11,7 @@ defmodule MehungryWeb.Api.V1.SearchController do
   alias Mehungry.Food
   alias Mehungry.FoodData.Usda.SearchClient
   alias MehungryWeb.Api.V1.BlueprintMatch
+  alias MehungryWeb.Api.V1.Locale
   alias MehungryWeb.Api.V1.RecipeJSON
 
   action_fallback MehungryWeb.Api.V1.FallbackController
@@ -47,7 +48,17 @@ defmodule MehungryWeb.Api.V1.SearchController do
   """
   def ingredients(conn, %{"q" => q, "source" => "local"} = params) when is_binary(q) and q != "" do
     owner_id = conn.assigns.current_user && conn.assigns.current_user.id
-    ingredients = Food.IngredientSearch.search(q, [], owner_id)
+    # Locale-aware exactly like the calendar meal-form picker: in Greek, search
+    # the translated ingredient names and return them as `name` (English base-name
+    # search otherwise). Reuses the same `Food.IngredientSearch` functions the
+    # LiveView picker uses so results never drift. Both branches yield items with
+    # `.id`/`.name`, so unit lookup + serialization below are unchanged.
+    ingredients =
+      case Locale.resolve(conn, params) do
+        "el" -> Food.IngredientSearch.search_in_language(q, "el", owner_id)
+        _ -> Food.IngredientSearch.search(q, [], owner_id)
+      end
+
     units_by_id = unit_options_by_id(ingredients)
 
     blueprint = BlueprintMatch.blueprint(conn, params)

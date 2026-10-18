@@ -4,7 +4,6 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
   import MehungryWeb.Api.V1.JSON.Helpers
 
   alias Mehungry.Food.{MeasurementUnit, RecipeIngredient}
-  alias Mehungry.Food.Nutrition.FattyAcidMatcher
   alias MehungryWeb.Api.V1.UserJSON
 
   @doc """
@@ -61,7 +60,7 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
       hashtags: hashtags(recipe),
       ingredients: Enum.map(recipe.recipe_ingredients || [], &ingredient/1),
       steps: Enum.map(recipe.steps || [], &step/1),
-      nutrients: nutrients(recipe.nutrients),
+      nutrients: localize_nutrients(recipe.nutrients, ctx[:locale]),
       primary_nutrients_size: recipe.primary_nutrients_size,
       likes_count: engagement.likes_count,
       comments_count: engagement.comments_count,
@@ -128,17 +127,6 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
     %{index: step.index, title: step.title, description: step.description}
   end
 
-  # The stored nutrient tree keeps raw USDA fatty-acid notation at its leaves
-  # (e.g. "MUFA 16:1", "PUFA 20:5 n-3 (EPA)"). Resolve those to their canonical
-  # common names at read time — same as the web nutrition accordion — so the
-  # mobile client shows "Palmitoleic acid (C16:1, Omega-7)" rather than raw codes.
-  # Keys are top-level nutrient names ("Total Fat", …); fatty acids live only in
-  # the nested children, so the keys are preserved and each value is walked.
-  defp nutrients(nil), do: %{}
-
-  defp nutrients(map) when is_map(map) do
-    Map.new(map, fn {name, node} -> {name, FattyAcidMatcher.resolve_names(node)} end)
-  end
 
   defp hashtags(recipe) do
     case recipe.recipe_hashtags do

@@ -113,6 +113,12 @@ in both `main_menu` and `mobile_menu` are locale-prefixed via `@current_language
 Backend: `MehungryWeb.Gettext`. `import MehungryWeb.Gettext` is already in the `:html`,
 `:live_view`, and `:controller` quotes, so `gettext("…")` works in any template.
 
+> **Nutrient names & the ingredient picker** are localized through two single
+> chokepoints (so new breakdown/search surfaces are localized for free) — nutrient
+> display names use Gettext (they're a normalized code vocabulary, **not** raw
+> `Nutrient.name`, so the `*_translation` path below does not apply). See
+> **`docs/translation_gates.md`**.
+
 Workflow to add/translate strings:
 
 ```bash

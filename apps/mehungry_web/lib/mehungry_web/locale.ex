@@ -68,14 +68,6 @@ defmodule MehungryWeb.Locale do
     "/" <> Enum.join([locale | rest], "/") <> query
   end
 
-  @doc """
-  Map a URL locale to the legacy language-row name used by the
-  ingredient/category/measurement-unit translation tables (`languages.name`).
-  """
-  def data_language_name("el"), do: "Gr"
-  def data_language_name("en"), do: "En"
-  def data_language_name(_), do: "En"
-
   defp user_locale(conn) do
     case conn.assigns[:current_user] do
       %{id: id} -> Accounts.get_user_language(id)

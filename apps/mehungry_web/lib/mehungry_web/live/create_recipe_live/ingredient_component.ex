@@ -62,35 +62,12 @@ defmodule MehungryWeb.IngredientComponent do
   defp assign_search_fns(socket) do
     language = Map.get(socket.assigns, :search_language, "en")
     owner_id = Map.get(socket.assigns, :current_user_id)
-
-    {item_fn, label_fn, get_by_id_fn} =
-      if language == "el" do
-        item_fn = fn term ->
-          Mehungry.Food.IngredientSearch.search_in_language(term, "el", owner_id)
-        end
-
-        get_by_id_fn = fn id ->
-          ingredient = Mehungry.Food.get_ingredient!(id)
-
-          case Mehungry.Food.find_ingredient_translation("el", id) do
-            [greek_name | _] -> %{ingredient | name: greek_name}
-            [] -> ingredient
-          end
-        end
-
-        {item_fn, fn item -> item.name end, get_by_id_fn}
-      else
-        {
-          fn term -> Mehungry.Food.IngredientSearch.search(term, [], owner_id) end,
-          fn item -> Mehungry.Utils.remove_parenthesis(item.name) end,
-          &Mehungry.Food.get_ingredient!/1
-        }
-      end
+    fns = MehungryWeb.IngredientSearchFns.search_fns(language, owner_id)
 
     socket
-    |> assign(:ingredient_item_fn, item_fn)
-    |> assign(:ingredient_label_fn, label_fn)
-    |> assign(:ingredient_get_by_id_fn, get_by_id_fn)
+    |> assign(:ingredient_item_fn, fns.item_fn)
+    |> assign(:ingredient_label_fn, fns.label_fn)
+    |> assign(:ingredient_get_by_id_fn, fns.get_by_id_fn)
   end
 
   @impl true

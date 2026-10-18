@@ -121,6 +121,11 @@ defmodule Mehungry.Posts do
     |> Repo.all()
     |> Repo.preload([
       :user,
+      :published_meal_plan,
+      # Post-level engagement, used by WEEKLY_PLAN cards (recipe posts count
+      # their likes/comments through `reference` instead). Empty for recipe posts.
+      :upvotes,
+      :comments,
       reference: [
         :user_recipes,
         :user,
@@ -151,6 +156,11 @@ defmodule Mehungry.Posts do
     |> Repo.all()
     |> Repo.preload([
       :user,
+      :published_meal_plan,
+      # Post-level engagement, used by WEEKLY_PLAN cards (recipe posts count
+      # their likes/comments through `reference` instead). Empty for recipe posts.
+      :upvotes,
+      :comments,
       reference: [
         :user,
         :user_recipes,
@@ -162,15 +172,38 @@ defmodule Mehungry.Posts do
       ]
     ])
     |> Enum.map(fn x ->
-      grading_score = Users.calculate_recipe_grading(x.reference, user_pref_table, follow_ids)
+      grading_score = feed_grading_score(x, user_pref_table, follow_ids)
       recency_hours = NaiveDateTime.diff(now, x.inserted_at, :second) / 3600.0
-      recency_score = :math.exp(-recency_hours / 96.0) * 3.0
-      base = recency_score + grading_score
+      decay = :math.exp(-recency_hours / 96.0)
+      # Both the freshness term AND the affinity (grading) term decay with age.
+      # Grading used to be permanent, so a well-graded recipe (follow/preference
+      # bonus, up to 5+) stayed pinned above fresh content forever — a month-old
+      # recipe would out-rank a brand-new meal-plan post whose baseline grading is
+      # 1.0. Time-weighting grading means affinity only breaks ties among roughly
+      # contemporary posts; stale posts sink regardless of how well they grade, so
+      # new posts (recipes or meal plans alike) can surface at the top.
+      base = decay * 3.0 + grading_score * decay
       score = if ai_post?(x, ai_emails), do: base - penalty, else: base
       {x, score}
     end)
     |> Enum.sort_by(fn {_x, score} -> score end, :desc)
     |> Enum.map(fn {x, _score} -> x end)
+  end
+
+  # Grading score that a post contributes to its feed rank. Recipe posts are
+  # graded on the recipe's ingredient categories against the user's preferences
+  # (plus a follow bonus). Reference-less posts like WEEKLY_PLAN cards have no
+  # recipe to grade, so they'd otherwise always score 0 and sink below every
+  # recipe of the same age. Instead give them the same neutral baseline a recipe
+  # with no matching preference rule gets (1.0) and the same follow bonus keyed
+  # on the post's author — so a meal-plan post ranks alongside recipes and can
+  # surface at the top of the feed.
+  defp feed_grading_score(%Post{type_: "WEEKLY_PLAN"} = post, _user_pref_table, follow_ids) do
+    if post.user_id in follow_ids, do: 1.0 + 4, else: 1.0
+  end
+
+  defp feed_grading_score(post, user_pref_table, follow_ids) do
+    Users.calculate_recipe_grading(post.reference, user_pref_table, follow_ids)
   end
 
   defp ai_bot_emails, do: Application.get_env(:mehungry, :ai_bot_emails, [])
@@ -189,19 +222,22 @@ defmodule Mehungry.Posts do
   def localize_for_language(posts, nil), do: posts
 
   def localize_for_language(posts, language_name) do
-    # Pick best post per reference_id, preserving score-based order
-    selected_by_ref =
+    # Pick best post per dedup key, preserving score-based order. Recipe posts
+    # dedup by `reference_id` (so per-language variants of one recipe collapse to
+    # the best match); reference-less posts (e.g. WEEKLY_PLAN cards) dedup by their
+    # own id so they stay distinct instead of all collapsing under `nil`.
+    selected_by_key =
       posts
-      |> Enum.group_by(& &1.reference_id)
-      |> Map.new(fn {ref_id, group} ->
+      |> Enum.group_by(&localize_key/1)
+      |> Map.new(fn {key, group} ->
         best = Enum.find(group, List.first(group), &(&1.language_name == language_name))
-        {ref_id, best}
+        {key, best}
       end)
 
     selected =
       posts
-      |> Enum.uniq_by(& &1.reference_id)
-      |> Enum.map(&Map.get(selected_by_ref, &1.reference_id))
+      |> Enum.uniq_by(&localize_key/1)
+      |> Enum.map(&Map.get(selected_by_key, localize_key(&1)))
       |> Enum.reject(&is_nil/1)
 
     recipe_ids = selected |> Enum.map(& &1.reference_id) |> Enum.reject(&is_nil/1)
@@ -220,6 +256,11 @@ defmodule Mehungry.Posts do
       end
     end)
   end
+
+  # Dedup key for feed localization: recipe posts collapse per recipe; a
+  # reference-less post keeps its own identity.
+  defp localize_key(%{reference_id: ref_id}) when not is_nil(ref_id), do: {:ref, ref_id}
+  defp localize_key(%{id: id}), do: {:post, id}
 
   @doc """
   Gets a single post.
@@ -242,8 +283,11 @@ defmodule Mehungry.Posts do
     Repo.get!(Post, id)
     |> Repo.preload([
       :user,
+      :published_meal_plan,
       :upvotes,
       :downvotes,
+      # WEEKLY_PLAN posts carry their own comments (recipe posts use reference).
+      comments: [:user],
       reference: [
         :user,
         :user_recipes,
@@ -309,6 +353,44 @@ defmodule Mehungry.Posts do
         title: recipe.title,
         type_: "RECIPE"
       }
+
+    %Post{}
+    |> Post.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Creates a `WEEKLY_PLAN` feed post from a generated `WeeklyPlanGraphic`. The card
+  image is the post media, so it renders in the home feed like any other post
+  (likes/share), and the post carries the author + caption. `title` defaults from
+  the graphic's week/goal but can be overridden.
+  """
+  def create_weekly_plan_post(%Mehungry.Food.WeeklyPlanGraphic{} = graphic, title, opts \\ []) do
+    plan_id = opts[:published_meal_plan_id]
+
+    # One feed post per published plan: re-posting the same week replaces the old
+    # card so the feed never shows two posts for the same dates (the published
+    # plan itself is upserted in `PublishedPlans.publish_week/3`).
+    if plan_id do
+      Repo.delete_all(
+        from(p in Post, where: p.type_ == "WEEKLY_PLAN" and p.published_meal_plan_id == ^plan_id)
+      )
+    end
+
+    attrs = %{
+      type_: "WEEKLY_PLAN",
+      user_id: graphic.user_id,
+      weekly_plan_graphic_id: graphic.id,
+      # Links the feed post to the full, crawlable plan snapshot so clicking it
+      # opens `/meal-plans/:slug` (the day-by-day details) instead of the raw
+      # card image. Optional: older posts / a failed publish fall back to the
+      # photo in the feed card.
+      published_meal_plan_id: opts[:published_meal_plan_id],
+      title: title,
+      md_media_url: graphic.image_url,
+      description: graphic.caption,
+      language_name: graphic.locale
+    }
 
     %Post{}
     |> Post.changeset(attrs)
@@ -456,6 +538,70 @@ defmodule Mehungry.Posts do
 
       {:error, _} ->
         result
+    end
+  end
+
+  @doc """
+  Creates a comment attached to a post (e.g. a WEEKLY_PLAN meal-plan post) and
+  broadcasts it on the post's topic so the feed card and the plan details page
+  update live. Mirrors `create_comment/1` but keyed on `post_id` rather than a
+  recipe.
+  """
+  def create_post_comment(attrs) do
+    result =
+      %Comment{}
+      |> Comment.changeset(attrs)
+      |> Repo.insert()
+
+    case result do
+      {:ok, comment} ->
+        comment = Repo.preload(comment, :user)
+
+        # Broadcast on a comments-only topic — NOT the shared "post:<id>" topic the
+        # home feed subscribes to. The feed's injected `%{new_comment}` handler
+        # assumes a recipe-keyed comment and would crash on a post comment's nil
+        # recipe_id. Only the plan details page listens here.
+        Phoenix.PubSub.broadcast(
+          Mehungry.PubSub,
+          post_comments_topic(comment.post_id),
+          %{new_comment: comment}
+        )
+
+        {:ok, comment}
+
+      {:error, _} ->
+        result
+    end
+  end
+
+  @doc "Subscribe to a post's comment stream (the plan details page)."
+  def subscribe_to_post_comments(post_id) do
+    Phoenix.PubSub.subscribe(Mehungry.PubSub, post_comments_topic(post_id))
+  end
+
+  defp post_comments_topic(post_id), do: "post:" <> to_string(post_id) <> ":comments"
+
+  @doc "Comments on a post, oldest first, with their authors preloaded."
+  def list_post_comments(post_id) do
+    from(c in Comment, where: c.post_id == ^post_id, order_by: [asc: c.inserted_at, asc: c.id])
+    |> Repo.all()
+    |> Repo.preload(:user)
+  end
+
+  @doc """
+  The WEEKLY_PLAN feed post for a published meal plan (there is at most one — see
+  `create_weekly_plan_post/3`), preloaded with its author, likes and comments.
+  Returns `nil` for plans published before the feed-post link existed.
+  """
+  def get_weekly_plan_post_for_plan(plan_id) do
+    from(p in Post,
+      where: p.type_ == "WEEKLY_PLAN" and p.published_meal_plan_id == ^plan_id,
+      limit: 1
+    )
+    |> Repo.one()
+    |> case do
+      nil -> nil
+      post -> Repo.preload(post, [:user, :upvotes, comments: [:user]])
     end
   end
 

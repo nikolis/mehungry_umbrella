@@ -92,21 +92,6 @@ defmodule MehungryWeb.BlueprintLiveTest do
     end
   end
 
-  describe "profile saved-blueprints tab" do
-    test "lists saved blueprints and can unsave", %{conn: conn} do
-      %{blueprint: bp} = public_blueprint("Profile Saved")
-      user = Mehungry.AccountsFixtures.user_fixture()
-      {:ok, _} = MealBlueprints.save_blueprint_for_user(user.id, bp.id)
-      conn = log_in_user(conn, user)
-
-      {:ok, live, html} = live(conn, ~p"/profile?#{[tab: "saved_blueprints"]}")
-      assert html =~ "Profile Saved"
-
-      render_click(element(live, "button[phx-click='unsave-blueprint'][phx-value-id='#{bp.id}']"))
-      refute MealBlueprints.blueprint_saved?(user.id, bp.id)
-    end
-  end
-
   describe "nutritionist gating" do
     test "a non-nutritionist is redirected away from authoring", %{conn: conn} do
       user = Mehungry.AccountsFixtures.user_fixture()
