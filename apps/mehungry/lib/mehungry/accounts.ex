@@ -87,6 +87,7 @@ defmodule Mehungry.Accounts do
   defdelegate get_user_profile!(id), to: Profiles
   defdelegate get_user_profile_by_user_id(id), to: Profiles
   defdelegate create_user_profile(attrs \\ %{}), to: Profiles
+  defdelegate create_user_profile_if_needed(user), to: Profiles
   defdelegate update_user_profile(user_profile, attrs), to: Profiles
   defdelegate update_user_language(profile, lang), to: Profiles
   defdelegate set_followed_blueprint(profile, blueprint_id), to: Profiles
