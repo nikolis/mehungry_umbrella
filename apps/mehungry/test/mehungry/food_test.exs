@@ -312,6 +312,22 @@ defmodule Mehungry.FoodTest do
       assert length(remaining) == 2
     end
 
+    test "delete_user_recipe/2 removes a recipe the user owns", %{user: user} do
+      recipe = recipe_fixture(user)
+
+      assert {:ok, _} = Food.delete_user_recipe(user, recipe.id)
+      refute Food.get_recipe_no_caching!(recipe.id)
+    end
+
+    test "delete_user_recipe/2 refuses a recipe owned by someone else", %{user: user} do
+      other = user_fixture()
+      recipe = recipe_fixture(other)
+
+      assert {:error, :not_found} = Food.delete_user_recipe(user, recipe.id)
+      # The other user's recipe is untouched.
+      assert Food.get_recipe_no_caching!(recipe.id)
+    end
+
     test "non-Latin (Greek) hashtags round-trip through search", %{user: user} do
       recipe_fixture(user, %{description: "παραδοσιακό #φαγητό today"})
 

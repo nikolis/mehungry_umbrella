@@ -58,6 +58,42 @@ defmodule MehungryWeb.ProfileLiveTest do
     assert_redirect(index_live, "/create_recipe/#{recipe.id}")
   end
 
+  test "Clicking delete on own recipe removes it from the created list", %{
+    conn: conn,
+    user: user
+  } do
+    recipe = recipe_fixture(user)
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
+    Accounts.update_user_profile(user_profile, %{onboarding_level: 1})
+
+    {:ok, index_live, html} = live(conn, Routes.profile_index_path(conn, :index))
+    assert html =~ "delete-recipe-#{recipe.id}"
+
+    html =
+      index_live
+      |> element("#delete-recipe-#{recipe.id}")
+      |> render_click()
+
+    refute html =~ "delete-recipe-#{recipe.id}"
+    refute Mehungry.Food.get_recipe_no_caching!(recipe.id)
+  end
+
+  test "Deleting another user's recipe via a forged id is refused", %{conn: conn, user: user} do
+    other = Mehungry.AccountsFixtures.user_fixture()
+    victim = recipe_fixture(other)
+
+    user_profile = Accounts.get_user_profile_by_user_id(user.id)
+    Accounts.update_user_profile(user_profile, %{onboarding_level: 1})
+
+    {:ok, index_live, _html} = live(conn, Routes.profile_index_path(conn, :index))
+
+    # The button isn't rendered for a recipe the user doesn't own, so push the
+    # event directly to prove the server-side owner check holds.
+    render_hook(index_live, "delete_recipe", %{"id" => victim.id})
+
+    assert Mehungry.Food.get_recipe_no_caching!(victim.id)
+  end
+
   test "Test Visit Own Profile Page ", %{conn: conn, user: user} do
     recipe = recipe_fixture(user)
     user_profile = Accounts.get_user_profile_by_user_id(user.id)

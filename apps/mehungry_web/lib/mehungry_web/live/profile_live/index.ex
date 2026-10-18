@@ -432,16 +432,20 @@ defmodule MehungryWeb.ProfileLive.Index do
   end
 
   def handle_event("delete_recipe", %{"id" => id}, socket) do
-    Food.delete_recipe(id)
-    user_saved_recipes = Users.list_user_saved_recipes(socket.assigns.user)
-    user_created_recipes = Users.list_user_created_recipes(socket.assigns.user)
+    user = socket.assigns.current_user
 
-    socket =
-      socket
-      |> assign(:user_saved_recipes, user_saved_recipes)
-      |> assign(:user_created_recipes, user_created_recipes)
+    # Owner-scoped delete so a forged id can't remove someone else's recipe.
+    case Food.delete_user_recipe(user, id) do
+      {:ok, _recipe} ->
+        {:noreply,
+         socket
+         |> assign(:user_created_recipes, Users.list_user_created_recipes(user))
+         |> assign(:created_count, Food.count_user_created_recipes(user.id) || 0)
+         |> put_flash(:info, "Recipe deleted")}
 
-    {:noreply, socket}
+      {:error, :not_found} ->
+        {:noreply, put_flash(socket, :error, "Recipe not found")}
+    end
   end
 
   def handle_event("disconnect_social", %{"provider" => provider}, socket) do

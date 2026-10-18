@@ -106,9 +106,25 @@ defmodule Mehungry.Food.Recipes do
   end
 
   def delete_recipe(id) do
-    recipe =
-      Repo.get!(Recipe, id)
-      |> Repo.preload([:recipe_ingredients])
+    Repo.get!(Recipe, id)
+    |> delete_recipe_record()
+  end
+
+  @doc """
+  Deletes a recipe only when it belongs to `user`. Owner-scoped so a forged id
+  in a LiveView event can't delete another user's recipe (mirrors
+  `delete_user_ingredient`/`delete-meal-plan`). Returns `{:error, :not_found}`
+  when the recipe is missing or not owned by the user.
+  """
+  def delete_user_recipe(%{id: user_id}, id) do
+    case Repo.get_by(Recipe, id: id, user_id: user_id) do
+      nil -> {:error, :not_found}
+      recipe -> delete_recipe_record(recipe)
+    end
+  end
+
+  defp delete_recipe_record(%Recipe{} = recipe) do
+    recipe = Repo.preload(recipe, [:recipe_ingredients])
 
     Enum.each(recipe.recipe_ingredients, fn rec_in ->
       Repo.delete(rec_in)
