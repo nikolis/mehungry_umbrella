@@ -522,6 +522,7 @@ defmodule MehungryWeb.Router do
 
       localized_live("/blueprints/:slug", BlueprintLive.Show, :show)
 
+      localized_live("/meal-plans", MealPlanLive.Index, :index)
       localized_live("/meal-plans/:slug", MealPlanLive.Show, :show)
 
       localized_live("/nutritionists", PublicNutritionistLive.Index, :index)

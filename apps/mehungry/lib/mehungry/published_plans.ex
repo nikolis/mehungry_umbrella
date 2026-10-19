@@ -137,6 +137,53 @@ defmodule Mehungry.PublishedPlans do
     Repo.all(query)
   end
 
+  @doc """
+  Full public-plan rows (author + professional profile preloaded), newest first —
+  the discovery surface for the browse "Meal Plans" tab and the crawlable
+  `/meal-plans` index page. Options: `:limit`, `:offset`.
+  """
+  def list_public_plans_detailed(opts \\ []) do
+    PublishedMealPlan
+    |> where([p], p.visibility == "public")
+    |> order_by([p], desc: p.published_at)
+    |> maybe_paginate(opts)
+    |> Repo.all()
+    |> Repo.preload(user: :professional_profile)
+  end
+
+  @doc """
+  Public plans whose `title` matches `term` (case-insensitive substring), newest
+  first, author + professional profile preloaded. A blank term returns all public
+  plans. Mirrors `Mehungry.MealBlueprints.search_public_blueprints/2`. Options:
+  `:limit`, `:offset`.
+  """
+  def search_public_plans(term, opts \\ [])
+
+  def search_public_plans(term, opts) when is_binary(term) do
+    trimmed = String.trim(term)
+
+    if trimmed == "" do
+      list_public_plans_detailed(opts)
+    else
+      pattern = "%#{trimmed}%"
+
+      PublishedMealPlan
+      |> where([p], p.visibility == "public" and ilike(p.title, ^pattern))
+      |> order_by([p], desc: p.published_at)
+      |> maybe_paginate(opts)
+      |> Repo.all()
+      |> Repo.preload(user: :professional_profile)
+    end
+  end
+
+  def search_public_plans(_term, opts), do: list_public_plans_detailed(opts)
+
+  defp maybe_paginate(query, opts) do
+    query
+    |> then(fn q -> if l = opts[:limit], do: limit(q, ^l), else: q end)
+    |> then(fn q -> if o = opts[:offset], do: offset(q, ^o), else: q end)
+  end
+
   @doc "How many published plans a user owns — cheap COUNT for tab badges."
   def count_plans_for_user(user_id) do
     Repo.aggregate(from(p in PublishedMealPlan, where: p.user_id == ^user_id), :count, :id)

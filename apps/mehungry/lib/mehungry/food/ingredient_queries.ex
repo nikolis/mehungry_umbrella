@@ -74,6 +74,27 @@ defmodule Mehungry.Food.IngredientQueries do
   end
 
   @doc """
+  Sample recipes using **any** of `ingredient_ids` — the species-page aggregation
+  of "recipes with this food" across every ingredient curated onto the species.
+  """
+  def list_sample_recipes_for_ingredients(ingredient_ids, limit \\ 6)
+
+  def list_sample_recipes_for_ingredients([], _limit), do: []
+
+  def list_sample_recipes_for_ingredients(ingredient_ids, limit) do
+    query =
+      from(r in Recipe,
+        join: ri in RecipeIngredient,
+        on: ri.recipe_id == r.id,
+        where: ri.ingredient_id in ^ingredient_ids,
+        limit: ^limit,
+        distinct: true
+      )
+
+    Repo.all(query)
+  end
+
+  @doc """
   Random recipes that use at least one ingredient from `include_ingredient_ids`
   and none from `exclude_ingredient_ids`.
 

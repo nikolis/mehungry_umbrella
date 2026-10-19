@@ -418,7 +418,9 @@ SEO on the species page:
 
 **The full breakdown is the shared hierarchical accordion.** The "Full Nutrition Breakdown — per 100g" section renders the string-keyed, nested per-100g tree (`Food.NutrientCalculation.ingredient_nutrient_tree(ingredient, 100)`) through `MehungryWeb.NutritionAccordion` — the *same* component the calendar/recipe "Nutrition Facts" uses, so the presentation is identical. Carbohydrates → Total Sugars → individual sugars (glucose/fructose) and Total Fat → saturated/mono/poly/trans → fatty acids are all present. The accordion's collapsed children are **`display:none` but in the DOM**, so every sugar/fatty-acid leaf is crawler-visible once the tree is server-rendered (see below). A short, deterministic **composition summary** `<p>` above the accordion (`build_composition_summary/2`, e.g. *"Per 100 g, … provides … g carbohydrate … almost entirely sugars, led by fructose and glucose"*) is the highest-value indexable prose, carrying the long-tail nutrient terms with one line of clutter.
 
-**`assign_async` audit:** the page's *core* content — the nutrition facts (top macros + the full accordion breakdown + composition summary) — is rendered **synchronously** in `mount` via `assign_ingredient_view/2`, so it is crawler-visible in the dead render (the main SEO asset for "food X nutrition/calories/sugar" queries was never at risk). Three **secondary** sections — "Bioactive Compounds", "Health Conditions", "Research" — were loaded via `assign_async` and were invisible to Googlebot: the title advertised "Nutrition, Research & Compounds" while the indexed HTML had only nutrition, and the "Health Conditions" section's **internal links to `/conditions/:id`** (which help that cluster rank) weren't in the crawled markup. Fixed with the `connected?/1` split (`load_species_sidecars/2`): async for the live client, synchronous `AsyncResult.ok(...)` on the dead render.
+**"Recipes with this food" — crawlable internal linking (highest-value addition).** Below the nutrition sections the page renders a **"Recipes with %{food}"** grid (`Food.list_sample_recipes_for_ingredients/2` — sample recipes using *any* ingredient curated onto the species), each row an `<a href="/browse/:id">`. This is the internal-linking unlock ("What to do next" #4) applied to food pages: every food page now feeds Googlebot a crawl path into the recipe cluster, and the recipe targets are independently in `sitemap.xml`. **It is crawler-visible** — see the `assign_async` audit below (the recipe links are in the dead render, not behind the WebSocket).
+
+**`assign_async` audit:** the page's *core* content — the nutrition facts (top macros + the full accordion breakdown + composition summary) — is rendered **synchronously** in `mount` via `assign_ingredient_view/2`, so it is crawler-visible in the dead render (the main SEO asset for "food X nutrition/calories/sugar" queries was never at risk). Two **secondary** sections — **"Bioactive Compounds"** and **"Recipes with this food"** — are loaded via `assign_async` for a fast live paint, which on its own would leave them invisible to Googlebot (async assigns stay in `loading` on the dead render). Both are kept crawler-visible with the `connected?/1` split in `load_species_sidecars/2`: `assign_async([:compounds, :recipes], …)` for the live client, synchronous `AsyncResult.ok(...)` for the dead render — so the title's "… & Compounds" promise and the recipe internal links are both in the indexed HTML. *(The old "Health Conditions" and "Research" sidecars were removed with the condition-page pullout — see the 🚫 notice under "Condition pages".)*
 
 ---
 
@@ -496,6 +498,32 @@ recipe-blog listicle can match on nutrition accuracy.
   (`PublishedPlans.list_public_plans/0`, localized entries) and `/meal-plans` is
   `Allow`ed in `robots.txt`. `/meal-plans` is **not** in `head.html.heex`'s
   `noindex_prefixes`.
+
+### The `/meal-plans` index + browse tab (crawl paths into the plan pages)
+
+Two surfaces link into the per-plan pages so Googlebot discovers them by
+following links, not sitemap-only:
+
+- **`/meal-plans` index (`MehungryWeb.MealPlanLive.Index`) — the crawl hub.** A
+  public, **synchronously rendered** listing (plans loaded in `handle_params`,
+  not `assign_async`) so the dead render already carries every
+  `<a>`→`/meal-plans/:slug` card. It sets plain-string `:page_title` /
+  `:page_description` / `:canonical_path` (`/meal-plans`) and emits
+  `CollectionPage`-style JSON-LD: a `BreadcrumbList` (Home › Meal Plans) + an
+  `ItemList` of the plans (truthful nodes only — no fabricated `aggregateRating`).
+  It's routed via `localized_live("/meal-plans", …)` and is the `/meal-plans`
+  entry already in the sitemap. This closes the "index itself can rank for
+  *weekly meal plans* **and** is an internal crawl path to every plan" gap.
+- **Recipe-browser "Meal Plans" tab.** `/browse` has a third `browse_mode`
+  (`:recipes` | `:blueprints` | `:meal_plans`) that shows the same
+  `BlueprintComponents.meal_plan_card`s. This is a **UX convenience, not a crawl
+  path** — the tab's rows are loaded lazily over the socket
+  (`set_browse_mode` / `search_meal_plans`), so they are *not* in the dead
+  render. That's fine: discovery is handled by the synchronous `/meal-plans`
+  index + the sitemap. The cards link with a `?from=browse` (or `?from=meal_plans`)
+  origin param for the detail-page breadcrumb back-link; the detail page's
+  `:canonical_path` is the **bare** `/meal-plans/:slug` (no query string), so the
+  `?from=` variants all canonicalize to one URL and never split indexing.
 
 **Publish trigger + feed integration.** Publishing is wired to the calendar's
 weekly share flow: when a user posts their week to the feed
@@ -633,6 +661,60 @@ These items would have the biggest remaining impact:
 4. **Internal linking** — make sure recipe pages link to related hashtag pages, and hashtag pages link to individual recipes. This helps Googlebot discover more content by following links rather than relying solely on the sitemap.
 
 5. **Page speed** — Google's Core Web Vitals (loading speed, interactivity, layout stability) are a ranking factor. Use [PageSpeed Insights](https://pagespeed.web.dev) to check your scores.
+
+---
+
+## Indexing opportunities to monitor (not yet wired)
+
+Audit 2026-10-19 of public routes vs. `sitemap.xml`. These are public pages that
+render crawlable (disconnected-render) HTML but Google can't discover well yet —
+tracked here so they don't get lost. Ranked by effort-to-impact.
+
+### Ready to index — the page already exists, it's just missing from the sitemap
+
+1. **`/blueprints/:slug` — public meal blueprints (strongest).** `BlueprintLive.Show`
+   is already fully SEO-ready: synchronous (crawler-safe) render, `page_title` /
+   `page_description` / `:canonical_path`, OG meta, and a referral footer linking
+   back to the site. But it is **absent from `sitemap_controller.ex` and not linked
+   from any crawlable page** — Google can only reach it via a shared Facebook link.
+   The listing query already exists: `MealBlueprints.list_public_blueprints/1`
+   (filters `visibility == "public"`). Wiring it in is ~10 lines mirroring the
+   `published_plans` block. Targets the "7-day meal plan for X" space, same as
+   `/meal-plans/:slug`.
+   - ⚠️ **Decision required before indexing:** a blueprint can carry a `condition`
+     badge (`@blueprint.condition.name`, e.g. "for Ulcerative Colitis") — the exact
+     medical-device framing (EU MDR / SaMD) that got `/conditions/:id` pulled (see
+     the 🚫 notice under "Condition pages"). **Either exclude condition-tied
+     blueprints from the sitemap or strip the condition framing from the indexed
+     page first**, or this re-opens the compliance exposure through a side door.
+
+2. **`/search/ingredient/:ingredient` — "Recipes with X" pages.** Already set a good
+   title/description (`"Recipes with <ingredient> | M3Hungry"`) in
+   `recipe_browser_live/index.ex` `apply_action` and render server-side — but only
+   **hashtag** search pages are in the sitemap, not ingredient ones. Emit the top-N
+   ingredients by recipe count (same `having: count(...) > 1` pattern as the hashtag
+   query) to capture "recipes with chicken / feta / chickpeas" long-tail.
+
+### Tuning what's already indexed
+
+3. **Hashtag cap at 200.** The sitemap caps hashtags at the top 200 with
+   `count > 1`. If there are more meaningful tags than that, raising the cap (or the
+   threshold) is free coverage.
+
+### Net-new page worth building
+
+4. **Cuisine landing pages (highest ceiling, real work).** Recipes carry a `cousine`
+   field (already emitted as `recipeCuisine` in the Recipe JSON-LD; the AI bot treats
+   cuisine as the top generation constraint) — so the structured data exists, but
+   there is **no cuisine browse/landing page** (e.g. `/cuisine/greek`). "Greek
+   recipes" / "Mediterranean recipes" are head terms far bigger than any single
+   recipe. This needs a new LiveView, not just sitemap wiring.
+
+**Deliberately excluded** (no organic value / privacy / policy): `/welcome` (duplicate
+of `/home`), `/profile/:id` (noindex by design + privacy), and the legal pages
+(`/terms`, `/cookies`, `/legal`). Also note the known **internal-linking gap**
+("What to do next" #4) is the connective tissue that makes #1, #2, #4 crawl fast
+instead of waiting on sitemap-only discovery.
 
 ---
 

@@ -16,7 +16,7 @@
           post is linked to a published plan; older posts fall back to the image. --%>
     <.link
       :if={@post.published_meal_plan}
-      navigate={~p"/meal-plans/#{@post.published_meal_plan.slug}"}
+      navigate={~p"/meal-plans/#{@post.published_meal_plan.slug}?#{[from: "home"]}"}
       class="block overflow-hidden bg-ink-panel2 group"
     >
       <img src={@post.md_media_url} alt={@post.title} class="w-full object-contain" />
@@ -74,7 +74,7 @@
         <!-- Comment Button → opens the plan details page where the thread lives -->
         <.link
           :if={@post.published_meal_plan}
-          navigate={~p"/meal-plans/#{@post.published_meal_plan.slug}"}
+          navigate={~p"/meal-plans/#{@post.published_meal_plan.slug}?#{[from: "home"]}"}
           class="group flex items-center gap-1 transition"
           aria-label="Comments"
         >

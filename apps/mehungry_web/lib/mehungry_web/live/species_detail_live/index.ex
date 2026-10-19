@@ -96,15 +96,27 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   # `AsyncResult`.
   defp load_species_sidecars(socket, species) do
     language = socket.assigns[:current_language] || "en"
+    ingredient_ids = Enum.map(socket.assigns.ingredients, & &1.id)
 
     if connected?(socket) do
-      assign_async(socket, [:compounds], fn ->
+      assign_async(socket, [:compounds, :recipes], fn ->
         rels = SpeciesCompounds.list_species_relationships(species.id)
-        {:ok, %{compounds: localize_compounds(rels, language)}}
+
+        {:ok,
+         %{
+           compounds: localize_compounds(rels, language),
+           recipes: Food.list_sample_recipes_for_ingredients(ingredient_ids)
+         }}
       end)
     else
       rels = SpeciesCompounds.list_species_relationships(species.id)
-      assign(socket, :compounds, AsyncResult.ok(localize_compounds(rels, language)))
+
+      socket
+      |> assign(:compounds, AsyncResult.ok(localize_compounds(rels, language)))
+      |> assign(
+        :recipes,
+        AsyncResult.ok(Food.list_sample_recipes_for_ingredients(ingredient_ids))
+      )
     end
   end
 

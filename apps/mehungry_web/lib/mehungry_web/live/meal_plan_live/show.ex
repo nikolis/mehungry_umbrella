@@ -210,26 +210,30 @@ defmodule MehungryWeb.MealPlanLive.Show do
 
   # ── View ────────────────────────────────────────────────────────────────────
 
+  # The breadcrumb's "back" link — returns the viewer to wherever they opened the
+  # plan from (carried in the `from` query param) instead of always Home. The
+  # owner's profile tab is gated on it actually being the owner viewing.
+  defp back_target(%{from: "profile", current_user: %{id: uid}, plan: %{user_id: uid}}),
+    do: {~p"/profile?#{[tab: "meal_plans"]}", gettext("Your profile")}
+
+  defp back_target(%{from: "home"}), do: {~p"/home", gettext("Home")}
+
+  defp back_target(%{from: "browse"}),
+    do: {~p"/browse?#{[mode: "meal_plans"]}", gettext("Meal Plans")}
+
+  defp back_target(%{from: "meal_plans"}), do: {~p"/meal-plans", gettext("Meal Plans")}
+  defp back_target(_), do: {~p"/meal-plans", gettext("Meal Plans")}
+
   @impl true
   def render(assigns) do
     ~H"""
     <div class="min-h-screen bg-ink text-parchment pb-16">
       <div class="container max-w-3xl mx-auto px-4 py-8">
         <nav class="text-xs text-parchment-dim mb-4" aria-label="Breadcrumb">
-          <%= if @from == "profile" && @current_user && @current_user.id == @plan.user_id do %>
-            <.link
-              navigate={~p"/profile?#{[tab: "meal_plans"]}"}
-              class="hover:text-parchment"
-            >
-              {gettext("Your profile")}
-            </.link>
-            <span class="mx-1">›</span>
-            <span class="text-parchment">{gettext("Meal plan")}</span>
-          <% else %>
-            <.link navigate={~p"/"} class="hover:text-parchment">{gettext("Home")}</.link>
-            <span class="mx-1">›</span>
-            <.link navigate={~p"/browse"} class="hover:text-parchment">{gettext("Meal Plans")}</.link>
-          <% end %>
+          <% {back_path, back_label} = back_target(assigns) %>
+          <.link navigate={back_path} class="hover:text-parchment">{back_label}</.link>
+          <span class="mx-1">›</span>
+          <span class="text-parchment">{gettext("Meal plan")}</span>
         </nav>
 
         <header class="bg-ink-panel border border-ink-panel2 rounded-2xl p-6 mb-6">
@@ -880,7 +884,7 @@ defmodule MehungryWeb.MealPlanLive.Show do
           "@type" => "ListItem",
           "position" => 2,
           "name" => "Meal Plans",
-          "item" => @base_url <> "/browse"
+          "item" => @base_url <> "/meal-plans"
         },
         %{"@type" => "ListItem", "position" => 3, "name" => plan.title}
       ]

@@ -127,6 +127,9 @@ defmodule Mehungry.Food do
   defdelegate search_recipes_by_ingredient(ingredient_name), to: IngredientQueries
   defdelegate list_sample_recipes_for_ingredient(ingredient_id, limit \\ 4), to: IngredientQueries
 
+  defdelegate list_sample_recipes_for_ingredients(ingredient_ids, limit \\ 6),
+    to: IngredientQueries
+
   defdelegate list_random_recipes_including_excluding(
                 include_ingredient_ids,
                 exclude_ingredient_ids,

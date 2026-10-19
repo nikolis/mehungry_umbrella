@@ -76,6 +76,20 @@
       >
         Meal Blueprints
       </button>
+      <button
+        type="button"
+        phx-click="set_browse_mode"
+        phx-value-mode="meal_plans"
+        class={[
+          "px-4 py-1.5 rounded-full text-sm font-semibold transition",
+          if(@browse_mode == :meal_plans,
+            do: "bg-paprika text-ink",
+            else: "text-parchment-dim hover:text-parchment"
+          )
+        ]}
+      >
+        Meal Plans
+      </button>
     </div>
 
     <!-- Search Bar -->
@@ -180,7 +194,39 @@
       </div>
 
       <div class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <.blueprint_card :for={bp <- @blueprints} blueprint={bp} />
+        <.blueprint_card :for={bp <- @blueprints} blueprint={bp} from="browse" />
+      </div>
+    </div>
+
+    <!-- Published meal-plan browsing -->
+    <div :if={@browse_mode == :meal_plans} class="mt-3">
+      <form
+        id="meal-plan-search-form"
+        phx-submit="search_meal_plans"
+        phx-change="search_meal_plans"
+        class="mb-5"
+      >
+        <input
+          type="text"
+          name="query"
+          value={@meal_plan_query}
+          placeholder="Search meal plans by title…"
+          phx-debounce="300"
+          class="w-full bg-ink-panel text-parchment rounded-xl px-4 py-3 text-sm border border-ink-panel2 focus:border-paprika focus:outline-none"
+        />
+      </form>
+
+      <div :if={@meal_plans == []} class="text-center text-parchment-dim py-16">
+        No meal plans found.
+        <div class="mt-1 text-sm">
+          <.link navigate={~p"/meal-plans"} class="text-paprika hover:underline">
+            Browse all meal plans
+          </.link>
+        </div>
+      </div>
+
+      <div class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <.meal_plan_card :for={plan <- @meal_plans} plan={plan} from="browse" />
       </div>
     </div>
 

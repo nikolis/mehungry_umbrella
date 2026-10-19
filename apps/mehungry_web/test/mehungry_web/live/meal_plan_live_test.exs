@@ -74,6 +74,25 @@ defmodule MehungryWeb.MealPlanLiveTest do
       assert html =~ ~s("@type":"ItemList")
     end
 
+    test "breadcrumb back-link returns to the origin carried in `from`", %{conn: conn} do
+      %{plan: plan} = publish_plan(og_image_url: "https://cdn.example.com/card.png")
+
+      # From the home feed → back to the feed, not the landing page.
+      home_html = conn |> get(~p"/meal-plans/#{plan.slug}?#{[from: "home"]}") |> html_response(200)
+      assert home_html =~ ~s(href="/home")
+
+      # From the browse "Meal Plans" tab → back to /browse opened on that tab,
+      # not the Recipes default.
+      browse_html =
+        conn |> get(~p"/meal-plans/#{plan.slug}?#{[from: "browse"]}") |> html_response(200)
+
+      assert browse_html =~ ~s(href="/browse?mode=meal_plans")
+
+      # No origin → the crawlable /meal-plans directory (never a dead-end on Home).
+      bare_html = conn |> get(~p"/meal-plans/#{plan.slug}") |> html_response(200)
+      assert bare_html =~ ~s(href="/meal-plans")
+    end
+
     test "offers copy-ready image caption + text post share controls", %{conn: conn} do
       %{plan: plan} = publish_plan(og_image_url: "https://cdn.example.com/card.png")
       html = conn |> get(~p"/meal-plans/#{plan.slug}") |> html_response(200)
@@ -172,6 +191,63 @@ defmodule MehungryWeb.MealPlanLiveTest do
       # The ingredient name is shown in Greek where a translation exists.
       assert html =~ "Σπανάκι"
       refute html =~ "Spinach"
+    end
+  end
+
+  describe "public index /meal-plans" do
+    test "dead render lists published plans, links each one, and is indexable", %{conn: conn} do
+      %{plan: plan} = publish_plan([])
+
+      html = conn |> get(~p"/meal-plans") |> html_response(200)
+
+      # The plan is listed with a link to its own crawlable page.
+      assert html =~ plan.title
+      assert html =~ ~s(/meal-plans/#{plan.slug})
+      # Hub page is indexable and carries a CollectionPage-style ItemList + crumbs.
+      assert html =~ ~s(<meta name="robots" content="index, follow")
+      assert html =~ ~s(rel="canonical")
+      assert html =~ ~s("@type":"BreadcrumbList")
+      assert html =~ ~s("@type":"ItemList")
+    end
+
+    test "empty state renders when there are no public plans", %{conn: conn} do
+      html = conn |> get(~p"/meal-plans") |> html_response(200)
+      assert html =~ "No meal plans have been published yet."
+    end
+  end
+
+  describe "browse 'Meal Plans' tab" do
+    test "lazy-loads and title-searches published plans", %{conn: conn} do
+      %{plan: plan} = publish_plan([])
+
+      {:ok, view, _html} = live(conn, ~p"/browse")
+
+      # Switching to the Meal Plans tab loads the published plans.
+      html = view |> element(~s(button[phx-value-mode="meal_plans"])) |> render_click()
+      assert html =~ plan.title
+      assert html =~ ~s(/meal-plans/#{plan.slug})
+      # The card shows a cover image — here the first recipe's photo (the plan was
+      # published without a share-card graphic, so it falls back to the recipe).
+      assert html =~ ~s(https://www.dommu_url/image)
+
+      # A matching title keeps it; a non-matching title drops it.
+      assert view
+             |> form(~s(form#meal-plan-search-form), query: String.slice(plan.title, 0, 4))
+             |> render_change() =~ plan.title
+
+      refute view
+             |> form(~s(form#meal-plan-search-form), query: "zzz-no-such-plan")
+             |> render_change() =~ plan.title
+    end
+
+    test "opens straight to the Meal Plans tab via ?mode=", %{conn: conn} do
+      %{plan: plan} = publish_plan([])
+
+      # Landing on /browse?mode=meal_plans renders the plans tab immediately — no
+      # click needed — so a "back to Meal Plans" link doesn't dump the user on the
+      # Recipes default.
+      html = conn |> get(~p"/browse?#{[mode: "meal_plans"]}") |> html_response(200)
+      assert html =~ ~s(/meal-plans/#{plan.slug})
     end
   end
 

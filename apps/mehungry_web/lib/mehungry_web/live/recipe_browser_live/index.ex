@@ -11,6 +11,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   alias Mehungry.Users
   alias Mehungry.Posts
   alias Mehungry.MealBlueprints
+  alias Mehungry.PublishedPlans
   alias MehungryWeb.RecipeComponents
   import MehungryWeb.BlueprintComponents
 
@@ -86,7 +87,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      # `diet_mode_available` remembers it so the badge can be toggled off/on.
      |> assign(:diet_mode_available, Accounts.diet_mode(user))
      |> assign(:diet_mode, Accounts.diet_mode(user))
-     # Browse switches between recipes and public meal-plan blueprints.
+     # Browse switches between recipes, public meal-plan blueprints, and
+     # published weekly meal plans.
      |> assign(:browse_mode, :recipes)
      |> assign(:blueprint_query, "")
      |> assign(:blueprints, [])
@@ -94,7 +96,12 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      # kept in assigns so flipping between tabs is a pure presentation switch —
      # no re-query of the DB. An explicit blueprint search still refreshes them.
      |> assign(:blueprints_loaded, false)
-     |> assign_recipe_search()}
+     # Published meal plans, loaded lazily the same way as blueprints.
+     |> assign(:meal_plan_query, "")
+     |> assign(:meal_plans, [])
+     |> assign(:meal_plans_loaded, false)
+     |> assign_recipe_search()
+     |> apply_initial_browse_mode(params)}
   end
 
   ######################################################################## MESSAGES ############################################################################# 
@@ -111,21 +118,12 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   ######################################################################## EVENTS #################################################################################
   @impl true
   def handle_event("set_browse_mode", %{"mode" => "blueprints"}, socket) do
-    # Only hit the DB the first time; after that, toggling tabs just re-shows the
-    # blueprints already in assigns.
-    socket =
-      if socket.assigns.blueprints_loaded do
-        socket
-      else
-        blueprints =
-          MealBlueprints.search_public_blueprints(socket.assigns.blueprint_query, limit: 60)
+    {:noreply, socket |> ensure_blueprints_loaded() |> assign(:browse_mode, :blueprints)}
+  end
 
-        socket
-        |> assign(:blueprints, blueprints)
-        |> assign(:blueprints_loaded, true)
-      end
-
-    {:noreply, assign(socket, :browse_mode, :blueprints)}
+  @impl true
+  def handle_event("set_browse_mode", %{"mode" => "meal_plans"}, socket) do
+    {:noreply, socket |> ensure_meal_plans_loaded() |> assign(:browse_mode, :meal_plans)}
   end
 
   @impl true
@@ -142,6 +140,17 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      |> assign(:blueprint_query, query)
      |> assign(:blueprints, blueprints)
      |> assign(:blueprints_loaded, true)}
+  end
+
+  @impl true
+  def handle_event("search_meal_plans", %{"query" => query}, socket) do
+    meal_plans = PublishedPlans.search_public_plans(query, limit: 60)
+
+    {:noreply,
+     socket
+     |> assign(:meal_plan_query, query)
+     |> assign(:meal_plans, meal_plans)
+     |> assign(:meal_plans_loaded, true)}
   end
 
   @impl true
@@ -331,6 +340,40 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   def handle_params(params, uri, socket) do
     socket = assign(socket, :path, uri)
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+  end
+
+  # Opens the browse page straight to a non-default tab (so a "back to Meal Plans"
+  # link lands on meal plans, not the Recipes default). Mirrors `set_browse_mode`
+  # but driven by the `?mode=` URL param on mount.
+  defp apply_initial_browse_mode(socket, %{"mode" => "meal_plans"}),
+    do: socket |> ensure_meal_plans_loaded() |> assign(:browse_mode, :meal_plans)
+
+  defp apply_initial_browse_mode(socket, %{"mode" => "blueprints"}),
+    do: socket |> ensure_blueprints_loaded() |> assign(:browse_mode, :blueprints)
+
+  defp apply_initial_browse_mode(socket, _params), do: socket
+
+  # Lazy-load the tab's rows once, then keep them in assigns so flipping tabs is a
+  # pure presentation switch (no re-query). Shared by the tab event and mount's
+  # initial-mode opener.
+  defp ensure_blueprints_loaded(%{assigns: %{blueprints_loaded: true}} = socket), do: socket
+
+  defp ensure_blueprints_loaded(socket) do
+    blueprints = MealBlueprints.search_public_blueprints(socket.assigns.blueprint_query, limit: 60)
+
+    socket
+    |> assign(:blueprints, blueprints)
+    |> assign(:blueprints_loaded, true)
+  end
+
+  defp ensure_meal_plans_loaded(%{assigns: %{meal_plans_loaded: true}} = socket), do: socket
+
+  defp ensure_meal_plans_loaded(socket) do
+    meal_plans = PublishedPlans.search_public_plans(socket.assigns.meal_plan_query, limit: 60)
+
+    socket
+    |> assign(:meal_plans, meal_plans)
+    |> assign(:meal_plans_loaded, true)
   end
 
   defp assign_user_meta(socket) do

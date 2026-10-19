@@ -21,7 +21,7 @@ defmodule MehungryWeb.BlueprintLive.Show do
   end
 
   @impl true
-  def handle_params(%{"slug" => slug}, _uri, socket) do
+  def handle_params(%{"slug" => slug} = params, _uri, socket) do
     blueprint = MealBlueprints.get_public_blueprint_by_slug!(slug)
     plans = MealBlueprints.list_public_plans_for_blueprint(blueprint.id)
     user = socket.assigns.current_user
@@ -32,6 +32,7 @@ defmodule MehungryWeb.BlueprintLive.Show do
      socket
      |> assign(:blueprint, blueprint)
      |> assign(:plans, plans)
+     |> assign(:from, params["from"])
      |> assign(:saved?, !!saved?)
      |> assign(:share_url, url(~p"/blueprints/#{slug}"))
      |> assign_seo(blueprint)}
@@ -67,19 +68,34 @@ defmodule MehungryWeb.BlueprintLive.Show do
     ~H"""
     <div class="min-h-screen bg-ink text-parchment pb-16">
       <div class="container max-w-3xl mx-auto px-4 py-8">
-        <!-- Back: live navigation to the previous page (LiveView handles the
-             popstate as a live redirect when it is in-app). -->
-        <button
-          type="button"
-          x-data
-          x-on:click="history.back()"
-          class="inline-flex items-center gap-1.5 mb-4 text-sm text-parchment-dim hover:text-parchment transition"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-          Back
-        </button>
+        <!-- Back: when the viewer arrived from a known origin (carried in `from`)
+             navigate explicitly so they land on the right tab (e.g. the browse
+             Blueprints tab, not its Recipes default); otherwise fall back to the
+             browser's history. -->
+        <%= case back_target(@from) do %>
+          <% nil -> %>
+            <button
+              type="button"
+              x-data
+              x-on:click="history.back()"
+              class="inline-flex items-center gap-1.5 mb-4 text-sm text-parchment-dim hover:text-parchment transition"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+          <% {path, label} -> %>
+            <.link
+              navigate={path}
+              class="inline-flex items-center gap-1.5 mb-4 text-sm text-parchment-dim hover:text-parchment transition"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              {label}
+            </.link>
+        <% end %>
         <!-- Header -->
         <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-6 mb-6">
           <h1 class="text-2xl md:text-3xl font-display font-medium text-parchment">
@@ -232,6 +248,12 @@ defmodule MehungryWeb.BlueprintLive.Show do
     </div>
     """
   end
+
+  # The "back" destination for a known entry origin (carried in `from`), or nil to
+  # fall back to the browser's history. `browse` returns to the browse Blueprints
+  # tab (via `?mode=`) rather than its Recipes default.
+  defp back_target("browse"), do: {~p"/browse?#{[mode: "blueprints"]}", gettext("Blueprints")}
+  defp back_target(_), do: nil
 
   attr :label, :string, required: true
   attr :tags, :list, required: true

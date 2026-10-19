@@ -42,6 +42,19 @@ defmodule MehungryWeb.BlueprintLiveTest do
       assert html =~ "facebook.com/sharer/sharer.php"
     end
 
+    test "back-link returns to the browse Blueprints tab when arrived from browse", %{conn: conn} do
+      %{blueprint: bp} = public_blueprint()
+
+      # With `from=browse`, back navigates to the browse page opened on the
+      # Blueprints tab (not its Recipes default).
+      from_browse = conn |> get(~p"/blueprints/#{bp.slug}?#{[from: "browse"]}") |> html_response(200)
+      assert from_browse =~ ~s(href="/browse?mode=blueprints")
+
+      # Without an origin, it falls back to the browser's history.
+      bare = conn |> get(~p"/blueprints/#{bp.slug}") |> html_response(200)
+      assert bare =~ "history.back()"
+    end
+
     test "a private blueprint 404s", %{conn: conn} do
       owner = Mehungry.AccountsFixtures.user_fixture()
 

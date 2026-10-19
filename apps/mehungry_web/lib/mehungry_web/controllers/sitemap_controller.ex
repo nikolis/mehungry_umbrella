@@ -119,7 +119,8 @@ defmodule MehungryWeb.SitemapController do
       localized_entries("/home", changefreq: "daily", priority: "1.0"),
       localized_entries("/browse", changefreq: "hourly", priority: "0.9"),
       localized_entries("/foods", changefreq: "daily", priority: "0.7"),
-      localized_entries("/nutritionists", changefreq: "daily", priority: "0.7")
+      localized_entries("/nutritionists", changefreq: "daily", priority: "0.7"),
+      localized_entries("/meal-plans", changefreq: "daily", priority: "0.7")
     ]
 
     nutritionist_urls =

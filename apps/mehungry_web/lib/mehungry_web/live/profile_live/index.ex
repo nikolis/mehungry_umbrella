@@ -510,6 +510,14 @@ defmodule MehungryWeb.ProfileLive.Index do
           class="group relative flex flex-col bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden hover:border-basil/50 transition"
         >
           <.link navigate={~p"/meal-plans/#{plan.slug}?#{[from: "profile"]}"} class="block p-4 flex-1">
+            <%!-- The shareable card graphic generated when the plan was published. --%>
+            <img
+              :if={plan.og_image_url}
+              src={plan.og_image_url}
+              alt={plan.title}
+              loading="lazy"
+              class="w-full rounded-lg border border-ink-panel2 mb-3"
+            />
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0 flex-1">
                 <div class="font-semibold text-parchment truncate group-hover:text-basil transition">

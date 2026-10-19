@@ -83,6 +83,39 @@ defmodule Mehungry.FoodTest do
              ]
     end
 
+    test "list_sample_recipes_for_ingredients aggregates recipes across ingredient ids", %{
+      ingredient: ingredient,
+      measurement_unit: measurement_unit,
+      user: user
+    } do
+      {:ok, recipe} =
+        @create_params_recipe
+        |> Enum.into(%{
+          recipe_ingredients: [
+            %{
+              ingredient_id: ingredient.id,
+              measurement_unit_id: measurement_unit.id,
+              quantity: 33
+            }
+          ],
+          user_id: user.id,
+          cooking_time_lower_limit: 15,
+          preperation_time_lower_limit: 15,
+          difficulty: 1,
+          description: "uses the food"
+        })
+        |> Food.create_recipe()
+
+      other_ingredient = ingredient_fixture()
+
+      result = Food.list_sample_recipes_for_ingredients([ingredient.id])
+      assert Enum.map(result, & &1.id) == [recipe.id]
+
+      # An unrelated ingredient surfaces nothing; the empty set short-circuits.
+      assert Food.list_sample_recipes_for_ingredients([other_ingredient.id]) == []
+      assert Food.list_sample_recipes_for_ingredients([]) == []
+    end
+
     test "Test Update Recipe Valid arguments", %{user: user} do
       recipe = recipe_fixture(user)
       assert {:ok, new_recipe} = Food.update_recipe(recipe, %{title: "New recipe title"})

@@ -20,6 +20,7 @@ defmodule MehungryWeb.BlueprintComponents do
   """
   attr :blueprint, :map, required: true
   attr :class, :string, default: ""
+  attr :from, :string, default: nil
 
   def blueprint_card(assigns) do
     assigns = assign(assigns, :author, author(assigns.blueprint))
@@ -29,7 +30,7 @@ defmodule MehungryWeb.BlueprintComponents do
       "group flex flex-col bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden hover:border-basil/50 transition",
       @class
     ]}>
-      <.link navigate={~p"/blueprints/#{@blueprint.slug}"} class="block p-4 flex-1">
+      <.link navigate={blueprint_path(@blueprint.slug, @from)} class="block p-4 flex-1">
         <div class="flex items-start gap-2">
           <.icon_clipboard />
           <div class="min-w-0 flex-1">
@@ -57,6 +58,91 @@ defmodule MehungryWeb.BlueprintComponents do
             class="text-[11px] px-2 py-0.5 rounded-full bg-basil/15 text-basil"
           >
             {@blueprint.plans_count} sample {plural(@blueprint.plans_count, "plan")}
+          </span>
+        </div>
+      </.link>
+
+      <.link
+        :if={@author}
+        navigate={author_path(@author)}
+        class="flex items-center gap-2.5 px-4 py-3 border-t border-ink-panel2 hover:bg-ink-panel2/60 transition"
+      >
+        <.author_avatar author={@author} />
+        <div class="min-w-0">
+          <div class="text-parchment text-xs font-medium truncate">
+            {author_display_name(@author)}
+          </div>
+          <div class="text-parchment-dim text-[11px] truncate">{author_role(@author)}</div>
+        </div>
+      </.link>
+    </div>
+    """
+  end
+
+  @doc """
+  A published-meal-plan summary card linking to its public, crawlable page
+  (`/meal-plans/:slug`), with the daily-average calories, recipe count and an
+  author block. Expects a `PublishedPlans.PublishedMealPlan` with
+  `user: :professional_profile` preloaded.
+  """
+  attr :plan, :map, required: true
+  attr :class, :string, default: ""
+  attr :from, :string, default: nil
+
+  def meal_plan_card(assigns) do
+    assigns =
+      assigns
+      |> assign(:author, author(assigns.plan))
+      |> assign(:image_url, plan_image(assigns.plan))
+
+    ~H"""
+    <div class={[
+      "group flex flex-col bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden hover:border-paprika/50 transition",
+      @class
+    ]}>
+      <.link navigate={meal_plan_path(@plan.slug, @from)} class="block p-4 flex-1">
+        <%!-- The shareable card graphic if the plan has one, else the first recipe
+              photo in the week; falls back to the calendar icon when neither. --%>
+        <img
+          :if={@image_url}
+          src={@image_url}
+          alt={@plan.title}
+          loading="lazy"
+          class="w-full rounded-lg border border-ink-panel2 mb-3"
+        />
+        <div class="flex items-start gap-2">
+          <.icon_calendar :if={!@image_url} />
+          <div class="min-w-0 flex-1">
+            <div class="font-semibold text-parchment truncate group-hover:text-paprika transition">
+              {@plan.title}
+            </div>
+            <div :if={@plan.summary_text} class="text-parchment-dim text-sm line-clamp-2 mt-0.5">
+              {@plan.summary_text}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5 mt-3">
+          <span class="text-[11px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
+            7 days
+          </span>
+          <span
+            :if={(@plan.recipe_count || 0) > 0}
+            class="text-[11px] px-2 py-0.5 rounded-full bg-basil/15 text-basil"
+          >
+            {@plan.recipe_count} {plural(@plan.recipe_count, "recipe")}
+          </span>
+          <span
+            :if={plan_kcal(@plan)}
+            class="text-[11px] px-2 py-0.5 rounded-full bg-paprika/15 text-paprika-soft [font-variant-numeric:tabular-nums]"
+          >
+            ~{plan_kcal(@plan)} kcal/day
+          </span>
+          <span
+            :if={@plan.goal_label}
+            class="text-[11px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim"
+          >
+            {@plan.goal_label}
           </span>
         </div>
       </.link>
@@ -398,6 +484,57 @@ defmodule MehungryWeb.BlueprintComponents do
   end
 
   # ── internal components / helpers ─────────────────────────────────────────────
+
+  # Rounded daily-average calories from a published plan's `macros` map, or nil
+  # when absent/zero so the chip is simply omitted.
+  defp plan_kcal(%{macros: %{"energy_kcal" => kcal}}) when is_number(kcal) and kcal > 0,
+    do: round(kcal)
+
+  defp plan_kcal(_), do: nil
+
+  # Cover image for a plan card: the shareable card graphic generated at publish
+  # time if present, otherwise the first recipe photo in the week. `nil` when the
+  # plan has neither (plans published without a card graphic and whose recipes
+  # have no `image_url`), so the card falls back to the calendar icon.
+  defp plan_image(%{og_image_url: url}) when is_binary(url) and url != "", do: url
+
+  defp plan_image(%{days: days}) when is_list(days) do
+    Enum.find_value(days, fn day ->
+      for(meal <- day["meals"] || [], item <- meal["items"] || [], do: item)
+      |> Enum.find_value(fn item ->
+        case item do
+          %{"kind" => "recipe", "image_url" => img} when is_binary(img) and img != "" -> img
+          _ -> nil
+        end
+      end)
+    end)
+  end
+
+  defp plan_image(_), do: nil
+
+  # Link to a plan's detail page, carrying the `from` origin so the detail page's
+  # breadcrumb returns the viewer to where they came from (browse, the /meal-plans
+  # index, …) rather than Home.
+  defp meal_plan_path(slug, nil), do: ~p"/meal-plans/#{slug}"
+  defp meal_plan_path(slug, from), do: ~p"/meal-plans/#{slug}?#{[from: from]}"
+
+  defp blueprint_path(slug, nil), do: ~p"/blueprints/#{slug}"
+  defp blueprint_path(slug, from), do: ~p"/blueprints/#{slug}?#{[from: from]}"
+
+  defp icon_calendar(assigns) do
+    ~H"""
+    <span class="w-9 h-9 rounded-lg bg-paprika/15 text-paprika flex items-center justify-center shrink-0">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
+      </svg>
+    </span>
+    """
+  end
 
   defp icon_clipboard(assigns) do
     ~H"""
