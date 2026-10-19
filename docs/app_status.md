@@ -275,7 +275,7 @@ Append one row per weekly check (run §5.1 pre-deploy, §5.2 post-deploy). Keep 
 | Date | Users (confirmed) | New users /30d | Recipes (authors) | Comments / Likes / Saves / Follows | Traffic (source) | Notes |
 |---|---|---|---|---|---|---|
 | 2026-10-17 | 49 (16) | 4 | 85 (5) | 1 / 0 / 25 / 8 | ~150 GA4 sessions/mo; 98.3% Greece; 0 organic | Baseline. July-2026 signup spike (27) never retained. `visits`=4,203 all-time, 114 distinct IPs, tracking since 2026-05-19; 411 visits/30d. Social dormant: FB 0 followers/0 eng; Pinterest 73 impr / 3 outbound clicks / audience 1 (30d). |
-| _next week_ | | | | | | |
+| 2026-10-19 | 49 (16) | 4 | 66 (5) | 1 / 0 / 19 / 8 | ~78 GA4 sessions/28d; 828 GSC impr (/foods: 460); 25 anon sessions all-time | **First automated `mix report.snapshot`** (DB+GA4+GSC). **Organic search has started** (vs "0 organic" baseline): 828 GSC impressions / 13 clicks, 460 impr on `/foods`, avg pos 12.6 — top queries are USDA nutrient lookups. ⚠️ GA4 28-day geo shows **US=45 > GR=19** (Sweden=11) and 78% Direct / 95% new — almost certainly bot/crawler noise at ~78 sessions, not a real audience shift; verify with GA4 bot filtering before trusting. Recipes **85→66** (−19, deletions via the new delete/clear-week features — confirm intended). Social: FB/Pinterest pulls now wired but tokens need a prod reconnect (FB insight metric names fixed; Pinterest token expired). |
 
 **What to watch week-over-week**
 1. **New users /30d** — is the trickle turning into a trend, or still flat at ~4?
@@ -286,14 +286,43 @@ Append one row per weekly check (run §5.1 pre-deploy, §5.2 post-deploy). Keep 
 
 ---
 
-## 7. Automating this report (possible upgrade — not yet done)
+## 7. Automating this report
 
-Today this snapshot is **manual**: a human runs the §5 SQL in the Supabase editor and pulls
-GA4 / social figures by hand, then pastes them in. The agent is deliberately **blocked from
-reading production** without explicit authorization. A few optional upgrades would make it
-hands-off; each is a one-time setup. Note that the **social sources (§7.3–7.4) are cheaper than
-GA4 (§7.2)**: the app already stores OAuth tokens and ships HTTP clients for them, so there's no
-new credential to provision — mostly just adding read calls (and, for Facebook, one extra scope).
+**✅ Implemented as `mix report.snapshot`** (see §7.0). The task pulls all four sources —
+DB (§7.1), GA4 (§7.2), Facebook (§7.3), Pinterest (§7.4) — in one pass and prints a
+human-readable report ending with a ready-to-paste §6 log row. Every external source
+**degrades gracefully**: when its credential / scope / env var is missing, that section shows a
+clear "not configured" note and the rest still renders, so the DB figures always print and you
+paste the missing one by hand. The §7.1–7.4 subsections below are now the **one-time setup** to
+switch each source from "paste by hand" to "pulled automatically".
+
+The agent is still deliberately **blocked from reading production** without explicit
+authorization, so in practice you (or an operator with prod env) run the task and hand the
+output back for interpretation. Note that the **social sources (§7.3–7.4) are cheaper than GA4
+(§7.2)**: the app already stores OAuth tokens and ships HTTP clients for them, so there's no new
+credential to provision — Facebook needed only one extra scope (`read_insights`, already added).
+
+### 7.0 The `mix report.snapshot` command
+
+```bash
+mix report.snapshot            # full report, last 28-day window for GA4/Pinterest
+mix report.snapshot --days 7   # narrower GA4/Pinterest window
+mix report.snapshot --row      # print ONLY the §6 markdown log row
+```
+
+Code: `Mehungry.Report.Snapshot` (orchestrator + formatting), `Mehungry.Report.GoogleAuth`
+(shared service-account auth), `Mehungry.Report.GA4` (Data API client),
+`Mehungry.Report.SearchConsole` (organic-search client),
+`Mehungry.Social.Facebook.page_insights/1`, `Mehungry.Social.Pinterest.user_account_analytics/3`,
+`Mehungry.Meta.session_metrics_summary/0`. Optional env vars that light up each source:
+
+| Env var | Turns on | Section |
+|---|---|---|
+| `REPORT_RO_DATABASE_URL` | reads the DB through the read-only role instead of the app Repo | §7.1 |
+| `GA4_SA_KEY` + `GA4_PROPERTY_ID` | the GA4 pull | §7.2 |
+| `GA4_SA_KEY` + `GSC_SITE_URL` | the Search Console pull (same service account as GA4) | §7.2 |
+| *(none — token already stored)* | Facebook Page insights (reconnect Page once for the new scope) | §7.3 |
+| `PINTEREST_ENV=live` | real Pinterest analytics (sandbox returns nothing) | §7.4 |
 
 ### 7.1 Auto DB pull — read-only Postgres role (recommended)
 
@@ -310,24 +339,43 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO report_ro;
 ```
 
 Then store its connection string (Supabase → Project Settings → Database → use the **pooler**
-host) as a secret the agent can read, e.g. `REPORT_RO_DATABASE_URL`, and allow `psql`. The
-agent runs the §5.1/§5.2 queries directly — no write access, no production shell.
+host) as `REPORT_RO_DATABASE_URL`. **`mix report.snapshot` reads through it automatically** when
+set (the reporting aggregate is routed via a transient read-only Postgrex connection); when
+unset, the task falls back to the app `Repo`. Include `?sslmode=require` in the URL for the
+managed pooler. (The role is also what you'd grant if you ever let the agent run the §5 SQL via
+`psql` directly — no write access, no production shell.)
 
 **Alternative (faster, broader, *not* recommended):** add a Claude Code Bash allow-rule for
 the read-only release eval (e.g. `Bash(fly ssh console:*)` in `.claude/settings.json`). This
 avoids creating a DB role, but it grants the agent a **full production shell**, so the
 contained read-only role above is the safer choice.
 
-### 7.2 Auto GA4 pull — Google service account + Analytics Data API
+### 7.2 Auto GA4 + Search Console pull — one Google service account, two APIs
 
-GA4 is unreadable today (no credential). To automate it:
+GA4 and Search Console are both unreadable today (no credential). **The same service account
+unlocks both** (`Mehungry.Report.GoogleAuth` mints a per-scope token; `GA4_SA_KEY` holds the
+one JSON key). To automate them:
 
-1. In Google Cloud, create a **service account** and enable the **Google Analytics Data API**.
-2. In GA4 → Admin → Property Access Management, add the service-account email as a **Viewer**.
-3. Download the service-account **JSON key**; store it as a secret (`GA4_SA_KEY`) and set
-   `GA4_PROPERTY_ID`.
-4. A small script then calls the Data API `runReport` for sessions, active/new users,
-   engagement rate, channels, countries, and top pages — the §5.3 figures, fetched automatically.
+1. In Google Cloud, create a **service account** and enable **both** the **Google Analytics
+   Data API** and the **Search Console API** on the project.
+2. Grant the service-account email read access **in each product separately**:
+   - GA4 → Admin → Property Access Management → add as **Viewer**.
+   - Search Console → Settings → Users and permissions → add (at least **Restricted**).
+3. Download the service-account **JSON key**; store it as `GA4_SA_KEY` (the raw JSON inline or a
+   path to the `.json` file). Then set:
+   - `GA4_PROPERTY_ID` — the **numeric** GA4 property id (Admin → Property Settings; *not* the
+     `G-XXXX` measurement id).
+   - `GSC_SITE_URL` — the exact Search Console property id: a **domain** property is
+     `sc-domain:m3hungry.com`; a **URL-prefix** property is `https://www.m3hungry.com/`.
+4. `Mehungry.Report.GA4.fetch/1` calls the Data API `runReport` for sessions, active/new users,
+   engagement rate, channels, countries and top pages; `Mehungry.Report.SearchConsole.fetch/1`
+   calls `searchAnalytics.query` for clicks/impressions/CTR/position overall, the **`/foods`
+   subset** (the organic leading indicator this report watches most), plus top queries and
+   pages. **(Already coded** — the JWT is signed with Erlang's `:public_key`, no JWT dependency;
+   `mix report.snapshot` skips each source until its env vars are set, and GA4 and Search Console
+   switch on independently — you can enable one without the other.)
+
+   Note Search Console data lags ~2-3 days, so the newest day(s) in the window may read as empty.
 
 ### 7.3 Auto Facebook Page insights — Graph API (token already exists)
 
@@ -341,10 +389,11 @@ GET /{PAGE_ID}?fields=followers_count,fan_count
 GET /{PAGE_ID}/insights?metric=page_impressions_unique,page_post_engagements,page_views_total&period=days_28
 ```
 
-- **Scope gap:** the current OAuth scope is `pages_read_engagement, pages_manage_posts,
-  pages_manage_engagement` (see `MehungryWeb.Ueberauth.Strategy.Facebook`). Page **Insights**
-  additionally needs **`read_insights`** — add it to `default_scope` and re-connect the Page
-  once to mint a token that carries it.
+- **(Already coded** — `Mehungry.Social.Facebook.page_insights/1`, called by `mix report.snapshot`.)
+- **Scope — done, one action left:** `read_insights` has been **added** to `default_scope` (see
+  `Ueberauth.Strategy.Local.Facebook`). The one remaining manual step is to **re-connect the Page
+  once** so the stored token carries the new scope; until then follower counts return but the
+  insight metrics come back as an `error` on the per-page line (the report says so explicitly).
 - **Caveat:** Meta regularly deprecates organic Page-Insights metrics between Graph API
   versions — verify the metric names against the current version before relying on them.
 - Gives: Page followers, 28-day reach/impressions, post engagements — the off-site social
@@ -363,16 +412,20 @@ GET /v5/user_account/analytics?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
     &metric_types=IMPRESSION,SAVE,PIN_CLICK,OUTBOUND_CLICK,ENGAGEMENT
 ```
 
-- Reuse `authed_request/2` in `Mehungry.Social.Pinterest` (handles token refresh) and the
-  `api_base/0` base URL.
+- **(Already coded** — `Mehungry.Social.Pinterest.user_account_analytics/3`, reusing
+  `authed_request/2` for token refresh and the env-aware `api_base/0`; called by `mix report.snapshot`.)
 - **Must be live, not sandbox:** set `PINTEREST_ENV=live` (otherwise `api_base` points at the
-  sandbox and returns no real data).
+  sandbox and returns no real data). The function short-circuits with a clear "sandbox" note
+  until you do.
 - Gives: impressions, saves, pin clicks, outbound clicks (= referral traffic Pinterest sends
   you) and total engagements.
 
 ### 7.5 Scheduling
 
-Once any of these sources are wired up, the weekly snapshot can run on a schedule (e.g. a
-cron/routine) that executes the §5 queries + the §7.2–7.4 API calls and appends a new row to
-the §6 log — turning this from a manual chore into an automatic weekly diff. Until then, keep
-doing the manual paste.
+With the gathering wired into `mix report.snapshot` (§7.0), the only thing left to make this
+hands-off is a schedule. Run the task weekly from an environment that has prod access (its env
+vars), capture the `--row` output, and append it to the §6 log — e.g. a Fly scheduled machine,
+a cron, or a Claude Code routine that runs `mix report.snapshot --row` and commits the new row.
+Because every source degrades gracefully, the schedule produces a useful row from day one and
+fills in GA4 / Facebook / Pinterest columns automatically as each source's setup (§7.1–7.4) is
+completed.

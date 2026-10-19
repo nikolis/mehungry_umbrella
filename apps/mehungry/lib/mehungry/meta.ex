@@ -107,6 +107,38 @@ defmodule Mehungry.Meta do
     end
   end
 
+  @doc """
+  All-time session-metrics summary — `%{sessions_total, first_day, last_day,
+  avg_seconds}` (the §5.2 "post-deploy" traffic query in `docs/app_status.md`,
+  the consent-independent denominator GA4 cannot see). Days with no sessions are
+  simply absent; `first_day`/`last_day` are `nil` when the table is empty.
+  """
+  def session_metrics_summary do
+    from(m in DailySessionMetric,
+      select: %{
+        sessions_total: coalesce(sum(m.session_count), 0),
+        duration_total: coalesce(sum(m.total_duration_seconds), 0),
+        first_day: min(m.date),
+        last_day: max(m.date)
+      }
+    )
+    |> Repo.one()
+    |> then(fn %{sessions_total: sessions, duration_total: duration} = row ->
+      # `sum(...)` comes back as `Decimal`; normalize to plain integers.
+      sessions = to_int(sessions)
+      duration = to_int(duration)
+
+      row
+      |> Map.delete(:duration_total)
+      |> Map.put(:sessions_total, sessions)
+      |> Map.put(:avg_seconds, avg_seconds(duration, sessions))
+    end)
+  end
+
+  defp to_int(%Decimal{} = d), do: Decimal.to_integer(d)
+  defp to_int(n) when is_integer(n), do: n
+  defp to_int(_), do: 0
+
   defp avg_seconds(_total, 0), do: 0
   defp avg_seconds(total, count), do: div(total, count)
 end

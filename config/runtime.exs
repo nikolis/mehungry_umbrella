@@ -89,6 +89,20 @@ pinterest_api_base =
 
 config :mehungry, pinterest_api_base: pinterest_api_base
 
+# GA4 read-only pull for the weekly app-status snapshot (see docs/app_status.md
+# §7.2 and Mehungry.Report.GA4). Both are optional — when unset, `mix
+# report.snapshot` skips GA4 and you paste its figures by hand.
+#   GA4_SA_KEY      — service-account JSON key, inline or a path to the .json file
+#   GA4_PROPERTY_ID — numeric GA4 property id
+config :mehungry,
+  ga4_sa_key: System.get_env("GA4_SA_KEY"),
+  ga4_property_id: System.get_env("GA4_PROPERTY_ID"),
+  # Google Search Console pull (same service account as GA4; see
+  # Mehungry.Report.SearchConsole). The organic-search leading indicator —
+  # /foods impressions. Set to the exact property id: a domain property is
+  # "sc-domain:m3hungry.com", a URL-prefix property is "https://www.m3hungry.com/".
+  gsc_site_url: System.get_env("GSC_SITE_URL")
+
 # Optional runtime override of the social-publishing kill switches
 # (see config.exs / Mehungry.Social). SOCIAL_PLATFORMS_DISABLED is a
 # comma-separated list of platforms to force off, e.g. "instagram,pinterest".

@@ -187,6 +187,30 @@ defmodule Mehungry.Social.Pinterest do
   stored token untouched.
   """
   def refresh_user_token(%User{} = user) do
+    case exchange_refresh_token(user) do
+      {:ok, new_token} ->
+        Logger.info("[Pinterest] refresh_user_token: refreshed token for user #{user.id}")
+        persist_token(user, new_token)
+
+      {:error, {:http_error, status, resp_body}} when status in 400..499 ->
+        Logger.warning(
+          "[Pinterest] refresh_user_token: HTTP #{status} for user #{user.id} — marking stale"
+        )
+
+        mark_stale(user, {:http_error, status, resp_body})
+        {:error, {:http_error, status, resp_body}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # Exchanges the stored refresh token for a fresh token map **without
+  # persisting** anything. Pure HTTP + decode — the caller decides whether to
+  # store it (`refresh_user_token/1`) or use it transiently (the read-only
+  # report path, which must not write to the DB). Returns
+  # `{:ok, token_map} | {:error, reason}`.
+  defp exchange_refresh_token(%User{} = user) do
     token = user.pinterest_token || %{}
 
     case token["refresh_token"] do
@@ -215,28 +239,18 @@ defmodule Mehungry.Social.Pinterest do
                   |> Map.merge(data)
                   |> Token.build()
 
-                Logger.info("[Pinterest] refresh_user_token: refreshed token for user #{user.id}")
-                persist_token(user, new_token)
+                {:ok, new_token}
 
               _ ->
                 {:error, :unexpected_response}
             end
-
-          {:ok, %HTTPoison.Response{status_code: status, body: resp_body}}
-          when status in 400..499 ->
-            Logger.warning(
-              "[Pinterest] refresh_user_token: HTTP #{status} for user #{user.id} — marking stale"
-            )
-
-            mark_stale(user, {:http_error, status, resp_body})
-            {:error, {:http_error, status, resp_body}}
 
           {:ok, %HTTPoison.Response{status_code: status, body: resp_body}} ->
             {:error, {:http_error, status, resp_body}}
 
           {:error, %HTTPoison.Error{reason: reason}} ->
             Logger.error(
-              "[Pinterest] refresh_user_token: request error for user #{user.id} — #{inspect(reason)}"
+              "[Pinterest] exchange_refresh_token: request error for user #{user.id} — #{inspect(reason)}"
             )
 
             {:error, {:transport_error, reason}}
@@ -270,26 +284,134 @@ defmodule Mehungry.Social.Pinterest do
     |> Repo.all()
   end
 
+  @analytics_metrics "IMPRESSION,SAVE,PIN_CLICK,OUTBOUND_CLICK,ENGAGEMENT"
+
+  @doc """
+  User-account analytics (§7.4 of `docs/app_status.md`) over `[start_date, end_date]`
+  (both `Date`): impressions, saves, pin clicks, outbound clicks (= referral
+  traffic Pinterest sends the site) and total engagements.
+
+  Uses the env-aware `api_base/0` and refreshes an expired token **in-memory
+  without persisting** (`persist: false`) — this is a read-only report path, so
+  it must never write to the DB (the user may have been read from a different,
+  read-only database). Refreshing still needs `PINTEREST_CLIENT_ID`/`SECRET` in
+  the environment; without them an expired token stays a 401.
+
+  Returns `{:ok, summary_map}`, `{:error, :not_connected}`, `{:error, :sandbox}`
+  (when `PINTEREST_ENV` is not `live`, so the API returns no real data), or
+  `{:error, {:http_error, status, body}} | {:error, {:transport_error, reason}}`.
+  """
+  def user_account_analytics(user, %Date{} = start_date, %Date{} = end_date) do
+    if sandbox?() do
+      {:error, :sandbox}
+    else
+      query =
+        URI.encode_query(%{
+          "start_date" => Date.to_iso8601(start_date),
+          "end_date" => Date.to_iso8601(end_date),
+          "metric_types" => @analytics_metrics
+        })
+
+      url = "#{api_base()}/user_account/analytics?#{query}"
+
+      result =
+        authed_request(
+          user,
+          fn token ->
+            http_client().get(url, [{"Authorization", "Bearer #{token}"}])
+          end,
+          persist: false
+        )
+
+      case result do
+        {:error, :not_connected} ->
+          {:error, :not_connected}
+
+        {:error, {:token_refresh_failed, _reason}} = err ->
+          err
+
+        {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+          case Jason.decode(body) do
+            {:ok, decoded} -> {:ok, summarize_analytics(decoded)}
+            {:error, _} -> {:error, {:http_error, 200, body}}
+          end
+
+        {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
+          Logger.warning("[Pinterest] user_account_analytics: HTTP #{status} — #{body}")
+          {:error, {:http_error, status, body}}
+
+        {:error, %HTTPoison.Error{reason: reason}} ->
+          {:error, {:transport_error, reason}}
+      end
+    end
+  end
+
+  # The v5 analytics payload nests daily series under "all" / "DAILY_METRICS";
+  # the top-level "summary_metrics" (or "lifetime_metrics") carries the window
+  # totals we want. Fall back to summing the daily series when only that exists.
+  defp summarize_analytics(%{"all" => all}), do: summarize_analytics(all)
+
+  defp summarize_analytics(%{"summary_metrics" => totals}) when is_map(totals),
+    do: normalize_metrics(totals)
+
+  defp summarize_analytics(%{"lifetime_metrics" => totals}) when is_map(totals),
+    do: normalize_metrics(totals)
+
+  defp summarize_analytics(%{"daily_metrics" => days}) when is_list(days) do
+    days
+    |> Enum.map(&Map.get(&1, "metrics", %{}))
+    |> Enum.reduce(%{}, fn metrics, acc ->
+      Map.merge(acc, metrics, fn _k, a, b -> num(a) + num(b) end)
+    end)
+    |> normalize_metrics()
+  end
+
+  defp summarize_analytics(other) when is_map(other), do: normalize_metrics(other)
+
+  defp normalize_metrics(metrics) do
+    %{
+      impressions: num(metrics["IMPRESSION"]),
+      saves: num(metrics["SAVE"]),
+      pin_clicks: num(metrics["PIN_CLICK"]),
+      outbound_clicks: num(metrics["OUTBOUND_CLICK"]),
+      engagements: num(metrics["ENGAGEMENT"])
+    }
+  end
+
+  defp num(n) when is_number(n), do: n
+  defp num(_), do: 0
+
+  defp sandbox?, do: not String.contains?(api_base(), "://api.pinterest.com")
+
   # Runs `request_fun.(token)` with the user's access token. On a 401 it
   # refreshes the token once and retries with the fresh one, returning the
   # original 401 result if the refresh itself fails. Returns the raw HTTP
   # result (or {:error, :not_connected}).
-  defp authed_request(user, request_fun) do
+  #
+  # `persist: true` (default, the publishing path) stores the refreshed token;
+  # `persist: false` (the read-only report path) refreshes in-memory only and
+  # never writes to the DB.
+  defp authed_request(user, request_fun, opts \\ []) do
     case access_token(user) do
       nil ->
         {:error, :not_connected}
 
       token ->
+        persist? = Keyword.get(opts, :persist, true)
+
         case request_fun.(token) do
           {:ok, %HTTPoison.Response{status_code: 401}} = result ->
             Logger.info("[Pinterest] 401 for user #{user.id} — attempting token refresh")
 
-            case refresh_user_token(user) do
-              {:ok, refreshed_user} ->
-                case access_token(refreshed_user) do
-                  nil -> result
-                  new_token -> request_fun.(new_token)
-                end
+            case refresh_access_token(user, persist?) do
+              {:ok, new_token} ->
+                request_fun.(new_token)
+
+              {:error, reason} when persist? == false ->
+                # Read-only report path: surface *why* the refresh failed instead
+                # of hiding it behind the original 401 (helps distinguish bad
+                # client creds vs a dead stored refresh token).
+                {:error, {:token_refresh_failed, reason}}
 
               {:error, _reason} ->
                 result
@@ -300,6 +422,28 @@ defmodule Mehungry.Social.Pinterest do
         end
     end
   end
+
+  # Refreshes and returns the new access-token string. With `persist?` true it
+  # stores the token (publishing); false exchanges it in-memory only (report).
+  defp refresh_access_token(user, true) do
+    case refresh_user_token(user) do
+      {:ok, refreshed_user} -> token_or_error(access_token(refreshed_user))
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp refresh_access_token(user, false) do
+    case exchange_refresh_token(user) do
+      {:ok, token_map} ->
+        token_or_error(access_token(%User{user | pinterest_token: token_map}))
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp token_or_error(nil), do: {:error, :no_access_token}
+  defp token_or_error(token), do: {:ok, token}
 
   defp persist_token(user, token) do
     Accounts.update_user_tokens(user, %{"pinterest_token" => token})
