@@ -155,6 +155,15 @@ channel today.
 
 Read: `/home` → `/profile` → `/create_recipe`/`/browse` is the core loop. The Greek locale (`/el/*`) out-draws English (`/en/*`) ~239 vs ~150, confirming the Greece-first audience.
 
+### 4.5 Organic search / SEO (2026-10-19)
+
+Deep SEO read via the GSC Search-Analytics pull + URL Inspection API + a Lighthouse snapshot — **full detail and the prioritized actions live in `docs/seo.md` (see its dated "SEO snapshot — 2026-10-19" section)**. Headlines:
+
+- **Organic is starting and improving.** 28d vs prior 28d: clicks 7→**13**, CTR 0.38%→**1.57%**, avg position **50.1→12.6** (page 5 → page 1–2). Impressions fell 1,824→828 but that was junk position-~50 noise dropping off — net quality up.
+- **Lighthouse (mobile): SEO 100 / Best Practices 100**, Accessibility 84 (contrast on hashtag chips + the cookie "Accept" button, a few unnamed controls — fixes listed in `seo.md`).
+- **URL Inspection:** key pages PASS/indexed. Fixed the **Recipe structured-data** warnings (added per-serving `nutrition`, `totalTime`, `datePublished`, step `name` fallback). Open: Greek `/foods` pages lose to **duplicate-canonical** (Google folds `/foods/Κάρδαμο` into `/foods/Cress`).
+- **🚫 Condition pages (`/conditions/:id`) removed from the roadmap (2026-10-19).** Condition-targeted dietary advice makes the app a **regulated medical device** (EU MDR / SaMD) we can't support now. The condition-query cluster — which the data flagged as the biggest ranking opportunity — is therefore **not** being pursued. See the notice in `docs/seo.md`.
+
 ---
 
 ## 5. How this is measured

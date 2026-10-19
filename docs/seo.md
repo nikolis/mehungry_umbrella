@@ -2,6 +2,13 @@
 
 This document explains what SEO is, why it matters, and exactly how it works in this codebase — so you can understand, extend, and monitor it without needing prior SEO experience.
 
+> 🚫 **NOTICE (2026-10-19): condition pages (`/conditions/:id`) are no longer part of the
+> project.** Targeting dietary advice at named medical conditions turns the product into a
+> **regulated medical device** (EU MDR / SaMD), which we **cannot support for now**. All
+> condition-page SEO work and any "condition query" growth opportunity are **off the roadmap** —
+> see the full notice under [Condition pages](#condition-pages-conditionsid). Historical
+> condition content in this doc is retained for record only.
+
 ---
 
 ## What is SEO and why does it matter?
@@ -207,6 +214,8 @@ Same idea as Open Graph but specifically for Twitter/X previews.
   "author": { "@type": "Person", "name": "Nikos" },
   "cookTime": "PT45M",
   "prepTime": "PT15M",
+  "totalTime": "PT60M",
+  "datePublished": "2026-03-15T10:00:00",
   "recipeYield": "4 servings",
   "recipeCuisine": "Indian",
   "recipeIngredient": [
@@ -215,6 +224,14 @@ Same idea as Open Graph but specifically for Twitter/X previews.
     "1 tbsp Garam Masala"
   ],
   "keywords": "curry, indian, dinner",
+  "nutrition": {
+    "@type": "NutritionInformation",
+    "servingSize": "1 serving",
+    "calories": "620 kcal",
+    "proteinContent": "38.0 g",
+    "fatContent": "22.0 g",
+    "carbohydrateContent": "70.0 g"
+  },
   "recipeInstructions": [
     { "@type": "HowToStep", "name": "Marinate", "text": "Marinate the chicken overnight..." },
     { "@type": "HowToStep", "name": "Cook", "text": "Cook on medium heat for 20 minutes..." }
@@ -237,13 +254,16 @@ Same idea as Open Graph but specifically for Twitter/X previews.
 | `recipeCuisine` | `recipe.cousine` | **note the misspelled schema column** |
 | `recipeIngredient` | `recipe.recipe_ingredients` | `jsonld_ingredient_line/1` → `"<qty> <unit> <name>"` using `RecipeIngredient.unit_label/1` + `Utils.remove_parenthesis/1`; whole-number floats print without `.0` |
 | `keywords` | `recipe.recipe_hashtags` → `hashtag.title` | comma-joined; **requires the `[recipe_hashtags: :hashtag]` preload in `Food.Recipes.get_recipe!/1`** |
+| `totalTime` | `preperation_time_lower_limit` + `cooking_time_lower_limit` | `total_time_minutes/1`; omitted when both are 0 |
+| `datePublished` | `recipe.inserted_at` | ISO-8601; helps freshness |
+| `nutrition` | `recipe.nutrients` → `NutrientUtils.macro_summary/1` | `jsonld_nutrition/1`; `NutritionInformation` **per serving** (whole-recipe totals ÷ `servings`): `calories` + protein/fat/saturatedFat/carbohydrate/sugar/fiber/sodium. Reuses the same `macro_summary/1` the calendar/share cards use (parity rule). Omitted when there's no energy value — we never publish fabricated numbers |
 | `recipeInstructions[].text` | `step.description` (or `title`) | |
-| `recipeInstructions[].name` | `step.title` | per-step enhancement; omitted if step has no title |
+| `recipeInstructions[].name` | `step.title`, else `"Step N"` | **always present now** — falls back to the 1-based position so Google never reports a missing step `name` |
 
-**Google Search Console "Enhance item appearance" warnings** — these are the non-critical warnings ("Βελτίωση εμφάνισης στοιχείων" in the Greek console) that recipes are *valid* but could be enriched. The table above closes: `author`, `recipeIngredient`, `recipeCuisine`, `keywords`, and per-step `name`. The following warnings are **deliberately left open** because the data doesn't exist and faking it violates Google's policy or misrepresents the page:
+**Google Search Console "Enhance item appearance" warnings** — these are the non-critical warnings ("Βελτίωση εμφάνισης στοιχείων" in the Greek console) that recipes are *valid* but could be enriched. The table above closes: `author`, `recipeIngredient`, `recipeCuisine`, `keywords`, `totalTime`, `datePublished`, **`nutrition`** (added 2026-10-19 — the app's whole reason to exist, so the biggest win), and per-step `name`. The following warnings are **deliberately left open** because the data doesn't exist and faking it violates Google's policy or misrepresents the page:
 
 - **`aggregateRating`** — there is no recipe rating/review feature yet (`MealPlanRating` is the nutritionist meal-plan feature, unrelated). Never emit fabricated or constant ratings — it risks a manual action. Add this only once real user ratings are collected and *displayed on the page*.
-- **`video`** and per-step **`image`/`video`** — no recipe video content exists.
+- **`video`** and per-step **`image`/`video`** — no recipe video content exists (`Step` is an embedded schema with only `title`/`description`/`index` — no image field).
 - **`recipeCategory`** — no dedicated meal-type field on the recipe; would have to be derived (e.g. from hashtags) and is low value, so it's skipped for now.
 
 **What it does**: JSON-LD is a machine-readable description of your page's content using a standard vocabulary ([schema.org](https://schema.org)). Google uses it to show **rich results** — enhanced search listings that look like this:
@@ -324,6 +344,23 @@ them here).
   "How Phoenix LiveView interacts with SEO" above makes this worth doing for any
   new public LiveView).
 
+> ✅ **We can work with Search Console programmatically — the REST API is already
+> configured.** The same Google service account used for GA4
+> (`GA4_SA_KEY` + `GSC_SITE_URL="sc-domain:m3hungry.com"`, see `docs/app_status.md §7`)
+> is granted on the GSC property, so you don't have to click through the UI. Two
+> endpoints are wired/available:
+> - **Search Analytics** — `Mehungry.Report.SearchConsole.fetch/1` pulls
+>   clicks/impressions/CTR/position + the `/foods` subset + top queries/pages, and
+>   feeds the automated `mix report.snapshot`. Extend it for any dimension the API
+>   supports (device, country, date-trend, page/query filters) — that's exactly how
+>   the 2026-10-19 snapshot above was produced.
+> - **URL Inspection API** (`https://searchconsole.googleapis.com/v1/urlInspection/index:inspect`,
+>   same `webmasters.readonly` token from `Mehungry.Report.GoogleAuth`) returns
+>   Google's per-URL **index verdict, coverage state, canonical choice, and
+>   rich-result issues** — the source of the duplicate-canonical and Recipe
+>   structured-data findings above. Call it ad-hoc to check any URL after a deploy +
+>   recrawl without opening the console.
+
 ### 2. GA4 (organic as a traffic channel)
 
 GA4 → **Acquisition → Traffic acquisition** breaks sessions down by channel
@@ -386,6 +423,16 @@ SEO on the species page:
 ---
 
 ## Condition pages (`/conditions/:id`)
+
+> 🚫 **DEPRECATED / BEING REMOVED (2026-10-19) — condition pages are no longer part of the
+> project.** Surfacing dietary advice targeted at named medical conditions ("foods to eat /
+> avoid for ulcerative colitis", etc.) makes the product a **regulated medical device** under
+> EU MDR / software-as-a-medical-device rules — a compliance burden we **cannot support for
+> now**. The `/conditions/:id` pages, their SEO targeting, and any condition-query growth plan
+> are therefore **off the roadmap**. Do **not** invest further in ranking them, and do not treat
+> condition queries as an opportunity elsewhere in this doc (the 2026-10-19 snapshot section
+> flagged them before this decision — that guidance is now void). The content below is retained
+> only as historical record of what the pages did while they existed.
 
 `ConditionDetailLive.Index` (e.g. `/en/conditions/16` = Peptic Ulcer Disease) is a high-value SEO target: it matches informational health queries like "peptic ulcer diet", "foods to avoid", "what to eat when you have ulcers". Search Console showed it *ranking* for exactly those queries but at **position ~80** (page 8) with **0 clicks** — indexed and topically relevant, but far too low to earn traffic. Diagnosis and the fixes applied:
 
@@ -488,6 +535,80 @@ After deploying, confirm these work:
 - [ ] View source of `/profile` — check `<meta name="robots" content="noindex, nofollow">` is present
 - [ ] Google's [Rich Results Test](https://search.google.com/test/rich-results) with a recipe URL — confirms JSON-LD is valid
 - [ ] Submit sitemap to [Google Search Console](https://search.google.com/search-console)
+
+---
+
+## SEO snapshot — 2026-10-19 (GSC + URL Inspection + Lighthouse)
+
+First deep read using the automated Search Console pull (`Mehungry.Report.SearchConsole`,
+see `docs/app_status.md §7`) plus the GSC **URL Inspection API** and a **Lighthouse**
+snapshot audit. Re-run roughly monthly.
+
+### Trajectory — organic has started and is improving
+28-day window vs the prior 28 days (domain property `sc-domain:m3hungry.com`):
+
+| Metric | Prior 28d | Last 28d |
+|---|---|---|
+| Clicks | 7 | **13** |
+| Impressions | 1,824 | 828 |
+| CTR | 0.38% | **1.57%** |
+| Avg position | **50.1** | **12.6** |
+
+The impression *drop* is healthy: the prior period was mostly junk impressions stuck at
+position ~50 (page 5, invisible). Clicks ~2×, CTR ~4×, and average position moved from
+page 5 to page 1–2 — Google has promoted the useful pages. Desktop 608 impr / mobile 220;
+mobile ranks better (pos 9.6 vs 13.7).
+
+### Two query clusters
+1. **USDA-nutrient noise** (high impressions, ~0 clicks): `"beef, ribeye, steak… calories"`,
+   `"bananas, overripe, raw" "sucrose"`, `abiyuch`, `cabbage nutrition information`. These are
+   `/foods` pages matching literal USDA food-description strings — they rank well (pos 6–8) but
+   are not human queries. This is why **USA = 308 impressions but CTR 0.65%**.
+2. **Health-condition queries — ⚠️ NOT pursued (see below).** The data showed high-intent
+   queries (`best foods for ulcerative colitis`, `colitis diet`, `colitis foods to avoid list`,
+   Hungarian `colitis étrend`) ranking at position 69–85, which *looked* like the biggest
+   opportunity. **As of 2026-10-19 this is off the roadmap:** condition pages are being removed
+   because condition-targeted dietary advice makes the app a regulated medical device (see the
+   🚫 notice under "Condition pages" below). Do not invest in ranking these.
+
+### Google's URL-Inspection verdicts
+Indexing is healthy — `/en/welcome`, `/en/browse`, `/en/conditions/13`, `/en/browse/180` all
+**PASS / "Submitted and indexed"**, robots ALLOWED, fetch SUCCESSFUL. Two issues:
+
+1. **Recipe structured-data warnings — FIXED 2026-10-19.** On recipe `/en/browse/180` Google
+   flagged the Recipe JSON-LD missing `nutrition`, `recipeCategory`, `aggregateRating`,
+   `recipeCuisine`, `totalTime`, and per-step `name`/`image`. Closed the data-backed ones in
+   `build_recipe_jsonld/1`: added `nutrition` (per-serving `NutritionInformation` from
+   `recipe.nutrients`), `totalTime`, `datePublished`, and a `"Step N"` fallback so every
+   `HowToStep` is named. `aggregateRating` / `video` / step-images / `recipeCategory` remain
+   open **by design** (no real data — see the warnings list in §4). Re-verify with the
+   [Rich Results Test](https://search.google.com/test/rich-results) after deploy + recrawl.
+2. **Greek `/foods` pages lose to duplicate-canonical (open).** `/en/foods/Κάρδαμο` returns
+   **NEUTRAL — "Duplicate, Google chose different canonical than user"**: Google picked
+   `/en/foods/Cress` as canonical. The Greek-named food URLs aren't indexed on their own —
+   they're folded into the English equivalent. Decide whether Greek food pages should carry
+   distinct localized content/canonical or deliberately point at the English page (and set the
+   canonical accordingly). Until then, Greek food-term queries can't rank their own URL.
+
+### Lighthouse (mobile, snapshot mode)
+`https://www.m3hungry.com/en/browse/180` — **SEO 100 / Best Practices 100** (titles, meta,
+crawlable links, hreflang, valid structured data all pass), **Accessibility 84**. Note:
+`navigation` mode returns `NO_FCP` on LiveView pages in headless Chrome — use `mode: "snapshot"`
+against an already-loaded page. Accessibility failures (not direct ranking factors, but worth
+fixing for page experience + real users):
+
+- **color-contrast** — hashtag chips (`#greek`, `#cretan`, …) render white on `#fb923c`
+  (`bg-primary-400`) = **2.26:1** (need 4.5:1); the **cookie-consent "Accept" button** is
+  `#333` on `#101729` = **1.41:1** (appears on every page). Darken the chip background
+  (`primary-500/600`) and fix the consent-button colors.
+- **button-name** — the mobile search submit button (`#recipe-search-form button.absolute`) has
+  no accessible name (icon-only). Add `aria-label`.
+- **link-name** — the login-overlay link (`a[href="/users/log_in"]` on the recipe image) has no
+  discernible text. Add `aria-label`.
+- **aria-dialog-name** — `#recipe_details_modal` `role="dialog"` has no accessible name
+  (`aria-labelledby` points at an element that isn't present on the dead render).
+- **label-content-name-mismatch** — the modal's "Back" button has `aria-label="close"` while its
+  visible text is "Back"; make the accessible name contain the visible text.
 
 ---
 

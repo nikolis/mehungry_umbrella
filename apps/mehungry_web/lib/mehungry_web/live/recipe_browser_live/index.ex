@@ -628,6 +628,30 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         base
       end
 
+    # totalTime — prep + cook when both known (Google asks for it explicitly).
+    base =
+      case total_time_minutes(recipe) do
+        nil -> base
+        minutes -> Map.put(base, "totalTime", "PT#{minutes}M")
+      end
+
+    # datePublished — helps Google judge freshness; derived from the row's insert.
+    base =
+      case recipe.inserted_at do
+        %NaiveDateTime{} = dt -> Map.put(base, "datePublished", NaiveDateTime.to_iso8601(dt))
+        %DateTime{} = dt -> Map.put(base, "datePublished", DateTime.to_iso8601(dt))
+        _ -> base
+      end
+
+    # nutrition — a NutritionInformation block from the recipe's own USDA-backed
+    # totals (the thing the app is built on), expressed per serving. Only emitted
+    # when we actually have calories, so we never assert fabricated numbers.
+    base =
+      case jsonld_nutrition(recipe) do
+        nil -> base
+        nutrition -> Map.put(base, "nutrition", nutrition)
+      end
+
     # author — recipe.author (free-text) falls back to the recipe owner's name.
     base =
       case jsonld_author(recipe) do
@@ -661,18 +685,21 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       case recipe.steps do
         steps when is_list(steps) and steps != [] ->
           instructions =
-            Enum.map(steps, fn step ->
-              step_jsonld = %{
-                "@type" => "HowToStep",
-                "text" => step.description || step.title || ""
-              }
+            steps
+            |> Enum.with_index(1)
+            |> Enum.map(fn {step, position} ->
+              # `name` is a per-step field Google flags as missing; use the step
+              # title, falling back to "Step N" so every HowToStep is named.
+              name =
+                if is_binary(step.title) and String.trim(step.title) != "",
+                  do: String.trim(step.title),
+                  else: "Step #{position}"
 
-              # `name` is a per-step enhancement Google asks for; use the step title.
-              if is_binary(step.title) and String.trim(step.title) != "" do
-                Map.put(step_jsonld, "name", String.trim(step.title))
-              else
-                step_jsonld
-              end
+              %{
+                "@type" => "HowToStep",
+                "name" => name,
+                "text" => step.description || step.title || name
+              }
             end)
 
           Map.put(base, "recipeInstructions", instructions)
@@ -682,6 +709,48 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       end
 
     base
+  end
+
+  # Sum of prep + cook lower limits (minutes), or nil when neither is set.
+  defp total_time_minutes(recipe) do
+    prep = if is_integer(recipe.preperation_time_lower_limit), do: recipe.preperation_time_lower_limit, else: 0
+    cook = if is_integer(recipe.cooking_time_lower_limit), do: recipe.cooking_time_lower_limit, else: 0
+
+    case prep + cook do
+      0 -> nil
+      total -> total
+    end
+  end
+
+  # schema.org NutritionInformation from the recipe's stored (whole-recipe) USDA
+  # totals, divided to a per-serving basis. `recipe.nutrients` is the aggregate
+  # tree `Mehungry.NutrientUtils.macro_summary/1` already consumes everywhere
+  # else (calendar, share cards), so we reuse it rather than recompute. Returns
+  # nil when there's no energy value — we only publish real numbers.
+  defp jsonld_nutrition(recipe) do
+    nutrients = recipe.nutrients
+
+    if is_map(nutrients) and map_size(nutrients) > 0 do
+      summary = Mehungry.NutrientUtils.macro_summary(nutrients)
+      servings = if is_integer(recipe.servings) and recipe.servings > 0, do: recipe.servings, else: 1
+
+      if summary.energy_kcal > 0 do
+        per = fn value -> value / servings end
+
+        %{
+          "@type" => "NutritionInformation",
+          "servingSize" => "1 serving",
+          "calories" => "#{round(per.(summary.energy_kcal))} kcal",
+          "proteinContent" => "#{Float.round(per.(summary.protein_g), 1)} g",
+          "fatContent" => "#{Float.round(per.(summary.fat_g), 1)} g",
+          "saturatedFatContent" => "#{Float.round(per.(summary.saturated_fat_g), 1)} g",
+          "carbohydrateContent" => "#{Float.round(per.(summary.carbs_g), 1)} g",
+          "sugarContent" => "#{Float.round(per.(summary.sugars_g), 1)} g",
+          "fiberContent" => "#{Float.round(per.(summary.fiber_g), 1)} g",
+          "sodiumContent" => "#{round(per.(summary.sodium_mg))} mg"
+        }
+      end
+    end
   end
 
   defp jsonld_author(recipe) do
