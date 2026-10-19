@@ -42,7 +42,26 @@ defmodule Mehungry.Report.SnapshotTest do
                "| 2026-10-24 | 50 (16) | 4 | 85 (5) | 1 / 0 / 25 / 8 | GA4 n/a; GSC n/a; 200 anon sessions all-time | |"
     end
 
-    test "uses GA4 session count in the traffic column when GA4 resolved" do
+    test "headlines the bot-filtered real session count in the traffic column" do
+      ga4 =
+        {:ok,
+         %{
+           window_days: 28,
+           totals: %{sessions: 142, engaged_sessions: 100},
+           bot_totals: %{sessions: 30, engaged_sessions: 10},
+           channels: [],
+           countries: [],
+           cities: [],
+           pages: []
+         }}
+
+      row = Snapshot.to_log_row(sample(%{ga4: ga4}))
+
+      # real = engaged (100) - datacenter engaged (10) = 90
+      assert row =~ "~90 GA4 real sessions/28d (142 raw incl. bots)"
+    end
+
+    test "falls back to the raw session count when the bot split is unavailable" do
       ga4 = {:ok, %{window_days: 28, totals: %{sessions: 142}, channels: [], countries: [], pages: []}}
       row = Snapshot.to_log_row(sample(%{ga4: ga4}))
 
@@ -87,9 +106,11 @@ defmodule Mehungry.Report.SnapshotTest do
           {:ok,
            %{
              window_days: 28,
-             totals: %{sessions: 142, active_users: 110, new_users: 40, engagement_rate: 0.58, avg_session_seconds: 95},
+             totals: %{sessions: 142, active_users: 110, new_users: 40, engagement_rate: 0.58, avg_session_seconds: 95, engaged_sessions: 100},
+             bot_totals: %{sessions: 30, active_users: 20, new_users: 18, engagement_rate: 0.1, avg_session_seconds: 3, engaged_sessions: 10},
              channels: [%{label: "Direct", value: 90}, %{label: "Organic Search", value: 12}],
              countries: [%{label: "Greece", value: 130}],
+             cities: [%{label: "Prineville", value: 18}, %{label: "Rethimno", value: 14}],
              pages: [%{label: "/home", value: 200}]
            }},
         search_console:
@@ -108,6 +129,12 @@ defmodule Mehungry.Report.SnapshotTest do
       report = Snapshot.to_report(sample(overrides))
 
       assert report =~ "142 sessions, 110 active users, 40 new users"
+      assert report =~ "datacenter-city sessions (infra/bot — see cities): 30"
+      # non-engaged = sessions (142) - engaged (100) = 42
+      assert report =~ "non-engaged sessions (<10s / single-view — bot-like): 42"
+      # real = engaged (100) - datacenter engaged (10) = 90
+      assert report =~ "REAL audience (engaged >10s, non-datacenter): 90 sessions"
+      assert report =~ "cities (curate datacenter denylist from here): Prineville=18, Rethimno=14"
       assert report =~ "Direct=90, Organic Search=12"
       assert report =~ "Search Console (last 28d): 4 clicks, 900 impressions"
       assert report =~ "/foods pages: 1 clicks, 120 impressions"

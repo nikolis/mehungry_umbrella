@@ -253,6 +253,34 @@ countries, top 5 pages/screens, and acquisition by channel (Direct / Organic Sea
 Organic Social / Referral). The leading indicator worth watching is **Search Console
 impressions** on the `/foods` SEO pages (shipped ~2026-10-16) — the first sign organic is starting.
 
+> **⚠️ Always separate bot/crawler noise from the real audience.** GA4 drops only
+> *known* bots; crawler traffic that evades that filter is the **bulk** of this tiny
+> app's sessions (at the 2026-10-19 snapshot, only **16 of 80** sessions were real).
+> Do **not** filter by country — that wrongly discards legitimate users abroad. Instead
+> flag two reliable tells, which `mix report.snapshot` applies automatically
+> (`Mehungry.Report.GA4`):
+>
+> 1. **Datacenter-city denylist.** Sessions geolocating to hyperscaler datacenter towns
+>    are near-certain hosting/crawler traffic. Most of this app's noise is **Meta/Facebook
+>    link-preview crawlers** (we auto-post recipe URLs to Facebook), which resolve to Meta
+>    datacenter towns — **Prineville, Forest City, Luleå (= the "Sweden" traffic), Altoona,
+>    Gallatin** — plus AWS/Google towns (Boardman, The Dalles, Ashburn…). The report prints
+>    a `cities:` breakdown precisely so you can **curate the denylist from evidence**: add a
+>    city once you've confirmed it's a datacenter town and never a real market. The list is
+>    `@default_datacenter_cities` in `ga4.ex`; override with
+>    `config :mehungry, :ga4_datacenter_cities, [...]` (values must match GA4's `city`
+>    labels exactly — note GA4 writes "Lulea"/"Rethimno" without diacritics). **Keep
+>    ambiguous real cities out** (Dublin, Springfield, Fort Worth host datacenters but are
+>    also real places).
+> 2. **Non-engaged / <10s sessions.** GA4's `engagedSessions` = sessions that lasted >10s,
+>    had 2+ views, or converted; `sessions − engagedSessions` is the sub-10-second,
+>    single-view, bot-like bucket.
+>
+> **The headline number is `REAL audience` = engaged (>10s) AND not from a datacenter city**
+> (datacenter *engaged* sessions are subtracted so the two filters don't double-count),
+> with the raw incl.-bots total shown alongside — **never the raw number alone.** Both are
+> proxies, so treat large swings as "verify", confirming against GA4's own bot reporting.
+
 ### 5.4 Derived metrics (how the ratios in §1–3 are computed)
 
 - **Confirmation rate** = `users_confirmed / users_total` = 16 / 49 = **33%**
@@ -275,7 +303,7 @@ Append one row per weekly check (run §5.1 pre-deploy, §5.2 post-deploy). Keep 
 | Date | Users (confirmed) | New users /30d | Recipes (authors) | Comments / Likes / Saves / Follows | Traffic (source) | Notes |
 |---|---|---|---|---|---|---|
 | 2026-10-17 | 49 (16) | 4 | 85 (5) | 1 / 0 / 25 / 8 | ~150 GA4 sessions/mo; 98.3% Greece; 0 organic | Baseline. July-2026 signup spike (27) never retained. `visits`=4,203 all-time, 114 distinct IPs, tracking since 2026-05-19; 411 visits/30d. Social dormant: FB 0 followers/0 eng; Pinterest 73 impr / 3 outbound clicks / audience 1 (30d). |
-| 2026-10-19 | 49 (16) | 4 | 66 (5) | 1 / 0 / 19 / 8 | ~78 GA4 sessions/28d; 828 GSC impr (/foods: 460); 25 anon sessions all-time | **First automated `mix report.snapshot`** (DB+GA4+GSC). **Organic search has started** (vs "0 organic" baseline): 828 GSC impressions / 13 clicks, 460 impr on `/foods`, avg pos 12.6 — top queries are USDA nutrient lookups. ⚠️ GA4 28-day geo shows **US=45 > GR=19** (Sweden=11) and 78% Direct / 95% new — almost certainly bot/crawler noise at ~78 sessions, not a real audience shift; verify with GA4 bot filtering before trusting. Recipes **85→66** (−19, deletions via the new delete/clear-week features — confirm intended). Social: FB/Pinterest pulls now wired but tokens need a prod reconnect (FB insight metric names fixed; Pinterest token expired). |
+| 2026-10-19 | 49 (16) | 4 | 67 (5) | 1 / 0 / 19 / 8 | **~16 real GA4 sessions/28d** (80 raw: 50 datacenter-city + 58 <10s non-engaged); 828 GSC impr (/foods: 460); 25 anon sessions all-time | **First automated `mix report.snapshot`** (DB+GA4+GSC). **Organic search has started** (vs "0 organic" baseline): 828 GSC impressions / 13 clicks, 460 impr on `/foods`, avg pos 12.6 — top queries are USDA nutrient lookups. **GA4 bot-filtering added this day** (see §5.3): of 80 raw sessions only **~16 are real** (engaged >10s + non-datacenter). The inflated "US=46 > GR=19 / Sweden=11" geo is **Meta/Facebook link-preview crawlers** resolving to Meta datacenter towns (Prineville 18, Forest City 11, Luleå 11 = the "Sweden", Altoona, Gallatin) — a consequence of auto-posting recipe URLs to FB, not a real audience shift. Genuine core is still Crete (Rethimno 14, Ierapetra 5, Heraklion 1). Recipes **85→67** (deletions via the new delete/clear-week features — confirm intended). Social: FB M3hungry 1 follower (insights n/a). **Pinterest fixed this day**: root cause was `PINTEREST_ENV` unset → OAuth exchanged against the Pinterest **sandbox**, whose tokens lack a durable refresh token (`:no_refresh_token`). Set `PINTEREST_ENV=live` (Fly secret + `fly.toml [env]`), reconnected from `/profile`, and the snapshot now pulls live analytics: 76 impr / 9 pin clicks / 3 outbound / 12 engagements. |
 
 **What to watch week-over-week**
 1. **New users /30d** — is the trickle turning into a trend, or still flat at ~4?

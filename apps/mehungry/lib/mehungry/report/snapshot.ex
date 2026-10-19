@@ -153,9 +153,23 @@ defmodule Mehungry.Report.Snapshot do
 
     ga4 =
       case s.ga4 do
-        {:ok, %{totals: %{sessions: n}}} -> "~#{n} GA4 sessions/#{s.window_days}d"
-        {:skip, _} -> "GA4 n/a"
-        _ -> "GA4 error"
+        {:ok,
+         %{
+           totals: %{sessions: raw, engaged_sessions: raw_engaged},
+           bot_totals: %{sessions: dc, engaged_sessions: dc_engaged}
+         }}
+        when is_integer(dc) ->
+          real = max(raw_engaged - dc_engaged, 0)
+          "~#{real} GA4 real sessions/#{s.window_days}d (#{raw} raw incl. bots)"
+
+        {:ok, %{totals: %{sessions: n}}} ->
+          "~#{n} GA4 sessions/#{s.window_days}d"
+
+        {:skip, _} ->
+          "GA4 n/a"
+
+        _ ->
+          "GA4 error"
       end
 
     gsc =
@@ -185,12 +199,36 @@ defmodule Mehungry.Report.Snapshot do
 
   defp ga4_block({:ok, g}) do
     t = g.totals
+    b = Map.get(g, :bot_totals, %{})
+    cities = Map.get(g, :cities, [])
+
+    raw = t[:sessions] || 0
+    raw_engaged = t[:engaged_sessions] || 0
+    non_engaged = raw - raw_engaged
+
+    dc = b[:sessions]
+    dc_engaged = b[:engaged_sessions] || 0
+    # Best "real human" proxy: engaged (>10s / multi-view) AND not from a
+    # datacenter city. Subtract datacenter *engaged* sessions so the two
+    # filters don't double-count.
+    real = if is_integer(dc), do: max(raw_engaged - dc_engaged, 0), else: nil
+
+    split =
+      if is_integer(dc) do
+        "    datacenter-city sessions (infra/bot — see cities): #{dc}\n" <>
+          "    non-engaged sessions (<10s / single-view — bot-like): #{non_engaged}\n" <>
+          "    REAL audience (engaged >10s, non-datacenter): #{real} sessions"
+      else
+        "    bot split: unavailable (datacenter totals: #{inspect(b[:error])})"
+      end
 
     """
-      GA4 (last #{g.window_days}d): #{t[:sessions]} sessions, #{t[:active_users]} active users, #{t[:new_users]} new users
-        engagement rate #{t[:engagement_rate]}, avg session #{t[:avg_session_seconds]}s
+      GA4 (last #{g.window_days}d) — ALL traffic incl. bots: #{raw} sessions, #{t[:active_users]} active users, #{t[:new_users]} new users
+    #{split}
+        engagement rate #{t[:engagement_rate]}, avg session #{t[:avg_session_seconds]}s (all traffic)
         channels: #{dim_line(g.channels)}
         countries: #{dim_line(g.countries)}
+        cities (curate datacenter denylist from here): #{dim_line(cities)}
         top pages: #{dim_line(g.pages)}\
     """
   end

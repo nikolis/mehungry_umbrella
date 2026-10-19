@@ -38,13 +38,17 @@ defmodule Mehungry.Report.GA4 do
          {:ok, property} <- property_id(),
          {:ok, token} <- GoogleAuth.access_token(creds, @scope) do
       range = [%{"startDate" => "#{days}daysAgo", "endDate" => "today"}]
+      dc_cities = datacenter_cities()
 
       {:ok,
        %{
          window_days: days,
+         datacenter_cities: dc_cities,
          totals: totals(property, token, range),
+         bot_totals: totals(property, token, range, city_filter(dc_cities)),
          channels: by_dimension(property, token, range, "sessionDefaultChannelGroup", "sessions", 8),
          countries: by_dimension(property, token, range, "country", "sessions", 5),
+         cities: by_dimension(property, token, range, "city", "sessions", 15),
          pages: by_dimension(property, token, range, "pagePath", "screenPageViews", 8)
        }}
     else
@@ -60,32 +64,48 @@ defmodule Mehungry.Report.GA4 do
   # Reports
   # ---------------------------------------------------------------------------
 
-  defp totals(property, token, range) do
-    body = %{
-      "dateRanges" => range,
-      "metrics" => [
-        %{"name" => "sessions"},
-        %{"name" => "activeUsers"},
-        %{"name" => "newUsers"},
-        %{"name" => "engagementRate"},
-        %{"name" => "averageSessionDuration"}
-      ]
-    }
+  defp totals(property, token, range, extra \\ %{}) do
+    body =
+      Map.merge(
+        %{
+          "dateRanges" => range,
+          "metrics" => [
+            %{"name" => "sessions"},
+            %{"name" => "activeUsers"},
+            %{"name" => "newUsers"},
+            %{"name" => "engagementRate"},
+            %{"name" => "averageSessionDuration"},
+            # engagedSessions = sessions that lasted >10s OR had 2+ views OR a
+            # conversion (GA4's own definition). sessions - engagedSessions is
+            # therefore the "<10s, single-view" bot-like bucket.
+            %{"name" => "engagedSessions"}
+          ]
+        },
+        extra
+      )
 
     case run_report(property, token, body) do
       {:ok, %{"rows" => [%{"metricValues" => values} | _]}} ->
-        [sessions, active, new, eng_rate, avg_dur] = Enum.map(values, & &1["value"])
+        [sessions, active, new, eng_rate, avg_dur, engaged] = Enum.map(values, & &1["value"])
 
         %{
           sessions: to_int(sessions),
           active_users: to_int(active),
           new_users: to_int(new),
           engagement_rate: to_float(eng_rate),
-          avg_session_seconds: round(to_float(avg_dur))
+          avg_session_seconds: round(to_float(avg_dur)),
+          engaged_sessions: to_int(engaged)
         }
 
       {:ok, _} ->
-        %{sessions: 0, active_users: 0, new_users: 0, engagement_rate: 0.0, avg_session_seconds: 0}
+        %{
+          sessions: 0,
+          active_users: 0,
+          new_users: 0,
+          engagement_rate: 0.0,
+          avg_session_seconds: 0,
+          engaged_sessions: 0
+        }
 
       {:error, reason} ->
         %{error: reason}
@@ -149,6 +169,65 @@ defmodule Mehungry.Report.GA4 do
       id when is_binary(id) and id != "" -> {:ok, String.replace(id, ~r/\D/, "")}
       _ -> {:skip, "GA4_PROPERTY_ID not set"}
     end
+  end
+
+  # GA4 already drops *known* bots, but crawler/noise traffic that evades that
+  # filter is the bulk of this tiny app's sessions. We DON'T filter by country
+  # (that would wrongly discard legitimate users abroad). Instead we flag two
+  # reliable infrastructure/behaviour tells:
+  #
+  #   1. Datacenter cities — sessions geolocating to hyperscaler datacenter
+  #      towns (Ashburn, The Dalles, Boardman, Council Bluffs…) are near-certain
+  #      hosting/crawler traffic, not residential users. We run the totals a
+  #      second time filtered to this city denylist to get an exact bot count.
+  #      Curate the list from the `cities:` breakdown the report prints — add a
+  #      city once you've confirmed it's a datacenter town, never a real market.
+  #   2. Non-engaged / <10s sessions — see `engagedSessions` in `totals/4`.
+  #
+  # Override the denylist with `config :mehungry, :ga4_datacenter_cities, [...]`.
+  # City values must match GA4's `city` dimension labels exactly.
+  # Exact GA4 `city` labels. Most noise here is Meta/Facebook link-preview
+  # crawlers (the app auto-posts recipe URLs to Facebook), which geolocate to
+  # Meta's datacenter towns — hence the Prineville/Forest City/Luleå/Altoona
+  # cluster. Deliberately excludes ambiguous real cities (Dublin, Springfield,
+  # Fort Worth) even though they host datacenters, to avoid dropping humans.
+  @default_datacenter_cities [
+    # AWS / Google / Azure
+    "Ashburn",
+    "Boardman",
+    "The Dalles",
+    "Council Bluffs",
+    "Moncks Corner",
+    "Quincy",
+    # Meta / Facebook datacenter towns (dominant source of this app's crawler noise)
+    "Prineville",
+    "Forest City",
+    "Lulea",
+    "Altoona",
+    "Gallatin",
+    "New Albany",
+    "Eagle Mountain",
+    "Papillion",
+    "Huntsville",
+    "Sarpy County"
+  ]
+
+  def datacenter_cities do
+    case Application.get_env(:mehungry, :ga4_datacenter_cities) do
+      [_ | _] = list -> list
+      _ -> @default_datacenter_cities
+    end
+  end
+
+  defp city_filter(cities) do
+    %{
+      "dimensionFilter" => %{
+        "filter" => %{
+          "fieldName" => "city",
+          "inListFilter" => %{"values" => cities}
+        }
+      }
+    }
   end
 
   defp value_of(%{"value" => v}), do: v

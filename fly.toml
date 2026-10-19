@@ -24,6 +24,9 @@ primary_region = "lhr"  # London — closest available region to the Supabase DB
   # with headroom for the migrator (pool 2) and the odd admin psql session.
   POOL_SIZE = "10"
   AWS_ASSETS_BUCKET_NAME = "mehungry-main-bucket"
+  # Use the real Pinterest API (not the sandbox). Sandbox tokens lack a durable
+  # refresh token, which breaks the daily PinterestTokenRefreshWorker.
+  PINTEREST_ENV = "live"
 
 [http_service]
   internal_port = 4000
