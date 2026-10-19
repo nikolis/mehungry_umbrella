@@ -23,6 +23,8 @@ usda_rest_call
 *.ez
 *.auth
 *.sh
+# ...except the committed snapshot trigger wrapper (secrets stay in a local env file).
+!bin/report_snapshot.sh
 .env
 
 # Editor swap files
