@@ -142,7 +142,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
         &handle_tool/3,
         acc,
         telemetry_metadata: %{agent: "recipe"},
-        model: model_for(context.brief),
+        model: @model,
         max_tokens: 8192,
         # Authentic specialty cuisines (e.g. Japanese: mirin, panko, dashi, bonito…)
         # trigger several create_ingredient calls before the recipe can be submitted;
@@ -188,17 +188,13 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   end
 
   # The viewer's content locale ("en"/"el"/nil) collapses to the two languages we
-  # support in generation. Unknown/nil defaults to English, preserving the prior
-  # behavior for every existing call site that passes no :language.
+  # support. Unknown/nil defaults to English, preserving the prior behavior for
+  # every existing call site that passes no :language. Only the *output* language
+  # of the final prose is affected (the polish pass translates) — the generation
+  # loop and ingredient resolution always run in English, so Greek runs resolve
+  # exactly like English ones.
   defp normalize_language("el"), do: "el"
   defp normalize_language(_), do: "en"
-
-  # Greek output is routed to the stronger writer model — Haiku's Greek fluency is
-  # the weak link, and the prose quality gap is where a user would notice it.
-  # English keeps the cheaper/faster default. (The polish pass already runs on
-  # @writer_model regardless, so only the loop model changes.)
-  defp model_for(%{language: "el"}), do: @writer_model
-  defp model_for(_), do: @model
 
   defp seed_names(seed, role) do
     (Map.get(seed, role) || Map.get(seed, String.to_atom(role)) || [])
@@ -225,7 +221,6 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     """
     #{persona_block(brief)}
     #{cuisine_block(brief)}
-    #{language_block(brief)}
     To generate a recipe from the user's description, follow these steps IN ORDER:
 
     1. First commit to ONE specific, real, traditional dish of the cuisine and name
@@ -273,12 +268,12 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   # Reproduces a specific existing recipe instead of inventing a dish. The tool
   # workflow (search → create → submit → fix) is identical to generic generation;
   # only the framing changes: faithful ingredients, reworded steps, fresh prose.
-  defp import_system_prompt(brief) do
+  defp import_system_prompt(_brief) do
     """
     You are an expert recipe editor. You are given an existing recipe that was
     imported from a web page. Your job is to reproduce it in this app's database —
     NOT to invent a new dish, and NOT to "improve" or restyle it.
-    #{language_block(brief)}
+
     Follow these steps IN ORDER:
 
     1. Reproduce the ingredient list as EXACTLY as possible: the same ingredients,
@@ -406,29 +401,6 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   end
 
   defp cuisine_block(_), do: ""
-
-  # The one place language is pinned. The reader-facing prose is written in the
-  # target language, but the ingredient `name`s the model searches with MUST stay
-  # English — the ingredient DB is USDA English names, and the provenance/name
-  # gate (name_matches?/2) compares against them. Separating "search in English,
-  # write prose in Greek" is what keeps resolution working while the output
-  # localizes. Empty string for English (the default) leaves behavior unchanged.
-  defp language_block(%{language: "el"}) do
-    """
-    ## Output language
-
-    Write ALL reader-facing text in Greek (Ελληνικά): the title, the description,
-    every step and its tip, and the hashtags. Write natural, fluent Greek the way
-    a Greek home cook actually speaks — not a word-for-word translation of English.
-
-    EXCEPTION — keep these in plain English, because they are matched against an
-    English-language ingredient database: the `name` you pass to search_ingredient
-    and create_ingredient, and the `name` field on each recipe_ingredient. Only the
-    prose the end user reads is in Greek.
-    """
-  end
-
-  defp language_block(_), do: ""
 
   # Steers ingredient selection from the setup's seed ingredients, and hard-bans
   # the avoid list. Empty string when there are no seed ingredients.
@@ -880,12 +852,22 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   defp polish_system_prompt(_brief, step_count), do: generic_polish_system_prompt(step_count)
 
-  # The polish pass rewrites title/description/steps/hashtags; it must keep them in
-  # the target language (it runs on @writer_model, which handles Greek well). No
-  # ingredient-name exception here — polish never touches ingredient resolution.
+  # The polish pass is where Greek output is produced. The draft it receives is in
+  # English (the loop always generates English so ingredient resolution works); the
+  # polish both cleans up prose AND translates the four reader-facing fields to
+  # Greek. It runs on @writer_model (Sonnet), which translates well. Polish never
+  # touches recipe_ingredients, so English ingredient resolution is preserved; and
+  # on any polish failure the English draft is kept (graceful degradation, never a
+  # hard failure).
   defp prepend_polish_language(system, %{language: "el"}) do
-    "IMPORTANT: Write the title, description, every step, and the hashtags in " <>
-      "Greek (Ελληνικά) — natural, fluent Greek, not a literal translation.\n\n" <> system
+    """
+    IMPORTANT — OUTPUT LANGUAGE: The draft below is written in English. Return the
+    title, description, every step, and the hashtags in Greek (Ελληνικά). Translate
+    the meaning faithfully, then make it read like natural, fluent Greek a home cook
+    would write — not a stiff word-for-word translation. Leave NO reader-facing text
+    in English.
+
+    """ <> system
   end
 
   defp prepend_polish_language(system, _), do: system

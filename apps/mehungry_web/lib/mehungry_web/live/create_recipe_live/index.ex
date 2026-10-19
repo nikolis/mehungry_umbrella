@@ -447,7 +447,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       socket.assigns.ai_task_ref == ref ->
         case result do
           {:ok, attrs, unmatched} ->
-            language_name = recipe_language_name(socket.assigns[:current_language])
+            language_name =
+              recipe_language_name(socket.assigns[:ai_language] || socket.assigns[:current_language])
 
             attrs =
               attrs
@@ -805,6 +806,18 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     Map.put(recipe_params, "steps", filtered)
   end
 
+  # Decides the output language of a generated recipe. Greek when the app is in the
+  # Greek locale OR the prompt itself is written in Greek — so "prompt in Greek →
+  # recipe in Greek" holds regardless of which UI locale the user happens to be in.
+  # The generation loop still runs in English (see RecipeAgent); this only selects
+  # whether the final prose is translated to Greek.
+  defp output_language("el", _description), do: "el"
+  defp output_language(_locale, description), do: if(greek?(description), do: "el", else: "en")
+
+  # True if the text contains any Greek-script character.
+  defp greek?(text) when is_binary(text), do: String.match?(text, ~r/\p{Greek}/u)
+  defp greek?(_), do: false
+
   # Maps the viewer's content locale ("en"/"el"/nil) to the `languages.name` FK the
   # recipe row carries. The table holds legacy names "En"/"Gr" (not ISO codes), so
   # a Greek-locale generation must be tagged "Gr" — tagging the Greek prose "En"
@@ -817,13 +830,14 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   defp start_ai_generation(socket, description) do
     case Mehungry.Subscriptions.check_quota(socket.assigns.user.id, "recipe_generation") do
       :ok ->
-        language = socket.assigns[:current_language]
+        language = output_language(socket.assigns[:current_language], description)
         task = Task.async(fn -> Mehungry.AI.RecipeGenerator.run(description, language) end)
 
         {:noreply,
          socket
          |> assign(:ai_generating, true)
          |> assign(:ai_task_ref, task.ref)
+         |> assign(:ai_language, language)
          |> assign(:show_ai_ingredients_modal, false)
          |> assign(:ai_pending_prompt, nil)
          |> assign(:ai_unmatched, [])
@@ -850,6 +864,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
          socket
          |> assign(:ai_generating, true)
          |> assign(:ai_task_ref, task.ref)
+         |> assign(:ai_language, "en")
          |> assign(:show_ai_ingredients_modal, false)
          |> assign(:ai_pending_prompt, nil)
          |> assign(:ai_unmatched, [])
