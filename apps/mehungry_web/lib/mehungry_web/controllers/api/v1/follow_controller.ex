@@ -13,9 +13,21 @@ defmodule MehungryWeb.Api.V1.FollowController do
   def follow(conn, %{"id" => id}) do
     follower = conn.assigns.current_user
     target = to_int(id)
-    UserContent.save_user_follow(follower.id, target)
-    Broadcaster.notify(target, "follow", %{follower_id: follower.id})
-    json(conn, data(%{following: true, followers_count: Accounts.count_user_followers(target) || 0}))
+
+    case UserContent.save_user_follow(follower.id, target) do
+      {:error, :self_follow} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{errors: %{detail: "You cannot follow yourself"}})
+
+      _ ->
+        Broadcaster.notify(target, "follow", %{follower_id: follower.id})
+
+        json(
+          conn,
+          data(%{following: true, followers_count: Accounts.count_user_followers(target) || 0})
+        )
+    end
   end
 
   def unfollow(conn, %{"id" => id}) do

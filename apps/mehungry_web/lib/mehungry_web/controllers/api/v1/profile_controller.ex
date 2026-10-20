@@ -22,9 +22,22 @@ defmodule MehungryWeb.Api.V1.ProfileController do
     with {:ok, user} <- fetch_user(id) do
       profile = Accounts.get_user_profile_by_user_id(user.id)
 
+      # This route is 🔓 but personalizes when a bearer token is present, so the
+      # viewer may be anonymous (nil) — then they follow no one.
+      following =
+        case conn.assigns[:current_user] do
+          %{id: viewer_id} -> UserContent.following?(viewer_id, user.id)
+          _ -> false
+        end
+
       json(
         conn,
-        UserJSON.public(%{user: user, profile: profile, counts: counts_for(user)})
+        UserJSON.public(%{
+          user: user,
+          profile: profile,
+          counts: counts_for(user),
+          following: following
+        })
       )
     end
   end
