@@ -29,6 +29,11 @@ re-implement business logic.
 - **Money / plans**: tier strings are `"free" | "m3hungry_plus" | "pro"`.
 - **Language**: honor `Accept-Language` or an explicit `?lang=en|el` param;
   default from `user_profile.language_preference` when authenticated, else `en`.
+  The resolved locale is installed per-request (server-side `SetLocale` plug): it
+  drives content localization (nutrient/compound/ingredient names, see below)
+  **and** the locale of server-rendered strings — the onboarding vocabulary
+  (`preferences/options`) and every error `detail`/`fields` message come back
+  translated to the resolved locale.
 
 ### 1.1 Envelope
 
@@ -233,6 +238,22 @@ for (2), and `"g"` for (3). **Nullability — clients must null-check:**
 - `measurement_unit.abbreviation`: **always `null`** (no such column exists on
   `measurement_units`).
 
+**Localization.** When the resolved locale (§Language) is `el`, the detail is
+served through the same `Food.get_recipe!/2` path the web recipe view uses, with
+two **independent** overlays:
+- **recipe-level** — `title`/`description`/step `description`s are overlaid from
+  the recipe's `RecipeTranslation`, *only if one exists* for the locale;
+- **ingredient-level** — `ingredient.name` and `measurement_unit.name` (and the
+  ingredient's category name) are swapped to their Greek translations
+  (`IngredientTranslation`/`MeasurementUnitTranslation`/`CategoryTranslation`).
+  This is **decoupled** from the recipe-level translation: a recipe that was
+  never fully translated still gets Greek ingredient names.
+
+Both overlays are **non-dropping** — any field with no translation row falls back
+to its stored English value, every ingredient is preserved, and the
+`recipe_ingredient` ids/FKs are kept intact. For `en` (the default) everything is
+returned as stored. (Nutrient names are localized separately — see below.)
+
 **Nutrients.** `nutrients` is the recipe's stored nutrition map serialized
 **verbatim** — a recursive tree keyed by the nutrient's **full display name**
 (`"Carbohydrates"`, `"Energy"`, `"Total Fat"`, `"Vitamins"`, `"Minerals"`, …).
@@ -336,6 +357,8 @@ currently toggles.)
 
 ### `POST /api/v1/users/:id/follow` 🔒 / `DELETE /api/v1/users/:id/follow` 🔒
 `{ "data": { "following": true, "followers_count": 12 } }`
+Both are idempotent (a repeat follow/unfollow is a no-op, never a duplicate row).
+Following yourself returns `422`.
 
 ### `POST /api/v1/recipes/:id/save` 🔒 / `DELETE …` — the profile "saved" tab
 (`Accounts.UserRecipe`).
@@ -344,7 +367,9 @@ currently toggles.)
 
 ## 6. Profiles
 
-### `GET /api/v1/users/:id` 🔓 — public profile (avatar, alias, intro, counts).
+### `GET /api/v1/users/:id` 🔓 — public profile (avatar, alias, intro, counts, `following`).
+When a bearer token is sent, `following` reflects whether the viewer follows this
+user (always `false` for anonymous requests or when viewing yourself-unfollowed).
 ### `GET /api/v1/users/:id/recipes` 🔓 `?type=created|saved` — grid for a profile.
 ### `GET /api/v1/me/recipes` 🔒 `?tab=saved|created|my_ingredients|friends_ingredients`
    — powers the Profile tab's sub-tabs seen in the web app.
@@ -369,7 +394,12 @@ picker. Backed by `Survey` + `Accounts.Rules`. Health-condition selection is
 to nutritionists and admins (see §8).
 
 ### `GET /api/v1/preferences/options` 🔓
-Static vocabulary for the wizard.
+Vocabulary for the wizard. The `key`/`code` values are stable identifiers; the
+`label`s of `diets` and `intolerances` are **localized to the request locale**
+(§Language) using the same gettext msgids as the web onboarding wizard — for `el`
+they come back in Greek (`"Παμφάγος"`, `"Χορτοφάγος"`, `"Έχω δυσανεξία στη
+λακτόζη"`, …). The `languages` labels are intentionally always shown in their own
+language and are not translated.
 ```json
 { "data": {
   "languages": [ {"code":"en","label":"EN — English"}, {"code":"el","label":"ΕΛ — Ελληνικά"} ],

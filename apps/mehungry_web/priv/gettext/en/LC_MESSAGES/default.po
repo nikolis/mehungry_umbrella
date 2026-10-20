@@ -2768,3 +2768,38 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Weekly grocery list"
 msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:13
+#, elixir-autogen, elixir-format
+msgid "Validation failed"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:17
+#, elixir-autogen, elixir-format
+msgid "Not found"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:21
+#, elixir-autogen, elixir-format
+msgid "unauthorized"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:25
+#, elixir-autogen, elixir-format
+msgid "forbidden"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:31
+#, elixir-autogen, elixir-format
+msgid "Quota reached for your plan"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:35
+#, elixir-autogen, elixir-format
+msgid "Too many requests"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:39
+#, elixir-autogen, elixir-format
+msgid "Bad request"
+msgstr ""

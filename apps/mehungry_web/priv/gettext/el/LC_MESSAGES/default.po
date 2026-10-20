@@ -2765,3 +2765,38 @@ msgstr "Αυτό το πρόγραμμα δεν έχει γεύματα που �
 #, elixir-autogen, elixir-format
 msgid "Weekly grocery list"
 msgstr "Εβδομαδιαία λίστα για ψώνια"
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:13
+#, elixir-autogen, elixir-format
+msgid "Validation failed"
+msgstr "Η επικύρωση απέτυχε"
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:17
+#, elixir-autogen, elixir-format
+msgid "Not found"
+msgstr "Δεν βρέθηκε"
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:21
+#, elixir-autogen, elixir-format
+msgid "unauthorized"
+msgstr "Μη εξουσιοδοτημένο"
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:25
+#, elixir-autogen, elixir-format
+msgid "forbidden"
+msgstr "Απαγορεύεται"
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:31
+#, elixir-autogen, elixir-format
+msgid "Quota reached for your plan"
+msgstr "Εξαντλήθηκε το όριο του πακέτου σας"
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:35
+#, elixir-autogen, elixir-format
+msgid "Too many requests"
+msgstr "Πάρα πολλά αιτήματα"
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:39
+#, elixir-autogen, elixir-format
+msgid "Bad request"
+msgstr "Μη έγκυρο αίτημα"

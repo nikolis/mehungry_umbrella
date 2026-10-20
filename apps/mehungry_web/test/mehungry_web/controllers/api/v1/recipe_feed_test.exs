@@ -109,6 +109,73 @@ defmodule MehungryWeb.Api.V1.RecipeFeedTest do
       assert json_response(conn, 404)
     end
 
+    test "error detail is localized to the request locale", %{conn: conn} do
+      en = get(conn, ~p"/api/v1/recipes/99999999") |> json_response(404)
+      assert en["errors"]["detail"] == "Not found"
+
+      el = get(conn, ~p"/api/v1/recipes/99999999?lang=el") |> json_response(404)
+      assert el["errors"]["detail"] == "Δεν βρέθηκε"
+    end
+
+    test "localizes recipe title/description with ?lang=el", %{conn: conn} do
+      {:ok, _lang} = Mehungry.Languages.create_language(%{name: "el"})
+      recipe = FoodFixtures.recipe_fixture(author())
+
+      {:ok, _translation} =
+        %Mehungry.AI.Bot.RecipeTranslation{}
+        |> Mehungry.AI.Bot.RecipeTranslation.changeset(%{
+          recipe_id: recipe.id,
+          language_name: "el",
+          title: "Ελληνικός τίτλος",
+          description: "Ελληνική περιγραφή"
+        })
+        |> Mehungry.Repo.insert()
+
+      en = get(conn, ~p"/api/v1/recipes/#{recipe.id}") |> json_response(200)
+      assert en["data"]["title"] == recipe.title
+
+      el = get(conn, ~p"/api/v1/recipes/#{recipe.id}?lang=el") |> json_response(200)
+      assert el["data"]["title"] == "Ελληνικός τίτλος"
+      assert el["data"]["description"] == "Ελληνική περιγραφή"
+    end
+
+    test "localizes ingredient names with ?lang=el even without a recipe translation",
+         %{conn: conn} do
+      {:ok, _lang} = Mehungry.Languages.create_language(%{name: "el"})
+
+      translated = FoodFixtures.ingredient_fixture(%{name: "Eggplant"})
+      untranslated = FoodFixtures.ingredient_fixture(%{name: "Zucchini"})
+      mu = FoodFixtures.measurement_unit_fixture()
+
+      recipe =
+        FoodFixtures.recipe_fixture(author(), %{
+          recipe_ingredients: [
+            %{ingredient_id: translated.id, measurement_unit_id: mu.id, quantity: 2},
+            %{ingredient_id: untranslated.id, measurement_unit_id: mu.id, quantity: 1}
+          ]
+        })
+
+      {:ok, _} = Mehungry.Food.upsert_ingredient_translation(translated.id, "el", "Μελιτζάνα")
+
+      # No `RecipeTranslation` exists — ingredient localization is decoupled from it.
+      el = get(conn, ~p"/api/v1/recipes/#{recipe.id}?lang=el") |> json_response(200)
+      ingredients = el["data"]["ingredients"]
+
+      names =
+        Map.new(ingredients, fn ing -> {ing["ingredient"]["id"], ing["ingredient"]["name"]} end)
+
+      assert names[translated.id] == "Μελιτζάνα"
+      # the untranslated ingredient is KEPT (not dropped) and falls back to English
+      assert names[untranslated.id] == "Zucchini"
+      # recipe_ingredient ids survive localization (serializer needs them for edits)
+      assert Enum.all?(ingredients, & &1["id"])
+
+      # English request is unaffected.
+      en = get(conn, ~p"/api/v1/recipes/#{recipe.id}") |> json_response(200)
+      en_names = Enum.map(en["data"]["ingredients"], & &1["ingredient"]["name"])
+      assert "Eggplant" in en_names and "Zucchini" in en_names
+    end
+
     test "404 for another user's private recipe", %{conn: conn} do
       recipe = FoodFixtures.recipe_fixture(author(), %{private: true})
       conn = get(conn, ~p"/api/v1/recipes/#{recipe.id}")

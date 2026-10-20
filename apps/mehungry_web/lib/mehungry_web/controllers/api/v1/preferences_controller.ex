@@ -12,25 +12,35 @@ defmodule MehungryWeb.Api.V1.PreferencesController do
 
   action_fallback MehungryWeb.Api.V1.FallbackController
 
+  # Language labels are always shown in their own language, so they are not
+  # translated. Diet/intolerance labels ARE localized to the request locale
+  # (set on the process by `SetLocale`) — same gettext msgids as the web
+  # onboarding wizard (`onboarding/form_component.ex`).
   @languages [%{code: "en", label: "EN — English"}, %{code: "el", label: "ΕΛ — Ελληνικά"}]
-  @diets [
-    %{key: "omnivore", label: "Omnivore"},
-    %{key: "vegetarian", label: "Vegetarian"},
-    %{key: "vegan", label: "Vegan"},
-    %{key: "pescatarian", label: "Pescatarian"}
-  ]
-  @intolerances [%{key: "lactose", label: "I am lactose intolerant"}]
 
-  @doc "GET /api/v1/preferences/options — static wizard vocabulary."
+  @doc "GET /api/v1/preferences/options — static wizard vocabulary (localized)."
   def options(conn, _params) do
     json(
       conn,
       data(%{
         languages: @languages,
-        diets: @diets,
-        intolerances: @intolerances
+        diets: diets(),
+        intolerances: intolerances()
       })
     )
+  end
+
+  defp diets do
+    [
+      %{key: "omnivore", label: gettext("Omnivore")},
+      %{key: "vegetarian", label: gettext("Vegetarian")},
+      %{key: "vegan", label: gettext("Vegan")},
+      %{key: "pescatarian", label: gettext("Pescatarian")}
+    ]
+  end
+
+  defp intolerances do
+    [%{key: "lactose", label: gettext("I am lactose intolerant")}]
   end
 
   @doc "GET /api/v1/me/preferences — current selections + onboarding_level."

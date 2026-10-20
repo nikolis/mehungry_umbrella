@@ -84,6 +84,14 @@ defmodule Mehungry.Food.Recipes do
     end
   end
 
+  # Localize a single recipe to `language_name` (a content locale, e.g. "el").
+  # Two independent overlays:
+  #   * recipe-level — title/description/steps from a `RecipeTranslation`, applied
+  #     only when one exists for the locale;
+  #   * ingredient-level — ingredient/category/unit names, applied to EVERY
+  #     ingredient that has a translation (decoupled from the recipe-level
+  #     translation so recipes that were never fully translated still get Greek
+  #     ingredient names). Non-dropping: untranslated names fall back to English.
   def get_recipe!(id, language_name) do
     recipe = get_recipe!(id)
 
@@ -91,15 +99,9 @@ defmodule Mehungry.Food.Recipes do
       translation =
         Map.get(Localization.load_recipe_translations_map([recipe.id], language_name), recipe.id)
 
-      ing_lang = Localization.ingredient_language_for(language_name)
-
-      if translation && ing_lang do
-        recipe
-        |> Localization.apply_recipe_translation(translation)
-        |> Localization.translate_ingredients_to(ing_lang)
-      else
-        Localization.apply_recipe_translation(recipe, translation)
-      end
+      recipe
+      |> Localization.apply_recipe_translation(translation)
+      |> Localization.localize_recipe_ingredients(language_name)
     else
       recipe
     end

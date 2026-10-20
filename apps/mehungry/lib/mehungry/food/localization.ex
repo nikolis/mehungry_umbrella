@@ -194,6 +194,101 @@ defmodule Mehungry.Food.Localization do
     end
   end
 
+  @doc """
+  Overlays locale translations onto a recipe's **already-preloaded**
+  `recipe_ingredients` — the ingredient name, its category name, and the
+  measurement-unit name — leaving every other field (crucially the
+  `RecipeIngredient` id and FKs) intact.
+
+  Unlike `translate_ingredients_to/2` (inner-join based, used by the list
+  surfaces), this **never drops an ingredient**: any ingredient/category/unit
+  without a translation row for the locale keeps its stored English name. A
+  locale maps to several `language_name` codes (ISO `el` + legacy `Gr`); both are
+  matched and the canonical code wins. No-op for the source locale (`en`), a
+  `nil` locale, or when `recipe_ingredients` isn't loaded.
+  """
+  def localize_recipe_ingredients(%Recipe{} = recipe, locale) do
+    cond do
+      locale in [nil, Locale.source()] -> recipe
+      not is_list(recipe.recipe_ingredients) -> recipe
+      true -> do_localize_recipe_ingredients(recipe, locale)
+    end
+  end
+
+  defp do_localize_recipe_ingredients(recipe, locale) do
+    codes = Locale.data_codes(locale)
+    ris = recipe.recipe_ingredients
+
+    ingredient_ids = collect_ids(ris, & &1.ingredient_id)
+    unit_ids = collect_ids(ris, & &1.measurement_unit_id)
+    category_ids = collect_ids(ris, fn ri -> ri.ingredient && ri.ingredient.category_id end)
+
+    ing_names = name_map(IngredientTranslation, :ingredient_id, ingredient_ids, codes)
+    unit_names = name_map(MeasurementUnitTranslation, :measurement_unit_id, unit_ids, codes)
+    cat_names = name_map(CategoryTranslation, :category_id, category_ids, codes)
+
+    translated = Enum.map(ris, &overlay_recipe_ingredient(&1, ing_names, unit_names, cat_names))
+    %Recipe{recipe | recipe_ingredients: translated}
+  end
+
+  defp collect_ids(ris, fun) do
+    ris |> Enum.map(fun) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+  end
+
+  # Build `%{id => translated_name}` for the rows whose `language_name` is one of
+  # `codes`, preferring the earliest (canonical) code when a row exists in more
+  # than one.
+  defp name_map(_schema, _key, [], _codes), do: %{}
+
+  defp name_map(schema, key, ids, codes) do
+    rank = codes |> Enum.with_index() |> Map.new()
+
+    from(t in schema,
+      where: field(t, ^key) in ^ids and t.language_name in ^codes,
+      select: {field(t, ^key), t.language_name, t.name}
+    )
+    |> Repo.all()
+    |> Enum.reduce(%{}, fn {id, lang, name}, acc ->
+      r = Map.get(rank, lang, length(codes))
+
+      case Map.get(acc, id) do
+        {best, _} when best <= r -> acc
+        _ -> Map.put(acc, id, {r, name})
+      end
+    end)
+    |> Map.new(fn {id, {_r, name}} -> {id, name} end)
+  end
+
+  defp overlay_recipe_ingredient(%RecipeIngredient{} = ri, ing_names, unit_names, cat_names) do
+    %RecipeIngredient{
+      ri
+      | ingredient: overlay_ingredient(ri.ingredient, ing_names, cat_names),
+        measurement_unit: overlay_unit(ri.measurement_unit, unit_names)
+    }
+  end
+
+  defp overlay_ingredient(%Ingredient{} = ing, ing_names, cat_names) do
+    %Ingredient{
+      ing
+      | name: Map.get(ing_names, ing.id, ing.name),
+        category: overlay_category(ing.category, cat_names)
+    }
+  end
+
+  defp overlay_ingredient(other, _ing_names, _cat_names), do: other
+
+  defp overlay_category(%Category{} = cat, cat_names) do
+    %Category{cat | name: Map.get(cat_names, cat.id, cat.name)}
+  end
+
+  defp overlay_category(other, _cat_names), do: other
+
+  defp overlay_unit(%MeasurementUnit{} = mu, unit_names) do
+    %MeasurementUnit{mu | name: Map.get(unit_names, mu.id, mu.name)}
+  end
+
+  defp overlay_unit(other, _unit_names), do: other
+
   def ingredient_display_names(ingredient_ids, language_name)
       when is_list(ingredient_ids) and language_name not in [nil, "en", "En"] do
     from(t in IngredientTranslation,

@@ -106,5 +106,29 @@ defmodule MehungryWeb.Api.V1.AuthProfileTest do
       assert %{"data" => %{"diets" => diets, "languages" => _}} = json_response(conn, 200)
       assert is_list(diets)
     end
+
+    test "GET /api/v1/preferences/options localizes diet/intolerance labels with ?lang=el",
+         %{conn: _conn} do
+      en =
+        Phoenix.ConnTest.build_conn()
+        |> get(~p"/api/v1/preferences/options")
+        |> json_response(200)
+
+      assert %{"key" => "omnivore", "label" => "Omnivore"} in en["data"]["diets"]
+      assert %{"key" => "lactose", "label" => "I am lactose intolerant"} in en["data"]["intolerances"]
+
+      el =
+        Phoenix.ConnTest.build_conn()
+        |> get(~p"/api/v1/preferences/options?lang=el")
+        |> json_response(200)
+
+      assert %{"key" => "omnivore", "label" => "Παμφάγος"} in el["data"]["diets"]
+
+      assert %{"key" => "lactose", "label" => "Έχω δυσανεξία στη λακτόζη"} in
+               el["data"]["intolerances"]
+
+      # Language labels stay in their own language in every locale.
+      assert en["data"]["languages"] == el["data"]["languages"]
+    end
   end
 end

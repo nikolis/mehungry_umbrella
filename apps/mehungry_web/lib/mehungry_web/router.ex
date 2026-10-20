@@ -77,11 +77,13 @@ defmodule MehungryWeb.Router do
   pipeline :api_v1 do
     plug(:accepts, ["json"])
     plug(MehungryWeb.Api.MaybeApiAuthPlug)
+    plug(MehungryWeb.Api.V1.SetLocale)
   end
 
   pipeline :api_v1_auth do
     plug(:accepts, ["json"])
     plug(MehungryWeb.Api.AuthPlug)
+    plug(MehungryWeb.Api.V1.SetLocale)
   end
 
   # Nutritionist-only (`"pro"` tier) mobile API surface (spec §14).
@@ -89,6 +91,7 @@ defmodule MehungryWeb.Router do
     plug(:accepts, ["json"])
     plug(MehungryWeb.Api.AuthPlug)
     plug(MehungryWeb.Api.RequireNutritionistPlug)
+    plug(MehungryWeb.Api.V1.SetLocale)
   end
 
   scope "/api", MehungryWeb.Api do

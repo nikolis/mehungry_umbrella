@@ -11,7 +11,6 @@ defmodule MehungryWeb.Api.V1.RecipeController do
   alias Mehungry.Posts
   alias Mehungry.Users
   alias MehungryWeb.Api.V1.BlueprintMatch
-  alias MehungryWeb.Api.V1.Locale
   alias MehungryWeb.Api.V1.RecipeJSON
 
   action_fallback MehungryWeb.Api.V1.FallbackController
@@ -19,7 +18,7 @@ defmodule MehungryWeb.Api.V1.RecipeController do
   def show(conn, %{"id" => id} = params) do
     user = conn.assigns[:current_user]
 
-    with {:ok, recipe} <- fetch_recipe(id),
+    with {:ok, recipe} <- fetch_recipe(id, conn.assigns[:content_locale]),
          :ok <- authorize_view(recipe, user) do
       engagement = Posts.get_recipe_engagement(recipe.id, user && user.id)
       match = blueprint_match(conn, params, recipe)
@@ -62,10 +61,16 @@ defmodule MehungryWeb.Api.V1.RecipeController do
 
   # ── helpers ────────────────────────────────────────────────────────────
 
-  # `Food.get_recipe!/1` is Cachex-backed and returns `nil` (rather than raising)
-  # for an unknown id, so guard against both.
-  defp fetch_recipe(id) do
-    case Food.get_recipe!(id) do
+  # `Food.get_recipe!/1,2` is Cachex-backed and returns `nil` (rather than
+  # raising) for an unknown id, so guard against both. When `locale` is given,
+  # the arity-2 form localizes title/description/steps (via `RecipeTranslation`)
+  # **and** the ingredient/unit/category names (via `translate_ingredients_to`)
+  # — the exact path the web recipe detail uses (`home_live` → `get_recipe!/2`).
+  # Mutating actions (update/delete) use the un-localized arity-1 form.
+  defp fetch_recipe(id), do: fetch_recipe(id, nil)
+
+  defp fetch_recipe(id, locale) do
+    case Food.get_recipe!(id, locale) do
       nil -> {:error, :not_found}
       recipe -> {:ok, recipe}
     end
@@ -131,8 +136,9 @@ defmodule MehungryWeb.Api.V1.RecipeController do
 
   # `:locale` is threaded into the ctx so `RecipeJSON.detail/4` can localize the
   # nutrient display names (spec §Language) — same labels as the web accordion.
-  defp viewer_ctx(user, conn, params) do
-    user |> base_ctx() |> Map.put(:locale, Locale.resolve(conn, params))
+  # `content_locale` is resolved once per request by `SetLocale`.
+  defp viewer_ctx(user, conn, _params) do
+    user |> base_ctx() |> Map.put(:locale, conn.assigns[:content_locale])
   end
 
   defp base_ctx(nil), do: %{saved_recipe_ids: [], follow_ids: []}

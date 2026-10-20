@@ -229,6 +229,7 @@ defmodule Mehungry.Food do
   # ── Localization ───────────────────────────────────────────────────────
 
   defdelegate apply_recipe_translation(recipe, translation), to: Localization
+  defdelegate localize_recipe_ingredients(recipe, locale), to: Localization
   defdelegate localize_recipes(recipes, language_name), to: Localization
   defdelegate load_recipe_translations_map(recipe_ids, language_name), to: Localization
   defdelegate translate_recipe_if_needed(recipe), to: Localization
