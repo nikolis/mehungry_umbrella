@@ -78,7 +78,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsTest do
       {:ok, view, _html} = live(conn, ~p"/professional/translations/recipes/#{recipe.id}")
 
       view
-      |> form("form", %{
+      |> form("form[phx-submit=save]", %{
         "fields" => %{"title" => "Τίτλος", "description" => "Περιγραφή"},
         "steps" => %{"0" => "Κόψε το κρεμμύδι.", "1" => "Βράσε το νερό."}
       })
@@ -95,5 +95,38 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsTest do
                %{"index" => 1, "description" => "Βράσε το νερό."}
              ]
     end
+
+    test "editing the original updates the base recipe text and steps", %{
+      conn: conn,
+      recipe: recipe
+    } do
+      {:ok, view, _html} = live(conn, ~p"/professional/translations/recipes/#{recipe.id}")
+
+      view
+      |> form("form[phx-submit=save_original]", %{
+        "base" => %{"title" => "Fixed title", "description" => "Fixed description"},
+        "base_steps" => %{"0" => "Dice the onion.", "1" => "Simmer the water."}
+      })
+      |> render_submit()
+
+      updated = Food.get_recipe!(recipe.id)
+
+      assert updated.title == "Fixed title"
+      assert updated.description == "Fixed description"
+      assert Enum.map(updated.steps, & &1.description) == ["Dice the onion.", "Simmer the water."]
+    end
+  end
+
+  test "editing the original updates a flat resource (compound)", %{
+    conn: conn,
+    compound: compound
+  } do
+    {:ok, view, _html} = live(conn, ~p"/professional/translations/compounds/#{compound.id}")
+
+    view
+    |> form("form[phx-submit=save_original]", %{"base" => %{"name" => "Oxalic acid"}})
+    |> render_submit()
+
+    assert Mehungry.Repo.get!(Mehungry.Food.Compound, compound.id).name == "Oxalic acid"
   end
 end

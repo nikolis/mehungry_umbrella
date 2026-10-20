@@ -112,6 +112,36 @@ defmodule Mehungry.Languages.Translations do
     |> Repo.insert_or_update()
   end
 
+  @doc """
+  Update the **source-language** base row's translatable fields in place — the
+  "edit the original" side of the hub editor.
+
+  `field_values` is a map of the descriptor's `:fields` to new text. Only those
+  fields are cast (a targeted `cast/3`, not the base schema's full changeset), so
+  a partial edit can't trip unrelated required-field validations on the base row.
+
+  `opts[:steps]`, when given (recipe descriptor only), is a list of step param
+  maps — each carrying the existing embed's `"id"` so `cast_embed/3` updates it
+  in place rather than replacing the collection.
+  """
+  def update_base(descriptor, base, field_values, opts \\ []) do
+    step_params = Keyword.get(opts, :steps)
+
+    params =
+      case step_params do
+        nil -> field_values
+        steps -> Map.put(field_values, :steps, steps)
+      end
+
+    base
+    |> Ecto.Changeset.cast(params, descriptor.fields)
+    |> maybe_cast_steps(step_params)
+    |> Repo.update()
+  end
+
+  defp maybe_cast_steps(changeset, nil), do: changeset
+  defp maybe_cast_steps(changeset, _steps), do: Ecto.Changeset.cast_embed(changeset, :steps)
+
   @doc "Mark the existing translation for `(base_id, locale)` verified."
   def verify(descriptor, base_id, locale, opts \\ []) do
     codes = Locale.data_codes(locale)

@@ -173,6 +173,30 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
   end
 
   @impl true
+  def handle_event("save_original", %{"base" => base_fields} = params, socket) do
+    %{descriptor: descriptor, base: base, base_steps: base_steps} = socket.assigns
+
+    field_values =
+      Map.new(descriptor.fields, fn field ->
+        {field, Map.get(base_fields, Atom.to_string(field))}
+      end)
+
+    opts = original_steps_opt(descriptor, params["base_steps"], base_steps)
+
+    case Translations.update_base(descriptor, base, field_values, opts) do
+      {:ok, updated} ->
+        {:noreply,
+         socket
+         |> assign(:base, updated)
+         |> assign(:base_steps, recipe_steps(descriptor, updated))
+         |> put_flash(:info, "Original updated.")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not update the original.")}
+    end
+  end
+
+  @impl true
   def handle_info(:do_translate, socket) do
     %{descriptor: descriptor, base: base, locale: locale} = socket.assigns
 
@@ -283,6 +307,26 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
   end
 
   defp maybe_put_steps(field_values, _descriptor, _step_params, _base_steps), do: field_values
+
+  # Build `cast_embed`-ready step params for an original (source-language) edit:
+  # carry each existing step's `id` (so Ecto updates it in place) + its title,
+  # overlaying the submitted description (falling back to the current one).
+  defp original_steps_opt(%{ai: :recipe}, step_fields, base_steps)
+       when is_map(step_fields) and base_steps != [] do
+    steps =
+      Enum.map(base_steps, fn step ->
+        %{
+          "id" => step.id,
+          "index" => step.index,
+          "title" => step.title,
+          "description" => Map.get(step_fields, to_string(step.index)) || step.description
+        }
+      end)
+
+    [steps: steps]
+  end
+
+  defp original_steps_opt(_descriptor, _step_fields, _base_steps), do: []
 
   defp item_title(descriptor, base), do: Map.get(base, descriptor.name_field) || "##{base.id}"
 
@@ -414,8 +458,8 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
         </button>
       </div>
 
-      <form phx-submit="save" class="grid grid-cols-2 gap-5">
-        <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-5">
+        <form phx-submit="save_original" class="space-y-3">
           <div class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">
             Original ({Locale.source()})
           </div>
@@ -423,28 +467,39 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
             <%= for field <- @descriptor.fields do %>
               <div>
                 <label class="block text-xs text-parchment-dim mb-1">{field_label(field)}</label>
-                <div class="text-sm text-parchment whitespace-pre-wrap">
-                  {Map.get(@base, field) || "—"}
-                </div>
+                <textarea
+                  name={"base[#{field}]"}
+                  rows={textarea_rows(field)}
+                  class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none resize-none"
+                ><%= Map.get(@base, field) %></textarea>
               </div>
             <% end %>
           </div>
-          <div :if={@base_steps != []} class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4">
-            <div class="text-xs text-parchment-dim mb-2">Steps</div>
-            <ol class="space-y-3">
-              <li :for={step <- @base_steps} class="flex gap-3">
-                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-ink-panel2 text-parchment-dim text-[10px] font-bold flex items-center justify-center mt-0.5">
+          <div :if={@base_steps != []} class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 space-y-3">
+            <div class="text-xs text-parchment-dim">Steps</div>
+            <div :for={step <- @base_steps}>
+              <label class="flex items-center gap-1.5 text-xs text-parchment-dim mb-1">
+                <span class="w-4 h-4 rounded-full bg-ink-panel2 text-parchment-dim text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                   {step.index + 1}
                 </span>
-                <p class="text-sm text-parchment leading-relaxed whitespace-pre-wrap">
-                  {step.description}
-                </p>
-              </li>
-            </ol>
+                Step {step.index + 1}
+              </label>
+              <textarea
+                name={"base_steps[#{step.index}]"}
+                rows="3"
+                class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none resize-none"
+              ><%= step.description %></textarea>
+            </div>
           </div>
-        </div>
+          <button
+            type="submit"
+            class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-ink-panel2 hover:bg-ink-panel border border-ink-panel2/60 text-parchment hover:text-white text-sm font-medium transition-colors"
+          >
+            <.icon name="hero-pencil-square" class="h-4 w-4" /> Save original
+          </button>
+        </form>
 
-        <div class="space-y-3">
+        <form phx-submit="save" class="space-y-3">
           <div class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">
             Translation ({@locale})
           </div>
@@ -483,8 +538,8 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
           >
             <.icon name="hero-check-badge" class="h-4 w-4" /> Save &amp; Verify
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
     """
   end

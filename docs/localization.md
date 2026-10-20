@@ -186,6 +186,13 @@ one code path:
   Save & Verify. Steps persist to `RecipeTranslation.steps` and are overlaid by
   `Localization.apply_recipe_translation/2`. The bulk worker already translated
   steps; this closes the same gap in the per-item review editor.
+- **Editable original** — the per-item editor is two-sided: each column is its own
+  form. The left **Original** side edits the source-language base row in place
+  ("Save original" → `Translations.update_base/4`, a targeted `cast` of just the
+  `:fields`, with recipe steps re-cast through `cast_embed` by their `id`); the
+  right **Translation** side upserts the `*_translation` row ("Save & Verify"). So
+  an admin can fix a typo in the English source and its Greek translation from the
+  same screen without leaving the hub.
 - **Locale codes** — `Mehungry.Languages.Locale` is the core-side twin of
   `MehungryWeb.Locale`: new rows are written under the ISO code (`"el"`), while coverage
   counts **both** ISO and legacy codes (`["el", "Gr"]`) so pre-existing `Gr` rows still
