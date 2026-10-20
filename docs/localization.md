@@ -179,6 +179,13 @@ one code path:
   (structured steps). Per-item "AI Translate → review → Save & Verify", or bulk
   "AI-translate all missing" via `ObanWorkers.ResourceTranslationWorker` (`:ai_agents`
   queue) which writes `ai_draft`s for a human to confirm.
+- **Recipe steps** — the recipe editor is the one descriptor whose translatable
+  content isn't flat text: beyond the `:title`/`:description` fields it renders the
+  recipe's embedded `Food.Step`s as a per-step textarea (matched on `step.index`),
+  so AI Translate fills them in and the admin reviews/edits each step before
+  Save & Verify. Steps persist to `RecipeTranslation.steps` and are overlaid by
+  `Localization.apply_recipe_translation/2`. The bulk worker already translated
+  steps; this closes the same gap in the per-item review editor.
 - **Locale codes** — `Mehungry.Languages.Locale` is the core-side twin of
   `MehungryWeb.Locale`: new rows are written under the ISO code (`"el"`), while coverage
   counts **both** ISO and legacy codes (`["el", "Gr"]`) so pre-existing `Gr` rows still

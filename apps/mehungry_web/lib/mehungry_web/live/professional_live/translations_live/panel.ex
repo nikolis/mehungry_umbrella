@@ -77,11 +77,15 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
     locale = socket.assigns.locale
     pair = Translations.get_pair(descriptor, String.to_integer(params["id"]), locale)
 
+    base_steps = recipe_steps(descriptor, pair.base)
+
     socket
     |> assign(:page_title, "Translate: #{item_title(descriptor, pair.base)}")
     |> assign(:base, pair.base)
     |> assign(:translation, pair.translation)
     |> assign(:draft, draft_from(descriptor, pair.translation))
+    |> assign(:base_steps, base_steps)
+    |> assign(:step_drafts, step_drafts_from(base_steps, pair.translation))
     |> assign(:translating, false)
   end
 
@@ -142,13 +146,14 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
   end
 
   @impl true
-  def handle_event("save", %{"fields" => fields}, socket) do
-    %{descriptor: descriptor, base: base, locale: locale, current_user: user} = socket.assigns
+  def handle_event("save", %{"fields" => fields} = params, socket) do
+    %{descriptor: descriptor, base: base, base_steps: base_steps, locale: locale, current_user: user} =
+      socket.assigns
 
     field_values =
-      Map.new(descriptor.fields, fn field ->
-        {field, Map.get(fields, Atom.to_string(field))}
-      end)
+      descriptor.fields
+      |> Map.new(fn field -> {field, Map.get(fields, Atom.to_string(field))} end)
+      |> maybe_put_steps(descriptor, params["steps"], base_steps)
 
     case Translations.upsert(descriptor, base.id, locale, field_values,
            status: "verified",
@@ -159,6 +164,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
          socket
          |> assign(:translation, translation)
          |> assign(:draft, draft_from(descriptor, translation))
+         |> assign(:step_drafts, step_drafts_from(base_steps, translation))
          |> put_flash(:info, "Saved & verified.")}
 
       {:error, _changeset} ->
@@ -171,10 +177,11 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
     %{descriptor: descriptor, base: base, locale: locale} = socket.assigns
 
     case run_ai(descriptor, base, locale) do
-      {:ok, values} ->
+      {:ok, values, step_drafts} ->
         {:noreply,
          socket
          |> assign(:draft, Map.merge(socket.assigns.draft, values))
+         |> assign(:step_drafts, Map.merge(socket.assigns.step_drafts, step_drafts))
          |> assign(:translating, false)
          |> put_flash(:info, "AI translation loaded — review and save.")}
 
@@ -186,10 +193,13 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
     end
   end
 
+  # Returns `{:ok, field_values, step_drafts}` on success, where `step_drafts` is
+  # a `%{step_index => translated_description}` map (empty for non-recipe
+  # resources, which have no steps).
   defp run_ai(%{ai: :recipe}, base, locale) do
     case RecipeTranslator.translate_recipe(base, Locale.write_code(locale)) do
-      {:ok, %{title: title, description: description}} ->
-        {:ok, %{title: title, description: description}}
+      {:ok, %{title: title, description: description, steps: steps}} ->
+        {:ok, %{title: title, description: description}, steps_to_draft_map(steps)}
 
       error ->
         error
@@ -198,7 +208,11 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
 
   defp run_ai(%{ai: :fields} = descriptor, base, locale) do
     field_values = Map.new(descriptor.fields, fn f -> {f, Map.get(base, f)} end)
-    FieldTranslator.translate_fields(field_values, locale, hint: descriptor.ai_hint)
+
+    case FieldTranslator.translate_fields(field_values, locale, hint: descriptor.ai_hint) do
+      {:ok, values} -> {:ok, values, %{}}
+      error -> error
+    end
   end
 
   # ── Helpers ────────────────────────────────────────────────────────────────
@@ -231,6 +245,44 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
   defp draft_from(descriptor, translation) do
     Map.new(descriptor.fields, fn field -> {field, Map.get(translation, field) || ""} end)
   end
+
+  # Recipe steps are structured (`[%Food.Step{}]`), not a flat text field, so
+  # they ride alongside the descriptor's `:fields` rather than inside them.
+  defp recipe_steps(%{ai: :recipe}, %{steps: steps}) when is_list(steps), do: steps
+  defp recipe_steps(_descriptor, _base), do: []
+
+  # Seed the editable per-step drafts from a saved translation (matched by the
+  # base step's `index`); each step defaults to blank until translated.
+  defp step_drafts_from(base_steps, translation) do
+    by_index = steps_to_draft_map((translation && translation.steps) || [])
+    Map.new(base_steps, fn step -> {step.index, Map.get(by_index, step.index, "")} end)
+  end
+
+  # Normalize a translator/stored step list (`[%{"index" => i, "description" =>
+  # d}]`, string- or atom-keyed) into a `%{index => description}` map.
+  defp steps_to_draft_map(steps) when is_list(steps) do
+    Enum.reduce(steps, %{}, fn s, acc ->
+      idx = Map.get(s, "index", Map.get(s, :index))
+      desc = Map.get(s, "description", Map.get(s, :description))
+      if is_nil(idx), do: acc, else: Map.put(acc, idx, desc || "")
+    end)
+  end
+
+  defp steps_to_draft_map(_), do: %{}
+
+  # Overlay the submitted per-step textareas onto the base steps, preserving each
+  # step's `index` so `Localization.apply_recipe_translation/2` can match them.
+  defp maybe_put_steps(field_values, %{ai: :recipe}, step_params, base_steps)
+       when is_map(step_params) do
+    steps =
+      Enum.map(base_steps, fn step ->
+        %{"index" => step.index, "description" => Map.get(step_params, to_string(step.index)) || ""}
+      end)
+
+    Map.put(field_values, :steps, steps)
+  end
+
+  defp maybe_put_steps(field_values, _descriptor, _step_params, _base_steps), do: field_values
 
   defp item_title(descriptor, base), do: Map.get(base, descriptor.name_field) || "##{base.id}"
 
@@ -377,6 +429,19 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
               </div>
             <% end %>
           </div>
+          <div :if={@base_steps != []} class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4">
+            <div class="text-xs text-parchment-dim mb-2">Steps</div>
+            <ol class="space-y-3">
+              <li :for={step <- @base_steps} class="flex gap-3">
+                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-ink-panel2 text-parchment-dim text-[10px] font-bold flex items-center justify-center mt-0.5">
+                  {step.index + 1}
+                </span>
+                <p class="text-sm text-parchment leading-relaxed whitespace-pre-wrap">
+                  {step.description}
+                </p>
+              </li>
+            </ol>
+          </div>
         </div>
 
         <div class="space-y-3">
@@ -394,6 +459,23 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
                 ><%= Map.get(@draft, field) %></textarea>
               </div>
             <% end %>
+          </div>
+          <div :if={@base_steps != []} class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 space-y-3">
+            <div class="text-xs text-parchment-dim">Steps</div>
+            <div :for={step <- @base_steps}>
+              <label class="flex items-center gap-1.5 text-xs text-parchment-dim mb-1">
+                <span class="w-4 h-4 rounded-full bg-ink-panel2 text-parchment-dim text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                  {step.index + 1}
+                </span>
+                Step {step.index + 1}
+              </label>
+              <textarea
+                name={"steps[#{step.index}]"}
+                rows="3"
+                placeholder={step.description}
+                class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none resize-none"
+              ><%= Map.get(@step_drafts, step.index) %></textarea>
+            </div>
           </div>
           <button
             type="submit"
