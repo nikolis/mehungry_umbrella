@@ -259,4 +259,6 @@ Required at runtime:
 ## Deployment Notes
 
 - Production runs on Fly.io; the canonical host is `www.m3hungry.com` (the apex `m3hungry.com` has no TLS cert — point clients at `www`).
+- **Topology (`fly.toml`):** 2 `shared-cpu-1x`/1GB machines in `lhr` (`min_machines_running = 2`) for single-machine-failure redundancy, each with a 512MB swap cushion (`swap_size_mb`, must be a top-level key or TOML folds it into the preceding table). Deploys are **rolling** (`strategy = "rolling"`) and gated on the `GET /health` liveness probe (`[[http_service.checks]]` → `MehungryWeb.HealthController`, a pure 200 "ok"), so deploys are zero-downtime and a hung BEAM is auto-restarted. The `[deploy] release_command` runs migrations in a one-off machine before the new release goes live.
+- **DB connections:** app connects via the Supabase **session pooler** (`…pooler.supabase.com:5432`); `POOL_SIZE = 10` per machine, so 2 machines + migrator ≈ 22 pooled clients. The Supavisor **Pool Size is set to 25** in the Supabase dashboard (raise it there before scaling machines up, or the extra connections hit the cap — Postgres `max_connections` is 60). *(Was single-machine + `immediate` deploys while the pooler was capped at 15.)*
 - The migrator app (`migrator/`) runs DB migrations as a separate step.

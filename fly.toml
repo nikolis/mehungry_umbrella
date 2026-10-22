@@ -3,6 +3,12 @@
 app = "m3hungry"
 primary_region = "lhr"  # London — closest available region to the Supabase DB (eu-west-1, Ireland)
 
+# 512MB swap as an OOM cushion on the 1GB box — not billed by Fly. Absorbs a
+# memory burst (vix image generation, embeddings, Oban science jobs) instead of
+# the kernel abruptly OOM-killing the BEAM. MUST be top-level (before any
+# [table] header) or TOML folds it into the preceding table and it's ignored.
+swap_size_mb = 512
+
 [build]
   dockerfile = "Dockerfile"
 
@@ -11,17 +17,20 @@ primary_region = "lhr"  # London — closest available region to the Supabase DB
 # MehungryWeb.Release.migrate/0 task (which runs with a tiny 2-connection pool).
 [deploy]
   release_command = "/app/bin/mehungry_umbrella eval MehungryWeb.Release.migrate"
-  # Supabase's session pooler caps total clients at 15 on this plan. "immediate"
-  # stops the old machine before starting the new one, so we never briefly run
-  # 2 * POOL_SIZE connections. Switch back to the default rolling strategy (and
-  # re-enable HA) once the pooler Pool Size is raised in the Supabase dashboard.
-  strategy = "immediate"
+  # Rolling deploys for zero downtime: Fly boots the new machine, waits for its
+  # /health check to pass, then drains the old one — no outage window. Safe now
+  # that the Supabase session pooler Pool Size is raised to 25, giving room for
+  # 2 machines * POOL_SIZE (20) + the migrator (pool 2) under the 60-connection
+  # Postgres budget. (Was "immediate" + single machine while the pooler was
+  # capped at 15 clients.)
+  strategy = "rolling"
 
 [env]
   # Keep the scheduler flags used on ECS (tuned for a 2-vCPU shared box).
   ERL_AFLAGS = "+S 2:2 +sbwt none +sbwtdcpu none +sbwtdio none"
-  # One machine * POOL_SIZE must stay under the Supabase pooler's 15-client cap,
-  # with headroom for the migrator (pool 2) and the odd admin psql session.
+  # 2 machines * POOL_SIZE (20) + the migrator (pool 2) must stay under the
+  # Supabase session pooler's client cap (raised to 25). Drop to "8" if the
+  # pooler can't be raised that far (2*8 = 16).
   POOL_SIZE = "10"
   AWS_ASSETS_BUCKET_NAME = "mehungry-main-bucket"
   # Use the real Pinterest API (not the sandbox). Sandbox tokens lack a durable
@@ -31,15 +40,27 @@ primary_region = "lhr"  # London — closest available region to the Supabase DB
 [http_service]
   internal_port = 4000
   force_https = true
-  # Keep one machine always up (it's a user-facing social app, not a toy).
+  # Keep two machines always up for single-machine-failure redundancy (it's a
+  # user-facing social app, not a toy) and so rolling deploys always have a warm
+  # peer serving traffic.
   auto_stop_machines = "off"
   auto_start_machines = true
-  min_machines_running = 1
+  min_machines_running = 2
 
   [http_service.concurrency]
     type = "connections"
     soft_limit = 200
     hard_limit = 250
+
+  # Liveness + deploy-readiness probe. /health is a pure 200 "ok" (no DB, no
+  # session/locale) — MehungryWeb.HealthController.check/2. Lets Fly auto-restart
+  # a hung BEAM and gate rolling deploys on the new machine being ready.
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
 
 [[vm]]
   size = "shared-cpu-1x"
