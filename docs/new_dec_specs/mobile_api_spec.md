@@ -69,7 +69,8 @@ drives the client. A later cursor upgrade (`?before=<id>`) is noted per-endpoint
 | Basket | `Api.V1.BasketController` | `Inventory` |
 | Profile / preferences | `Api.V1.ProfileController`, `PreferencesController` | `Accounts.Profiles`, `Survey` |
 | Subscriptions | `Api.V1.SubscriptionController` | `Subscriptions`, `Billing` |
-| Notifications / invitations | `Api.V1.InvitationController` | `Professionals` |
+| Notifications (inbox §5.1) | `Api.V1.NotificationController` | `Notifications` (+ `Api.Broadcaster.dispatch/5`) |
+| Invitations | `Api.V1.InvitationController` | `Professionals` |
 | Feedback | `Api.V1.FeedbackController` | `Feedback` |
 | Nutritionist (phase 2) | `Api.V1.Nutritionist.*` | `Professionals`, `History` |
 
@@ -179,6 +180,7 @@ state).
   "author": { "id": 33, "alias": "Nikos Galerakis", "avatar_url": "https://…", "recipe_count": 35 },
   "hashtags": ["vegetarian", "eggplant", "comfortfood"],
   "servings": 4,
+  "badges": [ {"nutrient": "Iron", "level": "high", "percent_nrv": 47} ],
   "prep_time": {"lower": 20, "upper": 20}, "cook_time": {"lower": 40, "upper": 40},
   "likes_count": 0, "comments_count": 0,
   "liked_by_me": false, "following_author": false,
@@ -187,6 +189,14 @@ state).
   "meta": { "page": 1, "page_size": 10, "has_more": true } }
 ```
 Query: `?page`, `?page_size`, future `?before=<recipe_id>` cursor.
+
+**`badges`** — EU per-serving nutrient-claim badges (`Mehungry.Food.NutrientClaims`,
+Reg. 1169/2011 & 1924/2006), computed from USDA data and persisted on the recipe;
+coverage-gated server-side. Each entry: `nutrient` (canonical English name),
+`level` (`"high"` ≥30% NRV, `"source"` ≥15% NRV), `percent_nrv` (share of the EU
+NRV one serving supplies). Sorted strongest-first; `[]` when none. Present on the
+feed card, recipe detail, and profile card payloads. Render as a neutral
+label-style claim ("High in Iron"), never as health/medical advice.
 
 ### `GET /api/v1/recipes/:id` 🔓
 Full recipe detail (image, timing, servings, ingredients grouped, steps,
@@ -199,6 +209,7 @@ nutrients, hashtags, engagement). Mirrors the recipe modal.
   "prep_time": {"lower":20,"upper":20}, "cook_time": {"lower":40,"upper":40},
   "private": false, "original_url": null,
   "hashtags": ["vegetarian"],
+  "badges": [ {"nutrient": "Iron", "level": "high", "percent_nrv": 47} ],
   "ingredients": [
     { "id": 8801, "quantity": 2.0, "ingredient_allias": "eggplant",
       "measurement_unit_id": 5, "ingredient_portion_id": null,
@@ -223,12 +234,16 @@ distinguished by the `measurement_unit_id` / `ingredient_portion_id` FKs:
 1. a real `MeasurementUnit` — `measurement_unit_id` set, `ingredient_portion_id`
    null (e.g. `"gram"`, `"piece"`);
 2. a description-only USDA `IngredientPortion` — `measurement_unit_id` null,
-   `ingredient_portion_id` set (e.g. `"1 medium banana"`, `"1 tablespoon"`);
+   `ingredient_portion_id` set (e.g. `"medium banana"`, `"tablespoon"`);
 3. bare grams — both FKs null.
 
 `measurement_unit` carries a human-readable `name` derived via
 `RecipeIngredient.unit_label/1`: the unit name for (1), the portion's description
-for (2), and `"g"` for (3). **Nullability — clients must null-check:**
+for (2), and `"g"` for (3). The `name` is a **unit label only — its quantity is
+stripped** (`"1 cup"` → `"cup"`, `"1 φλιτζάνι"` → `"φλιτζάνι"`): the count lives
+in the sibling `quantity` field, so clients render `{quantity} {name}` without a
+doubled number. The same stripping applies to the `units[].label` options
+returned by ingredient search (§7). **Nullability — clients must null-check:**
 - `measurement_unit` (the object): semantically optional. The server today
   always sends one (the `unit_label/1` fallback guarantees a `name`), but do not
   rely on that — treat a missing/`null` object defensively.
@@ -362,6 +377,39 @@ Following yourself returns `422`.
 
 ### `POST /api/v1/recipes/:id/save` 🔒 / `DELETE …` — the profile "saved" tab
 (`Accounts.UserRecipe`).
+
+### 5.1 Notifications inbox 🔒
+
+Durable source of truth for the Notifications screen + unread badge. Each record
+matches the §13 `user:<id>` channel `"notification"` payload. Backed by
+`Mehungry.Notifications` / `NotificationController`.
+
+- **`GET /api/v1/me/notifications`** — paginated (`?page`/`?page_size`, §1.3),
+  newest first.
+  ```jsonc
+  { "data": [ { "id": 12345, "type": "comment",
+                "actor": { "id": 42, "alias": "Maria", "avatar_url": null },
+                "subject": { "type": "recipe", "id": 987 },
+                "data": { "recipe_title": "Fasolada", "preview": "Looks great!" },
+                "read": false, "inserted_at": "2026-10-20T10:12:00Z" } ],
+    "meta": { "page": 1, "page_size": 20, "has_more": false } }
+  ```
+- **`GET /api/v1/me/notifications/unread_count`** → `{ "data": { "count": 3 } }`
+  — drives the tab badge.
+- **`POST /api/v1/me/notifications/read`** — mark all read; body `{ "id": 123 }`
+  marks one. → `{ "data": { "unread_count": 0 } }`.
+
+#### Device registration (OS push) 🔒
+
+The client registers its Expo push token after login so the server can deliver a
+notification as an OS push **when the app is closed** (if the user is connected, the
+`user:<id>` channel already delivered it — see §13; the push is presence-gated and
+skipped). Backed by `Mehungry.Notifications` + `PushNotificationWorker` → Expo push.
+
+- **`POST /api/v1/me/devices`** `{ "expo_token": "ExponentPushToken[…]", "platform": "ios"|"android"|"web" }`
+  → `201 { "data": { "ok": true } }`. Idempotent per token (re-register upserts; a token
+  re-registered by another user moves to them).
+- **`DELETE /api/v1/me/devices/:token`** — remove this device's token (on logout). → `204`.
 
 ---
 
@@ -605,7 +653,7 @@ One active basket per user with items (from recipes or manual). Backed by
      { "data": [ {
        "id": 412, "name": "Banana",
        "units": [
-         {"unit_selection": -88, "measurement_unit_id": null, "ingredient_portion_id": 88, "label": "1 medium banana"},
+         {"unit_selection": -88, "measurement_unit_id": null, "ingredient_portion_id": 88, "label": "medium banana"},
          {"unit_selection": 5,   "measurement_unit_id": 5,    "ingredient_portion_id": null, "label": "cup, sliced"},
          {"unit_selection": 1,   "measurement_unit_id": 1,    "ingredient_portion_id": null, "label": "gram"}
        ] } ] }
@@ -618,8 +666,15 @@ One active basket per user with items (from recipes or manual). Backed by
      **Localization** (§Language): when the resolved locale is `el`, the local search
      runs against **translated** ingredient names (`Food.IngredientSearch.search_in_language`)
      and each row's `name` is the Greek name — exactly like the calendar meal-form
-     picker. For `en` it searches/returns the English base names. (The USDA default
-     mode is unaffected — it is a create source, always English USDA descriptions.)
+     picker. Each unit-less portion's `units[].label` is likewise the **translated**
+     free-text description when one exists (e.g. `"1 medium banana"` → `"μέτρια
+     μπανάνα"`, curated at `/professional/translations/ingredients/:id`); unit-bearing
+     options keep their measurement-unit label and gram stays `"gram"`. Like the
+     English path, the label's leading quantity is stripped (`"1 μέτρια μπανάνα"` →
+     `"μέτρια μπανάνα"`). The response shape is unchanged — only the `label` string
+     is localized. For `en` it
+     searches/returns the English base names and original portion labels. (The USDA
+     default mode is unaffected — it is a create source, always English USDA descriptions.)
 
 ---
 
@@ -729,12 +784,31 @@ def id(socket), do: "user_socket:#{socket.assigns.user_id}"
 
 ### `user:<user_id>` 🔒 — personal notifications
 - Authorization: topic user_id must equal `socket.assigns.user_id`.
-- **Push → client**: `"notification"` `{ type, payload }` for:
-  - nutritionist **invitation received** (`type: "invitation"`) — badge on the
-    Notifications screen (`/notifications/invitations`),
-  - **new follower** (`type: "follow"`),
-  - **comment on your recipe** (`type: "comment"`),
-  - **meal plan / recipe generation ready** (`type: "ai_ready"`).
+- **Push → client**: `"notification"` — the **same object** the REST inbox returns
+  (§5.1), so the client has one render/route path. The live event is a *poke*; the
+  REST inbox (`GET /me/notifications`) is the durable source of truth.
+  ```jsonc
+  {
+    "id": 12345,
+    "type": "follow",            // follow | comment | comment_answer | ai_ready | invitation
+    "actor": { "id": 42, "alias": "Maria", "avatar_url": "https://…" }, // null for system
+    "subject": { "type": "user", "id": 42 },  // deep-link target (recipe|user|meal|comment); null if none
+    "data": { "recipe_title": "Fasolada", "preview": "Looks delicious!" },
+    "read": false,
+    "inserted_at": "2026-10-20T10:12:00Z"
+  }
+  ```
+  Launch types: **new follower** (`follow`, subject = follower's `user`),
+  **comment on your recipe** (`comment`, subject = `recipe`),
+  **reply to your comment** (`comment_answer`, subject = the `recipe`),
+  plus `ai_ready` and nutritionist `invitation`. Deep-link: `recipe` → recipe
+  detail, `user` → that profile. Self-notifications and duplicate unread follows
+  are suppressed server-side. Backed by `MehungryWeb.Api.Broadcaster.dispatch/5`
+  → `Mehungry.Notifications`.
+- **OS push fallback**: `dispatch/5` also enqueues an Expo push to the recipient's
+  registered devices (see device registration in §5.1) — but **only when no `user:<id>`
+  socket is connected** (a connected client already got this event, so no duplicate
+  push). The push `data` carries this same object so a tap deep-links identically.
 
 ### `meal_plan:<user_id>` 🔒 — AI meal-plan generation progress
 - **Push → client**: `"progress"` `{ job_id, status: "generating"|"done"|"error", pct }`,

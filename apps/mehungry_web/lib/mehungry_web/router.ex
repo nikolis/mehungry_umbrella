@@ -206,6 +206,13 @@ defmodule MehungryWeb.Router do
     get("/me/invitations", InvitationController, :index)
     post("/me/invitations/:id/accept", InvitationController, :accept)
     post("/me/invitations/:id/decline", InvitationController, :decline)
+
+    get("/me/notifications", NotificationController, :index)
+    get("/me/notifications/unread_count", NotificationController, :unread_count)
+    post("/me/notifications/read", NotificationController, :read)
+
+    post("/me/devices", DeviceController, :create)
+    delete("/me/devices/:token", DeviceController, :delete)
   end
 
   # Nutritionist portal (🔒 pro tier) — spec §14.
@@ -518,6 +525,7 @@ defmodule MehungryWeb.Router do
       localized_live("/search/", RecipeBrowserLive.Index, :index)
       localized_live("/search/hashtag/:hashtag", RecipeBrowserLive.Index, :index)
       localized_live("/search/ingredient/:ingredient", RecipeBrowserLive.Index, :index)
+      localized_live("/search/nutrient/:nutrient", RecipeBrowserLive.Index, :index)
       localized_live("/search/:query", RecipeBrowserLive.Index, :index)
 
       localized_live("/foods", FoodsLive.Index, :index)

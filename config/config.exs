@@ -145,6 +145,11 @@ config :mehungry,
     "Reactive Nitrogen Species"
   ]
 
+# Delivers notifications fired from the core `Notifications.emit/3` seam to the
+# mobile channel + OS push. The web impl no-ops when the endpoint isn't running
+# (core-only tests), so this is safe to set for every app in the umbrella.
+config :mehungry, :notification_dispatcher, MehungryWeb.Api.NotificationDispatcher
+
 config :mehungry, Oban,
   repo: Mehungry.Repo,
   # Pub/sub over Erlang process groups instead of the default single-connection

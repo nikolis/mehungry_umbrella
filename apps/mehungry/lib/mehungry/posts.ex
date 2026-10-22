@@ -423,6 +423,39 @@ defmodule Mehungry.Posts do
   end
 
   @doc """
+  Keeps a recipe's feed post media in sync with the recipe's own image.
+
+  `md_media_url` is a snapshot of `recipe.image_url` taken when the post is first
+  created, so it drifts whenever the recipe's image later changes. This reconciles
+  both directions idempotently:
+
+    * backfills the post for a recipe that never got one (e.g. created without an
+      image — a post requires `md_media_url`, so it couldn't be made then), and
+    * repoints every existing `RECIPE` post for the recipe (all language variants)
+      at the recipe's current image.
+
+  No-ops while the recipe has no image. Safe to call on every create/update.
+  """
+  def sync_recipe_post_media(%Recipe{image_url: image_url}) when image_url in [nil, ""], do: :ok
+
+  def sync_recipe_post_media(%Recipe{} = recipe) do
+    unless post_exists_for?(recipe.id, nil) do
+      create_post(recipe)
+    end
+
+    from(p in Post,
+      where:
+        p.reference_id == ^recipe.id and p.type_ == "RECIPE" and
+          p.md_media_url != ^recipe.image_url
+    )
+    |> Repo.update_all(
+      set: [md_media_url: recipe.image_url, updated_at: NaiveDateTime.utc_now(:second)]
+    )
+
+    :ok
+  end
+
+  @doc """
   Updates a post.
 
   ## Examples
@@ -532,14 +565,52 @@ defmodule Mehungry.Posts do
       |> Repo.insert()
 
     case result do
-      {:ok, _comment} ->
+      {:ok, comment} ->
         broadcast_change(result)
+        notify_recipe_author(comment)
         result
 
       {:error, _} ->
         result
     end
   end
+
+  # Notify a recipe's author that someone commented (any client — LiveView, REST,
+  # channel — reaches this one function). No-op for post comments and for
+  # self-comments (suppressed in `Notifications.create/3`).
+  defp notify_recipe_author(%{recipe_id: nil}), do: :ok
+
+  defp notify_recipe_author(%{recipe_id: recipe_id, user_id: actor_id, text: text}) do
+    case Repo.get(Recipe, recipe_id) do
+      %Recipe{user_id: author_id, title: title} when not is_nil(author_id) ->
+        Mehungry.Notifications.emit(author_id, "comment",
+          actor_id: actor_id,
+          subject_type: "recipe",
+          subject_id: recipe_id,
+          data: %{recipe_title: title, preview: preview(text)}
+        )
+
+      _ ->
+        :ok
+    end
+  end
+
+  # Notify a comment's author that someone replied. The deep-link points at the
+  # recipe the comment lives on (answers surface inside the recipe detail).
+  defp notify_comment_author(%{recipe_id: recipe_id, user_id: author_id}, answer)
+       when not is_nil(recipe_id) do
+    Mehungry.Notifications.emit(author_id, "comment_answer",
+      actor_id: answer.user_id,
+      subject_type: "recipe",
+      subject_id: recipe_id,
+      data: %{preview: preview(answer.text)}
+    )
+  end
+
+  defp notify_comment_author(_comment, _answer), do: :ok
+
+  defp preview(text) when is_binary(text), do: String.slice(text, 0, 140)
+  defp preview(_), do: nil
 
   @doc """
   Creates a comment attached to a post (e.g. a WEEKLY_PLAN meal-plan post) and
@@ -705,6 +776,7 @@ defmodule Mehungry.Posts do
       {:ok, comment_answer} ->
         comment = get_comment!(comment_answer.comment_id)
         broadcast_change({:ok, comment})
+        notify_comment_author(comment, comment_answer)
         result
 
       {:error, _} ->

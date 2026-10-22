@@ -12,6 +12,7 @@ defmodule Mehungry.Food.Recipes do
   alias Mehungry.Food.{
     DietClassifier,
     Localization,
+    NutrientClaims,
     Recipe,
     RecipeHashtag,
     RecipeSocialGraphic,
@@ -452,6 +453,45 @@ defmodule Mehungry.Food.Recipes do
     Repo.all(from r in Recipe, select: r.id)
   end
 
+  @doc """
+  Query for recipes carrying a given nutrient-claim badge (see
+  `Food.NutrientClaims`), e.g. `recipes_with_badge("Iron")` → recipes **high in**
+  iron. `level` is `"high"` (default) or `"source"`.
+
+  Returns an `Ecto.Query` so callers can compose further (pagination, ordering,
+  preloads). Matches against the persisted `recipes.badges` jsonb array.
+  """
+  def recipes_with_badge(label, level \\ "high") do
+    from r in Recipe,
+      where:
+        fragment(
+          "EXISTS (SELECT 1 FROM unnest(?) AS b WHERE b->>'nutrient' = ? AND b->>'level' = ?)",
+          r.badges,
+          ^label,
+          ^level
+        )
+  end
+
+  @doc """
+  Public, crawlable listing for a nutrient-claim badge — the
+  `/search/nutrient/:slug` browse surface. Mirrors
+  `IngredientQueries.search_hashtag1/1`: returns `{query, {recipes, cursor_after}}`
+  where `query` is the composable badge query (stored in the LiveView for
+  load-more) and the second element is the first cursor page.
+
+  Unlike the hashtag/ingredient searches, this **excludes private and image-less
+  recipes** — it is an indexable public page, so it must not surface a private
+  recipe or a card with no image. `level` defaults to `"high"` (the only tier the
+  UI exposes).
+  """
+  def search_recipes_by_badge(label, level \\ "high", language_name \\ nil) do
+    query =
+      from r in recipes_with_badge(label, level),
+        where: not is_nil(r.image_url) and (is_nil(r.private) or r.private == false)
+
+    {query, list_recipes(query, language_name)}
+  end
+
   def list_user_recipes_for_selection(nil) do
     entries = Repo.all(Recipe)
 
@@ -666,8 +706,8 @@ defmodule Mehungry.Food.Recipes do
   def put_nutrient_info(%Ecto.Changeset{valid?: true} = changeset, attrs) do
     start = System.monotonic_time()
 
-    {primary_size, nutrients} =
-      Mehungry.Food.NutrientCalculation.calculate_recipe_nutrition_value(attrs)
+    {primary_size, nutrients, coverage} =
+      Mehungry.Food.NutrientCalculation.calculate_recipe_nutrition_value_with_coverage(attrs)
 
     if Enum.empty?(nutrients) do
       duration =
@@ -675,7 +715,9 @@ defmodule Mehungry.Food.Recipes do
 
       Logger.warning("nutrition calculation(empty): #{duration}ms for recipe")
 
-      changeset
+      # Clear any stale claims — a recipe that lost its nutrition can't keep a
+      # "High in Iron" badge.
+      Ecto.Changeset.put_change(changeset, :badges, [])
     else
       nutrients =
         nutrients
@@ -691,7 +733,24 @@ defmodule Mehungry.Food.Recipes do
       changeset
       |> Ecto.Changeset.put_change(:nutrients, nutrients)
       |> Ecto.Changeset.put_change(:primary_nutrients_size, primary_size)
+      |> Ecto.Changeset.put_change(:badges, compute_badges(nutrients, attrs, coverage))
     end
+  end
+
+  # Per-serving nutrient-claim badges (see Food.NutrientClaims). `nutrients` here
+  # is the freshly-built **atom-keyed** tree; NutrientClaims/`find_nutrient` read
+  # the **string-keyed** JSONB shape, so round-trip through JSON first — this is
+  # exactly what Ecto persists and reloads, so stored badges match a derive-on-
+  # read of the same recipe. `coverage` is the recipe's mass-weighted
+  # nutrient-data coverage ratio; NutrientClaims suppresses all badges below its
+  # floor so a recipe built mostly from data-less ingredients can't over-claim.
+  defp compute_badges(nutrients, attrs, coverage) do
+    servings = Map.get(attrs, :servings) || Map.get(attrs, "servings")
+
+    nutrients
+    |> Jason.encode!()
+    |> Jason.decode!()
+    |> NutrientClaims.badges_for_storage(servings, coverage: coverage)
   end
 
   # Checks that every new/modified recipe ingredient has a resolvable

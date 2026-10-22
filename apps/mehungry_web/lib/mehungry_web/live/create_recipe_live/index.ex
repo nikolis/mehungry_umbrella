@@ -207,11 +207,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, assign(socket, show_spoonacular_modal: false)}
   end
 
-  def handle_event("add_ingredient", _params, socket) do
-    current_params = socket.assigns.f.params || %{}
-    add_ingredient(socket, current_params)
-  end
-
   def handle_event("clear-form", _, socket) do
     # recipe = Food.get_recipe!(socket.assigns.recipe.id)
     socket = init(socket, %Recipe{}, %{})
@@ -240,42 +235,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> init(recipe)}
   end
 
-  def handle_event("add-step", _, socket) do
-    existing = Ecto.Changeset.get_embed(socket.assigns.changeset, :steps)
-
-    changeset =
-      Ecto.Changeset.put_embed(
-        socket.assigns.changeset,
-        :steps,
-        existing ++ [%{temp_id: get_temp_id()}]
-      )
-
-    socket = assign(socket, :changeset, changeset)
-
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("remove-ingredient", %{"temp_id" => remove_id}, socket) do
-    {_progress, recipe_ingredients} = remove_from_change(socket, remove_id)
-
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_assoc(:recipe_ingredients, recipe_ingredients)
-
-    {:noreply, assign(socket, changeset: changeset)}
-  end
-
-  def handle_event("remove-step", %{"temp_id" => remove_id}, socket) do
-    {_progress, steps} = remove_from_change_step(socket, remove_id)
-
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_embed(:steps, steps)
-
-    {:noreply, assign(socket, changeset: changeset)}
-  end
-
   @impl true
   def handle_event("other", _, socket) do
     {:noreply, socket}
@@ -299,53 +258,41 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     Mehungry.RateLimit.hit("spoonacular:#{user_id}", 20, :timer.minutes(1))
   end
 
+  # Ingredient/step rows are added and removed through the `sort_param`/`drop_param`
+  # mechanism declared on `Recipe.changeset`: "add" appends a sentinel to the
+  # collection's sort param so cast_assoc/cast_embed materialises a new empty row;
+  # "remove" appends the clicked row index to the drop param so it's dropped
+  # (persisted ingredient rows deleted via `on_replace: :delete`). Both only rebuild
+  # the in-memory form — nothing persists until Save (the `_` clause). Because every
+  # add/remove is a full form submit, the complete current row set is always carried,
+  # so existing rows can never be lost.
   defp handle_action(socket, params) do
     case params["_action"] do
       "add_ingredient" ->
-        add_ingredient(socket, params)
+        rebuild_form(socket, add_row(params, "recipe_ingredients"))
 
       "remove_ingredient:" <> index ->
-        remove_ingredient(socket, params, index)
+        rebuild_form(socket, drop_row(params, "recipe_ingredients", index))
 
       "add_step" ->
-        add_step(socket, params)
+        rebuild_form(socket, add_row(params, "steps"))
 
       "remove_step:" <> index ->
-        remove_step(socket, params, index)
+        rebuild_form(socket, drop_row(params, "steps", index))
 
       _ ->
         save_recipe(socket, socket.assigns.live_action, params)
     end
   end
 
-  defp remove_ingredient(socket, params, index) do
-    portions =
-      Map.get(params, "recipe_ingredients", %{})
-      |> Map.delete(index)
-
-    rebuild_form(socket, Map.put(params, "recipe_ingredients", portions))
+  # Append a sentinel to `<field>_sort` so cast_assoc/cast_embed adds one new empty row.
+  defp add_row(params, field) do
+    Map.update(params, "#{field}_sort", ["new"], &(&1 ++ ["new"]))
   end
 
-  defp remove_step(socket, params, index) do
-    portions =
-      Map.get(params, "steps", %{})
-      |> Map.delete(index)
-
-    rebuild_form(socket, Map.put(params, "steps", portions))
-  end
-
-  defp add_ingredient(socket, params) do
-    ingredients = Map.get(params, "recipe_ingredients", %{})
-    new_key = "#{map_size(ingredients)}"
-    updated = Map.put(ingredients, new_key, %{})
-    rebuild_form(socket, Map.put(params, "recipe_ingredients", updated))
-  end
-
-  defp add_step(socket, params) do
-    steps = Map.get(params, "steps", %{})
-    new_key = "#{map_size(steps)}"
-    updated = Map.put(steps, new_key, %{})
-    rebuild_form(socket, Map.put(params, "steps", updated))
+  # Append the row index to `<field>_drop` so cast_assoc/cast_embed drops that row.
+  defp drop_row(params, field, index) do
+    Map.update(params, "#{field}_drop", [index], &(&1 ++ [index]))
   end
 
   @impl true
@@ -420,7 +367,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   defp rebuild_form(socket, params) do
     changeset =
       socket.assigns.recipe
-      |> Food.change_recipe(params)
+      |> Food.validation_changeset(params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :f, to_form(changeset))}
@@ -571,51 +518,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, socket}
   end
 
-  @doc """
-  Receiving the recipe_ingredient params from created in the RecipeIngredientComponent is this really needed
-  """
-  @impl true
-  def handle_info({:recipe_ingredient, recipe_ingredient_params}, socket) do
-    existing_ingredients =
-      Map.get(
-        socket.assigns.changeset.changes,
-        :recipe_ingredients,
-        socket.assigns.recipe.recipe_ingredients
-      )
-
-    existing_ingredients =
-      Enum.map(existing_ingredients, fn x ->
-        x.changes
-        |> Map.new(fn {k, v} -> {Atom.to_string(k), v} end)
-      end)
-
-    existing_ingredients =
-      case existing_ingredients do
-        [] ->
-          []
-
-        reci_ingr_list ->
-          Enum.filter(reci_ingr_list, fn x ->
-            x["temp_id"] != recipe_ingredient_params["temp_id"]
-          end)
-      end
-
-    ingredients = existing_ingredients ++ [recipe_ingredient_params]
-
-    ingredients =
-      Enum.map(ingredients, fn _x ->
-        for {key, val} <- recipe_ingredient_params, into: %{}, do: {String.to_atom(key), val}
-      end)
-
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_assoc(:recipe_ingredients, ingredients)
-
-    {:noreply,
-     socket
-     |> assign(:changeset, changeset)}
-  end
-
   @impl true
   def handle_info({MehungryWeb.Onboarding.FormComponent, "profile-saved"}, socket) do
     user_profile = Accounts.get_user_profile_by_user_id(socket.assigns.user.id)
@@ -626,54 +528,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
   end
 
   ########################################################################################## Helper Function  ##########################################
-  defp remove_from_change(socket, remove_id) do
-    case Map.get(socket.assigns.changeset.changes, :recipe_ingredients, nil) do
-      nil ->
-        {:repeat, []}
-
-      recipe_ingredient_changes ->
-        original_length = length(recipe_ingredient_changes)
-
-        result_changes =
-          recipe_ingredient_changes
-          |> Enum.reject(fn %{changes: recipe_ingredient} = _rest ->
-            Map.get(recipe_ingredient, :temp_id, nil) == remove_id
-          end)
-
-        case length(result_changes) == original_length do
-          true ->
-            {:repeat, result_changes}
-
-          false ->
-            {:ok, result_changes}
-        end
-    end
-  end
-
-  defp remove_from_change_step(socket, remove_id) do
-    case Map.get(socket.assigns.changeset.changes, :steps, nil) do
-      nil ->
-        {:repeat, []}
-
-      steps_changes ->
-        original_length = length(steps_changes)
-
-        result_changes =
-          steps_changes
-          |> Enum.reject(fn %{changes: step} = _rest ->
-            Map.get(step, :temp_id, nil) == remove_id
-          end)
-
-        case length(result_changes) == original_length do
-          true ->
-            {:repeat, result_changes}
-
-          false ->
-            {:ok, result_changes}
-        end
-    end
-  end
-
   def map_recipe_ingredient(recipe_ingredients) do
     ingredient = Food.get_ingredient(recipe_ingredients.ingredient_id)
     measurement_unit = Food.get_measurement_unit!(recipe_ingredients.measurement_unit_id)
@@ -708,7 +562,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       end
 
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
-    recipe_params = filter_empty_steps(recipe_params)
+    recipe_params = recipe_params |> filter_empty_steps() |> drop_sort_drop_params()
 
     case Food.update_recipe(socket.assigns.recipe, recipe_params) do
       {:ok, %Recipe{} = recipe} ->
@@ -755,7 +609,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       end
 
     recipe_params = Map.put(recipe_params, "user_id", socket.assigns.current_user.id)
-    recipe_params = filter_empty_steps(recipe_params)
+    recipe_params = recipe_params |> filter_empty_steps() |> drop_sort_drop_params()
 
     case Food.create_recipe(recipe_params) do
       {:ok, %Recipe{} = recipe} ->
@@ -804,6 +658,20 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       |> Map.new()
 
     Map.put(recipe_params, "steps", filtered)
+  end
+
+  # The `*_sort`/`*_drop` params only exist to drive in-memory add/remove of rows
+  # (see `handle_action`). On a real save they must be stripped so cast_assoc/
+  # cast_embed fall back to normal matching (by `id` / replace) rather than
+  # reordering against a step list that `filter_empty_steps` may have pruned —
+  # which would otherwise re-materialise an empty step and fail validation.
+  defp drop_sort_drop_params(recipe_params) do
+    Map.drop(recipe_params, [
+      "recipe_ingredients_sort",
+      "recipe_ingredients_drop",
+      "steps_sort",
+      "steps_drop"
+    ])
   end
 
   # Decides the output language of a generated recipe. Greek when the app is in the
@@ -918,6 +786,4 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       end)
     end)
   end
-
-  defp get_temp_id, do: :crypto.strong_rand_bytes(5) |> Base.url_encode64() |> binary_part(0, 5)
 end

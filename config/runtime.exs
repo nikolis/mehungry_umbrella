@@ -10,6 +10,9 @@ config :mehungry,
   # Entrez crawler and the PubTator3 annotator (same NCBI host); works without it.
   entrez_api_key: System.get_env("NCBI_API_KEY"),
   openai_api_key: System.get_env("OPENAI_API_KEY", ""),
+  # Optional Expo push access token — only needed if Expo "enhanced security" is
+  # enabled for the project; the push send works without it otherwise.
+  expo_access_token: System.get_env("EXPO_ACCESS_TOKEN"),
   stripe_secret_key: System.get_env("STRIPE_SECRET_KEY", ""),
   stripe_webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET", ""),
   stripe_pro_price_id: System.get_env("STRIPE_PRO_PRICE_ID", ""),

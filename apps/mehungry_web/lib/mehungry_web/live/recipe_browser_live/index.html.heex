@@ -142,6 +142,30 @@
         query_string={@query_string}
       />
     </div>
+    <!-- Nutrient-claim filter chips (EU per-serving "High in X" claims). Each is a
+         real crawlable link to /search/nutrient/:slug, not a client-only toggle. -->
+    <div
+      :if={@browse_mode == :recipes}
+      class="flex gap-2 overflow-x-auto mt-2 pb-1 -mx-1 px-1"
+      aria-label={gettext("Filter recipes by nutrient")}
+    >
+      <.link
+        :for={label <- MehungryWeb.RecipeBrowserLive.Index.chip_nutrients()}
+        navigate={~p"/search/nutrient/#{Mehungry.Food.claim_slug(label)}"}
+        class={[
+          "whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium border transition-colors",
+          if(@active_nutrient == label,
+            do: "bg-basil text-white border-basil",
+            else: "bg-parchment-dim text-ink border-ink-panel2 hover:border-basil"
+          )
+        ]}
+      >
+        {MehungryWeb.NutrientLabels.claim_label(label)}
+      </.link>
+    </div>
+    <p :if={@active_nutrient} class="text-parchment-dim text-xs mt-1">
+      {gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
+    </p>
     <%= if !is_nil(@must_be_loged_in) do %>
       <.modal
         id="browse_index_must_be_login"

@@ -17,6 +17,8 @@ defmodule Mehungry.Languages.TranslationRegistry do
     * `:name_field`        — base field to show as the item's title
     * `:ai`                — `:fields` (generic) or `:recipe` (structured steps)
     * `:ai_hint`           — domain hint passed to `AI.FieldTranslator`
+    * `:translate_portions`— (optional) also translate the base row's unit-less
+      `IngredientPortion` descriptions in the same editor (ingredients only)
   """
 
   alias Mehungry.Food
@@ -45,7 +47,11 @@ defmodule Mehungry.Languages.TranslationRegistry do
       fields: [:name, :description],
       name_field: :name,
       ai: :fields,
-      ai_hint: "USDA food ingredient name, as a Greek home cook would say it"
+      ai_hint: "USDA food ingredient name, as a Greek home cook would say it",
+      # Also translate the ingredient's unit-less free-text portions ("1 medium
+      # banana", "1 slice") alongside its name/description — see the portion
+      # branches in `TranslationsLive.Panel` + `ResourceTranslationWorker`.
+      translate_portions: true
     },
     %{
       key: "measurement_units",

@@ -40,7 +40,8 @@ defmodule MehungryWeb.Api.V1.IngredientMealTest do
                u["ingredient_portion_id"] == portion.id and
                  u["unit_selection"] == -portion.id and
                  is_nil(u["measurement_unit_id"]) and
-                 u["label"] == "1 medium banana"
+                 # Label is a unit only — the quantity is stripped.
+                 u["label"] == "medium banana"
              end)
 
       # "gram" is always appended, as a positive measurement_unit_id.

@@ -409,6 +409,22 @@
           </div>
         </div>
       </div>
+
+      <!-- Nutrient-claim badges — right-aligned in the action row, beside
+           like/comment/share (not over the image). -->
+      <% nutrient_badges = MehungryWeb.RecipeComponents.high_badges(@post.reference, 2) %>
+      <div
+        :if={nutrient_badges != []}
+        class="ml-auto flex flex-wrap items-center justify-end gap-1"
+      >
+        <span
+          :for={badge <- nutrient_badges}
+          class="rounded-full bg-paprika/15 text-paprika-soft border border-paprika/30 text-[10px] font-semibold px-2 py-0.5 whitespace-nowrap"
+          title={gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
+        >
+          {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])} · {badge["percent_nrv"]}% NRV
+        </span>
+      </div>
     </div>
   </div>
 

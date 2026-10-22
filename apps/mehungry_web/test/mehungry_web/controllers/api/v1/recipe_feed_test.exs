@@ -88,6 +88,20 @@ defmodule MehungryWeb.Api.V1.RecipeFeedTest do
       assert is_list(detail["ingredients"])
       assert Map.has_key?(detail, "nutrients")
       assert Map.has_key?(detail, "likes_count")
+      assert is_list(detail["badges"])
+    end
+
+    test "exposes persisted nutrient-claim badges", %{conn: conn} do
+      recipe =
+        FoodFixtures.recipe_fixture(author())
+        |> Ecto.Changeset.change(%{
+          badges: [%{"nutrient" => "Iron", "level" => "high", "percent_nrv" => 47}]
+        })
+        |> Mehungry.Repo.update!()
+
+      detail = get(conn, ~p"/api/v1/recipes/#{recipe.id}") |> json_response(200) |> Map.fetch!("data")
+
+      assert [%{"nutrient" => "Iron", "level" => "high", "percent_nrv" => 47}] = detail["badges"]
     end
 
     test "localizes nutrient display names with ?lang=el", %{conn: conn} do

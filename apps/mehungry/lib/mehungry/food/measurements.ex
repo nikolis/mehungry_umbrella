@@ -127,12 +127,38 @@ defmodule Mehungry.Food.Measurements do
   end
 
   @doc """
+  Locale-aware `ingredient_unit_options/1`: overlays each unit-less portion's
+  translated free-text description (from `Food.Localization.portion_display_names/2`)
+  onto its option label, so the calendar meal form and the mobile ingredient
+  search surface localized portion labels. `nil` locale / source locale behave
+  like `ingredient_unit_options/1`.
+  """
+  def ingredient_unit_options(nil, _locale), do: gram_unit_options()
+
+  def ingredient_unit_options(ingredient_id, locale) do
+    ingredient_id
+    |> get_measurement_unit_portions_for_ingredient()
+    |> build_unit_options(locale)
+  end
+
+  @doc """
   `ingredient_unit_options/1` for an already-loaded list of portions (lets
   callers batch the portion query across many ingredients, then build each
   ingredient's options without re-querying).
   """
   def build_unit_options(portions) when is_list(portions) do
     Enum.map(portions, &portion_unit_option/1) ++ gram_unit_options()
+  end
+
+  @doc "`build_unit_options/1` with localized unit-less portion labels for `locale`."
+  def build_unit_options(portions, locale) when is_list(portions) do
+    descrs =
+      portions
+      |> Enum.reject(& &1.measurement_unit_id)
+      |> Enum.map(& &1.id)
+      |> Mehungry.Food.Localization.portion_display_names(locale)
+
+    Enum.map(portions, &portion_unit_option(&1, descrs)) ++ gram_unit_options()
   end
 
   @doc "The grams-family unit option(s), in `ingredient_unit_options/1` shape."
@@ -160,6 +186,31 @@ defmodule Mehungry.Food.Measurements do
       measurement_unit_id: nil,
       ingredient_portion_id: portion.id,
       label: IngredientPortion.display_name(portion) || "portion"
+    }
+  end
+
+  # Locale-aware variants: a unit-bearing portion keeps its unit-derived label
+  # (localized separately via the measurement-unit translation); a unit-less
+  # portion takes its translated free-text description when one exists.
+  defp portion_unit_option(%IngredientPortion{measurement_unit_id: mu_id} = portion, _descrs)
+       when not is_nil(mu_id) do
+    portion_unit_option(portion)
+  end
+
+  defp portion_unit_option(%IngredientPortion{} = portion, descrs) do
+    # The translated description is a raw label ("1 φλιτζάνι"); strip its
+    # quantity the same way `display_name/1` does for the untranslated path.
+    label =
+      case Map.get(descrs, portion.id) do
+        nil -> IngredientPortion.display_name(portion) || "portion"
+        desc -> IngredientPortion.strip_amount(desc)
+      end
+
+    %{
+      unit_selection: -portion.id,
+      measurement_unit_id: nil,
+      ingredient_portion_id: portion.id,
+      label: label
     }
   end
 

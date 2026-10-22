@@ -347,6 +347,54 @@ defmodule Mehungry.Food.NutrientCalculationTest do
   end
 
   # ════════════════════════════════════════════════════════════════════════
+  # nutrient_data_coverage/1  (mass-weighted coverage ratio)
+  # ════════════════════════════════════════════════════════════════════════
+
+  describe "nutrient_data_coverage/1" do
+    # A structured-ingredient entry as map_ingredients_to_structured_form/1 emits:
+    # :gram_weight plus a scaled :nutrients list ([] ⇔ no IngredientNutrient data).
+    defp ing(grams, has_data?) do
+      %{gram_weight: grams, nutrients: if(has_data?, do: [%{name: "Iron"}], else: [])}
+    end
+
+    test "all mass covered → 1.0" do
+      assert NC.nutrient_data_coverage([ing(100.0, true), ing(50.0, true)]) == 1.0
+    end
+
+    test "no mass covered → 0.0" do
+      assert NC.nutrient_data_coverage([ing(100.0, false), ing(50.0, false)]) == 0.0
+    end
+
+    test "ratio is mass-weighted, not ingredient-count-weighted" do
+      # One data-less 150 g ingredient vs two data-rich 25 g ones: 50 / 200 = 0.25.
+      coverage =
+        NC.nutrient_data_coverage([ing(150.0, false), ing(25.0, true), ing(25.0, true)])
+
+      assert_in_delta coverage, 0.25, 1.0e-9
+    end
+
+    test "an unresolved-mass ingredient (0 g) drops out of numerator and denominator" do
+      # The 0 g data-rich ingredient neither helps nor hurts: 100 / 100 = 1.0.
+      assert NC.nutrient_data_coverage([ing(100.0, true), ing(0.0, true)]) == 1.0
+    end
+
+    test "zero total mass → 0.0 (nothing to claim)" do
+      assert NC.nutrient_data_coverage([ing(0.0, true), ing(0.0, false)]) == 0.0
+      assert NC.nutrient_data_coverage([]) == 0.0
+    end
+  end
+
+  describe "calculate_recipe_nutrition_value_with_coverage/1" do
+    test "returns {0, [], 0.0} for a recipe with no ingredients" do
+      assert NC.calculate_recipe_nutrition_value_with_coverage(%{recipe_ingredients: []}) ==
+               {0, [], 0.0}
+
+      assert NC.calculate_recipe_nutrition_value_with_coverage(%{recipe_ingredients: nil}) ==
+               {0, [], 0.0}
+    end
+  end
+
+  # ════════════════════════════════════════════════════════════════════════
   # validate_ingredient_units/1  (DB-backed)
   # ════════════════════════════════════════════════════════════════════════
 

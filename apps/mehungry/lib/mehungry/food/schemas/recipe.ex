@@ -26,6 +26,11 @@ defmodule Mehungry.Food.Recipe do
     field :title, :string
     field :difficulty, :integer, default: 1
     field :nutrients, :map, default: %{}
+    # Derived per-serving nutrient claims written by Recipes.put_nutrient_info/2
+    # alongside :nutrients (see Food.NutrientClaims). Each element reloads as
+    # %{"nutrient" => _, "level" => "high"|"source", "percent_nrv" => int}.
+    # Derived-only — never cast from user params.
+    field :badges, {:array, :map}, default: []
     # pgvector column created by 20260622000001_add_pgvector_and_recipe_embeddings.exs;
     # written by RecipeEmbeddingWorker, read by Search.RecipeVectorSearch.
     field :embedding, Pgvector.Ecto.Vector
@@ -116,8 +121,12 @@ defmodule Mehungry.Food.Recipe do
       :cooking_time_lower_limit,
       :preperation_time_lower_limit
     ])
-    |> cast_embed(:steps, [:required_message])
-    |> cast_assoc(:recipe_ingredients, required: true)
+    |> cast_embed(:steps, sort_param: :steps_sort, drop_param: :steps_drop)
+    |> cast_assoc(:recipe_ingredients,
+      required: true,
+      sort_param: :recipe_ingredients_sort,
+      drop_param: :recipe_ingredients_drop
+    )
     |> cast_assoc(:recipe_hashtags, required: false)
   end
 end

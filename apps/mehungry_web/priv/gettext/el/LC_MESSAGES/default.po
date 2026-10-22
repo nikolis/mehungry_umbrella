@@ -22,44 +22,44 @@ msgid "Admin Panel"
 msgstr "Πίνακας Διαχείρισης"
 
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:89
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:84
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:85
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:90
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:91
 #, elixir-autogen, elixir-format
 msgid "Basket"
 msgstr "Καλάθι"
 
 #: lib/mehungry_web/live/landing_live.ex:1248
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:35
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:31
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:32
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:37
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:38
 #, elixir-autogen, elixir-format
 msgid "Browse"
 msgstr "Περιήγηση"
 
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:81
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:74
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:75
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:80
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:81
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr "Ημερολόγιο"
 
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:73
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:64
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:65
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:70
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:71
 #, elixir-autogen, elixir-format
 msgid "Create Recipe"
 msgstr "Δημιουργία Συνταγής"
 
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:56
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:41
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:42
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:47
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:48
 #, elixir-autogen, elixir-format
 msgid "Foods"
 msgstr "Τρόφιμα"
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:157
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:112
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:113
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:177
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:135
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:136
 #, elixir-autogen, elixir-format
 msgid "Friends"
 msgstr "Φίλοι"
@@ -69,14 +69,15 @@ msgstr "Φίλοι"
 msgid "Give Feedback"
 msgstr "Στείλτε Σχόλια"
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:203
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:128
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:129
+#: lib/mehungry_web/live/meal_plan_live/show.ex:611
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:223
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:151
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:152
 #, elixir-autogen, elixir-format
 msgid "Log in"
 msgstr "Σύνδεση"
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:166
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:186
 #, elixir-autogen, elixir-format
 msgid "Manage subscriptions"
 msgstr "Διαχείριση συνδρομών"
@@ -86,16 +87,16 @@ msgstr "Διαχείριση συνδρομών"
 msgid "Nutritionist Panel"
 msgstr "Πίνακας Διατροφολόγου"
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:195
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:128
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:129
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:215
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:151
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:152
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr "Προφίλ"
 
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:137
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:95
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:96
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:101
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:102
 #, elixir-autogen, elixir-format
 msgid "Tutor Invitations"
 msgstr "Προσκλήσεις"
@@ -140,7 +141,7 @@ msgid "Calories"
 msgstr "Θερμίδες"
 
 #: lib/mehungry_web/components/nutrient_labels.ex:261
-#: lib/mehungry_web/live/meal_plan_live/show.ex:131
+#: lib/mehungry_web/live/meal_plan_live/show.ex:290
 #: lib/mehungry_web/weekly_plan_graphic.ex:256
 #, elixir-autogen, elixir-format
 msgid "Carbs"
@@ -207,7 +208,7 @@ msgid "Evidence: %{level}"
 msgstr "Τεκμηρίωση: %{level}"
 
 #: lib/mehungry_web/components/nutrient_labels.ex:261
-#: lib/mehungry_web/live/meal_plan_live/show.ex:132
+#: lib/mehungry_web/live/meal_plan_live/show.ex:291
 #: lib/mehungry_web/weekly_plan_graphic.ex:256
 #, elixir-autogen, elixir-format
 msgid "Fat"
@@ -284,7 +285,7 @@ msgid "Nutrition"
 msgstr "Διατροφή"
 
 #: lib/mehungry_web/components/nutrient_labels.ex:261
-#: lib/mehungry_web/live/meal_plan_live/show.ex:130
+#: lib/mehungry_web/live/meal_plan_live/show.ex:289
 #: lib/mehungry_web/weekly_plan_graphic.ex:256
 #, elixir-autogen, elixir-format
 msgid "Protein"
@@ -314,6 +315,7 @@ msgstr "Προβολή πλήρους σελίδας τροφίμου →"
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:329
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:747
 #: lib/mehungry_web/live/landing_live.ex:587
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:203
 #, elixir-autogen, elixir-format
 msgid "min"
 msgstr "λεπτά"
@@ -645,7 +647,7 @@ msgstr "Αφήστε σχόλια, κάντε ερωτήσεις και ψηφί
 #: lib/mehungry_web/components/meal_type_labels.ex:32
 #: lib/mehungry_web/live/landing_live.ex:253
 #: lib/mehungry_web/live/landing_live.ex:493
-#: lib/mehungry_web/live/meal_plan_live/show.ex:379
+#: lib/mehungry_web/live/meal_plan_live/show.ex:834
 #, elixir-autogen, elixir-format
 msgid "Lunch"
 msgstr "Μεσημεριανό"
@@ -1103,13 +1105,14 @@ msgstr "Δημιουργία της συνταγής σας…"
 msgid "Generating…"
 msgstr "Δημιουργία…"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:78
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:21
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:22
+#: lib/mehungry_web/live/meal_plan_live/show.ex:219
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:27
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:28
 #, elixir-autogen, elixir-format
 msgid "Home"
 msgstr "Αρχική"
 
+#: lib/mehungry_web/controllers/api/v1/preferences_controller.ex:43
 #: lib/mehungry_web/live/onboarding/form_component.ex:127
 #, elixir-autogen, elixir-format
 msgid "I am lactose intolerant"
@@ -1162,6 +1165,7 @@ msgstr "Δεν βρέθηκαν στη βάση και παραλείφθηκα�
 msgid "Not found in the database — add them manually using the ingredients section."
 msgstr "Δεν βρέθηκαν στη βάση δεδομένων — προσθέστε τα χειροκίνητα από την ενότητα υλικών."
 
+#: lib/mehungry_web/controllers/api/v1/preferences_controller.ex:35
 #: lib/mehungry_web/live/onboarding/form_component.ex:171
 #, elixir-autogen, elixir-format
 msgid "Omnivore"
@@ -1172,6 +1176,7 @@ msgstr "Παμφάγος"
 msgid "Optional — set a kcal/day goal to track against your meal plans. You can change or clear this later."
 msgstr "Προαιρετικό — ορίστε στόχο kcal/ημέρα για να τον παρακολουθείτε στα πλάνα γευμάτων σας. Μπορείτε να τον αλλάξετε ή να τον διαγράψετε αργότερα."
 
+#: lib/mehungry_web/controllers/api/v1/preferences_controller.ex:38
 #: lib/mehungry_web/live/onboarding/form_component.ex:174
 #, elixir-autogen, elixir-format
 msgid "Pescatarian"
@@ -1313,11 +1318,13 @@ msgstr "Η μεταφόρτωση απέτυχε, δοκιμάστε ξανά"
 msgid "Use your ingredients?"
 msgstr "Να χρησιμοποιηθούν τα υλικά σας;"
 
+#: lib/mehungry_web/controllers/api/v1/preferences_controller.ex:37
 #: lib/mehungry_web/live/onboarding/form_component.ex:173
 #, elixir-autogen, elixir-format
 msgid "Vegan"
 msgstr "Βίγκαν"
 
+#: lib/mehungry_web/controllers/api/v1/preferences_controller.ex:36
 #: lib/mehungry_web/live/onboarding/form_component.ex:172
 #, elixir-autogen, elixir-format
 msgid "Vegetarian"
@@ -1439,7 +1446,9 @@ msgid "Daily macro targets"
 msgstr "Ημερήσιος στόχος θερμίδων"
 
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:875
-#: lib/mehungry_web/live/meal_plan_live/show.ex:365
+#: lib/mehungry_web/live/meal_plan_live/show.ex:820
+#: lib/mehungry_web/meal_plan_share_text.ex:155
+#: lib/mehungry_web/meal_plan_share_text.ex:160
 #, elixir-autogen, elixir-format
 msgid "Day %{n}"
 msgstr "Ημέρα %{n}"
@@ -1804,6 +1813,7 @@ msgstr[0] "είδος"
 msgstr[1] "είδη"
 
 #: lib/mehungry_web/live/calendar_live/calendar/widget.ex:162
+#: lib/mehungry_web/live/calendar_live/index.ex:537
 #, elixir-autogen, elixir-format
 msgid "meal"
 msgid_plural "meals"
@@ -2345,27 +2355,27 @@ msgstr "Ζεαξανθίνη"
 msgid "Full Nutrition Breakdown"
 msgstr "Πλήρης ανάλυση διατροφής"
 
-#: lib/mehungry_web/live/species_detail_live/index.ex:463
+#: lib/mehungry_web/live/species_detail_live/index.ex:475
 #, elixir-autogen, elixir-format
 msgid "Absent"
 msgstr "Απουσιάζει"
 
-#: lib/mehungry_web/live/species_detail_live/index.ex:459
+#: lib/mehungry_web/live/species_detail_live/index.ex:471
 #, elixir-autogen, elixir-format
 msgid "Contains"
 msgstr "Περιέχει"
 
-#: lib/mehungry_web/live/species_detail_live/index.ex:460
+#: lib/mehungry_web/live/species_detail_live/index.ex:472
 #, elixir-autogen, elixir-format
 msgid "High in"
 msgstr "Υψηλό σε"
 
-#: lib/mehungry_web/live/species_detail_live/index.ex:461
+#: lib/mehungry_web/live/species_detail_live/index.ex:473
 #, elixir-autogen, elixir-format
 msgid "Low in"
 msgstr "Χαμηλό σε"
 
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:164
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:245
 #, elixir-autogen, elixir-format
 msgid "No PubMed papers are on file for this link yet."
 msgstr "Δεν υπάρχουν ακόμη καταχωρημένες δημοσιεύσεις PubMed για αυτή τη σύνδεση."
@@ -2375,17 +2385,17 @@ msgstr "Δεν υπάρχουν ακόμη καταχωρημένες δημοσ
 msgid "No compounds linked to this species yet."
 msgstr "Δεν έχουν συνδεθεί ακόμη ενώσεις με αυτό το είδος."
 
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:158
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:239
 #, elixir-autogen, elixir-format
 msgid "Research supporting this compound link."
 msgstr "Έρευνα που υποστηρίζει αυτή τη σύνδεση ένωσης."
 
-#: lib/mehungry_web/live/species_detail_live/index.ex:462
+#: lib/mehungry_web/live/species_detail_live/index.ex:474
 #, elixir-autogen, elixir-format
 msgid "Trace"
 msgstr "Ίχνη"
 
-#: lib/mehungry_web/live/species_detail_live/index.html.heex:176
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:257
 #, elixir-autogen, elixir-format
 msgid "Untitled study"
 msgstr "Μελέτη χωρίς τίτλο"
@@ -2396,13 +2406,13 @@ msgid "View the research supporting this"
 msgstr "Δείτε την έρευνα που το υποστηρίζει"
 
 #: lib/mehungry_web/components/meal_type_labels.ex:32
-#: lib/mehungry_web/live/meal_plan_live/show.ex:380
+#: lib/mehungry_web/live/meal_plan_live/show.ex:835
 #, elixir-autogen, elixir-format
 msgid "Afternoon Snack"
 msgstr "Απογευματινό σνακ"
 
 #: lib/mehungry_web/components/meal_type_labels.ex:32
-#: lib/mehungry_web/live/meal_plan_live/show.ex:377
+#: lib/mehungry_web/live/meal_plan_live/show.ex:832
 #, elixir-autogen, elixir-format
 msgid "Breakfast"
 msgstr "Πρωινό"
@@ -2412,12 +2422,12 @@ msgstr "Πρωινό"
 msgid "Copy this meal to today?"
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:435
+#: lib/mehungry_web/live/calendar_live/index.html.heex:466
 #, elixir-autogen, elixir-format
 msgid "Create shareable card"
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:344
+#: lib/mehungry_web/live/calendar_live/index.html.heex:375
 #, elixir-autogen, elixir-format
 msgid "Creating your card…"
 msgstr ""
@@ -2428,17 +2438,17 @@ msgid "Day note"
 msgstr ""
 
 #: lib/mehungry_web/components/meal_type_labels.ex:32
-#: lib/mehungry_web/live/meal_plan_live/show.ex:381
+#: lib/mehungry_web/live/meal_plan_live/show.ex:836
 #, elixir-autogen, elixir-format
 msgid "Dinner"
 msgstr "Βραδινό"
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:364
+#: lib/mehungry_web/live/calendar_live/index.html.heex:395
 #, elixir-autogen, elixir-format
 msgid "Download"
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:412
+#: lib/mehungry_web/live/calendar_live/index.html.heex:443
 #, elixir-autogen, elixir-format
 msgid "Goal label (optional)"
 msgstr ""
@@ -2450,48 +2460,48 @@ msgid "Log this again today"
 msgstr ""
 
 #: lib/mehungry_web/components/meal_type_labels.ex:32
-#: lib/mehungry_web/live/meal_plan_live/show.ex:378
+#: lib/mehungry_web/live/meal_plan_live/show.ex:833
 #, elixir-autogen, elixir-format
 msgid "Morning Snack"
 msgstr "Πρωινό σνακ"
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:370
+#: lib/mehungry_web/live/calendar_live/index.html.heex:401
 #, elixir-autogen, elixir-format
 msgid "My weekly meal plan"
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:381
+#: lib/mehungry_web/live/calendar_live/index.html.heex:412
 #, elixir-autogen, elixir-format
 msgid "Post to m3hungry"
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:385
+#: lib/mehungry_web/live/calendar_live/index.html.heex:416
 #, elixir-autogen, elixir-format
 msgid "Posted!"
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:404
+#: lib/mehungry_web/live/calendar_live/index.html.heex:435
 #, elixir-autogen, elixir-format
 msgid "Re-generate from the latest plan"
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:433
+#: lib/mehungry_web/live/calendar_live/index.html.heex:464
 #, elixir-autogen, elixir-format
 msgid "Replace saved card"
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:373
+#: lib/mehungry_web/live/calendar_live/index.html.heex:404
 #, elixir-autogen, elixir-format
 msgid "Share"
 msgstr ""
 
 #: lib/mehungry_web/live/calendar_live/index.html.heex:21
-#: lib/mehungry_web/live/calendar_live/index.html.heex:330
+#: lib/mehungry_web/live/calendar_live/index.html.heex:361
 #, elixir-autogen, elixir-format
 msgid "Share this week"
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:424
+#: lib/mehungry_web/live/calendar_live/index.html.heex:455
 #, elixir-autogen, elixir-format
 msgid "This shares your meal titles and weekly nutrition totals publicly. Your day notes and shopping basket stay private."
 msgstr ""
@@ -2501,22 +2511,22 @@ msgstr ""
 msgid "Unsorted"
 msgstr "Χωρίς κατηγορία"
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:387
+#: lib/mehungry_web/live/calendar_live/index.html.heex:418
 #, elixir-autogen, elixir-format
 msgid "View in feed"
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:353
+#: lib/mehungry_web/live/calendar_live/index.html.heex:384
 #, elixir-autogen, elixir-format
 msgid "Weekly plan card"
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:349
+#: lib/mehungry_web/live/calendar_live/index.html.heex:380
 #, elixir-autogen, elixir-format
 msgid "Your saved card for this week."
 msgstr ""
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:419
+#: lib/mehungry_web/live/calendar_live/index.html.heex:450
 #, elixir-autogen, elixir-format
 msgid "e.g. Anti-inflammatory"
 msgstr ""
@@ -2552,7 +2562,7 @@ msgid "Daily average over %{days} days"
 msgstr "Ημερήσιος μέσος όρος σε %{days} ημέρες"
 
 #: lib/mehungry_web/live/calendar_live/index.html.heex:37
-#: lib/mehungry_web/live/calendar_live/index.html.heex:454
+#: lib/mehungry_web/live/calendar_live/index.html.heex:485
 #, elixir-autogen, elixir-format
 msgid "Foods I avoid"
 msgstr "Τροφές που αποφεύγω"
@@ -2562,7 +2572,7 @@ msgstr "Τροφές που αποφεύγω"
 msgid "Hide micronutrients"
 msgstr "Απόκρυψη μικροθρεπτικών"
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:457
+#: lib/mehungry_web/live/calendar_live/index.html.heex:488
 #, elixir-autogen, elixir-format
 msgid "List foods you'd rather not eat — one per line. Any meal on your calendar containing one gets flagged. This list is private to you."
 msgstr "Καταχωρίστε τροφές που προτιμάτε να μην τρώτε — μία ανά γραμμή. Κάθε γεύμα στο ημερολόγιό σας που περιέχει κάποια επισημαίνεται. Η λίστα αυτή είναι ιδιωτική."
@@ -2587,8 +2597,8 @@ msgstr "Χωρίς δεδομένα μακροθρεπτικών"
 msgid "No nutrition data available"
 msgstr "Δεν υπάρχουν διαθέσιμα διατροφικά δεδομένα"
 
-#: lib/mehungry_web/components/recipe_components.ex:725
-#: lib/mehungry_web/components/recipe_components.ex:754
+#: lib/mehungry_web/components/recipe_components.ex:781
+#: lib/mehungry_web/components/recipe_components.ex:810
 #, elixir-autogen, elixir-format
 msgid "Nutrition Facts"
 msgstr "Διατροφικά Στοιχεία"
@@ -2603,7 +2613,7 @@ msgstr "Στη λίστα αποφυγής σας"
 msgid "On your avoid list: %{terms}"
 msgstr "Στη λίστα αποφυγής σας: %{terms}"
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:473
+#: lib/mehungry_web/live/calendar_live/index.html.heex:504
 #, elixir-autogen, elixir-format
 msgid "Save avoid list"
 msgstr "Αποθήκευση λίστας αποφυγής"
@@ -2618,7 +2628,7 @@ msgstr "Εμφάνιση μικροθρεπτικών"
 msgid "Weekly Summary"
 msgstr "Εβδομαδιαία Σύνοψη"
 
-#: lib/mehungry_web/live/calendar_live/index.html.heex:465
+#: lib/mehungry_web/live/calendar_live/index.html.heex:496
 #, elixir-autogen, elixir-format
 msgid "e.g.\nonion\ngarlic\nshellfish"
 msgstr "π.χ.\nκρεμμύδι\nσκόρδο\nοστρακοειδή"
@@ -2633,170 +2643,331 @@ msgstr "κορ. λιπαρά"
 msgid "sodium"
 msgstr "νάτριο"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:252
+#: lib/mehungry_web/live/meal_plan_live/show.ex:543
 #, elixir-autogen, elixir-format, fuzzy
 msgid "%{count} item"
 msgid_plural "%{count} items"
 msgstr[0] "%{count} προϊόν"
 msgstr[1] "%{count} προϊόντα"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:193
+#: lib/mehungry_web/live/meal_plan_live/show.ex:485
 #, elixir-autogen, elixir-format, fuzzy
 msgid "%{count} meal"
 msgid_plural "%{count} meals"
 msgstr[0] "%{count} γεύμα"
 msgstr[1] "%{count} γεύματα"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:117
+#: lib/mehungry_web/live/meal_plan_live/show.ex:273
+#: lib/mehungry_web/meal_plan_share_text.ex:91
 #, elixir-autogen, elixir-format
 msgid "%{count} recipe"
 msgid_plural "%{count} recipes"
 msgstr[0] "%{count} συνταγή"
 msgstr[1] "%{count} συνταγές"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:111
+#: lib/mehungry_web/live/meal_plan_live/show.ex:267
 #, elixir-autogen, elixir-format
 msgid "7 days"
 msgstr "7 ημέρες"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:142
+#: lib/mehungry_web/live/meal_plan_live/show.ex:301
 #, elixir-autogen, elixir-format
 msgid "Add to my calendar"
 msgstr "Προσθήκη στο ημερολόγιό μου"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:63
+#: lib/mehungry_web/live/meal_plan_live/show.ex:149
 #, elixir-autogen, elixir-format
 msgid "Added %{count} meals to your calendar for this week."
 msgstr "Προστέθηκαν %{count} γεύματα στο ημερολόγιό σας για αυτήν την εβδομάδα."
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:387
+#: lib/mehungry_web/live/meal_plan_live/show.ex:842
 #, elixir-autogen, elixir-format
 msgid "Bakery & Grains"
 msgstr "Αρτοσκευάσματα & Δημητριακά"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:390
+#: lib/mehungry_web/live/meal_plan_live/show.ex:845
 #, elixir-autogen, elixir-format
 msgid "Beverages"
 msgstr "Ποτά"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:301
+#: lib/mehungry_web/live/meal_plan_live/show.ex:649
 #, elixir-autogen, elixir-format
 msgid "Build and share your own weekly meal plans, free — with USDA nutrition."
 msgstr "Δημιουργήστε και μοιραστείτε τα δικά σας εβδομαδιαία προγράμματα γευμάτων, δωρεάν — με διατροφικά στοιχεία USDA."
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:129
+#: lib/mehungry_web/live/meal_plan_live/show.ex:286
+#, elixir-autogen, elixir-format
 msgid "Calories/day"
 msgstr "Θερμίδες/ημέρα"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:161
+#: lib/mehungry_web/live/meal_plan_live/show.ex:320
 #, elixir-autogen, elixir-format
 msgid "Copied!"
 msgstr "Αντιγράφηκε!"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:164
+#: lib/mehungry_web/live/meal_plan_live/show.ex:323
 #, elixir-autogen, elixir-format
 msgid "Copy link"
 msgstr "Αντιγραφή συνδέσμου"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:386
+#: lib/mehungry_web/live/meal_plan_live/show.ex:841
 #, elixir-autogen, elixir-format
 msgid "Dairy & Eggs"
 msgstr "Γαλακτοκομικά & Αυγά"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:149
+#: lib/mehungry_web/live/meal_plan_live/show.ex:308
 #, elixir-autogen, elixir-format
 msgid "Log in to use this plan"
 msgstr "Συνδεθείτε για να χρησιμοποιήσετε αυτό το πρόγραμμα"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:295
+#: lib/mehungry_web/live/meal_plan_live/show.ex:643
 #, elixir-autogen, elixir-format
 msgid "Made with"
 msgstr "Φτιαγμένο με"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:80
+#: lib/mehungry_web/live/meal_plan_live/show.ex:222
+#: lib/mehungry_web/live/meal_plan_live/show.ex:224
+#: lib/mehungry_web/live/meal_plan_live/show.ex:225
+#, elixir-autogen, elixir-format
 msgid "Meal Plans"
 msgstr "Προγράμματα Γευμάτων"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:385
+#: lib/mehungry_web/live/meal_plan_live/show.ex:840
 #, elixir-autogen, elixir-format
 msgid "Meat & Seafood"
 msgstr "Κρέας & Θαλασσινά"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:202
+#: lib/mehungry_web/live/meal_plan_live/show.ex:494
 #, elixir-autogen, elixir-format
 msgid "No meals planned"
 msgstr "Δεν έχουν προγραμματιστεί γεύματα"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:391
+#: lib/mehungry_web/live/meal_plan_live/show.ex:846
 #, elixir-autogen, elixir-format
 msgid "Other"
 msgstr "Άλλα"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:388
+#: lib/mehungry_web/live/meal_plan_live/show.ex:843
 #, elixir-autogen, elixir-format
 msgid "Pantry"
 msgstr "Ντουλάπι"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:384
+#: lib/mehungry_web/live/meal_plan_live/show.ex:839
 #, elixir-autogen, elixir-format
 msgid "Produce"
 msgstr "Φρούτα & Λαχανικά"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:157
+#: lib/mehungry_web/live/meal_plan_live/show.ex:316
 #, elixir-autogen, elixir-format
 msgid "Share on Facebook"
 msgstr "Κοινοποίηση στο Facebook"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:98
+#: lib/mehungry_web/live/meal_plan_live/show.ex:254
+#, elixir-autogen, elixir-format
 msgid "Shared by"
 msgstr "Κοινοποιήθηκε από"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:389
+#: lib/mehungry_web/live/meal_plan_live/show.ex:844
 #, elixir-autogen, elixir-format
 msgid "Spices & Seasonings"
 msgstr "Μπαχαρικά & Καρυκεύματα"
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:55
+#: lib/mehungry_web/live/meal_plan_live/show.ex:141
 #, elixir-autogen, elixir-format
 msgid "This plan has no meals that can be added to a calendar."
 msgstr "Αυτό το πρόγραμμα δεν έχει γεύματα που μπορούν να προστεθούν στο ημερολόγιο."
 
-#: lib/mehungry_web/live/meal_plan_live/show.ex:249
+#: lib/mehungry_web/live/meal_plan_live/show.ex:540
 #, elixir-autogen, elixir-format
 msgid "Weekly grocery list"
 msgstr "Εβδομαδιαία λίστα για ψώνια"
 
-#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:13
+#: lib/mehungry_web/live/meal_plan_live/show.ex:585
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{count} comment"
+msgid_plural "%{count} comments"
+msgstr[0] "%{count} προϊόν"
+msgstr[1] "%{count} προϊόντα"
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:598
 #, elixir-autogen, elixir-format
-msgid "Validation failed"
-msgstr "Η επικύρωση απέτυχε"
+msgid "Add a comment…"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:39
+#, elixir-autogen, elixir-format
+msgid "Bad request"
+msgstr "Μη έγκυρο αίτημα"
+
+#: lib/mehungry_web/live/blueprint_live/show.ex:255
+#, elixir-autogen, elixir-format
+msgid "Blueprints"
+msgstr ""
+
+#: lib/mehungry_web/meal_plan_share_text.ex:74
+#, elixir-autogen, elixir-format
+msgid "Build your own week 👉 %{url}"
+msgstr ""
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:167
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:292
+#, elixir-autogen, elixir-format
+msgid "Claims follow EU Reg. 1169/2011 & 1924/2006, per serving."
+msgstr "Οι ισχυρισμοί βάσει Καν. ΕΕ 1169/2011 & 1924/2006, ανά μερίδα."
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:60
+#, elixir-autogen, elixir-format
+msgid "Clear week"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:442
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Copy"
+msgstr "Αντιγραφή συνδέσμου"
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:420
+#, elixir-autogen, elixir-format
+msgid "Copy caption"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:194
+#, elixir-autogen, elixir-format
+msgid "Could not post your comment. Please try again."
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:161
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Couldn't load recipes for this food."
+msgstr "Δεν ήταν δυνατή η φόρτωση των συνταγών."
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:49
+#, elixir-autogen, elixir-format
+msgid "Delete every meal from the week you're viewing? This can't be undone."
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:411
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Download image"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:395
+#, elixir-autogen, elixir-format
+msgid "Download the image, copy the caption, then post them together."
+msgstr ""
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:150
+#, elixir-autogen, elixir-format
+msgid "Filter recipes by nutrient"
+msgstr "Φιλτράρισμα συνταγών ανά θρεπτικό συστατικό"
+
+#: lib/mehungry_web/meal_plan_share_text.ex:50
+#, elixir-autogen, elixir-format
+msgid "Full 7-day plan + grocery list 👉 %{url}"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:276
+#, elixir-autogen, elixir-format
+msgid "High in %{nutrient}"
+msgstr "Υψηλή σε %{nutrient}"
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:379
+#, elixir-autogen, elixir-format
+msgid "Image + caption"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:329
+#, elixir-autogen, elixir-format
+msgid "Like"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:236
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Meal plan"
+msgstr "Σχεδιασμός γευμάτων"
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:158
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:118
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:119
+#, elixir-autogen, elixir-format
+msgid "Messages"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:617
+#, elixir-autogen, elixir-format
+msgid "No comments yet — be the first to share your thoughts."
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:163
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No recipes use this food yet."
+msgstr "Δεν βρέθηκαν ακόμη συνταγές για αυτό το τρόφιμο."
 
 #: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:17
 #, elixir-autogen, elixir-format
 msgid "Not found"
 msgstr "Δεν βρέθηκε"
 
-#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:21
-#, elixir-autogen, elixir-format
-msgid "unauthorized"
-msgstr "Μη εξουσιοδοτημένο"
-
-#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:25
-#, elixir-autogen, elixir-format
-msgid "forbidden"
-msgstr "Απαγορεύεται"
+#: lib/mehungry_web/live/meal_plan_live/show.ex:605
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Post"
+msgstr ""
 
 #: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:31
 #, elixir-autogen, elixir-format
 msgid "Quota reached for your plan"
 msgstr "Εξαντλήθηκε το όριο του πακέτου σας"
 
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:143
+#, elixir-autogen, elixir-format
+msgid "Recipes with %{food}"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:366
+#, elixir-autogen, elixir-format
+msgid "Share as a post"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:453
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Share…"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:387
+#, elixir-autogen, elixir-format
+msgid "Text post"
+msgstr ""
+
 #: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:35
 #, elixir-autogen, elixir-format
 msgid "Too many requests"
 msgstr "Πάρα πολλά αιτήματα"
 
-#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:39
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:13
 #, elixir-autogen, elixir-format
-msgid "Bad request"
-msgstr "Μη έγκυρο αίτημα"
+msgid "Validation failed"
+msgstr "Η επικύρωση απέτυχε"
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:217
+#, elixir-autogen, elixir-format
+msgid "Your profile"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:25
+#, elixir-autogen, elixir-format
+msgid "forbidden"
+msgstr "Απαγορεύεται"
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:613
+#, elixir-autogen, elixir-format
+msgid "to join the conversation."
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:21
+#, elixir-autogen, elixir-format
+msgid "unauthorized"
+msgstr "Μη εξουσιοδοτημένο"
+
+#: lib/mehungry_web/meal_plan_share_text.ex:72
+#, elixir-autogen, elixir-format
+msgid "🛒 Free grocery list included"
+msgstr ""

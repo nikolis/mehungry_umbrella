@@ -36,9 +36,23 @@ defmodule Mehungry.Accounts.UserContent do
   def save_user_follow(user_id, follow_id) when is_integer(user_id) and is_integer(follow_id) do
     attrs = %{user_id: user_id, follow_id: follow_id}
 
-    %UserFollow{}
-    |> UserFollow.changeset(attrs)
-    |> Repo.insert(on_conflict: :nothing, conflict_target: [:user_id, :follow_id])
+    result =
+      %UserFollow{}
+      |> UserFollow.changeset(attrs)
+      |> Repo.insert(on_conflict: :nothing, conflict_target: [:user_id, :follow_id])
+
+    # Notify the followed user (any client — LiveView or REST — reaches this).
+    # Self-follows are rejected above; duplicate unread follows are de-duped in
+    # `Notifications.create/3`.
+    with {:ok, _} <- result do
+      Mehungry.Notifications.emit(follow_id, "follow",
+        actor_id: user_id,
+        subject_type: "user",
+        subject_id: user_id
+      )
+    end
+
+    result
   end
 
   @doc "Whether `user_id` currently follows `follow_id`."

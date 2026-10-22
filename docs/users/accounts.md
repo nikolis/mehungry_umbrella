@@ -72,6 +72,23 @@ Accounts modules directly.**
    convention as `Mehungry.Food`. Add a `defdelegate` when adding a sub-module public fn.
 5. **Bot users are normal users.** AI-bot authors are `Accounts` users carrying
    `instagram_token`/`facebook_token`/`pinterest_token` maps — see [`../ai/ai_bot.md`](../ai/ai_bot.md).
+6. **Follow graph invariants.** The social follow graph is the `user_follows`
+   table (`UserFollow`: `user_id` = follower, `follow_id` = followee), managed
+   through `UserContent.{save_user_follow/2, remove_user_follow/2, following?/2}`
+   (+ `Profiles.count_user_followers/1` · `count_user_following/1`). Two
+   invariants hold at the domain layer, so every surface (web + REST) inherits
+   them:
+   - **Idempotent.** A unique index on `(user_id, follow_id)` plus
+     `on_conflict: :nothing` in `save_user_follow/2` means a repeat follow is a
+     no-op — never a duplicate row that would inflate the follower count.
+     `remove_user_follow/2` is likewise a no-op when not following.
+   - **No self-follow.** `save_user_follow(id, id)` returns `{:error, :self_follow}`.
+   `following?/2` is the viewer→target state check (used to render Follow /
+   Following buttons). The mobile REST surface — `POST`/`DELETE
+   /api/v1/users/:id/follow` and the `following` field on `GET /api/v1/users/:id`
+   — is specified in [`../new_dec_specs/mobile_api_spec.md`](../new_dec_specs/mobile_api_spec.md)
+   (§5 engagement, §6 profiles); the web feed/grading read the same graph via
+   `list_user_follows/1` (`Grading` follow bonus).
 
 ## Read next
 

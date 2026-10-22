@@ -186,6 +186,26 @@ one code path:
   Save & Verify. Steps persist to `RecipeTranslation.steps` and are overlaid by
   `Localization.apply_recipe_translation/2`. The bulk worker already translated
   steps; this closes the same gap in the per-item review editor.
+- **Ingredient portions** — like recipe steps, the ingredients descriptor carries a
+  child collection (flagged `translate_portions: true`): an ingredient's **unit-less
+  free-text portions** (`"1 medium banana"`, `"1 slice"` — portions with a real
+  measurement unit get their label from the unit's own translation instead) render as
+  a per-portion input in the editor and are AI-translated by both "AI Translate" and
+  the bulk worker. They persist to the `ingredient_portion_translations` table
+  (`Food.IngredientPortionTranslation`) via `Food.upsert_portion_translation/4`, and
+  are read back by `Food.portion_display_names/2` — overlaid onto recipe-ingredient
+  unit labels (`Localization.localize_recipe_ingredients/2` + `translate_ingredients_to/2`)
+  and the calendar/mobile unit-option labels (`Food.build_unit_options/2`). Portion
+  rows have their own `status` and do not change the ingredient's top-level coverage
+  counts. Because portion translations are decoupled from the base translation, an
+  ingredient can be fully translated yet still have untranslated portions; the panel
+  therefore has a second bulk button, **"AI-translate missing portions"**, that
+  targets exactly those ingredients (`Food.ingredient_ids_with_untranslated_portions/1`)
+  and enqueues a **portions-only** worker run (`ResourceTranslationWorker` with
+  `portions_only: true`) which drafts only the missing portions and never touches the
+  base name/description translation. Both the portions-only run and the regular bulk
+  run only draft portions that are still missing, so re-running never clobbers an
+  existing (possibly verified) portion translation.
 - **Editable original** — the per-item editor is two-sided: each column is its own
   form. The left **Original** side edits the source-language base row in place
   ("Save original" → `Translations.update_base/4`, a targeted `cast` of just the

@@ -22,6 +22,8 @@ defmodule Mehungry.Food.IngredientPortion do
 
     belongs_to :measurement_unit, Mehungry.Food.MeasurementUnit
 
+    has_many :translation, Mehungry.Food.IngredientPortionTranslation, on_replace: :delete
+
     timestamps()
   end
 
@@ -48,11 +50,42 @@ defmodule Mehungry.Food.IngredientPortion do
 
   # Display label for a portion: prefer the free-text description (from USDA
   # `portionDescription`), fall back to the linked measurement unit's name.
-  def display_name(%__MODULE__{description: desc}) when is_binary(desc) and desc != "", do: desc
+  # Both are passed through `strip_amount/1` so the quantity never shows — the
+  # label is a *unit*, the count lives in the row's own `quantity`/`amount`.
+  def display_name(%__MODULE__{description: desc}) when is_binary(desc) and desc != "",
+    do: strip_amount(desc)
 
-  def display_name(%__MODULE__{measurement_unit: %{name: name}}) when is_binary(name), do: name
+  def display_name(%__MODULE__{measurement_unit: %{name: name}}) when is_binary(name),
+    do: strip_amount(name)
 
   def display_name(_), do: nil
+
+  @doc """
+  Strips numeric quantity tokens from a portion label so only the unit/measure
+  survives: `"1 cup" → "cup"`, `"1 φλιτζάνι" → "φλιτζάνι"`, `"2 1/2 cups" →
+  "cups"`, `"1,5 φλιτζάνι" → "φλιτζάνι"`. Collapses the whitespace left behind
+  and trims any leading/trailing separators. A purely-numeric label (nothing
+  left after stripping) is returned unchanged so it never renders blank.
+
+  The canonical place portion labels are shown — every surface routes its label
+  through here via `display_name/1` or the localized option builders — so the
+  quantity is hidden consistently across recipe details, recipe creation, the
+  calendar, and the REST API.
+  """
+  def strip_amount(label) when is_binary(label) do
+    stripped =
+      label
+      # Remove digit runs (incl. decimals/fractions like "1/2", "1,5", "1.5").
+      |> String.replace(~r/\d+([.,\/]\d+)*/u, " ")
+      # Collapse the whitespace the removal left behind.
+      |> String.replace(~r/\s+/u, " ")
+      # Trim surrounding whitespace and orphaned separators ("8-ounce" → "ounce").
+      |> String.replace(~r/^[\s\-.,\/]+|[\s\-.,\/]+$/u, "")
+
+    if stripped == "", do: label, else: stripped
+  end
+
+  def strip_amount(other), do: other
 
   # USDA portion labels that are technical artifacts rather than a serving a
   # person would recognize: "RACC" is the Reference Amount Customarily Consumed

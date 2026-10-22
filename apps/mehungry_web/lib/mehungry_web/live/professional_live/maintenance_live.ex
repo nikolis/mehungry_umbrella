@@ -29,7 +29,7 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
      |> assign(:running, true)
      |> assign(:enqueued_count, count)
      |> assign(:job_status, :enqueued)
-     |> put_flash(:info, "Enqueued nutrient recalculation for #{count} recipes.")}
+     |> put_flash(:info, "Enqueued nutrient + badge recalculation for #{count} recipes.")}
   end
 
   @impl true
@@ -70,12 +70,15 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
       <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-6">
         <div class="flex items-start justify-between gap-4">
           <div>
-            <h2 class="text-lg font-semibold text-white">Recalculate Recipe Nutrients</h2>
+            <h2 class="text-lg font-semibold text-white">Recalculate Recipe Nutrients &amp; Badges</h2>
             <p class="text-parchment-dim text-sm mt-1 max-w-lg">
               Re-runs the nutrient calculation pipeline for every recipe in the database.
               Each recipe is enqueued as an Oban job and processed in the background.
               Use this after fixing a calculation bug (e.g. the energy deduplication fix)
-              to backfill correct values for existing recipes.
+              to backfill correct values for existing recipes. <strong class="text-parchment">This is
+              also the backfill for the "High in X" nutrient-claim badges</strong> (feed, browse,
+              recipe cards, API) — they are recomputed and coverage-gated as part of the same
+              pipeline, so no separate job is needed.
             </p>
             <div class="mt-3 flex items-center gap-3 text-sm text-parchment-dim">
               <span class="inline-flex items-center gap-1.5">
@@ -143,7 +146,7 @@ defmodule MehungryWeb.ProfessionalLive.MaintenanceLive do
           <div class="mt-4 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm">
             <strong>{@enqueued_count} Oban jobs</strong> have been enqueued.
             Processing happens in the background — check the Oban dashboard or server logs for progress.
-            Each job recalculates and saves nutrients for one recipe.
+            Each job recalculates and saves nutrients <strong>and nutrient-claim badges</strong> for one recipe.
           </div>
         <% end %>
       </div>

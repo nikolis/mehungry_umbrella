@@ -41,6 +41,18 @@ defmodule Mehungry.Languages.Locale do
   @doc "Human-readable language name for a locale."
   def label(locale), do: Map.get(@labels, locale, locale)
 
+  @doc """
+  All `languages.name` codes in the same locale group as `code` (ISO + legacy
+  aliases). Lets a caller that only holds a legacy code (e.g. the inner-join
+  recipe localizer, which receives `"Gr"`) still match newer ISO-keyed rows.
+  Falls back to `[code]` for an unknown code.
+  """
+  def siblings(code) do
+    Enum.find_value(@data_codes, [code], fn {_locale, codes} ->
+      if code in codes, do: codes
+    end)
+  end
+
   @doc "True if `locale` is a supported content locale."
   def supported?(locale), do: locale in @locales
 end

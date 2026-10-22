@@ -53,13 +53,15 @@ defmodule MehungryWeb.Api.V1.SearchController do
     # search otherwise). Reuses the same `Food.IngredientSearch` functions the
     # LiveView picker uses so results never drift. Both branches yield items with
     # `.id`/`.name`, so unit lookup + serialization below are unchanged.
+    locale = Locale.resolve(conn, params)
+
     ingredients =
-      case Locale.resolve(conn, params) do
+      case locale do
         "el" -> Food.IngredientSearch.search_in_language(q, "el", owner_id)
         _ -> Food.IngredientSearch.search(q, [], owner_id)
       end
 
-    units_by_id = unit_options_by_id(ingredients)
+    units_by_id = unit_options_by_id(ingredients, locale)
 
     blueprint = BlueprintMatch.blueprint(conn, params)
     reports = BlueprintMatch.ingredient_reports(blueprint, ingredients)
@@ -91,12 +93,12 @@ defmodule MehungryWeb.Api.V1.SearchController do
 
   # Batch the portion lookup across all hits (one query) and append the shared
   # grams option once, so building N ingredients' unit lists is 2 queries, not 2N.
-  defp unit_options_by_id(ingredients) do
+  defp unit_options_by_id(ingredients, locale) do
     ids = Enum.map(ingredients, & &1.id)
     portions_by_id = Food.get_measurement_unit_portions_for_ingredients(ids)
 
     Map.new(ids, fn id ->
-      {id, Food.build_unit_options(Map.get(portions_by_id, id, []))}
+      {id, Food.build_unit_options(Map.get(portions_by_id, id, []), locale)}
     end)
   end
 

@@ -276,10 +276,11 @@ defmodule Mehungry.FoodTest do
       assert ri.ingredient_portion_id == portion.id
       assert is_nil(ri.measurement_unit_id)
 
-      # unit_label falls back to the portion's free-text description; the
-      # dropdown re-selection value is the -portion_id encoding.
+      # unit_label falls back to the portion's free-text description with the
+      # leading quantity stripped (the count lives in the sibling quantity field);
+      # the dropdown re-selection value is the -portion_id encoding.
       ri = %{ri | ingredient_portion: portion}
-      assert Mehungry.Food.RecipeIngredient.unit_label(ri) == "1 medium"
+      assert Mehungry.Food.RecipeIngredient.unit_label(ri) == "medium"
       assert Mehungry.Food.RecipeIngredient.unit_selection_value(ri) == -portion.id
     end
 

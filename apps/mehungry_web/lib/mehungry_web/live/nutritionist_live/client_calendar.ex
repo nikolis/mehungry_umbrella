@@ -188,6 +188,7 @@ defmodule MehungryWeb.NutritionistLive.ClientCalendar do
             recipes={@recipes}
             dates={@dates}
             current_user={@client}
+            current_language={@current_language}
             return_to={"/nutritionist/clients/#{@client_id}/calendar"}
           />
         </div>

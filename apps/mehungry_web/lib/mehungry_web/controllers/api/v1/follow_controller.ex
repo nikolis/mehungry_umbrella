@@ -6,7 +6,6 @@ defmodule MehungryWeb.Api.V1.FollowController do
 
   alias Mehungry.Accounts
   alias Mehungry.Accounts.UserContent
-  alias MehungryWeb.Api.Broadcaster
 
   action_fallback MehungryWeb.Api.V1.FallbackController
 
@@ -14,6 +13,8 @@ defmodule MehungryWeb.Api.V1.FollowController do
     follower = conn.assigns.current_user
     target = to_int(id)
 
+    # The follow notification is emitted inside `UserContent.save_user_follow/2`
+    # so every client (LiveView + REST) triggers it.
     case UserContent.save_user_follow(follower.id, target) do
       {:error, :self_follow} ->
         conn
@@ -21,8 +22,6 @@ defmodule MehungryWeb.Api.V1.FollowController do
         |> json(%{errors: %{detail: "You cannot follow yourself"}})
 
       _ ->
-        Broadcaster.notify(target, "follow", %{follower_id: follower.id})
-
         json(
           conn,
           data(%{following: true, followers_count: Accounts.count_user_followers(target) || 0})

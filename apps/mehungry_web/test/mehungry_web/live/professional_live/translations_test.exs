@@ -1,5 +1,6 @@
 defmodule MehungryWeb.ProfessionalLive.TranslationsTest do
   use MehungryWeb.ConnCase
+  use Oban.Testing, repo: Mehungry.Repo
 
   import Phoenix.LiveViewTest
   import Mehungry.AccountsFixtures
@@ -114,6 +115,75 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsTest do
       assert updated.title == "Fixed title"
       assert updated.description == "Fixed description"
       assert Enum.map(updated.steps, & &1.description) == ["Dice the onion.", "Simmer the water."]
+    end
+  end
+
+  describe "ingredient portion editor" do
+    setup do
+      ingredient = ingredient_fixture()
+
+      {:ok, portion} =
+        Food.create_ingredient_portion(%{
+          ingredient_id: ingredient.id,
+          description: "1 medium banana",
+          gram_weight: 118.0
+        })
+
+      %{ingredient: ingredient, portion: portion}
+    end
+
+    test "renders the unit-less portion with an editable translation input", %{
+      conn: conn,
+      ingredient: ingredient,
+      portion: portion
+    } do
+      {:ok, _view, html} =
+        live(conn, ~p"/professional/translations/ingredients/#{ingredient.id}")
+
+      assert html =~ "Portions"
+      assert html =~ "1 medium banana"
+      assert html =~ ~s(name="portions[#{portion.id}]")
+    end
+
+    test "Save & Verify persists the portion translation", %{
+      conn: conn,
+      ingredient: ingredient,
+      portion: portion
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/professional/translations/ingredients/#{ingredient.id}")
+
+      view
+      |> form("form[phx-submit=save]", %{
+        "fields" => %{"name" => "μπανάνα", "description" => ""},
+        "portions" => %{"#{portion.id}" => "1 μέτρια μπανάνα"}
+      })
+      |> render_submit()
+
+      assert Food.portion_display_names([portion.id], "el") == %{portion.id => "1 μέτρια μπανάνα"}
+    end
+
+    test "'AI-translate missing portions' enqueues a portions-only run and skips done ones", %{
+      conn: conn,
+      ingredient: ingredient,
+      portion: portion
+    } do
+      {:ok, view, html} = live(conn, ~p"/professional/translations/ingredients")
+
+      # The ingredient has an untranslated portion → the button is enabled.
+      assert html =~ "AI-translate missing portions"
+
+      view |> element("button[phx-click=ai_portions]") |> render_click()
+
+      assert_enqueued(
+        worker: Mehungry.ObanWorkers.ResourceTranslationWorker,
+        args: %{resource: "ingredients", language: "el", portions_only: true}
+      )
+
+      # The enqueued batch targets the ingredient with the missing portion.
+      [job] = all_enqueued(worker: Mehungry.ObanWorkers.ResourceTranslationWorker)
+      assert ingredient.id in job.args["ids"]
+      assert portion
     end
   end
 

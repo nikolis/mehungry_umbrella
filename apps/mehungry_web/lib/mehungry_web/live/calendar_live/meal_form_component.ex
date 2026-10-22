@@ -19,7 +19,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   # blank the selection.
   @impl true
   def update(%{ingredient_selected: {index, ingredient_id}}, socket) do
-    options = unit_options(ingredient_id)
+    options = unit_options(ingredient_id, socket.assigns[:current_language] || "en")
 
     socket =
       socket
@@ -71,7 +71,8 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     # row with no ingredient chosen yet, and `unit_options_by_index` caches the
     # per-row option lists so we don't re-query on every render.
     gram_options = gram_options()
-    unit_options_by_index = build_unit_options_by_index(base_user_meal)
+    unit_options_by_index =
+      build_unit_options_by_index(base_user_meal, assigns[:current_language] || "en")
 
     recipe_ids = Enum.map(recipes, fn x -> x.id end)
 
@@ -117,22 +118,22 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   # Precomputes the per-row unit dropdown options keyed by the row's `inputs_for`
   # index (its position in the ingredient list). New meals have no persisted rows
   # yet, so the map starts empty and rows fall back to `gram_options`.
-  defp build_unit_options_by_index(%UserMeal{ingredient_user_meals: iums}) when is_list(iums) do
+  defp build_unit_options_by_index(%UserMeal{ingredient_user_meals: iums}, locale) when is_list(iums) do
     iums
     |> Enum.with_index()
-    |> Map.new(fn {ium, idx} -> {idx, unit_options(ium.ingredient_id)} end)
+    |> Map.new(fn {ium, idx} -> {idx, unit_options(ium.ingredient_id, locale)} end)
   end
 
-  defp build_unit_options_by_index(_meal), do: %{}
+  defp build_unit_options_by_index(_meal, _locale), do: %{}
 
   # The unit dropdown options for an ingredient. The option list itself is built
   # in the core `Food` context (`Food.ingredient_unit_options/1`) so this form
   # and the `/api/v1/ingredients/search?source=local` endpoint stay in lockstep;
   # here we only project each option onto the `{value_string, label}` tuple the
   # `SelectComponent` expects, where the value is the signed `unit_selection`.
-  defp unit_options(ingredient_id) do
+  defp unit_options(ingredient_id, locale) do
     ingredient_id
-    |> Food.ingredient_unit_options()
+    |> Food.ingredient_unit_options(locale)
     |> to_select_options()
   end
 

@@ -190,11 +190,24 @@ defmodule MehungryWeb.SitemapController do
         )
       end)
 
+    # Nutrient-claim filter pages ("foods high in iron", …). Only the curated chip
+    # shortlist is listed — the other NRV nutrients stay reachable via
+    # /search/nutrient/:slug but aren't sitemapped, to avoid thin pages.
+    nutrient_urls =
+      Enum.map(MehungryWeb.RecipeBrowserLive.Index.chip_nutrients(), fn label ->
+        localized_entries("/search/nutrient/#{Mehungry.Food.claim_slug(label)}",
+          lastmod: today,
+          changefreq: "weekly",
+          priority: "0.6"
+        )
+      end)
+
     all_urls =
       Enum.join(
         static_urls ++
           recipe_urls ++
-          hashtag_urls ++ food_urls ++ nutritionist_urls ++ article_urls ++ plan_urls,
+          hashtag_urls ++
+          food_urls ++ nutritionist_urls ++ article_urls ++ plan_urls ++ nutrient_urls,
         "\n"
       )
 

@@ -22,6 +22,12 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
     :ok
   end
 
+  # One `recipe[recipe_ingredients_sort][]` hidden input is rendered per
+  # ingredient row, so counting them counts the rows currently in the form.
+  defp count_ingredient_rows(html) do
+    length(String.split(html, ~s(name="recipe[recipe_ingredients_sort][]"))) - 1
+  end
+
   defp create_ingredient(_) do
     ingredient = ingredient_fixture()
     %{ingredient: ingredient}
@@ -96,6 +102,43 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
       assert recipe_ingredient.ingredient_id == ingredient2.id
     end
 
+    test "Adding an ingredient in edit mode preserves the existing rows (regression)", %{
+      conn: conn,
+      user: user
+    } do
+      [ingredient | rest] = Food.search_ingredient("beans", nil)
+      [ingredient2 | _rest] = rest
+      [gram] = Food.search_measurement_unit("gram")
+
+      recipe =
+        Mehungry.FoodFixtures.recipe_fixture(user, %{
+          recipe_ingredients: [
+            %{ingredient_id: ingredient.id, measurement_unit_id: gram.id, quantity: 500},
+            %{ingredient_id: ingredient2.id, measurement_unit_id: gram.id, quantity: 250}
+          ]
+        })
+
+      recipe = Food.get_recipe!(recipe.id)
+
+      {:ok, index_live, html} =
+        live(conn, Routes.create_recipe_index_path(conn, :edit, recipe.id))
+
+      # One sort hidden input is rendered per ingredient row, so counting them
+      # counts the rows. Both persisted rows are present on load.
+      assert count_ingredient_rows(html) == 2
+
+      # Click "Add" with no prior edit — the original bug wiped the existing rows
+      # here, leaving a single empty slot. Now the full form is submitted and a
+      # new empty row is appended via the sort_param, so the two persisted rows
+      # survive and a third (empty) one is appended.
+      html =
+        index_live
+        |> form(".the_form")
+        |> render_submit(%{recipe: %{"_action" => "add_ingredient"}})
+
+      assert count_ingredient_rows(html) == 3
+    end
+
     test "Create Recipe Correct", %{
       conn: conn,
       ingredient: ingredient,
@@ -111,10 +154,7 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
         }
       }
 
-      assert index_live
-             |> element("#add_ingredient")
-             |> render_click()
-
+      # Index mode seeds a single empty ingredient row; fill it and save.
       {:ok, _, html} =
         index_live
         |> form(".the_form", recipe: @create_params_recipe)
@@ -140,10 +180,6 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
         }
       }
 
-      assert index_live
-             |> element("#add_ingredient")
-             |> render_click()
-
       html =
         index_live
         |> form(".the_form", recipe: @invalid_params_recipe)
@@ -167,10 +203,6 @@ defmodule MehungryWeb.CreateRecipeLiveTest do
           quantity: 33
         }
       }
-
-      assert index_live
-             |> element("#add_ingredient")
-             |> render_click()
 
       html =
         index_live

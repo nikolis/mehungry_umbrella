@@ -225,6 +225,11 @@ defmodule MehungryWeb.RecipeFormComponent do
           </h3>
           <div class="md:min-h-96 sm:max-h-65 overflow-x-hidden noscrollbar pt-4 step_ing_cont mb-14 pb-20 md:pb-0">
             <.inputs_for :let={ingredient_form} field={@f[:recipe_ingredients]}>
+              <input
+                type="hidden"
+                name="recipe[recipe_ingredients_sort][]"
+                value={ingredient_form.index}
+              />
               <.live_component
                 module={MehungryWeb.IngredientComponent}
                 id={"recipe_ingredients_component" <> Integer.to_string(ingredient_form.index)}
@@ -238,10 +243,9 @@ defmodule MehungryWeb.RecipeFormComponent do
             </.inputs_for>
             <button
               id="add_ingredient"
-              phx-click="add_ingredient"
               name="recipe[_action]"
               value="add_ingredient"
-              type="button"
+              type="submit"
               class="inline-flex items-center gap-1.5 text-sm font-semibold text-paprika-soft hover:text-paprika transition-colors self-end mt-3"
             >
               + {gettext("Add")}

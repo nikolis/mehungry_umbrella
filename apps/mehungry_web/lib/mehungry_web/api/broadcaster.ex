@@ -18,8 +18,4 @@ defmodule MehungryWeb.Api.Broadcaster do
   def comment_created(recipe_id, comment) do
     Endpoint.broadcast("recipe:#{recipe_id}", "comment_created", %{comment: comment})
   end
-
-  def notify(user_id, type, payload) do
-    Endpoint.broadcast("user:#{user_id}", "notification", %{type: type, payload: payload})
-  end
 end

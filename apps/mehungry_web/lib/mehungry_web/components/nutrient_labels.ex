@@ -262,4 +262,17 @@ defmodule MehungryWeb.NutrientLabels do
   end
 
   def translate_name(other), do: other
+
+  @doc """
+  The localized "High in X" nutrient-claim label used by the browse chip rail and
+  the recipe-card/detail badge pills (e.g. `"High in Iron"` / `"Υψηλή σε σίδηρο"`).
+
+  `gettext/2` carries the whole phrase so each locale's `.po` entry controls word
+  order (Greek is "Υψηλή σε <nutrient>"); the nutrient name itself is localized via
+  the shared `translate_name/1` vocabulary. Pass the canonical NRV label (the
+  `Food.NutrientClaims` key, e.g. `"Vitamin C"`).
+  """
+  def claim_label(nutrient_label) do
+    gettext("High in %{nutrient}", nutrient: translate_name(nutrient_label))
+  end
 end

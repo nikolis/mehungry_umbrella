@@ -19,6 +19,13 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   # in step with the cursor paginator's `limit: 10` in `Food.list_recipes/3`.
   @per_page 10
 
+  # Curated nutrient-claim chips on the browse rail — the handful a consumer
+  # recognizes. All 22 NRV nutrients stay reachable via `/search/nutrient/:slug`
+  # (and `Food.label_for_slug/1`), but only these render as chips and go in the
+  # sitemap, to avoid thin micronutrient pages. "High in" tier only.
+  @chip_nutrients ["Iron", "Calcium", "Vitamin C", "Potassium", "Magnesium"]
+  def chip_nutrients, do: @chip_nutrients
+
   @impl true
   def mount(params, session, socket) do
     query_str = Map.get(params, "query", "")
@@ -78,6 +85,7 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      |> assign(:invocations, 0)
      |> assign(:counter, 1)
      |> assign(:query, query)
+     |> assign(:active_nutrient, nil)
      |> assign(:pagination_mode, :cursor)
      |> assign(sort_by: "recent")
      |> assign(:must_be_loged_in, nil)
@@ -439,8 +447,48 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:query, query)
     |> assign(:pagination_mode, pagination_mode)
     |> assign(:search_changeset, nil)
+    # Any text/#/@/default search clears the nutrient-chip highlight; the nutrient
+    # filter (apply_action below) is the only path that sets it.
+    |> assign(:active_nutrient, nil)
     |> stream_recipes(recipes, reset: true)
     |> assign(:not_empty, length(recipes) > 0)
+  end
+
+  # Pre-defined nutrient-claim filter ("foods high in iron"), reached by the
+  # crawlable `/search/nutrient/:slug` route and the browse chip rail. Reuses the
+  # same composable-query + cursor-stream machinery as the #/@ searches, driven by
+  # the persisted `recipes.badges` column via `Food.search_recipes_by_badge/3`.
+  defp apply_action(socket, :index, %{"nutrient" => slug} = _params) do
+    case Food.label_for_slug(slug) do
+      nil ->
+        # Unknown nutrient slug → fall back to the default browse feed.
+        apply_action(socket, :index, %{})
+
+      label ->
+        language = get_user_language(socket)
+        {query, {recipes, cursor_after}} = Food.search_recipes_by_badge(label, "high", language)
+        maybe_track_user(%{query: "nutrient:" <> slug}, socket)
+
+        socket
+        |> assign(:recipe, nil)
+        |> assign_user_meta()
+        |> assign(:cursor_after, cursor_after)
+        |> assign(:query, query)
+        |> assign(:query_string, nil)
+        |> assign(:pagination_mode, :cursor)
+        |> assign(:search_changeset, nil)
+        |> assign(:active_nutrient, label)
+        |> stream_recipes(recipes, reset: true)
+        |> assign(:not_empty, length(recipes) > 0)
+        |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
+        |> assign(:page, 1)
+        |> assign(:page_title, "High-#{label} Recipes | M3Hungry")
+        |> assign(
+          :page_description,
+          "Browse recipes that are high in #{label} — each badge is the EU per-serving" <>
+            " nutrition claim (Reg. 1169/2011 & 1924/2006), computed from USDA data on M3Hungry."
+        )
+    end
   end
 
   defp apply_action(socket, :index, %{"ingredient" => ingredient_name} = _params) do

@@ -25,6 +25,7 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
       author: UserJSON.author(author),
       hashtags: hashtags(recipe),
       servings: recipe.servings,
+      badges: badges(recipe),
       prep_time: time_range(recipe.preperation_time_lower_limit, recipe.preperation_time_upper_limit),
       cook_time: time_range(recipe.cooking_time_lower_limit, recipe.cooking_time_upper_limit),
       likes_count: length(post.upvotes || []),
@@ -61,6 +62,7 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
       ingredients: Enum.map(recipe.recipe_ingredients || [], &ingredient/1),
       steps: Enum.map(recipe.steps || [], &step/1),
       nutrients: localize_nutrients(recipe.nutrients, ctx[:locale]),
+      badges: badges(recipe),
       primary_nutrients_size: recipe.primary_nutrients_size,
       likes_count: engagement.likes_count,
       comments_count: engagement.comments_count,
@@ -82,12 +84,18 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
       title: recipe.title,
       image_url: recipe.image_url,
       list_image_url: recipe.list_image_url || recipe.image_url,
-      servings: recipe.servings
+      servings: recipe.servings,
+      badges: badges(recipe)
     }
     |> maybe_blueprint_match(blueprint_match)
   end
 
   # ── parts ────────────────────────────────────────────────────────────────
+
+  # Persisted EU nutrient-claim badges (`Mehungry.Food.NutrientClaims`), passed
+  # through as stored (string-keyed, already coverage-gated). Each entry is
+  # `%{"nutrient" => "Iron", "level" => "high"|"source", "percent_nrv" => 47}`.
+  defp badges(recipe), do: Map.get(recipe, :badges) || []
 
   defp ingredient(ri) do
     %{

@@ -35,6 +35,7 @@ defmodule Mehungry.Food do
     Ingredients,
     Localization,
     Measurements,
+    NutrientClaims,
     Nutrients,
     ParserVocabulary,
     Recipes,
@@ -180,6 +181,21 @@ defmodule Mehungry.Food do
   defdelegate get_interactions_for_recipe(recipe), to: Nutrients
   defdelegate enqueue_interaction_recalculation_for_all(), to: Nutrients
 
+  # ── Nutrient claims (per-serving "high in / source of" badges) ───────────
+
+  defdelegate nutrient_badges(nutrients, servings), to: NutrientClaims, as: :badges
+  defdelegate nutrient_badges(nutrients, servings, opts), to: NutrientClaims, as: :badges
+  defdelegate recipe_nutrient_badges(recipe), to: NutrientClaims, as: :badges_for_recipe
+  defdelegate recipe_nutrient_badges(recipe, opts), to: NutrientClaims, as: :badges_for_recipe
+  defdelegate recipes_with_badge(label), to: Recipes
+  defdelegate recipes_with_badge(label, level), to: Recipes
+  defdelegate search_recipes_by_badge(label), to: Recipes
+  defdelegate search_recipes_by_badge(label, level), to: Recipes
+  defdelegate search_recipes_by_badge(label, level, language_name), to: Recipes
+  defdelegate claim_slug(label), to: NutrientClaims
+  defdelegate label_for_slug(slug), to: NutrientClaims
+  defdelegate claim_slugs(), to: NutrientClaims
+
   # ── Measurements ───────────────────────────────────────────────────────
 
   defdelegate get_measurement_unit!(id), to: Measurements
@@ -187,7 +203,9 @@ defmodule Mehungry.Food do
   defdelegate get_measurement_unit_portions_for_ingredients(ingredient_ids), to: Measurements
   defdelegate get_measurement_unit_by_name(name), to: Measurements
   defdelegate ingredient_unit_options(ingredient_id), to: Measurements
+  defdelegate ingredient_unit_options(ingredient_id, locale), to: Measurements
   defdelegate build_unit_options(portions), to: Measurements
+  defdelegate build_unit_options(portions, locale), to: Measurements
   defdelegate gram_unit_options(), to: Measurements
   defdelegate create_measurement_unit(attrs), to: Measurements
   defdelegate create_measurement_unit(attrs, opts), to: Measurements
@@ -236,6 +254,13 @@ defmodule Mehungry.Food do
   defdelegate ingredient_display_names(ingredient_ids, language_name), to: Localization
   defdelegate ingredient_display_names_by_name(names, language_name), to: Localization
   defdelegate compound_display_names(compound_ids, language_name), to: Localization
+  defdelegate portion_display_names(portion_ids, locale), to: Localization
+  defdelegate list_portion_translation_pairs(ingredient_id, locale), to: Localization
+  defdelegate ingredient_ids_with_untranslated_portions(locale), to: Localization
+  defdelegate ingredient_ids_with_untranslated_portions(locale, opts), to: Localization
+  defdelegate count_ingredients_with_untranslated_portions(locale), to: Localization
+  defdelegate upsert_portion_translation(portion_id, locale, description), to: Localization
+  defdelegate upsert_portion_translation(portion_id, locale, description, opts), to: Localization
   defdelegate get_unit_translations_map(unit_ids, language_name), to: Localization
 
   defdelegate upsert_ingredient_translation(ingredient_id, language_name, name),

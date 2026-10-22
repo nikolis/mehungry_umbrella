@@ -48,11 +48,20 @@ defmodule MehungryWeb.ApiChannelsTest do
 
     test "receives notification broadcasts" do
       user = AccountsFixtures.user_fixture()
+      actor = AccountsFixtures.user_fixture()
       socket = connect_user(user)
       {:ok, _, _} = subscribe_and_join(socket, "user:#{user.id}", %{})
 
-      MehungryWeb.Api.Broadcaster.notify(user.id, "follow", %{follower_id: 99})
-      assert_push("notification", %{type: "follow", payload: %{follower_id: 99}})
+      # Emission now runs through the core context seam (the configured web
+      # dispatcher broadcasts to the channel).
+      Mehungry.Notifications.emit(user.id, "follow",
+        actor_id: actor.id,
+        subject_type: "user",
+        subject_id: actor.id
+      )
+
+      assert_push("notification", %{type: "follow", actor: %{id: actor_id}, subject: %{type: "user"}})
+      assert actor_id == actor.id
     end
   end
 

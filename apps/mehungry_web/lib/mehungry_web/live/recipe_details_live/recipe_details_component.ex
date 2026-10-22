@@ -284,6 +284,17 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               </h1>
               <p class="text-parchment-dim mb-4">{@recipe.description}</p>
 
+              <% nutrient_badges = MehungryWeb.RecipeComponents.high_badges(@recipe, 99) %>
+              <div :if={nutrient_badges != []} class="flex flex-wrap gap-2 mb-4">
+                <span
+                  :for={badge <- nutrient_badges}
+                  class="rounded-full bg-paprika/15 text-paprika-soft border border-paprika/30 text-xs font-semibold px-3 py-1"
+                  title={gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
+                >
+                  {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])} · {badge["percent_nrv"]}% NRV
+                </span>
+              </div>
+
               <.recipe_tags recipe={@recipe} />
 
               <!-- Recipe Stats -->
@@ -434,6 +445,16 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               ingredient_display_names={@ingredient_display_names}
             />
           </div>
+          <%!-- "Nutrition Insights" (nutrient-interaction panel) is HIDDEN for now.
+               The underlying biochemistry rules are sound, but the recipe-level
+               inference is low-signal/occasionally misleading because it keys on
+               each ingredient's per-100g nutrient density rather than the amount
+               actually used in the dish (and ignores iron type, dose ratios, meal
+               timing). See docs/food/nutrient_interactions.md for the full
+               write-up and accuracy assessment. @interactions is forced to [] in
+               maybe_load_recipe_async/3 so nothing renders and no query runs;
+               un-comment this block and restore the query to re-enable. --%>
+          <%!--
           <.async_result :let={interactions} assign={@interactions}>
             <:loading>
               <div class="mt-20 animate-pulse">
@@ -451,6 +472,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               </div>
             <% end %>
           </.async_result>
+          --%>
 
           <div
             class="mt-20 bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden"
@@ -648,7 +670,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   # per recipe so a routine parent re-render doesn't reset them to a spinner or
   # re-run the queries. The live comment-update path (send_update with
   # `%{recipe_comments: ...}`) refreshes the list without going through here.
-  defp maybe_load_recipe_async(socket, recipe, ingredient_ids) do
+  defp maybe_load_recipe_async(socket, recipe, _ingredient_ids) do
     if socket.assigns[:async_recipe_id] == recipe.id do
       socket
     else
@@ -659,9 +681,14 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign_async(:recipe_comments, fn ->
         {:ok, %{recipe_comments: Food.get_recipe_comments(recipe_id)}}
       end)
-      |> assign_async(:interactions, fn ->
-        {:ok, %{interactions: Food.get_interactions_for_ingredients(ingredient_ids)}}
-      end)
+      # "Nutrition Insights" (nutrient-interaction panel) is HIDDEN for now — its
+      # recipe-level inference is low-signal/occasionally misleading (it keys on
+      # per-100g ingredient density, not the amount actually used). See
+      # docs/food/nutrient_interactions.md. Return [] so the panel renders nothing
+      # and we skip the DB query; to re-enable, restore the call below and un-hide
+      # the render block (search "Nutrition Insights").
+      #   Food.get_interactions_for_ingredients(ingredient_ids)
+      |> assign_async(:interactions, fn -> {:ok, %{interactions: []}} end)
     end
   end
 end

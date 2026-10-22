@@ -367,13 +367,39 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
+  @doc """
+  The high-tier nutrient-claim badges to show on a recipe card / detail (the
+  truthful EU "High in X" claims, see `Mehungry.Food.NutrientClaims`). Reads the
+  persisted, already-coverage-gated `recipe.badges` (string-keyed), filters to the
+  `"high"` tier, and keeps the first `limit` (they are stored strongest-first).
+  """
+  def high_badges(recipe, limit \\ 2) do
+    (Map.get(recipe, :badges) || [])
+    |> Enum.filter(&(&1["level"] == "high"))
+    |> Enum.take(limit)
+  end
+
   def recipe_card(assigns) do
     # Opt-in full live navigation (e.g. cross-LiveView to /browse/:id) instead of
     # the default same-LiveView patch. Existing callers keep patch behavior.
-    assigns = assign_new(assigns, :navigate_details, fn -> false end)
+    assigns =
+      assigns
+      |> assign_new(:navigate_details, fn -> false end)
+      |> assign(:nutrient_badges, high_badges(assigns.recipe))
 
     ~H"""
     <div id={"recipe-card-details-container-#{@id}-#{@recipe.id}"} class="py-2 relative">
+      <div
+        :if={@nutrient_badges != []}
+        class="absolute top-3 left-3 z-10 flex flex-col items-start gap-1"
+      >
+        <span
+          :for={badge <- @nutrient_badges}
+          class="rounded-full bg-paprika/90 text-white text-[10px] font-semibold px-2 py-0.5 shadow-sm backdrop-blur-sm"
+        >
+          {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])} · {badge["percent_nrv"]}% NRV
+        </span>
+      </div>
       <.link
         phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
         id={"recipe-card-details-link-#{@id}-#{@recipe.id}"}
