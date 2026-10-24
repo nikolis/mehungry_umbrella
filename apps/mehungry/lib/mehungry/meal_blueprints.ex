@@ -384,6 +384,7 @@ defmodule Mehungry.MealBlueprints do
       avoid_compounds: source.avoid_compounds,
       preferred_foods: source.preferred_foods,
       avoid_foods: source.avoid_foods,
+      required_hashtags: source.required_hashtags,
       days: Enum.map(source.days, &day_to_attrs/1)
     }
 
@@ -405,6 +406,7 @@ defmodule Mehungry.MealBlueprints do
       avoid_compounds: [],
       preferred_foods: [],
       avoid_foods: [],
+      required_hashtags: [],
       days:
         for day_index <- 1..7 do
           %{
@@ -439,6 +441,7 @@ defmodule Mehungry.MealBlueprints do
       avoid_compounds: blueprint.avoid_compounds,
       preferred_foods: blueprint.preferred_foods,
       avoid_foods: blueprint.avoid_foods,
+      required_hashtags: blueprint.required_hashtags,
       days:
         Enum.map(blueprint.days, fn day ->
           %{

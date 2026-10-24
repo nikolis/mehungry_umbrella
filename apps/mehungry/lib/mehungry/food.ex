@@ -57,6 +57,7 @@ defmodule Mehungry.Food do
   defdelegate delete_recipes_by_ids(recipe_ids), to: Recipes
   defdelegate search_recipes_for_admin(term), to: Recipes
   defdelegate recipe_ids_with_diet_tag(recipe_ids, diet_mode), to: Recipes
+  defdelegate recipe_ids_with_all_hashtags(recipe_ids, titles), to: Recipes
   defdelegate pescatarian_recipe_ids(recipe_ids), to: Recipes
   defdelegate ingredient_ids_in_categories(ingredient_ids, category_ids), to: IngredientQueries
   defdelegate search_recipes_for_admin(term, limit), to: Recipes

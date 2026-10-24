@@ -56,6 +56,8 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
     :whole_food_plant_based,
     :vegan,
     :vegetarian,
+    :raw_vegan,
+    :raw_vegetarian,
     :pescatarian,
     :paleo,
     :whole30,
@@ -92,6 +94,7 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
       :avoid_compounds,
       :preferred_foods,
       :avoid_foods,
+      :required_hashtags,
       :days
     ])
     |> Map.put(:user_id, user_id)
@@ -751,6 +754,86 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
     })
   end
 
+  defp build(:raw_vegan) do
+    spec = %{
+      name: "Raw Vegan Diet",
+      description:
+        "An entirely plant-based, uncooked eating pattern: only raw foods — nothing " <>
+          "heated above ~46°C (115°F) — and no meat, fish, dairy, eggs or honey. Fresh " <>
+          "fruit and vegetables, soaked nuts and seeds, sprouts and cold-pressed oils.",
+      compounds: [],
+      nutrients: [
+        {"Fiber", "encourage", "moderate", harvard_diet_ref("vegetarian-diet")}
+      ]
+    }
+
+    descriptor(:raw_vegan, spec, %{
+      preferred_foods: [
+        "fruit",
+        "raw vegetables",
+        "leafy greens",
+        "nuts",
+        "seeds",
+        "sprouts",
+        "avocado",
+        "cold-pressed olive oil",
+        "dates"
+      ],
+      # The vegan defining set *exactly* so MealPlanAgent.diet_mode_from_blueprint/1
+      # infers :vegan (meat+poultry+fish + dairy+eggs); the raw restriction itself
+      # is enforced by the `required_hashtags` #raw gate, not avoid_foods.
+      avoid_foods: [
+        "meat",
+        "poultry",
+        "fish",
+        "dairy",
+        "eggs",
+        "honey"
+      ],
+      required_hashtags: ["raw"],
+      macro_split: %{protein_pct: 15, carbs_pct: 55, fats_pct: 30}
+    })
+  end
+
+  defp build(:raw_vegetarian) do
+    spec = %{
+      name: "Raw Vegetarian Diet",
+      description:
+        "A meat-free, uncooked eating pattern: only raw foods — nothing heated above " <>
+          "~46°C (115°F) — with no meat, poultry or fish, but still including raw dairy " <>
+          "and eggs. Fresh fruit and vegetables, soaked nuts and seeds, sprouts and raw dairy.",
+      compounds: [],
+      nutrients: [
+        {"Fiber", "encourage", "moderate", harvard_diet_ref("vegetarian-diet")}
+      ]
+    }
+
+    descriptor(:raw_vegetarian, spec, %{
+      preferred_foods: [
+        "fruit",
+        "raw vegetables",
+        "leafy greens",
+        "nuts",
+        "seeds",
+        "sprouts",
+        "avocado",
+        "raw milk",
+        "raw cheese",
+        "eggs"
+      ],
+      # The vegetarian defining set (meat+poultry+fish) so
+      # diet_mode_from_blueprint/1 infers :vegetarian (dairy/eggs allowed); the raw
+      # restriction is enforced by the `required_hashtags` #raw gate.
+      avoid_foods: [
+        "meat",
+        "poultry",
+        "fish"
+      ],
+      required_hashtags: ["raw"],
+      macro_split: %{protein_pct: 16, carbs_pct: 54, fats_pct: 30}
+    })
+  end
+
   defp build(:pescatarian) do
     spec = %{
       name: "Pescatarian Diet",
@@ -1046,7 +1129,7 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
          preferred_foods: preferred_foods,
          avoid_foods: avoid_foods,
          macro_split: macro_split
-       }) do
+       } = opts) do
     %{
       key: key,
       name: spec.name,
@@ -1057,6 +1140,7 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
       avoid_nutrients: nutrient_names(spec, ["avoid", "limit", "caution"]),
       preferred_foods: preferred_foods,
       avoid_foods: avoid_foods,
+      required_hashtags: Map.get(opts, :required_hashtags, []),
       days: days(macro_split)
     }
   end
@@ -1098,6 +1182,7 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
       avoid_compounds: Map.get(attrs, :avoid_compounds, []),
       preferred_foods: Map.get(attrs, :preferred_foods, []),
       avoid_foods: Map.get(attrs, :avoid_foods, []),
+      required_hashtags: Map.get(attrs, :required_hashtags, []),
       required_nutrient_pcts: Map.get(attrs, :required_nutrient_pcts, %{}),
       avoid_nutrient_pcts: Map.get(attrs, :avoid_nutrient_pcts, %{}),
       required_nutrient_modes: Map.get(attrs, :required_nutrient_modes, %{}),
@@ -1122,6 +1207,7 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
       avoid_compounds: blueprint.avoid_compounds || [],
       preferred_foods: blueprint.preferred_foods || [],
       avoid_foods: blueprint.avoid_foods || [],
+      required_hashtags: blueprint.required_hashtags || [],
       required_nutrient_pcts: blueprint.required_nutrient_pcts || %{},
       avoid_nutrient_pcts: blueprint.avoid_nutrient_pcts || %{},
       required_nutrient_modes: blueprint.required_nutrient_modes || %{},
@@ -1141,6 +1227,7 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
       Enum.sort(content.avoid_compounds),
       Enum.sort(content.preferred_foods),
       Enum.sort(content.avoid_foods),
+      Enum.sort(content.required_hashtags),
       canon_map(content.required_nutrient_pcts),
       canon_map(content.avoid_nutrient_pcts),
       canon_map(content.required_nutrient_modes),

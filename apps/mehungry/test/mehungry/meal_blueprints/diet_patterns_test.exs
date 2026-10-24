@@ -22,6 +22,8 @@ defmodule Mehungry.MealBlueprints.DietPatternsTest do
     :whole_food_plant_based,
     :vegan,
     :vegetarian,
+    :raw_vegan,
+    :raw_vegetarian,
     :pescatarian,
     :paleo,
     :whole30,
@@ -46,6 +48,8 @@ defmodule Mehungry.MealBlueprints.DietPatternsTest do
     "Whole-Food Plant-Based Diet",
     "Vegan Diet",
     "Vegetarian Diet",
+    "Raw Vegan Diet",
+    "Raw Vegetarian Diet",
     "Pescatarian Diet",
     "Paleo Diet",
     "Whole30 Diet",
@@ -57,12 +61,12 @@ defmodule Mehungry.MealBlueprints.DietPatternsTest do
 
   test "exposes every diet-pattern descriptor with unique names" do
     patterns = DietPatterns.all()
-    assert length(patterns) == 21
+    assert length(patterns) == 23
     assert DietPatterns.keys() == @expected_keys
 
     names = Enum.map(patterns, & &1.name)
     assert names == @expected_names
-    assert length(Enum.uniq(names)) == 21
+    assert length(Enum.uniq(names)) == 23
   end
 
   test "each pattern builds a valid, insertable blueprint with the expected shape" do
@@ -132,6 +136,47 @@ defmodule Mehungry.MealBlueprints.DietPatternsTest do
     assert "legumes" in vegan.preferred_foods
   end
 
+  test "Raw Vegan requires the #raw hashtag and infers the :vegan diet mode" do
+    raw = DietPatterns.get(:raw_vegan)
+
+    assert raw.required_hashtags == ["raw"]
+    # Carries the exact vegan defining set so diet_mode_from_blueprint/1 → :vegan.
+    assert "meat" in raw.avoid_foods
+    assert "dairy" in raw.avoid_foods
+    assert "eggs" in raw.avoid_foods
+    assert "fruit" in raw.preferred_foods
+  end
+
+  test "Raw Vegetarian requires the #raw hashtag and infers the :vegetarian diet mode" do
+    raw = DietPatterns.get(:raw_vegetarian)
+
+    assert raw.required_hashtags == ["raw"]
+    assert "meat" in raw.avoid_foods
+    assert "poultry" in raw.avoid_foods
+    assert "fish" in raw.avoid_foods
+    # Vegetarian keeps dairy/eggs.
+    refute "dairy" in raw.avoid_foods
+    refute "eggs" in raw.avoid_foods
+  end
+
+  test "required_hashtags survives round-trip into a created blueprint" do
+    user = user_fixture()
+    {:ok, bp} = DietPatterns.create_for_user(user.id, :raw_vegan)
+
+    assert bp.required_hashtags == ["raw"]
+
+    reloaded = MealBlueprints.get_blueprint!(user.id, bp.id)
+    assert reloaded.required_hashtags == ["raw"]
+    # A seeded raw pattern reloads to its stamped signature (edit-detection honors
+    # the new field).
+    assert DietPatterns.content_signature_from_blueprint(reloaded) == bp.seed_signature
+  end
+
+  test "non-raw patterns default required_hashtags to []" do
+    assert DietPatterns.get(:mediterranean).required_hashtags == []
+    assert DietPatterns.get(:vegan).required_hashtags == []
+  end
+
   test "DASH is an encourage pattern using only resolving nutrient tags" do
     dash = DietPatterns.get(:dash)
 
@@ -158,7 +203,7 @@ defmodule Mehungry.MealBlueprints.DietPatternsTest do
     test "creates all patterns the first time, none the second (idempotent by name)" do
       user = user_fixture()
 
-      assert {:ok, 21} = DietPatterns.create_missing_for_user(user.id)
+      assert {:ok, 23} = DietPatterns.create_missing_for_user(user.id)
       assert {:ok, 0} = DietPatterns.create_missing_for_user(user.id)
 
       names =
@@ -187,7 +232,7 @@ defmodule Mehungry.MealBlueprints.DietPatternsTest do
   describe "sync_for_user/1" do
     test "creates all patterns the first time" do
       user = user_fixture()
-      assert {:ok, %{created: 21, refreshed: 0, skipped: 0, adopted: 0}} =
+      assert {:ok, %{created: 23, refreshed: 0, skipped: 0, adopted: 0}} =
                DietPatterns.sync_for_user(user.id)
     end
 
@@ -195,10 +240,10 @@ defmodule Mehungry.MealBlueprints.DietPatternsTest do
       user = user_fixture()
       {:ok, _} = DietPatterns.sync_for_user(user.id)
 
-      assert {:ok, %{created: 0, refreshed: 0, skipped: 21, adopted: 0}} =
+      assert {:ok, %{created: 0, refreshed: 0, skipped: 23, adopted: 0}} =
                DietPatterns.sync_for_user(user.id)
 
-      assert length(MealBlueprints.list_blueprints_for_user(user.id)) == 21
+      assert length(MealBlueprints.list_blueprints_for_user(user.id)) == 23
     end
 
     test "refreshes an unedited copy whose template has changed since seeding" do
@@ -253,9 +298,9 @@ defmodule Mehungry.MealBlueprints.DietPatternsTest do
 
       {:ok, tally} = DietPatterns.sync_for_user(user.id)
 
-      # The one existing Vegan is adopted (not duplicated); the other 20 created.
+      # The one existing Vegan is adopted (not duplicated); the other 22 created.
       assert tally.adopted == 1
-      assert tally.created == 20
+      assert tally.created == 22
 
       vegans =
         user.id

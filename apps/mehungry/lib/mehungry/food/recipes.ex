@@ -615,6 +615,36 @@ defmodule Mehungry.Food.Recipes do
     do: MapSet.new(recipe_ids)
 
   @doc """
+  Given a candidate list of recipe ids, returns the subset (a `MapSet`) whose
+  recipe carries **every** hashtag title in `titles` (titles without a leading
+  `#`, as stored — the same form `recipe_ids_with_diet_tag/2` and the recipe
+  description regex use). An empty `titles` list applies no filter and returns
+  the input ids unchanged.
+
+  The general preparation-/style-tag gate behind blueprint `required_hashtags`
+  (e.g. `["raw"]` for the Raw Vegan / Raw Vegetarian diet patterns), enforced in
+  `MealPlanAgent.search_catalog` on top of the vegan/vegetarian diet filter.
+  """
+  def recipe_ids_with_all_hashtags(recipe_ids, []) when is_list(recipe_ids),
+    do: MapSet.new(recipe_ids)
+
+  def recipe_ids_with_all_hashtags(recipe_ids, titles)
+      when is_list(recipe_ids) and is_list(titles) do
+    needed = length(titles)
+
+    from(r in Recipe,
+      join: rh in assoc(r, :recipe_hashtags),
+      join: h in assoc(rh, :hashtag),
+      where: r.id in ^recipe_ids and h.title in ^titles,
+      group_by: r.id,
+      having: count(fragment("DISTINCT ?", h.title)) == ^needed,
+      select: r.id
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc """
   The subset of `recipe_ids` that are **pescatarian-safe**: every ingredient is
   categorized and none falls in a meat/poultry category (fish & seafood allowed,
   per `Categories.diet_category_ids(:pescatarian)`).

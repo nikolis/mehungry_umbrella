@@ -40,6 +40,11 @@ defmodule Mehungry.MealBlueprints.Blueprint do
     # Free-text list of foods to exclude (the defining lever for avoidance diets
     # like Low-FODMAP); mirrors `preferred_foods`.
     field(:avoid_foods, {:array, :string}, default: [])
+    # Recipe hashtags (titles, no leading `#`) a generated plan must carry — the
+    # lever behind preparation-method patterns like Raw Vegan / Raw Vegetarian
+    # (`["raw"]`). Enforced in `MealPlanAgent` via
+    # `Food.recipe_ids_with_all_hashtags/2`; mirrors the other array tag fields.
+    field(:required_hashtags, {:array, :string}, default: [])
 
     # Provenance for blueprints seeded from a `MealBlueprints.DietPatterns`
     # template (nil on hand-made blueprints). `seeded_pattern_key` is the template
@@ -75,7 +80,8 @@ defmodule Mehungry.MealBlueprints.Blueprint do
     :required_compounds,
     :avoid_compounds,
     :preferred_foods,
-    :avoid_foods
+    :avoid_foods,
+    :required_hashtags
   ]
 
   # Each per-nutrient {value map, mode map, name array} triple.

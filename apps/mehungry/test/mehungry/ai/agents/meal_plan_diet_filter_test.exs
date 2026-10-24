@@ -187,6 +187,67 @@ defmodule Mehungry.AI.Agents.MealPlanDietFilterTest do
     end
   end
 
+  describe "required #raw hashtag gate — the layer on top of the diet filter" do
+    setup do
+      user = user_fixture()
+
+      # recipe_fixture goes through Food.create_recipe → ensure_recipe_hashtags,
+      # which parses #tags out of the description, so a "#raw" description links
+      # the raw hashtag exactly as a user typing it would.
+      raw_recipe =
+        recipe_fixture(user, %{
+          title: "Raw Zucchini Salad",
+          description: "crisp and fresh #raw #cold"
+        })
+
+      cooked_recipe =
+        recipe_fixture(user, %{title: "Zucchini Gratin", description: "baked and bubbling #cold"})
+
+      %{user: user, raw_recipe: raw_recipe, cooked_recipe: cooked_recipe}
+    end
+
+    test "required_recipe_tags/1 reads a blueprint's required_hashtags (downcased, nil-safe)" do
+      assert MealPlanAgent.required_recipe_tags(%Blueprint{required_hashtags: ["Raw", " raw "]}) ==
+               ["raw"]
+
+      assert MealPlanAgent.required_recipe_tags(%Blueprint{required_hashtags: []}) == []
+      assert MealPlanAgent.required_recipe_tags(nil) == []
+    end
+
+    test "the raw patterns carry required_hashtags [\"raw\"]" do
+      assert MealPlanAgent.required_recipe_tags(
+               %Blueprint{required_hashtags: DietPatterns.get(:raw_vegan).required_hashtags}
+             ) == ["raw"]
+
+      assert MealPlanAgent.required_recipe_tags(
+               %Blueprint{required_hashtags: DietPatterns.get(:raw_vegetarian).required_hashtags}
+             ) == ["raw"]
+    end
+
+    test "recipe_ids_with_all_hashtags keeps only the #raw recipe for [\"raw\"]", ctx do
+      ids = [ctx.raw_recipe.id, ctx.cooked_recipe.id]
+      keep = Food.recipe_ids_with_all_hashtags(ids, ["raw"])
+
+      assert MapSet.member?(keep, ctx.raw_recipe.id)
+      refute MapSet.member?(keep, ctx.cooked_recipe.id)
+    end
+
+    test "recipe_ids_with_all_hashtags with [] applies no filter", ctx do
+      ids = [ctx.raw_recipe.id, ctx.cooked_recipe.id]
+      assert Food.recipe_ids_with_all_hashtags(ids, []) == MapSet.new(ids)
+    end
+
+    test "recipe_ids_with_all_hashtags requires EVERY tag (conjunction)", ctx do
+      # The raw recipe carries #raw AND #cold; the cooked one carries only #cold.
+      # Requiring both keeps only the recipe that has all of them.
+      ids = [ctx.raw_recipe.id, ctx.cooked_recipe.id]
+      keep = Food.recipe_ids_with_all_hashtags(ids, ["raw", "cold"])
+
+      assert MapSet.member?(keep, ctx.raw_recipe.id)
+      refute MapSet.member?(keep, ctx.cooked_recipe.id)
+    end
+  end
+
   defp set_profile_diet(user_id, diet) do
     {count, _} =
       from(p in UserProfile, where: p.user_id == ^user_id) |> Repo.update_all(set: [diet: diet])
