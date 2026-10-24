@@ -658,6 +658,9 @@ defmodule MehungryWeb.RecipeComponents do
     assigns =
       assigns
       |> assign_new(:navigate_details, fn -> false end)
+      # Owner-only per-recipe "regenerate AI cover" action; callers opt in (the
+      # owner's own created recipes on /profile). Defaults off everywhere else.
+      |> assign_new(:can_regenerate_image, fn -> false end)
       |> assign(:nutrient_badges, high_badges(assigns.recipe))
 
     ~H"""
@@ -856,14 +859,69 @@ defmodule MehungryWeb.RecipeComponents do
         </button>
       <% end %>
       <%= if @type == "created" do %>
-        <div class="absolute top-2 right-2 z-10 flex items-center gap-2">
+        <div class="absolute top-2 right-2 z-10 flex flex-col items-end gap-2">
+          <div class="flex items-center gap-2">
+            <button
+              id={"edit-recipe-#{@recipe.id}"}
+              phx-click="edit-recipe"
+              phx-value-id={@recipe.id}
+              class="cursor-pointer text-parchment rounded-full p-2 bg-ink-panel hover:bg-ink-panel2 transition"
+              type="button"
+              aria-label="Edit recipe"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+              </svg>
+            </button>
+            <button
+              id={"delete-recipe-#{@recipe.id}"}
+              phx-click="delete_recipe"
+              phx-value-id={@recipe.id}
+              data-confirm={"Delete \"#{@recipe.title}\"? This can't be undone."}
+              class="cursor-pointer text-parchment rounded-full p-2 bg-ink-panel hover:bg-red-600 transition"
+              type="button"
+              aria-label="Delete recipe"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 6h18" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6" />
+                <path d="M14 11v6" />
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              </svg>
+            </button>
+          </div>
+          <%!-- Owner-only: regenerate this recipe's AI cover image (force overwrite). --%>
           <button
-            id={"edit-recipe-#{@recipe.id}"}
-            phx-click="edit-recipe"
+            :if={@can_regenerate_image}
+            id={"regenerate-image-#{@recipe.id}"}
+            phx-click="regenerate_recipe_image"
             phx-value-id={@recipe.id}
-            class="cursor-pointer text-parchment rounded-full p-2 bg-ink-panel hover:bg-ink-panel2 transition"
+            data-confirm={"Regenerate the AI cover image for \"#{@recipe.title}\"? This overwrites the current image."}
+            class="cursor-pointer text-parchment rounded-full p-2 bg-ink-panel hover:bg-basil transition"
             type="button"
-            aria-label="Edit recipe"
+            aria-label="Regenerate recipe image"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -876,35 +934,10 @@ defmodule MehungryWeb.RecipeComponents do
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-            </svg>
-          </button>
-          <button
-            id={"delete-recipe-#{@recipe.id}"}
-            phx-click="delete_recipe"
-            phx-value-id={@recipe.id}
-            data-confirm={"Delete \"#{@recipe.title}\"? This can't be undone."}
-            class="cursor-pointer text-parchment rounded-full p-2 bg-ink-panel hover:bg-red-600 transition"
-            type="button"
-            aria-label="Delete recipe"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M3 6h18" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-              <path d="M10 11v6" />
-              <path d="M14 11v6" />
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              <path d="M21 2v6h-6" />
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+              <path d="M3 22v-6h6" />
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
             </svg>
           </button>
         </div>

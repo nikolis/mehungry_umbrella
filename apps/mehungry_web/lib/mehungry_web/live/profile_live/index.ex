@@ -392,29 +392,23 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> put_flash(:info, "Ingredient deleted")}
   end
 
-  # Owner-only: re-queue AI cover-image generation (force overwrite) for every
-  # recipe the owner has created. Gated on the owner email so no other user can
-  # trigger a costly image-generation fan-out.
-  def handle_event("regenerate_recipe_images", _params, socket) do
+  # Owner-only: re-queue AI cover-image generation (force overwrite) for a single
+  # recipe. Gated on the owner email AND owner-scoped (the recipe must belong to
+  # the owner) so a forged id can't trigger generation on someone else's recipe.
+  def handle_event("regenerate_recipe_image", %{"id" => id}, socket) do
     user = socket.assigns.current_user
 
-    if user && user.email == "nikolisgal@gmail.com" do
-      recipes = Users.list_user_created_recipes(user)
-
-      Enum.each(recipes, fn recipe ->
-        %{recipe_id: recipe.id, force: true}
-        |> Mehungry.RecipeImageWorker.new()
-        |> Oban.insert()
-      end)
+    with true <- not is_nil(user) and user.email == "nikolisgal@gmail.com",
+         %Mehungry.Food.Recipe{user_id: user_id} = recipe when user_id == user.id <-
+           Food.get_recipe!(id) do
+      %{recipe_id: recipe.id, force: true}
+      |> Mehungry.RecipeImageWorker.new()
+      |> Oban.insert()
 
       {:noreply,
-       put_flash(
-         socket,
-         :info,
-         "Queued image regeneration for #{length(recipes)} recipe(s)."
-       )}
+       put_flash(socket, :info, "Queued image regeneration for “#{recipe.title}”.")}
     else
-      {:noreply, put_flash(socket, :error, "Not allowed.")}
+      _ -> {:noreply, put_flash(socket, :error, "Not allowed.")}
     end
   end
 
@@ -488,18 +482,6 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def get_profile_content(%{content_state: :created} = assigns) do
     ~H"""
-    <div
-      :if={@current_user && @current_user.email == "nikolisgal@gmail.com" && @live_action == :index}
-      class="px-4 mb-4"
-    >
-      <button
-        phx-click="regenerate_recipe_images"
-        data-confirm="Regenerate AI cover images for ALL your created recipes? This runs in the background and overwrites existing images."
-        class="px-4 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-ink font-bold text-sm transition-colors"
-      >
-        Regenerate recipe images
-      </button>
-    </div>
     <div class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6  px-4">
       <%= for recipe <- @user_created_recipes do %>
         <RecipeComponents.recipe_card
@@ -508,6 +490,10 @@ defmodule MehungryWeb.ProfileLive.Index do
           return_to="profile"
           user_recipes={@user_recipes}
           path_to_details={"/profile/show_recipe/#{recipe.id}"}
+          can_regenerate_image={
+            @current_user && @current_user.email == "nikolisgal@gmail.com" &&
+              @live_action == :index
+          }
           id={"recipe" <> Integer.to_string(recipe.id)}
         />
       <% end %>

@@ -186,6 +186,12 @@
             <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-2">
               Matched recipe (editable) — Save to keep, Skip to pass
             </p>
+            <div
+              :if={@editing_recipe}
+              class="mb-3 rounded-lg border border-basil/40 bg-basil/10 px-3 py-2 text-sm text-basil"
+            >
+              Editing the already-saved recipe (ID {@editing_recipe.id}). Save updates it in place.
+            </div>
             <.live_component
               module={MehungryWeb.RecipeFormComponent}
               uploads={@uploads}

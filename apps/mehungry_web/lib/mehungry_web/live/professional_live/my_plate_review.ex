@@ -23,6 +23,7 @@ defmodule MehungryWeb.ProfessionalLive.MyPlateReview do
 
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
+  alias Mehungry.Food.RecipeIngredient
   alias Mehungry.FoodData.MyPlate.Client, as: MyPlateClient
   alias Mehungry.FoodData.MyPlate.Imports, as: MyPlateImports
   alias Mehungry.FoodData.MyPlateImporter
@@ -57,6 +58,9 @@ defmodule MehungryWeb.ProfessionalLive.MyPlateReview do
      |> assign(:spoonacular_unmatched, [])
      |> assign(:ingredient_overview, [])
      |> assign(:source_steps, [])
+     # When the selected recipe was already saved, this holds the existing
+     # %Recipe{} so Save updates it in place instead of creating a duplicate.
+     |> assign(:editing_recipe, nil)
      |> assign(:recipe, @empty_recipe)
      |> assign(:f, to_form(Recipe.changeset(@empty_recipe, %{})))
      |> allow_upload(:image,
@@ -155,6 +159,7 @@ defmodule MehungryWeb.ProfessionalLive.MyPlateReview do
           MyPlateImporter.build_recipe_attrs(data, socket.assigns.current_user.id)
 
         index = Enum.find_index(socket.assigns.myplate_slugs, &(&1 == slug))
+        existing = existing_saved_recipe(slug)
 
         socket
         |> assign(:myplate_slug, slug)
@@ -166,7 +171,8 @@ defmodule MehungryWeb.ProfessionalLive.MyPlateReview do
         |> assign(:spoonacular_unmatched, unmatched)
         |> assign(:ingredient_overview, ImportReviewComponents.build_overview(attrs, unmatched, socket.assigns.ingredients))
         |> assign(:source_steps, ImportReviewComponents.source_steps(attrs))
-        |> init(@empty_recipe, attrs)
+        |> assign(:editing_recipe, existing)
+        |> load_into_form(existing, attrs)
 
       {:error, {:rate_limited, seconds}} ->
         # The myplate.food API caps full-recipe fetches at 100/day per IP.
@@ -324,17 +330,24 @@ defmodule MehungryWeb.ProfessionalLive.MyPlateReview do
       |> filter_empty_steps()
       |> drop_sort_drop_params()
 
-    case Food.create_recipe(recipe_params) do
+    result =
+      case socket.assigns.editing_recipe do
+        %Recipe{} = existing -> Food.update_recipe(existing, recipe_params)
+        _ -> Food.create_recipe(recipe_params)
+      end
+
+    case result do
       {:ok, %Recipe{} = recipe} ->
         MyPlateImports.mark_completed(socket.assigns.myplate_slug, recipe.id)
+        verb = if socket.assigns.editing_recipe, do: "Updated", else: "Saved"
 
         Logger.info(
-          "[myplate_review] saved slug=#{socket.assigns.myplate_slug} recipe_id=#{recipe.id}"
+          "[myplate_review] #{String.downcase(verb)} slug=#{socket.assigns.myplate_slug} recipe_id=#{recipe.id}"
         )
 
         {:noreply,
          socket
-         |> put_flash(:info, "Saved “#{recipe.title}”. Loading the next recipe.")
+         |> put_flash(:info, "#{verb} “#{recipe.title}”. Loading the next recipe.")
          |> advance()}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -368,6 +381,36 @@ defmodule MehungryWeb.ProfessionalLive.MyPlateReview do
     |> assign(:f, to_form(changeset))
     |> assign(:recipe, base)
   end
+
+  # Already-saved slug → edit the existing recipe (preserving prior curation, so
+  # Save updates it). Otherwise seed a fresh create from the parsed source attrs.
+  defp load_into_form(socket, %Recipe{} = existing, _attrs), do: init(socket, existing)
+  defp load_into_form(socket, nil, attrs), do: init(socket, @empty_recipe, attrs)
+
+  # The persisted recipe a completed slug was saved as, with unit selections
+  # seeded for the form — or nil when unreviewed/skipped or since deleted.
+  defp existing_saved_recipe(slug) do
+    with id when is_integer(id) <- MyPlateImports.recipe_id_for(slug),
+         %Recipe{} = recipe <- Food.get_recipe!(id) do
+      put_unit_selections(recipe)
+    else
+      _ -> nil
+    end
+  end
+
+  # Seed each recipe ingredient's virtual `unit_selection` from its persisted
+  # unit/portion so the unit dropdown shows the saved choice when editing.
+  defp put_unit_selections(%Recipe{recipe_ingredients: ris} = recipe) when is_list(ris) do
+    %Recipe{
+      recipe
+      | recipe_ingredients:
+          Enum.map(ris, fn %RecipeIngredient{} = ri ->
+            %RecipeIngredient{ri | unit_selection: RecipeIngredient.unit_selection_value(ri)}
+          end)
+    }
+  end
+
+  defp put_unit_selections(recipe), do: recipe
 
   defp rebuild_form(socket, params) do
     changeset =

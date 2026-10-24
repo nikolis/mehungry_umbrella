@@ -114,7 +114,8 @@
         <p class="text-sm text-white">
           Active: <span class="font-semibold">{provider_label(@image_provider)}</span>
           <span class="text-parchment-dim">
-            — applies to every new AI-generated cover, across all machines.
+            — applies to every new AI-generated cover (user-created recipes, API, and the
+            AI bot), across all machines.
           </span>
         </p>
         <%= if @image_provider == :flux and not @bfl_configured do %>

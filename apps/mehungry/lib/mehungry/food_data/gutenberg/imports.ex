@@ -36,6 +36,15 @@ defmodule Mehungry.FoodData.Gutenberg.Imports do
     Repo.one(from i in ImportRecord, where: i.ref == ^ref, select: i.status)
   end
 
+  @doc "The recipe id a completed `ref` was saved as, or `nil` (unreviewed/skipped)."
+  def recipe_id_for(ref) do
+    Repo.one(
+      from i in ImportRecord,
+        where: i.ref == ^ref and i.status == "completed",
+        select: i.recipe_id
+    )
+  end
+
   @doc "Set of every ref reviewed (completed or skipped) for `book_id`."
   def reviewed_refs(book_id) do
     prefix = "#{book_id}:%"

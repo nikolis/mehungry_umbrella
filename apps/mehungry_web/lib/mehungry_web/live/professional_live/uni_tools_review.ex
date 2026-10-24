@@ -29,6 +29,7 @@ defmodule MehungryWeb.ProfessionalLive.UniToolsReview do
 
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
+  alias Mehungry.Food.RecipeIngredient
   alias Mehungry.FoodData.UniTools.{Catalog, Decoder, Imports}
   alias Mehungry.FoodData.UniTools.Client, as: UniToolsClient
   alias Mehungry.FoodData.UniToolsImporter
@@ -69,6 +70,9 @@ defmodule MehungryWeb.ProfessionalLive.UniToolsReview do
      # at save because the shared RecipeFormComponent doesn't submit those fields.
      |> assign(:publish_on_save, false)
      |> assign(:provenance, %{})
+     # When the selected recipe was already saved, this holds the existing
+     # %Recipe{} so Save updates it in place instead of creating a duplicate.
+     |> assign(:editing_recipe, nil)
      |> assign(:recipe, @empty_recipe)
      |> assign(:f, to_form(Recipe.changeset(@empty_recipe, %{})))
      |> allow_upload(:image,
@@ -199,6 +203,7 @@ defmodule MehungryWeb.ProfessionalLive.UniToolsReview do
           )
 
         ref = Imports.ref(socket.assigns.dataset.id, recipe.index)
+        existing = existing_saved_recipe(ref)
 
         socket
         |> assign(:done, false)
@@ -207,8 +212,10 @@ defmodule MehungryWeb.ProfessionalLive.UniToolsReview do
         |> assign(:ingredient_overview, ImportReviewComponents.build_overview(attrs, unmatched, socket.assigns.ingredients))
         |> assign(:source_steps, ImportReviewComponents.source_steps(attrs))
         |> assign(:review_status, Imports.status_for(ref))
-        # Each recipe starts staged-private; the admin opts in to publishing.
-        |> assign(:publish_on_save, false)
+        |> assign(:editing_recipe, existing)
+        # A fresh recipe starts staged-private; when re-opening a saved one,
+        # mirror its current visibility so re-saving doesn't silently re-hide it.
+        |> assign(:publish_on_save, if(existing, do: not existing.private, else: false))
         # Fields the shared form won't submit, re-applied at save time.
         |> assign(:provenance, %{
           "source" => attrs.source,
@@ -216,7 +223,7 @@ defmodule MehungryWeb.ProfessionalLive.UniToolsReview do
           "original_url" => attrs.original_url,
           "license" => attrs.license
         })
-        |> init(@empty_recipe, attrs)
+        |> load_into_form(existing, attrs)
     end
   end
 
@@ -361,17 +368,26 @@ defmodule MehungryWeb.ProfessionalLive.UniToolsReview do
       |> filter_empty_steps()
       |> drop_sort_drop_params()
 
-    case Food.create_recipe(recipe_params) do
+    result =
+      case socket.assigns.editing_recipe do
+        %Recipe{} = existing -> Food.update_recipe(existing, recipe_params)
+        _ -> Food.create_recipe(recipe_params)
+      end
+
+    case result do
       {:ok, %Recipe{} = recipe} ->
         Imports.mark_completed(current_ref(socket), recipe.id)
+        verb = if socket.assigns.editing_recipe, do: "Updated", else: "Saved"
 
-        Logger.info("[unitools_review] saved ref=#{current_ref(socket)} recipe_id=#{recipe.id}")
+        Logger.info(
+          "[unitools_review] #{String.downcase(verb)} ref=#{current_ref(socket)} recipe_id=#{recipe.id}"
+        )
 
         visibility = if recipe.private, do: "staged private", else: "published"
 
         {:noreply,
          socket
-         |> put_flash(:info, "Saved “#{recipe.title}” (#{visibility}). Loading the next recipe.")
+         |> put_flash(:info, "#{verb} “#{recipe.title}” (#{visibility}). Loading the next recipe.")
          |> advance()}
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -405,6 +421,36 @@ defmodule MehungryWeb.ProfessionalLive.UniToolsReview do
     |> assign(:f, to_form(changeset))
     |> assign(:recipe, base)
   end
+
+  # Already-saved ref → edit the existing recipe (preserving prior curation, so
+  # Save updates it). Otherwise seed a fresh create from the parsed source attrs.
+  defp load_into_form(socket, %Recipe{} = existing, _attrs), do: init(socket, existing)
+  defp load_into_form(socket, nil, attrs), do: init(socket, @empty_recipe, attrs)
+
+  # The persisted recipe a completed ref was saved as, with unit selections
+  # seeded for the form — or nil when unreviewed/skipped or since deleted.
+  defp existing_saved_recipe(ref) do
+    with id when is_integer(id) <- Imports.recipe_id_for(ref),
+         %Recipe{} = recipe <- Food.get_recipe!(id) do
+      put_unit_selections(recipe)
+    else
+      _ -> nil
+    end
+  end
+
+  # Seed each recipe ingredient's virtual `unit_selection` from its persisted
+  # unit/portion so the unit dropdown shows the saved choice when editing.
+  defp put_unit_selections(%Recipe{recipe_ingredients: ris} = recipe) when is_list(ris) do
+    %Recipe{
+      recipe
+      | recipe_ingredients:
+          Enum.map(ris, fn %RecipeIngredient{} = ri ->
+            %RecipeIngredient{ri | unit_selection: RecipeIngredient.unit_selection_value(ri)}
+          end)
+    }
+  end
+
+  defp put_unit_selections(recipe), do: recipe
 
   defp rebuild_form(socket, params) do
     changeset =

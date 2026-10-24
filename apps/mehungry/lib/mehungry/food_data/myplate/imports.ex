@@ -33,6 +33,15 @@ defmodule Mehungry.FoodData.MyPlate.Imports do
     Repo.one(from i in ImportRecord, where: i.slug == ^slug, select: i.status)
   end
 
+  @doc "The recipe id a completed `slug` was saved as, or `nil` (unreviewed/skipped)."
+  def recipe_id_for(slug) do
+    Repo.one(
+      from i in ImportRecord,
+        where: i.slug == ^slug and i.status == "completed",
+        select: i.recipe_id
+    )
+  end
+
   @doc "Set of every slug that has been reviewed (completed or skipped)."
   def reviewed_slugs do
     Repo.all(from i in ImportRecord, select: i.slug) |> MapSet.new()
