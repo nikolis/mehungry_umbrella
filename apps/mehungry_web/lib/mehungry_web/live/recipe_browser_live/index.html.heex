@@ -1,4 +1,3 @@
-<div id="page-timer" phx-hook="PageTimer" class="hidden"></div>
 <div class="browse-page min-h-screen bg-ink text-parchment p-4">
   <div class="mx-auto md:pt-4 md:pl-8">
     <!-- Header -->
@@ -77,6 +76,20 @@
       >
         Meal Blueprints
       </button>
+      <button
+        type="button"
+        phx-click="set_browse_mode"
+        phx-value-mode="meal_plans"
+        class={[
+          "px-4 py-1.5 rounded-full text-sm font-semibold transition",
+          if(@browse_mode == :meal_plans,
+            do: "bg-paprika text-ink",
+            else: "text-parchment-dim hover:text-parchment"
+          )
+        ]}
+      >
+        Meal Plans
+      </button>
     </div>
 
     <!-- Search Bar -->
@@ -127,75 +140,36 @@
         ,
         class="search_comp"
         query_string={@query_string}
-        filter_active={not Enum.empty?(@selected_condition_ids)}
       />
-      <!-- Extended search settings — filter by health condition -->
-      <div class={[
-        "overflow-hidden transition-all duration-300 ease-in-out",
-        (@show_search_settings && "max-h-[600px] opacity-100 mt-2") || "max-h-0 opacity-0"
-      ]}>
-        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-4">
-          <div class="flex items-start justify-between mb-3">
-            <div>
-              <p class="text-sm font-display font-medium text-parchment">
-                Filter by health condition
-              </p>
-              <p class="text-xs text-parchment-dim mt-0.5">
-                Show recipes containing compounds recommended for these conditions.
-              </p>
-            </div>
-            <button
-              type="button"
-              phx-click="toggle_search_settings"
-              aria-label="Close filters"
-              class="text-parchment-dim hover:text-parchment transition"
-            >
-              <.icon name="hero-x-mark" class="h-5 w-5" />
-            </button>
-          </div>
-
-          <div :if={@conditions_by_category == []} class="text-sm text-parchment-dim py-2">
-            No health conditions available yet.
-          </div>
-
-          <div class="m3-scrollbar max-h-64 overflow-y-auto space-y-3 pr-1">
-            <div :for={{category, conditions} <- @conditions_by_category}>
-              <p class="text-xs uppercase tracking-wide text-parchment-dim mb-1.5">{category}</p>
-              <div class="flex flex-wrap gap-2">
-                <button
-                  :for={condition <- conditions}
-                  type="button"
-                  phx-click="toggle_condition"
-                  phx-value-id={condition.id}
-                  class={
-                    condition_pill_class(MapSet.member?(@selected_condition_ids, condition.id))
-                  }
-                >
-                  {if MapSet.member?(@selected_condition_ids, condition.id), do: "✓ ", else: ""}{condition.name}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-end gap-2 mt-4">
-            <button
-              type="button"
-              phx-click="clear_conditions"
-              class="px-4 py-1.5 rounded-full text-sm font-medium text-parchment-dim hover:text-parchment transition"
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              phx-click="apply_condition_filter"
-              class="px-5 py-1.5 rounded-full text-sm font-semibold bg-paprika text-white hover:opacity-90 transition"
-            >
-              Apply filters
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
+    <!-- Nutrient-claim filter chips (EU per-serving "High in X" claims). Each is a
+         real crawlable link to /search/nutrient/:slug, not a client-only toggle. -->
+    <div
+      :if={@browse_mode == :recipes}
+      class="flex gap-2 overflow-x-auto mt-2 pb-1 -mx-1 px-1"
+      aria-label={gettext("Filter recipes by nutrient")}
+    >
+      <.link
+        :for={label <- MehungryWeb.RecipeBrowserLive.Index.chip_nutrients()}
+        navigate={
+          if @active_nutrient == label,
+            do: ~p"/browse",
+            else: ~p"/search/nutrient/#{Mehungry.Food.claim_slug(label)}"
+        }
+        class={[
+          "whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium border transition-colors",
+          if(@active_nutrient == label,
+            do: "bg-basil text-white border-basil",
+            else: "bg-parchment-dim text-ink border-ink-panel2 hover:border-basil"
+          )
+        ]}
+      >
+        {MehungryWeb.NutrientLabels.claim_label(label)}
+      </.link>
+    </div>
+    <p :if={@active_nutrient} class="text-parchment-dim text-xs mt-1">
+      {gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
+    </p>
     <%= if !is_nil(@must_be_loged_in) do %>
       <.modal
         id="browse_index_must_be_login"
@@ -248,7 +222,39 @@
       </div>
 
       <div class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <.blueprint_card :for={bp <- @blueprints} blueprint={bp} />
+        <.blueprint_card :for={bp <- @blueprints} blueprint={bp} from="browse" />
+      </div>
+    </div>
+
+    <!-- Published meal-plan browsing -->
+    <div :if={@browse_mode == :meal_plans} class="mt-3">
+      <form
+        id="meal-plan-search-form"
+        phx-submit="search_meal_plans"
+        phx-change="search_meal_plans"
+        class="mb-5"
+      >
+        <input
+          type="text"
+          name="query"
+          value={@meal_plan_query}
+          placeholder="Search meal plans by title…"
+          phx-debounce="300"
+          class="w-full bg-ink-panel text-parchment rounded-xl px-4 py-3 text-sm border border-ink-panel2 focus:border-paprika focus:outline-none"
+        />
+      </form>
+
+      <div :if={@meal_plans == []} class="text-center text-parchment-dim py-16">
+        No meal plans found.
+        <div class="mt-1 text-sm">
+          <.link navigate={~p"/meal-plans"} class="text-paprika hover:underline">
+            Browse all meal plans
+          </.link>
+        </div>
+      </div>
+
+      <div class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <.meal_plan_card :for={plan <- @meal_plans} plan={plan} from="browse" />
       </div>
     </div>
 

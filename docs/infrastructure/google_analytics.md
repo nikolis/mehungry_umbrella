@@ -44,13 +44,14 @@ Module is named `GoogleAnalytics`, not `Analytics`, to avoid confusion with the 
 | Event | Trigger | File | Params |
 |---|---|---|---|
 | `page_view` | every full load / `live_navigate` / `live_patch` | `app.js` (`phx:page-loading-stop`) | `page_location`, `page_path`, `page_title` |
-| `sign_up` | registration success | `user_registration_controller.ex` | `method: "email"` |
+| `sign_up` | registration success (email) **or** first OAuth login that creates the account (`:created`, not returning logins) | `user_registration_controller.ex`; `auth_controller.ex` (`maybe_track_signup/3`) | `method: "email" \| "facebook" \| "google"` |
 | `search` | non-empty recipe search | `recipe_browser_live/index.ex` | `search_term` |
 | `create_recipe` | new recipe created (not edits) | `create_recipe_live/index.ex`, `save_recipe(socket, :index, ...)` | `recipe_id` |
+| `add_to_meal_plan` | meal added to the calendar (new, not edits) | `calendar_live/meal_form_component.ex`, `save_user_meal(socket, :new, ...)` | `meal_type` |
 | `begin_checkout` | subscribe/subscribe_nutritionist clicked, before Stripe redirect | `upgrade_live/index.ex` | `currency`, `value`, `items: [%{item_name: tier}]` |
 | `purchase` | Stripe checkout returns `stripe_status=success` | `upgrade_live/index.ex`, `handle_params/3` | `currency`, `value`, `transaction_id`. Guarded against double-firing on refresh by `push_patch(to: "/upgrade")`, which strips the query params from the URL right after tracking. |
 
-Lower-priority engagement events (post upvote/downvote, share, add-to-meal-plan, infinite scroll) are intentionally out of scope — add them the same way, via `MehungryWeb.GoogleAnalytics.track/3`, only in success branches.
+Lower-priority engagement events (post upvote/downvote, share, infinite scroll) are intentionally out of scope — add them the same way, via `MehungryWeb.GoogleAnalytics.track/3`, only in success branches.
 
 ## Adding a new event
 

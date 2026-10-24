@@ -32,7 +32,7 @@ defmodule MehungryWeb.CalendarLive.Components do
       myself={@myself}
       unit_options={@unit_options}
       current_user_id={assigns.current_user_id}
-      condition_ids={assigns.condition_ids}
+      current_language={Map.get(assigns, :current_language, "en")}
       parent_component={assigns.parent_component}
       deleted={assigns.deleted}
     />

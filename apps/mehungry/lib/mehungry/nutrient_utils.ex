@@ -290,12 +290,12 @@ defmodule Mehungry.NutrientUtils do
   end
 
   defp merge_nutrient(n1, n2) do
-    # Ensure both have the same canonical name
-    canonical_name = normalize_nutrient_name(n1["name"])
-
     base = %{
-      "name" => canonical_name,
-      "measurement_unit" => n1["measurement_unit"],
+      # Keep the stored name (already canonical at the top level; raw USDA
+      # fatty-acid notation at the leaves) so the merged tree renders identically
+      # to a recipe — e.g. FattyAcidMatcher still resolves "PUFA 20:5 n-3 (EPA)".
+      "name" => n1["name"] || n2["name"],
+      "measurement_unit" => n1["measurement_unit"] || n2["measurement_unit"],
       "amount" => (n1["amount"] || 0) + (n2["amount"] || 0)
     }
 
@@ -304,27 +304,18 @@ defmodule Mehungry.NutrientUtils do
         base
 
       {c1, c2} ->
-        children =
-          (c1 || [])
-          |> Enum.concat(c2 || [])
-          |> merge_children()
-
-        Map.put(base, "children", children)
+        Map.put(base, "children", merge_children((c1 || []) ++ (c2 || [])))
     end
   end
 
+  # Recursively merges children at any depth so the full hierarchy survives
+  # (Total Fat → Saturated/.../Polyunsaturated Fat → the individual fatty acids).
+  # Equivalent nodes across meals are grouped by canonical name and merged with
+  # `merge_nutrient/2`; a node that appears once is kept verbatim (children and all).
   defp merge_children(children) do
     children
     |> Enum.group_by(&normalize_nutrient_name(&1["name"]))
-    |> Enum.map(fn {canonical_name, group} ->
-      Enum.reduce(group, fn child, acc ->
-        %{
-          "name" => canonical_name,
-          "measurement_unit" => child["measurement_unit"],
-          "amount" => (acc["amount"] || 0) + (child["amount"] || 0)
-        }
-      end)
-    end)
+    |> Enum.map(fn {_canonical_name, group} -> Enum.reduce(group, &merge_nutrient/2) end)
   end
 
   @doc """
@@ -491,6 +482,108 @@ defmodule Mehungry.NutrientUtils do
   """
   def macro_buckets, do: @macro_buckets
 
+  @doc """
+  Macro + energy summary from an aggregated `name => nutrient` map (the output of
+  `summarize_meals_nutrients/1`): `%{energy_kcal, protein_g, fat_g, carbs_g,
+  sugars_g, fiber_g, sodium_mg, saturated_fat_g}`.
+
+  This is the single source of truth for the macro numbers shown on the
+  calendar's day/week headers (`CalendarLive.Calendar.Widget.summary_metrics/3`)
+  and the shareable weekly-plan card (`MehungryWeb.WeeklyPlanGraphic`), so the two
+  can never drift. Macro grams are the representative bucket nutrient's raw
+  `amount` (USDA stores these in grams, so no unit conversion); energy is pulled
+  out separately by canonical name since it isn't a macro bucket.
+
+  `sodium_mg` and `saturated_fat_g` are the two extra "conditions people track"
+  numbers; unlike the macro buckets they aren't top-level keys — `Saturated Fat`
+  is nested under `Total Fat` and `Sodium` under the `Minerals` umbrella — so
+  they're pulled via `find_nutrient/2`, which walks the tree's `children`. Both
+  are 0 when absent. Non-numeric values fall back to `0.0`.
+  """
+  def macro_summary(total_nutrients) do
+    macros = macro_totals(total_nutrients)
+
+    amount = fn bucket ->
+      macros |> Map.get(bucket, %{}) |> Map.get("amount", 0) |> macro_scalar() |> Float.round(1)
+    end
+
+    %{
+      energy_kcal: total_nutrients |> energy_scalar() |> round(),
+      protein_g: amount.(:protein),
+      fat_g: amount.(:fat),
+      carbs_g: amount.(:carbs),
+      sugars_g: amount.(:sugars),
+      fiber_g: amount.(:fiber),
+      sodium_mg: nutrient_grams(total_nutrients, "Sodium") |> Kernel.*(1000) |> round(),
+      saturated_fat_g: nutrient_grams(total_nutrients, "Saturated Fat") |> Float.round(1)
+    }
+  end
+
+  defp macro_scalar(n) when is_number(n), do: n * 1.0
+  defp macro_scalar(_), do: 0.0
+
+  # Energy isn't a macro bucket, so pull it out by canonical name.
+  defp energy_scalar(total_nutrients) do
+    case Enum.find(total_nutrients, fn {label, _} -> String.contains?(label, "Energy") end) do
+      {_label, %{"amount" => a}} when is_number(a) -> a * 1.0
+      _ -> 0.0
+    end
+  end
+
+  # The gram-converted amount of `canonical_name` found anywhere in the tree, or
+  # `0.0` when absent/unconvertible. Used for sub-tree nutrients (sodium, sat fat)
+  # that aren't top-level keys.
+  defp nutrient_grams(total_nutrients, canonical_name) do
+    case find_nutrient(total_nutrients, canonical_name) do
+      %{"amount" => amount, "measurement_unit" => unit} ->
+        case to_grams(amount, unit || "") do
+          {:ok, g} -> g
+          :error -> 0.0
+        end
+
+      _ ->
+        0.0
+    end
+  end
+
+  @doc """
+  Finds the first node whose name normalizes to `canonical_name` anywhere in an
+  aggregated nutrient tree — the top-level `name => node` map **and** nested
+  `"children"` — returning the node map or `nil`.
+
+  Needed because the hierarchy (`NutrientHierarchyBuilder`) nests subtype
+  nutrients: `Saturated Fat` lives under `Total Fat`, `Sodium` under the
+  `Minerals` umbrella, so they can't be read as top-level keys like the macros.
+  """
+  def find_nutrient(nutrients, canonical_name) when is_map(nutrients) do
+    nutrients |> Map.values() |> find_nutrient_in_nodes(canonical_name)
+  end
+
+  def find_nutrient(_nutrients, _canonical_name), do: nil
+
+  defp find_nutrient_in_nodes(nodes, canonical_name) when is_list(nodes) do
+    Enum.find_value(nodes, fn node ->
+      cond do
+        not is_map(node) -> nil
+        nutrient_name_matches?(node["name"], canonical_name) -> node
+        true -> find_nutrient_in_nodes(node["children"] || [], canonical_name)
+      end
+    end)
+  end
+
+  defp find_nutrient_in_nodes(_nodes, _canonical_name), do: nil
+
+  # A node matches `canonical_name` when it normalizes to it (collapses variants
+  # like "Fatty Acids, Total Saturated" → "Saturated Fat") or its raw stored name
+  # begins with it — leaf/child nodes keep raw USDA names ("Sodium, Na") that the
+  # canonical mapping doesn't cover.
+  defp nutrient_name_matches?(name, canonical_name) when is_binary(name) do
+    normalize_nutrient_name(name) == canonical_name or
+      String.starts_with?(String.downcase(name), String.downcase(canonical_name))
+  end
+
+  defp nutrient_name_matches?(_name, _canonical_name), do: false
+
   defp macro_amount(%{"amount" => a}) when is_number(a), do: a * 1.0
   defp macro_amount(_), do: 0.0
 
@@ -554,7 +647,15 @@ defmodule Mehungry.NutrientUtils do
   defp scale_amount(nutrient, _factor), do: nutrient
 
   @doc """
-  Your original summarize_meals_nutrients but using the enhanced merger
+  Aggregates a list of user meals into one `name => nutrient` map, merging recipe
+  meals and directly-logged ingredient meals uniformly.
+
+  Both meal kinds contribute the same **structured** nutrient tree: recipe meals
+  carry the recipe's stored `recipe_nutrients` (scaled to the consumed fraction),
+  and ingredient meals carry the tree from
+  `History.scaled_ingredient_nutrient_tree/2` — already scaled to the logged
+  quantity, so a directly-logged ingredient merges identically to the same
+  ingredient inside a recipe.
   """
   def summarize_meals_nutrients(user_meals) do
     result =
@@ -568,26 +669,22 @@ defmodule Mehungry.NutrientUtils do
             |> Map.get(:recipe_nutrients, %{})
             |> scale_nutrient_map(consumed_fraction(recipe_user_meal))
           end)
-          |> Enum.filter(&(&1 != %{}))
 
         ingredient_nutrients =
           item
           |> Map.get(:ingredient_user_meals, [])
-          |> Enum.flat_map(fn ing ->
-            Map.get(ing, :recipe, %{})
-            |> Map.get(:nutrients, [])
-            |> Enum.map(fn n ->
-              %{
-                n.name => %{
-                  "amount" => n.amount,
-                  "measurement_unit" => n.measurement_unit.name,
-                  "name" => n.name
-                }
-              }
-            end)
-          end)
+          |> Enum.map(fn ing -> ing |> Map.get(:recipe, %{}) |> Map.get(:nutrients, %{}) end)
 
-        recipe_nutrients ++ ingredient_nutrients
+        # Arbitrary "free food" entries carry an already-scaled tree under the same
+        # synthetic `recipe.nutrients` key as logged ingredients, so they merge
+        # identically (see History.scaled_free_food_nutrient_tree/1).
+        free_food_nutrients =
+          item
+          |> Map.get(:free_food_user_meals, [])
+          |> Enum.map(fn ff -> ff |> Map.get(:recipe, %{}) |> Map.get(:nutrients, %{}) end)
+
+        (recipe_nutrients ++ ingredient_nutrients ++ free_food_nutrients)
+        |> Enum.filter(&(is_map(&1) and &1 != %{}))
       end)
 
     # Use enhanced merger with normalization
@@ -597,4 +694,60 @@ defmodule Mehungry.NutrientUtils do
     sort_nutrients_for_display(merged)
     |> Enum.into(%{})
   end
+
+  @doc """
+  Scales a free-food entry's client-supplied **per-100g** nutrients to the amount
+  logged (`grams`), returning the canonical `name => node` map that
+  `summarize_meals_nutrients/1` merges — the per-100g analogue of a recipe's
+  stored `nutrients` (factor = `grams / 100`).
+
+  Accepts the stored map form `%{"<name>" => %{"unit" => u, "amount" => a}}` and
+  also tolerates a list of `%{"name","unit","amount"}`. Entries with a non-numeric
+  amount or a blank name are dropped. Returns `%{}` for empty/invalid input.
+  """
+  def per_100g_to_tree(nutrients, grams) when is_map(nutrients) and is_number(grams) do
+    factor = grams / 100.0
+
+    Enum.reduce(nutrients, %{}, fn {name, entry}, acc ->
+      name = to_string(name)
+
+      case per_100g_node(name, entry, factor) do
+        nil -> acc
+        node -> Map.put(acc, name, node)
+      end
+    end)
+  end
+
+  def per_100g_to_tree(nutrients, grams) when is_list(nutrients) and is_number(grams) do
+    nutrients
+    |> Enum.reduce(%{}, fn entry, acc ->
+      name = entry["name"] || entry[:name]
+
+      if is_binary(name) and name != "" do
+        Map.put(acc, name, %{
+          "unit" => entry["unit"] || entry[:unit],
+          "amount" => entry["amount"] || entry[:amount]
+        })
+      else
+        acc
+      end
+    end)
+    |> per_100g_to_tree(grams)
+  end
+
+  def per_100g_to_tree(_nutrients, _grams), do: %{}
+
+  defp per_100g_node(name, entry, factor)
+       when is_binary(name) and name != "" and is_map(entry) do
+    amount = entry["amount"] || entry[:amount]
+
+    unit =
+      entry["unit"] || entry[:unit] || entry["measurement_unit"] || entry[:measurement_unit]
+
+    if is_number(amount) do
+      %{"name" => name, "measurement_unit" => unit, "amount" => amount * factor}
+    end
+  end
+
+  defp per_100g_node(_name, _entry, _factor), do: nil
 end

@@ -74,6 +74,18 @@ add states to a condition to include it. Triggered from `/professional/science`
 `Literature.link_study_condition/1` + `list_studies_for_condition/1`. Powers the
 "Research on this condition" section on the public condition page.
 
+**Re-assignment + exclusions.** On `/professional/health` an admin can re-assign a
+discovered paper to a better-fitting condition via a per-paper search-select (a
+`<datalist>` of condition names). `Literature.reassign_study_to_condition/3` applies
+**move + flag** semantics in one transaction: the paper is linked to the target
+(`source: "manual"`, no-op if it was already there — the duplicate case),
+every `study_conditions` link to the origin is removed, and a term-agnostic
+`Literature.StudyConditionExclusion` (`study_condition_exclusions`, unique
+`(study_id, condition_id)`) is written against the origin. The reverse crawl's
+`fetch_and_link_condition` consults `excluded_study_ids_for_condition/1` and skips any
+flagged paper, so a re-crawl of the origin never re-grabs it. A manual move back to a
+previously-flagged condition clears that condition's exclusion.
+
 ## D — extraction (offline Python + REST)
 
 The extractor is a standalone, **non-deployed** Python project at `mehungry_extractor/`
@@ -122,9 +134,11 @@ New Elixir: `health/condition_state.ex`, `health/condition_state_recommendation.
 `health/condition_state_recommendation_study.ex`,
 `health/condition_recommendation_candidate.ex`, `..._candidate_study.ex`,
 `health/condition_rec_extraction_attempt.ex`, `health/condition_rec_candidates.ex`,
-`literature/study_condition.ex`, `literature/condition_crawl_attempt.ex`,
+`literature/study_condition.ex`, `literature/study_condition_exclusion.ex`,
+`literature/condition_crawl_attempt.ex`,
 `literature/condition_crawl_run.ex`, `literature/condition_crawl_runs.ex`,
-`oban_workers/condition_crawl_worker.ex`, migrations `20260924000001`–`…000005`.
+`oban_workers/condition_crawl_worker.ex`, migrations `20260924000001`–`…000005`,
+`20261004120000` (study_condition_exclusions).
 New web: `controllers/api/local_ai/condition_pending_controller.ex`,
 `…/condition_rec_candidates_controller.ex`. New Python: `mehungry_extractor/`.
 

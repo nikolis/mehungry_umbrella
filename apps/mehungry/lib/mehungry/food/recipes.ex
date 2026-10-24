@@ -9,7 +9,17 @@ defmodule Mehungry.Food.Recipes do
 
   alias Mehungry.Repo
   alias Mehungry.Hashtag
-  alias Mehungry.Food.{DietClassifier, Localization, Recipe, RecipeHashtag, Step}
+  alias Mehungry.Food.{
+    Categories,
+    DietClassifier,
+    Localization,
+    NutrientClaims,
+    Recipe,
+    RecipeHashtag,
+    RecipeSocialGraphic,
+    Step,
+    WeeklyPlanGraphic
+  }
 
   # The recipes cache predates this module: entries are keyed under
   # `Mehungry.Food` and RecipePutNutrientsWorker invalidates with that same
@@ -76,6 +86,14 @@ defmodule Mehungry.Food.Recipes do
     end
   end
 
+  # Localize a single recipe to `language_name` (a content locale, e.g. "el").
+  # Two independent overlays:
+  #   * recipe-level — title/description/steps from a `RecipeTranslation`, applied
+  #     only when one exists for the locale;
+  #   * ingredient-level — ingredient/category/unit names, applied to EVERY
+  #     ingredient that has a translation (decoupled from the recipe-level
+  #     translation so recipes that were never fully translated still get Greek
+  #     ingredient names). Non-dropping: untranslated names fall back to English.
   def get_recipe!(id, language_name) do
     recipe = get_recipe!(id)
 
@@ -83,36 +101,69 @@ defmodule Mehungry.Food.Recipes do
       translation =
         Map.get(Localization.load_recipe_translations_map([recipe.id], language_name), recipe.id)
 
-      ing_lang = Localization.ingredient_language_for(language_name)
-
-      if translation && ing_lang do
-        recipe
-        |> Localization.apply_recipe_translation(translation)
-        |> Localization.translate_ingredients_to(ing_lang)
-      else
-        Localization.apply_recipe_translation(recipe, translation)
-      end
+      recipe
+      |> Localization.apply_recipe_translation(translation)
+      |> Localization.localize_recipe_ingredients(language_name)
     else
       recipe
     end
   end
 
   def delete_recipe(id) do
-    recipe =
-      Repo.get!(Recipe, id)
-      |> Repo.preload([:recipe_ingredients])
+    Repo.get!(Recipe, id)
+    |> delete_recipe_record()
+  end
 
-    Enum.each(recipe.recipe_ingredients, fn rec_in ->
-      Repo.delete(rec_in)
-    end)
+  @doc """
+  Deletes a recipe only when it belongs to `user`. Owner-scoped so a forged id
+  in a LiveView event can't delete another user's recipe (mirrors
+  `delete_user_ingredient`/`delete-meal-plan`). Returns `{:error, :not_found}`
+  when the recipe is missing or not owned by the user.
+  """
+  def delete_user_recipe(%{id: user_id}, id) do
+    case Repo.get_by(Recipe, id: id, user_id: user_id) do
+      nil -> {:error, :not_found}
+      recipe -> delete_recipe_record(recipe)
+    end
+  end
 
-    if !is_nil(recipe.image_url) and not String.starts_with?(recipe.image_url, "http") do
-      file_name = List.last(String.split(recipe.image_url))
+  defp delete_recipe_record(%Recipe{} = recipe) do
+    recipe = Repo.preload(recipe, [:recipe_ingredients])
+    id = recipe.id
 
-      Mehungry.S3.delete_object("test-bucket-local-mehungry", file_name, region: "eu-central-1")
+    result =
+      Repo.transaction(fn ->
+        # Tables whose FK to recipes is on_delete: :nothing/:restrict (unlike the
+        # cascading ones) — a recipe referenced by any of them raises
+        # Ecto.ConstraintError on Repo.delete and is left undeletable (the
+        # symptom: recipes that have been added to a calendar/meal plan, liked,
+        # rated, or annotated won't delete). They all die with the recipe, so
+        # clear them first.
+        Repo.delete_all(from(r in "ratings", where: r.recipe_id == ^id))
+        Repo.delete_all(from(r in "likes", where: r.recipe_id == ^id))
+        Repo.delete_all(from(r in "meals", where: r.recipe_id == ^id))
+        Repo.delete_all(from(r in "annotations", where: r.recipe_id == ^id))
+        Repo.delete_all(from(r in "ai_bot_recipes", where: r.recipe_id == ^id))
+
+        # Basket items are a user's shopping-list entries, not part of the
+        # recipe: keep the item, just drop the now-dangling recipe provenance.
+        Repo.update_all(
+          from(b in "basket_items", where: b.recipe_id == ^id),
+          set: [recipe_id: nil]
+        )
+
+        Enum.each(recipe.recipe_ingredients, &Repo.delete!/1)
+
+        Repo.delete!(recipe)
+      end)
+
+    # Object-storage delete is network I/O — do it after the DB transaction
+    # commits so we don't hold a connection open across the HTTP call.
+    with {:ok, _} <- result do
+      Mehungry.Storage.delete_by_url(recipe.image_url)
     end
 
-    Repo.delete(recipe)
+    result
   end
 
   @doc """
@@ -395,12 +446,69 @@ defmodule Mehungry.Food.Recipes do
     Repo.aggregate(Recipe, :count)
   end
 
+  @doc "Counts recipes carrying the given provenance `source` (e.g. \"myplate\")."
+  def count_recipes_by_source(source) when is_binary(source) do
+    Repo.aggregate(from(r in Recipe, where: r.source == ^source), :count)
+  end
+
+  @doc "All recipe ids with the given provenance `source`."
+  def recipe_ids_by_source(source) when is_binary(source) do
+    Repo.all(from r in Recipe, where: r.source == ^source, select: r.id)
+  end
+
+  @doc """
+  Group-deletes every recipe with the given provenance `source` (and all their
+  references), via `delete_recipes_by_ids/1`. Returns `{:ok, count}`.
+  """
+  def delete_recipes_by_source(source) when is_binary(source) do
+    source |> recipe_ids_by_source() |> delete_recipes_by_ids()
+  end
+
   def count_recipes_missing_embeddings do
     Repo.aggregate(from(r in Recipe, where: is_nil(r.embedding)), :count)
   end
 
   def list_recipe_ids do
     Repo.all(from r in Recipe, select: r.id)
+  end
+
+  @doc """
+  Query for recipes carrying a given nutrient-claim badge (see
+  `Food.NutrientClaims`), e.g. `recipes_with_badge("Iron")` → recipes **high in**
+  iron. `level` is `"high"` (default) or `"source"`.
+
+  Returns an `Ecto.Query` so callers can compose further (pagination, ordering,
+  preloads). Matches against the persisted `recipes.badges` jsonb array.
+  """
+  def recipes_with_badge(label, level \\ "high") do
+    from r in Recipe,
+      where:
+        fragment(
+          "EXISTS (SELECT 1 FROM unnest(?) AS b WHERE b->>'nutrient' = ? AND b->>'level' = ?)",
+          r.badges,
+          ^label,
+          ^level
+        )
+  end
+
+  @doc """
+  Public, crawlable listing for a nutrient-claim badge — the
+  `/search/nutrient/:slug` browse surface. Mirrors
+  `IngredientQueries.search_hashtag1/1`: returns `{query, {recipes, cursor_after}}`
+  where `query` is the composable badge query (stored in the LiveView for
+  load-more) and the second element is the first cursor page.
+
+  Unlike the hashtag/ingredient searches, this **excludes private and image-less
+  recipes** — it is an indexable public page, so it must not surface a private
+  recipe or a card with no image. `level` defaults to `"high"` (the only tier the
+  UI exposes).
+  """
+  def search_recipes_by_badge(label, level \\ "high", language_name \\ nil) do
+    query =
+      from r in recipes_with_badge(label, level),
+        where: not is_nil(r.image_url) and (is_nil(r.private) or r.private == false)
+
+    {query, list_recipes(query, language_name)}
   end
 
   def list_user_recipes_for_selection(nil) do
@@ -497,6 +605,96 @@ defmodule Mehungry.Food.Recipes do
   end
 
   @doc """
+  Given a candidate list of recipe ids, returns the subset (a `MapSet`) whose
+  recipe carries the diet hashtag for `diet_mode` (`:vegan | :vegetarian`) — the
+  same `#vegan`/`#vegetarian` tags `DietClassifier` attaches from ingredient
+  categories and the browse/home feeds filter on. For any other `diet_mode`
+  (e.g. `nil`) returns the input ids unchanged (no diet filter applies).
+
+  Deterministic diet enforcement: a vegan plan draws only from recipes tagged
+  vegan, catching category-level foods (chicken, salmon) that the literal
+  `avoid_foods` substring filter misses.
+  """
+  def recipe_ids_with_diet_tag(recipe_ids, diet_mode)
+      when diet_mode in [:vegan, :vegetarian] and is_list(recipe_ids) do
+    tag = Atom.to_string(diet_mode)
+
+    from(r in Recipe,
+      join: rh in assoc(r, :recipe_hashtags),
+      join: h in assoc(rh, :hashtag),
+      where: r.id in ^recipe_ids and h.title == ^tag,
+      select: r.id
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  def recipe_ids_with_diet_tag(recipe_ids, _diet_mode) when is_list(recipe_ids),
+    do: MapSet.new(recipe_ids)
+
+  @doc """
+  Given a candidate list of recipe ids, returns the subset (a `MapSet`) whose
+  recipe carries **every** hashtag title in `titles` (titles without a leading
+  `#`, as stored — the same form `recipe_ids_with_diet_tag/2` and the recipe
+  description regex use). An empty `titles` list applies no filter and returns
+  the input ids unchanged.
+
+  The general preparation-/style-tag gate behind blueprint `required_hashtags`
+  (e.g. `["raw"]` for the Raw Vegan / Raw Vegetarian diet patterns), enforced in
+  `MealPlanAgent.search_catalog` on top of the vegan/vegetarian diet filter.
+  """
+  def recipe_ids_with_all_hashtags(recipe_ids, []) when is_list(recipe_ids),
+    do: MapSet.new(recipe_ids)
+
+  def recipe_ids_with_all_hashtags(recipe_ids, titles)
+      when is_list(recipe_ids) and is_list(titles) do
+    needed = length(titles)
+
+    from(r in Recipe,
+      join: rh in assoc(r, :recipe_hashtags),
+      join: h in assoc(rh, :hashtag),
+      where: r.id in ^recipe_ids and h.title in ^titles,
+      group_by: r.id,
+      having: count(fragment("DISTINCT ?", h.title)) == ^needed,
+      select: r.id
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  @doc """
+  The subset of `recipe_ids` that are **pescatarian-safe**: every ingredient is
+  categorized and none falls in a meat/poultry category (fish & seafood allowed,
+  per `Categories.diet_category_ids(:pescatarian)`).
+
+  Pescatarian has no precomputed `#pescatarian` hashtag the way vegan/vegetarian
+  do (a pescatarian recipe is "vegetarian ∪ fish-only", not a single positive
+  tag), so this is computed on the fly over the candidate set — the **inverse**
+  of `recipe_ids_with_diet_tag/2`: drop recipes that *contain* an excluded
+  category rather than keep ones that carry a tag. Conservative on unknowns like
+  `DietClassifier`: a recipe with an uncategorized ingredient (or no ingredients)
+  is dropped, since we can't prove it's meat-free.
+  """
+  def pescatarian_recipe_ids(recipe_ids) when is_list(recipe_ids) do
+    excluded = MapSet.new(Categories.diet_category_ids(:pescatarian))
+
+    from(r in Recipe,
+      join: ri in assoc(r, :recipe_ingredients),
+      join: i in assoc(ri, :ingredient),
+      where: r.id in ^recipe_ids,
+      select: {r.id, i.category_id}
+    )
+    |> Repo.all()
+    |> Enum.group_by(fn {rid, _} -> rid end, fn {_, cat_id} -> cat_id end)
+    |> Enum.filter(fn {_rid, cat_ids} ->
+      Enum.all?(cat_ids, &(not is_nil(&1))) and
+        MapSet.disjoint?(MapSet.new(cat_ids), excluded)
+    end)
+    |> Enum.map(fn {rid, _} -> rid end)
+    |> MapSet.new()
+  end
+
+  @doc """
   Builds a recipe changeset with the **full save-time validation** applied: the
   schema `Recipe.changeset/2` plus the ingredient unit/portion check that
   `create_recipe/1` and `update_recipe/2` enforce before writing.
@@ -539,7 +737,10 @@ defmodule Mehungry.Food.Recipes do
         |> Mehungry.RecipePutNutrientsWorker.new()
         |> Oban.insert()
 
-        if attrs["image_url"] in [nil, ""] do
+        # Accept either key form: form/AI callers pass string keys, the
+        # Spoonacular importer builds atom-keyed attrs. A string-only lookup
+        # missed an imported image_url and queued a needless AI cover image.
+        if (attrs["image_url"] || attrs[:image_url]) in [nil, ""] do
           %{recipe_id: recipe.id}
           |> Mehungry.RecipeImageWorker.new()
           |> Oban.insert()
@@ -617,8 +818,8 @@ defmodule Mehungry.Food.Recipes do
   def put_nutrient_info(%Ecto.Changeset{valid?: true} = changeset, attrs) do
     start = System.monotonic_time()
 
-    {primary_size, nutrients} =
-      Mehungry.Food.NutrientCalculation.calculate_recipe_nutrition_value(attrs)
+    {primary_size, nutrients, coverage} =
+      Mehungry.Food.NutrientCalculation.calculate_recipe_nutrition_value_with_coverage(attrs)
 
     if Enum.empty?(nutrients) do
       duration =
@@ -626,7 +827,9 @@ defmodule Mehungry.Food.Recipes do
 
       Logger.warning("nutrition calculation(empty): #{duration}ms for recipe")
 
-      changeset
+      # Clear any stale claims — a recipe that lost its nutrition can't keep a
+      # "High in Iron" badge.
+      Ecto.Changeset.put_change(changeset, :badges, [])
     else
       nutrients =
         nutrients
@@ -642,7 +845,24 @@ defmodule Mehungry.Food.Recipes do
       changeset
       |> Ecto.Changeset.put_change(:nutrients, nutrients)
       |> Ecto.Changeset.put_change(:primary_nutrients_size, primary_size)
+      |> Ecto.Changeset.put_change(:badges, compute_badges(nutrients, attrs, coverage))
     end
+  end
+
+  # Per-serving nutrient-claim badges (see Food.NutrientClaims). `nutrients` here
+  # is the freshly-built **atom-keyed** tree; NutrientClaims/`find_nutrient` read
+  # the **string-keyed** JSONB shape, so round-trip through JSON first — this is
+  # exactly what Ecto persists and reloads, so stored badges match a derive-on-
+  # read of the same recipe. `coverage` is the recipe's mass-weighted
+  # nutrient-data coverage ratio; NutrientClaims suppresses all badges below its
+  # floor so a recipe built mostly from data-less ingredients can't over-claim.
+  defp compute_badges(nutrients, attrs, coverage) do
+    servings = Map.get(attrs, :servings) || Map.get(attrs, "servings")
+
+    nutrients
+    |> Jason.encode!()
+    |> Jason.decode!()
+    |> NutrientClaims.badges_for_storage(servings, coverage: coverage)
   end
 
   # Checks that every new/modified recipe ingredient has a resolvable
@@ -853,6 +1073,63 @@ defmodule Mehungry.Food.Recipes do
 
       existing ->
         existing
+    end
+  end
+
+  # ── Recipe social graphics (insight share cards) ───────────────────────────
+
+  @doc "Persist a generated insight graphic row for a recipe."
+  def create_recipe_social_graphic(attrs) do
+    %RecipeSocialGraphic{}
+    |> RecipeSocialGraphic.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc "Persist a generated shareable weekly-plan card row for a user."
+  def create_weekly_plan_graphic(attrs) do
+    %WeeklyPlanGraphic{}
+    |> WeeklyPlanGraphic.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  The most recently generated weekly-plan card for a user's week, or `nil`. Lets
+  the share UI show the existing card instead of forcing a regenerate.
+  """
+  def latest_weekly_plan_graphic(user_id, %Date{} = week_start) do
+    Repo.one(
+      from(g in WeeklyPlanGraphic,
+        where: g.user_id == ^user_id and g.week_start == ^week_start,
+        order_by: [desc: g.id],
+        limit: 1
+      )
+    )
+  end
+
+  @doc "The most recently generated insight graphic for a recipe, or `nil`."
+  def latest_recipe_social_graphic(recipe_id) do
+    Repo.one(
+      from(g in RecipeSocialGraphic,
+        where: g.recipe_id == ^recipe_id,
+        order_by: [desc: g.id],
+        limit: 1
+      )
+    )
+  end
+
+  @doc """
+  Returns the recipe with its `image_url` swapped to the newest generated insight
+  social-graphic when one exists — so social-media posts surface the branded,
+  macro/compound-annotated graphic instead of the plain cover photo. Returns the
+  recipe unchanged when it has no generated graphic.
+  """
+  def recipe_with_share_image(%Recipe{} = recipe) do
+    case latest_recipe_social_graphic(recipe.id) do
+      %RecipeSocialGraphic{image_url: url} when is_binary(url) and url != "" ->
+        %{recipe | image_url: url}
+
+      _ ->
+        recipe
     end
   end
 end

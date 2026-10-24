@@ -25,6 +25,7 @@ directly, but every public function stays reachable through the facade.
 | **Measurement units & portions** | `Food.Measurements` — units, translations, the ingredient↔unit portion bridge, unit reconciliation | [`measurement_units_and_portions.md`](measurement_units_and_portions.md) |
 | **Nutrients (data model)** | `Food.Nutrients` + `Food.Nutrition.*` helpers (merger, hierarchy, interactions, mapper) | [`nutrients.md`](nutrients.md) |
 | **Nutrition calculation** | `Food.Nutrition.NutrientCalculation`, `RecipeUtils`, `RecipePutNutrientsWorker` | [`nutrition_calculation.md`](nutrition_calculation.md) |
+| **Nutrient badges** | `Food.NutrientClaims` — EU per-serving "High in / Source of" claims, persisted on `recipes.badges`, filterable via `recipes_with_badge/2` | [`nutrient_badges.md`](nutrient_badges.md) |
 | **Categories** | `Food.Categories` — category CRUD/search, food restriction types | this doc |
 | **Localization** | `Food.Localization` — recipe/ingredient/category/unit translations, `localize_recipes/2` | [`../localization.md`](../localization.md) |
 | **Engagement** | `Food.Engagement` — likes, recipe comments, annotations | this doc |
@@ -100,3 +101,5 @@ Unifying them is a behavior change and was deferred.
   helper modules (merge, hierarchy, interactions, display mapping).
 - [`nutrition_calculation.md`](nutrition_calculation.md) — how a recipe's `nutrients`
   map is computed, stored, read, and aggregated.
+- [`nutrient_badges.md`](nutrient_badges.md) — EU per-serving "High in / Source of"
+  nutrient-claim badges derived from `nutrients`, persisted on `recipes.badges`.

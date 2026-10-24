@@ -2,6 +2,13 @@
 
 This document explains what SEO is, why it matters, and exactly how it works in this codebase — so you can understand, extend, and monitor it without needing prior SEO experience.
 
+> 🚫 **NOTICE (2026-10-19): condition pages (`/conditions/:id`) are no longer part of the
+> project.** Targeting dietary advice at named medical conditions turns the product into a
+> **regulated medical device** (EU MDR / SaMD), which we **cannot support for now**. All
+> condition-page SEO work and any "condition query" growth opportunity are **off the roadmap** —
+> see the full notice under [Condition pages](#condition-pages-conditionsid). Historical
+> condition content in this doc is retained for record only.
+
 ---
 
 ## What is SEO and why does it matter?
@@ -207,6 +214,8 @@ Same idea as Open Graph but specifically for Twitter/X previews.
   "author": { "@type": "Person", "name": "Nikos" },
   "cookTime": "PT45M",
   "prepTime": "PT15M",
+  "totalTime": "PT60M",
+  "datePublished": "2026-03-15T10:00:00",
   "recipeYield": "4 servings",
   "recipeCuisine": "Indian",
   "recipeIngredient": [
@@ -215,6 +224,14 @@ Same idea as Open Graph but specifically for Twitter/X previews.
     "1 tbsp Garam Masala"
   ],
   "keywords": "curry, indian, dinner",
+  "nutrition": {
+    "@type": "NutritionInformation",
+    "servingSize": "1 serving",
+    "calories": "620 kcal",
+    "proteinContent": "38.0 g",
+    "fatContent": "22.0 g",
+    "carbohydrateContent": "70.0 g"
+  },
   "recipeInstructions": [
     { "@type": "HowToStep", "name": "Marinate", "text": "Marinate the chicken overnight..." },
     { "@type": "HowToStep", "name": "Cook", "text": "Cook on medium heat for 20 minutes..." }
@@ -237,13 +254,16 @@ Same idea as Open Graph but specifically for Twitter/X previews.
 | `recipeCuisine` | `recipe.cousine` | **note the misspelled schema column** |
 | `recipeIngredient` | `recipe.recipe_ingredients` | `jsonld_ingredient_line/1` → `"<qty> <unit> <name>"` using `RecipeIngredient.unit_label/1` + `Utils.remove_parenthesis/1`; whole-number floats print without `.0` |
 | `keywords` | `recipe.recipe_hashtags` → `hashtag.title` | comma-joined; **requires the `[recipe_hashtags: :hashtag]` preload in `Food.Recipes.get_recipe!/1`** |
+| `totalTime` | `preperation_time_lower_limit` + `cooking_time_lower_limit` | `total_time_minutes/1`; omitted when both are 0 |
+| `datePublished` | `recipe.inserted_at` | ISO-8601; helps freshness |
+| `nutrition` | `recipe.nutrients` → `NutrientUtils.macro_summary/1` | `jsonld_nutrition/1`; `NutritionInformation` **per serving** (whole-recipe totals ÷ `servings`): `calories` + protein/fat/saturatedFat/carbohydrate/sugar/fiber/sodium. Reuses the same `macro_summary/1` the calendar/share cards use (parity rule). Omitted when there's no energy value — we never publish fabricated numbers |
 | `recipeInstructions[].text` | `step.description` (or `title`) | |
-| `recipeInstructions[].name` | `step.title` | per-step enhancement; omitted if step has no title |
+| `recipeInstructions[].name` | `step.title`, else `"Step N"` | **always present now** — falls back to the 1-based position so Google never reports a missing step `name` |
 
-**Google Search Console "Enhance item appearance" warnings** — these are the non-critical warnings ("Βελτίωση εμφάνισης στοιχείων" in the Greek console) that recipes are *valid* but could be enriched. The table above closes: `author`, `recipeIngredient`, `recipeCuisine`, `keywords`, and per-step `name`. The following warnings are **deliberately left open** because the data doesn't exist and faking it violates Google's policy or misrepresents the page:
+**Google Search Console "Enhance item appearance" warnings** — these are the non-critical warnings ("Βελτίωση εμφάνισης στοιχείων" in the Greek console) that recipes are *valid* but could be enriched. The table above closes: `author`, `recipeIngredient`, `recipeCuisine`, `keywords`, `totalTime`, `datePublished`, **`nutrition`** (added 2026-10-19 — the app's whole reason to exist, so the biggest win), and per-step `name`. The following warnings are **deliberately left open** because the data doesn't exist and faking it violates Google's policy or misrepresents the page:
 
 - **`aggregateRating`** — there is no recipe rating/review feature yet (`MealPlanRating` is the nutritionist meal-plan feature, unrelated). Never emit fabricated or constant ratings — it risks a manual action. Add this only once real user ratings are collected and *displayed on the page*.
-- **`video`** and per-step **`image`/`video`** — no recipe video content exists.
+- **`video`** and per-step **`image`/`video`** — no recipe video content exists (`Step` is an embedded schema with only `title`/`description`/`index` — no image field).
 - **`recipeCategory`** — no dedicated meal-type field on the recipe; would have to be derived (e.g. from hashtags) and is low value, so it's skipped for now.
 
 **What it does**: JSON-LD is a machine-readable description of your page's content using a standard vocabulary ([schema.org](https://schema.org)). Google uses it to show **rich results** — enhanced search listings that look like this:
@@ -296,28 +316,58 @@ Browser requests /search/pasta
 
 ---
 
-## Monitoring SEO in the admin panel
+## Monitoring SEO
 
-The `/professional/seo` dashboard (built in `seo_live.ex`) shows:
+> ⚠️ **There is no longer an in-app SEO dashboard.** The old `/professional/seo`
+> page (`seo_live.ex`) and the `presence.ex` referrer-capture it read from were
+> **removed** together with the rest of the GA4-duplicating server-side analytics
+> (the `visits` table and its dashboards — see `docs/app_status.md` and the
+> *Analytics removal* memory). Don't go looking for them. SEO is now monitored
+> entirely with the two tools built for it:
 
-| Section | What it tells you |
-|---------|-------------------|
-| **Organic traffic trend** | How many visitors are arriving from search engines per day |
-| **Search engine breakdown** | Which search engines (Google, Bing, DuckDuckGo) send traffic |
-| **Organic landing pages** | Which of your pages rank in search results |
-| **Crawler activity** | When Googlebot last crawled your site and which pages it visited |
-| **Search queries detected** | What search terms people used (rarely available due to Google's HTTPS privacy policy) |
+### 1. Google Search Console (the source of truth for organic)
 
-**Important caveat**: The SEO dashboard only shows data for visits that happened **after** the referrer capture was added to `presence.ex`. Older visit records have no `referrer` field and will all appear as "direct." The data will build up over time.
+This is where you see what no referrer log can tell you: **impressions, clicks,
+average position, CTR, and the actual search queries** (queries are visible in
+GSC even though they're stripped from the HTTP `Referer` — Google only exposes
+them here).
 
-**The referrer capture works like this**:
-1. When a visitor arrives from Google and opens a page, their browser sends an HTTP `Referer` header with the Google URL
-2. Phoenix LiveView receives this via `get_connect_params(socket)["_live_referer"]` during the WebSocket handshake
-3. It's stored in the `visits` table as `details["referrer"]`
-4. The SEO dashboard classifies it as "search" if the domain matches a known search engine
+- Add/verify the `m3hungry.com` property, then **Sitemaps → submit
+  `https://www.m3hungry.com/sitemap.xml`** (see §2 above).
+- Watch **Performance** for impressions/clicks per query and per page, and
+  **Pages** (Index coverage) for what's indexed vs. excluded and why.
+- The leading indicator worth checking weekly is **impressions on the `/foods`,
+  `/conditions`, and recipe pages** — the first sign organic is starting
+  (currently zero; this is the #1 compounding unlock per `docs/growth_plan.md`).
+- Use the **URL Inspection** tool + **Rich Results Test** to confirm a specific
+  page's indexed HTML and JSON-LD are what you expect (the dead-render gotcha in
+  "How Phoenix LiveView interacts with SEO" above makes this worth doing for any
+  new public LiveView).
 
-**Why we can't see Google's search queries**:
-In the early days of the web, Google's referrer URL looked like `https://www.google.com/search?q=chicken+recipe`, so websites could see what people searched. In 2011, Google switched to HTTPS and stopped including the query parameter. Now you get `https://www.google.com/` as the referrer — you know traffic came from Google, but not the search term. The only way to see actual queries is via Google Search Console.
+> ✅ **We can work with Search Console programmatically — the REST API is already
+> configured.** The same Google service account used for GA4
+> (`GA4_SA_KEY` + `GSC_SITE_URL="sc-domain:m3hungry.com"`, see `docs/app_status.md §7`)
+> is granted on the GSC property, so you don't have to click through the UI. Two
+> endpoints are wired/available:
+> - **Search Analytics** — `Mehungry.Report.SearchConsole.fetch/1` pulls
+>   clicks/impressions/CTR/position + the `/foods` subset + top queries/pages, and
+>   feeds the automated `mix report.snapshot`. Extend it for any dimension the API
+>   supports (device, country, date-trend, page/query filters) — that's exactly how
+>   the 2026-10-19 snapshot above was produced.
+> - **URL Inspection API** (`https://searchconsole.googleapis.com/v1/urlInspection/index:inspect`,
+>   same `webmasters.readonly` token from `Mehungry.Report.GoogleAuth`) returns
+>   Google's per-URL **index verdict, coverage state, canonical choice, and
+>   rich-result issues** — the source of the duplicate-canonical and Recipe
+>   structured-data findings above. Call it ad-hoc to check any URL after a deploy +
+>   recrawl without opening the console.
+
+### 2. GA4 (organic as a traffic channel)
+
+GA4 → **Acquisition → Traffic acquisition** breaks sessions down by channel
+(Direct / Organic Search / Organic Social / Referral), so you can see organic
+search as a share of total traffic. Note GA4 is **consent-gated** (it only counts
+visitors who accepted the cookie banner) and is **not queryable from the
+codebase** — pull it by hand from the GA4 UI. See `docs/app_status.md §5.3`.
 
 ---
 
@@ -352,21 +402,39 @@ This is exactly the fix applied to both condition pages and the species detail p
 
 ---
 
-## Food/ingredient pages (`/foods/:slug`)
+## Food pages (`/foods/:slug`)
 
-`FoodDetailLive.Index` (nutrition-facts pages for individual ingredients) follows a deliberately smaller subset of the recipe-page pattern above:
+**`/foods/:slug` is served by `SpeciesDetailLive.Index`** — a *species* page (e.g. `/foods/Agave`), resolved via `Food.get_species_by_slug/1` (species name with spaces → hyphens). It shows the nutrition of the species' connected USDA ingredients, with a `<select>` dropdown (`select_ingredient` event) to switch which ingredient's breakdown is displayed.
 
-- **`page_title` / `page_description`**: set as plain strings, language-aware (mirroring the page's own `display_name` logic — English or Greek depending on `current_language`).
-- **No `page_seo_data` map**: the map form in `head.html.heex` hardcodes canonical resolution as `/browse/<id>`, which is recipe-specific. `Mehungry.Food.Ingredient` also has no image field to put in an OG image slot. Since there's nothing to gain (no image) and something to lose (wrong canonical unless `head.html.heex` is also made type-aware), food pages stick to the plain-string `page_title` path, which already resolves canonical correctly via `@conn.request_path`.
-- **No JSON-LD**: `schema.org/Recipe` doesn't fit a raw ingredient (no ingredient list or instructions — forcing it risks Google flagging misleading structured data). `NutritionInformation` isn't a standalone schema.org type; it's only valid nested inside a `Recipe`/`Diet` node. There's no clean schema.org type for a bare nutrition-facts page, so none is emitted. Plain title/description/semantic HTML (h1/h2 + tables) is the right amount of SEO investment here.
-- **hreflang**: not implemented anywhere in the app (recipe or food pages) because there are no language-specific URL paths — `current_language` is a runtime session assign, not part of the URL, so there's no second URL for `hreflang` to point at. Proper support would require a URL-structure change (e.g. `/en/...` vs `/el/...`) well beyond incremental SEO work. Revisit only if the app ever adopts language-prefixed routes.
-- Food pages **are** included in `sitemap.xml` (see below) since they're publicly indexable and not in the `noindex` prefix list.
+> ⚠️ `FoodDetailLive.Index` (a per-*ingredient* page) exists in the tree but is **not routed** — it is dead code, superseded by `SpeciesDetailLive`. Don't extend it; edit the species page.
 
-**Species detail (`/foods/:slug`, `SpeciesDetailLive.Index`) — `assign_async` audit:** unlike the condition page, this page's *core* content — the nutrition facts (top macros + full nutrient-by-family breakdown) — is rendered **synchronously** in `mount` via `assign_ingredient_view/2`, so it was always crawler-visible (the main SEO asset for "food X nutrition/calories" queries was never at risk). But three **secondary** sections — "Bioactive Compounds", "Health Conditions", and "Research" — were loaded via `assign_async` and therefore invisible to Googlebot: the page title advertised "Nutrition, Research & Compounds" while the indexed HTML had only the nutrition, and the "Health Conditions" section's **internal links to `/conditions/:id` pages** (which help that cluster rank) weren't in the crawled markup. Fixed with the same `connected?/1` split (`load_species_sidecars/2`): async for the live client, synchronous `AsyncResult.ok(...)` on the dead render.
+SEO on the species page:
+
+- **`page_title` / `page_description`**: plain strings, language-aware (English or Greek depending on `current_language`). Title is `"<name> — Nutrition, Research & Compounds"`.
+- **No `page_seo_data` map**: the map form in `head.html.heex` hardcodes canonical as `/browse/<id>` (recipe-specific), and species have no image for an OG slot — so food pages use the plain-string `page_title` path. Canonical resolves correctly via `@conn.request_path`.
+- **Canonical + hreflang are handled generically.** The app now has locale-prefixed routes (`/en/...`, `/el/...`), and `head.html.heex` emits a locale-aware canonical (`Locale.swap_path/2`) plus one `<link rel="alternate" hreflang>` per supported locale (+ `x-default`) for **any** page where `@locale` is assigned — food pages qualify via the `:browser`/`RestoreLocale` pipeline, so no per-page work is needed. *(This supersedes the old "hreflang not implemented" note.)*
+- **JSON-LD** (`:structured_data`, `build_structured_data/6` → `@graph`, rendered by `head.html.heex`): a `BreadcrumbList` (Foods › name — the real rich-result win) + a `WebPage` whose `MenuItem` `mainEntity` carries a `NutritionInformation`. The nutrition node reflects the **default-selected ingredient's** tree (the one painted on first load; switching ingredients happens over the socket, after the head is sent). **Only macro / level-1 fields** map, because `NutritionInformation` has no schema.org fields for individual sugars or fatty acids: `calories`, `proteinContent`, `fatContent`/`saturatedFatContent`/`transFatContent`/`unsaturatedFatContent`, `carbohydrateContent`/`sugarContent`/`fiberContent`, `sodiumContent`, `cholesterolContent`, `servingSize: "100 g"` (units normalized to `kcal`/`g`/`mg`/`µg`). We deliberately do **not** emit `schema.org/Recipe` for a food (no ingredients/instructions — Google would flag it as misleading). The deep sugar/fatty-acid breakdown's SEO value comes from the crawlable visible text, not the JSON-LD.
+- Food pages **are** in `sitemap.xml` (publicly indexable, not in the `noindex` prefix list).
+
+**The full breakdown is the shared hierarchical accordion.** The "Full Nutrition Breakdown — per 100g" section renders the string-keyed, nested per-100g tree (`Food.NutrientCalculation.ingredient_nutrient_tree(ingredient, 100)`) through `MehungryWeb.NutritionAccordion` — the *same* component the calendar/recipe "Nutrition Facts" uses, so the presentation is identical. Carbohydrates → Total Sugars → individual sugars (glucose/fructose) and Total Fat → saturated/mono/poly/trans → fatty acids are all present. The accordion's collapsed children are **`display:none` but in the DOM**, so every sugar/fatty-acid leaf is crawler-visible once the tree is server-rendered (see below). A short, deterministic **composition summary** `<p>` above the accordion (`build_composition_summary/2`, e.g. *"Per 100 g, … provides … g carbohydrate … almost entirely sugars, led by fructose and glucose"*) is the highest-value indexable prose, carrying the long-tail nutrient terms with one line of clutter.
+
+**"Recipes with this food" — crawlable internal linking (highest-value addition).** Below the nutrition sections the page renders a **"Recipes with %{food}"** grid (`Food.list_sample_recipes_for_ingredients/2` — sample recipes using *any* ingredient curated onto the species), each row an `<a href="/browse/:id">`. This is the internal-linking unlock ("What to do next" #4) applied to food pages: every food page now feeds Googlebot a crawl path into the recipe cluster, and the recipe targets are independently in `sitemap.xml`. **It is crawler-visible** — see the `assign_async` audit below (the recipe links are in the dead render, not behind the WebSocket).
+
+**`assign_async` audit:** the page's *core* content — the nutrition facts (top macros + the full accordion breakdown + composition summary) — is rendered **synchronously** in `mount` via `assign_ingredient_view/2`, so it is crawler-visible in the dead render (the main SEO asset for "food X nutrition/calories/sugar" queries was never at risk). Two **secondary** sections — **"Bioactive Compounds"** and **"Recipes with this food"** — are loaded via `assign_async` for a fast live paint, which on its own would leave them invisible to Googlebot (async assigns stay in `loading` on the dead render). Both are kept crawler-visible with the `connected?/1` split in `load_species_sidecars/2`: `assign_async([:compounds, :recipes], …)` for the live client, synchronous `AsyncResult.ok(...)` for the dead render — so the title's "… & Compounds" promise and the recipe internal links are both in the indexed HTML. *(The old "Health Conditions" and "Research" sidecars were removed with the condition-page pullout — see the 🚫 notice under "Condition pages".)*
 
 ---
 
 ## Condition pages (`/conditions/:id`)
+
+> 🚫 **DEPRECATED / BEING REMOVED (2026-10-19) — condition pages are no longer part of the
+> project.** Surfacing dietary advice targeted at named medical conditions ("foods to eat /
+> avoid for ulcerative colitis", etc.) makes the product a **regulated medical device** under
+> EU MDR / software-as-a-medical-device rules — a compliance burden we **cannot support for
+> now**. The `/conditions/:id` pages, their SEO targeting, and any condition-query growth plan
+> are therefore **off the roadmap**. Do **not** invest further in ranking them, and do not treat
+> condition queries as an opportunity elsewhere in this doc (the 2026-10-19 snapshot section
+> flagged them before this decision — that guidance is now void). The content below is retained
+> only as historical record of what the pages did while they existed.
 
 `ConditionDetailLive.Index` (e.g. `/en/conditions/16` = Peptic Ulcer Disease) is a high-value SEO target: it matches informational health queries like "peptic ulcer diet", "foods to avoid", "what to eat when you have ulcers". Search Console showed it *ranking* for exactly those queries but at **position ~80** (page 8) with **0 clicks** — indexed and topically relevant, but far too low to earn traffic. Diagnosis and the fixes applied:
 
@@ -390,6 +458,101 @@ This is exactly the fix applied to both condition pages and the species detail p
 
 **Re-measure after deploy + recrawl (~2–4 weeks):** expect #1 to move position materially on its own (the crawler can finally see the page); wording tweaks (#2) compound on top. #3–5 are what move it from page 8 to page 2–3.
 
+## Meal plan pages (`/meal-plans/:slug`)
+
+`MehungryWeb.MealPlanLive.Show` is the **SEO + sharing surface for meal planning**.
+The personal calendar (`/calendar`) is private, `noindex`, Disallowed in
+`robots.txt`, and WebSocket-driven — it can never rank. So instead a user
+**publishes a chosen week** as an immutable public snapshot
+(`Mehungry.PublishedPlans` → `published_meal_plans`) served at a crawlable
+`/meal-plans/:slug`. This targets the high-volume "7-day meal plan" / "weekly
+meal plan" / "μεσογειακό εβδομαδιαίο πρόγραμμα" query space with content no
+recipe-blog listicle can match on nutrition accuracy.
+
+- **`PublishedPlans.publish_week(user, week_start, opts)` is self-contained** — it
+  re-derives the week from the DB (`History.list_calendar_user_meals/3` +
+  `History.format_user_meals/1`), so no LiveView socket state is needed. Macro
+  numbers come from the **same** `NutrientUtils.summarize_meals_nutrients/1` +
+  `macro_summary/1` the calendar uses (parity rule), so the page matches the
+  calendar to the gram. The snapshot (days + macros + grocery + prose) is stored
+  immutably, so the public URL never churns when the author edits their calendar
+  and leaks no live PII.
+- **Rendered synchronously** (no `assign_async`) — the dead render Googlebot
+  indexes already carries the full 7-day plan, so there is no `connected?/1` split
+  to maintain (see the `assign_async` caveat above). Each recipe row is an
+  `<a href="/browse/:id">` — the internal-linking unlock (§"What to do next" #4),
+  35 links per plan into the recipe cluster.
+- **SEO assigns**: plain-string `:page_title` (= plan title) + `:page_description`
+  (the prose summary) + `:canonical_path` (`/meal-plans/:slug`, locale swapped in
+  generically) + `:og_image` (reuses the generated weekly **share card** when the
+  publish flow passes one). `:og_image` is a new **generic** override in
+  `head.html.heex` (mirrors the existing `:canonical_path` override) so any
+  plain-string page can set a custom OG image without the recipe `page_seo_data`
+  map (which hardcodes a `/browse/:id` canonical).
+- **JSON-LD** (`:structured_data`): a `BreadcrumbList` (Home › Meal Plans › title)
+  + an `ItemList` of the plan's recipes (each `url` → `/browse/:id`). There is **no
+  schema.org `MealPlan` type and no meal-plan rich result** — the win is ranking +
+  CTR + internal links, not a SERP card. We deliberately do **not** fabricate
+  `aggregateRating` (same policy trap as recipes).
+- **Sitemap + robots**: public plans are emitted in `sitemap.xml`
+  (`PublishedPlans.list_public_plans/0`, localized entries) and `/meal-plans` is
+  `Allow`ed in `robots.txt`. `/meal-plans` is **not** in `head.html.heex`'s
+  `noindex_prefixes`.
+
+### The `/meal-plans` index + browse tab (crawl paths into the plan pages)
+
+Two surfaces link into the per-plan pages so Googlebot discovers them by
+following links, not sitemap-only:
+
+- **`/meal-plans` index (`MehungryWeb.MealPlanLive.Index`) — the crawl hub.** A
+  public, **synchronously rendered** listing (plans loaded in `handle_params`,
+  not `assign_async`) so the dead render already carries every
+  `<a>`→`/meal-plans/:slug` card. It sets plain-string `:page_title` /
+  `:page_description` / `:canonical_path` (`/meal-plans`) and emits
+  `CollectionPage`-style JSON-LD: a `BreadcrumbList` (Home › Meal Plans) + an
+  `ItemList` of the plans (truthful nodes only — no fabricated `aggregateRating`).
+  It's routed via `localized_live("/meal-plans", …)` and is the `/meal-plans`
+  entry already in the sitemap. This closes the "index itself can rank for
+  *weekly meal plans* **and** is an internal crawl path to every plan" gap.
+- **Recipe-browser "Meal Plans" tab.** `/browse` has a third `browse_mode`
+  (`:recipes` | `:blueprints` | `:meal_plans`) that shows the same
+  `BlueprintComponents.meal_plan_card`s. This is a **UX convenience, not a crawl
+  path** — the tab's rows are loaded lazily over the socket
+  (`set_browse_mode` / `search_meal_plans`), so they are *not* in the dead
+  render. That's fine: discovery is handled by the synchronous `/meal-plans`
+  index + the sitemap. The cards link with a `?from=browse` (or `?from=meal_plans`)
+  origin param for the detail-page breadcrumb back-link; the detail page's
+  `:canonical_path` is the **bare** `/meal-plans/:slug` (no query string), so the
+  `?from=` variants all canonicalize to one URL and never split indexing.
+
+**Publish trigger + feed integration.** Publishing is wired to the calendar's
+weekly share flow: when a user posts their week to the feed
+(`calendar_live/index.ex` `post_week_plan`), it calls `publish_week/3` (passing
+the generated share card as `:og_image_url`) and links the resulting
+`WEEKLY_PLAN` feed post to the plan via `posts.published_meal_plan_id`. The feed
+card (`home_live/components/post_card.html.heex`) then opens
+`/meal-plans/:slug` — the full day-by-day details page — instead of the raw card
+image, and the details page shows a **"Shared by &lt;name&gt;"** byline linking to
+the author's `/profile/:id`. Older posts with no linked plan fall back to the
+image.
+
+**One plan + one post per `(user, week_start)`.** Re-posting a week the user has
+already published **replaces** rather than duplicates: `publish_week/3` upserts
+the `PublishedMealPlan` in place (keeping the same `slug`, so the public URL and
+shared links stay stable while the snapshot refreshes), and
+`create_weekly_plan_post/3` deletes the prior `WEEKLY_PLAN` post for that plan
+before inserting the fresh one — so the feed never shows two cards for the same
+dates. Publishing a *different* week makes a separate plan as expected.
+
+**Card image + one-click "Add to my calendar".** The details page shows the
+generated PNG share card (`og_image_url`) as a hero image, and the snapshot
+stores each item's FK ids (recipe / ingredient / unit) so a logged-in visitor
+can **re-create the whole week on their own calendar** with one button
+(`use_plan` → `PublishedPlans.import_to_calendar/3`, laying day-index 0..6 onto
+the Monday of the current week, non-destructively; mirrors
+`MealBlueprints.import_plan_to_calendar/3`). Anonymous visitors get a log-in CTA.
+Free-food slots (and any pre-FK-snapshot plans) are shown but skipped on import.
+
 ## Checklist: verifying the implementation
 
 After deploying, confirm these work:
@@ -403,19 +566,155 @@ After deploying, confirm these work:
 
 ---
 
+## SEO snapshot — 2026-10-19 (GSC + URL Inspection + Lighthouse)
+
+First deep read using the automated Search Console pull (`Mehungry.Report.SearchConsole`,
+see `docs/app_status.md §7`) plus the GSC **URL Inspection API** and a **Lighthouse**
+snapshot audit. Re-run roughly monthly.
+
+### Trajectory — organic has started and is improving
+28-day window vs the prior 28 days (domain property `sc-domain:m3hungry.com`):
+
+| Metric | Prior 28d | Last 28d |
+|---|---|---|
+| Clicks | 7 | **13** |
+| Impressions | 1,824 | 828 |
+| CTR | 0.38% | **1.57%** |
+| Avg position | **50.1** | **12.6** |
+
+The impression *drop* is healthy: the prior period was mostly junk impressions stuck at
+position ~50 (page 5, invisible). Clicks ~2×, CTR ~4×, and average position moved from
+page 5 to page 1–2 — Google has promoted the useful pages. Desktop 608 impr / mobile 220;
+mobile ranks better (pos 9.6 vs 13.7).
+
+### Two query clusters
+1. **USDA-nutrient noise** (high impressions, ~0 clicks): `"beef, ribeye, steak… calories"`,
+   `"bananas, overripe, raw" "sucrose"`, `abiyuch`, `cabbage nutrition information`. These are
+   `/foods` pages matching literal USDA food-description strings — they rank well (pos 6–8) but
+   are not human queries. This is why **USA = 308 impressions but CTR 0.65%**.
+2. **Health-condition queries — ⚠️ NOT pursued (see below).** The data showed high-intent
+   queries (`best foods for ulcerative colitis`, `colitis diet`, `colitis foods to avoid list`,
+   Hungarian `colitis étrend`) ranking at position 69–85, which *looked* like the biggest
+   opportunity. **As of 2026-10-19 this is off the roadmap:** condition pages are being removed
+   because condition-targeted dietary advice makes the app a regulated medical device (see the
+   🚫 notice under "Condition pages" below). Do not invest in ranking these.
+
+### Google's URL-Inspection verdicts
+Indexing is healthy — `/en/welcome`, `/en/browse`, `/en/conditions/13`, `/en/browse/180` all
+**PASS / "Submitted and indexed"**, robots ALLOWED, fetch SUCCESSFUL. Two issues:
+
+1. **Recipe structured-data warnings — FIXED 2026-10-19.** On recipe `/en/browse/180` Google
+   flagged the Recipe JSON-LD missing `nutrition`, `recipeCategory`, `aggregateRating`,
+   `recipeCuisine`, `totalTime`, and per-step `name`/`image`. Closed the data-backed ones in
+   `build_recipe_jsonld/1`: added `nutrition` (per-serving `NutritionInformation` from
+   `recipe.nutrients`), `totalTime`, `datePublished`, and a `"Step N"` fallback so every
+   `HowToStep` is named. `aggregateRating` / `video` / step-images / `recipeCategory` remain
+   open **by design** (no real data — see the warnings list in §4). Re-verify with the
+   [Rich Results Test](https://search.google.com/test/rich-results) after deploy + recrawl.
+2. **Greek `/foods` pages lose to duplicate-canonical (open).** `/en/foods/Κάρδαμο` returns
+   **NEUTRAL — "Duplicate, Google chose different canonical than user"**: Google picked
+   `/en/foods/Cress` as canonical. The Greek-named food URLs aren't indexed on their own —
+   they're folded into the English equivalent. Decide whether Greek food pages should carry
+   distinct localized content/canonical or deliberately point at the English page (and set the
+   canonical accordingly). Until then, Greek food-term queries can't rank their own URL.
+
+### Lighthouse (mobile, snapshot mode)
+`https://www.m3hungry.com/en/browse/180` — **SEO 100 / Best Practices 100** (titles, meta,
+crawlable links, hreflang, valid structured data all pass), **Accessibility 84**. Note:
+`navigation` mode returns `NO_FCP` on LiveView pages in headless Chrome — use `mode: "snapshot"`
+against an already-loaded page. Accessibility failures (not direct ranking factors, but worth
+fixing for page experience + real users):
+
+- **color-contrast** — hashtag chips (`#greek`, `#cretan`, …) render white on `#fb923c`
+  (`bg-primary-400`) = **2.26:1** (need 4.5:1); the **cookie-consent "Accept" button** is
+  `#333` on `#101729` = **1.41:1** (appears on every page). Darken the chip background
+  (`primary-500/600`) and fix the consent-button colors.
+- **button-name** — the mobile search submit button (`#recipe-search-form button.absolute`) has
+  no accessible name (icon-only). Add `aria-label`.
+- **link-name** — the login-overlay link (`a[href="/users/log_in"]` on the recipe image) has no
+  discernible text. Add `aria-label`.
+- **aria-dialog-name** — `#recipe_details_modal` `role="dialog"` has no accessible name
+  (`aria-labelledby` points at an element that isn't present on the dead render).
+- **label-content-name-mismatch** — the modal's "Back" button has `aria-label="close"` while its
+  visible text is "Back"; make the accessible name contain the visible text.
+
+---
+
 ## What to do next
 
 These items would have the biggest remaining impact:
 
-1. **Create a default OG image** at `/images/og-default.png` (1200×630px). This is shown when sharing pages that don't have a recipe image (browse, home, etc.).
+1. ~~**Create a default OG image** at `/images/og-default.png` (1200×630px).~~
+   **Done** — a brand-lockup card (parchment ground, logo mark, "m3hungry"
+   wordmark, tagline) lives at `apps/mehungry_web/priv/static/images/og-default.png`,
+   with its editable source alongside it as `og-default.svg`. It's the fallback
+   `og:image`/`twitter:image` for every page without a recipe image (home,
+   `/foods`, `/conditions`, `/blueprints/:slug`, `/nutritionists`). To re-render
+   after editing the SVG: `vips copy og-default.svg og-default.png` (libvips uses
+   librsvg, which renders fonts correctly — ImageMagick's built-in SVG renderer
+   does **not**, so don't use `convert` for this).
 
-2. **Google Search Console** — set it up, verify ownership, submit the sitemap. This gives you actual impressions, clicks, average position, and CTR data — far more accurate than the referrer-based analytics we track in the app.
+2. **Google Search Console** — set it up, verify ownership, submit the sitemap. This gives you actual impressions, clicks, average position, and CTR data. See "Monitoring SEO" above — GSC is now the source of truth for organic (there is no in-app SEO dashboard anymore).
 
 3. **Recipe review schema** — the remaining big JSON-LD gap is `aggregateRating` (see the Search Console warnings table above; the cheaper `author`/`recipeIngredient`/`recipeCuisine`/`keywords`/step-`name` enhancements are already emitted). If you add a rating/review feature, adding `aggregateRating` will show star ratings in Google results, which dramatically increases click-through rate — but only mark up ratings you actually collect and display on the page.
 
 4. **Internal linking** — make sure recipe pages link to related hashtag pages, and hashtag pages link to individual recipes. This helps Googlebot discover more content by following links rather than relying solely on the sitemap.
 
 5. **Page speed** — Google's Core Web Vitals (loading speed, interactivity, layout stability) are a ranking factor. Use [PageSpeed Insights](https://pagespeed.web.dev) to check your scores.
+
+---
+
+## Indexing opportunities to monitor (not yet wired)
+
+Audit 2026-10-19 of public routes vs. `sitemap.xml`. These are public pages that
+render crawlable (disconnected-render) HTML but Google can't discover well yet —
+tracked here so they don't get lost. Ranked by effort-to-impact.
+
+### Ready to index — the page already exists, it's just missing from the sitemap
+
+1. **`/blueprints/:slug` — public meal blueprints (strongest).** `BlueprintLive.Show`
+   is already fully SEO-ready: synchronous (crawler-safe) render, `page_title` /
+   `page_description` / `:canonical_path`, OG meta, and a referral footer linking
+   back to the site. But it is **absent from `sitemap_controller.ex` and not linked
+   from any crawlable page** — Google can only reach it via a shared Facebook link.
+   The listing query already exists: `MealBlueprints.list_public_blueprints/1`
+   (filters `visibility == "public"`). Wiring it in is ~10 lines mirroring the
+   `published_plans` block. Targets the "7-day meal plan for X" space, same as
+   `/meal-plans/:slug`.
+   - ⚠️ **Decision required before indexing:** a blueprint can carry a `condition`
+     badge (`@blueprint.condition.name`, e.g. "for Ulcerative Colitis") — the exact
+     medical-device framing (EU MDR / SaMD) that got `/conditions/:id` pulled (see
+     the 🚫 notice under "Condition pages"). **Either exclude condition-tied
+     blueprints from the sitemap or strip the condition framing from the indexed
+     page first**, or this re-opens the compliance exposure through a side door.
+
+2. **`/search/ingredient/:ingredient` — "Recipes with X" pages.** Already set a good
+   title/description (`"Recipes with <ingredient> | M3Hungry"`) in
+   `recipe_browser_live/index.ex` `apply_action` and render server-side — but only
+   **hashtag** search pages are in the sitemap, not ingredient ones. Emit the top-N
+   ingredients by recipe count (same `having: count(...) > 1` pattern as the hashtag
+   query) to capture "recipes with chicken / feta / chickpeas" long-tail.
+
+### Tuning what's already indexed
+
+3. **Hashtag cap at 200.** The sitemap caps hashtags at the top 200 with
+   `count > 1`. If there are more meaningful tags than that, raising the cap (or the
+   threshold) is free coverage.
+
+### Net-new page worth building
+
+4. **Cuisine landing pages (highest ceiling, real work).** Recipes carry a `cousine`
+   field (already emitted as `recipeCuisine` in the Recipe JSON-LD; the AI bot treats
+   cuisine as the top generation constraint) — so the structured data exists, but
+   there is **no cuisine browse/landing page** (e.g. `/cuisine/greek`). "Greek
+   recipes" / "Mediterranean recipes" are head terms far bigger than any single
+   recipe. This needs a new LiveView, not just sitemap wiring.
+
+**Deliberately excluded** (no organic value / privacy / policy): `/welcome` (duplicate
+of `/home`), `/profile/:id` (noindex by design + privacy), and the legal pages
+(`/terms`, `/cookies`, `/legal`). Also note the known **internal-linking gap**
+("What to do next" #4) is the connective tissue that makes #1, #2, #4 crawl fast
+instead of waiting on sitemap-only discovery.
 
 ---
 

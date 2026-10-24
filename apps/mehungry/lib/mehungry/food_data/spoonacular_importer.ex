@@ -2,18 +2,10 @@ defmodule Mehungry.FoodData.SpoonacularImporter do
   @moduledoc """
   Imports recipes from the Spoonacular API into the Food context.
 
-  ## Matching policy
-
-  The importer never creates ingredients, measurement units, categories, or
-  ingredient portions.  For each Spoonacular ingredient it attempts:
-
-    1. Find the best-matching ingredient in the DB via `IngredientSearch`.
-    2. Find the measurement unit by name/alternate_name in the DB.
-    3. Confirm the ingredient has an `IngredientPortion` for that unit
-       (gram-family units are always accepted without a portion row).
-
-  If any step fails the ingredient is placed in the `unmatched` list and
-  returned to the caller so the user can resolve it manually.
+  The ingredient matching + unit resolution is **not** here — it's the shared,
+  source-agnostic `Mehungry.FoodData.RecipeIngredientResolver`. This module only
+  fetches from Spoonacular and maps its JSON into the resolver's normalized
+  ingredient shape (incl. a gram weight lifted from `measures.metric`).
 
   ## Return values
 
@@ -24,16 +16,13 @@ defmodule Mehungry.FoodData.SpoonacularImporter do
   `import_recipe/3` returns `{:ok, %Recipe{}}` or `{:error, reason}`.
   """
 
-  require Logger
-
-  import Ecto.Query, only: [from: 2]
-
-  alias Mehungry.Repo
   alias Mehungry.Food
-  alias Mehungry.Food.{Ingredient, MeasurementUnit, IngredientPortion}
-  alias Mehungry.Food.IngredientSearch
+  alias Mehungry.FoodData.RecipeIngredientResolver
 
   @api_base "https://api.spoonacular.com"
+
+  # Spoonacular `measures.metric.unitShort` values treated as grams.
+  @gram_units ~w(g gr gram grams grammar)
 
   # ═══════════════════════════════════════════════════════════════════════════
   # Public API
@@ -101,10 +90,11 @@ defmodule Mehungry.FoodData.SpoonacularImporter do
   # HTTP
   # ��══════════════════════════════════════════════════════════════════════════
 
+  defp fetch_recipe(_id, api_key) when api_key in [nil, ""], do: {:error, :missing_api_key}
+
   defp fetch_recipe(id, api_key) do
-    url =
-      "#{@api_base}/recipes/#{id}/information" <>
-        "?includeNutrition=true&apiKey=#{api_key}"
+    query = URI.encode_query(%{"includeNutrition" => "true", "apiKey" => api_key})
+    url = "#{@api_base}/recipes/#{id}/information?#{query}"
 
     case HTTPoison.get(url) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
@@ -124,10 +114,14 @@ defmodule Mehungry.FoodData.SpoonacularImporter do
     end
   end
 
+  defp search_recipes(_query, api_key, _number) when api_key in [nil, ""],
+    do: {:error, :missing_api_key}
+
   defp search_recipes(query, api_key, number) do
-    url =
-      "#{@api_base}/recipes/complexSearch" <>
-        "?query=#{URI.encode(query)}&number=#{number}&apiKey=#{api_key}"
+    qs =
+      URI.encode_query(%{"query" => query, "number" => number, "apiKey" => api_key})
+
+    url = "#{@api_base}/recipes/complexSearch?#{qs}"
 
     case HTTPoison.get(url) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
@@ -149,16 +143,11 @@ defmodule Mehungry.FoodData.SpoonacularImporter do
 
   @doc false
   def build_recipe_attrs(data, user_id) do
-    {matched, unmatched} =
+    {recipe_ingredients, unmatched_list} =
       data["extendedIngredients"]
       |> List.wrap()
-      |> Enum.reject(&blank?(&1["name"]))
-      |> Enum.map(&classify_ingredient/1)
-      |> Enum.split_with(&match?({:matched, _}, &1))
-
-    recipe_ingredients = Enum.map(matched, fn {:matched, ri} -> ri end)
-
-    unmatched_list = Enum.map(unmatched, fn {:unmatched, info} -> info end)
+      |> Enum.map(&normalize_ingredient/1)
+      |> RecipeIngredientResolver.resolve_ingredients()
 
     if recipe_ingredients == [] and unmatched_list != [] do
       {:error, "no ingredients could be matched to existing database entries"}
@@ -186,35 +175,28 @@ defmodule Mehungry.FoodData.SpoonacularImporter do
     end
   end
 
-  # Tries to match a single Spoonacular ingredient to existing DB records.
-  # Returns {:matched, recipe_ingredient_map} or {:unmatched, info_map}.
-  defp classify_ingredient(ing) do
-    name = normalize_name(ing["name"])
-    unit_name = normalize_unit(ing["unit"])
+  # Maps one Spoonacular `extendedIngredients` entry into the resolver's
+  # normalized shape. `metric_grams` lifts Spoonacular's own gram weight from
+  # `measures.metric` so the resolver can use it as a last resort.
+  defp normalize_ingredient(ing) do
     quantity = to_float(ing["amount"], 1.0)
 
-    unmatched_info = %{
-      name: name,
+    %{
+      name: ing["name"],
       quantity: quantity,
-      unit: unit_name,
-      original: ing["original"] || "#{quantity} #{unit_name} #{name}"
+      unit: ing["unit"],
+      original: ing["original"] || "#{quantity} #{ing["unit"]} #{ing["name"]}",
+      metric_grams: metric_grams(ing)
     }
+  end
 
-    with {:ok, ingredient} <- find_ingredient(name),
-         {:ok, unit} <- find_measurement_unit(unit_name),
-         :ok <- check_portion(ingredient, unit) do
-      {:matched,
-       %{
-         quantity: quantity,
-         ingredient_id: ingredient.id,
-         measurement_unit_id: unit.id,
-         ingredient_allias: ing["original"]
-       }}
-    else
-      {:error, reason} ->
-        Logger.info("SpoonacularImporter: unmatched \"#{name}\" — #{reason}")
-        {:unmatched, Map.put(unmatched_info, :reason, reason)}
-    end
+  # Spoonacular's `measures.metric` weight, when it's expressed in grams.
+  defp metric_grams(ing) do
+    metric = get_in(ing, ["measures", "metric"]) || %{}
+    amount = to_float(metric["amount"], nil)
+    unit = (metric["unitShort"] || "") |> to_string() |> String.trim() |> String.downcase()
+
+    if amount && unit in @gram_units, do: amount, else: nil
   end
 
   defp build_steps([]), do: []
@@ -236,63 +218,13 @@ defmodule Mehungry.FoodData.SpoonacularImporter do
   defp extract_nutrients(_), do: %{}
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # DB lookup helpers (read-only — no inserts)
-  # ═══════════════════════════════════════════════════════════════════════════
-
-  # Uses IngredientSearch (ranked fuzzy + prefix) and takes the top result.
-  defp find_ingredient(name) do
-    case IngredientSearch.search(name) do
-      [best | _] -> {:ok, best}
-      [] -> {:error, :ingredient_not_found}
-    end
-  end
-
-  # Searches MeasurementUnit by name or alternate_name (existing Food function).
-  defp find_measurement_unit(name) do
-    case Food.get_measurement_unit_by_name(name) do
-      [unit | _] -> {:ok, unit}
-      [] -> {:error, :unit_not_found}
-    end
-  end
-
-  # Gram-family units are handled directly by NutrientCalculation — no portion needed.
-  # For all other units an IngredientPortion row must already exist.
-  defp check_portion(%Ingredient{} = ingredient, %MeasurementUnit{} = unit) do
-    if gram_unit?(unit) do
-      :ok
-    else
-      exists =
-        Repo.exists?(
-          from p in IngredientPortion,
-            where:
-              p.ingredient_id == ^ingredient.id and
-                p.measurement_unit_id == ^unit.id
-        )
-
-      if exists, do: :ok, else: {:error, :portion_not_found}
-    end
-  end
-
-  # ═══════════════════════════════════════════════════════════════════════════
   # Private helpers
   # ═══════════════════════════════════════════════════════════════════════════
-
-  defp gram_unit?(%MeasurementUnit{name: name, alternate_name: alt}) do
-    String.downcase(name || "") in ["g", "gram", "grams", "grammar"] or alt == "g"
-  end
 
   defp infer_difficulty(nil), do: 1
   defp infer_difficulty(minutes) when minutes <= 30, do: 1
   defp infer_difficulty(minutes) when minutes <= 60, do: 2
   defp infer_difficulty(_), do: 3
-
-  defp normalize_name(name) do
-    name |> String.trim() |> String.downcase() |> String.replace(~r/\s+/, " ")
-  end
-
-  defp normalize_unit(nil), do: "piece"
-  defp normalize_unit(""), do: "piece"
-  defp normalize_unit(unit), do: unit |> String.trim() |> String.downcase()
 
   defp strip_html(html) do
     html
@@ -310,8 +242,4 @@ defmodule Mehungry.FoodData.SpoonacularImporter do
   defp to_float(value, _default) when is_float(value), do: value
   defp to_float(value, _default) when is_integer(value), do: value * 1.0
   defp to_float(_, default), do: default
-
-  defp blank?(nil), do: true
-  defp blank?(""), do: true
-  defp blank?(_), do: false
 end

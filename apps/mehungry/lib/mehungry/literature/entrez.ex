@@ -181,6 +181,12 @@ defmodule Mehungry.Literature.Entrez do
   @doc """
   The search terms for a condition: `name × dietary/phase keywords`. Each term carries
   the `condition_id` it links to. Returns `[]` when the condition doesn't exist.
+
+  The condition name is anchored to **Title/Abstract** (`"<name>"[tiab]`) so a paper
+  must actually name the condition to be linked — without this, PubMed's term mapping
+  pulls in broad parent-disease papers (e.g. a UC crawl flooding with general IBD
+  studies). A subtype crawl (UC) and its parent crawl (IBD) therefore collect
+  cleanly-separated corpora.
   """
   def search_terms_for_condition(condition_id) do
     case Mehungry.Health.get_condition(condition_id) do
@@ -189,7 +195,7 @@ defmodule Mehungry.Literature.Entrez do
 
       condition ->
         for keyword <- @dietary_phase_keywords do
-          %{term: "#{condition.name} #{keyword}", condition_id: condition_id}
+          %{term: "\"#{condition.name}\"[tiab] AND #{keyword}", condition_id: condition_id}
         end
         |> Enum.uniq_by(& &1.term)
     end
@@ -226,15 +232,21 @@ defmodule Mehungry.Literature.Entrez do
   defp fetch_and_link_condition(condition_id, term, pmids) do
     case fetch_studies(pmids) do
       {:ok, studies} ->
+        # Papers an admin re-assigned away from this condition must never be
+        # re-linked by a later crawl, under any search term.
+        excluded = Literature.excluded_study_ids_for_condition(condition_id)
+
         Enum.each(studies, fn attrs ->
           {:ok, study} = Literature.upsert_study(Map.put(attrs, :retrieved_at, now()))
 
-          Literature.link_study_condition(%{
-            study_id: study.id,
-            condition_id: condition_id,
-            search_term: term,
-            source: "pubmed"
-          })
+          unless MapSet.member?(excluded, study.id) do
+            Literature.link_study_condition(%{
+              study_id: study.id,
+              condition_id: condition_id,
+              search_term: term,
+              source: "pubmed"
+            })
+          end
         end)
 
         record_condition_attempt(condition_id, term, "matched", length(studies))

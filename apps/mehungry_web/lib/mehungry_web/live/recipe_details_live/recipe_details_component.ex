@@ -5,9 +5,9 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   import MehungryWeb.RecipeComponents
 
   alias Mehungry.Posts.Comment
-  alias Mehungry.{Posts, Users, Food, Accounts}
+  alias Mehungry.{Posts, Users, Food, Accounts, Subscriptions}
   alias Mehungry.Social.Facebook
-  alias MehungryWeb.RecipeFlags
+  alias MehungryWeb.InsightGraphicGenerator
   alias Phoenix.LiveView.AsyncResult
 
   embed_templates("components/*")
@@ -24,8 +24,65 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   end
 
   @impl true
+  def handle_event("generate_graphic", _params, socket) do
+    recipe = socket.assigns.recipe
+    user = socket.assigns.current_user
+
+    cond do
+      is_nil(user) ->
+        {:noreply, assign(socket, :must_be_loged_in, 1)}
+
+      Subscriptions.check_quota(user.id, "graphic_generation") == {:error, :quota_exceeded} ->
+        {:noreply,
+         assign(
+           socket,
+           :graphic_error,
+           "You've used all your graphic generations this month. Upgrade for more."
+         )}
+
+      true ->
+        recipe_id = recipe.id
+        user_id = user.id
+
+        {:noreply,
+         socket
+         |> assign(:graphic_running, true)
+         |> assign(:graphic_result, nil)
+         |> assign(:graphic_error, nil)
+         |> start_async(:insight_graphic, fn ->
+           InsightGraphicGenerator.generate(recipe_id, user_id)
+         end)}
+    end
+  end
+
+  @impl true
+  def handle_async(:insight_graphic, {:ok, {:ok, graphic}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:graphic_running, false)
+     |> assign(:graphic_result, graphic)
+     |> assign(:graphic_error, nil)}
+  end
+
+  @impl true
+  def handle_async(:insight_graphic, {:ok, {:error, _reason}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:graphic_running, false)
+     |> assign(:graphic_error, "Graphic generation failed. Please try again.")}
+  end
+
+  @impl true
+  def handle_async(:insight_graphic, {:exit, _reason}, socket) do
+    {:noreply,
+     socket
+     |> assign(:graphic_running, false)
+     |> assign(:graphic_error, "Graphic generation failed. Please try again.")}
+  end
+
+  @impl true
   def handle_event("post-on-facebook", %{"recipe_id" => recipe_id, "user_id" => user_id}, socket) do
-    recipe = Food.get_recipe!(recipe_id)
+    recipe = recipe_id |> Food.get_recipe!() |> Food.recipe_with_share_image()
     user = Accounts.get_user!(user_id)
 
     Facebook.post_recipe_container(user, recipe, %{})
@@ -39,7 +96,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   @impl true
   def handle_event("post-on-instagram", %{"recipe_id" => recipe_id, "user_id" => user_id}, socket) do
-    recipe = Food.get_recipe!(recipe_id)
+    recipe = recipe_id |> Food.get_recipe!() |> Food.recipe_with_share_image()
     user = Accounts.get_user!(user_id)
     Mehungry.Social.Instagram.post_recipe(user, recipe)
 
@@ -145,8 +202,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     <div
       id="recipe_presentation_modal"
       phx-hook="RecipeDetailTimer"
-      data-server-ms={@server_ms}
-      data-recipe-id={@recipe.id}
       class="recipe-details-page min-h-screen bg-ink text-parchment pb-10"
     >
       <div class=" mx-auto px-4 py-8 max-w-4xl">
@@ -182,6 +237,45 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                 id={@id <> "like_container"}
                 myself={@myself}
               />
+              <%= if @recipe.image_url do %>
+                <button
+                  type="button"
+                  phx-click="generate_graphic"
+                  phx-target={@myself}
+                  disabled={@graphic_running}
+                  class="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-paprika/90 hover:bg-paprika disabled:opacity-60 text-white font-semibold text-xs shadow-lg backdrop-blur transition-colors"
+                >
+                  <.icon
+                    name={if @graphic_running, do: "hero-arrow-path", else: "hero-sparkles"}
+                    class={"w-4 h-4 #{if @graphic_running, do: "animate-spin"}"}
+                  />
+                  {if @graphic_running, do: "Creating graphic…", else: "Shareable graphic"}
+                </button>
+              <% end %>
+            </div>
+
+            <div :if={@graphic_error} class="mx-6 mt-4 rounded-lg bg-red-900/40 border border-red-700 text-red-200 text-xs px-3 py-2">
+              {@graphic_error}
+            </div>
+
+            <div :if={@graphic_result} class="mx-6 mt-4 rounded-xl bg-ink border border-ink-panel2 p-3 flex gap-3">
+              <img
+                src={@graphic_result.image_url}
+                alt="Shareable insight graphic"
+                class="w-28 h-28 rounded-lg object-cover shrink-0"
+              />
+              <div class="min-w-0 flex flex-col">
+                <p class="text-parchment text-sm font-semibold">{@graphic_result.headline}</p>
+                <p class="text-parchment-dim text-xs mt-1 line-clamp-3">{@graphic_result.caption}</p>
+                <a
+                  href={@graphic_result.image_url}
+                  target="_blank"
+                  rel="noopener"
+                  class="mt-auto inline-flex items-center gap-1.5 text-paprika hover:text-paprika-soft text-xs font-semibold"
+                >
+                  <.icon name="hero-arrow-down-tray" class="w-3.5 h-3.5" /> Download to share
+                </a>
+              </div>
             </div>
             <!-- Content -->
             <div class="p-6">
@@ -189,6 +283,38 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                 {@recipe.title}
               </h1>
               <p class="text-parchment-dim mb-4">{@recipe.description}</p>
+
+              <% nutrient_badges = MehungryWeb.RecipeComponents.high_badges(@recipe, 99) %>
+              <% badge_limit = 4 %>
+              <div :if={nutrient_badges != []} class="flex flex-wrap items-center gap-2 mb-4">
+                <span
+                  :for={{badge, index} <- Enum.with_index(nutrient_badges)}
+                  class={[
+                    "rounded-full bg-paprika/15 text-paprika-soft border border-paprika/30 text-xs font-semibold px-3 py-1",
+                    index >= badge_limit && "hidden recipe-badge-extra-#{@recipe.id}"
+                  ]}
+                  title={gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
+                >
+                  {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])} · {badge["percent_nrv"]}% NRV
+                </span>
+                <button
+                  :if={length(nutrient_badges) > badge_limit}
+                  type="button"
+                  phx-click={
+                    JS.toggle_class("hidden", to: ".recipe-badge-extra-#{@recipe.id}")
+                    |> JS.toggle_class("hidden", to: "#recipe-badge-more-#{@recipe.id}")
+                    |> JS.toggle_class("hidden", to: "#recipe-badge-less-#{@recipe.id}")
+                  }
+                  class="text-paprika-soft hover:text-paprika text-xs font-semibold px-2 py-1 underline underline-offset-2"
+                >
+                  <span id={"recipe-badge-more-#{@recipe.id}"}>
+                    {gettext("Show %{count} more", count: length(nutrient_badges) - badge_limit)}
+                  </span>
+                  <span id={"recipe-badge-less-#{@recipe.id}"} class="hidden">
+                    {gettext("Show less")}
+                  </span>
+                </button>
+              </div>
 
               <.recipe_tags recipe={@recipe} />
 
@@ -336,10 +462,20 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               current_user={@current_user}
               nutrients={@recipe.nutrients}
               primary_size={@recipe.primary_nutrients_size}
+              locale={Gettext.get_locale(MehungryWeb.Gettext)}
               ingredient_display_names={@ingredient_display_names}
-              ingredient_flags={@ingredient_flags}
             />
           </div>
+          <%!-- "Nutrition Insights" (nutrient-interaction panel) is HIDDEN for now.
+               The underlying biochemistry rules are sound, but the recipe-level
+               inference is low-signal/occasionally misleading because it keys on
+               each ingredient's per-100g nutrient density rather than the amount
+               actually used in the dish (and ignores iron type, dose ratios, meal
+               timing). See docs/food/nutrient_interactions.md for the full
+               write-up and accuracy assessment. @interactions is forced to [] in
+               maybe_load_recipe_async/3 so nothing renders and no query runs;
+               un-comment this block and restore the query to re-enable. --%>
+          <%!--
           <.async_result :let={interactions} assign={@interactions}>
             <:loading>
               <div class="mt-20 animate-pulse">
@@ -357,6 +493,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               </div>
             <% end %>
           </.async_result>
+          --%>
 
           <div
             class="mt-20 bg-ink-panel rounded-xl border border-ink-panel2 overflow-hidden"
@@ -503,8 +640,6 @@ defmodule MehungryWeb.RecipeDetailsComponent do
 
   @impl true
   def update(assigns, socket) do
-    t0 = System.monotonic_time(:millisecond)
-
     user_follows =
       if(is_nil(Map.get(assigns, :user_follows))) do
         []
@@ -529,29 +664,23 @@ defmodule MehungryWeb.RecipeDetailsComponent do
     display_names =
       Food.ingredient_display_names(ingredient_ids, user_language)
 
-    condition_ids = RecipeFlags.opted_in_condition_ids(profile)
-    ingredient_flags = RecipeFlags.flags_for_ingredient_ids(ingredient_ids, condition_ids)
-
-    recipe = RecipeFlags.enrich_one(assigns.recipe, condition_ids)
-
-    server_ms = System.monotonic_time(:millisecond) - t0
-
     socket =
       socket
       |> assign(assigns)
-      |> assign(:recipe, recipe)
+      |> assign(:recipe, assigns.recipe)
       |> assign(:reply, reply)
       |> assign(:user_follows, user_follows)
       |> assign(:ingredient_display_names, display_names)
-      |> assign(:ingredient_flags, ingredient_flags)
-      |> assign(:server_ms, server_ms)
+      |> assign_new(:graphic_running, fn -> false end)
+      |> assign_new(:graphic_result, fn -> nil end)
+      |> assign_new(:graphic_error, fn -> nil end)
       |> assign(
         :comment,
         get_when_first_exists(assigns.current_user, fn ->
           %Comment{user_id: assigns.current_user.id, recipe_id: assigns.recipe.id}
         end)
       )
-      |> maybe_load_recipe_async(recipe, ingredient_ids)
+      |> maybe_load_recipe_async(assigns.recipe, ingredient_ids)
 
     {:ok, socket}
   end
@@ -562,7 +691,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
   # per recipe so a routine parent re-render doesn't reset them to a spinner or
   # re-run the queries. The live comment-update path (send_update with
   # `%{recipe_comments: ...}`) refreshes the list without going through here.
-  defp maybe_load_recipe_async(socket, recipe, ingredient_ids) do
+  defp maybe_load_recipe_async(socket, recipe, _ingredient_ids) do
     if socket.assigns[:async_recipe_id] == recipe.id do
       socket
     else
@@ -573,9 +702,14 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       |> assign_async(:recipe_comments, fn ->
         {:ok, %{recipe_comments: Food.get_recipe_comments(recipe_id)}}
       end)
-      |> assign_async(:interactions, fn ->
-        {:ok, %{interactions: Food.get_interactions_for_ingredients(ingredient_ids)}}
-      end)
+      # "Nutrition Insights" (nutrient-interaction panel) is HIDDEN for now — its
+      # recipe-level inference is low-signal/occasionally misleading (it keys on
+      # per-100g ingredient density, not the amount actually used). See
+      # docs/food/nutrient_interactions.md. Return [] so the panel renders nothing
+      # and we skip the DB query; to re-enable, restore the call below and un-hide
+      # the render block (search "Nutrition Insights").
+      #   Food.get_interactions_for_ingredients(ingredient_ids)
+      |> assign_async(:interactions, fn -> {:ok, %{interactions: []}} end)
     end
   end
 end

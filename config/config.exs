@@ -14,6 +14,15 @@ config :mehungry,
 
 config :mehungry, :admin_email, "nikolisgal@gmail.com"
 
+# Android closed-testing (Google Play) opt-in invite, sent from the admin panel
+# at /professional/android-beta. Override in runtime.exs from env in prod.
+#   * opt_in_url — the Google Play "become a tester" opt-in link for the track
+#   * group_email — default recipient (a Google Group that fans out to testers)
+config :mehungry, :android_beta,
+  opt_in_url: "https://play.google.com/apps/testing/com.mehungry.app",
+  group_email: "mehungry-android-testers@googlegroups.com",
+  current_version: "1.0.0"
+
 # Feed ranking: AI recipes are authored by these bot accounts. Their posts are
 # penalized in Mehungry.Posts.list_posts/1 so human-created content out-ranks
 # freshly generated AI content. Tune :ai_content_penalty to taste.
@@ -28,7 +37,7 @@ config :mehungry, :ai_content_penalty, 3.0
 config :mehungry, :social_platforms,
   facebook: true,
   instagram: false,
-  pinterest: false
+  pinterest: true
 
 # Compile-time env marker for the /test-accounts routes. In dev/test the routes
 # are open; other envs additionally require a matching TEST_ACCOUNTS_TOKEN
@@ -136,6 +145,11 @@ config :mehungry,
     "Reactive Nitrogen Species"
   ]
 
+# Delivers notifications fired from the core `Notifications.emit/3` seam to the
+# mobile channel + OS push. The web impl no-ops when the endpoint isn't running
+# (core-only tests), so this is safe to set for every app in the umbrella.
+config :mehungry, :notification_dispatcher, MehungryWeb.Api.NotificationDispatcher
+
 config :mehungry, Oban,
   repo: Mehungry.Repo,
   # Pub/sub over Erlang process groups instead of the default single-connection
@@ -159,6 +173,8 @@ config :mehungry, Oban,
      crontab: [
        # 1:30am UTC daily — refresh Instagram long-lived tokens before the 2am run
        {"30 1 * * *", Mehungry.ObanWorkers.InstagramTokenRefreshWorker},
+       # 1:45am UTC daily — refresh Pinterest access tokens before the 2am run
+       {"45 1 * * *", Mehungry.ObanWorkers.PinterestTokenRefreshWorker},
        # 2am UTC daily — generate recipes for the next day + schedule publish jobs
        {"0 2 * * *", Mehungry.ObanWorkers.DailyRecipeGenerationWorker},
        # every 10 min — resume any pipeline run (crawl/annotation/derivation) whose chain broke
@@ -233,6 +249,17 @@ config :ex_aws,
   access_key_id: nil,
   secret_access_key: nil,
   region: "eu-central-1"
+
+# Object storage. `backend` selects which `Mehungry.Storage` implementation is
+# used app-wide: `:supabase` (Supabase Storage REST, the default and the only
+# backend used in production) or `:s3` (legacy AWS, via `Mehungry.S3`). The
+# effective backend is set from STORAGE_BACKEND at runtime (see
+# config/runtime.exs); Supabase values are nil here and filled from env there.
+config :mehungry, :storage,
+  backend: :supabase,
+  supabase_url: nil,
+  service_role_key: nil,
+  bucket: "media"
 
 config :ueberauth, Ueberauth,
   providers: [

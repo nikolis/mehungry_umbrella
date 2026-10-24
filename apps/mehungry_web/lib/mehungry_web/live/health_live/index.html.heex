@@ -23,7 +23,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
         <%= for condition <- @conditions do %>
           <a
-            href={~p"/#{@locale}/conditions/#{condition.id}"}
+            href={"#{@base}/#{condition.id}"}
             class="group block bg-ink-panel border border-ink-panel2 rounded-xl p-4 hover:border-paprika/50 hover:bg-ink-panel2/80 transition-colors"
           >
             <div class="flex items-start justify-between gap-2">

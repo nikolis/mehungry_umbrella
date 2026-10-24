@@ -12,76 +12,76 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "can't be blank"
-msgstr ""
+msgstr "δεν μπορεί να είναι κενό"
 
 msgid "has already been taken"
-msgstr ""
+msgstr "χρησιμοποιείται ήδη"
 
 msgid "is invalid"
-msgstr ""
+msgstr "δεν είναι έγκυρο"
 
 msgid "must be accepted"
-msgstr ""
+msgstr "πρέπει να γίνει αποδεκτό"
 
 msgid "has invalid format"
-msgstr ""
+msgstr "έχει μη έγκυρη μορφή"
 
 msgid "has an invalid entry"
-msgstr ""
+msgstr "έχει μη έγκυρη καταχώρηση"
 
 msgid "is reserved"
-msgstr ""
+msgstr "είναι δεσμευμένο"
 
 msgid "does not match confirmation"
-msgstr ""
+msgstr "δεν ταιριάζει με την επιβεβαίωση"
 
 msgid "is still associated with this entry"
-msgstr ""
+msgstr "εξακολουθεί να συνδέεται με αυτήν την καταχώρηση"
 
 msgid "are still associated with this entry"
-msgstr ""
+msgstr "εξακολουθούν να συνδέονται με αυτήν την καταχώρηση"
 
 msgid "should be %{count} character(s)"
 msgid_plural "should be %{count} character(s)"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "πρέπει να είναι %{count} χαρακτήρας"
+msgstr[1] "πρέπει να είναι %{count} χαρακτήρες"
 
 msgid "should have %{count} item(s)"
 msgid_plural "should have %{count} item(s)"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "πρέπει να έχει %{count} στοιχείο"
+msgstr[1] "πρέπει να έχει %{count} στοιχεία"
 
 msgid "should be at least %{count} character(s)"
 msgid_plural "should be at least %{count} character(s)"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "πρέπει να είναι τουλάχιστον %{count} χαρακτήρας"
+msgstr[1] "πρέπει να είναι τουλάχιστον %{count} χαρακτήρες"
 
 msgid "should have at least %{count} item(s)"
 msgid_plural "should have at least %{count} item(s)"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "πρέπει να έχει τουλάχιστον %{count} στοιχείο"
+msgstr[1] "πρέπει να έχει τουλάχιστον %{count} στοιχεία"
 
 msgid "should be at most %{count} character(s)"
 msgid_plural "should be at most %{count} character(s)"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "πρέπει να είναι το πολύ %{count} χαρακτήρας"
+msgstr[1] "πρέπει να είναι το πολύ %{count} χαρακτήρες"
 
 msgid "should have at most %{count} item(s)"
 msgid_plural "should have at most %{count} item(s)"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "πρέπει να έχει το πολύ %{count} στοιχείο"
+msgstr[1] "πρέπει να έχει το πολύ %{count} στοιχεία"
 
 msgid "must be less than %{number}"
-msgstr ""
+msgstr "πρέπει να είναι μικρότερο από %{number}"
 
 msgid "must be greater than %{number}"
-msgstr ""
+msgstr "πρέπει να είναι μεγαλύτερο από %{number}"
 
 msgid "must be less than or equal to %{number}"
-msgstr ""
+msgstr "πρέπει να είναι μικρότερο ή ίσο με %{number}"
 
 msgid "must be greater than or equal to %{number}"
-msgstr ""
+msgstr "πρέπει να είναι μεγαλύτερο ή ίσο με %{number}"
 
 msgid "must be equal to %{number}"
-msgstr ""
+msgstr "πρέπει να είναι ίσο με %{number}"

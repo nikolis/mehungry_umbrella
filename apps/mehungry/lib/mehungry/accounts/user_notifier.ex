@@ -5,60 +5,41 @@ defmodule Mehungry.Accounts.UserNotifier do
   require Logger
   alias Mehungry.Mailer
 
-  defp logo_svg do
+  # The M3Hungry mark is served as a hosted PNG rather than inline SVG — Gmail
+  # and Outlook strip SVG from email, so an <img> is the only reliable logo.
+  defp brand_header do
     """
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 120" width="300" height="80">
-      <defs>
-        <linearGradient id="em_top" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#FBBF24" />
-          <stop offset="50%" stop-color="#F97316" />
-          <stop offset="100%" stop-color="#EA580C" />
-        </linearGradient>
-        <linearGradient id="em_mid" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#F97316" />
-          <stop offset="50%" stop-color="#EA580C" />
-          <stop offset="100%" stop-color="#C2410C" />
-        </linearGradient>
-        <linearGradient id="em_bot" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#EA580C" />
-          <stop offset="100%" stop-color="#7C2D12" />
-        </linearGradient>
-      </defs>
-      <polygon points="60,95 80,82 100,95 100,115 80,128 60,115" fill="url(#em_bot)" />
-      <polygon points="80,82 100,95 80,108 60,95" fill="#7C2D12" opacity="0.7" />
-      <polygon points="80,65 100,52 120,65 120,85 100,98 80,85" fill="url(#em_mid)" />
-      <polygon points="100,52 120,65 100,78 80,65" fill="#C2410C" opacity="0.7" />
-      <polygon points="100,38 120,25 140,38 140,58 120,71 100,58" fill="url(#em_top)" />
-      <polygon points="120,25 140,38 120,51 100,38" fill="#F97316" opacity="0.8" />
-      <line x1="100" y1="58" x2="100" y2="78" stroke="#FBBF24" stroke-width="2" stroke-dasharray="3,3" />
-      <line x1="80" y1="65" x2="80" y2="82" stroke="#FBBF24" stroke-width="2" stroke-dasharray="3,3" />
-      <line x1="120" y1="52" x2="120" y2="65" stroke="#FBBF24" stroke-width="2" stroke-dasharray="3,3" />
-      <text x="160" y="65"
-            font-family="'Inter',system-ui,-apple-system,sans-serif"
-            font-size="38" font-weight="800" fill="#F8FAFC" letter-spacing="2">
-        M3<tspan fill="#EA580C">HUNGRY</tspan>
-      </text>
-      <text x="160" y="88"
-            font-family="'Inter',system-ui,-apple-system,sans-serif"
-            font-size="11" fill="#64748B" letter-spacing="3">
-        ANALYZE &#x2022; SHARE &#x2022; CONNECT
-      </text>
-    </svg>
+    <img src="https://www.m3hungry.com/images/m3hungry_icon_192.png"
+         width="76" height="76" alt="M3Hungry"
+         style="display:block;border:0;outline:none;text-decoration:none;border-radius:18px;" />
     """
   end
 
-  defp html_layout(title, subtitle, greeting, body, cta_label, cta_url, footer_note) do
+  defp wordmark do
+    """
+    <div style="font-family:Georgia,'Times New Roman',serif;font-size:30px;
+                font-weight:700;letter-spacing:1px;color:#F4EEDD;line-height:1;">
+      M3<span style="color:#E8622C;">HUNGRY</span>
+    </div>
+    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                font-size:11px;letter-spacing:3px;color:#8FDDCE;margin-top:8px;">
+      ANALYZE &#x2022; SHARE &#x2022; CONNECT
+    </div>
+    """
+  end
+
+  defp html_layout(title, subtitle, greeting, body, cta_label, cta_url, footer_note, lang \\ "en") do
     """
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="#{lang}">
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1.0">
       <title>#{title}</title>
     </head>
-    <body style="margin:0;padding:0;background-color:#0F172A;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+    <body style="margin:0;padding:0;background-color:#17140F;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
       <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-             style="background-color:#0F172A;">
+             style="background-color:#17140F;">
         <tr>
           <td align="center" style="padding:48px 16px;">
             <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
@@ -66,15 +47,22 @@ defmodule Mehungry.Accounts.UserNotifier do
 
               <!-- Logo -->
               <tr>
-                <td align="center" style="padding-bottom:20px;">
-                  #{logo_svg()}
+                <td align="center" style="padding-bottom:16px;">
+                  #{brand_header()}
+                </td>
+              </tr>
+
+              <!-- Wordmark -->
+              <tr>
+                <td align="center" style="padding-bottom:28px;">
+                  #{wordmark()}
                 </td>
               </tr>
 
               <!-- Title -->
               <tr>
                 <td align="center" style="padding-bottom:6px;">
-                  <h1 style="margin:0;color:#F8FAFC;font-size:26px;font-weight:800;letter-spacing:-0.4px;">
+                  <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;color:#F4EEDD;font-size:26px;font-weight:700;letter-spacing:-0.2px;">
                     #{title}
                   </h1>
                 </td>
@@ -83,18 +71,18 @@ defmodule Mehungry.Accounts.UserNotifier do
               <!-- Subtitle -->
               <tr>
                 <td align="center" style="padding-bottom:32px;">
-                  <p style="margin:0;color:rgba(119,178,85,0.7);font-size:15px;">#{subtitle}</p>
+                  <p style="margin:0;color:#8FDDCE;font-size:15px;">#{subtitle}</p>
                 </td>
               </tr>
 
               <!-- Card -->
               <tr>
-                <td style="background-color:#1E293B;border-radius:20px;padding:32px 28px;">
+                <td style="background-color:#211D16;border:1px solid #2B2619;border-radius:20px;padding:32px 28px;">
 
-                  <p style="margin:0 0 14px;color:#CBD5E1;font-size:15px;line-height:1.65;">
+                  <p style="margin:0 0 14px;color:#F4EEDD;font-size:15px;line-height:1.65;">
                     #{greeting}
                   </p>
-                  <p style="margin:0 0 30px;color:#94A3B8;font-size:14px;line-height:1.7;">
+                  <p style="margin:0 0 30px;color:#A9A08C;font-size:14px;line-height:1.7;">
                     #{body}
                   </p>
 
@@ -103,10 +91,10 @@ defmodule Mehungry.Accounts.UserNotifier do
                     <tr>
                       <td align="center" style="padding-bottom:28px;">
                         <a href="#{cta_url}"
-                           style="display:inline-block;background-color:#77b255;color:#ffffff;
+                           style="display:inline-block;background-color:#E8622C;color:#17140F;
                                   text-decoration:none;font-weight:700;font-size:15px;
                                   padding:14px 36px;border-radius:9999px;
-                                  border:1px solid #77b255;">
+                                  border:1px solid #E8622C;">
                           #{cta_label}
                         </a>
                       </td>
@@ -114,12 +102,12 @@ defmodule Mehungry.Accounts.UserNotifier do
                   </table>
 
                   <!-- Fallback link -->
-                  <p style="margin:0 0 4px;color:#475569;font-size:12px;">
+                  <p style="margin:0 0 4px;color:#6E6554;font-size:12px;">
                     If the button doesn't work, paste this link into your browser:
                   </p>
                   <p style="margin:0;">
                     <a href="#{cta_url}"
-                       style="color:#77b255;font-size:12px;word-break:break-all;text-decoration:none;">
+                       style="color:#E8622C;font-size:12px;word-break:break-all;text-decoration:none;">
                       #{cta_url}
                     </a>
                   </p>
@@ -130,8 +118,8 @@ defmodule Mehungry.Accounts.UserNotifier do
               <!-- Footer -->
               <tr>
                 <td align="center" style="padding-top:28px;">
-                  <p style="margin:0;color:#334155;font-size:12px;line-height:1.6;">
-                    Mehungry &mdash; #{footer_note}
+                  <p style="margin:0;color:#6E6554;font-size:12px;line-height:1.6;">
+                    M3Hungry &mdash; #{footer_note}
                   </p>
                 </td>
               </tr>
@@ -159,9 +147,10 @@ defmodule Mehungry.Accounts.UserNotifier do
         {:ok, email}
 
       {:error, reason} ->
-        # Surface delivery failures (e.g. Amazon SES rejecting an unverified
-        # recipient while the account is still in the SES sandbox) instead of
-        # dropping them silently — otherwise "no email arrived" is undiagnosable.
+        # Surface delivery failures (e.g. Mailgun rejecting a recipient or the
+        # sending domain not being verified) instead of dropping them silently —
+        # otherwise "no email arrived" is undiagnosable. Callers decide whether
+        # to tell the user; this always logs the reason.
         Logger.error(
           "[UserNotifier] failed to deliver #{inspect(subject)} to #{inspect(recipient)}: " <>
             inspect(reason)
@@ -171,7 +160,40 @@ defmodule Mehungry.Accounts.UserNotifier do
     end
   end
 
-  def deliver_confirmation_instructions(user, url) do
+  @doc """
+  Send the account-confirmation email. `locale` ("en"/"el") selects the
+  language — our audience is overwhelmingly Greek, so an English-only email was
+  a likely cause of signups never confirming.
+  """
+  def deliver_confirmation_instructions(user, url, locale \\ "en")
+
+  def deliver_confirmation_instructions(user, url, "el") do
+    text = """
+    Γεια σας #{user.email},
+
+    Καλώς ήρθατε στο Mehungry! Επιβεβαιώστε τον λογαριασμό σας επισκεπτόμενοι τον παρακάτω σύνδεσμο:
+
+    #{url}
+
+    Ο σύνδεσμος λήγει σε 7 ημέρες. Αν δεν δημιουργήσατε λογαριασμό, μπορείτε να αγνοήσετε αυτό το email.
+    """
+
+    html =
+      html_layout(
+        "Επιβεβαιώστε τον λογαριασμό σας",
+        "Ένα κλικ πριν εξερευνήσετε περισσότερα",
+        "Γεια σας #{user.email},",
+        "Καλώς ήρθατε στο Mehungry! Επιβεβαιώστε τον λογαριασμό σας πατώντας το κουμπί παρακάτω. Ο σύνδεσμος λήγει σε 7 ημέρες.",
+        "Επιβεβαίωση λογαριασμού",
+        url,
+        "Αν δεν δημιουργήσατε λογαριασμό, μπορείτε να αγνοήσετε αυτό το email με ασφάλεια.",
+        "el"
+      )
+
+    deliver(user.email, "Επιβεβαιώστε τον λογαριασμό σας στο Mehungry", text, html)
+  end
+
+  def deliver_confirmation_instructions(user, url, _locale) do
     text = """
     Hi #{user.email},
 
@@ -179,7 +201,7 @@ defmodule Mehungry.Accounts.UserNotifier do
 
     #{url}
 
-    This link expires in 24 hours. If you didn't create an account, you can ignore this email.
+    This link expires in 7 days. If you didn't create an account, you can ignore this email.
     """
 
     html =
@@ -187,7 +209,7 @@ defmodule Mehungry.Accounts.UserNotifier do
         "Confirm your account",
         "One click away from exploring more",
         "Hi #{user.email},",
-        "Welcome to Mehungry! Please confirm your account by clicking the button below. This link expires in 24 hours.",
+        "Welcome to Mehungry! Please confirm your account by clicking the button below. This link expires in 7 days.",
         "Confirm my account",
         url,
         "If you didn't create an account, you can safely ignore this email."
@@ -244,6 +266,143 @@ defmodule Mehungry.Accounts.UserNotifier do
       )
 
     deliver(user.email, "Update your Mehungry email", text, html)
+  end
+
+  # ── Android beta opt-in invite ───────────────────────────────────────────────
+
+  @doc """
+  Default opt-in URL for the Android closed-testing programme, read from
+  `config :mehungry, :android_beta`. The admin UI lets you override it per-send.
+  """
+  def android_beta_opt_in_url do
+    :mehungry
+    |> Application.get_env(:android_beta, [])
+    |> Keyword.get(:opt_in_url, "")
+  end
+
+  @doc "Default Google Group address the beta invite is sent to."
+  def android_beta_group_email do
+    :mehungry
+    |> Application.get_env(:android_beta, [])
+    |> Keyword.get(:group_email, "")
+  end
+
+  @doc "The current beta version/build being distributed (for send tracking)."
+  def android_beta_current_version do
+    :mehungry
+    |> Application.get_env(:android_beta, [])
+    |> Keyword.get(:current_version, "")
+  end
+
+  @doc """
+  Build the branded HTML for the Android beta opt-in invite. Shared by the
+  admin preview pane and `deliver_android_beta_invite/2` so what's previewed is
+  exactly what's sent.
+
+  Options:
+    * `:opt_in_url` — Google Play closed-testing opt-in link (defaults to config)
+    * `:intro` — optional extra paragraph of copy from the admin
+  """
+  def android_beta_email_html(opts \\ []) do
+    opt_in_url = Keyword.get(opts, :opt_in_url) || android_beta_opt_in_url()
+    intro = opts |> Keyword.get(:intro, "") |> to_string() |> String.trim()
+
+    intro_fragment =
+      if intro != "" do
+        "<p style=\"margin:0 0 18px;color:#F4EEDD;font-size:15px;line-height:1.65;\">" <>
+          html_escape(intro) <> "</p>"
+      else
+        ""
+      end
+
+    body =
+      intro_fragment <>
+        "You're one of the first to try the <strong style=\"color:#F4EEDD;\">Mehungry</strong> " <>
+        "app on Android — still in closed testing. Tap the button below to become a tester " <>
+        "on Google Play, then install the app from the Play Store page that opens. It can take " <>
+        "a few minutes after opting in before the app appears in the Store."
+
+    html_layout(
+      "Test the Mehungry Android app",
+      "You're invited to our closed beta",
+      "Hi there,",
+      body,
+      "Become a tester",
+      opt_in_url,
+      "You're receiving this because you signed up for early access to the Mehungry app."
+    )
+  end
+
+  defp android_beta_text(opts) do
+    opt_in_url = Keyword.get(opts, :opt_in_url) || android_beta_opt_in_url()
+    intro = opts |> Keyword.get(:intro, "") |> to_string() |> String.trim()
+
+    intro_block = if intro != "", do: intro <> "\n\n", else: ""
+
+    """
+    Hi there,
+
+    #{intro_block}You're invited to test the Mehungry app on Android, still in closed testing.
+
+    1. Become a tester: #{opt_in_url}
+    2. Install Mehungry from the Google Play page that opens.
+
+    It can take a few minutes after opting in before the app appears in the Store.
+
+    You're receiving this because you signed up for early access to the Mehungry app.
+    """
+  end
+
+  @doc """
+  Send the Android beta opt-in invite to `recipient` (a single address — an
+  individual tester or a Google Group address, which fans out to its members).
+
+  Options are passed through to `android_beta_email_html/1` (`:opt_in_url`,
+  `:intro`).
+  """
+  def deliver_android_beta_invite(recipient, opts \\ []) do
+    html = android_beta_email_html(opts)
+    text = android_beta_text(opts)
+    deliver(recipient, "You're invited to test the Mehungry Android app", text, html)
+  end
+
+  @doc """
+  Welcome email sent when someone registers on the public `/trial` page. Thanks
+  them, tells them an invite is coming, and carries the one-click unsubscribe
+  link (`unsubscribe_url`).
+  """
+  def deliver_trial_welcome(recipient, unsubscribe_url) do
+    text = """
+    Hi there,
+
+    Thanks for signing up to test the Mehungry Android app! We're in closed
+    testing and will email you an invitation to join soon.
+
+    In the meantime, explore Mehungry on the web: https://www.m3hungry.com
+
+    Changed your mind? Remove yourself anytime: #{unsubscribe_url}
+    """
+
+    footer_note =
+      "You signed up to test the Mehungry app. " <>
+        "Not interested anymore? " <>
+        "<a href=\"#{unsubscribe_url}\" style=\"color:#E8622C;text-decoration:underline;\">" <>
+        "Unsubscribe</a>."
+
+    html =
+      html_layout(
+        "You're on the list!",
+        "Thanks for signing up to test Mehungry",
+        "Hi there,",
+        "Thanks for your interest in testing the <strong style=\"color:#F4EEDD;\">Mehungry</strong> " <>
+          "Android app! We're in closed testing and will email you an invitation to join soon. " <>
+          "In the meantime, feel free to explore Mehungry on the web.",
+        "Explore Mehungry",
+        "https://www.m3hungry.com",
+        footer_note
+      )
+
+    deliver(recipient, "Thanks for signing up to test Mehungry", text, html)
   end
 
   # ── Appointment notifications ────────────────────────────────────────────────
@@ -359,6 +518,16 @@ defmodule Mehungry.Accounts.UserNotifier do
       )
 
     deliver(client.email, "Update on your Mehungry appointment", text, html)
+  end
+
+  # Escape admin-supplied free text before interpolating it into the HTML body.
+  defp html_escape(text) do
+    text
+    |> String.replace("&", "&amp;")
+    |> String.replace("<", "&lt;")
+    |> String.replace(">", "&gt;")
+    |> String.replace("\"", "&quot;")
+    |> String.replace("'", "&#39;")
   end
 
   defp notes_fragment(%{notes: notes}) when is_binary(notes) and notes != "",

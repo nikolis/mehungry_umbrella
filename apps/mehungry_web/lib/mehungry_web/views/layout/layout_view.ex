@@ -138,20 +138,23 @@ defmodule MehungryWeb.LayoutView do
       <div class="flex-1 px-3 space-y-1 overflow-y-auto">
         <.admin_link href="/professional/analytics" icon="hero-chart-bar" label="Analytics" />
         <.admin_link href="/professional/users" icon="hero-users" label="Users" />
-        <.admin_link href="/professional/seo" icon="hero-magnifying-glass" label="SEO" />
         <.admin_link href="/professional/recipes" icon="hero-book-open" label="Recipes" />
         <.admin_link href="/professional/ingredients" icon="hero-beaker" label="Ingredients" />
         <.admin_link href="/professional/measurement_units" icon="hero-scale" label="Units" />
         <.admin_link href="/professional/languages" icon="hero-language" label="Languages" />
         <.admin_link href="/professional/translations" icon="hero-globe-alt" label="Translations" />
         <.admin_link href="/professional/files" icon="hero-folder-open" label="Files" />
-        <.admin_link href="/professional/visits" icon="hero-map-pin" label="Visits" />
         <.admin_link
           href="/professional/feedback"
           icon="hero-chat-bubble-left-ellipsis"
           label="Feedback"
         />
         <.admin_link href="/professional/ai-bot" icon="hero-cpu-chip" label="AI Bot" />
+        <.admin_link
+          href="/professional/android-beta"
+          icon="hero-device-phone-mobile"
+          label="Android Beta"
+        />
         <.admin_link
           href="/professional/taxonomy/review"
           icon="hero-rectangle-stack"
@@ -273,8 +276,18 @@ defmodule MehungryWeb.LayoutView do
           icon="hero-identification"
           label="My Profile"
         />
-        <.nutritionist_link href="/nutritionist/clients" icon="hero-user-group" label="My Clients" />
-        <.nutritionist_link href="/nutritionist/records" icon="hero-folder" label="Client Records" />
+        <.nutritionist_link
+          href="/nutritionist/clients"
+          icon="hero-user-group"
+          label="My Clients"
+          badge={
+            if(@current_user,
+              do: Mehungry.Professionals.count_unread_messages_for(@current_user.id),
+              else: 0
+            )
+          }
+        />
+        <.nutritionist_link href="/nutritionist/conditions" icon="hero-heart" label="Health" />
         <.nutritionist_link
           href="/nutritionist/blueprints"
           icon="hero-clipboard-document-list"
@@ -316,6 +329,7 @@ defmodule MehungryWeb.LayoutView do
   attr :href, :string, required: true
   attr :icon, :string, required: true
   attr :label, :string, required: true
+  attr :badge, :integer, default: 0
 
   defp nutritionist_link(assigns) do
     ~H"""
@@ -325,6 +339,11 @@ defmodule MehungryWeb.LayoutView do
     >
       <.icon name={@icon} class="w-5 h-5 flex-shrink-0" />
       {@label}
+      <%= if @badge > 0 do %>
+        <span class="ml-auto min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold">
+          {@badge}
+        </span>
+      <% end %>
     </a>
     """
   end

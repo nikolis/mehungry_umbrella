@@ -10,7 +10,6 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
 
   alias Mehungry.Professionals
   alias Mehungry.{Food, Health, Literature}
-  alias MehungryWeb.SimpleS3Upload
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -144,8 +143,9 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
     paragraph = fetch_paragraph(socket, id)
 
     attrs =
-      case consume_uploaded_entries(socket, :paragraph_image, fn %{url: url, key: key}, _entry ->
-             {:ok, url <> "/" <> key}
+      case consume_uploaded_entries(socket, :paragraph_image, fn %{public_url: public_url},
+                                                                 _entry ->
+             {:ok, public_url}
            end) do
         [image_url | _] -> %{"image_url" => image_url, "image_caption" => params["image_caption"]}
         [] -> %{"image_caption" => params["image_caption"]}
@@ -265,8 +265,8 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
   end
 
   defp maybe_put_cover(params, socket) do
-    case consume_uploaded_entries(socket, :cover, fn %{url: url, key: key}, _entry ->
-           {:ok, url <> "/" <> key}
+    case consume_uploaded_entries(socket, :cover, fn %{public_url: public_url}, _entry ->
+           {:ok, public_url}
          end) do
       [cover_url | _] -> Map.put(params, "cover_image_url", cover_url)
       [] -> params
@@ -274,7 +274,8 @@ defmodule MehungryWeb.NutritionistLive.ArticleEditor do
   end
 
   defp presign_upload(entry, socket) do
-    {:ok, SimpleS3Upload.meta_for(entry, 5_000_000, "article_images"), socket}
+    key = MehungryWeb.Uploads.key_for("article_images", entry)
+    {:ok, MehungryWeb.Uploads.meta(entry, key, 5_000_000), socket}
   end
 
   # Display label + external link for a reference chip.

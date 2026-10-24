@@ -114,7 +114,10 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
               <.tag_multiselect
                 form={@form}
                 field={:required_nutrients}
-                label="Required nutrients"
+                pct_field={:required_nutrient_pcts}
+                mode_field={:required_nutrient_modes}
+                units={@nutrient_units}
+                label="Required nutrients (≥ % of calories or per-day amount)"
                 placeholder="Search nutrients…"
                 tone={:required}
                 active_search={@active_search}
@@ -122,7 +125,10 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
               <.tag_multiselect
                 form={@form}
                 field={:avoid_nutrients}
-                label="Avoid nutrients"
+                pct_field={:avoid_nutrient_pcts}
+                mode_field={:avoid_nutrient_modes}
+                units={@nutrient_units}
+                label="Avoid nutrients (≤ % of calories or per-day amount)"
                 placeholder="Search nutrients…"
                 tone={:avoid}
                 active_search={@active_search}
@@ -145,16 +151,29 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
               />
             </div>
 
-            <div>
-              <label class="block text-sm text-parchment-dim mb-1">Preferred foods</label>
-              <input
-                type="text"
-                name={@form[:preferred_foods].name}
-                value={tags_value(@form[:preferred_foods].value)}
-                placeholder="nuts, dairy, eggs, meat"
-                phx-debounce="blur"
-                class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
-              />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm text-parchment-dim mb-1">Preferred foods</label>
+                <input
+                  type="text"
+                  name={@form[:preferred_foods].name}
+                  value={tags_value(@form[:preferred_foods].value)}
+                  placeholder="nuts, dairy, eggs, meat"
+                  phx-debounce="blur"
+                  class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
+                />
+              </div>
+              <div>
+                <label class="block text-sm text-parchment-dim mb-1">Avoid foods</label>
+                <input
+                  type="text"
+                  name={@form[:avoid_foods].name}
+                  value={tags_value(@form[:avoid_foods].value)}
+                  placeholder="onion, garlic, wheat"
+                  phx-debounce="blur"
+                  class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
+                />
+              </div>
             </div>
           </div>
 
@@ -286,13 +305,27 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
   attr :placeholder, :string, required: true
   attr :tone, :atom, default: :required
   attr :active_search, :any, required: true
+  # When set, each chip carries a threshold control: a value input backed by
+  # `pct_field` and a mode selector backed by `mode_field` ("% of calories" vs a
+  # per-day amount in the nutrient's `units` label).
+  attr :pct_field, :atom, default: nil
+  attr :mode_field, :atom, default: nil
+  attr :units, :map, default: %{}
 
   defp tag_multiselect(assigns) do
+    pct_field = assigns.pct_field
+    mode_field = assigns.mode_field
+
     assigns =
       assigns
       |> assign(:selected, tag_list(assigns.form[assigns.field].value))
       |> assign(:name, assigns.form[assigns.field].name <> "[]")
       |> assign(:chip_class, chip_class(assigns.tone))
+      |> assign(:with_pct, pct_field != nil)
+      |> assign(:pct_name_base, pct_field && assigns.form[pct_field].name)
+      |> assign(:mode_name_base, mode_field && assigns.form[mode_field].name)
+      |> assign(:pcts, (pct_field && assigns.form[pct_field].value) || %{})
+      |> assign(:modes, (mode_field && assigns.form[mode_field].value) || %{})
 
     ~H"""
     <div class="relative">
@@ -306,6 +339,32 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
         >
           <input type="hidden" name={@name} value={tag} />
           {tag}
+          <span :if={@with_pct} class="inline-flex items-center gap-0.5">
+            <input
+              type="number"
+              min="0"
+              max={if tag_mode(@modes, tag) == "pct", do: "100"}
+              step="any"
+              name={"#{@pct_name_base}[#{tag}]"}
+              value={tag_value(@pcts, tag, tag_mode(@modes, tag))}
+              phx-blur="update_pct"
+              phx-value-field={@pct_field}
+              phx-value-tag={tag}
+              class="w-14 rounded bg-ink border border-ink-panel2 text-parchment text-xs px-1 py-0.5"
+            />
+            <select
+              name={"#{@mode_name_base}[#{tag}]"}
+              phx-change="update_mode"
+              phx-value-field={@mode_field}
+              phx-value-tag={tag}
+              class="rounded bg-ink border border-ink-panel2 text-parchment text-xs px-1 py-0.5"
+            >
+              <option value="pct" selected={tag_mode(@modes, tag) == "pct"}>% cal</option>
+              <option value="amount" selected={tag_mode(@modes, tag) == "amount"}>
+                {tag_unit(@units, tag)}/day
+              </option>
+            </select>
+          </span>
           <button
             type="button"
             phx-click="remove_tag"
@@ -399,6 +458,35 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
 
   defp blank_tag?(v), do: v |> to_string() |> String.trim() == ""
 
+  # Threshold mode for a chip. A nutrient with no stored mode falls back to the
+  # name-aware default ("amount" for fiber, "pct" otherwise).
+  defp tag_mode(modes, tag) when is_map(modes),
+    do: Map.get(modes, tag) || MealBlueprints.Blueprint.default_nutrient_mode(tag)
+
+  defp tag_mode(_modes, tag), do: MealBlueprints.Blueprint.default_nutrient_mode(tag)
+
+  # Display value for a chip's threshold input. With no stored value it falls back
+  # to the mode-appropriate default (caloric % or a per-day amount); amount-mode
+  # nutrients with no default amount stay blank until set.
+  defp tag_value(values, tag, mode) do
+    case {Map.get(values || %{}, tag), mode} do
+      {nil, "pct"} -> MealBlueprints.Blueprint.default_nutrient_pct(tag)
+      {nil, "amount"} -> default_amount_display(tag)
+      {nil, _} -> ""
+      {v, _} -> v
+    end
+  end
+
+  defp default_amount_display(tag) do
+    case MealBlueprints.Blueprint.default_nutrient_amount(tag) do
+      amount when is_number(amount) and amount > 0 -> amount
+      _ -> ""
+    end
+  end
+
+  # Short unit label (e.g. "mg") for the amount-mode option; "unit" if unknown.
+  defp tag_unit(units, tag), do: Map.get(units || %{}, tag) || "unit"
+
   # ── lifecycle ───────────────────────────────────────────────────────────────
 
   @impl true
@@ -413,6 +501,7 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
      |> assign(:condition_id, blueprint.condition_id)
      |> assign(:active_search, nil)
      |> assign(:nutrient_items, nutrient_items())
+     |> assign(:nutrient_units, nutrient_units())
      |> assign(:compound_items, compound_items())
      |> assign(:condition_items, condition_items())
      |> assign(:page_title, blueprint.name)
@@ -425,6 +514,13 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
     |> Enum.map(&{&1.name, &1.name})
     |> Enum.uniq()
     |> Enum.sort_by(fn {_v, l} -> l end)
+  end
+
+  # name => short unit label, for the amount-mode threshold option.
+  defp nutrient_units do
+    Food.list_nutrients()
+    |> Enum.map(& &1.name)
+    |> Food.nutrient_unit_labels()
   end
 
   defp compound_items do
@@ -493,6 +589,7 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
     socket =
       socket
       |> update_field(field, fn cur -> Enum.uniq(tag_list(cur) ++ [value]) end)
+      |> maybe_seed_pct(field, value)
       |> assign(:active_search, nil)
 
     {:noreply, socket}
@@ -502,8 +599,28 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
   def handle_event("remove_tag", %{"field" => field, "tag" => value}, socket) do
     field = String.to_existing_atom(field)
 
-    {:noreply,
-     update_field(socket, field, fn cur -> Enum.reject(tag_list(cur), &(&1 == value)) end)}
+    socket =
+      socket
+      |> update_field(field, fn cur -> Enum.reject(tag_list(cur), &(&1 == value)) end)
+      |> maybe_drop_pct(field, value)
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("update_pct", %{"field" => field, "tag" => tag} = params, socket) do
+    field = String.to_existing_atom(field)
+    value = Map.get(params, "value", "")
+
+    {:noreply, update_field(socket, field, fn cur -> put_pct(cur, tag, value) end)}
+  end
+
+  @impl true
+  def handle_event("update_mode", %{"field" => field, "tag" => tag, "value" => mode}, socket) do
+    field = String.to_existing_atom(field)
+    mode = if mode in ["pct", "amount"], do: mode, else: "pct"
+
+    {:noreply, update_field(socket, field, fn cur -> Map.put(cur || %{}, tag, mode) end)}
   end
 
   @impl true
@@ -604,6 +721,77 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
     assign_data(socket, Map.update!(data, field, fn cur -> fun.(cur) end))
   end
 
+  # Nutrient name field → its companion {value map, mode map} fields.
+  @nutrient_pct_fields %{
+    required_nutrients: :required_nutrient_pcts,
+    avoid_nutrients: :avoid_nutrient_pcts
+  }
+
+  @nutrient_mode_fields %{
+    required_nutrients: :required_nutrient_modes,
+    avoid_nutrients: :avoid_nutrient_modes
+  }
+
+  # Seed a newly-added nutrient with its default mode + threshold so its chip
+  # shows a sensible value immediately (and the defaults persist on save). Fiber
+  # seeds amount mode (≥25 g/day); everything else seeds a caloric-% floor.
+  defp maybe_seed_pct(socket, field, tag) do
+    case {Map.get(@nutrient_pct_fields, field), Map.get(@nutrient_mode_fields, field)} do
+      {nil, _} ->
+        socket
+
+      {pct_field, mode_field} ->
+        mode = MealBlueprints.Blueprint.default_nutrient_mode(tag)
+
+        value =
+          case mode do
+            "amount" -> MealBlueprints.Blueprint.default_nutrient_amount(tag)
+            _ -> MealBlueprints.Blueprint.default_nutrient_pct(tag)
+          end
+
+        socket
+        |> update_field(pct_field, fn cur -> Map.put_new(cur || %{}, tag, value) end)
+        |> maybe_seed_mode(mode_field, tag, mode)
+    end
+  end
+
+  # Only persist a non-default mode ("amount"); "pct" is the implicit fallback, so
+  # leaving it unset keeps the stored mode map lean.
+  defp maybe_seed_mode(socket, nil, _tag, _mode), do: socket
+  defp maybe_seed_mode(socket, _mode_field, _tag, "pct"), do: socket
+
+  defp maybe_seed_mode(socket, mode_field, tag, mode) do
+    update_field(socket, mode_field, fn cur -> Map.put_new(cur || %{}, tag, mode) end)
+  end
+
+  # Drop both the value and the mode when a nutrient is removed.
+  defp maybe_drop_pct(socket, field, tag) do
+    socket
+    |> drop_from_companion(@nutrient_pct_fields, field, tag)
+    |> drop_from_companion(@nutrient_mode_fields, field, tag)
+  end
+
+  defp drop_from_companion(socket, mapping, field, tag) do
+    case Map.get(mapping, field) do
+      nil -> socket
+      companion -> update_field(socket, companion, fn cur -> Map.delete(cur || %{}, tag) end)
+    end
+  end
+
+  defp put_pct(map, tag, value) do
+    map = map || %{}
+
+    case Float.parse(to_string(value)) do
+      {f, _} -> Map.put(map, tag, normalize_number(f))
+      :error -> Map.delete(map, tag)
+    end
+  end
+
+  defp normalize_number(f) do
+    truncated = trunc(f)
+    if truncated == f, do: truncated, else: f
+  end
+
   defp copy_day_from_source(day, source_index, source) do
     if day.day_index == source_index, do: day, else: copy_day_targets(day, source)
   end
@@ -644,13 +832,19 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
 
   # ── params ────────────────────────────────────────────────────────────────
 
-  # Split the free-text (blueprint-level) preferred_foods field into an array;
-  # the chip pickers already arrive as arrays via their hidden `[]` inputs.
+  # Split the free-text (blueprint-level) preferred_foods / avoid_foods fields into
+  # arrays; the chip pickers already arrive as arrays via their hidden `[]` inputs.
   defp normalize_params(params) do
-    case Map.get(params, "preferred_foods") do
+    params
+    |> split_csv_field("preferred_foods")
+    |> split_csv_field("avoid_foods")
+  end
+
+  defp split_csv_field(params, field) do
+    case Map.get(params, field) do
       value when is_binary(value) ->
         tags = value |> String.split(",") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
-        Map.put(params, "preferred_foods", tags)
+        Map.put(params, field, tags)
 
       _ ->
         params

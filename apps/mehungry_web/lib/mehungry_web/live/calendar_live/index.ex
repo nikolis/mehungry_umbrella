@@ -13,7 +13,7 @@ defmodule MehungryWeb.CalendarLive.Index do
   alias Mehungry.Repo
   alias Mehungry.Food
   alias Mehungry.Users
-  alias MehungryWeb.RecipeFlags
+  alias Mehungry.AI.Agents.MealPlanAgent
 
   # https://gist.github.com/cblavier/0e227de6fd1dfa00814b88642cdcb2a9
   # def render(assigns) do
@@ -25,11 +25,25 @@ defmodule MehungryWeb.CalendarLive.Index do
     user = Accounts.get_user_by_session_token(session["user_token"])
 
     profile = Accounts.get_user_profile_by_user_id(user.id)
-    condition_ids = RecipeFlags.opted_in_condition_ids(profile)
     calorie_target = profile && profile.daily_calorie_target
 
-    user_meals = load_and_format_user_meals(user.id)
+    # Personal "foods I avoid" list: the raw list (for the editor) + the
+    # normalized terms (reusing the meal-plan enforcement engine) the calendar
+    # uses to flag logged meals that contain one.
+    avoid_foods = (profile && profile.avoid_foods) || []
+    avoid_terms = MealPlanAgent.avoid_terms(%{avoid_foods: avoid_foods})
+
+    user_meals =
+      load_and_format_user_meals(user.id, Date.utc_today(), current_language(socket))
+
+    day_notes = day_notes_for(user.id, Date.utc_today())
     recipes = list_recipes(user)
+
+    # The blueprint the user was following persists on their profile, so the
+    # calendar re-opens "following" it until they switch or stop.
+    followed_blueprint = load_selected_blueprint(user.id, profile && profile.followed_blueprint_id)
+    blueprints = load_calendar_blueprints(user.id) |> prepend_blueprint(followed_blueprint)
+
     socket = assign_device_kind(socket)
     socket = push_event(socket, "create_meals", %{meals: user_meals})
 
@@ -37,24 +51,33 @@ defmodule MehungryWeb.CalendarLive.Index do
       :ok,
       socket
       |> assign(:user, user)
-      |> assign(:condition_ids, condition_ids)
       |> assign(:calorie_target, calorie_target)
+      |> assign(:avoid_foods, avoid_foods)
+      |> assign(:avoid_terms, avoid_terms)
       |> assign(:calendar_view, "week_view")
       |> assign(:particular_date, nil)
       |> assign(:page_title, "Meal planner")
       |> assign(:user_meals, user_meals)
+      |> assign(:day_notes, day_notes)
       |> assign(:recipes, recipes)
       |> assign(:detail_return_to, nil)
       |> assign(:ai_plan_generating, false)
       |> assign(:ai_plan_task_ref, nil)
       |> assign(:ai_plan_result, nil)
+      |> assign(:share_generating, false)
+      |> assign(:share_posted, false)
+      |> assign(:share_regenerate, false)
+      |> assign_latest_share_graphic()
       |> assign(
         :ai_quota_exceeded,
         Mehungry.Subscriptions.check_quota(user.id, "meal_plan") == {:error, :quota_exceeded}
       )
       |> assign(:has_nutritionist, not is_nil(Professionals.get_assignment_for_client(user.id)))
-      |> assign(:blueprints, load_calendar_blueprints(user.id))
-      |> assign(:preselected_blueprint_id, nil)
+      |> assign(:user_profile, profile)
+      |> assign(:blueprints, blueprints)
+      |> assign(:preselected_blueprint_id, followed_blueprint && to_string(followed_blueprint.id))
+      |> assign(:active_blueprint, followed_blueprint)
+      |> assign(:blueprint_progress, nil)
       |> assign(:week_rating, nil)
       # Assigns the recipe-details modal (RecipeDetailsComponent via the shared
       # LiveHelpers hook) reads for save/follow toggles.
@@ -69,7 +92,14 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   defp apply_action(socket, :index, params) do
     maybe_track_user(%{}, socket)
-    maybe_preselect_blueprint(socket, params["blueprint_id"])
+
+    # `:index` does not reset `@particular_date`, so `current_calendar_date/1`
+    # keeps the viewed week when patching back to `/calendar` (close-modal,
+    # delete, stop-following) rather than snapping to today.
+    socket
+    |> maybe_preselect_blueprint(params["blueprint_id"])
+    |> reload_week_meals()
+    |> assign_blueprint_progress()
   end
 
   defp apply_action(socket, :particular, %{"date" => date} = _params) do
@@ -77,9 +107,13 @@ defmodule MehungryWeb.CalendarLive.Index do
 
     socket = push_event(socket, "go_to_date", %{date: date})
 
+    # Week navigation reaches here via a `push_patch` with no DB reload of its
+    # own, so load the newly-viewed week's meals here.
     socket
     |> assign(:detail_return_to, ~p"/calendar/ondate/#{date}")
     |> assign(:particular_date, date)
+    |> reload_week_meals()
+    |> assign_blueprint_progress()
   end
 
   defp apply_action(socket, :nutrition_details, %{"date" => date} = _params) do
@@ -181,7 +215,13 @@ defmodule MehungryWeb.CalendarLive.Index do
       case result do
         {:ok, created, skipped} ->
           Mehungry.Subscriptions.record_usage(socket.assigns.user.id, "meal_plan")
-          user_meals = load_and_format_user_meals(socket.assigns.user.id)
+
+          user_meals =
+            load_and_format_user_meals(
+            socket.assigns.user.id,
+            current_calendar_date(socket),
+            current_language(socket)
+          )
           result_msg = build_result_message(length(created), skipped)
 
           {:noreply,
@@ -190,6 +230,7 @@ defmodule MehungryWeb.CalendarLive.Index do
            |> assign(:ai_plan_task_ref, nil)
            |> assign(:ai_plan_result, result_msg)
            |> assign(:user_meals, user_meals)
+           |> assign_blueprint_progress()
            |> push_event("create_meals", %{meals: user_meals})}
 
         {:error, reason} ->
@@ -219,11 +260,17 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   @impl true
   def handle_info({:meal_saved, %{return_to: return_to, flash: flash}}, socket) do
-    user_meals = load_and_format_user_meals(socket.assigns.user.id)
+    user_meals =
+      load_and_format_user_meals(
+            socket.assigns.user.id,
+            current_calendar_date(socket),
+            current_language(socket)
+          )
 
     socket =
       socket
       |> assign(:user_meals, user_meals)
+      |> assign_blueprint_progress()
       |> push_event("create_meals", %{meals: user_meals})
 
     socket = if flash, do: put_flash(socket, :info, flash), else: socket
@@ -253,6 +300,47 @@ defmodule MehungryWeb.CalendarLive.Index do
     {:noreply, push_patch(socket, to: "/calendar/details/#{start_date}", replace: true)}
   end
 
+  # Private per-day journal note (symptoms / how I felt / energy). Condition-
+  # agnostic and never leaves the calendar; a blank body clears the note.
+  @impl true
+  def handle_event("save_day_note", %{"date" => date_str, "body" => body}, socket) do
+    with {:ok, date} <- Date.from_iso8601(date_str),
+         {:ok, _} <- Mehungry.History.upsert_day_note(socket.assigns.user.id, date, body) do
+      {:noreply,
+       socket
+       |> assign(:day_notes, day_notes_for(socket.assigns.user.id, current_calendar_date(socket)))
+       |> put_flash(:info, "Note saved")}
+    else
+      _ -> {:noreply, put_flash(socket, :error, "Could not save note")}
+    end
+  end
+
+  # Personal "foods I avoid" list. Newline/comma-separated textarea → a cleaned
+  # list on the user's profile; the calendar then flags any logged food whose
+  # name contains one. Not gated behind a nutritionist blueprint.
+  @impl true
+  def handle_event("save_avoid_foods", %{"foods" => raw}, socket) do
+    user = socket.assigns.user
+
+    profile =
+      socket.assigns[:user_profile] || Accounts.create_user_profile_if_needed(user)
+
+    case Accounts.set_avoid_foods(profile, raw) do
+      {:ok, updated} ->
+        avoid_terms = MealPlanAgent.avoid_terms(%{avoid_foods: updated.avoid_foods})
+
+        {:noreply,
+         socket
+         |> assign(:user_profile, updated)
+         |> assign(:avoid_foods, updated.avoid_foods)
+         |> assign(:avoid_terms, avoid_terms)
+         |> put_flash(:info, "Avoid list saved")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not save your avoid list")}
+    end
+  end
+
   @impl true
   def handle_event("ai_plan_week", %{"prompt" => prompt} = params, socket) when prompt != "" do
     user = socket.assigns.user
@@ -260,7 +348,13 @@ defmodule MehungryWeb.CalendarLive.Index do
     case Mehungry.Subscriptions.check_quota(user.id, "meal_plan") do
       :ok ->
         recipes = socket.assigns.recipes
-        start_date = Date.utc_today()
+        # Anchor the generated 7-day plan to the Monday of the week currently in
+        # view — the same framing the calendar grid (Widget `beginning_of_week`)
+        # and the blueprint-progress panel (`assign_blueprint_progress`) use. Laying
+        # the plan from `Date.utc_today()` instead straddled two display weeks when
+        # generating mid-week, so the just-generated plan filled only part of the
+        # visible grid and the progress panel read half-empty.
+        start_date = Date.beginning_of_week(current_calendar_date(socket))
         # Optional blueprint to constrain generation. Loaded (owner-scoped) and
         # threaded through now; the generator treats it as an inert hint until
         # blueprint-aware planning lands.
@@ -287,6 +381,99 @@ defmodule MehungryWeb.CalendarLive.Index do
     {:noreply, socket}
   end
 
+  # ── Weekly-plan share card ──────────────────────────────────────────────────
+  # Renders the viewed week into a shareable card off the viewed `@user_meals`
+  # (the exact data the grid shows), so the card never re-queries or re-derives.
+  @impl true
+  def handle_event("generate_week_card", params, socket) do
+    user = socket.assigns.user
+    week_start = Date.beginning_of_week(current_calendar_date(socket))
+    meals = socket.assigns.user_meals
+    goal = params |> Map.get("goal_label", "") |> String.trim()
+    goal = if goal == "", do: nil, else: goal
+    locale = Map.get(socket.assigns, :current_language, "en")
+
+    {:noreply,
+     socket
+     |> assign(:share_generating, true)
+     |> assign(:share_graphic, nil)
+     |> assign(:share_posted, false)
+     |> start_async(:generate_week_card, fn ->
+       MehungryWeb.WeeklyPlanGraphicGenerator.generate(user, week_start, meals,
+         goal_label: goal,
+         locale: locale
+       )
+     end)}
+  end
+
+  @impl true
+  def handle_event("post_week_plan", _params, socket) do
+    case socket.assigns.share_graphic do
+      %{} = graphic ->
+        title = MehungryWeb.WeeklyPlanGraphicGenerator.post_title(graphic)
+
+        # Also publish the week as a full, crawlable plan snapshot so the feed
+        # post opens the day-by-day `/meal-plans/:slug` details page (not just the
+        # card photo). If publishing fails, the post still goes out with the photo.
+        published_meal_plan_id =
+          case Mehungry.PublishedPlans.publish_week(socket.assigns.user, graphic.week_start,
+                 title: title,
+                 goal_label: graphic.goal_label,
+                 locale: graphic.locale,
+                 og_image_url: graphic.image_url
+               ) do
+            {:ok, plan} -> plan.id
+            _ -> nil
+          end
+
+        case Mehungry.Posts.create_weekly_plan_post(graphic, title,
+               published_meal_plan_id: published_meal_plan_id
+             ) do
+          {:ok, _post} ->
+            {:noreply,
+             socket
+             |> assign(:share_posted, true)
+             |> put_flash(:info, "Your weekly plan was posted to the feed.")}
+
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "Could not post your weekly plan.")}
+        end
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  # "Re-generate" from the existing-card view: reveal the form again so the user
+  # can (optionally change the goal and) replace the saved card.
+  @impl true
+  def handle_event("start_regenerate", _params, socket) do
+    {:noreply, assign(socket, :share_regenerate, true)}
+  end
+
+  # Modal close: drop the transient flags and re-show the saved card for the week
+  # (so reopening shows the last generated card, not a blank form).
+  @impl true
+  def handle_event("reset_share", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:share_generating, false)
+     |> assign(:share_posted, false)
+     |> assign(:share_regenerate, false)
+     |> assign_latest_share_graphic()}
+  end
+
+  @impl true
+  def handle_event("stop_following_blueprint", _params, socket) do
+    {:noreply,
+     socket
+     |> persist_followed_blueprint(nil)
+     |> assign(:active_blueprint, nil)
+     |> assign(:blueprint_progress, nil)
+     |> assign(:preselected_blueprint_id, nil)
+     |> push_patch(to: ~p"/calendar", replace: true)}
+  end
+
   @impl true
   def handle_event("toggle_basket", %{"view" => view}, socket) do
     socket =
@@ -309,17 +496,69 @@ defmodule MehungryWeb.CalendarLive.Index do
       {:ok, _} ->
         # Patch back rather than push_navigate so the calendar's client-side
         # accordion (JS-toggled `copen`) state survives the delete.
-        user_meals = load_and_format_user_meals(socket.assigns.user.id)
+        user_meals =
+          load_and_format_user_meals(
+            socket.assigns.user.id,
+            current_calendar_date(socket),
+            current_language(socket)
+          )
 
         {:noreply,
          socket
          |> assign(:user_meals, user_meals)
+         |> assign_blueprint_progress()
          |> push_event("create_meals", %{meals: user_meals})
          |> put_flash(:info, "User Meal Deleted")
          |> push_patch(to: ~p"/calendar", replace: true)}
 
       {:error, _changeset} ->
         {:noreply, socket}
+    end
+  end
+
+  # "Clear week" — wipe every meal in the week currently in view (the same
+  # Monday–Sunday span the grid shows, via `week_bounds/1`). Guarded by a
+  # confirm dialog on the button; refreshes the view the same way a single
+  # delete does so the emptied week shows immediately.
+  @impl true
+  def handle_event("clear_week_meals", _params, socket) do
+    user_id = socket.assigns.user.id
+    {first, last} = week_bounds(current_calendar_date(socket))
+    count = History.delete_user_meals_in_date_range(user_id, first, last)
+
+    user_meals =
+      load_and_format_user_meals(user_id, current_calendar_date(socket), current_language(socket))
+
+    {:noreply,
+     socket
+     |> assign(:user_meals, user_meals)
+     |> assign_blueprint_progress()
+     |> push_event("create_meals", %{meals: user_meals})
+     |> put_flash(:info, "Cleared #{count} #{ngettext("meal", "meals", count)} from this week")
+     |> push_patch(to: ~p"/calendar", replace: true)}
+  end
+
+  # "Log again today" — clone an existing meal (with all its items) onto today.
+  # Reloads the viewed week so the copy shows immediately when today is in view;
+  # otherwise the flash confirms it landed on today.
+  @impl true
+  def handle_event("copy_meal_to_today", %{"id" => meal_id}, socket) do
+    user_id = socket.assigns.user.id
+
+    case History.duplicate_user_meal(user_id, meal_id, Date.utc_today()) do
+      {:ok, _meal} ->
+        user_meals =
+          load_and_format_user_meals(user_id, current_calendar_date(socket), current_language(socket))
+
+        {:noreply,
+         socket
+         |> assign(:user_meals, user_meals)
+         |> assign_blueprint_progress()
+         |> push_event("create_meals", %{meals: user_meals})
+         |> put_flash(:info, "Copied to today")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not copy this meal")}
     end
   end
 
@@ -370,6 +609,37 @@ defmodule MehungryWeb.CalendarLive.Index do
     end
   end
 
+  @impl true
+  def handle_async(:generate_week_card, {:ok, {:ok, graphic}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:share_generating, false)
+     |> assign(:share_regenerate, false)
+     |> assign(:share_posted, false)
+     |> assign(:share_graphic, graphic)}
+  end
+
+  def handle_async(:generate_week_card, {:ok, {:error, :empty_week}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:share_generating, false)
+     |> put_flash(:error, "This week has no meals yet — add some to share it.")}
+  end
+
+  def handle_async(:generate_week_card, {:ok, {:error, _reason}}, socket) do
+    {:noreply,
+     socket
+     |> assign(:share_generating, false)
+     |> put_flash(:error, "Could not create the card. Please try again.")}
+  end
+
+  def handle_async(:generate_week_card, {:exit, _reason}, socket) do
+    {:noreply,
+     socket
+     |> assign(:share_generating, false)
+     |> put_flash(:error, "Could not create the card. Please try again.")}
+  end
+
   defp list_recipes(user) do
     Food.list_user_recipes_for_selection(user)
   end
@@ -387,16 +657,78 @@ defmodule MehungryWeb.CalendarLive.Index do
         socket
 
       blueprint ->
-        blueprints = socket.assigns.blueprints
-
-        blueprints =
-          if Enum.any?(blueprints, &(&1.id == blueprint.id)),
-            do: blueprints,
-            else: [blueprint | blueprints]
-
         socket
-        |> assign(:blueprints, blueprints)
+        |> persist_followed_blueprint(blueprint.id)
+        |> assign(:blueprints, prepend_blueprint(socket.assigns.blueprints, blueprint))
         |> assign(:preselected_blueprint_id, to_string(blueprint.id))
+        |> assign(:active_blueprint, blueprint)
+    end
+  end
+
+  # Prepends `blueprint` to the calendar's blueprint list when not already present
+  # (nil is a no-op), so a followed/selected blueprint the user doesn't own is
+  # still selectable in the panel.
+  defp prepend_blueprint(blueprints, nil), do: blueprints
+
+  defp prepend_blueprint(blueprints, blueprint) do
+    if Enum.any?(blueprints, &(&1.id == blueprint.id)),
+      do: blueprints,
+      else: [blueprint | blueprints]
+  end
+
+  # Persists (or clears, with `nil`) the followed blueprint on the user's profile
+  # so the selection survives reloads, keeping the in-socket profile fresh.
+  # No-op when the user has no profile row yet.
+  defp persist_followed_blueprint(socket, blueprint_id) do
+    case socket.assigns[:user_profile] do
+      nil ->
+        socket
+
+      profile ->
+        case Accounts.set_followed_blueprint(profile, blueprint_id) do
+          {:ok, updated} -> assign(socket, :user_profile, updated)
+          {:error, _} -> socket
+        end
+    end
+  end
+
+  # Computes the blueprint-vs-calendar progress for the week currently in view,
+  # but only when the user is "following" a blueprint (arrived via "Use this
+  # blueprint"). Fully inert — no DB work — otherwise. The visible week is the
+  # one anchored by `@particular_date` (nil ⇒ today), matching the calendar
+  # Widget's `Date.beginning_of_week/1` framing.
+  defp assign_blueprint_progress(socket) do
+    case socket.assigns[:active_blueprint] do
+      nil ->
+        assign(socket, :blueprint_progress, nil)
+
+      blueprint ->
+        week_start = Date.beginning_of_week(current_calendar_date(socket))
+
+        progress =
+          Mehungry.MealBlueprints.calendar_progress(
+            socket.assigns.user.id,
+            blueprint,
+            week_start
+          )
+
+        assign(socket, :blueprint_progress, progress)
+    end
+  end
+
+  defp current_calendar_date(socket) do
+    case socket.assigns[:particular_date] do
+      date when is_binary(date) ->
+        case Date.from_iso8601(date) do
+          {:ok, d} -> d
+          _ -> Date.utc_today()
+        end
+
+      %Date{} = d ->
+        d
+
+      _ ->
+        Date.utc_today()
     end
   end
 
@@ -419,49 +751,54 @@ defmodule MehungryWeb.CalendarLive.Index do
     Ecto.NoResultsError -> nil
   end
 
-  defp load_and_format_user_meals(user_id) do
-    # Resolve the gram-unit id set once for the whole calendar (not per row) so
-    # each logged ingredient's nutrients scale by its chosen portion × quantity.
-    gram_ids = Mehungry.Food.NutrientCalculation.gram_unit_ids()
+  # Reloads `@user_meals` (and the week's day notes) for the currently-viewed
+  # week (anchored by `@particular_date`, defaulting to today).
+  defp reload_week_meals(socket) do
+    date = current_calendar_date(socket)
+    meals = load_and_format_user_meals(socket.assigns.user.id, date, current_language(socket))
 
-    History.list_history_user_meals_for_user(user_id)
-    |> Enum.map(fn x ->
-      %{
-        id: x.id,
-        start_dt: x.start_dt,
-        end: x.end_dt,
-        title: x.title,
-        meal_type: x.meal_type,
-        ingredient_user_meals:
-          Enum.map(x.ingredient_user_meals, fn y ->
-            %{
-              title: y.ingredient.name,
-              portions: y.quantity,
-              measurement_unit: Mehungry.Food.RecipeIngredient.unit_label(y),
-              primary_size: 6,
-              img_url: nil,
-              recipe: %{
-                id: y.ingredient.id,
-                nutrients: History.scaled_ingredient_nutrients(y, gram_ids),
-                primary_size: 5
-              }
-            }
-          end),
-        recipe_user_meals:
-          Enum.map(x.recipe_user_meals, fn y ->
-            %{
-              title: y.recipe.title,
-              consume_portions: y.consume_portions,
-              cooking_portions: y.cooking_portions,
-              servings: y.recipe.servings,
-              recipe_nutrients: y.recipe.nutrients,
-              img_url: y.recipe.image_url,
-              primary_size: y.recipe.primary_nutrients_size,
-              recipe_id: y.recipe.id
-            }
-          end)
-      }
-    end)
+    socket
+    |> assign(:user_meals, meals)
+    |> assign(:day_notes, day_notes_for(socket.assigns.user.id, date))
+    # Switching weeks shows that week's saved share card (if any) and drops any
+    # in-progress "regenerate" view.
+    |> assign(:share_regenerate, false)
+    |> assign_latest_share_graphic()
+  end
+
+  # Loads the latest saved weekly-plan share card for the viewed week into
+  # `@share_graphic` so the share modal shows it instead of forcing a regenerate.
+  defp assign_latest_share_graphic(socket) do
+    week_start = Date.beginning_of_week(current_calendar_date(socket))
+    graphic = Food.latest_weekly_plan_graphic(socket.assigns.user.id, week_start)
+    assign(socket, :share_graphic, graphic)
+  end
+
+  # The user's day notes for the week the given date falls in, as a
+  # `%{Date => body}` map (one query, no N+1 over the 7 days).
+  defp day_notes_for(user_id, %Date{} = date) do
+    {first, last} = week_bounds(date)
+    Mehungry.History.list_day_notes(user_id, first, last)
+  end
+
+  # Loads only the meals for the week the given date falls in (the calendar never
+  # shows more than one week at a time), rather than the user's entire history.
+  # Localizes ingredient names / unit labels / recipe titles to `locale` so the
+  # calendar grid and the share card both show the user's language.
+  defp load_and_format_user_meals(user_id, %Date{} = date, locale) do
+    {first, last} = week_bounds(date)
+
+    History.list_calendar_user_meals(user_id, first, last)
+    |> History.format_user_meals(locale)
+  end
+
+  defp current_language(socket), do: Map.get(socket.assigns, :current_language, "en")
+
+  # The Monday-anchored 7-day span the Widget renders (matches its `get_full_week`
+  # and `assign_blueprint_progress`, all using `Date.beginning_of_week/1`).
+  defp week_bounds(%Date{} = date) do
+    first = Date.beginning_of_week(date)
+    {first, Date.add(first, 6)}
   end
 
   defp build_result_message(created, 0),

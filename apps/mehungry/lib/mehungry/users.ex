@@ -28,6 +28,7 @@ defmodule Mehungry.Users do
   defdelegate list_user_saved_recipes(user), to: UserContent
   defdelegate list_user_saved_recipe_ids(user), to: UserContent
   defdelegate list_user_follows(user), to: UserContent
+  defdelegate following?(user_id, follow_id), to: UserContent
   defdelegate list_user_saved_posts(user), to: UserContent
   defdelegate list_user_created_recipes(user), to: UserContent
   defdelegate remove_recipe_from_users_list(user, recipe), to: UserContent

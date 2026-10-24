@@ -10,6 +10,11 @@ defmodule Mehungry.Food.RecipeIngredient do
   schema "recipe_ingredients" do
     field :quantity, :float
     field :ingredient_allias, :string
+    # Optional name of the recipe part/component this ingredient belongs to
+    # (e.g. "Salad", "Dressing"). `nil` → ungrouped, rendered flat as before.
+    # Purely a display-grouping label — not a FK to any component entity. The
+    # matching label for steps lives in the embedded `Step.title`.
+    field :component_name, :string
 
     field :delete, :boolean, virtual: true
     field :temp_id, :string, virtual: true
@@ -43,6 +48,7 @@ defmodule Mehungry.Food.RecipeIngredient do
     |> cast(attrs, [
       :quantity,
       :ingredient_allias,
+      :component_name,
       :measurement_unit_id,
       :ingredient_portion_id,
       :unit_selection,

@@ -39,6 +39,7 @@ defmodule Mehungry.Science.PipelineReset do
     species_compound_candidates
     study_ingredients
     study_compounds
+    study_condition_exclusions
     study_conditions
     entrez_responses
     literature_crawl_attempts

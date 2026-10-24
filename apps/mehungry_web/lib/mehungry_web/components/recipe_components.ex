@@ -9,6 +9,7 @@ defmodule MehungryWeb.RecipeComponents do
     router: MehungryWeb.Router
 
   use Phoenix.Component
+  use Gettext, backend: MehungryWeb.Gettext
   alias Phoenix.LiveView.JS
   import MehungryWeb.CoreComponents
   import MehungryWeb.TabsComponent
@@ -180,11 +181,6 @@ defmodule MehungryWeb.RecipeComponents do
       ) do
     ~H"""
     <div class="">
-      <.condition_flag_badges
-        flags={recipe_condition_flags(@recipe)}
-        limit={nil}
-        class="px-4 mb-2"
-      />
       <div style="height: 280px;">
         <.render_tabs
           id="live_comp_tabs_rec"
@@ -193,6 +189,7 @@ defmodule MehungryWeb.RecipeComponents do
           recipe={@recipe}
           nutrients={@nutrients}
           primary_size={@primary_size}
+          locale={Map.get(assigns, :locale, "en")}
           ingredient_display_names={Map.get(assigns, :ingredient_display_names, %{})}
           ingredient_flags={Map.get(assigns, :ingredient_flags, %{})}
         />
@@ -201,30 +198,32 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_ingredients(%{recipe_ingredients: _recipe_ingredients} = assigns) do
+  def recipe_ingredients(%{recipe_ingredients: recipe_ingredients} = assigns) do
+    assigns =
+      assigns
+      |> component_assigns()
+      |> assign(:ingredient_groups, group_by_part(recipe_ingredients, & &1.component_name))
+
     ~H"""
     <div class=" my-4 ">
       <div class="px-4">
         <div class="bg-ink-panel border border-ink-panel2 divide-y custom-scrollbar divide-ink-panel2 overflow-auto max-h-72">
-          <% ingredient_flags = Map.get(assigns, :ingredient_flags, %{}) %>
-          <%= for ingredient <- @recipe_ingredients do %>
-            <% display_names = Map.get(assigns, :ingredient_display_names, %{}) %>
-            <% name =
-              Map.get(display_names, ingredient.ingredient_id) ||
-                Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %>
-            <div class="flex justify-between items-center p-4 hover:bg-black/20 transition">
-              <span class="text-parchment">
-                {name}
-                <.condition_flag_badges
-                  flags={Map.get(ingredient_flags, ingredient.ingredient_id, [])}
-                  limit={2}
-                  class="mt-1"
-                />
-              </span>
-              <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
-                {ingredient.quantity} {Mehungry.Food.RecipeIngredient.unit_label(ingredient)}
-              </span>
-            </div>
+          <%= for {part, ingredients} <- @ingredient_groups do %>
+            <.part_header :if={part} name={part} />
+            <%= for ingredient <- ingredients do %>
+              <% display_names = Map.get(assigns, :ingredient_display_names, %{}) %>
+              <% name =
+                Map.get(display_names, ingredient.ingredient_id) ||
+                  Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %>
+              <div class="flex justify-between items-center p-4 hover:bg-black/20 transition">
+                <span class="text-parchment">
+                  {name}
+                </span>
+                <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
+                  {ingredient.quantity} {Mehungry.Food.RecipeIngredient.unit_label(ingredient)}
+                </span>
+              </div>
+            <% end %>
           <% end %>
         </div>
       </div>
@@ -232,24 +231,121 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_steps(%{steps: _steps} = assigns) do
+  def recipe_steps(%{steps: steps} = assigns) do
+    assigns =
+      assigns
+      |> component_assigns()
+      |> assign(:step_groups, group_by_part(steps, & &1.title))
+      |> assign(:source_url, Map.get(assigns, :original_url))
+      |> assign(:source_author, Map.get(assigns, :author))
+      |> assign(:source_license, Map.get(assigns, :license))
+
     ~H"""
     <div class=" my-4 ">
       <div class="px-4">
         <div class="overflow-auto text-base custom-scrollbar bg-ink-panel border border-ink-panel2 max-h-72 px-4   ">
-          <%= for step <- @steps do %>
-            <div class="step_details_container p-4 border-b border-ink-panel2 ">
+          <%= for {part, steps} <- @step_groups do %>
+            <.part_header :if={part} name={part} />
+            <%!--
+              Number steps per part (1..n within each component), not one
+              continuous count across parts — components are often prepared in
+              parallel, so a global 1..N would imply a false ordering.
+            --%>
+            <div
+              :for={{step, display_index} <- Enum.with_index(steps, 1)}
+              class="step_details_container p-4 border-b border-ink-panel2 "
+            >
               <div class="w-8 h-8 rounded-full bg-paprika/20 text-paprika flex items-center justify-center font-bold flex-shrink-0 [font-variant-numeric:tabular-nums] ">
-                {step.index}
+                {display_index}
               </div>
               <div class="text-parchment">{step.description}</div>
             </div>
           <% end %>
         </div>
+        <.recipe_source
+          :if={@source_url}
+          url={@source_url}
+          author={@source_author}
+          license={@source_license}
+        />
       </div>
     </div>
     """
   end
+
+  # Visible source credit for imported recipes (public-domain USDA MyPlate etc.).
+  # Only rendered when the recipe carries an `original_url`; app-authored recipes
+  # have none and show nothing.
+  attr :url, :string, required: true
+  attr :author, :string, default: nil
+  attr :license, :string, default: nil
+
+  defp recipe_source(assigns) do
+    ~H"""
+    <p class="px-4 py-3 text-xs text-parchment-dim">
+      {gettext("Source")}:
+      <a
+        href={@url}
+        target="_blank"
+        rel="noopener nofollow"
+        class="underline hover:text-parchment"
+      >
+        {@author || gettext("Original recipe")}
+      </a>
+      <%!-- License notice for sources that carry a reuse obligation (e.g.
+            UniTools CC BY-SA 4.0). ShareAlike requires the license to travel
+            with the adapted recipe. --%>
+      <span :if={@license} class="ml-1">· {gettext("Licensed under")} {@license}</span>
+    </p>
+    """
+  end
+
+  # Sub-header marking a recipe part (e.g. "Dressing") inside the ingredient/step
+  # lists. Only rendered when a part name is present — single-part recipes show no
+  # header and read exactly as before.
+  attr :name, :string, required: true
+
+  defp part_header(assigns) do
+    ~H"""
+    <div class="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-basil">
+      {@name}
+    </div>
+    """
+  end
+
+  # These components are invoked as plain functions (e.g. from
+  # `RecipeDetailsTabsConfig`) with a raw `%Recipe{}` struct as their assigns.
+  # `assign/3` rejects a bare struct — it needs the change-tracking map a HEEx
+  # `<.component/>` call injects — so demote the struct to a plain map and add an
+  # empty `__changed__` before any `assign/3` call.
+  defp component_assigns(%_{} = assigns),
+    do: assigns |> Map.from_struct() |> Map.put_new(:__changed__, %{})
+
+  defp component_assigns(assigns), do: Map.put_new(assigns, :__changed__, %{})
+
+  # Groups a list of ingredients/steps by their part label, preserving the order
+  # in which each part first appears. A blank/nil label normalises to `nil` (the
+  # ungrouped bucket, rendered without a header). When nothing is labelled this
+  # returns a single `{nil, items}` group — i.e. the pre-parts flat list.
+  defp group_by_part(items, key_fun) when is_list(items) do
+    Enum.reduce(items, [], fn item, acc ->
+      key = normalize_part(key_fun.(item))
+
+      case List.keyfind(acc, key, 0) do
+        {^key, list} -> List.keyreplace(acc, key, 0, {key, list ++ [item]})
+        nil -> acc ++ [{key, [item]}]
+      end
+    end)
+  end
+
+  defp group_by_part(_items, _key_fun), do: []
+
+  defp normalize_part(value) when value in [nil, ""], do: nil
+  defp normalize_part(value) when is_binary(value), do: String.trim(value) |> nilify_blank()
+  defp normalize_part(_value), do: nil
+
+  defp nilify_blank(""), do: nil
+  defp nilify_blank(value), do: value
 
   def recipe_tags(assigns) do
     assigns = assign(assigns, :tags, loaded_hashtags(assigns.recipe))
@@ -337,6 +433,174 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
+  @doc """
+  The live recipe-card preview rendered beside the Create Recipe form. It is
+  purely presentational — it reads a flat `preview` map (projected from the
+  form changeset by `CreateRecipeLive.Index`) plus the image `uploads`, so it
+  never touches the changeset or the database itself. Borrows the browse
+  `recipe_card` visual language (image-on-top card, basil numbers, editorial
+  numbered steps) so what the author builds reads like what they'll publish.
+  """
+  attr :preview, :map, required: true
+  attr :uploads, :map, required: true
+
+  def recipe_preview(assigns) do
+    ~H"""
+    <div class="recipe-preview overflow-hidden rounded-2xl border border-ink-panel2 bg-ink-panel">
+      <div class="flex items-center justify-between gap-2 px-4 pt-4">
+        <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-parchment-dim">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-basil/60 animate-ping motion-reduce:hidden">
+            </span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-basil"></span>
+          </span>
+          {gettext("Live preview")}
+        </span>
+        <span
+          :if={@preview.valid?}
+          class="inline-flex items-center gap-1 rounded-full bg-paprika/15 px-2.5 py-1 text-[11px] font-semibold text-paprika-soft"
+        >
+          <.icon name="hero-check-circle" class="h-3.5 w-3.5" /> {gettext("Ready to save")}
+        </span>
+      </div>
+
+      <div class="mt-3 px-4">
+        <div class="aspect-video w-full overflow-hidden rounded-xl bg-ink-panel2">
+          <%= cond do %>
+            <% filled?(@preview.image_url) -> %>
+              <img src={@preview.image_url} alt="" class="h-full w-full object-cover" />
+            <% @uploads.image.entries != [] -> %>
+              <%!-- The live client-side preview lives in the form's drop zone (one
+                    per upload entry); here we just confirm an image is attached. --%>
+              <div class="flex h-full w-full flex-col items-center justify-center gap-1 text-basil">
+                <.icon name="hero-check-circle" class="h-8 w-8" />
+                <span class="text-xs font-medium">{gettext("Image added")}</span>
+              </div>
+            <% true -> %>
+              <div class="flex h-full w-full items-center justify-center text-parchment-dim">
+                <.icon name="hero-photo" class="h-10 w-10" />
+              </div>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="space-y-4 p-4">
+        <div>
+          <h2 class={["font-display text-xl leading-tight", title_class(@preview.title)]}>
+            {@preview.title || gettext("Your recipe title")}
+          </h2>
+          <p class={["mt-1 text-sm", desc_class(@preview.description)]}>
+            {@preview.description || gettext("A short description will appear here.")}
+          </p>
+        </div>
+
+        <div class="flex items-center gap-4 border-y border-ink-panel2 py-3 text-sm">
+          <div class="flex items-center gap-1.5">
+            <.icon name="hero-clock" class="h-4 w-4 text-parchment-dim" />
+            <span class="font-bold tabular-nums text-basil">{total_time(@preview)}</span>
+            <span class="text-parchment-dim">{gettext("min")}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <.icon name="hero-user-group" class="h-4 w-4 text-parchment-dim" />
+            <span class="font-bold tabular-nums text-basil">{display_servings(@preview.servings)}</span>
+            <span class="text-parchment-dim">{gettext("servings")}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <.icon name="hero-signal" class="h-4 w-4 text-parchment-dim" />
+            <span class="text-parchment">{difficulty_label(@preview.difficulty)}</span>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-parchment-dim">
+            {gettext("Ingredients")}
+            <span :if={@preview.ingredients != []} class="tabular-nums text-basil">
+              ({length(@preview.ingredients)})
+            </span>
+          </h3>
+          <p :if={@preview.ingredients == []} class="text-sm text-parchment-dim/70">
+            {gettext("Add ingredients to see them here.")}
+          </p>
+          <ul :if={@preview.ingredients != []} class="space-y-1">
+            <li
+              :for={ing <- @preview.ingredients}
+              class="flex items-baseline gap-2 text-sm text-parchment"
+            >
+              <span :if={filled?(ing.quantity)} class="min-w-8 font-bold tabular-nums text-basil">
+                {ing.quantity}
+              </span>
+              <span>{ing.name}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-parchment-dim">
+            {gettext("Steps")}
+            <span :if={@preview.steps != []} class="tabular-nums text-basil">
+              ({length(@preview.steps)})
+            </span>
+          </h3>
+          <p :if={@preview.steps == []} class="text-sm text-parchment-dim/70">
+            {gettext("Your method will appear here, step by step.")}
+          </p>
+          <ol :if={@preview.steps != []} class="space-y-3">
+            <li :for={{step, i} <- Enum.with_index(@preview.steps, 1)} class="flex gap-3">
+              <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink-panel2 text-xs font-bold tabular-nums text-basil">
+                {i}
+              </span>
+              <div class="min-w-0">
+                <p
+                  :if={filled?(step.title)}
+                  class="text-xs font-semibold uppercase tracking-wide text-paprika-soft"
+                >
+                  {step.title}
+                </p>
+                <p class="text-sm text-parchment">{step.description}</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp filled?(value), do: value not in [nil, ""]
+
+  defp title_class(value) when value in [nil, ""], do: "text-parchment-dim/60"
+  defp title_class(_), do: "text-parchment"
+
+  defp desc_class(value) when value in [nil, ""], do: "text-parchment-dim/60 italic"
+  defp desc_class(_), do: "text-parchment-dim"
+
+  defp display_servings(value) when value in [nil, ""], do: "—"
+  defp display_servings(value), do: value
+
+  defp difficulty_label(value) when value in [1, "1"], do: gettext("Easy")
+  defp difficulty_label(value) when value in [2, "2"], do: gettext("Medium")
+  defp difficulty_label(value) when value in [3, "3"], do: gettext("Difficult")
+  defp difficulty_label(_), do: "—"
+
+  defp total_time(%{cooking_time: cooking, prep_time: prep}) do
+    case {to_minutes(cooking), to_minutes(prep)} do
+      {nil, nil} -> "—"
+      {c, p} -> (c || 0) + (p || 0)
+    end
+  end
+
+  defp to_minutes(nil), do: nil
+  defp to_minutes(value) when is_integer(value), do: value
+
+  defp to_minutes(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {int, _} -> int
+      :error -> nil
+    end
+  end
+
+  defp to_minutes(_), do: nil
+
   def post_card_interaction(assigns) do
     ~H"""
     <div class="post_card_details max-w-20  absolute h-full w-1/5 top-0 bottom-0 right-0 sm:-right-20 ">
@@ -377,69 +641,38 @@ defmodule MehungryWeb.RecipeComponents do
   end
 
   @doc """
-  A compact row of health-condition badges for a recipe. `flags` is the list
-  returned by `Mehungry.Health.flags_for_recipe/2`
-  (`%{condition, compound, recommendation, severity}`). Renders nothing when
-  empty, so non-opted-in users are unaffected. `limit` caps how many chips show
-  before a "+N" overflow (use `nil` on the detail view to show them all).
+  The high-tier nutrient-claim badges to show on a recipe card / detail (the
+  truthful EU "High in X" claims, see `Mehungry.Food.NutrientClaims`). Reads the
+  persisted, already-coverage-gated `recipe.badges` (string-keyed), filters to the
+  `"high"` tier, and keeps the first `limit` (they are stored strongest-first).
   """
-  attr :flags, :list, default: []
-  attr :limit, :any, default: 3
-  attr :class, :string, default: ""
-
-  def condition_flag_badges(%{flags: []} = assigns), do: ~H""
-
-  def condition_flag_badges(assigns) do
-    shown = if assigns.limit, do: Enum.take(assigns.flags, assigns.limit), else: assigns.flags
-    overflow = length(assigns.flags) - length(shown)
-    assigns = assign(assigns, shown: shown, overflow: overflow)
-
-    ~H"""
-    <div class={["flex flex-wrap gap-1", @class]}>
-      <span
-        :for={flag <- @shown}
-        class={[
-          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border",
-          recommendation_badge_class(flag.recommendation)
-        ]}
-        title={"#{flag_label(flag)} — #{flag.recommendation} for #{flag.condition.name}"}
-      >
-        <.icon name="hero-exclamation-triangle-mini" class="w-3 h-3" />
-        {flag_label(flag)} · {flag.recommendation} ({flag.condition.name})
-      </span>
-      <span
-        :if={@overflow > 0}
-        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border border-ink-panel2 text-parchment-dim"
-      >
-        +{@overflow}
-      </span>
-    </div>
-    """
+  def high_badges(recipe, limit \\ 2) do
+    (Map.get(recipe, :badges) || [])
+    |> Enum.filter(&(&1["level"] == "high"))
+    |> Enum.take(limit)
   end
-
-  defp recommendation_badge_class(recommendation) when recommendation in ["encourage", "monitor"],
-    do: "bg-basil/15 border-basil/40 text-basil"
-
-  defp recommendation_badge_class(_recommendation),
-    do: "bg-paprika/15 border-paprika/40 text-paprika"
-
-  # The badge's driver label: a nutrient flag carries a `:label` (nutrient name),
-  # a compound flag carries a `:compound` struct. Both share condition/recommendation.
-  defp flag_label(%{label: label}) when is_binary(label), do: label
-  defp flag_label(%{compound: %{name: name}}), do: name
-
-  # Safely reads the recipe's virtual :condition_flags (populated by
-  # MehungryWeb.RecipeFlags); tolerates plain maps / missing field.
-  defp recipe_condition_flags(%{condition_flags: flags}) when is_list(flags), do: flags
-  defp recipe_condition_flags(_recipe), do: []
 
   def recipe_card(assigns) do
     # Opt-in full live navigation (e.g. cross-LiveView to /browse/:id) instead of
     # the default same-LiveView patch. Existing callers keep patch behavior.
-    assigns = assign_new(assigns, :navigate_details, fn -> false end)
+    assigns =
+      assigns
+      |> assign_new(:navigate_details, fn -> false end)
+      |> assign(:nutrient_badges, high_badges(assigns.recipe))
 
     ~H"""
     <div id={"recipe-card-details-container-#{@id}-#{@recipe.id}"} class="py-2 relative">
+      <div
+        :if={@nutrient_badges != []}
+        class="absolute top-3 left-3 z-10 flex flex-col items-start gap-1"
+      >
+        <span
+          :for={badge <- @nutrient_badges}
+          class="rounded-full bg-paprika/90 text-white text-[10px] font-semibold px-2 py-0.5 shadow-sm backdrop-blur-sm"
+        >
+          {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])} · {badge["percent_nrv"]}% NRV
+        </span>
+      </div>
       <.link
         phx-mounter={Phoenix.LiveView.JS.transition("animate-bounce", time: 2000)}
         id={"recipe-card-details-link-#{@id}-#{@recipe.id}"}
@@ -481,8 +714,6 @@ defmodule MehungryWeb.RecipeComponents do
             <p class="text-parchment-dim text-sm mt-1 line-clamp-2">
               {@recipe.description || "No description available"}
             </p>
-
-            <.condition_flag_badges flags={recipe_condition_flags(@recipe)} class="mt-2" />
 
             <!-- Recipe Stats -->
             <div class="flex items-center justify-between mt-4 pt-3 border-t border-ink-panel2">
@@ -625,28 +856,58 @@ defmodule MehungryWeb.RecipeComponents do
         </button>
       <% end %>
       <%= if @type == "created" do %>
-        <button
-          id={"edit-recipe-#{@recipe.id}"}
-          phx-click="edit-recipe"
-          phx-value-id={@recipe.id}
-          class="absolute top-2 right-2 cursor-pointer text-parchment z-10 rounded-full p-2 bg-ink-panel hover:bg-ink-panel2 transition"
-          type="button"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+        <div class="absolute top-2 right-2 z-10 flex items-center gap-2">
+          <button
+            id={"edit-recipe-#{@recipe.id}"}
+            phx-click="edit-recipe"
+            phx-value-id={@recipe.id}
+            class="cursor-pointer text-parchment rounded-full p-2 bg-ink-panel hover:bg-ink-panel2 transition"
+            type="button"
+            aria-label="Edit recipe"
           >
-            <path d="M12 20h9" />
-            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+            </svg>
+          </button>
+          <button
+            id={"delete-recipe-#{@recipe.id}"}
+            phx-click="delete_recipe"
+            phx-value-id={@recipe.id}
+            data-confirm={"Delete \"#{@recipe.title}\"? This can't be undone."}
+            class="cursor-pointer text-parchment rounded-full p-2 bg-ink-panel hover:bg-red-600 transition"
+            type="button"
+            aria-label="Delete recipe"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M3 6h18" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6" />
+              <path d="M14 11v6" />
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            </svg>
+          </button>
+        </div>
       <% end %>
     </div>
     """
@@ -774,12 +1035,15 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_nutrients(%Mehungry.Food.Recipe{} = recipe) do
+  def recipe_nutrients(recipe, locale \\ "en")
+
+  def recipe_nutrients(%Mehungry.Food.Recipe{} = recipe, locale) do
     assigns = %{
       id: recipe.id,
       nutrients: recipe.nutrients,
       primary_size: recipe.primary_nutrients_size || 3,
       servings: recipe.servings || 1,
+      locale: locale,
       class: ""
     }
 
@@ -787,23 +1051,28 @@ defmodule MehungryWeb.RecipeComponents do
     <div class="my-4 bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden">
       <MehungryWeb.NutritionAccordion.nutrition_accordion
         nutrients={@nutrients}
-        title="Nutrition Facts"
+        title={gettext("Nutrition Facts")}
         max_height="600px"
         show_title={true}
+        locale={@locale}
+        accordion_id={"nutrition-#{@id}"}
       />
     </div>
     """
   end
 
   @doc """
-  Renders an accordion for recipe nutrients - with visual indicators for clickable items
+  Renders an accordion for recipe nutrients - with visual indicators for clickable items.
+  Accepts an assigns map; `:locale` localizes the nutrient names, falling back to
+  the `locale` argument (default "en") when the map carries none.
   """
-  def recipe_nutrients(assigns) do
+  def recipe_nutrients(assigns, locale) do
     assigns = %{
       id: assigns[:id],
       nutrients: assigns[:nutrients],
       primary_size: assigns[:primary_size] || 3,
       servings: assigns[:servings] || 1,
+      locale: assigns[:locale] || locale,
       class: assigns[:class] || ""
     }
 
@@ -811,9 +1080,11 @@ defmodule MehungryWeb.RecipeComponents do
     <div class="my-4 bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden">
       <MehungryWeb.NutritionAccordion.nutrition_accordion
         nutrients={@nutrients}
-        title="Nutrition Facts"
+        title={gettext("Nutrition Facts")}
         max_height="600px"
         show_title={true}
+        locale={@locale}
+        accordion_id={"nutrition-#{@id}"}
       />
     </div>
     """

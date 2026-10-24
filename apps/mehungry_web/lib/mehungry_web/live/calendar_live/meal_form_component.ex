@@ -7,7 +7,6 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   alias Mehungry.History.IngredientUserMeal
 
   alias Mehungry.Food
-  alias Mehungry.Food.IngredientPortion
   alias Mehungry.History
   alias MehungryWeb.CalendarLive.Components
 
@@ -20,7 +19,7 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   # blank the selection.
   @impl true
   def update(%{ingredient_selected: {index, ingredient_id}}, socket) do
-    options = unit_options(ingredient_id)
+    options = unit_options(ingredient_id, socket.assigns[:current_language] || "en")
 
     socket =
       socket
@@ -72,7 +71,8 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
     # row with no ingredient chosen yet, and `unit_options_by_index` caches the
     # per-row option lists so we don't re-query on every render.
     gram_options = gram_options()
-    unit_options_by_index = build_unit_options_by_index(base_user_meal)
+    unit_options_by_index =
+      build_unit_options_by_index(base_user_meal, assigns[:current_language] || "en")
 
     recipe_ids = Enum.map(recipes, fn x -> x.id end)
 
@@ -118,35 +118,32 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
   # Precomputes the per-row unit dropdown options keyed by the row's `inputs_for`
   # index (its position in the ingredient list). New meals have no persisted rows
   # yet, so the map starts empty and rows fall back to `gram_options`.
-  defp build_unit_options_by_index(%UserMeal{ingredient_user_meals: iums}) when is_list(iums) do
+  defp build_unit_options_by_index(%UserMeal{ingredient_user_meals: iums}, locale) when is_list(iums) do
     iums
     |> Enum.with_index()
-    |> Map.new(fn {ium, idx} -> {idx, unit_options(ium.ingredient_id)} end)
+    |> Map.new(fn {ium, idx} -> {idx, unit_options(ium.ingredient_id, locale)} end)
   end
 
-  defp build_unit_options_by_index(_meal), do: %{}
+  defp build_unit_options_by_index(_meal, _locale), do: %{}
 
-  # Builds the unit dropdown options for an ingredient, mirroring the recipe
-  # form's `IngredientComponent`: every portion becomes an option (values encode
-  # `measurement_unit_id`, or `-portion_id` for description-only portions), with
-  # "gram" always appended so a portion-less ingredient stays usable.
-  defp unit_options(nil), do: gram_options()
-
-  defp unit_options(ingredient_id) do
-    portion_options =
-      ingredient_id
-      |> Food.get_measurement_unit_portions_for_ingredient()
-      |> Enum.map(fn portion ->
-        value = if portion.measurement_unit_id, do: portion.measurement_unit_id, else: -portion.id
-        {Integer.to_string(value), IngredientPortion.display_name(portion) || "portion"}
-      end)
-
-    portion_options ++ gram_options()
+  # The unit dropdown options for an ingredient. The option list itself is built
+  # in the core `Food` context (`Food.ingredient_unit_options/1`) so this form
+  # and the `/api/v1/ingredients/search?source=local` endpoint stay in lockstep;
+  # here we only project each option onto the `{value_string, label}` tuple the
+  # `SelectComponent` expects, where the value is the signed `unit_selection`.
+  defp unit_options(ingredient_id, locale) do
+    ingredient_id
+    |> Food.ingredient_unit_options(locale)
+    |> to_select_options()
   end
 
   defp gram_options do
-    Enum.map(Food.get_measurement_unit_by_name("gram"), fn mu ->
-      {Integer.to_string(mu.id), mu.name}
+    Food.gram_unit_options() |> to_select_options()
+  end
+
+  defp to_select_options(options) do
+    Enum.map(options, fn %{unit_selection: value, label: label} ->
+      {Integer.to_string(value), label}
     end)
   end
 
@@ -328,7 +325,11 @@ defmodule MehungryWeb.CalendarLive.MealFormComponent do
           {:ok, _user_meal} ->
             # See :edit above — patch back rather than remount to preserve accordion state.
             send(self(), {:meal_saved, %{return_to: socket.assigns.return_to, flash: nil}})
-            {:noreply, socket}
+
+            {:noreply,
+             MehungryWeb.GoogleAnalytics.track(socket, "add_to_meal_plan", %{
+               meal_type: user_meal_params["meal_type"]
+             })}
 
           {:error, %Ecto.Changeset{} = changeset} ->
             {:noreply, assign(socket, changeset: changeset)}

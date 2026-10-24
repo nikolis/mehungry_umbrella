@@ -20,6 +20,13 @@ defmodule Mehungry.History.IngredientUserMeal do
 
     field :quantity, :float
 
+    # Denormalized, server-derived nutrient tree (same hierarchical shape as a
+    # recipe's `recipes.nutrients`), populated at write time by
+    # `History.put_ingredient_user_meal_nutrients/1` so the calendar reads it back
+    # instead of recomputing per ingredient on every load. Never cast from user
+    # input — set via `Repo.update`, mirroring `recipes.nutrients`.
+    field :nutrients, :map, default: %{}
+
     # Form-only unit picker value, identical in meaning to
     # `RecipeIngredient.unit_selection`:
     #   positive → a `measurement_unit_id` (unit-bearing portion or grams)

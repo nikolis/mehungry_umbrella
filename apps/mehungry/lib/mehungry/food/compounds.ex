@@ -20,7 +20,10 @@ defmodule Mehungry.Food.Compounds do
   alias Mehungry.Food.{
     Compound,
     CompoundIdentifier,
-    IngredientCompoundRelationship
+    FoundementalFood,
+    IngredientCompoundRelationship,
+    RecipeIngredient,
+    SpeciesCompoundRelationship
   }
 
   # ── Compound families ─────────────────────────────────────────────────────
@@ -245,6 +248,33 @@ defmodule Mehungry.Food.Compounds do
       )
     )
     |> Enum.sort_by(& &1.name)
+  end
+
+  @doc """
+  All compounds a recipe's ingredients are asserted to *contain*, grouped by
+  `compound_type` (e.g. `%{"polyphenol" => [%Compound{}, ...]}`).
+
+  Walks `recipe_ingredients → foundemental_foods → species_compound_relationships
+  → compounds`, the same species-anchored chain
+  `Mehungry.Health.flags_for_recipes/2` uses, but condition-agnostic: every
+  non-`absent` relationship, deduped per compound. Drives the recipe-insight
+  graphic's "Rich in <family>" selection.
+  """
+  def compounds_for_recipe(recipe_id) do
+    Repo.all(
+      from(ri in RecipeIngredient,
+        join: ff in FoundementalFood,
+        on: ff.ingredient_id == ri.ingredient_id,
+        join: scr in SpeciesCompoundRelationship,
+        on: scr.foundemental_species_id == ff.foundemental_species_id,
+        join: c in Compound,
+        on: c.id == scr.compound_id,
+        where: ri.recipe_id == ^recipe_id and scr.relationship_type != "absent",
+        distinct: c.id,
+        select: c
+      )
+    )
+    |> Enum.group_by(& &1.compound_type)
   end
 
   @doc "All ingredients linked to a compound (via the relationship rows)."

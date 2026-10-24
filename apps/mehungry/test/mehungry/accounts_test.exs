@@ -6,6 +6,56 @@ defmodule Mehungry.AccountsTest do
   import Mehungry.AccountsFixtures
   alias Mehungry.Accounts.{User, UserToken}
 
+  describe "set_followed_blueprint/2" do
+    test "persists and clears the calendar's followed blueprint on the profile" do
+      user = user_fixture()
+      profile = Accounts.get_user_profile_by_user_id(user.id)
+
+      {:ok, blueprint} =
+        user.id
+        |> Mehungry.MealBlueprints.default_blueprint_attrs("Test blueprint")
+        |> Mehungry.MealBlueprints.create_blueprint()
+
+      {:ok, updated} = Accounts.set_followed_blueprint(profile, blueprint.id)
+      assert updated.followed_blueprint_id == blueprint.id
+      # Survives a fresh read (persisted, not just in-struct).
+      assert Accounts.get_user_profile_by_user_id(user.id).followed_blueprint_id == blueprint.id
+
+      {:ok, cleared} = Accounts.set_followed_blueprint(updated, nil)
+      assert cleared.followed_blueprint_id == nil
+      assert Accounts.get_user_profile_by_user_id(user.id).followed_blueprint_id == nil
+    end
+  end
+
+  describe "set_avoid_foods/2" do
+    test "cleans and persists the personal avoid list" do
+      user = user_fixture()
+      profile = Accounts.get_user_profile_by_user_id(user.id)
+
+      {:ok, updated} = Accounts.set_avoid_foods(profile, [" Onion ", "garlic", "Onion", ""])
+      assert updated.avoid_foods == ["Onion", "garlic"]
+      # Survives a fresh read.
+      assert Accounts.get_user_profile_by_user_id(user.id).avoid_foods == ["Onion", "garlic"]
+    end
+
+    test "accepts a newline/comma-separated string" do
+      user = user_fixture()
+      profile = Accounts.get_user_profile_by_user_id(user.id)
+
+      {:ok, updated} = Accounts.set_avoid_foods(profile, "onion\ngarlic, shellfish\n")
+      assert updated.avoid_foods == ["onion", "garlic", "shellfish"]
+    end
+
+    test "clearing the list stores an empty array" do
+      user = user_fixture()
+      profile = Accounts.get_user_profile_by_user_id(user.id)
+
+      {:ok, _} = Accounts.set_avoid_foods(profile, ["onion"])
+      {:ok, cleared} = Accounts.set_avoid_foods(profile, "")
+      assert cleared.avoid_foods == []
+    end
+  end
+
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email("unknown@example.com")
@@ -629,41 +679,6 @@ defmodule Mehungry.AccountsTest do
                Accounts.update_user_profile(profile, %{daily_calorie_target: 0})
 
       assert %{daily_calorie_target: [_ | _]} = errors_on(changeset)
-    end
-  end
-
-  describe "condition opt-ins" do
-    setup do
-      user = user_fixture()
-      {:ok, profile} = Accounts.create_user_profile(%{user_id: user.id})
-      {:ok, c1} = Mehungry.Health.upsert_condition(%{name: "Kidney Stones"})
-      {:ok, c2} = Mehungry.Health.upsert_condition(%{name: "Gout"})
-      %{profile: profile, c1: c1, c2: c2}
-    end
-
-    test "set replaces the set; list reads it back", %{profile: profile, c1: c1, c2: c2} do
-      assert Accounts.list_opted_in_condition_ids(profile.id) == []
-
-      :ok = Accounts.set_condition_opt_ins(profile.id, [c1.id, c2.id])
-
-      assert Enum.sort(Accounts.list_opted_in_condition_ids(profile.id)) ==
-               Enum.sort([c1.id, c2.id])
-
-      # Replacing with a subset removes the dropped one; idempotent on re-set.
-      :ok = Accounts.set_condition_opt_ins(profile.id, [c1.id])
-      assert Accounts.list_opted_in_condition_ids(profile.id) == [c1.id]
-
-      :ok = Accounts.set_condition_opt_ins(profile.id, [c1.id])
-      assert Accounts.list_opted_in_condition_ids(profile.id) == [c1.id]
-
-      # Clearing removes everything.
-      :ok = Accounts.set_condition_opt_ins(profile.id, [])
-      assert Accounts.list_opted_in_condition_ids(profile.id) == []
-    end
-
-    test "accepts string ids (as they arrive from the form)", %{profile: profile, c1: c1} do
-      :ok = Accounts.set_condition_opt_ins(profile.id, [to_string(c1.id)])
-      assert Accounts.list_opted_in_condition_ids(profile.id) == [c1.id]
     end
   end
 

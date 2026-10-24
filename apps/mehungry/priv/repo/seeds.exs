@@ -1012,6 +1012,12 @@ IO.puts(
     "#{length(anti_inflammatory_nutrients)} nutrient recommendations."
 )
 
+# ── Diet patterns: Mediterranean + Low-FODMAP ────────────────────────────────
+# These named eating patterns (`Mehungry.MealBlueprints.DietPatterns`) are now
+# self-contained **meal blueprints**, not conditions — they are instantiated
+# per-user on demand (nutritionist blueprint library / admin "Seed diet patterns"
+# button via `create_missing_for_user/1`), so there is nothing global to seed here.
+
 # ── AI-bot personas (authoring voices) ───────────────────────────────────────
 # Idempotent: find-or-create by name. Personas are the reusable voice; a
 # RecipeSetup binds one to a place/story/ingredients/condition.

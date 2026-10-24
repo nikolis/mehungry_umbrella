@@ -17,11 +17,19 @@ defmodule Mehungry.Languages.TranslationRegistry do
     * `:name_field`        — base field to show as the item's title
     * `:ai`                — `:fields` (generic) or `:recipe` (structured steps)
     * `:ai_hint`           — domain hint passed to `AI.FieldTranslator`
+    * `:translate_portions`— (optional) also translate the base row's unit-less
+      `IngredientPortion` descriptions in the same editor (ingredients only)
+    * `:source_language_field` — (optional) a base-row column holding that row's
+      own source `languages.name` code. When present the base rows aren't all
+      English: the hub translates each out of its own language into the others,
+      exposes every locale as a target, and hides rows already in the target
+      locale. Only `recipes` sets this (`:language_name`).
   """
 
   alias Mehungry.Food
   alias Mehungry.FoodProducts
   alias Mehungry.Health
+  alias Mehungry.MealBlueprints
   alias Mehungry.AI.Bot.RecipeTranslation
 
   @registry [
@@ -34,7 +42,12 @@ defmodule Mehungry.Languages.TranslationRegistry do
       fields: [:title, :description],
       name_field: :title,
       ai: :recipe,
-      ai_hint: "recipe"
+      ai_hint: "recipe",
+      # Recipes are authored directly in a locale (Greek or English), so the base
+      # row carries its own source language in this column rather than always
+      # being English. The hub reads it to translate *out of* that language (and
+      # to never offer translating a recipe into the language it's already in).
+      source_language_field: :language_name
     },
     %{
       key: "ingredients",
@@ -45,7 +58,11 @@ defmodule Mehungry.Languages.TranslationRegistry do
       fields: [:name, :description],
       name_field: :name,
       ai: :fields,
-      ai_hint: "USDA food ingredient name, as a Greek home cook would say it"
+      ai_hint: "USDA food ingredient name, as a Greek home cook would say it",
+      # Also translate the ingredient's unit-less free-text portions ("1 medium
+      # banana", "1 slice") alongside its name/description — see the portion
+      # branches in `TranslationsLive.Panel` + `ResourceTranslationWorker`.
+      translate_portions: true
     },
     %{
       key: "measurement_units",
@@ -123,6 +140,17 @@ defmodule Mehungry.Languages.TranslationRegistry do
       name_field: :name,
       ai: :fields,
       ai_hint: "nutrient (vitamin / mineral / macronutrient)"
+    },
+    %{
+      key: "meal_blueprints",
+      label: "Meal Blueprints",
+      base_schema: MealBlueprints.Blueprint,
+      translation_schema: MealBlueprints.BlueprintTranslation,
+      fk: :blueprint_id,
+      fields: [:name, :description],
+      name_field: :name,
+      ai: :fields,
+      ai_hint: "7-day meal-plan blueprint — its title and short summary description"
     }
   ]
 

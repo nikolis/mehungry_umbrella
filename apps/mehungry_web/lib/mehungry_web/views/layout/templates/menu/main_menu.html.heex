@@ -57,17 +57,6 @@
     </a>
 
     <a
-      href={"/#{@current_language}/conditions"}
-      class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
-    >
-      <.icon
-        name="hero-heart"
-        class="w-5 h-5 flex-shrink-0"
-      />
-      {gettext("Health")}
-    </a>
-
-    <a
       href={"/#{@current_language}/create_recipe"}
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
     >
@@ -148,6 +137,26 @@
           <span class="hidden md:block text-sm font-medium">{gettext("Tutor Invitations")}</span>
         </a>
       <% end %>
+    <% end %>
+
+    <!-- Messages with your nutritionist (clients who have one) -->
+    <%= if @current_user && !Mehungry.Subscriptions.nutritionist?(@current_user.id) &&
+             Mehungry.Professionals.get_assignment_for_client(@current_user.id) do %>
+      <% unread_messages = Mehungry.Professionals.count_unread_messages_for(@current_user.id) %>
+      <a
+        href={"/#{@current_language}/messages"}
+        class="nav_link_basic relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors mt-1"
+      >
+        <div class="relative flex-shrink-0">
+          <.icon name="hero-chat-bubble-left-right" class="h-5 w-5" />
+          <%= if unread_messages > 0 do %>
+            <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white font-bold flex items-center justify-center">
+              {unread_messages}
+            </span>
+          <% end %>
+        </div>
+        <span class="hidden md:block text-sm font-medium">{gettext("Messages")}</span>
+      </a>
     <% end %>
 
     <!-- Friend requests badge -->

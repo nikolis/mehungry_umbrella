@@ -92,30 +92,11 @@ defmodule MehungryWeb.FoodsLiveTest do
       %{apple: apple, vitc: vitc, scurvy: scurvy, spinach: spinach_species}
     end
 
-    test "filtering by a condition keeps only species encouraged for it", %{
-      conn: conn,
-      scurvy: scurvy
-    } do
-      {:ok, view, _html} = live(conn, ~p"/foods")
-
-      html =
-        view
-        |> element("button[phx-click='toggle_condition'][phx-value-id='#{scurvy.id}']")
-        |> render_click()
-
-      assert html =~ "Apple"
-      refute html =~ "Spinach"
-      assert html =~ "filtered species"
-    end
-
     test "the compound multi-select filters to species containing the picked compound", %{
       conn: conn,
       vitc: vitc
     } do
       {:ok, view, _html} = live(conn, ~p"/foods")
-
-      # Switch to compound mode, search, then pick the suggestion.
-      render_click(element(view, "button[phx-value-mode='compound']"))
 
       html = render_change(element(view, "form[phx-change='search_compounds']"), %{"q" => "Vitamin"})
       assert html =~ "Vitamin C"
@@ -130,36 +111,9 @@ defmodule MehungryWeb.FoodsLiveTest do
       assert html =~ "filtered species"
     end
 
-    test "switching modes applies only the active mode's facet", %{
-      conn: conn,
-      scurvy: scurvy,
-      vitc: vitc
-    } do
-      {:ok, view, _html} = live(conn, ~p"/foods")
-
-      # Select a condition (condition mode is the default).
-      render_click(
-        element(view, "button[phx-click='toggle_condition'][phx-value-id='#{scurvy.id}']")
-      )
-
-      # Add a compound in compound mode.
-      render_click(element(view, "button[phx-value-mode='compound']"))
-      render_change(element(view, "form[phx-change='search_compounds']"), %{"q" => "Vitamin"})
-
-      html =
-        view
-        |> element("button[phx-click='add_compound'][phx-value-id='#{vitc.id}']")
-        |> render_click()
-
-      # Only Apple carries Vitamin C — the earlier condition pick does not stack.
-      assert html =~ "Apple"
-      refute html =~ "Spinach"
-    end
-
     test "clearing filters restores the full list", %{conn: conn, vitc: vitc} do
       {:ok, view, _html} = live(conn, ~p"/foods")
 
-      render_click(element(view, "button[phx-value-mode='compound']"))
       render_change(element(view, "form[phx-change='search_compounds']"), %{"q" => "Vitamin"})
       render_click(element(view, "button[phx-click='add_compound'][phx-value-id='#{vitc.id}']"))
 
@@ -174,16 +128,14 @@ defmodule MehungryWeb.FoodsLiveTest do
   end
 
   describe "/foods/:slug (species detail)" do
-    test "renders the species with its compounds, conditions and research", %{conn: conn} do
+    test "renders the species with its compounds", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/foods/Spinach")
 
-      # Async sections (compounds / conditions / studies) resolve after mount.
+      # The compounds section resolves asynchronously after mount.
       html = render_async(view)
 
       assert html =~ "Spinach"
       assert html =~ "Oxalate"
-      assert html =~ "Kidney Stones"
-      assert html =~ "Spinach oxalate content"
     end
 
     test "redirects unknown species back to /foods", %{conn: conn} do

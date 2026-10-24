@@ -42,6 +42,69 @@ defmodule Mehungry.Food.Nutrients do
     Repo.all(Mehungry.Food.Nutrient)
   end
 
+  @doc """
+  Maps each nutrient `name` to a short unit label (e.g. "mg", "µg", "g") via its
+  `measurement_unit`. A name with several units resolves to the first found.
+  """
+  def nutrient_unit_labels(names) when is_list(names) do
+    names = Enum.uniq(names)
+
+    if names == [] do
+      %{}
+    else
+      from(n in Nutrient,
+        join: mu in assoc(n, :measurement_unit),
+        where: n.name in ^names,
+        select: {n.name, mu.name}
+      )
+      |> Repo.all()
+      |> Enum.reduce(%{}, fn {name, unit}, acc -> Map.put_new(acc, name, unit_label(unit)) end)
+    end
+  end
+
+  def nutrient_unit_labels(_), do: %{}
+
+  @doc """
+  Like `nutrient_unit_labels/1`, but resolves each requested *canonical* label
+  (e.g. "Fiber", "Omega-3") against raw USDA `Nutrient.name`s run through
+  `NutrientNameNormalizer.normalize/1` — so a label that never appears verbatim
+  in the table (the common case for blueprint goals) still gets a unit. One query
+  over nutrients that carry a measurement unit.
+  """
+  def nutrient_unit_labels_normalized(labels) when is_list(labels) do
+    wanted = labels |> Enum.uniq() |> MapSet.new()
+
+    if MapSet.size(wanted) == 0 do
+      %{}
+    else
+      from(n in Nutrient,
+        join: mu in assoc(n, :measurement_unit),
+        select: {n.name, mu.name}
+      )
+      |> Repo.all()
+      |> Enum.reduce(%{}, fn {name, unit}, acc ->
+        canonical = Mehungry.Food.NutrientNameNormalizer.normalize(name)
+
+        if MapSet.member?(wanted, canonical) and not Map.has_key?(acc, canonical),
+          do: Map.put(acc, canonical, unit_label(unit)),
+          else: acc
+      end)
+    end
+  end
+
+  def nutrient_unit_labels_normalized(_), do: %{}
+
+  defp unit_label("gram"), do: "g"
+  defp unit_label("milligram"), do: "mg"
+  defp unit_label("microgram"), do: "µg"
+  defp unit_label("mcg"), do: "µg"
+  defp unit_label("kilocalorie"), do: "kcal"
+  defp unit_label("kilojoule"), do: "kJ"
+  defp unit_label("kj"), do: "kJ"
+  defp unit_label("International Unit"), do: "IU"
+  defp unit_label("iu"), do: "IU"
+  defp unit_label(other), do: other
+
   def list_key_nutrients() do
     Repo.all(from n in Mehungry.Food.Nutrient, order_by: [asc: n.rank], limit: 30)
   end

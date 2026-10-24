@@ -1,8 +1,8 @@
 defmodule Mehungry.Food.RecipeUtilsTest do
   @moduledoc """
-  Coverage for the two surviving display helpers in
-  `Mehungry.Food.RecipeUtils` (the calc/aggregation code moved to
-  `NutrientCalculation` / `NutrientUtils`). See `docs/food/nutrition_calculation.md`.
+  Coverage for the surviving display helper in `Mehungry.Food.RecipeUtils` (the
+  calc/aggregation code moved to `NutrientCalculation` / `NutrientUtils`). See
+  `docs/food/nutrition_calculation.md`.
   """
   use ExUnit.Case, async: true
 
@@ -31,22 +31,6 @@ defmodule Mehungry.Food.RecipeUtilsTest do
       nutrients = [{"Zinc", %{}}, {"Copper", %{}}]
       sorted = RecipeUtils.sort_nutrients_from_db(nutrients)
       assert Enum.map(sorted, fn {{name, _}, _} -> name end) == ["Zinc", "Copper"]
-    end
-  end
-
-  describe "reform_nutrients/1" do
-    test "re-keys by name with string keys and flattens the unit struct to its name" do
-      nutrients = [
-        %{name: "Protein", amount: 10.0, measurement_unit: %{name: "g"}},
-        %{name: "Energy", amount: 100.0, measurement_unit: %{name: "kcal"}}
-      ]
-
-      reformed = RecipeUtils.reform_nutrients(nutrients)
-
-      assert reformed["Protein"]["amount"] == 10.0
-      assert reformed["Protein"]["measurement_unit"] == "g"
-      assert reformed["Energy"]["measurement_unit"] == "kcal"
-      assert reformed["Energy"]["name"] == "Energy"
     end
   end
 end

@@ -113,6 +113,12 @@ in both `main_menu` and `mobile_menu` are locale-prefixed via `@current_language
 Backend: `MehungryWeb.Gettext`. `import MehungryWeb.Gettext` is already in the `:html`,
 `:live_view`, and `:controller` quotes, so `gettext("…")` works in any template.
 
+> **Nutrient names & the ingredient picker** are localized through two single
+> chokepoints (so new breakdown/search surfaces are localized for free) — nutrient
+> display names use Gettext (they're a normalized code vocabulary, **not** raw
+> `Nutrient.name`, so the `*_translation` path below does not apply). See
+> **`docs/translation_gates.md`**.
+
 Workflow to add/translate strings:
 
 ```bash
@@ -159,8 +165,11 @@ one code path:
 - **Registry** — `Mehungry.Languages.TranslationRegistry` lists a descriptor per
   resource (base schema, `*_translation` schema, FK, translatable fields, AI mode).
   Covered today: recipes, ingredients, measurement units, categories, food species,
-  food products, **compounds, health conditions, nutrients** (the last three got new
-  `*_translation` tables in this work).
+  food products, compounds, health conditions, nutrients, and **meal blueprints**
+  (`name` + `description`; `meal_blueprint_translations` table). Blueprint
+  translations are applied at read-time by `MealBlueprints.localize_blueprints/2`
+  (verified-only) on the public preview page, the browse grid, and the public
+  nutritionist profile.
 - **Every translation row carries a `status`** (`"ai_draft"` | `"verified"`) plus
   `verified_at`/`verified_by_id`. Pre-existing rows were backfilled `"verified"`.
 - **Coverage** — `Mehungry.Languages.Coverage.stats/0` reports, per resource × target
@@ -173,6 +182,54 @@ one code path:
   (structured steps). Per-item "AI Translate → review → Save & Verify", or bulk
   "AI-translate all missing" via `ObanWorkers.ResourceTranslationWorker` (`:ai_agents`
   queue) which writes `ai_draft`s for a human to confirm.
+- **Recipe steps** — the recipe editor is the one descriptor whose translatable
+  content isn't flat text: beyond the `:title`/`:description` fields it renders the
+  recipe's embedded `Food.Step`s as a per-step textarea (matched on `step.index`),
+  so AI Translate fills them in and the admin reviews/edits each step before
+  Save & Verify. Steps persist to `RecipeTranslation.steps` and are overlaid by
+  `Localization.apply_recipe_translation/2`. The bulk worker already translated
+  steps; this closes the same gap in the per-item review editor.
+- **Ingredient portions** — like recipe steps, the ingredients descriptor carries a
+  child collection (flagged `translate_portions: true`): an ingredient's **unit-less
+  free-text portions** (`"1 medium banana"`, `"1 slice"` — portions with a real
+  measurement unit get their label from the unit's own translation instead) render as
+  a per-portion input in the editor and are AI-translated by both "AI Translate" and
+  the bulk worker. They persist to the `ingredient_portion_translations` table
+  (`Food.IngredientPortionTranslation`) via `Food.upsert_portion_translation/4`, and
+  are read back by `Food.portion_display_names/2` — overlaid onto recipe-ingredient
+  unit labels (`Localization.localize_recipe_ingredients/2` + `translate_ingredients_to/2`)
+  and the calendar/mobile unit-option labels (`Food.build_unit_options/2`). Portion
+  rows have their own `status` and do not change the ingredient's top-level coverage
+  counts. Because portion translations are decoupled from the base translation, an
+  ingredient can be fully translated yet still have untranslated portions; the panel
+  therefore has a second bulk button, **"AI-translate missing portions"**, that
+  targets exactly those ingredients (`Food.ingredient_ids_with_untranslated_portions/1`)
+  and enqueues a **portions-only** worker run (`ResourceTranslationWorker` with
+  `portions_only: true`) which drafts only the missing portions and never touches the
+  base name/description translation. Both the portions-only run and the regular bulk
+  run only draft portions that are still missing, so re-running never clobbers an
+  existing (possibly verified) portion translation.
+- **Editable original** — the per-item editor is two-sided: each column is its own
+  form. The left **Original** side edits the source-language base row in place
+  ("Save original" → `Translations.update_base/4`, a targeted `cast` of just the
+  `:fields`, with recipe steps re-cast through `cast_embed` by their `id`); the
+  right **Translation** side upserts the `*_translation` row ("Save & Verify"). So
+  an admin can fix a typo in the source text and its translation from the
+  same screen without leaving the hub.
+- **Source-language-aware resources (recipes are bidirectional)** — most base rows
+  are English, so the hub translates them *into* `el` only. **Recipes are the
+  exception**: a user can author a recipe directly in Greek (`/el/create_recipe`
+  stamps `recipe.language_name`), so the base row isn't always English. The recipes
+  descriptor sets `source_language_field: :language_name`, which flips the hub to be
+  **source-aware** for that resource: `Translations.target_locales/1` exposes **every**
+  locale as a target (not just `el`), the listing/coverage queries **exclude rows
+  already in the target locale** (so a Greek recipe is never offered for translation
+  *into* Greek — the original bug), and the editor reads each recipe's own
+  `language_name` (via `Locale.locale_of/1`) to label the Original column and to pick
+  a target that differs from it (English recipe → `el`, Greek recipe → `en`). Per-item
+  `:show` can never target an item's own language (`show_target_locale/3`). Other
+  resources are unaffected — without the flag the queries and defaults behave exactly
+  as before.
 - **Locale codes** — `Mehungry.Languages.Locale` is the core-side twin of
   `MehungryWeb.Locale`: new rows are written under the ISO code (`"el"`), while coverage
   counts **both** ISO and legacy codes (`["el", "Gr"]`) so pre-existing `Gr` rows still

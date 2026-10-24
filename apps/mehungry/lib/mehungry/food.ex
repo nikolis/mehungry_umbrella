@@ -35,6 +35,7 @@ defmodule Mehungry.Food do
     Ingredients,
     Localization,
     Measurements,
+    NutrientClaims,
     Nutrients,
     ParserVocabulary,
     Recipes,
@@ -49,11 +50,16 @@ defmodule Mehungry.Food do
   defdelegate get_recipe!(id), to: Recipes
   defdelegate get_recipe!(id, language_name), to: Recipes
   defdelegate delete_recipe(id), to: Recipes
+  defdelegate delete_user_recipe(user, id), to: Recipes
   defdelegate count_recipes_without_ingredients(), to: Recipes
   defdelegate list_recipes_without_ingredients(), to: Recipes
   defdelegate delete_recipes_without_ingredients(), to: Recipes
   defdelegate delete_recipes_by_ids(recipe_ids), to: Recipes
   defdelegate search_recipes_for_admin(term), to: Recipes
+  defdelegate recipe_ids_with_diet_tag(recipe_ids, diet_mode), to: Recipes
+  defdelegate recipe_ids_with_all_hashtags(recipe_ids, titles), to: Recipes
+  defdelegate pescatarian_recipe_ids(recipe_ids), to: Recipes
+  defdelegate ingredient_ids_in_categories(ingredient_ids, category_ids), to: IngredientQueries
   defdelegate search_recipes_for_admin(term, limit), to: Recipes
   defdelegate change_recipe(recipe, attrs \\ %{}), to: Recipes
   defdelegate validation_changeset(recipe, attrs), to: Recipes
@@ -62,11 +68,19 @@ defmodule Mehungry.Food do
   defdelegate update_recipe(recipe_origin, attrs \\ %{}), to: Recipes
   defdelegate ensure_recipe_hashtags(recipe_or_id), to: Recipes
   defdelegate create_post_from_recipe(recipe), to: Recipes
+  defdelegate create_recipe_social_graphic(attrs), to: Recipes
+  defdelegate latest_recipe_social_graphic(recipe_id), to: Recipes
+  defdelegate create_weekly_plan_graphic(attrs), to: Recipes
+  defdelegate latest_weekly_plan_graphic(user_id, week_start), to: Recipes
+  defdelegate recipe_with_share_image(recipe), to: Recipes
   defdelegate put_nutrient_info(changeset, attrs), to: Recipes
   defdelegate recipe_counts_by_user_id(), to: Recipes
   defdelegate count_user_created_recipes(user_id), to: Recipes
   defdelegate count_recipes_created_by_user_ids(user_ids), to: Recipes
   defdelegate count_recipes(), to: Recipes
+  defdelegate count_recipes_by_source(source), to: Recipes
+  defdelegate recipe_ids_by_source(source), to: Recipes
+  defdelegate delete_recipes_by_source(source), to: Recipes
   defdelegate count_recipes_missing_embeddings(), to: Recipes
   defdelegate list_recipe_ids(), to: Recipes
   defdelegate list_recipes(query_or_cursor), to: Recipes
@@ -121,6 +135,9 @@ defmodule Mehungry.Food do
   defdelegate search_recipes_by_ingredient(ingredient_name), to: IngredientQueries
   defdelegate list_sample_recipes_for_ingredient(ingredient_id, limit \\ 4), to: IngredientQueries
 
+  defdelegate list_sample_recipes_for_ingredients(ingredient_ids, limit \\ 6),
+    to: IngredientQueries
+
   defdelegate list_random_recipes_including_excluding(
                 include_ingredient_ids,
                 exclude_ingredient_ids,
@@ -163,11 +180,28 @@ defmodule Mehungry.Food do
   defdelegate get_nutrient(name, measurement_unit_id), to: Nutrients
   defdelegate create_nutrient(attrs), to: Nutrients
   defdelegate list_nutrients(), to: Nutrients
+  defdelegate nutrient_unit_labels(names), to: Nutrients
+  defdelegate nutrient_unit_labels_normalized(labels), to: Nutrients
   defdelegate list_key_nutrients(), to: Nutrients
   defdelegate enqueue_nutrient_recalculation_for_all(), to: Nutrients
   defdelegate get_interactions_for_ingredients(ingredient_ids), to: Nutrients
   defdelegate get_interactions_for_recipe(recipe), to: Nutrients
   defdelegate enqueue_interaction_recalculation_for_all(), to: Nutrients
+
+  # ── Nutrient claims (per-serving "high in / source of" badges) ───────────
+
+  defdelegate nutrient_badges(nutrients, servings), to: NutrientClaims, as: :badges
+  defdelegate nutrient_badges(nutrients, servings, opts), to: NutrientClaims, as: :badges
+  defdelegate recipe_nutrient_badges(recipe), to: NutrientClaims, as: :badges_for_recipe
+  defdelegate recipe_nutrient_badges(recipe, opts), to: NutrientClaims, as: :badges_for_recipe
+  defdelegate recipes_with_badge(label), to: Recipes
+  defdelegate recipes_with_badge(label, level), to: Recipes
+  defdelegate search_recipes_by_badge(label), to: Recipes
+  defdelegate search_recipes_by_badge(label, level), to: Recipes
+  defdelegate search_recipes_by_badge(label, level, language_name), to: Recipes
+  defdelegate claim_slug(label), to: NutrientClaims
+  defdelegate label_for_slug(slug), to: NutrientClaims
+  defdelegate claim_slugs(), to: NutrientClaims
 
   # ── Measurements ───────────────────────────────────────────────────────
 
@@ -175,6 +209,11 @@ defmodule Mehungry.Food do
   defdelegate get_measurement_unit_portions_for_ingredient(ingredient_id), to: Measurements
   defdelegate get_measurement_unit_portions_for_ingredients(ingredient_ids), to: Measurements
   defdelegate get_measurement_unit_by_name(name), to: Measurements
+  defdelegate ingredient_unit_options(ingredient_id), to: Measurements
+  defdelegate ingredient_unit_options(ingredient_id, locale), to: Measurements
+  defdelegate build_unit_options(portions), to: Measurements
+  defdelegate build_unit_options(portions, locale), to: Measurements
+  defdelegate gram_unit_options(), to: Measurements
   defdelegate create_measurement_unit(attrs), to: Measurements
   defdelegate create_measurement_unit(attrs, opts), to: Measurements
   defdelegate update_measurement_unit(measurement_unit, attrs \\ %{}), to: Measurements
@@ -215,11 +254,22 @@ defmodule Mehungry.Food do
   # ── Localization ───────────────────────────────────────────────────────
 
   defdelegate apply_recipe_translation(recipe, translation), to: Localization
+  defdelegate localize_recipe_ingredients(recipe, locale), to: Localization
   defdelegate localize_recipes(recipes, language_name), to: Localization
   defdelegate load_recipe_translations_map(recipe_ids, language_name), to: Localization
   defdelegate translate_recipe_if_needed(recipe), to: Localization
   defdelegate ingredient_display_names(ingredient_ids, language_name), to: Localization
+  defdelegate ingredient_display_names_by_name(names, language_name), to: Localization
+  defdelegate compound_display_names(compound_ids, language_name), to: Localization
+  defdelegate portion_display_names(portion_ids, locale), to: Localization
+  defdelegate list_portion_translation_pairs(ingredient_id, locale), to: Localization
+  defdelegate ingredient_ids_with_untranslated_portions(locale), to: Localization
+  defdelegate ingredient_ids_with_untranslated_portions(locale, opts), to: Localization
+  defdelegate count_ingredients_with_untranslated_portions(locale), to: Localization
+  defdelegate upsert_portion_translation(portion_id, locale, description), to: Localization
+  defdelegate upsert_portion_translation(portion_id, locale, description, opts), to: Localization
   defdelegate get_unit_translations_map(unit_ids, language_name), to: Localization
+  defdelegate unit_display_names(unit_ids, locale), to: Localization
 
   defdelegate upsert_ingredient_translation(ingredient_id, language_name, name),
     to: Localization
@@ -313,6 +363,7 @@ defmodule Mehungry.Food do
   defdelegate list_compounds_for_ingredient(ingredient_id), to: Compounds
   defdelegate list_positive_compounds_for_ingredient(ingredient_id), to: Compounds
   defdelegate list_ingredients_for_compound(compound_id), to: Compounds
+  defdelegate compounds_for_recipe(recipe_id), to: Compounds
   defdelegate list_compound_relationships(ingredient_id), to: Compounds
   defdelegate add_compound_to_ingredient(ingredient_id, compound_attrs, rel_attrs), to: Compounds
 

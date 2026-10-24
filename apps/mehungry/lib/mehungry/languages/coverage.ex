@@ -23,20 +23,20 @@ defmodule Mehungry.Languages.Coverage do
   """
   def stats do
     for descriptor <- TranslationRegistry.all(),
-        locale <- Locale.targets() do
+        locale <- Translations.target_locales(descriptor) do
       coverage(descriptor, locale)
     end
   end
 
   @doc "Coverage rows for a single resource (one per target locale)."
   def for_resource(descriptor) do
-    Enum.map(Locale.targets(), &coverage(descriptor, &1))
+    Enum.map(Translations.target_locales(descriptor), &coverage(descriptor, &1))
   end
 
   @doc "Coverage for a single resource + locale."
   def coverage(descriptor, locale) do
     codes = Locale.data_codes(locale)
-    total = Translations.count_total(descriptor)
+    total = translatable_total(descriptor, codes)
     verified = count_verified(descriptor, codes)
     ai_draft = count_draft_only(descriptor, codes)
     missing = max(total - verified - ai_draft, 0)
@@ -51,6 +51,25 @@ defmodule Mehungry.Languages.Coverage do
       missing: missing,
       pct: percent(verified, total)
     }
+  end
+
+  # Denominator for a locale: how many base rows actually *need* a translation
+  # into it. For a `:source_language_field` resource (recipes) that excludes rows
+  # already written in the locale — otherwise they'd inflate "missing" forever.
+  defp translatable_total(descriptor, codes) do
+    case descriptor[:source_language_field] do
+      nil ->
+        Translations.count_total(descriptor)
+
+      field_name ->
+        default = Locale.write_code(Locale.source())
+
+        from(b in descriptor.base_schema,
+          where: fragment("coalesce(?, ?)", field(b, ^field_name), ^default) not in ^codes,
+          select: count(b.id)
+        )
+        |> Repo.one() || 0
+    end
   end
 
   defp count_verified(descriptor, codes) do

@@ -39,7 +39,12 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
          |> assign(:must_be_loged_in, nil)
          |> assign(:created_recipes, Users.list_user_created_recipes(profile.user))
          |> assign(:articles, Professionals.list_published_articles_for_profile(profile.id))
-         |> assign(:blueprints, MealBlueprints.list_public_blueprints_for_user(profile.user_id))
+         |> assign(
+           :blueprints,
+           profile.user_id
+           |> MealBlueprints.list_public_blueprints_for_user()
+           |> MealBlueprints.localize_blueprints(Gettext.get_locale(MehungryWeb.Gettext))
+         )
          |> assign_viewer_recipe_state()
          |> reset_booking_state()
          |> load_slots()

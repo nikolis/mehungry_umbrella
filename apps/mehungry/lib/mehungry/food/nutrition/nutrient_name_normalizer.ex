@@ -136,34 +136,38 @@ defmodule Mehungry.Food.NutrientNameNormalizer do
         "Cholesterol"
 
       # ===== MINERALS =====
-      name_lower in ["sodium", "na"] ->
+      # USDA names minerals as "Iron, Fe" / "Sodium, Na" / "Calcium, Ca", so we
+      # match on the full element word (a substring) rather than the bare name.
+      # The 1-2 letter symbols (Na, K, Fe, …) are deliberately *not* matched —
+      # "na" would wrongly swallow "Niacin", "mg" the magnesium unit, etc.
+      String.contains?(name_lower, "sodium") ->
         "Sodium"
 
-      name_lower in ["potassium", "k"] ->
+      String.contains?(name_lower, "potassium") ->
         "Potassium"
 
-      name_lower in ["calcium", "ca"] ->
+      String.contains?(name_lower, "calcium") ->
         "Calcium"
 
-      name_lower in ["iron", "fe"] ->
+      String.contains?(name_lower, "iron") ->
         "Iron"
 
-      name_lower in ["magnesium", "mg"] ->
+      String.contains?(name_lower, "magnesium") ->
         "Magnesium"
 
-      name_lower in ["phosphorus", "p"] ->
+      String.contains?(name_lower, "phosphorus") ->
         "Phosphorus"
 
-      name_lower in ["zinc", "zn"] ->
+      String.contains?(name_lower, "zinc") ->
         "Zinc"
 
-      name_lower in ["copper", "cu"] ->
+      String.contains?(name_lower, "copper") ->
         "Copper"
 
-      name_lower in ["manganese", "mn"] ->
+      String.contains?(name_lower, "manganese") ->
         "Manganese"
 
-      name_lower in ["selenium", "se"] ->
+      String.contains?(name_lower, "selenium") ->
         "Selenium"
 
       # ===== VITAMINS =====
@@ -174,8 +178,14 @@ defmodule Mehungry.Food.NutrientNameNormalizer do
           String.contains?(name_lower, "vitamin d") -> "Vitamin D"
           String.contains?(name_lower, "vitamin e") -> "Vitamin E"
           String.contains?(name_lower, "vitamin k") -> "Vitamin K"
-          String.contains?(name_lower, "vitamin b12") -> "Vitamin B12"
-          String.contains?(name_lower, "vitamin b6") -> "Vitamin B6"
+          # USDA writes these hyphenated ("Vitamin B-12", "Vitamin B-6").
+          String.contains?(name_lower, "vitamin b12") or
+              String.contains?(name_lower, "vitamin b-12") ->
+            "Vitamin B12"
+
+          String.contains?(name_lower, "vitamin b6") or
+              String.contains?(name_lower, "vitamin b-6") ->
+            "Vitamin B6"
           String.contains?(name_lower, "thiamin") -> "Vitamin B1 (Thiamin)"
           String.contains?(name_lower, "riboflavin") -> "Vitamin B2 (Riboflavin)"
           String.contains?(name_lower, "niacin") -> "Vitamin B3 (Niacin)"

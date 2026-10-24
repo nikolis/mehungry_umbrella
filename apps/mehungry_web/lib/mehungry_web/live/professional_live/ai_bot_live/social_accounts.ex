@@ -5,6 +5,7 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
   alias Mehungry.{Accounts, Languages}
   alias Mehungry.AI.Bot
   alias Mehungry.Social.Pinterest
+  alias MehungryWeb.PinterestComponents
 
   @impl true
   def mount(_params, _session, socket) do
@@ -93,18 +94,24 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
 
     case Pinterest.create_board(bot_user, board_params) do
       {:ok, board} ->
-        {boards, boards_error} = fetch_boards(bot_user)
+        # Use the board Pinterest just returned rather than re-fetching the
+        # eventually-consistent list (which usually omits it for a short window).
+        boards = prepend_board(socket.assigns.pinterest_boards, board)
 
         {:noreply,
          socket
          |> assign(:pinterest_boards, boards)
-         |> assign(:pinterest_boards_error, boards_error)
+         |> assign(:pinterest_boards_error, nil)
          |> assign(:show_create_board, false)
          |> put_flash(:info, "Pinterest board \"#{board["name"]}\" created.")}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "Failed to create board: #{reason}")}
     end
+  end
+
+  defp prepend_board(boards, board) do
+    [board | Enum.reject(boards, &(&1["id"] == board["id"]))]
   end
 
   @impl true
@@ -241,7 +248,9 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
             <p class="text-xs text-parchment-dim mb-4">
               No boards on this account yet. Create one to configure per-language pinning.
             </p>
-            <.create_board_form />
+            <div class="max-w-md">
+              <PinterestComponents.board_form />
+            </div>
           </div>
         <% end %>
 
@@ -251,6 +260,11 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
             <p class="text-xs text-parchment-dim mb-4">
               Choose which Pinterest board to pin to for each language. Leave blank to skip that language.
             </p>
+            <div class="grid sm:grid-cols-2 gap-2 mb-5">
+              <%= for board <- @pinterest_boards do %>
+                <PinterestComponents.board_card board={board} />
+              <% end %>
+            </div>
             <form phx-submit="save_pinterest_boards" class="space-y-3">
               <%= for lang <- @languages do %>
                 <div class="flex items-center gap-3">
@@ -297,8 +311,8 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
                 <.icon name="hero-plus" class="h-4 w-4" /> New board
               </button>
               <%= if @show_create_board do %>
-                <div class="mt-3">
-                  <.create_board_form />
+                <div class="mt-3 max-w-md">
+                  <PinterestComponents.board_form />
                 </div>
               <% end %>
             </div>
@@ -348,41 +362,6 @@ defmodule MehungryWeb.AiBotLive.SocialAccounts do
         {if @connected, do: "Reconnect", else: "Connect"}
       </a>
     </div>
-    """
-  end
-
-  defp create_board_form(assigns) do
-    ~H"""
-    <form phx-submit="create_pinterest_board" class="space-y-3 max-w-md">
-      <input
-        type="text"
-        name="board[name]"
-        required
-        maxlength="180"
-        placeholder="Board name"
-        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 placeholder-parchment-dim focus:border-paprika focus:outline-none"
-      />
-      <textarea
-        name="board[description]"
-        rows="2"
-        maxlength="500"
-        placeholder="Description (optional)"
-        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 placeholder-parchment-dim focus:border-paprika focus:outline-none"
-      ></textarea>
-      <select
-        name="board[privacy]"
-        class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none"
-      >
-        <option value="PUBLIC">Public</option>
-        <option value="SECRET">Secret</option>
-      </select>
-      <button
-        type="submit"
-        class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors"
-      >
-        <.icon name="hero-plus" class="h-4 w-4" /> Create Board
-      </button>
-    </form>
     """
   end
 

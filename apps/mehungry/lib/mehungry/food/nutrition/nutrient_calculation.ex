@@ -59,17 +59,74 @@ defmodule Mehungry.Food.NutrientCalculation do
   Returns `{primary_size, [nutrient]}` where the nutrient list is the
   priority-sorted hierarchical output of `NutrientHierarchyBuilder`.
   Returns `{0, []}` for a recipe with no ingredients.
+
+  Thin wrapper over `calculate_recipe_nutrition_value_with_coverage/1` that
+  drops the coverage ratio, for callers that only need the nutrient totals.
   """
   def calculate_recipe_nutrition_value(recipe) do
+    {primary_size, nutrients, _coverage} =
+      calculate_recipe_nutrition_value_with_coverage(recipe)
+
+    {primary_size, nutrients}
+  end
+
+  @doc """
+  Like `calculate_recipe_nutrition_value/1` but also returns the recipe's
+  **nutrient-data coverage ratio** as a third element:
+
+      {primary_size, [nutrient], coverage}
+
+  `coverage` is the mass-weighted fraction of the recipe's grams that comes from
+  ingredients which actually carry `IngredientNutrient` data (see
+  `nutrient_data_coverage/1`). It is the signal `Food.NutrientClaims` uses to
+  suppress nutrient-claim badges on recipes whose totals silently undercount —
+  a recipe mostly built from data-less ingredients can't truthfully claim
+  "High in Iron". Returns `{0, [], 0.0}` for a recipe with no ingredients.
+
+  One DB pass: reuses the same `map_ingredients_to_structured_form/1` output
+  that the nutrient totals are derived from, so computing coverage costs no
+  extra query.
+  """
+  def calculate_recipe_nutrition_value_with_coverage(recipe) do
     recipe_ingredients = get_value(recipe, :recipe_ingredients)
 
     if is_nil(recipe_ingredients) or recipe_ingredients == [] do
-      {0, []}
+      {0, [], 0.0}
     else
       ingredients = map_ingredients_to_structured_form(recipe_ingredients)
       result = calculate_nutrition_for_recipe(ingredients)
-      {8, Map.get(result, :structured_nutrients)}
+      {8, Map.get(result, :structured_nutrients), nutrient_data_coverage(ingredients)}
     end
+  end
+
+  @doc """
+  The mass-weighted nutrient-data coverage ratio of a recipe, in `0.0..1.0`.
+
+  Takes the structured-ingredient list produced by
+  `map_ingredients_to_structured_form/1` (each entry has `:gram_weight` and a
+  scaled `:nutrients` list) and returns
+
+      Σ gram_weight(ingredients WITH nutrient data) / Σ gram_weight(all ingredients)
+
+  An ingredient's scaled `:nutrients` list is empty **exactly when** it has no
+  `IngredientNutrient` rows (`build_nutrient_list/2` maps over them), so an empty
+  list is the "no data" marker. This is the signal `Food.NutrientClaims` gates
+  badges on: a low ratio means the recipe totals undercount and no "High in X"
+  claim can be trusted.
+
+  Returns `0.0` when total grams is `0` (no resolvable mass → nothing to claim).
+  Ingredients whose unit didn't resolve to grams (`gram_weight == 0.0`) drop out
+  of both numerator and denominator, since their mass is unknown either way.
+  """
+  def nutrient_data_coverage(structured_ingredients) do
+    {covered, total} =
+      Enum.reduce(structured_ingredients, {0.0, 0.0}, fn ingredient, {covered, total} ->
+        grams = safe_to_float(ingredient.gram_weight)
+        has_data = ingredient.nutrients != []
+        {covered + if(has_data, do: grams, else: 0.0), total + grams}
+      end)
+
+    if total > 0, do: covered / total, else: 0.0
   end
 
   @doc """
@@ -301,6 +358,40 @@ defmodule Mehungry.Food.NutrientCalculation do
         nutrient_number: nutrient_number
       }
     end)
+  end
+
+  @doc """
+  Builds the hierarchical, string-keyed nutrient map for a single logged
+  ingredient weighing `gram_weight` grams — the **same** structure
+  `calculate_nutrition_for_recipe/1` produces for a recipe (normalized names +
+  the fat/carb/vitamin/mineral hierarchy), so a directly-logged ingredient is
+  nutritionally indistinguishable from a one-ingredient recipe wherever a
+  `recipe.nutrients` map is consumed (calendar cards, the daily-summary merge in
+  `NutrientUtils.summarize_meals_nutrients/1`).
+
+  Returns `%{}` when the ingredient has no nutrients. `ingredient` must have
+  `ingredient_nutrients: [nutrient: :measurement_unit]` preloaded.
+  """
+  def ingredient_nutrient_tree(ingredient, gram_weight) do
+    nutrient_tree([build_nutrient_list(ingredient, gram_weight)])
+  end
+
+  @doc """
+  Builds the hierarchical, string-keyed nutrient map from one or more already
+  scaled nutrient lists (each the `build_nutrient_list/2` output of one
+  ingredient) — i.e. a recipe assembled from those ingredients. Returns `%{}`
+  when the lists hold no nutrients.
+  """
+  def nutrient_tree(nutrient_lists) when is_list(nutrient_lists) do
+    nutrient_lists
+    |> Enum.map(&%{nutrients: &1})
+    |> calculate_nutrition_for_recipe()
+    |> Map.get(:structured_nutrients)
+    # Collapse the priority-sorted node list into a `name => node` map and
+    # string-key it — the exact shape `Recipes.put_nutrient_info/2` persists to
+    # the `nutrients` jsonb column and every consumer reads back.
+    |> Enum.reduce(%{}, fn node, acc -> Map.put(acc, node.name, node) end)
+    |> Mehungry.Food.NutrientMerger.to_string_keys()
   end
 
   @doc """

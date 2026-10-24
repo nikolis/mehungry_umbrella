@@ -83,6 +83,39 @@ defmodule Mehungry.FoodTest do
              ]
     end
 
+    test "list_sample_recipes_for_ingredients aggregates recipes across ingredient ids", %{
+      ingredient: ingredient,
+      measurement_unit: measurement_unit,
+      user: user
+    } do
+      {:ok, recipe} =
+        @create_params_recipe
+        |> Enum.into(%{
+          recipe_ingredients: [
+            %{
+              ingredient_id: ingredient.id,
+              measurement_unit_id: measurement_unit.id,
+              quantity: 33
+            }
+          ],
+          user_id: user.id,
+          cooking_time_lower_limit: 15,
+          preperation_time_lower_limit: 15,
+          difficulty: 1,
+          description: "uses the food"
+        })
+        |> Food.create_recipe()
+
+      other_ingredient = ingredient_fixture()
+
+      result = Food.list_sample_recipes_for_ingredients([ingredient.id])
+      assert Enum.map(result, & &1.id) == [recipe.id]
+
+      # An unrelated ingredient surfaces nothing; the empty set short-circuits.
+      assert Food.list_sample_recipes_for_ingredients([other_ingredient.id]) == []
+      assert Food.list_sample_recipes_for_ingredients([]) == []
+    end
+
     test "Test Update Recipe Valid arguments", %{user: user} do
       recipe = recipe_fixture(user)
       assert {:ok, new_recipe} = Food.update_recipe(recipe, %{title: "New recipe title"})
@@ -157,6 +190,41 @@ defmodule Mehungry.FoodTest do
       recipe = Food.get_recipe_no_caching!(recipe.id)
       assert [ri] = recipe.recipe_ingredients
       assert is_nil(ri.ingredient_portion_id)
+    end
+
+    test "recipe parts persist via ingredient component_name + step title", %{
+      ingredient: ingredient,
+      measurement_unit: gram_unit,
+      user: user
+    } do
+      ingredients = [
+        %{
+          ingredient_id: ingredient.id,
+          measurement_unit_id: gram_unit.id,
+          quantity: 100,
+          component_name: "Dressing"
+        }
+      ]
+
+      recipe_params =
+        @create_params_recipe
+        |> Enum.into(%{
+          recipe_ingredients: ingredients,
+          steps: [%{index: 1, title: "Dressing", description: "Whisk it all together"}],
+          user_id: user.id,
+          cooking_time_lower_limit: 15,
+          preperation_time_lower_limit: 15,
+          difficulty: 1,
+          description: "parts linkage"
+        })
+
+      assert {:ok, recipe} = Food.create_recipe(recipe_params)
+      recipe = Food.get_recipe_no_caching!(recipe.id)
+
+      assert [ri] = recipe.recipe_ingredients
+      assert ri.component_name == "Dressing"
+      assert [step] = recipe.steps
+      assert step.title == "Dressing"
     end
 
     test "updating a recipe re-resolves ingredient_portion_id", %{
@@ -243,10 +311,11 @@ defmodule Mehungry.FoodTest do
       assert ri.ingredient_portion_id == portion.id
       assert is_nil(ri.measurement_unit_id)
 
-      # unit_label falls back to the portion's free-text description; the
-      # dropdown re-selection value is the -portion_id encoding.
+      # unit_label falls back to the portion's free-text description with the
+      # leading quantity stripped (the count lives in the sibling quantity field);
+      # the dropdown re-selection value is the -portion_id encoding.
       ri = %{ri | ingredient_portion: portion}
-      assert Mehungry.Food.RecipeIngredient.unit_label(ri) == "1 medium"
+      assert Mehungry.Food.RecipeIngredient.unit_label(ri) == "medium"
       assert Mehungry.Food.RecipeIngredient.unit_selection_value(ri) == -portion.id
     end
 
@@ -310,6 +379,37 @@ defmodule Mehungry.FoodTest do
       # ...and the remaining 2 recipes are still found through it.
       {_query, {remaining, _cursor}} = Food.search_hashtag1("#persistent")
       assert length(remaining) == 2
+    end
+
+    test "delete_user_recipe/2 removes a recipe the user owns", %{user: user} do
+      recipe = recipe_fixture(user)
+
+      assert {:ok, _} = Food.delete_user_recipe(user, recipe.id)
+      refute Food.get_recipe_no_caching!(recipe.id)
+    end
+
+    test "delete_user_recipe/2 deletes a recipe referenced by a like and a meal", %{user: user} do
+      recipe = recipe_fixture(user)
+      # Blocking refs (FK on_delete: :nothing) that previously made the recipe
+      # undeletable: a like and a calendar/meal-plan meal entry.
+      {:ok, _} = Food.like_recipe(user.id, recipe.id)
+
+      Mehungry.Repo.insert!(%Mehungry.Plans.Meal{
+        recipe_id: recipe.id,
+        meal_title: "Lunch"
+      })
+
+      assert {:ok, _} = Food.delete_user_recipe(user, recipe.id)
+      refute Food.get_recipe_no_caching!(recipe.id)
+    end
+
+    test "delete_user_recipe/2 refuses a recipe owned by someone else", %{user: user} do
+      other = user_fixture()
+      recipe = recipe_fixture(other)
+
+      assert {:error, :not_found} = Food.delete_user_recipe(user, recipe.id)
+      # The other user's recipe is untouched.
+      assert Food.get_recipe_no_caching!(recipe.id)
     end
 
     test "non-Latin (Greek) hashtags round-trip through search", %{user: user} do

@@ -25,8 +25,8 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   """
 
   require Logger
-  alias Mehungry.{History, Food, AI.Agent, Search.RecipeVectorSearch}
-  alias Mehungry.Food.IngredientPortion
+  alias Mehungry.{Accounts, History, Food, AI.Agent, Search.RecipeVectorSearch}
+  alias Mehungry.Food.{Categories, IngredientPortion}
 
   @model "claude-haiku-4-5-20251001"
   @history_days 21
@@ -50,7 +50,22 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
 
   Returns {:ok, [%UserMeal{}], skipped_count} or {:error, reason}.
   """
-  def run(preferences, _recipes, start_date, user_id, _blueprint \\ nil) do
+  def run(preferences, _recipes, start_date, user_id, blueprint \\ nil) do
+    # Avoid-foods enforcement (e.g. Low-FODMAP): downcased terms the search tools
+    # filter out and the prompt forbids. Empty when there's no blueprint / list.
+    avoid_terms = avoid_terms(blueprint)
+
+    # Category-level diet enforcement (vegan/vegetarian): the search tools drop
+    # any recipe not tagged for the diet and any ingredient in a diet-excluded
+    # category — catching foods (chicken, salmon, cheese) that the literal
+    # `avoid_terms` substring filter misses. `nil` ⇒ no diet filter.
+    diet_mode = effective_diet_mode(user_id, blueprint)
+
+    # Preparation-/style-tag enforcement (e.g. Raw Vegan/Vegetarian): recipe
+    # hashtags every candidate must carry, layered on top of the diet filter.
+    # Empty when there's no blueprint / no `required_hashtags`.
+    required_tags = required_recipe_tags(blueprint)
+
     # `offered`/`offered_ingredients` accumulate every id the search tools handed
     # the model this run; submit_plan rejects any id it never surfaced
     # (provenance). The validated result lands in `submitted` — no process-global
@@ -58,6 +73,9 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
     acc = %{
       user_id: user_id,
       start_date: start_date,
+      avoid_terms: avoid_terms,
+      diet_mode: diet_mode,
+      required_tags: required_tags,
       offered: MapSet.new(),
       offered_ingredients: MapSet.new(),
       submitted: nil
@@ -65,7 +83,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
 
     result =
       Agent.run(
-        system_prompt(preferences, start_date),
+        system_prompt(preferences, start_date, avoid_terms, diet_mode, required_tags),
         initial_message(preferences, start_date),
         tool_defs(),
         &handle_tool/3,
@@ -85,7 +103,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
 
   # ── system prompt ─────────────────────────────────────────────────────────────
 
-  defp system_prompt(preferences, start_date) do
+  defp system_prompt(preferences, start_date, avoid_terms, diet_mode, required_tags) do
     end_date = Date.add(start_date, 6)
 
     """
@@ -94,7 +112,7 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
     Plan period: #{Date.to_string(start_date)} to #{Date.to_string(end_date)} (inclusive).
     Meal slots each day: Breakfast, Morning Snack, Lunch, Afternoon Snack, Dinner (35 total entries).
     User preferences: #{preferences}
-
+    #{diet_block(diet_mode)}#{raw_block(required_tags)}#{avoid_block(avoid_terms)}
     WORKFLOW:
     1. Call get_recent_meals to see what the user has eaten lately — avoid heavy repetition
     2. Call search_catalog to find recipes suitable for each main slot:
@@ -271,13 +289,22 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   defp handle_tool(
          "search_catalog",
          %{"query" => query},
-         %{user_id: user_id, offered: offered} = acc
+         %{
+           user_id: user_id,
+           offered: offered,
+           avoid_terms: avoid_terms,
+           diet_mode: diet_mode,
+           required_tags: required_tags
+         } = acc
        ) do
     recipes =
       RecipeVectorSearch.search(query, user_id: user_id, limit: 20)
       |> Enum.map(fn r ->
         %{id: r.id, title: r.title, difficulty: r.difficulty || 1, servings: r.servings || 2}
       end)
+      |> reject_avoided(avoid_terms, & &1.title)
+      |> reject_off_diet_recipes(diet_mode)
+      |> reject_without_required_tags(required_tags)
 
     acc = %{acc | offered: Enum.reduce(recipes, offered, fn r, s -> MapSet.put(s, r.id) end)}
 
@@ -294,15 +321,18 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   defp handle_tool(
          "search_ingredients",
          %{"query" => query},
-         %{user_id: user_id, offered_ingredients: offered} = acc
+         %{user_id: user_id, offered_ingredients: offered, avoid_terms: avoid_terms, diet_mode: diet_mode} =
+           acc
        ) do
     ingredients =
       query
       |> Food.IngredientSearch.search([], user_id)
       |> Enum.take(15)
+      |> reject_off_diet_ingredients(diet_mode)
       |> Enum.map(fn i ->
         %{ingredient_id: i.id, name: i.name, units: ingredient_units(i.id)}
       end)
+      |> reject_avoided(avoid_terms, & &1.name)
 
     acc = %{
       acc
@@ -386,6 +416,168 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
   defp gram_units do
     Food.get_measurement_unit_by_name("gram")
     |> Enum.map(fn mu -> %{unit_selection: mu.id, label: mu.name} end)
+  end
+
+  # ── avoid-foods enforcement ─────────────────────────────────────────────────────
+
+  @doc false
+  # Downcased, non-blank avoid terms from a blueprint's `avoid_foods` (nil-safe).
+  def avoid_terms(%{avoid_foods: foods}) when is_list(foods) do
+    foods
+    |> Enum.map(&String.downcase(String.trim(&1)))
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  def avoid_terms(_), do: []
+
+  @doc false
+  # Downcased, non-blank required recipe hashtags from a blueprint's
+  # `required_hashtags` (nil-safe), e.g. ["raw"]. The preparation-/style-tag gate
+  # layered on top of the vegan/vegetarian diet filter.
+  def required_recipe_tags(%{required_hashtags: tags}) when is_list(tags) do
+    tags
+    |> Enum.map(&String.downcase(String.trim(&1)))
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  def required_recipe_tags(_), do: []
+
+  @doc false
+  # Keep only recipes carrying every required hashtag (e.g. #raw), mirroring
+  # reject_off_diet_recipes/2. A filtered-out id never enters the provenance set,
+  # so the model cannot submit it. No-op when there are no required tags.
+  def reject_without_required_tags(recipes, []), do: recipes
+
+  def reject_without_required_tags(recipes, tags) do
+    keep = Food.recipe_ids_with_all_hashtags(Enum.map(recipes, & &1.id), tags)
+    Enum.filter(recipes, &MapSet.member?(keep, &1.id))
+  end
+
+  @doc false
+  # Drop any result whose name contains an avoid term (case-insensitive
+  # substring) — a filtered-out id never enters the provenance set, so the model
+  # cannot submit it even if it guesses the id.
+  def reject_avoided(results, [], _name_fun), do: results
+
+  def reject_avoided(results, terms, name_fun) do
+    Enum.reject(results, fn result ->
+      name = result |> name_fun.() |> to_string() |> String.downcase()
+      Enum.any?(terms, &String.contains?(name, &1))
+    end)
+  end
+
+  @doc false
+  # The avoid terms (case-insensitive substring) that appear in any of `names` —
+  # the detection counterpart of `reject_avoided/3`, used to flag (not drop) a
+  # logged meal whose food names contain a term. Returns the matched terms,
+  # deduped; `[]` when nothing matches or there are no terms.
+  def matched_avoid_terms(_names, []), do: []
+
+  def matched_avoid_terms(names, terms) do
+    downcased = Enum.map(names, &(&1 |> to_string() |> String.downcase()))
+
+    Enum.filter(terms, fn term ->
+      Enum.any?(downcased, &String.contains?(&1, term))
+    end)
+  end
+
+  defp avoid_block([]), do: ""
+
+  defp avoid_block(terms) do
+    "\nSTRICT RULE — NEVER include these foods, or any dish containing them: " <>
+      Enum.join(terms, ", ") <> ".\n"
+  end
+
+  # ── category-level diet enforcement (vegan / vegetarian) ────────────────────────
+
+  @doc false
+  # The effective diet mode for this plan: the blueprint's own vegan/vegetarian
+  # pattern if it encodes one, else the user's persisted profile diet
+  # (`Accounts.diet_mode/1`). `nil` ⇒ no category diet filter.
+  def effective_diet_mode(user_id, blueprint) do
+    diet_mode_from_blueprint(blueprint) || Accounts.diet_mode(user_id)
+  end
+
+  @doc false
+  # Infers `:vegan | :vegetarian | :pescatarian | nil` from a blueprint's
+  # `avoid_foods`, using the same keywords the DietPatterns encode: the three
+  # flesh foods plus dairy + eggs ⇒ vegan; the three flesh foods alone ⇒
+  # vegetarian; meat + poultry but *not* fish ⇒ pescatarian (reaching this clause
+  # already implies fish is absent, else the vegetarian clause would have matched).
+  def diet_mode_from_blueprint(%{avoid_foods: foods}) when is_list(foods) do
+    f = MapSet.new(Enum.map(foods, &String.downcase(String.trim(&1))))
+    flesh = MapSet.new(["meat", "poultry", "fish"])
+
+    cond do
+      MapSet.subset?(flesh, f) and MapSet.member?(f, "dairy") and MapSet.member?(f, "eggs") ->
+        :vegan
+
+      MapSet.subset?(flesh, f) ->
+        :vegetarian
+
+      MapSet.member?(f, "meat") and MapSet.member?(f, "poultry") ->
+        :pescatarian
+
+      true ->
+        nil
+    end
+  end
+
+  def diet_mode_from_blueprint(_), do: nil
+
+  # Keep only recipes carrying the diet hashtag (`#vegan`/`#vegetarian`, the same
+  # tag browse/home filter on); no-op when there's no diet mode.
+  defp reject_off_diet_recipes(recipes, mode) when mode in [:vegan, :vegetarian] do
+    keep = Food.recipe_ids_with_diet_tag(Enum.map(recipes, & &1.id), mode)
+    Enum.filter(recipes, &MapSet.member?(keep, &1.id))
+  end
+
+  # Pescatarian has no positive hashtag — keep recipes with no meat/poultry
+  # ingredient (fish allowed), computed over the candidate set.
+  defp reject_off_diet_recipes(recipes, :pescatarian) do
+    keep = Food.pescatarian_recipe_ids(Enum.map(recipes, & &1.id))
+    Enum.filter(recipes, &MapSet.member?(keep, &1.id))
+  end
+
+  defp reject_off_diet_recipes(recipes, _mode), do: recipes
+
+  # Drop ingredients in a diet-excluded category (Meats/Fish/Dairy/… per
+  # `Categories.diet_category_ids/1`); no-op when there's no diet mode.
+  defp reject_off_diet_ingredients(ingredients, mode)
+       when mode in [:vegan, :vegetarian, :pescatarian] do
+    excluded =
+      Food.ingredient_ids_in_categories(
+        Enum.map(ingredients, & &1.id),
+        Categories.diet_category_ids(mode)
+      )
+
+    Enum.reject(ingredients, &MapSet.member?(excluded, &1.id))
+  end
+
+  defp reject_off_diet_ingredients(ingredients, _mode), do: ingredients
+
+  defp diet_block(mode) when mode in [:vegan, :vegetarian, :pescatarian] do
+    "\nDIET: this plan must be #{mode}. The search tools return only " <>
+      "#{mode}-compatible recipes and ingredients — build the whole plan from those.\n"
+  end
+
+  defp diet_block(_), do: ""
+
+  # A raw/uncooked instruction when the blueprint requires the #raw tag. The
+  # search tools already return only #raw recipes; this steers the model's
+  # queries toward no-cook dishes and keeps ingredient snacks raw.
+  defp raw_block(tags) do
+    if "raw" in tags do
+      "\nRAW: this is a raw-food plan — every meal must be uncooked (nothing heated " <>
+        "above ~46°C/115°F). search_catalog returns only raw-tagged recipes; search " <>
+        "for no-cook dishes (salads, smoothies, overnight oats-style soaks, raw wraps) " <>
+        "and choose only raw whole-food ingredients (fresh fruit, raw vegetables, nuts, " <>
+        "seeds) for snacks.\n"
+    else
+      ""
+    end
   end
 
   # ── plan validation ───────────────────────────────────────────────────────────

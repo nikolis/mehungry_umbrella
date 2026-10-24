@@ -5,21 +5,26 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   alias Mehungry.Food
   alias Mehungry.Food.Recipe
-  alias Mehungry.Health
   alias Mehungry.Search.RecipeSearchItem
   alias Mehungry.Search
-  alias Mehungry.Search.RecipeSearch
   alias Mehungry.Accounts
   alias Mehungry.Users
   alias Mehungry.Posts
   alias Mehungry.MealBlueprints
+  alias Mehungry.PublishedPlans
   alias MehungryWeb.RecipeComponents
-  alias MehungryWeb.RecipeFlags
   import MehungryWeb.BlueprintComponents
 
   # Page size for the offset-paginated, condition-prioritized browse mode; kept
   # in step with the cursor paginator's `limit: 10` in `Food.list_recipes/3`.
   @per_page 10
+
+  # Curated nutrient-claim chips on the browse rail — the handful a consumer
+  # recognizes. All 22 NRV nutrients stay reachable via `/search/nutrient/:slug`
+  # (and `Food.label_for_slug/1`), but only these render as chips and go in the
+  # sitemap, to avoid thin micronutrient pages. "High in" tier only.
+  @chip_nutrients ["Iron", "Calcium", "Vitamin C", "Potassium", "Magnesium"]
+  def chip_nutrients, do: @chip_nutrients
 
   @impl true
   def mount(params, session, socket) do
@@ -80,19 +85,18 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      |> assign(:invocations, 0)
      |> assign(:counter, 1)
      |> assign(:query, query)
+     |> assign(:active_nutrient, nil)
      |> assign(:pagination_mode, :cursor)
      |> assign(sort_by: "recent")
      |> assign(:must_be_loged_in, nil)
      |> assign(:reply, nil)
-     |> assign(:show_search_settings, false)
-     |> assign(:selected_condition_ids, MapSet.new())
-     |> assign(:conditions_by_category, conditions_by_category())
      # Diet "mode" derived from the user's saved profile category rules — when set,
      # the default browse feed is filtered to #vegan/#vegetarian and a badge shows.
      # `diet_mode_available` remembers it so the badge can be toggled off/on.
      |> assign(:diet_mode_available, Accounts.diet_mode(user))
      |> assign(:diet_mode, Accounts.diet_mode(user))
-     # Browse switches between recipes and public meal-plan blueprints.
+     # Browse switches between recipes, public meal-plan blueprints, and
+     # published weekly meal plans.
      |> assign(:browse_mode, :recipes)
      |> assign(:blueprint_query, "")
      |> assign(:blueprints, [])
@@ -100,7 +104,12 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
      # kept in assigns so flipping between tabs is a pure presentation switch —
      # no re-query of the DB. An explicit blueprint search still refreshes them.
      |> assign(:blueprints_loaded, false)
-     |> assign_recipe_search()}
+     # Published meal plans, loaded lazily the same way as blueprints.
+     |> assign(:meal_plan_query, "")
+     |> assign(:meal_plans, [])
+     |> assign(:meal_plans_loaded, false)
+     |> assign_recipe_search()
+     |> apply_initial_browse_mode(params)}
   end
 
   ######################################################################## MESSAGES ############################################################################# 
@@ -117,21 +126,12 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   ######################################################################## EVENTS #################################################################################
   @impl true
   def handle_event("set_browse_mode", %{"mode" => "blueprints"}, socket) do
-    # Only hit the DB the first time; after that, toggling tabs just re-shows the
-    # blueprints already in assigns.
-    socket =
-      if socket.assigns.blueprints_loaded do
-        socket
-      else
-        blueprints =
-          MealBlueprints.search_public_blueprints(socket.assigns.blueprint_query, limit: 60)
+    {:noreply, socket |> ensure_blueprints_loaded() |> assign(:browse_mode, :blueprints)}
+  end
 
-        socket
-        |> assign(:blueprints, blueprints)
-        |> assign(:blueprints_loaded, true)
-      end
-
-    {:noreply, assign(socket, :browse_mode, :blueprints)}
+  @impl true
+  def handle_event("set_browse_mode", %{"mode" => "meal_plans"}, socket) do
+    {:noreply, socket |> ensure_meal_plans_loaded() |> assign(:browse_mode, :meal_plans)}
   end
 
   @impl true
@@ -141,13 +141,27 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   @impl true
   def handle_event("search_blueprints", %{"query" => query}, socket) do
-    blueprints = MealBlueprints.search_public_blueprints(query, limit: 60)
+    blueprints =
+      query
+      |> MealBlueprints.search_public_blueprints(limit: 60)
+      |> MealBlueprints.localize_blueprints(Gettext.get_locale(MehungryWeb.Gettext))
 
     {:noreply,
      socket
      |> assign(:blueprint_query, query)
      |> assign(:blueprints, blueprints)
      |> assign(:blueprints_loaded, true)}
+  end
+
+  @impl true
+  def handle_event("search_meal_plans", %{"query" => query}, socket) do
+    meal_plans = PublishedPlans.search_public_plans(query, limit: 60)
+
+    {:noreply,
+     socket
+     |> assign(:meal_plan_query, query)
+     |> assign(:meal_plans, meal_plans)
+     |> assign(:meal_plans_loaded, true)}
   end
 
   @impl true
@@ -187,11 +201,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     {:noreply, assign(socket, :must_be_loged_in, nil)}
   end
 
-  @impl true
-  def handle_event("toggle_search_settings", _params, socket) do
-    {:noreply, assign(socket, :show_search_settings, !socket.assigns.show_search_settings)}
-  end
-
   # Turn the diet-mode filter off (see everything) or back on, then re-run the
   # current search so the feed reflects it immediately.
   @impl true
@@ -200,39 +209,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
     socket = assign(socket, :diet_mode, new_mode)
     {:noreply, handle_search(socket, socket.assigns.query_string)}
-  end
-
-  @impl true
-  def handle_event("toggle_condition", %{"id" => id}, socket) do
-    id = String.to_integer(id)
-    selected = socket.assigns.selected_condition_ids
-
-    selected =
-      if MapSet.member?(selected, id) do
-        MapSet.delete(selected, id)
-      else
-        MapSet.put(selected, id)
-      end
-
-    {:noreply, assign(socket, :selected_condition_ids, selected)}
-  end
-
-  @impl true
-  def handle_event("apply_condition_filter", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:show_search_settings, false)
-     |> assign(:page, 1)
-     |> handle_search(socket.assigns.query_string)}
-  end
-
-  @impl true
-  def handle_event("clear_conditions", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:selected_condition_ids, MapSet.new())
-     |> assign(:page, 1)
-     |> handle_search(socket.assigns.query_string)}
   end
 
   @impl true
@@ -377,6 +353,43 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
+  # Opens the browse page straight to a non-default tab (so a "back to Meal Plans"
+  # link lands on meal plans, not the Recipes default). Mirrors `set_browse_mode`
+  # but driven by the `?mode=` URL param on mount.
+  defp apply_initial_browse_mode(socket, %{"mode" => "meal_plans"}),
+    do: socket |> ensure_meal_plans_loaded() |> assign(:browse_mode, :meal_plans)
+
+  defp apply_initial_browse_mode(socket, %{"mode" => "blueprints"}),
+    do: socket |> ensure_blueprints_loaded() |> assign(:browse_mode, :blueprints)
+
+  defp apply_initial_browse_mode(socket, _params), do: socket
+
+  # Lazy-load the tab's rows once, then keep them in assigns so flipping tabs is a
+  # pure presentation switch (no re-query). Shared by the tab event and mount's
+  # initial-mode opener.
+  defp ensure_blueprints_loaded(%{assigns: %{blueprints_loaded: true}} = socket), do: socket
+
+  defp ensure_blueprints_loaded(socket) do
+    blueprints =
+      socket.assigns.blueprint_query
+      |> MealBlueprints.search_public_blueprints(limit: 60)
+      |> MealBlueprints.localize_blueprints(Gettext.get_locale(MehungryWeb.Gettext))
+
+    socket
+    |> assign(:blueprints, blueprints)
+    |> assign(:blueprints_loaded, true)
+  end
+
+  defp ensure_meal_plans_loaded(%{assigns: %{meal_plans_loaded: true}} = socket), do: socket
+
+  defp ensure_meal_plans_loaded(socket) do
+    meal_plans = PublishedPlans.search_public_plans(socket.assigns.meal_plan_query, limit: 60)
+
+    socket
+    |> assign(:meal_plans, meal_plans)
+    |> assign(:meal_plans_loaded, true)
+  end
+
   defp assign_user_meta(socket) do
     user = socket.assigns.current_user
 
@@ -405,11 +418,9 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   defp handle_search(socket, query_str) do
     language = get_user_language(socket)
-    condition_ids = selected_condition_id_list(socket)
 
     {query, pagination_mode, {recipes, cursor_after}} =
       cond do
-        # Power-user prefixes keep their existing behavior (no condition filter).
         is_binary(query_str) and String.at(query_str, 0) == "#" ->
           {query, page} = Food.search_hashtag1(query_str)
           {query, :cursor, page}
@@ -417,22 +428,6 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         is_binary(query_str) and String.at(query_str, 0) == "@" ->
           {query, page} = Food.search_recipes_by_ingredient(String.slice(query_str, 1..-1//1))
           {query, :cursor, page}
-
-        condition_ids != [] ->
-          # Prioritize (don't restrict): one continuous list with recipes
-          # encouraged for the selected conditions sorted to the top, then the
-          # rest. The priority is a computed order (not a cursor column), so this
-          # mode is offset-paginated by `:page` in `load-more`.
-          base = Health.recipes_prioritized_for_conditions_query(condition_ids)
-
-          query =
-            case query_str do
-              qr when is_binary(qr) and qr != "" -> RecipeSearch.run(base, qr)
-              _ -> base
-            end
-
-          recipes = Food.list_recipes_page(query, 1, @per_page, language)
-          {query, :offset, {recipes, nil}}
 
         is_nil(query_str) ->
           # Default browse feed. If the user is in a diet mode, filter it to that
@@ -458,8 +453,48 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:query, query)
     |> assign(:pagination_mode, pagination_mode)
     |> assign(:search_changeset, nil)
+    # Any text/#/@/default search clears the nutrient-chip highlight; the nutrient
+    # filter (apply_action below) is the only path that sets it.
+    |> assign(:active_nutrient, nil)
     |> stream_recipes(recipes, reset: true)
     |> assign(:not_empty, length(recipes) > 0)
+  end
+
+  # Pre-defined nutrient-claim filter ("foods high in iron"), reached by the
+  # crawlable `/search/nutrient/:slug` route and the browse chip rail. Reuses the
+  # same composable-query + cursor-stream machinery as the #/@ searches, driven by
+  # the persisted `recipes.badges` column via `Food.search_recipes_by_badge/3`.
+  defp apply_action(socket, :index, %{"nutrient" => slug} = _params) do
+    case Food.label_for_slug(slug) do
+      nil ->
+        # Unknown nutrient slug → fall back to the default browse feed.
+        apply_action(socket, :index, %{})
+
+      label ->
+        language = get_user_language(socket)
+        {query, {recipes, cursor_after}} = Food.search_recipes_by_badge(label, "high", language)
+        maybe_track_user(%{query: "nutrient:" <> slug}, socket)
+
+        socket
+        |> assign(:recipe, nil)
+        |> assign_user_meta()
+        |> assign(:cursor_after, cursor_after)
+        |> assign(:query, query)
+        |> assign(:query_string, nil)
+        |> assign(:pagination_mode, :cursor)
+        |> assign(:search_changeset, nil)
+        |> assign(:active_nutrient, label)
+        |> stream_recipes(recipes, reset: true)
+        |> assign(:not_empty, length(recipes) > 0)
+        |> assign(:return_to, Map.get(socket.assigns, :path, ~p"/browse"))
+        |> assign(:page, 1)
+        |> assign(:page_title, "High-#{label} Recipes | M3Hungry")
+        |> assign(
+          :page_description,
+          "Browse recipes that are high in #{label} — each badge is the EU per-serving" <>
+            " nutrition claim (Reg. 1169/2011 & 1924/2006), computed from USDA data on M3Hungry."
+        )
+    end
   end
 
   defp apply_action(socket, :index, %{"ingredient" => ingredient_name} = _params) do
@@ -609,39 +644,8 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
     |> assign(:recipe_search_item, %RecipeSearchItem{})
   end
 
-  # Presentable conditions (those with dietary advice) grouped by category, for
-  # the extended search-settings filter — mirrors the onboarding/profile picker.
-  defp conditions_by_category do
-    Health.list_conditions_for_presentation()
-    |> Enum.group_by(&(&1.category || "Other"))
-    |> Enum.sort_by(fn {category, _} -> category end)
-  end
-
-  # Styling for a condition filter pill, themed with this page's tokens.
-  def condition_pill_class(selected?) do
-    base = "px-4 py-1.5 rounded-full text-sm font-medium border transition"
-
-    if selected? do
-      "#{base} bg-paprika border-paprika text-white"
-    else
-      "#{base} border-ink-panel2 text-parchment-dim hover:border-paprika hover:text-parchment"
-    end
-  end
-
-  # Streams recipes into the :recipes stream, first stamping health-condition
-  # badges for the conditions the user selected in the search filter (no-op when
-  # none). Badges are driven by the active filter selection — not the user's
-  # profile — so a recipe only shows a condition badge for a condition the user
-  # is currently filtering by.
   defp stream_recipes(socket, recipes, opts \\ []) do
-    condition_ids = selected_condition_id_list(socket)
-    stream(socket, :recipes, RecipeFlags.enrich(recipes, condition_ids), opts)
-  end
-
-  defp selected_condition_id_list(socket) do
-    socket.assigns
-    |> Map.get(:selected_condition_ids, MapSet.new())
-    |> MapSet.to_list()
+    stream(socket, :recipes, recipes, opts)
   end
 
   def assign_changeset(%{assigns: %{recipe_search_item: recipe_search_item}} = socket) do
@@ -721,6 +725,30 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
         base
       end
 
+    # totalTime — prep + cook when both known (Google asks for it explicitly).
+    base =
+      case total_time_minutes(recipe) do
+        nil -> base
+        minutes -> Map.put(base, "totalTime", "PT#{minutes}M")
+      end
+
+    # datePublished — helps Google judge freshness; derived from the row's insert.
+    base =
+      case recipe.inserted_at do
+        %NaiveDateTime{} = dt -> Map.put(base, "datePublished", NaiveDateTime.to_iso8601(dt))
+        %DateTime{} = dt -> Map.put(base, "datePublished", DateTime.to_iso8601(dt))
+        _ -> base
+      end
+
+    # nutrition — a NutritionInformation block from the recipe's own USDA-backed
+    # totals (the thing the app is built on), expressed per serving. Only emitted
+    # when we actually have calories, so we never assert fabricated numbers.
+    base =
+      case jsonld_nutrition(recipe) do
+        nil -> base
+        nutrition -> Map.put(base, "nutrition", nutrition)
+      end
+
     # author — recipe.author (free-text) falls back to the recipe owner's name.
     base =
       case jsonld_author(recipe) do
@@ -754,18 +782,21 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       case recipe.steps do
         steps when is_list(steps) and steps != [] ->
           instructions =
-            Enum.map(steps, fn step ->
-              step_jsonld = %{
-                "@type" => "HowToStep",
-                "text" => step.description || step.title || ""
-              }
+            steps
+            |> Enum.with_index(1)
+            |> Enum.map(fn {step, position} ->
+              # `name` is a per-step field Google flags as missing; use the step
+              # title, falling back to "Step N" so every HowToStep is named.
+              name =
+                if is_binary(step.title) and String.trim(step.title) != "",
+                  do: String.trim(step.title),
+                  else: "Step #{position}"
 
-              # `name` is a per-step enhancement Google asks for; use the step title.
-              if is_binary(step.title) and String.trim(step.title) != "" do
-                Map.put(step_jsonld, "name", String.trim(step.title))
-              else
-                step_jsonld
-              end
+              %{
+                "@type" => "HowToStep",
+                "name" => name,
+                "text" => step.description || step.title || name
+              }
             end)
 
           Map.put(base, "recipeInstructions", instructions)
@@ -775,6 +806,48 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
       end
 
     base
+  end
+
+  # Sum of prep + cook lower limits (minutes), or nil when neither is set.
+  defp total_time_minutes(recipe) do
+    prep = if is_integer(recipe.preperation_time_lower_limit), do: recipe.preperation_time_lower_limit, else: 0
+    cook = if is_integer(recipe.cooking_time_lower_limit), do: recipe.cooking_time_lower_limit, else: 0
+
+    case prep + cook do
+      0 -> nil
+      total -> total
+    end
+  end
+
+  # schema.org NutritionInformation from the recipe's stored (whole-recipe) USDA
+  # totals, divided to a per-serving basis. `recipe.nutrients` is the aggregate
+  # tree `Mehungry.NutrientUtils.macro_summary/1` already consumes everywhere
+  # else (calendar, share cards), so we reuse it rather than recompute. Returns
+  # nil when there's no energy value — we only publish real numbers.
+  defp jsonld_nutrition(recipe) do
+    nutrients = recipe.nutrients
+
+    if is_map(nutrients) and map_size(nutrients) > 0 do
+      summary = Mehungry.NutrientUtils.macro_summary(nutrients)
+      servings = if is_integer(recipe.servings) and recipe.servings > 0, do: recipe.servings, else: 1
+
+      if summary.energy_kcal > 0 do
+        per = fn value -> value / servings end
+
+        %{
+          "@type" => "NutritionInformation",
+          "servingSize" => "1 serving",
+          "calories" => "#{round(per.(summary.energy_kcal))} kcal",
+          "proteinContent" => "#{Float.round(per.(summary.protein_g), 1)} g",
+          "fatContent" => "#{Float.round(per.(summary.fat_g), 1)} g",
+          "saturatedFatContent" => "#{Float.round(per.(summary.saturated_fat_g), 1)} g",
+          "carbohydrateContent" => "#{Float.round(per.(summary.carbs_g), 1)} g",
+          "sugarContent" => "#{Float.round(per.(summary.sugars_g), 1)} g",
+          "fiberContent" => "#{Float.round(per.(summary.fiber_g), 1)} g",
+          "sodiumContent" => "#{round(per.(summary.sodium_mg))} mg"
+        }
+      end
+    end
   end
 
   defp jsonld_author(recipe) do

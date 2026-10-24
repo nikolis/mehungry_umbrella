@@ -21,7 +21,8 @@ defmodule Mehungry.Health.ConditionStateRecommendation do
 
   import Ecto.Changeset
 
-  alias Mehungry.Food.Compound
+  alias Mehungry.Food.{Compound, FoundementalFoodSpecies}
+  alias Mehungry.MealBlueprints.Blueprint
   alias Mehungry.Health.{Condition, ConditionState, ConditionStateRecommendationStudy}
 
   @recommendations ~w(avoid limit caution encourage monitor)
@@ -46,6 +47,11 @@ defmodule Mehungry.Health.ConditionStateRecommendation do
     belongs_to :condition, Condition
     belongs_to :condition_state, ConditionState
     belongs_to :compound, Compound
+    # A suggestion can also resolve directly to a food species or a public meal
+    # blueprint (see `validate_has_target/1`); these render as a food card /
+    # "Suggested meal plans" card on the condition page.
+    belongs_to :species, FoundementalFoodSpecies
+    belongs_to :blueprint, Blueprint
 
     has_many :recommendation_studies, ConditionStateRecommendationStudy,
       foreign_key: :recommendation_id
@@ -61,6 +67,8 @@ defmodule Mehungry.Health.ConditionStateRecommendation do
       :condition_id,
       :condition_state_id,
       :compound_id,
+      :species_id,
+      :blueprint_id,
       :nutrient_name,
       :raw_food_term,
       :recommendation,
@@ -81,13 +89,19 @@ defmodule Mehungry.Health.ConditionStateRecommendation do
     |> unique_constraint(:dedup_key)
   end
 
-  # Must point at something — a compound, a nutrient name, or a free-text food term.
+  # Must point at something — a compound, a food species, a meal blueprint, a
+  # nutrient name, or a free-text food term.
   defp validate_has_target(changeset) do
-    if get_field(changeset, :compound_id) || present?(get_field(changeset, :nutrient_name)) ||
+    if get_field(changeset, :compound_id) || get_field(changeset, :species_id) ||
+         get_field(changeset, :blueprint_id) || present?(get_field(changeset, :nutrient_name)) ||
          present?(get_field(changeset, :raw_food_term)) do
       changeset
     else
-      add_error(changeset, :raw_food_term, "a compound, nutrient_name, or raw_food_term is required")
+      add_error(
+        changeset,
+        :raw_food_term,
+        "a compound, species, blueprint, nutrient_name, or raw_food_term is required"
+      )
     end
   end
 

@@ -8,9 +8,9 @@ defmodule Mehungry.Food.RecipeUtils do
   The per-meal/day aggregation lives in
   `Mehungry.NutrientUtils.summarize_meals_nutrients/1`.
 
-  What remains here are the two view-only helpers the calendar widget still
-  uses to reshape a stored `recipe.nutrients` map for rendering. The old
-  on-the-fly recomputation path (`get_nutrients/1`, `adjust_amount/4`,
+  What remains here is the view-only `sort_nutrients_from_db/1` helper the
+  calendar widget uses to order a stored `recipe.nutrients` map for rendering.
+  The old on-the-fly recomputation path (`get_nutrients/1`, `adjust_amount/4`,
   `calculate_nutrition_for_recipe_ingredient*/1`, …) was dead and has been
   removed — see `docs/food/nutrition_calculation.md`.
   """
@@ -34,23 +34,5 @@ defmodule Mehungry.Food.RecipeUtils do
     primaries = Enum.filter(primaries, fn x -> !is_nil(x) end)
     nutrients = Enum.filter(nutrients, fn x -> x not in primaries end)
     Enum.with_index(primaries ++ nutrients)
-  end
-
-  @doc """
-  Re-keys a stored `recipe.nutrients` map (a list of nutrient maps whose
-  `measurement_unit` is a struct) into a `%{name => nutrient}` map with
-  string keys, resolving `measurement_unit` down to its `name`. Used to feed a
-  saved recipe's nutrients into a calendar meal card.
-  """
-  def reform_nutrients(nutrients) do
-    nutrients
-    |> Enum.map(fn x ->
-      Map.new([
-        {x.name,
-         %{x | measurement_unit: x.measurement_unit.name}
-         |> Enum.into(%{}, fn {k, v} -> {Atom.to_string(k), v} end)}
-      ])
-    end)
-    |> Enum.reduce(&Map.merge/2)
   end
 end

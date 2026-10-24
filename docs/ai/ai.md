@@ -11,10 +11,10 @@ section links to the doc that covers it in depth.
 | **Recipe generation** | A full validated recipe (ingredients, steps, prose) from a description | Create-recipe LiveView; `DailyRecipeGenerationWorker`; `RecipeOrderWorker` | [`ai_agents.md`](ai_agents.md) · [`ai_bot.md`](ai_bot.md) |
 | **Persona-voiced authoring** | Recipes written in a character's voice (grandma, tavern, dietologist) | `RecipeSetup` bound to a config/order | [`ai_bot_personas.md`](ai_bot_personas.md) |
 | **Social publishing pipeline** | Review-gated recipes fanned out to IG/FB/Pinterest | `/professional/ai-bot/**` | [`ai_bot.md`](ai_bot.md) · [`../social_publishing.md`](../social_publishing.md) |
-| **Meal-plan generation** | A 7-day plan drawn from the user's own recipe catalog | Calendar LiveView (`MealPlanAgent`) | [`ai_agents.md`](ai_agents.md) |
+| **Meal-plan generation** | A 7-day plan drawn from the user's own recipe catalog | Calendar LiveView (`MealPlanAgent`) | [`meal_plan.md`](meal_plan.md) |
 | **Nutritionist plan drafting** | A 7-day plan a pro drafts *for a client*, with a rationale | `NutritionistAgentWorker` | [`ai_agents.md`](ai_agents.md) |
 | **Translation** | Recipe + ingredient/unit text in other languages (en/el) | `RecipeTranslator`, `IngredientTranslator` | [`ai_agents.md`](ai_agents.md) |
-| **Cover images** | Food-photography image per recipe | `RecipeImageWorker` (OpenAI `gpt-image-1`) | [`ai_agents.md`](ai_agents.md) |
+| **Cover images** | Food-photography image per recipe | `RecipeImageWorker` → `AI.ImageGenerator` (provider seam: OpenAI `gpt-image-2` **or** FLUX 2 pro) | [`ai_agents.md`](ai_agents.md) |
 | **Semantic search / embeddings** | pgvector recipe embeddings for meaning-based catalog search | `RecipeEmbeddingWorker`, `RecipeVectorSearch` | [`ai_agents.md`](ai_agents.md) |
 | **Measurement extraction** | Compound-measurement candidates pulled from full-text papers by a local QA model | `apps/mehungry_local_ai` → `/api/local_ai/*` | [`measurement_extraction.md`](measurement_extraction.md) |
 
@@ -25,7 +25,8 @@ Two external providers; everything else is our own code.
 | Provider | Used for | Client seam | Key |
 |---|---|---|---|
 | **Anthropic (Claude)** | All text generation, agents, translation, prose polish | `AI.Client` (the *only* Anthropic caller) | `ANTHROPIC_API_KEY` → `:anthropic_api_key` |
-| **OpenAI** | Image generation + recipe embeddings (Anthropic offers neither) | `AI.ImageGenerator`, `AI.EmbeddingClient` | `OPENAI_API_KEY` (optional) |
+| **OpenAI** | Image generation (`gpt-image-2`, default) + recipe embeddings (Anthropic offers neither) | `AI.ImageGenerator`, `AI.EmbeddingClient` | `OPENAI_API_KEY` (optional) |
+| **Black Forest Labs (FLUX)** | Alternative cover-image provider (FLUX 2 pro — higher photorealism); selected via `RECIPE_IMAGE_PROVIDER=flux` → `:recipe_image_provider` | `AI.FluxImageGenerator` | `BFL_API_KEY` (optional) |
 
 **Models** — the tool-loop runs on **Haiku** (`claude-haiku-4-5-20251001`, cheap/fast
 structured tool calling); user-visible prose is rewritten by **Sonnet**; embeddings
@@ -101,6 +102,8 @@ These hold across every AI feature (elaborated in
 - [`durable_review.md`](durable_review.md) — the durable "generate → hold for review
   → act" pattern (Oban + `status` column), and why the Jido framework isn't needed
   for it.
+- [`meal_plan.md`](meal_plan.md) — the meal-plan feature end to end: how generation
+  works (agent, tools, pipeline, surfaces) **and** the quality eval harness + results.
 
 > Adjacent but not "AI": the scientific knowledge pipeline (literature crawl,
 > PubTator, compound curation) is discovery/curation, not generation — see

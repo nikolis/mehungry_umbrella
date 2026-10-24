@@ -51,103 +51,39 @@ Hooks.VegaLite = {
 }
 
 
-// Capture the start of a LiveView page-level navigation so PageTimer.mounted()
-// can compute the full round-trip (request → DOM ready) for in-app navigation.
-let _liveNavStart = null
-window.addEventListener('phx:page-loading-start', (e) => {
-  if (e.detail && e.detail.kind === 'page') _liveNavStart = performance.now()
-})
-
-// Capture start timestamp for RecipeDetailTimer — covers patch and page navigations.
-let _recipeDetailPatchStart = null
-window.addEventListener('phx:page-loading-start', (e) => {
-  if (e.detail && (e.detail.kind === 'patch' || e.detail.kind === 'page')) {
-    _recipeDetailPatchStart = performance.now()
-  }
-})
-
 Hooks.RecipeDetailTimer = {
-  reportTiming(phase) {
-    let elapsed
-    if (_recipeDetailPatchStart !== null) {
-      elapsed = Math.round(performance.now() - _recipeDetailPatchStart)
-      _recipeDetailPatchStart = null
-    } else if (phase === 'mounted') {
-      // Direct HTTP load to a recipe URL — measure from navigation fetch start
-      try {
-        const nav = performance.getEntriesByType('navigation')[0]
-        if (nav) elapsed = Math.round(performance.now() - nav.fetchStart)
-      } catch (_) {}
-    }
-    if (elapsed == null) return
-    const serverMs = parseInt(this.el.dataset.serverMs, 10)
-    const recipeId = this.el.dataset.recipeId || null
-    this.pushEvent('recipe_detail_timing', {
-      elapsed_ms: elapsed,
-      server_ms: isNaN(serverMs) ? null : serverMs,
-      recipe_id: recipeId,
-      phase
-    })
-  },
   mounted() {
     // The recipe detail content is now in the DOM — data is present, so tell
     // app.js to drop the instant loading skeleton. This is the deterministic
     // hide signal (page-loading-stop and the safety timeout are backstops).
     window.dispatchEvent(new CustomEvent('mehungry:recipe-loaded'))
-    this.reportTiming('mounted')
-  },
-  updated() { this.reportTiming('updated') }
-}
-
-Hooks.PageTimer = {
-  mounted() {
-    if (_liveNavStart !== null) {
-      // LiveView navigation — measure from request start to DOM ready
-      const loadMs = Math.round(performance.now() - _liveNavStart)
-      _liveNavStart = null
-      this.pushEvent('page_timing', { ttfb_ms: null, load_ms: loadMs })
-    } else {
-      // Initial HTTP load — use Navigation Timing API for real TTFB
-      const report = () => {
-        try {
-          const nav = performance.getEntriesByType('navigation')[0]
-          if (!nav) return
-          const ttfb = Math.round(nav.responseStart - nav.fetchStart)
-          const load = nav.loadEventEnd > 0
-            ? Math.round(nav.loadEventEnd - nav.fetchStart)
-            : Math.round(nav.domInteractive - nav.fetchStart)
-          if (ttfb >= 0) this.pushEvent('page_timing', { ttfb_ms: ttfb, load_ms: load })
-        } catch (_) {}
-      }
-      if (document.readyState === 'complete') { report() }
-      else { window.addEventListener('load', report, { once: true }) }
-    }
-  }
-}
-
-Hooks.VisitScroll = {
-  mounted() {
-    this.observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        this.pushEvent("load_more_visits", {})
-      }
-    }, { rootMargin: "300px" })
-    this.observer.observe(this.el)
-  },
-  destroyed() {
-    if (this.observer) this.observer.disconnect()
   }
 }
 
 Hooks.Copy = {
   mounted() {
     let { to } = this.el.dataset;
+    const showFeedback = () => {
+      const span = this.el.querySelector("span") || this.el;
+      const prev = span.textContent;
+      span.textContent = "Copied!";
+      setTimeout(() => { span.textContent = prev; }, 2000);
+    };
     this.el.addEventListener("click", (ev) => {
       ev.preventDefault();
-      let text = document.querySelector(to).value;
-      navigator.clipboard.writeText(text).then(() => {
-        console.log("Copied to clipboard")
-      });
+      const target = document.querySelector(to);
+      if (!target) return;
+      const text = target.value;
+      navigator.clipboard.writeText(text)
+        .then(showFeedback)
+        .catch(() => {
+          // last-resort fallback for HTTP or old browsers
+          target.removeAttribute("readonly");
+          target.select();
+          document.execCommand("copy");
+          target.setAttribute("readonly", "");
+          showFeedback();
+        });
     });
   },
 }
@@ -163,6 +99,9 @@ Hooks.WebShare = {
       ev.stopPropagation();
       const url = this.el.dataset.url;
       const title = this.el.dataset.title || "Check out this recipe on Mehungry";
+      // Optional long-form body (e.g. a text-only plan caption). When present it
+      // rides along in the native share sheet, and is what we copy on fallback.
+      const text = this.el.dataset.text;
       const btn = this.el;
       const originalText = btn.querySelector("span") ? btn.querySelector("span").textContent : btn.textContent.trim();
 
@@ -173,17 +112,22 @@ Hooks.WebShare = {
         setTimeout(() => { span.textContent = prev; }, 2000);
       };
 
+      // When a body is supplied, copying it (not just the URL) preserves the
+      // whole post on platforms without a native share sheet.
+      const clipboardText = text ? (url ? `${text}\n${url}` : text) : url;
+
       if (navigator.share) {
-        navigator.share({ title, url })
+        const payload = text ? { title, text, url } : { title, url };
+        navigator.share(payload)
           .then(() => showFeedback("Shared!"))
           .catch((err) => { if (err.name !== "AbortError") console.error("Share failed", err); });
       } else {
-        navigator.clipboard.writeText(url)
+        navigator.clipboard.writeText(clipboardText)
           .then(() => showFeedback("Copied!"))
           .catch(() => {
             // last-resort fallback for HTTP or old browsers
             const ta = document.createElement("textarea");
-            ta.value = url;
+            ta.value = clipboardText;
             ta.style.position = "fixed";
             ta.style.opacity = "0";
             document.body.appendChild(ta);
@@ -931,5 +875,53 @@ Hooks.AccordionHook = {
 
 
 
+
+// Renders a Cloudflare Turnstile widget inside a LiveView-managed form.
+// Loads the Turnstile api.js once, then explicitly renders the widget so it
+// survives LiveView DOM patching (the auto `.cf-turnstile` render does not).
+// The widget injects a hidden `cf-turnstile-response` input into the form, so
+// its token is included in the `phx-submit` params.
+Hooks.Turnstile = {
+  mounted() {
+    this.renderWidget()
+  },
+  renderWidget() {
+    const sitekey = this.el.dataset.sitekey
+    if (!sitekey) return
+
+    const doRender = () => {
+      if (window.turnstile && this.el && !this.el.dataset.rendered) {
+        this.widgetId = window.turnstile.render(this.el, { sitekey })
+        this.el.dataset.rendered = "true"
+      }
+    }
+
+    if (window.turnstile) {
+      doRender()
+    } else if (!document.getElementById("cf-turnstile-script")) {
+      const script = document.createElement("script")
+      script.id = "cf-turnstile-script"
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+      script.async = true
+      script.defer = true
+      script.onload = doRender
+      document.head.appendChild(script)
+    } else {
+      // Script tag exists but turnstile not ready yet — poll briefly.
+      const t = setInterval(() => {
+        if (window.turnstile) {
+          clearInterval(t)
+          doRender()
+        }
+      }, 100)
+      setTimeout(() => clearInterval(t), 5000)
+    }
+  },
+  destroyed() {
+    if (this.widgetId && window.turnstile) {
+      try { window.turnstile.remove(this.widgetId) } catch (_e) {}
+    }
+  }
+}
 
 export {Hooks}

@@ -3,10 +3,15 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
   alias Mehungry.Professionals
   alias Mehungry.Professionals.{ConsultationNote, ClientIntake}
+  alias Mehungry.Professionals.Anthropometrics
   alias Mehungry.Professionals.DietaryHistory.Fields
+
+  @energy_source_fields ~w(height_m weight_kg sex age activity_level)
   alias Mehungry.Accounts
   alias Mehungry.Plans, as: PlansCtx
+  alias Mehungry.MealBlueprints
   alias Mehungry.ObanWorkers.NutritionistAgentWorker
+  alias VegaLite, as: Vl
 
   @impl true
   def mount(%{"id" => client_id}, _session, socket) do
@@ -24,13 +29,22 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
             Mehungry.PubSub,
             NutritionistAgentWorker.topic(professional_id)
           )
+
+          Professionals.subscribe_to_messages(professional_id)
         end
 
         client = Accounts.get_user!(client_id_int)
-        appointments = Professionals.list_appointments_for_client(client_id_int)
+
+        appointments =
+          Professionals.list_appointments_for_professional_client(professional_id, client_id_int)
+
         ratings = Professionals.list_ratings_for_client(client_id_int)
         meal_plans = PlansCtx.list_meal_plans_for_user(client_id_int)
         record = Professionals.get_client_record_by_user(professional_id, client_id_int)
+
+        # Opening the thread reads the client's messages.
+        Professionals.mark_thread_read(professional_id, client_id_int, professional_id)
+        messages = Professionals.list_messages(professional_id, client_id_int)
 
         {:ok,
          socket
@@ -48,8 +62,13 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:record, record)
          |> assign(:show_visit_form, false)
          |> assign(:intake_editing?, false)
+         |> assign(:plan_options, load_plan_options(professional_id))
+         |> assign(:assign_plan_form, new_assign_plan_form())
+         |> assign(:messages, messages)
+         |> assign(:message_body, "")
          |> load_intake()
-         |> load_visits()}
+         |> load_visits()
+         |> load_weight_history()}
     end
   end
 
@@ -90,6 +109,61 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
      |> assign(:ai_error, nil)}
   end
 
+  # ── Messages ────────────────────────────────────────────────────────────────────
+
+  @impl true
+  def handle_event("send_message", %{"body" => body}, socket) do
+    professional_id = socket.assigns.current_user.id
+    client_id = socket.assigns.client_id
+
+    case Professionals.send_message(professional_id, client_id, professional_id, body) do
+      {:ok, message} ->
+        {:noreply,
+         socket
+         |> assign(:messages, append_message(socket.assigns.messages, message))
+         |> assign(:message_body, "")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Message can't be empty.")}
+    end
+  end
+
+  # Open the full dietary-history editor, creating the record first if needed —
+  # the platform user is implied by the client being viewed, so there is no picker.
+  @impl true
+  def handle_event("open_full_record", _params, socket) do
+    case ensure_record(socket) do
+      {:ok, socket, record} ->
+        {:noreply, push_navigate(socket, to: ~p"/nutritionist/records/#{record.id}/edit")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Could not open the record: #{inspect(reason)}")}
+    end
+  end
+
+  # ── Assign a saved plan to THIS client's calendar ───────────────────────────────
+
+  @impl true
+  def handle_event("assign_plan", %{"assign" => params}, socket) do
+    professional_id = socket.assigns.current_user.id
+    client = socket.assigns.client
+
+    with {plan_id, ""} <- Integer.parse(params["plan_id"] || ""),
+         {:ok, start_date} <- Date.from_iso8601(params["start_date"] || ""),
+         %_{} = plan <- safe_get_plan(professional_id, plan_id) do
+      {:ok, created, skipped, deleted} =
+        MealBlueprints.import_plan_to_calendar(client.id, plan, start_date)
+
+      {:noreply,
+       socket
+       |> assign(:assign_plan_form, new_assign_plan_form())
+       |> put_flash(:info, assign_plan_message(created, skipped, deleted, client))}
+    else
+      _ ->
+        {:noreply, put_flash(socket, :error, "Pick a plan and a valid start date.")}
+    end
+  end
+
   # ── Visit (consultation note) events ────────────────────────────────────────────
 
   @impl true
@@ -115,11 +189,12 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   end
 
   @impl true
-  def handle_event("validate_visit", %{"consultation_note" => params}, socket) do
+  def handle_event("validate_visit", %{"consultation_note" => params} = payload, socket) do
     changeset =
       %ConsultationNote{}
       |> Professionals.change_consultation_note(params)
       |> Map.put(:action, :validate)
+      |> prefill_from_appointment(payload["_target"], socket.assigns.appointments)
 
     {:noreply, assign_visit_form(socket, changeset)}
   end
@@ -136,6 +211,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
              socket
              |> assign(:show_visit_form, false)
              |> load_visits()
+             |> load_weight_history()
              |> put_flash(:info, "Visit recorded.")}
 
           {:error, changeset} ->
@@ -146,6 +222,15 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         {:noreply, put_flash(socket, :error, "Could not save visit: #{inspect(reason)}")}
     end
   end
+
+  # ── Weight chart (responsive) ───────────────────────────────────────────────────
+
+  def handle_event("resize_chart", %{"width" => width}, socket) when width > 50 do
+    spec = build_weight_spec(socket.assigns.weight_history, width)
+    {:noreply, assign(socket, :weight_chart_spec, spec)}
+  end
+
+  def handle_event("resize_chart", _params, socket), do: {:noreply, socket}
 
   # ── Intake (dietary history) events ─────────────────────────────────────────────
 
@@ -158,11 +243,21 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         {:noreply,
          socket
          |> assign(:intake_editing?, true)
-         |> assign(:intake_form, to_form(Professionals.change_intake(intake), as: :intake))}
+         |> assign(:intake_form, to_form(new_intake_changeset(intake, record), as: :intake))}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "Could not start editing: #{inspect(reason)}")}
     end
+  end
+
+  def handle_event("validate_intake", %{"intake" => params} = payload, socket) do
+    changeset =
+      (socket.assigns.intake || %ClientIntake{})
+      |> Professionals.change_intake(params)
+      |> Map.put(:action, :validate)
+      |> recompute_energy(payload["_target"])
+
+    {:noreply, assign(socket, :intake_form, to_form(changeset, as: :intake))}
   end
 
   def handle_event("cancel_intake", _params, socket) do
@@ -189,6 +284,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
              socket
              |> assign(:intake, intake)
              |> assign(:intake_editing?, false)
+             |> load_weight_history()
              |> put_flash(:info, "Dietary history saved.")}
 
           {:error, changeset} ->
@@ -227,7 +323,68 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         record -> Enum.reverse(Professionals.list_consultation_notes(record.id))
       end
 
-    assign(socket, :visits, visits)
+    noted_ids =
+      for v <- visits, v.appointment_id, into: MapSet.new(), do: v.appointment_id
+
+    socket
+    |> assign(:visits, visits)
+    |> assign(:noted_appointment_ids, noted_ids)
+  end
+
+  # When the nutritionist picks an appointment this visit corresponds to, stamp
+  # the visit date from it (only on the appointment-field change, so an edited
+  # date is never clobbered). Appointments are already scoped to this
+  # professional+client, so only a legitimately-owned appointment can be linked.
+  defp prefill_from_appointment(changeset, ["consultation_note", "appointment_id"], appointments) do
+    with id when not is_nil(id) <- Ecto.Changeset.get_field(changeset, :appointment_id),
+         %{scheduled_at: %NaiveDateTime{} = at} <- Enum.find(appointments, &(&1.id == id)) do
+      Ecto.Changeset.put_change(changeset, :visit_date, NaiveDateTime.to_date(at))
+    else
+      _ -> changeset
+    end
+  end
+
+  defp prefill_from_appointment(changeset, _target, _appointments), do: changeset
+
+  defp appointment_options(appointments) do
+    for a <- appointments do
+      {"#{Calendar.strftime(a.scheduled_at, "%b %d, %Y")} — #{a.title}", a.id}
+    end
+  end
+
+  # Select options for every importable (status "completed") plan the
+  # nutritionist owns, labelled "Blueprint — Plan", newest plan first.
+  defp load_plan_options(professional_id) do
+    for bp <- MealBlueprints.list_blueprints_for_user(professional_id),
+        plan <- MealBlueprints.list_plans_for_blueprint(professional_id, bp.id),
+        plan.status == "completed" do
+      {"#{bp.name} — #{plan.name}", plan.id}
+    end
+  end
+
+  defp new_assign_plan_form do
+    to_form(%{"plan_id" => "", "start_date" => Date.to_iso8601(Date.utc_today())}, as: :assign)
+  end
+
+  # Owner-scoped plan fetch — `get_plan!/2` raises if the plan isn't this
+  # professional's, so a nutritionist can only push their own plans.
+  defp safe_get_plan(professional_id, plan_id) do
+    MealBlueprints.get_plan!(professional_id, plan_id)
+  rescue
+    Ecto.NoResultsError -> nil
+  end
+
+  defp assign_plan_message(created, skipped, deleted, client) do
+    whose = client.name || client.email
+
+    [
+      "Added #{created} meals to #{whose}'s calendar",
+      deleted > 0 && ", replacing #{deleted} existing meal#{if deleted == 1, do: "", else: "s"} that week",
+      skipped > 0 && " (#{skipped} skipped)",
+      "."
+    ]
+    |> Enum.reject(&(&1 == false))
+    |> Enum.join()
   end
 
   defp assign_visit_form(socket, changeset),
@@ -241,6 +398,53 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       end
 
     assign(socket, :intake, intake)
+  end
+
+  defp load_weight_history(socket) do
+    history =
+      case socket.assigns.record do
+        nil -> []
+        record -> Professionals.weight_history(record.id)
+      end
+
+    socket
+    |> assign(:weight_history, history)
+    |> assign(:weight_chart_spec, build_weight_spec(history))
+  end
+
+  # Weight (kg) over time, merged from intakes + consultation notes. Basil/emerald
+  # tone, matching the analytics session chart. Non-zero y-scale so small
+  # fluctuations are readable.
+  defp build_weight_spec(data, width \\ :container) do
+    chart_data =
+      Enum.map(data, fn %{date: d, weight_kg: w} ->
+        %{"date" => to_string(d), "weight" => w}
+      end)
+
+    Vl.new(width: width, height: 200, autosize: [type: "fit", contains: "padding"])
+    |> Vl.data_from_values(chart_data)
+    |> Vl.mark(:line, color: "#10B981", point: [color: "#10B981", filled: true])
+    |> Vl.encode_field(:x, "date",
+      type: :temporal,
+      axis: [
+        label_angle: -35,
+        title: nil,
+        label_color: "#94A3B8",
+        domain_color: "#334155",
+        tick_color: "#334155"
+      ]
+    )
+    |> Vl.encode_field(:y, "weight",
+      type: :quantitative,
+      scale: [zero: false],
+      axis: [title: "kg", label_color: "#94A3B8", domain_color: "#334155", grid_color: "#1E293B"]
+    )
+    |> Vl.encode(:tooltip, [
+      [field: "date", type: :temporal, title: "Date"],
+      [field: "weight", type: :quantitative, title: "Weight (kg)"]
+    ])
+    |> Vl.config(background: "transparent", view: [stroke: nil])
+    |> Vl.to_spec()
   end
 
   # ── PubSub messages ───────────────────────────────────────────────────────────
@@ -274,7 +478,25 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
      |> assign(:ai_error, reason)}
   end
 
+  # A new message in the thread currently open: append it and (since the
+  # nutritionist is looking) mark the client's messages read.
+  def handle_info({:assignment_message, %{client_id: cid} = message}, socket) do
+    if cid == socket.assigns.client_id do
+      professional_id = socket.assigns.current_user.id
+      Professionals.mark_thread_read(professional_id, cid, professional_id)
+      {:noreply, assign(socket, :messages, append_message(socket.assigns.messages, message))}
+    else
+      {:noreply, socket}
+    end
+  end
+
   def handle_info(_msg, socket), do: {:noreply, socket}
+
+  # Append a message unless it's already in the list (the sender appends
+  # optimistically and then also receives its own broadcast echo).
+  defp append_message(messages, message) do
+    if Enum.any?(messages, &(&1.id == message.id)), do: messages, else: messages ++ [message]
+  end
 
   # ── render ────────────────────────────────────────────────────────────────────
 
@@ -331,6 +553,9 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
             href={"/nutritionist/appointments?client_id=#{@client_id}"}
           >
             Schedule Appointment
+          </.action>
+          <.action variant={:secondary} size={:sm} phx-click="open_full_record">
+            Open full record
           </.action>
         </div>
       </div>
@@ -447,7 +672,110 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         <% end %>
       </div>
 
+      <!-- Assign a saved plan -->
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
+        <div class="flex items-center gap-2 mb-3">
+          <svg class="w-4 h-4 text-basil" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+            />
+          </svg>
+          <h2 class="text-parchment font-semibold text-sm">Assign a saved plan</h2>
+        </div>
+
+        <%= if @plan_options == [] do %>
+          <p class="text-parchment-dim text-sm">
+            You have no completed plans yet.
+            <.link navigate={~p"/nutritionist/blueprints"} class="text-basil hover:underline">
+              Build one in Meal Blueprints →
+            </.link>
+          </p>
+        <% else %>
+          <p class="text-parchment-dim text-sm mb-3">
+            Lay one of your plans onto {@client.name || @client.email}'s calendar. The plan's 7 days
+            start from the chosen date — <span class="text-paprika-soft">any meals already on that
+            week are replaced.</span>
+          </p>
+          <.form for={@assign_plan_form} phx-submit="assign_plan" class="flex flex-wrap items-end gap-3">
+            <div class="flex-1 min-w-[12rem]">
+              <label class="block text-sm text-parchment-dim mb-1">Plan</label>
+              <.input
+                field={@assign_plan_form[:plan_id]}
+                type="select"
+                prompt="Choose a plan…"
+                options={@plan_options}
+              />
+            </div>
+            <div>
+              <label class="block text-sm text-parchment-dim mb-1">Start date</label>
+              <.input field={@assign_plan_form[:start_date]} type="date" />
+            </div>
+            <.action
+              variant={:primary}
+              size={:sm}
+              type="submit"
+              data-confirm={"This replaces that whole week on #{@client.name || @client.email}'s calendar — any meals already logged there will be deleted. Continue?"}
+            >
+              Add to calendar
+            </.action>
+          </.form>
+        <% end %>
+      </div>
+
+      <!-- Messages -->
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
+        <div class="flex items-center gap-2 mb-3">
+          <svg class="w-4 h-4 text-basil" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+          </svg>
+          <h2 class="text-parchment font-display font-semibold">
+            Messages with {@client.name || @client.email}
+          </h2>
+        </div>
+        <.message_thread
+          messages={@messages}
+          current_user_id={@current_user.id}
+          body={@message_body}
+          placeholder="Message your client…"
+        />
+      </div>
+
       {intake_panel(assigns)}
+
+      <!-- Weight trend -->
+      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
+        <h2 class="text-parchment font-display font-semibold mb-4">Weight trend</h2>
+        <%= if length(@weight_history) >= 2 do %>
+          <div
+            id="weight-chart-wrapper"
+            phx-hook="ResponsiveChart"
+            data-id="weight"
+            data-origin_id="weight"
+            data-size="full"
+            class="w-full overflow-hidden"
+          >
+            <div
+              id="vega-weight"
+              phx-hook="VegaLite"
+              data-spec={Jason.encode!(@weight_chart_spec)}
+              class="w-full"
+            >
+            </div>
+          </div>
+        <% else %>
+          <p class="text-parchment-dim text-sm">
+            Not enough weight data yet — recorded weights will chart here.
+          </p>
+        <% end %>
+      </div>
 
       <!-- Client record: visits -->
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
@@ -500,6 +828,19 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                   <%= if visit.weight_kg do %>
                     <span class="text-parchment-dim text-xs">{visit.weight_kg} kg</span>
                   <% end %>
+                  <%= if visit.appointment_id do %>
+                    <span class="flex items-center gap-1 text-basil text-xs" title="Linked to an appointment">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5m8.656-1.172a4 4 0 010-5.656l3-3a4 4 0 115.656 5.656l-1.5 1.5"
+                        />
+                      </svg>
+                      Appointment
+                    </span>
+                  <% end %>
                   <svg
                     id={"visit-chevron-#{visit.id}"}
                     class="w-4 h-4 text-parchment-dim ml-auto shrink-0 transition-transform"
@@ -529,6 +870,17 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                     <div class="mt-3 pt-3 border-t border-ink-panel2">
                       <p class="text-xs text-parchment-dim mb-1">To do</p>
                       <p class="text-parchment text-sm whitespace-pre-line">{visit.todo}</p>
+                    </div>
+                  <% end %>
+                  <%= if visit.appointment do %>
+                    <div class="mt-3 pt-3 border-t border-ink-panel2">
+                      <p class="text-xs text-parchment-dim mb-1">Linked appointment</p>
+                      <p class="text-parchment text-sm">
+                        {visit.appointment.title} — {Calendar.strftime(
+                          visit.appointment.scheduled_at,
+                          "%b %d, %Y"
+                        )}
+                      </p>
                     </div>
                   <% end %>
                 </div>
@@ -567,6 +919,16 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                 <.input field={@visit_form[:weight_kg]} type="number" step="any" />
               </.labeled>
             </div>
+            <%= if @appointments != [] do %>
+              <.labeled label="Linked appointment">
+                <.input
+                  field={@visit_form[:appointment_id]}
+                  type="select"
+                  prompt="— none —"
+                  options={appointment_options(@appointments)}
+                />
+              </.labeled>
+            <% end %>
             <.labeled label="Notes">
               <.input field={@visit_form[:body]} type="textarea" />
             </.labeled>
@@ -601,6 +963,19 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
                   </div>
                   <%= if appt.notes do %>
                     <p class="text-parchment-dim text-xs mt-1">{appt.notes}</p>
+                  <% end %>
+                  <%= if MapSet.member?(@noted_appointment_ids, appt.id) do %>
+                    <span class="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full bg-basil/15 text-basil text-xs">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      Visit note recorded
+                    </span>
                   <% end %>
                 </div>
               <% end %>
@@ -734,6 +1109,13 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       <% end %>
 
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <.metric label="Sex" value={Anthropometrics.sex_label(@intake.sex)} unit="" />
+        <.metric label="Age" value={@intake.age} unit="yrs" />
+        <.metric
+          label="Activity"
+          value={Anthropometrics.activity_label(@intake.activity_level)}
+          unit=""
+        />
         <.metric label="Height" value={@intake.height_m} unit="m" />
         <.metric label="Weight" value={@intake.weight_kg} unit="kg" />
         <.metric label="BMI" value={@intake.bmi} unit="" />
@@ -776,10 +1158,36 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
   defp intake_form(assigns) do
     ~H"""
-    <.form :let={f} for={@intake_form} as={:intake} id="intake-form" phx-submit="save_intake">
+    <.form
+      :let={f}
+      for={@intake_form}
+      as={:intake}
+      id="intake-form"
+      phx-change="validate_intake"
+      phx-submit="save_intake"
+    >
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <.labeled label="Assessed on">
           <.input field={f[:assessed_on]} type="date" />
+        </.labeled>
+        <.labeled label="Sex">
+          <.input
+            field={f[:sex]}
+            type="select"
+            prompt="—"
+            options={for {v, l} <- Anthropometrics.sexes(), do: {l, v}}
+          />
+        </.labeled>
+        <.labeled label="Age">
+          <.input field={f[:age]} type="number" />
+        </.labeled>
+        <.labeled label="Activity level">
+          <.input
+            field={f[:activity_level]}
+            type="select"
+            prompt="—"
+            options={for {v, l, _f} <- Anthropometrics.activity_levels(), do: {l, v}}
+          />
         </.labeled>
         <.labeled label="Height (m)">
           <.input field={f[:height_m]} type="number" step="0.01" />
@@ -787,7 +1195,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         <.labeled label="Weight (kg)">
           <.input field={f[:weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="BMI">
+        <.labeled label="BMI (auto)">
           <.input field={f[:bmi]} type="number" step="0.1" />
         </.labeled>
         <.labeled label="Usual wt (kg)">
@@ -799,10 +1207,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         <.labeled label="Adjusted wt (kg)">
           <.input field={f[:adjusted_weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="BMR (kcal)">
+        <.labeled label="BMR (auto, kcal)">
           <.input field={f[:bmr_kcal]} type="number" />
         </.labeled>
-        <.labeled label="TDEE (kcal)">
+        <.labeled label="TDEE (auto, kcal)">
           <.input field={f[:tdee_kcal]} type="number" />
         </.labeled>
       </div>
@@ -859,6 +1267,55 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       </p>
     </div>
     """
+  end
+
+  # New intake: prefill `age` from the client record's date of birth when known.
+  defp new_intake_changeset(%ClientIntake{id: nil} = intake, record) do
+    case {intake.age, client_age(record)} do
+      {nil, age} when is_integer(age) -> Professionals.change_intake(intake, %{"age" => age})
+      _ -> Professionals.change_intake(intake)
+    end
+  end
+
+  defp new_intake_changeset(intake, _record), do: Professionals.change_intake(intake)
+
+  defp client_age(%{date_of_birth: %Date{} = dob}) do
+    today = Date.utc_today()
+    had_birthday? = Date.compare(replace_year(dob, today.year), today) != :gt
+    age = today.year - dob.year - if(had_birthday?, do: 0, else: 1)
+    if age > 0, do: age
+  end
+
+  defp client_age(_), do: nil
+
+  defp replace_year(%Date{month: 2, day: 29} = dob, year) do
+    case Date.new(year, 2, 29) do
+      {:ok, date} -> date
+      {:error, _} -> %Date{dob | year: year, day: 28}
+    end
+  end
+
+  defp replace_year(dob, year), do: %Date{dob | year: year}
+
+  # Recompute BMI/BMR/TDEE only when a *source* input changed; editing an output
+  # directly leaves it as typed (the override path).
+  defp recompute_energy(changeset, target) do
+    if target && List.last(target) in @energy_source_fields do
+      derived =
+        Anthropometrics.compute(%{
+          height_m: Ecto.Changeset.get_field(changeset, :height_m),
+          weight_kg: Ecto.Changeset.get_field(changeset, :weight_kg),
+          sex: Ecto.Changeset.get_field(changeset, :sex),
+          age: Ecto.Changeset.get_field(changeset, :age),
+          activity_level: Ecto.Changeset.get_field(changeset, :activity_level)
+        })
+
+      Enum.reduce(derived, changeset, fn {field, value}, acc ->
+        Ecto.Changeset.put_change(acc, field, value)
+      end)
+    else
+      changeset
+    end
   end
 
   defp detail_value(%ClientIntake{details: details}, key) when is_map(details),

@@ -302,9 +302,14 @@ mix test apps/mehungry/test/mehungry/health_test.exs
   POSTs their PMIDs to the external `mehungry_extractor`
   batch-analysis service (`POST /analyze`, deterministic evidence engine — see
   `mehungry_extractor/docs/api.md`) via `Mehungry.Extractor.Client` (behaviour-seamed on the
-  `:extractor_client` config key; base URL `:extractor_base_url` / `EXTRACTOR_BASE_URL`,
-  default `http://127.0.0.1:8000`). The synthesized conclusions/outliers/warnings render
-  read-only in a modal — a first step; nothing is promoted or persisted from the result yet.
+  `:extractor_client` config key). The service **URL + optional bearer token** are
+  UI-managed via the **"Analyzer service"** section on the same page
+  (`Mehungry.Extractor.connection/0` reads the singleton `Extractor.Settings` row,
+  falling back to `:extractor_base_url` / `EXTRACTOR_BASE_URL`, default
+  `http://127.0.0.1:8000`, and `:extractor_auth_token` / `EXTRACTOR_AUTH_TOKEN`); a
+  saved token is sent as `Authorization: Bearer …`. The synthesized
+  conclusions/outliers/warnings render read-only in a modal — a first step; nothing is
+  promoted or persisted from the result yet.
 - The registry+facts CRUD itself remains a plain synchronous layer (no cache/config seam).
 - **Evidence integration.** `evidence_level` is entered by the source today; wiring
   it to `Food.summarize/2` (so a recommendation's strength tracks the measured

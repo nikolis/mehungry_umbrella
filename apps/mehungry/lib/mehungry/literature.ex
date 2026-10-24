@@ -31,9 +31,11 @@ defmodule Mehungry.Literature do
     StudyIngredient,
     StudyCompound,
     StudyCondition,
+    StudyConditionExclusion,
     StudyEntityMention,
     StudyEntityRelation,
     StudyFullText,
+    StudyAnalyses,
     PmcFetchAttempt,
     CrawlAttempt,
     ConditionCrawlAttempt,
@@ -126,6 +128,32 @@ defmodule Mehungry.Literature do
 
   def get_study_by_pmid(pmid), do: Repo.get_by(ScientificStudy, pmid: pmid)
 
+  # ── Extractor analyses (per-paper `/analyze` results) ──────────────────────
+
+  @doc """
+  Persist + reconcile a `mehungry_extractor` `/analyze` response at the per-paper
+  grain. See `Mehungry.Literature.StudyAnalyses.store_analysis_response/1`.
+  """
+  defdelegate store_analysis_response(response), to: StudyAnalyses
+
+  @doc "The stored extractor analysis for a study id, or nil."
+  defdelegate get_analysis_by_study_id(study_id), to: StudyAnalyses
+
+  @doc "Stored analyses for every paper a condition was crawled for (`:study` preloaded)."
+  defdelegate analyses_for_condition(condition_id), to: StudyAnalyses
+
+  @doc "Set the curation `position` on one claim within a study's stored analysis."
+  defdelegate set_claim_position(study_id, claim_id, position), to: StudyAnalyses
+
+  @doc "The valid claim curation positions."
+  defdelegate claim_positions, to: StudyAnalyses
+
+  @doc "The subset of `study_ids` that already have a stored analysis (a MapSet)."
+  defdelegate analyzed_study_ids(study_ids), to: StudyAnalyses
+
+  @doc "The subset of `study_ids` whose stored analysis is non-open-access, hence unusable (a MapSet)."
+  defdelegate unusable_study_ids(study_ids), to: StudyAnalyses
+
   @doc """
   Fetch a single paper by `pmid` and upsert it into the study registry, returning
   the `ScientificStudy`. Returns the already-stored row when present (no network
@@ -189,6 +217,90 @@ defmodule Mehungry.Literature do
       conflict_target: [:study_id, :condition_id, :search_term]
     )
   end
+
+  # ── Condition re-assignment + exclusions ──────────────────────────────────
+
+  @doc """
+  Study ids flagged as *not belonging* to `condition_id` (via a prior re-assignment).
+  The reverse crawl consults this so it never re-links a paper that was moved away.
+  Returns a `MapSet`.
+  """
+  def excluded_study_ids_for_condition(condition_id) do
+    Repo.all(
+      from(e in StudyConditionExclusion,
+        where: e.condition_id == ^condition_id,
+        select: e.study_id
+      )
+    )
+    |> MapSet.new()
+  end
+
+  @doc """
+  Re-assign a discovered paper from one condition to a better-fitting one.
+
+  "Move + flag" semantics (see `/professional/health`):
+
+    * ensures the paper is linked to `to_condition_id` (no-op if it already is);
+    * removes every `study_conditions` link to `from_condition_id`;
+    * writes a term-agnostic `StudyConditionExclusion` on `from_condition_id` so a
+      future re-crawl never re-grabs it;
+    * clears any stale exclusion on `to_condition_id` (a manual move wins).
+
+  Runs in one transaction. Returns `{:ok, %{already_present: boolean()}}` where
+  `already_present` is true when the target already had the paper (the duplicate
+  case), or `{:error, reason}`.
+  """
+  def reassign_study_to_condition(study_id, from_condition_id, to_condition_id)
+      when from_condition_id != to_condition_id do
+    Repo.transaction(fn ->
+      already_present? =
+        Repo.exists?(
+          from(l in StudyCondition,
+            where: l.study_id == ^study_id and l.condition_id == ^to_condition_id
+          )
+        )
+
+      unless already_present? do
+        {:ok, _} =
+          link_study_condition(%{
+            study_id: study_id,
+            condition_id: to_condition_id,
+            search_term: "(manual reassignment)",
+            source: "manual"
+          })
+      end
+
+      # A manual move to the target overrides any earlier flag against it.
+      Repo.delete_all(
+        from(e in StudyConditionExclusion,
+          where: e.study_id == ^study_id and e.condition_id == ^to_condition_id
+        )
+      )
+
+      Repo.delete_all(
+        from(l in StudyCondition,
+          where: l.study_id == ^study_id and l.condition_id == ^from_condition_id
+        )
+      )
+
+      {:ok, _} =
+        %StudyConditionExclusion{}
+        |> StudyConditionExclusion.changeset(%{
+          study_id: study_id,
+          condition_id: from_condition_id,
+          reassigned_to_condition_id: to_condition_id
+        })
+        |> Repo.insert(
+          on_conflict: {:replace, [:reassigned_to_condition_id, :updated_at]},
+          conflict_target: [:study_id, :condition_id]
+        )
+
+      %{already_present: already_present?}
+    end)
+  end
+
+  def reassign_study_to_condition(_study_id, same, same),
+    do: {:error, :same_condition}
 
   # ── Raw response cache (append-only) ──────────────────────────────────────
 

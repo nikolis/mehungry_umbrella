@@ -16,7 +16,6 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   @model "claude-haiku-4-5-20251001"
   @writer_model "claude-sonnet-4-6"
-  @partial_indicators ~w(yolk white albumen powder dried dehydrated freeze extract concentrate)
 
   # The unit vocabulary the agent picks from is the ingredient's `IngredientPortion`
   # rows, not bare measurement units — each portion is a real, human-meaningful
@@ -79,7 +78,13 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     context = %{gram_unit: fetch_gram_unit(), brief: brief}
 
     sys_prompt = system_prompt(brief)
-    user_prompt = "Create a recipe from this description: #{description}"
+
+    user_prompt =
+      if brief.import_source do
+        import_user_prompt(brief.import_source)
+      else
+        "Create a recipe from this description: #{description}"
+      end
 
     Logger.debug("""
     [RecipeAgent] Prompt for this run:
@@ -170,9 +175,25 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       primary: seed_names(seed, "primary"),
       spice: seed_names(seed, "spice"),
       garnish: seed_names(seed, "garnish"),
-      avoid: seed_names(seed, "avoid")
+      avoid: seed_names(seed, "avoid"),
+      # When set, the run reproduces a specific source recipe (URL import) rather
+      # than inventing a dish — see import_system_prompt/1 and import_user_prompt/1.
+      import_source: Keyword.get(opts, :import_source),
+      # Target output language for the reader-facing prose (title/description/
+      # steps/hashtags). "el" writes Greek; anything else (the default) writes
+      # English. Ingredient search always stays English — see language_block/1.
+      language: normalize_language(Keyword.get(opts, :language))
     }
   end
+
+  # The viewer's content locale ("en"/"el"/nil) collapses to the two languages we
+  # support. Unknown/nil defaults to English, preserving the prior behavior for
+  # every existing call site that passes no :language. Only the *output* language
+  # of the final prose is affected (the polish pass translates) — the generation
+  # loop and ingredient resolution always run in English, so Greek runs resolve
+  # exactly like English ones.
+  defp normalize_language("el"), do: "el"
+  defp normalize_language(_), do: "en"
 
   defp seed_names(seed, role) do
     (Map.get(seed, role) || Map.get(seed, String.to_atom(role)) || [])
@@ -191,6 +212,9 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
   defp has_persona?(_), do: false
 
   # ── system prompt ─────────────────────────────────────────────────────────────
+
+  defp system_prompt(%{import_source: source} = brief) when not is_nil(source),
+    do: import_system_prompt(brief)
 
   defp system_prompt(brief) do
     """
@@ -235,6 +259,108 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
       the mushrooms will steam instead of brown")
     #{hashtag_directive(brief)}
     submit_recipe is the ONLY way to finish — always call it when the recipe is ready.
+    """
+  end
+
+  # ── import mode (URL import) ────────────────────────────────────────────────
+  #
+  # Reproduces a specific existing recipe instead of inventing a dish. The tool
+  # workflow (search → create → submit → fix) is identical to generic generation;
+  # only the framing changes: faithful ingredients, reworded steps, fresh prose.
+  defp import_system_prompt(_brief) do
+    """
+    You are an expert recipe editor. You are given an existing recipe that was
+    imported from a web page. Your job is to reproduce it in this app's database —
+    NOT to invent a new dish, and NOT to "improve" or restyle it.
+
+    Follow these steps IN ORDER:
+
+    1. Reproduce the ingredient list as EXACTLY as possible: the same ingredients,
+       in the same quantities as the source. Do not add ingredients, drop
+       ingredients, or substitute "better" ones. If the source lists it, keep it;
+       if it doesn't, don't invent it.
+    2. For EACH ingredient, call search_ingredient and pick the best matching
+       database candidate (prefer whole/raw/plain forms over processed or flavoured
+       variants unless the source specifically calls for the processed form).
+    3. If search_ingredient returns no results for an ingredient, call
+       create_ingredient to add it, then use the IDs it returns.
+    4. Convert each source quantity to one of the ingredient's returned portions.
+       Prefer a real portion ("1 cup", "1 medium onion") that matches the source's
+       unit; fall back to grams (portion_id 0) when nothing fits. Use ONLY
+       ingredient_id and ingredient_portion_id values from your tool results — never
+       invent or guess numeric IDs. Include the `name` you searched for with each
+       recipe ingredient; its id is verified against that name.
+    5. Call submit_recipe with the complete recipe to validate and save it.
+    6. If submit_recipe returns errors, fix ONLY the reported invalid IDs and resubmit.
+
+    ## Copyright — this part is mandatory
+
+    - STEPS: keep the same method, order, timings, and temperatures as the source,
+      but REWRITE every step in your own words. Do NOT copy sentences verbatim from
+      the source instructions. Paraphrase thoroughly while preserving the technique.
+    - TITLE: write a NEW, original title for the dish. Do not reuse the source's
+      title verbatim.
+    - DESCRIPTION: write a NEW description in your own words. Do not copy the
+      source's description text.
+
+    ## Recipe writing standards
+
+    **Description:** 2-3 plain, honest sentences about the dish — what it is, how it
+    tastes, when it's eaten. No purple prose, no piled-up adjectives. Do NOT include
+    hashtags in the description field; put them in the separate `hashtags` array.
+
+    **Steps:** Each step states what to do and roughly how long it takes, with a
+    sensory doneness cue where the source implies one. Natural paragraphs, not
+    one-line skeletons. Preserve the source's number of steps and their order.
+
+    **Hashtags:** 4-6 short topic keywords as bare strings without the # symbol.
+
+    submit_recipe is the ONLY way to finish — always call it when the recipe is ready.
+    """
+  end
+
+  # Formats the extracted source recipe into the user turn. Structured sources
+  # (schema.org JSON-LD) give us clean ingredient + instruction lists; raw sources
+  # hand the model the stripped page text to extract the single recipe from.
+  defp import_user_prompt(%{mode: :structured} = source) do
+    ingredients =
+      case source[:ingredients] || [] do
+        [] -> "(none listed — infer from the instructions)"
+        list -> Enum.map_join(list, "\n", &"- #{&1}")
+      end
+
+    instructions =
+      source[:instructions]
+      |> List.wrap()
+      |> Enum.with_index(1)
+      |> Enum.map_join("\n", fn {step, i} -> "#{i}. #{step}" end)
+
+    """
+    Reproduce this imported recipe. Keep the ingredients and quantities faithful,
+    reword the steps, and write a fresh title and description.
+
+    SOURCE TITLE: #{source[:title] || "(untitled)"}
+    SOURCE URL: #{source[:source_url]}
+
+    SOURCE INGREDIENTS:
+    #{ingredients}
+
+    SOURCE INSTRUCTIONS:
+    #{if instructions == "", do: "(none provided)", else: instructions}
+    """
+  end
+
+  defp import_user_prompt(%{mode: :raw} = source) do
+    """
+    The following is the text of a web page that contains a single recipe. Extract
+    that recipe, then reproduce it: keep its ingredients and quantities faithful,
+    reword the steps in your own words, and write a fresh title and description.
+    Ignore navigation, ads, comments, and any unrelated text on the page.
+
+    SOURCE URL: #{source[:source_url]}
+
+    PAGE TEXT:
+    #{source[:raw_text]}
     """
   end
 
@@ -438,10 +564,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   defp handle_tool("search_ingredient", %{"name" => name}, %{gram_unit: gram_unit} = acc) do
     top =
-      Food.IngredientSearch.search(name)
-      |> rerank_by_name(name)
-      |> filter_by_name_relevance(name)
-      |> reject_partial_variants(name)
+      Food.IngredientSearch.search_relevant(name)
       |> Enum.take(3)
 
     candidates =
@@ -512,9 +635,11 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
             )
         end
 
+        # No reject_partial_variants here: we just created this ingredient and
+        # want to re-find it even if its canonical name is a "powder"/"dried" form.
         case Food.IngredientSearch.search(name)
-             |> rerank_by_name(name)
-             |> filter_by_name_relevance(name)
+             |> Food.IngredientSearch.rerank_by_name(name)
+             |> Food.IngredientSearch.filter_by_name_relevance(name)
              |> Enum.take(1) do
           [ing | _] ->
             portions =
@@ -725,6 +850,26 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   defp polish_system_prompt(_brief, step_count), do: generic_polish_system_prompt(step_count)
 
+  # The polish pass is where Greek output is produced. The draft it receives is in
+  # English (the loop always generates English so ingredient resolution works); the
+  # polish both cleans up prose AND translates the four reader-facing fields to
+  # Greek. It runs on @writer_model (Sonnet), which translates well. Polish never
+  # touches recipe_ingredients, so English ingredient resolution is preserved; and
+  # on any polish failure the English draft is kept (graceful degradation, never a
+  # hard failure).
+  defp prepend_polish_language(system, %{language: "el"}) do
+    """
+    IMPORTANT — OUTPUT LANGUAGE: The draft below is written in English. Return the
+    title, description, every step, and the hashtags in Greek (Ελληνικά). Translate
+    the meaning faithfully, then make it read like natural, fluent Greek a home cook
+    would write — not a stiff word-for-word translation. Leave NO reader-facing text
+    in English.
+
+    """ <> system
+  end
+
+  defp prepend_polish_language(system, _), do: system
+
   defp persona_polish_hashtags(%{uses_hashtags: true}),
     do:
       "hashtags — 4-6 bare keywords without # prefix covering cuisine, main ingredient, dietary style, occasion."
@@ -763,7 +908,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   defp polish_prose(recipe_input, brief) do
     original_step_count = length(recipe_input["steps"] || [])
-    system = polish_system_prompt(brief, original_step_count)
+    system = polish_system_prompt(brief, original_step_count) |> prepend_polish_language(brief)
 
     user =
       Jason.encode!(%{
@@ -1006,42 +1151,4 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     end
   end
 
-  # Floats to top any candidate whose first word closely matches the search term,
-  # preventing e.g. "Fish herring eggs" outranking "Eggs, whole, raw".
-  defp rerank_by_name(results, search_term) do
-    query_first = search_term |> String.downcase() |> String.split(~r/[\s,]+/) |> List.first("")
-
-    Enum.sort_by(results, fn ing ->
-      ing_first = ing.name |> String.downcase() |> String.split(~r/[\s,]+/) |> List.first("")
-      -String.jaro_distance(ing_first, query_first)
-    end)
-  end
-
-  # Requires at least one search word to closely match the candidate's first word,
-  # filtering incidental secondary-ingredient matches.
-  defp filter_by_name_relevance(ingredients, search_term, threshold \\ 0.6) do
-    search_words =
-      search_term |> String.downcase() |> String.split(~r/[\s,]+/) |> Enum.reject(&(&1 == ""))
-
-    Enum.filter(ingredients, fn ing ->
-      candidate_first =
-        ing.name |> String.downcase() |> String.split(~r/[\s,]+/) |> List.first("")
-
-      Enum.any?(search_words, &(String.jaro_distance(&1, candidate_first) >= threshold))
-    end)
-  end
-
-  # Drops partial/processed forms (yolk, white, powder…) when the search term
-  # doesn't ask for them, so e.g. "eggs" resolves to "Eggs, whole, raw".
-  defp reject_partial_variants(ingredients, search_term) do
-    search_lower = String.downcase(search_term)
-
-    Enum.reject(ingredients, fn ing ->
-      ing_lower = String.downcase(ing.name)
-
-      Enum.any?(@partial_indicators, fn indicator ->
-        String.contains?(ing_lower, indicator) and not String.contains?(search_lower, indicator)
-      end)
-    end)
-  end
 end

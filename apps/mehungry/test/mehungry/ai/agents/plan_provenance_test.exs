@@ -136,6 +136,50 @@ defmodule Mehungry.AI.Agents.PlanProvenanceTest do
     end
   end
 
+  describe "MealPlanAgent avoid-foods enforcement" do
+    test "avoid_terms downcases, trims, dedups and drops blanks from a blueprint" do
+      bp = %Mehungry.MealBlueprints.Blueprint{avoid_foods: [" Onion ", "garlic", "ONION", ""]}
+      assert MealPlanAgent.avoid_terms(bp) == ["onion", "garlic"]
+    end
+
+    test "avoid_terms is empty for a nil blueprint or empty list" do
+      assert MealPlanAgent.avoid_terms(nil) == []
+      assert MealPlanAgent.avoid_terms(%Mehungry.MealBlueprints.Blueprint{avoid_foods: []}) == []
+    end
+
+    test "reject_avoided drops results whose name contains an avoid term" do
+      results = [
+        %{id: 1, name: "Red Onion"},
+        %{id: 2, name: "Carrot"},
+        %{id: 3, name: "Garlic Powder"},
+        %{id: 4, name: "Spinach"}
+      ]
+
+      kept = MealPlanAgent.reject_avoided(results, ["onion", "garlic"], & &1.name)
+      assert Enum.map(kept, & &1.id) == [2, 4]
+    end
+
+    test "reject_avoided is a no-op with no avoid terms" do
+      results = [%{id: 1, name: "Onion"}]
+      assert MealPlanAgent.reject_avoided(results, [], & &1.name) == results
+    end
+
+    test "matched_avoid_terms returns the terms appearing in any name" do
+      names = ["Red Onion Salad", "Grilled Chicken"]
+      assert MealPlanAgent.matched_avoid_terms(names, ["onion", "garlic"]) == ["onion"]
+    end
+
+    test "matched_avoid_terms dedups terms matched across names and is case-insensitive" do
+      names = ["ONION soup", "caramelized onion"]
+      assert MealPlanAgent.matched_avoid_terms(names, ["onion"]) == ["onion"]
+    end
+
+    test "matched_avoid_terms is empty with no terms or no match" do
+      assert MealPlanAgent.matched_avoid_terms(["Carrot"], []) == []
+      assert MealPlanAgent.matched_avoid_terms(["Carrot"], ["onion"]) == []
+    end
+  end
+
   describe "NutritionistAgent.validate_entries/5" do
     test "accepts a searched, in-catalog recipe_id" do
       offered = MapSet.new([5])

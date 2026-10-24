@@ -34,7 +34,15 @@ A baseline assessment (the intake form filled at the first appointment); `has_ma
 client keyed by `assessed_on`, so a client can be re-assessed over time.
 - **Typed, queryable columns:** `assessed_on`, `height_m`, `weight_kg`, `bmi`,
   `usual_weight_kg`, `ideal_weight_kg`, `adjusted_weight_kg` (floats), `bmr_kcal`, `tdee_kcal`
-  (ints), `goal`.
+  (ints), `sex`, `activity_level` (strings), `age` (int), `goal`.
+- **Auto-calculated energy figures.** `bmi`, `bmr_kcal` (Mifflin–St Jeor) and `tdee_kcal`
+  (BMR × activity factor) are derived from `height_m`/`weight_kg`/`sex`/`age`/`activity_level`
+  by the pure `Mehungry.Professionals.Anthropometrics` calculator (also the single source of
+  the sex + activity-level `<select>` vocab and factors). The intake `changeset/2` fills any of
+  the three that are **blank** on write (safety-net for CSV import / API / first save, never
+  overwriting a supplied value); the manual editors recompute them live as the nutritionist
+  edits a source field (`phx-change` keyed on `_target`) while leaving a hand-typed override
+  alone. `age` is prefilled from the client's `date_of_birth` when a new intake is opened.
 - **`details` (JSONB map)** holds the free-form questionnaire (medical history, lifestyle,
   eating behavior) plus a nested `recall_24h` map (the 24-hour recall). The canonical key set +
   display labels live in one place — `Mehungry.Professionals.DietaryHistory.Fields`
@@ -64,34 +72,32 @@ A clinical progress note for a visit (distinct from `Appointment`; may optionall
 labels, EU comma-decimals, Greek dates) into `%{client, intake, consultation_notes}`;
 `DietaryHistory.Importer` writes it as a new record + intake + notes in one transaction. Because a
 record is never headless, `Importer.import_csv/3` **requires** a `:user_id` opt (returns
-`{:error, :user_required}` otherwise). UI: `/nutritionist/records/import` (`NutritionistLive.Records`,
-**pick the m3hungry client** → upload → preview → confirm); the client is chosen from the
-nutritionist's assigned clients (`list_clients/1`) and its account name is the fallback when the
-sheet's identity row is blank.
+`{:error, :user_required}` otherwise). UI: `/nutritionist/clients/import` (folded into
+`NutritionistLive.Clients`, **pick the m3hungry client** → upload → preview → confirm); the client
+is chosen from the nutritionist's assigned clients (`list_clients/1`) and its account name is the
+fallback when the sheet's identity row is blank. `ClientDetail` deep-links here with the client
+preselected via `?client_id=`.
 
-## Manual authoring — onboarding a fresh client
+## Manual authoring — editing the full record
 
-`/nutritionist/records/new` and `/nutritionist/records/:id/edit` →
-`MehungryWeb.NutritionistLive.ClientRecordEditor`. Modeled on `ArticleEditor`/`ProfileEdit`
-(incremental persistence, raw changesets in assigns, `<.input>` + local `<.labeled>`,
-`validate`/`save` events). Reached from a **+ New client** button on the records roster.
+There is **no separate "new client" page and no user picker**: a record is always reached from a
+client, so its platform-user association is implied by which client you opened. The file is created
+by `ClientDetail.ensure_record/1` (lazily on first intake/visit, or eagerly via the **Open full
+record** button) and then edited at `/nutritionist/records/:id/edit` →
+`MehungryWeb.NutritionistLive.ClientRecordEditor` (`:edit` only). Modeled on
+`ArticleEditor`/`ProfileEdit` (incremental persistence, raw changesets in assigns, `<.input>` +
+local `<.labeled>`, `validate`/`save` events).
 
-- **`:new`** — the **client-details** form plus a **required association control**: pick the
-  linked m3hungry `User` from the nutritionist's assigned clients (`list_clients/1`) **or** look up
-  any registered user by account email (`Accounts.get_user_by_email/1`). Resolving either sets
-  `user_id` and prefills `full_name`/`email` from the `User`. Saving without a linked user is
-  refused (a record is never headless).
-  - On save: `create_client_record/1` (with `professional_id` + `user_id`), then navigate into `:edit`.
-- **`:edit`** — three stacked sections: the client-details form again (attach/detach a platform
-  user anytime); one **intake** form (typed anthropometrics via `<.input>`; questionnaire + 24h
-  recall as plain `intake[details][…]` inputs so the `details` map casts as-is — create if absent,
-  else update the latest); and a repeatable **consultation notes** list (add / edit / delete, each
-  its own form with a hidden `_id`).
+Three stacked sections: the **client-details** form (editable PII — `professional_id`/`user_id` are
+already set and untouched by a details save); one **intake** form (typed anthropometrics via
+`<.input>`; questionnaire + 24h recall as plain `intake[details][…]` inputs so the `details` map
+casts as-is — create if absent, else update the latest); and a repeatable **consultation notes**
+list (add / edit / delete, each its own form with a hidden `_id`).
 
 Ownership is enforced on mount via `get_client_record!(current_user.id, id)` in a rescue
-(redirect to `/nutritionist/records` on miss). The read-only record page
+(redirect to `/nutritionist/clients` on miss). The read-only record page
 (`NutritionistLive.ClientRecord`, `/nutritionist/records/:id`) has an **Edit** link and an
-`m3hungry client` / `External` badge driven by `user_id`.
+`m3hungry client` badge.
 
 ## User Overview integration — visits accordion
 

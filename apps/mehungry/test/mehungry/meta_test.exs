@@ -3,106 +3,61 @@ defmodule Mehungry.MetaTest do
 
   alias Mehungry.Meta
 
-  describe "visits" do
-    alias Mehungry.Meta.Visit
+  describe "anonymous session metrics" do
+    alias Mehungry.Meta.SessionAggregator
 
-    import Mehungry.MetaFixtures
+    test "record_session/2 upserts and accumulates into today's bucket" do
+      now = DateTime.utc_now()
 
-    @invalid_attrs %{details: nil, ip_address: nil, session_key: nil}
+      assert :ok = Meta.record_session(now, 10)
+      assert :ok = Meta.record_session(now, 20)
 
-    test "list_visits/0 returns all visits" do
-      visit = visit_fixture()
-      assert Meta.list_visits() == [visit]
+      assert %{sessions: 2, total_seconds: 30, avg_seconds: 15} = Meta.session_metrics_today()
     end
 
-    test "get_visit!/1 returns the visit with given id" do
-      visit = visit_fixture()
-      assert Meta.get_visit!(visit.id) == visit
+    test "session_metrics_today/0 is zeroed when nothing recorded" do
+      assert %{sessions: 0, total_seconds: 0, avg_seconds: 0} = Meta.session_metrics_today()
     end
 
-    test "create_visit/1 with valid data creates a visit" do
-      valid_attrs = %{
-        details: %{},
-        ip_address: "some ip_address",
-        session_key: "some session_key"
-      }
+    test "session_metrics_per_day/1 returns today's row with a computed average" do
+      now = DateTime.utc_now()
+      Meta.record_session(now, 30)
+      Meta.record_session(now, 10)
 
-      assert {:ok, %Visit{} = visit} = Meta.create_visit(valid_attrs)
-      assert visit.details == %{}
-      assert visit.ip_address == "some ip_address"
-      assert visit.session_key == "some session_key"
+      rows = Meta.session_metrics_per_day(14)
+      today_local = today_in_reporting_tz()
+
+      assert %{session_count: 2, total_duration_seconds: 40, avg_seconds: 20} =
+               Enum.find(rows, &(&1.date == today_local))
     end
 
-    test "create_visit/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Meta.create_visit(@invalid_attrs)
+    test "SessionAggregator counts a tracked process when it exits" do
+      before = Meta.session_metrics_today().sessions
+
+      # A throwaway process standing in for a connected LiveView.
+      {pid, ref} = spawn_monitor(fn -> Process.sleep(:infinity) end)
+      SessionAggregator.track(pid)
+      # Give the cast time to register the monitor before we kill the process.
+      Process.sleep(20)
+      Process.exit(pid, :kill)
+      assert_receive {:DOWN, ^ref, :process, _, _}, 1_000
+
+      assert eventually(fn -> Meta.session_metrics_today().sessions > before end)
     end
+  end
 
-    test "update_visit/2 with valid data updates the visit" do
-      visit = visit_fixture()
+  defp today_in_reporting_tz do
+    %{rows: [[date]]} =
+      Mehungry.Repo.query!("SELECT (now() AT TIME ZONE $1)::date", [Meta.reporting_timezone()])
 
-      update_attrs = %{
-        details: %{},
-        ip_address: "some updated ip_address",
-        session_key: "some updated session_key"
-      }
+    date
+  end
 
-      assert {:ok, %Visit{} = visit} = Meta.update_visit(visit, update_attrs)
-      assert visit.details == %{}
-      assert visit.ip_address == "some updated ip_address"
-      assert visit.session_key == "some updated session_key"
-    end
-
-    test "update_visit/2 with invalid data returns error changeset" do
-      visit = visit_fixture()
-      assert {:error, %Ecto.Changeset{}} = Meta.update_visit(visit, @invalid_attrs)
-      assert visit == Meta.get_visit!(visit.id)
-    end
-
-    test "delete_visit/1 deletes the visit" do
-      visit = visit_fixture()
-      assert {:ok, %Visit{}} = Meta.delete_visit(visit)
-      assert_raise Ecto.NoResultsError, fn -> Meta.get_visit!(visit.id) end
-    end
-
-    test "change_visit/1 returns a visit changeset" do
-      visit = visit_fixture()
-      assert %Ecto.Changeset{} = Meta.change_visit(visit)
-    end
-
-    test "traffic_sources/1 aggregates visits by referrer category" do
-      visit_fixture(%{details: %{"referrer" => "https://www.google.com/"}})
-      visit_fixture(%{details: %{"referrer" => "https://www.google.com/search?q=pasta"}})
-      visit_fixture(%{details: %{"referrer" => "https://www.facebook.com/"}})
-      visit_fixture(%{details: %{"referrer" => "https://mehungry.net/browse"}})
-      visit_fixture(%{details: %{"referrer" => "https://someblog.example.com/post"}})
-      visit_fixture(%{details: %{"referrer" => ""}})
-      visit_fixture(%{details: %{}})
-
-      counts = Meta.traffic_sources(30) |> Map.new(fn %{source: s, count: c} -> {s, c} end)
-
-      assert counts == %{
-               "search" => 2,
-               "social" => 1,
-               "internal" => 1,
-               "referral" => 1,
-               "direct" => 2
-             }
-    end
-
-    test "traffic_sources/1 sorts by count descending and excludes old visits" do
-      visit_fixture(%{details: %{"referrer" => "https://www.google.com/"}})
-      visit_fixture(%{details: %{"referrer" => "https://bing.com/search?q=x"}})
-      visit_fixture(%{details: %{"referrer" => ""}})
-
-      old = visit_fixture(%{details: %{"referrer" => "https://www.google.com/"}})
-      before_cutoff = NaiveDateTime.add(NaiveDateTime.utc_now(), -40 * 86_400, :second)
-
-      old
-      |> Ecto.Changeset.change(inserted_at: NaiveDateTime.truncate(before_cutoff, :second))
-      |> Mehungry.Repo.update!()
-
-      assert [%{source: "search", count: 2}, %{source: "direct", count: 1}] =
-               Meta.traffic_sources(30)
+  defp eventually(fun, retries \\ 50) do
+    cond do
+      fun.() -> true
+      retries <= 0 -> false
+      true -> Process.sleep(20) && eventually(fun, retries - 1)
     end
   end
 end

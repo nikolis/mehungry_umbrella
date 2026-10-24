@@ -15,7 +15,15 @@ defmodule Mehungry.Accounts do
     * `Mehungry.Accounts.Grading` — personalized recipe grading
   """
 
-  alias Mehungry.Accounts.{Admin, Auth, OAuth, Profiles, Rules}
+  alias Mehungry.Accounts.{Admin, Auth, OAuth, Profiles, Rules, UserNotifier}
+
+  # ── Android beta opt-in invite ─────────────────────────────────────────
+  defdelegate deliver_android_beta_invite(recipient, opts \\ []), to: UserNotifier
+  defdelegate android_beta_email_html(opts \\ []), to: UserNotifier
+  defdelegate android_beta_opt_in_url(), to: UserNotifier
+  defdelegate android_beta_group_email(), to: UserNotifier
+  defdelegate android_beta_current_version(), to: UserNotifier
+  defdelegate deliver_trial_welcome(recipient, unsubscribe_url), to: UserNotifier
 
   # ── Admin / lookups ────────────────────────────────────────────────────
 
@@ -52,6 +60,8 @@ defmodule Mehungry.Accounts do
   defdelegate get_user_by_session_token(token), to: Auth
   defdelegate delete_session_token(token), to: Auth
   defdelegate deliver_user_confirmation_instructions(user, confirmation_url_fun), to: Auth
+
+  defdelegate deliver_user_confirmation_instructions(user, confirmation_url_fun, locale), to: Auth
   defdelegate confirm_user(token), to: Auth
   defdelegate confirm_user_multi(user), to: Auth
   defdelegate deliver_user_reset_password_instructions(user, reset_password_url_fun), to: Auth
@@ -67,6 +77,7 @@ defmodule Mehungry.Accounts do
   defdelegate register_3rd_party_user(attrs), to: OAuth
   defdelegate verify_3rd_party_user_changes(auth, user), to: OAuth
   defdelegate find_or_create(auth), to: OAuth
+  defdelegate find_or_create_from_profile(profile), to: OAuth
   defdelegate oauth_profile(auth), to: OAuth
   defdelegate maybe_confirm_user(user), to: OAuth
 
@@ -76,15 +87,17 @@ defmodule Mehungry.Accounts do
   defdelegate get_user_profile!(id), to: Profiles
   defdelegate get_user_profile_by_user_id(id), to: Profiles
   defdelegate create_user_profile(attrs \\ %{}), to: Profiles
+  defdelegate create_user_profile_if_needed(user), to: Profiles
   defdelegate update_user_profile(user_profile, attrs), to: Profiles
   defdelegate update_user_language(profile, lang), to: Profiles
+  defdelegate set_followed_blueprint(profile, blueprint_id), to: Profiles
+  defdelegate set_avoid_foods(profile, foods), to: Profiles
+  defdelegate clean_food_list(foods), to: Profiles
   defdelegate get_user_language(user_id), to: Profiles
   defdelegate delete_user_profile(user_profile), to: Profiles
   defdelegate change_user_profile(user_profile, attrs \\ %{}), to: Profiles
-  defdelegate list_opted_in_condition_ids(user_profile_id), to: Profiles
   defdelegate diet_mode(user_or_id), to: Profiles
   defdelegate diet_mode_for_diet(diet), to: Profiles
-  defdelegate set_condition_opt_ins(user_profile_id, condition_ids), to: Profiles
   defdelegate get_user_essentials(user), to: Profiles
   defdelegate count_user_following(user_id), to: Profiles
   defdelegate count_user_followers(user_id), to: Profiles

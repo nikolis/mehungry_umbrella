@@ -18,6 +18,15 @@ defmodule Mehungry.Food.Recipe do
     field :detail_image_url, :string
     field :recipe_image_remote, :string
     field :original_url, :string
+    # Provenance marker: "myplate" for USDA MyPlate imports, nil for in-app
+    # (user/AI/bot) recipes. Lets imported batches be group-managed. See
+    # Food.Recipes source helpers and docs/food/myplate_import.md.
+    field :source, :string
+    # Content license notice for imported recipes that carry a reuse obligation
+    # (e.g. "CC BY-SA 4.0" for UniTools). nil for public-domain/in-app recipes.
+    # Rendered next to the "Source" credit on the Steps tab to satisfy
+    # ShareAlike's visible-license requirement. See docs/food/unitools_import.md.
+    field :license, :string
     field :preperation_time_lower_limit, :integer
     field :preperation_time_upper_limit, :integer
     field :primary_nutrients_size, :integer
@@ -26,12 +35,14 @@ defmodule Mehungry.Food.Recipe do
     field :title, :string
     field :difficulty, :integer, default: 1
     field :nutrients, :map, default: %{}
+    # Derived per-serving nutrient claims written by Recipes.put_nutrient_info/2
+    # alongside :nutrients (see Food.NutrientClaims). Each element reloads as
+    # %{"nutrient" => _, "level" => "high"|"source", "percent_nrv" => int}.
+    # Derived-only — never cast from user params.
+    field :badges, {:array, :map}, default: []
     # pgvector column created by 20260622000001_add_pgvector_and_recipe_embeddings.exs;
     # written by RecipeEmbeddingWorker, read by Search.RecipeVectorSearch.
     field :embedding, Pgvector.Ecto.Vector
-    # Populated at display time by MehungryWeb.RecipeFlags for opted-in users;
-    # each entry is %{condition, compound, recommendation, severity}.
-    field :condition_flags, {:array, :map}, virtual: true, default: []
     # Populated by Recipes.search_recipes_for_admin/2 for the admin recipes tab.
     field :ingredient_count, :integer, virtual: true
 
@@ -100,6 +111,8 @@ defmodule Mehungry.Food.Recipe do
       :nutrients,
       :image_url,
       :original_url,
+      :source,
+      :license,
       :detail_image_url,
       :user_id,
       :language_name,
@@ -119,8 +132,12 @@ defmodule Mehungry.Food.Recipe do
       :cooking_time_lower_limit,
       :preperation_time_lower_limit
     ])
-    |> cast_embed(:steps, [:required_message])
-    |> cast_assoc(:recipe_ingredients, required: true)
+    |> cast_embed(:steps, sort_param: :steps_sort, drop_param: :steps_drop)
+    |> cast_assoc(:recipe_ingredients,
+      required: true,
+      sort_param: :recipe_ingredients_sort,
+      drop_param: :recipe_ingredients_drop
+    )
     |> cast_assoc(:recipe_hashtags, required: false)
   end
 end

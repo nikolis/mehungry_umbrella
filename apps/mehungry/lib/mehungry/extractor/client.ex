@@ -1,13 +1,16 @@
 defmodule Mehungry.Extractor.Client do
   @moduledoc """
   HTTP client for the `mehungry_extractor` batch-PMID analysis service
-  (`POST /analyze`). Base URL is read from app config
-  (`:mehungry, :extractor_base_url`), overridable in `config/runtime.exs` from
-  the `EXTRACTOR_BASE_URL` env var. Default `http://127.0.0.1:8000`.
+  (`POST /analyze`). The target URL and optional auth token are the UI-managed
+  connection from `Mehungry.Extractor.connection/0` (editable at
+  `/professional/health`), falling back to the `:extractor_base_url` config
+  (`EXTRACTOR_BASE_URL` env var). Default `http://127.0.0.1:8000`. When a token is
+  set it is sent as an `Authorization: Bearer <token>` header.
 
   The service is a deterministic evidence engine: it ingests each PMID (fetching
   from PubMed/PMC on first use — hence the generous timeout), extracts claims, and
-  returns synthesized cross-paper conclusions. See `mehungry_extractor/docs/api.md`.
+  returns per-paper observations (each tracing back to a verbatim source span)
+  alongside the detected topic core and outliers. See `mehungry_extractor/docs/api.md`.
   """
 
   @behaviour Mehungry.Extractor.ClientBehaviour
@@ -30,8 +33,9 @@ defmodule Mehungry.Extractor.Client do
       |> Jason.encode!()
 
     http_opts = [recv_timeout: timeout_ms(), timeout: timeout_ms()]
+    {base_url, auth_token} = Mehungry.Extractor.connection()
 
-    case HTTPoison.post(base_url() <> "/analyze", body, headers(), http_opts) do
+    case HTTPoison.post(base_url <> "/analyze", body, headers(auth_token), http_opts) do
       {:ok, %{status_code: 200, body: resp}} ->
         decode(resp)
 
@@ -58,16 +62,15 @@ defmodule Mehungry.Extractor.Client do
     end
   end
 
-  defp headers do
-    [
+  defp headers(auth_token) do
+    base = [
       {"content-type", "application/json"},
       {"accept", "application/json"}
     ]
-  end
 
-  defp base_url do
-    Application.get_env(:mehungry, :extractor_base_url, "http://127.0.0.1:8000")
-    |> String.trim_trailing("/")
+    if is_binary(auth_token) and auth_token != "",
+      do: [{"authorization", "Bearer " <> auth_token} | base],
+      else: base
   end
 
   defp timeout_ms, do: Application.get_env(:mehungry, :extractor_timeout_ms, @default_timeout_ms)

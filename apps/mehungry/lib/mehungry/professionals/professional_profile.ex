@@ -29,8 +29,11 @@ defmodule Mehungry.Professionals.ProfessionalProfile do
     # Scheduling
     field :appointment_slot_minutes, :integer, default: 60
 
-    # Payments (Stripe Connect — minimal slice)
+    # Payments (Stripe Connect — minimal slice). The fee is stored in cents but
+    # entered/displayed in euros via the virtual `consultation_fee_eur` field,
+    # which the changeset converts both directions (see `put_consultation_fee_cents/1`).
     field :consultation_fee_cents, :integer
+    field :consultation_fee_eur, :decimal, virtual: true
     field :stripe_connect_account_id, :string
     field :stripe_charges_enabled, :boolean, default: false
 
@@ -58,8 +61,7 @@ defmodule Mehungry.Professionals.ProfessionalProfile do
     :contact_email,
     :website_url,
     :timezone,
-    :appointment_slot_minutes,
-    :consultation_fee_cents
+    :appointment_slot_minutes
   ]
 
   @doc """
@@ -70,17 +72,44 @@ defmodule Mehungry.Professionals.ProfessionalProfile do
   """
   def changeset(profile, attrs) do
     profile
-    |> cast(attrs, @editable_fields)
+    |> seed_consultation_fee_eur()
+    |> cast(attrs, [:consultation_fee_eur | @editable_fields])
     |> validate_required([:user_id, :specialization])
     |> validate_length(:specialization, max: 100)
     |> validate_number(:appointment_slot_minutes, greater_than: 0, less_than_or_equal_to: 480)
+    |> validate_number(:consultation_fee_eur, greater_than_or_equal_to: 0)
     |> validate_format(:contact_email, ~r/^[^\s]+@[^\s]+$/, message: "must be a valid email")
+    |> put_consultation_fee_cents()
     |> maybe_put_slug()
     |> validate_public_completeness()
     |> unique_constraint(:user_id)
     |> unique_constraint(:slug)
     |> foreign_key_constraint(:user_id)
   end
+
+  # The form displays/edits the fee in euros, so seed the virtual field from the
+  # stored cents before casting — otherwise the input renders blank for a profile
+  # that already has a fee. (No-op once the changeset is in flight.)
+  defp seed_consultation_fee_eur(%__MODULE__{consultation_fee_cents: cents} = profile) do
+    %{profile | consultation_fee_eur: cents_to_eur(cents)}
+  end
+
+  # Mirror the euro input back into the stored `consultation_fee_cents` whenever
+  # the euro field actually changed (including being cleared → nil).
+  defp put_consultation_fee_cents(changeset) do
+    case fetch_change(changeset, :consultation_fee_eur) do
+      {:ok, eur} -> put_change(changeset, :consultation_fee_cents, eur_to_cents(eur))
+      :error -> changeset
+    end
+  end
+
+  defp cents_to_eur(nil), do: nil
+  defp cents_to_eur(cents) when is_integer(cents), do: Decimal.div(Decimal.new(cents), 100)
+
+  defp eur_to_cents(nil), do: nil
+
+  defp eur_to_cents(%Decimal{} = eur),
+    do: eur |> Decimal.mult(100) |> Decimal.round(0) |> Decimal.to_integer()
 
   @doc """
   Internal changeset for Stripe Connect state — kept separate from the

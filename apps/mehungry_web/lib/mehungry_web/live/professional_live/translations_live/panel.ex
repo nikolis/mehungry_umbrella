@@ -12,6 +12,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
   use MehungryWeb, :live_view
 
   alias Mehungry.AI.{FieldTranslator, RecipeTranslator}
+  alias Mehungry.Food
   alias Mehungry.Languages.{Locale, Translations, TranslationRegistry}
   alias Mehungry.ObanWorkers.ResourceTranslationWorker
 
@@ -34,7 +35,11 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
          |> push_navigate(to: ~p"/professional/translations")}
 
       descriptor ->
-        locale = params["lang"] || hd(Locale.targets())
+        # Accept any valid target (recipes expose both `en` and `el`); otherwise
+        # default to the primary translation target. `:show` may still narrow
+        # this per-item so it never targets the item's own language.
+        targets = Translations.target_locales(descriptor)
+        locale = if params["lang"] in targets, do: params["lang"], else: hd(Locale.targets())
 
         socket =
           socket
@@ -64,24 +69,47 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
       verified: Translations.count_items(descriptor, locale, :verified)
     }
 
+    missing_portions =
+      if descriptor[:translate_portions],
+        do: Food.count_ingredients_with_untranslated_portions(locale),
+        else: 0
+
     socket
     |> assign(:page_title, "Translate: #{descriptor.label}")
     |> assign(:filter, filter)
     |> assign(:page, page)
     |> assign(:counts, counts)
     |> assign(:items, items)
+    |> assign(:missing_portions, missing_portions)
   end
 
   defp apply_action(socket, :show, params) do
     descriptor = socket.assigns.descriptor
-    locale = socket.assigns.locale
-    pair = Translations.get_pair(descriptor, String.to_integer(params["id"]), locale)
+    id = String.to_integer(params["id"])
+
+    # Load the base first so we know the item's own source language, then pick a
+    # target that differs from it — you can't translate a Greek recipe "into
+    # Greek", so the editor falls back to the other language for such an item.
+    base = Translations.get_base(descriptor, id)
+    source_locale = source_locale(descriptor, base)
+    locale = show_target_locale(descriptor, socket.assigns.locale, source_locale)
+
+    pair = Translations.get_pair(descriptor, id, locale)
+
+    base_steps = recipe_steps(descriptor, pair.base)
+    portion_pairs = portion_pairs(descriptor, pair.base, locale)
 
     socket
+    |> assign(:locale, locale)
     |> assign(:page_title, "Translate: #{item_title(descriptor, pair.base)}")
     |> assign(:base, pair.base)
+    |> assign(:source_locale, source_locale)
     |> assign(:translation, pair.translation)
     |> assign(:draft, draft_from(descriptor, pair.translation))
+    |> assign(:base_steps, base_steps)
+    |> assign(:step_drafts, step_drafts_from(base_steps, pair.translation))
+    |> assign(:portion_pairs, portion_pairs)
+    |> assign(:portion_drafts, portion_drafts_from(portion_pairs))
     |> assign(:translating, false)
   end
 
@@ -118,6 +146,29 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
   end
 
   @impl true
+  def handle_event("ai_portions", _params, socket) do
+    %{descriptor: descriptor, locale: locale} = socket.assigns
+    ids = Food.ingredient_ids_with_untranslated_portions(locale)
+
+    case ResourceTranslationWorker.enqueue_portions_only(descriptor.key, locale, ids) do
+      {:ok, 0} ->
+        {:noreply,
+         put_flash(socket, :info, "No untranslated portions — every portion already has a draft.")}
+
+      {:ok, jobs} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :info,
+           "Queued portion translation for #{length(ids)} ingredient(s) in #{jobs} batch(es). Drafts appear as they finish."
+         )}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "Could not queue portion translation jobs.")}
+    end
+  end
+
+  @impl true
   def handle_event("verify", %{"id" => id}, socket) do
     %{descriptor: descriptor, locale: locale, current_user: user} = socket.assigns
 
@@ -142,23 +193,30 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
   end
 
   @impl true
-  def handle_event("save", %{"fields" => fields}, socket) do
-    %{descriptor: descriptor, base: base, locale: locale, current_user: user} = socket.assigns
+  def handle_event("save", %{"fields" => fields} = params, socket) do
+    %{descriptor: descriptor, base: base, base_steps: base_steps, locale: locale, current_user: user} =
+      socket.assigns
 
     field_values =
-      Map.new(descriptor.fields, fn field ->
-        {field, Map.get(fields, Atom.to_string(field))}
-      end)
+      descriptor.fields
+      |> Map.new(fn field -> {field, Map.get(fields, Atom.to_string(field))} end)
+      |> maybe_put_steps(descriptor, params["steps"], base_steps)
 
     case Translations.upsert(descriptor, base.id, locale, field_values,
            status: "verified",
            verified_by_id: user.id
          ) do
       {:ok, translation} ->
+        portion_pairs =
+          save_portions(descriptor, base, params["portions"], locale, user.id)
+
         {:noreply,
          socket
          |> assign(:translation, translation)
          |> assign(:draft, draft_from(descriptor, translation))
+         |> assign(:step_drafts, step_drafts_from(base_steps, translation))
+         |> assign(:portion_pairs, portion_pairs)
+         |> assign(:portion_drafts, portion_drafts_from(portion_pairs))
          |> put_flash(:info, "Saved & verified.")}
 
       {:error, _changeset} ->
@@ -167,14 +225,40 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
   end
 
   @impl true
+  def handle_event("save_original", %{"base" => base_fields} = params, socket) do
+    %{descriptor: descriptor, base: base, base_steps: base_steps} = socket.assigns
+
+    field_values =
+      Map.new(descriptor.fields, fn field ->
+        {field, Map.get(base_fields, Atom.to_string(field))}
+      end)
+
+    opts = original_steps_opt(descriptor, params["base_steps"], base_steps)
+
+    case Translations.update_base(descriptor, base, field_values, opts) do
+      {:ok, updated} ->
+        {:noreply,
+         socket
+         |> assign(:base, updated)
+         |> assign(:base_steps, recipe_steps(descriptor, updated))
+         |> put_flash(:info, "Original updated.")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not update the original.")}
+    end
+  end
+
+  @impl true
   def handle_info(:do_translate, socket) do
     %{descriptor: descriptor, base: base, locale: locale} = socket.assigns
 
     case run_ai(descriptor, base, locale) do
-      {:ok, values} ->
+      {:ok, values, step_drafts, portion_drafts} ->
         {:noreply,
          socket
          |> assign(:draft, Map.merge(socket.assigns.draft, values))
+         |> assign(:step_drafts, Map.merge(socket.assigns.step_drafts, step_drafts))
+         |> assign(:portion_drafts, Map.merge(socket.assigns.portion_drafts, portion_drafts))
          |> assign(:translating, false)
          |> put_flash(:info, "AI translation loaded — review and save.")}
 
@@ -186,10 +270,14 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
     end
   end
 
+  # Returns `{:ok, field_values, step_drafts, portion_drafts}` on success, where
+  # `step_drafts` is a `%{step_index => translated_description}` map (empty for
+  # non-recipe resources) and `portion_drafts` is a `%{portion_id =>
+  # translated_description}` map (empty unless the descriptor translates portions).
   defp run_ai(%{ai: :recipe}, base, locale) do
     case RecipeTranslator.translate_recipe(base, Locale.write_code(locale)) do
-      {:ok, %{title: title, description: description}} ->
-        {:ok, %{title: title, description: description}}
+      {:ok, %{title: title, description: description, steps: steps}} ->
+        {:ok, %{title: title, description: description}, steps_to_draft_map(steps), %{}}
 
       error ->
         error
@@ -198,7 +286,11 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
 
   defp run_ai(%{ai: :fields} = descriptor, base, locale) do
     field_values = Map.new(descriptor.fields, fn f -> {f, Map.get(base, f)} end)
-    FieldTranslator.translate_fields(field_values, locale, hint: descriptor.ai_hint)
+
+    case FieldTranslator.translate_fields(field_values, locale, hint: descriptor.ai_hint) do
+      {:ok, values} -> {:ok, values, %{}, ai_portion_drafts(descriptor, base, locale)}
+      error -> error
+    end
   end
 
   # ── Helpers ────────────────────────────────────────────────────────────────
@@ -232,7 +324,166 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
     Map.new(descriptor.fields, fn field -> {field, Map.get(translation, field) || ""} end)
   end
 
+  # Recipe steps are structured (`[%Food.Step{}]`), not a flat text field, so
+  # they ride alongside the descriptor's `:fields` rather than inside them.
+  defp recipe_steps(%{ai: :recipe}, %{steps: steps}) when is_list(steps), do: steps
+  defp recipe_steps(_descriptor, _base), do: []
+
+  # Seed the editable per-step drafts from a saved translation (matched by the
+  # base step's `index`); each step defaults to blank until translated.
+  defp step_drafts_from(base_steps, translation) do
+    # `Map.get/2`, not `.steps`: a non-recipe translation struct (e.g.
+    # IngredientTranslation) has no `:steps` key, and `base_steps` is `[]` for
+    # those so the map comes out empty anyway.
+    by_index = steps_to_draft_map((translation && Map.get(translation, :steps)) || [])
+    Map.new(base_steps, fn step -> {step.index, Map.get(by_index, step.index, "")} end)
+  end
+
+  # Normalize a translator/stored step list (`[%{"index" => i, "description" =>
+  # d}]`, string- or atom-keyed) into a `%{index => description}` map.
+  defp steps_to_draft_map(steps) when is_list(steps) do
+    Enum.reduce(steps, %{}, fn s, acc ->
+      idx = Map.get(s, "index", Map.get(s, :index))
+      desc = Map.get(s, "description", Map.get(s, :description))
+      if is_nil(idx), do: acc, else: Map.put(acc, idx, desc || "")
+    end)
+  end
+
+  defp steps_to_draft_map(_), do: %{}
+
+  # Overlay the submitted per-step textareas onto the base steps, preserving each
+  # step's `index` so `Localization.apply_recipe_translation/2` can match them.
+  defp maybe_put_steps(field_values, %{ai: :recipe}, step_params, base_steps)
+       when is_map(step_params) do
+    steps =
+      Enum.map(base_steps, fn step ->
+        %{"index" => step.index, "description" => Map.get(step_params, to_string(step.index)) || ""}
+      end)
+
+    Map.put(field_values, :steps, steps)
+  end
+
+  defp maybe_put_steps(field_values, _descriptor, _step_params, _base_steps), do: field_values
+
+  # ── Portions (ingredients) ───────────────────────────────────────────────
+  # Unit-less free-text portions are translated alongside the ingredient's
+  # name/description, mirroring the recipe-steps code paths above but gated on
+  # the descriptor's `:translate_portions` flag.
+
+  defp portion_pairs(descriptor, %{id: id}, locale) when not is_nil(id) do
+    if descriptor[:translate_portions],
+      do: Food.list_portion_translation_pairs(id, locale),
+      else: []
+  end
+
+  defp portion_pairs(_descriptor, _base, _locale), do: []
+
+  # Seed each editable portion draft from its saved translation (keyed by the
+  # portion's id); blank until translated.
+  defp portion_drafts_from(portion_pairs) do
+    Map.new(portion_pairs, fn %{portion: p, translation: t} ->
+      {p.id, (t && t.description) || ""}
+    end)
+  end
+
+  # Persist the submitted portion-description textareas, then reload the pairs so
+  # the editor reflects the saved (verified) rows. No-op unless the descriptor
+  # translates portions.
+  defp save_portions(descriptor, %{id: id} = _base, portion_params, locale, user_id)
+       when is_map(portion_params) do
+    if descriptor[:translate_portions] do
+      portion_params
+      |> Enum.each(fn {portion_id, description} ->
+        if is_binary(description) and String.trim(description) != "" do
+          Food.upsert_portion_translation(portion_id, locale, description,
+            status: "verified",
+            verified_by_id: user_id
+          )
+        end
+      end)
+
+      Food.list_portion_translation_pairs(id, locale)
+    else
+      []
+    end
+  end
+
+  defp save_portions(descriptor, %{id: id}, _portion_params, locale, _user_id) do
+    if descriptor[:translate_portions], do: Food.list_portion_translation_pairs(id, locale), else: []
+  end
+
+  # AI-draft map `%{portion_id => translated_description}` for a descriptor's
+  # unit-less portions; empty unless the descriptor translates portions.
+  defp ai_portion_drafts(descriptor, %{id: id}, locale) do
+    if descriptor[:translate_portions] do
+      items =
+        id
+        |> Food.list_portion_translation_pairs(locale)
+        |> Enum.map(fn %{portion: p} -> %{id: p.id, fields: %{description: p.description}} end)
+
+      case items do
+        [] ->
+          %{}
+
+        _ ->
+          case FieldTranslator.translate_batch(items, locale, hint: "cooking serving/portion label") do
+            {:ok, result} ->
+              Map.new(result, fn {portion_id, fields} -> {portion_id, Map.get(fields, :description)} end)
+
+            _ ->
+              %{}
+          end
+      end
+    else
+      %{}
+    end
+  end
+
+  # Build `cast_embed`-ready step params for an original (source-language) edit:
+  # carry each existing step's `id` (so Ecto updates it in place) + its title,
+  # overlaying the submitted description (falling back to the current one).
+  defp original_steps_opt(%{ai: :recipe}, step_fields, base_steps)
+       when is_map(step_fields) and base_steps != [] do
+    steps =
+      Enum.map(base_steps, fn step ->
+        %{
+          "id" => step.id,
+          "index" => step.index,
+          "title" => step.title,
+          "description" => Map.get(step_fields, to_string(step.index)) || step.description
+        }
+      end)
+
+    [steps: steps]
+  end
+
+  defp original_steps_opt(_descriptor, _step_fields, _base_steps), do: []
+
   defp item_title(descriptor, base), do: Map.get(base, descriptor.name_field) || "##{base.id}"
+
+  # The locale the base row is authored in. For most resources that's always the
+  # source locale (English); for a `:source_language_field` resource (recipes)
+  # it's read off the row, so the editor labels a Greek recipe's left column
+  # "Original (el)" and translates it into the chosen target.
+  defp source_locale(descriptor, base) do
+    case descriptor[:source_language_field] do
+      nil -> Locale.source()
+      field_name -> Locale.locale_of(Map.get(base, field_name))
+    end
+  end
+
+  # The locale a single item is translated *into* must never be the one it's
+  # already written in. If the requested target is the item's own source
+  # language, fall back to the first differing target (English recipe → el,
+  # Greek recipe → en).
+  defp show_target_locale(descriptor, requested, source_locale) do
+    if requested == source_locale do
+      Translations.target_locales(descriptor)
+      |> Enum.find(requested, &(&1 != source_locale))
+    else
+      requested
+    end
+  end
 
   defp status_of(nil), do: :missing
   defp status_of(%{status: "verified"}), do: :verified
@@ -265,14 +516,26 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
           <.filter_tab filter={@filter} value={:verified} label="Verified" count={@counts.verified} />
           <.filter_tab filter={@filter} value={:all} label="All" count={nil} />
         </div>
-        <button
-          phx-click="ai_all"
-          data-confirm={"Queue AI translation for all #{@counts.missing} missing #{@descriptor.label}? Each becomes an unverified draft."}
-          class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors disabled:opacity-40"
-          disabled={@counts.missing == 0}
-        >
-          <.icon name="hero-cpu-chip" class="h-4 w-4" /> AI-translate all missing
-        </button>
+        <div class="flex items-center gap-1.5">
+          <button
+            :if={@descriptor[:translate_portions]}
+            phx-click="ai_portions"
+            data-confirm={"Queue AI translation of the untranslated portions on #{@missing_portions} #{@descriptor.label}? Each becomes an unverified draft; existing translations are left untouched."}
+            class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-panel2 hover:bg-ink-panel border border-ink-panel2/60 text-parchment hover:text-white text-sm font-medium transition-colors disabled:opacity-40"
+            disabled={@missing_portions == 0}
+          >
+            <.icon name="hero-cpu-chip" class="h-4 w-4" /> AI-translate missing portions
+            <span :if={@missing_portions > 0} class="text-parchment-dim">{@missing_portions}</span>
+          </button>
+          <button
+            phx-click="ai_all"
+            data-confirm={"Queue AI translation for all #{@counts.missing} missing #{@descriptor.label}? Each becomes an unverified draft."}
+            class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-paprika hover:bg-paprika-soft text-white text-sm font-medium transition-colors disabled:opacity-40"
+            disabled={@counts.missing == 0}
+          >
+            <.icon name="hero-cpu-chip" class="h-4 w-4" /> AI-translate all missing
+          </button>
+        </div>
       </div>
 
       <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl divide-y divide-ink-panel2/50">
@@ -337,7 +600,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
         </.link>
         <div class="flex-1 flex items-center gap-2">
           <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-ink-panel2 text-parchment text-xs font-semibold uppercase">
-            {Locale.source()}
+            {@source_locale}
           </span>
           <.icon name="hero-arrow-right" class="h-3.5 w-3.5 text-parchment-dim" />
           <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-paprika/30 text-paprika-soft text-xs font-semibold uppercase border border-paprika/30">
@@ -354,21 +617,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
           class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-panel hover:bg-ink-panel2 border border-ink-panel2/60 text-parchment hover:text-white text-sm transition-colors disabled:opacity-50"
         >
           <%= if @translating do %>
-            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              />
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              />
-            </svg>
+            <MehungryWeb.SvgComponents.get_loading compact class="w-4 h-4" />
             Translating…
           <% else %>
             <.icon name="hero-cpu-chip" class="h-4 w-4" /> AI Translate
@@ -376,24 +625,54 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
         </button>
       </div>
 
-      <form phx-submit="save" class="grid grid-cols-2 gap-5">
-        <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-5">
+        <form phx-submit="save_original" class="space-y-3">
           <div class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">
-            Original ({Locale.source()})
+            Original ({@source_locale})
           </div>
           <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 space-y-3">
             <%= for field <- @descriptor.fields do %>
               <div>
                 <label class="block text-xs text-parchment-dim mb-1">{field_label(field)}</label>
-                <div class="text-sm text-parchment whitespace-pre-wrap">
-                  {Map.get(@base, field) || "—"}
-                </div>
+                <textarea
+                  name={"base[#{field}]"}
+                  rows={textarea_rows(field)}
+                  class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none resize-none"
+                ><%= Map.get(@base, field) %></textarea>
               </div>
             <% end %>
           </div>
-        </div>
+          <div :if={@base_steps != []} class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 space-y-3">
+            <div class="text-xs text-parchment-dim">Steps</div>
+            <div :for={step <- @base_steps}>
+              <label class="flex items-center gap-1.5 text-xs text-parchment-dim mb-1">
+                <span class="w-4 h-4 rounded-full bg-ink-panel2 text-parchment-dim text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                  {step.index + 1}
+                </span>
+                Step {step.index + 1}
+              </label>
+              <textarea
+                name={"base_steps[#{step.index}]"}
+                rows="3"
+                class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none resize-none"
+              ><%= step.description %></textarea>
+            </div>
+          </div>
+          <div :if={@portion_pairs != []} class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 space-y-2">
+            <div class="text-xs text-parchment-dim">Portions</div>
+            <div :for={%{portion: portion} <- @portion_pairs} class="text-sm text-parchment">
+              {portion.description}
+            </div>
+          </div>
+          <button
+            type="submit"
+            class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-ink-panel2 hover:bg-ink-panel border border-ink-panel2/60 text-parchment hover:text-white text-sm font-medium transition-colors"
+          >
+            <.icon name="hero-pencil-square" class="h-4 w-4" /> Save original
+          </button>
+        </form>
 
-        <div class="space-y-3">
+        <form phx-submit="save" class="space-y-3">
           <div class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">
             Translation ({@locale})
           </div>
@@ -409,14 +688,44 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
               </div>
             <% end %>
           </div>
+          <div :if={@base_steps != []} class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 space-y-3">
+            <div class="text-xs text-parchment-dim">Steps</div>
+            <div :for={step <- @base_steps}>
+              <label class="flex items-center gap-1.5 text-xs text-parchment-dim mb-1">
+                <span class="w-4 h-4 rounded-full bg-ink-panel2 text-parchment-dim text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                  {step.index + 1}
+                </span>
+                Step {step.index + 1}
+              </label>
+              <textarea
+                name={"steps[#{step.index}]"}
+                rows="3"
+                placeholder={step.description}
+                class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none resize-none"
+              ><%= Map.get(@step_drafts, step.index) %></textarea>
+            </div>
+          </div>
+          <div :if={@portion_pairs != []} class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 space-y-2">
+            <div class="text-xs text-parchment-dim">Portions</div>
+            <div :for={%{portion: portion} <- @portion_pairs}>
+              <label class="block text-xs text-parchment-dim mb-1">{portion.description}</label>
+              <input
+                type="text"
+                name={"portions[#{portion.id}]"}
+                placeholder={portion.description}
+                value={Map.get(@portion_drafts, portion.id)}
+                class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg text-parchment text-sm px-3 py-2 focus:border-paprika focus:outline-none"
+              />
+            </div>
+          </div>
           <button
             type="submit"
             class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors"
           >
             <.icon name="hero-check-badge" class="h-4 w-4" /> Save &amp; Verify
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
     """
   end
@@ -424,6 +733,8 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
   # ── Function components ─────────────────────────────────────────────────────
 
   defp panel_header(assigns) do
+    assigns = assign(assigns, :targets, Translations.target_locales(assigns.descriptor))
+
     ~H"""
     <div class="flex items-center gap-3 mb-5">
       <.link
@@ -434,10 +745,27 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
       </.link>
       <h1 class="text-lg font-semibold text-white flex items-center gap-2">
         {@descriptor.label}
-        <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-paprika/30 text-paprika-soft border border-paprika/30 text-[10px] font-bold uppercase">
-          {@locale}
-        </span>
       </h1>
+      <div :if={length(@targets) > 1} class="flex items-center gap-1 ml-auto">
+        <.link
+          :for={target <- @targets}
+          navigate={~p"/professional/translations/#{@descriptor.key}?lang=#{target}"}
+          class={[
+            "px-2 py-0.5 rounded text-[10px] font-bold uppercase border transition-colors",
+            target == @locale && "bg-paprika/30 text-paprika-soft border-paprika/30",
+            target != @locale &&
+              "bg-ink-panel2 text-parchment-dim border-ink-panel2 hover:text-parchment"
+          ]}
+        >
+          {target}
+        </.link>
+      </div>
+      <span
+        :if={length(@targets) <= 1}
+        class="inline-flex items-center px-1.5 py-0.5 rounded bg-paprika/30 text-paprika-soft border border-paprika/30 text-[10px] font-bold uppercase"
+      >
+        {@locale}
+      </span>
     </div>
     """
   end

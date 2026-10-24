@@ -41,6 +41,9 @@ defmodule Mehungry.Health.ConditionSeeder do
     before = Repo.aggregate(Condition, :count, :id)
 
     Enum.each(rows, &upsert/1)
+    # Second pass: link each row's optional `parent` (by name) now that every
+    # condition exists, so order within the catalogue doesn't matter.
+    resolve_parents(rows)
 
     total = Repo.aggregate(Condition, :count, :id)
     {:ok, %{inserted: total - before, total: total}}
@@ -96,6 +99,24 @@ defmodule Mehungry.Health.ConditionSeeder do
   end
 
   defp upsert_states(_row), do: :ok
+
+  # Set `parent_condition_id` for any row carrying a `"parent"` name, resolving the
+  # parent by its unique name. Idempotent — re-seeding just re-asserts the link.
+  defp resolve_parents(rows) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    Enum.each(rows, fn
+      %{"main_name" => name, "parent" => parent} when is_binary(parent) and parent != "" ->
+        with %Condition{id: child_id} <- Repo.get_by(Condition, name: name),
+             %Condition{id: parent_id} <- Repo.get_by(Condition, name: parent) do
+          from(c in Condition, where: c.id == ^child_id)
+          |> Repo.update_all(set: [parent_condition_id: parent_id, updated_at: now])
+        end
+
+      _ ->
+        :ok
+    end)
+  end
 
   @doc "Count of conditions currently in the registry — a quick post-seed check."
   def count, do: Repo.one(from(c in Condition, select: count(c.id)))

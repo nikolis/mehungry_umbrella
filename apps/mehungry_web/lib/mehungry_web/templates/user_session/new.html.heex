@@ -81,6 +81,13 @@
         >
           New here? <span class="text-paprika-soft ml-1">Register with email</span>
         </a>
+
+        <div class="text-center">
+          {link("Didn't get the confirmation email? Resend it",
+            to: Routes.user_confirmation_path(@conn, :new),
+            class: "text-xs text-parchment-dim hover:text-parchment"
+          )}
+        </div>
       </div>
     </.form>
   </div>

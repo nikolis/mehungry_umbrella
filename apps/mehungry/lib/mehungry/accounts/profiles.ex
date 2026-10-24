@@ -10,7 +10,6 @@ defmodule Mehungry.Accounts.Profiles do
 
   alias Mehungry.Accounts.{
     User,
-    UserConditionOptIn,
     UserContent,
     UserFollow,
     UserProfile
@@ -65,6 +64,42 @@ defmodule Mehungry.Accounts.Profiles do
     |> Repo.update()
   end
 
+  @doc """
+  Persists (or clears, with `nil`) the meal blueprint the user is following on
+  their calendar. A targeted single-column update (`Ecto.Changeset.change/2`) so
+  it doesn't re-run the full profile validations/assoc casts.
+  """
+  def set_followed_blueprint(%UserProfile{} = profile, blueprint_id) do
+    profile
+    |> Ecto.Changeset.change(followed_blueprint_id: blueprint_id)
+    |> Repo.update()
+  end
+
+  @doc """
+  Persists the user's personal "foods I avoid" list. Accepts a list of strings
+  (or a newline/comma-separated string), trims blanks and dedups before saving.
+  A targeted single-column update so it skips the full profile validations.
+  """
+  def set_avoid_foods(%UserProfile{} = profile, foods) do
+    profile
+    |> Ecto.Changeset.change(avoid_foods: clean_food_list(foods))
+    |> Repo.update()
+  end
+
+  @doc "Normalizes a raw avoid-foods value into a trimmed, de-duplicated list."
+  def clean_food_list(foods) when is_binary(foods) do
+    foods |> String.split(~r/[\n,]/) |> clean_food_list()
+  end
+
+  def clean_food_list(foods) when is_list(foods) do
+    foods
+    |> Enum.map(&(&1 |> to_string() |> String.trim()))
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  def clean_food_list(_), do: []
+
   def get_user_language(user_id) do
     case get_user_profile_by_user_id(user_id) do
       nil -> "en"
@@ -95,69 +130,6 @@ defmodule Mehungry.Accounts.Profiles do
   def diet_mode_for_diet("vegan"), do: :vegan
   def diet_mode_for_diet("vegetarian"), do: :vegetarian
   def diet_mode_for_diet(_), do: nil
-
-  @doc """
-  The condition ids a profile has opted into (for health-condition badges).
-  """
-  def list_opted_in_condition_ids(user_profile_id) do
-    from(o in UserConditionOptIn,
-      where: o.user_profile_id == ^user_profile_id,
-      select: o.condition_id
-    )
-    |> Repo.all()
-  end
-
-  @doc """
-  Replaces a profile's set of opted-in conditions with `condition_ids`
-  (a list of ids, possibly as strings). Deletes rows no longer selected and
-  inserts newly selected ones in a single transaction. Returns `:ok`.
-  """
-  def set_condition_opt_ins(user_profile_id, condition_ids) do
-    desired =
-      condition_ids
-      |> List.wrap()
-      |> Enum.map(&normalize_id/1)
-      |> Enum.reject(&is_nil/1)
-      |> MapSet.new()
-
-    current = MapSet.new(list_opted_in_condition_ids(user_profile_id))
-
-    to_add = MapSet.difference(desired, current)
-    to_remove = MapSet.difference(current, desired)
-
-    Repo.transaction(fn ->
-      if MapSet.size(to_remove) > 0 do
-        from(o in UserConditionOptIn,
-          where:
-            o.user_profile_id == ^user_profile_id and
-              o.condition_id in ^MapSet.to_list(to_remove)
-        )
-        |> Repo.delete_all()
-      end
-
-      Enum.each(to_add, fn condition_id ->
-        %UserConditionOptIn{}
-        |> UserConditionOptIn.changeset(%{
-          user_profile_id: user_profile_id,
-          condition_id: condition_id
-        })
-        |> Repo.insert!()
-      end)
-    end)
-
-    :ok
-  end
-
-  defp normalize_id(id) when is_integer(id), do: id
-
-  defp normalize_id(id) when is_binary(id) do
-    case Integer.parse(id) do
-      {int, _} -> int
-      :error -> nil
-    end
-  end
-
-  defp normalize_id(_), do: nil
 
   def change_user_profile(%UserProfile{} = user_profile, attrs \\ %{}) do
     UserProfile.changeset(user_profile, attrs)

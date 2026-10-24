@@ -63,7 +63,7 @@ defmodule MehungryWeb.MyIngredientLive.Form do
         <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-6">
           <div class="flex items-center justify-between mb-6">
             <.link
-              navigate={~p"/profile?#{[tab: "my_ingredients"]}"}
+              navigate={~p"/profile?#{[tab: "ingredients"]}"}
               class="text-parchment-dim hover:text-parchment text-sm"
             >
               ← Back
@@ -164,7 +164,7 @@ defmodule MehungryWeb.MyIngredientLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Ingredient saved")
-         |> push_navigate(to: ~p"/profile?#{[tab: "my_ingredients"]}")}
+         |> push_navigate(to: ~p"/profile?#{[tab: "ingredients"]}")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}

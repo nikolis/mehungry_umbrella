@@ -21,5 +21,6 @@ defmodule Mehungry.Accounts.UserFollow do
       :follow_id
     ])
     |> validate_required([:user_id, :follow_id])
+    |> unique_constraint([:user_id, :follow_id])
   end
 end

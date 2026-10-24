@@ -8,6 +8,7 @@ defmodule Mehungry.History.UserMeal do
   alias Mehungry.History.ConsumeRecipeUserMeal
   alias Mehungry.History.RecipeUserMeal
   alias Mehungry.History.IngredientUserMeal
+  alias Mehungry.History.FreeFoodUserMeal
   alias Mehungry.History.MealType
 
   schema "history_user_meals" do
@@ -22,6 +23,10 @@ defmodule Mehungry.History.UserMeal do
 
     has_many :recipe_user_meals, RecipeUserMeal, on_replace: :delete, on_delete: :nothing
     has_many :ingredient_user_meals, IngredientUserMeal, on_replace: :delete, on_delete: :nothing
+
+    # Arbitrary "free food" entries the user logged that aren't in our DB. Isolated
+    # to the calendar — its only FK is back here (see FreeFoodUserMeal).
+    has_many :free_food_user_meals, FreeFoodUserMeal, on_replace: :delete, on_delete: :nothing
 
     has_many :consume_recipe_user_meals, ConsumeRecipeUserMeal,
       on_replace: :delete,
@@ -43,6 +48,7 @@ defmodule Mehungry.History.UserMeal do
     ])
     |> cast_assoc(:recipe_user_meals, with: &RecipeUserMeal.changeset/2, required: false)
     |> cast_assoc(:ingredient_user_meals, with: &IngredientUserMeal.changeset/2, required: false)
+    |> cast_assoc(:free_food_user_meals, with: &FreeFoodUserMeal.changeset/2, required: false)
     |> cast_assoc(:consume_recipe_user_meals,
       with: &ConsumeRecipeUserMeal.changeset/2,
       required: false

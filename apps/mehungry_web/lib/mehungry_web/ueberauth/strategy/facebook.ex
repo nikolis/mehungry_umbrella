@@ -5,7 +5,7 @@ defmodule Ueberauth.Strategy.Local.Facebook do
 
   use Ueberauth.Strategy,
     default_scope:
-      "email, public_profile, pages_manage_engagement, pages_manage_posts, pages_read_engagement",
+      "email, public_profile, pages_manage_engagement, pages_manage_posts, pages_read_engagement, read_insights",
     profile_fields: "id,email,gender,link,locale,name,timezone,updated_time,verified",
     uid_field: :id,
     allowed_request_params: [

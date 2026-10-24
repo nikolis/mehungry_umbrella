@@ -4,7 +4,6 @@ defmodule MehungryWeb.ProfileLive.Form do
 
   alias Mehungry.Accounts
   alias Mehungry.Food
-  alias Mehungry.Health
 
   @impl true
   def render(assigns) do
@@ -73,37 +72,6 @@ defmodule MehungryWeb.ProfileLive.Form do
           </button>
         </div>
 
-        <div class="mt-10 mb-4">
-          <h3 class="text-center text-parchment font-display text-xl font-medium">
-            Health Condition Badges
-          </h3>
-          <p class="text-center text-parchment-dim text-sm mt-1">
-            Recipes are flagged when they contain compounds relevant to the conditions you pick.
-          </p>
-        </div>
-
-        <div :if={@conditions_by_category == []} class="text-center text-parchment-dim text-sm">
-          No conditions available yet.
-        </div>
-
-        <div class="space-y-4">
-          <div :for={{category, conditions} <- @conditions_by_category}>
-            <p class="text-xs uppercase tracking-wide text-parchment-dim mb-2">{category}</p>
-            <div class="flex flex-wrap gap-2">
-              <button
-                :for={condition <- conditions}
-                type="button"
-                phx-target={@myself}
-                phx-click="toggle_condition"
-                phx-value-id={condition.id}
-                class={chip_class(MapSet.member?(@selected_condition_ids, condition.id))}
-              >
-                {if MapSet.member?(@selected_condition_ids, condition.id), do: "✓ ", else: ""}{condition.name}
-              </button>
-            </div>
-          </div>
-        </div>
-
         <div class="flex gap-4 pt-8">
           <button
             type="submit"
@@ -141,21 +109,9 @@ defmodule MehungryWeb.ProfileLive.Form do
   def update(%{user_profile: user_profile} = assigns, socket) do
     changeset = Accounts.change_user_profile(user_profile)
 
-    conditions_by_category =
-      Health.list_conditions_for_presentation()
-      |> Enum.group_by(&(&1.category || "Other"))
-      |> Enum.sort_by(fn {category, _} -> category end)
-
-    selected_condition_ids =
-      user_profile.id
-      |> Accounts.list_opted_in_condition_ids()
-      |> MapSet.new()
-
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:conditions_by_category, conditions_by_category)
-     |> assign_new(:selected_condition_ids, fn -> selected_condition_ids end)
      |> assign_new(:base_diet, fn -> user_profile.diet || "omnivore" end)
      |> assign_new(:lactose_intolerant, fn -> user_profile.lactose_intolerant || false end)
      |> assign_form(changeset)}
@@ -194,26 +150,9 @@ defmodule MehungryWeb.ProfileLive.Form do
     {:noreply, assign(socket, :lactose_intolerant, !socket.assigns.lactose_intolerant)}
   end
 
-  def handle_event("toggle_condition", %{"id" => id}, socket) do
-    id = String.to_integer(id)
-    selected = socket.assigns.selected_condition_ids
-
-    selected =
-      if MapSet.member?(selected, id),
-        do: MapSet.delete(selected, id),
-        else: MapSet.put(selected, id)
-
-    {:noreply, assign(socket, :selected_condition_ids, selected)}
-  end
-
   defp save_user_profile(socket, :index, user_profile_params) do
     case Accounts.update_user_profile(socket.assigns.user_profile, user_profile_params) do
       {:ok, user_profile} ->
-        Accounts.set_condition_opt_ins(
-          user_profile.id,
-          MapSet.to_list(socket.assigns.selected_condition_ids)
-        )
-
         notify_parent({:saved, user_profile})
 
         {:noreply,
@@ -230,11 +169,6 @@ defmodule MehungryWeb.ProfileLive.Form do
   defp save_user_profile(socket, :new, user_profile_params) do
     case Accounts.create_user_profile(user_profile_params) do
       {:ok, user_profile} ->
-        Accounts.set_condition_opt_ins(
-          user_profile.id,
-          MapSet.to_list(socket.assigns.selected_condition_ids)
-        )
-
         notify_parent({:saved, user_profile})
 
         {:noreply,

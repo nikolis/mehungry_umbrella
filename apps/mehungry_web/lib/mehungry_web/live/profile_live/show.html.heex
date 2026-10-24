@@ -1,141 +1,25 @@
-<div class="sm:p-10 bg-ink-panel rounded-2xl border border-ink-panel2 overflow-hidden mb-8">
-  <div class=""></div>
+<div class="bg-ink-panel rounded-2xl border border-ink-panel2 p-6 sm:p-8 mb-8">
   <%= if @live_action == :index do %>
-    <.user_details_card
+    <.profile_hero
+      mode={:index}
+      compact={@content_state in [:edit_profile, :connected_accounts, :ingredients]}
       user={@current_user}
-      myself={@myself}
-      total_recipes={count_user_created_recipes(@user.id)}
-      user_follows={@user_follows}
-      user_profile={@user_profile}
       current_user={@current_user}
+      user_profile={@user_profile}
+      user_follows={@user_follows}
+      myself={@myself}
       socket={@socket}
     />
-
-    <%!-- Language preference toggle — visible on all screen sizes --%>
-    <div class="flex justify-center mt-4 mb-2">
-      <div class="flex items-center gap-1 bg-ink-panel2 rounded-full p-1">
-        <a
-          href="/users/language/en"
-          class={"px-5 py-1.5 rounded-full text-sm font-semibold transition-colors #{if (@user_profile.language_preference || "en") == "en", do: "bg-paprika text-ink", else: "text-parchment-dim hover:text-parchment"}"}
-        >
-          EN
-        </a>
-        <a
-          href="/users/language/el"
-          class={"px-5 py-1.5 rounded-full text-sm font-semibold transition-colors #{if (@user_profile.language_preference || "en") == "el", do: "bg-paprika text-ink", else: "text-parchment-dim hover:text-parchment"}"}
-        >
-          ΕΛ — Ελληνικά
-        </a>
-      </div>
-    </div>
-
-    <div class="flex flex-col items-center gap-4 m-6">
-      <% subscription = Mehungry.Subscriptions.get_subscription(@current_user.id) %>
-      <%= if subscription.tier == "free" do %>
-        <.link href={~p"/upgrade"}>
-          <button
-            class="flex items-center gap-2 py-2.5 px-6 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-md sm:text-lg font-bold transition-colors"
-            type="button"
-          >
-            <.icon name="hero-sparkles" class="w-5 h-5 sm:w-6 sm:h-6 flex-none" />
-            Upgrade to Mehungry Plus
-          </button>
-        </.link>
-      <% else %>
-        <.link href={~p"/upgrade"} class="flex flex-col items-center gap-1.5">
-          <.subscription_badge tier={subscription.tier} />
-          <span class="text-parchment-dim text-sm hover:text-parchment transition-colors">
-            {if subscription.status == "active",
-              do: "Your subscription is active — manage it",
-              else: String.capitalize(subscription.status) <> " subscription — manage it"}
-          </span>
-        </.link>
-      <% end %>
-      <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-        <.link patch={~p"/users/log_out"} phx-click={JS.push_focus()}>
-          <button
-            class="flex items-center gap-1.5 text-parchment-dim hover:text-parchment text-sm sm:text-base font-medium transition-colors"
-            type="button"
-          >
-            <.icon name="hero-arrow-right-on-rectangle" class="w-4 h-4 sm:w-5 sm:h-5 flex-none" />
-            Logout
-          </button>
-        </.link>
-        <%= if !is_nil(@current_user.email) do %>
-          <%= if @current_user.email == "nikolisgal@gmail.com" do %>
-            <.link patch={~p"/professional/activeusers"} phx-click={JS.push_focus()}>
-              <button
-                class="flex items-center gap-1.5 text-parchment-dim hover:text-parchment text-sm sm:text-base font-medium transition-colors"
-                type="button"
-              >
-                <.icon name="hero-pencil-square" class="w-4 h-4 sm:w-5 sm:h-5 flex-none" />
-                Professional
-              </button>
-            </.link>
-            <.link patch={~p"/professional/analytics"} phx-click={JS.push_focus()}>
-              <button
-                class="flex items-center gap-1.5 text-parchment-dim hover:text-parchment text-sm sm:text-base font-medium transition-colors"
-                type="button"
-              >
-                <.icon name="hero-chart-bar" class="w-4 h-4 sm:w-5 sm:h-5 flex-none" /> Analytics
-              </button>
-            </.link>
-          <% end %>
-        <% end %>
-        <.link
-          patch={~p"/users/delete"}
-          phx-click={JS.push_focus()}
-          data-confirm="Are you sure you wan't to completely erase your account ?"
-        >
-          <button
-            class="flex items-center gap-1.5 text-red-500/70 hover:text-red-400 text-sm sm:text-base font-medium transition-colors"
-            type="button"
-          >
-            <.icon name="hero-trash" class="w-4 h-4 sm:w-5 sm:h-5 flex-none" /> Delete Account
-          </button>
-        </.link>
-      </div>
-    </div>
   <% else %>
-    <.user_details_card
+    <.profile_hero
+      mode={:show}
       user={@user}
+      current_user={@current_user}
+      user_profile={@user_profile}
+      user_follows={@user_follows}
+      friend_status={@friend_status}
       myself={@myself}
       socket={@socket}
-      total_recipes={count_user_created_recipes(@user.id)}
-      user_follows={@user_follows}
-      user_recipes={@user_recipes}
-      user_profile={@user_profile}
-      current_user={@current_user}
     />
-    <%= if @current_user && @current_user.id != @user.id do %>
-      <div class="flex justify-center mt-4">
-        <%= case @friend_status do %>
-          <% :friends -> %>
-            <span class="flex items-center gap-1.5 py-2 px-5 rounded-full bg-ink-panel2 text-parchment-dim text-sm font-medium">
-              <.icon name="hero-check" class="w-4 h-4 flex-none" /> Friends
-            </span>
-          <% :request_sent -> %>
-            <span class="flex items-center gap-1.5 py-2 px-5 rounded-full bg-ink-panel2 text-parchment-dim text-sm font-medium">
-              <.icon name="hero-clock" class="w-4 h-4 flex-none" /> Request sent
-            </span>
-          <% :request_received -> %>
-            <.link
-              navigate={~p"/friends"}
-              class="flex items-center gap-1.5 py-2 px-5 rounded-full bg-paprika hover:bg-paprika-soft text-ink text-sm font-bold transition-colors"
-            >
-              <.icon name="hero-user-plus" class="w-4 h-4 flex-none" /> Respond to request
-            </.link>
-          <% _ -> %>
-            <button
-              type="button"
-              phx-click="add_friend"
-              phx-value-id={@user.id}
-              class="flex items-center gap-1.5 py-2 px-5 rounded-full bg-paprika hover:bg-paprika-soft text-ink text-sm font-bold transition-colors"
-            >
-              <.icon name="hero-user-plus" class="w-4 h-4 flex-none" /> Add Friend
-            </button>
-        <% end %>
-      </div>
-    <% end %>
   <% end %>
 </div>

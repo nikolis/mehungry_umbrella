@@ -33,7 +33,10 @@ config :libcluster,
   ]
 
 config :mehungry_web, MehungryWeb.Endpoint,
-  http: [ip: {0, 0, 0, 0}, port: 4000],
+  # Bind on IPv6 any (dual-stack on Linux, so IPv4 still works too). Fly.io's
+  # proxy reaches the app over the private IPv6 6PN network, so an IPv4-only
+  # bind ({0,0,0,0}) is unreachable there; this value works on Fly and ECS alike.
+  http: [ip: {0, 0, 0, 0, 0, 0, 0, 0}, port: 4000],
   debug_errors: false,
   check_origin: false,
   # force_ssl: [rewrite_on: [:x_forwarded_proto]],

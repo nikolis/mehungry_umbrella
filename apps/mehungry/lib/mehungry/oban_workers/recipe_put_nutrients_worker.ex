@@ -61,7 +61,14 @@ defmodule Mehungry.RecipePutNutrientsWorker do
 
         changeset = Food.change_recipe(recipe)
 
-        _create_post = Mehungry.Posts.create_post(recipe)
+        # Keep the recipe's feed post(s) in sync with its image. This worker runs
+        # on every create *and* update, so a recipe created without an image
+        # (whose post couldn't be made then — a post requires md_media_url from
+        # image_url) gets its post the first time an image is present, and an
+        # existing post whose md_media_url has drifted from the current image
+        # (e.g. an AI cover later replaced by a user upload) is repointed. Both
+        # steps are idempotent — see Posts.sync_recipe_post_media/1.
+        Mehungry.Posts.sync_recipe_post_media(recipe)
 
         Cachex.del(:recipes_cache, {Mehungry.Food, recipe_id})
 

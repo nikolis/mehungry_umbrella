@@ -11,10 +11,17 @@ defmodule Mehungry.Search.RecipeVectorSearch do
   import Ecto.Query
   require Logger
 
-  alias Mehungry.{Repo, AI.EmbeddingClient, Search.RecipeSearch}
+  alias Mehungry.{Repo, Search.RecipeSearch}
   alias Mehungry.Food.Recipe
 
   @default_limit 20
+
+  # The embedding provider is a config seam (`:embedding_client`) so tests can
+  # exercise the real vector-search path with a deterministic, offline stub
+  # instead of degrading to strict full-text search. Defaults to the live
+  # OpenAI-backed client.
+  defp embedding_client,
+    do: Application.get_env(:mehungry, :embedding_client, Mehungry.AI.EmbeddingClient)
 
   @doc """
   Search recipes by semantic similarity to `query_text`.
@@ -32,7 +39,7 @@ defmodule Mehungry.Search.RecipeVectorSearch do
     limit = Keyword.get(opts, :limit, @default_limit)
     exclude_ids = Keyword.get(opts, :exclude_ids, [])
 
-    case EmbeddingClient.embed(query_text) do
+    case embedding_client().embed(query_text) do
       {:ok, vector} ->
         vector_search(vector, user_id, limit, exclude_ids)
 

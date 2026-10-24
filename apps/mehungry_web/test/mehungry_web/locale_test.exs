@@ -37,11 +37,4 @@ defmodule MehungryWeb.LocaleTest do
       assert Locale.swap_path("/", "el") == "/el"
     end
   end
-
-  describe "data_language_name/1" do
-    test "maps URL locales to the legacy translation-table language names" do
-      assert Locale.data_language_name("el") == "Gr"
-      assert Locale.data_language_name("en") == "En"
-    end
-  end
 end

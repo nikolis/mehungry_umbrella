@@ -41,6 +41,47 @@ defmodule Mehungry.ProfessionalsTest do
       assert p2.slug == "maria-papadaki-1"
     end
 
+    test "consultation fee is entered in euros and stored as cents" do
+      user = user_fixture()
+
+      {:ok, profile} =
+        Professionals.create_professional_profile(%{
+          user_id: user.id,
+          specialization: "Dietitian",
+          consultation_fee_eur: "49.99"
+        })
+
+      assert profile.consultation_fee_cents == 4999
+
+      # Re-editing surfaces the stored cents back as euros in the changeset.
+      changeset = Professionals.change_professional_profile(profile)
+      assert Decimal.equal?(Ecto.Changeset.get_field(changeset, :consultation_fee_eur), "49.99")
+
+      # Whole-euro input and clearing both round-trip correctly.
+      {:ok, profile} =
+        Professionals.update_professional_profile(profile, %{consultation_fee_eur: "50"})
+
+      assert profile.consultation_fee_cents == 5000
+
+      {:ok, profile} =
+        Professionals.update_professional_profile(profile, %{consultation_fee_eur: ""})
+
+      assert profile.consultation_fee_cents == nil
+    end
+
+    test "rejects a negative consultation fee" do
+      user = user_fixture()
+
+      {:error, changeset} =
+        Professionals.create_professional_profile(%{
+          user_id: user.id,
+          specialization: "Dietitian",
+          consultation_fee_eur: "-5"
+        })
+
+      assert %{consultation_fee_eur: _} = errors_on(changeset)
+    end
+
     test "cannot publish without display name, city and bio" do
       user = user_fixture()
 
@@ -127,6 +168,35 @@ defmodule Mehungry.ProfessionalsTest do
       # A second request for the same slot is rejected.
       assert {:error, :slot_unavailable} =
                Professionals.request_appointment(professional.id, client.id, slot)
+    end
+
+    test "the DB rejects two active appointments in the same slot (race backstop)", %{
+      professional: professional,
+      client: client
+    } do
+      at = NaiveDateTime.new!(Date.add(Date.utc_today(), 2), ~T[09:00:00])
+
+      base = %{
+        professional_id: professional.id,
+        client_id: client.id,
+        scheduled_at: at,
+        ends_at: NaiveDateTime.add(at, 3600),
+        title: "C"
+      }
+
+      assert {:ok, first} = Professionals.create_appointment(Map.put(base, :status, "requested"))
+
+      # Even when the slot_open? check is bypassed (simulating a concurrent
+      # racer), the partial unique index blocks a second active appointment.
+      assert {:error, changeset} =
+               Professionals.create_appointment(Map.put(base, :status, "accepted"))
+
+      assert %{scheduled_at: _} = errors_on(changeset)
+
+      # Freeing the slot (decline/cancel) lets it be rebooked.
+      {:ok, _} = Professionals.decline_appointment(first)
+
+      assert {:ok, _} = Professionals.create_appointment(Map.put(base, :status, "requested"))
     end
 
     test "rejects a slot outside availability", %{professional: professional, client: client} do
@@ -375,6 +445,300 @@ defmodule Mehungry.ProfessionalsTest do
       assert is_nil(Accounts.get_managed_user_by_claim_token(first))
       assert %{id: id} = Accounts.get_managed_user_by_claim_token(second)
       assert id == client.id
+    end
+  end
+
+  describe "client intake energy auto-calc" do
+    setup do
+      professional = user_fixture()
+      client = user_fixture()
+
+      {:ok, record} =
+        Professionals.create_client_record(%{
+          professional_id: professional.id,
+          user_id: client.id,
+          full_name: "Maria Papadaki"
+        })
+
+      %{record: record}
+    end
+
+    test "fills blank BMI/BMR/TDEE from anthropometrics on create", %{record: record} do
+      {:ok, intake} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "height_m" => "1.70",
+          "weight_kg" => "72",
+          "sex" => "female",
+          "age" => "34",
+          "activity_level" => "moderate"
+        })
+
+      assert intake.bmi == 24.9
+      assert intake.bmr_kcal == 1452
+      assert intake.tdee_kcal == round(1452 * 1.55)
+    end
+
+    test "does not overwrite supplied energy values (clobber guard)", %{record: record} do
+      {:ok, intake} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "height_m" => "1.70",
+          "weight_kg" => "72",
+          "sex" => "female",
+          "age" => "34",
+          "activity_level" => "moderate",
+          # a measured RMR the nutritionist typed — must survive
+          "bmr_kcal" => "1600"
+        })
+
+      assert intake.bmr_kcal == 1600
+      # the blank ones still auto-fill
+      assert intake.bmi == 24.9
+      assert intake.tdee_kcal == round(1452 * 1.55)
+    end
+
+    test "fills only BMI when sex/age absent", %{record: record} do
+      {:ok, intake} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "height_m" => "1.70",
+          "weight_kg" => "72"
+        })
+
+      assert intake.bmi == 24.9
+      assert intake.bmr_kcal == nil
+      assert intake.tdee_kcal == nil
+    end
+
+    test "rejects an unknown sex / activity level", %{record: record} do
+      assert {:error, changeset} =
+               Professionals.create_intake(%{
+                 "professional_client_id" => record.id,
+                 "sex" => "other"
+               })
+
+      assert %{sex: _} = errors_on(changeset)
+    end
+  end
+
+  describe "weight_history/1" do
+    setup do
+      professional = user_fixture()
+      client = user_fixture()
+
+      {:ok, record} =
+        Professionals.create_client_record(%{
+          professional_id: professional.id,
+          user_id: client.id,
+          full_name: "Maria Papadaki"
+        })
+
+      %{record: record}
+    end
+
+    test "merges intake + visit weights, sorted ascending by date, dropping nils", %{
+      record: record
+    } do
+      {:ok, _} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "assessed_on" => "2026-01-10",
+          "weight_kg" => "72.0"
+        })
+
+      {:ok, _} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "assessed_on" => "2026-03-01",
+          "weight_kg" => "70.5"
+        })
+
+      {:ok, _} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "visit_date" => "2026-02-05",
+          "weight_kg" => "71.2"
+        })
+
+      {:ok, _} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "visit_date" => "2026-04-01",
+          "weight_kg" => "69.8"
+        })
+
+      # dropped: no weight, and no date
+      {:ok, _} =
+        Professionals.create_consultation_note(%{
+          "professional_client_id" => record.id,
+          "visit_date" => "2026-05-01"
+        })
+
+      {:ok, _} =
+        Professionals.create_intake(%{
+          "professional_client_id" => record.id,
+          "weight_kg" => "68.0"
+        })
+
+      history = Professionals.weight_history(record.id)
+
+      assert Enum.map(history, & &1.date) == [
+               ~D[2026-01-10],
+               ~D[2026-02-05],
+               ~D[2026-03-01],
+               ~D[2026-04-01]
+             ]
+
+      assert Enum.map(history, & &1.weight_kg) == [72.0, 71.2, 70.5, 69.8]
+      assert Enum.map(history, & &1.source) == [:intake, :visit, :intake, :visit]
+    end
+
+    test "returns [] when no dated weights exist", %{record: record} do
+      assert Professionals.weight_history(record.id) == []
+    end
+  end
+
+  describe "records_by_user_id/1" do
+    test "maps each user to their record, scoped to the professional" do
+      professional = user_fixture()
+      other_professional = user_fixture()
+      client_a = user_fixture()
+      client_b = user_fixture()
+
+      {:ok, rec_a} =
+        Professionals.create_client_record(%{
+          professional_id: professional.id,
+          user_id: client_a.id,
+          full_name: "A"
+        })
+
+      {:ok, rec_b} =
+        Professionals.create_client_record(%{
+          professional_id: professional.id,
+          user_id: client_b.id,
+          full_name: "B"
+        })
+
+      # Another professional's record for the same user must not leak in.
+      {:ok, _other} =
+        Professionals.create_client_record(%{
+          professional_id: other_professional.id,
+          user_id: client_a.id,
+          full_name: "A elsewhere"
+        })
+
+      map = Professionals.records_by_user_id(professional.id)
+
+      assert Map.keys(map) |> Enum.sort() == Enum.sort([client_a.id, client_b.id])
+      assert map[client_a.id].id == rec_a.id
+      assert map[client_b.id].id == rec_b.id
+    end
+
+    test "most recently created record wins on duplicate imports for a user" do
+      professional = user_fixture()
+      client = user_fixture()
+
+      {:ok, _old} =
+        Professionals.create_client_record(%{
+          professional_id: professional.id,
+          user_id: client.id,
+          full_name: "Old"
+        })
+
+      {:ok, newer} =
+        Professionals.create_client_record(%{
+          professional_id: professional.id,
+          user_id: client.id,
+          full_name: "Newer"
+        })
+
+      map = Professionals.records_by_user_id(professional.id)
+
+      assert map[client.id].id == newer.id
+      assert map[client.id].full_name == "Newer"
+    end
+
+    test "returns an empty map for a professional with no records" do
+      professional = user_fixture()
+      assert Professionals.records_by_user_id(professional.id) == %{}
+    end
+  end
+
+  describe "client ↔ nutritionist messages" do
+    setup do
+      %{professional: user_fixture(), client: user_fixture()}
+    end
+
+    test "send_message creates a message and broadcasts to both parties", %{
+      professional: p,
+      client: c
+    } do
+      Professionals.subscribe_to_messages(p.id)
+      Professionals.subscribe_to_messages(c.id)
+
+      assert {:ok, msg} = Professionals.send_message(p.id, c.id, p.id, "Hi there")
+      assert msg.body == "Hi there"
+      assert msg.sender_user_id == p.id
+      assert is_nil(msg.read_at)
+
+      # Delivered to both the professional's and the client's topic.
+      assert_receive {:assignment_message, ^msg}
+      assert_receive {:assignment_message, ^msg}
+    end
+
+    test "send_message rejects a blank body", %{professional: p, client: c} do
+      assert {:error, changeset} = Professionals.send_message(p.id, c.id, p.id, "   ")
+      refute changeset.valid?
+    end
+
+    test "list_messages returns the thread oldest first", %{professional: p, client: c} do
+      {:ok, _} = Professionals.send_message(p.id, c.id, p.id, "first")
+      {:ok, _} = Professionals.send_message(p.id, c.id, c.id, "second")
+
+      assert Professionals.list_messages(p.id, c.id) |> Enum.map(& &1.body) == ["first", "second"]
+    end
+
+    test "mark_thread_read marks only the reader's received messages", %{professional: p, client: c} do
+      {:ok, from_client} = Professionals.send_message(p.id, c.id, c.id, "client msg")
+      {:ok, from_pro} = Professionals.send_message(p.id, c.id, p.id, "pro msg")
+
+      assert Professionals.mark_thread_read(p.id, c.id, p.id) == 1
+
+      by_id = Professionals.list_messages(p.id, c.id) |> Map.new(&{&1.id, &1})
+      refute is_nil(by_id[from_client.id].read_at)
+      assert is_nil(by_id[from_pro.id].read_at)
+    end
+
+    test "count_unread_messages_for counts messages addressed to the user", %{
+      professional: p,
+      client: c
+    } do
+      {:ok, _} = Professionals.send_message(p.id, c.id, c.id, "to pro 1")
+      {:ok, _} = Professionals.send_message(p.id, c.id, c.id, "to pro 2")
+      {:ok, _} = Professionals.send_message(p.id, c.id, p.id, "to client 1")
+
+      assert Professionals.count_unread_messages_for(p.id) == 2
+      assert Professionals.count_unread_messages_for(c.id) == 1
+
+      Professionals.mark_thread_read(p.id, c.id, p.id)
+      assert Professionals.count_unread_messages_for(p.id) == 0
+      assert Professionals.count_unread_messages_for(c.id) == 1
+    end
+
+    test "unread_counts_by_client groups unread by client, excluding the pro's own", %{
+      professional: p,
+      client: c
+    } do
+      other = user_fixture()
+      {:ok, _} = Professionals.send_message(p.id, c.id, c.id, "a")
+      {:ok, _} = Professionals.send_message(p.id, c.id, c.id, "b")
+      {:ok, _} = Professionals.send_message(p.id, other.id, other.id, "x")
+      {:ok, _} = Professionals.send_message(p.id, other.id, p.id, "pro reply")
+
+      counts = Professionals.unread_counts_by_client(p.id)
+      assert counts[c.id] == 2
+      assert counts[other.id] == 1
     end
   end
 end

@@ -1165,11 +1165,11 @@ defmodule MehungryWeb.LandingLive do
               <p class="mb-1 text-xs font-medium text-basil">{gettext("For nutritionists")}</p>
               <div class="mb-1 flex items-baseline gap-1">
                 <span class="text-3xl font-bold text-basil [font-variant-numeric:tabular-nums]">
-                  €59
+                  €29.90
                 </span>
                 <span class="text-sm text-parchment-dim">{gettext("/month")}</span>
               </div>
-              <p class="mb-5 text-xs text-parchment-dim">{gettext("or €599/yr")}</p>
+              <p class="mb-5 text-xs text-parchment-dim">{gettext("or €290/yr")}</p>
               <ul class="mb-6 space-y-2.5 text-sm">
                 <%= for text <- [
                 gettext("Everything in Mehungry Plus"),
@@ -1252,6 +1252,15 @@ defmodule MehungryWeb.LandingLive do
               </a>
               <a href="/privacy_policy" class="transition-colors hover:text-parchment">
                 {gettext("Privacy")}
+              </a>
+              <a href="/terms" class="transition-colors hover:text-parchment">
+                {gettext("Terms")}
+              </a>
+              <a href="/cookies" class="transition-colors hover:text-parchment">
+                {gettext("Cookies")}
+              </a>
+              <a href="/legal" class="transition-colors hover:text-parchment">
+                {gettext("Legal Notice")}
               </a>
               <a
                 href={"/#{@current_language}/feedback"}

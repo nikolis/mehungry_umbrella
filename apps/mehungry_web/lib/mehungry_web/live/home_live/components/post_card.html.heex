@@ -1,4 +1,226 @@
 <div id={@id} class="bg-ink-panel rounded-xl border border-ink-panel2">
+  <%= if @post.type_ == "WEEKLY_PLAN" do %>
+    <%!-- Weekly-plan post: a reference-less post whose media is the generated
+          share card. Author + caption + like/share only (no recipe to open, and
+          comments are recipe-keyed so they're not offered here). --%>
+    <div class="flex items-center gap-2 px-4 pt-4 pb-3">
+      <a
+        href={"/profile/#{@post.user_id}"}
+        class="text-parchment font-semibold text-sm hover:text-paprika-soft transition"
+      >
+        {@post.user.name}
+      </a>
+      <span class="text-parchment-dim text-xs">· shared a weekly plan</span>
+    </div>
+    <%!-- The card opens the full day-by-day plan (/meal-plans/:slug) when the
+          post is linked to a published plan; older posts fall back to the image. --%>
+    <.link
+      :if={@post.published_meal_plan}
+      navigate={~p"/meal-plans/#{@post.published_meal_plan.slug}?#{[from: "home"]}"}
+      class="block overflow-hidden bg-ink-panel2 group"
+    >
+      <img src={@post.md_media_url} alt={@post.title} class="w-full object-contain" />
+      <span class="block px-4 py-2 text-sm font-semibold text-paprika-soft group-hover:text-paprika transition">
+        View full plan — recipes, grocery list &amp; nutrition →
+      </span>
+    </.link>
+    <a
+      :if={is_nil(@post.published_meal_plan)}
+      href={@post.md_media_url}
+      target="_blank"
+      rel="noopener"
+      class="block overflow-hidden bg-ink-panel2"
+    >
+      <img src={@post.md_media_url} alt={@post.title} class="w-full object-contain" />
+    </a>
+    <div class="p-3">
+      <div class="flex items-center gap-4">
+        <!-- Like Button (post upvote) -->
+        <button
+          phx-click="react"
+          phx-value-type_="upvote"
+          phx-value-id={@post.id}
+          class="group flex items-center gap-1 transition"
+          aria-label="Like"
+        >
+          <svg
+            class={[
+              "w-7 h-7 transition",
+              if(@user && Enum.any?(@post.upvotes, &(&1.user_id == @user.id)),
+                do: "text-red-500",
+                else: "text-parchment-dim group-hover:text-red-400"
+              )
+            ]}
+            fill={
+              if @user && Enum.any?(@post.upvotes, &(&1.user_id == @user.id)),
+                do: "currentColor",
+                else: "none"
+            }
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+            />
+          </svg>
+          <span class="text-sm font-bold text-basil [font-variant-numeric:tabular-nums]">
+            {length(@post.upvotes)}
+          </span>
+        </button>
+
+        <!-- Comment Button → opens the plan details page where the thread lives -->
+        <.link
+          :if={@post.published_meal_plan}
+          navigate={~p"/meal-plans/#{@post.published_meal_plan.slug}?#{[from: "home"]}"}
+          class="group flex items-center gap-1 transition"
+          aria-label="Comments"
+        >
+          <svg
+            class="w-6 h-6 text-parchment-dim group-hover:text-paprika transition"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+          </svg>
+          <span class="text-sm font-bold text-basil [font-variant-numeric:tabular-nums]">
+            {length(@post.comments)}
+          </span>
+        </.link>
+
+        <!-- Share Button — mirrors the recipe card: copy link / Facebook / Pinterest -->
+        <%= if @post.published_meal_plan do %>
+          <div class="relative">
+            <button
+              phx-click={
+                Phoenix.LiveView.JS.toggle_class("drop_down_visible ",
+                  to: "#share_items_list" <> Integer.to_string(@post.id)
+                )
+              }
+              class="group p-1 transition"
+              aria-label="Share"
+            >
+              <svg
+                class="w-5 h-5 text-parchment-dim group-hover:text-paprika transition"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                />
+              </svg>
+            </button>
+
+            <div
+              class="drop_down_home absolute left-0 mt-2 bg-ink-panel2 rounded-lg shadow-lg border border-ink-panel2 z-10"
+              id={"share_items_list" <> Integer.to_string(@post.id)}
+              phx-click-away={
+                Phoenix.LiveView.JS.remove_class("drop_down_visible ",
+                  to: "#share_items_list" <> Integer.to_string(@post.id)
+                )
+              }
+            >
+              <div class="py-2">
+                <button
+                  id={"web-share-plan-#{@post.id}"}
+                  phx-hook="WebShare"
+                  data-url={"#{MehungryWeb.Endpoint.url()}/meal-plans/#{@post.published_meal_plan.slug}"}
+                  data-title={@post.title}
+                  class="w-full px-4 py-2 text-left text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                    />
+                  </svg>
+                  <span>Share</span>
+                </button>
+                <a
+                  href={
+                    "https://www.facebook.com/sharer/sharer.php?u=" <>
+                      URI.encode_www_form(
+                        "#{MehungryWeb.Endpoint.url()}/meal-plans/#{@post.published_meal_plan.slug}"
+                      )
+                  }
+                  target="_blank"
+                  rel="noopener"
+                  class="block px-4 py-2 text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
+                  Facebook
+                </a>
+                <a
+                  href={
+                    "https://www.pinterest.com/pin/create/button/?url=" <>
+                      URI.encode_www_form(
+                        "#{MehungryWeb.Endpoint.url()}/meal-plans/#{@post.published_meal_plan.slug}"
+                      ) <>
+                      "&media=" <> URI.encode_www_form(@post.md_media_url || "") <>
+                      "&description=" <> URI.encode_www_form(@post.title || "")
+                  }
+                  target="_blank"
+                  rel="noopener"
+                  class="block px-4 py-2 text-sm text-parchment hover:bg-black/20 transition flex items-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="#E60023" viewBox="0 0 24 24">
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" />
+                  </svg>
+                  Pinterest
+                </a>
+              </div>
+            </div>
+          </div>
+        <% else %>
+          <%!-- Older plan posts have no public page to link to; keep a plain
+                native/copy share of the card image. --%>
+          <button
+            id={"web-share-plan-#{@post.id}"}
+            phx-hook="WebShare"
+            data-url={@post.md_media_url}
+            data-title={@post.title}
+            class="group flex items-center gap-1 text-parchment-dim hover:text-paprika transition"
+            aria-label="Share"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+              />
+            </svg>
+            <span class="text-sm">Share</span>
+          </button>
+        <% end %>
+      </div>
+      <div class="flex flex-wrap items-baseline gap-1 mt-3">
+        <a
+          href={"/profile/#{@post.user_id}"}
+          class="text-parchment font-semibold text-sm hover:text-paprika-soft transition"
+        >
+          {@post.user.name}
+        </a>
+        <span class="text-parchment-dim text-sm">{@post.description}</span>
+      </div>
+    </div>
+  <% else %>
   <%= if ! is_nil(@post.reference) do %>
     <.user_overview_card
       user={@post.reference.user}
@@ -187,6 +409,22 @@
           </div>
         </div>
       </div>
+
+      <!-- Nutrient-claim badges — right-aligned in the action row, beside
+           like/comment/share (not over the image). -->
+      <% nutrient_badges = MehungryWeb.RecipeComponents.high_badges(@post.reference, 2) %>
+      <div
+        :if={nutrient_badges != []}
+        class="ml-auto flex flex-wrap items-center justify-end gap-1"
+      >
+        <span
+          :for={badge <- nutrient_badges}
+          class="rounded-full bg-paprika/15 text-paprika-soft border border-paprika/30 text-[10px] font-semibold px-2 py-0.5 whitespace-nowrap"
+          title={gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
+        >
+          {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])}
+        </span>
+      </div>
     </div>
   </div>
 
@@ -249,8 +487,9 @@
       View all {length(@post.reference.comments)} comments
     </.link>
   </div>
+  <% end %>
 </div>
-<!-- 
+<!--
 <div class="m-auto relative">
     <div class="relative flex gap-2 py-1">
       <.recipe_like_container2

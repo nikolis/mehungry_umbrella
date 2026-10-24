@@ -244,6 +244,44 @@ defmodule Mehungry.Food.NutrientCalculationTest do
     end
   end
 
+  describe "ingredient_nutrient_tree/2" do
+    test "builds the same hierarchical, string-keyed tree a one-ingredient recipe would" do
+      ing = %Ingredient{
+        ingredient_nutrients: [
+          ing_nutrient("Energy", 200.0, "kcal", number: "208"),
+          ing_nutrient("Total lipid (fat)", 10.0, "g", number: "204"),
+          ing_nutrient("PUFA 20:5 n-3 (EPA)", 1.0, "g", number: "629"),
+          ing_nutrient("Iron, Fe", 4.0, "mg", number: "303")
+        ]
+      }
+
+      # The tree is identical to feeding the same scaled nutrients through the
+      # recipe engine and persisting them the way Recipes.put_nutrient_info/2
+      # does (name-keyed map, string keys, as the jsonb column reads back).
+      expected =
+        [%{nutrients: NC.build_nutrient_list(ing, 100.0)}]
+        |> NC.calculate_nutrition_for_recipe()
+        |> Map.get(:structured_nutrients)
+        |> Enum.reduce(%{}, fn node, acc -> Map.put(acc, node.name, node) end)
+        |> Mehungry.Food.NutrientMerger.to_string_keys()
+
+      tree = NC.ingredient_nutrient_tree(ing, 100.0)
+      assert tree == expected
+
+      # And it is a structured hierarchy (string keys, nested fat + minerals),
+      # not a flat list of raw USDA names.
+      assert is_map(tree) and not is_list(tree)
+      assert %{"name" => "Total Fat", "children" => fat_children} = tree["Total Fat"]
+      assert Enum.any?(fat_children, &String.contains?(&1["name"], "Polyunsaturated"))
+      assert %{"children" => mineral_children} = tree["Minerals"]
+      assert Enum.any?(mineral_children, &(&1["name"] == "Iron"))
+    end
+
+    test "returns an empty map for an ingredient with no nutrients" do
+      assert NC.ingredient_nutrient_tree(%Ingredient{ingredient_nutrients: []}, 100.0) == %{}
+    end
+  end
+
   describe "calculate_total_calories/1" do
     test "returns the Energy amount rounded to a whole number" do
       assert NC.calculate_total_calories([%{name: "Energy", amount: 249.6}]) == 250.0
@@ -305,6 +343,54 @@ defmodule Mehungry.Food.NutrientCalculationTest do
     test "returns {0, []} for a recipe with no ingredients" do
       assert NC.calculate_recipe_nutrition_value(%{recipe_ingredients: []}) == {0, []}
       assert NC.calculate_recipe_nutrition_value(%{recipe_ingredients: nil}) == {0, []}
+    end
+  end
+
+  # ════════════════════════════════════════════════════════════════════════
+  # nutrient_data_coverage/1  (mass-weighted coverage ratio)
+  # ════════════════════════════════════════════════════════════════════════
+
+  describe "nutrient_data_coverage/1" do
+    # A structured-ingredient entry as map_ingredients_to_structured_form/1 emits:
+    # :gram_weight plus a scaled :nutrients list ([] ⇔ no IngredientNutrient data).
+    defp ing(grams, has_data?) do
+      %{gram_weight: grams, nutrients: if(has_data?, do: [%{name: "Iron"}], else: [])}
+    end
+
+    test "all mass covered → 1.0" do
+      assert NC.nutrient_data_coverage([ing(100.0, true), ing(50.0, true)]) == 1.0
+    end
+
+    test "no mass covered → 0.0" do
+      assert NC.nutrient_data_coverage([ing(100.0, false), ing(50.0, false)]) == 0.0
+    end
+
+    test "ratio is mass-weighted, not ingredient-count-weighted" do
+      # One data-less 150 g ingredient vs two data-rich 25 g ones: 50 / 200 = 0.25.
+      coverage =
+        NC.nutrient_data_coverage([ing(150.0, false), ing(25.0, true), ing(25.0, true)])
+
+      assert_in_delta coverage, 0.25, 1.0e-9
+    end
+
+    test "an unresolved-mass ingredient (0 g) drops out of numerator and denominator" do
+      # The 0 g data-rich ingredient neither helps nor hurts: 100 / 100 = 1.0.
+      assert NC.nutrient_data_coverage([ing(100.0, true), ing(0.0, true)]) == 1.0
+    end
+
+    test "zero total mass → 0.0 (nothing to claim)" do
+      assert NC.nutrient_data_coverage([ing(0.0, true), ing(0.0, false)]) == 0.0
+      assert NC.nutrient_data_coverage([]) == 0.0
+    end
+  end
+
+  describe "calculate_recipe_nutrition_value_with_coverage/1" do
+    test "returns {0, [], 0.0} for a recipe with no ingredients" do
+      assert NC.calculate_recipe_nutrition_value_with_coverage(%{recipe_ingredients: []}) ==
+               {0, [], 0.0}
+
+      assert NC.calculate_recipe_nutrition_value_with_coverage(%{recipe_ingredients: nil}) ==
+               {0, [], 0.0}
     end
   end
 

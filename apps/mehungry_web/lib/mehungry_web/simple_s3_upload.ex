@@ -77,20 +77,30 @@ defmodule MehungryWeb.SimpleS3Upload do
   end
 
   def meta(entry, uploads) do
-    s3_filepath = s3_filepath(entry)
+    meta_with_key(entry, s3_filepath(entry), uploads.image.max_file_size)
+  end
 
+  @doc """
+  LiveView external-upload metadata for a sigv4 POST-policy upload to an
+  arbitrary `key`. Shared by every caller (recipe/profile/article) so the key
+  layout is owned by the caller, not this module.
+  """
+  def meta_with_key(entry, key, max_file_size) do
     {:ok, fields} =
       sign_form_upload(
-        key: s3_filepath,
+        key: key,
         content_type: entry.client_type,
-        max_file_size: uploads.image.max_file_size,
+        max_file_size: max_file_size,
         expires_in: :timer.hours(1)
       )
 
+    url = "https://#{bucket()}.s3.eu-central-1.amazonaws.com"
+
     %{
       uploader: "S3",
-      key: s3_filepath,
-      url: "https://#{bucket()}.s3.#{"eu-central-1"}.amazonaws.com",
+      key: key,
+      url: url,
+      public_url: "#{url}/#{key}",
       fields: fields
     }
   end
@@ -101,22 +111,7 @@ defmodule MehungryWeb.SimpleS3Upload do
   nutritionist profile photo).
   """
   def meta_for(entry, max_file_size, prefix) do
-    key = "#{prefix}/#{entry.uuid}.#{ext(entry)}"
-
-    {:ok, fields} =
-      sign_form_upload(
-        key: key,
-        content_type: entry.client_type,
-        max_file_size: max_file_size,
-        expires_in: :timer.hours(1)
-      )
-
-    %{
-      uploader: "S3",
-      key: key,
-      url: "https://#{bucket()}.s3.eu-central-1.amazonaws.com",
-      fields: fields
-    }
+    meta_with_key(entry, "#{prefix}/#{entry.uuid}.#{ext(entry)}", max_file_size)
   end
 
   def bucket do

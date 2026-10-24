@@ -124,6 +124,15 @@
     "description": "An autoimmune disorder triggered by gluten ingestion, causing damage to the small intestine."
   },
   {
+    "main_name": "Inflammatory Bowel Disease",
+    "synonyms": [
+      "IBD"
+    ],
+    "category": "Digestive",
+    "subcategory": "Inflammatory Bowel Disease",
+    "description": "An umbrella condition for chronic inflammation of the gastrointestinal tract, comprising Ulcerative Colitis and Crohn's Disease. Holds general IBD-level dietary evidence shared by its subtypes."
+  },
+  {
     "main_name": "Crohn's Disease",
     "synonyms": [
       "Regional enteritis",
@@ -131,6 +140,7 @@
     ],
     "category": "Digestive",
     "subcategory": "Inflammatory Bowel Disease",
+    "parent": "Inflammatory Bowel Disease",
     "description": "A chronic inflammatory bowel disease that can affect any part of the gastrointestinal tract.",
     "states": [
       {
@@ -157,6 +167,7 @@
     ],
     "category": "Digestive",
     "subcategory": "Inflammatory Bowel Disease",
+    "parent": "Inflammatory Bowel Disease",
     "description": "A chronic inflammatory bowel disease affecting the large intestine, characterized by ulcers in the colon.",
     "states": [
       {

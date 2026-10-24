@@ -53,6 +53,28 @@ defmodule MehungryApi.HistoryTest do
       assert result22 == []
     end
 
+    test "delete_user_meals_in_date_range/3 clears only the viewed week", %{user: user} do
+      recipe = FoodFixtures.recipe_fixture(user)
+      recipe_user_meals = [%{recipe_id: recipe.id, consume_portions: 2, cooking_portions: 6}]
+
+      # Two meals inside the week of 2026-10-12..2026-10-18, one the week before.
+      for dt <- [~U[2026-10-13 12:00:00Z], ~U[2026-10-17 19:00:00Z]] do
+        user_meal_fixture(%{user_id: user.id, start_dt: dt, recipe_user_meals: recipe_user_meals})
+      end
+
+      prev_week =
+        user_meal_fixture(%{
+          user_id: user.id,
+          start_dt: ~U[2026-10-06 12:00:00Z],
+          recipe_user_meals: recipe_user_meals
+        })
+
+      assert History.delete_user_meals_in_date_range(user.id, ~D[2026-10-12], ~D[2026-10-18]) == 2
+
+      remaining = History.list_history_user_meals_for_user(user.id)
+      assert Enum.map(remaining, & &1.id) == [prev_week.id]
+    end
+
     test "list_history_user_meals/0 returns all history_user_meals", %{user: user} do
       recipe = FoodFixtures.recipe_fixture(user)
 
@@ -264,6 +286,253 @@ defmodule MehungryApi.HistoryTest do
                  meal_type: "",
                  user_id: user.id
                })
+    end
+  end
+
+  describe "calendar loading + denormalized ingredient nutrients" do
+    import Mehungry.HistoryFixtures
+
+    alias Mehungry.Food.{Ingredient, IngredientNutrient, MeasurementUnit, Nutrient}
+    alias Mehungry.History.IngredientUserMeal
+    alias Mehungry.Repo
+
+    setup do
+      %{user: AccountsFixtures.user_fixture()}
+    end
+
+    test "list_calendar_user_meals/3 returns only meals within the week range", %{user: user} do
+      recipe = FoodFixtures.recipe_fixture(user)
+      rums = [%{recipe_id: recipe.id, consume_portions: 1, cooking_portions: 1}]
+
+      in_week =
+        user_meal_fixture(%{
+          user_id: user.id,
+          start_dt: ~N[2026-03-04 12:00:00],
+          recipe_user_meals: rums
+        })
+
+      _before_week =
+        user_meal_fixture(%{
+          user_id: user.id,
+          start_dt: ~N[2026-02-24 12:00:00],
+          recipe_user_meals: rums
+        })
+
+      _after_week =
+        user_meal_fixture(%{
+          user_id: user.id,
+          start_dt: ~N[2026-03-20 12:00:00],
+          recipe_user_meals: rums
+        })
+
+      result = History.list_calendar_user_meals(user.id, ~D[2026-03-02], ~D[2026-03-08])
+
+      assert Enum.map(result, & &1.id) == [in_week.id]
+    end
+
+    test "create_user_meal stores the ingredient nutrient tree; format reads it back", %{
+      user: user
+    } do
+      {ingredient, gram} = ingredient_with_nutrient()
+
+      {:ok, meal} =
+        History.create_user_meal(%{
+          user_id: user.id,
+          title: "Logged iron",
+          start_dt: ~N[2026-03-04 12:00:00],
+          ingredient_user_meals: [
+            %{ingredient_id: ingredient.id, measurement_unit_id: gram.id, quantity: 100.0}
+          ]
+        })
+
+      [ium] = Repo.all(from i in IngredientUserMeal, where: i.user_meal_id == ^meal.id)
+
+      # The hook persisted the hierarchical tree at write time (not NotLoaded, not empty).
+      assert is_map(ium.nutrients) and map_size(ium.nutrients) > 0
+
+      # The calendar read path surfaces the stored map verbatim (no recomputation).
+      [formatted] =
+        History.list_calendar_user_meals(user.id, ~D[2026-03-02], ~D[2026-03-08])
+        |> History.format_user_meals()
+
+      assert [%{recipe: %{nutrients: nutrients}}] = formatted.ingredient_user_meals
+      assert nutrients == ium.nutrients
+    end
+
+    test "IngredientUserMealPutNutrientsWorker backfills an emptied nutrients column", %{
+      user: user
+    } do
+      {ingredient, gram} = ingredient_with_nutrient()
+
+      {:ok, meal} =
+        History.create_user_meal(%{
+          user_id: user.id,
+          title: "Legacy row",
+          start_dt: ~N[2026-03-04 12:00:00],
+          ingredient_user_meals: [
+            %{ingredient_id: ingredient.id, measurement_unit_id: gram.id, quantity: 100.0}
+          ]
+        })
+
+      [ium] = Repo.all(from i in IngredientUserMeal, where: i.user_meal_id == ^meal.id)
+      stored = ium.nutrients
+
+      # Simulate a row that predates the write-time hook.
+      ium |> Ecto.Changeset.change(nutrients: %{}) |> Repo.update!()
+
+      assert {:ok, _} =
+               Mehungry.IngredientUserMealPutNutrientsWorker.perform(%Oban.Job{
+                 args: %{"ingredient_user_meal_id" => ium.id}
+               })
+
+      assert Repo.get!(IngredientUserMeal, ium.id).nutrients == stored
+    end
+
+    # Persists an ingredient carrying one real `IngredientNutrient` (Iron) plus the
+    # "gram" unit `gram_unit_ids/0` recognises, so a logged 100 g quantity resolves
+    # to a non-empty nutrient tree through the real nutrition engine.
+    defp ingredient_with_nutrient do
+      gram = FoodFixtures.measurement_unit_fixture()
+      mg = Repo.insert!(%MeasurementUnit{name: "mg_#{System.unique_integer([:positive])}"})
+
+      nutrient =
+        Repo.insert!(%Nutrient{
+          name: "Iron, Fe",
+          number: "303",
+          measurement_unit_id: mg.id
+        })
+
+      ingredient = FoodFixtures.ingredient_fixture()
+
+      Repo.insert!(%IngredientNutrient{
+        ingredient_id: ingredient.id,
+        nutrient_id: nutrient.id,
+        amount: 18.0
+      })
+
+      {Repo.get!(Ingredient, ingredient.id), gram}
+    end
+  end
+
+  describe "duplicate_user_meal/3" do
+    import Mehungry.HistoryFixtures
+
+    setup do
+      %{user: AccountsFixtures.user_fixture()}
+    end
+
+    test "clones a recipe meal onto the target date, keeping meal_type/title", %{user: user} do
+      recipe = FoodFixtures.recipe_fixture(user, %{name: "repeat dish"})
+
+      source =
+        user_meal_fixture(%{
+          user_id: user.id,
+          title: "Oatmeal",
+          meal_type: "breakfast",
+          start_dt: ~N[2026-10-12 08:00:00],
+          end_dt: ~N[2026-10-12 08:30:00],
+          recipe_user_meals: [%{recipe_id: recipe.id, consume_portions: 2, cooking_portions: 4}]
+        })
+
+      target = ~D[2026-10-18]
+      assert {:ok, copy} = History.duplicate_user_meal(user.id, source.id, target)
+
+      refute copy.id == source.id
+      assert copy.title == "Oatmeal"
+      assert copy.meal_type == "breakfast"
+      assert NaiveDateTime.to_date(copy.start_dt) == target
+      # Time-of-day is preserved.
+      assert NaiveDateTime.to_time(copy.start_dt) == ~T[08:00:00]
+
+      copy = Repo.preload(copy, :recipe_user_meals)
+      assert [child] = copy.recipe_user_meals
+      assert child.recipe_id == recipe.id
+      assert child.consume_portions == 2
+      assert child.cooking_portions == 4
+    end
+
+    test "raises for a meal that isn't the user's", %{user: user} do
+      other = AccountsFixtures.user_fixture()
+      recipe = FoodFixtures.recipe_fixture(other, %{name: "not mine"})
+
+      source =
+        user_meal_fixture(%{
+          user_id: other.id,
+          recipe_user_meals: [%{recipe_id: recipe.id, consume_portions: 1, cooking_portions: 1}]
+        })
+
+      assert_raise Ecto.NoResultsError, fn ->
+        History.duplicate_user_meal(user.id, source.id, ~D[2026-10-18])
+      end
+    end
+  end
+
+  describe "day notes" do
+    alias Mehungry.History.DayNote
+
+    setup do
+      %{user: AccountsFixtures.user_fixture()}
+    end
+
+    test "get_day_note/2 returns nil when none exists", %{user: user} do
+      assert History.get_day_note(user.id, ~D[2026-10-18]) == nil
+    end
+
+    test "upsert_day_note/3 creates, then updates in place", %{user: user} do
+      date = ~D[2026-10-18]
+
+      assert {:ok, %DayNote{} = note} = History.upsert_day_note(user.id, date, "felt bloated")
+      assert note.body == "felt bloated"
+      assert History.get_day_note(user.id, date).body == "felt bloated"
+
+      assert {:ok, %DayNote{} = updated} = History.upsert_day_note(user.id, date, "good energy")
+      assert updated.id == note.id
+      assert updated.body == "good energy"
+    end
+
+    test "upsert_day_note/3 trims the body", %{user: user} do
+      assert {:ok, note} = History.upsert_day_note(user.id, ~D[2026-10-18], "  spaced  ")
+      assert note.body == "spaced"
+    end
+
+    test "upsert_day_note/3 with a blank body deletes an existing note (and is a no-op otherwise)",
+         %{user: user} do
+      date = ~D[2026-10-18]
+
+      # No-op when none exists.
+      assert {:ok, nil} = History.upsert_day_note(user.id, date, "   ")
+      assert {:ok, nil} = History.upsert_day_note(user.id, date, nil)
+
+      {:ok, _} = History.upsert_day_note(user.id, date, "something")
+      assert {:ok, nil} = History.upsert_day_note(user.id, date, "")
+      assert History.get_day_note(user.id, date) == nil
+    end
+
+    test "list_day_notes/3 returns a date=>body map scoped to the week and user", %{user: user} do
+      other = AccountsFixtures.user_fixture()
+
+      {:ok, _} = History.upsert_day_note(user.id, ~D[2026-10-12], "monday")
+      {:ok, _} = History.upsert_day_note(user.id, ~D[2026-10-15], "thursday")
+      # Outside the week window.
+      {:ok, _} = History.upsert_day_note(user.id, ~D[2026-10-20], "next week")
+      # Another user, same week.
+      {:ok, _} = History.upsert_day_note(other.id, ~D[2026-10-13], "not mine")
+
+      notes = History.list_day_notes(user.id, ~D[2026-10-12], ~D[2026-10-18])
+
+      assert notes == %{~D[2026-10-12] => "monday", ~D[2026-10-15] => "thursday"}
+    end
+
+    test "one note per user per day (unique)", %{user: user} do
+      date = ~D[2026-10-18]
+      {:ok, _} = History.upsert_day_note(user.id, date, "first")
+
+      assert {:error, changeset} =
+               %DayNote{}
+               |> DayNote.changeset(%{user_id: user.id, date: date, body: "dup"})
+               |> Repo.insert()
+
+      assert %{user_id: _} = errors_on(changeset)
     end
   end
 end

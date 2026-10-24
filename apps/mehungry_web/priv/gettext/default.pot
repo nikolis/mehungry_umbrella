@@ -11,183 +11,183 @@
 msgid ""
 msgstr ""
 
-#: lib/mehungry_web/components/core_components.ex:1346
+#: lib/mehungry_web/components/core_components.ex:1473
 #, elixir-autogen, elixir-format
 msgid "Actions"
 msgstr ""
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:118
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:107
 #, elixir-autogen, elixir-format
 msgid "Admin Panel"
 msgstr ""
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:100
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:96
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:97
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:89
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:90
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:91
 #, elixir-autogen, elixir-format
 msgid "Basket"
 msgstr ""
 
 #: lib/mehungry_web/live/landing_live.ex:1248
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:35
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:31
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:32
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:37
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:38
 #, elixir-autogen, elixir-format
 msgid "Browse"
 msgstr ""
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:92
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:86
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:87
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:81
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:80
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:81
 #, elixir-autogen, elixir-format
 msgid "Calendar"
 msgstr ""
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:84
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:76
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:77
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:73
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:70
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:71
 #, elixir-autogen, elixir-format
 msgid "Create Recipe"
 msgstr ""
 
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:56
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:53
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:54
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:47
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:48
 #, elixir-autogen, elixir-format
 msgid "Foods"
 msgstr ""
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:168
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:124
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:125
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:177
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:135
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:136
 #, elixir-autogen, elixir-format
 msgid "Friends"
 msgstr ""
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:108
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:97
 #, elixir-autogen, elixir-format
 msgid "Give Feedback"
 msgstr ""
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:67
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:40
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:41
-#, elixir-autogen, elixir-format
-msgid "Health"
-msgstr ""
-
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:214
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:140
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:141
+#: lib/mehungry_web/live/meal_plan_live/show.ex:611
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:223
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:151
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:152
 #, elixir-autogen, elixir-format
 msgid "Log in"
 msgstr ""
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:177
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:186
 #, elixir-autogen, elixir-format
 msgid "Manage subscriptions"
 msgstr ""
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:129
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:118
 #, elixir-autogen, elixir-format
 msgid "Nutritionist Panel"
 msgstr ""
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:206
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:140
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:141
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:215
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:151
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:152
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr ""
 
-#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:148
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:107
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:108
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:137
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:101
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:102
 #, elixir-autogen, elixir-format
 msgid "Tutor Invitations"
 msgstr ""
 
-#: lib/mehungry_web/components/core_components.ex:594
-#: lib/mehungry_web/components/core_components.ex:646
-#: lib/mehungry_web/components/core_components.ex:700
+#: lib/mehungry_web/components/core_components.ex:598
+#: lib/mehungry_web/components/core_components.ex:650
+#: lib/mehungry_web/components/core_components.ex:704
 #, elixir-autogen, elixir-format
 msgid "close"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:231
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:394
 #, elixir-autogen, elixir-format
 msgid "%{count} food species contain a compound flagged for this condition."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:326
+#: lib/mehungry_web/live/condition_detail_live/index.ex:693
 #, elixir-autogen, elixir-format
 msgid "Approach with caution"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:324
+#: lib/mehungry_web/live/condition_detail_live/index.ex:691
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:835
 #, elixir-autogen, elixir-format
 msgid "Avoid"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:407
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:655
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:106
 #, elixir-autogen, elixir-format
 msgid "Bioactive Compounds"
 msgstr ""
 
-#: lib/mehungry_web/live/health_live/index.ex:16
+#: lib/mehungry_web/live/health_live/index.ex:18
 #, elixir-autogen, elixir-format
 msgid "Browse health conditions and their dietary guidance — which bioactive compounds to avoid or limit, and the foods that contain them."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:333
+#: lib/mehungry_web/components/nutrient_labels.ex:261
 #, elixir-autogen, elixir-format
 msgid "Calories"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:336
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#: lib/mehungry_web/live/meal_plan_live/show.ex:290
+#: lib/mehungry_web/weekly_plan_graphic.ex:256
 #, elixir-autogen, elixir-format
 msgid "Carbs"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:227
+#: lib/mehungry_web/live/condition_detail_live/index.ex:563
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:5
 #, elixir-autogen, elixir-format
 msgid "Conditions"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:415
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:663
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:114
 #, elixir-autogen, elixir-format
 msgid "Couldn't load compounds."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:221
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:286
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:384
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:498
 #, elixir-autogen, elixir-format
 msgid "Couldn't load foods for this condition."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:382
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:630
 #, elixir-autogen, elixir-format
 msgid "Couldn't load nutrition."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:116
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:454
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:279
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:702
 #, elixir-autogen, elixir-format
 msgid "Couldn't load recipes."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:46
+#: lib/mehungry_web/live/condition_detail_live/index.ex:166
 #, elixir-autogen, elixir-format
 msgid "Couldn't load recommendations."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:323
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:538
 #, elixir-autogen, elixir-format
 msgid "Details →"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:31
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:138
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:212
 #, elixir-autogen, elixir-format
 msgid "Dietary Recommendations"
 msgstr ""
@@ -197,27 +197,29 @@ msgstr ""
 msgid "Dietary guidance by condition — which bioactive compounds to be mindful of, and the foods that contain them."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:328
+#: lib/mehungry_web/live/condition_detail_live/index.ex:695
 #, elixir-autogen, elixir-format
 msgid "Encourage"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:74
+#: lib/mehungry_web/live/condition_detail_live/index.ex:208
 #, elixir-autogen, elixir-format
 msgid "Evidence: %{level}"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:335
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#: lib/mehungry_web/live/meal_plan_live/show.ex:291
+#: lib/mehungry_web/weekly_plan_graphic.ex:256
 #, elixir-autogen, elixir-format
 msgid "Fat"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:337
+#: lib/mehungry_web/components/nutrient_labels.ex:261
 #, elixir-autogen, elixir-format
 msgid "Fiber"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:294
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:506
 #, elixir-autogen, elixir-format
 msgid "Foods worth including — each contains a compound recommended for this condition."
 msgstr ""
@@ -227,32 +229,32 @@ msgstr ""
 msgid "Health Conditions"
 msgstr ""
 
-#: lib/mehungry_web/live/health_live/index.ex:13
+#: lib/mehungry_web/live/health_live/index.ex:15
 #, elixir-autogen, elixir-format
 msgid "Health Conditions & Dietary Guidance"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:325
+#: lib/mehungry_web/live/condition_detail_live/index.ex:692
 #, elixir-autogen, elixir-format
 msgid "Limit"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:327
+#: lib/mehungry_web/live/condition_detail_live/index.ex:694
 #, elixir-autogen, elixir-format
 msgid "Monitor"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:418
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:666
 #, elixir-autogen, elixir-format
 msgid "No compounds linked to this food yet."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:290
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:502
 #, elixir-autogen, elixir-format
 msgid "No encouraged foods recorded for this condition yet."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:225
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:388
 #, elixir-autogen, elixir-format
 msgid "No foods linked yet — recommendations reference compounds; food species appear once a compound is linked to a species."
 msgstr ""
@@ -262,38 +264,40 @@ msgstr ""
 msgid "No health conditions have been added yet."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:385
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:633
 #, elixir-autogen, elixir-format
 msgid "No nutrition data for this food yet."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:457
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:705
 #, elixir-autogen, elixir-format
 msgid "No recipes found for this food yet."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:49
+#: lib/mehungry_web/live/condition_detail_live/index.ex:169
 #, elixir-autogen, elixir-format
 msgid "No recommendations recorded for this condition yet."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:373
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:621
 #, elixir-autogen, elixir-format
 msgid "Nutrition"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:334
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#: lib/mehungry_web/live/meal_plan_live/show.ex:289
+#: lib/mehungry_web/weekly_plan_graphic.ex:256
 #, elixir-autogen, elixir-format
 msgid "Protein"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:437
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:685
 #, elixir-autogen, elixir-format
 msgid "Sample Recipes"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:177
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:512
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:340
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:760
 #, elixir-autogen, elixir-format
 msgid "Save recipe for later"
 msgstr ""
@@ -303,24 +307,26 @@ msgstr ""
 msgid "Showing %{count} conditions"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:541
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:789
 #, elixir-autogen, elixir-format
 msgid "View full food page →"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:166
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:499
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:329
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:747
 #: lib/mehungry_web/live/landing_live.ex:587
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:203
 #, elixir-autogen, elixir-format
 msgid "min"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:374
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:622
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:87
 #, elixir-autogen, elixir-format
 msgid "per 100g"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:316
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:528
 #, elixir-autogen, elixir-format
 msgid "via %{compound}"
 msgstr ""
@@ -552,7 +558,7 @@ msgstr ""
 msgid "Features"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1260
+#: lib/mehungry_web/live/landing_live.ex:1269
 #, elixir-autogen, elixir-format
 msgid "Feedback"
 msgstr ""
@@ -638,8 +644,10 @@ msgstr ""
 msgid "Leave feedback, ask questions, and vote on the recipes you love"
 msgstr ""
 
+#: lib/mehungry_web/components/meal_type_labels.ex:32
 #: lib/mehungry_web/live/landing_live.ex:253
 #: lib/mehungry_web/live/landing_live.ex:493
+#: lib/mehungry_web/live/meal_plan_live/show.ex:834
 #, elixir-autogen, elixir-format
 msgid "Lunch"
 msgstr ""
@@ -913,7 +921,7 @@ msgstr ""
 
 #: lib/mehungry_web/live/landing_live.ex:1172
 #, elixir-autogen, elixir-format
-msgid "or €599/yr"
+msgid "or €290/yr"
 msgstr ""
 
 #: lib/mehungry_web/live/landing_live.ex:1126
@@ -941,7 +949,7 @@ msgstr ""
 msgid "tracked nutrients"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1265
+#: lib/mehungry_web/live/landing_live.ex:1274
 #, elixir-autogen, elixir-format
 msgid "© 2025 M3Hungry. Nutrition data from USDA FoodData Central."
 msgstr ""
@@ -951,27 +959,22 @@ msgstr ""
 msgid "… and that's it"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:78
+#: lib/mehungry_web/live/condition_detail_live/index.ex:378
 #, elixir-autogen, elixir-format
 msgid "%{name} Diet: Foods to Eat & Avoid"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:83
+#: lib/mehungry_web/live/condition_detail_live/index.ex:383
 #, elixir-autogen, elixir-format
 msgid "%{name} diet guide: which foods to eat and which foods to avoid, with the nutrients and bioactive compounds behind each recommendation."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:98
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:261
 #, elixir-autogen, elixir-format
 msgid "%{name} diet suggestions"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:95
-#, elixir-autogen, elixir-format
-msgid "A one-line summary shown in recipe listings"
-msgstr ""
-
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:237
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:251
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr ""
@@ -981,12 +984,12 @@ msgstr ""
 msgid "Add Step"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:35
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:36
 #, elixir-autogen, elixir-format
 msgid "Add at least one ingredient."
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.ex:91
+#: lib/mehungry_web/live/condition_detail_live/index.ex:391
 #, elixir-autogen, elixir-format
 msgid "Also called %{names}."
 msgstr ""
@@ -996,43 +999,43 @@ msgstr ""
 msgid "Also known as:"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:120
+#: lib/mehungry_web/live/onboarding/form_component.ex:119
 #, elixir-autogen, elixir-format
 msgid "Anything else?"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:49
+#: lib/mehungry_web/live/onboarding/form_component.ex:46
 #, elixir-autogen, elixir-format
 msgid "Back"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:336
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:358
 #, elixir-autogen, elixir-format
 msgid "Before saving, please fix:"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:92
+#: lib/mehungry_web/live/onboarding/form_component.ex:89
 #, elixir-autogen, elixir-format
 msgid "Choose your language"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:167
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:175
 #, elixir-autogen, elixir-format
 msgid "Click or drag to upload image"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:46
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:105
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:48
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:108
 #, elixir-autogen, elixir-format
 msgid "Cooking time"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:34
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:26
 #, elixir-autogen, elixir-format
 msgid "Create New Recipe"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:138
+#: lib/mehungry_web/live/onboarding/form_component.ex:137
 #, elixir-autogen, elixir-format
 msgid "Daily calorie target"
 msgstr ""
@@ -1042,355 +1045,1940 @@ msgstr ""
 msgid "Describe this step…"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:98
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:91
 #, elixir-autogen, elixir-format
 msgid "Describe your recipe… e.g. 'Creamy mushroom risotto for 4 people, medium difficulty'"
 msgstr ""
 
-#: lib/mehungry_web/components/core_components.ex:1443
+#: lib/mehungry_web/components/core_components.ex:1570
 #, elixir-autogen, elixir-format
 msgid "Details"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:125
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:133
 #, elixir-autogen, elixir-format
 msgid "Difficult"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:124
-#, elixir-autogen, elixir-format
-msgid "Difficulty"
-msgstr ""
-
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:125
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:133
 #, elixir-autogen, elixir-format
 msgid "Easy"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:333
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:354
 #, elixir-autogen, elixir-format
 msgid "Everything looks good — ready to save!"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:70
+#: lib/mehungry_web/live/onboarding/form_component.ex:67
 #, elixir-autogen, elixir-format
 msgid "Finish"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:203
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:366
 #, elixir-autogen, elixir-format
 msgid "Foods to Avoid or Limit"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:268
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:480
 #, elixir-autogen, elixir-format
 msgid "Foods to Eat"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:128
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:108
 #, elixir-autogen, elixir-format
 msgid "Generate"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:86
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:78
 #, elixir-autogen, elixir-format
 msgid "Generate with AI"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:14
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:6
 #, elixir-autogen, elixir-format
 msgid "Generating your recipe…"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:125
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:105
 #, elixir-autogen, elixir-format
 msgid "Generating…"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:161
-#, elixir-autogen, elixir-format
-msgid "Health condition badges"
-msgstr ""
-
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:21
-#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:22
+#: lib/mehungry_web/live/meal_plan_live/show.ex:219
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:27
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:28
 #, elixir-autogen, elixir-format
 msgid "Home"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:128
+#: lib/mehungry_web/controllers/api/v1/preferences_controller.ex:43
+#: lib/mehungry_web/live/onboarding/form_component.ex:127
 #, elixir-autogen, elixir-format
 msgid "I am lactose intolerant"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:123
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:49
+#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:86
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:51
 #, elixir-autogen, elixir-format
 msgid "Ingredient"
 msgstr ""
 
-#: lib/mehungry_web/components/core_components.ex:1443
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:215
+#: lib/mehungry_web/components/core_components.ex:1570
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:224
 #, elixir-autogen, elixir-format
 msgid "Ingredients"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:48
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:50
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:125
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:133
 #, elixir-autogen, elixir-format
 msgid "Medium"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:59
+#: lib/mehungry_web/live/onboarding/form_component.ex:56
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:167
-#, elixir-autogen, elixir-format
-msgid "No conditions available yet — you can set these later from your profile."
-msgstr ""
-
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:119
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:282
 #, elixir-autogen, elixir-format
 msgid "No recipes yet that pair an encouraged food with none of the mindful ones."
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:184
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:204
 #, elixir-autogen, elixir-format
 msgid "No, start fresh"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:134
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:152
 #, elixir-autogen, elixir-format
 msgid "Not found in database and skipped: %{items}. Add these manually if needed."
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:264
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:278
 #, elixir-autogen, elixir-format
 msgid "Not found in the database — add them manually using the ingredients section."
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:204
+#: lib/mehungry_web/controllers/api/v1/preferences_controller.ex:35
+#: lib/mehungry_web/live/onboarding/form_component.ex:171
 #, elixir-autogen, elixir-format
 msgid "Omnivore"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:163
-#, elixir-autogen, elixir-format
-msgid "Optional — pick any conditions and we'll flag recipes on your feed that contain compounds relevant to them."
-msgstr ""
-
-#: lib/mehungry_web/live/onboarding/form_component.ex:140
+#: lib/mehungry_web/live/onboarding/form_component.ex:139
 #, elixir-autogen, elixir-format
 msgid "Optional — set a kcal/day goal to track against your meal plans. You can change or clear this later."
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:207
+#: lib/mehungry_web/controllers/api/v1/preferences_controller.ex:38
+#: lib/mehungry_web/live/onboarding/form_component.ex:174
 #, elixir-autogen, elixir-format
 msgid "Pescatarian"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:114
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:117
 #, elixir-autogen, elixir-format
 msgid "Prep Time"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:47
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:49
 #, elixir-autogen, elixir-format
 msgid "Prep time"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:144
+#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:106
 #, elixir-autogen, elixir-format
 msgid "Qty"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:50
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:52
 #, elixir-autogen, elixir-format
 msgid "Quantity"
 msgstr ""
 
-#: lib/mehungry_web/live/condition_detail_live/index.html.heex:123
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:286
 #, elixir-autogen, elixir-format
 msgid "Recipes that include an encouraged food and none of the foods to be mindful of."
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:163
+#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:125
 #, elixir-autogen, elixir-format
 msgid "Remove ingredient"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:351
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:373
 #, elixir-autogen, elixir-format
 msgid "Reset"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:331
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:350
 #, elixir-autogen, elixir-format
 msgid "Review & Save"
 msgstr ""
 
-#: lib/mehungry_web/components/core_components.ex:1443
+#: lib/mehungry_web/components/core_components.ex:1570
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:890
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:353
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:375
 #, elixir-autogen, elixir-format
 msgid "Save Recipe"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:67
+#: lib/mehungry_web/live/onboarding/form_component.ex:64
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:357
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:379
 #, elixir-autogen, elixir-format
 msgid "Saving…"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:133
+#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:95
 #, elixir-autogen, elixir-format
 msgid "Search Ingredients"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:132
+#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:94
 #, elixir-autogen, elixir-format
 msgid "Select an ingredient…"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:120
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:127
 #, elixir-autogen, elixir-format
 msgid "Servings"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:94
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:98
 #, elixir-autogen, elixir-format
 msgid "Short description"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:58
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:62
 #, elixir-autogen, elixir-format
 msgid "Something went wrong with the upload"
 msgstr ""
 
-#: lib/mehungry_web/components/core_components.ex:1443
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:296
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:316
+#: lib/mehungry_web/components/core_components.ex:1570
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:311
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:333
 #, elixir-autogen, elixir-format
 msgid "Steps"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:298
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:318
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:314
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:336
 #, elixir-autogen, elixir-format
 msgid "The cooking instructions, one step at a time."
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:45
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:89
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:47
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:93
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:54
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:58
 #, elixir-autogen, elixir-format
 msgid "Too large"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:149
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:51
+#: lib/mehungry_web/live/create_recipe_live/ingredient_component.ex:111
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:53
 #, elixir-autogen, elixir-format
 msgid "Unit"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:260
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:274
 #, elixir-autogen, elixir-format
 msgid "Unmatched Ingredients"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:148
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:167
 #, elixir-autogen, elixir-format
 msgid "Upgrade"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:57
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:61
 #, elixir-autogen, elixir-format
 msgid "Upload failed, please try again"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:162
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:181
 #, elixir-autogen, elixir-format
 msgid "Use your ingredients?"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:206
+#: lib/mehungry_web/controllers/api/v1/preferences_controller.ex:37
+#: lib/mehungry_web/live/onboarding/form_component.ex:173
 #, elixir-autogen, elixir-format
 msgid "Vegan"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:205
+#: lib/mehungry_web/controllers/api/v1/preferences_controller.ex:36
+#: lib/mehungry_web/live/onboarding/form_component.ex:172
 #, elixir-autogen, elixir-format
 msgid "Vegetarian"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:25
+#: lib/mehungry_web/live/onboarding/form_component.ex:24
 #, elixir-autogen, elixir-format
 msgid "Welcome! Let's set up your preferences"
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:106
+#: lib/mehungry_web/live/onboarding/form_component.ex:104
 #, elixir-autogen, elixir-format
 msgid "What best describes your diet?"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:176
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:196
 #, elixir-autogen, elixir-format
 msgid "Yes, use them"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:55
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:59
 #, elixir-autogen, elixir-format
 msgid "You have selected an unacceptable file type"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:56
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:60
 #, elixir-autogen, elixir-format
 msgid "You have selected too many files"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:165
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:184
 #, elixir-autogen, elixir-format
 msgid "You've already added: %{items}. Should the AI build the recipe around them?"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/index.html.heex:142
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:161
 #, elixir-autogen, elixir-format
 msgid "You've reached your AI recipe limit for this month."
 msgstr ""
 
-#: lib/mehungry_web/live/onboarding/form_component.ex:149
+#: lib/mehungry_web/live/onboarding/form_component.ex:150
 #, elixir-autogen, elixir-format
 msgid "e.g. 2000"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:280
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:294
 #, elixir-autogen, elixir-format
 msgid "no portion"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:278
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:292
 #, elixir-autogen, elixir-format
 msgid "not in DB"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:279
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:293
 #, elixir-autogen, elixir-format
 msgid "unknown unit"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:859
+#, elixir-autogen, elixir-format
+msgid "%{count} meals"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:825
+#, elixir-autogen, elixir-format
+msgid "7 days · 5 meals/day"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Added Sugars"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:34
+#, elixir-autogen, elixir-format
+msgid "Advice by disease phase"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Calcium"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Carbohydrates"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Cholesterol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Choline"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Complex Carbohydrates"
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:1260
+#, elixir-autogen, elixir-format
+msgid "Cookies"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Copper"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:870
+#, elixir-autogen, elixir-format
+msgid "Daily macro targets"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:875
+#: lib/mehungry_web/live/meal_plan_live/show.ex:820
+#: lib/mehungry_web/meal_plan_share_text.ex:155
+#: lib/mehungry_web/meal_plan_share_text.ex:160
+#, elixir-autogen, elixir-format
+msgid "Day %{n}"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Dietary Fiber"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:39
+#, elixir-autogen, elixir-format
+msgid "Dietary advice for this condition depends on its phase — guidance during an active flare can differ sharply from remission. Pick a phase to see phase-specific guidance."
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Disaccharides"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:126
+#, elixir-autogen, elixir-format
+msgid "Each recommendation links the research it is based on so you can read the source and decide with your clinician."
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Energy"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Folate (Vitamin B9)"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Fructose"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Galactose"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:56
+#, elixir-autogen, elixir-format
+msgid "General"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Glucose"
+msgstr ""
+
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:140
+#, elixir-autogen, elixir-format
+msgid "Import"
+msgstr ""
+
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:137
+#, elixir-autogen, elixir-format
+msgid "Importing…"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:138
+#, elixir-autogen, elixir-format
+msgid "Informational only — not medical advice"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Iron"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Lactose"
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:1263
+#, elixir-autogen, elixir-format
+msgid "Legal Notice"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Magnesium"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Maltose"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Manganese"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Minerals"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Monosaccharides"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Monounsaturated Fat"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Net Carbs"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:87
+#, elixir-autogen, elixir-format
+msgid "No phase-specific guidance recorded for this selection yet."
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:156
+#, elixir-autogen, elixir-format
+msgid "Noted dietary suggestions"
+msgstr ""
+
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:126
+#, elixir-autogen, elixir-format
+msgid "Paste a recipe link, e.g. https://…"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Phosphorus"
+msgstr ""
+
+#: lib/mehungry_web/live/create_recipe_live/index.ex:122
+#, elixir-autogen, elixir-format
+msgid "Please enter a valid http(s) recipe link."
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Polyunsaturated Fat"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Potassium"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:830
+#, elixir-autogen, elixir-format
+msgid "Prefer"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:840
+#, elixir-autogen, elixir-format
+msgid "Preferred foods"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:553
+#, elixir-autogen, elixir-format
+msgid "Ready-made meal-plan blueprints matched to this condition."
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:227
+#, elixir-autogen, elixir-format
+msgid "Research on this condition"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:849
+#, elixir-autogen, elixir-format
+msgid "Sample meal plans"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Saturated Fat"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Selenium"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Sodium"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:268
+#: lib/mehungry_web/live/condition_detail_live/index.ex:679
+#, elixir-autogen, elixir-format
+msgid "Source"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.ex:242
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:447
+#, elixir-autogen, elixir-format
+msgid "Sources (%{count})"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:230
+#, elixir-autogen, elixir-format
+msgid "Studies discovered about this condition from PubMed. Discovery only — inclusion is not endorsement."
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Sucrose"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Sugar Alcohols"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:550
+#, elixir-autogen, elixir-format
+msgid "Suggested Meal Plans"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:531
+#, elixir-autogen, elixir-format
+msgid "Suggested for this condition"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:159
+#, elixir-autogen, elixir-format
+msgid "Suggestions drawn from the research that we don't yet map to specific foods — informational only, not medical advice."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:1257
+#, elixir-autogen, elixir-format
+msgid "Terms"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Total Fat"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Total Sugars"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Trans Fat"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:901
+#, elixir-autogen, elixir-format
+msgid "View full plan →"
+msgstr ""
+
+#: lib/mehungry_web/live/condition_detail_live/index.html.heex:571
+#, elixir-autogen, elixir-format
+msgid "View plan →"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin A"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin B1 (Thiamin)"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin B12"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin B2 (Riboflavin)"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin B3 (Niacin)"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin B5 (Pantothenic Acid)"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin B6"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin B7 (Biotin)"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin C"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin D"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin E"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamin K"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamins"
+msgstr ""
+
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:145
+#, elixir-autogen, elixir-format
+msgid "We copy the ingredients, rewrite the steps in our own words, and give it a fresh title and description."
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Zinc"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:181
+#, elixir-autogen, elixir-format
+msgid "carbs"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:178
+#, elixir-autogen, elixir-format
+msgid "fat"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:187
+#, elixir-autogen, elixir-format
+msgid "fiber"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:164
+#, elixir-autogen, elixir-format
+msgid "item"
+msgid_plural "items"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:162
+#: lib/mehungry_web/live/calendar_live/index.ex:537
+#, elixir-autogen, elixir-format
+msgid "meal"
+msgid_plural "meals"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/mehungry_web/live/create_recipe_live/index.html.heex:116
+#, elixir-autogen, elixir-format
+msgid "or import from a link"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:175
+#, elixir-autogen, elixir-format
+msgid "protein"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:184
+#, elixir-autogen, elixir-format
+msgid "sugars"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "10-formyl Folic Acid (10hcofa)"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "25-hydroxycholecalciferol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "5-formyltetrahydrofolic Acid (5-hcoh4"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Alcohol, Ethyl"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Amino Acids"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Arginine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Ash"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Aspartic Acid"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Beta-glucan"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Beta-sitostanol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Beta-sitosterol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Betaine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Boron, B"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Brassicasterol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Caffeine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Campestanol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Campesterol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Carotene, Alpha"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Carotene, Beta"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Carotene, Gamma"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Cis-beta-carotene"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Cis-lutein/zeaxanthin"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Cis-lycopene"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Citric Acid"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Cobalt, Co"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Cryptoxanthin, Alpha"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Cryptoxanthin, Beta"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Cysteine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Cystine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Daidzein"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Daidzin"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Delta-5-avenasterol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Delta-7-stigmastenol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Ergosta-5,7-dienol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Ergosta-7,22-dienol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Ergosta-7-enol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Ergosterol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Ergothioneine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Fluoride, F"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Folic Acid"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Genistein"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Genistin"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Glutamic Acid"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Glutathione"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Glycine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Glycitin"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "High Molecular Weight Dietary Fiber (HMWDF)"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Histidine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Hydroxyproline"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Iodine, I"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Isoflavones"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Isoleucine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Leucine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Lipids"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Low Molecular Weight Dietary Fiber (LMWDF)"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Lutein"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Lutein + Zeaxanthin"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Lycopene"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Lysine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Malic Acid"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Methionine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Molybdenum, Mo"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Nickel, Ni"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Nitrogen"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Oligosaccharides"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Organic Acids"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Oxalic Acid"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Phytoene"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Phytofluene"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Phytosterols"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Phytosterols, Other"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Proline"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Proximates"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Pyruvic Acid"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Quinic Acid"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Raffinose"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Resistant Starch"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Retinol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Serine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Specific Gravity"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Stachyose"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Starch"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Stigmastadiene"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Stigmasterol"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Sulfur, S"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Theobromine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Threonine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Tocopherol, Beta"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Tocopherol, Delta"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Tocopherol, Gamma"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Tocotrienol, Alpha"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Tocotrienol, Beta"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Tocotrienol, Delta"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Tocotrienol, Gamma"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Trans-beta-carotene"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Trans-lycopene"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Tryptophan"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Tyrosine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Valine"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Verbascose"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Vitamins And Other Components"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Water"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:261
+#, elixir-autogen, elixir-format
+msgid "Zeaxanthin"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:86
+#, elixir-autogen, elixir-format
+msgid "Full Nutrition Breakdown"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.ex:475
+#, elixir-autogen, elixir-format
+msgid "Absent"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.ex:471
+#, elixir-autogen, elixir-format
+msgid "Contains"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.ex:472
+#, elixir-autogen, elixir-format
+msgid "High in"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.ex:473
+#, elixir-autogen, elixir-format
+msgid "Low in"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:245
+#, elixir-autogen, elixir-format
+msgid "No PubMed papers are on file for this link yet."
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:117
+#, elixir-autogen, elixir-format
+msgid "No compounds linked to this species yet."
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:239
+#, elixir-autogen, elixir-format
+msgid "Research supporting this compound link."
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.ex:474
+#, elixir-autogen, elixir-format
+msgid "Trace"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:257
+#, elixir-autogen, elixir-format
+msgid "Untitled study"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:129
+#, elixir-autogen, elixir-format
+msgid "View the research supporting this"
+msgstr ""
+
+#: lib/mehungry_web/components/meal_type_labels.ex:32
+#: lib/mehungry_web/live/meal_plan_live/show.ex:835
+#, elixir-autogen, elixir-format
+msgid "Afternoon Snack"
+msgstr ""
+
+#: lib/mehungry_web/components/meal_type_labels.ex:32
+#: lib/mehungry_web/live/meal_plan_live/show.ex:832
+#, elixir-autogen, elixir-format
+msgid "Breakfast"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:1177
+#, elixir-autogen, elixir-format
+msgid "Copy this meal to today?"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:466
+#, elixir-autogen, elixir-format
+msgid "Create shareable card"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:375
+#, elixir-autogen, elixir-format
+msgid "Creating your card…"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:872
+#, elixir-autogen, elixir-format
+msgid "Day note"
+msgstr ""
+
+#: lib/mehungry_web/components/meal_type_labels.ex:32
+#: lib/mehungry_web/live/meal_plan_live/show.ex:836
+#, elixir-autogen, elixir-format
+msgid "Dinner"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:395
+#, elixir-autogen, elixir-format
+msgid "Download"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:443
+#, elixir-autogen, elixir-format
+msgid "Goal label (optional)"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:1173
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:1174
+#, elixir-autogen, elixir-format
+msgid "Log this again today"
+msgstr ""
+
+#: lib/mehungry_web/components/meal_type_labels.ex:32
+#: lib/mehungry_web/live/meal_plan_live/show.ex:833
+#, elixir-autogen, elixir-format
+msgid "Morning Snack"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:401
+#, elixir-autogen, elixir-format
+msgid "My weekly meal plan"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:412
+#, elixir-autogen, elixir-format
+msgid "Post to m3hungry"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:416
+#, elixir-autogen, elixir-format
+msgid "Posted!"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:435
+#, elixir-autogen, elixir-format
+msgid "Re-generate from the latest plan"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:464
+#, elixir-autogen, elixir-format
+msgid "Replace saved card"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:404
+#, elixir-autogen, elixir-format
+msgid "Share"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:21
+#: lib/mehungry_web/live/calendar_live/index.html.heex:361
+#, elixir-autogen, elixir-format
+msgid "Share this week"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:455
+#, elixir-autogen, elixir-format
+msgid "This shares your meal titles and weekly nutrition totals publicly. Your day notes and shopping basket stay private."
+msgstr ""
+
+#: lib/mehungry_web/components/meal_type_labels.ex:32
+#, elixir-autogen, elixir-format
+msgid "Unsorted"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:418
+#, elixir-autogen, elixir-format
+msgid "View in feed"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:384
+#, elixir-autogen, elixir-format
+msgid "Weekly plan card"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:380
+#, elixir-autogen, elixir-format
+msgid "Your saved card for this week."
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:450
+#, elixir-autogen, elixir-format
+msgid "e.g. Anti-inflammatory"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:882
+#, elixir-autogen, elixir-format
+msgid "e.g. felt bloated after lunch, good energy…"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:874
+#, elixir-autogen, elixir-format
+msgid "private — how you felt today"
+msgstr ""
+
+#: lib/mehungry_web/weekly_plan_graphic.ex:245
+#, elixir-autogen, elixir-format
+msgid "Daily average"
+msgstr ""
+
+#: lib/mehungry_web/weekly_plan_graphic.ex:246
+#, elixir-autogen, elixir-format
+msgid "Plan your week free"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:48
+#, elixir-autogen, elixir-format
+msgid "Daily Summary"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:76
+#, elixir-autogen, elixir-format
+msgid "Daily average over %{days} days"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:37
+#: lib/mehungry_web/live/calendar_live/index.html.heex:485
+#, elixir-autogen, elixir-format
+msgid "Foods I avoid"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:374
+#, elixir-autogen, elixir-format
+msgid "Hide micronutrients"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:488
+#, elixir-autogen, elixir-format
+msgid "List foods you'd rather not eat — one per line. Any meal on your calendar containing one gets flagged. This list is private to you."
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:350
+#, elixir-autogen, elixir-format
+msgid "Macros"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:386
+#, elixir-autogen, elixir-format
+msgid "Micronutrients"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:353
+#, elixir-autogen, elixir-format
+msgid "No macro data"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrition_accordion.ex:86
+#, elixir-autogen, elixir-format
+msgid "No nutrition data available"
+msgstr ""
+
+#: lib/mehungry_web/components/recipe_components.ex:781
+#: lib/mehungry_web/components/recipe_components.ex:810
+#, elixir-autogen, elixir-format
+msgid "Nutrition Facts"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:1213
+#, elixir-autogen, elixir-format
+msgid "On your avoid list"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:1203
+#, elixir-autogen, elixir-format
+msgid "On your avoid list: %{terms}"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:504
+#, elixir-autogen, elixir-format
+msgid "Save avoid list"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:373
+#, elixir-autogen, elixir-format
+msgid "Show micronutrients"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:75
+#, elixir-autogen, elixir-format
+msgid "Weekly Summary"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:496
+#, elixir-autogen, elixir-format
+msgid "e.g.\nonion\ngarlic\nshellfish"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:204
+#, elixir-autogen, elixir-format
+msgid "sat. fat"
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/calendar/widget.ex:196
+#, elixir-autogen, elixir-format
+msgid "sodium"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:543
+#, elixir-autogen, elixir-format
+msgid "%{count} item"
+msgid_plural "%{count} items"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:485
+#, elixir-autogen, elixir-format
+msgid "%{count} meal"
+msgid_plural "%{count} meals"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:273
+#: lib/mehungry_web/meal_plan_share_text.ex:91
+#, elixir-autogen, elixir-format
+msgid "%{count} recipe"
+msgid_plural "%{count} recipes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:267
+#, elixir-autogen, elixir-format
+msgid "7 days"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:301
+#, elixir-autogen, elixir-format
+msgid "Add to my calendar"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:149
+#, elixir-autogen, elixir-format
+msgid "Added %{count} meals to your calendar for this week."
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:842
+#, elixir-autogen, elixir-format
+msgid "Bakery & Grains"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:845
+#, elixir-autogen, elixir-format
+msgid "Beverages"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:649
+#, elixir-autogen, elixir-format
+msgid "Build and share your own weekly meal plans, free — with USDA nutrition."
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:286
+#, elixir-autogen, elixir-format
+msgid "Calories/day"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:320
+#, elixir-autogen, elixir-format
+msgid "Copied!"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:323
+#, elixir-autogen, elixir-format
+msgid "Copy link"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:841
+#, elixir-autogen, elixir-format
+msgid "Dairy & Eggs"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:308
+#, elixir-autogen, elixir-format
+msgid "Log in to use this plan"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:643
+#, elixir-autogen, elixir-format
+msgid "Made with"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:222
+#: lib/mehungry_web/live/meal_plan_live/show.ex:224
+#: lib/mehungry_web/live/meal_plan_live/show.ex:225
+#, elixir-autogen, elixir-format
+msgid "Meal Plans"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:840
+#, elixir-autogen, elixir-format
+msgid "Meat & Seafood"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:494
+#, elixir-autogen, elixir-format
+msgid "No meals planned"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:846
+#, elixir-autogen, elixir-format
+msgid "Other"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:843
+#, elixir-autogen, elixir-format
+msgid "Pantry"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:839
+#, elixir-autogen, elixir-format
+msgid "Produce"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:316
+#, elixir-autogen, elixir-format
+msgid "Share on Facebook"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:254
+#, elixir-autogen, elixir-format
+msgid "Shared by"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:844
+#, elixir-autogen, elixir-format
+msgid "Spices & Seasonings"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:141
+#, elixir-autogen, elixir-format
+msgid "This plan has no meals that can be added to a calendar."
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:540
+#, elixir-autogen, elixir-format
+msgid "Weekly grocery list"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:585
+#, elixir-autogen, elixir-format
+msgid "%{count} comment"
+msgid_plural "%{count} comments"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:598
+#, elixir-autogen, elixir-format
+msgid "Add a comment…"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:39
+#, elixir-autogen, elixir-format
+msgid "Bad request"
+msgstr ""
+
+#: lib/mehungry_web/live/blueprint_live/show.ex:255
+#, elixir-autogen, elixir-format
+msgid "Blueprints"
+msgstr ""
+
+#: lib/mehungry_web/meal_plan_share_text.ex:74
+#, elixir-autogen, elixir-format
+msgid "Build your own week 👉 %{url}"
+msgstr ""
+
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:423
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:167
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:296
+#, elixir-autogen, elixir-format
+msgid "Claims follow EU Reg. 1169/2011 & 1924/2006, per serving."
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:60
+#, elixir-autogen, elixir-format
+msgid "Clear week"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:442
+#, elixir-autogen, elixir-format
+msgid "Copy"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:420
+#, elixir-autogen, elixir-format
+msgid "Copy caption"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:194
+#, elixir-autogen, elixir-format
+msgid "Could not post your comment. Please try again."
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:161
+#, elixir-autogen, elixir-format
+msgid "Couldn't load recipes for this food."
+msgstr ""
+
+#: lib/mehungry_web/live/calendar_live/index.html.heex:49
+#, elixir-autogen, elixir-format
+msgid "Delete every meal from the week you're viewing? This can't be undone."
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:411
+#, elixir-autogen, elixir-format
+msgid "Download image"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:395
+#, elixir-autogen, elixir-format
+msgid "Download the image, copy the caption, then post them together."
+msgstr ""
+
+#: lib/mehungry_web/live/recipe_browser_live/index.html.heex:150
+#, elixir-autogen, elixir-format
+msgid "Filter recipes by nutrient"
+msgstr ""
+
+#: lib/mehungry_web/meal_plan_share_text.ex:50
+#, elixir-autogen, elixir-format
+msgid "Full 7-day plan + grocery list 👉 %{url}"
+msgstr ""
+
+#: lib/mehungry_web/components/nutrient_labels.ex:276
+#, elixir-autogen, elixir-format
+msgid "High in %{nutrient}"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:379
+#, elixir-autogen, elixir-format
+msgid "Image + caption"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:329
+#, elixir-autogen, elixir-format
+msgid "Like"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:236
+#, elixir-autogen, elixir-format
+msgid "Meal plan"
+msgstr ""
+
+#: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:158
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:118
+#: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:119
+#, elixir-autogen, elixir-format
+msgid "Messages"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:617
+#, elixir-autogen, elixir-format
+msgid "No comments yet — be the first to share your thoughts."
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:163
+#, elixir-autogen, elixir-format
+msgid "No recipes use this food yet."
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:17
+#, elixir-autogen, elixir-format
+msgid "Not found"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:605
+#, elixir-autogen, elixir-format
+msgid "Post"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:31
+#, elixir-autogen, elixir-format
+msgid "Quota reached for your plan"
+msgstr ""
+
+#: lib/mehungry_web/live/species_detail_live/index.html.heex:143
+#, elixir-autogen, elixir-format
+msgid "Recipes with %{food}"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:366
+#, elixir-autogen, elixir-format
+msgid "Share as a post"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:453
+#, elixir-autogen, elixir-format
+msgid "Share…"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:387
+#, elixir-autogen, elixir-format
+msgid "Text post"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:35
+#, elixir-autogen, elixir-format
+msgid "Too many requests"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:13
+#, elixir-autogen, elixir-format
+msgid "Validation failed"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:217
+#, elixir-autogen, elixir-format
+msgid "Your profile"
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:25
+#, elixir-autogen, elixir-format
+msgid "forbidden"
+msgstr ""
+
+#: lib/mehungry_web/live/meal_plan_live/show.ex:613
+#, elixir-autogen, elixir-format
+msgid "to join the conversation."
+msgstr ""
+
+#: lib/mehungry_web/controllers/api/v1/fallback_controller.ex:21
+#, elixir-autogen, elixir-format
+msgid "unauthorized"
+msgstr ""
+
+#: lib/mehungry_web/meal_plan_share_text.ex:72
+#, elixir-autogen, elixir-format
+msgid "🛒 Free grocery list included"
+msgstr ""
+
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:311
+#, elixir-autogen, elixir-format
+msgid "Show %{count} more"
+msgstr ""
+
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:314
+#, elixir-autogen, elixir-format
+msgid "Show less"
 msgstr ""

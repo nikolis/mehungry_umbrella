@@ -57,6 +57,9 @@ defmodule Mehungry.MixProject do
       {:ueberauth_google, "~> 0.8"},
       {:phoenix, "~> 1.7.10"},
       {:swoosh, "~> 1.8"},
+      # Required by Swoosh's Mailgun adapter to send multipart messages
+      # (needed for the .ics appointment-invite attachments).
+      {:multipart, "~> 0.4"},
       {:gen_smtp, "~> 1.0"},
       {:phoenix_pubsub, "~> 2.0"},
       {:ecto_sql, "~> 3.11"},
@@ -65,6 +68,7 @@ defmodule Mehungry.MixProject do
       {:paginator, "~> 1.2.0"},
       {:httpoison, "~> 2.2"},
       {:jason, "~> 1.2"},
+      {:floki, ">= 0.30.0"},
       {:cachex, "~> 3.4"},
       {:pgvector, "~> 0.3"},
       {:nimble_csv, "~> 1.2"}

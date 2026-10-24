@@ -15,9 +15,7 @@ defmodule Mehungry.RecipeCreationWorker do
     posts = Repo.all(from p in Post, where: p.reference_id == ^recipe_id)
 
     if !is_nil(origin_url) and origin_url != new_url do
-      file_name = List.last(String.split(origin_url, "/"))
-
-      Mehungry.S3.delete_object("test-bucket-local-mehungry", file_name, region: "eu-central-1")
+      Mehungry.Storage.delete_by_url(origin_url)
 
       posts
       |> Enum.each(fn x ->
@@ -25,11 +23,9 @@ defmodule Mehungry.RecipeCreationWorker do
       end)
     end
 
-    if length(posts) == 0 do
-      recipe = Mehungry.Food.get_recipe!(recipe_id)
-      _create_post = Mehungry.Posts.create_post(recipe)
-    end
-
+    # Post backfill (creating a post for a recipe that never got one) is handled
+    # idempotently by RecipePutNutrientsWorker, which runs on every update. This
+    # worker only keeps existing posts' media in sync with the recipe's image.
     :ok
   end
 end

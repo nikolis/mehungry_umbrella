@@ -1,17 +1,16 @@
 defmodule MehungryWeb.Onboarding.FormComponent do
   @moduledoc """
-  First-run onboarding wizard: a 3-step modal (dietary preferences + language →
-  daily calorie target → health-condition badge opt-in) that persists everything
-  to the user's profile on finish and sets `onboarding_level: 1`.
+  First-run onboarding wizard: a 2-step modal (dietary preferences + language →
+  daily calorie target) that persists everything to the user's profile on finish
+  and sets `onboarding_level: 1`.
   """
   use MehungryWeb, :live_component
   import MehungryWeb.CoreComponents
 
   alias Mehungry.Accounts
   alias Mehungry.Food
-  alias Mehungry.Health
 
-  @total_steps 3
+  @total_steps 2
 
   # ═══════════════════════════════════════════════════════════════════════════
   # View (Render)
@@ -33,8 +32,6 @@ defmodule MehungryWeb.Onboarding.FormComponent do
             {diet_step(assigns)}
           <% 2 -> %>
             {calories_step(assigns)}
-          <% 3 -> %>
-            {health_step(assigns)}
         <% end %>
       </div>
 
@@ -158,42 +155,6 @@ defmodule MehungryWeb.Onboarding.FormComponent do
     """
   end
 
-  # Step 3 — health condition badge opt-in
-  defp health_step(assigns) do
-    ~H"""
-    <div>
-      <p class="text-sm font-semibold text-slate-300 mb-1">{gettext("Health condition badges")}</p>
-      <p class="text-xs text-slate-400 mb-4">
-        {gettext(
-          "Optional — pick any conditions and we'll flag recipes on your feed that contain compounds relevant to them."
-        )}
-      </p>
-
-      <div :if={@conditions_by_category == []} class="text-sm text-slate-400">
-        {gettext("No conditions available yet — you can set these later from your profile.")}
-      </div>
-
-      <div class="text-left max-h-72 overflow-y-auto space-y-4">
-        <div :for={{category, conditions} <- @conditions_by_category}>
-          <p class="text-xs uppercase tracking-wide text-slate-500 mb-2">{category}</p>
-          <div class="flex flex-wrap gap-2">
-            <button
-              :for={condition <- conditions}
-              type="button"
-              phx-click="toggle_condition"
-              phx-value-id={condition.id}
-              phx-target={@myself}
-              class={pill_class(MapSet.member?(@selected_condition_ids, condition.id))}
-            >
-              {if MapSet.member?(@selected_condition_ids, condition.id), do: "✓ ", else: ""}{condition.name}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
   defp pill_class(selected?) do
     base =
       "px-5 py-2 rounded-full text-sm font-semibold border-2 transition-colors"
@@ -222,11 +183,6 @@ defmodule MehungryWeb.Onboarding.FormComponent do
   def update(assigns, socket) do
     existing_lang = (assigns.user_profile && assigns.user_profile.language_preference) || "en"
 
-    conditions_by_category =
-      Health.list_conditions_for_presentation()
-      |> Enum.group_by(&(&1.category || "Other"))
-      |> Enum.sort_by(fn {category, _} -> category end)
-
     {:ok,
      socket
      |> assign(assigns)
@@ -235,9 +191,7 @@ defmodule MehungryWeb.Onboarding.FormComponent do
      |> assign_new(:selected_language, fn -> existing_lang end)
      |> assign_new(:base_diet, fn -> "omnivore" end)
      |> assign_new(:lactose_intolerant, fn -> false end)
-     |> assign_new(:daily_calorie_target, fn -> nil end)
-     |> assign_new(:selected_condition_ids, fn -> MapSet.new() end)
-     |> assign(:conditions_by_category, conditions_by_category)}
+     |> assign_new(:daily_calorie_target, fn -> nil end)}
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -269,18 +223,6 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   def handle_event("set_calories", %{"daily_calorie_target" => value}, socket) do
     {:noreply, assign(socket, :daily_calorie_target, parse_calories(value))}
-  end
-
-  def handle_event("toggle_condition", %{"id" => id}, socket) do
-    id = String.to_integer(id)
-    selected = socket.assigns.selected_condition_ids
-
-    selected =
-      if MapSet.member?(selected, id),
-        do: MapSet.delete(selected, id),
-        else: MapSet.put(selected, id)
-
-    {:noreply, assign(socket, :selected_condition_ids, selected)}
   end
 
   def handle_event("save", _params, socket) do
@@ -319,11 +261,6 @@ defmodule MehungryWeb.Onboarding.FormComponent do
       |> maybe_put_calories(socket.assigns.daily_calorie_target)
 
     Accounts.update_user_profile(profile, attrs)
-
-    Accounts.set_condition_opt_ins(
-      profile.id,
-      MapSet.to_list(socket.assigns.selected_condition_ids)
-    )
 
     notify_parent("profile-saved")
 

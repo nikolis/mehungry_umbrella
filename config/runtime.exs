@@ -10,6 +10,22 @@ config :mehungry,
   # Entrez crawler and the PubTator3 annotator (same NCBI host); works without it.
   entrez_api_key: System.get_env("NCBI_API_KEY"),
   openai_api_key: System.get_env("OPENAI_API_KEY", ""),
+  # Black Forest Labs (FLUX) API key — powers the FLUX recipe-cover image
+  # provider. Only consulted when the active provider is :flux; empty = the
+  # Flux provider fails fast with a friendly "not configured" error. Reads
+  # BFL_KEY (the exported name) first, with BFL_API_KEY as a fallback alias.
+  bfl_api_key: System.get_env("BFL_KEY") || System.get_env("BFL_API_KEY", ""),
+  # Which backend generates recipe cover images: "openai" (gpt-image-2, default)
+  # or "flux" (FLUX 2 pro). Lets us A/B the two on live recipes and flip the
+  # default without a deploy once FLUX is validated.
+  recipe_image_provider:
+    (case System.get_env("RECIPE_IMAGE_PROVIDER") do
+       "flux" -> :flux
+       _ -> :openai
+     end),
+  # Optional Expo push access token — only needed if Expo "enhanced security" is
+  # enabled for the project; the push send works without it otherwise.
+  expo_access_token: System.get_env("EXPO_ACCESS_TOKEN"),
   stripe_secret_key: System.get_env("STRIPE_SECRET_KEY", ""),
   stripe_webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET", ""),
   stripe_pro_price_id: System.get_env("STRIPE_PRO_PRICE_ID", ""),
@@ -54,8 +70,15 @@ config :mehungry_local_ai,
   server_base_url: System.get_env("LOCAL_AI_SERVER_URL", "http://localhost:4000")
 
 # Base URL of the mehungry_extractor batch-PMID analysis service (POST /analyze).
+# A saved UI setting (Extractor.Settings) overrides this at runtime; this is the
+# fallback used until one is saved.
 config :mehungry, :extractor_base_url,
   System.get_env("EXTRACTOR_BASE_URL", "http://127.0.0.1:8000")
+
+# Optional bearer token for /analyze (fallback until a UI setting is saved).
+if token = System.get_env("EXTRACTOR_AUTH_TOKEN") do
+  config :mehungry, :extractor_auth_token, token
+end
 
 # HTTP receive/connect timeout (ms) for /analyze — a large uncached batch fetches
 # every PMID from PubMed/PMC and can take many minutes.
@@ -81,6 +104,20 @@ pinterest_api_base =
   end
 
 config :mehungry, pinterest_api_base: pinterest_api_base
+
+# GA4 read-only pull for the weekly app-status snapshot (see docs/app_status.md
+# §7.2 and Mehungry.Report.GA4). Both are optional — when unset, `mix
+# report.snapshot` skips GA4 and you paste its figures by hand.
+#   GA4_SA_KEY      — service-account JSON key, inline or a path to the .json file
+#   GA4_PROPERTY_ID — numeric GA4 property id
+config :mehungry,
+  ga4_sa_key: System.get_env("GA4_SA_KEY"),
+  ga4_property_id: System.get_env("GA4_PROPERTY_ID"),
+  # Google Search Console pull (same service account as GA4; see
+  # Mehungry.Report.SearchConsole). The organic-search leading indicator —
+  # /foods impressions. Set to the exact property id: a domain property is
+  # "sc-domain:m3hungry.com", a URL-prefix property is "https://www.m3hungry.com/".
+  gsc_site_url: System.get_env("GSC_SITE_URL")
 
 # Optional runtime override of the social-publishing kill switches
 # (see config.exs / Mehungry.Social). SOCIAL_PLATFORMS_DISABLED is a
@@ -120,12 +157,40 @@ config :ex_aws,
   secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY"),
   region: "eu-central-1"
 
+# Object storage backend. Supabase Storage is the default (and the only backend
+# used in production); STORAGE_BACKEND=s3 selects the legacy AWS S3 path. The
+# Supabase service_role key is a server-only secret — never exposed to clients.
+config :mehungry, :storage,
+  backend: String.to_atom(System.get_env("STORAGE_BACKEND", "supabase")),
+  supabase_url: System.get_env("SUPABASE_URL"),
+  service_role_key: System.get_env("SUPABASE_SERVICE_ROLE_KEY"),
+  bucket: System.get_env("SUPABASE_STORAGE_BUCKET", "media")
+
+# Android closed-testing opt-in invite (admin panel). Falls back to the
+# config.exs defaults when the env vars are unset.
+config :mehungry, :android_beta,
+  opt_in_url:
+    System.get_env(
+      "ANDROID_BETA_OPT_IN_URL",
+      "https://play.google.com/apps/testing/com.mehungry.app"
+    ),
+  group_email:
+    System.get_env(
+      "ANDROID_BETA_GROUP_EMAIL",
+      "mehungry-android-testers@googlegroups.com"
+    ),
+  current_version: System.get_env("ANDROID_BETA_CURRENT_VERSION", "1.0.0")
+
 if config_env() == :prod do
   config :mehungry, Mehungry.Mailer,
-    adapter: Swoosh.Adapters.AmazonSES,
-    region: System.get_env("AWS_SES_REGION", "eu-central-1"),
-    access_key: System.fetch_env!("AWS_ACCESS_KEY_ID"),
-    secret: System.fetch_env!("AWS_SECRET_ACCESS_KEY")
+    adapter: Swoosh.Adapters.Mailgun,
+    api_key: System.fetch_env!("MAILGUN_API_KEY"),
+    # The Mailgun sending domain (the one verified in the dashboard). Defaults to
+    # the app's canonical domain so the hardcoded noreply@m3hungry.com sender works.
+    domain: System.get_env("MAILGUN_DOMAIN", "m3hungry.com"),
+    # Region endpoint — EU is the default here (the Mailgun domain is in the EU
+    # region). Set MAILGUN_BASE_URL=https://api.mailgun.net/v3 if it's a US domain.
+    base_url: System.get_env("MAILGUN_BASE_URL", "https://api.eu.mailgun.net/v3")
 
   config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 end

@@ -11,14 +11,14 @@ defmodule Mehungry.RecipeImageWorker do
 
   require Logger
 
-  alias Mehungry.{Food, AI.ImageGenerator}
-  alias Mehungry.S3
+  alias Mehungry.{Food, AI.ImageGenerator, Storage}
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"recipe_id" => recipe_id}}) do
+  def perform(%Oban.Job{args: %{"recipe_id" => recipe_id} = args}) do
     recipe = Food.get_recipe!(recipe_id)
+    force = Map.get(args, "force", false)
 
-    if recipe.image_url not in [nil, ""] do
+    if not force and recipe.image_url not in [nil, ""] do
       Logger.info("RecipeImageWorker: recipe #{recipe_id} already has an image, skipping")
       :ok
     else
@@ -27,16 +27,15 @@ defmodule Mehungry.RecipeImageWorker do
   end
 
   defp generate_and_store(recipe) do
-    case ImageGenerator.generate(recipe.title, recipe.description, cuisine: recipe.cousine) do
+    case ImageGenerator.generate(recipe.title, recipe.description,
+           cuisine: recipe.cousine,
+           quality: "high"
+         ) do
       {:ok, binary} ->
-        bucket = Application.get_env(:mehungry_web, :aws_bucket)
-
         key = "recipe_images/#{recipe.id}.jpg"
 
-        case S3.upload_binary(binary, bucket, key, content_type: "image/jpeg") do
-          {:ok, _} ->
-            url = "https://#{bucket}.s3.eu-central-1.amazonaws.com/#{key}"
-
+        case Storage.put(key, binary, content_type: "image/jpeg") do
+          {:ok, %{url: url}} ->
             case Food.update_recipe(recipe, %{"image_url" => url}) do
               {:ok, _} ->
                 Logger.info("RecipeImageWorker: image saved for recipe #{recipe.id}")
@@ -52,7 +51,7 @@ defmodule Mehungry.RecipeImageWorker do
 
           {:error, reason} ->
             Logger.warning(
-              "RecipeImageWorker: S3 upload failed for recipe #{recipe.id}: #{inspect(reason)}"
+              "RecipeImageWorker: storage upload failed for recipe #{recipe.id}: #{inspect(reason)}"
             )
 
             {:error, reason}

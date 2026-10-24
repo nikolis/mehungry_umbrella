@@ -57,7 +57,18 @@ RUN apk add --no-cache \
     postgresql-client \
     curl \
     jq \
-    bash
+    bash \
+    fontconfig \
+    font-dejavu \
+    font-liberation
+
+# The recipe-insight social graphic (MehungryWeb.InsightGraphic) renders an SVG
+# through vix's bundled librsvg/pango. Without system fonts + a fontconfig cache
+# every glyph rasterizes as a tofu box (incl. Latin + Greek caption text).
+# font-liberation gives the Helvetica/Arial font stack an Arial-metric match;
+# DejaVu guarantees full Greek coverage (pango falls back per-glyph). Build the
+# fontconfig cache at image-build time so first render isn't slow.
+RUN fc-cache -f
 
 WORKDIR /app
 

@@ -74,73 +74,16 @@ defmodule MehungryWeb.Presence do
         end
       end
 
+      # Registers the connected LiveView in Presence so the admin "online now"
+      # count works. Consent-independent and ephemeral — Presence metas live in
+      # memory only, nothing is persisted. (Per-visit analytics that duplicated
+      # Google Analytics were removed; GA4 + Search Console own that now.)
       def maybe_track_user(_product, socket) do
-        context = if connected?(socket), do: tracking_context(socket)
-
-        with %{session: session, address: address, agent: agent} <- context,
-             "accepted" <- Map.get(session, "cookie_consent") do
-          referrer = Map.get(socket.assigns, :referrer, "")
+        if connected?(socket) do
           path = Map.get(socket.assigns, :path, "")
-          current_user = Map.get(socket.assigns, :current_user)
-
-          {user_token, visitor_id} =
-            {Map.get(session, "user_token"), Map.get(session, "visitor_id")}
-
-          session_key =
-            if user_token do
-              :crypto.hash(:sha256, user_token)
-              |> Base.encode16(case: :lower)
-              |> String.slice(0, 24)
-            else
-              date = Date.utc_today() |> Date.to_string()
-
-              :crypto.hash(:sha256, "#{address}|#{agent}|#{date}")
-              |> Base.encode16(case: :lower)
-              |> String.slice(0, 24)
-            end
-
-          ret =
-            Presence.track(self(), "general", "general", %{
-              address: address,
-              agent: agent,
-              path: path
-            })
-
-          case Mehungry.Meta.create_visit(%{
-                 ip_address: address,
-                 session_key: session_key,
-                 details: %{
-                   agent: agent,
-                   path: path,
-                   referrer: referrer,
-                   visitor_id: visitor_id,
-                   user_id: current_user && current_user.id,
-                   user_email: current_user && current_user.email
-                 }
-               }) do
-            {:ok, visit} ->
-              Process.put(:current_visit_id, visit.id)
-              Phoenix.PubSub.broadcast(Mehungry.PubSub, "mehungry:analytics", :new_visit)
-
-            {:error, changeset} ->
-              Logger.warning(
-                "[VisitTracking] failed to record visit: #{inspect(changeset.errors)}"
-              )
-          end
-
-          ret
-        else
-          _ -> nil
+          Presence.track(self(), "general", "general", %{path: path})
         end
       end
-
-      def handle_event("page_timing", %{"ttfb_ms" => ttfb, "load_ms" => load}, socket) do
-        visit_id = Process.get(:current_visit_id)
-        if visit_id, do: Mehungry.Meta.update_visit_timing(visit_id, ttfb, load)
-        {:noreply, socket}
-      end
-
-      # Presence.track(socket, "General" ,"General", %{addres: address, agent: agent, path: path} )
 
       """
             def maybe_track_user(

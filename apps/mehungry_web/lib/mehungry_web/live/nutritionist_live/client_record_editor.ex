@@ -1,21 +1,22 @@
 defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
   @moduledoc """
-  Manual authoring UI for a `ProfessionalClient` dietary-history record — the
-  by-hand counterpart to the CSV import in `NutritionistLive.Records`.
+  Full dietary-history editor for a `ProfessionalClient` record (`:edit` only).
 
-  `:new` collects the client's identity and its **required** association to an
-  m3hungry platform user (picked from the nutritionist's assigned clients or by
-  email — a record is never headless), then navigates into `:edit`, which
-  persists incrementally (mirroring
+  The record is always reached from a client (the roster / `ClientDetail`), which
+  creates it via `ensure_record/1` — so the platform-user association is already
+  set and there is no picker here. Persists incrementally (mirroring
   `ArticleEditor`): the client details form, a single `ClientIntake` (typed
   anthropometrics + the free-form questionnaire/24h-recall `details` map), and a
   repeatable list of `ConsultationNote`s.
   """
   use MehungryWeb, :live_view
 
-  alias Mehungry.{Accounts, Professionals}
-  alias Mehungry.Professionals.{ProfessionalClient, ClientIntake, ConsultationNote}
+  alias Mehungry.Professionals
+  alias Mehungry.Professionals.{ClientIntake, ConsultationNote}
+  alias Mehungry.Professionals.Anthropometrics
   alias Mehungry.Professionals.DietaryHistory.Fields
+
+  @energy_source_fields ~w(height_m weight_kg sex age activity_level)
 
   # ── Mount ─────────────────────────────────────────────────────────────────────
 
@@ -28,25 +29,11 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         {:ok,
          socket
          |> put_flash(:error, "Record not found.")
-         |> push_navigate(to: ~p"/nutritionist/records")}
+         |> push_navigate(to: ~p"/nutritionist/clients")}
 
       record ->
         {:ok, assign_edit(socket, record)}
     end
-  end
-
-  def mount(_params, _session, socket) do
-    professional_id = socket.assigns.current_user.id
-    client = %ProfessionalClient{professional_id: professional_id}
-
-    {:ok,
-     socket
-     |> assign(:page_title, "New client")
-     |> assign(:record, client)
-     |> assign(:client_changeset, Professionals.change_client_record(client))
-     |> assign(:linked_user_id, nil)
-     |> assign(:assigned_clients, assigned_client_options(professional_id))
-     |> assign(:email_lookup, "")}
   end
 
   defp assign_edit(socket, record) do
@@ -59,11 +46,8 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     |> assign(:record, record)
     |> assign(:client_changeset, Professionals.change_client_record(record))
     |> assign(:intake, intake)
-    |> assign(:intake_changeset, Professionals.change_intake(intake))
+    |> assign(:intake_changeset, new_intake_changeset(intake, record))
     |> assign(:notes, notes_newest_first(record.id))
-    |> assign(:linked_user_id, record.user_id)
-    |> assign(:assigned_clients, assigned_client_options(record.professional_id))
-    |> assign(:email_lookup, "")
   end
 
   defp fetch_record(professional_id, id) do
@@ -73,51 +57,9 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     Ecto.Query.CastError -> nil
   end
 
-  # options for the assigned-clients <select>: {label, platform user id}
-  defp assigned_client_options(professional_id) do
-    professional_id
-    |> Professionals.list_clients()
-    |> Enum.map(fn assignment ->
-      client = assignment.client
-      {client.name || client.email, client.id}
-    end)
-  end
-
-  # ── Association (required m3hungry user) ────────────────────────────────────────
-
-  @impl true
-  def handle_event("pick_assigned", %{"user_id" => ""}, socket) do
-    {:noreply, assign(socket, :linked_user_id, nil)}
-  end
-
-  def handle_event("pick_assigned", %{"user_id" => user_id}, socket) do
-    case safe_get_user(user_id) do
-      nil -> {:noreply, put_flash(socket, :error, "That client could not be found.")}
-      user -> {:noreply, link_user(socket, user)}
-    end
-  end
-
-  def handle_event("lookup_email", %{"email" => email}, socket) do
-    case email |> to_string() |> String.trim() do
-      "" ->
-        {:noreply, put_flash(socket, :error, "Enter an email to look up.")}
-
-      trimmed ->
-        case Accounts.get_user_by_email(trimmed) do
-          nil ->
-            {:noreply,
-             socket
-             |> assign(:email_lookup, trimmed)
-             |> put_flash(:error, "No m3hungry account found for #{trimmed}.")}
-
-          user ->
-            {:noreply, socket |> assign(:email_lookup, "") |> link_user(user)}
-        end
-    end
-  end
-
   # ── Client details form ─────────────────────────────────────────────────────────
 
+  @impl true
   def handle_event("validate_client", %{"client" => params}, socket) do
     changeset =
       socket.assigns.record
@@ -128,20 +70,20 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
   end
 
   def handle_event("save_client", %{"client" => params}, socket) do
-    # A record is never headless: refuse to save until a platform user is linked.
-    if is_nil(user_id_for_save(socket)) do
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "Select the m3hungry client this record belongs to — records can't be headless."
-       )}
-    else
-      save_client(params, socket)
-    end
+    save_client(params, socket)
   end
 
   # ── Intake form (edit only) ─────────────────────────────────────────────────────
+
+  def handle_event("validate_intake", %{"intake" => params} = payload, socket) do
+    changeset =
+      socket.assigns.intake
+      |> Professionals.change_intake(params)
+      |> Map.put(:action, :validate)
+      |> recompute_energy(payload["_target"])
+
+    {:noreply, assign(socket, :intake_changeset, changeset)}
+  end
 
   def handle_event("save_intake", %{"intake" => params}, socket) do
     attrs = Map.put(params, "professional_client_id", socket.assigns.record.id)
@@ -207,59 +149,19 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
 
   # ── Event helpers ───────────────────────────────────────────────────────────────
 
-  defp safe_get_user(id) do
-    Accounts.get_user!(id)
-  rescue
-    Ecto.NoResultsError -> nil
-    Ecto.Query.CastError -> nil
-  end
-
-  # Set the linked user id and prefill name/email into the (unsaved) client form.
-  defp link_user(socket, user) do
-    attrs = %{
-      "full_name" => user.name || socket.assigns.record.full_name,
-      "email" => user.email
-    }
-
-    socket
-    |> assign(:linked_user_id, user.id)
-    |> assign(:client_changeset, Professionals.change_client_record(socket.assigns.record, attrs))
-    |> put_flash(:info, "Linked to #{user.name || user.email}.")
-  end
-
-  defp user_id_for_save(socket), do: socket.assigns.linked_user_id
-
+  # The record's `professional_id`/`user_id` are already set (it was created from
+  # the client), so the details form only updates the editable PII fields.
   defp save_client(params, socket) do
-    attrs =
-      params
-      |> Map.put("professional_id", socket.assigns.current_user.id)
-      |> Map.put("user_id", user_id_for_save(socket))
+    case Professionals.update_client_record(socket.assigns.record, params) do
+      {:ok, record} ->
+        {:noreply,
+         socket
+         |> assign(:record, record)
+         |> assign(:client_changeset, Professionals.change_client_record(record))
+         |> put_flash(:info, "Client saved.")}
 
-    case socket.assigns.record do
-      %ProfessionalClient{id: nil} ->
-        case Professionals.create_client_record(attrs) do
-          {:ok, record} ->
-            {:noreply,
-             socket
-             |> put_flash(:info, "Client created.")
-             |> push_navigate(to: ~p"/nutritionist/records/#{record.id}/edit")}
-
-          {:error, changeset} ->
-            {:noreply, assign(socket, :client_changeset, Map.put(changeset, :action, :insert))}
-        end
-
-      record ->
-        case Professionals.update_client_record(record, attrs) do
-          {:ok, record} ->
-            {:noreply,
-             socket
-             |> assign(:record, record)
-             |> assign(:client_changeset, Professionals.change_client_record(record))
-             |> put_flash(:info, "Client saved.")}
-
-          {:error, changeset} ->
-            {:noreply, assign(socket, :client_changeset, changeset)}
-        end
+      {:error, changeset} ->
+        {:noreply, assign(socket, :client_changeset, changeset)}
     end
   end
 
@@ -275,22 +177,19 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     ~H"""
     <div class="profile-form max-w-4xl mx-auto pb-16">
       <.link
-        navigate={~p"/nutritionist/records"}
+        navigate={~p"/nutritionist/clients/#{@record.user_id}"}
         class="text-parchment-dim hover:text-parchment text-sm"
       >
-        ← Back to records
+        ← Back to client
       </.link>
 
       <h1 class="text-2xl font-display font-bold text-parchment mt-2 mb-6">
-        {if @live_action == :new, do: "New client", else: @record.full_name}
+        {@record.full_name}
       </h1>
 
       {client_section(assigns)}
-
-      <%= if @live_action == :edit do %>
-        {intake_section(assigns)}
-        {notes_section(assigns)}
-      <% end %>
+      {intake_section(assigns)}
+      {notes_section(assigns)}
     </div>
     """
   end
@@ -301,8 +200,6 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     ~H"""
     <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
       <h2 class="text-lg font-display font-bold text-parchment mb-4">Client details</h2>
-
-      {association_control(assigns)}
 
       <.form
         :let={f}
@@ -338,55 +235,10 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         </.labeled>
 
         <.action variant={:primary} size={:sm} type="submit">
-          {if @live_action == :new, do: "Create client", else: "Save details"}
+          Save details
         </.action>
       </.form>
     </section>
-    """
-  end
-
-  defp association_control(assigns) do
-    ~H"""
-    <div class="bg-ink rounded-lg p-3 mb-2">
-      <h3 class="text-sm font-semibold text-parchment mb-3">m3hungry client (required)</h3>
-
-      <div class="space-y-3">
-        <.labeled label="Pick from your clients">
-          <form id="pick-assigned-form" phx-change="pick_assigned">
-            <select
-              name="user_id"
-              class="w-full bg-ink-panel border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
-            >
-              <option value="">— select a client —</option>
-              <%= for {label, id} <- @assigned_clients do %>
-                <option value={id} selected={@linked_user_id == id}>{label}</option>
-              <% end %>
-            </select>
-          </form>
-        </.labeled>
-
-        <.labeled label="…or look up by account email">
-          <form id="lookup-email-form" phx-submit="lookup_email" class="flex gap-2">
-            <input
-              type="text"
-              name="email"
-              value={@email_lookup}
-              placeholder="client@example.com"
-              class="flex-1 bg-ink-panel border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm"
-            />
-            <.action variant={:secondary} size={:sm} type="submit">Look up</.action>
-          </form>
-        </.labeled>
-
-        <p class="text-xs text-parchment-dim">
-          <%= if @linked_user_id do %>
-            Linked to m3hungry account {@linked_user_id}. Name &amp; email were prefilled — edit below if needed.
-          <% else %>
-            A record can't be headless — select or look up the registered client it belongs to, then save.
-          <% end %>
-        </p>
-      </div>
-    </div>
     """
   end
 
@@ -399,6 +251,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
       for={@intake_changeset}
       as={:intake}
       id="intake-form"
+      phx-change="validate_intake"
       phx-submit="save_intake"
       class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6"
     >
@@ -408,13 +261,32 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         <.labeled label="Assessed on">
           <.input field={f[:assessed_on]} type="date" />
         </.labeled>
+        <.labeled label="Sex">
+          <.input
+            field={f[:sex]}
+            type="select"
+            prompt="—"
+            options={for {v, l} <- Anthropometrics.sexes(), do: {l, v}}
+          />
+        </.labeled>
+        <.labeled label="Age">
+          <.input field={f[:age]} type="number" />
+        </.labeled>
+        <.labeled label="Activity level">
+          <.input
+            field={f[:activity_level]}
+            type="select"
+            prompt="—"
+            options={for {v, l, _f} <- Anthropometrics.activity_levels(), do: {l, v}}
+          />
+        </.labeled>
         <.labeled label="Height (m)">
           <.input field={f[:height_m]} type="number" step="0.01" />
         </.labeled>
         <.labeled label="Weight (kg)">
           <.input field={f[:weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="BMI">
+        <.labeled label="BMI (auto)">
           <.input field={f[:bmi]} type="number" step="0.1" />
         </.labeled>
         <.labeled label="Usual wt (kg)">
@@ -426,10 +298,10 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
         <.labeled label="Adjusted wt (kg)">
           <.input field={f[:adjusted_weight_kg]} type="number" step="0.1" />
         </.labeled>
-        <.labeled label="BMR (kcal)">
+        <.labeled label="BMR (auto, kcal)">
           <.input field={f[:bmr_kcal]} type="number" />
         </.labeled>
-        <.labeled label="TDEE (kcal)">
+        <.labeled label="TDEE (auto, kcal)">
           <.input field={f[:tdee_kcal]} type="number" />
         </.labeled>
       </div>
@@ -468,6 +340,57 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
       <.action variant={:primary} size={:sm} type="submit" class="mt-5">Save intake</.action>
     </.form>
     """
+  end
+
+  # New intake: prefill `age` from the client's date of birth so the common case
+  # needs no typing. Existing intakes keep their stored age.
+  defp new_intake_changeset(%ClientIntake{id: nil} = intake, record) do
+    case {intake.age, client_age(record)} do
+      {nil, age} when is_integer(age) -> Professionals.change_intake(intake, %{"age" => age})
+      _ -> Professionals.change_intake(intake)
+    end
+  end
+
+  defp new_intake_changeset(intake, _record), do: Professionals.change_intake(intake)
+
+  defp client_age(%{date_of_birth: %Date{} = dob}) do
+    today = Date.utc_today()
+    age = today.year - dob.year - if(Date.compare(replace_year(dob, today.year), today) == :gt, do: 1, else: 0)
+    if age > 0, do: age
+  end
+
+  defp client_age(_), do: nil
+
+  defp replace_year(%Date{month: 2, day: 29} = dob, year) do
+    # Guard against non-leap target years so the birthday comparison never crashes.
+    case Date.new(year, 2, 29) do
+      {:ok, date} -> date
+      {:error, _} -> %Date{dob | year: year, day: 28}
+    end
+  end
+
+  defp replace_year(dob, year), do: %Date{dob | year: year}
+
+  # Recompute BMI/BMR/TDEE only when a *source* input changed (overwriting the
+  # outputs so they track inputs live). Editing an output directly leaves it as
+  # typed — the override path.
+  defp recompute_energy(changeset, target) do
+    if target && List.last(target) in @energy_source_fields do
+      derived =
+        Anthropometrics.compute(%{
+          height_m: Ecto.Changeset.get_field(changeset, :height_m),
+          weight_kg: Ecto.Changeset.get_field(changeset, :weight_kg),
+          sex: Ecto.Changeset.get_field(changeset, :sex),
+          age: Ecto.Changeset.get_field(changeset, :age),
+          activity_level: Ecto.Changeset.get_field(changeset, :activity_level)
+        })
+
+      Enum.reduce(derived, changeset, fn {field, value}, acc ->
+        Ecto.Changeset.put_change(acc, field, value)
+      end)
+    else
+      changeset
+    end
   end
 
   defp detail_value(%ClientIntake{details: details}, key) when is_map(details),

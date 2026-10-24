@@ -316,10 +316,15 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
         Logger.debug("    [child] #{n.name}: #{n.amount} #{n.measurement_unit}")
       end)
 
+      # Fatty acids are stored by their raw USDA notation (e.g. "MUFA 16:1").
+      # Resolving the common name is a display-time concern handled live by
+      # MehungryWeb.NutritionAccordion via FattyAcidMatcher — never baked into
+      # the persisted hierarchy, so matcher improvements apply to old recipes
+      # without recalculating.
       enhanced_children =
         Enum.map(all_children, fn fa ->
           %{
-            name: get_fatty_acid_display_name(fa.name),
+            name: fa.name,
             amount: fa.amount,
             measurement_unit: fa.measurement_unit,
             original_name: fa.name
@@ -346,39 +351,6 @@ defmodule Mehungry.Food.NutrientHierarchyBuilder do
       {subcategory, [subcategory | current_children]}
     else
       {nil, current_children}
-    end
-  end
-
-  defp get_fatty_acid_display_name(name) do
-    name_lower = String.downcase(name)
-
-    cond do
-      String.contains?(name_lower, "22:6") or String.contains?(name_lower, "dha") ->
-        "DHA (Docosahexaenoic Acid, Omega-3)"
-
-      String.contains?(name_lower, "20:5") or String.contains?(name_lower, "epa") ->
-        "EPA (Eicosapentaenoic Acid, Omega-3)"
-
-      String.contains?(name_lower, "18:3") and String.contains?(name_lower, "n-3") ->
-        "ALA (Alpha-Linolenic Acid, Omega-3)"
-
-      String.contains?(name_lower, "18:2") and String.contains?(name_lower, "n-6") ->
-        "Linoleic Acid (Omega-6)"
-
-      String.contains?(name_lower, "20:4") and String.contains?(name_lower, "n-6") ->
-        "Arachidonic Acid (Omega-6)"
-
-      String.contains?(name_lower, "16:0") and String.contains?(name_lower, "sfa") ->
-        "Palmitic Acid (C16:0)"
-
-      String.contains?(name_lower, "18:0") and String.contains?(name_lower, "sfa") ->
-        "Stearic Acid (C18:0)"
-
-      String.contains?(name_lower, "18:1") and String.contains?(name_lower, "mufa") ->
-        "Oleic Acid (Omega-9)"
-
-      true ->
-        name |> String.split(" ") |> Enum.map(&String.capitalize/1) |> Enum.join(" ")
     end
   end
 
