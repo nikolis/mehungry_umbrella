@@ -229,9 +229,15 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
         "rice",
         "potato",
         "sugar",
+        "honey",
         "banana",
         "beans",
-        "oats"
+        "oats",
+        "oatmeal",
+        "cereal",
+        "corn",
+        "fruit juice",
+        "chips"
       ],
       macro_split: %{protein_pct: 20, carbs_pct: 5, fats_pct: 75}
     })
@@ -265,7 +271,13 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
         "rice",
         "potato",
         "sugar",
-        "sugary drinks"
+        "sugary drinks",
+        "fruit juice",
+        "honey",
+        "corn",
+        "cereal",
+        "candy",
+        "pastries"
       ],
       macro_split: %{protein_pct: 30, carbs_pct: 20, fats_pct: 50}
     })
@@ -636,9 +648,20 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
         "vegetables",
         "nuts"
       ],
+      # Pescatarian is the one "no-meat" pattern that does NOT get the
+      # vegan/vegetarian category filter (see MealPlanAgent.diet_mode_from_blueprint/1),
+      # so the literal substring avoid-list is the *only* flesh gate — it must name
+      # the specific meats, not just the category words "meat"/"poultry".
       avoid_foods: [
         "meat",
-        "poultry"
+        "poultry",
+        "beef",
+        "pork",
+        "lamb",
+        "chicken",
+        "turkey",
+        "bacon",
+        "sausage"
       ],
       macro_split: %{protein_pct: 22, carbs_pct: 50, fats_pct: 28}
     })
@@ -666,11 +689,27 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
         "nuts",
         "seeds"
       ],
+      # Paleo gets no category diet filter, so the grain/legume *category* words
+      # alone ("grains", "legumes") leak specific foods — name the common ones so
+      # the literal substring gate actually catches rice/oats/beans/soy. (Bare
+      # "beans" also excludes green beans, a conservative over-exclusion.)
       avoid_foods: [
         "grains",
+        "rice",
+        "oats",
+        "oatmeal",
+        "quinoa",
+        "corn",
         "bread",
         "pasta",
+        "cereal",
         "legumes",
+        "beans",
+        "lentils",
+        "chickpeas",
+        "peanut",
+        "soy",
+        "tofu",
         "dairy",
         "refined sugar",
         "processed foods"
@@ -701,11 +740,30 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
         "nuts",
         "olive oil"
       ],
+      # Same category-word leak as paleo (no diet filter for Whole30): name the
+      # specific grains/legumes, plus Whole30's total added-sugar ban (honey,
+      # maple) which the bare "sugar" substring doesn't cover.
       avoid_foods: [
         "grains",
+        "rice",
+        "oats",
+        "oatmeal",
+        "quinoa",
+        "corn",
+        "bread",
+        "pasta",
+        "cereal",
         "legumes",
+        "beans",
+        "lentils",
+        "chickpeas",
+        "peanut",
+        "soy",
+        "tofu",
         "dairy",
         "sugar",
+        "honey",
+        "maple syrup",
         "alcohol",
         "processed foods"
       ],
@@ -739,6 +797,11 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
         "wheat",
         "barley",
         "rye",
+        "spelt",
+        "farro",
+        "bulgur",
+        "semolina",
+        "seitan",
         "bread",
         "pasta",
         "couscous",

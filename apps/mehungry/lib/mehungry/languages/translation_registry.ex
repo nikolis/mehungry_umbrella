@@ -19,6 +19,11 @@ defmodule Mehungry.Languages.TranslationRegistry do
     * `:ai_hint`           — domain hint passed to `AI.FieldTranslator`
     * `:translate_portions`— (optional) also translate the base row's unit-less
       `IngredientPortion` descriptions in the same editor (ingredients only)
+    * `:source_language_field` — (optional) a base-row column holding that row's
+      own source `languages.name` code. When present the base rows aren't all
+      English: the hub translates each out of its own language into the others,
+      exposes every locale as a target, and hides rows already in the target
+      locale. Only `recipes` sets this (`:language_name`).
   """
 
   alias Mehungry.Food
@@ -36,7 +41,12 @@ defmodule Mehungry.Languages.TranslationRegistry do
       fields: [:title, :description],
       name_field: :title,
       ai: :recipe,
-      ai_hint: "recipe"
+      ai_hint: "recipe",
+      # Recipes are authored directly in a locale (Greek or English), so the base
+      # row carries its own source language in this column rather than always
+      # being English. The hub reads it to translate *out of* that language (and
+      # to never offer translating a recipe into the language it's already in).
+      source_language_field: :language_name
     },
     %{
       key: "ingredients",

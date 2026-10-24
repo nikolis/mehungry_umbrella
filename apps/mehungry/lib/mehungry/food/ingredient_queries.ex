@@ -21,6 +21,26 @@ defmodule Mehungry.Food.IngredientQueries do
 
   alias Mehungry.Hashtag
 
+  @doc """
+  The subset (a `MapSet`) of `ingredient_ids` whose ingredient belongs to one of
+  `category_ids`. Used by the meal-plan agent to drop diet-excluded ingredients
+  (e.g. a vegan plan excludes ingredients in the Meats/Fish/Dairy categories —
+  see `Categories.diet_category_ids/1`). Returns an empty set for empty inputs.
+  """
+  def ingredient_ids_in_categories(ingredient_ids, category_ids)
+      when is_list(ingredient_ids) and is_list(category_ids) do
+    if ingredient_ids == [] or category_ids == [] do
+      MapSet.new()
+    else
+      from(i in Ingredient,
+        where: i.id in ^ingredient_ids and i.category_id in ^category_ids,
+        select: i.id
+      )
+      |> Repo.all()
+      |> MapSet.new()
+    end
+  end
+
   def search_hashtag(hashtag) do
     from(hashtag in Mehungry.Hashtag,
       where: hashtag.title == ^hashtag

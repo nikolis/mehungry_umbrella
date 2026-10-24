@@ -447,12 +447,13 @@ defmodule Mehungry.MealBlueprints do
   structured tree yet).
   """
   def blueprint_preferences(%Blueprint{} = blueprint) do
-    blueprint = Repo.preload(blueprint, :condition)
+    blueprint = Repo.preload(blueprint, [:condition, days: :meals])
 
     [
       "Follow the meal blueprint \"#{blueprint.name}\".",
       blueprint.description,
       blueprint.condition && "Health condition to respect: #{blueprint.condition.name}.",
+      macro_line(blueprint),
       tag_line("Prefer nutrients", blueprint.required_nutrients),
       tag_line("Avoid nutrients", blueprint.avoid_nutrients),
       tag_line("Prefer bioactive compounds", blueprint.required_compounds),
@@ -467,6 +468,42 @@ defmodule Mehungry.MealBlueprints do
   defp tag_line(_label, []), do: nil
   defp tag_line(_label, nil), do: nil
   defp tag_line(label, tags), do: "#{label}: #{Enum.join(tags, ", ")}."
+
+  # A one-line macro-balance target distilled from the blueprint's per-meal
+  # splits (protein/carbs/fats as % of energy). Diet patterns carry a deliberate
+  # split (keto ~75% fat, high-protein ~40% protein) that the free-text brief is
+  # the *only* channel to reach the planner — the agent reads the brief, not the
+  # structured day/meal tree. Omitted for a neutral/default 30/40/30 split so a
+  # plain "balanced" blueprint isn't given a redundant (or misleading) macro cue.
+  defp macro_line(%Blueprint{days: days}) when is_list(days) do
+    meals =
+      Enum.flat_map(days, fn
+        %{meals: m} when is_list(m) -> m
+        _ -> []
+      end)
+
+    case macro_average(meals) do
+      {30, 40, 30} ->
+        nil
+
+      {p, c, f} ->
+        "Target macro balance: about #{p}% of calories from protein, " <>
+          "#{c}% from carbs, #{f}% from fat."
+
+      nil ->
+        nil
+    end
+  end
+
+  defp macro_line(_), do: nil
+
+  defp macro_average([]), do: nil
+
+  defp macro_average(meals) do
+    n = length(meals)
+    avg = fn f -> round(Enum.sum(Enum.map(meals, f)) / n) end
+    {avg.(&(&1.protein_pct || 0)), avg.(&(&1.carbs_pct || 0)), avg.(&(&1.fats_pct || 0))}
+  end
 
   @doc "Records a new (in-flight) generation run for a blueprint."
   def create_plan(attrs) do

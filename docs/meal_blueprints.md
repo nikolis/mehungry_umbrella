@@ -2,6 +2,10 @@
 
 **Status:** shipped and reshaped into a two-audience product.
 
+> **Diet-pattern fidelity:** for an audit of how accurately each of the 21
+> ready-made `DietPatterns` reproduces its real diet (and what's missing & why),
+> see [`meal_blueprints_diet_pattern_accuracy.md`](meal_blueprints_diet_pattern_accuracy.md).
+
 - **Authoring is nutritionist-only.** The blueprint library + editor + generation
   live under the gated `:nutritionist` section at **`/nutritionist/blueprints`**
   (only the `"pro"` tier reaches it, via `NutritionistAuthLive`). A nutritionist

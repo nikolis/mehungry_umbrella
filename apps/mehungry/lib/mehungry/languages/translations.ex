@@ -15,6 +15,18 @@ defmodule Mehungry.Languages.Translations do
 
   @default_limit 50
 
+  @doc """
+  The locales this resource can be translated *into*.
+
+  For a resource whose base rows are all in the source language (the default),
+  that's every locale but the source. For a `:source_language_field` resource
+  (recipes) the base rows can be in any locale, so every locale is a valid
+  target — a Greek recipe is translated into English and vice-versa.
+  """
+  def target_locales(descriptor) do
+    if descriptor[:source_language_field], do: Locale.locales(), else: Locale.targets()
+  end
+
   @doc "Total number of base rows for a resource."
   def count_total(descriptor), do: Repo.aggregate(descriptor.base_schema, :count)
 
@@ -73,6 +85,9 @@ defmodule Mehungry.Languages.Translations do
 
     Repo.all(query)
   end
+
+  @doc "Load a single base row (no translation) — e.g. to read its source language."
+  def get_base(descriptor, base_id), do: Repo.get(descriptor.base_schema, base_id)
 
   @doc "Load a single base row and its preferred translation for a locale."
   def get_pair(descriptor, base_id, locale) do
@@ -171,16 +186,40 @@ defmodule Mehungry.Languages.Translations do
 
   defp stamp_verification(attrs, _status, _opts), do: attrs
 
-  defp base_query(descriptor, _codes, :all), do: from(b in descriptor.base_schema)
+  defp base_query(descriptor, codes, filter) do
+    descriptor
+    |> base_query_for(codes, filter)
+    |> exclude_same_language(descriptor, codes)
+  end
 
-  defp base_query(descriptor, codes, :missing) do
+  defp base_query_for(descriptor, _codes, :all), do: from(b in descriptor.base_schema)
+
+  defp base_query_for(descriptor, codes, :missing) do
     sub = translated_ids_query(descriptor, codes, nil)
     from(b in descriptor.base_schema, where: b.id not in subquery(sub))
   end
 
-  defp base_query(descriptor, codes, status) when status in [:ai_draft, :verified] do
+  defp base_query_for(descriptor, codes, status) when status in [:ai_draft, :verified] do
     sub = translated_ids_query(descriptor, codes, Atom.to_string(status))
     from(b in descriptor.base_schema, where: b.id in subquery(sub))
+  end
+
+  # For a `:source_language_field` resource, drop base rows that are already in
+  # the target locale — a Greek recipe must never be offered for translation
+  # *into* Greek. An untagged/`nil` source is treated as the source locale
+  # (English), so legacy recipes still appear under the non-English locales.
+  defp exclude_same_language(query, descriptor, codes) do
+    case descriptor[:source_language_field] do
+      nil ->
+        query
+
+      field_name ->
+        default = Locale.write_code(Locale.source())
+
+        from(b in query,
+          where: fragment("coalesce(?, ?)", field(b, ^field_name), ^default) not in ^codes
+        )
+    end
   end
 
   defp translated_ids_query(descriptor, codes, nil) do

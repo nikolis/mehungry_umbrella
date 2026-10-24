@@ -10,6 +10,7 @@ defmodule Mehungry.Food.Recipes do
   alias Mehungry.Repo
   alias Mehungry.Hashtag
   alias Mehungry.Food.{
+    Categories,
     DietClassifier,
     Localization,
     NutrientClaims,
@@ -583,6 +584,66 @@ defmodule Mehungry.Food.Recipes do
       end)
 
     result
+  end
+
+  @doc """
+  Given a candidate list of recipe ids, returns the subset (a `MapSet`) whose
+  recipe carries the diet hashtag for `diet_mode` (`:vegan | :vegetarian`) — the
+  same `#vegan`/`#vegetarian` tags `DietClassifier` attaches from ingredient
+  categories and the browse/home feeds filter on. For any other `diet_mode`
+  (e.g. `nil`) returns the input ids unchanged (no diet filter applies).
+
+  Deterministic diet enforcement: a vegan plan draws only from recipes tagged
+  vegan, catching category-level foods (chicken, salmon) that the literal
+  `avoid_foods` substring filter misses.
+  """
+  def recipe_ids_with_diet_tag(recipe_ids, diet_mode)
+      when diet_mode in [:vegan, :vegetarian] and is_list(recipe_ids) do
+    tag = Atom.to_string(diet_mode)
+
+    from(r in Recipe,
+      join: rh in assoc(r, :recipe_hashtags),
+      join: h in assoc(rh, :hashtag),
+      where: r.id in ^recipe_ids and h.title == ^tag,
+      select: r.id
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  def recipe_ids_with_diet_tag(recipe_ids, _diet_mode) when is_list(recipe_ids),
+    do: MapSet.new(recipe_ids)
+
+  @doc """
+  The subset of `recipe_ids` that are **pescatarian-safe**: every ingredient is
+  categorized and none falls in a meat/poultry category (fish & seafood allowed,
+  per `Categories.diet_category_ids(:pescatarian)`).
+
+  Pescatarian has no precomputed `#pescatarian` hashtag the way vegan/vegetarian
+  do (a pescatarian recipe is "vegetarian ∪ fish-only", not a single positive
+  tag), so this is computed on the fly over the candidate set — the **inverse**
+  of `recipe_ids_with_diet_tag/2`: drop recipes that *contain* an excluded
+  category rather than keep ones that carry a tag. Conservative on unknowns like
+  `DietClassifier`: a recipe with an uncategorized ingredient (or no ingredients)
+  is dropped, since we can't prove it's meat-free.
+  """
+  def pescatarian_recipe_ids(recipe_ids) when is_list(recipe_ids) do
+    excluded = MapSet.new(Categories.diet_category_ids(:pescatarian))
+
+    from(r in Recipe,
+      join: ri in assoc(r, :recipe_ingredients),
+      join: i in assoc(ri, :ingredient),
+      where: r.id in ^recipe_ids,
+      select: {r.id, i.category_id}
+    )
+    |> Repo.all()
+    |> Enum.group_by(fn {rid, _} -> rid end, fn {_, cat_id} -> cat_id end)
+    |> Enum.filter(fn {_rid, cat_ids} ->
+      Enum.all?(cat_ids, &(not is_nil(&1))) and
+        MapSet.disjoint?(MapSet.new(cat_ids), excluded)
+    end)
+    |> Enum.map(fn {rid, _} -> rid end)
+    |> MapSet.new()
   end
 
   @doc """

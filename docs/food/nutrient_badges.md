@@ -263,17 +263,28 @@ toggle), so the same URL is both the in-app filter and an SEO target.
 `recipe.badges` (string-keyed) and filters to the `"high"` tier. It is the single
 helper every HTML surface uses:
 
-- **Browse card** (`recipe_card/1`) — top 1–2 pills overlaid on the image.
+- **Browse card** (`recipe_card/1`) — top 1–2 pills overlaid on the image, rendered
+  `"High in X · N% NRV"`.
 - **Home feed** (`home_live/components/post_card.html.heex`) — pills right-aligned in
   the action row (beside like/comment/share), not over the image, so the photo stays
-  clean; top 2.
-- **Recipe detail** (`RecipeDetailsComponent`) — all high badges below the title.
+  clean; top 2. Here the pill shows **the label only** (`"High in X"`, no `· N% NRV`
+  suffix) — the compact action-row slot can't fit the longer string, and a high
+  `percent_nrv` (e.g. liver's 1606%) would otherwise overflow the card frame.
+- **Recipe detail** (`RecipeDetailsComponent`) — the full high-badge list below the
+  title, each rendered `"High in X · N% NRV"`. **Collapsed to the top 4** (stored
+  strongest-first) with a **"Show N more" / "Show less"** toggle so a
+  micronutrient-rich recipe doesn't render a wall of ~15 pills. The toggle is a
+  client-only `Phoenix.LiveView.JS.toggle_class("hidden", …)` (no server round-trip):
+  the extra pills and the "Show less" label start with `hidden`, and the button flips
+  `hidden` on the extras + both labels. (Deliberately **not** Alpine — Alpine doesn't
+  reliably initialize this dynamically patched-in modal subtree, so the extras + both
+  labels all rendered at once.)
 
-All render `"High in X · N% NRV"` — the % is the auditable proof that keeps the
-claim on the label side of the line. One consistent color app-wide (**paprika**,
-the brand accent) so the badge is recognizable as the same element everywhere:
-solid/opaque over the photo on the browse card, subtle `/15` tint on the panel
-surfaces (home, detail).
+The detail/card pills carry the `· N% NRV` — the % is the auditable proof that keeps
+the claim on the label side of the line (the feed drops it only for layout, see
+above). One consistent color app-wide (**paprika**, the brand accent) so the badge is
+recognizable as the same element everywhere: solid/opaque over the photo on the
+browse card, subtle `/15` tint on the panel surfaces (home, detail).
 
 ### Mobile API
 

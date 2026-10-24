@@ -11,7 +11,7 @@ section links to the doc that covers it in depth.
 | **Recipe generation** | A full validated recipe (ingredients, steps, prose) from a description | Create-recipe LiveView; `DailyRecipeGenerationWorker`; `RecipeOrderWorker` | [`ai_agents.md`](ai_agents.md) · [`ai_bot.md`](ai_bot.md) |
 | **Persona-voiced authoring** | Recipes written in a character's voice (grandma, tavern, dietologist) | `RecipeSetup` bound to a config/order | [`ai_bot_personas.md`](ai_bot_personas.md) |
 | **Social publishing pipeline** | Review-gated recipes fanned out to IG/FB/Pinterest | `/professional/ai-bot/**` | [`ai_bot.md`](ai_bot.md) · [`../social_publishing.md`](../social_publishing.md) |
-| **Meal-plan generation** | A 7-day plan drawn from the user's own recipe catalog | Calendar LiveView (`MealPlanAgent`) | [`ai_agents.md`](ai_agents.md) |
+| **Meal-plan generation** | A 7-day plan drawn from the user's own recipe catalog | Calendar LiveView (`MealPlanAgent`) | [`meal_plan.md`](meal_plan.md) |
 | **Nutritionist plan drafting** | A 7-day plan a pro drafts *for a client*, with a rationale | `NutritionistAgentWorker` | [`ai_agents.md`](ai_agents.md) |
 | **Translation** | Recipe + ingredient/unit text in other languages (en/el) | `RecipeTranslator`, `IngredientTranslator` | [`ai_agents.md`](ai_agents.md) |
 | **Cover images** | Food-photography image per recipe | `RecipeImageWorker` (OpenAI `gpt-image-1`) | [`ai_agents.md`](ai_agents.md) |
@@ -101,6 +101,8 @@ These hold across every AI feature (elaborated in
 - [`durable_review.md`](durable_review.md) — the durable "generate → hold for review
   → act" pattern (Oban + `status` column), and why the Jido framework isn't needed
   for it.
+- [`meal_plan.md`](meal_plan.md) — the meal-plan feature end to end: how generation
+  works (agent, tools, pipeline, surfaces) **and** the quality eval harness + results.
 
 > Adjacent but not "AI": the scientific knowledge pipeline (literature crawl,
 > PubTator, compound curation) is discovery/curation, not generation — see

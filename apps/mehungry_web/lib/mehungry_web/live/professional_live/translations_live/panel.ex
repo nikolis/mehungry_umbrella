@@ -35,7 +35,11 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
          |> push_navigate(to: ~p"/professional/translations")}
 
       descriptor ->
-        locale = params["lang"] || hd(Locale.targets())
+        # Accept any valid target (recipes expose both `en` and `el`); otherwise
+        # default to the primary translation target. `:show` may still narrow
+        # this per-item so it never targets the item's own language.
+        targets = Translations.target_locales(descriptor)
+        locale = if params["lang"] in targets, do: params["lang"], else: hd(Locale.targets())
 
         socket =
           socket
@@ -81,15 +85,25 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
 
   defp apply_action(socket, :show, params) do
     descriptor = socket.assigns.descriptor
-    locale = socket.assigns.locale
-    pair = Translations.get_pair(descriptor, String.to_integer(params["id"]), locale)
+    id = String.to_integer(params["id"])
+
+    # Load the base first so we know the item's own source language, then pick a
+    # target that differs from it — you can't translate a Greek recipe "into
+    # Greek", so the editor falls back to the other language for such an item.
+    base = Translations.get_base(descriptor, id)
+    source_locale = source_locale(descriptor, base)
+    locale = show_target_locale(descriptor, socket.assigns.locale, source_locale)
+
+    pair = Translations.get_pair(descriptor, id, locale)
 
     base_steps = recipe_steps(descriptor, pair.base)
     portion_pairs = portion_pairs(descriptor, pair.base, locale)
 
     socket
+    |> assign(:locale, locale)
     |> assign(:page_title, "Translate: #{item_title(descriptor, pair.base)}")
     |> assign(:base, pair.base)
+    |> assign(:source_locale, source_locale)
     |> assign(:translation, pair.translation)
     |> assign(:draft, draft_from(descriptor, pair.translation))
     |> assign(:base_steps, base_steps)
@@ -447,6 +461,30 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
 
   defp item_title(descriptor, base), do: Map.get(base, descriptor.name_field) || "##{base.id}"
 
+  # The locale the base row is authored in. For most resources that's always the
+  # source locale (English); for a `:source_language_field` resource (recipes)
+  # it's read off the row, so the editor labels a Greek recipe's left column
+  # "Original (el)" and translates it into the chosen target.
+  defp source_locale(descriptor, base) do
+    case descriptor[:source_language_field] do
+      nil -> Locale.source()
+      field_name -> Locale.locale_of(Map.get(base, field_name))
+    end
+  end
+
+  # The locale a single item is translated *into* must never be the one it's
+  # already written in. If the requested target is the item's own source
+  # language, fall back to the first differing target (English recipe → el,
+  # Greek recipe → en).
+  defp show_target_locale(descriptor, requested, source_locale) do
+    if requested == source_locale do
+      Translations.target_locales(descriptor)
+      |> Enum.find(requested, &(&1 != source_locale))
+    else
+      requested
+    end
+  end
+
   defp status_of(nil), do: :missing
   defp status_of(%{status: "verified"}), do: :verified
   defp status_of(_), do: :ai_draft
@@ -562,7 +600,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
         </.link>
         <div class="flex-1 flex items-center gap-2">
           <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-ink-panel2 text-parchment text-xs font-semibold uppercase">
-            {Locale.source()}
+            {@source_locale}
           </span>
           <.icon name="hero-arrow-right" class="h-3.5 w-3.5 text-parchment-dim" />
           <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-paprika/30 text-paprika-soft text-xs font-semibold uppercase border border-paprika/30">
@@ -590,7 +628,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
       <div class="grid grid-cols-2 gap-5">
         <form phx-submit="save_original" class="space-y-3">
           <div class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">
-            Original ({Locale.source()})
+            Original ({@source_locale})
           </div>
           <div class="bg-ink-panel border border-ink-panel2/60 rounded-xl p-4 space-y-3">
             <%= for field <- @descriptor.fields do %>
@@ -695,6 +733,8 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
   # ── Function components ─────────────────────────────────────────────────────
 
   defp panel_header(assigns) do
+    assigns = assign(assigns, :targets, Translations.target_locales(assigns.descriptor))
+
     ~H"""
     <div class="flex items-center gap-3 mb-5">
       <.link
@@ -705,10 +745,27 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Panel do
       </.link>
       <h1 class="text-lg font-semibold text-white flex items-center gap-2">
         {@descriptor.label}
-        <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-paprika/30 text-paprika-soft border border-paprika/30 text-[10px] font-bold uppercase">
-          {@locale}
-        </span>
       </h1>
+      <div :if={length(@targets) > 1} class="flex items-center gap-1 ml-auto">
+        <.link
+          :for={target <- @targets}
+          navigate={~p"/professional/translations/#{@descriptor.key}?lang=#{target}"}
+          class={[
+            "px-2 py-0.5 rounded text-[10px] font-bold uppercase border transition-colors",
+            target == @locale && "bg-paprika/30 text-paprika-soft border-paprika/30",
+            target != @locale &&
+              "bg-ink-panel2 text-parchment-dim border-ink-panel2 hover:text-parchment"
+          ]}
+        >
+          {target}
+        </.link>
+      </div>
+      <span
+        :if={length(@targets) <= 1}
+        class="inline-flex items-center px-1.5 py-0.5 rounded bg-paprika/30 text-paprika-soft border border-paprika/30 text-[10px] font-bold uppercase"
+      >
+        {@locale}
+      </span>
     </div>
     """
   end

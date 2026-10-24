@@ -118,6 +118,58 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsTest do
     end
   end
 
+  describe "bidirectional recipe translation (source language aware)" do
+    test "a Greek-authored recipe is not offered for translation into Greek", %{
+      conn: conn,
+      admin: admin
+    } do
+      _greek = recipe_fixture(admin, %{title: "Ελληνικό πιάτο", language_name: "Gr"})
+
+      # It must NOT appear in the Greek panel (it's already Greek)…
+      {:ok, _view, el_html} = live(conn, ~p"/professional/translations/recipes?lang=el")
+      refute el_html =~ "Ελληνικό πιάτο"
+
+      # …but it SHOULD appear under English as still needing an English version.
+      {:ok, _view, en_html} = live(conn, ~p"/professional/translations/recipes?lang=en")
+      assert en_html =~ "Ελληνικό πιάτο"
+    end
+
+    test "opening a Greek recipe's editor targets English, not Greek", %{
+      conn: conn,
+      admin: admin
+    } do
+      greek = recipe_fixture(admin, %{title: "Ελληνικό πιάτο", language_name: "Gr"})
+
+      # No ?lang given — the editor must pick a target that differs from the
+      # recipe's own language.
+      {:ok, _view, html} = live(conn, ~p"/professional/translations/recipes/#{greek.id}")
+
+      assert html =~ "Original (el)"
+      assert html =~ "Translation (en)"
+    end
+
+    test "an English recipe still translates into Greek by default", %{conn: conn, admin: admin} do
+      english = recipe_fixture(admin, %{title: "English dish", language_name: "En"})
+
+      {:ok, _view, html} = live(conn, ~p"/professional/translations/recipes/#{english.id}")
+
+      assert html =~ "Original (en)"
+      assert html =~ "Translation (el)"
+    end
+
+    test "Greek recipes are excluded from the Greek coverage denominator", %{admin: admin} do
+      descriptor = TranslationRegistry.get("recipes")
+      before_el = Coverage.coverage(descriptor, "el").total
+      before_en = Coverage.coverage(descriptor, "en").total
+
+      _greek = recipe_fixture(admin, %{language_name: "Gr"})
+
+      # Needs an English translation (counts toward en) but not a Greek one.
+      assert Coverage.coverage(descriptor, "el").total == before_el
+      assert Coverage.coverage(descriptor, "en").total == before_en + 1
+    end
+  end
+
   describe "ingredient portion editor" do
     setup do
       ingredient = ingredient_fixture()

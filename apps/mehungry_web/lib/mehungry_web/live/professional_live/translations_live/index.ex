@@ -49,8 +49,11 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Index do
 
             <div class="space-y-2">
               <%= for row <- Enum.sort_by(rows, & &1.language) do %>
-                <div class="flex items-center gap-3">
-                  <span class="inline-flex items-center justify-center w-9 px-1.5 py-0.5 rounded bg-ink-panel2 text-parchment text-[10px] font-bold uppercase">
+                <.link
+                  navigate={~p"/professional/translations/#{row.key}?lang=#{row.language}"}
+                  class="flex items-center gap-3 group"
+                >
+                  <span class="inline-flex items-center justify-center w-9 px-1.5 py-0.5 rounded bg-ink-panel2 text-parchment text-[10px] font-bold uppercase group-hover:text-white">
                     {row.language}
                   </span>
                   <div class="flex-1">
@@ -59,7 +62,7 @@ defmodule MehungryWeb.ProfessionalLive.TranslationsLive.Index do
                   <span class="w-12 text-right text-sm font-semibold text-white tabular-nums">
                     {row.pct}%
                   </span>
-                </div>
+                </.link>
               <% end %>
             </div>
           </div>

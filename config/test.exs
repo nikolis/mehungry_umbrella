@@ -33,6 +33,10 @@ config :mehungry_web, MehungryWeb.PromEx, manual_metrics_start_delay: :no_delay
 # Open Food Facts client is stubbed in tests — no network calls
 config :mehungry, :off_client, Mehungry.FoodData.OpenFoodFacts.ClientStub
 
+# Embedding client stubbed in tests (no OpenAI key) so RecipeVectorSearch runs
+# its real vector-search path deterministically instead of degrading to FTS.
+config :mehungry, :embedding_client, Mehungry.AI.EmbeddingClientStub
+
 # PubChem PUG REST is stubbed per-test via the `:pubchem_http_adapter` seam; pin a
 # deterministic base URL so no test can accidentally reach the real API.
 config :mehungry, :pubchem_base_url, "http://pubchem.test/rest/pug"

@@ -211,8 +211,22 @@ one code path:
   ("Save original" → `Translations.update_base/4`, a targeted `cast` of just the
   `:fields`, with recipe steps re-cast through `cast_embed` by their `id`); the
   right **Translation** side upserts the `*_translation` row ("Save & Verify"). So
-  an admin can fix a typo in the English source and its Greek translation from the
+  an admin can fix a typo in the source text and its translation from the
   same screen without leaving the hub.
+- **Source-language-aware resources (recipes are bidirectional)** — most base rows
+  are English, so the hub translates them *into* `el` only. **Recipes are the
+  exception**: a user can author a recipe directly in Greek (`/el/create_recipe`
+  stamps `recipe.language_name`), so the base row isn't always English. The recipes
+  descriptor sets `source_language_field: :language_name`, which flips the hub to be
+  **source-aware** for that resource: `Translations.target_locales/1` exposes **every**
+  locale as a target (not just `el`), the listing/coverage queries **exclude rows
+  already in the target locale** (so a Greek recipe is never offered for translation
+  *into* Greek — the original bug), and the editor reads each recipe's own
+  `language_name` (via `Locale.locale_of/1`) to label the Original column and to pick
+  a target that differs from it (English recipe → `el`, Greek recipe → `en`). Per-item
+  `:show` can never target an item's own language (`show_target_locale/3`). Other
+  resources are unaffected — without the flag the queries and defaults behave exactly
+  as before.
 - **Locale codes** — `Mehungry.Languages.Locale` is the core-side twin of
   `MehungryWeb.Locale`: new rows are written under the ISO code (`"el"`), while coverage
   counts **both** ISO and legacy codes (`["el", "Gr"]`) so pre-existing `Gr` rows still

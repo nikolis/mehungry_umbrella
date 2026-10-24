@@ -974,7 +974,7 @@ msgstr ""
 msgid "%{name} diet suggestions"
 msgstr ""
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:247
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:251
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr "Προσθήκη"
@@ -1009,7 +1009,7 @@ msgstr "Κάτι άλλο;"
 msgid "Back"
 msgstr "Πίσω"
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:354
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:358
 #, elixir-autogen, elixir-format
 msgid "Before saving, please fix:"
 msgstr "Πριν την αποθήκευση, διορθώστε:"
@@ -1065,7 +1065,7 @@ msgstr "Δύσκολη"
 msgid "Easy"
 msgstr "Εύκολη"
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:350
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:354
 #, elixir-autogen, elixir-format
 msgid "Everything looks good — ready to save!"
 msgstr "Όλα φαίνονται καλά — έτοιμα για αποθήκευση!"
@@ -1160,7 +1160,7 @@ msgstr "Όχι, από την αρχή"
 msgid "Not found in database and skipped: %{items}. Add these manually if needed."
 msgstr "Δεν βρέθηκαν στη βάση και παραλείφθηκαν: %{items}. Προσθέστε τα χειροκίνητα αν χρειάζεται."
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:274
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:278
 #, elixir-autogen, elixir-format
 msgid "Not found in the database — add them manually using the ingredients section."
 msgstr "Δεν βρέθηκαν στη βάση δεδομένων — προσθέστε τα χειροκίνητα από την ενότητα υλικών."
@@ -1212,12 +1212,12 @@ msgstr ""
 msgid "Remove ingredient"
 msgstr "Αφαίρεση υλικού"
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:369
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:373
 #, elixir-autogen, elixir-format
 msgid "Reset"
 msgstr "Επαναφορά"
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:346
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:350
 #, elixir-autogen, elixir-format
 msgid "Review & Save"
 msgstr "Έλεγχος & Αποθήκευση"
@@ -1228,7 +1228,7 @@ msgstr "Έλεγχος & Αποθήκευση"
 msgid "Save"
 msgstr "Αποθήκευση"
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:371
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:375
 #, elixir-autogen, elixir-format
 msgid "Save Recipe"
 msgstr "Αποθήκευση συνταγής"
@@ -1238,7 +1238,7 @@ msgstr "Αποθήκευση συνταγής"
 msgid "Saving..."
 msgstr "Αποθήκευση..."
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:375
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:379
 #, elixir-autogen, elixir-format
 msgid "Saving…"
 msgstr "Αποθήκευση…"
@@ -1269,14 +1269,14 @@ msgid "Something went wrong with the upload"
 msgstr "Κάτι πήγε στραβά με τη μεταφόρτωση"
 
 #: lib/mehungry_web/components/core_components.ex:1570
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:307
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:329
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:311
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:333
 #, elixir-autogen, elixir-format
 msgid "Steps"
 msgstr "Βήματα"
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:310
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:332
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:314
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:336
 #, elixir-autogen, elixir-format
 msgid "The cooking instructions, one step at a time."
 msgstr "Οι οδηγίες μαγειρέματος, ένα βήμα κάθε φορά."
@@ -1298,7 +1298,7 @@ msgstr "Πολύ μεγάλο"
 msgid "Unit"
 msgstr "Μονάδα"
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:270
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:274
 #, elixir-autogen, elixir-format
 msgid "Unmatched Ingredients"
 msgstr "Υλικά χωρίς αντιστοίχιση"
@@ -1370,17 +1370,17 @@ msgstr "Έχετε φτάσει το μηνιαίο όριο συνταγών AI
 msgid "e.g. 2000"
 msgstr "π.χ. 2000"
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:290
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:294
 #, elixir-autogen, elixir-format
 msgid "no portion"
 msgstr "χωρίς μερίδα"
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:288
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:292
 #, elixir-autogen, elixir-format
 msgid "not in DB"
 msgstr "εκτός βάσης"
 
-#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:289
+#: lib/mehungry_web/live/create_recipe_live/recipe_form_component.ex:293
 #, elixir-autogen, elixir-format
 msgid "unknown unit"
 msgstr "άγνωστη μονάδα"
@@ -2809,8 +2809,9 @@ msgstr ""
 msgid "Build your own week 👉 %{url}"
 msgstr ""
 
+#: lib/mehungry_web/live/home_live/components/post_card.html.heex:423
 #: lib/mehungry_web/live/recipe_browser_live/index.html.heex:167
-#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:292
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:296
 #, elixir-autogen, elixir-format
 msgid "Claims follow EU Reg. 1169/2011 & 1924/2006, per serving."
 msgstr "Οι ισχυρισμοί βάσει Καν. ΕΕ 1169/2011 & 1924/2006, ανά μερίδα."
@@ -2971,3 +2972,13 @@ msgstr "Μη εξουσιοδοτημένο"
 #, elixir-autogen, elixir-format
 msgid "🛒 Free grocery list included"
 msgstr ""
+
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:311
+#, elixir-autogen, elixir-format
+msgid "Show %{count} more"
+msgstr "Εμφάνιση %{count} ακόμη"
+
+#: lib/mehungry_web/live/recipe_details_live/recipe_details_component.ex:314
+#, elixir-autogen, elixir-format
+msgid "Show less"
+msgstr "Εμφάνιση λιγότερων"

@@ -285,14 +285,35 @@ defmodule MehungryWeb.RecipeDetailsComponent do
               <p class="text-parchment-dim mb-4">{@recipe.description}</p>
 
               <% nutrient_badges = MehungryWeb.RecipeComponents.high_badges(@recipe, 99) %>
-              <div :if={nutrient_badges != []} class="flex flex-wrap gap-2 mb-4">
+              <% badge_limit = 4 %>
+              <div :if={nutrient_badges != []} class="flex flex-wrap items-center gap-2 mb-4">
                 <span
-                  :for={badge <- nutrient_badges}
-                  class="rounded-full bg-paprika/15 text-paprika-soft border border-paprika/30 text-xs font-semibold px-3 py-1"
+                  :for={{badge, index} <- Enum.with_index(nutrient_badges)}
+                  class={[
+                    "rounded-full bg-paprika/15 text-paprika-soft border border-paprika/30 text-xs font-semibold px-3 py-1",
+                    index >= badge_limit && "hidden recipe-badge-extra-#{@recipe.id}"
+                  ]}
                   title={gettext("Claims follow EU Reg. 1169/2011 & 1924/2006, per serving.")}
                 >
                   {MehungryWeb.NutrientLabels.claim_label(badge["nutrient"])} · {badge["percent_nrv"]}% NRV
                 </span>
+                <button
+                  :if={length(nutrient_badges) > badge_limit}
+                  type="button"
+                  phx-click={
+                    JS.toggle_class("hidden", to: ".recipe-badge-extra-#{@recipe.id}")
+                    |> JS.toggle_class("hidden", to: "#recipe-badge-more-#{@recipe.id}")
+                    |> JS.toggle_class("hidden", to: "#recipe-badge-less-#{@recipe.id}")
+                  }
+                  class="text-paprika-soft hover:text-paprika text-xs font-semibold px-2 py-1 underline underline-offset-2"
+                >
+                  <span id={"recipe-badge-more-#{@recipe.id}"}>
+                    {gettext("Show %{count} more", count: length(nutrient_badges) - badge_limit)}
+                  </span>
+                  <span id={"recipe-badge-less-#{@recipe.id}"} class="hidden">
+                    {gettext("Show less")}
+                  </span>
+                </button>
               </div>
 
               <.recipe_tags recipe={@recipe} />
