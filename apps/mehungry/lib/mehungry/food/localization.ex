@@ -360,6 +360,20 @@ defmodule Mehungry.Food.Localization do
 
   def get_unit_translations_map(_unit_ids, _language), do: %{}
 
+  @doc """
+  `%{measurement_unit_id => translated_name}` for the given unit ids and
+  `locale`. Locale-aware sibling of `get_unit_translations_map/2`: matches every
+  `language_name` the locale maps to (ISO `el` + legacy `Gr`) via
+  `Locale.data_codes/1`, the canonical code winning. Returns `%{}` for the source
+  locale so callers no-op cleanly.
+  """
+  def unit_display_names(unit_ids, locale)
+      when is_list(unit_ids) and unit_ids != [] and locale not in [nil, "en", "En"] do
+    name_map(MeasurementUnitTranslation, :measurement_unit_id, unit_ids, Locale.data_codes(locale))
+  end
+
+  def unit_display_names(_unit_ids, _locale), do: %{}
+
   def upsert_ingredient_translation(ingredient_id, language_name, name) do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 

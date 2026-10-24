@@ -141,7 +141,10 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
 
   @impl true
   def handle_event("search_blueprints", %{"query" => query}, socket) do
-    blueprints = MealBlueprints.search_public_blueprints(query, limit: 60)
+    blueprints =
+      query
+      |> MealBlueprints.search_public_blueprints(limit: 60)
+      |> MealBlueprints.localize_blueprints(Gettext.get_locale(MehungryWeb.Gettext))
 
     {:noreply,
      socket
@@ -367,7 +370,10 @@ defmodule MehungryWeb.RecipeBrowserLive.Index do
   defp ensure_blueprints_loaded(%{assigns: %{blueprints_loaded: true}} = socket), do: socket
 
   defp ensure_blueprints_loaded(socket) do
-    blueprints = MealBlueprints.search_public_blueprints(socket.assigns.blueprint_query, limit: 60)
+    blueprints =
+      socket.assigns.blueprint_query
+      |> MealBlueprints.search_public_blueprints(limit: 60)
+      |> MealBlueprints.localize_blueprints(Gettext.get_locale(MehungryWeb.Gettext))
 
     socket
     |> assign(:blueprints, blueprints)

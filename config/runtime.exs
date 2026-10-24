@@ -10,6 +10,19 @@ config :mehungry,
   # Entrez crawler and the PubTator3 annotator (same NCBI host); works without it.
   entrez_api_key: System.get_env("NCBI_API_KEY"),
   openai_api_key: System.get_env("OPENAI_API_KEY", ""),
+  # Black Forest Labs (FLUX) API key — powers the FLUX recipe-cover image
+  # provider. Only consulted when the active provider is :flux; empty = the
+  # Flux provider fails fast with a friendly "not configured" error. Reads
+  # BFL_KEY (the exported name) first, with BFL_API_KEY as a fallback alias.
+  bfl_api_key: System.get_env("BFL_KEY") || System.get_env("BFL_API_KEY", ""),
+  # Which backend generates recipe cover images: "openai" (gpt-image-2, default)
+  # or "flux" (FLUX 2 pro). Lets us A/B the two on live recipes and flip the
+  # default without a deploy once FLUX is validated.
+  recipe_image_provider:
+    (case System.get_env("RECIPE_IMAGE_PROVIDER") do
+       "flux" -> :flux
+       _ -> :openai
+     end),
   # Optional Expo push access token — only needed if Expo "enhanced security" is
   # enabled for the project; the push send works without it otherwise.
   expo_access_token: System.get_env("EXPO_ACCESS_TOKEN"),

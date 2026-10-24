@@ -19,14 +19,13 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:ok,
      socket
      |> assign(:user, user)
-     |> assign(:show, false)
-     |> assign(:selected_ingredient, 1)
      |> assign(:user_profile, user_profile)
-     |> assign(:ingredients, list_ingredients())
-     |> assign(:measurement_units, nil)
      |> assign(:page_title, "Share your recipes ")
      |> assign(:return_to_path, "/create_recipe")
-     |> assign(:active_step, 0)
+     # Resolved ingredient_id → name cache for the live preview, so re-rendering
+     # the preview on every keystroke doesn't re-query names it already knows.
+     |> assign(:ingredient_names, %{})
+     |> assign(:preview, empty_preview())
      |> assign(:ai_generating, false)
      |> assign(:ai_task_ref, nil)
      |> assign(:ai_unmatched, [])
@@ -38,7 +37,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
        Mehungry.Subscriptions.check_quota(user.id, "recipe_generation") ==
          {:error, :quota_exceeded}
      )
-     |> assign(:show_ai_panel, false)
      |> assign(:spoonacular_results, [])
      |> assign(:spoonacular_unmatched, [])
      |> assign(:spoonacular_search_loading, false)
@@ -46,11 +44,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:show_spoonacular_modal, false)
      |> assign(:spoonacular_search_ref, nil)
      |> assign(:spoonacular_fetch_ref, nil)
-     |> assign(:items, [
-       %{id: 1, name: "easy"},
-       %{id: 2, name: "medium"},
-       %{id: 3, name: "difficult"}
-     ])
+     |> assign(:spoonacular_enabled, spoonacular_enabled?())
      |> allow_upload(:image,
        accept: :any,
        max_entries: 1,
@@ -58,10 +52,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
        auto_upload: false,
        external: &presign_upload/2
      )}
-  end
-
-  def handle_event("set_step", %{"step" => step}, socket) do
-    {:noreply, assign(socket, active_step: String.to_integer(step))}
   end
 
   @impl true
@@ -83,7 +73,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       Cachex.put(:create_recipe_cache, {__MODULE__, socket.assigns.user.id}, recipe_params)
     end
 
-    {:noreply, assign(socket, :f, to_form(changeset))}
+    {:noreply, put_form(socket, changeset)}
   end
 
   def handle_event("ai_generate", %{"prompt" => prompt}, socket) when prompt != "" do
@@ -156,50 +146,63 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
      |> assign(:ai_pending_prompt, nil)}
   end
 
+  def handle_event("spoonacular_search", _params, %{assigns: %{spoonacular_enabled: false}} = socket),
+    do: {:noreply, socket}
+
   def handle_event("spoonacular_search", %{"query" => query}, socket) when query != "" do
-    case spoonacular_rate_limit(socket.assigns.user.id) do
-      :ok ->
-        api_key = System.get_env("SPOONACULAR_API_KEY")
-        task = Task.async(fn -> Mehungry.FoodData.SpoonacularImporter.search(query, api_key) end)
+    with :ok <- spoonacular_rate_limit(socket.assigns.user.id),
+         {:ok, api_key} <- spoonacular_api_key() do
+      task = Task.async(fn -> Mehungry.FoodData.SpoonacularImporter.search(query, api_key) end)
 
-        {:noreply,
-         assign(socket,
-           spoonacular_search_loading: true,
-           spoonacular_search_ref: task.ref
-         )}
-
+      {:noreply,
+       assign(socket,
+         spoonacular_search_loading: true,
+         spoonacular_search_ref: task.ref
+       )}
+    else
       {:error, :rate_limited} ->
         {:noreply, put_flash(socket, :error, "Too many searches. Please slow down for a moment.")}
+
+      {:error, :missing_api_key} ->
+        {:noreply, put_flash(socket, :error, spoonacular_unavailable_message())}
     end
   end
 
   def handle_event("spoonacular_search", _params, socket), do: {:noreply, socket}
 
+  def handle_event("spoonacular_select", _params, %{assigns: %{spoonacular_enabled: false}} = socket),
+    do: {:noreply, socket}
+
   def handle_event("spoonacular_select", %{"id" => id}, socket) do
     user_id = socket.assigns.user.id
 
-    case spoonacular_rate_limit(user_id) do
-      :ok ->
-        api_key = System.get_env("SPOONACULAR_API_KEY")
-        spoonacular_id = String.to_integer(id)
+    with :ok <- spoonacular_rate_limit(user_id),
+         {:ok, api_key} <- spoonacular_api_key() do
+      spoonacular_id = String.to_integer(id)
 
-        task =
-          Task.async(fn ->
-            Mehungry.FoodData.SpoonacularImporter.fetch_for_form(spoonacular_id, user_id, api_key)
-          end)
+      task =
+        Task.async(fn ->
+          Mehungry.FoodData.SpoonacularImporter.fetch_for_form(spoonacular_id, user_id, api_key)
+        end)
 
-        {:noreply,
-         assign(socket,
-           spoonacular_fetch_loading: true,
-           spoonacular_fetch_ref: task.ref,
-           show_spoonacular_modal: false
-         )}
-
+      {:noreply,
+       assign(socket,
+         spoonacular_fetch_loading: true,
+         spoonacular_fetch_ref: task.ref,
+         show_spoonacular_modal: false
+       )}
+    else
       {:error, :rate_limited} ->
         {:noreply,
          socket
          |> assign(show_spoonacular_modal: false)
          |> put_flash(:error, "Too many imports. Please slow down for a moment.")}
+
+      {:error, :missing_api_key} ->
+        {:noreply,
+         socket
+         |> assign(show_spoonacular_modal: false)
+         |> put_flash(:error, spoonacular_unavailable_message())}
     end
   end
 
@@ -240,23 +243,35 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
     {:noreply, socket}
   end
 
-  def handle_event("select_ingredient", %{"index" => index} = _params, socket) do
-    socket = assign(socket, :selected_ingredient, String.to_integer(index))
-    socket = assign(socket, :show, true)
-
-    {:noreply, socket}
-  end
-
   @impl Phoenix.LiveView
   def handle_event("cancel-upload", %{"ref" => ref}, socket) do
     {:noreply, cancel_upload(socket, :image, ref)}
   end
+
+  # Spoonacular recipe import is **shadowed** — kept in the codebase but not
+  # surfaced to any user — because persisting full Spoonacular recipes likely
+  # violates their TOS (the public-domain MyPlate importer is the sanctioned
+  # path). Flip to `true` (or read a config/env flag here) to re-enable the UI +
+  # its handlers. Gates both the template block and the event handlers.
+  defp spoonacular_enabled?, do: false
 
   # Per-user fixed-window limit on the paid Spoonacular API (search + import
   # share one bucket) to prevent burning the shared key from free accounts.
   defp spoonacular_rate_limit(user_id) do
     Mehungry.RateLimit.hit("spoonacular:#{user_id}", 20, :timer.minutes(1))
   end
+
+  # Fail fast (and visibly) when the shared Spoonacular key isn't configured,
+  # instead of firing a request that comes back as an opaque "HTTP 401".
+  defp spoonacular_api_key do
+    case System.get_env("SPOONACULAR_API_KEY") do
+      key when is_binary(key) and key != "" -> {:ok, key}
+      _ -> {:error, :missing_api_key}
+    end
+  end
+
+  defp spoonacular_unavailable_message,
+    do: "Recipe import is temporarily unavailable. Please try again later."
 
   # Ingredient/step rows are added and removed through the `sort_param`/`drop_param`
   # mechanism declared on `Recipe.changeset`: "add" appends a sentinel to the
@@ -360,8 +375,8 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       |> struct!(action: :validate)
 
     socket
-    |> assign(:f, to_form(changeset))
     |> assign(:recipe, base)
+    |> put_form(changeset)
   end
 
   defp rebuild_form(socket, params) do
@@ -370,7 +385,102 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       |> Food.validation_changeset(params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, :f, to_form(changeset))}
+    {:noreply, put_form(socket, changeset)}
+  end
+
+  # Single chokepoint for publishing a changeset to the form: assigns `@f` and
+  # refreshes the live preview (`@preview`) from the same changeset so the
+  # right-hand card never drifts from the form the user is editing.
+  defp put_form(socket, changeset) do
+    socket
+    |> assign(:f, to_form(changeset))
+    |> assign_preview(changeset)
+  end
+
+  # Projects the current changeset into the flat `@preview` map the
+  # `recipe_preview/1` component renders — no changeset digging or DB queries in
+  # the template. Ingredient names are resolved through (and memoised into) the
+  # `@ingredient_names` cache so typing in any field doesn't re-query names.
+  defp assign_preview(socket, %Ecto.Changeset{} = changeset) do
+    ingredient_changesets =
+      changeset
+      |> Ecto.Changeset.get_assoc(:recipe_ingredients)
+      |> Enum.reject(&(&1.action in [:replace, :delete]))
+
+    ids =
+      ingredient_changesets
+      |> Enum.map(&Ecto.Changeset.get_field(&1, :ingredient_id))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    names = resolve_names(ids, socket.assigns.ingredient_names)
+
+    ingredients =
+      ingredient_changesets
+      |> Enum.map(fn ri ->
+        id = Ecto.Changeset.get_field(ri, :ingredient_id)
+
+        %{
+          name: id && Map.get(names, id),
+          quantity: Ecto.Changeset.get_field(ri, :quantity)
+        }
+      end)
+      |> Enum.filter(& &1.name)
+
+    steps =
+      changeset
+      |> Ecto.Changeset.get_embed(:steps)
+      |> Enum.reject(&(&1.action in [:replace, :delete]))
+      |> Enum.map(fn step ->
+        %{
+          title: Ecto.Changeset.get_field(step, :title),
+          description: Ecto.Changeset.get_field(step, :description)
+        }
+      end)
+      |> Enum.filter(&present?(&1.description))
+
+    preview = %{
+      title: Ecto.Changeset.get_field(changeset, :title),
+      description: Ecto.Changeset.get_field(changeset, :description),
+      image_url: Ecto.Changeset.get_field(changeset, :image_url),
+      cooking_time: Ecto.Changeset.get_field(changeset, :cooking_time_lower_limit),
+      prep_time: Ecto.Changeset.get_field(changeset, :preperation_time_lower_limit),
+      servings: Ecto.Changeset.get_field(changeset, :servings),
+      difficulty: Ecto.Changeset.get_field(changeset, :difficulty),
+      ingredients: ingredients,
+      steps: steps,
+      valid?: changeset.valid?
+    }
+
+    assign(socket, ingredient_names: names, preview: preview)
+  end
+
+  # Only query names for ids not already in the cache.
+  defp resolve_names(ids, cache) do
+    (ids -- Map.keys(cache))
+    |> Enum.reduce(cache, fn id, acc ->
+      case Food.get_ingredient(id) do
+        nil -> acc
+        ingredient -> Map.put(acc, id, ingredient.name)
+      end
+    end)
+  end
+
+  defp present?(value), do: value not in [nil, ""]
+
+  defp empty_preview do
+    %{
+      title: nil,
+      description: nil,
+      image_url: nil,
+      cooking_time: nil,
+      prep_time: nil,
+      servings: nil,
+      difficulty: nil,
+      ingredients: [],
+      steps: [],
+      valid?: false
+    }
   end
 
   defp presign_upload(entry, %{assigns: %{uploads: uploads}} = socket) do
@@ -583,7 +693,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         {:noreply,
          socket
          |> assign(:changeset, changeset)
-         |> assign(:f, to_form(%{changeset | action: :update}))
+         |> put_form(%{changeset | action: :update})
          |> put_flash(:error, save_error_flash(changeset))}
     end
   end
@@ -633,7 +743,7 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
         {:noreply,
          socket
          |> assign(:changeset, changeset)
-         |> assign(:f, to_form(%{changeset | action: :insert}))
+         |> put_form(%{changeset | action: :insert})
          |> put_flash(:error, save_error_flash(changeset))}
     end
   end
@@ -772,10 +882,6 @@ defmodule MehungryWeb.CreateRecipeLive.Index do
       _ ->
         []
     end
-  end
-
-  defp list_ingredients do
-    Food.list_ingredients()
   end
 
   # Flattens a changeset's errors into a plain map for readable log lines.

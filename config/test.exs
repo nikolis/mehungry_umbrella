@@ -74,6 +74,18 @@ config :mehungry, :compound_plausibility_judge, Mehungry.Food.CompoundPlausibili
 # S3 seed-file fetcher is stubbed in tests — no S3/network calls
 config :mehungry, :seed_file_fetcher, Mehungry.FoodData.Usda.SeedFileFetcherStub
 
+# MyPlate recipe API client is stubbed in tests — no network calls. Tests control
+# responses via the `:myplate_client_slugs` / `:myplate_client_recipes` app config keys.
+config :mehungry, :myplate_client, Mehungry.FoodData.MyPlate.ClientStub
+
+# Project Gutenberg book-download client is stubbed in tests — no network calls.
+# Tests control per-book text via the `:gutenberg_client_books` app config key.
+config :mehungry, :gutenberg_client, Mehungry.FoodData.Gutenberg.ClientStub
+
+# UniTools dataset loader is stubbed in tests — no bundled-file reads. Tests
+# control the per-dataset wrapper map via the `:unitools_client_datasets` key.
+config :mehungry, :unitools_client, Mehungry.FoodData.UniTools.ClientStub
+
 # Batch-PMID analysis extractor is stubbed in tests — no network calls
 config :mehungry, :extractor_client, Mehungry.Extractor.ClientStub
 

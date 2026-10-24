@@ -80,6 +80,19 @@ defmodule Mehungry.Food.PortionTranslationTest do
       assert Enum.any?(options, &(&1.label == "cup"))
     end
 
+    test "localizes a unit-bearing portion's label via the measurement-unit translation",
+         %{ingredient: ingredient, unit: unit, with_unit: with_unit} do
+      Mehungry.Languages.ensure_language("el")
+      Food.upsert_measurement_unit_translation(unit.id, "el", "φλιτζάνι")
+
+      portions = Food.get_measurement_unit_portions_for_ingredient(ingredient.id)
+      options = Food.build_unit_options(portions, "el")
+
+      unit_opt = Enum.find(options, &(&1.ingredient_portion_id == nil and &1.measurement_unit_id == unit.id))
+      assert unit_opt.unit_selection == with_unit.measurement_unit_id
+      assert unit_opt.label == "φλιτζάνι"
+    end
+
     test "source locale keeps the original English description",
          %{ingredient: ingredient, free_text: free_text} do
       Food.upsert_portion_translation(free_text.id, "el", "1 μέτρια μπανάνα")

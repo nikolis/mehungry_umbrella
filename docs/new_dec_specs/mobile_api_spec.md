@@ -212,11 +212,12 @@ nutrients, hashtags, engagement). Mirrors the recipe modal.
   "badges": [ {"nutrient": "Iron", "level": "high", "percent_nrv": 47} ],
   "ingredients": [
     { "id": 8801, "quantity": 2.0, "ingredient_allias": "eggplant",
+      "component": null,
       "measurement_unit_id": 5, "ingredient_portion_id": null,
       "measurement_unit": { "id": 5, "name": "piece", "abbreviation": null },
       "ingredient": { "id": 412, "name": "Eggplant", "species_slug": "eggplant" } }
   ],
-  "steps": [ { "index": 1, "title": "Roast", "description": "Roast the eggplant…" } ],
+  "steps": [ { "index": 1, "title": "Dressing", "description": "Whisk the oil…" } ],
   "nutrients": {
     "Carbohydrates": { "name": "Carbohydrates", "amount": 12.0, "measurement_unit": "g", "children_sum": 10.0,
       "children": [ { "name": "Total Sugars", "amount": 10.0, "measurement_unit": "g", "children_sum": 0.0, "children": [] } ] },
@@ -252,6 +253,17 @@ returned by ingredient search (§7). **Nullability — clients must null-check:*
   `ingredient_portion_id` FKs to tell the kinds apart and to round-trip edits.
 - `measurement_unit.abbreviation`: **always `null`** (no such column exists on
   `measurement_units`).
+
+**Recipe parts (components).** A recipe may be split into named parts (e.g. a
+salad with a `"Salad"` part and a `"Dressing"` part). Each ingredient carries an
+optional `component` string and each step an optional `title` string — the
+**same label** names a part across both lists. Both are **`null` for the common
+single-part recipe** (the majority), so clients must treat them as optional:
+when every ingredient's `component` and every step's `title` is `null`, render
+the flat lists exactly as before. When present, group ingredients by `component`
+and steps by `title` (preserving first-appearance order) under a part heading,
+and **number steps per part** (1..n within each part), not continuously across
+parts. These are free-text display labels — not IDs, not a shared enum.
 
 **Localization.** When the resolved locale (§Language) is `el`, the detail is
 served through the same `Food.get_recipe!/2` path the web recipe view uses, with

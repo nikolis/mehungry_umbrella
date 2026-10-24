@@ -392,6 +392,32 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> put_flash(:info, "Ingredient deleted")}
   end
 
+  # Owner-only: re-queue AI cover-image generation (force overwrite) for every
+  # recipe the owner has created. Gated on the owner email so no other user can
+  # trigger a costly image-generation fan-out.
+  def handle_event("regenerate_recipe_images", _params, socket) do
+    user = socket.assigns.current_user
+
+    if user && user.email == "nikolisgal@gmail.com" do
+      recipes = Users.list_user_created_recipes(user)
+
+      Enum.each(recipes, fn recipe ->
+        %{recipe_id: recipe.id, force: true}
+        |> Mehungry.RecipeImageWorker.new()
+        |> Oban.insert()
+      end)
+
+      {:noreply,
+       put_flash(
+         socket,
+         :info,
+         "Queued image regeneration for #{length(recipes)} recipe(s)."
+       )}
+    else
+      {:noreply, put_flash(socket, :error, "Not allowed.")}
+    end
+  end
+
   def handle_event("edit-recipe", %{"id" => id}, socket) do
     {:noreply,
      socket
@@ -462,6 +488,18 @@ defmodule MehungryWeb.ProfileLive.Index do
 
   def get_profile_content(%{content_state: :created} = assigns) do
     ~H"""
+    <div
+      :if={@current_user && @current_user.email == "nikolisgal@gmail.com" && @live_action == :index}
+      class="px-4 mb-4"
+    >
+      <button
+        phx-click="regenerate_recipe_images"
+        data-confirm="Regenerate AI cover images for ALL your created recipes? This runs in the background and overwrites existing images."
+        class="px-4 py-2 rounded-full bg-paprika hover:bg-paprika-soft text-ink font-bold text-sm transition-colors"
+      >
+        Regenerate recipe images
+      </button>
+    </div>
     <div class="pb-20 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6  px-4">
       <%= for recipe <- @user_created_recipes do %>
         <RecipeComponents.recipe_card

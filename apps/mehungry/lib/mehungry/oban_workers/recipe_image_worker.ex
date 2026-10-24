@@ -14,10 +14,11 @@ defmodule Mehungry.RecipeImageWorker do
   alias Mehungry.{Food, AI.ImageGenerator, Storage}
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"recipe_id" => recipe_id}}) do
+  def perform(%Oban.Job{args: %{"recipe_id" => recipe_id} = args}) do
     recipe = Food.get_recipe!(recipe_id)
+    force = Map.get(args, "force", false)
 
-    if recipe.image_url not in [nil, ""] do
+    if not force and recipe.image_url not in [nil, ""] do
       Logger.info("RecipeImageWorker: recipe #{recipe_id} already has an image, skipping")
       :ok
     else
@@ -26,7 +27,10 @@ defmodule Mehungry.RecipeImageWorker do
   end
 
   defp generate_and_store(recipe) do
-    case ImageGenerator.generate(recipe.title, recipe.description, cuisine: recipe.cousine) do
+    case ImageGenerator.generate(recipe.title, recipe.description,
+           cuisine: recipe.cousine,
+           quality: "high"
+         ) do
       {:ok, binary} ->
         key = "recipe_images/#{recipe.id}.jpg"
 

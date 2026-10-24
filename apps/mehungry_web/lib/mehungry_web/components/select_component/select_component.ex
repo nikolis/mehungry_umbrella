@@ -510,7 +510,7 @@ defmodule MehungryWeb.SelectComponent do
       height="24"
       stroke-width="0"
       fill="#ccc"
-      class="absolute top-2 right-2  -translate-y-1/2 cursor-pointer focus:outline-none z-50"
+      class="absolute top-2 right-2  -translate-y-1/2 cursor-pointer focus:outline-none z-20"
       style=" top: 50%; transform: translateY(-50%);"
       tabindex="-1"
     >

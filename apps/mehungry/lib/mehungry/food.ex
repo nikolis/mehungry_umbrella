@@ -78,6 +78,9 @@ defmodule Mehungry.Food do
   defdelegate count_user_created_recipes(user_id), to: Recipes
   defdelegate count_recipes_created_by_user_ids(user_ids), to: Recipes
   defdelegate count_recipes(), to: Recipes
+  defdelegate count_recipes_by_source(source), to: Recipes
+  defdelegate recipe_ids_by_source(source), to: Recipes
+  defdelegate delete_recipes_by_source(source), to: Recipes
   defdelegate count_recipes_missing_embeddings(), to: Recipes
   defdelegate list_recipe_ids(), to: Recipes
   defdelegate list_recipes(query_or_cursor), to: Recipes
@@ -266,6 +269,7 @@ defmodule Mehungry.Food do
   defdelegate upsert_portion_translation(portion_id, locale, description), to: Localization
   defdelegate upsert_portion_translation(portion_id, locale, description, opts), to: Localization
   defdelegate get_unit_translations_map(unit_ids, language_name), to: Localization
+  defdelegate unit_display_names(unit_ids, locale), to: Localization
 
   defdelegate upsert_ingredient_translation(ingredient_id, language_name, name),
     to: Localization

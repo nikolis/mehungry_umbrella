@@ -22,7 +22,11 @@ defmodule MehungryWeb.BlueprintLive.Show do
 
   @impl true
   def handle_params(%{"slug" => slug} = params, _uri, socket) do
-    blueprint = MealBlueprints.get_public_blueprint_by_slug!(slug)
+    blueprint =
+      slug
+      |> MealBlueprints.get_public_blueprint_by_slug!()
+      |> MealBlueprints.localize_blueprint(Gettext.get_locale(MehungryWeb.Gettext))
+
     plans = MealBlueprints.list_public_plans_for_blueprint(blueprint.id)
     user = socket.assigns.current_user
 

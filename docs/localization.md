@@ -165,8 +165,11 @@ one code path:
 - **Registry** — `Mehungry.Languages.TranslationRegistry` lists a descriptor per
   resource (base schema, `*_translation` schema, FK, translatable fields, AI mode).
   Covered today: recipes, ingredients, measurement units, categories, food species,
-  food products, **compounds, health conditions, nutrients** (the last three got new
-  `*_translation` tables in this work).
+  food products, compounds, health conditions, nutrients, and **meal blueprints**
+  (`name` + `description`; `meal_blueprint_translations` table). Blueprint
+  translations are applied at read-time by `MealBlueprints.localize_blueprints/2`
+  (verified-only) on the public preview page, the browse grid, and the public
+  nutritionist profile.
 - **Every translation row carries a `status`** (`"ai_draft"` | `"verified"`) plus
   `verified_at`/`verified_by_id`. Pre-existing rows were backfilled `"verified"`.
 - **Coverage** — `Mehungry.Languages.Coverage.stats/0` reports, per resource × target

@@ -151,7 +151,11 @@
     >
       <.link
         :for={label <- MehungryWeb.RecipeBrowserLive.Index.chip_nutrients()}
-        navigate={~p"/search/nutrient/#{Mehungry.Food.claim_slug(label)}"}
+        navigate={
+          if @active_nutrient == label,
+            do: ~p"/browse",
+            else: ~p"/search/nutrient/#{Mehungry.Food.claim_slug(label)}"
+        }
         class={[
           "whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium border transition-colors",
           if(@active_nutrient == label,

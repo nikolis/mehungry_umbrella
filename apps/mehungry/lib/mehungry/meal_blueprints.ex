@@ -11,8 +11,10 @@ defmodule Mehungry.MealBlueprints do
 
   alias Mehungry.Repo
   alias Mehungry.History.MealType
+  alias Mehungry.Languages.Locale
   alias Mehungry.MealBlueprints.Blueprint
   alias Mehungry.MealBlueprints.BlueprintPlan
+  alias Mehungry.MealBlueprints.BlueprintTranslation
   alias Mehungry.MealBlueprints.BlueprintPlanMeal
   alias Mehungry.MealBlueprints.PlanCompatibility
   alias Mehungry.MealBlueprints.UserBlueprint
@@ -53,6 +55,64 @@ defmodule Mehungry.MealBlueprints do
     |> Repo.get_by!(id: id, user_id: user_id)
     |> Repo.preload([:condition, days: :meals])
     |> sort_tree()
+  end
+
+  # ── read-time localization ───────────────────────────────────────────────────
+
+  @doc """
+  Overlays the verified `name`/`description` translation for `locale` onto a
+  blueprint, for display in the viewer's language. The source locale
+  (`Locale.source/0`, English) and an untranslated blueprint pass through
+  unchanged, so callers can apply this unconditionally. Only `"verified"`
+  translations are applied — an unreviewed AI draft never reaches a public page.
+  """
+  def localize_blueprint(%Blueprint{} = blueprint, locale) do
+    [blueprint] |> localize_blueprints(locale) |> hd()
+  end
+
+  @doc "Bulk `localize_blueprint/2` over a list (one query for the whole list)."
+  def localize_blueprints([], _locale), do: []
+
+  def localize_blueprints(blueprints, locale) when is_list(blueprints) do
+    if is_nil(locale) or locale == Locale.source() do
+      blueprints
+    else
+      codes = Locale.data_codes(locale)
+      ids = Enum.map(blueprints, & &1.id)
+      tmap = blueprint_translations_map(ids, codes)
+      Enum.map(blueprints, fn bp -> apply_blueprint_translation(bp, Map.get(tmap, bp.id)) end)
+    end
+  end
+
+  # `%{blueprint_id => BlueprintTranslation}` for a locale's codes (ISO + legacy),
+  # verified rows only, preferring the earliest (canonical ISO) code when a
+  # blueprint carries more than one.
+  defp blueprint_translations_map(ids, codes) do
+    rank = codes |> Enum.with_index() |> Map.new()
+
+    from(t in BlueprintTranslation,
+      where: t.blueprint_id in ^ids and t.language_name in ^codes and t.status == "verified"
+    )
+    |> Repo.all()
+    |> Enum.reduce(%{}, fn t, acc ->
+      r = Map.get(rank, t.language_name, length(codes))
+
+      case Map.get(acc, t.blueprint_id) do
+        {best, _} when best <= r -> acc
+        _ -> Map.put(acc, t.blueprint_id, {r, t})
+      end
+    end)
+    |> Map.new(fn {id, {_r, t}} -> {id, t} end)
+  end
+
+  defp apply_blueprint_translation(blueprint, nil), do: blueprint
+
+  defp apply_blueprint_translation(blueprint, %BlueprintTranslation{} = t) do
+    %{
+      blueprint
+      | name: t.name || blueprint.name,
+        description: t.description || blueprint.description
+    }
   end
 
   # ── public / shared reads ────────────────────────────────────────────────────

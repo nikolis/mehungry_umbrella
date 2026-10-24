@@ -198,24 +198,32 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_ingredients(%{recipe_ingredients: _recipe_ingredients} = assigns) do
+  def recipe_ingredients(%{recipe_ingredients: recipe_ingredients} = assigns) do
+    assigns =
+      assigns
+      |> component_assigns()
+      |> assign(:ingredient_groups, group_by_part(recipe_ingredients, & &1.component_name))
+
     ~H"""
     <div class=" my-4 ">
       <div class="px-4">
         <div class="bg-ink-panel border border-ink-panel2 divide-y custom-scrollbar divide-ink-panel2 overflow-auto max-h-72">
-          <%= for ingredient <- @recipe_ingredients do %>
-            <% display_names = Map.get(assigns, :ingredient_display_names, %{}) %>
-            <% name =
-              Map.get(display_names, ingredient.ingredient_id) ||
-                Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %>
-            <div class="flex justify-between items-center p-4 hover:bg-black/20 transition">
-              <span class="text-parchment">
-                {name}
-              </span>
-              <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
-                {ingredient.quantity} {Mehungry.Food.RecipeIngredient.unit_label(ingredient)}
-              </span>
-            </div>
+          <%= for {part, ingredients} <- @ingredient_groups do %>
+            <.part_header :if={part} name={part} />
+            <%= for ingredient <- ingredients do %>
+              <% display_names = Map.get(assigns, :ingredient_display_names, %{}) %>
+              <% name =
+                Map.get(display_names, ingredient.ingredient_id) ||
+                  Mehungry.Utils.remove_parenthesis(ingredient.ingredient.name) %>
+              <div class="flex justify-between items-center p-4 hover:bg-black/20 transition">
+                <span class="text-parchment">
+                  {name}
+                </span>
+                <span class="font-bold text-basil [font-variant-numeric:tabular-nums]">
+                  {ingredient.quantity} {Mehungry.Food.RecipeIngredient.unit_label(ingredient)}
+                </span>
+              </div>
+            <% end %>
           <% end %>
         </div>
       </div>
@@ -223,24 +231,121 @@ defmodule MehungryWeb.RecipeComponents do
     """
   end
 
-  def recipe_steps(%{steps: _steps} = assigns) do
+  def recipe_steps(%{steps: steps} = assigns) do
+    assigns =
+      assigns
+      |> component_assigns()
+      |> assign(:step_groups, group_by_part(steps, & &1.title))
+      |> assign(:source_url, Map.get(assigns, :original_url))
+      |> assign(:source_author, Map.get(assigns, :author))
+      |> assign(:source_license, Map.get(assigns, :license))
+
     ~H"""
     <div class=" my-4 ">
       <div class="px-4">
         <div class="overflow-auto text-base custom-scrollbar bg-ink-panel border border-ink-panel2 max-h-72 px-4   ">
-          <%= for step <- @steps do %>
-            <div class="step_details_container p-4 border-b border-ink-panel2 ">
+          <%= for {part, steps} <- @step_groups do %>
+            <.part_header :if={part} name={part} />
+            <%!--
+              Number steps per part (1..n within each component), not one
+              continuous count across parts — components are often prepared in
+              parallel, so a global 1..N would imply a false ordering.
+            --%>
+            <div
+              :for={{step, display_index} <- Enum.with_index(steps, 1)}
+              class="step_details_container p-4 border-b border-ink-panel2 "
+            >
               <div class="w-8 h-8 rounded-full bg-paprika/20 text-paprika flex items-center justify-center font-bold flex-shrink-0 [font-variant-numeric:tabular-nums] ">
-                {step.index}
+                {display_index}
               </div>
               <div class="text-parchment">{step.description}</div>
             </div>
           <% end %>
         </div>
+        <.recipe_source
+          :if={@source_url}
+          url={@source_url}
+          author={@source_author}
+          license={@source_license}
+        />
       </div>
     </div>
     """
   end
+
+  # Visible source credit for imported recipes (public-domain USDA MyPlate etc.).
+  # Only rendered when the recipe carries an `original_url`; app-authored recipes
+  # have none and show nothing.
+  attr :url, :string, required: true
+  attr :author, :string, default: nil
+  attr :license, :string, default: nil
+
+  defp recipe_source(assigns) do
+    ~H"""
+    <p class="px-4 py-3 text-xs text-parchment-dim">
+      {gettext("Source")}:
+      <a
+        href={@url}
+        target="_blank"
+        rel="noopener nofollow"
+        class="underline hover:text-parchment"
+      >
+        {@author || gettext("Original recipe")}
+      </a>
+      <%!-- License notice for sources that carry a reuse obligation (e.g.
+            UniTools CC BY-SA 4.0). ShareAlike requires the license to travel
+            with the adapted recipe. --%>
+      <span :if={@license} class="ml-1">· {gettext("Licensed under")} {@license}</span>
+    </p>
+    """
+  end
+
+  # Sub-header marking a recipe part (e.g. "Dressing") inside the ingredient/step
+  # lists. Only rendered when a part name is present — single-part recipes show no
+  # header and read exactly as before.
+  attr :name, :string, required: true
+
+  defp part_header(assigns) do
+    ~H"""
+    <div class="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-basil">
+      {@name}
+    </div>
+    """
+  end
+
+  # These components are invoked as plain functions (e.g. from
+  # `RecipeDetailsTabsConfig`) with a raw `%Recipe{}` struct as their assigns.
+  # `assign/3` rejects a bare struct — it needs the change-tracking map a HEEx
+  # `<.component/>` call injects — so demote the struct to a plain map and add an
+  # empty `__changed__` before any `assign/3` call.
+  defp component_assigns(%_{} = assigns),
+    do: assigns |> Map.from_struct() |> Map.put_new(:__changed__, %{})
+
+  defp component_assigns(assigns), do: Map.put_new(assigns, :__changed__, %{})
+
+  # Groups a list of ingredients/steps by their part label, preserving the order
+  # in which each part first appears. A blank/nil label normalises to `nil` (the
+  # ungrouped bucket, rendered without a header). When nothing is labelled this
+  # returns a single `{nil, items}` group — i.e. the pre-parts flat list.
+  defp group_by_part(items, key_fun) when is_list(items) do
+    Enum.reduce(items, [], fn item, acc ->
+      key = normalize_part(key_fun.(item))
+
+      case List.keyfind(acc, key, 0) do
+        {^key, list} -> List.keyreplace(acc, key, 0, {key, list ++ [item]})
+        nil -> acc ++ [{key, [item]}]
+      end
+    end)
+  end
+
+  defp group_by_part(_items, _key_fun), do: []
+
+  defp normalize_part(value) when value in [nil, ""], do: nil
+  defp normalize_part(value) when is_binary(value), do: String.trim(value) |> nilify_blank()
+  defp normalize_part(_value), do: nil
+
+  defp nilify_blank(""), do: nil
+  defp nilify_blank(value), do: value
 
   def recipe_tags(assigns) do
     assigns = assign(assigns, :tags, loaded_hashtags(assigns.recipe))
@@ -327,6 +432,174 @@ defmodule MehungryWeb.RecipeComponents do
     </div>
     """
   end
+
+  @doc """
+  The live recipe-card preview rendered beside the Create Recipe form. It is
+  purely presentational — it reads a flat `preview` map (projected from the
+  form changeset by `CreateRecipeLive.Index`) plus the image `uploads`, so it
+  never touches the changeset or the database itself. Borrows the browse
+  `recipe_card` visual language (image-on-top card, basil numbers, editorial
+  numbered steps) so what the author builds reads like what they'll publish.
+  """
+  attr :preview, :map, required: true
+  attr :uploads, :map, required: true
+
+  def recipe_preview(assigns) do
+    ~H"""
+    <div class="recipe-preview overflow-hidden rounded-2xl border border-ink-panel2 bg-ink-panel">
+      <div class="flex items-center justify-between gap-2 px-4 pt-4">
+        <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-parchment-dim">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-basil/60 animate-ping motion-reduce:hidden">
+            </span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-basil"></span>
+          </span>
+          {gettext("Live preview")}
+        </span>
+        <span
+          :if={@preview.valid?}
+          class="inline-flex items-center gap-1 rounded-full bg-paprika/15 px-2.5 py-1 text-[11px] font-semibold text-paprika-soft"
+        >
+          <.icon name="hero-check-circle" class="h-3.5 w-3.5" /> {gettext("Ready to save")}
+        </span>
+      </div>
+
+      <div class="mt-3 px-4">
+        <div class="aspect-video w-full overflow-hidden rounded-xl bg-ink-panel2">
+          <%= cond do %>
+            <% filled?(@preview.image_url) -> %>
+              <img src={@preview.image_url} alt="" class="h-full w-full object-cover" />
+            <% @uploads.image.entries != [] -> %>
+              <%!-- The live client-side preview lives in the form's drop zone (one
+                    per upload entry); here we just confirm an image is attached. --%>
+              <div class="flex h-full w-full flex-col items-center justify-center gap-1 text-basil">
+                <.icon name="hero-check-circle" class="h-8 w-8" />
+                <span class="text-xs font-medium">{gettext("Image added")}</span>
+              </div>
+            <% true -> %>
+              <div class="flex h-full w-full items-center justify-center text-parchment-dim">
+                <.icon name="hero-photo" class="h-10 w-10" />
+              </div>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="space-y-4 p-4">
+        <div>
+          <h2 class={["font-display text-xl leading-tight", title_class(@preview.title)]}>
+            {@preview.title || gettext("Your recipe title")}
+          </h2>
+          <p class={["mt-1 text-sm", desc_class(@preview.description)]}>
+            {@preview.description || gettext("A short description will appear here.")}
+          </p>
+        </div>
+
+        <div class="flex items-center gap-4 border-y border-ink-panel2 py-3 text-sm">
+          <div class="flex items-center gap-1.5">
+            <.icon name="hero-clock" class="h-4 w-4 text-parchment-dim" />
+            <span class="font-bold tabular-nums text-basil">{total_time(@preview)}</span>
+            <span class="text-parchment-dim">{gettext("min")}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <.icon name="hero-user-group" class="h-4 w-4 text-parchment-dim" />
+            <span class="font-bold tabular-nums text-basil">{display_servings(@preview.servings)}</span>
+            <span class="text-parchment-dim">{gettext("servings")}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <.icon name="hero-signal" class="h-4 w-4 text-parchment-dim" />
+            <span class="text-parchment">{difficulty_label(@preview.difficulty)}</span>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-parchment-dim">
+            {gettext("Ingredients")}
+            <span :if={@preview.ingredients != []} class="tabular-nums text-basil">
+              ({length(@preview.ingredients)})
+            </span>
+          </h3>
+          <p :if={@preview.ingredients == []} class="text-sm text-parchment-dim/70">
+            {gettext("Add ingredients to see them here.")}
+          </p>
+          <ul :if={@preview.ingredients != []} class="space-y-1">
+            <li
+              :for={ing <- @preview.ingredients}
+              class="flex items-baseline gap-2 text-sm text-parchment"
+            >
+              <span :if={filled?(ing.quantity)} class="min-w-8 font-bold tabular-nums text-basil">
+                {ing.quantity}
+              </span>
+              <span>{ing.name}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-parchment-dim">
+            {gettext("Steps")}
+            <span :if={@preview.steps != []} class="tabular-nums text-basil">
+              ({length(@preview.steps)})
+            </span>
+          </h3>
+          <p :if={@preview.steps == []} class="text-sm text-parchment-dim/70">
+            {gettext("Your method will appear here, step by step.")}
+          </p>
+          <ol :if={@preview.steps != []} class="space-y-3">
+            <li :for={{step, i} <- Enum.with_index(@preview.steps, 1)} class="flex gap-3">
+              <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink-panel2 text-xs font-bold tabular-nums text-basil">
+                {i}
+              </span>
+              <div class="min-w-0">
+                <p
+                  :if={filled?(step.title)}
+                  class="text-xs font-semibold uppercase tracking-wide text-paprika-soft"
+                >
+                  {step.title}
+                </p>
+                <p class="text-sm text-parchment">{step.description}</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp filled?(value), do: value not in [nil, ""]
+
+  defp title_class(value) when value in [nil, ""], do: "text-parchment-dim/60"
+  defp title_class(_), do: "text-parchment"
+
+  defp desc_class(value) when value in [nil, ""], do: "text-parchment-dim/60 italic"
+  defp desc_class(_), do: "text-parchment-dim"
+
+  defp display_servings(value) when value in [nil, ""], do: "—"
+  defp display_servings(value), do: value
+
+  defp difficulty_label(value) when value in [1, "1"], do: gettext("Easy")
+  defp difficulty_label(value) when value in [2, "2"], do: gettext("Medium")
+  defp difficulty_label(value) when value in [3, "3"], do: gettext("Difficult")
+  defp difficulty_label(_), do: "—"
+
+  defp total_time(%{cooking_time: cooking, prep_time: prep}) do
+    case {to_minutes(cooking), to_minutes(prep)} do
+      {nil, nil} -> "—"
+      {c, p} -> (c || 0) + (p || 0)
+    end
+  end
+
+  defp to_minutes(nil), do: nil
+  defp to_minutes(value) when is_integer(value), do: value
+
+  defp to_minutes(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {int, _} -> int
+      :error -> nil
+    end
+  end
+
+  defp to_minutes(_), do: nil
 
   def post_card_interaction(assigns) do
     ~H"""

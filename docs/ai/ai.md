@@ -14,7 +14,7 @@ section links to the doc that covers it in depth.
 | **Meal-plan generation** | A 7-day plan drawn from the user's own recipe catalog | Calendar LiveView (`MealPlanAgent`) | [`meal_plan.md`](meal_plan.md) |
 | **Nutritionist plan drafting** | A 7-day plan a pro drafts *for a client*, with a rationale | `NutritionistAgentWorker` | [`ai_agents.md`](ai_agents.md) |
 | **Translation** | Recipe + ingredient/unit text in other languages (en/el) | `RecipeTranslator`, `IngredientTranslator` | [`ai_agents.md`](ai_agents.md) |
-| **Cover images** | Food-photography image per recipe | `RecipeImageWorker` (OpenAI `gpt-image-1`) | [`ai_agents.md`](ai_agents.md) |
+| **Cover images** | Food-photography image per recipe | `RecipeImageWorker` → `AI.ImageGenerator` (provider seam: OpenAI `gpt-image-2` **or** FLUX 2 pro) | [`ai_agents.md`](ai_agents.md) |
 | **Semantic search / embeddings** | pgvector recipe embeddings for meaning-based catalog search | `RecipeEmbeddingWorker`, `RecipeVectorSearch` | [`ai_agents.md`](ai_agents.md) |
 | **Measurement extraction** | Compound-measurement candidates pulled from full-text papers by a local QA model | `apps/mehungry_local_ai` → `/api/local_ai/*` | [`measurement_extraction.md`](measurement_extraction.md) |
 
@@ -25,7 +25,8 @@ Two external providers; everything else is our own code.
 | Provider | Used for | Client seam | Key |
 |---|---|---|---|
 | **Anthropic (Claude)** | All text generation, agents, translation, prose polish | `AI.Client` (the *only* Anthropic caller) | `ANTHROPIC_API_KEY` → `:anthropic_api_key` |
-| **OpenAI** | Image generation + recipe embeddings (Anthropic offers neither) | `AI.ImageGenerator`, `AI.EmbeddingClient` | `OPENAI_API_KEY` (optional) |
+| **OpenAI** | Image generation (`gpt-image-2`, default) + recipe embeddings (Anthropic offers neither) | `AI.ImageGenerator`, `AI.EmbeddingClient` | `OPENAI_API_KEY` (optional) |
+| **Black Forest Labs (FLUX)** | Alternative cover-image provider (FLUX 2 pro — higher photorealism); selected via `RECIPE_IMAGE_PROVIDER=flux` → `:recipe_image_provider` | `AI.FluxImageGenerator` | `BFL_API_KEY` (optional) |
 
 **Models** — the tool-loop runs on **Haiku** (`claude-haiku-4-5-20251001`, cheap/fast
 structured tool calling); user-visible prose is rewritten by **Sonnet**; embeddings

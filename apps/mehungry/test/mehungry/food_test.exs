@@ -192,6 +192,41 @@ defmodule Mehungry.FoodTest do
       assert is_nil(ri.ingredient_portion_id)
     end
 
+    test "recipe parts persist via ingredient component_name + step title", %{
+      ingredient: ingredient,
+      measurement_unit: gram_unit,
+      user: user
+    } do
+      ingredients = [
+        %{
+          ingredient_id: ingredient.id,
+          measurement_unit_id: gram_unit.id,
+          quantity: 100,
+          component_name: "Dressing"
+        }
+      ]
+
+      recipe_params =
+        @create_params_recipe
+        |> Enum.into(%{
+          recipe_ingredients: ingredients,
+          steps: [%{index: 1, title: "Dressing", description: "Whisk it all together"}],
+          user_id: user.id,
+          cooking_time_lower_limit: 15,
+          preperation_time_lower_limit: 15,
+          difficulty: 1,
+          description: "parts linkage"
+        })
+
+      assert {:ok, recipe} = Food.create_recipe(recipe_params)
+      recipe = Food.get_recipe_no_caching!(recipe.id)
+
+      assert [ri] = recipe.recipe_ingredients
+      assert ri.component_name == "Dressing"
+      assert [step] = recipe.steps
+      assert step.title == "Dressing"
+    end
+
     test "updating a recipe re-resolves ingredient_portion_id", %{
       ingredient: ingredient,
       measurement_unit: gram_unit,

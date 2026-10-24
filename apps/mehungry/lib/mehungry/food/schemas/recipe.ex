@@ -18,6 +18,15 @@ defmodule Mehungry.Food.Recipe do
     field :detail_image_url, :string
     field :recipe_image_remote, :string
     field :original_url, :string
+    # Provenance marker: "myplate" for USDA MyPlate imports, nil for in-app
+    # (user/AI/bot) recipes. Lets imported batches be group-managed. See
+    # Food.Recipes source helpers and docs/food/myplate_import.md.
+    field :source, :string
+    # Content license notice for imported recipes that carry a reuse obligation
+    # (e.g. "CC BY-SA 4.0" for UniTools). nil for public-domain/in-app recipes.
+    # Rendered next to the "Source" credit on the Steps tab to satisfy
+    # ShareAlike's visible-license requirement. See docs/food/unitools_import.md.
+    field :license, :string
     field :preperation_time_lower_limit, :integer
     field :preperation_time_upper_limit, :integer
     field :primary_nutrients_size, :integer
@@ -102,6 +111,8 @@ defmodule Mehungry.Food.Recipe do
       :nutrients,
       :image_url,
       :original_url,
+      :source,
+      :license,
       :detail_image_url,
       :user_id,
       :language_name,

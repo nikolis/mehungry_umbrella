@@ -102,6 +102,7 @@ defmodule MehungryWeb.Api.V1.RecipeJSON do
       id: ri.id,
       quantity: ri.quantity,
       ingredient_allias: ri.ingredient_allias,
+      component: ri.component_name,
       measurement_unit_id: ri.measurement_unit_id,
       ingredient_portion_id: ri.ingredient_portion_id,
       measurement_unit: measurement_unit(ri),

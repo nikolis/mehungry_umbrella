@@ -68,6 +68,7 @@ defmodule Mehungry.MixProject do
       {:paginator, "~> 1.2.0"},
       {:httpoison, "~> 2.2"},
       {:jason, "~> 1.2"},
+      {:floki, ">= 0.30.0"},
       {:cachex, "~> 3.4"},
       {:pgvector, "~> 0.3"},
       {:nimble_csv, "~> 1.2"}

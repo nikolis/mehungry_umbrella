@@ -4,6 +4,7 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
   require Logger
 
   alias Mehungry.Food
+  alias Mehungry.Settings
   alias Mehungry.Food.Nutrients
   alias Mehungry.Food.NutrientRecalculationRuns
   alias Mehungry.Food.HashtagReconciliations
@@ -34,6 +35,8 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
       |> assign(:graphic_running_id, nil)
       |> assign(:graphic_result, nil)
       |> assign(:graphic_error, nil)
+      |> assign(:image_provider, Settings.image_provider())
+      |> assign(:bfl_configured, Application.get_env(:mehungry, :bfl_api_key, "") != "")
       |> load_stats()
       |> load_search_results("")
 
@@ -66,6 +69,33 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
      |> assign(:graphic_running_id, recipe_id)
      |> assign(:graphic_result, nil)
      |> assign(:graphic_error, nil)}
+  end
+
+  # Flip the recipe-cover image provider (gpt-image-2 ↔ FLUX 2 pro). Persisted in
+  # the shared app_settings store so it takes effect on every machine and
+  # survives deploys — see Mehungry.Settings.
+  @impl true
+  def handle_event("set_image_provider", %{"provider" => provider}, socket) do
+    Logger.info(
+      "[set_image_provider] provider=#{provider} requested by user " <>
+        "#{inspect(socket.assigns[:current_user] && socket.assigns.current_user.id)}"
+    )
+
+    socket =
+      case Settings.put_image_provider(provider) do
+        {:ok, _} ->
+          active = Settings.image_provider()
+
+          socket
+          |> assign(:image_provider, active)
+          |> put_flash(:info, "Recipe images now generated via #{provider_label(active)}.")
+
+        {:error, reason} ->
+          Logger.error("[set_image_provider] failed: #{inspect(reason)}")
+          put_flash(socket, :error, "Could not change image provider.")
+      end
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -111,6 +141,75 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
 
         {:error, reason} ->
           Logger.error("[delete_recipes_without_ingredients] failed: #{inspect(reason)}")
+          put_flash(socket, :error, "Deletion failed: #{inspect(reason)}")
+      end
+
+    {:noreply, socket}
+  end
+
+  # Group-manage imported recipes: delete every recipe marked `source: "myplate"`.
+  @impl true
+  def handle_event("delete_myplate_recipes", _params, socket) do
+    Logger.info(
+      "[delete_myplate_recipes] requested by user #{inspect(socket.assigns[:current_user] && socket.assigns.current_user.id)}"
+    )
+
+    socket =
+      case Food.delete_recipes_by_source("myplate") do
+        {:ok, count} ->
+          socket
+          |> put_flash(:info, "Deleted #{count} MyPlate-imported recipe(s).")
+          |> load_stats()
+          |> load_search_results(socket.assigns.search_query)
+
+        {:error, reason} ->
+          Logger.error("[delete_myplate_recipes] failed: #{inspect(reason)}")
+          put_flash(socket, :error, "Deletion failed: #{inspect(reason)}")
+      end
+
+    {:noreply, socket}
+  end
+
+  # Group-manage imported recipes: delete every recipe marked `source: "gutenberg"`.
+  @impl true
+  def handle_event("delete_gutenberg_recipes", _params, socket) do
+    Logger.info(
+      "[delete_gutenberg_recipes] requested by user #{inspect(socket.assigns[:current_user] && socket.assigns.current_user.id)}"
+    )
+
+    socket =
+      case Food.delete_recipes_by_source("gutenberg") do
+        {:ok, count} ->
+          socket
+          |> put_flash(:info, "Deleted #{count} Gutenberg-imported recipe(s).")
+          |> load_stats()
+          |> load_search_results(socket.assigns.search_query)
+
+        {:error, reason} ->
+          Logger.error("[delete_gutenberg_recipes] failed: #{inspect(reason)}")
+          put_flash(socket, :error, "Deletion failed: #{inspect(reason)}")
+      end
+
+    {:noreply, socket}
+  end
+
+  # Group-manage imported recipes: delete every recipe marked `source: "unitools"`.
+  @impl true
+  def handle_event("delete_unitools_recipes", _params, socket) do
+    Logger.info(
+      "[delete_unitools_recipes] requested by user #{inspect(socket.assigns[:current_user] && socket.assigns.current_user.id)}"
+    )
+
+    socket =
+      case Food.delete_recipes_by_source("unitools") do
+        {:ok, count} ->
+          socket
+          |> put_flash(:info, "Deleted #{count} UniTools-imported recipe(s).")
+          |> load_stats()
+          |> load_search_results(socket.assigns.search_query)
+
+        {:error, reason} ->
+          Logger.error("[delete_unitools_recipes] failed: #{inspect(reason)}")
           put_flash(socket, :error, "Deletion failed: #{inspect(reason)}")
       end
 
@@ -309,6 +408,9 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
      |> assign(:hashtag_running, in_flight > 0)}
   end
 
+  def provider_label(:flux), do: "FLUX 2 pro"
+  def provider_label(_), do: "gpt-image-2 (OpenAI)"
+
   def recalc_running?(%{status: "processing"}), do: true
   def recalc_running?(_), do: false
 
@@ -343,6 +445,7 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
     end
   end
 
+  # Progress helpers over the hashtag-reconciliation `status => count` map.
   def hashtag_total(counts), do: counts |> Map.values() |> Enum.sum()
 
   def hashtag_done(counts),
@@ -359,6 +462,9 @@ defmodule MehungryWeb.ProfessionalLive.Recipes do
     socket
     |> assign(:total_count, Food.count_recipes())
     |> assign(:empty_count, length(empty_recipes))
+    |> assign(:myplate_count, Food.count_recipes_by_source("myplate"))
+    |> assign(:gutenberg_count, Food.count_recipes_by_source("gutenberg"))
+    |> assign(:unitools_count, Food.count_recipes_by_source("unitools"))
     |> stream(:empty_recipes, empty_recipes, reset: true)
   end
 

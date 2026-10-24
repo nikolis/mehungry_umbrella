@@ -1,8 +1,14 @@
 defmodule Mehungry.AI.ImageGenerator do
   @moduledoc """
-  Generates recipe cover images using the OpenAI gpt-image-2 API.
+  Builds the (model-agnostic) recipe-cover prompt and dispatches image
+  generation to the backend selected by the `:recipe_image_provider` config:
 
-  Returns JPEG binary data ready to upload to S3.
+    * `:openai` (default) — the OpenAI gpt-image-2 API, implemented here.
+    * `:flux` — Black Forest Labs FLUX 2 pro, in `Mehungry.AI.FluxImageGenerator`.
+
+  Both providers receive the same engineered prompt and return JPEG binary data
+  ready to upload to object storage, so they are drop-in interchangeable and can
+  be A/B'd on live recipes by flipping `RECIPE_IMAGE_PROVIDER`.
   """
 
   require Logger
@@ -41,21 +47,36 @@ defmodule Mehungry.AI.ImageGenerator do
   @spec generate(String.t(), String.t(), keyword()) ::
           {:ok, binary()} | {:error, term()}
   def generate(title, description, opts \\ []) do
+    cuisine = Keyword.get(opts, :cuisine)
+    quality = normalize_quality(Keyword.get(opts, :quality, @default_quality))
+
+    # The prompt is model-agnostic — the exact same engineered prompt feeds
+    # whichever provider is configured, so swapping backends never silently
+    # changes what we ask for.
+    prompt = build_prompt(title, description, cuisine)
+    # Provider precedence: admin DB toggle → RECIPE_IMAGE_PROVIDER env → :openai.
+    provider = Mehungry.Settings.image_provider()
+
+    Logger.info(
+      "ImageGenerator: generating image for '#{title}' via #{provider}" <>
+        "#{quality_note(provider, quality)}#{cuisine && " (#{cuisine})"}"
+    )
+
+    case provider do
+      :flux -> Mehungry.AI.FluxImageGenerator.generate(prompt, quality: quality)
+      _ -> generate_openai(prompt, quality)
+    end
+  end
+
+  defp quality_note(:openai, quality), do: " (#{quality} quality)"
+  defp quality_note(_, _), do: ""
+
+  defp generate_openai(prompt, quality) do
     api_key = Application.get_env(:mehungry, :openai_api_key, "")
 
     if api_key == "" do
       {:error, "OPENAI_API_KEY is not configured"}
     else
-      cuisine = Keyword.get(opts, :cuisine)
-      quality = normalize_quality(Keyword.get(opts, :quality, @default_quality))
-
-      prompt = build_prompt(title, description, cuisine)
-
-      Logger.info(
-        "ImageGenerator: generating #{quality}-quality image for '#{title}'" <>
-          "#{cuisine && " (#{cuisine})"}"
-      )
-
       request_image(api_key, prompt, quality)
     end
   end

@@ -16,7 +16,6 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   @model "claude-haiku-4-5-20251001"
   @writer_model "claude-sonnet-4-6"
-  @partial_indicators ~w(yolk white albumen powder dried dehydrated freeze extract concentrate)
 
   # The unit vocabulary the agent picks from is the ingredient's `IngredientPortion`
   # rows, not bare measurement units — each portion is a real, human-meaningful
@@ -565,10 +564,7 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
 
   defp handle_tool("search_ingredient", %{"name" => name}, %{gram_unit: gram_unit} = acc) do
     top =
-      Food.IngredientSearch.search(name)
-      |> rerank_by_name(name)
-      |> filter_by_name_relevance(name)
-      |> reject_partial_variants(name)
+      Food.IngredientSearch.search_relevant(name)
       |> Enum.take(3)
 
     candidates =
@@ -639,9 +635,11 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
             )
         end
 
+        # No reject_partial_variants here: we just created this ingredient and
+        # want to re-find it even if its canonical name is a "powder"/"dried" form.
         case Food.IngredientSearch.search(name)
-             |> rerank_by_name(name)
-             |> filter_by_name_relevance(name)
+             |> Food.IngredientSearch.rerank_by_name(name)
+             |> Food.IngredientSearch.filter_by_name_relevance(name)
              |> Enum.take(1) do
           [ing | _] ->
             portions =
@@ -1153,42 +1151,4 @@ defmodule Mehungry.AI.Agents.RecipeAgent do
     end
   end
 
-  # Floats to top any candidate whose first word closely matches the search term,
-  # preventing e.g. "Fish herring eggs" outranking "Eggs, whole, raw".
-  defp rerank_by_name(results, search_term) do
-    query_first = search_term |> String.downcase() |> String.split(~r/[\s,]+/) |> List.first("")
-
-    Enum.sort_by(results, fn ing ->
-      ing_first = ing.name |> String.downcase() |> String.split(~r/[\s,]+/) |> List.first("")
-      -String.jaro_distance(ing_first, query_first)
-    end)
-  end
-
-  # Requires at least one search word to closely match the candidate's first word,
-  # filtering incidental secondary-ingredient matches.
-  defp filter_by_name_relevance(ingredients, search_term, threshold \\ 0.6) do
-    search_words =
-      search_term |> String.downcase() |> String.split(~r/[\s,]+/) |> Enum.reject(&(&1 == ""))
-
-    Enum.filter(ingredients, fn ing ->
-      candidate_first =
-        ing.name |> String.downcase() |> String.split(~r/[\s,]+/) |> List.first("")
-
-      Enum.any?(search_words, &(String.jaro_distance(&1, candidate_first) >= threshold))
-    end)
-  end
-
-  # Drops partial/processed forms (yolk, white, powder…) when the search term
-  # doesn't ask for them, so e.g. "eggs" resolves to "Eggs, whole, raw".
-  defp reject_partial_variants(ingredients, search_term) do
-    search_lower = String.downcase(search_term)
-
-    Enum.reject(ingredients, fn ing ->
-      ing_lower = String.downcase(ing.name)
-
-      Enum.any?(@partial_indicators, fn indicator ->
-        String.contains?(ing_lower, indicator) and not String.contains?(search_lower, indicator)
-      end)
-    end)
-  end
 end

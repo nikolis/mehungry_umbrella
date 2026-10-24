@@ -29,6 +29,7 @@ defmodule Mehungry.Languages.TranslationRegistry do
   alias Mehungry.Food
   alias Mehungry.FoodProducts
   alias Mehungry.Health
+  alias Mehungry.MealBlueprints
   alias Mehungry.AI.Bot.RecipeTranslation
 
   @registry [
@@ -139,6 +140,17 @@ defmodule Mehungry.Languages.TranslationRegistry do
       name_field: :name,
       ai: :fields,
       ai_hint: "nutrient (vitamin / mineral / macronutrient)"
+    },
+    %{
+      key: "meal_blueprints",
+      label: "Meal Blueprints",
+      base_schema: MealBlueprints.Blueprint,
+      translation_schema: MealBlueprints.BlueprintTranslation,
+      fk: :blueprint_id,
+      fields: [:name, :description],
+      name_field: :name,
+      ai: :fields,
+      ai_hint: "7-day meal-plan blueprint — its title and short summary description"
     }
   ]
 

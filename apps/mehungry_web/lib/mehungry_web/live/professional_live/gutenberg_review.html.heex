@@ -1,0 +1,213 @@
+<div class="min-h-screen bg-ink text-parchment">
+  <div class="container mx-auto px-4 py-4">
+    <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+      <div>
+        <h1 class="text-2xl font-display font-medium text-parchment flex items-center gap-2">
+          <.icon name="hero-book-open" class="w-6 h-6 text-paprika" />
+          Gutenberg import review
+        </h1>
+        <p :if={@mode in [:review, :list] and @book} class="text-sm text-parchment-dim mt-1">
+          <span class="text-parchment font-semibold">{@book.title}</span>
+          <span class="text-parchment-dim">· {@book.author}</span>
+          <span :if={@mode == :review and @recipe_index}>
+            · recipe <span class="text-parchment font-semibold">{@recipe_index}</span>
+            of {@recipe_total}
+          </span>
+          <span
+            :if={@mode == :review and @review_status}
+            class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30"
+          >
+            already {@review_status}
+          </span>
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <.link
+          :if={@mode == :review and @book}
+          navigate={~p"/professional/gutenberg-review/#{@book.id}"}
+          class="px-3 py-2 rounded-full text-sm text-parchment-dim hover:text-parchment border border-ink-panel2"
+        >
+          ← Recipe list
+        </.link>
+        <.link
+          :if={@mode == :list}
+          navigate={~p"/professional/gutenberg-review"}
+          class="px-3 py-2 rounded-full text-sm text-parchment-dim hover:text-parchment border border-ink-panel2"
+        >
+          ← Books
+        </.link>
+        <.link
+          navigate={~p"/professional/recipes"}
+          class="px-3 py-2 rounded-full text-sm text-parchment-dim hover:text-parchment border border-ink-panel2"
+        >
+          Admin
+        </.link>
+        <button
+          :if={@mode == :review and @recipe_index}
+          type="button"
+          phx-click="toggle_publish"
+          title="Imports are staged private until curated. Tick to publish this one on Save."
+          class={[
+            "flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-sm transition-colors border",
+            if(@publish_on_save,
+              do: "bg-basil/20 text-basil border-basil/40",
+              else: "bg-ink-panel2 text-parchment-dim border-ink-panel2 hover:text-parchment"
+            )
+          ]}
+        >
+          <.icon
+            name={if @publish_on_save, do: "hero-eye", else: "hero-eye-slash"}
+            class="w-4 h-4"
+          />
+          {if @publish_on_save, do: "Publishing on save", else: "Saving as private"}
+        </button>
+        <button
+          :if={@mode == :review and @recipe_index}
+          type="button"
+          phx-click="gutenberg_skip"
+          class="flex items-center gap-2 px-4 py-2 rounded-full bg-ink-panel2 hover:bg-ink-panel text-parchment font-semibold text-sm transition-colors"
+        >
+          Skip <.icon name="hero-forward" class="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+
+    <%= cond do %>
+      <% @mode == :picker -> %>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div
+            :for={book <- @books}
+            class="bg-ink-panel border border-ink-panel2 rounded-2xl p-5 flex flex-col"
+          >
+            <p class="text-lg font-semibold text-parchment">{book.title}</p>
+            <p class="text-sm text-parchment-dim mb-1">{book.author}</p>
+            <p class="text-xs text-parchment-dim mb-4">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment">
+                {book.cuisine}
+              </span>
+              <span class="ml-1">· public domain</span>
+            </p>
+            <% {saved, skipped} = progress_for(@book_progress, book.id) %>
+            <p class="text-xs text-parchment-dim mb-4">
+              <span class="text-basil font-semibold">{saved}</span> saved ·
+              <span class="text-parchment">{skipped}</span> skipped
+            </p>
+            <.link
+              navigate={~p"/professional/gutenberg-review/#{book.id}"}
+              class="mt-auto inline-flex justify-center px-4 py-2 rounded-full bg-paprika hover:bg-paprika/90 text-white font-semibold text-sm"
+            >
+              Browse recipes
+            </.link>
+          </div>
+        </div>
+
+      <% @load_error -> %>
+        <div class="bg-ink-panel border border-red-500/30 rounded-2xl p-8 text-center">
+          <p class="text-lg text-parchment font-semibold mb-2">Couldn't load the book</p>
+          <p class="text-sm text-parchment-dim mb-1">
+            Project Gutenberg didn't return the text. This is not "all done" — nothing
+            in this book has been reviewed.
+          </p>
+          <p class="text-xs text-red-400/80 mb-4">{@load_error}</p>
+          <button
+            type="button"
+            phx-click="gutenberg_retry"
+            class="inline-flex px-4 py-2 rounded-full bg-paprika hover:bg-paprika/90 text-white font-semibold text-sm"
+          >
+            Retry
+          </button>
+        </div>
+
+      <% @mode == :list -> %>
+        <form id="recipe-search" phx-change="search" phx-submit="search" class="mb-3">
+          <div class="relative max-w-xl">
+            <.icon
+              name="hero-magnifying-glass"
+              class="w-4 h-4 text-parchment-dim absolute left-3 top-1/2 -translate-y-1/2"
+            />
+            <input
+              type="text"
+              name="q"
+              value={@search}
+              phx-debounce="120"
+              autocomplete="off"
+              placeholder="Search recipes by name…"
+              class="w-full pl-9 pr-4 py-2 rounded-full bg-ink-panel border border-ink-panel2 text-parchment placeholder:text-parchment-dim focus:outline-none focus:border-paprika"
+            />
+          </div>
+        </form>
+        <p class="text-xs text-parchment-dim mb-3">
+          Showing <span class="text-parchment font-semibold">{length(@visible_rows)}</span>
+          of {@recipe_total} recipes — click one to review &amp; import.
+        </p>
+        <ul
+          :if={@visible_rows != []}
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2"
+        >
+          <li :for={row <- @visible_rows}>
+            <.link
+              navigate={~p"/professional/gutenberg-review/#{@book.id}/#{row.index}"}
+              class="flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-ink-panel border border-ink-panel2 hover:border-paprika transition-colors h-full"
+            >
+              <span class="text-sm text-parchment truncate">{row.title}</span>
+              <span
+                :if={row.status}
+                class={[
+                  "shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold",
+                  status_badge_class(row.status)
+                ]}
+              >
+                {row.status}
+              </span>
+            </.link>
+          </li>
+        </ul>
+        <p :if={@visible_rows == []} class="text-sm text-parchment-dim py-10 text-center">
+          No recipes match “{@search}”.
+        </p>
+
+      <% @done -> %>
+        <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-8 text-center">
+          <p class="text-lg text-parchment font-semibold mb-2">All caught up</p>
+          <p class="text-sm text-parchment-dim mb-4">
+            Every recipe in <span class="text-parchment">{@book && @book.title}</span>
+            has been reviewed (saved or skipped).
+          </p>
+          <.link
+            navigate={~p"/professional/gutenberg-review"}
+            class="inline-flex px-4 py-2 rounded-full bg-paprika hover:bg-paprika/90 text-white font-semibold text-sm"
+          >
+            Back to books
+          </.link>
+        </div>
+
+      <% true -> %>
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+          <div class="order-2 lg:order-1 lg:col-span-3">
+            <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-2">
+              Matched recipe (editable) — Save to keep, Skip to pass
+            </p>
+            <.live_component
+              module={MehungryWeb.RecipeFormComponent}
+              uploads={@uploads}
+              id="recipe-form"
+              ingredients={@ingredients}
+              recipe={@recipe}
+              measurement_units={@measurement_units}
+              f={@f}
+              search_language={@current_language}
+              current_user_id={@current_user.id}
+              spoonacular_unmatched={[]}
+              stacked={true}
+            />
+          </div>
+          <div class="order-1 lg:order-2 lg:col-span-2 lg:sticky lg:top-4">
+            <ImportReviewComponents.ingredient_reference
+              overview={@ingredient_overview}
+              steps={@source_steps}
+            />
+          </div>
+        </div>
+    <% end %>
+  </div>
+</div>

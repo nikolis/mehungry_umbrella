@@ -101,6 +101,80 @@ defmodule Mehungry.Food.IngredientSearch do
     |> Enum.map(fn i -> %{id: i.id, name: i.name} end)
   end
 
+  # Partial/processed forms to drop when the query didn't ask for them, so e.g.
+  # "eggs" resolves to "Eggs, whole, raw" rather than "egg white, dried".
+  @partial_indicators ~w(yolk white albumen powder dried dehydrated freeze extract concentrate)
+
+  @doc """
+  Searches, then applies the name-relevance ranking + filtering used to turn a
+  plain ingredient name into one confident DB match (the AI recipe agent and the
+  Spoonacular importer share this). In order it:
+
+    1. `search/3` — ranked prefix + fuzzy fallback.
+    2. `rerank_by_name/2` — floats candidates whose first word matches the query.
+    3. `filter_by_name_relevance/2` — drops incidental secondary-ingredient hits.
+    4. `reject_partial_variants/2` — drops yolk/white/powder/… unless asked for.
+
+  Returns the filtered, reranked list of `%Ingredient{}` (possibly empty). Use
+  `best_match/3` when you only want the single top result.
+  """
+  def search_relevant(search_term, classes \\ [], owner_id \\ nil) do
+    search(search_term, classes, owner_id)
+    |> rerank_by_name(search_term)
+    |> filter_by_name_relevance(search_term)
+    |> reject_partial_variants(search_term)
+  end
+
+  @doc """
+  The single best relevance-filtered match for `search_term`, or `nil` when
+  nothing clears the relevance bar. See `search_relevant/3`.
+  """
+  def best_match(search_term, classes \\ [], owner_id \\ nil) do
+    search_relevant(search_term, classes, owner_id) |> List.first()
+  end
+
+  # Floats to top any candidate whose first word closely matches the search term,
+  # preventing e.g. "Fish herring eggs" outranking "Eggs, whole, raw".
+  @doc false
+  def rerank_by_name(results, search_term) do
+    query_first = search_term |> String.downcase() |> String.split(~r/[\s,]+/) |> List.first("")
+
+    Enum.sort_by(results, fn ing ->
+      ing_first = ing.name |> String.downcase() |> String.split(~r/[\s,]+/) |> List.first("")
+      -String.jaro_distance(ing_first, query_first)
+    end)
+  end
+
+  # Requires at least one search word to closely match the candidate's first word,
+  # filtering incidental secondary-ingredient matches.
+  @doc false
+  def filter_by_name_relevance(ingredients, search_term, threshold \\ 0.6) do
+    search_words =
+      search_term |> String.downcase() |> String.split(~r/[\s,]+/) |> Enum.reject(&(&1 == ""))
+
+    Enum.filter(ingredients, fn ing ->
+      candidate_first =
+        ing.name |> String.downcase() |> String.split(~r/[\s,]+/) |> List.first("")
+
+      Enum.any?(search_words, &(String.jaro_distance(&1, candidate_first) >= threshold))
+    end)
+  end
+
+  # Drops partial/processed forms (yolk, white, powder…) when the search term
+  # doesn't ask for them, so e.g. "eggs" resolves to "Eggs, whole, raw".
+  @doc false
+  def reject_partial_variants(ingredients, search_term) do
+    search_lower = String.downcase(search_term)
+
+    Enum.reject(ingredients, fn ing ->
+      ing_lower = String.downcase(ing.name)
+
+      Enum.any?(@partial_indicators, fn indicator ->
+        String.contains?(ing_lower, indicator) and not String.contains?(search_lower, indicator)
+      end)
+    end)
+  end
+
   @doc """
   Searches ingredient names via their translations for the given language code.
   Returns `%{id: ingredient_id, name: translated_name}` maps so the result is

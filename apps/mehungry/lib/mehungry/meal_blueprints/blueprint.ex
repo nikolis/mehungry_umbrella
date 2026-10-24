@@ -65,6 +65,11 @@ defmodule Mehungry.MealBlueprints.Blueprint do
 
     has_many(:plans, Mehungry.MealBlueprints.BlueprintPlan)
 
+    # Per-language translations of `name`/`description`, authored in the
+    # professional translation hub and applied at read-time by
+    # `MealBlueprints.localize_blueprints/2`.
+    has_many(:translations, Mehungry.MealBlueprints.BlueprintTranslation)
+
     has_many(:days, BlueprintDay,
       foreign_key: :blueprint_id,
       preload_order: [asc: :day_index],

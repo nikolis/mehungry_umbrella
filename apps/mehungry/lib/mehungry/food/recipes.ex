@@ -446,6 +446,24 @@ defmodule Mehungry.Food.Recipes do
     Repo.aggregate(Recipe, :count)
   end
 
+  @doc "Counts recipes carrying the given provenance `source` (e.g. \"myplate\")."
+  def count_recipes_by_source(source) when is_binary(source) do
+    Repo.aggregate(from(r in Recipe, where: r.source == ^source), :count)
+  end
+
+  @doc "All recipe ids with the given provenance `source`."
+  def recipe_ids_by_source(source) when is_binary(source) do
+    Repo.all(from r in Recipe, where: r.source == ^source, select: r.id)
+  end
+
+  @doc """
+  Group-deletes every recipe with the given provenance `source` (and all their
+  references), via `delete_recipes_by_ids/1`. Returns `{:ok, count}`.
+  """
+  def delete_recipes_by_source(source) when is_binary(source) do
+    source |> recipe_ids_by_source() |> delete_recipes_by_ids()
+  end
+
   def count_recipes_missing_embeddings do
     Repo.aggregate(from(r in Recipe, where: is_nil(r.embedding)), :count)
   end
@@ -719,7 +737,10 @@ defmodule Mehungry.Food.Recipes do
         |> Mehungry.RecipePutNutrientsWorker.new()
         |> Oban.insert()
 
-        if attrs["image_url"] in [nil, ""] do
+        # Accept either key form: form/AI callers pass string keys, the
+        # Spoonacular importer builds atom-keyed attrs. A string-only lookup
+        # missed an imported image_url and queued a needless AI cover image.
+        if (attrs["image_url"] || attrs[:image_url]) in [nil, ""] do
           %{recipe_id: recipe.id}
           |> Mehungry.RecipeImageWorker.new()
           |> Oban.insert()

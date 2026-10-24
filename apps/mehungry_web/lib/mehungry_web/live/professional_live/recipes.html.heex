@@ -57,6 +57,104 @@
         <.icon name="hero-hashtag" class="w-4 h-4" />
         {if @hashtag_running, do: "Reconciling…", else: "Reconcile hashtags"}
       </button>
+      <.link
+        navigate={~p"/professional/myplate-review"}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-teal-700 hover:bg-teal-600 text-white font-semibold text-sm transition-colors"
+      >
+        <.icon name="hero-clipboard-document-check" class="w-4 h-4" /> Review MyPlate imports
+      </.link>
+      <button
+        type="button"
+        phx-click="delete_myplate_recipes"
+        disabled={@myplate_count == 0}
+        data-confirm={"Delete all #{@myplate_count} MyPlate-imported recipe(s) and their references? This cannot be undone."}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-800 hover:bg-red-700 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <.icon name="hero-trash" class="w-4 h-4" /> Delete MyPlate imports ({@myplate_count})
+      </button>
+      <.link
+        navigate={~p"/professional/gutenberg-review"}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-700 hover:bg-indigo-600 text-white font-semibold text-sm transition-colors"
+      >
+        <.icon name="hero-book-open" class="w-4 h-4" /> Review Gutenberg imports
+      </.link>
+      <button
+        type="button"
+        phx-click="delete_gutenberg_recipes"
+        disabled={@gutenberg_count == 0}
+        data-confirm={"Delete all #{@gutenberg_count} Gutenberg-imported recipe(s) and their references? This cannot be undone."}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-800 hover:bg-red-700 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <.icon name="hero-trash" class="w-4 h-4" /> Delete Gutenberg imports ({@gutenberg_count})
+      </button>
+      <.link
+        navigate={~p"/professional/unitools-review"}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-sky-700 hover:bg-sky-600 text-white font-semibold text-sm transition-colors"
+      >
+        <.icon name="hero-globe-alt" class="w-4 h-4" /> Review UniTools imports
+      </.link>
+      <button
+        type="button"
+        phx-click="delete_unitools_recipes"
+        disabled={@unitools_count == 0}
+        data-confirm={"Delete all #{@unitools_count} UniTools-imported recipe(s) and their references? This cannot be undone."}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-800 hover:bg-red-700 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <.icon name="hero-trash" class="w-4 h-4" /> Delete UniTools imports ({@unitools_count})
+      </button>
+    </div>
+  </div>
+
+  <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim mb-1">
+          Recipe image provider
+        </p>
+        <p class="text-sm text-white">
+          Active: <span class="font-semibold">{provider_label(@image_provider)}</span>
+          <span class="text-parchment-dim">
+            — applies to every new AI-generated cover, across all machines.
+          </span>
+        </p>
+        <%= if @image_provider == :flux and not @bfl_configured do %>
+          <p class="text-xs text-amber-300 mt-1">
+            ⚠ BFL_KEY is not set on the server — FLUX generation will fail until the key is configured.
+          </p>
+        <% end %>
+      </div>
+      <div class="inline-flex rounded-full border border-ink-panel2 overflow-hidden">
+        <button
+          type="button"
+          phx-click="set_image_provider"
+          phx-value-provider="openai"
+          disabled={@image_provider == :openai}
+          class={[
+            "px-4 py-2 text-sm font-semibold transition-colors",
+            if(@image_provider == :openai,
+              do: "bg-emerald-700 text-white cursor-default",
+              else: "bg-transparent text-parchment-dim hover:bg-ink-panel2"
+            )
+          ]}
+        >
+          gpt-image-2
+        </button>
+        <button
+          type="button"
+          phx-click="set_image_provider"
+          phx-value-provider="flux"
+          disabled={@image_provider == :flux}
+          class={[
+            "px-4 py-2 text-sm font-semibold transition-colors",
+            if(@image_provider == :flux,
+              do: "bg-emerald-700 text-white cursor-default",
+              else: "bg-transparent text-parchment-dim hover:bg-ink-panel2"
+            )
+          ]}
+        >
+          FLUX 2 pro
+        </button>
+      </div>
     </div>
   </div>
 
