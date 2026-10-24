@@ -607,17 +607,12 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
   @impl true
   def handle_event("add_diet_patterns", _params, socket) do
     user = socket.assigns.user
-    # Instantiate any diet-pattern blueprint the user doesn't already own (safe to
-    # click repeatedly). The blueprints are self-contained — no backing condition.
-    {:ok, created} = DietPatterns.create_missing_for_user(user.id)
+    # Re-seed: instantiate any missing diet pattern AND refresh unedited copies to
+    # the latest template, leaving user-edited copies alone (safe to click
+    # repeatedly). The blueprints are self-contained — no backing condition.
+    {:ok, tally} = DietPatterns.sync_for_user(user.id)
 
-    flash =
-      case created do
-        0 -> "You already have all the starter diet patterns."
-        n -> "Added #{n} starter diet-pattern blueprint#{if n == 1, do: "", else: "s"}."
-      end
-
-    {:noreply, socket |> put_flash(:info, flash) |> reload_blueprints()}
+    {:noreply, socket |> put_flash(:info, DietPatterns.sync_summary(tally)) |> reload_blueprints()}
   end
 
   @impl true

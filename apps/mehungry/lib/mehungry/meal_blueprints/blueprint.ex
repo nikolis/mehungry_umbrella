@@ -41,6 +41,15 @@ defmodule Mehungry.MealBlueprints.Blueprint do
     # like Low-FODMAP); mirrors `preferred_foods`.
     field(:avoid_foods, {:array, :string}, default: [])
 
+    # Provenance for blueprints seeded from a `MealBlueprints.DietPatterns`
+    # template (nil on hand-made blueprints). `seeded_pattern_key` is the template
+    # key ("mediterranean"); `seed_signature` is the content hash captured at seed
+    # time so `DietPatterns.sync_for_user/1` can overwrite an unedited copy with a
+    # newer template while leaving user-edited copies alone. A nil `seed_signature`
+    # means "never auto-refresh" (see DietPatterns).
+    field(:seeded_pattern_key, :string)
+    field(:seed_signature, :string)
+
     # Populated by list queries for card display; not persisted.
     field(:plans_count, :integer, virtual: true)
 
@@ -149,7 +158,9 @@ defmodule Mehungry.MealBlueprints.Blueprint do
       :required_nutrient_pcts,
       :avoid_nutrient_pcts,
       :required_nutrient_modes,
-      :avoid_nutrient_modes | @tag_fields
+      :avoid_nutrient_modes,
+      :seeded_pattern_key,
+      :seed_signature | @tag_fields
     ])
     |> validate_required([:name, :user_id])
     |> validate_length(:name, max: 120)

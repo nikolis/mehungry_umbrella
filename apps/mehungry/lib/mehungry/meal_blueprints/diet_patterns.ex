@@ -11,10 +11,16 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
   `create_blueprint/1` attrs from a descriptor; `create_for_user/2` and
   `create_missing_for_user/1` instantiate them into a user's account.
 
-  The nutritionist blueprint library (and the admin "Seed diet patterns" button on
-  `/professional/health`) call `create_missing_for_user/1`. Everything is driven
-  off `all/0`, so adding a new pattern here surfaces it in every button
-  automatically.
+  The nutritionist blueprint library and the user's blueprint page (the "Seed /
+  add diet patterns" buttons) call **`sync_for_user/1`**, the re-seed path: it
+  creates missing patterns *and* refreshes copies the user hasn't edited to the
+  latest template, leaving edited copies alone. This works via two provenance
+  columns stamped at seed time — `seeded_pattern_key` (the join back to the
+  template) and `seed_signature` (a content hash; current content ≠ signature ⇒
+  user-edited ⇒ skip). Legacy copies seeded before provenance existed are matched
+  by name, adopted (key set, signature left nil), and never auto-overwritten.
+  Everything is driven off `all/0`, so adding a new pattern here surfaces it in
+  every button automatically.
 
   Patterns take one of two shapes, chosen so they stay meaningful against the data
   we actually have (macro splits + food lists always apply; nutrient tags resolve
@@ -93,16 +99,22 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
 
   def attrs_for(key, user_id) when key in @keys, do: attrs_for(get(key), user_id)
 
-  @doc "Instantiates a diet pattern into `user_id`'s account."
+  @doc """
+  Instantiates a diet pattern into `user_id`'s account, stamping it with seed
+  provenance (`seeded_pattern_key` + `seed_signature`) so `sync_for_user/1` can
+  later refresh it in place while leaving user edits alone.
+  """
   def create_for_user(user_id, key) when key in @keys do
-    key
-    |> attrs_for(user_id)
+    user_id
+    |> seeded_attrs_for(key)
     |> MealBlueprints.create_blueprint()
   end
 
   @doc """
   Instantiates every diet pattern the user doesn't already own (matched by name),
   so the button is safe to click repeatedly. Returns `{:ok, created_count}`.
+
+  Prefer `sync_for_user/1`, which additionally refreshes unedited copies.
   """
   def create_missing_for_user(user_id) do
     existing = user_id |> MealBlueprints.list_blueprints_for_user() |> MapSet.new(& &1.name)
@@ -113,6 +125,120 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
       end
 
     {:ok, Enum.count(created, &match?({:ok, _}, &1))}
+  end
+
+  @doc """
+  Re-seeds the diet patterns for `user_id`, the "click again" path:
+
+    * **missing** patterns → created;
+    * patterns already present and **unedited since seeding** → overwritten with
+      the latest template (so changes to a pattern's definition propagate);
+    * patterns the user has **edited** → left untouched;
+    * **legacy** copies (instantiated before provenance existed, matched by name)
+      → adopted (`seeded_pattern_key` set) but never auto-refreshed, since we
+      can't prove they're unedited.
+
+  "Unedited" means the blueprint's current content hashes to the
+  `seed_signature` captured when it was last seeded. Returns
+  `{:ok, %{created:, refreshed:, skipped:, adopted:}}`.
+  """
+  def sync_for_user(user_id) do
+    existing = MealBlueprints.list_blueprints_for_sync(user_id)
+    by_key = Map.new(seeded(existing), &{&1.seeded_pattern_key, &1})
+    by_name = Map.new(existing, &{&1.name, &1})
+
+    tally =
+      Enum.reduce(all(), %{created: 0, refreshed: 0, skipped: 0, adopted: 0}, fn descriptor, acc ->
+        key = Atom.to_string(descriptor.key)
+
+        cond do
+          tracked = Map.get(by_key, key) ->
+            sync_tracked(tracked, descriptor, user_id, acc)
+
+          legacy = unseeded_name_match(by_name, descriptor.name) ->
+            {:ok, _} = MealBlueprints.set_blueprint_provenance(legacy, key, nil)
+            bump(acc, :adopted)
+
+          true ->
+            {:ok, _} = create_for_user(user_id, descriptor.key)
+            bump(acc, :created)
+        end
+      end)
+
+    {:ok, tally}
+  end
+
+  @doc """
+  A one-line human summary of a `sync_for_user/1` tally, for a flash message.
+  """
+  def sync_summary(%{created: created, refreshed: refreshed}) do
+    parts =
+      []
+      |> maybe_part(created, "added #{created}")
+      |> maybe_part(refreshed, "refreshed #{refreshed}")
+      |> Enum.reverse()
+
+    case parts do
+      [] -> "Diet patterns are already up to date."
+      _ -> "Diet patterns synced — " <> Enum.join(parts, ", ") <> "."
+    end
+  end
+
+  defp maybe_part(parts, 0, _text), do: parts
+  defp maybe_part(parts, _n, text), do: [text | parts]
+
+  # Refresh a key-tracked copy. Overwrite only when (a) it still matches its seed
+  # signature — i.e. the user hasn't edited it — AND (b) the template has actually
+  # changed since it was seeded. A nil signature (adopted legacy) is never
+  # refreshed; an edited or already-up-to-date copy is skipped.
+  defp sync_tracked(blueprint, descriptor, user_id, acc) do
+    attrs = attrs_for(descriptor.key, user_id)
+    template_signature = content_signature_from_attrs(attrs)
+
+    cond do
+      is_nil(blueprint.seed_signature) ->
+        bump(acc, :skipped)
+
+      content_signature_from_blueprint(blueprint) != blueprint.seed_signature ->
+        # User-edited since seeding — leave it alone.
+        bump(acc, :skipped)
+
+      template_signature == blueprint.seed_signature ->
+        # Unedited and already on the latest template — nothing to do.
+        bump(acc, :skipped)
+
+      true ->
+        stamped =
+          Map.merge(attrs, %{
+            seeded_pattern_key: Atom.to_string(descriptor.key),
+            seed_signature: template_signature
+          })
+
+        {:ok, _} = MealBlueprints.update_blueprint(blueprint, stamped)
+        bump(acc, :refreshed)
+    end
+  end
+
+  defp seeded(blueprints), do: Enum.filter(blueprints, &(&1.seeded_pattern_key not in [nil, ""]))
+
+  defp unseeded_name_match(by_name, name) do
+    case Map.get(by_name, name) do
+      %{seeded_pattern_key: k} = bp when k in [nil, ""] -> bp
+      _ -> nil
+    end
+  end
+
+  defp bump(acc, key), do: Map.update!(acc, key, &(&1 + 1))
+
+  # Template attrs plus the provenance stamp (key + content signature of those
+  # exact attrs), so a freshly-seeded blueprint reloads to the same signature.
+  defp seeded_attrs_for(user_id, key) do
+    attrs = attrs_for(key, user_id)
+
+    Map.merge(attrs, %{
+      seeded_pattern_key: Atom.to_string(key),
+      seed_signature: content_signature_from_attrs(attrs)
+    })
   end
 
   # ── descriptor construction ──────────────────────────────────────────────
@@ -952,6 +1078,106 @@ defmodule Mehungry.MealBlueprints.DietPatterns do
       %{day_index: day_index, meals: meals}
     end
   end
+
+  # ── content signature (edit detection for sync_for_user/1) ─────────────────
+
+  @doc """
+  Content hash of a template's `attrs_for/2` output, with the schema defaults a
+  created blueprint carries applied (visibility "private", empty pct/mode maps,
+  nil notes/calorie targets) so an unedited seeded copy hashes identically via
+  `content_signature_from_blueprint/1`.
+  """
+  def content_signature_from_attrs(attrs) do
+    signature(%{
+      name: Map.get(attrs, :name),
+      description: Map.get(attrs, :description),
+      visibility: Map.get(attrs, :visibility, "private"),
+      required_nutrients: Map.get(attrs, :required_nutrients, []),
+      avoid_nutrients: Map.get(attrs, :avoid_nutrients, []),
+      required_compounds: Map.get(attrs, :required_compounds, []),
+      avoid_compounds: Map.get(attrs, :avoid_compounds, []),
+      preferred_foods: Map.get(attrs, :preferred_foods, []),
+      avoid_foods: Map.get(attrs, :avoid_foods, []),
+      required_nutrient_pcts: Map.get(attrs, :required_nutrient_pcts, %{}),
+      avoid_nutrient_pcts: Map.get(attrs, :avoid_nutrient_pcts, %{}),
+      required_nutrient_modes: Map.get(attrs, :required_nutrient_modes, %{}),
+      avoid_nutrient_modes: Map.get(attrs, :avoid_nutrient_modes, %{}),
+      days: Map.get(attrs, :days, [])
+    })
+  end
+
+  @doc """
+  Content hash of a loaded blueprint (its `days: :meals` tree must be preloaded).
+  Equal to the stored `seed_signature` exactly when the user hasn't edited the
+  copy since it was seeded.
+  """
+  def content_signature_from_blueprint(blueprint) do
+    signature(%{
+      name: blueprint.name,
+      description: blueprint.description,
+      visibility: blueprint.visibility || "private",
+      required_nutrients: blueprint.required_nutrients || [],
+      avoid_nutrients: blueprint.avoid_nutrients || [],
+      required_compounds: blueprint.required_compounds || [],
+      avoid_compounds: blueprint.avoid_compounds || [],
+      preferred_foods: blueprint.preferred_foods || [],
+      avoid_foods: blueprint.avoid_foods || [],
+      required_nutrient_pcts: blueprint.required_nutrient_pcts || %{},
+      avoid_nutrient_pcts: blueprint.avoid_nutrient_pcts || %{},
+      required_nutrient_modes: blueprint.required_nutrient_modes || %{},
+      avoid_nutrient_modes: blueprint.avoid_nutrient_modes || %{},
+      days: blueprint.days || []
+    })
+  end
+
+  defp signature(content) do
+    canonical = [
+      content.name,
+      content.description,
+      content.visibility,
+      Enum.sort(content.required_nutrients),
+      Enum.sort(content.avoid_nutrients),
+      Enum.sort(content.required_compounds),
+      Enum.sort(content.avoid_compounds),
+      Enum.sort(content.preferred_foods),
+      Enum.sort(content.avoid_foods),
+      canon_map(content.required_nutrient_pcts),
+      canon_map(content.avoid_nutrient_pcts),
+      canon_map(content.required_nutrient_modes),
+      canon_map(content.avoid_nutrient_modes),
+      canon_days(content.days)
+    ]
+
+    :crypto.hash(:sha256, :erlang.term_to_binary(canonical)) |> Base.encode16(case: :lower)
+  end
+
+  defp canon_map(m) when is_map(m), do: m |> Map.to_list() |> Enum.sort()
+  defp canon_map(_), do: []
+
+  defp canon_days(days) when is_list(days) do
+    days
+    |> Enum.map(fn d ->
+      {field(d, :day_index), field(d, :total_calorie_target), canon_meals(field(d, :meals))}
+    end)
+    |> Enum.sort()
+  end
+
+  defp canon_days(_), do: []
+
+  defp canon_meals(meals) when is_list(meals) do
+    meals
+    |> Enum.map(fn m ->
+      {field(m, :meal_type), field(m, :protein_pct), field(m, :carbs_pct), field(m, :fats_pct),
+       field(m, :note)}
+    end)
+    |> Enum.sort()
+  end
+
+  defp canon_meals(_), do: []
+
+  # Reads a field from either a template map (atom keys, some absent) or a loaded
+  # Ecto struct; absent keys default to nil so both representations align.
+  defp field(x, key), do: Map.get(x, key)
 
   defp harvard_med_ref do
     %{

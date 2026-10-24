@@ -125,17 +125,11 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
   @impl true
   def handle_event("seed_diet_patterns", _params, socket) do
-    {:ok, created} = DietPatterns.create_missing_for_user(socket.assigns.current_user.id)
-
-    flash =
-      case created do
-        0 -> "You already have all the starter diet-pattern blueprints."
-        n -> "Added #{n} starter diet-pattern blueprint#{if n == 1, do: "", else: "s"}."
-      end
+    {:ok, tally} = DietPatterns.sync_for_user(socket.assigns.current_user.id)
 
     {:noreply,
      socket
-     |> put_flash(:info, flash)
+     |> put_flash(:info, DietPatterns.sync_summary(tally))
      |> load()}
   end
 

@@ -167,4 +167,105 @@ defmodule Mehungry.MealBlueprints.DietPatternsTest do
       assert names == Enum.sort(@expected_names)
     end
   end
+
+  describe "seed signature" do
+    test "a freshly-seeded blueprint reloads to the same signature it was stamped with" do
+      user = user_fixture()
+      {:ok, bp} = DietPatterns.create_for_user(user.id, :mediterranean)
+
+      assert bp.seeded_pattern_key == "mediterranean"
+      assert is_binary(bp.seed_signature)
+
+      reloaded = MealBlueprints.get_blueprint!(user.id, bp.id)
+
+      # The invariant the whole sync rests on: the attrs-side signature stamped at
+      # seed time equals the blueprint-side signature computed after reload.
+      assert DietPatterns.content_signature_from_blueprint(reloaded) == bp.seed_signature
+    end
+  end
+
+  describe "sync_for_user/1" do
+    test "creates all patterns the first time" do
+      user = user_fixture()
+      assert {:ok, %{created: 21, refreshed: 0, skipped: 0, adopted: 0}} =
+               DietPatterns.sync_for_user(user.id)
+    end
+
+    test "a second sync with no template change is a no-op (all skipped, no duplicates)" do
+      user = user_fixture()
+      {:ok, _} = DietPatterns.sync_for_user(user.id)
+
+      assert {:ok, %{created: 0, refreshed: 0, skipped: 21, adopted: 0}} =
+               DietPatterns.sync_for_user(user.id)
+
+      assert length(MealBlueprints.list_blueprints_for_user(user.id)) == 21
+    end
+
+    test "refreshes an unedited copy whose template has changed since seeding" do
+      user = user_fixture()
+      {:ok, bp} = DietPatterns.create_for_user(user.id, :mediterranean)
+
+      # Simulate "template changed since this was seeded": rewrite the copy's
+      # description to a stale value and re-stamp its seed_signature to match that
+      # stale content — so it reads as *unedited relative to its (stale) seed*,
+      # while the live template now differs.
+      loaded = MealBlueprints.get_blueprint!(user.id, bp.id)
+      {:ok, stale} = MealBlueprints.update_blueprint(loaded, %{description: "STALE"})
+      stale = MealBlueprints.get_blueprint!(user.id, stale.id)
+      {:ok, _} =
+        MealBlueprints.set_blueprint_provenance(
+          stale,
+          "mediterranean",
+          DietPatterns.content_signature_from_blueprint(stale)
+        )
+
+      assert {:ok, %{refreshed: refreshed}} = DietPatterns.sync_for_user(user.id)
+      assert refreshed >= 1
+
+      refreshed_bp = MealBlueprints.get_blueprint!(user.id, bp.id)
+      assert refreshed_bp.description == DietPatterns.get(:mediterranean).description
+    end
+
+    test "leaves a user-edited copy untouched" do
+      user = user_fixture()
+      {:ok, bp} = DietPatterns.create_for_user(user.id, :mediterranean)
+
+      # Edit the copy WITHOUT re-stamping the signature → current content now
+      # diverges from seed_signature, marking it user-edited.
+      loaded = MealBlueprints.get_blueprint!(user.id, bp.id)
+      {:ok, _} = MealBlueprints.update_blueprint(loaded, %{description: "my notes"})
+
+      {:ok, tally} = DietPatterns.sync_for_user(user.id)
+      assert tally.refreshed == 0
+
+      kept = MealBlueprints.get_blueprint!(user.id, bp.id)
+      assert kept.description == "my notes"
+    end
+
+    test "adopts a legacy name-matched copy (no provenance) without creating a duplicate" do
+      user = user_fixture()
+
+      # A blueprint created the old way: pattern content + name, but no provenance.
+      {:ok, legacy} =
+        DietPatterns.attrs_for(:vegan, user.id) |> MealBlueprints.create_blueprint()
+
+      assert is_nil(legacy.seeded_pattern_key)
+
+      {:ok, tally} = DietPatterns.sync_for_user(user.id)
+
+      # The one existing Vegan is adopted (not duplicated); the other 20 created.
+      assert tally.adopted == 1
+      assert tally.created == 20
+
+      vegans =
+        user.id
+        |> MealBlueprints.list_blueprints_for_user()
+        |> Enum.filter(&(&1.name == "Vegan Diet"))
+
+      assert length(vegans) == 1
+      assert hd(vegans).seeded_pattern_key == "vegan"
+      # Adopted with a nil signature → never auto-refreshed.
+      assert is_nil(hd(vegans).seed_signature)
+    end
+  end
 end

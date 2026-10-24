@@ -23,6 +23,26 @@ defmodule Mehungry.MealBlueprints do
   end
 
   @doc """
+  A user's blueprints with their full day/meal tree preloaded — the read behind
+  `MealBlueprints.DietPatterns.sync_for_user/1`, which needs the content to
+  compute each copy's edit signature.
+  """
+  def list_blueprints_for_sync(user_id) do
+    Repo.all(from(b in Blueprint, where: b.user_id == ^user_id, preload: [days: :meals]))
+  end
+
+  @doc """
+  Sets only the seed-provenance columns (`seeded_pattern_key`, `seed_signature`)
+  on a blueprint, bypassing content validation — used to adopt a legacy
+  name-matched copy without touching its content. See `DietPatterns`.
+  """
+  def set_blueprint_provenance(%Blueprint{} = blueprint, pattern_key, seed_signature) do
+    blueprint
+    |> Ecto.Changeset.change(%{seeded_pattern_key: pattern_key, seed_signature: seed_signature})
+    |> Repo.update()
+  end
+
+  @doc """
   Fetches one blueprint owned by `user_id`, with its full day/meal tree loaded
   and meals ordered by the canonical slot order (string sort ≠ display order).
 
