@@ -23,6 +23,7 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorker do
     "get_recent_meals" => "Checking recent meal history…",
     "get_ratings" => "Reviewing meal ratings…",
     "search_recipes" => "Searching recipe catalog…",
+    "search_ingredients" => "Finding whole-food snacks…",
     "submit_plan" => "Validating and creating meal plan…"
   }
 
