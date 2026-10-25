@@ -13,6 +13,13 @@ defmodule MehungryWeb.SessionMetricsTest do
   alias Mehungry.Meta
 
   test "mounting a public LiveView counts an anonymous session on disconnect", %{conn: conn} do
+    # The aggregator's DB write is disabled by default in the suite (see
+    # config/test.exs, which stops stray cross-test pollution); this test asserts
+    # the end-to-end path, so turn it on just here and restore it after.
+    prev = Application.get_env(:mehungry, :session_metrics_recording)
+    Application.put_env(:mehungry, :session_metrics_recording, true)
+    on_exit(fn -> Application.put_env(:mehungry, :session_metrics_recording, prev) end)
+
     before = Meta.session_metrics_today().sessions
 
     # Trap exits so the view (and its LiveViewTest proxy) dying doesn't take the
