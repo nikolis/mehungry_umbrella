@@ -1383,10 +1383,7 @@ defmodule MehungryWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <div
-      class="text-right text-xs font-small leading-6 text-rose-600 phx-no-feedback:hidden "
-      style="position: absolute; bottom: -0.4rem; right: 0.5rem;"
-    >
+    <div class="input-error text-right text-xs font-small leading-6 text-rose-600 phx-no-feedback:hidden ">
       {render_slot(@inner_block)}
     </div>
     """

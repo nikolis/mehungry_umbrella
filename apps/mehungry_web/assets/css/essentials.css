@@ -206,6 +206,17 @@ select {
   position: relative;
 }
 
+/* Field validation error. Floats below-right of the input on desktop so it
+   doesn't take layout space; on narrow screens it flows in normal document
+   order instead — otherwise a long, wrapping message anchored to the bottom
+   of a short field grows upward and covers the input (can't tap/edit it). */
+.input-error {
+  position: absolute;
+  bottom: -0.4rem;
+  right: 0.5rem;
+  max-width: 100%;
+}
+
 
 #my_modal-content{
 	margin-inline: auto;
@@ -408,6 +419,14 @@ span.flatpickr-weekday {
 @media only screen and (max-width: 760px) {
 	.input-form{
 		font-size:  calc(1vw + 0.7vh );
+	}
+	.input-error {
+		position: static;
+		bottom: auto;
+		right: auto;
+		text-align: left;
+		line-height: 1.2;
+		margin-top: 0.15rem;
 	}
 	.fields-row-container3{
 		gap: 0;
