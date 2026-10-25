@@ -4,11 +4,13 @@ defmodule MehungryWeb.ProfessionalLive.MeasurementUnits do
   alias Mehungry.Food
   alias Mehungry.Food.MeasurementUnit
   alias Mehungry.Food.MeasurementUnitReconciliationRuns
+  alias Mehungry.Food.IngredientPortionGenerationRuns
 
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Mehungry.PubSub, MeasurementUnitReconciliationRuns.topic())
+      Phoenix.PubSub.subscribe(Mehungry.PubSub, IngredientPortionGenerationRuns.topic())
     end
 
     socket =
@@ -16,6 +18,8 @@ defmodule MehungryWeb.ProfessionalLive.MeasurementUnits do
       |> assign(:numeric_count, Food.count_numeric_named_measurement_units())
       |> assign(:junk_count, Food.count_junk_measurement_units())
       |> assign(:reconcile_run, MeasurementUnitReconciliationRuns.latest_run())
+      |> assign(:ingredient_count, Food.count_ingredients())
+      |> assign(:portion_run, IngredientPortionGenerationRuns.latest_run())
       |> stream(:measurement_units, Food.list_measurement_units())
 
     {:ok, socket}
@@ -89,6 +93,16 @@ defmodule MehungryWeb.ProfessionalLive.MeasurementUnits do
   end
 
   @impl true
+  def handle_event("generate_portions", _params, socket) do
+    run = Food.start_ingredient_portion_generation_run()
+
+    {:noreply,
+     socket
+     |> assign(:portion_run, run)
+     |> put_flash(:info, "Queued #{run.total} ingredient(s) for derived-portion generation.")}
+  end
+
+  @impl true
   def handle_info(
         {MehungryWeb.ProfessionalLive.MeasurementUnitLive.FormComponent, {:saved, unit}},
         socket
@@ -115,8 +129,30 @@ defmodule MehungryWeb.ProfessionalLive.MeasurementUnits do
     {:noreply, socket}
   end
 
+  # Live progress broadcast by IngredientPortionGenerationRuns as jobs finish.
+  @impl true
+  def handle_info({:ingredient_portion_generation_run, run}, socket) do
+    {:noreply, assign(socket, :portion_run, run)}
+  end
+
   def reconcile_running?(%{status: "processing"}), do: true
   def reconcile_running?(_), do: false
+
+  def portion_run_running?(%{status: "processing"}), do: true
+  def portion_run_running?(_), do: false
+
+  def portion_run_percent(%{total: total} = run) when is_integer(total) and total > 0 do
+    round((run.completed + run.failed) / total * 100)
+  end
+
+  def portion_run_percent(_), do: 0
+
+  def portion_run_remaining(%{total: total, completed: completed, failed: failed})
+      when is_integer(total) do
+    max(total - completed - failed, 0)
+  end
+
+  def portion_run_remaining(_), do: 0
 
   def reconcile_percent(%{total: total} = run) when is_integer(total) and total > 0 do
     round((run.completed + run.failed) / total * 100)

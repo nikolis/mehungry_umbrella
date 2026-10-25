@@ -118,6 +118,7 @@ defmodule Mehungry.Food do
   defdelegate get_ingredient(id), to: Ingredients
   defdelegate find_ri_allias(rec_in, lang_id), to: Ingredients
   defdelegate list_ingredients(), to: Ingredients
+  defdelegate count_ingredients(), to: Ingredients
   defdelegate list_ingredients_paginated(), to: Ingredients
   defdelegate list_ingredients_paginated(query_or_cursor), to: Ingredients
   defdelegate list_ingredients_paginated(cursor_after, query), to: Ingredients
@@ -236,6 +237,9 @@ defmodule Mehungry.Food do
   defdelegate start_measurement_unit_reconciliation_run(),
     to: Measurements,
     as: :start_reconciliation_run
+
+  defdelegate generate_portions_for_ingredient(ingredient_id), to: Measurements
+  defdelegate start_ingredient_portion_generation_run(), to: Measurements
 
   # ── Categories ─────────────────────────────────────────────────────────
 

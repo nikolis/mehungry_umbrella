@@ -95,6 +95,39 @@ defmodule MehungryWeb.ProfessionalLive.MeasurementUnitsTest do
     assert Food.get_measurement_unit!(gram.id) != nil
   end
 
+  test "generate derived portions button enqueues a run and renders the progress card",
+       %{conn: conn, cup: cup} do
+    # An ingredient with a cup=240 g anchor so volume portions can be derived.
+    ingredient = ingredient_fixture(%{name: "flour"})
+
+    {:ok, _} =
+      Food.create_ingredient_portion(%{
+        ingredient_id: ingredient.id,
+        measurement_unit_id: cup.id,
+        gram_weight: 240.0,
+        amount: 1.0
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/professional/measurement_units")
+
+    html =
+      view
+      |> element("button", "Generate derived portions")
+      |> render_click()
+
+    # A run was opened and the progress card is rendered.
+    assert html =~ "Derived-portion generation"
+    assert Mehungry.Food.IngredientPortionGenerationRuns.latest_run() != nil
+
+    # Drain the enqueued jobs; the sweep materializes the derived portions.
+    Oban.drain_queue(queue: :portion_generation)
+
+    portions = Food.get_measurement_unit_portions_for_ingredient(ingredient.id)
+    unit_names = Enum.map(portions, & &1.measurement_unit.name)
+    assert "kg" in unit_names
+    assert Enum.any?(portions, fn p -> p.measurement_unit.name == "cup" end)
+  end
+
   test "non-admin is redirected away", %{} do
     conn = build_conn()
     user = user_fixture(%{email: "notadmin@example.com"})

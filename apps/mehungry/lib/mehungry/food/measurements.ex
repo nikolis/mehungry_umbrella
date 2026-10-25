@@ -11,12 +11,15 @@ defmodule Mehungry.Food.Measurements do
 
   alias Mehungry.Food.{
     Category,
+    Ingredient,
     IngredientPortion,
     MeasurementUnit,
     MeasurementUnitTranslation,
+    PortionConversion,
     RecipeIngredient
   }
 
+  alias Mehungry.Food.IngredientPortionGenerationRuns
   alias Mehungry.Food.Localization
   alias Mehungry.Languages.Language
 
@@ -521,6 +524,126 @@ defmodule Mehungry.Food.Measurements do
     Enum.each(ids, fn id ->
       %{measurement_unit_id: id, run_id: run.id}
       |> Mehungry.ObanWorkers.MeasurementUnitReconciliationWorker.new()
+      |> Oban.insert()
+    end)
+
+    run
+  end
+
+  # ── Derived-portion generation ─────────────────────────────────────────────
+  #
+  # Materializes the metric + common-recipe portions a user would want to log an
+  # ingredient with (see `Mehungry.Food.PortionConversion`): mass units from an
+  # ingredient-independent constant, volume units from the ingredient's density
+  # (derived from any one existing volume portion). Idempotent — a target portion
+  # that already exists is left untouched — so the whole sweep is re-runnable.
+
+  @doc """
+  Creates the missing derived portions (`PortionConversion.target_mass/0` +
+  `target_volume/0`) for one ingredient and returns the number of new
+  `IngredientPortion` rows created. Mass portions always synthesize; volume
+  portions only when the ingredient has a volume portion to anchor density on
+  (otherwise they are skipped). Safe to call repeatedly.
+  """
+  def generate_portions_for_ingredient(ingredient_id) do
+    mass_created =
+      Enum.reduce(PortionConversion.target_mass(), 0, fn token, acc ->
+        acc + ensure_derived_portion(ingredient_id, token, PortionConversion.mass_grams_per_unit(token))
+      end)
+
+    volume_created =
+      case PortionConversion.grams_per_ml(ingredient_id) do
+        :none ->
+          0
+
+        {:ok, grams_per_ml} ->
+          Enum.reduce(PortionConversion.target_volume(), 0, fn token, acc ->
+            gram_weight = grams_per_ml * PortionConversion.volume_ml_per_unit(token)
+            acc + ensure_derived_portion(ingredient_id, token, gram_weight)
+          end)
+      end
+
+    mass_created + volume_created
+  end
+
+  # Creates a `(ingredient, target-unit)` portion at `amount: 1.0` unless one
+  # already exists. Returns 1 if created, 0 if skipped or on a bad gram weight.
+  defp ensure_derived_portion(_ingredient_id, _token, gram_weight)
+       when not is_number(gram_weight) or gram_weight <= 0.0,
+       do: 0
+
+  defp ensure_derived_portion(ingredient_id, token, gram_weight) do
+    unit = resolve_target_unit(token)
+
+    cond do
+      is_nil(unit) ->
+        0
+
+      derived_portion_exists?(ingredient_id, unit.id) ->
+        0
+
+      true ->
+        {:ok, _} =
+          %IngredientPortion{}
+          |> IngredientPortion.changeset(%{
+            ingredient_id: ingredient_id,
+            measurement_unit_id: unit.id,
+            gram_weight: gram_weight,
+            amount: 1.0
+          })
+          |> Repo.insert()
+
+        1
+    end
+  end
+
+  defp derived_portion_exists?(ingredient_id, unit_id) do
+    from(ip in IngredientPortion,
+      where: ip.ingredient_id == ^ingredient_id and ip.measurement_unit_id == ^unit_id
+    )
+    |> Repo.exists?()
+  end
+
+  # Finds the single canonical `MeasurementUnit` for a target token, reusing any
+  # existing row whose name is an alias spelling (so "teaspoon"/"l" are reused
+  # rather than minting "tsp"/"liter" duplicates); mints the canonical name only
+  # when none exists. Lowest id wins so the choice is stable across runs.
+  defp resolve_target_unit(token) do
+    names = PortionConversion.alias_names_for(token)
+
+    existing =
+      from(mu in MeasurementUnit,
+        where: fragment("lower(btrim(?))", mu.name) in ^names,
+        order_by: [asc: mu.id],
+        limit: 1
+      )
+      |> Repo.one()
+
+    case existing do
+      %MeasurementUnit{} = unit ->
+        unit
+
+      nil ->
+        case create_measurement_unit(%{name: token}) do
+          {:ok, unit} -> unit
+          # Lost a race / name taken — re-fetch the canonical row.
+          {:error, _} -> Repo.get_by(MeasurementUnit, name: token)
+        end
+    end
+  end
+
+  @doc """
+  Opens an `IngredientPortionGenerationRun` and enqueues one
+  `IngredientPortionGenerationWorker` per ingredient (each carrying the
+  `run_id`). Returns the run.
+  """
+  def start_ingredient_portion_generation_run do
+    ids = from(i in Ingredient, select: i.id) |> Repo.all()
+    run = IngredientPortionGenerationRuns.start_run(length(ids))
+
+    Enum.each(ids, fn id ->
+      %{ingredient_id: id, run_id: run.id}
+      |> Mehungry.ObanWorkers.IngredientPortionGenerationWorker.new()
       |> Oban.insert()
     end)
 

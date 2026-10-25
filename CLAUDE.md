@@ -153,9 +153,12 @@ mailers:             3 concurrent  — appointment emails/ICS (AppointmentMailer
 imports:             1 concurrent  — literature crawl, PubTator annotation, candidate derivation, compound-fact plausibility audit
 seed_imports:        1 concurrent  — USDA S3 seed-file imports (SeedFileImportWorker) only
 hashtag_reconcile:   1 concurrent  — admin hashtag reconciliation sweep (HashtagReconciliationWorker), one job per recipe
+portion_generation:  1 concurrent  — admin derived-portion generation sweep (IngredientPortionGenerationWorker), one job per ingredient
 ```
 
-Total concurrency is capped at **12 job slots** so background jobs fit within the DB pool (`POOL_SIZE` 18 in prod) with headroom for web/LiveView/Presence — this closes the connection-pool starvation confirmed in prod (`queue_time` spiking to ~10s). See `oban_production_diagnostics.md`.
+Total concurrency is capped at **13 job slots** so background jobs fit within the DB pool (`POOL_SIZE` 18 in prod) with headroom for web/LiveView/Presence — this closes the connection-pool starvation confirmed in prod (`queue_time` spiking to ~10s). See `oban_production_diagnostics.md`.
+
+`IngredientPortionGenerationWorker` runs the admin-triggered "Generate derived portions" sweep from `/professional/measurement_units` (one durable `ingredient_portion_generation_runs` row per batch, live progress via PubSub — the Oban-UI-connected pattern). It calls `Food.generate_portions_for_ingredient/1`, which idempotently materializes metric + common-recipe portions: mass units (`kg`) from an ingredient-independent constant and volume units (`ml`/`l`/`tsp`/`tbsp`/`cup`) from the ingredient's density (derived from any one existing volume portion). Conversion constants + the density anchor live in `Mehungry.Food.PortionConversion` (shared with the `ReconcileRecipeIngredientPortions` sweep).
 
 `HashtagReconciliationWorker` runs the admin-triggered "Reconcile hashtags" sweep from `/professional/recipes` (one durable `hashtag_reconciliations` row per recipe, live progress via PubSub — the Oban-UI-connected pattern). It calls `Food.ensure_recipe_hashtags/1`, the shared additive routine that also runs on every recipe create/update. See `docs/hashtags.md`.
 
