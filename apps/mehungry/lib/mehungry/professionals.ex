@@ -2,6 +2,7 @@ defmodule Mehungry.Professionals do
   import Ecto.Query
   alias Mehungry.Repo
   alias Mehungry.Accounts
+  alias Mehungry.Accounts.User
 
   alias Mehungry.Professionals.{
     ProfessionalProfile,
@@ -151,18 +152,37 @@ defmodule Mehungry.Professionals do
   @doc "Send an invitation from a professional to a user identified by email."
   def invite_client(professional_id, client_email, message \\ nil) do
     case Accounts.get_user_by_email(client_email) do
-      nil ->
+      nil -> {:error, :client_not_found}
+      client -> invite_client_by_id(professional_id, client.id, message)
+    end
+  end
+
+  @doc """
+  Send an invitation from a professional directly to a registered user by id.
+
+  This is the primary path behind the search-and-pick invite UI, so a
+  professional can reach users they couldn't name by email — e.g. Facebook/Google
+  logins whose only email is a synthetic `*@facebook.user` placeholder. The
+  email-based `invite_client/3` resolves the address and delegates here.
+  """
+  def invite_client_by_id(professional_id, client_id, message \\ nil)
+      when is_integer(client_id) do
+    cond do
+      client_id == professional_id ->
+        {:error, :self_invite}
+
+      is_nil(Repo.get(User, client_id)) ->
         {:error, :client_not_found}
 
-      client ->
+      true ->
         existing =
-          Repo.get_by(TutorInvitation, professional_id: professional_id, client_id: client.id)
+          Repo.get_by(TutorInvitation, professional_id: professional_id, client_id: client_id)
 
         cond do
           not is_nil(existing) and existing.status == "pending" ->
             {:error, :already_invited}
 
-          not is_nil(existing) and existing.status == "accepted" ->
+          already_client?(professional_id, client_id) ->
             {:error, :already_client}
 
           not is_nil(existing) ->
@@ -174,13 +194,100 @@ defmodule Mehungry.Professionals do
             %TutorInvitation{}
             |> TutorInvitation.changeset(%{
               professional_id: professional_id,
-              client_id: client.id,
+              client_id: client_id,
               message: message
             })
             |> Repo.insert()
         end
     end
   end
+
+  defp already_client?(professional_id, client_id) do
+    Repo.exists?(
+      from a in TutorClientAssignment,
+        where: a.professional_id == ^professional_id and a.client_id == ^client_id
+    )
+  end
+
+  @doc """
+  Searches registered users a professional can invite, matching on display name,
+  profile alias, or exact email. This is the way to find users the email box
+  can't reach (OAuth logins without a usable email, since there is no username).
+
+  Deliberately includes users whose only email is a synthetic provider
+  placeholder (e.g. `*@facebook.user`) — they are real, invitable logins and the
+  whole reason this path exists, since they can't be reached by email. Excludes
+  only the professional themselves and managed, unclaimed placeholder accounts
+  (`managed_by_professional_id` set — login-less stand-ins that can't accept).
+  Each result is a `%{user: user, status: :invitable | :invited | :client}` map
+  so the UI can label people already invited or already a client. Requires at
+  least 2 chars; returns `[]` otherwise.
+
+  Options: `:limit` (default 10).
+  """
+  def search_invitable_users(professional_id, query, opts \\ []) when is_binary(query) do
+    trimmed = String.trim(query)
+
+    if String.length(trimmed) < 2 do
+      []
+    else
+      limit = Keyword.get(opts, :limit, 10)
+      like = "%#{escape_like(trimmed)}%"
+
+      users =
+        Repo.all(
+          from u in User,
+            left_join: p in assoc(u, :user_profile),
+            where: u.id != ^professional_id,
+            where: is_nil(u.managed_by_professional_id),
+            where: ilike(u.name, ^like) or ilike(p.alias, ^like) or u.email == ^trimmed,
+            order_by: [asc: u.name],
+            limit: ^limit,
+            preload: [user_profile: p]
+        )
+
+      annotate_invite_status(professional_id, users)
+    end
+  end
+
+  defp annotate_invite_status(_professional_id, []), do: []
+
+  defp annotate_invite_status(professional_id, users) do
+    ids = Enum.map(users, & &1.id)
+
+    invited =
+      MapSet.new(
+        Repo.all(
+          from i in TutorInvitation,
+            where:
+              i.professional_id == ^professional_id and i.client_id in ^ids and
+                i.status == "pending",
+            select: i.client_id
+        )
+      )
+
+    clients =
+      MapSet.new(
+        Repo.all(
+          from a in TutorClientAssignment,
+            where: a.professional_id == ^professional_id and a.client_id in ^ids,
+            select: a.client_id
+        )
+      )
+
+    Enum.map(users, fn u ->
+      status =
+        cond do
+          MapSet.member?(clients, u.id) -> :client
+          MapSet.member?(invited, u.id) -> :invited
+          true -> :invitable
+        end
+
+      %{user: u, status: status}
+    end)
+  end
+
+  defp escape_like(value), do: String.replace(value, ~r/([\\%_])/, "\\\\\\1")
 
   def get_invitation(id), do: Repo.get(TutorInvitation, id)
 
