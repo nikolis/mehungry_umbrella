@@ -471,7 +471,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                inference is low-signal/occasionally misleading because it keys on
                each ingredient's per-100g nutrient density rather than the amount
                actually used in the dish (and ignores iron type, dose ratios, meal
-               timing). See docs/food/nutrient_interactions.md for the full
+               timing). See docs/implementation/food/nutrient_interactions.md for the full
                write-up and accuracy assessment. @interactions is forced to [] in
                maybe_load_recipe_async/3 so nothing renders and no query runs;
                un-comment this block and restore the query to re-enable. --%>
@@ -705,7 +705,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       # "Nutrition Insights" (nutrient-interaction panel) is HIDDEN for now — its
       # recipe-level inference is low-signal/occasionally misleading (it keys on
       # per-100g ingredient density, not the amount actually used). See
-      # docs/food/nutrient_interactions.md. Return [] so the panel renders nothing
+      # docs/implementation/food/nutrient_interactions.md. Return [] so the panel renders nothing
       # and we skip the DB query; to re-enable, restore the call below and un-hide
       # the render block (search "Nutrition Insights").
       #   Food.get_interactions_for_ingredients(ingredient_ids)

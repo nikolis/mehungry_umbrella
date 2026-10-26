@@ -11,7 +11,7 @@ defmodule MehungryWeb.Api.DocsController do
   Covers two surfaces: the static-token **Public API** (`GET /api/foundemental_foods`)
   and the per-user **Mobile API** (`/api/v1/**`, tag `mobile`). The mobile paths are
   summarized here; the full request/response contract lives in
-  `docs/new_dec_specs/mobile_api_spec.md`.
+  `docs/implementation/new_dec_specs/mobile_api_spec.md`.
   """
   use MehungryWeb, :controller
 
@@ -71,7 +71,7 @@ defmodule MehungryWeb.Api.DocsController do
       security: [%{bearerAuth: []}],
       tags: [
         %{name: "public", description: "Static-token system-integration API."},
-        %{name: "mobile", description: "Per-user mobile API (/api/v1). See docs/new_dec_specs/mobile_api_spec.md."}
+        %{name: "mobile", description: "Per-user mobile API (/api/v1). See docs/implementation/new_dec_specs/mobile_api_spec.md."}
       ],
       paths: Map.merge(public_paths(), v1_paths())
     }

@@ -831,7 +831,7 @@ defmodule MehungryWeb.CoreComponents do
   A design-system action control for the warm `ink`/`paprika`/`basil` surfaces
   (nutritionist panel, profile, and the rest of the customer app).
 
-  Encodes the two rules from `docs/infrastructure/design_system.md`: exactly one
+  Encodes the two rules from `docs/implementation/infrastructure/design_system.md`: exactly one
   `:primary` (solid paprika) action per screen; everything else is a quiet
   `:secondary` (outline), `:ghost` (text), or `:danger` (muted red) control.
   `basil` is reserved for data and is deliberately never a button color here.

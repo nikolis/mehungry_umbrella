@@ -159,7 +159,7 @@ defmodule MehungryWeb.AuthController do
 
   # Fire the GA4 `sign_up` key event for OAuth, but only for a genuinely new
   # account (`:created`) — a returning Facebook/Google login must not count as a
-  # signup. Uses the controller flash seam (see docs/infrastructure/google_analytics.md);
+  # signup. Uses the controller flash seam (see docs/implementation/infrastructure/google_analytics.md);
   # must be piped after `log_in_user` since that renews (clears) the session.
   defp maybe_track_signup(conn, :created, provider) do
     put_flash(

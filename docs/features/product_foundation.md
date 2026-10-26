@@ -7,8 +7,8 @@ out of date; reconcile the two, don't let them drift.
 
 > **Status:** living. Current positioning set by the **2026-10-26 nutritionist-led
 > repositioning** (see [§ How we got here](#how-we-got-here)). This is the *intended* product,
-> not the measured one — for traction reality read [`app_status.md`](app_status.md), for the
-> current tactical plan read [`growth_plan.md`](growth_plan.md).
+> not the measured one — for traction reality read [`app_status.md`](../implementation/app_status.md), for the
+> current tactical plan read [`growth_plan.md`](../growth/growth_plan.md).
 
 ---
 
@@ -44,7 +44,7 @@ one workspace — and makes the nutrition math **exact** (see [the differentiato
 
 The strategic order matters: **win the nutritionist, and their clients come with them.** That
 is also the cold-start fix — we do not try to spark a consumer social graph from zero (it's been
-tried; it's dead — [`app_status.md` §3](app_status.md)).
+tried; it's dead — [`app_status.md` §3](../implementation/app_status.md)).
 
 ## Positioning — one audience, two acts
 
@@ -64,7 +64,7 @@ the **full 168-nutrient profile per serving — calculated, not estimated.** Thi
   to put their name on a plan. "Exact, not estimated" is a claim generic calorie trackers
   cannot honestly make.
 - It is the one surface already earning organic search (Greek nutrient lookups on `/foods` —
-  [`seo.md`](seo.md)). We keep `/foods` as the public **proof engine** behind the pro pitch; we
+  [`seo.md`](../growth/seo.md)). We keep `/foods` as the public **proof engine** behind the pro pitch; we
   do **not** delete the consumer side.
 
 ## Principles / non-negotiables
@@ -80,7 +80,7 @@ the **full 168-nutrient profile per serving — calculated, not estimated.** Thi
 4. **Stay inside the YMYL line.** We do **not** publish condition-specific dietary advice to the
    public — condition pages are nutritionist-gated and off the sitemap until the product
    formally qualifies as a regulated health-information service. See `CLAUDE.md` (Health
-   context) and [`seo.md`](seo.md). Advice reaches a client **through their nutritionist**, not
+   context) and [`seo.md`](../growth/seo.md). Advice reaches a client **through their nutritionist**, not
    from an anonymous page.
 5. **Reuse, never duplicate the calc.** One domain function per computation, shared across
    LiveView + REST, so nutrition totals can't silently diverge (see the REST↔LiveView parity
@@ -134,9 +134,9 @@ Three tiers, enforced by `Mehungry.Subscriptions` (owner email bypasses quotas).
 
 ## Related docs
 
-- [`app_status.md`](app_status.md) — measured traction (the honest denominator this doc's
+- [`app_status.md`](../implementation/app_status.md) — measured traction (the honest denominator this doc's
   *intent* is tested against).
-- [`growth_plan.md`](growth_plan.md) — the current time-boxed tactical plan. *(Note: predates the
+- [`growth_plan.md`](../growth/growth_plan.md) — the current time-boxed tactical plan. *(Note: predates the
   nutritionist pivot; reconcile when next revised.)*
 - [`professionals/professional_profiles.md`](professionals/professional_profiles.md) — the
   nutritionist profile + public directory + the nutritionist-led marketing landing.

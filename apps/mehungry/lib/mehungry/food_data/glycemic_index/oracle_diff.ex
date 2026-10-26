@@ -3,7 +3,7 @@ defmodule Mehungry.FoodData.GlycemicIndex.OracleDiff do
   **Internal verification oracle — diff half.** Compares the GI values we *re-derived*
   from primary literature (path B) against the *published* values parsed out of the
   International Tables PDF by `PdfReferenceParser` (see
-  `docs/science/glycemic_index_licensing.md`). Pure — takes both datasets as arguments,
+  `docs/implementation/science/glycemic_index_licensing.md`). Pure — takes both datasets as arguments,
   so it's testable without a DB or a PDF; `mix gi.diff` wires the real sources in.
 
   The compilation is used here **only as a measuring stick** — never a source. For each

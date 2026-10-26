@@ -1,8 +1,8 @@
 # Growth Plan — Oct 17 → Nov 14, 2026
 
-**Baseline source:** [docs/app_status.md](app_status.md) (snapshot 2026-10-17)
+**Baseline source:** [docs/app_status.md](../implementation/app_status.md) (snapshot 2026-10-17)
 **Cadence:** review every Friday against the weekly sprint; append the Week-4 retro here and a
-new row to [app_status.md §6](app_status.md#6-snapshot-log).
+new row to [app_status.md §6](../implementation/app_status.md#6-snapshot-log).
 
 **Thesis:** At ~4 signups/mo with a 98%-Greece, Crete-heavy audience and near-zero
 engagement, the win is un-scalable founder work — manually recruit + activate the first
@@ -16,7 +16,7 @@ signup→confirm leak and activation *before* scaling acquisition.
 
 | # | Metric | Baseline | Target | Floor | Measured by |
 |---|---|---:|---:|---:|---|
-| 1 | New registered users /month | 4 | 30 | 20 | `users_new_30d` ([§5.1](app_status.md#51-current-queries-while-the-visits-table-still-exists--pre-deploy)) |
+| 1 | New registered users /month | 4 | 30 | 20 | `users_new_30d` ([§5.1](../implementation/app_status.md#51-current-queries-while-the-visits-table-still-exists--pre-deploy)) |
 | 2 | Confirmation rate on this month's signups | 33% | ≥55% | 45% | confirmed ÷ new (`users`) |
 | 3 | Activation: % of new signups w/ ≥1 real action (save / meal-plan / follow) in 7d | ~0% | ≥40% | 30% | join `users`→`user_recipes`/`meal_plans`/`user_follows` |
 | 4 | User-created weekly meal plans (non-owner) | 0 | ≥5 | 3 | `meal_plans_total` |
@@ -43,7 +43,7 @@ signup→confirm leak and activation *before* scaling acquisition.
 - Ship + dogfood the weekly-program share; add the "Made with m3hungry" referral footer so
   every shared plan links back.
 - Baseline post-deploy metrics: confirm `daily_session_metrics` is filling; capture the GA4
-  28-day baseline ([§5.3](app_status.md#53-ga4-pull-by-hand)).
+  28-day baseline ([§5.3](../implementation/app_status.md#53-ga4-pull-by-hand)).
 - Personally invite ~10 from your network; watch them activate.
 
 ### Week 2 (Oct 24–30) — Hyperlocal launch (Crete offline + Greek communities)
@@ -80,8 +80,8 @@ signup→confirm leak and activation *before* scaling acquisition.
 
 - Personally message stalled signups ("what stopped you?") — reactivation + qualitative data.
 - Post the AI recipe social-graphics from the week's best recipes to IG/Pinterest/FB.
-- Run [§5.1](app_status.md#51-current-queries-while-the-visits-table-still-exists--pre-deploy)/[§5.2](app_status.md#52-post-deploy-queries-after-the-analytics-removal-branch-ships)
-  queries + GA4, append the [app_status.md §6](app_status.md#6-snapshot-log) snapshot row,
+- Run [§5.1](../implementation/app_status.md#51-current-queries-while-the-visits-table-still-exists--pre-deploy)/[§5.2](../implementation/app_status.md#52-post-deploy-queries-after-the-analytics-removal-branch-ships)
+  queries + GA4, append the [app_status.md §6](../implementation/app_status.md#6-snapshot-log) snapshot row,
   write a 5-line retro (best activated-user cost per channel; kill/2× decisions).
 
 ---

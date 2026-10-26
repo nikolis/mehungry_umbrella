@@ -46,7 +46,7 @@ defmodule Mehungry.Literature.Entrez do
   # studies (`scientific_name × "glycemic index"`), independent of the copyrighted
   # International Tables. These terms carry no `compound_id` — the local-AI service
   # extracts the GI value from the discovered papers (see
-  # docs/science/glycemic_index_licensing.md). Kept separate from @generic_keywords so
+  # docs/implementation/science/glycemic_index_licensing.md). Kept separate from @generic_keywords so
   # GI discovery is easy to reason about and toggle.
   @glycemic_keywords ["glycemic index"]
 

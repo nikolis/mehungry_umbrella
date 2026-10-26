@@ -81,11 +81,15 @@ Booking/ICS flow: [`professionals/appointments_booking.md`](professionals/appoin
   requests send an email + `.ics` invite.
 - **Payouts** — Stripe Connect onboarding from the profile editor (authorize /
   capture lifecycle, 5% platform fee, `professional_payments` ledger). See
-  [`payments/nutritionist_payments_stripe_connect.md`](payments/nutritionist_payments_stripe_connect.md).
+  [`payments/nutritionist_payments_stripe_connect.md`](../implementation/professionals/payments/nutritionist_payments_stripe_connect.md).
 - **Health conditions** — `/nutritionist/conditions` (`live_session
   :nutritionist_conditions`): condition→compound dietary-advice pages, mounted
   **only** inside the gated panel. Deliberately **not** public (YMYL boundary —
   see `product_foundation.md` principle 4 and `CLAUDE.md` Health context).
+  **Unlinked from the nutritionist sidebar** — the "Health" nav item was removed
+  as a half-baked feature. The routes still resolve by direct URL but are no
+  longer surfaced in navigation until the feature is finished; restore it by
+  re-adding the `nutritionist_link` in `layout_view.ex` (`nutritionist_sidebar/1`).
 
 ## 3. Do the busywork (AI leverage)
 
@@ -115,7 +119,7 @@ Booking/ICS flow: [`professionals/appointments_booking.md`](professionals/appoin
 | `/nutritionist/appointments` | `NutritionistLive.AppointmentCalendar` | bookings |
 | `/nutritionist/articles[...]` | `NutritionistLive.{Articles,ArticleEditor}` | authoring |
 | `/nutritionist/blueprints[...]` | `MealBlueprintLive.{Index,Editor}` | meal-plan templates |
-| `/nutritionist/conditions[...]` | `HealthLive`, `ConditionDetailLive` | gated condition advice |
+| `/nutritionist/conditions[...]` | `HealthLive`, `ConditionDetailLive` | gated condition advice — **unlinked from nav** (half-baked) |
 | `/nutritionists`, `/nutritionists/:slug` | `PublicNutritionistLive.{Index,Show}` | public directory + profile |
 | `/nutritionists/:slug/articles/:article_slug` | `PublicNutritionistLive.Article` | public article |
 | `/upgrade` | `UpgradeLive.Index` | become Pro |
@@ -131,5 +135,5 @@ assignments, appointments, ratings, articles, client records).
 - [`professionals/appointments_booking.md`](professionals/appointments_booking.md) — booking + ICS.
 - [`professionals/articles.md`](professionals/articles.md) — scientific articles.
 - [`professionals/client_records.md`](professionals/client_records.md) — client records / dietary history.
-- [`payments/nutritionist_payments_stripe_connect.md`](payments/nutritionist_payments_stripe_connect.md) — payouts.
+- [`payments/nutritionist_payments_stripe_connect.md`](../implementation/professionals/payments/nutritionist_payments_stripe_connect.md) — payouts.
 - [`subscriptions_billing.md`](subscriptions_billing.md) — tiers + quota enforcement.

@@ -12,7 +12,7 @@ defmodule Mehungry.Food.CompoundPlausibility do
 
   One JSON prompt via `AI.Client.request/1`, fence-strip + `Jason.decode`, mirroring
   `Mehungry.AI.TaxonomyClassifier`. Behind the `:compound_plausibility_judge` config
-  seam so tests stub it. See `docs/science/compound_candidates.md`.
+  seam so tests stub it. See `docs/implementation/science/compound_candidates.md`.
   """
 
   @behaviour Mehungry.Food.CompoundPlausibilityBehaviour

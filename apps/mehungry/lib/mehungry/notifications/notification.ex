@@ -9,7 +9,7 @@ defmodule Mehungry.Notifications.Notification do
   denormalized render bits (recipe title, comment preview) so the inbox needs no
   extra joins. `read_at` is nil until the recipient opens the inbox.
 
-  See `docs/notifications_system.md`.
+  See `docs/implementation/notifications_system.md`.
   """
   use Ecto.Schema
 

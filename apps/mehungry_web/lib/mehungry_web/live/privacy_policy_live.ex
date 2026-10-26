@@ -5,8 +5,7 @@ defmodule MehungryWeb.PrivacyPolicyLive do
   # the codebase (operator details filled: Nikolaos Galerakis, Greece). It should
   # still be reviewed by a qualified data-protection lawyer before being relied
   # upon in production, and the substantive risks (health claims, Art. 9 basis,
-  # erasure cascade) in docs/legal/legal_review_2026-10.md remain open.
-  # See also docs/audit/03-eu-compliance-risk-register.md.
+  # erasure cascade) in docs/implementation/legal/legal_review_2026-10.md remain open.
 
   @last_updated "13 October 2026"
 

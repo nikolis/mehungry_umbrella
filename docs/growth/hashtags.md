@@ -5,7 +5,7 @@ recipe, and where they get **read back out** (browse/search, post cards, SEO
 sitemap, social captions). Hashtags in this app are a recipe-only concept: there
 is no post-level or user-level hashtag.
 
-> The canonical schema card is [`entities/hashtag.md`](entities/hashtag.md). This
+> The canonical schema card is [`entities/hashtag.md`](../implementation/entities/hashtag.md). This
 > doc is the cross-cutting *usage* map.
 
 ## Data model
@@ -109,7 +109,7 @@ picks them up on insert:
   `RecipeAgent.hashtag_directive/1` and `persona_polish_hashtags/1` emit "leave the
   hashtags array empty — this voice does not use hashtags" for folksy personas
   (grandma, tavern) and only ask for tags when `uses_hashtags` is true. See
-  [`ai/ai_bot_personas.md`](ai/ai_bot_personas.md).
+  [`ai/ai_bot_personas.md`](../implementation/ai/ai_bot_personas.md).
 - Preview/struct-building code paths that don't persist tags set
   `recipe_hashtags: []` (`ai/bot.ex` ~104, `oban_workers/recipe_publish_worker.ex`
   ~65).

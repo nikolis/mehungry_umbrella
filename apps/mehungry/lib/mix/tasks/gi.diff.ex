@@ -6,7 +6,7 @@ defmodule Mix.Tasks.Gi.Diff do
   re-derived from primary literature (path B) against the *published* values parsed from
   a git-ignored International Tables PDF, reporting coverage + agreement with a tolerance
   band and a "divergence to investigate" bucket. See
-  `docs/science/glycemic_index_licensing.md`.
+  `docs/implementation/science/glycemic_index_licensing.md`.
 
       mix gi.diff                                    # oracle = studies/SupplementalTable1.pdf
       mix gi.diff studies/SupplementalTable2.pdf --table table2

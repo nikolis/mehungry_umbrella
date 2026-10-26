@@ -73,7 +73,7 @@ defmodule MehungryWeb.Router do
 
   # Mobile JSON API (per-user bearer tokens). `:api_v1` is for 🔓 endpoints that
   # optionally personalize for a logged-in caller; `:api_v1_auth` requires a
-  # valid token. See docs/new_dec_specs/mobile_api_spec.md.
+  # valid token. See docs/implementation/new_dec_specs/mobile_api_spec.md.
   pipeline :api_v1 do
     plug(:accepts, ["json"])
     plug(MehungryWeb.Api.MaybeApiAuthPlug)

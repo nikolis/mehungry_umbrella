@@ -12,7 +12,7 @@ defmodule Mehungry.Food.RecipeUtils do
   calendar widget uses to order a stored `recipe.nutrients` map for rendering.
   The old on-the-fly recomputation path (`get_nutrients/1`, `adjust_amount/4`,
   `calculate_nutrition_for_recipe_ingredient*/1`, …) was dead and has been
-  removed — see `docs/food/nutrition_calculation.md`.
+  removed — see `docs/implementation/food/nutrition_calculation.md`.
   """
 
   @doc """

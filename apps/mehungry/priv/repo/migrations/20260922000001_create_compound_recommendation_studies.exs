@@ -4,7 +4,7 @@ defmodule Mehungry.Repo.Migrations.CreateCompoundRecommendationStudies do
   # Frozen PubMed provenance for a promoted CompoundRecommendation: the reference
   # studies copied off the backing candidate at promotion time. Unlike the candidate
   # study links, these are never rewritten by re-derivation — they cite what the
-  # human actually validated. See docs/science/scientific_pipeline.md.
+  # human actually validated. See docs/implementation/science/scientific_pipeline.md.
   def change do
     create table(:compound_recommendation_studies) do
       add :recommendation_id,

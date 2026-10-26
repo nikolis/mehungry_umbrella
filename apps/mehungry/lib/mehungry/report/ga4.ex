@@ -1,7 +1,7 @@
 defmodule Mehungry.Report.GA4 do
   @moduledoc """
   Minimal read-only client for the Google Analytics Data API (GA4) `runReport`
-  endpoint — the §7.2 automation in `docs/app_status.md`.
+  endpoint — the §7.2 automation in `docs/implementation/app_status.md`.
 
   GA4 is otherwise unreadable from the codebase (the app only *sends* events via
   gtag). To enable this client, provision a Google service account with the

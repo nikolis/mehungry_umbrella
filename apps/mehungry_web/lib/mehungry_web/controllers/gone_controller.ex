@@ -7,7 +7,7 @@ defmodule MehungryWeb.GoneController do
   These were moved behind the nutritionist panel (`/nutritionist/conditions`) on
   2026-10-14 because condition-specific dietary advice makes the app a regulated
   medical device (EU MDR / YMYL) we can't publish publicly yet — see the notices
-  in `CLAUDE.md` (Health context) and `docs/seo.md`. They already 404; a 410 is
+  in `CLAUDE.md` (Health context) and `docs/growth/seo.md`. They already 404; a 410 is
   the explicit "permanently gone, drop it" signal (404 reads as possibly
   temporary, so Google re-checks it for longer).
   """

@@ -10,7 +10,7 @@ section links to the doc that covers it in depth.
 |---|---|---|---|
 | **Recipe generation** | A full validated recipe (ingredients, steps, prose) from a description | Create-recipe LiveView; `DailyRecipeGenerationWorker`; `RecipeOrderWorker` | [`ai_agents.md`](ai_agents.md) · [`ai_bot.md`](ai_bot.md) |
 | **Persona-voiced authoring** | Recipes written in a character's voice (grandma, tavern, dietologist) | `RecipeSetup` bound to a config/order | [`ai_bot_personas.md`](ai_bot_personas.md) |
-| **Social publishing pipeline** | Review-gated recipes fanned out to IG/FB/Pinterest | `/professional/ai-bot/**` | [`ai_bot.md`](ai_bot.md) · [`../social_publishing.md`](../social_publishing.md) |
+| **Social publishing pipeline** | Review-gated recipes fanned out to IG/FB/Pinterest | `/professional/ai-bot/**` | [`ai_bot.md`](ai_bot.md) · [`../social_publishing.md`](../../growth/social_publishing.md) |
 | **Meal-plan generation** | A 7-day plan drawn from the user's own recipe catalog | Calendar LiveView (`MealPlanAgent`) | [`meal_plan.md`](meal_plan.md) |
 | **Nutritionist plan drafting** | A 7-day plan a pro drafts *for a client*, with a rationale | `NutritionistAgentWorker` | [`ai_agents.md`](ai_agents.md) |
 | **Translation** | Recipe + ingredient/unit text in other languages (en/el) | `RecipeTranslator`, `IngredientTranslator` | [`ai_agents.md`](ai_agents.md) |
@@ -43,8 +43,8 @@ integration surface and blast radius):
 | **Food** | Ingredient search, recipe create/update, measurement units, `RecipeVectorSearch` | [`../food/food.md`](../food/food.md) |
 | **FoodData.Usda** | Real nutrition (`FdcClient`) when creating a missing ingredient, before AI-estimating | [`../food/food.md`](../food/food.md) |
 | **Health** | Encouraged/discouraged ingredients for condition-driven setups | [`../science/health_recommendations.md`](../science/health_recommendations.md) |
-| **Subscriptions** | Quota-gating user-facing generation (`check_quota/2` · `record_usage/2`) | [`../subscriptions_billing.md`](../subscriptions_billing.md) |
-| **Social** | Publishing generated recipes to IG/FB/Pinterest (`Publisher`, `Instagram`, `Pinterest`) | [`../social_publishing.md`](../social_publishing.md) |
+| **Subscriptions** | Quota-gating user-facing generation (`check_quota/2` · `record_usage/2`) | [`../subscriptions_billing.md`](../../features/subscriptions_billing.md) |
+| **Social** | Publishing generated recipes to IG/FB/Pinterest (`Publisher`, `Instagram`, `Pinterest`) | [`../social_publishing.md`](../../growth/social_publishing.md) |
 | **Accounts** | Bot users + `register_3rd_party_user/1` for new bot identities | [`../users/accounts.md`](../users/accounts.md) |
 | **Languages** | Translation targets and localized ingredient/unit display | [`../localization.md`](../localization.md) |
 | **Posts** | Creating the social `Post` that backs each generated recipe | — |
@@ -85,7 +85,7 @@ These hold across every AI feature (elaborated in
    review-gated too.
 7. **Quotas where it costs.** User-facing generation is gated by subscription tier
    (`Subscriptions.check_quota/2` before, `record_usage/2` after success) — see
-   [`../subscriptions_billing.md`](../subscriptions_billing.md).
+   [`../subscriptions_billing.md`](../../features/subscriptions_billing.md).
 8. **Real data over generated data.** USDA FDC lookups before AI-estimated nutrition,
    with the `data_source` tagged for audit.
 

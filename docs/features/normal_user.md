@@ -110,7 +110,7 @@ See [`subscriptions_billing.md`](subscriptions_billing.md).
 
 Full EN/EL localization: locale-prefixed URLs (`/en/…`·`/el/…`), Gettext UI
 strings, localized species/ingredient/nutrient names, hreflang/canonical for SEO.
-See [`localization.md`](localization.md). Language switch works anonymously.
+See [`localization.md`](../implementation/localization.md). Language switch works anonymously.
 
 ---
 
@@ -184,10 +184,10 @@ Grounded against the [foundation's principles and "what it is not"](product_foun
 
 - [`product_foundation.md`](product_foundation.md) — the source of truth this review
   traces back to (audience rings, principles, what-it-is-not).
-- [`app_status.md`](app_status.md) — measured consumer traction reality.
+- [`app_status.md`](../implementation/app_status.md) — measured consumer traction reality.
 - [`professionals/professional_profiles.md`](professionals/professional_profiles.md) —
   the nutritionist side the consumer funnels into.
 - [`subscriptions_billing.md`](subscriptions_billing.md) — the Free/Plus tiers and quota.
-- [`localization.md`](localization.md) — the EN/EL surface.
+- [`localization.md`](../implementation/localization.md) — the EN/EL surface.
 </content>
 </invoke>

@@ -109,7 +109,7 @@ defmodule Mehungry.Meta do
 
   @doc """
   All-time session-metrics summary — `%{sessions_total, first_day, last_day,
-  avg_seconds}` (the §5.2 "post-deploy" traffic query in `docs/app_status.md`,
+  avg_seconds}` (the §5.2 "post-deploy" traffic query in `docs/implementation/app_status.md`,
   the consent-independent denominator GA4 cannot see). Days with no sessions are
   simply absent; `first_day`/`last_day` are `nil` when the table is empty.
   """

@@ -287,7 +287,7 @@ defmodule Mehungry.Social.Pinterest do
   @analytics_metrics "IMPRESSION,SAVE,PIN_CLICK,OUTBOUND_CLICK,ENGAGEMENT"
 
   @doc """
-  User-account analytics (§7.4 of `docs/app_status.md`) over `[start_date, end_date]`
+  User-account analytics (§7.4 of `docs/implementation/app_status.md`) over `[start_date, end_date]`
   (both `Date`): impressions, saves, pin clicks, outbound clicks (= referral
   traffic Pinterest sends the site) and total engagements.
 

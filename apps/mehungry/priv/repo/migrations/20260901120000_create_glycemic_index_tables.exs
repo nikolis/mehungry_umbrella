@@ -1,7 +1,7 @@
 defmodule Mehungry.Repo.Migrations.CreateGlycemicIndexTables do
   use Ecto.Migration
 
-  # Path-B Glycemic Index pipeline (see docs/science/glycemic_index_licensing.md).
+  # Path-B Glycemic Index pipeline (see docs/implementation/science/glycemic_index_licensing.md).
   #
   # GI values are **re-derived from primary literature**, not ingested from the
   # copyrighted International Tables. The pipeline mirrors the compound-measurement

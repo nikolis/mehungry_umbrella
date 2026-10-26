@@ -4,7 +4,7 @@ defmodule Mehungry.Notifications do
 
   The database is the source of truth: the web layer persists a row here, then
   the live channel / OS push are best-effort deliveries of the *same* record
-  (see `MehungryWeb.Api.Broadcaster` and `docs/notifications_system.md`). This
+  (see `MehungryWeb.Api.Broadcaster` and `docs/implementation/notifications_system.md`). This
   context is web-agnostic — it never broadcasts.
 
   Two guards live in `create/3`:

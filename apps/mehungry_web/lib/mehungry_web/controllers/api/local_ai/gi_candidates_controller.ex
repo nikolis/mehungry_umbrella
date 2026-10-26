@@ -2,7 +2,7 @@ defmodule MehungryWeb.Api.LocalAi.GiCandidatesController do
   @moduledoc """
   Receives **Glycemic Index** findings the local-AI service extracted from a study's
   full text and persists them as review-gated candidates (path B — see
-  `docs/science/glycemic_index_licensing.md`). Each finding is fanned across the
+  `docs/implementation/science/glycemic_index_licensing.md`). Each finding is fanned across the
   `FoundementalFoodSpecies` the study links to (`Food.record_extracted_gi/3`), the
   domain association the local service is kept ignorant of. Nothing auto-promotes.
   """

@@ -37,7 +37,7 @@ value, or a phase schedule** we can only *gesture at* through the soft brief.
 > reliable for concrete singular English nouns, a **no-op** for collective words
 > (`grains`, `legumes`), and **blind across languages** and to hidden ingredients.
 > The full matrix of what it does/doesn't catch — and why — is documented in
-> [`../ai/meal_plan.md` → *What the avoid-foods filter matches against*](../ai/meal_plan.md#what-the-avoid-foods-filter-matches-against--and-its-blind-spots).
+> [`../ai/meal_plan.md` → *What the avoid-foods filter matches against*](../implementation/ai/meal_plan.md#what-the-avoid-foods-filter-matches-against--and-its-blind-spots).
 > This is *why* §4 concretizes category words into specific nouns.
 
 ### The structural gaps that hit many diets at once

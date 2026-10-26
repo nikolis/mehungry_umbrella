@@ -1,7 +1,7 @@
 defmodule MehungryWeb.RecipeBrowserNutrientFilterTest do
   @moduledoc """
   The crawlable nutrient-claim filter surface (`/search/nutrient/:slug`) on the
-  recipe browser — see `docs/food/nutrient_badges.md`.
+  recipe browser — see `docs/implementation/food/nutrient_badges.md`.
   """
   use MehungryWeb.ConnCase
 

@@ -94,4 +94,4 @@ Accounts modules directly.**
 
 - [`../entities/user.md`](../entities/user.md) — the User entity (schema, fields, relationships).
 - [`../infrastructure/security.md`](../infrastructure/security.md) — auth hardening, alias defense, CAPTCHA.
-- [`../subscriptions_billing.md`](../subscriptions_billing.md) — subscription tiers layered on accounts.
+- [`../subscriptions_billing.md`](../../features/subscriptions_billing.md) — subscription tiers layered on accounts.

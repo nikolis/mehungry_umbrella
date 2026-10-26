@@ -834,7 +834,7 @@ IO.puts("Seeded health conditions: #{inserted} new, #{total} total.")
 # the implicated food species resolve at read time (Health.species_for_condition/2).
 # Each guideline recommendation carries a structured `source_reference` so a
 # non-PubMed conclusion still cites a real, clickable source (the CompoundRecommendation
-# citation invariant — see docs/science/scientific_pipeline.md).
+# citation invariant — see docs/implementation/science/scientific_pipeline.md).
 health_seeds = [
   {"Kidney Stones", "renal", "Oxalate", "oxalate",
    %{

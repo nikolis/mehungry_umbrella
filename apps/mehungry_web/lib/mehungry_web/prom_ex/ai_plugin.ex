@@ -21,7 +21,7 @@ defmodule MehungryWeb.PromEx.AiPlugin do
     * `client_request_*` — Anthropic API latency, count, and token usage by
       `model` (cost tracking).
 
-  See `docs/infrastructure/observability.md` and `grafana/ai_agents_dashboard.json`.
+  See `docs/implementation/infrastructure/observability.md` and `grafana/ai_agents_dashboard.json`.
   """
 
   use PromEx.Plugin

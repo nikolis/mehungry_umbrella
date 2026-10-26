@@ -2,7 +2,7 @@ defmodule Mehungry.Food.GlycemicIndex do
   @moduledoc """
   **Path-B Glycemic Index pipeline** — GI values *re-derived from primary literature*,
   not ingested from the copyrighted International Tables (see
-  `docs/science/glycemic_index_licensing.md`).
+  `docs/implementation/science/glycemic_index_licensing.md`).
 
   Structurally the compound-measurement pipeline applied to GI:
 

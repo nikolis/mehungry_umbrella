@@ -7,7 +7,7 @@ LiveView admin surface, the domain/worker pipeline behind it, and a
 [review of known issues](#review--known-issues).
 
 Related docs: [`ai_bot_personas.md`](ai_bot_personas.md) (persona/setup/order
-domain model), [`social_publishing.md`](../social_publishing.md) (the publish
+domain model), [`social_publishing.md`](../../growth/social_publishing.md) (the publish
 fan-out). CLAUDE.md's "AI Bot Pipeline" section is the one-paragraph overview.
 
 ## Pipeline at a glance

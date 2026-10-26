@@ -16,7 +16,7 @@ defmodule MehungryWeb.PromEx do
 
       config :mehungry_web, MehungryWeb.PromEx, disabled: false
 
-  See `docs/infrastructure/observability.md`.
+  See `docs/implementation/infrastructure/observability.md`.
   """
 
   use PromEx, otp_app: :mehungry_web
@@ -74,7 +74,7 @@ defmodule MehungryWeb.PromEx do
       # the init event fires with nothing listening. With `$repo` empty, every
       # panel filters on `repo=""` and shows no data. Rewrite the variable at
       # upload time to source from the live query counter instead. See
-      # `docs/infrastructure/observability.md`.
+      # `docs/implementation/infrastructure/observability.md`.
       {:prom_ex, "ecto.json", apply_function: &__MODULE__.fix_ecto_repo_var/1},
       {:prom_ex, "oban.json"}
     ]

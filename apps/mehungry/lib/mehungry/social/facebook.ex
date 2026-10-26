@@ -110,7 +110,7 @@ defmodule Mehungry.Social.Facebook do
   ]
 
   @doc """
-  Page reach/engagement insights (§7.3 of `docs/app_status.md`) for every
+  Page reach/engagement insights (§7.3 of `docs/implementation/app_status.md`) for every
   Facebook Page stored on the user's `facebook_token`, using each Page's own
   access token. Returns `{:ok, [page_summary]}` with one map per page:
 

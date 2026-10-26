@@ -2,9 +2,8 @@
 
 > **Not legal advice.** This is an engineering-side review to get the user-facing
 > legal documents into a defensible shape and to flag what still needs a qualified
-> lawyer. It builds on the deeper analysis in
-> [`docs/audit/03-eu-compliance-risk-register.md`](../audit/03-eu-compliance-risk-register.md)
-> (R1–R14) and does not replace it.
+> lawyer. It built on a deeper EU compliance risk register (R1–R14) that has since
+> been removed from the repo, and does not replace a formal legal review.
 
 ## 1. What M3Hungry does with personal data (the surface being reviewed)
 

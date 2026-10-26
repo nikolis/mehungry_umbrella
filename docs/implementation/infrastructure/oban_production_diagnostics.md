@@ -43,10 +43,10 @@ three Ecto repo metrics side by side:
 
 | Screenshot | Window | `query_time` peak | `queue_time` peak | Reading |
 |---|---|---|---|---|
-| ![](docs/assets/oban_diagnostics/queue_time_01.png) `queue_time_01.png` | 10:06–10:08 | ~220 ms | **~9,500 ms** | DB fast, but queries wait ~9.5 s for a connection |
-| ![](docs/assets/oban_diagnostics/queue_time_02.png) `queue_time_02.png` | 10:32–10:34 | ~325 ms | **~9,500 ms** | same pattern, sustained |
-| ![](docs/assets/oban_diagnostics/queue_time_03.png) `queue_time_03.png` | 10:35–10:40 | ~10,000 ms | ~4,000–9,500 ms | execution *also* blows out to ~10 s under contention |
-| ![](docs/assets/oban_diagnostics/queue_time_04.png) `queue_time_04.png` | ~10:50 | ~10,500 ms | ~4,000–9,500 ms | worst case: total_time ≈ 10.5 s |
+| ![](../assets/oban_diagnostics/queue_time_01.png) `queue_time_01.png` | 10:06–10:08 | ~220 ms | **~9,500 ms** | DB fast, but queries wait ~9.5 s for a connection |
+| ![](../assets/oban_diagnostics/queue_time_02.png) `queue_time_02.png` | 10:32–10:34 | ~325 ms | **~9,500 ms** | same pattern, sustained |
+| ![](../assets/oban_diagnostics/queue_time_03.png) `queue_time_03.png` | 10:35–10:40 | ~10,000 ms | ~4,000–9,500 ms | execution *also* blows out to ~10 s under contention |
+| ![](../assets/oban_diagnostics/queue_time_04.png) `queue_time_04.png` | ~10:50 | ~10,500 ms | ~4,000–9,500 ms | worst case: total_time ≈ 10.5 s |
 
 ### Why this is a smoking gun for root cause #1
 

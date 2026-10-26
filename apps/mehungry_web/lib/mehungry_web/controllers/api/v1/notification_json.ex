@@ -1,7 +1,7 @@
 defmodule MehungryWeb.Api.V1.NotificationJSON do
   @moduledoc """
   Serializer for the notification contract shared by the REST inbox, the
-  `user:<id>` channel, and (Phase 2) OS push (spec §13, `docs/notifications_system.md` §4).
+  `user:<id>` channel, and (Phase 2) OS push (spec §13, `docs/implementation/notifications_system.md` §4).
 
   `render/1` expects a `%Mehungry.Notifications.Notification{}` with its `:actor`
   association loaded (or set to the known actor struct / nil).

@@ -7,7 +7,7 @@ defmodule MehungryWeb.Api.PushDispatch do
 
   **Presence-gated**: if the recipient currently has a live `user:<id>` socket
   (tracked by `MehungryWeb.UserChannel`), they already received the live
-  broadcast, so we skip the push entirely. See `docs/notifications_system.md` §7.
+  broadcast, so we skip the push entirely. See `docs/implementation/notifications_system.md` §7.
   """
 
   alias Mehungry.ObanWorkers.PushNotificationWorker

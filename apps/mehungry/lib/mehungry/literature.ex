@@ -1106,7 +1106,7 @@ defmodule Mehungry.Literature do
   @doc """
   Was this study discovered by the path-B Glycemic Index crawl term
   (`scientific_name × "glycemic index"`)? Signals the local-AI service to also run GI
-  extraction over its full text. See `docs/science/glycemic_index_licensing.md`.
+  extraction over its full text. See `docs/implementation/science/glycemic_index_licensing.md`.
   """
   def gi_discovered?(study_id) do
     Repo.exists?(

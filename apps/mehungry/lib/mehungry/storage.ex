@@ -8,7 +8,7 @@ defmodule Mehungry.Storage do
   Tests/rollback can hard-pin a module via `:storage_impl`. Keys are
   bucket-relative paths; the bucket lives in config.
 
-  See `docs/infrastructure/object_storage.md`.
+  See `docs/implementation/infrastructure/object_storage.md`.
   """
 
   alias Mehungry.Storage.{S3, Supabase}

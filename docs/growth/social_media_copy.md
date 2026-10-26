@@ -4,7 +4,7 @@
 [growth_plan.md](growth_plan.md) (the *why/when*) and [social_publishing.md](social_publishing.md)
 (the *how it ships*). Keep captions here so they're reusable and don't get re-invented per post.
 
-**Audience reminder (from [app_status.md](app_status.md)):** ~98% Greece, Crete-heavy →
+**Audience reminder (from [app_status.md](../implementation/app_status.md)):** ~98% Greece, Crete-heavy →
 **lead with the Greek version on Facebook** (the only live auto-publish channel today; Instagram
 & Pinterest are disabled — see `social_publishing.md`). Value-first, not spam.
 
