@@ -867,6 +867,16 @@ defmodule Mehungry.ProfessionalsTest do
                Professionals.invite_client(pro.id, "nobody@example.com")
     end
 
+    test "invite_client resolves an existing user by a non-canonical email alias" do
+      pro = user_fixture()
+      client = user_fixture(%{email: "john.doe@gmail.com"})
+
+      # Inviting the dedotted Gmail alias must resolve to the same account
+      # rather than dead-ending as :client_not_found.
+      assert {:ok, inv} = Professionals.invite_client(pro.id, "johndoe@gmail.com")
+      assert inv.client_id == client.id
+    end
+
     test "search_invitable_users matches by display name" do
       pro = user_fixture()
       alice = named_user("Alice Anderson")

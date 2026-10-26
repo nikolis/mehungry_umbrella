@@ -149,9 +149,20 @@ defmodule Mehungry.Professionals do
 
   # ── Invitations ────────────────────────────────────────────────────────────────
 
-  @doc "Send an invitation from a professional to a user identified by email."
+  @doc """
+  Send an invitation from a professional to a user identified by email.
+
+  Resolution falls back from an exact email match to the canonical form, so a
+  registered user invited via a Gmail-style alias (`johndoe@` vs the stored
+  `john.doe@`) still resolves — matching what `onboard_client_by_email/4`
+  treats as already-registered, which otherwise dead-ends the invite flow.
+  """
   def invite_client(professional_id, client_email, message \\ nil) do
-    case Accounts.get_user_by_email(client_email) do
+    client =
+      Accounts.get_user_by_email(client_email) ||
+        Accounts.get_user_by_canonical_email(client_email)
+
+    case client do
       nil -> {:error, :client_not_found}
       client -> invite_client_by_id(professional_id, client.id, message)
     end

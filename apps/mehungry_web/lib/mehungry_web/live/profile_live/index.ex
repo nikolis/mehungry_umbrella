@@ -497,6 +497,9 @@ defmodule MehungryWeb.ProfileLive.Index do
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, "You don't have a nutritionist linked.")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not remove nutritionist.")}
     end
   end
 
