@@ -22,15 +22,21 @@ defmodule MehungryWeb.LandingLive do
     recipes = find_bot_recipe(now.month, now.year) || []
     recipe = List.first(recipes)
 
+    # Feature a real published nutritionist profile in the hero when one exists;
+    # the hero falls back to an honest "your profile" preview when none is public.
+    featured_professional =
+      Mehungry.Professionals.list_public_professionals() |> List.first()
+
     {:ok,
      assign(socket,
-       page_title: gettext("M3Hungry — Know What's On Your Plate"),
+       page_title: gettext("M3Hungry — Grow Your Nutrition Practice"),
        page_description:
          gettext(
-           "Track 168 nutrients per meal. Generate AI recipes backed by USDA FoodData Central. Plan your week. Share what you cook."
+           "A discoverable public profile, a workspace to manage your clients and appointments, and an AI assistant that drafts meal plans backed by USDA FoodData Central — you review, adjust, and approve. The advice stays 100% yours."
          ),
        recipe: recipe,
        recipes: recipes,
+       featured_professional: featured_professional,
        child_ids: []
      )}
   end
@@ -130,7 +136,7 @@ defmodule MehungryWeb.LandingLive do
             <%!-- Eyebrow --%>
             <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-basil/20 bg-basil/10 px-3 py-1 text-xs font-medium text-basil">
               <span class="h-1.5 w-1.5 rounded-full bg-basil" aria-hidden="true"></span>
-              {gettext("Backed by USDA FoodData Central")}
+              {gettext("For nutritionists & dietitians")}
             </div>
 
             <%!-- Headline --%>
@@ -138,13 +144,13 @@ defmodule MehungryWeb.LandingLive do
               id="hero-heading"
               class="mb-5 font-display text-5xl font-medium leading-[1.1] tracking-tight text-parchment sm:text-6xl md:text-7xl"
             >
-              {gettext("Know what's on your plate.")}
-              <em class="not-italic text-paprika-soft">{gettext("Really.")}</em>
+              {gettext("Grow your nutrition practice.")}
+              <em class="not-italic text-paprika-soft">{gettext("Keep it 100% yours.")}</em>
             </h1>
 
             <p class="mb-9 text-lg leading-relaxed text-parchment-dim sm:text-xl">
               {gettext(
-                "Track 168 nutrients per meal. Generate AI recipes backed by USDA science. Plan your week. Share what you cook."
+                "A discoverable public profile that brings clients in, one workspace to manage patients and appointments, and an AI assistant that drafts the busywork — you review, adjust, approve."
               )}
             </p>
 
@@ -153,13 +159,13 @@ defmodule MehungryWeb.LandingLive do
                 href="/register"
                 class="w-full rounded-lg bg-paprika px-8 py-3 text-base font-bold text-ink shadow-lg shadow-black/30 transition-all hover:bg-paprika-soft sm:w-auto"
               >
-                {gettext("Start for free")}
+                {gettext("Start your practice")}
               </a>
               <a
-                href={"/#{@current_language}/browse"}
+                href={"/#{@current_language}/nutritionists"}
                 class="w-full rounded-lg border border-ink-panel2 px-8 py-3 text-base font-medium text-parchment-dim transition-all hover:border-parchment-dim hover:text-parchment sm:w-auto"
               >
-                {gettext("Browse recipes →")}
+                {gettext("See a nutritionist profile →")}
               </a>
             </div>
 
@@ -224,48 +230,99 @@ defmodule MehungryWeb.LandingLive do
             </div>
           </div>
 
-          <%!-- Hero visual: real recipe widget from DB --%>
-          <%= if @recipe do %>
-            <div class="relative mx-auto mt-16 max-w-2xl">
-              <div class="overflow-hidden rounded-2xl border border-ink-panel2 bg-ink-panel/80 shadow-2xl shadow-black/40">
-                <%!-- Browser chrome --%>
-                <div class="flex items-center gap-1.5 border-b border-ink-panel2 bg-ink-panel px-4 py-3">
-                  <span class="h-2.5 w-2.5 rounded-full bg-red-500/60" aria-hidden="true"></span>
-                  <span class="h-2.5 w-2.5 rounded-full bg-yellow-500/60" aria-hidden="true"></span>
-                  <span class="h-2.5 w-2.5 rounded-full bg-green-500/60" aria-hidden="true"></span>
-                  <span class="ml-3 text-xs text-parchment-dim">m3hungry.com/calendar</span>
-                </div>
-                <div class="p-4">
-                  <MehungryWeb.CalendarLive.Calendar.Widget.card_meal
-                    img_url={@recipe.image_url}
-                    card_meal_text="text-parchment"
-                    recipe={@recipe}
-                    cooking_portions="1"
-                    consume_portions="1"
-                    actual_meal={
-                      %{
-                        cooking_portions: 1,
-                        consume_portions: 1,
-                        recipe: @recipe,
-                        id: "hero_meal"
-                      }
-                    }
-                    title={gettext("Lunch")}
-                    myself="hero"
-                    id="hero_meal"
-                  />
-                </div>
+          <%!-- Hero visual: public profile + practice dashboard preview --%>
+          <div class="relative mx-auto mt-16 max-w-2xl">
+            <div class="overflow-hidden rounded-2xl border border-ink-panel2 bg-ink-panel/80 shadow-2xl shadow-black/40">
+              <%!-- Browser chrome --%>
+              <div class="flex items-center gap-1.5 border-b border-ink-panel2 bg-ink-panel px-4 py-3">
+                <span class="h-2.5 w-2.5 rounded-full bg-red-500/60" aria-hidden="true"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-yellow-500/60" aria-hidden="true"></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-green-500/60" aria-hidden="true"></span>
+                <span class="ml-3 truncate text-xs text-parchment-dim">
+                  m3hungry.com/nutritionists<%= if @featured_professional && @featured_professional.slug do %>/{@featured_professional.slug}<% end %>
+                </span>
               </div>
 
-              <%!-- Floating badge --%>
-              <div class="absolute -right-2 -top-3 hidden rounded-xl border border-basil/30 bg-ink-panel px-3 py-2 shadow-lg sm:block">
-                <p class="text-xs font-bold text-basil [font-variant-numeric:tabular-nums]">
-                  {gettext("168 nutrients")}
-                </p>
-                <p class="text-xs text-parchment-dim">{gettext("per serving, from USDA")}</p>
+              <div class="space-y-4 p-5">
+                <%!-- Public profile row (real nutritionist when one is published) --%>
+                <div class="flex items-center gap-4">
+                  <%= if @featured_professional && @featured_professional.photo_url do %>
+                    <img
+                      src={@featured_professional.photo_url}
+                      alt={profile_display_name(@featured_professional)}
+                      class="h-14 w-14 rounded-full object-cover ring-2 ring-basil/30"
+                      loading="lazy"
+                    />
+                  <% else %>
+                    <div
+                      class="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-paprika to-basil font-display text-lg font-bold text-ink"
+                      aria-hidden="true"
+                    >
+                      {profile_initials(@featured_professional)}
+                    </div>
+                  <% end %>
+                  <div class="min-w-0">
+                    <p class="truncate font-display font-medium text-parchment">
+                      {profile_display_name(@featured_professional)}
+                    </p>
+                    <p class="truncate text-sm text-parchment-dim">
+                      {profile_tagline(@featured_professional)}
+                    </p>
+                  </div>
+                </div>
+
+                <%!-- Platform capabilities (not vanity metrics) --%>
+                <div class="flex flex-wrap gap-2">
+                  <%= for chip <- [
+                    gettext("Online booking"),
+                    gettext("Published articles"),
+                    gettext("Secure payouts")
+                  ] do %>
+                    <span class="rounded-full border border-ink-panel2 bg-black/20 px-2.5 py-1 text-xs text-parchment-dim">
+                      {chip}
+                    </span>
+                  <% end %>
+                </div>
+
+                <%!-- Practice dashboard preview (illustrative UI — not live figures) --%>
+                <div class="grid grid-cols-2 gap-2 border-t border-ink-panel2 pt-4" aria-hidden="true">
+                  <div class="rounded-xl border border-ink-panel2 bg-ink p-3">
+                    <p class="text-xs text-parchment-dim">{gettext("Today's appointments")}</p>
+                    <p class="mt-1 font-display text-xl font-bold text-basil [font-variant-numeric:tabular-nums]">
+                      3
+                    </p>
+                  </div>
+                  <div class="rounded-xl border border-ink-panel2 bg-ink p-3">
+                    <p class="text-xs text-parchment-dim">{gettext("Active clients")}</p>
+                    <p class="mt-1 font-display text-xl font-bold text-basil [font-variant-numeric:tabular-nums]">
+                      18
+                    </p>
+                  </div>
+                  <div class="col-span-2 rounded-xl border border-ink-panel2 bg-ink p-3">
+                    <p class="mb-2 text-xs text-parchment-dim">{gettext("AI meal plans this month")}</p>
+                    <div class="flex items-center gap-2">
+                      <div class="h-2 flex-1 overflow-hidden rounded-full bg-ink-panel2">
+                        <div class="h-full w-2/5 rounded-full bg-basil"></div>
+                      </div>
+                      <span class="text-xs text-parchment-dim [font-variant-numeric:tabular-nums]">
+                        4 / 10
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          <% end %>
+
+            <%!-- Floating badge: the spine of the pitch --%>
+            <div class="absolute -right-2 -top-3 hidden rounded-xl border border-paprika/30 bg-ink-panel px-3 py-2 shadow-lg sm:block">
+              <p class="text-xs font-bold text-paprika-soft">{gettext("100% your advice")}</p>
+              <p class="text-xs text-parchment-dim">{gettext("AI drafts · you approve")}</p>
+            </div>
+
+            <p class="mt-3 text-center text-xs text-parchment-dim/60">
+              {gettext("Example dashboard — your practice once you're set up")}
+            </p>
+          </div>
         </div>
       </section>
 
@@ -1278,4 +1335,34 @@ defmodule MehungryWeb.LandingLive do
     </div>
     """
   end
+
+  # ── Hero profile helpers ────────────────────────────────────────────────────
+  # Fall back to an honest "your profile" template when no public nutritionist
+  # exists yet, so the hero never invents a fake person.
+
+  defp profile_display_name(%{display_name: name}) when is_binary(name) and name != "",
+    do: name
+
+  defp profile_display_name(_), do: gettext("Your name here")
+
+  defp profile_tagline(profile) when is_map(profile) do
+    [Map.get(profile, :specialization), Map.get(profile, :city)]
+    |> Enum.reject(&(is_nil(&1) or &1 == ""))
+    |> case do
+      [] -> gettext("Registered nutritionist")
+      parts -> Enum.join(parts, " · ")
+    end
+  end
+
+  defp profile_tagline(_), do: gettext("Your specialization · your city")
+
+  defp profile_initials(%{display_name: name}) when is_binary(name) and name != "" do
+    name
+    |> String.split(~r/\s+/, trim: true)
+    |> Enum.take(2)
+    |> Enum.map_join(&String.first/1)
+    |> String.upcase()
+  end
+
+  defp profile_initials(_), do: "+"
 end

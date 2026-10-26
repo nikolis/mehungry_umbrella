@@ -8,7 +8,9 @@ defmodule MehungryWeb.NutritionistLive.InvitationsTest do
 
   import Phoenix.LiveViewTest
 
-  alias Mehungry.{Professionals, Repo, Subscriptions}
+  alias Mehungry.{Accounts, Professionals, Repo, Subscriptions}
+
+  import Swoosh.TestAssertions
 
   setup %{conn: conn} do
     nutritionist = Mehungry.AccountsFixtures.user_fixture()
@@ -59,7 +61,7 @@ defmodule MehungryWeb.NutritionistLive.InvitationsTest do
     assert inv.client_id == client.id
   end
 
-  test "email fallback shows an error for an unknown address", %{conn: conn} do
+  test "an unknown address offers to send an onboarding invite", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/nutritionist/invitations")
 
     html =
@@ -67,6 +69,58 @@ defmodule MehungryWeb.NutritionistLive.InvitationsTest do
       |> form("form[phx-submit=invite_client]", %{"email" => "nobody@example.com", "message" => ""})
       |> render_submit()
 
-    assert html =~ "No user found with that email address."
+    assert html =~ "No m3hungry account found for"
+    assert html =~ "nobody@example.com"
+    assert html =~ "Send invitation email"
+  end
+
+  test "confirming the onboarding invite creates a managed client and emails them", %{
+    conn: conn,
+    nutritionist: nutritionist
+  } do
+    {:ok, view, _html} = live(conn, "/nutritionist/invitations")
+
+    view
+    |> form("form[phx-submit=invite_client]", %{
+      "email" => "newbie@example.com",
+      "message" => "Come join me"
+    })
+    |> render_submit()
+
+    html =
+      view
+      |> element("[phx-click=confirm_onboard]")
+      |> render_click()
+
+    assert html =~ "Invitation email sent to newbie@example.com"
+
+    # A managed, unclaimed client is now assigned to the nutritionist.
+    assert [assignment] = Professionals.list_clients(nutritionist.id)
+    client = Accounts.get_user!(assignment.client_id)
+    assert Accounts.managed_unclaimed?(client)
+
+    assert_email_sent(fn email ->
+      assert {_, "newbie@example.com"} = hd(email.to)
+      assert email.html_body =~ "/claim/"
+    end)
+  end
+
+  test "cancelling the onboarding invite hides the prompt and creates nothing", %{
+    conn: conn,
+    nutritionist: nutritionist
+  } do
+    {:ok, view, _html} = live(conn, "/nutritionist/invitations")
+
+    view
+    |> form("form[phx-submit=invite_client]", %{"email" => "nobody@example.com", "message" => ""})
+    |> render_submit()
+
+    html =
+      view
+      |> element("[phx-click=cancel_onboard]")
+      |> render_click()
+
+    refute html =~ "No m3hungry account found for"
+    assert [] = Professionals.list_clients(nutritionist.id)
   end
 end

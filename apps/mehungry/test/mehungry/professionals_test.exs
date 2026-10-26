@@ -448,6 +448,81 @@ defmodule Mehungry.ProfessionalsTest do
     end
   end
 
+  describe "onboard_client_by_email/4" do
+    alias Mehungry.Accounts
+    import Swoosh.TestAssertions
+
+    defp url_fun, do: fn token -> "https://test.host/claim/" <> token end
+
+    test "creates an assigned, unclaimed managed client and emails the claim link" do
+      pro = user_fixture()
+      email = unique_user_email()
+
+      assert {:ok, client} =
+               Professionals.onboard_client_by_email(pro.id, email, "Join me!", url_fun())
+
+      # Login-less managed client, assigned to the professional, not yet claimed.
+      assert client.managed_by_professional_id == pro.id
+      assert Accounts.managed_unclaimed?(client)
+      assert [assignment] = Professionals.list_clients(pro.id)
+      assert assignment.client_id == client.id
+
+      # The typed email is NOT stored on the account — it keeps a synthetic address.
+      refute client.email == email
+
+      # A claim token was minted for the account (reachable via the claim link).
+      token = Accounts.build_managed_client_claim_token(client)
+      assert %{id: id} = Accounts.get_managed_user_by_claim_token(token)
+      assert id == client.id
+
+      # The onboarding email went to the typed address, carrying the claim URL.
+      assert_email_sent(fn email_struct ->
+        assert {_, ^email} = hd(email_struct.to)
+        assert email_struct.html_body =~ "/claim/"
+        assert email_struct.text_body =~ "Join me!"
+      end)
+    end
+
+    test "returns :already_registered when the email already belongs to a user" do
+      pro = user_fixture()
+      existing = user_fixture()
+
+      assert {:error, :already_registered} =
+               Professionals.onboard_client_by_email(pro.id, existing.email, nil, url_fun())
+
+      assert [] = Professionals.list_clients(pro.id)
+    end
+
+    test "rejects a blank email" do
+      pro = user_fixture()
+
+      assert {:error, :invalid_email} =
+               Professionals.onboard_client_by_email(pro.id, "   ", nil, url_fun())
+    end
+
+    test "the onboarded client can claim the account and become a real client" do
+      pro = user_fixture()
+      invite_email = unique_user_email()
+
+      {:ok, client} = Professionals.onboard_client_by_email(pro.id, invite_email, nil, url_fun())
+
+      real_email = unique_user_email()
+      token = Accounts.build_managed_client_claim_token(client)
+
+      {:ok, claimed} =
+        Accounts.claim_managed_account(token, %{
+          "email" => real_email,
+          "password" => "super-secret-passphrase"
+        })
+
+      assert claimed.id == client.id
+      assert claimed.email == real_email
+      assert is_nil(claimed.managed_by_professional_id)
+      assert [assignment] = Professionals.list_clients(pro.id)
+      assert assignment.client_id == client.id
+    end
+  end
+
   describe "client intake energy auto-calc" do
     setup do
       professional = user_fixture()
@@ -854,6 +929,25 @@ defmodule Mehungry.ProfessionalsTest do
 
       assert Professionals.search_invitable_users(pro.id, "a") == []
       assert Professionals.search_invitable_users(pro.id, " ") == []
+    end
+
+    test "unassign_nutritionist lets a client end their own link" do
+      pro = user_fixture()
+      client = user_fixture()
+
+      {:ok, inv} = Professionals.invite_client_by_id(pro.id, client.id)
+      {:ok, _assignment} = Professionals.accept_invitation(inv.id, client.id)
+      assert Professionals.get_assignment_for_client(client.id)
+
+      assert {:ok, _} = Professionals.unassign_nutritionist(client.id)
+      assert is_nil(Professionals.get_assignment_for_client(client.id))
+      # The pro no longer counts them as a client either.
+      assert Professionals.count_clients(pro.id) == 0
+    end
+
+    test "unassign_nutritionist returns :not_found when unlinked" do
+      client = user_fixture()
+      assert {:error, :not_found} = Professionals.unassign_nutritionist(client.id)
     end
   end
 end

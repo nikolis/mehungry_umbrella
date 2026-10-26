@@ -1799,6 +1799,69 @@ defmodule MehungryWeb.CoreComponents do
   end
 
   @doc """
+  Recruitment call-to-action that invites a professional nutritionist to grow
+  their practice on M3Hungry. The product is nutritionist-led, but the public
+  consumer surfaces (the directory, a profile, a recipe/foods page reached from
+  a shared link) carried no path into the pro pitch — this is that path.
+
+  Hidden for users who are already pro (we don't recruit an existing pro).
+  `current_user` may be nil (anonymous visitor): anon lands on the landing-page
+  pitch, a logged-in non-pro on the upgrade page.
+
+  Two `variant`s:
+
+    * `:banner` — a full-width strip for the public directory + profile pages
+    * `:inline` — a slim one-liner for consumer recipe/foods pages
+
+      <.nutritionist_recruit_cta current_user={@current_user} variant={:banner} />
+  """
+  attr :current_user, :map, default: nil
+  attr :variant, :atom, default: :banner, values: [:banner, :inline]
+  attr :class, :string, default: ""
+
+  def nutritionist_recruit_cta(assigns) do
+    assigns =
+      assigns
+      |> assign(:hide?, nutritionist_recruit_pro?(assigns.current_user))
+      |> assign(:href, nutritionist_recruit_href(assigns.current_user))
+
+    ~H"""
+    <div :if={!@hide? and @variant == :banner} class={["my-6", @class]}>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-basil/10 border border-basil/30 rounded-xl px-5 py-4">
+        <div>
+          <p class="text-parchment font-medium">{gettext("Are you a nutritionist?")}</p>
+          <p class="text-parchment-dim text-sm mt-0.5">
+            {gettext("Get discovered, manage your clients, and let AI draft the plans — your advice stays 100% yours.")}
+          </p>
+        </div>
+        <a
+          href={@href}
+          class="whitespace-nowrap inline-flex items-center gap-2 rounded-lg bg-paprika px-4 py-2 text-sm font-semibold text-ink hover:bg-paprika-soft transition-colors"
+        >
+          {gettext("Grow your practice")}
+          <.icon name="hero-arrow-right" class="h-4 w-4" />
+        </a>
+      </div>
+    </div>
+
+    <p :if={!@hide? and @variant == :inline} class={["text-sm text-parchment-dim", @class]}>
+      {gettext("Built for nutritionists.")}
+      <a href={@href} class="text-paprika hover:text-paprika-soft font-medium">
+        {gettext("See how it grows your practice →")}
+      </a>
+    </p>
+    """
+  end
+
+  defp nutritionist_recruit_pro?(nil), do: false
+  defp nutritionist_recruit_pro?(user), do: Mehungry.Subscriptions.nutritionist?(user.id)
+
+  defp nutritionist_recruit_href(nil), do: "/#{nutritionist_recruit_locale()}/welcome#pricing"
+  defp nutritionist_recruit_href(_user), do: "/#{nutritionist_recruit_locale()}/upgrade"
+
+  defp nutritionist_recruit_locale, do: Gettext.get_locale(MehungryWeb.Gettext)
+
+  @doc """
   A flat client↔nutritionist message thread: a scrollable bubble list (own
   messages aligned right/paprika, the other party's left/panel) plus a compose
   form. The host LiveView owns the data and handles `send_message` (body in the

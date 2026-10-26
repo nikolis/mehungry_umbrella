@@ -15,6 +15,7 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
       |> assign(:invite_email, "")
       |> assign(:invite_message, "")
       |> assign(:invite_error, nil)
+      |> assign(:onboard_email, nil)
       |> assign(:search_query, "")
       |> assign(:search_results, [])
 
@@ -54,8 +55,9 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
   @impl true
   def handle_event("invite_client", %{"email" => email, "message" => message}, socket) do
     professional_id = socket.assigns.current_user.id
+    trimmed = String.trim(email)
 
-    case Professionals.invite_client(professional_id, String.trim(email), message) do
+    case Professionals.invite_client(professional_id, trimmed, message) do
       {:ok, _invitation} ->
         {:noreply,
          socket
@@ -63,11 +65,80 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
          |> assign(:invite_email, "")
          |> assign(:invite_message, "")
          |> assign(:invite_error, nil)
+         |> assign(:onboard_email, nil)
          |> put_flash(:info, "Invitation sent to #{email}.")}
 
+      # No account yet for this email — offer to send them an onboarding invite
+      # instead of a dead-end error. Keep the typed email + message around.
+      {:error, :client_not_found} ->
+        {:noreply,
+         socket
+         |> assign(:invite_email, trimmed)
+         |> assign(:invite_message, message)
+         |> assign(:invite_error, nil)
+         |> assign(:onboard_email, trimmed)}
+
       {:error, reason} ->
-        {:noreply, assign(socket, :invite_error, invite_error_message(reason))}
+        {:noreply,
+         socket |> assign(:onboard_email, nil) |> assign(:invite_error, invite_error_message(reason))}
     end
+  end
+
+  @impl true
+  def handle_event("confirm_onboard", %{"email" => email, "message" => message}, socket) do
+    professional_id = socket.assigns.current_user.id
+
+    case Professionals.onboard_client_by_email(professional_id, email, message, &claim_url/1) do
+      {:ok, _user} ->
+        {:noreply,
+         socket
+         |> assign(:invite_email, "")
+         |> assign(:invite_message, "")
+         |> assign(:invite_error, nil)
+         |> assign(:onboard_email, nil)
+         |> put_flash(
+           :info,
+           "Invitation email sent to #{email}. They'll appear in your clients once they join."
+         )}
+
+      # They registered in the meantime — fall back to the normal invite path.
+      {:error, :already_registered} ->
+        case Professionals.invite_client(professional_id, String.trim(email), message) do
+          {:ok, _} ->
+            {:noreply,
+             socket
+             |> refresh_invitations(professional_id)
+             |> assign(:invite_email, "")
+             |> assign(:invite_message, "")
+             |> assign(:onboard_email, nil)
+             |> put_flash(:info, "Invitation sent to #{email}.")}
+
+          {:error, reason} ->
+            {:noreply,
+             socket
+             |> assign(:onboard_email, nil)
+             |> assign(:invite_error, invite_error_message(reason))}
+        end
+
+      {:error, :email_failed} ->
+        {:noreply,
+         socket
+         |> assign(:onboard_email, nil)
+         |> put_flash(
+           :error,
+           "We created the client but couldn't send the email. You can share a claim link from your Clients page."
+         )}
+
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> assign(:invite_error, "Could not send the onboarding email. Please try again.")}
+    end
+  end
+
+  @impl true
+  def handle_event("cancel_onboard", _params, socket) do
+    {:noreply, assign(socket, :onboard_email, nil)}
   end
 
   @impl true
@@ -89,6 +160,8 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
   defp refresh_invitations(socket, professional_id) do
     assign(socket, :invitations, Professionals.list_sent_invitations(professional_id))
   end
+
+  defp claim_url(token), do: MehungryWeb.Endpoint.url() <> "/claim/" <> token
 
   defp invite_error_message(:client_not_found), do: "No user found with that email address."
 
@@ -206,6 +279,35 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
           <% end %>
           <.action variant={:primary} size={:sm} type="submit">Send invitation</.action>
         </form>
+
+        <%= if @onboard_email do %>
+          <div class="mt-4 bg-ink-panel2 border border-paprika/40 rounded-lg p-4">
+            <p class="text-parchment text-sm">
+              No m3hungry account found for
+              <span class="font-medium">{@onboard_email}</span>. Send them an invitation to join
+              m3hungry? When they sign up they'll become your client automatically.
+            </p>
+            <div class="flex items-center gap-4 mt-3">
+              <.action
+                variant={:primary}
+                size={:sm}
+                type="button"
+                phx-click="confirm_onboard"
+                phx-value-email={@onboard_email}
+                phx-value-message={@invite_message}
+              >
+                Send invitation email
+              </.action>
+              <button
+                type="button"
+                phx-click="cancel_onboard"
+                class="text-xs text-parchment-dim hover:text-parchment"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        <% end %>
       </div>
 
       <!-- Sent invitations -->

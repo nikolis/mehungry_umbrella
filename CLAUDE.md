@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Mehungry is a food/recipe social platform built as a **Phoenix Umbrella** application with two apps:
+Mehungry is a USDA-backed nutrition platform **led by the professional nutritionist** (discoverable profile + client/appointment workspace + AI meal-plan drafting), with a consumer food/recipe layer as the second ring. **For the product's purpose, audience, positioning, and non-negotiable principles, read `docs/product_foundation.md` first** — it's the source of truth every product decision traces back to. Built as a **Phoenix Umbrella** application with two apps:
 - `apps/mehungry` — core domain layer (Ecto schemas, contexts, business logic)
 - `apps/mehungry_web` — Phoenix web layer (LiveViews, controllers, components)
 

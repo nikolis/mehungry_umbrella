@@ -405,6 +405,62 @@ defmodule Mehungry.Accounts.UserNotifier do
     deliver(recipient, "Thanks for signing up to test Mehungry", text, html)
   end
 
+  # ── Nutritionist client onboarding invite ────────────────────────────────────
+
+  @doc """
+  Invite a not-yet-registered person to join Mehungry as a nutritionist's client.
+
+  Sent when a nutritionist invites a client by an email that has no account yet:
+  a login-less managed account has already been created and assigned to them, and
+  `claim_url` is the `/claim/:token` link that lets the recipient set a password
+  and take over that account (landing them already connected to the nutritionist).
+
+  `professional_name` personalises the copy; `personal_message` is the optional
+  note the nutritionist typed, shown as a quoted intro.
+  """
+  def deliver_client_onboarding_invite(recipient, professional_name, claim_url, personal_message \\ nil) do
+    note = personal_message |> to_string() |> String.trim()
+
+    intro_fragment =
+      if note != "" do
+        "<p style=\"margin:0 0 18px;color:#F4EEDD;font-size:15px;line-height:1.65;" <>
+          "border-left:3px solid #E8622C;padding-left:14px;font-style:italic;\">" <>
+          html_escape(note) <> "</p>"
+      else
+        ""
+      end
+
+    body =
+      intro_fragment <>
+        "<strong style=\"color:#F4EEDD;\">#{html_escape(professional_name)}</strong> uses " <>
+        "Mehungry to help their clients eat well and has invited you to join. Create your " <>
+        "account to connect with them, follow the meal plans they build for you, and track " <>
+        "your own nutrition."
+
+    text = """
+    Hi there,
+
+    #{if note != "", do: note <> "\n\n", else: ""}#{professional_name} uses Mehungry to help their clients eat well and has invited you to join.
+
+    Create your account here to connect with them:
+
+    #{claim_url}
+    """
+
+    html =
+      html_layout(
+        "You're invited to Mehungry",
+        "#{professional_name} would like to connect with you",
+        "Hi there,",
+        body,
+        "Create my account",
+        claim_url,
+        "You're receiving this because #{html_escape(professional_name)} invited you to Mehungry as their client."
+      )
+
+    deliver(recipient, "#{professional_name} invited you to join Mehungry", text, html)
+  end
+
   # ── Appointment notifications ────────────────────────────────────────────────
 
   @doc """

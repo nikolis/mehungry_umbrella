@@ -158,6 +158,78 @@ defmodule Mehungry.Professionals do
   end
 
   @doc """
+  Invite a not-yet-registered person to join Mehungry as this professional's client.
+
+  This is the fallback for `invite_client/3` when the typed email matches no
+  existing user. It reuses the managed-client machinery: a login-less `User` is
+  created and assigned to the professional (via `create_managed_client/2`), then an
+  onboarding email with the `/claim/:token` link is sent to `email`. When the
+  recipient claims the account they set their own email + password and land already
+  connected as this professional's client.
+
+  `claim_url_fun` is injected by the caller (the web layer) as `fn token -> url end`
+  so this core function stays URL-free. The real `email` is used only to send the
+  invite — the managed account keeps its synthetic placeholder address.
+
+  Returns `{:ok, user}`, `{:error, :already_registered}` (someone now owns that
+  email — caller should invite them normally instead), `{:error, :invalid_email}`,
+  `{:error, :email_failed}` (account created but the email could not be sent — the
+  professional can resend the claim link from their clients roster), or
+  `{:error, changeset}`.
+  """
+  def onboard_client_by_email(professional_id, email, message, claim_url_fun)
+      when is_function(claim_url_fun, 1) do
+    trimmed = String.trim(to_string(email))
+
+    cond do
+      trimmed == "" ->
+        {:error, :invalid_email}
+
+      not is_nil(Accounts.get_user_by_email(trimmed)) or
+          not is_nil(Accounts.get_user_by_canonical_email(trimmed)) ->
+        {:error, :already_registered}
+
+      true ->
+        with {:ok, %{user: user, claim_token: token}} <-
+               create_managed_client(professional_id, client_name_from_email(trimmed)),
+             {:ok, _email} <-
+               Accounts.deliver_client_onboarding_invite(
+                 trimmed,
+                 professional_display_name(professional_id),
+                 claim_url_fun.(token),
+                 message
+               ) do
+          {:ok, user}
+        else
+          {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset}
+          # Managed account was created but the email bounced/failed to send.
+          {:error, _reason} -> {:error, :email_failed}
+        end
+    end
+  end
+
+  # Human-ish display name for a managed client created from only an email — the
+  # local part, so the professional recognises the row in their clients roster.
+  defp client_name_from_email(email) do
+    email |> String.split("@") |> List.first() |> to_string()
+  end
+
+  # The name to sign the onboarding email with: the professional's public display
+  # name, falling back to their account name.
+  defp professional_display_name(professional_id) do
+    case get_professional_profile(professional_id) do
+      %ProfessionalProfile{display_name: name} when is_binary(name) and name != "" ->
+        name
+
+      _ ->
+        case Accounts.get_user!(professional_id) do
+          %User{name: name} when is_binary(name) and name != "" -> name
+          _ -> "Your nutritionist"
+        end
+    end
+  end
+
+  @doc """
   Send an invitation from a professional directly to a registered user by id.
 
   This is the primary path behind the search-and-pick invite UI, so a
@@ -395,6 +467,18 @@ defmodule Mehungry.Professionals do
 
   def remove_client(professional_id, client_id) do
     case get_assignment(professional_id, client_id) do
+      nil -> {:error, :not_found}
+      assignment -> Repo.delete(assignment)
+    end
+  end
+
+  @doc """
+  Client-initiated unlink: a client ends their own link to their nutritionist
+  (a client has at most one assignment). Returns `{:error, :not_found}` when the
+  client has no nutritionist.
+  """
+  def unassign_nutritionist(client_id) do
+    case Repo.get_by(TutorClientAssignment, client_id: client_id) do
       nil -> {:error, :not_found}
       assignment -> Repo.delete(assignment)
     end

@@ -58,6 +58,24 @@ published profile. `robots.txt` allows `/nutritionists` and disallows the privat
 `/nutritionist/` workspace. (Note the singular/plural distinction — do **not** add
 `/nutritionist` to the head's `noindex_prefixes`, as it would also match `/nutritionists`.)
 
+### Marketing landing is nutritionist-led
+
+The public marketing landing (`LandingLive`, `/welcome`, `:default3`) is **positioned for
+professional nutritionists first** (2026-10-26 repositioning — automated meal planning for the
+`m3hungry_plus`/consumer tier is the *second* act, not the lead). The hero copy sells the
+practice — *"Grow your nutrition practice. Keep it 100% yours."* — with the "**still 100% you**"
+spine (AI drafts; the nutritionist reviews/adjusts/approves) and a secondary CTA into
+`/nutritionists`.
+
+The hero **features a real published profile** when one exists:
+`Professionals.list_public_professionals() |> List.first()` feeds a profile card (real
+`display_name`/`specialization`/`city`/`photo_url`/`slug`). When **no** profile is public it
+falls back to an honest "Your name here" preview — it never invents a person. Per the page's
+no-fake-stats rule the practice-dashboard figures beside it are an `aria-hidden`, illustrative
+preview captioned *"Example dashboard"* (not live counts). `/foods` stays as the public
+consumer "proof engine" behind the pitch. See `MEMORY` → *Nutritionist Repositioning* for the
+rest of the ranked roadmap (section reorder, role-branched entry screen, pricing flip).
+
 ## Context API (`Mehungry.Professionals`)
 
 `list_public_professionals/1` (filters), `get_public_professional_by_slug/1`,

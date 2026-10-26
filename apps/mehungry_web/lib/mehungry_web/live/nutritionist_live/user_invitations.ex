@@ -55,6 +55,22 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
   end
 
   @impl true
+  def handle_event("unlink_nutritionist", _params, socket) do
+    client_id = socket.assigns.current_user.id
+
+    case Professionals.unassign_nutritionist(client_id) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(:active_assignment, nil)
+         |> put_flash(:info, "Nutritionist removed.")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not remove nutritionist.")}
+    end
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="max-w-2xl mx-auto px-4 py-8">
@@ -65,15 +81,26 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
         <% professional = @active_assignment.professional %>
         <div class="bg-basil/10 border border-basil/30 rounded-xl p-5 mb-6">
           <p class="text-basil text-sm font-medium mb-2">Your current nutritionist</p>
-          <div class="flex items-center gap-3">
-            <%= if professional.profile_pic do %>
-              <img src={professional.profile_pic} class="w-10 h-10 rounded-full object-cover" />
-            <% else %>
-              <div class="w-10 h-10 rounded-full bg-basil flex items-center justify-center text-ink font-bold text-sm">
-                {String.first(professional.name || "?")}
-              </div>
-            <% end %>
-            <p class="text-parchment font-medium">{professional.name || professional.email}</p>
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <%= if professional.profile_pic do %>
+                <img src={professional.profile_pic} class="w-10 h-10 rounded-full object-cover" />
+              <% else %>
+                <div class="w-10 h-10 rounded-full bg-basil flex items-center justify-center text-ink font-bold text-sm">
+                  {String.first(professional.name || "?")}
+                </div>
+              <% end %>
+              <p class="text-parchment font-medium truncate">
+                {professional.name || professional.email}
+              </p>
+            </div>
+            <button
+              phx-click="unlink_nutritionist"
+              data-confirm="Remove your nutritionist? They will no longer be linked to your account. You can be re-invited later."
+              class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-ink text-parchment-dim text-xs font-medium transition"
+            >
+              Remove
+            </button>
           </div>
         </div>
       <% end %>

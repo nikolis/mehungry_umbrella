@@ -89,6 +89,8 @@ defmodule MehungryWeb.PublicNutritionistLive.Index do
         Browse qualified nutritionists and dietitians and book a consultation.
       </p>
 
+      <.nutritionist_recruit_cta current_user={assigns[:current_user]} variant={:banner} />
+
       <form phx-change="filter" phx-submit="filter" class="flex flex-wrap gap-3 mb-8">
         <select
           name="city"

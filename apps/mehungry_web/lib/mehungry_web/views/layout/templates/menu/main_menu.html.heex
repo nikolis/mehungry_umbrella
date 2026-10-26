@@ -13,6 +13,35 @@
 
   <!-- Main navigation -->
   <nav class="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
+    <!-- Your practice (pro/nutritionist): workspace surfaces hoisted to the top -->
+    <%= if @current_user && Mehungry.Subscriptions.nutritionist?(@current_user.id) do %>
+      <p class="hidden md:block text-[10px] font-semibold uppercase tracking-wider text-teal-400/70 px-3 mb-1">
+        {gettext("Your practice")}
+      </p>
+      <a
+        href="/nutritionist"
+        class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-teal-400 hover:text-white hover:bg-teal-500/20 transition-colors"
+      >
+        <.icon name="hero-squares-2x2" class="h-5 w-5 flex-shrink-0" />
+        <span class="hidden md:block text-sm font-medium">{gettext("Dashboard")}</span>
+      </a>
+      <a
+        href="/nutritionist/clients"
+        class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
+      >
+        <.icon name="hero-user-group" class="h-5 w-5 flex-shrink-0" />
+        <span class="hidden md:block text-sm font-medium">{gettext("Clients")}</span>
+      </a>
+      <a
+        href="/nutritionist/appointments"
+        class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
+      >
+        <.icon name="hero-calendar-days" class="h-5 w-5 flex-shrink-0" />
+        <span class="hidden md:block text-sm font-medium">{gettext("Appointments")}</span>
+      </a>
+      <div class="border-b border-ink-panel2 my-2"></div>
+    <% end %>
+
     <a
       href={"/#{@current_language}/browse"}
       class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-parchment-dim hover:text-parchment hover:bg-ink-panel2 transition-colors"
@@ -105,17 +134,6 @@
       >
         <.icon name="hero-cog-6-tooth" class="h-5 w-5 flex-shrink-0" />
         <span class="hidden md:block text-sm font-medium">{gettext("Admin Panel")}</span>
-      </a>
-    <% end %>
-
-    <!-- Nutritionist Panel (only for pro/nutritionist subscribers) -->
-    <%= if @current_user && Mehungry.Subscriptions.nutritionist?(@current_user.id) do %>
-      <a
-        href="/nutritionist"
-        class="nav_link_basic flex items-center gap-3 px-3 py-2.5 rounded-lg text-teal-400 hover:text-white hover:bg-teal-500/20 border border-teal-500/30 hover:border-teal-500/60 transition-colors mt-2"
-      >
-        <.icon name="hero-academic-cap" class="h-5 w-5 flex-shrink-0" />
-        <span class="hidden md:block text-sm font-medium">{gettext("Nutritionist Panel")}</span>
       </a>
     <% end %>
 

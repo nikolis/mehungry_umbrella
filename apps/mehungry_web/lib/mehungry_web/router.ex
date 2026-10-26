@@ -497,6 +497,18 @@ defmodule MehungryWeb.Router do
     get("/terms", TermsController, :index)
     get("/legal", LegalNoticeController, :index)
 
+    # Retired public condition pages — moved behind /nutritionist/conditions on
+    # 2026-10-14 (YMYL / regulated-medical-device risk; see GoneController). They
+    # already 404, but Google still shows stale impressions for the indexed URLs;
+    # a 410 tells it to drop them. Both the bare and locale-prefixed forms, since
+    # the old routes were `localized_live`. Must NOT be re-added to the sitemap.
+    get("/conditions", GoneController, :gone)
+    get("/conditions/:id", GoneController, :gone)
+    get("/conditions/:id/food/:species_id", GoneController, :gone)
+    get("/:locale/conditions", GoneController, :gone)
+    get("/:locale/conditions/:id", GoneController, :gone)
+    get("/:locale/conditions/:id/food/:species_id", GoneController, :gone)
+
     # One-click unsubscribe from the beta-tester list (link in welcome/invite
     # emails). A plain GET controller so it works without JS and runs exactly
     # once (a LiveView mount would run on both the HTTP and WS passes).
