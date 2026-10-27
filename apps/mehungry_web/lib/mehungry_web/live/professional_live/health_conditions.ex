@@ -25,6 +25,12 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Mehungry.PubSub, Literature.research_ingestion_topic())
+      # Unwedge a run left `processing` by a server restart (its jobs are gone).
+      Literature.reconcile_research_ingestion()
+    end
+
     {:ok,
      socket
      |> assign(:page_title, "Health Conditions")
@@ -32,6 +38,9 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
      |> assign(:crawling, MapSet.new())
      |> assign(:analysis, nil)
      |> assign(:analyzing, false)
+     # Admin-triggered bulk research-ingestion run (crawl? + /analyze + store,
+     # across all conditions) — live progress via PubSub.
+     |> assign(:research_run, Literature.latest_research_ingestion_run())
      # Per-condition "Claims & suggestions" detail block: which conditions are
      # expanded, their loaded data, and the active tab. Loaded lazily on expand
      # (the full condition list is large).
@@ -367,6 +376,36 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
     {:noreply, assign(socket, :analysis, nil)}
   end
 
+  # Kick off the bulk research-ingestion run (the UI control for
+  # `mix research.ingest`): crawl? + extractor /analyze + store across every
+  # condition, as one durable background job. Only one run at a time.
+  @impl true
+  def handle_event("run_research_ingestion", params, socket) do
+    opts = [crawl: params["crawl"] == "true", force: params["force"] == "true"]
+
+    # Pre-flight: fail fast if the extractor link is dead, instead of churning
+    # retries across every condition before the failure surfaces.
+    case Extractor.reachable?() do
+      :ok -> start_research_ingestion(opts, socket)
+      {:error, reason} -> {:noreply, put_flash(socket, :error, extractor_down_message(reason))}
+    end
+  end
+
+  # Admin escape hatch: cancel the in-flight run (cancels its jobs + marks failed).
+  @impl true
+  def handle_event("cancel_research_ingestion", _params, socket) do
+    case Literature.cancel_research_ingestion() do
+      :noop ->
+        {:noreply, put_flash(socket, :error, "No research ingestion run is in progress.")}
+
+      run ->
+        {:noreply,
+         socket
+         |> assign(:research_run, run)
+         |> put_flash(:info, "Research ingestion cancelled.")}
+    end
+  end
+
   # Toggle a condition's "Claims & suggestions" detail block. Initially folded;
   # on first expand the per-paper claims (Tab 1) and derived suggestions (Tab 2)
   # are loaded lazily and the active tab defaults to "claims".
@@ -476,6 +515,14 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
   end
 
   @impl true
+  # Live progress from the research-ingestion worker. Reload the page data when a
+  # run finishes so the new "analyzed" badges + catalog counts appear.
+  def handle_info({:research_ingestion_run, run}, socket) do
+    socket = assign(socket, :research_run, run)
+    {:noreply, if(run.status in ["completed", "failed"], do: load(socket), else: socket)}
+  end
+
+  @impl true
   def handle_async({:crawl, cid}, {:ok, result}, socket) do
     # Always reveal what's on record for the condition — even if this run errored
     # or found nothing new — so the admin sees previously-associated papers.
@@ -537,6 +584,32 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditions do
 
   defp extractor_client,
     do: Application.get_env(:mehungry, :extractor_client, Mehungry.Extractor.Client)
+
+  defp start_research_ingestion(opts, socket) do
+    case Literature.enqueue_research_ingestion(opts) do
+      {:ok, run} ->
+        {:noreply,
+         socket
+         |> assign(:research_run, run)
+         |> put_flash(:info, "Research ingestion started across #{run.conditions_total} conditions.")}
+
+      {:error, :already_running, run} ->
+        {:noreply,
+         socket
+         |> assign(:research_run, run)
+         |> put_flash(:error, "A research ingestion run is already in progress.")}
+
+      {:error, :no_conditions} ->
+        {:noreply, put_flash(socket, :error, "No conditions to ingest.")}
+    end
+  end
+
+  defp extractor_down_message(reason) do
+    {base_url, _} = Extractor.connection()
+
+    "Extractor unreachable at #{base_url} (#{inspect(reason)}). " <>
+      "Check the connection below and that the mehungry_extractor service is running, then run again."
+  end
 
   # Load a condition's detail block: the stored per-paper analyses (Tab 1), the
   # derived food-for-condition suggestions (Tab 2), and — if the condition is a

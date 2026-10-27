@@ -29,6 +29,11 @@ defmodule Mehungry.Literature.ScientificStudy do
     field :journal, :string
     field :publication_date, :string
     field :authors, {:array, :string}, default: []
+    # Journal-authority signal (nutritionist research search): `issn` is the
+    # journal join key; `citation_status` is the MedlineCitation @Status
+    # ("MEDLINE" = vetted/indexed) — a public-domain authority marker.
+    field :issn, :string
+    field :citation_status, :string
     field :raw_metadata, :map, default: %{}
     field :retrieved_at, :utc_datetime
 
@@ -48,6 +53,8 @@ defmodule Mehungry.Literature.ScientificStudy do
       :journal,
       :publication_date,
       :authors,
+      :issn,
+      :citation_status,
       :raw_metadata,
       :retrieved_at
     ])

@@ -1,5 +1,9 @@
 # Chemistry context
 
+> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** `Chemistry.Resolver` ran only
+> during PubTator annotation (now dormant), so this context is **dormant (not dropped)** — code,
+> schemas, and tables remain. Reference only — see `docs/features/professionals/research_search.md`.
+
 `Mehungry.Chemistry` is the external chemical-data **enrichment layer** for the
 canonical bioactive-compound registry (`Mehungry.Food.Compounds`).
 

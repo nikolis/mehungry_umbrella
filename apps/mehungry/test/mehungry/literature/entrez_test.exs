@@ -41,10 +41,11 @@ defmodule Mehungry.Literature.EntrezTest do
     <!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2019//EN" "https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_190101.dtd">
     <PubmedArticleSet>
       <PubmedArticle>
-        <MedlineCitation>
+        <MedlineCitation Status="MEDLINE">
           <PMID Version="1">11111</PMID>
           <Article>
             <Journal>
+              <ISSN IssnType="Print">1234-5678</ISSN>
               <Title>Journal of Food Science</Title>
               <JournalIssue><PubDate><Year>2019</Year><Month>Mar</Month></PubDate></JournalIssue>
             </Journal>
@@ -54,6 +55,7 @@ defmodule Mehungry.Literature.EntrezTest do
               <Author><LastName>Smith</LastName><ForeName>Jane</ForeName></Author>
             </AuthorList>
           </Article>
+          <MedlineJournalInfo><ISSNLinking>1234-5678</ISSNLinking></MedlineJournalInfo>
         </MedlineCitation>
         <PubmedData>
           <ArticleIdList>
@@ -107,6 +109,9 @@ defmodule Mehungry.Literature.EntrezTest do
     assert study.doi == "10.1000/oxalate.2019"
     assert study.publication_date == "2019 Mar"
     assert study.authors == ["Jane Smith"]
+    # Journal-authority fields: ISSN + MEDLINE indexing status.
+    assert study.issn == "1234-5678"
+    assert study.citation_status == "MEDLINE"
 
     # Fanned out to the species' ingredient with the exact search term as provenance.
     assert [linked_study] = Literature.list_studies_for_ingredient(ingredient.id)

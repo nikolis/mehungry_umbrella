@@ -1,5 +1,11 @@
 # Compound Candidates — the curation step
 
+> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The admin review UI
+> (`/professional/compound-candidates`) and the derivation trigger were **removed**; the context,
+> Oban worker, schemas, and tables remain **dormant (not dropped)**, so this doc still describes code
+> that exists but is no longer wired to any UI/cron. Reference only — see
+> `docs/features/professionals/research_search.md`.
+
 A **two-stage candidate → curated pipeline** that turns accumulated evidence into
 **species-keyed** `SpeciesCompoundRelationship` facts. Candidates and facts are keyed on
 `FoundementalFoodSpecies` (one suggestion/fact per species, not per USDA ingredient

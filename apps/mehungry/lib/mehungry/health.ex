@@ -36,7 +36,6 @@ defmodule Mehungry.Health do
     Condition,
     ConditionState,
     ConditionStateRecommendation,
-    ConditionStateRecommendationStudy,
     CompoundRecommendation,
     CompoundRecommendationCandidate,
     CompoundRecommendationStudy,

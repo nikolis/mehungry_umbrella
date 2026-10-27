@@ -10,6 +10,90 @@ defmodule MehungryWeb.LayoutView do
     "main-content-container"
   end
 
+  @doc """
+  Whether to show the first-visit language chooser to an unrecognized visitor.
+
+  Shown only on public live surfaces when **all** hold: not logged in, the
+  visitor has not already picked a language this session, the request URL
+  carries no explicit `/:locale` prefix (a bare entry — a prefixed URL already
+  expresses a language), and a supported locale is in play (nil on the
+  English-only admin/nutritionist surfaces, which never prompt).
+  """
+  def show_language_chooser?(assigns) do
+    is_nil(assigns[:current_user]) and
+      assigns[:locale_selected] != true and
+      assigns[:url_locale_present] != true and
+      MehungryWeb.Locale.supported?(assigns[:locale])
+  end
+
+  @doc """
+  First-visit language selection modal for unrecognized visitors.
+
+  Each option is a real anchor to `/users/language/:lang` (the existing public
+  switcher, which persists the choice + swaps the current path's locale prefix),
+  so it works without JS and stays crawlable. `return_to` is bound client-side
+  to the current path so the visitor lands back on the same page in their
+  chosen language even when the `Referer` header is stripped. A client-side
+  `localStorage` flag keeps a dismissed/chosen chooser from reappearing on
+  subsequent bare navigations within the browser.
+  """
+  attr :current_user, :any, default: nil
+  attr :locale, :string, default: nil
+  attr :locale_selected, :boolean, default: false
+  attr :url_locale_present, :boolean, default: false
+
+  def language_chooser(assigns) do
+    ~H"""
+    <div
+      :if={show_language_chooser?(assigns)}
+      id="language-chooser"
+      x-data="{ open: !window.localStorage.getItem('langChosen'), choose() { window.localStorage.setItem('langChosen', '1') } }"
+      x-show="open"
+      x-cloak
+      role="dialog"
+      aria-modal="true"
+      aria-label="Choose your language"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-ink/80 backdrop-blur-sm px-4"
+    >
+      <div class="relative w-full max-w-sm rounded-2xl border border-ink-panel2 bg-ink-panel p-6 shadow-2xl text-center">
+        <button
+          type="button"
+          @click="choose(); open = false"
+          aria-label="Close"
+          class="absolute right-4 top-4 text-parchment-dim hover:text-parchment transition-colors"
+        >
+          <.icon name="hero-x-mark" class="h-5 w-5" />
+        </button>
+
+        <div class="mb-1 text-3xl">🍅</div>
+        <h2 class="text-lg font-semibold text-parchment">Choose your language</h2>
+        <p class="mt-1 text-sm text-parchment-dim">Επιλέξτε τη γλώσσα σας</p>
+
+        <div class="mt-5 grid grid-cols-2 gap-3">
+          <a
+            href="/users/language/en"
+            x-bind:href="'/users/language/en?return_to=' + encodeURIComponent(window.location.pathname + window.location.search)"
+            @click="choose()"
+            class="flex flex-col items-center gap-1 rounded-xl border border-ink-panel2 bg-ink px-4 py-4 text-parchment hover:border-paprika hover:bg-ink-panel2 transition-colors"
+          >
+            <span class="text-2xl">🇬🇧</span>
+            <span class="text-sm font-semibold">English</span>
+          </a>
+          <a
+            href="/users/language/el"
+            x-bind:href="'/users/language/el?return_to=' + encodeURIComponent(window.location.pathname + window.location.search)"
+            @click="choose()"
+            class="flex flex-col items-center gap-1 rounded-xl border border-ink-panel2 bg-ink px-4 py-4 text-parchment hover:border-paprika hover:bg-ink-panel2 transition-colors"
+          >
+            <span class="text-2xl">🇬🇷</span>
+            <span class="text-sm font-semibold">Ελληνικά</span>
+          </a>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   attr :conn, :any, required: true
 
   def cookie_consent_banner(assigns) do
@@ -71,71 +155,78 @@ defmodule MehungryWeb.LayoutView do
 
   def sidebar_nav_links(assigns) do
     ~H"""
-    <!-- Backdrop -->
-    <div
-      id="admin_backdrop"
-      class="fixed inset-0 bg-black/50 z-40 hidden"
-      phx-click={
-        JS.toggle_class("open", to: "#nav_bar_admin")
-        |> JS.toggle_class("hidden", to: "#admin_backdrop")
-      }
-    />
-
-    <!-- Toggle button -->
-    <button
-      id="admin_menu_button"
-      class="fixed bottom-4 right-4 z-50 w-12 h-12 flex items-center justify-center rounded-full bg-paprika hover:bg-paprika-soft text-white transition shadow-lg"
-      phx-click={
-        JS.toggle_class("open", to: "#nav_bar_admin")
-        |> JS.toggle_class("hidden", to: "#admin_backdrop")
-        |> JS.toggle_class("sidebar-open", to: "#admin_menu_button")
-      }
-    >
-      <svg id="icon_hamburger" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M4 6h16M4 12h16M4 18h16"
-        />
-      </svg>
-    </button>
-
-    <!-- Sidebar -->
-    <nav
-      id="nav_bar_admin"
-      class="fixed top-0 left-0 h-full w-64 bg-ink border-r border-ink-panel2/60 z-50 flex flex-col shadow-2xl transition-transform duration-300 -translate-x-full"
-    >
-      <!-- Logo -->
-      <div class="flex items-center justify-between px-5 py-5 border-b border-ink-panel2/60">
-        <a href="/" class="block w-32">
-          {SvgComponents.get_logo(%{id: "admin-sidebar"})}
+    <div x-data="{ open: false }">
+      <!-- Mobile top bar: the discoverable menu affordance on small screens.
+           The sidebar itself lives in the root layout (outside the LiveView DOM),
+           so the open/close toggle uses Alpine — phx-click/JS would never fire here. -->
+      <header class="md:hidden fixed top-0 inset-x-0 z-40 flex items-center justify-between h-14 px-4 bg-ink border-b border-ink-panel2/60">
+        <a href="/" class="block w-28">
+          {SvgComponents.get_logo(%{id: "admin-topbar"})}
         </a>
         <button
-          class="p-1.5 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel transition"
-          phx-click={
-            JS.toggle_class("open", to: "#nav_bar_admin")
-            |> JS.toggle_class("hidden", to: "#admin_backdrop")
-          }
+          type="button"
+          @click="open = true"
+          aria-label="Open admin menu"
+          class="flex items-center gap-2 py-2 pl-3 pr-2 -mr-2 rounded-lg text-parchment hover:bg-ink-panel transition"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span class="text-sm font-semibold">Admin</span>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
+              d="M4 6h16M4 12h16M4 18h16"
             />
           </svg>
         </button>
-      </div>
+      </header>
 
-      <!-- Label -->
-      <div class="px-5 py-3">
-        <span class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">Admin Panel</span>
-      </div>
+      <!-- Backdrop (mobile only; desktop sidebar is persistent) -->
+      <div
+        x-show="open"
+        x-transition.opacity
+        @click="open = false"
+        class="md:hidden fixed inset-0 bg-black/50 z-40"
+        x-cloak
+      />
 
-      <!-- Nav links -->
-      <div class="flex-1 px-3 space-y-1 overflow-y-auto">
+      <!-- Sidebar: persistent on desktop, slide-in drawer on mobile.
+           The slide transform is driven by the #nav_bar_admin CSS rules
+           (which beat Tailwind's utility specificity); Alpine toggles .open. -->
+      <nav
+        id="nav_bar_admin"
+        x-bind:class="{ 'open': open }"
+        class="fixed top-0 left-0 h-full w-64 bg-ink border-r border-ink-panel2/60 z-50 flex flex-col shadow-2xl transition-transform duration-300"
+      >
+        <!-- Logo -->
+        <div class="flex items-center justify-between px-5 py-5 border-b border-ink-panel2/60">
+          <a href="/" class="block w-32">
+            {SvgComponents.get_logo(%{id: "admin-sidebar"})}
+          </a>
+          <button
+            type="button"
+            class="md:hidden p-1.5 rounded-lg text-parchment-dim hover:text-white hover:bg-ink-panel transition"
+            @click="open = false"
+            aria-label="Close admin menu"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Label -->
+        <div class="px-5 py-3">
+          <span class="text-xs font-semibold text-parchment-dim uppercase tracking-wider">Admin Panel</span>
+        </div>
+
+        <!-- Nav links (tapping one closes the drawer on mobile) -->
+        <div class="flex-1 px-3 space-y-1 overflow-y-auto" @click="open = false">
         <.admin_link href="/professional/analytics" icon="hero-chart-bar" label="Analytics" />
         <.admin_link href="/professional/users" icon="hero-users" label="Users" />
         <.admin_link href="/professional/recipes" icon="hero-book-open" label="Recipes" />
@@ -159,13 +250,6 @@ defmodule MehungryWeb.LayoutView do
           href="/professional/taxonomy/review"
           icon="hero-rectangle-stack"
           label="Taxonomy"
-        />
-        <.admin_link href="/professional/science" icon="hero-sparkles" label="Science" />
-        <.admin_link href="/professional/literature" icon="hero-document-text" label="Literature" />
-        <.admin_link
-          href="/professional/compound-candidates"
-          icon="hero-beaker"
-          label="Candidates"
         />
         <.admin_link href="/professional/health" icon="hero-heart" label="Health" />
         <.admin_link
@@ -197,7 +281,8 @@ defmodule MehungryWeb.LayoutView do
           Back to app
         </a>
       </div>
-    </nav>
+      </nav>
+    </div>
     """
   end
 
@@ -287,7 +372,6 @@ defmodule MehungryWeb.LayoutView do
             )
           }
         />
-        <.nutritionist_link href="/nutritionist/conditions" icon="hero-heart" label="Health" />
         <.nutritionist_link
           href="/nutritionist/blueprints"
           icon="hero-clipboard-document-list"
@@ -303,6 +387,11 @@ defmodule MehungryWeb.LayoutView do
           href="/nutritionist/articles"
           icon="hero-document-text"
           label="Articles"
+        />
+        <.nutritionist_link
+          href="/nutritionist/research"
+          icon="hero-academic-cap"
+          label="Research"
         />
       </div>
 

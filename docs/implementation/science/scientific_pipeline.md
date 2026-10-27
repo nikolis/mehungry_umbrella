@@ -1,5 +1,15 @@
 # Scientific Pipeline — overview & setup runbook
 
+> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The generation stages and
+> admin control panel in this runbook (`/professional/science` "Run crawl / Run annotation / Derive",
+> `/professional/{compound-candidates,literature}`) were **removed** (the **USDA Schema** view at
+> `/professional/usda-schema` was **kept** — foundemental-food curation outlives the crawl), along with the
+> inbound `/api/local_ai/*` seam; `PipelineWatchdog`/`RunReconciler` now cover only the
+> condition-seeded crawl. Contexts, workers, schemas, and tables are **dormant, not dropped**. The
+> only live path is the **condition-seeded crawl + extractor `/analyze` ingestion** powering the
+> nutritionist research search (`docs/features/professionals/research_search.md`). The runbook below
+> is retained as reference for the dormant generation code.
+
 This is the **index and runbook** for the food-science subsystem. Eight detailed
 docs each describe one layer; this doc explains **how they compose into one flow**
 and gives the **ordered "run X, then run Y" setup sequence** to go from a bare

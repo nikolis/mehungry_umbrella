@@ -80,8 +80,8 @@ breakdown per serving + nutrient-claim badges ("High in Iron") are shown — the
 | Feature | What the user does | Entry point | Gate |
 |---|---|---|---|
 | **Create recipe** | Manual multi-step form; **AI generate** from a prompt; **AI import from URL**; (Spoonacular import is shadowed/off) | `CreateRecipeLive.Index` (`/create_recipe`) | AI paths consume `recipe_generation` quota |
-| **Calendar / meal plan** | Per-day meal slots; **AI plan a week**; day notes; per-day **avoid-foods** personal list w/ flagging; copy-a-meal-to-today; day-summary sodium/sat-fat badges; follow/unfollow a blueprint; **generate a week share card** + **post it to the feed** | `CalendarLive.Index` (`/calendar`) | AI plan consumes `meal_plan` quota |
-| **Basket / shopping** | Shopping baskets + items; add USDA-searched items or custom ingredients; import a recipe's or a meal's ingredients | `ShoppingBasketLive.Index` (`/basket`) | free |
+| **Calendar / meal plan** | Per-day meal slots; **AI plan a week**; day notes; per-day **avoid-foods** personal list w/ flagging; copy-a-meal-to-today; day-summary sodium/sat-fat badges; follow/unfollow a blueprint; **generate a week share card** + **post it to the feed**; **create a shopping list for the viewed week** (one click → `Inventory.create_basket_for_range/4`, or re-opens the week's existing list via `Inventory.get_basket_for_week/2` instead of duplicating; lands on `/basket?basket_id=`, title localized) | `CalendarLive.Index` (`/calendar`) | AI plan consumes `meal_plan` quota |
+| **Basket / shopping** | Shopping baskets + items; add USDA-searched items or custom ingredients; import a recipe's or a meal's ingredients (ingredient aggregation shared via `Inventory.aggregate_meal_ingredients/1`) | `ShoppingBasketLive.Index` (`/basket`) | free |
 | **My ingredients** | Create/edit personal ingredients | `MyIngredientLive.Form` | free |
 
 ### Identity, social & profile

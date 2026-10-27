@@ -204,6 +204,9 @@
 	}
 }
 
+/* Admin sidebar: off-canvas drawer on mobile (toggled by Alpine via .open),
+   persistent on desktop. The ID selector intentionally beats Tailwind's
+   translate utilities so the slide state is owned in one place. */
 #nav_bar_admin {
   transform: translateX(-100%);
   transition: transform 0.3s ease-in-out;
@@ -213,8 +216,18 @@
   transform: translateX(0);
 }
 
-#admin_menu_button.sidebar-open {
-  background-color: rgb(51 65 85); /* slate-700 */
-  color: white;
+@media (min-width: 768px) {
+  #nav_bar_admin {
+    transform: translateX(0);
+  }
+}
+
+/* Nutritionist sidebar: it already carries Tailwind's `-translate-x-full
+   md:translate-x-0` (hidden on mobile, persistent on desktop) and toggles
+   `.open` via phx-click (it lives in the live layout, so the event fires).
+   This rule is the missing piece — the ID+class specificity beats the
+   `-translate-x-full` utility so the drawer actually slides in when open. */
+#nav_bar_nutritionist.open {
+  transform: translateX(0);
 }
 

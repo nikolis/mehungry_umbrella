@@ -1,5 +1,9 @@
 # PubTator3 relations → condition recommendations (IMPLEMENTED)
 
+> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The derive-stage admin card
+> (`/professional/science`) was **removed**; the contexts, Oban worker, schemas, and tables remain
+> **dormant (not dropped)**. Reference only — see `docs/features/professionals/research_search.md`.
+
 **Status:** built (Phase 1 — the relations→recommendations slice over the existing
 corpus). Captured after an empirical spike on 2026-08-01; implemented 2026-08-03.
 The disease-seeded crawl (Phase 2) that discovers *new* literature per condition is

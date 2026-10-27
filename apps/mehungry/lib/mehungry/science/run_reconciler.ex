@@ -32,19 +32,17 @@ defmodule Mehungry.Science.RunReconciler do
   require Logger
 
   alias Mehungry.Repo
-  alias Mehungry.Literature.{AnnotationRuns, CrawlRuns, ConditionCrawlRuns}
-  alias Mehungry.Food.CandidateDerivationRuns
-  alias Mehungry.Health.RecommendationDerivationRuns
+  alias Mehungry.Literature.ConditionCrawlRuns
 
   # {run table, Oban worker (as stored — no "Elixir." prefix), run module with mark_failed/2}
+  #
+  # Trimmed to condition-crawl only in the research-search reshape (Phase 1):
+  # the generation stages (species crawl, PubTator annotation, compound- &
+  # recommendation-candidate derivation) were decommissioned; their runs/workers
+  # remain dormant and are no longer reconciled at boot. Condition crawl is the
+  # research-search acquisition path.
   @stages [
-    {"literature_crawl_runs", "Mehungry.ObanWorkers.LiteratureCrawlWorker", CrawlRuns},
-    {"condition_crawl_runs", "Mehungry.ObanWorkers.ConditionCrawlWorker", ConditionCrawlRuns},
-    {"pubtator_annotation_runs", "Mehungry.ObanWorkers.PubTatorAnnotationWorker", AnnotationRuns},
-    {"candidate_derivation_runs", "Mehungry.ObanWorkers.CompoundCandidateDerivationWorker",
-     CandidateDerivationRuns},
-    {"recommendation_derivation_runs",
-     "Mehungry.ObanWorkers.RecommendationCandidateDerivationWorker", RecommendationDerivationRuns}
+    {"condition_crawl_runs", "Mehungry.ObanWorkers.ConditionCrawlWorker", ConditionCrawlRuns}
   ]
 
   # `executing` is handled separately (see `live_run_ids/1`): a fresh one is live, a

@@ -822,7 +822,7 @@
             {@modal_blueprint.condition.name}
           </span>
           <span class="text-[11px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
-            {gettext("7 days · 5 meals/day")}
+            {gettext("Typical day · 5 meals")}
           </span>
         </div>
 
@@ -869,23 +869,31 @@
         <summary class="cursor-pointer select-none px-4 py-3 font-semibold text-parchment">
           {gettext("Daily macro targets")}
         </summary>
+        <%!-- A blueprint is a single typical day; all stored days (and every meal
+              within them) share one macro split, so show it once. --%>
         <div class="px-4 pb-4 space-y-4">
-          <div :for={day <- @modal_blueprint.days}>
-            <div class="text-parchment-dim text-xs font-semibold uppercase tracking-wide mb-1.5">
-              {gettext("Day %{n}", n: day.day_index)}
-              <span :if={day.total_calorie_target} class="normal-case font-normal">
-                · {day.total_calorie_target} kcal
+          <div :for={day <- Enum.take(@modal_blueprint.days, 1)}>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold uppercase tracking-wide mb-1.5">
+              <span :if={day.total_calorie_target} class="text-parchment-dim">
+                {day.total_calorie_target} kcal / {gettext("day")}
+              </span>
+              <span
+                :if={List.first(day.meals)}
+                class="text-parchment [font-variant-numeric:tabular-nums] normal-case"
+              >
+                P {List.first(day.meals).protein_pct}% · C {List.first(day.meals).carbs_pct}% · F {List.first(
+                  day.meals
+                ).fats_pct}%
               </span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               <div
                 :for={meal <- day.meals}
+                :if={meal.note not in [nil, ""]}
                 class="flex items-center justify-between text-sm"
               >
                 <span class="text-parchment-dim">{MealType.label(meal.meal_type)}</span>
-                <span class="text-parchment [font-variant-numeric:tabular-nums] text-xs">
-                  P {meal.protein_pct}% · C {meal.carbs_pct}% · F {meal.fats_pct}%
-                </span>
+                <span class="text-parchment text-xs">{meal.note}</span>
               </div>
             </div>
           </div>

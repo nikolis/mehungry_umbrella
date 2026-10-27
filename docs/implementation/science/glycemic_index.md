@@ -1,5 +1,9 @@
 # Glycemic Index import
 
+> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The GI derivation admin UI and
+> the inbound `/api/local_ai/gi_candidates` endpoint were **removed**; contexts/schemas/tables remain
+> **dormant (not dropped)**. Reference only — see `docs/features/professionals/research_search.md`.
+
 > **Provenance pivot in progress.** The compiled 2021 International Tables are **not
 > licensable for commercial use**, so the source of truth is moving from the *table*
 > to the *primary studies it cites* (re-derived through the literature pipeline). The

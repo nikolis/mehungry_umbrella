@@ -19,6 +19,11 @@ defmodule Mehungry.Extractor.ClientStub do
     call(:analyze, [pmids, opts], {:ok, default_response(pmids)})
   end
 
+  @impl true
+  def reachable? do
+    call(:reachable?, [], :ok)
+  end
+
   defp default_response(pmids) do
     %{
       "run" => %{"synthesis_version" => "0.1.0"},

@@ -1,5 +1,11 @@
 # Measurement extraction (local-AI service + REST)
 
+> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The `/api/local_ai/*` seam
+> described here (controllers, routes, `:local_ai_api` pipeline, the `local_ai_test.exs` test) was
+> **removed**, and the non-deployed `apps/mehungry_local_ai` service is now orphaned. The underlying
+> `Literature`/`Food` contexts, schemas, and tables remain **dormant (not dropped)**. Reference only —
+> see `docs/features/professionals/research_search.md`.
+
 Auto-extracts quantitative compound measurements (`compound = value unit`) from the
 literature we crawl, as **review-gated candidates** (never facts). Composition numbers
 live in full-text results/tables, so a paper's **PMC open-access full text** is fetched

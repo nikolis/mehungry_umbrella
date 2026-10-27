@@ -126,6 +126,20 @@ defmodule Mehungry.Literature.Entrez.Client do
     end
   end
 
+  @doc """
+  Parse a stored efetch XML body into normalized article maps (the shape the crawl
+  persists), with **no** network call. Used to backfill fields added after a paper
+  was first fetched (e.g. `issn`, `citation_status`) from the retained
+  `entrez_responses` payload (`raw_json["raw_xml"]`).
+  """
+  @spec parse_efetch_xml(String.t()) :: {:ok, [map()]} | {:error, term()}
+  def parse_efetch_xml(body) when is_binary(body) do
+    case parse_efetch(body) do
+      {:ok, articles, _raw} -> {:ok, articles}
+      error -> error
+    end
+  end
+
   # ── efetch parsing (PubMed XML → flat attr maps) ────────────────────────────
 
   defp parse_efetch(body) do
@@ -143,6 +157,14 @@ defmodule Mehungry.Literature.Entrez.Client do
         day: ~x"./MedlineCitation/Article/Journal/JournalIssue/PubDate/Day/text()"s,
         medline_date:
           ~x"./MedlineCitation/Article/Journal/JournalIssue/PubDate/MedlineDate/text()"s,
+        # Journal ISSN (print/electronic) + the linking ISSN; the universal join
+        # key for any journal-authority dataset (DOAJ, SJR, NLM catalog).
+        issn: ~x"./MedlineCitation/Article/Journal/ISSN/text()"s,
+        issn_linking: ~x"./MedlineCitation/MedlineJournalInfo/ISSNLinking/text()"s,
+        # MedlineCitation @Status — "MEDLINE" marks a fully MEDLINE-indexed
+        # (vetted) journal; "PubMed-not-MEDLINE" etc. are in PubMed but unindexed.
+        # Our public-domain, commercial-safe journal-authority signal.
+        citation_status: ~x"./MedlineCitation/@Status"s,
         doi: ~x"./PubmedData/ArticleIdList/ArticleId[@IdType='doi']/text()"s,
         authors: [
           ~x"./MedlineCitation/Article/AuthorList/Author"l,
@@ -172,8 +194,15 @@ defmodule Mehungry.Literature.Entrez.Client do
       abstract: join_abstract(raw.abstract_parts),
       journal: blank_to_nil(raw.journal),
       publication_date: publication_date(raw),
-      authors: authors(raw.authors)
+      authors: authors(raw.authors),
+      issn: issn(raw),
+      citation_status: blank_to_nil(raw.citation_status)
     }
+  end
+
+  # Prefer the article's own ISSN; fall back to the journal's linking ISSN.
+  defp issn(%{issn: issn, issn_linking: linking}) do
+    blank_to_nil(issn) || blank_to_nil(linking)
   end
 
   defp join_abstract([]), do: nil

@@ -16,7 +16,7 @@ section links to the doc that covers it in depth.
 | **Translation** | Recipe + ingredient/unit text in other languages (en/el) | `RecipeTranslator`, `IngredientTranslator` | [`ai_agents.md`](ai_agents.md) |
 | **Cover images** | Food-photography image per recipe | `RecipeImageWorker` → `AI.ImageGenerator` (provider seam: OpenAI `gpt-image-2` **or** FLUX 2 pro) | [`ai_agents.md`](ai_agents.md) |
 | **Semantic search / embeddings** | pgvector recipe embeddings for meaning-based catalog search | `RecipeEmbeddingWorker`, `RecipeVectorSearch` | [`ai_agents.md`](ai_agents.md) |
-| **Measurement extraction** | Compound-measurement candidates pulled from full-text papers by a local QA model | `apps/mehungry_local_ai` → `/api/local_ai/*` | [`measurement_extraction.md`](measurement_extraction.md) |
+| **Measurement extraction** *(decommissioned 2026-10-26 — `/api/local_ai/*` seam removed, `apps/mehungry_local_ai` orphaned; dormant. See `../../features/professionals/research_search.md`)* | Compound-measurement candidates pulled from full-text papers by a local QA model | ~~`apps/mehungry_local_ai` → `/api/local_ai/*`~~ | [`measurement_extraction.md`](measurement_extraction.md) |
 
 ## Providers & configuration
 

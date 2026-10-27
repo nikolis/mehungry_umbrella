@@ -57,13 +57,14 @@ defmodule Mehungry.Science.PipelineWatchdog do
   alias Mehungry.Repo
 
   # {run table, self-re-enqueueing stage worker}. Same stage set as RunReconciler.
+  #
+  # Trimmed to condition-crawl only in the research-search reshape (Phase 1): the
+  # species-crawl / PubTator-annotation / compound- & recommendation-candidate
+  # derivation generation stages were decommissioned, so the watchdog no longer
+  # resumes them. Their workers/tables remain dormant. Condition crawl is the
+  # research-search acquisition path and still self-heals.
   @stages [
-    {"literature_crawl_runs", Mehungry.ObanWorkers.LiteratureCrawlWorker},
-    {"condition_crawl_runs", Mehungry.ObanWorkers.ConditionCrawlWorker},
-    {"pubtator_annotation_runs", Mehungry.ObanWorkers.PubTatorAnnotationWorker},
-    {"candidate_derivation_runs", Mehungry.ObanWorkers.CompoundCandidateDerivationWorker},
-    {"recommendation_derivation_runs",
-     Mehungry.ObanWorkers.RecommendationCandidateDerivationWorker}
+    {"condition_crawl_runs", Mehungry.ObanWorkers.ConditionCrawlWorker}
   ]
 
   # `executing` is handled separately (see `live_run_ids/2`): a fresh one is live,

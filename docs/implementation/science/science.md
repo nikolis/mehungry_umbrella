@@ -1,5 +1,17 @@
 # Food Science Pipeline — Overview
 
+> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The *generation* pipeline
+> described below — species-seeded literature crawl, PubTator annotation, compound/recommendation
+> **candidate derivation**, Chemistry/PubChem resolution, glycemic-index derivation — has had its
+> admin UIs (`/professional/{science,literature,compound-candidates}`) and the inbound
+> `/api/local_ai/*` seam **removed**, and the pipeline watchdog/reconciler trimmed to condition-crawl
+> only. The contexts, Oban workers, schemas, and **tables remain dormant** (not dropped), so this doc
+> still describes code that exists. What's *live*: the **condition-seeded crawl** + extractor
+> `/analyze` ingestion feeding the nutritionist **research search**
+> (`docs/features/professionals/research_search.md`), and all hand-curated `Health`/`Food` advice
+> **reads** that consumer features depend on. Treat the generation flow below as reference for the
+> dormant code, not current operations.
+
 How the food-science subsystem turns external authorities (USDA, PubMed, PubTator,
 PubChem) into curated `Species↔Compound` facts and, finally, dietary advice. This
 is the front door to `docs/science/` — each section links to the doc that covers it
@@ -62,9 +74,11 @@ Other parts of the project the pipeline leans on (integration surface / blast ra
 - **`apps/mehungry/lib/mehungry/science/`** — pipeline orchestration:
   `PipelineWatchdog` (resumes a broken single-threaded run), `PipelineReset`,
   `RunReconciler`.
-- Admin/curation UIs: `apps/mehungry_web/.../professional_live/` (`science_pipeline.ex`,
-  `studies.ex`, `entities.ex`, plus `/professional/compound-candidates` and
-  `/professional/health`).
+- Admin/curation UIs: `apps/mehungry_web/.../professional_live/`. **Decommissioned in Phase 1**
+  (removed): `science_pipeline.ex`, `studies.ex`, `entities.ex`, `literature_runs.ex`,
+  `compound_candidates.ex`. **Still live:** `health_conditions.ex` (`/professional/health` — the
+  condition-crawl + analyze + claim-curation acquisition surface) and `usda_schema.ex`
+  (`/professional/usda-schema` — foundemental-food/species curation).
 
 ## Cross-cutting principles
 

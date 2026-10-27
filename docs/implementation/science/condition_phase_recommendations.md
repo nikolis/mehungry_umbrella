@@ -1,5 +1,10 @@
 # Phase-aware condition recommendations (disease-state pipeline)
 
+> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The derive trigger
+> (`/professional/science`) and the inbound `/api/local_ai/condition_*` endpoints described here were
+> **removed**; the contexts, schemas, and tables remain **dormant (not dropped)**. Reference only —
+> see `docs/features/professionals/research_search.md`.
+
 **Status:** built 2026-09-23.
 
 ## The problem this solves

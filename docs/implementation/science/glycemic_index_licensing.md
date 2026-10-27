@@ -1,5 +1,9 @@
 # Glycemic Index — licensing & provenance
 
+> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The GI derivation path
+> (incl. `POST /api/local_ai/gi_candidates`) was **removed**; contexts/schemas/tables remain
+> **dormant (not dropped)**. Reference only — see `docs/features/professionals/research_search.md`.
+
 **Status: decision doc for the GI pivot.** The pipeline in
 [`glycemic_index.md`](glycemic_index.md) was built to ingest the *compiled* 2021
 International Tables. That compilation is **not licensable for commercial use**, so

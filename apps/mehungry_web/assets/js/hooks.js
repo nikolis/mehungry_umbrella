@@ -383,45 +383,35 @@ Hooks.DatePicker = {
 		console.log("Update")
 		console.log(this.picker.open())
 	},
-	mounted() 
+	mounted()
 	{
-		console.log(this.el)
-		this.picker = flatpickr("#container", {appendTo: this.el, static: false, inline: true, wrap: false, clickOpens: true, mode: 'range', onChange: (e) => 
+		// Local midnight for the picked day as a naive ISO string. `toISOString()`
+		// would convert to UTC first, so for a user east of UTC (e.g. Greece,
+		// UTC+2/+3) the selected day would be shifted back by one, pulling the
+		// basket's meal-range query onto the wrong days. The server parses this
+		// with `NaiveDateTime.from_iso8601!/1`, which ignores any offset anyway.
+		const toNaive = (d) => {
+			const pad = (n) => String(n).padStart(2, '0')
+			return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T00:00:00"
+		}
+		const setDate = (el, d) => {
+			el.value = toNaive(d)
+			el.dispatchEvent(new Event('input', { view: window, bubbles: true, cancelable: true }))
+		}
+
+		this.picker = flatpickr("#container", {appendTo: this.el, static: false, inline: true, wrap: false, clickOpens: true, mode: 'range', onChange: (e) =>
 		{
-			console.log("Piou")
 			var end = document.getElementById('shopping_basket_end_dt')
 			var st = document.getElementById('shopping_basket_start_dt');
-			console.log(e)
-	
+
 			if(e[0]) {
-				console.log(e[0])
-				
-				var value = e[0].getFullYear() +"-"+ e[0].getMonth()  +"-" + e[0].getDate()
-				console.log(value)
-				st.value =  (e[0].toISOString())
-				console.log(st)
-				st.dispatchEvent(new Event('input', {
-				  view: window,
-				  bubbles: true,
-				  cancelable: true
-				}))
+				setDate(st, e[0])
 			}
-	
+
 			if(e[1]) {
-				end.value = e[1].toISOString()
-				end.dispatchEvent(new Event('input', {
-				  view: window,
-				  bubbles: true,
-				  cancelable: true
-				}))
+				setDate(end, e[1])
 			}
-
-
-		console.log(e[0])
-		console.log(e[1])
-		console.log("Something")
-		return;
-		} 
+		}
        })
 	this.picker.open()
    }
@@ -921,6 +911,44 @@ Hooks.Turnstile = {
     if (this.widgetId && window.turnstile) {
       try { window.turnstile.remove(this.widgetId) } catch (_e) {}
     }
+  }
+}
+
+// Research reader: when the server has put the page in "note mode"
+// (data-note-mode="true"), capturing a text selection in the article pushes the
+// selected passage + its paragraph/section anchors back so the note form can
+// prefill the sub-text. Cursor affordance is handled server-side via a CSS class.
+Hooks.NoteSelection = {
+  mounted() {
+    this.onMouseUp = () => {
+      if (this.el.dataset.noteMode !== "true") return
+
+      const selection = window.getSelection()
+      // Collapse whitespace so the stored quote matches the paragraph text (which
+      // the server re-locates with a whitespace-tolerant search to highlight it).
+      const text = selection ? selection.toString().replace(/\s+/g, " ").trim() : ""
+      if (!text) return
+
+      let node = selection.anchorNode
+      if (node && node.nodeType === Node.TEXT_NODE) node = node.parentElement
+
+      const paragraph = node && node.closest('[id^="par-"]')
+      const section = node && node.closest('[id^="sec-"]')
+
+      // Only accept selections that land inside the article.
+      if (!this.el.contains(node)) return
+
+      this.pushEvent("select_passage", {
+        text: text,
+        paragraph_id: paragraph ? paragraph.id.replace(/^par-/, "") : null,
+        section_id: section ? section.id.replace(/^sec-/, "") : null
+      })
+    }
+
+    this.el.addEventListener("mouseup", this.onMouseUp)
+  },
+  destroyed() {
+    this.el.removeEventListener("mouseup", this.onMouseUp)
   }
 }
 

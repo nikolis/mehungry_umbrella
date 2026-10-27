@@ -1,5 +1,9 @@
 # Measurement extraction — design review
 
+> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** The `/api/local_ai/*` seam this
+> review discusses was **removed** and `apps/mehungry_local_ai` is now orphaned. Retained as design
+> history only — see `docs/features/professionals/research_search.md`.
+
 A critical review of the full-text (PMC) + local-QA measurement-extraction feature as
 it stands after the split into `apps/mehungry_local_ai`. Covers the **pros/cons of the
 decisions made**, **model alternatives**, **next steps**, and **obstacles ahead**.

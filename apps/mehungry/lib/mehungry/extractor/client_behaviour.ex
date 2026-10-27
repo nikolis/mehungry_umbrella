@@ -7,4 +7,11 @@ defmodule Mehungry.Extractor.ClientBehaviour do
 
   @callback analyze(pmids :: [String.t()], opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
+
+  @doc """
+  Cheap liveness probe used as a **pre-flight** before starting a run: `:ok` when
+  the service answers at all (any HTTP status), `{:error, reason}` when the link
+  is dead (connection refused / timeout / DNS). Not a semantic health check.
+  """
+  @callback reachable?() :: :ok | {:error, term()}
 end

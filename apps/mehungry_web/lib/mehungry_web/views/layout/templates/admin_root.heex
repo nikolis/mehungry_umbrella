@@ -2,11 +2,9 @@
 <html lang="en" class="bg-ink">
   <.head conn={@conn} />
   <body class="w-full bg-ink min-h-screen">
-    <div class="pb-20">
-      {@inner_content}
-    </div>
+    {@inner_content}
     <%= if @current_user do %>
-      <.sidebar_nav_links current_user={@current_user} inner_content={@inner_content} />
+      <.sidebar_nav_links current_user={@current_user} />
     <% end %>
   </body>
 </html>

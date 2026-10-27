@@ -1,5 +1,12 @@
 # Health Recommendations
 
+> **⚠️ Partially decommissioned 2026-10-26 (research-search reshape, Phase 1).** The literature-derived
+> **candidate derivation** (`RecommendationCandidateDerivationWorker`, surfaced on `/professional/science`)
+> was removed; those contexts/tables are **dormant (not dropped)**. The hand-curated recommendation
+> tables and all **read paths** (`species_for_condition/2`, `recommendations_for_condition/2`, nutrient
+> advice, recipe badges) stay **live** — consumer features depend on them. See
+> `docs/features/professionals/research_search.md`.
+
 A **health-recommendation knowledge model**: it represents health conditions as
 first-class reference entities and links them to bioactive **compounds** as dietary
 recommendations — *"Kidney Stones: avoid Oxalate"*, *"IBS: limit FODMAP"*.

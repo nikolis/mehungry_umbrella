@@ -1,5 +1,17 @@
 # Literature context
 
+> **⚠️ Partially decommissioned 2026-10-26 (research-search reshape, Phase 1).** The **species-seeded**
+> crawl this doc describes (`scientific_name × compounds`, `LiteratureCrawlWorker`, fanning to
+> `StudyIngredient`/`StudyCompound`) is **dormant** — its admin trigger was removed and it fed the
+> decommissioned compound-fact pipeline. The same Entrez adapter + the `scientific_studies` registry
+> and schema below are **live**, now driven by the **condition-seeded crawl** (`ConditionCrawlWorker`,
+> `condition name × dietary keywords` → `StudyCondition`) that powers the nutritionist research search
+> (`docs/features/professionals/research_search.md`). The `issn`/`citation_status` columns below back
+> that feature's journal-authority signal. `StudyFullText` also gained a **`sections`** jsonb column
+> (ordered section→paragraph outline with titles + absolute char offsets) written by
+> `StudyAnalyses.store_analysis_response/1` from the enriched `/analyze` response, for the research
+> search's in-app full-text reader + claim-span highlighting.
+
 `Mehungry.Literature` is the scientific-literature **discovery layer** for the
 food domain. It finds research papers connecting a **food species** (by its
 curated scientific name) to bioactive compounds, and records each paper as a
@@ -65,6 +77,10 @@ it discovers and catalogues papers, it does not assert dietary facts.
 One row per paper, keyed by PubMed `pmid` (unique). Columns: `doi`, `title`,
 `abstract`, `journal`, `publication_date` (kept as the raw irregular PubMed
 string, like `ingredients.publication_date`), `authors` (`text[]`),
+`issn` + `citation_status` (journal-authority signal — the journal ISSN and the
+MedlineCitation `@Status`, `"MEDLINE"` = vetted/indexed; drives
+`Mehungry.Literature.JournalAuthority` in the nutritionist research search,
+backfillable from `entrez_responses` via `Literature.backfill_journal_metadata/0`),
 `raw_metadata` (jsonb, for extra efetch fields), `retrieved_at`.
 
 ### `study_ingredients` / `study_compounds` — the join facts

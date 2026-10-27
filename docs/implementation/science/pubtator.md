@@ -1,5 +1,11 @@
 # PubTator3 context
 
+> **⚠️ Decommissioned 2026-10-26 (research-search reshape, Phase 1).** PubTator annotation
+> (`PubTatorAnnotationWorker`) had its admin trigger removed and was dropped from the pipeline
+> watchdog/reconciler; it fed the decommissioned compound/recommendation fact pipeline. The context,
+> worker, schemas, and tables remain **dormant (not dropped)**. Reference only — see
+> `docs/features/professionals/research_search.md`.
+
 The PubTator3 integration is the scientific-literature **entity-extraction layer**
 for the food domain. Given a discovered `ScientificStudy`, it identifies the
 **Chemicals, Species, and Diseases** mentioned in the paper and records each as a

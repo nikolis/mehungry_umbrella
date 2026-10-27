@@ -49,11 +49,6 @@ defmodule MehungryWeb.Router do
     plug(:accepts, ["json"])
   end
 
-  # Shared-secret REST API for the non-deployed mehungry_local_ai service.
-  pipeline :local_ai_api do
-    plug(:accepts, ["json"])
-    plug(MehungryWeb.Plugs.RequireLocalAiToken)
-  end
 
   # Prometheus scrape endpoint (text exposition format), token-guarded.
   pipeline :metrics do
@@ -238,18 +233,6 @@ defmodule MehungryWeb.Router do
     get("/beam_scope/metrics", MetricsController, :beam_scope)
   end
 
-  scope "/api/local_ai", MehungryWeb.Api.LocalAi do
-    pipe_through(:local_ai_api)
-
-    get("/pending", PendingController, :index)
-    post("/full_text", FullTextController, :create)
-    post("/candidates", CandidatesController, :create)
-    post("/gi_candidates", GiCandidatesController, :create)
-
-    # Reverse (condition-seeded) phase-aware recommendation extraction.
-    get("/condition_pending", ConditionPendingController, :index)
-    post("/condition_recommendation_candidates", ConditionRecCandidatesController, :create)
-  end
 
   scope "/auth", MehungryWeb do
     pipe_through(:browser)
@@ -291,17 +274,17 @@ defmodule MehungryWeb.Router do
 
       live("/taxonomy/review", ProfessionalLive.TaxonomyReview, :index)
 
-      live("/science", ProfessionalLive.SciencePipeline, :index)
-      live("/science/studies", ProfessionalLive.Studies, :index)
-      live("/science/entities", ProfessionalLive.Entities, :index)
-
-      live("/literature", ProfessionalLive.LiteratureRuns, :index)
-
-      live("/compound-candidates", ProfessionalLive.CompoundCandidates, :index)
-
-      # live("/glycemic-index", ProfessionalLive.GlycemicIndex, :index)
+      # Science-pipeline *generation* UIs (species crawl, PubTator annotation,
+      # compound/recommendation candidate derivation + review) were decommissioned
+      # in the research-search reshape (Phase 1 — see
+      # docs/features/professionals/research_search.md). The contexts, workers, and
+      # tables remain dormant; the per-condition crawl + analyze acquisition path
+      # lives on `/professional/health` (HealthConditions).
       live("/health", ProfessionalLive.HealthConditions, :index)
 
+      # Retained: foundemental-food (species) curation — the concept/data outlives
+      # the decommissioned species crawl that used to consume its scientific_name
+      # (a new way to power it is TBD).
       live("/usda-schema", ProfessionalLive.UsdaSchema, :index)
 
       live("/languages", Professional.LanguageLive.Index, :index)
@@ -371,6 +354,14 @@ defmodule MehungryWeb.Router do
       live("/appointments", NutritionistLive.AppointmentCalendar, :index)
       live("/articles", NutritionistLive.Articles, :index)
       live("/articles/:id/edit", NutritionistLive.ArticleEditor, :edit)
+
+      # Research search engine — pre-digested PubMed research by condition.
+      live("/research", NutritionistLive.ResearchSearch, :index)
+      # `/research/notes` must precede `/research/:condition_id` (else "notes"
+      # matches as a condition id).
+      live("/research/notes", NutritionistLive.MyResearchNotes, :index)
+      live("/research/:condition_id", NutritionistLive.ResearchCondition, :show)
+      live("/research/:condition_id/paper/:study_id", NutritionistLive.ResearchPaper, :show)
 
       live("/blueprints", MealBlueprintLive.Index, :index)
       live("/blueprints/new", MealBlueprintLive.Index, :new)
