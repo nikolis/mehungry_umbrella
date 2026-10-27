@@ -6,8 +6,16 @@ defmodule MehungryWeb.HomePageController do
 
     case conn.assigns[:current_user] do
       nil ->
-        # Not logged in - show the nutritionist-led landing page
-        redirect(conn, to: "/#{locale}/welcome")
+        # Not logged in - show the nutritionist-led landing page. An
+        # unrecognized visitor who has never picked a language lands on the
+        # *bare* `/welcome` so the first-visit language chooser triggers (the
+        # bare URL carries no `/:locale`, which is what the chooser keys off);
+        # once they've chosen, go straight to their locale-prefixed landing.
+        if get_session(conn, "locale_selected") do
+          redirect(conn, to: "/#{locale}/welcome")
+        else
+          redirect(conn, to: "/welcome")
+        end
 
       user ->
         # The product is nutritionist-led: a pro lands in their practice

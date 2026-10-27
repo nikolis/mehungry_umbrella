@@ -20,4 +20,10 @@
     </div>
   <% end %>
   {@inner_content}
+  <.language_chooser
+    current_user={assigns[:current_user]}
+    locale={assigns[:locale]}
+    locale_selected={assigns[:locale_selected] == true}
+    url_locale_present={assigns[:url_locale_present] == true}
+  />
 </div>

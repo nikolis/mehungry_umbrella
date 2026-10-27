@@ -18,6 +18,9 @@ defmodule MehungryWeb.UserLanguageController do
 
       conn
       |> put_session("locale", lang)
+      # Mark the language as explicitly chosen so the first-visit language
+      # chooser is never shown to this session again (anonymous or not).
+      |> put_session("locale_selected", true)
       |> redirect(to: target_path(params["return_to"] || referer_path(conn), lang))
     else
       redirect(conn, to: "/")
