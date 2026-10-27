@@ -516,6 +516,41 @@ defmodule MehungryWeb.CalendarLive.Index do
     end
   end
 
+  # "Shopping list" — build a shopping basket from the ingredients of every meal
+  # in the week currently in view (same Monday–Sunday span as the grid, via
+  # `week_bounds/1`), reusing the shared `Inventory` aggregation, then take the
+  # user to their baskets to see/edit it.
+  @impl true
+  def handle_event("create_week_basket", _params, socket) do
+    user_id = socket.assigns.user.id
+    {first, last} = week_bounds(current_calendar_date(socket))
+
+    case Mehungry.Inventory.get_basket_for_week(user_id, first) do
+      nil ->
+        locale = current_language(socket)
+
+        date_label =
+          "#{first.day} #{MehungryWeb.CalendarLive.Calendar.Locale.month_short(first, locale)}"
+
+        title = gettext("Week of %{date}", date: date_label)
+
+        case Mehungry.Inventory.create_basket_for_range(user_id, first, last, title) do
+          {:ok, basket} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, gettext("Shopping list created for this week"))
+             |> push_navigate(to: ~p"/basket?#{[basket_id: basket.id]}")}
+
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, gettext("Could not create a shopping list"))}
+        end
+
+      existing ->
+        # Already have a list for this week — just open it, don't duplicate.
+        {:noreply, push_navigate(socket, to: ~p"/basket?#{[basket_id: existing.id]}")}
+    end
+  end
+
   # "Clear week" — wipe every meal in the week currently in view (the same
   # Monday–Sunday span the grid shows, via `week_bounds/1`). Guarded by a
   # confirm dialog on the button; refreshes the view the same way a single
