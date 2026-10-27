@@ -79,8 +79,6 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
   end
 
   defp create_basket(socket, basket_params_params) do
-    user = socket.assigns.user
-
     changeset =
       socket.assigns.shopping_basket
       |> Inventory.change_shopping_basket(basket_params_params)
@@ -91,95 +89,54 @@ defmodule MehungryWeb.ShoppingBasketLive.FormComponent do
         {:noreply, assign_form(socket, changeset)}
 
       true ->
-        start_dt = basket_params_params["start_dt"]
-        st_dt = NaiveDateTime.from_iso8601!(start_dt)
-
-        end_dt = basket_params_params["end_dt"]
-        en_dt = NaiveDateTime.from_iso8601!(end_dt)
-
-        user_meals =
-          History.list_history_user_meals_for_user(socket.assigns.user.id, st_dt, en_dt)
-
-        all_ingredients = crete_ingredient_basket(user_meals)
-
-        params = %{
-          "start_dt" => st_dt,
-          "end_dt" => en_dt,
-          "basket_ingredients" => all_ingredients,
-          "user_id" => user.id
-        }
-
-        {:ok, shopping_basket} =
-          Inventory.update_shopping_basket(socket.assigns.shopping_basket, params)
-
-        notify_parent({:update, shopping_basket})
-
-        {:noreply,
-         socket
-         |> push_patch(to: socket.assigns.patch)
-         |> assign(:shopping_basket, shopping_basket)}
+        with {:ok, st_dt} <- parse_naive(basket_params_params["start_dt"]),
+             {:ok, en_dt} <- parse_naive(basket_params_params["end_dt"]) do
+          build_basket_from_range(socket, basket_params_params, st_dt, en_dt)
+        else
+          # A date was never picked (range not completed) — don't crash; ask for one.
+          :error ->
+            {:noreply,
+             socket
+             |> put_flash(:error, "Pick a start and end date on the calendar first.")}
+        end
     end
   end
 
-  # Free-text label for a recipe ingredient that uses a description-only portion
-  # (no measurement unit), so the basket can still show e.g. "1 medium banana".
-  defp portion_description(%{measurement_unit_id: nil, ingredient_portion: %{description: d}}),
-    do: d
+  # Parses the hidden-field ISO datetime the DatePicker hook writes; `nil`/blank
+  # (incomplete range) yields `:error` so the caller can flash instead of raising.
+  defp parse_naive(value) when is_binary(value) and value != "" do
+    case NaiveDateTime.from_iso8601(value) do
+      {:ok, dt} -> {:ok, dt}
+      _ -> :error
+    end
+  end
 
-  defp portion_description(_), do: nil
+  defp parse_naive(_), do: :error
 
-  def crete_ingredient_basket(user_meals) do
-    user_meals
-    |> Enum.reduce([], fn x, acc -> acc ++ x.recipe_user_meals end)
-    # Recipe + portions
-    |> Enum.map(fn y -> {y.cooking_portions, y.recipe} end)
-    # [{2, recipe}]
-    |> Enum.map(fn {x, y} -> {x, y.servings, y.recipe_ingredients} end)
-    # [{2, [recipe_ingredient, ..]]
-    |> Enum.map(fn {x, z, y} ->
-      Enum.map(y, fn p -> {x, z, p} end)
-      # [[{2, recipe_ingredient}]]
-    end)
-    |> Enum.reduce([], fn x, acc -> acc ++ x end)
-    # [{2, recipe_ingredient}]
-    |> Enum.map(fn {x, z, p} ->
-      {p.ingredient_id, Float.round(p.quantity / z * x, 2), p.measurement_unit_id,
-       portion_description(p)}
-    end)
-    # [{ingredient_id, quantity, measurement_unit_id, description}]
-    # |> Enum.reduce([], fn x, acc -> acc ++ x.recipe.recipe_ingredients end)
+  defp build_basket_from_range(socket, _basket_params_params, st_dt, en_dt) do
+    user = socket.assigns.user
 
-    |> Enum.reduce(%{}, fn {ing, quant_out, mu, desc}, acc ->
-      with {ing, quant, mu_e, desc_e} <- Map.get(acc, Integer.to_string(ing)),
-           true <- mu == mu_e do
-        Map.replace(acc, Integer.to_string(ing), {ing, quant + quant_out, mu_e, desc_e})
-      else
-        _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant_out, mu, desc})
-      end
-    end)
-    |> Map.values()
-    |> Enum.map(fn {ing, quant, mu, desc} ->
-      %{
-        "ingredient_id" => ing,
-        "quantity" => quant,
-        "measurement_unit_id" => mu,
-        "description" => desc
-      }
-    end)
+    user_meals =
+      History.list_history_user_meals_for_user(user.id, st_dt, en_dt)
 
-    # |> Enum.map(fn x -> {x.ingredient.id, x.quantity, x.measurement_unit.id} end)
-    # |> Enum.reduce(%{}, fn {ing, quant, mu}, acc ->
-    # with {ing, quant, mu_e} <- Map.get(acc, Integer.to_string(ing)),
-    #     true <- mu == mu_e do
-    #  Map.replace(acc, Integer.to_string(ing), {ing, quant + quant, mu_e})
-    # else
-    #  _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant, mu})
-    # end
-    # end)
-    # |> Map.values()
-    # |> Enum.map(fn {ing, quant, mu} ->
-    # %{"ingredient_id" => ing, "quantity" => quant, "measurement_unit_id" => mu}
-    # end)
+    all_ingredients = Inventory.aggregate_meal_ingredients(user_meals)
+
+    params = %{
+      "start_dt" => st_dt,
+      "end_dt" => en_dt,
+      "basket_ingredients" => all_ingredients,
+      "user_id" => user.id
+    }
+
+    {:ok, shopping_basket} =
+      Inventory.update_shopping_basket(socket.assigns.shopping_basket, params)
+
+    notify_parent({:update, shopping_basket})
+
+    {:noreply,
+     socket
+     |> push_patch(to: socket.assigns.patch)
+     |> assign(:shopping_basket, shopping_basket)}
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do

@@ -112,6 +112,33 @@ defmodule Mehungry.InventoryTest do
       {:ok, shopping_basket} = shopping_basket_fixture(%{user_id: user.id})
       assert %Ecto.Changeset{} = Inventory.change_shopping_basket(shopping_basket)
     end
+
+    test "create_basket_for_range/4 creates a basket stamped with the week bounds", %{user: user} do
+      first = ~D[2026-10-26]
+      last = ~D[2026-11-01]
+
+      assert {:ok, %ShoppingBasket{} = basket} =
+               Inventory.create_basket_for_range(user.id, first, last, "Week of 26 Oct")
+
+      assert basket.title == "Week of 26 Oct"
+      assert basket.user_id == user.id
+      assert basket.start_dt == ~N[2026-10-26 00:00:00]
+      assert basket.end_dt == ~N[2026-11-01 00:00:00]
+    end
+
+    test "get_basket_for_week/2 finds a basket created for that week, else nil", %{user: user} do
+      first = ~D[2026-10-26]
+      last = ~D[2026-11-01]
+
+      assert Inventory.get_basket_for_week(user.id, first) == nil
+
+      {:ok, basket} = Inventory.create_basket_for_range(user.id, first, last, "Week of 26 Oct")
+
+      found = Inventory.get_basket_for_week(user.id, first)
+      assert found.id == basket.id
+      # A different week has no basket yet.
+      assert Inventory.get_basket_for_week(user.id, ~D[2026-11-02]) == nil
+    end
   end
 
   """

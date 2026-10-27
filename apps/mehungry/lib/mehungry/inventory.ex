@@ -283,6 +283,113 @@ defmodule Mehungry.Inventory do
   end
 
   @doc """
+  Creates a new shopping basket for `user_id` populated with the aggregated
+  ingredients of every meal logged in the inclusive `start_date..end_date` span
+  (e.g. the week currently shown on the calendar). Returns `{:ok, basket}` /
+  `{:error, changeset}`; the basket is created even when the span has no meals
+  (an empty list to start from).
+  """
+  def create_basket_for_range(user_id, %Date{} = start_date, %Date{} = end_date, title) do
+    start_dt = NaiveDateTime.new!(start_date, ~T[00:00:00])
+    end_dt = NaiveDateTime.new!(end_date, ~T[00:00:00])
+
+    basket_ingredients =
+      Mehungry.History.list_history_user_meals_for_user(user_id, start_dt, end_dt)
+      |> aggregate_meal_ingredients()
+
+    create_shopping_basket(%{
+      "user_id" => user_id,
+      "title" => title,
+      "start_dt" => start_dt,
+      "end_dt" => end_dt,
+      "basket_ingredients" => basket_ingredients
+    })
+  end
+
+  @doc """
+  Returns the user's existing shopping basket for the week starting on
+  `start_date` (matched on the `start_dt` that `create_basket_for_range/4`
+  stamps — Monday 00:00), or `nil`. Lets callers open an already-built week
+  list instead of creating a duplicate.
+  """
+  def get_basket_for_week(user_id, %Date{} = start_date) do
+    start_dt = NaiveDateTime.new!(start_date, ~T[00:00:00])
+
+    from(s in ShoppingBasket,
+      where: s.user_id == ^user_id and s.start_dt == ^start_dt,
+      order_by: [desc: s.id],
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Aggregates a list of `History.UserMeal`s into `basket_ingredients` attrs:
+  every recipe ingredient scaled by its meal's logged portions, summed per
+  `(ingredient_id, measurement_unit_id)`. Returns a list of string-keyed maps
+  (`"ingredient_id"`, `"quantity"`, `"measurement_unit_id"`, `"description"`)
+  ready to cast into a `ShoppingBasket`. The meals must be preloaded with
+  `recipe_user_meals: [recipe: [recipe_ingredients: [:ingredient_portion, ...]]]`.
+
+  Shared by the basket-builder LiveViews and `create_basket_for_range/4` so the
+  scaling/dedup rules live in one place.
+  """
+  def aggregate_meal_ingredients(user_meals) do
+    user_meals
+    |> Enum.flat_map(fn meal -> meal.recipe_user_meals end)
+    |> Enum.flat_map(fn rum ->
+      servings = rum.recipe.servings
+      portions = rum.cooking_portions
+
+      Enum.map(rum.recipe.recipe_ingredients, fn ri ->
+        {ri.ingredient_id, scaled_quantity(ri.quantity, servings, portions),
+         ri.measurement_unit_id, portion_description(ri)}
+      end)
+    end)
+    |> Enum.reduce(%{}, fn {ing, quant_out, mu, desc}, acc ->
+      with {ing, quant, mu_e, desc_e} <- Map.get(acc, Integer.to_string(ing)),
+           true <- mu == mu_e do
+        Map.replace(acc, Integer.to_string(ing), {ing, quant + quant_out, mu_e, desc_e})
+      else
+        _ -> Map.put_new(acc, Integer.to_string(ing), {ing, quant_out, mu, desc})
+      end
+    end)
+    |> Map.values()
+    |> Enum.map(fn {ing, quant, mu, desc} ->
+      %{
+        "ingredient_id" => ing,
+        "quantity" => quant,
+        "measurement_unit_id" => mu,
+        "description" => desc
+      }
+    end)
+  end
+
+  # Free-text label for a recipe ingredient that uses a description-only portion
+  # (no measurement unit), so the basket can still show e.g. "1 medium banana".
+  defp portion_description(%{measurement_unit_id: nil, ingredient_portion: %{description: d}}),
+    do: d
+
+  defp portion_description(_), do: nil
+
+  # Scales a recipe ingredient's per-recipe quantity to the logged portion:
+  # (quantity / servings) * cooking_portions. Any of the three can be missing on
+  # older/partial recipe data (nil servings, nil cooking_portions, nil quantity)
+  # or servings can be 0 — either of which would raise an ArithmeticError — so
+  # default to safe values (servings/portions → 1, qty → 0).
+  defp scaled_quantity(quantity, servings, portions) do
+    qty = as_number(quantity, 0)
+    svgs = as_number(servings, 1)
+    svgs = if svgs == 0, do: 1, else: svgs
+    prt = as_number(portions, 1)
+
+    Float.round(qty / svgs * prt, 2)
+  end
+
+  defp as_number(n, _default) when is_number(n), do: n
+  defp as_number(_, default), do: default
+
+  @doc """
   Deletes a shopping_basket.
 
   ## Examples
