@@ -122,8 +122,8 @@ with the modern `belongs_to :user`.
 | Schema (table) | Key fields |
 |---|---|
 | `Blueprint` (`meal_blueprints`) | `name`, `description`, `belongs_to :user`, `belongs_to :condition` (optional disease, `Health.Condition`), `required_nutrients` / `avoid_nutrients` / `required_compounds` / `avoid_compounds` / `preferred_foods` / `avoid_foods` (all `{:array,:string}`), `has_many :days` |
-| `BlueprintDay` (`meal_blueprint_days`) | `day_index` (1..7), `total_calorie_target` (int, optional), `has_many :meals` |
-| `BlueprintMeal` (`meal_blueprint_meals`) | `meal_type` (one of `History.MealType.values/0`), `protein_pct`, `carbs_pct`, `fats_pct` (integers, must total 100; default 30/40/30 via `BlueprintMeal.default_split/0`), `note` |
+| `BlueprintDay` (`meal_blueprint_days`) | `day_index` (1..7), `total_calorie_target` (int, optional), `has_many :meals`. A blueprint models a single **typical day** (a generic daily ration); the editor authors one day and fans it out across all 7 identical rows on save, so the 7×5 shape the generation/calendar pipeline relies on is preserved while the nutritionist only ever sees/edits one day |
+| `BlueprintMeal` (`meal_blueprint_meals`) | `meal_type` (one of `History.MealType.values/0`), `protein_pct`, `carbs_pct`, `fats_pct` (integers, must total 100; default 30/40/30 via `BlueprintMeal.default_split/0`), `note`. The macro split is authored **once per day** and is identical across every slot (the editor binds one day-level control and fans it onto all slots on save); it lives per-row only to keep the pipeline's shape unchanged. `note` is the genuinely per-slot field |
 
 Migrations: `apps/mehungry/priv/repo/migrations/20260905000001_create_meal_blueprints.exs`
 — cascade FKs (`on_delete: :delete_all`), `condition_id` FK `on_delete:
@@ -299,15 +299,22 @@ The public preview route is in the `:maybe` (anonymous-OK) session, via `localiz
     (`recommended_compounds_for_condition/1`) into the compound pickers —
     encouraged → *required*, discouraged → *avoid* (merged, editable). Health
     links conditions to *compounds* only, so nutrients stay manual.
-  - 7 collapsible day panels, each with just a calorie-aim field and 5 meal cards
-    (protein/carbs/fats % number inputs — with a live "Total: X%" hint that turns
-    paprika when the split ≠ 100 — + note) via nested `inputs_for`.
+  - a single **typical-day** panel (a blueprint is a generic daily ration): a
+    calorie-aim field, **one day-level macro split** (protein/carbs/fats % number
+    inputs — with a live "Total: X%" hint that turns paprika when the split ≠ 100),
+    and 5 per-slot note rows, via nested `inputs_for`. The macro control is bound
+    to the first meal's macro fields; the editor renders only the first
+    `BlueprintDay`; on submit `fan_out_days/2` replicates that one day's calorie
+    aim, copies the single macro split onto **every** meal slot, and preserves
+    per-slot notes, across all 7 stored days (keeping each row's primary key so
+    `cast_assoc` updates in place), so `Blueprint.validate_day_count/1` still sees
+    the 7×5 grid the generation/calendar pipeline expects.
 
   The chip pickers are **not** the shared `SelectComponent` (its multi mode
   doesn't repopulate chips from a persisted `{:array,:string}` on edit-load).
   They are a small self-contained widget (`tag_multiselect/1`) managed by
   `search_tag`/`add_tag`/`remove_tag` server events on the working changeset —
-  the same apply-changes-then-rebuild pattern the copy shortcuts use — rendering
+  an apply-changes-then-rebuild pattern — rendering
   hidden `name[...][]` inputs (plus an empty sentinel so a fully-cleared field
   still posts) so selections survive submit. The rendered chip list is
   blank-filtered (`tag_list/1`): after a validate, Phoenix reflects the raw
@@ -322,9 +329,9 @@ The public preview route is in the `:maybe` (anonymous-OK) session, via `localiz
   picker renders a `<ul>`, so exactly one click-away handler is live at a time
   (one per widget let the other pickers' handlers slam the dropdown shut the
   moment you touched any one of them). Preferred-food comma tags are split into an
-  array in `normalize_params/1`. **Copy shortcuts** ("Copy this day to all days",
-  "Copy this meal to every day") are server events operating on the current
-  changeset.
+  array in `normalize_params/2`, which also runs the single-day → 7-day
+  `fan_out_days/2` step (there are no per-day "copy" shortcuts anymore — one
+  authored typical day is the whole blueprint).
 
 **Navigation:** a "Blueprints" link (icon `hero-clipboard-document-list`) sits in
 the **nutritionist sidebar** (`LayoutView.nutritionist_sidebar/1`) with a matching
@@ -389,18 +396,19 @@ calendar uses their own tier's allotment (free = 0 → blocked). Blueprint
   (now nutritionist-gated setup) index list, new→editor redirect, edit+save
   persistence (macro split + blueprint-level nutrient/compound/preferred arrays),
   condition compound auto-suggest, search/add/remove chips, the
-  blank-sentinel-not-an-empty-chip guard, copy shortcuts, delete.
+  blank-sentinel-not-an-empty-chip guard, single-day → 7-day fan-out on save,
+  delete.
 - `apps/mehungry_web/test/mehungry_web/live/blueprint_live_test.exs` — public
   preview renders content + OG meta for anonymous visitors, private 404s, save
   toggle for logged-in users, browse toggle shows/searches blueprint cards, and
   a non-nutritionist is redirected from `/nutritionist/blueprints`.
 
 **Verified end-to-end** in the running app (browser): create via modal →
-editor with 7 days × 5 meals → pick DB nutrients/compounds as chips → select a
-disease and watch its recommended compounds populate the days → edit macros →
-save → DB persistence exact → reopen round-trips (chips + condition + macros) →
-calendar dropdown lists the blueprint → "Copy to every day" propagates to the
-correct slot only.
+editor with a single typical day × 5 meals → pick DB nutrients/compounds as chips
+→ select a disease and watch its recommended compounds populate → edit macros →
+save → the typical day fans out across all 7 stored days (DB persistence exact) →
+reopen round-trips (chips + condition + macros) → calendar dropdown lists the
+blueprint.
 
 ## Related
 

@@ -117,7 +117,7 @@ defmodule MehungryWeb.BlueprintLive.Show do
               {@blueprint.condition.name}
             </span>
             <span class="text-[11px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
-              7 days · 5 meals/day
+              Typical day · 5 meals
             </span>
             <span
               :if={author_line(@blueprint)}
@@ -214,20 +214,29 @@ defmodule MehungryWeb.BlueprintLive.Show do
           <summary class="cursor-pointer select-none px-4 py-3 font-semibold text-parchment">
             Daily macro targets
           </summary>
-          <div class="px-4 pb-4 space-y-4">
-            <div :for={day <- @blueprint.days}>
-              <div class="text-parchment-dim text-xs font-semibold uppercase tracking-wide mb-1.5">
-                Day {day.day_index}
-                <span :if={day.total_calorie_target} class="normal-case font-normal">
-                  · {day.total_calorie_target} kcal
+          <%!-- A blueprint is a single typical day; all stored days (and every
+                meal within them) share one macro split, so show it once. --%>
+          <div :for={day <- Enum.take(@blueprint.days, 1)} class="px-4 pb-4 space-y-4">
+            <div>
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold uppercase tracking-wide mb-1.5">
+                <span :if={day.total_calorie_target} class="text-parchment-dim">
+                  {day.total_calorie_target} kcal / day
+                </span>
+                <span
+                  :if={macro_summary(day)}
+                  class="text-parchment [font-variant-numeric:tabular-nums] normal-case"
+                >
+                  {macro_summary(day)}
                 </span>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                <div :for={meal <- day.meals} class="flex items-center justify-between text-sm">
+                <div
+                  :for={meal <- day.meals}
+                  :if={meal.note not in [nil, ""]}
+                  class="flex items-center justify-between text-sm"
+                >
                   <span class="text-parchment-dim">{MealType.label(meal.meal_type)}</span>
-                  <span class="text-parchment [font-variant-numeric:tabular-nums] text-xs">
-                    P {meal.protein_pct}% · C {meal.carbs_pct}% · F {meal.fats_pct}%
-                  </span>
+                  <span class="text-parchment text-xs">{meal.note}</span>
                 </div>
               </div>
             </div>
@@ -289,12 +298,19 @@ defmodule MehungryWeb.BlueprintLive.Show do
   defp author_line(%{user: %{name: name}}) when is_binary(name) and name != "", do: name
   defp author_line(_), do: nil
 
+  # The day's single macro split (every meal shares it), as a "P x% · C y% · F z%"
+  # string — or nil if the day carries no meals.
+  defp macro_summary(%{meals: [meal | _]}),
+    do: "P #{meal.protein_pct}% · C #{meal.carbs_pct}% · F #{meal.fats_pct}%"
+
+  defp macro_summary(_), do: nil
+
   # ── SEO ─────────────────────────────────────────────────────────────────────
 
   defp assign_seo(socket, blueprint) do
     description =
       (blueprint.description ||
-         "A 7-day meal blueprint#{condition_suffix(blueprint)} on M3Hungry — browse the sample plans and build your own.")
+         "A typical-day meal blueprint#{condition_suffix(blueprint)} on M3Hungry — browse the sample plans and build your own.")
       |> String.slice(0, 155)
 
     socket

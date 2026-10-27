@@ -32,7 +32,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
           <div>
             <h1 class="text-2xl font-display font-medium text-parchment">Meal Blueprints</h1>
             <p class="text-parchment-dim text-sm mt-1">
-              Reusable 7-day nutritional targets you can plan against.
+              Reusable typical-day nutritional targets you can plan against.
             </p>
           </div>
           <div class="flex items-center gap-2">
@@ -80,7 +80,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
                 <div :if={bp.description} class="text-parchment-dim text-sm truncate">
                   {bp.description}
                 </div>
-                <div class="text-parchment-dim text-xs mt-1">7 days · 5 meals/day</div>
+                <div class="text-parchment-dim text-xs mt-1">Typical day · 5 meals</div>
               </.link>
               <div class="flex items-center gap-2 ml-4 shrink-0">
                 <.link
