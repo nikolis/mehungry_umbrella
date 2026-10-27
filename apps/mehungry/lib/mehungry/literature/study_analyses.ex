@@ -136,6 +136,34 @@ defmodule Mehungry.Literature.StudyAnalyses do
   end
 
   @doc """
+  How many distinct `Health.Condition`s have at least one stored, non-error
+  `StudyAnalysis` — the honest "conditions with digested research" headline figure.
+  A single cheap aggregate (one row), returns `0` on empty data, never `nil`.
+  """
+  def count_conditions_with_research do
+    StudyCondition
+    |> join(:inner, [l], a in StudyAnalysis,
+      on: a.study_id == l.study_id and a.status != "error"
+    )
+    |> select([l], count(l.condition_id, :distinct))
+    |> Repo.one()
+    |> Kernel.||(0)
+  end
+
+  @doc """
+  How many distinct papers have a stored, non-error `StudyAnalysis` — the honest
+  "papers digested" figure (distinct from `Literature.count_studies/0`, which counts
+  everything *crawled*). One cheap aggregate, returns `0` on empty data, never `nil`.
+  """
+  def count_analyzed_studies do
+    StudyAnalysis
+    |> where([a], a.status != "error")
+    |> select([a], count(a.study_id, :distinct))
+    |> Repo.one()
+    |> Kernel.||(0)
+  end
+
+  @doc """
   The nutritionist research-search **landing list**: **every** `Health.Condition`,
   each with its distinct non-error analyzed-paper `study_count` (0 when none has
   been digested yet). Unlike `conditions_with_research/1` this does not hide

@@ -9,26 +9,53 @@ defmodule MehungryWeb.NutritionistLive.MyResearchNotes do
   use MehungryWeb, :live_view
 
   alias Mehungry.Professionals.ResearchNotes
+  alias Mehungry.Health
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign_notes(socket)}
+    {:ok, socket}
+  end
+
+  # A `condition_id` query param (e.g. from a client overview) scopes the page to
+  # the notes saved under that one condition.
+  @impl true
+  def handle_params(params, _uri, socket) do
+    {:noreply, assign_notes(socket, params["condition_id"])}
   end
 
   @impl true
   def handle_event("delete_note", %{"id" => id}, socket) do
     {:ok, _} = ResearchNotes.delete_note(socket.assigns.current_user.id, String.to_integer(id))
-    {:noreply, socket |> assign_notes() |> put_flash(:info, "Note removed.")}
+    condition_id = socket.assigns.filter_condition && to_string(socket.assigns.filter_condition.id)
+    {:noreply, socket |> assign_notes(condition_id) |> put_flash(:info, "Note removed.")}
   end
 
-  defp assign_notes(socket) do
-    notes = ResearchNotes.list_for_user(socket.assigns.current_user.id)
+  defp assign_notes(socket, condition_id) do
+    {condition, notes} = scoped_notes(socket.assigns.current_user.id, condition_id)
 
     socket
-    |> assign(:page_title, "My research notes")
+    |> assign(:page_title, if(condition, do: "My notes · #{condition.name}", else: "My research notes"))
+    |> assign(:filter_condition, condition)
     |> assign(:count, length(notes))
     |> assign(:grouped, group_by_condition(notes))
   end
+
+  # A valid `condition_id` filters to that condition's notes; anything else (blank,
+  # non-integer, unknown id) falls back to the full list.
+  defp scoped_notes(user_id, condition_id) when is_binary(condition_id) and condition_id != "" do
+    case Integer.parse(condition_id) do
+      {id, _} ->
+        case Health.get_condition(id) do
+          nil -> {nil, ResearchNotes.list_for_user(user_id)}
+          condition -> {condition, ResearchNotes.list_for_user_and_condition(user_id, id)}
+        end
+
+      :error ->
+        {nil, ResearchNotes.list_for_user(user_id)}
+    end
+  end
+
+  defp scoped_notes(user_id, _), do: {nil, ResearchNotes.list_for_user(user_id)}
 
   # [{condition_or_nil, [note]}] in the notes' existing (newest-first) order.
   defp group_by_condition(notes) do
@@ -49,16 +76,37 @@ defmodule MehungryWeb.NutritionistLive.MyResearchNotes do
       </.link>
 
       <header class="mb-6">
-        <h1 class="text-2xl font-semibold text-parchment">My research notes</h1>
+        <h1 class="text-2xl font-semibold text-parchment">
+          My research notes<span :if={@filter_condition} class="text-parchment-dim font-normal"> · {@filter_condition.name}</span>
+        </h1>
         <p class="text-sm text-parchment-dim mt-1">
-          {@count} saved note{if @count == 1, do: "", else: "s"} from the research search.
+          {@count} saved note{if @count == 1, do: "", else: "s"}<span :if={@filter_condition}> for {@filter_condition.name}</span>.
         </p>
+        <.link
+          :if={@filter_condition}
+          navigate={~p"/nutritionist/research/notes"}
+          class="inline-flex items-center gap-1 text-xs text-basil hover:underline mt-1"
+        >
+          View all notes
+        </.link>
       </header>
 
-      <p :if={@count == 0} class="text-sm text-parchment-dim py-8 text-center">
-        No saved notes yet. Open a condition's research and use <strong>Save</strong>
-        on a suggested note, or write your own.
-      </p>
+      <div :if={@count == 0} class="text-sm text-parchment-dim py-8 text-center">
+        <%= if @filter_condition do %>
+          <p>No notes saved for {@filter_condition.name} yet.</p>
+          <.link
+            navigate={~p"/nutritionist/research/#{@filter_condition.id}"}
+            class="inline-flex items-center gap-1 text-basil hover:underline mt-2"
+          >
+            Open {@filter_condition.name} research <.icon name="hero-arrow-right" class="w-4 h-4" />
+          </.link>
+        <% else %>
+          <p>
+            No saved notes yet. Open a condition's research and use <strong>Save</strong>
+            on a suggested note, or write your own.
+          </p>
+        <% end %>
+      </div>
 
       <section :for={{condition, notes} <- @grouped} class="mb-8">
         <h2 class="text-xs font-semibold uppercase tracking-wide text-parchment-dim mb-3">

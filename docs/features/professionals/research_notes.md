@@ -95,6 +95,11 @@ Turn the research search's read-only **extracted findings** into a lightweight, 
 - A **"My notes"** list (route under the `:nutritionist` live_session) of saved notes, grouped by
   condition then study, each linking back to the source passage. This is the always-available
   "present to them at different times" home, independent of any client.
+- **Condition scope (Phase 3 hook).** `MyResearchNotes` accepts a `?condition_id=` query param
+  (via `handle_params`) that filters the page to one condition's notes
+  (`ResearchNotes.list_for_user_and_condition/2`), names it in the header, offers a "View all
+  notes" reset, and — when nothing is saved for it yet — an empty state linking to that condition's
+  research. This is what a client's condition chip in the overview deep-links to (see below).
 
 ## 4. Data model (proposed)
 
@@ -140,20 +145,24 @@ Owned directly by the nutritionist `User` (mirrors the `user_recipes` per-user p
 The user wants saved notes shown back "at different times… for example when a client of his has this
 condition." Two things to resolve before building this:
 
-1. **Prerequisite — there is no structured `client ↔ Health.Condition` link today.**
-   `ProfessionalClient` / `ClientIntake` record conditions only as **free text** (`hereditary_conditions`
-   and friends in `details`), not as `Health.Condition` FKs. Surfacing "notes for this client's
-   condition" needs a structured association first (e.g. a `condition_id` / join on
-   `ProfessionalClient`, or resolving the intake's free-text conditions to `Health.Condition` via the
-   existing `Health.ConditionResolver`). **Decide this first.**
-2. **Where it appears** — candidates, to be chosen with the user:
-   - the **client detail page** (`NutritionistLive.ClientDetail`) — a "Relevant research notes" panel
-     keyed on the client's condition(s);
+1. **Prerequisite — ✅ RESOLVED (2026-10-27): the structured `client ↔ Health.Condition` link now
+   exists.** A `ProfessionalClient` can be linked to several existing `Health.Condition`s via the
+   `professional_client_conditions` join (`Mehungry.Professionals.ClientCondition`,
+   `many_to_many :conditions`), recorded nutritionist-only in the client record editor — see
+   [`client_records.md`](client_records.md) § Health conditions. Phase 3 can now join a client's
+   linked conditions against this nutritionist's `research_notes` (`notes_for_user_and_condition/2`)
+   directly, rather than resolving the intake's free-text conditions. *(The free-text
+   `hereditary_conditions` fields in `ClientIntake.details` remain as narrative history; they are no
+   longer the only condition signal.)*
+2. **Where it appears** — ✅ **first surface shipped (2026-10-27): the client User Overview**
+   (`NutritionistLive.ClientDetail`). Each of the client's condition chips (in the Dietary History
+   card) carries a **"Notes"** deep-link to `/nutritionist/research/notes?condition_id=<id>`, which
+   scopes the standalone "My notes" page (§3c) to that condition. This reuses the always-available
+   page rather than building a bespoke inline panel — the lightest honest version of "present the
+   notes when a client has this condition." Still-open richer surfaces (not built):
+   - an **inline** "Relevant research notes" panel on the overview (vs. the current deep-link);
    - the **consultation-note composer** (`ConsultationNote`) — suggested notes offered as the
-     nutritionist writes up a visit;
-   - the standalone **"My notes"** page (§3c), always available regardless of client.
-   The standalone page (Phase 2) is the safe, client-independent first home; client-surfacing is a
-   later phase gated on #1.
+     nutritionist writes up a visit.
 
 > **YMYL / scope caution** (from `CLAUDE.md` Health context): condition-specific content stays inside
 > the nutritionist-gated panel; do not surface notes to consumers / anonymous users.
@@ -183,8 +192,12 @@ condition." Two things to resolve before building this:
   (Save suggested notes + select-a-passage → sub-text custom notes via the `NoteSelection` hook);
   the claim-snapshot logic is shared across both surfaces via
   `ResearchNotes.suggested_attrs_from_claim/3`.
-- **Phase 3 — client surfacing.** Resolve §6.1 (structured client↔condition link), then surface a
-  client's condition notes in the chosen place (§6.2).
+- **Phase 3 — client surfacing. ✅ FIRST SURFACE SHIPPED 2026-10-27.** §6.1 is resolved (the
+  `professional_client_conditions` link — see [`client_records.md`](client_records.md)). A
+  nutritionist assigns a client's conditions from the **User Overview** (and the record editor),
+  and each condition chip deep-links to the condition-scoped "My notes"
+  (`/nutritionist/research/notes?condition_id=<id>`, §3c). Richer surfaces (inline overview panel,
+  consultation-note composer suggestions) remain open (§6.2).
 
 ## 8. Open questions
 - Editable suggested notes? (Proposed: Save copies the claim prose into `body`, editable thereafter.)

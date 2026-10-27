@@ -55,6 +55,22 @@ A clinical progress note for a visit (distinct from `Appointment`; may optionall
   `modality` (`in_person | phone | online`, via `ConsultationNote.modalities/0`), `body`, `todo`,
   `weight_kg`, `details`.
 
+### `ClientCondition` — table `professional_client_conditions`
+The **structured client↔condition link**: a join row connecting a `ProfessionalClient` to an
+existing `Health.Condition`. A client can carry **several** conditions, each only once (unique on
+`[:professional_client_id, :condition_id]`). This is the FK association the research layer wanted —
+previously a client's conditions lived only as free text inside `ClientIntake.details`
+(`hereditary_conditions` etc.), which couldn't be joined on.
+- `belongs_to :professional_client` and `belongs_to :condition` (both FKs `on_delete: :delete_all`
+  — deleting the client record or the registry condition removes the link; the condition registry
+  row itself is untouched).
+- Exposed on `ProfessionalClient` as `many_to_many :conditions, Health.Condition` +
+  `has_many :client_conditions`.
+- **Existing conditions only** — the link always points at a `Health.Condition` picked from the
+  registry (`Health.list_conditions/0`); this layer never creates a condition.
+- **Nutritionist-only** — the only write path is the nutritionist-gated record editor (below).
+  Consumers/clients never see or edit it (stays inside the YMYL boundary).
+
 ## Context API (`professionals.ex`)
 
 - **Records:** `list_client_records/1`, `get_client_record!/2` (scoped to owner),
@@ -64,6 +80,9 @@ A clinical progress note for a visit (distinct from `Appointment`; may optionall
   `change_intake/2`.
 - **Notes:** `list_consultation_notes/1` (chronological), `create_consultation_note/1`,
   `update_consultation_note/2`, `delete_consultation_note/1`, `change_consultation_note/2`.
+- **Conditions:** `list_client_conditions/1` (linked `Health.Condition`s, name-ordered),
+  `add_client_condition/2` (idempotent — a duplicate pair is a no-op via `on_conflict: :nothing`),
+  `remove_client_condition/2` (no-op if unlinked, returns `{:ok, count}`).
 - **Import:** `import_dietary_history/2` → `DietaryHistory.Importer`.
 
 ## CSV import — migrating an existing history
@@ -99,6 +118,33 @@ Ownership is enforced on mount via `get_client_record!(current_user.id, id)` in 
 (`NutritionistLive.ClientRecord`, `/nutritionist/records/:id`) has an **Edit** link and an
 `m3hungry client` badge.
 
+## Health conditions — recording the structured link
+
+A nutritionist links conditions in **two** nutritionist-gated places, both driven by the same
+`add_condition` / `remove_condition` events (→ `Professionals.add_client_condition/2` /
+`remove_client_condition/2`, reassigning the chip list — no changeset round-trip):
+
+- **User Overview** (`ClientDetail`, `/nutritionist/clients/:id`) — the primary surface. Conditions
+  render as **one more basic field in the Dietary History card** (right under the intake
+  Sex/Age/…/TDEE metrics): a "Conditions" label, the linked conditions as chips, and a minimal
+  `+ Add condition` `<select>`. Adding the first condition **lazily creates** the `ProfessionalClient`
+  record (via `ensure_record/1`) just like recording the first visit, so the nutritionist never has
+  to open the full editor first.
+- **Record editor** (`ClientRecordEditor`, `/nutritionist/records/:id/edit`) — the same picker in a
+  dedicated "Health conditions" section between the client-details and intake forms.
+
+Because the picker is a fixed list of registry conditions (`Health.list_conditions/0`, minus the
+already-linked ones), a nutritionist can only ever link **existing** conditions, never type a new
+one. The read-only record page (`ClientRecord`) renders the linked conditions as read-only chips.
+
+**The payoff — per-condition research notes.** Each condition chip in the overview carries a
+**"Notes"** deep-link to `/nutritionist/research/notes?condition_id=<id>`, which scopes the
+nutritionist's **"My notes"** page (`MyResearchNotes`) to just that condition's saved notes
+(`ResearchNotes.list_for_user_and_condition/2`), with an empty state that links straight to the
+condition's research when nothing is saved yet. This is the Phase 3 payoff of the research layer's
+**Suggested Notes** feature, which was blocked on exactly this structured link (see
+[`research_notes.md`](research_notes.md) §6).
+
 ## User Overview integration — visits accordion
 
 The per-client **User Overview** (`NutritionistLive.ClientDetail`, `/nutritionist/clients/:id`,
@@ -116,11 +162,12 @@ name/email) on the first visit if none exists, then `create_consultation_note/1`
 ## Files
 
 **Core (`apps/mehungry`)**
-- `lib/mehungry/professionals/{professional_client,client_intake,consultation_note}.ex`
+- `lib/mehungry/professionals/{professional_client,client_intake,consultation_note,client_condition}.ex`
 - `lib/mehungry/professionals/dietary_history/{csv_parser,importer}.ex`,
   `dietary_history/fields.ex` (shared label lists)
-- `lib/mehungry/professionals.ex` — record/intake/note context functions
-- `priv/repo/migrations/20260904000001_*`, `..002_*`, `..003_*`
+- `lib/mehungry/professionals.ex` — record/intake/note/condition context functions
+- `priv/repo/migrations/20260904000001_*`, `..002_*`, `..003_*`,
+  `20261027150000_create_professional_client_conditions.exs`
 
 **Web (`apps/mehungry_web`)**
 - `lib/mehungry_web/live/nutritionist_live/{records,client_record,client_record_editor,client_detail}.ex`

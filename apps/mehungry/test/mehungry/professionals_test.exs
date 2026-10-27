@@ -597,6 +597,62 @@ defmodule Mehungry.ProfessionalsTest do
     end
   end
 
+  describe "client conditions (structured client↔condition link)" do
+    setup do
+      professional = user_fixture()
+      client = user_fixture()
+
+      {:ok, record} =
+        Professionals.create_client_record(%{
+          professional_id: professional.id,
+          user_id: client.id,
+          full_name: "Maria Papadaki"
+        })
+
+      {:ok, ibs} = Mehungry.Health.create_condition(%{name: "IBS"})
+      {:ok, gout} = Mehungry.Health.create_condition(%{name: "Gout"})
+
+      %{record: record, ibs: ibs, gout: gout}
+    end
+
+    test "links several existing conditions, ordered by name", %{record: record, ibs: ibs, gout: gout} do
+      {:ok, _} = Professionals.add_client_condition(record.id, gout.id)
+      {:ok, _} = Professionals.add_client_condition(record.id, ibs.id)
+
+      names = record.id |> Professionals.list_client_conditions() |> Enum.map(& &1.name)
+      assert names == ["Gout", "IBS"]
+    end
+
+    test "linking the same condition twice is a no-op", %{record: record, ibs: ibs} do
+      {:ok, _} = Professionals.add_client_condition(record.id, ibs.id)
+      {:ok, _} = Professionals.add_client_condition(record.id, ibs.id)
+
+      assert [%{id: id}] = Professionals.list_client_conditions(record.id)
+      assert id == ibs.id
+    end
+
+    test "removes a linked condition without touching the others", %{record: record, ibs: ibs, gout: gout} do
+      {:ok, _} = Professionals.add_client_condition(record.id, ibs.id)
+      {:ok, _} = Professionals.add_client_condition(record.id, gout.id)
+
+      assert {:ok, 1} = Professionals.remove_client_condition(record.id, ibs.id)
+      assert [%{id: id}] = Professionals.list_client_conditions(record.id)
+      assert id == gout.id
+
+      # removing an unlinked condition is a no-op
+      assert {:ok, 0} = Professionals.remove_client_condition(record.id, ibs.id)
+    end
+
+    test "deleting the client record cascades its condition links", %{record: record, ibs: ibs} do
+      {:ok, _} = Professionals.add_client_condition(record.id, ibs.id)
+      {:ok, _} = Professionals.delete_client_record(record)
+
+      assert Professionals.list_client_conditions(record.id) == []
+      # the shared condition registry entry is untouched
+      assert Mehungry.Health.get_condition_by_name("IBS")
+    end
+  end
+
   describe "weight_history/1" do
     setup do
       professional = user_fixture()

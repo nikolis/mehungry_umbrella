@@ -15,6 +15,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
   alias Mehungry.Professionals.{ClientIntake, ConsultationNote}
   alias Mehungry.Professionals.Anthropometrics
   alias Mehungry.Professionals.DietaryHistory.Fields
+  alias Mehungry.Health
 
   @energy_source_fields ~w(height_m weight_kg sex age activity_level)
 
@@ -48,6 +49,12 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
     |> assign(:intake, intake)
     |> assign(:intake_changeset, new_intake_changeset(intake, record))
     |> assign(:notes, notes_newest_first(record.id))
+    |> assign(:all_conditions, Health.list_conditions())
+    |> assign_conditions()
+  end
+
+  defp assign_conditions(socket) do
+    assign(socket, :conditions, Professionals.list_client_conditions(socket.assigns.record.id))
   end
 
   defp fetch_record(professional_id, id) do
@@ -71,6 +78,20 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
 
   def handle_event("save_client", %{"client" => params}, socket) do
     save_client(params, socket)
+  end
+
+  # ── Health conditions (structured client↔condition link) ────────────────────────
+
+  def handle_event("add_condition", %{"condition_id" => ""}, socket), do: {:noreply, socket}
+
+  def handle_event("add_condition", %{"condition_id" => condition_id}, socket) do
+    Professionals.add_client_condition(socket.assigns.record.id, condition_id)
+    {:noreply, socket |> assign_conditions() |> put_flash(:info, "Condition added.")}
+  end
+
+  def handle_event("remove_condition", %{"id" => condition_id}, socket) do
+    Professionals.remove_client_condition(socket.assigns.record.id, condition_id)
+    {:noreply, assign_conditions(socket)}
   end
 
   # ── Intake form (edit only) ─────────────────────────────────────────────────────
@@ -188,6 +209,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
       </h1>
 
       {client_section(assigns)}
+      {conditions_section(assigns)}
       {intake_section(assigns)}
       {notes_section(assigns)}
     </div>
@@ -238,6 +260,63 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditor do
           Save details
         </.action>
       </.form>
+    </section>
+    """
+  end
+
+  # ── Health conditions ─────────────────────────────────────────────────────────
+
+  defp conditions_section(assigns) do
+    linked_ids = Enum.map(assigns.conditions, & &1.id)
+    available = Enum.reject(assigns.all_conditions, &(&1.id in linked_ids))
+    assigns = assign(assigns, :available_conditions, available)
+
+    ~H"""
+    <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
+      <h2 class="text-lg font-display font-bold text-parchment mb-1">Health conditions</h2>
+      <p class="text-parchment-dim text-sm mb-4">
+        Link existing conditions to this client. Only you, the nutritionist, can record these.
+      </p>
+
+      <%= if Enum.empty?(@conditions) do %>
+        <p class="text-parchment-dim text-sm mb-4">No conditions recorded yet.</p>
+      <% else %>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <%= for condition <- @conditions do %>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-paprika/20 text-paprika text-sm">
+              {condition.name}
+              <button
+                type="button"
+                phx-click="remove_condition"
+                phx-value-id={condition.id}
+                aria-label={"Remove #{condition.name}"}
+                class="hover:text-parchment"
+              >
+                ✕
+              </button>
+            </span>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%= if Enum.empty?(@available_conditions) do %>
+        <p class="text-parchment-dim text-sm">All conditions in the registry are already linked.</p>
+      <% else %>
+        <form phx-submit="add_condition" class="flex flex-wrap items-end gap-3">
+          <.labeled label="Add a condition">
+            <select
+              name="condition_id"
+              class="bg-ink border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm min-w-56"
+            >
+              <option value="">— Select a condition —</option>
+              <%= for condition <- @available_conditions do %>
+                <option value={condition.id}>{condition.name}</option>
+              <% end %>
+            </select>
+          </.labeled>
+          <.action variant={:primary} size={:sm} type="submit">Add</.action>
+        </form>
+      <% end %>
     </section>
     """
   end

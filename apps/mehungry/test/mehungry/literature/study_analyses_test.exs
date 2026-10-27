@@ -513,4 +513,48 @@ defmodule Mehungry.Literature.StudyAnalysesTest do
                ["MEDLINE", "PubMed-not-MEDLINE"]
     end
   end
+
+  # Store one `error`-status analysis for `pmid`, linked to `condition`.
+  defp error_paper(pmid, condition) do
+    {:ok, study} = Literature.upsert_study(%{pmid: pmid, title: "P#{pmid}"})
+    link_condition(study, condition)
+    resp = response(pmid, [claim("c1", "improves", "positive")])
+    paper = resp["papers"] |> hd() |> Map.put("status", "error")
+    {:ok, _} = Literature.store_analysis_response(%{resp | "papers" => [paper]})
+    study
+  end
+
+  describe "count_conditions_with_research/0" do
+    test "counts distinct conditions with a non-error analysis; 0 on empty data" do
+      assert Literature.count_conditions_with_research() == 0
+
+      {:ok, uc} = Mehungry.Health.create_condition(%{name: "Ulcerative Colitis"})
+      {:ok, ibs} = Mehungry.Health.create_condition(%{name: "IBS"})
+      {:ok, _gout} = Mehungry.Health.create_condition(%{name: "Gout"})
+      {:ok, err_only} = Mehungry.Health.create_condition(%{name: "ErrOnly"})
+
+      # uc has two papers (still one distinct condition), ibs one.
+      analyzed_paper(213_001, uc, "randomized_controlled_trial")
+      analyzed_paper(213_002, uc, "cohort")
+      analyzed_paper(213_003, ibs, "review")
+      # error-only + no-research conditions must not be counted.
+      error_paper(213_004, err_only)
+
+      assert Literature.count_conditions_with_research() == 2
+    end
+  end
+
+  describe "count_analyzed_studies/0" do
+    test "counts distinct non-error analyzed papers; 0 on empty data" do
+      assert Literature.count_analyzed_studies() == 0
+
+      {:ok, uc} = Mehungry.Health.create_condition(%{name: "Ulcerative Colitis"})
+      analyzed_paper(213_010, uc, "cohort")
+      analyzed_paper(213_011, uc, "cohort")
+      error_paper(213_012, uc)
+
+      # Two non-error papers counted; the error row excluded.
+      assert Literature.count_analyzed_studies() == 2
+    end
+  end
 end

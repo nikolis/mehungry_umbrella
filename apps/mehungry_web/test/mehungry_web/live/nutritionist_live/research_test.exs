@@ -223,6 +223,45 @@ defmodule MehungryWeb.NutritionistLive.ResearchTest do
       assert ResearchNotes.list_for_user(nutritionist.id) == []
       refute render(view) =~ "To delete."
     end
+
+    test "My notes page filters to a single condition via ?condition_id", %{
+      conn: conn,
+      condition: condition,
+      nutritionist: nutritionist
+    } do
+      study = Literature.get_study_by_pmid(55_001)
+      {:ok, other} = Mehungry.Health.create_condition(%{name: "Gout"})
+
+      {:ok, _} =
+        ResearchNotes.create_custom(nutritionist.id, %{
+          condition_id: condition.id,
+          study_id: study.id,
+          body: "Colitis note."
+        })
+
+      {:ok, _} =
+        ResearchNotes.create_custom(nutritionist.id, %{
+          condition_id: other.id,
+          body: "Gout note."
+        })
+
+      # Unfiltered: both show.
+      {:ok, _v, all_html} = live(conn, ~p"/nutritionist/research/notes")
+      assert all_html =~ "Colitis note."
+      assert all_html =~ "Gout note."
+
+      # Filtered to the condition: only its note, header names it.
+      {:ok, _v, filtered} = live(conn, ~p"/nutritionist/research/notes?condition_id=#{condition.id}")
+      assert filtered =~ "Colitis note."
+      refute filtered =~ "Gout note."
+      assert filtered =~ condition.name
+
+      # A condition with no saved notes shows an empty state naming it.
+      {:ok, empty} = Mehungry.Health.create_condition(%{name: "Histamine Intolerance"})
+      {:ok, _v, empty_html} = live(conn, ~p"/nutritionist/research/notes?condition_id=#{empty.id}")
+      assert empty_html =~ "No notes saved for Histamine Intolerance"
+      assert empty_html =~ "Histamine Intolerance research"
+    end
   end
 
   describe "full-text paper (section outline + reader)" do

@@ -149,6 +149,12 @@ defmodule Mehungry.Literature do
   @doc "The research-search landing list: every condition + its study count (0 if none)."
   defdelegate conditions_for_search(search \\ nil), to: StudyAnalyses
 
+  @doc "Count of distinct conditions that have non-error digested research (0 if none)."
+  defdelegate count_conditions_with_research(), to: StudyAnalyses
+
+  @doc "Count of distinct papers with a non-error stored analysis (0 if none)."
+  defdelegate count_analyzed_studies(), to: StudyAnalyses
+
   @doc "A condition's digested research grouped by research type (evidence-hierarchy order)."
   defdelegate grouped_research_for_condition(condition_id), to: StudyAnalyses
 

@@ -16,11 +16,13 @@ defmodule Mehungry.Professionals do
     ArticleReference,
     ProfessionalClient,
     ClientIntake,
+    ClientCondition,
     ConsultationNote,
     AssignmentMessage
   }
 
   alias Mehungry.Professionals.DietaryHistory
+  alias Mehungry.Health.Condition
 
   # ── Professional Profile ───────────────────────────────────────────────────────
 
@@ -1196,6 +1198,51 @@ defmodule Mehungry.Professionals do
 
   def change_client_record(%ProfessionalClient{} = client, attrs \\ %{}) do
     ProfessionalClient.changeset(client, attrs)
+  end
+
+  # ── Client conditions (structured client↔condition link) ────────────────────────
+
+  @doc """
+  The existing `Health.Condition`s linked to a client record, ordered by name.
+  """
+  def list_client_conditions(professional_client_id) do
+    Repo.all(
+      from c in Condition,
+        join: cc in ClientCondition,
+        on: cc.condition_id == c.id,
+        where: cc.professional_client_id == ^professional_client_id,
+        order_by: [asc: c.name]
+    )
+  end
+
+  @doc """
+  Links an existing condition to a client record. Idempotent — linking the same
+  condition twice is a no-op (the unique pair constraint is ignored). Only an
+  existing `Health.Condition` can be linked; this never creates a condition.
+  """
+  def add_client_condition(professional_client_id, condition_id) do
+    %ClientCondition{}
+    |> ClientCondition.changeset(%{
+      professional_client_id: professional_client_id,
+      condition_id: condition_id
+    })
+    |> Repo.insert(
+      on_conflict: :nothing,
+      conflict_target: [:professional_client_id, :condition_id]
+    )
+  end
+
+  @doc "Unlinks a condition from a client record. No-op if it wasn't linked."
+  def remove_client_condition(professional_client_id, condition_id) do
+    {count, _} =
+      Repo.delete_all(
+        from cc in ClientCondition,
+          where:
+            cc.professional_client_id == ^professional_client_id and
+              cc.condition_id == ^condition_id
+      )
+
+    {:ok, count}
   end
 
   # ── Client intakes ──────────────────────────────────────────────────────────────

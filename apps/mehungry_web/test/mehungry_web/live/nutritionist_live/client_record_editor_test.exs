@@ -137,6 +137,36 @@ defmodule MehungryWeb.NutritionistLive.ClientRecordEditorTest do
     refute html =~ ~s(value="1452")
   end
 
+  test "links and unlinks existing conditions; read-only page shows them", %{conn: conn, user: user} do
+    {record, _client_user} = record_for(user, "Condition Client")
+    {:ok, ibs} = Mehungry.Health.create_condition(%{name: "IBS"})
+    {:ok, gout} = Mehungry.Health.create_condition(%{name: "Gout"})
+
+    {:ok, edit_view, _html} = live(conn, "/nutritionist/records/#{record.id}/edit")
+
+    # Add two existing conditions via the picker form.
+    edit_view
+    |> form("form[phx-submit='add_condition']", %{condition_id: ibs.id})
+    |> render_submit()
+
+    edit_view
+    |> form("form[phx-submit='add_condition']", %{condition_id: gout.id})
+    |> render_submit()
+
+    assert record.id |> Professionals.list_client_conditions() |> Enum.map(& &1.name) ==
+             ["Gout", "IBS"]
+
+    # Read-only record page shows the linked conditions.
+    {:ok, _v, html} = live(conn, "/nutritionist/records/#{record.id}")
+    assert html =~ "IBS"
+    assert html =~ "Gout"
+
+    # Remove one (the browser sends the id as a string).
+    render_click(edit_view, "remove_condition", %{"id" => to_string(ibs.id)})
+    assert [%{id: id}] = Professionals.list_client_conditions(record.id)
+    assert id == gout.id
+  end
+
   test "editing another professional's record redirects away", %{conn: conn} do
     other = Mehungry.AccountsFixtures.user_fixture()
 

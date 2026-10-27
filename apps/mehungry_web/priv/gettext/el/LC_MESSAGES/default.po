@@ -28,7 +28,7 @@ msgstr "Πίνακας Διαχείρισης"
 msgid "Basket"
 msgstr "Καλάθι"
 
-#: lib/mehungry_web/live/landing_live.ex:1305
+#: lib/mehungry_web/live/landing_live.ex:1083
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:64
 #: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:39
 #: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:40
@@ -144,6 +144,7 @@ msgstr "Υδατάνθρακες"
 
 #: lib/mehungry_web/live/condition_detail_live/index.ex:563
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:5
+#: lib/mehungry_web/live/landing_live.ex:474
 #, elixir-autogen, elixir-format
 msgid "Conditions"
 msgstr "Παθήσεις"
@@ -310,7 +311,7 @@ msgstr "Προβολή πλήρους σελίδας τροφίμου →"
 #: lib/mehungry_web/components/recipe_components.ex:501
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:329
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:747
-#: lib/mehungry_web/live/landing_live.ex:644
+#: lib/mehungry_web/live/landing_live.ex:816
 #: lib/mehungry_web/live/species_detail_live/index.html.heex:205
 #, elixir-autogen, elixir-format
 msgid "min"
@@ -327,585 +328,294 @@ msgstr "ανά 100g"
 msgid "via %{compound}"
 msgstr "μέσω %{compound}"
 
-#: lib/mehungry_web/live/landing_live.ex:1115
-#: lib/mehungry_web/live/landing_live.ex:1180
-#: lib/mehungry_web/live/landing_live.ex:1227
+#: lib/mehungry_web/live/landing_live.ex:892
+#: lib/mehungry_web/live/landing_live.ex:958
+#: lib/mehungry_web/live/landing_live.ex:1004
 #, elixir-autogen, elixir-format
 msgid "/month"
 msgstr "/μήνα"
 
-#: lib/mehungry_web/live/landing_live.ex:1076
-#, elixir-autogen, elixir-format
-msgid "0 / 10 used"
-msgstr "0 / 10 σε χρήση"
-
-#: lib/mehungry_web/live/landing_live.ex:1234
+#: lib/mehungry_web/live/landing_live.ex:965
 #, elixir-autogen, elixir-format
 msgid "10 AI meal plans / month"
 msgstr "10 σχέδια γευμάτων AI / μήνα"
 
-#: lib/mehungry_web/live/landing_live.ex:1188
+#: lib/mehungry_web/live/landing_live.ex:1012
 #, elixir-autogen, elixir-format
 msgid "15 AI recipe generations / month"
 msgstr "15 δημιουργίες συνταγών AI / μήνα"
 
-#: lib/mehungry_web/live/landing_live.ex:650
+#: lib/mehungry_web/live/landing_live.ex:822
 #, elixir-autogen, elixir-format
 msgid "168 nutrients tracked"
 msgstr "168 θρεπτικά συστατικά σε παρακολούθηση"
 
-#: lib/mehungry_web/live/landing_live.ex:1233
+#: lib/mehungry_web/live/landing_live.ex:964
 #, elixir-autogen, elixir-format
 msgid "30 AI recipe generations / month"
 msgstr "30 δημιουργίες συνταγών AI / μήνα"
 
-#: lib/mehungry_web/live/landing_live.ex:1189
+#: lib/mehungry_web/live/landing_live.ex:1013
 #, elixir-autogen, elixir-format
 msgid "4 AI meal plan generations / month"
 msgstr "4 δημιουργίες σχεδίων γευμάτων AI / μήνα"
 
-#: lib/mehungry_web/live/landing_live.ex:707
-#, elixir-autogen, elixir-format
-msgid "AI Recipe Assistant"
-msgstr "Βοηθός Συνταγών AI"
-
-#: lib/mehungry_web/live/landing_live.ex:302
-#: lib/mehungry_web/live/landing_live.ex:1069
-#, elixir-autogen, elixir-format
-msgid "AI meal plans this month"
-msgstr "Σχέδια γευμάτων AI αυτόν τον μήνα"
-
-#: lib/mehungry_web/live/landing_live.ex:1033
-#, elixir-autogen, elixir-format
-msgid "AI recipe generations +"
-msgstr "δημιουργίες συνταγών AI +"
-
-#: lib/mehungry_web/live/landing_live.ex:1159
+#: lib/mehungry_web/live/landing_live.ex:936
 #, elixir-autogen, elixir-format
 msgid "AI recipe generator"
 msgstr "Δημιουργός συνταγών AI"
 
-#: lib/mehungry_web/live/landing_live.ex:744
-#, elixir-autogen, elixir-format
-msgid "AI-powered"
-msgstr "Με τεχνολογία AI"
-
-#: lib/mehungry_web/live/landing_live.ex:446
-#, elixir-autogen, elixir-format
-msgid "Add any recipe to your meal calendar. See your daily nutrition at a glance across every tracked nutrient. Generate your shopping list automatically from your weekly plan."
-msgstr "Προσθέστε οποιαδήποτε συνταγή στο ημερολόγιο γευμάτων σας. Δείτε με μια ματιά την ημερήσια διατροφή σας σε κάθε θρεπτικό συστατικό που παρακολουθείται. Δημιουργήστε αυτόματα τη λίστα αγορών σας από το εβδομαδιαίο σας πρόγραμμα."
-
-#: lib/mehungry_web/live/landing_live.ex:576
+#: lib/mehungry_web/live/landing_live.ex:748
 #, elixir-autogen, elixir-format
 msgid "Add meals to your calendar to see your daily nutrition overview"
 msgstr "Προσθέστε γεύματα στο ημερολόγιό σας για να δείτε την ημερήσια διατροφική σας επισκόπηση"
 
-#: lib/mehungry_web/live/landing_live.ex:519
-#, elixir-autogen, elixir-format
-msgid "Adjust portion sizes and serving counts per meal"
-msgstr "Προσαρμόστε τα μεγέθη μερίδων και τον αριθμό μερίδων ανά γεύμα"
-
-#: lib/mehungry_web/live/landing_live.ex:1103
+#: lib/mehungry_web/live/landing_live.ex:880
 #, elixir-autogen, elixir-format
 msgid "All plans include full nutrition tracking. AI features are the upgrade."
 msgstr "Όλα τα προγράμματα περιλαμβάνουν πλήρη διατροφική παρακολούθηση. Οι λειτουργίες AI είναι η αναβάθμιση."
 
-#: lib/mehungry_web/live/landing_live.ex:1236
-#, elixir-autogen, elixir-format
-msgid "Appointment calendar"
-msgstr "Ημερολόγιο ραντεβού"
-
-#: lib/mehungry_web/live/landing_live.ex:1015
-#, elixir-autogen, elixir-format
-msgid "Appointment scheduling with calendar view"
-msgstr "Προγραμματισμός ραντεβού με προβολή ημερολογίου"
-
-#: lib/mehungry_web/live/landing_live.ex:107
+#: lib/mehungry_web/live/landing_live.ex:116
 #, elixir-autogen, elixir-format
 msgid "Browse Recipes"
 msgstr "Περιήγηση Συνταγών"
 
-#: lib/mehungry_web/live/landing_live.ex:664
+#: lib/mehungry_web/live/landing_live.ex:836
 #, elixir-autogen, elixir-format
 msgid "Browse all recipes →"
 msgstr "Περιήγηση σε όλες τις συνταγές →"
 
-#: lib/mehungry_web/live/landing_live.ex:1123
+#: lib/mehungry_web/live/landing_live.ex:900
 #, elixir-autogen, elixir-format
 msgid "Browse and share community recipes"
 msgstr "Περιηγηθείτε και μοιραστείτε συνταγές της κοινότητας"
 
-#: lib/mehungry_web/live/landing_live.ex:595
-#, elixir-autogen, elixir-format
-msgid "Browse community recipes — each one built with real USDA ingredients, so the nutrition facts are exact, not estimated. Save any recipe to your calendar in one click."
-msgstr "Περιηγηθείτε στις συνταγές της κοινότητας — καθεμία φτιαγμένη με πραγματικά συστατικά USDA, ώστε τα διατροφικά στοιχεία να είναι ακριβή, όχι κατ’ εκτίμηση. Αποθηκεύστε οποιαδήποτε συνταγή στο ημερολόγιό σας με ένα κλικ."
-
-#: lib/mehungry_web/live/landing_live.ex:685
+#: lib/mehungry_web/live/landing_live.ex:857
 #, elixir-autogen, elixir-format
 msgid "Build a feed from the cooks whose nutrition philosophy matches yours"
 msgstr "Δημιουργήστε μια ροή από τους μάγειρες των οποίων η διατροφική φιλοσοφία ταιριάζει με τη δική σας"
 
-#: lib/mehungry_web/live/landing_live.ex:848
-#, elixir-autogen, elixir-format
-msgid "Built for how nutrition actually works."
-msgstr "Φτιαγμένο για το πώς λειτουργεί πραγματικά η διατροφή."
-
-#: lib/mehungry_web/live/landing_live.ex:958
-#, elixir-autogen, elixir-format
-msgid "Built for nutritionists, not just individuals."
-msgstr "Φτιαγμένο για διατροφολόγους, όχι μόνο για ιδιώτες."
-
-#: lib/mehungry_web/live/landing_live.ex:466
-#, elixir-autogen, elixir-format
-msgid "Calendar view for breakfast, lunch, dinner, and snacks"
-msgstr "Προβολή ημερολογίου για πρωινό, μεσημεριανό, βραδινό και σνακ"
-
-#: lib/mehungry_web/live/landing_live.ex:1064
-#, elixir-autogen, elixir-format
-msgid "Calendar →"
-msgstr "Ημερολόγιο →"
-
-#: lib/mehungry_web/live/landing_live.ex:981
-#, elixir-autogen, elixir-format
-msgid "Client invitation and management system"
-msgstr "Σύστημα πρόσκλησης και διαχείρισης πελατών"
-
-#: lib/mehungry_web/live/landing_live.ex:677
+#: lib/mehungry_web/live/landing_live.ex:849
 #, elixir-autogen, elixir-format
 msgid "Comment & vote"
 msgstr "Σχολιάστε & ψηφίστε"
 
-#: lib/mehungry_web/live/landing_live.ex:933
-#, elixir-autogen, elixir-format
-msgid "Complete a short dietary preferences survey when you join. Your food feed, recipe recommendations, and AI outputs adapt to your actual lifestyle and goals from the start."
-msgstr "Συμπληρώστε ένα σύντομο ερωτηματολόγιο διατροφικών προτιμήσεων όταν εγγραφείτε. Η ροή φαγητού, οι προτάσεις συνταγών και τα αποτελέσματα AI προσαρμόζονται στον πραγματικό τρόπο ζωής και τους στόχους σας από την αρχή."
-
-#: lib/mehungry_web/live/landing_live.ex:1287
-#, elixir-autogen, elixir-format
-msgid "Create your free account →"
-msgstr "Δημιουργήστε τον δωρεάν λογαριασμό σας →"
-
-#: lib/mehungry_web/live/landing_live.ex:483
-#, elixir-autogen, elixir-format
-msgid "Daily nutrition totals across all"
-msgstr "Ημερήσια διατροφικά σύνολα σε όλα τα"
-
-#: lib/mehungry_web/live/landing_live.ex:750
-#, elixir-autogen, elixir-format
-msgid "Describe your meal — a dietary goal, a cuisine, what's in your fridge. The AI generates a complete recipe with ingredients mapped directly to the USDA database, so you get exact nutrition data, not estimates."
-msgstr "Περιγράψτε το γεύμα σας — έναν διατροφικό στόχο, μια κουζίνα, ό,τι έχετε στο ψυγείο σας. Το AI δημιουργεί μια πλήρη συνταγή με συστατικά αντιστοιχισμένα απευθείας στη βάση δεδομένων USDA, ώστε να έχετε ακριβή διατροφικά δεδομένα, όχι εκτιμήσεις."
-
-#: lib/mehungry_web/live/landing_live.ex:903
-#, elixir-autogen, elixir-format
-msgid "Dietary preferences"
-msgstr "Διατροφικές προτιμήσεις"
-
-#: lib/mehungry_web/live/landing_live.ex:589
-#, elixir-autogen, elixir-format
-msgid "Discover & share"
-msgstr "Ανακαλύψτε & μοιραστείτε"
-
-#: lib/mehungry_web/live/landing_live.ex:787
-#, elixir-autogen, elixir-format
-msgid "Every ingredient mapped to USDA FoodData Central"
-msgstr "Κάθε συστατικό αντιστοιχισμένο στο USDA FoodData Central"
-
-#: lib/mehungry_web/live/landing_live.ex:1187
+#: lib/mehungry_web/live/landing_live.ex:1011
 #, elixir-autogen, elixir-format
 msgid "Everything in Free"
 msgstr "Ό,τι περιλαμβάνει το Δωρεάν"
 
-#: lib/mehungry_web/live/landing_live.ex:1232
+#: lib/mehungry_web/live/landing_live.ex:963
 #, elixir-autogen, elixir-format
 msgid "Everything in Mehungry Plus"
 msgstr "Ό,τι περιλαμβάνει το Mehungry Plus"
 
-#: lib/mehungry_web/live/landing_live.ex:737
+#: lib/mehungry_web/live/landing_live.ex:594
 #, elixir-autogen, elixir-format
 msgid "Example output — your results will vary by request"
 msgstr "Παράδειγμα αποτελέσματος — τα αποτελέσματά σας θα διαφέρουν ανά αίτημα"
 
-#: lib/mehungry_web/live/landing_live.ex:1261
+#: lib/mehungry_web/live/landing_live.ex:993
 #, elixir-autogen, elixir-format
 msgid "Explore Pro"
 msgstr "Εξερευνήστε το Pro"
 
-#: lib/mehungry_web/live/landing_live.ex:1042
-#, elixir-autogen, elixir-format
-msgid "Explore the professional tier →"
-msgstr "Εξερευνήστε το επαγγελματικό πακέτο →"
-
-#: lib/mehungry_web/live/landing_live.ex:98
-#, elixir-autogen, elixir-format
-msgid "Features"
-msgstr "Χαρακτηριστικά"
-
-#: lib/mehungry_web/live/landing_live.ex:1326
+#: lib/mehungry_web/live/landing_live.ex:1104
 #, elixir-autogen, elixir-format
 msgid "Feedback"
 msgstr "Σχόλια"
 
-#: lib/mehungry_web/live/landing_live.ex:683
+#: lib/mehungry_web/live/landing_live.ex:855
 #, elixir-autogen, elixir-format
 msgid "Follow creators"
 msgstr "Ακολουθήστε δημιουργούς"
 
-#: lib/mehungry_web/live/landing_live.ex:1222
+#: lib/mehungry_web/live/landing_live.ex:953
 #, elixir-autogen, elixir-format
 msgid "For nutritionists"
 msgstr "Για διατροφολόγους"
 
-#: lib/mehungry_web/live/landing_live.ex:1110
+#: lib/mehungry_web/live/landing_live.ex:887
 #, elixir-autogen, elixir-format
 msgid "Free"
 msgstr "Δωρεάν"
 
-#: lib/mehungry_web/live/landing_live.ex:228
-#, elixir-autogen, elixir-format
-msgid "Free to start · No credit card"
-msgstr "Δωρεάν για ξεκίνημα · Χωρίς πιστωτική κάρτα"
-
-#: lib/mehungry_web/live/landing_live.ex:725
+#: lib/mehungry_web/live/landing_live.ex:582
 #, elixir-autogen, elixir-format
 msgid "Full 168-nutrient breakdown calculated from USDA data"
 msgstr "Πλήρης ανάλυση 168 θρεπτικών συστατικών υπολογισμένη από δεδομένα USDA"
 
-#: lib/mehungry_web/live/landing_live.ex:1235
-#, elixir-autogen, elixir-format
-msgid "Full client management portal"
-msgstr "Πλήρης πύλη διαχείρισης πελατών"
-
-#: lib/mehungry_web/live/landing_live.ex:1120
+#: lib/mehungry_web/live/landing_live.ex:897
 #, elixir-autogen, elixir-format
 msgid "Full nutrition tracking (168 nutrients)"
 msgstr "Πλήρης διατροφική παρακολούθηση (168 θρεπτικά συστατικά)"
 
-#: lib/mehungry_web/live/landing_live.ex:804
-#, elixir-autogen, elixir-format
-msgid "Generate a full weekly meal plan in one request"
-msgstr "Δημιουργήστε ένα πλήρες εβδομαδιαίο σχέδιο γευμάτων με ένα αίτημα"
-
-#: lib/mehungry_web/live/landing_live.ex:721
+#: lib/mehungry_web/live/landing_live.ex:578
 #, elixir-autogen, elixir-format
 msgid "Generated using USDA-verified ingredients"
 msgstr "Δημιουργήθηκε με συστατικά επαληθευμένα από το USDA"
 
-#: lib/mehungry_web/live/landing_live.ex:122
+#: lib/mehungry_web/live/landing_live.ex:131
 #, elixir-autogen, elixir-format
 msgid "Get started"
 msgstr "Ξεκινήστε"
 
-#: lib/mehungry_web/live/landing_live.ex:1166
+#: lib/mehungry_web/live/landing_live.ex:943
 #, elixir-autogen, elixir-format
 msgid "Get started free"
 msgstr "Ξεκινήστε δωρεάν"
 
-#: lib/mehungry_web/live/landing_live.ex:712
+#: lib/mehungry_web/live/landing_live.ex:569
 #, elixir-autogen, elixir-format
 msgid "High-protein pasta under 600 kcal. Make it Mediterranean."
 msgstr "Ζυμαρικά υψηλής πρωτεΐνης κάτω από 600 kcal. Κάντε τα μεσογειακά."
 
-#: lib/mehungry_web/live/landing_live.ex:502
-#, elixir-autogen, elixir-format
-msgid "Import meal ingredients into your shopping basket with one tap"
-msgstr "Εισαγάγετε τα συστατικά του γεύματος στο καλάθι αγορών σας με ένα άγγιγμα"
-
-#: lib/mehungry_web/live/landing_live.ex:1279
-#, elixir-autogen, elixir-format
-msgid "Join free. No credit card. Access the full nutrition database and start building recipes today."
-msgstr "Εγγραφείτε δωρεάν. Χωρίς πιστωτική κάρτα. Αποκτήστε πρόσβαση στην πλήρη βάση διατροφικών δεδομένων και ξεκινήστε να φτιάχνετε συνταγές σήμερα."
-
-#: lib/mehungry_web/live/landing_live.ex:1298
+#: lib/mehungry_web/live/landing_live.ex:1076
 #, elixir-autogen, elixir-format
 msgid "Know what's on your plate."
 msgstr "Μάθετε τι υπάρχει στο πιάτο σας."
 
-#: lib/mehungry_web/live/landing_live.ex:679
+#: lib/mehungry_web/live/landing_live.ex:851
 #, elixir-autogen, elixir-format
 msgid "Leave feedback, ask questions, and vote on the recipes you love"
 msgstr "Αφήστε σχόλια, κάντε ερωτήσεις και ψηφίστε τις συνταγές που αγαπάτε"
 
 #: lib/mehungry_web/components/meal_type_labels.ex:32
-#: lib/mehungry_web/live/landing_live.ex:550
+#: lib/mehungry_web/live/landing_live.ex:722
 #: lib/mehungry_web/live/meal_plan_live/show.ex:834
 #, elixir-autogen, elixir-format
 msgid "Lunch"
 msgstr "Μεσημεριανό"
 
-#: lib/mehungry_web/live/landing_live.ex:961
-#, elixir-autogen, elixir-format
-msgid "Manage your client roster, assign meal plans, track progress, and schedule appointments — within the same platform your clients use to log their food."
-msgstr "Διαχειριστείτε το πελατολόγιό σας, αναθέστε σχέδια γευμάτων, παρακολουθήστε την πρόοδο και προγραμματίστε ραντεβού — μέσα στην ίδια πλατφόρμα που χρησιμοποιούν οι πελάτες σας για να καταγράφουν το φαγητό τους."
-
-#: lib/mehungry_web/live/landing_live.ex:1055
-#, elixir-autogen, elixir-format
-msgid "Manage →"
-msgstr "Διαχείριση →"
-
-#: lib/mehungry_web/live/landing_live.ex:1122
+#: lib/mehungry_web/live/landing_live.ex:899
 #, elixir-autogen, elixir-format
 msgid "Meal calendar planning"
 msgstr "Σχεδιασμός ημερολογίου γευμάτων"
 
-#: lib/mehungry_web/live/landing_live.ex:437
-#, elixir-autogen, elixir-format
-msgid "Meal planning"
-msgstr "Σχεδιασμός γευμάτων"
-
-#: lib/mehungry_web/live/landing_live.ex:718
+#: lib/mehungry_web/live/landing_live.ex:575
 #, elixir-autogen, elixir-format
 msgid "Mediterranean Chicken Orzo"
 msgstr "Μεσογειακό Κριθαράκι με Κοτόπουλο"
 
-#: lib/mehungry_web/live/landing_live.ex:832
-#, elixir-autogen, elixir-format
-msgid "Mehungry Plus plan required · From €9.99/mo"
-msgstr "Απαιτείται πρόγραμμα Mehungry Plus · Από 9,99€/μήνα"
-
-#: lib/mehungry_web/live/landing_live.ex:1173
+#: lib/mehungry_web/live/landing_live.ex:950
 #, elixir-autogen, elixir-format
 msgid "Most popular"
 msgstr "Πιο δημοφιλές"
 
-#: lib/mehungry_web/live/landing_live.ex:349
-#, elixir-autogen, elixir-format
-msgid "Most trackers give you calories and macros. We give you the full picture — the same data nutritionists and researchers actually use."
-msgstr "Οι περισσότερες εφαρμογές σας δίνουν θερμίδες και μακροθρεπτικά. Εμείς σας δίνουμε την πλήρη εικόνα — τα ίδια δεδομένα που χρησιμοποιούν στην πράξη διατροφολόγοι και ερευνητές."
-
-#: lib/mehungry_web/live/landing_live.ex:1117
+#: lib/mehungry_web/live/landing_live.ex:894
 #, elixir-autogen, elixir-format
 msgid "No credit card required"
 msgstr "Δεν απαιτείται πιστωτική κάρτα"
 
-#: lib/mehungry_web/live/landing_live.ex:345
-#, elixir-autogen, elixir-format
-msgid "Not 4 nutrients."
-msgstr "Όχι 4 θρεπτικά συστατικά."
-
-#: lib/mehungry_web/live/landing_live.ex:876
-#, elixir-autogen, elixir-format
-msgid "Nutrient interactions"
-msgstr "Αλληλεπιδράσεις θρεπτικών συστατικών"
-
-#: lib/mehungry_web/live/landing_live.ex:851
-#, elixir-autogen, elixir-format
-msgid "Nutrients don't exist in isolation. M3Hungry tracks how nutrients interact with each other — and adapts to the foods your body actually needs."
-msgstr "Τα θρεπτικά συστατικά δεν υπάρχουν απομονωμένα. Το M3Hungry παρακολουθεί πώς αλληλεπιδρούν μεταξύ τους — και προσαρμόζεται στα τρόφιμα που πραγματικά χρειάζεται το σώμα σας."
-
-#: lib/mehungry_web/live/landing_live.ex:339
-#, elixir-autogen, elixir-format
-msgid "Nutrition depth"
-msgstr "Διατροφικό βάθος"
-
-#: lib/mehungry_web/live/landing_live.ex:845
-#, elixir-autogen, elixir-format
-msgid "Nutrition intelligence"
-msgstr "Διατροφική ευφυΐα"
-
-#: lib/mehungry_web/live/landing_live.ex:1267
+#: lib/mehungry_web/live/landing_live.ex:1045
 #, elixir-autogen, elixir-format
 msgid "Payments processed securely by Stripe. Cancel any subscription anytime."
 msgstr "Οι πληρωμές διεκπεραιώνονται με ασφάλεια από τη Stripe. Ακυρώστε οποιαδήποτε συνδρομή ανά πάσα στιγμή."
 
-#: lib/mehungry_web/live/landing_live.ex:526
-#, elixir-autogen, elixir-format
-msgid "Plan your week →"
-msgstr "Σχεδιάστε την εβδομάδα σας →"
-
-#: lib/mehungry_web/live/landing_live.ex:671
+#: lib/mehungry_web/live/landing_live.ex:843
 #, elixir-autogen, elixir-format
 msgid "Post your recipes"
 msgstr "Δημοσιεύστε τις συνταγές σας"
 
-#: lib/mehungry_web/live/landing_live.ex:101
-#: lib/mehungry_web/live/landing_live.ex:1097
-#: lib/mehungry_web/live/landing_live.ex:1308
+#: lib/mehungry_web/live/landing_live.ex:110
+#: lib/mehungry_web/live/landing_live.ex:874
+#: lib/mehungry_web/live/landing_live.ex:1086
 #, elixir-autogen, elixir-format
 msgid "Pricing"
 msgstr "Τιμολόγηση"
 
-#: lib/mehungry_web/live/landing_live.ex:1190
+#: lib/mehungry_web/live/landing_live.ex:1014
 #, elixir-autogen, elixir-format
 msgid "Priority support"
 msgstr "Υποστήριξη προτεραιότητας"
 
-#: lib/mehungry_web/live/landing_live.ex:1311
+#: lib/mehungry_web/live/landing_live.ex:1089
 #, elixir-autogen, elixir-format
 msgid "Privacy"
 msgstr "Απόρρητο"
 
-#: lib/mehungry_web/live/landing_live.ex:952
-#, elixir-autogen, elixir-format
-msgid "Professional tier"
-msgstr "Επαγγελματικό πακέτο"
-
-#: lib/mehungry_web/live/landing_live.ex:728
+#: lib/mehungry_web/live/landing_live.ex:585
 #, elixir-autogen, elixir-format
 msgid "Protein · Fatty acids · Vitamins · Minerals · Amino acids…"
 msgstr "Πρωτεΐνη · Λιπαρά οξέα · Βιταμίνες · Μέταλλα · Αμινοξέα…"
 
-#: lib/mehungry_web/live/landing_live.ex:770
-#, elixir-autogen, elixir-format
-msgid "Recipes generated to your calorie and macro targets"
-msgstr "Συνταγές δημιουργημένες σύμφωνα με τους στόχους θερμίδων και μακροθρεπτικών σας"
-
-#: lib/mehungry_web/live/landing_live.ex:592
-#, elixir-autogen, elixir-format
-msgid "Recipes with the nutrition already done."
-msgstr "Συνταγές με τη διατροφική ανάλυση ήδη έτοιμη."
-
-#: lib/mehungry_web/live/landing_live.ex:821
-#, elixir-autogen, elixir-format
-msgid "Save generated recipes directly to your calendar"
-msgstr "Αποθηκεύστε τις δημιουργημένες συνταγές απευθείας στο ημερολόγιό σας"
-
-#: lib/mehungry_web/live/landing_live.ex:906
-#, elixir-autogen, elixir-format
-msgid "Set dietary restrictions — vegetarian, gluten-free, specific allergies. Exclude ingredients or entire food categories from your experience. Your feed and AI adapt accordingly."
-msgstr "Ορίστε διατροφικούς περιορισμούς — χορτοφαγικά, χωρίς γλουτένη, συγκεκριμένες αλλεργίες. Αποκλείστε συστατικά ή ολόκληρες κατηγορίες τροφίμων από την εμπειρία σας. Η ροή σας και το AI προσαρμόζονται ανάλογα."
-
-#: lib/mehungry_web/live/landing_live.ex:673
+#: lib/mehungry_web/live/landing_live.ex:845
 #, elixir-autogen, elixir-format
 msgid "Share what you cook and tag it with food hashtags for others to discover"
 msgstr "Μοιραστείτε αυτά που μαγειρεύετε και προσθέστε ετικέτες φαγητού για να τα ανακαλύψουν άλλοι"
 
-#: lib/mehungry_web/live/landing_live.ex:1124
+#: lib/mehungry_web/live/landing_live.ex:901
 #, elixir-autogen, elixir-format
 msgid "Shopping basket"
 msgstr "Καλάθι αγορών"
 
-#: lib/mehungry_web/live/landing_live.ex:116
+#: lib/mehungry_web/live/landing_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "Sign in"
 msgstr "Σύνδεση"
 
-#: lib/mehungry_web/live/landing_live.ex:879
-#, elixir-autogen, elixir-format
-msgid "Some nutrients enhance absorption; others inhibit it. Vitamin C improves iron uptake. Vitamin D activates calcium metabolism. We surface these relationships per recipe."
-msgstr "Ορισμένα θρεπτικά συστατικά ενισχύουν την απορρόφηση· άλλα την αναστέλλουν. Η βιταμίνη C βελτιώνει την πρόσληψη σιδήρου. Η βιταμίνη D ενεργοποιεί τον μεταβολισμό του ασβεστίου. Αναδεικνύουμε αυτές τις σχέσεις ανά συνταγή."
-
-#: lib/mehungry_web/live/landing_live.ex:1100
+#: lib/mehungry_web/live/landing_live.ex:877
 #, elixir-autogen, elixir-format
 msgid "Start free. Upgrade when you're ready."
 msgstr "Ξεκινήστε δωρεάν. Αναβαθμίστε όταν είστε έτοιμοι."
 
-#: lib/mehungry_web/live/landing_live.ex:1276
-#, elixir-autogen, elixir-format
-msgid "Start tracking what actually matters."
-msgstr "Ξεκινήστε να παρακολουθείτε αυτό που πραγματικά έχει σημασία."
-
-#: lib/mehungry_web/live/landing_live.ex:930
-#, elixir-autogen, elixir-format
-msgid "Survey-guided setup"
-msgstr "Ρύθμιση καθοδηγούμενη από ερωτηματολόγιο"
-
-#: lib/mehungry_web/live/landing_live.ex:747
-#, elixir-autogen, elixir-format
-msgid "Tell it what you want to eat. It handles the rest."
-msgstr "Πείτε του τι θέλετε να φάτε. Αναλαμβάνει τα υπόλοιπα."
-
-#: lib/mehungry_web/live/landing_live.ex:829
+#: lib/mehungry_web/live/landing_live.ex:634
 #, elixir-autogen, elixir-format
 msgid "Try the AI assistant →"
 msgstr "Δοκιμάστε τον βοηθό AI →"
 
-#: lib/mehungry_web/live/landing_live.ex:1121
+#: lib/mehungry_web/live/landing_live.ex:898
 #, elixir-autogen, elixir-format
 msgid "Unlimited manual recipe creation"
 msgstr "Απεριόριστη χειροκίνητη δημιουργία συνταγών"
 
-#: lib/mehungry_web/live/landing_live.ex:1059
-#, elixir-autogen, elixir-format
-msgid "Upcoming appointments"
-msgstr "Επερχόμενα ραντεβού"
-
-#: lib/mehungry_web/live/landing_live.ex:1215
+#: lib/mehungry_web/live/landing_live.ex:1039
 #, elixir-autogen, elixir-format
 msgid "Upgrade to Mehungry Plus"
 msgstr "Αναβάθμιση σε Mehungry Plus"
 
-#: lib/mehungry_web/live/landing_live.ex:998
-#, elixir-autogen, elixir-format
-msgid "View and manage client meal calendars"
-msgstr "Προβολή και διαχείριση ημερολογίων γευμάτων πελατών"
-
-#: lib/mehungry_web/live/landing_live.ex:732
-#, elixir-autogen, elixir-format
-msgid "View full breakdown →"
-msgstr "Δείτε πλήρη ανάλυση →"
-
-#: lib/mehungry_web/live/landing_live.ex:381
+#: lib/mehungry_web/live/landing_live.ex:684
 #, elixir-autogen, elixir-format
 msgid "What M3Hungry tracks"
 msgstr "Τι παρακολουθεί το M3Hungry"
 
-#: lib/mehungry_web/live/landing_live.ex:359
+#: lib/mehungry_web/live/landing_live.ex:669
 #, elixir-autogen, elixir-format
 msgid "What most apps track"
 msgstr "Τι παρακολουθούν οι περισσότερες εφαρμογές"
 
-#: lib/mehungry_web/live/landing_live.ex:1050
-#, elixir-autogen, elixir-format
-msgid "Your clients"
-msgstr "Οι πελάτες σας"
-
-#: lib/mehungry_web/live/landing_live.ex:443
-#, elixir-autogen, elixir-format
-msgid "Your week, planned. Your nutrition, balanced."
-msgstr "Η εβδομάδα σας, οργανωμένη. Η διατροφή σας, ισορροπημένη."
-
-#: lib/mehungry_web/live/landing_live.ex:193
+#: lib/mehungry_web/live/landing_live.ex:191
 #, elixir-autogen, elixir-format
 msgid "foods in the database"
 msgstr "τρόφιμα στη βάση δεδομένων"
 
-#: lib/mehungry_web/live/landing_live.ex:1035
-#, elixir-autogen, elixir-format
-msgid "meal plans per month"
-msgstr "σχέδια γευμάτων ανά μήνα"
-
-#: lib/mehungry_web/live/landing_live.ex:422
-#, elixir-autogen, elixir-format
-msgid "more nutrients tracked"
-msgstr "περισσότερα θρεπτικά συστατικά σε παρακολούθηση"
-
-#: lib/mehungry_web/live/landing_live.ex:211
+#: lib/mehungry_web/live/landing_live.ex:196
 #, elixir-autogen, elixir-format
 msgid "nutrients tracked per food"
 msgstr "θρεπτικά συστατικά ανά τρόφιμο"
 
-#: lib/mehungry_web/live/landing_live.ex:1229
+#: lib/mehungry_web/live/landing_live.ex:960
 #, elixir-autogen, elixir-format
 msgid "or €290/yr"
 msgstr "ή 290€/έτος"
 
-#: lib/mehungry_web/live/landing_live.ex:1183
+#: lib/mehungry_web/live/landing_live.ex:1007
 #, elixir-autogen, elixir-format
 msgid "or €99/yr —"
 msgstr "ή 99€/έτος —"
 
-#: lib/mehungry_web/live/landing_live.ex:1183
+#: lib/mehungry_web/live/landing_live.ex:1007
 #, elixir-autogen, elixir-format
 msgid "save 17%"
 msgstr "εξοικονομήστε 17%"
 
 #: lib/mehungry_web/components/recipe_components.ex:506
-#: lib/mehungry_web/live/landing_live.ex:642
+#: lib/mehungry_web/live/landing_live.ex:814
 #, elixir-autogen, elixir-format
 msgid "servings"
 msgstr "μερίδες"
 
-#: lib/mehungry_web/live/landing_live.ex:485
-#, elixir-autogen, elixir-format
-msgid "tracked nutrients"
-msgstr "θρεπτικά συστατικά σε παρακολούθηση"
-
-#: lib/mehungry_web/live/landing_live.ex:1331
-#, elixir-autogen, elixir-format
-msgid "© 2025 M3Hungry. Nutrition data from USDA FoodData Central."
-msgstr "© 2025 M3Hungry. Διατροφικά δεδομένα από το USDA FoodData Central."
-
-#: lib/mehungry_web/live/landing_live.ex:374
+#: lib/mehungry_web/live/landing_live.ex:678
 #, elixir-autogen, elixir-format
 msgid "… and that's it"
 msgstr "… και αυτό ήταν"
@@ -1359,7 +1069,7 @@ msgstr "Χολίνη"
 msgid "Complex Carbohydrates"
 msgstr "Σύνθετοι υδατάνθρακες"
 
-#: lib/mehungry_web/live/landing_live.ex:1317
+#: lib/mehungry_web/live/landing_live.ex:1095
 #, elixir-autogen, elixir-format
 msgid "Cookies"
 msgstr "Cookies"
@@ -1456,7 +1166,7 @@ msgstr "Σίδηρος"
 msgid "Lactose"
 msgstr "Λακτόζη"
 
-#: lib/mehungry_web/live/landing_live.ex:1320
+#: lib/mehungry_web/live/landing_live.ex:1098
 #, elixir-autogen, elixir-format
 msgid "Legal Notice"
 msgstr "Νομική σημείωση"
@@ -1614,7 +1324,7 @@ msgstr "Προτεινόμενα για αυτή την πάθηση"
 msgid "Suggestions drawn from the research that we don't yet map to specific foods — informational only, not medical advice."
 msgstr "Προτάσεις που προκύπτουν από την έρευνα και δεν αντιστοιχίζονται ακόμη σε συγκεκριμένες τροφές — μόνο για ενημέρωση, όχι ιατρική συμβουλή."
 
-#: lib/mehungry_web/live/landing_live.ex:1314
+#: lib/mehungry_web/live/landing_live.ex:1092
 #, elixir-autogen, elixir-format
 msgid "Terms"
 msgstr "Όροι"
@@ -2912,32 +2622,12 @@ msgstr "Εμφάνιση %{count} ακόμη"
 msgid "Show less"
 msgstr "Εμφάνιση λιγότερων"
 
-#: lib/mehungry_web/live/landing_live.ex:318
-#, elixir-autogen, elixir-format
-msgid "100% your advice"
-msgstr "100% δικές σας συμβουλές"
-
-#: lib/mehungry_web/live/landing_live.ex:152
-#, elixir-autogen, elixir-format
-msgid "A discoverable public profile that brings clients in, one workspace to manage patients and appointments, and an AI assistant that drafts the busywork — you review, adjust, approve."
-msgstr "Ένα δημόσιο προφίλ που σας κάνει ευδιάκριτους και φέρνει πελάτες, ένας χώρος εργασίας για τη διαχείριση ασθενών και ραντεβού, και ένας βοηθός AI που συντάσσει τη ρουτίνα — εσείς ελέγχετε, προσαρμόζετε, εγκρίνετε."
-
-#: lib/mehungry_web/live/landing_live.ex:34
-#, elixir-autogen, elixir-format
-msgid "A discoverable public profile, a workspace to manage your clients and appointments, and an AI assistant that drafts meal plans backed by USDA FoodData Central — you review, adjust, and approve. The advice stays 100% yours."
-msgstr "Ένα δημόσιο προφίλ που σας κάνει ευδιάκριτους, ένας χώρος εργασίας για τη διαχείριση πελατών και ραντεβού, και ένας βοηθός AI που συντάσσει διατροφικά πλάνα βασισμένα στο USDA FoodData Central — εσείς ελέγχετε, προσαρμόζετε και εγκρίνετε. Οι συμβουλές παραμένουν 100% δικές σας."
-
 #: lib/mehungry_web/components/recipe_components.ex:493
 #, elixir-autogen, elixir-format
 msgid "A short description will appear here."
 msgstr "Μια σύντομη περιγραφή θα εμφανιστεί εδώ."
 
-#: lib/mehungry_web/live/landing_live.ex:319
-#, elixir-autogen, elixir-format
-msgid "AI drafts · you approve"
-msgstr "Το AI συντάσσει · εσείς εγκρίνετε"
-
-#: lib/mehungry_web/live/landing_live.ex:296
+#: lib/mehungry_web/live/landing_live.ex:269
 #, elixir-autogen, elixir-format
 msgid "Active clients"
 msgstr "Ενεργοί πελάτες"
@@ -2992,7 +2682,7 @@ msgstr "Δημιουργία νέας συνταγής"
 msgid "Dashboard"
 msgstr "Πίνακας ελέγχου"
 
-#: lib/mehungry_web/live/landing_live.ex:323
+#: lib/mehungry_web/live/landing_live.ex:296
 #, elixir-autogen, elixir-format
 msgid "Example dashboard — your practice once you're set up"
 msgstr "Ενδεικτικός πίνακας ελέγχου — το ιατρείο σας μόλις ολοκληρώσετε τη ρύθμιση"
@@ -3002,7 +2692,7 @@ msgstr "Ενδεικτικός πίνακας ελέγχου — το ιατρε
 msgid "Fill in the details and watch your recipe come together."
 msgstr "Συμπληρώστε τις λεπτομέρειες και δείτε τη συνταγή σας να παίρνει μορφή."
 
-#: lib/mehungry_web/live/landing_live.ex:139
+#: lib/mehungry_web/live/landing_live.ex:148
 #, elixir-autogen, elixir-format
 msgid "For nutritionists & dietitians"
 msgstr "Για διατροφολόγους & διαιτολόγους"
@@ -3012,7 +2702,7 @@ msgstr "Για διατροφολόγους & διαιτολόγους"
 msgid "Get discovered, manage your clients, and let AI draft the plans — your advice stays 100% yours."
 msgstr "Γίνετε ευδιάκριτοι, διαχειριστείτε τους πελάτες σας και αφήστε το AI να συντάσσει τα πλάνα — οι συμβουλές σας παραμένουν 100% δικές σας."
 
-#: lib/mehungry_web/live/landing_live.ex:147
+#: lib/mehungry_web/live/landing_live.ex:156
 #, elixir-autogen, elixir-format
 msgid "Grow your nutrition practice."
 msgstr "Αναπτύξτε το διατροφικό σας ιατρείο."
@@ -3037,7 +2727,7 @@ msgstr "Η εικόνα προστέθηκε"
 msgid "In progress"
 msgstr "Σε εξέλιξη"
 
-#: lib/mehungry_web/live/landing_live.ex:148
+#: lib/mehungry_web/live/landing_live.ex:157
 #, elixir-autogen, elixir-format
 msgid "Keep it 100% yours."
 msgstr "Κρατήστε το 100% δικό σας."
@@ -3057,7 +2747,7 @@ msgstr "Ζωντανή προεπισκόπηση"
 msgid "M3Hungry — Grow Your Nutrition Practice"
 msgstr "M3Hungry — Αναπτύξτε το διατροφικό σας ιατρείο"
 
-#: lib/mehungry_web/live/landing_live.ex:277
+#: lib/mehungry_web/live/landing_live.ex:523
 #, elixir-autogen, elixir-format
 msgid "Online booking"
 msgstr "Online κρατήσεις"
@@ -3078,7 +2768,7 @@ msgstr "Μέρος (προαιρετικό)"
 msgid "Preview recipe"
 msgstr "Προεπισκόπηση συνταγής"
 
-#: lib/mehungry_web/live/landing_live.ex:278
+#: lib/mehungry_web/live/landing_live.ex:526
 #, elixir-autogen, elixir-format
 msgid "Published articles"
 msgstr "Δημοσιευμένα άρθρα"
@@ -3089,7 +2779,7 @@ msgstr "Δημοσιευμένα άρθρα"
 msgid "Ready to save"
 msgstr "Έτοιμο για αποθήκευση"
 
-#: lib/mehungry_web/live/landing_live.ex:1352
+#: lib/mehungry_web/live/landing_live.ex:1156
 #, elixir-autogen, elixir-format
 msgid "Registered nutritionist"
 msgstr "Εγγεγραμμένος διατροφολόγος"
@@ -3110,12 +2800,7 @@ msgstr "Αφαίρεση βήματος"
 msgid "Save recipe"
 msgstr "Αποθήκευση συνταγής"
 
-#: lib/mehungry_web/live/landing_live.ex:279
-#, elixir-autogen, elixir-format
-msgid "Secure payouts"
-msgstr "Ασφαλείς πληρωμές"
-
-#: lib/mehungry_web/live/landing_live.ex:168
+#: lib/mehungry_web/live/landing_live.ex:177
 #, elixir-autogen, elixir-format
 msgid "See a nutritionist profile →"
 msgstr "Δείτε ένα προφίλ διατροφολόγου →"
@@ -3130,12 +2815,12 @@ msgstr "Δείτε πώς αναπτύσσει το ιατρείο σας →"
 msgid "Split into parts"
 msgstr "Διαχωρισμός σε μέρη"
 
-#: lib/mehungry_web/live/landing_live.ex:162
+#: lib/mehungry_web/live/landing_live.ex:171
 #, elixir-autogen, elixir-format
 msgid "Start your practice"
 msgstr "Ξεκινήστε το ιατρείο σας"
 
-#: lib/mehungry_web/live/landing_live.ex:290
+#: lib/mehungry_web/live/landing_live.ex:263
 #, elixir-autogen, elixir-format
 msgid "Today's appointments"
 msgstr "Τα σημερινά ραντεβού"
@@ -3145,7 +2830,7 @@ msgstr "Τα σημερινά ραντεβού"
 msgid "Your method will appear here, step by step."
 msgstr "Η μέθοδός σας θα εμφανιστεί εδώ, βήμα προς βήμα."
 
-#: lib/mehungry_web/live/landing_live.ex:1346
+#: lib/mehungry_web/live/landing_live.ex:1150
 #, elixir-autogen, elixir-format
 msgid "Your name here"
 msgstr "Το όνομά σας εδώ"
@@ -3162,7 +2847,7 @@ msgstr "Το ιατρείο σας"
 msgid "Your recipe title"
 msgstr "Ο τίτλος της συνταγής σας"
 
-#: lib/mehungry_web/live/landing_live.ex:1357
+#: lib/mehungry_web/live/landing_live.ex:1161
 #, elixir-autogen, elixir-format
 msgid "Your specialization · your city"
 msgstr "Η ειδικότητά σας · η πόλη σας"
@@ -3206,3 +2891,387 @@ msgstr "Εβδομάδα %{date}"
 #, elixir-autogen, elixir-format, fuzzy
 msgid "day"
 msgstr "7 ημέρες"
+
+#: lib/mehungry_web/live/landing_live.ex:487
+#, elixir-autogen, elixir-format
+msgid "\"Low-residue during flares; reintroduce fibre gradually in remission.\""
+msgstr "«Χαμηλό υπόλειμμα στις εξάρσεις· σταδιακή επανεισαγωγή φυτικών ινών στην ύφεση.»"
+
+#: lib/mehungry_web/live/landing_live.ex:291
+#, elixir-autogen, elixir-format, fuzzy
+msgid "100% your judgment"
+msgstr "100% δικές σας συμβουλές"
+
+#: lib/mehungry_web/live/landing_live.ex:437
+#, elixir-autogen, elixir-format
+msgid "A client file that holds dietary history, visits, and conditions"
+msgstr "Ένας φάκελος πελάτη με διατροφικό ιστορικό, επισκέψεις και παθήσεις"
+
+#: lib/mehungry_web/live/landing_live.ex:764
+#, elixir-autogen, elixir-format
+msgid "A consumer app your clients already want."
+msgstr "Μια εφαρμογή που οι πελάτες σας ήδη θέλουν."
+
+#: lib/mehungry_web/live/landing_live.ex:524
+#, elixir-autogen, elixir-format
+msgid "A dietary-history file per client — intake, visits, conditions, weight trend."
+msgstr "Φάκελος διατροφικού ιστορικού ανά πελάτη — αρχική αξιολόγηση, επισκέψεις, παθήσεις, πορεία βάρους."
+
+#: lib/mehungry_web/live/landing_live.ex:161
+#, elixir-autogen, elixir-format
+msgid "A discoverable profile that brings clients in, one workspace for their records and appointments, a literature assistant that hands you the evidence, and AI that drafts the busywork — you review, adjust, approve."
+msgstr "Ένα προφίλ που σας κάνει ευδιάκριτους και φέρνει πελάτες, ένας χώρος εργασίας για τους φακέλους και τα ραντεβού τους, ένας βοηθός βιβλιογραφίας που σας παραδίδει τα τεκμήρια, και AI που ετοιμάζει την αγγαρεία — εσείς ελέγχετε, προσαρμόζετε, εγκρίνετε."
+
+#: lib/mehungry_web/live/landing_live.ex:34
+#, elixir-autogen, elixir-format, fuzzy
+msgid "A discoverable public profile, a workspace for your clients and appointments, a literature assistant that hands you graded PubMed evidence, and AI that drafts meal plans backed by USDA FoodData Central — you review, adjust, and approve. The judgment stays 100% yours."
+msgstr "Ένα δημόσιο προφίλ που σας κάνει ευδιάκριτους, ένας χώρος εργασίας για τη διαχείριση πελατών και ραντεβού, και ένας βοηθός AI που συντάσσει διατροφικά πλάνα βασισμένα στο USDA FoodData Central — εσείς ελέγχετε, προσαρμόζετε και εγκρίνετε. Οι συμβουλές παραμένουν 100% δικές σας."
+
+#: lib/mehungry_web/live/landing_live.ex:622
+#, elixir-autogen, elixir-format
+msgid "A full weekly meal plan in one request"
+msgstr "Πλήρες εβδομαδιαίο πλάνο γευμάτων με ένα αίτημα"
+
+#: lib/mehungry_web/live/landing_live.ex:522
+#, elixir-autogen, elixir-format
+msgid "A public, SEO-indexed profile and directory so clients searching your city find you."
+msgstr "Δημόσιο προφίλ και κατάλογος βελτιστοποιημένα για μηχανές αναζήτησης, ώστε να σας βρίσκουν πελάτες στην πόλη σας."
+
+#: lib/mehungry_web/live/landing_live.ex:292
+#, elixir-autogen, elixir-format
+msgid "AI & evidence assist · you decide"
+msgstr "AI & τεκμήρια βοηθούν · εσείς αποφασίζετε"
+
+#: lib/mehungry_web/live/landing_live.ex:564
+#, elixir-autogen, elixir-format
+msgid "AI draft — for your review"
+msgstr "Προσχέδιο AI — για τον έλεγχό σας"
+
+#: lib/mehungry_web/live/landing_live.ex:601
+#, elixir-autogen, elixir-format
+msgid "AI-assisted"
+msgstr "Με τη βοήθεια AI"
+
+#: lib/mehungry_web/live/landing_live.ex:251
+#, elixir-autogen, elixir-format
+msgid "Articles"
+msgstr "Άρθρα"
+
+#: lib/mehungry_web/live/landing_live.ex:650
+#, elixir-autogen, elixir-format
+msgid "Backed by USDA data"
+msgstr "Με βάση δεδομένα USDA"
+
+#: lib/mehungry_web/live/landing_live.ex:248
+#, elixir-autogen, elixir-format
+msgid "Booking"
+msgstr "Κρατήσεις"
+
+#: lib/mehungry_web/live/landing_live.ex:1054
+#, elixir-autogen, elixir-format
+msgid "Build a practice that's unmistakably yours."
+msgstr "Χτίστε ένα ιατρείο αναμφισβήτητα δικό σας."
+
+#: lib/mehungry_web/live/landing_live.ex:469
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Client file"
+msgstr "Πελάτες"
+
+#: lib/mehungry_web/live/landing_live.ex:249
+#: lib/mehungry_web/live/landing_live.ex:524
+#, elixir-autogen, elixir-format
+msgid "Client records"
+msgstr "Φάκελοι πελατών"
+
+#: lib/mehungry_web/live/landing_live.ex:967
+#, elixir-autogen, elixir-format
+msgid "Client records & dietary history"
+msgstr "Φάκελοι πελατών & διατροφικό ιστορικό"
+
+#: lib/mehungry_web/live/landing_live.ex:607
+#, elixir-autogen, elixir-format
+msgid "Describe a client's goal, a cuisine, a constraint. The AI drafts a complete recipe or weekly plan with every ingredient mapped to the USDA database — then you review, adjust, and approve before anything reaches a client."
+msgstr "Περιγράψτε τον στόχο ενός πελάτη, μια κουζίνα, έναν περιορισμό. Το AI ετοιμάζει μια πλήρη συνταγή ή εβδομαδιαίο πλάνο με κάθε συστατικό αντιστοιχισμένο στη βάση USDA — και μετά ελέγχετε, προσαρμόζετε και εγκρίνετε πριν φτάσει οτιδήποτε στον πελάτη."
+
+#: lib/mehungry_web/live/landing_live.ex:470
+#, elixir-autogen, elixir-format
+msgid "Dietary history · Visits"
+msgstr "Διατροφικό ιστορικό · Επισκέψεις"
+
+#: lib/mehungry_web/live/landing_live.ex:522
+#, elixir-autogen, elixir-format
+msgid "Discoverable profile"
+msgstr "Ευδιάκριτο προφίλ"
+
+#: lib/mehungry_web/live/landing_live.ex:604
+#, elixir-autogen, elixir-format
+msgid "Draft the busywork. You keep the final say."
+msgstr "Το AI ετοιμάζει την αγγαρεία. Ο τελικός λόγος είναι δικός σας."
+
+#: lib/mehungry_web/live/landing_live.ex:618
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Every ingredient mapped to USDA FoodData Central — exact, not estimated"
+msgstr "Κάθε συστατικό αντιστοιχισμένο στο USDA FoodData Central"
+
+#: lib/mehungry_web/live/landing_live.ex:653
+#, elixir-autogen, elixir-format
+msgid "Every plan is backed by real data —"
+msgstr "Κάθε πλάνο στηρίζεται σε πραγματικά δεδομένα —"
+
+#: lib/mehungry_web/live/landing_live.ex:511
+#, elixir-autogen, elixir-format
+msgid "Everything in one place."
+msgstr "Όλα σε ένα μέρος."
+
+#: lib/mehungry_web/live/landing_live.ex:525
+#, elixir-autogen, elixir-format
+msgid "Graded PubMed research per condition, saved as your own notes."
+msgstr "Αξιολογημένη έρευνα PubMed ανά πάθηση, αποθηκευμένη ως δικές σας σημειώσεις."
+
+#: lib/mehungry_web/live/landing_live.ex:382
+#, elixir-autogen, elixir-format
+msgid "How it works"
+msgstr "Πώς λειτουργεί"
+
+#: lib/mehungry_web/live/landing_live.ex:445
+#, elixir-autogen, elixir-format
+msgid "Import an existing history from a spreadsheet in one pass"
+msgstr "Εισαγωγή υπάρχοντος ιστορικού από υπολογιστικό φύλλο με μία κίνηση"
+
+#: lib/mehungry_web/live/landing_live.ex:637
+#, elixir-autogen, elixir-format
+msgid "Included in the Pro plan"
+msgstr "Περιλαμβάνεται στο πλάνο Pro"
+
+#: lib/mehungry_web/live/landing_live.ex:441
+#, elixir-autogen, elixir-format
+msgid "Intake does the arithmetic — BMI, BMR, and TDEE calculated for you"
+msgstr "Η αρχική αξιολόγηση κάνει τους υπολογισμούς — ΔΜΣ, BMR και TDEE υπολογίζονται για εσάς"
+
+#: lib/mehungry_web/live/landing_live.ex:480
+#, elixir-autogen, elixir-format
+msgid "Iron deficiency"
+msgstr "Έλλειψη σιδήρου"
+
+#: lib/mehungry_web/live/landing_live.ex:389
+#, elixir-autogen, elixir-format
+msgid "It resurfaces on the client who has that condition"
+msgstr "Εμφανίζεται ξανά στον πελάτη που έχει αυτή την πάθηση"
+
+#: lib/mehungry_web/live/landing_live.ex:1057
+#, elixir-autogen, elixir-format
+msgid "Join free. No credit card. Get a profile, the literature assistant, and a workspace for your clients today."
+msgstr "Εγγραφείτε δωρεάν. Χωρίς πιστωτική κάρτα. Αποκτήστε προφίλ, τον βοηθό βιβλιογραφίας και χώρο εργασίας για τους πελάτες σας σήμερα."
+
+#: lib/mehungry_web/live/landing_live.ex:430
+#, elixir-autogen, elixir-format
+msgid "Link a client to the conditions they live with. The notes you saved from the literature show up right there — your words, your judgment, at the moment you need them."
+msgstr "Συνδέστε έναν πελάτη με τις παθήσεις που τον αφορούν. Οι σημειώσεις που αποθηκεύσατε από τη βιβλιογραφία εμφανίζονται ακριβώς εκεί — τα δικά σας λόγια, η δική σας κρίση, τη στιγμή που τα χρειάζεστε."
+
+#: lib/mehungry_web/live/landing_live.ex:104
+#: lib/mehungry_web/live/landing_live.ex:250
+#: lib/mehungry_web/live/landing_live.ex:312
+#: lib/mehungry_web/live/landing_live.ex:525
+#, elixir-autogen, elixir-format
+msgid "Literature assistant"
+msgstr "Βοηθός βιβλιογραφίας"
+
+#: lib/mehungry_web/live/landing_live.ex:966
+#, elixir-autogen, elixir-format
+msgid "Literature assistant + research notes"
+msgstr "Βοηθός βιβλιογραφίας + σημειώσεις έρευνας"
+
+#: lib/mehungry_web/live/landing_live.ex:199
+#, elixir-autogen, elixir-format
+msgid "Literature assistant built in"
+msgstr "Ενσωματωμένος βοηθός βιβλιογραφίας"
+
+#: lib/mehungry_web/live/landing_live.ex:658
+#, elixir-autogen, elixir-format
+msgid "Most trackers give you calories and macros. Every recipe here is built from real USDA ingredients, so the nutrition is exact — the same data nutritionists and researchers actually use."
+msgstr "Οι περισσότερες εφαρμογές σάς δίνουν θερμίδες και μακροθρεπτικά. Εδώ κάθε συνταγή βασίζεται σε πραγματικά συστατικά USDA, οπότε η διατροφική ανάλυση είναι ακριβής — τα ίδια δεδομένα που χρησιμοποιούν διαιτολόγοι και ερευνητές."
+
+#: lib/mehungry_web/live/landing_live.ex:400
+#, elixir-autogen, elixir-format
+msgid "No fabricated verdicts on conditions — we surface the evidence and its provenance. You reach the conclusion, and it stays defensibly yours."
+msgstr "Καμία κατασκευασμένη ετυμηγορία για παθήσεις — αναδεικνύουμε τα τεκμήρια και την προέλευσή τους. Εσείς καταλήγετε στο συμπέρασμα, και παραμένει τεκμηριωμένα δικό σας."
+
+#: lib/mehungry_web/live/landing_live.ex:626
+#, elixir-autogen, elixir-format
+msgid "Nothing is published until you approve it"
+msgstr "Τίποτα δεν δημοσιεύεται αν δεν το εγκρίνετε"
+
+#: lib/mehungry_web/live/landing_live.ex:514
+#, elixir-autogen, elixir-format
+msgid "One platform runs the whole practice — from getting found, to the first appointment, to the evidence behind every plan."
+msgstr "Μία πλατφόρμα για όλο το ιατρείο σας — από το να σας βρίσκουν, ως το πρώτο ραντεβού, ως τα τεκμήρια πίσω από κάθε πλάνο."
+
+#: lib/mehungry_web/live/landing_live.ex:252
+#, elixir-autogen, elixir-format
+msgid "Payouts"
+msgstr "Πληρωμές"
+
+#: lib/mehungry_web/live/landing_live.ex:424
+#, elixir-autogen, elixir-format
+msgid "Point of care"
+msgstr "Στο σημείο φροντίδας"
+
+#: lib/mehungry_web/live/landing_live.ex:349
+#, elixir-autogen, elixir-format
+msgid "Ranked by study quality"
+msgstr "Κατάταξη κατά ποιότητα μελέτης"
+
+#: lib/mehungry_web/live/landing_live.ex:387
+#, elixir-autogen, elixir-format
+msgid "Read the full text in-app, with the key claims highlighted"
+msgstr "Διαβάστε το πλήρες κείμενο μέσα στην εφαρμογή, με επισημασμένα τα βασικά ευρήματα"
+
+#: lib/mehungry_web/live/landing_live.ex:614
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Recipes drafted to your calorie and macro targets"
+msgstr "Συνταγές δημιουργημένες σύμφωνα με τους στόχους θερμίδων και μακροθρεπτικών σας"
+
+#: lib/mehungry_web/live/landing_live.ex:589
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Review & approve →"
+msgstr "Έλεγχος & Αποθήκευση"
+
+#: lib/mehungry_web/live/landing_live.ex:388
+#, elixir-autogen, elixir-format
+msgid "Save what matters as your own note — or write your own"
+msgstr "Αποθηκεύστε ό,τι σας ενδιαφέρει ως δική σας σημείωση — ή γράψτε τη δική σας"
+
+#: lib/mehungry_web/live/landing_live.ex:490
+#, elixir-autogen, elixir-format
+msgid "Saved from a 2021 systematic review · your words"
+msgstr "Αποθηκεύτηκε από συστηματική ανασκόπηση του 2021 · τα λόγια σας"
+
+#: lib/mehungry_web/live/landing_live.ex:275
+#, elixir-autogen, elixir-format
+msgid "Saved research notes"
+msgstr "Αποθηκευμένες σημειώσεις έρευνας"
+
+#: lib/mehungry_web/live/landing_live.ex:322
+#, elixir-autogen, elixir-format
+msgid "Search PubMed by condition and get results ranked by study quality — meta-analyses first, then trials, then cohorts. Read the full text in-app with the key claims highlighted. Save what matters as your own notes. We do the legwork; the judgment stays with you."
+msgstr "Αναζητήστε στο PubMed ανά πάθηση και δείτε αποτελέσματα ταξινομημένα κατά ποιότητα μελέτης — πρώτα μετα-αναλύσεις, μετά κλινικές δοκιμές, μετά μελέτες κοόρτης. Διαβάστε το πλήρες κείμενο μέσα στην εφαρμογή με επισημασμένα τα βασικά ευρήματα. Αποθηκεύστε ό,τι σας ενδιαφέρει ως δικές σας σημειώσεις. Εμείς κάνουμε τον κόπο· η κρίση παραμένει δική σας."
+
+#: lib/mehungry_web/live/landing_live.ex:386
+#, elixir-autogen, elixir-format
+msgid "Search by condition — ulcerative colitis, PCOS, IBS…"
+msgstr "Αναζήτηση ανά πάθηση — ελκώδης κολίτιδα, PCOS, IBS…"
+
+#: lib/mehungry_web/live/landing_live.ex:543
+#, elixir-autogen, elixir-format
+msgid "See a live profile →"
+msgstr "Δείτε ένα ζωντανό προφίλ →"
+
+#: lib/mehungry_web/live/landing_live.ex:412
+#, elixir-autogen, elixir-format
+msgid "See the literature assistant →"
+msgstr "Δείτε τον βοηθό βιβλιογραφίας →"
+
+#: lib/mehungry_web/live/landing_live.ex:452
+#, elixir-autogen, elixir-format
+msgid "See where the notes come from →"
+msgstr "Δείτε από πού προέρχονται οι σημειώσεις →"
+
+#: lib/mehungry_web/live/landing_live.ex:523
+#, elixir-autogen, elixir-format
+msgid "Set your weekly availability; clients request, you accept, and a calendar invite goes out."
+msgstr "Ορίστε την εβδομαδιαία διαθεσιμότητά σας· οι πελάτες ζητούν, εσείς αποδέχεστε, και αποστέλλεται πρόσκληση ημερολογίου."
+
+#: lib/mehungry_web/live/landing_live.ex:1065
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Start your practice →"
+msgstr "Ξεκινήστε το ιατρείο σας"
+
+#: lib/mehungry_web/live/landing_live.ex:367
+#, elixir-autogen, elixir-format
+msgid "Strongest"
+msgstr "Ισχυρότερα"
+
+#: lib/mehungry_web/live/landing_live.ex:508
+#, elixir-autogen, elixir-format
+msgid "The complete practice"
+msgstr "Το πλήρες ιατρείο"
+
+#: lib/mehungry_web/live/landing_live.ex:319
+#, elixir-autogen, elixir-format
+msgid "The conclusion, yours."
+msgstr "Το συμπέρασμα, δικό σας."
+
+#: lib/mehungry_web/live/landing_live.ex:318
+#, elixir-autogen, elixir-format
+msgid "The evidence, graded."
+msgstr "Τα τεκμήρια, αξιολογημένα."
+
+#: lib/mehungry_web/live/landing_live.ex:761
+#, elixir-autogen, elixir-format
+msgid "The platform your clients use"
+msgstr "Η πλατφόρμα που χρησιμοποιούν οι πελάτες σας"
+
+#: lib/mehungry_web/live/landing_live.ex:107
+#, elixir-autogen, elixir-format
+msgid "The practice"
+msgstr "Το ιατρείο"
+
+#: lib/mehungry_web/live/landing_live.ex:375
+#, elixir-autogen, elixir-format
+msgid "The same evidence hierarchy the search groups results into."
+msgstr "Η ίδια ιεραρχία τεκμηρίων με την οποία η αναζήτηση ομαδοποιεί τα αποτελέσματα."
+
+#: lib/mehungry_web/live/landing_live.ex:477
+#, elixir-autogen, elixir-format
+msgid "Ulcerative colitis"
+msgstr "Ελκώδης κολίτιδα"
+
+#: lib/mehungry_web/live/landing_live.ex:526
+#, elixir-autogen, elixir-format
+msgid "Write evidence-referenced articles that rank and build your authority."
+msgstr "Γράψτε άρθρα τεκμηριωμένα με βιβλιογραφία που ανεβαίνουν στις αναζητήσεις και χτίζουν το κύρος σας."
+
+#: lib/mehungry_web/live/landing_live.ex:767
+#, elixir-autogen, elixir-format
+msgid "Your clients log food, plan their week, and browse recipes — each built with real USDA ingredients, so the nutrition facts are exact. The same platform you work in."
+msgstr "Οι πελάτες σας καταγράφουν τροφές, σχεδιάζουν την εβδομάδα τους και περιηγούνται σε συνταγές — όλες φτιαγμένες με πραγματικά συστατικά USDA, ώστε η διατροφική ανάλυση να είναι ακριβής. Η ίδια πλατφόρμα όπου εργάζεστε."
+
+#: lib/mehungry_web/live/landing_live.ex:427
+#, elixir-autogen, elixir-format
+msgid "Your notes find your client."
+msgstr "Οι σημειώσεις σας βρίσκουν τον πελάτη σας."
+
+#: lib/mehungry_web/live/landing_live.ex:485
+#, elixir-autogen, elixir-format
+msgid "Your saved note"
+msgstr "Η αποθηκευμένη σημείωσή σας"
+
+#: lib/mehungry_web/live/landing_live.ex:339
+#, elixir-autogen, elixir-format
+msgid "conditions covered"
+msgstr "καλυμμένες παθήσεις"
+
+#: lib/mehungry_web/live/landing_live.ex:696
+#, elixir-autogen, elixir-format
+msgid "more"
+msgstr "ακόμα"
+
+#: lib/mehungry_web/live/landing_live.ex:655
+#, elixir-autogen, elixir-format
+msgid "nutrients, not estimates."
+msgstr "θρεπτικά συστατικά, όχι εκτιμήσεις."
+
+#: lib/mehungry_web/live/landing_live.ex:333
+#, elixir-autogen, elixir-format
+msgid "papers digested"
+msgstr "αναλυμένες δημοσιεύσεις"
+
+#: lib/mehungry_web/live/landing_live.ex:1109
+#, elixir-autogen, elixir-format, fuzzy
+msgid "© 2026 M3Hungry. Nutrition data from USDA FoodData Central."
+msgstr "© 2025 M3Hungry. Διατροφικά δεδομένα από το USDA FoodData Central."
+
+#: lib/mehungry_web/live/landing_live.ex:968
+#, elixir-autogen, elixir-format
+msgid "Booking & appointment calendar"
+msgstr "Κρατήσεις & ημερολόγιο ραντεβού"
