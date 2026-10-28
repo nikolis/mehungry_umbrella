@@ -29,12 +29,15 @@ defmodule MehungryWeb.PublicNutritionistLive.Index do
 
   @impl true
   def handle_event("filter", params, socket) do
+    # Hand the verified-route sigil the key/value pairs directly — it encodes the
+    # query itself. Pre-encoding with URI.encode_query/1 and interpolating the
+    # string double-encodes the "=" (→ "?city%3DAthens"), a malformed query that
+    # silently drops the filter on reload.
     query =
       %{"city" => params["city"], "q" => params["q"]}
       |> Enum.reject(fn {_k, v} -> v in [nil, ""] end)
-      |> URI.encode_query()
 
-    to = if query == "", do: ~p"/nutritionists", else: ~p"/nutritionists?#{query}"
+    to = if query == [], do: ~p"/nutritionists", else: ~p"/nutritionists?#{query}"
     {:noreply, push_patch(socket, to: to)}
   end
 

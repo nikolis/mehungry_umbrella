@@ -1,5 +1,15 @@
 # Scaling Metrics for Phoenix / Elixir in Production
 
+> **⚠️ Historical (stale as of 2026-08-27).** This doc is written against the
+> **removed** DIY observability layer (`Mehungry.Telemetry.MetricsBuffer`,
+> `telemetry_snapshots`, the custom VM/pool gauges). That system was deleted
+> (migration `20260827000000_drop_custom_observability_tables.exs`); the app now
+> runs **stock Phoenix telemetry + PromEx** with **no DB-backed metric history**
+> — see [`observability.md`](observability.md). Every "✅ Persisted" claim below
+> no longer holds. Keep this only as the *reference list of which saturation
+> signals matter for scaling* (the framing in each section is still sound); the
+> "Have it?" column must be re-derived against PromEx/BeamScope before use.
+
 What production Phoenix/Elixir teams watch to make scaling decisions — mapped against
 the Mehungry telemetry stack: what we already capture, and the gaps that specifically
 matter for **scaling** (as opposed to general debugging).

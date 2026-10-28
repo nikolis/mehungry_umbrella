@@ -230,7 +230,7 @@ defmodule MehungryWeb.SvgComponents do
         fill="var(--logo-tagline-color, #A9A08C)"
         letter-spacing="4"
       >
-        ANALYZE • SHARE • CONNECT
+        EVIDENCE • PRACTICE • GROWTH
       </text>
     </svg>
     """

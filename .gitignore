@@ -46,3 +46,6 @@ myenv/
 # Copyrighted source compilations kept only as internal reference/verification
 # oracles — must never be committed. See docs/science/glycemic_index_licensing.md.
 studies/
+
+# excoveralls per-app output (umbrella)
+cover/

@@ -13,7 +13,14 @@ defmodule Mehungry.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test,
+        "coveralls.detail": :test
+      ]
     ]
   end
 
@@ -36,6 +43,7 @@ defmodule Mehungry.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:excoveralls, "~> 0.18", only: :test},
       {:bcrypt_elixir, "~> 3.0"},
       {:poison, "~> 5.0"},
       {:numexy, "~> 0.1.9"},

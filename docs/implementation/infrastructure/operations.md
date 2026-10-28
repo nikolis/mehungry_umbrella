@@ -2,10 +2,16 @@
 
 ## Deploy pipeline
 
-Docker → GitHub Actions → AWS ECR → ECS (`eu-central-1`). Task definitions:
-`task-definition.json`, `migrator-task-definition.json`. Migrations run as a
-separate ECS task (`migrator/`). PostgreSQL **14** on RDS — newer majors are
-not validated against the current ECS setup.
+**Fly.io** (`fly.toml`, app `m3hungry`, region `lhr`): `fly deploy` builds the
+`Dockerfile` into a Phoenix release and does a **rolling** deploy across 2
+`shared-cpu-1x`/1GB machines, gated on the `GET /health` liveness probe.
+Migrations run in a one-off machine via `[deploy] release_command`
+(`/app/bin/mehungry_umbrella eval MehungryWeb.Release.migrate`) **before** the
+new release goes live. PostgreSQL is **Supabase** (session pooler, see `CLAUDE.md`
+→ *Deployment Notes*).
+
+> **History:** previously AWS ECS/ECR + RDS. The leftover `task-definition.json`
+> / `migrator/` artifacts are from that era; `fly.toml` is the live config.
 
 ## Environment variables
 

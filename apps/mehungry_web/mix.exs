@@ -14,7 +14,14 @@ defmodule MehungryWeb.MixProject do
       compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test,
+        "coveralls.detail": :test
+      ]
     ]
   end
 
@@ -43,6 +50,7 @@ defmodule MehungryWeb.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:excoveralls, "~> 0.18", only: :test},
       {:cachex, "~> 3.4"},
       {:contex, "~> 0.5.0"},
       {:igniter, "~> 0.6", only: [:dev, :test]},

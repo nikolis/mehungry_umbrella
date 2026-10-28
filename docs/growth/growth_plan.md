@@ -1,123 +1,172 @@
-# Growth Plan — Oct 17 → Nov 14, 2026
+# Growth Plan — Nutritionist-led (Oct 26 → Nov 23, 2026)
 
 **Baseline source:** [docs/app_status.md](../implementation/app_status.md) (snapshot 2026-10-17)
+**Positioning source:** the nutritionist one-pager + [product_foundation.md](../features/product_foundation.md) —
+the product leads with **professional nutritionists**; the consumer food/recipe layer is the second ring.
 **Cadence:** review every Friday against the weekly sprint; append the Week-4 retro here and a
 new row to [app_status.md §6](../implementation/app_status.md#6-snapshot-log).
 
-**Thesis:** At ~4 signups/mo with a 98%-Greece, Crete-heavy audience and near-zero
-engagement, the win is un-scalable founder work — manually recruit + activate the first
-~100 real users where they physically are (Crete), in Greek, while seeding the one channel
-that compounds (SEO). **No paid ads this month.** Don't pour into a leaky bucket: fix the
-signup→confirm leak and activation *before* scaling acquisition.
+> **Reset (2026-10-26):** this plan was rewritten when the product repositioned to lead with
+> professional nutritionists. The previous version optimised for consumer signups in Crete; that
+> work survives only as the **proof/surfacing ring** (below), not the headline.
 
 ---
 
-## Month targets (Oct 17 → Nov 14)
+## Thesis
+
+The moat is **research + surfacing wired into the clinical workflow** — graded, provenance-backed
+PubMed digests per condition, and suggested notes that resurface on the exact client who has that
+condition. Profiles, booking, client files, and billing are **parity**: they earn the seat at the
+table next to Healthie / Practice Better / Nutrium, but they don't win. Everything we do this month
+is in service of getting a nutritionist to the moment where they *feel* the research→client loop.
+
+So growth is **not** raw consumer signups. It is:
+
+1. **Make the two must-be-true things true** — the differentiators are real in the architecture; the
+   risk is **coverage and quality, not features**. Research only impresses when the conditions a
+   nutritionist actually cares about have digested papers behind them, and the AI meal planning has
+   to be genuinely good, not just present.
+2. **Land and activate nutritionists** — founder-led, un-scalable, where Greek/Crete dietitians
+   physically are. One activated nutritionist is worth more than fifty passive consumer signups.
+3. **Let the motion be B2B2C** — an activated nutritionist brings their clients, who become users.
+   The consumer layer (`/foods`, SEO, share cards) is the credibility/surfacing proof engine
+   underneath, not the acquisition target.
+
+**No paid ads this month.** Don't scale acquisition into a product whose moat isn't yet proven on
+the conditions that matter.
+
+---
+
+## Month targets (Oct 26 → Nov 23)
+
+Targets are ordered: **1 & 2 are the moat readiness gates and matter most** — a nutritionist who
+hits the research→client loop on an empty condition churns. 3–5 are the nutritionist motion; 6–7 are
+the proof/surfacing ring.
 
 | # | Metric | Baseline | Target | Floor | Measured by |
 |---|---|---:|---:|---:|---|
-| 1 | New registered users /month | 4 | 30 | 20 | `users_new_30d` ([§5.1](../implementation/app_status.md#51-current-queries-while-the-visits-table-still-exists--pre-deploy)) |
-| 2 | Confirmation rate on this month's signups | 33% | ≥55% | 45% | confirmed ÷ new (`users`) |
-| 3 | Activation: % of new signups w/ ≥1 real action (save / meal-plan / follow) in 7d | ~0% | ≥40% | 30% | join `users`→`user_recipes`/`meal_plans`/`user_follows` |
-| 4 | User-created weekly meal plans (non-owner) | 0 | ≥5 | 3 | `meal_plans_total` |
-| 5 | Real engagement actions from non-owner users | 34 ever | +25 | +15 | comments+likes+saves+follows delta |
-| 6 | SEO seeded | n/a | sitemap submitted + `/foods` indexed + first GSC impressions >0 | sitemap submitted | Search Console |
-| 7 | Partnership landed (nutritionist/creator actively using) | 0 | 1 | 0 (1 convo) | manual |
+| 1 | **Condition coverage** — curated "top-20 conditions nutritionists care about" with ≥5 digested papers each | ~0 | ≥15/20 | 10/20 | `research_ingestion_runs` + studies/condition |
+| 2 | **AI meal-plan quality** — plans passing the review rubric (realistic, condition-aware, nutritionally sound) | unmeasured | ≥80% pass | 60% pass | manual rubric, n≥20 drafts |
+| 3 | **Nutritionists onboarded** — public profile live + indexed in the directory | ~0 | 5 | 3 | `Professionals` profiles |
+| 4 | **Nutritionists activated** — completed the loop: saved a suggested note **and** saw it resurface on a real client with that condition | 0 | ≥3 | 2 | `research_notes` + `professional_client_conditions` |
+| 5 | **Parity proof** — ≥1 nutritionist completes a real booking (accept → `.ics`) and finishes Stripe Connect onboarding | 0 | 1 | 0 (1 in progress) | appointments + Connect status |
+| 6 | **B2B2C clients** — users brought in via a nutritionist's client roster | 0 | ≥10 | 5 | `ProfessionalClient` → `User` |
+| 7 | **Discoverability seeded** — directory + per-profile local schema indexed; first "nutritionist in <city>" impressions >0 | n/a | indexed + impressions >0 | indexed | Search Console |
 
-> Targets **3 & 4 matter more than target 1** — a month of passive signups is worse than
-> fewer activated users. Optimise for activated users, not raw signups.
+> If target 1 or 2 is red at any Friday check, **pause nutritionist outreach** and fix the moat
+> first — demoing the loop over an empty or wrong-feeling condition burns the relationship.
 
 ---
 
 ## Weekly sprints
 
-### Week 1 (Oct 17–23) — Plug the bucket + arm the surfaces
-*Don't acquire yet; make sure what you acquire sticks and is trackable.*
+### Week 1 (Oct 26–Nov 1) — Make the moat true + arm the directory
+*The differentiators are architectural; this week closes the coverage/quality gap before any demo.*
 
-**Targets:** +5 signups (warm network only), ≥50% confirm on them, funnel instrumented, SEO submitted.
+**Targets:** condition coverage ≥10/20, AI meal-plan rubric run (n≥20), directory SEO verified.
 
-- **Fix the signup→confirm leak** (see the Week-1 engineering checklist below — deliverability
-  audit + copy fix + Greek email + resend discoverability). Highest-ROI task of the month.
-- Submit `/foods` + `/el` sitemap to Google Search Console; request indexing; verify
+- **Condition coverage sweep:** pick the top-20 conditions real Greek dietitians ask about; run
+  research ingestion (`/professional/health` → "Research ingestion") for each; confirm each has ≥5
+  graded papers with claim highlighting in the reader and at least one promotable **suggested note**.
+- **AI meal-plan quality rubric:** draft 20+ plans across those conditions; score each (realistic
+  dishes, condition-aware, macro/nutrient sanity, "still 100% you" edit-ability); log failures as
+  fixes. This is a gate, not a vanity pass.
+- **Directory SEO:** verify the public directory + each `/nutritionists/:slug` emits local-business
+  schema; submit the directory + `/el` sitemap to Search Console; request indexing; check
   hreflang/canonical.
-- Ship + dogfood the weekly-program share; add the "Made with m3hungry" referral footer so
-  every shared plan links back.
-- Baseline post-deploy metrics: confirm `daily_session_metrics` is filling; capture the GA4
-  28-day baseline ([§5.3](../implementation/app_status.md#53-ga4-pull-by-hand)).
-- Personally invite ~10 from your network; watch them activate.
+- **End-to-end loop smoke test:** as a test nutritionist, save a suggested note on condition X, link
+  a test client to condition X, confirm the note resurfaces on that client. Fix any seam.
 
-### Week 2 (Oct 24–30) — Hyperlocal launch (Crete offline + Greek communities)
-*Go where 98% of them already are.*
+### Week 2 (Nov 2–8) — Land nutritionists where they are
+*Founder-led outreach to Greek/Crete dietitians; lead with the loop, not the calendar.*
 
-**Targets:** +10 signups, ≥40% activate, 1 partner conversation started.
+**Targets:** 3–5 live profiles onboarded, 1 booking/payout flow started, 3 real demos given.
 
-- **Offline Crete:** QR "free weekly Mediterranean/Cretan meal plan" cards at University of
-  Crete / ΕΛΜΕΠΑ boards, a λαϊκή αγορά stall (Rethymno/Heraklion), 1 gym/yoga studio. QR →
-  the share landing, not the homepage.
-- **Greek online, value-first:** one useful post in 3–5 large Greek cooking FB groups +
-  r/greece / r/greekfood sharing a `/foods` page (useful + a backlink). Not spam.
-- **Start partner outreach:** DM 3–5 Greek dietitians — pitch = free Pro + their
-  client-records workspace.
+- **Direct outreach:** DM/email 10–15 Greek dietitians (University of Crete / ΕΛΜΕΠΑ networks,
+  professional associations, local practices). Pitch = free Pro + "the research layer your software
+  doesn't have, wired to your client files."
+- **Demo the moat, not the menu:** every demo ends on the research→client loop and a condition they
+  named. Use their real condition from Week 1's coverage set.
+- **Onboard profiles:** get 3–5 discoverable profiles live (photo, bio, city, availability) so the
+  directory has real inventory to index.
+- **Parity proof:** walk one nutritionist through a real booking + Stripe Connect onboarding so the
+  "earns the seat" claims are demonstrably true.
 
-### Week 3 (Oct 31–Nov 6) — Partnerships + content + double down
-*Leverage (one partner = many users) and compounding content.*
+### Week 3 (Nov 9–15) — Activate the loop + open B2B2C
+*Turn a live profile into an activated practitioner, then into their clients.*
 
-**Targets:** +10 signups, land 1 nutritionist partner, ≥3 shared weekly plans.
+**Targets:** ≥2 nutritionists activated (hit #4), ≥5 B2B2C clients, 2–3 evidence-referenced articles.
 
-- **Close 1 nutritionist** and onboard to client-records → their clients become users (B2B2C
-  beats one-by-one).
-- Publish **2–3 Greek cornerstone pieces** via the Articles feature targeting long-tail Greek
-  searches ("εβδομαδιαίο πρόγραμμα διατροφής", "μεσογειακή διατροφή συνταγές").
-- **Kill/scale:** do more of whatever Week-2 channel produced *activators*; drop
-  passive-signup channels.
-- **Activation push:** email the month's signups "build + export your first weekly plan in 2
-  min". Target ≥3 shared plans.
+- **Activation push:** sit with each onboarded nutritionist until they (a) save a suggested note and
+  (b) link a real client to a condition and see the note resurface. That moment *is* activation.
+- **B2B2C:** help one nutritionist import/add their client roster (CSV import or by-hand records);
+  those clients become platform users. Credibility: their records hold real PII and intake
+  (BMI/BMR/TDEE auto-calc), visit timeline.
+- **Content as reach:** have (or ghost-draft with) a nutritionist publish 2–3 evidence-referenced
+  Articles targeting long-tail Greek searches ("εβδομαδιαίο πρόγραμμα διατροφής",
+  "μεσογειακή διατροφή"), each with a numbered bibliography citing first-class entities.
+- **Kill/scale:** double down on whatever outreach channel produced an *activated* nutritionist.
 
-### Week 4 (Nov 7–14) — Retain, close the loop, measure
-*Turn signups into the loyal core; decide next month from evidence.*
+### Week 4 (Nov 16–23) — Retain, prove the loop, measure
+*Make the first activated nutritionists the loyal core; decide next month from evidence.*
 
-**Targets:** +5 signups (compounding), hit #3 ≥40% and #4 ≥5, publish snapshot.
+**Targets:** hold #4 ≥3, #6 ≥10, publish snapshot + retro.
 
-- Personally message stalled signups ("what stopped you?") — reactivation + qualitative data.
-- Post the AI recipe social-graphics from the week's best recipes to IG/Pinterest/FB.
-- Run [§5.1](../implementation/app_status.md#51-current-queries-while-the-visits-table-still-exists--pre-deploy)/[§5.2](../implementation/app_status.md#52-post-deploy-queries-after-the-analytics-removal-branch-ships)
-  queries + GA4, append the [app_status.md §6](../implementation/app_status.md#6-snapshot-log) snapshot row,
-  write a 5-line retro (best activated-user cost per channel; kill/2× decisions).
+- **Retention 1:1s:** ask each activated nutritionist what almost made them stop, and what condition
+  coverage they still want — feeds next month's ingestion list.
+- **Surfacing proof ring:** post the week's best AI recipe social-graphics + a nutritionist Article
+  to IG/Pinterest/FB; confirm the consumer `/foods` SEO is accruing GSC impressions underneath.
+- **Measure:** run the queries for targets 1–7, append the
+  [app_status.md §6](../implementation/app_status.md#6-snapshot-log) snapshot row, write a 5-line
+  retro (cost per *activated nutritionist* per channel; which conditions drove activation;
+  kill/2× decisions).
 
 ---
 
 ## Week-over-week watch list
 
-1. **New users /30d** — trickle turning into a trend, or still flat?
-2. **Organic** — GSC impressions on `/foods` (currently zero; the #1 compounding unlock).
-3. **Activation %** — are new users doing ≥1 real action?
-4. **Meal plans created** — the loop proof (baseline 0).
-5. **Confirmation rate** — did the Week-1 funnel fix move it off 33%?
+1. **Condition coverage** — are the conditions nutritionists actually name backed by digested papers?
+2. **AI meal-plan quality** — rubric pass rate trending up, or still producing plans a clinician would reject?
+3. **Nutritionists activated** — did anyone complete the research→client loop (not just sign up)?
+4. **B2B2C clients** — are activated nutritionists pulling their roster in?
+5. **Discoverability** — directory/profile indexing + first "nutritionist in <city>" impressions.
 
 ---
 
-## Week 1 engineering checklist (funnel-fix)
+## Engineering checklist
 
-Tracked in code. `[code]` = app change, `[ops]` = DNS/Mailgun console (human-applied).
+Tracked in code. `[code]` = app change, `[ops]` = console/DNS (human-applied).
 
-### A. Confirmation-email deliverability + funnel
-- **A1 [ops]** Audit SPF/DKIM/DMARC on `m3hungry.com` for **Mailgun EU**; confirm the domain
-  is verified (not sandbox); score a test send on mail-tester.com (≥9) and confirm Gmail
-  Primary placement. Sender: `noreply@m3hungry.com`.
-- **A2 [code]** Registration no longer swallows the deliver result — a Mailgun failure
-  surfaces a resend path to the user and is logged with its reason.
-- **A3 [code]** Confirmation email expiry copy corrected to **7 days** (matches
-  `@confirm_validity_in_days`).
-- **A4 [code]** Confirmation email **localized to Greek** (`el`), switched on user locale.
-- **A5 [code]** "Resend confirmation" link surfaced from the registration success flash and
-  the login page (→ `/users/confirm`).
-- **A6 [code, optional]** Auto-login on confirm → straight into onboarding (removes a
-  dead-end step).
+### A. Moat readiness (the two must-be-true things)
+- **A1 [ops/content]** Define the curated top-20 conditions list; run research ingestion per
+  condition; verify ≥5 graded papers + claim highlighting + a promotable suggested note each.
+- **A2 [code]** Verify the research→client loop end to end: save suggested note → link client to
+  condition → note resurfaces on that client's view (`research_notes` × `professional_client_conditions`).
+- **A3 [process]** AI meal-plan quality rubric: score ≥20 drafts across the target conditions; file
+  the failure modes as fixes; set the pass bar at ≥80%.
 
-### B. Weekly-program referral footer
-- **B1 [code]** "Made with m3hungry.com" footer + link on the public blueprint share page
-  (`/blueprints/:slug`).
-- **B2 [code]** Open Graph / Twitter-card meta on `/blueprints/:slug` for a rich FB/Pinterest
-  unfurl.
-- **B3 [code, deferred]** When the image/PDF export artifact lands, bake the brand lockup in
-  by reusing `MehungryWeb.InsightGraphic.wordmark/0` (vix/SVG pattern) — not a new convention.
+### B. Discoverability (built-in, not the practitioner's problem)
+- **B1 [code]** Confirm the public directory + each `/nutritionists/:slug` emit local-business schema
+  and are in the sitemap; submit to Search Console and request indexing.
+- **B2 [code]** Open Graph / Twitter-card meta on profiles + Articles for rich FB/Pinterest unfurls.
+
+### C. Parity credibility (earns the seat)
+- **C1 [code/ops]** One real booking flow (availability → request → accept → branded email + `.ics`)
+  plus Stripe Connect onboarding completed by a real nutritionist.
+- **C2 [code]** CSV import + by-hand `ClientRecordEditor` path verified so a nutritionist can bring a
+  real roster (BMI/BMR/TDEE auto-calc, visit timeline).
+
+### D. Signup funnel (nutritionists + their clients still have to confirm)
+- **D1 [ops]** Audit SPF/DKIM/DMARC on `m3hungry.com` for **Mailgun EU**; confirm the domain is
+  verified (not sandbox); score a test send on mail-tester.com (≥9) and confirm Gmail Primary
+  placement. Sender: `noreply@m3hungry.com`.
+- **D2 [code]** Registration surfaces a resend path when a Mailgun deliver fails, and logs the reason.
+- **D3 [code]** Confirmation email expiry copy corrected to **7 days** (matches `@confirm_validity_in_days`).
+- **D4 [code]** Confirmation email **localized to Greek** (`el`), switched on user locale.
+- **D5 [code]** "Resend confirmation" link surfaced from the registration success flash and the login page.
+
+### E. Surfacing / proof ring (the consumer second ring)
+- **E1 [code]** Weekly-program share + "Made with m3hungry.com" referral footer + OG meta on the
+  public blueprint share page (`/blueprints/:slug`).
+- **E2 [code, deferred]** When the image/PDF export lands, bake the brand lockup in by reusing
+  `MehungryWeb.InsightGraphic.wordmark/0` — not a new convention.

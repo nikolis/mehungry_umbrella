@@ -21,6 +21,12 @@ Cross-cutting / non-functional docs:
 
 - [`localization.md`](localization.md) — locale-prefixed URLs, Gettext, translation flow.
 - [`notifications_system.md`](notifications_system.md) — durable notifications + dispatch seam.
+- [`history_calendar.md`](history_calendar.md) — the weekly meal calendar / self-tracker (`History` context + denormalized per-day nutrition).
+- [`posts_feed.md`](posts_feed.md) — the `Post` model, home feed, comments/answers, and votes (`Posts` context).
+- [`published_plans.md`](published_plans.md) — public SEO-indexed meal-plan snapshots + week share card/post (`PublishedPlans`).
+- [`inventory_basket.md`](inventory_basket.md) — shopping baskets, recipe/meal import, and the week-list flow (`Inventory`).
+- [`plans_vocabulary.md`](plans_vocabulary.md) — disambiguates the four "plan" contexts (`History` / `MealBlueprints` / `PublishedPlans` / legacy `Plans`).
 - [`translation_gates.md`](translation_gates.md) — translation gating rules.
 - [`app_status.md`](app_status.md) — status snapshot (DB/GA4/GSC/social).
+- [`architecture_audit_2026-10-27.md`](architecture_audit_2026-10-27.md) — whole-system doc-coverage + architecture audit (gaps, drift, risks).
 - [`overview_doc_template.md`](overview_doc_template.md) — template for new overview docs.

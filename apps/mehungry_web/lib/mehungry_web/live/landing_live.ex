@@ -106,6 +106,9 @@ defmodule MehungryWeb.LandingLive do
             <a href="#practice" class="text-parchment-dim transition-colors hover:text-parchment">
               {gettext("The practice")}
             </a>
+            <a href="#difference" class="text-parchment-dim transition-colors hover:text-parchment">
+              {gettext("Why switch")}
+            </a>
             <a href="#pricing" class="text-parchment-dim transition-colors hover:text-parchment">
               {gettext("Pricing")}
             </a>
@@ -861,6 +864,93 @@ defmodule MehungryWeb.LandingLive do
         </div>
       </section>
 
+      <%!-- ══════════════════ THE DIFFERENCE — contrast vs legacy software ═══════════════════════════════ --%>
+      <section
+        id="difference"
+        class="bg-ink py-24"
+        aria-labelledby="difference-heading"
+        style="scroll-margin-top: 4rem;"
+      >
+        <div class="mx-auto max-w-5xl px-4 sm:px-6">
+          <div class="mb-12 text-center">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-basil">
+              {gettext("The difference")}
+            </p>
+            <h2
+              id="difference-heading"
+              class="font-display text-4xl font-medium text-parchment sm:text-5xl"
+            >
+              {gettext("Not another practice manager.")}
+              <em class="not-italic text-paprika-soft">{gettext("An evidence engine.")}</em>
+            </h2>
+            <p class="mx-auto mt-4 max-w-2xl text-parchment-dim">
+              {gettext(
+                "Conventional nutrition software runs your schedule, your notes, and your billing. m3hungry does that too — then adds the layer they leave out: living, graded science wired straight into the client in front of you."
+              )}
+            </p>
+          </div>
+
+          <%!-- Column headers (desktop only) --%>
+          <div class="hidden grid-cols-[1.1fr_1fr_1fr] gap-4 px-5 sm:grid">
+            <div></div>
+            <p class="text-xs font-semibold uppercase tracking-widest text-parchment-dim">
+              {gettext("Conventional software")}
+            </p>
+            <p class="text-xs font-semibold uppercase tracking-widest text-paprika-soft">
+              {gettext("m3hungry")}
+            </p>
+          </div>
+
+          <div class="mt-3 space-y-3 sm:space-y-0">
+            <%= for {dimension, them, us} <- [
+              {gettext("The science"),
+               gettext("A static library of condition handouts, written once."),
+               gettext("Live PubMed research, ranked by study quality and cited to the paper — updated as the evidence moves.")},
+              {gettext("At the point of care"),
+               gettext("Research and client records sit in separate tabs."),
+               gettext("The notes you saved surface on the exact client who has that condition.")},
+              {gettext("Getting found"),
+               gettext("A closed workspace — you bring your own clients."),
+               gettext("A public, SEO-indexed profile and directory that brings clients to you.")},
+              {gettext("Meal plans"),
+               gettext("Copy-paste templates you adapt by hand."),
+               gettext("AI drafts a first plan from USDA data; you review, adjust, approve.")},
+              {gettext("Commitment"),
+               gettext("A four-figure up-front licence."),
+               gettext("Free for a month, then €29.90 — cancel anytime.")}
+            ] do %>
+              <div class="grid grid-cols-1 overflow-hidden rounded-xl border border-ink-panel2 sm:grid-cols-[1.1fr_1fr_1fr] sm:rounded-none sm:border-x-0 sm:border-t-0 sm:border-b sm:border-ink-panel2">
+                <div class="bg-ink-panel px-5 py-4 sm:bg-transparent">
+                  <p class="font-display font-medium text-parchment">{dimension}</p>
+                </div>
+                <div class="border-t border-ink-panel2 bg-ink-panel px-5 py-4 sm:border-0 sm:bg-transparent">
+                  <p class="flex items-start gap-2.5 text-sm text-parchment-dim">
+                    <span
+                      class="mt-2 h-1 w-3 shrink-0 rounded-full bg-parchment-dim/30"
+                      aria-hidden="true"
+                    >
+                    </span>
+                    {them}
+                  </p>
+                </div>
+                <div class="border-t border-ink-panel2 bg-paprika/5 px-5 py-4 sm:border-0">
+                  <p class="flex items-start gap-2.5 text-sm text-parchment">
+                    <.check_icon class="mt-0.5 h-4 w-4 shrink-0 text-basil-soft" />
+                    {us}
+                  </p>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+          <p class="mx-auto mt-10 max-w-xl text-center text-sm text-parchment-dim/70">
+            {gettext(
+              "The schedule, the records, the billing — table stakes. The evidence engine is why you switch."
+            )}
+          </p>
+        </div>
+      </section>
+
       <%!-- ══════════════════════════════════ PRICING ════════════════════════════════════════════════════ --%>
       <section
         id="pricing"
@@ -1075,7 +1165,10 @@ defmodule MehungryWeb.LandingLive do
               <.get_logo id="footer-logo" class="mb-1 h-6 w-auto" show_tagline />
               <p class="text-xs text-parchment-dim">{gettext("Know what's on your plate.")}</p>
             </div>
-            <nav class="flex gap-8 text-sm text-parchment-dim" aria-label="Footer navigation">
+            <nav
+              class="flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm text-parchment-dim sm:gap-8"
+              aria-label="Footer navigation"
+            >
               <a
                 href={"/#{@current_language}/browse"}
                 class="transition-colors hover:text-parchment"

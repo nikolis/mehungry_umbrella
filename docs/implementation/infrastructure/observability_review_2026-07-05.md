@@ -1,5 +1,16 @@
 # Observability Stack Review — 2026-07-05
 
+> **⚠️ Historical.** This review critiques the **DIY observability layer that was
+> later removed entirely** (2026-08-27, migration
+> `20260827000000_drop_custom_observability_tables.exs`). The `MetricsBuffer`,
+> DIY `ErrorTracker`, query-time profiles, the four custom LiveDashboard pages,
+> the pruner worker, and the `telemetry_snapshots`/`error_events`/
+> `query_time_profiles` tables **no longer exist** — the app now runs stock
+> Phoenix telemetry + PromEx (see [`observability.md`](observability.md)). Retained
+> only as the rationale for *why* that layer was torn out (several of the cons
+> below — uncommitted state, silent truncation, no self-monitoring — informed the
+> decision to replace it with a standard baseline).
+
 Review of the telemetry/observability stack: `apps/mehungry/lib/mehungry/telemetry/*`, `apps/mehungry_web/lib/mehungry_web/telemetry.ex`, the four admin LiveDashboard pages, the pruner worker, migrations, and `docs/observability.md`.
 
 ## Context

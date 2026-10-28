@@ -181,7 +181,17 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   @impl true
   def update(assigns, socket) do
-    existing_lang = (assigns.user_profile && assigns.user_profile.language_preference) || "en"
+    # Default the language pill to the locale the wizard is actually rendering in
+    # (established by the parent LiveView's `RestoreLocale` on_mount from the URL
+    # / session). The wizard's language *is* the page locale, so the pill must
+    # track it — picking another language re-mounts the page under that locale
+    # (see `set_onboarding_language`), which is what keeps pill, wizard text, and
+    # the saved preference in sync.
+    existing_lang =
+      case Gettext.get_locale(MehungryWeb.Gettext) do
+        locale when locale in ["en", "el"] -> locale
+        _ -> (assigns.user_profile && assigns.user_profile.language_preference) || "en"
+      end
 
     {:ok,
      socket
@@ -209,6 +219,11 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   def handle_event("set_onboarding_language", %{"lang" => lang}, socket)
       when lang in ["en", "el"] do
+    # Apply the locale immediately so the rest of the wizard re-renders in the
+    # chosen language — the LiveComponent shares the parent LiveView process, so
+    # `put_locale` here governs this and subsequent renders. Without it the
+    # picker only records the choice and the wizard stays in its mount locale.
+    Gettext.put_locale(MehungryWeb.Gettext, lang)
     {:noreply, assign(socket, :selected_language, lang)}
   end
 

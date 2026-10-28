@@ -7,8 +7,16 @@ Mehungry is a Phoenix **umbrella** application:
 | `apps/mehungry` | Core domain: Ecto schemas, contexts, business logic, Oban workers, AI layer, external API clients |
 | `apps/mehungry_web` | Web layer: LiveViews, controllers, components, plugs, OAuth strategies |
 
-Deployed via Docker → GitHub Actions → AWS ECR → ECS; PostgreSQL 14 on RDS
-(`eu-central-1`). Migrations run as a separate ECS task (`migrator/`).
+Deployed on **Fly.io** (Docker image → Phoenix release; app `m3hungry`, region
+`lhr`, 2 `shared-cpu-1x` machines, rolling deploys gated on `GET /health`).
+PostgreSQL is **Supabase** (session pooler, `POOL_SIZE=10`/machine). Migrations
+run as a one-off machine via the `[deploy] release_command` in `fly.toml`
+(`MehungryWeb.Release.migrate`). See `CLAUDE.md` → *Deployment Notes* for the
+full topology.
+
+> **History:** the app previously ran on AWS ECS/ECR + RDS (`eu-central-1`); the
+> `task-definition.json` / `migrator/` artifacts are leftovers from that era.
+> `fly.toml` is the live config.
 
 ## Dependency rule
 
@@ -62,11 +70,15 @@ directly. When adding a public function to a sub-module, add a matching
 
 ## Oban
 
-Queues: `default: 10` (translations, publishing), `ai_agents: 2` (generation,
-translation, images), `mailers: 5`.
+Queues (total concurrency capped at **13** to fit the Supabase pool — see
+`CLAUDE.md` → *Oban Queues*): `default: 5`, `ai_agents: 1`, `mailers: 3`,
+`imports: 1` (condition-seeded crawl + research ingestion), `seed_imports: 1`
+(USDA S3 seed files), `hashtag_reconcile: 1`, `portion_generation: 1`.
 
-Cron: `InstagramTokenRefreshWorker` 01:30, `DailyRecipeGenerationWorker`
-02:00, `TelemetryPrunerWorker` 03:00 (UTC).
+Cron (UTC): `InstagramTokenRefreshWorker` 01:30, `PinterestTokenRefreshWorker`
+01:45, `DailyRecipeGenerationWorker` 02:00, `PipelineWatchdogWorker` every 10
+min. (The old `TelemetryPrunerWorker` cron was **removed** with the DIY
+observability layer — see [`observability.md`](observability.md).)
 
 **Worker module names are load-bearing** — queued jobs in prod reference them
 by name. Move logic out of workers freely, but never rename a worker module

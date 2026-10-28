@@ -28,7 +28,7 @@ msgstr ""
 msgid "Basket"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1083
+#: lib/mehungry_web/live/landing_live.ex:1173
 #: lib/mehungry_web/views/layout/templates/menu/main_menu.html.heex:64
 #: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:39
 #: lib/mehungry_web/views/layout/templates/menu/mobile_menu.html.heex:40
@@ -144,7 +144,7 @@ msgstr ""
 
 #: lib/mehungry_web/live/condition_detail_live/index.ex:563
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:5
-#: lib/mehungry_web/live/landing_live.ex:474
+#: lib/mehungry_web/live/landing_live.ex:477
 #, elixir-autogen, elixir-format
 msgid "Conditions"
 msgstr ""
@@ -311,7 +311,7 @@ msgstr ""
 #: lib/mehungry_web/components/recipe_components.ex:501
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:329
 #: lib/mehungry_web/live/condition_detail_live/index.html.heex:747
-#: lib/mehungry_web/live/landing_live.ex:816
+#: lib/mehungry_web/live/landing_live.ex:819
 #: lib/mehungry_web/live/species_detail_live/index.html.heex:205
 #, elixir-autogen, elixir-format
 msgid "min"
@@ -328,294 +328,294 @@ msgstr ""
 msgid "via %{compound}"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:892
-#: lib/mehungry_web/live/landing_live.ex:958
-#: lib/mehungry_web/live/landing_live.ex:1004
+#: lib/mehungry_web/live/landing_live.ex:982
+#: lib/mehungry_web/live/landing_live.ex:1048
+#: lib/mehungry_web/live/landing_live.ex:1094
 #, elixir-autogen, elixir-format
 msgid "/month"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:965
+#: lib/mehungry_web/live/landing_live.ex:1055
 #, elixir-autogen, elixir-format
 msgid "10 AI meal plans / month"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1012
+#: lib/mehungry_web/live/landing_live.ex:1102
 #, elixir-autogen, elixir-format
 msgid "15 AI recipe generations / month"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:822
+#: lib/mehungry_web/live/landing_live.ex:825
 #, elixir-autogen, elixir-format
 msgid "168 nutrients tracked"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:964
+#: lib/mehungry_web/live/landing_live.ex:1054
 #, elixir-autogen, elixir-format
 msgid "30 AI recipe generations / month"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1013
+#: lib/mehungry_web/live/landing_live.ex:1103
 #, elixir-autogen, elixir-format
 msgid "4 AI meal plan generations / month"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:936
+#: lib/mehungry_web/live/landing_live.ex:1026
 #, elixir-autogen, elixir-format
 msgid "AI recipe generator"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:748
+#: lib/mehungry_web/live/landing_live.ex:751
 #, elixir-autogen, elixir-format
 msgid "Add meals to your calendar to see your daily nutrition overview"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:880
+#: lib/mehungry_web/live/landing_live.ex:970
 #, elixir-autogen, elixir-format
 msgid "All plans include full nutrition tracking. AI features are the upgrade."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:116
+#: lib/mehungry_web/live/landing_live.ex:119
 #, elixir-autogen, elixir-format
 msgid "Browse Recipes"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:836
+#: lib/mehungry_web/live/landing_live.ex:839
 #, elixir-autogen, elixir-format
 msgid "Browse all recipes →"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:900
+#: lib/mehungry_web/live/landing_live.ex:990
 #, elixir-autogen, elixir-format
 msgid "Browse and share community recipes"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:857
+#: lib/mehungry_web/live/landing_live.ex:860
 #, elixir-autogen, elixir-format
 msgid "Build a feed from the cooks whose nutrition philosophy matches yours"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:849
+#: lib/mehungry_web/live/landing_live.ex:852
 #, elixir-autogen, elixir-format
 msgid "Comment & vote"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1011
+#: lib/mehungry_web/live/landing_live.ex:1101
 #, elixir-autogen, elixir-format
 msgid "Everything in Free"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:963
+#: lib/mehungry_web/live/landing_live.ex:1053
 #, elixir-autogen, elixir-format
 msgid "Everything in Mehungry Plus"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:594
+#: lib/mehungry_web/live/landing_live.ex:597
 #, elixir-autogen, elixir-format
 msgid "Example output — your results will vary by request"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:993
+#: lib/mehungry_web/live/landing_live.ex:1083
 #, elixir-autogen, elixir-format
 msgid "Explore Pro"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1104
+#: lib/mehungry_web/live/landing_live.ex:1194
 #, elixir-autogen, elixir-format
 msgid "Feedback"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:855
+#: lib/mehungry_web/live/landing_live.ex:858
 #, elixir-autogen, elixir-format
 msgid "Follow creators"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:953
+#: lib/mehungry_web/live/landing_live.ex:1043
 #, elixir-autogen, elixir-format
 msgid "For nutritionists"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:887
+#: lib/mehungry_web/live/landing_live.ex:977
 #, elixir-autogen, elixir-format
 msgid "Free"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:582
+#: lib/mehungry_web/live/landing_live.ex:585
 #, elixir-autogen, elixir-format
 msgid "Full 168-nutrient breakdown calculated from USDA data"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:897
+#: lib/mehungry_web/live/landing_live.ex:987
 #, elixir-autogen, elixir-format
 msgid "Full nutrition tracking (168 nutrients)"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:578
+#: lib/mehungry_web/live/landing_live.ex:581
 #, elixir-autogen, elixir-format
 msgid "Generated using USDA-verified ingredients"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:131
+#: lib/mehungry_web/live/landing_live.ex:134
 #, elixir-autogen, elixir-format
 msgid "Get started"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:943
+#: lib/mehungry_web/live/landing_live.ex:1033
 #, elixir-autogen, elixir-format
 msgid "Get started free"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:569
+#: lib/mehungry_web/live/landing_live.ex:572
 #, elixir-autogen, elixir-format
 msgid "High-protein pasta under 600 kcal. Make it Mediterranean."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1076
+#: lib/mehungry_web/live/landing_live.ex:1166
 #, elixir-autogen, elixir-format
 msgid "Know what's on your plate."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:851
+#: lib/mehungry_web/live/landing_live.ex:854
 #, elixir-autogen, elixir-format
 msgid "Leave feedback, ask questions, and vote on the recipes you love"
 msgstr ""
 
 #: lib/mehungry_web/components/meal_type_labels.ex:32
-#: lib/mehungry_web/live/landing_live.ex:722
+#: lib/mehungry_web/live/landing_live.ex:725
 #: lib/mehungry_web/live/meal_plan_live/show.ex:834
 #, elixir-autogen, elixir-format
 msgid "Lunch"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:899
+#: lib/mehungry_web/live/landing_live.ex:989
 #, elixir-autogen, elixir-format
 msgid "Meal calendar planning"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:575
+#: lib/mehungry_web/live/landing_live.ex:578
 #, elixir-autogen, elixir-format
 msgid "Mediterranean Chicken Orzo"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:950
+#: lib/mehungry_web/live/landing_live.ex:1040
 #, elixir-autogen, elixir-format
 msgid "Most popular"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:894
+#: lib/mehungry_web/live/landing_live.ex:984
 #, elixir-autogen, elixir-format
 msgid "No credit card required"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1045
+#: lib/mehungry_web/live/landing_live.ex:1135
 #, elixir-autogen, elixir-format
 msgid "Payments processed securely by Stripe. Cancel any subscription anytime."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:843
+#: lib/mehungry_web/live/landing_live.ex:846
 #, elixir-autogen, elixir-format
 msgid "Post your recipes"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:110
-#: lib/mehungry_web/live/landing_live.ex:874
-#: lib/mehungry_web/live/landing_live.ex:1086
+#: lib/mehungry_web/live/landing_live.ex:113
+#: lib/mehungry_web/live/landing_live.ex:964
+#: lib/mehungry_web/live/landing_live.ex:1176
 #, elixir-autogen, elixir-format
 msgid "Pricing"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1014
+#: lib/mehungry_web/live/landing_live.ex:1104
 #, elixir-autogen, elixir-format
 msgid "Priority support"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1089
+#: lib/mehungry_web/live/landing_live.ex:1179
 #, elixir-autogen, elixir-format
 msgid "Privacy"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:585
+#: lib/mehungry_web/live/landing_live.ex:588
 #, elixir-autogen, elixir-format
 msgid "Protein · Fatty acids · Vitamins · Minerals · Amino acids…"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:845
+#: lib/mehungry_web/live/landing_live.ex:848
 #, elixir-autogen, elixir-format
 msgid "Share what you cook and tag it with food hashtags for others to discover"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:901
+#: lib/mehungry_web/live/landing_live.ex:991
 #, elixir-autogen, elixir-format
 msgid "Shopping basket"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:125
+#: lib/mehungry_web/live/landing_live.ex:128
 #, elixir-autogen, elixir-format
 msgid "Sign in"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:877
+#: lib/mehungry_web/live/landing_live.ex:967
 #, elixir-autogen, elixir-format
 msgid "Start free. Upgrade when you're ready."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:634
+#: lib/mehungry_web/live/landing_live.ex:637
 #, elixir-autogen, elixir-format
 msgid "Try the AI assistant →"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:898
+#: lib/mehungry_web/live/landing_live.ex:988
 #, elixir-autogen, elixir-format
 msgid "Unlimited manual recipe creation"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1039
+#: lib/mehungry_web/live/landing_live.ex:1129
 #, elixir-autogen, elixir-format
 msgid "Upgrade to Mehungry Plus"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:684
+#: lib/mehungry_web/live/landing_live.ex:687
 #, elixir-autogen, elixir-format
 msgid "What M3Hungry tracks"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:669
+#: lib/mehungry_web/live/landing_live.ex:672
 #, elixir-autogen, elixir-format
 msgid "What most apps track"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:191
+#: lib/mehungry_web/live/landing_live.ex:194
 #, elixir-autogen, elixir-format
 msgid "foods in the database"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:196
+#: lib/mehungry_web/live/landing_live.ex:199
 #, elixir-autogen, elixir-format
 msgid "nutrients tracked per food"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:960
+#: lib/mehungry_web/live/landing_live.ex:1050
 #, elixir-autogen, elixir-format
 msgid "or €290/yr"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1007
+#: lib/mehungry_web/live/landing_live.ex:1097
 #, elixir-autogen, elixir-format
 msgid "or €99/yr —"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1007
+#: lib/mehungry_web/live/landing_live.ex:1097
 #, elixir-autogen, elixir-format
 msgid "save 17%"
 msgstr ""
 
 #: lib/mehungry_web/components/recipe_components.ex:506
-#: lib/mehungry_web/live/landing_live.ex:814
+#: lib/mehungry_web/live/landing_live.ex:817
 #, elixir-autogen, elixir-format
 msgid "servings"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:678
+#: lib/mehungry_web/live/landing_live.ex:681
 #, elixir-autogen, elixir-format
 msgid "… and that's it"
 msgstr ""
@@ -1069,7 +1069,7 @@ msgstr ""
 msgid "Complex Carbohydrates"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1095
+#: lib/mehungry_web/live/landing_live.ex:1185
 #, elixir-autogen, elixir-format
 msgid "Cookies"
 msgstr ""
@@ -1166,7 +1166,7 @@ msgstr ""
 msgid "Lactose"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1098
+#: lib/mehungry_web/live/landing_live.ex:1188
 #, elixir-autogen, elixir-format
 msgid "Legal Notice"
 msgstr ""
@@ -1324,7 +1324,7 @@ msgstr ""
 msgid "Suggestions drawn from the research that we don't yet map to specific foods — informational only, not medical advice."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1092
+#: lib/mehungry_web/live/landing_live.ex:1182
 #, elixir-autogen, elixir-format
 msgid "Terms"
 msgstr ""
@@ -2627,7 +2627,7 @@ msgstr ""
 msgid "A short description will appear here."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:269
+#: lib/mehungry_web/live/landing_live.ex:272
 #, elixir-autogen, elixir-format
 msgid "Active clients"
 msgstr ""
@@ -2682,7 +2682,7 @@ msgstr ""
 msgid "Dashboard"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:296
+#: lib/mehungry_web/live/landing_live.ex:299
 #, elixir-autogen, elixir-format
 msgid "Example dashboard — your practice once you're set up"
 msgstr ""
@@ -2692,7 +2692,7 @@ msgstr ""
 msgid "Fill in the details and watch your recipe come together."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:148
+#: lib/mehungry_web/live/landing_live.ex:151
 #, elixir-autogen, elixir-format
 msgid "For nutritionists & dietitians"
 msgstr ""
@@ -2702,7 +2702,7 @@ msgstr ""
 msgid "Get discovered, manage your clients, and let AI draft the plans — your advice stays 100% yours."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:156
+#: lib/mehungry_web/live/landing_live.ex:159
 #, elixir-autogen, elixir-format
 msgid "Grow your nutrition practice."
 msgstr ""
@@ -2727,7 +2727,7 @@ msgstr ""
 msgid "In progress"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:157
+#: lib/mehungry_web/live/landing_live.ex:160
 #, elixir-autogen, elixir-format
 msgid "Keep it 100% yours."
 msgstr ""
@@ -2747,7 +2747,7 @@ msgstr ""
 msgid "M3Hungry — Grow Your Nutrition Practice"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:523
+#: lib/mehungry_web/live/landing_live.ex:526
 #, elixir-autogen, elixir-format
 msgid "Online booking"
 msgstr ""
@@ -2768,7 +2768,7 @@ msgstr ""
 msgid "Preview recipe"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:526
+#: lib/mehungry_web/live/landing_live.ex:529
 #, elixir-autogen, elixir-format
 msgid "Published articles"
 msgstr ""
@@ -2779,7 +2779,7 @@ msgstr ""
 msgid "Ready to save"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1156
+#: lib/mehungry_web/live/landing_live.ex:1246
 #, elixir-autogen, elixir-format
 msgid "Registered nutritionist"
 msgstr ""
@@ -2800,7 +2800,7 @@ msgstr ""
 msgid "Save recipe"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:177
+#: lib/mehungry_web/live/landing_live.ex:180
 #, elixir-autogen, elixir-format
 msgid "See a nutritionist profile →"
 msgstr ""
@@ -2815,12 +2815,12 @@ msgstr ""
 msgid "Split into parts"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:171
+#: lib/mehungry_web/live/landing_live.ex:174
 #, elixir-autogen, elixir-format
 msgid "Start your practice"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:263
+#: lib/mehungry_web/live/landing_live.ex:266
 #, elixir-autogen, elixir-format
 msgid "Today's appointments"
 msgstr ""
@@ -2830,7 +2830,7 @@ msgstr ""
 msgid "Your method will appear here, step by step."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1150
+#: lib/mehungry_web/live/landing_live.ex:1240
 #, elixir-autogen, elixir-format
 msgid "Your name here"
 msgstr ""
@@ -2847,7 +2847,7 @@ msgstr ""
 msgid "Your recipe title"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1161
+#: lib/mehungry_web/live/landing_live.ex:1251
 #, elixir-autogen, elixir-format
 msgid "Your specialization · your city"
 msgstr ""
@@ -2892,32 +2892,32 @@ msgstr ""
 msgid "day"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:487
+#: lib/mehungry_web/live/landing_live.ex:490
 #, elixir-autogen, elixir-format
 msgid "\"Low-residue during flares; reintroduce fibre gradually in remission.\""
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:291
+#: lib/mehungry_web/live/landing_live.ex:294
 #, elixir-autogen, elixir-format
 msgid "100% your judgment"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:437
+#: lib/mehungry_web/live/landing_live.ex:440
 #, elixir-autogen, elixir-format
 msgid "A client file that holds dietary history, visits, and conditions"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:764
+#: lib/mehungry_web/live/landing_live.ex:767
 #, elixir-autogen, elixir-format
 msgid "A consumer app your clients already want."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:524
+#: lib/mehungry_web/live/landing_live.ex:527
 #, elixir-autogen, elixir-format
 msgid "A dietary-history file per client — intake, visits, conditions, weight trend."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:161
+#: lib/mehungry_web/live/landing_live.ex:164
 #, elixir-autogen, elixir-format
 msgid "A discoverable profile that brings clients in, one workspace for their records and appointments, a literature assistant that hands you the evidence, and AI that drafts the busywork — you review, adjust, approve."
 msgstr ""
@@ -2927,286 +2927,286 @@ msgstr ""
 msgid "A discoverable public profile, a workspace for your clients and appointments, a literature assistant that hands you graded PubMed evidence, and AI that drafts meal plans backed by USDA FoodData Central — you review, adjust, and approve. The judgment stays 100% yours."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:622
+#: lib/mehungry_web/live/landing_live.ex:625
 #, elixir-autogen, elixir-format
 msgid "A full weekly meal plan in one request"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:522
+#: lib/mehungry_web/live/landing_live.ex:525
 #, elixir-autogen, elixir-format
 msgid "A public, SEO-indexed profile and directory so clients searching your city find you."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:292
+#: lib/mehungry_web/live/landing_live.ex:295
 #, elixir-autogen, elixir-format
 msgid "AI & evidence assist · you decide"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:564
+#: lib/mehungry_web/live/landing_live.ex:567
 #, elixir-autogen, elixir-format
 msgid "AI draft — for your review"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:601
+#: lib/mehungry_web/live/landing_live.ex:604
 #, elixir-autogen, elixir-format
 msgid "AI-assisted"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:251
+#: lib/mehungry_web/live/landing_live.ex:254
 #, elixir-autogen, elixir-format
 msgid "Articles"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:650
+#: lib/mehungry_web/live/landing_live.ex:653
 #, elixir-autogen, elixir-format
 msgid "Backed by USDA data"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:248
+#: lib/mehungry_web/live/landing_live.ex:251
 #, elixir-autogen, elixir-format
 msgid "Booking"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1054
+#: lib/mehungry_web/live/landing_live.ex:1144
 #, elixir-autogen, elixir-format
 msgid "Build a practice that's unmistakably yours."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:469
+#: lib/mehungry_web/live/landing_live.ex:472
 #, elixir-autogen, elixir-format
 msgid "Client file"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:249
-#: lib/mehungry_web/live/landing_live.ex:524
+#: lib/mehungry_web/live/landing_live.ex:252
+#: lib/mehungry_web/live/landing_live.ex:527
 #, elixir-autogen, elixir-format
 msgid "Client records"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:967
+#: lib/mehungry_web/live/landing_live.ex:1057
 #, elixir-autogen, elixir-format
 msgid "Client records & dietary history"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:607
+#: lib/mehungry_web/live/landing_live.ex:610
 #, elixir-autogen, elixir-format
 msgid "Describe a client's goal, a cuisine, a constraint. The AI drafts a complete recipe or weekly plan with every ingredient mapped to the USDA database — then you review, adjust, and approve before anything reaches a client."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:470
+#: lib/mehungry_web/live/landing_live.ex:473
 #, elixir-autogen, elixir-format
 msgid "Dietary history · Visits"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:522
+#: lib/mehungry_web/live/landing_live.ex:525
 #, elixir-autogen, elixir-format
 msgid "Discoverable profile"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:604
+#: lib/mehungry_web/live/landing_live.ex:607
 #, elixir-autogen, elixir-format
 msgid "Draft the busywork. You keep the final say."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:618
+#: lib/mehungry_web/live/landing_live.ex:621
 #, elixir-autogen, elixir-format
 msgid "Every ingredient mapped to USDA FoodData Central — exact, not estimated"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:653
+#: lib/mehungry_web/live/landing_live.ex:656
 #, elixir-autogen, elixir-format
 msgid "Every plan is backed by real data —"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:511
+#: lib/mehungry_web/live/landing_live.ex:514
 #, elixir-autogen, elixir-format
 msgid "Everything in one place."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:525
+#: lib/mehungry_web/live/landing_live.ex:528
 #, elixir-autogen, elixir-format
 msgid "Graded PubMed research per condition, saved as your own notes."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:382
+#: lib/mehungry_web/live/landing_live.ex:385
 #, elixir-autogen, elixir-format
 msgid "How it works"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:445
+#: lib/mehungry_web/live/landing_live.ex:448
 #, elixir-autogen, elixir-format
 msgid "Import an existing history from a spreadsheet in one pass"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:637
+#: lib/mehungry_web/live/landing_live.ex:640
 #, elixir-autogen, elixir-format
 msgid "Included in the Pro plan"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:441
+#: lib/mehungry_web/live/landing_live.ex:444
 #, elixir-autogen, elixir-format
 msgid "Intake does the arithmetic — BMI, BMR, and TDEE calculated for you"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:480
+#: lib/mehungry_web/live/landing_live.ex:483
 #, elixir-autogen, elixir-format
 msgid "Iron deficiency"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:389
+#: lib/mehungry_web/live/landing_live.ex:392
 #, elixir-autogen, elixir-format
 msgid "It resurfaces on the client who has that condition"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1057
+#: lib/mehungry_web/live/landing_live.ex:1147
 #, elixir-autogen, elixir-format
 msgid "Join free. No credit card. Get a profile, the literature assistant, and a workspace for your clients today."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:430
+#: lib/mehungry_web/live/landing_live.ex:433
 #, elixir-autogen, elixir-format
 msgid "Link a client to the conditions they live with. The notes you saved from the literature show up right there — your words, your judgment, at the moment you need them."
 msgstr ""
 
 #: lib/mehungry_web/live/landing_live.ex:104
-#: lib/mehungry_web/live/landing_live.ex:250
-#: lib/mehungry_web/live/landing_live.ex:312
-#: lib/mehungry_web/live/landing_live.ex:525
+#: lib/mehungry_web/live/landing_live.ex:253
+#: lib/mehungry_web/live/landing_live.ex:315
+#: lib/mehungry_web/live/landing_live.ex:528
 #, elixir-autogen, elixir-format
 msgid "Literature assistant"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:966
+#: lib/mehungry_web/live/landing_live.ex:1056
 #, elixir-autogen, elixir-format
 msgid "Literature assistant + research notes"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:199
+#: lib/mehungry_web/live/landing_live.ex:202
 #, elixir-autogen, elixir-format
 msgid "Literature assistant built in"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:658
+#: lib/mehungry_web/live/landing_live.ex:661
 #, elixir-autogen, elixir-format
 msgid "Most trackers give you calories and macros. Every recipe here is built from real USDA ingredients, so the nutrition is exact — the same data nutritionists and researchers actually use."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:400
+#: lib/mehungry_web/live/landing_live.ex:403
 #, elixir-autogen, elixir-format
 msgid "No fabricated verdicts on conditions — we surface the evidence and its provenance. You reach the conclusion, and it stays defensibly yours."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:626
+#: lib/mehungry_web/live/landing_live.ex:629
 #, elixir-autogen, elixir-format
 msgid "Nothing is published until you approve it"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:514
+#: lib/mehungry_web/live/landing_live.ex:517
 #, elixir-autogen, elixir-format
 msgid "One platform runs the whole practice — from getting found, to the first appointment, to the evidence behind every plan."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:252
+#: lib/mehungry_web/live/landing_live.ex:255
 #, elixir-autogen, elixir-format
 msgid "Payouts"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:424
+#: lib/mehungry_web/live/landing_live.ex:427
 #, elixir-autogen, elixir-format
 msgid "Point of care"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:349
+#: lib/mehungry_web/live/landing_live.ex:352
 #, elixir-autogen, elixir-format
 msgid "Ranked by study quality"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:387
+#: lib/mehungry_web/live/landing_live.ex:390
 #, elixir-autogen, elixir-format
 msgid "Read the full text in-app, with the key claims highlighted"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:614
+#: lib/mehungry_web/live/landing_live.ex:617
 #, elixir-autogen, elixir-format
 msgid "Recipes drafted to your calorie and macro targets"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:589
+#: lib/mehungry_web/live/landing_live.ex:592
 #, elixir-autogen, elixir-format
 msgid "Review & approve →"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:388
+#: lib/mehungry_web/live/landing_live.ex:391
 #, elixir-autogen, elixir-format
 msgid "Save what matters as your own note — or write your own"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:490
+#: lib/mehungry_web/live/landing_live.ex:493
 #, elixir-autogen, elixir-format
 msgid "Saved from a 2021 systematic review · your words"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:275
+#: lib/mehungry_web/live/landing_live.ex:278
 #, elixir-autogen, elixir-format
 msgid "Saved research notes"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:322
+#: lib/mehungry_web/live/landing_live.ex:325
 #, elixir-autogen, elixir-format
 msgid "Search PubMed by condition and get results ranked by study quality — meta-analyses first, then trials, then cohorts. Read the full text in-app with the key claims highlighted. Save what matters as your own notes. We do the legwork; the judgment stays with you."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:386
+#: lib/mehungry_web/live/landing_live.ex:389
 #, elixir-autogen, elixir-format
 msgid "Search by condition — ulcerative colitis, PCOS, IBS…"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:543
+#: lib/mehungry_web/live/landing_live.ex:546
 #, elixir-autogen, elixir-format
 msgid "See a live profile →"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:412
+#: lib/mehungry_web/live/landing_live.ex:415
 #, elixir-autogen, elixir-format
 msgid "See the literature assistant →"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:452
+#: lib/mehungry_web/live/landing_live.ex:455
 #, elixir-autogen, elixir-format
 msgid "See where the notes come from →"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:523
+#: lib/mehungry_web/live/landing_live.ex:526
 #, elixir-autogen, elixir-format
 msgid "Set your weekly availability; clients request, you accept, and a calendar invite goes out."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1065
+#: lib/mehungry_web/live/landing_live.ex:1155
 #, elixir-autogen, elixir-format
 msgid "Start your practice →"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:367
+#: lib/mehungry_web/live/landing_live.ex:370
 #, elixir-autogen, elixir-format
 msgid "Strongest"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:508
+#: lib/mehungry_web/live/landing_live.ex:511
 #, elixir-autogen, elixir-format
 msgid "The complete practice"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:319
+#: lib/mehungry_web/live/landing_live.ex:322
 #, elixir-autogen, elixir-format
 msgid "The conclusion, yours."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:318
+#: lib/mehungry_web/live/landing_live.ex:321
 #, elixir-autogen, elixir-format
 msgid "The evidence, graded."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:761
+#: lib/mehungry_web/live/landing_live.ex:764
 #, elixir-autogen, elixir-format
 msgid "The platform your clients use"
 msgstr ""
@@ -3216,62 +3216,177 @@ msgstr ""
 msgid "The practice"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:375
+#: lib/mehungry_web/live/landing_live.ex:378
 #, elixir-autogen, elixir-format
 msgid "The same evidence hierarchy the search groups results into."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:477
+#: lib/mehungry_web/live/landing_live.ex:480
 #, elixir-autogen, elixir-format
 msgid "Ulcerative colitis"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:526
+#: lib/mehungry_web/live/landing_live.ex:529
 #, elixir-autogen, elixir-format
 msgid "Write evidence-referenced articles that rank and build your authority."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:767
+#: lib/mehungry_web/live/landing_live.ex:770
 #, elixir-autogen, elixir-format
 msgid "Your clients log food, plan their week, and browse recipes — each built with real USDA ingredients, so the nutrition facts are exact. The same platform you work in."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:427
+#: lib/mehungry_web/live/landing_live.ex:430
 #, elixir-autogen, elixir-format
 msgid "Your notes find your client."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:485
+#: lib/mehungry_web/live/landing_live.ex:488
 #, elixir-autogen, elixir-format
 msgid "Your saved note"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:339
+#: lib/mehungry_web/live/landing_live.ex:342
 #, elixir-autogen, elixir-format
 msgid "conditions covered"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:696
+#: lib/mehungry_web/live/landing_live.ex:699
 #, elixir-autogen, elixir-format
 msgid "more"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:655
+#: lib/mehungry_web/live/landing_live.ex:658
 #, elixir-autogen, elixir-format
 msgid "nutrients, not estimates."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:333
+#: lib/mehungry_web/live/landing_live.ex:336
 #, elixir-autogen, elixir-format
 msgid "papers digested"
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:1109
+#: lib/mehungry_web/live/landing_live.ex:1199
 #, elixir-autogen, elixir-format
 msgid "© 2026 M3Hungry. Nutrition data from USDA FoodData Central."
 msgstr ""
 
-#: lib/mehungry_web/live/landing_live.ex:968
+#: lib/mehungry_web/live/landing_live.ex:1058
 #, elixir-autogen, elixir-format
 msgid "Booking & appointment calendar"
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:913
+#, elixir-autogen, elixir-format
+msgid "A closed workspace — you bring your own clients."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:919
+#, elixir-autogen, elixir-format
+msgid "A four-figure up-front licence."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:914
+#, elixir-autogen, elixir-format
+msgid "A public, SEO-indexed profile and directory that brings clients to you."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:907
+#, elixir-autogen, elixir-format
+msgid "A static library of condition handouts, written once."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:917
+#, elixir-autogen, elixir-format
+msgid "AI drafts a first plan from USDA data; you review, adjust, approve."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:884
+#, elixir-autogen, elixir-format
+msgid "An evidence engine."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:909
+#, elixir-autogen, elixir-format
+msgid "At the point of care"
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:918
+#, elixir-autogen, elixir-format
+msgid "Commitment"
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:887
+#, elixir-autogen, elixir-format
+msgid "Conventional nutrition software runs your schedule, your notes, and your billing. m3hungry does that too — then adds the layer they leave out: living, graded science wired straight into the client in front of you."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:897
+#, elixir-autogen, elixir-format
+msgid "Conventional software"
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:916
+#, elixir-autogen, elixir-format
+msgid "Copy-paste templates you adapt by hand."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:920
+#, elixir-autogen, elixir-format
+msgid "Free for a month, then €29.90 — cancel anytime."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:912
+#, elixir-autogen, elixir-format
+msgid "Getting found"
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:908
+#, elixir-autogen, elixir-format
+msgid "Live PubMed research, ranked by study quality and cited to the paper — updated as the evidence moves."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:915
+#, elixir-autogen, elixir-format
+msgid "Meal plans"
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:883
+#, elixir-autogen, elixir-format
+msgid "Not another practice manager."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:910
+#, elixir-autogen, elixir-format
+msgid "Research and client records sit in separate tabs."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:877
+#, elixir-autogen, elixir-format
+msgid "The difference"
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:911
+#, elixir-autogen, elixir-format
+msgid "The notes you saved surface on the exact client who has that condition."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:947
+#, elixir-autogen, elixir-format
+msgid "The schedule, the records, the billing — table stakes. The evidence engine is why you switch."
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:906
+#, elixir-autogen, elixir-format
+msgid "The science"
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:110
+#, elixir-autogen, elixir-format
+msgid "Why switch"
+msgstr ""
+
+#: lib/mehungry_web/live/landing_live.ex:900
+#, elixir-autogen, elixir-format
+msgid "m3hungry"
 msgstr ""
