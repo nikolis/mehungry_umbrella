@@ -3,7 +3,6 @@ defmodule MehungryWeb.LandingLive do
   use MehungryWeb.Presence, :user_tracking
 
   import MehungryWeb.SvgComponents
-  import Ecto.Query
 
   @impl true
   def handle_event("resize_chart", %{"width" => width}, socket) do
@@ -16,16 +15,13 @@ defmodule MehungryWeb.LandingLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    # For the meal planning demo, prefer the AI bot user's recipe, then fall back
-    # to any recipe in the DB — we only need nutrients for the chart, not an image.
-    now = Date.utc_today()
-    recipes = find_bot_recipe(now.month, now.year) || []
-    recipe = List.first(recipes)
-
-    # Feature a real published nutritionist profile in the hero when one exists;
-    # the hero falls back to an honest "your profile" preview when none is public.
-    featured_professional =
-      Mehungry.Professionals.list_public_professionals() |> List.first()
+    %{
+      recipes: recipes,
+      featured_professional: featured_professional,
+      ingredient_count: ingredient_count,
+      research_condition_count: research_condition_count,
+      analyzed_study_count: analyzed_study_count
+    } = landing_data()
 
     {:ok,
      assign(socket,
@@ -34,51 +30,56 @@ defmodule MehungryWeb.LandingLive do
          gettext(
            "A discoverable public profile, a workspace for your clients and appointments, a literature assistant that hands you graded PubMed evidence, and AI that drafts meal plans backed by USDA FoodData Central — you review, adjust, and approve. The judgment stays 100% yours."
          ),
-       recipe: recipe,
+       recipe: List.first(recipes),
        recipes: recipes,
        featured_professional: featured_professional,
        # Honest, verifiable counts for the trust strip + literature section.
-       ingredient_count: Mehungry.Food.count_ingredients(),
-       research_condition_count: Mehungry.Literature.count_conditions_with_research(),
-       analyzed_study_count: Mehungry.Literature.count_analyzed_studies(),
-       # The real evidence-grading scheme the literature assistant applies.
+       ingredient_count: ingredient_count,
+       research_condition_count: research_condition_count,
+       analyzed_study_count: analyzed_study_count,
+       # The real evidence-grading scheme the literature assistant applies (pure,
+       # no DB — kept out of the cached bundle).
        research_buckets: Mehungry.Literature.ResearchType.buckets(),
        child_ids: []
      )}
   end
 
+  # The landing hero/trust-strip data is identical for every anonymous visitor and
+  # only used for a demo chart + honest counts, so it's cached (user-independent,
+  # TTL-bounded via Mehungry.ReferenceCache). This takes the ~6 queries — including
+  # the `ORDER BY RANDOM()` recipe pick — off the hot path, running them at most
+  # once per TTL instead of on every (double-rendered) landing hit. Kept synchronous
+  # (not assign_async) so the content stays in the crawler-indexed dead render.
+  defp landing_data do
+    Mehungry.ReferenceCache.fetch(:landing_bundle, fn ->
+      now = Date.utc_today()
+
+      %{
+        recipes: find_demo_recipes(now.month, now.year),
+        featured_professional: List.first(Mehungry.Professionals.list_public_professionals()),
+        ingredient_count: Mehungry.Food.count_ingredients(),
+        research_condition_count: Mehungry.Literature.count_conditions_with_research(),
+        analyzed_study_count: Mehungry.Literature.count_analyzed_studies()
+      }
+    end)
+  end
+
   # Picks up to 3 recipes for the meal-planning demo. Prefers the current month's
   # AI bot user, then falls back to any public recipe — but only ones that carry
   # nutrients, since the chart needs them. Always returns a list.
-  defp find_bot_recipe(month, year) do
+  defp find_demo_recipes(month, year) do
     bot_recipes =
       case Mehungry.AI.Bot.get_active_config_for_month(month, year) do
         %{bot_user_id: bot_user_id} ->
-          Mehungry.Repo.all(recipes_with_nutrients_query(user_id: bot_user_id))
+          Mehungry.Food.list_recipes_with_nutrients(user_id: bot_user_id, limit: 3)
 
         _ ->
           []
       end
 
     case bot_recipes do
-      [] -> Mehungry.Repo.all(recipes_with_nutrients_query([]))
+      [] -> Mehungry.Food.list_recipes_with_nutrients(limit: 3)
       recipes -> recipes
-    end
-  end
-
-  # Public recipes that have a non-empty `nutrients` map, 3 at random. Optionally
-  # scoped to a single author via the `:user_id` option.
-  defp recipes_with_nutrients_query(opts) do
-    query =
-      from(r in Mehungry.Food.Recipe,
-        where: (is_nil(r.private) or not r.private) and fragment("? <> '{}'::jsonb", r.nutrients),
-        order_by: fragment("RANDOM()"),
-        limit: 3
-      )
-
-    case Keyword.fetch(opts, :user_id) do
-      {:ok, user_id} -> from(r in query, where: r.user_id == ^user_id)
-      :error -> query
     end
   end
 

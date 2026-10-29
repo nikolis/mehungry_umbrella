@@ -6,23 +6,39 @@ defmodule Mehungry.Food.Categories do
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
+  alias Mehungry.ReferenceCache
   alias Mehungry.Food.{Category, FoodRestrictionType}
+
+  # Cache keys for the user-independent reference reads below.
+  @categories_cache_key :categories
+  @restrictions_cache_key :food_restriction_types
 
   def create_category(attrs) do
     %Category{}
     |> Category.changeset(attrs)
     |> Repo.insert()
+    |> tap_invalidate_categories()
   end
 
   def update_category(%Category{} = category, attrs \\ %{}) do
     category
     |> Category.changeset(attrs)
     |> Repo.update()
+    |> tap_invalidate_categories()
   end
 
   def delete_category(%Category{} = category) do
-    Repo.delete(category)
+    category
+    |> Repo.delete()
+    |> tap_invalidate_categories()
   end
+
+  defp tap_invalidate_categories({:ok, _} = result) do
+    ReferenceCache.invalidate(@categories_cache_key)
+    result
+  end
+
+  defp tap_invalidate_categories(other), do: other
 
   def get_category!(id) do
     Repo.get(Category, id)
@@ -44,7 +60,7 @@ defmodule Mehungry.Food.Categories do
   end
 
   def list_categories() do
-    Repo.all(Category)
+    ReferenceCache.fetch(@categories_cache_key, fn -> Repo.all(Category) end)
   end
 
   def search_category(term) do
@@ -58,7 +74,7 @@ defmodule Mehungry.Food.Categories do
   end
 
   def list_food_restriction_types() do
-    Repo.all(from(a in FoodRestrictionType))
+    ReferenceCache.fetch(@restrictions_cache_key, fn -> Repo.all(from(a in FoodRestrictionType)) end)
   end
 
   # Animal-product categories excluded by each base diet, plus flag add-ons.

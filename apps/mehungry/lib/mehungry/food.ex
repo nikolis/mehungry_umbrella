@@ -52,6 +52,7 @@ defmodule Mehungry.Food do
   defdelegate delete_recipe(id), to: Recipes
   defdelegate delete_user_recipe(user, id), to: Recipes
   defdelegate count_recipes_without_ingredients(), to: Recipes
+  defdelegate list_recipes_with_nutrients(opts), to: Recipes
   defdelegate list_recipes_without_ingredients(), to: Recipes
   defdelegate delete_recipes_without_ingredients(), to: Recipes
   defdelegate delete_recipes_by_ids(recipe_ids), to: Recipes

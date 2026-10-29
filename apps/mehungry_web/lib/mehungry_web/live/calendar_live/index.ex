@@ -6,11 +6,9 @@ defmodule MehungryWeb.CalendarLive.Index do
 
   import MehungryWeb.CoreComponents
 
-  alias Mehungry.History.UserMeal
   alias Mehungry.Accounts
   alias Mehungry.History
   alias Mehungry.Professionals
-  alias Mehungry.Repo
   alias Mehungry.Food
   alias Mehungry.Users
   alias Mehungry.AI.Agents.MealPlanAgent
@@ -33,33 +31,17 @@ defmodule MehungryWeb.CalendarLive.Index do
     avoid_foods = (profile && profile.avoid_foods) || []
     avoid_terms = MealPlanAgent.avoid_terms(%{avoid_foods: avoid_foods})
 
-    user_meals =
-      load_and_format_user_meals(user.id, Date.utc_today(), current_language(socket))
-
-    day_notes = day_notes_for(user.id, Date.utc_today())
-    recipes = list_recipes(user)
-
-    # The blueprint the user was following persists on their profile, so the
-    # calendar re-opens "following" it until they switch or stop.
-    followed_blueprint = load_selected_blueprint(user.id, profile && profile.followed_blueprint_id)
-    blueprints = load_calendar_blueprints(user.id) |> prepend_blueprint(followed_blueprint)
-
-    socket = assign_device_kind(socket)
-    socket = push_event(socket, "create_meals", %{meals: user_meals})
-
-    {
-      :ok,
+    socket =
       socket
+      |> assign_device_kind()
       |> assign(:user, user)
+      |> assign(:user_profile, profile)
       |> assign(:calorie_target, calorie_target)
       |> assign(:avoid_foods, avoid_foods)
       |> assign(:avoid_terms, avoid_terms)
       |> assign(:calendar_view, "week_view")
       |> assign(:particular_date, nil)
       |> assign(:page_title, "Meal planner")
-      |> assign(:user_meals, user_meals)
-      |> assign(:day_notes, day_notes)
-      |> assign(:recipes, recipes)
       |> assign(:detail_return_to, nil)
       |> assign(:ai_plan_generating, false)
       |> assign(:ai_plan_task_ref, nil)
@@ -67,27 +49,63 @@ defmodule MehungryWeb.CalendarLive.Index do
       |> assign(:share_generating, false)
       |> assign(:share_posted, false)
       |> assign(:share_regenerate, false)
-      |> assign_latest_share_graphic()
-      |> assign(
-        :ai_quota_exceeded,
-        Mehungry.Subscriptions.check_quota(user.id, "meal_plan") == {:error, :quota_exceeded}
-      )
-      |> assign(:has_nutritionist, not is_nil(Professionals.get_assignment_for_client(user.id)))
-      |> assign(:user_profile, profile)
-      |> assign(:blueprints, blueprints)
-      |> assign(:preselected_blueprint_id, followed_blueprint && to_string(followed_blueprint.id))
-      |> assign(:active_blueprint, followed_blueprint)
       |> assign(:blueprint_progress, nil)
       |> assign(:week_rating, nil)
       # Assigns the recipe-details modal (RecipeDetailsComponent via the shared
       # LiveHelpers hook) reads for save/follow toggles.
       |> assign(:recipe, nil)
-      |> assign(:current_user_recipes, Users.list_user_saved_recipe_ids(user))
-      |> assign(
-        :current_user_follows,
-        user |> Users.list_user_follows() |> Enum.map(& &1.follow_id)
-      )
-    }
+      # Heavy per-user data (meals, blueprints, saved/follows, quota, share card)
+      # is loaded once the socket connects — this is a private, noindex, JS-hydrated
+      # page the user always upgrades to WS, so the disconnected render's queries
+      # would be wasted DB-pool load. Safe empty defaults keep the first paint valid.
+      # See docs/implementation/liveview_optimization_plan.md.
+      |> assign(:user_meals, [])
+      |> assign(:day_notes, %{})
+      |> assign(:recipes, [])
+      |> assign(:blueprints, [])
+      |> assign(:preselected_blueprint_id, nil)
+      |> assign(:active_blueprint, nil)
+      |> assign(:share_graphic, nil)
+      |> assign(:ai_quota_exceeded, false)
+      |> assign(:has_nutritionist, false)
+      |> assign(:current_user_recipes, [])
+      |> assign(:current_user_follows, [])
+
+    socket = if connected?(socket), do: load_calendar_data(socket), else: socket
+
+    {:ok, socket}
+  end
+
+  # Loads the calendar's per-user data on the connected mount (see mount/3).
+  defp load_calendar_data(socket) do
+    user = socket.assigns.user
+    profile = socket.assigns.user_profile
+    user_meals = load_and_format_user_meals(user.id, Date.utc_today(), current_language(socket))
+
+    # The blueprint the user was following persists on their profile, so the
+    # calendar re-opens "following" it until they switch or stop.
+    followed_blueprint = load_selected_blueprint(user.id, profile && profile.followed_blueprint_id)
+    blueprints = load_calendar_blueprints(user.id) |> prepend_blueprint(followed_blueprint)
+
+    socket
+    |> assign(:user_meals, user_meals)
+    |> assign(:day_notes, day_notes_for(user.id, Date.utc_today()))
+    |> assign(:recipes, list_recipes(user))
+    |> assign(:blueprints, blueprints)
+    |> assign(:preselected_blueprint_id, followed_blueprint && to_string(followed_blueprint.id))
+    |> assign(:active_blueprint, followed_blueprint)
+    |> assign_latest_share_graphic()
+    |> assign(
+      :ai_quota_exceeded,
+      Mehungry.Subscriptions.check_quota(user.id, "meal_plan") == {:error, :quota_exceeded}
+    )
+    |> assign(:has_nutritionist, not is_nil(Professionals.get_assignment_for_client(user.id)))
+    |> assign(:current_user_recipes, Users.list_user_saved_recipe_ids(user))
+    |> assign(
+      :current_user_follows,
+      user |> Users.list_user_follows() |> Enum.map(& &1.follow_id)
+    )
+    |> push_event("create_meals", %{meals: user_meals})
   end
 
   defp apply_action(socket, :index, params) do
@@ -153,20 +171,7 @@ defmodule MehungryWeb.CalendarLive.Index do
   defp apply_action(socket, :new, %{"start" => start_date, "title" => title} = _params) do
     maybe_track_user(%{}, socket)
 
-    user_meal =
-      struct(UserMeal)
-      |> Repo.preload(
-        recipe_user_meals: [
-          recipe: [
-            recipe_ingredients: [
-              :measurement_unit,
-              :ingredient_portion,
-              ingredient: [:category, :ingredient_translation]
-            ]
-          ]
-        ],
-        ingredient_user_meals: [:ingredient, :measurement_unit]
-      )
+    user_meal = History.blank_user_meal()
 
     changeset =
       History.change_user_meal(user_meal, %{
@@ -789,16 +794,23 @@ defmodule MehungryWeb.CalendarLive.Index do
   # Reloads `@user_meals` (and the week's day notes) for the currently-viewed
   # week (anchored by `@particular_date`, defaulting to today).
   defp reload_week_meals(socket) do
-    date = current_calendar_date(socket)
-    meals = load_and_format_user_meals(socket.assigns.user.id, date, current_language(socket))
+    # Disconnected (first-paint) render does no DB work — the connected mount
+    # loads the week's meals. Guarding here keeps apply_action/3 cheap on the
+    # dead render too (see mount/3).
+    if connected?(socket) do
+      date = current_calendar_date(socket)
+      meals = load_and_format_user_meals(socket.assigns.user.id, date, current_language(socket))
 
-    socket
-    |> assign(:user_meals, meals)
-    |> assign(:day_notes, day_notes_for(socket.assigns.user.id, date))
-    # Switching weeks shows that week's saved share card (if any) and drops any
-    # in-progress "regenerate" view.
-    |> assign(:share_regenerate, false)
-    |> assign_latest_share_graphic()
+      socket
+      |> assign(:user_meals, meals)
+      |> assign(:day_notes, day_notes_for(socket.assigns.user.id, date))
+      # Switching weeks shows that week's saved share card (if any) and drops any
+      # in-progress "regenerate" view.
+      |> assign(:share_regenerate, false)
+      |> assign_latest_share_graphic()
+    else
+      socket
+    end
   end
 
   # Loads the latest saved weekly-plan share card for the viewed week into

@@ -653,24 +653,12 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       assigns.recipe.recipe_ingredients
       |> Enum.map(& &1.ingredient_id)
 
-    profile =
-      case assigns.current_user do
-        nil -> nil
-        user -> Accounts.get_user_profile_by_user_id(user.id)
-      end
-
-    user_language = (profile && profile.language_preference) || assigns.recipe.language_name
-
-    display_names =
-      Food.ingredient_display_names(ingredient_ids, user_language)
-
     socket =
       socket
       |> assign(assigns)
       |> assign(:recipe, assigns.recipe)
       |> assign(:reply, reply)
       |> assign(:user_follows, user_follows)
-      |> assign(:ingredient_display_names, display_names)
       |> assign_new(:graphic_running, fn -> false end)
       |> assign_new(:graphic_result, fn -> nil end)
       |> assign_new(:graphic_error, fn -> nil end)
@@ -680,9 +668,36 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           %Comment{user_id: assigns.current_user.id, recipe_id: assigns.recipe.id}
         end)
       )
+      |> maybe_assign_display_names(assigns.recipe, ingredient_ids, assigns.current_user)
       |> maybe_load_recipe_async(assigns.recipe, ingredient_ids)
 
     {:ok, socket}
+  end
+
+  # Resolve the recipe's ingredient display names in the viewer's language. The
+  # profile lookup + name resolution depend only on (recipe, viewer), so skip
+  # them when neither changed — otherwise every unrelated parent re-render of this
+  # (widely-reused) modal re-ran a profile query + a name resolve. Guarded the same
+  # once-per-recipe way as maybe_load_recipe_async/3 below.
+  defp maybe_assign_display_names(socket, recipe, ingredient_ids, current_user) do
+    user_id = current_user && current_user.id
+
+    if socket.assigns[:display_names_key] == {recipe.id, user_id} do
+      socket
+    else
+      profile =
+        case current_user do
+          nil -> nil
+          user -> Accounts.get_user_profile_by_user_id(user.id)
+        end
+
+      user_language = (profile && profile.language_preference) || recipe.language_name
+      display_names = Food.ingredient_display_names(ingredient_ids, user_language)
+
+      socket
+      |> assign(:display_names_key, {recipe.id, user_id})
+      |> assign(:ingredient_display_names, display_names)
+    end
   end
 
   # Comments and nutrient interactions are below the fold (comments even start

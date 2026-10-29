@@ -115,18 +115,19 @@ defmodule MehungryWeb.ProfileLive.Index do
           ~p"/profile?#{[tab: to_string(socket.assigns.content_state)]}"
         end
 
-      {current_user_profile, current_user_follows, current_user_recipes} =
-        Accounts.get_user_essentials(socket.assigns.current_user)
-
+      # `current_user_{profile,follows,recipes}` are already assigned for this
+      # lifecycle in mount/3, so we reuse them instead of re-running
+      # get_user_essentials/1. This also fixes a latent bug: the old reload
+      # re-assigned the **raw %Follow{} structs** to `current_user_follows`, but
+      # the shared follow hook (LiveHelpers.toggle_user_follow / save_user_follow)
+      # compares that list against integer follow-ids — mount maps it to ids, so
+      # re-assigning raw structs here silently broke the recipe modal's follow
+      # button. Reusing mount's id list keeps it correct.
       socket
       |> assign(:nutrients, recipe.nutrients)
       |> assign(:primary_size, recipe.primary_nutrients_size)
       |> assign(:page_title, recipe.title <> " from " <> recipe.user.email)
       |> assign(:recipe, recipe)
-      |> assign(:current_user_follows, current_user_follows)
-      # |> assign(:user_recipes, user_recipes)
-      |> assign(:current_user_recipes, current_user_recipes)
-      |> assign(:current_user_profile, current_user_profile)
       |> assign(:cancel_path, cancel_path)
     else
       socket |> put_flash(:error, "Recipe not found") |> push_navigate(to: "/home")

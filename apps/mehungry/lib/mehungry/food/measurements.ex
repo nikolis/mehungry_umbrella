@@ -8,6 +8,10 @@ defmodule Mehungry.Food.Measurements do
   require Logger
 
   alias Mehungry.Repo
+  alias Mehungry.ReferenceCache
+
+  # Cache key for the user-independent `list_measurement_units/0` read.
+  @units_cache_key :measurement_units
 
   alias Mehungry.Food.{
     Category,
@@ -256,13 +260,24 @@ defmodule Mehungry.Food.Measurements do
     %MeasurementUnit{}
     |> MeasurementUnit.changeset(attrs)
     |> Repo.insert(opts)
+    |> tap_invalidate_units()
   end
 
   def update_measurement_unit(%MeasurementUnit{} = measurement_unit, attrs \\ %{}) do
     measurement_unit
     |> MeasurementUnit.changeset(attrs)
     |> Repo.update()
+    |> tap_invalidate_units()
   end
+
+  # Drop the cached unit list after a write. Takes the `{:ok, _} | {:error, _}`
+  # Repo result through untouched so it composes in the pipeline.
+  defp tap_invalidate_units({:ok, _} = result) do
+    ReferenceCache.invalidate(@units_cache_key)
+    result
+  end
+
+  defp tap_invalidate_units(other), do: other
 
   @doc """
   Deletes a measurement unit. Returns `{:error, :referenced}` instead of
@@ -270,7 +285,9 @@ defmodule Mehungry.Food.Measurements do
   portions, etc.) so callers can surface a friendly message.
   """
   def delete_measurement_unit(%MeasurementUnit{} = measurement_unit) do
-    Repo.delete(measurement_unit)
+    measurement_unit
+    |> Repo.delete()
+    |> tap_invalidate_units()
   rescue
     Ecto.ConstraintError -> {:error, :referenced}
   end
@@ -295,16 +312,20 @@ defmodule Mehungry.Food.Measurements do
   Returns the number of units actually deleted.
   """
   def delete_measurement_unit_if_unreferenced(name) when is_binary(name) do
-    from(mu in MeasurementUnit, where: mu.name == ^name)
-    |> Repo.all()
-    |> Enum.reduce(0, fn unit, deleted ->
-      try do
-        Repo.delete!(unit)
-        deleted + 1
-      rescue
-        Ecto.ConstraintError -> deleted
-      end
-    end)
+    deleted =
+      from(mu in MeasurementUnit, where: mu.name == ^name)
+      |> Repo.all()
+      |> Enum.reduce(0, fn unit, deleted ->
+        try do
+          Repo.delete!(unit)
+          deleted + 1
+        rescue
+          Ecto.ConstraintError -> deleted
+        end
+      end)
+
+    if deleted > 0, do: ReferenceCache.invalidate(@units_cache_key)
+    deleted
   end
 
   def delete_measurement_unit_if_unreferenced(_), do: 0
@@ -327,17 +348,21 @@ defmodule Mehungry.Food.Measurements do
   transaction. Returns `%{units:, recipes:, portions:}` tallies.
   """
   def purge_junk_measurement_unit(name) when is_binary(name) do
-    from(mu in MeasurementUnit, where: mu.name == ^name)
-    |> Repo.all()
-    |> Enum.reduce(%{units: 0, recipes: 0, portions: 0}, fn unit, acc ->
-      case purge_unit(unit) do
-        {:ok, %{recipes: r, portions: p}} ->
-          %{units: acc.units + 1, recipes: acc.recipes + r, portions: acc.portions + p}
+    tally =
+      from(mu in MeasurementUnit, where: mu.name == ^name)
+      |> Repo.all()
+      |> Enum.reduce(%{units: 0, recipes: 0, portions: 0}, fn unit, acc ->
+        case purge_unit(unit) do
+          {:ok, %{recipes: r, portions: p}} ->
+            %{units: acc.units + 1, recipes: acc.recipes + r, portions: acc.portions + p}
 
-        _ ->
-          acc
-      end
-    end)
+          _ ->
+            acc
+        end
+      end)
+
+    if tally.units > 0, do: ReferenceCache.invalidate(@units_cache_key)
+    tally
   end
 
   def purge_junk_measurement_unit(_), do: %{units: 0, recipes: 0, portions: 0}
@@ -442,7 +467,7 @@ defmodule Mehungry.Food.Measurements do
   end
 
   def list_measurement_units() do
-    Repo.all(MeasurementUnit)
+    ReferenceCache.fetch(@units_cache_key, fn -> Repo.all(MeasurementUnit) end)
   end
 
   # ── Numeric-name reconciliation ────────────────────────────────────────────

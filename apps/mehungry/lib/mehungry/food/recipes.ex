@@ -184,6 +184,30 @@ defmodule Mehungry.Food.Recipes do
     |> Repo.aggregate(:count)
   end
 
+  @doc """
+  Up to `:limit` (default 3) public recipes that carry a non-empty `nutrients`
+  map, in random order — the landing page's meal-planning demo chart needs
+  nutrients, not images. Optionally scoped to a single author via `:user_id`.
+  """
+  def list_recipes_with_nutrients(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 3)
+
+    query =
+      from(r in Recipe,
+        where: (is_nil(r.private) or not r.private) and fragment("? <> '{}'::jsonb", r.nutrients),
+        order_by: fragment("RANDOM()"),
+        limit: ^limit
+      )
+
+    query =
+      case Keyword.fetch(opts, :user_id) do
+        {:ok, user_id} -> from(r in query, where: r.user_id == ^user_id)
+        :error -> query
+      end
+
+    Repo.all(query)
+  end
+
   @doc "Lists recipes with no linked ingredients (for admin preview)."
   def list_recipes_without_ingredients do
     from(r in Recipe,
