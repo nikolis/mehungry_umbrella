@@ -163,7 +163,7 @@ Severity scale (higher = more urgent): **3 = problem · 2 = watch · 1 = ok · �
 | 5 | profile/index | code, perf, **correctness** | ✅ | 2026-10-29 | `apply_action(:show_recipe)` reran `get_user_essentials/1` AND reassigned `current_user_follows` as raw `%Follow{}` structs — but the shared follow hook compares against integer follow-ids (mount maps to ids), so the recipe-modal follow button was silently broken. Now reuses mount's id list + drops the redundant reload → fixes the bug + removes queries. Mixed-concern split skipped (blind-refactor risk). 16 tests pass |
 | 5b | recipe_details_component | perf, parity | ✅ | 2026-10-29 | `update/3` re-ran a profile query + `ingredient_display_names` resolve on **every** parent re-render; extracted to `maybe_assign_display_names/4`, guarded once-per-`{recipe.id, user_id}` (mirrors existing `maybe_load_recipe_async/3`). Parity clean — nutrition delegates to shared `<.recipe_details>`, no forked macro math. 44 modal-exercising tests pass (home/profile/browse) |
 | 6 | meal_blueprint/index + editor | code, perf | ⬜ | | break up god-modules |
-| 7 | create_recipe/index | code, perf | ⬜ | | remove dead Spoonacular assigns; split |
+| 7 | create_recipe/index | perf, code | ✅ | 2026-10-29 | Removed dead `_gram = Food.get_measurement_unit_by_name("gram")` query (assigned, never used) — a wasted DB round-trip per mount. Spoonacular left intact (CLAUDE.md keeps it for re-enablement — overrides the triage note to remove it). Deferral skipped (not in the scoped calendar/meal_blueprint set; mount is light). 8 tests pass |
 | 8 | meal_plan/show | code | ⬜ | | size only; low urgency |
 | – | foods/index, basket, public_nutritionist/show | perf | ⬜ | | minor; fold into #1 where applicable |
 
