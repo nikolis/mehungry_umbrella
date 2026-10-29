@@ -36,6 +36,8 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
       socket
       |> assign(:page_title, "My Professional Profile")
       |> assign(:profile, profile)
+      |> assign(:short_link_base, MehungryWeb.Endpoint.url())
+      |> assign(:short_link_host, URI.parse(MehungryWeb.Endpoint.url()).host)
       |> assign(
         :changeset,
         Professionals.change_professional_profile(profile, %{user_id: user.id})
@@ -286,6 +288,38 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
             />
             <.live_file_input upload={@uploads.photo} class="text-parchment-dim text-sm" />
           </div>
+        </section>
+
+        <!-- Personal short link -->
+        <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-4">
+          <h2 class="text-lg font-display font-semibold text-parchment">Personal short link</h2>
+          <p class="text-parchment-dim text-sm">
+            A short, memorable link to print on cards or drop in your social bios. It redirects
+            visitors to your public profile.
+          </p>
+          <.labeled label="Handle">
+            <div class="flex items-center gap-2">
+              <span class="text-parchment-dim text-sm whitespace-nowrap">{@short_link_host}/@</span>
+              <.input field={f[:handle]} type="text" placeholder="maria" class="flex-1" />
+            </div>
+          </.labeled>
+          <div :if={(f[:handle].value || "") != ""} class="flex items-center gap-3 flex-wrap">
+            <code class="text-parchment text-sm break-all">
+              {@short_link_base}/@{f[:handle].value}
+            </code>
+            <button
+              type="button"
+              x-data
+              data-link={"#{@short_link_base}/@#{f[:handle].value}"}
+              @click="navigator.clipboard.writeText($el.dataset.link); $el.textContent = 'Copied!'"
+              class="px-3 py-1.5 rounded-lg border border-paprika/40 text-paprika hover:bg-paprika/10 text-sm transition"
+            >
+              Copy link
+            </button>
+          </div>
+          <p :if={(f[:handle].value || "") != "" and not @profile.is_public} class="text-parchment-dim text-xs">
+            Publish your profile below for this link to go live.
+          </p>
         </section>
 
         <!-- Contact & location -->

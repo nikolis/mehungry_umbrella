@@ -139,6 +139,20 @@ defmodule Mehungry.Professionals do
     |> Repo.one()
   end
 
+  @doc """
+  Fetch a published profile by its vanity `handle` (case-insensitive), or nil.
+  Backs the personal short link `/@handle` → canonical `/nutritionists/:slug`.
+  """
+  def get_public_professional_by_handle(handle) when is_binary(handle) do
+    normalized = handle |> String.trim() |> String.downcase()
+
+    ProfessionalProfile
+    |> where([p], p.handle == ^normalized and p.is_public == true)
+    |> Repo.one()
+  end
+
+  def get_public_professional_by_handle(_), do: nil
+
   @doc "Distinct cities of published professionals, for directory filters."
   def list_professional_cities do
     ProfessionalProfile

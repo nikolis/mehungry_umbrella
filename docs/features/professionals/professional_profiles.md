@@ -9,7 +9,8 @@ public directory + SEO surface works. Booking is documented separately in
 One row per user (`unique_index(:user_id)`). Beyond the original `specialization` + `bio`
 (now the *short bio*), the schema carries public-facing detail and contact fields:
 
-- **Identity:** `display_name`, `slug` (unique, URL key), `photo_url`, `is_public`.
+- **Identity:** `display_name`, `slug` (unique, URL key), `handle` (optional unique vanity
+  handle for the personal short link — see below), `photo_url`, `is_public`.
 - **Details:** `education`, `scientific_contributions`, `professional_achievements`.
 - **Contact/location:** `city`, `region`, `office_address`, `phone`, `contact_email`,
   `website_url`, `timezone`.
@@ -23,6 +24,19 @@ once set.
 
 **Publishing** is gated: `is_public` requires `display_name`, `city` and `bio`
 (`validate_public_completeness/1`) so a live page always renders well and ranks locally.
+
+**Personal short link (`/@handle`)** — an optional, user-chosen vanity handle, distinct from the
+auto-generated `slug` so the stable SEO URL never changes. `handle` is `[a-z0-9_]{3,30}`
+(trimmed + downcased on write, blank clears it), uniqueness-constrained, and refuses a
+reserved-words blocklist kept in sync with the router's top-level routes
+(`ProfessionalProfile.@reserved_handles`). The link is a **redirect, not a page**:
+`MehungryWeb.NutritionistHandleController` serves the lowest-priority single-segment catch-all
+route `/:handle`, honours only `@`-prefixed segments (everything else 404s), resolves the handle
+via `Professionals.get_public_professional_by_handle/1` (published profiles only), and **301s to
+the canonical `/:locale/nutritionists/:slug`** with the locale resolved by `MehungryWeb.Locale`.
+So the handle is a shareable entry point only — `/nutritionists/:slug` stays the single indexed,
+canonical, sitemapped URL. Edited in the profile editor with a live preview + "Copy link" button.
+See `personal_handle.md`.
 
 Two changesets: `changeset/2` (user-editable copy + slug + publish gate) and `stripe_changeset/2`
 (Connect fields only — webhooks/onboarding never touch profile copy).

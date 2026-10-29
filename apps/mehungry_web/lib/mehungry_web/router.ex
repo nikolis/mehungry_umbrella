@@ -609,4 +609,16 @@ defmodule MehungryWeb.Router do
   end
 
   ## Authentication routes
+
+  # Nutritionist personal short link `/@<handle>` → 301 to the canonical public
+  # profile. MUST stay the LAST route in the router: it's a single-segment
+  # catch-all, so every real single-segment route (declared above) matches
+  # first, and this only ever receives otherwise-unmatched segments. The
+  # controller honours only `@`-prefixed handles and 404s everything else.
+  # See `docs/features/professionals/personal_handle.md`.
+  scope "/", MehungryWeb do
+    pipe_through([:browser])
+
+    get("/:handle", NutritionistHandleController, :show)
+  end
 end

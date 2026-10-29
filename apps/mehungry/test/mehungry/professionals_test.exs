@@ -41,6 +41,83 @@ defmodule Mehungry.ProfessionalsTest do
       assert p2.slug == "maria-papadaki-1"
     end
 
+    test "accepts, normalizes and resolves a vanity handle" do
+      user = user_fixture()
+
+      {:ok, profile} =
+        Professionals.create_professional_profile(%{
+          user_id: user.id,
+          specialization: "Dietitian",
+          display_name: "Maria Papadaki",
+          city: "Rethymno",
+          bio: "Clinical dietitian.",
+          is_public: true,
+          handle: "  Maria_P  "
+        })
+
+      # Trimmed + downcased on write.
+      assert profile.handle == "maria_p"
+
+      # Resolvable case-insensitively, only while public.
+      assert Professionals.get_public_professional_by_handle("MARIA_P").id == profile.id
+      assert Professionals.get_public_professional_by_handle("nope") == nil
+    end
+
+    test "rejects malformed and reserved handles" do
+      user = user_fixture()
+      base = %{user_id: user.id, specialization: "Dietitian"}
+
+      assert {:error, cs} =
+               Professionals.create_professional_profile(Map.put(base, :handle, "ab"))
+
+      assert "may only use 3–30 lowercase letters, numbers or underscores" in errors_on(cs).handle
+
+      assert {:error, cs} =
+               Professionals.create_professional_profile(Map.put(base, :handle, "bad space"))
+
+      assert errors_on(cs).handle != []
+
+      assert {:error, cs} =
+               Professionals.create_professional_profile(Map.put(base, :handle, "admin"))
+
+      assert "is reserved" in errors_on(cs).handle
+    end
+
+    test "a blank handle clears the short link" do
+      user = user_fixture()
+
+      {:ok, profile} =
+        Professionals.create_professional_profile(%{
+          user_id: user.id,
+          specialization: "Dietitian",
+          handle: "maria_p"
+        })
+
+      {:ok, cleared} = Professionals.update_professional_profile(profile, %{handle: "  "})
+      assert cleared.handle == nil
+    end
+
+    test "handles are unique across profiles" do
+      u1 = user_fixture()
+      u2 = user_fixture()
+
+      {:ok, _} =
+        Professionals.create_professional_profile(%{
+          user_id: u1.id,
+          specialization: "Dietitian",
+          handle: "maria_p"
+        })
+
+      assert {:error, cs} =
+               Professionals.create_professional_profile(%{
+                 user_id: u2.id,
+                 specialization: "Dietitian",
+                 handle: "maria_p"
+               })
+
+      assert "has already been taken" in errors_on(cs).handle
+    end
+
     test "consultation fee is entered in euros and stored as cents" do
       user = user_fixture()
 
