@@ -219,12 +219,13 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   def handle_event("set_onboarding_language", %{"lang" => lang}, socket)
       when lang in ["en", "el"] do
-    # Apply the locale immediately so the rest of the wizard re-renders in the
-    # chosen language — the LiveComponent shares the parent LiveView process, so
-    # `put_locale` here governs this and subsequent renders. Without it the
-    # picker only records the choice and the wizard stays in its mount locale.
-    Gettext.put_locale(MehungryWeb.Gettext, lang)
-    {:noreply, assign(socket, :selected_language, lang)}
+    # Re-mount the wizard under the locale-prefixed route. `gettext/1` with
+    # literal strings compiles to *static* markup in HEEx — it is never
+    # re-rendered after mount — so `Gettext.put_locale` alone can't re-localize
+    # the already-rendered wizard. A fresh navigation both re-renders it in the
+    # new language and (via the `SetLocale` plug) switches the session locale, so
+    # the page behind the modal and the post-"Finish" redirect follow too.
+    {:noreply, push_navigate(socket, to: "/#{lang}/home")}
   end
 
   def handle_event("set_base_diet", %{"diet" => diet}, socket)

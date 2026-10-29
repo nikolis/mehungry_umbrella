@@ -3,6 +3,11 @@
 **Status:** foundation built (Connect onboarding + status). Charging clients for a
 booking is **designed here** and is the next increment — not yet built.
 
+> **See also:** `nutritionist_payments_build_plan.md` — the full build plan for the
+> charging layer **plus the compliance/obligations document** (KYC, dispute &
+> negative-balance liability, SCA, VAT, acceptable-use, GDPR). Read that before
+> building charging or going live.
+
 This document assesses using Stripe to move money **from a client to a professional
 nutritionist** for a paid consultation, and records the minimal slice already in the
 codebase.
