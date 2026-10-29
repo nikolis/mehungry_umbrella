@@ -230,6 +230,17 @@ one code path:
   `:show` can never target an item's own language (`show_target_locale/3`). Other
   resources are unaffected — without the flag the queries and defaults behave exactly
   as before.
+- **Auto-translate on create (recipes)** — every recipe created through
+  `Food.create_recipe/1` (the single chokepoint for the manual editor, AI bot,
+  URL import, and all bulk importers) is automatically enqueued for AI translation
+  into each supported locale it isn't already authored in — one job per differing
+  locale via `ObanWorkers.RecipeTranslationWorker` (English recipe → `el`, Greek
+  recipe → `en`; a recipe with no `language_name` is treated as English). The source
+  language is read off `recipe.language_name` through `Locale.locale_of/1` and the
+  targets are `Locale.locales/0` minus the source, so it scales if more locales are
+  added. The drafts land as `"ai_draft"` and still require human verification in the
+  translation hub before counting as verified coverage — the create-time job just
+  removes the manual "AI-translate all missing" step for fresh recipes.
 - **Locale codes** — `Mehungry.Languages.Locale` is the core-side twin of
   `MehungryWeb.Locale`: new rows are written under the ISO code (`"el"`), while coverage
   counts **both** ISO and legacy codes (`["el", "Gr"]`) so pre-existing `Gr` rows still

@@ -772,11 +772,34 @@ defmodule Mehungry.Food.Recipes do
 
         Mehungry.ObanWorkers.RecipeEmbeddingWorker.enqueue(recipe.id)
 
+        # Auto-translate the fresh recipe into every supported locale it isn't
+        # already authored in (English ↔ Greek) so a recipe has coverage in
+        # both languages the moment it's created. The drafts land as "ai_draft"
+        # until a human verifies them in the translation hub.
+        enqueue_auto_translations(recipe)
+
         result
 
       _ ->
         result
     end
+  end
+
+  # Enqueue an AI translation job for each supported locale that differs from the
+  # recipe's own source language (`language_name`). With two locales this is a
+  # single en→el or el→en job; driven off `Locale.locales/0` so it scales if more
+  # are added. A recipe with no `language_name` is treated as English (source).
+  defp enqueue_auto_translations(%Recipe{} = recipe) do
+    source_locale = Mehungry.Languages.Locale.locale_of(recipe.language_name)
+
+    for target <- Mehungry.Languages.Locale.locales(), target != source_locale do
+      Mehungry.ObanWorkers.RecipeTranslationWorker.enqueue(
+        recipe.id,
+        Mehungry.Languages.Locale.write_code(target)
+      )
+    end
+
+    :ok
   end
 
   def update_recipe(%Recipe{} = recipe_origin, attrs \\ %{}) do
