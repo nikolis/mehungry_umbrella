@@ -198,9 +198,11 @@ Same idea as Open Graph but specifically for Twitter/X previews.
 
 ### 4. JSON-LD structured data — Recipe rich results
 
-**Where it's generated**: `recipe_browser_live/index.ex` — `build_recipe_jsonld/1`
+**Where it's generated**: `MehungryWeb.RecipeSeo` (`apps/mehungry_web/lib/mehungry_web/recipe_seo.ex`) — `jsonld/1`. This is the **shared** builder: every route that renders a single recipe (`/browse/:id` via `RecipeBrowserLive.Index`, `/home/:id` + `/show_recipe/:id` via `HomeLive.Index`) calls `RecipeSeo.assign/2`, which sets `:page_title`, `:page_seo_data` (→ canonical `/browse/:id`), `:page_description`, and `:recipe_jsonld` in one call — so all recipe surfaces emit the same rich meta + JSON-LD instead of each copying it. *(Previously only `/browse/:id` carried the full data; the `/home` variant set a bare title, so a crawler landing there directly saw no structured data. Now the canonical consolidates to `/browse/:id` **and** the data is present either way.)*
 
 **Where it's rendered**: `head.html.heex` — injected when `@recipe_jsonld` assign is set
+
+> **Regression guard**: `browser_live_test.exs` → `describe "recipe detail SEO"` asserts on the **`get/2`** (disconnected) render of `/browse/:id` *and* `/home/:id` that the Recipe JSON-LD, meta description, and the `/browse/:id` canonical are all present — this is the guard for the socket-assigns-reach-`@conn` dead-render gotcha that the whole feature depends on.
 
 ```html
 <script type="application/ld+json">
@@ -240,7 +242,7 @@ Same idea as Open Graph but specifically for Twitter/X previews.
 </script>
 ```
 
-**Which fields are emitted, and where the data comes from** (all built in `build_recipe_jsonld/1` and its `jsonld_*` helpers):
+**Which fields are emitted, and where the data comes from** (all built in `RecipeSeo.jsonld/1` and its `jsonld_*` helpers):
 
 | JSON-LD field | Source | Notes |
 |---|---|---|

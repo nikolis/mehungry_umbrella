@@ -454,4 +454,50 @@ defmodule MehungryWeb.BrowserLiveTest do
       assert page_title(view) =~ "vegan"
     end
   end
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Recipe-detail SEO (disconnected render — what crawlers see)
+  #
+  # These assert on `get/2` (the static HTTP render that includes the root
+  # layout `<head>`), not `live/2` (which only returns the LiveView body). The
+  # whole SEO story hinges on the LiveView's socket assigns reaching
+  # `@conn.assigns` on that render, so this is the regression guard for it.
+  # ──────────────────────────────────────────────────────────────────────────
+  describe "recipe detail SEO" do
+    test "/browse/:id emits Recipe JSON-LD + meta for anonymous crawlers", %{conn: conn} do
+      user = user_fixture()
+      recipe = recipe_fixture(user)
+
+      html = conn |> get(~p"/browse/#{recipe.id}") |> html_response(200)
+
+      # Structured data: a schema.org Recipe block with the real data.
+      assert html =~ "application/ld+json"
+      assert html =~ ~s("@type":"Recipe")
+      assert html =~ ~s("recipeIngredient")
+      assert html =~ ~s("recipeYield":"4 servings")
+
+      # Dynamic meta description + indexable canonical pointing at /browse/:id.
+      assert html =~ "Full nutrition facts on M3Hungry."
+      assert html =~ ~s(rel="canonical")
+      assert html =~ "/browse/#{recipe.id}"
+      assert html =~ ~s(<meta name="robots" content="index, follow")
+      assert html =~ recipe.title
+    end
+
+    test "/home/:id canonicalizes to /browse/:id and emits the same JSON-LD", %{conn: conn} do
+      user = user_fixture()
+      recipe = recipe_fixture(user)
+
+      html = conn |> get(~p"/home/#{recipe.id}") |> html_response(200)
+
+      # Full structured data now renders on the /home variant too (was missing).
+      assert html =~ ~s("@type":"Recipe")
+      assert html =~ "Full nutrition facts on M3Hungry."
+
+      # Canonical consolidates the duplicate URL back to /browse/:id — never /home.
+      assert html =~ ~s(<link rel="canonical" href="https://www.m3hungry.com)
+      assert html =~ "/browse/#{recipe.id}"
+      refute html =~ ~s(rel="canonical" href="https://www.m3hungry.com/en/home/#{recipe.id}")
+    end
+  end
 end
