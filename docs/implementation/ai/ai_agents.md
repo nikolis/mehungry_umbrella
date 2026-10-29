@@ -445,7 +445,9 @@ defp build_prompt(title, description) do
 end
 ```
 
-`RecipeImageWorker` runs it, uploads the JPEG to S3, and writes `image_url` back to the recipe — skipping recipes that already have an image.
+`RecipeImageWorker` runs it, uploads the JPEG to S3, and writes `image_url` back to the recipe — skipping recipes that already have an image (unless the job carries `"force" => true`). The backend is selected by `Mehungry.Settings.image_provider/0` (`:openai` gpt-image-2 default, or `:flux` Black Forest Labs FLUX 2 pro — admin DB toggle → `RECIPE_IMAGE_PROVIDER` env → `:openai`); a job may also carry an explicit `"provider"` arg (`"openai" | "flux"`) that forces one backend and bypasses the configured default.
+
+**Owner per-recipe re-roll** — on the profile *Created* tab, the owner (`nikolisgal@gmail.com`) gets a regenerate-cover button under each card's edit/delete controls (`recipe_card`'s `allow_image_regen` assign; `ProfileLive.Index`'s `"regenerate_recipe_image"` event). It enqueues a `force: true` job with `provider` set to `Mehungry.Settings.alternate_image_provider/0` — deliberately the *other* backend from the active default — so a disappointing cover can be re-rolled on the alternative model. (The existing "Regenerate recipe images" bulk button re-queues every created recipe on the default provider.)
 
 **`EmbeddingClient`** — OpenAI `text-embedding-3-small`, 1536-dim vectors stored in `recipes.embedding` (pgvector). `RecipeEmbeddingWorker` builds the text to embed from title + description + cuisine + ingredient names + hashtags, and is triggered on recipe create/update (plus a `enqueue_all/0` backfill callable from iex). Full breakdown in **Recipe Embeddings & Semantic Search** below.
 

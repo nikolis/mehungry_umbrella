@@ -41,6 +41,9 @@ defmodule Mehungry.AI.ImageGenerator do
       "amber" look. Omit or pass `nil` when the cuisine is unknown.
     * `:quality` — `"low" | "medium" | "high"` (default `"medium"`). The caller
       picks the tier; see `Mehungry.RecipeImageWorker`.
+    * `:provider` — `:openai | :flux`, forces a specific backend and bypasses the
+      configured default. Used by the owner "regenerate with the alternative
+      provider" action; omit to use the configured provider.
 
   Returns `{:ok, jpeg_binary}` or `{:error, reason}`.
   """
@@ -54,8 +57,13 @@ defmodule Mehungry.AI.ImageGenerator do
     # whichever provider is configured, so swapping backends never silently
     # changes what we ask for.
     prompt = build_prompt(title, description, cuisine)
-    # Provider precedence: admin DB toggle → RECIPE_IMAGE_PROVIDER env → :openai.
-    provider = Mehungry.Settings.image_provider()
+    # Provider precedence: explicit :provider opt → admin DB toggle →
+    # RECIPE_IMAGE_PROVIDER env → :openai.
+    provider =
+      case Keyword.get(opts, :provider) do
+        p when p in [:openai, :flux] -> p
+        _ -> Mehungry.Settings.image_provider()
+      end
 
     Logger.info(
       "ImageGenerator: generating image for '#{title}' via #{provider}" <>

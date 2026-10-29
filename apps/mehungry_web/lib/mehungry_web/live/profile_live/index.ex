@@ -432,6 +432,26 @@ defmodule MehungryWeb.ProfileLive.Index do
     end
   end
 
+  # Owner-only: re-queue AI cover-image generation for a single recipe, forcing
+  # the *alternative* provider (not the configured default) so a bad cover can be
+  # re-rolled on the other model. Gated on the owner email like the bulk action.
+  def handle_event("regenerate_recipe_image", %{"id" => id}, socket) do
+    user = socket.assigns.current_user
+
+    if user && user.email == "nikolisgal@gmail.com" do
+      provider = Mehungry.Settings.alternate_image_provider()
+
+      %{recipe_id: String.to_integer(id), force: true, provider: Atom.to_string(provider)}
+      |> Mehungry.RecipeImageWorker.new()
+      |> Oban.insert()
+
+      {:noreply,
+       put_flash(socket, :info, "Queued image regeneration via #{provider}.")}
+    else
+      {:noreply, put_flash(socket, :error, "Not allowed.")}
+    end
+  end
+
   def handle_event("edit-recipe", %{"id" => id}, socket) do
     {:noreply,
      socket
@@ -537,6 +557,9 @@ defmodule MehungryWeb.ProfileLive.Index do
           type={if @live_action == :show, do: "browse", else: "created"}
           return_to="profile"
           user_recipes={@user_recipes}
+          allow_image_regen={
+            @live_action == :index && @current_user && @current_user.email == "nikolisgal@gmail.com"
+          }
           path_to_details={"/profile/show_recipe/#{recipe.id}"}
           id={"recipe" <> Integer.to_string(recipe.id)}
         />
