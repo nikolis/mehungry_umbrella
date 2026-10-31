@@ -42,6 +42,19 @@ defmodule MehungryWeb.Api.V1.ProfileController do
     end
   end
 
+  @doc """
+  DELETE /api/v1/me — permanently delete the signed-in account and all owned
+  content (Apple Guideline 5.1.1(v)). Delegates to `Accounts.delete_user/1`,
+  which cascades recipes, comments, meals, baskets, devices, subscriptions, etc.
+  """
+  def delete(conn, _params) do
+    user = conn.assigns.current_user
+
+    with {:ok, _user} <- Accounts.delete_user(user) do
+      send_resp(conn, :no_content, "")
+    end
+  end
+
   @doc "PUT /api/v1/me/profile — edit alias / intro / daily_calorie_target."
   def update(conn, params) do
     user = conn.assigns.current_user

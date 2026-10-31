@@ -147,6 +147,7 @@ defmodule MehungryWeb.Router do
     delete("/auth/logout", SessionController, :delete)
 
     get("/me", ProfileController, :me)
+    delete("/me", ProfileController, :delete)
     put("/me/profile", ProfileController, :update)
     put("/me/language", ProfileController, :language)
     get("/me/connected_accounts", ProfileController, :connected_accounts)
