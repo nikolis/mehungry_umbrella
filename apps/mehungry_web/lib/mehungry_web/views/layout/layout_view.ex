@@ -232,6 +232,11 @@ defmodule MehungryWeb.LayoutView do
         <.admin_link href="/professional/recipes" icon="hero-book-open" label="Recipes" />
         <.admin_link href="/professional/ingredients" icon="hero-beaker" label="Ingredients" />
         <.admin_link href="/professional/measurement_units" icon="hero-scale" label="Units" />
+        <.admin_link
+          href="/professional/onboarding-questions/user"
+          icon="hero-queue-list"
+          label="Onboarding Qs"
+        />
         <.admin_link href="/professional/languages" icon="hero-language" label="Languages" />
         <.admin_link href="/professional/translations" icon="hero-globe-alt" label="Translations" />
         <.admin_link href="/professional/files" icon="hero-folder-open" label="Files" />
@@ -378,6 +383,11 @@ defmodule MehungryWeb.LayoutView do
           label="Blueprints"
         />
         <.nutritionist_link href="/nutritionist/invitations" icon="hero-envelope" label="Invitations" />
+        <.nutritionist_link
+          href="/nutritionist/onboarding-questions"
+          icon="hero-queue-list"
+          label="Onboarding Qs"
+        />
         <.nutritionist_link
           href="/nutritionist/appointments"
           icon="hero-calendar-days"

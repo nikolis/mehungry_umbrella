@@ -17,6 +17,7 @@ defmodule Mehungry.Professionals.Appointment do
 
     belongs_to :professional, Mehungry.Accounts.User
     belongs_to :client, Mehungry.Accounts.User
+    belongs_to :service, Mehungry.Professionals.ProfessionalService, foreign_key: :professional_service_id
 
     timestamps()
   end
@@ -26,6 +27,7 @@ defmodule Mehungry.Professionals.Appointment do
     |> cast(attrs, [
       :professional_id,
       :client_id,
+      :professional_service_id,
       :external_client_name,
       :scheduled_at,
       :ends_at,
@@ -39,6 +41,7 @@ defmodule Mehungry.Professionals.Appointment do
     |> validate_client_present()
     |> foreign_key_constraint(:professional_id)
     |> foreign_key_constraint(:client_id)
+    |> foreign_key_constraint(:professional_service_id)
     |> unique_constraint(:scheduled_at,
       name: :professional_appointments_active_slot_unique,
       message: "is no longer available"

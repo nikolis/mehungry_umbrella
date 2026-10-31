@@ -61,6 +61,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:ai_error, nil)
          |> assign(:ai_preferences, "")
          |> assign(:record, record)
+         |> assign(:onboarding_answers, Mehungry.Onboarding.answers_for_user(client_id_int))
+         |> assign(:onboarding_locale, Gettext.get_locale(MehungryWeb.Gettext))
          |> assign(:conditions, client_conditions(record))
          |> assign(:all_conditions, Health.list_conditions())
          |> assign(:show_visit_form, false)
@@ -354,6 +356,52 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
   defp client_conditions(nil), do: []
   defp client_conditions(record), do: Professionals.list_client_conditions(record.id)
+
+  # Read-only: the answers the client gave to the app's user-onboarding questions
+  # (admin-authored, filled during their own onboarding), shown here on the file.
+  defp onboarding_answers_panel(assigns) do
+    ~H"""
+    <div :if={@onboarding_answers != []} class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
+      <h2 class="text-parchment font-display font-semibold mb-4">Onboarding answers</h2>
+      <dl class="space-y-3">
+        <div :for={{q, a} <- @onboarding_answers}>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-parchment-dim">
+            {onboarding_prompt(q, a, @onboarding_locale)}
+          </dt>
+          <dd class="text-parchment text-sm mt-0.5">{onboarding_answer_text(q, a, @onboarding_locale)}</dd>
+        </div>
+      </dl>
+    </div>
+    """
+  end
+
+  defp onboarding_prompt(nil, a, _locale), do: a.prompt_snapshot || "—"
+  defp onboarding_prompt(q, _a, locale), do: Mehungry.Onboarding.Question.prompt(q, locale)
+
+  defp onboarding_answer_text(q, a, locale) do
+    cond do
+      a.value_text not in [nil, ""] ->
+        a.value_text
+
+      a.selected_options not in [nil, []] ->
+        option_labels(q, a.selected_options, locale)
+
+      true ->
+        "—"
+    end
+  end
+
+  defp option_labels(nil, keys, _locale), do: Enum.join(keys, ", ")
+
+  defp option_labels(q, keys, locale) do
+    q.options
+    |> Enum.filter(&(&1.key in keys))
+    |> Enum.map(&Mehungry.Onboarding.QuestionOption.label(&1, locale))
+    |> case do
+      [] -> Enum.join(keys, ", ")
+      labels -> Enum.join(labels, ", ")
+    end
+  end
 
   # Conditions render as one more basic field in the Dietary History card (like
   # "Sex"): a small label, the linked conditions as values, and a minimal picker.
@@ -850,6 +898,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
       </div>
 
       {intake_panel(assigns)}
+
+      {onboarding_answers_panel(assigns)}
 
       <!-- Weight trend -->
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">

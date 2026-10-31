@@ -7,6 +7,7 @@ defmodule Mehungry.Professionals do
   alias Mehungry.Professionals.{
     ProfessionalProfile,
     ProfessionalAvailability,
+    ProfessionalService,
     TutorInvitation,
     TutorClientAssignment,
     Appointment,
@@ -653,6 +654,84 @@ defmodule Mehungry.Professionals do
     else
       _ -> {:error, :not_found}
     end
+  end
+
+  # ── Professional Services (session + package pricing, free intro) ────────────────
+
+  @doc "All services for a nutritionist, intro first, then by `position`."
+  def list_services(professional_id) do
+    ProfessionalService
+    |> where([s], s.professional_id == ^professional_id)
+    |> Repo.all()
+    |> sort_services()
+  end
+
+  @doc "Active services only (intro first, then by position) — for the public profile/booking."
+  def list_active_services(professional_id) do
+    ProfessionalService
+    |> where([s], s.professional_id == ^professional_id and s.active == true)
+    |> Repo.all()
+    |> sort_services()
+  end
+
+  def get_service!(id), do: Repo.get!(ProfessionalService, id)
+
+  @doc "Fetch a service scoped to its owning nutritionist (nil on cross-tenant access)."
+  def get_service_for_professional(professional_id, id) do
+    Repo.get_by(ProfessionalService, id: id, professional_id: professional_id)
+  end
+
+  def create_service(attrs) do
+    %ProfessionalService{}
+    |> ProfessionalService.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_service(%ProfessionalService{} = service, attrs) do
+    service
+    |> ProfessionalService.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc "Soft-hide a service (keeps historical appointments valid); the intro can't be hidden."
+  def archive_service(%ProfessionalService{kind: "intro"} = service), do: {:ok, service}
+
+  def archive_service(%ProfessionalService{} = service) do
+    update_service(service, %{active: false})
+  end
+
+  @doc "Permanently delete a service; the mandatory intro can't be deleted."
+  def delete_service(%ProfessionalService{kind: "intro"}), do: {:error, :intro_undeletable}
+  def delete_service(%ProfessionalService{} = service), do: Repo.delete(service)
+
+  def change_service(%ProfessionalService{} = service, attrs \\ %{}) do
+    ProfessionalService.changeset(service, attrs)
+  end
+
+  @doc """
+  Return the nutritionist's free intro service, lazily seeding the locked row if
+  it doesn't exist yet. Idempotent — safe to call on every Payments-page load.
+  The partial unique index guarantees at most one intro per professional.
+  """
+  def ensure_intro_service(professional_id) do
+    case Repo.get_by(ProfessionalService, professional_id: professional_id, kind: "intro") do
+      %ProfessionalService{} = intro ->
+        {:ok, intro}
+
+      nil ->
+        create_service(%{
+          professional_id: professional_id,
+          kind: "intro",
+          name: "Free 15-minute intro",
+          description: "A short no-cost call to see if we're a good fit.",
+          position: 0
+        })
+    end
+  end
+
+  # Intro always first, then by stored position (stable, DB-agnostic ordering).
+  defp sort_services(services) do
+    Enum.sort_by(services, fn s -> {s.kind != "intro", s.position} end)
   end
 
   # ── Appointments ───────────────────────────────────────────────────────────────

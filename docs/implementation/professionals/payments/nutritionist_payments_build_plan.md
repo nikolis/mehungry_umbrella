@@ -1,7 +1,9 @@
 # Direct Nutritionist Payments via Stripe Connect — Build Plan & Obligations
 
 **Status:** planning. Companion to `nutritionist_payments_stripe_connect.md` (the
-onboarding-slice assessment).
+onboarding-slice assessment) and `payments_workspace_plan.md` (the Payments workspace UI +
+service/package pricing model + multi-state badge this charging layer prices against — build
+that **first**; see §3 Step 1 and that doc's §7).
 
 **The important finding up front:** the charging layer we need **was already built** — in
 Sept 2026, on the branch `new_professional_nutritionist_features` (single commit

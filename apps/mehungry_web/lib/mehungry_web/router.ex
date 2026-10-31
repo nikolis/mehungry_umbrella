@@ -142,6 +142,7 @@ defmodule MehungryWeb.Router do
     delete("/auth/logout", SessionController, :delete)
 
     get("/me", ProfileController, :me)
+    delete("/me", ProfileController, :delete)
     put("/me/profile", ProfileController, :update)
     put("/me/language", ProfileController, :language)
     get("/me/connected_accounts", ProfileController, :connected_accounts)
@@ -272,6 +273,9 @@ defmodule MehungryWeb.Router do
       live("/measurement_units/new", ProfessionalLive.MeasurementUnits, :new)
       live("/measurement_units/:id/edit", ProfessionalLive.MeasurementUnits, :edit)
 
+      # Admin-editable onboarding question sets. `:scope` ∈ "user" | "client-default".
+      live("/onboarding-questions/:scope", ProfessionalLive.OnboardingQuestions, :index)
+
       live("/taxonomy/review", ProfessionalLive.TaxonomyReview, :index)
 
       # Science-pipeline *generation* UIs (species crawl, PubTator annotation,
@@ -339,7 +343,9 @@ defmodule MehungryWeb.Router do
       layout: {MehungryWeb.LayoutView, :nutritionist_live} do
       live("/", NutritionistLive.Dashboard, :index)
       live("/profile", NutritionistLive.ProfileEdit, :edit)
+      live("/payments", NutritionistLive.Payments, :index)
       live("/invitations", NutritionistLive.Invitations, :index)
+      live("/onboarding-questions", NutritionistLive.OnboardingQuestions, :index)
       live("/clients", NutritionistLive.Clients, :index)
       live("/clients/import", NutritionistLive.Clients, :import)
       # Legacy roster path — the Records page folded into Clients; redirect bookmarks.
@@ -410,6 +416,13 @@ defmodule MehungryWeb.Router do
       localized_live("/my_ingredients/:id/edit", MyIngredientLive.Form, :edit)
 
       localized_live("/upgrade", UpgradeLive.Index, :index)
+
+      # Client self-fills their nutritionist's onboarding questionnaire.
+      localized_live(
+        "/nutritionist-onboarding/:professional_id",
+        ClientOnboardingLive,
+        :index
+      )
     end
   end
 

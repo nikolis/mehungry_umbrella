@@ -33,6 +33,7 @@ and context (not repeated here) live in the domain docs: [`../food/food.md`](../
 | **Hashtag** | `hashtags` | [`hashtag.md`](hashtag.md) | — |
 | **User** | `users` | [`user.md`](user.md) | — |
 | **Language** | `languages` | [`language.md`](language.md) | string-FK (`name`) target of every translatable entity |
+| **Onboarding Question / Answer** | `onboarding_questions`, `onboarding_answers` | [`onboarding.md`](onboarding.md) | QuestionOption (embedded); polymorphic Answer subject (user / professional_client) |
 
 ## Conventions across these entities
 

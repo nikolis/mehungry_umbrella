@@ -2,6 +2,8 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
   use MehungryWeb, :live_view
 
   alias Mehungry.Professionals
+  alias Mehungry.Onboarding
+  alias Mehungry.Professionals.ProfessionalClient
 
   @impl true
   def mount(_params, _session, socket) do
@@ -13,9 +15,25 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
       socket
       |> assign(:invitations, invitations)
       |> assign(:active_assignment, active_assignment)
+      |> assign(:onboarding_professional_id, onboarding_professional_id(client_id, active_assignment))
       |> assign(:page_title, "Tutor Invitations")
 
     {:ok, socket}
+  end
+
+  # The nutritionist's onboarding questionnaire is offered only when the client
+  # already has a file with them and the nutritionist has active questions.
+  defp onboarding_professional_id(_client_id, nil), do: nil
+
+  defp onboarding_professional_id(client_id, assignment) do
+    pid = assignment.professional_id
+
+    with %ProfessionalClient{} <- Professionals.get_client_record_by_user(pid, client_id),
+         [_ | _] <- Onboarding.list_active_questions("client", pid) do
+      pid
+    else
+      _ -> nil
+    end
   end
 
   @impl true
@@ -31,6 +49,10 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
          socket
          |> assign(:invitations, invitations)
          |> assign(:active_assignment, active_assignment)
+         |> assign(
+           :onboarding_professional_id,
+           onboarding_professional_id(client_id, active_assignment)
+         )
          |> put_flash(:info, "You now have a nutritionist!")}
 
       {:error, _} ->
@@ -102,6 +124,13 @@ defmodule MehungryWeb.NutritionistLive.UserInvitations do
               Remove
             </button>
           </div>
+          <.link
+            :if={@onboarding_professional_id}
+            navigate={~p"/nutritionist-onboarding/#{@onboarding_professional_id}"}
+            class="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-lg bg-basil hover:bg-basil/80 text-ink text-xs font-semibold transition"
+          >
+            <.icon name="hero-clipboard-document-list" class="w-4 h-4" /> Fill in your onboarding questionnaire
+          </.link>
         </div>
       <% end %>
 

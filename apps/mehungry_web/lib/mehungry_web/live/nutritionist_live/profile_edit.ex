@@ -1,14 +1,14 @@
 defmodule MehungryWeb.NutritionistLive.ProfileEdit do
   @moduledoc """
   The nutritionist's own profile editor: public-facing details, a photo, the
-  publish toggle, a recurring weekly availability grid, and Stripe Connect
-  onboarding for payouts.
+  publish toggle, and a recurring weekly availability grid. Payments (Stripe
+  onboarding + service pricing) live on the separate `/nutritionist/payments`
+  workspace.
   """
   use MehungryWeb, :live_view
 
   alias Mehungry.Professionals
   alias Mehungry.Professionals.ProfessionalProfile
-  alias Mehungry.Billing.StripeHandler
 
   # Rendered order (Mon → Sun) mapped to stored day_of_week (0 = Sunday).
   @weekdays [
@@ -26,7 +26,7 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
   # ═══════════════════════════════════════════════════════════════════════════
 
   @impl true
-  def mount(params, _session, socket) do
+  def mount(_params, _session, socket) do
     user = socket.assigns.current_user
 
     profile =
@@ -45,7 +45,6 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
       |> assign(:availability, availability_model(user.id))
       |> assign(:weekdays, @weekdays)
       |> assign(:time_options, time_options())
-      |> maybe_sync_stripe(profile, params)
       |> allow_upload(:photo,
         accept: ~w(.jpg .jpeg .png .webp),
         max_entries: 1,
@@ -98,60 +97,6 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
          |> put_flash(:error, "Please fix the errors below.")}
     end
   end
-
-  @impl true
-  def handle_event("connect_stripe", _params, socket) do
-    user = socket.assigns.current_user
-    profile = socket.assigns.profile
-
-    with {:ok, account_id} <- ensure_stripe_account(profile, user),
-         {:ok, url} <-
-           StripeHandler.create_account_link(
-             account_id,
-             url(~p"/nutritionist/profile?stripe=refresh"),
-             url(~p"/nutritionist/profile?stripe=return")
-           ) do
-      {:noreply, redirect(socket, external: url)}
-    else
-      {:error, reason} ->
-        {:noreply,
-         put_flash(socket, :error, "Could not start payout onboarding: #{inspect(reason)}")}
-    end
-  end
-
-  # Create the Connect account on first use and persist its id.
-  defp ensure_stripe_account(%{stripe_connect_account_id: id} = _p, _user)
-       when is_binary(id) and id != "",
-       do: {:ok, id}
-
-  defp ensure_stripe_account(profile, user) do
-    with {:ok, account_id} <- StripeHandler.create_connect_account(user.email),
-         {:ok, _} <-
-           Professionals.update_professional_stripe(profile, %{
-             stripe_connect_account_id: account_id
-           }) do
-      {:ok, account_id}
-    end
-  end
-
-  # After Stripe redirects back, refresh charges_enabled from the API.
-  defp maybe_sync_stripe(socket, %{stripe_connect_account_id: id} = profile, %{
-         "stripe" => "return"
-       })
-       when is_binary(id) and id != "" do
-    case StripeHandler.get_connect_account(id) do
-      {:ok, %{charges_enabled: enabled}} ->
-        {:ok, updated} =
-          Professionals.update_professional_stripe(profile, %{stripe_charges_enabled: enabled})
-
-        assign(socket, :profile, updated)
-
-      _ ->
-        socket
-    end
-  end
-
-  defp maybe_sync_stripe(socket, _profile, _params), do: socket
 
   defp with_user_id(params, socket),
     do: Map.put(params, "user_id", socket.assigns.current_user.id)
@@ -396,38 +341,13 @@ defmodule MehungryWeb.NutritionistLive.ProfileEdit do
           </div>
         </section>
 
-        <!-- Payments -->
-        <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-4">
-          <h2 class="text-lg font-display font-semibold text-parchment">Payments (optional)</h2>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <.labeled label="Consultation fee (EUR)">
-              <.input
-                field={f[:consultation_fee_eur]}
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full"
-              />
-            </.labeled>
-          </div>
-          <div class="flex items-center gap-3">
-            <%= if @profile.stripe_charges_enabled do %>
-              <span class="inline-flex items-center gap-1 text-basil text-sm">
-                <.icon name="hero-check-circle" class="w-5 h-5" /> Payouts connected
-              </span>
-            <% else %>
-              <button
-                type="button"
-                phx-click="connect_stripe"
-                class="px-4 py-2 rounded-lg border border-paprika/40 text-paprika hover:bg-paprika/10 text-sm transition"
-              >
-                Connect payouts with Stripe
-              </button>
-            <% end %>
-          </div>
-          <p class="text-parchment-dim text-xs">
-            Connecting sets up a Stripe account so you can be paid for consultations. Charging clients at
-            booking is coming next.
+        <!-- Payments (moved to its own workspace) -->
+        <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 space-y-2">
+          <h2 class="text-lg font-display font-semibold text-parchment">Payments &amp; pricing</h2>
+          <p class="text-parchment-dim text-sm">
+            Connect payouts and set your session/package prices on the
+            <a href="/nutritionist/payments" class="text-paprika hover:text-paprika-soft">Payments</a>
+            page.
           </p>
         </section>
 

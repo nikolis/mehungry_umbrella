@@ -1092,3 +1092,8 @@ for attrs <- persona_seeds do
 end
 
 IO.puts("Seeded #{length(persona_seeds)} AI-bot personas.")
+
+# Onboarding questions: seed the admin `client_default` template from the legacy
+# hardcoded dietary-history field set (idempotent). The `user` scope starts empty.
+:ok = Mehungry.Onboarding.seed_defaults()
+IO.puts("Seeded onboarding client-default questionnaire.")

@@ -133,13 +133,21 @@ mobile use an app-attestation/no-captcha path guarded server-side).
 ```
 
 ### `POST /api/v1/auth/oauth/:provider` 🔓
-`:provider` ∈ `google | facebook | instagram`. The mobile client performs the
-native OAuth flow (e.g. `expo-auth-session`) and posts the provider's
-`id_token`/`access_token`; the server verifies via Ueberauth/`Accounts.OAuth`,
-upserts the user, and returns the same envelope as login.
+`:provider` ∈ `google | facebook | apple`. The mobile client performs the
+native OAuth flow and posts the provider's token; the server verifies it
+(`OAuthVerifier`), upserts the user via `Accounts.OAuth`, and returns the same
+envelope as login.
 ```json
 { "provider_token": "ya29...", "provider": "google" }
 ```
+- `google` — `provider_token` is the Google `id_token` (verified via Google's
+  tokeninfo endpoint; audience = the web client id).
+- `facebook` — `provider_token` is the Graph `access_token` (verified via `/me`).
+- `apple` — `provider_token` is the Sign in with Apple **identity token** (a JWT).
+  Verified locally: RS256 signature against Apple's JWKS
+  (`https://appleid.apple.com/auth/keys`) + `iss = https://appleid.apple.com`,
+  `aud = com.mehungry.ios` (the iOS bundle id), and `exp`. The `email` claim (may
+  be a private-relay alias) keys the find-or-create; no name is provided.
 
 ### `DELETE /api/v1/auth/logout` 🔒
 Revokes the presented token. `204`.
@@ -437,6 +445,12 @@ user (always `false` for anonymous requests or when viewing yourself-unfollowed)
 ```json
 { "alias": "Nikos", "intro": "Home cook", "daily_calorie_target": 2200 }
 ```
+### `DELETE /api/v1/me` 🔒 — permanently delete the account
+Deletes the signed-in user and all owned content (recipes, comments, meals,
+baskets, devices, subscriptions, …) via `Accounts.delete_user/1`. Required for an
+in-app account-deletion path (Apple Guideline 5.1.1(v)). No body. → `204`; the
+presented token is thereafter invalid. The mobile client clears its local
+session + query cache on success (`useDeleteAccount`).
 ### `GET /api/v1/me/connected_accounts` 🔒 / `DELETE /api/v1/me/connected_accounts/:provider`
    — the "connected accounts" profile sub-tab (OAuth link/unlink).
 ### `PUT /api/v1/me/language` 🔒 `{ "lang": "el" }` — mirrors `/users/language/:lang`.
@@ -883,7 +897,7 @@ POST   /api/v1/auth/register
 POST   /api/v1/auth/login
 POST   /api/v1/auth/oauth/:provider
 DELETE /api/v1/auth/logout
-GET    /api/v1/me
+GET    /api/v1/me                      DELETE /api/v1/me
 GET    /api/v1/feed
 GET    /api/v1/recipes/:id
 POST   /api/v1/recipes
