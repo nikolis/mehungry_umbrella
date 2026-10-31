@@ -2,6 +2,8 @@ defmodule MehungryWeb.LegalNoticeController do
   use MehungryWeb, :controller
 
   def index(conn, _params) do
-    render(conn, :index)
+    conn
+    |> put_view(MehungryWeb.LegalNoticeHTML)
+    |> render(:index)
   end
 end

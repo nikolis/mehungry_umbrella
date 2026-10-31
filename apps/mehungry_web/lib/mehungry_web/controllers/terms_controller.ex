@@ -2,6 +2,8 @@ defmodule MehungryWeb.TermsController do
   use MehungryWeb, :controller
 
   def index(conn, _params) do
-    render(conn, :index)
+    conn
+    |> put_view(MehungryWeb.TermsHTML)
+    |> render(:index)
   end
 end
