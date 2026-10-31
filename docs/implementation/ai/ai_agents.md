@@ -353,7 +353,13 @@ defp do_handle_tool("submit_plan", %{"entries" => entries, "rationale" => ration
   {created, skipped} = persist_entries(entries, client_id)   # …client's meals
 ```
 
-**2. More input tools** — `get_client_summary` and `get_ratings` in addition to meal history, so the plan reflects what the client actually liked. `submit_plan` also *requires* a `rationale` ("2–3 sentence professional note explaining the plan choices") — making the model justify the plan doubles as a light quality check and gives the nutritionist something to show the client.
+**2. More input tools — the whole client file, not just history.** On top of `get_recent_meals`, the agent reads the nutritionist's curated record and the client's own profile so the draft honours them:
+
+- `get_client_record` — merges the client's `ClientIntake` (goal, TDEE/BMR, weight/BMI/activity), linked `Health.Condition`s, the latest `ConsultationNote`, and the client's `UserProfile` (diet, lactose, `avoid_foods`) into one brief. It exposes a single `calorie_target` (intake TDEE, else profile target) and a unified **`avoid` list** = personal avoid foods + intake allergies/intolerances + **condition-implicated foods** (resolved through `Health.ingredients_for_condition(id, "avoid")`, the same curated engine the `/foods` filter uses).
+- `get_assigned_plan` — reads the meals the nutritionist already assigned to the client's calendar for the plan week (`History.list_calendar_user_meals/3`) and records their `(date, slot)` cells into the run accumulator. The prompt tells the model to leave those cells alone, and `submit_plan` **enforces skip-filled-slots** — it drops any submitted entry whose `(date, slot)` is already assigned (reported as `left_assigned`) so the AI never overwrites the nutritionist's own plan.
+- `get_client_summary` and `get_ratings` — recent-activity counts + what the client rated well.
+
+The system prompt turns the record into hard rules: respect the client's **diet** (vegetarian/vegan → never select meat/fish), **never** select anything on the `avoid` list, and keep each day's total near the **calorie_target** using the per-serving **calories** now returned by `search_recipes` (derived from each recipe's stored `nutrients` via `NutrientUtils.macro_summary/1`). `submit_plan` also *requires* a `rationale` ("2–3 sentence professional note explaining the plan choices") — making the model justify the plan doubles as a light quality check and gives the nutritionist something to show the client.
 
 **3. Live progress streaming.** The agent accepts an `on_event` callback that wraps every tool call; the Oban worker turns tool names into human-readable labels and broadcasts them over PubSub, so the nutritionist watches the agent work instead of staring at a spinner:
 
@@ -370,10 +376,13 @@ end
 ```elixir
 # nutritionist_agent_worker.ex — the worker owns the transport
 @tool_labels %{
+  "get_client_record" => "Reading client file…",
+  "get_assigned_plan" => "Checking the assigned plan…",
   "get_client_summary" => "Reading client profile…",
   "get_recent_meals" => "Checking recent meal history…",
   "get_ratings" => "Reviewing meal ratings…",
   "search_recipes" => "Searching recipe catalog…",
+  "search_ingredients" => "Finding whole-food snacks…",
   "submit_plan" => "Validating and creating meal plan…"
 }
 

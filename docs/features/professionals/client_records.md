@@ -159,6 +159,19 @@ link deep-links to `/nutritionist/records/:id`. A **+ New visit** button opens a
 (`save_visit`) that **lazily creates** the `ProfessionalClient` (from the client `User`'s
 name/email) on the first visit if none exists, then `create_consultation_note/1`.
 
+## The payoff — the client file feeds the AI meal-plan draft
+
+The record is not just a filing cabinet: when the nutritionist clicks **"Draft 7-day Plan"** on the
+User Overview, the `NutritionistAgent` reads the whole file so the draft honours it. Its
+`get_client_record` tool merges the latest **intake** (goal, TDEE → the plan's `calorie_target`),
+the linked **conditions**, the latest **consultation note**, and the client's own `UserProfile`
+(diet, `avoid_foods`) into one brief with a unified **`avoid` list** — personal avoid foods +
+intake allergies/intolerances + **condition-implicated foods** (via `Health.ingredients_for_condition/2`).
+A second tool, `get_assigned_plan`, reads any meals the nutritionist already assigned to the week
+and the agent **leaves those cells untouched** (skip-filled-slots). So filling in a client's
+intake/conditions and assigning part of a week both directly shape (and constrain) the AI draft —
+see [`../../implementation/ai/ai_agents.md`](../../implementation/ai/ai_agents.md) §NutritionistAgent.
+
 ## Files
 
 **Core (`apps/mehungry`)**
