@@ -49,11 +49,6 @@ defmodule MehungryWeb.Router do
     plug(:accepts, ["json"])
   end
 
-  # Shared-secret REST API for the non-deployed mehungry_local_ai service.
-  pipeline :local_ai_api do
-    plug(:accepts, ["json"])
-    plug(MehungryWeb.Plugs.RequireLocalAiToken)
-  end
 
   # Prometheus scrape endpoint (text exposition format), token-guarded.
   pipeline :metrics do
@@ -73,7 +68,7 @@ defmodule MehungryWeb.Router do
 
   # Mobile JSON API (per-user bearer tokens). `:api_v1` is for 🔓 endpoints that
   # optionally personalize for a logged-in caller; `:api_v1_auth` requires a
-  # valid token. See docs/new_dec_specs/mobile_api_spec.md.
+  # valid token. See docs/implementation/new_dec_specs/mobile_api_spec.md.
   pipeline :api_v1 do
     plug(:accepts, ["json"])
     plug(MehungryWeb.Api.MaybeApiAuthPlug)
@@ -147,6 +142,7 @@ defmodule MehungryWeb.Router do
     delete("/auth/logout", SessionController, :delete)
 
     get("/me", ProfileController, :me)
+    delete("/me", ProfileController, :delete)
     put("/me/profile", ProfileController, :update)
     put("/me/language", ProfileController, :language)
     get("/me/connected_accounts", ProfileController, :connected_accounts)
@@ -238,18 +234,6 @@ defmodule MehungryWeb.Router do
     get("/beam_scope/metrics", MetricsController, :beam_scope)
   end
 
-  scope "/api/local_ai", MehungryWeb.Api.LocalAi do
-    pipe_through(:local_ai_api)
-
-    get("/pending", PendingController, :index)
-    post("/full_text", FullTextController, :create)
-    post("/candidates", CandidatesController, :create)
-    post("/gi_candidates", GiCandidatesController, :create)
-
-    # Reverse (condition-seeded) phase-aware recommendation extraction.
-    get("/condition_pending", ConditionPendingController, :index)
-    post("/condition_recommendation_candidates", ConditionRecCandidatesController, :create)
-  end
 
   scope "/auth", MehungryWeb do
     pipe_through(:browser)
@@ -289,19 +273,22 @@ defmodule MehungryWeb.Router do
       live("/measurement_units/new", ProfessionalLive.MeasurementUnits, :new)
       live("/measurement_units/:id/edit", ProfessionalLive.MeasurementUnits, :edit)
 
+      # Admin-editable onboarding question sets. `:scope` ∈ "user" | "client-default".
+      live("/onboarding-questions/:scope", ProfessionalLive.OnboardingQuestions, :index)
+
       live("/taxonomy/review", ProfessionalLive.TaxonomyReview, :index)
 
-      live("/science", ProfessionalLive.SciencePipeline, :index)
-      live("/science/studies", ProfessionalLive.Studies, :index)
-      live("/science/entities", ProfessionalLive.Entities, :index)
-
-      live("/literature", ProfessionalLive.LiteratureRuns, :index)
-
-      live("/compound-candidates", ProfessionalLive.CompoundCandidates, :index)
-
-      # live("/glycemic-index", ProfessionalLive.GlycemicIndex, :index)
+      # Science-pipeline *generation* UIs (species crawl, PubTator annotation,
+      # compound/recommendation candidate derivation + review) were decommissioned
+      # in the research-search reshape (Phase 1 — see
+      # docs/features/professionals/research_search.md). The contexts, workers, and
+      # tables remain dormant; the per-condition crawl + analyze acquisition path
+      # lives on `/professional/health` (HealthConditions).
       live("/health", ProfessionalLive.HealthConditions, :index)
 
+      # Retained: foundemental-food (species) curation — the concept/data outlives
+      # the decommissioned species crawl that used to consume its scientific_name
+      # (a new way to power it is TBD).
       live("/usda-schema", ProfessionalLive.UsdaSchema, :index)
 
       live("/languages", Professional.LanguageLive.Index, :index)
@@ -356,7 +343,9 @@ defmodule MehungryWeb.Router do
       layout: {MehungryWeb.LayoutView, :nutritionist_live} do
       live("/", NutritionistLive.Dashboard, :index)
       live("/profile", NutritionistLive.ProfileEdit, :edit)
+      live("/payments", NutritionistLive.Payments, :index)
       live("/invitations", NutritionistLive.Invitations, :index)
+      live("/onboarding-questions", NutritionistLive.OnboardingQuestions, :index)
       live("/clients", NutritionistLive.Clients, :index)
       live("/clients/import", NutritionistLive.Clients, :import)
       # Legacy roster path — the Records page folded into Clients; redirect bookmarks.
@@ -371,6 +360,14 @@ defmodule MehungryWeb.Router do
       live("/appointments", NutritionistLive.AppointmentCalendar, :index)
       live("/articles", NutritionistLive.Articles, :index)
       live("/articles/:id/edit", NutritionistLive.ArticleEditor, :edit)
+
+      # Research search engine — pre-digested PubMed research by condition.
+      live("/research", NutritionistLive.ResearchSearch, :index)
+      # `/research/notes` must precede `/research/:condition_id` (else "notes"
+      # matches as a condition id).
+      live("/research/notes", NutritionistLive.MyResearchNotes, :index)
+      live("/research/:condition_id", NutritionistLive.ResearchCondition, :show)
+      live("/research/:condition_id/paper/:study_id", NutritionistLive.ResearchPaper, :show)
 
       live("/blueprints", MealBlueprintLive.Index, :index)
       live("/blueprints/new", MealBlueprintLive.Index, :new)
@@ -419,6 +416,13 @@ defmodule MehungryWeb.Router do
       localized_live("/my_ingredients/:id/edit", MyIngredientLive.Form, :edit)
 
       localized_live("/upgrade", UpgradeLive.Index, :index)
+
+      # Client self-fills their nutritionist's onboarding questionnaire.
+      localized_live(
+        "/nutritionist-onboarding/:professional_id",
+        ClientOnboardingLive,
+        :index
+      )
     end
   end
 
@@ -496,6 +500,18 @@ defmodule MehungryWeb.Router do
     get("/cookies", CookiesPolicyController, :index)
     get("/terms", TermsController, :index)
     get("/legal", LegalNoticeController, :index)
+
+    # Retired public condition pages — moved behind /nutritionist/conditions on
+    # 2026-10-14 (YMYL / regulated-medical-device risk; see GoneController). They
+    # already 404, but Google still shows stale impressions for the indexed URLs;
+    # a 410 tells it to drop them. Both the bare and locale-prefixed forms, since
+    # the old routes were `localized_live`. Must NOT be re-added to the sitemap.
+    get("/conditions", GoneController, :gone)
+    get("/conditions/:id", GoneController, :gone)
+    get("/conditions/:id/food/:species_id", GoneController, :gone)
+    get("/:locale/conditions", GoneController, :gone)
+    get("/:locale/conditions/:id", GoneController, :gone)
+    get("/:locale/conditions/:id/food/:species_id", GoneController, :gone)
 
     # One-click unsubscribe from the beta-tester list (link in welcome/invite
     # emails). A plain GET controller so it works without JS and runs exactly
@@ -606,4 +622,16 @@ defmodule MehungryWeb.Router do
   end
 
   ## Authentication routes
+
+  # Nutritionist personal short link `/@<handle>` → 301 to the canonical public
+  # profile. MUST stay the LAST route in the router: it's a single-segment
+  # catch-all, so every real single-segment route (declared above) matches
+  # first, and this only ever receives otherwise-unmatched segments. The
+  # controller honours only `@`-prefixed handles and 404s everything else.
+  # See `docs/features/professionals/personal_handle.md`.
+  scope "/", MehungryWeb do
+    pipe_through([:browser])
+
+    get("/:handle", NutritionistHandleController, :show)
+  end
 end

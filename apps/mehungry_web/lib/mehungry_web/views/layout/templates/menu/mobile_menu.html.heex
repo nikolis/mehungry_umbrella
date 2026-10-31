@@ -8,16 +8,18 @@
 <% friend_requests_count =
   (@current_user && Mehungry.Friends.count_pending_requests_for(@current_user.id)) || 0 %>
 <% show_friend_requests = friend_requests_count > 0 %>
+<% show_workspace =
+  (@current_user && Mehungry.Subscriptions.nutritionist?(@current_user.id)) || false %>
 <% menu_cols =
-  8 + if(show_invitations, do: 1, else: 0) + if(show_messages, do: 1, else: 0) +
-    if show_friend_requests, do: 1, else: 0 %>
+  7 + if(show_workspace, do: 1, else: 0) + if(show_invitations, do: 1, else: 0) +
+    if(show_messages, do: 1, else: 0) + if show_friend_requests, do: 1, else: 0 %>
 <nav
   class="nav_container_mobile fixed border-t border-ink-panel2 bg-ink-panel text-parchment-dim"
   id="nav_bar_mobile"
   phx-update="ignore"
 >
   <div
-    class={"grid #{%{8 => "grid-cols-8", 9 => "grid-cols-9", 10 => "grid-cols-10", 11 => "grid-cols-11"}[menu_cols]} bg-inherit"}
+    class={"grid #{%{7 => "grid-cols-7", 8 => "grid-cols-8", 9 => "grid-cols-9", 10 => "grid-cols-10", 11 => "grid-cols-11"}[menu_cols]} bg-inherit"}
     style="overflow: hidden; max-height: 64px;"
   >
     <!-- Logo -->
@@ -92,6 +94,18 @@
     >
       <.icon name="hero-shopping-cart" class="h-7 w-7" />
     </.link>
+
+    <!-- Your practice workspace (pro/nutritionist) -->
+    <%= if show_workspace do %>
+      <a
+        href="/nutritionist"
+        class="flex items-center justify-center p-3 nav_link_basic text-teal-400 hover:text-white hover:bg-teal-500/20 rounded-lg transition-colors"
+        title={gettext("Your practice")}
+        aria-label={gettext("Your practice")}
+      >
+        <.icon name="hero-squares-2x2" class="h-7 w-7" />
+      </a>
+    <% end %>
 
     <!-- Tutor invitations (non-professional users with pending invitations) -->
     <%= if show_invitations do %>

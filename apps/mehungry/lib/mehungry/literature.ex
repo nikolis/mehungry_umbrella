@@ -36,6 +36,7 @@ defmodule Mehungry.Literature do
     StudyEntityRelation,
     StudyFullText,
     StudyAnalyses,
+    ResearchIngestionRuns,
     PmcFetchAttempt,
     CrawlAttempt,
     ConditionCrawlAttempt,
@@ -142,8 +143,85 @@ defmodule Mehungry.Literature do
   @doc "Stored analyses for every paper a condition was crawled for (`:study` preloaded)."
   defdelegate analyses_for_condition(condition_id), to: StudyAnalyses
 
+  @doc "The research-search catalog: conditions that have digested research + study counts."
+  defdelegate conditions_with_research(search \\ nil), to: StudyAnalyses
+
+  @doc "The research-search landing list: every condition + its study count (0 if none)."
+  defdelegate conditions_for_search(search \\ nil), to: StudyAnalyses
+
+  @doc "Count of distinct conditions that have non-error digested research (0 if none)."
+  defdelegate count_conditions_with_research(), to: StudyAnalyses
+
+  @doc "Count of distinct papers with a non-error stored analysis (0 if none)."
+  defdelegate count_analyzed_studies(), to: StudyAnalyses
+
+  @doc "A condition's digested research grouped by research type (evidence-hierarchy order)."
+  defdelegate grouped_research_for_condition(condition_id), to: StudyAnalyses
+
+  @doc "The in-app reader payload for a study (sections + per-paragraph claim spans), or nil."
+  defdelegate full_text_for_reader(study_id), to: StudyAnalyses
+
+  # ── Research ingestion runs (admin-triggered bulk /analyze + store) ─────────
+
+  @doc "Enqueue an admin-triggered research-ingestion run. See `ResearchIngestionRuns.enqueue/1`."
+  defdelegate enqueue_research_ingestion(opts \\ []), to: ResearchIngestionRuns, as: :enqueue
+
+  @doc "The most recent research-ingestion run, or nil."
+  defdelegate latest_research_ingestion_run, to: ResearchIngestionRuns, as: :latest_run
+
+  @doc "PubSub topic carrying `{:research_ingestion_run, %Run{}}` progress updates."
+  defdelegate research_ingestion_topic, to: ResearchIngestionRuns, as: :topic
+
+  @doc "Cancel the in-flight research-ingestion run (cancel its jobs + mark failed)."
+  defdelegate cancel_research_ingestion, to: ResearchIngestionRuns, as: :cancel_active
+
+  @doc "Mark a stale `processing` run failed if no live Oban jobs back it (call on mount)."
+  defdelegate reconcile_research_ingestion, to: ResearchIngestionRuns, as: :reconcile_stale
+
   @doc "Set the curation `position` on one claim within a study's stored analysis."
   defdelegate set_claim_position(study_id, claim_id, position), to: StudyAnalyses
+
+  @doc """
+  Backfill `issn` + `citation_status` on existing `ScientificStudy` rows by
+  re-parsing the retained efetch payloads in `entrez_responses` — **no network**.
+  These fields were added after many papers were already crawled; this populates
+  them from the raw XML we kept. Idempotent; returns
+  `%{updated: n, skipped: n}` (skipped = a payload with no usable XML).
+  """
+  def backfill_journal_metadata do
+    RawResponse
+    |> where([r], r.endpoint == "efetch")
+    |> Repo.all()
+    |> Enum.reduce(%{updated: 0, skipped: 0}, fn resp, acc ->
+      with xml when is_binary(xml) <- resp.raw_json["raw_xml"],
+           {:ok, articles} <- Entrez.Client.parse_efetch_xml(xml) do
+        updated = Enum.reduce(articles, 0, &(&2 + backfill_study_journal_fields(&1)))
+        Map.update!(acc, :updated, &(&1 + updated))
+      else
+        _ -> Map.update!(acc, :skipped, &(&1 + 1))
+      end
+    end)
+  end
+
+  defp backfill_study_journal_fields(%{pmid: pmid} = article) when is_integer(pmid) do
+    case Repo.get_by(ScientificStudy, pmid: pmid) do
+      nil ->
+        0
+
+      study ->
+        {:ok, _} =
+          study
+          |> ScientificStudy.changeset(%{
+            issn: article[:issn],
+            citation_status: article[:citation_status]
+          })
+          |> Repo.update()
+
+        1
+    end
+  end
+
+  defp backfill_study_journal_fields(_), do: 0
 
   @doc "The valid claim curation positions."
   defdelegate claim_positions, to: StudyAnalyses
@@ -153,6 +231,9 @@ defmodule Mehungry.Literature do
 
   @doc "The subset of `study_ids` whose stored analysis is non-open-access, hence unusable (a MapSet)."
   defdelegate unusable_study_ids(study_ids), to: StudyAnalyses
+
+  @doc "The subset of `study_ids` known to be abstract-only/`none` (no full text) — a MapSet."
+  defdelegate known_abstract_study_ids(study_ids), to: StudyAnalyses
 
   @doc """
   Fetch a single paper by `pmid` and upsert it into the study registry, returning
@@ -1106,7 +1187,7 @@ defmodule Mehungry.Literature do
   @doc """
   Was this study discovered by the path-B Glycemic Index crawl term
   (`scientific_name × "glycemic index"`)? Signals the local-AI service to also run GI
-  extraction over its full text. See `docs/science/glycemic_index_licensing.md`.
+  extraction over its full text. See `docs/implementation/science/glycemic_index_licensing.md`.
   """
   def gi_discovered?(study_id) do
     Repo.exists?(

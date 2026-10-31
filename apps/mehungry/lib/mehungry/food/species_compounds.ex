@@ -12,6 +12,7 @@ defmodule Mehungry.Food.SpeciesCompounds do
   import Ecto.Query, warn: false
 
   alias Mehungry.Repo
+  alias Mehungry.ReferenceCache
   alias Mehungry.Food.{
     Compound,
     SpeciesCompoundRelationship,
@@ -20,17 +21,28 @@ defmodule Mehungry.Food.SpeciesCompounds do
 
   alias Mehungry.Literature.ScientificStudy
 
+  # Cache key for the user-independent `/foods`-facet read `list_linked_compounds/0`.
+  @linked_compounds_cache_key :linked_compounds
+
   @doc "Find-or-refresh a curated species↔compound fact on its natural key."
   def upsert_species_relationship(attrs) do
-    %SpeciesCompoundRelationship{}
-    |> SpeciesCompoundRelationship.changeset(attrs)
-    |> Repo.insert(
-      on_conflict: {:replace_all_except, [:id, :inserted_at]},
-      conflict_target: [:foundemental_species_id, :compound_id, :relationship_type, :source]
-    )
+    result =
+      %SpeciesCompoundRelationship{}
+      |> SpeciesCompoundRelationship.changeset(attrs)
+      |> Repo.insert(
+        on_conflict: {:replace_all_except, [:id, :inserted_at]},
+        conflict_target: [:foundemental_species_id, :compound_id, :relationship_type, :source]
+      )
+
+    with {:ok, _} <- result, do: ReferenceCache.invalidate(@linked_compounds_cache_key)
+    result
   end
 
-  def delete_species_relationship(%SpeciesCompoundRelationship{} = rel), do: Repo.delete(rel)
+  def delete_species_relationship(%SpeciesCompoundRelationship{} = rel) do
+    result = Repo.delete(rel)
+    with {:ok, _} <- result, do: ReferenceCache.invalidate(@linked_compounds_cache_key)
+    result
+  end
 
   @doc "All compounds linked to a species (each with its relationship preloaded)."
   def list_compounds_for_species(species_id) do
@@ -73,20 +85,22 @@ defmodule Mehungry.Food.SpeciesCompounds do
   nothing). Name-ordered.
   """
   def list_linked_compounds do
-    Repo.all(
-      from(c in Compound,
-        as: :compound,
-        where:
-          c.dietary_relevance != "non_dietary" and
-            exists(
-              from(r in SpeciesCompoundRelationship,
-                where:
-                  r.compound_id == parent_as(:compound).id and r.relationship_type != "absent"
-              )
-            ),
-        order_by: [asc: c.name]
+    ReferenceCache.fetch(@linked_compounds_cache_key, fn ->
+      Repo.all(
+        from(c in Compound,
+          as: :compound,
+          where:
+            c.dietary_relevance != "non_dietary" and
+              exists(
+                from(r in SpeciesCompoundRelationship,
+                  where:
+                    r.compound_id == parent_as(:compound).id and r.relationship_type != "absent"
+                )
+              ),
+          order_by: [asc: c.name]
+        )
       )
-    )
+    end)
   end
 
   @doc "All species linked to a compound (via the relationship rows)."

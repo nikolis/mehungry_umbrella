@@ -1,6 +1,9 @@
 import Config
 config :mehungry, Oban, testing: :manual
 
+# Capture emails in-process so tests can assert on them (Swoosh.TestAssertions).
+config :mehungry, Mehungry.Mailer, adapter: Swoosh.Adapters.Test
+
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 
@@ -120,3 +123,11 @@ config :mehungry_local_ai, start_qa: false
 # Don't run the pipeline run-reconciler at boot in tests — it would query the DB
 # outside the Ecto sandbox before any test checks out a connection.
 config :mehungry, reconcile_runs_on_boot: false
+
+# The anonymous-session aggregator is a global GenServer that writes a daily
+# counter row when a tracked LiveView process dies. In the suite, LiveView tests
+# run in Ecto's `{:shared, self()}` sandbox mode, so a late `:DOWN` would write a
+# stray row into whichever unrelated test currently owns the shared connection —
+# flaky pollution of the Meta tests. Default the aggregator's write OFF here; the
+# two tests that assert the end-to-end path flip it back on for themselves.
+config :mehungry, session_metrics_recording: false

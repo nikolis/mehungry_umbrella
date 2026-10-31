@@ -34,6 +34,10 @@ defmodule Mehungry.DataCase do
       Ecto.Adapters.SQL.Sandbox.mode(Mehungry.Repo, {:shared, self()})
     end
 
+    # The reference cache (measurement units, categories, …) is global, not
+    # sandboxed — clear it so one test's cached rows can't leak into the next.
+    Mehungry.ReferenceCache.clear()
+
     :ok
   end
 

@@ -8,7 +8,7 @@ defmodule Mehungry.ObanWorkers.PushNotificationWorker do
   The job args carry the already-rendered §4 notification payload (same object
   the channel and REST inbox serve), so the worker only needs the recipient's
   device tokens + title/body copy. Tokens Expo reports as `DeviceNotRegistered`
-  are pruned. See `docs/notifications_system.md` §7.
+  are pruned. See `docs/implementation/notifications_system.md` §7.
   """
   use Oban.Worker, queue: :mailers, max_attempts: 3
 

@@ -1,7 +1,8 @@
 defmodule MehungryWeb.Api.V1.BlueprintJSON do
   @moduledoc """
   Serializers for public meal blueprints (the mobile "Meal Blueprints" browse +
-  detail surface). A blueprint is a reusable 7-day targets document; the summary
+  detail surface). A blueprint is a reusable **typical-day** targets document
+  (stored as 7 identical days for the generation/calendar pipeline); the summary
   powers the browse list, the detail carries the full day/meal tree.
   """
 

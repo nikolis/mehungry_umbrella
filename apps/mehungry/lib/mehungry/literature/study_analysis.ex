@@ -45,6 +45,13 @@ defmodule Mehungry.Literature.StudyAnalysis do
     field :content_hash, :string
     field :analyzed_at, :utc_datetime
 
+    # Set at read time by `StudyAnalyses.grouped_research_for_condition/1`:
+    # `has_full_text?` is true when the paper has a stored full-text outline, and
+    # `outline` is the lightweight section list (`[%{id, title}]`) the results card
+    # deep-links into the in-app reader. Not persisted.
+    field :has_full_text, :boolean, virtual: true, default: false
+    field :outline, {:array, :map}, virtual: true, default: []
+
     belongs_to :study, ScientificStudy
 
     timestamps()

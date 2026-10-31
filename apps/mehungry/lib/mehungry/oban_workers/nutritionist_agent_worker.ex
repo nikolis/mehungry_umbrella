@@ -19,10 +19,13 @@ defmodule Mehungry.ObanWorkers.NutritionistAgentWorker do
   alias Mehungry.AI.Agents.NutritionistAgent
 
   @tool_labels %{
+    "get_client_record" => "Reading client file…",
+    "get_assigned_plan" => "Checking the assigned plan…",
     "get_client_summary" => "Reading client profile…",
     "get_recent_meals" => "Checking recent meal history…",
     "get_ratings" => "Reviewing meal ratings…",
     "search_recipes" => "Searching recipe catalog…",
+    "search_ingredients" => "Finding whole-food snacks…",
     "submit_plan" => "Validating and creating meal plan…"
   }
 

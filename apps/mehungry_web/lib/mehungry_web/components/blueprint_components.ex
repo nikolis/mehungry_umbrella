@@ -51,7 +51,7 @@ defmodule MehungryWeb.BlueprintComponents do
             {@blueprint.condition.name}
           </span>
           <span class="text-[11px] px-2 py-0.5 rounded-full bg-ink-panel2 text-parchment-dim">
-            7 days · 5 meals/day
+            Typical day · 5 meals
           </span>
           <span
             :if={(@blueprint.plans_count || 0) > 0}

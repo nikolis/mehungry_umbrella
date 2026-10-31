@@ -436,6 +436,28 @@ defmodule Mehungry.History do
   end
 
   @doc """
+  A blank `UserMeal` with its form associations preloaded to empty lists, so the
+  meal-create form (`CalendarLive.Index` `:new`) renders association fields
+  instead of `Ecto.Association.NotLoaded`. Keeps that preload shape in the context
+  alongside `get_user_meal!/1` rather than in the web layer.
+  """
+  def blank_user_meal do
+    struct(UserMeal)
+    |> Repo.preload(
+      recipe_user_meals: [
+        recipe: [
+          recipe_ingredients: [
+            :measurement_unit,
+            :ingredient_portion,
+            ingredient: [:category, :ingredient_translation]
+          ]
+        ]
+      ],
+      ingredient_user_meals: [:ingredient, :measurement_unit]
+    )
+  end
+
+  @doc """
   Gets a single user_meal owned by `user_id`.
 
   Scopes the lookup by owner so a meal id belonging to another user raises

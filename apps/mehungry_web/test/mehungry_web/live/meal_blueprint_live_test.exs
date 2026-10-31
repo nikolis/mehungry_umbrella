@@ -259,7 +259,7 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
     assert Enum.all?(client_meals, &(&1.blueprint_plan_id == plan.id))
   end
 
-  test "creating from the new modal redirects to the editor with 7 days x 5 meals", %{conn: conn} do
+  test "creating from the new modal redirects to the editor", %{conn: conn} do
     {:ok, live, _html} = live(conn, ~p"/nutritionist/blueprints/new")
 
     render_submit(element(live, "#new-blueprint-modal form"), %{
@@ -270,16 +270,17 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
     assert path =~ ~r{/blueprints/\d+/edit}
   end
 
-  test "editor renders all 7 days and 5 meal labels", %{conn: conn, user: user} do
+  test "editor renders a single typical day and 5 meal labels", %{conn: conn, user: user} do
     bp = seed_blueprint(user)
 
     {:ok, _live, html} = live(conn, ~p"/nutritionist/blueprints/#{bp.id}/edit")
 
-    for day <- 1..7, do: assert(html =~ "Day #{day}")
+    assert html =~ "Typical day"
+    refute html =~ "Day 2"
     for mt <- MealType.values(), do: assert(html =~ MealType.label(mt))
   end
 
-  test "editing a meal macro and blueprint-level targets and saving persists them", %{
+  test "editing the day macro split and blueprint-level targets and saving persists them", %{
     conn: conn,
     user: user
   } do
@@ -288,6 +289,7 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
 
     loaded = MealBlueprints.get_blueprint!(user.id, bp.id)
 
+    # The editor binds the day macro split to the first meal slot (breakfast).
     params =
       loaded
       |> build_params(fn di, _mi, meal ->
@@ -309,10 +311,14 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
 
     reloaded = MealBlueprints.get_blueprint!(user.id, bp.id)
 
-    breakfast =
-      reloaded.days |> hd() |> Map.fetch!(:meals) |> Enum.find(&(&1.meal_type == "breakfast"))
+    meals = reloaded.days |> hd() |> Map.fetch!(:meals)
+    breakfast = Enum.find(meals, &(&1.meal_type == "breakfast"))
+    lunch = Enum.find(meals, &(&1.meal_type == "lunch"))
 
     assert breakfast.protein_pct == 25
+    # The split is per-day: every slot (not just breakfast) gets it.
+    assert lunch.protein_pct == 25
+    assert lunch.carbs_pct == 45
     assert reloaded.preferred_foods == ["nuts", "dairy"]
     assert reloaded.avoid_foods == ["onion", "garlic"]
     assert reloaded.required_nutrients == ["Vitamin C", "Vitamin B12"]
@@ -437,42 +443,41 @@ defmodule MehungryWeb.MealBlueprintLiveTest do
     assert reloaded.required_nutrients == ["Iron"]
   end
 
-  test "copy this meal across the week propagates targets", %{conn: conn, user: user} do
+  test "the single authored typical day fans out across all 7 stored days on save", %{
+    conn: conn,
+    user: user
+  } do
     bp = seed_blueprint(user)
     {:ok, live, _html} = live(conn, ~p"/nutritionist/blueprints/#{bp.id}/edit")
 
-    # Enter a breakfast protein target on day 1 via change, then copy across week.
+    # The editor renders only the first day; mirror that by submitting meals for
+    # day 0 only (days 1-6 post just their hidden id, like the real form).
     loaded = MealBlueprints.get_blueprint!(user.id, bp.id)
 
     params =
-      build_params(loaded, fn di, _mi, meal ->
-        if di == 0 and meal["meal_type"] == "breakfast" do
-          Map.merge(meal, %{"protein_pct" => "40", "carbs_pct" => "35", "fats_pct" => "25"})
-        else
-          meal
-        end
-      end)
+      build_params(
+        loaded,
+        fn _di, _mi, meal ->
+          if meal["meal_type"] == "breakfast" do
+            Map.merge(meal, %{"protein_pct" => "40", "carbs_pct" => "35", "fats_pct" => "25"})
+          else
+            meal
+          end
+        end,
+        fn di, day -> if di == 0, do: day, else: Map.delete(day, "meals") end
+      )
 
-    render_change(element(live, "form"), %{"blueprint" => params})
+    render_submit(element(live, "form"), %{"blueprint" => params})
+    assert_redirect(live, ~p"/nutritionist/blueprints")
 
-    live
-    |> element(
-      "button[phx-click='copy_meal_across_week'][phx-value-day_index='1'][phx-value-meal_type='breakfast']"
-    )
-    |> render_click()
-
-    # Save the whole form as re-rendered, then assert every day's breakfast got 40.
-    html = render(live)
-    assert html =~ "value=\"40\""
-
-    # Persist by submitting the current form and verifying all breakfasts.
-    render_submit(element(live, "form"))
     reloaded = MealBlueprints.get_blueprint!(user.id, bp.id)
 
     breakfasts =
       reloaded.days
       |> Enum.map(fn d -> Enum.find(d.meals, &(&1.meal_type == "breakfast")) end)
 
+    # Every stored day received the typical day's breakfast macro.
+    assert length(reloaded.days) == 7
     assert Enum.all?(breakfasts, &(&1.protein_pct == 40))
   end
 

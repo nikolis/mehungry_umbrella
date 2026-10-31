@@ -75,7 +75,17 @@ defmodule Mehungry.Meta.SessionAggregator do
   def handle_info(_msg, state), do: {:noreply, state}
 
   defp record(start_utc, duration) do
-    Meta.record_session(start_utc, duration)
+    # Test seam: the suite runs non-async LiveView tests in Ecto's `{:shared,
+    # self()}` sandbox mode, so a tracked LiveView dying mid-suite would have
+    # this global GenServer write a stray row into whichever *unrelated* test
+    # currently owns the shared connection (flaky pollution). Default-off in
+    # `config/test.exs`; the two tests that exercise the aggregator end-to-end
+    # flip it back on for themselves.
+    if Application.get_env(:mehungry, :session_metrics_recording, true) do
+      Meta.record_session(start_utc, duration)
+    else
+      :ok
+    end
   rescue
     error ->
       # Analytics must never take down the supervisor; log and drop.

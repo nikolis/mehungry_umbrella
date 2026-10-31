@@ -3,7 +3,7 @@ defmodule Mehungry.Repo.Migrations.CreateSpeciesCompoundRelationshipStudies do
 
   # Frozen PubMed provenance for a promoted SpeciesCompoundRelationship fact: the
   # co-occurrence reference studies copied off the backing candidate at promotion.
-  # Never rewritten by re-derivation. See docs/science/scientific_pipeline.md.
+  # Never rewritten by re-derivation. See docs/implementation/science/scientific_pipeline.md.
   def change do
     create table(:species_compound_relationship_studies) do
       add :relationship_id,

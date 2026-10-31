@@ -13,7 +13,7 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
   import MehungryWeb.ShoppingBasketLive.Components
 
   @impl true
-  def mount(_params, session, socket) do
+  def mount(params, session, socket) do
     measurement_units =
       Mehungry.Food.list_measurement_units()
 
@@ -23,7 +23,10 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
 
     shopping_baskets = Inventory.list_shopping_baskets_for_user(user.id)
     shopping_baskets = Enum.sort_by(shopping_baskets, fn x -> x.updated_at end, :desc)
-    shopping_basket = List.first(shopping_baskets)
+    # Deep-link support (?basket_id=): open the requested basket if the user owns
+    # it (e.g. arriving from the calendar's "Shopping list" button); otherwise
+    # fall back to the most-recently-updated one.
+    shopping_basket = select_initial_basket(shopping_baskets, params["basket_id"])
     shopping_basket = get_shopping_basket(shopping_basket, user)
     changeset = Inventory.change_shopping_basket(shopping_basket, %{})
 
@@ -254,6 +257,17 @@ defmodule MehungryWeb.ShoppingBasketLive.Index do
       end
     end) || 0
   end
+
+  # Picks the basket to open on mount: the `?basket_id=` one when the user owns
+  # it, else the most-recently-updated (list is already sorted desc).
+  defp select_initial_basket(baskets, id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int_id, _} -> Enum.find(baskets, List.first(baskets), &(&1.id == int_id))
+      :error -> List.first(baskets)
+    end
+  end
+
+  defp select_initial_basket(baskets, _id), do: List.first(baskets)
 
   defp get_shopping_basket(shopping_basket, user) do
     case shopping_basket do

@@ -206,6 +206,17 @@ select {
   position: relative;
 }
 
+/* Field validation error. Floats below-right of the input on desktop so it
+   doesn't take layout space; on narrow screens it flows in normal document
+   order instead — otherwise a long, wrapping message anchored to the bottom
+   of a short field grows upward and covers the input (can't tap/edit it). */
+.input-error {
+  position: absolute;
+  bottom: -0.4rem;
+  right: 0.5rem;
+  max-width: 100%;
+}
+
 
 #my_modal-content{
 	margin-inline: auto;
@@ -283,13 +294,17 @@ span.flatpickr-weekday {
 	background: #211D16;
 }
 
-/* Individual day cells */
+/* Individual day cells.
+   `max-width` MUST stay >= flatpickr's base 39px: the day grid (.dayContainer)
+   is a fixed 307.875px row and cells wrap at `flex-basis` clamped by max-width.
+   At 36px, 8 cells (288px) fit per row instead of 7, so every date slides out
+   from under its weekday header (e.g. a Tuesday renders under "Fri"). */
 .flatpickr-day {
 	color: #F4EEDD;
 	border-radius: 8px;
 	height: 36px;
 	line-height: 36px;
-	max-width: 36px;
+	max-width: 39px;
 }
 .flatpickr-day:hover,
 .flatpickr-day:focus,
@@ -408,6 +423,14 @@ span.flatpickr-weekday {
 @media only screen and (max-width: 760px) {
 	.input-form{
 		font-size:  calc(1vw + 0.7vh );
+	}
+	.input-error {
+		position: static;
+		bottom: auto;
+		right: auto;
+		text-align: left;
+		line-height: 1.2;
+		margin-top: 0.15rem;
 	}
 	.fields-row-container3{
 		gap: 0;

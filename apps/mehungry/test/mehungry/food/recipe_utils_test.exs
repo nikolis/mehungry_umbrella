@@ -2,7 +2,7 @@ defmodule Mehungry.Food.RecipeUtilsTest do
   @moduledoc """
   Coverage for the surviving display helper in `Mehungry.Food.RecipeUtils` (the
   calc/aggregation code moved to `NutrientCalculation` / `NutrientUtils`). See
-  `docs/food/nutrition_calculation.md`.
+  `docs/implementation/food/nutrition_calculation.md`.
   """
   use ExUnit.Case, async: true
 

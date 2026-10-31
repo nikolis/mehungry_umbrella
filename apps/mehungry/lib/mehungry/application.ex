@@ -42,6 +42,10 @@ defmodule Mehungry.Application do
         id: :ingredient_details_cache,
         start: {Cachex, :start_link, [:ingredient_details_cache, [limit: 500]]}
       },
+      # Read-through cache for small, user-independent reference reads queried on
+      # every LiveView mount (measurement units, categories, food-restriction
+      # types, linked compounds). See Mehungry.ReferenceCache; TTL + write-invalidated.
+      %{id: :reference_cache, start: {Cachex, :start_link, [:reference_cache, [limit: 100]]}},
       {Task.Supervisor, name: Mehungry.TaskSupervisor},
       Mehungry.Meta.SessionAggregator
     ]

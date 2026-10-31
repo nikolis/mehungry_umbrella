@@ -1,0 +1,12 @@
+{
+  "skip_files": [
+    "test/",
+    "apps/mehungry/test/",
+    "apps/mehungry_web/test/",
+    "deps/"
+  ],
+  "coverage_options": {
+    "treat_no_relevant_lines_as_covered": true,
+    "output_dir": "cover/"
+  }
+}

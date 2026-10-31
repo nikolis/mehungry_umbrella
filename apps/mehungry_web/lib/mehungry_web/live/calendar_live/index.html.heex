@@ -44,6 +44,22 @@
       </button>
       <button
         type="button"
+        id="create-week-basket"
+        phx-click="create_week_basket"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-ink-panel2 text-parchment-dim hover:text-parchment hover:border-basil/40 text-xs font-medium transition-colors"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 1.5M17 13l1.5 1.5M9 21h6M12 21v-8"
+          />
+        </svg>
+        {gettext("Shopping list")}
+      </button>
+      <button
+        type="button"
         id="clear-week"
         phx-click="clear_week_meals"
         data-confirm={gettext("Delete every meal from the week you're viewing? This can't be undone.")}

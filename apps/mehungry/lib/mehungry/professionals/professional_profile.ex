@@ -9,6 +9,10 @@ defmodule Mehungry.Professionals.ProfessionalProfile do
     # Identity / public
     field :display_name, :string
     field :slug, :string
+    # Short, user-chosen vanity handle powering the personal short link
+    # `/@handle` (see `docs/features/professionals/personal_handle.md`). Distinct
+    # from `slug`, which stays the stable, SEO-indexed canonical URL key.
+    field :handle, :string
     field :photo_url, :string
     field :is_public, :boolean, default: false
 
@@ -44,11 +48,27 @@ defmodule Mehungry.Professionals.ProfessionalProfile do
     timestamps()
   end
 
+  # Handles that must never be claimed, because `/@<handle>` is served by a
+  # lowest-priority single-segment catch-all: a handle equal to a real
+  # top-level route name (or a locale code) would be confusing even though the
+  # router still resolves the real route first. Keep in sync with the
+  # single-segment routes in `MehungryWeb.Router`.
+  @reserved_handles ~w(
+    admin api auth professional nutritionist nutritionists foods browse home
+    profile welcome search basket calendar upgrade trial messages friends
+    notifications privacy_policy terms legal cookies conditions health sitemap
+    meal-plans meal_plans blueprints dashboard oban metrics beam_scope dev
+    webhooks test-accounts en el
+  )
+
+  @handle_format ~r/^[a-z0-9_]{3,30}$/
+
   @editable_fields [
     :user_id,
     :specialization,
     :bio,
     :display_name,
+    :handle,
     :photo_url,
     :is_public,
     :education,
@@ -81,10 +101,42 @@ defmodule Mehungry.Professionals.ProfessionalProfile do
     |> validate_format(:contact_email, ~r/^[^\s]+@[^\s]+$/, message: "must be a valid email")
     |> put_consultation_fee_cents()
     |> maybe_put_slug()
+    |> normalize_handle()
+    |> validate_handle()
     |> validate_public_completeness()
     |> unique_constraint(:user_id)
     |> unique_constraint(:slug)
+    |> unique_constraint(:handle)
     |> foreign_key_constraint(:user_id)
+  end
+
+  # Normalize the vanity handle before validating: trim + downcase, and treat a
+  # blank handle as "cleared" (nil) so a user can remove their short link.
+  defp normalize_handle(changeset) do
+    case fetch_change(changeset, :handle) do
+      {:ok, handle} when is_binary(handle) ->
+        case handle |> String.trim() |> String.downcase() do
+          "" -> put_change(changeset, :handle, nil)
+          normalized -> put_change(changeset, :handle, normalized)
+        end
+
+      _ ->
+        changeset
+    end
+  end
+
+  defp validate_handle(changeset) do
+    case get_field(changeset, :handle) do
+      nil ->
+        changeset
+
+      _handle ->
+        changeset
+        |> validate_format(:handle, @handle_format,
+          message: "may only use 3–30 lowercase letters, numbers or underscores"
+        )
+        |> validate_exclusion(:handle, @reserved_handles, message: "is reserved")
+    end
   end
 
   # The form displays/edits the fee in euros, so seed the virtual field from the

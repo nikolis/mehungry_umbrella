@@ -2,22 +2,29 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
   @moduledoc """
   Full-page editor for one blueprint.
 
+  A blueprint is a **single typical day** — a generic daily ration. The editor
+  therefore authors only one day; on submit that day is fanned out across the 7
+  identical `BlueprintDay` rows the generation/calendar pipeline still expects
+  (`fan_out_days/2`).
+
   Three levels of targets:
 
   * **Blueprint** — an optional disease/`Health.Condition` (native select). Picking
-    one auto-suggests that condition's recommended bioactive compounds into every
-    day's compound picker (`Health` links conditions to compounds only, so
-    nutrients stay manual).
-  * **Day** — the "general" targets: required nutrients and required compounds,
-    each a searchable chip multi-select sourced from the DB (persisted as name
-    arrays), plus free-text preferred foods and the per-day calorie aim.
-  * **Meal** — a macro percentage split (protein / carbs / fats, always totalling
-    100 %) + a note.
+    one auto-suggests that condition's recommended bioactive compounds into the
+    compound picker (`Health` links conditions to compounds only, so nutrients
+    stay manual) — plus required nutrients and required compounds, each a
+    searchable chip multi-select sourced from the DB (persisted as name arrays),
+    and free-text preferred/avoid foods.
+  * **Day** — the typical day's calorie aim and a single macro percentage split
+    (protein / carbs / fats, always totalling 100 %) shared by every meal slot.
+    Authored once (bound to the first meal's macro fields) and fanned out onto
+    every meal of every stored day by `fan_out_days/2` on save.
+  * **Meal** — a per-slot note (the only genuinely per-meal field), one row per
+    calendar meal slot.
 
   The two chip pickers are managed as server events (`add_tag` / `remove_tag` /
-  `search_tag`) on the working changeset — the same apply-changes-then-rebuild
-  pattern the copy shortcuts use — and each renders hidden `name[...][]` inputs so
-  the selections survive form submit.
+  `search_tag`) on the working changeset — an apply-changes-then-rebuild pattern —
+  and each renders hidden `name[...][]` inputs so the selections survive form submit.
   """
   use MehungryWeb, :live_view
 
@@ -177,53 +184,37 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
             </div>
           </div>
 
+          <%!-- A blueprint is a single *typical day* — a generic daily ration. We
+                author only the first day here; on save it is fanned out across the
+                7 identical days the generation/calendar pipeline still expects
+                (`fan_out_days/2`). --%>
           <.inputs_for :let={df} field={@form[:days]}>
-            <details
-              class="bg-ink-panel rounded-xl border border-ink-panel2 mb-3"
-              open={df.index == 0}
+            <div
+              :if={df.index == 0}
+              class="bg-ink-panel rounded-xl border border-ink-panel2 mb-3 px-4 py-4 space-y-4"
             >
-              <summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between">
-                <span class="font-semibold text-parchment">Day {day_index(df)}</span>
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-parchment">Typical day</span>
                 <span class="text-parchment-dim text-xs">5 meals</span>
-              </summary>
+              </div>
 
-              <div class="px-4 pb-4 space-y-4">
-                <input type="hidden" name={df[:day_index].name} value={df[:day_index].value} />
+              <input type="hidden" name={df[:day_index].name} value={df[:day_index].value} />
 
-                <div class="flex items-end gap-3">
-                  <.input
-                    field={df[:total_calorie_target]}
-                    type="number"
-                    label="Total calorie aim (day)"
-                    min="0"
-                  />
-                  <button
-                    type="button"
-                    phx-click="copy_day_to_all"
-                    phx-value-day_index={day_index(df)}
-                    class="mb-2 px-3 py-1.5 rounded-lg text-xs bg-ink-panel2 text-parchment-dim hover:text-parchment transition"
-                  >
-                    Copy this day to all days
-                  </button>
-                </div>
+              <.input
+                field={df[:total_calorie_target]}
+                type="number"
+                label="Total calorie aim (day)"
+                min="0"
+              />
 
+              <%!-- One macro split for the whole day (protein/carbs/fats as % of
+                    the day's energy, always totalling 100). Bound to the first
+                    meal's macro fields; `fan_out_days/2` copies it onto every meal
+                    slot of every stored day on save. --%>
+              <div class="rounded-lg border border-ink-panel2 p-3">
+                <label class="block text-sm text-parchment-dim mb-2">Daily macro split</label>
                 <.inputs_for :let={mf} field={df[:meals]}>
-                  <div class="rounded-lg border border-ink-panel2 p-3">
-                    <input type="hidden" name={mf[:meal_type].name} value={mf[:meal_type].value} />
-
-                    <div class="flex items-center justify-between mb-3">
-                      <h3 class="font-semibold text-basil">{MealType.label(mf[:meal_type].value)}</h3>
-                      <button
-                        type="button"
-                        phx-click="copy_meal_across_week"
-                        phx-value-day_index={day_index(df)}
-                        phx-value-meal_type={mf[:meal_type].value}
-                        class="px-2 py-1 rounded text-xs text-parchment-dim hover:text-parchment transition"
-                      >
-                        Copy to every day
-                      </button>
-                    </div>
-
+                  <div :if={mf.index == 0}>
                     <div class="grid grid-cols-3 gap-2">
                       <.input
                         field={mf[:protein_pct]}
@@ -258,21 +249,28 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
                       Total: {macro_total(mf)}%
                       <span :if={macro_total(mf) != 100}>(must be 100%)</span>
                     </p>
-
-                    <div class="mt-2">
-                      <label class="block text-sm text-parchment-dim mb-1">Note</label>
-                      <input
-                        type="text"
-                        name={mf[:note].name}
-                        value={mf[:note].value}
-                        phx-debounce="blur"
-                        class="w-full rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
-                      />
-                    </div>
                   </div>
                 </.inputs_for>
               </div>
-            </details>
+
+              <%!-- Per-slot notes (the one genuinely per-meal field). --%>
+              <.inputs_for :let={mf} field={df[:meals]}>
+                <div class="flex items-center gap-3">
+                  <input type="hidden" name={mf[:meal_type].name} value={mf[:meal_type].value} />
+                  <h3 class="font-semibold text-basil w-32 shrink-0">
+                    {MealType.label(mf[:meal_type].value)}
+                  </h3>
+                  <input
+                    type="text"
+                    name={mf[:note].name}
+                    value={mf[:note].value}
+                    phx-debounce="blur"
+                    placeholder="Note (optional)"
+                    class="flex-1 rounded-lg bg-ink border border-ink-panel2 text-parchment text-sm px-3 py-2"
+                  />
+                </div>
+              </.inputs_for>
+            </div>
           </.inputs_for>
 
           <div class="sticky bottom-0 bg-ink/90 backdrop-blur py-3 flex justify-end gap-2">
@@ -421,8 +419,6 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
     end)
   end
 
-  defp day_index(df), do: df[:day_index].value
-
   # Live sum of a meal's three macro percentages (for the "Total: X%" hint).
   defp macro_total(mf) do
     [:protein_pct, :carbs_pct, :fats_pct]
@@ -543,7 +539,7 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
 
     changeset =
       socket.assigns.blueprint
-      |> MealBlueprints.change_blueprint(normalize_params(params))
+      |> MealBlueprints.change_blueprint(normalize_params(params, socket.assigns.blueprint))
       |> Map.put(:action, :validate)
 
     changeset = maybe_suggest_compounds(changeset, new_condition_id, socket.assigns.condition_id)
@@ -556,7 +552,9 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
 
   @impl true
   def handle_event("save", %{"blueprint" => params}, socket) do
-    case MealBlueprints.update_blueprint(socket.assigns.blueprint, normalize_params(params)) do
+    params = normalize_params(params, socket.assigns.blueprint)
+
+    case MealBlueprints.update_blueprint(socket.assigns.blueprint, params) do
       {:ok, _blueprint} ->
         {:noreply,
          socket
@@ -626,27 +624,6 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
   @impl true
   def handle_event("close_search", _params, socket) do
     {:noreply, assign(socket, :active_search, nil)}
-  end
-
-  @impl true
-  def handle_event("copy_day_to_all", %{"day_index" => di}, socket) do
-    di = String.to_integer(di)
-    data = current_data(socket)
-    source = Enum.find(data.days, &(&1.day_index == di))
-    days = Enum.map(data.days, &copy_day_from_source(&1, di, source))
-
-    {:noreply, assign_data(socket, %{data | days: days})}
-  end
-
-  @impl true
-  def handle_event("copy_meal_across_week", %{"day_index" => di, "meal_type" => mt}, socket) do
-    di = String.to_integer(di)
-    data = current_data(socket)
-    source_day = Enum.find(data.days, &(&1.day_index == di))
-    source_meal = Enum.find(source_day.meals, &(&1.meal_type == mt))
-    days = Enum.map(data.days, &copy_slot_from_source(&1, mt, source_meal))
-
-    {:noreply, assign_data(socket, %{data | days: days})}
   end
 
   # ── search helpers ────────────────────────────────────────────────────────
@@ -792,53 +769,77 @@ defmodule MehungryWeb.MealBlueprintLive.Editor do
     if truncated == f, do: truncated, else: f
   end
 
-  defp copy_day_from_source(day, source_index, source) do
-    if day.day_index == source_index, do: day, else: copy_day_targets(day, source)
-  end
-
-  # Overwrite the given `meal_type` slot on this day with the source meal's macros.
-  defp copy_slot_from_source(day, meal_type, source_meal) do
-    meals =
-      Enum.map(day.meals, fn meal ->
-        if meal.meal_type == meal_type, do: merge_meal_targets(meal, source_meal), else: meal
-      end)
-
-    %{day | meals: meals}
-  end
-
-  defp copy_day_targets(day, source) do
-    by_type = Map.new(source.meals, &{&1.meal_type, &1})
-
-    meals =
-      Enum.map(day.meals, fn meal ->
-        case Map.get(by_type, meal.meal_type) do
-          nil -> meal
-          src -> merge_meal_targets(meal, src)
-        end
-      end)
-
-    %{day | total_calorie_target: source.total_calorie_target, meals: meals}
-  end
-
-  defp merge_meal_targets(meal, source) do
-    %{
-      meal
-      | protein_pct: source.protein_pct,
-        carbs_pct: source.carbs_pct,
-        fats_pct: source.fats_pct,
-        note: source.note
-    }
-  end
-
   # ── params ────────────────────────────────────────────────────────────────
 
   # Split the free-text (blueprint-level) preferred_foods / avoid_foods fields into
   # arrays; the chip pickers already arrive as arrays via their hidden `[]` inputs.
-  defp normalize_params(params) do
+  # Then fan the single authored "typical day" out across all 7 stored days.
+  defp normalize_params(params, blueprint) do
     params
     |> split_csv_field("preferred_foods")
     |> split_csv_field("avoid_foods")
+    |> fan_out_days(blueprint)
   end
+
+  # The editor renders only the first day — a generic daily ration with a single
+  # day-level macro split and per-slot notes. On submit, replicate that one day's
+  # calorie aim + macro split + notes across every stored `BlueprintDay`, so the
+  # 7×5 shape the generation/calendar pipeline still relies on stays consistent
+  # (and `Blueprint.validate_day_count/1` passes). Each day/meal keeps its existing
+  # primary key (sourced from the loaded blueprint) so `cast_assoc` updates the
+  # rows in place rather than deleting + re-inserting.
+  defp fan_out_days(%{"days" => days} = params, blueprint)
+       when is_map(days) and map_size(days) > 0 do
+    # The editor renders only the first day form, so the authored day arrives at
+    # param key "0"; fall back to any entry carrying meals.
+    typical =
+      Map.get(days, "0") ||
+        Enum.find(Map.values(days), &Map.has_key?(&1, "meals")) ||
+        days |> Map.values() |> List.first()
+
+    typical_meals = Map.values(typical["meals"] || %{})
+
+    # The macro split is authored once for the day (bound to the first meal), so
+    # take it from whichever submitted meal carries the macro fields and apply it
+    # to every slot. Notes stay per-slot.
+    split =
+      case Enum.find(typical_meals, &Map.has_key?(&1, "protein_pct")) do
+        nil -> %{}
+        meal -> Map.take(meal, ["protein_pct", "carbs_pct", "fats_pct"])
+      end
+
+    notes_by_type = Map.new(typical_meals, fn meal -> {meal["meal_type"], Map.get(meal, "note")} end)
+
+    fanned =
+      blueprint.days
+      |> Enum.with_index()
+      |> Map.new(fn {day, i} ->
+        meals =
+          day.meals
+          |> Enum.with_index()
+          |> Map.new(fn {meal, j} ->
+            meal_params =
+              split
+              |> Map.put("id", meal.id)
+              |> Map.put("meal_type", meal.meal_type)
+              |> Map.put("note", Map.get(notes_by_type, meal.meal_type))
+
+            {to_string(j), meal_params}
+          end)
+
+        {to_string(i),
+         %{
+           "id" => day.id,
+           "day_index" => day.day_index,
+           "total_calorie_target" => typical["total_calorie_target"],
+           "meals" => meals
+         }}
+      end)
+
+    Map.put(params, "days", fanned)
+  end
+
+  defp fan_out_days(params, _blueprint), do: params
 
   defp split_csv_field(params, field) do
     case Map.get(params, field) do

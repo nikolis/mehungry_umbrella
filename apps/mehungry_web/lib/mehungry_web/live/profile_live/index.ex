@@ -38,6 +38,7 @@ defmodule MehungryWeb.ProfileLive.Index do
      |> assign(:user_ingredients, [])
      |> assign(:friends_ingredients, [])
      |> assign(:user_meal_plans, [])
+     |> assign(:nutritionist_assignment, nil)
      |> assign(:current_user, current_user)
      |> assign(:user, nil)
      |> assign(:must_be_loged_in, nil)
@@ -114,18 +115,19 @@ defmodule MehungryWeb.ProfileLive.Index do
           ~p"/profile?#{[tab: to_string(socket.assigns.content_state)]}"
         end
 
-      {current_user_profile, current_user_follows, current_user_recipes} =
-        Accounts.get_user_essentials(socket.assigns.current_user)
-
+      # `current_user_{profile,follows,recipes}` are already assigned for this
+      # lifecycle in mount/3, so we reuse them instead of re-running
+      # get_user_essentials/1. This also fixes a latent bug: the old reload
+      # re-assigned the **raw %Follow{} structs** to `current_user_follows`, but
+      # the shared follow hook (LiveHelpers.toggle_user_follow / save_user_follow)
+      # compares that list against integer follow-ids — mount maps it to ids, so
+      # re-assigning raw structs here silently broke the recipe modal's follow
+      # button. Reusing mount's id list keeps it correct.
       socket
       |> assign(:nutrients, recipe.nutrients)
       |> assign(:primary_size, recipe.primary_nutrients_size)
       |> assign(:page_title, recipe.title <> " from " <> recipe.user.email)
       |> assign(:recipe, recipe)
-      |> assign(:current_user_follows, current_user_follows)
-      # |> assign(:user_recipes, user_recipes)
-      |> assign(:current_user_recipes, current_user_recipes)
-      |> assign(:current_user_profile, current_user_profile)
       |> assign(:cancel_path, cancel_path)
     else
       socket |> put_flash(:error, "Recipe not found") |> push_navigate(to: "/home")
@@ -266,6 +268,17 @@ defmodule MehungryWeb.ProfileLive.Index do
           []
       end
 
+    # Only the Connections panel renders the nutritionist card, so fetch the
+    # client's assignment just for that tab (nil elsewhere).
+    nutritionist_assignment =
+      case {content_state, is_nil(current_user)} do
+        {:connected_accounts, false} ->
+          Professionals.get_assignment_for_client(current_user.id)
+
+        _ ->
+          nil
+      end
+
     # Tab badges must show real totals even for tabs whose lists aren't loaded
     # (only the active tab's list is fetched above). Cheap COUNT queries, always.
     socket
@@ -275,6 +288,7 @@ defmodule MehungryWeb.ProfileLive.Index do
     |> assign(:user_ingredients, user_ingredients)
     |> assign(:friends_ingredients, friends_ingredients)
     |> assign(:user_meal_plans, user_meal_plans)
+    |> assign(:nutritionist_assignment, nutritionist_assignment)
     |> assign(:created_count, Food.count_user_created_recipes(current_user.id) || 0)
     |> assign(:saved_count, Accounts.count_user_saved_recipes(current_user.id) || 0)
     |> assign(:meal_plans_count, PublishedPlans.count_plans_for_user(current_user.id))
@@ -418,6 +432,26 @@ defmodule MehungryWeb.ProfileLive.Index do
     end
   end
 
+  # Owner-only: re-queue AI cover-image generation for a single recipe, forcing
+  # the *alternative* provider (not the configured default) so a bad cover can be
+  # re-rolled on the other model. Gated on the owner email like the bulk action.
+  def handle_event("regenerate_recipe_image", %{"id" => id}, socket) do
+    user = socket.assigns.current_user
+
+    if user && user.email == "nikolisgal@gmail.com" do
+      provider = Mehungry.Settings.alternate_image_provider()
+
+      %{recipe_id: String.to_integer(id), force: true, provider: Atom.to_string(provider)}
+      |> Mehungry.RecipeImageWorker.new()
+      |> Oban.insert()
+
+      {:noreply,
+       put_flash(socket, :info, "Queued image regeneration via #{provider}.")}
+    else
+      {:noreply, put_flash(socket, :error, "Not allowed.")}
+    end
+  end
+
   def handle_event("edit-recipe", %{"id" => id}, socket) do
     {:noreply,
      socket
@@ -474,6 +508,22 @@ defmodule MehungryWeb.ProfileLive.Index do
     end
   end
 
+  def handle_event("unlink_nutritionist", _params, socket) do
+    case Professionals.unassign_nutritionist(socket.assigns.current_user.id) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(:nutritionist_assignment, nil)
+         |> put_flash(:info, "Nutritionist removed.")}
+
+      {:error, :not_found} ->
+        {:noreply, put_flash(socket, :error, "You don't have a nutritionist linked.")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not remove nutritionist.")}
+    end
+  end
+
   def handle_event("disconnect_social", %{"provider" => provider}, socket) do
     user = socket.assigns.current_user
     token_key = "#{provider}_token"
@@ -507,6 +557,9 @@ defmodule MehungryWeb.ProfileLive.Index do
           type={if @live_action == :show, do: "browse", else: "created"}
           return_to="profile"
           user_recipes={@user_recipes}
+          allow_image_regen={
+            @live_action == :index && @current_user && @current_user.email == "nikolisgal@gmail.com"
+          }
           path_to_details={"/profile/show_recipe/#{recipe.id}"}
           id={"recipe" <> Integer.to_string(recipe.id)}
         />
@@ -714,19 +767,44 @@ defmodule MehungryWeb.ProfileLive.Index do
       not is_nil(assigns.current_user) and
         map_size(Map.get(assigns.current_user, :pinterest_token, %{})) > 0
 
-    instagram_connected =
-      not is_nil(assigns.current_user) and
-        map_size(Map.get(assigns.current_user, :instagram_token, %{})) > 0
-
     assigns =
       assigns
       |> assign(:facebook_connected, facebook_connected)
       |> assign(:facebook_is_primary_login, facebook_is_primary_login)
       |> assign(:pinterest_connected, pinterest_connected)
-      |> assign(:instagram_connected, instagram_connected)
 
     ~H"""
     <div class="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4 mb-10">
+      <%= if @nutritionist_assignment do %>
+        <% professional = @nutritionist_assignment.professional %>
+        <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4 min-w-0">
+            <%= if professional.profile_pic do %>
+              <img
+                src={professional.profile_pic}
+                class="w-12 h-12 rounded-full object-cover flex-shrink-0"
+              />
+            <% else %>
+              <div class="w-12 h-12 rounded-full bg-basil flex items-center justify-center text-ink font-bold flex-shrink-0">
+                {String.first(professional.name || professional.email || "?")}
+              </div>
+            <% end %>
+            <div class="min-w-0">
+              <p class="text-parchment font-semibold truncate">
+                {professional.name || professional.email}
+              </p>
+              <p class="text-parchment-dim text-sm">Your nutritionist</p>
+            </div>
+          </div>
+          <button
+            phx-click="unlink_nutritionist"
+            data-confirm="Remove your nutritionist? They will no longer be linked to your account. You can be re-invited later."
+            class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-ink-panel text-parchment-dim text-xs font-medium transition"
+          >
+            Remove
+          </button>
+        </div>
+      <% end %>
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 flex items-center justify-between gap-4">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
@@ -817,51 +895,6 @@ defmodule MehungryWeb.ProfileLive.Index do
           <a
             href="/auth/pinterest"
             class="flex-shrink-0 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition"
-          >
-            Connect
-          </a>
-        <% end %>
-      </div>
-
-      <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 flex items-center justify-between gap-4">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center flex-shrink-0">
-            <img src="/images/instagram-svgrepo-com.svg" class="w-6 h-6 brightness-0 invert" />
-          </div>
-          <div>
-            <p class="text-parchment font-semibold">Instagram</p>
-            <p class="text-parchment-dim text-sm">
-              {if @instagram_connected,
-                do: "Connected — you can post recipes to your Instagram account",
-                else: "Connect your account to post recipes to Instagram"}
-            </p>
-          </div>
-        </div>
-        <%= if @instagram_connected do %>
-          <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
-            <span class="flex items-center gap-1.5 text-green-400 text-sm font-medium">
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fill-rule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              Connected
-            </span>
-            <button
-              phx-click="disconnect_social"
-              phx-value-provider="instagram"
-              data-confirm="Disconnect your Instagram account?"
-              class="px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-ink-panel text-parchment-dim text-xs font-medium transition"
-            >
-              Disconnect
-            </button>
-          </div>
-        <% else %>
-          <a
-            href="/auth/instagram"
-            class="flex-shrink-0 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-sm font-medium transition"
           >
             Connect
           </a>

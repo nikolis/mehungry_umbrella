@@ -61,6 +61,21 @@ defmodule Mehungry.Settings do
     end
   end
 
+  @doc """
+  The provider that is **not** the active one (`:openai` ↔ `:flux`).
+
+  Used by the owner per-recipe "regenerate image" action, which deliberately
+  renders with the alternative backend rather than the configured default so a
+  disappointing cover can be re-rolled on the other model.
+  """
+  @spec alternate_image_provider() :: :openai | :flux
+  def alternate_image_provider do
+    case image_provider() do
+      :flux -> :openai
+      _ -> :flux
+    end
+  end
+
   @doc "Persists the recipe-image provider override. Accepts `:openai`/`:flux` or their strings."
   @spec put_image_provider(atom() | String.t()) ::
           {:ok, AppSetting.t()} | {:error, Ecto.Changeset.t() | :invalid_provider}

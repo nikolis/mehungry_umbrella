@@ -32,7 +32,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
           <div>
             <h1 class="text-2xl font-display font-medium text-parchment">Meal Blueprints</h1>
             <p class="text-parchment-dim text-sm mt-1">
-              Reusable 7-day nutritional targets you can plan against.
+              Reusable typical-day nutritional targets you can plan against.
             </p>
           </div>
           <div class="flex items-center gap-2">
@@ -80,7 +80,7 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
                 <div :if={bp.description} class="text-parchment-dim text-sm truncate">
                   {bp.description}
                 </div>
-                <div class="text-parchment-dim text-xs mt-1">7 days · 5 meals/day</div>
+                <div class="text-parchment-dim text-xs mt-1">Typical day · 5 meals</div>
               </.link>
               <div class="flex items-center gap-2 ml-4 shrink-0">
                 <.link
@@ -560,23 +560,40 @@ defmodule MehungryWeb.MealBlueprintLive.Index do
   @impl true
   def mount(_params, session, socket) do
     user = Accounts.get_user_by_session_token(session["user_token"])
-    blueprints = MealBlueprints.list_blueprints_for_user(user.id)
 
-    {:ok,
-     socket
-     |> assign(:user, user)
-     |> assign(:page_title, "Meal Blueprints")
-     |> assign(:new_form, to_form(%{"name" => ""}, as: :blueprint))
-     |> assign(:blueprints, blueprints)
-     |> assign(:plans_by_blueprint, load_plans(user.id, blueprints))
-     |> assign(:clients, load_client_targets(user.id))
-     |> assign(:expanded_plans, MapSet.new())
-     |> assign(:compat, %{})
-     |> assign(:generating_ids, MapSet.new())
-     |> assign(:gen_tasks, %{})
-     |> assign(:import_plan_id, nil)
-     |> assign(:import_form, nil)
-     |> assign(:editing_plan_meal, nil)}
+    socket =
+      socket
+      |> assign(:user, user)
+      |> assign(:page_title, "Meal Blueprints")
+      |> assign(:new_form, to_form(%{"name" => ""}, as: :blueprint))
+      # Safe empty defaults so the disconnected (first-paint) render is valid; the
+      # real per-user data is loaded once the socket connects (this is a private,
+      # noindex page the user always upgrades to WS, so the dead-render queries
+      # would be wasted DB-pool load). See docs/implementation/liveview_optimization_plan.md.
+      |> assign(:blueprints, [])
+      |> assign(:plans_by_blueprint, %{})
+      |> assign(:clients, [])
+      |> assign(:expanded_plans, MapSet.new())
+      |> assign(:compat, %{})
+      |> assign(:generating_ids, MapSet.new())
+      |> assign(:gen_tasks, %{})
+      |> assign(:import_plan_id, nil)
+      |> assign(:import_form, nil)
+      |> assign(:editing_plan_meal, nil)
+
+    socket =
+      if connected?(socket) do
+        blueprints = MealBlueprints.list_blueprints_for_user(user.id)
+
+        socket
+        |> assign(:blueprints, blueprints)
+        |> assign(:plans_by_blueprint, load_plans(user.id, blueprints))
+        |> assign(:clients, load_client_targets(user.id))
+      else
+        socket
+      end
+
+    {:ok, socket}
   end
 
   @impl true

@@ -315,7 +315,7 @@ if Mix.env() == :dev do
       |> Enum.sort()
     end
 
-    # Turn flat relative paths ("docs/ai/ai.md") into a nested tree of
+    # Turn flat relative paths ("docs/implementation/ai/ai.md") into a nested tree of
     # %{type: :dir | :file, name:, path:, children:} nodes. Directories are
     # listed before files at each level, both alphabetically.
     defp build_tree(paths) do

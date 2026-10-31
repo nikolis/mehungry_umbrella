@@ -10,7 +10,7 @@ defmodule Mehungry.Professionals.ProfessionalClient do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Mehungry.Professionals.{ClientIntake, ConsultationNote}
+  alias Mehungry.Professionals.{ClientIntake, ConsultationNote, ClientCondition}
 
   schema "professional_clients" do
     field :full_name, :string
@@ -26,6 +26,10 @@ defmodule Mehungry.Professionals.ProfessionalClient do
 
     has_many :intakes, ClientIntake
     has_many :consultation_notes, ConsultationNote
+
+    # Structured links to existing Health.Condition entities (nutritionist-only).
+    has_many :client_conditions, ClientCondition
+    many_to_many :conditions, Mehungry.Health.Condition, join_through: ClientCondition
 
     timestamps()
   end

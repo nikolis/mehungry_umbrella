@@ -15,7 +15,7 @@ defmodule Mix.Tasks.Knowledge.Schemas do
   def run(_args) do
     Mix.shell().info("Generating schema documentation...")
 
-    # File.mkdir_p!("docs/knowledge")
+    File.mkdir_p!("docs/implementation/knowledge")
     schemas =
       "apps"
       |> Path.join("**/*.ex")
@@ -143,7 +143,7 @@ defmodule Mix.Tasks.Knowledge.Schemas do
         """
       end)
 
-    File.write!("./docs/knowledge/schemas.md", "# Schema Inventory\n\n" <> content)
+    File.write!("./docs/implementation/knowledge/schemas.md", "# Schema Inventory\n\n" <> content)
   end
 
   defp generate_domain_graph_md(schemas) do
@@ -165,7 +165,7 @@ defmodule Mix.Tasks.Knowledge.Schemas do
       end)
 
     File.write!(
-      "./docs/knowledge/domain_graph.md",
+      "./docs/implementation/knowledge/domain_graph.md",
       "# Domain Graph\n\n" <> content
     )
   end

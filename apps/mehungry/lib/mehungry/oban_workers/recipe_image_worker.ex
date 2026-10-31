@@ -17,19 +17,28 @@ defmodule Mehungry.RecipeImageWorker do
   def perform(%Oban.Job{args: %{"recipe_id" => recipe_id} = args}) do
     recipe = Food.get_recipe!(recipe_id)
     force = Map.get(args, "force", false)
+    # Optional explicit backend (owner "regenerate with alternative" action);
+    # nil falls back to the configured provider inside ImageGenerator.
+    provider = parse_provider(Map.get(args, "provider"))
 
     if not force and recipe.image_url not in [nil, ""] do
       Logger.info("RecipeImageWorker: recipe #{recipe_id} already has an image, skipping")
       :ok
     else
-      generate_and_store(recipe)
+      generate_and_store(recipe, provider)
     end
   end
 
-  defp generate_and_store(recipe) do
+  defp parse_provider("flux"), do: :flux
+  defp parse_provider("openai"), do: :openai
+  defp parse_provider(provider) when provider in [:flux, :openai], do: provider
+  defp parse_provider(_), do: nil
+
+  defp generate_and_store(recipe, provider) do
     case ImageGenerator.generate(recipe.title, recipe.description,
            cuisine: recipe.cousine,
-           quality: "high"
+           quality: "high",
+           provider: provider
          ) do
       {:ok, binary} ->
         key = "recipe_images/#{recipe.id}.jpg"

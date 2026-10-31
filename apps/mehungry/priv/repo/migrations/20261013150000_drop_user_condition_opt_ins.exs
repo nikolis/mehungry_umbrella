@@ -5,7 +5,7 @@ defmodule Mehungry.Repo.Migrations.DropUserConditionOptIns do
   # special-category (health) data under GDPR Art. 9 that the product no longer
   # collects — condition/dietary guidance is now gated to the nutritionist and
   # admin surfaces only. Dropping the table permanently deletes the stored
-  # opt-ins. See docs/legal/legal_review_2026-10.md (R1/R3).
+  # opt-ins. See docs/implementation/legal/legal_review_2026-10.md (R1/R3).
 
   def up do
     drop_if_exists table(:user_condition_opt_ins)

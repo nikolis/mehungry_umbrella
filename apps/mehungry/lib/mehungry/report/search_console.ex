@@ -2,7 +2,7 @@ defmodule Mehungry.Report.SearchConsole do
   @moduledoc """
   Read-only client for the Google Search Console API (`searchAnalytics.query`) —
   the organic-search leading indicator the app-status snapshot cares about most
-  (`docs/app_status.md`: Search Console impressions on `/foods` are "the first
+  (`docs/implementation/app_status.md`: Search Console impressions on `/foods` are "the first
   sign organic is starting").
 
   Uses the **same service account** as GA4 (`GA4_SA_KEY` via

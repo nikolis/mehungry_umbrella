@@ -834,7 +834,7 @@ IO.puts("Seeded health conditions: #{inserted} new, #{total} total.")
 # the implicated food species resolve at read time (Health.species_for_condition/2).
 # Each guideline recommendation carries a structured `source_reference` so a
 # non-PubMed conclusion still cites a real, clickable source (the CompoundRecommendation
-# citation invariant — see docs/science/scientific_pipeline.md).
+# citation invariant — see docs/implementation/science/scientific_pipeline.md).
 health_seeds = [
   {"Kidney Stones", "renal", "Oxalate", "oxalate",
    %{
@@ -1092,3 +1092,8 @@ for attrs <- persona_seeds do
 end
 
 IO.puts("Seeded #{length(persona_seeds)} AI-bot personas.")
+
+# Onboarding questions: seed the admin `client_default` template from the legacy
+# hardcoded dietary-history field set (idempotent). The `user` scope starts empty.
+:ok = Mehungry.Onboarding.seed_defaults()
+IO.puts("Seeded onboarding client-default questionnaire.")

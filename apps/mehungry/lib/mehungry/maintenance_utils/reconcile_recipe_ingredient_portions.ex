@@ -75,98 +75,13 @@ defmodule Mehungry.ReconcileRecipeIngredientPortions do
   import Ecto.Query
 
   alias Mehungry.Repo
-  alias Mehungry.Food.{IngredientPortion, MeasurementUnit}
+  alias Mehungry.Food.{IngredientPortion, MeasurementUnit, PortionConversion}
 
-  # Correct grams-per-one-unit for mass units, keyed by canonical token.
-  # Ingredient-independent, so a mass portion can be created without an anchor.
-  @grams_per_unit %{
-    "g" => 1.0,
-    "mg" => 0.001,
-    "kg" => 1000.0,
-    "oz" => 28.3495,
-    "lb" => 453.592
-  }
-
-  # Millilitres-per-one-unit for volume units, keyed by canonical token.
-  # Grams-per-unit for a volume depends on density, so synthesis needs an
-  # existing volume portion of the same ingredient as an anchor.
-  @ml_per_unit %{
-    "ml" => 1.0,
-    "tsp" => 5.0,
-    "tbsp" => 15.0,
-    "cup" => 240.0,
-    "liter" => 1000.0,
-    "fl_oz" => 29.5735,
-    "pint" => 473.0,
-    "quart" => 946.0,
-    "gallon" => 3785.0
-  }
-
-  # Maps the many surface spellings of a unit — the DB has both "teaspoon" (a
-  # measurement-unit name) and "tsp" (a portion description) — onto one canonical
-  # token so name-matching and volume anchoring treat them as equal. Keys are
-  # already lower-cased; lookups downcase first, so matching is case-insensitive.
-  @unit_aliases %{
-    # mass
-    "g" => "g",
-    "gr" => "g",
-    "gram" => "g",
-    "grams" => "g",
-    "grammar" => "g",
-    "mg" => "mg",
-    "milligram" => "mg",
-    "milligrams" => "mg",
-    "kg" => "kg",
-    "kilogram" => "kg",
-    "kilograms" => "kg",
-    "oz" => "oz",
-    "ounce" => "oz",
-    "ounces" => "oz",
-    "lb" => "lb",
-    "lbs" => "lb",
-    "pound" => "lb",
-    "pounds" => "lb",
-    # volume
-    "ml" => "ml",
-    "cc" => "ml",
-    "milliliter" => "ml",
-    "millilitre" => "ml",
-    "milliliters" => "ml",
-    "millilitres" => "ml",
-    "tsp" => "tsp",
-    "teaspoon" => "tsp",
-    "teaspoons" => "tsp",
-    "tbsp" => "tbsp",
-    "tbs" => "tbsp",
-    "tbl" => "tbsp",
-    "tablespoon" => "tbsp",
-    "tablespoons" => "tbsp",
-    "cup" => "cup",
-    "cups" => "cup",
-    "l" => "liter",
-    "liter" => "liter",
-    "litre" => "liter",
-    "liters" => "liter",
-    "litres" => "liter",
-    "fl oz" => "fl_oz",
-    "fl. oz." => "fl_oz",
-    "floz" => "fl_oz",
-    "fluid ounce" => "fl_oz",
-    "fluid ounces" => "fl_oz",
-    "fluid_ounce" => "fl_oz",
-    "pint" => "pint",
-    "pints" => "pint",
-    "pt" => "pint",
-    "quart" => "quart",
-    "quarts" => "quart",
-    "qt" => "quart",
-    "gallon" => "gallon",
-    "gallons" => "gallon",
-    "gal" => "gallon",
-    # count
-    "piece" => "piece",
-    "pieces" => "piece"
-  }
+  # Conversion constants (`@grams_per_unit`, `@ml_per_unit`, `@unit_aliases`) and
+  # the density anchor now live in `Mehungry.Food.PortionConversion` so this
+  # sweep and the portion-generation worker share one definition. The `canon/1`,
+  # `mass_grams/1`, `volume_ml/1`, and `volume_anchor/2` helpers below are thin
+  # delegators kept for local readability.
 
   @typedoc """
   Structured outcome. `unresolved` entries are the admin-review queue: one per
@@ -381,36 +296,11 @@ defmodule Mehungry.ReconcileRecipeIngredientPortions do
     end
   end
 
-  # grams-per-millilitre from any existing volume portion of the ingredient —
-  # either a measurement-unit-bearing portion (unit name is a volume unit) or a
-  # description-only portion whose description names a volume unit (e.g. a "cup"
-  # portion with `measurement_unit_id: nil`).
-  defp volume_anchor(ingredient_id, units_by_id) do
-    IngredientPortion
-    |> where([ip], ip.ingredient_id == ^ingredient_id)
-    |> where([ip], not is_nil(ip.gram_weight) and ip.gram_weight > 0.0)
-    |> order_by([ip], asc: ip.id)
-    |> select([ip], %{
-      gw: ip.gram_weight,
-      amount: ip.amount,
-      mu_id: ip.measurement_unit_id,
-      desc: ip.description
-    })
-    |> Repo.all()
-    |> Enum.find_value(:none, fn p ->
-      ml =
-        cond do
-          p.mu_id -> volume_ml(unit_name(units_by_id, p.mu_id))
-          is_binary(p.desc) -> volume_ml(p.desc)
-          true -> nil
-        end
-
-      if ml do
-        amount = if is_number(p.amount) and p.amount > 0, do: p.amount, else: 1.0
-        {:ok, p.gw / amount / ml}
-      end
-    end)
-  end
+  # grams-per-millilitre from any existing volume portion of the ingredient.
+  # Delegated to the shared module (`units_by_id` is no longer needed — the
+  # anchor resolves unit names via its own join).
+  defp volume_anchor(ingredient_id, _units_by_id),
+    do: PortionConversion.grams_per_ml(ingredient_id)
 
   defp insert_portion(ingredient_id, unit_id, gram_weight) do
     unless mu_portion_exists?(ingredient_id, unit_id) do
@@ -527,18 +417,9 @@ defmodule Mehungry.ReconcileRecipeIngredientPortions do
 
   defp unit_tokens_match?(_a, _b), do: false
 
-  # Lower-case + trim, then collapse known synonyms to a canonical token. The
-  # downcase makes all matching case-insensitive.
-  defp canon(s) do
-    n = s |> String.downcase() |> String.trim()
-    Map.get(@unit_aliases, n, n)
-  end
-
-  defp mass_grams(name) when is_binary(name), do: Map.get(@grams_per_unit, canon(name))
-  defp mass_grams(_), do: nil
-
-  defp volume_ml(name) when is_binary(name), do: Map.get(@ml_per_unit, canon(name))
-  defp volume_ml(_), do: nil
+  defp canon(s), do: PortionConversion.canonical_unit(s)
+  defp mass_grams(name), do: PortionConversion.mass_grams_per_unit(name)
+  defp volume_ml(name), do: PortionConversion.volume_ml_per_unit(name)
 
   # ── Shared queries ──────────────────────────────────────────────────────────
 

@@ -114,6 +114,43 @@ defmodule MehungryWeb.NutritionistLive.ClientDetailTest do
     assert path == "/nutritionist/records/#{record.id}/edit"
   end
 
+  test "assigns conditions from the overview (lazy record), links to notes, and removes", %{
+    conn: conn,
+    nutritionist: nutritionist,
+    client_user: client_user
+  } do
+    {:ok, ibs} = Mehungry.Health.create_condition(%{name: "IBS"})
+    {:ok, gout} = Mehungry.Health.create_condition(%{name: "Gout"})
+
+    assert Professionals.get_client_record_by_user(nutritionist.id, client_user.id) == nil
+
+    {:ok, view, _html} = live(conn, "/nutritionist/clients/#{client_user.id}")
+
+    # Adding the first condition lazily creates the client record.
+    view
+    |> form("form[phx-submit='add_condition']", %{condition_id: ibs.id})
+    |> render_submit()
+
+    record = Professionals.get_client_record_by_user(nutritionist.id, client_user.id)
+    assert record
+    assert [%{name: "IBS"}] = Professionals.list_client_conditions(record.id)
+
+    html =
+      view
+      |> form("form[phx-submit='add_condition']", %{condition_id: gout.id})
+      |> render_submit()
+
+    # Both are listed, each offering a notes link scoped to that condition.
+    assert html =~ "IBS"
+    assert html =~ "Gout"
+    assert html =~ "/nutritionist/research/notes?condition_id=#{ibs.id}"
+    assert html =~ "/nutritionist/research/notes?condition_id=#{gout.id}"
+
+    # Remove one (browser sends the id as a string).
+    render_click(view, "remove_condition", %{"id" => to_string(ibs.id)})
+    assert [%{name: "Gout"}] = Professionals.list_client_conditions(record.id)
+  end
+
   test "nutritionist sends a message and it appears in the thread", %{
     conn: conn,
     nutritionist: nutritionist,

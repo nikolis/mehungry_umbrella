@@ -184,6 +184,30 @@ defmodule Mehungry.Food.Recipes do
     |> Repo.aggregate(:count)
   end
 
+  @doc """
+  Up to `:limit` (default 3) public recipes that carry a non-empty `nutrients`
+  map, in random order — the landing page's meal-planning demo chart needs
+  nutrients, not images. Optionally scoped to a single author via `:user_id`.
+  """
+  def list_recipes_with_nutrients(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 3)
+
+    query =
+      from(r in Recipe,
+        where: (is_nil(r.private) or not r.private) and fragment("? <> '{}'::jsonb", r.nutrients),
+        order_by: fragment("RANDOM()"),
+        limit: ^limit
+      )
+
+    query =
+      case Keyword.fetch(opts, :user_id) do
+        {:ok, user_id} -> from(r in query, where: r.user_id == ^user_id)
+        :error -> query
+      end
+
+    Repo.all(query)
+  end
+
   @doc "Lists recipes with no linked ingredients (for admin preview)."
   def list_recipes_without_ingredients do
     from(r in Recipe,
@@ -748,11 +772,34 @@ defmodule Mehungry.Food.Recipes do
 
         Mehungry.ObanWorkers.RecipeEmbeddingWorker.enqueue(recipe.id)
 
+        # Auto-translate the fresh recipe into every supported locale it isn't
+        # already authored in (English ↔ Greek) so a recipe has coverage in
+        # both languages the moment it's created. The drafts land as "ai_draft"
+        # until a human verifies them in the translation hub.
+        enqueue_auto_translations(recipe)
+
         result
 
       _ ->
         result
     end
+  end
+
+  # Enqueue an AI translation job for each supported locale that differs from the
+  # recipe's own source language (`language_name`). With two locales this is a
+  # single en→el or el→en job; driven off `Locale.locales/0` so it scales if more
+  # are added. A recipe with no `language_name` is treated as English (source).
+  defp enqueue_auto_translations(%Recipe{} = recipe) do
+    source_locale = Mehungry.Languages.Locale.locale_of(recipe.language_name)
+
+    for target <- Mehungry.Languages.Locale.locales(), target != source_locale do
+      Mehungry.ObanWorkers.RecipeTranslationWorker.enqueue(
+        recipe.id,
+        Mehungry.Languages.Locale.write_code(target)
+      )
+    end
+
+    :ok
   end
 
   def update_recipe(%Recipe{} = recipe_origin, attrs \\ %{}) do

@@ -1,9 +1,12 @@
 defmodule Mehungry.MealBlueprints.Blueprint do
   @moduledoc """
-  A reusable, user-owned "7-day meal-plan blueprint": a structured targets
-  document (7 days × the calendar's meal slots) the user authors by hand. It
-  carries no recipes — it is the *aim*, not the plan. A later phase lets the AI
-  planner generate an actual calendar week that honours these targets.
+  A reusable, user-owned meal-plan blueprint: a structured targets document the
+  user authors by hand. Conceptually it is a single **typical day** — a generic
+  daily ration — but it is **stored as 7 identical days** (`validate_day_count/1`
+  enforces exactly 7) so the AI planner and calendar import, which generate/lay
+  out a full week, have the shape they expect. The nutritionist editor authors one
+  day and fans it out across the 7 on save. It carries no recipes — it is the
+  *aim*, not the plan.
   """
   use Ecto.Schema
   import Ecto.Changeset

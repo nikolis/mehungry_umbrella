@@ -41,6 +41,54 @@ defmodule MehungryWeb.ProfessionalLive.HealthConditionsTest do
     assert html =~ "auth token set"
   end
 
+  test "the Research ingestion button enqueues a run and shows live progress", %{conn: conn} do
+    {:ok, _c} = Health.create_condition(%{name: "Ulcerative Colitis"})
+
+    {:ok, view, html} = live(conn, ~p"/professional/health")
+    assert html =~ "Research ingestion"
+
+    # Both toggles left unchecked (absent params → crawl/force false).
+    html =
+      view
+      |> form("form[phx-submit=run_research_ingestion]")
+      |> render_submit()
+
+    # A run row now exists and its live progress panel renders.
+    assert Literature.latest_research_ingestion_run().status == "processing"
+    assert html =~ "conditions"
+
+    # A second submit while in-flight is refused.
+    html =
+      view
+      |> form("form[phx-submit=run_research_ingestion]")
+      |> render_submit()
+
+    assert html =~ "already in progress"
+  end
+
+  test "a dead extractor link fails the run pre-flight instead of starting", %{conn: conn} do
+    {:ok, _c} = Health.create_condition(%{name: "Gout"})
+
+    # The pre-flight reachability probe reports the link is down.
+    Application.put_env(:mehungry, :extractor_stub,
+      reachable?: fn -> {:error, {:network, :econnrefused}} end
+    )
+
+    on_exit(fn -> Application.delete_env(:mehungry, :extractor_stub) end)
+
+    {:ok, view, _html} = live(conn, ~p"/professional/health")
+
+    html =
+      view
+      |> form("form[phx-submit=run_research_ingestion]")
+      |> render_submit()
+
+    # Surfaced immediately, and no run was started.
+    assert html =~ "Extractor unreachable"
+    assert html =~ "econnrefused"
+    assert is_nil(Literature.latest_research_ingestion_run())
+  end
+
   test "the Add condition form can set a parent condition", %{conn: conn} do
     {:ok, ibd} = Health.create_condition(%{name: "Inflammatory Bowel Disease"})
     {:ok, view, _html} = live(conn, ~p"/professional/health")

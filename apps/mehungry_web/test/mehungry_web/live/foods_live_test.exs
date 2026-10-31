@@ -141,5 +141,18 @@ defmodule MehungryWeb.FoodsLiveTest do
     test "redirects unknown species back to /foods", %{conn: conn} do
       assert {:error, {:live_redirect, %{to: "/foods"}}} = live(conn, ~p"/foods/no-such-thing")
     end
+
+    test "the synchronous dead render carries crawler-visible SEO + nutrition JSON-LD",
+         %{conn: conn} do
+      # The proof-engine page's whole point is organic search: the disconnected
+      # ("dead") render Googlebot indexes must already carry the species name,
+      # the SEO title, and the structured-data graph — not wait on assign_async.
+      body = conn |> get(~p"/foods/Spinach") |> html_response(200)
+
+      assert body =~ "Spinach"
+      assert body =~ "Nutrition, Research &amp; Compounds"
+      assert body =~ ~s("@type":"BreadcrumbList")
+      assert body =~ ~s("@type":"NutritionInformation")
+    end
   end
 end

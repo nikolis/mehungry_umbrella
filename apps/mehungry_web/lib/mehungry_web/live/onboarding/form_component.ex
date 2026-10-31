@@ -9,8 +9,12 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   alias Mehungry.Accounts
   alias Mehungry.Food
+  alias Mehungry.Onboarding
+  alias Mehungry.Onboarding.Question
 
-  @total_steps 2
+  # The diet/language/calorie essentials are always steps 1–2. Admin-authored
+  # `"user"` questions, when any exist, add a final step (see `update/2`).
+  @base_steps 2
 
   # ═══════════════════════════════════════════════════════════════════════════
   # View (Render)
@@ -32,6 +36,8 @@ defmodule MehungryWeb.Onboarding.FormComponent do
             {diet_step(assigns)}
           <% 2 -> %>
             {calories_step(assigns)}
+          <% 3 -> %>
+            {extra_step(assigns)}
         <% end %>
       </div>
 
@@ -155,6 +161,85 @@ defmodule MehungryWeb.Onboarding.FormComponent do
     """
   end
 
+  # Step 3 — admin-authored extra questions (only shown when any exist)
+  defp extra_step(assigns) do
+    ~H"""
+    <form phx-change="set_extra" phx-target={@myself} class="space-y-5 text-left">
+      <div :for={q <- @extra_questions} class="space-y-2">
+        <p class="text-sm font-semibold text-slate-300">
+          {Question.prompt(q, @selected_language)}<span :if={q.required} class="text-primary-500">
+            *</span>
+        </p>
+        {extra_question_input(
+          assign(assigns, q: q, value: extra_value(@extra_answers, q.id), selected: extra_selected(@extra_answers, q.id))
+        )}
+      </div>
+    </form>
+    """
+  end
+
+  defp extra_question_input(%{q: %Question{question_type: "value", value_kind: "number"}} = assigns) do
+    ~H"""
+    <input
+      type="number"
+      name={"answers[#{@q.id}][value_text]"}
+      value={@value}
+      phx-debounce="blur"
+      class="w-full rounded-lg border-2 border-slate-600 bg-transparent text-white px-4 py-2 focus:border-primary-500 focus:outline-none"
+    />
+    """
+  end
+
+  defp extra_question_input(%{q: %Question{question_type: "value"}} = assigns) do
+    ~H"""
+    <textarea
+      name={"answers[#{@q.id}][value_text]"}
+      rows="2"
+      phx-debounce="blur"
+      class="w-full rounded-lg border-2 border-slate-600 bg-transparent text-white px-4 py-2 focus:border-primary-500 focus:outline-none"
+    >{@value}</textarea>
+    """
+  end
+
+  defp extra_question_input(%{q: %Question{question_type: "single_choice"}} = assigns) do
+    ~H"""
+    <div class="space-y-1">
+      <label :for={opt <- @q.options} class="flex items-center gap-2 text-sm text-slate-300">
+        <input
+          type="radio"
+          name={"answers[#{@q.id}][selected_options][]"}
+          value={opt.key}
+          checked={opt.key in @selected}
+          class="accent-primary-500"
+        />
+        {Onboarding.QuestionOption.label(opt, @selected_language)}
+      </label>
+    </div>
+    """
+  end
+
+  defp extra_question_input(%{q: %Question{question_type: "multi_choice"}} = assigns) do
+    ~H"""
+    <div class="space-y-1">
+      <label :for={opt <- @q.options} class="flex items-center gap-2 text-sm text-slate-300">
+        <input
+          type="checkbox"
+          name={"answers[#{@q.id}][selected_options][]"}
+          value={opt.key}
+          checked={opt.key in @selected}
+          class="accent-primary-500"
+        />
+        {Onboarding.QuestionOption.label(opt, @selected_language)}
+      </label>
+    </div>
+    """
+  end
+
+  defp extra_value(extra_answers, qid), do: get_in(extra_answers, [to_string(qid), "value_text"]) || ""
+
+  defp extra_selected(extra_answers, qid),
+    do: get_in(extra_answers, [to_string(qid), "selected_options"]) || []
+
   defp pill_class(selected?) do
     base =
       "px-5 py-2 rounded-full text-sm font-semibold border-2 transition-colors"
@@ -181,17 +266,32 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   @impl true
   def update(assigns, socket) do
-    existing_lang = (assigns.user_profile && assigns.user_profile.language_preference) || "en"
+    # Default the language pill to the locale the wizard is actually rendering in
+    # (established by the parent LiveView's `RestoreLocale` on_mount from the URL
+    # / session). The wizard's language *is* the page locale, so the pill must
+    # track it — picking another language re-mounts the page under that locale
+    # (see `set_onboarding_language`), which is what keeps pill, wizard text, and
+    # the saved preference in sync.
+    existing_lang =
+      case Gettext.get_locale(MehungryWeb.Gettext) do
+        locale when locale in ["en", "el"] -> locale
+        _ -> (assigns.user_profile && assigns.user_profile.language_preference) || "en"
+      end
+
+    extra_questions = Onboarding.list_active_questions("user")
+    total_steps = if extra_questions == [], do: @base_steps, else: @base_steps + 1
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:total_steps, @total_steps)
+     |> assign(:extra_questions, extra_questions)
+     |> assign(:total_steps, total_steps)
      |> assign_new(:step, fn -> 1 end)
      |> assign_new(:selected_language, fn -> existing_lang end)
      |> assign_new(:base_diet, fn -> "omnivore" end)
      |> assign_new(:lactose_intolerant, fn -> false end)
-     |> assign_new(:daily_calorie_target, fn -> nil end)}
+     |> assign_new(:daily_calorie_target, fn -> nil end)
+     |> assign_new(:extra_answers, fn -> %{} end)}
   end
 
   # ═══════════════════════════════════════════════════════════════════════════
@@ -200,7 +300,16 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   @impl true
   def handle_event("next_step", _params, socket) do
-    {:noreply, assign(socket, :step, min(socket.assigns.step + 1, @total_steps))}
+    {:noreply, assign(socket, :step, min(socket.assigns.step + 1, socket.assigns.total_steps))}
+  end
+
+  def handle_event("set_extra", %{"answers" => answers}, socket) do
+    {:noreply, assign(socket, :extra_answers, answers)}
+  end
+
+  def handle_event("set_extra", _params, socket) do
+    # No inputs on the step produced an "answers" key (e.g. all unchecked).
+    {:noreply, assign(socket, :extra_answers, %{})}
   end
 
   def handle_event("prev_step", _params, socket) do
@@ -209,7 +318,13 @@ defmodule MehungryWeb.Onboarding.FormComponent do
 
   def handle_event("set_onboarding_language", %{"lang" => lang}, socket)
       when lang in ["en", "el"] do
-    {:noreply, assign(socket, :selected_language, lang)}
+    # Re-mount the wizard under the locale-prefixed route. `gettext/1` with
+    # literal strings compiles to *static* markup in HEEx — it is never
+    # re-rendered after mount — so `Gettext.put_locale` alone can't re-localize
+    # the already-rendered wizard. A fresh navigation both re-renders it in the
+    # new language and (via the `SetLocale` plug) switches the session locale, so
+    # the page behind the modal and the post-"Finish" redirect follow too.
+    {:noreply, push_navigate(socket, to: "/#{lang}/home")}
   end
 
   def handle_event("set_base_diet", %{"diet" => diet}, socket)
@@ -261,6 +376,15 @@ defmodule MehungryWeb.Onboarding.FormComponent do
       |> maybe_put_calories(socket.assigns.daily_calorie_target)
 
     Accounts.update_user_profile(profile, attrs)
+
+    if socket.assigns.extra_questions != [] do
+      Onboarding.upsert_answers(
+        "user",
+        user_id,
+        socket.assigns.extra_answers,
+        socket.assigns.extra_questions
+      )
+    end
 
     notify_parent("profile-saved")
 

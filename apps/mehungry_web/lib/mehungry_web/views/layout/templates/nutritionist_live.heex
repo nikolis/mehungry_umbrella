@@ -44,6 +44,13 @@
     <% end %>
 
     <main class="flex-1 p-4 md:p-8">
+      <.link
+        :if={@socket.view != MehungryWeb.NutritionistLive.Dashboard}
+        navigate="/nutritionist"
+        class="inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-parchment-dim hover:text-parchment transition-colors"
+      >
+        <.icon name="hero-arrow-left" class="w-4 h-4" /> Back to dashboard
+      </.link>
       {@inner_content}
     </main>
   </div>

@@ -37,7 +37,7 @@ defmodule MehungryWeb.UpgradeLive.Index do
      |> assign(:plan_used, plan_used)
      |> assign(:plan_limit, plan_limit)
      |> assign(:stripe_status, nil)
-     |> assign(:page_title, "Manage subscriptions")}
+     |> assign(:page_title, "Plans & subscriptions")}
   end
 
   @impl true

@@ -6,7 +6,7 @@ defmodule Mix.Tasks.Gi.Verify do
   International Tables of Glycemic Index PDF (`studies/SupplementalTable{1,2}.pdf`)
   into structured reference rows and reports coverage stats, so the path-B
   re-derivation can be checked against the published values *we never ship*. See
-  `docs/science/glycemic_index_licensing.md`.
+  `docs/implementation/science/glycemic_index_licensing.md`.
 
       mix gi.verify                                   # defaults to studies/SupplementalTable1.pdf
       mix gi.verify studies/SupplementalTable2.pdf --table table2

@@ -1,5 +1,6 @@
 defmodule Mehungry.FoodTest do
   use Mehungry.DataCase
+  use Oban.Testing, repo: Mehungry.Repo
 
   alias Mehungry.History.{UserMeal}
   alias Mehungry.History
@@ -59,6 +60,53 @@ defmodule Mehungry.FoodTest do
       {:ok, recipe} = result
       _recipe = Food.get_recipe_no_caching!(recipe.id)
       # assert _recipe = Food.create_recipe(recipe_params)
+    end
+
+    test "Creating a recipe auto-enqueues translation into the other locale", %{
+      ingredient: ingredient,
+      measurement_unit: measurement_unit,
+      user: user
+    } do
+      ingredients = [
+        %{ingredient_id: ingredient.id, measurement_unit_id: measurement_unit.id, quantity: 33}
+      ]
+
+      base_params =
+        %{
+          recipe_ingredients: ingredients,
+          user_id: user.id,
+          cooking_time_lower_limit: 15,
+          preperation_time_lower_limit: 15,
+          difficulty: 1,
+          servings: 3
+        }
+
+      # English recipe → queues a Greek ("el") translation.
+      {:ok, en_recipe} =
+        base_params
+        |> Map.merge(%{title: "English recipe", language_name: "En"})
+        |> Food.create_recipe()
+
+      assert_enqueued(
+        worker: Mehungry.ObanWorkers.RecipeTranslationWorker,
+        args: %{recipe_id: en_recipe.id, language_name: "el"}
+      )
+
+      # Greek recipe → queues an English ("en") translation, never Greek-into-Greek.
+      {:ok, el_recipe} =
+        base_params
+        |> Map.merge(%{title: "Greek recipe", language_name: "Gr"})
+        |> Food.create_recipe()
+
+      assert_enqueued(
+        worker: Mehungry.ObanWorkers.RecipeTranslationWorker,
+        args: %{recipe_id: el_recipe.id, language_name: "en"}
+      )
+
+      refute_enqueued(
+        worker: Mehungry.ObanWorkers.RecipeTranslationWorker,
+        args: %{recipe_id: el_recipe.id, language_name: "el"}
+      )
     end
 
     test "Create Recipe with invalid arguments should provide feedback", %{

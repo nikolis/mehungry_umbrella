@@ -8,6 +8,7 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
   @energy_source_fields ~w(height_m weight_kg sex age activity_level)
   alias Mehungry.Accounts
+  alias Mehungry.Health
   alias Mehungry.Plans, as: PlansCtx
   alias Mehungry.MealBlueprints
   alias Mehungry.ObanWorkers.NutritionistAgentWorker
@@ -60,6 +61,10 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
          |> assign(:ai_error, nil)
          |> assign(:ai_preferences, "")
          |> assign(:record, record)
+         |> assign(:onboarding_answers, Mehungry.Onboarding.answers_for_user(client_id_int))
+         |> assign(:onboarding_locale, Gettext.get_locale(MehungryWeb.Gettext))
+         |> assign(:conditions, client_conditions(record))
+         |> assign(:all_conditions, Health.list_conditions())
          |> assign(:show_visit_form, false)
          |> assign(:intake_editing?, false)
          |> assign(:plan_options, load_plan_options(professional_id))
@@ -125,6 +130,39 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Message can't be empty.")}
+    end
+  end
+
+  # ── Health conditions (structured client↔condition link) ────────────────────────
+
+  @impl true
+  def handle_event("add_condition", %{"condition_id" => ""}, socket), do: {:noreply, socket}
+
+  def handle_event("add_condition", %{"condition_id" => condition_id}, socket) do
+    # A condition attaches to the client record; create it lazily if this is the
+    # first thing recorded for the client.
+    case ensure_record(socket) do
+      {:ok, socket, record} ->
+        Professionals.add_client_condition(record.id, condition_id)
+
+        {:noreply,
+         socket
+         |> assign(:conditions, client_conditions(record))
+         |> put_flash(:info, "Condition added.")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not add the condition.")}
+    end
+  end
+
+  def handle_event("remove_condition", %{"id" => condition_id}, socket) do
+    case socket.assigns.record do
+      nil ->
+        {:noreply, socket}
+
+      record ->
+        Professionals.remove_client_condition(record.id, condition_id)
+        {:noreply, assign(socket, :conditions, client_conditions(record))}
     end
   end
 
@@ -315,6 +353,117 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
   end
 
   defp ensure_record(socket), do: {:ok, socket, socket.assigns.record}
+
+  defp client_conditions(nil), do: []
+  defp client_conditions(record), do: Professionals.list_client_conditions(record.id)
+
+  # Read-only: the answers the client gave to the app's user-onboarding questions
+  # (admin-authored, filled during their own onboarding), shown here on the file.
+  defp onboarding_answers_panel(assigns) do
+    ~H"""
+    <div :if={@onboarding_answers != []} class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
+      <h2 class="text-parchment font-display font-semibold mb-4">Onboarding answers</h2>
+      <dl class="space-y-3">
+        <div :for={{q, a} <- @onboarding_answers}>
+          <dt class="text-xs font-semibold uppercase tracking-wide text-parchment-dim">
+            {onboarding_prompt(q, a, @onboarding_locale)}
+          </dt>
+          <dd class="text-parchment text-sm mt-0.5">{onboarding_answer_text(q, a, @onboarding_locale)}</dd>
+        </div>
+      </dl>
+    </div>
+    """
+  end
+
+  defp onboarding_prompt(nil, a, _locale), do: a.prompt_snapshot || "—"
+  defp onboarding_prompt(q, _a, locale), do: Mehungry.Onboarding.Question.prompt(q, locale)
+
+  defp onboarding_answer_text(q, a, locale) do
+    cond do
+      a.value_text not in [nil, ""] ->
+        a.value_text
+
+      a.selected_options not in [nil, []] ->
+        option_labels(q, a.selected_options, locale)
+
+      true ->
+        "—"
+    end
+  end
+
+  defp option_labels(nil, keys, _locale), do: Enum.join(keys, ", ")
+
+  defp option_labels(q, keys, locale) do
+    q.options
+    |> Enum.filter(&(&1.key in keys))
+    |> Enum.map(&Mehungry.Onboarding.QuestionOption.label(&1, locale))
+    |> case do
+      [] -> Enum.join(keys, ", ")
+      labels -> Enum.join(labels, ", ")
+    end
+  end
+
+  # Conditions render as one more basic field in the Dietary History card (like
+  # "Sex"): a small label, the linked conditions as values, and a minimal picker.
+  defp conditions_panel(assigns) do
+    linked_ids = Enum.map(assigns.conditions, & &1.id)
+
+    assigns =
+      assign(assigns, :available_conditions, Enum.reject(assigns.all_conditions, &(&1.id in linked_ids)))
+
+    ~H"""
+    <div class="mt-6 mb-2 pt-5 border-t border-ink-panel2">
+      <h3 class="text-xs font-semibold uppercase tracking-wide text-parchment-dim mb-3">
+        Health conditions
+      </h3>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <%= if Enum.empty?(@conditions) do %>
+          <span class="text-parchment-dim text-sm italic">None recorded yet</span>
+        <% else %>
+          <%= for condition <- @conditions do %>
+            <span class="inline-flex items-center gap-2 pl-3 pr-2 py-1 rounded-full bg-paprika/20 text-paprika text-xs">
+              {condition.name}
+              <.link
+                navigate={~p"/nutritionist/research/notes?condition_id=#{condition.id}"}
+                class="inline-flex items-center gap-0.5 text-basil hover:underline"
+                title={"Open my notes for #{condition.name}"}
+              >
+                <.icon name="hero-document-text" class="w-3 h-3" /> Notes
+              </.link>
+              <button
+                type="button"
+                phx-click="remove_condition"
+                phx-value-id={condition.id}
+                aria-label={"Remove #{condition.name}"}
+                class="hover:text-parchment"
+              >
+                ✕
+              </button>
+            </span>
+          <% end %>
+        <% end %>
+
+        <form
+          :if={not Enum.empty?(@available_conditions)}
+          phx-submit="add_condition"
+          class="inline-flex items-center gap-2"
+        >
+          <select
+            name="condition_id"
+            class="bg-ink border border-ink-panel2 rounded-lg px-2.5 py-1.5 text-parchment text-xs"
+          >
+            <option value="">+ Add condition</option>
+            <%= for condition <- @available_conditions do %>
+              <option value={condition.id}>{condition.name}</option>
+            <% end %>
+          </select>
+          <.action variant={:secondary} size={:sm} type="submit">Add</.action>
+        </form>
+      </div>
+    </div>
+    """
+  end
 
   defp load_visits(socket) do
     visits =
@@ -750,6 +899,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
 
       {intake_panel(assigns)}
 
+      {onboarding_answers_panel(assigns)}
+
       <!-- Weight trend -->
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
         <h2 class="text-parchment font-display font-semibold mb-4">Weight trend</h2>
@@ -1093,7 +1244,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         <% @intake -> %>
           {intake_display(assigns)}
         <% true -> %>
-          <p class="text-parchment-dim text-sm">No dietary history recorded yet.</p>
+          <p class="text-parchment-dim text-sm mb-2">No dietary history recorded yet.</p>
+          {conditions_panel(assigns)}
       <% end %>
     </div>
     """
@@ -1125,6 +1277,8 @@ defmodule MehungryWeb.NutritionistLive.ClientDetail do
         <.metric label="BMR" value={@intake.bmr_kcal} unit="kcal" />
         <.metric label="TDEE" value={@intake.tdee_kcal} unit="kcal" />
       </div>
+
+      {conditions_panel(assigns)}
 
       <%= if present?(@intake.goal) do %>
         <p class="text-sm text-parchment mb-4">

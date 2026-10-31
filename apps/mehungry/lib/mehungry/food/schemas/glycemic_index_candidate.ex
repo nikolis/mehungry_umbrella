@@ -2,7 +2,7 @@ defmodule Mehungry.Food.GlycemicIndexCandidate do
   @moduledoc """
   A *proposed* Glycemic Index value **re-derived from a primary study**, staged
   `pending → promoted | rejected` — the review gate of the path-B GI pipeline
-  (see `docs/science/glycemic_index_licensing.md`).
+  (see `docs/implementation/science/glycemic_index_licensing.md`).
 
   Mirrors `Food.CompoundMeasurementCandidate`: the local-AI service extracts the
   measured GI from a paper's full text, and each finding is fanned over every

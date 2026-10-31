@@ -27,6 +27,7 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
         {:ok,
          socket
          |> assign(:record, record)
+         |> assign(:conditions, Professionals.list_client_conditions(client_id))
          |> assign(:intake, Professionals.get_latest_intake(client_id))
          |> assign(:notes, Professionals.list_consultation_notes(client_id))
          |> assign(:page_title, "Record: #{record.full_name}")}
@@ -71,6 +72,19 @@ defmodule MehungryWeb.NutritionistLive.ClientRecord do
         |> Enum.reject(&(&1 in [nil, ""]))
         |> Enum.join(" · ")}
       </p>
+
+      <%= unless Enum.empty?(@conditions) do %>
+        <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">
+          <h2 class="text-lg font-display font-bold text-parchment mb-3">Health conditions</h2>
+          <div class="flex flex-wrap gap-2">
+            <%= for condition <- @conditions do %>
+              <span class="px-3 py-1 rounded-full bg-paprika/20 text-paprika text-sm">
+                {condition.name}
+              </span>
+            <% end %>
+          </div>
+        </section>
+      <% end %>
 
       <%= if @intake do %>
         <section class="bg-ink-panel border border-ink-panel2 rounded-xl p-5 mb-6">

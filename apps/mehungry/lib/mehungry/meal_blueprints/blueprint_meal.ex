@@ -1,10 +1,15 @@
 defmodule Mehungry.MealBlueprints.BlueprintMeal do
   @moduledoc """
-  Per-meal nutritional targets within one day of a `Blueprint`: the macro split
-  as **percentages of the meal's energy** — `protein_pct`, `carbs_pct`,
-  `fats_pct` — which must always total 100 (default 30 / 40 / 30), plus an
-  optional free-text `note`. The "general" targets (required nutrients /
-  compounds, preferred foods) live one level up, on
+  One meal slot within a day of a `Blueprint`. Carries the macro split as
+  **percentages of the day's energy** — `protein_pct`, `carbs_pct`, `fats_pct`
+  (must total 100, default 30 / 40 / 30) — plus an optional free-text `note`.
+
+  The macro split is authored **once per day** and is identical across every meal
+  slot: the nutritionist editor binds one day-level control and fans the split
+  onto all slots on save. The split lives on each `BlueprintMeal` row (rather than
+  on `BlueprintDay`) only so the shape the generation/calendar pipeline reads is
+  unchanged; the `note` is the genuinely per-slot field. The "general" targets
+  (required nutrients / compounds, preferred foods) live one level up, on
   `Mehungry.MealBlueprints.Blueprint`.
 
   `meal_type` is one of `Mehungry.History.MealType.values/0` (the same slots the

@@ -1,7 +1,7 @@
 defmodule Mehungry.Food.ParserVocabularySeeder do
   @moduledoc """
   Idempotent seed set for the USDA description parser vocabulary — enough to
-  parse the golden examples in `docs/usda_description_parser.md`. Safe to run
+  parse a set of golden USDA description examples. Safe to run
   repeatedly (`on_conflict: :nothing` against the unique alias indexes);
   reloads the in-memory `Parser.Vocabulary` once at the end.
   """

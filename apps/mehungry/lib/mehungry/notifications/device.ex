@@ -4,7 +4,7 @@ defmodule Mehungry.Notifications.Device do
   the token belongs to exactly one user at a time (shared hardware re-registers
   and moves). `last_seen_at` is bumped on each registration.
 
-  See `docs/notifications_system.md` §7.
+  See `docs/implementation/notifications_system.md` §7.
   """
   use Ecto.Schema
 

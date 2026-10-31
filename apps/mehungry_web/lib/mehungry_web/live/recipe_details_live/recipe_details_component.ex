@@ -471,7 +471,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
                inference is low-signal/occasionally misleading because it keys on
                each ingredient's per-100g nutrient density rather than the amount
                actually used in the dish (and ignores iron type, dose ratios, meal
-               timing). See docs/food/nutrient_interactions.md for the full
+               timing). See docs/implementation/food/nutrient_interactions.md for the full
                write-up and accuracy assessment. @interactions is forced to [] in
                maybe_load_recipe_async/3 so nothing renders and no query runs;
                un-comment this block and restore the query to re-enable. --%>
@@ -653,24 +653,12 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       assigns.recipe.recipe_ingredients
       |> Enum.map(& &1.ingredient_id)
 
-    profile =
-      case assigns.current_user do
-        nil -> nil
-        user -> Accounts.get_user_profile_by_user_id(user.id)
-      end
-
-    user_language = (profile && profile.language_preference) || assigns.recipe.language_name
-
-    display_names =
-      Food.ingredient_display_names(ingredient_ids, user_language)
-
     socket =
       socket
       |> assign(assigns)
       |> assign(:recipe, assigns.recipe)
       |> assign(:reply, reply)
       |> assign(:user_follows, user_follows)
-      |> assign(:ingredient_display_names, display_names)
       |> assign_new(:graphic_running, fn -> false end)
       |> assign_new(:graphic_result, fn -> nil end)
       |> assign_new(:graphic_error, fn -> nil end)
@@ -680,9 +668,36 @@ defmodule MehungryWeb.RecipeDetailsComponent do
           %Comment{user_id: assigns.current_user.id, recipe_id: assigns.recipe.id}
         end)
       )
+      |> maybe_assign_display_names(assigns.recipe, ingredient_ids, assigns.current_user)
       |> maybe_load_recipe_async(assigns.recipe, ingredient_ids)
 
     {:ok, socket}
+  end
+
+  # Resolve the recipe's ingredient display names in the viewer's language. The
+  # profile lookup + name resolution depend only on (recipe, viewer), so skip
+  # them when neither changed — otherwise every unrelated parent re-render of this
+  # (widely-reused) modal re-ran a profile query + a name resolve. Guarded the same
+  # once-per-recipe way as maybe_load_recipe_async/3 below.
+  defp maybe_assign_display_names(socket, recipe, ingredient_ids, current_user) do
+    user_id = current_user && current_user.id
+
+    if socket.assigns[:display_names_key] == {recipe.id, user_id} do
+      socket
+    else
+      profile =
+        case current_user do
+          nil -> nil
+          user -> Accounts.get_user_profile_by_user_id(user.id)
+        end
+
+      user_language = (profile && profile.language_preference) || recipe.language_name
+      display_names = Food.ingredient_display_names(ingredient_ids, user_language)
+
+      socket
+      |> assign(:display_names_key, {recipe.id, user_id})
+      |> assign(:ingredient_display_names, display_names)
+    end
   end
 
   # Comments and nutrient interactions are below the fold (comments even start
@@ -705,7 +720,7 @@ defmodule MehungryWeb.RecipeDetailsComponent do
       # "Nutrition Insights" (nutrient-interaction panel) is HIDDEN for now — its
       # recipe-level inference is low-signal/occasionally misleading (it keys on
       # per-100g ingredient density, not the amount actually used). See
-      # docs/food/nutrient_interactions.md. Return [] so the panel renders nothing
+      # docs/implementation/food/nutrient_interactions.md. Return [] so the panel renders nothing
       # and we skip the DB query; to re-enable, restore the call below and un-hide
       # the render block (search "Nutrition Insights").
       #   Food.get_interactions_for_ingredients(ingredient_ids)

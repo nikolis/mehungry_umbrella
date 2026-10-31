@@ -5,7 +5,7 @@ defmodule Mehungry.Notifications.ExpoPush do
   (config `:expo_access_token`) is sent as a bearer when Expo's
   "enhanced security" is enabled; it's omitted otherwise.
 
-  See `docs/notifications_system.md` §7.
+  See `docs/implementation/notifications_system.md` §7.
   """
   @behaviour Mehungry.Notifications.ExpoPushClient
 

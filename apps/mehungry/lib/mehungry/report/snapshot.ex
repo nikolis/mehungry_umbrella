@@ -1,6 +1,6 @@
 defmodule Mehungry.Report.Snapshot do
   @moduledoc """
-  Gathers the weekly app-status snapshot (`docs/app_status.md`) from all four
+  Gathers the weekly app-status snapshot (`docs/implementation/app_status.md`) from all four
   §7 sources in one pass, so the figures can be read and interpreted instead of
   pulled by hand. Driven by `mix report.snapshot`.
 
@@ -127,7 +127,7 @@ defmodule Mehungry.Report.Snapshot do
     Pinterest:
     #{pinterest_block(s.pinterest)}
 
-    ## §6 log row (paste into docs/app_status.md)
+    ## §6 log row (paste into docs/implementation/app_status.md)
     #{to_log_row(s)}
     """
   end

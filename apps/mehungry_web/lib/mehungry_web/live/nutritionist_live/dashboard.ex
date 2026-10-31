@@ -15,6 +15,8 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
     pending_sent =
       length(Enum.filter(Professionals.list_sent_invitations(user.id), &(&1.status == "pending")))
 
+    setup_steps = setup_steps(profile, client_count, pending_sent, blueprint_count)
+
     socket =
       socket
       |> assign(:profile, profile)
@@ -22,16 +24,55 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
       |> assign(:upcoming_appointments, upcoming)
       |> assign(:pending_invitations_sent, pending_sent)
       |> assign(:blueprint_count, blueprint_count)
+      |> assign(:setup_steps, setup_steps)
+      |> assign(:setup_complete?, Enum.all?(setup_steps, & &1.done))
       |> assign(:page_title, "Nutritionist Dashboard")
 
     {:ok, socket}
+  end
+
+  # The activation path a nutritionist walks to a fully usable practice. Every
+  # signal is already loaded in mount (no extra queries). The checklist replaces
+  # the old single "set up profile" banner so scattered manual setup becomes one
+  # guided, self-ticking sequence. The client step honors its "or invite" promise
+  # by ticking on either an accepted client or a still-pending sent invitation.
+  defp setup_steps(profile, client_count, pending_invitations_sent, blueprint_count) do
+    [
+      %{
+        label: "Create your professional profile",
+        done: not is_nil(profile),
+        href: "/nutritionist/profile",
+        cta: "Set up"
+      },
+      %{
+        label: "Publish your profile so clients can find you",
+        done: (profile && profile.is_public) || false,
+        href: "/nutritionist/profile",
+        cta: "Publish"
+      },
+      %{
+        label: "Add or invite your first client",
+        done: client_count > 0 or pending_invitations_sent > 0,
+        href: "/nutritionist/clients",
+        cta: "Add client"
+      },
+      %{
+        label: "Draft your first meal-plan blueprint",
+        done: blueprint_count > 0,
+        href: "/nutritionist/blueprints",
+        cta: "Create"
+      }
+    ]
   end
 
   @impl true
   def render(assigns) do
     ~H"""
     <div class="max-w-5xl mx-auto">
-      <h1 class="text-2xl font-display font-bold text-parchment mb-6">Dashboard</h1>
+      <h1 class="text-2xl font-display font-bold text-parchment mb-1">Dashboard</h1>
+      <p class="text-parchment-dim text-sm mb-6">
+        AI drafts the plans · you review & approve · your advice stays 100% yours — every recipe built on exact USDA nutrition (168 nutrients per serving).
+      </p>
 
       <%= if @profile do %>
         <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-4 mb-6 flex items-center justify-between">
@@ -53,15 +94,33 @@ defmodule MehungryWeb.NutritionistLive.Dashboard do
           </div>
           <a href="/nutritionist/profile" class="text-sm text-paprika hover:text-paprika-soft">Edit profile</a>
         </div>
-      <% else %>
-        <div class="bg-basil/10 border border-basil/30 rounded-xl p-4 mb-6 flex items-center justify-between">
-          <p class="text-parchment text-sm">
-            Complete your professional profile so clients can find and book you.
+      <% end %>
+
+      <!-- Activation checklist (until the practice is fully set up) -->
+      <%= if not @setup_complete? do %>
+        <div class="bg-basil/10 border border-basil/30 rounded-xl p-5 mb-6">
+          <p class="text-parchment font-medium mb-1">Set up your practice</p>
+          <p class="text-parchment-dim text-sm mb-4">
+            A few steps to get discovered and start seeing clients.
           </p>
-          <a
-            href="/nutritionist/profile"
-            class="text-sm font-medium text-paprika hover:text-paprika-soft whitespace-nowrap"
-          >Set up profile →</a>
+          <ul class="space-y-2">
+            <li :for={step <- @setup_steps} class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2 min-w-0">
+                <%= if step.done do %>
+                  <.icon name="hero-check-circle-solid" class="h-5 w-5 text-basil flex-shrink-0" />
+                  <span class="text-parchment-dim text-sm line-through truncate">{step.label}</span>
+                <% else %>
+                  <span class="h-5 w-5 rounded-full border border-parchment-dim/40 flex-shrink-0"></span>
+                  <span class="text-parchment text-sm truncate">{step.label}</span>
+                <% end %>
+              </div>
+              <a
+                :if={not step.done}
+                href={step.href}
+                class="text-sm font-medium text-paprika hover:text-paprika-soft whitespace-nowrap"
+              >{step.cta} →</a>
+            </li>
+          </ul>
         </div>
       <% end %>
 

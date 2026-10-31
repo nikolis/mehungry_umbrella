@@ -2,9 +2,22 @@ defmodule MehungryWeb.LocaleRoutingTest do
   use MehungryWeb.ConnCase, async: true
 
   describe "locale-prefixed routing" do
-    test "bare / redirects an anonymous visitor to the default-locale welcome page", %{conn: conn} do
+    test "bare / sends an unrecognized visitor to the bare welcome page (so the chooser shows)",
+         %{conn: conn} do
       conn = get(conn, "/")
-      assert redirected_to(conn) == "/en/welcome"
+      # No explicit language choice yet → land on the bare (unprefixed) welcome
+      # so the first-visit language chooser can trigger.
+      assert redirected_to(conn) == "/welcome"
+    end
+
+    test "bare / sends a visitor who already chose a language to their localized welcome",
+         %{conn: conn} do
+      conn =
+        conn
+        |> init_test_session(%{"locale_selected" => true, "locale" => "el"})
+        |> get("/")
+
+      assert redirected_to(conn) == "/el/welcome"
     end
 
     test "a supported locale prefix serves the page and sets the session locale", %{conn: conn} do
@@ -22,6 +35,26 @@ defmodule MehungryWeb.LocaleRoutingTest do
     test "the bare unprefixed page still resolves", %{conn: conn} do
       conn = get(conn, "/welcome")
       assert html_response(conn, 200)
+    end
+
+    test "an unrecognized visitor sees the language chooser on a bare public page", %{conn: conn} do
+      html = conn |> get("/welcome") |> html_response(200)
+      assert html =~ ~s(id="language-chooser")
+    end
+
+    test "a locale-prefixed page does not show the language chooser", %{conn: conn} do
+      html = conn |> get("/el/welcome") |> html_response(200)
+      refute html =~ ~s(id="language-chooser")
+    end
+
+    test "a visitor who already chose a language sees no chooser on a bare page", %{conn: conn} do
+      html =
+        conn
+        |> init_test_session(%{"locale_selected" => true})
+        |> get("/welcome")
+        |> html_response(200)
+
+      refute html =~ ~s(id="language-chooser")
     end
 
     test "a localized content page renders localized chrome, html lang, and hreflang", %{

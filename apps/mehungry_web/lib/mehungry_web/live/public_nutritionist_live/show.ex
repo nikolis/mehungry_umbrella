@@ -413,6 +413,8 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
       >
         <.live_component module={MehungryWeb.MustBeLoginComponent} id={:new} patch={~p"/browse"} />
       </.modal>
+
+      <.nutritionist_recruit_cta current_user={@current_user} variant={:banner} />
     </div>
     """
   end

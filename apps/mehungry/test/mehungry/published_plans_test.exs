@@ -62,8 +62,8 @@ defmodule Mehungry.PublishedPlansTest do
     end
 
     test "grocery_groups buckets ingredients into aisles in canonical order", %{user: user} do
-      {:ok, veg} = Mehungry.Food.create_category(%{name: "Vegetables and Vegetable Products"})
-      {:ok, poultry} = Mehungry.Food.create_category(%{name: "Poultry Products"})
+      veg = ensure_category("Vegetables and Vegetable Products")
+      poultry = ensure_category("Poultry Products")
       {:ok, tomato} = Mehungry.Food.create_ingredient(%{name: "Tomato", category_id: veg.id})
 
       {:ok, chicken} =
@@ -115,7 +115,7 @@ defmodule Mehungry.PublishedPlansTest do
     end
 
     test "a directly-logged ingredient carries its id in the grocery list", %{user: user} do
-      {:ok, veg} = Mehungry.Food.create_category(%{name: "Vegetables and Vegetable Products"})
+      veg = ensure_category("Vegetables and Vegetable Products")
       {:ok, onion} = Mehungry.Food.create_ingredient(%{name: "Onion", category_id: veg.id})
       mu = FoodFixtures.measurement_unit_fixture()
 
@@ -137,8 +137,8 @@ defmodule Mehungry.PublishedPlansTest do
     end
 
     test "plain water is excluded from the grocery list", %{user: user} do
-      {:ok, bev} = Mehungry.Food.create_category(%{name: "Beverages"})
-      {:ok, veg} = Mehungry.Food.create_category(%{name: "Vegetables and Vegetable Products"})
+      bev = ensure_category("Beverages")
+      veg = ensure_category("Vegetables and Vegetable Products")
       {:ok, water} = Mehungry.Food.create_ingredient(%{name: "Water, tap, municipal", category_id: bev.id})
       {:ok, melon} = Mehungry.Food.create_ingredient(%{name: "Watermelon", category_id: veg.id})
       mu = FoodFixtures.measurement_unit_fixture()
@@ -167,7 +167,7 @@ defmodule Mehungry.PublishedPlansTest do
     end
 
     test "an ingredient used across meals appears once (deduped)", %{user: user} do
-      {:ok, veg} = Mehungry.Food.create_category(%{name: "Vegetables and Vegetable Products"})
+      veg = ensure_category("Vegetables and Vegetable Products")
       {:ok, onion} = Mehungry.Food.create_ingredient(%{name: "Onion", category_id: veg.id})
       mu = FoodFixtures.measurement_unit_fixture()
 
@@ -198,7 +198,7 @@ defmodule Mehungry.PublishedPlansTest do
     end
 
     test "backfill_grocery_groups/0 groups a legacy flat-only plan by aisle", %{user: user} do
-      {:ok, veg} = Mehungry.Food.create_category(%{name: "Vegetables and Vegetable Products"})
+      veg = ensure_category("Vegetables and Vegetable Products")
       {:ok, _} = Mehungry.Food.create_ingredient(%{name: "Tomato", category_id: veg.id})
 
       # Simulate a plan published before aisle grouping: flat grocery, no groups.
@@ -378,6 +378,20 @@ defmodule Mehungry.PublishedPlansTest do
 
       assert remaining == [second.id]
       refute first.id in remaining
+    end
+  end
+
+  # The test DB can already hold these USDA categories (from seeds or a prior
+  # interrupted run), and `categories.name` is unique — so creating them outright
+  # collides. Fetch-or-create keeps these tests independent of seed state.
+  defp ensure_category(name) do
+    case Mehungry.Food.get_category_by_name(name) do
+      nil ->
+        {:ok, category} = Mehungry.Food.create_category(%{name: name})
+        category
+
+      category ->
+        category
     end
   end
 end

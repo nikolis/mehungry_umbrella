@@ -8,6 +8,13 @@ defmodule Mehungry.Umbrella.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test,
+        "coveralls.detail": :test
+      ],
       releases: [
         mehungry_umbrella: [
           version: "0.0.1",
@@ -34,6 +41,7 @@ defmodule Mehungry.Umbrella.MixProject do
   # and cannot be accessed from applications inside the apps/ folder.
   defp deps do
     [
+      {:excoveralls, "~> 0.18", only: :test},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.3", only: [:dev], runtime: false}
     ]

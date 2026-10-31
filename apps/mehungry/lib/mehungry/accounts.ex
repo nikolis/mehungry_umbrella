@@ -25,6 +25,14 @@ defmodule Mehungry.Accounts do
   defdelegate android_beta_current_version(), to: UserNotifier
   defdelegate deliver_trial_welcome(recipient, unsubscribe_url), to: UserNotifier
 
+  defdelegate deliver_client_onboarding_invite(
+                recipient,
+                professional_name,
+                claim_url,
+                personal_message \\ nil
+              ),
+              to: UserNotifier
+
   # ── Admin / lookups ────────────────────────────────────────────────────
 
   defdelegate get_user_by_email(email), to: Admin

@@ -47,6 +47,19 @@ defmodule Mehungry.Extractor do
     {String.trim_trailing(base_url, "/"), auth_token}
   end
 
+  @doc """
+  The configured extractor client module (`:extractor_client`, default
+  `Mehungry.Extractor.Client`) — the one seam tests swap for a stub.
+  """
+  def client, do: Application.get_env(:mehungry, :extractor_client, Mehungry.Extractor.Client)
+
+  @doc """
+  Pre-flight liveness probe against the configured extractor, for a fail-fast
+  check before starting a run: `:ok` or `{:error, reason}`. Delegates to the
+  configured `client/0`.
+  """
+  def reachable?, do: client().reachable?()
+
   @doc "Upsert the singleton connection settings."
   def update_settings(attrs) do
     (get_settings() || %Settings{})

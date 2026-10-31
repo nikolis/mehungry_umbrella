@@ -31,8 +31,10 @@ defmodule Mehungry.Search.RecipeVectorSearch do
     - `:limit`       — max results (default: 20)
     - `:exclude_ids` — list of recipe IDs to exclude
 
-  Returns a list of maps: `%{id, title, difficulty, servings}`.
-  Falls back to full-text search if embedding is unavailable.
+  Returns a list of maps: `%{id, title, difficulty, servings, nutrients}`
+  (the stored per-recipe `nutrients` jsonb, so callers can derive calories
+  without a second query). Falls back to full-text search if embedding is
+  unavailable.
   """
   def search(query_text, opts \\ []) do
     user_id = Keyword.get(opts, :user_id)
@@ -57,7 +59,13 @@ defmodule Mehungry.Search.RecipeVectorSearch do
         where: not is_nil(r.embedding),
         order_by: fragment("embedding <=> ?", ^pg_vector),
         limit: ^limit,
-        select: %{id: r.id, title: r.title, difficulty: r.difficulty, servings: r.servings}
+        select: %{
+          id: r.id,
+          title: r.title,
+          difficulty: r.difficulty,
+          servings: r.servings,
+          nutrients: r.nutrients
+        }
 
     base
     |> maybe_filter_user(user_id)
@@ -76,7 +84,13 @@ defmodule Mehungry.Search.RecipeVectorSearch do
     base_query
     |> RecipeSearch.run(query_text)
     |> limit(^limit)
-    |> select([r], %{id: r.id, title: r.title, difficulty: r.difficulty, servings: r.servings})
+    |> select([r], %{
+      id: r.id,
+      title: r.title,
+      difficulty: r.difficulty,
+      servings: r.servings,
+      nutrients: r.nutrients
+    })
     |> Repo.all()
   end
 

@@ -2,10 +2,12 @@ defmodule Mehungry.Professionals do
   import Ecto.Query
   alias Mehungry.Repo
   alias Mehungry.Accounts
+  alias Mehungry.Accounts.User
 
   alias Mehungry.Professionals.{
     ProfessionalProfile,
     ProfessionalAvailability,
+    ProfessionalService,
     TutorInvitation,
     TutorClientAssignment,
     Appointment,
@@ -15,11 +17,13 @@ defmodule Mehungry.Professionals do
     ArticleReference,
     ProfessionalClient,
     ClientIntake,
+    ClientCondition,
     ConsultationNote,
     AssignmentMessage
   }
 
   alias Mehungry.Professionals.DietaryHistory
+  alias Mehungry.Health.Condition
 
   # ── Professional Profile ───────────────────────────────────────────────────────
 
@@ -136,6 +140,20 @@ defmodule Mehungry.Professionals do
     |> Repo.one()
   end
 
+  @doc """
+  Fetch a published profile by its vanity `handle` (case-insensitive), or nil.
+  Backs the personal short link `/@handle` → canonical `/nutritionists/:slug`.
+  """
+  def get_public_professional_by_handle(handle) when is_binary(handle) do
+    normalized = handle |> String.trim() |> String.downcase()
+
+    ProfessionalProfile
+    |> where([p], p.handle == ^normalized and p.is_public == true)
+    |> Repo.one()
+  end
+
+  def get_public_professional_by_handle(_), do: nil
+
   @doc "Distinct cities of published professionals, for directory filters."
   def list_professional_cities do
     ProfessionalProfile
@@ -148,21 +166,123 @@ defmodule Mehungry.Professionals do
 
   # ── Invitations ────────────────────────────────────────────────────────────────
 
-  @doc "Send an invitation from a professional to a user identified by email."
+  @doc """
+  Send an invitation from a professional to a user identified by email.
+
+  Resolution falls back from an exact email match to the canonical form, so a
+  registered user invited via a Gmail-style alias (`johndoe@` vs the stored
+  `john.doe@`) still resolves — matching what `onboard_client_by_email/4`
+  treats as already-registered, which otherwise dead-ends the invite flow.
+  """
   def invite_client(professional_id, client_email, message \\ nil) do
-    case Accounts.get_user_by_email(client_email) do
-      nil ->
+    client =
+      Accounts.get_user_by_email(client_email) ||
+        Accounts.get_user_by_canonical_email(client_email)
+
+    case client do
+      nil -> {:error, :client_not_found}
+      client -> invite_client_by_id(professional_id, client.id, message)
+    end
+  end
+
+  @doc """
+  Invite a not-yet-registered person to join Mehungry as this professional's client.
+
+  This is the fallback for `invite_client/3` when the typed email matches no
+  existing user. It reuses the managed-client machinery: a login-less `User` is
+  created and assigned to the professional (via `create_managed_client/2`), then an
+  onboarding email with the `/claim/:token` link is sent to `email`. When the
+  recipient claims the account they set their own email + password and land already
+  connected as this professional's client.
+
+  `claim_url_fun` is injected by the caller (the web layer) as `fn token -> url end`
+  so this core function stays URL-free. The real `email` is used only to send the
+  invite — the managed account keeps its synthetic placeholder address.
+
+  Returns `{:ok, user}`, `{:error, :already_registered}` (someone now owns that
+  email — caller should invite them normally instead), `{:error, :invalid_email}`,
+  `{:error, :email_failed}` (account created but the email could not be sent — the
+  professional can resend the claim link from their clients roster), or
+  `{:error, changeset}`.
+  """
+  def onboard_client_by_email(professional_id, email, message, claim_url_fun)
+      when is_function(claim_url_fun, 1) do
+    trimmed = String.trim(to_string(email))
+
+    cond do
+      trimmed == "" ->
+        {:error, :invalid_email}
+
+      not is_nil(Accounts.get_user_by_email(trimmed)) or
+          not is_nil(Accounts.get_user_by_canonical_email(trimmed)) ->
+        {:error, :already_registered}
+
+      true ->
+        with {:ok, %{user: user, claim_token: token}} <-
+               create_managed_client(professional_id, client_name_from_email(trimmed)),
+             {:ok, _email} <-
+               Accounts.deliver_client_onboarding_invite(
+                 trimmed,
+                 professional_display_name(professional_id),
+                 claim_url_fun.(token),
+                 message
+               ) do
+          {:ok, user}
+        else
+          {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset}
+          # Managed account was created but the email bounced/failed to send.
+          {:error, _reason} -> {:error, :email_failed}
+        end
+    end
+  end
+
+  # Human-ish display name for a managed client created from only an email — the
+  # local part, so the professional recognises the row in their clients roster.
+  defp client_name_from_email(email) do
+    email |> String.split("@") |> List.first() |> to_string()
+  end
+
+  # The name to sign the onboarding email with: the professional's public display
+  # name, falling back to their account name.
+  defp professional_display_name(professional_id) do
+    case get_professional_profile(professional_id) do
+      %ProfessionalProfile{display_name: name} when is_binary(name) and name != "" ->
+        name
+
+      _ ->
+        case Accounts.get_user!(professional_id) do
+          %User{name: name} when is_binary(name) and name != "" -> name
+          _ -> "Your nutritionist"
+        end
+    end
+  end
+
+  @doc """
+  Send an invitation from a professional directly to a registered user by id.
+
+  This is the primary path behind the search-and-pick invite UI, so a
+  professional can reach users they couldn't name by email — e.g. Facebook/Google
+  logins whose only email is a synthetic `*@facebook.user` placeholder. The
+  email-based `invite_client/3` resolves the address and delegates here.
+  """
+  def invite_client_by_id(professional_id, client_id, message \\ nil)
+      when is_integer(client_id) do
+    cond do
+      client_id == professional_id ->
+        {:error, :self_invite}
+
+      is_nil(Repo.get(User, client_id)) ->
         {:error, :client_not_found}
 
-      client ->
+      true ->
         existing =
-          Repo.get_by(TutorInvitation, professional_id: professional_id, client_id: client.id)
+          Repo.get_by(TutorInvitation, professional_id: professional_id, client_id: client_id)
 
         cond do
           not is_nil(existing) and existing.status == "pending" ->
             {:error, :already_invited}
 
-          not is_nil(existing) and existing.status == "accepted" ->
+          already_client?(professional_id, client_id) ->
             {:error, :already_client}
 
           not is_nil(existing) ->
@@ -174,13 +294,100 @@ defmodule Mehungry.Professionals do
             %TutorInvitation{}
             |> TutorInvitation.changeset(%{
               professional_id: professional_id,
-              client_id: client.id,
+              client_id: client_id,
               message: message
             })
             |> Repo.insert()
         end
     end
   end
+
+  defp already_client?(professional_id, client_id) do
+    Repo.exists?(
+      from a in TutorClientAssignment,
+        where: a.professional_id == ^professional_id and a.client_id == ^client_id
+    )
+  end
+
+  @doc """
+  Searches registered users a professional can invite, matching on display name,
+  profile alias, or exact email. This is the way to find users the email box
+  can't reach (OAuth logins without a usable email, since there is no username).
+
+  Deliberately includes users whose only email is a synthetic provider
+  placeholder (e.g. `*@facebook.user`) — they are real, invitable logins and the
+  whole reason this path exists, since they can't be reached by email. Excludes
+  only the professional themselves and managed, unclaimed placeholder accounts
+  (`managed_by_professional_id` set — login-less stand-ins that can't accept).
+  Each result is a `%{user: user, status: :invitable | :invited | :client}` map
+  so the UI can label people already invited or already a client. Requires at
+  least 2 chars; returns `[]` otherwise.
+
+  Options: `:limit` (default 10).
+  """
+  def search_invitable_users(professional_id, query, opts \\ []) when is_binary(query) do
+    trimmed = String.trim(query)
+
+    if String.length(trimmed) < 2 do
+      []
+    else
+      limit = Keyword.get(opts, :limit, 10)
+      like = "%#{escape_like(trimmed)}%"
+
+      users =
+        Repo.all(
+          from u in User,
+            left_join: p in assoc(u, :user_profile),
+            where: u.id != ^professional_id,
+            where: is_nil(u.managed_by_professional_id),
+            where: ilike(u.name, ^like) or ilike(p.alias, ^like) or u.email == ^trimmed,
+            order_by: [asc: u.name],
+            limit: ^limit,
+            preload: [user_profile: p]
+        )
+
+      annotate_invite_status(professional_id, users)
+    end
+  end
+
+  defp annotate_invite_status(_professional_id, []), do: []
+
+  defp annotate_invite_status(professional_id, users) do
+    ids = Enum.map(users, & &1.id)
+
+    invited =
+      MapSet.new(
+        Repo.all(
+          from i in TutorInvitation,
+            where:
+              i.professional_id == ^professional_id and i.client_id in ^ids and
+                i.status == "pending",
+            select: i.client_id
+        )
+      )
+
+    clients =
+      MapSet.new(
+        Repo.all(
+          from a in TutorClientAssignment,
+            where: a.professional_id == ^professional_id and a.client_id in ^ids,
+            select: a.client_id
+        )
+      )
+
+    Enum.map(users, fn u ->
+      status =
+        cond do
+          MapSet.member?(clients, u.id) -> :client
+          MapSet.member?(invited, u.id) -> :invited
+          true -> :invitable
+        end
+
+      %{user: u, status: status}
+    end)
+  end
+
+  defp escape_like(value), do: String.replace(value, ~r/([\\%_])/, "\\\\\\1")
 
   def get_invitation(id), do: Repo.get(TutorInvitation, id)
 
@@ -288,6 +495,18 @@ defmodule Mehungry.Professionals do
 
   def remove_client(professional_id, client_id) do
     case get_assignment(professional_id, client_id) do
+      nil -> {:error, :not_found}
+      assignment -> Repo.delete(assignment)
+    end
+  end
+
+  @doc """
+  Client-initiated unlink: a client ends their own link to their nutritionist
+  (a client has at most one assignment). Returns `{:error, :not_found}` when the
+  client has no nutritionist.
+  """
+  def unassign_nutritionist(client_id) do
+    case Repo.get_by(TutorClientAssignment, client_id: client_id) do
       nil -> {:error, :not_found}
       assignment -> Repo.delete(assignment)
     end
@@ -435,6 +654,84 @@ defmodule Mehungry.Professionals do
     else
       _ -> {:error, :not_found}
     end
+  end
+
+  # ── Professional Services (session + package pricing, free intro) ────────────────
+
+  @doc "All services for a nutritionist, intro first, then by `position`."
+  def list_services(professional_id) do
+    ProfessionalService
+    |> where([s], s.professional_id == ^professional_id)
+    |> Repo.all()
+    |> sort_services()
+  end
+
+  @doc "Active services only (intro first, then by position) — for the public profile/booking."
+  def list_active_services(professional_id) do
+    ProfessionalService
+    |> where([s], s.professional_id == ^professional_id and s.active == true)
+    |> Repo.all()
+    |> sort_services()
+  end
+
+  def get_service!(id), do: Repo.get!(ProfessionalService, id)
+
+  @doc "Fetch a service scoped to its owning nutritionist (nil on cross-tenant access)."
+  def get_service_for_professional(professional_id, id) do
+    Repo.get_by(ProfessionalService, id: id, professional_id: professional_id)
+  end
+
+  def create_service(attrs) do
+    %ProfessionalService{}
+    |> ProfessionalService.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_service(%ProfessionalService{} = service, attrs) do
+    service
+    |> ProfessionalService.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc "Soft-hide a service (keeps historical appointments valid); the intro can't be hidden."
+  def archive_service(%ProfessionalService{kind: "intro"} = service), do: {:ok, service}
+
+  def archive_service(%ProfessionalService{} = service) do
+    update_service(service, %{active: false})
+  end
+
+  @doc "Permanently delete a service; the mandatory intro can't be deleted."
+  def delete_service(%ProfessionalService{kind: "intro"}), do: {:error, :intro_undeletable}
+  def delete_service(%ProfessionalService{} = service), do: Repo.delete(service)
+
+  def change_service(%ProfessionalService{} = service, attrs \\ %{}) do
+    ProfessionalService.changeset(service, attrs)
+  end
+
+  @doc """
+  Return the nutritionist's free intro service, lazily seeding the locked row if
+  it doesn't exist yet. Idempotent — safe to call on every Payments-page load.
+  The partial unique index guarantees at most one intro per professional.
+  """
+  def ensure_intro_service(professional_id) do
+    case Repo.get_by(ProfessionalService, professional_id: professional_id, kind: "intro") do
+      %ProfessionalService{} = intro ->
+        {:ok, intro}
+
+      nil ->
+        create_service(%{
+          professional_id: professional_id,
+          kind: "intro",
+          name: "Free 15-minute intro",
+          description: "A short no-cost call to see if we're a good fit.",
+          position: 0
+        })
+    end
+  end
+
+  # Intro always first, then by stored position (stable, DB-agnostic ordering).
+  defp sort_services(services) do
+    Enum.sort_by(services, fn s -> {s.kind != "intro", s.position} end)
   end
 
   # ── Appointments ───────────────────────────────────────────────────────────────
@@ -994,6 +1291,51 @@ defmodule Mehungry.Professionals do
 
   def change_client_record(%ProfessionalClient{} = client, attrs \\ %{}) do
     ProfessionalClient.changeset(client, attrs)
+  end
+
+  # ── Client conditions (structured client↔condition link) ────────────────────────
+
+  @doc """
+  The existing `Health.Condition`s linked to a client record, ordered by name.
+  """
+  def list_client_conditions(professional_client_id) do
+    Repo.all(
+      from c in Condition,
+        join: cc in ClientCondition,
+        on: cc.condition_id == c.id,
+        where: cc.professional_client_id == ^professional_client_id,
+        order_by: [asc: c.name]
+    )
+  end
+
+  @doc """
+  Links an existing condition to a client record. Idempotent — linking the same
+  condition twice is a no-op (the unique pair constraint is ignored). Only an
+  existing `Health.Condition` can be linked; this never creates a condition.
+  """
+  def add_client_condition(professional_client_id, condition_id) do
+    %ClientCondition{}
+    |> ClientCondition.changeset(%{
+      professional_client_id: professional_client_id,
+      condition_id: condition_id
+    })
+    |> Repo.insert(
+      on_conflict: :nothing,
+      conflict_target: [:professional_client_id, :condition_id]
+    )
+  end
+
+  @doc "Unlinks a condition from a client record. No-op if it wasn't linked."
+  def remove_client_condition(professional_client_id, condition_id) do
+    {count, _} =
+      Repo.delete_all(
+        from cc in ClientCondition,
+          where:
+            cc.professional_client_id == ^professional_client_id and
+              cc.condition_id == ^condition_id
+      )
+
+    {:ok, count}
   end
 
   # ── Client intakes ──────────────────────────────────────────────────────────────

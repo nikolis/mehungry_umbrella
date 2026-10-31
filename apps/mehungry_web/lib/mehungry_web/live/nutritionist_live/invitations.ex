@@ -15,39 +15,130 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
       |> assign(:invite_email, "")
       |> assign(:invite_message, "")
       |> assign(:invite_error, nil)
+      |> assign(:onboard_email, nil)
+      |> assign(:search_query, "")
+      |> assign(:search_results, [])
 
     {:ok, socket}
   end
 
   @impl true
-  def handle_event("invite_client", %{"email" => email, "message" => message}, socket) do
+  def handle_event("search_users", %{"query" => query}, socket) do
+    professional_id = socket.assigns.current_user.id
+    results = Professionals.search_invitable_users(professional_id, query)
+
+    {:noreply,
+     socket
+     |> assign(:search_query, query)
+     |> assign(:search_results, results)}
+  end
+
+  @impl true
+  def handle_event("invite_user", %{"id" => id}, socket) do
     professional_id = socket.assigns.current_user.id
 
-    case Professionals.invite_client(professional_id, String.trim(email), message) do
+    case Professionals.invite_client_by_id(professional_id, String.to_integer(id)) do
       {:ok, _invitation} ->
-        invitations = Professionals.list_sent_invitations(professional_id)
+        results = Professionals.search_invitable_users(professional_id, socket.assigns.search_query)
 
         {:noreply,
          socket
-         |> assign(:invitations, invitations)
+         |> refresh_invitations(professional_id)
+         |> assign(:search_results, results)
+         |> put_flash(:info, "Invitation sent.")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, invite_error_message(reason))}
+    end
+  end
+
+  @impl true
+  def handle_event("invite_client", %{"email" => email, "message" => message}, socket) do
+    professional_id = socket.assigns.current_user.id
+    trimmed = String.trim(email)
+
+    case Professionals.invite_client(professional_id, trimmed, message) do
+      {:ok, _invitation} ->
+        {:noreply,
+         socket
+         |> refresh_invitations(professional_id)
          |> assign(:invite_email, "")
          |> assign(:invite_message, "")
          |> assign(:invite_error, nil)
+         |> assign(:onboard_email, nil)
          |> put_flash(:info, "Invitation sent to #{email}.")}
 
+      # No account yet for this email — offer to send them an onboarding invite
+      # instead of a dead-end error. Keep the typed email + message around.
       {:error, :client_not_found} ->
-        {:noreply, assign(socket, :invite_error, "No user found with that email address.")}
-
-      {:error, :already_invited} ->
         {:noreply,
-         assign(socket, :invite_error, "You already have a pending invitation to this user.")}
+         socket
+         |> assign(:invite_email, trimmed)
+         |> assign(:invite_message, message)
+         |> assign(:invite_error, nil)
+         |> assign(:onboard_email, trimmed)}
 
-      {:error, :already_client} ->
-        {:noreply, assign(socket, :invite_error, "This user is already your client.")}
-
-      {:error, _} ->
-        {:noreply, assign(socket, :invite_error, "Could not send invitation. Please try again.")}
+      {:error, reason} ->
+        {:noreply,
+         socket |> assign(:onboard_email, nil) |> assign(:invite_error, invite_error_message(reason))}
     end
+  end
+
+  @impl true
+  def handle_event("confirm_onboard", %{"email" => email, "message" => message}, socket) do
+    professional_id = socket.assigns.current_user.id
+
+    case Professionals.onboard_client_by_email(professional_id, email, message, &claim_url/1) do
+      {:ok, _user} ->
+        {:noreply,
+         socket
+         |> assign(:invite_email, "")
+         |> assign(:invite_message, "")
+         |> assign(:invite_error, nil)
+         |> assign(:onboard_email, nil)
+         |> put_flash(
+           :info,
+           "Invitation email sent to #{email}. They'll appear in your clients once they join."
+         )}
+
+      # They registered in the meantime — fall back to the normal invite path.
+      {:error, :already_registered} ->
+        case Professionals.invite_client(professional_id, String.trim(email), message) do
+          {:ok, _} ->
+            {:noreply,
+             socket
+             |> refresh_invitations(professional_id)
+             |> assign(:invite_email, "")
+             |> assign(:invite_message, "")
+             |> assign(:onboard_email, nil)
+             |> put_flash(:info, "Invitation sent to #{email}.")}
+
+          {:error, reason} ->
+            {:noreply,
+             socket
+             |> assign(:onboard_email, nil)
+             |> assign(:invite_error, invite_error_message(reason))}
+        end
+
+      {:error, :email_failed} ->
+        {:noreply,
+         socket
+         |> assign(:onboard_email, nil)
+         |> put_flash(
+           :error,
+           "We created the client but couldn't send the email. You can share a claim link from your Clients page."
+         )}
+
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> assign(:invite_error, "Could not send the onboarding email. Please try again.")}
+    end
+  end
+
+  @impl true
+  def handle_event("cancel_onboard", _params, socket) do
+    {:noreply, assign(socket, :onboard_email, nil)}
   end
 
   @impl true
@@ -66,6 +157,21 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
     end
   end
 
+  defp refresh_invitations(socket, professional_id) do
+    assign(socket, :invitations, Professionals.list_sent_invitations(professional_id))
+  end
+
+  defp claim_url(token), do: MehungryWeb.Endpoint.url() <> "/claim/" <> token
+
+  defp invite_error_message(:client_not_found), do: "No user found with that email address."
+
+  defp invite_error_message(:already_invited),
+    do: "You already have a pending invitation to this user."
+
+  defp invite_error_message(:already_client), do: "This user is already your client."
+  defp invite_error_message(:self_invite), do: "You can't invite yourself."
+  defp invite_error_message(_), do: "Could not send invitation. Please try again."
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -75,6 +181,78 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
       <!-- Invite form -->
       <div class="bg-ink-panel border border-ink-panel2 rounded-xl p-6 mb-8">
         <h2 class="text-parchment font-display font-semibold mb-4">Invite a client</h2>
+
+        <!-- Search existing users -->
+        <div>
+          <label class="block text-sm text-parchment-dim mb-1">Search by name</label>
+          <form id="user-search-form" phx-change="search_users" phx-submit="search_users">
+            <input
+              type="text"
+              name="query"
+              value={@search_query}
+              phx-debounce="250"
+              autocomplete="off"
+              placeholder="Search m3hungry users by name…"
+              class="w-full bg-ink-panel2 border border-ink-panel2 rounded-lg px-3 py-2 text-parchment text-sm focus:outline-none focus:border-paprika"
+            />
+          </form>
+          <p class="text-parchment-dim text-xs mt-1">
+            Find users who signed in with Facebook or Google even if you don't know their email.
+          </p>
+
+          <%= cond do %>
+            <% String.trim(@search_query) == "" -> %>
+            <% @search_results == [] -> %>
+              <p class="text-parchment-dim text-sm mt-3">No matching users found.</p>
+            <% true -> %>
+              <ul class="mt-3 space-y-2">
+                <%= for %{user: user, status: status} <- @search_results do %>
+                  <li class="flex items-center justify-between gap-3 bg-ink-panel2 rounded-lg px-3 py-2">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <%= if user.profile_pic do %>
+                        <img src={user.profile_pic} alt="" class="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                      <% else %>
+                        <div class="w-8 h-8 rounded-full bg-ink-panel flex-shrink-0 flex items-center justify-center text-parchment-dim text-xs">
+                          {String.first(user.name || "?")}
+                        </div>
+                      <% end %>
+                      <div class="min-w-0">
+                        <p class="text-parchment text-sm font-medium truncate">
+                          {user.name || "Unknown"}
+                        </p>
+                        <%= if user.user_profile && user.user_profile.alias && user.user_profile.alias != user.name do %>
+                          <p class="text-parchment-dim text-xs truncate">{user.user_profile.alias}</p>
+                        <% end %>
+                      </div>
+                    </div>
+                    <%= case status do %>
+                      <% :invitable -> %>
+                        <.action
+                          variant={:secondary}
+                          size={:sm}
+                          type="button"
+                          phx-click="invite_user"
+                          phx-value-id={user.id}
+                        >
+                          Invite
+                        </.action>
+                      <% :invited -> %>
+                        <span class="text-xs text-yellow-400 flex-shrink-0">Invited</span>
+                      <% :client -> %>
+                        <span class="text-xs text-green-400 flex-shrink-0">Client</span>
+                    <% end %>
+                  </li>
+                <% end %>
+              </ul>
+          <% end %>
+        </div>
+
+        <div class="flex items-center gap-3 my-5">
+          <div class="flex-1 h-px bg-ink-panel2"></div>
+          <span class="text-parchment-dim text-xs uppercase tracking-wide">or invite by email</span>
+          <div class="flex-1 h-px bg-ink-panel2"></div>
+        </div>
+
         <form phx-submit="invite_client" class="space-y-3">
           <div>
             <label class="block text-sm text-parchment-dim mb-1">Client email address</label>
@@ -101,6 +279,35 @@ defmodule MehungryWeb.NutritionistLive.Invitations do
           <% end %>
           <.action variant={:primary} size={:sm} type="submit">Send invitation</.action>
         </form>
+
+        <%= if @onboard_email do %>
+          <div class="mt-4 bg-ink-panel2 border border-paprika/40 rounded-lg p-4">
+            <p class="text-parchment text-sm">
+              No m3hungry account found for
+              <span class="font-medium">{@onboard_email}</span>. Send them an invitation to join
+              m3hungry? When they sign up they'll become your client automatically.
+            </p>
+            <div class="flex items-center gap-4 mt-3">
+              <.action
+                variant={:primary}
+                size={:sm}
+                type="button"
+                phx-click="confirm_onboard"
+                phx-value-email={@onboard_email}
+                phx-value-message={@invite_message}
+              >
+                Send invitation email
+              </.action>
+              <button
+                type="button"
+                phx-click="cancel_onboard"
+                class="text-xs text-parchment-dim hover:text-parchment"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        <% end %>
       </div>
 
       <!-- Sent invitations -->

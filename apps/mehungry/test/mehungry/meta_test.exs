@@ -32,6 +32,9 @@ defmodule Mehungry.MetaTest do
     end
 
     test "SessionAggregator counts a tracked process when it exits" do
+      # This test exercises the aggregator's DB write, which the suite disables by
+      # default (see config/test.exs); turn it back on just for this test.
+      enable_session_recording()
       before = Meta.session_metrics_today().sessions
 
       # A throwaway process standing in for a connected LiveView.
@@ -44,6 +47,13 @@ defmodule Mehungry.MetaTest do
 
       assert eventually(fn -> Meta.session_metrics_today().sessions > before end)
     end
+  end
+
+  # Re-enable the aggregator's DB write for a single test (restored after it).
+  defp enable_session_recording do
+    prev = Application.get_env(:mehungry, :session_metrics_recording)
+    Application.put_env(:mehungry, :session_metrics_recording, true)
+    on_exit(fn -> Application.put_env(:mehungry, :session_metrics_recording, prev) end)
   end
 
   defp today_in_reporting_tz do

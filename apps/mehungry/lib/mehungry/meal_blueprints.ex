@@ -1,11 +1,14 @@
 defmodule Mehungry.MealBlueprints do
   @moduledoc """
-  The MealBlueprints context — user-owned "7-day meal-plan blueprints".
+  The MealBlueprints context — user-owned meal-plan blueprints.
 
-  A blueprint is a reusable targets document: 7 days, each with an optional
-  calorie aim and one target row per calendar meal slot
-  (`Mehungry.History.MealType.values/0`). It holds no recipes; a later phase
-  feeds its targets to the AI meal planner. See `Mehungry.MealBlueprints.Blueprint`.
+  A blueprint is a reusable targets document modelling a single **typical day** —
+  a generic daily ration with an optional calorie aim and one target row per
+  calendar meal slot (`Mehungry.History.MealType.values/0`). It is stored as 7
+  identical days so the AI meal planner and calendar import (which produce a full
+  week) have the shape they expect; the nutritionist editor authors one day and
+  fans it out across the 7 on save. It holds no recipes. See
+  `Mehungry.MealBlueprints.Blueprint`.
   """
   import Ecto.Query, warn: false
 
@@ -392,7 +395,7 @@ defmodule Mehungry.MealBlueprints do
 
   @doc "Updates a blueprint (nested days/meals cast through the changeset)."
   def update_blueprint(%Blueprint{} = blueprint, attrs) do
-    Mehungry.Repo.transact(fn repo ->
+    Mehungry.Repo.transact(fn _repo ->
       changeset =
         blueprint
         |> Blueprint.changeset(attrs)
@@ -597,7 +600,7 @@ defmodule Mehungry.MealBlueprints do
 
   @doc "Updates a generation-run row (status, meals_count, error)."
   def update_plan(%BlueprintPlan{} = plan, attrs) do
-    Mehungry.Repo.transact(fn repo ->
+    Mehungry.Repo.transact(fn _repo ->
       changeset =
         plan
         |> BlueprintPlan.changeset(attrs)
@@ -1046,7 +1049,7 @@ defmodule Mehungry.MealBlueprints do
   passing `nil`.
   """
   def update_plan_meal(%BlueprintPlanMeal{} = plan_meal, attrs) do
-    Mehungry.Repo.transact(fn repo ->
+    Mehungry.Repo.transact(fn _repo ->
       result =
         plan_meal
         |> BlueprintPlanMeal.changeset(attrs)

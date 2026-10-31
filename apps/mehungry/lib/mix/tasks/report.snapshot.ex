@@ -2,7 +2,7 @@ defmodule Mix.Tasks.Report.Snapshot do
   @shortdoc "Pulls the weekly app-status snapshot (DB + GA4 + Facebook + Pinterest)"
 
   @moduledoc """
-  Gathers the `docs/app_status.md` weekly snapshot from all four §7 sources in
+  Gathers the `docs/implementation/app_status.md` weekly snapshot from all four §7 sources in
   one pass and prints a human-readable report ending with a ready-to-paste §6
   table row.
 
@@ -12,7 +12,7 @@ defmodule Mix.Tasks.Report.Snapshot do
 
   Degrades gracefully: GA4/Facebook/Pinterest sections show a clear
   "not configured" note when their credential/scope/env is missing, so the DB
-  figures always print. Optional env vars (see `docs/app_status.md` §7):
+  figures always print. Optional env vars (see `docs/implementation/app_status.md` §7):
 
     * `REPORT_RO_DATABASE_URL` — read through a read-only DB role (else the app Repo)
     * `GA4_SA_KEY`, `GA4_PROPERTY_ID` — enable the GA4 pull

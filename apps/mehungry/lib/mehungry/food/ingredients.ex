@@ -600,6 +600,9 @@ defmodule Mehungry.Food.Ingredients do
     |> Repo.preload([:measurement_unit, :category])
   end
 
+  @doc "Total number of ingredients."
+  def count_ingredients, do: Repo.aggregate(Ingredient, :count, :id)
+
   def list_ingredients_paginated() do
     # return the next 50 posts
     query = from(i in Ingredient)

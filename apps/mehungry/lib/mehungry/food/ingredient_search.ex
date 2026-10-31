@@ -273,6 +273,7 @@ defmodule Mehungry.Food.IngredientSearch do
   # matches in addition to the strict phrase prefix.
   defp run_prefix_query(normalized, original_term, classes, owner_id, secondary_ids) do
     search_words = String.split(normalized, " ")
+    term_variant = plural_variant(original_term)
 
     where_clause = build_where(normalized, search_words)
 
@@ -286,8 +287,19 @@ defmodule Mehungry.Food.IngredientSearch do
       order_by: [
         # 1. Exact normalized match
         desc: fragment("CASE WHEN ? = ? THEN 1 ELSE 0 END", i.search_name, ^normalized),
-        # 2. pg_trgm word similarity — perfect match on "salt" in "Salt, table" = 1.0
-        desc: fragment("word_similarity(?, ?)", ^original_term, i.name),
+        # 2. pg_trgm word similarity, plural-insensitive — scores the query AND
+        # its singular/plural variant, taking the better. Regular word_similarity
+        # anchors to whole words, so "onion" scores only 0.83 against the word
+        # "onions"; without this, every processed "Onion <x>" product (word
+        # "onion" = 1.0) outranks the raw "Onions, raw". See plural_variant/1.
+        desc:
+          fragment(
+            "GREATEST(word_similarity(?, ?), word_similarity(?, ?))",
+            ^original_term,
+            i.name,
+            ^term_variant,
+            i.name
+          ),
         # 3. Shorter names are less qualified and therefore more canonical
         asc: fragment("LENGTH(?)", i.search_name),
         # 4. USDA data quality preference
@@ -315,6 +327,22 @@ defmodule Mehungry.Food.IngredientSearch do
     |> Repo.all()
   end
 
+  # Naive singular/plural toggle of a search term, used to make the trigram
+  # word-similarity ranking plural-insensitive: USDA names the canonical whole
+  # food in the plural ("Onions, raw", "Eggs, whole, raw") while users often
+  # type the singular, so we score both forms and keep the better. Handles the
+  # dominant trailing-s case only; irregular plurals (tomato→tomatoes) are left
+  # to the canonical-form boost planned as the next step.
+  defp plural_variant(term) do
+    t = term |> to_string() |> String.trim() |> String.downcase()
+
+    cond do
+      String.length(t) <= 1 -> t
+      String.ends_with?(t, "s") -> String.trim_trailing(t, "s")
+      true -> t <> "s"
+    end
+  end
+
   # Single-word: plain prefix match.
   defp build_where(normalized, [_single_word]) do
     dynamic([i], ilike(i.search_name, ^"#{normalized}%"))
@@ -338,6 +366,8 @@ defmodule Mehungry.Food.IngredientSearch do
   # Uses the GIN trigram index on `name` (created by ingredient_gin_trgm migration)
   # to efficiently find approximate matches when the prefix search comes up short.
   defp run_fuzzy_query(normalized, exclude_ids, limit, classes, owner_id, secondary_ids) do
+    term_variant = plural_variant(normalized)
+
     base =
       from i in Ingredient,
         where: not is_nil(i.search_name),
@@ -351,7 +381,17 @@ defmodule Mehungry.Food.IngredientSearch do
             ^@fuzzy_threshold
           ),
         order_by: [
-          desc: fragment("word_similarity(?, ?)", ^normalized, i.name),
+          # Plural-insensitive ranking, mirroring run_prefix_query (see
+          # plural_variant/1). The WHERE threshold stays on the raw term so this
+          # only reorders the matched set, never changes which rows match.
+          desc:
+            fragment(
+              "GREATEST(word_similarity(?, ?), word_similarity(?, ?))",
+              ^normalized,
+              i.name,
+              ^term_variant,
+              i.name
+            ),
           asc: fragment("LENGTH(?)", i.search_name),
           asc:
             fragment(

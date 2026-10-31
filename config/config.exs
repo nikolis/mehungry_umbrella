@@ -184,7 +184,7 @@ config :mehungry, Oban,
      ]}
   ],
   queues: [
-    # Total concurrency is capped at 12 job slots so it fits within the DB pool
+    # Total concurrency is capped at 13 job slots so it fits within the DB pool
     # (POOL_SIZE 18) with headroom for web/LiveView/Presence checkouts. Sized to
     # close the connection-pool starvation confirmed in prod (queue_time spiking
     # to ~10s) — see oban_production_diagnostics.md.
@@ -199,7 +199,10 @@ config :mehungry, Oban,
     seed_imports: 1,
     # Admin-triggered hashtag reconciliation sweep (one job per recipe). Its own
     # slot so a full-corpus resweep can't starve behind other background work.
-    hashtag_reconcile: 1
+    hashtag_reconcile: 1,
+    # Admin-triggered derived-portion generation (one job per ingredient). Pure
+    # DB work; its own slot so a full-table sweep can't starve `:default`/`:imports`.
+    portion_generation: 1
   ]
 
 config :swarm,

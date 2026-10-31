@@ -399,8 +399,10 @@ defmodule Mehungry.AI.Agents.MealPlanAgent do
 
   # The unit_selection/label options for an ingredient, mirroring the manual meal
   # form's `unit_options/1`: each meaningful portion (positive measurement_unit_id
-  # or negative -portion_id) plus grams.
-  defp ingredient_units(ingredient_id) do
+  # or negative -portion_id) plus grams. Public so sibling agents (e.g.
+  # NutritionistAgent) present the same snack-ingredient unit options.
+  @doc false
+  def ingredient_units(ingredient_id) do
     portion_units =
       ingredient_id
       |> Food.get_measurement_unit_portions_for_ingredient()

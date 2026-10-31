@@ -26,6 +26,21 @@
           do: "Reconciling…",
           else: "Reconcile numeric units (#{@numeric_count})"}
       </button>
+      <button
+        type="button"
+        phx-click="generate_portions"
+        disabled={portion_run_running?(@portion_run)}
+        data-confirm={"Generate derived metric + common-recipe portions (kg, ml, l, tsp, tbsp, cup) for all #{@ingredient_count} ingredient(s)? Mass units are always created; volume units only where the ingredient already has a volume portion to anchor density on. Existing portions are left untouched (safe to re-run)."}
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-sky-700 hover:bg-sky-600 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <.icon
+          name="hero-beaker"
+          class={"w-4 h-4 #{if portion_run_running?(@portion_run), do: "animate-pulse"}"}
+        />
+        {if portion_run_running?(@portion_run),
+          do: "Generating portions…",
+          else: "Generate derived portions (#{@ingredient_count})"}
+      </button>
       <.link patch={~p"/professional/measurement_units/new"}>
         <button
           type="button"
@@ -80,6 +95,56 @@
       <%= if @reconcile_run.failed > 0 and @reconcile_run.error do %>
         <p class="mt-2 text-xs text-red-400/80 truncate" title={@reconcile_run.error}>
           Last error: {@reconcile_run.error}
+        </p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= if @portion_run do %>
+    <div class="bg-ink-panel border border-ink-panel2 rounded-2xl p-4 mb-6">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs font-semibold uppercase tracking-wider text-parchment-dim">
+          Derived-portion generation
+          <span class={[
+            "ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+            if(portion_run_running?(@portion_run),
+              do: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+              else: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+            )
+          ]}>
+            {if portion_run_running?(@portion_run), do: "Running", else: "Completed"}
+          </span>
+        </p>
+        <p class="text-sm font-semibold text-white">{portion_run_percent(@portion_run)}%</p>
+      </div>
+
+      <div class="w-full bg-ink-panel2 rounded-full h-2 overflow-hidden mb-3">
+        <div
+          class={[
+            "h-2 rounded-full transition-all duration-500",
+            if(portion_run_running?(@portion_run), do: "bg-amber-500", else: "bg-emerald-500")
+          ]}
+          style={"width: #{portion_run_percent(@portion_run)}%"}
+        >
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-4 text-sm">
+        <span class="text-parchment-dim">Ingredients
+        <span class="text-white font-semibold">{@portion_run.total}</span></span>
+        <span class="text-green-400">Processed
+        <span class="font-semibold">{@portion_run.completed}</span></span>
+        <span class="text-sky-400">Portions created
+        <span class="font-semibold">{@portion_run.portions_created}</span></span>
+        <span class="text-red-400">Failed
+        <span class="font-semibold">{@portion_run.failed}</span></span>
+        <span class="text-blue-400">Remaining
+        <span class="font-semibold">{portion_run_remaining(@portion_run)}</span></span>
+      </div>
+
+      <%= if @portion_run.failed > 0 and @portion_run.error do %>
+        <p class="mt-2 text-xs text-red-400/80 truncate" title={@portion_run.error}>
+          Last error: {@portion_run.error}
         </p>
       <% end %>
     </div>

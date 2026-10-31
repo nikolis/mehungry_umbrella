@@ -93,6 +93,74 @@
     </form>
   </section>
 
+  <%!-- ── Bulk research ingestion (run the whole pipeline once) ─────────── --%>
+  <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
+    <h2 class="text-lg font-medium text-parchment">Research ingestion</h2>
+    <p class="text-parchment-dim text-sm">
+      Run every condition's studies through the extractor in one background pass —
+      claims <span class="font-medium">and</span>
+      the full-text section outlines. The extractor only needs to be reachable
+      <span class="font-medium">while this runs</span>; afterwards the nutritionist
+      research search serves each condition entirely from the database, offline.
+      Idempotent — already-analyzed papers are skipped (use <em>Re-analyze</em>
+      to backfill section outlines onto older analyses).
+    </p>
+
+    <% run = @research_run %>
+    <% running? = run && run.status == "processing" %>
+
+    <form phx-submit="run_research_ingestion" class="flex flex-wrap items-center gap-4">
+      <label class="inline-flex items-center gap-1.5 text-sm text-parchment-dim">
+        <input type="checkbox" name="crawl" value="true" class="rounded border-ink-panel2" />
+        Crawl PubMed first
+      </label>
+      <label class="inline-flex items-center gap-1.5 text-sm text-parchment-dim">
+        <input type="checkbox" name="force" value="true" class="rounded border-ink-panel2" />
+        Re-analyze (backfill sections)
+      </label>
+      <button
+        type="submit"
+        disabled={running?}
+        class="px-3 py-1.5 rounded bg-basil text-ink text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {if running?, do: "Running…", else: "Run ingestion"}
+      </button>
+      <button
+        :if={running?}
+        type="button"
+        phx-click="cancel_research_ingestion"
+        data-confirm="Cancel the in-flight research ingestion run?"
+        class="px-3 py-1.5 rounded border border-red-500/40 text-red-400 text-sm font-medium hover:bg-red-500/10"
+      >
+        Cancel
+      </button>
+    </form>
+
+    <div :if={run} class="text-sm rounded border border-ink-panel2 bg-ink-panel2 p-3 space-y-1">
+      <div class="flex items-center gap-2">
+        <span class={[
+          "px-2 py-0.5 rounded-full text-[11px] font-medium",
+          run.status == "processing" && "bg-basil/15 text-basil",
+          run.status == "completed" && "bg-basil/20 text-basil",
+          run.status == "failed" && "bg-red-500/15 text-red-400"
+        ]}>
+          {run.status}
+        </span>
+        <span class="text-parchment-dim">
+          {run.conditions_done + run.conditions_failed}/{run.conditions_total} conditions
+          <span :if={run.conditions_failed > 0}>· {run.conditions_failed} failed</span>
+          <span :if={running? && run.current_condition}>· {run.current_condition}…</span>
+        </span>
+      </div>
+      <p class="text-parchment-dim text-xs">
+        Stored: {run.inserted} new · {run.updated} updated · {run.unchanged} unchanged · {run.skipped} skipped
+      </p>
+      <p :if={run.error} class="text-red-400 text-xs">
+        Error: {run.error} — fix the extractor connection and run again (stored work is kept).
+      </p>
+    </div>
+  </section>
+
   <%!-- ── Add condition ──────────────────────────────────────────────── --%>
   <section class="space-y-3 rounded-lg border border-ink-panel2 bg-ink-panel p-4">
     <h2 class="text-lg font-medium text-parchment">Add condition</h2>
@@ -272,12 +340,6 @@
       <h2 class="text-lg font-medium text-parchment mr-2">
         Review derived recommendations ({length(@rec_candidates)})
       </h2>
-      <.link
-        navigate={~p"/professional/science"}
-        class="text-sm text-basil hover:underline ml-auto"
-      >
-        Derive more →
-      </.link>
     </div>
     <p class="text-parchment-dim text-sm">
       Candidates derived from PubTator's directional chemical↔disease relations. The
@@ -369,9 +431,6 @@
       <h2 class="text-lg font-medium text-parchment mr-2">
         Review phase-aware candidates ({length(@phase_candidates)})
       </h2>
-      <.link navigate={~p"/professional/science"} class="text-sm text-basil hover:underline ml-auto">
-        Run condition crawl →
-      </.link>
     </div>
     <p class="text-parchment-dim text-sm">
       Extracted from condition literature by the offline Python service, each tagged

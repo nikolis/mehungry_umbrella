@@ -195,12 +195,7 @@ defmodule MehungryWeb.HomeLive.Index do
         end
 
       socket
-      |> assign(:page_title, recipe.title)
-      |> assign(:page_seo_data, %{
-        title: recipe.title,
-        img: recipe.image_url,
-        id: Integer.to_string(recipe.id)
-      })
+      |> MehungryWeb.RecipeSeo.assign(recipe)
       |> assign(:recipe, recipe)
       |> assign(:current_user_recipes, user_recipes)
     else

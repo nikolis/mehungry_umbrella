@@ -2,10 +2,17 @@ defmodule Mehungry.Science.PipelineWatchdogTest do
   use Mehungry.DataCase, async: false
   use Oban.Testing, repo: Mehungry.Repo
 
-  alias Mehungry.{Literature, Repo}
-  alias Mehungry.Literature.{AnnotationRun, AnnotationRuns, CrawlRun, CrawlRuns}
+  alias Mehungry.Repo
+  alias Mehungry.Literature.{ConditionCrawlRun, ConditionCrawlRuns}
   alias Mehungry.Science.PipelineWatchdog
-  alias Mehungry.ObanWorkers.{LiteratureCrawlWorker, PubTatorAnnotationWorker}
+  alias Mehungry.ObanWorkers.ConditionCrawlWorker
+
+  # Phase 1 of the research-search reshape trimmed the watchdog to the one stage
+  # that still runs: the condition-seeded crawl (the research-search acquisition
+  # path). The generation stages (species crawl, PubTator annotation, compound-
+  # & recommendation-candidate derivation) are decommissioned and no longer
+  # watched. The watchdog's stalled/live/zombie/terminal logic is unchanged and
+  # is exercised here against condition crawl.
 
   # Backdate a run's `updated_at` so it counts as stalled under the default grace.
   defp stall(schema, id) do
@@ -22,40 +29,20 @@ defmodule Mehungry.Science.PipelineWatchdogTest do
     )
   end
 
-  test "resumes a stalled annotation run with no live job by re-enqueuing a batch" do
-    {:ok, _study} = Literature.upsert_study(%{pmid: 11_111, title: "s"})
-    run = AnnotationRuns.start_run()
-    stall(AnnotationRun, run.id)
+  test "resumes a stalled condition-crawl run with no live job by re-enqueuing a batch" do
+    run = ConditionCrawlRuns.start_run()
+    stall(ConditionCrawlRun, run.id)
 
     assert 1 = PipelineWatchdog.resume_stalled()
-    assert_enqueued(worker: PubTatorAnnotationWorker, args: %{"run_id" => run.id})
-  end
-
-  test "resumes a stalled crawl run with no live job by re-enqueuing a batch" do
-    run = CrawlRuns.start_run()
-    stall(CrawlRun, run.id)
-
-    assert 1 = PipelineWatchdog.resume_stalled()
-    assert_enqueued(worker: LiteratureCrawlWorker, args: %{"run_id" => run.id})
-  end
-
-  test "resumes stalled runs across multiple stages in one sweep" do
-    crawl = CrawlRuns.start_run()
-    annotation = AnnotationRuns.start_run()
-    stall(CrawlRun, crawl.id)
-    stall(AnnotationRun, annotation.id)
-
-    assert 2 = PipelineWatchdog.resume_stalled()
-    assert_enqueued(worker: LiteratureCrawlWorker, args: %{"run_id" => crawl.id})
-    assert_enqueued(worker: PubTatorAnnotationWorker, args: %{"run_id" => annotation.id})
+    assert_enqueued(worker: ConditionCrawlWorker, args: %{"run_id" => run.id})
   end
 
   test "leaves a stalled run alone while it still has a live Oban job" do
-    run = AnnotationRuns.start_run()
-    stall(AnnotationRun, run.id)
+    run = ConditionCrawlRuns.start_run()
+    stall(ConditionCrawlRun, run.id)
 
     # A queued (available) batch counts as live — the chain is not actually broken.
-    {:ok, _job} = %{"run_id" => run.id} |> PubTatorAnnotationWorker.new() |> Oban.insert()
+    {:ok, _job} = %{"run_id" => run.id} |> ConditionCrawlWorker.new() |> Oban.insert()
 
     # Only the pre-existing job — no second one enqueued by the watchdog.
     assert 0 = PipelineWatchdog.resume_stalled()
@@ -63,50 +50,49 @@ defmodule Mehungry.Science.PipelineWatchdogTest do
     assert 1 =
              Repo.aggregate(
                from(j in Oban.Job,
-                 where: j.worker == ^"Mehungry.ObanWorkers.PubTatorAnnotationWorker"
+                 where: j.worker == ^"Mehungry.ObanWorkers.ConditionCrawlWorker"
                ),
                :count
              )
   end
 
   test "leaves a run alone while a fresh (recently-started) executing job holds it" do
-    run = AnnotationRuns.start_run()
-    stall(AnnotationRun, run.id)
+    run = ConditionCrawlRuns.start_run()
+    stall(ConditionCrawlRun, run.id)
 
-    {:ok, job} = %{"run_id" => run.id} |> PubTatorAnnotationWorker.new() |> Oban.insert()
+    {:ok, job} = %{"run_id" => run.id} |> ConditionCrawlWorker.new() |> Oban.insert()
     set_executing(job, NaiveDateTime.utc_now())
 
     assert 0 = PipelineWatchdog.resume_stalled()
-    refute_enqueued(worker: PubTatorAnnotationWorker, args: %{"run_id" => run.id})
+    refute_enqueued(worker: ConditionCrawlWorker, args: %{"run_id" => run.id})
   end
 
   test "resumes a run whose only job is a stale (crash-orphaned) executing zombie" do
-    {:ok, _study} = Literature.upsert_study(%{pmid: 22_222, title: "s"})
-    run = AnnotationRuns.start_run()
-    stall(AnnotationRun, run.id)
+    run = ConditionCrawlRuns.start_run()
+    stall(ConditionCrawlRun, run.id)
 
     # An `executing` row wedged by a hard crash, its attempted_at long past the grace
     # window — Lifeline won't reap it for 24h, but the watchdog must not wait.
-    {:ok, job} = %{"run_id" => run.id} |> PubTatorAnnotationWorker.new() |> Oban.insert()
+    {:ok, job} = %{"run_id" => run.id} |> ConditionCrawlWorker.new() |> Oban.insert()
     set_executing(job, NaiveDateTime.utc_now() |> NaiveDateTime.add(-3600, :second))
 
     assert 1 = PipelineWatchdog.resume_stalled()
-    assert_enqueued(worker: PubTatorAnnotationWorker, args: %{"run_id" => run.id})
+    assert_enqueued(worker: ConditionCrawlWorker, args: %{"run_id" => run.id})
   end
 
   test "leaves a run that is still making progress (not yet stale) alone" do
-    _run = AnnotationRuns.start_run()
+    _run = ConditionCrawlRuns.start_run()
 
     assert 0 = PipelineWatchdog.resume_stalled()
-    refute_enqueued(worker: PubTatorAnnotationWorker)
+    refute_enqueued(worker: ConditionCrawlWorker)
   end
 
   test "ignores terminal (completed/failed) runs" do
-    run = CrawlRuns.start_run()
-    CrawlRuns.mark_completed(run.id, %{processed: 0, total: 0})
-    stall(CrawlRun, run.id)
+    run = ConditionCrawlRuns.start_run()
+    ConditionCrawlRuns.mark_completed(run.id, %{processed: 0, total: 0})
+    stall(ConditionCrawlRun, run.id)
 
     assert 0 = PipelineWatchdog.resume_stalled()
-    refute_enqueued(worker: LiteratureCrawlWorker)
+    refute_enqueued(worker: ConditionCrawlWorker)
   end
 end

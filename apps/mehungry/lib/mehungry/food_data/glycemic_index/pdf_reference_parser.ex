@@ -6,7 +6,7 @@ defmodule Mehungry.FoodData.GlycemicIndex.PdfReferenceParser do
   extract from primary papers against the published ones.
 
   This is **not an ingest path.** Under the path-B pivot (see
-  `docs/science/glycemic_index_licensing.md`) the compilation is never a data source —
+  `docs/implementation/science/glycemic_index_licensing.md`) the compilation is never a data source —
   it is only a private measuring stick. The `studies/` PDFs are git-ignored and must
   never be committed, served, or ingested-as-served.
 

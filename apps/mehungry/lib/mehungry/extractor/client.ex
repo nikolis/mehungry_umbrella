@@ -20,6 +20,9 @@ defmodule Mehungry.Extractor.Client do
   # key (env var EXTRACTOR_TIMEOUT_MS).
   @default_timeout_ms 900_000
 
+  # The pre-flight probe must be snappy — it's a liveness check, not an analysis.
+  @reachability_timeout_ms 5_000
+
   @doc """
   Analyze a batch of PMIDs (up to 200). `pmids` are strings; `opts` may carry the
   API's `options` map under the `:options` key. Returns `{:ok, response_map}` on 200,
@@ -47,6 +50,22 @@ defmodule Mehungry.Extractor.Client do
 
       {:error, %HTTPoison.Error{reason: reason}} ->
         {:error, {:network, reason}}
+    end
+  end
+
+  @doc """
+  Pre-flight liveness probe: a short-timeout GET to the configured base URL. Any
+  HTTP response (even 404/401/405) means the service is up → `:ok`; a
+  connection-level failure means the link is dead → `{:error, {:network, reason}}`.
+  """
+  @impl true
+  def reachable? do
+    {base_url, auth_token} = Mehungry.Extractor.connection()
+    opts = [recv_timeout: @reachability_timeout_ms, timeout: @reachability_timeout_ms]
+
+    case HTTPoison.get(base_url <> "/", headers(auth_token), opts) do
+      {:ok, %HTTPoison.Response{}} -> :ok
+      {:error, %HTTPoison.Error{reason: reason}} -> {:error, {:network, reason}}
     end
   end
 
