@@ -112,19 +112,19 @@ defmodule Mehungry.UserIngredientsTest do
     setup do
       # Build a genuine second-layer category directly (the shared category_fixture
       # dedups on a mis-spelled key and can't reliably create a named category).
-      # "Baked Products" is one of the titles get_second_layer_foods_ids/0 hides.
-      baked =
-        Food.get_category_by_name("Baked Products") ||
+      # "Snacks" is one of the titles second_layer_category_ids/0 hides.
+      hidden_cat =
+        Food.get_category_by_name("Snacks") ||
           (
-            {:ok, c} = Food.create_category(%{name: "Baked Products", description: "x"})
+            {:ok, c} = Food.create_category(%{name: "Snacks", description: "x"})
             c
           )
 
-      %{baked: baked, mu: measurement_unit_fixture()}
+      %{hidden_cat: hidden_cat, mu: measurement_unit_fixture()}
     end
 
     test "owner's private ingredient in a hidden category is still found", %{
-      baked: baked,
+      hidden_cat: hidden_cat,
       mu: mu
     } do
       owner = user_fixture()
@@ -133,7 +133,7 @@ defmodule Mehungry.UserIngredientsTest do
         Food.create_user_ingredient(owner, %{
           name: "Sourdough Zonkbread",
           description: "custom",
-          category_id: baked.id,
+          category_id: hidden_cat.id,
           measurement_unit_id: mu.id
         })
 
@@ -144,14 +144,14 @@ defmodule Mehungry.UserIngredientsTest do
     end
 
     test "the same category still hides global ingredients from search", %{
-      baked: baked,
+      hidden_cat: hidden_cat,
       mu: mu
     } do
       {:ok, global} =
         Food.create_ingredient(%{
           name: "Plain Zonkloaf",
           description: "shared",
-          category_id: baked.id,
+          category_id: hidden_cat.id,
           measurement_unit_id: mu.id
         })
 

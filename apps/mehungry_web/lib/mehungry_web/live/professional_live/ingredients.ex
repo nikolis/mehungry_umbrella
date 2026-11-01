@@ -142,6 +142,37 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
     {:noreply, socket}
   end
 
+  # Import USDA foods by their known FDC id(s) straight into the shared catalogue
+  # with full USDA detail (nutrients/portions/category), reusing the same
+  # importer the eval-time backfill (Mehungry.Release.import_usda_ingredients/1)
+  # calls. Synchronous like the other admin actions here — meant for a handful of
+  # ids at a time; idempotent (re-importing an id upserts rather than duplicates).
+  @impl true
+  def handle_event("import_usda", %{"import_form" => %{"fdc_ids" => raw}}, socket) do
+    ids =
+      raw
+      |> String.split(~r/[^0-9]+/, trim: true)
+      |> Enum.map(&String.to_integer/1)
+      |> Enum.uniq()
+
+    case ids do
+      [] ->
+        {:noreply,
+         put_flash(socket, :error, "Enter one or more numeric FDC IDs (e.g. 175040, 170271).")}
+
+      ids ->
+        results = Mehungry.FoodData.Usda.Importer.import_by_fdc_ids(ids)
+        {ok, failed} = Enum.split_with(results, fn {_id, status, _} -> status == :ok end)
+
+        socket =
+          socket
+          |> flash_import_results(ok, failed)
+          |> push_navigate(to: ~p"/professional/ingredients")
+
+        {:noreply, socket}
+    end
+  end
+
   @impl true
   def handle_event("enqueue_translation", _params, socket) do
     %{} |> IngredientTranslationWorker.new() |> Oban.insert!()
@@ -188,6 +219,28 @@ defmodule MehungryWeb.ProfessionalLive.Ingredients do
       |> put_flash(:error, "USDA branded deletion failed: #{inspect(reason)}")
 
     {:noreply, socket}
+  end
+
+  # Summarise an import batch into a single flash: successes listed by name, any
+  # failures listed by id + reason. Falls to :error only when nothing imported.
+  defp flash_import_results(socket, ok, failed) do
+    ok_msg =
+      case ok do
+        [] -> nil
+        rows -> "Imported #{length(rows)} from USDA: " <> Enum.map_join(rows, ", ", &elem(&1, 2))
+      end
+
+    fail_msg =
+      case failed do
+        [] -> nil
+        rows -> "Failed: " <> Enum.map_join(rows, ", ", fn {id, _, why} -> "#{id} (#{why})" end)
+      end
+
+    case {ok_msg, fail_msg} do
+      {nil, fail} -> put_flash(socket, :error, fail)
+      {ok, nil} -> put_flash(socket, :info, ok)
+      {ok, fail} -> put_flash(socket, :info, ok <> " — " <> fail)
+    end
   end
 
   defp build_translation_stats, do: Food.ingredient_translation_stats()

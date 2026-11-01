@@ -63,7 +63,7 @@ defmodule Mehungry.Release do
 
     {:ok, results, _} =
       Ecto.Migrator.with_repo(Mehungry.Repo, fn _repo ->
-        Enum.map(fdc_ids, &import_one_usda_ingredient/1)
+        Mehungry.FoodData.Usda.Importer.import_by_fdc_ids(fdc_ids)
       end)
 
     Enum.each(results, fn {id, status, label} ->
@@ -71,17 +71,6 @@ defmodule Mehungry.Release do
     end)
 
     results
-  end
-
-  defp import_one_usda_ingredient(fdc_id) do
-    case Mehungry.FoodData.Usda.SearchClient.get_food_details(fdc_id) do
-      {:ok, food} ->
-        Mehungry.FoodData.Usda.FoodParser.create_ingredient(food, "usda")
-        {fdc_id, :ok, food["description"]}
-
-      other ->
-        {fdc_id, :error, inspect(other)}
-    end
   end
 
   @doc """

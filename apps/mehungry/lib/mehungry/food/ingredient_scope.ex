@@ -16,12 +16,17 @@ defmodule Mehungry.Food.IngredientScope do
   # The composite/prepared USDA "second layer" categories hidden from user-facing
   # ingredient search — prepared dishes, snacks, drinks etc. that aren't useful as
   # recipe building blocks.
+  #
+  # NOTE: these are SR Legacy category names; FNDDS/Survey foods use a different
+  # category vocabulary and are not matched here (so FNDDS sweets already show in
+  # search). "Sweets" and "Baked Products" were intentionally removed so that
+  # legitimate SR Legacy building blocks — dark chocolate, baking soda, baking
+  # chocolate — are searchable like their already-visible FNDDS counterparts,
+  # accepting that branded SR Legacy candy/baked rows become visible too.
   @second_layer_titles [
     "Meals, Entrees, and Side Dishes",
     "Restaurant Foods",
-    "Baked Products",
     "Snacks",
-    "Sweets",
     "Baby Foods",
     "Breakfast Cereals",
     "Beverages"

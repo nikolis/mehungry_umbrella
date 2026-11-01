@@ -100,10 +100,17 @@ and filtering stay identical everywhere:
   own private rows and their friends' (`visible_owner_ids/1` via `Mehungry.Friends`).
 - `maybe_filter_by_classes/2` — restrict to USDA food classes.
 - `second_layer_category_ids/0` + `exclude_secondary_categories/3` — hide the
-  composite/prepared "second layer" USDA categories (Snacks, Beverages, Baked
-  Products, …) from **every** user-facing search, but never the viewer's own private
-  ingredients. `IngredientSearch` previously left these visible; unifying on it
-  applied the hide consistently across all pickers.
+  composite/prepared "second layer" USDA categories (Snacks, Beverages,
+  Meals/Entrees, Restaurant Foods, Baby Foods, Breakfast Cereals) from **every**
+  user-facing search, but never the viewer's own private ingredients.
+  `IngredientSearch` previously left these visible; unifying on it applied the
+  hide consistently across all pickers. **These titles are SR Legacy category
+  names only** — FNDDS/Survey foods use a different category vocabulary and are
+  not matched, so FNDDS sweets/candy already show in search. `"Sweets"` and
+  `"Baked Products"` were deliberately **removed** from the hidden set so SR
+  Legacy building blocks (dark chocolate, baking soda, baking chocolate) are
+  searchable like their FNDDS counterparts — at the cost of branded SR Legacy
+  candy/baked rows also becoming visible.
 
 These helpers were previously copy-pasted into each module. `IngredientQueries`
 re-exports `maybe_filter_by_classes/2` and `get_second_layer_foods_ids/0` via

@@ -1,7 +1,22 @@
 <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-6xl mx-auto">
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-2xl font-bold text-white">Ingredients Explorer</h1>
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 flex-wrap justify-end">
+      <form phx-submit="import_usda" class="flex items-center gap-2">
+        <input
+          type="text"
+          name="import_form[fdc_ids]"
+          placeholder="USDA FDC IDs e.g. 175040, 170271"
+          class="px-3 py-2 rounded-full bg-ink-panel2 text-white text-sm placeholder:text-parchment-dim border border-ink-panel2 focus:border-paprika outline-none w-56"
+        />
+        <button
+          type="submit"
+          class="flex items-center gap-2 px-4 py-2 rounded-full bg-sky-700 hover:bg-sky-600 text-white font-semibold text-sm transition-colors"
+          title="Import USDA foods by FDC ID with full nutrient detail"
+        >
+          <.icon name="hero-arrow-down-tray" class="w-4 h-4" /> Import from USDA
+        </button>
+      </form>
       <button
         type="button"
         phx-click="delete_without_nutrients"
