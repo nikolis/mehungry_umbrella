@@ -230,10 +230,20 @@ FROM visits GROUP BY 1 ORDER BY c DESC LIMIT 12;
 ### 5.2 Post-deploy queries (after the analytics-removal branch ships)
 
 The `visits` table is gone; `users` / `recipes` / `posts` / engagement queries in §5.1 are
-unchanged. For traffic, the only in-DB signal is the consent-independent session counter:
+unchanged. For traffic, the only in-DB signal is the consent-independent session counter.
+
+> **Semantics (since the token+gate change):** `session_count` now counts **real visits**, not
+> raw LiveView-process lifetimes. `Mehungry.Meta.SessionAggregator` aggregates connected traffic
+> by a per-tab `visit_token` (so navigation, reconnects, and multi-tab fold into one visit) and
+> folds a visit in only if it **qualifies** — engaged (a real interaction), lasted ≥10s, or spanned
+> ≥2 views (GA4-parity) — and drops known-bot User-Agents at connect. So this number is now
+> directly comparable to the **GA4-real** figure, while still being consent-independent (it also
+> counts cookie-banner decliners GA4 can't). Earlier snapshots' `daily_session_metrics` values were
+> the pre-change *raw* counts and read far higher (e.g. the 11-01 "2020 all-time" was inflated by
+> fragmentation/idle/bots — treat it as a different, non-comparable metric).
 
 ```sql
--- anonymous, consent-independent sessions (the "true denominator" GA4 can't see)
+-- anonymous, consent-independent REAL visits (the "true denominator" GA4 can't see)
 SELECT
   COALESCE(sum(session_count),0)                               AS sessions_total,
   min(date)                                                    AS first_day,
@@ -314,6 +324,7 @@ Append one row per weekly check (run §5.1 pre-deploy, §5.2 post-deploy). Keep 
 | 2026-10-17 | 49 (16) | 4 | 85 (5) | 1 / 0 / 25 / 8 | ~150 GA4 sessions/mo; 98.3% Greece; 0 organic | Baseline. July-2026 signup spike (27) never retained. `visits`=4,203 all-time, 114 distinct IPs, tracking since 2026-05-19; 411 visits/30d. Social dormant: FB 0 followers/0 eng; Pinterest 73 impr / 3 outbound clicks / audience 1 (30d). |
 | 2026-10-25 | 55 (23) | 10 | 35 (5) | 4 / 1 / 19 / 8 | ~21 GA4 real sessions/28d (98 raw incl. bots); 927 GSC impr (/foods: 456); 978 anon sessions all-time | **Best users week yet**: 49→55 users, confirmed 16→23 (33%→42%), new/30d 4→**10**, onboarding 15→20 — first real break from the ~4/mo baseline (10-2026 signups=8). Engagement twitched off the floor: comments 1→4, **first-ever like (0→1)**. **Recipes 67→35 but 21 created /30d** → ~50+ deleted this week on top of heavy new creation (delete/clear-week features) — **confirm intended, not clobbering real recipes**. Anon `daily_session_metrics` now filling: 978 sessions / 8d, avg 374s (high → likely idle-tab/bot inflation). GA4 real 16→21 (raw still Meta link-preview crawler noise: Prineville 21, Forest City 12, Luleå 12=the fake "Sweden"); genuine core still Crete (Rethimno 15, Ierapetra 7). GSC impr 828→927 / clicks 13→15 but **avg pos slipped 12.6→18.9** (back toward page 2). **🚩 `/en/conditions/13` shows 44 GSC impressions — highest page in the list — i.e. condition pages are publicly indexed, which violates the YMYL/non-public policy (CLAUDE.md + docs/seo.md). Investigate.** Social: **FB M3hungry followers 1→39** (insights still n/a — `read_insights` Page reconnect still pending); Pinterest 76→111 impr / 9 pin clicks / 3 outbound / 13 eng. |
 | 2026-10-19 | 49 (16) | 4 | 67 (5) | 1 / 0 / 19 / 8 | **~16 real GA4 sessions/28d** (80 raw: 50 datacenter-city + 58 <10s non-engaged); 828 GSC impr (/foods: 460); 25 anon sessions all-time | **First automated `mix report.snapshot`** (DB+GA4+GSC). **Organic search has started** (vs "0 organic" baseline): 828 GSC impressions / 13 clicks, 460 impr on `/foods`, avg pos 12.6 — top queries are USDA nutrient lookups. **GA4 bot-filtering added this day** (see §5.3): of 80 raw sessions only **~16 are real** (engaged >10s + non-datacenter). The inflated "US=46 > GR=19 / Sweden=11" geo is **Meta/Facebook link-preview crawlers** resolving to Meta datacenter towns (Prineville 18, Forest City 11, Luleå 11 = the "Sweden", Altoona, Gallatin) — a consequence of auto-posting recipe URLs to FB, not a real audience shift. Genuine core is still Crete (Rethimno 14, Ierapetra 5, Heraklion 1). Recipes **85→67** (deletions via the new delete/clear-week features — confirm intended). Social: FB M3hungry 1 follower (insights n/a). **Pinterest fixed this day**: root cause was `PINTEREST_ENV` unset → OAuth exchanged against the Pinterest **sandbox**, whose tokens lack a durable refresh token (`:no_refresh_token`). Set `PINTEREST_ENV=live` (Fly secret + `fly.toml [env]`), reconnected from `/profile`, and the snapshot now pulls live analytics: 76 impr / 9 pin clicks / 3 outbound / 12 engagements. |
+| 2026-11-01 | 62 (30) | 15 | 40 (5) | 4 / 78 / 41 / 13 | ~27 GA4 real sessions/28d (148 raw incl. bots); 1190 GSC impr (/foods: 674); 2020 anon sessions all-time | **GSC restored.** The report service account had silently dropped to `siteUnverifiedUser` on the `sc-domain:m3hungry.com` **Domain** property (ownership/verification lapse around a password + CNAME re-verify) → every Search Console pull 403'd. Fix: re-added `mehungry-ga4-report@m3hungry.iam.gserviceaccount.com` to the Domain property (Settings → Users & permissions) as **Restricted** → now `siteRestrictedUser`, data flowing. Organic keeps growing: GSC impr 927→**1190**, clicks 15→**21**, avg pos 18.9→**17.3**, **`/foods` 456→674** (the engine — top queries are USDA macro/calorie/iron-per-100g lookups). **Likes 1→78 — VERIFIED GENUINE**: 75/78 are on *other* users' posts, from **7 confirmed accounts** across **36 posts**, spread over 10-28 & 10-31 (not a bulk insert) — the first real turn of the social loop, driven by ~3 newly-joined power users (csouzos 27 / joined 10-28, gggalerakis 20 / 10-31, ivanborges 10 / 10-27). Saves 19→41, follows 8→13 moved too. Users 55→62 (confirmed 23→**30 = 48%**, best ever), new/30d **15**, onboarded 20→26. Recipes 35→40 (26 created/30d). GA4 real 21→**27**; raw geo still Meta link-preview crawler noise (US=86, Sweden=16=Luleå, Prineville=35, Boardman/Forest City=15) — genuine core still Crete (Rethimno 17, Heraklion 9, Ierapetra 7) + Athens. Pinterest 111→**200 impr** / 11 pin clicks / 3 outbound / 15 eng. **🚩 `/en/conditions/13` STILL publicly indexed (30 GSC impr)** — YMYL/non-public violation now across three snapshots (CLAUDE.md + docs/seo.md); de-index + remove from sitemap/public router. **FB insights still down** — token invalidated by a password change ("session has been invalidated because the user changed their password"); reconnect the Page from `/profile` to restore the token + `read_insights`. |
 
 **What to watch week-over-week**
 1. **New users /30d** — is the trickle turning into a trend, or still flat at ~4?
@@ -414,6 +425,19 @@ one JSON key). To automate them:
    switch on independently — you can enable one without the other.)
 
    Note Search Console data lags ~2-3 days, so the newest day(s) in the window may read as empty.
+
+   **Troubleshooting a GSC `403 "User does not have sufficient permission for site"`** (seen
+   2026-11-01): the service account's grant on the Domain property can silently lapse to
+   `siteUnverifiedUser` (e.g. after a Search Console ownership re-verification or account
+   password change). GA4 still works — the key/auth is fine; only the GSC *property grant* is
+   gone. Confirm by minting a `webmasters.readonly` token for the SA and calling
+   `GET https://www.googleapis.com/webmasters/v3/sites` — a healthy grant shows
+   `permissionLevel: siteRestrictedUser`; a lapsed one shows `siteUnverifiedUser`. Fix: in
+   Search Console, open the **Domain** property (`m3hungry.com`, *not* a `https://` URL-prefix
+   property), Settings → Users and permissions → **Add user** → the SA's `client_email`
+   (`mehungry-ga4-report@m3hungry.iam.gserviceaccount.com`) → **Restricted**. It must be added
+   to the exact property `GSC_SITE_URL` points at; adding it to a different (URL-prefix)
+   property won't help. The grant takes effect immediately.
 
 ### 7.3 Auto Facebook Page insights — Graph API (token already exists)
 

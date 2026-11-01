@@ -4,11 +4,15 @@ defmodule Mehungry.Meta.DailySessionMetric do
 
   One row per calendar day (in `Mehungry.Meta.reporting_timezone/0`) with only
   two counters — `session_count` and `total_duration_seconds`. There is no
-  per-user or per-session row and no identifying column anywhere; average
-  session length is `total_duration_seconds / session_count`. It is
-  consent-independent — it counts 100% of connected traffic including visitors
-  who declined the cookie banner, which is the one thing Google Analytics
-  cannot measure.
+  per-user or per-session row and no identifying column anywhere; average visit
+  length is `total_duration_seconds / session_count`.
+
+  `session_count` is a count of **real visits** — `Mehungry.Meta.SessionAggregator`
+  aggregates connected traffic by a per-tab token and folds a visit in only if it
+  was engaged, lasted >=10s, or spanned >=2 views (GA4-parity), dropping
+  single-shot/idle/bot loads. It is consent-independent — it counts qualifying
+  traffic including visitors who declined the cookie banner, which is the one
+  thing Google Analytics cannot measure.
   """
   use Ecto.Schema
   import Ecto.Changeset

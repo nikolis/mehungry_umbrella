@@ -2,17 +2,19 @@ defmodule MehungryWeb.SessionMetricsTest do
   @moduledoc """
   End-to-end check that the `MehungryWeb.SessionMetrics` `on_mount` hook (wired
   into every live_session in the router) registers a connected LiveView with the
-  `Mehungry.Meta.SessionAggregator`, and that the aggregator folds the process
-  lifetime into the anonymous daily counter when the process dies — all without
-  any cookie-consent being accepted (the deliberate difference from Visit tracking).
+  `Mehungry.Meta.SessionAggregator`, that a genuine interaction (the
+  `"mh:visit_engaged"` event) qualifies the visit, and that it is folded into the
+  anonymous daily counter when finalized — all without any cookie-consent being
+  accepted (the deliberate difference from Visit tracking).
   """
   use MehungryWeb.ConnCase
 
   import Phoenix.LiveViewTest
 
   alias Mehungry.Meta
+  alias Mehungry.Meta.SessionAggregator
 
-  test "mounting a public LiveView counts an anonymous session on disconnect", %{conn: conn} do
+  test "an engaged public visit is counted on finalization", %{conn: conn} do
     # The aggregator's DB write is disabled by default in the suite (see
     # config/test.exs, which stops stray cross-test pollution); this test asserts
     # the end-to-end path, so turn it on just here and restore it after.
@@ -29,13 +31,20 @@ defmodule MehungryWeb.SessionMetricsTest do
     # /trial is in live_session :default3 — public, no consent accepted.
     {:ok, lv, _html} = live(conn, "/trial")
 
+    # Simulate a genuine interaction (the VisitEngagement hook pushes this) so the
+    # visit qualifies — a bare mount+close is now correctly NOT counted.
+    render_hook(lv, "mh:visit_engaged", %{})
+
     # Closing the LiveView process fires the aggregator's :DOWN handler.
     ref = Process.monitor(lv.pid)
     Process.exit(lv.pid, :shutdown)
     assert_receive {:DOWN, ^ref, :process, _, _}, 1_000
 
+    # DOWN no longer records directly — finalize the now-idle visit.
+    assert :ok = SessionAggregator.flush()
+
     assert eventually(fn -> Meta.session_metrics_today().sessions > before end),
-           "expected the anonymous session counter to increment after the LiveView closed"
+           "expected the anonymous visit counter to increment after the engaged visit closed"
   end
 
   defp eventually(fun, retries \\ 50) do

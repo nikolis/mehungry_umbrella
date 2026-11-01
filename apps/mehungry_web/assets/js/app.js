@@ -122,7 +122,18 @@ $(document).ready(function() {
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
-//LiveSocket Creation 
+// Per-tab visit token for anonymous, consent-independent session metrics
+// (Mehungry.Meta.SessionAggregator). sessionStorage survives in-tab navigation
+// and soft reconnects, and dies on tab close — so one tab = one visit.
+let visitToken = sessionStorage.getItem("mh_visit")
+if (!visitToken) {
+  visitToken = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  sessionStorage.setItem("mh_visit", visitToken)
+}
+
+//LiveSocket Creation
 let liveSocket = new LiveSocket("/live", Socket, {
 	hooks: Hooks,
 	uploaders: Uploaders,
@@ -136,6 +147,7 @@ let liveSocket = new LiveSocket("/live", Socket, {
   },
 	params: {
 		_csrf_token: csrfToken,
+    visit_token: visitToken,
     viewport: {
       width: window.screen.width,
       height: window.screen.height

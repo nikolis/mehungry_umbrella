@@ -2,6 +2,26 @@ import "selectize";
 
 let Hooks = {}
 
+// Signals the first genuine user interaction to the server so the anonymous
+// session aggregator (Mehungry.Meta.SessionAggregator) can tell a real visit
+// from an idle/instant/bot load. Fires once, then detaches its listeners.
+Hooks.VisitEngagement = {
+  mounted() {
+    const events = ["click", "keydown", "scroll", "touchstart", "pointerdown"]
+    const opts = { once: true, passive: true, capture: true }
+    const remove = () => events.forEach((e) => window.removeEventListener(e, fire, opts))
+    const fire = () => {
+      this.pushEvent("mh:visit_engaged", {})
+      remove()
+    }
+    this._removeVisitListeners = remove
+    events.forEach((e) => window.addEventListener(e, fire, opts))
+  },
+  destroyed() {
+    if (this._removeVisitListeners) this._removeVisitListeners()
+  }
+}
+
 import "vega"
 import "vega-lite"
 import vegaEmbed from "vega-embed"

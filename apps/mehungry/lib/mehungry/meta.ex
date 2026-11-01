@@ -8,10 +8,13 @@ defmodule Mehungry.Meta do
   favour of GA4 + Google Search Console, which do all of that more accurately.
 
   What remains is the one signal GA4 cannot provide: an anonymous,
-  consent-independent count of connected sessions — the honest denominator that
+  consent-independent count of **real visits** — the honest denominator that
   also includes visitors who declined the cookie banner. It stores only a daily
   count + total duration (see `Mehungry.Meta.DailySessionMetric`), written by
-  `Mehungry.Meta.SessionAggregator` when a LiveView process dies.
+  `Mehungry.Meta.SessionAggregator`, which aggregates connected traffic by a
+  per-tab token and counts only visits that are engaged, last >=10s, or span
+  >=2 views (GA4-parity) — so navigation fragmentation, reconnects, idle loads,
+  and JS bots don't inflate it.
   """
 
   import Ecto.Query, warn: false
