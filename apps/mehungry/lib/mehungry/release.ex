@@ -43,6 +43,48 @@ defmodule Mehungry.Release do
   end
 
   @doc """
+  Imports one or more USDA FoodData Central foods by `fdc_id` into the shared
+  ingredient catalogue, with their full USDA detail (nutrients + portions +
+  category), inside a prod release (where Mix is unavailable). Used to backfill
+  individual ingredients a user reports missing without re-seeding a whole file:
+
+      bin/mehungry_umbrella eval "Mehungry.Release.import_usda_ingredients([175040, 170271, 170272, 170273])"
+
+  Fetches each food live from the FDC API (so `FDC_API_KEY` must be set) and runs
+  it through the same `FoodParser.create_ingredient/2` path as bulk seeding, so
+  it is idempotent — re-running updates the existing row (upsert on name) rather
+  than duplicating it. `eval` does not boot the app, so HTTP (`:httpoison`) and
+  `Mehungry.Repo` are started temporarily, mirroring `seed_health_conditions/0`.
+  Returns a per-id result list.
+  """
+  def import_usda_ingredients(fdc_ids) when is_list(fdc_ids) do
+    Application.load(@app)
+    {:ok, _} = Application.ensure_all_started(:httpoison)
+
+    {:ok, results, _} =
+      Ecto.Migrator.with_repo(Mehungry.Repo, fn _repo ->
+        Enum.map(fdc_ids, &import_one_usda_ingredient/1)
+      end)
+
+    Enum.each(results, fn {id, status, label} ->
+      IO.puts("[#{status}] fdc_id=#{id} #{label}")
+    end)
+
+    results
+  end
+
+  defp import_one_usda_ingredient(fdc_id) do
+    case Mehungry.FoodData.Usda.SearchClient.get_food_details(fdc_id) do
+      {:ok, food} ->
+        Mehungry.FoodData.Usda.FoodParser.create_ingredient(food, "usda")
+        {fdc_id, :ok, food["description"]}
+
+      other ->
+        {fdc_id, :error, inspect(other)}
+    end
+  end
+
+  @doc """
   Bulk-imports European food products from Open Food Facts inside a prod
   release (where Mix is unavailable). Same options as
   `Mehungry.FoodData.OpenFoodFacts.BulkImporter.run/1`:
