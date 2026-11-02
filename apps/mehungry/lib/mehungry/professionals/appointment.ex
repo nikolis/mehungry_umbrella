@@ -14,6 +14,7 @@ defmodule Mehungry.Professionals.Appointment do
     field :external_client_name, :string
     field :status, :string, default: "requested"
     field :meeting_url, :string
+    field :google_event_id, :string
 
     belongs_to :professional, Mehungry.Accounts.User
     belongs_to :client, Mehungry.Accounts.User
@@ -35,7 +36,8 @@ defmodule Mehungry.Professionals.Appointment do
       :title,
       :notes,
       :status,
-      :meeting_url
+      :meeting_url,
+      :google_event_id
     ])
     |> validate_required([:professional_id, :scheduled_at, :title])
     |> validate_inclusion(:status, @statuses)

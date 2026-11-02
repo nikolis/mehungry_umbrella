@@ -1,7 +1,11 @@
-# Google Meet for Appointments — Assessment & Minimal Build
+# Google Meet for Appointments — Assessment & Build
 
-**Status:** minimal slice built (manual link). Automatic Meet-link generation is
-**designed here** as the next increment.
+**Status:** **BUILT (2026-11-02)** — full two-way Google Calendar sync with
+auto-generated Meet links. The manual `meeting_url` (§1) remains the fallback
+when a nutritionist hasn't connected a calendar or Google returns an error.
+Implementation details live in `docs/features/professionals/appointments_booking.md`
+(§"Google Calendar two-way sync"); this doc keeps the original assessment plus
+what shipped.
 
 Assesses giving each accepted appointment a video-call link so client and nutritionist can
 meet online.
@@ -19,6 +23,30 @@ The `professional_appointments.meeting_url` column + UI:
     rides into the client's Google/Apple/Outlook calendar.
 
 This requires **no Google integration** and works today for any provider.
+
+## What shipped (2026-11-02)
+
+The designed increment below was built **and extended to two-way sync**:
+
+- **Storage:** `professional_google_accounts` (`Mehungry.Professionals.GoogleAccount` — per-nutritionist
+  OAuth tokens, `calendar_id`, busy-sync bookkeeping), `professional_calendar_busy`
+  (`Mehungry.Professionals.CalendarBusy` — local busy cache), and
+  `professional_appointments.google_event_id`.
+- **Separate OAuth connect flow** (NOT the login flow): `MehungryWeb.GoogleCalendarOAuthController`
+  + the `:google` branch in `MehungryWeb.AuthController` (session marker
+  `google_calendar_connect`), scopes `calendar.events` + `calendar.readonly`,
+  `access_type=offline` + `prompt=consent`. Connect/Disconnect surfaced on
+  `/nutritionist/appointments`.
+- **Client:** `Mehungry.Professionals.GoogleCalendar.Client` (behind `ClientBehaviour`,
+  `:google_calendar_client` seam) + the `Mehungry.Professionals.GoogleCalendar` orchestration module
+  (on-demand token refresh, event-payload building, Meet-link extraction).
+- **Push worker** `AppointmentCalendarSyncWorker` (`events.insert`/`patch`/`delete`, Meet via
+  `conferenceData.createRequest`, client as attendee) and **import worker**
+  `GoogleCalendarBusyImportWorker` (free/busy → cache, cron every 20 min). The slot engine
+  (`available_slots/3`) subtracts the busy cache.
+
+See `docs/features/professionals/appointments_booking.md` for the runtime flow. The original
+design notes below are retained for context.
 
 ## 2. Next increment — auto-generate a Meet link
 

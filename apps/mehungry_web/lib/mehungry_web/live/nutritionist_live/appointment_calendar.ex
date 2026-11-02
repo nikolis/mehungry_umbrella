@@ -5,6 +5,11 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
   alias Mehungry.Professionals.Appointment
   alias Mehungry.ObanWorkers.AppointmentMailerWorker
 
+  # Vertical day-agenda bounds (wall-clock hours) and pixel height per hour.
+  @agenda_start_hour 6
+  @agenda_end_hour 22
+  @hour_px 52
+
   @impl true
   def mount(params, _session, socket) do
     user = socket.assigns.current_user
@@ -23,6 +28,8 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
     clients = Professionals.list_clients(professional_id)
     profile = Professionals.get_professional_profile(professional_id)
     pending = Professionals.list_pending_requests(professional_id)
+    availabilities = Professionals.list_availabilities(professional_id)
+    google_connected = Professionals.google_calendar_connected?(professional_id)
 
     preselected_client_id =
       case params do
@@ -35,12 +42,16 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       |> assign(:appointments, appointments)
       |> assign(:clients, clients)
       |> assign(:pending_requests, pending)
+      |> assign(:availabilities, availabilities)
+      |> assign(:google_connected, google_connected)
       |> assign(:professional_name, professional_name(profile, user))
       |> assign(:public_url, public_url(profile))
       |> assign(:page_title, "Appointments")
       |> assign(:current_month, today)
       |> assign(:selected_date, today)
       |> assign(:show_modal, not is_nil(preselected_client_id))
+      |> assign(:show_day_modal, false)
+      |> assign(:day_busy, [])
       |> assign(:editing_appointment, nil)
       |> assign(:modal_client_id, preselected_client_id)
       |> assign(
@@ -58,22 +69,56 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
 
   @impl true
   def handle_event("select_date", %{"date" => date_str}, socket) do
-    professional_id = socket.assigns.current_user.id
     date = Date.from_iso8601!(date_str)
+    professional_id = socket.assigns.current_user.id
 
-    changeset =
-      Professionals.change_appointment(%Appointment{}, %{
-        professional_id: professional_id
-      })
+    day_busy =
+      if socket.assigns.google_connected do
+        day_start = NaiveDateTime.new!(date, ~T[00:00:00])
+        day_end = NaiveDateTime.new!(date, ~T[23:59:59])
+        Professionals.list_calendar_busy(professional_id, day_start, day_end)
+      else
+        []
+      end
 
     {:noreply,
      socket
      |> assign(:selected_date, date)
      |> assign(:form_date, date_str)
-     |> assign(:form_start_hour, 9)
+     |> assign(:day_busy, day_busy)
+     |> assign(:show_day_modal, true)
+     |> assign(:show_modal, false)}
+  end
+
+  @impl true
+  def handle_event("close_day_modal", _params, socket) do
+    {:noreply, assign(socket, :show_day_modal, false)}
+  end
+
+  # "+ New" in the day modal, or a click on an empty hour row — open the create
+  # form pre-filled for the selected date (and hour, when supplied).
+  @impl true
+  def handle_event("new_appointment", params, socket) do
+    professional_id = socket.assigns.current_user.id
+    date_str = socket.assigns.form_date
+
+    start_hour =
+      case Integer.parse(to_string(params["hour"] || "")) do
+        {h, ""} when h in 6..21 -> h
+        _ -> 9
+      end
+
+    changeset =
+      Professionals.change_appointment(%Appointment{}, %{professional_id: professional_id})
+
+    {:noreply,
+     socket
+     |> assign(:form_date, date_str)
+     |> assign(:form_start_hour, start_hour)
      |> assign(:form_start_minute, 0)
-     |> assign(:form_end_hour, 10)
+     |> assign(:form_end_hour, start_hour + 1)
      |> assign(:form_end_minute, 0)
+     |> assign(:show_day_modal, false)
      |> assign(:show_modal, true)
      |> assign(:editing_appointment, nil)
      |> assign(:appointment_changeset, changeset)}
@@ -93,6 +138,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
         {:noreply,
          socket
          |> assign(:show_modal, true)
+         |> assign(:show_day_modal, false)
          |> assign(:editing_appointment, appt)
          |> assign(:appointment_changeset, changeset)
          |> assign(:form_date, form_date)
@@ -334,6 +380,15 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
   defp client_display(%{email: email}), do: email
   defp client_display(_), do: "Client"
 
+  # Party label for an appointment: a linked client, else the external name.
+  defp appt_party_label(%Appointment{client: %{} = client}), do: client_display(client)
+
+  defp appt_party_label(%Appointment{external_client_name: name})
+       when is_binary(name) and name != "",
+       do: name
+
+  defp appt_party_label(_), do: "Client"
+
   defp professional_name(%{display_name: name}, _user) when is_binary(name) and name != "",
     do: name
 
@@ -424,11 +479,142 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
   defp appt_chip_class(_accepted),
     do: "bg-basil/20 border border-basil/40 text-basil hover:bg-basil/30"
 
+  # --- Day agenda helpers -------------------------------------------------
+
+  # Appointments on a given date, soonest first. Derived from the already-loaded
+  # month window (no extra query); cancelled/declined fall to the bottom visually
+  # via their chip class but are still shown so the day reads honestly.
+  defp day_appointments(appointments, date) do
+    appointments
+    |> Enum.filter(fn a -> NaiveDateTime.to_date(a.scheduled_at) == date end)
+    |> Enum.sort_by(& &1.scheduled_at, NaiveDateTime)
+  end
+
+  defp agenda_hours, do: @agenda_start_hour..(@agenda_end_hour - 1)
+
+  defp agenda_height_px, do: (@agenda_end_hour - @agenda_start_hour) * @hour_px
+
+  # Top/height for an hour gridline row (module attributes aren't reachable as
+  # `@...` inside the HEEx template, so compute here).
+  defp hour_line_style(hour) do
+    "top: #{(hour - @agenda_start_hour) * @hour_px}px; height: #{@hour_px}px;"
+  end
+
+  # Absolute top/height (px) for an appointment block in the agenda column,
+  # clamped to the visible 06:00–22:00 window.
+  defp appointment_block_style(%Appointment{scheduled_at: s} = appt) do
+    ends_at = appt.ends_at || NaiveDateTime.add(s, 3600)
+
+    top = minutes_from_start(s.hour, s.minute)
+    bottom = minutes_from_start(ends_at.hour, ends_at.minute)
+    bottom = if bottom <= top, do: top + 30, else: bottom
+
+    top_px = top / 60 * @hour_px
+    height_px = max((bottom - top) / 60 * @hour_px, 22)
+
+    "top: #{Float.round(top_px, 1)}px; height: #{Float.round(height_px, 1)}px;"
+  end
+
+  # Weekly availability windows that fall on the selected date, as {start, end}
+  # Time tuples. The schema stores day_of_week 0=Sun..6=Sat; Date.day_of_week/1
+  # returns 1=Mon..7=Sun, so rem(_, 7) maps Sun(7)->0, Mon(1)->1 … Sat(6)->6.
+  defp availability_windows_for(availabilities, date) do
+    schema_dow = rem(Date.day_of_week(date), 7)
+
+    availabilities
+    |> Enum.filter(&(&1.day_of_week == schema_dow))
+    |> Enum.map(&{&1.start_time, &1.end_time})
+  end
+
+  # Google busy intervals clipped to the selected date, as {start, end} Time
+  # tuples. An interval that spills over the day boundary is clamped to the day.
+  defp busy_windows_for(day_busy, date) do
+    day_start = NaiveDateTime.new!(date, ~T[00:00:00])
+    day_end = NaiveDateTime.new!(date, ~T[23:59:59])
+
+    Enum.map(day_busy, fn b ->
+      starts = b.starts_at |> DateTime.to_naive() |> clamp_naive(day_start, day_end)
+      ends = b.ends_at |> DateTime.to_naive() |> clamp_naive(day_start, day_end)
+      {NaiveDateTime.to_time(starts), NaiveDateTime.to_time(ends)}
+    end)
+  end
+
+  defp clamp_naive(naive, min_naive, max_naive) do
+    cond do
+      NaiveDateTime.compare(naive, min_naive) == :lt -> min_naive
+      NaiveDateTime.compare(naive, max_naive) == :gt -> max_naive
+      true -> naive
+    end
+  end
+
+  defp availability_block_style({start_time, end_time}) do
+    top = minutes_from_start(start_time.hour, start_time.minute)
+    bottom = minutes_from_start(end_time.hour, end_time.minute)
+
+    top_px = top / 60 * @hour_px
+    height_px = max((bottom - top) / 60 * @hour_px, 0)
+
+    "top: #{Float.round(top_px, 1)}px; height: #{Float.round(height_px, 1)}px;"
+  end
+
+  # Minutes below the agenda's start hour, clamped to the visible window.
+  defp minutes_from_start(hour, minute) do
+    (hour - @agenda_start_hour) * 60 + minute
+    |> max(0)
+    |> min((@agenda_end_hour - @agenda_start_hour) * 60)
+  end
+
+  # Solid block variant (vs the translucent month chip) for the agenda column.
+  defp appt_block_class("requested"),
+    do: "bg-amber-600/80 border border-amber-500/60 text-amber-50 hover:bg-amber-500"
+
+  defp appt_block_class(status) when status in ["declined", "cancelled", "no_show"],
+    do: "bg-ink-panel2 border border-ink-panel2 text-parchment-dim line-through hover:bg-ink"
+
+  defp appt_block_class(_accepted),
+    do: "bg-basil/80 border border-basil text-ink hover:bg-basil"
+
   @impl true
   def render(assigns) do
     ~H"""
     <div class="profile-form max-w-5xl mx-auto">
       <h1 class="text-2xl font-display font-bold text-parchment mb-6">Appointment Calendar</h1>
+
+      <!-- Google Calendar connection -->
+      <div class="flex items-center justify-between gap-3 bg-ink-panel border border-ink-panel2 rounded-xl px-4 py-3 mb-6">
+        <div class="flex items-center gap-2 min-w-0">
+          <svg class="w-5 h-5 flex-shrink-0 text-parchment-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <%= if @google_connected do %>
+            <p class="text-sm text-parchment truncate">
+              <span class="text-basil font-medium">Google Calendar connected</span>
+              — accepted appointments sync and your busy times block new bookings.
+            </p>
+          <% else %>
+            <p class="text-sm text-parchment-dim truncate">
+              Connect your Google Calendar to auto-add accepted appointments (with a Meet link) and block your busy times.
+            </p>
+          <% end %>
+        </div>
+        <%= if @google_connected do %>
+          <.link
+            href={~p"/nutritionist/google-calendar/disconnect"}
+            method="delete"
+            data-confirm="Disconnect Google Calendar? Accepted appointments will stop syncing."
+            class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-ink-panel2 hover:bg-red-700/60 text-parchment-dim hover:text-red-200 text-xs transition"
+          >
+            Disconnect
+          </.link>
+        <% else %>
+          <.link
+            href={~p"/nutritionist/google-calendar/connect"}
+            class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-xs font-medium"
+          >
+            Connect Google Calendar
+          </.link>
+        <% end %>
+      </div>
 
       <!-- Pending requests -->
       <%= if @pending_requests != [] do %>
@@ -558,6 +744,117 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
           </div>
         <% end %>
       </div>
+
+      <!-- Day-agenda modal -->
+      <%= if @show_day_modal do %>
+        <% appts = day_appointments(@appointments, @selected_date)
+        windows = availability_windows_for(@availabilities, @selected_date)
+        busy_windows = busy_windows_for(@day_busy, @selected_date) %>
+        <div
+          class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4"
+          phx-click="close_day_modal"
+        >
+          <div
+            class="bg-ink-panel border border-ink-panel2 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]"
+            phx-click="close_day_modal"
+            phx-stop-propagation
+          >
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-ink-panel2 flex-shrink-0">
+              <div>
+                <h3 class="text-parchment font-display font-semibold">
+                  {Calendar.strftime(@selected_date, "%A, %b %-d, %Y")}
+                </h3>
+                <p class="text-parchment-dim text-xs mt-0.5">
+                  {length(appts)} {if length(appts) == 1, do: "appointment", else: "appointments"}
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  phx-click="new_appointment"
+                  class="px-3 py-1.5 rounded-lg bg-paprika hover:bg-paprika-soft text-ink text-xs font-medium"
+                >
+                  + New
+                </button>
+                <button
+                  phx-click="close_day_modal"
+                  class="text-parchment-dim hover:text-parchment transition"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Hourly agenda -->
+            <div class="flex-1 overflow-y-auto px-4 py-4">
+              <div class="relative" style={"height: #{agenda_height_px()}px;"}>
+                <!-- Hour gridlines + labels + clickable empty slots -->
+                <%= for hour <- agenda_hours() do %>
+                  <div
+                    class="absolute left-0 right-0 border-t border-ink-panel2/60 group cursor-pointer hover:bg-ink-panel2/30 transition"
+                    style={hour_line_style(hour)}
+                    phx-click="new_appointment"
+                    phx-value-hour={hour}
+                  >
+                    <span class="absolute -top-2 left-0 w-12 text-right pr-2 text-[10px] text-parchment-dim select-none">
+                      {format_time(hour, 0)}
+                    </span>
+                  </div>
+                <% end %>
+
+                <!-- Availability shading -->
+                <%= for window <- windows do %>
+                  <div
+                    class="absolute left-14 right-2 bg-basil/5 border-l-2 border-basil/40 pointer-events-none rounded-sm"
+                    style={availability_block_style(window)}
+                  >
+                  </div>
+                <% end %>
+
+                <!-- Google Calendar busy shading (personal, non-bookable) -->
+                <%= for window <- busy_windows do %>
+                  <div
+                    class="absolute left-14 right-2 bg-ink-panel2/70 border-l-2 border-parchment-dim/40 pointer-events-none rounded-sm overflow-hidden"
+                    style={availability_block_style(window)}
+                    title="Busy (Google Calendar)"
+                  >
+                    <span class="text-[9px] text-parchment-dim pl-1 select-none">Busy</span>
+                  </div>
+                <% end %>
+
+                <!-- Appointment blocks -->
+                <%= for appt <- appts do %>
+                  <div
+                    class={[
+                      "absolute left-14 right-2 rounded-md px-2 py-1 overflow-hidden cursor-pointer shadow-sm",
+                      appt_block_class(appt.status)
+                    ]}
+                    style={appointment_block_style(appt)}
+                    phx-click="edit_appointment"
+                    phx-value-id={appt.id}
+                    phx-stop-propagation
+                  >
+                    <p class="text-[11px] font-semibold leading-tight truncate">
+                      {Calendar.strftime(appt.scheduled_at, "%H:%M")} · {appt.title}
+                    </p>
+                    <p class="text-[10px] leading-tight truncate opacity-90">
+                      {appt_party_label(appt)}
+                    </p>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
 
       <!-- Appointment modal -->
       <%= if @show_modal do %>

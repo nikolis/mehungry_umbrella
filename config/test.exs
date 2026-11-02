@@ -61,6 +61,9 @@ config :mehungry, :pubtator_rate_limit, 1_000_000
 config :mehungry, :instagram_client, Mehungry.Social.Instagram.ClientStub
 config :mehungry, :social_media_publisher, Mehungry.Social.PublisherStub
 
+# Google Calendar API client is stubbed in tests — no network calls.
+config :mehungry, :google_calendar_client, Mehungry.Professionals.GoogleCalendar.ClientStub
+
 # Expo push client is stubbed in tests — no network calls.
 config :mehungry, :expo_push_client, Mehungry.Notifications.ExpoPushClientStub
 

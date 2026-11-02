@@ -30,7 +30,7 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendarTest do
         status: "requested"
       })
 
-    %{conn: log_in_user(conn, attacker), appt: appt}
+    %{conn: log_in_user(conn, attacker), appt: appt, attacker: attacker}
   end
 
   test "cannot delete another nutritionist's appointment", %{conn: conn, appt: appt} do
@@ -79,6 +79,38 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendarTest do
     render_click(view, "delete_appointment", %{"id" => "not-a-number"})
 
     assert render(view) =~ "Appointment not found."
+  end
+
+  test "clicking a day opens the hourly day-agenda modal (not the create form)",
+       %{conn: conn} do
+    {:ok, view, _html} = live(conn, "/nutritionist/appointments")
+
+    html =
+      render_click(view, "select_date", %{"date" => Date.to_iso8601(Date.add(Date.utc_today(), 3))})
+
+    # Day modal shows an hourly agenda with its "+ New" affordance.
+    assert html =~ "+ New"
+    # The hour labels of the 06:00–22:00 agenda are rendered.
+    assert html =~ "06:00"
+    assert html =~ "22:00" or html =~ "21:00"
+  end
+
+  test "shows a Connect Google Calendar prompt when not connected", %{conn: conn} do
+    {:ok, _view, html} = live(conn, "/nutritionist/appointments")
+    assert html =~ "Connect Google Calendar"
+  end
+
+  test "shows the connected state once a Google Calendar is linked", %{conn: conn, attacker: attacker} do
+    {:ok, _} =
+      Professionals.connect_google_calendar(attacker.id, %{
+        "access_token" => "ya29.x",
+        "refresh_token" => "1//r",
+        "expires_in" => 3600,
+        "scope" => "calendar"
+      })
+
+    {:ok, _view, html} = live(conn, "/nutritionist/appointments")
+    assert html =~ "Google Calendar connected"
   end
 
   test "cannot manually create an appointment for a user who is not your client",

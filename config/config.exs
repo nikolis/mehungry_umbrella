@@ -210,7 +210,9 @@ config :mehungry, Oban,
        # 4am UTC Mondays — sync food products from Open Food Facts delta exports
        {"0 4 * * 1", Mehungry.ObanWorkers.OffDeltaSyncWorker},
        # hourly — release consultation card-holds before Stripe voids them (~7d)
-       {"0 * * * *", Mehungry.ObanWorkers.AppointmentHoldExpiryWorker}
+       {"0 * * * *", Mehungry.ObanWorkers.AppointmentHoldExpiryWorker},
+       # every 20 min — import connected nutritionists' Google Calendar busy times
+       {"*/20 * * * *", Mehungry.ObanWorkers.GoogleCalendarBusyImportWorker}
      ]}
   ],
   queues: [

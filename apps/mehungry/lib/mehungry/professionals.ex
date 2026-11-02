@@ -20,12 +20,15 @@ defmodule Mehungry.Professionals do
     ClientCondition,
     ConsultationNote,
     AssignmentMessage,
-    AppointmentPayment
+    AppointmentPayment,
+    GoogleAccount,
+    CalendarBusy
   }
 
   alias Mehungry.Professionals.DietaryHistory
   alias Mehungry.Health.Condition
   alias Mehungry.Billing.StripeHandler
+  alias Mehungry.ObanWorkers.AppointmentCalendarSyncWorker
 
   # ── Professional Profile ───────────────────────────────────────────────────────
 
@@ -802,6 +805,8 @@ defmodule Mehungry.Professionals do
 
   def get_appointment!(id), do: Repo.get!(Appointment, id)
 
+  def get_appointment(id), do: Repo.get(Appointment, id)
+
   @doc """
   Fetch an appointment by id, scoped to its owning professional. Returns `nil`
   when the appointment does not exist or belongs to a different professional —
@@ -822,9 +827,21 @@ defmodule Mehungry.Professionals do
     appointment
     |> Appointment.changeset(attrs)
     |> Repo.update()
+    |> case do
+      {:ok, updated} ->
+        # Re-push an already-synced event so a reschedule/edit reaches Google.
+        if updated.google_event_id, do: AppointmentCalendarSyncWorker.enqueue(:upsert, updated.id)
+        {:ok, updated}
+
+      error ->
+        error
+    end
   end
 
   def delete_appointment(%Appointment{} = appointment) do
+    if appointment.google_event_id,
+      do: AppointmentCalendarSyncWorker.enqueue(:delete, appointment.id)
+
     Repo.delete(appointment)
   end
 
@@ -890,6 +907,7 @@ defmodule Mehungry.Professionals do
 
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
     booked = booked_slots(professional_id, from_date, to_date)
+    busy = busy_intervals(professional_id, from_date, to_date)
 
     Date.range(from_date, to_date)
     |> Enum.flat_map(fn date ->
@@ -900,9 +918,33 @@ defmodule Mehungry.Professionals do
       |> Enum.flat_map(&window_slots(date, &1, slot_minutes))
     end)
     |> Enum.filter(fn slot ->
-      NaiveDateTime.compare(slot, now) == :gt and not MapSet.member?(booked, slot)
+      NaiveDateTime.compare(slot, now) == :gt and
+        not MapSet.member?(booked, slot) and
+        not slot_overlaps_busy?(slot, slot_minutes, busy)
     end)
     |> Enum.sort(NaiveDateTime)
+  end
+
+  # Cached Google busy intervals ({start_naive, end_naive}) within the window, so
+  # a slot that overlaps the nutritionist's personal calendar is never offered.
+  defp busy_intervals(professional_id, from_date, to_date) do
+    start_naive = NaiveDateTime.new!(from_date, ~T[00:00:00])
+    end_naive = NaiveDateTime.new!(to_date, ~T[23:59:59])
+
+    professional_id
+    |> list_calendar_busy(start_naive, end_naive)
+    |> Enum.map(fn b ->
+      {DateTime.to_naive(b.starts_at), DateTime.to_naive(b.ends_at)}
+    end)
+  end
+
+  defp slot_overlaps_busy?(slot_start, slot_minutes, busy) do
+    slot_end = NaiveDateTime.add(slot_start, slot_minutes * 60, :second)
+
+    Enum.any?(busy, fn {busy_start, busy_end} ->
+      NaiveDateTime.compare(slot_start, busy_end) == :lt and
+        NaiveDateTime.compare(slot_end, busy_start) == :gt
+    end)
   end
 
   defp booked_slots(professional_id, from_date, to_date) do
@@ -932,6 +974,115 @@ defmodule Mehungry.Professionals do
         :gt
     end)
     |> Enum.to_list()
+  end
+
+  # ── Google Calendar integration ─────────────────────────────────────────────────
+
+  @doc "The connected Google Calendar account for a nutritionist, or nil."
+  def get_google_account(professional_id) do
+    Repo.get_by(GoogleAccount, professional_id: professional_id)
+  end
+
+  @doc "All connected Google Calendar accounts (for the busy-import sweep)."
+  def list_google_accounts do
+    Repo.all(GoogleAccount)
+  end
+
+  @doc "Whether a nutritionist has connected their Google Calendar."
+  def google_calendar_connected?(professional_id) do
+    not is_nil(get_google_account(professional_id))
+  end
+
+  @doc """
+  Upsert a nutritionist's Google Calendar connection from an OAuth token
+  response map (`"access_token"`, `"refresh_token"`, `"expires_in"`, `"scope"`).
+  Preserves an existing `refresh_token` if Google omits one on reconsent.
+  """
+  def connect_google_calendar(professional_id, token_response) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    existing = get_google_account(professional_id)
+
+    attrs =
+      token_response
+      |> GoogleAccount.token_attrs(now)
+      |> Map.put("professional_id", professional_id)
+      |> Map.put("connected_at", (existing && existing.connected_at) || now)
+
+    (existing || %GoogleAccount{})
+    |> GoogleAccount.changeset(attrs)
+    |> Repo.insert_or_update()
+  end
+
+  @doc "Persist updated token/sync columns on a Google account."
+  def update_google_account(%GoogleAccount{} = account, attrs) do
+    account
+    |> GoogleAccount.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Disconnect a nutritionist's Google Calendar — removes the stored tokens and
+  their cached busy intervals. Accepted appointments fall back to the manual
+  `meeting_url`.
+  """
+  def disconnect_google_calendar(professional_id) do
+    Repo.transaction(fn ->
+      Repo.delete_all(from b in CalendarBusy, where: b.professional_id == ^professional_id)
+      Repo.delete_all(from g in GoogleAccount, where: g.professional_id == ^professional_id)
+      :ok
+    end)
+  end
+
+  @doc """
+  Replace a professional's entire cached busy-interval set with `intervals`
+  (a list of `%{starts_at, ends_at}` with UTC `DateTime`s). Returns
+  `{:ok, count}`.
+  """
+  def replace_calendar_busy(professional_id, intervals) do
+    rows =
+      Enum.map(intervals, fn %{starts_at: s, ends_at: e} ->
+        CalendarBusy.changeset(%CalendarBusy{}, %{
+          professional_id: professional_id,
+          starts_at: s,
+          ends_at: e
+        })
+      end)
+
+    Repo.transaction(fn ->
+      Repo.delete_all(from b in CalendarBusy, where: b.professional_id == ^professional_id)
+      Enum.each(rows, &Repo.insert!/1)
+      length(rows)
+    end)
+  end
+
+  @doc """
+  Cached Google busy intervals for a professional overlapping a datetime window
+  (`NaiveDateTime`s, interpreted as UTC). Used by the slot engine and day view.
+  """
+  def list_calendar_busy(professional_id, from_naive, to_naive) do
+    start_dt = to_utc(from_naive)
+    end_dt = to_utc(to_naive)
+
+    Repo.all(
+      from b in CalendarBusy,
+        where:
+          b.professional_id == ^professional_id and
+            b.starts_at < ^end_dt and b.ends_at > ^start_dt,
+        order_by: [asc: b.starts_at]
+    )
+  end
+
+  defp to_utc(%NaiveDateTime{} = naive), do: DateTime.from_naive!(naive, "Etc/UTC")
+  defp to_utc(%DateTime{} = dt), do: dt
+
+  @doc "Attach the pushed Google event id (and optionally meeting_url) to an appointment."
+  def put_appointment_google_event(%Appointment{} = appointment, event_id, meeting_url \\ nil) do
+    attrs = %{google_event_id: event_id}
+    attrs = if meeting_url, do: Map.put(attrs, :meeting_url, meeting_url), else: attrs
+
+    appointment
+    |> Appointment.changeset(attrs)
+    |> Repo.update()
   end
 
   # ── Booking (public request → nutritionist accept) ──────────────────────────────
@@ -1100,8 +1251,13 @@ defmodule Mehungry.Professionals do
     |> Appointment.status_changeset(attrs)
     |> Repo.update()
     |> case do
-      {:ok, updated} -> {:ok, Repo.preload(updated, [:professional, :client])}
-      error -> error
+      {:ok, updated} ->
+        # Push to the nutritionist's Google Calendar (best-effort, off-cycle).
+        AppointmentCalendarSyncWorker.enqueue(:upsert, updated.id)
+        {:ok, Repo.preload(updated, [:professional, :client])}
+
+      error ->
+        error
     end
   end
 
@@ -1115,7 +1271,16 @@ defmodule Mehungry.Professionals do
     appointment
     |> Appointment.status_changeset(%{status: "declined"})
     |> Repo.update()
+    |> tap_calendar_delete()
   end
+
+  # Remove the pushed Google event when an appointment is declined/cancelled.
+  defp tap_calendar_delete({:ok, appointment} = result) do
+    if appointment.google_event_id, do: AppointmentCalendarSyncWorker.enqueue(:delete, appointment.id)
+    result
+  end
+
+  defp tap_calendar_delete(result), do: result
 
   @doc """
   Cancel an appointment. Money handling depends on state and timing (owner
@@ -1143,6 +1308,7 @@ defmodule Mehungry.Professionals do
     appointment
     |> Appointment.status_changeset(%{status: "cancelled"})
     |> Repo.update()
+    |> tap_calendar_delete()
   end
 
   @doc """
@@ -1171,6 +1337,7 @@ defmodule Mehungry.Professionals do
     appointment
     |> Appointment.status_changeset(%{status: "cancelled"})
     |> Repo.update()
+    |> tap_calendar_delete()
   end
 
   @doc """

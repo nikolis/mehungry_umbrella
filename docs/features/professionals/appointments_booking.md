@@ -19,10 +19,21 @@ calendar invite. Profile/discovery is in `professional_profiles.md`.
 ## Slot engine — `Professionals.available_slots/3`
 
 For a professional + date range: slices each weekly window into
-`profile.appointment_slot_minutes` slots, drops slots in the past and slots already taken by a
-`requested`/`accepted` appointment, returns sorted `NaiveDateTime`s (UTC, second precision).
-`request_appointment/4` re-checks the slot is open (`slot_open?/2`) before inserting, returning
-`{:error, :slot_unavailable}` on a race.
+`profile.appointment_slot_minutes` slots, drops slots in the past, slots already taken by a
+`requested`/`accepted` appointment, **and slots overlapping a cached Google Calendar busy
+interval** (`professional_calendar_busy`, see Google Calendar sync below) — returns sorted
+`NaiveDateTime`s (UTC, second precision). `request_appointment/4` re-checks the slot is open
+(`slot_open?/2`) before inserting, returning `{:error, :slot_unavailable}` on a race.
+
+## Nutritionist calendar view — `/nutritionist/appointments`
+
+The nutritionist calendar (`MehungryWeb.NutritionistLive.AppointmentCalendar`) is a month grid.
+**Clicking a day opens a day-agenda modal** — a vertical 06:00–22:00 hourly breakdown of that
+day's appointments as time-positioned blocks (color-coded by status), with the nutritionist's
+weekly availability window shaded and, when Google Calendar is connected, their imported busy
+intervals overlaid. Clicking an appointment block opens the edit form; clicking an empty hour (or
+the modal's **"+ New"**) opens the create form pre-filled for that date/hour. The month-cell
+chips still open edit directly.
 
 ## Flow
 
@@ -61,9 +72,46 @@ Kinds: `requested`/`accepted`/`declined`, plus **`cancelled_by_client`** (notifi
 nutritionist the slot is free) and **`cancelled_by_professional`** (notifies the client, with a
 full-refund note). Both cancel handlers enqueue the matching email.
 
+## Google Calendar two-way sync (optional, per-nutritionist)
+
+A nutritionist can **connect their Google Calendar** from `/nutritionist/appointments` (the
+"Connect Google Calendar" banner). This is a **separate OAuth flow** from Google login
+(`MehungryWeb.GoogleCalendarOAuthController` → `/nutritionist/google-calendar/connect` marks the
+session and redirects into the Ueberauth Google request phase with the `calendar.events` +
+`calendar.readonly` scopes, `access_type=offline`, `prompt=consent`; `AuthController`'s `:google`
+callback branches on the marker and persists the tokens via
+`Professionals.connect_google_calendar/2` into `professional_google_accounts`,
+`Mehungry.Professionals.GoogleAccount`). Disconnect (`DELETE /nutritionist/google-calendar/disconnect`)
+drops the tokens + cached busy rows.
+
+- **Push (app → Google):** on accept/reschedule the context enqueues
+  `Mehungry.ObanWorkers.AppointmentCalendarSyncWorker` (`:mailers` queue, off the request cycle) →
+  `Mehungry.Professionals.GoogleCalendar.sync_appointment/1`, which creates (or patches) an event
+  on the nutritionist's calendar, **minting a Google Meet link** via
+  `conferenceData.createRequest` and adding the client as an attendee, then stores the event id
+  (`professional_appointments.google_event_id`) + Meet URL (`meeting_url`). Decline/cancel/delete
+  enqueue a `:delete`. **Any Google error is best-effort** — the appointment keeps the manual
+  `meeting_url` fallback and the user action never fails. A manually pasted `meeting_url` is kept
+  as the event `LOCATION` instead of minting a Meet link.
+- **Import (Google → app):** `Mehungry.ObanWorkers.GoogleCalendarBusyImportWorker` (cron, every
+  20 min; also enqueued right after connect) reads each connected nutritionist's free/busy for the
+  next 8 weeks and **replaces** their `professional_calendar_busy` cache
+  (`Mehungry.Professionals.CalendarBusy`). The slot engine subtracts these, so the public booking
+  page respects the nutritionist's personal calendar **without a live Google call** (reads the
+  local cache only).
+- The HTTP client (`Mehungry.Professionals.GoogleCalendar.Client`, behind `ClientBehaviour`) is
+  swapped in tests via the `:google_calendar_client` config seam. Access tokens are refreshed
+  on demand (refresh token → Google token endpoint) before each call.
+
+> **Token storage:** OAuth tokens are stored in plaintext columns, matching the app's existing
+> provider-token practice (`users.instagram_token` etc.); encrypting them is a tracked follow-up.
+> The `calendar.events` sensitive scope requires Google app **verification** before external
+> nutritionists can consent — the manual `meeting_url` is the fallback until then.
+
 ## Notes / future
 
 - Times are handled in UTC end-to-end; per-nutritionist timezone display uses the profile
   `timezone` (not yet applied to the public calendar — future polish).
-- Paid bookings and auto-generated Meet links are the next increments — see
-  `docs/payments/nutritionist_payments_stripe_connect.md` and `docs/integrations/google_meet.md`.
+- Paid bookings are built (see `docs/implementation/professionals/payments/…`); auto-generated
+  Meet links now ship via the Google Calendar sync above (see
+  `docs/implementation/professionals/integrations/google_meet.md`).

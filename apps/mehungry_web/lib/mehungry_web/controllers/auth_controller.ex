@@ -136,7 +136,22 @@ defmodule MehungryWeb.AuthController do
     end
   end
 
+  # Google: a nutritionist connecting their calendar carries a
+  # `google_calendar_connect` session marker (set by GoogleCalendarOAuthController)
+  # and the extra calendar scopes + offline refresh token. Without the marker it
+  # is an ordinary Google sign-in.
+  def callback(%{assigns: %{ueberauth_auth: %{provider: :google} = auth}} = conn, _params) do
+    case get_session(conn, "google_calendar_connect") do
+      nil -> login_or_claim(conn, auth)
+      professional_id -> connect_google_calendar(conn, auth, professional_id)
+    end
+  end
+
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, _params) do
+    login_or_claim(conn, auth)
+  end
+
+  defp login_or_claim(conn, auth) do
     case get_session(conn, "claim_token") do
       nil ->
         case Accounts.find_or_create(auth) do
@@ -155,6 +170,62 @@ defmodule MehungryWeb.AuthController do
       claim_token ->
         claim_via_oauth(conn, claim_token, auth)
     end
+  end
+
+  # Persist the per-nutritionist calendar OAuth tokens, then return to the
+  # appointments screen. Guards that the connecting session actually belongs to
+  # the marked professional so a stale/forged marker can't bind someone else's
+  # tokens.
+  defp connect_google_calendar(conn, auth, professional_id) do
+    conn = delete_session(conn, "google_calendar_connect")
+    current = conn.assigns[:current_user]
+
+    cond do
+      is_nil(current) ->
+        conn
+        |> put_flash(:error, "Please log in before connecting Google Calendar.")
+        |> redirect(to: "/users/log_in")
+
+      current.id != professional_id ->
+        conn
+        |> put_flash(:error, "Could not connect Google Calendar.")
+        |> redirect(to: "/nutritionist/appointments")
+
+      true ->
+        case Mehungry.Professionals.connect_google_calendar(
+               professional_id,
+               google_token_response(auth)
+             ) do
+          {:ok, _account} ->
+            Mehungry.ObanWorkers.GoogleCalendarBusyImportWorker.enqueue(professional_id)
+
+            conn
+            |> put_flash(:info, "Google Calendar connected — your appointments will sync.")
+            |> redirect(to: "/nutritionist/appointments")
+
+          {:error, _changeset} ->
+            conn
+            |> put_flash(:error, "Could not connect Google Calendar. Please try again.")
+            |> redirect(to: "/nutritionist/appointments")
+        end
+    end
+  end
+
+  # Normalize the Ueberauth Google credentials into the token-response shape
+  # `Professionals.connect_google_calendar/2` expects.
+  defp google_token_response(%{credentials: creds}) do
+    expires_in =
+      case creds.expires_at do
+        at when is_integer(at) -> at - System.system_time(:second)
+        _ -> nil
+      end
+
+    %{
+      "access_token" => creds.token,
+      "refresh_token" => creds.refresh_token,
+      "expires_in" => expires_in,
+      "scope" => creds.scopes |> List.wrap() |> Enum.join(" ")
+    }
   end
 
   # Fire the GA4 `sign_up` key event for OAuth, but only for a genuinely new

@@ -374,6 +374,11 @@ defmodule MehungryWeb.Router do
       live("/blueprints/:id/edit", MealBlueprintLive.Editor, :edit)
     end
 
+    # Google Calendar connect/disconnect — plain controller actions (a separate
+    # OAuth flow from Google login), outside the live_session.
+    get("/google-calendar/connect", GoogleCalendarOAuthController, :connect)
+    delete("/google-calendar/disconnect", GoogleCalendarOAuthController, :disconnect)
+
     # Health-conditions workflow, reusing the public HealthLive / ConditionDetailLive
     # modules but mounted inside the nutritionist panel (its layout + chrome). The
     # injected `nav_section` session flag tells those LiveViews to keep all internal
