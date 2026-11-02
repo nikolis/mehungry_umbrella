@@ -58,6 +58,16 @@ defmodule MehungryWeb.FoodsLiveTest do
       assert html =~ "Spinach"
       assert html =~ "/foods/Spinach"
     end
+
+    test "the dead render carries a crawlable A–Z directory linking every food", %{conn: conn} do
+      # The paginated feed only renders page 1 on the dead render, so the A–Z
+      # directory is what gives the long tail of food pages their link equity.
+      body = conn |> get(~p"/foods") |> html_response(200)
+
+      assert body =~ "Browse all foods A–Z"
+      # A real, canonical-form anchor to the detail page (not a LiveView patch).
+      assert body =~ ~s(href="/en/foods/Spinach")
+    end
   end
 
   describe "/foods filtering" do
@@ -150,9 +160,35 @@ defmodule MehungryWeb.FoodsLiveTest do
       body = conn |> get(~p"/foods/Spinach") |> html_response(200)
 
       assert body =~ "Spinach"
-      assert body =~ "Nutrition, Research &amp; Compounds"
+      # Title leads with the nutrient-query intent the GSC data shows.
+      assert body =~ "Spinach Calories &amp; Nutrition Facts (per 100g)"
       assert body =~ ~s("@type":"BreadcrumbList")
       assert body =~ ~s("@type":"NutritionInformation")
+    end
+
+    test "the dead render consolidates every slug/locale variant onto one canonical per locale",
+         %{conn: conn} do
+      # A food is reachable at several URLs (bare /foods/Spinach, /en/…, /el/…,
+      # and any translated slug). Each must declare the SAME reciprocal canonical
+      # + hreflang pair so Google folds them into one page instead of splitting
+      # the ranking signal (the Κάρδαμο → Cress duplicate-canonical fold).
+      for url <- ["/foods/Spinach", "/en/foods/Spinach", "/el/foods/Spinach"] do
+        body = conn |> get(url) |> html_response(200)
+
+        assert body =~
+                 ~s(<link rel="alternate" hreflang="en" href="https://www.m3hungry.com/en/foods/Spinach">)
+
+        assert body =~
+                 ~s(<link rel="alternate" hreflang="el" href="https://www.m3hungry.com/el/foods/Spinach">)
+      end
+
+      # Bare + English URL canonicalize to the English-locale URL; the Greek URL
+      # canonicalizes within its own locale (never cross-canonicals to English).
+      assert conn |> get("/foods/Spinach") |> html_response(200) =~
+               ~s(<link rel="canonical" href="https://www.m3hungry.com/en/foods/Spinach">)
+
+      assert conn |> get("/el/foods/Spinach") |> html_response(200) =~
+               ~s(<link rel="canonical" href="https://www.m3hungry.com/el/foods/Spinach">)
     end
   end
 end

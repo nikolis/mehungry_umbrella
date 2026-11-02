@@ -27,7 +27,8 @@ defmodule MehungryWeb.FoodsLive.Index do
      |> assign(
        :page_description,
        "Browse our database of food species with detailed nutrition facts, the research behind them, and the bioactive compounds they carry."
-     )}
+     )
+     |> assign(:directory, build_directory(language))}
   end
 
   @impl true
@@ -230,4 +231,38 @@ defmodule MehungryWeb.FoodsLive.Index do
 
   defp load_page(_lang, nil), do: Food.list_species_paginated()
   defp load_page(_lang, cursor_after), do: Food.list_species_paginated(cursor_after)
+
+  # ── A–Z directory ──────────────────────────────────────────────────────────
+  # Every species as a crawlable link, grouped by first letter. The paginated
+  # feed above only renders the first page on the dead render, so without this
+  # the ~140 other food pages get no link equity from /foods and rank poorly
+  # (deep pages sat at GSC position 30–60). Links use the same canonical slug per
+  # locale as `SpeciesDetailLive` (English name for :en, the el translation for
+  # :el), so they point at each page's real canonical URL.
+  defp build_directory(language) do
+    Food.list_species_for_directory()
+    |> Enum.map(fn species ->
+      el_name =
+        case Enum.find(species.translations, &(&1.language_name == "el")) do
+          %{name: name} -> name
+          _ -> nil
+        end
+
+      slug_name = if language == "el" and el_name, do: el_name, else: species.name
+      label = if language == "el" and el_name, do: el_name, else: species.name
+
+      %{label: label, path: "/#{language}/foods/#{String.replace(slug_name || "", " ", "-")}"}
+    end)
+    |> Enum.reject(&(&1.label in [nil, ""]))
+    |> Enum.sort_by(&String.downcase(&1.label))
+    |> Enum.group_by(&directory_letter(&1.label))
+    |> Enum.sort_by(fn {letter, _entries} -> letter end)
+  end
+
+  defp directory_letter(label) do
+    case label |> String.trim() |> String.first() do
+      nil -> "#"
+      letter -> String.upcase(letter)
+    end
+  end
 end

@@ -226,4 +226,38 @@
       <% end %>
     <% end %>
   </div>
+
+  <%!-- Crawlable A–Z directory: links every food so link equity reaches the
+        detail pages the paginated feed never renders on the dead render. Shown
+        only in the default browse state (not during an active search/filter). --%>
+  <%= if @directory != [] and @query == "" and MapSet.size(@selected_compound_ids) == 0 do %>
+    <section class="mt-12 border-t border-ink-panel2 pt-8">
+      <details class="group">
+        <summary class="cursor-pointer select-none text-sm font-medium text-parchment-dim hover:text-parchment">
+          {gettext("Browse all foods A–Z")}
+        </summary>
+        <nav aria-label={gettext("All foods")} class="mt-6 space-y-6">
+          <%= for {letter, entries} <- @directory do %>
+            <div>
+              <h2 class="mb-2 text-xs font-semibold uppercase tracking-wide text-parchment-dim/60">
+                {letter}
+              </h2>
+              <ul class="flex flex-wrap gap-x-4 gap-y-1">
+                <%= for entry <- entries do %>
+                  <li>
+                    <a
+                      href={entry.path}
+                      class="text-sm text-parchment-dim transition-colors hover:text-paprika-soft"
+                    >
+                      {entry.label}
+                    </a>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+        </nav>
+      </details>
+    </section>
+  <% end %>
 </div>

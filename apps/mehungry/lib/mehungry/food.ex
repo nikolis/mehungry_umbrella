@@ -485,6 +485,8 @@ defmodule Mehungry.Food do
     to: FoundementalFoods,
     as: :list_species_with_foods
 
+  defdelegate list_species_for_directory(), to: FoundementalFoods
+
   defdelegate get_foundemental_species!(id), to: FoundementalFoods, as: :get_species!
 
   defdelegate get_species_with_ingredients!(id), to: FoundementalFoods

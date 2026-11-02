@@ -47,12 +47,27 @@ base_url = "https://www.m3hungry.com"
 # and emit one <link rel="alternate" hreflang> per supported locale + x-default.
 locale = @conn.assigns[:locale]
 
+# A page may supply per-locale canonical paths (locale-less, e.g.
+# %{"en" => "/foods/Beef", "el" => "/foods/Βοδινό-κρέας"}) when the same content
+# lives at a different slug per language. Canonical + every hreflang alternate
+# then point at each locale's real URL, instead of blindly reusing whatever slug
+# the request came in on — which otherwise splits one food across
+# /en/foods/Beef, /el/foods/Beef and /el/foods/<greek> as rival "canonical"s.
+hreflang_paths = @conn.assigns[:hreflang_paths]
+
+locale_path = fn loc ->
+  case hreflang_paths do
+    %{} = paths -> Map.get(paths, loc, canonical_path)
+    _ -> canonical_path
+  end
+end
+
 {canonical_url, hreflang_alternates} =
   if locale do
     {
-      base_url <> MehungryWeb.Locale.swap_path(canonical_path, locale),
+      base_url <> MehungryWeb.Locale.swap_path(locale_path.(locale), locale),
       Enum.map(MehungryWeb.Locale.supported(), fn loc ->
-        {loc, base_url <> MehungryWeb.Locale.swap_path(canonical_path, loc)}
+        {loc, base_url <> MehungryWeb.Locale.swap_path(locale_path.(loc), loc)}
       end)
     }
   else
@@ -108,7 +123,13 @@ ga_enabled =
     <link
       rel="alternate"
       hreflang="x-default"
-      href={base_url <> MehungryWeb.Locale.swap_path(canonical_path, MehungryWeb.Locale.default())}
+      href={
+        base_url <>
+          MehungryWeb.Locale.swap_path(
+            locale_path.(MehungryWeb.Locale.default()),
+            MehungryWeb.Locale.default()
+          )
+      }
     />
   <% end %>
   <%= if noindex do %>

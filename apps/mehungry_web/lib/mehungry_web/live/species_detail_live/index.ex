@@ -39,23 +39,27 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
       species ->
         language = socket.assigns[:current_language] || "en"
 
-        display_name =
-          if language == "el" do
-            case Food.find_species_translation("el", species.id) do
-              [greek_name | _] -> greek_name
-              [] -> species.name
-            end
-          else
-            species.name
+        el_name =
+          case Food.find_species_translation("el", species.id) do
+            [greek_name | _] -> greek_name
+            _ -> nil
           end
+
+        display_name = if language == "el" and el_name, do: el_name, else: species.name
+
+        # One canonical slug per locale, derived from the species (not from the
+        # slug the request happened to use), so every variant — /foods/Beef,
+        # /en/foods/Beef, /el/foods/Beef, /el/foods/Βοδινό-κρέας — consolidates
+        # onto a single URL per language and the hreflang pair is reciprocal.
+        # Fixes the Greek duplicate-canonical fold (Κάρδαμο → Cress). `head`
+        # reads :canonical_path + :hreflang_paths off the dead-render conn.
+        en_slug = species_slug(species)
+        el_slug = if el_name, do: species_slug(%{name: el_name}), else: en_slug
+        cur_slug = if language == "el", do: el_slug, else: en_slug
+        hreflang_paths = %{"en" => "/foods/" <> en_slug, "el" => "/foods/" <> el_slug}
 
         ingredients = species_ingredients(species)
         selected = default_ingredient(ingredients)
-
-        page_title = "#{display_name} — Nutrition, Research & Compounds"
-
-        page_description =
-          "#{display_name}: nutrition facts across its foods, the research behind it, and the bioactive compounds it carries."
 
         socket =
           socket
@@ -65,8 +69,19 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
           |> assign(:evidence_modal, nil)
           |> assign_ingredient_view(selected && selected.id)
           |> load_species_sidecars(species)
+
+        # Title + description lead with the query intent the GSC data shows
+        # (calories / protein / fat "per 100g") and the description carries the
+        # real macro numbers — numbers in the snippet lift CTR on nutrient queries.
+        page_title = "#{display_name} Calories & Nutrition Facts (per 100g)"
+        page_description = seo_description(display_name, socket.assigns.top_nutrients)
+
+        socket =
+          socket
           |> assign(:page_title, page_title)
           |> assign(:page_description, page_description)
+          |> assign(:canonical_path, "/foods/" <> cur_slug)
+          |> assign(:hreflang_paths, hreflang_paths)
 
         # JSON-LD for the dead render (crawler-visible). The nutrition node reflects
         # the default-selected ingredient's tree — the one rendered on first paint;
@@ -76,14 +91,38 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
            socket,
            :structured_data,
            build_structured_data(
-             species,
              socket.assigns.nutrient_tree,
              display_name,
              language,
+             cur_slug,
              page_title,
              page_description
            )
          )}
+    end
+  end
+
+  # One-line meta description carrying the selected ingredient's real per-100g
+  # macros ("Beef per 100 g: 291 kcal, 24 g protein, 19 g fat. …"). Zero/absent
+  # macros are dropped so we never assert a fabricated number.
+  defp seo_description(name, top_nutrients) do
+    by_label = Map.new(top_nutrients, &{&1.label, &1.amount})
+
+    parts =
+      [{"Calories", "kcal"}, {"Protein", "g protein"}, {"Carbs", "g carbs"}, {"Fat", "g fat"}]
+      |> Enum.flat_map(fn {label, unit} ->
+        case Map.get(by_label, label) do
+          amount when is_number(amount) and amount > 0 -> ["#{format_amount(amount)} #{unit}"]
+          _ -> []
+        end
+      end)
+
+    case parts do
+      [] ->
+        "#{name}: full USDA nutrition facts per 100 g — calories, protein, carbs, fat, vitamins, minerals and the research behind it, on M3Hungry."
+
+      _ ->
+        "#{name} per 100 g: #{Enum.join(parts, ", ")}. Full USDA nutrition facts — vitamins, minerals and research on M3Hungry."
     end
   end
 
@@ -162,6 +201,7 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
     |> assign(:top_nutrients, [])
     |> assign(:nutrient_tree, %{})
     |> assign(:composition_summary, nil)
+    |> assign(:micronutrient_summary, nil)
   end
 
   defp assign_ingredient_view(socket, ingredient_id) do
@@ -173,11 +213,14 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
     # groups foldable — for whichever connected ingredient the dropdown selects.
     nutrient_tree = Mehungry.Food.NutrientCalculation.ingredient_nutrient_tree(ingredient, 100)
 
+    micro_name = socket.assigns[:display_name] || ingredient.name
+
     socket
     |> assign(:selected_ingredient, ingredient)
     |> assign(:top_nutrients, build_top_nutrients(ingredient.ingredient_nutrients))
     |> assign(:nutrient_tree, nutrient_tree)
     |> assign(:composition_summary, build_composition_summary(ingredient.name, nutrient_tree))
+    |> assign(:micronutrient_summary, build_micronutrient_summary(micro_name, nutrient_tree))
   end
 
   defp species_ingredients(species) do
@@ -254,6 +297,91 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
     end
   end
 
+  # ── Micronutrient highlights ───────────────────────────────────────────────
+  # One crawlable sentence naming the food's notable minerals + vitamins with
+  # their real per-100g amounts ("…provides 7.6 mg iron, 508 mg potassium, 15 mg
+  # vitamin C per 100 g"). This is the SEO payload for the "<food> iron/potassium/
+  # vitamin X content per 100g" query family (already showing GSC impressions) —
+  # the full breakdown is in the accordion, but a prose sentence matches how those
+  # queries are phrased. Only real, positive values are listed (never fabricated).
+
+  # Display priority for notable micronutrients; anything else sorts after these.
+  @micronutrient_priority %{
+    "Iron" => 1,
+    "Calcium" => 2,
+    "Potassium" => 3,
+    "Magnesium" => 4,
+    "Zinc" => 5,
+    "Phosphorus" => 6,
+    "Vitamin C" => 7,
+    "Vitamin A" => 8,
+    "Vitamin D" => 9,
+    "Vitamin B-6" => 10,
+    "Vitamin B-12" => 11,
+    "Folate" => 12,
+    "Vitamin E" => 13,
+    "Vitamin K" => 14,
+    "Niacin" => 15,
+    "Thiamin" => 16,
+    "Riboflavin" => 17,
+    "Manganese" => 18,
+    "Copper" => 19,
+    "Selenium" => 20,
+    "Sodium" => 25
+  }
+
+  defp build_micronutrient_summary(name, tree) do
+    micros =
+      [top_node(tree, "Minerals"), top_node(tree, "Vitamins")]
+      |> Enum.flat_map(&(&1["children"] || []))
+      |> Enum.flat_map(fn node ->
+        amount = node["amount"]
+        clean = clean_micronutrient_name(node["name"])
+
+        if is_binary(clean) and is_number(amount) and amount > 0 do
+          [{clean, amount, normalize_unit(node["measurement_unit"]), micronutrient_rank(clean)}]
+        else
+          []
+        end
+      end)
+      |> Enum.sort_by(fn {label, _amt, _unit, rank} -> {rank, label} end)
+      |> Enum.take(6)
+
+    case micros do
+      [] ->
+        nil
+
+      list ->
+        phrases =
+          Enum.map(list, fn {label, amount, unit, _rank} ->
+            unit_suffix = if unit != "", do: " #{unit}", else: ""
+            "#{format_amount(amount)}#{unit_suffix} #{micronutrient_phrase(label)}"
+          end)
+
+        "Per 100 g, #{name} also provides #{join_and(phrases)}."
+    end
+  end
+
+  defp micronutrient_rank(label), do: Map.get(@micronutrient_priority, label, 50)
+
+  # "Iron, Fe" → "Iron"; "Potassium, K" → "Potassium"; "Vitamin C, total ascorbic
+  # acid" → "Vitamin C"; "Folate (Vitamin B9)" → "Folate". Drops the USDA qualifier
+  # tail (comma clause) and any trailing parenthetical.
+  defp clean_micronutrient_name(name) when is_binary(name) do
+    name
+    |> String.split(",", parts: 2)
+    |> List.first()
+    |> String.replace(~r/\s*\(.*\)\s*/, "")
+    |> String.trim()
+  end
+
+  defp clean_micronutrient_name(_), do: nil
+
+  # Minerals read naturally lowercased in prose ("iron"); vitamin designators keep
+  # their conventional casing ("vitamin C", "vitamin B-6", "folate").
+  defp micronutrient_phrase("Vitamin " <> rest), do: "vitamin " <> rest
+  defp micronutrient_phrase(label), do: String.downcase(label)
+
   defp sugar_sentence(tree, carbs) do
     carbs_node = top_node(tree, "Carbohydrates")
     sugars = node_amount(find_desc(carbs_node, ["Total Sugars"]))
@@ -307,9 +435,9 @@ defmodule MehungryWeb.SpeciesDetailLive.Index do
   # NutritionInformation has NO schema.org fields for individual sugars or fatty
   # acids, so JSON-LD intentionally covers macros / level-1 only — the deep
   # breakdown's SEO value comes from the crawlable visible text, not here.
-  defp build_structured_data(species, tree, name, language, title, description) do
+  defp build_structured_data(tree, name, language, slug, title, description) do
     foods_url = "#{@base_url}/#{language}/foods"
-    food_url = "#{foods_url}/#{species_slug(species)}"
+    food_url = "#{foods_url}/#{slug}"
 
     [
       %{

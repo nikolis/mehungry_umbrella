@@ -26,6 +26,17 @@ defmodule Mehungry.Food.FoundementalFoods do
   end
 
   @doc """
+  All species with `:translations` preloaded, name-ordered — the lightweight feed
+  for the crawlable `/foods` A–Z directory (every food linked so link equity
+  reaches the ~140 detail pages the paginated feed never renders on first paint).
+  """
+  def list_species_for_directory do
+    Repo.all(
+      from(s in FoundementalFoodSpecies, order_by: [asc: s.name], preload: :translations)
+    )
+  end
+
+  @doc """
   Search species by a free-text term matching `name`, `scientific_name`, or
   `alternative_name` (case-insensitive substring), capped at `limit` (default 20).
   Backs the article-reference species picker. A blank term returns `[]`.

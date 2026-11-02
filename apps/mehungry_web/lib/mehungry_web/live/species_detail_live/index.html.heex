@@ -91,6 +91,9 @@
         <%= if @composition_summary do %>
           <p class="text-parchment-dim leading-relaxed mb-4">{@composition_summary}</p>
         <% end %>
+        <%= if @micronutrient_summary do %>
+          <p class="text-parchment-dim leading-relaxed mb-4">{@micronutrient_summary}</p>
+        <% end %>
         <div class="bg-ink-panel border border-ink-panel2 rounded-xl overflow-hidden">
           <MehungryWeb.NutritionAccordion.nutrition_accordion
             nutrients={@nutrient_tree}

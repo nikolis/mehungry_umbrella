@@ -613,12 +613,24 @@ Indexing is healthy — `/en/welcome`, `/en/browse`, `/en/conditions/13`, `/en/b
    `HowToStep` is named. `aggregateRating` / `video` / step-images / `recipeCategory` remain
    open **by design** (no real data — see the warnings list in §4). Re-verify with the
    [Rich Results Test](https://search.google.com/test/rich-results) after deploy + recrawl.
-2. **Greek `/foods` pages lose to duplicate-canonical (open).** `/en/foods/Κάρδαμο` returns
-   **NEUTRAL — "Duplicate, Google chose different canonical than user"**: Google picked
-   `/en/foods/Cress` as canonical. The Greek-named food URLs aren't indexed on their own —
-   they're folded into the English equivalent. Decide whether Greek food pages should carry
-   distinct localized content/canonical or deliberately point at the English page (and set the
-   canonical accordingly). Until then, Greek food-term queries can't rank their own URL.
+2. **Greek `/foods` pages lose to duplicate-canonical — FIXED 2026-11-01.** Previously
+   `/en/foods/Κάρδαμο` returned **NEUTRAL — "Duplicate, Google chose different canonical than
+   user"**: a single food was reachable at several self-canonicalizing URLs
+   (`/foods/Beef`, `/en/foods/Beef`, `/el/foods/Beef`, `/el/foods/Βοδινό-κρέας`), each of which
+   mirrored *its own requested slug* into both `rel=canonical` and the hreflang pair — so the
+   pairs were non-reciprocal and Google folded the Greek URLs into the English page, splitting
+   the ranking signal 4 ways. **Root cause:** `head.html.heex` derived canonical + hreflang
+   from `@conn.request_path` (whatever slug was requested) instead of from a single canonical
+   slug per locale. **Fix:** `SpeciesDetailLive.Index.mount/3` now computes one canonical slug
+   per locale from the species itself — English `name` for `en`, the curated `el` translation
+   name for `el` (falling back to the English slug when there's no translation) — and assigns
+   `:canonical_path` + a new `:hreflang_paths` map (`%{"en" => "/foods/Beef", "el" =>
+   "/foods/Βοδινό-κρέας"}`). `head.html.heex` reads `:hreflang_paths` (backward-compatible: a
+   page that doesn't set it keeps the old `swap_path` behavior) and builds canonical + every
+   hreflang alternate + `x-default` from it, so **every** variant URL now declares the **same**
+   reciprocal pair and consolidates onto one URL per language. The JSON-LD `url`/breadcrumb use
+   the same canonical slug. Covered by `foods_live_test.exs` ("consolidates every slug/locale
+   variant onto one canonical per locale"). Re-verify with URL Inspection after recrawl.
 
 ### Lighthouse (mobile, snapshot mode)
 `https://www.m3hungry.com/en/browse/180` — **SEO 100 / Best Practices 100** (titles, meta,
@@ -643,6 +655,36 @@ fixing for page experience + real users):
 ---
 
 ## What to do next
+
+> **Shipped 2026-11-01 — `/foods` organic push (titles, micronutrients, crawlable index).**
+> GSC showed the `/foods` species pages ranking (avg pos ~17, `/foods` subset 674 impr/28d)
+> but earning almost no clicks even at positions 4–9, and ~140 of 161 food pages sitting at
+> pos 30–60. Three changes in one pass:
+>
+> 1. **Title + description (CTR / head-term intent).** `SpeciesDetailLive.Index` title is now
+>    `"<Food> Calories & Nutrition Facts (per 100g)"` (was `"<Food> — Nutrition, Research &
+>    Compounds"`), and the meta description carries the selected ingredient's **real per-100g
+>    macros** (`"Beef per 100 g: 291 kcal, 24 g protein, 19 g fat. …"`, zero/absent macros
+>    dropped so no number is fabricated) — matches the "X calories / protein fat / per 100g"
+>    queries and puts numbers in the snippet.
+> 2. **Micronutrient sentence (new query class).** A crawlable prose line now lists the food's
+>    notable minerals + vitamins with real per-100g amounts (`"Per 100 g, Onion also provides
+>    0.3 mg iron, 108 mg potassium, 16 mg calcium, …"`), built from the same string-keyed
+>    nutrient tree the accordion uses (`build_micronutrient_summary/2`, top 6 by a curated
+>    priority, only positive values). Targets the "<food> iron/potassium/vitamin X content per
+>    100g" family already showing GSC impressions (e.g. `amaranth iron content per 100g`).
+> 3. **Crawlable A–Z directory on `/foods`.** The feed paginates at 20/page, so the dead render
+>    only exposed ~20 of **161** food pages — the other ~140 got no link equity and ranked at
+>    pos 30–60. Added a dead-render `<details>` "Browse all foods A–Z" directory
+>    (`FoodsLive.Index.build_directory/1` + `Food.list_species_for_directory/0`) that links
+>    every species, grouped by first letter, using the **same canonical slug per locale** as
+>    the detail page (so links point at the real canonical URL). Shown only in the default
+>    browse state (hidden during an active search/filter).
+>
+> Covered by `foods_live_test.exs`. Still open: a localized (Greek) title suffix; linking each
+> **recipe's ingredients** to their `/foods/:slug` page (reverse of the existing foods→recipe
+> links — a larger shared-component change); `aggregateRating` (needs a reviews feature). See
+> the duplicate-canonical fix in the URL-Inspection section above (same day).
 
 These items would have the biggest remaining impact:
 
