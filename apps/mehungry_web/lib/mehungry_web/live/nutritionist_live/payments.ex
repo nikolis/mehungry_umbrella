@@ -395,7 +395,7 @@ defmodule MehungryWeb.NutritionistLive.Payments do
           <.input field={f[:price_eur]} type="number" min="0" step="0.01" class="w-full" />
         </.labeled>
         <.labeled :if={@kind == "session"} label="Duration (minutes)">
-          <.input field={f[:duration_minutes]} type="number" min="1" step="5" class="w-full" />
+          <.input field={f[:duration_minutes]} type="number" min="5" step="5" class="w-full" />
         </.labeled>
         <.labeled :if={@kind == "package"} label="Sessions included">
           <.input field={f[:session_count]} type="number" min="1" step="1" class="w-full" />

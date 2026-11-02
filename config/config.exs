@@ -29,6 +29,34 @@ config :mehungry, :android_beta,
 config :mehungry, :ai_bot_emails, ["nikolaos.galerakis@gmail.com", "nikolisgal@gmail.com"]
 config :mehungry, :ai_content_penalty, 3.0
 
+# ── Consultation payments (Stripe Connect) ──────────────────────────────────
+# GO-LIVE GATE: while false, booking is request-only and service prices are
+# display-only (money wired directly, outside M3Hungry). Do NOT flip to true in
+# prod until the compliance prerequisites are done — see
+# docs/implementation/professionals/payments/nutritionist_payments_build_plan.md §4.
+config :mehungry, :consultation_payments_enabled, false
+# Our flat platform commission (basis points): 500 = 5%.
+config :mehungry, :platform_fee_bps, 500
+# VAT contained within the (VAT-inclusive) commission: 2400 = 24% (Greek domestic).
+config :mehungry, :platform_fee_vat_bps, 2400
+# Client refund tiers: full refund if cancelling >= 24h out, 50% if >= 4h, else 0.
+config :mehungry, :consultation_free_cancel_hours, 24
+config :mehungry, :consultation_partial_refund_hours, 4
+# Connected-account classification (set on each nutritionist's Stripe account at
+# creation). We describe the service as non-medical nutrition/wellness coaching so
+# Stripe's risk review lands in the right, unrestricted category; the nutritionist
+# also picks the "Health and wellness coaching" industry during Express onboarding.
+config :mehungry,
+       :connect_product_description,
+       "Nutrition and wellness coaching consultations booked through M3Hungry. Counseling and education — not medical diagnosis or treatment."
+
+config :mehungry, :connect_business_url, "https://www.m3hungry.com"
+# Leave :connect_account_mcc UNSET — Stripe has no numeric "wellness coaching" MCC,
+# and a manually set code must match the account's chosen industry or Stripe
+# rejects/overrides it. Rely on industry auto-assignment. Only set this (to a
+# 4-digit code Stripe confirms) if you ever need to force one.
+# config :mehungry, :connect_account_mcc, "7298"
+
 # Global social-publishing kill switches (see Mehungry.Social). Instagram and
 # Pinterest are disabled for now due to problems with the platform apps
 # themselves — no posts are attempted and their share entry points are hidden.
@@ -180,7 +208,9 @@ config :mehungry, Oban,
        # every 10 min — resume any pipeline run (crawl/annotation/derivation) whose chain broke
        {"*/10 * * * *", Mehungry.ObanWorkers.PipelineWatchdogWorker},
        # 4am UTC Mondays — sync food products from Open Food Facts delta exports
-       {"0 4 * * 1", Mehungry.ObanWorkers.OffDeltaSyncWorker}
+       {"0 4 * * 1", Mehungry.ObanWorkers.OffDeltaSyncWorker},
+       # hourly — release consultation card-holds before Stripe voids them (~7d)
+       {"0 * * * *", Mehungry.ObanWorkers.AppointmentHoldExpiryWorker}
      ]}
   ],
   queues: [

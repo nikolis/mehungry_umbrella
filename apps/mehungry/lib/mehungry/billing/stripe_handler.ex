@@ -79,17 +79,37 @@ defmodule Mehungry.Billing.StripeHandler do
   `{:ok, account_id}` or `{:error, reason}`.
   """
   def create_connect_account(email) do
-    params = %{
-      "type" => "express",
-      "email" => email,
-      "capabilities[transfers][requested]" => "true",
-      "capabilities[card_payments][requested]" => "true"
-    }
+    params =
+      %{
+        "type" => "express",
+        "email" => email,
+        "capabilities[transfers][requested]" => "true",
+        "capabilities[card_payments][requested]" => "true"
+      }
+      # Classify the account as non-medical nutrition/wellness coaching so Stripe's
+      # risk review lands in the right (unrestricted) category. The nutritionist
+      # ALSO selects the "Health and wellness coaching" industry during Express
+      # onboarding — that's what Stripe auto-maps to the MCC; product_description +
+      # url reinforce it. We do NOT force a numeric MCC by default: Stripe has no
+      # "wellness coaching" numeric code, and a manually set MCC must match the
+      # account's chosen industry or Stripe rejects/overrides it — so leave it to
+      # industry auto-assignment unless :connect_account_mcc is explicitly set.
+      |> maybe_put("business_profile[product_description]", opt(:connect_product_description))
+      |> maybe_put("business_profile[url]", opt(:connect_business_url))
+      |> maybe_put("business_profile[mcc]", opt(:connect_account_mcc))
 
     case post("/accounts", params) do
       {:ok, %{"id" => account_id}} -> {:ok, account_id}
       {:ok, body} -> {:error, "unexpected response: #{inspect(body)}"}
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # Optional config value — nil when unset or blank so maybe_put omits the param.
+  defp opt(key) do
+    case Application.get_env(:mehungry, key) do
+      v when is_binary(v) and v != "" -> v
+      _ -> nil
     end
   end
 
@@ -132,6 +152,128 @@ defmodule Mehungry.Billing.StripeHandler do
     end
   end
 
+  # ── Connect (consultation charging — destination charge + manual capture) ─────
+
+  @doc """
+  Open a manual-capture Checkout Session for a paid consultation booking.
+
+  The client's card is **authorized** now (`capture_method: manual`); funds are
+  captured in `capture_payment_intent/1` when the nutritionist accepts, or
+  released via `cancel_payment_intent/1` on decline/expiry. The charge is a
+  **destination charge** (`transfer_data[destination]` + `on_behalf_of` = the
+  connected account, so the nutritionist is the merchant of record and Stripe's
+  processing fee comes out of their 95%) with our 5% as `application_fee_amount`.
+
+  `opts`: `:appointment_id`, `:destination_account`, `:currency`, `:amount_cents`,
+  `:application_fee_cents`, `:success_url`, `:cancel_url`, and optional
+  `:customer_email`, `:product_name`. Returns `{:ok, %{url, session_id}}`.
+  """
+  def create_consultation_checkout(opts) do
+    appointment_id = Keyword.fetch!(opts, :appointment_id)
+    account = Keyword.fetch!(opts, :destination_account)
+
+    params = %{
+      "mode" => "payment",
+      "customer_email" => Keyword.get(opts, :customer_email),
+      "line_items[0][price_data][currency]" => Keyword.fetch!(opts, :currency),
+      "line_items[0][price_data][unit_amount]" => to_string(Keyword.fetch!(opts, :amount_cents)),
+      "line_items[0][price_data][product_data][name]" =>
+        Keyword.get(opts, :product_name, "Consultation"),
+      "line_items[0][quantity]" => "1",
+      "payment_intent_data[capture_method]" => "manual",
+      "payment_intent_data[application_fee_amount]" =>
+        to_string(Keyword.fetch!(opts, :application_fee_cents)),
+      "payment_intent_data[transfer_data][destination]" => account,
+      "payment_intent_data[on_behalf_of]" => account,
+      "payment_intent_data[metadata][appointment_id]" => to_string(appointment_id),
+      "metadata[appointment_id]" => to_string(appointment_id),
+      "success_url" => Keyword.fetch!(opts, :success_url),
+      "cancel_url" => Keyword.fetch!(opts, :cancel_url)
+    }
+
+    case post("/checkout/sessions", params, idempotency_key: "appt-#{appointment_id}-session") do
+      {:ok, %{"id" => id, "url" => url}} -> {:ok, %{url: url, session_id: id}}
+      {:ok, body} -> {:error, "unexpected response: #{inspect(body)}"}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Capture a previously-authorized consultation PaymentIntent (on accept). Returns
+  `{:ok, %{charge_id: id}}` or `{:error, reason}`.
+  """
+  def capture_payment_intent(payment_intent_id) do
+    case post("/payment_intents/#{payment_intent_id}/capture", %{},
+           idempotency_key: "#{payment_intent_id}-capture"
+         ) do
+      {:ok, %{"id" => _} = pi} -> {:ok, %{charge_id: latest_charge_id(pi)}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc "Cancel (void) an uncaptured consultation PaymentIntent — releases the hold."
+  def cancel_payment_intent(payment_intent_id) do
+    case post("/payment_intents/#{payment_intent_id}/cancel", %{}) do
+      {:ok, %{"id" => _}} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Refund a captured consultation. A **full** refund (the default) reverses our
+  application fee and the transfer so the client's money is returned end-to-end.
+  A **partial** refund (`amount_cents:`) returns only that amount and reverses
+  the transfer proportionally; by default it does **not** refund our platform fee
+  (we keep our commission on the retained portion — pass `refund_application_fee:
+  true` to override). Returns `{:ok, %{refund_id: id}}`.
+  """
+  def refund_payment(payment_intent_id, opts \\ []) do
+    amount_cents = opts[:amount_cents]
+    partial? = is_integer(amount_cents)
+
+    params =
+      %{
+        "payment_intent" => payment_intent_id,
+        "reverse_transfer" => "true",
+        "refund_application_fee" =>
+          to_string(Keyword.get(opts, :refund_application_fee, not partial?))
+      }
+      |> maybe_put("amount", partial? && to_string(amount_cents))
+
+    case post("/refunds", params, idempotency_key: refund_idempotency_key(payment_intent_id, opts)) do
+      {:ok, %{"id" => id}} -> {:ok, %{refund_id: id}}
+      {:ok, body} -> {:error, "unexpected response: #{inspect(body)}"}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc "Create a one-time login link to a connected account's Express dashboard."
+  def create_login_link(account_id) do
+    case post("/accounts/#{account_id}/login_links", %{}) do
+      {:ok, %{"url" => url}} -> {:ok, url}
+      {:ok, body} -> {:error, "unexpected response: #{inspect(body)}"}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # A PI's captured charge id lives under `latest_charge` (a string id).
+  defp latest_charge_id(%{"latest_charge" => id}) when is_binary(id), do: id
+  defp latest_charge_id(%{"charges" => %{"data" => [%{"id" => id} | _]}}), do: id
+  defp latest_charge_id(_), do: nil
+
+  defp maybe_put(map, _key, false), do: map
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  # Distinct idempotency keys for full vs partial refunds so a later partial
+  # refund isn't swallowed as a replay of the full-refund request.
+  defp refund_idempotency_key(pi, opts) do
+    case opts[:amount_cents] do
+      n when is_integer(n) -> "#{pi}-refund-#{n}"
+      _ -> "#{pi}-refund"
+    end
+  end
+
   # ── Webhook ───────────────────────────────────────────────────────────────────
 
   @doc """
@@ -154,6 +296,74 @@ defmodule Mehungry.Billing.StripeHandler do
   end
 
   # ── Private: event dispatch ───────────────────────────────────────────────────
+
+  # A consultation booking's Checkout completed — the card is now authorized
+  # (held). Record the PaymentIntent so accept/decline can capture/cancel it.
+  # Matched ahead of the subscription clause by the `mode: "payment"` guard.
+  defp dispatch_event(%{
+         "type" => "checkout.session.completed",
+         "data" => %{"object" => %{"mode" => "payment"} = session}
+       }) do
+    Mehungry.Professionals.mark_payment_authorized(session["id"], session["payment_intent"])
+    :ok
+  end
+
+  # The client abandoned the consultation Checkout — release the pending booking.
+  defp dispatch_event(%{
+         "type" => "checkout.session.expired",
+         "data" => %{"object" => %{"mode" => "payment"} = session}
+       }) do
+    Mehungry.Professionals.expire_payment_session(session["id"])
+    :ok
+  end
+
+  defp dispatch_event(%{"type" => "payment_intent.canceled", "data" => %{"object" => pi}}) do
+    Mehungry.Professionals.mark_payment_canceled_by_intent(pi["id"])
+    :ok
+  end
+
+  defp dispatch_event(%{"type" => "payment_intent.payment_failed", "data" => %{"object" => pi}}) do
+    reason = get_in(pi, ["last_payment_error", "message"])
+    Mehungry.Professionals.mark_payment_failed(pi["id"], reason)
+    :ok
+  end
+
+  defp dispatch_event(%{"type" => "charge.refunded", "data" => %{"object" => charge}}) do
+    if charge["payment_intent"] do
+      Mehungry.Professionals.mark_payment_refunded(
+        charge["payment_intent"],
+        charge["amount_refunded"],
+        charge["amount"]
+      )
+    end
+
+    :ok
+  end
+
+  # A client opened a dispute. We carry the dispute liability on destination
+  # charges (even with on_behalf_of), so this is NOT log-only: alert + record it
+  # on the ledger so support can respond with evidence before the deadline.
+  defp dispatch_event(%{"type" => "charge.dispute.created", "data" => %{"object" => dispute}}) do
+    Mehungry.Professionals.record_payment_dispute(dispute)
+
+    Logger.error(
+      "STRIPE DISPUTE opened on charge #{dispute["charge"]} (amount #{dispute["amount"]}, " <>
+        "reason #{dispute["reason"]}) — platform liable, respond before the evidence deadline"
+    )
+
+    :ok
+  end
+
+  # The nutritionist disconnected their Stripe account from our platform — clear
+  # the stored account id and mark them no longer chargeable.
+  defp dispatch_event(%{
+         "type" => "account.application.deauthorized",
+         "account" => account_id
+       })
+       when is_binary(account_id) do
+    Mehungry.Professionals.clear_stripe_connection(account_id)
+    :ok
+  end
 
   defp dispatch_event(%{"type" => "checkout.session.completed", "data" => %{"object" => session}}) do
     user_id = get_in(session, ["metadata", "user_id"]) |> parse_int()
@@ -268,18 +478,20 @@ defmodule Mehungry.Billing.StripeHandler do
 
   # ── Private: HTTP ─────────────────────────────────────────────────────────────
 
-  defp post(path, params) do
+  defp post(path, params, opts \\ []) do
     secret_key = config(:stripe_secret_key)
 
     if secret_key == "" do
       {:error, :stripe_not_configured}
     else
-      body = URI.encode_query(params)
+      # Drop nil values so optional params (e.g. customer_email) are simply absent.
+      body = params |> Enum.reject(fn {_k, v} -> is_nil(v) end) |> URI.encode_query()
 
-      headers = [
-        {"Authorization", "Bearer #{secret_key}"},
-        {"Content-Type", "application/x-www-form-urlencoded"}
-      ]
+      headers =
+        [
+          {"Authorization", "Bearer #{secret_key}"},
+          {"Content-Type", "application/x-www-form-urlencoded"}
+        ] ++ idempotency_header(opts[:idempotency_key])
 
       case HTTPoison.post(@stripe_api <> path, body, headers, recv_timeout: 15_000) do
         {:ok, %HTTPoison.Response{status_code: code, body: resp_body}} when code in 200..299 ->
@@ -316,6 +528,9 @@ defmodule Mehungry.Billing.StripeHandler do
       end
     end
   end
+
+  defp idempotency_header(nil), do: []
+  defp idempotency_header(key), do: [{"Idempotency-Key", to_string(key)}]
 
   # The period-end fetcher can be overridden in tests via the
   # :stripe_period_end_fetcher app config key (a fun/1) so webhook dispatch can

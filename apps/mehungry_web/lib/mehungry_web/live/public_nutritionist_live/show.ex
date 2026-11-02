@@ -48,9 +48,27 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
          |> assign_viewer_recipe_state()
          |> reset_booking_state()
          |> load_slots()
+         |> load_services()
          |> assign_seo(profile)}
     end
   end
+
+  # Flash on return from Stripe Checkout (success/cancel URLs point back here).
+  @impl true
+  def handle_params(%{"booking" => "success"}, _uri, socket) do
+    {:noreply,
+     put_flash(
+       socket,
+       :info,
+       "Your card is on hold — #{display_name(socket.assigns.profile)} will confirm by email. You're only charged once they accept."
+     )}
+  end
+
+  def handle_params(%{"booking" => "cancelled"}, _uri, socket) do
+    {:noreply, put_flash(socket, :error, "Payment was not completed, so no time was requested.")}
+  end
+
+  def handle_params(_params, _uri, socket), do: {:noreply, socket}
 
   # The signed-in viewer's saved-recipe ids + follows drive the recipe cards'
   # save button state (the hook's save_user_recipe reads current_user_recipes).
@@ -96,6 +114,13 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
     end
   end
 
+  def handle_event("select_booking_service", %{"id" => id}, socket) do
+    case Integer.parse(id) do
+      {service_id, ""} -> {:noreply, assign(socket, :booking_service_id, service_id)}
+      _ -> {:noreply, socket}
+    end
+  end
+
   def handle_event("reset_booking", _params, socket) do
     {:noreply, reset_booking_state(socket)}
   end
@@ -119,10 +144,19 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
         {:noreply, socket}
 
       true ->
-        case Professionals.request_appointment(profile.user_id, user.id, slot,
-               title: "Consultation with #{display_name(profile)}",
-               notes: params["notes"]
-             ) do
+        opts = [
+          professional_service_id: socket.assigns.booking_service_id,
+          title: "Consultation with #{display_name(profile)}",
+          notes: params["notes"],
+          success_url: url(~p"/nutritionists/#{profile.slug}?booking=success"),
+          cancel_url: url(~p"/nutritionists/#{profile.slug}?booking=cancelled")
+        ]
+
+        case Professionals.request_appointment(profile.user_id, user.id, slot, opts) do
+          # Paid booking: redirect the client to Stripe Checkout to authorize their card.
+          {:ok, _appt, checkout_url} ->
+            {:noreply, redirect(socket, external: checkout_url)}
+
           {:ok, appt} ->
             AppointmentMailerWorker.enqueue("requested", appt.id, %{
               professional_name: display_name(profile),
@@ -159,6 +193,34 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
     |> assign(:booking_status, :idle)
     |> assign(:booked_slot, nil)
   end
+
+  # Active services (intro first) + the default selection (the free intro, or the
+  # first service). Empty for a nutritionist who never set up services → the
+  # wizard falls back to a plain, serviceless request.
+  defp load_services(socket) do
+    services = Professionals.list_active_services(socket.assigns.profile.user_id)
+
+    socket
+    |> assign(:services, services)
+    |> assign(:booking_service_id, default_service_id(services))
+  end
+
+  defp default_service_id([]), do: nil
+
+  defp default_service_id([first | _] = services) do
+    intro = Enum.find(services, &(&1.kind == "intro"))
+    (intro || first).id
+  end
+
+  defp service_price_label(%{kind: "intro"}), do: "Free · 15 min"
+
+  defp service_price_label(%{price_cents: cents} = service) when is_integer(cents) and cents > 0 do
+    euros = :erlang.float_to_binary(cents / 100, decimals: 2)
+    suffix = if service.kind == "package", do: " · #{service.session_count} sessions", else: ""
+    "€#{euros}#{suffix}"
+  end
+
+  defp service_price_label(_), do: "Free"
 
   defp load_slots(socket) do
     profile = socket.assigns.profile
@@ -397,6 +459,8 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
         profile={@profile}
         slots_by_date={@slots_by_date}
         day_slots={@day_slots}
+        services={@services}
+        booking_service_id={@booking_service_id}
         booking_window_days={@booking_window_days}
         booking_date={@booking_date}
         booking_slot={@booking_slot}
@@ -424,6 +488,8 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
   attr :profile, :map, required: true
   attr :slots_by_date, :list, required: true
   attr :day_slots, :list, required: true
+  attr :services, :list, default: []
+  attr :booking_service_id, :any, default: nil
   attr :booking_window_days, :integer, required: true
   attr :booking_date, :any, default: nil
   attr :booking_slot, :any, default: nil
@@ -488,9 +554,43 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
               {display_name(@profile)} will confirm by email before it's booked.
             </p>
 
-            <!-- Step 1 · day -->
+            <!-- Step 1 · service -->
+            <div :if={@services != []} class="mb-5">
+              <p class="text-[11px] font-semibold text-parchment-dim uppercase tracking-wide mb-2">
+                1 · Choose a service
+              </p>
+              <div class="space-y-2">
+                <button
+                  :for={service <- @services}
+                  type="button"
+                  phx-click="select_booking_service"
+                  phx-value-id={service.id}
+                  class={[
+                    "w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg border text-left transition",
+                    if(@booking_service_id == service.id,
+                      do: "border-paprika bg-paprika/10",
+                      else: "border-ink-panel2 hover:border-paprika/50"
+                    )
+                  ]}
+                >
+                  <span class="min-w-0">
+                    <span class="block text-sm text-parchment font-medium truncate">
+                      {service.name}
+                    </span>
+                    <span :if={service.description} class="block text-xs text-parchment-dim truncate">
+                      {service.description}
+                    </span>
+                  </span>
+                  <span class="flex-none text-sm text-paprika font-medium">
+                    {service_price_label(service)}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 2 · day -->
             <p class="text-[11px] font-semibold text-parchment-dim uppercase tracking-wide mb-2">
-              1 · Choose a day
+              {if @services != [], do: "2", else: "1"} · Choose a day
             </p>
             <div class="flex gap-2 overflow-x-auto pb-2 m3-scrollbar mb-5">
               <button
@@ -520,7 +620,7 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
             <!-- Step 2 · time -->
             <div :if={@booking_date}>
               <p class="text-[11px] font-semibold text-parchment-dim uppercase tracking-wide mb-2">
-                2 · Choose a time
+                {if @services != [], do: "3", else: "2"} · Choose a time
               </p>
               <div class="flex flex-wrap gap-2 mb-5 max-h-40 overflow-y-auto m3-scrollbar">
                 <button
@@ -548,7 +648,7 @@ defmodule MehungryWeb.PublicNutritionistLive.Show do
               class="border-t border-ink-panel2 pt-4"
             >
               <label class="block text-[11px] font-semibold text-parchment-dim uppercase tracking-wide mb-2">
-                3 · Add a note (optional)
+                {if @services != [], do: "4", else: "3"} · Add a note (optional)
               </label>
               <textarea
                 name="notes"

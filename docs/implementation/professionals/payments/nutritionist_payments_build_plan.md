@@ -128,6 +128,28 @@ Paid path only when `payable?/1` (onboarding done **and** fee > 0) **and** the
 
 ## 3. The plan (engineering) — resurrect, don't rebuild
 
+> **IMPLEMENTED 2026-11-02 on branch `nutritionist-consultation-payments`** (off the
+> `deploy-ingredient-search-plural` HEAD, which carries the per-service pricing workspace master
+> still lacks). The charging layer was **extracted file-by-file** from the giant mixed commit
+> `5d91fde5` (not cherry-picked wholesale) and **reconciled to per-service pricing**. What's in:
+> `AppointmentPayment` ledger (+ `professional_services`/`vat` snapshot) + migration
+> `20261102000001`; `StripeHandler.{create_consultation_checkout,capture_payment_intent,
+> cancel_payment_intent,refund_payment}` (refund extended for partials) + `post/3` idempotency;
+> payment webhook dispatch (`checkout.session.completed|expired` mode:payment, `payment_intent.*`,
+> `charge.refunded`, `charge.dispute.created` → **alert+ledger**, `account.application.deauthorized`);
+> `Professionals` lifecycle (request→authorize / accept→capture / decline→void / cancel→**tiered
+> refund** 100/50/0 / **no_show**→retain) keyed on the booked service's `price_cents`;
+> `AppointmentHoldExpiryWorker` + hourly cron; config keys (flag **off**); `StripePaymentClientStub`;
+> service picker in the public booking modal (`public_nutritionist_live/show.ex`) + Stripe redirect
+> + return flash. **Tests green:** `appointment_payments_test.exs` (13, incl. 50% tier/no-show/VAT/
+> per-service), no regressions in `stripe_handler_test` (10), `professionals_test` (61),
+> `public_nutritionist_live_test` (10). **Still TODO:** webhook-dispatch unit tests; the Phase-A
+> compliance/go-live gate (do **not** flip `:consultation_payments_enabled`); per-nutritionist
+> jurisdiction for `fee_vat_cents` (currently assumes GR 24% inclusive); package *scheduling* (v1
+> only session+intro are bookable-with-payment; packages are sold, scheduled out of band).
+
+The original resurrection steps below are kept for provenance; most are now done.
+
 ### Step 1 — Rebase the branch onto master (the bulk of the work)
 
 ```bash
@@ -257,16 +279,28 @@ Two distinct supplies:
     reverse charge.
   ([Greece VAT guide](https://www.vatcalc.com/greece/greece-vat-guide/),
   [EU reverse charge](https://flexlogistics.eu/vat-reverse-charge-explained-eu-business/))
-- **Actions:** (1) decide whether the stored 5% is VAT-inclusive or VAT-on-top — this changes
-  `application_fee_amount` math, **get it right with an accountant before launch**;
-  (2) **issue compliant invoices for the commission** (consider Stripe Tax/invoicing, but the
-  duty is ours regardless); (3) record fee + any VAT on the ledger row. The branch's A4 note
-  ("tax is the nutritionist's because of `on_behalf_of`") is right about the *consultation* but
-  silent on *our commission* — close that gap.
+- **DECISION (2026-11-02): the 5% commission is VAT-INCLUSIVE.** `application_fee_amount` is a
+  flat 5% of the transaction, VAT not added on top — identical economics for the nutritionist
+  in every country. GR nutritionist: VAT ≈ fee − fee/1.24 (net ≈4.03%); other-EU: reverse
+  charge, whole 5% is ours. Remaining actions: (1) **issue compliant invoices for the
+  commission** (consider Stripe Tax/invoicing, duty is ours regardless); (2) **record the VAT
+  portion on each ledger row**; (3) confirm invoicing mechanism with the accountant. The
+  branch's A4 note ("tax is the nutritionist's because of `on_behalf_of`") is right about the
+  *consultation* but silent on *our commission* — close that gap.
 
 > Most likely to need professional tax advice. Do not guess the fee's VAT treatment in code.
 
-### 4.5 Accurate business representation & acceptable use  *(prerequisite — due diligence)*
+### 4.5 Accurate business representation & acceptable use  *(RESOLVED 2026-11-02)*
+
+> **Stripe support confirmed (2026-11-02):** this model is **not categorically restricted** and
+> **telemedicine does not apply** — Stripe's telemedicine definition explicitly excludes
+> "education or wellness resources," and credentialed-nutritionist *counseling* (not diagnosis or
+> treatment) maps to the recognized **Counseling Services** / **Health & Wellness Coaching**
+> categories, neither on the Prohibited/Restricted list. There is **no blanket written
+> pre-approval** — Stripe reviews **each connected account case-by-case at onboarding** and may
+> request the nutritionist's credentials/licensing. So the platform-level gate is satisfied;
+> residual risk is per-account (handled by the `charges_enabled` gate). Keep the reply on file and
+> set the correct MCC (§5). Hold the framing below — never "telemedicine"/"medical".
 
 - Represent the platform truthfully to Stripe: **nutrition consulting / health education +
   software marketplace.**
@@ -280,13 +314,20 @@ Two distinct supplies:
 - No unsubstantiated health claims in payment-adjacent copy (consistent with the YMYL posture
   already in CLAUDE.md).
 
-### 4.6 Consumer-facing refund & cancellation policy  *(prerequisite — must publish)*
+### 4.6 Consumer-facing refund & cancellation policy  *(locked 2026-11-02 — must publish)*
 
 Even though the nutritionist is the service MoR, the client books and pays **inside
-M3Hungry**, so we must publish and honor a clear policy: free-cancel window (the branch's
-24h `:consultation_free_cancel_hours`), no-show handling, nutritionist-decline = released
-hold (never charged), post-capture refund mechanics. Surface it at the paid-booking step and
-in Terms. Reduces disputes (§4.2) and is an EU consumer-protection expectation.
+M3Hungry**, so we must publish and honor a clear policy. **The owner-approved tiers:**
+
+| When the client cancels | Refund | Capture mechanics (manual-capture flow) |
+|---|---|---|
+| **≥ 24h** before the appointment | **100%** | cancel the auth (if not yet captured) / full refund |
+| **4h–24h** before | **50%** | capture 50% (or capture full then refund 50%) |
+| **< 4h** before | **0%** | capture in full |
+| **No-show** | **0%** | capture in full |
+| **Nutritionist declines / cancels** | **100%** | release hold / full refund — client never charged |
+
+Config: `:consultation_free_cancel_hours` = 24 (existing) **plus a new `:consultation_partial_refund_hours` = 4** threshold for the 50% band. The branch only has the binary 24h window, so the refund path must be **extended** to the middle tier (partial capture/refund) — this is net-new logic, not a straight port. Surface the policy at the paid-booking step and in Terms. Reduces disputes (§4.2) and is an EU consumer-protection expectation.
 
 ### 4.7 Platform agreements  *(one-time)*
 
@@ -312,9 +353,21 @@ a flow that posts raw card numbers to our backend.
 
 - **Reuse** `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` (same platform account as
   subscriptions). Config keys: `:consultation_payments_enabled` (go-live switch),
-  `:platform_fee_bps` (500), `:consultation_free_cancel_hours` (24).
+  `:platform_fee_bps` (500), `:platform_fee_vat_bps` (2400), `:consultation_free_cancel_hours`
+  (24), `:consultation_partial_refund_hours` (4), `:connect_product_description`,
+  `:connect_business_url`, `:connect_account_mcc` (unset).
 - **Enable Connect** + set **platform profile, branding, support details** in the Stripe
   dashboard (shown in Express onboarding + on client receipts). *(Prerequisite.)*
+- **MCC / industry classification (decided 2026-11-02): "Health & Wellness Coaching".**
+  `create_connect_account/1` sets `business_profile[product_description]` + `[url]` on each
+  nutritionist account to classify it as non-medical nutrition/wellness coaching. We do **not**
+  force a numeric MCC — Stripe's supported list has no "wellness coaching" code, and a manually
+  set MCC must match the account's chosen industry (else Stripe rejects/overrides it), so we rely
+  on Stripe's auto-assignment from the industry the nutritionist picks at Express onboarding.
+  **Instruct nutritionists to select "Health and wellness coaching"** (never "medical/clinical")
+  and to describe their service as counseling/coaching — this keeps them out of the
+  telemedicine/licensing-review lane (§4.5). `:connect_account_mcc` exists only to force a
+  specific code later if Stripe ever requests one.
 - **Register webhook events** (§1.2 + the two Step-2 additions) on `/webhooks/stripe`.
 - **Confirm `debit_negative_balances`** on created accounts (§4.2).
 - **Deploy via Fly.io secrets**, *not* AWS — the branch's go-live doc is obsolete here.
@@ -322,15 +375,35 @@ a flow that posts raw card numbers to our backend.
 
 ---
 
-## 6. Open decisions (need a human call)
+## 6. Decisions (locked 2026-11-02)
 
-1. **VAT on our commission** — inclusive vs on-top; invoicing mechanism (§4.4). *Accountant.*
-2. **Refund/cancellation policy** specifics (§4.6). *Business.*
-3. **Stripe acceptable-use confirmation** for paid nutrition consultations (§4.5). *Business.*
-4. **Fee level** — keep 5% (`:platform_fee_bps` 500)? *Business.*
-5. **Rebase vs. cherry-pick** the branch (§3 Step 1). *Eng.*
-6. Whether to also take the branch's bundled **€30/€300 nutritionist price change** now or
-   separate it. *Business.*
+All six open decisions have been made by the owner:
+
+1. **VAT on our commission — INCLUSIVE.** The 5% `application_fee_amount` is the gross; VAT is
+   *not* added on top, so the fee is a constant 5% of the transaction regardless of the
+   nutritionist's country. For a **GR** nutritionist ≈0.97pts of the 5% is VAT we remit (net
+   ≈4.03%); for an **other-EU** nutritionist under reverse charge the whole 5% is ours and they
+   self-account. The ledger row must record the VAT portion. (§4.4) *Invoicing mechanism for the
+   commission still to be set with the accountant, but the inclusive treatment is fixed.*
+2. **Refund/cancellation policy — three-tier (see §4.6).** ≥24h → 100%; 4h–24h → 50%; <4h →
+   0%; no-show → 0%; nutritionist declines/cancels → 100%, never charged. **This is richer than
+   the branch's binary "full refund outside 24h" — the refund logic must be extended to the
+   50% middle band (partial capture) rather than ported as-is.**
+3. **Stripe acceptable-use — RESOLVED 2026-11-02 (Stripe support).** Stripe confirmed the model
+   is **not restricted** and **telemedicine does not apply**: their own definition excludes
+   "education or wellness resources," and nutrition *counseling* (not diagnosis/treatment) falls
+   under the recognized **Counseling Services / Health & Wellness Coaching** categories. Caveat:
+   **no blanket pre-approval exists** — each connected account is reviewed **per-account at
+   onboarding** (Stripe may request the nutritionist's credentials/licensing). The platform gate
+   is therefore satisfied; residual risk is per-account and already handled by gating charging on
+   `charges_enabled`. **Action:** set the platform/connected-account **MCC** to Counseling Services
+   / Health & Wellness Coaching (§5); keep Stripe's written reply on file. (§4.5)
+4. **Fee level — keep 5%** (`:platform_fee_bps` 500).
+5. **Cherry-pick, not rebase** (§3 Step 1 alternative): lift the payment-only files onto a fresh
+   branch off master and re-wire `Professionals`/`request_appointment` by hand.
+6. **No subscription price change.** The branch's bundled €30/€300 nutritionist-tier change is
+   **dropped** — consumer/nutritionist subscription prices stay as they are. Take only the
+   consultation-payment files.
 
 ---
 

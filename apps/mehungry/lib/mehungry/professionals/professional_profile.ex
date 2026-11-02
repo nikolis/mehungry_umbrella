@@ -172,6 +172,18 @@ defmodule Mehungry.Professionals.ProfessionalProfile do
     |> cast(attrs, [:stripe_connect_account_id, :stripe_charges_enabled])
   end
 
+  @doc """
+  Whether this nutritionist can be paid onto — Stripe Connect onboarding is
+  complete (an account id exists and Stripe reports `charges_enabled`). The
+  *amount* to charge comes from the booked `ProfessionalService`, not the
+  profile, so there is no fee check here (that moved to per-service pricing).
+  """
+  def payable?(%__MODULE__{stripe_connect_account_id: id, stripe_charges_enabled: true})
+      when is_binary(id) and id != "",
+      do: true
+
+  def payable?(_), do: false
+
   # Generate a slug from display_name (falling back to specialization) the
   # first time one is needed; keep an existing slug stable across edits.
   defp maybe_put_slug(changeset) do

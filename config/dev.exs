@@ -120,3 +120,8 @@ config :mehungry, :metrics_api_token, "dev-metrics-token"
 # Dummy token for the public system-integration API in dev.
 # Override in prod via the PUBLIC_API_TOKEN env var (see runtime.exs).
 config :mehungry, :public_api_token, "dev-public-api-token"
+
+# TEST-MODE ONLY: turn on consultation payments locally so the paid-booking →
+# Stripe Checkout flow can be exercised end-to-end against test-mode Stripe.
+# This is dev-only; prod stays gated off (config/config.exs) until go-live.
+config :mehungry, :consultation_payments_enabled, true

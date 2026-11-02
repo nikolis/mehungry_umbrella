@@ -26,14 +26,27 @@ For a professional + date range: slices each weekly window into
 
 ## Flow
 
-1. **Request** — logged-in visitor picks an open slot on `/nutritionists/:slug`
-   (`PublicNutritionistLive.Show`). Logged-out visitors are redirected to log in. On success:
-   an `AppointmentMailerWorker` "requested" email notifies the nutritionist. The visitor sees
-   "awaiting confirmation" — **nothing is confirmed yet**.
+1. **Request** — logged-in visitor picks a **service** (the booking modal lists the active
+   `ProfessionalService`s — free intro + paid session/package, with prices), then an open slot on
+   `/nutritionists/:slug` (`PublicNutritionistLive.Show`). Logged-out visitors are redirected to
+   log in. On success: an `AppointmentMailerWorker` "requested" email notifies the nutritionist.
+   The visitor sees "awaiting confirmation" — **nothing is confirmed yet**. For a **paid** service
+   (when the consultation-payments flag is on and the nutritionist is Stripe-Connect-onboarded) the
+   request instead opens a manual-capture Stripe Checkout and redirects the client to **authorize**
+   (hold) their card; the hold is only captured on acceptance. See the payments docs below.
 2. **Accept / decline** — nutritionist sees pending requests on `/nutritionist/appointments`
    (amber panel + amber calendar chips). Accept optionally attaches a `meeting_url`
-   (`Professionals.accept_appointment/2`); decline (`decline_appointment/1`) notifies the
-   client. Both enqueue an `AppointmentMailerWorker` email.
+   (`Professionals.accept_appointment/2`) and, for paid bookings, **captures** the card hold first;
+   decline (`decline_appointment/1`) **releases** the hold. A `mark_no_show/1` action retains a
+   captured payment in full. Both enqueue an `AppointmentMailerWorker` email.
+3. **Cancellation (two surfaces, two policies):**
+   - **Client** cancels from **`/appointments`** ("My appointments", `AppointmentsLive.Index`) —
+     `cancel_appointment/1` applies the **tiered** refund (≥24h → 100%, 4–24h → 50%, <4h → 0%);
+     the confirm dialog previews the amount via `client_cancellation_refund_cents/1`.
+   - **Nutritionist** cancels an **accepted** appointment from the calendar edit modal
+     ("Cancel & refund") — `cancel_appointment_by_professional/1` **always fully refunds** the
+     client (an uncaptured hold is released; a captured payment is fully reversed), since the
+     client is never penalised for the nutritionist calling it off.
 3. **Invite** — the acceptance email (`UserNotifier.deliver_appointment_accepted/3`) attaches an
    `.ics` built by `Mehungry.Professionals.ICS` (VCALENDAR/VEVENT, UTC, `meeting_url` as
    `LOCATION`/`URL`) so the client can add it to any calendar.

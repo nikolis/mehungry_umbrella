@@ -19,11 +19,13 @@ defmodule Mehungry.Professionals do
     ClientIntake,
     ClientCondition,
     ConsultationNote,
-    AssignmentMessage
+    AssignmentMessage,
+    AppointmentPayment
   }
 
   alias Mehungry.Professionals.DietaryHistory
   alias Mehungry.Health.Condition
+  alias Mehungry.Billing.StripeHandler
 
   # ── Professional Profile ───────────────────────────────────────────────────────
 
@@ -753,8 +755,13 @@ defmodule Mehungry.Professionals do
       from a in Appointment,
         where: a.client_id == ^client_id,
         order_by: [desc: a.scheduled_at],
-        preload: [professional: :user_profile]
+        preload: [:payment, :service, professional: :user_profile]
     )
+  end
+
+  @doc "Fetch an appointment scoped to its owning client (nil cross-tenant)."
+  def get_appointment_for_client(client_id, id) do
+    Repo.get_by(Appointment, id: id, client_id: client_id)
   end
 
   @doc """
@@ -939,14 +946,16 @@ defmodule Mehungry.Professionals do
     profile = get_professional_profile(professional_id)
     slot_minutes = (profile && profile.appointment_slot_minutes) || 60
     ends_at = NaiveDateTime.add(scheduled_at, slot_minutes * 60, :second)
+    service = load_bookable_service(professional_id, opts[:professional_service_id])
 
     if slot_open?(professional_id, scheduled_at) do
       %{
         professional_id: professional_id,
         client_id: client_id,
+        professional_service_id: service && service.id,
         scheduled_at: scheduled_at,
         ends_at: ends_at,
-        title: opts[:title] || "Consultation",
+        title: opts[:title] || (service && service.name) || "Consultation",
         notes: opts[:notes],
         status: "requested"
       }
@@ -959,13 +968,88 @@ defmodule Mehungry.Professionals do
             do: {:error, :slot_unavailable},
             else: {:error, changeset}
 
-        ok ->
-          ok
+        {:ok, appointment} ->
+          maybe_start_payment(appointment, profile, service, client_id, opts)
       end
     else
       {:error, :slot_unavailable}
     end
   end
+
+  # Only accept a service that belongs to this professional; nil otherwise.
+  defp load_bookable_service(_professional_id, nil), do: nil
+
+  defp load_bookable_service(professional_id, service_id),
+    do: get_service_for_professional(professional_id, service_id)
+
+  # When the profile is payable, the chosen service is paid (price > 0), the
+  # flag is on, and the caller wired success/cancel URLs: create the payment
+  # record + a manual-capture Checkout Session and hand back the redirect URL so
+  # the caller can send the client to Stripe. A free intro / £0 service, a
+  # non-payable profile, or the flag being off → request-only (`{:ok, appt}`).
+  #
+  # SHADOWED: while `:consultation_payments_enabled` is false the whole charge
+  # flow is skipped and every booking is request-only.
+  defp maybe_start_payment(appointment, profile, service, client_id, opts) do
+    success_url = opts[:success_url]
+    cancel_url = opts[:cancel_url]
+
+    if consultation_payments_enabled?() and ProfessionalProfile.payable?(profile) and
+         chargeable_service?(service) and is_binary(success_url) and is_binary(cancel_url) do
+      amount = service.price_cents
+      currency = service.currency || "eur"
+      fee = platform_fee_cents(amount)
+      vat = fee_vat_cents(fee, profile)
+      client = client_id && Repo.get(User, client_id)
+
+      {:ok, _payment} =
+        create_appointment_payment(%{
+          appointment_id: appointment.id,
+          professional_id: profile.user_id,
+          client_id: client_id,
+          professional_service_id: service.id,
+          amount_cents: amount,
+          currency: currency,
+          platform_fee_cents: fee,
+          fee_vat_cents: vat,
+          status: "pending"
+        })
+
+      checkout_opts = [
+        appointment_id: appointment.id,
+        destination_account: profile.stripe_connect_account_id,
+        customer_email: client && client.email,
+        amount_cents: amount,
+        currency: currency,
+        application_fee_cents: fee,
+        product_name: appointment.title,
+        success_url: success_url,
+        cancel_url: cancel_url
+      ]
+
+      case payment_client().create_consultation_checkout(checkout_opts) do
+        {:ok, %{url: url, session_id: session_id}} ->
+          update_appointment_payment(get_payment_for_appointment(appointment.id), %{
+            stripe_checkout_session_id: session_id
+          })
+
+          {:ok, appointment, url}
+
+        {:error, reason} ->
+          {:error, {:payment_setup_failed, reason}}
+      end
+    else
+      {:ok, appointment}
+    end
+  end
+
+  defp chargeable_service?(%ProfessionalService{kind: "intro"}), do: false
+
+  defp chargeable_service?(%ProfessionalService{price_cents: cents})
+       when is_integer(cents) and cents > 0,
+       do: true
+
+  defp chargeable_service?(_), do: false
 
   defp slot_open?(professional_id, scheduled_at) do
     date = NaiveDateTime.to_date(scheduled_at)
@@ -977,10 +1061,36 @@ defmodule Mehungry.Professionals do
 
   @doc """
   Nutritionist accepts a requested appointment (optionally attaching a
-  `:meeting_url`). Returns `{:ok, appointment}` with professional+client
-  preloaded so callers can notify.
+  `:meeting_url`). If the booking was paid, the authorized card hold is
+  **captured** first — acceptance only proceeds if capture succeeds, so an
+  expired/failed hold can't be accepted. Returns `{:ok, appointment}` with
+  professional+client preloaded so callers can notify.
   """
   def accept_appointment(%Appointment{} = appointment, opts \\ []) do
+    case get_payment_for_appointment(appointment.id) do
+      nil ->
+        do_accept(appointment, opts)
+
+      %AppointmentPayment{status: "paid"} ->
+        # Already captured (e.g. a retry after a transient error) — just accept.
+        do_accept(appointment, opts)
+
+      %AppointmentPayment{status: "authorized"} = payment ->
+        case payment_client().capture_payment_intent(payment.stripe_payment_intent_id) do
+          {:ok, %{charge_id: charge_id}} ->
+            mark_payment_paid(payment, charge_id)
+            do_accept(appointment, opts)
+
+          {:error, reason} ->
+            {:error, {:capture_failed, reason}}
+        end
+
+      %AppointmentPayment{} ->
+        {:error, :payment_not_authorized}
+    end
+  end
+
+  defp do_accept(%Appointment{} = appointment, opts) do
     attrs = %{status: "accepted"}
 
     attrs =
@@ -995,17 +1105,358 @@ defmodule Mehungry.Professionals do
     end
   end
 
+  @doc """
+  Nutritionist declines a request. Any authorized card hold is released (the
+  client is never charged).
+  """
   def decline_appointment(%Appointment{} = appointment) do
+    release_hold_if_authorized(appointment)
+
     appointment
     |> Appointment.status_changeset(%{status: "declined"})
     |> Repo.update()
   end
 
+  @doc """
+  Cancel an appointment. Money handling depends on state and timing (owner
+  refund policy 2026-11-02):
+
+    * an uncaptured hold (before acceptance) is released — no charge;
+    * a captured payment (after acceptance) is refunded on a tiered schedule:
+      **≥ `:consultation_free_cancel_hours`** (24h) before the slot → full
+      refund (fee reversed); **≥ `:consultation_partial_refund_hours`** (4h)
+      but inside the free window → 50% refund (we keep our commission on the
+      retained half); **inside 4h** → no refund (full capture retained).
+  """
   def cancel_appointment(%Appointment{} = appointment) do
+    case get_payment_for_appointment(appointment.id) do
+      %AppointmentPayment{status: "authorized"} ->
+        release_hold_if_authorized(appointment)
+
+      %AppointmentPayment{status: "paid"} = payment ->
+        apply_cancellation_refund(appointment, payment)
+
+      _ ->
+        :ok
+    end
+
     appointment
     |> Appointment.status_changeset(%{status: "cancelled"})
     |> Repo.update()
   end
+
+  @doc """
+  Nutritionist marks an **accepted** appointment as a no-show. The payment was
+  captured on acceptance and is **retained in full** (no refund).
+  """
+  def mark_no_show(%Appointment{} = appointment) do
+    appointment
+    |> Appointment.status_changeset(%{status: "no_show"})
+    |> Repo.update()
+  end
+
+  @doc """
+  **Nutritionist-initiated** cancellation. Unlike a client cancellation (tiered),
+  the client is **always fully refunded** — they are never penalised for the
+  nutritionist calling it off. An uncaptured hold is released; a captured payment
+  is fully refunded (fee reversed).
+  """
+  def cancel_appointment_by_professional(%Appointment{} = appointment) do
+    case get_payment_for_appointment(appointment.id) do
+      %AppointmentPayment{status: "authorized"} -> release_hold_if_authorized(appointment)
+      %AppointmentPayment{status: "paid"} = payment -> refund_payment_full(payment)
+      _ -> :ok
+    end
+
+    appointment
+    |> Appointment.status_changeset(%{status: "cancelled"})
+    |> Repo.update()
+  end
+
+  @doc """
+  What a **client** cancellation would refund right now (in cents), per the tiered
+  policy — for showing the consequence before they confirm. An uncaptured hold is
+  fully released; a captured payment follows ≥24h→full / 4–24h→half / <4h→none.
+  """
+  def client_cancellation_refund_cents(%Appointment{} = appointment) do
+    case get_payment_for_appointment(appointment.id) do
+      %AppointmentPayment{status: "authorized", amount_cents: amount} ->
+        amount
+
+      %AppointmentPayment{status: "paid", amount_cents: amount} ->
+        cond do
+          hours_until(appointment) >= free_cancel_hours() -> amount
+          hours_until(appointment) >= partial_refund_hours() -> div(amount, 2)
+          true -> 0
+        end
+
+      _ ->
+        0
+    end
+  end
+
+  # ── Consultation Payments ───────────────────────────────────────────────────
+
+  @doc "Our platform commission (in cents) for a booking amount — the flat 5%."
+  def platform_fee_cents(amount_cents) when is_integer(amount_cents) do
+    round(amount_cents * platform_fee_bps() / 10_000)
+  end
+
+  @doc """
+  The VAT slice *contained within* our VAT-inclusive platform fee (owner
+  decision 2026-11-02, build-plan §4.4). Domestic (Greek) default:
+  `fee - round(fee / 1.24)`. Jurisdiction is not yet modelled, so this is
+  best-effort — other-EU reverse-charge accounts should be 0; refine when the
+  nutritionist's country is captured on the profile.
+  """
+  def fee_vat_cents(fee_cents, _profile \\ nil) when is_integer(fee_cents) do
+    rate_bps = platform_fee_vat_bps()
+    net = round(fee_cents * 10_000 / (10_000 + rate_bps))
+    fee_cents - net
+  end
+
+  def create_appointment_payment(attrs) do
+    %AppointmentPayment{}
+    |> AppointmentPayment.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_appointment_payment(%AppointmentPayment{} = payment, attrs) do
+    payment
+    |> AppointmentPayment.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def get_payment_for_appointment(appointment_id) do
+    Repo.get_by(AppointmentPayment, appointment_id: appointment_id)
+  end
+
+  def get_payment_by_session(session_id) do
+    Repo.get_by(AppointmentPayment, stripe_checkout_session_id: session_id)
+  end
+
+  def get_payment_by_intent(payment_intent_id) do
+    Repo.get_by(AppointmentPayment, stripe_payment_intent_id: payment_intent_id)
+  end
+
+  @doc "Webhook: Checkout completed — the card is authorized (held)."
+  def mark_payment_authorized(session_id, payment_intent_id) do
+    case get_payment_by_session(session_id) do
+      nil ->
+        {:error, :not_found}
+
+      payment ->
+        update_appointment_payment(payment, %{
+          status: "authorized",
+          stripe_payment_intent_id: payment_intent_id,
+          authorized_at: now()
+        })
+    end
+  end
+
+  @doc "Webhook: the client abandoned Checkout — drop the pending payment."
+  def expire_payment_session(session_id) do
+    case get_payment_by_session(session_id) do
+      nil -> {:error, :not_found}
+      payment -> update_appointment_payment(payment, %{status: "canceled", canceled_at: now()})
+    end
+  end
+
+  def mark_payment_canceled_by_intent(payment_intent_id) do
+    case get_payment_by_intent(payment_intent_id) do
+      nil -> {:error, :not_found}
+      payment -> mark_payment_canceled(payment)
+    end
+  end
+
+  def mark_payment_failed(payment_intent_id, reason) do
+    case get_payment_by_intent(payment_intent_id) do
+      nil ->
+        {:error, :not_found}
+
+      payment ->
+        update_appointment_payment(payment, %{status: "failed", failure_reason: reason})
+    end
+  end
+
+  @doc "Webhook: a refund landed — record full or partial."
+  def mark_payment_refunded(payment_intent_id, refunded_amount, total_amount) do
+    case get_payment_by_intent(payment_intent_id) do
+      nil ->
+        {:error, :not_found}
+
+      payment ->
+        status = if refunded_amount >= total_amount, do: "refunded", else: "partially_refunded"
+
+        update_appointment_payment(payment, %{
+          status: status,
+          refunded_amount_cents: refunded_amount,
+          refunded_at: now()
+        })
+    end
+  end
+
+  @doc "Webhook: a dispute/chargeback was opened — flag the ledger row (we are liable)."
+  def record_payment_dispute(%{"charge" => charge_id}) when is_binary(charge_id) do
+    case Repo.get_by(AppointmentPayment, stripe_charge_id: charge_id) do
+      nil -> {:error, :not_found}
+      payment -> update_appointment_payment(payment, %{status: "disputed", disputed_at: now()})
+    end
+  end
+
+  def record_payment_dispute(_), do: {:error, :not_found}
+
+  @doc """
+  Webhook: the nutritionist disconnected their Stripe account — clear the stored
+  account id and mark them no longer chargeable.
+  """
+  def clear_stripe_connection(account_id) when is_binary(account_id) do
+    case get_profile_by_stripe_account(account_id) do
+      nil ->
+        {:error, :not_found}
+
+      profile ->
+        update_professional_stripe(profile, %{
+          stripe_connect_account_id: nil,
+          stripe_charges_enabled: false
+        })
+    end
+  end
+
+  def mark_payment_paid(%AppointmentPayment{} = payment, charge_id) do
+    update_appointment_payment(payment, %{
+      status: "paid",
+      stripe_charge_id: charge_id,
+      captured_at: now()
+    })
+  end
+
+  def mark_payment_canceled(%AppointmentPayment{} = payment) do
+    update_appointment_payment(payment, %{status: "canceled", canceled_at: now()})
+  end
+
+  def mark_payment_refunded_full(%AppointmentPayment{} = payment) do
+    update_appointment_payment(payment, %{
+      status: "refunded",
+      refunded_amount_cents: payment.amount_cents,
+      refunded_at: now()
+    })
+  end
+
+  defp mark_payment_partially_refunded(%AppointmentPayment{} = payment, amount) do
+    update_appointment_payment(payment, %{
+      status: "partially_refunded",
+      refunded_amount_cents: amount,
+      refunded_at: now()
+    })
+  end
+
+  # Tiered client-cancellation refund on a captured booking (see cancel_appointment).
+  defp apply_cancellation_refund(%Appointment{} = appointment, %AppointmentPayment{} = payment) do
+    cond do
+      hours_until(appointment) >= free_cancel_hours() -> refund_payment_full(payment)
+      hours_until(appointment) >= partial_refund_hours() -> refund_payment_partial(payment)
+      true -> :ok
+    end
+  end
+
+  defp release_hold_if_authorized(%Appointment{} = appointment) do
+    case get_payment_for_appointment(appointment.id) do
+      %AppointmentPayment{status: "authorized", stripe_payment_intent_id: pi} = payment
+      when is_binary(pi) ->
+        payment_client().cancel_payment_intent(pi)
+        mark_payment_canceled(payment)
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp refund_payment_full(%AppointmentPayment{stripe_payment_intent_id: pi} = payment)
+       when is_binary(pi) do
+    case payment_client().refund_payment(pi) do
+      {:ok, _} -> mark_payment_refunded_full(payment)
+      {:error, _reason} -> :ok
+    end
+  end
+
+  defp refund_payment_full(_), do: :ok
+
+  # Refund half the gross; Stripe reverses the transfer proportionally, and we
+  # keep our 5% commission on the retained half (refund_application_fee stays
+  # false for partials in StripeHandler.refund_payment/2).
+  defp refund_payment_partial(%AppointmentPayment{stripe_payment_intent_id: pi} = payment)
+       when is_binary(pi) do
+    amount = div(payment.amount_cents, 2)
+
+    case payment_client().refund_payment(pi, amount_cents: amount) do
+      {:ok, _} -> mark_payment_partially_refunded(payment, amount)
+      {:error, _reason} -> :ok
+    end
+  end
+
+  defp refund_payment_partial(_), do: :ok
+
+  @doc "Sum of captured (paid) earnings for a nutritionist, net of our fee, in cents."
+  def professional_net_earnings_cents(professional_user_id) do
+    from(p in AppointmentPayment,
+      where: p.professional_id == ^professional_user_id and p.status == "paid",
+      select: coalesce(sum(p.amount_cents - p.platform_fee_cents), 0)
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Open a one-time login link to the nutritionist's Stripe Express payouts
+  dashboard. Returns `{:ok, url}` or `{:error, reason}`.
+  """
+  def payouts_dashboard_url(%ProfessionalProfile{stripe_connect_account_id: account_id})
+      when is_binary(account_id) do
+    payment_client().create_login_link(account_id)
+  end
+
+  def payouts_dashboard_url(_), do: {:error, :not_connected}
+
+  @doc """
+  Appointments still `requested` whose authorized hold is about to expire
+  (Stripe voids uncaptured holds after ~7 days) — used by the expiry worker to
+  auto-decline and release them before Stripe does it silently.
+  """
+  def expiring_authorized_appointments(older_than_hours \\ 144) do
+    cutoff = NaiveDateTime.add(now(), -older_than_hours * 3600, :second)
+
+    from(a in Appointment,
+      join: p in AppointmentPayment,
+      on: p.appointment_id == a.id,
+      where: a.status == "requested" and p.status == "authorized" and p.authorized_at < ^cutoff,
+      preload: [:professional, :client]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Whether the built-out Stripe consultation-charging flow is live. SHADOWED off
+  by default (`:consultation_payments_enabled`): while false, booking is
+  request-only and service prices are display-only (money wired directly between
+  client and nutritionist outside M3Hungry).
+  """
+  def consultation_payments_enabled?,
+    do: Application.get_env(:mehungry, :consultation_payments_enabled, false)
+
+  defp platform_fee_bps, do: Application.get_env(:mehungry, :platform_fee_bps, 500)
+  defp platform_fee_vat_bps, do: Application.get_env(:mehungry, :platform_fee_vat_bps, 2400)
+  defp free_cancel_hours, do: Application.get_env(:mehungry, :consultation_free_cancel_hours, 24)
+
+  defp partial_refund_hours,
+    do: Application.get_env(:mehungry, :consultation_partial_refund_hours, 4)
+
+  defp hours_until(%Appointment{scheduled_at: scheduled_at}),
+    do: NaiveDateTime.diff(scheduled_at, NaiveDateTime.utc_now(), :second) / 3600
+
+  # Indirection so tests can stub the money-moving Stripe calls.
+  defp payment_client, do: Application.get_env(:mehungry, :stripe_payment_client, StripeHandler)
+
+  defp now, do: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
   # ── Meal Plan Ratings ──────────────────────────────────────────────────────────
 

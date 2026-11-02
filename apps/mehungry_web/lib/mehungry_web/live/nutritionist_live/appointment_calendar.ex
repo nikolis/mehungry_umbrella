@@ -200,6 +200,28 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
   end
 
   @impl true
+  def handle_event("cancel_appointment_professional", %{"id" => id}, socket) do
+    case fetch_owned(socket, id) do
+      nil ->
+        {:noreply, appointment_not_found(socket)}
+
+      appt ->
+        case Professionals.cancel_appointment_by_professional(appt) do
+          {:ok, _cancelled} ->
+            {:noreply,
+             socket
+             |> assign(:show_modal, false)
+             |> assign(:editing_appointment, nil)
+             |> refresh()
+             |> put_flash(:info, "Appointment cancelled — the client has been fully refunded.")}
+
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "Could not cancel the appointment.")}
+        end
+    end
+  end
+
+  @impl true
   def handle_event("prev_month", _params, socket) do
     new_month = Date.add(socket.assigns.current_month, -28)
     {:noreply, socket |> assign(:current_month, new_month) |> load_month_appointments(new_month)}
@@ -710,16 +732,28 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
                 >
                   Save Appointment
                 </button>
-                <%= if @editing_appointment do %>
+                <%= if @editing_appointment && @editing_appointment.status == "accepted" do %>
                   <button
                     type="button"
-                    phx-click="delete_appointment"
+                    phx-click="cancel_appointment_professional"
                     phx-value-id={@editing_appointment.id}
-                    data-confirm="Delete this appointment?"
+                    data-confirm="Cancel this appointment and fully refund the client?"
                     class="px-4 py-2 rounded-lg bg-red-700/60 hover:bg-red-600 text-red-200 text-sm transition"
                   >
-                    Delete
+                    Cancel &amp; refund
                   </button>
+                <% else %>
+                  <%= if @editing_appointment do %>
+                    <button
+                      type="button"
+                      phx-click="delete_appointment"
+                      phx-value-id={@editing_appointment.id}
+                      data-confirm="Delete this appointment?"
+                      class="px-4 py-2 rounded-lg bg-red-700/60 hover:bg-red-600 text-red-200 text-sm transition"
+                    >
+                      Delete
+                    </button>
+                  <% end %>
                 <% end %>
                 <button
                   type="button"

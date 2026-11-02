@@ -2,7 +2,7 @@ defmodule Mehungry.Professionals.Appointment do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @statuses ~w(requested accepted declined cancelled)
+  @statuses ~w(requested accepted declined cancelled no_show)
 
   def statuses, do: @statuses
 
@@ -18,6 +18,7 @@ defmodule Mehungry.Professionals.Appointment do
     belongs_to :professional, Mehungry.Accounts.User
     belongs_to :client, Mehungry.Accounts.User
     belongs_to :service, Mehungry.Professionals.ProfessionalService, foreign_key: :professional_service_id
+    has_one :payment, Mehungry.Professionals.AppointmentPayment
 
     timestamps()
   end

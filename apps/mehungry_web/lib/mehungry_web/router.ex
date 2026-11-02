@@ -395,6 +395,7 @@ defmodule MehungryWeb.Router do
       on_mount: [MehungryWeb.RestoreLocale, MehungryWeb.UserAuthLive, MehungryWeb.SessionMetrics] do
       localized_live("/notifications/invitations", NutritionistLive.UserInvitations, :index)
       localized_live("/messages", MessagesLive.Index, :index)
+      localized_live("/appointments", AppointmentsLive.Index, :index)
       localized_live("/friends", FriendsLive.Index, :index)
       localized_live("/basket", ShoppingBasketLive.Index, :index)
       localized_live("/basket/import_items/:id", ShoppingBasketLive.Index, :import_items)
