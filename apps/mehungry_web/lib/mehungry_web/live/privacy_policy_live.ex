@@ -129,7 +129,7 @@ defmodule MehungryWeb.PrivacyPolicyLive do
             data-processing agreement and only as needed to deliver the service:
           </p>
           <.data_table rows={[
-            {"Stripe", "Payment processing and subscription billing."},
+            {"Stripe", "Payment processing for subscription billing and paid nutritionist consultations (Stripe Connect). For consultations, Stripe also collects nutritionists' identity and bank details directly to enable payouts, and processes clients' card payments — we never see or store full card numbers."},
             {"Supabase", "Object/media storage (images and uploads)."},
             {"Amazon Web Services (AWS)", "Hosting-adjacent infrastructure and the USDA seed-data import bucket."},
             {"Anthropic", "AI generation (recipes, meal plans, assistant features)."},
