@@ -208,6 +208,11 @@ defmodule MehungryWeb.NutritionistLive.AppointmentCalendar do
       appt ->
         case Professionals.cancel_appointment_by_professional(appt) do
           {:ok, _cancelled} ->
+            AppointmentMailerWorker.enqueue("cancelled_by_professional", appt.id, %{
+              professional_name: socket.assigns.professional_name,
+              cta_url: socket.assigns.public_url
+            })
+
             {:noreply,
              socket
              |> assign(:show_modal, false)

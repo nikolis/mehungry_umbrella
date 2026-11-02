@@ -14,7 +14,11 @@ defmodule Mehungry.ObanWorkers.AppointmentMailerWorker do
   alias Mehungry.Accounts.UserNotifier
   alias Mehungry.Repo
 
-  @doc "Enqueue an appointment email. `kind` is \"requested\" | \"accepted\" | \"declined\"."
+  @doc """
+  Enqueue an appointment email. `kind` is `"requested"` | `"accepted"` |
+  `"declined"` | `"cancelled_by_client"` (→ notifies the nutritionist) |
+  `"cancelled_by_professional"` (→ notifies the client, full-refund note).
+  """
   def enqueue(kind, appointment_id, opts \\ %{}) do
     %{
       "kind" => kind,
@@ -48,6 +52,16 @@ defmodule Mehungry.ObanWorkers.AppointmentMailerWorker do
 
         "declined" ->
           UserNotifier.deliver_appointment_declined(appointment, professional_name, cta_url)
+
+        "cancelled_by_client" ->
+          UserNotifier.deliver_appointment_cancelled_by_client(appointment, client_name, cta_url)
+
+        "cancelled_by_professional" ->
+          UserNotifier.deliver_appointment_cancelled_by_professional(
+            appointment,
+            professional_name,
+            cta_url
+          )
       end
 
     case result do

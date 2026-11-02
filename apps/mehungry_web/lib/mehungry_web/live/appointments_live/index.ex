@@ -8,6 +8,7 @@ defmodule MehungryWeb.AppointmentsLive.Index do
   use MehungryWeb, :live_view
 
   alias Mehungry.Professionals
+  alias Mehungry.ObanWorkers.AppointmentMailerWorker
 
   @impl true
   def mount(_params, _session, socket) do
@@ -36,6 +37,11 @@ defmodule MehungryWeb.AppointmentsLive.Index do
 
         case Professionals.cancel_appointment(appt) do
           {:ok, _} ->
+            AppointmentMailerWorker.enqueue("cancelled_by_client", appt.id, %{
+              client_name: user.name || user.email,
+              cta_url: url(~p"/nutritionist/appointments")
+            })
+
             {:noreply,
              socket
              |> load_appointments()

@@ -57,6 +57,9 @@ For a professional + date range: slices each weekly window into
 the first worker to use that provisioned queue). The **web caller** supplies display strings
 (`professional_name`, `client_name`) and the CTA URL (built from verified routes) as job args,
 so the core app never needs web routing. Emails reuse `UserNotifier`'s branded `html_layout/7`.
+Kinds: `requested`/`accepted`/`declined`, plus **`cancelled_by_client`** (notifies the
+nutritionist the slot is free) and **`cancelled_by_professional`** (notifies the client, with a
+full-refund note). Both cancel handlers enqueue the matching email.
 
 ## Notes / future
 

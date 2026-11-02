@@ -576,6 +576,66 @@ defmodule Mehungry.Accounts.UserNotifier do
     deliver(client.email, "Update on your Mehungry appointment", text, html)
   end
 
+  @doc "Notify the nutritionist that the client cancelled their appointment."
+  def deliver_appointment_cancelled_by_client(appointment, client_name, cta_url) do
+    prof = appointment.professional
+    when_str = format_dt(appointment.scheduled_at)
+
+    text = """
+    Hi,
+
+    #{client_name} cancelled their appointment with you on Mehungry.
+
+    When: #{when_str}
+
+    The time slot is open again: #{cta_url}
+    """
+
+    html =
+      html_layout(
+        "Appointment cancelled",
+        "A client cancelled",
+        "Hi #{prof.email},",
+        "#{client_name} cancelled their appointment for <strong>#{when_str}</strong>. " <>
+          "The time slot is open again.",
+        "Open appointments",
+        cta_url,
+        "Any refund due to the client has been handled automatically."
+      )
+
+    deliver(prof.email, "An appointment was cancelled on Mehungry", text, html)
+  end
+
+  @doc """
+  Notify the client that the nutritionist cancelled — the client is **fully
+  refunded**. `appointment` must have `:professional` and `:client` preloaded.
+  """
+  def deliver_appointment_cancelled_by_professional(appointment, professional_name, cta_url) do
+    client = appointment.client
+    when_str = format_dt(appointment.scheduled_at)
+
+    text = """
+    Hi #{client.email},
+
+    Unfortunately #{professional_name} had to cancel your appointment on #{when_str}.
+    You've been fully refunded. You can pick another time here: #{cta_url}
+    """
+
+    html =
+      html_layout(
+        "Your appointment was cancelled",
+        "#{professional_name} had to cancel",
+        "Hi #{client.email},",
+        "Unfortunately <strong>#{professional_name}</strong> had to cancel your appointment on " <>
+          "<strong>#{when_str}</strong>. You've been <strong>fully refunded</strong> — nothing is owed.",
+        "Pick another time",
+        cta_url,
+        "The refund returns to your original payment method."
+      )
+
+    deliver(client.email, "Your Mehungry appointment was cancelled", text, html)
+  end
+
   # Escape admin-supplied free text before interpolating it into the HTML body.
   defp html_escape(text) do
     text
