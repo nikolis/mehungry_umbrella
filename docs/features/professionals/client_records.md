@@ -6,6 +6,10 @@ timeline of **consultation notes**. Records are created two ways: by **importing
 Google-Sheet CSV export, or **by hand** in-app when onboarding a fresh client. Profiles, booking,
 and articles are documented separately in the sibling docs.
 
+> **Localized.** Like the rest of the nutritionist workspace, the client-record editor and
+> timeline render in the nutritionist's language (EN/EL) — the surface is fully `gettext`-wrapped
+> and translated. See `docs/implementation/localization.md` ("Done: the nutritionist workspace").
+
 ## What this is (and isn't)
 
 A `ProfessionalClient` is **not** the same as a `TutorClientAssignment`. The assignment

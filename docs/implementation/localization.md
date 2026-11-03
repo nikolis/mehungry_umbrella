@@ -299,10 +299,22 @@ mix test apps/mehungry_web/test/mehungry_web/locale_test.exs \
 
 ---
 
+## Done: the nutritionist workspace
+
+The entire **nutritionist workspace** (`/nutritionist/**`, ~20 LiveViews + the shared
+`MeasurementChart`/`PieChart`/`OnboardingQuestion` components) is fully wrapped in `gettext`
+and translated to `el`. Appointment **emails + `.ics`** go out in the *recipient's* language
+(see `docs/features/professionals/appointments_booking.md`) — localized with explicit EN/EL
+variants rather than Gettext, because the core app has no Gettext backend. The bare chart
+modules bring Gettext in with `use Gettext, backend: MehungryWeb.Gettext` (the new-style macro
+import). The `el` translations are AI-drafted and live; a native-speaker review is still worthwhile.
+Tests: `test/mehungry_web/live/nutritionist_live/localization_test.exs` (Greek chrome renders),
+`apps/mehungry/test/mehungry/accounts/user_notifier_appointment_test.exs` (EN/EL emails + `.ics`).
+
 ## Remaining work (follow-up)
 
-- **Gettext**: wrap hardcoded English in the remaining ~60 templates and translate; the
-  menu is the reference implementation.
+- **Gettext**: wrap hardcoded English in the remaining consumer/admin templates and translate; the
+  menu and the nutritionist workspace are the reference implementations.
 - **`~p` links**: deep in-page links still use bare `~p"/…"`. They *work* (both-paths
   routes + canonical), but migrate to `~p"/#{@locale}/…"` for prefix-consistent URLs.
 - **Optional**: a language toggle in the compact mobile bottom-nav; consolidating the
