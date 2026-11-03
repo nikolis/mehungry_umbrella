@@ -73,7 +73,7 @@ client-file **Progress trend** chart and the client's own **My progress** profil
      ("Cancel & refund") — `cancel_appointment_by_professional/1` **always fully refunds** the
      client (an uncaptured hold is released; a captured payment is fully reversed), since the
      client is never penalised for the nutritionist calling it off.
-3. **Invite** — the acceptance email (`UserNotifier.deliver_appointment_accepted/3`) attaches an
+3. **Invite** — the acceptance email (`UserNotifier.deliver_appointment_accepted/4`) attaches an
    `.ics` built by `Mehungry.Professionals.ICS` (VCALENDAR/VEVENT, UTC, `meeting_url` as
    `LOCATION`/`URL`) so the client can add it to any calendar.
 
@@ -86,6 +86,15 @@ so the core app never needs web routing. Emails reuse `UserNotifier`'s branded `
 Kinds: `requested`/`accepted`/`declined`, plus **`cancelled_by_client`** (notifies the
 nutritionist the slot is free) and **`cancelled_by_professional`** (notifies the client, with a
 full-refund note). Both cancel handlers enqueue the matching email.
+
+**Localization** — each email is sent in the **recipient's** language (their
+`language_preference`): the nutritionist for `requested`/`cancelled_by_client`, the client for
+`accepted`/`declined`/`cancelled_by_professional`. The worker resolves the locale and passes it
+to each `UserNotifier.deliver_appointment_*/4`; the core app has no Gettext backend (it can't
+depend on the web app), so these emails carry explicit EN/EL variants via a `tr/3` helper — the
+subject, body, the `.ics` SUMMARY (`Consultation with …` / `Συνεδρία με …`), and the date (Greek
+month/day names via `Calendar.strftime` name options) all switch together. See
+`docs/implementation/localization.md`.
 
 ## Google Calendar two-way sync (optional, per-nutritionist)
 

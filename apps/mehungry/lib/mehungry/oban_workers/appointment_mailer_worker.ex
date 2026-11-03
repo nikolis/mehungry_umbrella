@@ -10,6 +10,7 @@ defmodule Mehungry.ObanWorkers.AppointmentMailerWorker do
 
   use Oban.Worker, queue: :mailers, max_attempts: 3
 
+  alias Mehungry.Accounts
   alias Mehungry.Professionals
   alias Mehungry.Accounts.UserNotifier
   alias Mehungry.Repo
@@ -42,25 +43,33 @@ defmodule Mehungry.ObanWorkers.AppointmentMailerWorker do
     client_name = args["client_name"] || client_email(appointment)
     cta_url = args["cta_url"] || "https://www.m3hungry.com/home"
 
+    # Each email is localized to the language of its *recipient* — the
+    # nutritionist for requests/client-cancellations, the client otherwise.
     result =
       case kind do
         "requested" ->
-          UserNotifier.deliver_appointment_requested(appointment, client_name, cta_url)
+          locale = user_locale(appointment.professional)
+          UserNotifier.deliver_appointment_requested(appointment, client_name, cta_url, locale)
 
         "accepted" ->
-          UserNotifier.deliver_appointment_accepted(appointment, professional_name, cta_url)
+          locale = user_locale(appointment.client)
+          UserNotifier.deliver_appointment_accepted(appointment, professional_name, cta_url, locale)
 
         "declined" ->
-          UserNotifier.deliver_appointment_declined(appointment, professional_name, cta_url)
+          locale = user_locale(appointment.client)
+          UserNotifier.deliver_appointment_declined(appointment, professional_name, cta_url, locale)
 
         "cancelled_by_client" ->
-          UserNotifier.deliver_appointment_cancelled_by_client(appointment, client_name, cta_url)
+          locale = user_locale(appointment.professional)
+          UserNotifier.deliver_appointment_cancelled_by_client(appointment, client_name, cta_url, locale)
 
         "cancelled_by_professional" ->
+          locale = user_locale(appointment.client)
           UserNotifier.deliver_appointment_cancelled_by_professional(
             appointment,
             professional_name,
-            cta_url
+            cta_url,
+            locale
           )
       end
 
@@ -72,4 +81,7 @@ defmodule Mehungry.ObanWorkers.AppointmentMailerWorker do
 
   defp client_email(%{client: %{email: email}}), do: email
   defp client_email(_), do: "there"
+
+  defp user_locale(%{id: id}) when not is_nil(id), do: Accounts.get_user_language(id)
+  defp user_locale(_), do: "en"
 end

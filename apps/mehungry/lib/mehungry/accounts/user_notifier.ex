@@ -28,6 +28,12 @@ defmodule Mehungry.Accounts.UserNotifier do
     """
   end
 
+  defp fallback_link_note("el"),
+    do: "Αν το κουμπί δεν λειτουργεί, αντιγράψτε αυτόν τον σύνδεσμο στο πρόγραμμα περιήγησής σας:"
+
+  defp fallback_link_note(_),
+    do: "If the button doesn't work, paste this link into your browser:"
+
   defp html_layout(title, subtitle, greeting, body, cta_label, cta_url, footer_note, lang \\ "en") do
     """
     <!DOCTYPE html>
@@ -103,7 +109,7 @@ defmodule Mehungry.Accounts.UserNotifier do
 
                   <!-- Fallback link -->
                   <p style="margin:0 0 4px;color:#6E6554;font-size:12px;">
-                    If the button doesn't work, paste this link into your browser:
+                    #{fallback_link_note(lang)}
                   </p>
                   <p style="margin:0;">
                     <a href="#{cta_url}"
@@ -468,172 +474,310 @@ defmodule Mehungry.Accounts.UserNotifier do
   `appointment` must have `:professional` and `:client` preloaded.
   `cta_url` links to their appointments dashboard.
   """
-  def deliver_appointment_requested(appointment, client_name, cta_url) do
+  def deliver_appointment_requested(appointment, client_name, cta_url, locale \\ "en") do
     prof = appointment.professional
-    when_str = format_dt(appointment.scheduled_at)
+    when_str = format_dt(appointment.scheduled_at, locale)
 
-    text = """
-    Hi,
+    text =
+      tr(
+        locale,
+        """
+        Hi,
 
-    #{client_name} requested an appointment with you on Mehungry.
+        #{client_name} requested an appointment with you on Mehungry.
 
-    When: #{when_str}
-    Notes: #{appointment.notes || "—"}
+        When: #{when_str}
+        Notes: #{appointment.notes || "—"}
 
-    Review and accept it here: #{cta_url}
-    """
+        Review and accept it here: #{cta_url}
+        """,
+        """
+        Γεια σας,
+
+        Ο/Η #{client_name} ζήτησε ραντεβού μαζί σας στο Mehungry.
+
+        Πότε: #{when_str}
+        Σημειώσεις: #{appointment.notes || "—"}
+
+        Δείτε και αποδεχτείτε το εδώ: #{cta_url}
+        """
+      )
 
     html =
       html_layout(
-        "New appointment request",
-        "A client would like to meet",
-        "Hi #{prof.email},",
-        "#{client_name} requested an appointment for <strong>#{when_str}</strong>." <>
-          notes_fragment(appointment) <>
-          " Open your appointments to accept or decline — the client is notified only once you accept.",
-        "Review request",
+        tr(locale, "New appointment request", "Νέο αίτημα ραντεβού"),
+        tr(locale, "A client would like to meet", "Ένας πελάτης θέλει να κλείσει ραντεβού"),
+        tr(locale, "Hi #{prof.email},", "Γεια σας #{prof.email},"),
+        tr(
+          locale,
+          "#{client_name} requested an appointment for <strong>#{when_str}</strong>." <>
+            notes_fragment(appointment, locale) <>
+            " Open your appointments to accept or decline — the client is notified only once you accept.",
+          "Ο/Η #{client_name} ζήτησε ραντεβού για <strong>#{when_str}</strong>." <>
+            notes_fragment(appointment, locale) <>
+            " Ανοίξτε τα ραντεβού σας για να το αποδεχτείτε ή να το απορρίψετε — ο πελάτης ειδοποιείται μόνο αφού το αποδεχτείτε."
+        ),
+        tr(locale, "Review request", "Προβολή αιτήματος"),
         cta_url,
-        "You're receiving this because you offer consultations on Mehungry."
+        tr(
+          locale,
+          "You're receiving this because you offer consultations on Mehungry.",
+          "Λαμβάνετε αυτό το μήνυμα επειδή προσφέρετε συνεδρίες στο Mehungry."
+        ),
+        locale
       )
 
-    deliver(prof.email, "New appointment request on Mehungry", text, html)
+    deliver(
+      prof.email,
+      tr(locale, "New appointment request on Mehungry", "Νέο αίτημα ραντεβού στο Mehungry"),
+      text,
+      html
+    )
   end
 
   @doc """
   Notify the client that the nutritionist accepted — attaches a calendar
   invite (.ics). `appointment` must have `:professional` and `:client` preloaded.
   """
-  def deliver_appointment_accepted(appointment, professional_name, cta_url) do
+  def deliver_appointment_accepted(appointment, professional_name, cta_url, locale \\ "en") do
     client = appointment.client
-    when_str = format_dt(appointment.scheduled_at)
+    when_str = format_dt(appointment.scheduled_at, locale)
     meeting = appointment.meeting_url
 
     ics =
       Mehungry.Professionals.ICS.build(appointment,
         attendee_email: client.email,
-        summary: "Consultation with #{professional_name}"
+        summary: tr(locale, "Consultation with #{professional_name}", "Συνεδρία με #{professional_name}")
       )
 
     {cta_label, cta_target} =
       if meeting && meeting != "",
-        do: {"Join the video call", meeting},
-        else: {"Open Mehungry", cta_url}
+        do: {tr(locale, "Join the video call", "Συμμετοχή στην κλήση βίντεο"), meeting},
+        else: {tr(locale, "Open Mehungry", "Άνοιγμα Mehungry"), cta_url}
 
-    text = """
-    Hi #{client.email},
+    text =
+      tr(
+        locale,
+        """
+        Hi #{client.email},
 
-    #{professional_name} accepted your appointment request.
+        #{professional_name} accepted your appointment request.
 
-    When: #{when_str}
-    #{if meeting && meeting != "", do: "Video call: #{meeting}", else: ""}
+        When: #{when_str}
+        #{if meeting && meeting != "", do: "Video call: #{meeting}", else: ""}
 
-    A calendar invite is attached to this email.
-    """
+        A calendar invite is attached to this email.
+        """,
+        """
+        Γεια σας #{client.email},
+
+        Ο/Η #{professional_name} αποδέχτηκε το αίτημά σας για ραντεβού.
+
+        Πότε: #{when_str}
+        #{if meeting && meeting != "", do: "Κλήση βίντεο: #{meeting}", else: ""}
+
+        Μια πρόσκληση ημερολογίου επισυνάπτεται σε αυτό το email.
+        """
+      )
 
     html =
       html_layout(
-        "Your appointment is confirmed",
-        "#{professional_name} accepted your request",
-        "Hi #{client.email},",
-        "Your appointment with <strong>#{professional_name}</strong> is confirmed for " <>
-          "<strong>#{when_str}</strong>." <>
-          if(meeting && meeting != "",
-            do: " A video call link is included below and in the attached calendar invite.",
-            else: " A calendar invite is attached to this email."
-          ),
+        tr(locale, "Your appointment is confirmed", "Το ραντεβού σας επιβεβαιώθηκε"),
+        tr(locale, "#{professional_name} accepted your request", "Ο/Η #{professional_name} αποδέχτηκε το αίτημά σας"),
+        tr(locale, "Hi #{client.email},", "Γεια σας #{client.email},"),
+        tr(
+          locale,
+          "Your appointment with <strong>#{professional_name}</strong> is confirmed for " <>
+            "<strong>#{when_str}</strong>." <>
+            if(meeting && meeting != "",
+              do: " A video call link is included below and in the attached calendar invite.",
+              else: " A calendar invite is attached to this email."
+            ),
+          "Το ραντεβού σας με τον/την <strong>#{professional_name}</strong> επιβεβαιώθηκε για " <>
+            "<strong>#{when_str}</strong>." <>
+            if(meeting && meeting != "",
+              do: " Ο σύνδεσμος της κλήσης βίντεο περιλαμβάνεται παρακάτω και στην επισυναπτόμενη πρόσκληση ημερολογίου.",
+              else: " Μια πρόσκληση ημερολογίου επισυνάπτεται σε αυτό το email."
+            )
+        ),
         cta_label,
         cta_target,
-        "Add the attached invite to your calendar so you don't miss it."
+        tr(
+          locale,
+          "Add the attached invite to your calendar so you don't miss it.",
+          "Προσθέστε την επισυναπτόμενη πρόσκληση στο ημερολόγιό σας για να μην το ξεχάσετε."
+        ),
+        locale
       )
 
-    deliver_with_ics(client.email, "Your Mehungry appointment is confirmed", text, html, ics)
+    deliver_with_ics(
+      client.email,
+      tr(locale, "Your Mehungry appointment is confirmed", "Το ραντεβού σας στο Mehungry επιβεβαιώθηκε"),
+      text,
+      html,
+      ics
+    )
   end
 
   @doc "Notify the client that the nutritionist declined the request."
-  def deliver_appointment_declined(appointment, professional_name, cta_url) do
+  def deliver_appointment_declined(appointment, professional_name, cta_url, locale \\ "en") do
     client = appointment.client
-    when_str = format_dt(appointment.scheduled_at)
+    when_str = format_dt(appointment.scheduled_at, locale)
 
-    text = """
-    Hi #{client.email},
+    text =
+      tr(
+        locale,
+        """
+        Hi #{client.email},
 
-    Unfortunately #{professional_name} can't take your appointment on #{when_str}.
-    You can pick another time here: #{cta_url}
-    """
+        Unfortunately #{professional_name} can't take your appointment on #{when_str}.
+        You can pick another time here: #{cta_url}
+        """,
+        """
+        Γεια σας #{client.email},
+
+        Δυστυχώς ο/η #{professional_name} δεν μπορεί να αναλάβει το ραντεβού σας στις #{when_str}.
+        Μπορείτε να επιλέξετε άλλη ώρα εδώ: #{cta_url}
+        """
+      )
 
     html =
       html_layout(
-        "Appointment not available",
-        "Let's find another time",
-        "Hi #{client.email},",
-        "Unfortunately <strong>#{professional_name}</strong> isn't able to meet on " <>
-          "<strong>#{when_str}</strong>. You can browse their availability and request another slot.",
-        "Pick another time",
+        tr(locale, "Appointment not available", "Το ραντεβού δεν είναι διαθέσιμο"),
+        tr(locale, "Let's find another time", "Ας βρούμε άλλη ώρα"),
+        tr(locale, "Hi #{client.email},", "Γεια σας #{client.email},"),
+        tr(
+          locale,
+          "Unfortunately <strong>#{professional_name}</strong> isn't able to meet on " <>
+            "<strong>#{when_str}</strong>. You can browse their availability and request another slot.",
+          "Δυστυχώς ο/η <strong>#{professional_name}</strong> δεν μπορεί να συναντηθεί στις " <>
+            "<strong>#{when_str}</strong>. Μπορείτε να δείτε τη διαθεσιμότητά του/της και να ζητήσετε άλλη ώρα."
+        ),
+        tr(locale, "Pick another time", "Επιλέξτε άλλη ώρα"),
         cta_url,
-        "No charge was made for this request."
+        tr(locale, "No charge was made for this request.", "Δεν έγινε καμία χρέωση για αυτό το αίτημα."),
+        locale
       )
 
-    deliver(client.email, "Update on your Mehungry appointment", text, html)
+    deliver(
+      client.email,
+      tr(locale, "Update on your Mehungry appointment", "Ενημέρωση για το ραντεβού σας στο Mehungry"),
+      text,
+      html
+    )
   end
 
   @doc "Notify the nutritionist that the client cancelled their appointment."
-  def deliver_appointment_cancelled_by_client(appointment, client_name, cta_url) do
+  def deliver_appointment_cancelled_by_client(appointment, client_name, cta_url, locale \\ "en") do
     prof = appointment.professional
-    when_str = format_dt(appointment.scheduled_at)
+    when_str = format_dt(appointment.scheduled_at, locale)
 
-    text = """
-    Hi,
+    text =
+      tr(
+        locale,
+        """
+        Hi,
 
-    #{client_name} cancelled their appointment with you on Mehungry.
+        #{client_name} cancelled their appointment with you on Mehungry.
 
-    When: #{when_str}
+        When: #{when_str}
 
-    The time slot is open again: #{cta_url}
-    """
+        The time slot is open again: #{cta_url}
+        """,
+        """
+        Γεια σας,
+
+        Ο/Η #{client_name} ακύρωσε το ραντεβού του/της μαζί σας στο Mehungry.
+
+        Πότε: #{when_str}
+
+        Η ώρα είναι ξανά διαθέσιμη: #{cta_url}
+        """
+      )
 
     html =
       html_layout(
-        "Appointment cancelled",
-        "A client cancelled",
-        "Hi #{prof.email},",
-        "#{client_name} cancelled their appointment for <strong>#{when_str}</strong>. " <>
-          "The time slot is open again.",
-        "Open appointments",
+        tr(locale, "Appointment cancelled", "Το ραντεβού ακυρώθηκε"),
+        tr(locale, "A client cancelled", "Ένας πελάτης ακύρωσε"),
+        tr(locale, "Hi #{prof.email},", "Γεια σας #{prof.email},"),
+        tr(
+          locale,
+          "#{client_name} cancelled their appointment for <strong>#{when_str}</strong>. " <>
+            "The time slot is open again.",
+          "Ο/Η #{client_name} ακύρωσε το ραντεβού για <strong>#{when_str}</strong>. " <>
+            "Η ώρα είναι ξανά διαθέσιμη."
+        ),
+        tr(locale, "Open appointments", "Άνοιγμα ραντεβού"),
         cta_url,
-        "Any refund due to the client has been handled automatically."
+        tr(
+          locale,
+          "Any refund due to the client has been handled automatically.",
+          "Τυχόν επιστροφή χρημάτων προς τον πελάτη έχει γίνει αυτόματα."
+        ),
+        locale
       )
 
-    deliver(prof.email, "An appointment was cancelled on Mehungry", text, html)
+    deliver(
+      prof.email,
+      tr(locale, "An appointment was cancelled on Mehungry", "Ένα ραντεβού ακυρώθηκε στο Mehungry"),
+      text,
+      html
+    )
   end
 
   @doc """
   Notify the client that the nutritionist cancelled — the client is **fully
   refunded**. `appointment` must have `:professional` and `:client` preloaded.
   """
-  def deliver_appointment_cancelled_by_professional(appointment, professional_name, cta_url) do
+  def deliver_appointment_cancelled_by_professional(appointment, professional_name, cta_url, locale \\ "en") do
     client = appointment.client
-    when_str = format_dt(appointment.scheduled_at)
+    when_str = format_dt(appointment.scheduled_at, locale)
 
-    text = """
-    Hi #{client.email},
+    text =
+      tr(
+        locale,
+        """
+        Hi #{client.email},
 
-    Unfortunately #{professional_name} had to cancel your appointment on #{when_str}.
-    You've been fully refunded. You can pick another time here: #{cta_url}
-    """
+        Unfortunately #{professional_name} had to cancel your appointment on #{when_str}.
+        You've been fully refunded. You can pick another time here: #{cta_url}
+        """,
+        """
+        Γεια σας #{client.email},
+
+        Δυστυχώς ο/η #{professional_name} χρειάστηκε να ακυρώσει το ραντεβού σας στις #{when_str}.
+        Σας επιστράφηκε πλήρως το ποσό. Μπορείτε να επιλέξετε άλλη ώρα εδώ: #{cta_url}
+        """
+      )
 
     html =
       html_layout(
-        "Your appointment was cancelled",
-        "#{professional_name} had to cancel",
-        "Hi #{client.email},",
-        "Unfortunately <strong>#{professional_name}</strong> had to cancel your appointment on " <>
-          "<strong>#{when_str}</strong>. You've been <strong>fully refunded</strong> — nothing is owed.",
-        "Pick another time",
+        tr(locale, "Your appointment was cancelled", "Το ραντεβού σας ακυρώθηκε"),
+        tr(locale, "#{professional_name} had to cancel", "Ο/Η #{professional_name} χρειάστηκε να ακυρώσει"),
+        tr(locale, "Hi #{client.email},", "Γεια σας #{client.email},"),
+        tr(
+          locale,
+          "Unfortunately <strong>#{professional_name}</strong> had to cancel your appointment on " <>
+            "<strong>#{when_str}</strong>. You've been <strong>fully refunded</strong> — nothing is owed.",
+          "Δυστυχώς ο/η <strong>#{professional_name}</strong> χρειάστηκε να ακυρώσει το ραντεβού σας στις " <>
+            "<strong>#{when_str}</strong>. Σας επιστράφηκε <strong>πλήρως το ποσό</strong> — δεν οφείλετε τίποτα."
+        ),
+        tr(locale, "Pick another time", "Επιλέξτε άλλη ώρα"),
         cta_url,
-        "The refund returns to your original payment method."
+        tr(
+          locale,
+          "The refund returns to your original payment method.",
+          "Η επιστροφή χρημάτων γίνεται στον αρχικό τρόπο πληρωμής σας."
+        ),
+        locale
       )
 
-    deliver(client.email, "Your Mehungry appointment was cancelled", text, html)
+    deliver(
+      client.email,
+      tr(locale, "Your Mehungry appointment was cancelled", "Το ραντεβού σας στο Mehungry ακυρώθηκε"),
+      text,
+      html
+    )
   end
 
   # Escape admin-supplied free text before interpolating it into the HTML body.
@@ -646,12 +790,30 @@ defmodule Mehungry.Accounts.UserNotifier do
     |> String.replace("'", "&#39;")
   end
 
-  defp notes_fragment(%{notes: notes}) when is_binary(notes) and notes != "",
-    do: " Their note: “#{notes}”."
+  defp notes_fragment(%{notes: notes}, locale) when is_binary(notes) and notes != "",
+    do: tr(locale, " Their note: “#{notes}”.", " Η σημείωσή τους: «#{notes}».")
 
-  defp notes_fragment(_), do: ""
+  defp notes_fragment(_, _locale), do: ""
 
-  defp format_dt(%NaiveDateTime{} = ndt) do
+  # Pick the English or Greek variant of a string for emails. Core app has no
+  # Gettext backend (it can't depend on the web app), so appointment emails are
+  # localized with explicit per-locale variants — the same shape as
+  # `deliver_confirmation_instructions`.
+  defp tr("el", _en, el), do: el
+  defp tr(_locale, en, _el), do: en
+
+  @el_days {"Δευτέρα", "Τρίτη", "Τετάρτη", "Πέμπτη", "Παρασκευή", "Σάββατο", "Κυριακή"}
+  @el_months {"Ιανουαρίου", "Φεβρουαρίου", "Μαρτίου", "Απριλίου", "Μαΐου", "Ιουνίου", "Ιουλίου",
+              "Αυγούστου", "Σεπτεμβρίου", "Οκτωβρίου", "Νοεμβρίου", "Δεκεμβρίου"}
+
+  defp format_dt(%NaiveDateTime{} = ndt, "el") do
+    Calendar.strftime(ndt, "%A %-d %B %Y, %H:%M UTC",
+      day_of_week_names: fn d -> elem(@el_days, d - 1) end,
+      month_names: fn m -> elem(@el_months, m - 1) end
+    )
+  end
+
+  defp format_dt(%NaiveDateTime{} = ndt, _locale) do
     Calendar.strftime(ndt, "%A %-d %B %Y, %H:%M UTC")
   end
 
